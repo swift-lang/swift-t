@@ -30,4 +30,6 @@ main()
   bool b = reader_free(id);
 
   printf("freed: %i\n", b);
+
+  reader_finalize();
 }

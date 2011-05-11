@@ -140,5 +140,6 @@ reader_free(long id)
 
 void reader_finalize()
 {
-
+  if (table.size != 0)
+    puts("reader: table not empty!");
 }
