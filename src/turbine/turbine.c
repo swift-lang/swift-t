@@ -10,7 +10,7 @@
 #include <list.h>
 #include <ltable.h>
 
-#include "src/turbine.h"
+#include "src/turbine/turbine.h"
 
 //const int TURBINE_NAME_MAX = 128;
 //const int TURBINE_ARGS_MAX = 128;

@@ -9,7 +9,7 @@
 
 #include <ltable.h>
 
-#include "src/reader.h"
+#include "src/tools/reader.h"
 
 static struct ltable table;
 
