@@ -52,6 +52,7 @@ $(TURBINE): $(TURBINE_OBJS)
 	$(E) ar rcs $(@) $(TURBINE_OBJS)
 
 TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC))
+TEST_DEPS = $(patsubst %.c, %.d, $(TEST_SRC))
 TESTS     = $(patsubst %.c, %.x, $(TEST_SRC))
 
 $(TESTS): %.x: %.o $(TURBINE)
