@@ -1,0 +1,3 @@
+
+TURBINE_SRC += src/turbine.c
+TURBINE_SRC += src/command.c

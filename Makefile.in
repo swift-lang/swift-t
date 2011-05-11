@@ -1,0 +1,63 @@
+
+srcdir = @srcdir@
+
+QUIET_COMPILE = 1
+ifeq ($(V),1)
+	QUIET_COMPILE = 0
+endif
+
+ifeq ($(QUIET_COMPILE),1)
+  # Prints a short description of the action, does not show command
+  Q=@echo
+  E=@
+else
+  # Echoes the entire command
+  Q=@echo >/dev/null
+  E=
+endif
+
+WOZTOOLS = @USE_WOZTOOLS@
+
+CFLAGS += -I $(srcdir)
+CFLAGS += -I $(WOZTOOLS)/src
+CFLAGS += -std=gnu99
+CFLAGS += -g
+
+LDFLAGS += -L $(WOZTOOLS)/lib
+
+LIBS += -l readline
+LIBS += -l woztools
+
+dirname = $(patsubst %/,%,$(dir $(1)))
+
+TURBINE_SRC :=
+include src/module.mk
+
+TEST_SRC :=
+include test/module.mk
+
+# default rule for generating dependency files (deps)
+%.d: %.c
+	$(Q) "  DEP		$(@)"
+	$(E) CC="$(CC)" $(srcdir)/depend.sh \
+             $(call dirname, $*) $(CFLAGS) $< > $@
+
+TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
+
+TURBINE = lib/libturbine.a
+
+$(TURBINE): $(TURBINE_OBJS)
+	$(Q) "  AR		$@"
+	$(E) install -d lib
+	$(E) ar rcs $(@) $(TURBINE_OBJS)
+
+TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC))
+TESTS     = $(patsubst %.c, %.x, $(TEST_SRC))
+
+$(TESTS): %.x: %.o $(TURBINE)
+	$(Q) "LINK		$(@)"
+	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) $(LIBS) -o $(@)
+
+clean:
+	@rm -fv $(TESTS) $(TEST_OBJS)
+	@rm -fv $(TURBINE_OBJS)

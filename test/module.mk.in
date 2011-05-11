@@ -1,0 +1,4 @@
+
+TEST_SRC += test/data.c
+TEST_SRC += test/interaction.c
+TEST_SRC += test/batch.c

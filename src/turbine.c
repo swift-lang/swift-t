@@ -1,0 +1,296 @@
+/*
+ * turbine.c
+ *
+ *  Created on: May 4, 2011
+ *      Author: wozniak
+ */
+
+#include <stdio.h>
+
+#include <list.h>
+#include <ltable.h>
+
+#include "src/turbine.h"
+
+//const int TURBINE_NAME_MAX = 128;
+//const int TURBINE_ARGS_MAX = 128;
+
+typedef enum
+{
+  TD_UNSET, TD_SET
+} td_status;
+
+typedef enum
+{
+  TURBINE_TYPE_FILE
+} turbine_type;
+
+typedef struct
+{
+  turbine_type type;
+  turbine_datum_id id;
+  td_status status;
+  union
+  {
+    struct
+    {
+      char* path;
+    } file;
+  } data;
+} td;
+
+typedef enum
+{
+  TR_WAITING, TR_READY, TR_RUNNING, TR_DONE
+} tr_status;
+
+typedef struct
+{
+  turbine_transform_id id;
+  turbine_transform transform;
+  tr_status status;
+} tr;
+
+/**
+   Waiting trs
+ */
+struct list trs_waiting;
+
+/**
+   Ready trs
+ */
+struct list trs_ready;
+
+/**
+   Running trs
+ */
+struct list trs_running;
+
+/**
+   Map from turbine_datum_id to td
+*/
+struct ltable tds;
+
+static turbine_transform_id tr_unique = 0;
+static turbine_datum_id     td_unique = 0;
+
+#define check(code) if (code != TURBINE_SUCCESS) return code;
+
+turbine_code
+turbine_init()
+{
+  list_init(&trs_waiting);
+  list_init(&trs_running);
+  ltable_init(&tds, 1024);
+}
+
+static turbine_code
+td_register(td* datum)
+{
+  ltable_add(&tds, datum->id, datum);
+  return TURBINE_SUCCESS;
+}
+
+turbine_code
+turbine_datum_file_create(turbine_datum_id* id, char* path)
+{
+  td* result = malloc(sizeof(td));
+  if (!result)
+    return TURBINE_ERROR_OOM;
+  result->type = TURBINE_TYPE_FILE;
+  result->data.file.path = strdup(path);
+  result->id = td_unique++;
+  puts("ok");
+  td_register(result);
+  puts("ok3");
+
+  *id = result->id;
+  return TURBINE_SUCCESS;
+}
+
+static tr*
+tr_create(turbine_transform* transform)
+{
+  tr* result = malloc(sizeof(tr));
+
+  result->transform.name = strdup(transform->name);
+  result->transform.executor = strdup(transform->executor);
+
+  result->transform.input =
+      malloc(transform->inputs*sizeof(turbine_datum_id));
+  assert(result->transform.input);
+
+  result->transform.output =
+      malloc(transform->outputs*sizeof(turbine_datum_id));
+  assert(result->transform.output);
+
+  for (int i = 0; i < transform->inputs; i++)
+    result->transform.input[i] = transform->input[i];
+
+  for (int i = 0; i < transform->outputs; i++)
+    result->transform.output[i] = transform->output[i];
+
+  result->status = TR_WAITING;
+
+  return result;
+}
+
+turbine_code
+turbine_rule_add(turbine_transform* transform,
+                 turbine_transform_id* id)
+{
+  tr* new_tr = tr_create(transform);
+  new_tr->id = tr_unique++;
+  list_add(&trs_waiting, new_tr);
+  return TURBINE_SUCCESS;
+}
+
+turbine_code
+turbine_ready(int count, turbine_transform_id* output)
+{
+  int i = 0;
+  void* v;
+  while (i < count &&
+         (v = list_poll(&trs_ready)))
+  {
+    tr* t = (tr*) v;
+    list_add(&trs_running, t);
+    output[i++] = t->id;
+  }
+  return TURBINE_SUCCESS;
+}
+
+static turbine_code
+td_close(td* datum)
+{
+  if (datum->status = TD_SET)
+    return TURBINE_ERROR_DOUBLE_WRITE;
+  datum->status = TD_SET;
+  return TURBINE_SUCCESS;
+}
+
+static bool
+is_ready(tr* t)
+{
+  for (int i = 0; i < t->transform.inputs; i++)
+  {
+    turbine_datum_id id = t->transform.input[i];
+    td* d = ltable_search(&tds, id);
+    if (d->status == TD_UNSET)
+      return false;
+  }
+  return true;
+}
+
+static void
+notify_waiters()
+{
+  for (struct list_item* item = trs_waiting.head; item;
+       item = item->next)
+  {
+    tr* t = item->data;
+    if (is_ready(t))
+    {
+      list_remove(&trs_waiting, t);
+      list_add(&trs_ready, t);
+    }
+  }
+}
+
+static int
+datum_id_cmp(void* datum, void* id)
+{
+  td* d = (td*) datum;
+
+}
+
+turbine_code
+turbine_datum_complete(turbine_transform_id id)
+{
+  struct list* result =
+    list_pop_where(&trs_running, datum_id_cmp, &id);
+  if (!result->size == 1)
+    return TURBINE_ERROR_NOT_FOUND;
+  tr* t = list_poll(result);
+  for (int i = 0; i < t->transform.outputs; i++)
+  {
+    td* td = ltable_search(&tds, t->transform.output[i]);
+    turbine_code code = td_close(td);
+    check(code);
+  }
+
+  notify_waiters();
+
+  return TURBINE_SUCCESS;
+}
+
+/**
+   @param output Should point to good storage for output,
+   at least 64 chars
+*/
+turbine_code
+turbine_code_tostring(turbine_code code, char* output)
+{
+  switch (code)
+  {
+    case TURBINE_SUCCESS:
+      sprintf(output, "TURBINE_SUCCESS");
+      break;
+    case TURBINE_ERROR_OOM:
+      sprintf(output, "TURBINE_ERROR_OOM");
+      break;
+    case TURBINE_ERROR_DOUBLE_WRITE:
+      sprintf(output, "TURBINE_ERROR_DOUBLE_WRITE");
+      break;
+    case TURBINE_ERROR_NOT_FOUND:
+      sprintf(output, "TURBINE_ERROR_NOT_FOUND");
+      break;
+    case TURBINE_ERROR_COMMAND:
+      sprintf(output, "TURBINE_ERROR_COMMAND");
+      break;
+    case TURBINE_ERROR_UNKNOWN:
+      sprintf(output, "TURBINE_ERROR_UNKNOWN");
+      break;
+    default:
+      sprintf(output, "<could not convert code to string>");
+      break;
+  }
+}
+
+static int td_tostring(char* output, int length, td* td)
+{
+  int result;
+  switch (td->type)
+  {
+    case TURBINE_TYPE_FILE:
+      result = snprintf(output, length, "file:/%s",
+                        td->data.file.path);
+  }
+  return result;
+}
+
+int turbine_data_tostring(char* output, int length, td* td)
+{
+  int t;
+  int result = 0;
+  char* p = output;
+
+  t = snprintf(p, length, "%li:", td->id);
+  result += t;
+  length -= t;
+  p      += t;
+
+  t = td_tostring(p, length, td);
+  result += t;
+  length -= t;
+  p      += t;
+
+  char* status = (td->status == TD_UNSET) ? "UNSET" : "SET";
+  t = snprintf(p, length, "%s", status);
+  result += t;
+
+  return result;
+}
+
+void turbine_finalize()
+{}
