@@ -1,9 +1,14 @@
 
+TURBINE = lib/libturbine.a
+
+all: $(TURBINE)
+
 srcdir = @srcdir@
 
-QUIET_COMPILE = 1
 ifeq ($(V),1)
 	QUIET_COMPILE = 0
+else
+	QUIET_COMPILE = 1
 endif
 
 ifeq ($(QUIET_COMPILE),1)
@@ -18,6 +23,8 @@ endif
 
 WOZTOOLS = @USE_WOZTOOLS@
 
+CC = @CC@
+CFLAGS := @CFLAGS@
 CFLAGS += -I $(srcdir)
 CFLAGS += -I $(WOZTOOLS)/src
 CFLAGS += -std=gnu99
@@ -33,8 +40,13 @@ dirname = $(patsubst %/,%,$(dir $(1)))
 TURBINE_SRC :=
 include src/module.mk
 
+TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC))
+
 TEST_SRC :=
 include test/module.mk
+TEST_DEPS := $(patsubst %.c, %.d, $(TEST_SRC))
+
+DEPS := $(TURBINE_DEPS) $(TEST_DEPS)
 
 # default rule for generating dependency files (deps)
 %.d: %.c
@@ -42,9 +54,15 @@ include test/module.mk
 	$(E) CC="$(CC)" $(srcdir)/depend.sh \
              $(call dirname, $*) $(CFLAGS) $< > $@
 
-TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
+ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
+  -include $(DEPS)
+endif
 
-TURBINE = lib/libturbine.a
+%.o: %.c
+	$(Q) "  CC		$@"
+	$(E) $(CC) $(CFLAGS) -c $(<) -o $(@)
+
+TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
 
 $(TURBINE): $(TURBINE_OBJS)
 	$(Q) "  AR		$@"
