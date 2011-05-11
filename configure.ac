@@ -8,6 +8,8 @@ AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
 AC_PROG_CC
+# This does not work:
+# AC_PROG_INSTALL
 
 # Checks for libraries.
 
@@ -29,13 +31,13 @@ AC_ARG_WITH(woztools,
                   if test "$USE_WOZTOOLS" = 0 ; then
                      AC_MSG_ERROR(Could not find WOZTOOLS in $withval)
                   fi
-                  AC_MSG_RESULT([using woztools in $withval...])
+                  AC_MSG_RESULT([using woztools in $withval ...])
                   AC_DEFINE_UNQUOTED([WOZTOOLS_LOCATION],
                                      "$withval", [WOZTOOLS Location])
                   USE_WOZTOOLS=$withval
                  ],
                  [
-                  AC_MSG_RESULT([Not using WOZTOOLS...])
+                  AC_MSG_ERROR([Not found: WOZTOOLS])
                   USE_WOZTOOLS=0
                  ])
 AC_SUBST(USE_WOZTOOLS)
