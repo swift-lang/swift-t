@@ -48,7 +48,8 @@ TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC))
 
 PROGS_SRC :=
 include src/progs/module.mk
-PROGS_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC))
+PROGS_DEPS := $(patsubst %.c, %.d, $(PROGS_SRC))
+PROGS      := $(patsubst %.c, %.x, $(PROGS_SRC))
 
 TEST_SRC :=
 include test/module.mk
@@ -81,7 +82,7 @@ TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC))
 TEST_DEPS = $(patsubst %.c, %.d, $(TEST_SRC))
 TESTS     = $(patsubst %.c, %.x, $(TEST_SRC))
 
-$(TESTS): %.x: %.o $(TURBINE)
+$(PROGS) $(TESTS): %.x: %.o $(TURBINE)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) $(LIBS) -o $(@)
 
