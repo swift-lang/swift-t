@@ -3,6 +3,8 @@ TURBINE = lib/libturbine.a
 
 all: $(TURBINE)
 
+turbine: $(TURBINE)
+
 srcdir = @srcdir@
 
 ifeq ($(V),1)
@@ -37,10 +39,16 @@ LIBS += -l woztools
 
 dirname = $(patsubst %/,%,$(dir $(1)))
 
-TURBINE_SRC :=
-include src/module.mk
+DIR :=
 
+TURBINE_SRC :=
+include src/turbine/module.mk
+include src/tools/module.mk
 TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC))
+
+PROGS_SRC :=
+include src/progs/module.mk
+PROGS_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC))
 
 TEST_SRC :=
 include test/module.mk
@@ -55,7 +63,7 @@ DEPS := $(TURBINE_DEPS) $(TEST_DEPS)
              $(call dirname, $*) $(CFLAGS) $< > $@
 
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
-  -include $(DEPS)
+ -include $(DEPS)
 endif
 
 %.o: %.c
@@ -82,3 +90,9 @@ clean:
 	@rm -fv $(DEPS)
 	@rm -fv $(TESTS) $(TEST_OBJS)
 	@rm -fv $(TURBINE_OBJS)
+
+.PHONY: clean
+
+debug_build:
+	@echo DEPS: $(DEPS)
+	@echo TURBINE_OBJS: $(TURBINE_OBJS)
