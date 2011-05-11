@@ -78,5 +78,7 @@ $(TESTS): %.x: %.o $(TURBINE)
 	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) $(LIBS) -o $(@)
 
 clean:
+	@rm -fv $(TURBINE)
+	@rm -fv $(DEPS)
 	@rm -fv $(TESTS) $(TEST_OBJS)
 	@rm -fv $(TURBINE_OBJS)
