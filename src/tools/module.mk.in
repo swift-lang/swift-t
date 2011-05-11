@@ -2,3 +2,4 @@
 DIR := src/tools
 
 TURBINE_SRC += $(DIR)/tools.c
+TURBINE_SRC += $(DIR)/reader.c
