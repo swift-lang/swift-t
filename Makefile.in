@@ -60,20 +60,20 @@ DEPS := $(TURBINE_DEPS) $(TEST_DEPS)
 %.d: %.c
 	$(Q) "  DEP		$(@)"
 	$(E) CC="$(CC)" $(srcdir)/depend.sh \
-             $(call dirname, $*) $(CFLAGS) $< > $@
+             $(call dirname, $(*)) $(CFLAGS) $(<) > $(@)
 
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
  -include $(DEPS)
 endif
 
 %.o: %.c
-	$(Q) "  CC		$@"
+	$(Q) "  CC		$(@)"
 	$(E) $(CC) $(CFLAGS) -c $(<) -o $(@)
 
 TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
 
 $(TURBINE): $(TURBINE_OBJS)
-	$(Q) "  AR		$@"
+	$(Q) "  AR		$(@)"
 	$(E) install -d lib
 	$(E) ar rcs $(@) $(TURBINE_OBJS)
 
@@ -82,7 +82,7 @@ TEST_DEPS = $(patsubst %.c, %.d, $(TEST_SRC))
 TESTS     = $(patsubst %.c, %.x, $(TEST_SRC))
 
 $(TESTS): %.x: %.o $(TURBINE)
-	$(Q) "LINK		$(@)"
+	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) $(LIBS) -o $(@)
 
 clean:

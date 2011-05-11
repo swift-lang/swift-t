@@ -8,11 +8,15 @@
 #ifndef READER_H
 #define READER_H
 
+#include <stdbool.h>
+
 int reader_init();
 
-int reader_read(char* file);
+long reader_read(char* file);
 
-void reader_free(int id);
+char* reader_next(long id);
+
+bool reader_free(long id);
 
 void reader_finalize();
 

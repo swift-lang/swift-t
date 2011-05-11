@@ -5,6 +5,10 @@
  *      Author: wozniak
  */
 
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 
 #include <ltable.h>
@@ -15,21 +19,25 @@ static struct ltable table;
 
 static int unique = 0;
 
+#define LINE_MAX 1024
+
 struct entry
 {
   int id;
   int size;
   char* data;
-  char* current;
+  int position;
+  /** copy of current line */
+  char line[LINE_MAX];
 };
 
 int
 reader_init()
 {
-  ltable_init(&ltable, 128);
+  ltable_init(&table, 128);
 }
 
-int
+long
 reader_read(char* path)
 {
   struct stat stats;
@@ -49,7 +57,7 @@ reader_read(char* path)
   while (total < length)
   {
     int chunk  = length-total;
-    int actual = fread((*data)+total, 1, chunk, file);
+    int actual = fread(data+total, 1, chunk, file);
     total += actual;
   }
 
@@ -57,17 +65,70 @@ reader_read(char* path)
   e->id = unique++;
   e->size = total;
   e->data = data;
-  e->current = data;
+  e->position = 0;
 
   ltable_add(&table, e->id, e);
 
   return e->id;
 }
 
-/** @return true iff successfully removed */
-bool reader_free(int id);
+char*
+reader_next(long id)
 {
-  struct entry* e = (struct entry*) ltable_remove(&table, id);
+  char* result = NULL;
+
+  struct entry* e = ltable_search(&table, id);
+  if (!e)
+    return NULL;
+
+  // Internal error:
+  assert(e->id == id);
+
+  // Loop until we have a non-empty line
+  while (true)
+  {
+    // Check for end of data:
+    if (e->position >= e->size)
+      return NULL;
+
+    // Copy next line, without leading spaces, into returned line
+    int p = e->position;
+    while (e->data[p] == ' ')
+      p++;
+    int q = p;
+    while (e->data[q] != '\n' && q < e->size)
+      q++;
+    q++;
+    e->position = q;
+    memcpy(e->line, e->data+p, q-p-1);
+    e->line[q-p-1] = '\0';
+
+    // Cut off everything after a comment character
+    char* comment = strchr(e->line, '#');
+    if (comment)
+      *comment = '\0';
+
+    // Delete trailing whitespace
+    int length = strlen(e->line);
+    for (int i = length-1; i >= 0; i--)
+      if (e->line[i] == ' ')
+        e->line[i] = '\0';
+      else
+        break;
+
+    if (strlen(e->line) > 0)
+      break;
+  }
+
+  result = &(e->line[0]);
+  return result;
+}
+
+/** @return true iff successfully removed */
+bool
+reader_free(long id)
+{
+  struct entry* e = ltable_remove(&table, id);
   if (!e)
     return false;
 
@@ -75,4 +136,9 @@ bool reader_free(int id);
   free(e);
 
   return true;
+}
+
+void reader_finalize()
+{
+
 }
