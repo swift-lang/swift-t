@@ -43,7 +43,9 @@ AC_ARG_WITH(woztools,
 AC_SUBST(USE_WOZTOOLS)
 
 AC_CONFIG_FILES(
-        src/module.mk
+        src/turbine/module.mk
+        src/tools/module.mk
+        src/progs/module.mk
         test/module.mk
 	Makefile
 )
