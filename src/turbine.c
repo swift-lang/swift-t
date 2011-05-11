@@ -91,6 +91,12 @@ td_register(td* datum)
   return TURBINE_SUCCESS;
 }
 
+static td*
+td_get(turbine_datum_id id)
+{
+  return ltable_search(&tds, id);
+}
+
 turbine_code
 turbine_datum_file_create(turbine_datum_id* id, char* path)
 {
@@ -227,34 +233,37 @@ turbine_datum_complete(turbine_transform_id id)
 /**
    @param output Should point to good storage for output,
    at least 64 chars
+   @return Number of characters written
 */
-turbine_code
-turbine_code_tostring(turbine_code code, char* output)
+int
+turbine_code_tostring(char* output, turbine_code code)
 {
+  int result = -1;
   switch (code)
   {
     case TURBINE_SUCCESS:
-      sprintf(output, "TURBINE_SUCCESS");
+      result = sprintf(output, "TURBINE_SUCCESS");
       break;
     case TURBINE_ERROR_OOM:
-      sprintf(output, "TURBINE_ERROR_OOM");
+      result = sprintf(output, "TURBINE_ERROR_OOM");
       break;
     case TURBINE_ERROR_DOUBLE_WRITE:
-      sprintf(output, "TURBINE_ERROR_DOUBLE_WRITE");
+      result = sprintf(output, "TURBINE_ERROR_DOUBLE_WRITE");
       break;
     case TURBINE_ERROR_NOT_FOUND:
-      sprintf(output, "TURBINE_ERROR_NOT_FOUND");
+      result = sprintf(output, "TURBINE_ERROR_NOT_FOUND");
       break;
     case TURBINE_ERROR_COMMAND:
-      sprintf(output, "TURBINE_ERROR_COMMAND");
+      result = sprintf(output, "TURBINE_ERROR_COMMAND");
       break;
     case TURBINE_ERROR_UNKNOWN:
-      sprintf(output, "TURBINE_ERROR_UNKNOWN");
+      result = sprintf(output, "TURBINE_ERROR_UNKNOWN");
       break;
     default:
       sprintf(output, "<could not convert code to string>");
       break;
   }
+  return result;
 }
 
 static int td_tostring(char* output, int length, td* td)
@@ -269,23 +278,26 @@ static int td_tostring(char* output, int length, td* td)
   return result;
 }
 
-int turbine_data_tostring(char* output, int length, td* td)
+int
+turbine_data_tostring(char* output, int length, turbine_datum_id id)
 {
   int t;
   int result = 0;
   char* p = output;
 
-  t = snprintf(p, length, "%li:", td->id);
+  td* d = td_get(id);
+
+  t = snprintf(p, length, "%li:", d->id);
   result += t;
   length -= t;
   p      += t;
 
-  t = td_tostring(p, length, td);
+  t = td_tostring(p, length, d);
   result += t;
   length -= t;
   p      += t;
 
-  char* status = (td->status == TD_UNSET) ? "UNSET" : "SET";
+  char* status = (d->status == TD_UNSET) ? "UNSET" : "SET";
   t = snprintf(p, length, "%s", status);
   result += t;
 

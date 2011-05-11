@@ -48,9 +48,10 @@ turbine_code turbine_ready(int count, turbine_transform_id* output);
 
 turbine_code turbine_complete(turbine_transform_id* id);
 
-turbine_code turbine_code_tostring(turbine_code code, char* output);
+int turbine_code_tostring(char* output, turbine_code code);
 
-turbine_code turbine_data_tostring(int length, char* output);
+int turbine_data_tostring(char* output, int length,
+                          turbine_datum_id id);
 
 void turbine_finalize();
 
