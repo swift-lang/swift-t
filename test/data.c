@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 
-#include "src/turbine.h"
+#include "src/turbine/turbine.h"
 
 int
 main()
