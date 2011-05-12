@@ -55,10 +55,15 @@ TEST_SRC :=
 include test/module.mk
 TEST_DEPS := $(patsubst %.c, %.d, $(TEST_SRC))
 
+# Dependency files:
+# Remember that having a bad #include can cause dependency
+# file generation to fail silently
+
 DEPS := $(TURBINE_DEPS) $(TEST_DEPS)
 
-# default rule for generating dependency files (deps)
-%.d: %.c
+deps: $(DEPS)
+
+%.d:%.c
 	$(Q) "  DEP		$(@)"
 	$(E) CC="$(CC)" $(srcdir)/depend.sh \
              $(call dirname, $(*)) $(CFLAGS) $(<) > $(@)
@@ -67,7 +72,7 @@ ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
  -include $(DEPS)
 endif
 
-%.o: %.c
+%.o:%.c
 	$(Q) "  CC		$(@)"
 	$(E) $(CC) $(CFLAGS) -c $(<) -o $(@)
 
@@ -87,7 +92,7 @@ $(PROGS) $(TESTS): %.x: %.o $(TURBINE)
 	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) $(LIBS) -o $(@)
 
 clean:
-	@rm -fv $(TURBINE)
+	@rm -fv $(TURBINE) $(PROGS)
 	@rm -fv $(DEPS)
 	@rm -fv $(TESTS) $(TEST_OBJS)
 	@rm -fv $(TURBINE_OBJS)
@@ -97,3 +102,4 @@ clean:
 debug_build:
 	@echo DEPS: $(DEPS)
 	@echo TURBINE_OBJS: $(TURBINE_OBJS)
+	@echo TESTS: $(TESTS)
