@@ -27,6 +27,8 @@ struct entry
   int size;
   char* data;
   int position;
+  /** current line number */
+  int number;
   /** copy of current line */
   char line[LINE_MAX];
 };
@@ -67,23 +69,29 @@ reader_read(char* path)
 
   struct entry* e = malloc(sizeof(struct entry));
   e->id = unique++;
+
   e->size = total;
   e->data = data;
   e->position = 0;
-
+  e->number = 1;
   ltable_add(&table, e->id, e);
 
   return e->id;
 }
 
-char*
+
+/**
+     @return Pointer to next string or NULL on end of data
+ */
+reader_line
 reader_next(long id)
 {
-  char* result = NULL;
+  reader_line result = {0};
 
   struct entry* e = ltable_search(&table, id);
+  result.number = e->number;
   if (!e)
-    return NULL;
+    return result;
 
   // Internal error:
   assert(e->id == id);
@@ -93,7 +101,7 @@ reader_next(long id)
   {
     // Check for end of data:
     if (e->position >= e->size)
-      return NULL;
+      return result;
 
     // Copy next line, without leading spaces, into returned line
     int p = e->position;
@@ -122,9 +130,12 @@ reader_next(long id)
 
     if (strlen(e->line) > 0)
       break;
+    e->number++;
   }
 
-  result = &(e->line[0]);
+  result.number = e->number;
+  result.line= &(e->line[0]);
+  e->number++;
   return result;
 }
 

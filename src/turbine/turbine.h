@@ -13,6 +13,8 @@ typedef enum
   TURBINE_SUCCESS,
   /** Out of memory */
   TURBINE_ERROR_OOM,
+  /** Attempt to declare the same thing twice */
+  TURBINE_ERROR_DOUBLE_DECLARE,
   /** Attempt to set the same datum twice */
   TURBINE_ERROR_DOUBLE_WRITE,
   /** Data set not found */
@@ -38,7 +40,7 @@ typedef struct
 
 turbine_code turbine_init();
 
-turbine_code turbine_datum_file_create(turbine_datum_id* id,
+turbine_code turbine_datum_file_create(turbine_datum_id id,
                                        char* path);
 
 turbine_code turbine_rule_add(turbine_transform* transform,

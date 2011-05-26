@@ -3,3 +3,4 @@ DIR := src/progs
 
 PROGS_SRC += $(DIR)/batch.c
 PROGS_SRC += $(DIR)/interaction.c
+

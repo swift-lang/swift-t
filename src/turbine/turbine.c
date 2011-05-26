@@ -37,7 +37,7 @@ typedef struct
       char* path;
     } file;
   } data;
-} td;
+} turbine_datum;
 
 typedef enum
 {
@@ -67,12 +67,11 @@ struct list trs_ready;
 struct list trs_running;
 
 /**
-   Map from turbine_datum_id to td
+   Map from turbine_datum_id to turbine_datum
 */
 struct ltable tds;
 
 static turbine_transform_id tr_unique = 0;
-static turbine_datum_id     td_unique = 0;
 
 #define check(code) if (code != TURBINE_SUCCESS) return code;
 
@@ -81,37 +80,42 @@ turbine_init()
 {
   list_init(&trs_waiting);
   list_init(&trs_running);
-  ltable_init(&tds, 1024);
-}
-
-static turbine_code
-td_register(td* datum)
-{
-  ltable_add(&tds, datum->id, datum);
+  void* result = ltable_init(&tds, 1024);
+  if (!result)
+    return TURBINE_ERROR_OOM;
   return TURBINE_SUCCESS;
 }
 
-static td*
+static turbine_code
+td_register(turbine_datum* datum)
+{
+  if (ltable_search(&tds, datum->id))
+    return TURBINE_ERROR_DOUBLE_DECLARE;
+  bool result = ltable_add(&tds, datum->id, datum);
+  if (!result)
+    return TURBINE_ERROR_OOM;
+  return TURBINE_SUCCESS;
+}
+
+static turbine_datum*
 td_get(turbine_datum_id id)
 {
   return ltable_search(&tds, id);
 }
 
 turbine_code
-turbine_datum_file_create(turbine_datum_id* id, char* path)
+turbine_datum_file_create(turbine_datum_id id, char* path)
 {
-  td* result = malloc(sizeof(td));
+  turbine_datum* result = malloc(sizeof(turbine_datum));
   if (!result)
     return TURBINE_ERROR_OOM;
   result->type = TURBINE_TYPE_FILE;
   result->data.file.path = strdup(path);
-  result->id = td_unique++;
+  result->id = id;
   puts("ok");
-  td_register(result);
-  puts("ok3");
+  turbine_code code = td_register(result);
 
-  *id = result->id;
-  return TURBINE_SUCCESS;
+  return code;
 }
 
 static tr*
@@ -167,9 +171,9 @@ turbine_ready(int count, turbine_transform_id* output)
 }
 
 static turbine_code
-td_close(td* datum)
+td_close(turbine_datum* datum)
 {
-  if (datum->status = TD_SET)
+  if (datum->status == TD_SET)
     return TURBINE_ERROR_DOUBLE_WRITE;
   datum->status = TD_SET;
   return TURBINE_SUCCESS;
@@ -181,7 +185,7 @@ is_ready(tr* t)
   for (int i = 0; i < t->transform.inputs; i++)
   {
     turbine_datum_id id = t->transform.input[i];
-    td* d = ltable_search(&tds, id);
+    turbine_datum* d = ltable_search(&tds, id);
     if (d->status == TD_UNSET)
       return false;
   }
@@ -204,10 +208,23 @@ notify_waiters()
 }
 
 static int
+id_cmp(void* id1, void* id2)
+{
+  long* l1 = id1;
+  long* l2 = id2;
+  if (l1 < l2)
+    return -1;
+  else if (l1 > l2)
+    return 1;
+  return 0;
+}
+
+static int
 datum_id_cmp(void* datum, void* id)
 {
-  td* d = (td*) datum;
-
+  turbine_datum* td = (turbine_datum*) datum;
+  turbine_datum_id tid = td->id;
+  return id_cmp(&tid, id);
 }
 
 turbine_code
@@ -220,7 +237,7 @@ turbine_datum_complete(turbine_transform_id id)
   tr* t = list_poll(result);
   for (int i = 0; i < t->transform.outputs; i++)
   {
-    td* td = ltable_search(&tds, t->transform.output[i]);
+    turbine_datum* td = ltable_search(&tds, t->transform.output[i]);
     turbine_code code = td_close(td);
     check(code);
   }
@@ -266,7 +283,7 @@ turbine_code_tostring(char* output, turbine_code code)
   return result;
 }
 
-static int td_tostring(char* output, int length, td* td)
+static int td_tostring(char* output, int length, turbine_datum* td)
 {
   int result;
   switch (td->type)
@@ -285,7 +302,7 @@ turbine_data_tostring(char* output, int length, turbine_datum_id id)
   int result = 0;
   char* p = output;
 
-  td* d = td_get(id);
+  turbine_datum* d = td_get(id);
 
   t = snprintf(p, length, "%li:", d->id);
   result += t;

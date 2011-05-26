@@ -10,11 +10,17 @@
 
 #include <stdbool.h>
 
+typedef struct
+{
+  int number;
+  char* line;
+} reader_line;
+
 bool reader_init();
 
 long reader_read(char* file);
 
-char* reader_next(long id);
+reader_line reader_next(long id);
 
 bool reader_free(long id);
 

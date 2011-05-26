@@ -4,8 +4,11 @@
 
 #include "src/turbine/command.h"
 
+// declare file <id> <name>
+// rule ( <output ids> ) <name> ( <input ids> ) executor
 turbine_code turbine_command(char* cmd)
 {
+  turbine_code result = TURBINE_SUCCESS;
   printf("cmd: %s\n", cmd);
 
   char* state;
@@ -24,16 +27,24 @@ turbine_code turbine_command(char* cmd)
     {
       puts("file");
       turbine_datum_id id;
-      char* name = strtok_r(cmd, " ", &state);
-      puts("name");
-      turbine_datum_file_create(&id, name);
+      char* sid = strtok_r(NULL, " ", &state);
+      int count = sscanf(sid, "%li", &id);
+      if (count != 1)
+        return TURBINE_ERROR_COMMAND;
       printf("id: %li\n", id);
+      char* name = strtok_r(NULL, " ", &state);
+      puts("name");
+      result = turbine_datum_file_create(id, name);
     }
     else
       return TURBINE_ERROR_COMMAND;
   }
+  if (strcmp(op, "rule") == 0)
+  {
+
+  }
   else
     return TURBINE_ERROR_COMMAND;
 
-  return TURBINE_SUCCESS;
+  return result;
 }
