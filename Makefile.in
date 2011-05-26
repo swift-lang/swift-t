@@ -31,6 +31,7 @@ CFLAGS += -I $(srcdir)
 CFLAGS += -I $(WOZTOOLS)/src
 CFLAGS += -std=gnu99
 CFLAGS += -g
+CFLAGS += -Wall
 
 LDFLAGS += -L $(WOZTOOLS)/lib
 
