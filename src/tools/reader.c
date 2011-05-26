@@ -31,10 +31,14 @@ struct entry
   char line[LINE_MAX];
 };
 
-int
+/**
+   @return true unless memory could not be allocated
+ */
+bool
 reader_init()
 {
-  ltable_init(&table, 128);
+  void* result = ltable_init(&table, 128);
+  return (result) ? true : false;
 }
 
 long

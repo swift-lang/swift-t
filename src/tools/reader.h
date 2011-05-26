@@ -10,7 +10,7 @@
 
 #include <stdbool.h>
 
-int reader_init();
+bool reader_init();
 
 long reader_read(char* file);
 
