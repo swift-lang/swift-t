@@ -43,6 +43,10 @@ reader_init()
   return (result) ? true : false;
 }
 
+/**
+   Read the file into memory
+   @return The non-negative id or -1 on error
+ */
 long
 reader_read(char* path)
 {
@@ -79,10 +83,9 @@ reader_read(char* path)
   return e->id;
 }
 
-
 /**
      @return Pointer to next string or NULL on end of data
- */
+*/
 reader_line
 reader_next(long id)
 {
