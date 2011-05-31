@@ -2,4 +2,4 @@
 DIR := src/turbine
 
 TURBINE_SRC += $(DIR)/turbine.c
-TURBINE_SRC += $(DIR)/command.c
+# TURBINE_SRC += $(DIR)/command.c
