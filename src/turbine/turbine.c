@@ -110,9 +110,7 @@ turbine_datum_file_create(turbine_datum_id id, char* path)
   result->type = TURBINE_TYPE_FILE;
   result->data.file.path = strdup(path);
   result->id = id;
-  puts("ok");
   turbine_code code = td_register(result);
-
   return code;
 }
 
