@@ -16,4 +16,5 @@ main()
   turbine_code code;
   code = turbine_init();
   code = turbine_datum_file_create(&d1, "file.txt");
+  turbine_finalize();
 }
