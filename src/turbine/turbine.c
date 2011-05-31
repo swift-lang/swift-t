@@ -71,8 +71,6 @@ struct list trs_running;
 */
 struct ltable tds;
 
-static turbine_transform_id tr_unique = 0;
-
 turbine_code
 turbine_init()
 {
