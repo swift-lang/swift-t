@@ -142,11 +142,11 @@ tr_create(turbine_transform* transform)
 }
 
 turbine_code
-turbine_rule_add(turbine_transform* transform,
-                 turbine_transform_id* id)
+turbine_rule_add(turbine_transform_id id,
+                 turbine_transform* transform)
 {
   tr* new_tr = tr_create(transform);
-  new_tr->id = tr_unique++;
+  new_tr->id = id;
   list_add(&trs_waiting, new_tr);
   return TURBINE_SUCCESS;
 }
@@ -235,7 +235,7 @@ turbine_datum_complete(turbine_transform_id id)
   {
     turbine_datum* td = ltable_search(&tds, t->transform.output[i]);
     turbine_code code = td_close(td);
-    check(code);
+    turbine_check(code);
   }
 
   notify_waiters();
