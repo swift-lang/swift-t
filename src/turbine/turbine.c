@@ -73,8 +73,6 @@ struct ltable tds;
 
 static turbine_transform_id tr_unique = 0;
 
-#define check(code) if (code != TURBINE_SUCCESS) return code;
-
 turbine_code
 turbine_init()
 {

@@ -38,6 +38,8 @@ typedef struct
   turbine_datum_id* output;
 } turbine_transform;
 
+#define TURBINE_ID_NULL 0
+
 turbine_code turbine_init();
 
 turbine_code turbine_datum_file_create(turbine_datum_id id,
@@ -56,5 +58,8 @@ int turbine_data_tostring(char* output, int length,
                           turbine_datum_id id);
 
 void turbine_finalize();
+
+// Internal API:
+#define turbine_check(code) if (code != TURBINE_SUCCESS) return code;
 
 #endif
