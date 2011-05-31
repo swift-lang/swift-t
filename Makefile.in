@@ -24,6 +24,7 @@ else
 endif
 
 WOZTOOLS = @USE_WOZTOOLS@
+WOZTOOLS_LIB = $(WOZTOOLS)/lib/libwoztools.a
 
 CC = @CC@
 CFLAGS := @CFLAGS@
@@ -88,7 +89,7 @@ TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC))
 TEST_DEPS = $(patsubst %.c, %.d, $(TEST_SRC))
 TESTS     = $(patsubst %.c, %.x, $(TEST_SRC))
 
-$(PROGS) $(TESTS): %.x: %.o $(TURBINE)
+$(PROGS) $(TESTS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) $(LIBS) -o $(@)
 
@@ -97,6 +98,7 @@ clean:
 	@rm -fv $(DEPS)
 	@rm -fv $(TESTS) $(TEST_OBJS)
 	@rm -fv $(TURBINE_OBJS)
+	@rm -fv $(PARSER_INTERMEDIATES)
 
 .PHONY: clean
 
