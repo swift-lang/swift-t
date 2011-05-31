@@ -12,9 +12,10 @@
 int
 main()
 {
-  turbine_datum_id d1;
+  turbine_datum_id d1 = 1;
   turbine_code code;
   code = turbine_init();
-  code = turbine_datum_file_create(&d1, "file.txt");
+  code = turbine_datum_file_create(d1, "file.txt");
   turbine_finalize();
+  puts("OK");
 }
