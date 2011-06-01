@@ -5,7 +5,10 @@
  *      Author: wozniak
  */
 
+#include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <list.h>
 #include <ltable.h>
@@ -142,6 +145,18 @@ tr_create(turbine_transform* transform)
   return result;
 }
 
+static void
+tr_free(tr* t)
+{
+  free(t->transform.name);
+  free(t->transform.executor);
+  if (t->transform.input)
+    free(t->transform.input);
+  if (t->transform.output)
+    free(t->transform.output);
+  free(t);
+}
+
 turbine_code
 turbine_rule_add(turbine_transform_id id,
                  turbine_transform* transform)
@@ -191,18 +206,32 @@ is_ready(tr* t)
   return true;
 }
 
+
+/**
+   Move trs that are ready to run from waiting to ready
+   Note: cannot modify list while iterating over it
+ */
 static void
 notify_waiters()
 {
+  struct list tmp;
+  list_init(&tmp);
+
+  // Put trs that are ready into tmp
   for (struct list_item* item = trs_waiting.head; item;
        item = item->next)
   {
     tr* t = item->data;
     if (is_ready(t))
-    {
-      list_remove(&trs_waiting, t);
-      list_add(&trs_ready, t);
-    }
+      list_add(&tmp, t);
+  }
+
+  // Put items from tmp into ready
+  while (tmp.size > 0)
+  {
+    tr *t = list_pop(&tmp);
+    list_remove(&trs_waiting, t);
+    list_add(&trs_ready, t);
   }
 }
 
@@ -211,19 +240,11 @@ id_cmp(void* id1, void* id2)
 {
   long* l1 = id1;
   long* l2 = id2;
-  if (l1 < l2)
+  if (*l1 < *l2)
     return -1;
-  else if (l1 > l2)
+  else if (*l1 > *l2)
     return 1;
   return 0;
-}
-
-static int
-datum_id_cmp(void* datum, void* id)
-{
-  turbine_datum* td = (turbine_datum*) datum;
-  turbine_datum_id tid = td->id;
-  return id_cmp(&tid, id);
 }
 
 turbine_code
@@ -237,11 +258,27 @@ turbine_close(turbine_datum_id id)
 }
 
 turbine_code
+turbine_executor(turbine_transform_id id, char* executor)
+{
+  for (struct list_item* item = trs_running.head; item;
+       item = item->next)
+  {
+    tr* transform = item->data;
+    if (transform->id == id)
+    {
+      strcpy(executor, transform->transform.executor);
+      return TURBINE_SUCCESS;
+    }
+  }
+  return TURBINE_ERROR_NOT_FOUND;
+}
+
+turbine_code
 turbine_complete(turbine_transform_id id)
 {
   struct list* result =
-    list_pop_where(&trs_running, datum_id_cmp, &id);
-  if (!result->size == 1)
+    list_pop_where(&trs_running, id_cmp, &id);
+  if (result->size != 1)
     return TURBINE_ERROR_NOT_FOUND;
   tr* t = list_poll(result);
   for (int i = 0; i < t->transform.outputs; i++)
@@ -249,6 +286,8 @@ turbine_complete(turbine_transform_id id)
     turbine_code code = turbine_close(t->transform.output[i]);
     turbine_check(code);
   }
+  list_free(result);
+  tr_free(t);
 
   return TURBINE_SUCCESS;
 }

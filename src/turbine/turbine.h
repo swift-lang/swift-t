@@ -53,6 +53,9 @@ turbine_code turbine_ready(int count, turbine_transform_id* output,
 
 turbine_code turbine_close(turbine_datum_id id);
 
+turbine_code turbine_executor(turbine_transform_id id,
+                              char* executor);
+
 turbine_code turbine_complete(turbine_transform_id id);
 
 int turbine_code_tostring(char* output, turbine_code code);
@@ -64,5 +67,20 @@ void turbine_finalize();
 
 // Internal API:
 #define turbine_check(code) if (code != TURBINE_SUCCESS) return code;
+
+#define turbine_check_verbose(code) \
+    turbine_check_impl(code, __FILE__, __LINE__)
+
+#define turbine_check_impl(code, file, line)    \
+    {                                           \
+      if (code != TURBINE_SUCCESS)              \
+      {                                         \
+        char output[64];                        \
+        turbine_code_tostring(output, code);    \
+        printf("turbine error: %s\n", output);  \
+        printf("\tat: %s:%i\n", file, line);    \
+        return code;                            \
+      }                                         \
+    }
 
 #endif
