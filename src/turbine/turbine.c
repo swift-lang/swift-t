@@ -116,21 +116,36 @@ turbine_datum_file_create(turbine_datum_id id, char* path)
   return code;
 }
 
-static tr*
-tr_create(turbine_transform* transform)
+static turbine_code
+tr_create(turbine_transform* transform, tr** t)
 {
+  assert(transform->name);
+  assert(transform->executor);
+
   tr* result = malloc(sizeof(tr));
 
   result->transform.name = strdup(transform->name);
   result->transform.executor = strdup(transform->executor);
 
-  result->transform.input =
-      malloc(transform->inputs*sizeof(turbine_datum_id));
-  assert(result->transform.input);
+  if (transform->inputs > 0)
+  {
+    result->transform.input =
+        malloc(transform->inputs*sizeof(turbine_datum_id));
+    if (! result->transform.input)
+      return TURBINE_ERROR_OOM;
+  }
+  else
+    result->transform.input = NULL;
 
-  result->transform.output =
-      malloc(transform->outputs*sizeof(turbine_datum_id));
-  assert(result->transform.output);
+  if (transform->inputs > 0)
+  {
+    result->transform.output =
+        malloc(transform->outputs*sizeof(turbine_datum_id));
+    if (! result->transform.output)
+      return TURBINE_ERROR_OOM;
+  }
+  else
+    result->transform.output = NULL;
 
   result->transform.inputs = transform->inputs;
   for (int i = 0; i < transform->inputs; i++)
@@ -142,7 +157,8 @@ tr_create(turbine_transform* transform)
 
   result->status = TR_WAITING;
 
-  return result;
+  *t = result;
+  return TURBINE_SUCCESS;
 }
 
 static void
@@ -161,7 +177,9 @@ turbine_code
 turbine_rule_add(turbine_transform_id id,
                  turbine_transform* transform)
 {
-  tr* new_tr = tr_create(transform);
+  tr* new_tr;
+  turbine_code code = tr_create(transform, &new_tr);
+  turbine_check(code);
   new_tr->id = id;
   list_add(&trs_waiting, new_tr);
   return TURBINE_SUCCESS;
