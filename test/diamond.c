@@ -7,6 +7,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <ltable.h>
 
@@ -38,8 +39,6 @@ main()
     turbine_datum_id* output;
   } turbine_transform;
   */
-
-  struct ltable* tasks = ltable_create(8);
 
   turbine_transform_id tB = 2, tC = 3, tD = 4;
 
@@ -75,13 +74,14 @@ main()
   turbine_transform transformD;
   transformD.name = "D";
   transformD.executor = "cat A.txt B.txt > D.txt";
-  turbine_datum_id inputD[1];
+  turbine_datum_id inputD[2];
   turbine_datum_id outputD[1];
-  transformD.inputs  = 1;
+  transformD.inputs  = 2;
   transformD.outputs = 1;
   transformD.input  = inputD;
   transformD.output = outputD;
-  transformD.input[0]  = dA;
+  transformD.input[0]  = dB;
+  transformD.input[1]  = dC;
   transformD.output[0] = dD;
   turbine_rule_add(tD, &transformD);
 
@@ -91,12 +91,30 @@ main()
   assert(ready == 0);
 
   turbine_close(dA);
+  char executor[64];
   while (true)
   {
     turbine_ready(8, tr_id, &ready);
+    if (ready == 0)
+      break;
     for (int i = 0; i < ready; i++)
+    {
       printf("ready: %li\n", tr_id[i]);
+      turbine_code code = turbine_executor(tr_id[i], executor);
+      turbine_check_verbose(code);
+      printf("run: %s\n", executor);
+      int result = system(executor);
+      if (result)
+      {
+        printf("command failed with exit code: %i\n\t%s\n",
+               result, executor);
+        exit(result);
+      }
+      code = turbine_complete(tr_id[i]);
+      turbine_check_verbose(code);
+    }
   }
 
   turbine_finalize();
+  puts("OK");
 }
