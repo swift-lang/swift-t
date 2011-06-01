@@ -108,6 +108,7 @@ turbine_datum_file_create(turbine_datum_id id, char* path)
   result->type = TURBINE_TYPE_FILE;
   result->data.file.path = strdup(path);
   result->id = id;
+  result->status = TD_UNSET;
   turbine_code code = td_register(result);
   return code;
 }
@@ -128,9 +129,11 @@ tr_create(turbine_transform* transform)
       malloc(transform->outputs*sizeof(turbine_datum_id));
   assert(result->transform.output);
 
+  result->transform.inputs = transform->inputs;
   for (int i = 0; i < transform->inputs; i++)
     result->transform.input[i] = transform->input[i];
 
+  result->transform.outputs = transform->outputs;
   for (int i = 0; i < transform->outputs; i++)
     result->transform.output[i] = transform->output[i];
 
@@ -150,7 +153,8 @@ turbine_rule_add(turbine_transform_id id,
 }
 
 turbine_code
-turbine_ready(int count, turbine_transform_id* output)
+turbine_ready(int count, turbine_transform_id* output,
+              int* result)
 {
   int i = 0;
   void* v;
@@ -161,6 +165,7 @@ turbine_ready(int count, turbine_transform_id* output)
     list_add(&trs_running, t);
     output[i++] = t->id;
   }
+  *result = i;
   return TURBINE_SUCCESS;
 }
 
@@ -222,7 +227,17 @@ datum_id_cmp(void* datum, void* id)
 }
 
 turbine_code
-turbine_datum_complete(turbine_transform_id id)
+turbine_close(turbine_datum_id id)
+{
+  turbine_datum* td = ltable_search(&tds, id);
+  turbine_code code = td_close(td);
+  turbine_check(code);
+  notify_waiters();
+  return TURBINE_SUCCESS;
+}
+
+turbine_code
+turbine_complete(turbine_transform_id id)
 {
   struct list* result =
     list_pop_where(&trs_running, datum_id_cmp, &id);
@@ -231,12 +246,9 @@ turbine_datum_complete(turbine_transform_id id)
   tr* t = list_poll(result);
   for (int i = 0; i < t->transform.outputs; i++)
   {
-    turbine_datum* td = ltable_search(&tds, t->transform.output[i]);
-    turbine_code code = td_close(td);
+    turbine_code code = turbine_close(t->transform.output[i]);
     turbine_check(code);
   }
-
-  notify_waiters();
 
   return TURBINE_SUCCESS;
 }

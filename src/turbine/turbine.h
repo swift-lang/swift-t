@@ -48,9 +48,12 @@ turbine_code turbine_datum_file_create(turbine_datum_id id,
 turbine_code turbine_rule_add(turbine_transform_id id,
                               turbine_transform* transform);
 
-turbine_code turbine_ready(int count, turbine_transform_id* output);
+turbine_code turbine_ready(int count, turbine_transform_id* output,
+                           int *result);
 
-turbine_code turbine_complete(turbine_transform_id* id);
+turbine_code turbine_close(turbine_datum_id id);
+
+turbine_code turbine_complete(turbine_transform_id id);
 
 int turbine_code_tostring(char* output, turbine_code code);
 
