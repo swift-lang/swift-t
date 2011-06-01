@@ -1,5 +1,8 @@
-#                                               -*- Autoconf -*-
+
 # Process this file with autoconf to produce a configure script.
+
+# NOTE: Default CFLAGS are "-g -O2"
+# Use ./configure CFLAGS="-g ..." to changs the defaults
 
 AC_PREREQ([2.67])
 AC_INIT([FULL-PACKAGE-NAME], [VERSION], [BUG-REPORT-ADDRESS])
