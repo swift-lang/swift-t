@@ -40,13 +40,15 @@ typedef struct
 
 #define TURBINE_ID_NULL 0
 
-turbine_code turbine_init();
+turbine_code turbine_init(void);
 
 turbine_code turbine_datum_file_create(turbine_datum_id id,
                                        char* path);
 
 turbine_code turbine_rule_add(turbine_transform_id id,
                               turbine_transform* transform);
+
+turbine_code turbine_rules_flush(void);
 
 turbine_code turbine_ready(int count, turbine_transform_id* output,
                            int *result);
@@ -63,7 +65,7 @@ int turbine_code_tostring(char* output, turbine_code code);
 int turbine_data_tostring(char* output, int length,
                           turbine_datum_id id);
 
-void turbine_finalize();
+void turbine_finalize(void);
 
 // Internal API:
 #define turbine_check(code) if (code != TURBINE_SUCCESS) return code;

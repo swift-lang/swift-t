@@ -137,7 +137,7 @@ tr_create(turbine_transform* transform, tr** t)
   else
     result->transform.input = NULL;
 
-  if (transform->inputs > 0)
+  if (transform->outputs > 0)
   {
     result->transform.output =
         malloc(transform->outputs*sizeof(turbine_datum_id));
@@ -182,6 +182,15 @@ turbine_rule_add(turbine_transform_id id,
   turbine_check(code);
   new_tr->id = id;
   list_add(&trs_waiting, new_tr);
+  return TURBINE_SUCCESS;
+}
+
+static void notify_waiters();
+
+turbine_code
+turbine_rules_flush()
+{
+  notify_waiters();
   return TURBINE_SUCCESS;
 }
 
