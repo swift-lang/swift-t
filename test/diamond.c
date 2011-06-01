@@ -40,7 +40,19 @@ main()
   } turbine_transform;
   */
 
-  turbine_transform_id tB = 2, tC = 3, tD = 4;
+  turbine_transform_id tA = 1, tB = 2, tC = 3, tD = 4;
+
+  // Task A
+  turbine_transform transformA;
+  transformA.name = "A";
+  transformA.executor = "touch A.txt";
+  turbine_datum_id outputA[1];
+  transformA.inputs  = 0;
+  transformA.outputs = 1;
+  transformA.input  = NULL;
+  transformA.output = outputA;
+  transformA.output[0] = dA;
+  turbine_rule_add(tA, &transformA);
 
   // Task B
   turbine_transform transformB;
@@ -87,10 +99,9 @@ main()
 
   turbine_transform_id tr_id[8];
   int ready;
-  turbine_ready(8, tr_id, &ready);
-  assert(ready == 0);
 
-  turbine_close(dA);
+  turbine_rules_flush();
+
   char executor[64];
   while (true)
   {
