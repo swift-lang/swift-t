@@ -1,4 +1,5 @@
 
 TEST_SRC += test/data.c
+TEST_SRC += test/diamond.c
 TEST_SRC += test/readfile.c
 
