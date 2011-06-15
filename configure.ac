@@ -45,6 +45,26 @@ AC_ARG_WITH(woztools,
                  ])
 AC_SUBST(USE_WOZTOOLS)
 
+AC_ARG_WITH(adlb,
+                 AS_HELP_STRING(
+                 [--with-woztools],
+                 [location of ADLB]),
+                 [AC_CHECK_FILE(${withval}/libadlb.so,
+                  [], [USE_ADLB=0])
+                  if test "$USE_ADLB" = 0 ; then
+                     AC_MSG_ERROR(Could not find ADLB in $withval)
+                  fi
+                  AC_MSG_RESULT([using woztools in $withval ...])
+                  AC_DEFINE_UNQUOTED([ADLB_LOCATION],
+                                     "$withval", [ADLB Location])
+                  USE_ADLB=$withval
+                 ],
+                 [
+                  AC_MSG_ERROR([Not found: ADLB])
+                  USE_ADLB=0
+                 ])
+AC_SUBST(USE_ADLB)
+
 AC_CONFIG_FILES(
         src/turbine/module.mk
         src/tools/module.mk
