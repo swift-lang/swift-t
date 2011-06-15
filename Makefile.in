@@ -28,8 +28,20 @@ WOZTOOLS_LIB = $(WOZTOOLS)/lib/libwoztools.a
 
 CC = @CC@
 CFLAGS := @CFLAGS@
+
+# Set includes
 CFLAGS += -I $(srcdir)
 CFLAGS += -I $(WOZTOOLS)/src
+
+MPI = @USE_MPI@
+ifneq ($(MPI),0)
+	CFLAGS += -I $(MPI)/include
+endif
+ADLB = @USE_ADLB@
+ifneq ($(ADLB),0)
+	CFLAGS += -I $(ADLB)
+endif
+
 CFLAGS += -std=gnu99
 CFLAGS += -g
 CFLAGS += -Wall
