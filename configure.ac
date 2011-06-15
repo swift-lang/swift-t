@@ -85,6 +85,28 @@ AC_ARG_WITH(mpi,
                  ])
 AC_SUBST(USE_MPI)
 
+AC_ARG_WITH(tcl,
+                 AS_HELP_STRING(
+                 [--with-tcl],
+                 [location of TCL]),
+                 [AC_CHECK_FILE(${withval}/lib/tclConfig.sh,
+                  [], [USE_TCL=0])
+                  if test "$USE_TCL" = 0 ; then
+                     AC_MSG_ERROR(Could not find TCL in $withval)
+                  fi
+                  AC_MSG_RESULT([using TCL in $withval ...])
+                  AC_DEFINE_UNQUOTED([TCL_LOCATION],
+                                     "$withval", [TCL Location])
+                  USE_TCL=$withval
+                  source $USE_TCL/lib/tclConfig.sh
+                 ],
+                 [
+                  AC_MSG_ERROR([Not found: TCL])
+                  USE_TCL=0
+                 ])
+AC_SUBST(USE_TCL)
+AC_SUBST(TCL_INCLUDE_SPEC)
+
 
 AC_CONFIG_FILES(
         src/turbine/module.mk
