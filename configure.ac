@@ -65,6 +65,27 @@ AC_ARG_WITH(adlb,
                  ])
 AC_SUBST(USE_ADLB)
 
+AC_ARG_WITH(mpi,
+                 AS_HELP_STRING(
+                 [--with-mpi],
+                 [location of MPI]),
+                 [AC_CHECK_FILE(${withval}/lib/libmpich.so,
+                  [], [USE_MPI=0])
+                  if test "$USE_MPI" = 0 ; then
+                     AC_MSG_ERROR(Could not find MPI in $withval)
+                  fi
+                  AC_MSG_RESULT([using MPI in $withval ...])
+                  AC_DEFINE_UNQUOTED([MPI_LOCATION],
+                                     "$withval", [MPI Location])
+                  USE_MPI=$withval
+                 ],
+                 [
+                  AC_MSG_ERROR([Not found: MPI])
+                  USE_MPI=0
+                 ])
+AC_SUBST(USE_MPI)
+
+
 AC_CONFIG_FILES(
         src/turbine/module.mk
         src/tools/module.mk
