@@ -82,16 +82,20 @@ DEPS := $(TURBINE_DEPS) $(TEST_DEPS)
 
 deps: $(DEPS)
 
-%.d:%.c
+%.d: %.c
 	$(Q) "  DEP		$(@)"
 	$(E) CC="$(CC)" $(srcdir)/depend.sh \
              $(call dirname, $(*)) $(CFLAGS) $(<) > $(@)
+
+ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
+ -include $(DEPS)
+endif
 
 tags: TAGS
 
 TAGS: deps.txt
 	$(Q) "  TAGS "
-	$(E) etags $(ETAGS_FLAGS) `cat deps.txt`
+	$(E) etags `cat deps.txt`
 
 # Extract all files from *.d files, format and sort:
 # Formats to one file per line & extracts junk and extra files in *.d
@@ -102,10 +106,6 @@ deps.txt: $(DEPS)
                 sed 's/ //g;s/\\//g' | \
 	        grep -v '.*\.o\>\|.*\.po\>\|.*\.d\>' | \
 	        sort -u > $(@)
-
-ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
- -include $(DEPS)
-endif
 
 %.o:%.c
 	$(Q) "  CC		$(@)"

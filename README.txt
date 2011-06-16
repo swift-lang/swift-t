@@ -2,7 +2,8 @@
 This package may be built with Eclipse or with the
 autotools-based scripts.
 
-To use ADLB-TCL:
+To use ADLB-TCL, you must first compile/install TCL, ADLB, MPICH, and
+woztools.
 
 First, compile ADLB as a shared library:
 Add the following to the ADLB Makefile
@@ -12,6 +13,10 @@ libadlb.so: $(OBJS)
 
 Compile MPICH as a shared library
 configure --enable-shared
+
+Compile woztools as a shared library
+configure --enable-shared
+make woztools_so
 
 To build:
 

@@ -20,6 +20,8 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   Tcl_SetObjResult(interp, Tcl_NewIntObj(TURBINE_SUCCESS));
 
+  turbine_init();
+
   return TCL_OK;
 }
 
@@ -36,7 +38,7 @@ Turbine_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
    Called when Tcl loads this extension
  */
 int DLLEXPORT
-Turbinetcl_Init(Tcl_Interp *interp)
+Tclturbine_Init(Tcl_Interp *interp)
 {
   if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL) {
     return TCL_ERROR;
