@@ -14,4 +14,4 @@ $(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) lib
 	$(E) gcc -shared -o $(@) $(TCL_LINK_FLAGS) $(TCL_TURBINE_OBJS)
 
 clean::
-	@rm -v $(TCL_TURBINE_OBJS)
+	@rm -fv $(TCL_TURBINE_OBJS)
