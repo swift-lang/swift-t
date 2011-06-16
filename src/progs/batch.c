@@ -23,6 +23,14 @@ main(int argc, char* argv[])
   char* filename = argv[1];
 
   // Use reader to read input file
+  reader_init();
+  long reader_id = reader_read(file);
+  if (reader_id == -1)
+  {
+    char msg[1024];
+    sprintf(msg, "could not read: %s", file);
+    crash(msg);
+  }
 
   bool result = reader_init();
   assert(result);
@@ -35,7 +43,15 @@ main(int argc, char* argv[])
   }
 
   // Insert commands into turbine
+  while (true)
+  {
+    char* line = reader_next(reader_id);
+    if (!line)
+      break;
+    turbine_command(line);
+  }
 
+  // Set up turbine
   turbine_code code = turbine_init();
   if (code != TURBINE_SUCCESS)
     crash("could not initialize turbine!");
