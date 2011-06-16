@@ -22,4 +22,4 @@ $(TCL_ADLB_SO): $(TCL_ADLB_OBJS) lib
 		  -L $(MPI)/lib -l mpich -l mpl
 
 clean::
-	@rm -v $(TCL_ADLB_OBJS)
+	@rm -fv $(TCL_ADLB_OBJS)
