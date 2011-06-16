@@ -4,7 +4,7 @@ DIR := src/tcl/adlb
 ADLB := @USE_ADLB@
 MPI := @USE_MPI@
 
-TCL_ADLB_SRC := $(DIR)/adlb-tcl.c
+TCL_ADLB_SRC := $(DIR)/tcl-adlb.c
 
 TCL_ADLB_OBJS := $(patsubst %.c, %.o, $(TCL_ADLB_SRC))
 
