@@ -45,6 +45,8 @@ endif
 CFLAGS += -std=gnu99
 CFLAGS += -g
 CFLAGS += -Wall
+CFLAGS += @TCL_INCLUDE_SPEC@
+CFLAGS += -fPIC
 
 LDFLAGS += -L $(WOZTOOLS)/lib
 
@@ -58,6 +60,8 @@ DIR :=
 TURBINE_SRC :=
 include src/turbine/module.mk
 include src/tools/module.mk
+include src/tcl/module.mk
+include src/tcl/adlb/module.mk
 TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC))
 
 PROGS_SRC :=
@@ -105,7 +109,10 @@ $(PROGS) $(TESTS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) $(LIBS) -o $(@)
 
-clean:
+lib:
+	mkdir -p lib
+
+clean::
 	@rm -fv $(TURBINE) $(PROGS)
 	@rm -fv $(DEPS)
 	@rm -fv $(TESTS) $(TEST_OBJS)

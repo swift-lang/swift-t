@@ -60,7 +60,7 @@ AC_ARG_WITH(adlb,
                   USE_ADLB=$withval
                  ],
                  [
-                  AC_MSG_ERROR([Not found: ADLB])
+                  AC_MSG_WARN([Not found: ADLB])
                   USE_ADLB=0
                  ])
 AC_SUBST(USE_ADLB)
@@ -80,7 +80,7 @@ AC_ARG_WITH(mpi,
                   USE_MPI=$withval
                  ],
                  [
-                  AC_MSG_ERROR([Not found: MPI])
+                  AC_MSG_WARN([Not found: MPI])
                   USE_MPI=0
                  ])
 AC_SUBST(USE_MPI)
@@ -101,17 +101,19 @@ AC_ARG_WITH(tcl,
                   source $USE_TCL/lib/tclConfig.sh
                  ],
                  [
-                  AC_MSG_ERROR([Not found: TCL])
+                  AC_MSG_WARN([Not found: TCL])
                   USE_TCL=0
                  ])
 AC_SUBST(USE_TCL)
 AC_SUBST(TCL_INCLUDE_SPEC)
-
+AC_SUBST(TCL_LIB_SPEC)
 
 AC_CONFIG_FILES(
         src/turbine/module.mk
         src/tools/module.mk
         src/progs/module.mk
+        src/tcl/module.mk
+        src/tcl/adlb/module.mk
         test/module.mk
 	Makefile
 )
