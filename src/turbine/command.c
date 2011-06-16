@@ -4,8 +4,9 @@
 
 #include "src/turbine/command.h"
 
-// declare file <id> <name>
-// rule ( <output ids> ) <name> ( <input ids> ) executor
+#define check(condition) \
+  if (!(condition)) return TURBINE_ERROR_COMMAND;
+
 turbine_code turbine_command(char* cmd)
 {
   turbine_code result = TURBINE_SUCCESS;
@@ -17,16 +18,19 @@ turbine_code turbine_command(char* cmd)
       return TURBINE_ERROR_COMMAND;
 
   printf("op: %s\n", op);
-  if (strcmp(op, "declare") == 0)
+  if (strcmp(op, "data") == 0)
   {
-    puts("de");
+    char* sid = strtok_r(NULL, " ", &state);
+    check(sid);
+    turbine_datum_id id;
+    int count = sscanf(sid, "%li", &id);
+    check(count == 1);
+
     char* type = strtok_r(NULL, " ", &state);
-    if (!type)
-      return TURBINE_ERROR_COMMAND;
+    check(type);
     if (strcmp(type, "file") == 0)
     {
       puts("file");
-      turbine_datum_id id;
       char* sid = strtok_r(NULL, " ", &state);
       int count = sscanf(sid, "%li", &id);
       if (count != 1)
@@ -34,7 +38,8 @@ turbine_code turbine_command(char* cmd)
       printf("id: %li\n", id);
       char* name = strtok_r(NULL, " ", &state);
       puts("name");
-      result = turbine_datum_file_create(id, name);
+      turbine_datum_file_create(id, name);
+      printf("id: %li\n", id);
     }
     else
       return TURBINE_ERROR_COMMAND;
