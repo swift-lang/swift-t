@@ -62,6 +62,7 @@ include src/turbine/module.mk
 include src/tools/module.mk
 include src/tcl/module.mk
 include src/tcl/adlb/module.mk
+include src/tcl/turbine/module.mk
 TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC))
 
 PROGS_SRC :=

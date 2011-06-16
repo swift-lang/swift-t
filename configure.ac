@@ -114,6 +114,7 @@ AC_CONFIG_FILES(
         src/progs/module.mk
         src/tcl/module.mk
         src/tcl/adlb/module.mk
+        src/tcl/turbine/module.mk
         test/module.mk
 	Makefile
 )

@@ -1,0 +1,18 @@
+
+DIR := src/tcl/turbine
+
+TCL_TURBINE_SRC := $(DIR)/tcl-turbine.c
+
+TCL_TURBINE_OBJS := $(patsubst %.c, %.o, $(TCL_TURBINE_SRC))
+
+TCL_TURBINE_SO = lib/libtclturbine.so
+
+tcl_turbine: $(TCL_TURBINE_SO)
+
+$(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) lib
+	$(Q) "  LINK		$(@)"
+	$(E) gcc -shared -o $(@) $(TCL_LINK_FLAGS) \
+		  $(TCL_TURBINE_OBJS)
+
+clean::
+	@rm -v $(TCL_TURBINE_OBJS)
