@@ -20,10 +20,34 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   Tcl_SetObjResult(interp, Tcl_NewIntObj(TURBINE_SUCCESS));
 
-  turbine_init();
+  turbine_code code = turbine_init();
+  if (code != TURBINE_SUCCESS)
+  {
+    Tcl_AddErrorInfo(interp, " Could not initialize Turbine!\n");
+    return TCL_ERROR;
+  }
 
   return TCL_OK;
 }
+
+static int
+Turbine_File_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  if (objc != 3)
+  {
+    Tcl_WrongNumArgs(interp, objc, objv, NULL);
+    return TCL_ERROR;
+  }
+  int iid;
+  Tcl_GetIntFromObj(interp, objv[1], &iid);
+  char* filename = Tcl_GetStringFromObj(objv[2], NULL);
+  turbine_datum_id id = (turbine_datum_id) iid;
+  turbine_datum_file_create(id, filename);
+  //
+  return TCL_OK;
+}
+
 
 static int
 Turbine_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -48,6 +72,7 @@ Tclturbine_Init(Tcl_Interp *interp)
     return TCL_ERROR;
   }
   Tcl_CreateObjCommand(interp, "turbine_init", Turbine_Init_Cmd, NULL, NULL);
+  Tcl_CreateObjCommand(interp, "turbine_file", Turbine_File_Cmd, NULL, NULL);
   Tcl_CreateObjCommand(interp, "turbine_finalize", Turbine_Finalize_Cmd, NULL, NULL);
   return TCL_OK;
 }
