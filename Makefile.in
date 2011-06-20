@@ -58,12 +58,15 @@ dirname = $(patsubst %/,%,$(dir $(1)))
 DIR :=
 
 TURBINE_SRC :=
+TCL_TURBINE_SRC :=
 include src/turbine/module.mk
 include src/tools/module.mk
 include src/tcl/module.mk
 include src/tcl/adlb/module.mk
 include src/tcl/turbine/module.mk
 TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC))
+
+TCL_TURBINE_OBJS += $(patsubst %.c, %.o, $(TCL_TURBINE_SRC))
 
 PROGS_SRC :=
 include src/progs/module.mk
@@ -118,6 +121,16 @@ $(TURBINE): $(TURBINE_OBJS)
 	$(E) install -d lib
 	$(E) ar rcs $(@) $(TURBINE_OBJS)
 
+TCL_TURBINE_SO = lib/libtclturbine.so
+
+tcl_turbine: $(TCL_TURBINE_SO)
+
+$(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_CORE_OBJS) lib
+	$(Q) "  LINK		$(@)"
+	$(E) gcc -shared -fPIC -o $(@) $(TCL_LINK_FLAGS) \
+             $(TCL_TURBINE_OBJS) $(TURBINE_CORE_OBJS) \
+             -L $(WOZTOOLS)/lib -l woztools
+
 TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC))
 TEST_DEPS = $(patsubst %.c, %.d, $(TEST_SRC))
 TESTS     = $(patsubst %.c, %.x, $(TEST_SRC))
@@ -134,7 +147,8 @@ clean::
 	@rm -fv $(DEPS) deps.txt TAGS
 	@rm -fv $(TESTS) $(TEST_OBJS)
 	@rm -fv $(TURBINE_OBJS)
-	@rm -fv $(PARSER_INTERMEDIATES)
+#	@rm -fv $(PARSER_INTERMEDIATES)
+	@rm -fv $(TCL_TURBINE_OBJS)
 
 .PHONY: clean
 

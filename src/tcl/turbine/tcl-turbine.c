@@ -11,6 +11,7 @@
 
 #include "src/turbine/turbine.h"
 
+#include "src/tcl/util.h"
 #include "src/tcl/turbine/tcl-turbine.h"
 
 static int
@@ -46,6 +47,49 @@ Turbine_File_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
+Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(6);
+
+  turbine_transform_id id;
+  int inputs;
+  turbine_datum_id input[TCL_TURBINE_MAX_INPUTS];
+  int outputs;
+  turbine_datum_id output[TCL_TURBINE_MAX_INPUTS];
+
+  int code = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK(code);
+
+  char* name = Tcl_GetStringFromObj(objv[2], NULL);
+  assert(name);
+
+  turbine_tcl_long_array(interp, objv[3], TCL_TURBINE_MAX_INPUTS,
+                         input, &inputs);
+  turbine_tcl_long_array(interp, objv[4], TCL_TURBINE_MAX_OUTPUTS,
+                         output, &outputs);
+
+  char* executor = Tcl_GetStringFromObj(objv[5], NULL);
+  assert(executor);
+
+  turbine_transform transform =
+  {
+    .name = name,
+    .executor = executor,
+    .inputs = inputs,
+    .input = input,
+    .outputs = outputs,
+    .output = output
+  };
+
+  printf("name: %s inputs: %i outputs: %i\n", name, inputs, outputs);
+
+  turbine_rule_add(id, &transform);
+
+  return TCL_OK;
+}
+
+static int
 Turbine_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
@@ -68,6 +112,7 @@ Tclturbine_Init(Tcl_Interp *interp)
   }
   Tcl_CreateObjCommand(interp, "turbine_init", Turbine_Init_Cmd, NULL, NULL);
   Tcl_CreateObjCommand(interp, "turbine_file", Turbine_File_Cmd, NULL, NULL);
+  Tcl_CreateObjCommand(interp, "turbine_rule", Turbine_Rule_Cmd, NULL, NULL);
   Tcl_CreateObjCommand(interp, "turbine_finalize", Turbine_Finalize_Cmd, NULL, NULL);
   return TCL_OK;
 }
