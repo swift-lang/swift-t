@@ -90,12 +90,24 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
+Turbine_Push_Cmd(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  turbine_rules_push();
+  return TCL_OK;
+}
+
+static int
 Turbine_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
   turbine_finalize();
   return TCL_OK;
 }
+
+#define ADD_COMMAND(tcl_function, c_function) \
+  Tcl_CreateObjCommand(interp, tcl_function, c_function, NULL, NULL);
 
 /**
    Called when Tcl loads this extension
@@ -110,9 +122,10 @@ Tclturbine_Init(Tcl_Interp *interp)
   if (Tcl_PkgProvide(interp, "ADLB", "1.0") == TCL_ERROR) {
     return TCL_ERROR;
   }
-  Tcl_CreateObjCommand(interp, "turbine_init", Turbine_Init_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "turbine_file", Turbine_File_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "turbine_rule", Turbine_Rule_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "turbine_finalize", Turbine_Finalize_Cmd, NULL, NULL);
+  ADD_COMMAND("turbine_init",     Turbine_Init_Cmd);
+  ADD_COMMAND("turbine_file",     Turbine_File_Cmd);
+  ADD_COMMAND("turbine_rule",     Turbine_Rule_Cmd);
+  ADD_COMMAND("turbine_push",     Turbine_Push_Cmd);
+  ADD_COMMAND("turbine_finalize", Turbine_Finalize_Cmd);
   return TCL_OK;
 }

@@ -188,7 +188,7 @@ turbine_rule_add(turbine_transform_id id,
 static void notify_waiters();
 
 turbine_code
-turbine_rules_flush()
+turbine_rules_push()
 {
   notify_waiters();
   return TURBINE_SUCCESS;

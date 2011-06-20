@@ -11,6 +11,8 @@ turbine_file 4 D.txt
 
 turbine_rule 1 A { 0 } { 1 } { touch A.txt }
 
+turbine_push
+
 turbine_finalize
 
 puts OK

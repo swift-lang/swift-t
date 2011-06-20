@@ -100,7 +100,7 @@ main()
   turbine_transform_id tr_id[8];
   int ready;
 
-  turbine_rules_flush();
+  turbine_rules_push();
 
   char executor[64];
   while (true)
