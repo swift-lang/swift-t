@@ -53,7 +53,6 @@ static int
 Turbine_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
-  puts("Turbine finalizing...");
   turbine_finalize();
   return TCL_OK;
 }
