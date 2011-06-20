@@ -1,0 +1,9 @@
+
+# BASH-formatted setup script
+
+export TCL=@USE_TCL@
+export WOZTOOLS=@USE_WOZTOOLS@
+
+export TCLSH=${TCL}/bin/tclsh8*
+
+export LD_LIBRARY_PATH=${WOZTOOLS}/lib:${LD_LIBRARY_PATH}
