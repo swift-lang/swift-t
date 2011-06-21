@@ -141,6 +141,23 @@ Turbine_Executor_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
+Turbine_Complete_Cmd(ClientData cdata, Tcl_Interp *interp,
+                     int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  turbine_transform_id id;
+  int error = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK(error);
+
+  turbine_code code = turbine_complete(id);
+  TCL_CONDITION(code == TURBINE_SUCCESS,
+                "could not find transform id: %li", id);
+
+  return TCL_OK;
+}
+
+static int
 Turbine_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
@@ -170,6 +187,7 @@ Tclturbine_Init(Tcl_Interp *interp)
   ADD_COMMAND("turbine_push",     Turbine_Push_Cmd);
   ADD_COMMAND("turbine_ready",    Turbine_Ready_Cmd);
   ADD_COMMAND("turbine_executor", Turbine_Executor_Cmd);
+  ADD_COMMAND("turbine_complete", Turbine_Complete_Cmd);
   ADD_COMMAND("turbine_finalize", Turbine_Finalize_Cmd);
   return TCL_OK;
 }
