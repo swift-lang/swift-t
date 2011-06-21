@@ -1,6 +1,8 @@
 
 load lib/libtclturbine.so
 
+source tcl/turbine.tcl
+
 turbine_init
 
 turbine_file 0 /dev/null
@@ -14,22 +16,7 @@ turbine_rule 2 B { 1   } { 2 } { touch B.txt }
 turbine_rule 3 C { 1   } { 3 } { touch C.txt }
 turbine_rule 4 D { 2 3 } { 4 } { touch D.txt }
 
-while {true} {
-
-    turbine_push
-
-    set ready [ turbine_ready ]
-    if { ! [ string length $ready ] } break
-
-    foreach {transform} $ready {
-        set command [ turbine_executor $transform ]
-        puts "executing: $command"
-        if { [ catch { eval exec $command } ] } {
-            error "rule: $transform failed in command: $command"
-        }
-        turbine_complete $transform
-    }
-}
+turbine_engine
 
 turbine_finalize
 
