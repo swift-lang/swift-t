@@ -64,7 +64,7 @@ include src/tools/module.mk
 include src/tcl/module.mk
 include src/tcl/adlb/module.mk
 include src/tcl/turbine/module.mk
-TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC))
+TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC) $(TCL_TURBINE_SRC))
 
 TCL_TURBINE_OBJS += $(patsubst %.c, %.o, $(TCL_TURBINE_SRC))
 
