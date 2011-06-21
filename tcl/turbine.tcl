@@ -1,6 +1,8 @@
 
 # Turbine TCL library
 
+package provide turbine 0.1
+
 proc turbine_engine { } {
     while {true} {
 
