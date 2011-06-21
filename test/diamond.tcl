@@ -22,8 +22,8 @@ while {true} {
     if { ! [ string length $ready ] } break
 
     foreach {transform} $ready {
-        puts "transform: $transform"
         set command [ turbine_executor $transform ]
+        puts "executing: $command"
         if { [ catch { eval exec $command } ] } {
             error "rule: $transform failed in command: $command"
         }

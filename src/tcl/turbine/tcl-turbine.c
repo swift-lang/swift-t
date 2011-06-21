@@ -82,8 +82,6 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
     .output = output
   };
 
-  printf("name: %s inputs: %i outputs: %i\n", name, inputs, outputs);
-
   turbine_rule_add(id, &transform);
 
   return TCL_OK;
