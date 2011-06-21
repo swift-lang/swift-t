@@ -14,7 +14,13 @@ turbine_rule 1 A { } { 1 } { touch A.txt }
 turbine_push
 
 puts "Ready:"
-puts [ turbine_ready ]
+set ready [ turbine_ready ]
+
+foreach {transform} $ready {
+    puts "transform: $transform"
+    puts [ turbine_executor $transform ]
+}
+
 
 turbine_finalize
 
