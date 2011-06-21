@@ -175,8 +175,8 @@ Tclturbine_Init(Tcl_Interp *interp)
   if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL) {
     return TCL_ERROR;
   }
-  /* changed this to check for an error - GPS */
-  if (Tcl_PkgProvide(interp, "ADLB", "1.0") == TCL_ERROR) {
+
+  if (Tcl_PkgProvide(interp, "turbine", "0.1") == TCL_ERROR) {
     return TCL_ERROR;
   }
   ADD_COMMAND("turbine_init",     Turbine_Init_Cmd);

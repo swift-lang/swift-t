@@ -16,8 +16,7 @@ alias spacer='print >> ${OUTPUT}'
 
 # Header
 {
-  print "load lib/libtclturbine.so"
-  print "source tcl/turbine.tcl"
+  print "package require turbine 0.1"
   print "turbine_init"
 } > ${OUTPUT}
 

@@ -1,7 +1,9 @@
 
-load lib/libtclturbine.so
+# load lib/libtclturbine.so
 
-source tcl/turbine.tcl
+# source tcl/turbine.tcl
+
+package require turbine 0.1
 
 turbine_init
 
