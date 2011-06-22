@@ -27,7 +27,8 @@ typedef enum
 
 typedef enum
 {
-  TURBINE_TYPE_FILE
+  TURBINE_TYPE_FILE,
+  TURBINE_TYPE_CONTAINER
 } turbine_type;
 
 typedef struct
@@ -131,6 +132,20 @@ turbine_datum_file_create(turbine_datum_id id, char* path)
     return TURBINE_ERROR_OOM;
   result->type = TURBINE_TYPE_FILE;
   result->data.file.path = strdup(path);
+  result->id = id;
+  result->status = TD_UNSET;
+  lnlist_init(&result->listeners);
+  turbine_code code = td_register(result);
+  return code;
+}
+
+turbine_code
+turbine_datum_container_create(turbine_datum_id id)
+{
+  turbine_datum* result = malloc(sizeof(turbine_datum));
+  if (!result)
+    return TURBINE_ERROR_OOM;
+  result->type = TURBINE_TYPE_CONTAINER;
   result->id = id;
   result->status = TD_UNSET;
   lnlist_init(&result->listeners);
@@ -456,6 +471,10 @@ static int td_tostring(char* output, int length, turbine_datum* td)
     case TURBINE_TYPE_FILE:
       result = snprintf(output, length, "file:/%s",
                         td->data.file.path);
+      break;
+    case TURBINE_TYPE_CONTAINER:
+      result = snprintf(output, length, "container");
+      break;
   }
   return result;
 }

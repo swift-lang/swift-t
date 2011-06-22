@@ -45,6 +45,8 @@ turbine_code turbine_init(void);
 turbine_code turbine_datum_file_create(turbine_datum_id id,
                                        char* path);
 
+turbine_code turbine_datum_container_create(turbine_datum_id id);
+
 turbine_code turbine_filename(turbine_datum_id id,
                               char* output);
 
