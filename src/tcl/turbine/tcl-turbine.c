@@ -38,10 +38,10 @@ Turbine_File_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(3);
-  int iid;
-  Tcl_GetIntFromObj(interp, objv[1], &iid);
+  long lid;
+  Tcl_GetLongFromObj(interp, objv[1], &lid);
   char* filename = Tcl_GetStringFromObj(objv[2], NULL);
-  turbine_datum_id id = (turbine_datum_id) iid;
+  turbine_datum_id id = (turbine_datum_id) lid;
   turbine_datum_file_create(id, filename);
   return TCL_OK;
 }
