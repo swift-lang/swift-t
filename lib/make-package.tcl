@@ -1,5 +1,4 @@
 
 # Generate the turbine TCL package
 
-puts [ pwd ]
-pkg_mkIndex ./tcl ./lib
+puts [ ::pkg::create -name turbine -version 0.1 -load libtclturbine.so -source turbine.tcl ]

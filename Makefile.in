@@ -145,7 +145,7 @@ $(PROGS) $(TESTS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
 
 $(PACKAGE): $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
 	$(Q) "  TCL		$(@)"
-	$(E) tclsh lib/make-package.tcl
+	$(E) tclsh lib/make-package.tcl > lib/pkgIndex.tcl
 
 clean::
 	@rm -fv $(TURBINE) $(PROGS)
