@@ -163,13 +163,12 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
 int DLLEXPORT
 Adlbtcl_Init(Tcl_Interp *interp)
 {
-  if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL) {
+  if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
     return TCL_ERROR;
-  }
-  /* changed this to check for an error - GPS */
-  if (Tcl_PkgProvide(interp, "ADLB", "1.0") == TCL_ERROR) {
+
+  if (Tcl_PkgProvide(interp, "ADLB", "0.1") == TCL_ERROR)
     return TCL_ERROR;
-  }
+
   Tcl_CreateObjCommand(interp, "adlb_init", ADLB_Init_Cmd, NULL, NULL);
   Tcl_CreateObjCommand(interp, "adlb_rank", ADLB_Rank_Cmd, NULL, NULL);
   Tcl_CreateObjCommand(interp, "adlb_amserver", ADLB_AmServer_Cmd, NULL, NULL);
