@@ -4,9 +4,10 @@
 package provide turbine 0.1
 
 proc turbine_engine { } {
-    while {true} {
 
-        turbine_push
+    turbine_push
+
+    while {true} {
 
         set ready [ turbine_ready ]
         if { ! [ string length $ready ] } break
