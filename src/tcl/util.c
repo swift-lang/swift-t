@@ -41,5 +41,6 @@ void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
   p += vsprintf(p, format, va);
   p += sprintf(p, "\n");
   va_end(va);
+  printf("error: %s\n", buffer);
   Tcl_AddErrorInfo(interp, buffer);
 }
