@@ -127,6 +127,16 @@ turbine_datum_file_create(turbine_datum_id id, char* path)
   return code;
 }
 
+turbine_code
+turbine_filename(turbine_datum_id id, char* output)
+{
+  turbine_datum* td = ltable_search(&tds, id);
+  if (td == NULL)
+    return TURBINE_ERROR_NOT_FOUND;
+  strcpy(output, td->data.file.path);
+  return TURBINE_SUCCESS;
+}
+
 static turbine_code
 tr_create(turbine_transform* transform, tr** t)
 {
