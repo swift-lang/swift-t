@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 
 #include <list.h>
@@ -78,6 +79,16 @@ struct ltable trs_running;
 */
 struct ltable tds;
 
+#define TURBINE_DEBUG(format, args...) turbine_debug(format, ## args)
+static void turbine_debug(char* format, ...)
+{
+  va_list va;
+  va_start(va,format);
+  vprintf(format, va);
+  printf("\n");
+  va_end(va);
+}
+
 turbine_code
 turbine_init()
 {
@@ -133,6 +144,7 @@ turbine_filename(turbine_datum_id id, char* output)
   turbine_datum* td = ltable_search(&tds, id);
   if (td == NULL)
     return TURBINE_ERROR_NOT_FOUND;
+
   strcpy(output, td->data.file.path);
   return TURBINE_SUCCESS;
 }
@@ -194,6 +206,8 @@ tr_free(tr* t)
   free(t);
 }
 
+static bool is_ready(tr* t);
+
 static void subscribe(turbine_transform* transform,
                       turbine_transform_id id);
 
@@ -203,10 +217,18 @@ turbine_rule_add(turbine_transform_id id,
 {
   tr* new_tr;
   turbine_code code = tr_create(transform, &new_tr);
+  turbine_debug("turbine_rule_add: %li", id);
   turbine_check(code);
   new_tr->id = id;
-  ltable_add(&trs_waiting, id, new_tr);
-  subscribe(transform, id);
+  if (is_ready(new_tr))
+  {
+    list_add(&trs_ready, new_tr);
+  }
+  else
+  {
+    ltable_add(&trs_waiting, id, new_tr);
+    subscribe(transform, id);
+  }
   return TURBINE_SUCCESS;
 }
 
@@ -237,8 +259,6 @@ turbine_new(turbine_datum_id* id)
   unique++;
   return TURBINE_SUCCESS;
 }
-
-static bool is_ready(tr* t);
 
 /**
    Push transforms that are ready into trs_ready
@@ -275,12 +295,14 @@ turbine_ready(int count, turbine_transform_id* output,
 {
   int i = 0;
   void* v;
+  turbine_debug("turbine_ready:");
   while (i < count &&
          (v = list_poll(&trs_ready)))
   {
     tr* t = (tr*) v;
     ltable_add(&trs_running, t->id, t);
     output[i++] = t->id;
+    turbine_debug("\t %li\n", t->id);
   }
   *result = i;
   return TURBINE_SUCCESS;
@@ -289,8 +311,6 @@ turbine_ready(int count, turbine_transform_id* output,
 static turbine_code
 td_close(turbine_datum* datum)
 {
-  if (datum->status == TD_SET)
-    return TURBINE_ERROR_DOUBLE_WRITE;
   datum->status = TD_SET;
   return TURBINE_SUCCESS;
 }
@@ -356,6 +376,7 @@ id_cmp(void* id1, void* id2)
 turbine_code
 turbine_close(turbine_datum_id id)
 {
+  TURBINE_DEBUG("turbine_close: %li", id);
   turbine_datum* td = ltable_search(&tds, id);
   assert(td);
   turbine_code code = td_close(td);
@@ -378,6 +399,7 @@ turbine_executor(turbine_transform_id id, char* executor)
 turbine_code
 turbine_complete(turbine_transform_id id)
 {
+  TURBINE_DEBUG("turbine_complete: %li", id);
   tr* t = ltable_remove(&trs_running, id);
   assert(t);
   for (int i = 0; i < t->transform.outputs; i++)

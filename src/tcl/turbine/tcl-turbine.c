@@ -57,7 +57,7 @@ Turbine_Filename_Cmd(ClientData cdata, Tcl_Interp *interp,
   turbine_datum_id id = (turbine_datum_id) lid;
   char filename[TCL_TURBINE_MAX_FILENAME];
   turbine_code code = turbine_filename(id, filename);
-  TCL_CONDITION(code != TURBINE_SUCCESS,
+  TCL_CONDITION(code == TURBINE_SUCCESS,
                 "could not get filename for datum: %li", lid);
 
   Tcl_Obj* result = Tcl_NewStringObj(filename, -1);
@@ -186,7 +186,7 @@ Turbine_Complete_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   turbine_code code = turbine_complete(id);
   TCL_CONDITION(code == TURBINE_SUCCESS,
-                "could not find transform id: %li", id);
+                "could not complete transform id: %li", id);
 
   return TCL_OK;
 }
