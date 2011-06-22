@@ -47,6 +47,22 @@ Turbine_File_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
+Turbine_New_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  long id;
+
+  turbine_code code = turbine_new(&id);
+  assert(code == TURBINE_SUCCESS);
+
+  Tcl_Obj* result = Tcl_NewLongObj(id);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+
+static int
 Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
 {
@@ -182,6 +198,7 @@ Tclturbine_Init(Tcl_Interp *interp)
   ADD_COMMAND("turbine_init",     Turbine_Init_Cmd);
   ADD_COMMAND("turbine_file",     Turbine_File_Cmd);
   ADD_COMMAND("turbine_rule",     Turbine_Rule_Cmd);
+  ADD_COMMAND("turbine_new",      Turbine_New_Cmd);
   ADD_COMMAND("turbine_push",     Turbine_Push_Cmd);
   ADD_COMMAND("turbine_ready",    Turbine_Ready_Cmd);
   ADD_COMMAND("turbine_executor", Turbine_Executor_Cmd);
