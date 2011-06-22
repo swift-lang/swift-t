@@ -302,7 +302,7 @@ turbine_ready(int count, turbine_transform_id* output,
     tr* t = (tr*) v;
     ltable_add(&trs_running, t->id, t);
     output[i++] = t->id;
-    turbine_debug("\t %li\n", t->id);
+    turbine_debug("\t %li", t->id);
   }
   *result = i;
   return TURBINE_SUCCESS;
