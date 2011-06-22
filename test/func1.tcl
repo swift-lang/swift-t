@@ -7,7 +7,8 @@ proc f { inputs outputs } {
     turbine_file $tmp $tmpfile
     set data1 [ lindex $inputs 0 ]
     set filename1 [ turbine_filename $data1 ]
-    set filename2 [ turbine_filename [ lindex $outputs 0 ] ]
+    set data2 [ lindex $outputs 0 ]
+    set filename2 [ turbine_filename $data2 ]
     set rule1 [ turbine_new ]
     turbine_rule $rule1 "f" $inputs $tmp  "cp $filename1 $tmpfile"
     set rule2 [ turbine_new ]
