@@ -7,6 +7,4 @@ source ${TURBINE}/scripts/turbine-config.sh
 
 export TCLLIBPATH=${TURBINE}/lib
 
-which tclsh
-
 tclsh ${*}
