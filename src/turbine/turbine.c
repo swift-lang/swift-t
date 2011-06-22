@@ -212,6 +212,22 @@ subscribe(turbine_transform* transform, turbine_transform_id id)
   }
 }
 
+static turbine_datum_id unique = 0;
+
+turbine_code
+turbine_new(turbine_datum_id* id)
+{
+  while (true)
+  {
+    if (! ltable_contains(&tds, unique))
+      break;
+    unique++;
+  }
+  *id = unique;
+  unique++;
+  return TURBINE_SUCCESS;
+}
+
 static bool is_ready(tr* t);
 
 /**
