@@ -47,6 +47,26 @@ Turbine_File_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
+Turbine_Filename_Cmd(ClientData cdata, Tcl_Interp *interp,
+                     int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  long lid;
+  Tcl_GetLongFromObj(interp, objv[1], &lid);
+  turbine_datum_id id = (turbine_datum_id) lid;
+  char filename[TCL_TURBINE_MAX_FILENAME];
+  turbine_code code = turbine_filename(id, filename);
+  TCL_CONDITION(code != TURBINE_SUCCESS,
+                "could not get filename for datum: %li", lid);
+
+  Tcl_Obj* result = Tcl_NewStringObj(filename, -1);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+
+static int
 Turbine_New_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
@@ -197,6 +217,7 @@ Tclturbine_Init(Tcl_Interp *interp)
   }
   ADD_COMMAND("turbine_init",     Turbine_Init_Cmd);
   ADD_COMMAND("turbine_file",     Turbine_File_Cmd);
+  ADD_COMMAND("turbine_filename", Turbine_Filename_Cmd);
   ADD_COMMAND("turbine_rule",     Turbine_Rule_Cmd);
   ADD_COMMAND("turbine_new",      Turbine_New_Cmd);
   ADD_COMMAND("turbine_push",     Turbine_Push_Cmd);
