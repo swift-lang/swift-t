@@ -129,7 +129,7 @@ TCL_TURBINE_SO = lib/libtclturbine.so
 
 tcl_turbine: $(TCL_TURBINE_SO)
 
-$(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_CORE_OBJS) lib
+$(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_CORE_OBJS)
 	$(Q) "  LINK		$(@)"
 	$(E) gcc -shared -fPIC -o $(@) $(TCL_LINK_FLAGS) \
              $(TCL_TURBINE_OBJS) $(TURBINE_CORE_OBJS) \
@@ -142,9 +142,6 @@ TESTS     = $(patsubst %.c, %.x, $(TEST_SRC))
 $(PROGS) $(TESTS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) $(LIBS) -o $(@)
-
-lib:
-	mkdir -p lib
 
 $(PACKAGE): $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
 	$(Q) "  TCL		$(@)"
