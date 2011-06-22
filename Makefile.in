@@ -1,9 +1,13 @@
 
 TURBINE = lib/libturbine.a
 
+PACKAGE = lib/pkgIndex.tcl
+
 all: $(TURBINE)
 
 turbine: $(TURBINE)
+
+package: $(PACKAGE)
 
 srcdir = @srcdir@
 
@@ -141,6 +145,10 @@ $(PROGS) $(TESTS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
 
 lib:
 	mkdir -p lib
+
+$(PACKAGE): $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
+	$(Q) "  TCL		$(@)"
+	$(E) tclsh lib/make-package.tcl
 
 clean::
 	@rm -fv $(TURBINE) $(PROGS)
