@@ -42,6 +42,10 @@ typedef struct
     {
       char* path;
     } file;
+    struct
+    {
+
+    } container;
   } data;
   struct lnlist listeners;
 } turbine_datum;
@@ -79,6 +83,12 @@ struct ltable trs_running;
    Map from turbine_datum_id to turbine_datum
 */
 struct ltable tds;
+
+/**
+   Stores turbine container variable translations
+   Map from internally-formatted string to turbine_id
+*/
+struct hashtable container;
 
 #define TURBINE_DEBUG(format, args...) turbine_debug(format, ## args)
 static void turbine_debug(char* format, ...)
@@ -164,6 +174,24 @@ turbine_filename(turbine_datum_id id, char* output)
   return TURBINE_SUCCESS;
 }
 
+static turbine_code
+make_lookup_string(turbine_datum_id id, turbine_entry* entry,
+                   char* output)
+{
+  char *p = output;
+  p += sprintf(p, "%li", id);
+  char* type;
+  if (entry->type == TURBINE_ENTRY_KEY)
+    type = "key:";
+  else if (entry->type == TURBINE_ENTRY_FIELD)
+    type = "field:";
+  else
+    return TURBINE_ERROR_INVALID;
+  p += sprintf(p, "%s", type);
+  p += sprintf(p, "%s", entry->name);
+  return TURBINE_SUCCESS;
+}
+
 turbine_code
 turbine_lookup(turbine_datum_id id, turbine_entry* entry,
                turbine_datum_id* result)
@@ -171,10 +199,14 @@ turbine_lookup(turbine_datum_id id, turbine_entry* entry,
   if (!ltable_contains(&tds, id))
     return TURBINE_ERROR_NOT_FOUND;
   char tmp[TURBINE_MAX_ENTRY+24];
-  char *p = &tmp[0];
-  p += sprintf(p, "%li", id);
-  p += sprintf(p, "%s", entry->name);
+  turbine_code code = make_lookup_string(id, entry, tmp);
+  turbine_check(code);
 
+  void* data = hashtable_search(&container, tmp);
+  if (!result)
+    return TURBINE_ERROR_NOT_FOUND;
+
+  *result = *data;
   return TURBINE_SUCCESS;
 }
 

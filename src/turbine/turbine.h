@@ -21,6 +21,8 @@ typedef enum
   TURBINE_ERROR_NOT_FOUND,
   /** Bad string command given to the interpreter */
   TURBINE_ERROR_COMMAND,
+  /** Invalid input */
+  TURBINE_ERROR_INVALID,
   /** Unknown error */
   TURBINE_ERROR_UNKNOWN
 } turbine_code;
@@ -50,7 +52,7 @@ typedef struct
 {
   turbine_entry_type type;
   char name[TURBINE_MAX_ENTRY];
-}
+} turbine_entry;
 
 #define TURBINE_ID_NULL 0
 
