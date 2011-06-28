@@ -1,9 +1,11 @@
 
-# BASH-formatted setup script
+# BASH-formatted setup script processed by turbine/configure
 
 export TCL=@USE_TCL@
 export WOZTOOLS=@USE_WOZTOOLS@
 
 export TCLSH=${TCL}/bin/tclsh8*
 
+export LD_LIBRARY_PATH=${TCL}/lib:${LD_LIBRARY_PATH}
 export LD_LIBRARY_PATH=${WOZTOOLS}/lib:${LD_LIBRARY_PATH}
+
