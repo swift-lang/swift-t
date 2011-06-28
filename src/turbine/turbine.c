@@ -11,6 +11,7 @@
 #include <stdarg.h>
 #include <string.h>
 
+#include <hashtable.h>
 #include <list.h>
 #include <lnlist.h>
 #include <ltable.h>
@@ -206,7 +207,7 @@ turbine_lookup(turbine_datum_id id, turbine_entry* entry,
   if (!result)
     return TURBINE_ERROR_NOT_FOUND;
 
-  *result = *data;
+  *result = *(turbine_datum_id*) data;
   return TURBINE_SUCCESS;
 }
 
