@@ -8,6 +8,12 @@ package require turbine 0.1
 # B.p = cp(A);
 # B.q = cp(A);
 
+proc f { src dest } {
+    set file1 [ turbine_filename $src ]
+    set file2 [ turbine_filename $dest ]
+    puts "cp $file1 -> $file2"
+}
+
 proc rules { } {
     turbine_file 0 /dev/null
     turbine_file 1 A.txt
@@ -18,7 +24,8 @@ proc rules { } {
     turbine_file $v2 B.q.txt
 
     turbine_rule 1 A  {   } { 1 } { touch A.txt }
-    turbine_rule 2 F1 { 1 } { 2 } { tp: f { 1 } { 2 } }
+    turbine_rule 2 F1 { 1 } { $v1 } { tp: f 1 $v1 }
+    turbine_rule 3 F2 { 1 } { $v2 } { tp: f 1 $v2 }
 }
 
 turbine_init
