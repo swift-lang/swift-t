@@ -38,6 +38,20 @@ typedef struct
   turbine_datum_id* output;
 } turbine_transform;
 
+typedef enum
+{
+  TURBINE_ENTRY_KEY,
+  TURBINE_ENTRY_FIELD
+} turbine_entry_type;
+
+#define TURBINE_MAX_ENTRY 256
+
+typedef struct
+{
+  turbine_entry_type type;
+  char name[TURBINE_MAX_ENTRY];
+}
+
 #define TURBINE_ID_NULL 0
 
 turbine_code turbine_init(void);
@@ -49,6 +63,10 @@ turbine_code turbine_datum_container_create(turbine_datum_id id);
 
 turbine_code turbine_filename(turbine_datum_id id,
                               char* output);
+
+turbine_code turbine_lookup(turbine_datum_id id,
+                            turbine_entry* entry,
+                            turbine_datum_id* result);
 
 turbine_code turbine_rule_add(turbine_transform_id id,
                               turbine_transform* transform);

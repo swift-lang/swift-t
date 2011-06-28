@@ -164,6 +164,20 @@ turbine_filename(turbine_datum_id id, char* output)
   return TURBINE_SUCCESS;
 }
 
+turbine_code
+turbine_lookup(turbine_datum_id id, turbine_entry* entry,
+               turbine_datum_id* result)
+{
+  if (!ltable_contains(&tds, id))
+    return TURBINE_ERROR_NOT_FOUND;
+  char tmp[TURBINE_MAX_ENTRY+24];
+  char *p = &tmp[0];
+  p += sprintf(p, "%li", id);
+  p += sprintf(p, "%s", entry->name);
+
+  return TURBINE_SUCCESS;
+}
+
 static turbine_code
 tr_create(turbine_transform* transform, tr** t)
 {
