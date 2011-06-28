@@ -7,4 +7,5 @@ source ${TURBINE}/scripts/turbine-config.sh
 
 export TCLLIBPATH=${TURBINE}/lib
 
-${TCLSH} ${*}
+# Allow user to insert valgrind
+${VALGRIND} ${TCLSH} ${*}
