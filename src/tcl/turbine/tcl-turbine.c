@@ -6,6 +6,7 @@
  * */
 
 #include <assert.h>
+#include <string.h>
 
 #include <tcl.h>
 
@@ -47,6 +48,23 @@ Turbine_File_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
+Turbine_Container_Cmd(ClientData cdata, Tcl_Interp *interp,
+                      int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2)
+
+  long lid;
+  Tcl_GetLongFromObj(interp, objv[1], &lid);
+  turbine_datum_id id = (turbine_datum_id) lid;
+
+  turbine_code code = turbine_datum_container_create(id);
+  TCL_CONDITION(code == TURBINE_SUCCESS,
+                "could not create container: %li", lid);
+
+  return TCL_OK;
+}
+
+static int
 Turbine_Filename_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
@@ -65,6 +83,38 @@ Turbine_Filename_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int
+Turbine_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(4);
+
+  int error;
+  long lid;
+  error = Tcl_GetLongFromObj(interp, objv[1], &lid);
+  TCL_CHECK(error);
+  char* type = Tcl_GetString(objv[2]);
+  char* subscript = Tcl_GetString(objv[3]);
+
+  turbine_datum_id member;
+  turbine_datum_id id = (turbine_datum_id) lid;
+  turbine_entry entry;
+  if (strcmp(type, "field"))
+    entry.type = TURBINE_ENTRY_FIELD;
+  else if (strcmp(type, "key"))
+    entry.type = TURBINE_ENTRY_KEY;
+  else
+    TCL_RETURN_ERROR("unknown turbine entry type: %s", type);
+
+  strcpy(entry.name, type);
+  turbine_code code = turbine_lookup(id, &entry, &member);
+  TCL_CONDITION(code == TURBINE_SUCCESS,
+                "could not lookup: %li:%s[%s]", lid, type, subscript);
+
+  Tcl_Obj* result = Tcl_NewLongObj(member);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
 
 static int
 Turbine_New_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -215,15 +265,17 @@ Tclturbine_Init(Tcl_Interp *interp)
   if (Tcl_PkgProvide(interp, "turbine", "0.1") == TCL_ERROR) {
     return TCL_ERROR;
   }
-  ADD_COMMAND("turbine_init",     Turbine_Init_Cmd);
-  ADD_COMMAND("turbine_file",     Turbine_File_Cmd);
-  ADD_COMMAND("turbine_filename", Turbine_Filename_Cmd);
-  ADD_COMMAND("turbine_rule",     Turbine_Rule_Cmd);
-  ADD_COMMAND("turbine_new",      Turbine_New_Cmd);
-  ADD_COMMAND("turbine_push",     Turbine_Push_Cmd);
-  ADD_COMMAND("turbine_ready",    Turbine_Ready_Cmd);
-  ADD_COMMAND("turbine_executor", Turbine_Executor_Cmd);
-  ADD_COMMAND("turbine_complete", Turbine_Complete_Cmd);
-  ADD_COMMAND("turbine_finalize", Turbine_Finalize_Cmd);
+  ADD_COMMAND("turbine_init",      Turbine_Init_Cmd);
+  ADD_COMMAND("turbine_file",      Turbine_File_Cmd);
+  ADD_COMMAND("turbine_container", Turbine_Container_Cmd);
+  ADD_COMMAND("turbine_lookup",    Turbine_Lookup_Cmd);
+  ADD_COMMAND("turbine_filename",  Turbine_Filename_Cmd);
+  ADD_COMMAND("turbine_rule",      Turbine_Rule_Cmd);
+  ADD_COMMAND("turbine_new",       Turbine_New_Cmd);
+  ADD_COMMAND("turbine_push",      Turbine_Push_Cmd);
+  ADD_COMMAND("turbine_ready",     Turbine_Ready_Cmd);
+  ADD_COMMAND("turbine_executor",  Turbine_Executor_Cmd);
+  ADD_COMMAND("turbine_complete",  Turbine_Complete_Cmd);
+  ADD_COMMAND("turbine_finalize",  Turbine_Finalize_Cmd);
   return TCL_OK;
 }

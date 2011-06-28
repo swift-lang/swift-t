@@ -32,4 +32,7 @@ void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
     return TCL_ERROR;                                         \
   }                                                           \
 
+#define TCL_RETURN_ERROR(format, args...)        \
+  tcl_condition_failed(interp, objv[0], format, ## args);
+
 #endif
