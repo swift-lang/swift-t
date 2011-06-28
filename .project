@@ -3,6 +3,7 @@
 	<name>turbine</name>
 	<comment></comment>
 	<projects>
+		<project>woztools</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
