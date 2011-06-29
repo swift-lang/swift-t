@@ -15,6 +15,9 @@
 
 #include "src/tools/reader.h"
 
+/**
+   Map from entry ids to entries
+*/
 static struct ltable table;
 
 static int unique = 0;
