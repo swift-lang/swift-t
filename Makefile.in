@@ -3,7 +3,7 @@ TURBINE = lib/libturbine.a
 
 PACKAGE = lib/pkgIndex.tcl
 
-all: $(TURBINE)
+all: package
 
 turbine: $(TURBINE)
 
