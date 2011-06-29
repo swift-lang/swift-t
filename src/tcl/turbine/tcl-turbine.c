@@ -2,10 +2,12 @@
 /**
  * TCL extension for Turbine
  *
+ * @file tcl-turbine.c
  * @author wozniak
  * */
 
 #include <assert.h>
+#include <stdarg.h>
 #include <string.h>
 
 #include <tcl.h>
@@ -15,14 +17,36 @@
 #include "src/tcl/util.h"
 #include "src/tcl/turbine/tcl-turbine.h"
 
-#define TURBINE_CONDITION(code, format, args...)                \
+/**
+   @see TURBINE_CHECK
+*/
+static void
+turbine_check_failed(Tcl_Interp* interp, turbine_code code,
+                     char* format, ...)
+{
+    char tmp[1024];
+    char* p = &tmp[0];
+    va_list ap;
+    va_start(ap, format);
+    p += vsprintf(tmp, format, ap);
+    va_end(ap);
+    p += sprintf(p, "\n%s", "turbine error: ");
+    turbine_code_tostring(p, code);
+    Tcl_SetObjResult(interp, Tcl_NewStringObj(tmp, -1));
+}
+
+/**
+   If code is not SUCCESS, return a TCL error that includes the
+   string representation of code
+   @note Assumes @code Tcl_Interp* interp @endcode is in scope
+   @param code A turbine_code
+   @param format A printf-style format string for a error message
+   @param args A printf-style vargs list
+*/
+#define TURBINE_CHECK(code, format, args...)                    \
   if (code != TURBINE_SUCCESS) {                                \
-    char tc_tmp[1024];                                          \
-    char* tc_p = &tc_tmp[0];                                    \
-    tc_p += vsprintf(tc_tmp, format, ## args);                  \
-    tc_p += sprintf(tc_p, "\n\t turbine error: ");              \
-    turbine_code_tostring(tc_p, code);                          \
-    Tcl_SetObjResult(interp, TclNewStringObj(tc_tmp, -1));      \
+    turbine_check_failed(interp, code, format, ## args);        \
+    return TCL_ERROR;                                           \
   }
 
 static int
@@ -123,9 +147,7 @@ Turbine_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   SET_ENTRY(entry, type, subscript);
 
   turbine_code code = turbine_insert(container_id, &entry, entry_id);
-
-  TCL_CONDITION(code == TURBINE_SUCCESS,
-                "could not insert: %li:%s[%s]",
+  TURBINE_CHECK(code, "could not insert: %li:%s[%s]",
                 container_id, type, subscript);
   return TCL_OK;
 }
@@ -185,16 +207,24 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
   int outputs;
   turbine_datum_id output[TCL_TURBINE_MAX_INPUTS];
 
-  int code = Tcl_GetLongFromObj(interp, objv[1], &id);
+  int code;
+  code = Tcl_GetLongFromObj(interp, objv[1], &id);
   TCL_CHECK(code);
 
   char* name = Tcl_GetStringFromObj(objv[2], NULL);
   assert(name);
 
-  turbine_tcl_long_array(interp, objv[3], TCL_TURBINE_MAX_INPUTS,
-                         input, &inputs);
-  turbine_tcl_long_array(interp, objv[4], TCL_TURBINE_MAX_OUTPUTS,
-                         output, &outputs);
+  code = turbine_tcl_long_array(interp, objv[3],
+                                TCL_TURBINE_MAX_INPUTS,
+                                input, &inputs);
+  TURBINE_CHECK(code, "could not parse list as long integers: {%s}",
+                Tcl_GetString(objv[3]));
+
+  code = turbine_tcl_long_array(interp, objv[4],
+                                TCL_TURBINE_MAX_OUTPUTS,
+                                output, &outputs);
+  TURBINE_CHECK(code, "could not parse list as long integers: {%s}",
+                Tcl_GetString(objv[4]));
 
   char* executor = Tcl_GetStringFromObj(objv[5], NULL);
   assert(executor);

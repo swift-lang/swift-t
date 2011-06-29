@@ -531,8 +531,8 @@ turbine_code_tostring(char* output, turbine_code code)
     case TURBINE_ERROR_NOT_FOUND:
       result = sprintf(output, "TURBINE_ERROR_NOT_FOUND");
       break;
-    case TURBINE_ERROR_COMMAND:
-      result = sprintf(output, "TURBINE_ERROR_COMMAND");
+    case TURBINE_ERROR_NUMBER_FORMAT:
+      result = sprintf(output, "TURBINE_ERROR_NUMBER_FORMAT");
       break;
     case TURBINE_ERROR_UNKNOWN:
       result = sprintf(output, "TURBINE_ERROR_UNKNOWN");

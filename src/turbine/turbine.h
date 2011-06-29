@@ -19,8 +19,8 @@ typedef enum
   TURBINE_ERROR_DOUBLE_WRITE,
   /** Data set not found */
   TURBINE_ERROR_NOT_FOUND,
-  /** Bad string command given to the interpreter */
-  TURBINE_ERROR_COMMAND,
+  /** Parse error in number scanning */
+  TURBINE_ERROR_NUMBER_FORMAT,
   /** Invalid input */
   TURBINE_ERROR_INVALID,
   /** Unknown error */

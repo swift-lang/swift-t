@@ -9,7 +9,7 @@ proc turbine_eval { command } {
     set prefix "[ string range $command 0 2 ]"
     if { [ string equal $prefix "tp:" ] } {
         set proccall [ lrange $command 1 end ]
-        puts $proccall
+        puts "eval: $proccall"
         eval $proccall
     } else {
         puts "exec: $command"

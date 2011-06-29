@@ -22,7 +22,8 @@ turbine_tcl_long_array(Tcl_Interp* interp, Tcl_Obj* list, int max,
   for (int i = 0; i < *count; i++)
   {
     code = Tcl_GetLongFromObj(interp, entry[i], &output[i]);
-    assert(code == TCL_OK);
+    if (code != TCL_OK)
+      return TURBINE_ERROR_NUMBER_FORMAT;
   }
   return TURBINE_SUCCESS;
 }
