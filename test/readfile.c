@@ -21,10 +21,10 @@ main()
   int i = 0;
   while (true)
   {
-    char* line = reader_next(id);
-    printf("line[%i]: [%s]\n", i++, line);
-    if (!line)
+    reader_line line = reader_next(id);
+    if (!line.line)
       break;
+    printf("line[%i]: [%s]\n", i++, line.line);
   }
 
   bool b = reader_free(id);
