@@ -1,25 +1,7 @@
 
 DIR := test
 
-TEST_SRC += test/data.c
-TEST_SRC += test/diamond.c
-TEST_SRC += test/readfile.c
+TEST_SRC_C += $(DIR)/data.c
+TEST_SRC_C += $(DIR)/diamond.c
 
-PARSER_INTERMEDIATES := \
-	$(DIR)/lexer.c $(DIR)/lexer.o $(DIR)/lexer.h \
-        $(DIR)/parser.c $(DIR)/parser.o $(DIR)/parser.h
-
-$(DIR)/lexer.c $(DIR)/lexer.h: $(DIR)/command.l
-	flex -d --header-file=$(DIR)/lexer.h  \
-		--outfile=$(DIR)/lexer.c $(<)
-
-$(DIR)/parser.c $(DIR)/parser.h: $(DIR)/command.y
-	 bison -t -v --defines=$(DIR)/parser.h  \
-		--output=$(DIR)/parser.c $(<)
-
-$(DIR)/parser: $(DIR)/lexer.h $(DIR)/parser.h \
-               $(DIR)/lexer.o $(DIR)/parser.o \
-               $(DIR)/launch-parser.o $(DIR)/command-ops.o
-	gcc $(DIR)/launch-parser.o $(DIR)/lexer.o $(DIR)/parser.o \
-            $(DIR)/command-ops.o -o $(@)
 
