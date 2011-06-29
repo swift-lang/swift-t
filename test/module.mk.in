@@ -1,7 +1,9 @@
 
 DIR := test
 
-TEST_SRC_C += $(DIR)/data.c
-TEST_SRC_C += $(DIR)/diamond.c
+TEST_SRC_C := $(shell find $(DIR) -name *.c )
 
+TEST_SRC_TCL := $(shell find $(DIR) -name *.tcl )
+
+tests: $(TEST_BINS)
 

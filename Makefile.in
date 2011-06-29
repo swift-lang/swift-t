@@ -135,11 +135,17 @@ $(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_CORE_OBJS) $(WOZTOOLS_LIB)
              $(TCL_TURBINE_OBJS) $(TURBINE_CORE_OBJS) \
              -L $(WOZTOOLS)/lib -l woztools
 
-TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC))
-TEST_DEPS = $(patsubst %.c, %.d, $(TEST_SRC))
-TESTS     = $(patsubst %.c, %.x, $(TEST_SRC))
+# Test cases in C as objects
+TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC_C))
+# Test cases in C as dependency files
+TEST_DEPS = $(patsubst %.c, %.d, $(TEST_SRC_C))
+# Test cases in C compiled to binary
+TEST_BINS = $(patsubst %.c, %.x, $(TEST_SRC_C))
 
-$(PROGS) $(TESTS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
+# Target to just build all C tests
+tests: $(TEST_BINS)
+
+$(PROGS) $(TEST_BINS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) $(LIBS) -o $(@)
 
@@ -150,7 +156,8 @@ $(PACKAGE): $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
 clean::
 	@rm -fv $(TURBINE) $(PROGS)
 	@rm -fv $(DEPS) deps.txt TAGS
-	@rm -fv $(TESTS) $(TEST_OBJS)
+	echo $(TEST_BINS) $(TEST_OBJS)
+	@rm -fv $(TEST_BINS) $(TEST_OBJS)
 	@rm -fv $(TURBINE_OBJS)
 #	@rm -fv $(PARSER_INTERMEDIATES)
 	@rm -fv $(TCL_TURBINE_OBJS)
