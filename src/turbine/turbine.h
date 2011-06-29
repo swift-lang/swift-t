@@ -66,6 +66,10 @@ turbine_code turbine_datum_container_create(turbine_datum_id id);
 turbine_code turbine_filename(turbine_datum_id id,
                               char* output);
 
+turbine_code turbine_insert(turbine_datum_id container_id,
+                            turbine_entry* entry,
+                            turbine_datum_id entry_id);
+
 turbine_code turbine_lookup(turbine_datum_id id,
                             turbine_entry* entry,
                             turbine_datum_id* result);

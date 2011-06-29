@@ -15,6 +15,16 @@
 #include "src/tcl/util.h"
 #include "src/tcl/turbine/tcl-turbine.h"
 
+#define TURBINE_CONDITION(code, format, args...)                \
+  if (code != TURBINE_SUCCESS) {                                \
+    char tc_tmp[1024];                                          \
+    char* tc_p = &tc_tmp[0];                                    \
+    tc_p += vsprintf(tc_tmp, format, ## args);                  \
+    tc_p += sprintf(tc_p, "\n\t turbine error: ");              \
+    turbine_code_tostring(tc_p, code);                          \
+    Tcl_SetObjResult(interp, TclNewStringObj(tc_tmp, -1));      \
+  }
+
 static int
 Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
@@ -83,6 +93,43 @@ Turbine_Filename_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+#define SET_ENTRY(entry, type, subscript)                       \
+  if (strcmp(type, "field"))                                    \
+    entry.type = TURBINE_ENTRY_FIELD;                           \
+  else if (strcmp(type, "key"))                                 \
+    entry.type = TURBINE_ENTRY_KEY;                             \
+  else                                                          \
+    TCL_RETURN_ERROR("unknown turbine entry type: %s", type);   \
+  strcpy(entry.name, subscript);
+
+static int
+Turbine_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(5);
+  int error;
+  long container_lid;
+  error = Tcl_GetLongFromObj(interp, objv[1], &container_lid);
+  TCL_CHECK(error);
+  turbine_datum_id container_id = (turbine_datum_id) container_lid;
+  char* type = Tcl_GetString(objv[2]);
+  char* subscript = Tcl_GetString(objv[3]);
+  long entry_lid;
+  error = Tcl_GetLongFromObj(interp, objv[4], &entry_lid);
+  TCL_CHECK(error);
+  turbine_datum_id entry_id = (turbine_datum_id) entry_lid;
+
+  turbine_entry entry;
+  SET_ENTRY(entry, type, subscript);
+
+  turbine_code code = turbine_insert(container_id, &entry, entry_id);
+
+  TCL_CONDITION(code == TURBINE_SUCCESS,
+                "could not insert: %li:%s[%s]",
+                container_id, type, subscript);
+  return TCL_OK;
+}
+
 static int
 Turbine_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
@@ -99,14 +146,8 @@ Turbine_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
   turbine_datum_id member;
   turbine_datum_id id = (turbine_datum_id) lid;
   turbine_entry entry;
-  if (strcmp(type, "field"))
-    entry.type = TURBINE_ENTRY_FIELD;
-  else if (strcmp(type, "key"))
-    entry.type = TURBINE_ENTRY_KEY;
-  else
-    TCL_RETURN_ERROR("unknown turbine entry type: %s", type);
+  SET_ENTRY(entry, type, subscript);
 
-  strcpy(entry.name, type);
   turbine_code code = turbine_lookup(id, &entry, &member);
   TCL_CONDITION(code == TURBINE_SUCCESS,
                 "could not lookup: %li:%s[%s]", lid, type, subscript);
@@ -269,6 +310,7 @@ Tclturbine_Init(Tcl_Interp *interp)
   ADD_COMMAND("turbine_file",      Turbine_File_Cmd);
   ADD_COMMAND("turbine_container", Turbine_Container_Cmd);
   ADD_COMMAND("turbine_lookup",    Turbine_Lookup_Cmd);
+  ADD_COMMAND("turbine_insert",    Turbine_Insert_Cmd);
   ADD_COMMAND("turbine_filename",  Turbine_Filename_Cmd);
   ADD_COMMAND("turbine_rule",      Turbine_Rule_Cmd);
   ADD_COMMAND("turbine_new",       Turbine_New_Cmd);

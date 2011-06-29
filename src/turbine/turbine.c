@@ -104,15 +104,18 @@ static void turbine_debug(char* format, ...)
 turbine_code
 turbine_init()
 {
-  struct ltable* result;
-  result = ltable_init(&trs_waiting, 1024*1024);
-  if (!result)
+  struct ltable* table;
+  table = ltable_init(&trs_waiting, 1024*1024);
+  if (!table)
     return TURBINE_ERROR_OOM;
   list_init(&trs_ready);
   ltable_init(&trs_running, 1024*1024);
-  if (!result)
+  if (!table)
     return TURBINE_ERROR_OOM;
-  result = ltable_init(&tds, 1024*1024);
+  table = ltable_init(&tds, 1024*1024);
+  if (!table)
+    return TURBINE_ERROR_OOM;
+  bool result = hashtable_init(&container, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
   return TURBINE_SUCCESS;
@@ -177,7 +180,7 @@ turbine_filename(turbine_datum_id id, char* output)
 
 static turbine_code
 make_lookup_string(turbine_datum_id id, turbine_entry* entry,
-                   char* output)
+                   char* output, int* length)
 {
   char *p = output;
   p += sprintf(p, "%li", id);
@@ -190,6 +193,35 @@ make_lookup_string(turbine_datum_id id, turbine_entry* entry,
     return TURBINE_ERROR_INVALID;
   p += sprintf(p, "%s", type);
   p += sprintf(p, "%s", entry->name);
+  *length = p - output;
+  return TURBINE_SUCCESS;
+}
+
+turbine_code
+turbine_insert(turbine_datum_id container_id, turbine_entry* entry,
+               turbine_datum_id entry_id)
+{
+  if (!ltable_contains(&tds, container_id))
+    return TURBINE_ERROR_NOT_FOUND;
+  if (!ltable_contains(&tds, entry_id))
+    return TURBINE_ERROR_NOT_FOUND;
+  char tmp[TURBINE_MAX_ENTRY+24];
+  int length;
+  turbine_code code = make_lookup_string(container_id, entry, tmp,
+                                         &length);
+  turbine_check(code);
+  printf("tmp: %s\n", tmp);
+
+  char* entry_key = malloc(length+1);
+  if (!entry_key)
+    return TURBINE_ERROR_OOM;
+  strcpy(entry_key, tmp);
+  turbine_datum_id* entry_id_copy = malloc(sizeof(turbine_datum_id));
+  *entry_id_copy = entry_id;
+  bool result = hashtable_add(&container, entry_key, entry_id_copy);
+  if (!result)
+    return TURBINE_ERROR_DOUBLE_DECLARE;
+
   return TURBINE_SUCCESS;
 }
 
@@ -200,11 +232,13 @@ turbine_lookup(turbine_datum_id id, turbine_entry* entry,
   if (!ltable_contains(&tds, id))
     return TURBINE_ERROR_NOT_FOUND;
   char tmp[TURBINE_MAX_ENTRY+24];
-  turbine_code code = make_lookup_string(id, entry, tmp);
+  int length;
+  turbine_code code = make_lookup_string(id, entry, tmp, &length);
   turbine_check(code);
+  printf("tmp: %s\n", tmp);
 
   void* data = hashtable_search(&container, tmp);
-  if (!result)
+  if (!data)
     return TURBINE_ERROR_NOT_FOUND;
 
   *result = *(turbine_datum_id*) data;
