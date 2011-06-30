@@ -117,8 +117,8 @@ AC_CONFIG_FILES(
         src/tcl/turbine/module.mk
         scripts/turbine-config.sh
         test/module.mk
+        test/runbin.zsh
 	Makefile
 )
 
 AC_OUTPUT
-

@@ -1,0 +1,11 @@
+#!/bin/zsh
+
+# Set up and run test case
+
+BIN=$1
+
+WOZTOOLS=@USE_WOZTOOLS@
+
+export LD_LIBRARY_PATH=${WOZTOOLS}/lib
+
+$BIN $WOZTOOLS

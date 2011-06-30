@@ -141,13 +141,28 @@ TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC_C))
 TEST_DEPS = $(patsubst %.c, %.d, $(TEST_SRC_C))
 # Test cases in C compiled to binary
 TEST_BINS = $(patsubst %.c, %.x, $(TEST_SRC_C))
+# Test case results
+TEST_SCRIPTS = $(patsubst %.c, %.sh, $(TEST_SRC_C))
+# Test case outputs
+TEST_OUTPUT = $(patsubst %.c, %.out, $(TEST_SRC_C))
+# Test case results
+TEST_RESULTS = $(patsubst %.c, %.result, $(TEST_SRC_C))
 
 # Target to just build all C tests
 tests: $(TEST_BINS)
 
+# Run all tests
+test_results: $(TEST_RESULTS)
+
 $(PROGS) $(TEST_BINS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) $(LIBS) -o $(@)
+
+%.result: %.sh %.x
+#       Cannot use chmod in config.status
+	$(E) chmod u+x test/runbin.zsh
+	$(Q) "  SH		$(@)"
+	$(E) $(^) > $(@)
 
 $(PACKAGE): $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
 	$(Q) "  TCL		$(@)"
@@ -156,10 +171,8 @@ $(PACKAGE): $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
 clean::
 	@rm -fv $(TURBINE) $(PROGS)
 	@rm -fv $(DEPS) deps.txt TAGS
-	echo $(TEST_BINS) $(TEST_OBJS)
-	@rm -fv $(TEST_BINS) $(TEST_OBJS)
+	@rm -fv $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT) $(TEST_RESULTS)
 	@rm -fv $(TURBINE_OBJS)
-#	@rm -fv $(PARSER_INTERMEDIATES)
 	@rm -fv $(TCL_TURBINE_OBJS)
 
 .PHONY: clean
