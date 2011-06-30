@@ -145,7 +145,8 @@ TEST_SCRIPTS = $(patsubst %.c, %.sh, $(TEST_SRC_C))
 # Test case outputs
 TEST_OUTPUT = $(patsubst %.c, %.out, $(TEST_SRC_C))
 # Test case results
-TEST_RESULTS = $(patsubst %.c, %.result, $(TEST_SRC_C))
+TEST_RESULTS := $(patsubst %.c,   %.result, $(TEST_SRC_C))
+TEST_RESULTS += $(patsubst %.tcl, %.result, $(TEST_SRC_TCL))
 
 # Target to just build all C tests
 tests: $(TEST_BINS)
@@ -157,9 +158,15 @@ $(PROGS) $(TEST_BINS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) $(LIBS) -o $(@)
 
+# Test result rule for C tests
 %.result: %.sh %.x
 #       Cannot use chmod in config.status
 	$(E) chmod u+x test/runbin.zsh
+	$(Q) "  SH		$(@)"
+	$(E) $(^) > $(@) 2>&1
+
+# Test result rule for TCL tests
+%.result: %.sh %.tcl
 	$(Q) "  SH		$(@)"
 	$(E) $(^) > $(@) 2>&1
 
