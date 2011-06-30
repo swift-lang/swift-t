@@ -556,6 +556,10 @@ static int td_tostring(char* output, int length, turbine_datum* td)
     case TURBINE_TYPE_CONTAINER:
       result = snprintf(output, length, "container");
       break;
+    default:
+      puts("unknown turbine_datum type!");
+      assert(false);
+      break;
   }
   return result;
 }
