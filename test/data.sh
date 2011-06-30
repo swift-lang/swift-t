@@ -2,10 +2,10 @@
 
 TESTS=$( dirname $0 )
 
+set -x
+
 BIN=$1
 OUTPUT=${BIN%.x}.out
-
-[[ ${TURBINE_DEBUG_TEST} != "" ]] && set -x
 
 ${TESTS}/runbin.zsh ${BIN} >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
