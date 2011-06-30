@@ -54,7 +54,6 @@ CFLAGS += -fPIC
 
 LDFLAGS += -L $(WOZTOOLS)/lib
 
-LIBS += -l readline
 LIBS += -l woztools
 
 dirname = $(patsubst %/,%,$(dir $(1)))
