@@ -162,7 +162,7 @@ $(PROGS) $(TEST_BINS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
 #       Cannot use chmod in config.status
 	$(E) chmod u+x test/runbin.zsh
 	$(Q) "  SH		$(@)"
-	$(E) $(^) > $(@)
+	$(E) $(^) > $(@) 2>&1
 
 $(PACKAGE): $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
 	$(Q) "  TCL		$(@)"
