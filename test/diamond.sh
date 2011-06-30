@@ -1,7 +1,18 @@
-#!/bin/sh
+#!/bin/bash
 
-TURBINE=$( cd $(dirname $0) ; cd .. ; /bin/pwd )
+TESTS=$( dirname $0 )
 
-source ${TURBINE}/scripts/turbine-config.sh
+set -x
 
-${TCLSH} ${TURBINE}/test/diamond.tcl
+BIN=$1
+OUTPUT=${BIN%.x}.out
+INPUT=${BIN%.x}.txt
+
+${TESTS}/runbin.zsh ${BIN}  >& ${OUTPUT}
+[[ ${?} == 0 ]] || exit 1
+
+LINES=$( grep -c "cp A.txt" ${OUTPUT} )
+[[ ${LINES} == 2 ]] || exit 1
+grep "cat B.txt C.txt" ${OUTPUT} || exit 1
+
+exit 0

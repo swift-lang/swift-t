@@ -85,7 +85,7 @@ main()
   // Task D
   turbine_transform transformD;
   transformD.name = "D";
-  transformD.executor = "cat A.txt B.txt > D.txt";
+  transformD.executor = "cat B.txt C.txt > D.txt";
   turbine_datum_id inputD[2];
   turbine_datum_id outputD[1];
   transformD.inputs  = 2;

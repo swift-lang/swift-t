@@ -1,8 +1,7 @@
 
 DIR := test
 
-# TEST_SRC_C := $(shell find $(DIR) -name *.c )
-TEST_SRC_C := test/data.c test/readfile.c
+TEST_SRC_C := $(DIR)/data.c $(DIR)/readfile.c $(DIR)/diamond.c
 
 TEST_SRC_TCL := $(shell find $(DIR) -name *.tcl )
 
