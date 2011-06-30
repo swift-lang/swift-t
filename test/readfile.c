@@ -27,9 +27,6 @@ main()
     printf("line[%i]: [%s]\n", i++, line.line);
   }
 
-  bool b = reader_free(id);
-
-  printf("freed: %i\n", b);
-
+  reader_free(id);
   reader_finalize();
 }
