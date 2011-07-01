@@ -7,6 +7,7 @@ SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
 
 bin/turbine ${SCRIPT} >& ${OUTPUT}
+[[ ${?} == 0 ]] || exit 1
 
 LINES=$( grep -c "exec.* touch ..txt" ${OUTPUT} )
 (( ${LINES} >= 4 )) || exit 1

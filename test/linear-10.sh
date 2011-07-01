@@ -7,6 +7,7 @@ SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
 
 bin/turbine ${SCRIPT} >& ${OUTPUT}
+[[ ${?} == 0 ]] || exit 1
 
 LINES=$( ls [0-9].txt | wc -l )
 (( ${LINES} == 10 )) || exit 1
