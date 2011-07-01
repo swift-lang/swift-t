@@ -3,4 +3,7 @@ DIR := test
 
 TEST_SRC_C := $(DIR)/data.c $(DIR)/readfile.c $(DIR)/diamond1.c
 
-TEST_SRC_TCL := $(DIR)/diamond2.tcl $(DIR)/linear-10.tcl
+TEST_SRC_TCL := $(DIR)/diamond2.tcl 	\
+	        $(DIR)/linear-10.tcl    \
+                $(DIR)/batcher.tcl
+

@@ -1,7 +1,7 @@
 
-load ./libadlbtcl.so
+package require turbine 0.1
 
-source helpers.tcl
+# source helpers.tcl
 
 set rc [ adlb_init ]
 assert [ expr $rc == $ADLB_SUCCESS ] "Failed: adlb_init"
@@ -13,6 +13,7 @@ proc do_work {} {
         set work [ adlb_get ]
         if { [ string length $work ] } {
             puts "work: $work"
+            eval exec $work
         } else {
             break;
         }

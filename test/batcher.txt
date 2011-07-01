@@ -1,0 +1,4 @@
+touch test/data/1.txt
+touch test/data/2.txt
+touch test/data/3.txt
+touch test/data/4.txt
