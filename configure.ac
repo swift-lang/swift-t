@@ -111,7 +111,6 @@ AC_SUBST(TCL_LIB_SPEC)
 AC_CONFIG_FILES(
         src/turbine/module.mk
         src/tools/module.mk
-        src/progs/module.mk
         src/tcl/module.mk
         src/tcl/adlb/module.mk
         src/tcl/turbine/module.mk

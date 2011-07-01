@@ -71,11 +71,6 @@ TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC) $(TCL_TURBINE_SRC))
 
 TCL_TURBINE_OBJS += $(patsubst %.c, %.o, $(TCL_TURBINE_SRC))
 
-PROGS_SRC :=
-include src/progs/module.mk
-PROGS_DEPS := $(patsubst %.c, %.d, $(PROGS_SRC))
-PROGS      := $(patsubst %.c, %.x, $(PROGS_SRC))
-
 TEST_SRC :=
 include test/module.mk
 TEST_DEPS := $(patsubst %.c, %.d, $(TEST_SRC))
@@ -143,7 +138,8 @@ TEST_BINS = $(patsubst %.c, %.x, $(TEST_SRC_C))
 # Test case results
 TEST_SCRIPTS = $(patsubst %.c, %.sh, $(TEST_SRC_C))
 # Test case outputs
-TEST_OUTPUT = $(patsubst %.c, %.out, $(TEST_SRC_C))
+TEST_OUTPUT  := $(patsubst %.c,   %.out, $(TEST_SRC_C))
+TEST_OUTPUT  += $(patsubst %.tcl, %.out, $(TEST_SRC_TCL))
 # Test case results
 TEST_RESULTS := $(patsubst %.c,   %.result, $(TEST_SRC_C))
 TEST_RESULTS += $(patsubst %.tcl, %.result, $(TEST_SRC_TCL))
@@ -154,7 +150,7 @@ tests: $(TEST_BINS)
 # Run all tests
 test_results: $(TEST_RESULTS)
 
-$(PROGS) $(TEST_BINS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
+$(TEST_BINS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) $(LIBS) -o $(@)
 
@@ -175,8 +171,8 @@ $(PACKAGE): $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
 	$(E) tclsh lib/make-package.tcl > lib/pkgIndex.tcl
 
 clean::
-	@rm -fv $(TURBINE) $(PROGS) $(TURBINE) $(TCL_TURBINE_SO)
-	@rm -fv $(DEPS) deps.txt TAGS
+	@rm -fv $(TURBINE) $(TURBINE) $(TCL_TURBINE_SO)
+	@rm -fv $(DEPS) $(TEST_DEPS) deps.txt TAGS
 	@rm -fv $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT)
 	@rm -fv $(TEST_RESULTS)
 	@rm -fv $(TURBINE_OBJS)
