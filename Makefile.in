@@ -166,9 +166,9 @@ $(TEST_BINS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
 	$(Q) "  SH		$(@)"
 	$(E) $(<) > $(@) 2>&1
 
-$(PACKAGE): $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
+$(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
 	$(Q) "  TCL		$(@)"
-	$(E) tclsh lib/make-package.tcl > lib/pkgIndex.tcl
+	$(E) tclsh $(<) > lib/pkgIndex.tcl
 
 clean::
 	@rm -fv $(TURBINE) $(TURBINE) $(TCL_TURBINE_SO)
