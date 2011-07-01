@@ -4,9 +4,10 @@ TESTS=$( dirname $0 )
 
 set -x
 
-BIN=$1
-OUTPUT=${BIN%.x}.out
-INPUT=${BIN%.x}.txt
+THIS=$0
+BIN=${THIS%.sh}.x
+OUTPUT=${THIS%.sh}.out
+INPUT=${THIS%.sh}.txt
 
 ${TESTS}/runbin.zsh ${BIN}  >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1

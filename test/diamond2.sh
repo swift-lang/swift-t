@@ -2,9 +2,9 @@
 
 set -x
 
-SCRIPT=$1
-
-OUTPUT=${SCRIPT%.tcl}.out
+THIS=$0
+SCRIPT=${THIS%.sh}.tcl
+OUTPUT=${THIS%.sh}.out
 
 bin/turbine ${SCRIPT} >& ${OUTPUT}
 
