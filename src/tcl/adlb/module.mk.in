@@ -14,7 +14,7 @@ TCL_ADLB_SO = lib/libtcladlb.so
 
 tcl_adlb: $(TCL_ADLB_SO)
 
-$(TCL_ADLB_SO): $(TCL_ADLB_OBJS) lib
+$(TCL_ADLB_SO): $(TCL_ADLB_OBJS)
 	$(Q) "  LINK		$(@)"
 	$(E) gcc -shared -o $(@) $(TCL_LINK_FLAGS) \
 		  $(TCL_ADLB_OBJS) \
