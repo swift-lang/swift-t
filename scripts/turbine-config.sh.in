@@ -1,11 +1,21 @@
 
 # BASH-formatted setup script processed by turbine/configure
 
+TURBINE_SCRIPTS=$( dirname $0 )
+TURBINE=$( cd ${TURBINE_SCRIPTS}/.. ; /bin/pwd )
+
 export TCL=@USE_TCL@
 export WOZTOOLS=@USE_WOZTOOLS@
+export ADLB=@USE_ADLB@
+export MPI=@USE_MPI@
 
 export TCLSH=${TCL}/bin/tclsh8*
 
 export LD_LIBRARY_PATH=${TCL}/lib:${LD_LIBRARY_PATH}
 export LD_LIBRARY_PATH=${WOZTOOLS}/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${ADLB}:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${MPI}/lib:${LD_LIBRARY_PATH}
 
+export TCLLIBPATH=${TURBINE}/lib
+
+export MPIEXEC=${MPI}/bin/mpiexec

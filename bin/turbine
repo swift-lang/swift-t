@@ -5,7 +5,5 @@ TURBINE=$( cd ${TURBINE_BIN}/.. ; /bin/pwd )
 
 source ${TURBINE}/scripts/turbine-config.sh
 
-export TCLLIBPATH=${TURBINE}/lib
-
 # Allow user to insert valgrind
 ${VALGRIND} ${TCLSH} ${*}
