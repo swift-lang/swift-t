@@ -15,7 +15,7 @@ proc do_work {} {
             puts "work: $work"
             eval exec $work
         } else {
-            break;
+            break
         }
     }
 }
