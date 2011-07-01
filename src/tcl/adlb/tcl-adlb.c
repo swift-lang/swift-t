@@ -52,8 +52,9 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   if ( am_server )
   {
+    puts("ADLB server starting");
     ADLB_Server( 3000000, 0.0 );
-    // puts("ADLB server done");
+    puts("ADLB server done");
   }
 
   Tcl_ObjSetVar2(interp, Tcl_NewStringObj("ADLB_SUCCESS", -1), NULL,
@@ -121,26 +122,39 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   int rc = ADLB_Reserve(req_types, &work_type, &work_prio,
                         work_handle, &work_len, &answer_rank);
   // puts("exit reserve");
-  if (rc == ADLB_DONE_BY_EXHAUSTION ||
-      rc == ADLB_NO_MORE_WORK )
+  if (rc == ADLB_DONE_BY_EXHAUSTION)
+  {
+    puts("ADLB_DONE_BY_EXHAUSTION!");
     result[0] = '\0';
-  else if (rc == ADLB_NO_CURRENT_WORK)
-    puts("NO_CURRENT_WORK");
-  else if (rc < 0)
+  }
+  else if (rc == ADLB_NO_MORE_WORK ) {
+    puts("ADLB_NO_MORE_WORK!");
+    result[0] = '\0';
+  }
+  else if (rc == ADLB_NO_CURRENT_WORK) {
+    puts("ADLB_NO_CURRENT_WORK");
+    result[0] = '\0';
+  }
+  else if (rc < 0) {
     puts("rc < 0");
-  else if (work_type != CMDLINE)
+    result[0] = '\0';
+  }
+  else if (work_type != CMDLINE) {
     puts("unknown work type!");
+    result[0] = '\0';
+  }
   else
   {
     rc = ADLB_Get_reserved(result, work_handle);
     if (rc == ADLB_NO_MORE_WORK)
     {
-      puts("No more work on get_reserved");
+      puts("No more work on Get_reserved()!");
       result[0] = '\0';
     }
   }
 
-  // printf("adlb_get: %s\n", result);
+  printf("adlb_get: %s\n", result);
+  fflush(NULL);
 
   Tcl_SetObjResult(interp, Tcl_NewStringObj(result, -1));
   return TCL_OK;
