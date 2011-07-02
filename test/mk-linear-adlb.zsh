@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-# Generate linear-*.tcl, a tcl-turbine test case
+# Generate linear-adlb-*.tcl, a tcl-turbine-adlb test case
 
 COUNT=$1
 
@@ -11,8 +11,6 @@ then
 fi
 
 OUTPUT="linear-adlb-${COUNT}.tcl"
-
-alias spacer='print >> ${OUTPUT}'
 
 # Header
 {
