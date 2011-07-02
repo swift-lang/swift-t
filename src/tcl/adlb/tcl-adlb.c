@@ -60,6 +60,10 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_ObjSetVar2(interp, Tcl_NewStringObj("ADLB_SUCCESS", -1), NULL,
                  Tcl_NewIntObj(ADLB_SUCCESS), TCL_GLOBAL_ONLY);
 
+  // ADLB uses -1 to mean "any" in ADLB_Put() and ADLB_Reserve()
+  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("ADLB_ANY", -1), NULL,
+                 Tcl_NewIntObj(-1), TCL_GLOBAL_ONLY);
+
   Tcl_SetObjResult(interp, Tcl_NewIntObj(ADLB_SUCCESS));
 
   return TCL_OK;
