@@ -178,6 +178,10 @@ clean::
 	@rm -fv $(TURBINE_OBJS)
 	@rm -fv $(TCL_TURBINE_OBJS)
 
+# Clean *.result files that did not succeed
+clean-failed:
+	@rm -fv `grep -L "exit 0" **/*.result`
+
 .PHONY: clean
 
 debug_build:
