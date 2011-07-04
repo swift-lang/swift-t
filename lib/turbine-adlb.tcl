@@ -15,6 +15,7 @@ proc turbine_adlb { rules } {
 
 proc turbine_adlb_engine { rules } {
 
+    global ADLB_ANY
     puts "engine"
     eval $rules
 
@@ -28,13 +29,13 @@ proc turbine_adlb_engine { rules } {
         foreach {transform} $ready {
             set command [ turbine_executor $transform ]
             puts "submitting: $command"
-            adlb_put $command
+            adlb_put $ADLB_ANY $command
             turbine_complete $transform
         }
     }
     puts "no more work to submit!"
     exec sleep 1
-    set msg [ adlb_get ]
+    set msg [ adlb_get answer_rank ]
     puts "engine msg: $msg"
 }
 
@@ -44,7 +45,7 @@ proc turbine_adlb_worker { } {
 
     while { true } {
         puts "get"
-        set msg [ adlb_get ]
+        set msg [ adlb_get answer_rank ]
         set command [ string trim $msg ]
         if { ! [ string length $command ] } {
             puts "empty"

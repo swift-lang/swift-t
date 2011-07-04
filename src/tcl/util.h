@@ -6,6 +6,8 @@
 
 #include "src/turbine/turbine.h"
 
+#define EMPTY_FLAG 0
+
 /**
    objc should be equal to count.  If not, fail.
 */

@@ -10,7 +10,7 @@ set amserver [ adlb_amserver ]
 
 proc do_work {} {
     while { true } {
-        set work [ adlb_get ]
+        set work [ adlb_get answer_rank ]
         if { [ string length $work ] } {
             puts "work: $work"
             eval exec $work
@@ -21,6 +21,7 @@ proc do_work {} {
 }
 
 proc do_client {argc argv} {
+    global ADLB_ANY
     set rank [ adlb_rank ]
 
     if { $rank == 0 } {
@@ -37,7 +38,7 @@ proc do_client {argc argv} {
             gets $fd line
             set line [ string trimright $line ]
             if { [ string length $line ] } {
-                adlb_put $line
+                adlb_put $ADLB_ANY $line
             }
             if { [ eof $fd ] } {
                 close $fd

@@ -10,6 +10,8 @@
 #include <tcl.h>
 #include <adlb.h>
 
+#include "src/tcl/util.h"
+
 enum
 { CMDLINE };
 
@@ -19,6 +21,9 @@ static int am_server, am_debug_server;
 
 /** Max command-line length */
 #define ADLBTCL_CMD_MAX 1024
+
+// ADLB uses -1 to mean "any" in ADLB_Put() and ADLB_Reserve()
+#define ADLB_ANY 1
 
 static int
 ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -60,9 +65,8 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_ObjSetVar2(interp, Tcl_NewStringObj("ADLB_SUCCESS", -1), NULL,
                  Tcl_NewIntObj(ADLB_SUCCESS), TCL_GLOBAL_ONLY);
 
-  // ADLB uses -1 to mean "any" in ADLB_Put() and ADLB_Reserve()
   Tcl_ObjSetVar2(interp, Tcl_NewStringObj("ADLB_ANY", -1), NULL,
-                 Tcl_NewIntObj(-1), TCL_GLOBAL_ONLY);
+                 Tcl_NewIntObj(ADLB_ANY), TCL_GLOBAL_ONLY);
 
   Tcl_SetObjResult(interp, Tcl_NewIntObj(ADLB_SUCCESS));
 
@@ -91,18 +95,25 @@ ADLB_AmServer_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-
+/**
+   usage: adlb_put <reserve_rank> <work unit>
+*/
 static int
 ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
              int objc, Tcl_Obj *const objv[])
 {
-  assert(objc == 2);
 
-  char* cmd = Tcl_GetString(objv[1]);
+  TCL_ARGS(3);
+
+  int reserve_rank;
+  Tcl_GetIntFromObj(interp, objv[1], &reserve_rank);
+  char* cmd = Tcl_GetString(objv[2]);
 
   // printf("adlb_put: %s\n", cmd);
 
-  int rc = ADLB_Put(cmd, strlen(cmd)+1, -1, -1,
+// int ADLB_Put(void *work_buf, int work_len, int reserve_rank,
+//              int answer_rank, int work_type, int work_prio)
+  int rc = ADLB_Put(cmd, strlen(cmd)+1, reserve_rank, adlb_rank,
                     CMDLINE, 1);
 
   assert(rc == ADLB_SUCCESS);
@@ -110,13 +121,24 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+/**
+   usage: adlb_get <answer_rank>
+   returns the work unit or empty string when ADLB is done
+ */
 static int
 ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
              int objc, Tcl_Obj *const objv[])
 {
+  TCL_ARGS(2);
+
+  Tcl_Obj* tcl_answer_rank_name = objv[1];
+
   char result[ADLBTCL_CMD_MAX];
-  int work_prio, work_type, work_handle[ADLB_HANDLE_SIZE], work_len,
-    answer_rank;
+  int work_prio;
+  int work_type;
+  int work_handle[ADLB_HANDLE_SIZE];
+  int work_len;
+  int answer_rank;
   int req_types[4];
 
   req_types[0] = -1;
@@ -157,8 +179,12 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
     }
   }
 
-  printf("adlb_get: %s\n", result);
+  printf("adlb_get: %i %s\n", answer_rank, result);
   fflush(NULL);
+
+  Tcl_Obj* tcl_answer_rank = Tcl_NewIntObj(answer_rank);
+  Tcl_ObjSetVar2(interp, tcl_answer_rank_name, NULL, tcl_answer_rank,
+                 EMPTY_FLAG);
 
   Tcl_SetObjResult(interp, Tcl_NewStringObj(result, -1));
   return TCL_OK;
