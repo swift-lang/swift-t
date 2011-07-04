@@ -164,7 +164,8 @@ $(TEST_BINS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
 # Test result rule for TCL tests
 %.result: %.sh %.tcl $(PACKAGE)
 	$(Q) "  SH		$(@)"
-	$(E) $(<) > $(@) 2>&1
+	$(E) $(<) > $(@).tmp 2>&1
+	$(E) mv $(@).tmp $(@)
 
 $(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
 	$(Q) "  TCL		$(@)"
