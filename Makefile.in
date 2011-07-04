@@ -171,7 +171,7 @@ $(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
 	$(E) tclsh $(<) > lib/pkgIndex.tcl
 
 clean::
-	@rm -fv $(TURBINE) $(TURBINE) $(TCL_TURBINE_SO)
+	@rm -fv $(TURBINE) $(TURBINE) $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
 	@rm -fv $(DEPS) $(TEST_DEPS) deps.txt TAGS
 	@rm -fv $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT)
 	@rm -fv $(TEST_RESULTS)
