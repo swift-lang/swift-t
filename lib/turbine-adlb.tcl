@@ -1,4 +1,11 @@
 
+proc turbine_adlb_init { } {
+    enum WORK_TYPE { CMDLINE }
+    global WORK_TYPE
+    turbine_init
+    adlb_init [ array size WORK_TYPE ]
+}
+
 proc turbine_adlb { rules } {
 
     set rank [ adlb_rank ]
@@ -16,6 +23,8 @@ proc turbine_adlb { rules } {
 proc turbine_adlb_engine { rules } {
 
     global ADLB_ANY
+    global WORK_TYPE
+
     puts "engine"
     eval $rules
 
@@ -29,23 +38,24 @@ proc turbine_adlb_engine { rules } {
         foreach {transform} $ready {
             set command [ turbine_executor $transform ]
             puts "submitting: $command"
-            adlb_put $ADLB_ANY $command
+            adlb_put $ADLB_ANY $WORK_TYPE(CMDLINE) $command
             turbine_complete $transform
         }
     }
     puts "no more work to submit!"
     exec sleep 1
-    set msg [ adlb_get answer_rank ]
+    set msg [ adlb_get $WORK_TYPE(CMDLINE) answer_rank ]
     puts "engine msg: $msg"
 }
 
 proc turbine_adlb_worker { } {
 
+    global WORK_TYPE
     puts "worker"
 
     while { true } {
         puts "get"
-        set msg [ adlb_get answer_rank ]
+        set msg [ adlb_get $WORK_TYPE(CMDLINE) answer_rank ]
         set command [ string trim $msg ]
         if { ! [ string length $command ] } {
             puts "empty"

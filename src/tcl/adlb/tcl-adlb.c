@@ -25,25 +25,38 @@ static int am_server, am_debug_server;
 // ADLB uses -1 to mean "any" in ADLB_Put() and ADLB_Reserve()
 #define ADLB_ANY 1
 
+/**
+   Simplified use of ADLB_Init type_vect: just give adlb_init
+   a number ntypes, and the valid types will be: [0..ntypes-1]
+ */
 static int
 ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
               int objc, Tcl_Obj *const objv[])
 {
+  TCL_ARGS(2);
+
+  int ntypes;
+  int error = Tcl_GetIntFromObj(interp, objv[1], &ntypes);
+  TCL_CHECK(error);
+
   int argc = 0;
   char** argv = NULL;
-  int type_vect[2] = {CMDLINE};
+
+  printf("ntypes: %i\n", ntypes);
+  int type_vect[ntypes];
+  for (int i = 0; i < ntypes; i++)
+    type_vect[i] = i;
 
   MPI_Comm app_comm;
 
   int code;
-
   code = MPI_Init(&argc, &argv);
   assert(code == MPI_SUCCESS);
 
   // ADLB_Init(int num_servers, int use_debug_server,
   //           int aprintf_flag, int num_types, int *types,
   //           int *am_server, int *am_debug_server, MPI_Comm *app_comm)
-  code = ADLB_Init(1, 0, 0, 1, type_vect,
+  code = ADLB_Init(1, 0, 0, ntypes, type_vect,
                    &am_server, &am_debug_server, &app_comm);
   assert(code == ADLB_SUCCESS);
 
@@ -102,46 +115,54 @@ static int
 ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
              int objc, Tcl_Obj *const objv[])
 {
-
-  TCL_ARGS(3);
+  TCL_ARGS(4);
 
   int reserve_rank;
+  int work_type;
   Tcl_GetIntFromObj(interp, objv[1], &reserve_rank);
-  char* cmd = Tcl_GetString(objv[2]);
+  Tcl_GetIntFromObj(interp, objv[2], &work_type);
+  char* cmd = Tcl_GetString(objv[3]);
 
-  // printf("adlb_put: %s\n", cmd);
+  printf("adlb_put: rr: %i wt: %i %s\n",
+         reserve_rank, work_type, cmd);
 
-// int ADLB_Put(void *work_buf, int work_len, int reserve_rank,
-//              int answer_rank, int work_type, int work_prio)
+  // int ADLB_Put(void *work_buf, int work_len, int reserve_rank,
+  //              int answer_rank, int work_type, int work_prio)
   int rc = ADLB_Put(cmd, strlen(cmd)+1, reserve_rank, adlb_rank,
-                    CMDLINE, 1);
+                    work_type, 1);
 
   assert(rc == ADLB_SUCCESS);
-
   return TCL_OK;
 }
 
 /**
-   usage: adlb_get <answer_rank>
-   returns the work unit or empty string when ADLB is done
+   usage: adlb_get <req_type> <answer_rank>
+   Returns the next work unit of req_type or empty string when
+   ADLB is done
+   Stores answer_rank in given output variable
  */
 static int
 ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
              int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(2);
+  TCL_ARGS(3);
 
-  Tcl_Obj* tcl_answer_rank_name = objv[1];
+  int req_type;
+  int error = Tcl_GetIntFromObj(interp, objv[1], &req_type);
+  TCL_CHECK(error);
+  Tcl_Obj* tcl_answer_rank_name = objv[2];
+
+  printf("adlb_get: req_type=%i\n", req_type);
 
   char result[ADLBTCL_CMD_MAX];
-  int work_prio;
   int work_type;
+  int work_prio;
   int work_handle[ADLB_HANDLE_SIZE];
   int work_len;
   int answer_rank;
   int req_types[4];
 
-  req_types[0] = -1;
+  req_types[0] = req_type;
   req_types[1] = req_types[2] = req_types[3] = -1;
 
   // puts("enter reserve");
@@ -182,6 +203,7 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   printf("adlb_get: %i %s\n", answer_rank, result);
   fflush(NULL);
 
+  // Store answer_rank in caller's stack frame
   Tcl_Obj* tcl_answer_rank = Tcl_NewIntObj(answer_rank);
   Tcl_ObjSetVar2(interp, tcl_answer_rank_name, NULL, tcl_answer_rank,
                  EMPTY_FLAG);

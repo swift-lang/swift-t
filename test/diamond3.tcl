@@ -16,8 +16,7 @@ proc rules { } {
     turbine_rule 4 D { 2 3 } { 4 } { touch test/data/D.txt }
 }
 
-turbine_init
-adlb_init
+turbine_adlb_init
 
 turbine_adlb rules
 
