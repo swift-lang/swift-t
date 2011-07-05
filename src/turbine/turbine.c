@@ -244,7 +244,6 @@ turbine_insert(turbine_datum_id container_id, const char* name,
   turbine_code code = make_lookup_string(container_id, type, name,
                                          tmp, &length);
   turbine_check(code);
-  printf("tmp: %s\n", tmp);
 
   insert_container(entry_id, tmp, length);
   insert_member(td, name);
@@ -268,7 +267,6 @@ turbine_lookup(turbine_datum_id id, const char* name,
   turbine_code code = make_lookup_string(id, td->data.container.type,
                                          name, tmp, &length);
   turbine_check(code);
-  printf("tmp: %s\n", tmp);
 
   void* data = hashtable_search(&container, tmp);
   if (!data)
