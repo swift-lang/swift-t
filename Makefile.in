@@ -67,6 +67,7 @@ include src/tools/module.mk
 include src/tcl/module.mk
 include src/tcl/adlb/module.mk
 include src/tcl/turbine/module.mk
+include lib/module.mk
 TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC) $(TCL_TURBINE_SRC))
 
 TCL_TURBINE_OBJS += $(patsubst %.c, %.o, $(TCL_TURBINE_SRC))
@@ -159,18 +160,16 @@ $(TEST_BINS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
 #       Cannot use chmod in config.status
 	$(E) chmod u+x test/runbin.zsh
 	$(Q) "  SH		$(@)"
+	$(E) rm -f $(@)
 	$(E) $(<) > $(*).tmp 2>&1
 	$(E) mv $(*).tmp $(@) 2>&1
 
 # Test result rule for TCL tests
 %.result: %.sh %.tcl $(PACKAGE)
 	$(Q) "  SH		$(@)"
+	$(E) rm -f $(@)
 	$(E) $(<) > $(*).tmp 2>&1
 	$(E) mv $(*).tmp $(@)
-
-$(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
-	$(Q) "  TCL		$(@)"
-	$(E) tclsh $(<) > lib/pkgIndex.tcl
 
 clean::
 	@rm -fv $(TURBINE) $(TURBINE) $(TCL_TURBINE_SO) $(TCL_ADLB_SO)

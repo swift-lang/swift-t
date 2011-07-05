@@ -1,0 +1,11 @@
+
+DIR := lib
+
+TCL_SRC := $(DIR)/helpers.tcl      \
+           $(DIR)/turbine.tcl      \
+           $(DIR)/turbine-adlb.tcl
+
+$(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) $(TCL_ADLB_SO) \
+            $(TCL_SRC)
+	$(Q) "  TCL		$(@)"
+	$(E) tclsh $(<) > lib/pkgIndex.tcl
