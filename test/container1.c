@@ -45,7 +45,17 @@ main()
   assert(code == TURBINE_SUCCESS);
   printf("keys: %i\n", count);
   for (int i = 0; i < count; i++)
+  {
     printf("key: %s\n", keys[i]);
+    turbine_datum_id d;
+    code = turbine_lookup(d1, keys[i], &d);
+    assert(code == TURBINE_SUCCESS);
+    printf("member: %li\n", d);
+    char filename[64];
+    code = turbine_filename(d, filename);
+    assert(code == TURBINE_SUCCESS);
+    printf("filename: %s\n", filename);
+  }
 
   turbine_finalize();
   puts("DONE");
