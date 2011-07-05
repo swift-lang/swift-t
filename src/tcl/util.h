@@ -21,7 +21,8 @@
 
 #define TCL_CHECK(code) { if (code != TCL_OK) { return TCL_ERROR; }}
 
-turbine_code turbine_tcl_long_array(Tcl_Interp* interp, Tcl_Obj* list, int max,
+turbine_code turbine_tcl_long_array(Tcl_Interp* interp,
+                                    Tcl_Obj* list, int max,
                                     long* output, int* count);
 
 void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
