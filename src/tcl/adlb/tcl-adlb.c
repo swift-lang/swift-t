@@ -23,7 +23,7 @@ static int am_server, am_debug_server;
 #define ADLBTCL_CMD_MAX 1024
 
 // ADLB uses -1 to mean "any" in ADLB_Put() and ADLB_Reserve()
-#define ADLB_ANY 1
+#define ADLB_ANY -1
 
 /**
    Simplified use of ADLB_Init type_vect: just give adlb_init
@@ -184,10 +184,6 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
   else if (rc < 0) {
     puts("rc < 0");
-    result[0] = '\0';
-  }
-  else if (work_type != CMDLINE) {
-    puts("unknown work type!");
     result[0] = '\0';
   }
   else
