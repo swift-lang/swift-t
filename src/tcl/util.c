@@ -38,10 +38,13 @@ void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
   char buffer[TCL_CONDITION_MSG_MAX];
   char* commandname = Tcl_GetStringFromObj(command, NULL);
   char* p = &buffer[0];
+  printf("error: ");
+  fflush(stdout);
   p += sprintf(p, "%s: ", commandname);
   p += vsprintf(p, format, va);
   p += sprintf(p, "\n");
   va_end(va);
-  printf("error: %s\n", buffer);
+  printf("%s\n", buffer);
+  fflush(stdout);
   Tcl_AddErrorInfo(interp, buffer);
 }
