@@ -9,6 +9,10 @@ turbine: $(TURBINE)
 
 package: $(PACKAGE)
 
+TCL_TURBINE_SO := lib/libtclturbine.so
+
+tcl_turbine: $(TCL_TURBINE_SO)
+
 srcdir = @srcdir@
 
 ifeq ($(V),1)
@@ -119,10 +123,6 @@ $(TURBINE): $(TURBINE_OBJS)
 	$(Q) "  AR		$(@)"
 	$(E) install -d lib
 	$(E) ar rcs $(@) $(TURBINE_OBJS)
-
-TCL_TURBINE_SO = lib/libtclturbine.so
-
-tcl_turbine: $(TCL_TURBINE_SO)
 
 $(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_CORE_OBJS) $(WOZTOOLS_LIB)
 	$(Q) "  LINK		$(@)"
