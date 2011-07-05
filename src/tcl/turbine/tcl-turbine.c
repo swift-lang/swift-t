@@ -85,16 +85,24 @@ static int
 Turbine_Container_Cmd(ClientData cdata, Tcl_Interp *interp,
                       int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(2)
+  TCL_ARGS(3);
 
   long lid;
   Tcl_GetLongFromObj(interp, objv[1], &lid);
   turbine_datum_id id = (turbine_datum_id) lid;
+  char* type_string = Tcl_GetString(objv[2]);
+  printf("type_string: %s\n", type_string);
+  turbine_entry_type type;
+  if (strcmp(type_string, "field") == 0)
+    type = TURBINE_ENTRY_FIELD;
+  else if (strcmp(type_string, "key") == 0)
+    type = TURBINE_ENTRY_KEY;
+  else
+    TCL_RETURN_ERROR("unknown entry type: %s\n", type_string);
 
-  turbine_code code = turbine_datum_container_create(id);
+  turbine_code code = turbine_datum_container_create(id, type);
   TCL_CONDITION(code == TURBINE_SUCCESS,
                 "could not create container: %li", lid);
-
   return TCL_OK;
 }
 
@@ -126,6 +134,9 @@ Turbine_Filename_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_RETURN_ERROR("unknown turbine entry type: %s", type);   \
   strcpy(entry.name, subscript);
 
+/**
+   usage: turbine_insert <container id> <type> <subscript> <entry id>
+*/
 static int
 Turbine_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
@@ -143,10 +154,8 @@ Turbine_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK(error);
   turbine_datum_id entry_id = (turbine_datum_id) entry_lid;
 
-  turbine_entry entry;
-  SET_ENTRY(entry, type, subscript);
-
-  turbine_code code = turbine_insert(container_id, &entry, entry_id);
+  turbine_code code =
+    turbine_insert(container_id, subscript, entry_id);
   TURBINE_CHECK(code, "could not insert: %li:%s[%s]",
                 container_id, type, subscript);
   return TCL_OK;
@@ -158,23 +167,45 @@ Turbine_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(4);
 
-  int error;
   long lid;
-  error = Tcl_GetLongFromObj(interp, objv[1], &lid);
+  int error = Tcl_GetLongFromObj(interp, objv[1], &lid);
   TCL_CHECK(error);
   char* type = Tcl_GetString(objv[2]);
   char* subscript = Tcl_GetString(objv[3]);
 
   turbine_datum_id member;
   turbine_datum_id id = (turbine_datum_id) lid;
-  turbine_entry entry;
-  SET_ENTRY(entry, type, subscript);
 
-  turbine_code code = turbine_lookup(id, &entry, &member);
+  turbine_code code = turbine_lookup(id, subscript, &member);
   TCL_CONDITION(code == TURBINE_SUCCESS,
                 "could not lookup: %li:%s[%s]", lid, type, subscript);
 
   Tcl_Obj* result = Tcl_NewLongObj(member);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+static int
+Turbine_Enumerate_Cmd(ClientData cdata, Tcl_Interp *interp,
+                      int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  long lid;
+  int error = Tcl_GetLongFromObj(interp, objv[1], &lid);
+  TCL_CHECK(error);
+  turbine_datum_id container_id = (turbine_datum_id) lid;
+
+  int count = 1024;
+  char* keys[count];
+  turbine_code code = turbine_enumerate(container_id, keys, &count);
+  TCL_CONDITION(code == TURBINE_SUCCESS,
+                "could not enumerate: %li", lid);
+
+  Tcl_Obj* result = Tcl_NewListObj(0, NULL);
+  for (int i = 0; i < count; i++)
+    Tcl_ListObjAppendElement(interp, result,
+                             Tcl_NewStringObj(keys[i], -1));
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
@@ -339,8 +370,9 @@ Tclturbine_Init(Tcl_Interp *interp)
   ADD_COMMAND("turbine_init",      Turbine_Init_Cmd);
   ADD_COMMAND("turbine_file",      Turbine_File_Cmd);
   ADD_COMMAND("turbine_container", Turbine_Container_Cmd);
-  ADD_COMMAND("turbine_lookup",    Turbine_Lookup_Cmd);
   ADD_COMMAND("turbine_insert",    Turbine_Insert_Cmd);
+  ADD_COMMAND("turbine_lookup",    Turbine_Lookup_Cmd);
+  ADD_COMMAND("turbine_enumerate", Turbine_Enumerate_Cmd);
   ADD_COMMAND("turbine_filename",  Turbine_Filename_Cmd);
   ADD_COMMAND("turbine_rule",      Turbine_Rule_Cmd);
   ADD_COMMAND("turbine_new",       Turbine_New_Cmd);
