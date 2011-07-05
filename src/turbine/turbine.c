@@ -404,6 +404,23 @@ turbine_ready(int count, turbine_transform_id* output,
   return TURBINE_SUCCESS;
 }
 
+turbine_code
+turbine_entry_set(turbine_entry* entry,
+                  const char* type, const char* name)
+{
+  if (strcmp(type, "field"))
+    entry->type = TURBINE_ENTRY_FIELD;
+  else if (strcmp(type, "key"))
+    entry->type = TURBINE_ENTRY_KEY;
+  else
+  {
+    printf("unknown entry type: %s\n", type);
+    assert(false);
+  }
+  strcpy(entry->name, name);
+  return TURBINE_SUCCESS;
+}
+
 static turbine_code
 td_close(turbine_datum* datum)
 {
