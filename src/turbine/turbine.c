@@ -45,7 +45,8 @@ typedef struct
     } file;
     struct
     {
-
+      turbine_entry_type type;
+      struct list members;
     } container;
   } data;
   struct lnlist listeners;
@@ -154,7 +155,8 @@ turbine_datum_file_create(turbine_datum_id id, char* path)
 }
 
 turbine_code
-turbine_datum_container_create(turbine_datum_id id)
+turbine_datum_container_create(turbine_datum_id id,
+                               turbine_entry_type type)
 {
   turbine_datum* result = malloc(sizeof(turbine_datum));
   if (!result)
@@ -162,6 +164,8 @@ turbine_datum_container_create(turbine_datum_id id)
   result->type = TURBINE_TYPE_CONTAINER;
   result->id = id;
   result->status = TD_UNSET;
+  result->data.container.type = type;
+  list_init(&result->data.container.members);
   lnlist_init(&result->listeners);
   turbine_code code = td_register(result);
   return code;
@@ -179,61 +183,90 @@ turbine_filename(turbine_datum_id id, char* output)
 }
 
 static turbine_code
-make_lookup_string(turbine_datum_id id, turbine_entry* entry,
-                   char* output, int* length)
+make_lookup_string(turbine_datum_id id, turbine_entry_type type,
+                   const char* name, char* output, size_t* length)
 {
   char *p = output;
   p += sprintf(p, "%li", id);
-  char* type;
-  if (entry->type == TURBINE_ENTRY_KEY)
-    type = "key:";
-  else if (entry->type == TURBINE_ENTRY_FIELD)
-    type = "field:";
+  char* type_string;
+  if (type == TURBINE_ENTRY_KEY)
+    type_string = "key:";
+  else if (type == TURBINE_ENTRY_FIELD)
+    type_string = "field:";
   else
     return TURBINE_ERROR_INVALID;
-  p += sprintf(p, "%s", type);
-  p += sprintf(p, "%s", entry->name);
+  p += sprintf(p, "%s", type_string);
+  p += sprintf(p, "%s", name);
   *length = p - output;
   return TURBINE_SUCCESS;
 }
 
-turbine_code
-turbine_insert(turbine_datum_id container_id, turbine_entry* entry,
-               turbine_datum_id entry_id)
+static turbine_code
+insert_container(turbine_datum_id entry_id,
+                 char* lookup_string, size_t length)
 {
-  if (!ltable_contains(&tds, container_id))
-    return TURBINE_ERROR_NOT_FOUND;
-  if (!ltable_contains(&tds, entry_id))
-    return TURBINE_ERROR_NOT_FOUND;
-  char tmp[TURBINE_MAX_ENTRY+24];
-  int length;
-  turbine_code code = make_lookup_string(container_id, entry, tmp,
-                                         &length);
-  turbine_check(code);
-  printf("tmp: %s\n", tmp);
-
   char* entry_key = malloc(length+1);
   if (!entry_key)
     return TURBINE_ERROR_OOM;
-  strcpy(entry_key, tmp);
+  strcpy(entry_key, lookup_string);
   turbine_datum_id* entry_id_copy = malloc(sizeof(turbine_datum_id));
   *entry_id_copy = entry_id;
   bool result = hashtable_add(&container, entry_key, entry_id_copy);
   if (!result)
     return TURBINE_ERROR_DOUBLE_DECLARE;
+  return TURBINE_SUCCESS;
+}
+
+static turbine_code
+insert_member(turbine_datum* td, const char* name)
+{
+  char* copy = strdup(name);
+  list_add(&td->data.container.members, copy);
+  return TURBINE_SUCCESS;
+}
+
+/**
+   Constructs a lookup string and adds it to the
+   containers hashtable.
+*/
+turbine_code
+turbine_insert(turbine_datum_id container_id, const char* name,
+               turbine_datum_id entry_id)
+{
+  turbine_datum* td = ltable_search(&tds, container_id);
+  if (!td)
+    return TURBINE_ERROR_NOT_FOUND;
+  if (!ltable_contains(&tds, entry_id))
+    return TURBINE_ERROR_NOT_FOUND;
+  char tmp[TURBINE_MAX_ENTRY+24];
+  size_t length;
+  turbine_entry_type type = td->data.container.type;
+  turbine_code code = make_lookup_string(container_id, type, name,
+                                         tmp, &length);
+  turbine_check(code);
+  printf("tmp: %s\n", tmp);
+
+  insert_container(entry_id, tmp, length);
+  insert_member(td, name);
 
   return TURBINE_SUCCESS;
 }
 
+/**
+   Constructs the lookup string and looks it up in the containers
+   hashtable
+*/
 turbine_code
-turbine_lookup(turbine_datum_id id, turbine_entry* entry,
+turbine_lookup(turbine_datum_id id, const char* name,
                turbine_datum_id* result)
 {
-  if (!ltable_contains(&tds, id))
+  turbine_datum* td = ltable_search(&tds, id);
+  if (!td)
     return TURBINE_ERROR_NOT_FOUND;
   char tmp[TURBINE_MAX_ENTRY+24];
-  int length;
-  turbine_code code = make_lookup_string(id, entry, tmp, &length);
+  size_t length;
+  turbine_code code = make_lookup_string(id, td->data.container.type,
+                                         name, tmp, &length);
   turbine_check(code);
   printf("tmp: %s\n", tmp);
 
@@ -242,6 +275,30 @@ turbine_lookup(turbine_datum_id id, turbine_entry* entry,
     return TURBINE_ERROR_NOT_FOUND;
 
   *result = *(turbine_datum_id*) data;
+  return TURBINE_SUCCESS;
+}
+
+/**
+   Return keys in given container
+   @param id A container variable
+   @param input: maximum number of keys to return
+          output: number of keys actually returned
+*/
+turbine_code
+turbine_enumerate(turbine_datum_id id, char** keys, int* count)
+{
+  turbine_datum* td = ltable_search(&tds, id);
+  if (!td)
+    return TURBINE_ERROR_NOT_FOUND;
+  int n = 1;
+  for (struct list_item* item = td->data.container.members.head;
+       item && n <= *count;
+       item = item->next)
+  {
+    keys[n-1] = item->data;
+    n++;
+  }
+  *count = n-1;
   return TURBINE_SUCCESS;
 }
 

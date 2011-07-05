@@ -61,21 +61,25 @@ turbine_code turbine_init(void);
 turbine_code turbine_datum_file_create(turbine_datum_id id,
                                        char* path);
 
-turbine_code turbine_datum_container_create(turbine_datum_id id);
+turbine_code turbine_datum_container_create(turbine_datum_id id,
+                                            turbine_entry_type type);
 
 turbine_code turbine_filename(turbine_datum_id id,
                               char* output);
 
 turbine_code turbine_insert(turbine_datum_id container_id,
-                            turbine_entry* entry,
+                            const char* name,
                             turbine_datum_id entry_id);
 
 turbine_code turbine_entry_set(turbine_entry* entry,
                                const char* type, const char* name);
 
 turbine_code turbine_lookup(turbine_datum_id id,
-                            turbine_entry* entry,
+                            const char* name,
                             turbine_datum_id* result);
+
+turbine_code turbine_enumerate(turbine_datum_id id,
+                               char** keys, int* count);
 
 turbine_code turbine_rule_add(turbine_transform_id id,
                               turbine_transform* transform);
