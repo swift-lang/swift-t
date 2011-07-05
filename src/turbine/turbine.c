@@ -281,8 +281,8 @@ turbine_lookup(turbine_datum_id id, const char* name,
 /**
    Return keys in given container
    @param id A container variable
-   @param input: maximum number of keys to return
-          output: number of keys actually returned
+   @param count input: maximum number of keys to return
+                output: number of keys actually returned
 */
 turbine_code
 turbine_enumerate(turbine_datum_id id, char** keys, int* count)
