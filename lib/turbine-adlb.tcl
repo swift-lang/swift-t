@@ -42,7 +42,7 @@ proc turbine_adlb_engine { rules } {
             adlb_put $ADLB_ANY $WORK_TYPE(WORK) "$transform $command"
         }
 
-        exec sleep 1
+        # exec sleep 1
         set msg [ adlb_get $WORK_TYPE(DONE) answer_rank ]
         puts "engine msg: $msg"
         if { [ string length $msg ] } {
@@ -73,7 +73,7 @@ proc turbine_adlb_worker { } {
         puts "work: $command"
 
         if { [ catch { turbine_eval $command } ] } {
-            error "rule: $transform failed in command: $command"
+            error "rule: transform failed in command: $command"
         }
         adlb_put $ADLB_ANY $WORK_TYPE(DONE) $rule_id
     }
