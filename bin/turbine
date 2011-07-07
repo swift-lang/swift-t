@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 TURBINE_BIN=$( dirname $0 )
 TURBINE=$( cd ${TURBINE_BIN}/.. ; /bin/pwd )
