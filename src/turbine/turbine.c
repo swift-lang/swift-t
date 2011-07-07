@@ -92,6 +92,9 @@ struct ltable tds;
 */
 struct hashtable container;
 
+// #define ENABLE_DEBUG_TURBINE
+#ifdef ENABLE_DEBUG_TURBINE
+
 #define TURBINE_DEBUG(format, args...) turbine_debug(format, ## args)
 static void turbine_debug(char* format, ...)
 {
@@ -101,6 +104,12 @@ static void turbine_debug(char* format, ...)
   printf("\n");
   va_end(va);
 }
+
+#else
+
+#define TURBINE_DEBUG(format, args...)
+
+#endif
 
 turbine_code
 turbine_init()
@@ -368,7 +377,7 @@ turbine_rule_add(turbine_transform_id id,
 {
   tr* new_tr;
   turbine_code code = tr_create(transform, &new_tr);
-  turbine_debug("turbine_rule_add: %li", id);
+  TURBINE_DEBUG("turbine_rule_add: %li", id);
   turbine_check(code);
   new_tr->id = id;
   if (is_ready(new_tr))
@@ -446,14 +455,14 @@ turbine_ready(int count, turbine_transform_id* output,
 {
   int i = 0;
   void* v;
-  turbine_debug("turbine_ready:");
+  TURBINE_DEBUG("turbine_ready:");
   while (i < count &&
          (v = list_poll(&trs_ready)))
   {
     tr* t = (tr*) v;
     ltable_add(&trs_running, t->id, t);
     output[i++] = t->id;
-    turbine_debug("\t %li", t->id);
+    TURBINE_DEBUG("\t %li", t->id);
   }
   *result = i;
   return TURBINE_SUCCESS;

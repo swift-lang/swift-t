@@ -38,13 +38,13 @@ proc turbine_adlb_engine { rules } {
         # ready list may be empty
         foreach {transform} $ready {
             set command [ turbine_executor $transform ]
-            puts "submitting: $command"
+            # puts "submitting: $command"
             adlb_put $ADLB_ANY $WORK_TYPE(WORK) "$transform $command"
         }
 
         # exec sleep 1
         set msg [ adlb_get $WORK_TYPE(DONE) answer_rank ]
-        puts "engine msg: $msg"
+        # puts "engine msg: $msg"
         if { [ string length $msg ] } {
             turbine_complete $msg
         } else {
@@ -60,17 +60,17 @@ proc turbine_adlb_worker { } {
     puts "worker: $ADLB_ANY"
 
     while { true } {
-        puts "get"
+        # puts "get"
         set msg [ adlb_get $WORK_TYPE(WORK) answer_rank ]
 
         set rule_id [ lreplace $msg 1 end ]
         set command [ lreplace $msg 0 0 ]
         if { ! [ string length $command ] } {
-            puts "empty"
+            # puts "empty"
             break
         }
-        puts "rule_id: $rule_id"
-        puts "work: $command"
+        # puts "rule_id: $rule_id"
+        # puts "work: $command"
 
         if { [ catch { turbine_eval $command } ] } {
             error "rule: transform failed in command: $command"

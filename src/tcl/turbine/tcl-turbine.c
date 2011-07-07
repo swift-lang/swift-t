@@ -291,7 +291,7 @@ Turbine_Ready_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(1);
   turbine_transform_id transforms[TCL_TURBINE_READY_COUNT];
   int actual;
-  turbine_ready(1, transforms, &actual);
+  turbine_ready(TCL_TURBINE_READY_COUNT, transforms, &actual);
 
   Tcl_Obj* result = Tcl_NewListObj(0, NULL);
   assert(result);

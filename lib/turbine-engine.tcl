@@ -14,7 +14,7 @@ proc turbine_engine { } {
 
         foreach {transform} $ready {
             set command [ turbine_executor $transform ]
-            puts "executing: $command"
+            # puts "executing: $command"
             if { [ catch { turbine_eval $command } ] } {
                 error "rule: $transform failed in command: $command"
             }

@@ -25,6 +25,25 @@ static int am_server, am_debug_server;
 // ADLB uses -1 to mean "any" in ADLB_Put() and ADLB_Reserve()
 #define ADLB_ANY -1
 
+// #define ENABLE_DEBUG
+#ifdef ENABLE_DEBUG
+
+#define DEBUG(format, args...) debug(format, ## args)
+static void debug(char* format, ...)
+{
+  va_list va;
+  va_start(va,format);
+  vprintf(format, va);
+  printf("\n");
+  va_end(va);
+}
+
+#else
+
+#define DEBUG(format, args...)
+
+#endif
+
 /**
    Simplified use of ADLB_Init type_vect: just give adlb_init
    a number ntypes, and the valid types will be: [0..ntypes-1]
@@ -123,8 +142,8 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_GetIntFromObj(interp, objv[2], &work_type);
   char* cmd = Tcl_GetString(objv[3]);
 
-  printf("adlb_put: rr: %i wt: %i %s\n",
-         reserve_rank, work_type, cmd);
+  DEBUG("adlb_put: rr: %i wt: %i %s\n",
+        reserve_rank, work_type, cmd);
 
   // int ADLB_Put(void *work_buf, int work_len, int reserve_rank,
   //              int answer_rank, int work_type, int work_prio)
@@ -152,7 +171,7 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK(error);
   Tcl_Obj* tcl_answer_rank_name = objv[2];
 
-  printf("adlb_get: req_type=%i\n", req_type);
+  DEBUG("adlb_get: req_type=%i\n", req_type);
 
   char result[ADLBTCL_CMD_MAX];
   int work_type;
@@ -196,7 +215,7 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
     }
   }
 
-  printf("adlb_get: %i %s\n", answer_rank, result);
+  DEBUG("adlb_get: %i %s\n", answer_rank, result);
   fflush(NULL);
 
   // Store answer_rank in caller's stack frame
