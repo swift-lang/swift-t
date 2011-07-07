@@ -39,24 +39,28 @@ typeset -z COUNT=0
   print
 
   # Task dependencies
-  for (( i=0 ; i<STEPS ; i++ ))
+  PREVROW=() 
+  for (( i=0 ; i<WIDTH ; i++ ))
    do
    printf "\t turbine_rule ${COUNT} ${COUNT} "
    printf     "{ } { ${COUNT} } { sleep ${DURATION} } \n"
-   (( COUNT++ ))
+   PREVROW+=$(( COUNT++ ))
   done
+  print
 
   for (( i=1 ; i<STEPS ; i++ ))
    do
-   PREVROW=$( print {$(( (i-1)*WIDTH ))..$(( i*WIDTH-1 ))} )
+   ROW=()
    for (( j=0 ; j<WIDTH ; j++ ))
     do
     printf "\t turbine_rule ${COUNT} ${COUNT} "
     printf     "{ ${PREVROW} } { ${COUNT} } "
     printf     "{ tp: noop }\n"
     # printf     "{ sleep ${DURATION} }\n"
-    (( COUNT++ ))
+    ROW+=$(( COUNT++ ))
    done
+   PREVROW=( ${ROW} )
+   print
   done
   print "}"
 } >> ${OUTPUT}
