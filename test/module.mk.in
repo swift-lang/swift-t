@@ -12,4 +12,4 @@ TEST_SRC_TCL := $(DIR)/diamond2.tcl       \
                 $(DIR)/adlb-putget.tcl    \
                 $(DIR)/batcher.tcl        \
                 $(DIR)/diamond3.tcl       \
-                $(DIR)/linear-adlb-10.tcl
+                $(DIR)/linear-adlb-touch-10.tcl
