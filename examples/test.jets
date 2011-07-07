@@ -1,0 +1,2 @@
+echo hello > /home/wozniak/output.txt
+
