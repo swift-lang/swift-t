@@ -16,6 +16,7 @@ do
   eval "DATA_${i}=()"
 done
 
+export UNIQUE=0
 for (( ITER=1 ; ITER<=ITERS ; ITER++ ))
 do
   print "ITER: ${ITER}"
@@ -26,6 +27,7 @@ do
     eval ${COMMAND[i]}
     STOP=${SECONDS}
     eval "DATA_${i}+=$(( STOP-START ))"
+    (( UNIQUE++ ))
   done
 print
 done
