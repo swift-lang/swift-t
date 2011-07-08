@@ -29,7 +29,8 @@ typedef enum
 typedef enum
 {
   TURBINE_TYPE_FILE,
-  TURBINE_TYPE_CONTAINER
+  TURBINE_TYPE_CONTAINER,
+  TURBINE_TYPE_INTEGER
 } turbine_type;
 
 typedef struct
@@ -48,6 +49,10 @@ typedef struct
       turbine_entry_type type;
       struct list members;
     } container;
+    struct
+    {
+      long value;
+    } integer;
   } data;
   struct lnlist listeners;
 } turbine_datum;
@@ -148,8 +153,42 @@ td_get(turbine_datum_id id)
   return ltable_search(&tds, id);
 }
 
+static int
+type_tostring(char* output, turbine_type type)
+{
+  int result = -1;
+  switch(type)
+  {
+    case TURBINE_TYPE_FILE:
+      result = sprintf(output, "file");
+      break;
+    case TURBINE_TYPE_CONTAINER:
+      result = sprintf(output, "container");
+      break;
+    case TURBINE_TYPE_INTEGER:
+      result = sprintf(output, "integer");
+      break;
+    default:
+      sprintf(output, "<unknown type>");
+  }
+
+  return result;
+}
+
 turbine_code
-turbine_datum_file_create(turbine_datum_id id, char* path)
+turbine_typeof(turbine_datum_id id, char* output, int* length)
+{
+  turbine_datum* td = ltable_search(&tds, id);
+  if (td == NULL)
+    return TURBINE_ERROR_NOT_FOUND;
+  turbine_type type = td->type;
+  int result = type_tostring(output, type);
+  *length = result;
+  return TURBINE_SUCCESS;
+}
+
+turbine_code
+turbine_datum_file_create(turbine_datum_id id, const char* path)
 {
   turbine_datum* result = malloc(sizeof(turbine_datum));
   if (!result)
@@ -178,6 +217,47 @@ turbine_datum_container_create(turbine_datum_id id,
   lnlist_init(&result->listeners);
   turbine_code code = td_register(result);
   return code;
+}
+
+turbine_code
+turbine_datum_integer_create(turbine_datum_id id)
+{
+  turbine_datum* result = malloc(sizeof(turbine_datum));
+  if (!result)
+    return TURBINE_ERROR_OOM;
+  result->type = TURBINE_TYPE_INTEGER;
+  result->id = id;
+  result->status = TD_UNSET;
+  lnlist_init(&result->listeners);
+  turbine_code code = td_register(result);
+  return code;
+}
+
+turbine_code
+turbine_datum_integer_set(turbine_datum_id id, long value)
+{
+  turbine_datum* td = ltable_search(&tds, id);
+  if (td == NULL)
+    return TURBINE_ERROR_NOT_FOUND;
+  if (td->status == TD_SET)
+    return TURBINE_ERROR_DOUBLE_WRITE;
+  td->status = TD_SET;
+
+  td->data.integer.value = value;
+  return TURBINE_SUCCESS;
+}
+
+turbine_code
+turbine_datum_integer_get(turbine_datum_id id, long* value)
+{
+  turbine_datum* td = ltable_search(&tds, id);
+  if (td == NULL)
+    return TURBINE_ERROR_NOT_FOUND;
+  if (td->status == TD_UNSET)
+    return TURBINE_ERROR_UNSET;
+
+  *value = td->data.integer.value;
+  return TURBINE_SUCCESS;
 }
 
 turbine_code
@@ -606,8 +686,14 @@ turbine_code_tostring(char* output, turbine_code code)
     case TURBINE_ERROR_OOM:
       result = sprintf(output, "TURBINE_ERROR_OOM");
       break;
+    case TURBINE_ERROR_DOUBLE_DECLARE:
+      result = sprintf(output, "TURBINE_ERROR_DOUBLE_DECLARE");
+      break;
     case TURBINE_ERROR_DOUBLE_WRITE:
       result = sprintf(output, "TURBINE_ERROR_DOUBLE_WRITE");
+      break;
+    case TURBINE_ERROR_UNSET:
+      result = sprintf(output, "TURBINE_ERROR_UNSET");
       break;
     case TURBINE_ERROR_NOT_FOUND:
       result = sprintf(output, "TURBINE_ERROR_NOT_FOUND");

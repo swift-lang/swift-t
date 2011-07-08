@@ -69,6 +69,24 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
+Turbine_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  long lid;
+  Tcl_GetLongFromObj(interp, objv[1], &lid);
+
+  char output[64];
+  int length;
+  turbine_code code = turbine_typeof(lid, output, &length);
+  TURBINE_CHECK(code, "could not get type of: %li", lid);
+  Tcl_Obj* result = Tcl_NewStringObj(output, length);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+static int
 Turbine_File_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
 {
@@ -103,6 +121,61 @@ Turbine_Container_Cmd(ClientData cdata, Tcl_Interp *interp,
   turbine_code code = turbine_datum_container_create(id, type);
   TCL_CONDITION(code == TURBINE_SUCCESS,
                 "could not create container: %li", lid);
+  return TCL_OK;
+}
+
+static int
+Turbine_Integer_Cmd(ClientData cdata, Tcl_Interp *interp,
+                    int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  long lid;
+  Tcl_GetLongFromObj(interp, objv[1], &lid);
+  turbine_datum_id id = (turbine_datum_id) lid;
+
+  turbine_code code = turbine_datum_integer_create(id);
+  TCL_CONDITION(code == TURBINE_SUCCESS,
+                "could not create integer: %li", lid);
+  return TCL_OK;
+}
+
+static int
+Turbine_Integer_Set_Cmd(ClientData cdata, Tcl_Interp *interp,
+                        int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(3);
+
+  long lid;
+  Tcl_GetLongFromObj(interp, objv[1], &lid);
+  turbine_datum_id id = (turbine_datum_id) lid;
+
+  long value;
+  Tcl_GetLongFromObj(interp, objv[2], &value);
+
+  turbine_code code = turbine_datum_integer_set(id, value);
+  TCL_CONDITION(code == TURBINE_SUCCESS,
+                "could not set integer: %li", lid);
+  return TCL_OK;
+}
+
+static int
+Turbine_Integer_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
+                        int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  long lid;
+  Tcl_GetLongFromObj(interp, objv[1], &lid);
+  turbine_datum_id id = (turbine_datum_id) lid;
+
+  long value;
+  turbine_code code = turbine_datum_integer_get(id, &value);
+  TURBINE_CHECK(code,
+                "could not get integer: %li", lid);
+
+  Tcl_Obj* result = Tcl_NewLongObj(value);
+  Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
 
@@ -367,19 +440,23 @@ Tclturbine_Init(Tcl_Interp *interp)
   if (Tcl_PkgProvide(interp, "turbine", "0.1") == TCL_ERROR) {
     return TCL_ERROR;
   }
-  ADD_COMMAND("turbine_init",      Turbine_Init_Cmd);
-  ADD_COMMAND("turbine_file",      Turbine_File_Cmd);
-  ADD_COMMAND("turbine_container", Turbine_Container_Cmd);
-  ADD_COMMAND("turbine_insert",    Turbine_Insert_Cmd);
-  ADD_COMMAND("turbine_lookup",    Turbine_Lookup_Cmd);
-  ADD_COMMAND("turbine_enumerate", Turbine_Enumerate_Cmd);
-  ADD_COMMAND("turbine_filename",  Turbine_Filename_Cmd);
-  ADD_COMMAND("turbine_rule",      Turbine_Rule_Cmd);
-  ADD_COMMAND("turbine_new",       Turbine_New_Cmd);
-  ADD_COMMAND("turbine_push",      Turbine_Push_Cmd);
-  ADD_COMMAND("turbine_ready",     Turbine_Ready_Cmd);
-  ADD_COMMAND("turbine_executor",  Turbine_Executor_Cmd);
-  ADD_COMMAND("turbine_complete",  Turbine_Complete_Cmd);
-  ADD_COMMAND("turbine_finalize",  Turbine_Finalize_Cmd);
+  ADD_COMMAND("turbine_init",        Turbine_Init_Cmd);
+  ADD_COMMAND("turbine_file",        Turbine_File_Cmd);
+  ADD_COMMAND("turbine_container",   Turbine_Container_Cmd);
+  ADD_COMMAND("turbine_integer",     Turbine_Integer_Cmd);
+  ADD_COMMAND("turbine_integer_set", Turbine_Integer_Set_Cmd);
+  ADD_COMMAND("turbine_integer_get", Turbine_Integer_Get_Cmd);
+  ADD_COMMAND("turbine_typeof",      Turbine_Typeof_Cmd);
+  ADD_COMMAND("turbine_insert",      Turbine_Insert_Cmd);
+  ADD_COMMAND("turbine_lookup",      Turbine_Lookup_Cmd);
+  ADD_COMMAND("turbine_enumerate",   Turbine_Enumerate_Cmd);
+  ADD_COMMAND("turbine_filename",    Turbine_Filename_Cmd);
+  ADD_COMMAND("turbine_rule",        Turbine_Rule_Cmd);
+  ADD_COMMAND("turbine_new",         Turbine_New_Cmd);
+  ADD_COMMAND("turbine_push",        Turbine_Push_Cmd);
+  ADD_COMMAND("turbine_ready",       Turbine_Ready_Cmd);
+  ADD_COMMAND("turbine_executor",    Turbine_Executor_Cmd);
+  ADD_COMMAND("turbine_complete",    Turbine_Complete_Cmd);
+  ADD_COMMAND("turbine_finalize",    Turbine_Finalize_Cmd);
   return TCL_OK;
 }

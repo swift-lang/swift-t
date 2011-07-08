@@ -17,6 +17,8 @@ typedef enum
   TURBINE_ERROR_DOUBLE_DECLARE,
   /** Attempt to set the same datum twice */
   TURBINE_ERROR_DOUBLE_WRITE,
+  /** Attempt to read an unset value */
+  TURBINE_ERROR_UNSET,
   /** Data set not found */
   TURBINE_ERROR_NOT_FOUND,
   /** Parse error in number scanning */
@@ -58,11 +60,22 @@ typedef struct
 
 turbine_code turbine_init(void);
 
+turbine_code turbine_typeof(turbine_datum_id id,
+                            char* output, int* length);
+
 turbine_code turbine_datum_file_create(turbine_datum_id id,
-                                       char* path);
+                                       const char* path);
 
 turbine_code turbine_datum_container_create(turbine_datum_id id,
                                             turbine_entry_type type);
+
+turbine_code turbine_datum_integer_create(turbine_datum_id id);
+
+turbine_code turbine_datum_integer_set(turbine_datum_id id,
+                                       long value);
+
+turbine_code turbine_datum_integer_get(turbine_datum_id id,
+                                       long* value);
 
 turbine_code turbine_filename(turbine_datum_id id,
                               char* output);
