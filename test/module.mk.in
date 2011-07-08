@@ -9,6 +9,7 @@ TEST_SRC_C := $(DIR)/list.c       \
 
 TEST_SRC_TCL := $(DIR)/diamond2.tcl       \
 	        $(DIR)/linear-10.tcl      \
+                $(DIR)/container2.tcl     \
                 $(DIR)/adlb-noop.tcl      \
                 $(DIR)/adlb-putget.tcl    \
                 $(DIR)/batcher.tcl        \
