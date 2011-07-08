@@ -5,7 +5,7 @@
  *      Author: wozniak
  */
 
-#include "src/tools/tools.h"
+#include "src/util/tools.h"
 
 int array_length(void** array)
 {

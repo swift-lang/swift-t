@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <ltable.h>
+#include "src/util/ltable.h"
 
 #include "src/turbine/turbine.h"
 

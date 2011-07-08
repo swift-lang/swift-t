@@ -1,0 +1,4 @@
+
+DIR := src/util
+
+TURBINE_SRC += $(shell find $(DIR) -name *.c)

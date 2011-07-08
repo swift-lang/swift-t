@@ -1,9 +1,4 @@
 
 DIR := src/turbine
 
-TURBINE_CORE_SRC :=
-TURBINE_CORE_SRC += $(DIR)/turbine.c
-TURBINE_SRC += $(TURBINE_CORE_SRC)
-# TURBINE_SRC += $(DIR)/command.c
-
-TURBINE_CORE_OBJS := $(patsubst %.c, %.o, $(TURBINE_CORE_SRC))
+TURBINE_SRC += $(DIR)/turbine.c

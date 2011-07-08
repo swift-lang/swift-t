@@ -11,10 +11,10 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include <hashtable.h>
-#include <list.h>
-#include <lnlist.h>
-#include <ltable.h>
+#include "src/util/hashtable.h"
+#include "src/util/list.h"
+#include "src/util/lnlist.h"
+#include "src/util/ltable.h"
 
 #include "src/turbine/turbine.h"
 

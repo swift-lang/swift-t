@@ -1,9 +1,12 @@
 #!/bin/sh
 
-DIR="$1"
-shift
-if [ -n "$DIR" ] ; then
-    DIR="$DIR"
-fi
+# set -x
 
-exec $CC -M -MG "$@" | sed -e "s@^\(.*\)\.o:@$DIR/\1.d $DIR/\1.o:@"
+DIR=$1
+C_FILE=$2
+D_FILE=$3
+shift 3
+CFLAGS=${*}
+
+exec $CC -M -MG ${CFLAGS} ${C_FILE} | \
+  sed -e "s@^\(.*\)\.o:@$DIR/\1.d $DIR/\1.o:@" > ${D_FILE}

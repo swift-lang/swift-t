@@ -25,25 +25,25 @@ AC_HEADER_STDBOOL
 AC_FUNC_MALLOC
 AC_CHECK_FUNCS([strdup])
 
-AC_ARG_WITH(woztools,
-                 AS_HELP_STRING(
-                 [--with-woztools],
-                 [location of WOZTOOLS]),
-                 [AC_CHECK_FILE(${withval}/lib/libwoztools.a,
-                  [], [USE_WOZTOOLS=0])
-                  if test "$USE_WOZTOOLS" = 0 ; then
-                     AC_MSG_ERROR(Could not find WOZTOOLS in $withval)
-                  fi
-                  AC_MSG_RESULT([using woztools in $withval ...])
-                  AC_DEFINE_UNQUOTED([WOZTOOLS_LOCATION],
-                                     "$withval", [WOZTOOLS Location])
-                  USE_WOZTOOLS=$withval
-                 ],
-                 [
-                  AC_MSG_ERROR([Not found: WOZTOOLS])
-                  USE_WOZTOOLS=0
-                 ])
-AC_SUBST(USE_WOZTOOLS)
+dnl AC_ARG_WITH(woztools,
+dnl                  AS_HELP_STRING(
+dnl                  [--with-woztools],
+dnl                  [location of WOZTOOLS]),
+dnl                  [AC_CHECK_FILE(${withval}/lib/libwoztools.a,
+dnl                   [], [USE_WOZTOOLS=0])
+dnl                   if test "$USE_WOZTOOLS" = 0 ; then
+dnl                      AC_MSG_ERROR(Could not find WOZTOOLS in $withval)
+dnl                   fi
+dnl                   AC_MSG_RESULT([using woztools in $withval ...])
+dnl                   AC_DEFINE_UNQUOTED([WOZTOOLS_LOCATION],
+dnl                                      "$withval", [WOZTOOLS Location])
+dnl                   USE_WOZTOOLS=$withval
+dnl                  ],
+dnl                  [
+dnl                   AC_MSG_ERROR([Not found: WOZTOOLS])
+dnl                   USE_WOZTOOLS=0
+dnl                  ])
+dnl AC_SUBST(USE_WOZTOOLS)
 
 AC_ARG_WITH(adlb,
                  AS_HELP_STRING(
@@ -110,7 +110,7 @@ AC_SUBST(TCL_LIB_SPEC)
 
 AC_CONFIG_FILES(
         src/turbine/module.mk
-        src/tools/module.mk
+        src/util/module.mk
         src/tcl/module.mk
         src/tcl/adlb/module.mk
         src/tcl/turbine/module.mk

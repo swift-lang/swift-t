@@ -31,15 +31,15 @@ else
   E=
 endif
 
-WOZTOOLS = @USE_WOZTOOLS@
-WOZTOOLS_LIB = $(WOZTOOLS)/lib/libwoztools.a
+# WOZTOOLS = @USE_WOZTOOLS@
+# WOZTOOLS_LIB = $(WOZTOOLS)/lib/libwoztools.a
 
 CC = @CC@
 CFLAGS := @CFLAGS@
 
 # Set includes
 CFLAGS += -I $(srcdir)
-CFLAGS += -I $(WOZTOOLS)/src
+# CFLAGS += -I $(WOZTOOLS)/src
 
 MPI = @USE_MPI@
 ifneq ($(MPI),0)
@@ -56,9 +56,9 @@ CFLAGS += -Wall
 CFLAGS += @TCL_INCLUDE_SPEC@
 CFLAGS += -fPIC
 
-LDFLAGS += -L $(WOZTOOLS)/lib
+# LDFLAGS += -L $(WOZTOOLS)/lib
 
-LIBS += -l woztools
+# LIBS += -l woztools
 
 dirname = $(patsubst %/,%,$(dir $(1)))
 
@@ -67,7 +67,7 @@ DIR :=
 TURBINE_SRC :=
 TCL_TURBINE_SRC :=
 include src/turbine/module.mk
-include src/tools/module.mk
+include src/util/module.mk
 include src/tcl/module.mk
 include src/tcl/adlb/module.mk
 include src/tcl/turbine/module.mk
@@ -83,7 +83,7 @@ TEST_DEPS := $(patsubst %.c, %.d, $(TEST_SRC))
 # Dependency files:
 # Remember that having a bad #include can cause dependency
 # file generation to fail silently
-
+# Solution: use target check_includes
 DEPS := $(TURBINE_DEPS) $(TEST_DEPS)
 
 deps: $(DEPS)
@@ -91,7 +91,7 @@ deps: $(DEPS)
 %.d: %.c
 	$(Q) "  DEP		$(@)"
 	$(E) CC="$(CC)" $(srcdir)/depend.sh \
-             $(call dirname, $(*)) $(CFLAGS) $(<) > $(@)
+             $(call dirname, $(*)) $(<) $(@) $(CFLAGS)
 
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
  -include $(DEPS)
@@ -107,13 +107,22 @@ TAGS: deps.txt
 # Formats to one file per line & extracts junk and extra files in *.d
 deps.txt: $(DEPS)
 	$(Q) "  DEPS.TXT "
-	$(E) cat $(DEPS) | \
-		fmt -w 1 | cut -f 1  | \
-                sed 's/ //g;s/\\//g' | \
-	        grep -v '.*\.o\>\|.*\.po\>\|.*\.d\>' | \
-	        sort -u > $(@)
+	$(E) $(srcdir)/collect.sh $(@) $(DEPS)
 
-%.o:%.c
+# Check existing *.d files for files that do not exist
+# Useful when dependency file generation is failing
+# Must "make clean" to re-check correctly
+EXISTING_D = $(shell find . -name *.d)
+
+check_includes: deps_contents.txt
+	$(Q) "  CHECK.SH"
+	$(E) $(srcdir)/check.sh deps_contents.txt
+
+deps_contents.txt:
+	$(Q) "  SH		$(@)"
+	$(E) $(srcdir)/collect.sh $(@) $(EXISTING_D)
+
+%.o: %.c
 	$(Q) "  CC		$(@)"
 	$(E) $(CC) $(CFLAGS) -c $(<) -o $(@)
 
@@ -124,11 +133,11 @@ $(TURBINE): $(TURBINE_OBJS)
 	$(E) install -d lib
 	$(E) ar rcs $(@) $(TURBINE_OBJS)
 
-$(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_CORE_OBJS) $(WOZTOOLS_LIB)
+$(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_OBJS) # $(WOZTOOLS_LIB)
 	$(Q) "  LINK		$(@)"
 	$(E) gcc -shared -fPIC -o $(@) $(TCL_LINK_FLAGS) \
-             $(TCL_TURBINE_OBJS) $(TURBINE_CORE_OBJS) \
-             -L $(WOZTOOLS)/lib -l woztools
+             $(TCL_TURBINE_OBJS) $(TURBINE_OBJS)
+#             -L $(WOZTOOLS)/lib -l woztools
 
 # Test cases in C as objects
 TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC_C))
@@ -151,7 +160,7 @@ tests: $(TEST_BINS)
 # Run all tests
 test_results: $(TEST_RESULTS)
 
-$(TEST_BINS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
+$(TEST_BINS): %.x: %.o $(TURBINE) # $(WOZTOOLS_LIB)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) $(LIBS) -o $(@)
 
@@ -160,6 +169,7 @@ $(TEST_BINS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
 #       Cannot use chmod in config.status
 	$(E) chmod u+x test/runbin.zsh
 	$(Q) "  SH		$(@)"
+	$(E) mkdir -p test/data
 	$(E) rm -f $(@)
 	$(E) $(<) > $(*).tmp 2>&1
 	$(E) mv $(*).tmp $(@) 2>&1
@@ -167,17 +177,19 @@ $(TEST_BINS): %.x: %.o $(TURBINE) $(WOZTOOLS_LIB)
 # Test result rule for TCL tests
 %.result: %.sh %.tcl $(PACKAGE)
 	$(Q) "  SH		$(@)"
+	$(E) mkdir -p test/data
 	$(E) rm -f $(@)
 	$(E) $(<) > $(*).tmp 2>&1
 	$(E) mv $(*).tmp $(@)
 
 clean::
-	@rm -fv $(TURBINE) $(TURBINE) $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
-	@rm -fv $(DEPS) $(TEST_DEPS) deps.txt TAGS
-	@rm -fv $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT)
-	@rm -fv $(TEST_RESULTS)
-	@rm -fv $(TURBINE_OBJS)
-	@rm -fv $(TCL_TURBINE_OBJS)
+	@rm -fv  $(TURBINE) $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
+	@rm -fv  $(DEPS) $(TEST_DEPS) deps.txt deps_contents.txt TAGS
+	@rm -fv  $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT)
+	@rm -fv  $(TEST_RESULTS)
+	@rm -fv  $(TURBINE_OBJS)
+	@rm -fv  $(TCL_TURBINE_OBJS)
+	@rm -fvr test/data
 
 # Clean *.result files that did not succeed
 clean-failed:
@@ -185,7 +197,9 @@ clean-failed:
 
 .PHONY: clean
 
+# Useful target when debugging the build system
 debug_build:
 	@echo DEPS: $(DEPS)
+	@echo TURBINE_SRC: $(TURBINE_SRC)
 	@echo TURBINE_OBJS: $(TURBINE_OBJS)
 	@echo TESTS: $(TESTS)

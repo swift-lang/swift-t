@@ -11,9 +11,9 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include <ltable.h>
+#include "src/util/ltable.h"
 
-#include "src/tools/reader.h"
+#include "src/util/reader.h"
 
 /**
    Map from entry ids to entries

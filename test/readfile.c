@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 
-#include "src/tools/reader.h"
+#include "src/util/reader.h"
 
 int
 main()

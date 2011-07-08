@@ -1,7 +1,8 @@
 
 DIR := test
 
-TEST_SRC_C := $(DIR)/data.c       \
+TEST_SRC_C := $(DIR)/list.c       \
+              $(DIR)/data.c       \
               $(DIR)/container1.c \
               $(DIR)/readfile.c   \
               $(DIR)/diamond1.c
