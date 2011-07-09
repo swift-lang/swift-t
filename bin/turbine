@@ -3,7 +3,7 @@
 TURBINE_BIN=$( dirname $0 )
 TURBINE=$( cd ${TURBINE_BIN}/.. ; /bin/pwd )
 
-source ${TURBINE}/scripts/turbine-config.sh
+. ${TURBINE}/scripts/turbine-config.sh
 
 # Allow user to insert valgrind
 ${VALGRIND} ${TCLSH} ${*}
