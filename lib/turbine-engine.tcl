@@ -12,7 +12,7 @@ proc turbine_engine { } {
         set ready [ turbine_ready ]
         if { ! [ string length $ready ] } break
 
-        foreach {transform} $ready {
+        foreach transform $ready {
             set command [ turbine_executor $transform ]
             # puts "executing: $command"
             if { [ catch { turbine_eval $command } ] } {

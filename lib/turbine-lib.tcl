@@ -1,21 +1,62 @@
 
-proc turbine_trace { vars } {
+proc turbine_trace { args } {
 
     set rule_id [ turbine_new ]
-    turbine_rule $rule_id $rule_id $vars { } "
-        tp: turbine_trace_body $vars
-    "
+    turbine_rule $rule_id "trace-$rule_id" $args { } \
+        "tp: turbine_trace_body $args"
 }
 
-proc turbine_trace_body { vars } {
+proc turbine_trace_body { args } {
 
-    foreach v $vars {
+    set n [ llength $args ]
+    for { set i 0 } { $i < $n } { incr i } {
+        set v [ lindex $args $i ]
         switch [ turbine_typeof $v ] {
             integer {
                 set value [ turbine_integer_get $v ]
                 puts -nonewline $value
             }
+            string {
+                set value [ turbine_string_get $v ]
+                puts -nonewline $value
+            }
         }
+        if { $i < $n-1 } { puts -nonewline "," }
     }
     puts ""
+}
+
+proc turbine_range { result start end } {
+
+    set rule_id [ turbine_new ]
+    turbine_rule $rule_id "range-$rule_id" "$start $end" $result \
+        "tp: turbine_range_body $result $start $end"
+}
+
+proc turbine_range_body { result start end } {
+
+    set start_value [ turbine_integer_get $start ]
+    set end_value   [ turbine_integer_get $end ]
+
+    set k 0
+    for { set i $start } { $i <= $end_value } { incr i } {
+        set td [ turbine_new ]
+        turbine_integer $td
+        turbine_integer_set $td $i
+        turbine_insert $result key $k $td
+        incr k
+    }
+}
+
+proc turbine_enumerate { result container } {
+
+    set rule_id [ turbine_new ]
+    turbine_rule $rule_id "enumerate-$rule_id" $container $result \
+        "tp: turbine_enumerate_body $result $container"
+}
+
+proc turbine_enumerate_body { result container } {
+
+    set s [ turbine_container_get $container ]
+    turbine_string_set $result $s
 }

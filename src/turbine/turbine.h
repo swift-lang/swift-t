@@ -77,6 +77,18 @@ turbine_code turbine_datum_integer_set(turbine_datum_id id,
 turbine_code turbine_datum_integer_get(turbine_datum_id id,
                                        long* value);
 
+turbine_code turbine_datum_string_create(turbine_datum_id id);
+
+turbine_code turbine_datum_string_set(turbine_datum_id id,
+                                      const char* value,
+                                      int length);
+
+turbine_code turbine_datum_string_get(turbine_datum_id id,
+                                      char* output);
+
+turbine_code turbine_datum_string_length(turbine_datum_id id,
+                                         int* length);
+
 turbine_code turbine_filename(turbine_datum_id id,
                               char* output);
 
@@ -91,8 +103,8 @@ turbine_code turbine_lookup(turbine_datum_id id,
                             const char* name,
                             turbine_datum_id* result);
 
-turbine_code turbine_enumerate(turbine_datum_id id,
-                               char** keys, int* count);
+turbine_code turbine_container_get(turbine_datum_id id,
+                                   char** keys, int* count);
 
 turbine_code turbine_rule_add(turbine_transform_id id,
                               turbine_transform* transform);

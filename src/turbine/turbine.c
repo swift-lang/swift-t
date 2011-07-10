@@ -11,6 +11,7 @@
 #include <stdarg.h>
 #include <string.h>
 
+#include "src/util/tools.h"
 #include "src/util/hashtable.h"
 #include "src/util/list.h"
 #include "src/util/lnlist.h"
@@ -30,7 +31,8 @@ typedef enum
 {
   TURBINE_TYPE_FILE,
   TURBINE_TYPE_CONTAINER,
-  TURBINE_TYPE_INTEGER
+  TURBINE_TYPE_INTEGER,
+  TURBINE_TYPE_STRING
 } turbine_type;
 
 typedef struct
@@ -53,6 +55,11 @@ typedef struct
     {
       long value;
     } integer;
+    struct
+    {
+      char* value;
+      int length;
+    } string;
   } data;
   struct lnlist listeners;
 } turbine_datum;
@@ -106,8 +113,8 @@ static void turbine_debug(char* format, ...)
   va_list va;
   va_start(va,format);
   vprintf(format, va);
-  printf("\n");
   va_end(va);
+  fflush(stdout);
 }
 
 #else
@@ -168,6 +175,9 @@ type_tostring(char* output, turbine_type type)
     case TURBINE_TYPE_INTEGER:
       result = sprintf(output, "integer");
       break;
+    case TURBINE_TYPE_STRING:
+      result = sprintf(output, "string");
+      break;
     default:
       sprintf(output, "<unknown type>");
   }
@@ -178,12 +188,14 @@ type_tostring(char* output, turbine_type type)
 turbine_code
 turbine_typeof(turbine_datum_id id, char* output, int* length)
 {
+  TURBINE_DEBUG("typeof: {%li}", id);
   turbine_datum* td = ltable_search(&tds, id);
   if (td == NULL)
     return TURBINE_ERROR_NOT_FOUND;
   turbine_type type = td->type;
   int result = type_tostring(output, type);
   *length = result;
+  TURBINE_DEBUG(":%s\n", output);
   return TURBINE_SUCCESS;
 }
 
@@ -236,6 +248,8 @@ turbine_datum_integer_create(turbine_datum_id id)
 turbine_code
 turbine_datum_integer_set(turbine_datum_id id, long value)
 {
+  TURBINE_DEBUG("integer_set: {%li}=%li\n", id, value);
+
   turbine_datum* td = ltable_search(&tds, id);
   if (td == NULL)
     return TURBINE_ERROR_NOT_FOUND;
@@ -250,6 +264,8 @@ turbine_datum_integer_set(turbine_datum_id id, long value)
 turbine_code
 turbine_datum_integer_get(turbine_datum_id id, long* value)
 {
+  TURBINE_DEBUG("integer_get: {%li}=", id);
+
   turbine_datum* td = ltable_search(&tds, id);
   if (td == NULL)
     return TURBINE_ERROR_NOT_FOUND;
@@ -257,6 +273,75 @@ turbine_datum_integer_get(turbine_datum_id id, long* value)
     return TURBINE_ERROR_UNSET;
 
   *value = td->data.integer.value;
+  TURBINE_DEBUG("%li\n", *value);
+  return TURBINE_SUCCESS;
+}
+
+turbine_code
+turbine_datum_string_create(turbine_datum_id id)
+{
+  TURBINE_DEBUG("string_create: %li\n", id);
+
+  turbine_datum* result = malloc(sizeof(turbine_datum));
+  if (!result)
+    return TURBINE_ERROR_OOM;
+  result->type = TURBINE_TYPE_STRING;
+  result->id = id;
+  result->status = TD_UNSET;
+  lnlist_init(&result->listeners);
+  turbine_code code = td_register(result);
+  return code;
+}
+
+/**
+   @param length If -1, use strlen() internally
+*/
+turbine_code
+turbine_datum_string_set(turbine_datum_id id,
+                         const char* value,
+                         int length)
+{
+  turbine_datum* td = ltable_search(&tds, id);
+  if (td == NULL)
+    return TURBINE_ERROR_NOT_FOUND;
+  if (td->status == TD_SET)
+    return TURBINE_ERROR_DOUBLE_WRITE;
+  td->status = TD_SET;
+
+  if (length == -1)
+    length = strlen(value);
+  td->data.string.value = malloc(length)+1;
+  if (td->data.string.value == NULL)
+    return TURBINE_ERROR_OOM;
+  strcpy(td->data.string.value, value);
+  td->data.string.length = length;
+
+  return TURBINE_SUCCESS;
+}
+
+turbine_code
+turbine_datum_string_get(turbine_datum_id id, char* output)
+{
+  turbine_datum* td = ltable_search(&tds, id);
+  if (td == NULL)
+    return TURBINE_ERROR_NOT_FOUND;
+  if (td->status == TD_UNSET)
+    return TURBINE_ERROR_UNSET;
+
+  strcpy(output,  td->data.string.value);
+  return TURBINE_SUCCESS;
+}
+
+turbine_code
+turbine_datum_string_length(turbine_datum_id id, int* length)
+{
+  turbine_datum* td = ltable_search(&tds, id);
+  if (td == NULL)
+    return TURBINE_ERROR_NOT_FOUND;
+  if (td->status == TD_UNSET)
+    return TURBINE_ERROR_UNSET;
+
+  *length = td->data.string.length;
   return TURBINE_SUCCESS;
 }
 
@@ -286,7 +371,8 @@ make_lookup_string(turbine_datum_id id, turbine_entry_type type,
     return TURBINE_ERROR_INVALID;
   p += sprintf(p, "%s", type_string);
   p += sprintf(p, "%s", name);
-  *length = p - output;
+  if (length)
+    *length = p - output;
   return TURBINE_SUCCESS;
 }
 
@@ -306,22 +392,26 @@ insert_container(turbine_datum_id entry_id,
   return TURBINE_SUCCESS;
 }
 
+/**
+   Insert string subscript into container's list of members
+*/
 static turbine_code
-insert_member(turbine_datum* td, const char* name)
+insert_member(turbine_datum* td, const char* subscript)
 {
-  char* copy = strdup(name);
+  char* copy = strdup(subscript);
   list_add(&td->data.container.members, copy);
   return TURBINE_SUCCESS;
 }
 
 /**
    Constructs a lookup string and adds it to the
-   containers hashtable.
+   containers hashtable
 */
 turbine_code
 turbine_insert(turbine_datum_id container_id, const char* name,
                turbine_datum_id entry_id)
 {
+  TURBINE_DEBUG("insert: ", container_id);
   turbine_datum* td = ltable_search(&tds, container_id);
   if (!td)
     return TURBINE_ERROR_NOT_FOUND;
@@ -333,6 +423,7 @@ turbine_insert(turbine_datum_id container_id, const char* name,
   turbine_code code = make_lookup_string(container_id, type, name,
                                          tmp, &length);
   turbine_check(code);
+  TURBINE_DEBUG("%s=<%li>\n", tmp, entry_id);
 
   insert_container(entry_id, tmp, length);
   insert_member(td, name);
@@ -366,13 +457,14 @@ turbine_lookup(turbine_datum_id id, const char* name,
 }
 
 /**
-   Return keys in given container
+   Return subscripts in members list of given container
    @param id A container variable
    @param count input: maximum number of keys to return
                 output: number of keys actually returned
 */
 turbine_code
-turbine_enumerate(turbine_datum_id id, char** keys, int* count)
+turbine_container_get(turbine_datum_id id,
+                      char** keys, int* count)
 {
   turbine_datum* td = ltable_search(&tds, id);
   if (!td)
@@ -382,7 +474,7 @@ turbine_enumerate(turbine_datum_id id, char** keys, int* count)
        item && n <= *count;
        item = item->next)
   {
-    keys[n-1] = item->data;
+    keys[n-1] = (char*) item->data;
     n++;
   }
   *count = n-1;
@@ -451,13 +543,26 @@ static bool is_ready(tr* t);
 static void subscribe(turbine_transform* transform,
                       turbine_transform_id id);
 
+static int transform_tostring(char* output,
+                              turbine_transform* transform);
+
+#ifdef ENABLE_DEBUG_TURBINE
+#define TURBINE_DEBUG_RULE_ADD(transform) {      \
+    char tmp[1024];                              \
+    transform_tostring(tmp, transform);          \
+    printf("rule_add: %s\n", tmp);               \
+  }
+#else
+#define TURBINE_DEBUG_RULE_ADD(transform)
+#endif
+
 turbine_code
 turbine_rule_add(turbine_transform_id id,
                  turbine_transform* transform)
 {
   tr* new_tr;
   turbine_code code = tr_create(transform, &new_tr);
-  TURBINE_DEBUG("turbine_rule_add: %li", id);
+  TURBINE_DEBUG_RULE_ADD(transform);
   turbine_check(code);
   new_tr->id = id;
   if (is_ready(new_tr))
@@ -544,6 +649,7 @@ turbine_ready(int count, turbine_transform_id* output,
     output[i++] = t->id;
     TURBINE_DEBUG("\t %li", t->id);
   }
+  TURBINE_DEBUG("\n");
   *result = i;
   return TURBINE_SUCCESS;
 }
@@ -633,7 +739,7 @@ id_cmp(void* id1, void* id2)
 turbine_code
 turbine_close(turbine_datum_id id)
 {
-  TURBINE_DEBUG("turbine_close: %li", id);
+  TURBINE_DEBUG("turbine_close: %li\n", id);
   turbine_datum* td = ltable_search(&tds, id);
   assert(td);
   turbine_code code = td_close(td);
@@ -659,6 +765,7 @@ turbine_complete(turbine_transform_id id)
   TURBINE_DEBUG("turbine_complete: %li", id);
   tr* t = ltable_remove(&trs_running, id);
   assert(t);
+  TURBINE_DEBUG(" %s\n", t->transform.name);
   for (int i = 0; i < t->transform.outputs; i++)
   {
     turbine_code code = turbine_close(t->transform.output[i]);
@@ -757,5 +864,52 @@ turbine_data_tostring(char* output, int length, turbine_datum_id id)
   return result;
 }
 
-void turbine_finalize()
-{}
+static int
+transform_tostring(char* output, turbine_transform* transform)
+{
+  int result = 0;
+  char* p = output;
+
+  append(p, "%s ", transform->name);
+  append(p, "{");
+  for (int i = 0; i < transform->inputs; i++)
+  {
+    append(p, "%li", transform->input[i]);
+    if (i < transform->inputs-1)
+      append(p, " ");
+  }
+  append(p, "}->{");
+
+  for (int i = 0; i < transform->outputs; i++)
+  {
+    append(p, "%li", transform->output[i]);
+    if (i < transform->outputs-1)
+      append(p, " ");
+  }
+  append(p, "}");
+
+  result = p - output;
+  return result;
+}
+
+void
+info_waiting()
+{
+  printf("WAITING TRANSFORMS: %i\n", trs_waiting.size);
+  char buffer[1024];
+  for (int i = 0; i < trs_waiting.capacity; i++)
+    for (struct llist_item* item = trs_waiting.array[i]->head;
+         item; item = item->next)
+    {
+      tr* t = (tr*) item->data;
+      transform_tostring(buffer, &t->transform);
+      printf("TRANSFORM: %s\n", buffer);
+    }
+}
+
+void
+turbine_finalize()
+{
+  if (trs_waiting.size != 0)
+    info_waiting();
+}

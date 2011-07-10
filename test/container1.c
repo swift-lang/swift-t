@@ -41,7 +41,7 @@ main()
   assert(code == TURBINE_SUCCESS);
   int count = 4;
   char* keys[count];
-  code = turbine_enumerate(d1, keys, &count);
+  code = turbine_container_get(d1, keys, &count);
   assert(code == TURBINE_SUCCESS);
   printf("keys: %i\n", count);
   for (int i = 0; i < count; i++)
