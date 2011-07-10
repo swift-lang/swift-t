@@ -13,4 +13,6 @@
  */
 int array_length(void** array);
 
+#define append(string, args...) string += sprintf(string, ## args)
+
 #endif /* TOOLS_H_ */
