@@ -14,9 +14,11 @@ proc turbine_engine { } {
 
         foreach transform $ready {
             set command [ turbine_executor $transform ]
-            # puts "executing: $command"
-            if { [ catch { turbine_eval $command } ] } {
-                error "rule: $transform failed in command: $command"
+            puts "executing: $command"
+            if { [ catch { turbine_eval $command } e v ] } {
+                puts "[ dict get $v -errorinfo]"
+                puts "\nrule $transform failed: $command\n"
+                return false
             }
             turbine_complete $transform
         }

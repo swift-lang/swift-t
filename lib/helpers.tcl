@@ -18,3 +18,18 @@ proc enum { name members } {
         incr n
     }
 }
+
+# Given: set d [ readfile file.txt ]
+# Returns an array with $d(0) = line 1, $d(0) = line 2, etc.
+# DOES NOT WORK
+proc readfile { filename } {
+    puts $filename
+    set fd [ open $filename r ]
+    set i 0
+    while { [ gets $fd line ] >= 0 } {
+        puts "$i $line"
+         # array set $result { red a }
+        incr i
+    }
+    return $result
+}

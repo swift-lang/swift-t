@@ -96,6 +96,10 @@ turbine_code turbine_insert(turbine_datum_id container_id,
                             const char* name,
                             turbine_datum_id entry_id);
 
+turbine_code turbine_insert_key(turbine_datum_id container_id,
+                                turbine_datum_id subscript,
+                                turbine_datum_id entry_id);
+
 turbine_code turbine_entry_set(turbine_entry* entry,
                                const char* type, const char* name);
 

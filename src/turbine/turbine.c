@@ -170,14 +170,13 @@ type_tostring(char* output, turbine_type type)
 turbine_code
 turbine_typeof(turbine_datum_id id, char* output, int* length)
 {
-  DEBUG_TURBINE("typeof: {%li}", id);
   turbine_datum* td = ltable_search(&tds, id);
   if (td == NULL)
     return TURBINE_ERROR_NOT_FOUND;
   turbine_type type = td->type;
   int result = type_tostring(output, type);
   *length = result;
-  DEBUG_TURBINE(":%s\n", output);
+  DEBUG_TURBINE("typeof: <%li>:%s\n", id, output);
   return TURBINE_SUCCESS;
 }
 
@@ -230,7 +229,7 @@ turbine_datum_integer_create(turbine_datum_id id)
 turbine_code
 turbine_datum_integer_set(turbine_datum_id id, long value)
 {
-  DEBUG_TURBINE("integer_set: {%li}=%li\n", id, value);
+  DEBUG_TURBINE("integer_set: <%li>=%li\n", id, value);
 
   turbine_datum* td = ltable_search(&tds, id);
   if (td == NULL)
@@ -246,8 +245,6 @@ turbine_datum_integer_set(turbine_datum_id id, long value)
 turbine_code
 turbine_datum_integer_get(turbine_datum_id id, long* value)
 {
-  DEBUG_TURBINE("integer_get: {%li}=", id);
-
   turbine_datum* td = ltable_search(&tds, id);
   if (td == NULL)
     return TURBINE_ERROR_NOT_FOUND;
@@ -255,7 +252,7 @@ turbine_datum_integer_get(turbine_datum_id id, long* value)
     return TURBINE_ERROR_UNSET;
 
   *value = td->data.integer.value;
-  DEBUG_TURBINE("%li\n", *value);
+  DEBUG_TURBINE("integer_get: <%li>=%li\n", id, *value);
   return TURBINE_SUCCESS;
 }
 
@@ -393,7 +390,6 @@ turbine_code
 turbine_insert(turbine_datum_id container_id, const char* name,
                turbine_datum_id entry_id)
 {
-  DEBUG_TURBINE("insert: ", container_id);
   turbine_datum* td = ltable_search(&tds, container_id);
   if (!td)
     return TURBINE_ERROR_NOT_FOUND;
@@ -405,13 +401,48 @@ turbine_insert(turbine_datum_id container_id, const char* name,
   turbine_code code = make_lookup_string(container_id, type, name,
                                          tmp, &length);
   turbine_check(code);
-  DEBUG_TURBINE("%s=<%li>\n", tmp, entry_id);
+  DEBUG_TURBINE("<%li[%s]>=<%li>\n", container_id, tmp, entry_id);
 
   insert_container(entry_id, tmp, length);
   insert_member(td, name);
 
   return TURBINE_SUCCESS;
 }
+
+/**
+   Constructs a lookup string and adds it to the
+   containers hashtable
+*/
+/*
+turbine_code
+turbine_insert_key(turbine_datum_id container_id,
+                   turbine_datum_id subscript,
+                   turbine_datum_id entry_id)
+{
+  DEBUG_TURBINE("insert_key: <%li[%li]>=%li\n",
+                container_id, subscript, entry_id);
+  turbine_datum* td = ltable_search(&tds, container_id);
+  if (!td)
+    return TURBINE_ERROR_NOT_FOUND;
+  if (!ltable_contains(&tds, entry_id))
+    return TURBINE_ERROR_NOT_FOUND;
+  char tmp[TURBINE_MAX_ENTRY+24];
+  size_t length;
+  turbine_entry_type type = TURBINE_ENTRY_KEY;
+  long value;
+  turbine_datum_integer_get(subscript, &value);
+  char name[16];
+  sprintf(tmp, "%li", value);
+  turbine_code code = make_lookup_string(container_id, type, name,
+                                         tmp, &length);
+  turbine_check(code);
+
+  insert_container(entry_id, tmp, length);
+  insert_member(td, name);
+
+  return TURBINE_SUCCESS;
+}
+*/
 
 /**
    Constructs the lookup string and looks it up in the containers
@@ -622,16 +653,15 @@ turbine_ready(int count, turbine_transform_id* output,
 {
   int i = 0;
   void* v;
-  DEBUG_TURBINE("turbine_ready:");
+  DEBUG_TURBINE("turbine_ready: \n");
   while (i < count &&
          (v = list_poll(&trs_ready)))
   {
     tr* t = (tr*) v;
     ltable_add(&trs_running, t->id, t);
     output[i++] = t->id;
-    DEBUG_TURBINE("\t %li", t->id);
+    DEBUG_TURBINE("\t %li\n", output[i]);
   }
-  DEBUG_TURBINE("\n");
   *result = i;
   return TURBINE_SUCCESS;
 }
@@ -744,7 +774,7 @@ turbine_executor(turbine_transform_id id, char* executor)
 turbine_code
 turbine_complete(turbine_transform_id id)
 {
-  DEBUG_TURBINE("turbine_complete: %li", id);
+  DEBUG_TURBINE("turbine_complete: %li\n", id);
   tr* t = ltable_remove(&trs_running, id);
   assert(t);
   DEBUG_TURBINE(" %s\n", t->transform.name);

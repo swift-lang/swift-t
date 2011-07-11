@@ -5,6 +5,6 @@
 # Each token maps to ON or OFF to indicate debugging
 
 set INPUT {
-    TURBINE OFF
+    TURBINE ON
     TCL_TURBINE OFF
 }

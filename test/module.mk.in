@@ -12,6 +12,7 @@ TEST_SRC_TCL := $(DIR)/diamond2.tcl       \
                 $(DIR)/numbers.tcl        \
                 $(DIR)/strings.tcl        \
                 $(DIR)/container2.tcl     \
+                $(DIR)/loop1.tcl          \
                 $(DIR)/adlb-noop.tcl      \
                 $(DIR)/adlb-putget.tcl    \
                 $(DIR)/batcher.tcl        \

@@ -171,6 +171,8 @@ Turbine_Integer_Set_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_GetLongFromObj(interp, objv[1], &lid);
   turbine_datum_id id = (turbine_datum_id) lid;
 
+  printf("set: %li\n", id);
+
   long value;
   Tcl_GetLongFromObj(interp, objv[2], &value);
 
@@ -315,6 +317,9 @@ Turbine_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+/**
+   usage: turbine_lookup <container_id> <type> <entry_id>
+*/
 static int
 Turbine_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])

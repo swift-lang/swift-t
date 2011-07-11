@@ -7,7 +7,7 @@
 void
 turbine_debug(char* token, char* format, ...)
 {
-  printf("%s:", token);
+  printf("%s: ", token);
   va_list va;
   va_start(va,format);
   vprintf(format, va);

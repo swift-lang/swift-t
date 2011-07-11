@@ -60,3 +60,44 @@ proc turbine_enumerate_body { result container } {
     set s [ turbine_container_get $container ]
     turbine_string_set $result $s
 }
+
+proc turbine_readdata { result filename } {
+
+    set rule_id [ turbine_new ]
+    turbine_rule $rule_id "read_data-$rule_id" $filename $result  \
+        "tp: turbine_readdata_body $result $filename"
+}
+
+proc turbine_readdata_body { result filename } {
+
+    set name_value [ turbine_string_get $filename ]
+    if { [ catch { set fd [ open $name_value r ] } e ] } {
+        error "Could not open file: $name_value"
+    }
+
+    set i 0
+    while { [ gets $fd line ] >= 0 } {
+        puts "$i $line"
+        set s [ turbine_new ]
+        turbine_string $s
+        turbine_string_set $s $line
+        turbine_insert $result key $i $s
+    }
+}
+
+proc turbine_loop { stmts container } {
+    set rule_id [ turbine_new ]
+    turbine_rule $rule_id "loop-$rule_id" $container {} \
+        "tp: turbine_loop_body $stmts $container"
+}
+
+proc turbine_loop_body { stmts container } {
+    set s [ turbine_container_get $container ]
+    puts "container_got: $s"
+    foreach t $s {
+        set i [ turbine_new ]
+        turbine_integer $i
+        turbine_integer_set $i $t
+        $stmts $i
+    }
+}
