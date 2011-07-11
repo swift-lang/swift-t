@@ -37,7 +37,7 @@ foreach token [ array names tokens ] {
         out "#define $macro" "(format, args...) \\\n"
         out "\t turbine_debug(\"$macro\", format, ## args)\n"
     } else {
-        out "#define $symbol" "(format, args...) (void)\n"
+        out "#define $macro" "(format, args...)\n"
     }
     out "\n"
 }
