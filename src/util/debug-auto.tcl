@@ -30,6 +30,7 @@ out "void turbine_debug(char* token, char* format, ...);\n\n"
 
 # String breaks were necessary to prevent TCL string interpolation
 foreach token [ array names tokens ] {
+    out "// Macros for user token: $token\n\n"
     set symbol "ENABLE_DEBUG_$token"
     set macro "DEBUG_$token"
     if { $tokens($token) eq "ON" } {
