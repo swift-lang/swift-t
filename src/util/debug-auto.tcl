@@ -21,7 +21,7 @@ proc out { args } {
 }
 
 out "\n"
-out "// This file was created by debug-auto.tcl at: [exec date]\n\n"
+out "// Header created by debug-auto.tcl at: [exec date]\n\n"
 
 out "#ifndef DEBUG_H\n"
 out "#define DEBUG_H\n\n"
