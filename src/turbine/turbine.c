@@ -11,6 +11,7 @@
 #include <stdarg.h>
 #include <string.h>
 
+#include "src/util/debug.h"
 #include "src/util/tools.h"
 #include "src/util/hashtable.h"
 #include "src/util/list.h"
@@ -104,25 +105,6 @@ struct ltable tds;
 */
 struct hashtable container;
 
-// #define ENABLE_DEBUG_TURBINE
-#ifdef ENABLE_DEBUG_TURBINE
-
-#define TURBINE_DEBUG(format, args...) turbine_debug(format, ## args)
-static void turbine_debug(char* format, ...)
-{
-  va_list va;
-  va_start(va,format);
-  vprintf(format, va);
-  va_end(va);
-  fflush(stdout);
-}
-
-#else
-
-#define TURBINE_DEBUG(format, args...)
-
-#endif
-
 turbine_code
 turbine_init()
 {
@@ -188,14 +170,14 @@ type_tostring(char* output, turbine_type type)
 turbine_code
 turbine_typeof(turbine_datum_id id, char* output, int* length)
 {
-  TURBINE_DEBUG("typeof: {%li}", id);
+  DEBUG_TURBINE("typeof: {%li}", id);
   turbine_datum* td = ltable_search(&tds, id);
   if (td == NULL)
     return TURBINE_ERROR_NOT_FOUND;
   turbine_type type = td->type;
   int result = type_tostring(output, type);
   *length = result;
-  TURBINE_DEBUG(":%s\n", output);
+  DEBUG_TURBINE(":%s\n", output);
   return TURBINE_SUCCESS;
 }
 
@@ -248,7 +230,7 @@ turbine_datum_integer_create(turbine_datum_id id)
 turbine_code
 turbine_datum_integer_set(turbine_datum_id id, long value)
 {
-  TURBINE_DEBUG("integer_set: {%li}=%li\n", id, value);
+  DEBUG_TURBINE("integer_set: {%li}=%li\n", id, value);
 
   turbine_datum* td = ltable_search(&tds, id);
   if (td == NULL)
@@ -264,7 +246,7 @@ turbine_datum_integer_set(turbine_datum_id id, long value)
 turbine_code
 turbine_datum_integer_get(turbine_datum_id id, long* value)
 {
-  TURBINE_DEBUG("integer_get: {%li}=", id);
+  DEBUG_TURBINE("integer_get: {%li}=", id);
 
   turbine_datum* td = ltable_search(&tds, id);
   if (td == NULL)
@@ -273,14 +255,14 @@ turbine_datum_integer_get(turbine_datum_id id, long* value)
     return TURBINE_ERROR_UNSET;
 
   *value = td->data.integer.value;
-  TURBINE_DEBUG("%li\n", *value);
+  DEBUG_TURBINE("%li\n", *value);
   return TURBINE_SUCCESS;
 }
 
 turbine_code
 turbine_datum_string_create(turbine_datum_id id)
 {
-  TURBINE_DEBUG("string_create: %li\n", id);
+  DEBUG_TURBINE("string_create: %li\n", id);
 
   turbine_datum* result = malloc(sizeof(turbine_datum));
   if (!result)
@@ -411,7 +393,7 @@ turbine_code
 turbine_insert(turbine_datum_id container_id, const char* name,
                turbine_datum_id entry_id)
 {
-  TURBINE_DEBUG("insert: ", container_id);
+  DEBUG_TURBINE("insert: ", container_id);
   turbine_datum* td = ltable_search(&tds, container_id);
   if (!td)
     return TURBINE_ERROR_NOT_FOUND;
@@ -423,7 +405,7 @@ turbine_insert(turbine_datum_id container_id, const char* name,
   turbine_code code = make_lookup_string(container_id, type, name,
                                          tmp, &length);
   turbine_check(code);
-  TURBINE_DEBUG("%s=<%li>\n", tmp, entry_id);
+  DEBUG_TURBINE("%s=<%li>\n", tmp, entry_id);
 
   insert_container(entry_id, tmp, length);
   insert_member(td, name);
@@ -547,13 +529,13 @@ static int transform_tostring(char* output,
                               turbine_transform* transform);
 
 #ifdef ENABLE_DEBUG_TURBINE
-#define TURBINE_DEBUG_RULE_ADD(transform) {      \
+#define DEBUG_TURBINE_RULE_ADD(transform) {      \
     char tmp[1024];                              \
     transform_tostring(tmp, transform);          \
     printf("rule_add: %s\n", tmp);               \
   }
 #else
-#define TURBINE_DEBUG_RULE_ADD(transform)
+#define DEBUG_TURBINE_RULE_ADD(transform)
 #endif
 
 turbine_code
@@ -562,7 +544,7 @@ turbine_rule_add(turbine_transform_id id,
 {
   tr* new_tr;
   turbine_code code = tr_create(transform, &new_tr);
-  TURBINE_DEBUG_RULE_ADD(transform);
+  DEBUG_TURBINE_RULE_ADD(transform);
   turbine_check(code);
   new_tr->id = id;
   if (is_ready(new_tr))
@@ -640,16 +622,16 @@ turbine_ready(int count, turbine_transform_id* output,
 {
   int i = 0;
   void* v;
-  TURBINE_DEBUG("turbine_ready:");
+  DEBUG_TURBINE("turbine_ready:");
   while (i < count &&
          (v = list_poll(&trs_ready)))
   {
     tr* t = (tr*) v;
     ltable_add(&trs_running, t->id, t);
     output[i++] = t->id;
-    TURBINE_DEBUG("\t %li", t->id);
+    DEBUG_TURBINE("\t %li", t->id);
   }
-  TURBINE_DEBUG("\n");
+  DEBUG_TURBINE("\n");
   *result = i;
   return TURBINE_SUCCESS;
 }
@@ -739,7 +721,7 @@ id_cmp(void* id1, void* id2)
 turbine_code
 turbine_close(turbine_datum_id id)
 {
-  TURBINE_DEBUG("turbine_close: %li\n", id);
+  DEBUG_TURBINE("turbine_close: %li\n", id);
   turbine_datum* td = ltable_search(&tds, id);
   assert(td);
   turbine_code code = td_close(td);
@@ -762,10 +744,10 @@ turbine_executor(turbine_transform_id id, char* executor)
 turbine_code
 turbine_complete(turbine_transform_id id)
 {
-  TURBINE_DEBUG("turbine_complete: %li", id);
+  DEBUG_TURBINE("turbine_complete: %li", id);
   tr* t = ltable_remove(&trs_running, id);
   assert(t);
-  TURBINE_DEBUG(" %s\n", t->transform.name);
+  DEBUG_TURBINE(" %s\n", t->transform.name);
   for (int i = 0; i < t->transform.outputs; i++)
   {
     turbine_code code = turbine_close(t->transform.output[i]);

@@ -41,8 +41,8 @@ CFLAGS := @CFLAGS@
 CFLAGS += -I $(srcdir)
 # CFLAGS += -I $(WOZTOOLS)/src
 
-TCL = @USE_TCL@
-TCLSH = $(TCL)/$(shell find $(TCL)/bin -name tcl8.* )
+TCL := @USE_TCL@
+TCLSH := $(shell find $(TCL)/bin -name tclsh8.* )
 
 MPI = @USE_MPI@
 ifneq ($(MPI),0)
