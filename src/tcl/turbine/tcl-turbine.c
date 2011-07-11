@@ -111,7 +111,8 @@ Turbine_Container_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(3);
 
   long lid;
-  Tcl_GetLongFromObj(interp, objv[1], &lid);
+  int error = Tcl_GetLongFromObj(interp, objv[1], &lid);
+  TCL_CHECK(error);
   turbine_datum_id id = (turbine_datum_id) lid;
   char* type_string = Tcl_GetString(objv[2]);
   turbine_entry_type type;
