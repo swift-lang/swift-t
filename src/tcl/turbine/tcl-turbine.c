@@ -13,6 +13,7 @@
 
 #include <tcl.h>
 
+#include "src/util/debug.h"
 #include "src/turbine/turbine.h"
 
 #include "src/tcl/util.h"
@@ -229,8 +230,6 @@ Turbine_String_Set_Cmd(ClientData cdata, Tcl_Interp *interp,
   int length;
   char* value = Tcl_GetStringFromObj(objv[2], &length);
   turbine_code code = turbine_datum_string_set(id, value, length);
-  //TCL_CONDITION(code == TURBINE_SUCCESS,
-  //              "could not set string: %li", lid);
   TURBINE_CHECK(code, "could not set string: %li", lid);
 
   return TCL_OK;
