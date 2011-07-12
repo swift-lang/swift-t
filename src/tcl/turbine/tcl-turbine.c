@@ -171,8 +171,6 @@ Turbine_Integer_Set_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_GetLongFromObj(interp, objv[1], &lid);
   turbine_datum_id id = (turbine_datum_id) lid;
 
-  printf("set: %li\n", id);
-
   long value;
   Tcl_GetLongFromObj(interp, objv[2], &value);
 
