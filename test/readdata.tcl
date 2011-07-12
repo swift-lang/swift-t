@@ -17,7 +17,7 @@ set c 1
 turbine_container $c key
 set s 2
 turbine_string $s
-turbine_string_set $s "input.txt"
+turbine_string_set $s "test/data/input.txt"
 
 turbine_readdata $c $s
 
