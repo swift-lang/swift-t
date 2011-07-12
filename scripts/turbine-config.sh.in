@@ -5,7 +5,6 @@ TURBINE_SCRIPTS=$( dirname $0 )
 TURBINE=$( cd ${TURBINE_SCRIPTS}/.. ; /bin/pwd )
 
 export TCL=@USE_TCL@
-export WOZTOOLS=@USE_WOZTOOLS@
 export ADLB=@USE_ADLB@
 export MPI=@USE_MPI@
 
