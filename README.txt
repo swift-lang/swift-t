@@ -14,5 +14,11 @@ Type
             --with-tcl=<PATH/TO/TCL>
 make package
 
+Note:
+
+PATH/TO/ADLB  : Points to source tree
+PATH/TO/MPICH : Points to installed location
+PATH/TO/TCL   : Points to installed location
+
 Remember to use config.status for speed
 
