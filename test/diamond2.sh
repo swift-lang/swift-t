@@ -12,6 +12,6 @@ bin/turbine ${SCRIPT} >& ${OUTPUT}
 LINES=$( ls test/data/[ABCD].txt | wc -l )
 (( ${LINES} == 4 )) || exit 1
 
-rm [ABCD].txt || exit 1
+rm test/data/[ABCD].txt || exit 1
 
 exit 0
