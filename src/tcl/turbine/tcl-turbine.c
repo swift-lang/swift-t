@@ -56,11 +56,6 @@ static int
 Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
 {
-  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("TURBINE_SUCCESS", -1), NULL,
-                 Tcl_NewIntObj(TURBINE_SUCCESS), TCL_GLOBAL_ONLY);
-
-  Tcl_SetObjResult(interp, Tcl_NewIntObj(TURBINE_SUCCESS));
-
   turbine_code code = turbine_init();
   if (code != TURBINE_SUCCESS)
   {
