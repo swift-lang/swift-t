@@ -512,7 +512,27 @@ Turbine_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-#define ADD_COMMAND(tcl_function, c_function) \
+#ifdef ENABLE_DEBUG_TCL_TURBINE
+static int
+Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  char* msg = Tcl_GetString(objv[1]);
+  DEBUG_TCL_TURBINE("%s", msg);
+  return TCL_OK;
+}
+#else // Debug output is disabled
+static int
+Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
+                     int objc, Tcl_Obj *const objv[])
+{
+  // This is a noop
+  return TCL_OK;
+}
+#endif
+
+#define ADD_COMMAND(tcl_function, c_function)                           \
   Tcl_CreateObjCommand(interp, tcl_function, c_function, NULL, NULL);
 
 /**
@@ -550,5 +570,6 @@ Tclturbine_Init(Tcl_Interp *interp)
   ADD_COMMAND("turbine_executor",      Turbine_Executor_Cmd);
   ADD_COMMAND("turbine_complete",      Turbine_Complete_Cmd);
   ADD_COMMAND("turbine_finalize",      Turbine_Finalize_Cmd);
+  ADD_COMMAND("turbine_debug",         Turbine_Debug_Cmd);
   return TCL_OK;
 }

@@ -14,7 +14,7 @@ proc turbine_engine { } {
 
         foreach transform $ready {
             set command [ turbine_executor $transform ]
-            puts "executing: $command"
+            turbine_debug "executing: $command"
             if { [ catch { turbine_eval $command } e v ] } {
                 puts "[ dict get $v -errorinfo]"
                 puts "\nrule $transform failed: $command\n"
@@ -23,4 +23,5 @@ proc turbine_engine { } {
             turbine_complete $transform
         }
     }
+    return true
 }
