@@ -10,12 +10,14 @@
 
 /**
    objc should be equal to count.  If not, fail.
+   Note that in TCL, the command name counts as an argument
 */
-#define TCL_ARGS(count) { if (objc != count) { \
-    char* tmp = Tcl_GetStringFromObj(objv[0], NULL);            \
-    printf("command %s requires %i arguments, received %i\n",  \
-           tmp, count, objc);                                   \
-    return TCL_ERROR;                                           \
+#define TCL_ARGS(count) {                                       \
+    if (objc != count) {                                        \
+      char* tmp = Tcl_GetStringFromObj(objv[0], NULL);          \
+      printf("command %s requires %i arguments, received %i\n", \
+             tmp, count, objc);                                 \
+      return TCL_ERROR;                                         \
     }                                                           \
   }
 
