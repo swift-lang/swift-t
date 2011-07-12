@@ -654,13 +654,13 @@ turbine_ready(int count, turbine_transform_id* output,
   int i = 0;
   void* v;
   DEBUG_TURBINE("turbine_ready: \n");
-  while (i < count &&
-         (v = list_poll(&trs_ready)))
+  while (i < count && (v = list_poll(&trs_ready)))
   {
     tr* t = (tr*) v;
     ltable_add(&trs_running, t->id, t);
-    output[i++] = t->id;
+    output[i] = t->id;
     DEBUG_TURBINE("\t %li\n", output[i]);
+    i++;
   }
   *result = i;
   return TURBINE_SUCCESS;
