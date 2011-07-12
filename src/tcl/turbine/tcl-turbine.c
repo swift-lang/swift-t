@@ -253,7 +253,7 @@ Turbine_String_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   code = turbine_datum_string_get(id, tmp);
   TURBINE_CHECK(code, "could not get string: %li", lid);
 
-  Tcl_Obj* result = Tcl_NewStringObj(tmp, length+1);
+  Tcl_Obj* result = Tcl_NewStringObj(tmp, length);
   Tcl_SetObjResult(interp, result);
   free(tmp);
   return TCL_OK;
@@ -516,7 +516,7 @@ Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2);
   char* msg = Tcl_GetString(objv[1]);
-  DEBUG_TCL_TURBINE("%s", msg);
+  DEBUG_TCL_TURBINE("%s\n", msg);
   return TCL_OK;
 }
 #else // Debug output is disabled
