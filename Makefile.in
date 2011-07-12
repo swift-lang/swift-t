@@ -58,6 +58,8 @@ CFLAGS += -g
 CFLAGS += -Wall
 CFLAGS += @TCL_INCLUDE_SPEC@
 CFLAGS += -fPIC
+# This is referenced in lookup3.c - may want to drop this for speed
+CFLAGS += -D VALGRIND
 
 # LDFLAGS += -L $(WOZTOOLS)/lib
 
@@ -178,7 +180,7 @@ $(TEST_BINS): %.x: %.o $(TURBINE) # $(WOZTOOLS_LIB)
 	$(E) mv $(*).tmp $(@) 2>&1
 
 # Test result rule for TCL tests
-%.result: %.sh %.tcl $(PACKAGE)
+%.result: %.sh %.tcl $(PACKAGE) bin/turbine
 	$(Q) "  SH		$(@)"
 	$(E) mkdir -p test/data
 	$(E) rm -f $(@)
