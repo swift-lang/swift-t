@@ -11,7 +11,7 @@
 # }
 
 package require turbine 0.1
-turbine_init
+turbine_c_init
 
 set c 1
 turbine_container $c key

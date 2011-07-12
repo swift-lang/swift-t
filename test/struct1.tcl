@@ -34,7 +34,7 @@ proc rules { } {
     turbine_rule 3 F2 1   $v2 "tp: f 1 $v2"
 }
 
-turbine_init
+turbine_c_init
 
 rules
 

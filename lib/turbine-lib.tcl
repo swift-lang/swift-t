@@ -1,4 +1,8 @@
 
+proc turbine_init { } {
+    turbine_c_init
+}
+
 proc turbine_trace { args } {
 
     set rule_id [ turbine_new ]

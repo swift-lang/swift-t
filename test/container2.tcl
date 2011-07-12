@@ -11,7 +11,7 @@
 # // Print out contents of f1
 
 package require turbine 0.1
-turbine_init
+turbine_c_init
 
 turbine_container 1 key
 turbine_file 2 file1.txt

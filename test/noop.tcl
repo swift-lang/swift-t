@@ -4,7 +4,7 @@
 
 package require turbine 0.1
 
-turbine_init
+turbine_c_init
 
 turbine_engine
 

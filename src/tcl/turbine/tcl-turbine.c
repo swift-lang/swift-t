@@ -545,7 +545,7 @@ Tclturbine_Init(Tcl_Interp *interp)
   if (Tcl_PkgProvide(interp, "turbine", "0.1") == TCL_ERROR) {
     return TCL_ERROR;
   }
-  ADD_COMMAND("turbine_init",          Turbine_Init_Cmd);
+  ADD_COMMAND("turbine_c_init",        Turbine_Init_Cmd);
   ADD_COMMAND("turbine_file",          Turbine_File_Cmd);
   ADD_COMMAND("turbine_container",     Turbine_Container_Cmd);
   ADD_COMMAND("turbine_close",         Turbine_Close_Cmd);

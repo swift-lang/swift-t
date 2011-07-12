@@ -9,7 +9,7 @@ package require turbine 0.1
 enum WORK_TYPE { T }
 
 adlb_init [ array size WORK_TYPE ]
-turbine_init
+turbine_c_init
 
 set amserver [ adlb_amserver ]
 
