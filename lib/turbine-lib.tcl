@@ -72,7 +72,7 @@ proc turbine_readdata_body { result filename } {
 
     set name_value [ turbine_string_get $filename ]
     if { [ catch { set fd [ open $name_value r ] } e ] } {
-        error "Could not open file: $name_value"
+        error "Could not open file: '$name_value'"
     }
 
     set i 0
