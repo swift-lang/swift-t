@@ -289,7 +289,7 @@ turbine_datum_string_set(turbine_datum_id id,
 
   if (length == -1)
     length = strlen(value);
-  td->data.string.value = malloc(length)+1;
+  td->data.string.value = malloc(length+1);
   if (td->data.string.value == NULL)
     return TURBINE_ERROR_OOM;
   strcpy(td->data.string.value, value);
