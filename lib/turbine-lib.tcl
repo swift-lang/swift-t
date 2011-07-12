@@ -77,11 +77,11 @@ proc turbine_readdata_body { result filename } {
 
     set i 0
     while { [ gets $fd line ] >= 0 } {
-        puts "$i $line"
         set s [ turbine_new ]
         turbine_string $s
         turbine_string_set $s $line
         turbine_insert $result key $i $s
+        incr i
     }
 }
 
