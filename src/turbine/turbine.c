@@ -444,7 +444,8 @@ turbine_insert(turbine_datum_id container_id, const char* name,
   turbine_code code = make_lookup_string(container_id, type, name,
                                          tmp, &length);
   turbine_check(code);
-  DEBUG_TURBINE("<%li[%s]>=<%li>\n", container_id, tmp, entry_id);
+  DEBUG_TURBINE("insert: <%li[%s]>=<%li>\n",
+                container_id, tmp, entry_id);
 
   insert_container(entry_id, tmp, length);
   insert_member(td, name);
@@ -1012,6 +1013,7 @@ info_waiting()
 void
 turbine_finalize()
 {
+  DEBUG_TURBINE("finalize:\n");
   if (trs_waiting.size != 0)
     info_waiting();
 }
