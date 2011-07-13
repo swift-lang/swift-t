@@ -13,6 +13,7 @@
 
 #include <tcl.h>
 
+#include "src/util/tools.h"
 #include "src/util/debug.h"
 #include "src/turbine/turbine.h"
 
@@ -26,16 +27,17 @@ static void
 turbine_check_failed(Tcl_Interp* interp, turbine_code code,
                      char* format, ...)
 {
-    char buffer[1024];
-    char* p = &buffer[0];
-    va_list ap;
-    va_start(ap, format);
-    p += vsprintf(buffer, format, ap);
-    va_end(ap);
-    p += sprintf(p, "\n%s", "turbine error: ");
-    turbine_code_tostring(p, code);
-    printf("%s\n", buffer);
-    Tcl_AddErrorInfo(interp, buffer);
+  char buffer[1024];
+  char* p = &buffer[0];
+  va_list ap;
+  va_start(ap, format);
+  append(p, "\n");
+  p += vsprintf(p, format, ap);
+  va_end(ap);
+  append(p, "\n%s", "turbine error: ");
+  turbine_code_tostring(p, code);
+  // printf("%s\n", buffer);
+  Tcl_AddErrorInfo(interp, buffer);
 }
 
 /**
@@ -385,13 +387,13 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(6);
 
-  turbine_transform_id id;
   int inputs;
   turbine_datum_id input[TCL_TURBINE_MAX_INPUTS];
   int outputs;
   turbine_datum_id output[TCL_TURBINE_MAX_INPUTS];
 
   int code;
+  turbine_transform_id id;
   code = Tcl_GetLongFromObj(interp, objv[1], &id);
   TCL_CHECK(code);
 
