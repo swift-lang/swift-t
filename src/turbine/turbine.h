@@ -25,8 +25,10 @@ typedef enum
   TURBINE_ERROR_NUMBER_FORMAT,
   /** Invalid input */
   TURBINE_ERROR_INVALID,
+  /** Attempt to read/write TURBINE_ID_NULL */
+  TURBINE_ERROR_NULL,
   /** Unknown error */
-  TURBINE_ERROR_UNKNOWN
+  TURBINE_ERROR_UNKNOWN,
 } turbine_code;
 
 typedef long turbine_transform_id;
