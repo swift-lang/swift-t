@@ -21,7 +21,6 @@ set v3 [ expr $v1 + $v2 ]
 
 turbine_integer_set 3 $v3
 
-puts -nonewline "result: "
 turbine_trace 3
 
 turbine_engine

@@ -12,8 +12,9 @@ INPUT=${THIS%.sh}.txt
 ${TESTS}/runbin.zsh ${BIN}  >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
-LINES=$( grep -c "cp A.txt" ${OUTPUT} )
-[[ ${LINES} == 2 ]] || exit 1
-grep "cat B.txt C.txt" ${OUTPUT} || exit 1
+LINES=$( ls test/data/[ABCD].txt | wc -l)
+[[ ${LINES} == 4 ]] || exit 1
+
+rm -v test/data/[ABCD].txt
 
 exit 0

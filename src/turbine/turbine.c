@@ -609,10 +609,10 @@ static int transform_tostring(char* output,
                               turbine_transform* transform);
 
 #ifdef ENABLE_DEBUG_TURBINE
-#define DEBUG_TURBINE_RULE_ADD(transform, id) {     \
-    char tmp[1024];                              \
-    transform_tostring(tmp, transform);          \
-    printf("rule_add: %s <%li>\n", tmp, id);          \
+#define DEBUG_TURBINE_RULE_ADD(transform, id) {         \
+    char tmp[1024];                                     \
+    transform_tostring(tmp, transform);                 \
+    DEBUG_TURBINE("rule_add: %s <%li>\n", tmp, id);     \
   }
 #else
 #define DEBUG_TURBINE_RULE_ADD(transform, id)

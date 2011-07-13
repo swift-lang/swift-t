@@ -313,6 +313,7 @@ Turbine_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /**
    usage: turbine_lookup <container_id> <type> <entry_id>
+   returns: the TD of the lookup result
 */
 static int
 Turbine_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -392,24 +393,24 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
   int outputs;
   turbine_datum_id output[TCL_TURBINE_MAX_INPUTS];
 
-  int code;
+  int error;
   turbine_transform_id id;
-  code = Tcl_GetLongFromObj(interp, objv[1], &id);
-  TCL_CHECK(code);
+  error = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK(error);
 
   char* name = Tcl_GetStringFromObj(objv[2], NULL);
   assert(name);
 
-  code = turbine_tcl_long_array(interp, objv[3],
+  error = turbine_tcl_long_array(interp, objv[3],
                                 TCL_TURBINE_MAX_INPUTS,
                                 input, &inputs);
-  TURBINE_CHECK(code, "could not parse list as long integers: {%s}",
+  TCL_CHECK_MSG(error, "could not parse list as long integers: {%s}",
                 Tcl_GetString(objv[3]));
 
-  code = turbine_tcl_long_array(interp, objv[4],
+  error = turbine_tcl_long_array(interp, objv[4],
                                 TCL_TURBINE_MAX_OUTPUTS,
                                 output, &outputs);
-  TURBINE_CHECK(code, "could not parse list as long integers: {%s}",
+  TCL_CHECK_MSG(error, "could not parse list as long integers: {%s}",
                 Tcl_GetString(objv[4]));
 
   char* executor = Tcl_GetStringFromObj(objv[5], NULL);
@@ -425,7 +426,8 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
     .output = output
   };
 
-  turbine_rule_add(id, &transform);
+  turbine_code code = turbine_rule_add(id, &transform);
+  TURBINE_CHECK(code, "could not add rule: %li", id);
 
   return TCL_OK;
 }

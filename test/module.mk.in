@@ -21,3 +21,5 @@ TEST_SRC_TCL := $(DIR)/noop.tcl           \
                 $(DIR)/diamond3.tcl       \
                 $(DIR)/range.tcl          \
                 $(DIR)/linear-adlb-touch-10.tcl
+
+#                $(DIR)/modftdock.tcl

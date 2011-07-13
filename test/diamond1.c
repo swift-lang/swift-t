@@ -21,10 +21,10 @@ main()
 
   // Data definitions
   turbine_datum_id dA = 1, dB = 2, dC = 3, dD = 4;
-  code = turbine_datum_file_create(dA, "A.txt");
-  code = turbine_datum_file_create(dB, "B.txt");
-  code = turbine_datum_file_create(dC, "C.txt");
-  code = turbine_datum_file_create(dD, "D.txt");
+  code = turbine_datum_file_create(dA, "test/data/A.txt");
+  code = turbine_datum_file_create(dB, "test/data/B.txt");
+  code = turbine_datum_file_create(dC, "test/data/C.txt");
+  code = turbine_datum_file_create(dD, "test/data/D.txt");
 
   // Task dependency definitions
   /*
@@ -45,7 +45,7 @@ main()
   // Task A
   turbine_transform transformA;
   transformA.name = "A";
-  transformA.executor = "touch A.txt";
+  transformA.executor = "touch test/data/A.txt";
   turbine_datum_id outputA[1];
   transformA.inputs  = 0;
   transformA.outputs = 1;
@@ -57,7 +57,7 @@ main()
   // Task B
   turbine_transform transformB;
   transformB.name = "B";
-  transformB.executor = "cp A.txt B.txt";
+  transformB.executor = "cp test/data/A.txt test/data/B.txt";
   turbine_datum_id inputB[1];
   turbine_datum_id outputB[1];
   transformB.inputs  = 1;
@@ -71,7 +71,7 @@ main()
   // Task C
   turbine_transform transformC;
   transformC.name = "C";
-  transformC.executor = "cp A.txt C.txt";
+  transformC.executor = "cp test/data/A.txt test/data/C.txt";
   turbine_datum_id inputC[1];
   turbine_datum_id outputC[1];
   transformC.inputs  = 1;
@@ -85,7 +85,8 @@ main()
   // Task D
   turbine_transform transformD;
   transformD.name = "D";
-  transformD.executor = "cat B.txt C.txt > D.txt";
+  transformD.executor =
+    "cat test/data/B.txt test/data/C.txt > test/data/D.txt";
   turbine_datum_id inputD[2];
   turbine_datum_id outputD[1];
   transformD.inputs  = 2;
