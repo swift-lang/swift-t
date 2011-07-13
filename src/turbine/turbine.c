@@ -105,6 +105,9 @@ struct ltable tds;
 */
 struct hashtable container;
 
+static void turbine_check_msg_impl(turbine_code code,
+                                   const char* format, ...);
+
 turbine_code
 turbine_init()
 {
@@ -551,7 +554,7 @@ tr_free(tr* t)
   free(t);
 }
 
-static bool is_ready(tr* t);
+static turbine_code is_ready(tr* t, bool* result);
 
 static void subscribe(turbine_transform* transform,
                       turbine_transform_id id);
@@ -578,7 +581,10 @@ turbine_rule_add(turbine_transform_id id,
   DEBUG_TURBINE_RULE_ADD(transform);
   turbine_check(code);
   new_tr->id = id;
-  if (is_ready(new_tr))
+  bool ready;
+  code = is_ready(new_tr, &ready);
+  turbine_check(code);
+  if (ready)
   {
     list_add(&trs_ready, new_tr);
   }
@@ -620,6 +626,7 @@ turbine_new(turbine_datum_id* id)
 
 /**
    Push transforms that are ready into trs_ready
+   @return
 */
 turbine_code
 turbine_rules_push()
@@ -632,7 +639,10 @@ turbine_rules_push()
     {
       tr* t = item->data;
       assert(t);
-      if (is_ready(t))
+      bool ready;
+      turbine_code code = is_ready(t, &ready);
+      turbine_check(code);
+      if (ready)
         list_add(&tmp, t);
     }
 
@@ -690,17 +700,24 @@ td_close(turbine_datum* datum)
   return TURBINE_SUCCESS;
 }
 
-static bool
-is_ready(tr* t)
+static turbine_code
+is_ready(tr* t, bool* result)
 {
   for (int i = 0; i < t->transform.inputs; i++)
   {
     turbine_datum_id id = t->transform.input[i];
     turbine_datum* d = ltable_search(&tds, id);
+    if (d == NULL)
+      return TURBINE_ERROR_NOT_FOUND;
+
     if (d->status == TD_UNSET)
-      return false;
+    {
+      *result = false;
+      return TURBINE_SUCCESS;
+    }
   }
-  return true;
+  *result = true;
+  return TURBINE_SUCCESS;
 }
 
 /**
@@ -720,7 +737,11 @@ notify_waiters(turbine_datum* td)
     turbine_transform_id id = item->data;
     tr* t = ltable_search(&trs_waiting, id);
     assert(t);
-    if (is_ready(t))
+    bool result;
+    turbine_code code = is_ready(t, &result);
+    turbine_check_msg(code, "unknown input in rule: %s\n",
+                      t->transform.name);
+    if (result)
       list_add(&tmp, t);
   }
 
@@ -925,3 +946,20 @@ turbine_finalize()
   if (trs_waiting.size != 0)
     info_waiting();
 }
+
+static void
+turbine_check_msg_impl(turbine_code code, const char* format, ...)
+{
+  char buffer[1024];
+  char* p = &buffer[0];
+  va_list ap;
+  p += sprintf(p, "\n%s", "turbine error: ");
+  va_start(ap, format);
+  p += vsprintf(buffer, format, ap);
+  va_end(ap);
+  turbine_code_tostring(p, code);
+  printf("%s\n", buffer);
+  fflush(NULL);
+}
+
+

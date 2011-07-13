@@ -14,7 +14,7 @@
 #   trace(key, c[key]);
 
 package require turbine 0.1
-turbine_c_init
+turbine_init
 
 set c 1
 turbine_container $c key

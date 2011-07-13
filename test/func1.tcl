@@ -24,7 +24,7 @@ proc rules { } {
     turbine_rule 2 F1 { 1 } { 2 } { tp: f { 1 } { 2 } }
 }
 
-turbine_c_init
+turbine_init
 
 rules
 

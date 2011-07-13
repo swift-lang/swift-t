@@ -1,6 +1,59 @@
 
+global turbine_argv
+
 proc turbine_init { } {
     turbine_c_init
+
+    turbine_argv_init
+}
+
+proc turbine_argv_init { } {
+
+    global argc
+    global argv
+    set turbine_argv [ dict create ]
+    foreach arg $argv {
+        set tokens [ split $arg = ]
+        set key [ lindex $tokens 0 ]
+        if { [ string index $key 0 ] == "-" } {
+            set key [ string range $key 1 end ]
+        }
+        if { [ string index $key 0 ] == "-" } {
+            set key [ string range $key 1 end ]
+        }
+        set value [ lindex $tokens 1 ]
+        set v [ turbine_new ]
+        turbine_string $v
+        turbine_string_set $v $value
+        dict set $turbine_argv $key $value
+        turbine_debug "argv: $key=<$v>=$value"
+    }
+}
+
+proc turbine_argv_get { args } {
+
+    puts "args: $args"
+
+    set result [ lindex $args 0 ]
+    set key    [ lindex $args 1 ]
+    set base ""
+    if { [ llength $args ] == 3 }  {
+        set base [ lindex $args 2 ]
+    }
+    puts "default: $base"
+
+    set rule_id [ turbine_new ]
+    turbine_rule $rule_id "argv_get-$rule_id" $key $result \
+        "tp: turbine_trace_body $key $base $result"
+}
+
+proc turbine_argv_get_body { key base $result } {
+
+    set t [ turbine_string_get $key ]
+    puts "t: $key"
+    set v [ dict get $turbine_argv $t ]
+    puts "v: $v"
+    turbine_string_set $result $v
 }
 
 proc turbine_trace { args } {
@@ -105,3 +158,22 @@ proc turbine_loop_body { stmts container } {
         $stmts $i
     }
 }
+
+proc turbine_strcat { result inputs } {
+
+    set rule_id [ turbine_new ]
+    turbine_rule $rule_id "strcat-$rule_id" $inputs $result \
+        "tp: turbine_strcat $inputs $result"
+}
+
+proc turbine_strcat_body { inputs result } {
+
+    set output [ list ]
+    foreach input $inputs {
+        set t [ turbine_string_get $input ]
+        lappend output $t
+    }
+    set total [ join $output "" ]
+    turbine_string_set $result $total
+}
+

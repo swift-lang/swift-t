@@ -137,19 +137,23 @@ void turbine_finalize(void);
 // Internal API:
 #define turbine_check(code) if (code != TURBINE_SUCCESS) return code;
 
-#define turbine_check_verbose(code) \
-    turbine_check_impl(code, __FILE__, __LINE__)
+#define turbine_check_msg(code, format, args...)        \
+  { if (code != TURBINE_SUCCESS)                        \
+      turbine_check_msg_impl(code, format, ## args);    \
+  }
 
-#define turbine_check_impl(code, file, line)    \
-    {                                           \
-      if (code != TURBINE_SUCCESS)              \
-      {                                         \
-        char output[64];                        \
-        turbine_code_tostring(output, code);    \
-        printf("turbine error: %s\n", output);  \
-        printf("\tat: %s:%i\n", file, line);    \
-        return code;                            \
-      }                                         \
-    }
+#define turbine_check_verbose(code) \
+    turbine_check_verbose_impl(code, __FILE__, __LINE__)
+
+#define turbine_check_verbose_impl(code, file, line)    \
+  { if (code != TURBINE_SUCCESS)                        \
+    {                                                   \
+      char output[64];                                  \
+      turbine_code_tostring(output, code);              \
+      printf("turbine error: %s\n", output);            \
+      printf("\t at: %s:%i\n", file, line);             \
+      return code;                                      \
+    }                                                   \
+  }
 
 #endif

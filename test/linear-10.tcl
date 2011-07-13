@@ -1,5 +1,5 @@
 package require turbine 0.1
-turbine_c_init
+turbine_init
 
 turbine_file 0 0.txt
 turbine_file 1 1.txt
