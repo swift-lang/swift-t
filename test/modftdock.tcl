@@ -12,38 +12,41 @@ global turbine_null
 set str_list [ turbine_new ]
 turbine_string $str_list
 turbine_string_set $str_list "list"
-set t_list [ turbine_new ]
-turbine_string $t_list
-turbine_argv_get $t_list $str_list
+set td_list [ turbine_new ]
+turbine_string $td_list
+turbine_argv_get $td_list $str_list
 
 # Get arg("in")
 set in [ turbine_new ]
 turbine_string $in
 turbine_string_set $in "in"
-set t_in [ turbine_new ]
-turbine_string $t_in
-turbine_argv_get $t_in $in
+set td_in [ turbine_new ]
+turbine_string $td_in
+turbine_argv_get $td_in $in
 
 set str_roots [ turbine_new ]
 turbine_container $str_roots key integer
-turbine_readdata $str_roots $t_list
+turbine_readdata $str_roots $td_list
+
+set slash [ turbine_literal string "/" ]
+set pdb [ turbine_literal string ".pdb" ]
 
 turbine_loop loop1_body $str_roots
 
 proc loop1_body { key } {
 
-    global str_roots
+    global str_roots td_in slash pdb
 
     puts "body: $key"
     # turbine_trace $key
     set t [ turbine_integer_get $key ]
     puts "t: $t"
-    set value [ turbine_lookup $str_roots key $t ]
-    # turbine_trace $value
-
-    # set pdb [ turbine_new ]
-    # turbine_string $pdb
-    # turbine_string_set $pdb ".pdb"
+    set root [ turbine_lookup $str_roots key $t ]
+    turbine_trace $root $pdb
+    set s [ turbine_new ]
+    turbine_string $s
+    turbine_strcat $s $td_in $slash $root $pdb
+    turbine_trace $s
 }
 
 # set pdb

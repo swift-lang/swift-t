@@ -186,7 +186,7 @@ proc turbine_loop_body { stmts container } {
     }
 }
 
-# Convenience function to set up a TD
+# Utility function to set up a TD
 proc turbine_literal { type value } {
 
     set result [ turbine_new ]
@@ -217,14 +217,22 @@ proc turbine_copy { src dest } {
 }
 
 # User function
-proc turbine_strcat { result inputs } {
+# usage: strcat <result> <args>*
+proc turbine_strcat { args } {
+
+    set result [ lindex $args 0 ]
+    set inputs [ lreplace $args 0 0 ]
 
     set rule_id [ turbine_new ]
     turbine_rule $rule_id "strcat-$rule_id" $inputs $result \
-        "tp: turbine_strcat $inputs $result"
+        "tp: turbine_strcat_body $inputs $result"
 }
 
-proc turbine_strcat_body { inputs result } {
+# usage: strcat_body <args>* <result>
+proc turbine_strcat_body { args } {
+
+    set result [ lindex $args end ]
+    set inputs [ lreplace $args end end ]
 
     set output [ list ]
     foreach input $inputs {
