@@ -7,3 +7,4 @@ TURBINE=$( cd ${TURBINE_BIN}/.. ; /bin/pwd )
 
 # Allow user to insert valgrind
 ${VALGRIND} ${TCLSH} ${*}
+# Exit code returned by shell script

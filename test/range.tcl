@@ -11,7 +11,7 @@ turbine_init
 turbine_integer 1
 turbine_integer 2
 turbine_string  3
-turbine_container 4 key
+turbine_container 4 key integer
 
 turbine_integer_set 1 1
 turbine_integer_set 2 4

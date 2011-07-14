@@ -27,6 +27,8 @@ typedef enum
   TURBINE_ERROR_INVALID,
   /** Attempt to read/write TURBINE_ID_NULL */
   TURBINE_ERROR_NULL,
+  /** Attempt to operate on wrong data type */
+    TURBINE_ERROR_TYPE,
   /** Unknown error */
   TURBINE_ERROR_UNKNOWN,
 } turbine_code;
@@ -48,13 +50,21 @@ typedef enum
 {
   TURBINE_ENTRY_KEY,
   TURBINE_ENTRY_FIELD
-} turbine_entry_type;
+} turbine_entry_mode;
+
+typedef enum
+{
+  TURBINE_TYPE_FILE,
+  TURBINE_TYPE_CONTAINER,
+  TURBINE_TYPE_INTEGER,
+  TURBINE_TYPE_STRING
+} turbine_type;
 
 #define TURBINE_MAX_ENTRY 256
 
 typedef struct
 {
-  turbine_entry_type type;
+  turbine_entry_mode type;
   char name[TURBINE_MAX_ENTRY];
 } turbine_entry;
 
@@ -65,11 +75,15 @@ turbine_code turbine_init(void);
 turbine_code turbine_typeof(turbine_datum_id id,
                             char* output, int* length);
 
+turbine_code turbine_container_typeof(turbine_datum_id id,
+                                      char* output, int* length);
+
 turbine_code turbine_datum_file_create(turbine_datum_id id,
                                        const char* path);
 
 turbine_code turbine_datum_container_create(turbine_datum_id id,
-                                            turbine_entry_type type);
+                                            turbine_entry_mode mode,
+                                            turbine_type type);
 
 turbine_code turbine_datum_integer_create(turbine_datum_id id);
 

@@ -28,14 +28,6 @@ typedef enum
   TD_UNSET, TD_SET
 } td_status;
 
-typedef enum
-{
-  TURBINE_TYPE_FILE,
-  TURBINE_TYPE_CONTAINER,
-  TURBINE_TYPE_INTEGER,
-  TURBINE_TYPE_STRING
-} turbine_type;
-
 typedef struct
 {
   turbine_type type;
@@ -49,7 +41,9 @@ typedef struct
     } file;
     struct
     {
-      turbine_entry_type type;
+      turbine_entry_mode mode;
+      /** type of container keys */
+      turbine_type type;
       struct list members;
     } container;
     struct
@@ -206,7 +200,8 @@ turbine_datum_file_create(turbine_datum_id id, const char* path)
 
 turbine_code
 turbine_datum_container_create(turbine_datum_id id,
-                               turbine_entry_type type)
+                               turbine_entry_mode mode,
+                               turbine_type type)
 {
   if (id == TURBINE_ID_NULL)
     return TURBINE_ERROR_NULL;
@@ -219,11 +214,35 @@ turbine_datum_container_create(turbine_datum_id id,
   result->type = TURBINE_TYPE_CONTAINER;
   result->id = id;
   result->status = TD_UNSET;
+  result->data.container.mode = mode;
   result->data.container.type = type;
   list_init(&result->data.container.members);
   lnlist_init(&result->listeners);
   turbine_code code = td_register(result);
   return code;
+}
+
+/**
+   Obtain the type of the keys in given container id
+ */
+turbine_code
+turbine_container_typeof(turbine_datum_id id,
+                         char* output, int* length)
+{
+  if (id == TURBINE_ID_NULL)
+    return TURBINE_ERROR_NULL;
+
+  turbine_datum* td = ltable_search(&tds, id);
+  if (td == NULL)
+    return TURBINE_ERROR_NOT_FOUND;
+  turbine_type type = td->type;
+  if (type != TURBINE_TYPE_CONTAINER)
+    return TURBINE_ERROR_TYPE;
+  turbine_type container_type = td->data.container.type;
+  int result = type_tostring(output, container_type);
+  *length = result;
+  DEBUG_TURBINE("container_typeof: <%li>:%s\n", id, output);
+  return TURBINE_SUCCESS;
 }
 
 turbine_code
@@ -339,7 +358,7 @@ turbine_datum_string_get(turbine_datum_id id, char* output)
     return TURBINE_ERROR_UNSET;
 
   strcpy(output,  td->data.string.value);
-  DEBUG_TURBINE("string_set: <%li>=\"%s\"\n", id, output);
+  DEBUG_TURBINE("string_get: <%li>=\"%s\"\n", id, output);
 
   return TURBINE_SUCCESS;
 }
@@ -375,22 +394,24 @@ turbine_filename(turbine_datum_id id, char* output)
 }
 
 static turbine_code
-make_lookup_string(turbine_datum_id id, turbine_entry_type type,
+make_lookup_string(turbine_datum_id id, turbine_entry_mode mode,
                    const char* name, char* output, size_t* length)
 {
   char *p = output;
-  p += sprintf(p, "%li", id);
-  char* type_string;
-  if (type == TURBINE_ENTRY_KEY)
-    type_string = "key:";
-  else if (type == TURBINE_ENTRY_FIELD)
-    type_string = "field:";
+  append(p, "%li", id);
+  char* mode_string;
+  if (mode == TURBINE_ENTRY_KEY)
+    mode_string = "key:";
+  else if (mode == TURBINE_ENTRY_FIELD)
+    mode_string = "field:";
   else
     return TURBINE_ERROR_INVALID;
-  p += sprintf(p, "%s", type_string);
-  p += sprintf(p, "%s", name);
+
+  append(p, "%s", mode_string);
+  append(p, "%s", name);
   if (length)
     *length = p - output;
+
   return TURBINE_SUCCESS;
 }
 
@@ -440,8 +461,8 @@ turbine_insert(turbine_datum_id container_id, const char* name,
     return TURBINE_ERROR_NOT_FOUND;
   char tmp[TURBINE_MAX_ENTRY+24];
   size_t length;
-  turbine_entry_type type = td->data.container.type;
-  turbine_code code = make_lookup_string(container_id, type, name,
+  turbine_entry_mode mode = td->data.container.mode;
+  turbine_code code = make_lookup_string(container_id, mode, name,
                                          tmp, &length);
   turbine_check(code);
   DEBUG_TURBINE("insert: <%li[%s]>=<%li>\n",
@@ -501,10 +522,13 @@ turbine_lookup(turbine_datum_id id, const char* name,
 
   turbine_datum* td = ltable_search(&tds, id);
   if (!td)
+  {
+    DEBUG_TURBINE("could not find: %li\n", id);
     return TURBINE_ERROR_NOT_FOUND;
+  }
   char tmp[TURBINE_MAX_ENTRY+24];
   size_t length;
-  turbine_code code = make_lookup_string(id, td->data.container.type,
+  turbine_code code = make_lookup_string(id, td->data.container.mode,
                                          name, tmp, &length);
   turbine_check(code);
 
@@ -719,7 +743,7 @@ turbine_ready(int count, turbine_transform_id* output,
 {
   int i = 0;
   void* v;
-  DEBUG_TURBINE("turbine_ready: \n");
+  DEBUG_TURBINE("ready: \n");
   while (i < count && (v = list_poll(&trs_ready)))
   {
     tr* t = (tr*) v;
@@ -846,26 +870,26 @@ turbine_executor(turbine_transform_id id, char* executor)
   if (id == TURBINE_ID_NULL)
     return TURBINE_ERROR_NULL;
 
-  tr* transform = ltable_search(&trs_running, id);
-  if (!transform)
+  tr* t = ltable_search(&trs_running, id);
+  if (!t)
       return TURBINE_ERROR_NOT_FOUND;
 
-  strcpy(executor, transform->transform.executor);
+  strcpy(executor, t->transform.executor);
 
-  DEBUG_TURBINE("executor: <%li> %s\n", id, executor);
+  DEBUG_TURBINE("executor: <%li> %s: %s\n",
+                id, t->transform.name, executor);
   return TURBINE_SUCCESS;
 }
 
 turbine_code
 turbine_complete(turbine_transform_id id)
 {
-  DEBUG_TURBINE("turbine_complete: %li\n", id);
   if (id == TURBINE_ID_NULL)
     return TURBINE_ERROR_NULL;
 
   tr* t = ltable_remove(&trs_running, id);
   assert(t);
-  DEBUG_TURBINE(" %s\n", t->transform.name);
+  DEBUG_TURBINE("complete: <%li> %s\n", id, t->transform.name);
   for (int i = 0; i < t->transform.outputs; i++)
   {
     turbine_code code = turbine_close(t->transform.output[i]);
@@ -908,11 +932,17 @@ turbine_code_tostring(char* output, turbine_code code)
     case TURBINE_ERROR_NUMBER_FORMAT:
       result = sprintf(output, "TURBINE_ERROR_NUMBER_FORMAT");
       break;
+    case TURBINE_ERROR_INVALID:
+      result = sprintf(output, "TURBINE_ERROR_INVALID");
+      break;
     case TURBINE_ERROR_NULL:
       result = sprintf(output, "TURBINE_ERROR_NULL");
       break;
     case TURBINE_ERROR_UNKNOWN:
       result = sprintf(output, "TURBINE_ERROR_UNKNOWN");
+      break;
+    case TURBINE_ERROR_TYPE:
+      result = sprintf(output, "TURBINE_ERROR_TYPE");
       break;
     default:
       sprintf(output, "<could not convert code to string>");

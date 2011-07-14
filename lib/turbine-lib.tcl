@@ -1,4 +1,5 @@
 
+# User function
 proc turbine_init { } {
     turbine_c_init
 
@@ -30,11 +31,11 @@ proc turbine_argv_init { } {
         turbine_string_set $v $value
         dict set turbine_argv $key $value
         turbine_debug "argv: $key=<$v>=$value"
-        puts $turbine_argv
         incr turbine_argc
     }
 }
 
+# User function
 # usage: argv_get <result> <optional:default> <key>
 proc turbine_argv_get { args } {
 
@@ -69,7 +70,6 @@ proc turbine_argv_get_body { args } {
     set key [ lindex $args 0 ]
 
     set t [ turbine_string_get $key ]
-    puts $turbine_argv
     if { [ catch { set v [ dict get $turbine_argv $t ] } ] } {
         turbine_string_set $result ""
         return
@@ -77,6 +77,7 @@ proc turbine_argv_get_body { args } {
     turbine_string_set $result $v
 }
 
+# User function
 proc turbine_trace { args } {
 
     set rule_id [ turbine_new ]
@@ -105,6 +106,7 @@ proc turbine_trace_body { args } {
     puts ""
 }
 
+# User function
 proc turbine_range { result start end } {
 
     set rule_id [ turbine_new ]
@@ -127,6 +129,7 @@ proc turbine_range_body { result start end } {
     }
 }
 
+# User function
 proc turbine_enumerate { result container } {
 
     set rule_id [ turbine_new ]
@@ -140,6 +143,7 @@ proc turbine_enumerate_body { result container } {
     turbine_string_set $result $s
 }
 
+# User function
 proc turbine_readdata { result filename } {
 
     set rule_id [ turbine_new ]
@@ -164,6 +168,7 @@ proc turbine_readdata_body { result filename } {
     }
 }
 
+# User function
 proc turbine_loop { stmts container } {
     set rule_id [ turbine_new ]
     turbine_rule $rule_id "loop-$rule_id" $container {} \
@@ -171,17 +176,47 @@ proc turbine_loop { stmts container } {
 }
 
 proc turbine_loop_body { stmts container } {
-    set s [ turbine_container_get $container ]
-    puts "container_got: $s"
-    foreach t $s {
-        set td_key [ turbine_new ]
-        turbine_integer $td_key
-        turbine_integer_set $td_key $t
-        # Call user body with TD
+    set L    [ turbine_container_get $container ]
+    set type [ turbine_container_typeof $container ]
+    puts "container_got: $L"
+    foreach subscript $L {
+        set td_key [ turbine_literal $type $subscript ]
+        # Call user body with subscript as TD
         $stmts $td_key
     }
 }
 
+# Convenience function to set up a TD
+proc turbine_literal { type value } {
+
+    set result [ turbine_new ]
+    turbine_$type $result
+    turbine_${type}_set $result $value
+    return $result
+}
+
+# Copy from TD src to TD dest
+# src must be closed
+# dest must be a new TD but not created or closed
+# NOT TESTED
+proc turbine_copy { src dest } {
+
+    set type [ turbine_typeof $src ]
+    switch $type {
+        integer {
+            set t [ turbine_integer_get $src ]
+            turbine_integer $dest
+            turbine_integer_set $dest $t
+        }
+        string {
+            set t [ turbine_string_get $src ]
+            turbine_string $dest
+            turbine_string_set $dest $t
+        }
+    }
+}
+
+# User function
 proc turbine_strcat { result inputs } {
 
     set rule_id [ turbine_new ]

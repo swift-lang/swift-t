@@ -14,7 +14,7 @@ package require turbine 0.1
 turbine_init
 
 set c 1
-turbine_container $c key
+turbine_container $c key integer
 set s 2
 turbine_string $s
 turbine_string_set $s "test/data/input.txt"

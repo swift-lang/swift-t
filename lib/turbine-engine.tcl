@@ -5,6 +5,8 @@ package provide turbine 0.1
 
 proc turbine_engine { } {
 
+    turbine_debug "engine start..."
+
     turbine_push
 
     while {true} {
@@ -23,5 +25,6 @@ proc turbine_engine { } {
             turbine_complete $transform
         }
     }
+    turbine_debug "engine stop"
     return true
 }

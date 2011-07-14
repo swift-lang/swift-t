@@ -5,7 +5,6 @@ package require turbine 0.1
 turbine_adlb_init
 
 proc rules { } {
-	 turbine_file 0 test/data/0.txt
 	 turbine_file 1 test/data/1.txt
 	 turbine_file 2 test/data/2.txt
 	 turbine_file 3 test/data/3.txt
@@ -15,8 +14,7 @@ proc rules { } {
 	 turbine_file 7 test/data/7.txt
 	 turbine_file 8 test/data/8.txt
 	 turbine_file 9 test/data/9.txt
-	 turbine_rule 0 0 {   } { 0 } { touch test/data/0.txt }
-	 turbine_rule 1 1 { 0 } { 1 } { touch test/data/1.txt }
+	 turbine_rule 1 1 {   } { 1 } { touch test/data/1.txt }
 	 turbine_rule 2 2 { 1 } { 2 } { touch test/data/2.txt }
 	 turbine_rule 3 3 { 2 } { 3 } { touch test/data/3.txt }
 	 turbine_rule 4 4 { 3 } { 4 } { touch test/data/4.txt }

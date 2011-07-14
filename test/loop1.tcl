@@ -17,7 +17,7 @@ package require turbine 0.1
 turbine_init
 
 set c 1
-turbine_container $c key
+turbine_container $c key file
 set file1 3
 turbine_file $file1 file1.txt
 turbine_close $file1
