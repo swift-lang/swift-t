@@ -26,6 +26,7 @@ out "// Header created by debug-auto.tcl at: [exec date]\n\n"
 out "#ifndef DEBUG_H\n"
 out "#define DEBUG_H\n\n"
 
+out "void turbine_debug_init(void);\n\n"
 out "void turbine_debug(char* token, char* format, ...);\n\n"
 
 # String breaks were necessary to prevent TCL string interpolation

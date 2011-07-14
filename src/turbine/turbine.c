@@ -105,6 +105,8 @@ static void turbine_check_msg_impl(turbine_code code,
 turbine_code
 turbine_init()
 {
+  turbine_debug_init();
+
   struct ltable* table;
   table = ltable_init(&trs_waiting, 1024*1024);
   if (!table)
