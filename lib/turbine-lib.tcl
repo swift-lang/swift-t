@@ -257,3 +257,37 @@ proc turbine_toint_body { input result } {
     # TCL performs the conversion naturally
     turbine_integer_set $result $t
 }
+
+# usage: arithmetic_body <result> <expr> <args>*
+# example: assume td1 = 5, td2 = 6, td3 = 7
+# turbine_arithmetic td4 "(_+_)*_" td1 td2 td3
+# results in td4=210
+proc turbine_arithmetic { args } {
+
+    set result     [ lindex $args 0 ]
+    set expression [ lindex $args 1 ]
+    set inputs     [ lreplace $args 0 1 ]
+
+    set rule_id [ turbine_new ]
+    turbine_rule $rule_id "arithmetic-$rule_id" $inputs $result \
+        "tp: turbine_arithmetic_body $inputs $expression $result"
+}
+
+# usage: arithmetic_body <args>* <expr> <result>
+proc turbine_arithmetic_body { args } {
+
+    set expression [ lindex $args end-1 ]
+    set result [ lindex $args end ]
+    set inputs [ lreplace $args end-1 end ]
+    set count [ llength $inputs ]
+
+    set working $expression
+    for { set i 0 } { $i < $count } { incr i } {
+        set td [ lindex $inputs $i ]
+        set v [ turbine_integer_get $td ]
+        regsub "_" $working $v working
+    }
+
+    set total [ expr $working ]
+    turbine_integer_set $result $total
+}
