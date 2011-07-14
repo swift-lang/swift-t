@@ -322,7 +322,7 @@ Turbine_Filename_Cmd(ClientData cdata, Tcl_Interp *interp,
   strcpy(entry.name, subscript);
 
 /**
-   usage: turbine_insert <container id> <type> <subscript> <entry id>
+   usage: turbine_insert <container id> <mode> <subscript> <entry id>
 */
 static int
 Turbine_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -334,7 +334,7 @@ Turbine_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   error = Tcl_GetLongFromObj(interp, objv[1], &container_lid);
   TCL_CHECK(error);
   turbine_datum_id container_id = (turbine_datum_id) container_lid;
-  char* type = Tcl_GetString(objv[2]);
+  char* mode = Tcl_GetString(objv[2]);
   char* subscript = Tcl_GetString(objv[3]);
   long entry_lid;
   error = Tcl_GetLongFromObj(interp, objv[4], &entry_lid);
@@ -344,12 +344,12 @@ Turbine_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   turbine_code code =
     turbine_insert(container_id, subscript, entry_id);
   TURBINE_CHECK(code, "could not insert: %li:%s[%s]",
-                container_id, type, subscript);
+                container_id, mode, subscript);
   return TCL_OK;
 }
 
 /**
-   usage: turbine_lookup <container_id> <type> <entry_id>
+   usage: turbine_lookup <container_id> <mode> <subscript>
    returns: the TD of the lookup result
 */
 static int
@@ -361,15 +361,16 @@ Turbine_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
   long lid;
   int error = Tcl_GetLongFromObj(interp, objv[1], &lid);
   TCL_CHECK(error);
-  char* type = Tcl_GetString(objv[2]);
+  char* mode = Tcl_GetString(objv[2]);
   char* subscript = Tcl_GetString(objv[3]);
 
   turbine_datum_id member;
   turbine_datum_id id = (turbine_datum_id) lid;
 
   turbine_code code = turbine_lookup(id, subscript, &member);
+  if (code == TURBINE_ERROR_NOT_FOUND)
   TCL_CONDITION(code == TURBINE_SUCCESS,
-                "could not lookup: %li:%s[%s]", lid, type, subscript);
+                "could not lookup: %li:%s[%s]", lid, mode, subscript);
 
   Tcl_Obj* result = Tcl_NewLongObj(member);
   Tcl_SetObjResult(interp, result);
