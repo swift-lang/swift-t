@@ -243,3 +243,17 @@ proc turbine_strcat_body { args } {
     turbine_string_set $result $total
 }
 
+# User function
+proc turbine_toint { result input } {
+
+    set rule_id [ turbine_new ]
+    turbine_rule $rule_id "toint-$rule_id" $input $result \
+        "tp: turbine_toint_body $input $result"
+}
+
+proc turbine_toint_body { input result } {
+
+    set t [ turbine_string_get $input ]
+    # TCL performs the conversion naturally
+    turbine_integer_set $result $t
+}
