@@ -24,6 +24,12 @@ set td_in [ turbine_new ]
 turbine_string $td_in
 turbine_argv_get $td_in $in
 
+# Get arg("n")
+set n [ turbine_literal string "n" ]
+set td_n [ turbine_new ]
+turbine_string $td_n
+turbine_argv_get $td_n $n
+
 set str_roots [ turbine_new ]
 turbine_container $str_roots key integer
 turbine_readdata $str_roots $td_list
@@ -35,7 +41,7 @@ turbine_loop loop1_body $str_roots
 
 proc loop1_body { key } {
 
-    global str_roots td_in slash pdb
+    global str_roots td_in td_n slash pdb
 
     puts "body: $key"
     # turbine_trace $key
@@ -47,6 +53,12 @@ proc loop1_body { key } {
     turbine_string $s
     turbine_strcat $s $td_in $slash $root $pdb
     turbine_trace $s
+
+    turbine_trace $td_n
+
+    set indices [ turbine_new ]
+    turbine_container $indices key integer
+    # turbine_range $indices
 }
 
 # set pdb
