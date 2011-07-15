@@ -24,6 +24,6 @@ bin/turbine ${SCRIPT} --list=${ROOTS_TXT} --in=input >& ${OUTPUT}
 # LINES=$( grep -c "v[0-2]" ${OUTPUT} )
 # [[ ${LINES} == 3 ]] || exit 1
 
-rm -rv ${INPUT} || exit 1
+# rm -rv ${INPUT} || exit 1
 
 exit 0
