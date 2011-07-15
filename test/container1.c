@@ -30,7 +30,7 @@ main()
   code = turbine_init();
   assert(code == TURBINE_SUCCESS);
   code = turbine_datum_container_create(d1, TURBINE_ENTRY_KEY,
-                                        TURBINE_TYPE_FILE);
+                                        TURBINE_TYPE_INTEGER);
   assert(code == TURBINE_SUCCESS);
   code = turbine_datum_file_create(d2, "file1.txt");
   assert(code == TURBINE_SUCCESS);

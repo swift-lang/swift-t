@@ -13,6 +13,15 @@
 
 #include "src/turbine/turbine.h"
 
+/**
+   SwiftScript:
+   file A, B, C, D ... ;
+   A = touch();
+   B = cp(A);
+   C = cp(A);
+   D = cat(B, C);
+*/
+
 int
 main()
 {

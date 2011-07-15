@@ -12,6 +12,11 @@
 
 #include "src/turbine/turbine.h"
 
+/**
+   SwiftScript:
+   type file;
+   file d1<"file.txt">;
+*/
 int
 main()
 {
