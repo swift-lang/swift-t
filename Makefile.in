@@ -141,7 +141,10 @@ $(TURBINE): $(TURBINE_OBJS)
 $(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_OBJS) # $(WOZTOOLS_LIB)
 	$(Q) "  LINK		$(@)"
 	$(E) gcc -shared -fPIC -o $(@) $(TCL_LINK_FLAGS) \
-             $(TCL_TURBINE_OBJS) $(TURBINE_OBJS)
+             $(TCL_TURBINE_OBJS) $(TURBINE_OBJS) \
+		  -L $(ADLB) -l adlb \
+		  -L $(MPI)/lib -l mpich -l mpl
+
 #             -L $(WOZTOOLS)/lib -l woztools
 
 # Test cases in C as objects
