@@ -7,4 +7,5 @@
 set INPUT {
     TURBINE ON
     TCL_TURBINE ON
+    ADLB ON
 }

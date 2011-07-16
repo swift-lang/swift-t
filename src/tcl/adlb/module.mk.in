@@ -9,6 +9,7 @@ TCL_ADLB_SRC := $(DIR)/tcl-adlb.c
 TURBINE_SRC += $(TCL_ADLB_SRC)
 
 TCL_ADLB_OBJS := $(patsubst %.c, %.o, $(TCL_ADLB_SRC))
+TCL_ADLB_OBJS += src/util/debug.o
 
 TCL_ADLB_SO = lib/libtcladlb.so
 
