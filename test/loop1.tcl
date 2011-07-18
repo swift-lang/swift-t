@@ -3,53 +3,55 @@
 # TCL version of container1
 
 # SwiftScript
-# file[] c;
+# string[] c;
 # int key1 = 0;
-# file file1<"file1.txt">;
+# string s1 = "string1";
 # int key2 = 1
-# file file2<"file2.txt">;
-# c[key1] = file1;
-# c[key2] = file2;
+# string s2 = "string2";
+# c[key1] = s1;
+# c[key2] = s2;
 # foreach key in c
 #   trace(key, c[key]);
 
 package require turbine 0.1
-turbine_init
+turbine::init
 
 set c 1
-turbine_container $c key file
-set file1 3
-turbine_file $file1 file1.txt
-turbine_close $file1
-set file2 5
-turbine_file $file2 file2.txt
-turbine_close $file2
+turbine::c::container $c key integer
+set s1 3
+turbine::c::string $s1
+turbine::c::string_set $s1 string1
+turbine::c::close $s1
+set s2 5
+turbine::c::string $s2
+turbine::c::string_set $s2 string2
+turbine::c::close $s2
 
-turbine_insert $c key 0 $file1
-turbine_insert $c key 1 $file2
+turbine::c::insert $c key 0 $s1
+turbine::c::insert $c key 1 $s2
 
-turbine_close $c
+turbine::c::close $c
 
-turbine_loop loop1_body $c
+turbine::loop loop1_body $c
 proc loop1_body { key } {
     global c
     puts "body: $key"
-    turbine_trace $key
-    set t [ turbine_integer_get $key ]
-    set value [ turbine_lookup $c key $t ]
-    turbine_trace $value
+    turbine::trace $key
+    set t [ turbine::c::integer_get $key ]
+    set value [ turbine::c::lookup $c key $t ]
+    turbine::trace $value
 }
 
-# set L [ turbine_container_get 1 ]
+# set L [ turbine::c::container_get 1 ]
 # puts "enumeration: $L"
 
 # This is not a real Turbine loop
 # foreach id $L {
-#     set member [ turbine_lookup 1 "key" $id ]
-#     set filename [ turbine_filename $member ]
+#     set member [ turbine::c::lookup 1 "key" $id ]
+#     set filename [ turbine::c::filename $member ]
 #     puts "filename: $filename"
 # }
 
-turbine_engine
-turbine_finalize
+turbine::engine
+turbine::finalize
 puts OK

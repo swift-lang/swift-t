@@ -3,28 +3,33 @@
 
 package provide turbine 0.1
 
-proc turbine_engine { } {
+namespace eval turbine {
 
-    turbine_debug "engine start..."
+    proc engine { } {
 
-    turbine_push
+        namespace import c::debug c::push c::ready c::complete c::executor
 
-    while {true} {
+        debug "engine start..."
 
-        set ready [ turbine_ready ]
-        if { ! [ string length $ready ] } break
+        push
 
-        foreach transform $ready {
-            set command [ turbine_executor $transform ]
-            turbine_debug "executing: $command"
-            if { [ catch { turbine_eval $command } e v ] } {
-                puts "[ dict get $v -errorinfo]"
-                puts "\nrule $transform failed: $command\n"
-                return false
+        while {true} {
+
+            set ready [ ready ]
+            if { ! [ string length $ready ] } break
+
+            foreach transform $ready {
+                set command [ executor $transform ]
+                debug "executing: $command"
+                if { [ catch { turbine::eval $command } e v ] } {
+                    puts "[ dict get $v -errorinfo]"
+                    puts "\nrule $transform failed: $command\n"
+                    return false
+                }
+                complete $transform
             }
-            turbine_complete $transform
         }
+        debug "engine stop"
+        return true
     }
-    turbine_debug "engine stop"
-    return true
 }

@@ -2,7 +2,7 @@
 # Test basic readdata functionality
 
 # SwiftScript
-# file[] c;
+# string[] c;
 # string s = "input.txt";
 # c = readdata(s);
 # foreach key in c {
@@ -11,26 +11,26 @@
 # }
 
 package require turbine 0.1
-turbine_init
+turbine::init
 
 set c 1
-turbine_container $c key integer
+turbine::c::container $c key integer
 set s 2
-turbine_string $s
-turbine_string_set $s "test/data/input.txt"
+turbine::c::string $s
+turbine::c::string_set $s "test/data/input.txt"
 
-turbine_readdata $c $s
+turbine::readdata $c $s
 
-turbine_loop loop1_body $c
+turbine::loop loop1_body $c
 proc loop1_body { key } {
     global c
-    turbine_trace $key
-    set t [ turbine_integer_get $key ]
-    set value [ turbine_lookup $c key $t ]
-    turbine_trace $value
+    turbine::trace $key
+    set t [ turbine::c::integer_get $key ]
+    set value [ turbine::c::lookup $c key $t ]
+    turbine::trace $value
 }
 
-turbine_engine
+turbine::engine
 
-turbine_finalize
+turbine::finalize
 puts OK

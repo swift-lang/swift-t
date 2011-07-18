@@ -9,7 +9,7 @@ package require turbine 0.1
 enum WORK_TYPE { T }
 
 adlb::init [ array size WORK_TYPE ]
-turbine_init
+turbine::init
 
 set amserver [ adlb::amserver ]
 
@@ -27,6 +27,6 @@ if { $amserver == 0 } {
     puts "ADLB server exited!"
 }
 
-turbine_finalize
+turbine::finalize
 adlb::finalize
 puts OK

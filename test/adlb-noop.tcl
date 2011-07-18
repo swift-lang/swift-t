@@ -4,8 +4,8 @@
 
 package require turbine 0.1
 adlb::init 1
-turbine_init
+turbine::init
 
-turbine_finalize
+turbine::finalize
 adlb::finalize
 puts OK

@@ -4,10 +4,10 @@
 
 package require turbine 0.1
 
-turbine_init
+turbine::init
 
-turbine_engine
+turbine::engine
 
-turbine_finalize
+turbine::c::finalize
 
 puts OK

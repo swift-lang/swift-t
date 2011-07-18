@@ -567,10 +567,10 @@ Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
 #endif
 
 /**
-   Shorten object creation lines.  Note "turbine_" is prepended
+   Shorten object creation lines.  "turbine::" namespace is prepended
  */
 #define COMMAND(tcl_function, c_function)                           \
-  Tcl_CreateObjCommand(interp, "turbine_" tcl_function, c_function, \
+  Tcl_CreateObjCommand(interp, "turbine::c::" tcl_function, c_function, \
                        NULL, NULL);
 
 /**
@@ -587,7 +587,7 @@ Tclturbine_Init(Tcl_Interp *interp)
     return TCL_ERROR;
   }
 
-  COMMAND("c_init",           Turbine_Init_Cmd);
+  COMMAND("init",           Turbine_Init_Cmd);
   COMMAND("file",             Turbine_File_Cmd);
   COMMAND("container",        Turbine_Container_Cmd);
   COMMAND("container_typeof", Turbine_ContainerTypeof_Cmd);
@@ -611,5 +611,10 @@ Tclturbine_Init(Tcl_Interp *interp)
   COMMAND("complete",         Turbine_Complete_Cmd);
   COMMAND("finalize",         Turbine_Finalize_Cmd);
   COMMAND("debug",            Turbine_Debug_Cmd);
+
+  Tcl_Namespace* turbine =
+    Tcl_FindNamespace(interp, "turbine::c", NULL, 0);
+  Tcl_Export(interp, turbine, "*", 0);
+
   return TCL_OK;
 }
