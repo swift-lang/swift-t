@@ -21,6 +21,6 @@ turbine_adlb_init
 turbine_adlb rules
 
 turbine_finalize
-adlb_finalize
+adlb::finalize
 
 puts OK

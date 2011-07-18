@@ -28,5 +28,5 @@ proc rules { } {
 turbine_adlb rules
 
 turbine_finalize
-adlb_finalize
+adlb::finalize
 puts OK

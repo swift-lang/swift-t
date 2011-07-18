@@ -3,16 +3,16 @@ package require turbine 0.1
 
 enum WORK_TYPE { CMDLINE }
 
-set rc [ adlb_init [ array size WORK_TYPE ] ]
-assert [ expr $rc == $ADLB_SUCCESS ] "Failed: adlb_init"
+set rc [ adlb::init [ array size WORK_TYPE ] ]
+assert [ expr $rc == $ADLB_SUCCESS ] "Failed: adlb::init"
 
-set amserver [ adlb_amserver ]
+set amserver [ adlb::amserver ]
 
 proc do_work {} {
 
     global WORK_TYPE
     while { true } {
-        set work [ adlb_get $WORK_TYPE(CMDLINE) answer_rank ]
+        set work [ adlb::get $WORK_TYPE(CMDLINE) answer_rank ]
         if { [ string length $work ] } {
             puts "work: $work"
             eval exec $work
@@ -25,7 +25,7 @@ proc do_work {} {
 proc do_client {argc argv} {
     global ADLB_ANY
     global WORK_TYPE
-    set rank [ adlb_rank ]
+    set rank [ adlb::rank ]
 
     if { $rank == 0 } {
         if { $argc != 1 } {
@@ -41,7 +41,7 @@ proc do_client {argc argv} {
             gets $fd line
             set line [ string trimright $line ]
             if { [ string length $line ] } {
-                adlb_put $ADLB_ANY $WORK_TYPE(CMDLINE) $line
+                adlb::put $ADLB_ANY $WORK_TYPE(CMDLINE) $line
             }
             if { [ eof $fd ] } {
                 close $fd
@@ -58,7 +58,7 @@ if { $amserver == 0 } {
     do_client $argc $argv
 }
 
-adlb_finalize
+adlb::finalize
 
 # Help TCL free memory
 proc exit args {}

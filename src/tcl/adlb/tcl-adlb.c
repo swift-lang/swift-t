@@ -180,7 +180,7 @@ static int
 ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
              int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(2);
+  TCL_ARGS(3);
 
   int req_type;
   int error = Tcl_GetIntFromObj(interp, objv[1], &req_type);
@@ -313,16 +313,16 @@ Tcladlb_Init(Tcl_Interp *interp)
   if (Tcl_PkgProvide(interp, "ADLB", "0.1") == TCL_ERROR)
     return TCL_ERROR;
 
-  Tcl_CreateObjCommand(interp, "adlb_init", ADLB_Init_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "adlb_rank", ADLB_Rank_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "adlb_amserver", ADLB_AmServer_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "adlb_servers", ADLB_Servers_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "adlb_workers", ADLB_Workers_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "adlb_put", ADLB_Put_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "adlb_get", ADLB_Get_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "adlb_store", ADLB_Store_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "adlb_retrieve", ADLB_Retrieve_Cmd, NULL, NULL);
+  Tcl_CreateObjCommand(interp, "adlb::init", ADLB_Init_Cmd, NULL, NULL);
+  Tcl_CreateObjCommand(interp, "adlb::rank", ADLB_Rank_Cmd, NULL, NULL);
+  Tcl_CreateObjCommand(interp, "adlb::amserver", ADLB_AmServer_Cmd, NULL, NULL);
+  Tcl_CreateObjCommand(interp, "adlb::servers", ADLB_Servers_Cmd, NULL, NULL);
+  Tcl_CreateObjCommand(interp, "adlb::workers", ADLB_Workers_Cmd, NULL, NULL);
+  Tcl_CreateObjCommand(interp, "adlb::put", ADLB_Put_Cmd, NULL, NULL);
+  Tcl_CreateObjCommand(interp, "adlb::get", ADLB_Get_Cmd, NULL, NULL);
+  Tcl_CreateObjCommand(interp, "adlb::store", ADLB_Store_Cmd, NULL, NULL);
+  Tcl_CreateObjCommand(interp, "adlb::retrieve", ADLB_Retrieve_Cmd, NULL, NULL);
 
-  Tcl_CreateObjCommand(interp, "adlb_finalize", ADLB_Finalize_Cmd, NULL, NULL);
+  Tcl_CreateObjCommand(interp, "adlb::finalize", ADLB_Finalize_Cmd, NULL, NULL);
   return TCL_OK;
 }

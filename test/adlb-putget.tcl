@@ -8,18 +8,18 @@ package require turbine 0.1
 
 enum WORK_TYPE { T }
 
-adlb_init [ array size WORK_TYPE ]
+adlb::init [ array size WORK_TYPE ]
 turbine_init
 
-set amserver [ adlb_amserver ]
+set amserver [ adlb::amserver ]
 
 if { $amserver == 0 } {
 
-    set rank [ adlb_rank ]
+    set rank [ adlb::rank ]
     if { $rank == 0 } {
-        adlb_put $ADLB_ANY $WORK_TYPE(T) "hello"
+        adlb::put $ADLB_ANY $WORK_TYPE(T) "hello"
     } else {
-        set msg [ adlb_get $WORK_TYPE(T) answer_rank ]
+        set msg [ adlb::get $WORK_TYPE(T) answer_rank ]
         puts "answer_rank: $answer_rank"
         puts "msg: $msg"
     }
@@ -28,5 +28,5 @@ if { $amserver == 0 } {
 }
 
 turbine_finalize
-adlb_finalize
+adlb::finalize
 puts OK
