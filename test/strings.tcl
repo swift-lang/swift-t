@@ -7,22 +7,25 @@
 # trace(s1,s2);
 
 package require turbine 0.1
-turbine::init
 
-turbine::c::string 1
-turbine::c::string 2
-# turbine::c::string 3
+namespace import turbine::* turbine::data::*
 
-turbine::c::string_set 1 "hi"
-turbine::c::string_set 2 "bye"
+init
 
-set v1 [ turbine::c::string_get 1 ]
-set v2 [ turbine::c::string_get 2 ]
+string_init 1
+string_init 2
+# c::string 3
+
+string_set 1 "hi"
+string_set 2 "bye"
+
+set v1 [ string_get 1 ]
+set v2 [ string_get 2 ]
 
 puts -nonewline "result: "
 turbine::trace 1 2
 
-turbine::engine
-turbine::finalize
+engine
+finalize
 
 puts OK

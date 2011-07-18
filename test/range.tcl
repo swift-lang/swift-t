@@ -9,10 +9,10 @@
 package require turbine 0.1
 turbine::init
 
-turbine::c::integer 1
-turbine::c::integer 2
-turbine::c::string  3
-turbine::c::container 4 key integer
+turbine::c::integer_init 1
+turbine::c::integer_init 2
+turbine::c::string_init  3
+turbine::c::container_init 4 key integer
 
 turbine::c::integer_set 1 1
 turbine::c::integer_set 2 4

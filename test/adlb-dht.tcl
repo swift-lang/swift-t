@@ -2,8 +2,8 @@
 # Flex ADLB DHT
 
 package require turbine 0.1
-adlb::init 1
-turbine_init
+
+turbine::adlb::init
 
 set count 4
 
@@ -22,6 +22,6 @@ if { ! [ adlb::amserver ] } {
     }
 }
 
-turbine_finalize
-adlb::finalize
+turbine::adlb::finalize
+
 puts OK

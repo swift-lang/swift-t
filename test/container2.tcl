@@ -13,7 +13,7 @@
 package require turbine 0.1
 turbine::init
 
-turbine::c::container 1 key file
+turbine::c::container_init 1 key file
 turbine::c::file 2 file1.txt
 turbine::c::file 3 file2.txt
 

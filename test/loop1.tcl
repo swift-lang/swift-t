@@ -17,13 +17,13 @@ package require turbine 0.1
 turbine::init
 
 set c 1
-turbine::c::container $c key integer
+turbine::c::container_init $c key integer
 set s1 3
-turbine::c::string $s1
+turbine::c::string_init $s1
 turbine::c::string_set $s1 string1
 turbine::c::close $s1
 set s2 5
-turbine::c::string $s2
+turbine::c::string_init $s2
 turbine::c::string_set $s2 string2
 turbine::c::close $s2
 

@@ -179,8 +179,8 @@ Turbine_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
-Turbine_Integer_Cmd(ClientData cdata, Tcl_Interp *interp,
-                    int objc, Tcl_Obj *const objv[])
+Turbine_Integer_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
+                         int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
 
@@ -234,8 +234,8 @@ Turbine_Integer_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
-Turbine_String_Cmd(ClientData cdata, Tcl_Interp *interp,
-                   int objc, Tcl_Obj *const objv[])
+Turbine_String_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
+                        int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
 
@@ -587,15 +587,15 @@ Tclturbine_Init(Tcl_Interp *interp)
     return TCL_ERROR;
   }
 
-  COMMAND("init",           Turbine_Init_Cmd);
+  COMMAND("init",             Turbine_Init_Cmd);
   COMMAND("file",             Turbine_File_Cmd);
-  COMMAND("container",        Turbine_Container_Cmd);
+  COMMAND("container_init",   Turbine_Container_Cmd);
   COMMAND("container_typeof", Turbine_ContainerTypeof_Cmd);
   COMMAND("close",            Turbine_Close_Cmd);
-  COMMAND("integer",          Turbine_Integer_Cmd);
+  COMMAND("integer_init",     Turbine_Integer_Init_Cmd);
   COMMAND("integer_set",      Turbine_Integer_Set_Cmd);
   COMMAND("integer_get",      Turbine_Integer_Get_Cmd);
-  COMMAND("string",           Turbine_String_Cmd);
+  COMMAND("string_init",      Turbine_String_Init_Cmd);
   COMMAND("string_set",       Turbine_String_Set_Cmd);
   COMMAND("string_get",       Turbine_String_Get_Cmd);
   COMMAND("typeof",           Turbine_Typeof_Cmd);

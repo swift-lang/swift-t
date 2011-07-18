@@ -1,10 +1,11 @@
 
 namespace eval turbine {
 
-    namespace export init rule
+    namespace export init rule engine finalize
+
     namespace import c::new c::rule c::typeof
-    namespace import c::integer_get c::integer_set
-    namespace import c::string_get c::string_set
+    namespace import c::integer_init c::integer_get c::integer_set
+    namespace import c::string_init  c::string_get  c::string_set
     namespace import c::container_get c::container_typeof
     namespace import c::insert
 
@@ -36,7 +37,7 @@ namespace eval turbine {
             }
             set value [ lindex $tokens 1 ]
             set v [ new ]
-            string $v
+            string_init $v
             string_set $v $value
             dict set argv $key $value
             debug "argv: $key=<$v>=$value"
@@ -87,6 +88,8 @@ namespace eval turbine {
     }
 
     # User function
+    # This name conflicts with a TCL built-in - it cannot be exported
+    # TODO: Replace this with tracef()
     proc trace { args } {
 
         set rule_id [ new ]
@@ -131,7 +134,7 @@ namespace eval turbine {
         set k 0
         for { set i $start } { $i <= $end_value } { incr i } {
             set td [ new ]
-            c::integer $td
+            c::integer_init $td
             integer_set $td $i
             insert $result key $k $td
             incr k
@@ -170,7 +173,7 @@ namespace eval turbine {
         set i 0
         while { [ gets $fd line ] >= 0 } {
             set s [ new ]
-            turbine::c::string $s
+            turbine::c::string_init $s
             turbine::c::string_set $s $line
             insert $result key $i $s
             incr i
@@ -199,7 +202,7 @@ namespace eval turbine {
     proc literal { type value } {
 
         set result [ new ]
-        c::$type $result
+        c::${type}_init $result
         ${type}_set $result $value
         return $result
     }
@@ -219,7 +222,7 @@ namespace eval turbine {
             }
             string {
                 set t [ string_get $src ]
-                string $dest
+                string_init $dest
                 string_set $dest $t
             }
         }
