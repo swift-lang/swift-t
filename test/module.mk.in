@@ -16,7 +16,6 @@ TEST_SRC_TCL := $(DIR)/noop.tcl           \
                 $(DIR)/container2.tcl     \
                 $(DIR)/loop1.tcl          \
                 $(DIR)/readdata.tcl       \
-                $(DIR)/modftdock.tcl      \
                 $(DIR)/adlb-noop.tcl      \
                 $(DIR)/adlb-putget.tcl    \
                 $(DIR)/batcher.tcl        \
@@ -24,3 +23,4 @@ TEST_SRC_TCL := $(DIR)/noop.tcl           \
                 $(DIR)/range.tcl          \
                 $(DIR)/linear-adlb-touch-10.tcl
 
+#                $(DIR)/modftdock.tcl      \
