@@ -2,10 +2,7 @@
 DIR := test
 
 TEST_SRC_C := $(DIR)/list.c       \
-              $(DIR)/readfile.c   \
-              $(DIR)/data.c       \
-              $(DIR)/container1.c \
-              $(DIR)/diamond1.c
+              $(DIR)/readfile.c
 
 TEST_SRC_TCL := $(DIR)/noop.tcl           \
                 $(DIR)/diamond2.tcl       \
