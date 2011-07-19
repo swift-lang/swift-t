@@ -291,6 +291,54 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
+ADLB_Subscribe_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(3);
+
+  int subscribed;
+  long id;
+
+  Tcl_GetLongFromObj(interp, objv[1], &id);
+  int rc = ADLB_Subscribe(id, &subscribed);
+  assert(rc == ADLB_SUCCESS);
+
+  Tcl_Obj* result = Tcl_NewIntObj(subscribed);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+/**
+   usage: adlb_close <id>
+   returns list of int ranks that must be notified
+*/
+static int
+ADLB_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
+               int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  long id;
+  Tcl_GetLongFromObj(interp, objv[1], &id);
+
+  DEBUG_ADLB("adlb_close: <%li>\n", id);
+  int* ranks;
+  int count;
+  int rc = ADLB_Close(id, &ranks, &count);
+  assert(rc == ADLB_SUCCESS);
+
+  Tcl_Obj* result = Tcl_NewListObj(0, NULL);
+  for (int i = 0; i < count; i++)
+  {
+    Tcl_Obj* o = Tcl_NewIntObj(ranks[i]);
+    Tcl_ListObjAppendElement(interp, result, o);
+  }
+  Tcl_SetObjResult(interp, result);
+
+  return TCL_OK;
+}
+
+static int
 ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
@@ -301,6 +349,12 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+/**
+   Shorten object creation lines.  "turbine::" namespace is prepended
+ */
+#define COMMAND(tcl_function, c_function) \
+    Tcl_CreateObjCommand(interp, "adlb::" tcl_function, c_function, \
+                         NULL, NULL);
 /**
    Called when Tcl loads this extension
  */
@@ -313,16 +367,18 @@ Tcladlb_Init(Tcl_Interp *interp)
   if (Tcl_PkgProvide(interp, "ADLB", "0.1") == TCL_ERROR)
     return TCL_ERROR;
 
-  Tcl_CreateObjCommand(interp, "adlb::init", ADLB_Init_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "adlb::rank", ADLB_Rank_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "adlb::amserver", ADLB_AmServer_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "adlb::servers", ADLB_Servers_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "adlb::workers", ADLB_Workers_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "adlb::put", ADLB_Put_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "adlb::get", ADLB_Get_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "adlb::store", ADLB_Store_Cmd, NULL, NULL);
-  Tcl_CreateObjCommand(interp, "adlb::retrieve", ADLB_Retrieve_Cmd, NULL, NULL);
+  COMMAND("init",      ADLB_Init_Cmd);
+  COMMAND("rank",      ADLB_Rank_Cmd);
+  COMMAND("amserver",  ADLB_AmServer_Cmd);
+  COMMAND("servers",   ADLB_Servers_Cmd);
+  COMMAND("workers",   ADLB_Workers_Cmd);
+  COMMAND("put",       ADLB_Put_Cmd);
+  COMMAND("get",       ADLB_Get_Cmd);
+  COMMAND("store",     ADLB_Store_Cmd);
+  COMMAND("retrieve",  ADLB_Retrieve_Cmd);
+  COMMAND("subscribe", ADLB_Subscribe_Cmd);
+  COMMAND("close",     ADLB_Close_Cmd);
+  COMMAND("finalize",  ADLB_Finalize_Cmd);
 
-  Tcl_CreateObjCommand(interp, "adlb::finalize", ADLB_Finalize_Cmd, NULL, NULL);
   return TCL_OK;
 }

@@ -8,34 +8,9 @@
 #ifndef TURBINE_H
 #define TURBINE_H
 
-typedef enum
-{
-  TURBINE_SUCCESS,
-  /** Out of memory */
-  TURBINE_ERROR_OOM,
-  /** Attempt to declare the same thing twice */
-  TURBINE_ERROR_DOUBLE_DECLARE,
-  /** Attempt to set the same datum twice */
-  TURBINE_ERROR_DOUBLE_WRITE,
-  /** Attempt to read an unset value */
-  TURBINE_ERROR_UNSET,
-  /** Data set not found */
-  TURBINE_ERROR_NOT_FOUND,
-  /** Parse error in number scanning */
-  TURBINE_ERROR_NUMBER_FORMAT,
-  /** Invalid input */
-  TURBINE_ERROR_INVALID,
-  /** Attempt to read/write TURBINE_ID_NULL */
-  TURBINE_ERROR_NULL,
-  /** Attempt to operate on wrong data type */
-    TURBINE_ERROR_TYPE,
-  /** Unknown error */
-  TURBINE_ERROR_UNKNOWN,
-} turbine_code;
+#include "src/turbine/defs.h"
 
 typedef long turbine_transform_id;
-typedef long turbine_datum_id;
-
 typedef struct
 {
   char* name;
@@ -46,85 +21,9 @@ typedef struct
   turbine_datum_id* output;
 } turbine_transform;
 
-typedef enum
-{
-  TURBINE_ENTRY_KEY,
-  TURBINE_ENTRY_FIELD
-} turbine_entry_mode;
-
-typedef enum
-{
-  TURBINE_TYPE_FILE,
-  TURBINE_TYPE_CONTAINER,
-  TURBINE_TYPE_INTEGER,
-  TURBINE_TYPE_STRING
-} turbine_type;
-
 #define TURBINE_MAX_ENTRY 256
 
-typedef struct
-{
-  turbine_entry_mode type;
-  char name[TURBINE_MAX_ENTRY];
-} turbine_entry;
-
-#define TURBINE_ID_NULL 0
-
 turbine_code turbine_init(void);
-
-turbine_code turbine_typeof(turbine_datum_id id,
-                            char* output, int* length);
-
-turbine_code turbine_container_typeof(turbine_datum_id id,
-                                      char* output, int* length);
-
-turbine_code turbine_datum_file_create(turbine_datum_id id,
-                                       const char* path);
-
-turbine_code turbine_datum_container_create(turbine_datum_id id,
-                                            turbine_entry_mode mode,
-                                            turbine_type type);
-
-turbine_code turbine_datum_integer_create(turbine_datum_id id);
-
-turbine_code turbine_datum_integer_set(turbine_datum_id id,
-                                       long value);
-
-turbine_code turbine_datum_integer_get(turbine_datum_id id,
-                                       long* value);
-
-turbine_code turbine_datum_string_create(turbine_datum_id id);
-
-turbine_code turbine_datum_string_set(turbine_datum_id id,
-                                      const char* value,
-                                      int length);
-
-turbine_code turbine_datum_string_get(turbine_datum_id id,
-                                      char* output);
-
-turbine_code turbine_datum_string_length(turbine_datum_id id,
-                                         int* length);
-
-turbine_code turbine_filename(turbine_datum_id id,
-                              char* output);
-
-turbine_code turbine_insert(turbine_datum_id container_id,
-                            const char* name,
-                            turbine_datum_id entry_id);
-
-turbine_code turbine_insert_key(turbine_datum_id container_id,
-                                turbine_datum_id subscript,
-                                turbine_datum_id entry_id);
-
-turbine_code turbine_entry_set(turbine_entry* entry,
-                               const char* type, const char* name);
-
-turbine_code turbine_lookup(turbine_datum_id id,
-                            const char* name,
-                            turbine_datum_id* result);
-
-turbine_code turbine_container_get(turbine_datum_id id,
-                                   char** keys, int* count);
 
 turbine_code turbine_rule_add(turbine_transform_id id,
                               turbine_transform* transform);

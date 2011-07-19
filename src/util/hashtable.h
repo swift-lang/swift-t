@@ -4,7 +4,7 @@
 
 #include <stdbool.h>
 
-#include "src/util/klist.h"
+#include "klist.h"
 
 struct hashtable
 {

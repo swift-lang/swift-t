@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "src/util/ltable.h"
+#include "ltable.h"
 
 static int
 hash_long(long key, int table_size)

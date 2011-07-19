@@ -10,7 +10,7 @@
 
 #include <stdbool.h>
 
-#include "src/util/llist.h"
+#include "llist.h"
 
 struct ltable
 {
