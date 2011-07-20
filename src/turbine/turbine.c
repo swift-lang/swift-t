@@ -659,7 +659,7 @@ transform_tostring(char* output, turbine_transform* transform)
   return result;
 }
 
-void
+static void
 info_waiting()
 {
   printf("WAITING TRANSFORMS: %i\n", trs_waiting.size);
