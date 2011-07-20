@@ -2,9 +2,6 @@
 namespace eval turbine {
 
     namespace import c::new c::rule c::typeof
-    namespace import c::integer_init c::integer_get c::integer_set
-    namespace import c::string_init  c::string_get  c::string_set
-    namespace import c::container_get c::container_typeof
     namespace import c::insert
 
     proc argv_init { } {
@@ -293,11 +290,5 @@ namespace eval turbine {
 
         set total [ expr $working ]
         integer_set $result $total
-    }
-
-
-    proc finalize { } {
-        c::finalize
-        adlb::finalize
     }
 }
