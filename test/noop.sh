@@ -6,9 +6,7 @@ THIS=$0
 SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
 
-bin/turbine ${SCRIPT} >& ${OUTPUT}
+mpiexec -n 4 bin/turbine ${SCRIPT} >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
-
-grep -q OK ${OUTPUT} || exit 1
 
 exit 0

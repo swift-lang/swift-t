@@ -5,19 +5,19 @@ TEST_SRC_C := $(DIR)/list.c       \
               $(DIR)/readfile.c
 
 TEST_SRC_TCL := $(DIR)/noop.tcl           \
-                $(DIR)/diamond2.tcl       \
-                $(DIR)/linear-10.tcl      \
-                $(DIR)/numbers.tcl        \
-                $(DIR)/arithmetic.tcl     \
-                $(DIR)/strings.tcl        \
-                $(DIR)/container2.tcl     \
-                $(DIR)/loop1.tcl          \
-                $(DIR)/readdata.tcl       \
-                $(DIR)/adlb-noop.tcl      \
-                $(DIR)/adlb-putget.tcl    \
-                $(DIR)/batcher.tcl        \
-                $(DIR)/diamond3.tcl       \
-                $(DIR)/range.tcl          \
-                $(DIR)/linear-adlb-touch-10.tcl
+                $(DIR)/diamond2.tcl
+                # $(DIR)/linear-10.tcl      \
+                # $(DIR)/numbers.tcl        \
+                # $(DIR)/arithmetic.tcl     \
+                # $(DIR)/strings.tcl        \
+                # $(DIR)/container2.tcl     \
+                # $(DIR)/loop1.tcl          \
+                # $(DIR)/readdata.tcl       \
+                # $(DIR)/adlb-noop.tcl      \
+                # $(DIR)/adlb-putget.tcl    \
+                # $(DIR)/batcher.tcl        \
+                # $(DIR)/diamond3.tcl       \
+                # $(DIR)/range.tcl          \
+                # $(DIR)/linear-adlb-touch-10.tcl
 
 #                $(DIR)/modftdock.tcl      \

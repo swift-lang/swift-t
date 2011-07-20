@@ -4,10 +4,13 @@
 
 package require turbine 0.1
 
-turbine::adlb::init
+# No rules
+proc rules { } { }
 
-turbine::engine
+turbine::init 1
 
-turbine::adlb::finalize
+turbine::start rules
+
+turbine::finalize
 
 puts OK
