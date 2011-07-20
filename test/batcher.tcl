@@ -23,7 +23,7 @@ proc do_work {} {
 }
 
 proc do_client {argc argv} {
-    global ADLB_ANY
+
     global WORK_TYPE
     set rank [ adlb::rank ]
 
@@ -41,7 +41,7 @@ proc do_client {argc argv} {
             gets $fd line
             set line [ string trimright $line ]
             if { [ string length $line ] } {
-                adlb::put $ADLB_ANY $WORK_TYPE(CMDLINE) $line
+                adlb::put $adlb::ANY $WORK_TYPE(CMDLINE) $line
             }
             if { [ eof $fd ] } {
                 close $fd
@@ -54,7 +54,7 @@ proc do_client {argc argv} {
 }
 
 if { $amserver == 0 } {
-    puts "ADLB_SUCCESS: $ADLB_SUCCESS"
+    puts "ADLB_SUCCESS: $adlb::SUCCESS"
     do_client $argc $argv
 }
 
