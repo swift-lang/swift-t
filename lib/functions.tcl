@@ -4,6 +4,7 @@ namespace eval turbine {
     namespace import c::new c::rule c::typeof
     namespace import c::insert
 
+    # Called by turbine::init to setup Turbine's argv
     proc argv_init { } {
 
         global argv
