@@ -253,8 +253,8 @@ llist_get(struct llist* target, int i)
 void*
 llist_search(struct llist* target, long key)
 {
- struct llist_item* item;
-  for (item = target->head; item; item = item->next)
+  for (struct llist_item* item = target->head; item;
+       item = item->next)
     if (key == item->key)
       return (item->data);
   return NULL;
