@@ -3,8 +3,8 @@ DIR := lib
 
 TCL_SRC := $(DIR)/helpers.tcl             \
            $(DIR)/turbine.tcl             \
-           $(DIR)/turbine-engine.tcl      \
-           $(DIR)/turbine-engine-adlb.tcl
+           $(DIR)/engine.tcl              \
+           $(DIR)/data.tcl
 
 $(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) $(TCL_ADLB_SO) \
             $(TCL_SRC)

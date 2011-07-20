@@ -88,11 +88,11 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
     puts("ADLB server done");
   }
 
-  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("ADLB_SUCCESS", -1), NULL,
-                 Tcl_NewIntObj(ADLB_SUCCESS), TCL_GLOBAL_ONLY);
+  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::SUCCESS", -1), NULL,
+                 Tcl_NewIntObj(ADLB_SUCCESS), 0);
 
-  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("ADLB_ANY", -1), NULL,
-                 Tcl_NewIntObj(ADLB_ANY), TCL_GLOBAL_ONLY);
+  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::ANY", -1), NULL,
+                 Tcl_NewIntObj(ADLB_ANY), 0);
 
   Tcl_SetObjResult(interp, Tcl_NewIntObj(ADLB_SUCCESS));
 
@@ -144,7 +144,7 @@ ADLB_Workers_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb_put <reserve_rank> <work unit>
+   usage: adlb_put <reserve_rank> <work type> <work unit>
 */
 static int
 ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -196,6 +196,7 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   int work_len;
   int answer_rank;
   int req_types[4];
+  bool found_work = false;
 
   req_types[0] = req_type;
   req_types[1] = req_types[2] = req_types[3] = -1;
@@ -229,10 +230,12 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
       puts("No more work on Get_reserved()!");
       result[0] = '\0';
     }
+    else
+      found_work = true;
   }
 
-  DEBUG_ADLB("adlb_get: %i %s\n", answer_rank, result);
-  fflush(NULL);
+  if (found_work)
+    DEBUG_ADLB("adlb_get: %i %s\n", answer_rank, result);
 
   // Store answer_rank in caller's stack frame
   Tcl_Obj* tcl_answer_rank = Tcl_NewIntObj(answer_rank);
@@ -240,6 +243,28 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
                  EMPTY_FLAG);
 
   Tcl_SetObjResult(interp, Tcl_NewStringObj(result, -1));
+  return TCL_OK;
+}
+
+/**
+   usage: adlb_create <id> <data>
+*/
+static int
+ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(3);
+
+  long id;
+  int length;
+  Tcl_GetLongFromObj(interp, objv[1], &id);
+  char* s = Tcl_GetStringFromObj(objv[2], &length);
+  char data[length+1];
+  strncpy(data, s, length);
+  data[length] = '\0';
+  DEBUG_ADLB("adlb_create: <%li> %s\n", id, data);
+  int rc = ADLB_Create(id, data, length+1);
+  assert(rc == ADLB_SUCCESS);
   return TCL_OK;
 }
 
@@ -330,9 +355,11 @@ ADLB_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_Obj* result = Tcl_NewListObj(0, NULL);
   for (int i = 0; i < count; i++)
   {
+    printf("adding rank: %i\n", ranks[i]);
     Tcl_Obj* o = Tcl_NewIntObj(ranks[i]);
     Tcl_ListObjAppendElement(interp, result, o);
   }
+  free(ranks);
   Tcl_SetObjResult(interp, result);
 
   return TCL_OK;
@@ -374,6 +401,7 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("workers",   ADLB_Workers_Cmd);
   COMMAND("put",       ADLB_Put_Cmd);
   COMMAND("get",       ADLB_Get_Cmd);
+  COMMAND("create",    ADLB_Create_Cmd);
   COMMAND("store",     ADLB_Store_Cmd);
   COMMAND("retrieve",  ADLB_Retrieve_Cmd);
   COMMAND("subscribe", ADLB_Subscribe_Cmd);

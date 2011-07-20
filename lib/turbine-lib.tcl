@@ -1,20 +1,11 @@
 
 namespace eval turbine {
 
-    namespace export init rule engine finalize
-
     namespace import c::new c::rule c::typeof
     namespace import c::integer_init c::integer_get c::integer_set
     namespace import c::string_init  c::string_get  c::string_set
     namespace import c::container_get c::container_typeof
     namespace import c::insert
-
-    # User function
-    proc init { } {
-        ::turbine::c::init
-
-        argv_init
-    }
 
     proc argv_init { } {
 
@@ -307,5 +298,6 @@ namespace eval turbine {
 
     proc finalize { } {
         c::finalize
+        adlb::finalize
     }
 }

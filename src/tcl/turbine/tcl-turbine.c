@@ -204,6 +204,39 @@ Turbine_Complete_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
+Turbine_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  turbine_datum_id id;
+  int error = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK(error);
+
+  turbine_code code = turbine_close(id);
+  TCL_CONDITION(code == TURBINE_SUCCESS,
+                "could not close datum id: %li", id);
+
+  return TCL_OK;
+}
+static int
+Turbine_Declare_Cmd(ClientData cdata, Tcl_Interp *interp,
+                    int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  turbine_transform_id id;
+  int error = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK(error);
+
+  turbine_code code = turbine_declare(id);
+  TCL_CONDITION(code == TURBINE_SUCCESS,
+                "could not declare data id: %li", id);
+
+  return TCL_OK;
+}
+
+static int
 Turbine_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
@@ -232,7 +265,8 @@ Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
 #endif
 
 /**
-   Shorten object creation lines.  "turbine::" namespace is prepended
+   Shorten command creation lines.
+   The "turbine::c::" namespace is prepended
  */
 #define COMMAND(tcl_function, c_function)                           \
   Tcl_CreateObjCommand(interp, "turbine::c::" tcl_function, c_function, \
@@ -244,22 +278,22 @@ Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
 int DLLEXPORT
 Tclturbine_Init(Tcl_Interp *interp)
 {
-  if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL) {
+  if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
     return TCL_ERROR;
-  }
 
-  if (Tcl_PkgProvide(interp, "turbine", "0.1") == TCL_ERROR) {
+  if (Tcl_PkgProvide(interp, "turbine", "0.1") == TCL_ERROR)
     return TCL_ERROR;
-  }
 
-  COMMAND("init",             Turbine_Init_Cmd);
-  COMMAND("rule",             Turbine_Rule_Cmd);
-  COMMAND("push",             Turbine_Push_Cmd);
-  COMMAND("ready",            Turbine_Ready_Cmd);
-  COMMAND("executor",         Turbine_Executor_Cmd);
-  COMMAND("complete",         Turbine_Complete_Cmd);
-  COMMAND("finalize",         Turbine_Finalize_Cmd);
-  COMMAND("debug",            Turbine_Debug_Cmd);
+  COMMAND("init",     Turbine_Init_Cmd);
+  COMMAND("declare",  Turbine_Declare_Cmd);
+  COMMAND("rule",     Turbine_Rule_Cmd);
+  COMMAND("push",     Turbine_Push_Cmd);
+  COMMAND("ready",    Turbine_Ready_Cmd);
+  COMMAND("executor", Turbine_Executor_Cmd);
+  COMMAND("complete", Turbine_Complete_Cmd);
+  COMMAND("close",    Turbine_Close_Cmd);
+  COMMAND("finalize", Turbine_Finalize_Cmd);
+  COMMAND("debug",    Turbine_Debug_Cmd);
 
   Tcl_Namespace* turbine =
     Tcl_FindNamespace(interp, "turbine::c", NULL, 0);
