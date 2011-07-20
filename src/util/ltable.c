@@ -134,6 +134,21 @@ ltable_dump(char* format, struct ltable* target)
   printf("}\n");
 }
 
+void
+ltable_dumpkeys(struct ltable* target)
+{
+  printf("{\n");
+  for (int i = 0; i < target->capacity; i++)
+  {
+    if (target->array[i]->size > 0)
+    {
+      printf("%i: \n\t", i);
+      llist_dumpkeys(target->array[i]);
+    }
+  }
+  printf("}\n");
+}
+
 /** Dump llist to string a la snprintf()
         size must be greater than 2.
         format specifies the output format for the data items

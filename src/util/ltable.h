@@ -36,4 +36,6 @@ void  ltable_dump(char* format, struct ltable* target);
 int ltable_tostring(char* str, size_t size,
                     char* format, struct ltable* target);
 
+void ltable_dumpkeys(struct ltable* target);
+
 #endif
