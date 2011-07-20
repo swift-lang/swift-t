@@ -5,7 +5,7 @@ namespace eval turbine {
 
     namespace export                      \
         string_init string_set string_get \
-        file_init   file_set   file_get
+        file_init   file_set   filename
 
     proc string_init { id } {
         adlb::create $id "string:"
@@ -33,11 +33,12 @@ namespace eval turbine {
         close_dataset $id "file:close"
     }
 
-    proc file_get { id } {
-        puts "get $id"
+    proc filename { id } {
+        debug "filename($id)"
         set s [ adlb::retrieve $id ]
-        set i [ file first : $s ]
-        set result [ file range $s $i end ]
+        set i [ string first : $s ]
+        set i [ expr $i + 1 ]
+        set result [ string range $s $i end ]
         return $result
     }
 
