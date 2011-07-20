@@ -47,6 +47,10 @@ namespace eval turbine {
         }
     }
 
+    proc debug { msg } {
+        c::debug $msg
+    }
+
     proc finalize { } {
         turbine::c::finalize
         adlb::finalize
