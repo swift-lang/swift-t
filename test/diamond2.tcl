@@ -2,18 +2,21 @@
 package require turbine 0.1
 
 proc function_touch { d } {
-  # exec touch $filename
+
     puts "function_touch: $d"
+    set filename [ turbine::filename $d ]
+    puts "function_touch: filename: $filename"
+    exec touch $filename
     turbine::file_set $d
 }
 
 proc rules { } {
     namespace import turbine::c::rule
 
-    turbine::file_init 1 A.txt
-    turbine::file_init 2 B.txt
-    turbine::file_init 3 C.txt
-    turbine::file_init 4 D.txt
+    turbine::file_init 1 test/data/A.txt
+    turbine::file_init 2 test/data/B.txt
+    turbine::file_init 3 test/data/C.txt
+    turbine::file_init 4 test/data/D.txt
 
     rule 1 A {     } { 1 } { tp: function_touch 1 }
     rule 2 B { 1   } { 2 } { tp: function_touch 2 }
