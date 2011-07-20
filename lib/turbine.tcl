@@ -48,7 +48,7 @@ namespace eval turbine {
     }
 
     proc finalize { } {
-        turbine::finalize
+        turbine::c::finalize
         adlb::finalize
     }
 }
