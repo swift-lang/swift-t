@@ -31,9 +31,6 @@ else
   E=
 endif
 
-# WOZTOOLS = @USE_WOZTOOLS@
-# WOZTOOLS_LIB = $(WOZTOOLS)/lib/libwoztools.a
-
 CC = @CC@
 CFLAGS := @CFLAGS@
 
