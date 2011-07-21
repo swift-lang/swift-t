@@ -24,6 +24,24 @@ namespace eval turbine {
         return $result
     }
 
+    proc integer_init { id } {
+        adlb::create $id "integer:"
+        turbine::c::declare $id
+    }
+
+    proc integer_set { id value } {
+        close_dataset $id "integer:$value"
+    }
+
+    proc integer_get { id } {
+        puts "get $id"
+        set s [ adlb::retrieve $id ]
+        set i [ string first : $s ]
+        incr i
+        set result [ string range $s $i end ]
+        return $result
+    }
+
     proc file_init { id path } {
         adlb::create $id "file:$path"
         turbine::c::declare $id
