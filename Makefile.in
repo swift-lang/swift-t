@@ -36,7 +36,6 @@ CFLAGS := @CFLAGS@
 
 # Set includes
 CFLAGS += -I $(srcdir)
-# CFLAGS += -I $(WOZTOOLS)/src
 
 TCL := @USE_TCL@
 TCLSH := $(shell find $(TCL)/bin -name tclsh8.* )
@@ -57,10 +56,6 @@ CFLAGS += @TCL_INCLUDE_SPEC@
 CFLAGS += -fPIC
 # This is referenced in lookup3.c - may want to drop this for speed
 CFLAGS += -D VALGRIND
-
-# LDFLAGS += -L $(WOZTOOLS)/lib
-
-# LIBS += -l woztools
 
 dirname = $(patsubst %/,%,$(dir $(1)))
 
@@ -138,11 +133,9 @@ $(TURBINE): $(TURBINE_OBJS)
 $(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_OBJS) # $(WOZTOOLS_LIB)
 	$(Q) "  LINK		$(@)"
 	$(E) gcc -shared -fPIC -o $(@) $(TCL_LINK_FLAGS) \
-             $(TCL_TURBINE_OBJS) $(TURBINE_OBJS) \
-		  -L $(ADLB) -l adlb \
+             $(TCL_TURBINE_OBJS) $(TURBINE_OBJS)         \
+		  -L $(ADLB) -l adlb                     \
 		  -L $(MPI)/lib -l mpich -l mpl
-
-#             -L $(WOZTOOLS)/lib -l woztools
 
 # Test cases in C as objects
 TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC_C))
