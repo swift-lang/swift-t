@@ -11,12 +11,14 @@ proc function_touch { d } {
 }
 
 proc rules { } {
-    namespace import turbine::c::rule
 
-    turbine::file_init 1 test/data/A.txt
-    turbine::file_init 2 test/data/B.txt
-    turbine::file_init 3 test/data/C.txt
-    turbine::file_init 4 test/data/D.txt
+    namespace import turbine::c::rule
+    namespace import turbine::file_init
+
+    file_init 1 test/data/A.txt
+    file_init 2 test/data/B.txt
+    file_init 3 test/data/C.txt
+    file_init 4 test/data/D.txt
 
     rule 1 A {     } { 1 } { tp: function_touch 1 }
     rule 2 B { 1   } { 2 } { tp: function_touch 2 }
