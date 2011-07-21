@@ -1,29 +1,45 @@
 
 package require turbine 0.1
 
-turbine::init
+proc function_touch { d } {
 
-turbine::c::file 1 test/data/1.txt
-turbine::c::file 2 test/data/2.txt
-turbine::c::file 3 test/data/3.txt
-turbine::c::file 4 test/data/4.txt
-turbine::c::file 5 test/data/5.txt
-turbine::c::file 6 test/data/6.txt
-turbine::c::file 7 test/data/7.txt
-turbine::c::file 8 test/data/8.txt
-turbine::c::file 9 test/data/9.txt
+    puts "function_touch: $d"
+    set filename [ turbine::filename $d ]
+    puts "function_touch: filename: $filename"
+    exec touch $filename
+    turbine::file_set $d
+}
 
-turbine::c::rule 1 1 {   } { 1 } { touch test/data/1.txt }
-turbine::c::rule 2 2 { 1 } { 2 } { touch test/data/2.txt }
-turbine::c::rule 3 3 { 2 } { 3 } { touch test/data/3.txt }
-turbine::c::rule 4 4 { 3 } { 4 } { touch test/data/4.txt }
-turbine::c::rule 5 5 { 4 } { 5 } { touch test/data/5.txt }
-turbine::c::rule 6 6 { 5 } { 6 } { touch test/data/6.txt }
-turbine::c::rule 7 7 { 6 } { 7 } { touch test/data/7.txt }
-turbine::c::rule 8 8 { 7 } { 8 } { touch test/data/8.txt }
-turbine::c::rule 9 9 { 8 } { 9 } { touch test/data/9.txt }
+proc rules { } {
 
-turbine::engine
+    namespace import turbine::c::rule
+    namespace import turbine::file_init
+
+    file_init 1 test/data/1.txt
+    file_init 2 test/data/2.txt
+    file_init 3 test/data/3.txt
+    file_init 4 test/data/4.txt
+    file_init 5 test/data/5.txt
+    file_init 6 test/data/6.txt
+    file_init 7 test/data/7.txt
+    file_init 8 test/data/8.txt
+    file_init 9 test/data/9.txt
+
+    rule 1 1 {   } { 1 } { tp: function_touch 1 }
+    rule 2 2 { 1 } { 2 } { tp: function_touch 2 }
+    rule 3 3 { 2 } { 3 } { tp: function_touch 3 }
+    rule 4 4 { 3 } { 4 } { tp: function_touch 4 }
+    rule 5 5 { 4 } { 5 } { tp: function_touch 5 }
+    rule 6 6 { 5 } { 6 } { tp: function_touch 6 }
+    rule 7 7 { 6 } { 7 } { tp: function_touch 7 }
+    rule 8 8 { 7 } { 8 } { tp: function_touch 8 }
+    rule 9 9 { 8 } { 9 } { tp: function_touch 9 }
+}
+
+turbine::init 1
+
+turbine::start rules
+
 turbine::finalize
 
 puts OK
