@@ -6,23 +6,29 @@
 # trace(x);
 
 package require turbine 0.1
-turbine::init
 
-turbine::c::integer_init 1
-turbine::c::integer_init 2
-turbine::c::integer_init 3
+proc rules { } {
 
-turbine::c::integer_set 1 2
-turbine::c::integer_set 2 2
+    turbine::integer_init 1
+    turbine::integer_init 2
+    turbine::integer_init 3
 
-set v1 [ turbine::c::integer_get 1 ]
-set v2 [ turbine::c::integer_get 2 ]
-set v3 [ expr $v1 + $v2 ]
+    turbine::integer_set 1 2
+    turbine::integer_set 2 2
 
-turbine::c::integer_set 3 $v3
+    set v1 [ turbine::integer_get 1 ]
+    set v2 [ turbine::integer_get 2 ]
+    set v3 [ expr $v1 + $v2 ]
 
-turbine::trace 3
+    turbine::integer_set 3 $v3
 
-turbine::engine
+    puts "result: $v3"
+}
+
+turbine::init 1
+
+turbine::start rules
+
 turbine::finalize
+
 puts OK
