@@ -28,6 +28,7 @@ namespace eval turbine {
         puts "get $id"
         set s [ adlb::retrieve $id ]
         set i [ string first : $s ]
+        incr i
         set result [ string range $s $i end ]
         return $result
     }
