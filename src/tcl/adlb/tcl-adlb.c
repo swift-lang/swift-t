@@ -66,6 +66,9 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   workers = size - servers;
 
+  if (workers <= 0)
+    puts("WARNING: No workers");
+
   // ADLB_Init(int num_servers, int use_debug_server,
   //           int aprintf_flag, int num_types, int *types,
   //           int *am_server, int *am_debug_server, MPI_Comm *app_comm)
@@ -308,6 +311,8 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   DEBUG_ADLB("adlb_retrieve: <%li>\n", id);
   int rc = ADLB_Retrieve(id, retrieved, &length);
   assert(rc == ADLB_SUCCESS);
+
+  DEBUG_ADLB("retrieved: %s\n", retrieved);
 
   Tcl_Obj* result = Tcl_NewStringObj(retrieved, length-1);
   Tcl_SetObjResult(interp, result);
