@@ -136,6 +136,20 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
+Turbine_RuleNew_Cmd(ClientData cdata, Tcl_Interp *interp,
+                    int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+
+  turbine_transform_id id;
+  turbine_rule_new(&id);
+
+  Tcl_Obj* result = Tcl_NewLongObj(id);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+static int
 Turbine_Push_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
@@ -287,6 +301,7 @@ Tclturbine_Init(Tcl_Interp *interp)
   COMMAND("init",     Turbine_Init_Cmd);
   COMMAND("declare",  Turbine_Declare_Cmd);
   COMMAND("rule",     Turbine_Rule_Cmd);
+  COMMAND("rule_new", Turbine_RuleNew_Cmd);
   COMMAND("push",     Turbine_Push_Cmd);
   COMMAND("ready",    Turbine_Ready_Cmd);
   COMMAND("executor", Turbine_Executor_Cmd);

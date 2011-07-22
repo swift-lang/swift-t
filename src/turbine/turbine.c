@@ -73,6 +73,11 @@ static void turbine_check_msg_impl(turbine_code code,
                                    const char* format, ...);
 */
 
+/**
+   Unique transform ID for rule_new().
+ */
+static long unique_transform = 1;
+
 turbine_code
 turbine_init()
 {
@@ -233,6 +238,17 @@ turbine_rule_add(turbine_transform_id id,
     printf("add-ready: %li\n", id);
     list_add(&trs_ready, new_tr);
   }
+
+  if (id >= unique_transform)
+    unique_transform = id+1;
+
+  return TURBINE_SUCCESS;
+}
+
+turbine_code
+turbine_rule_new(turbine_transform_id *id)
+{
+  *id = unique_transform++;
   return TURBINE_SUCCESS;
 }
 
