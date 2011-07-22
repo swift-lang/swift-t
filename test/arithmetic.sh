@@ -6,7 +6,7 @@ THIS=$0
 SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
 
-bin/turbine ${SCRIPT} >& ${OUTPUT}
+mpiexec -l -n 3 bin/turbine ${SCRIPT} >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
 grep -q "trace: 64" ${OUTPUT} || exit 1
