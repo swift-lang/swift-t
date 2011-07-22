@@ -1,7 +1,7 @@
 
 namespace eval turbine {
 
-    namespace import c::new c::rule c::typeof
+    namespace import c::new c::rule c::rule_new c::typeof
     namespace import c::insert
 
     # Called by turbine::init to setup Turbine's argv
@@ -81,7 +81,7 @@ namespace eval turbine {
     # TODO: Replace this with tracef()
     proc trace { args } {
 
-        set rule_id [ new ]
+        set rule_id [ rule_new ]
         rule $rule_id "trace-$rule_id" $args { } \
             "tp: turbine::trace_body $args"
     }
@@ -269,7 +269,7 @@ namespace eval turbine {
         set expression [ lindex $args 1 ]
         set inputs     [ lreplace $args 0 1 ]
 
-        set rule_id [ new ]
+        set rule_id [ rule_new ]
         rule $rule_id "arithmetic-$rule_id" $inputs $result \
             "tp: arithmetic_body $inputs $expression $result"
     }

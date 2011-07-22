@@ -7,6 +7,14 @@ namespace eval turbine {
         string_init string_set string_get \
         file_init   file_set   filename
 
+    proc typeof { id } {
+        set s [ adlb::retrieve $id ]
+        set i [ string first : $s ]
+        incr i -1
+        set result [ string range $s 0 $i ]
+        return $result
+    }
+
     proc string_init { id } {
         adlb::create $id "string:"
         turbine::c::declare $id
@@ -34,7 +42,6 @@ namespace eval turbine {
     }
 
     proc integer_get { id } {
-        puts "get $id"
         set s [ adlb::retrieve $id ]
         set i [ string first : $s ]
         incr i
