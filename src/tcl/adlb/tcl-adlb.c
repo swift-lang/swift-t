@@ -13,9 +13,6 @@
 #include "src/tcl/util.h"
 #include "src/util/debug.h"
 
-enum
-{ CMDLINE };
-
 static int adlb_rank;
 /** Number of workers */
 static int workers;
@@ -51,7 +48,6 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   int argc = 0;
   char** argv = NULL;
 
-  printf("ntypes: %i\n", ntypes);
   int type_vect[ntypes];
   for (int i = 0; i < ntypes; i++)
     type_vect[i] = i;
@@ -66,8 +62,15 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   workers = size - servers;
 
-  if (workers <= 0)
-    puts("WARNING: No workers");
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  if (rank == 0)
+  {
+    if (workers <= 0)
+      puts("WARNING: No workers");
+    // Other configuration information will go here...
+  }
 
   // ADLB_Init(int num_servers, int use_debug_server,
   //           int aprintf_flag, int num_types, int *types,
@@ -76,13 +79,8 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
                    &am_server, &am_debug_server, &app_comm);
   assert(code == ADLB_SUCCESS);
 
-  // printf("am_server: %i\n", am_server);
-
   if (! am_server)
     MPI_Comm_rank(app_comm, &adlb_rank);
-
-  // code = MPI_Barrier(app_comm);
-  // assert(code == MPI_SUCCESS);
 
   if ( am_server )
   {
@@ -320,6 +318,54 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+/**
+   usage: adlb_insert <id> <subscript> <member>
+*/
+static int
+ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(4);
+
+  long id;
+  Tcl_GetLongFromObj(interp, objv[1], &id);
+  char* subscript = Tcl_GetString(objv[2]);
+  long member;
+  Tcl_GetLongFromObj(interp, objv[3], &member);
+
+  DEBUG_ADLB("adlb_insert: <%li>:%s=<%li>\n", id, subscript, member);
+  int rc = ADLB_Insert(id, subscript, member);
+
+  assert(rc == ADLB_SUCCESS);
+  return TCL_OK;
+}
+
+/**
+   usage: adlb_lookup <id> <subscript>
+*/
+static int
+ADLB_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(3);
+
+  long id;
+  Tcl_GetLongFromObj(interp, objv[1], &id);
+  char* subscript = Tcl_GetString(objv[2]);
+
+  DEBUG_ADLB("adlb::lookup: <%li>:%s\n", id, subscript);
+  long member;
+  int rc = ADLB_Lookup(id, subscript, &member);
+  assert(rc == ADLB_SUCCESS);
+
+  DEBUG_ADLB("adlb::lookup => <%li>\n", member);
+
+  Tcl_Obj* result = Tcl_NewLongObj(member);
+  Tcl_SetObjResult(interp, result);
+
+  return TCL_OK;
+}
+
 static int
 ADLB_Subscribe_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
@@ -409,6 +455,8 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("create",    ADLB_Create_Cmd);
   COMMAND("store",     ADLB_Store_Cmd);
   COMMAND("retrieve",  ADLB_Retrieve_Cmd);
+  COMMAND("insert",    ADLB_Insert_Cmd);
+  COMMAND("lookup",    ADLB_Lookup_Cmd);
   COMMAND("subscribe", ADLB_Subscribe_Cmd);
   COMMAND("close",     ADLB_Close_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
