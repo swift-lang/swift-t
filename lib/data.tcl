@@ -25,7 +25,6 @@ namespace eval turbine {
     }
 
     proc string_get { id } {
-        puts "get $id"
         set s [ adlb::retrieve $id ]
         set i [ string first : $s ]
         incr i
@@ -43,6 +42,28 @@ namespace eval turbine {
     }
 
     proc integer_get { id } {
+        set s [ adlb::retrieve $id ]
+        set i [ string first : $s ]
+        incr i
+        set result [ string range $s $i end ]
+        return $result
+    }
+
+    proc container_init { id type } {
+        adlb::create $id "container:$type"
+        turbine::c::declare $id
+    }
+
+    proc container_insert { id subscript value } {
+        adlb::insert $id $subscript $value
+    }
+
+    proc container_get { id subscript } {
+        set s [ adlb::lookup $id $subscript ]
+        return $s
+    }
+
+    proc container_list { id } {
         set s [ adlb::retrieve $id ]
         set i [ string first : $s ]
         incr i
