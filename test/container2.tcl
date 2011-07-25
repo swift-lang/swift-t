@@ -11,25 +11,34 @@
 # // Print out contents of f1
 
 package require turbine 0.1
-turbine::init
 
-turbine::c::container_init 1 key file
-turbine::c::file 2 file1.txt
-turbine::c::file 3 file2.txt
+proc rules { } {
 
-turbine::c::insert 1 key "0" 2
-turbine::c::insert 1 key "1" 3
+    turbine::container_init 1 integer
+    turbine::file_init 2 file1.txt
+    turbine::file_init 3 file2.txt
 
-set L [ turbine::c::container_get 1 ]
-puts "enumeration: $L"
+    # set <container> <subscript> <member>
+    turbine::container_insert 1 "0" 2
+    turbine::container_insert 1 "1" 3
 
-# This is not a real Turbine loop
-foreach id $L {
-    set member [ turbine::c::lookup 1 "key" $id ]
-    set filename [ turbine::c::filename $member ]
-    puts "filename: $filename"
+    set L [ turbine::container_list 1 ]
+    puts "enumeration: $L"
+
+    # This is not a real Turbine loop
+    foreach subscript $L {
+        set member [ turbine::container_get 1 $subscript ]
+        puts "member: $member"
+        set filename [ turbine::filename $member ]
+        puts "filename: $filename"
+    }
 }
 
-turbine::engine
+turbine::init 1
+turbine::start rules
 turbine::finalize
+
 puts OK
+
+# Help TCL free memory
+proc exit args {}
