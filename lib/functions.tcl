@@ -110,7 +110,7 @@ namespace eval turbine {
     # User function
     proc range { result start end } {
 
-        set rule_id [ new ]
+        set rule_id [ rule_new ]
         rule $rule_id "range-$rule_id" "$start $end" $result \
             "tp: range_body $result $start $end"
     }
@@ -121,19 +121,21 @@ namespace eval turbine {
         set end_value   [ integer_get $end ]
 
         set k 0
-        for { set i $start } { $i <= $end_value } { incr i } {
-            set td [ new ]
-            c::integer_init $td
+        for { set i $start_value } { $i <= $end_value } { incr i } {
+            set td [ data_new ]
+            integer_init $td
             integer_set $td $i
-            insert $result key $k $td
+            container_insert $result $k $td
             incr k
         }
+        close_container $result
     }
 
     # User function
+    # NOT TESTED
     proc enumerate { result container } {
 
-        set rule_id [ new ]
+        set rule_id [ data_new ]
         rule $rule_id "enumerate-$rule_id" $container $result \
             "tp: enumerate_body $result $container"
     }

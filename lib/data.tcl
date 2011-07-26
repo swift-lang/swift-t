@@ -37,11 +37,13 @@ namespace eval turbine {
     }
 
     proc integer_init { id } {
+        debug "integer_init: <$id>"
         adlb::create $id "integer:"
         turbine::c::declare $id
     }
 
     proc integer_set { id value } {
+        debug "integer_set: <$id>=$value"
         close_dataset $id "integer:$value"
     }
 
@@ -50,6 +52,7 @@ namespace eval turbine {
         set i [ string first : $s ]
         incr i
         set result [ string range $s $i end ]
+        debug "integer_get: <$id>=$result"
         return $result
     }
 

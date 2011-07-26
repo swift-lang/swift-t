@@ -44,6 +44,7 @@ MPI = @USE_MPI@
 ifneq ($(MPI),0)
 	CFLAGS += -I $(MPI)/include
 endif
+
 ADLB = @USE_ADLB@
 ifneq ($(ADLB),0)
 	CFLAGS += -I $(ADLB)

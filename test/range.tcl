@@ -2,25 +2,40 @@
 # Test trace and basic numerical functionality
 
 # SwiftScript
-# // something like
-# string s = @sprintf([1:4])
+# int i = 1;
+# int j = 4;
+# int c[] = [i:j];
+# string s = @sprintf(c)
 # trace(s);
 
 package require turbine 0.1
-turbine::init
 
-turbine::c::integer_init 1
-turbine::c::integer_init 2
-turbine::c::string_init  3
-turbine::c::container_init 4 key integer
+proc rules { } {
 
-turbine::c::integer_set 1 1
-turbine::c::integer_set 2 4
+    set i [ turbine::data_new ]
+    turbine::integer_init $i
+    set j [ turbine::data_new ]
+    turbine::integer_init $j
+    set c [ turbine::data_new ]
+    turbine::container_init $c integer
 
-turbine::range 4 1 2
-turbine::enumerate 3 4
-turbine::trace 3
+    turbine::integer_set $i 1
+    turbine::integer_set $j 4
 
-turbine::engine
+    turbine::range $c $i $j
+    turbine::loop loop1_body none $c
+}
+
+proc loop1_body { stack container key } {
+    puts "loop1_body: $key"
+    set t [ turbine::integer_get $key ]
+    set member [ turbine::container_get $container $t ]
+    # set value [ turbine::integer_get $member ]
+    turbine::trace $key $member
+}
+
+turbine::init 1
+turbine::start rules
 turbine::finalize
 puts OK
+
