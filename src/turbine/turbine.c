@@ -78,6 +78,13 @@ static void turbine_check_msg_impl(turbine_code code,
  */
 static long unique_transform = 1;
 
+#define turbine_condition(condition, code, format, args...) \
+  { if (! (condition))                                      \
+    {                                                       \
+       printf(format, ## args);                             \
+       return code;                                         \
+    }}
+
 turbine_code
 turbine_init()
 {
@@ -222,7 +229,8 @@ turbine_rule_add(turbine_transform_id id,
   {
     turbine_datum_id id = new_tr->transform.input[i];
     struct longlist* L = ltable_search(&blockers, id);
-    assert(L);
+    turbine_condition(L != NULL, TURBINE_ERROR_NOT_FOUND,
+                      "rule_add: could not find: <%li>\n", id);
     longlist_add(L, new_tr->id);
   }
 
@@ -230,12 +238,12 @@ turbine_rule_add(turbine_transform_id id,
 
   if (subscribed)
   {
-    printf("waiting: %li\n", id);
+    turbine_debug("waiting: %li\n", id);
     ltable_add(&trs_waiting, id, new_tr);
   }
   else
   {
-    printf("add-ready: %li\n", id);
+    turbine_debug("add-ready: %li\n", id);
     list_add(&trs_ready, new_tr);
   }
 
