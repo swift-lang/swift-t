@@ -11,8 +11,8 @@ TEST_SRC_TCL := $(DIR)/noop.tcl           \
                 $(DIR)/arithmetic.tcl     \
                 $(DIR)/strings.tcl        \
                 $(DIR)/container2.tcl     \
-                $(DIR)/loop1.tcl
-                # $(DIR)/readdata.tcl       \
+                $(DIR)/loop1.tcl          \
+                $(DIR)/readdata.tcl
                 # $(DIR)/adlb-noop.tcl      \
                 # $(DIR)/adlb-putget.tcl    \
                 # $(DIR)/batcher.tcl        \

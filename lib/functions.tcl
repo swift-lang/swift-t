@@ -161,12 +161,13 @@ namespace eval turbine {
 
         set i 0
         while { [ gets $fd line ] >= 0 } {
-            set s [ new ]
+            set s [ data_new ]
             string_init $s
             string_set $s $line
-            container_insert $result key $i $s
+            container_insert $result $i $s
             incr i
         }
+        close_container $result
     }
 
     # User function

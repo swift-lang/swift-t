@@ -11,26 +11,27 @@
 # }
 
 package require turbine 0.1
-turbine::init
 
-set c 1
-turbine::c::container_init $c key integer
-set s 2
-turbine::c::string_init $s
-turbine::c::string_set $s "test/data/input.txt"
+proc rules { } {
 
-turbine::readdata $c $s
+    set c 1
+    turbine::container_init $c integer
+    set s 2
+    turbine::string_init $s
+    turbine::string_set $s "test/data/input.txt"
 
-turbine::loop loop1_body $c
-proc loop1_body { key } {
-    global c
+    turbine::readdata $c $s
+    turbine::loop loop1_body none $c
+}
+
+proc loop1_body { stack container key } {
     turbine::trace $key
-    set t [ turbine::c::integer_get $key ]
-    set value [ turbine::c::lookup $c key $t ]
+    set t [ turbine::integer_get $key ]
+    set value [ turbine::container_get $container $t ]
     turbine::trace $value
 }
 
-turbine::engine
-
+turbine::init 1
+turbine::start rules
 turbine::finalize
 puts OK
