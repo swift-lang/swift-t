@@ -36,13 +36,12 @@ namespace eval turbine {
 
         set command [ string trim $command ]
         set prefix "[ string range $command 0 2 ]"
-        puts "eval: $command"
         if { [ string equal $prefix "tf:" ] } {
             set proccall [ lrange $command 1 end ]
-            puts "eval: $proccall"
+            debug "eval: $proccall"
             ::eval $proccall
         } else {
-            puts "exec: $command"
+            debug "exec: $command"
             ::eval "exec $command"
         }
     }
@@ -52,6 +51,7 @@ namespace eval turbine {
     }
 
     proc finalize { } {
+        debug "finalize"
         turbine::c::finalize
         adlb::finalize
     }

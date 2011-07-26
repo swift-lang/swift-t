@@ -106,7 +106,7 @@ namespace eval turbine {
         adlb::store $id $value
         set ranks [ adlb::close $id ]
         foreach rank $ranks {
-            puts "notify: $rank"
+            debug "notify: $rank"
             adlb::put $rank $WORK_TYPE(CONTROL) "close $id"
         }
     }
@@ -115,7 +115,7 @@ namespace eval turbine {
         global WORK_TYPE
         set ranks [ adlb::close $id ]
         foreach rank $ranks {
-            puts "notify: $rank"
+            debug "notify: $rank"
             adlb::put $rank $WORK_TYPE(CONTROL) "close $id"
         }
     }

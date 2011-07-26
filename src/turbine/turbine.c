@@ -202,7 +202,7 @@ static int transform_tostring(char* output,
 #define DEBUG_TURBINE_RULE_ADD(transform, id) {         \
     char tmp[1024];                                     \
     transform_tostring(tmp, transform);                 \
-    DEBUG_TURBINE("rule_add: %s <%li>\n", tmp, id);     \
+    DEBUG_TURBINE("rule_add: %s {%li}\n", tmp, id);     \
   }
 #else
 #define DEBUG_TURBINE_RULE_ADD(transform, id)
@@ -238,12 +238,10 @@ turbine_rule_add(turbine_transform_id id,
 
   if (subscribed)
   {
-    turbine_debug("rule_add", "waiting: %li\n", id);
     ltable_add(&trs_waiting, id, new_tr);
   }
   else
   {
-    turbine_debug("rule_add", "add-ready: %li\n", id);
     list_add(&trs_ready, new_tr);
   }
 
@@ -267,12 +265,10 @@ turbine_rule_new(turbine_transform_id *id)
 static void
 add_to_ready(struct list* tmp)
 {
-  DEBUG_TURBINE("add_to_ready: %i\n", tmp->size);
   tr* t;
-  ltable_dumpkeys(&trs_waiting);
+  // ltable_dumpkeys(&trs_waiting);
   while ((t = list_poll(tmp)))
   {
-    DEBUG_TURBINE("tr->id: %li\n", t->id);
     void* c = ltable_remove(&trs_waiting, t->id);
     assert(c);
     list_add(&trs_ready, t);
@@ -286,9 +282,7 @@ add_to_ready(struct list* tmp)
 turbine_code
 turbine_rules_push()
 {
-  puts("push");
-
-  // Temporary holding spot for transforms moving into ready list
+  // Temporary holding list for transforms moving into ready list
   struct list tmp;
   list_init(&tmp);
 
@@ -307,7 +301,6 @@ turbine_rules_push()
     }
 
   add_to_ready(&tmp);
-  puts("push done");
 
   return TURBINE_SUCCESS;
 }
@@ -469,8 +462,8 @@ turbine_complete(turbine_transform_id id)
 turbine_code
 turbine_close(turbine_datum_id id)
 {
-  DEBUG_TURBINE("turbine_close()...\n");
-  ltable_dumpkeys(&trs_waiting);
+  // DEBUG_TURBINE("turbine_close()...\n");
+  // ltable_dumpkeys(&trs_waiting);
 
   // Look up what this td was blocking
   struct longlist* L = ltable_search(&blockers, id);
@@ -481,25 +474,21 @@ turbine_close(turbine_datum_id id)
   list_init(&tmp);
 
   // Try to make progress on those transforms
-  DEBUG_TURBINE("loop\n");
   for (struct longlist_item* item = L->head; item; item = item->next)
   {
     turbine_transform_id tr_id = item->data;
-    DEBUG_TURBINE("transform: %li\n", tr_id);
     tr* transform = ltable_search(&trs_waiting, tr_id);
     if (!transform)
       continue;
-    DEBUG_TURBINE("checking: %s\n", transform->transform.name);
 
     bool subscribed = progress(transform);
     if (!subscribed)
     {
-      DEBUG_TURBINE("ready: %s\n", transform->transform.name);
+      DEBUG_TURBINE("ready: {%li}\n", tr_id);
       list_add(&tmp, transform);
     }
   }
 
-  DEBUG_TURBINE("tmp.size %i\n", tmp.size);
   add_to_ready(&tmp);
 
   return TURBINE_SUCCESS;
@@ -508,6 +497,9 @@ turbine_close(turbine_datum_id id)
 static bool
 progress(tr* transform)
 {
+  DEBUG_TURBINE("progress: {%li} %s\n",
+                transform->id, transform->transform.name);
+
   int subscribed = 0;
   while (transform->blocker < transform->transform.inputs)
   {
@@ -662,14 +654,14 @@ transform_tostring(char* output, turbine_transform* transform)
   char* p = output;
 
   append(p, "%s ", transform->name);
-  append(p, "{");
+  append(p, "(");
   for (int i = 0; i < transform->inputs; i++)
   {
     append(p, "%li", transform->input[i]);
     if (i < transform->inputs-1)
       append(p, " ");
   }
-  append(p, "}->{");
+  append(p, ")->(");
 
   for (int i = 0; i < transform->outputs; i++)
   {
@@ -677,7 +669,7 @@ transform_tostring(char* output, turbine_transform* transform)
     if (i < transform->outputs-1)
       append(p, " ");
   }
-  append(p, "}");
+  append(p, ")");
 
   result = p - output;
   return result;
@@ -701,7 +693,6 @@ info_waiting()
 void
 turbine_finalize()
 {
-  DEBUG_TURBINE("finalize:\n");
   if (trs_waiting.size != 0)
     info_waiting();
 }

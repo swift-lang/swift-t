@@ -193,12 +193,9 @@ namespace eval turbine {
     # Utility function to set up a TD
     proc literal { type value } {
 
-        puts "literal: ${type}_"
         set result [ data_new ]
-        puts "new: $result"
         ${type}_init $result
         ${type}_set $result $value
-        puts "literal done"
         return $result
     }
 

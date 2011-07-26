@@ -3,10 +3,9 @@
 set -x
 
 THIS=$0
-SCRIPT=${THIS%.sh}.tcl
-OUTPUT=${THIS%.sh}.out
+source $( dirname $0 )/setup.sh
 
-mpiexec -n 4 bin/turbine ${SCRIPT} >& ${OUTPUT}
+mpiexec -l -n ${PROCS} bin/turbine ${SCRIPT} >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
 exit 0

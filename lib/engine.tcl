@@ -6,7 +6,6 @@ namespace eval turbine {
     proc start { rules } {
 
         set rank [ adlb::rank ]
-        puts "rank: $rank"
         set amserver [ adlb::amserver ]
         if { $amserver == 1 } return
 
@@ -22,7 +21,7 @@ namespace eval turbine {
 
         global WORK_TYPE
 
-        puts "engine"
+        debug "TURBINE ENGINE..."
         ::eval $rules
 
         turbine::c::push
@@ -41,7 +40,6 @@ namespace eval turbine {
                 control $msg
             } else break
         }
-        puts "engine done"
     }
 
     # Release a work unit for execution elsewhere
@@ -64,14 +62,13 @@ namespace eval turbine {
     # Handle a message coming into this rule engine
     proc control { msg } {
 
-        puts "control: $msg"
+        debug "control: $msg"
 
         set header [ lindex $msg 0 ]
-        puts "header: $header"
+        show header
         switch $header {
             procedure {
                 set command [ lrange $msg 2 end ]
-                show command
                 ::eval $command
             }
             complete {
@@ -93,7 +90,7 @@ namespace eval turbine {
 
 
         global WORK_TYPE
-        puts "worker"
+        debug "TURBINE WORKER..."
 
         while { true } {
             # puts "get"
@@ -108,7 +105,6 @@ namespace eval turbine {
 
             do_work $rule_id $command
         }
-        puts "worker done"
     }
 
     # Worker: do actual work, handle errors, report back when complete
@@ -116,8 +112,8 @@ namespace eval turbine {
 
         global WORK_TYPE
 
-        puts "rule_id: $rule_id"
-        puts "work: $command"
+        debug "rule_id: $rule_id"
+        debug "work: $command"
 
         if { [ catch { turbine::eval $command } e ] } {
             puts "work unit error: "
