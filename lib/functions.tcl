@@ -147,7 +147,7 @@ namespace eval turbine {
     # User function
     proc readdata { result filename } {
 
-        set rule_id [ new ]
+        set rule_id [ data_new ]
         rule $rule_id "read_data-$rule_id" $filename $result  \
             "tp: readdata_body $result $filename"
     }
@@ -162,9 +162,9 @@ namespace eval turbine {
         set i 0
         while { [ gets $fd line ] >= 0 } {
             set s [ new ]
-            turbine::c::string_init $s
-            turbine::c::string_set $s $line
-            insert $result key $i $s
+            string_init $s
+            string_set $s $line
+            container_insert $result key $i $s
             incr i
         }
     }
@@ -183,7 +183,7 @@ namespace eval turbine {
         foreach subscript $L {
             set td_key [ literal $type $subscript ]
             # Call user body with subscript as TD
-            $stmts $stack $td_key
+            $stmts $stack $container $td_key
         }
     }
 

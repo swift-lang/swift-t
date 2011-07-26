@@ -40,14 +40,12 @@ proc rules { } {
     turbine::loop loop1_body $stack $c
 }
 
-proc loop1_body { stack key } {
+proc loop1_body { stack container key } {
 
-    puts "body: stack: $stack "
-    set c [ turbine::container_get $stack "c" ]
-    puts "body: $c $key"
+    puts "body: $stack $container $key"
     turbine::trace $key
     set t [ turbine::integer_get $key ]
-    set value [ turbine::container_get $c $t ]
+    set value [ turbine::container_get $container $t ]
     turbine::trace $value
 }
 
