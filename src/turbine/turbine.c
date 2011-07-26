@@ -238,12 +238,12 @@ turbine_rule_add(turbine_transform_id id,
 
   if (subscribed)
   {
-    turbine_debug("waiting: %li\n", id);
+    turbine_debug("rule_add", "waiting: %li\n", id);
     ltable_add(&trs_waiting, id, new_tr);
   }
   else
   {
-    turbine_debug("add-ready: %li\n", id);
+    turbine_debug("rule_add", "add-ready: %li\n", id);
     list_add(&trs_ready, new_tr);
   }
 
