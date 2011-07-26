@@ -33,3 +33,9 @@ proc readfile { filename } {
     }
     return $result
 }
+
+# Debugging helper
+proc show { v } {
+    upvar $v t
+    turbine::debug "$v: $t"
+}
