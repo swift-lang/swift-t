@@ -14,44 +14,48 @@
 #   trace(key, c[key]);
 
 package require turbine 0.1
-turbine::init
 
-set c 1
-turbine::c::container_init $c key integer
-set s1 3
-turbine::c::string_init $s1
-turbine::c::string_set $s1 string1
-turbine::c::close $s1
-set s2 5
-turbine::c::string_init $s2
-turbine::c::string_set $s2 string2
-turbine::c::close $s2
+proc rules { } {
 
-turbine::c::insert $c key 0 $s1
-turbine::c::insert $c key 1 $s2
+    set stack [ turbine::data_new ]
 
-turbine::c::close $c
+    set c [ turbine::data_new ]
 
-turbine::loop loop1_body $c
-proc loop1_body { key } {
-    global c
-    puts "body: $key"
+    turbine::container_init $stack string
+    turbine::container_insert $stack "c" $c
+
+    turbine::container_init $c integer
+    set s1 [ turbine::data_new ]
+    turbine::string_init $s1
+    turbine::string_set $s1 string1
+    set s2 [ turbine::data_new ]
+    turbine::string_init $s2
+    turbine::string_set $s2 string2
+
+    turbine::container_insert $c "0" $s1
+    turbine::container_insert $c "1" $s2
+
+    turbine::close_container $c
+
+    turbine::loop loop1_body $stack $c
+}
+
+proc loop1_body { stack key } {
+
+    puts "body: stack: $stack "
+    set c [ turbine::container_get $stack "c" ]
+    puts "body: $c $key"
     turbine::trace $key
-    set t [ turbine::c::integer_get $key ]
-    set value [ turbine::c::lookup $c key $t ]
+    set t [ turbine::integer_get $key ]
+    set value [ turbine::container_get $c $t ]
     turbine::trace $value
 }
 
-# set L [ turbine::c::container_get 1 ]
-# puts "enumeration: $L"
-
-# This is not a real Turbine loop
-# foreach id $L {
-#     set member [ turbine::c::lookup 1 "key" $id ]
-#     set filename [ turbine::c::filename $member ]
-#     puts "filename: $filename"
-# }
-
-turbine::engine
+turbine::init 1
+turbine::start rules
 turbine::finalize
+
 puts OK
+
+# Help TCL free memory
+proc exit args {}

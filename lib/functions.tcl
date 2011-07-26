@@ -170,29 +170,32 @@ namespace eval turbine {
     }
 
     # User function
-    proc loop { stmts container } {
-        set rule_id [ new ]
+    proc loop { stmts stack container } {
+        set rule_id [ rule_new ]
         rule $rule_id "loop-$rule_id" $container {} \
-            "tp: loop_body $stmts $container"
+            "tp: loop_body $stmts $stack $container"
     }
 
-    proc loop_body { stmts container } {
-        set L    [ container_get $container ]
+    proc loop_body { stmts stack container } {
         set type [ container_typeof $container ]
-        puts "container_got: $L"
+        set L    [ container_list $container ]
+        puts "container_got: $type: $L"
         foreach subscript $L {
             set td_key [ literal $type $subscript ]
             # Call user body with subscript as TD
-            $stmts $td_key
+            $stmts $stack $td_key
         }
     }
 
     # Utility function to set up a TD
     proc literal { type value } {
 
-        set result [ new ]
-        c::${type}_init $result
+        puts "literal: ${type}_"
+        set result [ data_new ]
+        puts "new: $result"
+        ${type}_init $result
         ${type}_set $result $value
+        puts "literal done"
         return $result
     }
 

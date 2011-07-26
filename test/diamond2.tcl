@@ -20,16 +20,14 @@ proc rules { } {
     file_init 3 test/data/C.txt
     file_init 4 test/data/D.txt
 
-    rule 1 A {     } { 1 } { tp: function_touch 1 }
-    rule 2 B { 1   } { 2 } { tp: function_touch 2 }
-    rule 3 C { 1   } { 3 } { tp: function_touch 3 }
-    rule 4 D { 2 3 } { 4 } { tp: function_touch 4 }
+    rule 1 A {     } { 1 } { tf: function_touch 1 }
+    rule 2 B { 1   } { 2 } { tf: function_touch 2 }
+    rule 3 C { 1   } { 3 } { tf: function_touch 3 }
+    rule 4 D { 2 3 } { 4 } { tf: function_touch 4 }
 }
 
 turbine::init 1
-
 turbine::start rules
-
 turbine::finalize
 
 puts OK

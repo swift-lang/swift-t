@@ -33,8 +33,7 @@ namespace eval turbine {
             # ready list may be empty
             foreach {transform} $ready {
                 set command [ turbine::c::executor $transform ]
-                puts "submitting: $command"
-                adlb::put $adlb::ANY $WORK_TYPE(WORK) "$transform $command"
+                release $transform $command
             }
 
             set msg [ adlb::get $WORK_TYPE(CONTROL) answer_rank ]
@@ -45,6 +44,23 @@ namespace eval turbine {
         puts "engine done"
     }
 
+    # Release a work unit for execution elsewhere
+    proc release { transform command } {
+
+        global WORK_TYPE
+
+        set command [ string trim $command ]
+        set prefix "[ string range $command 0 2 ]"
+        if { [ string equal $prefix "tp:" ] } {
+            set proccall [ lrange $command 1 end ]
+            adlb::put $adlb::ANY $WORK_TYPE(CONTROL) \
+                "procedure $command"
+        } else {
+            adlb::put $adlb::ANY $WORK_TYPE(WORK) \
+                "$transform $command"
+        }
+    }
+
     # Handle a message coming into this rule engine
     proc control { msg } {
 
@@ -53,6 +69,11 @@ namespace eval turbine {
         set header [ lindex $msg 0 ]
         puts "header: $header"
         switch $header {
+            procedure {
+                set command [ lrange $msg 2 end ]
+                show command
+                ::eval $command
+            }
             complete {
                 set id [ lindex $msg 1 ]
                 turbine::c::complete $id
@@ -95,8 +116,8 @@ namespace eval turbine {
 
         global WORK_TYPE
 
-        # puts "rule_id: $rule_id"
-        # puts "work: $command"
+        puts "rule_id: $rule_id"
+        puts "work: $command"
 
         if { [ catch { turbine::eval $command } e ] } {
             puts "work unit error: "

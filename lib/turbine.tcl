@@ -37,7 +37,7 @@ namespace eval turbine {
         set command [ string trim $command ]
         set prefix "[ string range $command 0 2 ]"
         puts "eval: $command"
-        if { [ string equal $prefix "tp:" ] } {
+        if { [ string equal $prefix "tf:" ] } {
             set proccall [ lrange $command 1 end ]
             puts "eval: $proccall"
             ::eval $proccall

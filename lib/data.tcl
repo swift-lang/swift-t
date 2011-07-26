@@ -15,6 +15,10 @@ namespace eval turbine {
         return $result
     }
 
+    proc data_new { } {
+        return [ adlb::unique ]
+    }
+
     proc string_init { id } {
         adlb::create $id "string:"
         turbine::c::declare $id
@@ -63,6 +67,11 @@ namespace eval turbine {
         return $s
     }
 
+    proc container_typeof { id } {
+        set s [ adlb::container_typeof $id ]
+        return $s
+    }
+
     proc container_list { id } {
         set s [ adlb::retrieve $id ]
         set i [ string first : $s ]
@@ -92,6 +101,15 @@ namespace eval turbine {
     proc close_dataset { id value } {
         global WORK_TYPE
         adlb::store $id $value
+        set ranks [ adlb::close $id ]
+        foreach rank $ranks {
+            puts "notify: $rank"
+            adlb::put $rank $WORK_TYPE(CONTROL) "close $id"
+        }
+    }
+
+    proc close_container { id } {
+        global WORK_TYPE
         set ranks [ adlb::close $id ]
         foreach rank $ranks {
             puts "notify: $rank"

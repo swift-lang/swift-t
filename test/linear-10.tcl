@@ -25,15 +25,15 @@ proc rules { } {
     file_init 8 test/data/8.txt
     file_init 9 test/data/9.txt
 
-    rule 1 1 {   } { 1 } { tp: function_touch 1 }
-    rule 2 2 { 1 } { 2 } { tp: function_touch 2 }
-    rule 3 3 { 2 } { 3 } { tp: function_touch 3 }
-    rule 4 4 { 3 } { 4 } { tp: function_touch 4 }
-    rule 5 5 { 4 } { 5 } { tp: function_touch 5 }
-    rule 6 6 { 5 } { 6 } { tp: function_touch 6 }
-    rule 7 7 { 6 } { 7 } { tp: function_touch 7 }
-    rule 8 8 { 7 } { 8 } { tp: function_touch 8 }
-    rule 9 9 { 8 } { 9 } { tp: function_touch 9 }
+    rule 1 1 {   } { 1 } { tf: function_touch 1 }
+    rule 2 2 { 1 } { 2 } { tf: function_touch 2 }
+    rule 3 3 { 2 } { 3 } { tf: function_touch 3 }
+    rule 4 4 { 3 } { 4 } { tf: function_touch 4 }
+    rule 5 5 { 4 } { 5 } { tf: function_touch 5 }
+    rule 6 6 { 5 } { 6 } { tf: function_touch 6 }
+    rule 7 7 { 6 } { 7 } { tf: function_touch 7 }
+    rule 8 8 { 7 } { 8 } { tf: function_touch 8 }
+    rule 9 9 { 8 } { 9 } { tf: function_touch 9 }
 }
 
 turbine::init 1
