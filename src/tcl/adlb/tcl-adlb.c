@@ -416,6 +416,52 @@ ADLB_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+/**
+   usage: adlb::unique
+*/
+static int
+ADLB_Unique_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+
+  long id;
+  int rc = ADLB_Unique(&id);
+  assert(rc == ADLB_SUCCESS);
+
+  DEBUG_ADLB("unique: %li\n", id);
+
+  Tcl_Obj* result = Tcl_NewLongObj(id);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+/**
+   usage: adlb::container_typeof <id>
+*/
+static int
+ADLB_Container_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
+                          int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  long id;
+  Tcl_GetLongFromObj(interp, objv[1], &id);
+
+  int length;
+  DEBUG_ADLB("adlb::container_typeof: <%li>\n", id);
+  char output[64];
+  int rc = ADLB_Container_Typeof(id, output, &length);
+  assert(rc == ADLB_SUCCESS);
+
+  DEBUG_ADLB("output: %s\n", output);
+
+  Tcl_Obj* result = Tcl_NewStringObj(output, length);
+  Tcl_SetObjResult(interp, result);
+
+  return TCL_OK;
+}
+
 static int
 ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
@@ -459,6 +505,8 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("lookup",    ADLB_Lookup_Cmd);
   COMMAND("subscribe", ADLB_Subscribe_Cmd);
   COMMAND("close",     ADLB_Close_Cmd);
+  COMMAND("unique",    ADLB_Unique_Cmd);
+  COMMAND("container_typeof", ADLB_Container_Typeof_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
 
   return TCL_OK;
