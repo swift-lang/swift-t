@@ -150,14 +150,15 @@ namespace eval turbine {
         set end_value   [ integer_get $end ]
         set parts_value [ integer_get $parts ]
         set size        [ expr $end_value - $start_value + 1]
+        set step        [ expr $size / $parts_value ]
 
         global WORK_TYPE
         for { set i 0 } { $i < $parts_value } { incr i } {
             set td [ data_new ]
             container_init $td integer
             container_insert $result $i $td
-            set s [ expr $i * $size / $parts_value ]
-            set e [ expr $s + $parts_value - 1 ]
+            set s [ expr $i *  $step ]
+            set e [ expr $s + $step - 1 ]
             adlb::put $adlb::ANY $WORK_TYPE(CONTROL) \
                 "procedure tp: range_work $td $s $e"
         }
