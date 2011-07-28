@@ -210,6 +210,8 @@ static int transform_tostring(char* output,
 
 static bool progress(tr* transform);
 
+static void rule_inputs(tr* transform);
+
 turbine_code
 turbine_rule_add(turbine_transform_id id,
                  turbine_transform* transform)
@@ -224,15 +226,7 @@ turbine_rule_add(turbine_transform_id id,
   new_tr->id = id;
   new_tr->blocker = 0;
 
-  // Record that this rule is blocked by its inputs
-  for (int i = 0; i < new_tr->transform.inputs; i++)
-  {
-    turbine_datum_id id = new_tr->transform.input[i];
-    struct longlist* L = ltable_search(&blockers, id);
-    turbine_condition(L != NULL, TURBINE_ERROR_NOT_FOUND,
-                      "rule_add: could not find: <%li>\n", id);
-    longlist_add(L, new_tr->id);
-  }
+  rule_inputs(new_tr);
 
   bool subscribed = progress(new_tr);
 
@@ -249,6 +243,25 @@ turbine_rule_add(turbine_transform_id id,
     unique_transform = id+1;
 
   return TURBINE_SUCCESS;
+}
+
+/**
+   Record that this rule is blocked by its inputs
+*/
+static void
+rule_inputs(tr* transform)
+{
+
+  for (int i = 0; i < transform->transform.inputs; i++)
+  {
+    turbine_datum_id id = transform->transform.input[i];
+    struct longlist* L = ltable_search(&blockers, id);
+    // turbine_condition(L != NULL, TURBINE_ERROR_NOT_FOUND,
+    //                  "rule_add: could not find: <%li>\n", id);
+    if (L == NULL)
+      turbine_declare(id, &L);
+    longlist_add(L, transform->id);
+  }
 }
 
 turbine_code
@@ -305,14 +318,19 @@ turbine_rules_push()
   return TURBINE_SUCCESS;
 }
 
+/**
+   @param result If non-NULL, return the new blocked list here
+ */
 turbine_code
-turbine_declare(turbine_datum_id id)
+turbine_declare(turbine_datum_id id, struct longlist** result)
 {
   DEBUG_TURBINE("declare: %li\n", id);
   struct longlist* blocked = longlist_create();
   if (ltable_contains(&blockers, id))
     return TURBINE_ERROR_DOUBLE_DECLARE;
   ltable_add(&blockers, id, blocked);
+  if (result != NULL)
+    *result = blocked;
   return TURBINE_SUCCESS;
 }
 

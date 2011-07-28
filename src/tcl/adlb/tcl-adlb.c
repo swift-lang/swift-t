@@ -30,6 +30,7 @@ static int am_server, am_debug_server;
 char retrieved[ADLB_DHT_MAX];
 
 /**
+   usage: adlb::init <servers> <types>
    Simplified use of ADLB_Init type_vect: just give adlb_init
    a number ntypes, and the valid types will be: [0..ntypes-1]
  */
@@ -37,13 +38,17 @@ static int
 ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
               int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(2);
+  TCL_ARGS(3);
 
-  int ntypes;
-  int error = Tcl_GetIntFromObj(interp, objv[1], &ntypes);
+  int error;
+
+  int servers;
+  error = Tcl_GetIntFromObj(interp, objv[1], &servers);
   TCL_CHECK(error);
 
-  servers = 1;
+  int ntypes;
+  error = Tcl_GetIntFromObj(interp, objv[2], &ntypes);
+  TCL_CHECK(error);
 
   int argc = 0;
   char** argv = NULL;
@@ -95,7 +100,6 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
                  Tcl_NewIntObj(ADLB_ANY), 0);
 
   Tcl_SetObjResult(interp, Tcl_NewIntObj(ADLB_SUCCESS));
-
   return TCL_OK;
 }
 

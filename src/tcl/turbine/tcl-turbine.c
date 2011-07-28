@@ -243,7 +243,7 @@ Turbine_Declare_Cmd(ClientData cdata, Tcl_Interp *interp,
   int error = Tcl_GetLongFromObj(interp, objv[1], &id);
   TCL_CHECK(error);
 
-  turbine_code code = turbine_declare(id);
+  turbine_code code = turbine_declare(id, NULL);
   TCL_CONDITION(code == TURBINE_SUCCESS,
                 "could not declare data id: %li", id);
 
