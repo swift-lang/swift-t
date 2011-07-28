@@ -11,18 +11,20 @@ namespace eval turbine {
 
         variable engines
         if { $rank < $engines } {
-            engine $rules
+            engine $rank $rules
         } else {
             worker
         }
     }
 
-    proc engine { rules } {
+    proc engine { rank rules } {
 
         global WORK_TYPE
 
         debug "TURBINE ENGINE..."
-        ::eval $rules
+        if { $rank == 0 } {
+            ::eval $rules
+        }
 
         turbine::c::push
 
@@ -103,12 +105,12 @@ namespace eval turbine {
                 break
             }
 
-            do_work $rule_id $command
+            do_work $answer_rank $rule_id $command
         }
     }
 
     # Worker: do actual work, handle errors, report back when complete
-    proc do_work { rule_id command } {
+    proc do_work { answer_rank rule_id command } {
 
         global WORK_TYPE
 
@@ -121,6 +123,6 @@ namespace eval turbine {
             # puts "[dict get $e -errorinfo]"
             error "rule: transform failed in command: $command"
         }
-        adlb::put $adlb::ANY $WORK_TYPE(CONTROL) "complete $rule_id"
+        adlb::put $answer_rank $WORK_TYPE(CONTROL) "complete $rule_id"
     }
 }
