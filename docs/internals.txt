@@ -1,0 +1,229 @@
+
+Turbine Internals
+================
+Justin M. Wozniak <wozniak@mcs.anl.gov>
+v0.1, July 2011
+
+
+Overview
+--------
+
+This manual provides an index of important concepts internal to
+Turbine.
+
+Quick Start
+-----------
+
+The fastest way to get a quick overview of provided features is to just run:
+
+--------------------------------------------------------
+./setup.sh
+./configure --with-adlb=<PATH/TO/ADLB>
+            --with-mpi=<PATH/TO/MPICH>
+            --with-tcl=<PATH/TO/TCL>
+make package
+
+Note:
+
+PATH/TO/ADLB  : Points to source tree
+PATH/TO/MPICH : Points to installed location
+PATH/TO/TCL   : Points to installed location
+--------------------------------------------------------
+
+Then, just take a look at the test code and output to see how things
+work.
+
+TCL Packaging
+-------------
+
+Turbine consists of two libraries, ADLB and Turbine, packaged as TCL
+extensions, and several TCL script libraries.  All of this is packaged
+with TCL conventions in +lib+.  Cf. +lib/make-package.tcl+ and
++lib/module.mk.in+.
+
+To bring these extensions and libraries into a TCL script, we use:
+
+--------------------------------------------------------
+package require turbine 0.1
+--------------------------------------------------------
+
+This command refers to environment variable +TCLLIBPATH+, which we
+set in +bin/turbine+.
+
+MPI Process Modes
+-----------------
+
+A Turbine program is a TCL script launched as an SPMD program by
++mpiexec+.  In general, the idea is to do
+
+--------------------------------------------------------
+mpiexec -l -n ${N} tclsh something.tcl
+--------------------------------------------------------
+
+In our case, we provide a helper script.  So in the test cases, we run
+
+--------------------------------------------------------
+mpiexec -l -n ${N} bin/turbine test/something.tcl
+--------------------------------------------------------
+
+The Turbine MPI environment is set by the +mpiexec -n+ number and the
+inputs to +turbine::init+.  As a result, each MPI process will become
+a Turbine Engine, Turbine Worker, or ADLB Server.  Turbine Engines and
+Workers are workers from the perspective of ADLB.
+
+Turbine Engine::
+
+Processes Turbine dependency rules.  Cf. +lib/engine.tcl:engine+.
+Runs on the lowest MPI ranks.  Rank 0 calls the user +rules+
+procedure, starting the program.  Work from this procedure may be
+distributed to other engines.
+
+Turbine Worker::
+
+Processes leaf work units.  Cf. +lib/engine.tcl:worker+.  Runs on the
+middle MPI ranks.
+
+ADLB Server::
+
+Performs ADLB services.  Enters +ADLB_Server()+ and does not exit
+until the run is complete.
+Cf. +src/tcl/adlb/tcl-adlb.c::ADLB_Init_Cmd()+.  Runs on the highest
+MPI ranks.
+
+Turbine concepts
+----------------
+
+TR::
+
+Turbine makes progress by evaluating Turbine rules (TRs).  A rule has
+an ID, a name (primarily for debugging), a state (waiting, ready,
+running, complete, and a transform.  A transform has a list of input
+TDs, output TDs, and an executor that does actual work.  The executor
+is usually a TCL command string that is processed via TCL +eval+.  The
+function body targeted by the executor can contain arbitrary TCL code,
+lookup data from the given TDs, launch external processes via TCL
++exec+ and store TDs.
+
+TR IDs are represented in the log as +{ID}+.
+
+TD::
+
+A Turbine datum.  Represented in TCL by a 64-bit TD ID.  A TD may be
+open (unset) or closed (set).  TD IDs are represented in the log as
++<ID>+.  Current types include:
+
+* string
+* integer
+* container
+* file
++
+
+TP::
+
+A Turbine procedure.  If an executor is prefixed with +tp:+, it will
+only be processed by an engine.
+
+TF::
+
+A Turbine function.  If an executor is prefixed with +tf:+, it will
+only be processed by a worker.
+
+Container::
+
+Element from which Turbine data structures are created.  May be used
+to create associative arrays, structs, and stack frames.  Represented
+by a TD.  A TD plus a subscript results in another TD.
++
+Container operations are represented in the log as, e.g., +<4>:k=<8>+,
+indicating that container TD 4 with subscript "k" resulted in TD 8.
+
+Subscribe::
+
+TRs are stored in the distributed rule engines.  To make progress,
+these TRs are activated when their input data is ready.  Thus, the
+rule engines subscribe to data stored in ADLB and are notified when
+data is ready.
+
+ADLB Modifications
+------------------
+
+Turbine uses ADLB to distribute tasks and locate data.
+
+All Turbine variables are stored in a customized data store built into
+ADLB.  This required the construction of additional ADLB API calls.
+
+The following ADLB features are available to Turbine.  They are used
+internally by the Turbine features, they are not called directly by
+the user script.  Cf. +src/tcl/adlb/tcl-adlb.c+.
+
+adlb::SUCCESS::
+
+Variable represents +ADLB_SUCCESS+.
+
+adlb::ANY::
+
+Variable represents "any", which is -1 in ADLB.
+
+adlb::init <servers> <types>::
+
+Start ADLB with the given number of servers and work types.
+
+adlb::finalize::
+
+Stop ADLB.
+
+adlb::put <reserve_rank> <work type> <work unit>::
+
+Submit a work unit as a string of given integer type.  Sent to given
+rank, which may be +adlb::ANY+.
+
+adlb::get <req_type> <answer_rank>::
+
+Get a work unit as a string of given integer type, which may be
++adlb::ANY+.  ADLB answer rank stored in +answer_rank+.
+
+adlb::create <id> <data>::
+
+Instantiate the given data but do not close it.  Data may be:
+
+* +string:+
+* +integer:+
+* +container:<type>+
+  where +type+ is the type of the container keys.
+* +file:<name>+
+  where +name+ is the file name.
+
+adlb::store <id> <data>::
+
+Store the TD.
+
+adlb::retrieve <id>::
+
+Retrieve the TD.
+
+adlb::insert <id> <subscript> <member>::
+
+Store TD +member+ at the given +subscript+ in container +id+.
+
+adlb::lookup <id> <subscript>::
+
+Obtain the TD for the given +subscript+ in container +id+.
+
+ADLB_Subscribe(id)::
+
+ADLB modification.  Called only by Turbine rule processing.  Request
+that the calling rank be notified when TD +id+ is closed.
+
+adlb::close <id>::
+
+Close TD +id+.  Returns a list of ranks that must be notified.
+
+adlb::unique::
+
+Return a unique TD.
+
+Turbine Core
+------------
+
+The core Turbine features are as follows...
+
