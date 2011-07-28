@@ -1,5 +1,6 @@
 
-# Turbine TCL library
+# turbine.tcl
+# Main control functions
 
 package provide turbine 0.1
 
@@ -16,19 +17,26 @@ namespace eval turbine {
 
     # User function
     # param e Number of engines
-    proc init { e } {
+    # param s Number of ADLB servers
+    proc init { e s } {
 
-        enum WORK_TYPE { WORK CONTROL }
-        global WORK_TYPE
-        adlb::init 2
-         # [ array size WORK_TYPE ]
-
-        ::turbine::c::init
+        # Obtain process counts
         variable engines servers
         set engines $e
-        set servers [ adlb::servers ]
+        set servers $s
+
+        puts "init: $e $s"
+
+        # Set up work types
+        enum WORK_TYPE { WORK CONTROL }
+        global WORK_TYPE
+        set types [ array size WORK_TYPE ]
+        adlb::init $servers $types
+
         set adlb_workers [ adlb::workers ]
         set workers [ expr $adlb_workers - $servers ]
+
+        c::init
         argv_init
     }
 
