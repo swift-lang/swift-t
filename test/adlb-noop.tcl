@@ -3,9 +3,7 @@
 # Nice to have for quick manual experiments
 
 package require turbine 0.1
-adlb::init 1
-turbine::init
+turbine::init 1 1
 
 turbine::finalize
-adlb::finalize
 puts OK

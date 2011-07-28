@@ -26,7 +26,7 @@ proc rules { } {
     turbine::trace 1 2
 }
 
-turbine::init 1
+turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
 turbine::start rules
 turbine::finalize
 

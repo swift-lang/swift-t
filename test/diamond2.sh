@@ -1,17 +1,19 @@
 #!/bin/bash
 
-set -x
+# set -x
 
 THIS=$0
 SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
 
-mpiexec -l -n 3 bin/turbine ${SCRIPT} >& ${OUTPUT}
+source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
+
+mpiexec -l -n ${PROCS} bin/turbine ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || exit 1
 
 LINES=$( ls test/data/[ABCD].txt | wc -l )
 (( ${LINES} == 4 )) || exit 1
 
-rm test/data/[ABCD].txt || exit 1
+rm -v test/data/[ABCD].txt || exit 1
 
 exit 0

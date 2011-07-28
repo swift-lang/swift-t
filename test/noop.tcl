@@ -7,7 +7,7 @@ package require turbine 0.1
 # No rules
 proc rules { } { }
 
-turbine::init $env(TURBINE_ENGINES)
+turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
 
 turbine::start rules
 

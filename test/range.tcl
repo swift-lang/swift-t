@@ -34,7 +34,7 @@ proc loop1_body { stack container key } {
     turbine::trace $key $member
 }
 
-turbine::init 1
+turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
 turbine::start rules
 turbine::finalize
 puts OK

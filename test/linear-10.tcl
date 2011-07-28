@@ -36,7 +36,7 @@ proc rules { } {
     rule 9 9 { 8 } { 9 } { tf: function_touch 9 }
 }
 
-turbine::init 1
+turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
 
 turbine::start rules
 
