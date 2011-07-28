@@ -342,7 +342,7 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb_lookup <id> <subscript>
+   usage: adlb::lookup <id> <subscript>
 */
 static int
 ADLB_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -363,24 +363,6 @@ ADLB_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_Obj* result = Tcl_NewLongObj(member);
   Tcl_SetObjResult(interp, result);
 
-  return TCL_OK;
-}
-
-static int
-ADLB_Subscribe_Cmd(ClientData cdata, Tcl_Interp *interp,
-                   int objc, Tcl_Obj *const objv[])
-{
-  TCL_ARGS(3);
-
-  int subscribed;
-  long id;
-
-  Tcl_GetLongFromObj(interp, objv[1], &id);
-  int rc = ADLB_Subscribe(id, &subscribed);
-  assert(rc == ADLB_SUCCESS);
-
-  Tcl_Obj* result = Tcl_NewIntObj(subscribed);
-  Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
 
@@ -499,7 +481,6 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("retrieve",  ADLB_Retrieve_Cmd);
   COMMAND("insert",    ADLB_Insert_Cmd);
   COMMAND("lookup",    ADLB_Lookup_Cmd);
-  COMMAND("subscribe", ADLB_Subscribe_Cmd);
   COMMAND("close",     ADLB_Close_Cmd);
   COMMAND("unique",    ADLB_Unique_Cmd);
   COMMAND("container_typeof", ADLB_Container_Typeof_Cmd);
