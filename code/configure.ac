@@ -4,7 +4,7 @@
 # NOTE: Default CFLAGS are "-g -O2"
 # Use ./configure CFLAGS="-g ..." to changs the defaults
 
-AC_PREREQ([2.67])
+AC_PREREQ([2.63])
 AC_INIT([FULL-PACKAGE-NAME], [VERSION], [BUG-REPORT-ADDRESS])
 AC_CONFIG_SRCDIR([src/turbine/turbine.c])
 AC_CONFIG_HEADERS([config.h])
