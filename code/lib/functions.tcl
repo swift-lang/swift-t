@@ -120,13 +120,46 @@ namespace eval turbine {
         set start_value [ integer_get $start ]
         set end_value   [ integer_get $end ]
 
+        range_work $result $start_value $end_value
+    }
+
+    proc range_work { result start end } {
         set k 0
-        for { set i $start_value } { $i <= $end_value } { incr i } {
+        for { set i $start } { $i <= $end } { incr i } {
             set td [ data_new ]
             integer_init $td
             integer_set $td $i
             container_insert $result $k $td
             incr k
+        }
+        close_container $result
+    }
+
+    # User function
+    # Construct a distributed container of sequential integers
+    proc drange { result start end parts } {
+
+        set rule_id [ rule_new ]
+        rule $rule_id "drange-$rule_id" "$start $end" $result \
+            "tp: drange_body $result $start $end $parts"
+    }
+
+    proc drange_body { result start end parts } {
+
+        set start_value [ integer_get $start ]
+        set end_value   [ integer_get $end ]
+        set parts_value [ integer_get $parts ]
+        set size        [ expr $end_value - $start_value + 1]
+
+        global WORK_TYPE
+        for { set i 0 } { $i < $parts_value } { incr i } {
+            set td [ data_new ]
+            container_init $td integer
+            container_insert $result $i $td
+            set s [ expr $i * $size / $parts_value ]
+            set e [ expr $s + $parts_value - 1 ]
+            adlb::put $adlb::ANY $WORK_TYPE(CONTROL) \
+                "procedure tp: range_work $td $s $e"
         }
         close_container $result
     }
