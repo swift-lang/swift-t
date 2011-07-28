@@ -8,8 +8,7 @@ To build:
 Type
 
 ./setup.sh
-./configure --with-woztools=<PATH/TO/WOZTOOLS> \
-            --with-adlb=<PATH/TO/ADLB>
+./configure --with-adlb=<PATH/TO/ADLB>
             --with-mpi=<PATH/TO/MPICH>
             --with-tcl=<PATH/TO/TCL>
 make package
