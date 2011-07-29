@@ -5,14 +5,23 @@ namespace eval turbine {
 
     proc start { rules } {
 
+        variable mode
         set rank [ adlb::rank ]
         set amserver [ adlb::amserver ]
-        if { $amserver == 1 } return
+        if { $amserver == 1 } {
+	    set mode SERVER
+	    return
+	}
+
+	variable stats
+	dict set stats tasks_run 0
 
         variable engines
         if { $rank < $engines } {
+	    set mode ENGINE
             engine $rank $rules
         } else {
+	    set mode WORKER
             worker
         }
     }
@@ -26,10 +35,12 @@ namespace eval turbine {
             ::eval $rules
         }
 
+	variable stats
+	dict set stats tasks_released 0
+
         turbine::c::push
 
         while {true} {
-
             set ready [ turbine::c::ready ]
             # ready list may be empty
             foreach {transform} $ready {
@@ -47,8 +58,10 @@ namespace eval turbine {
     # Release a work unit for execution elsewhere
     proc release { transform command } {
 
-        global WORK_TYPE
+	variable stats
+	dict incr stats tasks_released
 
+        global WORK_TYPE
         set command [ string trim $command ]
         set prefix "[ string range $command 0 2 ]"
         if { [ string equal $prefix "tp:" ] } {
@@ -66,10 +79,12 @@ namespace eval turbine {
 
         debug "control: $msg"
 
+	variable stats
         set header [ lindex $msg 0 ]
         show header
         switch $header {
             procedure {
+		dict incr stats tasks_run
                 set command [ lrange $msg 2 end ]
                 ::eval $command
             }
@@ -116,6 +131,9 @@ namespace eval turbine {
 
         debug "rule_id: $rule_id"
         debug "work: $command"
+
+	variable stats
+	dict incr stats tasks_run
 
         if { [ catch { turbine::eval $command } e ] } {
             puts "work unit error: "
