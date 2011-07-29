@@ -90,7 +90,8 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   if ( am_server )
   {
     DEBUG_ADLB("ADLB SERVER...\n");
-    ADLB_Server( 3000000, 0.0 );
+    // Limit ADLB to 100MB
+    ADLB_Server( 100*1024*1024, 0.0 );
   }
 
   Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::SUCCESS", -1), NULL,
