@@ -25,25 +25,21 @@ AC_HEADER_STDBOOL
 AC_FUNC_MALLOC
 AC_CHECK_FUNCS([strdup])
 
-dnl AC_ARG_WITH(woztools,
-dnl                  AS_HELP_STRING(
-dnl                  [--with-woztools],
-dnl                  [location of WOZTOOLS]),
-dnl                  [AC_CHECK_FILE(${withval}/lib/libwoztools.a,
-dnl                   [], [USE_WOZTOOLS=0])
-dnl                   if test "$USE_WOZTOOLS" = 0 ; then
-dnl                      AC_MSG_ERROR(Could not find WOZTOOLS in $withval)
-dnl                   fi
-dnl                   AC_MSG_RESULT([using woztools in $withval ...])
-dnl                   AC_DEFINE_UNQUOTED([WOZTOOLS_LOCATION],
-dnl                                      "$withval", [WOZTOOLS Location])
-dnl                   USE_WOZTOOLS=$withval
-dnl                  ],
-dnl                  [
-dnl                   AC_MSG_ERROR([Not found: WOZTOOLS])
-dnl                   USE_WOZTOOLS=0
-dnl                  ])
-dnl AC_SUBST(USE_WOZTOOLS)
+USE_MACHINE=normal
+USE_LAUNCHER=mpiexec
+LIBMPI=libmpich.so
+AC_ARG_ENABLE(sicortex,
+                 AS_HELP_STRING(
+                 [--enable-sicortex],
+                 [Required if running on SiCortex]),
+                 [
+                        USE_MACHINE=sicortex
+                        USE_LAUNCHER=srun
+                        LIBMPI=libmpiP.a
+                 ],
+                 [])
+AC_SUBST(USE_MACHINE)
+AC_SUBST(USE_LAUNCHER)
 
 AC_ARG_WITH(adlb,
                  AS_HELP_STRING(
@@ -69,7 +65,7 @@ AC_ARG_WITH(mpi,
                  AS_HELP_STRING(
                  [--with-mpi],
                  [location of MPI]),
-                 [AC_CHECK_FILE(${withval}/lib/libmpich.so,
+                 [AC_CHECK_FILE(${withval}/lib/${LIBMPI},
                   [], [USE_MPI=0])
                   if test "$USE_MPI" = 0 ; then
                      AC_MSG_ERROR(Could not find MPI in $withval)

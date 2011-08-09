@@ -22,8 +22,9 @@ proc rules { } {
     turbine::integer_init $p
 
     turbine::integer_set $i 1
-    turbine::integer_set $j 4
-    turbine::integer_set $p 2
+    # 100000
+    turbine::integer_set $j 1000
+    turbine::integer_set $p 16
 
     turbine::drange $c $i $j $p
     # turbine::loop loop1_body none $c

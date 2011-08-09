@@ -40,10 +40,20 @@ CFLAGS += -I $(srcdir)
 TCL := @USE_TCL@
 TCLSH := $(shell find $(TCL)/bin -name tclsh8.* )
 
+MACHINE = @USE_MACHINE@
+
 MPI = @USE_MPI@
 ifneq ($(MPI),0)
 	CFLAGS += -I $(MPI)/include
 endif
+
+ifeq ($(MACHINE),normal)
+	LIB_MPI	= -L $(MPI)/lib -l mpich -l mpl
+else ifeq ($(MACHINE),sicortex)
+	LIB_MPI = -L $(MPI)/lib -l scmpi
+endif
+
+LAUNCH = @USE_LAUNCHER@
 
 ADLB = @USE_ADLB@
 ifneq ($(ADLB),0)
@@ -133,10 +143,9 @@ $(TURBINE): $(TURBINE_OBJS)
 
 $(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_OBJS) # $(WOZTOOLS_LIB)
 	$(Q) "  LINK		$(@)"
-	$(E) gcc -shared -fPIC -o $(@) $(TCL_LINK_FLAGS) \
-             $(TCL_TURBINE_OBJS) $(TURBINE_OBJS)         \
-		  -L $(ADLB) -l adlb                     \
-		  -L $(MPI)/lib -l mpich -l mpl
+	$(E) $(CC) -shared -fPIC -o $(@) $(TCL_LINK_FLAGS) \
+             $(TCL_TURBINE_OBJS) $(TURBINE_OBJS)           \
+		  -L $(ADLB) -l adlb $(LIB_MPI)
 
 # Test cases in C as objects
 TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC_C))
@@ -170,7 +179,7 @@ $(TEST_BINS): %.x: %.o $(TURBINE) # $(WOZTOOLS_LIB)
 	$(Q) "  SH		$(@)"
 	$(E) mkdir -p test/data
 	$(E) rm -f $(@)
-	$(E) $(<) > $(*).tmp 2>&1
+	$(E) LAUNCH=$(LAUNCH) $(<) > $(*).tmp 2>&1
 	$(E) mv $(*).tmp $(@) 2>&1
 
 # Test result rule for TCL tests
@@ -178,7 +187,7 @@ $(TEST_BINS): %.x: %.o $(TURBINE) # $(WOZTOOLS_LIB)
 	$(Q) "  SH		$(@)"
 	$(E) mkdir -p test/data
 	$(E) rm -f $(@)
-	$(E) $(<) > $(*).tmp 2>&1
+	$(E) LAUNCH=$(LAUNCH) $(<) > $(*).tmp 2>&1
 	$(E) mv $(*).tmp $(@)
 
 clean::

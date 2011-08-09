@@ -8,7 +8,7 @@ OUTPUT=${THIS%.sh}.out
 
 source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
 
-mpiexec -l -n ${PROCS} bin/turbine ${SCRIPT} >> ${OUTPUT} 2>&1
+${LAUNCH} -l -n ${PROCS} bin/turbine ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || exit 1
 
 LINES=$( ls test/data/[ABCD].txt | wc -l )

@@ -6,7 +6,7 @@ THIS=$0
 SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
 
-mpiexec -n 3 bin/turbine ${SCRIPT} >& ${OUTPUT}
+${LAUNCH} -n 3 bin/turbine ${SCRIPT} >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
 grep -q "answer_rank: 0" ${OUTPUT} || exit 1
