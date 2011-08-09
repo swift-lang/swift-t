@@ -10,10 +10,11 @@ TEST_SRC_TCL := $(DIR)/noop.tcl           \
                 $(DIR)/numbers.tcl        \
                 $(DIR)/arithmetic.tcl     \
                 $(DIR)/strings.tcl        \
+                $(DIR)/dht.tcl            \
                 $(DIR)/container2.tcl     \
                 $(DIR)/loop1.tcl          \
                 $(DIR)/readdata.tcl       \
                 $(DIR)/range.tcl          \
                 $(DIR)/drange.tcl
-#                $(DIR)/dht.tcl            \
+
 #                $(DIR)/modftdock.tcl      \
