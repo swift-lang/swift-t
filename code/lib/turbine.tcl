@@ -28,7 +28,7 @@ namespace eval turbine {
 
 	variable stats
 	set stats [ dict create ]
-	dict set stats clock_start [ clock seconds ]
+	dict set stats clock_start [ clock clicks -milliseconds ]
 
 	variable engines
 	variable servers
@@ -74,9 +74,14 @@ namespace eval turbine {
 	variable stats
 	puts "engines: $engines"
 	set start [ dict get $stats clock_start ]
-	set stop [ clock seconds ]
+	set stop [ clock clicks -milliseconds ]
 	set stats [ dict remove $stats clock_start ]
-	dict set stats walltime [ expr $stop - $start ]
+        # duration in milliseconds
+        set duration [ expr $stop - $start ]
+        # walltime in seconds
+        set w [ expr $duration / 1000.0 ]
+        set walltime [ format "%0.3f" $w ]
+	dict set stats walltime $walltime
 
 	dict for { key value } $stats {
 	    puts "STATS: $key $value"
