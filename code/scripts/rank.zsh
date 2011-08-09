@@ -4,7 +4,7 @@
 # Assumes the output file is formatted via "mpiexec -l"
 
 RANK=$1
-REGEXP=$2
-FILE=$3
+FILE=$2
 
-grep "\[${RANK}\]" ${REGEXP} ${FILE}
+grep "\[${RANK}\]" < ${FILE} | less
+
