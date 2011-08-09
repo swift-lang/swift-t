@@ -21,10 +21,16 @@ static int servers;
 
 static int am_server, am_debug_server;
 
+/** Size of MPI_COMM_WORLD */
+static int mpi_size = -1;
+
+/** Rank in MPI_COMM_WORLD */
+static int mpi_rank = -1;
+
 /** Max command-line length */
 #define ADLBTCL_CMD_MAX 1024
 
-// ADLB uses -1 to mean "any" in ADLB_Put() and ADLB_Reserve()
+/** ADLB uses -1 to mean "any" in ADLB_Put() and ADLB_Reserve() */
 #define ADLB_ANY -1
 
 char retrieved[ADLB_DHT_MAX];
@@ -63,14 +69,12 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   code = MPI_Init(&argc, &argv);
   assert(code == MPI_SUCCESS);
 
-  int size;
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  workers = size - servers;
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+  workers = mpi_size - servers;
 
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
-  if (rank == 0)
+  if (mpi_rank == 0)
   {
     if (workers <= 0)
       puts("WARNING: No workers");
@@ -123,6 +127,17 @@ ADLB_AmServer_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
   Tcl_SetObjResult(interp, Tcl_NewBooleanObj(am_server));
+  return TCL_OK;
+}
+
+/**
+   usage: no args, returns number of MPI world ranks
+*/
+static int
+ADLB_Size_Cmd(ClientData cdata, Tcl_Interp *interp,
+              int objc, Tcl_Obj *const objv[])
+{
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(mpi_size));
   return TCL_OK;
 }
 
@@ -473,6 +488,7 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("init",      ADLB_Init_Cmd);
   COMMAND("rank",      ADLB_Rank_Cmd);
   COMMAND("amserver",  ADLB_AmServer_Cmd);
+  COMMAND("size",      ADLB_Size_Cmd);
   COMMAND("servers",   ADLB_Servers_Cmd);
   COMMAND("workers",   ADLB_Workers_Cmd);
   COMMAND("put",       ADLB_Put_Cmd);
