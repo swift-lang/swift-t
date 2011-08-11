@@ -86,9 +86,11 @@ static long unique_transform = 1;
     }}
 
 turbine_code
-turbine_init()
+turbine_init(int amserver)
 {
   turbine_debug_init();
+  if (amserver)
+    return TURBINE_SUCCESS;
 
   struct ltable* table;
   table = ltable_init(&trs_waiting, 1024*1024);
