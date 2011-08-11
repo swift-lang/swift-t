@@ -91,13 +91,6 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   if (! am_server)
     MPI_Comm_rank(app_comm, &adlb_rank);
 
-  if ( am_server )
-  {
-    DEBUG_ADLB("ADLB SERVER...\n");
-    // Limit ADLB to 100MB
-    ADLB_Server( 100*1024*1024, 0.0 );
-  }
-
   Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::SUCCESS", -1), NULL,
                  Tcl_NewIntObj(ADLB_SUCCESS), 0);
 
@@ -105,6 +98,27 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
                  Tcl_NewIntObj(ADLB_ANY), 0);
 
   Tcl_SetObjResult(interp, Tcl_NewIntObj(ADLB_SUCCESS));
+  return TCL_OK;
+}
+
+/**
+   Enter server
+ */
+static int
+ADLB_Server_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  if (!am_server)
+  {
+    printf("adlb::server: This process is not a server!\n");
+    return TCL_ERROR;
+  }
+
+  DEBUG_ADLB("ADLB SERVER...\n");
+  // Limit ADLB to 100MB
+  int max_memory = 100*1024*1024;
+  double logging = 0.0;
+  ADLB_Server(max_memory, logging);
   return TCL_OK;
 }
 
@@ -486,6 +500,7 @@ Tcladlb_Init(Tcl_Interp *interp)
     return TCL_ERROR;
 
   COMMAND("init",      ADLB_Init_Cmd);
+  COMMAND("server",    ADLB_Server_Cmd);
   COMMAND("rank",      ADLB_Rank_Cmd);
   COMMAND("amserver",  ADLB_AmServer_Cmd);
   COMMAND("size",      ADLB_Size_Cmd);

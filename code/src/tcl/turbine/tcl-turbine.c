@@ -58,7 +58,12 @@ static int
 Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
 {
-  turbine_code code = turbine_init();
+  TCL_ARGS(2);
+  int amserver;
+  int error = Tcl_GetIntFromObj(interp, objv[1], &amserver);
+  assert(error == TCL_OK);
+
+  turbine_code code = turbine_init(amserver);
   if (code != TURBINE_SUCCESS)
   {
     Tcl_AddErrorInfo(interp, " Could not initialize Turbine!\n");

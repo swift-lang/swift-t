@@ -41,12 +41,16 @@ namespace eval turbine {
         global WORK_TYPE
         set types [ array size WORK_TYPE ]
         adlb::init $servers $types
-	if { [ adlb::amserver ] == 1} return
+        c::init [ adlb::amserver ]
+
+	if { [ adlb::amserver ] == 1 } {
+            adlb::server
+            return
+        }
 
         set adlb_workers [ adlb::workers ]
         set workers [ expr $adlb_workers - $servers ]
 
-        c::init
         argv_init
     }
 
@@ -73,7 +77,7 @@ namespace eval turbine {
 	variable mode
 	variable engines
 	variable stats
-	puts "engines: $engines"
+	# puts "engines: $engines"
 	set start [ dict get $stats clock_start ]
 	set stop [ clock clicks -milliseconds ]
 	set stats [ dict remove $stats clock_start ]
