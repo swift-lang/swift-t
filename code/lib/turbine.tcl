@@ -24,10 +24,11 @@ namespace eval turbine {
     # param s Number of ADLB servers
     proc init { e s } {
 
-	puts "turbine::init"
+	# puts "turbine::init"
 
 	variable stats
 	set stats [ dict create ]
+        puts "starting clock"
 	dict set stats clock_start [ clock clicks -milliseconds ]
 
 	variable engines
@@ -90,8 +91,8 @@ namespace eval turbine {
 
     proc finalize { } {
         debug "finalize"
+	report_stats
         turbine::c::finalize
         adlb::finalize
-	report_stats
     }
 }
