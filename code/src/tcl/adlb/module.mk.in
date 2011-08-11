@@ -1,9 +1,6 @@
 
 DIR := src/tcl/adlb
 
-ADLB := @USE_ADLB@
-MPI := @USE_MPI@
-
 TCL_ADLB_SRC := $(DIR)/tcl-adlb.c
 
 TURBINE_SRC += $(TCL_ADLB_SRC)
