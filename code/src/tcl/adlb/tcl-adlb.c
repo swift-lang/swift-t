@@ -27,6 +27,9 @@ static int mpi_size = -1;
 /** Rank in MPI_COMM_WORLD */
 static int mpi_rank = -1;
 
+/** Communicator for ADLB workers */
+MPI_Comm worker_comm;
+
 /** Max command-line length */
 #define ADLBTCL_CMD_MAX 1024
 
@@ -63,8 +66,6 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   for (int i = 0; i < ntypes; i++)
     type_vect[i] = i;
 
-  MPI_Comm app_comm;
-
   int code;
   code = MPI_Init(&argc, &argv);
   assert(code == MPI_SUCCESS);
@@ -85,11 +86,11 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   //           int aprintf_flag, int num_types, int *types,
   //           int *am_server, int *am_debug_server, MPI_Comm *app_comm)
   code = ADLB_Init(servers, 0, 0, ntypes, type_vect,
-                   &am_server, &am_debug_server, &app_comm);
+                   &am_server, &am_debug_server, &worker_comm);
   assert(code == ADLB_SUCCESS);
 
   if (! am_server)
-    MPI_Comm_rank(app_comm, &adlb_rank);
+    MPI_Comm_rank(worker_comm, &adlb_rank);
 
   Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::SUCCESS", -1), NULL,
                  Tcl_NewIntObj(ADLB_SUCCESS), 0);
@@ -174,6 +175,18 @@ ADLB_Workers_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
 {
   Tcl_SetObjResult(interp, Tcl_NewIntObj(workers));
+  return TCL_OK;
+}
+
+/**
+   usage: no args, barrier for workers
+*/
+static int
+ADLB_Barrier_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  int rc = MPI_Barrier(MPI_COMM_WORLD);
+  assert(rc == MPI_SUCCESS);
   return TCL_OK;
 }
 
@@ -506,6 +519,7 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("size",      ADLB_Size_Cmd);
   COMMAND("servers",   ADLB_Servers_Cmd);
   COMMAND("workers",   ADLB_Workers_Cmd);
+  COMMAND("barrier",   ADLB_Barrier_Cmd);
   COMMAND("put",       ADLB_Put_Cmd);
   COMMAND("get",       ADLB_Get_Cmd);
   COMMAND("create",    ADLB_Create_Cmd);

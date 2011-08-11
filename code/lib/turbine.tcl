@@ -28,8 +28,6 @@ namespace eval turbine {
 
 	variable stats
 	set stats [ dict create ]
-        puts "starting clock"
-	dict set stats clock_start [ clock clicks -milliseconds ]
 
 	variable engines
 	variable servers
@@ -42,6 +40,10 @@ namespace eval turbine {
         set types [ array size WORK_TYPE ]
         adlb::init $servers $types
         c::init [ adlb::amserver ]
+
+        puts "starting clock"
+        adlb::barrier
+	dict set stats clock_start [ clock clicks -milliseconds ]
 
 	if { [ adlb::amserver ] == 1 } {
             adlb::server
