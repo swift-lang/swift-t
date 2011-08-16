@@ -166,6 +166,25 @@ namespace eval turbine {
     }
 
     # User function
+    # Loop over a distributed container
+    proc dloop { loop_body stack container } {
+
+        set rule_id [ rule_new ]
+        rule $rule_id "dloop-$rule_id" $container "" \
+            "tp: dloop_body $container"
+    }
+
+    proc dloop_body { container } {
+
+        set keys [ container_get $container ]
+
+        global WORK_TYPE
+        foreach key $keys {
+            puts "key: $key"
+        }
+    }
+
+    # User function
     # NOT TESTED
     proc enumerate { result container } {
 
