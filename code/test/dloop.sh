@@ -11,9 +11,10 @@ set -x
 ${LAUNCH} -l -n ${PROCS} bin/turbine ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || exit 1
 
-# grep -q "trace: 0,1" ${OUTPUT} || exit 1
-# grep -q "trace: 1,2" ${OUTPUT} || exit 1
-# grep -q "trace: 2,3" ${OUTPUT} || exit 1
-# grep -q "trace: 3,4" ${OUTPUT} || exit 1
+# Should find values from 0-9
+for (( i=0 ; i<10 ; i++ ))
+do
+  grep -q "value: ${i}" ${OUTPUT} || exit 1
+done
 
 exit 0
