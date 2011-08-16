@@ -171,16 +171,18 @@ namespace eval turbine {
 
         set rule_id [ rule_new ]
         rule $rule_id "dloop-$rule_id" $container "" \
-            "tp: dloop_body $container"
+            "tp: dloop_body $loop_body $stack $container"
     }
 
-    proc dloop_body { container } {
+    proc dloop_body { loop_body stack container } {
 
-        set keys [ container_get $container ]
+        set keys [ container_list $container ]
 
         global WORK_TYPE
         foreach key $keys {
-            puts "key: $key"
+            set c [ container_get $container $key ]
+            adlb::put $adlb::ANY $WORK_TYPE(CONTROL) \
+                "procedure tp: loop_body $loop_body $stack $c"
         }
     }
 
@@ -195,7 +197,7 @@ namespace eval turbine {
 
     proc enumerate_body { result container } {
 
-        set s [ container_get $container ]
+        set s [ container_list $container ]
         string_set $result $s
     }
 
