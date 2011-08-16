@@ -21,10 +21,17 @@ proc rules { } {
     set p [ turbine::data_new ]
     turbine::integer_init $p
 
+    global env
+    if { [ info exists env(COUNT) ] } {
+        set count $env(COUNT)
+        puts "count: $count"
+    } else {
+        puts "count_: $env(COUNT)"
+        set count 1000
+    }
     turbine::integer_set $i 1
-    # 100000
-    turbine::integer_set $j 1000
-    turbine::integer_set $p 16
+    turbine::integer_set $j $count
+    turbine::integer_set $p $env(TURBINE_ENGINES)
 
     turbine::drange $c $i $j $p
     # turbine::loop loop1_body none $c
@@ -38,6 +45,7 @@ proc loop1_body { stack container key } {
     turbine::trace $key $member
 }
 
+global env
 turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
 turbine::start rules
 turbine::finalize
