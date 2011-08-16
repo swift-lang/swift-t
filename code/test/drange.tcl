@@ -1,5 +1,5 @@
 
-# Test trace and basic numerical functionality
+# Test distributed range creation functionality
 
 # SwiftScript
 # int i = 1;
