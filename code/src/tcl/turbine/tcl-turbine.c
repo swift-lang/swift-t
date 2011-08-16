@@ -13,8 +13,9 @@
 
 #include <tcl.h>
 
-#include "src/util/tools.h"
 #include "src/util/debug.h"
+#include "src/util/log.h"
+#include "src/util/tools.h"
 #include "src/turbine/turbine.h"
 
 #include "src/tcl/util.h"
@@ -69,6 +70,9 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
     Tcl_AddErrorInfo(interp, " Could not initialize Turbine!\n");
     return TCL_ERROR;
   }
+
+  log_init();
+  log_normalize();
 
   return TCL_OK;
 }
@@ -238,6 +242,7 @@ Turbine_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   return TCL_OK;
 }
+
 static int
 Turbine_Declare_Cmd(ClientData cdata, Tcl_Interp *interp,
                     int objc, Tcl_Obj *const objv[])
@@ -251,6 +256,18 @@ Turbine_Declare_Cmd(ClientData cdata, Tcl_Interp *interp,
   turbine_code code = turbine_declare(id, NULL);
   TCL_CONDITION(code == TURBINE_SUCCESS,
                 "could not declare data id: %li", id);
+
+  return TCL_OK;
+}
+
+static int
+Turbine_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  char* message = Tcl_GetString(objv[1]);
+  log_printf("%s", message);
 
   return TCL_OK;
 }
@@ -312,6 +329,7 @@ Tclturbine_Init(Tcl_Interp *interp)
   COMMAND("executor", Turbine_Executor_Cmd);
   COMMAND("complete", Turbine_Complete_Cmd);
   COMMAND("close",    Turbine_Close_Cmd);
+  COMMAND("log",      Turbine_Log_Cmd);
   COMMAND("finalize", Turbine_Finalize_Cmd);
   COMMAND("debug",    Turbine_Debug_Cmd);
 
