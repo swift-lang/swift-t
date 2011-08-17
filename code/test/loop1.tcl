@@ -17,35 +17,38 @@ package require turbine 0.1
 
 proc rules { } {
 
-    set stack [ turbine::data_new ]
+    namespace import turbine::*
 
-    set c [ turbine::data_new ]
+    set stack [ data_new ]
+    set c [ data_new ]
 
-    turbine::container_init $stack string
-    turbine::container_insert $stack "c" $c
+    container_init $stack string
+    container_insert $stack "c" $c
 
-    turbine::container_init $c integer
-    set s1 [ turbine::data_new ]
-    turbine::string_init $s1
-    turbine::string_set $s1 string1
-    set s2 [ turbine::data_new ]
-    turbine::string_init $s2
-    turbine::string_set $s2 string2
+    container_init $c integer
+    set s1 [ data_new ]
+    string_init $s1
+    string_set $s1 string1
+    set s2 [ data_new ]
+    string_init $s2
+    string_set $s2 string2
 
-    turbine::container_insert $c "0" $s1
-    turbine::container_insert $c "1" $s2
+    container_insert $c "0" $s1
+    container_insert $c "1" $s2
 
-    turbine::close_container $c
+    close_container $c
 
     turbine::loop loop1_body $stack $c
 }
 
 proc loop1_body { stack container key } {
 
+    namespace import turbine::*
+
     puts "body: $stack $container $key"
     turbine::trace $key
-    set t [ turbine::integer_get $key ]
-    set value [ turbine::container_get $container $t ]
+    set t [ integer_get $key ]
+    set value [ container_get $container $t ]
     turbine::trace $value
 }
 
