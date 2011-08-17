@@ -27,23 +27,24 @@ proc rules { } {
     } else {
         set count 10
     }
-    puts "count: $count"
+    puts "COUNT: $count"
 
     turbine::integer_set $i 1
     turbine::integer_set $j $count
-    turbine::integer_set $p $env(TURBINE_ENGINES)
+    set split [ expr $env(TURBINE_ENGINES) * 10 ]
+    turbine::integer_set $p $split
 
     turbine::drange $c $i $j $p
     turbine::dloop loop1_body none $c
 }
 
 proc loop1_body { stack container key } {
-    puts "loop1_body: $key"
+    # puts "loop1_body: $key"
     set t [ turbine::integer_get $key ]
     set member [ turbine::container_get $container $t ]
     set value [ turbine::integer_get $member ]
     # turbine::trace $key $member
-    puts "value: $value"
+    # puts "value: $value"
 }
 
 global env
