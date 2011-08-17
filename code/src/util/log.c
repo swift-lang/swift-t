@@ -21,13 +21,23 @@ log_init()
   output = stdout;
 }
 
+double
+log_time_absolute()
+{
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  double result = tv.tv_sec;
+  result += tv.tv_usec * 0.000001;
+  return result;
+}
+
 /**
    Reset the original time to now
  */
 void
 log_normalize()
 {
-  log_start = log_time();
+  log_start = log_time_absolute();
 }
 
 double
