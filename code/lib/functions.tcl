@@ -1,6 +1,8 @@
 
 namespace eval turbine {
 
+    namespace export arithmetic
+
     namespace import c::new c::rule c::rule_new c::typeof
     namespace import c::insert
 
@@ -169,6 +171,7 @@ namespace eval turbine {
     # Loop over a distributed container
     proc dloop { loop_body stack container } {
 
+        c::log "log_dloop:"
         set rule_id [ rule_new ]
         rule $rule_id "dloop-$rule_id" $container "" \
             "tp: dloop_body $loop_body $stack $container"
@@ -180,9 +183,9 @@ namespace eval turbine {
 
         global WORK_TYPE
         foreach key $keys {
+            c::log "log_dloop_body"
             set c [ container_get $container $key ]
-            adlb::put $adlb::ANY $WORK_TYPE(CONTROL) \
-                "procedure tp: loop_body $loop_body $stack $c"
+            release _ "tp: loop_body $loop_body $stack $c"
         }
     }
 
@@ -237,12 +240,14 @@ namespace eval turbine {
     proc loop_body { stmts stack container } {
         set type [ container_typeof $container ]
         set L    [ container_list $container ]
-        puts "container_got: $type: $L"
+        # puts "container_got: $type: $L"
+        c::log "log_loop_body start"
         foreach subscript $L {
             set td_key [ literal $type $subscript ]
             # Call user body with subscript as TD
             $stmts $stack $container $td_key
         }
+        c::log "log_loop_body done"
     }
 
     # Utility function to set up a TD
