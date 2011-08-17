@@ -24,11 +24,10 @@ proc rules { } {
     global env
     if { [ info exists env(COUNT) ] } {
         set count $env(COUNT)
-        puts "count: $count"
     } else {
-        puts "count_: $env(COUNT)"
-        set count 1000
+        set count 100
     }
+    puts "count: $count"
     turbine::integer_set $i 1
     turbine::integer_set $j $count
     turbine::integer_set $p $env(TURBINE_ENGINES)
