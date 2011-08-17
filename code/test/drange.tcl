@@ -33,15 +33,6 @@ proc rules { } {
     turbine::integer_set $p $env(TURBINE_ENGINES)
 
     turbine::drange $c $i $j $p
-    # turbine::loop loop1_body none $c
-}
-
-proc loop1_body { stack container key } {
-    puts "loop1_body: $key"
-    set t [ turbine::integer_get $key ]
-    set member [ turbine::container_get $container $t ]
-    # set value [ turbine::integer_get $member ]
-    turbine::trace $key $member
 }
 
 global env
