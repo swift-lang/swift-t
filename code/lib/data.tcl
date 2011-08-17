@@ -3,9 +3,11 @@
 
 namespace eval turbine {
 
-    namespace export                      \
-        string_init string_set string_get \
-        file_init   file_set   filename
+    namespace export                         \
+        data_new                             \
+        string_init  string_set  string_get  \
+        integer_init integer_set integer_get \
+        file_init    file_set    filename
 
     proc typeof { id } {
         set s [ adlb::retrieve $id ]
