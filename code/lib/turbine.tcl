@@ -26,9 +26,6 @@ namespace eval turbine {
 
 	# puts "turbine::init"
 
-	variable stats
-	set stats [ dict create ]
-
 	variable engines
 	variable servers
         set engines $e
@@ -41,9 +38,7 @@ namespace eval turbine {
         adlb::init $servers $types
         c::init [ adlb::amserver ]
 
-        puts "starting clock"
-        adlb::barrier
-	dict set stats clock_start [ clock clicks -milliseconds ]
+        start_stats
 
 	if { [ adlb::amserver ] == 1 } {
             adlb::server
@@ -54,6 +49,17 @@ namespace eval turbine {
         set workers [ expr $adlb_workers - $servers ]
 
         argv_init
+    }
+
+    proc start_stats { } {
+
+	variable stats
+	set stats [ dict create ]
+
+        adlb::barrier
+        c::normalize
+        c::log "starting clock"
+	dict set stats clock_start [ clock clicks -milliseconds ]
     }
 
     proc eval { command } {
