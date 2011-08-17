@@ -273,6 +273,15 @@ Turbine_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
+Turbine_Normalize_Cmd(ClientData cdata, Tcl_Interp *interp,
+                      int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  log_normalize();
+  return TCL_OK;
+}
+
+static int
 Turbine_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
@@ -320,18 +329,19 @@ Tclturbine_Init(Tcl_Interp *interp)
   if (Tcl_PkgProvide(interp, "turbine", "0.1") == TCL_ERROR)
     return TCL_ERROR;
 
-  COMMAND("init",     Turbine_Init_Cmd);
-  COMMAND("declare",  Turbine_Declare_Cmd);
-  COMMAND("rule",     Turbine_Rule_Cmd);
-  COMMAND("rule_new", Turbine_RuleNew_Cmd);
-  COMMAND("push",     Turbine_Push_Cmd);
-  COMMAND("ready",    Turbine_Ready_Cmd);
-  COMMAND("executor", Turbine_Executor_Cmd);
-  COMMAND("complete", Turbine_Complete_Cmd);
-  COMMAND("close",    Turbine_Close_Cmd);
-  COMMAND("log",      Turbine_Log_Cmd);
-  COMMAND("finalize", Turbine_Finalize_Cmd);
-  COMMAND("debug",    Turbine_Debug_Cmd);
+  COMMAND("init",      Turbine_Init_Cmd);
+  COMMAND("declare",   Turbine_Declare_Cmd);
+  COMMAND("rule",      Turbine_Rule_Cmd);
+  COMMAND("rule_new",  Turbine_RuleNew_Cmd);
+  COMMAND("push",      Turbine_Push_Cmd);
+  COMMAND("ready",     Turbine_Ready_Cmd);
+  COMMAND("executor",  Turbine_Executor_Cmd);
+  COMMAND("complete",  Turbine_Complete_Cmd);
+  COMMAND("close",     Turbine_Close_Cmd);
+  COMMAND("log",       Turbine_Log_Cmd);
+  COMMAND("normalize", Turbine_Normalize_Cmd);
+  COMMAND("finalize",  Turbine_Finalize_Cmd);
+  COMMAND("debug",     Turbine_Debug_Cmd);
 
   Tcl_Namespace* turbine =
     Tcl_FindNamespace(interp, "turbine::c", NULL, 0);
