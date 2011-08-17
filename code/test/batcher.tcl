@@ -1,10 +1,14 @@
 
+# This test only flexes ADLB, it does not use Turbine features
+
 package require turbine 0.1
 
 enum WORK_TYPE { CMDLINE }
 
-set rc [ adlb::init [ array size WORK_TYPE ] ]
-assert [ expr $rc == $ADLB_SUCCESS ] "Failed: adlb::init"
+set servers 1
+set types [ array size WORK_TYPE ]
+set rc [ adlb::init $servers $types ]
+assert [ expr $rc == $adlb::SUCCESS ] "Failed: adlb::init"
 
 set amserver [ adlb::amserver ]
 
@@ -56,6 +60,8 @@ proc do_client {argc argv} {
 if { $amserver == 0 } {
     puts "ADLB_SUCCESS: $adlb::SUCCESS"
     do_client $argc $argv
+} else {
+    adlb::server
 }
 
 adlb::finalize
