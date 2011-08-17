@@ -7,18 +7,27 @@
  */
 
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/time.h>
 
 #include "src/util/log.h"
 
 FILE* output;
 double log_start = 0;
+bool enabled = true;
 
 void
 log_init()
 {
   output = stdout;
+  char* s = getenv("LOGGING");
+  if (s == NULL)
+    return;
+  if (strcmp(s, "0") == 0)
+     enabled = false;
 }
 
 double
@@ -57,6 +66,9 @@ log_time()
 void
 log_printf(char* format, ...)
 {
+  if (!enabled)
+    return;
+
   double t = log_time();
 
   static char line[1024];
