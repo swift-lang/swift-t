@@ -19,6 +19,7 @@ TEST_SRC_TCL := $(DIR)/noop.tcl           \
                 $(DIR)/loop1.tcl          \
                 $(DIR)/readdata.tcl       \
                 $(DIR)/range.tcl          \
-                $(DIR)/drange.tcl
+                $(DIR)/drange.tcl         \
+                $(DIR)/noop2.tcl
 
 #                $(DIR)/modftdock.tcl      \

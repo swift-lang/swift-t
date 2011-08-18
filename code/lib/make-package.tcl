@@ -7,4 +7,5 @@ puts [ ::pkg::create -name turbine -version 0.1 \
        -source engine.tcl    \
        -source data.tcl      \
        -source functions.tcl \
+       -source lang.tcl      \
        -source helpers.tcl ]
