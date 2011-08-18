@@ -25,6 +25,8 @@ AC_HEADER_STDBOOL
 AC_FUNC_MALLOC
 AC_CHECK_FUNCS([strdup])
 
+# Special systems:
+# On the SiCortex, we use srun and libmpiP.a
 USE_MACHINE=normal
 USE_LAUNCHER=mpiexec
 LIBMPI=libmpich.so
@@ -36,6 +38,17 @@ AC_ARG_ENABLE(sicortex,
                         USE_MACHINE=sicortex
                         USE_LAUNCHER=srun
                         LIBMPI=libmpiP.a
+                 ],
+                 [])
+# On a custom system, the user will specify mpi-lib-dir and
+# mpi-lib-name below
+AC_ARG_ENABLE(custom,
+                 AS_HELP_STRING(
+                 [--enable-custom],
+                 [Select MPI include and lib separately]),
+                 [
+                        USE_MACHINE=custom
+                        USE_LAUNCHER=mpiexec
                  ],
                  [])
 AC_SUBST(USE_MACHINE)
@@ -50,7 +63,7 @@ AC_ARG_WITH(adlb,
                   if test "$USE_ADLB" = 0 ; then
                      AC_MSG_ERROR(Could not find ADLB in $withval)
                   fi
-                  AC_MSG_RESULT([using ADLB in $withval ...])
+                  AC_MSG_RESULT([using ADLB in $withval])
                   AC_DEFINE_UNQUOTED([ADLB_LOCATION],
                                      "$withval", [ADLB Location])
                   USE_ADLB=$withval
@@ -70,16 +83,80 @@ AC_ARG_WITH(mpi,
                   if test "$USE_MPI" = 0 ; then
                      AC_MSG_ERROR(Could not find MPI in $withval)
                   fi
-                  AC_MSG_RESULT([using MPI in $withval ...])
+                  AC_MSG_RESULT([using MPI in $withval])
                   AC_DEFINE_UNQUOTED([MPI_LOCATION],
                                      "$withval", [MPI Location])
                   USE_MPI=$withval
                  ],
                  [
-                  AC_MSG_WARN([Not found: MPI])
                   USE_MPI=0
                  ])
 AC_SUBST(USE_MPI)
+
+AC_ARG_WITH(mpi-include,
+                 AS_HELP_STRING(
+                 [--with-mpi-include],
+                 [location of MPI header (mpi.h)]),
+                 [AC_CHECK_FILE(${withval}/mpi.h,
+                  [], [USE_MPI_INCLUDE=0])
+                  if test "$USE_MPI_INCLUDE" = 0 ; then
+                     AC_MSG_ERROR(Could not find mpi.h in $withval)
+                  fi
+                  AC_MSG_RESULT([using mpi.h in $withval])
+                  USE_MPI_INCLUDE=$withval
+                 ],
+                 [
+                  USE_MPI_INCLUDE=0
+                 ])
+AC_SUBST(USE_MPI_INCLUDE)
+
+AC_ARG_WITH(mpi-lib-dir,
+                 AS_HELP_STRING(
+                 [--with-mpi-lib-dir],
+                 [directory containing MPI lib (usually libmpich.a)]),
+                 [AC_CHECK_FILE(${withval},
+                  [], [USE_MPI_LIB_DIR=0])
+                  if test "$USE_MPI_LIB_DIR" = 0 ; then
+                     AC_MSG_ERROR(Could not find directory $withval)
+                  fi
+                  AC_MSG_RESULT([using MPI lib in $withval])
+                  USE_MPI_LIB_DIR=$withval
+                 ],
+                 [
+                  USE_MPI_LIB_DIR=0
+                 ])
+AC_SUBST(USE_MPI_LIB_DIR)
+
+AC_ARG_WITH(mpi-lib-name,
+                 AS_HELP_STRING(
+                 [--with-mpi-lib-name],
+                 [name of MPI lib (usually mpich) -
+                  assumes mpi-lib-dir has been given]),
+                 [
+                  FILE=${USE_MPI_LIB_DIR}/lib${withval}.a
+                  AC_CHECK_FILE(${FILE},
+                  [], [USE_MPI_LIB_NAME=0])
+                  if test "$USE_MPI_LIB_NAME" = 0 ; then
+                     AC_MSG_ERROR(Could not find ${FILE})
+                  fi
+                  AC_MSG_RESULT([using MPI lib $FILE])
+                  USE_MPI_LIB_NAME=$withval
+                 ],
+                 [
+                  if test -z ${MPI_LIB_DIR} ; then
+                    FILE=${USE_MPI_LIB_DIR}/libmpich.a
+                    AC_CHECK_FILE(${FILE},
+                    [], [USE_MPI_LIB_NAME=0])
+                    if test "$USE_MPI_LIB_NAME" = 0 ; then
+                       AC_MSG_ERROR(Could not find ${FILE})
+                    fi
+                    AC_MSG_RESULT([using MPI lib $FILE])
+                    USE_MPI_LIB_NAME=mpich
+                  else
+                    USE_MPI_LIB_NAME=0
+                  fi
+                 ])
+AC_SUBST(USE_MPI_LIB_NAME)
 
 AC_ARG_WITH(tcl,
                  AS_HELP_STRING(

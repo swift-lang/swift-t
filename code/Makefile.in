@@ -35,22 +35,32 @@ CC = @CC@
 CFLAGS := @CFLAGS@
 
 # Set includes
-CFLAGS += -I $(srcdir)
+CFLAGS += -I .
 
 TCL := @USE_TCL@
 TCLSH := $(shell find $(TCL)/bin -name tclsh8.* )
 
 MACHINE = @USE_MACHINE@
 
+# On some systems, the user will use mpicc,
+# on others, the user will specify the MPI include and lib paths
 MPI = @USE_MPI@
+MPI_INCLUDE = @USE_MPI_INCLUDE@
+MPI_LIB_DIR = @USE_MPI_LIB_DIR@
+MPI_LIB_NAME = @USE_MPI_LIB_NAME@
 ifneq ($(MPI),0)
 	CFLAGS += -I $(MPI)/include
+endif
+ifneq ($(MPI_INCLUDE),0)
+	CFLAGS += -I $(MPI_INCLUDE)
 endif
 
 ifeq ($(MACHINE),normal)
 	LIB_MPI	= -L $(MPI)/lib -l mpich -l mpl
 else ifeq ($(MACHINE),sicortex)
 	LIB_MPI = -L $(MPI)/lib -l scmpi
+else ifeq ($(MACHINE),custom)
+	LIB_MPI = -L $(MPI_LIB_DIR) -l $(MPI_LIB_NAME)
 endif
 
 LAUNCH = @USE_LAUNCHER@
