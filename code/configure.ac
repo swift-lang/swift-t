@@ -143,7 +143,7 @@ AC_ARG_WITH(mpi-lib-name,
                   USE_MPI_LIB_NAME=$withval
                  ],
                  [
-                  if test -z ${MPI_LIB_DIR} ; then
+                  if test "$USE_MPI_LIB_DIR" != 0; then
                     FILE=${USE_MPI_LIB_DIR}/libmpich.a
                     AC_CHECK_FILE(${FILE},
                     [], [USE_MPI_LIB_NAME=0])
