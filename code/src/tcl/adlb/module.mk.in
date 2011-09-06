@@ -1,0 +1,22 @@
+
+DIR := src/tcl/adlb
+
+TCL_ADLB_SRC := $(DIR)/tcl-adlb.c
+
+TURBINE_SRC += $(TCL_ADLB_SRC)
+
+TCL_ADLB_OBJS := $(patsubst %.c, %.o, $(TCL_ADLB_SRC))
+TCL_ADLB_OBJS += src/util/debug.o
+
+TCL_ADLB_SO = lib/libtcladlb.so
+
+tcl_adlb: $(TCL_ADLB_SO)
+
+$(TCL_ADLB_SO): $(TCL_ADLB_OBJS)
+	$(Q) "  LINK		$(@)"
+	$(E) gcc -shared -o $(@) $(TCL_LINK_FLAGS) \
+		  $(TCL_ADLB_OBJS) \
+		  -L $(ADLB) -l adlb $(LIB_MPI)
+
+clean::
+	@rm -fv $(TCL_ADLB_OBJS)

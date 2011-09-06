@@ -1,0 +1,24 @@
+
+# BASH-formatted setup script processed by turbine/configure
+
+if [[ -z ${TURBINE} ]]
+then
+  TURBINE_SCRIPTS=$( dirname $0 )
+  TURBINE=$( cd ${TURBINE_SCRIPTS}/.. ; /bin/pwd )
+fi
+
+export TCL=@USE_TCL@
+export ADLB=@USE_ADLB@
+# Only one of the following is used
+export MPI=@USE_MPI@
+export MPI_LIB=@USE_MPI_LIB_DIR@
+
+export LD_LIBRARY_PATH=${TCL}/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${ADLB}:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${MPI}/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${MPI_LIB}:${LD_LIBRARY_PATH}
+
+export TCLLIBPATH=${TURBINE}/lib
+export TCLSH=${TCL}/bin/tclsh8*
+
+export MPIEXEC=${MPI}/bin/mpiexec

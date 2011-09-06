@@ -1,0 +1,13 @@
+#!/bin/sh
+
+TURBINE_BIN=$( dirname $0 )
+if [[ -z ${TURBINE} ]]
+then
+  TURBINE=$( cd ${TURBINE_BIN}/.. ; /bin/pwd )
+fi
+
+. ${TURBINE}/scripts/turbine-config.sh
+
+# Allow user to insert valgrind
+${VALGRIND} ${TCLSH} ${*}
+# Exit code returned by shell script
