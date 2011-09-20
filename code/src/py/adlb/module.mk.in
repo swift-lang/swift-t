@@ -1,0 +1,14 @@
+
+PY_ADLB := src/py/adlb
+
+PY_ADLB_SRC := $(PY_ADLB)/adlbmodule.c
+
+TURBINE_SRC += $(PY_ADLB_SRC)
+
+PY_ADLB_OBJS := $(patsubst %.c, %.o, $(PY_ADLB_SRC))
+
+py_adlb:
+	python $(PY_ADLB)/setup.py install
+
+clean::
+#	@rm -fv $(PY_ADLB_OBJS)

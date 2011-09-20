@@ -89,6 +89,7 @@ include src/util/module.mk
 include src/tcl/module.mk
 include src/tcl/adlb/module.mk
 include src/tcl/turbine/module.mk
+include src/py/adlb/module.mk
 include lib/module.mk
 TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC) $(TCL_TURBINE_SRC))
 

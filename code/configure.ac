@@ -187,6 +187,7 @@ AC_CONFIG_FILES(
         src/tcl/module.mk
         src/tcl/adlb/module.mk
         src/tcl/turbine/module.mk
+        src/py/adlb/module.mk
         lib/module.mk
         scripts/turbine-config.sh
         test/module.mk
