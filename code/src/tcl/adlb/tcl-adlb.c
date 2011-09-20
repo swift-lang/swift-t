@@ -28,7 +28,7 @@ static int mpi_size = -1;
 static int mpi_rank = -1;
 
 /** Communicator for ADLB workers */
-MPI_Comm worker_comm;
+static MPI_Comm worker_comm;
 
 /** Max command-line length */
 #define ADLBTCL_CMD_MAX 1024
