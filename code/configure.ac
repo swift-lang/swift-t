@@ -181,18 +181,44 @@ AC_SUBST(USE_TCL)
 AC_SUBST(TCL_INCLUDE_SPEC)
 AC_SUBST(TCL_LIB_SPEC)
 
+AC_ARG_WITH(python,
+                 AS_HELP_STRING(
+                 [--with-python],
+                 [location of Python]),
+                 [AC_CHECK_FILE(${withval}/bin/python,
+                  [], [USE_PYTHON=0])
+                  if test "$USE_PYTHON" = 0 ; then
+                     AC_MSG_ERROR(Could not find python in $withval)
+                  fi
+                  AC_MSG_RESULT([using python in $withval ...])
+                  AC_DEFINE_UNQUOTED([PYTHON_LOCATION],
+                                     "$withval", [Python location])
+                  USE_PYTHON=$withval
+                  source $USE_PYTHON/lib/tclConfig.sh
+                 ],
+                 [
+                  AC_MSG_RESULT([Not using Python.])
+                  USE_PYTHON=0
+                 ])
+AC_SUBST(USE_PYTHON)
+
 AC_CONFIG_FILES(
         src/turbine/module.mk
         src/util/module.mk
         src/tcl/module.mk
         src/tcl/adlb/module.mk
         src/tcl/turbine/module.mk
-        src/py/adlb/module.mk
         lib/module.mk
         scripts/turbine-config.sh
         test/module.mk
         test/runbin.zsh
 	Makefile
 )
+
+if test ! "$USE_PYTHON" = 0 ; then
+AC_CONFIG_FILES(
+        src/py/adlb/module.mk
+)
+fi
 
 AC_OUTPUT
