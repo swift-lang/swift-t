@@ -1,4 +1,8 @@
 
+#include <config.h>
+
+#ifdef PYTHON_LOCATION
+
 #include <Python.h>
 
 #include <assert.h>
@@ -101,3 +105,5 @@ PyADLB_finalize(PyObject *self, PyObject *args)
   assert(code == ADLB_SUCCESS);
   return PyLong_FromLong(1);
 }
+
+#endif
