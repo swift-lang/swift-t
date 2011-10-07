@@ -8,7 +8,9 @@ package require turbine 0.1
 
 enum WORK_TYPE { T }
 
-adlb::init [ array size WORK_TYPE ]
+set servers $env(ADLB_SERVERS)
+if { string length $servers == 0 } { set servers 1 }
+adlb::init $env( [ array size WORK_TYPE ]
 turbine::init
 
 set amserver [ adlb::amserver ]
