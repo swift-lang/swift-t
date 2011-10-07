@@ -9,9 +9,9 @@ package require turbine 0.1
 enum WORK_TYPE { T }
 
 set servers $env(ADLB_SERVERS)
-if { string length $servers == 0 } { set servers 1 }
-adlb::init $env( [ array size WORK_TYPE ]
-turbine::init
+if { [ string length $servers ] == 0 } { set servers 1 }
+adlb::init $servers [ array size WORK_TYPE ]
+# turbine::init
 
 set amserver [ adlb::amserver ]
 
@@ -26,9 +26,9 @@ if { $amserver == 0 } {
         puts "msg: $msg"
     }
 } else {
-    puts "ADLB server exited!"
+    adlb::server
 }
 
-turbine::finalize
+# turbine::finalize
 adlb::finalize
 puts OK
