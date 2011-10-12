@@ -7,8 +7,7 @@ adlb::init 1 1
 
 if [ adlb::amserver ] {
     adlb::server
-} else
-{}
+} else {}
 
 adlb::finalize
 puts OK
