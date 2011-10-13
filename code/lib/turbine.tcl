@@ -107,4 +107,30 @@ namespace eval turbine {
         turbine::c::finalize
         adlb::finalize
     }
+
+    # Set engines and servers in the caller's stack frame
+    # Used to get tests running, etc.
+    proc defaults { } {
+
+        upvar 1 engines e
+        upvar 1 servers s
+
+        if [ info exists env(TURBINE_ENGINES) ] {
+            set e $env(TURBINE_ENGINES)
+        } else {
+            set e ""
+        }
+        if { [ string length $e ] == 0 } {
+            set e 1
+        }
+
+        if [ info exists env(TURBINE_SERVERS) ] {
+            set s $env(TURBINE_SERVERS)
+        } else {
+            set s ""
+        }
+        if { [ string length $s ] == 0 } {
+            set s 1
+        }
+    }
 }
