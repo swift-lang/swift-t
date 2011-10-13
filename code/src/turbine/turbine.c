@@ -46,6 +46,11 @@ typedef struct
 } tr;
 
 /**
+   Has turbine_init() been called successfully?
+*/
+bool initialized = false;
+
+/**
    Waiting trs
    Map from tr id to tr
  */
@@ -101,6 +106,7 @@ turbine_init(int amserver)
   if (!table)
     return TURBINE_ERROR_OOM;
   ltable_init(&blockers, 1024*1024);
+  initialized = true;
   return TURBINE_SUCCESS;
 }
 
@@ -326,6 +332,7 @@ turbine_rules_push()
 turbine_code
 turbine_declare(turbine_datum_id id, struct longlist** result)
 {
+  assert(initialized);
   DEBUG_TURBINE("declare: %li\n", id);
   struct longlist* blocked = longlist_create();
   if (ltable_contains(&blockers, id))
