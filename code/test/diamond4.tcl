@@ -1,6 +1,7 @@
 
 package require turbine 0.1
 
+# Use turbine lang functionality
 
 turbine::program {
 
