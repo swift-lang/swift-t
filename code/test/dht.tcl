@@ -1,5 +1,6 @@
 
 # Test ADLB store/retrieve
+# Does not use Turbine features
 
 package require turbine 0.1
 
