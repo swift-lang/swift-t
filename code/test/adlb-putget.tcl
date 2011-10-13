@@ -10,6 +10,8 @@ enum WORK_TYPE { T }
 
 if [ info exists env(ADLB_SERVERS) ] {
     set servers $env(ADLB_SERVERS)
+} else {
+    set servers ""
 }
 if { [ string length $servers ] == 0 } {
     set servers 1

@@ -7,6 +7,7 @@ TEST_SRC_C := $(DIR)/list.c       \
 
 TEST_SRC_TCL := $(DIR)/adlb-noop.tcl      \
                 $(DIR)/noop.tcl           \
+                $(DIR)/adlb-putget.tcl    \
                 $(DIR)/batcher.tcl        \
                 $(DIR)/adlb-data.tcl      \
                 $(DIR)/diamond2.tcl       \
