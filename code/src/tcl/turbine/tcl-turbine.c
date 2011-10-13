@@ -254,6 +254,9 @@ Turbine_Declare_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK(error);
 
   turbine_code code = turbine_declare(id, NULL);
+
+  if (code == TURBINE_ERROR_DOUBLE_DECLARE)
+    printf("error: trying to declare twice: %li", id);
   TCL_CONDITION(code == TURBINE_SUCCESS,
                 "could not declare data id: %li", id);
 
