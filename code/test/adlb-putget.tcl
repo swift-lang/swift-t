@@ -8,8 +8,12 @@ package require turbine 0.1
 
 enum WORK_TYPE { T }
 
-set servers $env(ADLB_SERVERS)
-if { [ string length $servers ] == 0 } { set servers 1 }
+if [ info exists env(ADLB_SERVERS) ] {
+    set servers $env(ADLB_SERVERS)
+}
+if { [ string length $servers ] == 0 } {
+    set servers 1
+}
 adlb::init $servers [ array size WORK_TYPE ]
 
 set amserver [ adlb::amserver ]
