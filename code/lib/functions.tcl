@@ -1,7 +1,7 @@
 
 namespace eval turbine {
 
-    namespace export arithmetic
+    namespace export arithmetic literal
 
     namespace import c::new c::rule c::rule_new c::typeof
     namespace import c::insert
