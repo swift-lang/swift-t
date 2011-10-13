@@ -64,7 +64,8 @@ namespace eval turbine {
         global WORK_TYPE
         set command [ string trim $command ]
         set prefix "[ string range $command 0 2 ]"
-        if { [ string equal $prefix "tp:" ] } {
+        if { [ string equal $prefix "tp:" ] ||
+             [ string equal $prefix "tc:" ] } {
             set proccall [ lrange $command 1 end ]
             adlb::put $adlb::ANY $WORK_TYPE(CONTROL) \
                 "procedure $command"
