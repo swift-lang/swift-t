@@ -3,28 +3,48 @@
 
 package require turbine 0.1
 
-turbine::adlb::init
+namespace import turbine::string_*
 
-namespace import turbine::adlb::data::*
+if [ info exists env(ADLB_SERVERS) ] {
+    set servers $env(ADLB_SERVERS)
+} else {
+    set servers ""
+}
+if { [ string length $servers ] == 0 } {
+    set servers 1
+}
+if [ info exists env(ADLB_ENGINES) ] {
+    set engines $env(ADLB_ENGINES)
+} else {
+    set engines ""
+}
+if { [ string length $engines ] == 0 } {
+    set engines 1
+}
 
-set count 4
+turbine::init $engines $servers
+
+
 if { ! [ adlb::amserver ] } {
+
+    set count 4
+
     set rank [ adlb::rank ]
     puts "rank: $rank"
     set workers [ adlb::workers ]
 
     for { set i 0 } { $i < $count } { incr i } {
-        set id [ expr ( $rank + $i ) % $workers ]
+        set id [ expr $rank + $i * $workers + 1]
         string_init $id
-        string_set $id "msg rank:$rank"
+        string_set $id "message rank:$rank:$i"
 
-        set id [ expr ( $rank + 1 + $i ) % $workers ]
+        set id [ expr $rank + $i * $workers + 1 ]
         puts "get"
         set msg [ string_get $id ]
         puts "got: $msg"
     }
 }
 
-turbine::adlb::finalize
+turbine::finalize
 
 puts OK
