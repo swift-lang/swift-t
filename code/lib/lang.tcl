@@ -40,7 +40,7 @@ namespace eval turbine {
     }
 
     # "ready" and "creates" are ignored keywords
-    proc when { ready inputs executor creates outputs } {
+    proc when { ready inputs action creates outputs } {
         set r [ rule_new ]
         set input_tds [ list ]
         foreach t $inputs {
@@ -53,22 +53,22 @@ namespace eval turbine {
             lappend output_tds $td
         }
         set first 1
-        set executor_list [ list ]
-        puts "executor: $executor"
-        foreach t $executor {
+        set action_list [ list ]
+        puts "action: $action"
+        foreach t $action {
             puts "t: $t"
-            puts "executor_list: $executor_list"
+            puts "action_list: $action_list"
             if { $first } {
                 # First token is command name
-                lappend executor_list $t
+                lappend action_list $t
                 set first 0
                 continue
             }
             upvar $t td
-            lappend executor_list $td
+            lappend action_list $td
         }
 
-        rule $r $r $input_tds $output_tds "tf: $executor_list"
+        rule $r $r $input_tds $output_tds "tf: $action_list"
     }
 
     proc shell { command args } {

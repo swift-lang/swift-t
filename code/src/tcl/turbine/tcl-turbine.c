@@ -125,13 +125,13 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK_MSG(error, "could not parse list as long integers: {%s}",
                 Tcl_GetString(objv[4]));
 
-  char* executor = Tcl_GetStringFromObj(objv[5], NULL);
-  assert(executor);
+  char* action = Tcl_GetStringFromObj(objv[5], NULL);
+  assert(action);
 
   turbine_transform transform =
   {
     .name = name,
-    .executor = executor,
+    .action = action,
     .inputs = inputs,
     .input = input,
     .outputs = outputs,
@@ -198,12 +198,12 @@ Turbine_Executor_Cmd(ClientData cdata, Tcl_Interp *interp,
   turbine_transform_id id;
   int error = Tcl_GetLongFromObj(interp, objv[1], &id);
   TCL_CHECK(error);
-  char executor[64];
-  turbine_code code = turbine_executor(id, executor);
+  char action[64];
+  turbine_code code = turbine_action(id, action);
   TCL_CONDITION(code == TURBINE_SUCCESS,
                 "could not find transform id: %li", id);
 
-  Tcl_Obj* result = Tcl_NewStringObj(executor, -1);
+  Tcl_Obj* result = Tcl_NewStringObj(action, -1);
   Tcl_SetObjResult(interp, result);
 
   return TCL_OK;
@@ -338,7 +338,7 @@ Tclturbine_Init(Tcl_Interp *interp)
   COMMAND("rule_new",  Turbine_RuleNew_Cmd);
   COMMAND("push",      Turbine_Push_Cmd);
   COMMAND("ready",     Turbine_Ready_Cmd);
-  COMMAND("executor",  Turbine_Executor_Cmd);
+  COMMAND("action",  Turbine_Executor_Cmd);
   COMMAND("complete",  Turbine_Complete_Cmd);
   COMMAND("close",     Turbine_Close_Cmd);
   COMMAND("log",       Turbine_Log_Cmd);

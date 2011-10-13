@@ -15,7 +15,7 @@ typedef long turbine_transform_id;
 typedef struct
 {
   char* name;
-  char* executor;
+  char* action;
   int inputs;
   turbine_datum_id* input;
   int outputs;
@@ -41,8 +41,8 @@ turbine_code turbine_ready(int count, turbine_transform_id* output,
 
 turbine_code turbine_close(turbine_datum_id id);
 
-turbine_code turbine_executor(turbine_transform_id id,
-                              char* executor);
+turbine_code turbine_action(turbine_transform_id id,
+                              char* action);
 
 turbine_code turbine_complete(turbine_transform_id id);
 

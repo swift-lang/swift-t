@@ -44,7 +44,7 @@ namespace eval turbine {
             set ready [ turbine::c::ready ]
             # ready list may be empty
             foreach {transform} $ready {
-                set command [ turbine::c::executor $transform ]
+                set command [ turbine::c::action $transform ]
                 release $transform $command
             }
 

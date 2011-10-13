@@ -141,12 +141,12 @@ static turbine_code
 tr_create(turbine_transform* transform, tr** t)
 {
   assert(transform->name);
-  assert(transform->executor);
+  assert(transform->action);
 
   tr* result = malloc(sizeof(tr));
 
   result->transform.name = strdup(transform->name);
-  result->transform.executor = strdup(transform->executor);
+  result->transform.action = strdup(transform->action);
   result->blocker = 0;
 
   if (transform->inputs > 0)
@@ -187,7 +187,7 @@ static void
 tr_free(tr* t)
 {
   free(t->transform.name);
-  free(t->transform.executor);
+  free(t->transform.action);
   if (t->transform.input)
     free(t->transform.input);
   if (t->transform.output)
@@ -451,7 +451,7 @@ id_cmp(void* id1, void* id2)
 */
 
 turbine_code
-turbine_executor(turbine_transform_id id, char* executor)
+turbine_action(turbine_transform_id id, char* action)
 {
   if (id == TURBINE_ID_NULL)
     return TURBINE_ERROR_NULL;
@@ -460,10 +460,10 @@ turbine_executor(turbine_transform_id id, char* executor)
   if (!t)
       return TURBINE_ERROR_NOT_FOUND;
 
-  strcpy(executor, t->transform.executor);
+  strcpy(action, t->transform.action);
 
-  DEBUG_TURBINE("executor: <%li> %s: %s\n",
-                id, t->transform.name, executor);
+  DEBUG_TURBINE("action: <%li> %s: %s\n",
+                id, t->transform.name, action);
   return TURBINE_SUCCESS;
 }
 
