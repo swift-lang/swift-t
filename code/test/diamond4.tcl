@@ -15,9 +15,9 @@ turbine::program {
         declare file f3 "test/data/C.txt"
         declare file f4 "test/data/D.txt"
 
-        when ready {    } { touch f1 } creates { f1 }
-        when ready { f1 } { touch f2 } creates { f2 }
-        # when ready { f1 } { touch f2 } creates { f2 }
-        # when ready { f1 } { touch f2 } creates { f2 }
+        when ready {    }    { touch f1 } creates { f1 }
+        when ready { f1 }    { touch f2 } creates { f2 }
+        when ready { f1 }    { touch f3 } creates { f3 }
+        when ready { f2 f3 } { touch f4 } creates { f4 }
     }
 }

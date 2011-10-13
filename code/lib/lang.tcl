@@ -73,7 +73,7 @@ namespace eval turbine {
 
     proc shell { command args } {
         puts "shell: $command $args"
-        # exec $command $args
+        exec $command $args
     }
 
     proc @ { f } {
