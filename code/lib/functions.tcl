@@ -85,7 +85,7 @@ namespace eval turbine {
 
         set rule_id [ rule_new ]
         rule $rule_id "trace-$rule_id" $args { } \
-            "tp: turbine::trace_body $args"
+            "tc: turbine::trace_body $args"
     }
 
     proc trace_body { args } {
