@@ -15,6 +15,7 @@
 # // try even or odd values here:
 # int x = 4;
 # int a, b;
+# (a,b) = f(x);
 # trace("a=",a);
 
 package require turbine 0.1
