@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 # NOTE: Default CFLAGS are "-g -O2"
-# Use ./configure CFLAGS="-g ..." to changs the defaults
+# Use ./configure CFLAGS="-g ..." to change the defaults
 
 AC_PREREQ([2.63])
 AC_INIT([FULL-PACKAGE-NAME], [VERSION], [BUG-REPORT-ADDRESS])
@@ -180,6 +180,8 @@ AC_ARG_WITH(tcl,
 AC_SUBST(USE_TCL)
 AC_SUBST(TCL_INCLUDE_SPEC)
 AC_SUBST(TCL_LIB_SPEC)
+
+AC_DEFINE([HAVE_PYTHON], [], [Do we have Python?])
 
 AC_ARG_WITH(python,
                  AS_HELP_STRING(
