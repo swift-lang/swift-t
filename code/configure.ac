@@ -16,11 +16,10 @@ AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
 AC_PROG_CC
-# This does not work:
-AC_PROG_INSTALL
+# We trust the user's install and omit AC_PROG_INSTALL
 
 # Checks for headers
-AC_CHECK_HEADERS([stddef.h,sys/param.h,sys/time.h])
+AC_CHECK_HEADERS([stddef.h sys/param.h sys/time.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
@@ -32,8 +31,7 @@ AC_TYPE_UINT32_T
 
 # Checks for library functions.
 AC_FUNC_MALLOC
-AC_CHECK_FUNCS([stddef,strchr,strdup,gettimeofday])
-AC_CHECK_FUNCS([sys/param.h,sys/time.h])
+AC_CHECK_FUNCS([strchr strdup gettimeofday])
 
 # Define templates
 AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
