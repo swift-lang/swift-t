@@ -40,8 +40,8 @@ AC_ARG_ENABLE(sicortex,
                         LIBMPI=libmpiP.a
                  ],
                  [])
-# On a custom system, the user will specify mpi-lib-dir and
-# mpi-lib-name below
+
+# On a custom system, the user will specify MPI directories below
 AC_ARG_ENABLE(custom,
                  AS_HELP_STRING(
                  [--enable-custom],
@@ -77,7 +77,7 @@ AC_SUBST(USE_ADLB)
 AC_ARG_WITH(mpi,
                  AS_HELP_STRING(
                  [--with-mpi],
-                 [location of MPI]),
+                 [location of MPI installation with mpicc]),
                  [AC_CHECK_FILE(${withval}/lib/${LIBMPI},
                   [], [USE_MPI=0])
                   if test "$USE_MPI" = 0 ; then
@@ -92,6 +92,27 @@ AC_ARG_WITH(mpi,
                   USE_MPI=0
                  ])
 AC_SUBST(USE_MPI)
+
+# This is an MPI installation without mpicc (e.g., Cray)
+AC_ARG_WITH(mpi-dir,
+                 AS_HELP_STRING(
+                 [--with-mpi-dir],
+                 [location of MPI installation]),
+                 [AC_CHECK_FILE(${withval}/include/mpi.h,
+                  [], [USE_MPI_INCLUDE=0])
+                  if test "$USE_MPI_INCLUDE" = 0 ; then
+                     AC_MSG_ERROR(Could not find mpi.h
+                                  in $withval/include)
+                  fi
+                  AC_MSG_RESULT([using mpi.h in $withval])
+                  USE_MPI_INCLUDE=$withval/include
+                  USE_MPI_LIB_DIR=$withval/lib
+                 ],
+                 [
+                  USE_MPI_INCLUDE=0
+                  USE_MPI_LIB_DIR=0
+                 ])
+# AC_SUBST commands below
 
 AC_ARG_WITH(mpi-include,
                  AS_HELP_STRING(
