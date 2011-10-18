@@ -17,18 +17,28 @@ AC_CONFIG_HEADERS([config.h])
 # Checks for programs.
 AC_PROG_CC
 # This does not work:
-# AC_PROG_INSTALL
+AC_PROG_INSTALL
 
-# Checks for libraries.
-
-# Checks for header files.
+# Checks for headers
+AC_CHECK_HEADERS([stddef.h,sys/param.h,sys/time.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
+AC_C_INLINE
 AC_HEADER_STDBOOL
+AC_TYPE_SIZE_T
+AC_TYPE_UINT8_T
+AC_TYPE_UINT16_T
+AC_TYPE_UINT32_T
 
 # Checks for library functions.
 AC_FUNC_MALLOC
-AC_CHECK_FUNCS([strdup])
+AC_CHECK_FUNCS([stddef,strchr,strdup,gettimeofday])
+AC_CHECK_FUNCS([sys/param.h,sys/time.h])
+
+# Define templates
+AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
+AC_DEFINE([HAVE_SYS_PARAM_H], [], [Do we have sys/param.h?])
+AC_DEFINE([HAVE_PYTHON], [], [Do we have Python?])
 
 # Special systems:
 # On the SiCortex, we use srun and libmpiP.a
@@ -204,8 +214,6 @@ AC_ARG_WITH(tcl,
 AC_SUBST(USE_TCL)
 AC_SUBST(TCL_INCLUDE_SPEC)
 AC_SUBST(TCL_LIB_SPEC)
-
-AC_DEFINE([HAVE_PYTHON], [], [Do we have Python?])
 
 AC_ARG_WITH(python,
                  AS_HELP_STRING(
