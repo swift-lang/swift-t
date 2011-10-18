@@ -152,6 +152,7 @@ deps_contents.txt:
 	$(E) $(srcdir)/collect.sh $(@) $(EXISTING_D)
 
 %.o: %.c
+# 	The following string produces a false autoscan message (C++)
 	$(Q) "  CC		$(@)"
 	$(E) $(CC) $(CFLAGS) -c $(<) -o $(@)
 
