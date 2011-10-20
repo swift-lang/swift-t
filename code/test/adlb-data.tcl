@@ -6,25 +6,8 @@ package require turbine 0.1
 
 namespace import turbine::string_*
 
-if [ info exists env(ADLB_SERVERS) ] {
-    set servers $env(ADLB_SERVERS)
-} else {
-    set servers ""
-}
-if { [ string length $servers ] == 0 } {
-    set servers 1
-}
-if [ info exists env(ADLB_ENGINES) ] {
-    set engines $env(ADLB_ENGINES)
-} else {
-    set engines ""
-}
-if { [ string length $engines ] == 0 } {
-    set engines 1
-}
-
+turbine::defaults
 turbine::init $engines $servers
-
 
 if { ! [ adlb::amserver ] } {
 
