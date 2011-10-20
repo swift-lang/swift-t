@@ -355,4 +355,14 @@ namespace eval turbine {
         set total [ expr $working ]
         integer_set $result $total
     }
+
+    # This is a Swift-1 function
+    # c = a+b;
+    proc plus { a b c } {
+
+        set a_value [ integer_get $a ]
+        set b_value [ integer_get $b ]
+        set c_value [ expr $a_value + $b_value ]
+        integer_set $c $c_value
+    }
 }
