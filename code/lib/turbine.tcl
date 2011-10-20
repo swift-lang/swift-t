@@ -124,8 +124,8 @@ namespace eval turbine {
             set e 1
         }
 
-        if [ info exists env(TURBINE_SERVERS) ] {
-            set s $env(TURBINE_SERVERS)
+        if [ info exists env(ADLB_SERVERS) ] {
+            set s $env(ADLB_SERVERS)
         } else {
             set s ""
         }
