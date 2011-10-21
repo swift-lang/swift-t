@@ -3,6 +3,9 @@ namespace eval turbine {
 
     namespace export arithmetic literal
 
+    # This is a Swift-1 function
+    namespace export plus
+
     namespace import c::new c::rule c::rule_new c::typeof
     namespace import c::insert
 
@@ -358,8 +361,12 @@ namespace eval turbine {
 
     # This is a Swift-1 function
     # c = a+b;
-    proc plus { a b c } {
-
+    proc plus { c a b } {
+        set rule_id [ rule_new ]
+        rule $rule_id "plus-$a-$b" "$a $b" $c \
+            "tf: plus_body $c $a $b"
+    }
+    proc plus_body {c a b } {
         set a_value [ integer_get $a ]
         set b_value [ integer_get $b ]
         set c_value [ expr $a_value + $b_value ]
