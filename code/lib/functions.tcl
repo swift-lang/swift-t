@@ -1,13 +1,13 @@
 
 namespace eval turbine {
 
-    namespace export arithmetic literal
+    namespace export arithmetic literal shell
 
     # This is a Swift-1 function
     namespace export plus
 
     namespace import c::new c::rule c::rule_new c::typeof
-    namespace import c::insert
+    namespace import c::insert c::log
 
     # Called by turbine::init to setup Turbine's argv
     proc argv_init { } {
@@ -361,6 +361,7 @@ namespace eval turbine {
 
     # This is a Swift-1 function
     # c = a+b;
+    # and sleeps for c seconds
     proc plus { c a b } {
         set rule_id [ rule_new ]
         rule $rule_id "plus-$a-$b" "$a $b" $c \
@@ -370,6 +371,30 @@ namespace eval turbine {
         set a_value [ integer_get $a ]
         set b_value [ integer_get $b ]
         set c_value [ expr $a_value + $b_value ]
+        # Emulate some computation time
+        log "plus $a_value + $b_value => $c_value"
+        exec sleep $c_value
         integer_set $c $c_value
+    }
+
+    # Execute shell command
+    proc shell { args } {
+        puts "turbine::shell $args"
+        set command [ lindex $args 0 ]
+        set inputs [ lreplace $args 0 0 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "shell-$command" $inputs "" \
+            "tf: shell_body $command \"$inputs\""
+    }
+    proc shell_body { args } {
+        set command [ lindex $args 0 ]
+        set inputs [ lreplace $args 0 0 ]
+        set values [ list ]
+        foreach i $inputs {
+            set value [ integer_get $i ]
+            lappend values $value
+        }
+        debug "executing: $command $values"
+        exec $command $values
     }
 }
