@@ -71,10 +71,10 @@ namespace eval turbine {
         rule $r $r $input_tds $output_tds "tf: $action_list"
     }
 
-    proc shell { command args } {
-        puts "shell: $command $args"
-        exec $command $args
-    }
+    # proc shell { command args } {
+    #     puts "shell: $command $args"
+    #     exec $command $args
+    # }
 
     proc @ { f } {
         upvar $f td
