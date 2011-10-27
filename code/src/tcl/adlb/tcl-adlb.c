@@ -386,6 +386,7 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /**
    usage: adlb::lookup <id> <subscript>
+   returns the member TD or 0 if not found
 */
 static int
 ADLB_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,

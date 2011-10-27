@@ -69,6 +69,7 @@ namespace eval turbine {
         adlb::insert $id $subscript $value
     }
 
+    # Returns 0 if subscript is not found
     proc container_get { id subscript } {
         set s [ adlb::lookup $id $subscript ]
         return $s
