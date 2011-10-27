@@ -1,11 +1,16 @@
 
 namespace eval turbine {
 
+    # User functions
     namespace export arithmetic literal shell
+
+    # System functions
+    namespace export stack_lookup
 
     # This is a Swift-1 function
     namespace export plus
 
+    # Bring in Turbine extension features
     namespace import c::new c::rule c::rule_new c::typeof
     namespace import c::insert c::log
 
@@ -159,10 +164,13 @@ namespace eval turbine {
 
         global WORK_TYPE
         for { set i 0 } { $i < $parts_value } { incr i } {
+            # top-level container
             set td [ data_new ]
             container_init $td integer
             container_insert $result $i $td
+            # start
             set s [ expr $i *  $step ]
+            # end
             set e [ expr $s + $step - 1 ]
             adlb::put $adlb::ANY $WORK_TYPE(CONTROL) \
                 "procedure tp: range_work $td $s $e"
@@ -386,6 +394,7 @@ namespace eval turbine {
         rule $rule_id "shell-$command" $inputs "" \
             "tf: shell_body $command \"$inputs\""
     }
+
     proc shell_body { args } {
         set command [ lindex $args 0 ]
         set inputs [ lreplace $args 0 0 ]
@@ -396,5 +405,26 @@ namespace eval turbine {
         }
         debug "executing: $command $values"
         exec $command $values
+    }
+
+    # Look in all enclosing stack frames for the TD for the given symbol
+    # If not found, return the empty string
+    proc stack_lookup { stack symbol } {
+
+        set result ""
+        while true {
+            set result [ container_get $stack $symbol ]
+            if { [ string length $result ] } {
+                return $result
+            } else {
+                set enclosure [ container_get $stack _enclosure ]
+                if { [ string length $enclosure ] } {
+                    set stack $enclosure
+                } else {
+                    break
+                }
+            }
+        }
+        return ""
     }
 }
