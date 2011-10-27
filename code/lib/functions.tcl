@@ -10,6 +10,9 @@ namespace eval turbine {
     # This is a Swift-1 function
     namespace export plus
 
+    # This is a Swift-2 function
+    namespace export minus
+
     # Bring in Turbine extension features
     namespace import c::new c::rule c::rule_new c::typeof
     namespace import c::insert c::log
@@ -381,6 +384,24 @@ namespace eval turbine {
         set c_value [ expr $a_value + $b_value ]
         # Emulate some computation time
         log "plus $a_value + $b_value => $c_value"
+        exec sleep $c_value
+        integer_set $c $c_value
+    }
+
+    # This is a Swift-2 function
+    # c = a-b;
+    # and sleeps for c seconds
+    proc minus { c a b } {
+        set rule_id [ rule_new ]
+        rule $rule_id "minus-$a-$b" "$a $b" $c \
+            "tf: minus_body $c $a $b"
+    }
+    proc minus_body {c a b } {
+        set a_value [ integer_get $a ]
+        set b_value [ integer_get $b ]
+        set c_value [ expr $a_value - $b_value ]
+        # Emulate some computation time
+        log "minus $a_value - $b_value => $c_value"
         exec sleep $c_value
         integer_set $c $c_value
     }
