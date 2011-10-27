@@ -414,15 +414,18 @@ namespace eval turbine {
         set result ""
         while true {
             set result [ container_get $stack $symbol ]
-            if { [ string length $result ] } {
-                return $result
-            } else {
+            if { [ string equal $result "0" ] } {
+                # Not found in local stack frame: check enclosing frame
                 set enclosure [ container_get $stack _enclosure ]
-                if { [ string length $enclosure ] } {
+                if { ! [ string equal $enclosure "0" ] } {
                     set stack $enclosure
                 } else {
+                    # We have no more frames to check
                     break
                 }
+
+            } else {
+                return $result
             }
         }
         return ""
