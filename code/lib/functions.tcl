@@ -384,7 +384,7 @@ namespace eval turbine {
         set c_value [ expr $a_value + $b_value ]
         # Emulate some computation time
         log "plus $a_value + $b_value => $c_value"
-        exec sleep $c_value
+        # exec sleep $c_value
         integer_set $c $c_value
     }
 
@@ -402,7 +402,7 @@ namespace eval turbine {
         set c_value [ expr $a_value - $b_value ]
         # Emulate some computation time
         log "minus $a_value - $b_value => $c_value"
-        exec sleep $c_value
+        # exec sleep $c_value
         integer_set $c $c_value
     }
 
@@ -410,7 +410,7 @@ namespace eval turbine {
     # o = i;
     proc copy { o i } {
         set rule_id [ rule_new ]
-        rule $rule_id "copy-$o-$i" $o $i \
+        rule $rule_id "copy-$o-$i" $i $o \
             "tf: copy_body $o $i"
     }
     proc copy_body { o i } {
@@ -424,7 +424,7 @@ namespace eval turbine {
     # o = ! i;
     proc not { o i } {
         set rule_id [ rule_new ]
-        rule $rule_id "not-$o-$i" $o $i \
+        rule $rule_id "not-$i" $i $o \
             "tf: not_body $o $i"
     }
     proc not_body { o i } {

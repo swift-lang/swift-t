@@ -82,7 +82,7 @@ namespace eval turbine {
 
 	variable stats
         set header [ lindex $msg 0 ]
-        show header
+        # show header
         switch $header {
             procedure {
 		dict incr stats tasks_run

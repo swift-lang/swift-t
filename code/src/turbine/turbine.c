@@ -462,7 +462,7 @@ turbine_action(turbine_transform_id id, char* action)
 
   strcpy(action, t->transform.action);
 
-  DEBUG_TURBINE("action: <%li> %s: %s\n",
+  DEBUG_TURBINE("action: {%li} %s: %s\n",
                 id, t->transform.name, action);
   return TURBINE_SUCCESS;
 }
@@ -475,7 +475,7 @@ turbine_complete(turbine_transform_id id)
 
   tr* t = ltable_remove(&trs_running, id);
   assert(t);
-  DEBUG_TURBINE("complete: <%li> %s\n", id, t->transform.name);
+  DEBUG_TURBINE("complete: {%li} %s\n", id, t->transform.name);
   for (int i = 0; i < t->transform.outputs; i++)
   {
     turbine_code code = turbine_close(t->transform.output[i]);
@@ -524,8 +524,8 @@ turbine_close(turbine_datum_id id)
 static bool
 progress(tr* transform)
 {
-  DEBUG_TURBINE("progress: {%li} %s\n",
-                transform->id, transform->transform.name);
+  // DEBUG_TURBINE("progress: {%li} %s\n",
+  //              transform->id, transform->transform.name);
 
   int subscribed = 0;
   while (transform->blocker < transform->transform.inputs)

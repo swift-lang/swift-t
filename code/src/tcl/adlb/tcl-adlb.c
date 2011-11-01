@@ -402,7 +402,7 @@ ADLB_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
   int rc = ADLB_Lookup(id, subscript, &member);
   assert(rc == ADLB_SUCCESS);
 
-  DEBUG_ADLB("adlb::lookup <%li>:%s=<%li>\n", id, subscript, member);
+  DEBUG_ADLB("adlb::lookup <%li>[%s]=<%li>\n", id, subscript, member);
 
   Tcl_Obj* result = Tcl_NewLongObj(member);
   Tcl_SetObjResult(interp, result);
