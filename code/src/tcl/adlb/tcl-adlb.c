@@ -376,7 +376,7 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   long member;
   Tcl_GetLongFromObj(interp, objv[3], &member);
 
-  DEBUG_ADLB("adlb::insert: <%li>:%s=<%li>\n",
+  DEBUG_ADLB("adlb::insert: <%li>[%s]=<%li>\n",
              id, subscript, member);
   int rc = ADLB_Insert(id, subscript, member);
 

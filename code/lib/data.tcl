@@ -19,8 +19,14 @@ namespace eval turbine {
         return $result
     }
 
-    proc data_new { } {
-        return [ adlb::unique ]
+    # Obtain unique TD
+    # If given an argument, a log message is reported
+    proc data_new { args } {
+        set u [ adlb::unique ]
+        if { [ string length $args ] } {
+            log "variable: $args=<$u>"
+        }
+        return $u
     }
 
     proc string_init { id } {
