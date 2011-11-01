@@ -10,8 +10,8 @@ namespace eval turbine {
     # This is a Swift-1 function
     namespace export plus
 
-    # This is a Swift-2 function
-    namespace export minus
+    # These are Swift-2 functions
+    namespace export minus copy not
 
     # Bring in Turbine extension features
     namespace import c::new c::rule c::rule_new c::typeof
@@ -404,6 +404,34 @@ namespace eval turbine {
         log "minus $a_value - $b_value => $c_value"
         exec sleep $c_value
         integer_set $c $c_value
+    }
+
+    # This is a Swift-2 function
+    # o = i;
+    proc copy { o i } {
+        set rule_id [ rule_new ]
+        rule $rule_id "copy-$o-$i" $o $i \
+            "tf: copy_body $o $i"
+    }
+    proc copy_body { o i } {
+        set i_value [ integer_get $i ]
+        set o_value $i_value
+        log "copy $i_value => $o_value"
+        integer_set $o $o_value
+    }
+
+    # This is a Swift-2 function
+    # o = ! i;
+    proc not { o i } {
+        set rule_id [ rule_new ]
+        rule $rule_id "not-$o-$i" $o $i \
+            "tf: not_body $o $i"
+    }
+    proc not_body { o i } {
+        set i_value [ integer_get $i ]
+        set o_value [ expr ! $i_value ]
+        log "not $i_value => $o_value"
+        integer_set $o $o_value
     }
 
     # Execute shell command
