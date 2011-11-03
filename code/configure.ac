@@ -38,6 +38,19 @@ AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
 AC_DEFINE([HAVE_SYS_PARAM_H], [], [Do we have sys/param.h?])
 AC_DEFINE([HAVE_PYTHON], [], [Do we have Python?])
 
+DISABLE_LOG=0
+AC_ARG_ENABLE(log,
+                AS_HELP_STRING(
+                 [--disable-log],
+                 [Disables logging]),
+                 [
+                 if test "$enableval" = no ; then
+                   DISABLE_LOG=1
+                 fi
+                 ],
+                 [])
+AC_DEFINE_UNQUOTED(DISABLE_LOG,$DISABLE_LOG,[Disables logging])
+
 # Special systems:
 # On the SiCortex, we use srun and libmpiP.a
 USE_MACHINE=normal

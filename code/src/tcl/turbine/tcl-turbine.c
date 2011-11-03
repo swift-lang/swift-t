@@ -269,8 +269,7 @@ Turbine_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2);
 
-  char* message = Tcl_GetString(objv[1]);
-  log_printf("%s", message);
+  log_printf("%s", Tcl_GetString(objv[1]));
 
   return TCL_OK;
 }

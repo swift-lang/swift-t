@@ -6,13 +6,23 @@
  *      Author: wozniak
  */
 
-#ifndef LOG_H_
-#define LOG_H_
+#ifndef LOG_H
+#define LOG_H
+
+#include "config.h"
 
 void   log_init(void);
 void   log_normalize(void);
 double log_time(void);
-void   log_printf(char* format, ...);
 void   log_finalize(void);
+
+/**
+   Allow user to eliminate this function call
+*/
+#if DISABLE_LOG==1
+#define log_printf(...) ;
+#else
+void log_printf(char* format, ...);
+#endif
 
 #endif
