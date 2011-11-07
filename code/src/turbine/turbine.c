@@ -349,7 +349,7 @@ turbine_ready(int count, turbine_transform_id* output,
 {
   int i = 0;
   void* v;
-  DEBUG_TURBINE("ready: \n");
+  DEBUG_TURBINE("ready:\n");
   while (i < count && (v = list_poll(&trs_ready)))
   {
     tr* t = (tr*) v;
