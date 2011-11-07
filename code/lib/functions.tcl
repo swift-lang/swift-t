@@ -58,7 +58,7 @@ namespace eval turbine {
             set base [ lindex $args 2 ]
         }
 
-        set rule_id [ new ]
+        set rule_id [ rule_new ]
         rule $rule_id "argv_get-$rule_id" $key $result \
             "tp: argv_get_body $key $base $result"
     }
@@ -373,17 +373,19 @@ namespace eval turbine {
     # This is a Swift-1 function
     # c = a+b;
     # and sleeps for c seconds
-    proc plus { c a b } {
+    proc plus { c inputs } {
+        set a [ lindex 0 $inputs ]
+        set b [ lindex 1 $inputs ]
         set rule_id [ rule_new ]
         rule $rule_id "plus-$a-$b" "$a $b" $c \
             "tf: plus_body $c $a $b"
     }
-    proc plus_body {c a b } {
+    proc plus_body { c a b } {
         set a_value [ integer_get $a ]
         set b_value [ integer_get $b ]
         set c_value [ expr $a_value + $b_value ]
         # Emulate some computation time
-        log "plus $a_value + $b_value => $c_value"
+        log "plus: $a_value + $b_value => $c_value"
         # exec sleep $c_value
         integer_set $c $c_value
     }
@@ -401,7 +403,24 @@ namespace eval turbine {
         set b_value [ integer_get $b ]
         set c_value [ expr $a_value - $b_value ]
         # Emulate some computation time
-        log "minus $a_value - $b_value => $c_value"
+        log "minus: $a_value - $b_value => $c_value"
+        # exec sleep $c_value
+        integer_set $c $c_value
+    }
+
+    # This is a Swift-2 function
+    # c = a && b;
+    proc and { c a b } {
+        set rule_id [ rule_new ]
+        rule $rule_id "and-$a-$b" "$a $b" $c \
+            "tf: and_body $c $a $b"
+    }
+    proc and_body { c a b } {
+        set a_value [ integer_get $a ]
+        set b_value [ integer_get $b ]
+        set c_value [ expr $a_value && $b_value ]
+        # Emulate some computation time
+        log "and: $a_value && $b_value => $c_value"
         # exec sleep $c_value
         integer_set $c $c_value
     }
