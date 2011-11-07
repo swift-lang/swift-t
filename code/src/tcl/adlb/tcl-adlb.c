@@ -487,6 +487,15 @@ ADLB_Container_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
+ADLB_Abort_Cmd(ClientData cdata, Tcl_Interp *interp,
+               int objc, Tcl_Obj *const objv[])
+{
+  ADLB_Abort(1);
+  // Abort does not return
+  return TCL_OK;
+}
+
+static int
 ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
@@ -531,6 +540,7 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("close",     ADLB_Close_Cmd);
   COMMAND("unique",    ADLB_Unique_Cmd);
   COMMAND("container_typeof", ADLB_Container_Typeof_Cmd);
+  COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
 
   return TCL_OK;
