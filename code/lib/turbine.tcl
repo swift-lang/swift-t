@@ -24,8 +24,6 @@ namespace eval turbine {
     # param s Number of ADLB servers
     proc init { e s } {
 
-	# puts "turbine::init"
-
 	variable engines
 	variable servers
         set engines $e
