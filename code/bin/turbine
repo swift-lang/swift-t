@@ -8,12 +8,12 @@
 # mpiexec -n <processes> turbine <program.tcl>
 
 TURBINE_BIN=$( dirname $0 )
-if [[ -z ${TURBINE} ]]
+if [[ -z ${TURBINE_HOME} ]]
 then
-  TURBINE=$( cd ${TURBINE_BIN}/.. ; /bin/pwd )
+  TURBINE_HOME=$( cd ${TURBINE_BIN}/.. ; /bin/pwd )
 fi
 
-source ${TURBINE}/scripts/turbine-config.sh
+source ${TURBINE_HOME}/scripts/turbine-config.sh
 
 # Allow user to insert valgrind
 ${VALGRIND} ${TCLSH} ${*}
