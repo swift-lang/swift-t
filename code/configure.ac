@@ -38,24 +38,16 @@ AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
 AC_DEFINE([HAVE_SYS_PARAM_H], [], [Do we have sys/param.h?])
 AC_DEFINE([HAVE_PYTHON], [], [Do we have Python?])
 
-DISABLE_LOG=0
-AC_ARG_ENABLE(log,
-                AS_HELP_STRING(
-                 [--disable-log],
-                 [Disables logging]),
-                 [
-                 if test "$enableval" = no ; then
-                   DISABLE_LOG=1
-                 fi
-                 ],
-                 [])
-AC_DEFINE_UNQUOTED(DISABLE_LOG,$DISABLE_LOG,[Disables logging])
+# Using the MPI library under Tcl apparently requires MPICH as a
+# shared library
 
-# Special systems:
-# On the SiCortex, we use srun and libmpiP.a
+# MPI defaults (may be overridden on special systems)
 USE_MACHINE=normal
 USE_LAUNCHER=mpiexec
 LIBMPI=libmpich.so
+
+# Special systems:
+# On the SiCortex, we use srun and libmpiP.a
 AC_ARG_ENABLE(sicortex,
                  AS_HELP_STRING(
                  [--enable-sicortex],
@@ -79,26 +71,6 @@ AC_ARG_ENABLE(custom,
                  [])
 AC_SUBST(USE_MACHINE)
 AC_SUBST(USE_LAUNCHER)
-
-AC_ARG_WITH(adlb,
-                 AS_HELP_STRING(
-                 [--with-adlb],
-                 [location of ADLB]),
-                 [AC_CHECK_FILE(${withval}/libadlb.so,
-                  [], [USE_ADLB=0])
-                  if test "$USE_ADLB" = 0 ; then
-                     AC_MSG_ERROR(Could not find ADLB in $withval)
-                  fi
-                  AC_MSG_RESULT([using ADLB in $withval])
-                  AC_DEFINE_UNQUOTED([ADLB_LOCATION],
-                                     "$withval", [ADLB Location])
-                  USE_ADLB=$withval
-                 ],
-                 [
-                  AC_MSG_WARN([Not found: ADLB])
-                  USE_ADLB=0
-                 ])
-AC_SUBST(USE_ADLB)
 
 AC_ARG_WITH(mpi,
                  AS_HELP_STRING(
@@ -203,6 +175,26 @@ AC_ARG_WITH(mpi-lib-name,
                  ])
 AC_SUBST(USE_MPI_LIB_NAME)
 
+AC_ARG_WITH(adlb,
+                 AS_HELP_STRING(
+                 [--with-adlb],
+                 [location of ADLB]),
+                 [AC_CHECK_FILE(${withval}/libadlb.so,
+                  [], [USE_ADLB=0])
+                  if test "$USE_ADLB" = 0 ; then
+                     AC_MSG_ERROR(Could not find ADLB in $withval)
+                  fi
+                  AC_MSG_RESULT([using ADLB in $withval])
+                  AC_DEFINE_UNQUOTED([ADLB_LOCATION],
+                                     "$withval", [ADLB Location])
+                  USE_ADLB=$withval
+                 ],
+                 [
+                  AC_MSG_WARN([Not found: ADLB])
+                  USE_ADLB=0
+                 ])
+AC_SUBST(USE_ADLB)
+
 AC_ARG_WITH(tcl,
                  AS_HELP_STRING(
                  [--with-tcl],
@@ -246,6 +238,19 @@ AC_ARG_WITH(python,
                   USE_PYTHON=0
                  ])
 AC_SUBST(USE_PYTHON)
+
+DISABLE_LOG=0
+AC_ARG_ENABLE(log,
+                AS_HELP_STRING(
+                 [--disable-log],
+                 [Disables logging]),
+                 [
+                 if test "$enableval" = no ; then
+                   DISABLE_LOG=1
+                 fi
+                 ],
+                 [])
+AC_DEFINE_UNQUOTED(DISABLE_LOG,$DISABLE_LOG,[Disables logging])
 
 AC_CONFIG_FILES(
         src/turbine/module.mk
