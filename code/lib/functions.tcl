@@ -418,6 +418,25 @@ namespace eval turbine {
         integer_set $c $c_value
     }
 
+    # c = a*b;
+    # and sleeps for c seconds
+    proc mult { stack c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "mult-$a-$b" "$a $b" $c \
+            "tf: mult_body $c $a $b"
+    }
+    proc mult_body {c a b } {
+        set a_value [ integer_get $a ]
+        set b_value [ integer_get $b ]
+        set c_value [ expr $a_value * $b_value ]
+        log "minus: $a_value * $b_value => $c_value"
+        # Emulate some computation time
+        # exec sleep $c_value
+        integer_set $c $c_value
+    }
+
     # This is a Swift-2 function
     # c = a && b;
     proc and { c a b } {
@@ -451,7 +470,7 @@ namespace eval turbine {
 
     # This is a Swift-2 function
     # o = ! i;
-    proc not { o i } {
+    proc not { stack o i } {
         set rule_id [ rule_new ]
         rule $rule_id "not-$i" $i $o \
             "tf: not_body $o $i"
