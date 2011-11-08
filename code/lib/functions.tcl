@@ -1,4 +1,10 @@
 
+# Turbine builtin functions
+# All builtins will have signature:
+#   f <STACK> <OUTPUT LIST> <INPUT LIST>
+# where the lists are Tcl lists of TDs
+# (Not all functions conform to this but they will. -Justin)
+
 namespace eval turbine {
 
     # User functions
@@ -94,9 +100,11 @@ namespace eval turbine {
     # TODO: Replace this with tracef()
     proc trace { args } {
 
+        set stack [ lindex $args 0 ]
+        set tds   [ lindex $args 2 ]
         set rule_id [ rule_new ]
-        rule $rule_id "trace-$rule_id" $args { } \
-            "tc: turbine::trace_body $args"
+        rule $rule_id "trace-$rule_id" $tds { } \
+            "tc: turbine::trace_body $tds"
     }
 
     proc trace_body { args } {
