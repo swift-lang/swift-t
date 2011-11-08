@@ -376,8 +376,6 @@ namespace eval turbine {
     proc plus { stack c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        puts "inputs: $inputs"
-        puts "a b c $a $b $c"
         set rule_id [ rule_new ]
         rule $rule_id "plus-$a-$b" "$a $b" $c \
             "tf: plus_body $stack $c $a $b"
@@ -386,8 +384,8 @@ namespace eval turbine {
         set a_value [ integer_get $a ]
         set b_value [ integer_get $b ]
         set c_value [ expr $a_value + $b_value ]
-        # Emulate some computation time
         log "plus: $a_value + $b_value => $c_value"
+        # Emulate some computation time
         # exec sleep $c_value
         integer_set $c $c_value
     }
@@ -395,7 +393,9 @@ namespace eval turbine {
     # This is a Swift-2 function
     # c = a-b;
     # and sleeps for c seconds
-    proc minus { c a b } {
+    proc minus { stack c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
         set rule_id [ rule_new ]
         rule $rule_id "minus-$a-$b" "$a $b" $c \
             "tf: minus_body $c $a $b"
@@ -404,8 +404,8 @@ namespace eval turbine {
         set a_value [ integer_get $a ]
         set b_value [ integer_get $b ]
         set c_value [ expr $a_value - $b_value ]
-        # Emulate some computation time
         log "minus: $a_value - $b_value => $c_value"
+        # Emulate some computation time
         # exec sleep $c_value
         integer_set $c $c_value
     }
