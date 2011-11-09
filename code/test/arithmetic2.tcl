@@ -24,8 +24,9 @@ proc rules { } {
     integer_set $t3 3
     integer_set $t5 5
 
-    arithmetic $x "(_+_)*(_+_)" $t3 $t5 $t3 $t5
-    turbine::trace $x
+    # Use 0 as stack frame
+    arithmetic 0 $x [ list "(_+_)*(_+_)" $t3 $t5 $t3 $t5 ]
+    turbine::trace 0 "" $x
 }
 
 turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
