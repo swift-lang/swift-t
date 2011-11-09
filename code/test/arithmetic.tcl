@@ -19,8 +19,9 @@ proc rules { } {
     set v1 [ turbine::integer_get 1 ]
     set v2 [ turbine::integer_get 2 ]
 
-    turbine::arithmetic 3 "(_+_)*(_+_)" 1 2 1 2
-    turbine::trace 3
+    # Use 0 as stack frame
+    turbine::arithmetic 0 3 [ list "(_+_)*(_+_)" 1 2 1 2 ]
+    turbine::trace 0 "" 3
 }
 
 turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)

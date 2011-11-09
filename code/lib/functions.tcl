@@ -100,7 +100,7 @@ namespace eval turbine {
     # TODO: Replace this with tracef()
     proc trace { args } {
 
-        set stack [ lindex $args 0 ]
+        # parent stack and output arguments not read
         set tds   [ lindex $args 2 ]
         set rule_id [ rule_new ]
         rule $rule_id "trace-$rule_id" $tds { } \
@@ -344,19 +344,21 @@ namespace eval turbine {
         integer_set $result $t
     }
 
-    # usage: arithmetic_body <result> <expr> <args>*
+    # usage: arithmetic <stack> <result> [ <expr> <args>* ]
     # example: assume td1 = 5, td2 = 6, td3 = 7
     # arithmetic td4 "(_+_)*_" td1 td2 td3
     # results in td4=210
     proc arithmetic { args } {
 
-        set result     [ lindex $args 0 ]
-        set expression [ lindex $args 1 ]
-        set inputs     [ lreplace $args 0 1 ]
+        # parent stack argument not read
+        set result     [ lindex $args 1 ]
+        set inputs     [ lindex $args 2 ]
+        set expression [ lindex $inputs 0 ]
+        set tds        [ lreplace $inputs 0 0 ]
 
         set rule_id [ rule_new ]
-        rule $rule_id "arithmetic-$rule_id" $inputs $result \
-            "tp: arithmetic_body $inputs $expression $result"
+        rule $rule_id "arithmetic-$rule_id" $tds $result \
+            "tp: arithmetic_body $tds $expression $result"
     }
 
     # usage: arithmetic_body <args>* <expr> <result>
