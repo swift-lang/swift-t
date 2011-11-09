@@ -1,8 +1,12 @@
 
 # Turbine builtin functions
+
 # All builtins will have signature:
 #   f <STACK> <OUTPUT LIST> <INPUT LIST>
 # where the lists are Tcl lists of TDs
+# even if some of the arguments are not used
+# The uniformity allows the stp code generator to simply write all
+# calls to builtins the same way
 # (Not all functions conform to this but they will. -Justin)
 
 namespace eval turbine {
