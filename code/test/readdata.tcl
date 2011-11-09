@@ -24,11 +24,11 @@ proc rules { } {
     turbine::loop loop1_body none $c
 }
 
-proc loop1_body { stack container key } {
-    turbine::trace $key
+proc loop1_body { parent container key } {
+    turbine::trace $parent "" $key
     set t [ turbine::integer_get $key ]
     set value [ turbine::container_get $container $t ]
-    turbine::trace $value
+    turbine::trace $parent "" $value
 }
 
 turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
