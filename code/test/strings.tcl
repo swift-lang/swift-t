@@ -23,7 +23,8 @@ proc rules { } {
     set v2 [ string_get 2 ]
 
     puts -nonewline "result: "
-    turbine::trace 1 2
+    # Use 0 as stack frame
+    turbine::trace 0 "" [ list 1 2 ]
 }
 
 turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)

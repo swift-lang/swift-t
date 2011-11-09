@@ -100,7 +100,8 @@ proc rules { } {
     rule 1 A $x [ list $a $b ] "tp: myfun $a $b $x"
 
     set a_label [ literal string "a=" ]
-    turbine::trace $a_label $a
+    # Use 0 as stack frame
+    turbine::trace 0 "" [ list $a_label $a ]
 }
 
 turbine::defaults
