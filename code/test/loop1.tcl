@@ -41,15 +41,15 @@ proc rules { } {
     turbine::loop loop1_body $stack $c
 }
 
-proc loop1_body { stack container key } {
+proc loop1_body { parent container key } {
 
     namespace import turbine::*
 
-    puts "body: $stack $container $key"
-    turbine::trace $key
+    puts "body: $parent $container $key"
+    turbine::trace $parent "" $key
     set t [ integer_get $key ]
     set value [ container_get $container $t ]
-    turbine::trace $value
+    turbine::trace $parent "" $value
 }
 
 turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
