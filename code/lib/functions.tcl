@@ -460,9 +460,9 @@ namespace eval turbine {
         integer_set $c $c_value
     }
 
-    # This is a Swift-2 function
+    # This is a Swift-2 function, thus it only applies to integers
     # o = i;
-    proc copy { o i } {
+    proc copy { parent o i } {
         set rule_id [ rule_new ]
         rule $rule_id "copy-$o-$i" $i $o \
             "tf: copy_body $o $i"
