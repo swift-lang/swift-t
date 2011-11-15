@@ -348,7 +348,7 @@ namespace eval turbine {
         integer_set $result $t
     }
 
-    # usage: arithmetic <stack> <result> [ <expr> <args>* ]
+    # usage: arithmetic <parent> <result> [ <expr> <args>* ]
     # example: assume td1 = 5, td2 = 6, td3 = 7
     # arithmetic td4 "(_+_)*_" td1 td2 td3
     # results in td4=210
@@ -387,14 +387,14 @@ namespace eval turbine {
     # This is a Swift-1 function
     # c = a+b;
     # and sleeps for c seconds
-    proc plus { stack c inputs } {
+    proc plus { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         set rule_id [ rule_new ]
         rule $rule_id "plus-$a-$b" "$a $b" $c \
-            "tf: plus_body $stack $c $a $b"
+            "tf: plus_body $parent $c $a $b"
     }
-    proc plus_body { stack c a b } {
+    proc plus_body { parent c a b } {
         set a_value [ integer_get $a ]
         set b_value [ integer_get $b ]
         set c_value [ expr $a_value + $b_value ]
@@ -407,7 +407,7 @@ namespace eval turbine {
     # This is a Swift-2 function
     # c = a-b;
     # and sleeps for c seconds
-    proc minus { stack c inputs } {
+    proc minus { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         set rule_id [ rule_new ]
@@ -426,7 +426,7 @@ namespace eval turbine {
 
     # c = a*b;
     # and sleeps for c seconds
-    proc mult { stack c inputs } {
+    proc mult { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         set rule_id [ rule_new ]
@@ -476,7 +476,7 @@ namespace eval turbine {
 
     # This is a Swift-2 function
     # o = ! i;
-    proc not { stack o i } {
+    proc not { parent o i } {
         set rule_id [ rule_new ]
         rule $rule_id "not-$i" $i $o \
             "tf: not_body $o $i"
