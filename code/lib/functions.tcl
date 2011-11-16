@@ -550,6 +550,9 @@ namespace eval turbine {
     proc container_load_body { d c i } {
         set t1 [ integer_get $i ]
         set t2 [ container_get $c $t1 ]
+        if { $t2 == 0 } {
+            error "lookup failed: container_get <$c>\[$t1\]"
+        }
         set t3 [ integer_get $t2 ]
         integer_set $d $t3
     }
