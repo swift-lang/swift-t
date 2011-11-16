@@ -106,6 +106,9 @@ namespace eval turbine {
 
         # parent stack and output arguments not read
         set tds   [ lindex $args 2 ]
+        if { ! [ string length $tds ] } {
+            error "trace: received no arguments!"
+        }
         set rule_id [ rule_new ]
         rule $rule_id "trace-$rule_id" $tds { } \
             "tc: turbine::trace_body $tds"
@@ -532,5 +535,22 @@ namespace eval turbine {
             }
         }
         return ""
+    }
+
+    # When i is closed, set d := c[i]
+    # d: the destination
+    # c: the container
+    # i: the subscript
+    proc container_load { d c i } {
+        set rule_id [ rule_new ]
+        rule $rule_id "container_load-$c-$i" $i $d \
+            "tp: turbine::container_load_body $d $c $i"
+    }
+
+    proc container_load_body { d c i } {
+        set t1 [ integer_get $i ]
+        set t2 [ container_get $c $t1 ]
+        set t3 [ integer_get $t2 ]
+        integer_set $d $t3
     }
 }
