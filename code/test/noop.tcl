@@ -7,10 +7,9 @@ package require turbine 0.1
 # No rules
 proc rules { } { }
 
-turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
-
+turbine::defaults
+turbine::init $engines $servers
 turbine::start rules
-
 turbine::finalize
 
 puts OK
