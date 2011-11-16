@@ -8,7 +8,7 @@ THIS=$0
 SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
 
-${MPIEXEC} -l -n 4 ${VALGRIND} bin/turbine ${SCRIPT} >& ${OUTPUT}
+${MPIEXEC} -l -n 4 ${VALGRIND} ${SCRIPT} >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
 LINES=$( ls test/data/{A..D}.txt | wc -l )

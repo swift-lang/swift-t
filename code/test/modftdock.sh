@@ -18,7 +18,7 @@ do
   touch ${INPUT}/${R}.pdb
 done
 
-bin/turbine ${SCRIPT} --list=${ROOTS_TXT} --in=input >& ${OUTPUT}
+${SCRIPT} --list=${ROOTS_TXT} --in=input >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
 # LINES=$( grep -c "v[0-2]" ${OUTPUT} )
