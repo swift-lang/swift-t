@@ -1,6 +1,5 @@
 
 # Test basic container functionality
-# TCL version of container1
 
 # SwiftScript
 # file[] c;
