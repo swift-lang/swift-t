@@ -11,8 +11,8 @@ set -x
 turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || exit 1
 
-grep -q "enumeration: 34" ${OUTPUT} || exit 1
-grep -q "trace: 14"       ${OUTPUT} || exit 1
-grep -q "trace: 15"       ${OUTPUT} || exit 1
+grep -q "enumeration: 34 35" ${OUTPUT} || exit 1
+grep -q "trace: 14"          ${OUTPUT} || exit 1
+grep -q "trace: 15"          ${OUTPUT} || exit 1
 
 exit 0
