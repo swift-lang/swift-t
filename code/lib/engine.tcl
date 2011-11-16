@@ -16,6 +16,16 @@ namespace eval turbine {
 	variable stats
 	dict set stats tasks_run 0
 
+        if { [ catch { enter_mode $rules $rank } e ] } {
+            # Error handling
+            puts "CAUGHT ERROR:"
+            puts $e
+            puts "CALLING adlb::abort"
+            adlb::abort
+        }
+    }
+
+    proc enter_mode { rules rank } {
         variable engines
         if { $rank < $engines } {
 	    set mode ENGINE
@@ -111,7 +121,6 @@ namespace eval turbine {
         debug "TURBINE WORKER..."
 
         while { true } {
-            # puts "get"
             set msg [ adlb::get $WORK_TYPE(WORK) answer_rank ]
 
             set rule_id [ lreplace $msg 1 end ]
