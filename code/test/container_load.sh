@@ -1,0 +1,18 @@
+#!/bin/bash
+
+THIS=$0
+SCRIPT=${THIS%.sh}.tcl
+OUTPUT=${THIS%.sh}.out
+
+source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
+
+set -x
+
+turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
+[[ ${?} == 0 ]] || exit 1
+
+grep -q "enumeration: 34" ${OUTPUT} || exit 1
+grep -q "trace: 14"       ${OUTPUT} || exit 1
+grep -q "trace: 15"       ${OUTPUT} || exit 1
+
+exit 0

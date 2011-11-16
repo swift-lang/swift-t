@@ -19,6 +19,7 @@ TEST_SRC_TCL := $(DIR)/adlb-noop.tcl      \
                 $(DIR)/dht.tcl            \
                 $(DIR)/container2.tcl     \
                 $(DIR)/container3.tcl     \
+                $(DIR)/container_load.tcl \
                 $(DIR)/if1.tcl            \
                 $(DIR)/loop1.tcl          \
                 $(DIR)/readdata.tcl       \
