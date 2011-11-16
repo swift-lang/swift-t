@@ -37,7 +37,6 @@ turbine_check_failed(Tcl_Interp* interp, turbine_code code,
   va_end(ap);
   append(p, "\n%s", "turbine error: ");
   turbine_code_tostring(p, code);
-  // printf("%s\n", buffer);
   Tcl_AddErrorInfo(interp, buffer);
 }
 
@@ -116,8 +115,9 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
   error = turbine_tcl_long_array(interp, objv[3],
                                 TCL_TURBINE_MAX_INPUTS,
                                 input, &inputs);
-  TCL_CHECK_MSG(error, "could not parse list as long integers: {%s}",
-                Tcl_GetString(objv[3]));
+  TCL_CHECK_MSG(error, "could not parse list as long integers: {%s}\n"
+                "in rule: <%li> %s",
+                Tcl_GetString(objv[3]), id, name);
 
   error = turbine_tcl_long_array(interp, objv[4],
                                 TCL_TURBINE_MAX_OUTPUTS,
