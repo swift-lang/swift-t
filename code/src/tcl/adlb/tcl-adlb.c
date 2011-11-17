@@ -49,26 +49,27 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(3);
 
-  int error;
+  turbine_debug_init();
+
+  int rc;
 
   int servers;
-  error = Tcl_GetIntFromObj(interp, objv[1], &servers);
-  TCL_CHECK(error);
+  rc = Tcl_GetIntFromObj(interp, objv[1], &servers);
+  TCL_CHECK(rc);
 
   int ntypes;
-  error = Tcl_GetIntFromObj(interp, objv[2], &ntypes);
-  TCL_CHECK(error);
+  rc = Tcl_GetIntFromObj(interp, objv[2], &ntypes);
+  TCL_CHECK(rc);
 
-  int argc = 0;
-  char** argv = NULL;
 
   int type_vect[ntypes];
   for (int i = 0; i < ntypes; i++)
     type_vect[i] = i;
 
-  int code;
-  code = MPI_Init(&argc, &argv);
-  assert(code == MPI_SUCCESS);
+  int argc = 0;
+  char** argv = NULL;
+  rc = MPI_Init(&argc, &argv);
+  assert(rc == MPI_SUCCESS);
 
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
   workers = mpi_size - servers;
@@ -85,9 +86,9 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   // ADLB_Init(int num_servers, int use_debug_server,
   //           int aprintf_flag, int num_types, int *types,
   //           int *am_server, int *am_debug_server, MPI_Comm *app_comm)
-  code = ADLB_Init(servers, 0, 0, ntypes, type_vect,
+  rc = ADLB_Init(servers, 0, 0, ntypes, type_vect,
                    &am_server, &am_debug_server, &worker_comm);
-  assert(code == ADLB_SUCCESS);
+  assert(rc == ADLB_SUCCESS);
 
   if (! am_server)
     MPI_Comm_rank(worker_comm, &adlb_rank);
@@ -501,6 +502,7 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   ADLB_Finalize();
   MPI_Finalize();
+  turbine_debug_finalize();
   return TCL_OK;
 }
 

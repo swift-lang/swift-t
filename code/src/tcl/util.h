@@ -22,7 +22,7 @@
     }                                                           \
   }
 
-#define TCL_CHECK(code) { if (code != TCL_OK) { return TCL_ERROR; }}
+#define TCL_CHECK(rc) { if (rc != TCL_OK) { return TCL_ERROR; }}
 
 turbine_code turbine_tcl_long_array(Tcl_Interp* interp,
                                     Tcl_Obj* list, int max,
@@ -32,8 +32,8 @@ void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
                           const char* format, ...)
   __attribute__ ((format (printf, 3, 4)));
 
-#define TCL_CHECK_MSG(code, format, args...)                      \
-  if (code != TCL_OK) {                                           \
+#define TCL_CHECK_MSG(rc, format, args...)                      \
+  if (rc != TCL_OK) {                                           \
     tcl_condition_failed(interp, objv[0], format, ## args);       \
     return TCL_ERROR;                                             \
   }                                                               \

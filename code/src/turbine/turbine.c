@@ -93,7 +93,6 @@ static long unique_transform = 1;
 turbine_code
 turbine_init(int amserver)
 {
-  turbine_debug_init();
   if (amserver)
     return TURBINE_SUCCESS;
 

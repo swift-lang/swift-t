@@ -1,4 +1,11 @@
 
+/**
+ * debug.c
+ *
+ * Debugging reports for Turbine
+ * */
+
+#include <assert.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -15,6 +22,11 @@ static const int buffer_size = 2*1024;
 void
 turbine_debug_init()
 {
+  if (initialized)
+  {
+    printf("turbine_debug: already initialized\n");
+    return;
+  }
   initialized = true;
   char* s = getenv("DEBUG");
   if (s != NULL)
@@ -38,6 +50,7 @@ turbine_debug(const char* token, const char* format, ...)
 {
   if (!enabled)
     return;
+  assert(initialized);
 
   va_list va;
   va_start(va, format);
@@ -50,10 +63,12 @@ turbine_debug(const char* token, const char* format, ...)
   printf("%s", buffer);
   fflush(stdout);
   va_end(va);
+  fflush(stdout);
 }
 
 void
 turbine_debug_finalize()
 {
-  free(buffer);
+  if (buffer)
+    free(buffer);
 }
