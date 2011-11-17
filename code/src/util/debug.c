@@ -7,34 +7,53 @@
 
 #include "src/util/debug.h"
 
-static bool initialized = false;
-static bool enabled = true;
+static bool  initialized = false;
+static bool  enabled = true;
+static char* buffer = NULL;
+static const int buffer_size = 2*1024;
 
 void
 turbine_debug_init()
 {
   initialized = true;
   char* s = getenv("DEBUG");
-  if (s == NULL)
-    return;
-  if (strcmp(s, "0") == 0)
-    enabled = false;
+  if (s != NULL)
+    if (strcmp(s, "0") == 0)
+    {
+      enabled = false;
+      return;
+    }
+  buffer = malloc(buffer_size);
 }
 
 /**
    All turbine_debug messages may be disabled by setting
    DEBUG=0 (number 0) in the environment.
+   We have to put everything into one string before we print it,
+   otherwise mpiexec -l does not print the rank things [0]
+   correctly.
 */
 void
-turbine_debug(char* token, char* format, ...)
+turbine_debug(const char* token, const char* format, ...)
 {
   if (!enabled)
     return;
 
-  printf("%s: ", token);
   va_list va;
-  va_start(va,format);
-  vprintf(format, va);
-  va_end(va);
+  va_start(va, format);
+  int count = 0;
+  count += sprintf(buffer, "%s: ", token);
+  count += vsnprintf(buffer+count, buffer_size, format, va);
+  if (count >= buffer_size)
+    printf("turbine_debug: message exceeded buffer_size (%i)\n",
+           buffer_size);
+  printf("%s", buffer);
   fflush(stdout);
+  va_end(va);
+}
+
+void
+turbine_debug_finalize()
+{
+  free(buffer);
 }

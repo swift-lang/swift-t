@@ -3,7 +3,8 @@ DIR := test
 
 TEST_SRC_C := $(DIR)/list.c       \
               $(DIR)/readfile.c   \
-              $(DIR)/log.c
+              $(DIR)/log.c        \
+              $(DIR)/debug.c
 
 TEST_SRC_TCL := $(DIR)/adlb-noop.tcl      \
                 $(DIR)/noop.tcl           \
