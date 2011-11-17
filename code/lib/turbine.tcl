@@ -110,6 +110,7 @@ namespace eval turbine {
     # Used to get tests running, etc.
     proc defaults { } {
 
+        global env
         upvar 1 engines e
         upvar 1 servers s
 
