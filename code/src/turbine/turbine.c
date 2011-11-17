@@ -73,7 +73,30 @@ struct ltable trs_running;
  */
 struct ltable blockers;
 
+#define turbine_check(code) if (code != TURBINE_SUCCESS) return code;
+
+// Currently unused
+// #define turbine_check_msg(code, format, args...)
+//    { if (code != TURBINE_SUCCESS)
+//       turbine_check_msg_impl(code, format, ## args);
+//    }
+
+#define turbine_check_verbose(code) \
+    turbine_check_verbose_impl(code, __FILE__, __LINE__)
+
+#define turbine_check_verbose_impl(code, file, line)    \
+  { if (code != TURBINE_SUCCESS)                        \
+    {                                                   \
+      char output[64];                                  \
+      turbine_code_tostring(output, code);              \
+      printf("turbine error: %s\n", output);            \
+      printf("\t at: %s:%i\n", file, line);             \
+      return code;                                      \
+    }                                                   \
+  }
+
 /*
+// Currently unused
 static void turbine_check_msg_impl(turbine_code code,
                                    const char* format, ...);
 */
@@ -108,33 +131,6 @@ turbine_init(int amserver)
   initialized = true;
   return TURBINE_SUCCESS;
 }
-
-/*
-static int
-type_tostring(char* output, turbine_type type)
-{
-  int result = -1;
-  switch(type)
-  {
-    case TURBINE_TYPE_FILE:
-      result = sprintf(output, "file");
-      break;
-    case TURBINE_TYPE_CONTAINER:
-      result = sprintf(output, "container");
-      break;
-    case TURBINE_TYPE_INTEGER:
-      result = sprintf(output, "integer");
-      break;
-    case TURBINE_TYPE_STRING:
-      result = sprintf(output, "string");
-      break;
-    default:
-      sprintf(output, "<unknown type>");
-  }
-
-  return result;
-}
-*/
 
 static turbine_code
 tr_create(turbine_transform* transform, tr** t)
@@ -193,8 +189,6 @@ tr_free(tr* t)
     free(t->transform.output);
   free(t);
 }
-
-// static turbine_code is_ready(tr* t, bool* result);
 
 static void subscribe(turbine_transform_id id,
                       int* result)
@@ -286,7 +280,6 @@ static void
 add_to_ready(struct list* tmp)
 {
   tr* t;
-  // ltable_dumpkeys(&trs_waiting);
   while ((t = list_poll(tmp)))
   {
     void* c = ltable_remove(&trs_waiting, t->id);
@@ -377,77 +370,6 @@ turbine_entry_set(turbine_entry* entry,
   strcpy(entry->name, name);
   return TURBINE_SUCCESS;
 }
-
-/*
-static turbine_code
-is_ready(tr* t, bool* result)
-{
-  for (int i = 0; i < t->transform.inputs; i++)
-  {
-    turbine_datum_id id = t->transform.input[i];
-    bool status;
-    int error = progress()
-    assert(error == ADLB_SUCCESS);
-    if (!status)
-    {
-      *result = false;
-      return TURBINE_SUCCESS;
-    }
-  }
-  *result = true;
-  return TURBINE_SUCCESS;
-}
-*/
-/**
-   Move trs that are ready to run from waiting to ready
-   Note: cannot modify list while iterating over it
- */
-/*
-static void
-notify_waiters(turbine_datum* td)
-{
-  struct list tmp;
-  list_init(&tmp);
-
-  // Put trs that are ready into tmp
-  for (struct lnlist_item* item = td->listeners.head; item;
-       item = item->next)
-  {
-    turbine_transform_id id = item->data;
-    tr* t = ltable_search(&trs_waiting, id);
-    assert(t);
-    bool result;
-    turbine_code code = is_ready(t, &result);
-    turbine_check_msg(code, "unknown input in rule: %s\n",
-                      t->transform.name);
-    if (result)
-      list_add(&tmp, t);
-  }
-
-  // Put items from tmp into ready
-  while (tmp.size > 0)
-  {
-    tr *t = list_pop(&tmp);
-    void* c = ltable_remove(&trs_waiting, t->id);
-    assert(c);
-    list_add(&trs_ready, t);
-  }
-}
-*/
-
-/*
-static int
-id_cmp(void* id1, void* id2)
-{
-  long* l1 = id1;
-  long* l2 = id2;
-  if (*l1 < *l2)
-    return -1;
-  else if (*l1 > *l2)
-    return 1;
-  return 0;
-}
-*/
 
 turbine_code
 turbine_action(turbine_transform_id id, char* action)
@@ -724,6 +646,7 @@ turbine_finalize()
 }
 
 /*
+// Currently unused
 static void
 turbine_check_msg_impl(turbine_code code, const char* format, ...)
 {
