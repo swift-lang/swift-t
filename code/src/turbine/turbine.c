@@ -1,9 +1,10 @@
-/*
+
+/**
  * turbine.c
  *
  *  Created on: May 4, 2011
  *      Author: wozniak
- */
+ * */
 
 #include <assert.h>
 #include <stdio.h>
@@ -416,10 +417,8 @@ turbine_close(turbine_datum_id id)
   // Look up what this td was blocking
   struct longlist* L = ltable_search(&blockers, id);
   if (L == NULL)
-  {
-    printf("turbine_close: error: could not find: <%li>\n", id);
-    return TURBINE_ERROR_NOT_FOUND;
-  }
+    // We don't have any rules that block on this td
+    return TURBINE_SUCCESS;
 
   // Temporary holding spot for transforms moving into ready list
   struct list tmp;
@@ -449,9 +448,6 @@ turbine_close(turbine_datum_id id)
 static bool
 progress(tr* transform)
 {
-  // DEBUG_TURBINE("progress: {%li} %s\n",
-  //              transform->id, transform->transform.name);
-
   int subscribed = 0;
   while (transform->blocker < transform->transform.inputs)
   {
