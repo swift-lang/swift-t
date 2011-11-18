@@ -61,7 +61,6 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_GetIntFromObj(interp, objv[2], &ntypes);
   TCL_CHECK(rc);
 
-
   int type_vect[ntypes];
   for (int i = 0; i < ntypes; i++)
     type_vect[i] = i;
@@ -125,13 +124,13 @@ ADLB_Server_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: no args, returns ADLB rank
+   usage: no args, returns MPI rank
 */
 static int
 ADLB_Rank_Cmd(ClientData cdata, Tcl_Interp *interp,
               int objc, Tcl_Obj *const objv[])
 {
-  Tcl_SetObjResult(interp, Tcl_NewIntObj(adlb_rank));
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(mpi_rank));
   return TCL_OK;
 }
 

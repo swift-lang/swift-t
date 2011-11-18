@@ -10,43 +10,35 @@ namespace eval turbine {
 
     # Mode is ENGINE, WORKER, or SERVER
     variable mode
-    # Number of Turbine engines
-    variable engines
-    # Number of Turbine workers
-    variable workers
-    # Number of ADLB servers
-    variable servers
     # Statistics
     variable stats
 
     # User function
     # param e Number of engines
     # param s Number of ADLB servers
-    proc init { e s } {
-
-	variable engines
-	variable servers
-        set engines $e
-        set servers $s
+    proc init { engines servers } {
 
         # Set up work types
         enum WORK_TYPE { WORK CONTROL }
         global WORK_TYPE
         set types [ array size WORK_TYPE ]
         adlb::init $servers $types
-        c::init [ adlb::amserver ]
+        c::init [ adlb::amserver ] [ adlb::rank ] [ adlb::size ]
+
+        variable mode
+        if { [ adlb::rank ] < $engines } {
+	    set mode ENGINE
+        } elseif { [ adlb::amserver ] == 1 } {
+            set mode SERVER
+        } else {
+	    set mode WORKER
+        }
 
         start_stats
 
-	if { [ adlb::amserver ] == 1 } {
-            adlb::server
-            return
+        if { [ string equal $mode SERVER ] } {
+            argv_init
         }
-
-        set adlb_workers [ adlb::workers ]
-        set workers [ expr $adlb_workers - $servers ]
-
-        argv_init
     }
 
     proc start_stats { } {
@@ -83,7 +75,6 @@ namespace eval turbine {
 	variable mode
 	variable engines
 	variable stats
-	# puts "engines: $engines"
 	set start [ dict get $stats clock_start ]
 	set stop [ clock clicks -milliseconds ]
 	set stats [ dict remove $stats clock_start ]

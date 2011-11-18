@@ -24,7 +24,7 @@ typedef struct
 
 #define TURBINE_MAX_ENTRY 256
 
-turbine_code turbine_init(int amserver);
+turbine_code turbine_init(int amserver, int rank, int size);
 
 turbine_code turbine_declare(turbine_datum_id id,
                              struct longlist** result);

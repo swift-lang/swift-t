@@ -37,6 +37,7 @@ turbine_check_failed(Tcl_Interp* interp, turbine_code code,
   va_end(ap);
   append(p, "\n%s", "turbine error: ");
   turbine_code_tostring(p, code);
+  printf("turbine_check_failed: %s\n", buffer);
   Tcl_AddErrorInfo(interp, buffer);
 }
 
@@ -58,12 +59,17 @@ static int
 Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(2);
-  int amserver;
-  int error = Tcl_GetIntFromObj(interp, objv[1], &amserver);
-  assert(error == TCL_OK);
+  TCL_ARGS(4);
+  int amserver, rank, size;
+  int rc;
+  rc = Tcl_GetIntFromObj(interp, objv[1], &amserver);
+  assert(rc == TCL_OK);
+  rc = Tcl_GetIntFromObj(interp, objv[2], &rank);
+  assert(rc == TCL_OK);
+  rc = Tcl_GetIntFromObj(interp, objv[3], &size);
+  assert(rc == TCL_OK);
 
-  turbine_code code = turbine_init(amserver);
+  turbine_code code = turbine_init(amserver, rank, size);
   if (code != TURBINE_SUCCESS)
   {
     Tcl_AddErrorInfo(interp, " Could not initialize Turbine!\n");

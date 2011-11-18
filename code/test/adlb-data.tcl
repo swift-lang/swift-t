@@ -27,6 +27,8 @@ if { ! [ adlb::amserver ] } {
         set msg [ string_get $id ]
         puts "got: $msg"
     }
+} else {
+    adlb::server
 }
 
 turbine::finalize

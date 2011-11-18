@@ -26,6 +26,8 @@ if { ! [ adlb::amserver ] } {
         adlb::create $i string:
         adlb::store $i string:data
     }
+} else {
+    adlb::server
 }
 
 turbine::finalize

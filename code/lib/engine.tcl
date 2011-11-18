@@ -5,18 +5,10 @@ namespace eval turbine {
 
     proc start { rules } {
 
-        variable mode
-        set rank [ adlb::rank ]
-        set amserver [ adlb::amserver ]
-        if { $amserver == 1 } {
-	    set mode SERVER
-	    return
-	}
-
 	variable stats
 	dict set stats tasks_run 0
 
-        if { [ catch { enter_mode $rules $rank } e ] } {
+        if { [ catch { enter_mode $rules } e ] } {
             # Error handling
             puts "CAUGHT ERROR:"
             puts $e
@@ -25,23 +17,23 @@ namespace eval turbine {
         }
     }
 
-    proc enter_mode { rules rank } {
-        variable engines
-        if { $rank < $engines } {
-	    set mode ENGINE
-            engine $rank $rules
-        } else {
-	    set mode WORKER
-            worker
+    proc enter_mode { rules } {
+
+        variable mode
+        switch $mode {
+            ENGINE  { engine $rules }
+            SERVER  { adlb::server }
+            WORKER  { worker }
+            default { error "UNKNOWN MODE" }
         }
     }
 
-    proc engine { rank rules } {
+    proc engine { rules } {
 
         global WORK_TYPE
 
         debug "TURBINE ENGINE..."
-        if { $rank == 0 } {
+        if { [ adlb::rank ] == 0 } {
             ::eval $rules
         }
 

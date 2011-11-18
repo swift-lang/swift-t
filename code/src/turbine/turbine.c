@@ -103,9 +103,12 @@ static void turbine_check_msg_impl(turbine_code code,
 */
 
 /**
-   Unique transform ID for rule_new().
+   Globally unique transform ID for rule_new().
+   Starts at mpi_rank, incremented by mpi_size, thus unique
  */
-static long unique_transform = 1;
+static long unique_transform = -1;
+
+static int mpi_size = -1;
 
 #define turbine_condition(condition, code, format, args...) \
   { if (! (condition))                                      \
@@ -115,10 +118,13 @@ static long unique_transform = 1;
     }}
 
 turbine_code
-turbine_init(int amserver)
+turbine_init(int amserver, int rank, int size)
 {
   if (amserver)
     return TURBINE_SUCCESS;
+
+  mpi_size = size;
+  unique_transform = rank+mpi_size;
 
   struct ltable* table;
   table = ltable_init(&trs_waiting, 1024*1024);
@@ -269,7 +275,7 @@ rule_inputs(tr* transform)
 turbine_code
 turbine_rule_new(turbine_transform_id *id)
 {
-  *id = unique_transform++;
+  *id = unique_transform + mpi_size;
   return TURBINE_SUCCESS;
 }
 
