@@ -415,7 +415,11 @@ turbine_close(turbine_datum_id id)
 
   // Look up what this td was blocking
   struct longlist* L = ltable_search(&blockers, id);
-  assert(L);
+  if (L == NULL)
+  {
+    printf("turbine_close: error: could not find: <%li>\n", id);
+    return TURBINE_ERROR_NOT_FOUND;
+  }
 
   // Temporary holding spot for transforms moving into ready list
   struct list tmp;
