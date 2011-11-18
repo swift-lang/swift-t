@@ -56,7 +56,7 @@ turbine_debug(const char* token, const char* format, ...)
   va_start(va, format);
   int count = 0;
   count += sprintf(buffer, "%s: ", token);
-  count += vsnprintf(buffer+count, buffer_size, format, va);
+  count += vsnprintf(buffer+count, buffer_size-count, format, va);
   if (count >= buffer_size)
     printf("turbine_debug: message exceeded buffer_size (%i)\n",
            buffer_size);
