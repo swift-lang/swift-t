@@ -49,7 +49,7 @@ typedef struct
 /**
    Has turbine_init() been called successfully?
 */
-bool initialized = false;
+static bool initialized = false;
 
 /**
    Waiting trs
