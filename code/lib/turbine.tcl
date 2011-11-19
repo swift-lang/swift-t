@@ -123,4 +123,13 @@ namespace eval turbine {
             set s 1
         }
     }
+
+    # e: A Tcl error object
+    proc abort { e } {
+        # Error handling
+        puts "CAUGHT ERROR:"
+        puts $e
+        puts "CALLING adlb::abort"
+        adlb::abort
+    }
 }

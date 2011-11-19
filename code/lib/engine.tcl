@@ -9,11 +9,7 @@ namespace eval turbine {
 	dict set stats tasks_run 0
 
         if { [ catch { enter_mode $rules } e ] } {
-            # Error handling
-            puts "CAUGHT ERROR:"
-            puts $e
-            puts "CALLING adlb::abort"
-            adlb::abort
+            abort $e
         }
     }
 
