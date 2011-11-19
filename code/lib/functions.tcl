@@ -514,7 +514,7 @@ namespace eval turbine {
     }
 
     # Look in all enclosing stack frames for the TD for the given symbol
-    # If not found, return the empty string
+    # If not found, abort
     proc stack_lookup { stack symbol } {
 
         set result ""
@@ -534,7 +534,7 @@ namespace eval turbine {
                 return $result
             }
         }
-        return ""
+        abort "stack_lookup failure: stack: <$stack> symbol: $symbol"
     }
 
     # When i is closed, set d := c[i]
