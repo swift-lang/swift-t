@@ -26,7 +26,8 @@ proc rules { } {
     rule 4 D { 2 3 } { 4 } { tf: function_touch 4 }
 }
 
-turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
+turbine::defaults
+turbine::init $engines $servers
 turbine::start rules
 turbine::finalize
 
