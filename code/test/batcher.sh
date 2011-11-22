@@ -9,8 +9,9 @@ OUTPUT=${THIS%.sh}.out
 mkdir test/data
 
 source scripts/turbine-config.sh
-${MPIEXEC} -l -n 4 ${VALGRIND} ${TCLSH} ${SCRIPT} test/batcher.txt \
-           >& ${OUTPUT}
+echo PRELOAD $LD_PRELOAD
+${TURBINE_LAUNCH} -l -n 4 ${VALGRIND} ${TCLSH} ${SCRIPT} \
+                  test/batcher.txt >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
 LINES=$( ls test/data/{1..4}.txt | wc -l )

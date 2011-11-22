@@ -201,7 +201,7 @@ $(TEST_BINS): %.x: %.o $(TURBINE) # $(WOZTOOLS_LIB)
 	$(Q) "  SH		$(@)"
 	$(E) mkdir -p test/data
 	$(E) rm -f $(@)
-	$(E) LAUNCH=$(LAUNCH) $(<) > $(*).tmp 2>&1
+	$(E) $(<) > $(*).tmp 2>&1
 	$(E) mv $(*).tmp $(@) 2>&1
 
 # Test result rule for TCL tests

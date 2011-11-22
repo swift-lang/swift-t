@@ -11,7 +11,7 @@ set -x
 INPUT=test/data/input.txt
 echo v{0..2} | xargs -n 1 > ${INPUT} || exit 1
 
-turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
+bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || exit 1
 
 LINES=$( grep -c "trace: v[0-2]" ${OUTPUT} )

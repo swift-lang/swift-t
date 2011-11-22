@@ -8,7 +8,7 @@ OUTPUT=${THIS%.sh}.out
 
 source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
 
-turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
+bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || exit 1
 
 grep "a=,3" ${OUTPUT} || exit 1

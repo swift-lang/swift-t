@@ -8,7 +8,7 @@ source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
 
 set -x
 
-turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
+bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || exit 1
 
 LINES=$( ls test/data/[1-9].txt | wc -l )

@@ -22,4 +22,12 @@ export LD_LIBRARY_PATH=${MPI_LIB}:${LD_LIBRARY_PATH}
 export TCLLIBPATH=${TURBINE_HOME}/lib
 export TCLSH=${TCL}/bin/tclsh8*
 
-export MPIEXEC=${MPI}/bin/mpiexec
+export TURBINE_LAUNCH=@USE_LAUNCHER@
+export TURBINE_MACHINE=@USE_MACHINE@
+
+if [[ ${TURBINE_MACHINE} == "sicortex" ]]
+then
+  # Fast string functions for the SiCortex
+  # Turbine will not run without this
+  export LD_PRELOAD=/usr/lib64/libscstr.so
+fi

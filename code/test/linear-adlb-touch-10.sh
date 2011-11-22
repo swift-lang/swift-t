@@ -6,7 +6,7 @@ THIS=$0
 SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
 
-turbine -n 4 ${SCRIPT} >& ${OUTPUT}
+bin/turbine -n 4 ${SCRIPT} >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
 LINES=$( ls test/data/{1..9}.txt | wc -l )

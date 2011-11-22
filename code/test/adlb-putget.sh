@@ -6,7 +6,7 @@ THIS=$0
 SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
 
-turbine -n 3 ${SCRIPT} >& ${OUTPUT}
+bin/turbine -n 3 ${SCRIPT} >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
 grep -q "answer_rank: 0" ${OUTPUT} || exit 1
