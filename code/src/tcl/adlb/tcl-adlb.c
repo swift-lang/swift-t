@@ -489,6 +489,33 @@ ADLB_Container_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+/**
+   usage: adlb::container_reference
+                  <container_id> <subscript> <reference>
+*/
+static int
+ADLB_Container_Reference_Cmd(ClientData cdata, Tcl_Interp *interp,
+                             int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(4);
+
+  long container_id;
+  Tcl_GetLongFromObj(interp, objv[1], &container_id);
+  char* subscript = Tcl_GetString(objv[2]);
+  long reference;
+  Tcl_GetLongFromObj(interp, objv[3], &reference);
+
+  DEBUG_ADLB("adlb::container_reference: <%li>[%s] => <%li>\n",
+             container_id, subscript, reference);
+  int rc =
+      ADLB_Container_reference(container_id, subscript, reference);
+
+  if (rc != ADLB_SUCCESS)
+    return TCL_ERROR;
+  return TCL_OK;
+}
+
+
 static int
 ADLB_Abort_Cmd(ClientData cdata, Tcl_Interp *interp,
                int objc, Tcl_Obj *const objv[])
@@ -543,7 +570,8 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("lookup",    ADLB_Lookup_Cmd);
   COMMAND("close",     ADLB_Close_Cmd);
   COMMAND("unique",    ADLB_Unique_Cmd);
-  COMMAND("container_typeof", ADLB_Container_Typeof_Cmd);
+  COMMAND("container_typeof",    ADLB_Container_Typeof_Cmd);
+  COMMAND("container_reference", ADLB_Container_Reference_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
 

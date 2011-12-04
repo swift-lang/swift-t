@@ -601,7 +601,7 @@ namespace eval turbine {
     }
     proc f_reference_body { c i d } {
         set t1 [ integer_get $i ]
-        c::reference $c $i $d
+        adlb::container_reference $c $i $d
     }
 
     # When reference r is closed, store its (integer) value in v
