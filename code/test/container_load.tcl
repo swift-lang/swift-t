@@ -51,10 +51,10 @@ proc rules { } {
     set L [ turbine::container_list $c ]
     puts "enumeration: $L"
 
-    turbine::container_load $v1 $c $i1
-    turbine::trace none "" $v1
-    turbine::container_load $v2 $c $i2
-    turbine::trace none "" $v2
+    turbine::container_f_get no_stack $v1 "$c $i1"
+    turbine::trace no_stack "" $v1
+    turbine::container_f_get no_stack $v2 "$c $i2"
+    turbine::trace no_stack "" $v2
 
     turbine::integer_set $i1 34
     turbine::integer_set $i2 35

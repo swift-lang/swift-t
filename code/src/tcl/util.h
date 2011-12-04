@@ -1,4 +1,10 @@
 
+/**
+ * TCL/UTIL
+ *
+ * Various utilities for C-based Tcl extensions
+ * */
+
 #ifndef TURBINE_TCL_UTIL_H
 #define TURBINE_TCL_UTIL_H
 
@@ -27,6 +33,10 @@
 turbine_code turbine_tcl_long_array(Tcl_Interp* interp,
                                     Tcl_Obj* list, int max,
                                     long* output, int* count);
+
+turbine_code turbine_tcl_string_array(Tcl_Interp* interp,
+                                      Tcl_Obj* list, int max,
+                                      char** output, int* count);
 
 void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
                           const char* format, ...)

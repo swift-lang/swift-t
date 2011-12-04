@@ -11,15 +11,23 @@
 #include "src/util/longlist.h"
 #include "src/turbine/defs.h"
 
+typedef struct
+{
+  turbine_datum_id id;
+  char* subscript;
+} container_subscript;
+
 typedef long turbine_transform_id;
 typedef struct
 {
   char* name;
   char* action;
   int inputs;
-  turbine_datum_id* input;
+  turbine_datum_id* input_list;
+  int container_subscripts;
+  container_subscript* container_subscript_list;
   int outputs;
-  turbine_datum_id* output;
+  turbine_datum_id* output_list;
 } turbine_transform;
 
 #define TURBINE_MAX_ENTRY 256

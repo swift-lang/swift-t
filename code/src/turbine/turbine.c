@@ -24,13 +24,9 @@
 
 #include "src/turbine/turbine.h"
 
-//const int TURBINE_NAME_MAX = 128;
-//const int TURBINE_ARGS_MAX = 128;
-
-/**
-   Reusable buffer for data transfer
-*/
-static char xfer[1024*1024];
+#define XFER_SIZE (1024*1024)
+/** Reusable buffer for data transfer */
+static char xfer[XFER_SIZE];
 
 typedef enum
 {
@@ -69,10 +65,16 @@ struct list trs_ready;
 struct ltable trs_running;
 
 /**
-   Inputs blocking their TRs
+   TD inputs blocking their TRs
    Map from TD ID to list of TRs
  */
-struct ltable blockers;
+struct ltable td_blockers;
+
+/**
+   Subscript lookups blocking their TRs
+   Map from "container[subscript]" strings to list of TRs
+ */
+struct hashtable subscript_blockers;
 
 #define turbine_check(code) if (code != TURBINE_SUCCESS) return code;
 
@@ -134,7 +136,7 @@ turbine_init(int amserver, int rank, int size)
   ltable_init(&trs_running, 1024*1024);
   if (!table)
     return TURBINE_ERROR_OOM;
-  ltable_init(&blockers, 1024*1024);
+  ltable_init(&td_blockers, 1024*1024);
   initialized = true;
   return TURBINE_SUCCESS;
 }
@@ -153,31 +155,31 @@ tr_create(turbine_transform* transform, tr** t)
 
   if (transform->inputs > 0)
   {
-    result->transform.input =
+    result->transform.input_list =
         malloc(transform->inputs*sizeof(turbine_datum_id));
-    if (! result->transform.input)
+    if (! result->transform.input_list)
       return TURBINE_ERROR_OOM;
   }
   else
-    result->transform.input = NULL;
+    result->transform.input_list = NULL;
 
   if (transform->outputs > 0)
   {
-    result->transform.output =
+    result->transform.output_list =
         malloc(transform->outputs*sizeof(turbine_datum_id));
-    if (! result->transform.output)
+    if (! result->transform.output_list)
       return TURBINE_ERROR_OOM;
   }
   else
-    result->transform.output = NULL;
+    result->transform.output_list = NULL;
 
   result->transform.inputs = transform->inputs;
   for (int i = 0; i < transform->inputs; i++)
-    result->transform.input[i] = transform->input[i];
+    result->transform.input_list[i] = transform->input_list[i];
 
   result->transform.outputs = transform->outputs;
   for (int i = 0; i < transform->outputs; i++)
-    result->transform.output[i] = transform->output[i];
+    result->transform.output_list[i] = transform->output_list[i];
 
   result->status = TR_WAITING;
 
@@ -190,10 +192,10 @@ tr_free(tr* t)
 {
   free(t->transform.name);
   free(t->transform.action);
-  if (t->transform.input)
-    free(t->transform.input);
-  if (t->transform.output)
-    free(t->transform.output);
+  if (t->transform.input_list)
+    free(t->transform.input_list);
+  if (t->transform.output_list)
+    free(t->transform.output_list);
   free(t);
 }
 
@@ -262,8 +264,8 @@ rule_inputs(tr* transform)
 
   for (int i = 0; i < transform->transform.inputs; i++)
   {
-    turbine_datum_id id = transform->transform.input[i];
-    struct longlist* L = ltable_search(&blockers, id);
+    turbine_datum_id id = transform->transform.input_list[i];
+    struct longlist* L = ltable_search(&td_blockers, id);
     // turbine_condition(L != NULL, TURBINE_ERROR_NOT_FOUND,
     //                  "rule_add: could not find: <%li>\n", id);
     if (L == NULL)
@@ -334,9 +336,9 @@ turbine_declare(turbine_datum_id id, struct longlist** result)
   assert(initialized);
   DEBUG_TURBINE("declare: %li\n", id);
   struct longlist* blocked = longlist_create();
-  if (ltable_contains(&blockers, id))
+  if (ltable_contains(&td_blockers, id))
     return TURBINE_ERROR_DOUBLE_DECLARE;
-  ltable_add(&blockers, id, blocked);
+  ltable_add(&td_blockers, id, blocked);
   if (result != NULL)
     *result = blocked;
   return TURBINE_SUCCESS;
@@ -406,7 +408,7 @@ turbine_complete(turbine_transform_id id)
   DEBUG_TURBINE("complete: {%li} %s\n", id, t->transform.name);
   for (int i = 0; i < t->transform.outputs; i++)
   {
-    turbine_code code = turbine_close(t->transform.output[i]);
+    turbine_code code = turbine_close(t->transform.output_list[i]);
     turbine_check(code);
   }
   tr_free(t);
@@ -417,11 +419,8 @@ turbine_complete(turbine_transform_id id)
 turbine_code
 turbine_close(turbine_datum_id id)
 {
-  // DEBUG_TURBINE("turbine_close()...\n");
-  // ltable_dumpkeys(&trs_waiting);
-
-  // Look up what this td was blocking
-  struct longlist* L = ltable_search(&blockers, id);
+  // Look up transforms that this td was blocking
+  struct longlist* L = ltable_search(&td_blockers, id);
   if (L == NULL)
     // We don't have any rules that block on this td
     return TURBINE_SUCCESS;
@@ -458,7 +457,7 @@ progress(tr* transform)
   while (transform->blocker < transform->transform.inputs)
   {
     turbine_datum_id tid =
-        transform->transform.input[transform->blocker];
+        transform->transform.input_list[transform->blocker];
     subscribe(tid, &subscribed);
     if (!subscribed)
       transform->blocker++;
@@ -544,7 +543,8 @@ td_get(turbine_datum_id id, turbine_datum* td)
 {
   int length;
   int error = ADLB_Retrieve(id, xfer, &length);
-  assert(error == ADLB_SUCCESS);
+  if (error != ADLB_SUCCESS)
+    return TURBINE_ERROR_NOT_FOUND;
 
   char type_string[32];
   char* p = strchr(xfer, ':');
@@ -558,16 +558,16 @@ td_get(turbine_datum_id id, turbine_datum* td)
 
   switch (type)
   {
-  case TURBINE_TYPE_FILE:
-    break;
-  case TURBINE_TYPE_CONTAINER:
-    break;
-  case TURBINE_TYPE_INTEGER:
-    sscanf(p+1, "%li", &td->data.integer.value);
-    break;
-  case TURBINE_TYPE_STRING:
-    td->data.string.value = strdup(p+1);
-    td->data.string.length = strlen(td->data.string.value);
+    case TURBINE_TYPE_FILE:
+      break;
+    case TURBINE_TYPE_CONTAINER:
+      break;
+    case TURBINE_TYPE_INTEGER:
+      sscanf(p+1, "%li", &td->data.integer.value);
+      break;
+    case TURBINE_TYPE_STRING:
+      td->data.string.value = strdup(p+1);
+      td->data.string.length = strlen(td->data.string.value);
   }
 
   return TURBINE_SUCCESS;
@@ -611,7 +611,7 @@ transform_tostring(char* output, turbine_transform* transform)
   append(p, "(");
   for (int i = 0; i < transform->inputs; i++)
   {
-    append(p, "%li", transform->input[i]);
+    append(p, "%li", transform->input_list[i]);
     if (i < transform->inputs-1)
       append(p, " ");
   }
@@ -619,7 +619,7 @@ transform_tostring(char* output, turbine_transform* transform)
 
   for (int i = 0; i < transform->outputs; i++)
   {
-    append(p, "%li", transform->output[i]);
+    append(p, "%li", transform->output_list[i]);
     if (i < transform->outputs-1)
       append(p, " ");
   }

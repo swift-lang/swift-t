@@ -430,12 +430,15 @@ ADLB_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
   assert(rc == ADLB_SUCCESS);
 
   Tcl_Obj* result = Tcl_NewListObj(0, NULL);
-  for (int i = 0; i < count; i++)
+  if (count > 0)
   {
-    Tcl_Obj* o = Tcl_NewIntObj(ranks[i]);
-    Tcl_ListObjAppendElement(interp, result, o);
+    for (int i = 0; i < count; i++)
+    {
+      Tcl_Obj* o = Tcl_NewIntObj(ranks[i]);
+      Tcl_ListObjAppendElement(interp, result, o);
+    }
+    free(ranks);
   }
-  free(ranks);
   Tcl_SetObjResult(interp, result);
 
   return TCL_OK;

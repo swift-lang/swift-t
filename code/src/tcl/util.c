@@ -28,6 +28,24 @@ turbine_tcl_long_array(Tcl_Interp* interp, Tcl_Obj* list, int max,
   return TURBINE_SUCCESS;
 }
 
+turbine_code
+turbine_tcl_string_array(Tcl_Interp* interp, Tcl_Obj* list, int max,
+                         char** output, int* count)
+{
+  Tcl_Obj** entry;
+  int code = Tcl_ListObjGetElements(interp, list, count, &entry);
+  assert(code == TCL_OK);
+  assert(*count < max);
+  for (int i = 0; i < *count; i++)
+  {
+    char* t = Tcl_GetStringFromObj(entry[i], NULL);
+    if (code != TCL_OK)
+          return TURBINE_ERROR_UNKNOWN;
+    output[i] = t;
+  }
+  return TURBINE_SUCCESS;
+}
+
 #define TCL_CONDITION_MSG_MAX 1024
 
 void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,

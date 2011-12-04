@@ -106,9 +106,9 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(6);
 
   int inputs;
-  turbine_datum_id input[TCL_TURBINE_MAX_INPUTS];
+  turbine_datum_id input_list[TCL_TURBINE_MAX_INPUTS];
   int outputs;
-  turbine_datum_id output[TCL_TURBINE_MAX_INPUTS];
+  turbine_datum_id output_list[TCL_TURBINE_MAX_INPUTS];
 
   int error;
   turbine_transform_id id;
@@ -120,14 +120,14 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   error = turbine_tcl_long_array(interp, objv[3],
                                 TCL_TURBINE_MAX_INPUTS,
-                                input, &inputs);
+                                input_list, &inputs);
   TCL_CHECK_MSG(error, "could not parse inputs list as integers:\n"
                 "in rule: <%li> %s inputs: \"%s\"",
                 id, name, Tcl_GetString(objv[3]));
 
   error = turbine_tcl_long_array(interp, objv[4],
                                 TCL_TURBINE_MAX_OUTPUTS,
-                                output, &outputs);
+                                 output_list, &outputs);
   TCL_CHECK_MSG(error, "could not parse outputs list as integers:\n"
                  "in rule: <%li> %s outputs: \"%s\"",
                  id, name, Tcl_GetString(objv[4]));
@@ -140,9 +140,9 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
     .name = name,
     .action = action,
     .inputs = inputs,
-    .input = input,
+    .input_list = input_list,
     .outputs = outputs,
-    .output = output
+    .output_list = output_list
   };
 
   turbine_code code = turbine_rule_add(id, &transform);

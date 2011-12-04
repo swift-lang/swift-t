@@ -14,6 +14,10 @@ namespace eval turbine {
     # User functions
     namespace export arithmetic literal shell
 
+    # Memory functions (will be in turbine::f namespace)
+    namespace export container_f_get container_f_insert
+    namespace export f_reference f_dereference
+
     # System functions
     namespace export stack_lookup
 
@@ -291,23 +295,23 @@ namespace eval turbine {
     # Copy from TD src to TD dest
     # src must be closed
     # dest must be a new TD but not created or closed
-    # NOT TESTED
-    proc copy { src dest } {
+    # DELETE THIS
+    # proc copy { src dest } {
 
-        set type [ typeof $src ]
-        switch $type {
-            integer {
-                set t [ integer_get $src ]
-                integer $dest
-                integer_set $dest $t
-            }
-            string {
-                set t [ string_get $src ]
-                string_init $dest
-                string_set $dest $t
-            }
-        }
-    }
+    #     set type [ typeof $src ]
+    #     switch $type {
+    #         integer {
+    #             set t [ integer_get $src ]
+    #             integer $dest
+    #             integer_set $dest $t
+    #         }
+    #         string {
+    #             set t [ string_get $src ]
+    #             string_init $dest
+    #             string_set $dest $t
+    #         }
+    #     }
+    # }
 
     # User function
     # usage: strcat <result> <args>*
@@ -538,22 +542,76 @@ namespace eval turbine {
     }
 
     # When i is closed, set d := c[i]
-    # d: the destination
+    # d: the destination, an integer
+    # inputs: [ list c i ]
     # c: the container
     # i: the subscript
-    proc container_load { d c i } {
+    proc container_f_get { parent d inputs } {
+        set c [ lindex $inputs 0 ]
+        set i [ lindex $inputs 1 ]
         set rule_id [ rule_new ]
-        rule $rule_id "container_load-$c-$i" $i $d \
-            "tp: turbine::container_load_body $d $c $i"
+        rule $rule_id "container_f_get-$c-$i" $i $d \
+            "tp: turbine::container_f_get_body $d $c $i"
     }
 
-    proc container_load_body { d c i } {
+    proc container_f_get_body { d c i } {
         set t1 [ integer_get $i ]
         set t2 [ container_get $c $t1 ]
         if { $t2 == 0 } {
-            error "lookup failed: container_get <$c>\[$t1\]"
+            error "lookup failed: container_f_get <$c>\[$t1\]"
         }
         set t3 [ integer_get $t2 ]
         integer_set $d $t3
+    }
+
+    # When i is closed, set c[i] := d
+    # inputs: [ list c i d ]
+    # c: the container
+    # i: the subscript
+    # d: the data
+    # outputs: ignored.  To block on this, use turbine::reference
+    proc container_f_insert { parent outputs inputs } {
+        set c [ lindex $inputs 0 ]
+        set i [ lindex $inputs 1 ]
+        set d [ lindex $inputs 2 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "container_f_insert-$c-$i" $i "" \
+            "tp: turbine::container_f_insert_body $c $i $d"
+    }
+
+    proc container_f_insert_body { c i d } {
+        set t1 [ integer_get $i ]
+        container_insert $c $t1 $d
+    }
+
+    # When i is closed, get a reference on c[i] in TD d
+    # Thus, you can block on d and be notified when c[i] exists
+    # inputs: [ list c i d ]
+    # outputs: None.  You can block on d with turbine::dereference
+    # c: the container
+    # i: the subscript
+    # d: the reference TD
+    proc f_reference { parent outputs inputs } {
+        set c [ lindex $inputs 0 ]
+        set i [ lindex $inputs 1 ]
+        set d [ lindex $inputs 2 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "f_reference_body-$c-$i" $i "" \
+            "tp: turbine::f_reference_body $c $i $d"
+    }
+    proc f_reference_body { c i d } {
+        set t1 [ integer_get $i ]
+        c::reference $c $i $d
+    }
+
+    # When reference r is closed, store its (integer) value in v
+    proc f_dereference { parent v r } {
+        set rule_id [ rule_new ]
+        rule $rule_id "f_dereference-$v-$r" $r $v \
+            "tp: turbine::f_dereference_body $v $r"
+    }
+    proc f_dereference_body { v r } {
+        set t [ integer_get [ integer_get $r ] ]
+        integer_set $v $t
     }
 }
