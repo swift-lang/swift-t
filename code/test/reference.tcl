@@ -27,8 +27,8 @@ proc rules { } {
     set c [ turbine::data_new ]
     turbine::container_init $c integer
 
-    set i [ turbine::literal integer 3 ]
-    set j [ turbine::literal integer 4 ]
+    set i [ turbine::literal integer 37 ]
+    set j [ turbine::literal integer 41 ]
     set r1 [ turbine::data_new ]
     set v1 [ turbine::data_new ]
     turbine::integer_init $r1
