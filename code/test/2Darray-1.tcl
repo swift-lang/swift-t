@@ -8,6 +8,9 @@
 # int k = 59;
 # A[i][j] = k;
 
+# This could be implemented without references but is
+# done with references here for testing
+
 package require turbine 0.1
 
 proc rules { } {
