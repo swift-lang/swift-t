@@ -16,7 +16,7 @@ proc rules { } {
     set v [ turbine::data_new ]
     turbine::integer_init $v
 
-    turbine::f_dereference no_stack $v $r
+    turbine::f_dereference_integer no_stack $v $r
     turbine::trace no_stack "" $v
 }
 

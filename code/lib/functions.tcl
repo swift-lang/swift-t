@@ -586,6 +586,7 @@ namespace eval turbine {
 
     # When i is closed, get a reference on c[i] in TD d
     # Thus, you can block on d and be notified when c[i] exists
+    # d is an integer.  The value of d is the TD of c[i]
     # inputs: [ list c i d ]
     # outputs: None.  You can block on d with turbine::dereference
     # c: the container
@@ -605,12 +606,12 @@ namespace eval turbine {
     }
 
     # When reference r is closed, store its (integer) value in v
-    proc f_dereference { parent v r } {
+    proc f_dereference_integer { parent v r } {
         set rule_id [ rule_new ]
         rule $rule_id "f_dereference-$v-$r" $r $v \
-            "tp: turbine::f_dereference_body $v $r"
+            "tp: turbine::f_dereference_integer_body $v $r"
     }
-    proc f_dereference_body { v r } {
+    proc f_dereference_integer_body { v r } {
         set t [ integer_get [ integer_get $r ] ]
         integer_set $v $t
     }
