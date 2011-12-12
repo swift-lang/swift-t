@@ -615,4 +615,24 @@ namespace eval turbine {
         set t [ integer_get [ integer_get $r ] ]
         integer_set $v $t
     }
+
+    # When reference r on c[*] is closed, store c[*][i] = d
+    # Blocks on r and i
+    # inputs: [ list r c i d ]
+    # outputs: ignored
+    proc f_container_reference_insert { parent outputs inputs } {
+        set r [ lindex $inputs 0 ]
+        set c [ lindex $inputs 1 ]
+        set i [ lindex $inputs 2 ]
+        set d [ lindex $inputs 3 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "f_container_reference_insert-$r" "$r $i" "" \
+            "tp: turbine::f_container_reference_insert_body $c $i $d"
+    }
+    proc f_container_reference_insert_body { c i d } {
+        # We do not need to read r
+        # s: The subscript value
+        set s [ integer_get $i ]
+        container_insert $c $s $d
+    }
 }
