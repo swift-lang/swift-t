@@ -2,15 +2,15 @@
 # Test basic container reference functionality
 
 # SwiftScript-ish
-# int i = 3;
-# int j = 4;
+# int i = 37;
+# int j = 41;
 # int c[];
 # // reference before insertion
 # int* r1 = &c[i];
 # int v1 = *r1;
 # trace(v1);
 # c[i] = j;
-# // prints "trace: 4"
+# // prints "trace: 41"
 
 # // reference after insertion
 # int k = 72;
