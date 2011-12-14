@@ -103,6 +103,13 @@ namespace eval turbine {
         string_set $result $v
     }
 
+    proc call_composite { stack f outputs inputs } {
+
+        set rule_id [ rule_new ]
+        turbine::c::rule $rule_id $f "$inputs" "$outputs" \
+            "tp: $f $stack $outputs $inputs"
+    }
+
     # User function
     # This name conflicts with a TCL built-in - it cannot be exported
     # TODO: Replace this with tracef()
