@@ -7,6 +7,19 @@ proc assert { condition msg } {
     }
 }
 
+# Assert that each x is non-empty
+# Note: each x should be passed as a symbol
+#       this is so we can print a nice error message
+proc nonempty { args } {
+    foreach x $args {
+        upvar 1 $x v
+        if { ( ! [ info exists v ] ) ||
+             [ string length $v ] == 0 } {
+            error "This must not be empty: $x"
+        }
+    }
+}
+
 # Given: enum E { T1 T2 }
 # Defines global array E with members E(T1)=0, E(T2)=1
 proc enum { name members } {
