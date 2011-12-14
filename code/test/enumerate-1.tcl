@@ -41,7 +41,8 @@ proc rules { } {
     turbine::close_container $c
 }
 
-turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
+turbine::defaults
+turbine::init $engines $servers
 turbine::start rules
 turbine::finalize
 
