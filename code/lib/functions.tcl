@@ -12,7 +12,7 @@
 namespace eval turbine {
 
     # User functions
-    namespace export arithmetic literal shell
+    namespace export arithmetic enumerate literal shell
 
     # Memory functions (will be in turbine::f namespace)
     namespace export container_f_get container_f_insert
@@ -222,17 +222,16 @@ namespace eval turbine {
         }
     }
 
-    # User function
-    # NOT TESTED
-    proc enumerate { result container } {
-
+    # When container is closed, concatenate its keys in result
+    # container: The container to read
+    # result: An initialized string
+    proc enumerate { stack result container } {
         set rule_id [ data_new ]
-        rule $rule_id "enumerate-$rule_id" $container $result \
+        rule $rule_id "enumerate-$container" $container $result \
             "tp: enumerate_body $result $container"
     }
 
     proc enumerate_body { result container } {
-
         set s [ container_list $container ]
         string_set $result $s
     }
@@ -574,6 +573,7 @@ namespace eval turbine {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set d [ lindex $inputs 2 ]
+        nonempty c i d
         set rule_id [ rule_new ]
         rule $rule_id "container_f_insert-$c-$i" $i "" \
             "tp: turbine::container_f_insert_body $c $i $d"

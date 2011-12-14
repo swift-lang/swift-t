@@ -21,6 +21,7 @@ TEST_SRC_TCL := $(DIR)/adlb-noop.tcl      \
                 $(DIR)/container2.tcl     \
                 $(DIR)/container3.tcl     \
                 $(DIR)/container_load.tcl \
+                $(DIR)/enumerate.tcl      \
                 $(DIR)/dereference.tcl    \
                 $(DIR)/reference.tcl      \
                 $(DIR)/if1.tcl            \
@@ -28,7 +29,8 @@ TEST_SRC_TCL := $(DIR)/adlb-noop.tcl      \
                 $(DIR)/readdata.tcl       \
                 $(DIR)/range.tcl          \
                 $(DIR)/drange.tcl         \
-                $(DIR)/noop2.tcl          \
-                # $(DIR)/diamond4.tcl
+                $(DIR)/noop2.tcl
 
-#                $(DIR)/modftdock.tcl      \
+# FUTURE WORK:
+#                $(DIR)/diamond4.tcl
+#                $(DIR)/modftdock.tcl
