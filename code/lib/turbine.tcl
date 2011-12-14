@@ -128,7 +128,7 @@ namespace eval turbine {
     proc abort { e } {
         # Error handling
         puts "CAUGHT ERROR:"
-        puts $e
+        puts $::errorInfo
         puts "CALLING adlb::abort"
         adlb::abort
     }
