@@ -35,6 +35,7 @@ namespace eval turbine {
     }
 
     proc string_set { id value } {
+        debug "string_set: <$id>=$value"
         close_dataset $id "string:$value"
     }
 
