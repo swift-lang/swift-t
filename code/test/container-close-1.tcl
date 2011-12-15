@@ -7,8 +7,8 @@
 # int j1=98, j2=72;
 # c[i1] = j1;
 # c[i2] = j2;
-#
-# tracef("%k%s", c, "CLOSED!");
+# string s = enumerate(c)
+# trace(s);
 
 package require turbine 0.1
 
@@ -34,8 +34,11 @@ proc rules { } {
     turbine::container_f_insert no_stack "" "$c $i1 $j1"
     turbine::container_f_insert no_stack "" "$c $i2 $j2"
 
-    set rule_id [ rule_new ]
-    rule 1 1 "$c" "" "tp: puts CLOSED!"
+    set s [ data_new ]
+    string_init $s
+
+    turbine::enumerate no_stack $s $c
+    turbine::trace no_stack "" $s
 }
 
 turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
