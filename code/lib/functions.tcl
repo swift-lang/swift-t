@@ -108,6 +108,7 @@ namespace eval turbine {
         set rule_id [ rule_new ]
         turbine::c::rule $rule_id $f "$inputs" "$outputs" \
             "tp: $f $stack $outputs $inputs"
+        return $rule_id
     }
 
     # User function
@@ -233,7 +234,7 @@ namespace eval turbine {
     # container: The container to read
     # result: An initialized string
     proc enumerate { stack result container } {
-        set rule_id [ data_new ]
+        set rule_id [ rule_new ]
         rule $rule_id "enumerate-$container" $container $result \
             "tp: enumerate_body $result $container"
     }
@@ -357,7 +358,7 @@ namespace eval turbine {
     proc toint_body { input result } {
 
         set t [ string_get $input ]
-        # TCL performs the conversion naturally
+        # Tcl performs the conversion naturally
         integer_set $result $t
     }
 
@@ -539,7 +540,6 @@ namespace eval turbine {
                     # We have no more frames to check
                     break
                 }
-
             } else {
                 return $result
             }
@@ -581,7 +581,7 @@ namespace eval turbine {
         set i [ lindex $inputs 1 ]
         set d [ lindex $inputs 2 ]
         nonempty c i d
-        adlb::make_slot $c
+        adlb::slot_create $c
         set rule_id [ rule_new ]
         rule $rule_id "container_f_insert-$c-$i" $i "" \
             "tp: turbine::container_f_insert_body $c $i $d"
@@ -644,6 +644,33 @@ namespace eval turbine {
         container_insert $c $s $d
     }
 
+    variable container_branches
+
+    # c: container
+    # r: rule id
+    proc container_branch_post { r c } {
+
+        variable container_branches
+
+        puts "container_branch_post: rule: $r container: $c"
+        dict lappend container_branches $r $c
+        adlb::slot_create $c
+    }
+
+    # r: rule id
+    proc container_branch_complete { r } {
+
+        variable container_branches
+
+        puts "container_branch_complete: $r"
+        set cL [ dict get $container_branches $r ]
+        foreach c $cL {
+            puts "container: $c"
+            adlb::slot_drop $c
+        }
+        set container_branches [ dict remove $container_branches ]
+    }
+
     variable subs
     variable map_rule_stack
     variable map_stack_container
@@ -663,7 +690,12 @@ namespace eval turbine {
     }
 
     proc scope_complete { rule_id } {
-        set stack [ dict get rule_map $rule_id ]
+
+        puts "scope_complete: $rule_id"
+
+
+        # Do we need this?
+        # set stack [ dict get rule_map $rule_id ]
     }
 
     proc scope_decr { stack sub } {

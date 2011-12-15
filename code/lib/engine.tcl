@@ -88,11 +88,13 @@ namespace eval turbine {
             procedure {
 		dict incr stats tasks_run
                 set command [ lrange $msg 2 end ]
+                puts "control:procedure: $command"
                 ::eval $command
             }
             complete {
                 set id [ lindex $msg 1 ]
                 turbine::c::complete $id
+                # branch_complete $id
             }
             close {
                 set id [ lindex $msg 1 ]

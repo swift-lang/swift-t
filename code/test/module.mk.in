@@ -22,6 +22,7 @@ TEST_SRC_TCL := $(DIR)/adlb-noop.tcl         \
                 $(DIR)/container3.tcl        \
                 $(DIR)/container_load.tcl    \
                 $(DIR)/container-close-1.tcl \
+                $(DIR)/container-close-2.tcl \
                 $(DIR)/enumerate-1.tcl       \
                 $(DIR)/enumerate-2.tcl       \
                 $(DIR)/dereference.tcl       \
