@@ -406,11 +406,11 @@ turbine_complete(turbine_transform_id id)
   tr* t = ltable_remove(&trs_running, id);
   assert(t);
   DEBUG_TURBINE("complete: {%li} %s\n", id, t->transform.name);
-  for (int i = 0; i < t->transform.outputs; i++)
-  {
-    turbine_code code = turbine_close(t->transform.output_list[i]);
-    turbine_check(code);
-  }
+  //  for (int i = 0; i < t->transform.outputs; i++)
+  //  {
+  //    turbine_code code = turbine_close(t->transform.output_list[i]);
+  //    turbine_check(code);
+  //  }
   tr_free(t);
 
   return TURBINE_SUCCESS;
