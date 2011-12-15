@@ -37,8 +37,6 @@ proc rules { } {
     turbine::enumerate no_stack $s $c
 
     turbine::trace no_stack "" $s
-
-    turbine::close_container $c
 }
 
 turbine::defaults
