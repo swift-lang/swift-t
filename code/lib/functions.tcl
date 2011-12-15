@@ -581,6 +581,7 @@ namespace eval turbine {
         set i [ lindex $inputs 1 ]
         set d [ lindex $inputs 2 ]
         nonempty c i d
+        adlb::make_slot $c
         set rule_id [ rule_new ]
         rule $rule_id "container_f_insert-$c-$i" $i "" \
             "tp: turbine::container_f_insert_body $c $i $d"
@@ -641,5 +642,44 @@ namespace eval turbine {
         # s: The subscript value
         set s [ integer_get $i ]
         container_insert $c $s $d
+    }
+
+    variable subs
+    variable map_rule_stack
+    variable map_stack_container
+
+    proc scope_enter { stack } {
+        dict lappend subs $stack
+    }
+
+    proc scope_add { stack rule_id } {
+        dict incr subs $stack
+        dict set rule_map $rule_id $stack
+    }
+
+    proc scope_container { stack c } {
+
+
+    }
+
+    proc scope_complete { rule_id } {
+        set stack [ dict get rule_map $rule_id ]
+    }
+
+    proc scope_decr { stack sub } {
+        dict incr subs $stack -1
+        set count [ dict get subs $stack ]
+        if { count == 0 } {
+            scope_exit $stack
+        }
+    }
+
+    proc scope_exit { stack } {
+        variable complete_rank
+
+    }
+
+    proc f_close_container { c r } {
+        puts "f_close_container: $c $r"
     }
 }

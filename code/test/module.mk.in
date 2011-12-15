@@ -6,32 +6,34 @@ TEST_SRC_C := $(DIR)/list.c       \
               $(DIR)/log.c        \
               $(DIR)/debug.c
 
-TEST_SRC_TCL := $(DIR)/adlb-noop.tcl      \
-                $(DIR)/noop.tcl           \
-                $(DIR)/adlb-putget.tcl    \
-                $(DIR)/batcher.tcl        \
-                $(DIR)/adlb-data.tcl      \
-                $(DIR)/diamond2.tcl       \
-                $(DIR)/linear-10.tcl      \
-                $(DIR)/numbers.tcl        \
-                $(DIR)/arithmetic.tcl     \
-                $(DIR)/arithmetic2.tcl    \
-                $(DIR)/strings.tcl        \
-                $(DIR)/dht.tcl            \
-                $(DIR)/container2.tcl     \
-                $(DIR)/container3.tcl     \
-                $(DIR)/container_load.tcl \
-                $(DIR)/enumerate-1.tcl    \
-                $(DIR)/enumerate-2.tcl    \
-                $(DIR)/dereference.tcl    \
-                $(DIR)/reference.tcl      \
-                $(DIR)/if1.tcl            \
-                $(DIR)/loop1.tcl          \
-                $(DIR)/readdata.tcl       \
-                $(DIR)/range.tcl          \
-                $(DIR)/drange.tcl         \
+TEST_SRC_TCL := $(DIR)/adlb-noop.tcl         \
+                $(DIR)/noop.tcl              \
+                $(DIR)/adlb-putget.tcl       \
+                $(DIR)/batcher.tcl           \
+                $(DIR)/adlb-data.tcl         \
+                $(DIR)/diamond2.tcl          \
+                $(DIR)/linear-10.tcl         \
+                $(DIR)/numbers.tcl           \
+                $(DIR)/arithmetic.tcl        \
+                $(DIR)/arithmetic2.tcl       \
+                $(DIR)/strings.tcl           \
+                $(DIR)/dht.tcl               \
+                $(DIR)/container2.tcl        \
+                $(DIR)/container3.tcl        \
+                $(DIR)/container_load.tcl    \
+                $(DIR)/container-close-1.tcl \
+                $(DIR)/enumerate-1.tcl       \
+                $(DIR)/enumerate-2.tcl       \
+                $(DIR)/dereference.tcl       \
+                $(DIR)/reference.tcl         \
+                $(DIR)/if1.tcl               \
+                $(DIR)/loop1.tcl             \
+                $(DIR)/readdata.tcl          \
+                $(DIR)/range.tcl             \
+                $(DIR)/drange.tcl            \
                 $(DIR)/noop2.tcl
 
 # FUTURE WORK:
 #                $(DIR)/diamond4.tcl
 #                $(DIR)/modftdock.tcl
+

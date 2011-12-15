@@ -515,6 +515,25 @@ ADLB_Container_Reference_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+/**
+   usage: adlb::container_reference <container_id>
+*/
+static int
+ADLB_Make_Slot_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  long container_id;
+  Tcl_GetLongFromObj(interp, objv[1], &container_id);
+
+  DEBUG_ADLB("adlb::make_slot: <%li>\n", container_id);
+  int rc = ADLB_Make_slot(container_id);
+
+  if (rc != ADLB_SUCCESS)
+    return TCL_ERROR;
+  return TCL_OK;
+}
 
 static int
 ADLB_Abort_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -566,6 +585,7 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("create",    ADLB_Create_Cmd);
   COMMAND("store",     ADLB_Store_Cmd);
   COMMAND("retrieve",  ADLB_Retrieve_Cmd);
+  COMMAND("make_slot", ADLB_Make_Slot_Cmd);
   COMMAND("insert",    ADLB_Insert_Cmd);
   COMMAND("lookup",    ADLB_Lookup_Cmd);
   COMMAND("close",     ADLB_Close_Cmd);

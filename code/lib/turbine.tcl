@@ -12,6 +12,11 @@ namespace eval turbine {
     variable mode
     # Statistics
     variable stats
+    # Table of outstanding subroutines
+    # Maps stack to outstanding sub count
+    variable subs
+    # Map rule number to stack TD
+    variable rule_map
 
     # User function
     # param e Number of engines
@@ -35,6 +40,8 @@ namespace eval turbine {
         }
 
         start_stats
+
+        set subs [ dict create ]
 
         if { [ string equal $mode SERVER ] } {
             argv_init

@@ -48,7 +48,7 @@ namespace eval turbine {
 
             set msg [ adlb::get $WORK_TYPE(CONTROL) answer_rank ]
             if { [ string length $msg ] } {
-                control $msg
+                control $msg $answer_rank
             } else break
         }
     }
@@ -74,11 +74,14 @@ namespace eval turbine {
     }
 
     # Handle a message coming into this rule engine
-    proc control { msg } {
+    proc control { msg answer_rank } {
 
         debug "control: $msg"
 
 	variable stats
+        variable complete_rank
+        set complete_rank $answer_rank
+
         set header [ lindex $msg 0 ]
         # show header
         switch $header {
@@ -103,7 +106,6 @@ namespace eval turbine {
 
     # Main worker loop
     proc worker { } {
-
 
         global WORK_TYPE
         debug "TURBINE WORKER..."
