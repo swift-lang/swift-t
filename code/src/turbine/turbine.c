@@ -129,13 +129,19 @@ turbine_init(int amserver, int rank, int size)
 
   bool result;
   result = table_lp_init(&trs_waiting, 1024*1024);
+  printf("ok1\n");
   if (!result)
+  {
+    printf("ok not\n");
     return TURBINE_ERROR_OOM;
+  }
   list_init(&trs_ready);
   result = table_lp_init(&trs_running, 1024*1024);
+  printf("ok2\n");
   if (!result)
     return TURBINE_ERROR_OOM;
   result = table_lp_init(&td_blockers, 1024*1024);
+  printf("ok3\n");
   if (!result)
     return TURBINE_ERROR_OOM;
   initialized = true;
