@@ -11,7 +11,7 @@
 
 #include <list_l.h>
 
-#include "src/turbine/defs.h"
+#include "src/turbine/turbine-defs.h"
 
 typedef struct
 {
