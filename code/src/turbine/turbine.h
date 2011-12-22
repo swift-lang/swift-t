@@ -8,7 +8,8 @@
 #ifndef TURBINE_H
 #define TURBINE_H
 
-#include "src/util/longlist.h"
+#include <list_l.h>
+
 #include "src/turbine/defs.h"
 
 typedef struct
@@ -35,7 +36,7 @@ typedef struct
 turbine_code turbine_init(int amserver, int rank, int size);
 
 turbine_code turbine_declare(turbine_datum_id id,
-                             struct longlist** result);
+                             struct list_l** result);
 
 turbine_code turbine_rule_add(turbine_transform_id id,
                               turbine_transform* transform);

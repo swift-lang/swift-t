@@ -14,13 +14,12 @@
 
 #include <adlb.h>
 
-#include "src/util/debug.h"
-#include "src/util/tools.h"
 #include <table.h>
 #include <list.h>
-#include <list_l.h>
-#include "src/util/longlist.h"
 #include <table_lp.h>
+
+#include "src/util/debug.h"
+#include "src/util/tools.h"
 
 #include "src/turbine/turbine.h"
 
@@ -267,12 +266,12 @@ rule_inputs(tr* transform)
   for (int i = 0; i < transform->transform.inputs; i++)
   {
     turbine_datum_id id = transform->transform.input_list[i];
-    struct longlist* L = table_lp_search(&td_blockers, id);
+    struct list_l* L = table_lp_search(&td_blockers, id);
     // turbine_condition(L != NULL, TURBINE_ERROR_NOT_FOUND,
     //                  "rule_add: could not find: <%li>\n", id);
     if (L == NULL)
       turbine_declare(id, &L);
-    longlist_add(L, transform->id);
+    list_l_add(L, transform->id);
   }
 }
 
@@ -333,11 +332,11 @@ turbine_rules_push()
    @param result If non-NULL, return the new blocked list here
  */
 turbine_code
-turbine_declare(turbine_datum_id id, struct longlist** result)
+turbine_declare(turbine_datum_id id, struct list_l** result)
 {
   assert(initialized);
   DEBUG_TURBINE("declare: %li\n", id);
-  struct longlist* blocked = longlist_create();
+  struct list_l* blocked = list_l_create();
   if (table_lp_contains(&td_blockers, id))
     return TURBINE_ERROR_DOUBLE_DECLARE;
   table_lp_add(&td_blockers, id, blocked);
@@ -422,7 +421,7 @@ turbine_code
 turbine_close(turbine_datum_id id)
 {
   // Look up transforms that this td was blocking
-  struct longlist* L = table_lp_search(&td_blockers, id);
+  struct list_l* L = table_lp_search(&td_blockers, id);
   if (L == NULL)
     // We don't have any rules that block on this td
     return TURBINE_SUCCESS;
@@ -432,7 +431,7 @@ turbine_close(turbine_datum_id id)
   list_init(&tmp);
 
   // Try to make progress on those transforms
-  for (struct longlist_item* item = L->head; item; item = item->next)
+  for (struct list_l_item* item = L->head; item; item = item->next)
   {
     turbine_transform_id tr_id = item->data;
     tr* transform = table_lp_search(&trs_waiting, tr_id);
