@@ -10,7 +10,7 @@
 # NOTFOUND means FILE NOT FOUND
 
 AC_PREREQ([2.63])
-AC_INIT([FULL-PACKAGE-NAME], [VERSION], [BUG-REPORT-ADDRESS])
+AC_INIT([Turbine], [0.1], [wozniak@mcs.anl.gov])
 AC_CONFIG_SRCDIR([src/turbine/turbine.c])
 AC_CONFIG_HEADERS([config.h])
 
@@ -38,6 +38,26 @@ AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
 AC_DEFINE([HAVE_SYS_PARAM_H], [], [Do we have sys/param.h?])
 AC_DEFINE([HAVE_PYTHON], [], [Do we have Python?])
 
+AC_ARG_WITH(c-utils,
+                 AS_HELP_STRING(
+                    [--with-c-utils],
+                    [location of ExM c-utils]),
+                 [AC_CHECK_FILE(${withval}/lib/libexmcutils.a,
+                                [], [USE_C_UTILS=0])
+                  if test "$USE_C_UTILS" = 0 ; then
+                     AC_MSG_ERROR([Could not find ExM c-utils in $withval])
+                  fi
+                  AC_MSG_RESULT([using ExM c-utils in $withval ...])
+                  AC_DEFINE_UNQUOTED([C_UTILS_LOCATION],
+                                     "$withval", [ExM c-utils location])
+                  USE_C_UTILS=$withval
+                 ],
+                 [
+                  AC_MSG_ERROR([Not found: ExM c-utils])
+                  USE_C_UTILS=0
+                 ])
+AC_SUBST(USE_C_UTILS)
+
 # Using the MPI library under Tcl apparently requires MPICH as a
 # shared library
 
@@ -50,8 +70,8 @@ LIBMPI=libmpich.so
 # On the SiCortex, we use srun and libmpiP.a
 AC_ARG_ENABLE(sicortex,
                  AS_HELP_STRING(
-                 [--enable-sicortex],
-                 [Required if running on SiCortex]),
+                    [--enable-sicortex],
+                    [Required if running on SiCortex]),
                  [
                         USE_MACHINE=sicortex
                         USE_LAUNCHER=srun
@@ -74,8 +94,8 @@ AC_SUBST(USE_LAUNCHER)
 
 AC_ARG_WITH(mpi,
                  AS_HELP_STRING(
-                 [--with-mpi],
-                 [location of MPI installation with mpicc]),
+                    [--with-mpi],
+                    [location of MPI installation with mpicc]),
                  [AC_CHECK_FILE(${withval}/lib/${LIBMPI},
                   [], [USE_MPI=0])
                   if test "$USE_MPI" = 0 ; then
@@ -98,8 +118,8 @@ USE_MPI_LIB_DIR=0
 # This is an MPI installation without mpicc (e.g., Cray)
 AC_ARG_WITH(mpi-dir,
                  AS_HELP_STRING(
-                 [--with-mpi-dir],
-                 [location of MPI installation]),
+                    [--with-mpi-dir],
+                    [location of MPI installation]),
                  [AC_CHECK_FILE(${withval}/include/mpi.h,
                   [], [USE_MPI_INCLUDE=NOTFOUND])
                   if test "$USE_MPI_INCLUDE" = NOTFOUND ; then
@@ -130,8 +150,8 @@ AC_SUBST(USE_MPI_INCLUDE)
 
 AC_ARG_WITH(mpi-lib-dir,
                  AS_HELP_STRING(
-                 [--with-mpi-lib-dir],
-                 [directory containing MPI lib (usually libmpich.a)]),
+                    [--with-mpi-lib-dir],
+                    [directory containing MPI lib (usually libmpich.a)]),
                  [AC_CHECK_FILE(${withval},
                   [], [USE_MPI_LIB_DIR=NOTFOUND])
                   if test "$USE_MPI_LIB_DIR" = NOTFOUND ; then
@@ -148,9 +168,9 @@ USE_MPI_LIB_NAME=0
 
 AC_ARG_WITH(mpi-lib-name,
                  AS_HELP_STRING(
-                 [--with-mpi-lib-name],
-                 [name of MPI lib (usually mpich) -
-                  assumes mpi-lib-dir has been given]),
+                    [--with-mpi-lib-name],
+                    [name of MPI lib (usually mpich) -
+                        assumes mpi-lib-dir has been given]),
                  [
                   FILE=${USE_MPI_LIB_DIR}/lib${withval}.a
                   AC_CHECK_FILE(${FILE},
@@ -177,8 +197,8 @@ AC_SUBST(USE_MPI_LIB_NAME)
 
 AC_ARG_WITH(adlb,
                  AS_HELP_STRING(
-                 [--with-adlb],
-                 [location of ADLB]),
+                    [--with-adlb],
+                    [location of ADLB]),
                  [AC_CHECK_FILE(${withval}/libadlb.so,
                   [], [USE_ADLB=0])
                   if test "$USE_ADLB" = 0 ; then
@@ -197,8 +217,8 @@ AC_SUBST(USE_ADLB)
 
 AC_ARG_WITH(tcl,
                  AS_HELP_STRING(
-                 [--with-tcl],
-                 [location of TCL]),
+                    [--with-tcl],
+                    [location of TCL]),
                  [AC_CHECK_FILE(${withval}/lib/tclConfig.sh,
                   [], [USE_TCL=0])
                   if test "$USE_TCL" = 0 ; then
@@ -220,8 +240,8 @@ AC_SUBST(TCL_LIB_SPEC)
 
 AC_ARG_WITH(python,
                  AS_HELP_STRING(
-                 [--with-python],
-                 [location of Python]),
+                    [--with-python],
+                    [location of Python]),
                  [AC_CHECK_FILE(${withval}/bin/python,
                   [], [USE_PYTHON=0])
                   if test "$USE_PYTHON" = 0 ; then
@@ -242,8 +262,8 @@ AC_SUBST(USE_PYTHON)
 DISABLE_LOG=0
 AC_ARG_ENABLE(log,
                 AS_HELP_STRING(
-                 [--disable-log],
-                 [Disables logging]),
+                   [--disable-log],
+                   [Disables logging]),
                  [
                  if test "$enableval" = no ; then
                    DISABLE_LOG=1

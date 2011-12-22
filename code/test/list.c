@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "src/util/list.h"
+#include <list.h>
 
 int
 cmp(void* s1, void* ignored)

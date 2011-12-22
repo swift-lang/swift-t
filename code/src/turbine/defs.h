@@ -1,7 +1,7 @@
 
-#include "src/util/inlist.h"
-#include "src/util/list.h"
-#include "src/util/lnlist.h"
+#include <inlist.h>
+#include <list.h>
+#include <lnlist.h>
 
 typedef long turbine_datum_id;
 

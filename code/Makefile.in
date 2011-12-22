@@ -42,6 +42,8 @@ CFLAGS += -I .
 LDFLAGS = @LDFLAGS@
 # LDFLAGS += additional system libs here
 
+C_UTILS = @USE_C_UTILS@
+
 TCL := @USE_TCL@
 TCLSH := $(shell find $(TCL)/bin -name tclsh8.* )
 
@@ -80,10 +82,15 @@ endif
 CFLAGS += -std=gnu99
 CFLAGS += -g
 CFLAGS += -Wall
+CFLAGS += -I $(C_UTILS)/src
 CFLAGS += @TCL_INCLUDE_SPEC@
 CFLAGS += -fPIC
 # This is referenced in lookup3.c - may want to drop this for speed
 CFLAGS += -D VALGRIND
+
+LDFLAGS += -L $(C_UTILS)/lib
+LDFLAGS += -Wl,-rpath -Wl,$(C_UTILS)/lib
+LDFLAGS += -l exmcutils
 
 dirname = $(patsubst %/,%,$(dir $(1)))
 
@@ -190,7 +197,7 @@ tests: $(TEST_BINS)
 # Run all tests
 test_results: $(TEST_RESULTS)
 
-$(TEST_BINS): %.x: %.o $(TURBINE) # $(WOZTOOLS_LIB)
+$(TEST_BINS): %.x: %.o $(TURBINE) $(C_UTILS_LIB)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) $(LIBS) -o $(@)
 

@@ -7,6 +7,7 @@ then
   TURBINE_HOME=$( cd ${TURBINE_SCRIPTS}/.. ; /bin/pwd )
 fi
 
+export C_UTILS=@USE_C_UTILS@
 export TCL=@USE_TCL@
 export ADLB=@USE_ADLB@
 # Only one of the following is used
@@ -14,6 +15,7 @@ export MPI=@USE_MPI@
 export MPI_LIB=@USE_MPI_LIB_DIR@
 
 export LD_LIBRARY_PATH=${TURBINE_HOME}/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${C_UTILS}/lib:${LD_LIBRARY_PATH}
 export LD_LIBRARY_PATH=${TCL}/lib:${LD_LIBRARY_PATH}
 export LD_LIBRARY_PATH=${ADLB}:${LD_LIBRARY_PATH}
 export LD_LIBRARY_PATH=${MPI}/lib:${LD_LIBRARY_PATH}
