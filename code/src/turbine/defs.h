@@ -1,7 +1,7 @@
 
-#include <inlist.h>
+#include <list_i.h>
 #include <list.h>
-#include <lnlist.h>
+#include <list_l.h>
 
 typedef long turbine_datum_id;
 
@@ -58,7 +58,7 @@ typedef struct
       int length;
     } string;
   } data;
-  struct inlist listeners;
+  struct list_i listeners;
 } turbine_datum;
 
 typedef enum

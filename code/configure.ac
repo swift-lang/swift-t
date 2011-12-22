@@ -42,19 +42,23 @@ AC_ARG_WITH(c-utils,
                  AS_HELP_STRING(
                     [--with-c-utils],
                     [location of ExM c-utils]),
-                 [AC_CHECK_FILE(${withval}/lib/libexmcutils.a,
-                                [], [USE_C_UTILS=0])
-                  if test "$USE_C_UTILS" = 0 ; then
-                     AC_MSG_ERROR([Could not find ExM c-utils in $withval])
-                  fi
-                  AC_MSG_RESULT([using ExM c-utils in $withval ...])
-                  AC_DEFINE_UNQUOTED([C_UTILS_LOCATION],
-                                     "$withval", [ExM c-utils location])
-                  USE_C_UTILS=$withval
+                   [
+                    USE_C_UTILS=0
+                    AC_CHECK_FILE( ${withval}/lib/libexmcutils.a, [USE_C_UTILS=1], [])
+                    if test "$USE_C_UTILS" = 0 ; then
+                      AC_CHECK_FILE( ${withval}/lib/libexmcutils.so, [USE_C_UTILS=1], [])
+                      if test "$USE_C_UTILS" = 0 ; then
+                        AC_MSG_ERROR([Could not find ExM c-utils in $withval])
+                      fi
+                    fi
+                    AC_MSG_RESULT([using ExM c-utils in $withval ...])
+                    AC_DEFINE_UNQUOTED([C_UTILS_LOCATION],
+                                       "$withval", [ExM c-utils location])
+                    USE_C_UTILS=$withval
                  ],
                  [
-                  AC_MSG_ERROR([Not found: ExM c-utils])
-                  USE_C_UTILS=0
+                   AC_MSG_ERROR([Not found: ExM c-utils])
+                   USE_C_UTILS=0
                  ])
 AC_SUBST(USE_C_UTILS)
 

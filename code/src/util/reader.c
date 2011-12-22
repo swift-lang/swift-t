@@ -12,14 +12,14 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include <ltable.h>
+#include <table_lp.h>
 
 #include "src/util/reader.h"
 
 /**
    Map from entry ids to entries
 */
-static struct ltable table;
+static struct table_lp table;
 
 static int unique = 0;
 
@@ -43,8 +43,8 @@ struct entry
 bool
 reader_init()
 {
-  void* result = ltable_init(&table, 128);
-  return (result) ? true : false;
+  bool result = table_lp_init(&table, 128);
+  return result;
 }
 
 /**
@@ -82,7 +82,7 @@ reader_read(char* path)
   e->data = data;
   e->position = 0;
   e->number = 1;
-  ltable_add(&table, e->id, e);
+  table_lp_add(&table, e->id, e);
 
   return e->id;
 }
@@ -95,7 +95,7 @@ reader_next(long id)
 {
   reader_line result = {0};
 
-  struct entry* e = ltable_search(&table, id);
+  struct entry* e = table_lp_search(&table, id);
   result.number = e->number;
   if (!e)
     return result;
@@ -150,7 +150,7 @@ reader_next(long id)
 bool
 reader_free(long id)
 {
-  struct entry* e = ltable_remove(&table, id);
+  struct entry* e = table_lp_remove(&table, id);
   if (!e)
     return false;
 

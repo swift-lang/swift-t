@@ -16,11 +16,11 @@
 
 #include "src/util/debug.h"
 #include "src/util/tools.h"
-#include <hashtable.h>
+#include <table.h>
 #include <list.h>
-#include <lnlist.h>
+#include <list_l.h>
 #include "src/util/longlist.h"
-#include <ltable.h>
+#include <table_lp.h>
 
 #include "src/turbine/turbine.h"
 
@@ -51,7 +51,7 @@ static bool initialized = false;
    Waiting trs
    Map from tr id to tr
  */
-struct ltable trs_waiting;
+struct table_lp trs_waiting;
 
 /**
    Ready trs
@@ -62,19 +62,19 @@ struct list trs_ready;
    Running TRs
    Map from TR ID to TR
  */
-struct ltable trs_running;
+struct table_lp trs_running;
 
 /**
    TD inputs blocking their TRs
    Map from TD ID to list of TRs
  */
-struct ltable td_blockers;
+struct table_lp td_blockers;
 
 /**
    Subscript lookups blocking their TRs
    Map from "container[subscript]" strings to list of TRs
  */
-struct hashtable subscript_blockers;
+struct table subscript_blockers;
 
 #define turbine_check(code) if (code != TURBINE_SUCCESS) return code;
 
@@ -128,15 +128,17 @@ turbine_init(int amserver, int rank, int size)
   mpi_size = size;
   unique_transform = rank+mpi_size;
 
-  struct ltable* table;
-  table = ltable_init(&trs_waiting, 1024*1024);
-  if (!table)
+  bool result;
+  result = table_lp_init(&trs_waiting, 1024*1024);
+  if (!result)
     return TURBINE_ERROR_OOM;
   list_init(&trs_ready);
-  ltable_init(&trs_running, 1024*1024);
-  if (!table)
+  result = table_lp_init(&trs_running, 1024*1024);
+  if (!result)
     return TURBINE_ERROR_OOM;
-  ltable_init(&td_blockers, 1024*1024);
+  result = table_lp_init(&td_blockers, 1024*1024);
+  if (!result)
+    return TURBINE_ERROR_OOM;
   initialized = true;
   return TURBINE_SUCCESS;
 }
@@ -242,7 +244,7 @@ turbine_rule_add(turbine_transform_id id,
 
   if (subscribed)
   {
-    ltable_add(&trs_waiting, id, new_tr);
+    table_lp_add(&trs_waiting, id, new_tr);
   }
   else
   {
@@ -265,7 +267,7 @@ rule_inputs(tr* transform)
   for (int i = 0; i < transform->transform.inputs; i++)
   {
     turbine_datum_id id = transform->transform.input_list[i];
-    struct longlist* L = ltable_search(&td_blockers, id);
+    struct longlist* L = table_lp_search(&td_blockers, id);
     // turbine_condition(L != NULL, TURBINE_ERROR_NOT_FOUND,
     //                  "rule_add: could not find: <%li>\n", id);
     if (L == NULL)
@@ -291,7 +293,7 @@ add_to_ready(struct list* tmp)
   tr* t;
   while ((t = list_poll(tmp)))
   {
-    void* c = ltable_remove(&trs_waiting, t->id);
+    void* c = table_lp_remove(&trs_waiting, t->id);
     assert(c);
     list_add(&trs_ready, t);
   }
@@ -309,7 +311,7 @@ turbine_rules_push()
   list_init(&tmp);
 
   for (int i = 0; i < trs_waiting.capacity; i++)
-    for (struct llist_item* item = trs_waiting.array[i]->head; item;
+    for (struct list_lp_item* item = trs_waiting.array[i]->head; item;
          item = item->next)
     {
       tr* t = item->data;
@@ -336,9 +338,9 @@ turbine_declare(turbine_datum_id id, struct longlist** result)
   assert(initialized);
   DEBUG_TURBINE("declare: %li\n", id);
   struct longlist* blocked = longlist_create();
-  if (ltable_contains(&td_blockers, id))
+  if (table_lp_contains(&td_blockers, id))
     return TURBINE_ERROR_DOUBLE_DECLARE;
-  ltable_add(&td_blockers, id, blocked);
+  table_lp_add(&td_blockers, id, blocked);
   if (result != NULL)
     *result = blocked;
   return TURBINE_SUCCESS;
@@ -354,7 +356,7 @@ turbine_ready(int count, turbine_transform_id* output,
   while (i < count && (v = list_poll(&trs_ready)))
   {
     tr* t = (tr*) v;
-    ltable_add(&trs_running, t->id, t);
+    table_lp_add(&trs_running, t->id, t);
     output[i] = t->id;
     DEBUG_TURBINE("\t %li\n", output[i]);
     i++;
@@ -386,7 +388,7 @@ turbine_action(turbine_transform_id id, char* action)
   if (id == TURBINE_ID_NULL)
     return TURBINE_ERROR_NULL;
 
-  tr* t = ltable_search(&trs_running, id);
+  tr* t = table_lp_search(&trs_running, id);
   if (!t)
       return TURBINE_ERROR_NOT_FOUND;
 
@@ -403,7 +405,7 @@ turbine_complete(turbine_transform_id id)
   if (id == TURBINE_ID_NULL)
     return TURBINE_ERROR_NULL;
 
-  tr* t = ltable_remove(&trs_running, id);
+  tr* t = table_lp_remove(&trs_running, id);
   assert(t);
   DEBUG_TURBINE("complete: {%li} %s\n", id, t->transform.name);
   //  for (int i = 0; i < t->transform.outputs; i++)
@@ -420,7 +422,7 @@ turbine_code
 turbine_close(turbine_datum_id id)
 {
   // Look up transforms that this td was blocking
-  struct longlist* L = ltable_search(&td_blockers, id);
+  struct longlist* L = table_lp_search(&td_blockers, id);
   if (L == NULL)
     // We don't have any rules that block on this td
     return TURBINE_SUCCESS;
@@ -433,7 +435,7 @@ turbine_close(turbine_datum_id id)
   for (struct longlist_item* item = L->head; item; item = item->next)
   {
     turbine_transform_id tr_id = item->data;
-    tr* transform = ltable_search(&trs_waiting, tr_id);
+    tr* transform = table_lp_search(&trs_waiting, tr_id);
     if (!transform)
       continue;
 
@@ -635,7 +637,7 @@ info_waiting()
   printf("WAITING TRANSFORMS: %i\n", trs_waiting.size);
   char buffer[1024];
   for (int i = 0; i < trs_waiting.capacity; i++)
-    for (struct llist_item* item = trs_waiting.array[i]->head;
+    for (struct list_lp_item* item = trs_waiting.array[i]->head;
          item; item = item->next)
     {
       tr* t = (tr*) item->data;

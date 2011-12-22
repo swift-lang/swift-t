@@ -1,8 +1,8 @@
 
-#include "longlist.h"
-
 #include <stdio.h>
 #include <string.h>
+
+#include "longlist.h"
 
 void
 longlist_init(struct longlist* target)
