@@ -13,9 +13,10 @@
 
 #include <tcl.h>
 
+#include <log.h>
+#include <tools.h>
+
 #include "src/util/debug.h"
-#include "src/util/log.h"
-#include "src/util/tools.h"
 #include "src/turbine/turbine.h"
 
 #include "src/tcl/util.h"

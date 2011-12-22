@@ -14,12 +14,12 @@
 
 #include <adlb.h>
 
-#include <table.h>
 #include <list.h>
+#include <table.h>
 #include <table_lp.h>
+#include <tools.h>
 
 #include "src/util/debug.h"
-#include "src/util/tools.h"
 
 #include "src/turbine/turbine.h"
 
