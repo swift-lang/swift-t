@@ -2,7 +2,7 @@
 # Flex ADLB DHT with Turbine data
 # No real Turbine data flow here
 
-package require turbine 0.1
+package require turbine 0.0.1
 
 namespace import turbine::string_*
 

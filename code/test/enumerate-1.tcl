@@ -12,7 +12,7 @@
 # trace(s);
 # // prints "trace: 0 1"
 
-package require turbine 0.1
+package require turbine 0.0.1
 
 namespace import turbine::data_new
 namespace import turbine::string_init

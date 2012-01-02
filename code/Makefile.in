@@ -1,5 +1,6 @@
 
 TURBINE = lib/libturbine.a
+TURBINE_VERSION = 0.0.1
 
 PACKAGE = lib/pkgIndex.tcl
 
@@ -87,6 +88,7 @@ CFLAGS += @TCL_INCLUDE_SPEC@
 CFLAGS += -fPIC
 # This is referenced in lookup3.c - may want to drop this for speed
 CFLAGS += -D VALGRIND
+CFLAGS += -D TURBINE_VERSION=\"$(TURBINE_VERSION)\"
 
 LDFLAGS += -L $(C_UTILS)/lib
 LDFLAGS += -Wl,-rpath -Wl,$(C_UTILS)/lib
@@ -161,7 +163,9 @@ deps_contents.txt:
 %.o: %.c
 # 	The following string produces a false autoscan message (C++)
 	$(Q) "  CC		$(@)"
-	$(E) $(CC) $(CFLAGS) -c $(<) -o $(@)
+	$(E) $(CC) $(CFLAGS) \
+              \
+             -c $(<) -o $(@)
 
 TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
 

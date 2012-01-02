@@ -2,7 +2,7 @@
 # turbine.tcl
 # Main control functions
 
-package provide turbine 0.1
+package provide turbine [ turbine::c::version ]
 
 namespace eval turbine {
 

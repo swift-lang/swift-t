@@ -1,5 +1,5 @@
 
-package require turbine 0.1
+package require turbine 0.0.1
 
 proc f { inputs outputs } {
     set tmp [ turbine_new ]

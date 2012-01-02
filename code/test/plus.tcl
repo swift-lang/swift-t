@@ -6,7 +6,7 @@
 # x = 2+2;
 # trace(x);
 
-package require turbine 0.1
+package require turbine 0.0.1
 
 proc rules { } {
 

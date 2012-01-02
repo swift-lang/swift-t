@@ -18,7 +18,7 @@
 # (a,b) = f(x);
 # trace("a=",a);
 
-package require turbine 0.1
+package require turbine 0.0.1
 
 namespace import turbine::c::rule
 namespace import turbine::c::rule_new

@@ -83,6 +83,24 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int
+Turbine_Version_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+
+  version v;
+  turbine_version(&v);
+  char vs[8];
+  version_to_string(vs, &v);
+  Tcl_Obj* result = Tcl_NewStringObj(vs, -1);
+  assert(result);
+  Tcl_SetObjResult(interp, result);
+
+  return TCL_OK;
+}
+
+
 #define string_tomode(mode, mode_string)                        \
   if (strcmp(mode_string, "field") == 0)                        \
     mode = TURBINE_ENTRY_FIELD;                                 \
@@ -336,10 +354,15 @@ Tclturbine_Init(Tcl_Interp *interp)
   if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
     return TCL_ERROR;
 
-  if (Tcl_PkgProvide(interp, "turbine", "0.1") == TCL_ERROR)
+#ifndef TURBINE_VERSION
+#error TURBINE_VERSION must be set by the build system!
+#endif
+
+  if (Tcl_PkgProvide(interp, "turbine", TURBINE_VERSION) == TCL_ERROR)
     return TCL_ERROR;
 
   COMMAND("init",      Turbine_Init_Cmd);
+  COMMAND("version",   Turbine_Version_Cmd);
   COMMAND("declare",   Turbine_Declare_Cmd);
   COMMAND("rule",      Turbine_Rule_Cmd);
   COMMAND("rule_new",  Turbine_RuleNew_Cmd);

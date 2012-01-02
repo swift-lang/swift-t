@@ -8,7 +8,7 @@
 # string s = @sprintf(c)
 # trace(s);
 
-package require turbine 0.1
+package require turbine 0.0.1
 
 proc rules { } {
 

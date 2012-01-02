@@ -1,7 +1,7 @@
 
 # Simple diamond test case but use ADLB
 
-package require turbine 0.1
+package require turbine 0.0.1
 
 proc rules { } {
     turbine::c::file 0 /dev/null

@@ -1,7 +1,7 @@
 
 # This test only flexes ADLB, it does not use Turbine features
 
-package require turbine 0.1
+package require turbine 0.0.1
 
 enum WORK_TYPE { CMDLINE }
 

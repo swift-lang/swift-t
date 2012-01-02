@@ -13,7 +13,7 @@
 # foreach key in c
 #   trace(key, c[key]);
 
-package require turbine 0.1
+package require turbine 0.0.1
 
 proc rules { } {
 

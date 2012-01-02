@@ -2,7 +2,7 @@
 # ModFTDock example:
 # https://sites.google.com/site/exmproject/development/task-model
 
-package require turbine 0.1
+package require turbine 0.0.1
 
 turbine_init
 

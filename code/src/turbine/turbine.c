@@ -14,6 +14,7 @@
 
 #include <adlb.h>
 
+#include <c-utils.h>
 #include <list.h>
 #include <table.h>
 #include <table_lp.h>
@@ -118,9 +119,23 @@ static int mpi_size = -1;
        return code;                                         \
     }}
 
+static void check_versions()
+{
+  version tv, av, rav, cuv, rcuv;
+  turbine_version(&tv);
+  ADLB_Version(&av);
+  version_parse(&rav, "0.0.1");
+  c_utils_version(&cuv);
+  version_parse(&rcuv, "0.0.1");
+  version_require("Turbine", &tv, "c-utils", &cuv, &rcuv);
+  version_require("Turbine", &tv, "ADLB",    &av,  &rav);
+}
+
 turbine_code
 turbine_init(int amserver, int rank, int size)
 {
+  check_versions();
+
   if (amserver)
     return TURBINE_SUCCESS;
 
@@ -146,6 +161,14 @@ turbine_init(int amserver, int rank, int size)
     return TURBINE_ERROR_OOM;
   initialized = true;
   return TURBINE_SUCCESS;
+}
+
+void turbine_version(version* output)
+{
+#ifndef TURBINE_VERSION
+#error TURBINE_VERSION must be set by the build system!
+#endif
+  version_parse(output, TURBINE_VERSION);
 }
 
 static turbine_code

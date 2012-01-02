@@ -1,7 +1,9 @@
 
 # Generate the Turbine TCL package
 
-puts [ ::pkg::create -name turbine -version 0.1 \
+set turbine_version $env(TURBINE_VERSION)
+
+puts [ ::pkg::create -name turbine -version $turbine_version \
        -load libtcladlb.so -load libtclturbine.so \
        -source turbine.tcl   \
        -source engine.tcl    \

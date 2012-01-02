@@ -2,7 +2,7 @@
 # Test ADLB store/retrieve
 # Does not use Turbine features
 
-package require turbine 0.1
+package require turbine 0.0.1
 
 namespace import turbine::string_*
 

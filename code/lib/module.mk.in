@@ -11,4 +11,5 @@ TCL_SRC := $(DIR)/helpers.tcl             \
 $(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) $(TCL_ADLB_SO) \
             $(TCL_SRC)
 	$(Q) "  TCL		$(@)"
-	$(E) tclsh $(<) > lib/pkgIndex.tcl
+	$(E) TURBINE_VERSION=$(TURBINE_VERSION) \
+             tclsh $(<) > lib/pkgIndex.tcl

@@ -1,15 +1,16 @@
 
-/*
+/**
  * turbine.h
  *
  *  Created on: May 4, 2011
  *      Author: wozniak
- */
+ * */
 
 #ifndef TURBINE_H
 #define TURBINE_H
 
 #include <list_l.h>
+#include <version.h>
 
 #include "src/turbine/turbine-defs.h"
 
@@ -35,6 +36,8 @@ typedef struct
 #define TURBINE_MAX_ENTRY 256
 
 turbine_code turbine_init(int amserver, int rank, int size);
+
+void turbine_version(version* output);
 
 turbine_code turbine_declare(turbine_datum_id id,
                              struct list_l** result);
