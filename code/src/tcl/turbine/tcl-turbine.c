@@ -1,8 +1,7 @@
 
 /**
- * TCL extension for Turbine
+ * Tcl extension for Turbine
  *
- * @file tcl-turbine.c
  * @author wozniak
  * */
 
