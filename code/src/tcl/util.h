@@ -17,7 +17,7 @@
 /**
    Check that the user gave us the correct number of arguments
    objc should be equal to count.  If not, fail.
-   Note that in TCL, the command name counts as an argument
+   Note that in Tcl, the command name counts as an argument
 */
 #define TCL_ARGS(count) {                                       \
     if (objc != count) {                                        \
