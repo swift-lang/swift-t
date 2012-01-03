@@ -22,7 +22,8 @@ if { ! [ adlb::amserver ] } {
     }
 
     # puts "MPI size: $size"
-    for { set i $rank } { $i <= $count } { incr i $size } {
+    set r [ expr $rank + 1 ]
+    for { set i $r } { $i <= $count } { incr i $size } {
         adlb::create $i string:
         adlb::store $i string:data
     }
