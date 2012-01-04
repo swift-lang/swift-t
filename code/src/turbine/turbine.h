@@ -1,6 +1,6 @@
 
 /**
- * turbine.h
+ *  TURBINE
  *
  *  Created on: May 4, 2011
  *      Author: wozniak
