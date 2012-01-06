@@ -124,7 +124,7 @@ static void check_versions()
   version tv, av, rav, cuv, rcuv;
   turbine_version(&tv);
   ADLB_Version(&av);
-  version_parse(&rav, "0.0.1");
+  version_parse(&rav, "0.0.2");
   c_utils_version(&cuv);
   version_parse(&rcuv, "0.0.1");
   version_require("Turbine", &tv, "c-utils", &cuv, &rcuv);
