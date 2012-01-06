@@ -1,6 +1,6 @@
 
 /**
- * TCL extension for ADLB
+ * Tcl extension for ADLB
  *
  * @author wozniak
  * */
@@ -191,7 +191,7 @@ ADLB_Barrier_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb_put <reserve_rank> <work type> <work unit>
+   usage: adlb::put <reserve_rank> <work type> <work unit>
 */
 static int
 ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -218,7 +218,7 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb_get <req_type> <answer_rank>
+   usage: adlb::get <req_type> <answer_rank>
    Returns the next work unit of req_type or empty string when
    ADLB is done
    Stores answer_rank in given output variable
@@ -294,7 +294,7 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb_create <id> <data>
+   usage: adlb::create <id> <data>
 */
 static int
 ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -316,7 +316,7 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb_store <id> <data>
+   usage: adlb::store <id> <data>
 */
 static int
 ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -339,7 +339,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb_retrieve <id>
+   usage: adlb::retrieve <id>
 */
 static int
 ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -362,7 +362,7 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb_insert <id> <subscript> <member>
+   usage: adlb::insert <id> <subscript> <member>
 */
 static int
 ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -411,7 +411,7 @@ ADLB_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb_close <id>
+   usage: adlb::close <id>
    returns list of int ranks that must be notified
 */
 static int
@@ -555,16 +555,21 @@ ADLB_Slot_Drop_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-
+/**
+   usage: adlb::abort
+ */
 static int
 ADLB_Abort_Cmd(ClientData cdata, Tcl_Interp *interp,
                int objc, Tcl_Obj *const objv[])
 {
   ADLB_Abort(1);
-  // Abort does not return
+  // ADLB_Abort does not return
   return TCL_OK;
 }
 
+/**
+   usage: adlb::finalize
+ */
 static int
 ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
@@ -576,7 +581,7 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   Shorten object creation lines.  "turbine::" namespace is prepended
+   Shorten object creation lines.  "adlb::" namespace is prepended
  */
 #define COMMAND(tcl_function, c_function) \
     Tcl_CreateObjCommand(interp, "adlb::" tcl_function, c_function, \
