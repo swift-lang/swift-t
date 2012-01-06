@@ -49,13 +49,15 @@ void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
   }                                                               \
 
 #define TCL_CONDITION(condition, format, args...)             \
-  if (!condition) {                                           \
+  if (!(condition)) {                                         \
     tcl_condition_failed(interp, objv[0], format, ## args);   \
     return TCL_ERROR;                                         \
-  }                                                           \
+  }
 
 #define TCL_RETURN_ERROR(format, args...)                        \
-  { tcl_condition_failed(interp, objv[0], format, ## args);      \
-    return TCL_ERROR; }
+  {                                                              \
+    tcl_condition_failed(interp, objv[0], format, ## args);      \
+    return TCL_ERROR;                                            \
+  }
 
 #endif
