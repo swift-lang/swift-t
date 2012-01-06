@@ -29,27 +29,9 @@ namespace eval turbine {
         return $u
     }
 
-    proc string_init { id } {
-        adlb::create $id "string:"
-        turbine::c::declare $id
-    }
-
-    proc string_set { id value } {
-        debug "string_set: <$id>=$value"
-        close_dataset $id "string:$value"
-    }
-
-    proc string_get { id } {
-        set s [ adlb::retrieve $id ]
-        set i [ string first : $s ]
-        incr i
-        set result [ string range $s $i end ]
-        return $result
-    }
-
     proc integer_init { id } {
         debug "integer_init: <$id>"
-        adlb::create $id "integer:"
+        adlb::create $id "integer"
         turbine::c::declare $id
     }
 
@@ -67,8 +49,46 @@ namespace eval turbine {
         return $result
     }
 
-    proc container_init { id type } {
-        adlb::create $id "container:$type"
+    proc float_init { id } {
+        debug "float_init: <$id>"
+        adlb::create $id "float"
+        turbine::c::declare $id
+    }
+
+    proc float_set { id value } {
+        debug "float_set: <$id>=$value"
+        close_dataset $id "float:$value"
+    }
+
+    proc float_get { id } {
+        set s [ adlb::retrieve $id ]
+        set i [ string first : $s ]
+        incr i
+        set result [ string range $s $i end ]
+        debug "float_get: <$id>=$result"
+        return $result
+    }
+
+    proc string_init { id } {
+        adlb::create $id "string"
+        turbine::c::declare $id
+    }
+
+    proc string_set { id value } {
+        debug "string_set: <$id>=$value"
+        close_dataset $id "string:$value"
+    }
+
+    proc string_get { id } {
+        set s [ adlb::retrieve $id ]
+        set i [ string first : $s ]
+        incr i
+        set result [ string range $s $i end ]
+        return $result
+    }
+
+    proc container_init { id subscript_type } {
+        adlb::create $id "container" $subscript_type
         turbine::c::declare $id
     }
 
@@ -96,7 +116,7 @@ namespace eval turbine {
     }
 
     proc file_init { id path } {
-        adlb::create $id "file:$path"
+        adlb::create $id "file" $path
         turbine::c::declare $id
     }
 

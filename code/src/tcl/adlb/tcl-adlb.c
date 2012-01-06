@@ -31,7 +31,7 @@ static int mpi_rank = -1;
 static MPI_Comm worker_comm;
 
 /** Max command-line length */
-#define ADLBTCL_CMD_MAX 1024
+// #define ADLBTCL_CMD_MAX 1024
 
 /** ADLB uses -1 to mean "any" in ADLB_Put() and ADLB_Reserve() */
 #define ADLB_ANY -1
@@ -236,7 +236,7 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   DEBUG_ADLB("adlb::get: type=%i\n", req_type);
 
-  char result[ADLBTCL_CMD_MAX];
+  char result[ADLB_MSG_MAX];
   int work_type;
   int work_prio;
   int work_handle[ADLB_HANDLE_SIZE];
@@ -294,24 +294,81 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
+   Convert type string to adlb_data_type
+ */
+static inline adlb_data_type type_from_string(char* type_string)
+{
+  adlb_data_type result;
+  if (strcmp(type_string, "integer") == 0)
+    result = ADLB_DATA_TYPE_INTEGER;
+  else if (strcmp(type_string, "float") == 0)
+    result = ADLB_DATA_TYPE_FLOAT;
+  else if (strcmp(type_string, "string") == 0)
+    result = ADLB_DATA_TYPE_STRING;
+  else if (strcmp(type_string, "blob") == 0)
+    result = ADLB_DATA_TYPE_BLOB;
+  else if (strcmp(type_string, "file") == 0)
+    result = ADLB_DATA_TYPE_FILE;
+  else if (strcmp(type_string, "container") == 0)
+    result = ADLB_DATA_TYPE_CONTAINER;
+  else
+    result = ADLB_DATA_TYPE_NULL;
+  return result;
+}
+
+/**
    usage: adlb::create <id> <data>
 */
 static int
 ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(3);
+  TCL_CONDITION(objc >= 3, "adlb::create requires >= 3 args!");
 
+  int rc;
   long id;
-  int length;
-  Tcl_GetLongFromObj(interp, objv[1], &id);
-  char* s = Tcl_GetStringFromObj(objv[2], &length);
-  char data[length+1];
-  strncpy(data, s, length);
-  data[length] = '\0';
-  DEBUG_ADLB("adlb::create: <%li> %s\n", id, data);
-  int rc = ADLB_Create(id, data, length+1);
-  assert(rc == ADLB_SUCCESS);
+  rc = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CONDITION(rc == TCL_OK, "adlb:create could not get data id");
+  char* type_string = Tcl_GetString(objv[2]);
+  adlb_data_type type = type_from_string(type_string);
+  DEBUG_ADLB("adlb::create: <%li> %s\n", id, type_string);
+
+  switch (type)
+  {
+    case ADLB_DATA_TYPE_INTEGER:
+      rc = ADLB_Create_integer(id);
+      break;
+    case ADLB_DATA_TYPE_FLOAT:
+      rc = ADLB_Create_float(id);
+      break;
+    case ADLB_DATA_TYPE_STRING:
+      rc = ADLB_Create_string(id);
+      break;
+    case ADLB_DATA_TYPE_BLOB:
+      rc = ADLB_Create_blob(id);
+      break;
+    case ADLB_DATA_TYPE_FILE:
+      TCL_CONDITION(objc >= 4,
+                    "adlb::create type=file requires file name!");
+      char* filename = Tcl_GetString(objv[3]);
+      rc = ADLB_Create_file(id, filename);
+      break;
+    case ADLB_DATA_TYPE_CONTAINER:
+      TCL_CONDITION(objc >= 4,
+                    "adlb::create type=container requires "
+                    "subscript type!");
+      char* subscript_type_string = Tcl_GetString(objv[3]);
+      adlb_data_type subscript_type =
+          type_from_string(subscript_type_string);
+      rc = ADLB_Create_container(id, subscript_type);
+      break;
+    case ADLB_DATA_TYPE_NULL:
+      Tcl_AddErrorInfo(interp,
+                       "adlb::create received unknown type string");
+      return TCL_ERROR;
+      break;
+  }
+  TCL_CONDITION(rc == ADLB_SUCCESS, "adlb::create <%li> failed!", id);
   return TCL_OK;
 }
 
@@ -353,7 +410,8 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   int length;
   DEBUG_ADLB("adlb_retrieve: <%li>\n", id);
   int rc = ADLB_Retrieve(id, retrieved, &length);
-  assert(rc == ADLB_SUCCESS);
+  TCL_CONDITION(rc == ADLB_SUCCESS,
+                "adlb::retrieve <%li> failed!\n", id);
 
   Tcl_Obj* result = Tcl_NewStringObj(retrieved, length-1);
   Tcl_SetObjResult(interp, result);
@@ -395,12 +453,15 @@ ADLB_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(3);
 
   long id;
-  Tcl_GetLongFromObj(interp, objv[1], &id);
+  int rc;
+  rc = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK_MSG(rc, "adlb::lookup could not parse given id!");
   char* subscript = Tcl_GetString(objv[2]);
 
   long member;
-  int rc = ADLB_Lookup(id, subscript, &member);
-  assert(rc == ADLB_SUCCESS);
+  rc = ADLB_Lookup(id, subscript, &member);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "lookup failed for: <%li>[%s]",
+                id, subscript);
 
   DEBUG_ADLB("adlb::lookup <%li>[%s]=<%li>\n", id, subscript, member);
 
