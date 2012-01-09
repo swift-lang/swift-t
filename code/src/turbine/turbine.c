@@ -124,9 +124,11 @@ static void check_versions()
   version tv, av, rav, cuv, rcuv;
   turbine_version(&tv);
   ADLB_Version(&av);
+  // Required ADLB version:
   version_parse(&rav, "0.0.2");
   c_utils_version(&cuv);
-  version_parse(&rcuv, "0.0.1");
+  // Required c-utils version:
+  version_parse(&rcuv, "0.0.2");
   version_require("Turbine", &tv, "c-utils", &cuv, &rcuv);
   version_require("Turbine", &tv, "ADLB",    &av,  &rav);
 }
@@ -145,10 +147,8 @@ turbine_init(int amserver, int rank, int size)
   bool result;
   result = table_lp_init(&trs_waiting, 1024*1024);
   if (!result)
-  {
-    printf("ok not\n");
     return TURBINE_ERROR_OOM;
-  }
+
   list_init(&trs_ready);
   result = table_lp_init(&trs_running, 1024*1024);
   if (!result)
@@ -565,6 +565,61 @@ static int td_tostring(char* output, int length, turbine_datum* td)
   return result;
 }
 
+static void
+string_totype(const char* type_string, turbine_type* type)
+{
+  if (strcmp(type_string, "integer") == 0)
+    *type = TURBINE_TYPE_INTEGER;
+  else if (strcmp(type_string, "float") == 0)
+    *type = TURBINE_TYPE_FLOAT;
+  else if (strcmp(type_string, "string") == 0)
+    *type = TURBINE_TYPE_STRING;
+  else if (strcmp(type_string, "blob") == 0)
+    *type = TURBINE_TYPE_BLOB;
+  else if (strcmp(type_string, "file") == 0)
+    *type = TURBINE_TYPE_FILE;
+  else if (strcmp(type_string, "container") == 0)
+    *type = TURBINE_TYPE_CONTAINER;
+  else
+    *type = TURBINE_TYPE_NULL;
+}
+
+/*
+NOT CURRENTLY USED
+
+static int
+type_tostring(char* output, turbine_type type)
+{
+  int result = -1;
+  switch(type)
+  {
+    case TURBINE_TYPE_INTEGER:
+      result = sprintf(output, "integer");
+      break;
+    case TURBINE_TYPE_FLOAT:
+      result = sprintf(output, "float");
+      break;
+    case TURBINE_TYPE_STRING:
+      result = sprintf(output, "string");
+      break;
+    case TURBINE_TYPE_BLOB:
+      result = sprintf(output, "blob");
+      break;
+    case TURBINE_TYPE_FILE:
+      result = sprintf(output, "file");
+      break;
+    case TURBINE_TYPE_CONTAINER:
+      result = sprintf(output, "container");
+      break;
+    case TURBINE_TYPE_NULL:
+      sprintf(output, "TURBINE_TYPE_NULL");
+    default:
+      sprintf(output, "<unknown type>");
+  }
+  return result;
+}
+*/
+
 static turbine_code
 td_get(turbine_datum_id id, turbine_datum* td)
 {
@@ -579,22 +634,32 @@ td_get(turbine_datum_id id, turbine_datum* td)
   type_string[xfer-p] = '\0';
 
   turbine_type type;
-  turbine_string_totype(type, type_string);
+  string_totype(type_string, &type);
   td->type = type;
   td->status = TD_SET;
 
   switch (type)
   {
+    case TURBINE_TYPE_INTEGER:
+      sscanf(p+1, "%li", &td->data.integer.value);
+      break;
+    case TURBINE_TYPE_FLOAT:
+       // TODO: DO SOMETHING
+       break;
+    case TURBINE_TYPE_STRING:
+      td->data.string.value = strdup(p+1);
+      td->data.string.length = strlen(td->data.string.value);
+    case TURBINE_TYPE_BLOB:
+      // TODO: DO SOMETHING
+      break;
     case TURBINE_TYPE_FILE:
       break;
     case TURBINE_TYPE_CONTAINER:
       break;
-    case TURBINE_TYPE_INTEGER:
-      sscanf(p+1, "%li", &td->data.integer.value);
+    case TURBINE_TYPE_NULL:
+      printf("Attempt to retrieve TURBINE_TYPE_NULL!\n");
+      return TURBINE_ERROR_NULL;
       break;
-    case TURBINE_TYPE_STRING:
-      td->data.string.value = strdup(p+1);
-      td->data.string.length = strlen(td->data.string.value);
   }
 
   return TURBINE_SUCCESS;

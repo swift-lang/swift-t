@@ -537,14 +537,17 @@ ADLB_Container_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
   long id;
   Tcl_GetLongFromObj(interp, objv[1], &id);
 
-  int length;
-  char output[64];
-  int rc = ADLB_Container_Typeof(id, output, &length);
-  assert(rc == ADLB_SUCCESS);
+  adlb_data_type type;
+  int rc = ADLB_Container_Typeof(id, &type);
+  TCL_CONDITION(rc == ADLB_SUCCESS,
+		        "adlb::container_typeof <%li> failed!", id);
 
-  DEBUG_ADLB("adlb::container_typeof: <%li> is: %s\n", id, output);
+  DEBUG_ADLB("adlb::container_typeof: <%li> is: %s\n", id);
 
-  Tcl_Obj* result = Tcl_NewStringObj(output, length);
+  char type_string[32];
+  ADLB_Data_type_tostring(type_string, type);
+
+  Tcl_Obj* result = Tcl_NewStringObj(type_string, -1);
   Tcl_SetObjResult(interp, result);
 
   return TCL_OK;
