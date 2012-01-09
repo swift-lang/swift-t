@@ -20,7 +20,7 @@ proc rules { } {
     namespace import turbine::*
 
     set stack [ data_new ]
-    set c [ data_new ]
+    set c     [ data_new ]
 
     container_init $stack string
     container_insert $stack "c" $c
