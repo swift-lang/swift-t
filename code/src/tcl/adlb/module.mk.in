@@ -13,7 +13,7 @@ tcl_adlb: $(TCL_ADLB_SO)
 
 # Use rpath so we do not have to put stuff in LD_LIBRARY_PATH
 $(TCL_ADLB_SO): $(TCL_ADLB_OBJS) $(TCL_TURBINE_SO)
-	@echo 
+	@echo
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) -shared -o $(@) \
                  $(TCL_LINK_FLAGS) \
