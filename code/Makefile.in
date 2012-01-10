@@ -267,7 +267,7 @@ debug_build:
 	@echo TURBINE_OBJS: $(TURBINE_OBJS)
 	@echo TESTS: $(TESTS)
 
-install: 
+install: package
 	@echo 
 	$(Q) "  INSTALL"
 	$(E) mkdir -pv $(INSTALL_PREFIX)
