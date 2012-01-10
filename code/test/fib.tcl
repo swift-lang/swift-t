@@ -5,7 +5,7 @@
 package require turbine 0.0.1
 namespace import turbine::*
 
-set N 29
+set N 5
 
 proc fib { stack o n } {
     turbine::c::log function:fib
