@@ -11,11 +11,20 @@ TCL_ADLB_SO = lib/libtcladlb.so
 
 tcl_adlb: $(TCL_ADLB_SO)
 
+# Use rpath so we do not have to put stuff in LD_LIBRARY_PATH
 $(TCL_ADLB_SO): $(TCL_ADLB_OBJS) $(TCL_TURBINE_SO)
+	@echo 
 	$(Q) "  LINK		$(@)"
-	$(E) gcc -shared -o $(@) $(TCL_LINK_FLAGS) \
-                 $(TCL_ADLB_OBJS) $(LDFLAGS) \
-                 -L $(ADLB) -l adlb -L lib -l tclturbine $(LIB_MPI)
+	$(E) $(CC) -shared -o $(@) \
+                 $(TCL_LINK_FLAGS) \
+                 $(TCL_ADLB_OBJS) \
+                 $(LDFLAGS) \
+                 -L $(ADLB) -l adlb \
+                 -L lib -l tclturbine \
+                 -Wl,-rpath -Wl,$(ADLB) \
+                 -Wl,-rpath -Wl,$(TCL)/lib \
+                 -Wl,-rpath -Wl,$(INSTALL_LIB) \
+                 $(LIB_MPI)
 
 clean::
 	@rm -fv $(TCL_ADLB_OBJS)

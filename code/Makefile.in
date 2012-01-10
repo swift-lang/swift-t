@@ -14,6 +14,12 @@ TCL_TURBINE_SO := lib/libtclturbine.so
 
 tcl_turbine: $(TCL_TURBINE_SO)
 
+INSTALL_PREFIX  = @prefix@
+INSTALL_BIN     = $(INSTALL_PREFIX)/bin
+INSTALL_LIB     = $(INSTALL_PREFIX)/lib
+INSTALL_SCRIPTS = $(INSTALL_PREFIX)/scripts
+SCRIPTS_SUBMIT  = $(shell find scripts/submit -name "*sh" )
+
 srcdir = @srcdir@
 
 ifeq ($(V),1)
@@ -58,19 +64,30 @@ MPI = @USE_MPI@
 MPI_INCLUDE = @USE_MPI_INCLUDE@
 MPI_LIB_DIR = @USE_MPI_LIB_DIR@
 MPI_LIB_NAME = @USE_MPI_LIB_NAME@
+# The actual linker arguments: 
+LIB_MPI := 
 ifneq ($(MPI),0)
 	CFLAGS += -I $(MPI)/include
 endif
 ifneq ($(MPI_INCLUDE),0)
 	CFLAGS += -I $(MPI_INCLUDE)
 endif
-
 ifeq ($(MACHINE),normal)
 	LIB_MPI	= -L $(MPI)/lib -l mpich -l mpl
-else ifeq ($(MACHINE),sicortex)
+endif
+ifeq ($(MACHINE),sicortex)
 	LIB_MPI = -L $(MPI)/lib -l scmpi
-else ifeq ($(MACHINE),custom)
-	LIB_MPI = -L $(MPI_LIB_DIR) -l $(MPI_LIB_NAME)
+endif
+ifeq ($(MACHINE),bgp-zeptoos)
+	LIB_MPI =
+endif
+ifeq ($(MACHINE),custom)
+	ifneq ($(MPI_LIB_DIR),0)
+		LIB_MPI += -L $(MPI_LIB_DIR)
+	endif
+	ifneq ($(MPI_LIB_NAME),0)
+		LIB_MPI += -l $(MPI_LIB_NAME)
+	endif
 endif
 
 LAUNCH = @USE_LAUNCHER@
@@ -164,7 +181,6 @@ deps_contents.txt:
 # 	The following string produces a false autoscan message (C++)
 	$(Q) "  CC		$(@)"
 	$(E) $(CC) $(CFLAGS) \
-              \
              -c $(<) -o $(@)
 
 TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
@@ -174,11 +190,17 @@ $(TURBINE): $(TURBINE_OBJS)
 	$(E) install -d lib
 	$(E) ar rcs $(@) $(TURBINE_OBJS)
 
-$(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_OBJS) # $(WOZTOOLS_LIB)
+$(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_OBJS) 
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) -shared -fPIC -o $(@) $(TCL_LINK_FLAGS) \
-             $(TCL_TURBINE_OBJS) $(TURBINE_OBJS)           \
-	     $(LDFLAGS) -L $(ADLB) -l adlb $(LIB_MPI)
+	$(E) $(CC) -shared -fPIC -o $(@) \
+             $(TCL_LINK_FLAGS) \
+             $(TCL_TURBINE_OBJS) \
+             $(TURBINE_OBJS) \
+             $(LDFLAGS) \
+             -L $(ADLB) -l adlb \
+             -Wl,-rpath -Wl,$(ADLB) \
+             -Wl,-rpath -Wl,$(TCL)/lib \
+             $(LIB_MPI)
 
 # Test cases in C as objects
 TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC_C))
@@ -215,7 +237,7 @@ $(TEST_BINS): %.x: %.o $(TURBINE) $(C_UTILS_LIB)
 	$(E) $(<) > $(*).tmp 2>&1
 	$(E) mv $(*).tmp $(@) 2>&1
 
-# Test result rule for TCL tests
+# Test result rule for Tcl tests
 %.result: %.sh %.tcl $(PACKAGE) bin/turbine
 	$(Q) "  SH		$(@)"
 	$(E) mkdir -p test/data
@@ -244,3 +266,15 @@ debug_build:
 	@echo TURBINE_SRC: $(TURBINE_SRC)
 	@echo TURBINE_OBJS: $(TURBINE_OBJS)
 	@echo TESTS: $(TESTS)
+
+install: 
+	@echo 
+	$(Q) "  INSTALL"
+	$(E) mkdir -pv $(INSTALL_PREFIX)
+	$(E) mkdir -pv $(INSTALL_LIB)
+	$(E) mkdir -pv $(INSTALL_BIN)
+	$(E) mkdir -pv $(INSTALL_SCRIPTS)
+	$(E) cp -uv bin/turbine $(INSTALL_BIN)
+	$(E) cp -uv lib/*.tcl lib/*.so $(INSTALL_LIB)
+	$(E) cp -uv scripts/*.zsh scripts/*.sh $(INSTALL_SCRIPTS)
+	$(E) cp -uv --parents $(SCRIPTS_SUBMIT) $(INSTALL_PREFIX) 
