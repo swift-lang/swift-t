@@ -5,6 +5,8 @@
 package require turbine 0.0.1
 namespace import turbine::*
 
+set N 29
+
 proc fib { stack o n } {
     turbine::c::log function:fib
     set parent $stack
@@ -93,7 +95,9 @@ proc rules {  } {
     integer_init $__l0
     set __l1 [ data_new __l1 ]
     integer_init $__l1
-    integer_set $__l1 4
+    global N
+    puts "N: $N"
+    integer_set $__l1 $N
     set rule_id [ turbine::c::rule_new ]
     turbine::c::rule $rule_id fib [ list $__l1 ] [ list $__l0 ] "tp: fib $stack $__l0 $__l1"
     turbine::trace $stack [ list ] [ list $__l0 ]
