@@ -88,7 +88,6 @@ namespace eval turbine {
             procedure {
 		dict incr stats tasks_run
                 set command [ lrange $msg 2 end ]
-                puts "control:procedure: $command"
                 ::eval $command
             }
             complete {
