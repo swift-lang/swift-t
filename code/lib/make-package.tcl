@@ -1,5 +1,5 @@
 
-# Generate the Turbine TCL package
+# Generate the Turbine Tcl package
 
 set turbine_version $env(TURBINE_VERSION)
 
