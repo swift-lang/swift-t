@@ -64,8 +64,8 @@ MPI = @USE_MPI@
 MPI_INCLUDE = @USE_MPI_INCLUDE@
 MPI_LIB_DIR = @USE_MPI_LIB_DIR@
 MPI_LIB_NAME = @USE_MPI_LIB_NAME@
-# The actual linker arguments: 
-LIB_MPI := 
+# The actual linker arguments:
+LIB_MPI :=
 ifneq ($(MPI),0)
 	CFLAGS += -I $(MPI)/include
 endif
@@ -190,7 +190,7 @@ $(TURBINE): $(TURBINE_OBJS)
 	$(E) install -d lib
 	$(E) ar rcs $(@) $(TURBINE_OBJS)
 
-$(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_OBJS) 
+$(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_OBJS)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) -shared -fPIC -o $(@) \
              $(TCL_LINK_FLAGS) \
@@ -268,8 +268,8 @@ debug_build:
 	@echo TESTS: $(TESTS)
 
 install: package
-	@echo 
-	$(Q) "  INSTALL"
+	@echo
+	$(Q) "  INSTALL: $(INSTALL_PREFIX)"
 	$(E) mkdir -pv $(INSTALL_PREFIX)
 	$(E) mkdir -pv $(INSTALL_LIB)
 	$(E) mkdir -pv $(INSTALL_BIN)
@@ -277,4 +277,4 @@ install: package
 	$(E) cp -uv bin/turbine $(INSTALL_BIN)
 	$(E) cp -uv lib/*.tcl lib/*.so $(INSTALL_LIB)
 	$(E) cp -uv scripts/*.zsh scripts/*.sh $(INSTALL_SCRIPTS)
-	$(E) cp -uv --parents $(SCRIPTS_SUBMIT) $(INSTALL_PREFIX) 
+	$(E) cp -uv --parents $(SCRIPTS_SUBMIT) $(INSTALL_PREFIX)
