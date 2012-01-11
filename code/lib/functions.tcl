@@ -624,6 +624,49 @@ namespace eval turbine {
         integer_set $v $t
     }
 
+    # When reference cr is closed, store d = (*cr)[i]
+    # Blocks on cr
+    # inputs: [ list cr i d ]
+    #       cr is a reference to a container
+    #       i is a literal int
+    # outputs: ignored
+    proc f_container_reference_lookup_literal { parent outputs inputs } {
+        set cr [ lindex $inputs 0 ]
+        set i [ lindex $inputs 1 ]
+        set d [ lindex $inputs 2 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "f_container_reference_lookup_literal-$cr" "$cr" "" \
+            "tp: turbine::f_container_reference_lookup_literal_body $cr $i $d"
+        
+    }
+    
+    proc f_container_reference_lookup_literal_body { cr i d } {
+        # When this procedure is run, cr should be set and 
+        # i should be the literal index
+        set c [ integer_get $cr ]
+        adlb::container_reference $c $i $d
+    }
+
+    # When reference cr is closed, store d = (*cr)[i]
+    # Blocks on cr and i
+    # inputs: [ list cr i d ]
+    #       cr is a reference to a container
+    # outputs: ignored
+    proc f_container_reference_lookup { parent outputs inputs } {
+        set cr [ lindex $inputs 0 ]
+        set i [ lindex $inputs 1 ]
+        set d [ lindex $inputs 2 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "f_container_reference_lookup-$cr" "$cr $i" "" \
+            "tp: turbine::f_container_reference_lookup_body $cr $i $d"
+    }
+
+    proc f_container_reference_lookup_body { cr i d } {
+        # When this procedure is run, cr and i should be set
+        set c [ integer_get $cr ]
+        set t1 [ integer_get $i ]
+        adlb::container_reference $c $t1 $d
+    }
     # When reference r on c[*] is closed, store c[*][i] = d
     # Blocks on r and i
     # inputs: [ list r c i d ]
