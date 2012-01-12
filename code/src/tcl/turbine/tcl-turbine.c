@@ -329,7 +329,7 @@ Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
 #else // Debug output is disabled
 static int
 Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
-                     int objc, Tcl_Obj *const objv[])
+                  int objc, Tcl_Obj *const objv[])
 {
   // This is a noop
   return TCL_OK;
@@ -341,7 +341,8 @@ Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
    The "turbine::c::" namespace is prepended
  */
 #define COMMAND(tcl_function, c_function)                           \
-  Tcl_CreateObjCommand(interp, "turbine::c::" tcl_function, c_function, \
+  Tcl_CreateObjCommand(interp,                                      \
+                       "turbine::c::" tcl_function, c_function,     \
                        NULL, NULL);
 
 /**
