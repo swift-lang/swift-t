@@ -30,9 +30,9 @@ if { ! [ adlb::amserver ] } {
         string_set $id "message rank:$rank:$i"
 
         set id [ expr $rank + $i * $workers + 1 ]
-        puts "get"
+        turbine::c::debug "get"
         set msg [ string_get $id ]
-        puts "got: $msg"
+        turbine::c::debug "got: $msg"
     }
 } else {
     adlb::server
