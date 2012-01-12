@@ -592,6 +592,16 @@ namespace eval turbine {
         container_insert $c $t1 $d
     }
 
+    # Immediately insert data into container without affecting open slot count
+    # c: the container
+    # i: the subscript
+    # d: the data
+    # outputs: ignored.
+    proc container_immediate_insert { c i d } {
+        adlb::slot_create $c
+        container_insert $c $i $d
+    }
+
     # When i is closed, get a reference on c[i] in TD d
     # Thus, you can block on d and be notified when c[i] exists
     # d is an integer.  The value of d is the TD of c[i]
