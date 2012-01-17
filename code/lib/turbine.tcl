@@ -10,7 +10,7 @@ namespace eval turbine {
 
     # Mode is ENGINE, WORKER, or SERVER
     variable mode
-    # Statistics
+    # Statistics: dict from string token to integer count
     variable stats
 
     # Maps from rule id to list of container id
@@ -52,17 +52,6 @@ namespace eval turbine {
         }
     }
 
-    proc start_stats { } {
-
-	variable stats
-	set stats [ dict create ]
-
-        adlb::barrier
-        c::normalize
-        c::log "starting clock"
-	dict set stats clock_start [ clock clicks -milliseconds ]
-    }
-
     proc eval { command } {
 
         set command [ string trim $command ]
@@ -79,6 +68,19 @@ namespace eval turbine {
 
     proc debug { msg } {
         c::debug $msg
+    }
+
+    proc start_stats { } {
+
+	variable stats
+	set stats [ dict create ]
+
+        adlb::barrier
+        c::normalize
+        c::log "starting clock"
+	dict set stats clock_start [ clock clicks -milliseconds ]
+
+	dict set stats set1 0
     }
 
     proc report_stats { } {
