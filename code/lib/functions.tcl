@@ -490,7 +490,7 @@ namespace eval turbine {
 
     # Good for performance testing
     # c = 1;
-    # and sleeps 
+    # and sleeps
     proc set1 { parent c } {
 
         set rule_id [ rule_new ]
@@ -499,6 +499,10 @@ namespace eval turbine {
     }
     proc set1_body { parent c } {
         log "set1"
+
+        variable stats
+        dict incr stats set1
+
         # Emulate some computation time
         after 1000
         integer_set $c 1
@@ -663,11 +667,11 @@ namespace eval turbine {
         set rule_id [ rule_new ]
         rule $rule_id "f_container_reference_lookup_literal-$cr" "$cr" "" \
             "tp: turbine::f_container_reference_lookup_literal_body $cr $i $d"
-        
+
     }
-    
+
     proc f_container_reference_lookup_literal_body { cr i d } {
-        # When this procedure is run, cr should be set and 
+        # When this procedure is run, cr should be set and
         # i should be the literal index
         set c [ integer_get $cr ]
         adlb::container_reference $c $i $d
