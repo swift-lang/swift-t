@@ -53,10 +53,10 @@ proc if-1 { stack } {
     set __t0_value [ integer_get $__t0 ]
     if { $__t0_value } {
         set n [ stack_lookup $__pscope1 n ]
-        set parent $stack
-        set stack [ data_new stack ]
-        container_init $stack string
-        container_insert $stack _parent $parent
+        # set parent $stack
+        # set stack [ data_new stack ]
+        # container_init $stack string
+        # container_insert $stack _parent $parent
         set __l1 [ data_new __l1 ]
         integer_init $__l1
         set __l2 [ data_new __l2 ]
