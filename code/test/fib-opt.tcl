@@ -13,13 +13,18 @@ if { [ info exists env(TURBINE_TEST_PARAM_1) ] } {
 }
 
 proc fib { stack o n } {
+    set parent $stack
+    set stack [ data_new stack ]
+    container_init $stack string
+    container_insert $stack _parent $parent
+    container_insert $stack n $n
+    container_insert $stack o $o
     set rule_id [ turbine::c::rule_new ]
     turbine::c::rule $rule_id if-0 "$n" "" "tc: if-0 $stack"
 }
 
 proc if-0 { stack } {
     set n [ stack_lookup $stack n ]
-    set o [ stack_lookup $stack o ]
     set n_value [ integer_get $n ]
     if { $n_value } {
         set parent $stack
@@ -36,10 +41,7 @@ proc if-0 { stack } {
         set rule_id [ turbine::c::rule_new ]
         turbine::c::rule $rule_id if-1 "$__t0" "" "tc: if-1 $stack"
     } else {
-        set parent $stack
-        set stack [ data_new stack ]
-        container_init $stack string
-        container_insert $stack _parent $parent
+        set o [ stack_lookup $stack o ]
         integer_set $o 0
     }
 }
@@ -47,10 +49,10 @@ proc if-0 { stack } {
 proc if-1 { stack } {
     set __t0 [ stack_lookup $stack __t0 ]
     set __pscope1 [ stack_lookup $stack _parent ]
-    set n [ stack_lookup $__pscope1 n ]
     set o [ stack_lookup $__pscope1 o ]
     set __t0_value [ integer_get $__t0 ]
     if { $__t0_value } {
+        set n [ stack_lookup $__pscope1 n ]
         set parent $stack
         set stack [ data_new stack ]
         container_init $stack string
