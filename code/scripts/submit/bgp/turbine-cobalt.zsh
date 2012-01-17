@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 # Variables that may have defaults set in the environment: 
-# QUEUE, TURBINE_OUTPUT_ROOT
+# QUEUE, TURBINE_OUTPUT_ROOT, PROJECT
 
 TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 print "TURBINE_HOME: ${TURBINE_HOME}"
@@ -11,10 +11,16 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 PROCS=0
 WALLTIME="00:15:00"
 
-while getopts "n:o:t:" OPTION
+# Job environment
+typeset -T ENV env 
+env=() 
+
+while getopts "e:n:o:t:" OPTION
  do
  case ${OPTION}
    in
+   e) env+=${OPTARG}
+     ;; 
    n) PROCS=${OPTARG}     
      ;;
    o) TURBINE_OUTPUT_ROOT=${OPTARG}
@@ -30,6 +36,7 @@ done
 shift $(( OPTIND-1 ))
 
 SCRIPT=$1
+START=$( date +%s )
 
 checkvars QUEUE SCRIPT
   
@@ -37,9 +44,6 @@ if [[ ${TURBINE_OUTPUT_ROOT} == "" ]]
 then
   TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
 fi
-
-# For /bin/date (Intrepid is on UTC):
-export TZ=CST6CDT
 
 RUN=$( date_path )
 
@@ -55,12 +59,15 @@ SCRIPT_NAME=$( basename ${SCRIPT} )
 
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
 
-typeset -T ENV env 
-env=( TCLLIBPATH=${TCLLIBPATH}
-      DEBUG=0
-      LOGGING=0
-      TURBINE_ENGINES=$((PROCS/4))
-      ADLB_SERVERS=$((PROCS/4))
+TURBINE_ENGINES=$(( PROCS/100 ))
+ADLB_SERVERS=$((    PROCS/100 ))
+
+# Turbine-specific environment
+env+=( TCLLIBPATH=${TCLLIBPATH}
+       DEBUG=0
+       LOGGING=0
+       TURBINE_ENGINES=${TURBINE_ENGINES}
+       ADLB_SERVERS=${ADLB_SERVERS}
 )
 
 NODES=$(( PROCS/4 ))
@@ -74,6 +81,7 @@ cqsub -n ${NODES} \
 
 print "JOB: ${JOB_ID}"
 {
+  print "JOB: ${JOB_ID}"
   print "PROCS: ${PROCS}" 
   print "SUBMITTED: $( date_nice )" 
   print "TURBINE_ENGINES: ${TURBINE_ENGINES}" 
@@ -85,4 +93,7 @@ print ${JOB_ID} > ${JOB_ID_FILE}
 cqwait ${JOB_ID}
 
 print "COMPLETE: $( date_nice )" >> ${LOG}
+STOP=$( date +%s )
+TOOK=$( tformat $(( STOP-START )) )
+declare TOOK
 print "DONE"
