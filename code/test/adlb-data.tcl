@@ -22,6 +22,9 @@ if { ! [ adlb::amserver ] } {
 
     set rank [ adlb::rank ]
     puts "rank: $rank"
+    if { $rank == 0 } { 
+	puts "iterations: $iterations"
+    }
     set workers [ adlb::workers ]
 
     for { set i 0 } { $i < $iterations } { incr i } {
