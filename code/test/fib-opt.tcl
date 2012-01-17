@@ -1,6 +1,7 @@
 
 # Based on STP test 238- fibonacci
 # Copied here for stability
+# Hand-optimized
 
 package require turbine 0.0.1
 namespace import turbine::*
@@ -12,13 +13,6 @@ if { [ info exists env(TURBINE_TEST_PARAM_1) ] } {
 }
 
 proc fib { stack o n } {
-    turbine::c::log function:fib
-    set parent $stack
-    set stack [ data_new stack ]
-    container_init $stack string
-    container_insert $stack _parent $parent
-    container_insert $stack n $n
-    container_insert $stack o $o
     set rule_id [ turbine::c::rule_new ]
     turbine::c::rule $rule_id if-0 "$n" "" "tc: if-0 $stack"
 }
@@ -83,10 +77,6 @@ proc if-1 { stack } {
         turbine::c::rule $rule_id fib [ list $__l5 ] [ list $__l4 ] "tp: fib $stack $__l4 $__l5"
         turbine::plus $stack [ list $o ] [ list $__l1 $__l4 ]
     } else {
-        set parent $stack
-        set stack [ data_new stack ]
-        container_init $stack string
-        container_insert $stack _parent $parent
 	turbine::set1 no_stack $o
     }
 }
