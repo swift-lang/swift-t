@@ -96,8 +96,10 @@ namespace eval turbine {
         set walltime [ format "%0.3f" $w ]
 	dict set stats walltime $walltime
 
+	set rank [ adlb::rank ]
+
 	dict for { key value } $stats {
-	    puts "STATS: $key $value"
+	    puts "STATS\[$rank\]: $key $value"
 	}
     }
 
