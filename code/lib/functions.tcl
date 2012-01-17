@@ -612,6 +612,50 @@ namespace eval turbine {
         container_insert $c $t1 $d
     }
 
+    # When i and r are closed, set c[i] := *(r)
+    # inputs: [ list c i r ]
+    # r: a reference to a turbine ID
+    # 
+    proc container_f_deref_insert { parent outputs inputs } {
+        set c [ lindex $inputs 0 ]
+        set i [ lindex $inputs 1 ]
+        set r [ lindex $inputs 2 ]
+        
+        nonempty c i r
+        adlb::slot_create $c
+        set rule_id [ rule_new ]
+        rule $rule_id "container_f_deref_insert-$c-$i" "$i $r" "" \
+            "tp: turbine::container_f_deref_insert_body $c $i $r"
+    }
+    
+    proc container_f_deref_insert_body { c i r } {
+        set t1 [ integer_get $i ]
+        set d [ integer_get $r ]
+        container_insert $c $t1 $d
+    }
+    
+    # When r is closed, set c[i] := *(r)
+    # inputs: [ list c i r ]
+    # i: an integer which is the index to insert into
+    # r: a reference to a turbine ID
+    # 
+    proc container_deref_insert { parent outputs inputs } {
+        set c [ lindex $inputs 0 ]
+        set i [ lindex $inputs 1 ]
+        set r [ lindex $inputs 2 ]
+        
+        nonempty c i r
+        adlb::slot_create $c
+        set rule_id [ rule_new ]
+        rule $rule_id "container_deref_insert-$c-$i" "$r" "" \
+            "tp: turbine::container_deref_insert_body $c $i $r"
+    }
+    
+    proc container_deref_insert_body { c i r } {
+        set d [ integer_get $r ]
+        container_insert $c $i $d
+    }
+
     # Immediately insert data into container without affecting open slot count
     # c: the container
     # i: the subscript
