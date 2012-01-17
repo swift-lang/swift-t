@@ -25,7 +25,7 @@ namespace eval turbine {
     namespace export plus
 
     # These are Swift-2 functions
-    namespace export minus copy not
+    namespace export minus copy not set1
 
     # Bring in Turbine extension features
     namespace import c::new c::rule c::rule_new c::typeof
@@ -414,7 +414,7 @@ namespace eval turbine {
         set c_value [ expr $a_value + $b_value ]
         log "plus: $a_value + $b_value => $c_value"
         # Emulate some computation time
-        # exec sleep $c_value
+        # after 10000
         integer_set $c $c_value
     }
 
@@ -434,7 +434,7 @@ namespace eval turbine {
         set c_value [ expr $a_value - $b_value ]
         log "minus: $a_value - $b_value => $c_value"
         # Emulate some computation time
-        # exec sleep $c_value
+        # after 10000
         integer_set $c $c_value
     }
 
@@ -486,6 +486,22 @@ namespace eval turbine {
         set o_value $i_value
         log "copy $i_value => $o_value"
         integer_set $o $o_value
+    }
+
+    # Good for performance testing
+    # c = 1;
+    # and sleeps 
+    proc set1 { parent c } {
+
+        set rule_id [ rule_new ]
+        rule $rule_id "set1-$" "" $c \
+            "tf: set1_body $parent $c"
+    }
+    proc set1_body { parent c } {
+        log "set1"
+        # Emulate some computation time
+        after 1000
+        integer_set $c 1
     }
 
     # This is a Swift-2 function

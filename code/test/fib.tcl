@@ -5,7 +5,11 @@
 package require turbine 0.0.1
 namespace import turbine::*
 
-set N 5
+if { [ info exists env(TURBINE_TEST_PARAM_1) ] } {
+    set N $env(TURBINE_TEST_PARAM_1)
+} else {
+    set N 4
+}
 
 proc fib { stack o n } {
     turbine::c::log function:fib
@@ -83,7 +87,7 @@ proc if-1 { stack } {
         set stack [ data_new stack ]
         container_init $stack string
         container_insert $stack _parent $parent
-        integer_set $o 1
+	turbine::set1 no_stack $o
     }
 }
 
