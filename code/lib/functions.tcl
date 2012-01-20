@@ -230,6 +230,26 @@ namespace eval turbine {
         }
     }
 
+    # Sum all of the values in a container of integers    
+    proc dsum { stack outputs inputs } {
+        set container [ lindex $inputs 0 ]
+        set result [ lindex $inputs 1 ]
+        rule $rule_id "dsum-$rule_id" $container "" \
+            "tp: dsum_body $stack $container $result"
+    }
+    
+    proc dsum_body { stack container result } {
+
+        set keys [ container_list $container ]
+        # TODO: divide and conquer
+        global WORK_TYPE
+        foreach key $keys {
+            c::log "log_dsum_body"
+            set c [ container_get $container $key ]
+            #TODO: plus??
+        }
+    }
+
     # When container is closed, concatenate its keys in result
     # container: The container to read
     # result: An initialized string
