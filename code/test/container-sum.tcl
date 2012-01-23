@@ -38,7 +38,7 @@ proc rules { } {
     # initialise the result
     turbine::integer_init 6
 
-    turbine::dsum NO_STACK [ list ] [ list 1 6 ]
+    turbine::sum NO_STACK [ list 6 ] [ list 1 ]
 
     # trace the result
     turbine::trace NO_STACK [ list ] [ list 6]

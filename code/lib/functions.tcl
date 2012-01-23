@@ -234,15 +234,15 @@ namespace eval turbine {
     # inputs: [ list c r ]
     # c: the container
     # r: the turbine id to store the sum into
-    proc dsum { stack outputs inputs } {
+    proc sum { stack outputs inputs } {
         set container [ lindex $inputs 0 ]
-        set result [ lindex $inputs 1 ]
+        set result [ lindex $outputs 0 ]
         set rule_id [ rule_new ]
-        rule $rule_id "dsum-$rule_id" $container "" \
-            "tp: dsum_body $stack $container $result 0 0"
+        rule $rule_id "sum-$rule_id" $container "" \
+            "tp: sum_body $stack $container $result 0 0"
     }
     
-    proc dsum_body { stack container result accum next_index } {
+    proc sum_body { stack container result accum next_index } {
         set keys [ container_list $container ]
         # TODO: could divide and conquer instead of 
         #       doing linear search
@@ -261,8 +261,8 @@ namespace eval turbine {
                 # block until the next turbine id is finished, 
                 #   then continue running
                 set rule_id [ rule_new ]
-                rule $rule_id "dsum-$rule_id" $turbine_id "" \
-                    "tp: dsum_body $stack $container $result $accum $i"
+                rule $rule_id "sum-$rule_id" $turbine_id "" \
+                    "tp: sum_body $stack $container $result $accum $i"
                 # return immediately without setting result
                 return 
             }
