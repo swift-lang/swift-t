@@ -373,6 +373,27 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
+   usage: adlb::exists <id>
+ */
+static int
+ADLB_Exists_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  long id;
+  bool b;
+  int rc;
+  rc = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK_MSG(rc, "adlb::exists requires a data ID");
+  rc = ADLB_Exists(id, &b);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "adlb::exists <%li> failed!", id);
+  Tcl_Obj* result = Tcl_NewBooleanObj(b);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+/**
    usage: adlb::store <id> <data>
 */
 static int
@@ -673,6 +694,7 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("put",       ADLB_Put_Cmd);
   COMMAND("get",       ADLB_Get_Cmd);
   COMMAND("create",    ADLB_Create_Cmd);
+  COMMAND("exists",    ADLB_Exists_Cmd);
   COMMAND("store",     ADLB_Store_Cmd);
   COMMAND("retrieve",  ADLB_Retrieve_Cmd);
   COMMAND("slot_create", ADLB_Slot_Create_Cmd);
