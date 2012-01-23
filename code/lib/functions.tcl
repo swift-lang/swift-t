@@ -231,23 +231,44 @@ namespace eval turbine {
     }
 
     # Sum all of the values in a container of integers    
+    # inputs: [ list c r ]
+    # c: the container
+    # r: the turbine id to store the sum into
     proc dsum { stack outputs inputs } {
         set container [ lindex $inputs 0 ]
         set result [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
         rule $rule_id "dsum-$rule_id" $container "" \
-            "tp: dsum_body $stack $container $result"
+            "tp: dsum_body $stack $container $result 0 0"
     }
     
-    proc dsum_body { stack container result } {
-
+    proc dsum_body { stack container result accum next_index } {
         set keys [ container_list $container ]
-        # TODO: divide and conquer
-        global WORK_TYPE
-        foreach key $keys {
-            c::log "log_dsum_body"
-            set c [ container_get $container $key ]
-            #TODO: plus??
+        # TODO: could divide and conquer instead of 
+        #       doing linear search
+        set n [ llength $keys ]
+        set i $next_index
+        while { $i < $n } {
+            set key [ lindex $keys $i ]
+            set turbine_id [ container_get $container $key ]
+
+            if { [ catch { set val [ integer_get $turbine_id ] } ] == 0 } {
+                # add to the sum
+                puts "Adding $val"
+                set accum [ expr $accum + $val ]
+                incr i
+            } else {
+                # block until the next turbine id is finished, 
+                #   then continue running
+                set rule_id [ rule_new ]
+                rule $rule_id "dsum-$rule_id" $turbine_id "" \
+                    "tp: dsum_body $stack $container $result $accum $i"
+                # return immediately without setting result
+                return 
+            }
         }
+        # If we get out of loop, we're done
+        integer_set $result $accum
     }
 
     # When container is closed, concatenate its keys in result
