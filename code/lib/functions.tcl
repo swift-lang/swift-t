@@ -17,6 +17,7 @@ namespace eval turbine {
     # Memory functions (will be in turbine::f namespace)
     namespace export container_f_get container_f_insert
     namespace export f_reference f_dereference
+    namespace export f_container_create_nested
 
     # System functions
     namespace export stack_lookup
@@ -230,7 +231,7 @@ namespace eval turbine {
         }
     }
 
-    # Sum all of the values in a container of integers    
+    # Sum all of the values in a container of integers
     # inputs: [ list c r ]
     # c: the container
     # r: the turbine id to store the sum into
@@ -241,10 +242,10 @@ namespace eval turbine {
         rule $rule_id "sum-$rule_id" $container "" \
             "tp: sum_body $stack $container $result 0 0"
     }
-    
+
     proc sum_body { stack container result accum next_index } {
         set keys [ container_list $container ]
-        # TODO: could divide and conquer instead of 
+        # TODO: could divide and conquer instead of
         #       doing linear search
         set n [ llength $keys ]
         set i $next_index
@@ -258,13 +259,13 @@ namespace eval turbine {
                 set accum [ expr $accum + $val ]
                 incr i
             } else {
-                # block until the next turbine id is finished, 
+                # block until the next turbine id is finished,
                 #   then continue running
                 set rule_id [ rule_new ]
                 rule $rule_id "sum-$rule_id" $turbine_id "" \
                     "tp: sum_body $stack $container $result $accum $i"
                 # return immediately without setting result
-                return 
+                return
             }
         }
         # If we get out of loop, we're done
@@ -332,11 +333,27 @@ namespace eval turbine {
     }
 
     # Utility function to set up a TD
-    proc literal { type value } {
+    # usage: [<name>] <type> <value>
+    # If name is given, store TD in variable name and log name
+    proc literal { args } {
 
-        set result [ data_new ]
+        if { [ llength $args ] == 2 } {
+            set type   [ lindex $args 0 ]
+            set value  [ lindex $args 1 ]
+            set result [ data_new ]
+        } elseif { [ llength $args ] == 3 } {
+            set name   [ lindex $args 0 ]
+            set type   [ lindex $args 1 ]
+            set value  [ lindex $args 2 ]
+            set result [ data_new $name ]
+            upvar 1 $name n
+            set n $result
+        } else {
+            error "turbine::literal requires 2 or 3 args!"
+        }
         ${type}_init $result
         ${type}_set $result $value
+
         return $result
     }
 
@@ -528,7 +545,7 @@ namespace eval turbine {
         log "copy $i_value => $o_value"
         integer_set $o $o_value
     }
-    
+
     # This is a Swift-2 function
     # c = -b;
     proc negate { parent c inputs } {
@@ -674,42 +691,42 @@ namespace eval turbine {
     # When i and r are closed, set c[i] := *(r)
     # inputs: [ list c i r ]
     # r: a reference to a turbine ID
-    # 
+    #
     proc container_f_deref_insert { parent outputs inputs } {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set r [ lindex $inputs 2 ]
-        
+
         nonempty c i r
         adlb::slot_create $c
         set rule_id [ rule_new ]
         rule $rule_id "container_f_deref_insert-$c-$i" "$i $r" "" \
             "tp: turbine::container_f_deref_insert_body $c $i $r"
     }
-    
+
     proc container_f_deref_insert_body { c i r } {
         set t1 [ integer_get $i ]
         set d [ integer_get $r ]
         container_insert $c $t1 $d
     }
-    
+
     # When r is closed, set c[i] := *(r)
     # inputs: [ list c i r ]
     # i: an integer which is the index to insert into
     # r: a reference to a turbine ID
-    # 
+    #
     proc container_deref_insert { parent outputs inputs } {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set r [ lindex $inputs 2 ]
-        
+
         nonempty c i r
         adlb::slot_create $c
         set rule_id [ rule_new ]
         rule $rule_id "container_deref_insert-$c-$i" "$r" "" \
             "tp: turbine::container_deref_insert_body $c $i $r"
     }
-    
+
     proc container_deref_insert_body { c i r } {
         set d [ integer_get $r ]
         container_insert $c $i $d
@@ -800,24 +817,75 @@ namespace eval turbine {
         set t1 [ integer_get $i ]
         adlb::container_reference $c $t1 $d
     }
-    # When reference r on c[*] is closed, store c[*][i] = d
-    # Blocks on r and i
-    # inputs: [ list r c i d ]
+    # When reference r on c[i] is closed, store c[i][j] = d
+    # Blocks on r and j
+    # inputs: [ list r j d ]
     # outputs: ignored
     proc f_container_reference_insert { parent outputs inputs } {
         set r [ lindex $inputs 0 ]
-        set c [ lindex $inputs 1 ]
-        set i [ lindex $inputs 2 ]
-        set d [ lindex $inputs 3 ]
+        # set c [ lindex $inputs 1 ]
+        set j [ lindex $inputs 1 ]
+        set d [ lindex $inputs 2 ]
         set rule_id [ rule_new ]
-        rule $rule_id "f_container_reference_insert-$r" "$r $i" "" \
-            "tp: turbine::f_container_reference_insert_body $c $i $d"
+        rule $rule_id "f_container_reference_insert-$r" "$r $j" "" \
+            "tp: turbine::f_container_reference_insert_body $r $j $d"
     }
-    proc f_container_reference_insert_body { c i d } {
+    proc f_container_reference_insert_body { r j d } {
         # We do not need to read r
-        # s: The subscript value
-        set s [ integer_get $i ]
-        container_insert $c $s $d
+        # s: The subscripted container
+        set s [ integer_get $r ]
+        container_insert $s $j $d
+    }
+
+    # Insert c[i][j] = d
+    proc f_container_nested_insert { c i j d } {
+
+        set rule_id [ rule_new ]
+        rule $rule_id "fcni" "$i $j" "" \
+            "tp: f_container_nested_insert_body_1 $c $i $j $d"
+    }
+
+    proc f_container_nested_insert_body_1 { c i j d } {
+
+        if [ container_insert_atomic $c $i ] {
+            # c[i] does not exist
+            set t [ data_new ]
+            container_init $t integer
+            container_insert $c $i $t
+        } else {
+            set r [ data_new ]
+            integer_init $r
+            container_reference $r $c $i
+            set rule_id [ rule_new ]
+            rule $rule_id fcnib "$r" "" \
+                "tp: container_nested_insert_body_2 $r $j $d"
+        }
+    }
+
+    proc f_container_nested_insert_body_2 { r j d } {
+        container_insert $r $j $d
+    }
+
+    # Create container at c[i]
+    # Set r, a reference TD on c[i]
+    proc f_container_create_nested { r c i type } {
+
+        debug "container_create_nested: $r $c\[$i\] $type"
+
+        upvar 1 $r v
+
+        if [ adlb::insert_atomic $c $i ] {
+            # Member did not exist: create it and get reference
+            set t [ data_new ]
+            container_init $t $type
+            container_f_insert no_stack "" "$c $i $t"
+        }
+
+        # Create reference
+        set r [ data_new tmp_r ]
+        integer_init $r
+        f_reference no_stack "" "$c $i $r"
+        set v $r
     }
 
     variable container_branches

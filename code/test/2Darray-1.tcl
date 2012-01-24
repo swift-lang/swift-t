@@ -19,23 +19,21 @@ proc rules { } {
     # in this scope: an anonymous container t1
     # By analysis, we determine that t1 has one insertion in this
     # scope
-    set A [ turbine::data_new ]
+    turbine::data_new A
     turbine::container_init $A integer
-    set t1 [ turbine::data_new ]
+    turbine::data_new t1
     turbine::container_init $t1 integer
 
-    set i [ turbine::literal integer 37 ]
-    set j [ turbine::literal integer 41 ]
-    set k [ turbine::literal integer 59 ]
+    turbine::literal i integer 37
+    turbine::literal j integer 41
+    turbine::literal k integer 59
 
-    set r1 [ turbine::data_new ]
-    set v1 [ turbine::data_new ]
+    turbine::data_new r1
     turbine::integer_init $r1
-    turbine::integer_init $v1
     turbine::f_reference no_stack "" "$A $i $r1"
     turbine::container_f_insert no_stack "" "$A $i $t1"
-    turbine::f_container_reference_insert no_stack "" "$r1 $A $i $t1"
-    turbine::container_f_insert no_stack "" "$t1 $j $k"
+    turbine::f_container_reference_insert no_stack "" "$r1 $j $t1"
+    # turbine::container_f_insert no_stack "" "$t1 $j $k"
 }
 
 turbine::defaults

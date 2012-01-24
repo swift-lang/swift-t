@@ -409,7 +409,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   char data[length+1];
   strncpy(data, s, length);
   data[length] = '\0';
-  DEBUG_ADLB("adlb::store: <%li>=%s\n", id, data);
+  DEBUG_ADLB("adlb::store: <%li>=%s", id, data);
   int rc = ADLB_Store(id, data, length+1);
 
   assert(rc == ADLB_SUCCESS);
@@ -429,7 +429,7 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_GetLongFromObj(interp, objv[1], &id);
 
   int length;
-  DEBUG_ADLB("adlb_retrieve: <%li>\n", id);
+  DEBUG_ADLB("adlb_retrieve: <%li>", id);
   int rc = ADLB_Retrieve(id, retrieved, &length);
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::retrieve <%li> failed!\n", id);
@@ -459,7 +459,38 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
              id, subscript, member);
   int rc = ADLB_Insert(id, subscript, member);
 
-  assert(rc == ADLB_SUCCESS);
+  TCL_CONDITION(rc == ADLB_SUCCESS,
+                "adlb::insert: failed: <%li>[%s]=<%li>\n",
+                id, subscript, member);
+  return TCL_OK;
+}
+
+/**
+   usage: adlb::insert_atomic <id> <subscript>
+   returns: 1 if the id[subscript] already existed, else 0
+*/
+static int
+ADLB_Insert_Atomic_Cmd(ClientData cdata, Tcl_Interp *interp,
+                       int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(3);
+
+  bool b;
+  long id;
+  Tcl_GetLongFromObj(interp, objv[1], &id);
+  char* subscript = Tcl_GetString(objv[2]);
+
+  DEBUG_ADLB("adlb::insert_atomic: <%li>[%s]\n",
+             id, subscript);
+  int rc = ADLB_Insert_atomic(id, subscript, &b);
+
+  TCL_CONDITION(rc == ADLB_SUCCESS,
+                "adlb::insert_atomic: failed: <%li>[%s]",
+                id, subscript);
+
+  Tcl_Obj* result = Tcl_NewBooleanObj(b);
+  Tcl_SetObjResult(interp, result);
+
   return TCL_OK;
 }
 
@@ -703,6 +734,7 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("slot_create", ADLB_Slot_Create_Cmd);
   COMMAND("slot_drop", ADLB_Slot_Drop_Cmd);
   COMMAND("insert",    ADLB_Insert_Cmd);
+  COMMAND("insert_atomic", ADLB_Insert_Atomic_Cmd);
   COMMAND("lookup",    ADLB_Lookup_Cmd);
   COMMAND("close",     ADLB_Close_Cmd);
   COMMAND("unique",    ADLB_Unique_Cmd);

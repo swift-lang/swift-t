@@ -61,7 +61,7 @@ turbine_debug(const char* token, const char* format, ...)
   if (count >= buffer_size)
     printf("turbine_debug: message exceeded buffer_size (%i)\n",
            buffer_size);
-  printf("%s", buffer);
+  printf("%s\n", buffer);
   fflush(stdout);
   va_end(va);
 }

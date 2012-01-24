@@ -21,9 +21,10 @@ namespace import turbine::enumerate
 
 proc rules { } {
 
-    set c [ data_new ]
+    # set c [ data_new ]
+    turbine::data_new c
     turbine::container_init $c integer
-    set i1 [ literal integer 0 ]
+    turbine::literal i1 integer 0
     set i2 [ literal integer 1 ]
     set j1 [ literal integer 98 ]
     set j2 [ literal integer 72 ]

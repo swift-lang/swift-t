@@ -28,6 +28,8 @@ TEST_SRC_TCL := $(DIR)/adlb-noop.tcl         \
                 $(DIR)/enumerate-2.tcl       \
                 $(DIR)/dereference.tcl       \
                 $(DIR)/reference.tcl         \
+                $(DIR)/2Darray-1.tcl         \
+                $(DIR)/2Darray-2.tcl         \
                 $(DIR)/if1.tcl               \
                 $(DIR)/loop1.tcl             \
                 $(DIR)/readdata.tcl          \
@@ -35,7 +37,9 @@ TEST_SRC_TCL := $(DIR)/adlb-noop.tcl         \
                 $(DIR)/drange.tcl            \
                 $(DIR)/noop2.tcl
 
+
 # FUTURE WORK:
 #                $(DIR)/diamond4.tcl
 #                $(DIR)/modftdock.tcl
 
+#                 $(DIR)/2Darray-3.tcl        ???

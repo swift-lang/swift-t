@@ -133,10 +133,46 @@ static void check_versions()
   version_require("Turbine", &tv, "ADLB",    &av,  &rav);
 }
 
+/**
+   This is a separate function so we can set a function breakpoint
+ */
+static void gdb_sleep(int* t, int i)
+{
+  sleep(1);
+  DEBUG_TURBINE("gdb_check: %i %i\n", *t, i);
+}
+
+static void gdb_check(int rank)
+{
+  int gdb_rank;
+  char* s = getenv("GDB_RANK");
+  if (s != NULL &&
+      strlen(s) > 0)
+  {
+    int c = sscanf(s, "%i", &gdb_rank);
+    if (c != 1)
+    {
+      printf("Invalid GDB_RANK: %s\n", s);
+      exit(1);
+    }
+    if (gdb_rank == rank)
+    {
+      pid_t pid = getpid();
+      printf("Waiting for gdb: rank: %i pid: %i\n", rank, pid);
+      int t = 0;
+      int i = 0;
+      while (!t)
+        gdb_sleep(&t, i++);
+    }
+  }
+}
+
 turbine_code
 turbine_init(int amserver, int rank, int size)
 {
   check_versions();
+
+  gdb_check(rank);
 
   if (amserver)
     return TURBINE_SUCCESS;
@@ -731,7 +767,8 @@ info_waiting()
          item; item = item->next)
     {
       tr* t = (tr*) item->data;
-      transform_tostring(buffer, &t->transform);
+      int c = sprintf(buffer, "%6li  ", t->id);
+      transform_tostring(buffer+c, &t->transform);
       printf("TRANSFORM: %s\n", buffer);
     }
 }
