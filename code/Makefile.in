@@ -73,7 +73,7 @@ ifneq ($(MPI_INCLUDE),0)
 	CFLAGS += -I $(MPI_INCLUDE)
 endif
 ifeq ($(MACHINE),normal)
-	LIB_MPI	= -L $(MPI)/lib -l mpich -l mpl
+	LIB_MPI	= -L $(MPI)/lib -l mpich # -l mpl
 	LDFLAGS += -Wl,-rpath -Wl,$(MPI)/lib
 endif
 ifeq ($(MACHINE),sicortex)
