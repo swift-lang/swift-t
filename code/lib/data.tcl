@@ -20,11 +20,14 @@ namespace eval turbine {
     }
 
     # Obtain unique TD
-    # If given an argument, a log message is reported
+    # If given an argument, sets the variable by that name
+    # and a log message is reported
     proc data_new { args } {
         set u [ adlb::unique ]
         if { [ string length $args ] } {
             log "variable: $args=<$u>"
+            upvar 1 $args v
+            set v $u
         }
         return $u
     }
