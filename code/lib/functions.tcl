@@ -831,10 +831,10 @@ namespace eval turbine {
             "tp: turbine::f_container_reference_insert_body $r $j $d"
     }
     proc f_container_reference_insert_body { r j d } {
-        # We do not need to read r
         # s: The subscripted container
-        set s [ integer_get $r ]
-        container_insert $s $j $d
+        set c [ integer_get $r ]
+        set s [ integer_get $j ]
+        container_insert $c $s $d
     }
 
     # Insert c[i][j] = d

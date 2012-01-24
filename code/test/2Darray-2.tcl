@@ -38,22 +38,19 @@ proc rules { } {
     turbine::f_container_create_nested r1 $A $i1 integer
     turbine::f_container_reference_insert parent "" "$r1 $j1 $k1"
 
-    # turbine::literal i2 integer 32
-    # turbine::literal j2 integer 42
-    # turbine::literal k2 integer 52
+    turbine::literal i2 integer 32
+    turbine::literal j2 integer 42
+    turbine::literal k2 integer 52
+
+    turbine::f_container_create_nested r2 $A $i2 integer
+    turbine::f_container_reference_insert parent "" "$r2 $j2 $k2"
 
     # turbine::literal i1 integer 31
     # turbine::literal j1 integer 41
     # turbine::literal k1 integer 51
 
-
-
-    # set r1 [ turbine::data_new ]
-    # turbine::integer_init $r1
-    # turbine::f_reference no_stack "" "$A $i $r1"
-    # turbine::container_f_insert no_stack "" "$A $i $t1"
-    # turbine::f_container_reference_insert no_stack "" "$r1 $i $t1"
-    # turbine::container_f_insert no_stack "" "$t1 $j $k"
+    # turbine::f_container_create_nested r1 $A $i1 integer
+    # turbine::f_container_reference_insert parent "" "$r1 $j1 $k1"
 }
 
 turbine::defaults
