@@ -20,7 +20,7 @@ namespace eval turbine {
             ENGINE  { engine $rules }
             SERVER  { adlb::server }
             WORKER  { worker }
-            default { error "UNKNOWN MODE" }
+            default { error "UNKNOWN MODE: $mode" }
         }
     }
 
