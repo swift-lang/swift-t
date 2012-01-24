@@ -45,6 +45,7 @@ turbine_debug_init()
    otherwise mpiexec -l does not print the rank things [0]
    correctly.
 */
+__attribute__ ((format (printf, 2, 3)))
 void
 turbine_debug(const char* token, const char* format, ...)
 {
