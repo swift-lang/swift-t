@@ -52,7 +52,8 @@ proc loop1_body { parent container key } {
     turbine::trace $parent "" $value
 }
 
-turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
+turbine::defaults
+turbine::init $engines $servers
 turbine::start rules
 turbine::finalize
 
