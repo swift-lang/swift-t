@@ -528,6 +528,24 @@ namespace eval turbine {
         log "copy $i_value => $o_value"
         integer_set $o $o_value
     }
+    
+    # This is a Swift-2 function
+    # c = -b;
+    proc negate { parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "negate-$a" "$a" $c \
+            "tf: negate_body $c $a"
+    }
+
+    proc negate_body { c a } {
+        set a_value [ integer_get $a ]
+        set c_value [ expr 0 - $a_value ]
+        log "negate: -1 * $a_value => $c_value"
+        # Emulate some computation time
+        # exec sleep $c_value
+        integer_set $c $c_value
+    }
 
     # Good for performance testing
     # c = 1;
