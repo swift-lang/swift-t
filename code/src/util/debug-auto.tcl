@@ -27,8 +27,11 @@ out "#ifndef DEBUG_H\n"
 out "#define DEBUG_H\n\n"
 
 out "void turbine_debug_init(void);\n\n"
+
+out "__attribute__ ((format (printf, 2, 3)))\n"
 out "void turbine_debug(const char* token, " \
                        "const char* format, ...);\n\n"
+
 out "void turbine_debug_finalize(void);\n\n"
 
 # String breaks were necessary to prevent TCL string interpolation
