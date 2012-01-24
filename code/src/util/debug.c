@@ -64,7 +64,6 @@ turbine_debug(const char* token, const char* format, ...)
   printf("%s", buffer);
   fflush(stdout);
   va_end(va);
-  fflush(stdout);
 }
 
 void
