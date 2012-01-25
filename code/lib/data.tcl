@@ -39,7 +39,7 @@ namespace eval turbine {
     }
 
     proc integer_set { id value } {
-        debug "integer_set: <$id>=$value"
+        log "set: <$id>=$value"
         close_dataset $id "integer:$value"
     }
 

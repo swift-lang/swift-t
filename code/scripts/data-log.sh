@@ -10,4 +10,4 @@ then
   exit 1
 fi
 
-grep "variable:\|INSERT:" ${LOG}
+grep "variable:\|function:\|insert:\|set:\|trace:" ${LOG}
