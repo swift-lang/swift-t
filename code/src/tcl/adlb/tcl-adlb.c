@@ -42,9 +42,6 @@ static int mpi_rank = -1;
 /** Communicator for ADLB workers */
 static MPI_Comm worker_comm;
 
-/** Max command-line length */
-// #define ADLBTCL_CMD_MAX 1024
-
 /** ADLB uses -1 to mean "any" in ADLB_Put() and ADLB_Reserve() */
 #define ADLB_ANY -1
 
@@ -471,9 +468,6 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   // DEBUG_ADLB("adlb::insert: <%li>[%s]=<%li>\n",
   //            id, subscript, member);
 
-  log_printf("insert: <%li>[%s]=<%li>\n",
-             id, subscript, member);
-
   int rc = ADLB_Insert(id, subscript, member);
 
   TCL_CONDITION(rc == ADLB_SUCCESS,
@@ -551,14 +545,17 @@ ADLB_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2);
 
+  int rc;
   long id;
-  Tcl_GetLongFromObj(interp, objv[1], &id);
+  rc = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK_MSG(rc, "adlb::close: argument must be a long integer!");
 
   // DEBUG_ADLB("adlb::close: <%li>\n", id);
   int* ranks;
   int count;
-  int rc = ADLB_Close(id, &ranks, &count);
-  assert(rc == ADLB_SUCCESS);
+  rc = ADLB_Close(id, &ranks, &count);
+  TCL_CONDITION(rc == ADLB_SUCCESS,
+                "adlb::close <%li> failed!", id);
 
   Tcl_Obj* result = Tcl_NewListObj(0, NULL);
   if (count > 0)
@@ -653,9 +650,33 @@ ADLB_Container_Reference_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::container_reference: <%li> failed!",
                 container_id);
+  return TCL_OK;
+}
 
-  if (rc != ADLB_SUCCESS)
-    return TCL_ERROR;
+/**
+   usage: adlb::container_size <container_id>
+*/
+static int
+ADLB_Container_Size_Cmd(ClientData cdata, Tcl_Interp *interp,
+                             int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  long container_id;
+  int rc;
+  rc = Tcl_GetLongFromObj(interp, objv[1], &container_id);
+  TCL_CHECK_MSG(rc, "adlb::container_size: "
+                "argument is not a long integer!");
+
+  int size;
+  // DEBUG_ADLB("adlb::container_size: <%li>",
+  //            container_id, size);
+  rc = ADLB_Container_size(container_id, &size);
+  TCL_CONDITION(rc == ADLB_SUCCESS,
+                "adlb::container_size: <%li> failed!",
+                container_id);
+  Tcl_Obj* result = Tcl_NewIntObj(size);
+  Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
 
@@ -765,6 +786,7 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("unique",    ADLB_Unique_Cmd);
   COMMAND("container_typeof",    ADLB_Container_Typeof_Cmd);
   COMMAND("container_reference", ADLB_Container_Reference_Cmd);
+  COMMAND("container_size",      ADLB_Container_Size_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
 
