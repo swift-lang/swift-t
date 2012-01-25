@@ -5,10 +5,22 @@
  * @author wozniak
  * */
 
+// This file should do some user logging using the c-utils
+// logging library - this is because the ADLB C layer cannot
+// do that effectively, and these functions are called
+// directly as Tcl extension functions
+
+// This file should not do DEBUG logging for data operations
+// except for during development of this file - the Turbine and ADLB
+// messages are more useful.  This file only packs and unpacks
+// calls to the ADLB C layer
+
 #include <assert.h>
 
 #include <tcl.h>
 #include <adlb.h>
+
+#include <log.h>
 
 #include "src/tcl/util.h"
 #include "src/util/debug.h"
@@ -331,7 +343,7 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(rc == TCL_OK, "adlb:create could not get data id");
   char* type_string = Tcl_GetString(objv[2]);
   adlb_data_type type = type_from_string(type_string);
-  DEBUG_ADLB("adlb::create: <%li> %s\n", id, type_string);
+  // DEBUG_ADLB("adlb::create: <%li> %s\n", id, type_string);
 
   switch (type)
   {
@@ -409,10 +421,11 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   char data[length+1];
   strncpy(data, s, length);
   data[length] = '\0';
-  DEBUG_ADLB("adlb::store: <%li>=%s", id, data);
+  // DEBUG_ADLB("adlb::store: <%li>=%s", id, data);
   int rc = ADLB_Store(id, data, length+1);
 
-  assert(rc == ADLB_SUCCESS);
+  TCL_CONDITION(rc == ADLB_SUCCESS,
+                "adlb::store <%li> failed!", id);
   return TCL_OK;
 }
 
@@ -429,10 +442,10 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_GetLongFromObj(interp, objv[1], &id);
 
   int length;
-  DEBUG_ADLB("adlb_retrieve: <%li>", id);
+  // DEBUG_ADLB("adlb_retrieve: <%li>", id);
   int rc = ADLB_Retrieve(id, retrieved, &length);
   TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::retrieve <%li> failed!\n", id);
+                "adlb::retrieve <%li> failed!", id);
 
   Tcl_Obj* result = Tcl_NewStringObj(retrieved, length-1);
   Tcl_SetObjResult(interp, result);
@@ -455,8 +468,12 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   long member;
   Tcl_GetLongFromObj(interp, objv[3], &member);
 
-  DEBUG_ADLB("adlb::insert: <%li>[%s]=<%li>\n",
+  // DEBUG_ADLB("adlb::insert: <%li>[%s]=<%li>\n",
+  //            id, subscript, member);
+
+  log_printf("insert: <%li>[%s]=<%li>\n",
              id, subscript, member);
+
   int rc = ADLB_Insert(id, subscript, member);
 
   TCL_CONDITION(rc == ADLB_SUCCESS,
@@ -480,7 +497,7 @@ ADLB_Insert_Atomic_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_GetLongFromObj(interp, objv[1], &id);
   char* subscript = Tcl_GetString(objv[2]);
 
-  DEBUG_ADLB("adlb::insert_atomic: <%li>[%s]\n",
+  DEBUG_ADLB("adlb::insert_atomic: <%li>[\"%s\"]",
              id, subscript);
   int rc = ADLB_Insert_atomic(id, subscript, &b);
 
@@ -515,7 +532,8 @@ ADLB_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(rc == ADLB_SUCCESS, "lookup failed for: <%li>[%s]",
                 id, subscript);
 
-  DEBUG_ADLB("adlb::lookup <%li>[%s]=<%li>\n", id, subscript, member);
+  DEBUG_ADLB("adlb::lookup <%li>[\"%s\"]=<%li>",
+             id, subscript, member);
 
   Tcl_Obj* result = Tcl_NewLongObj(member);
   Tcl_SetObjResult(interp, result);
@@ -536,7 +554,7 @@ ADLB_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
   long id;
   Tcl_GetLongFromObj(interp, objv[1], &id);
 
-  DEBUG_ADLB("adlb::close: <%li>\n", id);
+  // DEBUG_ADLB("adlb::close: <%li>\n", id);
   int* ranks;
   int count;
   int rc = ADLB_Close(id, &ranks, &count);
@@ -570,7 +588,7 @@ ADLB_Unique_Cmd(ClientData cdata, Tcl_Interp *interp,
   int rc = ADLB_Unique(&id);
   assert(rc == ADLB_SUCCESS);
 
-  DEBUG_ADLB("adlb::unique: <%li>\n", id);
+  // DEBUG_ADLB("adlb::unique: <%li>", id);
 
   Tcl_Obj* result = Tcl_NewLongObj(id);
   Tcl_SetObjResult(interp, result);
@@ -592,15 +610,15 @@ ADLB_Container_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_data_type type;
   int rc = ADLB_Container_Typeof(id, &type);
   TCL_CONDITION(rc == ADLB_SUCCESS,
-		        "adlb::container_typeof <%li> failed!", id);
+                "adlb::container_typeof <%li> failed!", id);
 
   // DEBUG_ADLB("adlb::container_typeof: <%li> is: %i\n", id, type);
 
   char type_string[32];
   ADLB_Data_type_tostring(type_string, type);
 
-  DEBUG_ADLB("adlb::container_typeof: <%li> is: %s\n",
-             id, type_string);
+  // DEBUG_ADLB("adlb::container_typeof: <%li> is: %s",
+  //            id, type_string);
 
   Tcl_Obj* result = Tcl_NewStringObj(type_string, -1);
   Tcl_SetObjResult(interp, result);
@@ -619,15 +637,22 @@ ADLB_Container_Reference_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(4);
 
   long container_id;
-  Tcl_GetLongFromObj(interp, objv[1], &container_id);
+  int rc;
+  rc = Tcl_GetLongFromObj(interp, objv[1], &container_id);
+  TCL_CHECK_MSG(rc, "adlb::container_reference: "
+                "argument 1 is not a long integer!");
   char* subscript = Tcl_GetString(objv[2]);
   long reference;
-  Tcl_GetLongFromObj(interp, objv[3], &reference);
+  rc = Tcl_GetLongFromObj(interp, objv[3], &reference);
+  TCL_CHECK_MSG(rc, "adlb::container_reference: "
+                "argument 3 is not a long integer!");
 
-  DEBUG_ADLB("adlb::container_reference: <%li>[%s] => <%li>\n",
-             container_id, subscript, reference);
-  int rc =
-      ADLB_Container_reference(container_id, subscript, reference);
+  // DEBUG_ADLB("adlb::container_reference: <%li>[%s] => <%li>\n",
+  //            container_id, subscript, reference);
+  rc = ADLB_Container_reference(container_id, subscript, reference);
+  TCL_CONDITION(rc == ADLB_SUCCESS,
+                "adlb::container_reference: <%li> failed!",
+                container_id);
 
   if (rc != ADLB_SUCCESS)
     return TCL_ERROR;
@@ -646,7 +671,7 @@ ADLB_Slot_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
   long container_id;
   Tcl_GetLongFromObj(interp, objv[1], &container_id);
 
-  DEBUG_ADLB("adlb::slot_create: <%li>\n", container_id);
+  // DEBUG_ADLB("adlb::slot_create: <%li>", container_id);
   int rc = ADLB_Slot_create(container_id);
 
   if (rc != ADLB_SUCCESS)
@@ -666,7 +691,7 @@ ADLB_Slot_Drop_Cmd(ClientData cdata, Tcl_Interp *interp,
   long container_id;
   Tcl_GetLongFromObj(interp, objv[1], &container_id);
 
-  DEBUG_ADLB("adlb::slot_drop: <%li>\n", container_id);
+  // DEBUG_ADLB("adlb::slot_drop: <%li>", container_id);
   int rc = ADLB_Slot_drop(container_id);
 
   if (rc != ADLB_SUCCESS)
