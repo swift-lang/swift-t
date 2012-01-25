@@ -397,7 +397,7 @@ turbine_code
 turbine_declare(turbine_datum_id id, struct list_l** result)
 {
   assert(initialized);
-  DEBUG_TURBINE("declare: %li\n", id);
+  // DEBUG_TURBINE("declare: %li\n", id);
   struct list_l* blocked = list_l_create();
   if (table_lp_contains(&td_blockers, id))
     return TURBINE_ERROR_DOUBLE_DECLARE;
