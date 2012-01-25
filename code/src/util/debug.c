@@ -39,6 +39,14 @@ turbine_debug_init()
 }
 
 /**
+   Used only for snprintf checks in turbine_debug
+*/
+#define BUFFER_SIZE_CHECK(count, buffer_size)                           \
+  if (count >= buffer_size)                                             \
+    printf("turbine_debug: message exceeded buffer_size (%i)\n",        \
+           buffer_size);
+
+/**
    All turbine_debug messages may be disabled by setting
    DEBUG=0 (number 0) in the environment.
    We have to put everything into one string before we print it,
@@ -58,10 +66,10 @@ turbine_debug(const char* token, const char* format, ...)
   int count = 0;
   count += sprintf(buffer, "%s: ", token);
   count += vsnprintf(buffer+count, buffer_size-count, format, va);
-  if (count >= buffer_size)
-    printf("turbine_debug: message exceeded buffer_size (%i)\n",
-           buffer_size);
-  printf("%s\n", buffer);
+  BUFFER_SIZE_CHECK(count, buffer_size);
+  count += snprintf(buffer+count, buffer_size-count, "\n");
+  BUFFER_SIZE_CHECK(count, buffer_size);
+  printf("%s", buffer);
   fflush(stdout);
   va_end(va);
 }
