@@ -6,6 +6,7 @@ TEST_SRC_C := $(DIR)/debug.c
 TEST_SRC_TCL := $(DIR)/adlb-noop.tcl         \
 	        $(DIR)/adlb-exists.tcl       \
 	        $(DIR)/adlb-get-fail.tcl     \
+                $(DIR)/adlb-containers.tcl   \
                 $(DIR)/noop.tcl              \
                 $(DIR)/adlb-putget.tcl       \
                 $(DIR)/batcher.tcl           \
