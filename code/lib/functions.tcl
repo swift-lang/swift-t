@@ -742,25 +742,26 @@ namespace eval turbine {
         container_insert $c $i $d
     }
 
-    # When i is closed, get a reference on c[i] in TD d
-    # Thus, you can block on d and be notified when c[i] exists
-    # d is an integer.  The value of d is the TD of c[i]
-    # inputs: [ list c i d ]
+    # When i is closed, get a reference on c[i] in TD r
+    # Thus, you can block on r and be notified when c[i] exists
+    # r is an integer.  The value of r is the TD of c[i]
+    # inputs: [ list c i r ]
     # outputs: None.  You can block on d with turbine::dereference
     # c: the container
     # i: the subscript
-    # d: the reference TD
+    # r: the reference TD
     proc f_reference { parent outputs inputs } {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
-        set d [ lindex $inputs 2 ]
+        set r [ lindex $inputs 2 ]
+        # nonempty c i r
         set rule_id [ rule_new ]
         rule $rule_id "f_reference_body-$c-$i" $i "" \
-            "tp: turbine::f_reference_body $c $i $d"
+            "tp: turbine::f_reference_body $c $i $r"
     }
-    proc f_reference_body { c i d } {
+    proc f_reference_body { c i r } {
         set t1 [ integer_get $i ]
-        adlb::container_reference $c $t1 $d
+        adlb::container_reference $c $t1 $r
     }
 
     # When reference r is closed, store its (integer) value in v
@@ -866,26 +867,35 @@ namespace eval turbine {
         container_insert $r $j $d
     }
 
-    # Create container at c[i]
-    # Set r, a reference TD on c[i]
     proc f_container_create_nested { r c i type } {
-
-        debug "container_create_nested: $r $c\[$i\] $type"
 
         upvar 1 $r v
 
-        if [ adlb::insert_atomic $c $i ] {
+        # Create reference
+        data_new tmp_r
+        integer_init $tmp_r
+        set v $tmp_r
+
+        set rule_id [ rule_new ]
+        rule $rule_id fccn "" "$i" \
+               "tp: f_container_create_nested_body $tmp_r $c $i $type"
+    }
+
+    # Create container at c[i]
+    # Set r, a reference TD on c[i]
+    proc f_container_create_nested_body { r c i type } {
+
+        debug "container_create_nested: $r $c\[$i\] $type"
+
+        set s [ integer_get $i ]
+        if [ adlb::insert_atomic $c $s ] {
             # Member did not exist: create it and get reference
             set t [ data_new ]
             container_init $t $type
-            container_f_insert no_stack "" "$c $i $t"
+            adlb::insert $c $s $t
         }
 
-        # Create reference
-        set r [ data_new tmp_r ]
-        integer_init $r
         f_reference no_stack "" "$c $i $r"
-        set v $r
     }
 
     variable container_branches

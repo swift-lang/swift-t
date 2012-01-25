@@ -23,11 +23,6 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    # By analysis, we determine that A has one insertion
-    # in this scope: an anonymous container t1
-    # By analysis, we determine that t1 has one insertion in this
-    # scope
-
     turbine::data_new A
     turbine::container_init $A integer
 
@@ -45,12 +40,12 @@ proc rules { } {
     turbine::f_container_create_nested r2 $A $i2 integer
     turbine::f_container_reference_insert parent "" "$r2 $j2 $k2"
 
-    # turbine::literal i1 integer 31
-    # turbine::literal j1 integer 41
-    # turbine::literal k1 integer 51
+    turbine::literal i3 integer 31
+    turbine::literal j3 integer 43
+    turbine::literal k3 integer 53
 
-    # turbine::f_container_create_nested r1 $A $i1 integer
-    # turbine::f_container_reference_insert parent "" "$r1 $j1 $k1"
+    turbine::f_container_create_nested r3 $A $i3 integer
+    turbine::f_container_reference_insert parent "" "$r3 $j3 $k3"
 }
 
 turbine::defaults
