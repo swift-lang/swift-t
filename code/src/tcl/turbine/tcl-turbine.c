@@ -323,7 +323,7 @@ Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2);
   char* msg = Tcl_GetString(objv[1]);
-  DEBUG_TCL_TURBINE("%s\n", msg);
+  DEBUG_TCL_TURBINE("%s", msg);
   return TCL_OK;
 }
 #else // Debug output is disabled
