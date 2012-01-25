@@ -96,6 +96,8 @@ namespace eval turbine {
     }
 
     proc container_insert { id subscript value } {
+
+        log "insert: <$id>[$subscript]=<$value>"
         adlb::insert $id $subscript $value
     }
 
