@@ -8,7 +8,7 @@ namespace import turbine::*
 if { [ info exists env(TURBINE_TEST_PARAM_1) ] } {
     set N $env(TURBINE_TEST_PARAM_1)
 } else {
-    set N 4
+    set N 7
 }
 
 proc fib { stack o n } {
@@ -46,7 +46,7 @@ proc if-0 { stack } {
         set stack [ data_new stack ]
         container_init $stack string
         container_insert $stack _parent $parent
-        integer_set $o 0
+        turbine::set0 no_stack $o
     }
 }
 

@@ -567,6 +567,26 @@ namespace eval turbine {
     # Good for performance testing
     # c = 1;
     # and sleeps
+    proc set0 { parent c } {
+
+        set rule_id [ rule_new ]
+        rule $rule_id "set1-$" "" $c \
+            "tf: set0_body $parent $c"
+    }
+    proc set0_body { parent c } {
+        log "set0"
+
+        variable stats
+        dict incr stats set0
+
+        # Emulate some computation time
+        # after 10000
+        integer_set $c 0
+    }
+
+    # Good for performance testing
+    # c = 1;
+    # and sleeps
     proc set1 { parent c } {
 
         set rule_id [ rule_new ]
@@ -580,7 +600,7 @@ namespace eval turbine {
         dict incr stats set1
 
         # Emulate some computation time
-        after 1000
+        # after 10000
         integer_set $c 1
     }
 
