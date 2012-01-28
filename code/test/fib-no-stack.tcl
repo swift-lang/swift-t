@@ -5,6 +5,12 @@
 package require turbine 0.0.1
 namespace import turbine::*
 
+if { [ info exists env(TURBINE_TEST_PARAM_1) ] } {
+    set N $env(TURBINE_TEST_PARAM_1)
+} else {
+    set N 7
+}
+
 proc cmpf:fib { stack u:o u:n } {
     turbine::c::log function:cmpf:fib
     set __rule_id [ turbine::c::rule_new ]
@@ -23,7 +29,8 @@ proc if-0 { stack __rule_id u:n u:n u:o } {
         set __rule_id [ turbine::c::rule_new ]
         turbine::c::rule ${__rule_id} if-1 "${l:0}" "" "tc: if-1 ${stack} ${__rule_id} ${l:0} ${u:n} ${u:o}"
     } else {
-        integer_set ${u:o} 0
+        # integer_set ${u:o} 0
+	turbine::set0 no_stack ${u:o}
     }
 }
 
@@ -52,18 +59,20 @@ proc if-1 { stack __rule_id l:0 u:n u:o } {
         turbine::c::rule ${__rule_id} fib [ list ${l:6} ] [ list ${l:5} ] "tp: cmpf:fib ${stack} ${l:5} ${l:6}"
         turbine::plus ${stack} [ list ${u:o} ] [ list ${l:2} ${l:5} ]
     } else {
-        integer_set ${u:o} 1
+        # integer_set ${u:o} 1
+	turbine::set1 no_stack ${u:o}
     }
 }
 
 proc __swiftmain {  } {
+    global N
     turbine::c::log function:__swiftmain
     set stack 0
     set l:0 [ data_new __l0 ]
     turbine::integer_init ${l:0}
     set l:1 [ data_new __l1 ]
     turbine::integer_init ${l:1}
-    integer_set ${l:1} 18
+    integer_set ${l:1} $N
     set __rule_id [ turbine::c::rule_new ]
     turbine::c::rule ${__rule_id} fib [ list ${l:1} ] [ list ${l:0} ] "tp: cmpf:fib ${stack} ${l:0} ${l:1}"
     turbine::trace ${stack} [ list ] [ list ${l:0} ]
