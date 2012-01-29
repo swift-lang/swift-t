@@ -59,8 +59,11 @@ SCRIPT_NAME=$( basename ${SCRIPT} )
 
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
 
-TURBINE_ENGINES=$(( PROCS/100 ))
-ADLB_SERVERS=$((    PROCS/100 ))
+TURBINE_ENGINES=$(( PROCS/64 ))
+ADLB_SERVERS=$((    PROCS/64 ))
+
+print "TURBINE_ENGINES: ${TURBINE_ENGINES}" >> ${LOG}
+print "ADLB_SERVERS:    ${ADLB_SERVERS}"    >> ${LOG}
 
 # Turbine-specific environment
 env+=( TCLLIBPATH=${TCLLIBPATH}
@@ -78,6 +81,12 @@ cqsub -n ${NODES} \
       -e ${ENV} \
       -m vn \
       ${TCLSH} ${SCRIPT_NAME} | read JOB_ID
+
+if [[ ${JOB_ID} == "" ]] 
+then
+  print "cqsub failed!"
+  exit 1
+fi
 
 print "JOB: ${JOB_ID}"
 {
