@@ -66,6 +66,7 @@ proc if-1 { stack __rule_id l:0 u:n u:o } {
 
 proc __swiftmain {  } {
     global N
+    puts "N: $N"
     turbine::c::log function:__swiftmain
     set stack 0
     set l:0 [ data_new __l0 ]
