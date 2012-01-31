@@ -67,7 +67,10 @@ namespace eval turbine {
             set proccall [ lrange $command 1 end ]
             adlb::put $adlb::ANY $WORK_TYPE(CONTROL) \
                 "procedure $command"
-        } else {
+        } elseif { [ string equal $prefix "tl:" ] } {
+            set expression [ lrange $command 1 end ]
+	    ::eval $expression
+	} else {
             adlb::put $adlb::ANY $WORK_TYPE(WORK) \
                 "$transform $command"
         }

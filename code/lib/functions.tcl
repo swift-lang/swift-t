@@ -464,7 +464,7 @@ namespace eval turbine {
         set b [ lindex $inputs 1 ]
         set rule_id [ rule_new ]
         rule $rule_id "plus-$a-$b" "$a $b" $c \
-            "tf: plus_body $parent $c $a $b"
+            "tl: plus_body $parent $c $a $b"
     }
     proc plus_body { parent c a b } {
         set a_value [ integer_get $a ]
@@ -484,7 +484,7 @@ namespace eval turbine {
         set b [ lindex $inputs 1 ]
         set rule_id [ rule_new ]
         rule $rule_id "minus-$a-$b" "$a $b" $c \
-            "tf: minus_body $c $a $b"
+            "tl: minus_body $c $a $b"
     }
     proc minus_body {c a b } {
         set a_value [ integer_get $a ]
@@ -580,7 +580,7 @@ namespace eval turbine {
         dict incr stats set0
 
         # Emulate some computation time
-        # after 10000
+        # after 1000
         integer_set $c 0
     }
 
@@ -600,7 +600,7 @@ namespace eval turbine {
         dict incr stats set1
 
         # Emulate some computation time
-        # after 10000
+        # after 1000
         integer_set $c 1
     }
 
