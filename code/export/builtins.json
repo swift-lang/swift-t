@@ -1,0 +1,20 @@
+{
+    "version" : "0.0.2",
+
+    "builtins" :
+    [
+        {
+            "thing" : "function",
+            "name" : "plus",
+            "input": [ "int", "int" ],
+            "output" : [ "int" ]
+        },
+
+        {
+            "thing" : "function",
+            "name" : "minus",
+            "input": [ "int", "int" ],
+            "output" : [ "int" ]
+        }
+    ]
+}
