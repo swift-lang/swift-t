@@ -18,7 +18,8 @@ if [ adlb::amserver ] {
     adlb::create $d3 integer
     adlb::store $d3 integer:35
     adlb::close $d3
-    foreach d "$z $d0 $d1 $d2 $d3" {
+    set L [ list $z $d0 $d1 $d2 $d3 ]
+    foreach d $L {
         if { [ adlb::exists $d ] } {
             puts "exists: $d"
         } else {
