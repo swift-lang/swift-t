@@ -255,7 +255,6 @@ namespace eval turbine {
 
             if { [ catch { set val [ integer_get $turbine_id ] } ] == 0 } {
                 # add to the sum
-                puts "Adding $val"
                 set accum [ expr $accum + $val ]
                 incr i
             } else {
