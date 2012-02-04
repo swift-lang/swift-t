@@ -793,6 +793,17 @@ namespace eval turbine {
         set t [ integer_get [ integer_get $r ] ]
         integer_set $v $t
     }
+    
+    # When reference r is closed, store its (string) value in v
+    proc f_dereference_integer { parent v r } {
+        set rule_id [ rule_new ]
+        rule $rule_id "f_dereference-$v-$r" $r $v \
+            "tp: turbine::f_dereference_string_body $v $r"
+    }
+    proc f_dereference_string_body { v r } {
+        set t [ string_get [ string_get $r ] ]
+        string_set $v $t
+    }
 
     # When reference cr is closed, store d = (*cr)[i]
     # Blocks on cr
