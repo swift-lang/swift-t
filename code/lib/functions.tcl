@@ -868,6 +868,7 @@ namespace eval turbine {
         container_insert $c $s $d
     }
 
+
     # Insert c[i][j] = d
     proc f_container_nested_insert { c i j d } {
 
@@ -926,6 +927,26 @@ namespace eval turbine {
         }
 
         f_reference no_stack "" "$c $i $r"
+    }
+    
+    # Create container at c[i]
+    # Set r, a reference TD on (cr*)[i]
+    proc f_container_reference_create_nested { r cr i type } {
+        upvar 1 $r v
+
+        # Create reference
+        data_new tmp_r
+        integer_init $tmp_r
+        set v $tmp_r
+        
+        set rule_id [ rule_new ]
+        rule $rule_id fcrcn "" "$cr $i" \
+           "tp: f_container_reference_create_nested_body $tmp_r $cr $i $type"
+    }
+    
+    proc f_container_reference_create_nested_body { r cr i type } {
+        set c [ integer_get $cr ]
+        f_container_create_nested_body [ $r $c $i $type ]
     }
 
     variable container_branches
