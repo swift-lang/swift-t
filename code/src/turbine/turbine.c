@@ -275,7 +275,7 @@ static int transform_tostring(char* output,
 #define DEBUG_TURBINE_RULE_ADD(transform, id) {         \
     char tmp[1024];                                     \
     transform_tostring(tmp, transform);                 \
-    DEBUG_TURBINE("rule_add: %s {%li}\n", tmp, id);     \
+    DEBUG_TURBINE("rule_add: %s {%li}", tmp, id);     \
   }
 #else
 #define DEBUG_TURBINE_RULE_ADD(transform, id)
@@ -324,7 +324,6 @@ turbine_rule_add(turbine_transform_id id,
 static void
 rule_inputs(tr* transform)
 {
-
   for (int i = 0; i < transform->transform.inputs; i++)
   {
     turbine_datum_id id = transform->transform.input_list[i];
@@ -391,6 +390,7 @@ turbine_rules_push()
 }
 
 /**
+   Declare a new data id
    @param result If non-NULL, return the new blocked list here
  */
 turbine_code
@@ -407,24 +407,31 @@ turbine_declare(turbine_datum_id id, struct list_l** result)
   return TURBINE_SUCCESS;
 }
 
+/**
+   Obtain the list of trs ready to run
+ */
 turbine_code
 turbine_ready(int count, turbine_transform_id* output,
               int* result)
 {
   int i = 0;
   void* v;
-  DEBUG_TURBINE("ready:\n");
+  DEBUG_TURBINE("ready:");
   while (i < count && (v = list_poll(&trs_ready)))
   {
     tr* t = (tr*) v;
     table_lp_add(&trs_running, t->id, t);
     output[i] = t->id;
-    DEBUG_TURBINE("\t %li\n", output[i]);
+    DEBUG_TURBINE("\t %li", output[i]);
     i++;
   }
   *result = i;
   return TURBINE_SUCCESS;
 }
+
+/*
+
+NOT CURRENTLY USED
 
 turbine_code
 turbine_entry_set(turbine_entry* entry,
@@ -442,6 +449,7 @@ turbine_entry_set(turbine_entry* entry,
   strcpy(entry->name, name);
   return TURBINE_SUCCESS;
 }
+*/
 
 turbine_code
 turbine_action(turbine_transform_id id, char* action)
@@ -455,7 +463,7 @@ turbine_action(turbine_transform_id id, char* action)
 
   strcpy(action, t->transform.action);
 
-  DEBUG_TURBINE("action: {%li} %s: %s\n",
+  DEBUG_TURBINE("action: {%li} %s: %s",
                 id, t->transform.name, action);
   return TURBINE_SUCCESS;
 }
@@ -468,12 +476,7 @@ turbine_complete(turbine_transform_id id)
 
   tr* t = table_lp_remove(&trs_running, id);
   assert(t);
-  DEBUG_TURBINE("complete: {%li} %s\n", id, t->transform.name);
-  //  for (int i = 0; i < t->transform.outputs; i++)
-  //  {
-  //    turbine_code code = turbine_close(t->transform.output_list[i]);
-  //    turbine_check(code);
-  //  }
+  DEBUG_TURBINE("complete: {%li} %s", id, t->transform.name);
   tr_free(t);
 
   return TURBINE_SUCCESS;
@@ -503,7 +506,7 @@ turbine_close(turbine_datum_id id)
     bool subscribed = progress(transform);
     if (!subscribed)
     {
-      DEBUG_TURBINE("ready: {%li}\n", tr_id);
+      DEBUG_TURBINE("ready: {%li}", tr_id);
       list_add(&tmp, transform);
     }
   }

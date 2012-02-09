@@ -214,7 +214,7 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_GetIntFromObj(interp, objv[2], &work_type);
   char* cmd = Tcl_GetString(objv[3]);
 
-  DEBUG_ADLB("adlb::put: reserve_rank: %i type: %i %s\n",
+  DEBUG_ADLB("adlb::put: reserve_rank: %i type: %i %s",
              reserve_rank, work_type, cmd);
 
   // int ADLB_Put(void *work_buf, int work_len, int reserve_rank,
@@ -243,7 +243,7 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK(error);
   Tcl_Obj* tcl_answer_rank_name = objv[2];
 
-  DEBUG_ADLB("adlb::get: type=%i\n", req_type);
+  DEBUG_ADLB("adlb::get: type=%i", req_type);
 
   char result[ADLB_MSG_MAX];
   int work_type;
@@ -291,7 +291,7 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
 
   if (found_work)
-    DEBUG_ADLB("adlb::get: %s\n", result);
+    DEBUG_ADLB("adlb::get: %s", result);
 
   // Store answer_rank in caller's stack frame
   Tcl_Obj* tcl_answer_rank = Tcl_NewIntObj(answer_rank);
