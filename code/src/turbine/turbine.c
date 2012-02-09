@@ -685,6 +685,7 @@ td_get(turbine_datum_id id, turbine_datum* td)
     case TURBINE_TYPE_STRING:
       td->data.string.value = strdup(p+1);
       td->data.string.length = strlen(td->data.string.value);
+      break;
     case TURBINE_TYPE_BLOB:
       // TODO: DO SOMETHING
       break;
