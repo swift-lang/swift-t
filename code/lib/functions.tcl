@@ -470,8 +470,6 @@ namespace eval turbine {
         set b_value [ integer_get $b ]
         set c_value [ expr $a_value + $b_value ]
         log "plus: $a_value + $b_value => $c_value"
-        # Emulate some computation time
-        # after 10000
         integer_set $c $c_value
     }
 
@@ -490,8 +488,6 @@ namespace eval turbine {
         set b_value [ integer_get $b ]
         set c_value [ expr $a_value - $b_value ]
         log "minus: $a_value - $b_value => $c_value"
-        # Emulate some computation time
-        # after 10000
         integer_set $c $c_value
     }
 
@@ -599,7 +595,7 @@ namespace eval turbine {
         dict incr stats set1
 
         # Emulate some computation time
-        # after 1000
+        after 1000
         integer_set $c 1
     }
 
@@ -793,9 +789,9 @@ namespace eval turbine {
         set t [ integer_get [ integer_get $r ] ]
         integer_set $v $t
     }
-    
+
     # When reference r is closed, store its (string) value in v
-    proc f_dereference_integer { parent v r } {
+    proc f_dereference_string { parent v r } {
         set rule_id [ rule_new ]
         rule $rule_id "f_dereference-$v-$r" $r $v \
             "tp: turbine::f_dereference_string_body $v $r"
@@ -928,7 +924,7 @@ namespace eval turbine {
 
         f_reference no_stack "" "$c $i $r"
     }
-    
+
     # Create container at c[i]
     # Set r, a reference TD on (cr*)[i]
     proc f_container_reference_create_nested { r cr i type } {
@@ -938,12 +934,12 @@ namespace eval turbine {
         data_new tmp_r
         integer_init $tmp_r
         set v $tmp_r
-        
+
         set rule_id [ rule_new ]
         rule $rule_id fcrcn "" "$cr $i" \
            "tp: f_container_reference_create_nested_body $tmp_r $cr $i $type"
     }
-    
+
     proc f_container_reference_create_nested_body { r cr i type } {
         set c [ integer_get $cr ]
         f_container_create_nested_body [ $r $c $i $type ]
