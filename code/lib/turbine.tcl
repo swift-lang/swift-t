@@ -106,8 +106,8 @@ namespace eval turbine {
     }
 
     proc finalize { } {
-        debug "finalize"
-	report_stats
+        log "turbine finalizing"
+        report_stats
         turbine::c::finalize
         adlb::finalize
     }
