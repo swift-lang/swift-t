@@ -39,11 +39,14 @@ namespace eval turbine {
         turbine::c::push
 
         while {true} {
-            set ready [ turbine::c::ready ]
-            # ready list may be empty
-            foreach {transform} $ready {
-                set command [ turbine::c::action $transform ]
-                release $transform $command
+            while {true} {
+                # Do local work until we have none
+                set ready [ turbine::c::ready ]
+                if { [ llength $ready ] == 0 } break
+                foreach {transform} $ready {
+                    set command [ turbine::c::action $transform ]
+                    release $transform $command
+                }
             }
 
             set msg [ adlb::get $WORK_TYPE(CONTROL) answer_rank ]
