@@ -6,7 +6,11 @@ package require turbine 0.0.1
 adlb::init 1 1
 
 if [ adlb::amserver ] {
-    adlb::server
+    set rc [ adlb::server ]
+    if { $rc != $adlb::SUCCESS } {
+        puts "adlb::server failed!"
+        exit 1
+    }
 } else {}
 
 adlb::finalize
