@@ -128,7 +128,8 @@ ADLB_Server_Cmd(ClientData cdata, Tcl_Interp *interp,
   // Limit ADLB to 100MB
   int max_memory = 100*1024*1024;
   double logging = 0.0;
-  ADLB_Server(max_memory, logging);
+  int rc = ADLB_Server(max_memory, logging);
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(rc));
   return TCL_OK;
 }
 
