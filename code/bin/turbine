@@ -34,7 +34,8 @@ PROGRAM=$1
 
 OPTS=
 OPTS+="${L} "
-OPTS+="-n ${PROCS}"
+OPTS+="-n ${PROCS} "
+OPTS+=${TURBINE_LAUNCH_OPTS}
 
 TURBINE_BIN=$( dirname $0 )
 if [[ -z ${TURBINE_HOME} ]]
