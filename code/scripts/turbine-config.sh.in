@@ -23,8 +23,8 @@ export TCLLIBPATH=${TURBINE_HOME}/lib
 # but we prefer one named "tclsh"
 for tcl in ${TCL}/bin/{tclsh,tclsh8.5}
  do
- if [[ -x ${tcl} ]] 
-   then 
+ if [[ -x ${tcl} ]]
+   then
    export TCLSH=${tcl}
    break
  fi
