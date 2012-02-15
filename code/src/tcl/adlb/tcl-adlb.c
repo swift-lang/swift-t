@@ -124,7 +124,7 @@ ADLB_Server_Cmd(ClientData cdata, Tcl_Interp *interp,
     return TCL_ERROR;
   }
 
-  DEBUG_ADLB("ADLB SERVER...\n");
+  DEBUG_ADLB("ADLB SERVER...");
   // Limit ADLB to 100MB
   int max_memory = 100*1024*1024;
   double logging = 0.0;
