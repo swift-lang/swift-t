@@ -893,6 +893,18 @@ namespace eval turbine {
     proc f_container_nested_insert_body_2 { r j d } {
         container_insert $r $j $d
     }
+    
+    proc container_create_nested { r c i type } {
+        debug "container_create_nested: $r $c\[$i\] $type"
+        if [ adlb::insert_atomic $c $i ] {
+            # Member did not exist: create it and get reference
+            set t [ data_new ]
+            container_init $t $type
+            adlb::insert $c $s $t
+        }
+
+        f_reference no_stack "" "$c $i $r"
+    }
 
     proc f_container_create_nested { r c i type } {
 
@@ -908,21 +920,35 @@ namespace eval turbine {
                "tp: f_container_create_nested_body $tmp_r $c $i $type"
     }
 
+
     # Create container at c[i]
     # Set r, a reference TD on c[i]
     proc f_container_create_nested_body { r c i type } {
 
-        debug "container_create_nested: $r $c\[$i\] $type"
+        debug "f_container_create_nested: $r $c\[$i\] $type"
 
         set s [ integer_get $i ]
-        if [ adlb::insert_atomic $c $s ] {
-            # Member did not exist: create it and get reference
-            set t [ data_new ]
-            container_init $t $type
-            adlb::insert $c $s $t
-        }
+        container_create_nested $r $c $s $type
+    }
+    
+    # Create container at c[i]
+    # Set r, a reference TD on (cr*)[i]
+    proc container_reference_create_nested { r cr i type } {
+        upvar 1 $r v
 
-        f_reference no_stack "" "$c $i $r"
+        # Create reference
+        data_new tmp_r
+        integer_init $tmp_r
+        set v $tmp_r
+
+        set rule_id [ rule_new ]
+        rule $rule_id fcrcn "" "$cr" \
+           "tp: container_reference_create_nested_body $tmp_r $cr $i $type"
+    }
+    
+    proc f_container_reference_create_nested_body { r cr i type } {
+        set c [ integer_get $cr ]
+        container_create_nested $r $c $i $type
     }
 
     # Create container at c[i]
@@ -942,7 +968,8 @@ namespace eval turbine {
 
     proc f_container_reference_create_nested_body { r cr i type } {
         set c [ integer_get $cr ]
-        f_container_create_nested_body [ $r $c $i $type ]
+        set s [ integer_get $i ]
+        container_create_nested $r $c $s $type
     }
 
     variable container_branches
