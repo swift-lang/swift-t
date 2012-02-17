@@ -965,8 +965,16 @@ namespace eval turbine {
         container_insert $r $j $d
     }
     
-    proc container_create_nested { r c i type } {
+    proc imm_container_create_nested { r c i type } {
         debug "container_create_nested: $r $c\[$i\] $type"
+        upvar 1 $r v
+        set v [ data_new ]
+        integer_init $v
+        __container_create_nested $v $c $i $type 
+    }
+
+    proc __container_create_nested { r c i type } {
+        debug "__container_create_nested: $r $c\[$i\] $type"
         if [ adlb::insert_atomic $c $i ] {
             # Member did not exist: create it and get reference
             set t [ data_new ]
@@ -974,7 +982,7 @@ namespace eval turbine {
             adlb::insert $c $i $t
         }
 
-        f_reference no_stack "" "$c $i $r"
+        adlb::container_reference $c $i $r
     }
 
     proc f_container_create_nested { r c i type } {
@@ -999,7 +1007,7 @@ namespace eval turbine {
         debug "f_container_create_nested: $r $c\[$i\] $type"
 
         set s [ integer_get $i ]
-        container_create_nested $r $c $s $type
+        __container_create_nested $r $c $s $type
     }
     
     # Create container at c[i]
@@ -1019,7 +1027,7 @@ namespace eval turbine {
     
     proc f_container_reference_create_nested_body { r cr i type } {
         set c [ integer_get $cr ]
-        container_create_nested $r $c $i $type
+        __container_create_nested $r $c $i $type
     }
 
     # Create container at c[i]
