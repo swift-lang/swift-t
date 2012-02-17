@@ -856,7 +856,7 @@ namespace eval turbine {
             "tp: turbine::f_dereference_float_body $v $r"
     }
 
-    proc f_dereference_integer_body { v r } {
+    proc f_dereference_float_body { v r } {
         set t [ float_get [ integer_get $r ] ]
         float_set $v $t
     }
