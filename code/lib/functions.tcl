@@ -127,12 +127,6 @@ namespace eval turbine {
             "tc: turbine::trace_body $tds"
     }
 
-    # Dummy alternative to trace
-    # TODO: remove this once parser type system is more flexible
-    proc tracestr { stack out in } {
-        turbine::trace $stack $out $in
-    }
-
     proc trace_body { args } {
 
         puts -nonewline "trace: "
