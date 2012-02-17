@@ -127,6 +127,12 @@ namespace eval turbine {
             "tc: turbine::trace_body $tds"
     }
 
+    # Dummy alternative to trace
+    # TODO: remove this once parser type system is more flexible
+    proc tracestr { stack out in } {
+        turbine::trace $stack $out $in
+    }
+
     proc trace_body { args } {
 
         puts -nonewline "trace: "
@@ -1041,5 +1047,22 @@ namespace eval turbine {
 
     proc f_close_container { c r } {
         puts "f_close_container: $c $r"
+    }
+
+    # concatenates two strings
+    proc strcat { parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "strcat-$a-$b" "$a $b" $c \
+            "tl: strcat_body $parent $c $a $b"
+    }
+
+    proc strcat_body { parent c a b } {
+        set a_value [ string_get $a ]
+        set b_value [ string_get $b ]
+        set c_value "${a_value}${b_value}"
+        log "strcat: strcat($a_value, $b_value) => $c_value"
+        string_set $c $c_value
     }
 }
