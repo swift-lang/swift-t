@@ -87,6 +87,7 @@ namespace eval turbine {
         set i [ string first : $s ]
         incr i
         set result [ string range $s $i end ]
+        debug "string_get: <$id>=$result"
         return $result
     }
 

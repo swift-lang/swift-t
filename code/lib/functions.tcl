@@ -142,6 +142,10 @@ namespace eval turbine {
                     set value [ string_get $v ]
                     puts -nonewline $value
                 }
+                float {
+                    set value [ float_get $v ]
+                    puts -nonewline $value
+                }
             }
             if { $i < $n-1 } { puts -nonewline "," }
         }
@@ -571,6 +575,30 @@ namespace eval turbine {
         log "copy $i_value => $o_value"
         integer_set $o $o_value
     }
+    
+    # o = i;
+    proc copyfloat { parent o i } {
+        set rule_id [ rule_new ]
+        rule $rule_id "copyfloat-$o-$i" $i $o \
+            "tf: copyfloat_body $o $i"
+    }
+    proc copyfloat_body { o i } {
+        set i_value [ float_get $i ]
+        log "copy $i_value => $i_value"
+        float_set $o $i_value
+    }
+    
+    # o = i;
+    proc copystring { parent o i } {
+        set rule_id [ rule_new ]
+        rule $rule_id "copystring-$o-$i" $i $o \
+            "tf: copystring_body $o $i"
+    }
+    proc copystring_body { o i } {
+        set i_value [ string_get $i ]
+        log "copy $i_value => $i_value"
+        string_set $o $i_value
+    }
 
     # This is a Swift-2 function
     # c = -b;
@@ -820,6 +848,18 @@ namespace eval turbine {
         set t [ integer_get [ integer_get $r ] ]
         integer_set $v $t
     }
+    
+    # When reference r is closed, store its (float) value in v
+    proc f_dereference_float { parent v r } {
+        set rule_id [ rule_new ]
+        rule $rule_id "f_dereference-$v-$r" $r $v \
+            "tp: turbine::f_dereference_float_body $v $r"
+    }
+
+    proc f_dereference_integer_body { v r } {
+        set t [ float_get [ integer_get $r ] ]
+        float_set $v $t
+    }
 
     # When reference r is closed, store its (string) value in v
     proc f_dereference_string { parent v r } {
@@ -828,7 +868,7 @@ namespace eval turbine {
             "tp: turbine::f_dereference_string_body $v $r"
     }
     proc f_dereference_string_body { v r } {
-        set t [ string_get [ string_get $r ] ]
+        set t [ string_get [ integer_get $r ] ]
         string_set $v $t
     }
 
