@@ -384,11 +384,11 @@ namespace eval turbine {
         set result [ lindex $args 0 ]
         set inputs [ lreplace $args 0 0 ]
 
-        set rule_id [ new ]
+        set rule_id [ rule_new ]
         rule $rule_id "strcat-$rule_id" $inputs $result \
             "tp: strcat_body $inputs $result"
     }
-
+    
     # usage: strcat_body <args>* <result>
     proc strcat_body { args } {
 
@@ -404,10 +404,28 @@ namespace eval turbine {
         string_set $result $total
     }
 
-    # User function
-    proc toint { result input } {
+    proc substring { stack result inputs  } {
+        set rule_id [ rule_new ]
+        set str [ lindex $inputs 0 ]
+        set first [ lindex $inputs 1 ]
+        set len [ lindex $inputs 2 ]
+        rule $rule_id "substring-$rule_id-$str-$first-$len" $inputs $result \
+            "tp: substring_body $result $str $first $len"
+    }
 
-        set rule_id [ new ]
+    proc substring_body { result str first len } {
+        set str_val [ string_get $str ]
+        set first_val [ integer_get $first ]
+        set len_val [ integer_get $len ]
+        
+        set last [ expr $first_val + $len_val - 1 ]
+        set result_val [ string range $str_val $first_val $last ] 
+        string_set $result $result_val
+    }
+
+    # User function
+    proc toint { stack result input } {
+        set rule_id [ rule_new ]
         rule $rule_id "toint-$rule_id" $input $result \
             "tp: toint_body $input $result"
     }
@@ -417,6 +435,18 @@ namespace eval turbine {
         set t [ string_get $input ]
         # Tcl performs the conversion naturally
         integer_set $result $t
+    }
+
+    proc fromint { stack result input } {
+        set rule_id [ rule_new ]
+        rule $rule_id "fromint-$rule_id" $input $result \
+            "tp: fromint_body $input $result"
+    }
+
+    proc fromint_body { input result } {
+        set t [ integer_get $input ]
+        # Tcl performs the conversion naturally
+        string_set $result $t
     }
 
     # usage: arithmetic <parent> <result> [ <expr> <args>* ]
@@ -465,6 +495,7 @@ namespace eval turbine {
         rule $rule_id "plus-$a-$b" "$a $b" $c \
             "tl: plus_body $parent $c $a $b"
     }
+
     proc plus_body { parent c a b } {
         set a_value [ integer_get $a ]
         set b_value [ integer_get $b ]
