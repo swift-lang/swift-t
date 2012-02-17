@@ -971,7 +971,7 @@ namespace eval turbine {
             # Member did not exist: create it and get reference
             set t [ data_new ]
             container_init $t $type
-            adlb::insert $c $s $t
+            adlb::insert $c $i $t
         }
 
         f_reference no_stack "" "$c $i $r"
