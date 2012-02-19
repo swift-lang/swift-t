@@ -25,7 +25,7 @@ if { ! [ adlb::amserver ] } {
     set r [ expr $rank + 1 ]
     for { set i $r } { $i <= $count } { incr i $size } {
         adlb::create $i string
-        adlb::store $i string:data
+        adlb::store $i $adlb::STRING "data"
     }
 } else {
     adlb::server

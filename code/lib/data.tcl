@@ -11,6 +11,8 @@ namespace eval turbine {
         container_insert close_container              \
         file_init        file_set      filename
 
+    # namespace import adlb::INTEGER adlb::STRING
+
     proc typeof { id } {
         set s [ adlb::retrieve $id ]
         set i [ string first : $s ]
@@ -40,7 +42,7 @@ namespace eval turbine {
 
     proc integer_set { id value } {
         log "set: <$id>=$value"
-        close_dataset $id "integer:$value"
+        close_dataset $id $adlb::INTEGER $value
     }
 
     proc integer_get { id } {
@@ -60,7 +62,7 @@ namespace eval turbine {
 
     proc float_set { id value } {
         debug "float_set: <$id>=$value"
-        close_dataset $id "float:$value"
+        close_dataset $id $adlb::FLOAT $value
     }
 
     proc float_get { id } {
@@ -79,7 +81,7 @@ namespace eval turbine {
 
     proc string_set { id value } {
         debug "string_set: <$id>=$value"
-        close_dataset $id "string:$value"
+        close_dataset $id $adlb::STRING $value
     }
 
     proc string_get { id } {
@@ -127,7 +129,7 @@ namespace eval turbine {
     }
 
     proc file_set { id } {
-        close_dataset $id "file:close"
+        close_dataset $id $adlb::FILE none
     }
 
     proc filename { id } {
@@ -139,9 +141,9 @@ namespace eval turbine {
         return $result
     }
 
-    proc close_dataset { id value } {
+    proc close_dataset { id type value } {
         global WORK_TYPE
-        adlb::store $id $value
+        adlb::store $id $type $value
         set ranks [ adlb::close $id ]
         foreach rank $ranks {
             debug "notify: $rank"

@@ -45,7 +45,7 @@ static MPI_Comm worker_comm;
 /** ADLB uses -1 to mean "any" in ADLB_Put() and ADLB_Reserve() */
 #define ADLB_ANY -1
 
-char retrieved[ADLB_DHT_MAX];
+char xfer[ADLB_MSG_MAX];
 
 /**
    usage: adlb::init <servers> <types>
@@ -106,6 +106,18 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::ANY", -1), NULL,
                  Tcl_NewIntObj(ADLB_ANY), 0);
+
+  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::INTEGER", -1), NULL,
+                 Tcl_NewIntObj(ADLB_DATA_TYPE_INTEGER), 0);
+
+  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::FLOAT", -1), NULL,
+                 Tcl_NewIntObj(ADLB_DATA_TYPE_FLOAT), 0);
+
+  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::STRING", -1), NULL,
+                 Tcl_NewIntObj(ADLB_DATA_TYPE_STRING), 0);
+
+  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::FILE", -1), NULL,
+                 Tcl_NewIntObj(ADLB_DATA_TYPE_FILE), 0);
 
   Tcl_SetObjResult(interp, Tcl_NewIntObj(ADLB_SUCCESS));
   return TCL_OK;
@@ -410,17 +422,51 @@ static int
 ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
                int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(3);
+  TCL_ARGS(4);
 
   long id;
-  int length;
+  int length = 0;
   Tcl_GetLongFromObj(interp, objv[1], &id);
-  char* s = Tcl_GetStringFromObj(objv[2], &length);
-  char data[length+1];
-  strncpy(data, s, length);
-  data[length] = '\0';
+  int type;
+  Tcl_GetIntFromObj(interp, objv[2], &type);
+  int rc;
+
+  char* s;
+  switch (type)
+  {
+  case ADLB_DATA_TYPE_INTEGER:
+    rc = Tcl_GetLongFromObj(interp, objv[3], (long*) xfer);
+    TCL_CHECK_MSG(rc, "adlb::store long <%li> failed!", id);
+    length = sizeof(long);
+    break;
+  case ADLB_DATA_TYPE_FLOAT:
+    rc = Tcl_GetDoubleFromObj(interp, objv[3], (double*) xfer);
+    length = sizeof(double);
+    break;
+  case ADLB_DATA_TYPE_STRING:
+    s = Tcl_GetStringFromObj(objv[3], &length);
+    TCL_CONDITION(s != NULL, "adlb::store string <%li> failed!", id);
+    length = strlen(s)+1;
+    TCL_CONDITION(length < ADLB_MSG_MAX,
+		  "adlb::store: string too long: <%li>", id);
+    strcpy(xfer, s);
+    break;
+  case ADLB_DATA_TYPE_FILE:
+    // Ignore objv[3]
+    break;
+  case ADLB_DATA_TYPE_BLOB:
+    // Ignore objv[3]
+    break;
+  case ADLB_DATA_TYPE_CONTAINER:
+    // Ignore objv[3]
+    break;
+  default:
+    rc = TCL_ERROR;
+    break;
+  }
+
   // DEBUG_ADLB("adlb::store: <%li>=%s", id, data);
-  int rc = ADLB_Store(id, data, length+1);
+  rc = ADLB_Store(id, xfer, length+1);
 
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::store <%li> failed!", id);
@@ -441,11 +487,11 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   int length;
   // DEBUG_ADLB("adlb_retrieve: <%li>", id);
-  int rc = ADLB_Retrieve(id, retrieved, &length);
+  int rc = ADLB_Retrieve(id, xfer, &length);
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::retrieve <%li> failed!", id);
 
-  Tcl_Obj* result = Tcl_NewStringObj(retrieved, length-1);
+  Tcl_Obj* result = Tcl_NewStringObj(xfer, length-1);
   Tcl_SetObjResult(interp, result);
 
   return TCL_OK;
