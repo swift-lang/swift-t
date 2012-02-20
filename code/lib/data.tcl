@@ -13,13 +13,13 @@ namespace eval turbine {
 
     # namespace import adlb::INTEGER adlb::STRING
 
-    proc typeof { id } {
-        set s [ adlb::retrieve $id ]
-        set i [ string first : $s ]
-        incr i -1
-        set result [ string range $s 0 $i ]
-        return $result
-    }
+#     proc typeof { id } {
+#         set s [ adlb::retrieve $id ]
+#         set i [ string first : $s ]
+#         incr i -1
+#         set result [ string range $s 0 $i ]
+#         return $result
+#     }
 
     # Obtain unique TD
     # If given an argument, sets the variable by that name

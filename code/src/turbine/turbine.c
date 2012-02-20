@@ -604,6 +604,9 @@ static int td_tostring(char* output, int length, turbine_datum* td)
   return result;
 }
 
+/*
+NOT CURRENTLY USED
+
 static void
 string_totype(const char* type_string, turbine_type* type)
 {
@@ -622,6 +625,7 @@ string_totype(const char* type_string, turbine_type* type)
   else
     *type = TURBINE_TYPE_NULL;
 }
+*/
 
 /*
 NOT CURRENTLY USED
@@ -663,36 +667,31 @@ static turbine_code
 td_get(turbine_datum_id id, turbine_datum* td)
 {
   int length;
-  int error = ADLB_Retrieve(id, xfer, &length);
+  adlb_data_type type;
+  int error = ADLB_Retrieve(id, &type, xfer, &length);
   if (error != ADLB_SUCCESS)
     return TURBINE_ERROR_NOT_FOUND;
 
-  char type_string[32];
-  char* p = strchr(xfer, ':');
-  strncpy(type_string, xfer, xfer-p);
-  type_string[xfer-p] = '\0';
-
-  turbine_type type;
-  string_totype(type_string, &type);
   td->type = type;
   td->status = TD_SET;
 
   switch (type)
   {
     case TURBINE_TYPE_INTEGER:
-      sscanf(p+1, "%li", &td->data.integer.value);
+      td->data.integer.value = *(long*) xfer;
       break;
     case TURBINE_TYPE_FLOAT:
-       // TODO: DO SOMETHING
-       break;
+      td->data.FLOAT.value = *(double*) xfer;
+      break;
     case TURBINE_TYPE_STRING:
-      td->data.string.value = strdup(p+1);
-      td->data.string.length = strlen(td->data.string.value);
+      td->data.string.value = strdup(xfer);
+      td->data.string.length = strlen(xfer);
       break;
     case TURBINE_TYPE_BLOB:
       // TODO: DO SOMETHING
       break;
     case TURBINE_TYPE_FILE:
+      td->data.file.path = strdup(xfer);
       break;
     case TURBINE_TYPE_CONTAINER:
       break;

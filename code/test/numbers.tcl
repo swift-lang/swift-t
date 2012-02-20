@@ -22,14 +22,13 @@ proc rules { } {
 
     turbine::integer_set 3 $v3
     puts "result: $v3"
-    set t [ turbine::typeof 3 ]
+    set t [ adlb::typeof 3 ]
     puts "type: $t"
 }
 
-turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
-
+turbine::defaults
+turbine::init $engines $servers
 turbine::start rules
-
 turbine::finalize
 
 puts OK

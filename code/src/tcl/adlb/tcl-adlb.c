@@ -487,13 +487,38 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   int length;
   // DEBUG_ADLB("adlb_retrieve: <%li>", id);
-  int rc = ADLB_Retrieve(id, xfer, &length);
+  adlb_data_type type;
+  int rc = ADLB_Retrieve(id, &type, xfer, &length);
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::retrieve <%li> failed!", id);
+  Tcl_Obj* result;
+  switch (type)
+  {
+  case ADLB_DATA_TYPE_INTEGER:
+    result = Tcl_NewLongObj(*(long*)xfer);
+    break;
+  case ADLB_DATA_TYPE_FLOAT:
+    result = Tcl_NewDoubleObj(*(double*)xfer);
+    break;
+  case ADLB_DATA_TYPE_STRING:
+    result = Tcl_NewStringObj(xfer, length-1);
+    break;
+  case ADLB_DATA_TYPE_FILE:
+    result = Tcl_NewStringObj(xfer, length-1);
+    break;
+  case ADLB_DATA_TYPE_BLOB:
+    // TODO: DO SOMETHING
+    result = NULL;
+    break;
+  case ADLB_DATA_TYPE_CONTAINER:
+    result = Tcl_NewStringObj(xfer, length-1);
+    break;
+  default:
+    result = NULL;
+    return TCL_ERROR;
+  }
 
-  Tcl_Obj* result = Tcl_NewStringObj(xfer, length-1);
   Tcl_SetObjResult(interp, result);
-
   return TCL_OK;
 }
 
@@ -643,6 +668,37 @@ ADLB_Unique_Cmd(ClientData cdata, Tcl_Interp *interp,
    usage: adlb::container_typeof <id>
 */
 static int
+ADLB_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
+		int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  long id;
+  Tcl_GetLongFromObj(interp, objv[1], &id);
+
+  adlb_data_type type;
+  int rc = ADLB_Typeof(id, &type);
+  TCL_CONDITION(rc == ADLB_SUCCESS,
+                "adlb::container_typeof <%li> failed!", id);
+
+  // DEBUG_ADLB("adlb::container_typeof: <%li> is: %i\n", id, type);
+
+  char type_string[32];
+  ADLB_Data_type_tostring(type_string, type);
+
+  // DEBUG_ADLB("adlb::container_typeof: <%li> is: %s",
+  //            id, type_string);
+
+  Tcl_Obj* result = Tcl_NewStringObj(type_string, -1);
+  Tcl_SetObjResult(interp, result);
+
+  return TCL_OK;
+}
+
+/**
+   usage: adlb::container_typeof <id>
+*/
+static int
 ADLB_Container_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
                           int objc, Tcl_Obj *const objv[])
 {
@@ -652,7 +708,7 @@ ADLB_Container_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_GetLongFromObj(interp, objv[1], &id);
 
   adlb_data_type type;
-  int rc = ADLB_Container_Typeof(id, &type);
+  int rc = ADLB_Container_typeof(id, &type);
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::container_typeof <%li> failed!", id);
 
@@ -831,6 +887,7 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("lookup",    ADLB_Lookup_Cmd);
   COMMAND("close",     ADLB_Close_Cmd);
   COMMAND("unique",    ADLB_Unique_Cmd);
+  COMMAND("typeof",    ADLB_Typeof_Cmd);
   COMMAND("container_typeof",    ADLB_Container_Typeof_Cmd);
   COMMAND("container_reference", ADLB_Container_Reference_Cmd);
   COMMAND("container_size",      ADLB_Container_Size_Cmd);

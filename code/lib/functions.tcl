@@ -133,7 +133,7 @@ namespace eval turbine {
         set n [ llength $args ]
         for { set i 0 } { $i < $n } { incr i } {
             set v [ lindex $args $i ]
-            switch [ typeof $v ] {
+            switch [ adlb::typeof $v ] {
                 integer {
                     set value [ integer_get $v ]
                     puts -nonewline $value
@@ -392,7 +392,7 @@ namespace eval turbine {
         rule $rule_id "strcat-$rule_id" $inputs $result \
             "tp: strcat_body $inputs $result"
     }
-    
+
     # usage: strcat_body <args>* <result>
     proc strcat_body { args } {
 
@@ -421,9 +421,9 @@ namespace eval turbine {
         set str_val [ string_get $str ]
         set first_val [ integer_get $first ]
         set len_val [ integer_get $len ]
-        
+
         set last [ expr $first_val + $len_val - 1 ]
-        set result_val [ string range $str_val $first_val $last ] 
+        set result_val [ string range $str_val $first_val $last ]
         string_set $result $result_val
     }
 
@@ -575,7 +575,7 @@ namespace eval turbine {
         log "copy $i_value => $o_value"
         integer_set $o $o_value
     }
-    
+
     # o = i;
     proc copyfloat { parent o i } {
         set rule_id [ rule_new ]
@@ -587,7 +587,7 @@ namespace eval turbine {
         log "copy $i_value => $i_value"
         float_set $o $i_value
     }
-    
+
     # o = i;
     proc copystring { parent o i } {
         set rule_id [ rule_new ]
@@ -848,7 +848,7 @@ namespace eval turbine {
         set t [ integer_get [ integer_get $r ] ]
         integer_set $v $t
     }
-    
+
     # When reference r is closed, store its (float) value in v
     proc f_dereference_float { parent v r } {
         set rule_id [ rule_new ]
@@ -964,13 +964,13 @@ namespace eval turbine {
     proc f_container_nested_insert_body_2 { r j d } {
         container_insert $r $j $d
     }
-    
+
     proc imm_container_create_nested { r c i type } {
         debug "container_create_nested: $r $c\[$i\] $type"
         upvar 1 $r v
         set v [ data_new ]
         integer_init $v
-        __container_create_nested $v $c $i $type 
+        __container_create_nested $v $c $i $type
     }
 
     proc __container_create_nested { r c i type } {
@@ -1009,7 +1009,7 @@ namespace eval turbine {
         set s [ integer_get $i ]
         __container_create_nested $r $c $s $type
     }
-    
+
     # Create container at c[i]
     # Set r, a reference TD on (cr*)[i]
     proc container_reference_create_nested { r cr i type } {
@@ -1024,7 +1024,7 @@ namespace eval turbine {
         rule $rule_id fcrcn "" "$cr" \
            "tp: container_reference_create_nested_body $tmp_r $cr $i $type"
     }
-    
+
     proc f_container_reference_create_nested_body { r cr i type } {
         set c [ integer_get $cr ]
         __container_create_nested $r $c $i $type
