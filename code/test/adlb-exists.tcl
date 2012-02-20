@@ -13,10 +13,10 @@ if [ adlb::amserver ] {
     adlb::create $d1 integer
     set d2 [ adlb::unique ]
     adlb::create $d2 integer
-    adlb::store $d2 integer:25
+    adlb::store $d2 $adlb::INTEGER 25
     set d3 [ adlb::unique ]
     adlb::create $d3 integer
-    adlb::store $d3 integer:35
+    adlb::store $d3 $adlb::INTEGER 35
     adlb::close $d3
     set L [ list $z $d0 $d1 $d2 $d3 ]
     foreach d $L {
