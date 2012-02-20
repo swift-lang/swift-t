@@ -66,6 +66,10 @@ typedef struct
     } integer;
     struct
     {
+      double value;
+    } FLOAT;
+    struct
+    {
       char* value;
       int length;
     } string;
