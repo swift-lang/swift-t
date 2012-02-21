@@ -30,3 +30,5 @@ if [ adlb::amserver ] {
 
 adlb::finalize
 puts OK
+
+proc exit args {}
