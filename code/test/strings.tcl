@@ -8,27 +8,29 @@
 
 package require turbine 0.0.1
 
-namespace import turbine::string_*
-
 proc rules { } {
 
-    string_init 1
-    string_init 2
+    turbine::create_string 1
+    turbine::create_string 2
     # c::string 3
 
-    string_set 1 "hi"
-    string_set 2 "bye"
+    turbine::set_string 1 "hi"
+    turbine::set_string 2 "bye"
 
-    set v1 [ string_get 1 ]
-    set v2 [ string_get 2 ]
+    set v1 [ turbine::get 1 ]
+    set v2 [ turbine::get 2 ]
 
     puts -nonewline "result: "
     # Use 0 as stack frame
     turbine::trace 0 "" [ list 1 2 ]
 }
 
-turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
+turbine::defaults
+turbine::init $engines $servers
 turbine::start rules
 turbine::finalize
 
 puts OK
+
+# Help TCL free memory
+proc exit args {}

@@ -24,15 +24,12 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    set c [ turbine::data_new ]
-    turbine::container_init $c integer
+    turbine::allocate_container c integer
 
     set i [ turbine::literal integer 37 ]
     set j [ turbine::literal integer 41 ]
-    set r1 [ turbine::data_new ]
-    set v1 [ turbine::data_new ]
-    turbine::integer_init $r1
-    turbine::integer_init $v1
+    turbine::allocate r1 integer
+    turbine::allocate v1 integer
     turbine::f_reference no_stack "" "$c $i $r1"
     turbine::f_dereference_integer no_stack $v1 $r1
     turbine::trace no_stack "" $v1
@@ -40,10 +37,8 @@ proc rules { } {
 
     set k [ turbine::literal integer 72 ]
     turbine::container_f_insert no_stack "" "$c $j $k"
-    set r2 [ turbine::data_new ]
-    set v2 [ turbine::data_new ]
-    turbine::integer_init $r2
-    turbine::integer_init $v2
+    turbine::allocate r2 integer
+    turbine::allocate v2 integer
     turbine::f_reference no_stack "" "$c $j $r2"
     turbine::f_dereference_integer no_stack $v2 $r2
     turbine::trace no_stack "" $v2
@@ -55,3 +50,6 @@ turbine::start rules
 turbine::finalize
 
 puts OK
+
+# Help TCL free memory
+proc exit args {}

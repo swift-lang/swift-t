@@ -12,14 +12,10 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    set i [ turbine::data_new ]
-    turbine::integer_init $i
-    set j [ turbine::data_new ]
-    turbine::integer_init $j
-    set c [ turbine::data_new ]
-    turbine::container_init $c integer
-    set p [ turbine::data_new ]
-    turbine::integer_init $p
+    turbine::allocate i integer
+    turbine::allocate j integer
+    turbine::allocate_container c integer
+    turbine::allocate p integer
 
     global env
     if { [ info exists env(COUNT) ] } {
@@ -28,16 +24,19 @@ proc rules { } {
         set count 100
     }
     puts "count: $count"
-    turbine::integer_set $i 1
-    turbine::integer_set $j $count
-    turbine::integer_set $p $env(TURBINE_ENGINES)
+    turbine::set_integer $i 1
+    turbine::set_integer $j $count
+    turbine::set_integer $p $env(TURBINE_ENGINES)
 
     turbine::drange $c $i $j $p
 }
 
-global env
-turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
+turbine::defaults
+turbine::init $engines $servers
 turbine::start rules
 turbine::finalize
+
 puts OK
 
+# Help TCL free memory
+proc exit args {}

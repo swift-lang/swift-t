@@ -13,32 +13,23 @@
 
 package require turbine 0.0.1
 
-namespace import turbine::data_new
-namespace import turbine::string_init
-namespace import turbine::integer_*
-namespace import turbine::literal
-namespace import turbine::enumerate
-
 proc f { stack o i } {
     puts "f: $i"
-    set t [ integer_get $i ]
+    set t [ turbine::get $i ]
     if { $i == 0 } {
-        integer_set $o 98
+        turbine::set_integer $o 98
     } else {
-        integer_set $o 72
+        turbine::set_integer $o 72
     }
 }
 
 proc rules { } {
 
-    set c [ data_new ]
-    turbine::container_init $c integer
-    set i1 [ literal integer 0 ]
-    set i2 [ literal integer 1 ]
-    set t1 [ data_new ]
-    integer_init $t1
-    set t2 [ data_new ]
-    integer_init $t2
+    turbine::allocate_container c integer
+    set i1 [ turbine::literal integer 0 ]
+    set i2 [ turbine::literal integer 1 ]
+    turbine::allocate t1 integer
+    turbine::allocate t2 integer
 
     turbine::call_composite no_stack f $t1 $i1
     turbine::call_composite no_stack f $t2 $i2
@@ -46,9 +37,7 @@ proc rules { } {
     turbine::container_f_insert no_stack "" "$c $i1 $t1"
     turbine::container_f_insert no_stack "" "$c $i2 $t2"
 
-    set s [ data_new ]
-    string_init $s
-
+    turbine::allocate s string
     turbine::enumerate no_stack $s $c
     turbine::trace no_stack "" $s
 }

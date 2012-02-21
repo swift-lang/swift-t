@@ -20,53 +20,50 @@
 
 package require turbine 0.0.1
 
-namespace import turbine::c::rule
-namespace import turbine::c::rule_new
 namespace import turbine::*
+namespace import turbine::c::rule*
 
 proc f { x r } {
     # Leaf function
     # Set r to 1 if x is odd, else 0
 
-    set x_value [ integer_get $x ]
-    integer_set $r [ expr $x_value % 2 ]
+    set x_value [ get $x ]
+    set_integer $r [ expr $x_value % 2 ]
 }
 
 proc g { x r } {
     # Leaf function
     # Copy x into r
 
-    set x_value [ integer_get $x ]
-    integer_set $r $x_value
+    set x_value [ get $x ]
+    set_integer $r $x_value
 }
 
 proc h { x r } {
     # Leaf function
     # Copy x into r
 
-    set x_value [ integer_get $x ]
-    integer_set $r $x_value
+    set x_value [ get $x ]
+    set_integer $r $x_value
 }
 
 proc j { x r } {
     # Leaf function
     # Copy 0 into r
 
-    integer_set $r 0
+    set_integer $r 0
 }
 
 proc myfun { a b x } {
 
     # Create stack frame
-    set stack [ data_new ]
-    container_init $stack string
+    allocate_container stack string
     container_insert $stack "a" $a
     container_insert $stack "b" $b
     container_insert $stack "x" $x
 
     # Create condition variable for "if"
-    set c_1 [ data_new ]
-    integer_init $c_1
+    allocate c_1 integer
     rule [ rule_new ] MYFUN_1 $x   $c_1 "tf: f $x $c_1"
     rule [ rule_new ] MYFUN_2 $c_1 { }  "tc: if_1 $stack $c_1"
     rule [ rule_new ] MYFUN_3 $x   $b   "tf: g $x $b"
@@ -75,7 +72,7 @@ proc myfun { a b x } {
 proc if_1 { stack c } {
 
     # c is the condition variable
-    set c_value [ integer_get $c ]
+    set c_value [ get $c ]
 
     # Locate stack variables
     set a [ container_get $stack "a" ]
@@ -91,11 +88,9 @@ proc if_1 { stack c } {
 
 proc rules { } {
 
-    set a [ data_new ]
-    set b [ data_new ]
-    integer_init $a
-    integer_init $b
-    set x [ literal integer 3 ]
+    turbine::allocate a integer
+    turbine::allocate b integer
+    turbine::literal x integer 3
 
     rule 1 A $x [ list $a $b ] "tp: myfun $a $b $x"
 
@@ -110,3 +105,6 @@ turbine::start rules
 turbine::finalize
 
 puts OK
+
+# Help TCL free memory
+proc exit args {}

@@ -13,8 +13,7 @@ proc rules { } {
 
     turbine::literal i integer 3
     turbine::literal r integer $i
-    turbine::data_new v
-    turbine::integer_init $v
+    turbine::allocate v integer
 
     turbine::f_dereference_integer no_stack $v $r
     turbine::trace no_stack "" $v
@@ -26,3 +25,6 @@ turbine::start rules
 turbine::finalize
 
 puts OK
+
+# Help TCL free memory
+proc exit args {}

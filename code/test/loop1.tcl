@@ -19,19 +19,12 @@ proc rules { } {
 
     namespace import turbine::*
 
-    set stack [ data_new ]
-    set c     [ data_new ]
-
-    container_init $stack string
+    allocate_container stack string
+    allocate_container c    integer
     container_insert $stack "c" $c
 
-    container_init $c integer
-    set s1 [ data_new ]
-    string_init $s1
-    string_set $s1 string1
-    set s2 [ data_new ]
-    string_init $s2
-    string_set $s2 string2
+    literal s1 string "string1"
+    literal s2 string "string2"
 
     container_insert $c "0" $s1
     container_insert $c "1" $s2
@@ -47,7 +40,7 @@ proc loop1_body { parent container key } {
 
     puts "body: $parent $container $key"
     turbine::trace $parent "" $key
-    set t [ integer_get $key ]
+    set t [ get $key ]
     set value [ container_get $container $t ]
     turbine::trace $parent "" $value
 }

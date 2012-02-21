@@ -17,18 +17,18 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    set stack [ turbine::data_new ]
+    set stack [ adlb::unique ]
 
-    set c [ turbine::data_new ]
+    set c [ adlb::unique ]
 
     turbine::container_init $stack string
     turbine::container_insert $stack "c" $c
 
     turbine::container_init $c integer
-    set s1 [ turbine::data_new ]
+    set s1 [ adlb::unique ]
     turbine::string_init $s1
     turbine::string_set $s1 string1
-    set s2 [ turbine::data_new ]
+    set s2 [ adlb::unique ]
     turbine::string_init $s2
     turbine::string_set $s2 string2
 
@@ -44,7 +44,7 @@ proc loop1_body { stack container key } {
 
     puts "body: $stack $container $key"
     turbine::trace $key
-    set t [ turbine::integer_get $key ]
+    set t [ turbine::get_integer $key ]
     set value [ turbine::container_get $container $t ]
     turbine::trace $value
 }

@@ -119,6 +119,12 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::FILE", -1), NULL,
                  Tcl_NewIntObj(ADLB_DATA_TYPE_FILE), 0);
 
+  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::BLOB", -1), NULL,
+                 Tcl_NewIntObj(ADLB_DATA_TYPE_BLOB), 0);
+
+  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::CONTAINER", -1), NULL,
+                   Tcl_NewIntObj(ADLB_DATA_TYPE_CONTAINER), 0);
+
   Tcl_SetObjResult(interp, Tcl_NewIntObj(ADLB_SUCCESS));
   return TCL_OK;
 }
@@ -339,7 +345,8 @@ static inline adlb_data_type type_from_string(char* type_string)
 }
 
 /**
-   usage: adlb::create <id> <data>
+   usage: adlb::create <id> <type> [<extra>]
+   @param extra is only used for files and containers
 */
 static int
 ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -351,9 +358,9 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
   long id;
   rc = Tcl_GetLongFromObj(interp, objv[1], &id);
   TCL_CONDITION(rc == TCL_OK, "adlb:create could not get data id");
-  char* type_string = Tcl_GetString(objv[2]);
-  adlb_data_type type = type_from_string(type_string);
-  // DEBUG_ADLB("adlb::create: <%li> %s\n", id, type_string);
+
+  int type;
+  Tcl_GetIntFromObj(interp, objv[2], &type);
 
   switch (type)
   {
@@ -386,7 +393,7 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
       break;
     case ADLB_DATA_TYPE_NULL:
       Tcl_AddErrorInfo(interp,
-                       "adlb::create received unknown type string");
+                       "adlb::create: unknown type!");
       return TCL_ERROR;
       break;
   }
@@ -416,7 +423,8 @@ ADLB_Exists_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::store <id> <data>
+   usage: adlb::store <id> <type> <value>
+   @param value Ignored for types file, blob, container
 */
 static int
 ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -436,37 +444,39 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   char* s;
   switch (type)
   {
-  case ADLB_DATA_TYPE_INTEGER:
-    rc = Tcl_GetLongFromObj(interp, objv[3], (long*) xfer);
-    TCL_CHECK_MSG(rc, "adlb::store long <%li> failed!", id);
-    length = sizeof(long);
-    break;
-  case ADLB_DATA_TYPE_FLOAT:
-    rc = Tcl_GetDoubleFromObj(interp, objv[3], &tmp_double);
-    TCL_CHECK_MSG(rc, "adlb::store double <%li> failed!", id);
-    memcpy(xfer, &tmp_double, sizeof(double));
-    length = sizeof(double);
-    break;
-  case ADLB_DATA_TYPE_STRING:
-    s = Tcl_GetStringFromObj(objv[3], &length);
-    TCL_CONDITION(s != NULL, "adlb::store string <%li> failed!", id);
-    length = strlen(s)+1;
-    TCL_CONDITION(length < ADLB_MSG_MAX,
-		  "adlb::store: string too long: <%li>", id);
-    strcpy(xfer, s);
-    break;
-  case ADLB_DATA_TYPE_FILE:
-    // Ignore objv[3]
-    break;
-  case ADLB_DATA_TYPE_BLOB:
-    // Ignore objv[3]
-    break;
-  case ADLB_DATA_TYPE_CONTAINER:
-    // Ignore objv[3]
-    break;
-  default:
-    rc = TCL_ERROR;
-    break;
+    case ADLB_DATA_TYPE_INTEGER:
+      rc = Tcl_GetLongFromObj(interp, objv[3], (long*) xfer);
+      TCL_CHECK_MSG(rc, "adlb::store long <%li> failed!", id);
+      length = sizeof(long);
+      break;
+    case ADLB_DATA_TYPE_FLOAT:
+      rc = Tcl_GetDoubleFromObj(interp, objv[3], &tmp_double);
+      TCL_CHECK_MSG(rc, "adlb::store double <%li> failed!", id);
+      memcpy(xfer, &tmp_double, sizeof(double));
+      length = sizeof(double);
+      break;
+    case ADLB_DATA_TYPE_STRING:
+      s = Tcl_GetStringFromObj(objv[3], &length);
+      TCL_CONDITION(s != NULL,
+          "adlb::store string <%li> failed!", id);
+      length = strlen(s)+1;
+      TCL_CONDITION(length < ADLB_MSG_MAX,
+          "adlb::store: string too long: <%li>", id);
+      strcpy(xfer, s);
+      break;
+    case ADLB_DATA_TYPE_FILE:
+      // Ignore objv[3]
+      break;
+    case ADLB_DATA_TYPE_BLOB:
+      // Ignore objv[3]
+      break;
+    case ADLB_DATA_TYPE_CONTAINER:
+      // Ignore objv[3]
+      break;
+    default:
+      printf("adlb::store unknown type!\n");
+      rc = TCL_ERROR;
+      break;
   }
 
   // DEBUG_ADLB("adlb::store: <%li>=%s", id, data);

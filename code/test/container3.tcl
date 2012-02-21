@@ -13,17 +13,13 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    namespace import turbine::data_new
-    namespace import turbine::integer_*
-    namespace import turbine::arithmetic
+    set c  [ adlb::unique ]
+    set f1 [ adlb::unique ]
+    set f2 [ adlb::unique ]
 
-    set c  [ data_new ]
-    set f1 [ data_new ]
-    set f2 [ data_new ]
-
-    turbine::container_init $c integer
-    turbine::file_init $f1 file1.txt
-    turbine::file_init $f2 file2.txt
+    turbine::create_container $c integer
+    turbine::create_file $f1 file1.txt
+    turbine::create_file $f2 file2.txt
 
     # insert <container> <subscript> <member>
     turbine::container_insert $c "0" $f1

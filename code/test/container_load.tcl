@@ -20,28 +20,18 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    namespace import turbine::data_new
-    namespace import turbine::integer_*
-    namespace import turbine::arithmetic
+    namespace import adlb::unique
 
-    set c  [ data_new ]
-    set x1 [ data_new ]
-    set x2 [ data_new ]
-    set i1 [ data_new ]
-    set i2 [ data_new ]
-    set v1 [ data_new ]
-    set v2 [ data_new ]
+    turbine::allocate_container c integer
+    turbine::allocate x1 integer
+    turbine::allocate x2 integer
+    turbine::allocate i1 integer
+    turbine::allocate i2 integer
+    turbine::allocate v1 integer
+    turbine::allocate v2 integer
 
-    turbine::container_init $c integer
-    turbine::integer_init $x1
-    turbine::integer_init $x2
-    turbine::integer_init $i1
-    turbine::integer_init $i2
-    turbine::integer_init $v1
-    turbine::integer_init $v2
-
-    turbine::integer_set $x1 14
-    turbine::integer_set $x2 15
+    turbine::set_integer $x1 14
+    turbine::set_integer $x2 15
 
     # We pretend that we know the indices here
     # insert <container> <subscript> <member>
@@ -51,13 +41,13 @@ proc rules { } {
     set L [ turbine::container_list $c ]
     puts "enumeration: $L"
 
-    turbine::container_f_get no_stack $v1 "$c $i1"
+    turbine::container_f_get_integer no_stack $v1 "$c $i1"
     turbine::trace no_stack "" $v1
-    turbine::container_f_get no_stack $v2 "$c $i2"
+    turbine::container_f_get_integer no_stack $v2 "$c $i2"
     turbine::trace no_stack "" $v2
 
-    turbine::integer_set $i1 34
-    turbine::integer_set $i2 35
+    turbine::set_integer $i1 34
+    turbine::set_integer $i2 35
 }
 
 turbine::defaults

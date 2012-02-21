@@ -9,27 +9,20 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    namespace import turbine::data_new
-    namespace import turbine::integer_*
-    namespace import turbine::arithmetic
+    turbine::allocate t3 integer
+    turbine::allocate t5 integer
+    turbine::allocate x integer
 
-    set t3 [ data_new ]
-    set t5 [ data_new ]
-    set x  [ data_new ]
-
-    integer_init $t3
-    integer_init $t5
-    integer_init $x
-
-    integer_set $t3 3
-    integer_set $t5 5
+    turbine::set_integer $t3 3
+    turbine::set_integer $t5 5
 
     # Use 0 as stack frame
-    arithmetic 0 $x [ list "(_+_)*(_+_)" $t3 $t5 $t3 $t5 ]
+    turbine::arithmetic 0 $x [ list "(_+_)*(_+_)" $t3 $t5 $t3 $t5 ]
     turbine::trace 0 "" $x
 }
 
-turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
+turbine::defaults
+turbine::init $engines $servers
 turbine::start rules
 turbine::finalize
 

@@ -14,29 +14,19 @@
 
 package require turbine 0.0.1
 
-namespace import turbine::data_new
-namespace import turbine::string_init
-namespace import turbine::literal
-namespace import turbine::enumerate
-
 proc rules { } {
 
-    # set c [ data_new ]
-    turbine::data_new c
-    turbine::container_init $c integer
+    turbine::allocate_container c integer
     turbine::literal i1 integer 0
-    set i2 [ literal integer 1 ]
-    set j1 [ literal integer 98 ]
-    set j2 [ literal integer 72 ]
+    set i2 [ turbine::literal integer 1 ]
+    set j1 [ turbine::literal integer 98 ]
+    set j2 [ turbine::literal integer 72 ]
 
     turbine::container_f_insert no_stack "" "$c $i1 $j1"
     turbine::container_f_insert no_stack "" "$c $i2 $j2"
 
-    set s [ data_new ]
-    string_init $s
-
+    turbine::allocate s string
     turbine::enumerate no_stack $s $c
-
     turbine::trace no_stack "" $s
 }
 

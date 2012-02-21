@@ -13,9 +13,9 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    turbine::container_init 1 integer
-    turbine::file_init 2 file1.txt
-    turbine::file_init 3 file2.txt
+    turbine::create_container 1 integer
+    turbine::create_file 2 file1.txt
+    turbine::create_file 3 file2.txt
 
     # set <container> <subscript> <member>
     turbine::container_insert 1 "0" 2
@@ -33,7 +33,8 @@ proc rules { } {
     }
 }
 
-turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
+turbine::defaults
+turbine::init $engines $servers
 turbine::start rules
 turbine::finalize
 

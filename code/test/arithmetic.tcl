@@ -9,15 +9,15 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    turbine::integer_init 1
-    turbine::integer_init 2
-    turbine::integer_init 3
+    turbine::create_integer 1
+    turbine::create_integer 2
+    turbine::create_integer 3
 
-    turbine::integer_set 1 3
-    turbine::integer_set 2 5
+    turbine::set_integer 1 3
+    turbine::set_integer 2 5
 
-    set v1 [ turbine::integer_get 1 ]
-    set v2 [ turbine::integer_get 2 ]
+    set v1 [ turbine::get_integer 1 ]
+    set v2 [ turbine::get_integer 2 ]
 
     # Use 0 as stack frame
     turbine::arithmetic 0 3 [ list "(_+_)*(_+_)" 1 2 1 2 ]

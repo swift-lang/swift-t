@@ -14,17 +14,17 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    turbine::container_init 1 integer
+    turbine::create_container 1 integer
     adlb::slot_create 1
 
-    turbine::integer_init 2
-    turbine::integer_set 2 12345
-    turbine::integer_init 3
-    turbine::integer_set 3 4
-    turbine::integer_init 4 
-    turbine::integer_set 4 -1
-    turbine::integer_init 5 
-    turbine::integer_set 5 3
+    turbine::create_integer 2
+    turbine::set_integer 2 12345
+    turbine::create_integer 3
+    turbine::set_integer 3 4
+    turbine::create_integer 4
+    turbine::set_integer 4 -1
+    turbine::create_integer 5
+    turbine::set_integer 5 3
     # 12345 + 4 - 1 + 3 = 12351
 
     # set <container> <subscript> <member>
@@ -33,18 +33,19 @@ proc rules { } {
     turbine::container_immediate_insert 1 "2" 4
     turbine::container_immediate_insert 1 "3" 5
     # close the container
-    adlb::slot_drop 1 
-    
-    # initialise the result
-    turbine::integer_init 6
+    adlb::slot_drop 1
 
-    turbine::sum NO_STACK [ list 6 ] [ list 1 ]
+    # initialise the result
+    turbine::create_integer 6
+
+    turbine::sum_integer NO_STACK [ list 6 ] [ list 1 ]
 
     # trace the result
     turbine::trace NO_STACK [ list ] [ list 6]
 }
 
-turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
+turbine::defaults
+turbine::init $engines $servers
 turbine::start rules
 turbine::finalize
 

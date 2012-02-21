@@ -14,9 +14,8 @@ TEST_SRC_TCL := $(DIR)/adlb-noop.tcl         \
                 $(DIR)/diamond2.tcl          \
                 $(DIR)/linear-10.tcl         \
                 $(DIR)/numbers.tcl           \
-                $(DIR)/arithmetic.tcl        \
-                $(DIR)/arithmetic2.tcl       \
                 $(DIR)/strings.tcl           \
+                $(DIR)/float1.tcl            \
                 $(DIR)/dht.tcl               \
                 $(DIR)/container2.tcl        \
                 $(DIR)/container3.tcl        \
@@ -37,6 +36,9 @@ TEST_SRC_TCL := $(DIR)/adlb-noop.tcl         \
                 $(DIR)/range.tcl             \
                 $(DIR)/drange.tcl            \
                 $(DIR)/noop2.tcl
+
+                # $(DIR)/arithmetic.tcl        \
+                # $(DIR)/arithmetic2.tcl       \
 
 
 # FUTURE WORK:

@@ -3,14 +3,16 @@
 
 namespace eval turbine {
 
-    namespace export                                  \
-        data_new                                      \
-        string_init      string_set    string_get     \
-        integer_init     integer_set   integer_get    \
-        float_init       float_set     float_get      \
-        container_init   container_get container_list \
-        container_insert close_container              \
-        file_init        file_set      filename
+    namespace export                          \
+        allocate get                          \
+        create_string  set_string             \
+        create_integer set_integer            \
+        create_float   set_float              \
+        create_file    set_file               \
+        allocate_container                    \
+        container_get container_list          \
+        container_insert close_container      \
+        file_set filename
 
     # namespace import adlb::INTEGER adlb::STRING
 
@@ -22,81 +24,131 @@ namespace eval turbine {
 #         return $result
 #     }
 
-    # Obtain unique TD
-    # If given an argument, sets the variable by that name
-    # and a log message is reported
-    proc data_new { args } {
+    # usage: allocate [<name>] [<type>]
+    # If name is given, print a log message
+    proc allocate { args } {
         set u [ adlb::unique ]
-        if { [ string length $args ] } {
-            log "variable: $args=<$u>"
-            upvar 1 $args v
+        set length [ llength $args ]
+        puts "len: $length"
+        if { $length == 2 } {
+            set name [ lindex $args 0 ]
+            set type [ lindex $args 1 ]
+            log "${type}: $name=<$u>"
+            upvar 1 $name v
             set v $u
+        } elseif { $length == 1 } {
+            set type $args
+        } else {
+            error "allocate: requires 1 or 2 args!"
         }
+        create_$type $u
         return $u
     }
 
-    proc integer_init { id } {
-        debug "integer_init: <$id>"
-        adlb::create $id "integer"
-        turbine::c::declare $id
+    # Obtain unique TD
+    # If given an argument, sets the variable by that name
+    # and a log message is reported
+    # proc allocate_integer { args } {
+    #     set u [ adlb::unique ]
+    #     if { [ string length $args ] } {
+    #         log "integer: $args=<$u>"
+    #         upvar 1 $args v
+    #         set v $u
+    #     }
+    #     create_integer $u
+    #     return $u
+    # }
+
+    # usage: [<name>] <subscript_type>
+    proc allocate_container { args } {
+        set u [ adlb::unique ]
+        set length [ llength $args ]
+        if { $length == 2  } {
+            set name           [ lindex $args 0 ]
+            set subscript_type [ lindex $args 1 ]
+            log "container: $name\[$subscript_type\]=<$u>"
+            upvar 1 $name v
+            set v $u
+        } elseif { $length == 1 } {
+            set subscript_type $args
+        } else {
+            error "allocate_container: requires 1 or 2 args!"
+        }
+        create_container $u $subscript_type
+        return $u
     }
 
-    proc integer_set { id value } {
+    # proc create { type id } {
+    #     debug "create $type: <$id>"
+    #     adlb::create $id $type
+    # }
+
+    proc get { id } {
+        set result [ adlb::retrieve $id ]
+        debug "get: <$id>=$result"
+        return $result
+    }
+
+    proc create_integer { id } {
+        debug "create_integer: <$id>"
+        adlb::create $id $adlb::INTEGER
+    }
+
+    proc set_integer { id value } {
         log "set: <$id>=$value"
         close_dataset $id $adlb::INTEGER $value
     }
 
-    proc integer_get { id } {
-        set s [ adlb::retrieve $id ]
-        set i [ string first : $s ]
-        incr i
-        set result [ string range $s $i end ]
-        debug "integer_get: <$id>=$result"
-        return $result
+    # proc get_integer { id } {
+    #     set s [ adlb::retrieve $id ]
+    #     set i [ string first : $s ]
+    #     incr i
+    #     set result [ string range $s $i end ]
+    #     debug "get_integer: <$id>=$result"
+    #     return $result
+    # }
+
+    proc create_float { id } {
+        debug "create_float: <$id>"
+        adlb::create $id $adlb::FLOAT
     }
 
-    proc float_init { id } {
-        debug "float_init: <$id>"
-        adlb::create $id "float"
-        turbine::c::declare $id
-    }
-
-    proc float_set { id value } {
-        debug "float_set: <$id>=$value"
+    proc set_float { id value } {
+        debug "set: <$id>=$value"
         close_dataset $id $adlb::FLOAT $value
     }
 
-    proc float_get { id } {
-        set s [ adlb::retrieve $id ]
-        set i [ string first : $s ]
-        incr i
-        set result [ string range $s $i end ]
-        debug "float_get: <$id>=$result"
-        return $result
+    # proc float_get { id } {
+    #     set s [ adlb::retrieve $id ]
+    #     set i [ string first : $s ]
+    #     incr i
+    #     set result [ string range $s $i end ]
+    #     debug "float_get: <$id>=$result"
+    #     return $result
+    # }
+
+    proc create_string { id } {
+        debug "create_string: <$id>"
+        adlb::create $id $adlb::STRING
     }
 
-    proc string_init { id } {
-        adlb::create $id "string"
-        turbine::c::declare $id
-    }
-
-    proc string_set { id value } {
-        debug "string_set: <$id>=$value"
+    proc set_string { id value } {
+        debug "set: <$id>=$value"
         close_dataset $id $adlb::STRING $value
     }
 
-    proc string_get { id } {
-        set s [ adlb::retrieve $id ]
-        set i [ string first : $s ]
-        incr i
-        set result [ string range $s $i end ]
-        debug "string_get: <$id>=$result"
-        return $result
-    }
+    # proc string_get { id } {
+    #     set s [ adlb::retrieve $id ]
+    #     set i [ string first : $s ]
+    #     incr i
+    #     set result [ string range $s $i end ]
+    #     debug "string_get: <$id>=$result"
+    #     return $result
+    # }
 
-    proc container_init { id subscript_type } {
-        adlb::create $id "container" $subscript_type
-        turbine::c::declare $id
+    proc create_container { id subscript_type } {
+        debug "create_container: <$id>\[$subscript_type\]"
+        adlb::create $id $adlb::CONTAINER $subscript_type
     }
 
     proc container_insert { id subscript value } {
@@ -124,12 +176,11 @@ namespace eval turbine {
         return $result
     }
 
-    proc file_init { id path } {
-        adlb::create $id "file" $path
-        turbine::c::declare $id
+    proc create_file { id path } {
+        adlb::create $id $adlb::FILE $path
     }
 
-    proc file_set { id } {
+    proc set_file { id } {
         close_dataset $id $adlb::FILE none
     }
 

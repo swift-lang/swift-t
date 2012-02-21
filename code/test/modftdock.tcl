@@ -52,7 +52,7 @@ proc loop1_body { key } {
 
     puts "body: $key"
     # turbine_trace $key
-    set t [ turbine_integer_get $key ]
+    set t [ turbine_get_integer $key ]
     puts "t: $t"
     set root [ turbine_lookup $str_roots key $t ]
     turbine_trace $root $pdb

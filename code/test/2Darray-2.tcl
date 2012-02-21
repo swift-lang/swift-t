@@ -23,8 +23,7 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    turbine::data_new A
-    turbine::container_init $A integer
+    turbine::allocate_container A integer
 
     turbine::literal i1 integer 31
     turbine::literal j1 integer 41
@@ -54,3 +53,6 @@ turbine::start rules
 turbine::finalize
 
 puts OK
+
+# Help TCL free memory
+proc exit args {}

@@ -9,23 +9,19 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    namespace import turbine::data_new
+    namespace import adlb::unique
     namespace import turbine::float_*
     namespace import turbine::arithmetic
 
-    data_new t1
-    data_new t2
-    data_new x
+    turbine::allocate t1 float
+    turbine::allocate t2 float
+    turbine::allocate x float
 
-    float_init $t1
-    float_init $t2
-    float_init $x
-
-    float_set $t1 3
-    float_set $t2 5
+    turbine::set_float $t1 3
+    turbine::set_float $t2 5
 
     # Use 0 as stack frame
-    turbine::plus_float 0 [ list $x ] [ list $t1 $t2 ]
+    turbine::plus float 0 [ list $x ] [ list $t1 $t2 ]
     turbine::trace 0 "" $x
 }
 

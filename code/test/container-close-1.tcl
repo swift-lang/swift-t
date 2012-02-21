@@ -12,36 +12,27 @@
 
 package require turbine 0.0.1
 
-namespace import turbine::data_new
-namespace import turbine::string_init
-namespace import turbine::integer_*
-namespace import turbine::literal
-namespace import turbine::enumerate
-namespace import turbine::c::rule
-namespace import turbine::c::rule_new
-
 proc rules { } {
 
-    set c [ data_new ]
-    turbine::container_init $c integer
+    turbine::allocate_container c integer
 
-    set i1 [ literal integer 0 ]
-    set i2 [ literal integer 1 ]
+    set i1 [ turbine::literal integer 0 ]
+    set i2 [ turbine::literal integer 1 ]
 
-    set j1 [ literal integer 98 ]
-    set j2 [ literal integer 72 ]
+    set j1 [ turbine::literal integer 98 ]
+    set j2 [ turbine::literal integer 72 ]
 
     turbine::container_f_insert no_stack "" "$c $i1 $j1"
     turbine::container_f_insert no_stack "" "$c $i2 $j2"
 
-    set s [ data_new ]
-    string_init $s
+    turbine::allocate s string
 
     turbine::enumerate no_stack $s $c
     turbine::trace no_stack "" $s
 }
 
-turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
+turbine::defaults
+turbine::init $engines $servers
 turbine::start rules
 turbine::finalize
 

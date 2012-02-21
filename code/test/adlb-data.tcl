@@ -22,19 +22,19 @@ if { ! [ adlb::amserver ] } {
 
     set rank [ adlb::rank ]
     puts "rank: $rank"
-    if { $rank == 0 } { 
+    if { $rank == 0 } {
 	puts "iterations: $iterations"
     }
     set workers [ adlb::workers ]
 
     for { set i 0 } { $i < $iterations } { incr i } {
         set id [ expr $rank + $i * $workers + 1]
-        string_init $id
-        string_set $id "message rank:$rank:$i"
+        adlb::create $id $adlb::STRING
+        adlb::store $id $adlb::STRING "message rank:$rank:$i"
 
         set id [ expr $rank + $i * $workers + 1 ]
         # turbine::c::debug "get"
-        set msg [ string_get $id ]
+        set msg [ adlb::retrieve $id ]
         # turbine::c::debug "got: $msg"
     }
 } else {

@@ -135,18 +135,16 @@ namespace eval turbine {
             set v [ lindex $args $i ]
             switch [ adlb::typeof $v ] {
                 integer {
-                    set value [ integer_get $v ]
-                    puts -nonewline $value
+                    set value [ get $v ]
                 }
                 string {
-                    set value [ string_get $v ]
-                    puts -nonewline $value
+                    set value [ get $v ]
                 }
                 float {
-                    set value [ float_get $v ]
-                    puts -nonewline $value
+                    set value [ get $v ]
                 }
             }
+            puts -nonewline $value
             if { $i < $n-1 } { puts -nonewline "," }
         }
         puts ""
@@ -162,8 +160,8 @@ namespace eval turbine {
 
     proc range_body { result start end } {
 
-        set start_value [ integer_get $start ]
-        set end_value   [ integer_get $end ]
+        set start_value [ get $start ]
+        set end_value   [ get $end ]
 
         range_work $result $start_value $end_value
     }
@@ -171,9 +169,8 @@ namespace eval turbine {
     proc range_work { result start end } {
         set k 0
         for { set i $start } { $i <= $end } { incr i } {
-            set td [ data_new ]
-            integer_init $td
-            integer_set $td $i
+            allocate td integer
+            set_integer $td $i
             container_insert $result $k $td
             incr k
         }
@@ -191,24 +188,23 @@ namespace eval turbine {
 
     proc drange_body { result start end parts } {
 
-        set start_value [ integer_get $start ]
-        set end_value   [ integer_get $end ]
-        set parts_value [ integer_get $parts ]
+        set start_value [ get $start ]
+        set end_value   [ get $end ]
+        set parts_value [ get $parts ]
         set size        [ expr $end_value - $start_value + 1]
         set step        [ expr $size / $parts_value ]
 
         global WORK_TYPE
         for { set i 0 } { $i < $parts_value } { incr i } {
             # top-level container
-            set td [ data_new ]
-            container_init $td integer
-            container_insert $result $i $td
+            allocate_container c integer
+            container_insert $result $i $c
             # start
             set s [ expr $i *  $step ]
             # end
             set e [ expr $s + $step - 1 ]
             adlb::put $adlb::ANY $WORK_TYPE(CONTROL) \
-                "procedure tp: range_work $td $s $e"
+                "procedure tp: range_work $c $s $e"
         }
         close_container $result
     }
@@ -239,15 +235,15 @@ namespace eval turbine {
     # inputs: [ list c r ]
     # c: the container
     # r: the turbine id to store the sum into
-    proc sum { stack outputs inputs } {
+    proc sum_integer { stack outputs inputs } {
         set container [ lindex $inputs 0 ]
         set result [ lindex $outputs 0 ]
         set rule_id [ rule_new ]
         rule $rule_id "sum-$rule_id" $container "" \
-            "tp: sum_body $stack $container $result 0 0"
+            "tp: sum_integer_body $stack $container $result 0 0"
     }
 
-    proc sum_body { stack container result accum next_index } {
+    proc sum_integer_body { stack container result accum next_index } {
         set keys [ container_list $container ]
         # TODO: could divide and conquer instead of
         #       doing linear search
@@ -257,7 +253,7 @@ namespace eval turbine {
             set key [ lindex $keys $i ]
             set turbine_id [ container_get $container $key ]
 
-            if { [ catch { set val [ integer_get $turbine_id ] } ] == 0 } {
+            if { [ catch { set val [ get $turbine_id ] } ] == 0 } {
                 # add to the sum
                 set accum [ expr $accum + $val ]
                 incr i
@@ -266,13 +262,13 @@ namespace eval turbine {
                 #   then continue running
                 set rule_id [ rule_new ]
                 rule $rule_id "sum-$rule_id" $turbine_id "" \
-                    "tp: sum_body $stack $container $result $accum $i"
+                    "tp: sum_integer_body $stack $container $result $accum $i"
                 # return immediately without setting result
                 return
             }
         }
         # If we get out of loop, we're done
-        integer_set $result $accum
+        set_integer $result $accum
     }
 
     # When container is closed, concatenate its keys in result
@@ -286,29 +282,28 @@ namespace eval turbine {
 
     proc enumerate_body { result container } {
         set s [ container_list $container ]
-        string_set $result $s
+        set_string $result $s
     }
 
     # User function
     proc readdata { result filename } {
 
-        set rule_id [ data_new ]
+        set rule_id [ rule_new ]
         rule $rule_id "read_data-$rule_id" $filename $result  \
             "tp: readdata_body $result $filename"
     }
 
     proc readdata_body { result filename } {
 
-        set name_value [ string_get $filename ]
+        set name_value [ get $filename ]
         if { [ catch { set fd [ open $name_value r ] } e ] } {
             error "Could not open file: '$name_value'"
         }
 
         set i 0
         while { [ gets $fd line ] >= 0 } {
-            set s [ data_new ]
-            string_init $s
-            string_set $s $line
+            allocate s string
+            set_string $s $line
             container_insert $result $i $s
             incr i
         }
@@ -343,19 +338,20 @@ namespace eval turbine {
         if { [ llength $args ] == 2 } {
             set type   [ lindex $args 0 ]
             set value  [ lindex $args 1 ]
-            set result [ data_new ]
+            set result [ allocate $type ]
         } elseif { [ llength $args ] == 3 } {
             set name   [ lindex $args 0 ]
             set type   [ lindex $args 1 ]
             set value  [ lindex $args 2 ]
-            set result [ data_new $name ]
+            puts "name: $name"
+            set result [ allocate $name $type ]
             upvar 1 $name n
             set n $result
         } else {
             error "turbine::literal requires 2 or 3 args!"
         }
-        ${type}_init $result
-        ${type}_set $result $value
+
+        set_${type} $result $value
 
         return $result
     }
@@ -369,9 +365,9 @@ namespace eval turbine {
     #     set type [ typeof $src ]
     #     switch $type {
     #         integer {
-    #             set t [ integer_get $src ]
+    #             set t [ get $src ]
     #             integer $dest
-    #             integer_set $dest $t
+    #             set_integer $dest $t
     #         }
     #         string {
     #             set t [ string_get $src ]
@@ -401,11 +397,11 @@ namespace eval turbine {
 
         set output [ list ]
         foreach input $inputs {
-            set t [ string_get $input ]
+            set t [ get $input ]
             lappend output $t
         }
         set total [ join $output "" ]
-        string_set $result $total
+        set_string $result $total
     }
 
     proc substring { stack result inputs  } {
@@ -418,13 +414,13 @@ namespace eval turbine {
     }
 
     proc substring_body { result str first len } {
-        set str_val [ string_get $str ]
-        set first_val [ integer_get $first ]
-        set len_val [ integer_get $len ]
+        set str_val   [ get $str ]
+        set first_val [ get $first ]
+        set len_val   [ get $len ]
 
         set last [ expr $first_val + $len_val - 1 ]
         set result_val [ string range $str_val $first_val $last ]
-        string_set $result $result_val
+        set_string $result $result_val
     }
 
     # User function
@@ -436,9 +432,9 @@ namespace eval turbine {
 
     proc toint_body { input result } {
 
-        set t [ string_get $input ]
+        set t [ get $input ]
         # Tcl performs the conversion naturally
-        integer_set $result $t
+        set_integer $result $t
     }
 
     proc fromint { stack result input } {
@@ -448,9 +444,9 @@ namespace eval turbine {
     }
 
     proc fromint_body { input result } {
-        set t [ integer_get $input ]
+        set t [ get $input ]
         # Tcl performs the conversion naturally
-        string_set $result $t
+        set_string $result $t
     }
 
     # OBSOLETE: The parser can generate code as efficient as this
@@ -482,12 +478,78 @@ namespace eval turbine {
         set working $expression
         for { set i 0 } { $i < $count } { incr i } {
             set td [ lindex $inputs $i ]
-            set v [ integer_get $td ]
+            set v [ get $td ]
             regsub "_" $working $v working
         }
 
         set total [ expr $working ]
-        integer_set $result $total
+        set_integer $result $total
+    }
+
+    proc plus { type parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "plus-$a-$b" "$a $b" $c \
+            "tl: plus_body $type $parent $c $a $b"
+    }
+
+    proc plus_body { type parent c a b } {
+        set a_value [ get $a ]
+        set b_value [ get $b ]
+        set c_value [ expr $a_value + $b_value ]
+        log "plus: $a_value + $b_value => $c_value"
+        set_${type} $c $c_value
+    }
+
+    proc minus { type parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "minus-$a-$b" "$a $b" $c \
+            "tl: minus_body $type $parent $c $a $b"
+    }
+
+    proc minus_body { type parent c a b } {
+        set a_value [ get $a ]
+        set b_value [ get $b ]
+        set c_value [ expr $a_value - $b_value ]
+        log "minus: $a_value - $b_value => $c_value"
+        set_${type} $c $c_value
+    }
+
+    # c = a*b;
+    proc multiply { type parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "mult-$a-$b" "$a $b" $c \
+            "tf: multiply_body $type $c $a $b"
+    }
+    proc multiply_body { type c a b } {
+        set a_value [ get $a ]
+        set b_value [ get $b ]
+        set c_value [ expr $a_value * $b_value ]
+        log "multiply: $a_value * $b_value => $c_value"
+        # Emulate some computation time
+        # exec sleep $c_value
+        set_${type} $c $c_value
+    }
+
+    # c = a/b
+    proc divide { type parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "div-$a-$b" "$a $b" $c \
+            "tf: divide_body $type $c $a $b"
+    }
+    proc divide_body { type c a b } {
+        set a_value [ get $a ]
+        set b_value [ get $b ]
+        set c_value [ expr $a_value / $b_value ]
+        log "divide: $a_value / $b_value => $c_value"
+        set_${type} $c $c_value
     }
 
     proc plus_integer { parent c inputs } {
@@ -499,11 +561,11 @@ namespace eval turbine {
     }
 
     proc plus_integer_body { parent c a b } {
-        set a_value [ integer_get $a ]
-        set b_value [ integer_get $b ]
+        set a_value [ get $a ]
+        set b_value [ get $b ]
         set c_value [ expr $a_value + $b_value ]
         log "plus: $a_value + $b_value => $c_value"
-        integer_set $c $c_value
+        set_integer $c $c_value
     }
 
     proc plus_float { parent c inputs } {
@@ -533,13 +595,13 @@ namespace eval turbine {
             "tl: minus_integer_body $c $a $b"
     }
     proc minus_integer_body {c a b } {
-        set a_value [ integer_get $a ]
-        set b_value [ integer_get $b ]
+        set a_value [ get $a ]
+        set b_value [ get $b ]
         set c_value [ expr $a_value - $b_value ]
         log "minus: $a_value - $b_value => $c_value"
-        integer_set $c $c_value
+        set_integer $c $c_value
     }
-    
+
     # This is a Swift-5 function
     # c = a-b;
     # and sleeps for c seconds
@@ -568,15 +630,15 @@ namespace eval turbine {
             "tf: multiply_integer_body $c $a $b"
     }
     proc multiply_integer_body {c a b } {
-        set a_value [ integer_get $a ]
-        set b_value [ integer_get $b ]
+        set a_value [ get $a ]
+        set b_value [ get $b ]
         set c_value [ expr $a_value * $b_value ]
         log "multiply: $a_value * $b_value => $c_value"
         # Emulate some computation time
         # exec sleep $c_value
-        integer_set $c $c_value
+        set_integer $c $c_value
     }
-    
+
     # c = a*b;
     # and sleeps for c seconds
     proc multiply_float { parent c inputs } {
@@ -595,8 +657,7 @@ namespace eval turbine {
         # exec sleep $c_value
         float_set $c $c_value
     }
-    
-    
+
     # c = a/b; with integer division
     # and sleeps for c seconds
     proc divide_integer { parent c inputs } {
@@ -615,7 +676,7 @@ namespace eval turbine {
         # exec sleep $c_value
         integer_set $c $c_value
     }
-    
+
     # c = a/b; with float division
     # and sleeps for c seconds
     proc divide_float { parent c inputs } {
@@ -645,13 +706,13 @@ namespace eval turbine {
             "tf: and_body $c $a $b"
     }
     proc and_body { c a b } {
-        set a_value [ integer_get $a ]
-        set b_value [ integer_get $b ]
+        set a_value [ get $a ]
+        set b_value [ get $b ]
         set c_value [ expr $a_value && $b_value ]
         # Emulate some computation time
         log "and: $a_value && $b_value => $c_value"
         # exec sleep $c_value
-        integer_set $c $c_value
+        set_integer $c $c_value
     }
 
     # This is a Swift-2 function
@@ -681,10 +742,10 @@ namespace eval turbine {
             "tl: copy_integer_body $o $i"
     }
     proc copy_integer_body { o i } {
-        set i_value [ integer_get $i ]
+        set i_value [ get $i ]
         set o_value $i_value
         log "copy $i_value => $o_value"
-        integer_set $o $o_value
+        set_integer $o $o_value
     }
 
     # o = i;
@@ -721,14 +782,14 @@ namespace eval turbine {
     }
 
     proc negate_integer_body { c a } {
-        set a_value [ integer_get $a ]
+        set a_value [ get $a ]
         set c_value [ expr 0 - $a_value ]
         log "negate: -1 * $a_value => $c_value"
         # Emulate some computation time
         # exec sleep $c_value
-        integer_set $c $c_value
+        set_integer $c $c_value
     }
-    
+
     # This is a Swift-5 function
     # c = -b;
     proc negate_float { parent c inputs } {
@@ -764,7 +825,7 @@ namespace eval turbine {
 
         # Emulate some computation time
         # after 1000
-        integer_set $c 0
+        set_integer $c 0
     }
 
     # Good for performance testing
@@ -784,7 +845,7 @@ namespace eval turbine {
 
         # Emulate some computation time
         # after 1000
-        integer_set $c 1
+        set_integer $c 1
     }
 
     # This is a Swift-2 function
@@ -795,10 +856,10 @@ namespace eval turbine {
             "tf: not_body $o $i"
     }
     proc not_body { o i } {
-        set i_value [ integer_get $i ]
+        set i_value [ get $i ]
         set o_value [ expr ! $i_value ]
         log "not $i_value => $o_value"
-        integer_set $o $o_value
+        set_integer $o $o_value
     }
 
     # Execute shell command
@@ -816,7 +877,7 @@ namespace eval turbine {
         set inputs [ lreplace $args 0 0 ]
         set values [ list ]
         foreach i $inputs {
-            set value [ integer_get $i ]
+            set value [ get $i ]
             lappend values $value
         }
         debug "executing: $command $values"
@@ -851,22 +912,22 @@ namespace eval turbine {
     # inputs: [ list c i ]
     # c: the container
     # i: the subscript
-    proc container_f_get { parent d inputs } {
+    proc container_f_get_integer { parent d inputs } {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set rule_id [ rule_new ]
         rule $rule_id "container_f_get-$c-$i" $i $d \
-            "tp: turbine::container_f_get_body $d $c $i"
+            "tl: turbine::container_f_get_integer_body $d $c $i"
     }
 
-    proc container_f_get_body { d c i } {
-        set t1 [ integer_get $i ]
+    proc container_f_get_integer_body { d c i } {
+        set t1 [ get $i ]
         set t2 [ container_get $c $t1 ]
         if { $t2 == 0 } {
             error "lookup failed: container_f_get <$c>\[$t1\]"
         }
-        set t3 [ integer_get $t2 ]
-        integer_set $d $t3
+        set t3 [ get $t2 ]
+        set_integer $d $t3
     }
 
     # When i is closed, set c[i] := d
@@ -887,7 +948,7 @@ namespace eval turbine {
     }
 
     proc container_f_insert_body { c i d } {
-        set t1 [ integer_get $i ]
+        set t1 [ get $i ]
         container_insert $c $t1 $d
     }
 
@@ -908,8 +969,8 @@ namespace eval turbine {
     }
 
     proc container_f_deref_insert_body { c i r } {
-        set t1 [ integer_get $i ]
-        set d [ integer_get $r ]
+        set t1 [ get $i ]
+        set d [ get $r ]
         container_insert $c $t1 $d
     }
 
@@ -931,7 +992,7 @@ namespace eval turbine {
     }
 
     proc container_deref_insert_body { c i r } {
-        set d [ integer_get $r ]
+        set d [ get $r ]
         container_insert $c $i $d
     }
 
@@ -963,7 +1024,7 @@ namespace eval turbine {
             "tp: turbine::f_reference_body $c $i $r"
     }
     proc f_reference_body { c i r } {
-        set t1 [ integer_get $i ]
+        set t1 [ get $i ]
         adlb::container_reference $c $t1 $r
     }
 
@@ -974,8 +1035,8 @@ namespace eval turbine {
             "tp: turbine::f_dereference_integer_body $v $r"
     }
     proc f_dereference_integer_body { v r } {
-        set t [ integer_get [ integer_get $r ] ]
-        integer_set $v $t
+        set t [ get [ get $r ] ]
+        set_integer $v $t
     }
 
     # When reference r is closed, store its (float) value in v
@@ -986,8 +1047,8 @@ namespace eval turbine {
     }
 
     proc f_dereference_float_body { v r } {
-        set t [ float_get [ integer_get $r ] ]
-        float_set $v $t
+        set t [ get [ get $r ] ]
+        set_float $v $t
     }
 
     # When reference r is closed, store its (string) value in v
@@ -997,8 +1058,8 @@ namespace eval turbine {
             "tp: turbine::f_dereference_string_body $v $r"
     }
     proc f_dereference_string_body { v r } {
-        set t [ string_get [ integer_get $r ] ]
-        string_set $v $t
+        set t [ get [ get $r ] ]
+        set_string $v $t
     }
 
     # When reference cr is closed, store d = (*cr)[i]
@@ -1020,7 +1081,7 @@ namespace eval turbine {
     proc f_container_reference_lookup_literal_body { cr i d } {
         # When this procedure is run, cr should be set and
         # i should be the literal index
-        set c [ integer_get $cr ]
+        set c [ get $cr ]
         adlb::container_reference $c $i $d
     }
 
@@ -1040,8 +1101,8 @@ namespace eval turbine {
 
     proc f_container_reference_lookup_body { cr i d } {
         # When this procedure is run, cr and i should be set
-        set c [ integer_get $cr ]
-        set t1 [ integer_get $i ]
+        set c [ get $cr ]
+        set t1 [ get $i ]
         adlb::container_reference $c $t1 $d
     }
     # When reference r on c[i] is closed, store c[i][j] = d
@@ -1059,8 +1120,8 @@ namespace eval turbine {
     }
     proc f_container_reference_insert_body { r j d } {
         # s: The subscripted container
-        set c [ integer_get $r ]
-        set s [ integer_get $j ]
+        set c [ get $r ]
+        set s [ get $j ]
         container_insert $c $s $d
     }
 
@@ -1078,11 +1139,10 @@ namespace eval turbine {
         if [ container_insert_atomic $c $i ] {
             # c[i] does not exist
             set t [ data_new ]
-            container_init $t integer
+            allocate_container t integer
             container_insert $c $i $t
         } else {
-            set r [ data_new ]
-            integer_init $r
+            allocate r integer
             container_reference $r $c $i
             set rule_id [ rule_new ]
             rule $rule_id fcnib "$r" "" \
@@ -1097,8 +1157,7 @@ namespace eval turbine {
     proc imm_container_create_nested { r c i type } {
         debug "container_create_nested: $r $c\[$i\] $type"
         upvar 1 $r v
-        set v [ data_new ]
-        integer_init $v
+        allocate v integer
         __container_create_nested $v $c $i $type
     }
 
@@ -1106,8 +1165,7 @@ namespace eval turbine {
         debug "__container_create_nested: $r $c\[$i\] $type"
         if [ adlb::insert_atomic $c $i ] {
             # Member did not exist: create it and get reference
-            set t [ data_new ]
-            container_init $t $type
+            allocate_container t $type
             adlb::insert $c $i $t
         }
 
@@ -1119,8 +1177,7 @@ namespace eval turbine {
         upvar 1 $r v
 
         # Create reference
-        data_new tmp_r
-        integer_init $tmp_r
+        allocate tmp_r integer
         set v $tmp_r
 
         set rule_id [ rule_new ]
@@ -1135,7 +1192,7 @@ namespace eval turbine {
 
         debug "f_container_create_nested: $r $c\[$i\] $type"
 
-        set s [ integer_get $i ]
+        set s [ get $i ]
         __container_create_nested $r $c $s $type
     }
 
@@ -1145,8 +1202,7 @@ namespace eval turbine {
         upvar 1 $r v
 
         # Create reference
-        data_new tmp_r
-        integer_init $tmp_r
+        allocate tmp_r integer
         set v $tmp_r
 
         set rule_id [ rule_new ]
@@ -1155,7 +1211,7 @@ namespace eval turbine {
     }
 
     proc f_container_reference_create_nested_body { r cr i type } {
-        set c [ integer_get $cr ]
+        set c [ get $cr ]
         __container_create_nested $r $c $i $type
     }
 
@@ -1166,7 +1222,7 @@ namespace eval turbine {
 
         # Create reference
         data_new tmp_r
-        integer_init $tmp_r
+        create_integer $tmp_r
         set v $tmp_r
 
         set rule_id [ rule_new ]
@@ -1175,8 +1231,8 @@ namespace eval turbine {
     }
 
     proc f_container_reference_create_nested_body { r cr i type } {
-        set c [ integer_get $cr ]
-        set s [ integer_get $i ]
+        set c [ get $cr ]
+        set s [ get $i ]
         container_create_nested $r $c $s $type
     }
 

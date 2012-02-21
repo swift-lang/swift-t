@@ -14,11 +14,11 @@ proc rules { } {
     turbine::integer_init 2
     turbine::integer_init 3
 
-    turbine::integer_set 1 2
-    turbine::integer_set 2 2
+    turbine::set_integer 1 2
+    turbine::set_integer 2 2
 
-    set v1 [ turbine::integer_get 1 ]
-    set v2 [ turbine::integer_get 2 ]
+    set v1 [ turbine::get_integer 1 ]
+    set v2 [ turbine::get_integer 2 ]
 
     turbine::rule 5 PLUS "1 2" 3 "tf: plus 1 2 3"
 }
