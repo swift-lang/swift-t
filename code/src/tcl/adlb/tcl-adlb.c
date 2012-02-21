@@ -441,6 +441,8 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
     break;
   case ADLB_DATA_TYPE_FLOAT:
     rc = Tcl_GetDoubleFromObj(interp, objv[3], (double*) xfer);
+    TCL_CHECK_MSG(rc, "adlb::store double <%li> failed!", id);
+    printf("d: %f\n", *(double*) xfer);
     length = sizeof(double);
     break;
   case ADLB_DATA_TYPE_STRING:
@@ -466,7 +468,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
 
   // DEBUG_ADLB("adlb::store: <%li>=%s", id, data);
-  rc = ADLB_Store(id, xfer, length+1);
+  rc = ADLB_Store(id, xfer, length);
 
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::store <%li> failed!", id);
