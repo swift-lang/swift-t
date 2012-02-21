@@ -25,7 +25,7 @@ proc rules { } {
     float_set $t2 5
 
     # Use 0 as stack frame
-    # turbine::plus 0 [ $t1 $t2 ] [ $x ]
+    turbine::plus_float 0 [ list $x ] [ list $t1 $t2 ]
     turbine::trace 0 "" $x
 }
 

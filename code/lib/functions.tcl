@@ -453,6 +453,7 @@ namespace eval turbine {
         string_set $result $t
     }
 
+    # OBSOLETE: The parser can generate code as efficient as this
     # usage: arithmetic <parent> <result> [ <expr> <args>* ]
     # example: assume td1 = 5, td2 = 6, td3 = 7
     # arithmetic td4 "(_+_)*_" td1 td2 td3
@@ -489,18 +490,15 @@ namespace eval turbine {
         integer_set $result $total
     }
 
-    # This is a Swift-1 function
-    # c = a+b;
-    # and sleeps for c seconds
-    proc plus { parent c inputs } {
+    proc plus_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         set rule_id [ rule_new ]
         rule $rule_id "plus-$a-$b" "$a $b" $c \
-            "tl: plus_body $parent $c $a $b"
+            "tl: plus_integer_body $parent $c $a $b"
     }
 
-    proc plus_body { parent c a b } {
+    proc plus_integer_body { parent c a b } {
         set a_value [ integer_get $a ]
         set b_value [ integer_get $b ]
         set c_value [ expr $a_value + $b_value ]
@@ -508,17 +506,33 @@ namespace eval turbine {
         integer_set $c $c_value
     }
 
+    proc plus_float { parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "plus-$a-$b" "$a $b" $c \
+            "tl: plus_float_body $parent $c $a $b"
+    }
+
+    proc plus_float_body { parent c a b } {
+        set a_value [ float_get $a ]
+        set b_value [ float_get $b ]
+        set c_value [ expr $a_value + $b_value ]
+        log "plus: $a_value + $b_value => $c_value"
+        float_set $c $c_value
+    }
+
     # This is a Swift-2 function
     # c = a-b;
     # and sleeps for c seconds
-    proc minus { parent c inputs } {
+    proc minus_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         set rule_id [ rule_new ]
         rule $rule_id "minus-$a-$b" "$a $b" $c \
-            "tl: minus_body $c $a $b"
+            "tl: minus_integer_body $c $a $b"
     }
-    proc minus_body {c a b } {
+    proc minus_integer_body {c a b } {
         set a_value [ integer_get $a ]
         set b_value [ integer_get $b ]
         set c_value [ expr $a_value - $b_value ]
@@ -528,18 +542,18 @@ namespace eval turbine {
 
     # c = a*b;
     # and sleeps for c seconds
-    proc mult { parent c inputs } {
+    proc multiply_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         set rule_id [ rule_new ]
         rule $rule_id "mult-$a-$b" "$a $b" $c \
-            "tf: mult_body $c $a $b"
+            "tf: multiply_integer_body $c $a $b"
     }
-    proc mult_body {c a b } {
+    proc multiply_integer_body {c a b } {
         set a_value [ integer_get $a ]
         set b_value [ integer_get $b ]
         set c_value [ expr $a_value * $b_value ]
-        log "minus: $a_value * $b_value => $c_value"
+        log "multiply: $a_value * $b_value => $c_value"
         # Emulate some computation time
         # exec sleep $c_value
         integer_set $c $c_value
@@ -564,12 +578,12 @@ namespace eval turbine {
 
     # This is a Swift-2 function, thus it only applies to integers
     # o = i;
-    proc copy { parent o i } {
+    proc copy_integer { parent o i } {
         set rule_id [ rule_new ]
         rule $rule_id "copy-$o-$i" $i $o \
-            "tf: copy_body $o $i"
+            "tl: copy_integer_body $o $i"
     }
-    proc copy_body { o i } {
+    proc copy_integer_body { o i } {
         set i_value [ integer_get $i ]
         set o_value $i_value
         log "copy $i_value => $o_value"
@@ -577,24 +591,24 @@ namespace eval turbine {
     }
 
     # o = i;
-    proc copyfloat { parent o i } {
+    proc copy_float { parent o i } {
         set rule_id [ rule_new ]
         rule $rule_id "copyfloat-$o-$i" $i $o \
-            "tf: copyfloat_body $o $i"
+            "tl: copy_float_body $o $i"
     }
-    proc copyfloat_body { o i } {
+    proc copy_float_body { o i } {
         set i_value [ float_get $i ]
         log "copy $i_value => $i_value"
         float_set $o $i_value
     }
 
     # o = i;
-    proc copystring { parent o i } {
+    proc copy_string { parent o i } {
         set rule_id [ rule_new ]
         rule $rule_id "copystring-$o-$i" $i $o \
-            "tf: copystring_body $o $i"
+            "tl: copy_string_body $o $i"
     }
-    proc copystring_body { o i } {
+    proc copy_string_body { o i } {
         set i_value [ string_get $i ]
         log "copy $i_value => $i_value"
         string_set $o $i_value
@@ -602,14 +616,14 @@ namespace eval turbine {
 
     # This is a Swift-2 function
     # c = -b;
-    proc negate { parent c inputs } {
+    proc negate_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set rule_id [ rule_new ]
         rule $rule_id "negate-$a" "$a" $c \
-            "tf: negate_body $c $a"
+            "tf: negate_integer_body $c $a"
     }
 
-    proc negate_body { c a } {
+    proc negate_integer_body { c a } {
         set a_value [ integer_get $a ]
         set c_value [ expr 0 - $a_value ]
         log "negate: -1 * $a_value => $c_value"
@@ -654,7 +668,7 @@ namespace eval turbine {
         dict incr stats set1
 
         # Emulate some computation time
-        after 1000
+        # after 1000
         integer_set $c 1
     }
 

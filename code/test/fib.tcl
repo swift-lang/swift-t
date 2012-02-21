@@ -38,7 +38,7 @@ proc if-0 { stack } {
         set __l0 [ data_new __l0 ]
         integer_init $__l0
         integer_set $__l0 1
-        turbine::minus $stack [ list $__t0 ] [ list $n $__l0 ]
+        turbine::minus_integer $stack [ list $__t0 ] [ list $n $__l0 ]
         set rule_id [ turbine::c::rule_new ]
         turbine::c::rule $rule_id if-1 "$__t0" "" "tc: if-1 $stack"
     } else {
@@ -68,7 +68,7 @@ proc if-1 { stack } {
         set __l3 [ data_new __l3 ]
         integer_init $__l3
         integer_set $__l3 1
-        turbine::minus $stack [ list $__l2 ] [ list $n $__l3 ]
+        turbine::minus_integer $stack [ list $__l2 ] [ list $n $__l3 ]
         set rule_id [ turbine::c::rule_new ]
         turbine::c::rule $rule_id fib [ list $__l2 ] [ list $__l1 ] "tp: fib $stack $__l1 $__l2"
         set __l4 [ data_new __l4 ]
@@ -78,10 +78,10 @@ proc if-1 { stack } {
         set __l6 [ data_new __l6 ]
         integer_init $__l6
         integer_set $__l6 2
-        turbine::minus $stack [ list $__l5 ] [ list $n $__l6 ]
+        turbine::minus_integer $stack [ list $__l5 ] [ list $n $__l6 ]
         set rule_id [ turbine::c::rule_new ]
         turbine::c::rule $rule_id fib [ list $__l5 ] [ list $__l4 ] "tp: fib $stack $__l4 $__l5"
-        turbine::plus $stack [ list $o ] [ list $__l1 $__l4 ]
+        turbine::plus_integer $stack [ list $o ] [ list $__l1 $__l4 ]
     } else {
         set parent $stack
         set stack [ data_new stack ]
