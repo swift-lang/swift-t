@@ -444,7 +444,6 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   case ADLB_DATA_TYPE_FLOAT:
     rc = Tcl_GetDoubleFromObj(interp, objv[3], &tmp_double);
     TCL_CHECK_MSG(rc, "adlb::store double <%li> failed!", id);
-    printf("d: %f\n", tmp_double);
     void* v = &tmp_double;
     memcpy(xfer, v, sizeof(double));
     length = sizeof(double);
