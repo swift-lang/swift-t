@@ -539,6 +539,24 @@ namespace eval turbine {
         log "minus: $a_value - $b_value => $c_value"
         integer_set $c $c_value
     }
+    
+    # This is a Swift-5 function
+    # c = a-b;
+    # and sleeps for c seconds
+    proc minus_float { parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "minus-$a-$b" "$a $b" $c \
+            "tl: minus_float_body $c $a $b"
+    }
+    proc minus_float_body {c a b } {
+        set a_value [ float_get $a ]
+        set b_value [ float_get $b ]
+        set c_value [ expr $a_value - $b_value ]
+        log "minus: $a_value - $b_value => $c_value"
+        float_set $c $c_value
+    }
 
     # c = a*b;
     # and sleeps for c seconds
@@ -558,10 +576,70 @@ namespace eval turbine {
         # exec sleep $c_value
         integer_set $c $c_value
     }
+    
+    # c = a*b;
+    # and sleeps for c seconds
+    proc multiply_float { parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "mult-$a-$b" "$a $b" $c \
+            "tf: multiply_float_body $c $a $b"
+    }
+    proc multiply_float_body {c a b } {
+        set a_value [ float_get $a ]
+        set b_value [ float_get $b ]
+        set c_value [ expr $a_value * $b_value ]
+        log "multiply: $a_value * $b_value => $c_value"
+        # Emulate some computation time
+        # exec sleep $c_value
+        float_set $c $c_value
+    }
+    
+    
+    # c = a/b; with integer division
+    # and sleeps for c seconds
+    proc divide_integer { parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "div-$a-$b" "$a $b" $c \
+            "tf: divide_integer_body $c $a $b"
+    }
+    proc divide_integer_body {c a b } {
+        set a_value [ integer_get $a ]
+        set b_value [ integer_get $b ]
+        set c_value [ expr $a_value / $b_value ]
+        log "divide: $a_value / $b_value => $c_value"
+        # Emulate some computation time
+        # exec sleep $c_value
+        integer_set $c $c_value
+    }
+    
+    # c = a/b; with float division
+    # and sleeps for c seconds
+    proc divide_float { parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "div-$a-$b" "$a $b" $c \
+            "tf: divide_float_body $c $a $b"
+    }
+    proc divide_float_body {c a b } {
+        set a_value [ float_get $a ]
+        set b_value [ float_get $b ]
+        set c_value [ expr $a_value / $b_value ]
+        log "divide: $a_value / $b_value => $c_value"
+        # Emulate some computation time
+        # exec sleep $c_value
+        float_set $c $c_value
+    }
 
     # This is a Swift-2 function
     # c = a && b;
-    proc and { c a b } {
+    proc and { parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
         set rule_id [ rule_new ]
         rule $rule_id "and-$a-$b" "$a $b" $c \
             "tf: and_body $c $a $b"
@@ -572,6 +650,25 @@ namespace eval turbine {
         set c_value [ expr $a_value && $b_value ]
         # Emulate some computation time
         log "and: $a_value && $b_value => $c_value"
+        # exec sleep $c_value
+        integer_set $c $c_value
+    }
+
+    # This is a Swift-2 function
+    # c = a || b;
+    proc or { parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "or-$a-$b" "$a $b" $c \
+            "tf: or_body $c $a $b"
+    }
+    proc or_body { c a b } {
+        set a_value [ integer_get $a ]
+        set b_value [ integer_get $b ]
+        set c_value [ expr $a_value || $b_value ]
+        # Emulate some computation time
+        log "or: $a_value || $b_value => $c_value"
         # exec sleep $c_value
         integer_set $c $c_value
     }
@@ -630,6 +727,24 @@ namespace eval turbine {
         # Emulate some computation time
         # exec sleep $c_value
         integer_set $c $c_value
+    }
+    
+    # This is a Swift-5 function
+    # c = -b;
+    proc negate_float { parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "negate-$a" "$a" $c \
+            "tf: negate_float_body $c $a"
+    }
+
+    proc negate_float_body { c a } {
+        set a_value [ float_get $a ]
+        set c_value [ expr 0 - $a_value ]
+        log "negate: -1 * $a_value => $c_value"
+        # Emulate some computation time
+        # exec sleep $c_value
+        float_set $c $c_value
     }
 
     # Good for performance testing
