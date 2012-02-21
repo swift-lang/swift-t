@@ -675,17 +675,13 @@ td_get(turbine_datum_id id, turbine_datum* td)
   td->type = type;
   td->status = TD_SET;
 
-  void* v;
-
   switch (type)
   {
     case TURBINE_TYPE_INTEGER:
-      v = &td->data.integer.value;
-      memcpy(v, xfer, sizeof(long));
+      memcpy(&td->data.integer.value, xfer, sizeof(long));
       break;
     case TURBINE_TYPE_FLOAT:
-      v = &td->data.FLOAT.value;
-      memcpy(v, xfer, sizeof(double));
+      memcpy(&td->data.FLOAT.value, xfer, sizeof(double));
       break;
     case TURBINE_TYPE_STRING:
       td->data.string.value = strdup(xfer);

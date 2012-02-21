@@ -444,8 +444,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   case ADLB_DATA_TYPE_FLOAT:
     rc = Tcl_GetDoubleFromObj(interp, objv[3], &tmp_double);
     TCL_CHECK_MSG(rc, "adlb::store double <%li> failed!", id);
-    void* v = &tmp_double;
-    memcpy(xfer, v, sizeof(double));
+    memcpy(xfer, &tmp_double, sizeof(double));
     length = sizeof(double);
     break;
   case ADLB_DATA_TYPE_STRING:
@@ -499,19 +498,16 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   long tmp_long;
   double tmp_double;
-  void* v;
 
   Tcl_Obj* result;
   switch (type)
   {
     case ADLB_DATA_TYPE_INTEGER:
-      v = &tmp_long;
-      memcpy(v, xfer, sizeof(long));
+      memcpy(&tmp_long, xfer, sizeof(long));
       result = Tcl_NewLongObj(tmp_long);
       break;
     case ADLB_DATA_TYPE_FLOAT:
-      v = &tmp_double;
-      memcpy(v, xfer, sizeof(double));
+      memcpy(&tmp_double, xfer, sizeof(double));
       result = Tcl_NewDoubleObj(tmp_double);
       break;
     case ADLB_DATA_TYPE_STRING:
