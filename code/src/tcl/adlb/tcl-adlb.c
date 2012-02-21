@@ -431,6 +431,8 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_GetIntFromObj(interp, objv[2], &type);
   int rc;
 
+  double tmp_double;
+
   char* s;
   switch (type)
   {
@@ -440,9 +442,11 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
     length = sizeof(long);
     break;
   case ADLB_DATA_TYPE_FLOAT:
-    rc = Tcl_GetDoubleFromObj(interp, objv[3], (double*) xfer);
+    rc = Tcl_GetDoubleFromObj(interp, objv[3], &tmp_double);
     TCL_CHECK_MSG(rc, "adlb::store double <%li> failed!", id);
-    printf("d: %f\n", *(double*) xfer);
+    printf("d: %f\n", tmp_double);
+    void* v = &tmp_double;
+    memcpy(xfer, v, sizeof(double));
     length = sizeof(double);
     break;
   case ADLB_DATA_TYPE_STRING:
@@ -493,31 +497,40 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   int rc = ADLB_Retrieve(id, &type, xfer, &length);
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::retrieve <%li> failed!", id);
+
+  long tmp_long;
+  double tmp_double;
+  void* v;
+
   Tcl_Obj* result;
   switch (type)
   {
-  case ADLB_DATA_TYPE_INTEGER:
-    result = Tcl_NewLongObj(*(long*)xfer);
-    break;
-  case ADLB_DATA_TYPE_FLOAT:
-    result = Tcl_NewDoubleObj(*(double*)xfer);
-    break;
-  case ADLB_DATA_TYPE_STRING:
-    result = Tcl_NewStringObj(xfer, length-1);
-    break;
-  case ADLB_DATA_TYPE_FILE:
-    result = Tcl_NewStringObj(xfer, length-1);
-    break;
-  case ADLB_DATA_TYPE_BLOB:
-    // TODO: DO SOMETHING
-    result = NULL;
-    break;
-  case ADLB_DATA_TYPE_CONTAINER:
-    result = Tcl_NewStringObj(xfer, length-1);
-    break;
-  default:
-    result = NULL;
-    return TCL_ERROR;
+    case ADLB_DATA_TYPE_INTEGER:
+      v = &tmp_long;
+      memcpy(v, xfer, sizeof(long));
+      result = Tcl_NewLongObj(tmp_long);
+      break;
+    case ADLB_DATA_TYPE_FLOAT:
+      v = &tmp_double;
+      memcpy(v, xfer, sizeof(double));
+      result = Tcl_NewDoubleObj(tmp_double);
+      break;
+    case ADLB_DATA_TYPE_STRING:
+      result = Tcl_NewStringObj(xfer, length-1);
+      break;
+    case ADLB_DATA_TYPE_FILE:
+      result = Tcl_NewStringObj(xfer, length-1);
+      break;
+    case ADLB_DATA_TYPE_BLOB:
+      // TODO: DO SOMETHING
+      result = NULL;
+      break;
+    case ADLB_DATA_TYPE_CONTAINER:
+      result = Tcl_NewStringObj(xfer, length-1);
+      break;
+    default:
+      result = NULL;
+      return TCL_ERROR;
   }
 
   Tcl_SetObjResult(interp, result);
