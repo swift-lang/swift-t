@@ -11,9 +11,9 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    set i [ turbine::literal integer 3 ]
-    set r [ turbine::literal integer $i ]
-    set v [ turbine::data_new ]
+    turbine::literal i integer 3
+    turbine::literal r integer $i
+    turbine::data_new v
     turbine::integer_init $v
 
     turbine::f_dereference_integer no_stack $v $r
