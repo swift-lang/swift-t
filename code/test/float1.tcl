@@ -18,11 +18,11 @@ proc rules { } {
     data_new x
 
     float_init $t1
-    #float_init $t2
-    #float_init $x
+    float_init $t2
+    float_init $x
 
-    #float_set $t1 3
-    #float_set $t2 5
+    float_set $t1 3
+    float_set $t2 5
 
     # Use 0 as stack frame
     # turbine::plus 0 [ $t1 $t2 ] [ $x ]
