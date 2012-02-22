@@ -33,7 +33,7 @@ namespace eval turbine {
             # string or integer
             eval ${type}_init $td
             if { [ string length $args ] } {
-                eval ${type}_set $td $args
+                eval set_${type} $td $args
             }
         }
         uplevel 1 "set $name $td"

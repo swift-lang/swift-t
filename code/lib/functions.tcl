@@ -55,7 +55,7 @@ namespace eval turbine {
             set value [ lindex $tokens 1 ]
             set v [ new ]
             string_init $v
-            string_set $v $value
+            set_string $v $value
             dict set argv $key $value
             debug "argv: $key=<$v>=$value"
             incr argc
@@ -96,12 +96,12 @@ namespace eval turbine {
         }
         set key [ lindex $args 0 ]
 
-        set t [ string_get $key ]
+        set t [ get_string $key ]
         if { [ catch { set v [ dict get $argv $t ] } ] } {
-            string_set $result ""
+            set_string $result ""
             return
         }
-        string_set $result $v
+        set_string $result $v
     }
 
     proc call_composite { stack f outputs inputs } {
@@ -370,9 +370,9 @@ namespace eval turbine {
     #             set_integer $dest $t
     #         }
     #         string {
-    #             set t [ string_get $src ]
+    #             set t [ get_string $src ]
     #             string_init $dest
-    #             string_set $dest $t
+    #             set_string $dest $t
     #         }
     #     }
     # }
@@ -577,11 +577,11 @@ namespace eval turbine {
     }
 
     proc plus_float_body { parent c a b } {
-        set a_value [ float_get $a ]
-        set b_value [ float_get $b ]
+        set a_value [ get_float $a ]
+        set b_value [ get_float $b ]
         set c_value [ expr $a_value + $b_value ]
         log "plus: $a_value + $b_value => $c_value"
-        float_set $c $c_value
+        set_float $c $c_value
     }
 
     # This is a Swift-2 function
@@ -613,11 +613,11 @@ namespace eval turbine {
             "tl: minus_float_body $c $a $b"
     }
     proc minus_float_body {c a b } {
-        set a_value [ float_get $a ]
-        set b_value [ float_get $b ]
+        set a_value [ get_float $a ]
+        set b_value [ get_float $b ]
         set c_value [ expr $a_value - $b_value ]
         log "minus: $a_value - $b_value => $c_value"
-        float_set $c $c_value
+        set_float $c $c_value
     }
 
     # c = a*b;
@@ -649,13 +649,13 @@ namespace eval turbine {
             "tf: multiply_float_body $c $a $b"
     }
     proc multiply_float_body {c a b } {
-        set a_value [ float_get $a ]
-        set b_value [ float_get $b ]
+        set a_value [ get_float $a ]
+        set b_value [ get_float $b ]
         set c_value [ expr $a_value * $b_value ]
         log "multiply: $a_value * $b_value => $c_value"
         # Emulate some computation time
         # exec sleep $c_value
-        float_set $c $c_value
+        set_float $c $c_value
     }
 
     # c = a/b; with integer division
@@ -668,13 +668,13 @@ namespace eval turbine {
             "tf: divide_integer_body $c $a $b"
     }
     proc divide_integer_body {c a b } {
-        set a_value [ integer_get $a ]
-        set b_value [ integer_get $b ]
+        set a_value [ get_integer $a ]
+        set b_value [ get_integer $b ]
         set c_value [ expr $a_value / $b_value ]
         log "divide: $a_value / $b_value => $c_value"
         # Emulate some computation time
         # exec sleep $c_value
-        integer_set $c $c_value
+        set_integer $c $c_value
     }
 
     # c = a/b; with float division
@@ -687,13 +687,13 @@ namespace eval turbine {
             "tf: divide_float_body $c $a $b"
     }
     proc divide_float_body {c a b } {
-        set a_value [ float_get $a ]
-        set b_value [ float_get $b ]
+        set a_value [ get_float $a ]
+        set b_value [ get_float $b ]
         set c_value [ expr $a_value / $b_value ]
         log "divide: $a_value / $b_value => $c_value"
         # Emulate some computation time
         # exec sleep $c_value
-        float_set $c $c_value
+        set_float $c $c_value
     }
 
     # This is a Swift-2 function
@@ -725,13 +725,13 @@ namespace eval turbine {
             "tf: or_body $c $a $b"
     }
     proc or_body { c a b } {
-        set a_value [ integer_get $a ]
-        set b_value [ integer_get $b ]
+        set a_value [ get_integer $a ]
+        set b_value [ get_integer $b ]
         set c_value [ expr $a_value || $b_value ]
         # Emulate some computation time
         log "or: $a_value || $b_value => $c_value"
         # exec sleep $c_value
-        integer_set $c $c_value
+        set_integer $c $c_value
     }
 
     # This is a Swift-2 function, thus it only applies to integers
@@ -755,9 +755,9 @@ namespace eval turbine {
             "tl: copy_float_body $o $i"
     }
     proc copy_float_body { o i } {
-        set i_value [ float_get $i ]
+        set i_value [ get_float $i ]
         log "copy $i_value => $i_value"
-        float_set $o $i_value
+        set_float $o $i_value
     }
 
     # o = i;
@@ -767,9 +767,9 @@ namespace eval turbine {
             "tl: copy_string_body $o $i"
     }
     proc copy_string_body { o i } {
-        set i_value [ string_get $i ]
+        set i_value [ get_string $i ]
         log "copy $i_value => $i_value"
-        string_set $o $i_value
+        set_string $o $i_value
     }
 
     # This is a Swift-2 function
@@ -800,12 +800,12 @@ namespace eval turbine {
     }
 
     proc negate_float_body { c a } {
-        set a_value [ float_get $a ]
+        set a_value [ get_float $a ]
         set c_value [ expr 0 - $a_value ]
         log "negate: -1 * $a_value => $c_value"
         # Emulate some computation time
         # exec sleep $c_value
-        float_set $c $c_value
+        set_float $c $c_value
     }
 
     # Good for performance testing
@@ -1317,10 +1317,10 @@ namespace eval turbine {
     }
 
     proc strcat_body { parent c a b } {
-        set a_value [ string_get $a ]
-        set b_value [ string_get $b ]
+        set a_value [ get_string $a ]
+        set b_value [ get_string $b ]
         set c_value "${a_value}${b_value}"
         log "strcat: strcat($a_value, $b_value) => $c_value"
-        string_set $c $c_value
+        set_string $c $c_value
     }
 }
