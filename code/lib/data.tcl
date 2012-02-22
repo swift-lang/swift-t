@@ -143,7 +143,7 @@ namespace eval turbine {
 
     proc get_string { id } {
         set result [ adlb::retrieve $id $adlb::STRING ]
-        debug "get_float: <$id>=$result"
+        debug "get_string: <$id>=$result"
         return $result
     }
 
