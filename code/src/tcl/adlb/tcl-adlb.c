@@ -505,7 +505,7 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_data_type given_type = ADLB_DATA_TYPE_NULL;
   if (objc == 3)
   {
-    rc = Tcl_GetIntFromObj(interp, objv[1], (int*) &given_type);
+    rc = Tcl_GetIntFromObj(interp, objv[2], (int*) &given_type);
     TCL_CHECK_MSG(rc, "2nd arg must be adlb:: type!");
     // DEBUG_ADLB("adlb::retrieve: checking type: %i", given_type);
   }
@@ -517,7 +517,7 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%li> failed!", id);
   TCL_CONDITION((given_type == ADLB_DATA_TYPE_NULL ||
                  given_type == type),
-                 "type mismatch!");
+                 "type mismatch exp %i act %i!", given_type, type);
 
   long tmp_long;
   double tmp_double;
