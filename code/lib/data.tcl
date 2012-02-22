@@ -83,6 +83,7 @@ namespace eval turbine {
     #     adlb::create $id $type
     # }
 
+    # usage: get <id>
     proc get { id } {
         set result [ adlb::retrieve $id ]
         debug "get: <$id>=$result"
@@ -97,6 +98,12 @@ namespace eval turbine {
     proc set_integer { id value } {
         log "set: <$id>=$value"
         close_dataset $id $adlb::INTEGER $value
+    }
+
+    proc get_integer { id } {
+        set result [ adlb::retrieve $id $adlb::INTEGER ]
+        debug "get_integer: <$id>=$result"
+        return $result
     }
 
     # proc get_integer { id } {
@@ -118,14 +125,11 @@ namespace eval turbine {
         close_dataset $id $adlb::FLOAT $value
     }
 
-    # proc float_get { id } {
-    #     set s [ adlb::retrieve $id ]
-    #     set i [ string first : $s ]
-    #     incr i
-    #     set result [ string range $s $i end ]
-    #     debug "float_get: <$id>=$result"
-    #     return $result
-    # }
+    proc get_float { id } {
+        set result [ adlb::retrieve $id $adlb::FLOAT ]
+        debug "get_float: <$id>=$result"
+        return $result
+    }
 
     proc create_string { id } {
         debug "create_string: <$id>"
@@ -137,14 +141,11 @@ namespace eval turbine {
         close_dataset $id $adlb::STRING $value
     }
 
-    # proc string_get { id } {
-    #     set s [ adlb::retrieve $id ]
-    #     set i [ string first : $s ]
-    #     incr i
-    #     set result [ string range $s $i end ]
-    #     debug "string_get: <$id>=$result"
-    #     return $result
-    # }
+    proc get_string { id } {
+        set result [ adlb::retrieve $id $adlb::STRING ]
+        debug "get_float: <$id>=$result"
+        return $result
+    }
 
     proc create_container { id subscript_type } {
         debug "create_container: <$id>\[$subscript_type\]"

@@ -488,23 +488,36 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::retrieve <id>
+   usage: adlb::retrieve <id> [<type>]
 */
 static int
 ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(2);
+  TCL_CONDITION((objc == 2 || objc == 3),
+                "adlb::retrieve: requires 1 or 2 args!");
 
+  int rc;
   long id;
-  Tcl_GetLongFromObj(interp, objv[1], &id);
+  rc = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK_MSG(rc, "adlb::retrieve: requires id!");
 
-  int length;
+  adlb_data_type given_type = ADLB_DATA_TYPE_NULL;
+  if (objc == 3)
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[1], (int*) &given_type);
+    TCL_CHECK_MSG(rc, "2nd arg must be adlb:: type!");
+    // DEBUG_ADLB("adlb::retrieve: checking type: %i", given_type);
+  }
+
   // DEBUG_ADLB("adlb_retrieve: <%li>", id);
   adlb_data_type type;
-  int rc = ADLB_Retrieve(id, &type, xfer, &length);
-  TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::retrieve <%li> failed!", id);
+  int length;
+  rc = ADLB_Retrieve(id, &type, xfer, &length);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%li> failed!", id);
+  TCL_CONDITION((given_type == ADLB_DATA_TYPE_NULL ||
+                 given_type == type),
+                 "type mismatch!");
 
   long tmp_long;
   double tmp_double;
