@@ -10,5 +10,6 @@ puts [ ::pkg::create -name turbine -version $turbine_version \
        -source data.tcl      \
        -source functions.tcl \
        -source assert.tcl \
+       -source logical.tcl \
        -source lang.tcl      \
        -source helpers.tcl ]

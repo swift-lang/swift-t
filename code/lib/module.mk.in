@@ -7,6 +7,7 @@ TCL_SRC := $(DIR)/helpers.tcl             \
            $(DIR)/data.tcl                \
            $(DIR)/functions.tcl           \
            $(DIR)/assert.tcl           \
+           $(DIR)/logical.tcl           \
            $(DIR)/lang.tcl
 
 $(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) $(TCL_ADLB_SO) \

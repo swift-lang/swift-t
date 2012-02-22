@@ -23,10 +23,10 @@ namespace eval turbine {
     namespace export stack_lookup
 
     # This is a Swift-1 function
-    namespace export plus
+    namespace export plus_integer
 
     # These are Swift-2 functions
-    namespace export minus copy not set1
+    namespace export minus_integer copy set1
 
     # Bring in Turbine extension features
     namespace import c::new c::rule c::rule_new c::typeof
@@ -536,22 +536,6 @@ namespace eval turbine {
         set_${type} $c $c_value
     }
 
-    # c = a/b
-    proc divide { type parent c inputs } {
-        set a [ lindex $inputs 0 ]
-        set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "div-$a-$b" "$a $b" $c \
-            "tf: divide_body $type $c $a $b"
-    }
-    proc divide_body { type c a b } {
-        set a_value [ get $a ]
-        set b_value [ get $b ]
-        set c_value [ expr $a_value / $b_value ]
-        log "divide: $a_value / $b_value => $c_value"
-        set_${type} $c $c_value
-    }
-
     proc plus_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
@@ -696,44 +680,6 @@ namespace eval turbine {
         set_float $c $c_value
     }
 
-    # This is a Swift-2 function
-    # c = a && b;
-    proc and { parent c inputs } {
-        set a [ lindex $inputs 0 ]
-        set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "and-$a-$b" "$a $b" $c \
-            "tf: and_body $c $a $b"
-    }
-    proc and_body { c a b } {
-        set a_value [ get $a ]
-        set b_value [ get $b ]
-        set c_value [ expr $a_value && $b_value ]
-        # Emulate some computation time
-        log "and: $a_value && $b_value => $c_value"
-        # exec sleep $c_value
-        set_integer $c $c_value
-    }
-
-    # This is a Swift-2 function
-    # c = a || b;
-    proc or { parent c inputs } {
-        set a [ lindex $inputs 0 ]
-        set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "or-$a-$b" "$a $b" $c \
-            "tf: or_body $c $a $b"
-    }
-    proc or_body { c a b } {
-        set a_value [ get_integer $a ]
-        set b_value [ get_integer $b ]
-        set c_value [ expr $a_value || $b_value ]
-        # Emulate some computation time
-        log "or: $a_value || $b_value => $c_value"
-        # exec sleep $c_value
-        set_integer $c $c_value
-    }
-
     # This is a Swift-2 function, thus it only applies to integers
     # o = i;
     proc copy_integer { parent o i } {
@@ -846,20 +792,6 @@ namespace eval turbine {
         # Emulate some computation time
         # after 1000
         set_integer $c 1
-    }
-
-    # This is a Swift-2 function
-    # o = ! i;
-    proc not { parent o i } {
-        set rule_id [ rule_new ]
-        rule $rule_id "not-$i" $i $o \
-            "tf: not_body $o $i"
-    }
-    proc not_body { o i } {
-        set i_value [ get $i ]
-        set o_value [ expr ! $i_value ]
-        log "not $i_value => $o_value"
-        set_integer $o $o_value
     }
 
     # Execute shell command
