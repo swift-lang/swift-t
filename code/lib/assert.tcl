@@ -35,7 +35,7 @@ namespace eval turbine {
             "tf: assertEqual_body $arg1 $arg2 $msg"
     }
     
-    proc assert_body { arg1 arg2 msg } {
+    proc assertEqual_body { arg1 arg2 msg } {
         set arg1_value [ get $arg1 ]
         set arg2_value [ get $arg2 ]
         if { $arg1_value != $arg2_value } {
