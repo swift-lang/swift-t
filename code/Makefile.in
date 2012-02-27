@@ -276,6 +276,7 @@ install: package
 	$(E) mkdir -pv $(INSTALL_LIB)
 	$(E) mkdir -pv $(INSTALL_BIN)
 	$(E) mkdir -pv $(INSTALL_SCRIPTS)
+	$(E) mkdir -pv $(INSTALL_EXPORT)
 	$(E) cp -uv bin/turbine $(INSTALL_BIN)
 	$(E) cp -uv lib/*.tcl lib/*.so $(INSTALL_LIB)
 	$(E) cp -uv scripts/*.zsh scripts/*.sh $(INSTALL_SCRIPTS)
