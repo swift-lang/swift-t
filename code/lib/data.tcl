@@ -29,7 +29,6 @@ namespace eval turbine {
     proc allocate { args } {
         set u [ adlb::unique ]
         set length [ llength $args ]
-        puts "len: $length"
         if { $length == 2 } {
             set name [ lindex $args 0 ]
             set type [ lindex $args 1 ]
