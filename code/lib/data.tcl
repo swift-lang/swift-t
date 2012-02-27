@@ -14,16 +14,6 @@ namespace eval turbine {
         container_insert close_container      \
         file_set filename
 
-    # namespace import adlb::INTEGER adlb::STRING
-
-#     proc typeof { id } {
-#         set s [ adlb::retrieve $id ]
-#         set i [ string first : $s ]
-#         incr i -1
-#         set result [ string range $s 0 $i ]
-#         return $result
-#     }
-
     # usage: allocate [<name>] [<type>]
     # If name is given, print a log message
     proc allocate { args } {
@@ -44,20 +34,6 @@ namespace eval turbine {
         return $u
     }
 
-    # Obtain unique TD
-    # If given an argument, sets the variable by that name
-    # and a log message is reported
-    # proc allocate_integer { args } {
-    #     set u [ adlb::unique ]
-    #     if { [ string length $args ] } {
-    #         log "integer: $args=<$u>"
-    #         upvar 1 $args v
-    #         set v $u
-    #     }
-    #     create_integer $u
-    #     return $u
-    # }
-
     # usage: [<name>] <subscript_type>
     proc allocate_container { args } {
         set u [ adlb::unique ]
@@ -76,11 +52,6 @@ namespace eval turbine {
         create_container $u $subscript_type
         return $u
     }
-
-    # proc create { type id } {
-    #     debug "create $type: <$id>"
-    #     adlb::create $id $type
-    # }
 
     # usage: get <id>
     proc get { id } {
@@ -104,15 +75,6 @@ namespace eval turbine {
         debug "get_integer: <$id>=$result"
         return $result
     }
-
-    # proc get_integer { id } {
-    #     set s [ adlb::retrieve $id ]
-    #     set i [ string first : $s ]
-    #     incr i
-    #     set result [ string range $s $i end ]
-    #     debug "get_integer: <$id>=$result"
-    #     return $result
-    # }
 
     proc create_float { id } {
         debug "create_float: <$id>"
