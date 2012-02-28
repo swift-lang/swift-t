@@ -34,7 +34,7 @@ proc if-0 { stack } {
         container_insert $stack __t0 $__t0
         allocate __l0 integer
         set_integer $__l0 1
-        turbine::minus integer $stack [ list $__t0 ] [ list $n $__l0 ]
+        turbine::minus_integer $stack [ list $__t0 ] [ list $n $__l0 ]
         set rule_id [ turbine::c::rule_new ]
         turbine::c::rule $rule_id if-1 "$__t0" "" "tc: if-1 $stack"
     } else {
@@ -69,7 +69,7 @@ proc if-1 { stack } {
         turbine::minus_integer $stack [ list $__l5 ] [ list $n $__l6 ]
         set rule_id [ turbine::c::rule_new ]
         turbine::c::rule $rule_id fib [ list $__l5 ] [ list $__l4 ] "tp: fib $stack $__l4 $__l5"
-        turbine::plus integer $stack [ list $o ] [ list $__l1 $__l4 ]
+        turbine::plus_integer $stack [ list $o ] [ list $__l1 $__l4 ]
     } else {
         set parent $stack
         allocate_container stack string

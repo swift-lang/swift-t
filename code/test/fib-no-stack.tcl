@@ -25,7 +25,7 @@ proc if-0 { stack __rule_id u:n u:n u:o } {
         set l:1 [ adlb::unique __l1 ]
         turbine::integer_init ${l:1}
         set_integer ${l:1} 1
-        turbine::minus ${stack} [ list ${l:0} ] [ list ${u:n} ${l:1} ]
+        turbine::minus_integer ${stack} [ list ${l:0} ] [ list ${u:n} ${l:1} ]
         set __rule_id [ turbine::c::rule_new ]
         turbine::c::rule ${__rule_id} if-1 "${l:0}" "" "tl: if-1 ${stack} ${__rule_id} ${l:0} ${u:n} ${u:o}"
     } else {
@@ -44,7 +44,7 @@ proc if-1 { stack __rule_id l:0 u:n u:o } {
         set l:4 [ adlb::unique __l4 ]
         turbine::integer_init ${l:4}
         set_integer ${l:4} 1
-        turbine::minus ${stack} [ list ${l:3} ] [ list ${u:n} ${l:4} ]
+        turbine::minus_integer ${stack} [ list ${l:3} ] [ list ${u:n} ${l:4} ]
         set __rule_id [ turbine::c::rule_new ]
         turbine::c::rule ${__rule_id} fib [ list ${l:3} ] [ list ${l:2} ] "tl: cmpf:fib ${stack} ${l:2} ${l:3}"
         set l:5 [ adlb::unique __l5 ]
@@ -54,10 +54,10 @@ proc if-1 { stack __rule_id l:0 u:n u:o } {
         set l:7 [ adlb::unique __l7 ]
         turbine::integer_init ${l:7}
         set_integer ${l:7} 2
-        turbine::minus ${stack} [ list ${l:6} ] [ list ${u:n} ${l:7} ]
+        turbine::minus_integer ${stack} [ list ${l:6} ] [ list ${u:n} ${l:7} ]
         set __rule_id [ turbine::c::rule_new ]
         turbine::c::rule ${__rule_id} fib [ list ${l:6} ] [ list ${l:5} ] "tl: cmpf:fib ${stack} ${l:5} ${l:6}"
-        turbine::plus ${stack} [ list ${u:o} ] [ list ${l:2} ${l:5} ]
+        turbine::plus_integer ${stack} [ list ${u:o} ] [ list ${l:2} ${l:5} ]
     } else {
         # set_integer ${u:o} 1
 	turbine::set1 no_stack ${u:o}

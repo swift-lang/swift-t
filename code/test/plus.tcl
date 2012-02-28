@@ -20,7 +20,7 @@ proc rules { } {
     set v1 [ turbine::get_integer 1 ]
     set v2 [ turbine::get_integer 2 ]
 
-    turbine::rule 5 PLUS "1 2" 3 "tf: plus 1 2 3"
+    turbine::rule 5 PLUS "1 2" 3 "tf: plus_integer 1 2 3"
 }
 
 turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
