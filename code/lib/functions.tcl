@@ -253,8 +253,10 @@ namespace eval turbine {
             set key [ lindex $keys $i ]
             set turbine_id [ container_get $container $key ]
 
-            if { [ catch { set val [ get $turbine_id ] } ] == 0 } {
+            if { [ adlb::exists $turbine_id ] } {
                 # add to the sum
+                set val [ get_integer $turbine_id ]
+                #puts "C\[$i\] = $val"
                 set accum [ expr $accum + $val ]
                 incr i
             } else {

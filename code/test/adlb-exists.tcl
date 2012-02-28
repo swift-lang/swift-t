@@ -20,7 +20,7 @@ if [ adlb::amserver ] {
     adlb::close $d3
     set L [ list $z $d0 $d1 $d2 $d3 ]
     foreach d $L {
-        if { [ adlb::exists $d ] } {
+        if { adlb::exists $d } {
             puts "exists: $d"
         } else {
             puts "nope: $d"
