@@ -361,5 +361,4 @@ namespace eval turbine {
         # exec sleep $c_value
         set_integer $c $c_value
     }
-    
 }
