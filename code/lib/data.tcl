@@ -53,6 +53,25 @@ namespace eval turbine {
         return $u
     }
 
+    # usage: [<name>] [<mapping>]
+    proc allocate_file { args } {
+        set u [ adlb::unique ]
+        set length [ llength $args ]
+        if { $length == 2 } {
+            set name [ lindex $args 0 ]
+            set mapping [ lindex $args 1 ]
+            log "file: $name=<$u> mapped to '${mapping}'"
+            upvar 1 $name v
+            set v $u
+        } elseif { $length == 1 } {
+            set mapping $args
+        } else {
+            error "allocate: requires 1 or 2 args!"
+        }
+        create_file $u $mapping
+        return $u
+    }
+
     # usage: get <id>
     proc get { id } {
         set result [ adlb::retrieve $id ]
