@@ -4,7 +4,7 @@ namespace eval turbine {
     namespace export container_f_get container_f_insert
     namespace export f_reference
     namespace export f_container_create_nested
-    
+
     # When i is closed, set d := c[i]
     # d: the destination, an integer
     # inputs: [ list c i ]
@@ -125,7 +125,7 @@ namespace eval turbine {
         set t1 [ get $i ]
         adlb::container_reference $c $t1 $r
     }
-    
+
     # When reference r is closed, store its (integer) value in v
     proc f_dereference_integer { parent v r } {
         set rule_id [ rule_new ]
@@ -133,8 +133,10 @@ namespace eval turbine {
             "tp: turbine::f_dereference_integer_body $v $r"
     }
     proc f_dereference_integer_body { v r } {
-        set t [ get [ get $r ] ]
-        set_integer $v $t
+        # Get the TD from the reference
+        set id [ get $r ]
+        # When the TD has a value, copy the value
+        copy_integer no_stack $v $a
     }
 
     # When reference r is closed, store its (float) value in v
@@ -361,8 +363,6 @@ namespace eval turbine {
         set container_branches [ dict remove $container_branches ]
     }
 
-
-    
     # When container is closed, concatenate its keys in result
     # container: The container to read
     # result: An initialized string
@@ -418,6 +418,4 @@ namespace eval turbine {
         # If we get out of loop, we're done
         set_integer $result $accum
     }
-
-
 }
