@@ -101,7 +101,7 @@ namespace eval turbine {
     }
 
     proc set_float { id value } {
-        debug "set: <$id>=$value"
+        log "set: <$id>=$value"
         close_dataset $id $adlb::FLOAT $value
     }
 
@@ -117,7 +117,7 @@ namespace eval turbine {
     }
 
     proc set_string { id value } {
-        debug "set: <$id>=$value"
+        log "set: <$id>=\"$value\""
         close_dataset $id $adlb::STRING $value
     }
 
