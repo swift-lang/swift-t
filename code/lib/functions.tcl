@@ -298,27 +298,6 @@ namespace eval turbine {
         return $result
     }
 
-    # Copy from TD src to TD dest
-    # src must be closed
-    # dest must be a new TD but not created or closed
-    # DELETE THIS
-    # proc copy { src dest } {
-
-    #     set type [ typeof $src ]
-    #     switch $type {
-    #         integer {
-    #             set t [ get $src ]
-    #             integer $dest
-    #             set_integer $dest $t
-    #         }
-    #         string {
-    #             set t [ get_string $src ]
-    #             string_init $dest
-    #             set_string $dest $t
-    #         }
-    #     }
-    # }
-
     # User function
     proc toint { stack result input } {
         set rule_id [ rule_new ]
@@ -466,49 +445,5 @@ namespace eval turbine {
             }
         }
         abort "stack_lookup failure: stack: <$stack> symbol: $symbol"
-    }
-
-    variable subs
-    variable map_rule_stack
-    variable map_stack_container
-
-    proc scope_enter { stack } {
-        dict lappend subs $stack
-    }
-
-    proc scope_add { stack rule_id } {
-        dict incr subs $stack
-        dict set rule_map $rule_id $stack
-    }
-
-    proc scope_container { stack c } {
-
-
-    }
-
-    proc scope_complete { rule_id } {
-
-        puts "scope_complete: $rule_id"
-
-
-        # Do we need this?
-        # set stack [ dict get rule_map $rule_id ]
-    }
-
-    proc scope_decr { stack sub } {
-        dict incr subs $stack -1
-        set count [ dict get subs $stack ]
-        if { count == 0 } {
-            scope_exit $stack
-        }
-    }
-
-    proc scope_exit { stack } {
-        variable complete_rank
-
-    }
-
-    proc f_close_container { c r } {
-        puts "f_close_container: $c $r"
     }
 }
