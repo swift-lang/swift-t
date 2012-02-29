@@ -126,7 +126,7 @@ namespace eval turbine {
         adlb::container_reference $c $t1 $r
     }
 
-    # When reference r is closed, store its (integer) value in v
+    # When reference r is closed, copy its (integer) value in v
     proc f_dereference_integer { parent v r } {
         set rule_id [ rule_new ]
         rule $rule_id "f_dereference-$v-$r" $r $v \
@@ -139,7 +139,7 @@ namespace eval turbine {
         copy_integer no_stack $v $a
     }
 
-    # When reference r is closed, store its (float) value in v
+    # When reference r is closed, copy its (float) value into v
     proc f_dereference_float { parent v r } {
         set rule_id [ rule_new ]
         rule $rule_id "f_dereference-$v-$r" $r $v \
@@ -147,19 +147,23 @@ namespace eval turbine {
     }
 
     proc f_dereference_float_body { v r } {
-        set t [ get [ get $r ] ]
-        set_float $v $t
+        # Get the TD from the reference
+        set id [ get $r ]
+        # When the TD has a value, copy the value
+        copy_float no_stack $v $a
     }
 
-    # When reference r is closed, store its (string) value in v
+    # When reference r is closed, copy its (string) value into v
     proc f_dereference_string { parent v r } {
         set rule_id [ rule_new ]
         rule $rule_id "f_dereference-$v-$r" $r $v \
             "tp: turbine::f_dereference_string_body $v $r"
     }
     proc f_dereference_string_body { v r } {
-        set t [ get [ get $r ] ]
-        set_string $v $t
+        # Get the TD from the reference
+        set id [ get $r ]
+        # When the TD has a value, copy the value
+        copy_string no_stack $v $a
     }
 
     # When reference cr is closed, store d = (*cr)[i]
