@@ -556,24 +556,30 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::insert <id> <subscript> <member>
+   usage: adlb::insert <id> <subscript> <member> [<drops>]
 */
 static int
 ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(4);
+  TCL_CONDITION((objc == 4 || objc == 5),
+                "requires 3 or 4 args!");
 
+  int rc;
   long id;
   Tcl_GetLongFromObj(interp, objv[1], &id);
   char* subscript = Tcl_GetString(objv[2]);
   long member;
-  Tcl_GetLongFromObj(interp, objv[3], &member);
+  rc = Tcl_GetLongFromObj(interp, objv[3], &member);
+  assert(rc == TCL_OK);
+  int drops = 0;
+  if (objc == 5)
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[4], &drops);
+    TCL_CHECK(rc);
+  }
 
-  // DEBUG_ADLB("adlb::insert: <%li>[%s]=<%li>\n",
-  //            id, subscript, member);
-
-  int rc = ADLB_Insert(id, subscript, member);
+  rc = ADLB_Insert(id, subscript, member, drops);
 
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "failed: <%li>[%s]=<%li>\n",

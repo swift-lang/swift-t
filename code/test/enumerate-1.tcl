@@ -24,6 +24,7 @@ proc rules { } {
 
     turbine::container_f_insert no_stack "" "$c $i1 $j1"
     turbine::container_f_insert no_stack "" "$c $i2 $j2"
+    adlb::slot_drop $c
 
     turbine::allocate s string
     turbine::enumerate no_stack $s $c

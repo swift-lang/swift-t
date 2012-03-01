@@ -47,7 +47,7 @@ namespace eval turbine {
 
     proc container_f_insert_body { c i d } {
         set t1 [ get $i ]
-        container_insert $c $t1 $d
+        container_insert $c $t1 $d 1
     }
 
     # When i and r are closed, set c[i] := *(r)
@@ -100,8 +100,8 @@ namespace eval turbine {
     # d: the data
     # outputs: ignored.
     proc container_immediate_insert { c i d } {
-        adlb::slot_create $c
-        container_insert $c $i $d
+        # adlb::slot_create $c
+        container_insert $c $i $d 0
     }
 
     # When i is closed, get a reference on c[i] in TD r

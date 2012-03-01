@@ -128,14 +128,23 @@ namespace eval turbine {
     }
 
     proc create_container { id subscript_type } {
-        debug "create_container: <$id>\[$subscript_type\]"
+        log "create_container: <$id>\[$subscript_type\]"
         adlb::create $id $adlb::CONTAINER $subscript_type
     }
 
-    proc container_insert { id subscript value } {
+    # usage: container_insert <id> <subscript> <member> [<drops>]
+    # @param drops = 0 by default
+    proc container_insert { args } {
 
-        log "insert: <$id>\[$subscript\]=<$value>"
-        adlb::insert $id $subscript $value
+        set id        [ lindex $args 0 ]
+        set subscript [ lindex $args 1 ]
+        set member    [ lindex $args 2 ]
+        set drops 0
+        if { [ llength $args ] == 4 } {
+            set drops [ lindex $args 3 ]
+        }
+        log "insert: <$id>\[$subscript\]=<$member>"
+        adlb::insert $id $subscript $member $drops
     }
 
     # Returns 0 if subscript is not found

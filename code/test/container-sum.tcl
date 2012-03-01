@@ -15,7 +15,7 @@ package require turbine 0.0.1
 proc rules { } {
 
     turbine::create_container 1 integer
-    adlb::slot_create 1
+    # adlb::slot_create 1
 
     turbine::create_integer 2
     turbine::set_integer 2 12345
