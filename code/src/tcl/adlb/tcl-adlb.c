@@ -505,7 +505,9 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_data_type given_type = ADLB_DATA_TYPE_NULL;
   if (objc == 3)
   {
-    rc = Tcl_GetIntFromObj(interp, objv[2], (int*) &given_type);
+    int tmp;
+    rc = Tcl_GetIntFromObj(interp, objv[2], &tmp);
+    given_type = tmp;
     TCL_CHECK_MSG(rc, "2nd arg must be adlb:: type!");
   }
 
