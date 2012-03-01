@@ -136,7 +136,7 @@ namespace eval turbine {
         # Get the TD from the reference
         set id [ get $r ]
         # When the TD has a value, copy the value
-        copy_integer no_stack $v $a
+        copy_integer no_stack $v $id
     }
 
     # When reference r is closed, copy its (float) value into v
@@ -150,7 +150,7 @@ namespace eval turbine {
         # Get the TD from the reference
         set id [ get $r ]
         # When the TD has a value, copy the value
-        copy_float no_stack $v $a
+        copy_float no_stack $v $id
     }
 
     # When reference r is closed, copy its (string) value into v
@@ -163,7 +163,7 @@ namespace eval turbine {
         # Get the TD from the reference
         set id [ get $r ]
         # When the TD has a value, copy the value
-        copy_string no_stack $v $a
+        copy_string no_stack $v $id
     }
 
     # When reference cr is closed, store d = (*cr)[i]
