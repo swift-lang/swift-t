@@ -495,19 +495,18 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
   TCL_CONDITION((objc == 2 || objc == 3),
-                "adlb::retrieve: requires 1 or 2 args!");
+                "requires 1 or 2 args!");
 
   int rc;
   long id;
   rc = Tcl_GetLongFromObj(interp, objv[1], &id);
-  TCL_CHECK_MSG(rc, "adlb::retrieve: requires id!");
+  TCL_CHECK_MSG(rc, "requires id!");
 
   adlb_data_type given_type = ADLB_DATA_TYPE_NULL;
   if (objc == 3)
   {
     rc = Tcl_GetIntFromObj(interp, objv[2], (int*) &given_type);
     TCL_CHECK_MSG(rc, "2nd arg must be adlb:: type!");
-    // DEBUG_ADLB("adlb::retrieve: checking type: %i", given_type);
   }
 
   // DEBUG_ADLB("adlb_retrieve: <%li>", id);
@@ -517,7 +516,8 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%li> failed!", id);
   TCL_CONDITION((given_type == ADLB_DATA_TYPE_NULL ||
                  given_type == type),
-                 "type mismatch exp %i act %i!", given_type, type);
+                 "type mismatch: expected: %i actual: %i",
+                 given_type, type);
 
   long tmp_long;
   double tmp_double;
@@ -576,7 +576,7 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   int rc = ADLB_Insert(id, subscript, member);
 
   TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::insert: failed: <%li>[%s]=<%li>\n",
+                "failed: <%li>[%s]=<%li>\n",
                 id, subscript, member);
   return TCL_OK;
 }
@@ -653,14 +653,13 @@ ADLB_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
   int rc;
   long id;
   rc = Tcl_GetLongFromObj(interp, objv[1], &id);
-  TCL_CHECK_MSG(rc, "adlb::close: argument must be a long integer!");
+  TCL_CHECK_MSG(rc, "argument must be a long integer!");
 
   // DEBUG_ADLB("adlb::close: <%li>\n", id);
   int* ranks;
   int count;
   rc = ADLB_Close(id, &ranks, &count);
-  TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::close <%li> failed!", id);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%li> failed!", id);
 
   Tcl_Obj* result = Tcl_NewListObj(0, NULL);
   if (count > 0)
