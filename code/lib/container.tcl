@@ -385,15 +385,15 @@ namespace eval turbine {
     # inputs: [ list c r ]
     # c: the container
     # r: the turbine id to store the sum into
-    proc sum_integer { stack outputs inputs } {
+    proc sum_integer { stack result inputs } {
         set container [ lindex $inputs 0 ]
-        set result [ lindex $outputs 0 ]
         set rule_id [ rule_new ]
         rule $rule_id "sum-$rule_id" $container "" \
             "tp: sum_integer_body $stack $container $result 0 0"
     }
 
     proc sum_integer_body { stack container result accum next_index } {
+        debug "sum_integer $container => $result"
         set keys [ container_list $container ]
         # TODO: could divide and conquer instead of
         #       doing linear search
@@ -402,7 +402,7 @@ namespace eval turbine {
         while { $i < $n } {
             set key [ lindex $keys $i ]
             set turbine_id [ container_get $container $key ]
-
+            #puts "turbine_id: $turbine_id"
             if { [ adlb::exists $turbine_id ] } {
                 # add to the sum
                 set val [ get_integer $turbine_id ]
