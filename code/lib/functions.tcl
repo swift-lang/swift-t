@@ -147,8 +147,12 @@ namespace eval turbine {
     }
 
     # User function
-    proc range { result start end } {
-
+    proc range { stack result inputs } {
+        # Assume that there was a container slot opened
+        # that can be owned by range (this works with stc's calling
+        #   conventions which don't close assigned arrays)
+        set start [ lindex $inputs 0 ]
+        set end [ lindex $inputs 1 ]
         set rule_id [ rule_new ]
         rule $rule_id "range-$rule_id" "$start $end" $result \
             "tp: range_body $result $start $end"
@@ -156,21 +160,41 @@ namespace eval turbine {
 
     proc range_body { result start end } {
 
-        set start_value [ get $start ]
-        set end_value   [ get $end ]
+        set start_value [ get_integer $start ]
+        set end_value   [ get_integer $end ]
 
-        range_work $result $start_value $end_value
+        range_work $result $start_value $end_value 1
     }
 
-    proc range_work { result start end } {
+    proc rangestep { stack result inputs } {
+        # Assume that there was a container slot opened
+        # that can be owned by range
+        set start [ lindex $inputs 0 ]
+        set end [ lindex $inputs 1 ]
+        set step [ lindex $inputs 2 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "rangestep-$rule_id" [ list $start $end $step ] $result \
+            "tp: rangestep_body $result $start $end $step"
+    }
+
+    proc rangestep_body { result start end step } {
+
+        set start_value [ get_integer $start ]
+        set end_value   [ get_integer $end ]
+        set step_value   [ get_integer $step ]
+
+        range_work $result $start_value $end_value $step_value
+    }
+
+    proc range_work { result start end step } {
         set k 0
-        for { set i $start } { $i <= $end } { incr i } {
+        for { set i $start } { $i <= $end } { incr i $step } {
             allocate td integer
             set_integer $td $i
             container_insert $result $k $td
             incr k
         }
-        close_container $result
+        adlb::slot_drop $result
     }
 
     # User function
@@ -200,7 +224,7 @@ namespace eval turbine {
             # end
             set e [ expr $s + $step - 1 ]
             adlb::put $adlb::ANY $WORK_TYPE(CONTROL) \
-                "procedure tp: range_work $c $s $e"
+                "procedure tp: range_work $c $s $e 1"
         }
         close_container $result
     }

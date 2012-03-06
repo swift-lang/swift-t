@@ -18,7 +18,7 @@ proc rules { } {
     turbine::set_integer $i 1
     turbine::set_integer $j 4
 
-    turbine::range $c $i $j
+    turbine::range NO_STACK $c [ list $i $j ]
     turbine::loop loop1_body none $c
 }
 
