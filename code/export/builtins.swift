@@ -15,6 +15,7 @@
 (int o) minus_integer   (int i1, int i2) "turbine" "0.0.2" "minus_integer";
 (int o) multiply_integer(int i1, int i2) "turbine" "0.0.2" "multiply_integer";
 (int o) divide_integer  (int i1, int i2) "turbine" "0.0.2" "divide_integer";
+(int o) mod_integer     (int i1, int i2) "turbine" "0.0.2" "mod_integer";
 (int o) negate_integer  (int i)          "turbine" "0.0.2" "negate_integer";
 
 (boolean o) and (boolean i1, boolean i2) "turbine" "0.0.2" "and";

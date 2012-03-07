@@ -126,7 +126,18 @@ namespace eval turbine {
     proc divide_integer_body {c a b } {
         set a_value [ get_integer $a ]
         set b_value [ get_integer $b ]
-        set c_value [ expr $a_value / $b_value ]
+
+        # emulate java's integer division
+        set sign 1
+        if { [ expr $a_value < 0 ] } {
+            set sign [ expr $sign * -1 ]
+            set a_value [ expr 0 - $a_value ]
+        }
+        if { [ expr $b_value < 0 ] } {
+            set sign [ expr $sign * -1 ]
+            set b_value [ expr 0 - $b_value ]
+        }
+        set c_value [ expr $sign * ( $a_value / $b_value ) ]
         log "divide: $a_value / $b_value => $c_value"
         # Emulate some computation time
         # exec sleep $c_value
@@ -186,6 +197,32 @@ namespace eval turbine {
         # Emulate some computation time
         # exec sleep $c_value
         set_float $c $c_value
+    }
+
+
+    proc mod_integer { parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "mod-$a-$b" "$a $b" $c \
+            "tl: mod_integer_body $parent $c $a $b"
+    }
+
+    proc mod_integer_body { parent c a b } {
+        set a_value [ get_integer $a ]
+        set b_value [ get_integer $b ]
+        # emulate java's mod operator behaviour for negative numbers
+        if { [ expr $b_value < 0 ] } {
+            set b_value [ expr -1 * $b_value ]
+        }
+        if { [ expr $a_value < 0 ] } {
+            set c_value [ expr -1 * ( (-1 * $a_value ) % $b_value ) ]
+        } else {
+            set c_value [ expr $a_value % $b_value ]
+        }
+
+        log "mod: $a_value % $b_value => $c_value"
+        set_integer $c $c_value
     }
 
     # This is a Swift-2 function, thus it only applies to integers
