@@ -126,18 +126,8 @@ namespace eval turbine {
     proc divide_integer_body {c a b } {
         set a_value [ get_integer $a ]
         set b_value [ get_integer $b ]
-
-        # emulate java's integer division
-        set sign 1
-        if { [ expr $a_value < 0 ] } {
-            set sign [ expr $sign * -1 ]
-            set a_value [ expr 0 - $a_value ]
-        }
-        if { [ expr $b_value < 0 ] } {
-            set sign [ expr $sign * -1 ]
-            set b_value [ expr 0 - $b_value ]
-        }
-        set c_value [ expr $sign * ( $a_value / $b_value ) ]
+        
+        set c_value [ divide_integer_impl $a_value $b_value ]
         log "divide: $a_value / $b_value => $c_value"
         # Emulate some computation time
         # exec sleep $c_value
@@ -211,18 +201,39 @@ namespace eval turbine {
     proc mod_integer_body { parent c a b } {
         set a_value [ get_integer $a ]
         set b_value [ get_integer $b ]
-        # emulate java's mod operator behaviour for negative numbers
-        if { [ expr $b_value < 0 ] } {
-            set b_value [ expr -1 * $b_value ]
-        }
-        if { [ expr $a_value < 0 ] } {
-            set c_value [ expr -1 * ( (-1 * $a_value ) % $b_value ) ]
-        } else {
-            set c_value [ expr $a_value % $b_value ]
-        }
-
+        set c_value [ mod_integer_impl $a $b ]
         log "mod: $a_value % $b_value => $c_value"
         set_integer $c $c_value
+    }
+
+    # emulate java's mod and div operator behaviour for negative numbers
+    # tcl uses floored integer division, while java used truncated integer
+    # division.  Both tcl and java implementations are the same for
+    # positive numbers
+    proc divide_integer_impl { a b } {
+        # emulate java's truncated integer division
+        # e.g so -5/3 = -1 and 4/-3 = -1
+        # java's integer division obeys the rule:
+        # a / b == sign(a) * sign(b) * ( abs(a) / abs(b) )
+        set sign 1
+        if { [ expr $a < 0 ] } {
+            set sign [ expr $sign * -1 ]
+        }
+        if { [ expr $b < 0 ] } {
+            set sign [ expr $sign * -1 ]
+        }
+        return [ expr $sign * ( abs($a) / abs($b) ) ]
+    }
+
+    proc mod_integer_impl { a b } {
+        # in Java's truncated integer division,
+        # a % b == sign(a) * ( abs(a) % abs(b) )
+        if { [ expr $a >= 0 ] } {
+            set sign 1
+        } else {
+            set sign -1
+        }
+        return [ expr $sign * ( abs($a) % abs($b) ) ]
     }
 
     # This is a Swift-2 function, thus it only applies to integers
