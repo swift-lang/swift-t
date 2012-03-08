@@ -258,22 +258,30 @@ namespace eval turbine {
         container_insert $r $j $d
     }
 
-    proc imm_container_create_nested { r c i type } {
-        debug "container_create_nested: $r $c\[$i\] $type"
-        upvar 1 $r v
-        allocate v integer
-        __container_create_nested $v $c $i $type
+    proc imm_container_create_nested { c i type } {
+        debug "imm_container_create_nested: $c\[$i\] $type"
+        return [ container_create_nested $c $i $type ]
     }
 
-    proc __container_create_nested { r c i type } {
-        debug "__container_create_nested: $r $c\[$i\] $type"
-        if [ adlb::insert_atomic $c $i ] {
-            # Member did not exist: create it and get reference
-            allocate_container t $type
-            adlb::insert $c $i $t
+    proc container_create_nested { c i type } {
+      debug "container_create_nested: $c\[$i\] $type"
+      if [ adlb::insert_atomic $c $i ] {
+        debug "$c\[$i\] doesn't exist, creating" 
+        # Member did not exist: create it and get reference
+        allocate_container t $type
+        adlb::insert $c $i $t
+        return $t
+      } else {
+        # Another engine is creating it right this second, poll
+        # until we get it.  Note: this should require at most one
+        # or two polls to get a result
+        debug "$c\[$i\] already exists, retrieving"
+        set container_id 0
+        while { $container_id == 0 } {
+          set container_id [ adlb::lookup $c $i ]
         }
-
-        adlb::container_reference $c $i $r
+        return $container_id
+      }
     }
 
     proc f_container_create_nested { r c i type } {
@@ -297,7 +305,8 @@ namespace eval turbine {
         debug "f_container_create_nested: $r $c\[$i\] $type"
 
         set s [ get $i ]
-        __container_create_nested $r $c $s $type
+        set res [ container_create_nested $c $s $type ]
+        set_integer $r $res
     }
 
     # Create container at c[i]
@@ -316,7 +325,8 @@ namespace eval turbine {
 
     proc f_container_reference_create_nested_body { r cr i type } {
         set c [ get $cr ]
-        __container_create_nested $r $c $i $type
+        set res [ container_create_nested $c $i $type ]
+        set_integer $r $res
     }
 
     # Create container at c[i]
@@ -337,7 +347,8 @@ namespace eval turbine {
     proc f_container_reference_create_nested_body { r cr i type } {
         set c [ get $cr ]
         set s [ get $i ]
-        container_create_nested $r $c $s $type
+        set res [ container_create_nested $c $s $type ]
+        set_integer $r $res
     }
 
     variable container_branches
