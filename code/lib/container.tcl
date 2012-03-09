@@ -338,6 +338,7 @@ namespace eval turbine {
         allocate tmp_r integer
         set v $tmp_r
 
+        adlb::slot_create $c 
         set rule_id [ rule_new ]
         rule $rule_id fccn "" "$i" \
                "tp: f_container_create_nested_body $tmp_r $c $i $type"
@@ -353,6 +354,7 @@ namespace eval turbine {
         set s [ get $i ]
         set res [ container_create_nested $c $s $type ]
         set_integer $r $res
+        adlb::slot_drop $c 
     }
 
     # Create container at c[i]
