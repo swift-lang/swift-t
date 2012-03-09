@@ -312,6 +312,10 @@ namespace eval turbine {
         # Member did not exist: create it and get reference
         allocate_container t $type
         adlb::insert $c $i $t
+        # setup rule to close when outer container closes
+        set rule_id [ rule_new ]
+        rule $rule_id "autoclose-$c-$t" "" "$c" \
+               "tp: adlb::slot_drop $t"
         return $t
       } else {
         # Another engine is creating it right this second, poll
