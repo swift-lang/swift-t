@@ -67,8 +67,8 @@ namespace eval turbine {
     }
 
     proc container_f_deref_insert_body { c i r } {
-        set t1 [ get $i ]
-        set d [ get $r ]
+        set t1 [ get_integer $i ]
+        set d [ get_integer $r ]
         container_insert $c $t1 $d
     }
 
@@ -90,7 +90,7 @@ namespace eval turbine {
     }
 
     proc container_deref_insert_body { c i r } {
-        set d [ get $r ]
+        set d [ get_integer $r ]
         container_insert $c $i $d
     }
 
@@ -209,6 +209,7 @@ namespace eval turbine {
         set t1 [ get $i ]
         adlb::container_reference $c $t1 $d
     }
+
     # When reference r on c[i] is closed, store c[i][j] = d
     # Blocks on r and j
     # inputs: [ list r j d ]
@@ -224,9 +225,55 @@ namespace eval turbine {
     }
     proc f_container_reference_insert_body { r j d } {
         # s: The subscripted container
-        set c [ get $r ]
-        set s [ get $j ]
+        set c [ get_integer $r ]
+        set s [ get_integer $j ]
         container_insert $c $s $d
+    }
+    
+    # When reference cr on c[i] is closed, store c[i][j] = d
+    # Blocks on cr, j must be a tcl integer
+    # inputs: [ list r j d ]
+    # outputs: ignored
+    proc cref_insert { parent outputs inputs } {
+        set cr [ lindex $inputs 0 ]
+        set j [ lindex $inputs 1 ]
+        set d [ lindex $inputs 2 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "cref_insert-$cr" "$cr" "" \
+            "tp: turbine::cref_insert_body $cr $j $d"
+    }
+    proc cref_insert_body { cr j d } {
+        set c [ get_integer $cr ]
+        container_insert $c $j $d
+    }
+    
+    proc cref_deref_insert { parent outputs inputs } {
+        set cr [ lindex $inputs 0 ]
+        set j [ lindex $inputs 1 ]
+        set dr [ lindex $inputs 2 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "cref_deref_insert-$r" "$cr $dr" "" \
+            "tp: turbine::cref_deref_insert_body $cr $j $dr"
+    }
+    proc cref_deref_insert_body { r j d } {
+        set c [ get_integer $cr ]
+        set d [ get_integer $dr ]
+        container_insert $c $j $d
+    }
+    
+    proc cref_f_deref_insert { parent outputs inputs } {
+        set cr [ lindex $inputs 0 ]
+        set j [ lindex $inputs 1 ]
+        set dr [ lindex $inputs 2 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "cref_f_deref_insert-$r" "$cr $j $dr" "" \
+            "tp: turbine::cref_f_deref_insert_body $cr $j $dr"
+    }
+    proc cref_f_deref_insert_body { r j d } {
+        set c [ get_integer $cr ]
+        set d [ get_integer $dr ]
+        set jval [ get_integer $j ]
+        container_insert $c $jval $d
     }
 
 
