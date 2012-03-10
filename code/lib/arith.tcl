@@ -261,4 +261,68 @@ namespace eval turbine {
         log "copy $i_value => $i_value"
         set_float $o $i_value
     }
+
+    proc max_integer { parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "max-$a-$b" "$a $b" $c \
+            "tl: max_integer_body $parent $c $a $b"
+    }
+
+    proc max_integer_body { parent c a b } {
+        set a_value [ get_integer $a ]
+        set b_value [ get_integer $b ]
+        set c_value [ expr max ($a_value, $b_value) ]
+        log "max: $a_value $b_value => $c_value"
+        set_integer $c $c_value
+    }
+    
+    proc min_integer { parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "min-$a-$b" "$a $b" $c \
+            "tl: min_integer_body $parent $c $a $b"
+    }
+
+    proc min_integer_body { parent c a b } {
+        set a_value [ get_integer $a ]
+        set b_value [ get_integer $b ]
+        set c_value [ expr min ($a_value, $b_value) ]
+        log "min: $a_value $b_value => $c_value"
+        set_integer $c $c_value
+    }
+    
+    proc max_float { parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "max-$a-$b" "$a $b" $c \
+            "tl: max_float_body $parent $c $a $b"
+    }
+
+    proc max_float_body { parent c a b } {
+        set a_value [ get_float $a ]
+        set b_value [ get_float $b ]
+        set c_value [ expr max ($a_value, $b_value) ]
+        log "max: $a_value $b_value => $c_value"
+        set_float $c $c_value
+    }
+    
+    proc min_float { parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "min-$a-$b" "$a $b" $c \
+            "tl: min_float_body $parent $c $a $b"
+    }
+
+    proc min_float_body { parent c a b } {
+        set a_value [ get_float $a ]
+        set b_value [ get_float $b ]
+        set c_value [ expr min ($a_value, $b_value) ]
+        log "min: $a_value $b_value => $c_value"
+        set_float $c $c_value
+    }
 }

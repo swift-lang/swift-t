@@ -17,6 +17,8 @@
 (int o) divide_integer  (int i1, int i2) "turbine" "0.0.2" "divide_integer";
 (int o) mod_integer     (int i1, int i2) "turbine" "0.0.2" "mod_integer";
 (int o) negate_integer  (int i)          "turbine" "0.0.2" "negate_integer";
+(int o) max_integer     (int i1, int i2) "turbine" "0.0.2" "max_integer";
+(int o) min_integer     (int i1, int i2) "turbine" "0.0.2" "min_integer";
 
 (boolean o) and (boolean i1, boolean i2) "turbine" "0.0.2" "and";
 (boolean o) or  (boolean i1, boolean i2) "turbine" "0.0.2" "or";
@@ -29,6 +31,8 @@
 (float o) multiply_float(float i1, float i2) "turbine" "0.0.2" "multiply_float";
 (float o) divide_float  (float i1, float i2) "turbine" "0.0.2" "divide_float";
 (float o) negate_float  (float i)            "turbine" "0.0.2" "negate_float";
+(float o) max_float     (float i1, float i2) "turbine" "0.0.2" "max_float";
+(float o) min_float     (float i1, float i2) "turbine" "0.0.2" "min_float";
 
 // Relational
 
