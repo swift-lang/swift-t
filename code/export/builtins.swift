@@ -39,6 +39,9 @@
 (int o) ceil            (float i) "turbine"  "0.0.2" "ceil";
 (int o) round           (float i) "turbine"  "0.0.2" "round";
 (float o) inttofloat    (int i) "turbine"  "0.0.2" "inttofloat";
+(float o) log           (float i) "turbine"  "0.0.2" "log";
+(float o) exp           (float i) "turbine"  "0.0.2" "exp";
+(float o) sqrt          (float i) "turbine"  "0.0.2" "sqrt";
 
 // Relational
 

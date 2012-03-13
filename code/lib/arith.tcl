@@ -334,9 +334,9 @@ namespace eval turbine {
 
     proc floor_body { parent c a } {
         set a_value [ get_float $a ]
-        set c_value [ expr floor $a_value ]
+        set c_value [ expr floor($a_value) ]
         log "floor: $a_value => $c_value"
-        set_float $c $c_value
+        set_integer $c $c_value
     }
 
     proc ceil { parent c a } {
@@ -347,9 +347,9 @@ namespace eval turbine {
 
     proc ceil_body { parent c a } {
         set a_value [ get_float $a ]
-        set c_value [ expr ceil $a_value ]
+        set c_value [ expr ceil($a_value) ]
         log "ceil: $a_value => $c_value"
-        set_float $c $c_value
+        set_integer $c $c_value
     }
 
     proc round { parent c a } {
@@ -360,9 +360,9 @@ namespace eval turbine {
 
     proc round_body { parent c a } {
         set a_value [ get_float $a ]
-        set c_value [ expr round $a_value ]
+        set c_value [ expr round($a_value) ]
         log "round: $a_value => $c_value"
-        set_float $c $c_value
+        set_integer $c $c_value
     }
 
     proc inttofloat { parent c a } {
@@ -374,5 +374,44 @@ namespace eval turbine {
     proc inttofloat_body { parent c a } {
         set a_value [ get_integer $a ]
         set_float $c $a_value
+    }
+    
+    proc log { parent c a } {
+        set rule_id [ rule_new ]
+        rule $rule_id "log-$a" "$a" $c \
+            "tl: log_body $parent $c $a"
+    }
+
+    proc log_body { parent c a } {
+        set a_value [ get_float $a ]
+        set c_value [ expr log($a_value) ]
+        log "log: $a_value => $c_value"
+        set_float $c $c_value
+    }
+    
+    proc exp { parent c a } {
+        set rule_id [ rule_new ]
+        rule $rule_id "exp-$a" "$a" $c \
+            "tl: exp_body $parent $c $a"
+    }
+
+    proc exp_body { parent c a } {
+        set a_value [ get_float $a ]
+        set c_value [ expr exp($a_value) ]
+        exp "exp: $a_value => $c_value"
+        set_float $c $c_value
+    }
+    
+    proc sqrt { parent c a } {
+        set rule_id [ rule_new ]
+        rule $rule_id "sqrt-$a" "$a" $c \
+            "tl: sqrt_body $parent $c $a"
+    }
+
+    proc sqrt_body { parent c a } {
+        set a_value [ get_float $a ]
+        set c_value [ expr sqrt($a_value) ]
+        sqrt "sqrt: $a_value => $c_value"
+        set_float $c $c_value
     }
 }
