@@ -325,4 +325,54 @@ namespace eval turbine {
         log "min: $a_value $b_value => $c_value"
         set_float $c $c_value
     }
+
+    proc floor { parent c a } {
+        set rule_id [ rule_new ]
+        rule $rule_id "floor-$a" "$a" $c \
+            "tl: floor_body $parent $c $a"
+    }
+
+    proc floor_body { parent c a } {
+        set a_value [ get_float $a ]
+        set c_value [ expr floor $a_value ]
+        log "floor: $a_value => $c_value"
+        set_float $c $c_value
+    }
+
+    proc ceil { parent c a } {
+        set rule_id [ rule_new ]
+        rule $rule_id "ceil-$a" "$a" $c \
+            "tl: ceil_body $parent $c $a"
+    }
+
+    proc ceil_body { parent c a } {
+        set a_value [ get_float $a ]
+        set c_value [ expr ceil $a_value ]
+        log "ceil: $a_value => $c_value"
+        set_float $c $c_value
+    }
+
+    proc round { parent c a } {
+        set rule_id [ rule_new ]
+        rule $rule_id "round-$a" "$a" $c \
+            "tl: round_body $parent $c $a"
+    }
+
+    proc round_body { parent c a } {
+        set a_value [ get_float $a ]
+        set c_value [ expr round $a_value ]
+        log "round: $a_value => $c_value"
+        set_float $c $c_value
+    }
+
+    proc inttofloat { parent c a } {
+        set rule_id [ rule_new ]
+        rule $rule_id "itf-$a" "$a" $c \
+            "tl: inttofloat_body $parent $c $a"
+    }
+
+    proc inttofloat_body { parent c a } {
+        set a_value [ get_integer $a ]
+        set_float $c $a_value
+    }
 }
