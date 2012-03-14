@@ -8,7 +8,9 @@
 (float o)  copy_float  (float i)  "turbine" "0.0.2" "copy_float";
 (string o) copy_string (string i) "turbine" "0.0.2" "copy_string";
 (boolean o) copy_boolean (boolean i) "turbine" "0.0.2" "copy_integer";
+(void o) copy_void (void i) "turbine" "0.0.2" "copy_void";
 (blob o) copy_blob (blob i) "turbine" "0.0.2" "copy_blob";
+(void o) make_void () "turbine" "0.0.2" "make_void";
 
 // Arithmetic
 (int o) plus_integer    (int i1, int i2) "turbine" "0.0.2" "plus_integer";

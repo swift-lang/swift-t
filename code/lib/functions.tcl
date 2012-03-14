@@ -470,4 +470,22 @@ namespace eval turbine {
         }
         abort "stack_lookup failure: stack: <$stack> symbol: $symbol"
     }
+
+    # o = i.  Void has no value, so this just makes sure that they close at 
+    # the same time
+    proc copy_void { parent o i } {
+        set rule_id [ rule_new ]
+        rule $rule_id "copy-$o-$i" $i $o \
+            "tl: copy_void_body $o $i"
+    }
+    proc copy_void_body { o i } {
+        log "copy_void $i => $o"
+        set_void $o
+    }
+
+    # create a void type (i.e. just set it)
+    proc make_void { parent o i } {
+        empty i
+        set_void $o
+    }
 }
