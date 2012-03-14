@@ -11,6 +11,7 @@ TCL_SRC := $(DIR)/helpers.tcl             \
            $(DIR)/arith.tcl           \
            $(DIR)/string.tcl           \
            $(DIR)/container.tcl           \
+           $(DIR)/rand.tcl           \
            $(DIR)/lang.tcl
 
 $(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) $(TCL_ADLB_SO) \

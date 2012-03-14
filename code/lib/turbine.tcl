@@ -26,6 +26,7 @@ namespace eval turbine {
     # param e Number of engines
     # param s Number of ADLB servers
     proc init { engines servers } {
+        turbine::init_rng
 
         # Set up work types
         enum WORK_TYPE { WORK CONTROL }

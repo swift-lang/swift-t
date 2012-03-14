@@ -72,6 +72,10 @@
 (boolean o) eq_boolean (boolean i1, boolean i2) "turbine" "0.0.2" "eq_integer";
 (boolean o) neq_boolean(boolean i1, boolean i2) "turbine" "0.0.2" "neq_integer";
 
+// Random functions
+(float o) random() "turbine" "0.0.2" "random";
+(int o) randint(int start, int end) "turbine" "0.0.2" "randint";
+
 // String operations
 (string o) strcat(string i1, string i2) "turbine" "0.0.2" "strcat";
 (string o) substring(string s, int start, int length) "turbine" "0.0.2" "substring";

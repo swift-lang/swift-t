@@ -20,6 +20,19 @@ proc nonempty { args } {
     }
 }
 
+# assert that each x is an empty list
+# Note: each x should be passed as a symbol
+#       this is so we can print a nice error message
+proc empty { args } {
+    foreach x $args {
+        upvar 1 $x v
+        if { ( ! [ info exists v ] ) ||
+             [ string length $v ] > 0 } {
+            error "This must be an empty list/string: $x"
+        }
+    }
+}
+
 # Given: enum E { T1 T2 }
 # Defines global array E with members E(T1)=0, E(T2)=1
 proc enum { name members } {
