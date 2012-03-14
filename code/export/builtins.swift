@@ -35,11 +35,13 @@
 (float o) min_float     (float i1, float i2) "turbine" "0.0.2" "min_float";
 
 // Mathematical functions
+(int o) abs_integer     (int i) "turbine"  "0.0.2" "abs_integer";
+(float o) abs_float     (float i) "turbine"  "0.0.2" "abs_float";
 (int o) floor           (float i) "turbine"  "0.0.2" "floor";
 (int o) ceil            (float i) "turbine"  "0.0.2" "ceil";
 (int o) round           (float i) "turbine"  "0.0.2" "round";
 (float o) inttofloat    (int i) "turbine"  "0.0.2" "inttofloat";
-(float o) log           (float i) "turbine"  "0.0.2" "log";
+(float o) log           (float i) "turbine"  "0.0.2" "log_e";
 (float o) exp           (float i) "turbine"  "0.0.2" "exp";
 (float o) sqrt          (float i) "turbine"  "0.0.2" "sqrt";
 

@@ -376,16 +376,16 @@ namespace eval turbine {
         set_float $c $a_value
     }
     
-    proc log { parent c a } {
+    proc log_e { parent c a } {
         set rule_id [ rule_new ]
-        rule $rule_id "log-$a" "$a" $c \
-            "tl: log_body $parent $c $a"
+        rule $rule_id "log_e-$a" "$a" $c \
+            "tl: log_e_body $parent $c $a"
     }
 
-    proc log_body { parent c a } {
+    proc log_e_body { parent c a } {
         set a_value [ get_float $a ]
         set c_value [ expr log($a_value) ]
-        log "log: $a_value => $c_value"
+        log "log_e: $a_value => $c_value"
         set_float $c $c_value
     }
     
@@ -398,7 +398,7 @@ namespace eval turbine {
     proc exp_body { parent c a } {
         set a_value [ get_float $a ]
         set c_value [ expr exp($a_value) ]
-        exp "exp: $a_value => $c_value"
+        log "exp: $a_value => $c_value"
         set_float $c $c_value
     }
     
@@ -411,7 +411,33 @@ namespace eval turbine {
     proc sqrt_body { parent c a } {
         set a_value [ get_float $a ]
         set c_value [ expr sqrt($a_value) ]
-        sqrt "sqrt: $a_value => $c_value"
+        log "sqrt: $a_value => $c_value"
         set_float $c $c_value
+    }
+    
+    proc abs_float { parent c a } {
+        set rule_id [ rule_new ]
+        rule $rule_id "abs_float-$a" "$a" $c \
+            "tl: abs_float_body $parent $c $a"
+    }
+
+    proc abs_float_body { parent c a } {
+        set a_value [ get_float $a ]
+        set c_value [ expr abs($a_value) ]
+        log "abs_float: $a_value => $c_value"
+        set_float $c $c_value
+    }
+    
+    proc abs_integer { parent c a } {
+        set rule_id [ rule_new ]
+        rule $rule_id "abs_integer-$a" "$a" $c \
+            "tl: abs_integer_body $parent $c $a"
+    }
+
+    proc abs_integer_body { parent c a } {
+        set a_value [ get_integer $a ]
+        set c_value [ expr abs($a_value) ]
+        log "abs_integer: $a_value => $c_value"
+        set_integer $c $c_value
     }
 }
