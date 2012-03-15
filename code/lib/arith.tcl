@@ -201,7 +201,7 @@ namespace eval turbine {
     proc mod_integer_body { parent c a b } {
         set a_value [ get_integer $a ]
         set b_value [ get_integer $b ]
-        set c_value [ mod_integer_impl $a $b ]
+        set c_value [ mod_integer_impl $a_value $b_value ]
         log "mod: $a_value % $b_value => $c_value"
         set_integer $c $c_value
     }
