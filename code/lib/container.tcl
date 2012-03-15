@@ -172,17 +172,17 @@ namespace eval turbine {
     #       cr is a reference to a container
     #       i is a literal int
     # outputs: ignored
-    proc f_container_reference_lookup_literal { parent outputs inputs } {
+    proc f_cref_lookup_literal { parent outputs inputs } {
         set cr [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set d [ lindex $inputs 2 ]
         set rule_id [ rule_new ]
-        rule $rule_id "f_container_reference_lookup_literal-$cr" "$cr" "" \
-            "tp: turbine::f_container_reference_lookup_literal_body $cr $i $d"
+        rule $rule_id "f_cref_lookup_literal-$cr" "$cr" "" \
+            "tp: turbine::f_cref_lookup_literal_body $cr $i $d"
 
     }
 
-    proc f_container_reference_lookup_literal_body { cr i d } {
+    proc f_cref_lookup_literal_body { cr i d } {
         # When this procedure is run, cr should be set and
         # i should be the literal index
         set c [ get $cr ]
@@ -194,16 +194,16 @@ namespace eval turbine {
     # inputs: [ list cr i d ]
     #       cr is a reference to a container
     # outputs: ignored
-    proc f_container_reference_lookup { parent outputs inputs } {
+    proc f_cref_lookup { parent outputs inputs } {
         set cr [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set d [ lindex $inputs 2 ]
         set rule_id [ rule_new ]
-        rule $rule_id "f_container_reference_lookup-$cr" "$cr $i" "" \
-            "tp: turbine::f_container_reference_lookup_body $cr $i $d"
+        rule $rule_id "f_cref_lookup-$cr" "$cr $i" "" \
+            "tp: turbine::f_cref_lookup_body $cr $i $d"
     }
 
-    proc f_container_reference_lookup_body { cr i d } {
+    proc f_cref_lookup_body { cr i d } {
         # When this procedure is run, cr and i should be set
         set c [ get $cr ]
         set t1 [ get $i ]
@@ -215,7 +215,7 @@ namespace eval turbine {
     # oc is outer container
     # inputs: [ list r j d oc ]
     # outputs: ignored
-    proc f_container_reference_insert { parent outputs inputs } {
+    proc f_cref_insert { parent outputs inputs } {
         set r [ lindex $inputs 0 ]
         # set c [ lindex $inputs 1 ]
         set j [ lindex $inputs 1 ]
@@ -223,10 +223,10 @@ namespace eval turbine {
         set oc [ lindex $inputs 3 ]
         adlb::slot_create $oc
         set rule_id [ rule_new ]
-        rule $rule_id "f_container_reference_insert-$r-$j-$d-$oc" "$r $j" "" \
-            "tp: turbine::f_container_reference_insert_body $r $j $d $oc"
+        rule $rule_id "f_cref_insert-$r-$j-$d-$oc" "$r $j" "" \
+            "tp: turbine::f_cref_insert_body $r $j $d $oc"
     }
-    proc f_container_reference_insert_body { r j d oc } {
+    proc f_cref_insert_body { r j d oc } {
         # s: The subscripted container
         set c [ get_integer $r ]
         set s [ get_integer $j ]
@@ -378,7 +378,7 @@ namespace eval turbine {
 
     # Create container at c[i]
     # Set r, a reference TD on (cr*)[i]
-    proc container_reference_create_nested { r cr i type } {
+    proc cref_create_nested { r cr i type } {
         upvar 1 $r v
 
         # Create reference
@@ -387,10 +387,10 @@ namespace eval turbine {
 
         set rule_id [ rule_new ]
         rule $rule_id fcrcn "" "$cr" \
-           "tp: container_reference_create_nested_body $tmp_r $cr $i $type"
+           "tp: cref_create_nested_body $tmp_r $cr $i $type"
     }
 
-    proc f_container_reference_create_nested_body { r cr i type } {
+    proc cref_create_nested_body { r cr i type } {
         set c [ get $cr ]
         set res [ container_create_nested $c $i $type ]
         set_integer $r $res
@@ -398,20 +398,19 @@ namespace eval turbine {
 
     # Create container at c[i]
     # Set r, a reference TD on (cr*)[i]
-    proc f_container_reference_create_nested { r cr i type } {
+    proc f_cref_create_nested { r cr i type } {
         upvar 1 $r v
 
         # Create reference
-        data_new tmp_r
-        create_integer $tmp_r
+        allocate tmp_r integer
         set v $tmp_r
 
         set rule_id [ rule_new ]
         rule $rule_id fcrcn "" "$cr $i" \
-           "tp: f_container_reference_create_nested_body $tmp_r $cr $i $type"
+           "tp: f_cref_create_nested_body $tmp_r $cr $i $type"
     }
 
-    proc f_container_reference_create_nested_body { r cr i type } {
+    proc f_cref_create_nested_body { r cr i type } {
         set c [ get $cr ]
         set s [ get $i ]
         set res [ container_create_nested $c $s $type ]

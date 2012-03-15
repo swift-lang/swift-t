@@ -29,7 +29,7 @@ proc rules { } {
     turbine::allocate r1 integer
     turbine::f_reference no_stack "" "$A $i $r1"
     turbine::container_f_insert no_stack "" "$A $i $t1"
-    turbine::f_container_reference_insert no_stack "" "$r1 $j $t1 $A"
+    turbine::f_cref_insert no_stack "" "$r1 $j $t1 $A"
     # turbine::container_f_insert no_stack "" "$t1 $j $k"
 }
 
