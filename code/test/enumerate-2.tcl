@@ -31,8 +31,8 @@ proc rules { } {
     turbine::allocate t1 integer
     turbine::allocate t2 integer
 
-    turbine::call_composite no_stack f $t1 $i1
-    turbine::call_composite no_stack f $t2 $i2
+    turbine::call_composite no_stack f $t1 $i1 $t1
+    turbine::call_composite no_stack f $t2 $i2 $t1
 
     turbine::container_f_insert no_stack "" "$c $i1 $t1"
     turbine::container_f_insert no_stack "" "$c $i2 $t2"

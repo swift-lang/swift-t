@@ -100,10 +100,10 @@ namespace eval turbine {
         set_string $result $v
     }
 
-    proc call_composite { stack f outputs inputs } {
+    proc call_composite { stack f outputs inputs blockon } {
 
         set rule_id [ rule_new ]
-        turbine::c::rule $rule_id $f "$inputs" "$outputs" \
+        turbine::c::rule $rule_id $f "$blockon" "$outputs" \
             "tp: $f $stack $outputs $inputs"
         return $rule_id
     }
