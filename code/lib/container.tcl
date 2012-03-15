@@ -68,7 +68,7 @@ namespace eval turbine {
 
     proc container_f_deref_insert_body { c i r } {
         set t1 [ get_integer $i ]
-        set d [ get_integer $r ]
+        set d [ get $r ]
         container_insert $c $t1 $d
     }
 
@@ -90,7 +90,7 @@ namespace eval turbine {
     }
 
     proc container_deref_insert_body { c i r } {
-        set d [ get_integer $r ]
+        set d [ get $r ]
         container_insert $c $i $d
     }
 
@@ -212,68 +212,86 @@ namespace eval turbine {
 
     # When reference r on c[i] is closed, store c[i][j] = d
     # Blocks on r and j
-    # inputs: [ list r j d ]
+    # oc is outer container
+    # inputs: [ list r j d oc ]
     # outputs: ignored
     proc f_container_reference_insert { parent outputs inputs } {
         set r [ lindex $inputs 0 ]
         # set c [ lindex $inputs 1 ]
         set j [ lindex $inputs 1 ]
         set d [ lindex $inputs 2 ]
+        set oc [ lindex $inputs 3 ]
+        adlb::slot_create $oc
         set rule_id [ rule_new ]
-        rule $rule_id "f_container_reference_insert-$r" "$r $j" "" \
-            "tp: turbine::f_container_reference_insert_body $r $j $d"
+        rule $rule_id "f_container_reference_insert-$r-$j-$d-$oc" "$r $j" "" \
+            "tp: turbine::f_container_reference_insert_body $r $j $d $oc"
     }
-    proc f_container_reference_insert_body { r j d } {
+    proc f_container_reference_insert_body { r j d oc } {
         # s: The subscripted container
         set c [ get_integer $r ]
         set s [ get_integer $j ]
         container_insert $c $s $d
+        adlb::slot_drop $oc
     }
     
     # When reference cr on c[i] is closed, store c[i][j] = d
     # Blocks on cr, j must be a tcl integer
-    # inputs: [ list r j d ]
+    # oc is a direct handle to the top-level container 
+    #       which cr will be inside
+    # inputs: [ list r j d oc ]
     # outputs: ignored
     proc cref_insert { parent outputs inputs } {
         set cr [ lindex $inputs 0 ]
         set j [ lindex $inputs 1 ]
         set d [ lindex $inputs 2 ]
+        set oc [ lindex $inputs 3 ]
+        adlb::slot_create $oc
         set rule_id [ rule_new ]
-        rule $rule_id "cref_insert-$cr" "$cr" "" \
-            "tp: turbine::cref_insert_body $cr $j $d"
+        rule $rule_id "cref_insert-$cr-$j-$d-$oc" "$cr" "" \
+            "tp: turbine::cref_insert_body $cr $j $d $oc"
     }
-    proc cref_insert_body { cr j d } {
+    proc cref_insert_body { cr j d oc } {
         set c [ get_integer $cr ]
+        # insert and drop slot
         container_insert $c $j $d
+        adlb::slot_drop $oc
     }
     
+    # j: tcl integer index
+    # oc: direct handle to outer container 
     proc cref_deref_insert { parent outputs inputs } {
         set cr [ lindex $inputs 0 ]
         set j [ lindex $inputs 1 ]
         set dr [ lindex $inputs 2 ]
+        set oc [ lindex $inputs 3 ]
+        adlb::slot_create $oc
         set rule_id [ rule_new ]
-        rule $rule_id "cref_deref_insert-$r" "$cr $dr" "" \
-            "tp: turbine::cref_deref_insert_body $cr $j $dr"
+        rule $rule_id "cref_deref_insert-$cr-$j-$dr-$oc" "$cr $dr" "" \
+            "tp: turbine::cref_deref_insert_body $cr $j $dr $oc"
     }
-    proc cref_deref_insert_body { r j d } {
+    proc cref_deref_insert_body { cr j dr oc } {
         set c [ get_integer $cr ]
-        set d [ get_integer $dr ]
+        set d [ get $dr ]
         container_insert $c $j $d
+        adlb::slot_drop $oc
     }
     
     proc cref_f_deref_insert { parent outputs inputs } {
         set cr [ lindex $inputs 0 ]
         set j [ lindex $inputs 1 ]
         set dr [ lindex $inputs 2 ]
+        set oc [ lindex $inputs 3 ]
+        adlb::slot_create $oc
         set rule_id [ rule_new ]
-        rule $rule_id "cref_f_deref_insert-$r" "$cr $j $dr" "" \
-            "tp: turbine::cref_f_deref_insert_body $cr $j $dr"
+        rule $rule_id "cref_f_deref_insert-$cr-$j-$dr-$oc" "$cr $j $dr" "" \
+            "tp: turbine::cref_f_deref_insert_body $cr $j $dr $oc"
     }
-    proc cref_f_deref_insert_body { r j d } {
+    proc cref_f_deref_insert_body { cr j dr oc } {
         set c [ get_integer $cr ]
-        set d [ get_integer $dr ]
+        set d [ get $dr ]
         set jval [ get_integer $j ]
         container_insert $c $jval $d
+        adlb::slot_drop $oc
     }
 
 
@@ -314,7 +332,7 @@ namespace eval turbine {
         adlb::insert $c $i $t
         # setup rule to close when outer container closes
         set rule_id [ rule_new ]
-        rule $rule_id "autoclose-$c-$t" "" "$c" \
+        rule $rule_id "autoclose-$c-$t" "$c" "" \
                "tp: adlb::slot_drop $t"
         return $t
       } else {
@@ -330,6 +348,9 @@ namespace eval turbine {
       }
     }
 
+    # puts a reference to a nested container at c[i]
+    # into reference variable r.  
+    # i: an integer future 
     proc f_container_create_nested { r c i type } {
 
         upvar 1 $r v
@@ -338,7 +359,6 @@ namespace eval turbine {
         allocate tmp_r integer
         set v $tmp_r
 
-        adlb::slot_create $c 
         set rule_id [ rule_new ]
         rule $rule_id fccn "" "$i" \
                "tp: f_container_create_nested_body $tmp_r $c $i $type"
@@ -354,7 +374,6 @@ namespace eval turbine {
         set s [ get $i ]
         set res [ container_create_nested $c $s $type ]
         set_integer $r $res
-        adlb::slot_drop $c 
     }
 
     # Create container at c[i]
