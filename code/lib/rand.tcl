@@ -23,7 +23,8 @@ namespace eval turbine {
     # called with 0 args, returns a random float in [0.0, 1.0)
     proc random { parent o i } {
         nonempty o
-        empty i # no input args
+        # no input args
+        empty i
         set o_val [ expr rand() ]
         set_float $o $o_val
     }
