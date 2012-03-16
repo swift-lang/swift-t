@@ -3,6 +3,8 @@
 # Helps automate selection of process mode (engine, server, worker)
 # Prints the "SETUP:" header in the *.out file
 
+export ADLB_EXHAUST_TIME=1
+
 if [[ ${TURBINE_ENGINES} == "" ]]
 then
   export TURBINE_ENGINES=1
