@@ -5,6 +5,7 @@
 # where the lists are Tcl lists of TDs
 
 namespace eval turbine {
+
     # User function
     # usage: strcat <result> <args>*
     proc strcat2 { args } {
@@ -66,7 +67,7 @@ namespace eval turbine {
         log "strcat: strcat($a_value, $b_value) => $c_value"
         set_string $c $c_value
     }
-    
+
     # o = i;
     proc copy_string { parent o i } {
         set rule_id [ rule_new ]
@@ -77,5 +78,46 @@ namespace eval turbine {
         set i_value [ get_string $i ]
         log "copy $i_value => $i_value"
         set_string $o $i_value
+    }
+
+    proc split { args } {
+        set result [ lindex $args 1 ]
+        set inputs [ lreplace $args 0 1 ]
+        set rule_id [ rule_new ]
+
+        set s [ lindex $inputs 0 ]
+        if { [ llength $inputs ] == 2 } {
+            set delimiter [ lindex $inputs 1 ]
+            rule $rule_id "split-$result" [ list $s $delimiter ] $result \
+                "tl: split_body $result $s $delimiter"
+        } elseif { [ llength $inputs ] == 1 } {
+            # Use default delimiter: " "
+            set delimiter 0
+            rule $rule_id "split-$result" $s $result \
+                "tl: split_body $result $s 0"
+        } else {
+            error "split requires 1 or 2 arguments"
+        }
+    }
+
+    # Split string s with delimiter d into result container r
+    # Tcl split should handle spaces correctly:
+    # http://tmml.sourceforge.net/doc/tcl/split.html
+    proc split_body { result s delimiter } {
+        set s_value [ get_string $s ]
+        if { $delimiter == 0 } {
+            set d_value " "
+        } else {
+            set d_value [ get_string $delimiter ]
+        }
+        set r_value [ ::split $s_value $d_value ]
+        set n [ llength $r_value ]
+        log "split: $s_value on: $d_value tokens: $n"
+        for { set i 0 } { $i < $n } { incr i } {
+            set v [ lindex $r_value $i ]
+            literal split_token string $v
+            container_insert $result $i $split_token
+        }
+        close_container $result
     }
 }
