@@ -92,3 +92,7 @@
 // Container operations
 (int res[]) range(int start, int end) "turbine" "0.0.2" "range";
 (int res[]) rangestep(int start, int end, int step) "turbine" "0.0.2" "rangestep";
+(int res) sum_integer(int arr[]) "turbine" "0.0.2" "sum_integer";
+
+// Misc
+() assert(boolean condition, string msg) "turbine" "0.0.2" "assert";
