@@ -440,4 +440,44 @@ namespace eval turbine {
         log "abs_integer: $a_value => $c_value"
         set_integer $c $c_value
     }
+    
+    proc pow_integer { parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "pow-$a-$b" "$a $b" $c \
+            "tf: pow_integer_body $c $a $b"
+    }
+    proc pow_integer_body { c a b } {
+        set a_value [ get $a ]
+        set b_value [ get $b ]
+        # convert to float otherwise doesn't handle negative
+        # exponents right
+        set c_value [ pow_integer_impl $a_value $b_value ]
+        log "pow_integer: $a_value ** $b_value => $c_value"
+        set_float $c $c_value
+    }
+
+    proc pow_integer_impl { a b } {
+        if { $b < 0 } {
+            set a [ expr double($a) ]
+            set b [ expr double($b) ]
+        }
+        return [ expr $a ** $b ]
+    }
+
+    proc pow_float { parent c inputs } {
+        set a [ lindex $inputs 0 ]
+        set b [ lindex $inputs 1 ]
+        set rule_id [ rule_new ]
+        rule $rule_id "pow-$a-$b" "$a $b" $c \
+            "tf: pow_float_body $c $a $b"
+    }
+    proc pow_float_body {c a b } {
+        set a_value [ get_float $a ]
+        set b_value [ get_float $b ]
+        set c_value [ expr $a_value ** $b_value ]
+        log "pow_float: $a_value ** $b_value => $c_value"
+        set_float $c $c_value
+    }
 }
