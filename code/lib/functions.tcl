@@ -127,16 +127,20 @@ namespace eval turbine {
         set valuelist [ list ]
         foreach v $args {
             set value [ get $v ]
-            lappend $valuelist $value
+            lappend valuelist $value
         }
-        trace_impl $valuelist
+        trace_impl2 $valuelist
+    }
+    proc trace_impl { args } {
+        # variadic version
+        trace_impl2 $args
     }
 
-    proc trace_impl { args } {
-        set n [ llength $args ]
+    proc trace_impl2 { arglist } {
+        set n [ llength $arglist ]
         puts -nonewline "trace: "
         set first 1
-        foreach value $args {
+        foreach value $arglist {
             if { $first } {
               set first 0
             } else {
