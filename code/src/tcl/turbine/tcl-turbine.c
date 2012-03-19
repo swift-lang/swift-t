@@ -223,7 +223,7 @@ Turbine_Executor_Cmd(ClientData cdata, Tcl_Interp *interp,
   turbine_transform_id id;
   int error = Tcl_GetLongFromObj(interp, objv[1], &id);
   TCL_CHECK(error);
-  char action[64];
+  static char action[1024];
   turbine_code code = turbine_action(id, action);
   TCL_CONDITION(code == TURBINE_SUCCESS,
                 "could not find transform id: %li", id);

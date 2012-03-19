@@ -451,6 +451,10 @@ turbine_entry_set(turbine_entry* entry,
 }
 */
 
+/**
+   @param action Location to write the action string
+   TODO: Fix this!  Fails badly if string exceeds space (#155)
+ */
 turbine_code
 turbine_action(turbine_transform_id id, char* action)
 {
@@ -459,7 +463,7 @@ turbine_action(turbine_transform_id id, char* action)
 
   tr* t = table_lp_search(&trs_running, id);
   if (!t)
-      return TURBINE_ERROR_NOT_FOUND;
+    return TURBINE_ERROR_NOT_FOUND;
 
   strcpy(action, t->transform.action);
 
