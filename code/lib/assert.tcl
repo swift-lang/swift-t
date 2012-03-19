@@ -15,10 +15,14 @@ namespace eval turbine {
     proc assert_body { cond msg } {
         set cond_value [ get $cond ]
         set msg_value [ get $msg ]
-        if { $cond_value == 0 } {
-            error "Assertion failed!: $msg_value"
+        assert_impl $cond_value $msg_value
+    }
+
+    proc assert_impl { cond msg } {
+        if { $cond == 0 } {
+            error "Assertion failed!: $msg"
         } else {
-            log "assert passed: $msg_value"
+            log "assert passed: $msg"
         }
     }
     
@@ -39,10 +43,14 @@ namespace eval turbine {
         set arg1_value [ get $arg1 ]
         set arg2_value [ get $arg2 ]
         set msg_value [ get $msg ]
-        if { $arg1_value != $arg2_value } {
-            error "Assertion failed $arg1_value != $arg2_value: $msg_value"
+        assertEqual_impl $arg1_value $arg2_value $msg_value
+    }
+
+    proc assertEqual_impl { arg1 arg2 msg } {
+        if { $arg1 != $arg2 } {
+            error "Assertion failed $arg1 != $arg2: $msg"
         } else {
-            log "assertEqual $arg1_value $arg2_value passed: $msg_value"
+            log "assertEqual $arg1 $arg2 passed: $msg"
         }
     }
     

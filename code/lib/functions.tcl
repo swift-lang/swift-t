@@ -124,24 +124,25 @@ namespace eval turbine {
     }
 
     proc trace_body { args } {
+        set valuelist [ list ]
+        foreach v $args {
+            set value [ get $v ]
+            lappend $valuelist $value
+        }
+        trace_impl $valuelist
+    }
 
-        puts -nonewline "trace: "
+    proc trace_impl { args } {
         set n [ llength $args ]
-        for { set i 0 } { $i < $n } { incr i } {
-            set v [ lindex $args $i ]
-            switch [ adlb::typeof $v ] {
-                integer {
-                    set value [ get $v ]
-                }
-                string {
-                    set value [ get $v ]
-                }
-                float {
-                    set value [ get $v ]
-                }
+        puts -nonewline "trace: "
+        set first 1
+        foreach value $args {
+            if { $first } {
+              set first 0
+            } else {
+              puts -nonewline ","
             }
             puts -nonewline $value
-            if { $i < $n-1 } { puts -nonewline "," }
         }
         puts ""
     }
