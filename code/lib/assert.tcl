@@ -13,8 +13,8 @@ namespace eval turbine {
     }
     
     proc assert_body { cond msg } {
-        set cond_value [ get $cond ]
-        set msg_value [ get $msg ]
+        set cond_value [ get_integer $cond ]
+        set msg_value [ get_string $msg ]
         assert_impl $cond_value $msg_value
     }
 
@@ -42,8 +42,8 @@ namespace eval turbine {
     proc assertEqual_body { arg1 arg2 msg } {
         set arg1_value [ get $arg1 ]
         set arg2_value [ get $arg2 ]
-        set msg_value [ get $msg ]
-        assertEqual_impl $arg1_value $arg2_value $msg_value
+        set msg_value [ get_string $msg ]
+        assertEqual_impl "$arg1_value" "$arg2_value" "$msg_value"
     }
 
     proc assertEqual_impl { arg1 arg2 msg } {
