@@ -84,9 +84,14 @@ namespace eval turbine {
         set_string $o $i_value
     }
 
+    # This accepts an optional delimiter
+    # (STC does not yet support optional arguments)
     proc split { args } {
         set result [ lindex $args 1 ]
         set inputs [ lreplace $args 0 1 ]
+
+        # Unpack inputs
+        set inputs [ lindex $inputs 0 ]
         set rule_id [ rule_new ]
 
         set s [ lindex $inputs 0 ]

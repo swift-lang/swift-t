@@ -23,7 +23,7 @@ proc rules { } {
     turbine::create_container 9 integer
     turbine::set_string 2 "/bin:/usr/evil name/p:/usr/bin"
     turbine::set_string 3 ":"
-    turbine::split 0 9 2 3
+    turbine::split 0 9 { 2 3 }
 }
 
 turbine::defaults
