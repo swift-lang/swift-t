@@ -20,7 +20,6 @@ namespace eval turbine {
     # System functions
     namespace export stack_lookup
 
-
     # These are Swift-2 functions
     namespace export set1
 
@@ -476,7 +475,7 @@ namespace eval turbine {
         abort "stack_lookup failure: stack: <$stack> symbol: $symbol"
     }
 
-    # o = i.  Void has no value, so this just makes sure that they close at 
+    # o = i.  Void has no value, so this just makes sure that they close at
     # the same time
     proc copy_void { parent o i } {
         set rule_id [ rule_new ]
