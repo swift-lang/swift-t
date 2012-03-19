@@ -3,17 +3,17 @@
 
 namespace eval turbine {
 
-    namespace export                          \
-        allocate get                          \
-        create_string  set_string             \
-        create_integer set_integer            \
-        create_float   set_float              \
-        create_void    set_void              \
-        create_file    set_file               \
-        set_void                              \
-        allocate_container                    \
-        container_get container_list          \
-        container_insert close_container      \
+    namespace export                           \
+        allocate get                           \
+        create_string  set_string              \
+        create_integer set_integer get_integer \
+        create_float   set_float   get_float   \
+        create_void    set_void                \
+        create_file    set_file                \
+        set_void                               \
+        allocate_container                     \
+        container_get container_list           \
+        container_insert close_container       \
         file_set filename
 
     # usage: allocate [<name>] [<type>]
@@ -140,7 +140,7 @@ namespace eval turbine {
     }
 
     # get_void not provided as it wouldn't do anything
-    
+
     proc create_container { id subscript_type } {
         log "create_container: <$id>\[$subscript_type\]"
         adlb::create $id $adlb::CONTAINER $subscript_type
