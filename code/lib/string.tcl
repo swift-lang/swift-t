@@ -47,9 +47,13 @@ namespace eval turbine {
         set first_val [ get $first ]
         set len_val   [ get $len ]
 
-        set last [ expr $first_val + $len_val - 1 ]
-        set result_val [ string range $str_val $first_val $last ]
+        set result_val [ substring_impl $str_val $first_val $len_val ]
         set_string $result $result_val
+    }
+
+    proc substring_impl { str first len } {
+        set last [ expr $first + $len - 1 ]
+        return [ string range $str $first $last ]
     }
 
     proc strcat { parent c inputs } {
