@@ -17,12 +17,17 @@ export MPI_LIB=@USE_MPI_LIB_DIR@
 # export LD_LIBRARY_PATH=${MPI}/lib:${LD_LIBRARY_PATH}
 # export LD_LIBRARY_PATH=${MPI_LIB}:${LD_LIBRARY_PATH}
 
-export TCLLIBPATH=${TURBINE_HOME}/lib
+TCLLIBPATH=
+if [[ -n ${TURBINE_USER_LIB} ]] ; then
+  TCLLIBPATH="${TURBINE_USER_LIB} "
+fi
+TCLLIBPATH+="${TURBINE_HOME}/lib"
+export TCLLIBPATH
 
 # The default Tcl installation has executable "tclsh8.5",
 # but we prefer one named "tclsh"
 for tcl in ${TCL}/bin/{tclsh,tclsh8.5}
- do
+do
  if [[ -x ${tcl} ]]
    then
    export TCLSH=${tcl}
