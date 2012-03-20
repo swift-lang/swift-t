@@ -499,4 +499,92 @@ namespace eval turbine {
         # If we get out of loop, we're done
         set_integer $result $accum
     }
+    
+    
+    # calculate mean of an array of floats
+    proc avg_float { parent result container } {
+        set NULL 0
+        stats_impl $container $NULL $result $NULL $NULL $NULL $NULL
+    }
+    
+    # calculate mean of an array of floats
+    proc std_float { parent result container } {
+        set NULL 0
+        stats_impl $container $NULL $NULL $NULL $result $NULL $NULL
+    }
+
+    proc stats_impl { container sum_out mean_out samp_std_out pop_std_out\
+                    max_out min_out } {
+        set rule_id [ rule_new ]
+        rule $rule_id "avg-$rule_id" $container "" \
+            "tp: stats_body $container $sum_out $mean_out $samp_std_out\
+             $pop_std_out $max_out $min_out 0.0 0.0 0.0 0.0 0.0 0"
+    }
+
+    # Calculate mean, standard deviation, max, min for array of float or int
+    proc stats_body { container sum_out mean_out samp_std_out pop_std_out\
+                    max_out min_out sum_accum mean_accum std_accum min_accum\
+                    max_accum next_index } {
+        debug "stats_body $container"
+        set keys [ container_list $container ]
+        # TODO: could divide and conquer instead of doing linear search
+        set n [ llength $keys ]
+        set i $next_index
+        while { $i < $n } {
+            set key [ lindex $keys $i ]
+            set turbine_id [ container_get $container $key ]
+            #puts "turbine_id: $turbine_id"
+            if { [ adlb::exists $turbine_id ] } {
+                # retrieve value and make sure its floating point
+                # so we don't get surprised by integer division
+                set x [ get $turbine_id ]
+                set x [ expr double($x) ]
+                puts "c\[$key\] = $x"
+                if { $sum_out != 0 } {
+                    # avoid potential of overflow
+                    set sum_accum [ expr $sum_account $x ]
+                }
+                set min_accum [ expr min($min_accum, $x) ]
+                set max_accum [ expr max($max_accum, $x) ]
+                # Note: use knuth's online algorithm for mean and std
+                set delta [ expr $x - $mean_accum ]
+                set mean_accum [ expr $mean_accum + ( $delta / ($i + 1) ) ]
+                puts "mean_accum = $mean_accum"
+                set std_accum [ expr $std_accum + $delta*($x - $mean_accum)]
+                incr i
+            } else {
+                # block until the next turbine id is finished,
+                #   then continue running
+                set rule_id [ rule_new ]
+                rule $rule_id "sum-$rule_id" $turbine_id "" \
+                    "tp: sum_integer_body $stack $container $sum_out 
+                         $mean_out \
+                         $samp_std_out $pop_std_out $max_out $min_out \
+                         $sum_accum $mean_accum $std_accum \
+                         $min_accum $max_accum $next_index"
+                # return immediately without setting result
+                return
+            }
+        }
+        # If we get out of loop, we're done
+        if { $mean_out != 0 } {
+            set_float $mean_out $mean_accum
+        }
+        
+        if { $min_out != 0 } {
+            set_float $min_out $min_accum
+        }
+        
+        if { $max_out != 0 } {
+            set_float $max_out $max_accum
+        }
+
+        if { $samp_std_out != 0 } {
+            set_float $samp_std_out [ expr sqrt($std_accum / ($n - 1)) ]
+        }
+
+        if { $pop_std_out != 0 } {
+            set_float $pop_std_out [ expr sqrt($std_accum / $n) ]
+        }
+    }
 }
