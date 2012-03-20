@@ -102,5 +102,8 @@
 (float res) std_float(float arr[]) "turbine" "0.0.2" "std_float";
 (float res) std_integer(int arr[]) "turbine" "0.0.2" "std_float";
 
+(float mean, float std) stats_float(float arr[]) "turbine" "0.0.2" "stats_float";
+(float mean, float std) stats_integer(int arr[]) "turbine" "0.0.2" "stats_float";
+
 // Misc
 () assert(boolean condition, string msg) "turbine" "0.0.2" "assert";

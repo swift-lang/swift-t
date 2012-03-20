@@ -513,6 +513,13 @@ namespace eval turbine {
         stats_impl $container $NULL $NULL $NULL $result $NULL $NULL
     }
 
+    proc stats_float { parent outputs container } {
+        set NULL 0
+        set mean [ lindex $outputs 0 ]
+        set std [ lindex $outputs 1 ]
+        stats_impl $container $NULL $mean $NULL $std $NULL $NULL
+    }
+
     proc stats_impl { container sum_out mean_out samp_std_out pop_std_out\
                     max_out min_out } {
         set rule_id [ rule_new ]
