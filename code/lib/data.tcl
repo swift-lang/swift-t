@@ -131,12 +131,14 @@ namespace eval turbine {
 
     proc create_void { id } {
         debug "create_void: <$id>"
-        error "create_void not implemented"
+        # TODO: for now emulate void with integer
+        adlb::create $id $adlb::INTEGER
     }
 
     proc set_void { id } {
         debug "set_void: <$id>"
-        error "set_void not implemented"
+        # TODO: for now emulate void with integer
+        close_dataset $id $adlb::INTEGER 12345
     }
 
     # get_void not provided as it wouldn't do anything
