@@ -44,7 +44,6 @@
 (int o) floor           (float i) "turbine"  "0.0.2" "floor";
 (int o) ceil            (float i) "turbine"  "0.0.2" "ceil";
 (int o) round           (float i) "turbine"  "0.0.2" "round";
-(float o) inttofloat    (int i) "turbine"  "0.0.2" "inttofloat";
 (float o) log           (float i) "turbine"  "0.0.2" "log_e";
 (float o) exp           (float i) "turbine"  "0.0.2" "exp";
 (float o) sqrt          (float i) "turbine"  "0.0.2" "sqrt";
@@ -88,6 +87,7 @@
 // Type conversion
 (string o) fromint(int i)  "turbine" "0.0.2" "fromint";
 (int o)    toint(string i) "turbine" "0.0.2" "toint";
+(float o) itof    (int i) "turbine"  "0.0.2" "itof";
 
 // I/O
 () trace (...) "turbine" "0.0.2" "trace";

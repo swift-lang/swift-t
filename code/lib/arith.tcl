@@ -365,13 +365,13 @@ namespace eval turbine {
         set_integer $c $c_value
     }
 
-    proc inttofloat { parent c a } {
+    proc itof { parent c a } {
         set rule_id [ rule_new ]
         rule $rule_id "itf-$a" "$a" $c \
-            "tl: inttofloat_body $parent $c $a"
+            "tl: itof_body $parent $c $a"
     }
 
-    proc inttofloat_body { parent c a } {
+    proc itof_body { parent c a } {
         set a_value [ get_integer $a ]
         set_float $c $a_value
     }
