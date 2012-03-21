@@ -3,32 +3,40 @@ namespace eval turbine {
 
     namespace export start
 
-    proc start { rules } {
+    proc start { args } {
 
 	variable stats
 	dict set stats tasks_run 0
 
-        if { [ catch { enter_mode $rules } e ] } {
+        set rules [ lindex $args 0 ]
+        if { [ llength $args ] > 1 } {
+            set engine_startup [ lindex $args 1 ]
+        } else {
+            set engine_startup ""
+        }
+
+        if { [ catch { enter_mode $rules $engine_startup } e ] } {
             abort $e
         }
     }
 
-    proc enter_mode { rules } {
+    proc enter_mode { rules engine_startup } {
 
         variable mode
         switch $mode {
-            ENGINE  { engine $rules }
+            ENGINE  { engine $rules $engine_startup }
             SERVER  { adlb::server }
             WORKER  { worker }
             default { error "UNKNOWN MODE: $mode" }
         }
     }
 
-    proc engine { rules } {
+    proc engine { rules startup } {
 
         global WORK_TYPE
 
         debug "TURBINE ENGINE..."
+        ::eval $startup
         if { [ adlb::rank ] == 0 } {
             ::eval $rules
         }
