@@ -520,16 +520,6 @@ namespace eval turbine {
         stats_impl $container $NULL $NULL $mean $NULL $NULL $std $NULL $NULL
     }
 
-    # take a container of PartialStats and summarize them
-    proc stat_combine { parent outputs container } {
-        error "stat_combine not implemented"
-        # TODO: combine:
-        #       n' := n1 + n2
-        #       mean' := (mean1 * n1 + mean2 * n2) / ( n1 + n2)
-        #       diff := mean2 - mean1
-        #       M2' := M2_1 + M2_2 + diff^2 * ( n1*n2 / (n1 + n2))
-    }
-
     proc statagg_float { parent outputs container } {
         set NULL 0
         set n [ lindex $outputs 0 ]
@@ -544,84 +534,173 @@ namespace eval turbine {
         rule "stats-body-$container" $container $turbine::LOCAL \
             "stats_body $container $n_out $sum_out $mean_out $M2_out \
              $samp_std_out $pop_std_out $max_out $min_out \
-             0.0 0.0 0.0 0.0 0.0 0"
+             0.0 0.0 0.0 NOMIN NOMAX 0"
     }
 
     # Calculate mean, standard deviation, max, min for array of float or int
     proc stats_body { container n_out sum_out mean_out M2_out \
-                    samp_std_out pop_std_out\
-                    max_out min_out sum_accum mean_accum std_accum min_accum\
-                    max_accum next_index } {
-        debug "stats_body $container"
-        set keys [ container_list $container ]
-        # TODO: could divide and conquer instead of doing linear search
-        set n [ llength $keys ]
-        set i $next_index
-        while { $i < $n } {
-            set key [ lindex $keys $i ]
-            set turbine_id [ container_get $container $key ]
-            #puts "turbine_id: $turbine_id"
-            if { [ adlb::exists $turbine_id ] } {
-                # retrieve value and make sure its floating point
-                # so we don't get surprised by integer division
-                set x [ get $turbine_id ]
-                set x [ expr double($x) ]
-                puts "c\[$key\] = $x"
-                if { $sum_out != 0 } {
-                    # avoid potential of overflow
-                    set sum_accum [ expr $sum_account $x ]
-                }
-                set min_accum [ expr min($min_accum, $x) ]
-                set max_accum [ expr max($max_accum, $x) ]
-                # Note: use knuth's online algorithm for mean and std
-                set delta [ expr $x - $mean_accum ]
-                set mean_accum [ expr $mean_accum + ( $delta / ($i + 1) ) ]
-                puts "mean_accum = $mean_accum"
-                set std_accum [ expr $std_accum + $delta*($x - $mean_accum)]
-                incr i
-            } else {
-                # block until the next turbine id is finished then continue running
-                rule "stats_body-$container" $turbine_id $turbine::LOCAL \
-                    "stats_body $stack $container $n_out $sum_out \
-                         $mean_out $M2_out \
-                         $samp_std_out $pop_std_out $max_out $min_out \
-                         $sum_accum $mean_accum $std_accum \
-                         $min_accum $max_accum $next_index"
-                # return immediately without setting result
-                return
-            }
+                samp_std_out pop_std_out\
+                max_out min_out sum_accum mean_accum std_accum min_accum\
+                max_accum next_index } {
+      debug "stats_body $container"
+      set keys [ container_list $container ]
+      # TODO: could divide and conquer instead of doing linear search
+      set n [ llength $keys ]
+      set i $next_index
+      while { $i < $n } {
+        set key [ lindex $keys $i ]
+        set turbine_id [ container_get $container $key ]
+        #puts "turbine_id: $turbine_id"
+        if { [ adlb::exists $turbine_id ] } {
+          # retrieve value and make sure it's floating point
+          # so we don't get surprised by integer division
+          set x [ get $turbine_id ]
+          set x [ expr double($x) ]
+          puts "c\[$key\] = $x"
+          if { $sum_out != 0 } {
+            # avoid potential of overflow
+            set sum_accum [ expr $sum_accum $x ]
+          }
+          if { $min_accum == {NOMIN} } {
+            set min_accum $x
+          } else {
+            set min_accum [ expr min($min_accum, $x) ]
+          }
+          if { $max_accum == {NOMAX} } {
+            set max_accum $x
+          } else {
+            set max_accum [ expr max($max_accum, $x) ]
+          }
+          # Note: use knuth's online algorithm for mean and std
+          set delta [ expr $x - $mean_accum ]
+          set mean_accum [ expr $mean_accum + ( $delta / ($i + 1) ) ]
+          puts "mean_accum = $mean_accum"
+          set std_accum [ expr $std_accum + $delta*($x - $mean_accum)]
+          incr i
+        } else {
+          # block until the next turbine id is finished then continue running
+          rule "stats_body-$container" $turbine_id $turbine::LOCAL \
+            "stats_body $stack $container $n_out $sum_out \
+               $mean_out $M2_out \
+               $samp_std_out $pop_std_out $max_out $min_out \
+               $sum_accum $mean_accum $std_accum \
+               $min_accum $max_accum $next_index"
+          # return immediately without setting result
+          return
         }
-        # If we get out of loop, we're done
-        if { $n_out != 0 } {
-            set_float $n_out $n
-        }
+      }
+      # If we get out of loop, we're done
+      if { $n_out != 0 } {
+        set_float $n_out $n
+      }
 
-        if { $sum_out != 0 } {
-            set_float $sum_out $sum_accum
-        }
+      if { $sum_out != 0 } {
+        set_float $sum_out $sum_accum
+      }
 
-        if { $mean_out != 0 } {
-            set_float $mean_out $mean_accum
+      if { $mean_out != 0 } {
+        if { $n == 0 } {
+          error "calculating mean of empty array <$container>"
         }
+        set_float $mean_out $mean_accum
+      }
+      
+      if { $min_out != 0 } {
+        if { $n == 0 } {
+          error "calculating min of empty array <$container>"
+        }
+        set_float $min_out $min_accum
+      }
+      
+      if { $max_out != 0 } {
+        if { $n == 0 } {
+          error "calculating max of empty array <$container>"
+        }
+        set_float $max_out $max_accum
+      }
+      
+      if { $M2_out != 0 } {
+        set_float $M2_out $std_accum
+      }
 
-        if { $min_out != 0 } {
-            set_float $min_out $min_accum
+      if { $samp_std_out != 0 } {
+        if { $n == 0 } {
+          error "calculating stddev of empty array <$container>"
         }
+        set_float $samp_std_out [ expr sqrt($std_accum / ($n - 1)) ]
+      }
 
-        if { $max_out != 0 } {
-            set_float $max_out $max_accum
+      if { $pop_std_out != 0 } {
+        if { $n == 0 } {
+          error "calculating stddev of empty array <$container>"
         }
-        
-        if { $M2_out != 0 } {
-            set_float $M2_out $std_accum
-        }
+        set_float $pop_std_out [ expr sqrt($std_accum / $n) ]
+      }
+    }
 
-        if { $samp_std_out != 0 } {
-            set_float $samp_std_out [ expr sqrt($std_accum / ($n - 1)) ]
-        }
 
-        if { $pop_std_out != 0 } {
-            set_float $pop_std_out [ expr sqrt($std_accum / $n) ]
+    # take a container of PartialStats and summarize them
+    # outputs are mean, stddev
+    # note: we return population std dev
+    proc stat_combine { parent outputs container } {
+      set n_out [ lindex $outputs 0 ]
+      set mean_out [ lindex $outputs 1 ]
+      set std_out [ lindex $outputs 2 ]
+      set rule_id [ rule_new ]
+      rule $rule_id "stats-combine-$container" $container \
+              "tp: stat_combine_body $n_out $mean_out $std_out \
+              0 0.0 0.0 0"
+    }
+
+    proc stat_combine_body { n_out mean_out std_out count_accum mean_accum 
+                    M2_accum next_index } {
+      set keys [ container_list $container ]
+      set n [ llength $keys ]
+      set i $next_index
+      while { $i < $n } {
+        set key [ lindex $keys $i ]
+        set struct [ container_get $container $key ]
+        # struct should be closed
+        set n_id [ container_get $struct "n" ]
+        set mean_id [ container_get $struct "mean" ]
+        set M2_id [ container_get $struct "M2" ]
+        if { [ adlb::exists $n_id ] && [ adlb::exists $mean_id ] 
+          && [ adlb::exists $M2_id ] } {
+          set n [ get_integer $n_id ]
+          set mean [ get_float $mean_id ]
+          set M2 [ get_float $M2_id ]
+          if { $i > 0 } { 
+            # combine statistics
+            # weighted mean
+            # mean' := (mean1 * n1 + mean2 * n2) / ( n1 + n2)
+            set mean_accum [ expr ( $mean_accum * $n_accum + 
+                                $mean * $n) / double( $n_accum + $n )
+            #  diff := mean2 - mean1
+            set diff [ $mean - $mean_accum ] 
+            # M2' := M2_1 + M2_2 + diff^2 * ( n1*n2 / (n1 + n2))
+            set M2_accum [ expr $M2_accum + $M2 +
+                          ($diff**2) * ($n_accum * $n / ($n_accum + $n)) ]
+            # n' := n1 + n2
+            set n_accum [ expr $n_accum + $n ]
+
+          } else {
+            set n_accum $n
+            set mean_accum $mean
+            set M2_accum $M2
+          }
+        } else {
+          set rule_id [ rule_new ]
+          rule $rule_id "stats-combine-$container" 
+            [ list $n_id $mean_id $M2_id ] \
+            "tp: stat_combine_body $n_out $mean_out $std_out \
+              $count_accum $mean_accum $M2_accum $i"
         }
+      }
+      if { $n_accum == 0 } {
+        error "mean and standard deviation not defined for sample size 0"
+      }
+      set_integer $n_out $n_accum
+      set_float $mean_out $mean_accum
+      set_float $std_out [ expr sqrt($M2_accum / (double($n))) ]
     }
 }

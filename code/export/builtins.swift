@@ -110,12 +110,12 @@
 
 // Aggregate partial statistics
 type PartialStats {
-  float n; /* number of samples */
+  int n; /* number of samples */
   float mean;
   float M2; /* Variance * n_samples */
 }
-(float n, float mean, float M2) statagg_float(float arr[]) "turbine" "0.0.2" "statagg_float";
-(float mean, float std) stat_combine(PartialStats arr[]) "turbine" "0.0.2" "stat_combine";
+(int n, float mean, float M2) statagg_float(float arr[]) "turbine" "0.0.2" "statagg_float";
+(int n, float mean, float std) stat_combine(PartialStats arr[]) "turbine" "0.0.2" "stat_combine";
 
 // Misc
 () assert(boolean condition, string msg) "turbine" "0.0.2" "assert";
