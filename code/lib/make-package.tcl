@@ -15,4 +15,5 @@ puts [ ::pkg::create -name turbine -version $turbine_version \
        -source arith.tcl \
        -source container.tcl \
        -source rand.tcl      \
+       -source io.tcl      \
        -source helpers.tcl ]

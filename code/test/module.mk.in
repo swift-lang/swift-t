@@ -37,17 +37,4 @@ TEST_SRC_TCL := $(DIR)/adlb-noop.tcl         \
                 $(DIR)/readdata.tcl          \
                 $(DIR)/range.tcl             \
                 $(DIR)/drange.tcl            \
-                $(DIR)/noop2.tcl
-
-                # $(DIR)/arithmetic.tcl        \
-                # $(DIR)/arithmetic2.tcl       \
-
-
-#                 $(DIR)/container-close-2.tcl \
-
-
-# FUTURE WORK:
-#                $(DIR)/diamond4.tcl
-#                $(DIR)/modftdock.tcl
-
-#                 $(DIR)/2Darray-3.tcl        ???
+                $(DIR)/printf.tcl
