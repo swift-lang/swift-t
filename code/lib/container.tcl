@@ -540,7 +540,7 @@ namespace eval turbine {
     # Calculate mean, standard deviation, max, min for array of float or int
     proc stats_body { container n_out sum_out mean_out M2_out \
                 samp_std_out pop_std_out\
-                max_out min_out sum_accum mean_accum std_accum min_accum\
+                max_out min_out sum_accum mean_accum M2_accum min_accum\
                 max_accum next_index } {
       debug "stats_body $container"
       set keys [ container_list $container ]
@@ -575,15 +575,15 @@ namespace eval turbine {
           set delta [ expr $x - $mean_accum ]
           set mean_accum [ expr $mean_accum + ( $delta / ($i + 1) ) ]
           puts "mean_accum = $mean_accum"
-          set std_accum [ expr $std_accum + $delta*($x - $mean_accum)]
+          set M2_accum [ expr $M2_accum + $delta*($x - $mean_accum)]
           incr i
         } else {
           # block until the next turbine id is finished then continue running
           rule "stats_body-$container" $turbine_id $turbine::LOCAL \
-            "stats_body $stack $container $n_out $sum_out \
+            "stats_body $container $n_out $sum_out \
                $mean_out $M2_out \
                $samp_std_out $pop_std_out $max_out $min_out \
-               $sum_accum $mean_accum $std_accum \
+               $sum_accum $mean_accum $M2_accum \
                $min_accum $max_accum $next_index"
           # return immediately without setting result
           return
@@ -591,7 +591,8 @@ namespace eval turbine {
       }
       # If we get out of loop, we're done
       if { $n_out != 0 } {
-        set_float $n_out $n
+        puts "DEBUG n = $n n_out = $n_out"
+        set_integer $n_out $n
       }
 
       if { $sum_out != 0 } {
@@ -620,21 +621,21 @@ namespace eval turbine {
       }
       
       if { $M2_out != 0 } {
-        set_float $M2_out $std_accum
+        set_float $M2_out $M2_accum
       }
 
       if { $samp_std_out != 0 } {
         if { $n == 0 } {
           error "calculating stddev of empty array <$container>"
         }
-        set_float $samp_std_out [ expr sqrt($std_accum / ($n - 1)) ]
+        set_float $samp_std_out [ expr sqrt($M2_accum / ($n - 1)) ]
       }
 
       if { $pop_std_out != 0 } {
         if { $n == 0 } {
           error "calculating stddev of empty array <$container>"
         }
-        set_float $pop_std_out [ expr sqrt($std_accum / $n) ]
+        set_float $pop_std_out [ expr sqrt($M2_accum / $n) ]
       }
     }
 

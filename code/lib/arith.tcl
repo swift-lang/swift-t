@@ -365,7 +365,7 @@ namespace eval turbine {
 
     proc itof { parent c a } {
         rule "itf-$a" "$a" $turbine::LOCAL \
-            "inttofloat_body $parent $c $a"
+            "itof_body $parent $c $a"
     }
 
     proc itof_body { parent c a } {
