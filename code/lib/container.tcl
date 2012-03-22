@@ -504,32 +504,52 @@ namespace eval turbine {
     # calculate mean of an array of floats
     proc avg_float { parent result container } {
         set NULL 0
-        stats_impl $container $NULL $result $NULL $NULL $NULL $NULL
+        stats_impl $container $NULL $NULL $result $NULL $NULL $NULL $NULL $NULL
     }
 
     # calculate mean of an array of floats
     proc std_float { parent result container } {
         set NULL 0
-        stats_impl $container $NULL $NULL $NULL $result $NULL $NULL
+        stats_impl $container $NULL $NULL $NULL $NULL $NULL $result $NULL $NULL
     }
 
     proc stats_float { parent outputs container } {
         set NULL 0
         set mean [ lindex $outputs 0 ]
         set std [ lindex $outputs 1 ]
-        stats_impl $container $NULL $mean $NULL $std $NULL $NULL
+        stats_impl $container $NULL $NULL $mean $NULL $NULL $std $NULL $NULL
     }
 
-    proc stats_impl { container sum_out mean_out samp_std_out pop_std_out\
-                    max_out min_out } {
+    # take a container of PartialStats and summarize them
+    proc stat_combine { parent outputs container } {
+        error "stat_combine not implemented"
+        # TODO: combine:
+        #       n' := n1 + n2
+        #       mean' := (mean1 * n1 + mean2 * n2) / ( n1 + n2)
+        #       diff := mean2 - mean1
+        #       M2' := M2_1 + M2_2 + diff^2 * ( n1*n2 / (n1 + n2))
+    }
 
-        rule "avg-$container" $container $turbine::LOCAL \
-            "stats_body $container $sum_out $mean_out $samp_std_out\
-             $pop_std_out $max_out $min_out 0.0 0.0 0.0 0.0 0.0 0"
+    proc statagg_float { parent outputs container } {
+        set NULL 0
+        set n [ lindex $outputs 0 ]
+        set mean [ lindex $outputs 1 ]
+        set M2 [ lindex $outputs 2 ]
+        stats_impl $container $n $NULL $mean $M2 $NULL $NULL $NULL $NULL
+    }
+
+    proc stats_impl { container n_out sum_out mean_out M2_out \
+                    samp_std_out pop_std_out\
+                    max_out min_out } {
+        rule "stats-body-$container" $container $turbine::LOCAL \
+            "stats_body $container $n_out $sum_out $mean_out $M2_out \
+             $samp_std_out $pop_std_out $max_out $min_out \
+             0.0 0.0 0.0 0.0 0.0 0"
     }
 
     # Calculate mean, standard deviation, max, min for array of float or int
-    proc stats_body { container sum_out mean_out samp_std_out pop_std_out\
+    proc stats_body { container n_out sum_out mean_out M2_out \
+                    samp_std_out pop_std_out\
                     max_out min_out sum_accum mean_accum std_accum min_accum\
                     max_accum next_index } {
         debug "stats_body $container"
@@ -560,12 +580,10 @@ namespace eval turbine {
                 set std_accum [ expr $std_accum + $delta*($x - $mean_accum)]
                 incr i
             } else {
-                # block until the next turbine id is finished,
-                #   then continue running
-
-                rule "sum-$container" $turbine_id $turbine::LOCAL \
-                    "stats_body $stack $container $sum_out
-                         $mean_out \
+                # block until the next turbine id is finished then continue running
+                rule "stats_body-$container" $turbine_id $turbine::LOCAL \
+                    "stats_body $stack $container $n_out $sum_out \
+                         $mean_out $M2_out \
                          $samp_std_out $pop_std_out $max_out $min_out \
                          $sum_accum $mean_accum $std_accum \
                          $min_accum $max_accum $next_index"
@@ -574,6 +592,14 @@ namespace eval turbine {
             }
         }
         # If we get out of loop, we're done
+        if { $n_out != 0 } {
+            set_float $n_out $n
+        }
+
+        if { $sum_out != 0 } {
+            set_float $sum_out $sum_accum
+        }
+
         if { $mean_out != 0 } {
             set_float $mean_out $mean_accum
         }
@@ -584,6 +610,10 @@ namespace eval turbine {
 
         if { $max_out != 0 } {
             set_float $max_out $max_accum
+        }
+        
+        if { $M2_out != 0 } {
+            set_float $M2_out $std_accum
         }
 
         if { $samp_std_out != 0 } {

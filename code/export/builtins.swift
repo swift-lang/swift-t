@@ -95,15 +95,27 @@
 // Container operations
 (int res[]) range(int start, int end) "turbine" "0.0.2" "range";
 (int res[]) rangestep(int start, int end, int step) "turbine" "0.0.2" "rangestep";
+
+
+// Container aggregate functions
 (int res) sum_integer(int arr[]) "turbine" "0.0.2" "sum_integer";
 (float res) avg_float(float arr[]) "turbine" "0.0.2" "avg_float";
 (float res) avg_integer(int arr[]) "turbine" "0.0.2" "avg_float";
 // Population standard deviation
 (float res) std_float(float arr[]) "turbine" "0.0.2" "std_float";
 (float res) std_integer(int arr[]) "turbine" "0.0.2" "std_float";
-
 (float mean, float std) stats_float(float arr[]) "turbine" "0.0.2" "stats_float";
 (float mean, float std) stats_integer(int arr[]) "turbine" "0.0.2" "stats_float";
+
+
+// Aggregate partial statistics
+type PartialStats {
+  float n; /* number of samples */
+  float mean;
+  float M2; /* Variance * n_samples */
+}
+(float n, float mean, float M2) statagg_float(float arr[]) "turbine" "0.0.2" "statagg_float";
+(float mean, float std) stat_combine(PartialStats arr[]) "turbine" "0.0.2" "stat_combine";
 
 // Misc
 () assert(boolean condition, string msg) "turbine" "0.0.2" "assert";
