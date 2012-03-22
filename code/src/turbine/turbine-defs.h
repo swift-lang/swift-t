@@ -18,7 +18,6 @@ typedef enum
   TD_SET = ADLB_DATA_SET
 } turbine_status;
 
-// This enum must be kept in the same order as adlb_type
 typedef enum
 {
   TURBINE_TYPE_NULL = 0,
@@ -30,15 +29,8 @@ typedef enum
   TURBINE_TYPE_CONTAINER = ADLB_DATA_TYPE_CONTAINER
 } turbine_type;
 
-typedef enum
-{
-  TURBINE_ENTRY_KEY   = ADLB_DATA_ENTRY_KEY,
-  TURBINE_ENTRY_FIELD = ADLB_DATA_ENTRY_FIELD
-} turbine_entry_mode;
-
 typedef struct
 {
-  turbine_entry_mode type;
   char* name;
 } turbine_entry;
 
@@ -55,7 +47,6 @@ typedef struct
     } file;
     struct
     {
-      turbine_entry_mode mode;
       /** type of container keys */
       turbine_type type;
       struct list members;
@@ -97,13 +88,23 @@ typedef enum
   /** Attempt to read/write ID_NULL */
   TURBINE_ERROR_NULL = ADLB_DATA_ERROR_NULL,
   /** Attempt to operate on wrong data type */
-    TURBINE_ERROR_TYPE = ADLB_DATA_ERROR_TYPE,
+  TURBINE_ERROR_TYPE = ADLB_DATA_ERROR_TYPE,
+  /** Turbine function given insufficient output storage */
+  TURBINE_ERROR_STORAGE,
   /** Unknown error */
   TURBINE_ERROR_UNKNOWN = ADLB_DATA_ERROR_UNKNOWN,
 } turbine_code;
 
 #define TURBINE_ID_NULL        ADLB_DATA_ID_NULL
+
+/**
+   The maximal string length of a container subscript
+ */
 #define TURBINE_SUBSCRIPT_MAX  ADLB_DATA_SUBSCRIPT_MAX
+
+/**
+   The maximal length of a datum (string, blob, etc.)
+ */
 #define TURBINE_DATA_MAX       ADLB_DATA_MAX
 
 #define turbine_string_totype adlb_data_string_totype

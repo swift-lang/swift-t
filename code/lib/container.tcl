@@ -13,9 +13,9 @@ namespace eval turbine {
     proc container_f_get_integer { parent d inputs } {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "container_f_get-$c-$i" $i $d \
-            "tl: turbine::container_f_get_integer_body $d $c $i"
+
+        rule "container_f_get-$c-$i" $i $turbine::LOCAL \
+            "turbine::container_f_get_integer_body $d $c $i"
     }
 
     proc container_f_get_integer_body { d c i } {
@@ -40,9 +40,9 @@ namespace eval turbine {
         set d [ lindex $inputs 2 ]
         nonempty c i d
         adlb::slot_create $c
-        set rule_id [ rule_new ]
-        rule $rule_id "container_f_insert-$c-$i" $i "" \
-            "tp: turbine::container_f_insert_body $c $i $d"
+
+        rule "container_f_insert-$c-$i" $i $turbine::LOCAL \
+            "turbine::container_f_insert_body $c $i $d"
     }
 
     proc container_f_insert_body { c i d } {
@@ -61,9 +61,9 @@ namespace eval turbine {
 
         nonempty c i r
         adlb::slot_create $c
-        set rule_id [ rule_new ]
-        rule $rule_id "container_f_deref_insert-$c-$i" "$i $r" "" \
-            "tp: turbine::container_f_deref_insert_body $c $i $r"
+
+        rule "container_f_deref_insert-$c-$i" "$i $r" $turbine::LOCAL \
+            "turbine::container_f_deref_insert_body $c $i $r"
     }
 
     proc container_f_deref_insert_body { c i r } {
@@ -84,9 +84,9 @@ namespace eval turbine {
 
         nonempty c i r
         adlb::slot_create $c
-        set rule_id [ rule_new ]
-        rule $rule_id "container_deref_insert-$c-$i" "$r" "" \
-            "tp: turbine::container_deref_insert_body $c $i $r"
+
+        rule "container_deref_insert-$c-$i" "$r" $turbine::LOCAL \
+            "turbine::container_deref_insert_body $c $i $r"
     }
 
     proc container_deref_insert_body { c i r } {
@@ -117,9 +117,9 @@ namespace eval turbine {
         set i [ lindex $inputs 1 ]
         set r [ lindex $inputs 2 ]
         # nonempty c i r
-        set rule_id [ rule_new ]
-        rule $rule_id "f_reference_body-$c-$i" $i "" \
-            "tp: turbine::f_reference_body $c $i $r"
+
+        rule "f_reference_body-$c-$i" $i $turbine::LOCAL \
+            "turbine::f_reference_body $c $i $r"
     }
     proc f_reference_body { c i r } {
         set t1 [ get $i ]
@@ -128,9 +128,9 @@ namespace eval turbine {
 
     # When reference r is closed, copy its (integer) value in v
     proc f_dereference_integer { parent v r } {
-        set rule_id [ rule_new ]
-        rule $rule_id "f_dereference-$v-$r" $r $v \
-            "tp: turbine::f_dereference_integer_body $v $r"
+
+        rule "f_dereference-$v-$r" $r $turbine::LOCAL \
+            "turbine::f_dereference_integer_body $v $r"
     }
     proc f_dereference_integer_body { v r } {
         # Get the TD from the reference
@@ -141,9 +141,9 @@ namespace eval turbine {
 
     # When reference r is closed, copy its (float) value into v
     proc f_dereference_float { parent v r } {
-        set rule_id [ rule_new ]
-        rule $rule_id "f_dereference-$v-$r" $r $v \
-            "tp: turbine::f_dereference_float_body $v $r"
+
+        rule "f_dereference-$v-$r" $r $turbine::LOCAL \
+            "turbine::f_dereference_float_body $v $r"
     }
 
     proc f_dereference_float_body { v r } {
@@ -155,9 +155,9 @@ namespace eval turbine {
 
     # When reference r is closed, copy its (string) value into v
     proc f_dereference_string { parent v r } {
-        set rule_id [ rule_new ]
-        rule $rule_id "f_dereference-$v-$r" $r $v \
-            "tp: turbine::f_dereference_string_body $v $r"
+
+        rule "f_dereference-$v-$r" $r $turbine::LOCAL \
+            "turbine::f_dereference_string_body $v $r"
     }
     proc f_dereference_string_body { v r } {
         # Get the TD from the reference
@@ -176,9 +176,9 @@ namespace eval turbine {
         set cr [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set d [ lindex $inputs 2 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "f_cref_lookup_literal-$cr" "$cr" "" \
-            "tp: turbine::f_cref_lookup_literal_body $cr $i $d"
+
+        rule "f_cref_lookup_literal-$cr" "$cr" $turbine::LOCAL \
+            "turbine::f_cref_lookup_literal_body $cr $i $d"
 
     }
 
@@ -198,9 +198,9 @@ namespace eval turbine {
         set cr [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set d [ lindex $inputs 2 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "f_cref_lookup-$cr" "$cr $i" "" \
-            "tp: turbine::f_cref_lookup_body $cr $i $d"
+
+        rule "f_cref_lookup-$cr" "$cr $i" $turbine::LOCAL \
+            "turbine::f_cref_lookup_body $cr $i $d"
     }
 
     proc f_cref_lookup_body { cr i d } {
@@ -222,9 +222,9 @@ namespace eval turbine {
         set d [ lindex $inputs 2 ]
         set oc [ lindex $inputs 3 ]
         adlb::slot_create $oc
-        set rule_id [ rule_new ]
-        rule $rule_id "f_cref_insert-$r-$j-$d-$oc" "$r $j" "" \
-            "tp: turbine::f_cref_insert_body $r $j $d $oc"
+
+        rule "f_cref_insert-$r-$j-$d-$oc" "$r $j" $turbine::LOCAL \
+            "turbine::f_cref_insert_body $r $j $d $oc"
     }
     proc f_cref_insert_body { r j d oc } {
         # s: The subscripted container
@@ -233,10 +233,10 @@ namespace eval turbine {
         container_insert $c $s $d
         adlb::slot_drop $oc
     }
-    
+
     # When reference cr on c[i] is closed, store c[i][j] = d
     # Blocks on cr, j must be a tcl integer
-    # oc is a direct handle to the top-level container 
+    # oc is a direct handle to the top-level container
     #       which cr will be inside
     # inputs: [ list r j d oc ]
     # outputs: ignored
@@ -246,9 +246,9 @@ namespace eval turbine {
         set d [ lindex $inputs 2 ]
         set oc [ lindex $inputs 3 ]
         adlb::slot_create $oc
-        set rule_id [ rule_new ]
-        rule $rule_id "cref_insert-$cr-$j-$d-$oc" "$cr" "" \
-            "tp: turbine::cref_insert_body $cr $j $d $oc"
+
+        rule "cref_insert-$cr-$j-$d-$oc" "$cr" $turbine::LOCAL \
+            "turbine::cref_insert_body $cr $j $d $oc"
     }
     proc cref_insert_body { cr j d oc } {
         set c [ get_integer $cr ]
@@ -256,18 +256,18 @@ namespace eval turbine {
         container_insert $c $j $d
         adlb::slot_drop $oc
     }
-    
+
     # j: tcl integer index
-    # oc: direct handle to outer container 
+    # oc: direct handle to outer container
     proc cref_deref_insert { parent outputs inputs } {
         set cr [ lindex $inputs 0 ]
         set j [ lindex $inputs 1 ]
         set dr [ lindex $inputs 2 ]
         set oc [ lindex $inputs 3 ]
         adlb::slot_create $oc
-        set rule_id [ rule_new ]
-        rule $rule_id "cref_deref_insert-$cr-$j-$dr-$oc" "$cr $dr" "" \
-            "tp: turbine::cref_deref_insert_body $cr $j $dr $oc"
+
+        rule "cref_deref_insert-$cr-$j-$dr-$oc" "$cr $dr" $turbine::LOCAL \
+            "turbine::cref_deref_insert_body $cr $j $dr $oc"
     }
     proc cref_deref_insert_body { cr j dr oc } {
         set c [ get_integer $cr ]
@@ -275,16 +275,16 @@ namespace eval turbine {
         container_insert $c $j $d
         adlb::slot_drop $oc
     }
-    
+
     proc cref_f_deref_insert { parent outputs inputs } {
         set cr [ lindex $inputs 0 ]
         set j [ lindex $inputs 1 ]
         set dr [ lindex $inputs 2 ]
         set oc [ lindex $inputs 3 ]
         adlb::slot_create $oc
-        set rule_id [ rule_new ]
-        rule $rule_id "cref_f_deref_insert-$cr-$j-$dr-$oc" "$cr $j $dr" "" \
-            "tp: turbine::cref_f_deref_insert_body $cr $j $dr $oc"
+
+        rule "cref_f_deref_insert-$cr-$j-$dr-$oc" "$cr $j $dr" $turbine::LOCAL \
+            "turbine::cref_f_deref_insert_body $cr $j $dr $oc"
     }
     proc cref_f_deref_insert_body { cr j dr oc } {
         set c [ get_integer $cr ]
@@ -298,9 +298,9 @@ namespace eval turbine {
     # Insert c[i][j] = d
     proc f_container_nested_insert { c i j d } {
 
-        set rule_id [ rule_new ]
-        rule $rule_id "fcni" "$i $j" "" \
-            "tp: f_container_nested_insert_body_1 $c $i $j $d"
+
+        rule "fcni" "$i $j" $turbine::LOCAL \
+            "f_container_nested_insert_body_1 $c $i $j $d"
     }
 
     proc f_container_nested_insert_body_1 { c i j d } {
@@ -313,9 +313,9 @@ namespace eval turbine {
         } else {
             allocate r integer
             container_reference $r $c $i
-            set rule_id [ rule_new ]
-            rule $rule_id fcnib "$r" "" \
-                "tp: container_nested_insert_body_2 $r $j $d"
+
+            rule fcnib "$r" $turbine::LOCAL \
+                "container_nested_insert_body_2 $r $j $d"
         }
     }
 
@@ -326,14 +326,14 @@ namespace eval turbine {
     proc container_create_nested { c i type } {
       debug "container_create_nested: $c\[$i\] $type"
       if [ adlb::insert_atomic $c $i ] {
-        debug "$c\[$i\] doesn't exist, creating" 
+        debug "$c\[$i\] doesn't exist, creating"
         # Member did not exist: create it and get reference
         allocate_container t $type
         adlb::insert $c $i $t
         # setup rule to close when outer container closes
-        set rule_id [ rule_new ]
-        rule $rule_id "autoclose-$c-$t" "$c" "" \
-               "tp: adlb::slot_drop $t"
+
+        rule "autoclose-$c-$t" "$c" $turbine::LOCAL \
+               "adlb::slot_drop $t"
         return $t
       } else {
         # Another engine is creating it right this second, poll
@@ -349,8 +349,8 @@ namespace eval turbine {
     }
 
     # puts a reference to a nested container at c[i]
-    # into reference variable r.  
-    # i: an integer future 
+    # into reference variable r.
+    # i: an integer future
     proc f_container_create_nested { r c i type } {
 
         upvar 1 $r v
@@ -359,9 +359,9 @@ namespace eval turbine {
         allocate tmp_r integer
         set v $tmp_r
 
-        set rule_id [ rule_new ]
-        rule $rule_id fccn "" "$i" \
-               "tp: f_container_create_nested_body $tmp_r $c $i $type"
+
+        rule fccn "$i" $turbine::LOCAL \
+               "f_container_create_nested_body $tmp_r $c $i $type"
     }
 
 
@@ -385,9 +385,9 @@ namespace eval turbine {
         allocate tmp_r integer
         set v $tmp_r
 
-        set rule_id [ rule_new ]
-        rule $rule_id fcrcn "" "$cr" \
-           "tp: cref_create_nested_body $tmp_r $cr $i $type"
+
+        rule fcrcn "$cr" $turbine::LOCAL \
+           "cref_create_nested_body $tmp_r $cr $i $type"
     }
 
     proc cref_create_nested_body { r cr i type } {
@@ -405,9 +405,9 @@ namespace eval turbine {
         allocate tmp_r integer
         set v $tmp_r
 
-        set rule_id [ rule_new ]
-        rule $rule_id fcrcn "" "$cr $i" \
-           "tp: f_cref_create_nested_body $tmp_r $cr $i $type"
+
+        rule fcrcn "$cr $i" $turbine::LOCAL \
+           "f_cref_create_nested_body $tmp_r $cr $i $type"
     }
 
     proc f_cref_create_nested_body { r cr i type } {
@@ -448,9 +448,9 @@ namespace eval turbine {
     # container: The container to read
     # result: An initialized string
     proc enumerate { stack result container } {
-        set rule_id [ rule_new ]
-        rule $rule_id "enumerate-$container" $container $result \
-            "tp: enumerate_body $result $container"
+
+        rule "enumerate-$container" $container $turbine::LOCAL \
+            "enumerate_body $result $container"
     }
 
     proc enumerate_body { result container } {
@@ -464,9 +464,9 @@ namespace eval turbine {
     # r: the turbine id to store the sum into
     proc sum_integer { stack result inputs } {
         set container [ lindex $inputs 0 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "sum-$rule_id" $container "" \
-            "tp: sum_integer_body $stack $container $result 0 0"
+
+        rule "sum-$container" $container $turbine::LOCAL \
+            "sum_integer_body $stack $container $result 0 0"
     }
 
     proc sum_integer_body { stack container result accum next_index } {
@@ -489,9 +489,9 @@ namespace eval turbine {
             } else {
                 # block until the next turbine id is finished,
                 #   then continue running
-                set rule_id [ rule_new ]
-                rule $rule_id "sum-$rule_id" $turbine_id "" \
-                    "tp: sum_integer_body $stack $container $result $accum $i"
+
+                rule "sum-$container" $turbine_id $turbine::LOCAL \
+                    "sum_integer_body $stack $container $result $accum $i"
                 # return immediately without setting result
                 return
             }
@@ -499,14 +499,14 @@ namespace eval turbine {
         # If we get out of loop, we're done
         set_integer $result $accum
     }
-    
-    
+
+
     # calculate mean of an array of floats
     proc avg_float { parent result container } {
         set NULL 0
         stats_impl $container $NULL $result $NULL $NULL $NULL $NULL
     }
-    
+
     # calculate mean of an array of floats
     proc std_float { parent result container } {
         set NULL 0
@@ -522,9 +522,9 @@ namespace eval turbine {
 
     proc stats_impl { container sum_out mean_out samp_std_out pop_std_out\
                     max_out min_out } {
-        set rule_id [ rule_new ]
-        rule $rule_id "avg-$rule_id" $container "" \
-            "tp: stats_body $container $sum_out $mean_out $samp_std_out\
+
+        rule "avg-$container" $container $turbine::LOCAL \
+            "stats_body $container $sum_out $mean_out $samp_std_out\
              $pop_std_out $max_out $min_out 0.0 0.0 0.0 0.0 0.0 0"
     }
 
@@ -562,9 +562,9 @@ namespace eval turbine {
             } else {
                 # block until the next turbine id is finished,
                 #   then continue running
-                set rule_id [ rule_new ]
-                rule $rule_id "sum-$rule_id" $turbine_id "" \
-                    "tp: sum_integer_body $stack $container $sum_out 
+
+                rule "sum-$container" $turbine_id $turbine::LOCAL \
+                    "stats_body $stack $container $sum_out
                          $mean_out \
                          $samp_std_out $pop_std_out $max_out $min_out \
                          $sum_accum $mean_accum $std_accum \
@@ -577,11 +577,11 @@ namespace eval turbine {
         if { $mean_out != 0 } {
             set_float $mean_out $mean_accum
         }
-        
+
         if { $min_out != 0 } {
             set_float $min_out $min_accum
         }
-        
+
         if { $max_out != 0 } {
             set_float $max_out $max_accum
         }

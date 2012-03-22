@@ -13,9 +13,8 @@ namespace eval turbine {
         set result [ lindex $args 0 ]
         set inputs [ lreplace $args 0 0 ]
 
-        set rule_id [ rule_new ]
-        rule $rule_id "strcat-$rule_id" $inputs $result \
-            "tp: strcat2_body $inputs $result"
+        rule "strcat" $inputs $result \
+            "strcat2_body $inputs $result"
     }
 
     # usage: strcat_body <args>* <result>
@@ -34,12 +33,13 @@ namespace eval turbine {
     }
 
     proc substring { stack result inputs  } {
-        set rule_id [ rule_new ]
+
         set str [ lindex $inputs 0 ]
         set first [ lindex $inputs 1 ]
         set len [ lindex $inputs 2 ]
-        rule $rule_id "substring-$rule_id-$str-$first-$len" $inputs $result \
-            "tp: substring_body $result $str $first $len"
+        rule "substring-$str-$first-$len" $inputs \
+            $turbine::LOCAL \
+            "substring_body $result $str $first $len"
     }
 
     proc substring_body { result str first len } {
@@ -59,9 +59,9 @@ namespace eval turbine {
     proc strcat { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "strcat-$a-$b" "$a $b" $c \
-            "tl: strcat_body $parent $c $a $b"
+
+        rule "strcat-$a-$b" "$a $b" $turbine::LOCAL \
+            "strcat_body $parent $c $a $b"
     }
 
     proc strcat_body { parent c a b } {
@@ -74,9 +74,9 @@ namespace eval turbine {
 
     # o = i;
     proc copy_string { parent o i } {
-        set rule_id [ rule_new ]
-        rule $rule_id "copystring-$o-$i" $i $o \
-            "tl: copy_string_body $o $i"
+
+        rule "copystring-$o-$i" $i $turbine::LOCAL \
+            "copy_string_body $o $i"
     }
     proc copy_string_body { o i } {
         set i_value [ get_string $i ]
@@ -92,18 +92,18 @@ namespace eval turbine {
 
         # Unpack inputs
         set inputs [ lindex $inputs 0 ]
-        set rule_id [ rule_new ]
 
         set s [ lindex $inputs 0 ]
         if { [ llength $inputs ] == 2 } {
             set delimiter [ lindex $inputs 1 ]
-            rule $rule_id "split-$result" [ list $s $delimiter ] $result \
-                "tl: split_body $result $s $delimiter"
+            rule "split-$result" [ list $s $delimiter ] \
+                $turbine::LOCAL \
+                "split_body $result $s $delimiter"
         } elseif { [ llength $inputs ] == 1 } {
             # Use default delimiter: " "
             set delimiter 0
-            rule $rule_id "split-$result" $s $result \
-                "tl: split_body $result $s 0"
+            rule "split-$result" $s $turbine::LOCAL \
+                "split_body $result $s 0"
         } else {
             error "split requires 1 or 2 arguments"
         }

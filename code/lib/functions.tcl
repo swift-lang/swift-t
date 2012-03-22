@@ -24,7 +24,7 @@ namespace eval turbine {
     namespace export set1
 
     # Bring in Turbine extension features
-    namespace import c::new c::rule c::rule_new c::typeof
+    namespace import c::new c::rule c::typeof
     namespace import c::insert c::log
 
     # Called by turbine::init to setup Turbine's argv
@@ -68,9 +68,8 @@ namespace eval turbine {
             set base [ lindex $args 2 ]
         }
 
-        set rule_id [ rule_new ]
-        rule $rule_id "argv_get-$rule_id" $key $result \
-            "tp: argv_get_body $key $base $result"
+        rule "argv_get-$key" $key $turbine::LOCAL \
+            "argv_get_body $key $base $result"
     }
 
     # usage: argv_get <optional:default> <key> <result>
@@ -101,9 +100,9 @@ namespace eval turbine {
 
     proc call_composite { stack f outputs inputs blockon } {
 
-        set rule_id [ rule_new ]
-        turbine::c::rule $rule_id $f "$blockon" "$outputs" \
-            "tp: $f $stack $outputs $inputs"
+        set rule_id [ turbine::c::rule $f "$blockon"   \
+                          $turbine::CONTROL            \
+                          "$f $stack $outputs $inputs" ]
         return $rule_id
     }
 
@@ -113,13 +112,12 @@ namespace eval turbine {
     proc trace { args } {
 
         # parent stack and output arguments not read
-        set tds   [ lindex $args 2 ]
+        set tds [ lindex $args 2 ]
         if { ! [ string length $tds ] } {
             error "trace: received no arguments!"
         }
-        set rule_id [ rule_new ]
-        rule $rule_id "trace-$rule_id" $tds { } \
-            "tc: turbine::trace_body $tds"
+        rule "trace" $tds $turbine::LOCAL \
+            "turbine::trace_body $tds"
     }
 
     proc trace_body { args } {
@@ -157,9 +155,8 @@ namespace eval turbine {
         #   conventions which don't close assigned arrays)
         set start [ lindex $inputs 0 ]
         set end [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "range-$rule_id" "$start $end" $result \
-            "tp: range_body $result $start $end"
+        rule "range-$result" "$start $end" $turbine::CONTROL \
+            "range_body $result $start $end"
     }
 
     proc range_body { result start end } {
@@ -176,9 +173,9 @@ namespace eval turbine {
         set start [ lindex $inputs 0 ]
         set end [ lindex $inputs 1 ]
         set step [ lindex $inputs 2 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "rangestep-$rule_id" [ list $start $end $step ] $result \
-            "tp: rangestep_body $result $start $end $step"
+        rule "rangestep-$result" [ list $start $end $step ] \
+            $turbine::CONTROL \
+            "rangestep_body $result $start $end $step"
     }
 
     proc rangestep_body { result start end step } {
@@ -205,9 +202,8 @@ namespace eval turbine {
     # Construct a distributed container of sequential integers
     proc drange { result start end parts } {
 
-        set rule_id [ rule_new ]
-        rule $rule_id "drange-$rule_id" "$start $end" $result \
-            "tp: drange_body $result $start $end $parts"
+        rule "drange-$result" "$start $end" $turbine::CONTROL \
+            "drange_body $result $start $end $parts"
     }
 
     proc drange_body { result start end parts } {
@@ -228,7 +224,7 @@ namespace eval turbine {
             # end
             set e [ expr $s + $step - 1 ]
             adlb::put $adlb::ANY $WORK_TYPE(CONTROL) \
-                "procedure tp: range_work $c $s $e 1"
+                "command range_work $c $s $e 1"
         }
         close_container $result
     }
@@ -238,9 +234,8 @@ namespace eval turbine {
     proc dloop { loop_body stack container } {
 
         c::log "log_dloop:"
-        set rule_id [ rule_new ]
-        rule $rule_id "dloop-$rule_id" $container "" \
-            "tp: dloop_body $loop_body $stack $container"
+        rule "dloop-$container" $container $turbine::CONTROL \
+            "dloop_body $loop_body $stack $container"
     }
 
     proc dloop_body { loop_body stack container } {
@@ -251,16 +246,14 @@ namespace eval turbine {
         foreach key $keys {
             c::log "log_dloop_body"
             set c [ container_get $container $key ]
-            release _ "tp: loop_body $loop_body $stack $c"
+            release "loop_body $loop_body $stack $c"
         }
     }
 
-    # User function
     proc readdata { result filename } {
 
-        set rule_id [ rule_new ]
-        rule $rule_id "read_data-$rule_id" $filename $result  \
-            "tp: readdata_body $result $filename"
+        rule "read_data-$filename" $filename $turbine::CONTROL \
+            "readdata_body $result $filename"
     }
 
     proc readdata_body { result filename } {
@@ -282,19 +275,18 @@ namespace eval turbine {
 
     # User function
     proc loop { stmts stack container } {
-        set rule_id [ rule_new ]
-        rule $rule_id "loop-$rule_id" $container {} \
-            "tp: loop_body $stmts $stack $container"
+        rule "loop-$container" $container $turbine::CONTROL \
+            "loop_body $stmts $stack $container"
     }
 
     proc loop_body { stmts stack container } {
         set type [ container_typeof $container ]
         set L    [ container_list $container ]
-        # puts "container_got: $type: $L"
-        c::log "log_loop_body start"
+        c::log "loop_body start"
         foreach subscript $L {
             set td_key [ literal $type $subscript ]
             # Call user body with subscript as TD
+            # TODO: shouldn't this be an adlb::put ? -Justin
             $stmts $stack $container $td_key
         }
         c::log "log_loop_body done"
@@ -328,9 +320,8 @@ namespace eval turbine {
 
     # User function
     proc toint { stack result input } {
-        set rule_id [ rule_new ]
-        rule $rule_id "toint-$rule_id" $input $result \
-            "tp: toint_body $input $result"
+        rule "toint-$input" $input $turbine::LOCAL \
+            "toint_body $input $result"
     }
 
     proc toint_body { input result } {
@@ -341,9 +332,8 @@ namespace eval turbine {
     }
 
     proc fromint { stack result input } {
-        set rule_id [ rule_new ]
-        rule $rule_id "fromint-$rule_id" $input $result \
-            "tp: fromint_body $input $result"
+        rule "fromint-$input-$result" $input $turbine::LOCAL \
+            "fromint_body $input $result"
     }
 
     proc fromint_body { input result } {
@@ -352,52 +342,12 @@ namespace eval turbine {
         set_string $result $t
     }
 
-    # OBSOLETE: The parser can generate code as efficient as this
-    # usage: arithmetic <parent> <result> [ <expr> <args>* ]
-    # example: assume td1 = 5, td2 = 6, td3 = 7
-    # arithmetic td4 "(_+_)*_" td1 td2 td3
-    # results in td4=210
-    proc arithmetic { args } {
-
-        # parent stack argument not read
-        set result     [ lindex $args 1 ]
-        set inputs     [ lindex $args 2 ]
-        set expression [ lindex $inputs 0 ]
-        set tds        [ lreplace $inputs 0 0 ]
-
-        set rule_id [ rule_new ]
-        rule $rule_id "arithmetic-$rule_id" $tds $result \
-            "tp: arithmetic_body $tds $expression $result"
-    }
-
-    # usage: arithmetic_body <args>* <expr> <result>
-    proc arithmetic_body { args } {
-
-        set expression [ lindex $args end-1 ]
-        set result [ lindex $args end ]
-        set inputs [ lreplace $args end-1 end ]
-        set count [ llength $inputs ]
-
-        set working $expression
-        for { set i 0 } { $i < $count } { incr i } {
-            set td [ lindex $inputs $i ]
-            set v [ get $td ]
-            regsub "_" $working $v working
-        }
-
-        set total [ expr $working ]
-        set_integer $result $total
-    }
-
-
     # Good for performance testing
     # c = 1;
     # and sleeps
     proc set0 { parent c } {
 
-        set rule_id [ rule_new ]
-        rule $rule_id "set1-$" "" $c \
-            "tf: set0_body $parent $c"
+        rule "set0-$" "" $turbine::WORK "set0_body $parent $c"
     }
     proc set0_body { parent c } {
         log "set0"
@@ -415,9 +365,7 @@ namespace eval turbine {
     # and sleeps
     proc set1 { parent c } {
 
-        set rule_id [ rule_new ]
-        rule $rule_id "set1-$" "" $c \
-            "tf: set1_body $parent $c"
+        rule "set1-$" "" $turbine::WORK "set1_body $parent $c"
     }
     proc set1_body { parent c } {
         log "set1"
@@ -435,9 +383,8 @@ namespace eval turbine {
         puts "turbine::shell $args"
         set command [ lindex $args 0 ]
         set inputs [ lreplace $args 0 0 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "shell-$command" $inputs "" \
-            "tf: shell_body $command \"$inputs\""
+        rule "shell-$command" $inputs $turbine::WORK \
+            "shell_body $command \"$inputs\""
     }
 
     proc shell_body { args } {
@@ -478,9 +425,7 @@ namespace eval turbine {
     # o = i.  Void has no value, so this just makes sure that they close at
     # the same time
     proc copy_void { parent o i } {
-        set rule_id [ rule_new ]
-        rule $rule_id "copy-$o-$i" $i $o \
-            "tl: copy_void_body $o $i"
+        rule "copy-$o-$i" $i $turbine::LOCAL "copy_void_body $o $i"
     }
     proc copy_void_body { o i } {
         log "copy_void $i => $o"
@@ -492,5 +437,4 @@ namespace eval turbine {
         empty i
         set_void $o
     }
-
 }

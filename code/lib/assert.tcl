@@ -7,9 +7,8 @@ namespace eval turbine {
     proc assert { stack noresult inputs } {
         set cond [ lindex $inputs 0 ]
         set msg [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "assert-$cond-$msg" "$cond $msg" "" \
-            "tf: assert_body $cond $msg"
+        rule "assert-$cond-$msg" "$cond $msg" \
+            $turbine::LOCAL "assert_body $cond $msg"
     }
     
     proc assert_body { cond msg } {
@@ -34,9 +33,8 @@ namespace eval turbine {
         set arg1 [ lindex $inputs 0 ]
         set arg2 [ lindex $inputs 1 ]
         set msg [ lindex $inputs 2 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "assertEqual-$arg1-$arg2-$msg" "$arg1 $arg2 $msg" "" \
-            "tf: assertEqual_body $arg1 $arg2 $msg"
+        rule "assertEqual-$arg1-$arg2-$msg" "$arg1 $arg2 $msg" \
+            $turbine::LOCAL "assertEqual_body $arg1 $arg2 $msg"
     }
     
     proc assertEqual_body { arg1 arg2 msg } {
@@ -61,9 +59,8 @@ namespace eval turbine {
         set arg1 [ lindex $inputs 0 ]
         set arg2 [ lindex $inputs 1 ]
         set msg [ lindex $inputs 2 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "assertLT-$arg1-$arg2-$msg" "$arg1 $arg2 $msg" "" \
-            "tf: assertLT_body $arg1 $arg2 $msg"
+        rule "assertLT-$arg1-$arg2-$msg" "$arg1 $arg2 $msg" \
+            $turbine::LOCAL "assertLT_body $arg1 $arg2 $msg"
     }
     
     proc assertLT_body { arg1 arg2 msg } {
@@ -84,9 +81,8 @@ namespace eval turbine {
         set arg1 [ lindex $inputs 0 ]
         set arg2 [ lindex $inputs 1 ]
         set msg [ lindex $inputs 2 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "assertLTE-$arg1-$arg2-$msg" "$arg1 $arg2 $msg" "" \
-            "tf: assertLTE_body $arg1 $arg2 $msg"
+        rule "assertLTE-$arg1-$arg2-$msg" "$arg1 $arg2 $msg" \
+            $turbine::LOCAL "assertLTE_body $arg1 $arg2 $msg"
     }
     
     proc assertLTE_body { arg1 arg2 msg } {

@@ -11,9 +11,8 @@ namespace eval turbine {
     proc plus_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "plus-$a-$b" "$a $b" $c \
-            "tl: plus_integer_body $parent $c $a $b"
+        rule "plus-$a-$b" "$a $b" $turbine::LOCAL \
+            "plus_integer_body $parent $c $a $b"
     }
 
     proc plus_integer_body { parent c a b } {
@@ -27,9 +26,9 @@ namespace eval turbine {
     proc plus_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "plus-$a-$b" "$a $b" $c \
-            "tl: plus_float_body $parent $c $a $b"
+
+        rule "plus-$a-$b" "$a $b" $turbine::LOCAL \
+            "plus_float_body $parent $c $a $b"
     }
 
     proc plus_float_body { parent c a b } {
@@ -46,9 +45,9 @@ namespace eval turbine {
     proc minus_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "minus-$a-$b" "$a $b" $c \
-            "tl: minus_integer_body $c $a $b"
+
+        rule "minus-$a-$b" "$a $b" $turbine::LOCAL \
+            "minus_integer_body $c $a $b"
     }
     proc minus_integer_body {c a b } {
         set a_value [ get $a ]
@@ -64,9 +63,9 @@ namespace eval turbine {
     proc minus_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "minus-$a-$b" "$a $b" $c \
-            "tl: minus_float_body $c $a $b"
+
+        rule "minus-$a-$b" "$a $b" $turbine::LOCAL \
+            "minus_float_body $c $a $b"
     }
     proc minus_float_body {c a b } {
         set a_value [ get_float $a ]
@@ -81,9 +80,9 @@ namespace eval turbine {
     proc multiply_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "mult-$a-$b" "$a $b" $c \
-            "tf: multiply_integer_body $c $a $b"
+
+        rule "mult-$a-$b" "$a $b" $turbine::LOCAL \
+            "multiply_integer_body $c $a $b"
     }
     proc multiply_integer_body {c a b } {
         set a_value [ get $a ]
@@ -100,9 +99,9 @@ namespace eval turbine {
     proc multiply_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "mult-$a-$b" "$a $b" $c \
-            "tf: multiply_float_body $c $a $b"
+
+        rule "mult-$a-$b" "$a $b" $turbine::LOCAL \
+            "multiply_float_body $c $a $b"
     }
     proc multiply_float_body {c a b } {
         set a_value [ get_float $a ]
@@ -119,14 +118,14 @@ namespace eval turbine {
     proc divide_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "div-$a-$b" "$a $b" $c \
-            "tf: divide_integer_body $c $a $b"
+
+        rule "div-$a-$b" "$a $b" $turbine::LOCAL \
+            "divide_integer_body $c $a $b"
     }
     proc divide_integer_body {c a b } {
         set a_value [ get_integer $a ]
         set b_value [ get_integer $b ]
-        
+
         set c_value [ divide_integer_impl $a_value $b_value ]
         log "divide: $a_value / $b_value => $c_value"
         # Emulate some computation time
@@ -139,9 +138,9 @@ namespace eval turbine {
     proc divide_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "div-$a-$b" "$a $b" $c \
-            "tf: divide_float_body $c $a $b"
+
+        rule "div-$a-$b" "$a $b" $turbine::LOCAL \
+            "divide_float_body $c $a $b"
     }
     proc divide_float_body {c a b } {
         set a_value [ get_float $a ]
@@ -152,14 +151,14 @@ namespace eval turbine {
         # exec sleep $c_value
         set_float $c $c_value
     }
-    
+
     # This is a Swift-2 function
     # c = -b;
     proc negate_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "negate-$a" "$a" $c \
-            "tf: negate_integer_body $c $a"
+
+        rule "negate-$a" "$a" $turbine::LOCAL \
+            "negate_integer_body $c $a"
     }
 
     proc negate_integer_body { c a } {
@@ -175,9 +174,9 @@ namespace eval turbine {
     # c = -b;
     proc negate_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "negate-$a" "$a" $c \
-            "tf: negate_float_body $c $a"
+
+        rule "negate-$a" "$a" $turbine::LOCAL \
+            "negate_float_body $c $a"
     }
 
     proc negate_float_body { c a } {
@@ -193,9 +192,9 @@ namespace eval turbine {
     proc mod_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "mod-$a-$b" "$a $b" $c \
-            "tl: mod_integer_body $parent $c $a $b"
+
+        rule "mod-$a-$b" "$a $b" $turbine::LOCAL \
+            "mod_integer_body $parent $c $a $b"
     }
 
     proc mod_integer_body { parent c a b } {
@@ -239,9 +238,9 @@ namespace eval turbine {
     # This is a Swift-2 function, thus it only applies to integers
     # o = i;
     proc copy_integer { parent o i } {
-        set rule_id [ rule_new ]
-        rule $rule_id "copy-$o-$i" $i $o \
-            "tl: copy_integer_body $o $i"
+
+        rule "copy-$o-$i" $i $turbine::LOCAL \
+            "copy_integer_body $o $i"
     }
     proc copy_integer_body { o i } {
         set i_value [ get $i ]
@@ -252,9 +251,9 @@ namespace eval turbine {
 
     # o = i;
     proc copy_float { parent o i } {
-        set rule_id [ rule_new ]
-        rule $rule_id "copyfloat-$o-$i" $i $o \
-            "tl: copy_float_body $o $i"
+
+        rule "copyfloat-$o-$i" $i $turbine::LOCAL \
+            "copy_float_body $o $i"
     }
     proc copy_float_body { o i } {
         set i_value [ get_float $i ]
@@ -265,9 +264,9 @@ namespace eval turbine {
     proc max_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "max-$a-$b" "$a $b" $c \
-            "tl: max_integer_body $parent $c $a $b"
+
+        rule "max-$a-$b" "$a $b" $turbine::LOCAL \
+            "max_integer_body $parent $c $a $b"
     }
 
     proc max_integer_body { parent c a b } {
@@ -277,13 +276,13 @@ namespace eval turbine {
         log "max: $a_value $b_value => $c_value"
         set_integer $c $c_value
     }
-    
+
     proc min_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "min-$a-$b" "$a $b" $c \
-            "tl: min_integer_body $parent $c $a $b"
+
+        rule "min-$a-$b" "$a $b" $turbine::LOCAL \
+            "min_integer_body $parent $c $a $b"
     }
 
     proc min_integer_body { parent c a b } {
@@ -293,13 +292,13 @@ namespace eval turbine {
         log "min: $a_value $b_value => $c_value"
         set_integer $c $c_value
     }
-    
+
     proc max_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "max-$a-$b" "$a $b" $c \
-            "tl: max_float_body $parent $c $a $b"
+
+        rule "max-$a-$b" "$a $b" $turbine::LOCAL \
+            "max_float_body $parent $c $a $b"
     }
 
     proc max_float_body { parent c a b } {
@@ -309,13 +308,13 @@ namespace eval turbine {
         log "max: $a_value $b_value => $c_value"
         set_float $c $c_value
     }
-    
+
     proc min_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "min-$a-$b" "$a $b" $c \
-            "tl: min_float_body $parent $c $a $b"
+
+        rule "min-$a-$b" "$a $b" $turbine::LOCAL \
+            "min_float_body $parent $c $a $b"
     }
 
     proc min_float_body { parent c a b } {
@@ -327,9 +326,9 @@ namespace eval turbine {
     }
 
     proc floor { parent c a } {
-        set rule_id [ rule_new ]
-        rule $rule_id "floor-$a" "$a" $c \
-            "tl: floor_body $parent $c $a"
+
+        rule "floor-$a" "$a" $turbine::LOCAL \
+            "floor_body $parent $c $a"
     }
 
     proc floor_body { parent c a } {
@@ -340,9 +339,9 @@ namespace eval turbine {
     }
 
     proc ceil { parent c a } {
-        set rule_id [ rule_new ]
-        rule $rule_id "ceil-$a" "$a" $c \
-            "tl: ceil_body $parent $c $a"
+
+        rule "ceil-$a" "$a" $turbine::LOCAL \
+            "ceil_body $parent $c $a"
     }
 
     proc ceil_body { parent c a } {
@@ -353,9 +352,8 @@ namespace eval turbine {
     }
 
     proc round { parent c a } {
-        set rule_id [ rule_new ]
-        rule $rule_id "round-$a" "$a" $c \
-            "tl: round_body $parent $c $a"
+        rule "round-$a" "$a" $turbine::LOCAL \
+            "round_body $parent $c $a"
     }
 
     proc round_body { parent c a } {
@@ -366,20 +364,19 @@ namespace eval turbine {
     }
 
     proc itof { parent c a } {
-        set rule_id [ rule_new ]
-        rule $rule_id "itf-$a" "$a" $c \
-            "tl: itof_body $parent $c $a"
+        rule "itf-$a" "$a" $turbine::LOCAL \
+            "inttofloat_body $parent $c $a"
     }
 
     proc itof_body { parent c a } {
         set a_value [ get_integer $a ]
         set_float $c $a_value
     }
-    
+
     proc log_e { parent c a } {
-        set rule_id [ rule_new ]
-        rule $rule_id "log_e-$a" "$a" $c \
-            "tl: log_e_body $parent $c $a"
+
+        rule "log_e-$a" "$a" $turbine::LOCAL \
+            "log_e_body $parent $c $a"
     }
 
     proc log_e_body { parent c a } {
@@ -388,11 +385,11 @@ namespace eval turbine {
         log "log_e: $a_value => $c_value"
         set_float $c $c_value
     }
-    
+
     proc exp { parent c a } {
-        set rule_id [ rule_new ]
-        rule $rule_id "exp-$a" "$a" $c \
-            "tl: exp_body $parent $c $a"
+
+        rule "exp-$a" "$a" $turbine::LOCAL \
+            "exp_body $parent $c $a"
     }
 
     proc exp_body { parent c a } {
@@ -401,11 +398,11 @@ namespace eval turbine {
         log "exp: $a_value => $c_value"
         set_float $c $c_value
     }
-    
+
     proc sqrt { parent c a } {
-        set rule_id [ rule_new ]
-        rule $rule_id "sqrt-$a" "$a" $c \
-            "tl: sqrt_body $parent $c $a"
+
+        rule "sqrt-$a" "$a" $turbine::LOCAL \
+            "sqrt_body $parent $c $a"
     }
 
     proc sqrt_body { parent c a } {
@@ -414,11 +411,11 @@ namespace eval turbine {
         log "sqrt: $a_value => $c_value"
         set_float $c $c_value
     }
-    
+
     proc abs_float { parent c a } {
-        set rule_id [ rule_new ]
-        rule $rule_id "abs_float-$a" "$a" $c \
-            "tl: abs_float_body $parent $c $a"
+
+        rule "abs_float-$a" "$a" $turbine::LOCAL \
+            "abs_float_body $parent $c $a"
     }
 
     proc abs_float_body { parent c a } {
@@ -427,11 +424,11 @@ namespace eval turbine {
         log "abs_float: $a_value => $c_value"
         set_float $c $c_value
     }
-    
+
     proc abs_integer { parent c a } {
-        set rule_id [ rule_new ]
-        rule $rule_id "abs_integer-$a" "$a" $c \
-            "tl: abs_integer_body $parent $c $a"
+
+        rule "abs_integer-$a" "$a" $turbine::LOCAL \
+            "abs_integer_body $parent $c $a"
     }
 
     proc abs_integer_body { parent c a } {
@@ -440,13 +437,13 @@ namespace eval turbine {
         log "abs_integer: $a_value => $c_value"
         set_integer $c $c_value
     }
-    
+
     proc pow_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "pow-$a-$b" "$a $b" $c \
-            "tf: pow_integer_body $c $a $b"
+
+        rule "pow-$a-$b" "$a $b" $turbine::LOCAL \
+            "pow_integer_body $c $a $b"
     }
     proc pow_integer_body { c a b } {
         set a_value [ get $a ]
@@ -469,9 +466,9 @@ namespace eval turbine {
     proc pow_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "pow-$a-$b" "$a $b" $c \
-            "tf: pow_float_body $c $a $b"
+
+        rule "pow-$a-$b" "$a $b" $turbine::LOCAL \
+            "pow_float_body $c $a $b"
     }
     proc pow_float_body {c a b } {
         set a_value [ get_float $a ]

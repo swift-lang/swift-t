@@ -76,6 +76,19 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
     return TCL_ERROR;
   }
 
+  Tcl_ObjSetVar2(interp,
+                 Tcl_NewStringObj("::turbine::LOCAL", -1),
+                 NULL,
+                 Tcl_NewIntObj(TURBINE_ACTION_LOCAL), 0);
+  Tcl_ObjSetVar2(interp,
+                 Tcl_NewStringObj("::turbine::CONTROL", -1),
+                 NULL,
+                 Tcl_NewIntObj(TURBINE_ACTION_CONTROL), 0);
+  Tcl_ObjSetVar2(interp,
+                 Tcl_NewStringObj("::turbine::WORK", -1),
+                 NULL,
+                 Tcl_NewIntObj(TURBINE_ACTION_WORK), 0);
+
   log_init();
   log_normalize();
 
@@ -117,58 +130,48 @@ Turbine_Version_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_RETURN_ERROR("unknown turbine entry type: %s", type);   \
   strcpy(entry.name, subscript);
 
+/**
+   usage: rule name [ list inputs ] action_type action => id
+ */
 static int
 Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(6);
+  TCL_ARGS(5);
 
   int inputs;
   turbine_datum_id input_list[TCL_TURBINE_MAX_INPUTS];
-  int outputs;
-  turbine_datum_id output_list[TCL_TURBINE_MAX_INPUTS];
 
   int error;
   turbine_transform_id id;
-  error = Tcl_GetLongFromObj(interp, objv[1], &id);
-  TCL_CHECK(error);
 
-  char* name = Tcl_GetStringFromObj(objv[2], NULL);
+  char* name = Tcl_GetStringFromObj(objv[1], NULL);
   assert(name);
 
-  error = turbine_tcl_long_array(interp, objv[3],
+  error = turbine_tcl_long_array(interp, objv[2],
                                 TCL_TURBINE_MAX_INPUTS,
                                 input_list, &inputs);
   TCL_CHECK_MSG(error, "could not parse inputs list as integers:\n"
                 "in rule: <%li> %s inputs: \"%s\"",
-                id, name, Tcl_GetString(objv[3]));
+                id, name, Tcl_GetString(objv[2]));
 
-  error = turbine_tcl_long_array(interp, objv[4],
-                                TCL_TURBINE_MAX_OUTPUTS,
-                                 output_list, &outputs);
-  TCL_CHECK_MSG(error, "could not parse outputs list as integers:\n"
-                 "in rule: <%li> %s outputs: \"%s\"",
-                 id, name, Tcl_GetString(objv[4]));
+  turbine_action_type action_type;
+  int tmp;
+  error = Tcl_GetIntFromObj(interp, objv[3], &tmp);
+  TCL_CHECK_MSG(error, "could not parse as integer!");
+  action_type = tmp;
 
-  char* action = Tcl_GetStringFromObj(objv[5], NULL);
+  char* action = Tcl_GetStringFromObj(objv[4], NULL);
   assert(action);
 
-  turbine_transform transform =
-  {
-    .name = name,
-    .action = action,
-    .inputs = inputs,
-    .input_list = input_list,
-    .outputs = outputs,
-    .output_list = output_list
-  };
-
-  turbine_code code = turbine_rule_add(id, &transform);
+  turbine_code code = turbine_rule(name, inputs, input_list,
+                                   action_type, action, &id);
   TURBINE_CHECK(code, "could not add rule: %li", id);
 
   return TCL_OK;
 }
 
+/*
 static int
 Turbine_RuleNew_Cmd(ClientData cdata, Tcl_Interp *interp,
                     int objc, Tcl_Obj *const objv[])
@@ -182,6 +185,7 @@ Turbine_RuleNew_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
+*/
 
 static int
 Turbine_Push_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -192,6 +196,9 @@ Turbine_Push_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+/**
+   usage: ready => [ list ids ]
+ */
 static int
 Turbine_Ready_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
@@ -215,22 +222,31 @@ Turbine_Ready_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+/**
+   usage: action id => [ list action_type action ]
+ */
 static int
-Turbine_Executor_Cmd(ClientData cdata, Tcl_Interp *interp,
-                     int objc, Tcl_Obj *const objv[])
+Turbine_Action_Cmd(ClientData cdata, Tcl_Interp *interp,
+                       int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
   turbine_transform_id id;
   int error = Tcl_GetLongFromObj(interp, objv[1], &id);
   TCL_CHECK(error);
-  static char action[1024];
-  turbine_code code = turbine_action(id, action);
+
+  // Pointer into Turbine memory
+  char* action;
+  turbine_action_type action_type;
+  turbine_code code = turbine_action(id, &action_type, &action);
   TCL_CONDITION(code == TURBINE_SUCCESS,
                 "could not find transform id: %li", id);
 
-  Tcl_Obj* result = Tcl_NewStringObj(action, -1);
-  Tcl_SetObjResult(interp, result);
+  Tcl_Obj* items[2];
+  items[0] = Tcl_NewIntObj(action_type);
+  items[1] = Tcl_NewStringObj(action, -1);
 
+  Tcl_Obj* result = Tcl_NewListObj(2, items);
+  Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
 
@@ -268,6 +284,7 @@ Turbine_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+/*
 static int
 Turbine_Declare_Cmd(ClientData cdata, Tcl_Interp *interp,
                     int objc, Tcl_Obj *const objv[])
@@ -287,6 +304,7 @@ Turbine_Declare_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   return TCL_OK;
 }
+*/
 
 static int
 Turbine_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -363,12 +381,13 @@ Tclturbine_Init(Tcl_Interp *interp)
 
   COMMAND("init",      Turbine_Init_Cmd);
   COMMAND("version",   Turbine_Version_Cmd);
-  COMMAND("declare",   Turbine_Declare_Cmd);
+  // COMMAND("declare",   Turbine_Declare_Cmd);
   COMMAND("rule",      Turbine_Rule_Cmd);
-  COMMAND("rule_new",  Turbine_RuleNew_Cmd);
+  // COMMAND("rule_new",  Turbine_RuleNew_Cmd);
   COMMAND("push",      Turbine_Push_Cmd);
   COMMAND("ready",     Turbine_Ready_Cmd);
-  COMMAND("action",  Turbine_Executor_Cmd);
+  // COMMAND("type",      Turbine_ActionType_Cmd);
+  COMMAND("action",    Turbine_Action_Cmd);
   COMMAND("complete",  Turbine_Complete_Cmd);
   COMMAND("close",     Turbine_Close_Cmd);
   COMMAND("log",       Turbine_Log_Cmd);

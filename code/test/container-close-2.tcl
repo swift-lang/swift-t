@@ -41,10 +41,9 @@ proc rules { } {
 
     turbine::allocate s string
 
-    set rule_id [ turbine::rule_new ]
     turbine::container_branch_post $rule_id $c
-    turbine::rule $rule_id RULE_F $i3 "" \
-        "tp: f no_stack $rule_id $c $i3 $j2 $j3"
+    turbine::rule RULE_F $i3 $turbine::LOCAL \
+        "f no_stack $rule_id $c $i3 $j2 $j3"
 
     turbine::enumerate no_stack $s $c
     turbine::trace no_stack "" $s

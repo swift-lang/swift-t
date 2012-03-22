@@ -19,9 +19,8 @@ namespace eval turbine {
     # This is a Swift-2 function
     # o = ! i;
     proc not { parent o i } {
-        set rule_id [ rule_new ]
-        rule $rule_id "not-$i" $i $o \
-            "tf: not_body $o $i"
+        rule "not-$i" $i \
+            $turbine::LOCAL "not_body $o $i"
     }
     proc not_body { o i } {
         set i_value [ get $i ]
@@ -35,9 +34,8 @@ namespace eval turbine {
     proc and { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "and-$a-$b" "$a $b" $c \
-            "tf: and_body $c $a $b"
+        rule "and-$a-$b" "$a $b" \
+            $turbine::LOCAL "and_body $c $a $b"
     }
     proc and_body { c a b } {
         set a_value [ get $a ]
@@ -54,9 +52,8 @@ namespace eval turbine {
     proc or { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "or-$a-$b" "$a $b" $c \
-            "tf: or_body $c $a $b"
+        rule "or-$a-$b" "$a $b" \
+            $turbine::LOCAL "or_body $c $a $b"
     }
     proc or_body { c a b } {
         set a_value [ get_integer $a ]
@@ -71,9 +68,8 @@ namespace eval turbine {
     proc eq_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "eq_integer-$a-$b" "$a $b" $c \
-            "tf: eq_integer_body $c $a $b"
+        rule "eq_integer-$a-$b" "$a $b" \
+            $turbine::LOCAL "eq_integer_body $c $a $b"
     }
     proc eq_integer_body { c a b } {
         set a_value [ get_integer $a ]
@@ -92,9 +88,8 @@ namespace eval turbine {
     proc neq_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "neq_integer-$a-$b" "$a $b" $c \
-            "tf: neq_integer_body $c $a $b"
+        rule "neq_integer-$a-$b" "$a $b" \
+            $turbine::LOCAL "neq_integer_body $c $a $b"
     }
     proc neq_integer_body { c a b } {
         set a_value [ get_integer $a ]
@@ -113,9 +108,8 @@ namespace eval turbine {
     proc lt_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "lt_integer-$a-$b" "$a $b" $c \
-            "tf: lt_integer_body $c $a $b"
+        rule "lt_integer-$a-$b" "$a $b" \
+            $turbine::LOCAL "lt_integer_body $c $a $b"
     }
     proc lt_integer_body { c a b } {
         set a_value [ get_integer $a ]
@@ -134,9 +128,8 @@ namespace eval turbine {
     proc lte_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "lte_integer-$a-$b" "$a $b" $c \
-            "tf: lte_integer_body $c $a $b"
+        rule "lte_integer-$a-$b" "$a $b" \
+            $turbine::LOCAL "lte_integer_body $c $a $b"
     }
     proc lte_integer_body { c a b } {
         set a_value [ get_integer $a ]
@@ -155,9 +148,8 @@ namespace eval turbine {
     proc gt_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "gt_integer-$a-$b" "$a $b" $c \
-            "tf: gt_integer_body $c $a $b"
+        rule "gt_integer-$a-$b" "$a $b" \
+            $turbine::LOCAL "gt_integer_body $c $a $b"
     }
     proc gt_integer_body { c a b } {
         set a_value [ get_integer $a ]
@@ -176,9 +168,8 @@ namespace eval turbine {
     proc gte_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "gte_integer-$a-$b" "$a $b" $c \
-            "tf: gte_integer_body $c $a $b"
+        rule "gte_integer-$a-$b" "$a $b" \
+            $turbine::LOCAL "gte_integer_body $c $a $b"
     }
     proc gte_integer_body { c a b } {
         set a_value [ get_integer $a ]
@@ -197,9 +188,8 @@ namespace eval turbine {
     proc eq_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "eq_float-$a-$b" "$a $b" $c \
-            "tf: eq_float_body $c $a $b"
+        rule "eq_float-$a-$b" "$a $b" \
+            $turbine::LOCAL "eq_float_body $c $a $b"
     }
     proc eq_float_body { c a b } {
         set a_value [ get_float $a ]
@@ -218,9 +208,8 @@ namespace eval turbine {
     proc neq_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "neq_float-$a-$b" "$a $b" $c \
-            "tf: neq_float_body $c $a $b"
+        rule "neq_float-$a-$b" "$a $b" \
+            $turbine::LOCAL "neq_float_body $c $a $b"
     }
     proc neq_float_body { c a b } {
         set a_value [ get_float $a ]
@@ -239,9 +228,8 @@ namespace eval turbine {
     proc lt_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "lt_float-$a-$b" "$a $b" $c \
-            "tf: lt_float_body $c $a $b"
+        rule "lt_float-$a-$b" "$a $b" \
+            $turbine::LOCAL "lt_float_body $c $a $b"
     }
     proc lt_float_body { c a b } {
         set a_value [ get_float $a ]
@@ -260,9 +248,8 @@ namespace eval turbine {
     proc lte_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "lte_float-$a-$b" "$a $b" $c \
-            "tf: lte_float_body $c $a $b"
+        rule "lte_float-$a-$b" "$a $b" \
+            $turbine::LOCAL "lte_float_body $c $a $b"
     }
     proc lte_float_body { c a b } {
         set a_value [ get_float $a ]
@@ -281,9 +268,8 @@ namespace eval turbine {
     proc gt_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "gt_float-$a-$b" "$a $b" $c \
-            "tf: gt_float_body $c $a $b"
+        rule "gt_float-$a-$b" "$a $b" \
+            $turbine::LOCAL "gt_float_body $c $a $b"
     }
     proc gt_float_body { c a b } {
         set a_value [ get_float $a ]
@@ -302,9 +288,8 @@ namespace eval turbine {
     proc gte_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "gte_float-$a-$b" "$a $b" $c \
-            "tf: gte_float_body $c $a $b"
+        rule "gte_float-$a-$b" "$a $b" \
+            $turbine::LOCAL "gte_float_body $c $a $b"
     }
     proc gte_float_body { c a b } {
         set a_value [ get_float $a ]
@@ -323,9 +308,8 @@ namespace eval turbine {
     proc eq_string { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "eq_string-$a-$b" "$a $b" $c \
-            "tf: eq_string_body $c $a $b"
+        rule "eq_string-$a-$b" "$a $b" \
+            $turbine::LOCAL "eq_string_body $c $a $b"
     }
     proc eq_string_body { c a b } {
         set a_value [ get_string $a ]
@@ -344,9 +328,8 @@ namespace eval turbine {
     proc neq_string { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "neq_string-$a-$b" "$a $b" $c \
-            "tf: neq_string_body $c $a $b"
+        rule "neq_string-$a-$b" "$a $b" \
+            $turbine::LOCAL "neq_string_body $c $a $b"
     }
     proc neq_string_body { c a b } {
         set a_value [ get_string $a ]

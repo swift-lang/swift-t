@@ -23,7 +23,6 @@ TEST_SRC_TCL := $(DIR)/adlb-noop.tcl         \
                 $(DIR)/container3.tcl        \
                 $(DIR)/container_load.tcl    \
                 $(DIR)/container-close-1.tcl \
-                $(DIR)/container-close-2.tcl \
                 $(DIR)/container-sum.tcl     \
                 $(DIR)/string_split.tcl      \
                 $(DIR)/fib.tcl               \
@@ -42,6 +41,9 @@ TEST_SRC_TCL := $(DIR)/adlb-noop.tcl         \
 
                 # $(DIR)/arithmetic.tcl        \
                 # $(DIR)/arithmetic2.tcl       \
+
+
+#                 $(DIR)/container-close-2.tcl \
 
 
 # FUTURE WORK:

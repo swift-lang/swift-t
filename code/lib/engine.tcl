@@ -38,7 +38,7 @@ namespace eval turbine {
         debug "TURBINE ENGINE..."
         ::eval $startup
         if { [ adlb::rank ] == 0 } {
-            ::eval $rules
+            eval $rules
         }
 
 	variable stats
@@ -52,8 +52,8 @@ namespace eval turbine {
                 set ready [ turbine::c::ready ]
                 if { [ llength $ready ] == 0 } break
                 foreach {transform} $ready {
-                    set command [ turbine::c::action $transform ]
-                    release $transform $command
+                    set action [ turbine::c::action $transform ]
+                    release $transform $action
                 }
             }
 
@@ -64,26 +64,31 @@ namespace eval turbine {
         }
     }
 
-    # Release a work unit for execution elsewhere
-    proc release { transform command } {
+    # Release a work unit for execution here or elsewhere
+    proc release { transform action } {
 
 	variable stats
 	dict incr stats tasks_released
 
         global WORK_TYPE
-        set command [ string trim $command ]
-        set prefix "[ string range $command 0 2 ]"
-        if { [ string equal $prefix "tp:" ] ||
-             [ string equal $prefix "tc:" ] } {
-            set proccall [ lrange $command 1 end ]
-            adlb::put $adlb::ANY $WORK_TYPE(CONTROL) \
-                "procedure $command"
-        } elseif { [ string equal $prefix "tl:" ] } {
-            set expression [ lrange $command 1 end ]
-	    ::eval $expression
-	} else {
-            adlb::put $adlb::ANY $WORK_TYPE(WORK) \
-                "$transform $command"
+        set type    [ lindex $action 0 ]
+        set command [ lindex $action 1 ]
+
+        switch $type {
+            1 { # $turbine::LOCAL
+                eval $command
+            }
+            2 { # $turbine::CONTROL
+                adlb::put $adlb::ANY $WORK_TYPE(CONTROL) \
+                    "command $command"
+            }
+            3 { # $turbine::WORK
+                adlb::put $adlb::ANY $WORK_TYPE(WORK) \
+                    "$transform $command"
+            }
+            default {
+                error "unknown action type!"
+            }
         }
     }
 
@@ -99,10 +104,10 @@ namespace eval turbine {
         set header [ lindex $msg 0 ]
         # show header
         switch $header {
-            procedure {
+            command {
 		dict incr stats tasks_run
-                set command [ lrange $msg 2 end ]
-                ::eval $command
+                set command [ lrange $msg 1 end ]
+                eval $command
             }
             complete {
                 set id [ lindex $msg 1 ]
@@ -150,7 +155,9 @@ namespace eval turbine {
 	variable stats
 	dict incr stats tasks_run
 
-        if { [ catch { turbine::eval $command } e ] } {
+        debug "eval: $command"
+
+        if { [ catch { eval $command } e ] } {
             puts "work unit error: "
             puts $e
             # puts "[dict get $e -errorinfo]"

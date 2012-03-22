@@ -18,8 +18,7 @@ proc fib { stack o n } {
     container_insert $stack _parent $parent
     container_insert $stack n $n
     container_insert $stack o $o
-    set rule_id [ turbine::c::rule_new ]
-    turbine::c::rule $rule_id if-0 "$n" "" "tc: if-0 $stack"
+    turbine::c::rule if-0 "$n" $turbine::LOCAL "if-0 $stack"
 }
 
 proc if-0 { stack } {
@@ -35,8 +34,7 @@ proc if-0 { stack } {
         allocate __l0 integer
         set_integer $__l0 1
         turbine::minus_integer $stack [ list $__t0 ] [ list $n $__l0 ]
-        set rule_id [ turbine::c::rule_new ]
-        turbine::c::rule $rule_id if-1 "$__t0" "" "tc: if-1 $stack"
+        turbine::c::rule if-1 "$__t0" $turbine::LOCAL "if-1 $stack"
     } else {
         set parent $stack
         allocate_container stack string
@@ -60,15 +58,13 @@ proc if-1 { stack } {
         allocate __l3 integer
         set_integer $__l3 1
         turbine::minus_integer $stack [ list $__l2 ] [ list $n $__l3 ]
-        set rule_id [ turbine::c::rule_new ]
-        turbine::c::rule $rule_id fib [ list $__l2 ] [ list $__l1 ] "tp: fib $stack $__l1 $__l2"
+        turbine::c::rule fib [ list $__l2 ] $turbine::LOCAL "fib $stack $__l1 $__l2"
         allocate __l4 integer
         allocate __l5 integer
         allocate __l6 integer
         set_integer $__l6 2
         turbine::minus_integer $stack [ list $__l5 ] [ list $n $__l6 ]
-        set rule_id [ turbine::c::rule_new ]
-        turbine::c::rule $rule_id fib [ list $__l5 ] [ list $__l4 ] "tp: fib $stack $__l4 $__l5"
+        turbine::c::rule fib [ list $__l5 ] $turbine::LOCAL "fib $stack $__l4 $__l5"
         turbine::plus_integer $stack [ list $o ] [ list $__l1 $__l4 ]
     } else {
         set parent $stack
@@ -86,8 +82,7 @@ proc rules {  } {
     global N
     puts "N: $N"
     set_integer $__l1 $N
-    set rule_id [ turbine::c::rule_new ]
-    turbine::c::rule $rule_id fib [ list $__l1 ] [ list $__l0 ] "tp: fib $stack $__l0 $__l1"
+    turbine::c::rule fib [ list $__l1 ] $turbine::LOCAL "fib $stack $__l0 $__l1"
     turbine::trace $stack [ list ] [ list $__l0 ]
 }
 

@@ -64,9 +64,9 @@ proc myfun { a b x } {
 
     # Create condition variable for "if"
     allocate c_1 integer
-    rule [ rule_new ] MYFUN_1 $x   $c_1 "tf: f $x $c_1"
-    rule [ rule_new ] MYFUN_2 $c_1 { }  "tc: if_1 $stack $c_1"
-    rule [ rule_new ] MYFUN_3 $x   $b   "tf: g $x $b"
+    rule MYFUN_1 $x   $turbine::WORK    "f $x $c_1"
+    rule MYFUN_2 $c_1 $turbine::CONTROL "if_1 $stack $c_1"
+    rule MYFUN_3 $x   $turbine::WORK    "g $x $b"
 }
 
 proc if_1 { stack c } {
@@ -79,9 +79,9 @@ proc if_1 { stack c } {
     set x [ container_get $stack "x" ]
 
     if $c_value {
-        rule [ rule_new ] IF_1_1 $x $a "tf: h $x $a"
+        rule IF_1_1 $x $turbine::WORK "h $x $a"
     } else {
-        rule [ rule_new ] IF_1_2 $x $a "tf: j $x $a"
+        rule IF_1_2 $x $turbine::WORK "j $x $a"
     }
     turbine::c::push
 }
@@ -92,7 +92,7 @@ proc rules { } {
     turbine::allocate b integer
     turbine::literal x integer 3
 
-    rule 1 A $x [ list $a $b ] "tp: myfun $a $b $x"
+    rule A $x $turbine::CONTROL "myfun $a $b $x"
 
     set a_label [ literal string "a=" ]
     # Use 0 as stack frame
@@ -106,5 +106,5 @@ turbine::finalize
 
 puts OK
 
-# Help TCL free memory
+# Help Tcl free memory
 proc exit args {}

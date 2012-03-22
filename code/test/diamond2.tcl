@@ -17,10 +17,10 @@ proc rules { } {
     turbine::create_file 3 "test/data/C.txt"
     turbine::create_file 4 "test/data/D.txt"
 
-    turbine::rule 1 A {     } { 1 } { tf: function_touch 1 }
-    turbine::rule 2 B { 1   } { 2 } { tf: function_touch 2 }
-    turbine::rule 3 C { 1   } { 3 } { tf: function_touch 3 }
-    turbine::rule 4 D { 2 3 } { 4 } { tf: function_touch 4 }
+    turbine::rule A {     } $turbine::WORK { function_touch 1 }
+    turbine::rule B { 1   } $turbine::WORK { function_touch 2 }
+    turbine::rule C { 1   } $turbine::WORK { function_touch 3 }
+    turbine::rule D { 2 3 } $turbine::WORK { function_touch 4 }
 }
 
 turbine::defaults

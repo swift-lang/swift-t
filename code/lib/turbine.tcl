@@ -16,12 +16,6 @@ namespace eval turbine {
     # Maps from rule id to list of container id
     variable container_branches
 
-    # Table of outstanding subroutines
-    # Maps stack to outstanding sub count
-    # variable subs
-    # Map rule number to stack TD
-    # variable rule_map
-
     # User function
     # param e Number of engines
     # param s Number of ADLB servers
@@ -53,20 +47,6 @@ namespace eval turbine {
         }
     }
 
-    proc eval { command } {
-
-        set command [ string trim $command ]
-        set prefix "[ string range $command 0 2 ]"
-        if { [ string equal $prefix "tf:" ] } {
-            set proccall [ lrange $command 1 end ]
-            debug "eval: $proccall"
-            ::eval $proccall
-        } else {
-            debug "exec: $command"
-            ::eval "exec $command"
-        }
-    }
-
     proc debug { msg } {
         c::debug $msg
     }
@@ -81,7 +61,7 @@ namespace eval turbine {
         c::log "starting clock"
 	dict set stats clock_start [ clock clicks -milliseconds ]
 
-	dict set stats set1 0
+	# dict set stats set1 0
     }
 
     proc report_stats { } {

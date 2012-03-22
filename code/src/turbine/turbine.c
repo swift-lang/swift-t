@@ -4,6 +4,8 @@
  *
  *  Created on: May 4, 2011
  *      Author: wozniak
+ *
+ * TD means Turbine Datum, which is a variable id stored in ADLB
  * */
 
 #include <assert.h>
@@ -19,28 +21,43 @@
 #include <table.h>
 #include <table_lp.h>
 #include <tools.h>
+// #include <exm-string.h>
 
 #include "src/util/debug.h"
 
 #include "src/turbine/turbine.h"
 
-#define XFER_SIZE (1024*1024)
-/** Reusable buffer for data transfer */
-static char xfer[XFER_SIZE];
-
 typedef enum
 {
-  TR_WAITING, TR_READY, TR_RUNNING, TR_DONE
-} tr_status;
+  /** Waiting for inputs */
+  TRANSFORM_WAITING,
+  /** Inputs ready */
+  TRANSFORM_READY,
+  /** Application level has started the action */
+  TRANSFORM_RUNNING,
+  /** Application level has completed the action */
+  TRANSFORM_DONE
+} transform_status;
 
+/**
+   In-memory structure resulting from Turbine rule statement
+ */
 typedef struct
 {
   turbine_transform_id id;
-  turbine_transform transform;
+  /** Name for human debugging */
+  char* name;
+  /** Tcl string to evaluate when inputs are ready */
+  char* action;
+  /** Number of inputs */
+  int inputs;
+  /** Array of input TDs */
+  turbine_datum_id* input_list;
+  turbine_action_type action_type;
   /** Index of next subscribed input (starts at 0) */
   int blocker;
-  tr_status status;
-} tr;
+  transform_status status;
+} transform;
 
 /**
    Has turbine_init() been called successfully?
@@ -48,41 +65,29 @@ typedef struct
 static bool initialized = false;
 
 /**
-   Waiting trs
-   Map from tr id to tr
+   Waiting transforms
+   Map from transform id to transform
  */
-struct table_lp trs_waiting;
+struct table_lp transforms_waiting;
 
 /**
-   Ready trs
+   Ready transforms
  */
-struct list trs_ready;
+struct list transforms_ready;
 
 /**
-   Running TRs
-   Map from TR ID to TR
+   Running transforms
+   Map from transform ID to transform
  */
-struct table_lp trs_running;
+struct table_lp transforms_running;
 
 /**
-   TD inputs blocking their TRs
-   Map from TD ID to list of TRs
+   TD inputs blocking their transforms
+   Map from TD ID to list of transforms
  */
 struct table_lp td_blockers;
 
-/**
-   Subscript lookups blocking their TRs
-   Map from "container[subscript]" strings to list of TRs
- */
-struct table subscript_blockers;
-
 #define turbine_check(code) if (code != TURBINE_SUCCESS) return code;
-
-// Currently unused
-// #define turbine_check_msg(code, format, args...)
-//    { if (code != TURBINE_SUCCESS)
-//       turbine_check_msg_impl(code, format, ## args);
-//    }
 
 #define turbine_check_verbose(code) \
     turbine_check_verbose_impl(code, __FILE__, __LINE__)
@@ -98,17 +103,11 @@ struct table subscript_blockers;
     }                                                   \
   }
 
-/*
-// Currently unused
-static void turbine_check_msg_impl(turbine_code code,
-                                   const char* format, ...);
-*/
-
 /**
    Globally unique transform ID for rule_new().
    Starts at mpi_rank, incremented by mpi_size, thus unique
  */
-static long unique_transform = -1;
+static long transform_unique_id = -1;
 
 static int mpi_size = -1;
 
@@ -119,7 +118,8 @@ static int mpi_size = -1;
        return code;                                         \
     }}
 
-static void check_versions()
+static void
+check_versions()
 {
   version tv, av, rav, cuv, rcuv;
   turbine_version(&tv);
@@ -136,13 +136,18 @@ static void check_versions()
 /**
    This is a separate function so we can set a function breakpoint
  */
-static void gdb_sleep(int* t, int i)
+static void
+gdb_sleep(int* t, int i)
 {
   sleep(1);
   DEBUG_TURBINE("gdb_check: %i %i\n", *t, i);
 }
 
-static void gdb_check(int rank)
+/**
+   Allows user to launch Turbine in a loop until a debugger attaches
+ */
+static void
+gdb_check(int rank)
 {
   int gdb_rank;
   char* s = getenv("GDB_RANK");
@@ -178,15 +183,15 @@ turbine_init(int amserver, int rank, int size)
     return TURBINE_SUCCESS;
 
   mpi_size = size;
-  unique_transform = rank+mpi_size;
+  transform_unique_id = rank+mpi_size;
 
   bool result;
-  result = table_lp_init(&trs_waiting, 1024*1024);
+  result = table_lp_init(&transforms_waiting, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
 
-  list_init(&trs_ready);
-  result = table_lp_init(&trs_running, 1024*1024);
+  list_init(&transforms_ready);
+  result = table_lp_init(&transforms_running, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
   result = table_lp_init(&td_blockers, 1024*1024);
@@ -204,143 +209,131 @@ void turbine_version(version* output)
   version_parse(output, TURBINE_VERSION);
 }
 
-static turbine_code
-tr_create(turbine_transform* transform, tr** t)
+static inline long
+make_unique_id()
 {
-  assert(transform->name);
-  assert(transform->action);
+  long result = transform_unique_id;
+  transform_unique_id += mpi_size;
+  return result;
+}
 
-  tr* result = malloc(sizeof(tr));
+static inline turbine_code
+transform_create(const char* name,
+                 int inputs, const turbine_datum_id* input_list,
+                 turbine_action_type action_type,
+                 const char* action,
+                 transform** result)
+{
+  assert(name);
+  assert(action);
 
-  result->transform.name = strdup(transform->name);
-  result->transform.action = strdup(transform->action);
-  result->blocker = 0;
+  transform* T = malloc(sizeof(transform));
 
-  if (transform->inputs > 0)
+  T->id = make_unique_id();
+  T->name = strdup(name);
+  T->action_type = action_type;
+  T->action = strdup(action);
+  T->blocker = 0;
+
+  if (inputs > 0)
   {
-    result->transform.input_list =
-        malloc(transform->inputs*sizeof(turbine_datum_id));
-    if (! result->transform.input_list)
+    T->input_list =
+        malloc(inputs*sizeof(turbine_datum_id));
+    if (! T->input_list)
       return TURBINE_ERROR_OOM;
   }
   else
-    result->transform.input_list = NULL;
+    T->input_list = NULL;
 
-  if (transform->outputs > 0)
-  {
-    result->transform.output_list =
-        malloc(transform->outputs*sizeof(turbine_datum_id));
-    if (! result->transform.output_list)
-      return TURBINE_ERROR_OOM;
-  }
-  else
-    result->transform.output_list = NULL;
+  T->inputs = inputs;
+  for (int i = 0; i < inputs; i++)
+    T->input_list[i] = input_list[i];
 
-  result->transform.inputs = transform->inputs;
-  for (int i = 0; i < transform->inputs; i++)
-    result->transform.input_list[i] = transform->input_list[i];
+  T->status = TRANSFORM_WAITING;
 
-  result->transform.outputs = transform->outputs;
-  for (int i = 0; i < transform->outputs; i++)
-    result->transform.output_list[i] = transform->output_list[i];
-
-  result->status = TR_WAITING;
-
-  *t = result;
+  *result = T;
   return TURBINE_SUCCESS;
 }
 
-static void
-tr_free(tr* t)
+static inline void
+transform_free(transform* T)
 {
-  free(t->transform.name);
-  free(t->transform.action);
-  if (t->transform.input_list)
-    free(t->transform.input_list);
-  if (t->transform.output_list)
-    free(t->transform.output_list);
-  free(t);
+  free(T->name);
+  free(T->action);
+  if (T->input_list)
+    free(T->input_list);
+  free(T);
 }
 
-static void subscribe(turbine_transform_id id,
-                      int* result)
+static inline void
+subscribe(turbine_transform_id id, int* result)
 {
   ADLB_Subscribe(id, result);
 }
 
 static int transform_tostring(char* output,
-                              turbine_transform* transform);
+                              transform* transform);
 
 #ifdef ENABLE_DEBUG_TURBINE
-#define DEBUG_TURBINE_RULE_ADD(transform, id) {         \
+#define DEBUG_TURBINE_RULE(transform, id) {         \
     char tmp[1024];                                     \
     transform_tostring(tmp, transform);                 \
-    DEBUG_TURBINE("rule_add: %s {%li}", tmp, id);     \
+    DEBUG_TURBINE("rule: %s {%li}", tmp, id);     \
   }
 #else
 #define DEBUG_TURBINE_RULE_ADD(transform, id)
 #endif
 
-static bool progress(tr* transform);
-
-static void rule_inputs(tr* transform);
+static bool progress(transform* T);
+static void rule_inputs(transform* T);
 
 turbine_code
-turbine_rule_add(turbine_transform_id id,
-                 turbine_transform* transform)
+turbine_rule(const char* name,
+             int inputs, const turbine_datum_id* input_list,
+             turbine_action_type action_type,
+             const char* action,
+             turbine_transform_id* id)
 {
-  if (id == TURBINE_ID_NULL)
-    return TURBINE_ERROR_NULL;
-
-  tr* new_tr;
-  turbine_code code = tr_create(transform, &new_tr);
-  DEBUG_TURBINE_RULE_ADD(transform, id);
+  transform* T = NULL;
+  turbine_code code = transform_create(name, inputs, input_list,
+                                       action_type, action, &T);
+  *id = T->id;
+  DEBUG_TURBINE_RULE(T, *id);
   turbine_check(code);
-  new_tr->id = id;
-  new_tr->blocker = 0;
 
-  rule_inputs(new_tr);
+  rule_inputs(T);
 
-  bool subscribed = progress(new_tr);
+  bool subscribed = progress(T);
 
   if (subscribed)
   {
-    table_lp_add(&trs_waiting, id, new_tr);
+    table_lp_add(&transforms_waiting, *id, T);
   }
   else
   {
-    list_add(&trs_ready, new_tr);
+    list_add(&transforms_ready, T);
   }
-
-  if (id >= unique_transform)
-    unique_transform = id+1;
 
   return TURBINE_SUCCESS;
 }
+
+turbine_code declare_datum(turbine_datum_id id,
+                           struct list_l** result);
 
 /**
-   Record that this rule is blocked by its inputs
+   Record that this transform is blocked by its inputs
 */
 static void
-rule_inputs(tr* transform)
+rule_inputs(transform* T)
 {
-  for (int i = 0; i < transform->transform.inputs; i++)
+  for (int i = 0; i < T->inputs; i++)
   {
-    turbine_datum_id id = transform->transform.input_list[i];
+    turbine_datum_id id = T->input_list[i];
     struct list_l* L = table_lp_search(&td_blockers, id);
-    // turbine_condition(L != NULL, TURBINE_ERROR_NOT_FOUND,
-    //                  "rule_add: could not find: <%li>\n", id);
     if (L == NULL)
-      turbine_declare(id, &L);
-    list_l_add(L, transform->id);
+      declare_datum(id, &L);
+    list_l_add(L, T->id);
   }
-}
-
-turbine_code
-turbine_rule_new(turbine_transform_id *id)
-{
-  *id = unique_transform + mpi_size;
-  return TURBINE_SUCCESS;
 }
 
 /**
@@ -350,12 +343,12 @@ turbine_rule_new(turbine_transform_id *id)
 static void
 add_to_ready(struct list* tmp)
 {
-  tr* t;
-  while ((t = list_poll(tmp)))
+  transform* T;
+  while ((T = list_poll(tmp)))
   {
-    void* c = table_lp_remove(&trs_waiting, t->id);
+    void* c = table_lp_remove(&transforms_waiting, T->id);
     assert(c);
-    list_add(&trs_ready, t);
+    list_add(&transforms_ready, T);
   }
 }
 
@@ -370,17 +363,17 @@ turbine_rules_push()
   struct list tmp;
   list_init(&tmp);
 
-  for (int i = 0; i < trs_waiting.capacity; i++)
-    for (struct list_lp_item* item = trs_waiting.array[i]->head; item;
+  for (int i = 0; i < transforms_waiting.capacity; i++)
+    for (struct list_lp_item* item = transforms_waiting.array[i]->head; item;
          item = item->next)
     {
-      tr* t = item->data;
-      assert(t);
-      bool subscribed = progress(t);
+      transform* T = item->data;
+      assert(T);
+      bool subscribed = progress(T);
       if (!subscribed)
       {
-        DEBUG_TURBINE("not subscribed on: %li\n", t->id);
-        list_add(&tmp, t);
+        DEBUG_TURBINE("not subscribed on: %li\n", T->id);
+        list_add(&tmp, T);
       }
     }
 
@@ -394,7 +387,7 @@ turbine_rules_push()
    @param result If non-NULL, return the new blocked list here
  */
 turbine_code
-turbine_declare(turbine_datum_id id, struct list_l** result)
+declare_datum(turbine_datum_id id, struct list_l** result)
 {
   assert(initialized);
   // DEBUG_TURBINE("declare: %li\n", id);
@@ -417,11 +410,11 @@ turbine_ready(int count, turbine_transform_id* output,
   int i = 0;
   void* v;
   DEBUG_TURBINE("ready:");
-  while (i < count && (v = list_poll(&trs_ready)))
+  while (i < count && (v = list_poll(&transforms_ready)))
   {
-    tr* t = (tr*) v;
-    table_lp_add(&trs_running, t->id, t);
-    output[i] = t->id;
+    transform* T = (transform*) v;
+    table_lp_add(&transforms_running, T->id, T);
+    output[i] = T->id;
     DEBUG_TURBINE("\t %li", output[i]);
     i++;
   }
@@ -429,63 +422,48 @@ turbine_ready(int count, turbine_transform_id* output,
   return TURBINE_SUCCESS;
 }
 
-/*
-
-NOT CURRENTLY USED
-
-turbine_code
-turbine_entry_set(turbine_entry* entry,
-                  const char* type, const char* name)
-{
-  if (strcmp(type, "field"))
-    entry->type = TURBINE_ENTRY_FIELD;
-  else if (strcmp(type, "key"))
-    entry->type = TURBINE_ENTRY_KEY;
-  else
-  {
-    printf("unknown entry type: %s\n", type);
-    assert(false);
-  }
-  strcpy(entry->name, name);
-  return TURBINE_SUCCESS;
-}
-*/
-
 /**
-   @param action Location to write the action string
-   TODO: Fix this!  Fails badly if string exceeds space (#155)
+   @param action Pointer into Turbine memory
+                 Use this before calling turbine_complete
  */
 turbine_code
-turbine_action(turbine_transform_id id, char* action)
+turbine_action(turbine_transform_id id,
+               turbine_action_type* action_type, char** action)
 {
   if (id == TURBINE_ID_NULL)
     return TURBINE_ERROR_NULL;
 
-  tr* t = table_lp_search(&trs_running, id);
-  if (!t)
+  transform* T = table_lp_search(&transforms_running, id);
+  if (!T)
     return TURBINE_ERROR_NOT_FOUND;
 
-  strcpy(action, t->transform.action);
+  *action = T->action;
+  *action_type = T->action_type;
 
-  DEBUG_TURBINE("action: {%li} %s: %s",
-                id, t->transform.name, action);
+  DEBUG_TURBINE("action: {%li} %s: %s", id, T->name, T->action);
   return TURBINE_SUCCESS;
 }
 
+/**
+   Indicate a transform action is no longer running
+   Free the transform
+ */
 turbine_code
 turbine_complete(turbine_transform_id id)
 {
   if (id == TURBINE_ID_NULL)
     return TURBINE_ERROR_NULL;
 
-  tr* t = table_lp_remove(&trs_running, id);
-  assert(t);
-  DEBUG_TURBINE("complete: {%li} %s", id, t->transform.name);
-  tr_free(t);
-
+  transform* T = table_lp_remove(&transforms_running, id);
+  assert(T);
+  DEBUG_TURBINE("complete: {%li} %s", id, T->name);
+  transform_free(T);
   return TURBINE_SUCCESS;
 }
 
+/**
+   TODO: This does not remove tds from td_blockers!
+ */
 turbine_code
 turbine_close(turbine_datum_id id)
 {
@@ -502,16 +480,16 @@ turbine_close(turbine_datum_id id)
   // Try to make progress on those transforms
   for (struct list_l_item* item = L->head; item; item = item->next)
   {
-    turbine_transform_id tr_id = item->data;
-    tr* transform = table_lp_search(&trs_waiting, tr_id);
-    if (!transform)
+    turbine_transform_id transform_id = item->data;
+    transform* T = table_lp_search(&transforms_waiting, transform_id);
+    if (!T)
       continue;
 
-    bool subscribed = progress(transform);
+    bool subscribed = progress(T);
     if (!subscribed)
     {
-      DEBUG_TURBINE("ready: {%li}", tr_id);
-      list_add(&tmp, transform);
+      DEBUG_TURBINE("ready: {%li}", transform_id);
+      list_add(&tmp, T);
     }
   }
 
@@ -521,16 +499,15 @@ turbine_close(turbine_datum_id id)
 }
 
 static bool
-progress(tr* transform)
+progress(transform* T)
 {
   int subscribed = 0;
-  while (transform->blocker < transform->transform.inputs)
+  while (T->blocker < T->inputs)
   {
-    turbine_datum_id tid =
-        transform->transform.input_list[transform->blocker];
-    subscribe(tid, &subscribed);
+    turbine_datum_id td = T->input_list[T->blocker];
+    subscribe(td, &subscribed);
     if (!subscribed)
-      transform->blocker++;
+      T->blocker++;
     else
       break;
   }
@@ -588,174 +565,18 @@ turbine_code_tostring(char* output, turbine_code code)
   return result;
 }
 
-static int td_tostring(char* output, int length, turbine_datum* td)
-{
-  int result;
-  switch (td->type)
-  {
-    case TURBINE_TYPE_FILE:
-      result = snprintf(output, length, "file:/%s",
-                        td->data.file.path);
-      break;
-    case TURBINE_TYPE_CONTAINER:
-      result = snprintf(output, length, "container");
-      break;
-    default:
-      puts("unknown turbine_datum type!");
-      assert(false);
-      break;
-  }
-  return result;
-}
-
-/*
-NOT CURRENTLY USED
-
-static void
-string_totype(const char* type_string, turbine_type* type)
-{
-  if (strcmp(type_string, "integer") == 0)
-    *type = TURBINE_TYPE_INTEGER;
-  else if (strcmp(type_string, "float") == 0)
-    *type = TURBINE_TYPE_FLOAT;
-  else if (strcmp(type_string, "string") == 0)
-    *type = TURBINE_TYPE_STRING;
-  else if (strcmp(type_string, "blob") == 0)
-    *type = TURBINE_TYPE_BLOB;
-  else if (strcmp(type_string, "file") == 0)
-    *type = TURBINE_TYPE_FILE;
-  else if (strcmp(type_string, "container") == 0)
-    *type = TURBINE_TYPE_CONTAINER;
-  else
-    *type = TURBINE_TYPE_NULL;
-}
-*/
-
-/*
-NOT CURRENTLY USED
-
 static int
-type_tostring(char* output, turbine_type type)
-{
-  int result = -1;
-  switch(type)
-  {
-    case TURBINE_TYPE_INTEGER:
-      result = sprintf(output, "integer");
-      break;
-    case TURBINE_TYPE_FLOAT:
-      result = sprintf(output, "float");
-      break;
-    case TURBINE_TYPE_STRING:
-      result = sprintf(output, "string");
-      break;
-    case TURBINE_TYPE_BLOB:
-      result = sprintf(output, "blob");
-      break;
-    case TURBINE_TYPE_FILE:
-      result = sprintf(output, "file");
-      break;
-    case TURBINE_TYPE_CONTAINER:
-      result = sprintf(output, "container");
-      break;
-    case TURBINE_TYPE_NULL:
-      sprintf(output, "TURBINE_TYPE_NULL");
-    default:
-      sprintf(output, "<unknown type>");
-  }
-  return result;
-}
-*/
-
-static turbine_code
-td_get(turbine_datum_id id, turbine_datum* td)
-{
-  int length;
-  adlb_data_type type;
-  int error = ADLB_Retrieve(id, &type, xfer, &length);
-  if (error != ADLB_SUCCESS)
-    return TURBINE_ERROR_NOT_FOUND;
-
-  td->type = type;
-  td->status = TD_SET;
-
-  switch (type)
-  {
-    case TURBINE_TYPE_INTEGER:
-      memcpy(&td->data.integer.value, xfer, sizeof(long));
-      break;
-    case TURBINE_TYPE_FLOAT:
-      memcpy(&td->data.FLOAT.value, xfer, sizeof(double));
-      break;
-    case TURBINE_TYPE_STRING:
-      td->data.string.value = strdup(xfer);
-      td->data.string.length = strlen(xfer);
-      break;
-    case TURBINE_TYPE_BLOB:
-      // TODO: DO SOMETHING
-      break;
-    case TURBINE_TYPE_FILE:
-      td->data.file.path = strdup(xfer);
-      break;
-    case TURBINE_TYPE_CONTAINER:
-      break;
-    case TURBINE_TYPE_NULL:
-      printf("Attempt to retrieve TURBINE_TYPE_NULL!\n");
-      return TURBINE_ERROR_NULL;
-      break;
-  }
-
-  return TURBINE_SUCCESS;
-}
-
-int
-turbine_data_tostring(char* output, int length, turbine_datum_id id)
-{
-  int t;
-  int result = 0;
-  char* p = output;
-
-  turbine_datum td;
-  turbine_code code = td_get(id, &td);
-  assert(code == TURBINE_SUCCESS);
-
-  t = snprintf(p, length, "%li:", id);
-  result += t;
-  length -= t;
-  p      += t;
-
-  t = td_tostring(p, length, &td);
-  result += t;
-  length -= t;
-  p      += t;
-
-  char* status = (td.status == TD_UNSET) ? "UNSET" : "SET";
-  t = snprintf(p, length, "%s", status);
-  result += t;
-
-  return result;
-}
-
-static int
-transform_tostring(char* output, turbine_transform* transform)
+transform_tostring(char* output, transform* t)
 {
   int result = 0;
   char* p = output;
 
-  append(p, "%s ", transform->name);
+  append(p, "%s:%i ", t->name, t->action_type);
   append(p, "(");
-  for (int i = 0; i < transform->inputs; i++)
+  for (int i = 0; i < t->inputs; i++)
   {
-    append(p, "%li", transform->input_list[i]);
-    if (i < transform->inputs-1)
-      append(p, " ");
-  }
-  append(p, ")->(");
-
-  for (int i = 0; i < transform->outputs; i++)
-  {
-    append(p, "%li", transform->output_list[i]);
-    if (i < transform->outputs-1)
+    append(p, "%li", t->input_list[i]);
+    if (i < t->inputs-1)
       append(p, " ");
   }
   append(p, ")");
@@ -767,15 +588,15 @@ transform_tostring(char* output, turbine_transform* transform)
 static void
 info_waiting()
 {
-  printf("WAITING TRANSFORMS: %i\n", trs_waiting.size);
+  printf("WAITING TRANSFORMS: %i\n", transforms_waiting.size);
   char buffer[1024];
-  for (int i = 0; i < trs_waiting.capacity; i++)
-    for (struct list_lp_item* item = trs_waiting.array[i]->head;
+  for (int i = 0; i < transforms_waiting.capacity; i++)
+    for (struct list_lp_item* item = transforms_waiting.array[i]->head;
          item; item = item->next)
     {
-      tr* t = (tr*) item->data;
+      transform* t = item->data;
       int c = sprintf(buffer, "%6li  ", t->id);
-      transform_tostring(buffer+c, &t->transform);
+      transform_tostring(buffer+c, t);
       printf("TRANSFORM: %s\n", buffer);
     }
 }
@@ -783,24 +604,6 @@ info_waiting()
 void
 turbine_finalize()
 {
-  if (trs_waiting.size != 0)
+  if (transforms_waiting.size != 0)
     info_waiting();
 }
-
-/*
-// Currently unused
-static void
-turbine_check_msg_impl(turbine_code code, const char* format, ...)
-{
-  char buffer[1024];
-  char* p = &buffer[0];
-  va_list ap;
-  p += sprintf(p, "\n%s", "turbine error: ");
-  va_start(ap, format);
-  p += vsprintf(buffer, format, ap);
-  va_end(ap);
-  turbine_code_tostring(p, code);
-  printf("%s\n", buffer);
-  fflush(NULL);
-}
-*/

@@ -34,9 +34,8 @@ namespace eval turbine {
         nonempty o i
         set lo [ lindex $i 0 ]
         set hi [ lindex $i 1 ]
-        set rule_id [ rule_new ]
-        rule $rule_id "randint-$lo-$hi" "$lo $hi" $o \
-            "tl: randint_body $o $lo $hi"
+        rule "randint-$lo-$hi" "$lo $hi" \
+            $turbine::LOCAL "randint_body $o $lo $hi"
     }
 
     proc randint_body { o lo hi } {
