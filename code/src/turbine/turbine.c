@@ -575,7 +575,11 @@ transform_tostring(char* output, transform* t)
   append(p, "(");
   for (int i = 0; i < t->inputs; i++)
   {
-    append(p, "%li", t->input_list[i]);
+    // Highlight the blocking variable
+    if (i == t->blocker)
+      append(p, "*%li*", t->input_list[i]);
+    else
+      append(p, "%li", t->input_list[i]);
     if (i < t->inputs-1)
       append(p, " ");
   }
@@ -595,7 +599,7 @@ info_waiting()
          item; item = item->next)
     {
       transform* t = item->data;
-      int c = sprintf(buffer, "%6li  ", t->id);
+      int c = sprintf(buffer, "%6li ", t->id);
       transform_tostring(buffer+c, t);
       printf("TRANSFORM: %s\n", buffer);
     }
