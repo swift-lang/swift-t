@@ -5,6 +5,16 @@ namespace eval turbine {
     namespace export f_reference
     namespace export f_container_create_nested
 
+
+    # Same as container get, but fail if item does not exist
+    proc checked_container_get { c i } {
+        set res [ container_get $c $i ]
+        if { $res == 0 } {
+            error "lookup failed: checked_container_get <$c>\[$i\]"
+        }
+        return $res
+    }
+
     # When i is closed, set d := c[i]
     # d: the destination, an integer
     # inputs: [ list c i ]
@@ -141,7 +151,6 @@ namespace eval turbine {
 
     # When reference r is closed, copy its (float) value into v
     proc f_dereference_float { parent v r } {
-
         rule "f_dereference-$v-$r" $r $turbine::LOCAL \
             "turbine::f_dereference_float_body $v $r"
     }
