@@ -281,7 +281,7 @@ static int transform_tostring(char* output,
     DEBUG_TURBINE("rule: %s {%li}", tmp, id);     \
   }
 #else
-#define DEBUG_TURBINE_RULE_ADD(transform, id)
+#define DEBUG_TURBINE_RULE(transform, id)
 #endif
 
 static bool progress(transform* T);
