@@ -456,6 +456,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
       length = sizeof(double);
       break;
     case ADLB_DATA_TYPE_STRING:
+    case ADLB_DATA_TYPE_BLOB:
       s = Tcl_GetStringFromObj(objv[3], &length);
       TCL_CONDITION(s != NULL,
           "adlb::store string <%li> failed!", id);
@@ -467,9 +468,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
     case ADLB_DATA_TYPE_FILE:
       // Ignore objv[3]
       break;
-    case ADLB_DATA_TYPE_BLOB:
-      // Ignore objv[3]
-      break;
+
     case ADLB_DATA_TYPE_CONTAINER:
       // Ignore objv[3]
       break;
@@ -536,14 +535,11 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
       result = Tcl_NewDoubleObj(tmp_double);
       break;
     case ADLB_DATA_TYPE_STRING:
+    case ADLB_DATA_TYPE_BLOB:
       result = Tcl_NewStringObj(xfer, length-1);
       break;
     case ADLB_DATA_TYPE_FILE:
       result = Tcl_NewStringObj(xfer, length-1);
-      break;
-    case ADLB_DATA_TYPE_BLOB:
-      // TODO: DO SOMETHING
-      result = NULL;
       break;
     case ADLB_DATA_TYPE_CONTAINER:
       result = Tcl_NewStringObj(xfer, length-1);
