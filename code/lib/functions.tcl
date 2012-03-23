@@ -12,7 +12,7 @@
 namespace eval turbine {
 
     # User functions
-    namespace export arithmetic enumerate literal shell
+    namespace export argv_get enumerate literal shell
 
     # Memory functions (will be in turbine::f namespace)
     namespace export f_dereference
@@ -27,33 +27,65 @@ namespace eval turbine {
     namespace import c::new c::rule c::typeof
     namespace import c::insert c::log
 
+    variable turbine_argc
+    variable turbine_argv
+
     # Called by turbine::init to setup Turbine's argv
     proc argv_init { } {
 
-        global argv
-        global null
         global argc
         global argv
+        variable turbine_argc
+        variable turbine_argv
+        variable mode
 
-        set null 0
-        set argc 0
-        set argv [ dict create ]
-        foreach arg $argv {
-            set tokens [ split $arg = ]
-            set key [ lindex $tokens 0 ]
-            if { [ string index $key 0 ] == "-" } {
-                set key [ string range $key 1 end ]
+        if { ! [ string equal $mode ENGINE ] } return
+
+        puts "argv_init $::argv"
+
+        set turbine_argv [ dict create ]
+        # Arguments that are not part of a -key=value pair
+        set turbine_argc 0
+        for { set i 0 } { $i < $argc } { incr i } {
+            set arg [ lindex $argv $i ]
+            set tokens [ ::split $arg = ]
+            set token [ lindex $tokens 0 ]
+            if { [ string index $token 0 ] == "-" } {
+                set key [ string range $token 1 end ]
+                if { [ string index $key 0 ] == "-" } {
+                    set key [ string range $key 1 end ]
+                }
+                set value [ lindex $tokens 1 ]
+            } else {
+                incr turbine_argc
+                set key $turbine_argc
+                set value $token
             }
-            if { [ string index $key 0 ] == "-" } {
-                set key [ string range $key 1 end ]
-            }
-            set value [ lindex $tokens 1 ]
-            set v [ new ]
-            string_init $v
-            set_string $v $value
-            dict set argv $key $value
-            debug "argv: $key=<$v>=$value"
-            incr argc
+
+            literal argv_td string $value
+            dict set turbine_argv $key $argv_td
+            # incr argc
+        }
+    }
+
+    proc argc_get { stack result } {
+        variable turbine_argc
+        set_integer $result $turbine_argc
+    }
+
+    proc argv_contains { stack result key } {
+        rule "argv_contains-$key" $key $turbine::LOCAL \
+            "argv_contains_body $result $key"
+    }
+
+    proc argv_contains_body { result key } {
+
+        variable turbine_argv
+        set t [ get $key ]
+        if { [ catch { set td [ dict get $turbine_argv $t ] } ] } {
+            set_integer $result 0
+        } else {
+            set_integer $result 1
         }
     }
 
@@ -61,41 +93,75 @@ namespace eval turbine {
     # usage: argv_get <result> <optional:default> <key>
     proc argv_get { args } {
 
-        set result [ lindex $args 0 ]
-        set key    [ lindex $args 1 ]
+        set stack  [ lindex $args 0 ]
+        set result [ lindex $args 1 ]
+        set key    [ lindex $args 2 ]
         set base ""
-        if { [ llength $args ] == 3 }  {
-            set base [ lindex $args 2 ]
+        if { [ llength $args ] == 4 }  {
+            set base [ lindex $args 3 ]
         }
 
         rule "argv_get-$key" $key $turbine::LOCAL \
-            "argv_get_body $key $base $result"
+            "argv_get_body $result $key $base"
     }
 
-    # usage: argv_get <optional:default> <key> <result>
+    # usage: argv_get <result> <key> <optional:default>
+    # "default" is a Tcl keyword so we call it "base"
     proc argv_get_body { args } {
 
-        global null
-        global argv
+        variable turbine_argv
 
-        set argc [ llength $args ]
-        if { $argc != 2 && $argc != 3 } error
-
-        if { $argc == 2 } {
-            set base ""
-            set result [ lindex $args 1 ]
-        } elseif { $argc == 3 } {
-            set base [ lindex $args 1 ]
-            set result [ lindex $args 2 ]
+        set c [ llength $args ]
+        if { $c != 2 && $c != 3 } {
+            error "argv_get_body: args: $c"
         }
-        set key [ lindex $args 0 ]
 
-        set t [ get_string $key ]
-        if { [ catch { set v [ dict get $argv $t ] } ] } {
-            set_string $result ""
+        set result [ lindex $args 0 ]
+        puts "result $result"
+        set key    [ lindex $args 1 ]
+        if { $c == 2 } {
+            set base 0
+        } elseif { $c == 3 } {
+            set base [ lindex $args 2 ]
+        }
+
+        set t [ get $key ]
+        if { [ catch { set td [ dict get $turbine_argv $t ] } ] } {
+            if { ! $base } {
+                error "Could not find argv($t)"
+            }
+            set_string $result [ get_string $base ]
             return
         }
-        set_string $result $v
+        set_string $result [ get_string $td ]
+    }
+
+    proc argv_accept { args } {
+        set stack [ lindex 0 ]
+        set L [ lreplace $args 0 0 ]
+        rule argv_accept "$L" $turbine::LOCAL "argv_accept_body $L"
+    }
+
+    proc argv_accept_body { args } {
+
+        variable turbine_argv
+
+        puts "accept: $args"
+
+        if { [ adlb::rank ] != 0 } {
+            return
+        }
+
+        set accepted [ list ]
+        foreach td $args {
+            lappend accepted [ get_string $td ]
+        }
+        dict for { key value } $turbine_argv {
+            if [ string is integer $key ] continue
+            if { [ lsearch $accepted $key ] == -1 } {
+                error "argv_accept: not accepted: $key"
+            }
+        }
     }
 
     proc call_composite { stack f outputs inputs blockon } {
@@ -305,7 +371,6 @@ namespace eval turbine {
             set name   [ lindex $args 0 ]
             set type   [ lindex $args 1 ]
             set value  [ lindex $args 2 ]
-            puts "name: $name"
             set result [ allocate $name $type ]
             upvar 1 $name n
             set n $result

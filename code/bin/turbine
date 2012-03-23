@@ -31,6 +31,8 @@ done
 
 shift $(( OPTIND-1 ))
 PROGRAM=$1
+shift
+ARGS=${*}
 
 OPTS=
 OPTS+="${L} "
@@ -46,5 +48,5 @@ fi
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
 # Allow user to insert valgrind
-${TURBINE_LAUNCH} ${OPTS} ${VALGRIND} ${TCLSH} ${PROGRAM}
+${TURBINE_LAUNCH} ${OPTS} ${VALGRIND} ${TCLSH} ${PROGRAM} ${ARGS}
 # Exit code returned by shell script

@@ -42,9 +42,7 @@ namespace eval turbine {
 
         set container_branches [ dict create ]
 
-        if { [ string equal $mode SERVER ] } {
-            argv_init
-        }
+        argv_init
     }
 
     proc debug { msg } {
