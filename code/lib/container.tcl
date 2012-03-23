@@ -653,42 +653,39 @@ namespace eval turbine {
     }
 
     proc stat_combine_body { container n_out mean_out std_out \
-                    count_accum mean_accum \
+                    n_accum mean_accum \
                     M2_accum next_index } {
       set keys [ container_list $container ]
-      set n [ llength $keys ]
+      set keycount [ llength $keys ]
       set i $next_index
-      while { $i < $n } {
+      while { $i < $keycount } {
         set key [ lindex $keys $i ]
         set struct [ container_get $container $key ]
         # struct should be closed
         set n_id [ container_get $struct "n" ]
         set mean_id [ container_get $struct "mean" ]
         set M2_id [ container_get $struct "M2" ]
-        set n_exists [ adlb::exists $n_id ]
-        set mean_exists [ adlb::exists $mean_id ]
-        set M2_exists [ adlb::exists $M2_id ]
-        puts "exists: $n_exists $mean_exists $M2_exists" 
-        if { [ expr $n_exists && $mean_exists && $M2_exists ] } {
-          set nval [ get_integer $n_id ]
+        if { [ adlb::exists $n_id ] && [ adlb::exists $mean_id ] \
+            && [ adlb::exists $M2_id ] } {
+          set n [ get_integer $n_id ]
           set mean [ get_float $mean_id ]
           set M2 [ get_float $M2_id ]
           if { $i > 0 } { 
             # combine statistics
             # weighted mean
             # mean' := (mean1 * n1 + mean2 * n2) / ( n1 + n2)
-            set mean_accum [ expr ( $mean_accum * $n_accum + 
-                                $mean * $nval) / double( $n_accum + $nval )
+            set mean_accum [ expr ( $mean_accum * $n_accum + \
+                                $mean * $n) / double( $n_accum + $n ) ]
             #  diff := mean2 - mean1
-            set diff [ $mean - $mean_accum ] 
+            set diff [ expr $mean - $mean_accum ] 
             # M2' := M2_1 + M2_2 + diff^2 * ( n1*n2 / (n1 + n2))
-            set M2_accum [ expr $M2_accum + $M2 +
-                          ($diff**2) * ($n_accum * $nval / ($n_accum + $nval)) ]
+            set M2_accum [ expr $M2_accum + $M2 + \
+                          ($diff**2) * ($n_accum * $n / ($n_accum + $n)) ]
             # n' := n1 + n2
-            set n_accum [ expr $n_accum + $nval ]
+            set n_accum [ expr $n_accum + $n ]
 
           } else {
-            set n_accum $nval
+            set n_accum $n
             set mean_accum $mean
             set M2_accum $M2
           }
@@ -697,7 +694,8 @@ namespace eval turbine {
           rule "stats-combine-$container" \
             "$n_id $mean_id $M2_id" $turbine::LOCAL \
             "stat_combine_body $container $n_out $mean_out $std_out \
-              $count_accum $mean_accum $M2_accum $i"
+              $n_accum $mean_accum $M2_accum $i"
+          return
         }
       }
       if { $n_accum == 0 } {
@@ -705,6 +703,6 @@ namespace eval turbine {
       }
       set_integer $n_out $n_accum
       set_float $mean_out $mean_accum
-      set_float $std_out [ expr sqrt($M2_accum / (double($n))) ]
+      set_float $std_out [ expr sqrt($M2_accum / (double($n_accum))) ]
     }
 }
