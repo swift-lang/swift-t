@@ -251,8 +251,7 @@ namespace eval turbine {
 
     # o = i;
     proc copy_float { parent o i } {
-
-        rule "copyfloat-$o-$i" $i $turbine::LOCAL \
+        rule "copy_float-$o-$i" $i $turbine::LOCAL \
             "copy_float_body $o $i"
     }
     proc copy_float_body { o i } {
