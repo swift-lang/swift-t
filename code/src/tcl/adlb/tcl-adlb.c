@@ -535,8 +535,10 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
       result = Tcl_NewDoubleObj(tmp_double);
       break;
     case ADLB_DATA_TYPE_STRING:
-    case ADLB_DATA_TYPE_BLOB:
       result = Tcl_NewStringObj(xfer, length-1);
+      break;
+    case ADLB_DATA_TYPE_BLOB:
+      result = Tcl_NewStringObj(xfer, -1);
       break;
     case ADLB_DATA_TYPE_FILE:
       result = Tcl_NewStringObj(xfer, length-1);
