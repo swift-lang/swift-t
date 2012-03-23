@@ -87,6 +87,8 @@
 // Type conversion
 (string o) fromint(int i)  "turbine" "0.0.2" "fromint";
 (int o)    toint(string i) "turbine" "0.0.2" "toint";
+(string o) fromfloat(float i)  "turbine" "0.0.2" "fromfloat";
+(float o) tofloat(string i)  "turbine" "0.0.2" "tofloat";
 (float o) itof    (int i) "turbine"  "0.0.2" "itof";
 
 // I/O

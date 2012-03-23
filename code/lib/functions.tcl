@@ -325,18 +325,54 @@ namespace eval turbine {
     }
 
     proc toint_body { input result } {
-
-        set t [ get $input ]
-        # Tcl performs the conversion naturally
-        set_integer $result $t
+      set t [ get $input ]
+      
+      set_integer $result [ check_str_int $t ]
+    }
+    
+    proc check_str_int { input } {
+      if { ! [ string is integer $input ] } {
+        error "could not convert string '${input}' to integer"
+      }
+      return $input
     }
 
     proc fromint { stack result input } {
-        rule "fromint-$input-$result" $input $turbine::LOCAL \
+      rule "fromint-$input-$result" $input $turbine::LOCAL \
             "fromint_body $input $result"
     }
 
     proc fromint_body { input result } {
+        set t [ get $input ]
+        # Tcl performs the conversion naturally
+        set_string $result $t
+    }
+    
+    proc tofloat { stack result input } {
+        rule "tofloat-$input" $input $turbine::LOCAL \
+            "tofloat_body $input $result"
+    }
+
+    proc tofloat_body { input result } {
+        set t [ get $input ]
+        #TODO: would be better if the accepted double types
+        #     matched Swift float literals
+        set_float $result [ check_str_float $t ]
+    }
+
+    proc check_str_float { input } {
+      if { ! [ string is double $input ] } {
+        error "could not convert string '${input}' to float"
+      }
+      return $input
+    }
+    
+    proc fromfloat { stack result input } {
+        rule "fromfloat-$input-$result" $input $turbine::LOCAL \
+            "fromfloat_body $input $result"
+    }
+
+    proc fromfloat_body { input result } {
         set t [ get $input ]
         # Tcl performs the conversion naturally
         set_string $result $t
