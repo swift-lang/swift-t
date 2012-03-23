@@ -34,6 +34,17 @@ PROGRAM=$1
 shift
 ARGS=${*}
 
+if [[ ${PROGRAM} == "" ]]
+then
+  echo "turbine: no program!"
+  exit 1
+fi
+if [[ ! -f ${PROGRAM} ]]
+then
+  echo "turbine: program not found: ${PROGRAM}"
+  exit 1
+fi
+
 OPTS=
 OPTS+="${L} "
 OPTS+="-n ${PROCS} "
