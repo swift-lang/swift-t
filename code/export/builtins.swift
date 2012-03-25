@@ -122,7 +122,8 @@ type PartialStats {
 // Misc
 () assert(boolean condition, string msg) "turbine" "0.0.2" "assert";
 
-(int c) argc()             "turbine" "0.0.2" "argc_get";
-(int b) argv_contains(...) "turbine" "0.0.2" "argv_contains";
-() argv_accept(...)        "turbine" "0.0.2" "argv_accept";
-(string s) argv(...)       "turbine" "0.0.2" "argv_get";
+(int c) argc()                    "turbine" "0.0.2" "argc_get";
+(int b) argv_contains(string key) "turbine" "0.0.2" "argv_contains";
+() argv_accept(string... keys)    "turbine" "0.0.2" "argv_accept";
+(string s) argv(string key, string... default_val) "turbine" "0.0.2" "argv_get";
+() printf(string fmt, ... args) "turbine" "0.0.2" "printf";
