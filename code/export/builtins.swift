@@ -101,13 +101,10 @@ trace (int|float|string|boolean... args) "turbine" "0.0.2" "trace";
 
 // Container aggregate functions
 (int res) sum_integer(int arr[]) "turbine" "0.0.2" "sum_integer";
-(float res) avg_float(float arr[]) "turbine" "0.0.2" "avg_float";
-(float res) avg_integer(int arr[]) "turbine" "0.0.2" "avg_float";
+(float res) avg(int|float arr[]) "turbine" "0.0.2" "avg_float";
 // Population standard deviation
-(float res) std_float(float arr[]) "turbine" "0.0.2" "std_float";
-(float res) std_integer(int arr[]) "turbine" "0.0.2" "std_float";
-(float mean, float std) stats_float(float arr[]) "turbine" "0.0.2" "stats_float";
-(float mean, float std) stats_integer(int arr[]) "turbine" "0.0.2" "stats_float";
+(float res) std(int|float arr[]) "turbine" "0.0.2" "std";
+(float mean, float std) stats(int|float arr[]) "turbine" "0.0.2" "stats";
 
 
 // Aggregate partial statistics
@@ -116,7 +113,7 @@ type PartialStats {
   float mean;
   float M2; /* Variance * n_samples */
 }
-(int n, float mean, float M2) statagg_float(float arr[]) "turbine" "0.0.2" "statagg_float";
+(int n, float mean, float M2) statagg(int|float arr[]) "turbine" "0.0.2" "statagg_float";
 (int n, float mean, float std) stat_combine(PartialStats arr[]) "turbine" "0.0.2" "stat_combine";
 
 // Misc
