@@ -281,4 +281,5 @@ install: package
 	$(E) cp -uv lib/*.tcl lib/*.so $(INSTALL_LIB)
 	$(E) cp -uv scripts/*.zsh scripts/*.sh $(INSTALL_SCRIPTS)
 	$(E) cp -uv --parents $(SCRIPTS_SUBMIT) $(INSTALL_PREFIX)
+	$(E) cp -uv --parents export/*.swift $(INSTALL_PREFIX)
 	$(E) cp -uv --parents export/**/*.swift $(INSTALL_PREFIX)

@@ -1,3 +1,5 @@
+#ifndef __STC_BUILTINS_SWIFT__
+#define __STC_BUILTINS_SWIFT__
 
 // Swift/Turbine builtins defined here
 
@@ -125,3 +127,4 @@ assertLT(string|int|float|boolean v1, string|int|float|boolean v2,
 assertLTE(string|int|float|boolean v1, string|int|float|boolean v2,
                string msg) "turbine" "0.0.2" "assertLTE";
 
+#endif
