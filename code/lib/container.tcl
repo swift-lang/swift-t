@@ -510,26 +510,26 @@ namespace eval turbine {
     }
 
 
-    # calculate mean of an array of floats
-    proc avg_float { parent result container } {
+    # calculate mean of an array of floats or ints
+    proc avg { parent result container } {
         set NULL 0
         stats_impl $container $NULL $NULL $result $NULL $NULL $NULL $NULL $NULL
     }
 
-    # calculate mean of an array of floats
-    proc std_float { parent result container } {
+    # calculate mean of an array of floats or ints
+    proc std { parent result container } {
         set NULL 0
         stats_impl $container $NULL $NULL $NULL $NULL $NULL $result $NULL $NULL
     }
 
-    proc stats_float { parent outputs container } {
+    proc stats { parent outputs container } {
         set NULL 0
         set mean [ lindex $outputs 0 ]
         set std [ lindex $outputs 1 ]
         stats_impl $container $NULL $NULL $mean $NULL $NULL $std $NULL $NULL
     }
 
-    proc statagg_float { parent outputs container } {
+    proc statagg { parent outputs container } {
         set NULL 0
         set n [ lindex $outputs 0 ]
         set mean [ lindex $outputs 1 ]
@@ -670,6 +670,7 @@ namespace eval turbine {
       while { $i < $keycount } {
         set key [ lindex $keys $i ]
         set struct [ container_get $container $key ]
+        puts "key: $key"
         # struct should be closed
         set n_id [ container_get $struct "n" ]
         set mean_id [ container_get $struct "mean" ]
