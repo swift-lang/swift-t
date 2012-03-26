@@ -20,12 +20,14 @@ namespace eval turbine {
         global argv
         variable turbine_argc
         variable turbine_argv
+        variable turbine_args
         variable mode
 
         if { ! [ string equal $mode ENGINE ] } return
 
         set turbine_argv [ dict create ]
         set turbine_argc 0
+        set turbine_args $::argv
 
         set L [ argv_helper $::argv ]
         for { set i 0 } { $i < $argc } { incr i } {
@@ -96,6 +98,12 @@ namespace eval turbine {
         # ignore inputs
         variable turbine_argc
         set_integer $result $turbine_argc
+    }
+
+    proc args_get { stack result inputs } {
+        # ignore inputs
+        variable turbine_args
+        set_string $result $turbine_args
     }
 
     proc argv_contains { stack result key } {
