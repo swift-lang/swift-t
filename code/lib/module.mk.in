@@ -14,7 +14,8 @@ TCL_SRC := $(DIR)/helpers.tcl             \
            $(DIR)/string.tcl              \
            $(DIR)/container.tcl           \
            $(DIR)/rand.tcl                \
-           $(DIR)/stdio.tcl
+           $(DIR)/stdio.tcl               \
+           $(DIR)/unistd.tcl
 
 # Builds the Turbine Tcl package
 $(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) $(TCL_ADLB_SO) \
