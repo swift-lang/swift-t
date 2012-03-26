@@ -68,7 +68,8 @@ namespace eval turbine {
         }
     }
 
-    proc argc_get { stack result } {
+    proc argc_get { stack result inputs } {
+        # ignore inputs
         variable turbine_argc
         set_integer $result $turbine_argc
     }
@@ -391,10 +392,10 @@ namespace eval turbine {
 
     proc toint_body { input result } {
       set t [ get $input ]
-      
+
       set_integer $result [ check_str_int $t ]
     }
-    
+
     proc check_str_int { input } {
       if { ! [ string is integer $input ] } {
         error "could not convert string '${input}' to integer"
@@ -412,7 +413,7 @@ namespace eval turbine {
         # Tcl performs the conversion naturally
         set_string $result $t
     }
-    
+
     proc tofloat { stack result input } {
         rule "tofloat-$input" $input $turbine::LOCAL \
             "tofloat_body $input $result"
@@ -431,7 +432,7 @@ namespace eval turbine {
       }
       return $input
     }
-    
+
     proc fromfloat { stack result input } {
         rule "fromfloat-$input-$result" $input $turbine::LOCAL \
             "fromfloat_body $input $result"
