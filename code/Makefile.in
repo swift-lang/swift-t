@@ -66,7 +66,7 @@ MPI_INCLUDE = @USE_MPI_INCLUDE@
 MPI_LIB_DIR = @USE_MPI_LIB_DIR@
 MPI_LIB_NAME = @USE_MPI_LIB_NAME@
 # The actual linker arguments:
-LIB_MPI :=
+MPI_LIB :=
 ifneq ($(MPI),0)
 	CFLAGS += -I $(MPI)/include
 endif
@@ -74,21 +74,22 @@ ifneq ($(MPI_INCLUDE),0)
 	CFLAGS += -I $(MPI_INCLUDE)
 endif
 ifeq ($(MACHINE),normal)
-	LIB_MPI	= -L $(MPI)/lib -l mpich # -l mpl
-	LDFLAGS += -Wl,-rpath -Wl,$(MPI)/lib
+	MPI_LIB_DIR = $(MPI)/lib
+	MPI_LIB_NAME = libmpich.so.5
+	MPI_LIB	= -L $(MPI_LIB_DIR) -l mpich # -l mpl
 endif
 ifeq ($(MACHINE),sicortex)
-	LIB_MPI = -L $(MPI)/lib -l scmpi
+	MPI_LIB = -L $(MPI)/lib -l scmpi
 endif
 ifeq ($(MACHINE),bgp-zeptoos)
-	LIB_MPI =
+	MPI_LIB =
 endif
 ifeq ($(MACHINE),custom)
 	ifneq ($(MPI_LIB_DIR),0)
-		LIB_MPI += -L $(MPI_LIB_DIR)
+		MPI_LIB += -L $(MPI_LIB_DIR)
 	endif
 	ifneq ($(MPI_LIB_NAME),0)
-		LIB_MPI += -l $(MPI_LIB_NAME)
+		MPI_LIB += -l $(MPI_LIB_NAME)
 	endif
 endif
 
@@ -110,7 +111,6 @@ CFLAGS += -D VALGRIND
 CFLAGS += -D TURBINE_VERSION=\"$(TURBINE_VERSION)\"
 
 LDFLAGS += -L $(C_UTILS)/lib
-LDFLAGS += -Wl,-rpath -Wl,$(C_UTILS)/lib
 LDFLAGS += -l exmcutils
 
 dirname = $(patsubst %/,%,$(dir $(1)))
@@ -200,9 +200,8 @@ $(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_OBJS)
              $(TURBINE_OBJS) \
              $(LDFLAGS) \
              -L $(ADLB) -l adlb \
-             -Wl,-rpath -Wl,$(ADLB) \
-             -Wl,-rpath -Wl,$(TCL)/lib \
-             $(LIB_MPI)
+             $(MPI_LIB) \
+             -Wl,-rpath -Wl,$(INSTALL_LIB) \
 
 # Test cases in C as objects
 TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC_C))
@@ -272,11 +271,18 @@ debug_build:
 install: package
 	@echo
 	$(Q) "  INSTALL: $(INSTALL_PREFIX)"
+#       Set up directories
 	$(E) mkdir -pv $(INSTALL_PREFIX)
 	$(E) mkdir -pv $(INSTALL_LIB)
 	$(E) mkdir -pv $(INSTALL_BIN)
 	$(E) mkdir -pv $(INSTALL_SCRIPTS)
 	$(E) mkdir -pv $(INSTALL_EXPORT)
+#       Copy shared objects so that all libs are in rpath
+	$(E) cp -uv $(MPI_LIB_DIR)/$(MPI_LIB_NAME) $(INSTALL_LIB)
+	$(E) cp -uv $(TCL)/lib/libtcl8.5.so        $(INSTALL_LIB)
+	$(E) cp -uv $(C_UTILS)/lib/libexmcutils.so $(INSTALL_LIB)
+	$(E) cp -uv $(ADLB)/libadlb.so             $(INSTALL_LIB)
+#       Copy Turbine items
 	$(E) cp -uv bin/turbine $(INSTALL_BIN)
 	$(E) cp -uv lib/*.tcl lib/*.so $(INSTALL_LIB)
 	$(E) cp -uv scripts/*.zsh scripts/*.sh $(INSTALL_SCRIPTS)
