@@ -129,4 +129,18 @@ namespace eval turbine {
         }
         close_container $result
     }
+
+    proc sprintf { stack result inputs } {
+        rule sprintf $inputs $turbine::LOCAL "sprintf_body $result $inputs"
+    }
+
+    proc sprintf_body { result args } {
+        set L [ list ]
+        foreach a $args {
+            lappend L [ get $a ]
+        }
+
+        set s [ eval format $L ]
+        set_string $result $s
+    }
 }
