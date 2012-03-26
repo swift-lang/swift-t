@@ -3,6 +3,8 @@
 
 set turbine_version $env(TURBINE_VERSION)
 
+# List of Turbine shared objects and Tcl libraries
+# Must be kept in sync with list in lib/module.mk.in
 puts [ ::pkg::create -name turbine -version $turbine_version \
        -load libtcladlb.so -load libtclturbine.so \
        -source turbine.tcl   \
@@ -15,5 +17,5 @@ puts [ ::pkg::create -name turbine -version $turbine_version \
        -source arith.tcl \
        -source container.tcl \
        -source rand.tcl      \
-       -source io.tcl      \
+       -source stdio.tcl      \
        -source helpers.tcl ]

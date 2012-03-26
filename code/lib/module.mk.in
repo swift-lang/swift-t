@@ -1,6 +1,8 @@
 
 DIR := lib
 
+# List of Turbine Tcl libraries
+# Must be kept in sync with list in make-package.tcl
 TCL_SRC := $(DIR)/helpers.tcl             \
            $(DIR)/turbine.tcl             \
            $(DIR)/engine.tcl              \
@@ -12,8 +14,9 @@ TCL_SRC := $(DIR)/helpers.tcl             \
            $(DIR)/string.tcl              \
            $(DIR)/container.tcl           \
            $(DIR)/rand.tcl                \
-           $(DIR)/io.tcl
+           $(DIR)/stdio.tcl
 
+# Builds the Turbine Tcl package
 $(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) $(TCL_ADLB_SO) \
             $(TCL_SRC)
 	$(Q) "  TCL		$(@)"
