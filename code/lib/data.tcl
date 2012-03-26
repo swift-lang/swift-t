@@ -10,7 +10,7 @@ namespace eval turbine {
         create_float   set_float   get_float   \
         create_void    set_void                \
         create_file    set_file                \
-        create_blob_string                     \
+        create_blob                            \
         get_blob_string                        \
         allocate_container                     \
         container_get container_list           \
@@ -144,7 +144,7 @@ namespace eval turbine {
 
     # get_void not provided as it wouldn't do anything
 
-    # Create blob from string
+    # Create blob
     proc create_blob { id } {
         log "create_blob: <$id>"
         adlb::create $id $adlb::BLOB
