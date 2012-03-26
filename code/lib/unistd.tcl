@@ -5,8 +5,13 @@
 
 namespace eval turbine {
 
+    # Count of unflagged arguments
     variable turbine_argc
+    # Map from key to value for flagged arguments like:
+    # -key or --key or -key= or -key=value or --key=value
     variable turbine_argv
+    # Simple string containing all arguments (unused)
+    variable turbine_args
 
     # Called by turbine::init to setup Turbine's argv
     proc argv_init { } {
@@ -19,13 +24,14 @@ namespace eval turbine {
 
         if { ! [ string equal $mode ENGINE ] } return
 
-        puts "argv_init $::argv"
-
         set turbine_argv [ dict create ]
-        # Arguments that are not part of a -key=value pair
         set turbine_argc 0
+
+        set L [ argv_helper $::argv ]
         for { set i 0 } { $i < $argc } { incr i } {
-            set arg [ lindex $argv $i ]
+            set arg [ lindex $L $i ]
+            # String replacement may cause early break:
+            if [ string equal $arg "" ] break
             set tokens [ ::split $arg = ]
             set token [ lindex $tokens 0 ]
             if { [ string index $token 0 ] == "-" } {
@@ -42,8 +48,48 @@ namespace eval turbine {
 
             literal argv_td string $value
             dict set turbine_argv $key $argv_td
-            # incr argc
         }
+    }
+
+    # Replace shell quoted spaced arguments with Tcl list
+    proc argv_helper { s } {
+        set result [ list ]
+        # Index into string s
+        set i 0
+        # Index into list s
+        set p 0
+        set length [ llength $s ]
+        # Find arg of form --key=\"val1 val2\"
+        # and replace with \{--key=val1 val2\}
+        for { } { $p < $length } { incr p } {
+            set t [ lindex $s $p ]
+            set j1 [ string first "-" $t $i ]
+            if { $j1 == -1 } {
+                lappend result $t
+                continue
+            }
+            set j2 [ string first "\"" $t $i ]
+            if { $j2 == -1 } {
+                lappend result $t
+                continue
+            }
+            set t [ string replace $t $j2 $j2 "" ]
+            set matched 0
+            for { incr p } { $p < $length } { incr p } {
+                set w [ lindex $s $p ]
+                set t "$t $w"
+                set j4 [ string first "\"" $t ]
+                if { $j4 == -1 } continue
+                set matched 1
+                set j5 [ expr $j4 - 1 ]
+                set t [ string replace $t $j4 $j4 "" ]
+                set i $j5
+                break
+            }
+            if { ! $matched } { error "argv: unmatched quotes!" }
+            lappend result $t
+        }
+        return $result
     }
 
     proc argc_get { stack result inputs } {
@@ -96,7 +142,6 @@ namespace eval turbine {
         }
 
         set result [ lindex $args 0 ]
-        puts "result $result"
         set key    [ lindex $args 1 ]
         if { $c == 2 } {
             set base 0
