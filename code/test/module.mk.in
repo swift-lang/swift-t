@@ -38,4 +38,5 @@ TEST_SRC_TCL := $(DIR)/adlb-noop.tcl         \
                 $(DIR)/range.tcl             \
                 $(DIR)/drange.tcl            \
                 $(DIR)/printf.tcl            \
-                $(DIR)/blob1.tcl
+                $(DIR)/blob1.tcl             \
+                $(DIR)/argv.tcl
