@@ -92,7 +92,7 @@
 (float o) itof    (int i) "turbine"  "0.0.2" "itof";
 
 // I/O
-() trace (...) "turbine" "0.0.2" "trace";
+trace (int|float|string|boolean... args) "turbine" "0.0.2" "trace";
 
 // Container operations
 (int res[]) range(int start, int end) "turbine" "0.0.2" "range";
@@ -120,10 +120,16 @@ type PartialStats {
 (int n, float mean, float std) stat_combine(PartialStats arr[]) "turbine" "0.0.2" "stat_combine";
 
 // Misc
-() assert(boolean condition, string msg) "turbine" "0.0.2" "assert";
+assert(boolean condition, string msg) "turbine" "0.0.2" "assert";
+assertEqual(string|int|float|boolean v1, string|int|float|boolean v2,
+               string msg) "turbine" "0.0.2" "assertEqual";
+assertLT(string|int|float|boolean v1, string|int|float|boolean v2,
+               string msg) "turbine" "0.0.2" "assertLT";
+assertLTE(string|int|float|boolean v1, string|int|float|boolean v2,
+               string msg) "turbine" "0.0.2" "assertLTE";
 
 (int c) argc()                    "turbine" "0.0.2" "argc_get";
 (int b) argv_contains(string key) "turbine" "0.0.2" "argv_contains";
-() argv_accept(string... keys)    "turbine" "0.0.2" "argv_accept";
+argv_accept(string... keys)    "turbine" "0.0.2" "argv_accept";
 (string s) argv(string key, string... default_val) "turbine" "0.0.2" "argv_get";
-() printf(string fmt, ... args) "turbine" "0.0.2" "printf";
+printf(string fmt, int|float|string|boolean... args) "turbine" "0.0.2" "printf";
