@@ -7,7 +7,7 @@ namespace eval turbine {
 
     proc printf { args } {
 
-        set a [ lreplace $args 0 0 ]
+        set a [ lindex $args 2 ]
         rule printf $a $turbine::LOCAL \
             "printf_body $a"
     }
