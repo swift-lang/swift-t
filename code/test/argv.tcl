@@ -29,10 +29,10 @@ proc rules { } {
 
     # Get unflagged parameter count
     turbine::create_integer 23
-    turbine::argc_get no_stack 23
+    turbine::argc_get no_stack 23 {}
     turbine::trace no_stack {} 23
 
-    turbine::argv_accept no_stack $k1
+    turbine::argv_accept no_stack {} $k1
 }
 
 turbine::defaults

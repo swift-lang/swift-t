@@ -9,20 +9,20 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    turbine::create_integer 1
-    turbine::create_integer 2
-    turbine::create_integer 3
+    turbine::create_integer 11
+    turbine::create_integer 12
+    turbine::create_integer 13
 
-    turbine::set_integer 1 2
-    turbine::set_integer 2 2
+    turbine::set_integer 11 2
+    turbine::set_integer 12 2
 
-    set v1 [ turbine::get 1 ]
-    set v2 [ turbine::get 2 ]
+    set v1 [ turbine::get 11 ]
+    set v2 [ turbine::get 12 ]
     set v3 [ expr $v1 + $v2 ]
 
-    turbine::set_integer 3 $v3
+    turbine::set_integer 13 $v3
     puts "result: $v3"
-    set t [ adlb::typeof 3 ]
+    set t [ adlb::typeof 13 ]
     puts "type: $t"
 }
 

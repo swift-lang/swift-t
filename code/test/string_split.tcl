@@ -10,20 +10,20 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    turbine::create_string 1
-    turbine::create_string 2
-    turbine::create_string 3
+    turbine::create_string 11
+    turbine::create_string 12
+    turbine::create_string 13
     # c::string 3
 
-    turbine::set_string 1 "hi how are you"
+    turbine::set_string 11 "hi how are you"
 
-    turbine::create_container 8 integer
-    turbine::split 0 8 1
+    turbine::create_container 18 integer
+    turbine::split 0 18 11
 
-    turbine::create_container 9 integer
-    turbine::set_string 2 "/bin:/usr/evil name/p:/usr/bin"
-    turbine::set_string 3 ":"
-    turbine::split 0 9 { 2 3 }
+    turbine::create_container 19 integer
+    turbine::set_string 12 "/bin:/usr/evil name/p:/usr/bin"
+    turbine::set_string 13 ":"
+    turbine::split 0 19 { 12 13 }
 }
 
 turbine::defaults
@@ -33,5 +33,5 @@ turbine::finalize
 
 puts OK
 
-# Help TCL free memory
+# Help Tcl free memory
 proc exit args {}

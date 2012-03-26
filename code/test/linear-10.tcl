@@ -12,25 +12,25 @@ proc function_touch { d } {
 
 proc rules { } {
 
-    turbine::create_file 1 test/data/1.txt
-    turbine::create_file 2 test/data/2.txt
-    turbine::create_file 3 test/data/3.txt
-    turbine::create_file 4 test/data/4.txt
-    turbine::create_file 5 test/data/5.txt
-    turbine::create_file 6 test/data/6.txt
-    turbine::create_file 7 test/data/7.txt
-    turbine::create_file 8 test/data/8.txt
-    turbine::create_file 9 test/data/9.txt
+    turbine::create_file 11 test/data/1.txt
+    turbine::create_file 12 test/data/2.txt
+    turbine::create_file 13 test/data/3.txt
+    turbine::create_file 14 test/data/4.txt
+    turbine::create_file 15 test/data/5.txt
+    turbine::create_file 16 test/data/6.txt
+    turbine::create_file 17 test/data/7.txt
+    turbine::create_file 18 test/data/8.txt
+    turbine::create_file 19 test/data/9.txt
 
-    turbine::rule 1 {   } $turbine::WORK { function_touch 1 }
-    turbine::rule 2 { 1 } $turbine::WORK { function_touch 2 }
-    turbine::rule 3 { 2 } $turbine::WORK { function_touch 3 }
-    turbine::rule 4 { 3 } $turbine::WORK { function_touch 4 }
-    turbine::rule 5 { 4 } $turbine::WORK { function_touch 5 }
-    turbine::rule 6 { 5 } $turbine::WORK { function_touch 6 }
-    turbine::rule 7 { 6 } $turbine::WORK { function_touch 7 }
-    turbine::rule 8 { 7 } $turbine::WORK { function_touch 8 }
-    turbine::rule 9 { 8 } $turbine::WORK { function_touch 9 }
+    turbine::rule 1 {   }  $turbine::WORK { function_touch 11 }
+    turbine::rule 2 { 11 } $turbine::WORK { function_touch 12 }
+    turbine::rule 3 { 12 } $turbine::WORK { function_touch 13 }
+    turbine::rule 4 { 13 } $turbine::WORK { function_touch 14 }
+    turbine::rule 5 { 14 } $turbine::WORK { function_touch 15 }
+    turbine::rule 6 { 15 } $turbine::WORK { function_touch 16 }
+    turbine::rule 7 { 16 } $turbine::WORK { function_touch 17 }
+    turbine::rule 8 { 17 } $turbine::WORK { function_touch 18 }
+    turbine::rule 9 { 18 } $turbine::WORK { function_touch 19 }
 }
 
 turbine::defaults

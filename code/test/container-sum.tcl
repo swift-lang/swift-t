@@ -14,34 +14,34 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    turbine::create_container 1 integer
+    turbine::create_container 11 integer
     # adlb::slot_create 1
 
-    turbine::create_integer 2
-    turbine::set_integer 2 12345
-    turbine::create_integer 3
-    turbine::set_integer 3 4
-    turbine::create_integer 4
-    turbine::set_integer 4 -1
-    turbine::create_integer 5
-    turbine::set_integer 5 3
+    turbine::create_integer 12
+    turbine::set_integer 12 12345
+    turbine::create_integer 13
+    turbine::set_integer 13 4
+    turbine::create_integer 14
+    turbine::set_integer 14 -1
+    turbine::create_integer 15
+    turbine::set_integer 15 3
     # 12345 + 4 - 1 + 3 = 12351
 
     # set <container> <subscript> <member>
-    turbine::container_immediate_insert 1 "0" 2
-    turbine::container_immediate_insert 1 "1" 3
-    turbine::container_immediate_insert 1 "2" 4
-    turbine::container_immediate_insert 1 "3" 5
+    turbine::container_immediate_insert 11 "0" 12
+    turbine::container_immediate_insert 11 "1" 13
+    turbine::container_immediate_insert 11 "2" 14
+    turbine::container_immediate_insert 11 "3" 15
     # close the container
-    adlb::slot_drop 1
+    adlb::slot_drop 11
 
     # initialise the result
-    turbine::create_integer 6
+    turbine::create_integer 16
 
-    turbine::sum_integer NO_STACK [ list 6 ] [ list 1 ]
+    turbine::sum_integer NO_STACK [ list 16 ] [ list 11 ]
 
     # trace the result
-    turbine::trace NO_STACK [ list ] [ list 6]
+    turbine::trace NO_STACK [ list ] [ list 16 ]
 }
 
 turbine::defaults
@@ -51,5 +51,5 @@ turbine::finalize
 
 puts OK
 
-# Help TCL free memory
+# Help Tcl free memory
 proc exit args {}
