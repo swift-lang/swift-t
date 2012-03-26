@@ -162,15 +162,13 @@ namespace eval turbine {
 
     proc argv_accept { args } {
         set stack [ lindex 0 ]
-        set L [ lreplace $args 0 0 ]
+        set L [ lindex $args 2 ]
         rule argv_accept "$L" $turbine::LOCAL "argv_accept_body $L"
     }
 
     proc argv_accept_body { args } {
 
         variable turbine_argv
-
-        puts "accept: $args"
 
         if { [ adlb::rank ] != 0 } {
             return
@@ -187,5 +185,4 @@ namespace eval turbine {
             }
         }
     }
-
 }
