@@ -5,6 +5,8 @@
 
 namespace eval turbine {
 
+    # Name of Turbine Tcl program
+    variable turbine_program
     # Count of unflagged arguments
     variable turbine_argc
     # Map from key to value for flagged arguments like:
@@ -18,6 +20,7 @@ namespace eval turbine {
 
         global argc
         global argv
+        variable turbine_program
         variable turbine_argc
         variable turbine_argv
         variable turbine_args
@@ -25,9 +28,14 @@ namespace eval turbine {
 
         if { ! [ string equal $mode ENGINE ] } return
 
-        set turbine_argv [ dict create ]
+        set turbine_program [ info script ]
         set turbine_argc 0
+        set turbine_argv [ dict create ]
         set turbine_args $::argv
+
+        # Set Tcl program name at argv(0)
+        literal argv_td string $turbine_program
+        dict set turbine_argv 0 $argv_td
 
         set L [ argv_helper $::argv ]
         for { set i 0 } { $i < $argc } { incr i } {
