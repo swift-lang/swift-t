@@ -476,4 +476,15 @@ namespace eval turbine {
         log "pow_float: $a_value ** $b_value => $c_value"
         set_float $c $c_value
     }
+
+    # checks to see if float i is NaN, sets o to true or false accordingly
+    proc is_nan { stack o i } {
+        rule "is_nan-$o-$i" "$i" $turbine::LOCAL \
+            "is_nan_body $o $i"
+    }
+    proc is_nan_body { o i } {
+      set i_value [ get_float $i ]
+      # NaN is the only floating point value not equal to itself
+      set_integer $o [ expr $i_value != $i_value ]
+    }
 }
