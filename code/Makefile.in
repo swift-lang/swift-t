@@ -75,7 +75,7 @@ ifneq ($(MPI_INCLUDE),0)
 endif
 ifeq ($(MACHINE),normal)
 	MPI_LIB_DIR = $(MPI)/lib
-	MPI_LIB_NAME = libmpich.so.5
+	MPI_LIB_NAME = libmpich.so
 	MPI_LIB	= -L $(MPI_LIB_DIR) -l mpich # -l mpl
 endif
 ifeq ($(MACHINE),sicortex)
@@ -278,7 +278,7 @@ install: package
 	$(E) mkdir -pv $(INSTALL_SCRIPTS)
 	$(E) mkdir -pv $(INSTALL_EXPORT)
 #       Copy shared objects so that all libs are in rpath
-	$(E) cp -uv $(MPI_LIB_DIR)/$(MPI_LIB_NAME) $(INSTALL_LIB)
+	$(E) cp -uv $(MPI_LIB_DIR)/$(MPI_LIB_NAME)* $(INSTALL_LIB)
 	$(E) cp -uv $(TCL)/lib/libtcl8.5.so        $(INSTALL_LIB)
 	$(E) cp -uv $(C_UTILS)/lib/libexmcutils.so $(INSTALL_LIB)
 	$(E) cp -uv $(ADLB)/libadlb.so             $(INSTALL_LIB)
