@@ -15,6 +15,7 @@ TCL_SRC := $(DIR)/helpers.tcl             \
            $(DIR)/container.tcl           \
            $(DIR)/rand.tcl                \
            $(DIR)/stdio.tcl               \
+           $(DIR)/updateable.tcl               \
            $(DIR)/unistd.tcl
 
 # Builds the Turbine Tcl package

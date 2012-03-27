@@ -102,6 +102,8 @@ trace (int|float|string|boolean... args) "turbine" "0.0.2" "trace";
 (int res[]) range(int start, int end) "turbine" "0.0.2" "range";
 (int res[]) rangestep(int start, int end, int step) "turbine" "0.0.2" "rangestep";
 
+// Updateable variables
+(updateable_float o) init_updateable(float i) "turbine" "0.0.2" "init_updateable";
 
 // Container aggregate functions
 (int res) sum_integer(int arr[]) "turbine" "0.0.2" "sum_integer";
