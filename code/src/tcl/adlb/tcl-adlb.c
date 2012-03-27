@@ -22,6 +22,8 @@
 
 #include <log.h>
 
+#include <table_lp.h>
+
 #include "src/tcl/util.h"
 #include "src/util/debug.h"
 
@@ -45,7 +47,10 @@ static MPI_Comm worker_comm;
 /** ADLB uses -1 to mean "any" in ADLB_Put() and ADLB_Reserve() */
 #define ADLB_ANY -1
 
-char xfer[ADLB_MSG_MAX];
+static char xfer[ADLB_MSG_MAX];
+
+/** Map from TD to local blob pointers */
+static struct table_lp blob_cache;
 
 /**
    usage: adlb::init <servers> <types>
@@ -73,6 +78,8 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   int type_vect[ntypes];
   for (int i = 0; i < ntypes; i++)
     type_vect[i] = i;
+
+  table_lp_init(&blob_cache, 16);
 
   int argc = 0;
   char** argv = NULL;
@@ -556,6 +563,77 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
+   Copy a blob from the distributed store into a local blob
+   in the memory of this process
+   Must be freed with adlb::blob_free
+   usage: adlb::blob_cache <id> => [ list <pointer> <length> ]
+ */
+static int
+ADLB_Blob_Cache_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  int rc;
+  long id;
+  rc = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK_MSG(rc, "requires id!");
+
+  // Retrieve the blob data
+  adlb_data_type type;
+  int length;
+  rc = ADLB_Retrieve(id, &type, xfer, &length);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%li> failed!", id);
+  TCL_CONDITION(type == ADLB_DATA_TYPE_BLOB,
+                "type mismatch: expected: %i actual: %i",
+                ADLB_DATA_TYPE_BLOB, type);
+
+  // Allocate the local blob
+  void* blob = malloc(length);
+  assert(blob);
+
+  // Copy the blob data
+  memcpy(blob, xfer, length);
+
+  // Link the blob into the cache
+  bool b = table_lp_add(&blob_cache, id, blob);
+  assert(b);
+
+  // printf("blob_cache: %p\n", blob);
+
+  // Pack and return the blob pointer, length as Tcl list
+  Tcl_Obj* list[2];
+  long pointer = (long) blob;
+  list[0] = Tcl_NewLongObj(pointer);
+  list[1] = Tcl_NewIntObj(length);
+  Tcl_Obj* result = Tcl_NewListObj(2, list);
+
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+/**
+   Free a local blob cached with adlb::blob_cache
+   usage: adlb::blob_free <id>
+ */
+static int
+ADLB_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  int rc;
+  long id;
+  rc = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK_MSG(rc, "requires id!");
+
+  void* blob = table_lp_remove(&blob_cache, id);
+  TCL_CONDITION(blob != NULL, "blob not cached: <%li>", id);
+  free(blob);
+  return TCL_OK;
+}
+
+/**
    usage: adlb::insert <id> <subscript> <member> [<drops>]
 */
 static int
@@ -918,6 +996,8 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("exists",    ADLB_Exists_Cmd);
   COMMAND("store",     ADLB_Store_Cmd);
   COMMAND("retrieve",  ADLB_Retrieve_Cmd);
+  COMMAND("blob_cache", ADLB_Blob_Cache_Cmd);
+  COMMAND("blob_free",  ADLB_Blob_Free_Cmd);
   COMMAND("slot_create", ADLB_Slot_Create_Cmd);
   COMMAND("slot_drop", ADLB_Slot_Drop_Cmd);
   COMMAND("insert",    ADLB_Insert_Cmd);
