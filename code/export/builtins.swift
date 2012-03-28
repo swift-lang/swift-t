@@ -83,7 +83,7 @@
 (int o) randint(int start, int end) "turbine" "0.0.2" "randint";
 
 // String operations
-(string o) strcat(string i1, string i2) "turbine" "0.0.2" "strcat";
+(string o) strcat(string... args) "turbine" "0.0.2" "strcat";
 (string o) substring(string s, int start, int length) "turbine" "0.0.2" "substring";
 (string t[]) split(string s, string delimiter) "turbine" "0.0.2" "split";
 (string o) sprintf(string fmt, int|float|string|boolean... args) "turbine" "0.0.2" "sprintf";

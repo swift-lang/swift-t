@@ -8,23 +8,15 @@ namespace eval turbine {
 
     # User function
     # usage: strcat <result> <args>*
-    proc strcat2 { args } {
-
-        set result [ lindex $args 0 ]
-        set inputs [ lreplace $args 0 0 ]
-
-        rule "strcat" $inputs $result \
-            "strcat2_body $inputs $result"
+    proc strcat { stack result inputs } {
+        rule "strcat" $inputs $turbine::LOCAL \
+            "strcat_body $result $inputs"
     }
 
-    # usage: strcat_body <args>* <result>
-    proc strcat2_body { args } {
-
-        set result [ lindex $args end ]
-        set inputs [ lreplace $args end end ]
-
+    # usage: strcat_body <result> <args>*
+    proc strcat_body { result args } {
         set output [ list ]
-        foreach input $inputs {
+        foreach input $args {
             set t [ get $input ]
             lappend output $t
         }
@@ -54,22 +46,6 @@ namespace eval turbine {
     proc substring_impl { str first len } {
         set last [ expr $first + $len - 1 ]
         return [ string range $str $first $last ]
-    }
-
-    proc strcat { parent c inputs } {
-        set a [ lindex $inputs 0 ]
-        set b [ lindex $inputs 1 ]
-
-        rule "strcat-$a-$b" "$a $b" $turbine::LOCAL \
-            "strcat_body $parent $c $a $b"
-    }
-
-    proc strcat_body { parent c a b } {
-        set a_value [ get_string $a ]
-        set b_value [ get_string $b ]
-        set c_value "${a_value}${b_value}"
-        log "strcat: strcat($a_value, $b_value) => $c_value"
-        set_string $c $c_value
     }
 
     # o = i;
