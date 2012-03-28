@@ -306,6 +306,26 @@ namespace eval turbine {
         set_string $result $t
     }
 
+    proc blob_from_string { stack result input } {
+        rule "bfs-$input-$result" $input $turbine::LOCAL \
+            "blob_from_string_body $input $result"
+    }
+
+    proc blob_from_string_body { input result } {
+        set t [ get $input ]
+        set_blob_string $result $t
+    }
+
+    proc string_from_blob { stack result input } {
+        rule "sfb-$input-$result" $input $turbine::LOCAL \
+            "string_from_blob_body $input $result"
+    }
+
+    proc string_from_blob_body { input result } {
+        set s [ get_blob_string $input ]
+        set_string $result $s
+    }
+
     # Good for performance testing
     # c = 1;
     # and sleeps

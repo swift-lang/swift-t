@@ -94,6 +94,8 @@
 (string o) fromfloat(float i)  "turbine" "0.0.2" "fromfloat";
 (float o) tofloat(string i)  "turbine" "0.0.2" "tofloat";
 (float o) itof    (int i) "turbine"  "0.0.2" "itof";
+(blob o)   blob_from_string(string s) "turbine" "0.0.2" "blob_from_string";
+(string o) string_from_blob(blob b) "turbine" "0.0.2" "string_from_blob";
 
 // I/O
 trace (int|float|string|boolean... args) "turbine" "0.0.2" "trace";
