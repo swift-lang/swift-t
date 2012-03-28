@@ -768,7 +768,51 @@ ADLB_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::unique
+   usage: adlb::lock <id> => false (try again) or
+                             true (locked by caller)
+*/
+static int
+ADLB_Lock_Cmd(ClientData cdata, Tcl_Interp *interp,
+               int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  int rc;
+  long id;
+  rc = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK_MSG(rc, "argument must be a long integer!");
+
+  bool locked;
+  rc = ADLB_Lock(id, &locked);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%li> failed!", id);
+
+  Tcl_Obj* result = Tcl_NewBooleanObj(locked);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+/**
+   usage: adlb::unlock <id>
+*/
+static int
+ADLB_Unlock_Cmd(ClientData cdata, Tcl_Interp *interp,
+               int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  int rc;
+  long id;
+  rc = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK_MSG(rc, "argument must be a long integer!");
+
+  rc = ADLB_Unlock(id);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%li> failed!", id);
+
+  return TCL_OK;
+}
+
+/**
+   usage: adlb::unique => id
 */
 static int
 ADLB_Unique_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -1010,6 +1054,8 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("insert",    ADLB_Insert_Cmd);
   COMMAND("insert_atomic", ADLB_Insert_Atomic_Cmd);
   COMMAND("lookup",    ADLB_Lookup_Cmd);
+  COMMAND("lock",      ADLB_Lock_Cmd);
+  COMMAND("unlock",    ADLB_Unlock_Cmd);
   COMMAND("close",     ADLB_Close_Cmd);
   COMMAND("unique",    ADLB_Unique_Cmd);
   COMMAND("typeof",    ADLB_Typeof_Cmd);
