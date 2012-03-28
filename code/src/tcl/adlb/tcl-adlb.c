@@ -495,6 +495,8 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /**
    usage: adlb::retrieve <id> [<type>]
+   If id is a blob, we try to return it as a string.
+   This is an error if the blob is not NULL-terminated
 */
 static int
 ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -520,6 +522,7 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   // DEBUG_ADLB("adlb_retrieve: <%li>", id);
   adlb_data_type type;
   int length;
+  int string_length;
   rc = ADLB_Retrieve(id, &type, xfer, &length);
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%li> failed!", id);
   TCL_CONDITION((given_type == ADLB_DATA_TYPE_NULL ||
@@ -545,7 +548,11 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
       result = Tcl_NewStringObj(xfer, length-1);
       break;
     case ADLB_DATA_TYPE_BLOB:
-      result = Tcl_NewStringObj(xfer, -1);
+      string_length = strnlen(xfer, length);
+      TCL_CONDITION(string_length < length,
+                    "adlb::retrieve: unterminated blob: <%li>",
+                    id);
+      result = Tcl_NewStringObj(xfer, string_length);
       break;
     case ADLB_DATA_TYPE_FILE:
       result = Tcl_NewStringObj(xfer, length-1);
