@@ -67,12 +67,8 @@ crash()
 }
 
 STC_TESTS_DIR=$( cd $( dirname $0 ) ; /bin/pwd )
-
-STC=$( which stc )
-if [[ ${STC} == "" ]]
-then
-  crash "Could not find stc!"
-fi
+STC_ROOT_DIR=$( dirname $STC_TESTS_DIR )
+STC=${STC_ROOT_DIR}/code/bin/stc
 
 RUN_TEST=${STC_TESTS_DIR}/run-test.zsh
 
