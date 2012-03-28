@@ -1,0 +1,10 @@
+trace: 0,1
+trace: 1,2
+trace: 2,4
+trace: 3,8
+trace: 4,16
+trace: 5,32
+trace: 6,64
+trace: 7,128
+trace: 8,256
+trace: 9,512

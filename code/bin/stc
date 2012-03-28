@@ -1,0 +1,269 @@
+#!/bin/zsh
+# STC: Swift-Turbine Compiler
+
+# Usage: stc <OPTIONS>* <INPUT> <OUTPUT>?
+# Input: Given INPUT file
+# Output: Given OUTPUT file or standard output
+# Exit code: Result from java
+
+# User must set TURBINE_HOME
+
+# Options:
+#   -C <output file>
+#        Write intermediate representation to this file (otherwise
+#           does not output it)
+#   -d <PORT>
+#      Use JDWP debugging on given PORT.
+#   -E
+#      Just preprocess
+#   -I <DIRECTORY>
+#      Add an include path
+#      TURBINE_HOME/export is always included to get builtins.swift
+#   -l <LOG>
+#      Log stc progress to given LOG.
+#   -O <Optimization level>
+#      Set compiler optimization level:
+#        0 - no optimizations
+#        1,2,3 - standard optimizations (DEFAULT) (this will change later)
+#   -T <setting name>
+#        toggle compiler option on
+#   -t <setting name>
+#        toggle compiler option off
+
+# Exit codes: (cf. ExitCode.java)
+EXIT_ERROR_SCRIPT=6
+
+#  COMPILER OPTIONS (All are on by default, except assert disabling)
+#  ----------------------------------------
+#  constant-fold: whether constant folding/propagation should occur
+#  shared-constants: whether we should lift all constants into shared
+#               global constant region
+#  branch-predict: whether static branch prediction should occur
+#  dead-code-elim: whether dead code elimination should occur
+#  flatten-nested: whether nested blocks should be flattened
+#  forward-dataflow: whether we should do forward dataflow analysis
+#               to eliminate common subexpressions, etc
+#  disable-asserts: whether to disable assert statements
+#  unroll-loops: whether to unroll loops with @unroll annotation
+#  no-stack: whether we should disable the explicit stack
+#  no-stack-vars: whether we should put user variables in the stack
+COMPILER_OPTS=()
+
+O1_OPTS=("constant-fold" "branch-predict" "dead-code-elim"
+                    "flatten-nested" "shared-constants"
+                    "forward-dataflow" "unroll-loops")
+O2_OPTS=("disable-asserts")
+O3_OPTS=()
+
+function get_compiler_opt_name() {
+    case $1
+        in
+        constant-fold) echo "stc.opt.constant-fold"
+                    return 0
+                    ;;
+        shared-constants) echo "stc.opt.shared-constants"
+                    return 0
+                    ;;
+        branch-predict) echo "stc.opt.branch-predict"
+                    return 0
+                    ;;
+        dead-code-elim) echo "stc.opt.dead-code-elim"
+                    return 0
+                    ;;
+        flatten-nested) echo "stc.opt.flatten-nested"
+                    return 0
+                    ;;
+        forward-dataflow) echo "stc.opt.forward-dataflow-analysis"
+                    return 0
+                    ;;
+        disable-asserts) echo "stc.opt.disable-asserts"
+                    return 0
+                    ;;
+        unroll-loops) echo "stc.opt.unroll-loops"
+                    return 0
+                    ;;
+
+        array-switcheroo) echo "stc.array-ref-switcheroo"
+                    return 0
+                    ;;
+
+        no-stack)   echo "stc.codegen.no-stack"
+                    return 0
+                    ;;
+        no-stack-vars)
+                    echo "stc.codegen.no-stack-vars"
+                    return 0
+                    ;;
+       *)
+         return 1
+         ;;
+    esac
+}
+
+function disable_opt() {
+  local OPTNAME=$(get_compiler_opt_name $1)
+  if [ -z "$OPTNAME" ]; then
+    echo "ERROR Invalid compiler option $1" 1>&2
+    exit 1
+  fi
+  COMPILER_OPTS+="-D${OPTNAME}=false"
+}
+
+function enable_opt() {
+  local OPTNAME=$(get_compiler_opt_name $1)
+  if [ -z "$OPTNAME" ]; then
+    echo "ERROR Invalid compiler option $1" 1>&2
+    exit 1
+  fi
+  COMPILER_OPTS+="-D${OPTNAME}=true"
+}
+
+STC_ZSH_DEBUG=0
+debug()
+{
+  if (( STC_ZSH_DEBUG ))
+  then
+    print ${*}
+  fi
+}
+
+# OUTPUT_MODE= turbine or cpp
+OUTPUT_MODE=turbine
+
+while getopts "d:EI:l:t:T:O:C:" OPTION
+do
+  case ${OPTION}
+    in
+    d) DEBUG_PORT=${OPTARG}
+      debug "DEBUG_PORT: ${DEBUG_PORT}"
+      ;;
+    E) OUTPUT_MODE=cpp
+      ;;
+    I) CPP_INCLUDE+="-I ${OPTARG} "
+      ;;
+    l) LOGFILE=${OPTARG}
+      debug "LOGFILE: ${LOGFILE}"
+      ;;
+    t) debug "TURNOFF: ${OPTARG}"
+      disable_opt ${OPTARG}
+      ;;
+    T) debug "TURNON: ${OPTARG}"
+      enable_opt ${OPTARG}
+      ;;
+    O) debug "Optimization level ${OPTARG}"
+      if [ ${OPTARG} = 0 ]; then
+        for opt in $O1_OPTS $O2_OPTS $O3_OPTS; do
+            disable_opt ${opt}
+        done
+      elif [ ${OPTARG} = 1 -o ${OPTARG} = 2 -o ${OPTARG} = 3 ]; then
+        for opt in $O1_OPTS; do
+            enable_opt ${opt}
+        done
+        if [ ${OPTARG} -ge 2 ]; then
+            for opt in $O2_OPTS; do
+                enable_opt ${opt}
+            done
+            if [ ${OPTARG} -ge 3 ]; then
+                for opt in $O3_OPTS; do
+                    enable_opt ${opt}
+                done
+            fi
+        fi
+      else
+        echo "Invalid optimization level -O ${OPTARG}"
+        exit 1
+      fi
+      ;;
+    C) debug "IC Output: ${OPTARG}"
+       COMPILER_OPTS+="-Dstc.ic.output-file=${OPTARG}"
+       ;;
+    *)
+      # getopts already printed an error message
+      exit ${EXIT_ERROR_SCRIPT}
+      ;;
+  esac
+done
+
+shift $(( OPTIND-1 ))
+
+# After shifting out the options we are left with the file names
+INPUT=$1
+# This is optional (defaults to stdout)
+OUTPUT=$2
+
+if [[ ${INPUT} == "" ]]
+then
+  print "stc: no input file"
+  exit ${EXIT_ERROR_SCRIPT}
+fi
+
+if [[ ! -f ${INPUT} ]]
+then
+  print "stc: not readable: ${INPUT}"
+  exit ${EXIT_ERROR_SCRIPT}
+fi
+
+# Clear this in case the user has set it
+unset DEBUG
+if [[ ${DEBUG_PORT} != "" ]]
+then
+  export DEBUG=-agentlib:jdwp=transport=dt_socket,server=y,address=${DEBUG_PORT}
+fi
+
+if [[ ${OUTPUT} == "" ]]
+then
+  OUTPUT=/dev/stdout
+fi
+
+PARSER_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
+
+ANTLR=${PARSER_HOME}/lib/antlr-3.4-complete-no-antlrv2.jar
+PARSER=${PARSER_HOME}/lib/parser.jar
+LOG4J=${PARSER_HOME}/lib/log4j-1.2.16.jar
+JSON=${PARSER_HOME}/lib/json.jar
+CLASSPATH=${ANTLR}:${PARSER}:${LOG4J}:${JSON}
+
+FLAGS=( -ea )
+if [[ ${LOGFILE} != "" ]]
+then
+  FLAGS+="-Dparser.logfile=${LOGFILE}"
+fi
+
+# Find Turbine (for include path)
+if [[ -z ${TURBINE_HOME} ]]
+then
+  # Try to find turbine in PATH
+  TURBINE=$( which turbine )
+  if [[ ${?} == 0 ]]
+  then
+    TURBINE_HOME=$( cd $( dirname ${TURBINE} )/.. ; /bin/pwd )
+  fi
+fi
+
+if [[ -z ${TURBINE_HOME} ]]
+then
+  print "Not set: TURBINE_HOME"
+  exit ${EXIT_ERROR_SCRIPT}
+fi
+
+# Add last resort include paths
+CPP_INCLUDE+="-I ${PWD} "
+CPP_INCLUDE+="-I ${TURBINE_HOME}/export"
+
+MAIN=exm.parser.ui.Main
+
+# Group all JVM args together
+ARGS="${DEBUG} ${FLAGS} ${COMPILER_OPTS} -cp ${CLASSPATH}"
+# Assemble preprocessor command line
+CPP="cpp ${CPP_INCLUDE}"
+
+if [[ ${OUTPUT_MODE} == "cpp" ]]
+then
+  # Just preprocess
+  ${=CPP} ${INPUT} > ${OUTPUT}
+  exit ${?}
+fi
+
+# We use ZSH to make a special file for the pre-processed script
+java ${=ARGS} ${MAIN} <( ${=CPP} ${INPUT} ) ${OUTPUT}
+# Return the exit code from the java process

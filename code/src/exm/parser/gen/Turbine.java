@@ -1,0 +1,608 @@
+
+package exm.parser.gen;
+
+import java.util.*;
+
+import exm.parser.util.ParserRuntimeException;
+import exm.tcl.*;
+
+/**
+ * Automates creation of Turbine-specific Tcl constructs
+ * @author wozniak
+ *
+ * This class is package-private: only TurbineGenerator uses it
+ * */
+class Turbine
+{
+
+  private static final Token DIVIDE_INTEGER = new Token("turbine::divide_integer_impl");
+  private static final Token MOD_INTEGER = new Token("turbine::mod_integer_impl");
+
+  /* TODO: TPREFIX? These are no longer prefixes, right? -Justin */
+  public static final String STRING_TPREFIX = "string";
+  public static final String INTEGER_TPREFIX = "integer";
+  public static final String VOID_TPREFIX = "void";
+  public static final String FLOAT_TPREFIX = "float";
+  public static final String BLOB_TPREFIX = "blob";
+
+  static final Token CONTAINER_GET = new Token("turbine::container_get");
+  static final Token CHECKED_CONTAINER_GET =
+                              new Token("turbine::checked_container_get");
+  private static final Token INTEGER_SET = new Token("turbine::set_integer");
+  private static final Token FLOAT_SET = new Token("turbine::set_float");
+  private static final Token STRING_SET = new Token("turbine::set_string");
+  private static final Token CONTAINER_DEREF_INSERT = new Token("turbine::container_deref_insert");
+  private static final Token CONTAINER_F_DEREF_INSERT = new Token("turbine::container_f_deref_insert");
+
+  private static final Token CALL_COMPOSITE = new Token("turbine::call_composite");
+  // Commonly used things:
+  private static final Token ALLOCATE_CONTAINER =
+                                      new Token("turbine::allocate_container");
+  private static final Token CONTAINER_INSERT =
+                                      new Token("turbine::container_insert");
+  private static final Token CONTAINER_F_INSERT =
+                                    new Token("turbine::container_f_insert");
+  private static final Token CONTAINER_F_REFERENCE =
+                  new Token("turbine::f_reference");
+  private static final Token CONTAINER_REFERENCE =
+                                      new Token("adlb::container_reference");
+  private static final Token CONTAINER_IMMEDIATE_INSERT =
+      new Token("turbine::container_immediate_insert");
+  private static final Token CREF_F_LOOKUP =
+      new Token("turbine::f_cref_lookup");
+  private static final TclTree CREF_LOOKUP_LITERAL =
+      new Token("turbine::f_cref_lookup_literal");
+  private static final Token F_CONTAINER_CREATE_NESTED
+        = new Token("turbine::f_container_create_nested");
+  private static final Token F_CREF_CREATE_NESTED
+  = new Token("turbine::f_cref_create_nested");
+  private static final Token F_CONTAINER_CREATE_NESTED_STATIC
+          = new Token("turbine::container_create_nested");
+private static final Token F_CREF_CREATE_NESTED_STATIC
+            = new Token("turbine::cref_create_nested");
+  private static final Token CONTAINER_SLOT_DROP = new Token("adlb::slot_drop");
+  private static final Token CONTAINER_SLOT_CREATE = new Token("adlb::slot_create");
+  static final Token CONTAINER_LIST = new Token("turbine::container_list");
+  private static final Token UNTYPED_GET = new Token("turbine::get");
+  private static final Token INTEGER_GET = new Token("turbine::get_integer");
+  private static final Token FLOAT_GET = new Token("turbine::get_float");
+  private static final Token STRING_GET = new Token("turbine::get_string");
+  private static final Token STACK_LOOKUP = new Token("turbine::stack_lookup");
+  static final String LOCAL_STACK_NAME = "stack";
+  static final String PARENT_STACK_NAME = "stack";
+  private static final Value STACK = new Value(LOCAL_STACK_NAME);
+  private static final Value PARENT_STACK = new Value(PARENT_STACK_NAME);
+  private static final Token PARENT_STACK_ENTRY = new Token("_parent");
+  private static final Token RULE = new Token("turbine::c::rule");
+  private static final Token NO_STACK = new Token("no_stack");
+  private static final Token DEREFERENCE_INTEGER =
+                          new Token("turbine::f_dereference_integer");
+  private static final Token DEREFERENCE_FLOAT =
+                          new Token("turbine::f_dereference_float");
+  private static final Token DEREFERENCE_STRING =
+                          new Token("turbine::f_dereference_string");
+  private static final String TURBINE_LOG = "turbine::c::log";
+  private static final Token ALLOCATE = new Token("turbine::allocate");
+
+  public enum StackFrameType {
+    MAIN,
+    COMPOSITE,
+    NESTED
+  }
+
+  public Turbine()
+  {}
+
+  public static TclTree[] createStackFrame(StackFrameType type)
+  {
+    TclTree[] result;
+    // Index into result
+    int index = 0;
+
+    if (type == StackFrameType.MAIN)
+      result = new TclTree[1];
+    else
+      result = new TclTree[3];
+
+
+    if (type == StackFrameType.NESTED || type == StackFrameType.COMPOSITE) {
+      // Make sure that there is a variable in scope called parent
+      // (parent is passed in as an argument for composites)
+      result[index++] = new SetVariable("parent", STACK);
+    }
+
+    result[index++] = allocateContainer(LOCAL_STACK_NAME, STRING_TPREFIX);
+
+    if (type != StackFrameType.MAIN) {
+      // main is the only procedure without a parent stack frame
+      result[index++] = new Command(CONTAINER_INSERT, STACK,
+                                    PARENT_STACK_ENTRY, PARENT_STACK);
+    }
+    return result;
+  }
+
+  public static TclTree createDummyStackFrame() {
+    return new SetVariable(LOCAL_STACK_NAME, new LiteralInt(0));
+  }
+
+
+  public static Command storeInStack(String stackVarName, String tclVarName)
+  {
+    Token name = new Token(stackVarName);
+    Value value = new Value(tclVarName);
+    Command result =
+      new Command(CONTAINER_INSERT, STACK, name, value);
+    return result;
+  }
+
+
+  public static TclTree allocate(String tclName, String typePrefix) {
+    // return new SetVariable(tclName, new Square(ALLOCATE, new Token(typePrefix)));
+    return new Command(ALLOCATE,
+                       new Token(tclName), new Token(typePrefix));
+  }
+
+  public static TclTree allocateContainer(String name,
+                                          String indexType) {
+    return new Command(ALLOCATE_CONTAINER,
+                       new Token(name), new Token(indexType));
+  }
+
+  public static SetVariable stackLookup(String stackName,
+      String tclVarName, String containerVarName) {
+    Token v = new Token(containerVarName);
+    Expression expression = new Expression(STACK_LOOKUP,
+                          new Value(stackName), v);
+    Square square = new Square(expression);
+    SetVariable sv = new SetVariable(tclVarName, square);
+    return sv;
+  }
+
+  public static SetVariable lookupParentStack(String parentScope,
+      String childScope) {
+    Expression expression = new Expression(STACK_LOOKUP,
+                          new Value(childScope),
+                          PARENT_STACK_ENTRY);
+    Square square = new Square(expression);
+    SetVariable sv = new SetVariable(parentScope, square);
+    return sv;
+  }
+
+  /**
+     Do a data get operation to load the value from the TD
+   */
+  public static SetVariable integerGet(String target, Value variable)
+  {
+    SetVariable result =
+      new SetVariable(target,
+                      new Square(INTEGER_GET, variable));
+    return result;
+  }
+
+
+  public static SetVariable refGet(String target, Value variable)
+  {
+   SetVariable result =
+     new SetVariable(target,
+                     new Square(UNTYPED_GET, variable));
+   return result;
+  }
+
+  public static Command stringSet(String turbineDstVar, Expression src) {
+    // The TD is a Value
+    Value t = new Value(turbineDstVar);
+    Command c = new Command(STRING_SET, t, src);
+    return c;
+  }
+
+  public static Command integerSet(String turbineDstVar, Expression src) {
+    // The TD is a Value
+    Value t = new Value(turbineDstVar);
+    // The value is a literal Token
+    Command c = new Command(INTEGER_SET, t, src);
+    return c;
+  }
+
+  public static Command floatSet(String turbineDstVar, Expression src) {
+    // The TD is a Value
+    Value t = new Value(turbineDstVar);
+    // The value is a literal Token
+    Command c = new Command(FLOAT_SET, t, src);
+    return c;
+  }
+
+  public static SetVariable floatGet(String target, Value variable) {
+    SetVariable result =
+      new SetVariable(target,
+          new Square(FLOAT_GET, variable));
+    return result;
+  }
+
+  /**
+   * Do a data get operation to load the value from the TD
+   */
+  public static SetVariable stringGet(String target, Value variable)
+  {
+    SetVariable result =
+      new SetVariable(target,
+                     new Square(STRING_GET, variable));
+    return result;
+  }
+
+  static enum RuleType {
+    LOCAL,
+    CONTROL,
+    WORK
+  }
+
+  private static Value tclRuleType (RuleType t) {
+    switch (t) {
+    case LOCAL:
+      return new Value("turbine::LOCAL");
+    case CONTROL:
+      return new Value("turbine::CONTROL");
+    case WORK:
+      return new Value("turbine::WORK");
+    default:
+      throw new ParserRuntimeException("Unexpected rule type: " + t);
+    }
+  }
+
+  
+  /**
+   * Generate code for a rule
+   * @param symbol
+   * @param inputs
+   * @param action the action, using a tcl list to ensure proper escaping
+   * @param type
+   * @return
+   */
+  private static Sequence ruleHelper(String symbol, List<Value> inputs,
+      TclList action, RuleType type) {
+    Sequence result = new Sequence();
+
+    Token s = new Token(symbol);
+    TclList i = new TclList(inputs);
+
+    Command r = new Command(RULE, s, i, tclRuleType(type), action);
+    result.add(r);
+
+    return result;
+  }
+
+  /**
+   * Same as rule, but store the rule ID into the TCL variable named by
+   * ruleIDVarName so that it can be provided as an argument to the procedure
+   * @param procName
+   * @param inputs
+   * @param action
+   * @param shareWork
+   * @return
+   */
+  public static Sequence rule(String symbol,
+      List<Value> inputs, TclList action, boolean shareWork) {
+    RuleType ruleType = shareWork ? RuleType.CONTROL : RuleType.LOCAL;
+    return ruleHelper(symbol, inputs, action, ruleType);
+  }
+
+  public static Sequence loopRule(String symbol,
+      List<Value> args, List<Value> blockOn) {
+    List<Expression> actionElems = new ArrayList<Expression>();
+    actionElems.add(new Token(symbol));
+    for (Value arg: args) {
+      actionElems.add(arg);
+    }
+    TclList action = new TclList(actionElems);
+    return ruleHelper(symbol, blockOn, action, RuleType.CONTROL);
+  }
+
+
+  public static Sequence structLookupFieldID(String structName, String structField,
+      String resultVar) {
+    Sequence result = new Sequence();
+
+    Square containerGet = new Square(CONTAINER_GET, new Value(structName),
+        new TclString(structField, true));
+
+    SetVariable loadCmd = new SetVariable(resultVar, containerGet);
+    result.add(loadCmd);
+    return result;
+  }
+
+
+  public static Command structRefLookupFieldID(String structName, String structField,
+      String resultVar) {
+
+    Command lookup = new Command(CREF_LOOKUP_LITERAL,
+        NO_STACK, new TclList(), new TclList(
+            Arrays.asList(new Value(structName),
+                new TclString(structField, true), new Value(resultVar))));
+
+    return lookup;
+  }
+
+
+  /**
+   * Put reference to arrayVar[arrayIndex] into refVar once it is ready
+   * @param refVar
+   * @param arrayIndex
+   * @param isArrayRef
+   * @return
+   */
+  public static Sequence arrayLookupImmIx(String refVar, String arrayVar,
+      Expression arrayIndex, boolean isArrayRef) {
+    Sequence result = new Sequence();
+    // set up reference to point to array data
+    Command loadCmd;
+    if (isArrayRef) {
+      loadCmd = new Command(CREF_LOOKUP_LITERAL, NO_STACK,
+          new TclList(),  new TclList(new Value(arrayVar),
+          arrayIndex, new Value(refVar)));
+    } else {
+      loadCmd = new Command(CONTAINER_REFERENCE, new Value(arrayVar),
+        arrayIndex, new Value(refVar));
+    }
+    result.add(loadCmd);
+
+    return result;
+  }
+
+  /**
+   * Lookup arrayVar[arrayIndex] right away, regardless of whether
+   * it is closed
+   * @param refVar
+   * @param arrayIndex
+   * @param isArrayRef
+   * @return
+   */
+  public static SetVariable arrayLookupImm(String dst, String arrayVar,
+      Expression arrayIndex) {
+    return new SetVariable(dst,
+        new Square(CHECKED_CONTAINER_GET, new Value(arrayVar), arrayIndex));
+  }
+
+  /**
+   * Put a reference to arrayVar[indexVar] into refVar
+   * @param refVar
+   * @param arrayVar
+   * @param indexVar
+   * @param isArrayRef
+   * @return
+   */
+  public static Sequence arrayLookupComputed(String refVar, String arrayVar,
+                          String indexVar, boolean isArrayRef) {
+
+    Sequence result = new Sequence();
+
+    Command loadCmd;
+    if (isArrayRef) {
+      loadCmd = new Command(CREF_F_LOOKUP, NO_STACK,
+          new TclList(), new TclList(new Value(arrayVar), new Value(indexVar),
+              new Value(refVar)));
+    } else {
+      loadCmd = new Command(CONTAINER_F_REFERENCE, NO_STACK,
+         new TclList(), new TclList(new Value(arrayVar), new Value(indexVar),
+             new Value(refVar)));
+    }
+
+    result.add(loadCmd);
+    return result;
+   }
+
+   public static Sequence dereferenceInteger(String dstVar, String refVar) {
+     Sequence result = new Sequence();
+     Command deref = new Command(DEREFERENCE_INTEGER, NO_STACK,
+         new Value(dstVar), new Value(refVar));
+     result.add(deref);
+     return result;
+   }
+
+   public static Sequence dereferenceFloat(String dstVar, String refVar) {
+     Sequence result = new Sequence();
+     Command deref = new Command(DEREFERENCE_FLOAT, NO_STACK,
+         new Value(dstVar), new Value(refVar));
+     result.add(deref);
+     return result;
+   }
+
+   public static Sequence dereferenceString(String dstVar, String refVar) {
+     Sequence result = new Sequence();
+     Command deref = new Command(DEREFERENCE_STRING, NO_STACK,
+         new Value(dstVar), new Value(refVar));
+     result.add(deref);
+     return result;
+   }
+
+  public static Sequence arrayStoreImmediate(String srcVar, String arrayVar,
+                                                  Expression arrayIndex) {
+    Sequence result = new Sequence();
+
+    Command storeCmd = new Command(CONTAINER_IMMEDIATE_INSERT,
+        new Value(arrayVar), arrayIndex, new Value(srcVar));
+
+    result.add(storeCmd);
+    return result;
+  }
+
+  public static Sequence arrayDerefStore(String srcRefVar, String arrayVar,
+      Expression arrayIndex) {
+    Sequence result = new Sequence();
+
+    Square outputs = new TclList();
+    Square inputs =  new TclList(new Value(arrayVar),
+                      arrayIndex, new Value(srcRefVar));
+    Command storeCmd = new Command(CONTAINER_DEREF_INSERT, NO_STACK, outputs, inputs);
+
+    result.add(storeCmd);
+    return result;
+  }
+
+  public static Sequence arrayDerefStoreComputed(String srcRefVar, String arrayVar,
+      String indexVar) {
+    Sequence result = new Sequence();
+    Square outputs = new TclList();
+    Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
+    new Value(srcRefVar));
+    Command storeCmd = new Command(CONTAINER_F_DEREF_INSERT,
+                                           NO_STACK, outputs, inputs);
+    result.add(storeCmd);
+    return result;
+  }
+
+  public static Sequence arrayStoreComputed(String srcVar, String arrayVar,
+                                                    String indexVar) {
+    Sequence result = new Sequence();
+    Square outputs = new TclList();
+    Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
+          new Value(srcVar));
+    Command storeCmd = new Command(CONTAINER_F_INSERT, NO_STACK,
+                                          outputs, inputs);
+    result.add(storeCmd);
+    return result;
+  }
+
+  public static Sequence arrayRefStoreImmediate(String srcVar, String arrayVar,
+      Expression arrayIndex, String outerArray) {
+    Sequence result = new Sequence();
+
+    Command storeCmd = new Command(new Token("turbine::cref_insert"),
+                    NO_STACK, new TclList(), new TclList(
+                    new Value(arrayVar), arrayIndex, new Value(srcVar),
+                    new Value(outerArray)));
+
+    result.add(storeCmd);
+    return result;
+  }
+
+
+  public static Sequence arrayRefStoreComputed(String srcVar, String arrayVar,
+      String indexVar, String outerArray) {
+    Sequence result = new Sequence();
+    Square outputs = new TclList();
+    Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
+        new Value(srcVar), new Value(outerArray));
+    Command storeCmd = new Command(new Token("turbine::f_cref_insert"),
+                        NO_STACK, outputs, inputs);
+    result.add(storeCmd);
+    return result;
+  }
+
+  public static Sequence arrayRefDerefStore(String srcRefVar, String arrayVar,
+      Expression arrayIndex, String outerArrayVar) {
+    Sequence result = new Sequence();
+
+    Square outputs = new TclList();
+    Square inputs =  new TclList(new Value(arrayVar),
+        arrayIndex, new Value(srcRefVar), new Value(outerArrayVar));
+    Command storeCmd = new Command(new Token("turbine::cref_deref_insert"),
+                                              NO_STACK, outputs, inputs);
+
+    result.add(storeCmd);
+    return result;
+  }
+
+  public static Sequence arrayRefDerefStoreComputed(String srcRefVar, String arrayVar,
+      String indexVar, String outerArrayVar) {
+    Sequence result = new Sequence();
+    Square outputs = new TclList();
+    Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
+        new Value(srcRefVar), new Value(outerArrayVar));
+    Command storeCmd = new Command(new Token("turbine::cref_f_deref_insert"),
+                                    NO_STACK, outputs, inputs);
+    result.add(storeCmd);
+    return result;
+  }
+
+  public static TclTree containerCreateNested(String resultVar,
+        String containerVar, String indexVar) {
+    return new Command(F_CONTAINER_CREATE_NESTED,
+            new Token(resultVar), new Value(containerVar),
+            new Value(indexVar), new Token(INTEGER_TPREFIX));
+  }
+
+  public static TclTree containerRefCreateNested(String resultVar,
+      String containerVar, String indexVar) {
+    return new Command(F_CREF_CREATE_NESTED,
+          new Token(resultVar), new Value(containerVar),
+          new Value(indexVar), new Token(INTEGER_TPREFIX));
+  }
+
+  public static TclTree containerRefCreateNestedImmIx(String resultVar,
+      String containerVar, Expression arrIx) {
+    return new Command(F_CREF_CREATE_NESTED_STATIC,
+        new Token(resultVar), new Value(containerVar),
+        arrIx, new Token(INTEGER_TPREFIX));
+  }
+
+  public static TclTree containerCreateNestedImmIx(String resultVar,
+      String containerVar, Expression arrIx) {
+    return new SetVariable(resultVar,
+        new Square(F_CONTAINER_CREATE_NESTED_STATIC,
+            new Value(containerVar), arrIx, new Token(INTEGER_TPREFIX)));
+  }
+
+  public static TclTree containerSlotCreate(Value arr) {
+    return new Command(CONTAINER_SLOT_CREATE, arr);
+  }
+
+  public static Sequence containerSlotDrop(Value arr) {
+    Sequence result = new Sequence();
+    Command c = new Command(CONTAINER_SLOT_DROP, arr);
+    result.add(c);
+    return result;
+  }
+
+  public static Command turbineLog(String msg) {
+    return new Command(TURBINE_LOG, msg);
+  }
+
+  public static TclTree declareReference(String refVarName) {
+    return allocate(refVarName, INTEGER_TPREFIX);
+  }
+
+  /**
+   * Insert src into struct at container.field
+   * @param container
+   * @param field
+   * @param src
+   */
+  public static Sequence structInsert(String container, String field,
+                    String src) {
+    Sequence result = new Sequence();
+    Command storeCmd = new Command(CONTAINER_IMMEDIATE_INSERT,
+        new Value(container), new TclString(field, true), new Value(src));
+
+    result.add(storeCmd);
+    return result;
+
+  }
+
+  public static TclTree callComposite(String function, TclList oList,
+                                      TclList iList, TclList blockOn) {
+    //TODO: blockon
+    return new Command(CALL_COMPOSITE,
+        new Value(Turbine.LOCAL_STACK_NAME), new Token(function),
+                  oList, iList, blockOn);
+  }
+
+
+  public static TclTree callCompositeSync(String function, TclList oList,
+      TclList iList) {
+    return new Command(new Token(function), new Value(Turbine.LOCAL_STACK_NAME),
+        oList, iList);
+  }
+
+  public static Command makeTCLGlobal(String tclName) {
+    return new Command(new Token("global"), new Token(tclName));
+  }
+
+  public static Square modInteger(Expression a, Expression b) {
+    return new Square(new Expression[] {MOD_INTEGER, a, b});
+  }
+
+  public static Square divideInteger(Expression a, Expression b) {
+    return new Square(new Expression[] {DIVIDE_INTEGER, a, b});
+  }
+
+
+}

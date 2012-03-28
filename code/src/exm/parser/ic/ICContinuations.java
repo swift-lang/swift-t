@@ -1,0 +1,1575 @@
+package exm.parser.ic;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.log4j.Logger;
+
+import exm.ast.Types;
+import exm.ast.Variable;
+import exm.ast.Variable.DefType;
+import exm.ast.Variable.VariableStorage;
+import exm.parser.CompilerBackend;
+import exm.ast.Builtins.ArithOpcode;
+import exm.parser.ic.ICInstructions.LocalArithOp;
+import exm.parser.ic.ICInstructions.LoopBreak;
+import exm.parser.ic.ICInstructions.LoopContinue;
+import exm.parser.ic.ICInstructions.Oparg;
+import exm.parser.ic.ICInstructions.OpargType;
+import exm.parser.ic.SwiftIC.Block;
+import exm.parser.ic.SwiftIC.BlockType;
+import exm.parser.ic.SwiftIC.GenInfo;
+import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.UndefinedTypeException;
+
+public class ICContinuations {
+  public static final String indent = ICUtil.indent;
+  
+  public static abstract class Continuation {
+    public abstract ContinuationType getType();
+  
+    public abstract void generate(Logger logger, CompilerBackend gen, GenInfo info)
+        throws UndefinedTypeException;
+  
+    public abstract void prettyPrint(StringBuilder sb, String currentIndent);
+  
+  
+    /** Returns all nested blocks in this continuation */
+    public abstract List<Block> getBlocks();
+  
+  
+    /**
+     * Replace usage of the values of the specified variables throughotu
+     * where possible.  It is ok if the usedVariables get messed up a bit
+     * here: we will fix them up later 
+     * @param renames
+     */
+    public abstract void replaceInputs(Map<String, Oparg> renames);
+
+    public abstract void replaceVars(Map<String, Oparg> renames);
+    protected void replaceVarsInBlocks(Map<String, Oparg> renames,
+        boolean inputsOnly) {
+      for (Block b: this.getBlocks()) {
+        HashMap<String, Oparg> shadowed =
+                new HashMap<String, Oparg>();
+  
+        // See if any of the renamed vars are redeclared,
+        //  and if so temporarily remove them from the
+        //  rename map
+        for (Variable v: b.getVariables()) {
+          String vName = v.getName();
+          if (renames.containsKey(vName)) {
+            shadowed.put(vName, renames.get(vName));
+            renames.remove(vName);
+          }
+        }
+        b.renameVars(renames, inputsOnly);
+  
+        renames.putAll(shadowed);
+      }
+    }
+  
+    public abstract void removeVars(Set<String> removeVars);
+  
+    protected void removeVarsInBlocks(Set<String> removeVars) {
+      for (Block b: this.getBlocks()) {
+        b.removeVars(removeVars);
+      }
+    }
+  
+    /**
+     * @return all variables whose values are needed to evaluate this construct
+     * (e.g. branch condition).  empty list if none
+     */
+    public abstract Collection<Variable> requiredVars();
+  
+    /**
+     * See if we can predict branch and flatten this to a block
+     * @param knownConstants
+     * @return a block which is the branch that will run 
+     */
+    public abstract Block branchPredict(Map<String, Oparg> knownConstants);
+  
+    /**
+     * replace variables with constants in loop construct
+     * @param knownConstants
+     * @return true if anything changed
+     */
+    public boolean constantReplace(Map<String, Oparg> knownConstants) {
+      // default: do nothing
+      return false;
+    }
+    
+    /** @return true if the continuation does nothing */
+    public abstract boolean isNoop();
+
+    /** Return list of variables that will be
+     * closed within continuation blocks
+     * @return
+     */
+    public abstract List<Variable> closedVarsInside();
+
+    /**
+     * Return list of variables that are defined by construct and 
+     * accessible inside
+     * @return
+     */
+    public abstract List<Variable> constructDefinedVars();
+    
+    /**
+     * @return true if all variables in block containing continuation are
+     *        automatically visible in inner blocks
+     */
+    public abstract boolean variablesPassedInAutomatically();
+
+    public abstract Collection<Variable> getPassedInVars();
+
+    public abstract void addPassedInVar(Variable variable);
+
+    public abstract void removePassedInVar(Variable variable);
+    
+    /** 
+     * Remove this continuation from block, inlining one of
+     * the nested blocks inside the continuation (e.g. the predicted branch
+     *  of an if statement)
+     * @param b
+     */
+    public void inlineInto(Block block, Block predictedBranch) {
+      // Default implementation
+      block.insertInline(predictedBranch);
+      block.removeContinuation(this);
+    }
+
+    /**
+     * Returns true if a change was made.
+     * 
+     * It is ok if the unrolling introduced duplicate variable names in 
+     * nested blocks (so long as they don't shadow each other) - a
+     * subsequent pass will make those names unique
+     * @param logger
+     * @param outerBlock
+     * @return
+     */
+    public boolean tryUnroll(Logger logger, Block outerBlock) {
+      // default: do nothing
+      return false;
+    }
+    
+    /**
+     * Try to inline a block, depending on which variables are closed
+     * This is also a mechanism to let the continuation know what variables
+     * are closed so it can make internal optimizations
+     * @param closedVars
+     * @return null if it cannot be inlined, a block that is equivalent to 
+     *          the continuation otherwise
+     */
+    public Block tryInline(Set<String> closedVars) {
+      // Default: do nothing
+      return null;
+    }
+    
+    public abstract Continuation clone();
+  }
+
+  public enum ContinuationType {
+    NESTED_BLOCK,
+    IF_STATEMENT,
+    SWITCH_STATEMENT,
+    FOREACH_LOOP,
+    RANGE_LOOP,
+    LOOP,
+    WAIT_STATEMENT
+  }
+
+  public static abstract class AbstractLoop extends Continuation {
+    protected Block loopBody;
+
+    protected final List<Variable> usedVariables;
+    protected final List<Variable> containersToRegister;
+    
+    public AbstractLoop(Block block, List<Variable> usedVariables,
+        List<Variable> containersToRegister) {
+  
+      this.usedVariables = new ArrayList<Variable>(usedVariables);
+      this.containersToRegister =
+                      new ArrayList<Variable>(containersToRegister);
+      this.loopBody = block;
+    }
+  
+    public Block getLoopBody() {
+      return loopBody;
+    }
+  
+    @Override
+    public List<Block> getBlocks() {
+      return Arrays.asList(loopBody);
+    }
+  
+    @Override 
+    public Collection<Variable> requiredVars() {
+      ArrayList<Variable> res = new ArrayList<Variable>();
+      for (Variable c: containersToRegister) {
+        if (c.getStorage() == VariableStorage.ALIAS) {
+          // We might be holding it open so that a different var can
+          // be written inside
+        }
+      }
+      return res;
+    }
+    
+    protected void checkNotRemoved(Variable v, Set<String> removeVars) {
+      if (removeVars.contains(v.getName())) {
+        throw new ParserRuntimeException("bad optimization: tried to remove" +
+        		" required variable " + v.toString());
+      }
+    }
+    protected void checkNotRemoved(Oparg o, Set<String> removeVars) {
+      if (o.type == OpargType.VAR) {
+        checkNotRemoved(o.getVariable(), removeVars);
+      }
+    }
+    
+    @Override
+    public Collection<Variable> getPassedInVars() {
+      return Collections.unmodifiableList(this.usedVariables);
+    }
+    
+    @Override
+    public void addPassedInVar(Variable variable) {
+      assert(variable != null);
+      this.usedVariables.add(variable);
+    }
+    
+    @Override
+    public void removePassedInVar(Variable variable) {
+      ICUtil.removeVarInList(usedVariables, variable.getName());
+    }
+
+    @Override
+    public void inlineInto(Block block, Block predictedBranch) {  
+      throw new ParserRuntimeException("Can't inline loops yet");
+    }
+  }
+
+  public static class ForeachLoop extends AbstractLoop {
+    private Variable arrayVar;
+    private boolean arrayClosed;
+    private Variable loopCounterVar;
+    private Variable loopVar;
+    private final boolean isSync;
+  
+    private ForeachLoop(Block block, Variable arrayVar, Variable loopVar,
+        Variable loopCounterVar, boolean isSync, boolean arrayClosed,
+        List<Variable> usedVariables, List<Variable> containersToRegister) {
+      super(block, usedVariables, containersToRegister);
+      this.arrayVar = arrayVar;
+      this.loopVar = loopVar;
+      this.loopCounterVar = loopCounterVar;
+      this.isSync = isSync;
+      this.arrayClosed = arrayClosed;
+    }
+    
+    public ForeachLoop(Variable arrayVar, Variable loopVar,
+        Variable loopCounterVar, boolean isSync, boolean arrayClosed,
+        List<Variable> usedVariables, List<Variable> containersToRegister) {
+      this(new Block(BlockType.FOREACH_BODY), arrayVar, loopVar, loopCounterVar,
+          isSync, arrayClosed, usedVariables, containersToRegister);
+    }
+  
+    @Override
+    public ForeachLoop clone() {
+      return new ForeachLoop(this.loopBody.clone(),
+          arrayVar, loopVar, loopCounterVar, isSync, arrayClosed,
+          new ArrayList<Variable>(usedVariables), 
+          new ArrayList<Variable>(containersToRegister));
+    }
+
+    @Override
+    public ContinuationType getType() {
+      return ContinuationType.FOREACH_LOOP;
+    }
+  
+    @Override
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
+        throws UndefinedTypeException {
+      gen.startForeachLoop(arrayVar, loopVar, loopCounterVar, isSync, 
+                arrayClosed, usedVariables, containersToRegister);
+      this.loopBody.generate(logger, gen, info);
+      gen.endForeachLoop(isSync, arrayClosed, containersToRegister);
+    }
+  
+    @Override
+    public void prettyPrint(StringBuilder sb, String currentIndent) {
+      if (isSync) {
+        sb.append(currentIndent + "@sync\n");
+      }
+      if (arrayClosed) {
+        sb.append(currentIndent + "@skiparrayblock\n");
+      }
+      sb.append(currentIndent + "foreach " + loopVar.getName());
+      if (loopCounterVar != null) {
+        sb.append(", " + loopCounterVar.getName());
+      }
+      sb.append(" in " + arrayVar.getName() + " ");
+      ICUtil.prettyPrintVarInfo(sb, usedVariables, containersToRegister);
+      sb.append(" {\n");
+      loopBody.prettyPrint(sb, currentIndent + indent);
+      sb.append(currentIndent + "}\n");
+    }
+  
+    @Override
+    public void replaceVars(Map<String, Oparg> renames) {
+      this.replaceVarsInBlocks(renames, false);
+      if (renames.containsKey(arrayVar.getName())) {
+        arrayVar = renames.get(arrayVar.getName()).getVariable();
+      }
+      if (renames.containsKey(loopVar.getName())) {
+        loopVar = renames.get(loopVar.getName()).getVariable();
+      }
+      if (this.loopCounterVar != null &&
+          renames.containsKey(loopCounterVar.getName())) {
+        loopCounterVar = renames.get(loopCounterVar.getName()).getVariable();
+      }
+      ICUtil.replaceVarsInList2(renames, usedVariables, true);
+      ICUtil.replaceVarsInList2(renames, containersToRegister, true);
+    }
+  
+    @Override
+    public void replaceInputs(Map<String, Oparg> renames) {
+      // Replace only those we're reading
+      this.replaceVarsInBlocks(renames, true);
+      if (renames.containsKey(arrayVar.getName())) {
+        arrayVar = renames.get(arrayVar.getName()).getVariable();
+      }
+      ICUtil.replaceVarsInList2(renames, usedVariables, true);
+    }
+
+    @Override
+    public Collection<Variable> requiredVars() {
+      Collection<Variable> res = super.requiredVars();
+      res.add(arrayVar);
+      return res;
+    }
+  
+    @Override
+    public void removeVars(Set<String> removeVars) {
+      removeVarsInBlocks(removeVars);
+      checkNotRemoved(arrayVar, removeVars);
+      checkNotRemoved(loopVar, removeVars);
+      if (loopCounterVar != null) {
+        checkNotRemoved(loopCounterVar, removeVars);
+      }
+      ICUtil.removeVarsInList(this.containersToRegister, removeVars);
+      ICUtil.removeVarsInList(this.usedVariables, removeVars);
+    }
+  
+    @Override
+    public Block branchPredict(Map<String, Oparg> knownConstants) {
+      return null;
+    }
+  
+    @Override
+    public boolean isNoop() {
+      return this.loopBody.isEmpty();
+    }
+
+    @Override
+    public boolean variablesPassedInAutomatically() {
+      return false;
+    }
+
+    @Override
+    public List<Variable> constructDefinedVars() {
+      return Arrays.asList(loopCounterVar, loopVar);
+    }
+
+    @Override
+    public List<Variable> closedVarsInside() {
+      return null;
+    }
+
+    @Override
+    public Block tryInline(Set<String> closedVars) {
+      if (closedVars.contains(arrayVar.getName())) {
+        this.arrayClosed = true;
+      }
+      return null;
+    }
+  
+  }
+
+  static class IfStatement extends Continuation {
+    private final Block thenBlock;
+    private final Block elseBlock;
+    private Variable condVar;
+  
+    public IfStatement(Variable condVar) {
+      this(condVar, new Block(BlockType.THEN_BLOCK),
+                          new Block(BlockType.ELSE_BLOCK));
+    }
+    
+    private IfStatement(Variable condVar, Block thenBlock, Block elseBlock) {
+      assert(thenBlock != null);
+      assert(elseBlock != null);
+      this.condVar = condVar;
+      this.thenBlock = thenBlock;
+      // Always have an else block to make more uniform: empty block is then
+      // equivalent to no else block
+      this.elseBlock = elseBlock;
+    }
+  
+    @Override
+    public IfStatement clone() {
+      return new IfStatement(condVar, thenBlock.clone(), elseBlock.clone());
+    }
+
+    public Block getThenBlock() {
+      return thenBlock;
+    }
+  
+    public Block getElseBlock() {
+      return elseBlock;
+    }
+  
+    @Override
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
+        throws UndefinedTypeException {
+      boolean hasElse = !(elseBlock.isEmpty());
+      gen.startIfStatement(condVar, hasElse);
+      this.thenBlock.generate(logger, gen, info);
+      if (hasElse) {
+        gen.startElseBlock();
+        this.elseBlock.generate(logger, gen, info);
+      }
+      gen.endIfStatement();
+    }
+  
+    @Override
+    public void prettyPrint(StringBuilder sb, String currentIndent) {
+      String newIndent = currentIndent + indent;
+      sb.append(currentIndent + "if (");
+      sb.append(this.condVar.getName());
+      sb.append(") {\n");
+      thenBlock.prettyPrint(sb, newIndent);
+      if (!elseBlock.isEmpty()) {
+        sb.append(currentIndent + "} else {\n");
+        elseBlock.prettyPrint(sb, newIndent);
+      }
+      sb.append(currentIndent + "}\n");
+    }
+  
+    @Override
+    public List<Block> getBlocks() {
+      return Arrays.asList(thenBlock, elseBlock);
+    }
+  
+    @Override
+    public void replaceVars(Map<String, Oparg> renames) {
+      replaceShared(renames, false);
+    }
+  
+    @Override
+    public void replaceInputs(Map<String, Oparg> renames) {
+      replaceShared(renames, true);
+    }
+
+    private void replaceShared(Map<String, Oparg> renames,
+          boolean inputsOnly) {
+      replaceVarsInBlocks(renames, inputsOnly);
+      if (renames.containsKey(condVar.getName())) {
+        condVar = renames.get(condVar.getName()).getVariable();
+      }
+    }
+
+    @Override
+    public ContinuationType getType() {
+      return ContinuationType.IF_STATEMENT;
+    }
+  
+    @Override
+    public Collection<Variable> requiredVars() {
+      return Arrays.asList(condVar);
+    }
+  
+    @Override
+    public void removeVars(Set<String> removeVars) {
+      removeVarsInBlocks(removeVars);
+      assert(!removeVars.contains(condVar.getName()));
+    }
+  
+    @Override
+    public Block branchPredict(Map<String, Oparg> knownConstants) {
+      Oparg condVal = knownConstants.get(condVar.getName());
+      if (condVal != null) {
+        assert(condVal.getType() == OpargType.INTVAL
+            || condVal.getType() == OpargType.BOOLVAL);
+        if (condVal.getType() == OpargType.INTVAL &&
+                                        condVal.getIntLit() != 0) {
+          return thenBlock;
+        } else if (condVal.getType() == OpargType.BOOLVAL &&
+            condVal.getBoolLit()) {
+          return thenBlock;
+        } else {
+          return elseBlock;
+        }
+      }
+      return null;
+    }
+  
+    @Override
+    public boolean isNoop() {
+      return thenBlock.isEmpty() && elseBlock.isEmpty();
+    }
+
+    @Override
+    public boolean variablesPassedInAutomatically() {
+      return true;
+    }
+
+    @Override
+    public Collection<Variable> getPassedInVars() {
+      // doesn't apply
+      return null;
+    }
+
+    @Override
+    public void addPassedInVar(Variable variable) {
+      throw new ParserRuntimeException("addPassedInVar not supported on if");
+    }
+
+    @Override
+    public void removePassedInVar(Variable variable) {
+      throw new ParserRuntimeException("removePassedInVar not supported on " +
+      		"if");
+    }
+
+    @Override
+    public List<Variable> constructDefinedVars() {
+      return null;
+    }
+
+    @Override
+    public List<Variable> closedVarsInside() {
+      return null;
+    }
+  }
+
+  public static class Loop extends AbstractLoop {
+    private final String loopName;
+    private final Variable condVar;
+    private final List<Variable> loopVars;
+    private final List<Variable> initVals;
+
+    /*
+     * Have handles to the termination instructions 
+     */
+    private LoopBreak loopBreak;
+
+    private LoopContinue loopContinue;
+    private ArrayList<Boolean> blockingVars;
+  
+    
+    public Loop(String loopName, List<Variable> loopVars, 
+            List<Variable> initVals, List<Variable> usedVariables, 
+            List<Variable> containersToRegister, List<Boolean> blockingVars) {
+      this(loopName, new Block(BlockType.LOOP_BODY), loopVars, initVals,
+          usedVariables, containersToRegister, blockingVars);
+    }
+    
+    private Loop(String loopName, Block loopBody,
+        List<Variable> loopVars,  List<Variable> initVals, 
+        List<Variable> usedVariables, List<Variable> containersToRegister,
+        List<Boolean> blockingVars) {
+      super(loopBody, usedVariables, containersToRegister);
+      this.loopName = loopName;
+      this.condVar = loopVars.get(0);
+      this.loopVars = new ArrayList<Variable>(loopVars);
+      this.initVals = new ArrayList<Variable>(initVals);
+      this.blockingVars = new ArrayList<Boolean>(blockingVars);
+      assert(loopVars.size() == initVals.size());
+      for (int i = 0; i < loopVars.size(); i++) {
+        Variable loopV = loopVars.get(i);
+        Variable initV = initVals.get(i);
+        if (!loopV.getType().equals(initV.getType())) {
+          throw new ParserRuntimeException("loop variable " + loopV.toString()
+              + " is given init value of wrong type: " + initV.toString());
+        }
+      }
+    }
+    
+    @Override
+    public Loop clone() {
+      // Constructor creates copies of variable lists
+      return new Loop(loopName, this.loopBody.clone(), loopVars, initVals, 
+          usedVariables, containersToRegister, blockingVars);
+    }
+
+    @Override
+    public ContinuationType getType() {
+      return ContinuationType.LOOP;
+    }
+    
+    public void setLoopBreak(LoopBreak loopBreak) {
+      this.loopBreak = loopBreak;
+    }
+
+    public void setLoopContinue(LoopContinue loopContinue) {
+      this.loopContinue = loopContinue;
+    }
+  
+    @Override
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
+        throws UndefinedTypeException {
+      gen.startLoop(loopName, loopVars, initVals, 
+                    usedVariables, containersToRegister, blockingVars);
+      this.loopBody.generate(logger, gen, info);
+      gen.endLoop();
+    }
+  
+    @Override
+    public void prettyPrint(StringBuilder sb, String currentIndent) {
+      sb.append(currentIndent + "loop /*" + loopName + "*/\n");
+      sb.append(currentIndent + indent + indent + "while (");
+      sb.append(condVar.getType().typeName() + " " + condVar.getName());
+      sb.append(")\n" + currentIndent + indent + indent + "loopvars (");
+      boolean first = true;
+      for (int i = 0; i < loopVars.size(); i++) {
+        Variable loopV = loopVars.get(i);
+        Variable initV = initVals.get(i);
+        if (first) {
+          first = false;
+        } else {
+          sb.append(", ");
+        }
+        sb.append(loopV.getType().typeName() + " " + loopV.getName() + "="
+            + initV.getName());
+      }
+      
+      sb.append(")\n" + currentIndent + indent + indent);
+      ICUtil.prettyPrintVarInfo(sb, usedVariables, containersToRegister);
+      sb.append(" {\n");
+      loopBody.prettyPrint(sb, currentIndent + indent);
+      sb.append(currentIndent + "}\n");
+    }
+  
+    @Override
+    public void replaceVars(Map<String, Oparg> renames) {
+      this.replaceVarsInBlocks(renames, false);
+      ICUtil.replaceVarsInList2(renames, initVals, false);
+      ICUtil.replaceVarsInList2(renames, usedVariables, true);
+      ICUtil.replaceVarsInList2(renames, containersToRegister, true);
+    }
+  
+    @Override
+    public void replaceInputs(Map<String, Oparg> renames) {
+      this.replaceVarsInBlocks(renames, true);
+      ICUtil.replaceVarsInList2(renames, initVals, false);
+    }
+
+    @Override
+    public Collection<Variable> requiredVars() {
+      Collection<Variable> res = super.requiredVars();
+      res.addAll(initVals);
+      return res;
+    }
+  
+    @Override
+    public void removeVars(Set<String> removeVars) {
+      removeVarsInBlocks(removeVars);
+      // check it isn't removing initial values 
+      for (Variable v: this.initVals) {
+        checkNotRemoved(v, removeVars);
+      }
+      for (Variable v: this.loopVars) {
+        checkNotRemoved(v, removeVars);
+      }
+      ICUtil.removeVarsInList(this.containersToRegister, removeVars);
+      ICUtil.removeVarsInList(this.usedVariables, removeVars);
+    }
+  
+    @Override
+    public Block branchPredict(Map<String, Oparg> knownConstants) {
+      return null;
+    }
+  
+    @Override
+    public boolean isNoop() {
+      // TODO: think about particular conditions that would render it a noop.
+      //      
+      return false;
+    }
+
+    @Override
+    public boolean variablesPassedInAutomatically() {
+      return false;
+    }
+
+    @Override
+    public List<Variable> constructDefinedVars() {
+      ArrayList<Variable> defVars = new ArrayList<Variable>(
+                                      loopVars.size() + 1);
+      defVars.addAll(this.loopVars);
+      defVars.add(this.condVar);
+      return defVars;
+    }
+
+    @Override
+    public List<Variable> closedVarsInside() {
+      ArrayList<Variable> res = new ArrayList<Variable>();
+      res.add(condVar);
+      for (int i = 0; i < loopVars.size(); i++) {
+        if (blockingVars.get(i)) {
+          res.add(loopVars.get(i));
+        }
+      }
+      return res;
+    }
+  
+    
+    @Override
+    public void addPassedInVar(Variable variable) {
+      // special implementation to also fix up the loopContinue instruction
+      assert(variable != null);
+      super.addPassedInVar(variable);
+      this.loopContinue.addUsedVar(variable);
+    }
+
+    @Override
+    public void removePassedInVar(Variable variable) {
+      // special implementation to also fix up the loopContinue instruction
+      super.removePassedInVar(variable);
+      this.loopContinue.removeUsedVar(variable);
+    }
+
+    public Variable getInitCond() {
+      return this.initVals.get(0);
+    }
+  }
+
+  /**
+   * For now, treat nested blocks as continuations.  If we implement a
+   * proper variable renaming scheme for nested blocks we can just
+   * flatten them into the main block
+   */
+  static class NestedBlock extends Continuation {
+    private final Block block;
+  
+    public NestedBlock() {
+      this(new Block(BlockType.NESTED_BLOCK));
+    }
+    
+    
+    private NestedBlock(Block block) {
+      this.block = block;
+    }
+
+    @Override
+    public NestedBlock clone() {
+      return new NestedBlock(this.block.clone());
+    }
+
+    @Override
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
+        throws UndefinedTypeException {
+      gen.startNestedBlock();
+      block.generate(logger, gen, info);
+      gen.endNestedBlock();
+    }
+  
+    public Block getBlock() {
+      return this.block;
+    }
+  
+    @Override
+    public void prettyPrint(StringBuilder sb, String currentIndent) {
+      sb.append(currentIndent + "{\n");
+      block.prettyPrint(sb, currentIndent + indent);
+      sb.append(currentIndent + "}\n");
+    }
+  
+    @Override
+    public List<Block> getBlocks() {
+      return Arrays.asList(block);
+    }
+  
+    @Override
+    public ContinuationType getType() {
+      return ContinuationType.NESTED_BLOCK;
+    }
+  
+    @Override
+    public void replaceVars(Map<String, Oparg> renames) {
+      replaceVarsInBlocks(renames, false);
+    }
+  
+    @Override
+    public void replaceInputs(Map<String, Oparg> renames) {
+      replaceVarsInBlocks(renames, true);
+    }
+
+    @Override
+    public Collection<Variable> requiredVars() {
+      return new ArrayList<Variable>(0);
+    }
+  
+    @Override
+    public void removeVars(Set<String> removeVars) {
+      removeVarsInBlocks(removeVars);
+    }
+  
+    @Override
+    public Block branchPredict(Map<String, Oparg> knownConstants) {
+      return null;
+    }
+  
+    @Override
+    public boolean isNoop() {
+      return block.isEmpty();
+    }
+
+    @Override
+    public boolean variablesPassedInAutomatically() {
+      return true;
+    }
+
+    @Override
+    public Collection<Variable> getPassedInVars() {
+      return null;
+    }
+
+    @Override
+    public void addPassedInVar(Variable variable) {
+      throw new ParserRuntimeException("addPassedInVar not supported on " +
+      		"nested");
+    }
+
+    @Override
+    public void removePassedInVar(Variable variable) {
+      throw new ParserRuntimeException("removePassedInVar not supported on " +
+          "nested block");
+    }
+
+    @Override
+    public List<Variable> constructDefinedVars() {
+      return null;
+    }
+
+    @Override
+    public List<Variable> closedVarsInside() {
+      return null;
+    }
+  }
+
+  public static class RangeLoop extends AbstractLoop {
+    // arguments can be either value variable or integer literal
+    private final String loopName;
+    private Variable loopVar;
+    private Oparg start;
+    private Oparg end;
+    private Oparg increment;
+    private final boolean isSync;
+    private int desiredUnroll;
+    
+    public RangeLoop(String loopName, Variable loopVar,
+        Oparg start, Oparg end, Oparg increment,
+        boolean isSync,
+        List<Variable> usedVariables, List<Variable> containersToRegister,
+        int desiredUnroll) {
+      this(loopName, new Block(BlockType.RANGELOOP_BODY), loopVar,
+          start, end, increment, isSync, usedVariables, containersToRegister,
+          desiredUnroll);
+    }
+    
+    private RangeLoop(String loopName, Block block, Variable loopVar,
+        Oparg start, Oparg end, Oparg increment,
+        boolean isSync,
+        List<Variable> usedVariables, List<Variable> containersToRegister,
+        int desiredUnroll) {
+      super(block, 
+            usedVariables, containersToRegister);
+      assert(start.getType() == OpargType.INTVAL || 
+          (start.getType() == OpargType.VAR && 
+              start.getVariable().getType().equals(Types.VALUE_INTEGER)));
+      assert(end.getType() == OpargType.INTVAL || 
+          (end.getType() == OpargType.VAR && 
+              end.getVariable().getType().equals(Types.VALUE_INTEGER)));
+      assert(increment.getType() == OpargType.INTVAL || 
+          (increment.getType() == OpargType.VAR && 
+                      increment.getVariable().getType().equals(Types.VALUE_INTEGER)));
+      assert(loopVar.getType().equals(Types.VALUE_INTEGER));
+      this.loopName = loopName;
+      this.loopVar = loopVar;
+      this.start = start;
+      this.end = end;
+      this.increment = increment;
+      this.isSync = isSync;
+      this.desiredUnroll = desiredUnroll;
+    }
+    
+    @Override
+    public RangeLoop clone() {
+      return new RangeLoop(loopName, this.loopBody.clone(), loopVar, 
+          start.clone(), end.clone(), increment.clone(), isSync, 
+          new ArrayList<Variable>(usedVariables), 
+          new ArrayList<Variable>(containersToRegister), desiredUnroll);
+    }
+
+    @Override
+    public ContinuationType getType() {
+      return ContinuationType.RANGE_LOOP;
+    }
+  
+    @Override
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
+        throws UndefinedTypeException {
+      gen.startRangeLoop(loopName, loopVar, start, end, increment,
+                         isSync,
+                         usedVariables, containersToRegister,
+                         desiredUnroll);
+      this.loopBody.generate(logger, gen, info);
+      gen.endRangeLoop(isSync, containersToRegister);
+    }
+  
+    @Override
+    public void prettyPrint(StringBuilder sb, String currentIndent) {
+      if (isSync) {
+        sb.append(currentIndent + "@sync\n");
+      }
+      sb.append(currentIndent +   "for " + loopVar.getName());
+      
+      sb.append(" = " + start.toString() + " to " + end.toString() 
+          + " incr " + increment.toString() + " ");
+      ICUtil.prettyPrintVarInfo(sb, usedVariables, containersToRegister);
+      sb.append(" {\n");
+      loopBody.prettyPrint(sb, currentIndent + indent);
+      sb.append(currentIndent + "}\n");
+    }
+  
+    @Override
+    public void replaceVars(Map<String, Oparg> renames) {
+      this.replaceVarsInBlocks(renames, false);
+      if (renames.containsKey(loopVar.getName())) {
+        throw new ParserRuntimeException("Can't rename loop var in" +
+        		" range loop");
+      }
+      start = renameRangeArg(start, renames);
+      end = renameRangeArg(end, renames);
+      increment = renameRangeArg(increment, renames);
+      
+      ICUtil.replaceVarsInList2(renames, usedVariables, true);
+      ICUtil.replaceVarsInList2(renames, containersToRegister, true);
+    }
+    @Override
+    public void replaceInputs(Map<String, Oparg> renames) {
+      this.replaceVarsInBlocks(renames, true);
+      start = renameRangeArg(start, renames);
+      end = renameRangeArg(end, renames);
+      increment = renameRangeArg(increment, renames);
+    }
+
+    private Oparg renameRangeArg(Oparg val, Map<String, Oparg> renames) {
+      if (val.type == OpargType.VAR) {
+        String vName = val.getVariable().getName();
+        if (renames.containsKey(vName)) {
+          Oparg o = renames.get(vName);
+          assert(o != null);
+          return o;
+        }
+      }
+      return val;
+    }
+  
+    @Override
+    public Collection<Variable> requiredVars() {
+      Collection<Variable> res = super.requiredVars();
+      for (Oparg o: Arrays.asList(start, end, increment)) {
+        if (o.getType() == OpargType.VAR) {
+          res.add(o.getVariable());
+        }
+      }
+      return res;
+    }
+  
+    @Override
+    public void removeVars(Set<String> removeVars) {
+      checkNotRemoved(start, removeVars);
+      checkNotRemoved(end, removeVars);
+      checkNotRemoved(increment, removeVars);
+      removeVarsInBlocks(removeVars);
+      ICUtil.removeVarsInList(this.containersToRegister, removeVars);
+      ICUtil.removeVarsInList(this.usedVariables, removeVars);
+    }
+  
+    @Override
+    public Block branchPredict(Map<String, Oparg> knownConstants) {
+      // Could inline loop if there is only one iteration...
+      if (start.getType() == OpargType.INTVAL && end.getType() == OpargType.INTVAL) {
+        long startV = start.getIntLit();
+        long endV = end.getIntLit();
+        boolean singleIter = false;
+        if (endV < startV) {
+          // Doesn't run - return empty block
+          return new Block(BlockType.FOREACH_BODY);
+        } else if (endV == startV) {
+          singleIter = true;
+        } else if (increment.getType() == OpargType.INTVAL) {
+          long incV = increment.getIntLit();
+          if (startV + incV > endV) {
+            singleIter = true;
+          }
+        }
+        
+        if (singleIter) {
+          return this.loopBody;
+        }
+      }
+      return null;
+    }
+  
+    @Override
+    public void inlineInto(Block block, Block predictedBranch) {
+      assert(predictedBranch == this.loopBody);
+      // Shift loop variable to body and inline loop body
+      this.loopBody.declareVariable(loopVar);
+      this.loopBody.addInstructionFront(
+          new LocalArithOp(ArithOpcode.COPY_INT, this.loopVar, start));
+      block.insertInline(loopBody);
+      block.removeContinuation(this);
+    }
+
+    @Override
+    public boolean constantReplace(Map<String, Oparg> knownConstants) {
+      boolean anyChanged = false;
+      Oparg oldVals[] = new Oparg[] {start, end, increment };
+      Oparg newVals[] = new Oparg[3];
+      for (int i = 0; i < oldVals.length; i++) {
+        Oparg old = oldVals[i]; 
+        if (old.type == OpargType.VAR) {
+          Oparg replacement = knownConstants.get(old.getVariable().getName());
+          if (replacement != null) {
+            assert(replacement.getType() == OpargType.INTVAL);
+            anyChanged = true;
+            newVals[i] = replacement;
+          } else {
+            newVals[i] = old;
+          }
+        } else {
+          newVals[i] = old;
+        }
+      }
+      start = newVals[0];
+      end = newVals[1];
+      increment = newVals[2];
+  
+      assert(start != null); assert(end != null); assert(increment  != null);
+      return anyChanged;
+    }
+    
+    @Override
+    public boolean isNoop() {
+      return this.loopBody.isEmpty();
+    }
+
+    @Override
+    public boolean variablesPassedInAutomatically() {
+      return false;
+    }
+
+    @Override
+    public List<Variable> constructDefinedVars() {
+      return Arrays.asList(loopVar);
+    }
+
+    @Override
+    public List<Variable> closedVarsInside() {
+      return null;
+    }
+
+    @Override
+    public boolean tryUnroll(Logger logger, Block outerBlock) {
+      logger.trace("DesiredUnroll for " + loopName + ": " + desiredUnroll);
+      if (this.desiredUnroll > 1) {
+        logger.debug("Unrolling range loop " + desiredUnroll + " times ");
+        Oparg oldStep = this.increment;
+        
+        long checkIter; // the time we need to check
+        if(increment.getType() == OpargType.INTVAL && 
+            start.getType() == OpargType.INTVAL &&
+            end.getType() == OpargType.INTVAL) {
+          long startV = start.getIntLit();
+          long endV = end.getIntLit();
+          long incV = increment.getIntLit();
+          
+          long diff = (endV - startV + 1);
+          // Number of loop iterations
+          long iters = ( (diff - 1) / incV ) + 1;
+          
+          // 0 if the number of iterations will go exactly into the 
+          // unroll factor
+          long extra = iters % desiredUnroll; 
+          
+          if (extra == 0) {
+            checkIter = desiredUnroll;
+          } else {
+            checkIter = extra;
+          }
+        } else {
+          checkIter = -1;
+        }
+        
+        // Update step
+        if (oldStep.getType() == OpargType.INTVAL) {
+          this.increment = Oparg.createIntLit(oldStep.getIntLit() * desiredUnroll);
+        } else {
+          Variable old = oldStep.getVariable();
+          Variable newIncrement = new Variable(old.getType(),
+              old.getName() + "@unroll" + desiredUnroll,
+              VariableStorage.LOCAL,
+              DefType.LOCAL_COMPILER, null);
+          outerBlock.declareVariable(newIncrement);
+          outerBlock.addInstruction(new LocalArithOp(ArithOpcode.MULT_INT,
+              newIncrement, Arrays.asList(oldStep, Oparg.createIntLit(desiredUnroll))));
+              
+          this.increment = Oparg.createVar(newIncrement);
+        }
+        
+        // Create a copy of the original loop body for reference
+        Block orig = loopBody;
+        this.loopBody = new Block(BlockType.LOOP_BODY);
+        Block curr = loopBody;
+        Variable nextIter = loopVar; // Variable with current iter number
+        
+        for (int i = 0; i < desiredUnroll; i++) {
+          // Put everything in nested block
+          NestedBlock nb = new NestedBlock(orig.clone(BlockType.NESTED_BLOCK));
+          curr.addContinuation(nb);
+          if (i != 0) {
+            // Replace references to the iteration counter
+            nb.replaceVars(Collections.singletonMap(this.loopVar.getName(), 
+                                            Oparg.createVar(nextIter)));
+          }
+          
+          if (i < desiredUnroll - 1) {
+            // Next iteration number and boolean check
+            Variable lastIter = nextIter;
+            nextIter = new Variable(Types.VALUE_INTEGER,
+                this.loopVar.getName() + "@" + (i + 1), VariableStorage.LOCAL,
+                DefType.LOCAL_COMPILER, null);
+            
+            curr.addVariable(nextIter);
+            // Loop counter
+            curr.addInstruction(new LocalArithOp(ArithOpcode.PLUS_INT, 
+                nextIter, Arrays.asList(Oparg.createVar(lastIter), 
+                                        oldStep)));
+            
+            boolean mustCheck = checkIter < 0 || i + 1 == checkIter;
+            if (mustCheck) {
+              Variable nextIterCheck = new Variable(Types.VALUE_BOOLEAN,
+                  this.loopVar.getName() + "@" + (i + 1) + "_check", 
+                  VariableStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+              curr.addVariable(nextIterCheck);
+              curr.addInstruction(new LocalArithOp(ArithOpcode.LTE_INT, 
+                  nextIterCheck, Arrays.asList(Oparg.createVar(nextIter), 
+                                          this.end)));
+              // check to see if we should run next iteration
+              IfStatement ifSt = new IfStatement(nextIterCheck); 
+              curr.addContinuation(ifSt);
+              
+              curr = ifSt.getThenBlock();
+            }
+          } else {
+            curr = null;
+          }
+        }
+        this.desiredUnroll = 1;
+        return true;
+      }
+      return false;
+    }
+  }
+
+  static class SwitchStatement extends Continuation {
+    private final ArrayList<Integer> caseLabels;
+    private final ArrayList<Block> caseBlocks;
+    private final Block defaultBlock;
+    private Variable switchVar;
+  
+    public SwitchStatement(Variable switchVar, List<Integer> caseLabels) {
+      this(switchVar, new ArrayList<Integer>(caseLabels), 
+          new ArrayList<Block>(), new Block(BlockType.CASE_BLOCK));
+
+      // number of non-default cases
+      int caseCount = caseLabels.size();
+      for (int i = 0; i < caseCount; i++) {
+        this.caseBlocks.add(new Block(BlockType.CASE_BLOCK));
+      }
+    }
+  
+    private SwitchStatement(Variable switchVar, ArrayList<Integer> caseLabels,
+        ArrayList<Block> caseBlocks, Block defaultBlock) {
+      super();
+      this.switchVar = switchVar;
+      this.caseLabels = caseLabels;
+      this.caseBlocks = caseBlocks;
+      this.defaultBlock = defaultBlock;
+    }
+
+    @Override
+    public SwitchStatement clone() {
+      return new SwitchStatement(switchVar, 
+          new ArrayList<Integer>(this.caseLabels),
+          ICUtil.cloneBlocks(this.caseBlocks), this.defaultBlock.clone());
+          
+    }
+
+    public List<Block> caseBlocks() {
+      return Collections.unmodifiableList(caseBlocks);
+    }
+  
+    public Block getDefaultBlock() {
+      return this.defaultBlock;
+    }
+  
+    @Override
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
+        throws UndefinedTypeException {
+      boolean hasDefault = !defaultBlock.isEmpty();
+      gen.startSwitch(switchVar, caseLabels, hasDefault);
+  
+      for (Block b: this.caseBlocks) {
+        b.generate(logger, gen, info);
+        gen.endCase();
+      }
+  
+      if (hasDefault) {
+        defaultBlock.generate(logger, gen, info);
+        gen.endCase();
+      }
+  
+      gen.endSwitch();
+    }
+  
+    @Override
+    public void prettyPrint(StringBuilder sb, String currentIndent) {
+      assert(this.caseBlocks.size() == this.caseLabels.size());
+      String caseIndent = currentIndent + indent;
+      String caseBlockIndent = caseIndent + indent;
+      sb.append(currentIndent + "switch (" + switchVar.getName() + ") {\n");
+      for (int i = 0; i < caseLabels.size(); i++) {
+        sb.append(caseIndent + "case " + caseLabels.get(i) + " {\n");
+        caseBlocks.get(i).prettyPrint(sb, caseBlockIndent);
+        sb.append(caseIndent + "}\n");
+      }
+      if (!defaultBlock.isEmpty()) {
+        sb.append(caseIndent + "default {\n");
+        defaultBlock.prettyPrint(sb, caseBlockIndent);
+        sb.append(caseIndent + "}\n");
+      }
+      sb.append(currentIndent + "}\n");
+    }
+  
+    @Override
+    public List<Block> getBlocks() {
+      List<Block> result = new ArrayList<Block>();
+      result.addAll(this.caseBlocks);
+      result.add(defaultBlock);
+      return result;
+    }
+  
+    @Override
+    public void replaceVars(Map<String, Oparg> renames) {
+      replaceVarsInBlocks(renames, false);
+      if (renames.containsKey(switchVar.getName())) {
+        switchVar = renames.get(switchVar.getName()).getVariable();
+      }
+    }
+  
+    @Override
+    public void replaceInputs(Map<String, Oparg> renames) {
+      replaceVarsInBlocks(renames, true);
+      if (renames.containsKey(switchVar.getName())) {
+        switchVar = renames.get(switchVar.getName()).getVariable();
+      }
+    }
+
+    @Override
+    public ContinuationType getType() {
+      return ContinuationType.SWITCH_STATEMENT;
+    }
+  
+    @Override
+    public Collection<Variable> requiredVars() {
+      return Arrays.asList(switchVar);
+    }
+  
+    @Override
+    public void removeVars(Set<String> removeVars) {
+      assert(!removeVars.contains(switchVar.getName()));
+      defaultBlock.removeVars(removeVars);
+      for (Block caseBlock: this.caseBlocks) {
+        caseBlock.removeVars(removeVars);
+      }
+  
+    }
+  
+    @Override
+    public Block branchPredict(Map<String, Oparg> knownConstants) {
+      Oparg switchVal = knownConstants.get(switchVar.getName());
+      if (switchVal != null) {
+        assert(switchVal.getType() == OpargType.INTVAL);
+        long val = switchVal.getIntLit();
+        // Check cases
+        for (int i = 0; i < caseLabels.size(); i++) {
+          if (val == caseLabels.get(i)) {
+            return caseBlocks.get(i);
+          }
+        }
+        // Otherwise return (maybe empty) default block
+        return defaultBlock;
+      } else {
+        return null;
+      }
+    }
+  
+    @Override
+    public boolean isNoop() {
+      for (Block b: caseBlocks) {
+        if (!b.isEmpty()) {
+          return false;
+        }
+      }
+      return this.defaultBlock.isEmpty();
+    }
+
+    @Override
+    public boolean variablesPassedInAutomatically() {
+      return true;
+    }
+
+    @Override
+    public Collection<Variable> getPassedInVars() {
+      return null;
+    }
+
+    @Override
+    public void addPassedInVar(Variable variable) {
+      throw new ParserRuntimeException("addPassedInVar not supported on switch");
+    }
+
+    @Override
+    public void removePassedInVar(Variable variable) {
+      throw new ParserRuntimeException("removePassedInVar not supported on " +
+          "switch"); 
+    }
+
+    @Override
+    public List<Variable> constructDefinedVars() {
+      return null;
+    }
+
+    @Override
+    public List<Variable> closedVarsInside() {
+      return null;
+    }
+  }
+
+  /**
+   * A new construct that blocks on a list of variables (blockVars),
+   * and only runs the contents once all of those variables are closed
+   *
+   */
+  public static class WaitStatement extends Continuation {
+    /** Label name to use in final generated code */
+    private final String procName;
+    private final Block block;
+    private final ArrayList<Variable> waitVars;
+    private final ArrayList<Variable> usedVariables;
+    private final ArrayList<Variable> containersToRegister;
+    /* True if this wait was compiler-generated so can be removed if needed 
+     * We can only remove an explicit wait if we know that the variables are
+     * already closed*/
+    private final boolean explicit;
+  
+    public WaitStatement(String procName, List<Variable> waitVars,
+                    List<Variable> usedVariables,
+                    List<Variable> containersToRegister,
+                    boolean explicit) {
+      this(procName, new Block(BlockType.WAIT_BLOCK), 
+                        new ArrayList<Variable>(waitVars), 
+                        new ArrayList<Variable>(usedVariables),
+                        new ArrayList<Variable>(containersToRegister),
+                        explicit);
+    }
+  
+    private WaitStatement(String procName, Block block,
+        ArrayList<Variable> waitVars, ArrayList<Variable> usedVariables,
+        ArrayList<Variable> containersToRegister, boolean explicit) {
+      super();
+      this.procName = procName;
+      this.block = block;
+      this.waitVars = waitVars;
+      ICUtil.removeDuplicates(waitVars);
+      this.usedVariables = usedVariables;
+      this.containersToRegister = containersToRegister;
+      this.explicit = explicit;
+    }
+
+    @Override
+    public WaitStatement clone() {
+      return new WaitStatement(procName, this.block.clone(), 
+          new ArrayList<Variable>(waitVars),
+          new ArrayList<Variable>(usedVariables), 
+          new ArrayList<Variable>(containersToRegister), explicit);
+    }
+
+    public Block getBlock() {
+      return block;
+    }
+  
+    @Override
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
+        throws UndefinedTypeException {
+  
+      gen.startWaitStatement(procName, waitVars, usedVariables,
+          containersToRegister, explicit);
+      this.block.generate(logger, gen, info);
+      gen.endWaitStatement(containersToRegister);
+    }
+  
+    @Override
+    public void prettyPrint(StringBuilder sb, String currentIndent) {
+      String newIndent = currentIndent + indent;
+      sb.append(currentIndent + "wait (");
+      ICUtil.prettyPrintVarList(sb, waitVars);
+      sb.append(") ");
+      sb.append("/*" + procName + "*/ " );
+      ICUtil.prettyPrintVarInfo(sb, usedVariables, containersToRegister);
+      sb.append(" {\n");
+      block.prettyPrint(sb, newIndent);
+      sb.append(currentIndent + "}\n");
+    }
+  
+    @Override
+    public List<Block> getBlocks() {
+      return Arrays.asList(block);
+    }
+    
+    @Override
+    public void replaceVars(Map<String, Oparg> renames) {
+      replaceVarsInBlocks(renames, false);
+      ICUtil.replaceVarsInList2(renames, waitVars, true);
+      ICUtil.replaceVarsInList2(renames, usedVariables, true);
+      ICUtil.replaceVarsInList2(renames, containersToRegister, true);
+    }
+  
+    @Override
+    public void replaceInputs(Map<String, Oparg> renames) {
+      replaceVarsInBlocks(renames, true);
+      ICUtil.replaceVarsInList2(renames, waitVars, true);
+    }
+
+    @Override
+    public ContinuationType getType() {
+      return ContinuationType.WAIT_STATEMENT;
+    }
+  
+    @Override
+    public Collection<Variable> requiredVars() {
+      ArrayList<Variable> res = new ArrayList<Variable>();
+      for (Variable c: containersToRegister) {
+        if (c.getStorage() == VariableStorage.ALIAS) {
+          // Might be alias for actual container written inside
+          res.add(c);
+        }
+      }
+      if (explicit) {
+        for (Variable v: waitVars) {
+          res.add(v);
+        }
+      }
+      return res; // can later eliminate waitVars, etc
+    }
+  
+    public List<Variable> getWaitVars() {
+      return Collections.unmodifiableList(this.waitVars);
+    }
+    
+    @Override
+    public void removeVars(Set<String> removeVars) {
+      removeVarsInBlocks(removeVars);
+      ICUtil.removeVarsInList(waitVars, removeVars);
+      ICUtil.removeVarsInList(usedVariables, removeVars);
+      ICUtil.removeVarsInList(containersToRegister, removeVars);
+    }
+  
+    @Override
+    public Block branchPredict(Map<String, Oparg> knownConstants) {
+      // We can't really do branch prediction for a wait statement, but
+      // it is a useful mechanism to piggy-back on to remove the wait
+      return tryInline(knownConstants.keySet());
+    }
+  
+    @Override
+    public boolean isNoop() {
+      return this.block.isEmpty();
+    }
+
+    public Block tryInline(Set<String> closedVars) {
+      boolean mustWait = false;
+      // iterate over wait vars, remove those in list
+      ListIterator<Variable> it = waitVars.listIterator();
+      while(it.hasNext()) {
+        Variable wv = it.next();
+        if (closedVars.contains(wv.getName())) {
+          it.remove();
+        } else {
+          mustWait = true;
+        }
+      }
+      if (mustWait) {
+        return null;
+      } else {
+        // if at end we have nothing left, return the inner block for inlining
+        return block;
+      }
+    }
+
+    @Override
+    public List<Variable> closedVarsInside() {
+      return Collections.unmodifiableList(this.waitVars);
+    }
+
+    @Override
+    public boolean variablesPassedInAutomatically() {
+      return false;
+    }
+
+    @Override
+    public Collection<Variable> getPassedInVars() {
+      return Collections.unmodifiableList(this.usedVariables);
+    }
+
+    @Override
+    public void addPassedInVar(Variable variable) {
+      this.usedVariables.add(variable);
+    }
+
+    @Override
+    public void removePassedInVar(Variable variable) {
+      ICUtil.removeVarInList(this.usedVariables, variable.getName());
+    }
+
+    @Override
+    public List<Variable> constructDefinedVars() {
+      return null;
+    }
+  }
+
+}

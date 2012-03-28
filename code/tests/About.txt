@@ -1,0 +1,43 @@
+
+= ExM Parser Test Suite
+
+== Overview
+
+The official documentation is at:
+https://sites.google.com/site/exmproject/development/parser---usage#TOC-Test-suite
+
+We compile each Swift script to the corresponding Tcl script, then run
+Turbine on it.
+
+Use +run-tests.zsh+ to run the tests.  This automates the following
+simplified command lines:
+----
+stc 100-test.swift 100-test.tcl
+mpiexec -n 3 turbine 100-test.tcl
+----
+
+This creates stc logs, intermediate code, and output files.
+
+== Numbering
+
+The tests are numbered for sorting by shell glob.
+
+000::       Script fragments, noops, assert()s
+100::       Basic function calls, errors
+200::       Conditionals, recursion, expressions
+300::       Arrays, structs
+400::       For loops
+500::       Types
+        590: blobs
+600::       User builtins, interesting CPP uses
+700::       STC standard library
+        700: strings
+        710: argc/argv
+        730: stdio
+800::       Error outputs
+900::       ??? Formerly advanced constructs
+
+== Clean
+
+Use ./clean.sh to clean up files created by the test suite
+

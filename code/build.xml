@@ -1,0 +1,200 @@
+
+<project name="parser"
+         default="jar">
+
+  <!-- ExM parser build file
+
+       Note:
+       Eclipse generates class files in build/
+       This Ant script puts them in src/
+       The ones in src/ are the ones used in the output jar file
+  -->
+
+  <!-- Locations of jars and ANTLR grammar file -->
+  <property name="antlr.jar"
+            value="lib/antlr-3.4-complete-no-antlrv2.jar"/>
+  <property name="parser.jar"
+            value="lib/parser.jar"/>
+  <property name="log4j.jar"
+            value="lib/log4j-1.2.16.jar"/>
+  <property name="json.jar"
+            value="lib/json.jar"/>
+  <property name="grammar"
+            value="ExM.g"/>
+  <property name="classpath"
+            value=".:${antlr.jar}:${log4j.jar}"/>
+
+  <target name="jar"
+          depends="compile">
+    <jar destfile="${parser.jar}"
+         basedir="src"
+         includes="**/*.class"
+         manifest="META-INF/MANIFEST.MF"/>
+  </target>
+
+  <!-- We compile the packages separately
+       This is so we can get all warnings on our code but suppress
+       warnings on ANTLR-generated code that is outside our control
+  -->
+  <target name="compile"
+          depends="compile.antlr,compile.ui,compile.gen,compile.ast,compile.ic">
+  </target>
+
+  <!-- Check if the ANTLR code is up-to-date -->
+  <uptodate srcfile="${grammar}"
+            targetfile="${parser.jar}"
+            property="antlr.uptodate"/>
+
+  <!-- ANTLR output directory -->
+  <property name="antlr.pkg"
+            value="exm/parser/antlr" />
+  <property name="antlr.out"
+            value="src/${antlr.pkg}" />
+
+  <!-- Compile the ANTLR-generated parser code -->
+  <target name="compile.antlr"
+          depends="antlr.generate">
+   <javac srcdir="src"
+          includes="${antlr.pkg}/*.java"
+          listfiles="${lf}"
+          debug="true"
+          debuglevel="source,lines,vars"
+          includeantruntime="false"
+          classpath=".:${antlr.jar}">
+     <compilerarg value="-Xlint"/>
+     <compilerarg value="-Xlint:-cast"/>
+   </javac>
+  </target>
+
+  <!-- Call ANTLR to generate the parser code -->
+  <target name="antlr.generate"
+          unless="antlr.uptodate">
+    <java classname="org.antlr.Tool"
+          fork="true"
+          failonerror="true">
+      <arg value="-fo"/>
+      <arg value="${antlr.out}"/>
+      <arg value="${grammar}"/>
+      <classpath>
+         <pathelement location="${antlr.jar}"/>
+         <pathelement location="${json.jar}"/>
+      </classpath>
+    </java>
+
+    <echo message="ANTLR OK: output in: ${antlr.out}"/>
+  </target>
+
+  <!-- Compile the AST sources -->
+  <target name="compile.ast"
+          depends="compile.util,compile.antlr">
+    <javac srcdir="src"
+           includes="exm/ast/*.java,exm/ast/descriptor/*.java"
+           listfiles="${lf}"
+           debug="true"
+           debuglevel="source,lines,vars"
+           includeantruntime="false"
+           classpath="${classpath}:${json.jar}">
+      <compilerarg value="-Xlint"/>
+      <compilerarg value="-Xlint:-cast"/>
+    </javac>
+  </target>
+  
+  <!-- Compile the IC sources -->
+  <target name="compile.ic"
+          depends="compile.ast">
+    <javac srcdir="src"
+           includes="exm/parser/ic/*.java,exm/parser/ic/opt/*.java"
+           listfiles="${lf}"
+           debug="true"
+           debuglevel="source,lines,vars"
+           includeantruntime="false"
+           classpath="${classpath}:${json.jar}">
+      <compilerarg value="-Xlint"/>
+      <compilerarg value="-Xlint:-cast"/>
+    </javac>
+  </target>
+
+
+  <!-- Compile the UI -->
+  <target name="compile.ui"
+          depends="compile.antlr">
+    <javac srcdir="src"
+           includes="exm/parser/ui/*.java"
+           listfiles="${lf}"
+           debug="true"
+           debuglevel="source,lines,vars"
+           includeantruntime="false"
+           classpath="${classpath}:${json.jar}">
+      <compilerarg value="-Xlint:-cast"/>
+    </javac>
+  </target>
+
+  <!-- Compile the utilities -->
+  <target name="compile.util">
+    <javac srcdir="src"
+           includes="exm/parser/util/*.java"
+           listfiles="${lf}"
+           debug="true"
+           debuglevel="source,lines,vars"
+           includeantruntime="false"
+           classpath="${classpath}:${json.jar}">
+    </javac>
+    <javac srcdir="src"
+           includes="exm/parser/*.java"
+           listfiles="${lf}"
+           debug="true"
+           debuglevel="source,lines,vars"
+           includeantruntime="false"
+           classpath="${classpath}:${json.jar}">
+    </javac>
+  </target>
+
+  <!-- Compile the code generator -->
+  <target name="compile.gen"
+          depends="compile.tcl"> <!-- ,compile.tcl.tree -->
+    <javac srcdir="src"
+           includes="exm/parser/gen/*.java"
+           listfiles="${lf}"
+           debug="true"
+           debuglevel="source,lines,vars"
+           includeantruntime="false"
+           classpath=".:${antlr.jar}:${log4j.jar}:${json.jar}">
+    </javac>
+  </target>
+
+  <!-- Compile the Tcl code generator -->
+  <target name="compile.tcl">
+    <javac srcdir="src"
+           includes="exm/tcl/*.java"
+           listfiles="${lf}"
+           debug="true"
+           debuglevel="source,lines,vars"
+           includeantruntime="false"
+           classpath=".:${log4j.jar}">
+    </javac>
+  </target>
+
+  <!-- Compile the Tcl AST library -->
+  <!-- OBSOLETE
+  <target name="compile.tcl.tree">
+    <javac srcdir="src"
+           includes="exm/tcl/tree/*.java"
+           listfiles="${lf}"
+           debug="true"
+           debuglevel="source,lines,vars"
+           includeantruntime="false"
+           classpath=".:${log4j.jar}">
+    </javac>
+  </target>
+  -->
+
+  <target name="clean">
+    <delete file="${parser.jar}"/>
+    <!-- Delete all ANTLR-generated stuff -->
+    <delete dir="${antlr.out}"/>
+    <delete>
+      <fileset dir="src" includes="**/*.class"/>
+    </delete>
+  </target>
+
+</project>
