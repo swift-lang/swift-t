@@ -57,6 +57,11 @@ then
 fi
 
 source ${TURBINE_HOME}/scripts/turbine-config.sh
+if [[ ${?} != 0 ]]
+then
+  echo "turbine: configuration error!"
+  exit 1
+fi
 
 # Allow user to insert valgrind
 ${TURBINE_LAUNCH} ${OPTS} ${VALGRIND} ${TCLSH} ${PROGRAM} ${ARGS}

@@ -35,6 +35,12 @@ do
  fi
 done
 
+if [[ ${TCLSH} == "" ]]
+then
+  echo "Could not find tclsh!"
+  return 1
+fi
+
 export TURBINE_LAUNCH=@USE_LAUNCHER@
 export TURBINE_MACHINE=@USE_MACHINE@
 
@@ -46,3 +52,5 @@ then
   # For some reason, the SiCortex cannot find this in rpath
   export LD_LIBRARY_PATH=${TURBINE_HOME}/lib:${LD_LIBRARY_PATH}
 fi
+
+return 0
