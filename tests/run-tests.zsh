@@ -59,18 +59,22 @@ then
   set -x
 fi
 
-DIR=$( cd $( dirname $0 ) ; /bin/pwd )
-PARSER_DIR=$( dirname ${DIR} )
-PARSER_TESTS_DIR=${PARSER_DIR}/tests
-STC=${PARSER_DIR}/bin/stc
-RUN_TEST=${PARSER_TESTS_DIR}/run-test.zsh
-
 crash()
 {
   MSG=$1
   print ${MSG}
   exit 1
 }
+
+STC_TESTS_DIR=$( cd $( dirname $0 ) ; /bin/pwd )
+
+STC=$( which stc )
+if [[ ${STC} == "" ]]
+then
+  crash "Could not find stc!"
+fi
+
+RUN_TEST=${STC_TESTS_DIR}/run-test.zsh
 
 compile_test()
 # Translate test
@@ -179,7 +183,7 @@ report_result()
 }
 
 TEST_COUNT=0
-SWIFT_FILES=( ${PARSER_TESTS_DIR}/*.swift )
+SWIFT_FILES=( ${STC_TESTS_DIR}/*.swift )
 SWIFT_FILE_TOTAL=${#SWIFT_FILES}
 for (( i=1 ; i<=SWIFT_FILE_TOTAL ; i++ ))
 do
