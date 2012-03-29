@@ -326,6 +326,7 @@ namespace eval turbine {
         set_string $result $s
     }
 
+    # Container must be indexed from 0,N-1
     proc blob_from_floats { stack result input } {
         rule "bff-$input-$result" $input $turbine::LOCAL \
             "blob_from_floats_body $input $result"
@@ -334,17 +335,17 @@ namespace eval turbine {
     proc blob_from_floats_body { container result } {
 
         set type [ container_typeof $container ]
-        set L    [ container_list $container ]
+        set N    [ adlb::container_size $container ]
         c::log "bff_body start"
         set A [ list ]
-        foreach subscript $L {
-
-            set td [ container_get $container $subscript ]
+        for { set i 0 } { $i < $N } { incr i } {
+            set td [ container_get $container $i ]
             set v  [ get_float $td ]
             lappend A $v
         }
 
         adlb::set_blob_floats $result $A
+        turbine::close_datum $result
     }
 
     # Good for performance testing
