@@ -55,8 +55,6 @@ C_UTILS = @USE_C_UTILS@
 TCL := @USE_TCL@
 TCLSH := $(shell find $(TCL)/bin -name tclsh8.* )
 
-PYTHON := @USE_PYTHON@
-
 MACHINE = @USE_MACHINE@
 
 # On some systems, the user will use mpicc,
@@ -124,9 +122,6 @@ include src/util/module.mk
 include src/tcl/module.mk
 include src/tcl/adlb/module.mk
 include src/tcl/turbine/module.mk
-ifneq ($(PYTHON),0)
-	include src/py/adlb/module.mk
-endif
 include lib/module.mk
 
 TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC) $(TCL_TURBINE_SRC))

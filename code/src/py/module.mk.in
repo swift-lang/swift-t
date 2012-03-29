@@ -1,4 +1,0 @@
-
-DIR := src/py
-
-PY_TURBINE_SRC += $(DIR)/util.c

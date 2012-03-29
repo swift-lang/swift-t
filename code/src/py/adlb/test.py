@@ -1,4 +1,0 @@
-
-import PyADLB
-
-PyADLB.init()
