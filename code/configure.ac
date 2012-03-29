@@ -102,15 +102,15 @@ AC_SUBST(USE_LAUNCHER)
 AC_ARG_WITH(mpi,
                  AS_HELP_STRING(
                     [--with-mpi],
-                    [location of MPI installation with mpicc]),
+                    [location of MPI installation]),
                  [AC_CHECK_FILE(${withval}/lib/${LIBMPI},
                   [], [USE_MPI=0])
                   if test "$USE_MPI" = 0 ; then
                      AC_MSG_ERROR(Could not find MPI in $withval)
                   fi
-                  AC_MSG_RESULT([using MPICC in $withval])
+                  AC_MSG_RESULT([using MPI in $withval])
                   AC_DEFINE_UNQUOTED([MPI_LOCATION],
-                                     "$withval", [MPI Location])
+                                     "$withval", [MPI location])
                   USE_MPI=$withval
                  ],
                  [
@@ -225,20 +225,20 @@ AC_SUBST(USE_ADLB)
 AC_ARG_WITH(tcl,
                  AS_HELP_STRING(
                     [--with-tcl],
-                    [location of TCL]),
+                    [location of Tcl]),
                  [AC_CHECK_FILE(${withval}/lib/tclConfig.sh,
                   [], [USE_TCL=0])
                   if test "$USE_TCL" = 0 ; then
-                     AC_MSG_ERROR(Could not find TCL in $withval)
+                     AC_MSG_ERROR(Could not find Tcl in $withval)
                   fi
-                  AC_MSG_RESULT([using TCL in $withval ...])
+                  AC_MSG_RESULT([using Tcl in $withval])
                   AC_DEFINE_UNQUOTED([TCL_LOCATION],
-                                     "$withval", [TCL Location])
+                                     "$withval", [Tcl location])
                   USE_TCL=$withval
                   source $USE_TCL/lib/tclConfig.sh
                  ],
                  [
-                  AC_MSG_WARN([Not found: TCL])
+                  AC_MSG_WARN([Not found: Tcl])
                   USE_TCL=0
                  ])
 AC_SUBST(USE_TCL)
