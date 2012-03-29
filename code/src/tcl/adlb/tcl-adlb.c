@@ -17,6 +17,11 @@
 
 #include <assert.h>
 
+// strnlen() is a GNU extension
+#define _GNU_SOURCE
+#define __USE_GNU
+#include <string.h>
+
 #include <tcl.h>
 #include <adlb.h>
 
@@ -550,8 +555,7 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
     case ADLB_DATA_TYPE_BLOB:
       string_length = strnlen(xfer, length);
       TCL_CONDITION(string_length < length,
-                    "adlb::retrieve: unterminated blob: <%li>",
-                    id);
+                    "adlb::retrieve: unterminated blob: <%li>", id);
       result = Tcl_NewStringObj(xfer, string_length);
       break;
     case ADLB_DATA_TYPE_FILE:
