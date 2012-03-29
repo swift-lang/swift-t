@@ -339,12 +339,12 @@ namespace eval turbine {
         set A [ list ]
         foreach subscript $L {
 
-            set td [ container_lookup $container $v ]
+            set td [ container_get $container $subscript ]
             set v  [ get_float $td ]
             lappend A $v
         }
 
-        set_blob_floats $result $t
+        adlb::set_blob_floats $result $A
     }
 
     # Good for performance testing
