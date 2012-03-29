@@ -645,6 +645,40 @@ ADLB_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
+   adlb::set_blob_floats <id> [ list doubles ]
+ */
+static int
+ADLB_Blob_set_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
+                         int objc, Tcl_Obj *const objv[])
+{
+  int rc;
+  long id;
+  rc = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK_MSG(rc, "requires id!");
+
+  int length;
+  Tcl_Obj** objs;
+  rc = Tcl_ListObjGetElements(interp, objv[2], &length, &objs);
+  TCL_CHECK_MSG(rc, "requires list!");
+
+  TCL_CONDITION(length*sizeof(double) <= ADLB_MSG_MAX,
+                "list too long!");
+
+  for (int i = 0; i < length; i++)
+  {
+    double v;
+    rc = Tcl_GetDoubleFromObj(interp, objs[i], &v);
+    memcpy(xfer+i*sizeof(double), &v, sizeof(double));
+  }
+
+  rc = ADLB_Store(id, xfer, length*sizeof(double));
+
+  TCL_CONDITION(rc == ADLB_SUCCESS,
+                "adlb::store <%li> failed!", id);
+  return TCL_OK;
+}
+
+/**
    usage: adlb::insert <id> <subscript> <member> [<drops>]
 */
 static int
@@ -1053,6 +1087,7 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("retrieve",  ADLB_Retrieve_Cmd);
   COMMAND("blob_cache", ADLB_Blob_Cache_Cmd);
   COMMAND("blob_free",  ADLB_Blob_Free_Cmd);
+  COMMAND("set_blob_floats", ADLB_Blob_set_floats_Cmd);
   COMMAND("slot_create", ADLB_Slot_Create_Cmd);
   COMMAND("slot_drop", ADLB_Slot_Drop_Cmd);
   COMMAND("insert",    ADLB_Insert_Cmd);

@@ -326,6 +326,27 @@ namespace eval turbine {
         set_string $result $s
     }
 
+    proc blob_from_floats { stack result input } {
+        rule "bff-$input-$result" $input $turbine::LOCAL \
+            "blob_from_floats_body $input $result"
+    }
+
+    proc blob_from_floats_body { container result } {
+
+        set type [ container_typeof $container ]
+        set L    [ container_list $container ]
+        c::log "bff_body start"
+        set A [ list ]
+        foreach subscript $L {
+
+            set td [ container_lookup $container $v ]
+            set v  [ get_float $td ]
+            lappend A $v
+        }
+
+        set_blob_floats $result $t
+    }
+
     # Good for performance testing
     # c = 1;
     # and sleeps
