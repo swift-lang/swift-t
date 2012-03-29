@@ -8,6 +8,18 @@ namespace eval turbine {
     #TODO
   }
 
+  proc lock_loop { id } {
+      # Delay time in ms
+      set i 0
+      while { ! [ adlb::lock $id ] } {
+          if { $i >= 1000 } {
+              error "Could not lock: $id"
+          }
+          after $i
+          incr i
+      }
+  }
+
   proc update_min { stack o inputs } {
     set x [ lindex $inputs 0 ]
     set val [ lindex $inputs 1 ]
@@ -20,13 +32,15 @@ namespace eval turbine {
   }
 
   proc update_min_impl { x val } {
-    # TODO: this version has a race condition
-    set old [ turbine::get_float $x ]
-    if { $old > $val } {
-      adlb::store $x $adlb::FLOAT $val
-    }
+
+      lock_loop $x
+      set old [ turbine::get_float $x ]
+      if { $old > $val } {
+          adlb::store $x $adlb::FLOAT $val
+      }
+      adlb::unlock $x
   }
-  
+
   proc update_incr { stack o inputs } {
     set x [ lindex $inputs 0 ]
     set val [ lindex $inputs 1 ]
