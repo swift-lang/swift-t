@@ -21,7 +21,7 @@ proc rules { } {
         turbine::literal v float $x_value
         turbine::container_insert $A $i $v
     }
-    turbine::close_container $A
+    turbine::close_datum $A
 
     turbine::blob_from_floats no_stack $b $A
     puts DONE

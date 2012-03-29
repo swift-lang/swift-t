@@ -155,7 +155,7 @@ namespace eval turbine {
             adlb::put $adlb::ANY $WORK_TYPE(CONTROL) \
                 "command range_work $c $s $e 1"
         }
-        close_container $result
+        close_datum $result
     }
 
     # User function
@@ -199,7 +199,7 @@ namespace eval turbine {
             container_insert $result $i $s
             incr i
         }
-        close_container $result
+        close_datum $result
     }
 
     # User function

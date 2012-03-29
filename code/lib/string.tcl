@@ -103,7 +103,7 @@ namespace eval turbine {
             literal split_token string $v
             container_insert $result $i $split_token
         }
-        close_container $result
+        close_datum $result
     }
 
     proc sprintf { stack result inputs } {

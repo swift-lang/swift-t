@@ -14,7 +14,7 @@ namespace eval turbine {
         get_blob_string                        \
         allocate_container                     \
         container_get container_list           \
-        container_insert close_container       \
+        container_insert close_datum       \
         file_set filename
 
     # usage: allocate [<name>] [<type>]
@@ -89,7 +89,8 @@ namespace eval turbine {
 
     proc set_integer { id value } {
         log "set: <$id>=$value"
-        close_dataset $id $adlb::INTEGER $value
+        adlb::store $id $adlb::INTEGER $value
+        close_datum $id
     }
 
     proc get_integer { id } {
@@ -105,7 +106,8 @@ namespace eval turbine {
 
     proc set_float { id value } {
         log "set: <$id>=$value"
-        close_dataset $id $adlb::FLOAT $value
+        adlb::store $id $adlb::FLOAT $value
+        close_datum $id
     }
 
     proc get_float { id } {
@@ -121,7 +123,8 @@ namespace eval turbine {
 
     proc set_string { id value } {
         log "set: <$id>=\"$value\""
-        close_dataset $id $adlb::STRING $value
+        adlb::store $id $adlb::STRING $value
+        close_datum $id
     }
 
     proc get_string { id } {
@@ -139,20 +142,21 @@ namespace eval turbine {
     proc set_void { id } {
         debug "set_void: <$id>"
         # TODO: for now emulate void with integer
-        close_dataset $id $adlb::INTEGER 12345
+        adlb::store $id $adlb::INTEGER 12345
+        close_datum $id
     }
 
     # get_void not provided as it wouldn't do anything
 
     # Create blob
     proc create_blob { id } {
-        log "create_blob: <$id>"
         adlb::create $id $adlb::BLOB
     }
 
     proc set_blob_string { id value } {
         log "set_blob: <$id>=$value"
-        close_dataset $id $adlb::BLOB $value
+        adlb::store $id $adlb::BLOB $value
+        close_datum $id
     }
 
     proc get_blob_string { id } {
@@ -205,7 +209,7 @@ namespace eval turbine {
     }
 
     proc set_file { id } {
-        close_dataset $id $adlb::FILE none
+        close_datum $id
     }
 
     proc filename { id } {
@@ -217,17 +221,7 @@ namespace eval turbine {
         return $result
     }
 
-    proc close_dataset { id type value } {
-        global WORK_TYPE
-        adlb::store $id $type $value
-        set ranks [ adlb::close $id ]
-        foreach rank $ranks {
-            debug "notify: $rank"
-            adlb::put $rank $WORK_TYPE(CONTROL) "close $id"
-        }
-    }
-
-    proc close_container { id } {
+    proc close_datum { id } {
         global WORK_TYPE
         set ranks [ adlb::close $id ]
         foreach rank $ranks {

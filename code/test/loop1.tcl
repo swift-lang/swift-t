@@ -29,7 +29,7 @@ proc rules { } {
     container_insert $c "0" $s1
     container_insert $c "1" $s2
 
-    close_container $c
+    close_datum $c
 
     turbine::loop loop1_body $stack $c
 }

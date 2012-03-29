@@ -35,7 +35,7 @@ proc rules { } {
     turbine::container_insert $c "0" $s1
     turbine::container_insert $c "1" $s2
 
-    turbine::close_container $c
+    turbine::close_datum $c
 
     turbine::loop loop1_body $stack $c
 }
