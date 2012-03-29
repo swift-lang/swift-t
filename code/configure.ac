@@ -24,6 +24,7 @@ AC_CHECK_HEADERS([stddef.h sys/param.h sys/time.h])
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
 AC_HEADER_STDBOOL
+AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 AC_TYPE_UINT8_T
 AC_TYPE_UINT16_T
@@ -31,7 +32,7 @@ AC_TYPE_UINT32_T
 
 # Checks for library functions.
 AC_FUNC_MALLOC
-AC_CHECK_FUNCS([strchr strdup gettimeofday])
+AC_CHECK_FUNCS([strchr strdup strnlen gettimeofday])
 
 # Define templates
 AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
@@ -44,10 +45,10 @@ AC_ARG_WITH(c-utils,
                     [location of ExM c-utils]),
                    [
                     USE_C_UTILS=0
-                    AC_CHECK_FILE(${withval}/lib/libexmcutils.a, 
+                    AC_CHECK_FILE(${withval}/lib/libexmcutils.a,
                                   [USE_C_UTILS=1], [])
                     if test "$USE_C_UTILS" = 0 ; then
-                      AC_CHECK_FILE(${withval}/lib/libexmcutils.so, 
+                      AC_CHECK_FILE(${withval}/lib/libexmcutils.so,
                                     [USE_C_UTILS=1], [])
                       if test "$USE_C_UTILS" = 0 ; then
                         AC_MSG_ERROR([Could not find ExM c-utils in $withval])
@@ -55,7 +56,7 @@ AC_ARG_WITH(c-utils,
                     fi
                     AC_MSG_RESULT([using ExM c-utils in $withval ...])
                     AC_DEFINE_UNQUOTED([C_UTILS_LOCATION],
-                                       "$withval", 
+                                       "$withval",
                                        [ExM c-utils location])
                     USE_C_UTILS=$withval
                  ],
