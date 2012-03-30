@@ -108,6 +108,11 @@ namespace eval turbine {
         set_integer $result $turbine_argc
     }
 
+    proc argc_get_impl { } {
+        variable turbine_argc
+        return $turbine_argc
+    }
+
     proc args_get { stack result inputs } {
         # ignore inputs
         variable turbine_args
@@ -123,10 +128,14 @@ namespace eval turbine {
 
         variable turbine_argv
         set t [ get $key ]
-        if { [ catch { set td [ dict get $turbine_argv $t ] } ] } {
-            set_integer $result 0
+        set_integer $result [ argv_contains_impl $t ]
+    }
+
+    proc argv_contains_impl { key } {
+        if { [ catch { set td [ dict get $turbine_argv $key ] } ] } {
+            return 0
         } else {
-            set_integer $result 1
+            return 1
         }
     }
 
@@ -150,7 +159,6 @@ namespace eval turbine {
     # "default" is a Tcl keyword so we call it "base"
     proc argv_get_body { args } {
 
-        variable turbine_argv
 
         set c [ llength $args ]
         if { $c != 2 && $c != 3 } {
@@ -159,21 +167,37 @@ namespace eval turbine {
 
         set result [ lindex $args 0 ]
         set key    [ lindex $args 1 ]
+
+        set key_val [ get $key ]
         if { $c == 2 } {
-            set base 0
+            set result_val [ argv_get_impl $key_val ]
         } elseif { $c == 3 } {
             set base [ lindex $args 2 ]
+            set base_val [ get_string $base ]
+            set result_val [ argv_get_impl $key_val $base_val ]
         }
 
-        set t [ get $key ]
-        if { [ catch { set td [ dict get $turbine_argv $t ] } ] } {
-            if { ! $base } {
-                error "Could not find argv($t)"
-            }
-            set_string $result [ get_string $base ]
-            return
+        set_string $result $result_val
+    }
+
+    proc argv_get_impl { key args } {
+        variable turbine_argv
+        set c [ llength $args ]
+        if { $c == 0 } {
+           set base 0
+        } elseif { $c == 1 } {
+           set base [ lindex $args 0 ]
+        } else {
+           error "argv_get_body: args: $c"
         }
-        set_string $result [ get_string $td ]
+
+        if { [ catch { set td [ dict get $turbine_argv $key ] } ] } {
+            if { ! $base } {
+                error "Could not find argv($key)"
+            }
+            return $base
+        }
+        return [ get_string $td ]
     }
 
     proc argv_accept { args } {
