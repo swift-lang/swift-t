@@ -265,6 +265,17 @@ significant()
   return 0
 }
 
+turbine_stats_walltime()
+# Extract the average walltime from the Turbine STATS
+{
+  LOG=$1
+  if [[ ${LOG} == "" ]]
+  then
+    print "turbine_stats_walltime(): Not given: LOG"
+  fi
+  grep walltime ${LOG} | clm 4 | avgz
+}
+
 # Local variables:
 # mode: sh
 # sh-basic-offset: 2
