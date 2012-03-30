@@ -184,15 +184,16 @@ namespace eval turbine {
         variable turbine_argv
         set c [ llength $args ]
         if { $c == 0 } {
-           set base 0
+            set base_defined 0
         } elseif { $c == 1 } {
+            set base_defined 1
            set base [ lindex $args 0 ]
         } else {
            error "argv_get_body: args: $c"
         }
-
+        puts "ARGV_GET_IMPL $turbine_argv $key $base"
         if { [ catch { set td [ dict get $turbine_argv $key ] } ] } {
-            if { ! $base } {
+            if { ! $base_defined } {
                 error "Could not find argv($key)"
             }
             return $base
