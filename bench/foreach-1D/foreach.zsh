@@ -9,12 +9,19 @@ N=1000
 # Delay in milliseconds
 DELAY=0
 
+# Load common features
+BENCH_UTIL=$( cd $( dirname $0 )/../util ; /bin/pwd )
+source ${BENCH_UTIL}/tools.zsh
+
 # System settings
 export TURBINE_DEBUG=0
 export ADLB_DEBUG=0
 export LOGGING=0
 export ADLB_EXHAUST_TIME=1
-export TURBINE_USER_LIB=$( cd ${PWD}/../util ; /bin/pwd )
+export TURBINE_USER_LIB=${BENCH_UTIL}
+
+# Run stc if necessary
+compile foreach.swift foreach.tcl
 
 START=$( date +%s )
 turbine -l -n ${PROCS} foreach.tcl --N=${N} --delay=${DELAY}
