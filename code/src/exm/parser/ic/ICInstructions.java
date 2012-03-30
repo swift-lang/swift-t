@@ -1651,6 +1651,14 @@ public class ICInstructions {
       sideEffectFree.add("log");
       sideEffectFree.add("sqrt");
       sideEffectFree.add("is_nan");
+      
+      sideEffectFree.add("argc");
+      sideEffectFree.add("argv_contains");
+      sideEffectFree.add("argv");
+      localEquivalents.put("argc", ArithOpcode.ARGC_GET);
+      localEquivalents.put("argv_contains", ArithOpcode.ARGV_CONTAINS);
+      localEquivalents.put("argv", ArithOpcode.ARGV_GET);
+      
     
       localEquivalents.put("plus_integer", ArithOpcode.PLUS_INT);
       localEquivalents.put("minus_integer", ArithOpcode.MINUS_INT);

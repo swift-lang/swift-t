@@ -12,7 +12,6 @@ import exm.ast.Types.FunctionType.InArgT;
 import exm.ast.Types.PrimType;
 import exm.ast.Types.ReferenceType;
 import exm.ast.Types.ScalarUpdateableType;
-import exm.ast.Types.ScalarValueType;
 import exm.ast.Types.StructType;
 import exm.ast.Types.StructType.StructField;
 import exm.ast.Types.SwiftType;

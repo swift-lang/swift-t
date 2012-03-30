@@ -369,6 +369,29 @@ public class TurbineGenerator implements CompilerBackend
       Command cmd = new Command(tclFn, argExpr);
       pointStack.peek().add(cmd);
       return;
+    } else if (op == ArithOpcode.ARGC_GET || op == ArithOpcode.ARGV_CONTAINS
+            || op == ArithOpcode.ARGV_GET) {
+      assert(out != null);
+      String tclFn;
+      switch (op) {
+      case ARGC_GET:
+        tclFn = "turbine::argc_get_impl";
+        break;
+      case ARGV_CONTAINS:
+        tclFn = "turbine::argv_contains_impl";
+        break;
+      case ARGV_GET:
+        tclFn = "turbine::argv_get_impl";
+        break;
+      default:
+        throw new ParserRuntimeException("Cn't handle local op: "
+            + op.toString());
+      }
+      SetVariable cmd = new SetVariable(prefixVar(out.getName()), 
+                        Square.fnCall(tclFn, argExpr.toArray(
+                            new Expression[argExpr.size()])));
+      pointStack.peek().add(cmd);
+      return;
     } else if (op == ArithOpcode.PRINTF || op == ArithOpcode.SPRINTF) {
       Square fmtArgs = new TclList(argExpr);
       Square fmt = new Square(new Token("eval"), new Token("format"), 
