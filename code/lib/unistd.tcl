@@ -34,8 +34,7 @@ namespace eval turbine {
         set turbine_args $::argv
 
         # Set Tcl program name at argv(0)
-        literal argv_td string $turbine_program
-        dict set turbine_argv 0 $argv_td
+        dict set turbine_argv 0 $turbine_program
 
         set L [ argv_helper $::argv ]
         for { set i 0 } { $i < $argc } { incr i } {
@@ -56,8 +55,7 @@ namespace eval turbine {
                 set value $token
             }
 
-            literal argv_td string $value
-            dict set turbine_argv $key $argv_td
+            dict set turbine_argv $key $value
         }
     }
 
@@ -132,7 +130,7 @@ namespace eval turbine {
     }
 
     proc argv_contains_impl { key } {
-        if { [ catch { set td [ dict get $turbine_argv $key ] } ] } {
+        if { [ catch { set val [ dict get $turbine_argv $key ] } ] } {
             return 0
         } else {
             return 1
@@ -191,13 +189,13 @@ namespace eval turbine {
         } else {
            error "argv_get_body: args: $c"
         }
-        if { [ catch { set td [ dict get $turbine_argv $key ] } ] } {
+        if { [ catch { set val [ dict get $turbine_argv $key ] } ] } {
             if { ! $base_defined } {
                 error "Could not find argv($key)"
             }
             return $base
         }
-        return [ get_string $td ]
+        return $val
     }
 
     proc argv_accept { args } {
