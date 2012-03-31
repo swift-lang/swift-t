@@ -426,33 +426,6 @@ namespace eval turbine {
         set_integer $r $res
     }
 
-    variable container_branches
-
-    # c: container
-    # r: rule id
-    proc container_branch_post { r c } {
-
-        variable container_branches
-
-        puts "container_branch_post: rule: $r container: $c"
-        dict lappend container_branches $r $c
-        adlb::slot_create $c
-    }
-
-    # r: rule id
-    proc container_branch_complete { r } {
-
-        variable container_branches
-
-        puts "container_branch_complete: $r"
-        set cL [ dict get $container_branches $r ]
-        foreach c $cL {
-            puts "container: $c"
-            adlb::slot_drop $c
-        }
-        set container_branches [ dict remove $container_branches ]
-    }
-
     # When container is closed, concatenate its keys in result
     # container: The container to read
     # result: An initialized string

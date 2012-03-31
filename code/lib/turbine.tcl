@@ -13,9 +13,6 @@ namespace eval turbine {
     # Statistics: dict from string token to integer count
     variable stats
 
-    # Maps from rule id to list of container id
-    variable container_branches
-
     # User function
     # param e Number of engines
     # param s Number of ADLB servers
@@ -39,8 +36,6 @@ namespace eval turbine {
         }
 
         start_stats
-
-        set container_branches [ dict create ]
 
         argv_init
     }

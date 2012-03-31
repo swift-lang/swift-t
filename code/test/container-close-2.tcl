@@ -15,14 +15,14 @@
 package require turbine 0.0.1
 
 # This is like an if block
-proc f { stack r c i j2 j3 } {
+proc f { stack c i j2 j3 } {
     puts "f: $i"
     if { $i == 0 } {
         turbine::container_f_insert no_stack "" "$c $i $j2"
     } else {
         turbine::container_f_insert no_stack "" "$c $i $j3"
     }
-    turbine::container_branch_complete $r
+    adlb::slot_drop $c
 }
 
 proc rules { } {
@@ -41,10 +41,11 @@ proc rules { } {
 
     turbine::allocate s string
 
-    turbine::container_branch_post $rule_id $c
+    adlb::slot_create $c
     turbine::rule RULE_F $i3 $turbine::LOCAL \
-        "f no_stack $rule_id $c $i3 $j2 $j3"
+        "f no_stack $c $i3 $j2 $j3"
 
+    adlb::slot_drop $c
     turbine::enumerate no_stack $s $c
     turbine::trace no_stack "" $s
 }
