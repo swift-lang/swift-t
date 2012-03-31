@@ -191,7 +191,6 @@ namespace eval turbine {
         } else {
            error "argv_get_body: args: $c"
         }
-        puts "ARGV_GET_IMPL $turbine_argv $key $base"
         if { [ catch { set td [ dict get $turbine_argv $key ] } ] } {
             if { ! $base_defined } {
                 error "Could not find argv($key)"
