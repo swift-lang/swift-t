@@ -876,22 +876,23 @@ public class ICContinuations {
     private Oparg increment;
     private final boolean isSync;
     private int desiredUnroll;
+    private int splitDegree;
     
     public RangeLoop(String loopName, Variable loopVar,
         Oparg start, Oparg end, Oparg increment,
         boolean isSync,
         List<Variable> usedVariables, List<Variable> containersToRegister,
-        int desiredUnroll) {
+        int desiredUnroll, int splitDegree) {
       this(loopName, new Block(BlockType.RANGELOOP_BODY), loopVar,
           start, end, increment, isSync, usedVariables, containersToRegister,
-          desiredUnroll);
+          desiredUnroll, splitDegree);
     }
     
     private RangeLoop(String loopName, Block block, Variable loopVar,
         Oparg start, Oparg end, Oparg increment,
         boolean isSync,
         List<Variable> usedVariables, List<Variable> containersToRegister,
-        int desiredUnroll) {
+        int desiredUnroll, int splitDegree) {
       super(block, 
             usedVariables, containersToRegister);
       assert(start.getType() == OpargType.INTVAL || 
@@ -911,6 +912,7 @@ public class ICContinuations {
       this.increment = increment;
       this.isSync = isSync;
       this.desiredUnroll = desiredUnroll;
+      this.splitDegree = splitDegree;
     }
     
     @Override
@@ -918,7 +920,8 @@ public class ICContinuations {
       return new RangeLoop(loopName, this.loopBody.clone(), loopVar, 
           start.clone(), end.clone(), increment.clone(), isSync, 
           new ArrayList<Variable>(usedVariables), 
-          new ArrayList<Variable>(containersToRegister), desiredUnroll);
+          new ArrayList<Variable>(containersToRegister), desiredUnroll,
+          splitDegree);
     }
 
     @Override
@@ -932,7 +935,7 @@ public class ICContinuations {
       gen.startRangeLoop(loopName, loopVar, start, end, increment,
                          isSync,
                          usedVariables, containersToRegister,
-                         desiredUnroll);
+                         desiredUnroll, splitDegree);
       this.loopBody.generate(logger, gen, info);
       gen.endRangeLoop(isSync, containersToRegister);
     }

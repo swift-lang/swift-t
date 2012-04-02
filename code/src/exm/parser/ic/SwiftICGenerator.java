@@ -281,10 +281,10 @@ public class SwiftICGenerator implements CompilerBackend {
   public void startRangeLoop(String loopName, Variable loopVar,
       Oparg start, Oparg end, Oparg increment, boolean isSync,
       List<Variable> usedVariables, List<Variable> containersToRegister,
-      int desiredUnroll) {
+      int desiredUnroll, int splitDegree) {
     RangeLoop loop = new RangeLoop(loopName, loopVar, start, end, increment,
                                 isSync, usedVariables, containersToRegister,
-                                desiredUnroll);
+                                desiredUnroll, splitDegree);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
   }

@@ -691,7 +691,8 @@ public class SwiftScript {
     backend.startRangeLoop("range" + loopNum, memberVal, 
             Oparg.createVar(startVal), Oparg.createVar(endVal), 
             Oparg.createVar(stepVal), loop.isSyncLoop(),
-            usedVariables, containersToRegister, loop.getDesiredUnroll());
+            usedVariables, containersToRegister, loop.getDesiredUnroll(),
+            loop.getSplitDegree());
     
     // We have the current value, but need to put it in a future in case user
     //  code refers to it
@@ -755,6 +756,10 @@ public class SwiftScript {
     loop.setupLoopBodyContext(outsideLoopContext, typecheck);
     Context loopBodyContext = loop.getBodyContext();
 
+    if (loop.getSplitDegree() > 0 || loop.getDesiredUnroll() != 1) {
+      throw new ParserRuntimeException("Loop splitting and unrolling not"
+          + " yet supported for loops over containers");
+    }
     backend.startForeachLoop(realArray, loop.getMemberVar(), loop.getLoopCountVal(),
         loop.isSyncLoop(), false, usedVariables, containersToRegister);
     // If the user's code expects a loop count var, need to create it here

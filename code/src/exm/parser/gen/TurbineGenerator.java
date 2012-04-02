@@ -1552,7 +1552,7 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void startRangeLoop(String loopName, Variable loopVar, Oparg start,
       Oparg end, Oparg increment, boolean isSync, List<Variable> usedVariables,
-      List<Variable> containersToRegister, int desiredUnroll) {
+      List<Variable> containersToRegister, int desiredUnroll, int splitDegree) {
     assert(start.getType() == OpargType.INTVAL ||
         (start.getType() == OpargType.VAR &&
             start.getVariable().getType().equals(Types.VALUE_INTEGER)));
@@ -1567,6 +1567,11 @@ public class TurbineGenerator implements CompilerBackend
 
     Sequence loopBody = new Sequence();
     String loopVarName = prefixVar(loopVar.getName());
+    //TODO: implement loop splitting here
+    if (splitDegree > 0) {
+      throw new ParserRuntimeException("Loop splitting not yet supported for "
+          + " codegen");
+    }
     Expression startE = opargToExpr(start);
     Expression endE = opargToExpr(end);
     Expression incrE = opargToExpr(increment);

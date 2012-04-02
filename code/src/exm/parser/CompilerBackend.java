@@ -244,11 +244,12 @@ public interface CompilerBackend {
    * @param usedVariables variables used in loop body
    * @param containersToRegister containers written in loop body
    * @param desiredUnroll the suggested unrolling factor
+   * @param splitDegree the desired loop split factor (negative if no splitting)
    */
   public abstract void startRangeLoop(String loopName, Variable loopVar, 
       Oparg start, Oparg end, Oparg increment, 
       boolean isSync, List<Variable> usedVariables, 
-      List<Variable> containersToRegister, int desiredUnroll);
+      List<Variable> containersToRegister, int desiredUnroll, int splitDegree);
   public abstract void endRangeLoop(boolean isSync, 
                                     List<Variable> containersToRegister);
   /**
