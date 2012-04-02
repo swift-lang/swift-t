@@ -251,7 +251,8 @@ public interface CompilerBackend {
       boolean isSync, List<Variable> usedVariables, 
       List<Variable> containersToRegister, int desiredUnroll, int splitDegree);
   public abstract void endRangeLoop(boolean isSync, 
-                                    List<Variable> containersToRegister);
+                                    List<Variable> containersToRegister,
+                                    int splitDegree);
   /**
    * Add a global variable (currently constant literals are supported)  
    * @param name

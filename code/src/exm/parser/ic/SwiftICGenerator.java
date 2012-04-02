@@ -291,7 +291,8 @@ public class SwiftICGenerator implements CompilerBackend {
 
   @Override
   public void endRangeLoop(boolean isSync, 
-                          List<Variable> containersToRegister) {
+                          List<Variable> containersToRegister,
+                          int splitDegree) {
     assert(currBlock().getType() == BlockType.RANGELOOP_BODY);
     blockStack.pop();
   }

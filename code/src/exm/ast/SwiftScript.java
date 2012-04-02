@@ -699,7 +699,8 @@ public class SwiftScript {
     initialiseVariable(bodyContext, loop.getMemberVar());
     backend.assignInt(loop.getMemberVar(), Oparg.createVar(memberVal));
     block(bodyContext, loop.getBody());
-    backend.endRangeLoop(loop.isSyncLoop(), containersToRegister);
+    backend.endRangeLoop(loop.isSyncLoop(), containersToRegister,
+                                                  loop.getSplitDegree());
     backend.endWaitStatement(containersToRegister);
   }
   

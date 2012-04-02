@@ -937,7 +937,7 @@ public class ICContinuations {
                          usedVariables, containersToRegister,
                          desiredUnroll, splitDegree);
       this.loopBody.generate(logger, gen, info);
-      gen.endRangeLoop(isSync, containersToRegister);
+      gen.endRangeLoop(isSync, containersToRegister, splitDegree);
     }
   
     @Override

@@ -29,6 +29,9 @@ import exm.tcl.*;
 public class TurbineGenerator implements CompilerBackend
 {
 
+  private static final String TCLTMP_RANGE_INC = "tcltmp:inc";
+  private static final String TCLTMP_RANGE_HI = "tcltmp:hi";
+  private static final String TCLTMP_RANGE_LO = "tcltmp:lo";
   private static final String MAIN_FUNCTION_NAME = "__swiftmain";
   private static final String CONSTINIT_FUNCTION_NAME = "__consts";
 
@@ -1563,18 +1566,128 @@ public class TurbineGenerator implements CompilerBackend
         (increment.getType() == OpargType.VAR &&
                     increment.getVariable().getType().equals(Types.VALUE_INTEGER)));
     assert(loopVar.getType().equals(Types.VALUE_INTEGER));
-
-
-    Sequence loopBody = new Sequence();
-    String loopVarName = prefixVar(loopVar.getName());
-    //TODO: implement loop splitting here
-    if (splitDegree > 0) {
-      throw new ParserRuntimeException("Loop splitting not yet supported for "
-          + " codegen");
-    }
     Expression startE = opargToExpr(start);
     Expression endE = opargToExpr(end);
     Expression incrE = opargToExpr(increment);
+    
+    if (splitDegree > 0) {
+      startRangeLoopWithSplitting(loopName, loopVar, isSync, usedVariables,
+              containersToRegister, splitDegree, startE, endE, incrE);
+    } else {
+      startRangeLoop2(loopName, loopVar, isSync, usedVariables,
+              containersToRegister, startE, endE, incrE);
+    }
+  }
+
+  private void startRangeLoopWithSplitting(String loopName, Variable loopVar,
+          boolean isSync, List<Variable> usedVariables,
+          List<Variable> containersToRegister, int splitDegree,
+          Expression startE, Expression endE, Expression incrE) {
+    // Create two procedures that will be called: an outer procedure
+    //  that recursively breaks up the foreach loop into chunks, 
+    //  and an inner procedure that actually runs the loop
+    ArrayList<String> args = new ArrayList<String>();
+    args.add(Turbine.LOCAL_STACK_NAME);
+    for (Variable uv: usedVariables) {
+      args.add(prefixVar(uv.getName()));
+    }
+    args.add(TCLTMP_RANGE_LO);
+    args.add(TCLTMP_RANGE_HI);
+    args.add(TCLTMP_RANGE_INC);
+
+    Value loVal = new Value(TCLTMP_RANGE_LO);
+    Value hiVal = new Value(TCLTMP_RANGE_HI);
+    Value incVal = new Value(TCLTMP_RANGE_INC);
+    
+    List<Expression> commonArgs = new ArrayList<Expression>();
+    commonArgs.add(new Value(Turbine.LOCAL_STACK_NAME));
+    for (Variable uv: usedVariables) {
+      commonArgs.add(varToExpr(uv));
+    }
+    
+    List<Expression> outerCallArgs = new ArrayList<Expression>(commonArgs);
+    outerCallArgs.add(startE);
+    outerCallArgs.add(endE);
+    outerCallArgs.add(incrE);
+    
+    List<Expression> innerCallArgs = new ArrayList<Expression>(commonArgs);
+    innerCallArgs.add(loVal);
+    innerCallArgs.add(hiVal);
+    innerCallArgs.add(incVal);
+    
+    Sequence outer = new Sequence();
+    String outerProcName = loopName + ":outer";
+    tree.add(new Proc(outerProcName, 
+            usedTclFunctionNames, args, outer));
+    
+    Sequence inner = new Sequence();
+    String innerProcName = loopName + ":inner";
+    tree.add(new Proc(innerProcName, 
+          usedTclFunctionNames, args, inner));
+    
+    // Call outer directly
+    pointStack.peek().add(new Command(outerProcName, 
+            outerCallArgs));
+                     
+    
+    String itersLeft = "tcltmp:itersleft";
+    // itersLeft = ceil( (hi - lo + 1) /(double) inc)) 
+    // ==> itersLeft = ( (hi - lo) / inc ) + 1 
+    outer.add(new SetVariable(itersLeft, Square.arithExpr( new Token(
+            String.format("((${%s} - ${%s}) / ${%s}) + 1",
+                   TCLTMP_RANGE_HI, TCLTMP_RANGE_LO, TCLTMP_RANGE_INC)))));
+    Expression doneSplitting = Square.arithExpr(
+            new Value(itersLeft), new Token("<="), 
+            new LiteralInt(splitDegree));
+    Sequence thenB = new Sequence();
+    Sequence elseB = new Sequence();
+    
+    // if (iters < splitFactor) then <call inner> else <split more>
+    If splitIf = new If(doneSplitting, thenB, elseB);
+    outer.add(splitIf);
+    
+    thenB.add(new Command(innerProcName, innerCallArgs));
+    
+    Sequence splitBody = new Sequence();
+    String splitStart = "tcltmp:splitstart";
+    String skip = "tcltmp:skip";
+    // skip = max(splitFactor,  ceil(iters /(float) splitfactor))
+    // skip = max(splitFactor,  ((iters - 1) /(int) splitfactor) + 1)
+    elseB.add(new SetVariable(skip, Square.arithExpr(new Token(
+          String.format("max(%d, ((${%s} - 1) / %d ) + 1)", 
+                  splitDegree, itersLeft, splitDegree)))));
+    
+    ForLoop splitLoop = new ForLoop(splitStart, loVal, 
+            hiVal, new Value(skip), splitBody);
+    elseB.add(splitLoop);
+    
+    
+    ArrayList<Expression> outerRecCall = new 
+                     ArrayList<Expression>();
+    outerRecCall.add(new Token(outerProcName));
+    outerRecCall.addAll(commonArgs);
+    outerRecCall.add(new Value(splitStart));
+    // splitEnd = min(hi, start + skip - 1)
+    Square splitEnd = Square.arithExpr(new Token(String.format(
+            "min(${%s}, ${%s} + ${%s} - 1)", TCLTMP_RANGE_HI, 
+            splitStart, skip)));
+    outerRecCall.add(splitEnd);
+    outerRecCall.add(incVal);
+    
+    splitBody.add(Turbine.rule(outerProcName, new ArrayList<Value>(0),
+                    new TclList(outerRecCall), true));
+    
+    pointStack.push(inner);
+    startRangeLoop2(loopName, loopVar, isSync, usedVariables,
+            containersToRegister, loVal, hiVal, incVal);
+  }
+
+  private void startRangeLoop2(String loopName, Variable loopVar,
+          boolean isSync, List<Variable> usedVariables,
+          List<Variable> containersToRegister, Expression startE,
+          Expression endE, Expression incrE) {
+    Sequence loopBody = new Sequence();
+    String loopVarName = prefixVar(loopVar.getName());
     ForLoop tclLoop = new ForLoop(loopVarName, startE, endE, incrE, loopBody);
     pointStack.peek().add(tclLoop);
     pointStack.push(loopBody);
@@ -1591,11 +1704,15 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void endRangeLoop(boolean isSync,
-                        List<Variable> containersToRegister) {
+                        List<Variable> containersToRegister,
+                        int splitDegree) {
     assert(pointStack.size() >= 2);
     if (!isSync) {
       assert(pointStack.size() >= 3);
       endAsync(containersToRegister); // Swift loop body
+    }
+    if (splitDegree > 0) {
+      pointStack.pop(); // inner proc body
     }
     pointStack.pop(); // for loop body
   }
