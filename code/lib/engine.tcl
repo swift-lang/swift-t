@@ -52,11 +52,13 @@ namespace eval turbine {
                 set ready [ turbine::c::ready ]
                 if { [ llength $ready ] == 0 } break
                 foreach {transform} $ready {
-                    set action [ turbine::c::action $transform ]
+                    set action   [ turbine::c::action   $transform ]
+                    set_priority [ turbine::c::priority $transform ]
                     release $transform $action
                 }
             }
 
+            reset_priority
             set msg [ adlb::get $WORK_TYPE(CONTROL) answer_rank ]
             if { [ string length $msg ] } {
                 control $msg $answer_rank
@@ -80,11 +82,12 @@ namespace eval turbine {
             }
             2 { # $turbine::CONTROL
                 adlb::put $adlb::ANY $WORK_TYPE(CONTROL) \
-                    "command $command"
+                    "command priority: $turbine::priority $command" \
+                    $turbine::priority
             }
             3 { # $turbine::WORK
                 adlb::put $adlb::ANY $WORK_TYPE(WORK) \
-                    "$transform $command"
+                    "$transform $command" $turbine::priority
             }
             default {
                 error "unknown action type!"
@@ -107,6 +110,11 @@ namespace eval turbine {
             command {
 		dict incr stats tasks_run
                 set command [ lrange $msg 1 end ]
+                if { [ string equal [ lindex $command 0 ] \
+                                    "priority:" ] } {
+                    set_priority [ lindex $command 1 ]
+                    set command [ lrange $command 2 end ]
+                }
                 eval $command
             }
             complete {
@@ -163,6 +171,7 @@ namespace eval turbine {
             # puts "[dict get $e -errorinfo]"
             error "rule: transform failed in command: $command"
         }
-        adlb::put $answer_rank $WORK_TYPE(CONTROL) "complete $rule_id"
+        adlb::put $answer_rank $WORK_TYPE(CONTROL) \
+            "complete $rule_id" $turbine::default_priority
     }
 }

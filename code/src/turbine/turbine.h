@@ -34,6 +34,7 @@ turbine_code turbine_rule(const char* name,
                           const turbine_datum_id* input_list,
                           turbine_action_type action_type,
                           const char* action,
+                          int priority,
                           turbine_transform_id* id);
 
 turbine_code turbine_rules_push(void);
@@ -46,6 +47,8 @@ turbine_code turbine_close(turbine_datum_id id);
 turbine_code turbine_action(turbine_transform_id id,
                             turbine_action_type* action_type,
                             char** action);
+
+turbine_code turbine_priority(turbine_transform_id id, int* priority);
 
 turbine_code turbine_complete(turbine_transform_id id);
 

@@ -153,7 +153,8 @@ namespace eval turbine {
             # end
             set e [ expr $s + $step - 1 ]
             adlb::put $adlb::ANY $WORK_TYPE(CONTROL) \
-                "command range_work $c $s $e 1"
+                "command priority: $turbine::priority range_work $c $s $e 1" \
+                $turbine::priority
         }
         close_datum $result
     }

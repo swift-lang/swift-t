@@ -132,6 +132,7 @@ Turbine_Version_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /**
    usage: rule name [ list inputs ] action_type action => id
+   The name is just for debugging
  */
 static int
 Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -145,9 +146,11 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
   int error;
   turbine_transform_id id;
 
+  // Get the debugging name
   char* name = Tcl_GetStringFromObj(objv[1], NULL);
   assert(name);
 
+  // Get the input list
   error = turbine_tcl_long_array(interp, objv[2],
                                 TCL_TURBINE_MAX_INPUTS,
                                 input_list, &inputs);
@@ -155,19 +158,29 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
                 "in rule: <%li> %s inputs: \"%s\"",
                 id, name, Tcl_GetString(objv[2]));
 
+  // Get the action type
   turbine_action_type action_type;
   int tmp;
   error = Tcl_GetIntFromObj(interp, objv[3], &tmp);
   TCL_CHECK_MSG(error, "could not parse as integer!");
   action_type = tmp;
 
+  // Get the action string
   char* action = Tcl_GetStringFromObj(objv[4], NULL);
   assert(action);
 
-  turbine_code code = turbine_rule(name, inputs, input_list,
-                                   action_type, action, &id);
-  TURBINE_CHECK(code, "could not add rule: %li", id);
+  // Lookup current priority
+  int priority = 0;
+  Tcl_Obj* p = Tcl_GetVar2Ex(interp, "turbine::priority", NULL, 0);
+  TCL_CONDITION(p != NULL, "could not access turbine::priority");
+  error = Tcl_GetIntFromObj(interp, p, &priority);
+  TCL_CHECK_MSG(error, "turbine::priority is not an integer!");
 
+  // Issue the rule
+  turbine_code code =
+      turbine_rule(name, inputs, input_list, action_type, action,
+                   priority, &id);
+  TURBINE_CHECK(code, "could not add rule: %li", id);
   return TCL_OK;
 }
 
@@ -223,7 +236,7 @@ Turbine_Ready_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: action id => [ list action_type action ]
+   usage: turbine::action id => [ list action_type action ]
  */
 static int
 Turbine_Action_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -246,6 +259,29 @@ Turbine_Action_Cmd(ClientData cdata, Tcl_Interp *interp,
   items[1] = Tcl_NewStringObj(action, -1);
 
   Tcl_Obj* result = Tcl_NewListObj(2, items);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+/**
+   usage: turbine::priority id => priority
+ */
+static int
+Turbine_Priority_Cmd(ClientData cdata, Tcl_Interp *interp,
+                     int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  turbine_transform_id id;
+  int error = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK(error);
+
+
+  int priority;
+  turbine_code code = turbine_priority(id, &priority);
+  TCL_CONDITION(code == TURBINE_SUCCESS,
+                "could not find transform id: %li", id);
+
+  Tcl_Obj* result = Tcl_NewIntObj(priority);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
@@ -388,6 +424,7 @@ Tclturbine_Init(Tcl_Interp *interp)
   COMMAND("ready",     Turbine_Ready_Cmd);
   // COMMAND("type",      Turbine_ActionType_Cmd);
   COMMAND("action",    Turbine_Action_Cmd);
+  COMMAND("priority",  Turbine_Priority_Cmd);
   COMMAND("complete",  Turbine_Complete_Cmd);
   COMMAND("close",     Turbine_Close_Cmd);
   COMMAND("log",       Turbine_Log_Cmd);

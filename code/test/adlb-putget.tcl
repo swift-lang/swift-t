@@ -24,7 +24,7 @@ if { $amserver == 0 } {
 
     set rank [ adlb::rank ]
     if { $rank == 0 } {
-        adlb::put $adlb::ANY $WORK_TYPE(T) "hello"
+        adlb::put $adlb::ANY $WORK_TYPE(T) "hello" 0
     } else {
         set msg [ adlb::get $WORK_TYPE(T) answer_rank ]
         puts "answer_rank: $answer_rank"

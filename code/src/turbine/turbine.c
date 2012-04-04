@@ -54,6 +54,8 @@ typedef struct
   /** Array of input TDs */
   turbine_datum_id* input_list;
   turbine_action_type action_type;
+  /** ADLB priority for this action */
+  int priority;
   /** Index of next subscribed input (starts at 0) */
   int blocker;
   transform_status status;
@@ -221,7 +223,7 @@ static inline turbine_code
 transform_create(const char* name,
                  int inputs, const turbine_datum_id* input_list,
                  turbine_action_type action_type,
-                 const char* action,
+                 const char* action, int priority,
                  transform** result)
 {
   assert(name);
@@ -233,6 +235,7 @@ transform_create(const char* name,
   T->name = strdup(name);
   T->action_type = action_type;
   T->action = strdup(action);
+  T->priority = priority;
   T->blocker = 0;
 
   if (inputs > 0)
@@ -292,11 +295,13 @@ turbine_rule(const char* name,
              int inputs, const turbine_datum_id* input_list,
              turbine_action_type action_type,
              const char* action,
+             int priority,
              turbine_transform_id* id)
 {
   transform* T = NULL;
   turbine_code code = transform_create(name, inputs, input_list,
-                                       action_type, action, &T);
+                                       action_type, action,
+                                       priority, &T);
   *id = T->id;
   DEBUG_TURBINE_RULE(T, *id);
   turbine_check(code);
@@ -423,6 +428,7 @@ turbine_ready(int count, turbine_transform_id* output,
 }
 
 /**
+   Retrieve action string for given transform
    @param action Pointer into Turbine memory
                  Use this before calling turbine_complete
  */
@@ -441,6 +447,24 @@ turbine_action(turbine_transform_id id,
   *action_type = T->action_type;
 
   DEBUG_TURBINE("action: {%li} %s: %s", id, T->name, T->action);
+  return TURBINE_SUCCESS;
+}
+
+/**
+   Retrieve priority for given transform
+*/
+turbine_code
+turbine_priority(turbine_transform_id id, int* priority)
+{
+  if (id == TURBINE_ID_NULL)
+    return TURBINE_ERROR_NULL;
+
+  transform* T = table_lp_search(&transforms_running, id);
+  if (!T)
+    return TURBINE_ERROR_NOT_FOUND;
+
+  *priority = T->priority;
+  DEBUG_TURBINE("priority: {%li} => %i\n", T->priority);
   return TURBINE_SUCCESS;
 }
 

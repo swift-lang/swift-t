@@ -10,6 +10,11 @@ namespace eval turbine {
 
     # Mode is ENGINE, WORKER, or SERVER
     variable mode
+
+    # ADLB task priority
+    variable priority
+    variable default_priority
+
     # Statistics: dict from string token to integer count
     variable stats
 
@@ -18,6 +23,11 @@ namespace eval turbine {
     # param s Number of ADLB servers
     proc init { engines servers } {
         turbine::init_rng
+
+        variable priority
+        variable default_priority
+        set default_priority 0
+        reset_priority
 
         # Set up work types
         enum WORK_TYPE { WORK CONTROL }
@@ -38,6 +48,17 @@ namespace eval turbine {
         start_stats
 
         argv_init
+    }
+
+    proc reset_priority { } {
+        variable priority
+        variable default_priority
+        set priority $default_priority
+    }
+
+    proc set_priority { p } {
+        variable priority
+        set priority $p
     }
 
     proc debug { msg } {

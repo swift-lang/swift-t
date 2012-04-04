@@ -237,21 +237,23 @@ static int
 ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
              int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(4);
+  TCL_ARGS(5);
 
   int reserve_rank;
   int work_type;
+  int priority;
   Tcl_GetIntFromObj(interp, objv[1], &reserve_rank);
   Tcl_GetIntFromObj(interp, objv[2], &work_type);
   char* cmd = Tcl_GetString(objv[3]);
+  Tcl_GetIntFromObj(interp, objv[4], &priority);
 
-  DEBUG_ADLB("adlb::put: reserve_rank: %i type: %i %s",
-             reserve_rank, work_type, cmd);
+  DEBUG_ADLB("adlb::put: reserve_rank: %i type: %i \"%s\" %i",
+             reserve_rank, work_type, cmd, priority);
 
   // int ADLB_Put(void *work_buf, int work_len, int reserve_rank,
   //              int answer_rank, int work_type, int work_prio)
   int rc = ADLB_Put(cmd, strlen(cmd)+1, reserve_rank, adlb_rank,
-                    work_type, 1);
+                    work_type, priority);
 
   assert(rc == ADLB_SUCCESS);
   return TCL_OK;
