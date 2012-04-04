@@ -7,22 +7,20 @@ PROGRAM_TCL=${PROGRAM_SWIFT%.swift}.tcl
 export TURBINE_ENGINES=1
 export ADLB_SERVERS=1
 TURBINE_WORKERS=1
-N=1000
+NX=10
+NY=10
 # Delay in milliseconds
 DELAY=0
 
 PROCS=$(( TURBINE_ENGINES + ADLB_SERVERS + TURBINE_WORKERS ))
 
 # Load common features
-
 TURBINE=$( which turbine )
 if [[ ${TURBINE} == "" ]]
 then
   print "turbine not found!"
   exit 1
 fi
-
-set -x
 
 TURBINE_HOME=$( cd $( dirname ${TURBINE} )/.. ; /bin/pwd )
 source ${TURBINE_HOME}/scripts/helpers.zsh
@@ -35,27 +33,44 @@ export TURBINE_DEBUG=0
 export ADLB_DEBUG=0
 export LOGGING=0
 export ADLB_EXHAUST_TIME=1
-# export TURBINE_USER_LIB=${BENCH_UTIL}
+export TURBINE_USER_LIB=${BENCH_UTIL}
+# Mode defaults to MPIEXEC (local execution)
+MODE=mpiexec
+
+while getopts "m:" OPTION
+  do
+   case ${OPTION}
+     in
+     m) MODE=${OPTARG} ;;
+     v) set -x         ;;
+   esac
+done
 
 # Run stc if necessary
 compile ${PROGRAM_SWIFT} ${PROGRAM_TCL}
+exitcode
 
 START=$( date +%s )
 
-# MODE MPIEXEC
-# OUTPUT="output.txt"
-# turbine -l -n ${PROCS} foreach.tcl --N=${N} --delay=${DELAY} >& ${OUTPUT}
-
-# MODE COBALT
-
-# LAUNCH IT
-${TURBINE_COBALT} -n ${PROCS} ${PROGRAM_TCL}
-exitcode "turbine-cobalt failed!"
+# Launch it
+case ${MODE}
+  in
+  "mpiexec")
+    OUTPUT="turbine-output.txt"
+    turbine -l -n ${PROCS} \
+      foreach.tcl --NX=${NX} --NY=${NY} --delay=${DELAY} >& ${OUTPUT}
+    exitcode "turbine failed!"
+    ;;
+  "cobalt")
+    ${TURBINE_COBALT} -n ${PROCS} ${PROGRAM_TCL}
+    exitcode "turbine-cobalt failed!"
+    read OUTPUT_DIR < output.txt
+    OUTPUT=$( ls ${OUTPUT_DIR}/*.output )
+    ;;
+esac
 
 STOP=$( date +%s )
 
-read OUTPUT_DIR < output.txt
-OUTPUT=$( ls ${OUTPUT_DIR}/*.output )
 TIME=$( turbine_stats_walltime ${OUTPUT} )
 if [[ ${TIME} == "" ]]
 then
