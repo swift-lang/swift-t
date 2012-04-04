@@ -1,0 +1,48 @@
+
+# Test basic container functionality
+
+# SwiftScript
+# file[] c;
+# file f1<"file1.txt">;
+# file f2<"file2.txt">;
+# c[0] = f1;
+# c[1] = f2;
+# // Print out contents of c
+
+package require turbine 0.0.1
+
+proc rules { } {
+
+    set c  [ adlb::unique ]
+    set s1 [ adlb::unique ]
+    set s2 [ adlb::unique ]
+
+    turbine::create_container $c integer
+    turbine::create_string $s1
+    turbine::set_string $s1 "hello"
+    turbine::create_string $s2
+    turbine::set_string $s2 "howdy"
+
+    # insert <container> <subscript> <member>
+    turbine::container_insert $c "0" $s1
+    turbine::container_insert $c "1" $s2
+
+    set L [ adlb::enumerate $c subscripts 2 0 ]
+    puts "subscripts: $L"
+
+    set L [ adlb::enumerate $c members 2 0 ]
+    puts "members: $L"
+
+    set L [ adlb::enumerate $c dict 2 0 ]
+    puts "dict: $L"
+}
+
+turbine::defaults
+turbine::init $engines $servers
+turbine::start rules
+turbine::finalize
+
+puts OK
+
+# Help Tcl free memory
+proc exit args {}

@@ -21,7 +21,7 @@ proc rules { } {
     turbine::container_insert 1 "0" 2
     turbine::container_insert 1 "1" 3
 
-    set L [ turbine::container_list 1 ]
+    set L [ adlb::enumerate 1 subscripts all 0 ]
     puts "enumeration: $L"
 
     # This is not a real Turbine loop

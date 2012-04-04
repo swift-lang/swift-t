@@ -197,10 +197,7 @@ namespace eval turbine {
     }
 
     proc container_list { id } {
-        set s [ adlb::retrieve $id ]
-        set i [ string first : $s ]
-        incr i
-        set result [ string range $s $i end ]
+        set result [ adlb::enumerate $id subscripts all 0 ]
         return $result
     }
 

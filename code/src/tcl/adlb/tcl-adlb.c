@@ -574,6 +574,111 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
+   usage:
+   adlb::enumerate <id> subscripts|members|dict <count>|all <offset>
+
+   subscripts: return list of subscript strings
+   members: return list of member TDs
+   dict: return dict mapping subscripts to TDs
+ */
+static int
+ADLB_Enumerate_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(5);
+  int rc;
+  long container_id;
+  char* token;
+  char* tmp;
+  int count;
+  int offset;
+  rc = Tcl_GetLongFromObj(interp, objv[1], &container_id);
+  TCL_CHECK_MSG(rc, "requires container id!");
+  token = Tcl_GetStringFromObj(objv[2], NULL);
+  TCL_CONDITION(token, "requires token!");
+  // This argument is either the integer count or "all", all == -1
+  tmp = Tcl_GetStringFromObj(objv[3], NULL);
+  if (strcmp(tmp, "all"))
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[3], &count);
+    TCL_CHECK_MSG(rc, "requires count!");
+  }
+  else
+    count = -1;
+  rc = Tcl_GetIntFromObj(interp, objv[4], &offset);
+  TCL_CHECK_MSG(rc, "requires offset!");
+
+  char* subscripts;
+  int length;
+  adlb_datum_id* member_ids;
+  int actual;
+
+  if (!strcmp(token, "subscripts"))
+  {
+    subscripts = NULL+1;
+    member_ids = NULL;
+  }
+  else if (!strcmp(token, "members"))
+  {
+    subscripts = NULL;
+    member_ids = NULL+1;
+  }
+  else if (!strcmp(token, "dict"))
+  {
+    subscripts = NULL+1;
+    member_ids = NULL+1;
+  }
+  else
+  {
+    tcl_condition_failed(interp, objv[0], "unknown token!");
+    return TCL_ERROR;
+  }
+
+  rc = ADLB_Enumerate(container_id, count, offset,
+                      &subscripts, &length, &member_ids, &actual);
+
+  Tcl_Obj* result;
+  if (!strcmp(token, "subscripts"))
+  {
+    result = Tcl_NewStringObj(subscripts, length-1);
+    free(subscripts);
+  }
+  else if (!strcmp(token, "members"))
+  {
+    Tcl_Obj* objv[actual];
+    for (int i = 0; i < actual; i++)
+    {
+      objv[i] = Tcl_NewLongObj(member_ids[i]);
+    }
+    free(member_ids);
+    result = Tcl_NewListObj(actual, objv);
+  }
+  else if (!strcmp(token, "dict"))
+  {
+    // Use Tcl to convert string to list
+    Tcl_Obj* s = Tcl_NewStringObj(subscripts, length);
+
+    // Member TDs
+    Tcl_Obj* m[actual];
+    for (int i = 0; i < actual; i++)
+      m[i] = Tcl_NewLongObj(member_ids[i]);
+    result = Tcl_NewDictObj();
+    for (int i = 0; i < actual; i++)
+    {
+      Tcl_Obj* p;
+      Tcl_ListObjIndex(interp, s, i, &p);
+      Tcl_DictObjPut(interp, result, p, m[i]);
+    }
+  }
+  else
+    // Cannot get here
+    return TCL_ERROR;
+
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+/**
    Copy a blob from the distributed store into a local blob
    in the memory of this process
    Must be freed with adlb::blob_free
@@ -581,7 +686,7 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
  */
 static int
 ADLB_Blob_Cache_Cmd(ClientData cdata, Tcl_Interp *interp,
-                   int objc, Tcl_Obj *const objv[])
+                    int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
 
@@ -1085,6 +1190,7 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("exists",    ADLB_Exists_Cmd);
   COMMAND("store",     ADLB_Store_Cmd);
   COMMAND("retrieve",  ADLB_Retrieve_Cmd);
+  COMMAND("enumerate", ADLB_Enumerate_Cmd);
   COMMAND("blob_cache", ADLB_Blob_Cache_Cmd);
   COMMAND("blob_free",  ADLB_Blob_Free_Cmd);
   COMMAND("set_blob_floats", ADLB_Blob_set_floats_Cmd);
