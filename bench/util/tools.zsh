@@ -14,3 +14,14 @@ compile()
   fi
   return 0
 }
+
+TURBINE=$( which turbine )
+if [[ ${TURBINE} == "" ]]
+then
+  print "Could not find turbine!"
+  return 1
+fi
+
+TURBINE_HOME=$( dirname $( dirname ${TURBINE} ) )
+declare TURBINE_HOME
+TURBINE_COBALT=${TURBINE_HOME}/scripts/submit/bgp/turbine-cobalt.zsh
