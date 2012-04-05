@@ -11,14 +11,16 @@ main {
   int delay = toint(argv("delay"));
 
   int A[][];
-  int B[];
+  int B[][];
+  int C[];
   foreach x in [0:NX-1]
   {
     foreach y in [0:NY-1]
     {
       A[x][y] = set1_integer(delay);
+      B[x][y] = set1_integer(delay*A[x][y]);
     }
-    B[x] = sum_integer(A[x]);
-    printf("B[%i]=%i", x, B[x]);
+    C[x] = sum_integer(B[x]);
+    printf("C[%i]=%i", x, C[x]);
   }
 }
