@@ -1,0 +1,12 @@
+
+Cobalt does not properly handle environment variable values
+that contain spaces.  This creates problems for TURBINE_USER_LIB,
+which relies on the space-separated TCLLIBPATH
+
+The workaround is to change the package path in the Tcl.  After
+compiling the *.swift to *.tcl; manually append to the list auto_path
+before doing the package require, as shown:
+
+lappend auto_path /gpfs/home/wozniak/proj/stc/bench/util
+package require bench ...
+
