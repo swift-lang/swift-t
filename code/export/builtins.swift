@@ -100,6 +100,8 @@
 
 // I/O
 trace (int|float|string|boolean... args) "turbine" "0.0.2" "trace";
+sleep_trace (float secs, int|float|string|boolean... args) "turbine" "0.0.2"
+                                                            "sleep_trace";
 
 // Container operations
 (int res[]) range(int start, int end) "turbine" "0.0.2" "range";
