@@ -3,6 +3,9 @@
 #include <swift/unistd.swift>
 #include "../util/bench.swift"
 
+/*
+  delay in milliseconds
+*/
 main {
   argv_accept("N", "delay");
   int   N     = toint(argv("N"));
