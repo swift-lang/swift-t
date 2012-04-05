@@ -5,7 +5,7 @@ PROGRAM_TCL=${PROGRAM_SWIFT%.swift}.tcl
 
 # Benchmark parameters
 PROCS=${PROCS:-4}
-CONTROL=${CONTROL:-4}
+CONTROL=${CONTROL:-2}
 export TURBINE_ENGINES=$(( PROCS / CONTROL / 2 ))
 export ADLB_SERVERS=$(( PROCS / CONTROL / 2 ))
 TURBINE_WORKERS=$(( PROCS - TURBINE_ENGINES - ADLB_SERVERS ))
@@ -33,7 +33,18 @@ export TURBINE_DEBUG=0
 export ADLB_DEBUG=0
 export LOGGING=0
 export ADLB_EXHAUST_TIME=1
-# export TURBINE_USER_LIB=${BENCH_UTIL}
+export TURBINE_USER_LIB=${BENCH_UTIL}
+# Mode defaults to MPIEXEC (local execution)
+MODE=mpiexec
+
+while getopts "m:" OPTION
+  do
+   case ${OPTION}
+     in
+     m) MODE=${OPTARG} ;;
+     v) set -x         ;;
+   esac
+done
 
 # Log all settings
 declare PROCS CONTROL TURBINE_ENGINES ADLB_SERVERS TURBINE_WORKERS
@@ -45,18 +56,33 @@ compile ${PROGRAM_SWIFT} ${PROGRAM_TCL}
 
 START=$( date +%s )
 
-# MODE MPIEXEC
-# OUTPUT="output.txt"
-# turbine -l -n ${PROCS} foreach.tcl --N=${N} --delay=${DELAY} >& ${OUTPUT}
-
-# MODE COBALT
-
-OUTPUT_TOKEN_FILE=$( mktemp )
-# LAUNCH IT
-${TURBINE_COBALT} -d ${OUTPUT_TOKEN_FILE} \
-                  -n ${PROCS} ${PROGRAM_TCL} --N=${N} --delay=${DELAY}
-exitcode "turbine-cobalt failed!"
-
+# Launch it
+case ${MODE}
+  in
+  "mpiexec")
+    OUTPUT="turbine-output.txt"
+    OUTPUT_DIR=${PWD}
+    turbine -l -n ${PROCS} \
+      foreach.tcl --N=${N} --delay=${DELAY} >& ${OUTPUT}
+    exitcode "turbine failed!"
+    ;;
+  "cobalt")
+    # User must edit Tcl to add user libs
+    unset TURBINE_USER_LIB
+    OUTPUT_TOKEN_FILE=$( mktemp )
+    ${TURBINE_COBALT} -d ${OUTPUT_TOKEN_FILE} \
+      -n ${PROCS} ${PROGRAM_TCL} --N=${N} --delay=${DELAY}
+    exitcode "turbine-cobalt failed!"
+    read OUTPUT_DIR < ${OUTPUT_TOKEN_FILE}
+    declare OUTPUT_DIR
+    rm ${OUTPUT_TOKEN_FILE}
+    OUTPUT=$( ls ${OUTPUT_DIR}/*.output )
+    ;;
+  *)
+    print "unknown MODE: ${MODE}"
+    return 1
+    ;;
+esac
 STOP=$( date +%s )
 
 TOOK=$(( STOP - START ))
@@ -66,10 +92,6 @@ print "TOOK: ${TOOK}"
 
 float -F 3 TIME TOTAL_TIME TOTAL_RATE WORKER_RATE UTIL
 
-read OUTPUT_DIR < ${OUTPUT_TOKEN_FILE}
-declare OUTPUT_DIR
-rm ${OUTPUT_TOKEN_FILE}
-OUTPUT=$( ls ${OUTPUT_DIR}/*.output )
 if grep -qi abort ${OUTPUT}
 then
   print "run aborted!"
