@@ -719,7 +719,6 @@ public class SwiftScript {
     ArrayList<Variable> usedVariables = new ArrayList<Variable>();
     ArrayList<Variable> containersToRegister = new ArrayList<Variable>();
 
-    // TODO: correct??
     VariableUsageInfo bodyVU = loop.getBody().checkedGetVariableUsage();
     summariseBranchVariableUsage(context, Arrays.asList(bodyVU),
         usedVariables, containersToRegister);

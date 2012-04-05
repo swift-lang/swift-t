@@ -3,7 +3,6 @@ package exm.parser.gen;
 
 import java.util.*;
 
-import exm.parser.ic.ICInstructions.Oparg;
 import exm.parser.util.ParserRuntimeException;
 import exm.tcl.*;
 
@@ -63,7 +62,7 @@ private static final Token F_CREF_CREATE_NESTED_STATIC
             = new Token("turbine::cref_create_nested");
   private static final Token CONTAINER_SLOT_DROP = new Token("adlb::slot_drop");
   private static final Token CONTAINER_SLOT_CREATE = new Token("adlb::slot_create");
-  static final Token CONTAINER_LIST = new Token("turbine::container_list");
+  private static final Token CONTAINER_ENUMERATE = new Token("adlb::enumerate");
   private static final Token UNTYPED_GET = new Token("turbine::get");
   private static final Token INTEGER_GET = new Token("turbine::get_integer");
   private static final Token FLOAT_GET = new Token("turbine::get_float");
@@ -553,6 +552,38 @@ private static final Token F_CREF_CREATE_NESTED_STATIC
     return result;
   }
 
+  /**
+   * Get entire contents of container
+   * @param resultVar
+   * @param arr
+   * @param includeKeys
+   * @return
+   */
+  public static SetVariable containerContents(String resultVar, 
+                        Value arr, boolean includeKeys) {
+    Token mode = includeKeys ? new Token("dict") : new Token("members");
+    return new SetVariable(resultVar, new Square(
+            CONTAINER_ENUMERATE, arr, mode, new Token("all"),
+                                          new LiteralInt(0)));
+  }
+  
+  /**
+   * Retrieve partial contents of container from start to end inclusive
+   * start to end are not the logical array indices, but rather physical indices
+   * @param resultVar
+   * @param arr
+   * @param includeKeys
+   * @param start
+   * @param len
+   * @return
+   */
+  public static SetVariable containerContents(String resultVar, 
+          Value arr, boolean includeKeys, Expression start, Expression len) {
+    Token mode = includeKeys ? new Token("dict") : new Token("members");
+    return new SetVariable(resultVar, new Square(
+              CONTAINER_ENUMERATE, arr, mode, start, len));
+  }
+  
   public static Command turbineLog(String msg) {
     return new Command(TURBINE_LOG, msg);
   }
@@ -612,6 +643,5 @@ private static final Token F_CREF_CREATE_NESTED_STATIC
   public static TclTree setPriority(Expression priority) {
     return new Command("turbine::set_priority", Arrays.asList(priority));
   }
-
 
 }

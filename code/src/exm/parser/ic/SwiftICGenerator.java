@@ -262,7 +262,8 @@ public class SwiftICGenerator implements CompilerBackend {
                 arrayVar.toString()); 
     }
     assert(arrayVar.getType().getMemberType().equals(memberVar.getType()));
-    assert(loopCountVar.getType().equals(Types.VALUE_INTEGER));
+    assert(loopCountVar == null || 
+              loopCountVar.getType().equals(Types.VALUE_INTEGER));
     ForeachLoop loop = new ForeachLoop(arrayVar, memberVar, 
                 loopCountVar, isSync, arrayClosed, usedVariables, 
                 containersToRegister);

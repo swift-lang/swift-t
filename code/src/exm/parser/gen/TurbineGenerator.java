@@ -1489,7 +1489,8 @@ public class TurbineGenerator implements CompilerBackend
                     Variable loopCountVar, boolean isSync, boolean arrayClosed,
           List<Variable> usedVariables, List<Variable> containersToRegister) {
     assert(Types.isArray(arrayVar.getType()));
-    assert(loopCountVar.getType().equals(Types.VALUE_INTEGER));
+    assert(loopCountVar == null ||
+              loopCountVar.getType().equals(Types.VALUE_INTEGER));
 
     int foreach_num = foreach_counter++;
     String procName = "foreach:" + foreach_num;
@@ -1504,33 +1505,35 @@ public class TurbineGenerator implements CompilerBackend
     }
     Sequence curr = pointStack.peek();
 
-    String keysVar ="tcltmp:keys";
+    String contentsVar ="tcltmp:contents";
     Value tclArrayVar = varToExpr(arrayVar);
-    SetVariable getKeys = new SetVariable(keysVar,
-            new Square(Turbine.CONTAINER_LIST, tclArrayVar));
-    curr.add(getKeys);
+    boolean haveKeys = loopCountVar != null;
+    curr.add(Turbine.containerContents(contentsVar, varToExpr(arrayVar), haveKeys));
+    
     Sequence loopBody = new Sequence();
-    Square keyList = new Square(
-        Turbine.CONTAINER_LIST,
-        varToExpr(arrayVar));
 
-    ForEach tclLoop = new ForEach(new Token(prefixVar(loopCountVar.getName())),
-       keyList, loopBody);
-    curr.add(tclLoop);
-    pointStack.push(loopBody);
 
 
     String tclMemberVar = prefixVar(memberVar.getName());
-    // Load the array member
-    loopBody.add(new SetVariable(tclMemberVar,
-                 new Square(Turbine.CONTAINER_GET, tclArrayVar,
-                     varToExpr(loopCountVar))));
+    String tclCountVar = haveKeys ? prefixVar(loopCountVar.getName()) : null;
+    
+    /* Iterate over keys and values, or just values */
+    Sequence tclLoop;
+    if (haveKeys) {
+      tclLoop = new DictFor(new Token(tclCountVar), new Token(tclMemberVar), 
+                      new Value(contentsVar), loopBody);
+    } else {
+      tclLoop = new ForEach(new Token(tclMemberVar),
+                            new Value(contentsVar), loopBody);
+    }
+    curr.add(tclLoop);
+    pointStack.push(loopBody);
 
     if (!isSync) {
       // pass in the array member and loop count var along with other used vars
       ArrayList<Variable> loopUsedVars = new ArrayList<Variable>(usedVariables);
       loopUsedVars.add(memberVar);
-      loopUsedVars.add(loopCountVar);
+      if (loopCountVar != null) loopUsedVars.add(loopCountVar);
       startAsync("foreach:" + foreach_num + ":body",
           new ArrayList<Variable>(), loopUsedVars, containersToRegister,
           true);

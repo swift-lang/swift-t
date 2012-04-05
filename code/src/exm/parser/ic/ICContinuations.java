@@ -387,7 +387,9 @@ public class ICContinuations {
 
     @Override
     public List<Variable> constructDefinedVars() {
-      return Arrays.asList(loopCounterVar, loopVar);
+      return loopCounterVar == null ?
+                Arrays.asList(loopVar) 
+              : Arrays.asList(loopCounterVar, loopVar);
     }
 
     @Override

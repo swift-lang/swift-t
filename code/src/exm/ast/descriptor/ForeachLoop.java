@@ -226,10 +226,7 @@ public class ForeachLoop {
       loopCountVal = context.createLocalValueVariable(Types.VALUE_INTEGER,
           loopCountVarName);
     } else {
-      loopCountVal = context.declareVariable(Types.VALUE_INTEGER,
-          Variable.LOOP_INDEX_VAR_PREFIX
-              + context.getFunctionContext().getCounterVal("loopvar"),
-          VariableStorage.STACK, DefType.LOCAL_COMPILER, null);
+      loopCountVal = null;
     }
 
     SwiftType arrayType = findArrayType(context, typecheck);

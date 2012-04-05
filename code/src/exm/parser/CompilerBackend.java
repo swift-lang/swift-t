@@ -212,7 +212,7 @@ public interface CompilerBackend {
    * 
    * @param arrayVar
    * @param memberVar
-   * @param loopCountVar
+   * @param loopCountVar counter variable, can be null
    * @param isSync if true, don't spawn off tasks to run iterations asynchronously
    * @param arrayClosed if true, assume array is already closed
    * @param usedVariables
