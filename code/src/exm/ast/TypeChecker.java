@@ -82,8 +82,7 @@ public class TypeChecker {
       String function = tree.child(0).getText();
       FunctionType ftype = context.lookupFunction(function);
       if (ftype == null) {
-        throw new UndefinedFunctionException(context, "function " + function
-            + " not defined before call to it");
+        throw UndefinedFunctionException.unknownFunction(context, function);
       }
       return ftype.getOutputs();
     case ExMParser.VARIABLE: {
@@ -94,8 +93,13 @@ public class TypeChecker {
       }
       SwiftType exprType = var.getType();
       if (Types.isScalarUpdateable(exprType)) {
-        // In expression context, updateables have same type as future
-        exprType = ScalarUpdateableType.asScalarFuture(exprType);
+        if (expected != null &&
+            expected.size() == 1 && Types.isScalarUpdateable(expected.get(0))) {
+          // Keep type as updateable
+        } else {
+          // by default, coerce to future
+          exprType = ScalarUpdateableType.asScalarFuture(exprType);
+        }
       }
       return Arrays.asList(exprType);
     }
@@ -397,7 +401,10 @@ public class TypeChecker {
         tree.child(i+1).clearTypeInfo();
       }
       SwiftType t = findSingleExprType(context, tree.child(i+1), desiredType);
-      if (!Types.isScalarFuture(t)) {
+      if(Types.isScalarUpdateable(t)) {
+        //TODO: workaround to treat updateables as regular futures
+        t = ScalarUpdateableType.asScalarFuture(t);
+      } else if (!Types.isScalarFuture(t)) {
         throw new TypeMismatchException(context,
             "Non-scalar argument of type " + t.toString() + " " +
             		"was used as an argument to operator "
@@ -525,13 +532,15 @@ public class TypeChecker {
     return concreteTypes;
   }
 
-  private SwiftType whichAlternativeType(InArgT funArgType, SwiftType varType) {
+  public SwiftType whichAlternativeType(InArgT funArgType, SwiftType varType) {
     for (SwiftType alt: funArgType.getAlternatives()) {
       if (varType.equals(alt)) {
         // Obviously ok if types are exactly the same
         return alt;
       } else if (Types.isReferenceTo(varType, alt)) {
         // We can block on reference, so we can transform type here
+        return alt;
+      } else if (Types.isUpdateableEquiv(varType, alt)) {
         return alt;
       }
     }
@@ -599,8 +608,7 @@ public class TypeChecker {
     //TODO: auto-convert int lit args to float lit args (this requires
     //      changes in called)
     if (ftype == null) {
-      throw new UndefinedFunctionException(context, "Function " + function
-          + " is not defined");
+      throw UndefinedFunctionException.unknownFunction(context, function);
     }
     checkFunctionOutputs(context, ftype.getOutputs(), oList,
           " in returns for call to function " + function);

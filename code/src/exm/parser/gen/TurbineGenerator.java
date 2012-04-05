@@ -1410,7 +1410,8 @@ public class TurbineGenerator implements CompilerBackend
       for (Variable v: usedVariables) {
         SwiftType t = v.getType();
         if (Types.isScalarFuture(t) || Types.isReference(t) ||
-            Types.isArray(t) || Types.isStruct(t)) {
+            Types.isArray(t) || Types.isStruct(t) ||
+            Types.isScalarUpdateable(t)) {
           // Just passing turbine id
           ruleTokens.add(varToExpr(v));
         } else if (Types.isScalarValue(t)) {

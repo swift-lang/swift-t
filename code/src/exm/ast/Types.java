@@ -2,6 +2,7 @@ package exm.ast;
 
 import java.util.*;
 
+import exm.ast.Types.SwiftType;
 import exm.parser.util.ParserRuntimeException;
 
 public class Types {
@@ -665,6 +666,11 @@ public class Types {
     return isReference(refType) && refType.getMemberType().equals(valType);
   }
 
+  public static boolean isUpdateableEquiv(SwiftType up, SwiftType future) {
+    return isScalarFuture(future) && isScalarUpdateable(up) && 
+                      future.getPrimitiveType() == up.getPrimitiveType();
+  }
+  
   public static SwiftType derefResultType(SwiftType future) {
     if (future.getStructureType() == StructureType.SCALAR_FUTURE) {
       return new ScalarValueType(future.getPrimitiveType());
@@ -743,5 +749,6 @@ public class Types {
       new ReferenceType(FUTURE_VOID);
   
   private static final String VALUE_SIGIL = "$";
+
 
 }

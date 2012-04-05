@@ -1257,7 +1257,7 @@ public class SwiftScript {
     backend.assignString(oVar, Oparg.createStringLit(value));
   }
 
-  private void assignVariable(Context context, SwiftAST tree, Variable oVar,
+  private void assignVariable(Context context, Variable oVar,
       Variable src) throws UserException {
     if (Types.isScalarUpdateable(src.getType())) {
       // Create a future alias to the updateable type so that
@@ -1907,7 +1907,7 @@ public class SwiftScript {
                 oVar.getName() + " to itself");
           
         }
-        assignVariable(context, tree, oVar, srcVar);
+        assignVariable(context, oVar, srcVar);
         break;
 
       case ExMParser.INT_LITERAL:
@@ -2468,6 +2468,11 @@ public class SwiftScript {
                                                           e.toString());
     }
 
+    FunctionType ftype = context.lookupFunction(f);
+    if (ftype == null) {
+      throw UndefinedFunctionException.unknownFunction(context, f);
+    }
+    
     // evaluate argument expressions left to right, creating temporaries
     ArrayList<Variable> argVars = new ArrayList<Variable>(
         tree.getChildCount() - 1);
@@ -2475,7 +2480,21 @@ public class SwiftScript {
     int argcount = arglist.getChildCount();
     for (int i = 0; i < argcount; i++) {
       SwiftAST argtree = arglist.child(i);
-      SwiftType argtype = typecheck.findSingleExprType(context, argtree);
+      InArgT expType = ftype.getInputs().get(Math.min(i, ftype.getInputs().size() - 1));
+      
+      
+      SwiftType argtype;
+      if (expType.getAltCount() == 1) {
+        argtype = typecheck.findSingleExprType(context, argtree, expType.getAlt(0));
+      } else {
+        argtype = typecheck.findSingleExprType(context, argtree);
+        SwiftType matching = typecheck.whichAlternativeType(expType, argtype);
+        if (matching != null && Types.isUpdateableEquiv(argtype, matching)) {
+          // Try to coerce
+          argtree.clearTypeInfo();
+          argtype = typecheck.findSingleExprType(context, argtree, matching);
+        }
+      }
 
       argVars.add(evalExprToTmp(context, argtree, argtype, false, renames));
     }
@@ -2510,8 +2529,9 @@ public class SwiftScript {
       }
 
       // Check to see that the current variable's storage is adequate
-      if ((!Types.isScalarUpdateable(var.getType())) && (
-              var.getStorage() == VariableStorage.STACK || (!storeInStack))) {
+      // Might need to convert type, can't do that here
+      if (var.getStorage() == VariableStorage.STACK || (!storeInStack)
+              && var.getType().equals(type)) {
         return var;
       }
     }
@@ -2590,8 +2610,15 @@ public class SwiftScript {
         waitVars.add(input);
         derefVars.add(derefed);
         realIList.add(derefed);
+      } else if (Types.isUpdateableEquiv(inputType, expType)) {
+        Variable copy = context.createLocalTmpVariable(
+                  ScalarUpdateableType.asScalarFuture(inputType));
+        initialiseVariable(waitContext, copy);
+        assignVariable(context, copy, input);
+        realIList.add(copy);
       } else {
-        throw new ParserRuntimeException("Shouldn't be here, don't know how to "
+        throw new ParserRuntimeException(context.getFileLine() + 
+                " Shouldn't be here, don't know how to "
             + " convert " + inputType.toString() + " to " + expType.toString());
       }
     }
@@ -2627,8 +2654,7 @@ public class SwiftScript {
       backend.compositeFunctionCall(function, realIList, oList, null, 
           !context.isSyncComposite(function));
     else
-      throw new UndefinedFunctionException(context, "undefined function: "
-          + function);
+      throw UndefinedFunctionException.unknownFunction(context, function);
 
     if (waitContext != null) {
       backend.endWaitStatement(new ArrayList<Variable>());
