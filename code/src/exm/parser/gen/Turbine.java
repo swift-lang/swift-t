@@ -3,6 +3,7 @@ package exm.parser.gen;
 
 import java.util.*;
 
+import exm.parser.ic.ICInstructions.Oparg;
 import exm.parser.util.ParserRuntimeException;
 import exm.tcl.*;
 
@@ -602,6 +603,14 @@ private static final Token F_CREF_CREATE_NESTED_STATIC
 
   public static Square divideInteger(Expression a, Expression b) {
     return new Square(new Expression[] {DIVIDE_INTEGER, a, b});
+  }
+
+  public static TclTree resetPriority() {
+    return new Command("turbine::reset_priority");
+  }
+
+  public static TclTree setPriority(Expression priority) {
+    return new Command("turbine::set_priority", Arrays.asList(priority));
   }
 
 

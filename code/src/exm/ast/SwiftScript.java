@@ -1007,7 +1007,8 @@ public class SwiftScript {
     backend.assignInt(one, Oparg.createIntLit(1));
     backend.builtinFunctionCall(
         Builtins.getArithBuiltin(PrimType.INTEGER, ExMParser.PLUS), 
-        Arrays.asList(loop.getLoopVar(), one), Arrays.asList(nextCounter));
+        Arrays.asList(loop.getLoopVar(), one), Arrays.asList(nextCounter),
+        null);
     backend.loopContinue(Arrays.asList(nextCond, nextCounter), 
         usedVariables, containersToRegister, blockingVars);
 
@@ -1301,23 +1302,23 @@ public class SwiftScript {
     if (Types.isScalarFuture(type)) {
       if (type.equals(Types.FUTURE_INTEGER)) {
         backend.builtinFunctionCall(Builtins.COPY_INTEGER, Arrays.asList(src),
-                                          Arrays.asList(dst));
+                                          Arrays.asList(dst), null);
       } else if (type.equals(Types.FUTURE_STRING)) {
         backend.builtinFunctionCall(Builtins.COPY_STRING, Arrays.asList(src),
-            Arrays.asList(dst));
+            Arrays.asList(dst), null);
       } else if (type.equals(Types.FUTURE_FLOAT)) {
         backend.builtinFunctionCall(Builtins.COPY_FLOAT, Arrays.asList(src),
-            Arrays.asList(dst));
+            Arrays.asList(dst), null);
       } else if (type.equals(Types.FUTURE_BOOLEAN)) {
         backend.builtinFunctionCall(Builtins.COPY_BOOLEAN, Arrays.asList(src),
-            Arrays.asList(dst));
+            Arrays.asList(dst), null);
       } else if (type.equals(Types.FUTURE_BLOB)) {
         backend.builtinFunctionCall(Builtins.COPY_BLOB, Arrays.asList(src),
-            Arrays.asList(dst));
+            Arrays.asList(dst), null);
       } else if (type.equals(Types.FUTURE_VOID)) {
         // Sort of silly, but might be needed
         backend.builtinFunctionCall(Builtins.COPY_VOID, Arrays.asList(src),
-            Arrays.asList(dst));
+            Arrays.asList(dst), null);
       } else {
         throw new ParserRuntimeException(context.getFileLine() +
             "Haven't implemented copy for scalar type " +
@@ -2067,7 +2068,7 @@ public class SwiftScript {
       iList.add(arg);
     }
 
-    backend.builtinFunctionCall(builtin, iList, oList);
+    backend.builtinFunctionCall(builtin, iList, oList, null);
   }
   
   private void updateStmt(Context context, SwiftAST tree) 
@@ -2366,10 +2367,10 @@ public class SwiftScript {
       Variable stepV = evalExprToTmp(context, ar.getStep(), Types.FUTURE_INTEGER, 
           false, null);
       backend.builtinFunctionCall("rangestep", Arrays.asList(startV, endV, stepV), 
-          Arrays.asList(oVar));
+          Arrays.asList(oVar), null);
     } else {
       backend.builtinFunctionCall("range", Arrays.asList(startV, endV), 
-          Arrays.asList(oVar));
+          Arrays.asList(oVar), null);
     }
   }
 
@@ -2456,6 +2457,7 @@ public class SwiftScript {
    */
   private void callFunctionExpression(Context context, SwiftAST tree,
       List<Variable> oList, Map<String, String> renames) throws UserException {
+    assert(tree.getChildCount() >= 2 && tree.getChildCount() <= 3);
     String f = tree.child(0).getText();
     try {
       // If this is an assert statement, disable it
@@ -2468,6 +2470,8 @@ public class SwiftScript {
                                                           e.toString());
     }
 
+    SwiftAST arglist = tree.child(1);
+    
     FunctionType ftype = context.lookupFunction(f);
     if (ftype == null) {
       throw UndefinedFunctionException.unknownFunction(context, f);
@@ -2475,8 +2479,7 @@ public class SwiftScript {
     
     // evaluate argument expressions left to right, creating temporaries
     ArrayList<Variable> argVars = new ArrayList<Variable>(
-        tree.getChildCount() - 1);
-    SwiftAST arglist = tree.child(1);
+            arglist.getChildCount());
     int argcount = arglist.getChildCount();
     for (int i = 0; i < argcount; i++) {
       SwiftAST argtree = arglist.child(i);
@@ -2498,8 +2501,37 @@ public class SwiftScript {
 
       argVars.add(evalExprToTmp(context, argtree, argtype, false, renames));
     }
+    
+    // Process priority after arguments have been evaluated, so that
+    // the argument evaluation is outside the wait statement
+    Variable priorityVal = null;
+    boolean openedWait = false;
+    List<Variable> waitContainers = null;
+    Context callContext = context;
+    if (tree.getChildCount() == 3) {
+      SwiftAST priorityT = tree.child(2);
+      Variable priorityFuture = evalExprToTmp(context, priorityT,
+                            Types.FUTURE_INTEGER, false, renames);
+      waitContainers = new ArrayList<Variable>(0); // TODO: Do we need these?
+      //TODO: used variables: any input or output args
+      ArrayList<Variable> usedVariables = new ArrayList<Variable>();
+      usedVariables.addAll(argVars);
+      usedVariables.addAll(oList);
+      
+      backend.startWaitStatement(context.getFunctionContext().constructName("priority-wait"), 
+                        Arrays.asList(priorityFuture), usedVariables, waitContainers, false);
+      openedWait = true;
+      callContext = new LocalContext(context);
+      priorityVal = retrieveScalarVal(callContext, priorityFuture);
+      
+    }
+    
     // callFunction will check that argument types match function
-    callFunction(context, f, oList, argVars);
+    callFunction(context, f, oList, argVars, priorityVal);
+    if (openedWait) {
+      backend.endWaitStatement(waitContainers);
+    }
+  
   }
 
   /**
@@ -2579,7 +2611,7 @@ public class SwiftScript {
   }
 
   private void callFunction(Context context, String function,
-      List<Variable> oList, List<Variable> iList)
+      List<Variable> oList, List<Variable> iList, Variable priorityVal)
       throws UndefinedTypeException, UserException {
     context.checkDefinedVariables(iList);
 
@@ -2648,11 +2680,12 @@ public class SwiftScript {
     }
 
 
+    Oparg priority = priorityVal != null ? Oparg.createVar(priorityVal) : null;
     if (context.isBuiltinFunction(function))
-      backend.builtinFunctionCall(function, realIList, oList);
+      backend.builtinFunctionCall(function, realIList, oList, priority);
     else if (context.isCompositeFunction(function))
       backend.compositeFunctionCall(function, realIList, oList, null, 
-          !context.isSyncComposite(function));
+          !context.isSyncComposite(function), priority);
     else
       throw UndefinedFunctionException.unknownFunction(context, function);
 

@@ -488,8 +488,12 @@ literal:
 bool_lit: TRUE | FALSE
     ;
 
-function_call:
-            f=ID a=expr_argument_list -> ^( CALL_FUNCTION $f $a )
+function_call: 
+             priority? f=ID a=expr_argument_list -> ^( CALL_FUNCTION $f $a priority?)
+    ;
+
+priority:
+            '@' expr '@' -> expr
     ;
 
 expr_argument_list:

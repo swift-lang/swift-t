@@ -345,29 +345,33 @@ public class SwiftICGenerator implements CompilerBackend {
 
   @Override
   public void builtinFunctionCall(String function, List<Variable> inputs,
-      List<Variable> outputs) {
+      List<Variable> outputs, Oparg priority) {
+    assert(priority == null || priority.isImmediateInt());
     currBlock().addInstruction(
         FunctionCallInstruction.createBuiltinCall(
-            function, inputs, outputs));
+            function, inputs, outputs, priority));
   }
 
   @Override
   public void compositeFunctionCall(String function, List<Variable> inputs,
-      List<Variable> outputs, List<Boolean> blockOn, boolean async) {
+      List<Variable> outputs, List<Boolean> blockOn, boolean async, 
+      Oparg priority) {
+    assert(priority == null || priority.isImmediateInt());
     if (blockOn != null) {
       throw new ParserRuntimeException("Swift IC generator doesn't support " +
       		" blocking on composite function inputs");
     }
     currBlock().addInstruction(
           FunctionCallInstruction.createCompositeCall(
-              function, inputs, outputs, async));
+              function, inputs, outputs, async, priority));
   }
 
   @Override
   public void appFunctionCall(String function, List<Variable> inputs,
-      List<Variable> outputs) {
+      List<Variable> outputs, Oparg priority) {
+    assert(priority == null || priority.isImmediateInt());
     currBlock().addInstruction(
-          FunctionCallInstruction.createAppCall(function, inputs, outputs));
+          FunctionCallInstruction.createAppCall(function, inputs, outputs, priority));
   }
 
 

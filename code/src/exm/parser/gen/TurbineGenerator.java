@@ -743,30 +743,20 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void appFunctionCall(String function,
-                              List<Variable> inputs,
-                              List<Variable> outputs)
-  {
+              List<Variable> inputs, List<Variable> outputs, Oparg priority) {
+    assert(priority == null || priority.isImmediateInt());
     throw new ParserRuntimeException("appFunctionCall not implemented");
-    //    logger.debug("call app: " + function);
-    //    String iString = listOfTclVariables(inputs);
-    //    String oString = listOfTclVariables(outputs);
-    //    return function + " " + oString + " " + iString + '\n';
   }
 
   @Override
   public void builtinFunctionCall(String function,
-                                  List<Variable> inputs,
-                                  List<Variable> outputs)
+          List<Variable> inputs, List<Variable> outputs, Oparg priority)
   {
+    assert(priority == null || priority.isImmediateInt());
     logger.debug("call builtin: " + function);
-    //    String iString = listOfTclVariables(inputs);
-    //    String oString = listOfTclVariables(outputs);
-    //    Tok"turbine::"+function + " " +
-    //           oString + " " + iString + '\n';
 
     TclList iList = tclListOfVariables(inputs);
     TclList oList = tclListOfVariables(outputs);
-    // return function + " $stack " + oString + " " + iString + '\n';
     TCLFunRef tclf = builtinSymbols.get(function);
     if (tclf == null) {
       //should have all builtins in symbols
@@ -776,16 +766,17 @@ public class TurbineGenerator implements CompilerBackend
     Token f = new Token(tclf.pkg + "::" + tclf.symbol);
     Value s = new Value(Turbine.LOCAL_STACK_NAME);
     Command c = new Command(f, s, oList, iList);
+    
+    setPriority(priority);
     pointStack.peek().add(c);
+    clearPriority(priority);
   }
 
   @Override
   public void compositeFunctionCall(String function,
-                                    List<Variable> inputs,
-                                    List<Variable> outputs,
-                                    List<Boolean> blocking,
-                                    boolean async)
-  {
+              List<Variable> inputs, List<Variable> outputs,
+              List<Boolean> blocking, boolean async, Oparg priority)  {
+    assert(priority == null || priority.isImmediateInt());
     logger.debug("call composite: " + function);
     TclList iList = tclListOfVariables(inputs);
     TclList oList = tclListOfVariables(outputs);
@@ -798,6 +789,8 @@ public class TurbineGenerator implements CompilerBackend
         alreadyBlocking.add(v.getName());
       }
     }
+    
+    setPriority(priority);
     if (async) {
       pointStack.peek().add(Turbine.callComposite(COMP_FN_PREFIX + function,
                             oList, iList, tclListOfVariables(blockOn)));
@@ -806,6 +799,20 @@ public class TurbineGenerator implements CompilerBackend
       assert(blocking.size() == 0);
       pointStack.peek().add(Turbine.callCompositeSync(COMP_FN_PREFIX + function,
           oList, iList));
+    }
+    clearPriority(priority);
+  }
+
+  private void clearPriority(Oparg priority) {
+    if (priority != null) {
+      pointStack.peek().add(Turbine.resetPriority());
+    }
+  }
+
+  private void setPriority(Oparg priority) {
+    if (priority != null) {
+      logger.trace("priority: " + priority);
+      pointStack.peek().add(Turbine.setPriority(opargToExpr(priority)));
     }
   }
 

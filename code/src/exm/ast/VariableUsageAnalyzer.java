@@ -500,12 +500,16 @@ class VariableUsageAnalyzer {
               + ":" + line);*/
       switch (token) {
         case ExMParser.CALL_FUNCTION:
-          assert(node.getChildCount() == 2);
+          assert(node.getChildCount() >= 2 && node.getChildCount() <= 3);
           // Walk all the arguments
           SwiftAST argsTree = node.child(1);
           for (int i=0; i < argsTree.getChildCount(); i++) {
             SwiftAST argTree = argsTree.child(i);
             exprNodes.push(argTree);
+          }
+          if (node.getChildCount() == 3) {
+            // Priority
+            exprNodes.push(node.child(2));
           }
           break;
 

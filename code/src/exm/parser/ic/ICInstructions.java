@@ -1435,9 +1435,10 @@ public class ICInstructions {
     private final List<Variable> inputs;
     private final List<Boolean> closedInputs; // which inputs are closed
     private final String functionName;
+    private final Oparg priority;
   
     private FunctionCallInstruction(Opcode op, String functionName,
-        List<Variable> inputs, List<Variable> outputs) {
+        List<Variable> inputs, List<Variable> outputs, Oparg priority) {
       super(op);
       if (op != Opcode.CALL_BUILTIN && op != Opcode.CALL_COMPOSITE &&
           op != Opcode.CALL_APP && op != Opcode.CALL_COMPOSITE_SYNC) {
@@ -1445,6 +1446,7 @@ public class ICInstructions {
             + " instruction with invalid opcode");
       }
       this.functionName = functionName;
+      this.priority = priority;
       this.outputs = new ArrayList<Variable>();
       this.outputs.addAll(outputs);
       this.inputs = new ArrayList<Variable>();
@@ -1464,14 +1466,15 @@ public class ICInstructions {
     }
   
     public static FunctionCallInstruction createAppCall(
-        String functionName, List<Variable> inputs, List<Variable> outputs) {
+        String functionName, List<Variable> inputs, List<Variable> outputs,
+        Oparg priority) {
       return new FunctionCallInstruction(Opcode.CALL_APP, functionName,
-          inputs, outputs);
+          inputs, outputs, priority);
     }
   
     public static FunctionCallInstruction createCompositeCall(
         String functionName, List<Variable> inputs, List<Variable> outputs,
-        boolean async) {
+        boolean async, Oparg priority) {
       Opcode op;
       if (async) {
         op = Opcode.CALL_COMPOSITE;
@@ -1479,13 +1482,14 @@ public class ICInstructions {
         op = Opcode.CALL_COMPOSITE_SYNC;
       }
       return new FunctionCallInstruction(op, functionName,
-          inputs, outputs);
+          inputs, outputs, priority);
     }
   
     public static FunctionCallInstruction createBuiltinCall(
-        String functionName, List<Variable> inputs, List<Variable> outputs) {
+        String functionName, List<Variable> inputs, List<Variable> outputs,
+        Oparg priority) {
       return new FunctionCallInstruction(Opcode.CALL_BUILTIN, functionName,
-          inputs, outputs);
+          inputs, outputs, priority);
     }
   
     @Override
@@ -1500,6 +1504,9 @@ public class ICInstructions {
         result += " " + v.getName();
       }
       result += " ]";
+      if (priority != null) {
+        result += " priority=" + priority.toString(); 
+      }
       return result;
     }
   
@@ -1507,10 +1514,10 @@ public class ICInstructions {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       switch(this.op) {
       case CALL_APP:
-        gen.appFunctionCall(functionName, inputs, outputs);
+        gen.appFunctionCall(functionName, inputs, outputs, priority);
         break;
       case CALL_BUILTIN:
-        gen.builtinFunctionCall(functionName, inputs, outputs);
+        gen.builtinFunctionCall(functionName, inputs, outputs, priority);
         break;
       case CALL_COMPOSITE_SYNC:
       case CALL_COMPOSITE:
@@ -1522,7 +1529,7 @@ public class ICInstructions {
           needToBlock.add(blocking.get(i) && (!this.closedInputs.get(i)));
         }
         gen.compositeFunctionCall(functionName, inputs, outputs, needToBlock,
-                                            async);
+                                            async, priority);
         break;
       default:
         throw new ParserRuntimeException("Huh?");
@@ -1545,7 +1552,11 @@ public class ICInstructions {
   
     @Override
     public List<Oparg> getInputs() {
-      return Oparg.fromVarList(inputs);
+      List<Oparg> inputVars = Oparg.fromVarList(inputs);
+      if (priority != null) {
+        inputVars.add(priority);
+      }
+      return inputVars;
     }
   
     @Override
@@ -1839,7 +1850,8 @@ public class ICInstructions {
           // Change it to a copy: should make it easier to further optimize
           if ((functionName.equals("or") && !arg1) ||
               (functionName.equals("and") && arg1)) {
-            return createBuiltinCall(Builtins.COPY_BOOLEAN, varArgs, outputs);
+            return createBuiltinCall(Builtins.COPY_BOOLEAN, varArgs, outputs,
+                    null);
           } 
         }
       }
@@ -1968,7 +1980,8 @@ public class ICInstructions {
     public Instruction clone() {
       // Variables are immutable so just need to clone lists
       return new FunctionCallInstruction(op, functionName, 
-          new ArrayList<Variable>(inputs), new ArrayList<Variable>(outputs));
+          new ArrayList<Variable>(inputs), new ArrayList<Variable>(outputs),
+          priority);
     }
   }
   

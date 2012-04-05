@@ -78,23 +78,22 @@ public interface CompilerBackend {
   public abstract void assignBool(Variable target, Oparg src);
   public abstract void retrieveBool(Variable target, Variable source);
 
-  /** NOT UPDATED */
-
   public abstract void appFunctionCall(String function, List<Variable> inputs,
-      List<Variable> outputs);
+      List<Variable> outputs, Oparg priority);
 
   /**
    * NOTE: all built-ins should be defined before composites
    * @param function
    * @param inputs
    * @param outputs
+   * @param priorityVal 
    */
   public abstract void builtinFunctionCall(String function,
-      List<Variable> inputs, List<Variable> outputs);
+      List<Variable> inputs, List<Variable> outputs, Oparg priority);
 
   public abstract void compositeFunctionCall(String function,
       List<Variable> inputs, List<Variable> outputs, List<Boolean> blockOn, 
-      boolean async);
+      boolean async, Oparg priority);
 
   /**
    * lookup structVarName.structField and copy to oVarName
