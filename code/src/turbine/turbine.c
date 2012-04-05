@@ -464,7 +464,7 @@ turbine_priority(turbine_transform_id id, int* priority)
     return TURBINE_ERROR_NOT_FOUND;
 
   *priority = T->priority;
-  DEBUG_TURBINE("priority: {%li} => %i\n", T->priority);
+  DEBUG_TURBINE("priority: {%li} => %i\n", T->id, T->priority);
   return TURBINE_SUCCESS;
 }
 
