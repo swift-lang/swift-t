@@ -273,7 +273,7 @@ turbine_stats_walltime()
   then
     print "turbine_stats_walltime(): Not given: LOG"
   fi
-  grep walltime ${LOG} | clm 4 | avgz
+  grep walltime ${LOG} | zclm -1 | avg
 }
 
 # Local variables:
