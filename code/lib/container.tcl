@@ -439,6 +439,19 @@ namespace eval turbine {
         set s [ container_list $container ]
         set_string $result $s
     }
+    
+    # When container is closed, count the members 
+    # result: a turbine integer
+    proc container_size { stack result container } {
+
+        rule "container_size-$container" $container $turbine::LOCAL \
+            "container_size_body $result $container"
+    }
+
+    proc container_size_body { result container } {
+        set sz [ adlb::enumerate $container count all 0 ]
+        set_integer $result $sz
+    }
 
     # Sum all of the values in a container of integers
     # inputs: [ list c r ]
@@ -448,19 +461,22 @@ namespace eval turbine {
         set container [ lindex $inputs 0 ]
 
         rule "sum-$container" $container $turbine::LOCAL \
-            "sum_integer_body $stack $container $result 0 0"
+            "sum_integer_body $stack $container $result 0 0 -1"
     }
 
-    proc sum_integer_body { stack container result accum next_index } {
+    proc sum_integer_body { stack container result accum next_index n } {
         debug "sum_integer $container => $result"
-        set keys [ container_list $container ]
-        # TODO: could divide and conquer instead of
-        #       doing linear search
-        set n [ llength $keys ]
+        set CHUNK_SIZE 1024
+        # TODO: could divide and conquer instead of doing linear search
+        if { $n == -1 } {
+          set n [ adlb::enumerate $container count all 0 ]
+        }
         set i $next_index
         while { $i < $n } {
-            set key [ lindex $keys $i ]
-            set turbine_id [ container_get $container $key ]
+          set this_chunk_size [ expr min( $CHUNK_SIZE, $n - $i ) ]
+          set members [ adlb::enumerate $container members $this_chunk_size $i ]
+          #puts "members of $container $i $this_chunk_size : $members"
+          foreach turbine_id $members {
             #puts "turbine_id: $turbine_id"
             if { [ adlb::exists $turbine_id ] } {
                 # add to the sum
@@ -471,12 +487,12 @@ namespace eval turbine {
             } else {
                 # block until the next turbine id is finished,
                 #   then continue running
-
                 rule "sum-$container" $turbine_id $turbine::LOCAL \
-                    "sum_integer_body $stack $container $result $accum $i"
+                    "sum_integer_body $stack $container $result $accum $i $n"
                 # return immediately without setting result
                 return
             }
+          }
         }
         # If we get out of loop, we're done
         set_integer $result $accum
@@ -516,59 +532,62 @@ namespace eval turbine {
         rule "stats-body-$container" $container $turbine::LOCAL \
             "stats_body $container $n_out $sum_out $mean_out $M2_out \
              $samp_std_out $pop_std_out $max_out $min_out \
-             0.0 0.0 0.0 NOMIN NOMAX 0"
+             0.0 0.0 0.0 NOMIN NOMAX 0 -1"
     }
 
     # Calculate mean, standard deviation, max, min for array of float or int
     proc stats_body { container n_out sum_out mean_out M2_out \
                 samp_std_out pop_std_out\
                 max_out min_out sum_accum mean_accum M2_accum min_accum\
-                max_accum next_index } {
+                max_accum next_index n } {
       debug "stats_body $container"
-      set keys [ container_list $container ]
-      # TODO: could divide and conquer instead of doing linear search
-      set n [ llength $keys ]
+      set CHUNK_SIZE 1024
+      if { $n == -1 } {
+        set n [ adlb::enumerate $container count all 0 ]
+      }
       set i $next_index
       while { $i < $n } {
-        set key [ lindex $keys $i ]
-        set turbine_id [ container_get $container $key ]
-        #puts "turbine_id: $turbine_id"
-        if { [ adlb::exists $turbine_id ] } {
-          # retrieve value and make sure it's floating point
-          # so we don't get surprised by integer division
-          set x [ get $turbine_id ]
-          set x [ expr double($x) ]
-          puts "c\[$key\] = $x"
-          if { $sum_out != 0 } {
-            # avoid potential of overflow
-            set sum_accum [ expr $sum_accum $x ]
-          }
-          if { $min_accum == {NOMIN} } {
-            set min_accum $x
+        set this_chunk_size [ expr min( $CHUNK_SIZE, $n - $i ) ]
+        set members [ adlb::enumerate $container members $this_chunk_size $i ]
+        foreach turbine_id $members {
+          #puts "turbine_id: $turbine_id"
+          if { [ adlb::exists $turbine_id ] } {
+            # retrieve value and make sure it's floating point
+            # so we don't get surprised by integer division
+            set x [ get $turbine_id ]
+            set x [ expr double($x) ]
+            puts "c\[$i\] = $x"
+            if { $sum_out != 0 } {
+              # avoid potential of overflow
+              set sum_accum [ expr $sum_accum $x ]
+            }
+            if { $min_accum == {NOMIN} } {
+              set min_accum $x
+            } else {
+              set min_accum [ expr min($min_accum, $x) ]
+            }
+            if { $max_accum == {NOMAX} } {
+              set max_accum $x
+            } else {
+              set max_accum [ expr max($max_accum, $x) ]
+            }
+            # Note: use knuth's online algorithm for mean and std
+            set delta [ expr $x - $mean_accum ]
+            set mean_accum [ expr $mean_accum + ( $delta / ($i + 1) ) ]
+            puts "mean_accum = $mean_accum"
+            set M2_accum [ expr $M2_accum + $delta*($x - $mean_accum)]
+            incr i
           } else {
-            set min_accum [ expr min($min_accum, $x) ]
+            # block until the next turbine id is finished then continue running
+            rule "stats_body-$container" $turbine_id $turbine::LOCAL \
+              "stats_body $container $n_out $sum_out \
+                 $mean_out $M2_out \
+                 $samp_std_out $pop_std_out $max_out $min_out \
+                 $sum_accum $mean_accum $M2_accum \
+                 $min_accum $max_accum $i $n"
+            # return immediately without setting result
+            return
           }
-          if { $max_accum == {NOMAX} } {
-            set max_accum $x
-          } else {
-            set max_accum [ expr max($max_accum, $x) ]
-          }
-          # Note: use knuth's online algorithm for mean and std
-          set delta [ expr $x - $mean_accum ]
-          set mean_accum [ expr $mean_accum + ( $delta / ($i + 1) ) ]
-          puts "mean_accum = $mean_accum"
-          set M2_accum [ expr $M2_accum + $delta*($x - $mean_accum)]
-          incr i
-        } else {
-          # block until the next turbine id is finished then continue running
-          rule "stats_body-$container" $turbine_id $turbine::LOCAL \
-            "stats_body $container $n_out $sum_out \
-               $mean_out $M2_out \
-               $samp_std_out $pop_std_out $max_out $min_out \
-               $sum_accum $mean_accum $M2_accum \
-               $min_accum $max_accum $next_index"
-          # return immediately without setting result
-          return
         }
       }
       # If we get out of loop, we're done
