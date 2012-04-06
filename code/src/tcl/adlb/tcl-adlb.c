@@ -577,11 +577,12 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /**
    usage:
-   adlb::enumerate <id> subscripts|members|dict <count>|all <offset>
+   adlb::enumerate <id> subscripts|members|dict|count <count>|all <offset>
 
    subscripts: return list of subscript strings
    members: return list of member TDs
    dict: return dict mapping subscripts to TDs
+   count: return integer count of container elements
  */
 static int
 ADLB_Enumerate_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -630,7 +631,12 @@ ADLB_Enumerate_Cmd(ClientData cdata, Tcl_Interp *interp,
     subscripts = NULL+1;
     member_ids = NULL+1;
   }
-  else
+  else if (!strcmp(token, "count"))
+  {
+    subscripts = NULL;
+    member_ids = NULL;
+  }
+  else 
   {
     tcl_condition_failed(interp, objv[0], "unknown token!");
     return TCL_ERROR;
@@ -671,6 +677,10 @@ ADLB_Enumerate_Cmd(ClientData cdata, Tcl_Interp *interp,
       Tcl_ListObjIndex(interp, s, i, &p);
       Tcl_DictObjPut(interp, result, p, m[i]);
     }
+  }
+  else if (!strcmp(token, "count"))
+  {
+    result = Tcl_NewLongObj(actual);
   }
   else
     // Cannot get here

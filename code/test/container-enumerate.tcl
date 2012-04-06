@@ -35,6 +35,9 @@ proc rules { } {
 
     set L [ adlb::enumerate $c dict 2 0 ]
     puts "dict: $L"
+    
+    set n [ adlb::enumerate $c count all 0 ]
+    puts "count: $n"
 }
 
 turbine::defaults

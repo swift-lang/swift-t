@@ -14,5 +14,6 @@ bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 grep -q "subscripts: 0 1" ${OUTPUT} || exit 1
 grep -q "members: 3 4"    ${OUTPUT} || exit 1
 grep -q "dict: 0 3 1 4"   ${OUTPUT} || exit 1
+grep -q "count: 2"   ${OUTPUT} || exit 1
 
 exit 0
