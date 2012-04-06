@@ -264,9 +264,11 @@ public class ICContinuations {
     private Variable loopCounterVar;
     private Variable loopVar;
     private final boolean isSync;
+    private final int splitDegree;
   
     private ForeachLoop(Block block, Variable arrayVar, Variable loopVar,
-        Variable loopCounterVar, boolean isSync, boolean arrayClosed,
+        Variable loopCounterVar, boolean isSync, int splitDegree, 
+        boolean arrayClosed,
         List<Variable> usedVariables, List<Variable> containersToRegister) {
       super(block, usedVariables, containersToRegister);
       this.arrayVar = arrayVar;
@@ -274,19 +276,21 @@ public class ICContinuations {
       this.loopCounterVar = loopCounterVar;
       this.isSync = isSync;
       this.arrayClosed = arrayClosed;
+      this.splitDegree = splitDegree;
     }
     
     public ForeachLoop(Variable arrayVar, Variable loopVar,
-        Variable loopCounterVar, boolean isSync, boolean arrayClosed,
-        List<Variable> usedVariables, List<Variable> containersToRegister) {
+        Variable loopCounterVar, boolean isSync, int splitDegree, 
+        boolean arrayClosed, List<Variable> usedVariables,
+        List<Variable> containersToRegister) {
       this(new Block(BlockType.FOREACH_BODY), arrayVar, loopVar, loopCounterVar,
-          isSync, arrayClosed, usedVariables, containersToRegister);
+          isSync, splitDegree, arrayClosed, usedVariables, containersToRegister);
     }
   
     @Override
     public ForeachLoop clone() {
       return new ForeachLoop(this.loopBody.clone(),
-          arrayVar, loopVar, loopCounterVar, isSync, arrayClosed,
+          arrayVar, loopVar, loopCounterVar, isSync, splitDegree, arrayClosed,
           new ArrayList<Variable>(usedVariables), 
           new ArrayList<Variable>(containersToRegister));
     }
@@ -300,9 +304,10 @@ public class ICContinuations {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
       gen.startForeachLoop(arrayVar, loopVar, loopCounterVar, isSync, 
-                arrayClosed, usedVariables, containersToRegister);
+                splitDegree, arrayClosed, usedVariables, containersToRegister);
       this.loopBody.generate(logger, gen, info);
-      gen.endForeachLoop(isSync, arrayClosed, containersToRegister);
+      gen.endForeachLoop(isSync, splitDegree, arrayClosed,
+                                          containersToRegister);
     }
   
     @Override

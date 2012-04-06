@@ -101,6 +101,8 @@ public class ForeachLoop {
     int unrollFactor = 1;
     int splitDegree = -1; // Don't split by default
 
+    
+    int annotationCount = 0;
     for (int i = tree.getChildCount() - 1; i >= 0; i--) {
       SwiftAST subtree = tree.child(i);
       if (subtree.getType() == ExMParser.ANNOTATION) {
@@ -118,6 +120,7 @@ public class ForeachLoop {
                 } else {
                   splitDegree = val;
                 }
+                annotationCount++;
               }
             }
             if (!posint) {
@@ -132,16 +135,16 @@ public class ForeachLoop {
         } else {
           assert (subtree.getChildCount() == 1);
           annotations.add(subtree.child(0).getText());
+          annotationCount++;
         }
       } else {
         break;
       }
     }
 
-    int childCount = tree.getChildCount() - annotations.size();
-    if (childCount < 3 || childCount > 4) {
-      throw new ParserRuntimeException("foreach: child count != 4");
-    }
+    int childCount = tree.getChildCount() - annotationCount;
+    assert(childCount == 3 || childCount == 4);
+    
     SwiftAST arrayVarTree = tree.child(0);
     SwiftAST loopBodyTree = tree.child(1);
     SwiftAST memberVarTree = tree.child(2);

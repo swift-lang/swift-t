@@ -29,9 +29,16 @@ import exm.tcl.*;
 public class TurbineGenerator implements CompilerBackend
 {
 
-  private static final String TCLTMP_RANGE_INC = "tcltmp:inc";
-  private static final String TCLTMP_RANGE_HI = "tcltmp:hi";
+  private static final String TCLTMP_SPLITLEN = "tcltmp:splitlen";
+  private static final String TCLTMP_CONTAINER_SIZE = "tcltmp:container_sz";
+  private static final String TCLTMP_ARRAY_CONTENTS = "tcltmp:contents";
   private static final String TCLTMP_RANGE_LO = "tcltmp:lo";
+  private static final Value TCLTMP_RANGE_LO_V = new Value(TCLTMP_RANGE_LO);
+  private static final String TCLTMP_RANGE_HI = "tcltmp:hi";
+  private static final Value TCLTMP_RANGE_HI_V = new Value(TCLTMP_RANGE_HI);
+  private static final String TCLTMP_RANGE_INC = "tcltmp:inc";
+  private static final Value TCLTMP_RANGE_INC_V = new Value(TCLTMP_RANGE_INC);
+  
   private static final String MAIN_FUNCTION_NAME = "__swiftmain";
   private static final String CONSTINIT_FUNCTION_NAME = "__consts";
 
@@ -1486,7 +1493,8 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void startForeachLoop(Variable arrayVar, Variable memberVar,
-                    Variable loopCountVar, boolean isSync, boolean arrayClosed,
+                    Variable loopCountVar, boolean isSync, int splitDegree, 
+                    boolean arrayClosed,
           List<Variable> usedVariables, List<Variable> containersToRegister) {
     assert(Types.isArray(arrayVar.getType()));
     assert(loopCountVar == null ||
@@ -1495,25 +1503,60 @@ public class TurbineGenerator implements CompilerBackend
     int foreach_num = foreach_counter++;
     String procName = "foreach:" + foreach_num;
 
-    ArrayList<Variable> passIn = new ArrayList<Variable>(usedVariables);
-    if (!passIn.contains(arrayVar)) {
-      passIn.add(arrayVar);
-    }
     if (!arrayClosed) {
-        startAsync(procName, Arrays.asList(arrayVar), passIn,
+      ArrayList<Variable> passIn = new ArrayList<Variable>(usedVariables);
+      if (!passIn.contains(arrayVar)) {
+        passIn.add(arrayVar);
+      }
+      startAsync(procName, Arrays.asList(arrayVar), passIn,
                   containersToRegister, false);
     }
-    Sequence curr = pointStack.peek();
-
-    String contentsVar ="tcltmp:contents";
-    Value tclArrayVar = varToExpr(arrayVar);
-    boolean haveKeys = loopCountVar != null;
-    curr.add(Turbine.containerContents(contentsVar, varToExpr(arrayVar), haveKeys));
     
+    boolean haveKeys = loopCountVar != null;
+    String contentsVar = TCLTMP_ARRAY_CONTENTS;
+    
+    if (splitDegree <= 0) {
+      pointStack.peek().add(Turbine.containerContents(contentsVar, 
+                          varToExpr(arrayVar), haveKeys));
+    } else {
+      // load array size
+      pointStack.peek().add(Turbine.containerSize(TCLTMP_CONTAINER_SIZE, 
+                                        varToExpr(arrayVar)));
+      Expression lastIndex = Square.arithExpr(new Value(TCLTMP_CONTAINER_SIZE), 
+            new Token("-"), new LiteralInt(1));
+      
+      // recursively split the range
+      ArrayList<Variable> splitUsedVars = new ArrayList<Variable>(
+          usedVariables);
+      splitUsedVars.add(arrayVar);
+      startRangeSplit(procName, splitUsedVars, containersToRegister, 
+            splitDegree, new LiteralInt(0), lastIndex, new LiteralInt(1));
+      
+      // need to find the length of this split since that is what the turbine
+      //  call wants
+      pointStack.peek().add(new SetVariable(TCLTMP_SPLITLEN,
+              Square.arithExpr(new Token(
+              String.format("${%s} - ${%s} + 1", TCLTMP_RANGE_HI,
+                                                 TCLTMP_RANGE_LO)))));
+              
+      // load the subcontainer
+      pointStack.peek().add(Turbine.containerContents(contentsVar, 
+          varToExpr(arrayVar), haveKeys, new Value(TCLTMP_SPLITLEN),
+          TCLTMP_RANGE_LO_V));
+      
+    }
+    startForeachInner(new Value(contentsVar), memberVar, loopCountVar, 
+        isSync, usedVariables, containersToRegister, foreach_num);
+  }
+
+  private void startForeachInner(Value arrayContents,
+      Variable memberVar, Variable loopCountVar,
+      boolean isSync, List<Variable> usedVariables,
+      List<Variable> containersToRegister, int foreach_num) {
+    Sequence curr = pointStack.peek();
+    boolean haveKeys = loopCountVar != null;
     Sequence loopBody = new Sequence();
-
-
-
+    
     String tclMemberVar = prefixVar(memberVar.getName());
     String tclCountVar = haveKeys ? prefixVar(loopCountVar.getName()) : null;
     
@@ -1521,10 +1564,9 @@ public class TurbineGenerator implements CompilerBackend
     Sequence tclLoop;
     if (haveKeys) {
       tclLoop = new DictFor(new Token(tclCountVar), new Token(tclMemberVar), 
-                      new Value(contentsVar), loopBody);
+                      arrayContents, loopBody);
     } else {
-      tclLoop = new ForEach(new Token(tclMemberVar),
-                            new Value(contentsVar), loopBody);
+      tclLoop = new ForEach(new Token(tclMemberVar), arrayContents, loopBody);
     }
     curr.add(tclLoop);
     pointStack.push(loopBody);
@@ -1541,25 +1583,20 @@ public class TurbineGenerator implements CompilerBackend
   }
 
 
-  private Value varToExpr(Variable v) {
-    return new Value(prefixVar(v.getName()));
-  }
-
-  private Expression opargToExpr(Oparg in) {
-    switch (in.getType()) {
-    case INTVAL:
-      return new LiteralInt(in.getIntLit());
-    case BOOLVAL:
-      return new LiteralInt(in.getBoolLit() ? 1 : 0);
-    case STRINGVAL:
-      return new TclString(in.getStringLit(), true);
-    case VAR:
-      return new Value(prefixVar(in.getVariable().getName()));
-    case FLOATVAL:
-      return new LiteralFloat(in.getFloatLit());
-    default:
-      throw new ParserRuntimeException("Unknown oparg type: "
-          + in.getType().toString());
+  @Override
+  public void endForeachLoop(boolean isSync, int splitDegree, 
+          boolean arrayClosed, List<Variable> containersToRegister) {
+    assert(pointStack.size() >= 2);
+    if (!isSync) {
+      assert(pointStack.size() >= 3);
+      endAsync(containersToRegister); // Swift loop body
+    }
+    pointStack.pop(); // tclloop body
+    if (splitDegree > 0) {
+      endRangeSplit();
+    }
+    if (!arrayClosed) {
+      endAsync(containersToRegister); // outer wait for container
     }
   }
 
@@ -1582,16 +1619,67 @@ public class TurbineGenerator implements CompilerBackend
     Expression incrE = opargToExpr(increment);
     
     if (splitDegree > 0) {
-      startRangeLoopWithSplitting(loopName, loopVar, isSync, usedVariables,
+      startRangeSplit(loopName, usedVariables,
               containersToRegister, splitDegree, startE, endE, incrE);
+      startRangeLoopInner(loopName, loopVar, isSync, usedVariables,
+              containersToRegister, TCLTMP_RANGE_LO_V, TCLTMP_RANGE_HI_V,
+                                                      TCLTMP_RANGE_INC_V);
     } else {
-      startRangeLoop2(loopName, loopVar, isSync, usedVariables,
+      startRangeLoopInner(loopName, loopVar, isSync, usedVariables,
               containersToRegister, startE, endE, incrE);
     }
   }
 
-  private void startRangeLoopWithSplitting(String loopName, Variable loopVar,
+  @Override
+  public void endRangeLoop(boolean isSync,
+                        List<Variable> containersToRegister,
+                        int splitDegree) {
+    assert(pointStack.size() >= 2);
+    if (!isSync) {
+      assert(pointStack.size() >= 3);
+      endAsync(containersToRegister); // Swift loop body
+    }
+    pointStack.pop(); // for loop body
+    
+    if (splitDegree > 0) {
+      endRangeSplit();
+    }
+  }
+
+  private void startRangeLoopInner(String loopName, Variable loopVar,
           boolean isSync, List<Variable> usedVariables,
+          List<Variable> containersToRegister, Expression startE,
+          Expression endE, Expression incrE) {
+    Sequence loopBody = new Sequence();
+    String loopVarName = prefixVar(loopVar.getName());
+    ForLoop tclLoop = new ForLoop(loopVarName, startE, endE, incrE, loopBody);
+    pointStack.peek().add(tclLoop);
+    pointStack.push(loopBody);
+  
+  
+    ArrayList<Variable> loopUsedVars = new ArrayList<Variable>(usedVariables);
+    loopUsedVars.add(loopVar);
+    if (!isSync) {
+      startAsync(loopName + ":body",
+          new ArrayList<Variable>(), loopUsedVars, containersToRegister,
+          true);
+    }
+  }
+
+  /**
+   * After this function is called, in the TCL context at the top of the stack
+   * will be available the bottom, top (inclusive) and increment of the split in
+   * tcl values: TCLTMP_RANGE_LO TCLTMP_RANGE_HI and TCLTMP_RANGE_INC 
+   * @param loopName
+   * @param usedVariables
+   * @param containersToRegister
+   * @param splitDegree
+   * @param startE start of range (inclusive)
+   * @param endE end of range (inclusive)
+   * @param incrE
+   */
+  private void startRangeSplit(String loopName,
+          List<Variable> usedVariables,
           List<Variable> containersToRegister, int splitDegree,
           Expression startE, Expression endE, Expression incrE) {
     // Create two procedures that will be called: an outer procedure
@@ -1689,60 +1777,11 @@ public class TurbineGenerator implements CompilerBackend
                     new TclList(outerRecCall), true));
     
     pointStack.push(inner);
-    startRangeLoop2(loopName, loopVar, isSync, usedVariables,
-            containersToRegister, loVal, hiVal, incVal);
   }
 
-  private void startRangeLoop2(String loopName, Variable loopVar,
-          boolean isSync, List<Variable> usedVariables,
-          List<Variable> containersToRegister, Expression startE,
-          Expression endE, Expression incrE) {
-    Sequence loopBody = new Sequence();
-    String loopVarName = prefixVar(loopVar.getName());
-    ForLoop tclLoop = new ForLoop(loopVarName, startE, endE, incrE, loopBody);
-    pointStack.peek().add(tclLoop);
-    pointStack.push(loopBody);
-
-
-    ArrayList<Variable> loopUsedVars = new ArrayList<Variable>(usedVariables);
-    loopUsedVars.add(loopVar);
-    if (!isSync) {
-      startAsync(loopName + ":body",
-          new ArrayList<Variable>(), loopUsedVars, containersToRegister,
-          true);
-    }
+  private void endRangeSplit() {
+    pointStack.pop(); // inner proc body
   }
-
-  @Override
-  public void endRangeLoop(boolean isSync,
-                        List<Variable> containersToRegister,
-                        int splitDegree) {
-    assert(pointStack.size() >= 2);
-    if (!isSync) {
-      assert(pointStack.size() >= 3);
-      endAsync(containersToRegister); // Swift loop body
-    }
-    if (splitDegree > 0) {
-      pointStack.pop(); // inner proc body
-    }
-    pointStack.pop(); // for loop body
-  }
-
-
-  @Override
-  public void endForeachLoop(boolean isSync, boolean arrayClosed,
-                              List<Variable> containersToRegister) {
-    assert(pointStack.size() >= 2);
-    if (!isSync) {
-      assert(pointStack.size() >= 3);
-      endAsync(containersToRegister); // Swift loop body
-    }
-    pointStack.pop(); // tclloop body
-    if (!arrayClosed) {
-      endAsync(containersToRegister); // outer wait for container
-    }
-  }
-
 
   @Override
   public void addGlobal(String name, Oparg val) {
@@ -1804,6 +1843,28 @@ public class TurbineGenerator implements CompilerBackend
     return sb.toString();
   }
 
+
+    private Value varToExpr(Variable v) {
+    return new Value(prefixVar(v.getName()));
+  }
+
+  private Expression opargToExpr(Oparg in) {
+    switch (in.getType()) {
+    case INTVAL:
+      return new LiteralInt(in.getIntLit());
+    case BOOLVAL:
+      return new LiteralInt(in.getBoolLit() ? 1 : 0);
+    case STRINGVAL:
+      return new TclString(in.getStringLit(), true);
+    case VAR:
+      return new Value(prefixVar(in.getVariable().getName()));
+    case FLOATVAL:
+      return new LiteralFloat(in.getFloatLit());
+    default:
+      throw new ParserRuntimeException("Unknown oparg type: "
+          + in.getType().toString());
+    }
+  }
 
     private static String prefixVar(String varname) {
       // Replace the internal names of temporary variables with

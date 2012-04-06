@@ -214,17 +214,18 @@ public interface CompilerBackend {
    * @param memberVar
    * @param loopCountVar counter variable, can be null
    * @param isSync if true, don't spawn off tasks to run iterations asynchronously
+   * @param splitDegree
    * @param arrayClosed if true, assume array is already closed
    * @param usedVariables
    * @param containersToRegister
    */
   public abstract void startForeachLoop(Variable arrayVar,
       Variable memberVar, Variable loopCountVar, boolean isSync,
-      boolean arrayClosed,
+      int splitDegree, boolean arrayClosed,
       List<Variable> usedVariables, List<Variable> containersToRegister);
 
-  public abstract void endForeachLoop(boolean isSync, boolean arrayClosed,
-                                    List<Variable> containersToRegister);
+  public abstract void endForeachLoop(boolean isSync, int splitDegree, 
+            boolean arrayClosed, List<Variable> containersToRegister);
 
   
   /**

@@ -568,6 +568,19 @@ private static final Token F_CREF_CREATE_NESTED_STATIC
   }
   
   /**
+   * Return the size of a container
+   * @param resultVar
+   * @param arr
+   * @return
+   */
+  public static SetVariable containerSize(String resultVar,
+        Value arr) {
+    return new SetVariable(resultVar, new Square(
+        CONTAINER_ENUMERATE, arr, new Token("count"), new Token("all"),
+                                      new LiteralInt(0)));
+  }
+  
+  /**
    * Retrieve partial contents of container from start to end inclusive
    * start to end are not the logical array indices, but rather physical indices
    * @param resultVar

@@ -255,7 +255,8 @@ public class SwiftICGenerator implements CompilerBackend {
 
   @Override
   public void startForeachLoop(Variable arrayVar, Variable memberVar,
-                  Variable loopCountVar, boolean isSync, boolean arrayClosed,
+                  Variable loopCountVar, boolean isSync, 
+                  int splitDegree, boolean arrayClosed,
          List<Variable> usedVariables, List<Variable> containersToRegister) {
     if(!Types.isArray(arrayVar.getType())) {
       throw new ParserRuntimeException("foreach loop over non-array: " + 
@@ -265,15 +266,15 @@ public class SwiftICGenerator implements CompilerBackend {
     assert(loopCountVar == null || 
               loopCountVar.getType().equals(Types.VALUE_INTEGER));
     ForeachLoop loop = new ForeachLoop(arrayVar, memberVar, 
-                loopCountVar, isSync, arrayClosed, usedVariables, 
+                loopCountVar, isSync, splitDegree, arrayClosed, usedVariables, 
                 containersToRegister);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
   }
 
   @Override
-  public void endForeachLoop(boolean isSync, boolean arrayClosed,
-                                List<Variable> containersToRegister) {
+  public void endForeachLoop(boolean isSync, int splitDegree, 
+            boolean arrayClosed, List<Variable> containersToRegister) {
     assert(blockStack.peek().getType() == BlockType.FOREACH_BODY);
     blockStack.pop();
   }

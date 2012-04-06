@@ -2,7 +2,6 @@ package exm.ast;
 
 import java.util.*;
 
-import exm.ast.Types.SwiftType;
 import exm.parser.util.ParserRuntimeException;
 
 public class Types {

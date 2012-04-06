@@ -756,12 +756,13 @@ public class SwiftScript {
     loop.setupLoopBodyContext(outsideLoopContext, typecheck);
     Context loopBodyContext = loop.getBodyContext();
 
-    if (loop.getSplitDegree() > 0 || loop.getDesiredUnroll() != 1) {
-      throw new ParserRuntimeException("Loop splitting and unrolling not"
+    if (loop.getDesiredUnroll() != 1) {
+      throw new ParserRuntimeException("Loop unrolling not"
           + " yet supported for loops over containers");
     }
     backend.startForeachLoop(realArray, loop.getMemberVar(), loop.getLoopCountVal(),
-        loop.isSyncLoop(), false, usedVariables, containersToRegister);
+        loop.isSyncLoop(), loop.getSplitDegree(), false, 
+        usedVariables, containersToRegister);
     // If the user's code expects a loop count var, need to create it here
     if (loop.getCountVarName() != null) {
       Variable loopCountVar = createVariable(loop.getBodyContext(),
@@ -770,7 +771,8 @@ public class SwiftScript {
       backend.assignInt(loopCountVar, Oparg.createVar(loop.getLoopCountVal()));
     }
     block(loopBodyContext, loop.getBody());
-    backend.endForeachLoop(loop.isSyncLoop(), false, containersToRegister);
+    backend.endForeachLoop(loop.isSyncLoop(), loop.getSplitDegree(), false, 
+                                                    containersToRegister);
 
     if (Types.isArrayRef(arrayVar.getType())) {
       backend.endWaitStatement(containersToRegister);
@@ -1346,10 +1348,10 @@ public class SwiftScript {
     Variable ix = copyContext.createLocalValueVariable(Types.VALUE_INTEGER);
     
     List<Variable> modifiedContainers = Arrays.asList(dst);
-    backend.startForeachLoop(src, member, ix, true, false, 
+    backend.startForeachLoop(src, member, ix, true, -1, false, 
         Arrays.asList(src, dst), modifiedContainers);
     backend.arrayStoreImmediate(member, dst, Oparg.createVar(ix));
-    backend.endForeachLoop(true, false, modifiedContainers);
+    backend.endForeachLoop(true, -1, false, modifiedContainers);
     backend.closeArray(dst);
   }
 
