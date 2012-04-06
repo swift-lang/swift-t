@@ -47,3 +47,7 @@ TEST_SRC_TCL := $(DIR)/adlb-noop.tcl           \
                 $(DIR)/printf.tcl              \
                 $(DIR)/blob1.tcl               \
                 $(DIR)/argv.tcl
+
+ifeq ($(USE_MPE),1)
+	TEST_SRC_TCL += $(DIR)/mpe-3.tcl
+endif
