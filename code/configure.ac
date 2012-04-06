@@ -202,6 +202,16 @@ AC_ARG_WITH(mpi-lib-name,
                  ])
 AC_SUBST(USE_MPI_LIB_NAME)
 
+# We assume the libmpe.so is in the ADLB directory
+# See Turbine - Build for explanation
+USE_MPE=0
+AC_ARG_ENABLE(mpe,
+     AS_HELP_STRING(
+                    [--enable-mpe],
+                    [enable Tcl MPE module]),
+     [ USE_MPE=1 ], [])
+AC_SUBST(USE_MPE)
+
 AC_ARG_WITH(adlb,
                  AS_HELP_STRING(
                     [--with-adlb],
@@ -264,6 +274,7 @@ AC_CONFIG_FILES(
         src/tcl/module.mk
         src/tcl/adlb/module.mk
         src/tcl/turbine/module.mk
+        src/tcl/mpe/module.mk
         lib/module.mk
         scripts/turbine-config.sh
         test/module.mk

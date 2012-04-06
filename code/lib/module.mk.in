@@ -18,9 +18,15 @@ TCL_SRC := $(DIR)/helpers.tcl             \
            $(DIR)/updateable.tcl               \
            $(DIR)/unistd.tcl
 
+ALL_SO := $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
+ifeq (@USE_MPE@,1)
+	ALL_SO += $(TCL_MPE_SO)
+endif
+
 # Builds the Turbine Tcl package
-$(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) $(TCL_ADLB_SO) \
+$(PACKAGE): lib/make-package.tcl $(ALL_SO) \
             $(TCL_SRC)
 	$(Q) "  TCL		$(@)"
 	$(E) TURBINE_VERSION=$(TURBINE_VERSION) \
+             USE_MPE=@USE_MPE@ \
              tclsh $(<) > lib/pkgIndex.tcl

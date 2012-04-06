@@ -74,7 +74,7 @@ endif
 ifeq ($(MACHINE),normal)
 	MPI_LIB_DIR = $(MPI)/lib
 	MPI_LIB_NAME = libmpich.so
-	MPI_LIB	= -L $(MPI_LIB_DIR) -l mpich # -l mpl
+	MPI_LIB	= -L $(MPI_LIB_DIR) -l mpich
 endif
 ifeq ($(MACHINE),sicortex)
 	MPI_LIB = -L $(MPI)/lib -l scmpi
@@ -98,6 +98,8 @@ ifneq ($(ADLB),0)
 	CFLAGS += -I $(ADLB)
 endif
 
+USE_MPE = @USE_MPE@
+
 CFLAGS += -std=gnu99
 CFLAGS += -g
 CFLAGS += -Wall
@@ -108,8 +110,11 @@ CFLAGS += -fPIC
 CFLAGS += -D VALGRIND
 CFLAGS += -D TURBINE_VERSION=\"$(TURBINE_VERSION)\"
 
-LDFLAGS += -L $(C_UTILS)/lib
-LDFLAGS += -l exmcutils
+LIBS += -L $(C_UTILS)/lib -l exmcutils
+ifeq ($(USE_MPE),1)
+	LIBS += -L $(ADLB) -l mpe -l mpich
+endif
+LIBS += $(MPI_LIB)
 
 dirname = $(patsubst %/,%,$(dir $(1)))
 
@@ -122,6 +127,9 @@ include src/util/module.mk
 include src/tcl/module.mk
 include src/tcl/adlb/module.mk
 include src/tcl/turbine/module.mk
+ifeq (@USE_MPE@,1)
+	include src/tcl/mpe/module.mk
+endif
 include lib/module.mk
 
 TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC) $(TCL_TURBINE_SRC))
@@ -187,14 +195,14 @@ $(TURBINE): $(TURBINE_OBJS)
 	$(E) install -d lib
 	$(E) ar rcs $(@) $(TURBINE_OBJS)
 
-$(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_OBJS)
+$(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS)
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) -shared -fPIC -o $(@) \
+	$(E) $(CC) -shared -o $(@) \
              $(TCL_LINK_FLAGS) \
              $(TCL_TURBINE_OBJS) \
              $(TURBINE_OBJS) \
              $(LDFLAGS) \
-             -L $(ADLB) -l adlb \
+             -L $(ADLB) -l adlb -l mpe \
              $(MPI_LIB) \
              -Wl,-rpath -Wl,$(INSTALL_LIB) \
              -Wl,-rpath -Wl,$(MPI_LIB_DIR)
@@ -220,9 +228,13 @@ tests: $(TEST_BINS)
 # Run all tests
 test_results: $(TEST_RESULTS)
 
+# Binary executables in the test suite
 $(TEST_BINS): %.x: %.o $(TURBINE) $(C_UTILS_LIB)
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) $(LIBS) -o $(@)
+	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) \
+        $(LIBS) \
+        -Wl,-rpath -Wl,$(INSTALL_LIB) \
+	-o $(@)
 
 # Test result rule for C tests
 %.result: %.sh %.x
@@ -277,6 +289,10 @@ install: package
 	$(E) cp -uv $(TCL)/lib/libtcl8.5.so        $(INSTALL_LIB)
 	$(E) cp -uv $(C_UTILS)/lib/libexmcutils.so $(INSTALL_LIB)
 	$(E) cp -uv $(ADLB)/libadlb.so             $(INSTALL_LIB)
+#            We assume libmpe.so is in the ADLB directory
+ifeq ($(USE_MPE),1)
+	$(E) cp -uv $(ADLB)/libmpe.so              $(INSTALL_LIB)
+endif
 #       Copy Turbine items
 	$(E) cp -uv bin/turbine $(INSTALL_BIN)
 	$(E) cp -uv lib/*.tcl lib/*.so $(INSTALL_LIB)

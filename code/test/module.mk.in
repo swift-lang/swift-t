@@ -1,7 +1,8 @@
 
 DIR := test
 
-TEST_SRC_C := $(DIR)/debug.c
+TEST_SRC_C := $(DIR)/debug.c \
+              $(DIR)/mpe-1.c
 
 TEST_SRC_TCL := $(DIR)/adlb-noop.tcl           \
 	        $(DIR)/adlb-exists.tcl         \
