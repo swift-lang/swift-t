@@ -21,6 +21,7 @@ main()
   MPE_Describe_state(n1, n2, state, color);
 
   MPE_Log_event(n1, 0, NULL);
+  MPE_Log_event(n2, 0, "Howdy");
 
   MPE_Finish_log("test_mpe-2");
   MPI_Finalize();
