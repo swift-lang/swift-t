@@ -16,7 +16,8 @@ namespace eval turbine {
     #   unpredictable seed
     # TODO: not good randomness
     proc init_rng {} {
-        set seed [ expr [ clock clicks ] ^ [ pid ] ]
+        # set seed [ expr [ clock clicks ] ^ [ pid ] ]
+        set seed [ adlb::rank ]
         set x [ expr srand($seed) ]
     }
 
