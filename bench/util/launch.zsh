@@ -1,6 +1,6 @@
 
 # Assumes the presence of:
-checkvars MODE
+checkvars MODE COMMAND
 
 # Sets: OUTPUT_DIR OUTPUT START STOP
 
@@ -19,8 +19,9 @@ case ${MODE}
     # User must edit Tcl to add user libs
     unset TURBINE_USER_LIB
     OUTPUT_TOKEN_FILE=$( mktemp )
+    # Call Turbine submit script:
     ${TURBINE_COBALT} -d ${OUTPUT_TOKEN_FILE} \
-      -n ${PROCS} ${PROGRAM_TCL} --N=${N} --delay=${DELAY}
+      -n ${PROCS} ${PROGRAM_TCL} ${=COMMAND}
     exitcode "turbine-cobalt failed!"
     read OUTPUT_DIR < ${OUTPUT_TOKEN_FILE}
     declare OUTPUT_DIR
