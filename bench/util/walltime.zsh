@@ -2,8 +2,10 @@
 # Analyze output
 
 # Assumes the presence of:
+checkvars N TURBINE_WORKERS
 checkvars START STOP
 checkvars OUTPUT OUTPUT_DIR
+checkvars ADLB_EXHAUST_TIME
 
 TOOK=$(( STOP - START ))
 print "TOOK: ${TOOK}"
