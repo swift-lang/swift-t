@@ -8,7 +8,6 @@ checkvars OUTPUT OUTPUT_DIR
 checkvars ADLB_EXHAUST_TIME
 
 TOOK=$(( STOP - START ))
-print "TOOK: ${TOOK}"
 
 # Start processing output
 
