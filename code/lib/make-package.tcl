@@ -4,6 +4,7 @@
 set turbine_version $env(TURBINE_VERSION)
 set use_mpe         $env(USE_MPE)
 
+set load_mpe ""
 # Determine if we compiled MPE
 if { $use_mpe == 1 } {
     set load_mpe "-load libtclmpe.so"

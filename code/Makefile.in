@@ -195,7 +195,7 @@ $(TURBINE): $(TURBINE_OBJS)
 	$(E) install -d lib
 	$(E) ar rcs $(@) $(TURBINE_OBJS)
 
-$(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS)
+$(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_OBJS)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) -shared -o $(@) \
              $(TCL_LINK_FLAGS) \
