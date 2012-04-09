@@ -11,10 +11,11 @@ export ADLB_SERVERS=$(( PROCS / CONTROL / 2 ))
 TURBINE_WORKERS=$(( PROCS - TURBINE_ENGINES - ADLB_SERVERS ))
 
 # Benchmark parameters
-NX=10
-NY=10
+V=${V:-10}
+NX=${V}
+NY=${V}
 # Delay in milliseconds
-DELAY=0
+DELAY=${DELAY:-0}
 
 # Actual amount of user work (calls to set1() or sum()):
 N=$(( NX*NY ))
@@ -51,9 +52,15 @@ while getopts "m:v" OPTION
    esac
 done
 
+declare PROCS CONTROL TURBINE_ENGINES ADLB_SERVERS TURBINE_WORKERS
+declare V N DELAY
+declare TURBINE_HOME BENCH_UTIL
+
 # Run stc if necessary
 compile ${PROGRAM_SWIFT} ${PROGRAM_TCL}
 exitcode
+
+set -x
 
 COMMAND="foreach.tcl --NX=${NX} --NY=${NY} --delay=${DELAY}"
 
