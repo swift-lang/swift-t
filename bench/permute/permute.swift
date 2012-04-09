@@ -13,16 +13,13 @@
   {
     r = 1;
   }
+  else if (d == 1)
+  {
+    r = n;
+  }
   else
   {
-    if (d == 1)
-    {
-      r = n;
-    }
-    else
-    {
-      r = pow(n*n, d-1);
-    }
+    r = pow(n*n, d-1);
   }
 }
 
