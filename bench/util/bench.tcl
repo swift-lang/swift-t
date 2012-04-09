@@ -34,4 +34,19 @@ namespace eval bench {
         after $delay_value
         set_integer $result 1
     }
+
+    # usage: set1_integer no_stack result delay
+    # delay in milliseconds: rounded to nearest whole millisecond
+    proc set1r_integer { stack result delay } {
+        turbine::rule "set1r-$result" $delay $turbine::WORK \
+            "bench::set1r_integer_body $result $delay"
+    }
+
+    proc set1r_integer_body { result delay } {
+        set delay_value [ get_integer $delay ]
+        # randomized delay value:
+        set rdv [ expr rand() * $delay_value ] 
+        after [ expr round($rdv) ]
+        set_integer $result 1
+    }
 }
