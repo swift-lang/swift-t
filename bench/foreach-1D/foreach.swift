@@ -12,6 +12,12 @@ main {
   float delay = tofloat(argv("delay"));
 
   float A[];
+
+  // @sync
+  // @splitdegree // STC test 587
+  // Make
+  // No actual container
+
   foreach i in [0:N-1]
   {
     A[i] = set1_float(delay);
