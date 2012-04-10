@@ -10,7 +10,7 @@ main {
   int NY    = toint(argv("NY"));
   int delay = toint(argv("delay"));
   int delay_2 = delay %/ 2;
-  
+
   int A[][];
   int B[][];
   int C[];
@@ -18,8 +18,10 @@ main {
   {
     foreach y in [0:NY-1]
     {
-      A[x][y] = set1r_integer(delay);
-      B[x][y] = set1r_integer(delay_2*A[x][y]);
+      // f()
+      A[x][y] = set1rA_integer(delay);
+      // g()
+      B[x][y] = set1rB_integer(delay_2*A[x][y]);
     }
     C[x] = sum_integer(B[x]);
     // printf("C[%i]=%i", x, C[x]);
