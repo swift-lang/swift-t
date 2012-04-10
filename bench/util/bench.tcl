@@ -9,6 +9,29 @@ namespace eval bench {
 
     # namespace import turbine::c::rule turbine::set_integer
 
+    # Set by mpe_setup
+    variable mpe_ready
+
+    # MPE event IDs
+    variable set1r_event_start
+    variable set1r_event_stop
+
+    proc mpe_setup { } {
+
+        variable mpe_ready
+        variable set1r_event_start
+        variable set1r_event_stop
+
+        puts CHECK
+        if { ! [ info exists mpe_ready ] } {
+            set L [ mpe::create "set1r" ]
+            set set1r_event_start [ lindex $L 0 ]
+            set set1r_event_stop  [ lindex $L 1 ]
+            set mpe_ready 1
+            puts OK
+        }
+    }
+
     # usage: set1_float no_stack result delay
     # delay in milliseconds: rounded to nearest whole millisecond
     proc set1_float { stack result delay } {
@@ -43,10 +66,17 @@ namespace eval bench {
     }
 
     proc set1r_integer_body { result delay } {
+
+        mpe_setup
+        variable set1r_event_start
+        variable set1r_event_stop
+
         set delay_value [ get_integer $delay ]
         # randomized delay value:
-        set rdv [ expr rand() * $delay_value ] 
+        mpe::log $set1r_event_start
+        set rdv [ expr rand() * $delay_value ]
         after [ expr round($rdv) ]
+        mpe::log $set1r_event_stop
         set_integer $result 1
     }
 }
