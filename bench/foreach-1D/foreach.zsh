@@ -16,7 +16,7 @@ DELAY=${DELAY:-0}
 # Load common features
 
 TURBINE=$( which turbine )
-if [[ ${TURBINE} == "" ]]
+if (( ${?} ))
 then
   print "turbine not found!"
   return 1
