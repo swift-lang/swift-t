@@ -1,8 +1,12 @@
 
+# Runs Turbine
+
 # Assumes the presence of:
 checkvars MODE COMMAND
 
 # Sets: OUTPUT_DIR OUTPUT START STOP
+
+# Puts output in $OUTPUT_DIR/$OUTPUT
 
 START=$( date +%s )
 
