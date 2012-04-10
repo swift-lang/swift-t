@@ -202,7 +202,7 @@ $(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_OBJS)
              $(TCL_TURBINE_OBJS) \
              $(TURBINE_OBJS) \
              $(LDFLAGS) \
-             -L $(ADLB) -l adlb -l mpe \
+             $(LIBS) \
              $(MPI_LIB) \
              -Wl,-rpath -Wl,$(INSTALL_LIB) \
              -Wl,-rpath -Wl,$(MPI_LIB_DIR)
