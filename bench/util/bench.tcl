@@ -13,31 +13,22 @@ namespace eval bench {
     variable mpe_ready
 
     # MPE event IDs
-    variable set1rA_event_start
-    variable set1rA_event_stop
-    variable set1rB_event_start
-    variable set1rB_event_stop
+    variable event
 
     proc mpe_setup { } {
 
-        variable mpe_ready
-        variable set1rA_event_start
-        variable set1rA_event_stop
-        variable set1rB_event_start
-        variable set1rB_event_stop
+        variable event
+        set event_names [ list set1 set1rA set1rB ]
 
-        puts CHECK
         if { ! [ info exists mpe_ready ] } {
-            set L [ mpe::create "set1rA" ]
-            set set1rA_event_start [ lindex $L 0 ]
-            set set1rA_event_stop  [ lindex $L 1 ]
 
-            set L [ mpe::create "set1rB" ]
-            set set1rB_event_start [ lindex $L 0 ]
-            set set1rB_event_stop  [ lindex $L 1 ]
+            foreach e $event_names {
+                set L [ mpe::create $e ]
+                set event(start_$e) [ lindex $L 0 ]
+                set event(stop_$e)  [ lindex $L 1 ]
 
-            set mpe_ready 1
-            puts OK
+                set mpe_ready 1
+            }
         }
     }
 
@@ -49,8 +40,14 @@ namespace eval bench {
     }
 
     proc set1_float_body { result delay } {
+
+        variable event
+
+        mpe_setup
         set delay_value [ get_float $delay ]
+        mpe::log $event(start_set1)
         after [ expr round($delay_value) ]
+        mpe::log $event(stop_set1)
         set_integer $result 1
     }
 
@@ -76,16 +73,14 @@ namespace eval bench {
 
     proc set1rA_integer_body { result delay } {
 
+        variable event
         mpe_setup
-        variable set1rA_event_start
-        variable set1rA_event_stop
-
         set delay_value [ get_integer $delay ]
         # randomized delay value:
-        mpe::log $set1rA_event_start
+        mpe::log $event(start_set1rA)
         set rdv [ expr rand() * $delay_value ]
         after [ expr round($rdv) ]
-        mpe::log $set1rA_event_stop
+        mpe::log $event(stop_set1rA)
         set_integer $result 1
     }
 
@@ -98,16 +93,14 @@ namespace eval bench {
 
     proc set1rB_integer_body { result delay } {
 
+        variable event
         mpe_setup
-        variable set1rB_event_start
-        variable set1rB_event_stop
-
         set delay_value [ get_integer $delay ]
         # randomized delay value:
-        mpe::log $set1rB_event_start
+        mpe::log $event(start_set1rB)
         set rdv [ expr rand() * $delay_value ]
         after [ expr round($rdv) ]
-        mpe::log $set1rB_event_stop
+        mpe::log $event(stop_set1rB)
         set_integer $result 1
     }
 }
