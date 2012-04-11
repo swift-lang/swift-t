@@ -209,7 +209,8 @@ AC_ARG_ENABLE(mpe,
      AS_HELP_STRING(
                     [--enable-mpe],
                     [enable Tcl MPE module]),
-     [ USE_MPE=1 ], [])
+     [ [[ $enableval == yes ]] && USE_MPE=1 ], [] )
+AC_MSG_RESULT([MPE enabled? $enableval])
 AC_SUBST(USE_MPE)
 
 AC_ARG_WITH(adlb,
