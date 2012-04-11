@@ -35,9 +35,9 @@ source ${BENCH_UTIL}/tools.zsh
 exitcode
 
 # System settings
-export TURBINE_DEBUG=0
-export ADLB_DEBUG=0
-export LOGGING=0
+export TURBINE_DEBUG=${TURBINE_DEBUG:-0}
+export ADLB_DEBUG=${ADLB_DEBUG:-0}
+export LOGGING=${LOGGING:-0}
 export ADLB_EXHAUST_TIME=1
 export TURBINE_USER_LIB=${BENCH_UTIL}
 # Mode defaults to MPIEXEC (local execution)
