@@ -7,8 +7,6 @@ namespace eval bench {
 
     package provide bench 0.0.1
 
-    # namespace import turbine::c::rule turbine::set_integer
-
     # Set by mpe_setup
     variable mpe_ready
 
@@ -17,8 +15,9 @@ namespace eval bench {
 
     proc mpe_setup { } {
 
+        variable mpe_ready
         variable event
-        set event_names [ list set1 set1rA set1rB ]
+        set event_names [ list set1 set1rA set1rB sum ]
 
         if { ! [ info exists mpe_ready ] } {
 
@@ -102,5 +101,57 @@ namespace eval bench {
         after [ expr round($rdv) ]
         mpe::log $event(stop_set1rB)
         set_integer $result 1
+    }
+
+    # Sum all of the values in a container of integers
+    # inputs: [ list c r ]
+    # c: the container
+    # r: the turbine id to store the sum into
+    proc bench_sum_integer { stack result inputs } {
+        set container [ lindex $inputs 0 ]
+
+        mpe_setup
+        variable event
+        mpe::log $event(start_sum)
+        turbine::rule "sum-$container" $container $turbine::LOCAL \
+            "bench::bench_sum_integer_body $stack $container $result 0 0 -1"
+    }
+
+    proc bench_sum_integer_body { stack container result accum next_index n } {
+
+        variable event
+        turbine::debug "sum_integer $container => $result"
+        set CHUNK_SIZE 1024
+        # TODO: could divide and conquer instead of doing linear search
+        if { $n == -1 } {
+          set n [ adlb::enumerate $container count all 0 ]
+        }
+        set i $next_index
+        while { $i < $n } {
+          set this_chunk_size [ expr min( $CHUNK_SIZE, $n - $i ) ]
+          set members [ adlb::enumerate $container members $this_chunk_size $i ]
+          #puts "members of $container $i $this_chunk_size : $members"
+          foreach turbine_id $members {
+            #puts "turbine_id: $turbine_id"
+            if { [ adlb::exists $turbine_id ] } {
+                # add to the sum
+                set val [ get_integer $turbine_id ]
+                #puts "C\[$i\] = $val"
+                set accum [ expr $accum + $val ]
+                incr i
+            } else {
+                # block until the next turbine id is finished,
+                #   then continue running
+                turbine::rule "sum-$container" $turbine_id $turbine::LOCAL \
+                    "sum_integer_body $stack $container $result $accum $i $n"
+                # return immediately without setting result
+                return
+            }
+          }
+        }
+        # If we get out of loop, we're done
+        set_integer $result $accum
+        mpe::log $event(stop_sum)
+        puts "log sum"
     }
 }
