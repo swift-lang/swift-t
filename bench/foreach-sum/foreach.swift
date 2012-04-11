@@ -23,7 +23,8 @@ main {
       // g()
       B[x][y] = set1rB_integer(delay_2*A[x][y]);
     }
-    C[x] = sum_integer(B[x]);
-    // printf("C[%i]=%i", x, C[x]);
+    C[x] = bench_sum_integer(B[x]);
+    // C[x] = sum_integer(B[x]);
+    printf("C[%i]=%i", x, C[x]);
   }
 }
