@@ -36,6 +36,7 @@ public class SwiftICOptimiser {
     try {
       // need variable names to be unique for rest of stages
       Flattener.makeVarNamesUnique(prog);
+      ForwardDataflow.fixupVariablePassing(logger, prog);
       
       if (Settings.getBoolean(Settings.OPT_FLATTEN_NESTED)) {
         prog = Flattener.flattenNestedBlocks(prog);
