@@ -482,7 +482,7 @@ public class ForwardDataflow {
       // First, all constants can be treated as being set
       if (v.getStorage() == VariableStorage.GLOBAL_CONST) {
         Oparg val = program.lookupGlobalConst(v.getName());
-        assert (val != null);
+        assert (val != null): v.getName();
         ComputedValue compVal = ICInstructions.assignComputedVal(v, val);
         cv.addComputedValue(compVal, cv.hasComputedValue(compVal));
       }

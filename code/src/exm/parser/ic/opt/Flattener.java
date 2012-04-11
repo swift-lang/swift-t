@@ -1,12 +1,14 @@
 package exm.parser.ic.opt;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import exm.ast.Variable;
+import exm.ast.Variable.DefType;
 import exm.parser.ic.ICContinuations.Continuation;
 import exm.parser.ic.ICInstructions.Oparg;
 import exm.parser.ic.SwiftIC.Block;
@@ -62,6 +64,9 @@ public class Flattener {
   private static void makeVarNamesUnique(Block in, Set<String> usedNames) {
     HashMap<String, Oparg> renames = new HashMap<String, Oparg>(); 
     for (Variable v: in.getVariables()) {
+      if (v.getDefType() == DefType.GLOBAL_CONST) {
+        continue;
+      }
       if (usedNames.contains(v.getName())) {
         int counter = 1;
         String newName; 
@@ -91,8 +96,9 @@ public class Flattener {
     }
   }
 
-  public static void makeVarNamesUnique(CompFunction in) {
-    Set<String> usedNames = new HashSet<String>();
+  public static void makeVarNamesUnique(CompFunction in, 
+            Set<String> globals) {
+    Set<String> usedNames = new HashSet<String>(globals);
     for (Variable v: in.getInputList()) {
       usedNames.add(v.getName());
     }
@@ -110,7 +116,7 @@ public class Flattener {
    */
   public static void makeVarNamesUnique(Program in) {
     for (CompFunction f: in.getComposites()) {
-      makeVarNamesUnique(f);
+      makeVarNamesUnique(f, in.getGlobalConsts().keySet());
     }
   }
 

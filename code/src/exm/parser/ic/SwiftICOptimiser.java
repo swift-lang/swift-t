@@ -101,7 +101,7 @@ public class SwiftICOptimiser {
     for (CompFunction f: prog.getComposites()) {
       if (unrollLoops(logger, prog, f, f.getMainblock())) {
         // Unrolling can introduce duplicate vars
-        Flattener.makeVarNamesUnique(f);
+        Flattener.makeVarNamesUnique(f, prog.getGlobalConsts().keySet());
         Flattener.flattenNestedBlocks(f.getMainblock());
       }
     }
