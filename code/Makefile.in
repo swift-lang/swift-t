@@ -111,8 +111,9 @@ CFLAGS += -D VALGRIND
 CFLAGS += -D TURBINE_VERSION=\"$(TURBINE_VERSION)\"
 
 LIBS += -L $(C_UTILS)/lib -l exmcutils
+LIBS += -L $(ADLB) -l adlb
 ifeq ($(USE_MPE),1)
-	LIBS += -L $(ADLB) -l mpe -l mpich
+	LIBS += -l mpe
 endif
 LIBS += $(MPI_LIB)
 
