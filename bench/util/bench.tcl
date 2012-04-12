@@ -105,6 +105,25 @@ namespace eval bench {
         set_integer $result 1
     }
 
+    # usage: set1_integer no_stack result delay
+    # delay in milliseconds: rounded to nearest whole millisecond
+    proc add3 { stack result inputs } {
+        set x [ lindex $inputs 0 ]
+        set y [ lindex $inputs 1 ]
+        set z [ lindex $inputs 2 ]
+        turbine::rule "add3-$result" "$x $y $z" $turbine::WORK \
+            "bench::add3_body $result $x $y $z"
+    }
+
+    proc add3_body { result x y z } {
+        set x_value [ get_integer $x ]
+        set y_value [ get_integer $y ]
+        set z_value [ get_integer $z ]
+        set r [ expr $x_value + $y_value + $z_value ]
+        set_integer $result $r
+    }
+
+
     # Sum all of the values in a container of integers
     # inputs: [ list c r ]
     # c: the container
