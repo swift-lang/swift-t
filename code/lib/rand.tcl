@@ -12,7 +12,7 @@
 
 namespace eval turbine {
 
-    # Initialize this process's random number generator its MPI rank
+    # Initialize this process's RNG based on MPI rank
     # TODO: Upgrade Turbine to use SPRNG
     # Note: Call this after adlb::init so that rank is valid
     proc init_rng {} {
