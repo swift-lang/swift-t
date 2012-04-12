@@ -75,8 +75,8 @@ namespace eval bench {
         variable event
         mpe_setup
         set delay_value [ get_integer $delay ]
-        # randomized delay value:
         mpe::log $event(start_set1rA)
+        # randomized delay value: rdv
         set rdv [ expr rand() * $delay_value ]
         set rdv [ expr round($rdv) ]
         mpe::log $event(start_debug) "after:$rdv"
@@ -145,7 +145,7 @@ namespace eval bench {
                 # block until the next turbine id is finished,
                 #   then continue running
                 turbine::rule "sum-$container" $turbine_id $turbine::LOCAL \
-                    "sum_integer_body $stack $container $result $accum $i $n"
+                    "bench::bench_sum_integer_body $stack $container $result $accum $i $n"
                 # return immediately without setting result
                 return
             }
@@ -154,6 +154,5 @@ namespace eval bench {
         # If we get out of loop, we're done
         set_integer $result $accum
         mpe::log $event(stop_sum)
-        puts "log sum"
     }
 }
