@@ -5,20 +5,20 @@
 # where the lists are Tcl lists of TDs
 # even if some of the arguments are not used
 #
-# init_rng should be called during turbine startup before 
+# init_rng should be called during turbine startup before
 # any other functions are used
 #
 # TODO: this currently doesn't do proper parallel random number generation
 
 namespace eval turbine {
 
-    # initialize this process's random number generator with a somewhat 
-    #   unpredictable seed
-    # TODO: not good randomness
+    # Initialize this process's random number generator its MPI rank
+    # TODO: Upgrade Turbine to use SPRNG
+    # Note: Call this after adlb::init so that rank is valid
     proc init_rng {} {
-        # set seed [ expr [ clock clicks ] ^ [ pid ] ]
         set seed [ adlb::rank ]
-        set x [ expr srand($seed) ]
+        puts "seed: $seed"
+        expr srand($seed)
     }
 
     # called with 0 args, returns a random float in [0.0, 1.0)
@@ -51,7 +51,7 @@ namespace eval turbine {
             error "randint: empty range \[$lo, $hi)"
         }
         set range [ expr $hi - $lo ]
-        # random value in [lo, hi) 
+        # random value in [lo, hi)
         # this works b/c rand() generates a number in [0.0, 1.0)
         return [ expr (int(rand() * $range)) + $lo ]
     }

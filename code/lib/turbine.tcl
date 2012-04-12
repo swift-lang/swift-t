@@ -22,7 +22,6 @@ namespace eval turbine {
     # param e Number of engines
     # param s Number of ADLB servers
     proc init { engines servers } {
-        turbine::init_rng
 
         variable priority
         variable default_priority
@@ -35,6 +34,8 @@ namespace eval turbine {
         set types [ array size WORK_TYPE ]
         adlb::init $servers $types
         c::init [ adlb::amserver ] [ adlb::rank ] [ adlb::size ]
+
+        turbine::init_rng
 
         variable mode
         if { [ adlb::rank ] < $engines } {
