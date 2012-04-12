@@ -69,6 +69,8 @@ MPE_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
   assert(state);
 
   int event1, event2;
+  // This is typically the first call to MPE
+  // A SEGV here probably means that ADLB was not configured with MPE
   MPE_Log_get_state_eventIDs(&event1, &event2);
   MPE_Describe_state(event1, event2, state, MPE_CHOOSE_COLOR);
 
