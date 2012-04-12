@@ -28,8 +28,7 @@ fi
 # Collect stats:
 {
   TIME=$(( TIME - ADLB_EXHAUST_TIME ))
-  print "N: ${N}"
-  print "TIME: ${TIME}"
+  declare N TIME DELAY
   if (( TIME ))
   then
     TOTAL_RATE=$(( N / TIME ))
