@@ -17,7 +17,7 @@ namespace eval bench {
 
         variable mpe_ready
         variable event
-        set event_names [ list set1 set1rA set1rB sum ]
+        set event_names [ list debug set1 set1rA set1rB sum ]
 
         if { ! [ info exists mpe_ready ] } {
 
@@ -78,7 +78,9 @@ namespace eval bench {
         # randomized delay value:
         mpe::log $event(start_set1rA)
         set rdv [ expr rand() * $delay_value ]
-        after [ expr round($rdv) ]
+        set rdv [ expr round($rdv) ]
+        mpe::log $event(start_debug) "after:$rdv"
+        after $rdv
         mpe::log $event(stop_set1rA)
         set_integer $result 1
     }
