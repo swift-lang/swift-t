@@ -60,6 +60,9 @@ MPE_Describe_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 static const char* MPE_CHOOSE_COLOR = "MPE_CHOOSE_COLOR";
 
+/**
+  usage: mpe::create <symbol> => [ list start-ID stop-ID ]
+*/
 static int
 MPE_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
                int objc, Tcl_Obj *const objv[])
@@ -82,6 +85,9 @@ MPE_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+/**
+   usage: mpe::log <event-ID> [<message>]
+*/
 static int
 MPE_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
         int objc, Tcl_Obj *const objv[])
