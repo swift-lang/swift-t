@@ -15,7 +15,8 @@ TCL_SRC := $(DIR)/helpers.tcl             \
            $(DIR)/container.tcl           \
            $(DIR)/rand.tcl                \
            $(DIR)/stdio.tcl               \
-           $(DIR)/updateable.tcl               \
+           $(DIR)/stdlib.tcl              \
+           $(DIR)/updateable.tcl          \
            $(DIR)/unistd.tcl
 
 ALL_SO := $(TCL_TURBINE_SO) $(TCL_ADLB_SO)

@@ -26,6 +26,7 @@ set items [ eval list -load libtcladlb.so   \
                 -source container.tcl  \
                 -source rand.tcl       \
                 -source stdio.tcl      \
+                -source stdlib.tcl     \
                 -source updateable.tcl \
                 -source unistd.tcl     \
                 -source helpers.tcl ]
