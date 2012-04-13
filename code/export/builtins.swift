@@ -23,7 +23,7 @@
 (int o) negate_integer  (int i)          "turbine" "0.0.2" "negate_integer";
 (int o) max_integer     (int i1, int i2) "turbine" "0.0.2" "max_integer";
 (int o) min_integer     (int i1, int i2) "turbine" "0.0.2" "min_integer";
-(int o) pow_integer     (int i1, int i2) "turbine" "0.0.2" "pow_integer";
+(float o) pow_integer     (int i1, int i2) "turbine" "0.0.2" "pow_integer";
 
 (boolean o) and (boolean i1, boolean i2) "turbine" "0.0.2" "and";
 (boolean o) or  (boolean i1, boolean i2) "turbine" "0.0.2" "or";
