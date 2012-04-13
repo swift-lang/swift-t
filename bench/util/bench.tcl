@@ -17,7 +17,7 @@ namespace eval bench {
 
         variable mpe_ready
         variable event
-        set event_names [ list debug set1 set1rA set1rB sum ]
+        set event_names [ list metadata debug set1 set1rA set1rB sum ]
 
         if { ! [ info exists mpe_ready ] } {
 
@@ -29,6 +29,20 @@ namespace eval bench {
                 set mpe_ready 1
             }
         }
+    }
+
+    proc metadata { stack result input } {
+        turbine::rule "set1-$result" $delay $turbine::WORK \
+            "bench::metadata_body $input"
+    }
+
+    proc metadata_body { message } {
+
+        variable event
+        mpe_setup
+
+        set message_value [ turbine::get_string $message ]
+        mpe::log $event(start_metadata)
     }
 
     # usage: set1_float no_stack result delay
