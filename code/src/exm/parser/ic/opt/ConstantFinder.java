@@ -17,7 +17,7 @@ import exm.ast.Variable.VariableStorage;
 import exm.parser.Settings;
 import exm.parser.ic.HierarchicalMap;
 import exm.parser.ic.ICInstructions;
-import exm.parser.ic.ICInstructions.LocalArithOp;
+import exm.parser.ic.ICInstructions.LocalBuiltin;
 import exm.parser.ic.ICUtil;
 import exm.parser.ic.ICContinuations.Continuation;
 import exm.parser.ic.ICInstructions.Instruction;
@@ -188,8 +188,8 @@ public class ConstantFinder {
         if (input.isConstant() &&
             (inst.op == Opcode.ASSIGN_INT || inst.op == Opcode.ASSIGN_BOOL            
             || inst.op == Opcode.ASSIGN_FLOAT || inst.op == Opcode.ASSIGN_STRING
-            || (!ignoreLocalValConstants && inst.op == Opcode.LOCAL_ARITH_OP && 
-                  LocalArithOp.isValueCopy(inst)))) {
+            || (!ignoreLocalValConstants && inst.op == Opcode.CALL_LOCAL_BUILTIN && 
+                  LocalBuiltin.isValueCopy(inst)))) {
           Oparg output = inst.getOutput(0); 
           String varName = output.getVariable().getName();
           if ((!removeLocalConsts) || removalCandidates.contains(varName)) {

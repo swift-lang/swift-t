@@ -158,7 +158,7 @@ public class Builtins {
   /**
    * Opcodes for operations operating on local variables
    */
-  public static enum ArithOpcode {
+  public static enum LocalOpcode {
     PLUS_INT, MINUS_INT, MULT_INT, DIV_INT, MOD_INT,
     PLUS_FLOAT, MINUS_FLOAT, MULT_FLOAT, DIV_FLOAT,
     NEGATE_INT, NEGATE_FLOAT, POW_INT, POW_FLOAT,

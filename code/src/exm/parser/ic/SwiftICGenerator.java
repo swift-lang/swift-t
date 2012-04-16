@@ -23,11 +23,11 @@ import exm.parser.ic.ICContinuations.NestedBlock;
 import exm.parser.ic.ICContinuations.RangeLoop;
 import exm.parser.ic.ICContinuations.SwitchStatement;
 import exm.parser.ic.ICContinuations.WaitStatement;
-import exm.ast.Builtins.ArithOpcode;
+import exm.ast.Builtins.LocalOpcode;
 import exm.ast.Builtins.UpdateMode;
 import exm.parser.ic.ICInstructions.Comment;
 import exm.parser.ic.ICInstructions.FunctionCallInstruction;
-import exm.parser.ic.ICInstructions.LocalArithOp;
+import exm.parser.ic.ICInstructions.LocalBuiltin;
 import exm.parser.ic.ICInstructions.LoopBreak;
 import exm.parser.ic.ICInstructions.LoopContinue;
 import exm.parser.ic.ICInstructions.Oparg;
@@ -632,12 +632,12 @@ public class SwiftICGenerator implements CompilerBackend {
   }
 
   @Override
-  public void localArithOp(ArithOpcode op, Variable out, 
+  public void localArithOp(LocalOpcode op, Variable out, 
                                             List<Oparg> in) {
     if (out != null) {
       assert(Types.isScalarValue(out.getType()));
     }
-    currBlock().addInstruction(new LocalArithOp(op, out, in));
+    currBlock().addInstruction(new LocalBuiltin(op, out, in));
   }
 
   @Override

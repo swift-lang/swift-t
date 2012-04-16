@@ -17,8 +17,8 @@ import exm.ast.Variable;
 import exm.ast.Variable.DefType;
 import exm.ast.Variable.VariableStorage;
 import exm.parser.CompilerBackend;
-import exm.ast.Builtins.ArithOpcode;
-import exm.parser.ic.ICInstructions.LocalArithOp;
+import exm.ast.Builtins.LocalOpcode;
+import exm.parser.ic.ICInstructions.LocalBuiltin;
 import exm.parser.ic.ICInstructions.LoopBreak;
 import exm.parser.ic.ICInstructions.LoopContinue;
 import exm.parser.ic.ICInstructions.Oparg;
@@ -954,8 +954,12 @@ public class ICContinuations {
       }
       sb.append(currentIndent +   "for " + loopVar.getName());
       
-      sb.append(" = " + start.toString() + " to " + end.toString() 
-          + " incr " + increment.toString() + " ");
+      sb.append(" = " + start.toString() + " to " + end.toString() + " ");
+      
+      if (increment.getType() != OpargType.INTVAL || 
+            increment.getIntLit() != 1) { 
+          sb.append("incr " + increment.toString() + " ");
+      }
       ICUtil.prettyPrintVarInfo(sb, usedVariables, containersToRegister);
       sb.append(" {\n");
       loopBody.prettyPrint(sb, currentIndent + indent);
@@ -1049,7 +1053,7 @@ public class ICContinuations {
       // Shift loop variable to body and inline loop body
       this.loopBody.declareVariable(loopVar);
       this.loopBody.addInstructionFront(
-          new LocalArithOp(ArithOpcode.COPY_INT, this.loopVar, start));
+          new LocalBuiltin(LocalOpcode.COPY_INT, this.loopVar, start));
       block.insertInline(loopBody);
       block.removeContinuation(this);
     }
@@ -1144,7 +1148,7 @@ public class ICContinuations {
               VariableStorage.LOCAL,
               DefType.LOCAL_COMPILER, null);
           outerBlock.declareVariable(newIncrement);
-          outerBlock.addInstruction(new LocalArithOp(ArithOpcode.MULT_INT,
+          outerBlock.addInstruction(new LocalBuiltin(LocalOpcode.MULT_INT,
               newIncrement, Arrays.asList(oldStep, Oparg.createIntLit(desiredUnroll))));
               
           this.increment = Oparg.createVar(newIncrement);
@@ -1175,7 +1179,7 @@ public class ICContinuations {
             
             curr.addVariable(nextIter);
             // Loop counter
-            curr.addInstruction(new LocalArithOp(ArithOpcode.PLUS_INT, 
+            curr.addInstruction(new LocalBuiltin(LocalOpcode.PLUS_INT, 
                 nextIter, Arrays.asList(Oparg.createVar(lastIter), 
                                         oldStep)));
             
@@ -1185,7 +1189,7 @@ public class ICContinuations {
                   this.loopVar.getName() + "@" + (i + 1) + "_check", 
                   VariableStorage.LOCAL, DefType.LOCAL_COMPILER, null);
               curr.addVariable(nextIterCheck);
-              curr.addInstruction(new LocalArithOp(ArithOpcode.LTE_INT, 
+              curr.addInstruction(new LocalBuiltin(LocalOpcode.LTE_INT, 
                   nextIterCheck, Arrays.asList(Oparg.createVar(nextIter), 
                                           this.end)));
               // check to see if we should run next iteration

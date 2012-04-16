@@ -9,7 +9,7 @@ import java.util.*;
 
 import org.apache.log4j.Logger;
 
-import exm.ast.Builtins.ArithOpcode;
+import exm.ast.Builtins.LocalOpcode;
 import exm.ast.Builtins.UpdateMode;
 import exm.ast.*;
 import exm.ast.Types.FunctionType;
@@ -351,15 +351,15 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void localArithOp(ArithOpcode op, Variable out,
+  public void localArithOp(LocalOpcode op, Variable out,
                                             List<Oparg> in) {
     ArrayList<Expression> argExpr = new ArrayList<Expression>(in.size());
     for (Oparg a: in) {
       argExpr.add(opargToExpr(a));
     }
 
-    if (op == ArithOpcode.ASSERT || op == ArithOpcode.ASSERT_EQ ||
-        op == ArithOpcode.TRACE) {
+    if (op == LocalOpcode.ASSERT || op == LocalOpcode.ASSERT_EQ ||
+        op == LocalOpcode.TRACE) {
       assert(out == null);
       String tclFn;
       switch (op) {
@@ -379,8 +379,8 @@ public class TurbineGenerator implements CompilerBackend
       Command cmd = new Command(tclFn, argExpr);
       pointStack.peek().add(cmd);
       return;
-    } else if (op == ArithOpcode.ARGC_GET || op == ArithOpcode.ARGV_CONTAINS
-            || op == ArithOpcode.ARGV_GET) {
+    } else if (op == LocalOpcode.ARGC_GET || op == LocalOpcode.ARGV_CONTAINS
+            || op == LocalOpcode.ARGV_GET) {
       assert(out != null);
       String tclFn;
       switch (op) {
@@ -402,14 +402,14 @@ public class TurbineGenerator implements CompilerBackend
                             new Expression[argExpr.size()])));
       pointStack.peek().add(cmd);
       return;
-    } else if (op == ArithOpcode.PRINTF || op == ArithOpcode.SPRINTF) {
+    } else if (op == LocalOpcode.PRINTF || op == LocalOpcode.SPRINTF) {
       Square fmtArgs = new TclList(argExpr);
       Square fmt = new Square(new Token("eval"), new Token("format"), 
                                                                 fmtArgs);
-      if (op ==  ArithOpcode.PRINTF) {
+      if (op ==  LocalOpcode.PRINTF) {
         pointStack.peek().add(new Command(new Token("puts"), fmt));
       } else {
-        assert(op == ArithOpcode.SPRINTF);
+        assert(op == LocalOpcode.SPRINTF);
         pointStack.peek().add(new SetVariable(prefixVar(out.getName()), fmt));
       }
       return;
@@ -418,51 +418,51 @@ public class TurbineGenerator implements CompilerBackend
       assert(Types.isScalarValue(out.getType()));
       Expression rhs;
       // First handle special cases, then typical case
-      if (op == ArithOpcode.STRCAT) {
+      if (op == LocalOpcode.STRCAT) {
         rhs = localStrCat(in, argExpr);
-      } else if (op == ArithOpcode.EQ_STRING
-                || op == ArithOpcode.NEQ_STRING) {
+      } else if (op == LocalOpcode.EQ_STRING
+                || op == LocalOpcode.NEQ_STRING) {
         assert(argExpr.size() == 2);
         rhs = new Square(new Token("string"), new Token("equal"),
             argExpr.get(0), argExpr.get(1));
-        if (op == ArithOpcode.NEQ_STRING) {
+        if (op == LocalOpcode.NEQ_STRING) {
           // Negate previous result
           rhs = Square.arithExpr(new Token("!"), rhs);
         }
-      } else if (op == ArithOpcode.COPY_BLOB ||
-          op ==  ArithOpcode.COPY_BOOL ||
-          op == ArithOpcode.COPY_INT ||
-          op == ArithOpcode.COPY_FLOAT ||
-          op == ArithOpcode.COPY_STRING) {
+      } else if (op == LocalOpcode.COPY_BLOB ||
+          op ==  LocalOpcode.COPY_BOOL ||
+          op == LocalOpcode.COPY_INT ||
+          op == LocalOpcode.COPY_FLOAT ||
+          op == LocalOpcode.COPY_STRING) {
         assert(argExpr.size() == 1);
         checkCopy(op, out, in.get(0));
         rhs = argExpr.get(0);
-      } else if (op == ArithOpcode.MOD_INT) {
+      } else if (op == LocalOpcode.MOD_INT) {
         // Special implementation to emulate old swift
         rhs = Turbine.modInteger(argExpr.get(0), argExpr.get(1));
-      } else if (op == ArithOpcode.DIV_INT) {
+      } else if (op == LocalOpcode.DIV_INT) {
         // special implementation to emulate old swift
         rhs = Turbine.divideInteger(argExpr.get(0), argExpr.get(1));
-      } else if (op == ArithOpcode.RAND_INT) {
+      } else if (op == LocalOpcode.RAND_INT) {
         rhs = new Square(new Token("turbine::randint_impl"), argExpr.get(0),
                                                     argExpr.get(1));
-      } else if (op == ArithOpcode.POW_INT) {
+      } else if (op == LocalOpcode.POW_INT) {
         assert(argExpr.size() == 2);
         assert(in.get(0).isImmediateInt() && in.get(1).isImmediateInt());
         rhs = new Square(new Token("turbine::pow_integer_impl"), argExpr.get(0),
                                                                 argExpr.get(1));
-      } else if (op == ArithOpcode.SUBSTRING) {
+      } else if (op == LocalOpcode.SUBSTRING) {
         assert(argExpr.size() == 3);
         rhs = new Square(new Token("turbine::substring_impl"),
             argExpr.get(0), argExpr.get(1), argExpr.get(2));
-      } else if (op == ArithOpcode.INTTOSTR || op == ArithOpcode.FLOATTOSTR) {
+      } else if (op == LocalOpcode.INTTOSTR || op == LocalOpcode.FLOATTOSTR) {
         assert(argExpr.size() == 1);
         // TCL will convert automatically
         rhs = argExpr.get(0);
-      } else if (op == ArithOpcode.STRTOINT ||
-          op == ArithOpcode.STRTOFLOAT ) {
+      } else if (op == LocalOpcode.STRTOINT ||
+          op == LocalOpcode.STRTOFLOAT ) {
         assert(argExpr.size() == 1);
-        String tclCheck = (op == ArithOpcode.STRTOINT) ?
+        String tclCheck = (op == LocalOpcode.STRTOINT) ?
                   "turbine::check_str_int" : "turbine::check_str_float";
         rhs = Square.fnCall(tclCheck, argExpr.get(0));
 
@@ -479,7 +479,7 @@ public class TurbineGenerator implements CompilerBackend
     }
   }
 
-  private void checkCopy(ArithOpcode op, Variable out, Oparg inArg) {
+  private void checkCopy(LocalOpcode op, Variable out, Oparg inArg) {
     SwiftType expType = null;
     switch (op) {
     case COPY_BLOB:
@@ -516,7 +516,7 @@ public class TurbineGenerator implements CompilerBackend
     return rhs;
   }
 
-  private Expression[] arithOpExpr(ArithOpcode op,
+  private Expression[] arithOpExpr(LocalOpcode op,
                         ArrayList<Expression> argExpr) {
     switch(op) {
     /* First handle binary ops that map nicely to TCL equivalent */
@@ -565,7 +565,7 @@ public class TurbineGenerator implements CompilerBackend
       return new Expression[] { argExpr.get(0) };
     case MAX_FLOAT: case MAX_INT: case MIN_FLOAT: case MIN_INT:
       String fnName;
-      if (op == ArithOpcode.MAX_FLOAT || op == ArithOpcode.MAX_INT) {
+      if (op == LocalOpcode.MAX_FLOAT || op == LocalOpcode.MAX_INT) {
         fnName = "max";
       } else {
         fnName = "min";
@@ -579,7 +579,7 @@ public class TurbineGenerator implements CompilerBackend
     }
   }
 
-  private Token arithOpTok(ArithOpcode op) {
+  private Token arithOpTok(LocalOpcode op) {
     switch (op) {
     case EQ_INT: case EQ_FLOAT: case EQ_BOOL:
       return new Token("==");

@@ -7,7 +7,7 @@ import exm.ast.Types.SwiftType;
 import exm.ast.Variable.DefType;
 import exm.ast.Variable.VariableStorage;
 import exm.ast.*;
-import exm.ast.Builtins.ArithOpcode;
+import exm.ast.Builtins.LocalOpcode;
 import exm.ast.Builtins.UpdateMode;
 import exm.parser.ic.ICInstructions.Oparg;
 import exm.parser.util.UndefinedTypeException;
@@ -34,7 +34,7 @@ public interface CompilerBackend {
 
   public abstract void closeArray(Variable arr);
 
-  public abstract void localArithOp(ArithOpcode op, Variable out, 
+  public abstract void localArithOp(LocalOpcode op, Variable out, 
                                             List<Oparg> in);
   
   /**

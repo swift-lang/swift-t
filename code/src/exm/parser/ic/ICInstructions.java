@@ -15,7 +15,7 @@ import org.apache.log4j.Logger;
 import exm.ast.Builtins;
 import exm.ast.Builtins.UpdateMode;
 import exm.ast.Types;
-import exm.ast.Builtins.ArithOpcode;
+import exm.ast.Builtins.LocalOpcode;
 import exm.ast.Types.SwiftType;
 import exm.ast.Variable;
 import exm.ast.Variable.VariableStorage;
@@ -1569,8 +1569,8 @@ public class ICInstructions {
                                             new HashSet<String>();
     
     /** Names of built-ins which have a local equivalent operation */
-    private static HashMap<String, ArithOpcode>
-              localEquivalents = new HashMap<String, ArithOpcode>();
+    private static HashMap<String, LocalOpcode>
+              localEquivalents = new HashMap<String, LocalOpcode>();
     
     
     /** Built-ins which are known to be deterministic */
@@ -1666,88 +1666,88 @@ public class ICInstructions {
       sideEffectFree.add("argc");
       sideEffectFree.add("argv_contains");
       sideEffectFree.add("argv");
-      localEquivalents.put("argc", ArithOpcode.ARGC_GET);
-      localEquivalents.put("argv_contains", ArithOpcode.ARGV_CONTAINS);
-      localEquivalents.put("argv", ArithOpcode.ARGV_GET);
+      localEquivalents.put("argc", LocalOpcode.ARGC_GET);
+      localEquivalents.put("argv_contains", LocalOpcode.ARGV_CONTAINS);
+      localEquivalents.put("argv", LocalOpcode.ARGV_GET);
       
     
-      localEquivalents.put("plus_integer", ArithOpcode.PLUS_INT);
-      localEquivalents.put("minus_integer", ArithOpcode.MINUS_INT);
-      localEquivalents.put("multiply_integer", ArithOpcode.MULT_INT);
-      localEquivalents.put("divide_integer", ArithOpcode.DIV_INT);
-      localEquivalents.put("mod_integer", ArithOpcode.MOD_INT);
-      localEquivalents.put("negate_integer", ArithOpcode.NEGATE_INT);
-      localEquivalents.put("max_integer", ArithOpcode.MAX_INT);
-      localEquivalents.put("min_integer", ArithOpcode.MIN_INT);
-      localEquivalents.put("abs_integer", ArithOpcode.ABS_INT);
-      localEquivalents.put("pow_integer", ArithOpcode.POW_INT);
+      localEquivalents.put("plus_integer", LocalOpcode.PLUS_INT);
+      localEquivalents.put("minus_integer", LocalOpcode.MINUS_INT);
+      localEquivalents.put("multiply_integer", LocalOpcode.MULT_INT);
+      localEquivalents.put("divide_integer", LocalOpcode.DIV_INT);
+      localEquivalents.put("mod_integer", LocalOpcode.MOD_INT);
+      localEquivalents.put("negate_integer", LocalOpcode.NEGATE_INT);
+      localEquivalents.put("max_integer", LocalOpcode.MAX_INT);
+      localEquivalents.put("min_integer", LocalOpcode.MIN_INT);
+      localEquivalents.put("abs_integer", LocalOpcode.ABS_INT);
+      localEquivalents.put("pow_integer", LocalOpcode.POW_INT);
       
-      localEquivalents.put("eq_integer", ArithOpcode.EQ_INT);
-      localEquivalents.put("neq_integer", ArithOpcode.NEQ_INT);
-      localEquivalents.put("lt_integer", ArithOpcode.LT_INT);
-      localEquivalents.put("lte_integer", ArithOpcode.LTE_INT);
-      localEquivalents.put("gt_integer", ArithOpcode.GT_INT);
-      localEquivalents.put("gte_integer", ArithOpcode.GTE_INT);
+      localEquivalents.put("eq_integer", LocalOpcode.EQ_INT);
+      localEquivalents.put("neq_integer", LocalOpcode.NEQ_INT);
+      localEquivalents.put("lt_integer", LocalOpcode.LT_INT);
+      localEquivalents.put("lte_integer", LocalOpcode.LTE_INT);
+      localEquivalents.put("gt_integer", LocalOpcode.GT_INT);
+      localEquivalents.put("gte_integer", LocalOpcode.GTE_INT);
       
-      localEquivalents.put("plus_float", ArithOpcode.PLUS_FLOAT);
-      localEquivalents.put("minus_float", ArithOpcode.MINUS_FLOAT);
-      localEquivalents.put("multiply_float", ArithOpcode.MULT_FLOAT);
-      localEquivalents.put("divide_float", ArithOpcode.DIV_FLOAT);
-      localEquivalents.put("negate_float", ArithOpcode.NEGATE_FLOAT);
-      localEquivalents.put("max_float", ArithOpcode.MAX_FLOAT);
-      localEquivalents.put("min_float", ArithOpcode.MIN_FLOAT);
-      localEquivalents.put("abs_float", ArithOpcode.ABS_FLOAT);
-      localEquivalents.put("pow_float", ArithOpcode.POW_FLOAT);
-      localEquivalents.put("is_nan", ArithOpcode.IS_NAN);
+      localEquivalents.put("plus_float", LocalOpcode.PLUS_FLOAT);
+      localEquivalents.put("minus_float", LocalOpcode.MINUS_FLOAT);
+      localEquivalents.put("multiply_float", LocalOpcode.MULT_FLOAT);
+      localEquivalents.put("divide_float", LocalOpcode.DIV_FLOAT);
+      localEquivalents.put("negate_float", LocalOpcode.NEGATE_FLOAT);
+      localEquivalents.put("max_float", LocalOpcode.MAX_FLOAT);
+      localEquivalents.put("min_float", LocalOpcode.MIN_FLOAT);
+      localEquivalents.put("abs_float", LocalOpcode.ABS_FLOAT);
+      localEquivalents.put("pow_float", LocalOpcode.POW_FLOAT);
+      localEquivalents.put("is_nan", LocalOpcode.IS_NAN);
       
-      localEquivalents.put("ceil", ArithOpcode.CEIL);
-      localEquivalents.put("floor", ArithOpcode.FLOOR);
-      localEquivalents.put("round", ArithOpcode.ROUND);
-      localEquivalents.put("itof", ArithOpcode.INTTOFLOAT);
-      localEquivalents.put("toint", ArithOpcode.STRTOINT);
-      localEquivalents.put("fromint", ArithOpcode.INTTOSTR);
-      localEquivalents.put("tofloat", ArithOpcode.STRTOFLOAT);
-      localEquivalents.put("fromfloat", ArithOpcode.FLOATTOSTR);
-      localEquivalents.put("exp", ArithOpcode.EXP);
-      localEquivalents.put("log", ArithOpcode.LOG);
-      localEquivalents.put("sqrt", ArithOpcode.SQRT);
+      localEquivalents.put("ceil", LocalOpcode.CEIL);
+      localEquivalents.put("floor", LocalOpcode.FLOOR);
+      localEquivalents.put("round", LocalOpcode.ROUND);
+      localEquivalents.put("itof", LocalOpcode.INTTOFLOAT);
+      localEquivalents.put("toint", LocalOpcode.STRTOINT);
+      localEquivalents.put("fromint", LocalOpcode.INTTOSTR);
+      localEquivalents.put("tofloat", LocalOpcode.STRTOFLOAT);
+      localEquivalents.put("fromfloat", LocalOpcode.FLOATTOSTR);
+      localEquivalents.put("exp", LocalOpcode.EXP);
+      localEquivalents.put("log", LocalOpcode.LOG);
+      localEquivalents.put("sqrt", LocalOpcode.SQRT);
       
-      localEquivalents.put("eq_float", ArithOpcode.EQ_FLOAT);
-      localEquivalents.put("neq_float", ArithOpcode.NEQ_FLOAT);
-      localEquivalents.put("lt_float", ArithOpcode.LT_FLOAT);
-      localEquivalents.put("lte_float", ArithOpcode.LTE_FLOAT);
-      localEquivalents.put("gt_float", ArithOpcode.GT_FLOAT);
-      localEquivalents.put("gte_float", ArithOpcode.GTE_FLOAT);      
+      localEquivalents.put("eq_float", LocalOpcode.EQ_FLOAT);
+      localEquivalents.put("neq_float", LocalOpcode.NEQ_FLOAT);
+      localEquivalents.put("lt_float", LocalOpcode.LT_FLOAT);
+      localEquivalents.put("lte_float", LocalOpcode.LTE_FLOAT);
+      localEquivalents.put("gt_float", LocalOpcode.GT_FLOAT);
+      localEquivalents.put("gte_float", LocalOpcode.GTE_FLOAT);      
       
-      localEquivalents.put("eq_string", ArithOpcode.EQ_STRING);
-      localEquivalents.put("neq_string", ArithOpcode.NEQ_STRING);
-      localEquivalents.put("strcat", ArithOpcode.STRCAT);
-      localEquivalents.put("substrict", ArithOpcode.SUBSTRING);
+      localEquivalents.put("eq_string", LocalOpcode.EQ_STRING);
+      localEquivalents.put("neq_string", LocalOpcode.NEQ_STRING);
+      localEquivalents.put("strcat", LocalOpcode.STRCAT);
+      localEquivalents.put("substrict", LocalOpcode.SUBSTRING);
       
-      localEquivalents.put("eq_bool", ArithOpcode.EQ_FLOAT);
-      localEquivalents.put("neq_bool", ArithOpcode.NEQ_FLOAT);
-      localEquivalents.put("and", ArithOpcode.AND);
-      localEquivalents.put("or", ArithOpcode.OR);
-      localEquivalents.put("xor", ArithOpcode.XOR);
-      localEquivalents.put("not", ArithOpcode.NOT);
+      localEquivalents.put("eq_bool", LocalOpcode.EQ_FLOAT);
+      localEquivalents.put("neq_bool", LocalOpcode.NEQ_FLOAT);
+      localEquivalents.put("and", LocalOpcode.AND);
+      localEquivalents.put("or", LocalOpcode.OR);
+      localEquivalents.put("xor", LocalOpcode.XOR);
+      localEquivalents.put("not", LocalOpcode.NOT);
       
-      localEquivalents.put("copy_integer", ArithOpcode.COPY_INT);
-      localEquivalents.put("copy_float", ArithOpcode.COPY_FLOAT);
-      localEquivalents.put("copy_string", ArithOpcode.COPY_STRING);
-      localEquivalents.put("copy_boolean", ArithOpcode.COPY_BOOL);
-      localEquivalents.put("copy_blob", ArithOpcode.COPY_BLOB);
+      localEquivalents.put("copy_integer", LocalOpcode.COPY_INT);
+      localEquivalents.put("copy_float", LocalOpcode.COPY_FLOAT);
+      localEquivalents.put("copy_string", LocalOpcode.COPY_STRING);
+      localEquivalents.put("copy_boolean", LocalOpcode.COPY_BOOL);
+      localEquivalents.put("copy_blob", LocalOpcode.COPY_BLOB);
 
-      localEquivalents.put("assert", ArithOpcode.ASSERT);
-      localEquivalents.put("assertEqual", ArithOpcode.ASSERT_EQ);
-      localEquivalents.put("trace", ArithOpcode.TRACE);
-      localEquivalents.put("printf", ArithOpcode.PRINTF);
-      localEquivalents.put("sprintf", ArithOpcode.SPRINTF);
+      localEquivalents.put("assert", LocalOpcode.ASSERT);
+      localEquivalents.put("assertEqual", LocalOpcode.ASSERT_EQ);
+      localEquivalents.put("trace", LocalOpcode.TRACE);
+      localEquivalents.put("printf", LocalOpcode.PRINTF);
+      localEquivalents.put("sprintf", LocalOpcode.SPRINTF);
       
       // Random functions
       randomFunctions.add("random");
       randomFunctions.add("randint");
-      localEquivalents.put("random", ArithOpcode.RANDOM);
-      localEquivalents.put("randint", ArithOpcode.RAND_INT);
+      localEquivalents.put("random", LocalOpcode.RANDOM);
+      localEquivalents.put("randint", LocalOpcode.RAND_INT);
       
       // All local arith ops are deterministic aside from random ones
       knownDeterministic.addAll(localEquivalents.keySet());
@@ -1778,7 +1778,7 @@ public class ICInstructions {
         if (op == Opcode.CALL_BUILTIN && 
                           localEquivalents.containsKey(this.functionName)) {
           assert(outputs.size() == 1); // assume for now
-          LocalArithOp.constantFold(localEquivalents.get(this.functionName),
+          LocalBuiltin.constantFold(localEquivalents.get(this.functionName),
               outputs.get(0).getName(), constInputs);
         }
       } else {
@@ -1883,7 +1883,7 @@ public class ICInstructions {
     @Override
     public MakeImmChange makeImmediate(List<Variable> outVars, 
                                         List<Oparg> values) {
-      ArithOpcode newOp = localEquivalents.get(this.functionName);
+      LocalOpcode newOp = localEquivalents.get(this.functionName);
       assert(newOp != null);
       assert(values.size() == inputs.size());
       
@@ -1891,11 +1891,11 @@ public class ICInstructions {
         assert(Types.derefResultType(outputs.get(0).getType()).equals(
             outVars.get(0).getType()));
         return new MakeImmChange(
-            new LocalArithOp(newOp, outVars.get(0), values));
+            new LocalBuiltin(newOp, outVars.get(0), values));
       } else {
         assert(outputs.size() == 0);
         return new MakeImmChange(
-            new LocalArithOp(newOp, null, values));
+            new LocalBuiltin(newOp, null, values));
       }
     }
 
@@ -2249,7 +2249,7 @@ public class ICInstructions {
     ARRAY_CREATE_NESTED_IMM, ARRAY_REF_CREATE_NESTED_IMM,
     LOOP_BREAK, LOOP_CONTINUE, 
     COPY_REF,
-    LOCAL_ARITH_OP,
+    CALL_LOCAL_BUILTIN,
     INIT_UPDATEABLE_FLOAT, UPDATE_MIN, UPDATE_INCR, UPDATE_SCALE, LATEST_VALUE,
     UPDATE_MIN_IMM, UPDATE_INCR_IMM, UPDATE_SCALE_IMM,
   }
@@ -2257,42 +2257,42 @@ public class ICInstructions {
   /** Keep track of which of the above functions are randomized or have
    * side effects, so we don't optimized these things out
    */
-  private static HashSet<ArithOpcode> sideeffectLocalOps
-            = new HashSet<ArithOpcode>();
+  private static HashSet<LocalOpcode> sideeffectLocalOps
+            = new HashSet<LocalOpcode>();
   static {
-    sideeffectLocalOps.add(ArithOpcode.RANDOM);
-    sideeffectLocalOps.add(ArithOpcode.RAND_INT);
-    sideeffectLocalOps.add(ArithOpcode.TRACE);
-    sideeffectLocalOps.add(ArithOpcode.ASSERT);
-    sideeffectLocalOps.add(ArithOpcode.ASSERT_EQ);
-    sideeffectLocalOps.add(ArithOpcode.PRINTF);
-    sideeffectLocalOps.add(ArithOpcode.SPRINTF);
+    sideeffectLocalOps.add(LocalOpcode.RANDOM);
+    sideeffectLocalOps.add(LocalOpcode.RAND_INT);
+    sideeffectLocalOps.add(LocalOpcode.TRACE);
+    sideeffectLocalOps.add(LocalOpcode.ASSERT);
+    sideeffectLocalOps.add(LocalOpcode.ASSERT_EQ);
+    sideeffectLocalOps.add(LocalOpcode.PRINTF);
+    sideeffectLocalOps.add(LocalOpcode.SPRINTF);
   }
-  public static class LocalArithOp extends Instruction {
-    public final ArithOpcode localop;
+  public static class LocalBuiltin extends Instruction {
+    public final LocalOpcode localop;
     
     // First arg is always result, others are inputs
     private Variable output; // null if no output
     private List<Oparg> inputs;
 
-    public LocalArithOp(ArithOpcode localop, Variable output, 
+    public LocalBuiltin(LocalOpcode localop, Variable output, 
         Oparg input) {
       this(localop, output, Arrays.asList(input));
     }
-    public LocalArithOp(ArithOpcode localop, Variable output, 
+    public LocalBuiltin(LocalOpcode localop, Variable output, 
           List<Oparg> inputs) {
-      super(Opcode.LOCAL_ARITH_OP);
+      super(Opcode.CALL_LOCAL_BUILTIN);
       this.localop = localop;
       this.output = output;
       this.inputs = new ArrayList<Oparg>(inputs);
     }
 
-    private static boolean shortCircuitable(ArithOpcode op) {
-      return op == ArithOpcode.AND || op == ArithOpcode.OR;
+    private static boolean shortCircuitable(LocalOpcode op) {
+      return op == LocalOpcode.AND || op == LocalOpcode.OR;
     }
     
     public static Map<String, Oparg> 
-        constantFold(ArithOpcode op, String outVarName,
+        constantFold(LocalOpcode op, String outVarName,
             List<Oparg> constInputs) {
       if (shortCircuitable(op)) {
         // TODO: could short-circuit e.g. x * 0 or x ** 0 or x - x
@@ -2322,7 +2322,7 @@ public class ICInstructions {
           return constantFoldStringOp(op, outVarName, constInputs);
         } else if (allBool) {
           return constantFoldBoolOp(op, outVarName, constInputs);
-        } else if (op == ArithOpcode.SUBSTRING) {
+        } else if (op == LocalOpcode.SUBSTRING) {
           String str = constInputs.get(0).getStringLit();
           long start = constInputs.get(1).getIntLit();
           long len = constInputs.get(2).getIntLit();
@@ -2344,7 +2344,7 @@ public class ICInstructions {
      * @return
      */
     private static Map<String, Oparg> constFoldShortCircuit(
-        ArithOpcode op, String outVarName, List<Oparg> constArgs) {
+        LocalOpcode op, String outVarName, List<Oparg> constArgs) {
       List<Oparg> constInputs = new ArrayList<Oparg>(2);
       for (Oparg in: constArgs) {
         if (in != null) {
@@ -2358,19 +2358,19 @@ public class ICInstructions {
         if (constInputs.size() == 2) {
           // Can directly evaluate
           boolean arg2 = constInputs.get(1).getBoolLit();
-          if (op == ArithOpcode.OR) {
+          if (op == LocalOpcode.OR) {
             newConsts.put(outVarName, Oparg.createBoolLit(arg1 || arg2 ));
             return newConsts;
-          } else if (op == ArithOpcode.AND) {
+          } else if (op == LocalOpcode.AND) {
             newConsts.put(outVarName, Oparg.createBoolLit(arg1 && arg2));
             return newConsts;
           }
         } else if (constInputs.size() == 1) {
           // see if we can short-circuit
-          if (op == ArithOpcode.AND && arg1) {
+          if (op == LocalOpcode.AND && arg1) {
             newConsts.put(outVarName, Oparg.createBoolLit(true));
             return newConsts;
-          } else if (op == ArithOpcode.OR && !arg1) {
+          } else if (op == LocalOpcode.OR && !arg1) {
             newConsts.put(outVarName, Oparg.createBoolLit(false));
             return newConsts;
           }
@@ -2379,9 +2379,9 @@ public class ICInstructions {
       return null;
     }
   
-    private static Map<String, Oparg> constantFoldStringOp(ArithOpcode op,
+    private static Map<String, Oparg> constantFoldStringOp(LocalOpcode op,
                       String outVar, List<Oparg> constInputs) {
-      if (op == ArithOpcode.STRCAT) {
+      if (op == LocalOpcode.STRCAT) {
         // Strcat can take multiple arguments
         HashMap<String, Oparg> newConsts = new HashMap<String, Oparg>(1);
         StringBuilder sb = new StringBuilder();
@@ -2393,7 +2393,7 @@ public class ICInstructions {
       } else 
       if (constInputs.size() == 1) {
         String arg1 = constInputs.get(0).getStringLit();
-        if (op == ArithOpcode.COPY_STRING) {
+        if (op == LocalOpcode.COPY_STRING) {
           HashMap<String, Oparg> newConsts = new HashMap<String, Oparg>(1);
           newConsts.put(outVar,
                 Oparg.createStringLit(arg1));
@@ -2403,10 +2403,10 @@ public class ICInstructions {
         HashMap<String, Oparg> newConsts = new HashMap<String, Oparg>(1);
         String arg1 = constInputs.get(0).getStringLit();
         String arg2 = constInputs.get(1).getStringLit();
-        if (op == ArithOpcode.EQ_STRING) {
+        if (op == LocalOpcode.EQ_STRING) {
           newConsts.put(outVar, Oparg.createBoolLit(arg1.equals(arg2)));
           return newConsts;
-        } else if (op == ArithOpcode.NEQ_STRING) {
+        } else if (op == LocalOpcode.NEQ_STRING) {
           newConsts.put(outVar, Oparg.createBoolLit(!arg1.equals(arg2)));
           return newConsts;
         }
@@ -2414,31 +2414,31 @@ public class ICInstructions {
       return null;
     }
   
-    private static Map<String, Oparg> constantFoldFloatOp(ArithOpcode op,
+    private static Map<String, Oparg> constantFoldFloatOp(LocalOpcode op,
         String outVar, List<Oparg> constInputs) {
       if (constInputs.size() == 1) {
         HashMap<String, Oparg> newConsts = new HashMap<String, Oparg>(1);
         double arg1 = constInputs.get(0).getFloatLit();
-        if (op == ArithOpcode.COPY_FLOAT) {
+        if (op == LocalOpcode.COPY_FLOAT) {
           newConsts.put(outVar, Oparg.createFloatLit(arg1));
-        } else if (op == ArithOpcode.ABS_FLOAT) {
+        } else if (op == LocalOpcode.ABS_FLOAT) {
            newConsts.put(outVar, Oparg.createFloatLit(Math.abs(arg1)));
-        } else if (op == ArithOpcode.EXP) {
+        } else if (op == LocalOpcode.EXP) {
           newConsts.put(outVar, Oparg.createFloatLit(Math.exp(arg1)));
-        } else if (op == ArithOpcode.LOG) {
+        } else if (op == LocalOpcode.LOG) {
           newConsts.put(outVar, Oparg.createFloatLit(Math.log(arg1)));
-        } else if (op == ArithOpcode.SQRT) {
+        } else if (op == LocalOpcode.SQRT) {
           newConsts.put(outVar, Oparg.createFloatLit(Math.sqrt(arg1)));
-        } else if (op == ArithOpcode.ROUND) {
+        } else if (op == LocalOpcode.ROUND) {
           newConsts.put(outVar, Oparg.createIntLit(Math.round(arg1)));
-        } else if (op == ArithOpcode.CEIL) {
+        } else if (op == LocalOpcode.CEIL) {
           newConsts.put(outVar, Oparg.createIntLit((long)Math.ceil(arg1)));
-        } else if (op == ArithOpcode.FLOOR) {
+        } else if (op == LocalOpcode.FLOOR) {
           newConsts.put(outVar, Oparg.createIntLit((long)Math.floor(arg1)));
-        } else if (op == ArithOpcode.FLOATTOSTR) {
+        } else if (op == LocalOpcode.FLOATTOSTR) {
           //TODO: format might not be consistent with TCL
           newConsts.put(outVar, Oparg.createStringLit(Double.toString(arg1)));
-        } else if (op == ArithOpcode.IS_NAN) {
+        } else if (op == LocalOpcode.IS_NAN) {
           newConsts.put(outVar, Oparg.createBoolLit(Double.isNaN(arg1)));
         } else {
           return null;
@@ -2448,29 +2448,29 @@ public class ICInstructions {
         HashMap<String, Oparg> newConsts = new HashMap<String, Oparg>(1);
         double arg1 = constInputs.get(0).getFloatLit();
         double arg2 = constInputs.get(1).getFloatLit();
-        if (op == ArithOpcode.PLUS_FLOAT) {
+        if (op == LocalOpcode.PLUS_FLOAT) {
           newConsts.put(outVar,  Oparg.createFloatLit(arg1 + arg2));
-        } else if (op == ArithOpcode.MINUS_FLOAT) {
+        } else if (op == LocalOpcode.MINUS_FLOAT) {
           newConsts.put(outVar,  Oparg.createFloatLit(arg1 - arg2));
-        } else if (op == ArithOpcode.MULT_FLOAT) {
+        } else if (op == LocalOpcode.MULT_FLOAT) {
           newConsts.put(outVar, Oparg.createFloatLit(arg1 * arg2));
-        } else if (op == ArithOpcode.EQ_FLOAT) {
+        } else if (op == LocalOpcode.EQ_FLOAT) {
           newConsts.put(outVar, Oparg.createBoolLit(arg1 == arg2));
-        } else if (op == ArithOpcode.NEQ_FLOAT) {
+        } else if (op == LocalOpcode.NEQ_FLOAT) {
           newConsts.put(outVar, Oparg.createBoolLit(arg1 != arg2));
-        } else if (op == ArithOpcode.GT_FLOAT) {
+        } else if (op == LocalOpcode.GT_FLOAT) {
           newConsts.put(outVar, Oparg.createBoolLit(arg1 > arg2));
-        } else if (op == ArithOpcode.GTE_FLOAT) {
+        } else if (op == LocalOpcode.GTE_FLOAT) {
           newConsts.put(outVar, Oparg.createBoolLit(arg1 >= arg2));
-        } else if (op == ArithOpcode.LT_FLOAT) {
+        } else if (op == LocalOpcode.LT_FLOAT) {
           newConsts.put(outVar, Oparg.createBoolLit(arg1 < arg2));
-        } else if (op == ArithOpcode.LTE_FLOAT) {
+        } else if (op == LocalOpcode.LTE_FLOAT) {
           newConsts.put(outVar, Oparg.createBoolLit(arg1 <= arg2));
-        } else if (op == ArithOpcode.MAX_FLOAT) {
+        } else if (op == LocalOpcode.MAX_FLOAT) {
           newConsts.put(outVar, Oparg.createFloatLit(Math.max(arg1,arg2)));
-        } else if (op == ArithOpcode.MIN_FLOAT) {
+        } else if (op == LocalOpcode.MIN_FLOAT) {
           newConsts.put(outVar, Oparg.createFloatLit(Math.min(arg1,arg2)));
-        } else if (op == ArithOpcode.POW_FLOAT) {
+        } else if (op == LocalOpcode.POW_FLOAT) {
           newConsts.put(outVar, Oparg.createFloatLit(Math.pow(arg1,arg2)));
         } else {
           return null;
@@ -2481,20 +2481,20 @@ public class ICInstructions {
       }
     }
   
-    private static Map<String, Oparg> constantFoldIntOp(ArithOpcode op,
+    private static Map<String, Oparg> constantFoldIntOp(LocalOpcode op,
         String outVar, List<Oparg> constInputs) {
       if (constInputs.size() == 1) {
         HashMap<String, Oparg> newConsts = new HashMap<String, Oparg>(1);
         long arg1 = constInputs.get(0).getIntLit();
-        if (op == ArithOpcode.COPY_INT) {
+        if (op == LocalOpcode.COPY_INT) {
           newConsts.put(outVar, Oparg.createIntLit(arg1));
-        } else if (op == ArithOpcode.ABS_INT) {
+        } else if (op == LocalOpcode.ABS_INT) {
           newConsts.put(outVar, Oparg.createIntLit(Math.abs(arg1)));
-        } else if (op == ArithOpcode.NEGATE_INT) {
+        } else if (op == LocalOpcode.NEGATE_INT) {
           newConsts.put(outVar, Oparg.createIntLit(0 - arg1));
-        } else if (op == ArithOpcode.INTTOFLOAT) {
+        } else if (op == LocalOpcode.INTTOFLOAT) {
           newConsts.put(outVar, Oparg.createFloatLit(arg1));
-        } else if (op == ArithOpcode.INTTOSTR) {
+        } else if (op == LocalOpcode.INTTOSTR) {
           newConsts.put(outVar, Oparg.createStringLit(Long.toString(arg1)));
         } else {
           return null;
@@ -2504,33 +2504,33 @@ public class ICInstructions {
         HashMap<String, Oparg> newConsts = new HashMap<String, Oparg>(1);
         long arg1 = constInputs.get(0).getIntLit();
         long arg2 = constInputs.get(1).getIntLit();
-        if (op == ArithOpcode.PLUS_INT) {
+        if (op == LocalOpcode.PLUS_INT) {
           newConsts.put(outVar, Oparg.createIntLit(arg1 + arg2));
-        } else if (op == ArithOpcode.MINUS_INT) {
+        } else if (op == LocalOpcode.MINUS_INT) {
           newConsts.put(outVar, Oparg.createIntLit(arg1 - arg2));
-        } else if (op == ArithOpcode.MULT_INT) {
+        } else if (op == LocalOpcode.MULT_INT) {
           newConsts.put(outVar, Oparg.createIntLit(arg1 * arg2));
-        } else if (op == ArithOpcode.DIV_INT) {
+        } else if (op == LocalOpcode.DIV_INT) {
           newConsts.put(outVar, Oparg.createIntLit(arg1 / arg2));
-        } else if (op == ArithOpcode.MOD_INT) {
+        } else if (op == LocalOpcode.MOD_INT) {
           newConsts.put(outVar, Oparg.createIntLit(arg1 % arg2));
-        } else if (op == ArithOpcode.EQ_INT) {
+        } else if (op == LocalOpcode.EQ_INT) {
           newConsts.put(outVar, Oparg.createBoolLit(arg1 == arg2));
-        } else if (op == ArithOpcode.NEQ_INT) {
+        } else if (op == LocalOpcode.NEQ_INT) {
           newConsts.put(outVar, Oparg.createBoolLit(arg1 != arg2));
-        } else if (op == ArithOpcode.GT_INT) {
+        } else if (op == LocalOpcode.GT_INT) {
           newConsts.put(outVar, Oparg.createBoolLit(arg1 > arg2));
-        } else if (op == ArithOpcode.GTE_INT) {
+        } else if (op == LocalOpcode.GTE_INT) {
           newConsts.put(outVar, Oparg.createBoolLit(arg1 >= arg2));
-        } else if (op == ArithOpcode.LT_INT) {
+        } else if (op == LocalOpcode.LT_INT) {
           newConsts.put(outVar, Oparg.createBoolLit(arg1 < arg2));
-        } else if (op == ArithOpcode.LTE_INT) {
+        } else if (op == LocalOpcode.LTE_INT) {
           newConsts.put(outVar, Oparg.createBoolLit(arg1 <= arg2));
-        } else if (op == ArithOpcode.MAX_INT) {
+        } else if (op == LocalOpcode.MAX_INT) {
           newConsts.put(outVar, Oparg.createIntLit(Math.max(arg1,arg2)));
-        } else if (op == ArithOpcode.MIN_INT) {
+        } else if (op == LocalOpcode.MIN_INT) {
           newConsts.put(outVar, Oparg.createIntLit(Math.min(arg1,arg2)));
-        } else if (op == ArithOpcode.POW_INT) {
+        } else if (op == LocalOpcode.POW_INT) {
           newConsts.put(outVar, Oparg.createFloatLit(Math.pow((double)arg1,
                                                           (double)arg2)));
         } else {
@@ -2542,12 +2542,12 @@ public class ICInstructions {
       }
     }
   
-    private static Map<String, Oparg> constantFoldBoolOp(ArithOpcode op,
+    private static Map<String, Oparg> constantFoldBoolOp(LocalOpcode op,
         String outVar, List<Oparg> constInputs) {
       if (constInputs.size() == 1) {
         HashMap<String, Oparg> newConsts = new HashMap<String, Oparg>(1);
         boolean arg1 = constInputs.get(0).getBoolLit();
-        if (op == ArithOpcode.NOT) {
+        if (op == LocalOpcode.NOT) {
           newConsts.put(outVar, Oparg.createBoolLit(!arg1));
         } else {
           return null;
@@ -2638,7 +2638,7 @@ public class ICInstructions {
           constInputs.add(in);
         }
       }
-      return LocalArithOp.constantFold(this.localop, this.output.getName(),
+      return LocalBuiltin.constantFold(this.localop, this.output.getName(),
           constInputs);
     }
 
@@ -2672,9 +2672,9 @@ public class ICInstructions {
         // Two invocations of this aren't equivalent
         return null;
       } else {
-        if (localop == ArithOpcode.COPY_INT || localop == ArithOpcode.COPY_BOOL
-            || localop == ArithOpcode.COPY_FLOAT || localop == ArithOpcode.COPY_STRING
-            || localop == ArithOpcode.COPY_BLOB) {
+        if (localop == LocalOpcode.COPY_INT || localop == LocalOpcode.COPY_BOOL
+            || localop == LocalOpcode.COPY_FLOAT || localop == LocalOpcode.COPY_STRING
+            || localop == LocalOpcode.COPY_BLOB) {
           // It might be assigning a constant val
           return Collections.singletonList(ComputedValue.makeCopyCV(
                 this.output, this.inputs.get(0)));
@@ -2695,16 +2695,16 @@ public class ICInstructions {
 
     @Override
     public Instruction clone() {
-      return new LocalArithOp(localop, output, 
+      return new LocalBuiltin(localop, output, 
           Oparg.cloneList(inputs));
     }
     
     public static boolean isValueCopy(Instruction inst) {
-      if (inst instanceof LocalArithOp) {
-        ArithOpcode aop = ((LocalArithOp) inst).localop;
-        return aop == ArithOpcode.COPY_BLOB || aop == ArithOpcode.COPY_BOOL ||
-            aop == ArithOpcode.COPY_FLOAT || aop == ArithOpcode.COPY_INT ||
-            aop == ArithOpcode.COPY_STRING;
+      if (inst instanceof LocalBuiltin) {
+        LocalOpcode aop = ((LocalBuiltin) inst).localop;
+        return aop == LocalOpcode.COPY_BLOB || aop == LocalOpcode.COPY_BOOL ||
+            aop == LocalOpcode.COPY_FLOAT || aop == LocalOpcode.COPY_INT ||
+            aop == LocalOpcode.COPY_STRING;
       }
       return false;
     }
@@ -3019,16 +3019,16 @@ public class ICInstructions {
       switch (dst.getType().getPrimitiveType()) {
       case BOOLEAN:
         assert(value.isImmediateBool());
-        return new LocalArithOp(ArithOpcode.COPY_BOOL, dst, value);
+        return new LocalBuiltin(LocalOpcode.COPY_BOOL, dst, value);
       case INTEGER:
         assert(value.isImmediateInt());
-        return new LocalArithOp(ArithOpcode.COPY_INT, dst, value);
+        return new LocalBuiltin(LocalOpcode.COPY_INT, dst, value);
       case FLOAT:
         assert(value.isImmediateFloat());
-        return new LocalArithOp(ArithOpcode.COPY_FLOAT, dst, value);
+        return new LocalBuiltin(LocalOpcode.COPY_FLOAT, dst, value);
       case STRING:
         assert(value.isImmediateString());
-        return new LocalArithOp(ArithOpcode.COPY_STRING, dst, value);
+        return new LocalBuiltin(LocalOpcode.COPY_STRING, dst, value);
       }
     } else if (Types.isArray(dst.getType()) || Types.isStruct(dst.getType())) {
       assert(dst.getStorage() == VariableStorage.ALIAS);
@@ -3077,28 +3077,28 @@ public class ICInstructions {
   public static ComputedValue assignComputedVal(Variable dst, Oparg val) {
     SwiftType dstType = dst.getType();
     if (Types.isScalarValue(dstType)) {
-        ArithOpcode op;
+        LocalOpcode op;
         switch(dstType.getPrimitiveType()) {
         case BOOLEAN:
-          op = ArithOpcode.COPY_BOOL;
+          op = LocalOpcode.COPY_BOOL;
           break;
         case INTEGER:
-          op = ArithOpcode.COPY_INT;
+          op = LocalOpcode.COPY_INT;
           break;
         case FLOAT:
-          op = ArithOpcode.COPY_FLOAT;
+          op = LocalOpcode.COPY_FLOAT;
           break;
         case STRING:
-          op = ArithOpcode.COPY_STRING;
+          op = LocalOpcode.COPY_STRING;
           break;
         case BLOB:
-          op = ArithOpcode.COPY_BLOB;
+          op = LocalOpcode.COPY_BLOB;
           break;
         default:
           throw new ParserRuntimeException("Unhandled type: "
               + dstType);
         }
-        return new ComputedValue(Opcode.LOCAL_ARITH_OP, 
+        return new ComputedValue(Opcode.CALL_LOCAL_BUILTIN, 
             op.toString(), Arrays.asList(val), Oparg.createVar(dst), false);
     } else {
       Opcode op = assignOpcode(dstType);
