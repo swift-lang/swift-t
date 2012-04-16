@@ -8,6 +8,9 @@
 # The user should copy and edit the parameters throughout this script
 # marked USER:
 
+# USER: Directory available from compute nodes:
+USER_WORK=/lustre/beagle/wozniak
+
 # USER: (optional) Change the qstat name
 #PBS -N turbine
 # USER: Set the job size
@@ -28,11 +31,14 @@ echo "Turbine: aprun.sh"
 date "+%m/%d/%Y %I:%M%p"
 echo
 
+# Be sure we are in an accessible directory
+cd $PBS_O_WORKDIR
+
 set -x
 # USER: Set Turbine installation path
-export TURBINE_HOME=/lustre/beagle/wozniak/sfw/turbine-0.0.2
+export TURBINE_HOME=${USER_WORK}/sfw/turbine-0.0.2
 # USER: Select program name
-PROGRAM=${TURBINE_HOME}/test/adlb-data.tcl
+PROGRAM=${USER_WORK}/adlb-data.tcl
 
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 if [[ ${?} != 0 ]]
@@ -45,4 +51,3 @@ fi
 #PBS -v TURBINE_ENGINES ADLB_SERVERS TURBINE_HOME
 # USER: Set aprun parameters to agree with PBS -l settings
 aprun -n 3 -N 1 -cc none -d 1 ${TCLSH} ${PROGRAM}
-
