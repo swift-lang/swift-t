@@ -622,7 +622,7 @@ public class SwiftIC {
     public void prettyPrint(StringBuilder sb, String indent) {
       for (Variable v: variables) {
         sb.append(indent);
-        sb.append("decl " + v.getName() + " as " + v.getType().typeName() +
+        sb.append("alloc " + v.getType().typeName() + " " + v.getName() + 
                 " <" + v.getStorage().toString().toLowerCase() + ">\n");
       }
 
@@ -638,7 +638,7 @@ public class SwiftIC {
 
       for (Variable v: arraysToClose) {
         sb.append(indent);
-        sb.append(Opcode.ARRAY_CLOSE.toString().toLowerCase() + " " +
+        sb.append(Opcode.ARRAY_DECR_WRITERS.toString().toLowerCase() + " " +
                                 v.getName());
         sb.append("\n");
       }

@@ -37,13 +37,17 @@ public class ICUtil {
 
   public static void prettyPrintVarInfo(StringBuilder sb,
           List<Variable> usedVariables, List<Variable> containersToBeRegistered) {
-    sb.append("#passin[");
-    prettyPrintVarList(sb, usedVariables);
-    sb.append("] ");
+    if (usedVariables.size() > 0 ) {
+      sb.append("#passin[");
+      prettyPrintVarList(sb, usedVariables);
+      sb.append("] ");
+    }
 
-    sb.append("#keepopen[");
-    prettyPrintVarList(sb, containersToBeRegistered);
-    sb.append("]");
+    if (containersToBeRegistered.size() > 0) {
+      sb.append("#keepopen[");
+      prettyPrintVarList(sb, containersToBeRegistered);
+      sb.append("]");
+    }
   }
 
   /**

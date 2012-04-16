@@ -1350,7 +1350,7 @@ public class SwiftScript {
     List<Variable> modifiedContainers = Arrays.asList(dst);
     backend.startForeachLoop(src, member, ix, true, -1, false, 
         Arrays.asList(src, dst), modifiedContainers);
-    backend.arrayStoreImmediate(member, dst, Oparg.createVar(ix));
+    backend.arrayInsertImm(member, dst, Oparg.createVar(ix));
     backend.endForeachLoop(true, -1, false, modifiedContainers);
     backend.closeArray(dst);
   }
@@ -1689,13 +1689,13 @@ public class SwiftScript {
           if (Types.isArray(lvalArr.getType())) {
             mVar = context.createAliasVariable(memberType);
             backendDeclare(mVar);
-            backend.arrayCreateNestedImmediate(mVar, lvalArr, 
+            backend.arrayCreateNestedImm(mVar, lvalArr, 
                         Oparg.createIntLit(arrIx));
           } else {
             assert(Types.isArrayRef(lvalArr.getType()));
             mVar = context.createAliasVariable(new ReferenceType(memberType));
             backendDeclare(mVar);
-            backend.arrayRefCreateNestedImmediateIx(mVar, lvalArr, 
+            backend.arrayRefCreateNestedImm(mVar, lvalArr, 
                 Oparg.createIntLit(arrIx));
           }
 
@@ -1707,10 +1707,10 @@ public class SwiftScript {
               Types.FUTURE_INTEGER, false, null);
           
           if (Types.isArray(lvalArr.getType())) {
-            backend.arrayCreateNestedComputedIndex(mVar, lvalArr, indexVar);
+            backend.arrayCreateNestedFuture(mVar, lvalArr, indexVar);
           } else {
             assert(Types.isArrayRef(lvalArr.getType()));
-            backend.arrayRefCreateNestedComputedIndex(mVar, lvalArr, indexVar);
+            backend.arrayRefCreateNestedFuture(mVar, lvalArr, indexVar);
           }
         }
       } else {
@@ -1802,13 +1802,13 @@ public class SwiftScript {
         // This should only be run when assigning to nested array
         afterActions.addFirst(new Runnable() {
           public void run() {
-            backend.arrayRefStoreImmediateIx(lvalVar,
+            backend.arrayRefInsertImm(lvalVar,
                       arr, Oparg.createIntLit(arrIx), origLval.var);
           }});
       } else {
         afterActions.addFirst(new Runnable() {
           public void run() {
-            backend.arrayStoreImmediate(lvalVar, arr, 
+            backend.arrayInsertImm(lvalVar, arr, 
                 Oparg.createIntLit(arrIx));
           }});
       }
@@ -1820,13 +1820,13 @@ public class SwiftScript {
       if (isRef) {
         afterActions.addFirst(new Runnable() {
           public void run() {
-            backend.arrayRefStoreComputedIndex(lvalVar, arr, 
+            backend.arrayRefInsertFuture(lvalVar, arr, 
                                               indexVar, origLval.var);
           }});
       } else {
         afterActions.addFirst(new Runnable() {
           public void run() {
-            backend.arrayStoreComputedIndex(lvalVar, arr, indexVar);
+            backend.arrayInsertFuture(lvalVar, arr, indexVar);
           }});
       }
     }
@@ -2334,7 +2334,7 @@ public class SwiftScript {
         throw new ParserRuntimeException(
             "Invalid non-numeric array index token " + arrayIndexStr);
       }
-      backend.arrayLoadImmediateIx(lookupIntoVar, arrayVar, 
+      backend.arrayLookupRefImm(lookupIntoVar, arrayVar, 
           Oparg.createIntLit(arrayIndex), isRef);
     } else {
       // TODO: there may be special cases where we know the index
@@ -2343,7 +2343,7 @@ public class SwiftScript {
       // Handle the general case where the index must be computed
       Variable indexVar = evalExprToTmp(context, arrayIndexTree,
           Types.FUTURE_INTEGER, false, renames);
-      backend.arrayLoadComputedIndex(lookupIntoVar, arrayVar, indexVar, isRef);
+      backend.arrayLookupFuture(lookupIntoVar, arrayVar, indexVar, isRef);
     }
     // Do the dereference down here so that it is generated in a more logical
     // order
@@ -2400,7 +2400,7 @@ public class SwiftScript {
         SwiftAST mem = ae.getMember(i);
         Variable computedMember = evalExprToTmp(context, mem, 
             memType, false, renames);
-        backend.arrayStoreImmediate(computedMember, oVar, 
+        backend.arrayInsertImm(computedMember, oVar, 
                                       Oparg.createIntLit(i));
       }
       // Will need to close this array

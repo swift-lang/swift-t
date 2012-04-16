@@ -304,41 +304,41 @@ public class ICInstructions {
       case ADDRESS_OF:
         gen.assignReference(args.get(0).getVariable(), args.get(1).getVariable());
         break;
-      case ARRAY_LOAD_COMPUTED:
-        gen.arrayLoadComputedIndex(args.get(0).getVariable(),
+      case ARRAY_LOOKUP_FUTURE:
+        gen.arrayLookupFuture(args.get(0).getVariable(),
               args.get(1).getVariable(), args.get(2).getVariable(), false);
         break;
-      case ARRAYREF_LOAD_COMPUTED:
-        gen.arrayLoadComputedIndex(args.get(0).getVariable(),
+      case ARRAYREF_LOOKUP_FUTURE:
+        gen.arrayLookupFuture(args.get(0).getVariable(),
             args.get(1).getVariable(), args.get(2).getVariable(), true);
         break;
-      case ARRAY_LOAD_IMM_IX:
-        gen.arrayLoadImmediateIx(args.get(0).getVariable(),
+      case ARRAY_LOOKUP_REF_IMM:
+        gen.arrayLookupRefImm(args.get(0).getVariable(),
             args.get(1).getVariable(), args.get(2), false);
         break;
-      case ARRAY_LOAD_IMM:
-        gen.arrayLoadImmediate(args.get(0).getVariable(),
+      case ARRAY_LOOKUP_IMM:
+        gen.arrayLookupImm(args.get(0).getVariable(),
             args.get(1).getVariable(), args.get(2));
         break;
-      case ARRAYREF_LOAD_IMM_IX:
-        gen.arrayLoadImmediateIx(args.get(0).getVariable(),
+      case ARRAYREF_LOOKUP_IMM:
+        gen.arrayLookupRefImm(args.get(0).getVariable(),
             args.get(1).getVariable(), args.get(2), true);
         break;
-      case ARRAY_STORE_COMPUTED:
-        gen.arrayStoreComputedIndex(args.get(2).getVariable(),
+      case ARRAY_INSERT_FUTURE:
+        gen.arrayInsertFuture(args.get(2).getVariable(),
             args.get(0).getVariable(), args.get(1).getVariable());
         break;
-      case ARRAY_STORE_IMM:
-        gen.arrayStoreImmediate(args.get(2).getVariable(),
+      case ARRAY_INSERT_IMM:
+        gen.arrayInsertImm(args.get(2).getVariable(),
             args.get(0).getVariable(), args.get(1));
         break;
-      case ARRAYREF_STORE_COMPUTED:
-        gen.arrayRefStoreComputedIndex(args.get(2).getVariable(),
+      case ARRAYREF_INSERT_FUTURE:
+        gen.arrayRefInsertFuture(args.get(2).getVariable(),
             args.get(0).getVariable(), args.get(1).getVariable(),
             args.get(3).getVariable());
         break;
-      case ARRAYREF_STORE_IMM_IX:
-        gen.arrayRefStoreImmediateIx(args.get(2).getVariable(),
+      case ARRAYREF_INSERT_IMM:
+        gen.arrayRefInsertImm(args.get(2).getVariable(),
             args.get(0).getVariable(), args.get(1), args.get(3).getVariable());
         break;
       case STRUCT_LOOKUP:
@@ -383,20 +383,20 @@ public class ICInstructions {
       case COPY_REF:
         gen.makeAlias(args.get(0).getVariable(), args.get(1).getVariable());
         break;
-      case CREATE_NESTED_ARRAY_COMPUTED:
-        gen.arrayCreateNestedComputedIndex(args.get(0).getVariable(),
+      case ARRAY_CREATE_NESTED_FUTURE:
+        gen.arrayCreateNestedFuture(args.get(0).getVariable(),
             args.get(1).getVariable(), args.get(2).getVariable());
         break;
-      case CREATE_NESTED_ARRAY_REF_COMPUTED:
-        gen.arrayRefCreateNestedComputedIndex(args.get(0).getVariable(),
+      case ARRAY_REF_CREATE_NESTED_FUTURE:
+        gen.arrayRefCreateNestedFuture(args.get(0).getVariable(),
             args.get(1).getVariable(), args.get(2).getVariable());
         break;
-      case CREATE_NESTED_ARRAY_REF_IMM_IX:
-        gen.arrayRefCreateNestedImmediateIx(args.get(0).getVariable(),
+      case ARRAY_REF_CREATE_NESTED_IMM:
+        gen.arrayRefCreateNestedImm(args.get(0).getVariable(),
             args.get(1).getVariable(), args.get(2));
         break;
-      case CREATE_NESTED_ARRAY_IMM:
-        gen.arrayCreateNestedImmediate(args.get(0).getVariable(),
+      case ARRAY_CREATE_NESTED_IMM:
+        gen.arrayCreateNestedImm(args.get(0).getVariable(),
             args.get(1).getVariable(), args.get(2));
         break;
       case RETRIEVE_INT:
@@ -452,65 +452,65 @@ public class ICInstructions {
   
     }
   
-    public static TurbineOp arrayRefLoadComputed(Variable oVar, Variable arrayRefVar,
+    public static TurbineOp arrayRefLookupFuture(Variable oVar, Variable arrayRefVar,
         Variable indexVar) {
-      return new TurbineOp(Opcode.ARRAYREF_LOAD_COMPUTED,
+      return new TurbineOp(Opcode.ARRAYREF_LOOKUP_FUTURE,
           Arrays.asList(Oparg.createVar(oVar), Oparg.createVar(arrayRefVar),
                                     Oparg.createVar(indexVar)));
     }
   
-    public static TurbineOp arrayLoadComputed(Variable oVar, Variable arrayVar,
+    public static TurbineOp arrayLookupFuture(Variable oVar, Variable arrayVar,
         Variable indexVar) {
-      return new TurbineOp(Opcode.ARRAY_LOAD_COMPUTED,
+      return new TurbineOp(Opcode.ARRAY_LOOKUP_FUTURE,
           Arrays.asList(Oparg.createVar(oVar), Oparg.createVar(arrayVar),
                                                 Oparg.createVar(indexVar)));
     }
   
-    public static Instruction arrayStoreComputed(Variable iVar,
+    public static Instruction arrayInsertFuture(Variable iVar,
         Variable arrayVar, Variable indexVar) {
-      return new TurbineOp(Opcode.ARRAY_STORE_COMPUTED,
+      return new TurbineOp(Opcode.ARRAY_INSERT_FUTURE,
           Arrays.asList(Oparg.createVar(arrayVar), Oparg.createVar(indexVar),
               Oparg.createVar(iVar)));
     }
   
-    public static Instruction arrayRefStoreComputed(Variable iVar,
+    public static Instruction arrayRefInsertFuture(Variable iVar,
         Variable arrayVar, Variable indexVar, Variable outerArrayVar) {
-      return new TurbineOp(Opcode.ARRAYREF_STORE_COMPUTED,
+      return new TurbineOp(Opcode.ARRAYREF_INSERT_FUTURE,
           Arrays.asList(Oparg.createVar(arrayVar), Oparg.createVar(indexVar),
               Oparg.createVar(iVar), Oparg.createVar(outerArrayVar)));
     }
     
-    public static Instruction arrayRefLoadImmIx(Variable oVar,
+    public static Instruction arrayRefLookupImm(Variable oVar,
         Variable arrayVar, Oparg arrayIndex) {
-      return new TurbineOp(Opcode.ARRAYREF_LOAD_IMM_IX,
+      return new TurbineOp(Opcode.ARRAYREF_LOOKUP_IMM,
           Arrays.asList(Oparg.createVar(oVar), Oparg.createVar(arrayVar),
                                                arrayIndex));
     }
   
-    public static Instruction arrayLoadImmIx(Variable oVar, Variable arrayVar,
+    public static Instruction arrayLookupRefImm(Variable oVar, Variable arrayVar,
         Oparg arrayIndex) {
-      return new TurbineOp(Opcode.ARRAY_LOAD_IMM_IX,
+      return new TurbineOp(Opcode.ARRAY_LOOKUP_REF_IMM,
           Arrays.asList(Oparg.createVar(oVar), Oparg.createVar(arrayVar),
                                                arrayIndex));
     }
     
-    public static Instruction arrayLoadImm(Variable oVar, Variable arrayVar,
+    public static Instruction arrayLookupImm(Variable oVar, Variable arrayVar,
         Oparg arrayIndex) {
-      return new TurbineOp(Opcode.ARRAY_LOAD_IMM,
+      return new TurbineOp(Opcode.ARRAY_LOOKUP_IMM,
           Arrays.asList(Oparg.createVar(oVar), Oparg.createVar(arrayVar),
                                                arrayIndex));
     }
   
-    public static Instruction arrayStoreImm(Variable iVar,
+    public static Instruction arrayInsertImm(Variable iVar,
         Variable arrayVar, Oparg arrayIndex) {
-      return new TurbineOp(Opcode.ARRAY_STORE_IMM,
+      return new TurbineOp(Opcode.ARRAY_INSERT_IMM,
           Arrays.asList(Oparg.createVar(arrayVar), arrayIndex,
                         Oparg.createVar(iVar)));
     }
     
-    public static Instruction arrayRefStoreImmIx(Variable iVar,
+    public static Instruction arrayRefInsertImm(Variable iVar,
         Variable arrayVar, Oparg arrayIndex, Variable outerArray) {
-      return new TurbineOp(Opcode.ARRAYREF_STORE_IMM_IX,
+      return new TurbineOp(Opcode.ARRAYREF_INSERT_IMM,
           Arrays.asList(Oparg.createVar(arrayVar), arrayIndex,
                         Oparg.createVar(iVar),
                         Oparg.createVar(outerArray)));
@@ -627,21 +627,21 @@ public class ICInstructions {
   
     public static Instruction arrayCreateNestedComputed(Variable arrayResult,
         Variable arrayVar, Variable indexVar) {
-      return new TurbineOp(Opcode.CREATE_NESTED_ARRAY_COMPUTED,
+      return new TurbineOp(Opcode.ARRAY_CREATE_NESTED_FUTURE,
           Arrays.asList(Oparg.createVar(arrayResult),
               Oparg.createVar(arrayVar), Oparg.createVar(indexVar)));
     }
   
     public static Instruction arrayCreateNestedImm(Variable arrayResult,
         Variable arrayVar, Oparg arrIx) {
-      return new TurbineOp(Opcode.CREATE_NESTED_ARRAY_IMM,
+      return new TurbineOp(Opcode.ARRAY_CREATE_NESTED_IMM,
           Arrays.asList(Oparg.createVar(arrayResult),
               Oparg.createVar(arrayVar), arrIx));
     }
   
     public static Instruction arrayRefCreateNestedComputed(Variable arrayResult,
         Variable arrayVar, Variable indexVar) {
-      return new TurbineOp(Opcode.CREATE_NESTED_ARRAY_REF_COMPUTED,
+      return new TurbineOp(Opcode.ARRAY_REF_CREATE_NESTED_FUTURE,
           Arrays.asList(Oparg.createVar(arrayResult),
               Oparg.createVar(arrayVar), Oparg.createVar(indexVar)));
     }
@@ -649,7 +649,7 @@ public class ICInstructions {
   
     public static Instruction arrayRefCreateNestedImmIx(Variable arrayResult,
         Variable arrayVar, Oparg arrIx) {
-      return new TurbineOp(Opcode.CREATE_NESTED_ARRAY_REF_IMM_IX,
+      return new TurbineOp(Opcode.ARRAY_REF_CREATE_NESTED_IMM,
           Arrays.asList(Oparg.createVar(arrayResult),
               Oparg.createVar(arrayVar), arrIx));
     }
@@ -719,14 +719,14 @@ public class ICInstructions {
     public void renameInputs(Map<String, Oparg> renames) {
       
       int firstInputArg;
-      if (op == Opcode.CREATE_NESTED_ARRAY_COMPUTED
-       || op == Opcode.CREATE_NESTED_ARRAY_IMM
-       || op == Opcode.CREATE_NESTED_ARRAY_REF_COMPUTED
-       || op == Opcode.CREATE_NESTED_ARRAY_REF_IMM_IX
-       || op == Opcode.ARRAY_STORE_COMPUTED
-       || op == Opcode.ARRAY_STORE_IMM
-       || op == Opcode.ARRAYREF_STORE_COMPUTED
-       || op == Opcode.ARRAYREF_STORE_IMM_IX) {
+      if (op == Opcode.ARRAY_CREATE_NESTED_FUTURE
+       || op == Opcode.ARRAY_CREATE_NESTED_IMM
+       || op == Opcode.ARRAY_REF_CREATE_NESTED_FUTURE
+       || op == Opcode.ARRAY_REF_CREATE_NESTED_IMM
+       || op == Opcode.ARRAY_INSERT_FUTURE
+       || op == Opcode.ARRAY_INSERT_IMM
+       || op == Opcode.ARRAYREF_INSERT_FUTURE
+       || op == Opcode.ARRAYREF_INSERT_IMM) {
          // The arrays mutated by these instructions are also basically
          // inputs
          firstInputArg = 0;
@@ -749,28 +749,28 @@ public class ICInstructions {
       case LATEST_VALUE:
         return 1;
       
-      case ARRAY_STORE_COMPUTED:
-      case ARRAY_STORE_IMM:
+      case ARRAY_INSERT_FUTURE:
+      case ARRAY_INSERT_IMM:
       case STRUCT_CLOSE:
       case STRUCT_INSERT:
         // We view array as output
         return 1;
-      case ARRAYREF_STORE_COMPUTED:
-      case ARRAYREF_STORE_IMM_IX:
+      case ARRAYREF_INSERT_FUTURE:
+      case ARRAYREF_INSERT_IMM:
         return 0;
-      case ARRAYREF_LOAD_COMPUTED:
-      case ARRAYREF_LOAD_IMM_IX:
-      case ARRAY_LOAD_IMM_IX:
-      case ARRAY_LOAD_IMM:
-      case ARRAY_LOAD_COMPUTED:
+      case ARRAYREF_LOOKUP_FUTURE:
+      case ARRAYREF_LOOKUP_IMM:
+      case ARRAY_LOOKUP_REF_IMM:
+      case ARRAY_LOOKUP_IMM:
+      case ARRAY_LOOKUP_FUTURE:
       case ASSIGN_INT:
       case ASSIGN_BOOL:
       case ASSIGN_FLOAT:
       case ASSIGN_STRING:
-      case CREATE_NESTED_ARRAY_COMPUTED:
-      case CREATE_NESTED_ARRAY_REF_COMPUTED:
-      case CREATE_NESTED_ARRAY_IMM:
-      case CREATE_NESTED_ARRAY_REF_IMM_IX:
+      case ARRAY_CREATE_NESTED_FUTURE:
+      case ARRAY_REF_CREATE_NESTED_FUTURE:
+      case ARRAY_CREATE_NESTED_IMM:
+      case ARRAY_REF_CREATE_NESTED_IMM:
       case DEREFERENCE_INT:
       case DEREFERENCE_BOOL:
       case DEREFERENCE_FLOAT:
@@ -797,15 +797,15 @@ public class ICInstructions {
       switch (op) {
       /* The direct container write functions only mutate their output 
        * argument */
-      case ARRAY_STORE_COMPUTED:
-      case ARRAY_STORE_IMM:
+      case ARRAY_INSERT_FUTURE:
+      case ARRAY_INSERT_IMM:
       case STRUCT_CLOSE:
       case STRUCT_INSERT:
-      case ARRAY_CLOSE:
+      case ARRAY_DECR_WRITERS:
         return this.writesAliasVar();
         
-      case ARRAYREF_STORE_COMPUTED:
-      case ARRAYREF_STORE_IMM_IX:
+      case ARRAYREF_INSERT_FUTURE:
+      case ARRAYREF_INSERT_IMM:
         return true;
   
       
@@ -831,10 +831,10 @@ public class ICInstructions {
       case RETRIEVE_BOOL:
       case RETRIEVE_FLOAT:
       case RETRIEVE_STRING:
-      case ARRAY_LOAD_IMM_IX:
-      case ARRAY_LOAD_COMPUTED:
-      case ARRAYREF_LOAD_COMPUTED:
-      case ARRAYREF_LOAD_IMM_IX:
+      case ARRAY_LOOKUP_REF_IMM:
+      case ARRAY_LOOKUP_FUTURE:
+      case ARRAYREF_LOOKUP_FUTURE:
+      case ARRAYREF_LOOKUP_IMM:
           return this.writesAliasVar();
 
       case STRUCT_LOOKUP:
@@ -842,16 +842,16 @@ public class ICInstructions {
       case ADDRESS_OF:
       case COPY_REF:
       case STRUCTREF_LOOKUP:
-      case ARRAY_LOAD_IMM:
+      case ARRAY_LOOKUP_IMM:
       case LATEST_VALUE:
           // Always has alias as output because the instructions initialises
           // the aliases
           return false;
           
-      case CREATE_NESTED_ARRAY_COMPUTED:
-      case CREATE_NESTED_ARRAY_REF_COMPUTED:
-      case CREATE_NESTED_ARRAY_IMM:
-      case CREATE_NESTED_ARRAY_REF_IMM_IX:
+      case ARRAY_CREATE_NESTED_FUTURE:
+      case ARRAY_REF_CREATE_NESTED_FUTURE:
+      case ARRAY_CREATE_NESTED_IMM:
+      case ARRAY_REF_CREATE_NESTED_IMM:
           /* It might seem like these nested creation primitives have a 
            * side-effect, but for optimisation purposes they can be treated as 
            * side-effect free, as the side-effect is only relevant if the array 
@@ -904,30 +904,30 @@ public class ICInstructions {
     @Override
     public Instruction constantReplace(Map<String, Oparg> knownConstants) {
       switch (op) {
-      case ARRAY_LOAD_COMPUTED:
-      case ARRAYREF_LOAD_COMPUTED:
+      case ARRAY_LOOKUP_FUTURE:
+      case ARRAYREF_LOOKUP_FUTURE:
         Variable index = args.get(2).getVariable();
         if (knownConstants.containsKey(index.getName())) {
           Oparg cIndex = knownConstants.get(index.getName());
-          if (op == Opcode.ARRAY_LOAD_COMPUTED) {
-            return arrayLoadImmIx(args.get(0).getVariable(),
+          if (op == Opcode.ARRAY_LOOKUP_FUTURE) {
+            return arrayLookupRefImm(args.get(0).getVariable(),
                 args.get(1).getVariable(), cIndex);
           } else {
-            return arrayRefLoadImmIx(args.get(0).getVariable(),
+            return arrayRefLookupImm(args.get(0).getVariable(),
                 args.get(1).getVariable(), cIndex);
           }
         }
         break;
-      case ARRAYREF_STORE_COMPUTED:
-      case ARRAY_STORE_COMPUTED:
+      case ARRAYREF_INSERT_FUTURE:
+      case ARRAY_INSERT_FUTURE:
         Variable sIndex = args.get(1).getVariable();
         if (knownConstants.containsKey(sIndex.getName())) {
           Oparg cIndex = knownConstants.get(sIndex.getName());
-          if (op == Opcode.ARRAY_STORE_COMPUTED) {
-            return arrayStoreImm(args.get(2).getVariable(),
+          if (op == Opcode.ARRAY_INSERT_FUTURE) {
+            return arrayInsertImm(args.get(2).getVariable(),
                       args.get(0).getVariable(), cIndex);
           } else {
-            return arrayRefStoreImmIx(args.get(2).getVariable(),
+            return arrayRefInsertImm(args.get(2).getVariable(),
                 args.get(0).getVariable(), cIndex, args.get(3).getVariable());
           }
         }
@@ -940,7 +940,7 @@ public class ICInstructions {
     public MakeImmRequest canMakeImmediate(Set<String> closedVars) {
       // Try to take advantage of closed variables 
       switch (op) {
-      case ARRAY_LOAD_IMM_IX:
+      case ARRAY_LOOKUP_REF_IMM:
         // If array is closed or this index already inserted,
         // don't need to block on array.  
         // NOTE: could try to reduce other forms to this in one step,
@@ -953,13 +953,13 @@ public class ICInstructions {
         }
         break;
         
-      case ARRAY_LOAD_COMPUTED:
+      case ARRAY_LOOKUP_FUTURE:
         Variable index = args.get(2).getVariable();
         if (closedVars.contains(index.getName())) {
           return new MakeImmRequest(null, Arrays.asList(index));
         }
         break;
-      case ARRAYREF_LOAD_COMPUTED:
+      case ARRAYREF_LOOKUP_FUTURE:
         // We will take either the index or the dereferenced array
         List<Variable> req = mkImmVarList(closedVars, 
                   args.get(1).getVariable(), args.get(2).getVariable());
@@ -967,26 +967,26 @@ public class ICInstructions {
           return new MakeImmRequest(null, req);
         }
         break;
-      case ARRAYREF_LOAD_IMM_IX:
+      case ARRAYREF_LOOKUP_IMM:
         // Could skip using reference
         Variable arrRef2 = args.get(1).getVariable();
         if (closedVars.contains(arrRef2.getName())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef2));
         }
         break;
-      case ARRAY_STORE_COMPUTED:
+      case ARRAY_INSERT_FUTURE:
         Variable sIndex = args.get(1).getVariable();
         if (closedVars.contains(sIndex.getName())) {
           return new MakeImmRequest(null, Arrays.asList(sIndex));
         }
         break;
-      case ARRAYREF_STORE_IMM_IX:
+      case ARRAYREF_INSERT_IMM:
         Variable arrRef3 = args.get(0).getVariable();
         if (closedVars.contains(arrRef3.getName())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef3));
         }
         break;
-      case ARRAYREF_STORE_COMPUTED:
+      case ARRAYREF_INSERT_FUTURE:
         // We will take either the index or the dereferenced array
         List<Variable> req2 = mkImmVarList(closedVars,
                     args.get(0).getVariable(), args.get(1).getVariable());
@@ -994,20 +994,20 @@ public class ICInstructions {
           return new MakeImmRequest(null, req2);
         }
         break;
-      case CREATE_NESTED_ARRAY_COMPUTED:
+      case ARRAY_CREATE_NESTED_FUTURE:
         // Try to get immediate index
         Variable index2 = args.get(2).getVariable();
         if (closedVars.contains(index2.getName())) {
           return new MakeImmRequest(null, Arrays.asList(index2));
         }
         break;
-      case CREATE_NESTED_ARRAY_REF_IMM_IX:
+      case ARRAY_REF_CREATE_NESTED_IMM:
         Variable arrRef5 = args.get(1).getVariable();
         if (closedVars.contains(arrRef5.getName())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef5));
         }
         break;
-      case CREATE_NESTED_ARRAY_REF_COMPUTED:
+      case ARRAY_REF_CREATE_NESTED_FUTURE:
         List<Variable> req5 = mkImmVarList(closedVars, 
             args.get(1).getVariable(), args.get(2).getVariable());
         if (req5.size() > 0) {
@@ -1038,25 +1038,25 @@ public class ICInstructions {
     @Override
     public MakeImmChange makeImmediate(List<Variable> out, List<Oparg> values) {
       switch (op) {
-      case ARRAY_LOAD_IMM_IX:
+      case ARRAY_LOOKUP_REF_IMM:
         assert(values.size() == 0);
         // OUtput switched from ref to value
         Variable refOut = args.get(0).getVariable();
         Variable valOut = Variable.createDerefTmp(refOut, 
                                       VariableStorage.ALIAS);
-        Instruction newI = arrayLoadImm(valOut,
+        Instruction newI = arrayLookupImm(valOut,
             args.get(1).getVariable(), args.get(2));
         return new MakeImmChange(valOut, refOut, newI);
-      case ARRAY_LOAD_COMPUTED:
+      case ARRAY_LOOKUP_FUTURE:
         assert(values.size() == 1);
         return new MakeImmChange(
-                arrayLoadImmIx(args.get(0).getVariable(), 
+                arrayLookupRefImm(args.get(0).getVariable(), 
                 args.get(1).getVariable(), values.get(0)));
-      case ARRAYREF_LOAD_COMPUTED:
+      case ARRAYREF_LOOKUP_FUTURE:
         assert(values.size() == 1 || values.size() == 2);
         // Could be either array ref, index, or both
         if (values.size() == 2) {
-          return new MakeImmChange(arrayLoadImmIx(
+          return new MakeImmChange(arrayLookupRefImm(
               args.get(0).getVariable(), values.get(0).getVariable(), 
               values.get(1)));
         } else { 
@@ -1064,37 +1064,37 @@ public class ICInstructions {
           if (v1.isImmediateInt()) {
             // replace index
             return new MakeImmChange(
-                    arrayRefLoadImmIx(args.get(0).getVariable(), 
+                    arrayRefLookupImm(args.get(0).getVariable(), 
                     args.get(1).getVariable(), v1));
           } else {
             // replace the array ref
             return new MakeImmChange(
-                    arrayLoadComputed(args.get(0).getVariable(), 
+                    arrayLookupFuture(args.get(0).getVariable(), 
                             v1.getVariable(), args.get(2).getVariable()));
           }
         }
-      case ARRAYREF_LOAD_IMM_IX:
+      case ARRAYREF_LOOKUP_IMM:
         assert(values.size() == 1);
         // Switch from ref to plain array
-        return new MakeImmChange(arrayLoadImmIx(
+        return new MakeImmChange(arrayLookupRefImm(
                 args.get(0).getVariable(), values.get(0).getVariable(),
                                                          args.get(2)));
-      case ARRAY_STORE_COMPUTED:
+      case ARRAY_INSERT_FUTURE:
         assert(values.size() == 1);
         return new MakeImmChange(
-                arrayStoreImm(args.get(2).getVariable(), 
+                arrayInsertImm(args.get(2).getVariable(), 
                 args.get(0).getVariable(), values.get(0)));
-      case ARRAYREF_STORE_IMM_IX:
+      case ARRAYREF_INSERT_IMM:
         assert(values.size() == 1);
         // Switch from ref to plain array
-        return new MakeImmChange(arrayStoreImm(
+        return new MakeImmChange(arrayInsertImm(
             args.get(2).getVariable(), values.get(0).getVariable(),
                                                       args.get(1)));
-      case ARRAYREF_STORE_COMPUTED:
+      case ARRAYREF_INSERT_FUTURE:
         assert(values.size() == 1 || values.size() == 2);
         // Could be either array ref, index, or both
         if (values.size() == 2) {
-          return new MakeImmChange(arrayStoreImm(
+          return new MakeImmChange(arrayInsertImm(
               args.get(2).getVariable(),
               values.get(0).getVariable(), values.get(1)));
         } else { 
@@ -1102,16 +1102,16 @@ public class ICInstructions {
           if (v1.isImmediateInt()) {
             // replace index
             return new MakeImmChange(
-                    arrayRefStoreImmIx(args.get(2).getVariable(), 
+                    arrayRefInsertImm(args.get(2).getVariable(), 
                     args.get(0).getVariable(), v1, args.get(3).getVariable()));
           } else {
             // replace the array ref
             return new MakeImmChange(
-                    arrayStoreComputed(args.get(2).getVariable(), 
+                    arrayInsertFuture(args.get(2).getVariable(), 
                             v1.getVariable(), args.get(1).getVariable()));
           }
         }
-      case CREATE_NESTED_ARRAY_COMPUTED:
+      case ARRAY_CREATE_NESTED_FUTURE:
         assert(values.size() == 1);
         // Output type of instruction changed from ref to direct
         // array handle
@@ -1122,7 +1122,7 @@ public class ICInstructions {
         return new MakeImmChange(newOut, oldOut,
             arrayCreateNestedImm(newOut,
                             args.get(1).getVariable(), values.get(0)));
-      case CREATE_NESTED_ARRAY_REF_COMPUTED:
+      case ARRAY_REF_CREATE_NESTED_FUTURE:
         assert(values.size() == 1 || values.size() == 2);
         if (values.size() == 2) {
           Variable oldOut2 = args.get(0).getVariable();
@@ -1147,7 +1147,7 @@ public class ICInstructions {
                     newA.getVariable(), args.get(2)));
           }
         }
-      case CREATE_NESTED_ARRAY_REF_IMM_IX:
+      case ARRAY_REF_CREATE_NESTED_IMM:
         assert(values.size() == 1);
         Variable oldOut3 = args.get(0).getVariable();
         assert(Types.isArrayRef(oldOut3.getType()));
@@ -1288,10 +1288,10 @@ public class ICInstructions {
               EquivalenceType.REFERENCE);
           return Arrays.asList(lookup); 
         }
-        case ARRAYREF_STORE_COMPUTED:
-        case ARRAYREF_STORE_IMM_IX:
-        case ARRAY_STORE_IMM:
-        case ARRAY_STORE_COMPUTED:{
+        case ARRAYREF_INSERT_FUTURE:
+        case ARRAYREF_INSERT_IMM:
+        case ARRAY_INSERT_IMM:
+        case ARRAY_INSERT_FUTURE:{
           // STORE <out array> <in index> <in var>
           // OR
           // STORE <out array> <in index> <in var> <in outer array>
@@ -1300,11 +1300,11 @@ public class ICInstructions {
           contents = args.get(2);
           return Arrays.asList(makeArrayComputedValue(arr, ix, contents));
         }
-        case ARRAY_LOAD_IMM:
-        case ARRAY_LOAD_IMM_IX:
-        case ARRAY_LOAD_COMPUTED:
-        case ARRAYREF_LOAD_COMPUTED:
-        case ARRAYREF_LOAD_IMM_IX: {
+        case ARRAY_LOOKUP_IMM:
+        case ARRAY_LOOKUP_REF_IMM:
+        case ARRAY_LOOKUP_FUTURE:
+        case ARRAYREF_LOOKUP_FUTURE:
+        case ARRAYREF_LOOKUP_IMM: {
           // LOAD <out var> <in array> <in index>
           arr = args.get(1);
           ix = args.get(2);
@@ -1313,7 +1313,7 @@ public class ICInstructions {
           
           cv = makeArrayComputedValue(arr, ix, contents);
   
-          if (op == Opcode.ARRAY_LOAD_IMM) {
+          if (op == Opcode.ARRAY_LOOKUP_IMM) {
             assert(lookupRes.getType().equals(
                 Types.getArrayMemberType(arr.getSwiftType())));
             // This just retrieves the item immediately
@@ -1342,17 +1342,17 @@ public class ICInstructions {
             }
           }
         }
-        case CREATE_NESTED_ARRAY_COMPUTED:
-        case CREATE_NESTED_ARRAY_IMM:
-        case CREATE_NESTED_ARRAY_REF_COMPUTED:
-        case CREATE_NESTED_ARRAY_REF_IMM_IX: {
+        case ARRAY_CREATE_NESTED_FUTURE:
+        case ARRAY_CREATE_NESTED_IMM:
+        case ARRAY_REF_CREATE_NESTED_FUTURE:
+        case ARRAY_REF_CREATE_NESTED_IMM: {
           // CREATE_NESTED <out inner array> <in array> <in index>
           contents = args.get(0);
           Variable nestedArr = contents.getVariable();
           arr = args.get(1);
           ix = args.get(2);
           cv = makeArrayComputedValue(arr, ix, contents);
-          if (op == Opcode.CREATE_NESTED_ARRAY_IMM) {
+          if (op == Opcode.ARRAY_CREATE_NESTED_IMM) {
             // No references involved, the instruction returns the nested
             // array directly
             return Arrays.asList(cv);
@@ -2238,15 +2238,15 @@ public class ICInstructions {
     ASSIGN_INT, ASSIGN_STRING, ASSIGN_FLOAT, ASSIGN_BOOL,
     RETRIEVE_INT, RETRIEVE_STRING, RETRIEVE_FLOAT, RETRIEVE_BOOL,
     RETRIEVE_REF,
-    ARRAY_CLOSE,
+    ARRAY_DECR_WRITERS,
     
-    ARRAYREF_LOAD_COMPUTED, ARRAY_LOAD_COMPUTED,
-    ARRAYREF_LOAD_IMM_IX, ARRAY_LOAD_IMM_IX, ARRAY_LOAD_IMM,
-    ARRAY_STORE_COMPUTED, ARRAY_STORE_IMM, ARRAYREF_STORE_COMPUTED,
-    ARRAYREF_STORE_IMM_IX,
+    ARRAYREF_LOOKUP_FUTURE, ARRAY_LOOKUP_FUTURE,
+    ARRAYREF_LOOKUP_IMM, ARRAY_LOOKUP_REF_IMM, ARRAY_LOOKUP_IMM,
+    ARRAY_INSERT_FUTURE, ARRAY_INSERT_IMM, ARRAYREF_INSERT_FUTURE,
+    ARRAYREF_INSERT_IMM,
     STRUCT_LOOKUP, STRUCTREF_LOOKUP, STRUCT_CLOSE, STRUCT_INSERT,
-    CREATE_NESTED_ARRAY_COMPUTED, CREATE_NESTED_ARRAY_REF_COMPUTED,
-    CREATE_NESTED_ARRAY_IMM, CREATE_NESTED_ARRAY_REF_IMM_IX,
+    ARRAY_CREATE_NESTED_FUTURE, ARRAY_REF_CREATE_NESTED_FUTURE,
+    ARRAY_CREATE_NESTED_IMM, ARRAY_REF_CREATE_NESTED_IMM,
     LOOP_BREAK, LOOP_CONTINUE, 
     COPY_REF,
     LOCAL_ARITH_OP,

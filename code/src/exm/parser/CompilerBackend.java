@@ -112,10 +112,10 @@ public interface CompilerBackend {
   public abstract void structInsert(Variable structVar, String fieldName,
                                           Variable fieldContents);
 
-  public abstract void arrayLoadComputedIndex(Variable oVar, Variable arrayVar,
+  public abstract void arrayLookupFuture(Variable oVar, Variable arrayVar,
       Variable indexVar, boolean isArrayRef);
 
-  public abstract void arrayLoadImmediateIx(Variable oVar, Variable arrayVar,
+  public abstract void arrayLookupRefImm(Variable oVar, Variable arrayVar,
       Oparg arrayIndex, boolean isArrayRef);
   
   /**
@@ -126,31 +126,31 @@ public interface CompilerBackend {
    * @param arrayVar
    * @param arrayIndex
    */
-  public abstract void arrayLoadImmediate(Variable oVar, Variable arrayVar,
+  public abstract void arrayLookupImm(Variable oVar, Variable arrayVar,
       Oparg arrayIndex);
 
-  public abstract void arrayStoreComputedIndex(Variable iVar,
+  public abstract void arrayInsertFuture(Variable iVar,
       Variable arrayVar, Variable indexVar);
   
-  public abstract void arrayRefStoreComputedIndex(Variable iVar,
+  public abstract void arrayRefInsertFuture(Variable iVar,
       Variable arrayVar, Variable indexVar, Variable outerArrayVar);
 
-  public abstract void arrayStoreImmediate(Variable iVar, Variable arrayVar,
+  public abstract void arrayInsertImm(Variable iVar, Variable arrayVar,
       Oparg arrayIndex);
   
-  public abstract void arrayRefStoreImmediateIx(Variable iVar, 
+  public abstract void arrayRefInsertImm(Variable iVar, 
       Variable arrayVar, Oparg arrayIndex, Variable outerArrayVar);
 
-  public abstract void arrayCreateNestedComputedIndex(Variable arrayResult,
+  public abstract void arrayCreateNestedFuture(Variable arrayResult,
       Variable arrayVar, Variable indexVar);
 
-  public abstract void arrayCreateNestedImmediate(Variable arrayResult,
+  public abstract void arrayCreateNestedImm(Variable arrayResult,
       Variable arrayVar, Oparg arrIx);
 
-  public abstract void arrayRefCreateNestedComputedIndex(Variable arrayResult,
+  public abstract void arrayRefCreateNestedFuture(Variable arrayResult,
       Variable arrayVar, Variable indexVar);
 
-  public abstract void arrayRefCreateNestedImmediateIx(Variable arrayResult,
+  public abstract void arrayRefCreateNestedImm(Variable arrayResult,
       Variable arrayVar, Oparg arrIx);
 
   public abstract void initUpdateable(Variable updateable, Oparg val);

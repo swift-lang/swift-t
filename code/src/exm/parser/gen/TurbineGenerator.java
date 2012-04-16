@@ -693,7 +693,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void arrayCreateNestedComputedIndex(Variable arrayResult,
+  public void arrayCreateNestedFuture(Variable arrayResult,
       Variable arrayVar, Variable indexVar) {
     assert(Types.isArray(arrayVar.getType()));
     assert(Types.isArrayRef(arrayResult.getType()));
@@ -706,7 +706,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void arrayRefCreateNestedComputedIndex(Variable arrayResult,
+  public void arrayRefCreateNestedFuture(Variable arrayResult,
       Variable arrayRefVar, Variable indexVar) {
     assert(Types.isArrayRef(arrayRefVar.getType()));
     assert(Types.isArrayRef(arrayResult.getType()));
@@ -720,7 +720,7 @@ public class TurbineGenerator implements CompilerBackend
 
 
   @Override
-  public void arrayCreateNestedImmediate(Variable arrayResult,
+  public void arrayCreateNestedImm(Variable arrayResult,
       Variable arrayVar, Oparg arrIx) {
     assert(Types.isArray(arrayVar.getType()));
     assert(Types.isArray(arrayResult.getType()));
@@ -734,7 +734,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void arrayRefCreateNestedImmediateIx(Variable arrayResult,
+  public void arrayRefCreateNestedImm(Variable arrayResult,
       Variable arrayVar, Oparg arrIx) {
     assert(Types.isArrayRef(arrayVar.getType()));
     assert(Types.isArrayRef(arrayResult.getType()));
@@ -865,7 +865,7 @@ public class TurbineGenerator implements CompilerBackend
 
 
   @Override
-  public void arrayLoadComputedIndex(Variable oVar, Variable arrayVar, Variable indexVar,
+  public void arrayLookupFuture(Variable oVar, Variable arrayVar, Variable indexVar,
         boolean isArrayRef) {
     arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
     assert(indexVar.getType().equals(Types.FUTURE_INTEGER));
@@ -878,7 +878,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void arrayLoadImmediateIx(Variable oVar, Variable arrayVar, Oparg arrIx,
+  public void arrayLookupRefImm(Variable oVar, Variable arrayVar, Oparg arrIx,
         boolean isArrayRef) {
     assert(arrIx.isImmediateInt());
     arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
@@ -891,7 +891,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void arrayLoadImmediate(Variable oVar, Variable arrayVar,
+  public void arrayLookupImm(Variable oVar, Variable arrayVar,
                                                       Oparg arrIx) {
     assert(arrIx.isImmediateInt());
     assert(oVar.getType().equals(
@@ -941,7 +941,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void arrayStoreComputedIndex(Variable iVar, Variable arrayVar,
+  public void arrayInsertFuture(Variable iVar, Variable arrayVar,
                                                       Variable indexVar) {
     assert(Types.isArray(arrayVar.getType()));
     SwiftType memberType = arrayVar.getType().getMemberType();
@@ -963,7 +963,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void arrayRefStoreComputedIndex(Variable iVar, Variable arrayVar,
+  public void arrayRefInsertFuture(Variable iVar, Variable arrayVar,
                                 Variable indexVar, Variable outerArrayVar) {
     assert(Types.isArrayRef(arrayVar.getType()));
     assert(Types.isArray(outerArrayVar.getType()));
@@ -988,7 +988,7 @@ public class TurbineGenerator implements CompilerBackend
 
 
   @Override
-  public void arrayStoreImmediate(Variable iVar, Variable arrayVar,
+  public void arrayInsertImm(Variable iVar, Variable arrayVar,
         Oparg arrIx) {
     assert(Types.isArray(arrayVar.getType()));
     if (!arrIx.isImmediateInt()) {
@@ -1020,7 +1020,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void arrayRefStoreImmediateIx(Variable iVar, Variable arrayVar,
+  public void arrayRefInsertImm(Variable iVar, Variable arrayVar,
         Oparg arrIx, Variable outerArrayVar) {
     assert(Types.isArrayRef(arrayVar.getType()));
     assert(Types.isArray(outerArrayVar.getType()));

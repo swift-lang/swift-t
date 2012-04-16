@@ -384,78 +384,78 @@ public class SwiftICGenerator implements CompilerBackend {
   }
 
   @Override
-  public void arrayLoadComputedIndex(Variable oVar, Variable arrayVar,
+  public void arrayLookupFuture(Variable oVar, Variable arrayVar,
       Variable indexVar, boolean isArrayRef) {
     assert(indexVar.getType().equals(Types.FUTURE_INTEGER));
     if (isArrayRef) {
       currBlock().addInstruction(
-          TurbineOp.arrayRefLoadComputed(oVar, arrayVar, indexVar));
+          TurbineOp.arrayRefLookupFuture(oVar, arrayVar, indexVar));
     } else {
       currBlock().addInstruction(
-          TurbineOp.arrayLoadComputed(oVar, arrayVar, indexVar));
+          TurbineOp.arrayLookupFuture(oVar, arrayVar, indexVar));
     }
   }
 
   @Override
-  public void arrayLoadImmediateIx(Variable oVar, Variable arrayVar,
+  public void arrayLookupRefImm(Variable oVar, Variable arrayVar,
       Oparg arrIx, boolean isArrayRef) {
     assert(arrIx.isImmediateInt());
     if (isArrayRef) {
       currBlock().addInstruction(
-          TurbineOp.arrayRefLoadImmIx(oVar, arrayVar, arrIx));
+          TurbineOp.arrayRefLookupImm(oVar, arrayVar, arrIx));
     } else {
       currBlock().addInstruction(
-          TurbineOp.arrayLoadImmIx(oVar, arrayVar, arrIx));
+          TurbineOp.arrayLookupRefImm(oVar, arrayVar, arrIx));
     }
   }
   
   @Override
-  public void arrayLoadImmediate(Variable oVar, Variable arrayVar,
+  public void arrayLookupImm(Variable oVar, Variable arrayVar,
       Oparg arrIx) {
     assert(oVar.getStorage() == VariableStorage.ALIAS);
     assert(Types.isArray(arrayVar.getType())); // Can't be reference to array
     assert(arrIx.isImmediateInt());
     currBlock().addInstruction(
-        TurbineOp.arrayLoadImm(oVar, arrayVar, arrIx));
+        TurbineOp.arrayLookupImm(oVar, arrayVar, arrIx));
   }
 
   @Override
-  public void arrayStoreComputedIndex(Variable iVar, Variable arrayVar,
+  public void arrayInsertFuture(Variable iVar, Variable arrayVar,
       Variable indexVar) {
     assert(indexVar.getType().equals(Types.FUTURE_INTEGER));
     currBlock().addInstruction(
-        TurbineOp.arrayStoreComputed(iVar, arrayVar, indexVar));
+        TurbineOp.arrayInsertFuture(iVar, arrayVar, indexVar));
   }
 
   @Override
-  public void arrayRefStoreComputedIndex(Variable iVar,
+  public void arrayRefInsertFuture(Variable iVar,
       Variable arrayVar, Variable indexVar, Variable outerArrayVar) {
     assert(indexVar.getType().equals(Types.FUTURE_INTEGER));
     assert(Types.isArrayRef(arrayVar.getType()));
     currBlock().addInstruction(
-        TurbineOp.arrayRefStoreComputed(iVar, arrayVar, indexVar, 
+        TurbineOp.arrayRefInsertFuture(iVar, arrayVar, indexVar, 
                                               outerArrayVar));
   }
   
   @Override
-  public void arrayStoreImmediate(Variable iVar, Variable arrayVar,
+  public void arrayInsertImm(Variable iVar, Variable arrayVar,
       Oparg arrIx) {
     assert(arrIx.isImmediateInt());
     currBlock().addInstruction(
-        TurbineOp.arrayStoreImm(iVar, arrayVar, arrIx));
+        TurbineOp.arrayInsertImm(iVar, arrayVar, arrIx));
   }
   
   @Override
-  public void arrayRefStoreImmediateIx(Variable iVar, Variable arrayVar,
+  public void arrayRefInsertImm(Variable iVar, Variable arrayVar,
           Oparg arrIx, Variable outerArrayVar) {
     assert(arrIx.isImmediateInt());
     assert(Types.isArrayRef(arrayVar.getType()));
     currBlock().addInstruction(
-        TurbineOp.arrayRefStoreImmIx(iVar, arrayVar, arrIx, outerArrayVar));
+        TurbineOp.arrayRefInsertImm(iVar, arrayVar, arrIx, outerArrayVar));
   }
 
   @Override
-  public void arrayCreateNestedComputedIndex(Variable arrayResult,
+  public void arrayCreateNestedFuture(Variable arrayResult,
       Variable arrayVar, Variable indexVar) {
     assert(Types.isArrayRef(arrayResult.getType()));
     assert(Types.isArray(arrayVar.getType()));
@@ -467,7 +467,7 @@ public class SwiftICGenerator implements CompilerBackend {
   }
 
   @Override
-  public void arrayCreateNestedImmediate(Variable arrayResult,
+  public void arrayCreateNestedImm(Variable arrayResult,
       Variable arrayVar, Oparg arrIx) {
     assert(Types.isArray(arrayResult.getType()));
     assert(Types.isArray(arrayVar.getType()));
@@ -480,7 +480,7 @@ public class SwiftICGenerator implements CompilerBackend {
   }
 
   @Override
-  public void arrayRefCreateNestedImmediateIx(Variable arrayResult,
+  public void arrayRefCreateNestedImm(Variable arrayResult,
       Variable arrayVar, Oparg arrIx) {
     assert(Types.isArrayRef(arrayResult.getType()));
     assert(Types.isArrayRef(arrayVar.getType()));
@@ -491,7 +491,7 @@ public class SwiftICGenerator implements CompilerBackend {
   }
 
   @Override
-  public void arrayRefCreateNestedComputedIndex(Variable arrayResult,
+  public void arrayRefCreateNestedFuture(Variable arrayResult,
       Variable arrayVar, Variable indexVar) {
     assert(Types.isArrayRef(arrayResult.getType()));
     assert(Types.isArrayRef(arrayVar.getType()));
