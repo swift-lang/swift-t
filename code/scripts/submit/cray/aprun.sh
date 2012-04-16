@@ -15,7 +15,7 @@
 # USER: Set the wall time
 #PBS -l walltime=10:00
 # USER: (optional) Redirect output from its default location ($PWD)
-# # #PBS -o /home/users/p01226/pbs.out
+#PBS -o /lustre/beagle/wozniak/pbs.out
 
 #PBS -j oe
 #PBS -m n
@@ -30,9 +30,9 @@ echo
 
 set -x
 # USER: Set Turbine installation path
-export TURBINE_HOME=${PBS_O_HOME}/sfw/turbine-0.0.2
+export TURBINE_HOME=/lustre/beagle/wozniak/sfw/turbine-0.0.2
 # USER: Select program name
-PROGRAM=${PBS_O_HOME}/proj/turbine/test/adlb-data.tcl
+PROGRAM=${TURBINE_HOME}/test/adlb-data.tcl
 
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 if [[ ${?} != 0 ]]
@@ -45,3 +45,4 @@ fi
 #PBS -v TURBINE_ENGINES ADLB_SERVERS TURBINE_HOME
 # USER: Set aprun parameters to agree with PBS -l settings
 aprun -n 3 -N 1 -cc none -d 1 ${TCLSH} ${PROGRAM}
+
