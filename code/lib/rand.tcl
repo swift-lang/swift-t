@@ -17,7 +17,6 @@ namespace eval turbine {
     # Note: Call this after adlb::init so that rank is valid
     proc init_rng {} {
         set seed [ adlb::rank ]
-        puts "seed: $seed"
         expr srand($seed)
     }
 
