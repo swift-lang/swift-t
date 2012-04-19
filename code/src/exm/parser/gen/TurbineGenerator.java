@@ -325,7 +325,8 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void retrieveFloat(Variable target, Variable source) {
     assert(target.getType().equals(Types.VALUE_FLOAT));
-    assert(source.getType().equals(Types.FUTURE_FLOAT));
+    assert(source.getType().equals(Types.FUTURE_FLOAT)
+            || source.getType().equals(Types.UPDATEABLE_FLOAT));
     pointStack.peek().add(Turbine.floatGet(prefixVar(target.getName()),
                                                   varToExpr(source)));
   }

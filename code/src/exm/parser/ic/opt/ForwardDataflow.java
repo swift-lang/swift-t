@@ -471,6 +471,12 @@ public class ForwardDataflow {
       for (Variable v: f.getBlockingInputs()) {
         cv.close(v.getName());
       }
+      for (Variable v: f.getInputList()) {
+        if (Types.isScalarUpdateable(v.getType())) {
+          // Updateables always have a value
+          cv.close(v.getName());
+        }
+      }
     }
     if (replaceInputs == null) {
       replaceInputs = new HierarchicalMap<String, Oparg>();

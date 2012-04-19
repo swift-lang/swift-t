@@ -1220,9 +1220,12 @@ public class ICInstructions {
         case RETRIEVE_INT:
         case RETRIEVE_REF:
         case RETRIEVE_STRING: {
-          // address_of and retrieve* are invertible
+          // retrieve* is invertible
           Oparg src = args.get(1);
           Oparg val = args.get(0);
+          if (Types.isScalarUpdateable(src.getVariable().getType())) {
+            return null;
+          }
           ComputedValue retrieve = vanillaComputedValue(true);
           Opcode cvop = assignOpcode(src.getSwiftType());
           if (cvop == null) {
@@ -3042,7 +3045,8 @@ public class ICInstructions {
 
   public static Instruction retrieveValueOf(Variable dst, Variable src) {
     assert(Types.isScalarValue(dst.getType()));
-    assert(Types.isScalarFuture(src.getType()));
+    assert(Types.isScalarFuture(src.getType())
+            || Types.isScalarUpdateable(src.getType()));
     switch (src.getType().getPrimitiveType()) {
     case BOOLEAN:
       return TurbineOp.retrieveBool(dst, src);

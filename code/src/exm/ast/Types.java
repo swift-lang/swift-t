@@ -671,7 +671,8 @@ public class Types {
   }
   
   public static SwiftType derefResultType(SwiftType future) {
-    if (future.getStructureType() == StructureType.SCALAR_FUTURE) {
+    if (future.getStructureType() == StructureType.SCALAR_FUTURE
+          || future.getStructureType() == StructureType.SCALAR_UPDATEABLE) {
       return new ScalarValueType(future.getPrimitiveType());
     } else if (future.getStructureType() == StructureType.REFERENCE) {
       return future.getMemberType();
