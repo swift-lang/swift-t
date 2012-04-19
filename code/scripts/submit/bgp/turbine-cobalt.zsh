@@ -5,7 +5,7 @@
 #                 <SCRIPT> [<ARG>]*
 
 # Variables that may have defaults set in the environment:
-# QUEUE, TURBINE_OUTPUT_ROOT, PROJECT
+# PROJECT, QUEUE, TURBINE_OUTPUT_ROOT
 
 TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 declare TURBINE_HOME
@@ -61,10 +61,10 @@ exitcode "PROCS==0"
 RUN=$( date_path )
 
 TURBINE_OUTPUT=${TURBINE_OUTPUT_ROOT}/${RUN}
-print "TURBINE_OUTPUT: ${TURBINE_OUTPUT}"
-declare OUTPUT_TOKEN_FILE
+declare TURBINE_OUTPUT
 print ${TURBINE_OUTPUT} > ${OUTPUT_TOKEN_FILE}
-mkdir -pv ${TURBINE_OUTPUT}
+mkdir -p ${TURBINE_OUTPUT}
+exitcode "mkdir failed: ${TURBINE_OUTPUT}"
 
 LOG=${TURBINE_OUTPUT}/log.txt
 
@@ -82,8 +82,8 @@ env+=( TCLLIBPATH="${TCLLIBPATH}"
        TURBINE_DEBUG=${TURBINE_DEBUG:-1}
        ADLB_DEBUG=${ADLB_DEBUG:-1}
        LOGGING=${LOGGING:-1}
-       TURBINE_ENGINES=${TURBINE_ENGINES}
-       ADLB_SERVERS=${ADLB_SERVERS}
+       TURBINE_ENGINES=${TURBINE_ENGINES:-1}
+       ADLB_SERVERS=${ADLB_SERVERS:-1}
        ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME:-5}
 )
 
@@ -123,4 +123,4 @@ print "COMPLETE: $( date_nice )" >> ${LOG}
 STOP=$( date +%s )
 TOOK=$( tformat $(( STOP-START )) )
 declare TOOK
-print "DONE"
+
