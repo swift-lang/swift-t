@@ -439,8 +439,8 @@ namespace eval turbine {
         set s [ container_list $container ]
         set_string $result $s
     }
-    
-    # When container is closed, count the members 
+
+    # When container is closed, count the members
     # result: a turbine integer
     proc container_size { stack result container } {
 
@@ -606,21 +606,21 @@ namespace eval turbine {
         }
         set_float $mean_out $mean_accum
       }
-      
+
       if { $min_out != 0 } {
         if { $n == 0 } {
           error "calculating min of empty array <$container>"
         }
         set_float $min_out $min_accum
       }
-      
+
       if { $max_out != 0 } {
         if { $n == 0 } {
           error "calculating max of empty array <$container>"
         }
         set_float $max_out $max_accum
       }
-      
+
       if { $M2_out != 0 } {
         set_float $M2_out $M2_accum
       }
@@ -662,7 +662,7 @@ namespace eval turbine {
       while { $i < $keycount } {
         set key [ lindex $keys $i ]
         set struct [ container_get $container $key ]
-        puts "key: $key"
+        # puts "key: $key"
         # struct should be closed
         set n_id [ container_get $struct "n" ]
         set mean_id [ container_get $struct "mean" ]
@@ -672,14 +672,14 @@ namespace eval turbine {
           set n [ get_integer $n_id ]
           set mean [ get_float $mean_id ]
           set M2 [ get_float $M2_id ]
-          if { $i > 0 } { 
+          if { $i > 0 } {
             # combine statistics
             # weighted mean
             # mean' := (mean1 * n1 + mean2 * n2) / ( n1 + n2)
             set mean_accum [ expr ( $mean_accum * $n_accum + \
                                 $mean * $n) / double( $n_accum + $n ) ]
             #  diff := mean2 - mean1
-            set diff [ expr $mean - $mean_accum ] 
+            set diff [ expr $mean - $mean_accum ]
             # M2' := M2_1 + M2_2 + diff^2 * ( n1*n2 / (n1 + n2))
             set M2_accum [ expr $M2_accum + $M2 + \
                           ($diff**2) * ($n_accum * $n / ($n_accum + $n)) ]
