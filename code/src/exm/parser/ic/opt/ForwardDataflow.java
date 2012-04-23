@@ -396,7 +396,7 @@ public class ForwardDataflow {
                             HashSet<ICInstructions.Opcode>();
   static {
     nonProgressOpcodes.add(Opcode.ARRAY_DECR_WRITERS);
-    nonProgressOpcodes.add(Opcode.CALL_LOCAL_BUILTIN);
+    nonProgressOpcodes.add(Opcode.LOCAL_OP);
     nonProgressOpcodes.add(Opcode.ASSIGN_BOOL);
     nonProgressOpcodes.add(Opcode.ASSIGN_INT);
     nonProgressOpcodes.add(Opcode.ASSIGN_FLOAT);

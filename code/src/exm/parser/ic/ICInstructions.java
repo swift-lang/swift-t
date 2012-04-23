@@ -1443,8 +1443,8 @@ public class ICInstructions {
     private FunctionCallInstruction(Opcode op, String functionName,
         List<Variable> inputs, List<Variable> outputs, Oparg priority) {
       super(op);
-      if (op != Opcode.CALL_BUILTIN && op != Opcode.CALL_COMPOSITE &&
-          op != Opcode.CALL_APP && op != Opcode.CALL_COMPOSITE_SYNC) {
+      if (op != Opcode.CALL_BUILTIN && op != Opcode.CALL &&
+          op != Opcode.CALL_APP && op != Opcode.CALL_SYNC) {
         throw new ParserRuntimeException("Tried to create function call"
             + " instruction with invalid opcode");
       }
@@ -1480,9 +1480,9 @@ public class ICInstructions {
         boolean async, Oparg priority) {
       Opcode op;
       if (async) {
-        op = Opcode.CALL_COMPOSITE;
+        op = Opcode.CALL;
       } else {
-        op = Opcode.CALL_COMPOSITE_SYNC;
+        op = Opcode.CALL_SYNC;
       }
       return new FunctionCallInstruction(op, functionName,
           inputs, outputs, priority);
@@ -1522,9 +1522,9 @@ public class ICInstructions {
       case CALL_BUILTIN:
         gen.builtinFunctionCall(functionName, inputs, outputs, priority);
         break;
-      case CALL_COMPOSITE_SYNC:
-      case CALL_COMPOSITE:
-        boolean async = (op == Opcode.CALL_COMPOSITE);
+      case CALL_SYNC:
+      case CALL:
+        boolean async = (op == Opcode.CALL);
         List<Boolean> blocking = info.getBlockingInputVector(functionName);
         assert(blocking != null && blocking.size() == inputs.size());
         List<Boolean> needToBlock = new ArrayList<Boolean>(inputs.size());
@@ -1920,10 +1920,10 @@ public class ICInstructions {
             blocksOn.add(v);
           }
         }
-      } else if (op == Opcode.CALL_COMPOSITE_SYNC) {
+      } else if (op == Opcode.CALL_SYNC) {
         // Can't block because we need to enter the function immediately
         return null;
-      } else if (op == Opcode.CALL_COMPOSITE ) {
+      } else if (op == Opcode.CALL ) {
         //TODO: should see which arguments are blocking
         return null;
       }
@@ -1931,7 +1931,7 @@ public class ICInstructions {
     }
 
     public boolean isDefinitelyDeterministic() {
-      if (this.op == Opcode.CALL_COMPOSITE || this.op == Opcode.CALL_COMPOSITE_SYNC
+      if (this.op == Opcode.CALL || this.op == Opcode.CALL_SYNC
           || this.op == Opcode.CALL_APP) {
         return false;
       } else if (knownDeterministic.contains(functionName)) {
@@ -2235,7 +2235,7 @@ public class ICInstructions {
   public static enum Opcode {
     FAKE, // Used for ComputedValue if there isn't a real opcode
     COMMENT,
-    CALL_BUILTIN, CALL_COMPOSITE, CALL_APP, CALL_COMPOSITE_SYNC,
+    CALL_BUILTIN, CALL, CALL_APP, CALL_SYNC,
     DEREFERENCE_INT, DEREFERENCE_STRING, ADDRESS_OF, DEREFERENCE_FLOAT,
     DEREFERENCE_BOOL, DEREFERENCE_BLOB,
     ASSIGN_INT, ASSIGN_STRING, ASSIGN_FLOAT, ASSIGN_BOOL,
@@ -2252,7 +2252,7 @@ public class ICInstructions {
     ARRAY_CREATE_NESTED_IMM, ARRAY_REF_CREATE_NESTED_IMM,
     LOOP_BREAK, LOOP_CONTINUE, 
     COPY_REF,
-    CALL_LOCAL_BUILTIN,
+    LOCAL_OP,
     INIT_UPDATEABLE_FLOAT, UPDATE_MIN, UPDATE_INCR, UPDATE_SCALE, LATEST_VALUE,
     UPDATE_MIN_IMM, UPDATE_INCR_IMM, UPDATE_SCALE_IMM,
   }
@@ -2284,7 +2284,7 @@ public class ICInstructions {
     }
     public LocalBuiltin(LocalOpcode localop, Variable output, 
           List<Oparg> inputs) {
-      super(Opcode.CALL_LOCAL_BUILTIN);
+      super(Opcode.LOCAL_OP);
       this.localop = localop;
       this.output = output;
       this.inputs = new ArrayList<Oparg>(inputs);
@@ -3102,7 +3102,7 @@ public class ICInstructions {
           throw new ParserRuntimeException("Unhandled type: "
               + dstType);
         }
-        return new ComputedValue(Opcode.CALL_LOCAL_BUILTIN, 
+        return new ComputedValue(Opcode.LOCAL_OP, 
             op.toString(), Arrays.asList(val), Oparg.createVar(dst), false);
     } else {
       Opcode op = assignOpcode(dstType);
