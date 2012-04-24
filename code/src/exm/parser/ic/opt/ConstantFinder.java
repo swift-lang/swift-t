@@ -186,9 +186,9 @@ public class ConstantFinder {
       if (inst.getInputs().size() == 1) {
         Oparg input = inst.getInput(0);
         if (input.isConstant() &&
-            (inst.op == Opcode.ASSIGN_INT || inst.op == Opcode.ASSIGN_BOOL            
-            || inst.op == Opcode.ASSIGN_FLOAT || inst.op == Opcode.ASSIGN_STRING
-            || (!ignoreLocalValConstants && inst.op == Opcode.CALL_LOCAL_BUILTIN && 
+            (inst.op == Opcode.STORE_INT || inst.op == Opcode.STORE_BOOL            
+            || inst.op == Opcode.STORE_FLOAT || inst.op == Opcode.STORE_STRING
+            || (!ignoreLocalValConstants && inst.op == Opcode.LOCAL_OP && 
                   LocalBuiltin.isValueCopy(inst)))) {
           Oparg output = inst.getOutput(0); 
           String varName = output.getVariable().getName();

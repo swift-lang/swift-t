@@ -289,16 +289,16 @@ public class ICInstructions {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       // Recreate calls that were used to generate this instruction
       switch (op) {
-      case ASSIGN_INT:
+      case STORE_INT:
         gen.assignInt(args.get(0).getVariable(), args.get(1));
         break;
-      case ASSIGN_BOOL:
+      case STORE_BOOL:
         gen.assignBool(args.get(0).getVariable(), args.get(1));
         break;
-      case ASSIGN_FLOAT:
+      case STORE_FLOAT:
         gen.assignFloat(args.get(0).getVariable(), args.get(1));
         break;
-      case ASSIGN_STRING:
+      case STORE_STRING:
         gen.assignString(args.get(0).getVariable(), args.get(1));
         break;
       case ADDRESS_OF:
@@ -356,27 +356,27 @@ public class ICInstructions {
       case STRUCT_CLOSE:
         gen.structClose(args.get(0).getVariable());
         break;
-      case DEREFERENCE_INT:
+      case DEREF_INT:
         gen.dereferenceInt(args.get(0).getVariable(),
                                 args.get(1).getVariable());
         break;
-      case DEREFERENCE_BOOL:
+      case DEREF_BOOL:
         gen.dereferenceBool(args.get(0).getVariable(),
                                 args.get(1).getVariable());
         break;
-      case DEREFERENCE_FLOAT:
+      case DEREF_FLOAT:
         gen.dereferenceFloat(args.get(0).getVariable(),
                                 args.get(1).getVariable());
         break;
-      case DEREFERENCE_STRING:
+      case DEREF_STRING:
         gen.dereferenceString(args.get(0).getVariable(),
                                 args.get(1).getVariable());
         break;
-      case DEREFERENCE_BLOB:
+      case DEREF_BLOB:
         gen.dereferenceBlob(args.get(0).getVariable(),
                                 args.get(1).getVariable());
         break;
-      case RETRIEVE_REF:
+      case LOAD_REF:
         gen.retrieveRef(args.get(0).getVariable(),
                                 args.get(1).getVariable());
         break;
@@ -399,19 +399,19 @@ public class ICInstructions {
         gen.arrayCreateNestedImm(args.get(0).getVariable(),
             args.get(1).getVariable(), args.get(2));
         break;
-      case RETRIEVE_INT:
+      case LOAD_INT:
         gen.retrieveInt(args.get(0).getVariable(),
                   args.get(1).getVariable());
         break;
-      case RETRIEVE_STRING:
+      case LOAD_STRING:
         gen.retrieveString(args.get(0).getVariable(),
             args.get(1).getVariable());
         break;
-      case RETRIEVE_BOOL:
+      case LOAD_BOOL:
         gen.retrieveBool(args.get(0).getVariable(),
             args.get(1).getVariable());
         break;
-      case RETRIEVE_FLOAT:
+      case LOAD_FLOAT:
         gen.retrieveFloat(args.get(0).getVariable(),
             args.get(1).getVariable());
         break;  
@@ -532,42 +532,42 @@ public class ICInstructions {
     }
   
     public static Instruction assignInt(Variable target, Oparg src) {
-      return new TurbineOp(Opcode.ASSIGN_INT,
+      return new TurbineOp(Opcode.STORE_INT,
           Arrays.asList(Oparg.createVar(target), src));
     }
 
     public static Instruction assignBool(Variable target, Oparg src) {
-      return new TurbineOp(Opcode.ASSIGN_BOOL,
+      return new TurbineOp(Opcode.STORE_BOOL,
           Arrays.asList(Oparg.createVar(target), src));
     }
   
     public static Instruction assignFloat(Variable target, Oparg src) {
-      return new TurbineOp(Opcode.ASSIGN_FLOAT,
+      return new TurbineOp(Opcode.STORE_FLOAT,
           Arrays.asList(Oparg.createVar(target), src));
     }
   
     public static Instruction assignString(Variable target, Oparg src) {
-      return new TurbineOp(Opcode.ASSIGN_STRING,
+      return new TurbineOp(Opcode.STORE_STRING,
           Arrays.asList(Oparg.createVar(target), src));
     }
   
     public static Instruction retrieveString(Variable target, Variable source) {
-      return new TurbineOp(Opcode.RETRIEVE_STRING,
+      return new TurbineOp(Opcode.LOAD_STRING,
           Arrays.asList(Oparg.createVar(target), Oparg.createVar(source)));
     }
   
     public static Instruction retrieveInt(Variable target, Variable source) {
-      return new TurbineOp(Opcode.RETRIEVE_INT,
+      return new TurbineOp(Opcode.LOAD_INT,
           Arrays.asList(Oparg.createVar(target), Oparg.createVar(source)));
     }
   
     public static Instruction retrieveBool(Variable target, Variable source) {
-      return new TurbineOp(Opcode.RETRIEVE_BOOL,
+      return new TurbineOp(Opcode.LOAD_BOOL,
           Arrays.asList(Oparg.createVar(target), Oparg.createVar(source)));
     }
     
     public static Instruction retrieveFloat(Variable target, Variable source) {
-      return new TurbineOp(Opcode.RETRIEVE_FLOAT,
+      return new TurbineOp(Opcode.LOAD_FLOAT,
           Arrays.asList(Oparg.createVar(target), Oparg.createVar(source)));
     }
   
@@ -590,32 +590,32 @@ public class ICInstructions {
     }
   
     public static Instruction dereferenceInt(Variable target, Variable src) {
-      return new TurbineOp(Opcode.DEREFERENCE_INT,
+      return new TurbineOp(Opcode.DEREF_INT,
           Arrays.asList(Oparg.createVar(target), Oparg.createVar(src)));
     }
     
     public static Instruction dereferenceBool(Variable target, Variable src) {
-      return new TurbineOp(Opcode.DEREFERENCE_BOOL,
+      return new TurbineOp(Opcode.DEREF_BOOL,
           Arrays.asList(Oparg.createVar(target), Oparg.createVar(src)));
     }
   
     public static Instruction dereferenceFloat(Variable target, Variable src) {
-      return new TurbineOp(Opcode.DEREFERENCE_FLOAT,
+      return new TurbineOp(Opcode.DEREF_FLOAT,
           Arrays.asList(Oparg.createVar(target), Oparg.createVar(src)));
     }
   
     public static Instruction dereferenceString(Variable target, Variable src) {
-      return new TurbineOp(Opcode.DEREFERENCE_STRING,
+      return new TurbineOp(Opcode.DEREF_STRING,
           Arrays.asList(Oparg.createVar(target), Oparg.createVar(src)));
     }
   
     public static Instruction dereferenceBlob(Variable target, Variable src) {
-      return new TurbineOp(Opcode.DEREFERENCE_BLOB,
+      return new TurbineOp(Opcode.DEREF_BLOB,
           Arrays.asList(Oparg.createVar(target), Oparg.createVar(src)));
     }
     
     public static Instruction retrieveRef(Variable target, Variable src) {
-      return new TurbineOp(Opcode.RETRIEVE_REF,
+      return new TurbineOp(Opcode.LOAD_REF,
           Arrays.asList(Oparg.createVar(target), Oparg.createVar(src)));
     }
     
@@ -763,27 +763,27 @@ public class ICInstructions {
       case ARRAY_LOOKUP_REF_IMM:
       case ARRAY_LOOKUP_IMM:
       case ARRAY_LOOKUP_FUTURE:
-      case ASSIGN_INT:
-      case ASSIGN_BOOL:
-      case ASSIGN_FLOAT:
-      case ASSIGN_STRING:
+      case STORE_INT:
+      case STORE_BOOL:
+      case STORE_FLOAT:
+      case STORE_STRING:
       case ARRAY_CREATE_NESTED_FUTURE:
       case ARRAY_REF_CREATE_NESTED_FUTURE:
       case ARRAY_CREATE_NESTED_IMM:
       case ARRAY_REF_CREATE_NESTED_IMM:
-      case DEREFERENCE_INT:
-      case DEREFERENCE_BOOL:
-      case DEREFERENCE_FLOAT:
-      case DEREFERENCE_STRING:
-      case DEREFERENCE_BLOB:
-      case RETRIEVE_INT:
-      case RETRIEVE_BOOL:
-      case RETRIEVE_FLOAT:
-      case RETRIEVE_STRING:
+      case DEREF_INT:
+      case DEREF_BOOL:
+      case DEREF_FLOAT:
+      case DEREF_STRING:
+      case DEREF_BLOB:
+      case LOAD_INT:
+      case LOAD_BOOL:
+      case LOAD_FLOAT:
+      case LOAD_STRING:
       case STRUCT_LOOKUP:
       case STRUCTREF_LOOKUP:
       case ADDRESS_OF:
-      case RETRIEVE_REF:
+      case LOAD_REF:
       case COPY_REF:
           return 1;
       default:
@@ -818,19 +818,19 @@ public class ICInstructions {
       case INIT_UPDATEABLE_FLOAT:
         return true;
       
-      case ASSIGN_INT:
-      case ASSIGN_BOOL:
-      case ASSIGN_FLOAT:
-      case ASSIGN_STRING:
-      case DEREFERENCE_INT:
-      case DEREFERENCE_BOOL:
-      case DEREFERENCE_FLOAT:
-      case DEREFERENCE_STRING:
-      case DEREFERENCE_BLOB:
-      case RETRIEVE_INT:
-      case RETRIEVE_BOOL:
-      case RETRIEVE_FLOAT:
-      case RETRIEVE_STRING:
+      case STORE_INT:
+      case STORE_BOOL:
+      case STORE_FLOAT:
+      case STORE_STRING:
+      case DEREF_INT:
+      case DEREF_BOOL:
+      case DEREF_FLOAT:
+      case DEREF_STRING:
+      case DEREF_BLOB:
+      case LOAD_INT:
+      case LOAD_BOOL:
+      case LOAD_FLOAT:
+      case LOAD_STRING:
       case ARRAY_LOOKUP_REF_IMM:
       case ARRAY_LOOKUP_FUTURE:
       case ARRAYREF_LOOKUP_FUTURE:
@@ -838,7 +838,7 @@ public class ICInstructions {
           return this.writesAliasVar();
 
       case STRUCT_LOOKUP:
-      case RETRIEVE_REF:
+      case LOAD_REF:
       case ADDRESS_OF:
       case COPY_REF:
       case STRUCTREF_LOOKUP:
@@ -878,14 +878,14 @@ public class ICInstructions {
     public Map<String, Oparg> constantFold(String fnName,
                         Map<String, Oparg> knownConstants) {
       switch (op) {
-      case ASSIGN_INT:
-      case ASSIGN_STRING:
-      case ASSIGN_BOOL:
-      case ASSIGN_FLOAT:
-      case RETRIEVE_BOOL:
-      case RETRIEVE_FLOAT:
-      case RETRIEVE_INT:
-      case RETRIEVE_STRING:
+      case STORE_INT:
+      case STORE_STRING:
+      case STORE_BOOL:
+      case STORE_FLOAT:
+      case LOAD_BOOL:
+      case LOAD_FLOAT:
+      case LOAD_INT:
+      case LOAD_STRING:
         // The input arg could be a var or a literal constant
         if (args.get(1).getType() == OpargType.VAR) {
           Oparg val = knownConstants.get(args.get(1).getVariable().getName());
@@ -1215,11 +1215,11 @@ public class ICInstructions {
       Oparg contents = null;
       ComputedValue cv = null;
       switch(op) {
-        case RETRIEVE_BOOL:
-        case RETRIEVE_FLOAT:
-        case RETRIEVE_INT:
-        case RETRIEVE_REF:
-        case RETRIEVE_STRING: {
+        case LOAD_BOOL:
+        case LOAD_FLOAT:
+        case LOAD_INT:
+        case LOAD_REF:
+        case LOAD_STRING: {
           // retrieve* is invertible
           Oparg src = args.get(1);
           Oparg val = args.get(0);
@@ -1246,10 +1246,10 @@ public class ICInstructions {
           }
         }
         case ADDRESS_OF:
-        case ASSIGN_BOOL:
-        case ASSIGN_FLOAT:
-        case ASSIGN_INT:
-        case ASSIGN_STRING: {
+        case STORE_BOOL:
+        case STORE_FLOAT:
+        case STORE_INT:
+        case STORE_STRING: {
           // add assign so we can avoid recreating future 
           // (true b/c this instruction closes val immediately)
           ComputedValue assign = vanillaComputedValue(true);
@@ -1270,11 +1270,11 @@ public class ICInstructions {
           } 
           return Arrays.asList(retrieve, assign);
         }
-        case DEREFERENCE_BLOB:
-        case DEREFERENCE_BOOL:
-        case DEREFERENCE_FLOAT:
-        case DEREFERENCE_INT:
-        case DEREFERENCE_STRING: {
+        case DEREF_BLOB:
+        case DEREF_BOOL:
+        case DEREF_FLOAT:
+        case DEREF_INT:
+        case DEREF_STRING: {
           return Arrays.asList(vanillaComputedValue(false));
         }
         case STRUCT_INSERT: {
@@ -2236,11 +2236,9 @@ public class ICInstructions {
     FAKE, // Used for ComputedValue if there isn't a real opcode
     COMMENT,
     CALL_BUILTIN, CALL, CALL_APP, CALL_SYNC,
-    DEREFERENCE_INT, DEREFERENCE_STRING, ADDRESS_OF, DEREFERENCE_FLOAT,
-    DEREFERENCE_BOOL, DEREFERENCE_BLOB,
-    ASSIGN_INT, ASSIGN_STRING, ASSIGN_FLOAT, ASSIGN_BOOL,
-    RETRIEVE_INT, RETRIEVE_STRING, RETRIEVE_FLOAT, RETRIEVE_BOOL,
-    RETRIEVE_REF,
+    DEREF_INT, DEREF_STRING, DEREF_FLOAT, DEREF_BOOL, DEREF_BLOB,
+    STORE_INT, STORE_STRING, STORE_FLOAT, STORE_BOOL, ADDRESS_OF, 
+    LOAD_INT, LOAD_STRING, LOAD_FLOAT, LOAD_BOOL, LOAD_REF,
     ARRAY_DECR_WRITERS,
     
     ARRAYREF_LOOKUP_FUTURE, ARRAY_LOOKUP_FUTURE,
@@ -3119,16 +3117,16 @@ public class ICInstructions {
     if (Types.isScalarFuture(dstType)) {
        switch(dstType.getPrimitiveType()) {
        case BOOLEAN:
-         op = Opcode.ASSIGN_BOOL;
+         op = Opcode.STORE_BOOL;
          break;
        case INTEGER:
-         op = Opcode.ASSIGN_INT;
+         op = Opcode.STORE_INT;
          break;
        case FLOAT:
-         op = Opcode.ASSIGN_FLOAT;
+         op = Opcode.STORE_FLOAT;
          break;
        case STRING:
-         op = Opcode.ASSIGN_STRING;
+         op = Opcode.STORE_STRING;
          break;
        }
     } else if (Types.isReference(dstType)) {
@@ -3142,16 +3140,16 @@ public class ICInstructions {
     if (Types.isScalarFuture(srcType)) {
       switch(srcType.getPrimitiveType()) {
       case BOOLEAN:
-        op = Opcode.RETRIEVE_BOOL;
+        op = Opcode.LOAD_BOOL;
         break;
       case INTEGER:
-        op = Opcode.RETRIEVE_INT;
+        op = Opcode.LOAD_INT;
         break;
       case FLOAT:
-        op = Opcode.RETRIEVE_FLOAT;
+        op = Opcode.LOAD_FLOAT;
         break;
       case STRING:
-        op = Opcode.RETRIEVE_STRING;
+        op = Opcode.LOAD_STRING;
         break;
       default:
         // Can't retrieve other types
@@ -3159,7 +3157,7 @@ public class ICInstructions {
       }
 
     } else if (Types.isReference(srcType)) {
-      op = Opcode.RETRIEVE_REF;
+      op = Opcode.LOAD_REF;
     } else {
       op = null;
     }
@@ -3173,15 +3171,15 @@ public class ICInstructions {
       if (Types.isScalarFuture(refedType)) {
         switch (refedType.getPrimitiveType()) {
         case BLOB:
-          return Opcode.DEREFERENCE_BLOB;
+          return Opcode.DEREF_BLOB;
         case BOOLEAN:
-          return Opcode.DEREFERENCE_BOOL;
+          return Opcode.DEREF_BOOL;
         case FLOAT:
-          return Opcode.DEREFERENCE_FLOAT;
+          return Opcode.DEREF_FLOAT;
         case INTEGER:
-          return Opcode.DEREFERENCE_INT;
+          return Opcode.DEREF_INT;
         case STRING:
-          return Opcode.DEREFERENCE_STRING;
+          return Opcode.DEREF_STRING;
         }
       }
     }
