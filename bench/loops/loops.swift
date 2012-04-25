@@ -5,13 +5,8 @@
 #include "../util/bench.swift"
 
 main {
-  // int x = 3;
-  // int y = 4;
-  // int z = 5;
-  // int r;
-  // r = add3(x, y, z);
 
-  argv_accept("V", "delay");
+  argv_accept("V");
   int V = toint(argv("V"));
 
   foreach i in [0:V-1] {

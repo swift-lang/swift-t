@@ -12,8 +12,6 @@ ADLB_SERVERS=${ADLB_SERVERS:-${ADLB_SERVERS_DEFAULT}}
 TURBINE_WORKERS=$(( PROCS - TURBINE_ENGINES - ADLB_SERVERS ))
 V=${V:-10}
 N=$(( V ** 4 ))
-# Delay in milliseconds - currently unused
-DELAY=${DELAY:-0}
 
 # Load common features
 
@@ -51,12 +49,12 @@ done
 # Log all settings
 declare PROCS CONTROL TURBINE_ENGINES ADLB_SERVERS TURBINE_WORKERS
 declare TURBINE_HOME BENCH_UTIL
-declare V N DELAY
+declare V N
 
 # Run stc if necessary
 compile ${PROGRAM_SWIFT} ${PROGRAM_TCL}
 
-COMMAND="loops.tcl --V=${V} --delay=${DELAY}"
+COMMAND="loops.tcl --V=${V}"
 
 source ${BENCH_UTIL}/launch.zsh
 [[ ${?} == 0 ]] || return 1
