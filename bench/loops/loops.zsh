@@ -5,8 +5,8 @@ PROGRAM_TCL=${PROGRAM_SWIFT%.swift}.tcl
 
 # Benchmark parameters
 PROCS=${PROCS:-4}
-TURBINE_ENGINES_DEFAULT=$(( 2* PROCS / 5 ))
-ADLB_SERVERS_DEFAULT=$(( PROCS / 5 ))
+TURBINE_ENGINES_DEFAULT=$(( PROCS / 4 ))
+ADLB_SERVERS_DEFAULT=$(( PROCS / 4 ))
 TURBINE_ENGINES=${TURBINE_ENGINES:-${TURBINE_ENGINES_DEFAULT}}
 ADLB_SERVERS=${ADLB_SERVERS:-${ADLB_SERVERS_DEFAULT}}
 TURBINE_WORKERS=$(( PROCS - TURBINE_ENGINES - ADLB_SERVERS ))
@@ -65,3 +65,7 @@ source ${BENCH_UTIL}/launch.zsh
 
 source ${BENCH_UTIL}/walltime.zsh
 # Return error code from walltime.zsh
+CODE=${?}
+
+date_nice
+return ${CODE}
