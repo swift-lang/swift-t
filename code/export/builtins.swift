@@ -136,4 +136,8 @@ assertLT(string|int|float|boolean v1, string|int|float|boolean v2,
 assertLTE(string|int|float|boolean v1, string|int|float|boolean v2,
                string msg) "turbine" "0.0.2" "assertLTE";
 
+(int n) adlb_servers() "turbine" "0.0.2" "adlb_servers_future";
+(int n) turbine_engines() "turbine" "0.0.2" "turbine_engines_future";
+(int n) turbine_workers() "turbine" "0.0.2" "turbine_workers_future";
+
 #endif

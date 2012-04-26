@@ -11,6 +11,11 @@ namespace eval turbine {
     # Mode is ENGINE, WORKER, or SERVER
     variable mode
 
+    # Counts of engines, servers, workers
+    variable n_adlb_servers
+    variable n_engines
+    variable n_workers
+
     # ADLB task priority
     variable priority
     variable default_priority
@@ -34,6 +39,13 @@ namespace eval turbine {
         set types [ array size WORK_TYPE ]
         adlb::init $servers $types
         c::init [ adlb::amserver ] [ adlb::rank ] [ adlb::size ]
+
+        variable n_adlb_servers
+        variable n_engines
+        variable n_workers
+        set n_adlb_servers $servers
+        set n_engines $engines
+        set n_workers [ expr [ adlb::size ] - $servers - $engines ]
 
         turbine::init_rng
 
@@ -142,5 +154,32 @@ namespace eval turbine {
         puts $::errorInfo
         puts "CALLING adlb::abort"
         adlb::abort
+    }
+
+    proc turbine_workers { } {
+        variable n_workers
+        return $n_workers
+    }
+
+    proc turbine_workers_future { stack output inputs } {
+        set_integer $output [ turbine_workers ]
+    }
+    
+    proc turbine_engines { } {
+        variable n_engines
+        return $n_engines
+    }
+
+    proc turbine_engines_future { stack output inputs } {
+        set_integer $output [ turbine_engines ]
+    }
+    
+    proc adlb_servers { } {
+        variable n_adlb_servers
+        return $n_adlb_servers
+    }
+    
+    proc adlb_servers_future { stack output inputs } {
+        set_integer $output [ adlb_servers ]
     }
 }
