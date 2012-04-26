@@ -31,8 +31,10 @@ namespace eval bench {
         }
     }
 
+    # Add an arbitrary string to the MPE log as "metadata"
+    # The string length limit is 32
     proc metadata { stack result input } {
-        turbine::rule "set1-$result" $input $turbine::WORK \
+        turbine::rule "metadata-$input" $input $turbine::WORK \
             "bench::metadata_body $input"
     }
 
@@ -42,7 +44,7 @@ namespace eval bench {
         mpe_setup
 
         set message_value [ turbine::get_string $message ]
-        mpe::log $event(start_metadata) "metadata:$message_value"
+        mpe::log $event(start_metadata) "$message_value"
     }
 
     # usage: set1_float no_stack result delay
