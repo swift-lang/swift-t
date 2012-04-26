@@ -32,7 +32,7 @@ namespace eval bench {
     }
 
     proc metadata { stack result input } {
-        turbine::rule "set1-$result" $delay $turbine::WORK \
+        turbine::rule "set1-$result" $input $turbine::WORK \
             "bench::metadata_body $input"
     }
 
@@ -42,7 +42,7 @@ namespace eval bench {
         mpe_setup
 
         set message_value [ turbine::get_string $message ]
-        mpe::log $event(start_metadata)
+        mpe::log $event(start_metadata) "metadata:$message_value"
     }
 
     # usage: set1_float no_stack result delay
@@ -111,10 +111,11 @@ namespace eval bench {
         variable event
         mpe_setup
         set delay_value [ get_integer $delay ]
-        # randomized delay value:
-        mpe::log $event(start_set1rB)
+        # randomized delay value: rdv
         set rdv [ expr rand() * $delay_value ]
-        after [ expr round($rdv) ]
+        set rdv [ expr round($rdv) ]
+        mpe::log $event(start_set1rB)
+        after $rdv
         mpe::log $event(stop_set1rB)
         set_integer $result 1
     }
