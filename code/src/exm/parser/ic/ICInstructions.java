@@ -1673,6 +1673,13 @@ public class ICInstructions {
       localEquivalents.put("argv_contains", LocalOpcode.ARGV_CONTAINS);
       localEquivalents.put("argv", LocalOpcode.ARGV_GET);
       
+      sideEffectFree.add("turbine_workers");
+      sideEffectFree.add("turbine_engines");
+      sideEffectFree.add("adlb_servers");
+      localEquivalents.put("turbine_workers", LocalOpcode.N_WORKERS);
+      localEquivalents.put("turbine_engines", LocalOpcode.N_ENGINES);
+      localEquivalents.put("adlb_servers", LocalOpcode.N_ADLB_SERVERS);
+      
     
       localEquivalents.put("plus_integer", LocalOpcode.PLUS_INT);
       localEquivalents.put("minus_integer", LocalOpcode.MINUS_INT);

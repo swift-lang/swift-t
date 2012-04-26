@@ -381,7 +381,8 @@ public class TurbineGenerator implements CompilerBackend
       pointStack.peek().add(cmd);
       return;
     } else if (op == LocalOpcode.ARGC_GET || op == LocalOpcode.ARGV_CONTAINS
-            || op == LocalOpcode.ARGV_GET) {
+            || op == LocalOpcode.ARGV_GET || op == LocalOpcode.N_ADLB_SERVERS
+            || op == LocalOpcode.N_ENGINES ||op == LocalOpcode.N_WORKERS) {
       assert(out != null);
       String tclFn;
       switch (op) {
@@ -394,8 +395,17 @@ public class TurbineGenerator implements CompilerBackend
       case ARGV_GET:
         tclFn = "turbine::argv_get_impl";
         break;
+      case N_ADLB_SERVERS:
+        tclFn = "turbine::adlb_servers";
+        break;
+      case N_ENGINES:
+        tclFn = "turbine::turbine_engines";
+        break;
+      case N_WORKERS:
+        tclFn = "turbine::turbine_workers";
+        break;
       default:
-        throw new ParserRuntimeException("Cn't handle local op: "
+        throw new ParserRuntimeException("Can't handle local op: "
             + op.toString());
       }
       SetVariable cmd = new SetVariable(prefixVar(out.getName()), 
