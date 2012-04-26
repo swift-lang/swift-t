@@ -11,6 +11,8 @@ main {
   int   N     = toint(argv("N"));
   float delay = tofloat(argv("delay"));
 
+  metadata(sprintf("N:%i",N));
+
   float A[];
 
   // @sync
