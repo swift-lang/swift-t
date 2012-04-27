@@ -29,6 +29,7 @@ set items [ eval list -load libtcladlb.so   \
                 -source stdlib.tcl     \
                 -source updateable.tcl \
                 -source unistd.tcl     \
+                -source mpe.tcl        \
                 -source helpers.tcl ]
 
 # List of Turbine shared objects and Tcl libraries

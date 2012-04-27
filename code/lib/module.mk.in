@@ -17,7 +17,8 @@ TCL_SRC := $(DIR)/helpers.tcl             \
            $(DIR)/stdio.tcl               \
            $(DIR)/stdlib.tcl              \
            $(DIR)/updateable.tcl          \
-           $(DIR)/unistd.tcl
+           $(DIR)/unistd.tcl              \
+           $(DIR)/mpe.tcl
 
 ALL_SO := $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
 ifeq (@USE_MPE@,1)
