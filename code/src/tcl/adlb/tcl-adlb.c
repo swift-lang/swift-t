@@ -438,7 +438,9 @@ ADLB_Exists_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /**
    usage: adlb::store <id> <type> <value>
-   @param value Ignored for types file, blob, container
+   @param value Ignored for types file, container
+   If given a blob, the value must be a string
+   This allows users to store a string in a blob
 */
 static int
 ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
