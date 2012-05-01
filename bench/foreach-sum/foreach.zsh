@@ -69,3 +69,5 @@ source ${BENCH_UTIL}/launch.zsh
 
 source ${BENCH_UTIL}/walltime.zsh
 # Return error code from walltime.zsh
+
+date_nice
