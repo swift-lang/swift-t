@@ -48,8 +48,8 @@ done
 
 # Log all settings
 declare PROCS CONTROL TURBINE_ENGINES ADLB_SERVERS TURBINE_WORKERS
-declare N DELAY
 declare TURBINE_HOME BENCH_UTIL
+declare N DELAY
 
 # Run stc if necessary
 compile ${PROGRAM_SWIFT} ${PROGRAM_TCL}
