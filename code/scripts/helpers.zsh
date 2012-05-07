@@ -112,6 +112,27 @@ compile()
   return 0
 }
 
+uptodate()
+{
+  F1=$1
+  F2=$2
+  if [[ ${F1} == "" || ${F2} == "" ]]
+    then
+    print "uptodate: requires two files!"
+  fi
+  if [[ -f ${F2} && ${F2} -nt ${F1} ]]
+  then
+    return 0
+  fi
+  return 1
+}
+
+rm0()
+{
+  (( ! ${#*} )) && return
+  rm ${*}
+}
+
 within()
 {
   local TIME=$1
