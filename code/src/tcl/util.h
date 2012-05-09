@@ -42,12 +42,18 @@ void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
                           const char* format, ...)
   __attribute__ ((format (printf, 3, 4)));
 
+/**
+   If rc is not TCL_OK, return a Tcl error
+ */
 #define TCL_CHECK_MSG(rc, format, args...)                      \
   if (rc != TCL_OK) {                                           \
     tcl_condition_failed(interp, objv[0], format, ## args);       \
     return TCL_ERROR;                                             \
   }                                                               \
 
+/**
+   If condition is false, return a Tcl error
+ */
 #define TCL_CONDITION(condition, format, args...)             \
   if (!(condition)) {                                         \
     tcl_condition_failed(interp, objv[0], format, ## args);   \
