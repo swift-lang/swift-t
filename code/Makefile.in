@@ -235,6 +235,7 @@ $(TEST_BINS): %.x: %.o $(TURBINE) $(C_UTILS_LIB)
 	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) \
         $(LIBS) \
         -Wl,-rpath -Wl,$(INSTALL_LIB) \
+        -Wl,-rpath -Wl,$(MPI_LIB_DIR) \
 	-o $(@)
 
 # Test result rule for C tests
