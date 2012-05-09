@@ -8,7 +8,8 @@ ifeq ($(USE_MPE),1)
                       $(DIR)/mpe-2.c
 endif
 
-TEST_SRC_TCL := $(DIR)/adlb-noop.tcl           \
+TEST_SRC_TCL := $(DIR)/error.tcl               \
+                $(DIR)/adlb-noop.tcl           \
 	        $(DIR)/adlb-exists.tcl         \
 	        $(DIR)/adlb-get-fail.tcl       \
 	        $(DIR)/adlb-lookup-fail.tcl    \
