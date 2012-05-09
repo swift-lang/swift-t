@@ -280,8 +280,8 @@ AC_CONFIG_FILES(
         src/tcl/mpe/module.mk
         lib/module.mk
         scripts/turbine-config.sh
-        test/module.mk
-        test/runbin.zsh
+        tests/module.mk
+        tests/runbin.zsh
 	Makefile
 )
 

@@ -1,5 +1,5 @@
 
-DIR := test
+DIR := tests
 
 TEST_SRC_C := $(DIR)/debug.c
 

@@ -138,7 +138,7 @@ TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC) $(TCL_TURBINE_SRC))
 TCL_TURBINE_OBJS += $(patsubst %.c, %.o, $(TCL_TURBINE_SRC))
 
 TEST_SRC :=
-include test/module.mk
+include tests/module.mk
 TEST_DEPS := $(patsubst %.c, %.d, $(TEST_SRC))
 
 # Dependency files:
@@ -241,9 +241,9 @@ $(TEST_BINS): %.x: %.o $(TURBINE) $(C_UTILS_LIB)
 # Test result rule for C tests
 %.result: %.sh %.x
 #       Cannot use chmod in config.status
-	$(E) chmod u+x test/runbin.zsh
+	$(E) chmod u+x tests/runbin.zsh
 	$(Q) "  SH		$(@)"
-	$(E) mkdir -p test/data
+	$(E) mkdir -p tests/data
 	$(E) rm -f $(@)
 	$(E) $(<) > $(*).tmp 2>&1
 	$(E) mv $(*).tmp $(@) 2>&1
@@ -251,7 +251,7 @@ $(TEST_BINS): %.x: %.o $(TURBINE) $(C_UTILS_LIB)
 # Test result rule for Tcl tests
 %.result: %.sh %.tcl $(PACKAGE) bin/turbine
 	$(Q) "  SH		$(@)"
-	$(E) mkdir -p test/data
+	$(E) mkdir -p tests/data
 	$(E) rm -f $(@)
 	$(E) LAUNCH=$(LAUNCH) $(<) > $(*).tmp 2>&1
 	$(E) mv $(*).tmp $(@)
@@ -263,7 +263,7 @@ clean::
 	@rm -fv  $(TEST_RESULTS)
 	@rm -fv  $(TURBINE_OBJS)
 	@rm -fv  $(TCL_TURBINE_OBJS)
-	@rm -fvr test/data
+	@rm -fvr tests/data
 
 # Clean *.result files that did not succeed
 clean-failed:

@@ -16,7 +16,7 @@ proc rules { } {
 
     set c 1
     turbine::create_container $c integer
-    turbine::literal s string "test/data/input.txt"
+    turbine::literal s string "tests/data/input.txt"
 
     turbine::readdata $c $s
     turbine::loop loop1_body none $c
