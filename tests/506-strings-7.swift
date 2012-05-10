@@ -1,5 +1,6 @@
-#include <builtins.swift>
 
+#include <builtins.swift>
+#include <swift/assert.swift>
 
 (int r) iid (int x) {
     r = x;
@@ -19,7 +20,7 @@ main {
     assertEqual(-3.142, tofloat("-3.142"), "tofloat");
     assert("3.142" == fromfloat(3.142), "fromfloat");
     assert("4321" == fromint(4321), "fromint");
-    
+
     assertEqual(1234, toint(sid("1234")), "toint");
     assertEqual(-3.142, tofloat(sid("-3.142")), "tofloat");
     assert("3.142" == fromfloat(fid(3.142)), "fromfloat");

@@ -1,9 +1,10 @@
+
 #include <builtins.swift>
+#include <swift/assert.swift>
 
 (int r) up (int x) {
     r = x + 1;
 }
-
 
 (int r) f () {
     r = 5;

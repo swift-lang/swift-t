@@ -1,4 +1,6 @@
-#include "builtins.swift"
+
+#include <builtins.swift>
+#include <swift/assert.swift>
 
 main {
     int A[];
@@ -21,9 +23,6 @@ main {
     assertEqual(C[0], 1, "C[0]");
     assertEqual(C[8], 9*9*9, "C[8]");
 }
-
-
-
 
 (int A[]) fillup () {
     A[0] = 1;

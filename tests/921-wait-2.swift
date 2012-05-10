@@ -1,5 +1,6 @@
-#include <builtins.swift>
 
+#include <builtins.swift>
+#include <swift/assert.swift>
 
 (int r) f (int a, int b) {
   wait(a, b) {

@@ -1,4 +1,7 @@
-#include "builtins.swift"
+
+#include <builtins.swift>
+#include <swift/assert.swift>
+
 // will need to support whole-array copying
 
 type soa {

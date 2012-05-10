@@ -1,5 +1,7 @@
-#include "builtins.swift"
 
+#include <builtins.swift>
+#include <swift/assert.swift>
+#include <swift/stats.swift>
 
 (int M[]) f () {
     M[0] = 1;

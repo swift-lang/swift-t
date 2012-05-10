@@ -1,6 +1,8 @@
-#include <builtins.swift>
 
 // Test the infinity and NaN values
+
+#include <builtins.swift>
+#include <swift/assert.swift>
 
 main {
     float x = inf;

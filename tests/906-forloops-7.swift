@@ -1,7 +1,11 @@
-#include <builtins.swift>
+
 /*
  * Test the waiton and waitonall annotations for for loops
  */
+
+#include <builtins.swift>
+#include <swift/assert.swift>
+#include <swift/math.swift>
 
 main {
     int n = 20;

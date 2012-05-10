@@ -1,5 +1,8 @@
-#include <builtins.swift>
 
+#include <builtins.swift>
+#include <swift/assert.swift>
+#include <swift/stdlib.swift>
+#include <swift/stats.swift>
 
 main {
     testMultiAgg();
@@ -11,8 +14,8 @@ main {
                          itof(fib(4)), itof(fib(7)),
                          itof(fib(8)), itof(fib(9))];
     float samples3[] = [itof(fib(14)), itof(fib(13))];
-    float samples4[] = [itof(fib(12)), itof(fib(5)), itof(fib(6))]; 
-    
+    float samples4[] = [itof(fib(12)), itof(fib(5)), itof(fib(6))];
+
     PartialStats ps1;
     PartialStats ps2;
     PartialStats ps3;

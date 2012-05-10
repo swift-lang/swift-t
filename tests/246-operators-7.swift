@@ -1,5 +1,10 @@
-#include <builtins.swift>
+
 // Test out log, sqrt, exp, etc
+
+#include <builtins.swift>
+#include <swift/assert.swift>
+#include <swift/math.swift>
+#include <swift/stdlib.swift>
 
 main {
     assertEqual(abs_float(16.0), 16.0, "abs_float(16)");
@@ -45,7 +50,6 @@ main {
         assert(abs_float(pow_float(d, 1.8)- 7.224674056) < 0.00001 , "3.0**1.8");
     }
 }
-
 
 (float r) f (float i) {
     r = i;

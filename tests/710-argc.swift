@@ -1,6 +1,7 @@
 
 #include <builtins.swift>
 #include <swift/stdio.swift>
+#include <swift/string.swift>
 #include <swift/unistd.swift>
 
 main {

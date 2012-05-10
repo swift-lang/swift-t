@@ -1,5 +1,6 @@
-#include <builtins.swift>
 
+#include <builtins.swift>
+#include <swift/assert.swift>
 
 main {
     int M[][][];
@@ -55,7 +56,7 @@ type T {
     a.M[0][f(1)][f(3)] = 8.0;
     a.M[0][f(1)][4] = 9.0;
     a.M[1][1][1] = 10.0;
- 
+
     assertEqual(a.M[0][1][2], 7.0, "[0][1][2]");
     assertEqual(a.M[0][1][3], 8.0, "[0][1][3]");
     assertEqual(a.M[0][1][4], 9.0, "[0][1][4]");

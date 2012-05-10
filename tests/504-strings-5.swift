@@ -1,12 +1,16 @@
-#include "builtins.swift"
+
 // Test out some more string functions
+
+#include <builtins.swift>
+#include <swift/assert.swift>
+#include <swift/string.swift>
 
 main {
     // check that + performs strcat
     trace("hello" + " " + "world");
     assertEqual("one " + "two " + "three", "one two three", "");
-    
-    
+
+
     string x = id("two ");
     wait (x) {
         assertEqual("one " + x + "three", "one two three", "local version");

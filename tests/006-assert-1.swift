@@ -1,7 +1,10 @@
-#include "builtins.swift"
+
 // Test that assert works ok when they pass
 
-() main () {
+#include <builtins.swift>
+#include <swift/assert.swift>
+
+main {
     assert(true, "true");
     assertEqual(123, 123, "123 == 123");
     assertLT(1, 2, "1 < 2");

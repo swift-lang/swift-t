@@ -1,10 +1,10 @@
-#include "builtins.swift"
 
-
+#include <builtins.swift>
+#include <swift/assert.swift>
 
 main {
     int res[];
-    
+
     // test iterating over array ref
     foreach x, i in (f()[0]) {
         res[i] = x;

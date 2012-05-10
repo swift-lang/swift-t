@@ -1,4 +1,7 @@
-#include "builtins.swift"
+
+#include <builtins.swift>
+#include <swift/assert.swift>
+#include <swift/stats.swift>
 
 (int r) g (int x) {
     r = 2 + x;

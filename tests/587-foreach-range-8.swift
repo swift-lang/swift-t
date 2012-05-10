@@ -1,5 +1,5 @@
-#include <builtins.swift>
 
+#include <builtins.swift>
 
 main {
     @splitdegree=8

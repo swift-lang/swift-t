@@ -1,14 +1,16 @@
+
 #include <builtins.swift>
+#include <swift/assert.swift>
 
 main {
     assertEqual(7 %% 3, 1, "7 %% 3 = 1");
     assertEqual(8 %% 3, 2, "8 %% 3 = 2");
     assertEqual(7 %% -3, 1, "7 %% -3 = 1");
     assertEqual(8 %% -3, 2, "8 %% -3 = 2");
-    
+
     assertEqual(-7 %% 3, -1, "-7 %% 3 = -1");
     assertEqual(-8 %% 3, -2, "-8 %% 3 = -2");
-    
+
     assertEqual(-7 %% -3, -1, "-7 %% -3 = -1");
     assertEqual(-8 %% -3, -2, "-8 %% -3 = -2");
 

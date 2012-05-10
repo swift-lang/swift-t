@@ -1,4 +1,7 @@
-#include "builtins.swift"
+
+#include <builtins.swift>
+#include <swift/assert.swift>
+
 () f () {
     int A[][];
 

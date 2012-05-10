@@ -1,4 +1,8 @@
-#include "builtins.swift"
+
+#include <builtins.swift>
+#include <swift/assert.swift>
+#include <swift/string.swift>
+
 main {
     string x = "hello world\n";
 

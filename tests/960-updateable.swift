@@ -1,16 +1,17 @@
-#include <builtins.swift>
 
+#include <builtins.swift>
+#include <swift/assert.swift>
 
 main {
     updateable_float x = inf;
 
     assertEqual(x, inf, "init");
-    
-    
+
+
     x <min> := 100.0;
     assertEqual(x, 100.0, "successful update");
-    
-    
+
+
     x <min> := 125.0;
     assertEqual(x, 100.0, "unsuccessful update");
 
@@ -22,7 +23,7 @@ main {
 
     y <incr> := 200;
     assertEqual(y, 202.0, "incr 2");
-    
+
     y <incr> := -10;
     assertEqual(y, 192.0, "incr 3");
 
@@ -32,7 +33,7 @@ main {
 
     z <scale> := 200;
     assertEqual(z, 200.0, "scale 2");
-    
+
     z <scale> := 0.5;
     assertEqual(z, 100.0, "scale 3");
 }

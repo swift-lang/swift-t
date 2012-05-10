@@ -1,5 +1,7 @@
-#include "builtins.swift"
+
 // Test out mutual recursion
+#include <builtins.swift>
+#include <swift/assert.swift>
 
 main {
     assertEqual(ping(10), 10, "");

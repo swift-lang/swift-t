@@ -1,4 +1,6 @@
+
 #include <builtins.swift>
+#include <swift/assert.swift>
 
 main {
     int x = f(0);

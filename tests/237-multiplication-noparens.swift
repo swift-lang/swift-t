@@ -1,9 +1,12 @@
-#include "builtins.swift"
 
 // Recursive my_multiplication based on addition, subtraction
 
+#include <builtins.swift>
+#include <swift/assert.swift>
+
 // my_mult(i,0,s) = s
 // my_mult(i,j,s) = my_mult(i,j-1,s+i)
+
 (int o) my_mult_helper(int i, int j, int s)
 {
   int t;

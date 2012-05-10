@@ -1,4 +1,6 @@
-#include "builtins.swift"
+
+#include <builtins.swift>
+#include <swift/assert.swift>
 
 main {
     boolean x = 1 == 1;
@@ -6,7 +8,7 @@ main {
 
     assert(x, "x");
     assertEqual(!x, false, "!");
-    
+
     boolean y = true;
 
     trace(x && y);

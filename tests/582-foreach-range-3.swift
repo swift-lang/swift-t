@@ -1,6 +1,9 @@
-#include <builtins.swift>
 
 // Check that it compiles to good code with arrays
+
+#include <builtins.swift>
+#include <swift/stats.swift>
+
 main {
     int A[][];
     int n = 20;

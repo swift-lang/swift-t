@@ -1,4 +1,7 @@
+
 #include <builtins.swift>
+#include <swift/assert.swift>
+#include <swift/stats.swift>
 
 main {
     int A[] = [1,2,3];

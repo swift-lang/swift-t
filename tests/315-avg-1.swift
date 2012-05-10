@@ -1,5 +1,7 @@
-#include <builtins.swift>
 
+#include <builtins.swift>
+#include <swift/assert.swift>
+#include <swift/stats.swift>
 
 main {
     float a[];
@@ -9,7 +11,7 @@ main {
     assertEqual(avg(b), 2.5, "avg_integer");
     assertLT(std(a) - 1.1180339887498949,
                                     0.0000001, "std_float");
-    assertLT(std(b)- 1.1180339887498949, 
+    assertLT(std(b)- 1.1180339887498949,
                                     0.0000001, "std_integer");
 
 
@@ -23,7 +25,7 @@ main {
     a[5] = fid(3.0);
     a[id(242)] = 4.0;
 
-    
+
     b[0] = id(1);
     b[id(1)] = 2;
     b[5] = id(3);

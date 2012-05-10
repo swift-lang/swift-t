@@ -1,4 +1,7 @@
+
 #include <builtins.swift>
+#include <swift/assert.swift>
+#include <swift/stats.swift>
 
 main {
     int A[];
@@ -9,8 +12,8 @@ main {
             B[j] = j;
         }
         A[i] = sum_integer(B);
-        assertEqual(sum_integer(B), 
-                    ((i + i*i)%/2) , 
+        assertEqual(sum_integer(B),
+                    ((i + i*i)%/2) ,
                     "i=" + fromint(i) + " sum B");
     }
     trace(sum_integer(A));

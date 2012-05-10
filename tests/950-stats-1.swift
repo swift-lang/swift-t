@@ -1,5 +1,8 @@
-#include <builtins.swift>
 
+#include <builtins.swift>
+#include <swift/assert.swift>
+#include <swift/stdlib.swift>
+#include <swift/stats.swift>
 
 main {
     testStatAgg();
@@ -18,7 +21,7 @@ main {
 
     // Check it works with delayed computation
     float fibsamples[] = [0.0, itof(fib(1)), itof(fib(5)), itof(fib(6)),
-                             itof(fib(7)), itof(fib(8)), itof(fib(2)), 
+                             itof(fib(7)), itof(fib(8)), itof(fib(2)),
                              itof(fib(3)), itof(fib(4)), itof(fib(9))];
     int fn; float fmean; float fM2;
     fn, fmean, fM2 = statagg(fibsamples);

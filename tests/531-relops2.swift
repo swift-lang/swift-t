@@ -1,5 +1,7 @@
-#include "builtins.swift"
+
 // Test relational operators on floats
+#include <builtins.swift>
+#include <swift/assert.swift>
 
 (float r) f () {
     r = 1.0;
@@ -14,7 +16,7 @@ main {
     assert(f() > -1.0, "delayed > -1.0");
     assert(f() <= 23.0, "delayed <= 23.0");
     assert(!(f() < 1.0), "delayed < 1.0");
-    assert(f() >= 0.0, "delayed >= 0.0"); 
+    assert(f() >= 0.0, "delayed >= 0.0");
 
     // Immediate (to check constant folding
     float a = 1.0;
@@ -25,5 +27,5 @@ main {
     assert(a > -1.0, "immediate > -1.0");
     assert(a <= 23.0, "immediate <= 23.0");
     assert(!(a < 1.0), "immediate < 1.0");
-    assert(a >= 0.0, "immediate >= 0.0"); 
+    assert(a >= 0.0, "immediate >= 0.0");
 }

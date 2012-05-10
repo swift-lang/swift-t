@@ -34,6 +34,7 @@ The tests are numbered for sorting by shell glob.
         700: strings
         710: argc/argv
         730: stdio
+        780: MPE
 800::       Error outputs
 900::       ??? Formerly advanced constructs
 

@@ -1,4 +1,7 @@
+
 #include <builtins.swift>
+#include <swift/assert.swift>
+#include <swift/stdlib.swift>
 
 main {
     foreach i in [1:100] {
@@ -7,7 +10,7 @@ main {
         trace("check future random()",i,x);
         assert(x <= 1.0, "future x<=1.0");
         assert(x >= 0.0, "future x>=0.0");
-        
+
         // use directly to allow local ops
         float y = random();
         trace("check local random()",i,y);
@@ -25,7 +28,7 @@ main {
         assert(b < 2*i, "future b<2*i");
         assert(b >= i, "future b>=i");
 
-        // check to make sure we're not doing common subexpression 
+        // check to make sure we're not doing common subexpression
         // elimination on y and z
         float z = random();
         int z2 = randint(i, 2*i);
@@ -33,7 +36,7 @@ main {
         trace(z2);
     }
     // Check these aren't optimized out
-    random(); 
+    random();
     randint(2, 20);
 }
 

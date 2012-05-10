@@ -1,5 +1,6 @@
-#include "builtins.swift"
 
+#include <builtins.swift>
+#include <swift/assert.swift>
 
 main {
     float a = 3.142;
