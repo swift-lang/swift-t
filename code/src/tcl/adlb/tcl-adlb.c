@@ -866,12 +866,41 @@ ADLB_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
+   adlb::store_blob <id> <pointer> <length>
+ */
+static int
+ADLB_Store_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
+                    int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(4);
+
+  int rc;
+  long id;
+  long p;
+  void* pointer;
+  int length;
+  rc = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK_MSG(rc, "requires id!");
+  rc = Tcl_GetLongFromObj(interp, objv[2], &p);
+  TCL_CHECK_MSG(rc, "requires pointer!");
+  pointer = (void*) p;
+  rc = Tcl_GetIntFromObj(interp, objv[3], &length);
+  TCL_CHECK_MSG(rc, "requires length!");
+
+  rc = ADLB_Store(id, pointer, length);
+  TCL_CHECK_MSG(rc, "failed!");
+
+  return TCL_OK;
+}
+
+/**
    adlb::store_blob_floats <id> [ list doubles ]
  */
 static int
 ADLB_Blob_store_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
                            int objc, Tcl_Obj *const objv[])
 {
+  TCL_ARGS(3);
   int rc;
   long id;
   rc = Tcl_GetLongFromObj(interp, objv[1], &id);
@@ -1304,6 +1333,7 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("enumerate", ADLB_Enumerate_Cmd);
   COMMAND("retrieve_blob", ADLB_Retrieve_Blob_Cmd);
   COMMAND("blob_free",  ADLB_Blob_Free_Cmd);
+  COMMAND("store_blob", ADLB_Store_Blob_Cmd);
   COMMAND("store_blob_floats", ADLB_Blob_store_floats_Cmd);
   COMMAND("slot_create", ADLB_Slot_Create_Cmd);
   COMMAND("slot_drop", ADLB_Slot_Drop_Cmd);
