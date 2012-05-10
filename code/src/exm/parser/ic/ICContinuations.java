@@ -1,23 +1,14 @@
 package exm.parser.ic;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.log4j.Logger;
 
-import exm.ast.Types;
-import exm.ast.Variable;
+import exm.ast.Builtins.LocalOpcode;
+import exm.ast.*;
 import exm.ast.Variable.DefType;
 import exm.ast.Variable.VariableStorage;
 import exm.parser.CompilerBackend;
-import exm.ast.Builtins.LocalOpcode;
 import exm.parser.ic.ICInstructions.LocalBuiltin;
 import exm.parser.ic.ICInstructions.LoopBreak;
 import exm.parser.ic.ICInstructions.LoopContinue;
@@ -31,24 +22,24 @@ import exm.parser.util.UndefinedTypeException;
 
 public class ICContinuations {
   public static final String indent = ICUtil.indent;
-  
+
   public static abstract class Continuation {
     public abstract ContinuationType getType();
-  
+
     public abstract void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException;
-  
+
     public abstract void prettyPrint(StringBuilder sb, String currentIndent);
-  
-  
+
+
     /** Returns all nested blocks in this continuation */
     public abstract List<Block> getBlocks();
-  
-  
+
+
     /**
      * Replace usage of the values of the specified variables throughotu
      * where possible.  It is ok if the usedVariables get messed up a bit
-     * here: we will fix them up later 
+     * here: we will fix them up later
      * @param renames
      */
     public abstract void replaceInputs(Map<String, Oparg> renames);
@@ -59,7 +50,7 @@ public class ICContinuations {
       for (Block b: this.getBlocks()) {
         HashMap<String, Oparg> shadowed =
                 new HashMap<String, Oparg>();
-  
+
         // See if any of the renamed vars are redeclared,
         //  and if so temporarily remove them from the
         //  rename map
@@ -71,32 +62,32 @@ public class ICContinuations {
           }
         }
         b.renameVars(renames, inputsOnly);
-  
+
         renames.putAll(shadowed);
       }
     }
-  
+
     public abstract void removeVars(Set<String> removeVars);
-  
+
     protected void removeVarsInBlocks(Set<String> removeVars) {
       for (Block b: this.getBlocks()) {
         b.removeVars(removeVars);
       }
     }
-  
+
     /**
      * @return all variables whose values are needed to evaluate this construct
      * (e.g. branch condition).  empty list if none
      */
     public abstract Collection<Variable> requiredVars();
-  
+
     /**
      * See if we can predict branch and flatten this to a block
      * @param knownConstants
-     * @return a block which is the branch that will run 
+     * @return a block which is the branch that will run
      */
     public abstract Block branchPredict(Map<String, Oparg> knownConstants);
-  
+
     /**
      * replace variables with constants in loop construct
      * @param knownConstants
@@ -106,7 +97,7 @@ public class ICContinuations {
       // default: do nothing
       return false;
     }
-    
+
     /** @return true if the continuation does nothing */
     public abstract boolean isNoop();
 
@@ -117,12 +108,12 @@ public class ICContinuations {
     public abstract List<Variable> closedVarsInside();
 
     /**
-     * Return list of variables that are defined by construct and 
+     * Return list of variables that are defined by construct and
      * accessible inside
      * @return
      */
     public abstract List<Variable> constructDefinedVars();
-    
+
     /**
      * @return true if all variables in block containing continuation are
      *        automatically visible in inner blocks
@@ -134,8 +125,8 @@ public class ICContinuations {
     public abstract void addPassedInVar(Variable variable);
 
     public abstract void removePassedInVar(Variable variable);
-    
-    /** 
+
+    /**
      * Remove this continuation from block, inlining one of
      * the nested blocks inside the continuation (e.g. the predicted branch
      *  of an if statement)
@@ -149,8 +140,8 @@ public class ICContinuations {
 
     /**
      * Returns true if a change was made.
-     * 
-     * It is ok if the unrolling introduced duplicate variable names in 
+     *
+     * It is ok if the unrolling introduced duplicate variable names in
      * nested blocks (so long as they don't shadow each other) - a
      * subsequent pass will make those names unique
      * @param logger
@@ -161,20 +152,21 @@ public class ICContinuations {
       // default: do nothing
       return false;
     }
-    
+
     /**
      * Try to inline a block, depending on which variables are closed
      * This is also a mechanism to let the continuation know what variables
      * are closed so it can make internal optimizations
      * @param closedVars
-     * @return null if it cannot be inlined, a block that is equivalent to 
+     * @return null if it cannot be inlined, a block that is equivalent to
      *          the continuation otherwise
      */
     public Block tryInline(Set<String> closedVars) {
       // Default: do nothing
       return null;
     }
-    
+
+    @Override
     public abstract Continuation clone();
   }
 
@@ -193,26 +185,26 @@ public class ICContinuations {
 
     protected final List<Variable> usedVariables;
     protected final List<Variable> containersToRegister;
-    
+
     public AbstractLoop(Block block, List<Variable> usedVariables,
         List<Variable> containersToRegister) {
-  
+
       this.usedVariables = new ArrayList<Variable>(usedVariables);
       this.containersToRegister =
                       new ArrayList<Variable>(containersToRegister);
       this.loopBody = block;
     }
-  
+
     public Block getLoopBody() {
       return loopBody;
     }
-  
+
     @Override
     public List<Block> getBlocks() {
       return Arrays.asList(loopBody);
     }
-  
-    @Override 
+
+    @Override
     public Collection<Variable> requiredVars() {
       ArrayList<Variable> res = new ArrayList<Variable>();
       for (Variable c: containersToRegister) {
@@ -223,7 +215,7 @@ public class ICContinuations {
       }
       return res;
     }
-    
+
     protected void checkNotRemoved(Variable v, Set<String> removeVars) {
       if (removeVars.contains(v.getName())) {
         throw new ParserRuntimeException("bad optimization: tried to remove" +
@@ -235,25 +227,25 @@ public class ICContinuations {
         checkNotRemoved(o.getVariable(), removeVars);
       }
     }
-    
+
     @Override
     public Collection<Variable> getPassedInVars() {
       return Collections.unmodifiableList(this.usedVariables);
     }
-    
+
     @Override
     public void addPassedInVar(Variable variable) {
       assert(variable != null);
       this.usedVariables.add(variable);
     }
-    
+
     @Override
     public void removePassedInVar(Variable variable) {
       ICUtil.removeVarInList(usedVariables, variable.getName());
     }
 
     @Override
-    public void inlineInto(Block block, Block predictedBranch) {  
+    public void inlineInto(Block block, Block predictedBranch) {
       throw new ParserRuntimeException("Can't inline loops yet");
     }
   }
@@ -265,9 +257,9 @@ public class ICContinuations {
     private Variable loopVar;
     private final boolean isSync;
     private final int splitDegree;
-  
+
     private ForeachLoop(Block block, Variable arrayVar, Variable loopVar,
-        Variable loopCounterVar, boolean isSync, int splitDegree, 
+        Variable loopCounterVar, boolean isSync, int splitDegree,
         boolean arrayClosed,
         List<Variable> usedVariables, List<Variable> containersToRegister) {
       super(block, usedVariables, containersToRegister);
@@ -278,20 +270,20 @@ public class ICContinuations {
       this.arrayClosed = arrayClosed;
       this.splitDegree = splitDegree;
     }
-    
+
     public ForeachLoop(Variable arrayVar, Variable loopVar,
-        Variable loopCounterVar, boolean isSync, int splitDegree, 
+        Variable loopCounterVar, boolean isSync, int splitDegree,
         boolean arrayClosed, List<Variable> usedVariables,
         List<Variable> containersToRegister) {
       this(new Block(BlockType.FOREACH_BODY), arrayVar, loopVar, loopCounterVar,
           isSync, splitDegree, arrayClosed, usedVariables, containersToRegister);
     }
-  
+
     @Override
     public ForeachLoop clone() {
       return new ForeachLoop(this.loopBody.clone(),
           arrayVar, loopVar, loopCounterVar, isSync, splitDegree, arrayClosed,
-          new ArrayList<Variable>(usedVariables), 
+          new ArrayList<Variable>(usedVariables),
           new ArrayList<Variable>(containersToRegister));
     }
 
@@ -299,17 +291,17 @@ public class ICContinuations {
     public ContinuationType getType() {
       return ContinuationType.FOREACH_LOOP;
     }
-  
+
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
-      gen.startForeachLoop(arrayVar, loopVar, loopCounterVar, isSync, 
+      gen.startForeachLoop(arrayVar, loopVar, loopCounterVar, isSync,
                 splitDegree, arrayClosed, usedVariables, containersToRegister);
       this.loopBody.generate(logger, gen, info);
       gen.endForeachLoop(isSync, splitDegree, arrayClosed,
                                           containersToRegister);
     }
-  
+
     @Override
     public void prettyPrint(StringBuilder sb, String currentIndent) {
       if (isSync) {
@@ -328,7 +320,7 @@ public class ICContinuations {
       loopBody.prettyPrint(sb, currentIndent + indent);
       sb.append(currentIndent + "}\n");
     }
-  
+
     @Override
     public void replaceVars(Map<String, Oparg> renames) {
       this.replaceVarsInBlocks(renames, false);
@@ -345,7 +337,7 @@ public class ICContinuations {
       ICUtil.replaceVarsInList2(renames, usedVariables, true);
       ICUtil.replaceVarsInList2(renames, containersToRegister, true);
     }
-  
+
     @Override
     public void replaceInputs(Map<String, Oparg> renames) {
       // Replace only those we're reading
@@ -362,7 +354,7 @@ public class ICContinuations {
       res.add(arrayVar);
       return res;
     }
-  
+
     @Override
     public void removeVars(Set<String> removeVars) {
       removeVarsInBlocks(removeVars);
@@ -374,12 +366,12 @@ public class ICContinuations {
       ICUtil.removeVarsInList(this.containersToRegister, removeVars);
       ICUtil.removeVarsInList(this.usedVariables, removeVars);
     }
-  
+
     @Override
     public Block branchPredict(Map<String, Oparg> knownConstants) {
       return null;
     }
-  
+
     @Override
     public boolean isNoop() {
       return this.loopBody.isEmpty();
@@ -393,7 +385,7 @@ public class ICContinuations {
     @Override
     public List<Variable> constructDefinedVars() {
       return loopCounterVar == null ?
-                Arrays.asList(loopVar) 
+                Arrays.asList(loopVar)
               : Arrays.asList(loopCounterVar, loopVar);
     }
 
@@ -409,19 +401,19 @@ public class ICContinuations {
       }
       return null;
     }
-  
+
   }
 
   static class IfStatement extends Continuation {
     private final Block thenBlock;
     private final Block elseBlock;
     private Variable condVar;
-  
+
     public IfStatement(Variable condVar) {
       this(condVar, new Block(BlockType.THEN_BLOCK),
                           new Block(BlockType.ELSE_BLOCK));
     }
-    
+
     private IfStatement(Variable condVar, Block thenBlock, Block elseBlock) {
       assert(thenBlock != null);
       assert(elseBlock != null);
@@ -431,7 +423,7 @@ public class ICContinuations {
       // equivalent to no else block
       this.elseBlock = elseBlock;
     }
-  
+
     @Override
     public IfStatement clone() {
       return new IfStatement(condVar, thenBlock.clone(), elseBlock.clone());
@@ -440,11 +432,11 @@ public class ICContinuations {
     public Block getThenBlock() {
       return thenBlock;
     }
-  
+
     public Block getElseBlock() {
       return elseBlock;
     }
-  
+
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
@@ -457,7 +449,7 @@ public class ICContinuations {
       }
       gen.endIfStatement();
     }
-  
+
     @Override
     public void prettyPrint(StringBuilder sb, String currentIndent) {
       String newIndent = currentIndent + indent;
@@ -471,17 +463,17 @@ public class ICContinuations {
       }
       sb.append(currentIndent + "}\n");
     }
-  
+
     @Override
     public List<Block> getBlocks() {
       return Arrays.asList(thenBlock, elseBlock);
     }
-  
+
     @Override
     public void replaceVars(Map<String, Oparg> renames) {
       replaceShared(renames, false);
     }
-  
+
     @Override
     public void replaceInputs(Map<String, Oparg> renames) {
       replaceShared(renames, true);
@@ -499,18 +491,18 @@ public class ICContinuations {
     public ContinuationType getType() {
       return ContinuationType.IF_STATEMENT;
     }
-  
+
     @Override
     public Collection<Variable> requiredVars() {
       return Arrays.asList(condVar);
     }
-  
+
     @Override
     public void removeVars(Set<String> removeVars) {
       removeVarsInBlocks(removeVars);
       assert(!removeVars.contains(condVar.getName()));
     }
-  
+
     @Override
     public Block branchPredict(Map<String, Oparg> knownConstants) {
       Oparg condVal = knownConstants.get(condVar.getName());
@@ -529,7 +521,7 @@ public class ICContinuations {
       }
       return null;
     }
-  
+
     @Override
     public boolean isNoop() {
       return thenBlock.isEmpty() && elseBlock.isEmpty();
@@ -575,23 +567,23 @@ public class ICContinuations {
     private final List<Variable> initVals;
 
     /*
-     * Have handles to the termination instructions 
+     * Have handles to the termination instructions
      */
-    private LoopBreak loopBreak;
+    // private LoopBreak loopBreak;
 
     private LoopContinue loopContinue;
-    private ArrayList<Boolean> blockingVars;
-  
-    
-    public Loop(String loopName, List<Variable> loopVars, 
-            List<Variable> initVals, List<Variable> usedVariables, 
+    private final ArrayList<Boolean> blockingVars;
+
+
+    public Loop(String loopName, List<Variable> loopVars,
+            List<Variable> initVals, List<Variable> usedVariables,
             List<Variable> containersToRegister, List<Boolean> blockingVars) {
       this(loopName, new Block(BlockType.LOOP_BODY), loopVars, initVals,
           usedVariables, containersToRegister, blockingVars);
     }
-    
+
     private Loop(String loopName, Block loopBody,
-        List<Variable> loopVars,  List<Variable> initVals, 
+        List<Variable> loopVars,  List<Variable> initVals,
         List<Variable> usedVariables, List<Variable> containersToRegister,
         List<Boolean> blockingVars) {
       super(loopBody, usedVariables, containersToRegister);
@@ -610,11 +602,11 @@ public class ICContinuations {
         }
       }
     }
-    
+
     @Override
     public Loop clone() {
       // Constructor creates copies of variable lists
-      return new Loop(loopName, this.loopBody.clone(), loopVars, initVals, 
+      return new Loop(loopName, this.loopBody.clone(), loopVars, initVals,
           usedVariables, containersToRegister, blockingVars);
     }
 
@@ -622,24 +614,24 @@ public class ICContinuations {
     public ContinuationType getType() {
       return ContinuationType.LOOP;
     }
-    
+
     public void setLoopBreak(LoopBreak loopBreak) {
-      this.loopBreak = loopBreak;
+      // this.loopBreak = loopBreak;
     }
 
     public void setLoopContinue(LoopContinue loopContinue) {
       this.loopContinue = loopContinue;
     }
-  
+
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
-      gen.startLoop(loopName, loopVars, initVals, 
+      gen.startLoop(loopName, loopVars, initVals,
                     usedVariables, containersToRegister, blockingVars);
       this.loopBody.generate(logger, gen, info);
       gen.endLoop();
     }
-  
+
     @Override
     public void prettyPrint(StringBuilder sb, String currentIndent) {
       sb.append(currentIndent + "loop /*" + loopName + "*/\n");
@@ -658,14 +650,14 @@ public class ICContinuations {
         sb.append(loopV.getType().typeName() + " " + loopV.getName() + "="
             + initV.getName());
       }
-      
+
       sb.append(")\n" + currentIndent + indent + indent);
       ICUtil.prettyPrintVarInfo(sb, usedVariables, containersToRegister);
       sb.append(" {\n");
       loopBody.prettyPrint(sb, currentIndent + indent);
       sb.append(currentIndent + "}\n");
     }
-  
+
     @Override
     public void replaceVars(Map<String, Oparg> renames) {
       this.replaceVarsInBlocks(renames, false);
@@ -673,7 +665,7 @@ public class ICContinuations {
       ICUtil.replaceVarsInList2(renames, usedVariables, true);
       ICUtil.replaceVarsInList2(renames, containersToRegister, true);
     }
-  
+
     @Override
     public void replaceInputs(Map<String, Oparg> renames) {
       this.replaceVarsInBlocks(renames, true);
@@ -686,11 +678,11 @@ public class ICContinuations {
       res.addAll(initVals);
       return res;
     }
-  
+
     @Override
     public void removeVars(Set<String> removeVars) {
       removeVarsInBlocks(removeVars);
-      // check it isn't removing initial values 
+      // check it isn't removing initial values
       for (Variable v: this.initVals) {
         checkNotRemoved(v, removeVars);
       }
@@ -700,16 +692,16 @@ public class ICContinuations {
       ICUtil.removeVarsInList(this.containersToRegister, removeVars);
       ICUtil.removeVarsInList(this.usedVariables, removeVars);
     }
-  
+
     @Override
     public Block branchPredict(Map<String, Oparg> knownConstants) {
       return null;
     }
-  
+
     @Override
     public boolean isNoop() {
       // TODO: think about particular conditions that would render it a noop.
-      //      
+      //
       return false;
     }
 
@@ -738,8 +730,8 @@ public class ICContinuations {
       }
       return res;
     }
-  
-    
+
+
     @Override
     public void addPassedInVar(Variable variable) {
       // special implementation to also fix up the loopContinue instruction
@@ -767,12 +759,12 @@ public class ICContinuations {
    */
   static class NestedBlock extends Continuation {
     private final Block block;
-  
+
     public NestedBlock() {
       this(new Block(BlockType.NESTED_BLOCK));
     }
-    
-    
+
+
     private NestedBlock(Block block) {
       this.block = block;
     }
@@ -789,33 +781,33 @@ public class ICContinuations {
       block.generate(logger, gen, info);
       gen.endNestedBlock();
     }
-  
+
     public Block getBlock() {
       return this.block;
     }
-  
+
     @Override
     public void prettyPrint(StringBuilder sb, String currentIndent) {
       sb.append(currentIndent + "{\n");
       block.prettyPrint(sb, currentIndent + indent);
       sb.append(currentIndent + "}\n");
     }
-  
+
     @Override
     public List<Block> getBlocks() {
       return Arrays.asList(block);
     }
-  
+
     @Override
     public ContinuationType getType() {
       return ContinuationType.NESTED_BLOCK;
     }
-  
+
     @Override
     public void replaceVars(Map<String, Oparg> renames) {
       replaceVarsInBlocks(renames, false);
     }
-  
+
     @Override
     public void replaceInputs(Map<String, Oparg> renames) {
       replaceVarsInBlocks(renames, true);
@@ -825,17 +817,17 @@ public class ICContinuations {
     public Collection<Variable> requiredVars() {
       return new ArrayList<Variable>(0);
     }
-  
+
     @Override
     public void removeVars(Set<String> removeVars) {
       removeVarsInBlocks(removeVars);
     }
-  
+
     @Override
     public Block branchPredict(Map<String, Oparg> knownConstants) {
       return null;
     }
-  
+
     @Override
     public boolean isNoop() {
       return block.isEmpty();
@@ -877,14 +869,14 @@ public class ICContinuations {
   public static class RangeLoop extends AbstractLoop {
     // arguments can be either value variable or integer literal
     private final String loopName;
-    private Variable loopVar;
+    private final Variable loopVar;
     private Oparg start;
     private Oparg end;
     private Oparg increment;
     private final boolean isSync;
     private int desiredUnroll;
-    private int splitDegree;
-    
+    private final int splitDegree;
+
     public RangeLoop(String loopName, Variable loopVar,
         Oparg start, Oparg end, Oparg increment,
         boolean isSync,
@@ -894,22 +886,22 @@ public class ICContinuations {
           start, end, increment, isSync, usedVariables, containersToRegister,
           desiredUnroll, splitDegree);
     }
-    
+
     private RangeLoop(String loopName, Block block, Variable loopVar,
         Oparg start, Oparg end, Oparg increment,
         boolean isSync,
         List<Variable> usedVariables, List<Variable> containersToRegister,
         int desiredUnroll, int splitDegree) {
-      super(block, 
+      super(block,
             usedVariables, containersToRegister);
-      assert(start.getType() == OpargType.INTVAL || 
-          (start.getType() == OpargType.VAR && 
+      assert(start.getType() == OpargType.INTVAL ||
+          (start.getType() == OpargType.VAR &&
               start.getVariable().getType().equals(Types.VALUE_INTEGER)));
-      assert(end.getType() == OpargType.INTVAL || 
-          (end.getType() == OpargType.VAR && 
+      assert(end.getType() == OpargType.INTVAL ||
+          (end.getType() == OpargType.VAR &&
               end.getVariable().getType().equals(Types.VALUE_INTEGER)));
-      assert(increment.getType() == OpargType.INTVAL || 
-          (increment.getType() == OpargType.VAR && 
+      assert(increment.getType() == OpargType.INTVAL ||
+          (increment.getType() == OpargType.VAR &&
                       increment.getVariable().getType().equals(Types.VALUE_INTEGER)));
       assert(loopVar.getType().equals(Types.VALUE_INTEGER));
       this.loopName = loopName;
@@ -921,12 +913,12 @@ public class ICContinuations {
       this.desiredUnroll = desiredUnroll;
       this.splitDegree = splitDegree;
     }
-    
+
     @Override
     public RangeLoop clone() {
-      return new RangeLoop(loopName, this.loopBody.clone(), loopVar, 
-          start.clone(), end.clone(), increment.clone(), isSync, 
-          new ArrayList<Variable>(usedVariables), 
+      return new RangeLoop(loopName, this.loopBody.clone(), loopVar,
+          start.clone(), end.clone(), increment.clone(), isSync,
+          new ArrayList<Variable>(usedVariables),
           new ArrayList<Variable>(containersToRegister), desiredUnroll,
           splitDegree);
     }
@@ -935,7 +927,7 @@ public class ICContinuations {
     public ContinuationType getType() {
       return ContinuationType.RANGE_LOOP;
     }
-  
+
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
@@ -946,18 +938,18 @@ public class ICContinuations {
       this.loopBody.generate(logger, gen, info);
       gen.endRangeLoop(isSync, containersToRegister, splitDegree);
     }
-  
+
     @Override
     public void prettyPrint(StringBuilder sb, String currentIndent) {
       if (isSync) {
         sb.append(currentIndent + "@sync\n");
       }
       sb.append(currentIndent +   "for " + loopVar.getName());
-      
+
       sb.append(" = " + start.toString() + " to " + end.toString() + " ");
-      
-      if (increment.getType() != OpargType.INTVAL || 
-            increment.getIntLit() != 1) { 
+
+      if (increment.getType() != OpargType.INTVAL ||
+            increment.getIntLit() != 1) {
           sb.append("incr " + increment.toString() + " ");
       }
       ICUtil.prettyPrintVarInfo(sb, usedVariables, containersToRegister);
@@ -965,7 +957,7 @@ public class ICContinuations {
       loopBody.prettyPrint(sb, currentIndent + indent);
       sb.append(currentIndent + "}\n");
     }
-  
+
     @Override
     public void replaceVars(Map<String, Oparg> renames) {
       this.replaceVarsInBlocks(renames, false);
@@ -976,7 +968,7 @@ public class ICContinuations {
       start = renameRangeArg(start, renames);
       end = renameRangeArg(end, renames);
       increment = renameRangeArg(increment, renames);
-      
+
       ICUtil.replaceVarsInList2(renames, usedVariables, true);
       ICUtil.replaceVarsInList2(renames, containersToRegister, true);
     }
@@ -999,7 +991,7 @@ public class ICContinuations {
       }
       return val;
     }
-  
+
     @Override
     public Collection<Variable> requiredVars() {
       Collection<Variable> res = super.requiredVars();
@@ -1010,7 +1002,7 @@ public class ICContinuations {
       }
       return res;
     }
-  
+
     @Override
     public void removeVars(Set<String> removeVars) {
       checkNotRemoved(start, removeVars);
@@ -1020,7 +1012,7 @@ public class ICContinuations {
       ICUtil.removeVarsInList(this.containersToRegister, removeVars);
       ICUtil.removeVarsInList(this.usedVariables, removeVars);
     }
-  
+
     @Override
     public Block branchPredict(Map<String, Oparg> knownConstants) {
       // Could inline loop if there is only one iteration...
@@ -1039,14 +1031,14 @@ public class ICContinuations {
             singleIter = true;
           }
         }
-        
+
         if (singleIter) {
           return this.loopBody;
         }
       }
       return null;
     }
-  
+
     @Override
     public void inlineInto(Block block, Block predictedBranch) {
       assert(predictedBranch == this.loopBody);
@@ -1064,7 +1056,7 @@ public class ICContinuations {
       Oparg oldVals[] = new Oparg[] {start, end, increment };
       Oparg newVals[] = new Oparg[3];
       for (int i = 0; i < oldVals.length; i++) {
-        Oparg old = oldVals[i]; 
+        Oparg old = oldVals[i];
         if (old.type == OpargType.VAR) {
           Oparg replacement = knownConstants.get(old.getVariable().getName());
           if (replacement != null) {
@@ -1081,11 +1073,11 @@ public class ICContinuations {
       start = newVals[0];
       end = newVals[1];
       increment = newVals[2];
-  
+
       assert(start != null); assert(end != null); assert(increment  != null);
       return anyChanged;
     }
-    
+
     @Override
     public boolean isNoop() {
       return this.loopBody.isEmpty();
@@ -1112,23 +1104,23 @@ public class ICContinuations {
       if (this.desiredUnroll > 1) {
         logger.debug("Unrolling range loop " + desiredUnroll + " times ");
         Oparg oldStep = this.increment;
-        
+
         long checkIter; // the time we need to check
-        if(increment.getType() == OpargType.INTVAL && 
+        if(increment.getType() == OpargType.INTVAL &&
             start.getType() == OpargType.INTVAL &&
             end.getType() == OpargType.INTVAL) {
           long startV = start.getIntLit();
           long endV = end.getIntLit();
           long incV = increment.getIntLit();
-          
+
           long diff = (endV - startV + 1);
           // Number of loop iterations
           long iters = ( (diff - 1) / incV ) + 1;
-          
-          // 0 if the number of iterations will go exactly into the 
+
+          // 0 if the number of iterations will go exactly into the
           // unroll factor
-          long extra = iters % desiredUnroll; 
-          
+          long extra = iters % desiredUnroll;
+
           if (extra == 0) {
             checkIter = desiredUnroll;
           } else {
@@ -1137,7 +1129,7 @@ public class ICContinuations {
         } else {
           checkIter = -1;
         }
-        
+
         // Update step
         if (oldStep.getType() == OpargType.INTVAL) {
           this.increment = Oparg.createIntLit(oldStep.getIntLit() * desiredUnroll);
@@ -1150,52 +1142,52 @@ public class ICContinuations {
           outerBlock.declareVariable(newIncrement);
           outerBlock.addInstruction(new LocalBuiltin(LocalOpcode.MULT_INT,
               newIncrement, Arrays.asList(oldStep, Oparg.createIntLit(desiredUnroll))));
-              
+
           this.increment = Oparg.createVar(newIncrement);
         }
-        
+
         // Create a copy of the original loop body for reference
         Block orig = loopBody;
         this.loopBody = new Block(BlockType.LOOP_BODY);
         Block curr = loopBody;
         Variable nextIter = loopVar; // Variable with current iter number
-        
+
         for (int i = 0; i < desiredUnroll; i++) {
           // Put everything in nested block
           NestedBlock nb = new NestedBlock(orig.clone(BlockType.NESTED_BLOCK));
           curr.addContinuation(nb);
           if (i != 0) {
             // Replace references to the iteration counter
-            nb.replaceVars(Collections.singletonMap(this.loopVar.getName(), 
+            nb.replaceVars(Collections.singletonMap(this.loopVar.getName(),
                                             Oparg.createVar(nextIter)));
           }
-          
+
           if (i < desiredUnroll - 1) {
             // Next iteration number and boolean check
             Variable lastIter = nextIter;
             nextIter = new Variable(Types.VALUE_INTEGER,
                 this.loopVar.getName() + "@" + (i + 1), VariableStorage.LOCAL,
                 DefType.LOCAL_COMPILER, null);
-            
+
             curr.addVariable(nextIter);
             // Loop counter
-            curr.addInstruction(new LocalBuiltin(LocalOpcode.PLUS_INT, 
-                nextIter, Arrays.asList(Oparg.createVar(lastIter), 
+            curr.addInstruction(new LocalBuiltin(LocalOpcode.PLUS_INT,
+                nextIter, Arrays.asList(Oparg.createVar(lastIter),
                                         oldStep)));
-            
+
             boolean mustCheck = checkIter < 0 || i + 1 == checkIter;
             if (mustCheck) {
               Variable nextIterCheck = new Variable(Types.VALUE_BOOLEAN,
-                  this.loopVar.getName() + "@" + (i + 1) + "_check", 
+                  this.loopVar.getName() + "@" + (i + 1) + "_check",
                   VariableStorage.LOCAL, DefType.LOCAL_COMPILER, null);
               curr.addVariable(nextIterCheck);
-              curr.addInstruction(new LocalBuiltin(LocalOpcode.LTE_INT, 
-                  nextIterCheck, Arrays.asList(Oparg.createVar(nextIter), 
+              curr.addInstruction(new LocalBuiltin(LocalOpcode.LTE_INT,
+                  nextIterCheck, Arrays.asList(Oparg.createVar(nextIter),
                                           this.end)));
               // check to see if we should run next iteration
-              IfStatement ifSt = new IfStatement(nextIterCheck); 
+              IfStatement ifSt = new IfStatement(nextIterCheck);
               curr.addContinuation(ifSt);
-              
+
               curr = ifSt.getThenBlock();
             }
           } else {
@@ -1214,9 +1206,9 @@ public class ICContinuations {
     private final ArrayList<Block> caseBlocks;
     private final Block defaultBlock;
     private Variable switchVar;
-  
+
     public SwitchStatement(Variable switchVar, List<Integer> caseLabels) {
-      this(switchVar, new ArrayList<Integer>(caseLabels), 
+      this(switchVar, new ArrayList<Integer>(caseLabels),
           new ArrayList<Block>(), new Block(BlockType.CASE_BLOCK));
 
       // number of non-default cases
@@ -1225,7 +1217,7 @@ public class ICContinuations {
         this.caseBlocks.add(new Block(BlockType.CASE_BLOCK));
       }
     }
-  
+
     private SwitchStatement(Variable switchVar, ArrayList<Integer> caseLabels,
         ArrayList<Block> caseBlocks, Block defaultBlock) {
       super();
@@ -1237,39 +1229,39 @@ public class ICContinuations {
 
     @Override
     public SwitchStatement clone() {
-      return new SwitchStatement(switchVar, 
+      return new SwitchStatement(switchVar,
           new ArrayList<Integer>(this.caseLabels),
           ICUtil.cloneBlocks(this.caseBlocks), this.defaultBlock.clone());
-          
+
     }
 
     public List<Block> caseBlocks() {
       return Collections.unmodifiableList(caseBlocks);
     }
-  
+
     public Block getDefaultBlock() {
       return this.defaultBlock;
     }
-  
+
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
       boolean hasDefault = !defaultBlock.isEmpty();
       gen.startSwitch(switchVar, caseLabels, hasDefault);
-  
+
       for (Block b: this.caseBlocks) {
         b.generate(logger, gen, info);
         gen.endCase();
       }
-  
+
       if (hasDefault) {
         defaultBlock.generate(logger, gen, info);
         gen.endCase();
       }
-  
+
       gen.endSwitch();
     }
-  
+
     @Override
     public void prettyPrint(StringBuilder sb, String currentIndent) {
       assert(this.caseBlocks.size() == this.caseLabels.size());
@@ -1288,7 +1280,7 @@ public class ICContinuations {
       }
       sb.append(currentIndent + "}\n");
     }
-  
+
     @Override
     public List<Block> getBlocks() {
       List<Block> result = new ArrayList<Block>();
@@ -1296,7 +1288,7 @@ public class ICContinuations {
       result.add(defaultBlock);
       return result;
     }
-  
+
     @Override
     public void replaceVars(Map<String, Oparg> renames) {
       replaceVarsInBlocks(renames, false);
@@ -1304,7 +1296,7 @@ public class ICContinuations {
         switchVar = renames.get(switchVar.getName()).getVariable();
       }
     }
-  
+
     @Override
     public void replaceInputs(Map<String, Oparg> renames) {
       replaceVarsInBlocks(renames, true);
@@ -1317,12 +1309,12 @@ public class ICContinuations {
     public ContinuationType getType() {
       return ContinuationType.SWITCH_STATEMENT;
     }
-  
+
     @Override
     public Collection<Variable> requiredVars() {
       return Arrays.asList(switchVar);
     }
-  
+
     @Override
     public void removeVars(Set<String> removeVars) {
       assert(!removeVars.contains(switchVar.getName()));
@@ -1330,9 +1322,9 @@ public class ICContinuations {
       for (Block caseBlock: this.caseBlocks) {
         caseBlock.removeVars(removeVars);
       }
-  
+
     }
-  
+
     @Override
     public Block branchPredict(Map<String, Oparg> knownConstants) {
       Oparg switchVal = knownConstants.get(switchVar.getName());
@@ -1351,7 +1343,7 @@ public class ICContinuations {
         return null;
       }
     }
-  
+
     @Override
     public boolean isNoop() {
       for (Block b: caseBlocks) {
@@ -1380,7 +1372,7 @@ public class ICContinuations {
     @Override
     public void removePassedInVar(Variable variable) {
       throw new ParserRuntimeException("removePassedInVar not supported on " +
-          "switch"); 
+          "switch");
     }
 
     @Override
@@ -1406,22 +1398,22 @@ public class ICContinuations {
     private final ArrayList<Variable> waitVars;
     private final ArrayList<Variable> usedVariables;
     private final ArrayList<Variable> containersToRegister;
-    /* True if this wait was compiler-generated so can be removed if needed 
+    /* True if this wait was compiler-generated so can be removed if needed
      * We can only remove an explicit wait if we know that the variables are
      * already closed*/
     private final boolean explicit;
-  
+
     public WaitStatement(String procName, List<Variable> waitVars,
                     List<Variable> usedVariables,
                     List<Variable> containersToRegister,
                     boolean explicit) {
-      this(procName, new Block(BlockType.WAIT_BLOCK), 
-                        new ArrayList<Variable>(waitVars), 
+      this(procName, new Block(BlockType.WAIT_BLOCK),
+                        new ArrayList<Variable>(waitVars),
                         new ArrayList<Variable>(usedVariables),
                         new ArrayList<Variable>(containersToRegister),
                         explicit);
     }
-  
+
     private WaitStatement(String procName, Block block,
         ArrayList<Variable> waitVars, ArrayList<Variable> usedVariables,
         ArrayList<Variable> containersToRegister, boolean explicit) {
@@ -1437,26 +1429,26 @@ public class ICContinuations {
 
     @Override
     public WaitStatement clone() {
-      return new WaitStatement(procName, this.block.clone(), 
+      return new WaitStatement(procName, this.block.clone(),
           new ArrayList<Variable>(waitVars),
-          new ArrayList<Variable>(usedVariables), 
+          new ArrayList<Variable>(usedVariables),
           new ArrayList<Variable>(containersToRegister), explicit);
     }
 
     public Block getBlock() {
       return block;
     }
-  
+
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
-  
+
       gen.startWaitStatement(procName, waitVars, usedVariables,
           containersToRegister, explicit);
       this.block.generate(logger, gen, info);
       gen.endWaitStatement(containersToRegister);
     }
-  
+
     @Override
     public void prettyPrint(StringBuilder sb, String currentIndent) {
       String newIndent = currentIndent + indent;
@@ -1469,12 +1461,12 @@ public class ICContinuations {
       block.prettyPrint(sb, newIndent);
       sb.append(currentIndent + "}\n");
     }
-  
+
     @Override
     public List<Block> getBlocks() {
       return Arrays.asList(block);
     }
-    
+
     @Override
     public void replaceVars(Map<String, Oparg> renames) {
       replaceVarsInBlocks(renames, false);
@@ -1482,7 +1474,7 @@ public class ICContinuations {
       ICUtil.replaceVarsInList2(renames, usedVariables, true);
       ICUtil.replaceVarsInList2(renames, containersToRegister, true);
     }
-  
+
     @Override
     public void replaceInputs(Map<String, Oparg> renames) {
       replaceVarsInBlocks(renames, true);
@@ -1493,7 +1485,7 @@ public class ICContinuations {
     public ContinuationType getType() {
       return ContinuationType.WAIT_STATEMENT;
     }
-  
+
     @Override
     public Collection<Variable> requiredVars() {
       ArrayList<Variable> res = new ArrayList<Variable>();
@@ -1510,11 +1502,11 @@ public class ICContinuations {
       }
       return res; // can later eliminate waitVars, etc
     }
-  
+
     public List<Variable> getWaitVars() {
       return Collections.unmodifiableList(this.waitVars);
     }
-    
+
     @Override
     public void removeVars(Set<String> removeVars) {
       removeVarsInBlocks(removeVars);
@@ -1522,19 +1514,20 @@ public class ICContinuations {
       ICUtil.removeVarsInList(usedVariables, removeVars);
       ICUtil.removeVarsInList(containersToRegister, removeVars);
     }
-  
+
     @Override
     public Block branchPredict(Map<String, Oparg> knownConstants) {
       // We can't really do branch prediction for a wait statement, but
       // it is a useful mechanism to piggy-back on to remove the wait
       return tryInline(knownConstants.keySet());
     }
-  
+
     @Override
     public boolean isNoop() {
       return this.block.isEmpty();
     }
 
+    @Override
     public Block tryInline(Set<String> closedVars) {
       boolean mustWait = false;
       // iterate over wait vars, remove those in list

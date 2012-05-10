@@ -25,62 +25,79 @@ class Turbine
   public static final String FLOAT_TPREFIX = "float";
   public static final String BLOB_TPREFIX = "blob";
 
-  static final Token CONTAINER_GET = new Token("turbine::container_get");
+  static final Token CONTAINER_GET =
+      new Token("turbine::container_get");
   static final Token CHECKED_CONTAINER_GET =
-                              new Token("turbine::checked_container_get");
-  private static final Token INTEGER_SET = new Token("turbine::set_integer");
-  private static final Token FLOAT_SET = new Token("turbine::set_float");
-  private static final Token STRING_SET = new Token("turbine::set_string");
-  private static final Token CONTAINER_DEREF_INSERT = new Token("turbine::container_deref_insert");
-  private static final Token CONTAINER_F_DEREF_INSERT = new Token("turbine::container_f_deref_insert");
+      new Token("turbine::checked_container_get");
+  private static final Token STORE_INTEGER =
+      new Token("turbine::store_integer");
+  private static final Token STORE_FLOAT =
+      new Token("turbine::store_float");
+  private static final Token STORE_STRING =
+      new Token("turbine::store_string");
+  private static final Token CONTAINER_DEREF_INSERT =
+      new Token("turbine::container_deref_insert");
+  private static final Token CONTAINER_F_DEREF_INSERT =
+      new Token("turbine::container_f_deref_insert");
 
-  private static final Token CALL_COMPOSITE = new Token("turbine::call_composite");
+  private static final Token CALL_COMPOSITE =
+      new Token("turbine::call_composite");
   // Commonly used things:
   private static final Token ALLOCATE_CONTAINER =
-                                      new Token("turbine::allocate_container");
+      new Token("turbine::allocate_container");
   private static final Token CONTAINER_INSERT =
-                                      new Token("turbine::container_insert");
+      new Token("turbine::container_insert");
   private static final Token CONTAINER_F_INSERT =
-                                    new Token("turbine::container_f_insert");
+      new Token("turbine::container_f_insert");
   private static final Token CONTAINER_F_REFERENCE =
-                  new Token("turbine::f_reference");
+      new Token("turbine::f_reference");
   private static final Token CONTAINER_REFERENCE =
-                                      new Token("adlb::container_reference");
+      new Token("adlb::container_reference");
   private static final Token CONTAINER_IMMEDIATE_INSERT =
       new Token("turbine::container_immediate_insert");
   private static final Token CREF_F_LOOKUP =
       new Token("turbine::f_cref_lookup");
   private static final TclTree CREF_LOOKUP_LITERAL =
       new Token("turbine::f_cref_lookup_literal");
-  private static final Token F_CONTAINER_CREATE_NESTED
-        = new Token("turbine::f_container_create_nested");
-  private static final Token F_CREF_CREATE_NESTED
-  = new Token("turbine::f_cref_create_nested");
-  private static final Token F_CONTAINER_CREATE_NESTED_STATIC
-          = new Token("turbine::container_create_nested");
-private static final Token F_CREF_CREATE_NESTED_STATIC
-            = new Token("turbine::cref_create_nested");
-  private static final Token CONTAINER_SLOT_DROP = new Token("adlb::slot_drop");
-  private static final Token CONTAINER_SLOT_CREATE = new Token("adlb::slot_create");
-  private static final Token CONTAINER_ENUMERATE = new Token("adlb::enumerate");
-  private static final Token UNTYPED_GET = new Token("turbine::get");
-  private static final Token INTEGER_GET = new Token("turbine::get_integer");
-  private static final Token FLOAT_GET = new Token("turbine::get_float");
-  private static final Token STRING_GET = new Token("turbine::get_string");
-  private static final Token STACK_LOOKUP = new Token("turbine::stack_lookup");
+  private static final Token F_CONTAINER_CREATE_NESTED =
+      new Token("turbine::f_container_create_nested");
+  private static final Token F_CREF_CREATE_NESTED =
+      new Token("turbine::f_cref_create_nested");
+  private static final Token F_CONTAINER_CREATE_NESTED_STATIC =
+      new Token("turbine::container_create_nested");
+  private static final Token F_CREF_CREATE_NESTED_STATIC =
+      new Token("turbine::cref_create_nested");
+  private static final Token CONTAINER_SLOT_DROP =
+      new Token("adlb::slot_drop");
+  private static final Token CONTAINER_SLOT_CREATE =
+      new Token("adlb::slot_create");
+  private static final Token CONTAINER_ENUMERATE =
+      new Token("adlb::enumerate");
+  private static final Token UNTYPED_GET =
+      new Token("turbine::retrieve");
+  private static final Token RETRIEVE_INTEGER =
+      new Token("turbine::retrieve_integer");
+  private static final Token RETRIEVE_FLOAT =
+      new Token("turbine::retrieve_float");
+  private static final Token RETRIEVE_STRING =
+      new Token("turbine::retrieve_string");
+  private static final Token STACK_LOOKUP =
+      new Token("turbine::stack_lookup");
   static final String LOCAL_STACK_NAME = "stack";
   static final String PARENT_STACK_NAME = "stack";
   private static final Value STACK = new Value(LOCAL_STACK_NAME);
-  private static final Value PARENT_STACK = new Value(PARENT_STACK_NAME);
-  private static final Token PARENT_STACK_ENTRY = new Token("_parent");
+  private static final Value PARENT_STACK =
+      new Value(PARENT_STACK_NAME);
+  private static final Token PARENT_STACK_ENTRY =
+      new Token("_parent");
   private static final Token RULE = new Token("turbine::c::rule");
   private static final Token NO_STACK = new Token("no_stack");
   private static final Token DEREFERENCE_INTEGER =
-                          new Token("turbine::f_dereference_integer");
+      new Token("turbine::f_dereference_integer");
   private static final Token DEREFERENCE_FLOAT =
-                          new Token("turbine::f_dereference_float");
+      new Token("turbine::f_dereference_float");
   private static final Token DEREFERENCE_STRING =
-                          new Token("turbine::f_dereference_string");
+      new Token("turbine::f_dereference_string");
   private static final String TURBINE_LOG = "turbine::c::log";
   private static final Token ALLOCATE = new Token("turbine::allocate");
 
@@ -175,7 +192,7 @@ private static final Token F_CREF_CREATE_NESTED_STATIC
   {
     SetVariable result =
       new SetVariable(target,
-                      new Square(INTEGER_GET, variable));
+                      new Square(RETRIEVE_INTEGER, variable));
     return result;
   }
 
@@ -191,7 +208,7 @@ private static final Token F_CREF_CREATE_NESTED_STATIC
   public static Command stringSet(String turbineDstVar, Expression src) {
     // The TD is a Value
     Value t = new Value(turbineDstVar);
-    Command c = new Command(STRING_SET, t, src);
+    Command c = new Command(STORE_STRING, t, src);
     return c;
   }
 
@@ -199,7 +216,7 @@ private static final Token F_CREF_CREATE_NESTED_STATIC
     // The TD is a Value
     Value t = new Value(turbineDstVar);
     // The value is a literal Token
-    Command c = new Command(INTEGER_SET, t, src);
+    Command c = new Command(STORE_INTEGER, t, src);
     return c;
   }
 
@@ -207,14 +224,14 @@ private static final Token F_CREF_CREATE_NESTED_STATIC
     // The TD is a Value
     Value t = new Value(turbineDstVar);
     // The value is a literal Token
-    Command c = new Command(FLOAT_SET, t, src);
+    Command c = new Command(STORE_FLOAT, t, src);
     return c;
   }
 
   public static SetVariable floatGet(String target, Value variable) {
     SetVariable result =
       new SetVariable(target,
-          new Square(FLOAT_GET, variable));
+          new Square(RETRIEVE_FLOAT, variable));
     return result;
   }
 
@@ -225,7 +242,7 @@ private static final Token F_CREF_CREATE_NESTED_STATIC
   {
     SetVariable result =
       new SetVariable(target,
-                     new Square(STRING_GET, variable));
+                     new Square(RETRIEVE_STRING, variable));
     return result;
   }
 
@@ -248,7 +265,7 @@ private static final Token F_CREF_CREATE_NESTED_STATIC
     }
   }
 
-  
+
   /**
    * Generate code for a rule
    * @param symbol
@@ -559,14 +576,14 @@ private static final Token F_CREF_CREATE_NESTED_STATIC
    * @param includeKeys
    * @return
    */
-  public static SetVariable containerContents(String resultVar, 
+  public static SetVariable containerContents(String resultVar,
                         Value arr, boolean includeKeys) {
     Token mode = includeKeys ? new Token("dict") : new Token("members");
     return new SetVariable(resultVar, new Square(
             CONTAINER_ENUMERATE, arr, mode, new Token("all"),
                                           new LiteralInt(0)));
   }
-  
+
   /**
    * Return the size of a container
    * @param resultVar
@@ -579,7 +596,7 @@ private static final Token F_CREF_CREATE_NESTED_STATIC
         CONTAINER_ENUMERATE, arr, new Token("count"), new Token("all"),
                                       new LiteralInt(0)));
   }
-  
+
   /**
    * Retrieve partial contents of container from start to end inclusive
    * start to end are not the logical array indices, but rather physical indices
@@ -590,13 +607,13 @@ private static final Token F_CREF_CREATE_NESTED_STATIC
    * @param len
    * @return
    */
-  public static SetVariable containerContents(String resultVar, 
+  public static SetVariable containerContents(String resultVar,
           Value arr, boolean includeKeys, Expression start, Expression len) {
     Token mode = includeKeys ? new Token("dict") : new Token("members");
     return new SetVariable(resultVar, new Square(
               CONTAINER_ENUMERATE, arr, mode, start, len));
   }
-  
+
   public static Command turbineLog(String msg) {
     return new Command(TURBINE_LOG, msg);
   }
