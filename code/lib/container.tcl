@@ -35,7 +35,7 @@ namespace eval turbine {
             error "lookup failed: container_f_get <$c>\[$t1\]"
         }
         set t3 [ get $t2 ]
-        set_integer $d $t3
+        store_integer $d $t3
     }
 
     # When i is closed, set c[i] := d
@@ -77,7 +77,7 @@ namespace eval turbine {
     }
 
     proc container_f_deref_insert_body { c i r } {
-        set t1 [ get_integer $i ]
+        set t1 [ retrieve_integer $i ]
         set d [ get $r ]
         container_insert $c $t1 $d
     }
@@ -237,8 +237,8 @@ namespace eval turbine {
     }
     proc f_cref_insert_body { r j d oc } {
         # s: The subscripted container
-        set c [ get_integer $r ]
-        set s [ get_integer $j ]
+        set c [ retrieve_integer $r ]
+        set s [ retrieve_integer $j ]
         container_insert $c $s $d
         adlb::slot_drop $oc
     }
@@ -260,7 +260,7 @@ namespace eval turbine {
             "turbine::cref_insert_body $cr $j $d $oc"
     }
     proc cref_insert_body { cr j d oc } {
-        set c [ get_integer $cr ]
+        set c [ retrieve_integer $cr ]
         # insert and drop slot
         container_insert $c $j $d
         adlb::slot_drop $oc
@@ -279,7 +279,7 @@ namespace eval turbine {
             "turbine::cref_deref_insert_body $cr $j $dr $oc"
     }
     proc cref_deref_insert_body { cr j dr oc } {
-        set c [ get_integer $cr ]
+        set c [ retrieve_integer $cr ]
         set d [ get $dr ]
         container_insert $c $j $d
         adlb::slot_drop $oc
@@ -296,9 +296,9 @@ namespace eval turbine {
             "turbine::cref_f_deref_insert_body $cr $j $dr $oc"
     }
     proc cref_f_deref_insert_body { cr j dr oc } {
-        set c [ get_integer $cr ]
+        set c [ retrieve_integer $cr ]
         set d [ get $dr ]
-        set jval [ get_integer $j ]
+        set jval [ retrieve_integer $j ]
         container_insert $c $jval $d
         adlb::slot_drop $oc
     }
@@ -382,7 +382,7 @@ namespace eval turbine {
 
         set s [ get $i ]
         set res [ container_create_nested $c $s $type ]
-        set_integer $r $res
+        store_integer $r $res
     }
 
     # Create container at c[i]
@@ -402,7 +402,7 @@ namespace eval turbine {
     proc cref_create_nested_body { r cr i type } {
         set c [ get $cr ]
         set res [ container_create_nested $c $i $type ]
-        set_integer $r $res
+        store_integer $r $res
     }
 
     # Create container at c[i]
@@ -423,7 +423,7 @@ namespace eval turbine {
         set c [ get $cr ]
         set s [ get $i ]
         set res [ container_create_nested $c $s $type ]
-        set_integer $r $res
+        store_integer $r $res
     }
 
     # When container is closed, concatenate its keys in result
@@ -437,7 +437,7 @@ namespace eval turbine {
 
     proc enumerate_body { result container } {
         set s [ container_list $container ]
-        set_string $result $s
+        store_string $result $s
     }
 
     # When container is closed, count the members
@@ -450,7 +450,7 @@ namespace eval turbine {
 
     proc container_size_body { result container } {
         set sz [ adlb::enumerate $container count all 0 ]
-        set_integer $result $sz
+        store_integer $result $sz
     }
 
     # Sum all of the values in a container of integers
@@ -480,7 +480,7 @@ namespace eval turbine {
             puts "turbine_id: $turbine_id"
             if { [ adlb::exists $turbine_id ] } {
                 # add to the sum
-                set val [ get_integer $turbine_id ]
+                set val [ retrieve_integer $turbine_id ]
                 #puts "C\[$i\] = $val"
                 set accum [ expr $accum + $val ]
                 incr i
@@ -496,7 +496,7 @@ namespace eval turbine {
           }
         }
         # If we get out of loop, we're done
-        set_integer $result $accum
+        store_integer $result $accum
     }
 
 
@@ -594,50 +594,50 @@ namespace eval turbine {
       # If we get out of loop, we're done
       if { $n_out != 0 } {
         puts "DEBUG n = $n n_out = $n_out"
-        set_integer $n_out $n
+        store_integer $n_out $n
       }
 
       if { $sum_out != 0 } {
-        set_float $sum_out $sum_accum
+        store_float $sum_out $sum_accum
       }
 
       if { $mean_out != 0 } {
         if { $n == 0 } {
           error "calculating mean of empty array <$container>"
         }
-        set_float $mean_out $mean_accum
+        store_float $mean_out $mean_accum
       }
 
       if { $min_out != 0 } {
         if { $n == 0 } {
           error "calculating min of empty array <$container>"
         }
-        set_float $min_out $min_accum
+        store_float $min_out $min_accum
       }
 
       if { $max_out != 0 } {
         if { $n == 0 } {
           error "calculating max of empty array <$container>"
         }
-        set_float $max_out $max_accum
+        store_float $max_out $max_accum
       }
 
       if { $M2_out != 0 } {
-        set_float $M2_out $M2_accum
+        store_float $M2_out $M2_accum
       }
 
       if { $samp_std_out != 0 } {
         if { $n == 0 } {
           error "calculating stddev of empty array <$container>"
         }
-        set_float $samp_std_out [ expr sqrt($M2_accum / ($n - 1)) ]
+        store_float $samp_std_out [ expr sqrt($M2_accum / ($n - 1)) ]
       }
 
       if { $pop_std_out != 0 } {
         if { $n == 0 } {
           error "calculating stddev of empty array <$container>"
         }
-        set_float $pop_std_out [ expr sqrt($M2_accum / $n) ]
+        store_float $pop_std_out [ expr sqrt($M2_accum / $n) ]
       }
     }
 
@@ -670,9 +670,9 @@ namespace eval turbine {
         set M2_id [ container_get $struct "M2" ]
         if { [ adlb::exists $n_id ] && [ adlb::exists $mean_id ] \
             && [ adlb::exists $M2_id ] } {
-          set n [ get_integer $n_id ]
-          set mean [ get_float $mean_id ]
-          set M2 [ get_float $M2_id ]
+          set n [ retrieve_integer $n_id ]
+          set mean [ retrieve_float $mean_id ]
+          set M2 [ retrieve_float $M2_id ]
           if { $i > 0 } {
             # combine statistics
             # weighted mean
@@ -704,8 +704,8 @@ namespace eval turbine {
       if { $n_accum == 0 } {
         error "mean and standard deviation not defined for sample size 0"
       }
-      set_integer $n_out $n_accum
-      set_float $mean_out $mean_accum
-      set_float $std_out [ expr sqrt($M2_accum / (double($n_accum))) ]
+      store_integer $n_out $n_accum
+      store_float $mean_out $mean_accum
+      store_float $std_out [ expr sqrt($M2_accum / (double($n_accum))) ]
     }
 }

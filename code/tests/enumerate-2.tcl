@@ -17,9 +17,9 @@ proc f { stack o i } {
     puts "f: $i"
     set t [ turbine::get $i ]
     if { $i == 0 } {
-        turbine::set_integer $o 98
+        turbine::store_integer $o 98
     } else {
-        turbine::set_integer $o 72
+        turbine::store_integer $o 72
     }
 }
 

@@ -15,8 +15,8 @@ proc rules { } {
     turbine::allocate j integer
     turbine::allocate_container c integer
 
-    turbine::set_integer $i 1
-    turbine::set_integer $j 4
+    turbine::store_integer $i 1
+    turbine::store_integer $j 4
 
     turbine::range NO_STACK $c [ list $i $j ]
     turbine::loop loop1_body none $c
@@ -26,7 +26,7 @@ proc loop1_body { parent container key } {
     puts "loop1_body: $key"
     set t [ turbine::get $key ]
     set member [ turbine::container_get $container $t ]
-    # set value [ turbine::get_integer $member ]
+    # set value [ turbine::retrieve_integer $member ]
     turbine::trace $parent "" [ list $key $member ]
 }
 

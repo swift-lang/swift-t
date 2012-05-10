@@ -24,9 +24,9 @@ proc rules { } {
         set count 100
     }
     puts "count: $count"
-    turbine::set_integer $i 1
-    turbine::set_integer $j $count
-    turbine::set_integer $p $env(TURBINE_ENGINES)
+    turbine::store_integer $i 1
+    turbine::store_integer $j $count
+    turbine::store_integer $p $env(TURBINE_ENGINES)
 
     turbine::drange $c $i $j $p
 }

@@ -12,8 +12,8 @@ proc rules { } {
 
     turbine::create_blob 1
 
-    turbine::set_blob_string 1 "hi"
-    set v1 [ turbine::get_blob_string 1 ]
+    turbine::store_blob_string 1 "hi"
+    set v1 [ turbine::retrieve_blob_string 1 ]
 
     puts "result: $v1"
 }

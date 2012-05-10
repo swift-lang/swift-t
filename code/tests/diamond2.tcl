@@ -7,7 +7,7 @@ proc function_touch { d } {
     set filename [ turbine::filename $d ]
     puts "function_touch: filename: $filename"
     exec touch $filename
-    turbine::set_file $d
+    turbine::store_file $d
 }
 
 proc rules { } {

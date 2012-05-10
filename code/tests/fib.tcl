@@ -32,7 +32,7 @@ proc if-0 { stack } {
         allocate __t0 integer
         container_insert $stack __t0 $__t0
         allocate __l0 integer
-        set_integer $__l0 1
+        store_integer $__l0 1
         turbine::minus_integer $stack [ list $__t0 ] [ list $n $__l0 ]
         turbine::c::rule if-1 "$__t0" $turbine::LOCAL "if-1 $stack"
     } else {
@@ -56,13 +56,13 @@ proc if-1 { stack } {
         allocate __l1 integer
         allocate __l2 integer
         allocate __l3 integer
-        set_integer $__l3 1
+        store_integer $__l3 1
         turbine::minus_integer $stack [ list $__l2 ] [ list $n $__l3 ]
         turbine::c::rule fib [ list $__l2 ] $turbine::LOCAL "fib $stack $__l1 $__l2"
         allocate __l4 integer
         allocate __l5 integer
         allocate __l6 integer
-        set_integer $__l6 2
+        store_integer $__l6 2
         turbine::minus_integer $stack [ list $__l5 ] [ list $n $__l6 ]
         turbine::c::rule fib [ list $__l5 ] $turbine::LOCAL "fib $stack $__l4 $__l5"
         turbine::plus_integer $stack [ list $o ] [ list $__l1 $__l4 ]
@@ -81,7 +81,7 @@ proc rules {  } {
     allocate __l1 integer
     global N
     puts "N: $N"
-    set_integer $__l1 $N
+    store_integer $__l1 $N
     turbine::c::rule fib [ list $__l1 ] $turbine::LOCAL "fib $stack $__l0 $__l1"
     turbine::trace $stack [ list ] [ list $__l0 ]
 }

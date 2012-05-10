@@ -90,7 +90,7 @@ namespace eval turbine {
             "turbine::sleep_trace_body $secs $args"
     }
     proc sleep_trace_body { secs inputs } {
-        set secs_val [ get_float $secs ]
+        set secs_val [ retrieve_float $secs ]
         after [ expr round($secs_val * 1000) ] 
         puts "AFTER"
         trace_body $inputs
@@ -109,8 +109,8 @@ namespace eval turbine {
 
     proc range_body { result start end } {
 
-        set start_value [ get_integer $start ]
-        set end_value   [ get_integer $end ]
+        set start_value [ retrieve_integer $start ]
+        set end_value   [ retrieve_integer $end ]
 
         range_work $result $start_value $end_value 1
     }
@@ -128,9 +128,9 @@ namespace eval turbine {
 
     proc rangestep_body { result start end step } {
 
-        set start_value [ get_integer $start ]
-        set end_value   [ get_integer $end ]
-        set step_value   [ get_integer $step ]
+        set start_value [ retrieve_integer $start ]
+        set end_value   [ retrieve_integer $end ]
+        set step_value   [ retrieve_integer $step ]
 
         range_work $result $start_value $end_value $step_value
     }
@@ -139,7 +139,7 @@ namespace eval turbine {
         set k 0
         for { set i $start } { $i <= $end } { incr i $step } {
             allocate td integer
-            set_integer $td $i
+            store_integer $td $i
             container_insert $result $k $td
             incr k
         }
@@ -215,7 +215,7 @@ namespace eval turbine {
         set i 0
         while { [ gets $fd line ] >= 0 } {
             allocate s string
-            set_string $s $line
+            store_string $s $line
             container_insert $result $i $s
             incr i
         }
@@ -261,7 +261,7 @@ namespace eval turbine {
             error "turbine::literal requires 2 or 3 args!"
         }
 
-        set_${type} $result $value
+        store_${type} $result $value
 
         return $result
     }
@@ -275,7 +275,7 @@ namespace eval turbine {
     proc toint_body { input result } {
       set t [ get $input ]
 
-      set_integer $result [ check_str_int $t ]
+      store_integer $result [ check_str_int $t ]
     }
 
     proc check_str_int { input } {
@@ -293,7 +293,7 @@ namespace eval turbine {
     proc fromint_body { input result } {
         set t [ get $input ]
         # Tcl performs the conversion naturally
-        set_string $result $t
+        store_string $result $t
     }
 
     proc tofloat { stack result input } {
@@ -305,7 +305,7 @@ namespace eval turbine {
         set t [ get $input ]
         #TODO: would be better if the accepted double types
         #     matched Swift float literals
-        set_float $result [ check_str_float $t ]
+        store_float $result [ check_str_float $t ]
     }
 
     proc check_str_float { input } {
@@ -323,7 +323,7 @@ namespace eval turbine {
     proc fromfloat_body { input result } {
         set t [ get $input ]
         # Tcl performs the conversion naturally
-        set_string $result $t
+        store_string $result $t
     }
 
     proc blob_from_string { stack result input } {
@@ -333,7 +333,7 @@ namespace eval turbine {
 
     proc blob_from_string_body { input result } {
         set t [ get $input ]
-        set_blob_string $result $t
+        store_blob_string $result $t
     }
 
     proc string_from_blob { stack result input } {
@@ -342,8 +342,8 @@ namespace eval turbine {
     }
 
     proc string_from_blob_body { input result } {
-        set s [ get_blob_string $input ]
-        set_string $result $s
+        set s [ retrieve_blob_string $input ]
+        store_string $result $s
     }
 
     # Container must be indexed from 0,N-1
@@ -360,11 +360,11 @@ namespace eval turbine {
         set A [ list ]
         for { set i 0 } { $i < $N } { incr i } {
             set td [ container_get $container $i ]
-            set v  [ get_float $td ]
+            set v  [ retrieve_float $td ]
             lappend A $v
         }
 
-        adlb::set_blob_floats $result $A
+        adlb::store_blob_floats $result $A
         turbine::close_datum $result
     }
 
@@ -383,7 +383,7 @@ namespace eval turbine {
 
         # Emulate some computation time
         # after 1000
-        set_integer $c 0
+        store_integer $c 0
     }
 
     # Good for performance testing
@@ -401,7 +401,7 @@ namespace eval turbine {
 
         # Emulate some computation time
         # after 1000
-        set_integer $c 1
+        store_integer $c 1
     }
 
     # Execute shell command
@@ -455,12 +455,12 @@ namespace eval turbine {
     }
     proc copy_void_body { o i } {
         log "copy_void $i => $o"
-        set_void $o
+        store_void $o
     }
 
     # create a void type (i.e. just set it)
     proc make_void { parent o i } {
         empty i
-        set_void $o
+        store_void $o
     }
 }

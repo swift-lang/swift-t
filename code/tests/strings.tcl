@@ -14,8 +14,8 @@ proc rules { } {
     turbine::create_string 12
     # c::string 3
 
-    turbine::set_string 11 "hi"
-    turbine::set_string 12 "bye"
+    turbine::store_string 11 "hi"
+    turbine::store_string 12 "bye"
 
     set v1 [ turbine::get 11 ]
     set v2 [ turbine::get 12 ]

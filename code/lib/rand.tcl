@@ -26,7 +26,7 @@ namespace eval turbine {
         # no input args
         empty i
         set o_val [ expr rand() ]
-        set_float $o $o_val
+        store_float $o $o_val
     }
 
     # called with 2 args: inclusive minimum and exclusive maximum of range
@@ -39,10 +39,10 @@ namespace eval turbine {
     }
 
     proc randint_body { o lo hi } {
-        set lo_value [ get_integer $lo ]
-        set hi_value [ get_integer $hi ]
+        set lo_value [ retrieve_integer $lo ]
+        set hi_value [ retrieve_integer $hi ]
         set o_value [ randint_impl $lo_value $hi_value ]
-        set_integer $o $o_value
+        store_integer $o $o_value
     }
 
     proc randint_impl { lo hi } {

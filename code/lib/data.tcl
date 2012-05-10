@@ -3,21 +3,21 @@
 
 namespace eval turbine {
 
-    namespace export                           \
-        allocate get                           \
-        create_string  set_string              \
-        create_integer set_integer get_integer \
-        create_float   set_float   get_float   \
-        create_void    set_void                \
-        create_file    set_file                \
-        create_blob                            \
-        get_blob_string                        \
-        allocate_container                     \
-        container_get container_list           \
-        container_insert close_datum       \
-        file_set filename
+    namespace export                                  \
+        allocate get                                  \
+        create_string  store_string                   \
+        create_integer store_integer retrieve_integer \
+        create_float   store_float   retrieve_float   \
+        create_void    store_void                     \
+        create_file    store_file                     \
+        create_blob                                   \
+        retrieve_blob_string                          \
+        allocate_container                            \
+        container_get container_list                  \
+        container_insert close_datum                  \
+        filename
 
-    # usage: allocate [<name>] [<type>]
+    # usage: allocate [<name>] <type>
     # If name is given, print a log message
     proc allocate { args } {
         set u [ adlb::unique ]
@@ -87,15 +87,15 @@ namespace eval turbine {
         adlb::create $id $adlb::INTEGER
     }
 
-    proc set_integer { id value } {
+    proc store_integer { id value } {
         log "set: <$id>=$value"
         adlb::store $id $adlb::INTEGER $value
         close_datum $id
     }
 
-    proc get_integer { id } {
+    proc retrieve_integer { id } {
         set result [ adlb::retrieve $id $adlb::INTEGER ]
-        debug "get_integer: <$id>=$result"
+        debug "retrieve_integer: <$id>=$result"
         return $result
     }
 
@@ -104,15 +104,15 @@ namespace eval turbine {
         adlb::create $id $adlb::FLOAT
     }
 
-    proc set_float { id value } {
+    proc store_float { id value } {
         log "set: <$id>=$value"
         adlb::store $id $adlb::FLOAT $value
         close_datum $id
     }
 
-    proc get_float { id } {
+    proc retrieve_float { id } {
         set result [ adlb::retrieve $id $adlb::FLOAT ]
-        debug "get_float: <$id>=$result"
+        debug "retrieve_float: <$id>=$result"
         return $result
     }
 
@@ -121,15 +121,15 @@ namespace eval turbine {
         adlb::create $id $adlb::STRING
     }
 
-    proc set_string { id value } {
+    proc store_string { id value } {
         log "set: <$id>=\"$value\""
         adlb::store $id $adlb::STRING $value
         close_datum $id
     }
 
-    proc get_string { id } {
+    proc retrieve_string { id } {
         set result [ adlb::retrieve $id $adlb::STRING ]
-        debug "get_string: <$id>=$result"
+        debug "retrieve_string: <$id>=$result"
         return $result
     }
 
@@ -139,29 +139,29 @@ namespace eval turbine {
         adlb::create $id $adlb::INTEGER
     }
 
-    proc set_void { id } {
-        debug "set_void: <$id>"
+    proc store_void { id } {
+        debug "store_void: <$id>"
         # TODO: for now emulate void with integer
         adlb::store $id $adlb::INTEGER 12345
         close_datum $id
     }
 
-    # get_void not provided as it wouldn't do anything
+    # retrieve_void not provided as it wouldn't do anything
 
     # Create blob
     proc create_blob { id } {
         adlb::create $id $adlb::BLOB
     }
 
-    proc set_blob_string { id value } {
-        log "set_blob: <$id>=$value"
+    proc store_blob_string { id value } {
+        log "store_blob: <$id>=$value"
         adlb::store $id $adlb::BLOB $value
         close_datum $id
     }
 
-    proc get_blob_string { id } {
+    proc retrieve_blob_string { id } {
         set result [ adlb::retrieve $id $adlb::BLOB ]
-        debug "get_string: <$id>=$result"
+        debug "retrieve_string: <$id>=$result"
         return $result
     }
 
@@ -205,7 +205,7 @@ namespace eval turbine {
         adlb::create $id $adlb::FILE $path
     }
 
-    proc set_file { id } {
+    proc store_file { id } {
         close_datum $id
     }
 

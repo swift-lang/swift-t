@@ -23,10 +23,10 @@ proc rules { } {
     adlb::slot_create $c
 
     turbine::integer_init 2
-    turbine::set_integer 2 12345
+    turbine::store_integer 2 12345
     turbine::integer_init 3
     turbine::integer_init 4 
-    turbine::set_integer 4 -1
+    turbine::store_integer 4 -1
     turbine::integer_init 5 
     # 12345 + 4 - 1 + 3 = 12351
 
@@ -48,8 +48,8 @@ proc rules { } {
     turbine::c::rule 1 A "" "" "tc: insert_last $c 1 3"
     
     # wait until we assign 
-    turbine::c::rule 2 A "1" "" "tc: turbine::set_integer 3 4"
-    turbine::c::rule 3 A "1" "" "tc: turbine::set_integer 5 3"
+    turbine::c::rule 2 A "1" "" "tc: turbine::store_integer 3 4"
+    turbine::c::rule 3 A "1" "" "tc: turbine::store_integer 5 3"
 }
 
 turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)

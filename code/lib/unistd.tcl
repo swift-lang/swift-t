@@ -103,7 +103,7 @@ namespace eval turbine {
     proc argc_get { stack result inputs } {
         # ignore inputs
         variable turbine_argc
-        set_integer $result $turbine_argc
+        store_integer $result $turbine_argc
     }
 
     proc argc_get_impl { } {
@@ -114,7 +114,7 @@ namespace eval turbine {
     proc args_get { stack result inputs } {
         # ignore inputs
         variable turbine_args
-        set_string $result $turbine_args
+        store_string $result $turbine_args
     }
 
     proc argv_contains { stack result key } {
@@ -126,7 +126,7 @@ namespace eval turbine {
 
         variable turbine_argv
         set t [ get $key ]
-        set_integer $result [ argv_contains_impl $t ]
+        store_integer $result [ argv_contains_impl $t ]
     }
 
     proc argv_contains_impl { key } {
@@ -171,11 +171,11 @@ namespace eval turbine {
             set result_val [ argv_get_impl $key_val ]
         } elseif { $c == 3 } {
             set base [ lindex $args 2 ]
-            set base_val [ get_string $base ]
+            set base_val [ retrieve_string $base ]
             set result_val [ argv_get_impl $key_val $base_val ]
         }
 
-        set_string $result $result_val
+        store_string $result $result_val
     }
 
     proc argv_get_impl { key args } {
@@ -214,7 +214,7 @@ namespace eval turbine {
 
         set accepted [ list ]
         foreach td $args {
-            lappend accepted [ get_string $td ]
+            lappend accepted [ retrieve_string $td ]
         }
         dict for { key value } $turbine_argv {
             if [ string is integer $key ] continue

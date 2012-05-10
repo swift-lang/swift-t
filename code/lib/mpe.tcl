@@ -39,7 +39,7 @@ namespace eval turbine {
         variable event
         mpe_setup
 
-        set message_value [ turbine::get_string $message ]
+        set message_value [ turbine::retrieve_string $message ]
         mpe::log $event(start_metadata) "$message_value"
     }
 }

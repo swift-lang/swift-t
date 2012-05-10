@@ -30,8 +30,8 @@ proc rules { } {
     turbine::allocate v1 integer
     turbine::allocate v2 integer
 
-    turbine::set_integer $x1 14
-    turbine::set_integer $x2 15
+    turbine::store_integer $x1 14
+    turbine::store_integer $x2 15
 
     # We pretend that we know the indices here
     # insert <container> <subscript> <member>
@@ -46,8 +46,8 @@ proc rules { } {
     turbine::container_f_get_integer no_stack $v2 "$c $i2"
     turbine::trace no_stack "" $v2
 
-    turbine::set_integer $i1 34
-    turbine::set_integer $i2 35
+    turbine::store_integer $i1 34
+    turbine::store_integer $i2 35
 }
 
 turbine::defaults

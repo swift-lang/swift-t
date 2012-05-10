@@ -44,7 +44,7 @@ proc loop1_body { stack container key } {
 
     puts "body: $stack $container $key"
     turbine::trace $key
-    set t [ turbine::get_integer $key ]
+    set t [ turbine::retrieve_integer $key ]
     set value [ turbine::container_get $container $t ]
     turbine::trace $value
 }

@@ -13,8 +13,8 @@ proc rules { } {
     turbine::allocate t5 integer
     turbine::allocate x integer
 
-    turbine::set_integer $t3 3
-    turbine::set_integer $t5 5
+    turbine::store_integer $t3 3
+    turbine::store_integer $t5 5
 
     # Use 0 as stack frame
     turbine::arithmetic 0 $x [ list "(_+_)*(_+_)" $t3 $t5 $t3 $t5 ]

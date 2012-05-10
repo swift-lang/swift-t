@@ -18,13 +18,13 @@ proc rules { } {
     # adlb::slot_create 1
 
     turbine::create_integer 12
-    turbine::set_integer 12 12345
+    turbine::store_integer 12 12345
     turbine::create_integer 13
-    turbine::set_integer 13 4
+    turbine::store_integer 13 4
     turbine::create_integer 14
-    turbine::set_integer 14 -1
+    turbine::store_integer 14 -1
     turbine::create_integer 15
-    turbine::set_integer 15 3
+    turbine::store_integer 15 3
     # 12345 + 4 - 1 + 3 = 12351
 
     # set <container> <subscript> <member>

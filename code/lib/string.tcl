@@ -21,7 +21,7 @@ namespace eval turbine {
             lappend output $t
         }
         set total [ join $output "" ]
-        set_string $result $total
+        store_string $result $total
     }
 
     proc substring { stack result inputs  } {
@@ -40,7 +40,7 @@ namespace eval turbine {
         set len_val   [ get $len ]
 
         set result_val [ substring_impl $str_val $first_val $len_val ]
-        set_string $result $result_val
+        store_string $result $result_val
     }
 
     proc substring_impl { str first len } {
@@ -55,9 +55,9 @@ namespace eval turbine {
             "copy_string_body $o $i"
     }
     proc copy_string_body { o i } {
-        set i_value [ get_string $i ]
+        set i_value [ retrieve_string $i ]
         log "copy $i_value => $i_value"
-        set_string $o $i_value
+        store_string $o $i_value
     }
 
     # This accepts an optional delimiter
@@ -89,11 +89,11 @@ namespace eval turbine {
     # Tcl split should handle spaces correctly:
     # http://tmml.sourceforge.net/doc/tcl/split.html
     proc split_body { result s delimiter } {
-        set s_value [ get_string $s ]
+        set s_value [ retrieve_string $s ]
         if { $delimiter == 0 } {
             set d_value " "
         } else {
-            set d_value [ get_string $delimiter ]
+            set d_value [ retrieve_string $delimiter ]
         }
         set r_value [ ::split $s_value $d_value ]
         set n [ llength $r_value ]
@@ -117,6 +117,6 @@ namespace eval turbine {
         }
 
         set s [ eval format $L ]
-        set_string $result $s
+        store_string $result $s
     }
 }

@@ -17,8 +17,8 @@ proc rules { } {
     turbine::allocate t2 float
     turbine::allocate x float
 
-    turbine::set_float $t1 3
-    turbine::set_float $t2 5
+    turbine::store_float $t1 3
+    turbine::store_float $t2 5
 
     # Use 0 as stack frame
     turbine::plus_float 0 [ list $x ] [ list $t1 $t2 ]

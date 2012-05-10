@@ -13,11 +13,11 @@ proc rules { } {
     turbine::create_integer 2
     turbine::create_integer 3
 
-    turbine::set_integer 1 3
-    turbine::set_integer 2 5
+    turbine::store_integer 1 3
+    turbine::store_integer 2 5
 
-    set v1 [ turbine::get_integer 1 ]
-    set v2 [ turbine::get_integer 2 ]
+    set v1 [ turbine::retrieve_integer 1 ]
+    set v2 [ turbine::retrieve_integer 2 ]
 
     # Use 0 as stack frame
     turbine::arithmetic 0 3 [ list "(_+_)*(_+_)" 1 2 1 2 ]

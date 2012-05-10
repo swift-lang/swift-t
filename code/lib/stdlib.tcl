@@ -13,12 +13,12 @@ namespace eval turbine {
     }
     proc getenv_body { result key } {
         global env
-        set key_value [ get_string $key ]
+        set key_value [ retrieve_string $key ]
         if [ info exists env($key_value) ] {
             set result_value $env($key_value)
         } else {
             set result_value ""
         }
-        set_string $result $result_value
+        store_string $result $result_value
     }
 }

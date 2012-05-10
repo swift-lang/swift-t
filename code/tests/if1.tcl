@@ -28,7 +28,7 @@ proc f { x r } {
     # Set r to 1 if x is odd, else 0
 
     set x_value [ get $x ]
-    set_integer $r [ expr $x_value % 2 ]
+    store_integer $r [ expr $x_value % 2 ]
 }
 
 proc g { x r } {
@@ -36,7 +36,7 @@ proc g { x r } {
     # Copy x into r
 
     set x_value [ get $x ]
-    set_integer $r $x_value
+    store_integer $r $x_value
 }
 
 proc h { x r } {
@@ -44,14 +44,14 @@ proc h { x r } {
     # Copy x into r
 
     set x_value [ get $x ]
-    set_integer $r $x_value
+    store_integer $r $x_value
 }
 
 proc j { x r } {
     # Leaf function
     # Copy 0 into r
 
-    set_integer $r 0
+    store_integer $r 0
 }
 
 proc myfun { a b x } {

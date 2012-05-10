@@ -15,11 +15,11 @@ proc rules { } {
     turbine::create_string  14
     turbine::create_float   15
 
-    turbine::set_integer 11 2
-    turbine::set_integer 12 2
-    turbine::set_string  13 "(%i,%i,%s,%0.2f)"
-    turbine::set_string  14 "howdy"
-    turbine::set_float   15 3.1415
+    turbine::store_integer 11 2
+    turbine::store_integer 12 2
+    turbine::store_string  13 "(%i,%i,%s,%0.2f)"
+    turbine::store_string  14 "howdy"
+    turbine::store_float   15 3.1415
 
     turbine::printf no_stack "" [ list 13 11 12 14 15 ]
 }

@@ -27,14 +27,14 @@ namespace eval turbine {
         $turbine::LOCAL "update_min_body $x $val"
   }
   proc update_min_body { x val } {
-    set val2 [ get_float $val ]
+    set val2 [ retrieve_float $val ]
     update_min_impl $x $val2
   }
 
   proc update_min_impl { x val } {
 
       lock_loop $x
-      set old [ turbine::get_float $x ]
+      set old [ turbine::retrieve_float $x ]
       if { $old > $val } {
           adlb::store $x $adlb::FLOAT $val
       }
@@ -48,13 +48,13 @@ namespace eval turbine {
         $turbine::LOCAL "update_incr_body $x $val"
   }
   proc update_incr_body { x val } {
-    set val2 [ get_float $val ]
+    set val2 [ retrieve_float $val ]
     update_incr_impl $x $val2
   }
 
   proc update_incr_impl { x val } {
     # TODO: this version has a race condition
-    set old [ turbine::get_float $x ]
+    set old [ turbine::retrieve_float $x ]
     adlb::store $x $adlb::FLOAT [ expr $val + $old ]
   }
 
@@ -65,13 +65,13 @@ namespace eval turbine {
         $turbine::LOCAL "update_scale_body $x $val"
   }
   proc update_scale_body { x val } {
-    set val2 [ get_float $val ]
+    set val2 [ retrieve_float $val ]
     update_scale_impl $x $val2
   }
 
   proc update_scale_impl { x val } {
     # TODO: this version has a race condition
-    set old [ turbine::get_float $x ]
+    set old [ turbine::retrieve_float $x ]
     adlb::store $x $adlb::FLOAT [ expr $val * $old ]
   }
 }

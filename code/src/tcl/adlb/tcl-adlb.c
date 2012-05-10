@@ -446,7 +446,7 @@ static int
 ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
                int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(4);
+  TCL_CONDITION(objc >= 4, "adlb::create requires >= 4 args!");
 
   long id;
   int length = 0;
@@ -457,29 +457,57 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   double tmp_double;
 
-  char* s;
+  void* data = &xfer[0];
   switch (type)
   {
     case ADLB_DATA_TYPE_INTEGER:
+      TCL_CONDITION(objc == 4, "incorrect arguments!");
       rc = Tcl_GetLongFromObj(interp, objv[3], (long*) xfer);
       TCL_CHECK_MSG(rc, "adlb::store long <%li> failed!", id);
       length = sizeof(long);
       break;
     case ADLB_DATA_TYPE_FLOAT:
+      TCL_CONDITION(objc == 4, "incorrect arguments!");
       rc = Tcl_GetDoubleFromObj(interp, objv[3], &tmp_double);
       TCL_CHECK_MSG(rc, "adlb::store double <%li> failed!", id);
       memcpy(xfer, &tmp_double, sizeof(double));
       length = sizeof(double);
       break;
     case ADLB_DATA_TYPE_STRING:
-    case ADLB_DATA_TYPE_BLOB:
-      s = Tcl_GetStringFromObj(objv[3], &length);
-      TCL_CONDITION(s != NULL,
-          "adlb::store string <%li> failed!", id);
-      length = strlen(s)+1;
+      TCL_CONDITION(objc == 4, "incorrect arguments!");
+      data = Tcl_GetStringFromObj(objv[3], &length);
+      TCL_CONDITION(data != NULL,
+                    "adlb::store string <%li> failed!", id);
+      length = strlen(data)+1;
       TCL_CONDITION(length < ADLB_MSG_MAX,
           "adlb::store: string too long: <%li>", id);
-      strcpy(xfer, s);
+      break;
+    case ADLB_DATA_TYPE_BLOB:
+      if (objc == 4)
+      {
+        // User is storing a Tcl string in a blob
+        TCL_CONDITION(objc == 4, "incorrect arguments!");
+        data = Tcl_GetStringFromObj(objv[3], &length);
+        TCL_CONDITION(data != NULL,
+                      "adlb::store blob <%li> failed!", id);
+        length = strlen(data)+1;
+        TCL_CONDITION(length < ADLB_MSG_MAX,
+                      "adlb::store: string too long: <%li>", id);
+        break;
+      }
+      else if (objc == 5)
+      {
+        // User is providing a pointer+length
+        TCL_CONDITION(objc == 5, "incorrect arguments!");
+        int p;
+        rc = Tcl_GetIntFromObj(interp, objv[3], &p);
+        TCL_CHECK_MSG(rc, "required pointer!");
+        data = (void*) p;
+        rc = Tcl_GetIntFromObj(interp, objv[4], &length);
+        TCL_CHECK_MSG(rc, "required length!");
+      }
+      else
+        TCL_RETURN_ERROR("incorrect arguments!");
       break;
     case ADLB_DATA_TYPE_FILE:
       // Ignore objv[3]
@@ -495,7 +523,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
 
   // DEBUG_ADLB("adlb::store: <%li>=%s", id, data);
-  rc = ADLB_Store(id, xfer, length);
+  rc = ADLB_Store(id, data, length);
 
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::store <%li> failed!", id);
@@ -696,11 +724,11 @@ ADLB_Enumerate_Cmd(ClientData cdata, Tcl_Interp *interp,
    Copy a blob from the distributed store into a local blob
    in the memory of this process
    Must be freed with adlb::blob_free
-   usage: adlb::blob_cache <id> => [ list <pointer> <length> ]
+   usage: adlb::blob_cache_retrieve <id> => [ list <pointer> <length> ]
  */
 static int
-ADLB_Blob_Cache_Cmd(ClientData cdata, Tcl_Interp *interp,
-                    int objc, Tcl_Obj *const objv[])
+ADLB_Blob_Cache_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
+                             int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
 
@@ -764,11 +792,11 @@ ADLB_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   adlb::set_blob_floats <id> [ list doubles ]
+   adlb::store_blob_floats <id> [ list doubles ]
  */
 static int
-ADLB_Blob_set_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
-                         int objc, Tcl_Obj *const objv[])
+ADLB_Blob_store_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
+                           int objc, Tcl_Obj *const objv[])
 {
   int rc;
   long id;
@@ -1205,9 +1233,9 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("store",     ADLB_Store_Cmd);
   COMMAND("retrieve",  ADLB_Retrieve_Cmd);
   COMMAND("enumerate", ADLB_Enumerate_Cmd);
-  COMMAND("blob_cache", ADLB_Blob_Cache_Cmd);
+  COMMAND("blob_cache_retrieve", ADLB_Blob_Cache_Retrieve_Cmd);
   COMMAND("blob_free",  ADLB_Blob_Free_Cmd);
-  COMMAND("set_blob_floats", ADLB_Blob_set_floats_Cmd);
+  COMMAND("store_blob_floats", ADLB_Blob_store_floats_Cmd);
   COMMAND("slot_create", ADLB_Slot_Create_Cmd);
   COMMAND("slot_drop", ADLB_Slot_Drop_Cmd);
   COMMAND("insert",    ADLB_Insert_Cmd);

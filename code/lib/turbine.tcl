@@ -162,24 +162,24 @@ namespace eval turbine {
     }
 
     proc turbine_workers_future { stack output inputs } {
-        set_integer $output [ turbine_workers ]
+        store_integer $output [ turbine_workers ]
     }
-    
+
     proc turbine_engines { } {
         variable n_engines
         return $n_engines
     }
 
     proc turbine_engines_future { stack output inputs } {
-        set_integer $output [ turbine_engines ]
+        store_integer $output [ turbine_engines ]
     }
-    
+
     proc adlb_servers { } {
         variable n_adlb_servers
         return $n_adlb_servers
     }
-    
+
     proc adlb_servers_future { stack output inputs } {
-        set_integer $output [ adlb_servers ]
+        store_integer $output [ adlb_servers ]
     }
 }

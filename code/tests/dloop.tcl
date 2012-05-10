@@ -29,10 +29,10 @@ proc rules { } {
     }
     puts "COUNT: $count"
 
-    turbine::set_integer $i 1
-    turbine::set_integer $j $count
+    turbine::store_integer $i 1
+    turbine::store_integer $j $count
     set split [ expr $env(TURBINE_ENGINES) * 10 ]
-    turbine::set_integer $p $split
+    turbine::store_integer $p $split
 
     turbine::drange $c $i $j $p
     turbine::dloop loop1_body none $c
@@ -40,9 +40,9 @@ proc rules { } {
 
 proc loop1_body { stack container key } {
     # puts "loop1_body: $key"
-    set t [ turbine::get_integer $key ]
+    set t [ turbine::retrieve_integer $key ]
     set member [ turbine::container_get $container $t ]
-    set value [ turbine::get_integer $member ]
+    set value [ turbine::retrieve_integer $member ]
     # turbine::trace $key $member
     # puts "value: $value"
 }

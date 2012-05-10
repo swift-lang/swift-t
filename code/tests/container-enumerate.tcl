@@ -19,9 +19,9 @@ proc rules { } {
 
     turbine::create_container $c integer
     turbine::create_string $s1
-    turbine::set_string $s1 "hello"
+    turbine::store_string $s1 "hello"
     turbine::create_string $s2
-    turbine::set_string $s2 "howdy"
+    turbine::store_string $s2 "howdy"
 
     # insert <container> <subscript> <member>
     turbine::container_insert $c "0" $s1
