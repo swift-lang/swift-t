@@ -14,9 +14,10 @@ import exm.tcl.*;
  * */
 class Turbine
 {
-
-  private static final Token DIVIDE_INTEGER = new Token("turbine::divide_integer_impl");
-  private static final Token MOD_INTEGER = new Token("turbine::mod_integer_impl");
+  private static final Token DIVIDE_INTEGER =
+      new Token("turbine::divide_integer_impl");
+  private static final Token MOD_INTEGER =
+      new Token("turbine::mod_integer_impl");
 
   /* TODO: TPREFIX? These are no longer prefixes, right? -Justin */
   public static final String STRING_TPREFIX = "string";
@@ -25,10 +26,10 @@ class Turbine
   public static final String FLOAT_TPREFIX = "float";
   public static final String BLOB_TPREFIX = "blob";
 
-  static final Token CONTAINER_GET =
-      new Token("turbine::container_get");
-  static final Token CHECKED_CONTAINER_GET =
-      new Token("turbine::checked_container_get");
+  static final Token CONTAINER_LOOKUP =
+      new Token("turbine::container_lookup");
+  static final Token CONTAINER_LOOKUP_CHECKED =
+      new Token("turbine::container_lookup_checked");
   private static final Token STORE_INTEGER =
       new Token("turbine::store_integer");
   private static final Token STORE_FLOAT =
@@ -73,7 +74,7 @@ class Turbine
       new Token("adlb::slot_create");
   private static final Token CONTAINER_ENUMERATE =
       new Token("adlb::enumerate");
-  private static final Token UNTYPED_GET =
+  private static final Token RETRIEVE_UNTYPED =
       new Token("turbine::retrieve");
   private static final Token RETRIEVE_INTEGER =
       new Token("turbine::retrieve_integer");
@@ -201,7 +202,7 @@ class Turbine
   {
    SetVariable result =
      new SetVariable(target,
-                     new Square(UNTYPED_GET, variable));
+                     new Square(RETRIEVE_UNTYPED, variable));
    return result;
   }
 
@@ -318,7 +319,7 @@ class Turbine
       String resultVar) {
     Sequence result = new Sequence();
 
-    Square containerGet = new Square(CONTAINER_GET, new Value(structName),
+    Square containerGet = new Square(CONTAINER_LOOKUP, new Value(structName),
         new TclString(structField, true));
 
     SetVariable loadCmd = new SetVariable(resultVar, containerGet);
@@ -375,7 +376,7 @@ class Turbine
   public static SetVariable arrayLookupImm(String dst, String arrayVar,
       Expression arrayIndex) {
     return new SetVariable(dst,
-        new Square(CHECKED_CONTAINER_GET, new Value(arrayVar), arrayIndex));
+        new Square(CONTAINER_LOOKUP_CHECKED, new Value(arrayVar), arrayIndex));
   }
 
   /**
