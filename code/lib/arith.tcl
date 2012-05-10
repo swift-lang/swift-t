@@ -1,3 +1,4 @@
+
 # Turbine builtin arithmetic functions
 
 # For two types: integer and float
@@ -5,9 +6,8 @@
 #   f <STACK> <OUTPUT LIST> <INPUT LIST>
 # where the lists are Tcl lists of TDs
 
-
-
 namespace eval turbine {
+
     proc plus_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]

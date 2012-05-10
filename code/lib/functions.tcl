@@ -329,7 +329,6 @@ namespace eval turbine {
         rule "bfs-$input-$result" $input $turbine::LOCAL \
             "blob_from_string_body $input $result"
     }
-
     proc blob_from_string_body { input result } {
         set t [ retrieve $input ]
         store_blob_string $result $t
@@ -339,7 +338,6 @@ namespace eval turbine {
         rule "sfb-$input-$result" $input $turbine::LOCAL \
             "string_from_blob_body $input $result"
     }
-
     proc string_from_blob_body { input result } {
         set s [ retrieve_blob_string $input ]
         store_string $result $s
