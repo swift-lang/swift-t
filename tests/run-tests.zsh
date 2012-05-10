@@ -68,7 +68,21 @@ crash()
 
 STC_TESTS_DIR=$( cd $( dirname $0 ) ; /bin/pwd )
 STC_ROOT_DIR=$( dirname $STC_TESTS_DIR )
-STC=${STC_ROOT_DIR}/code/bin/stc
+STC_TRIES=( ${STC_ROOT_DIR}/code/bin/stc ${STC_ROOT_DIR}/bin/stc )
+STC=""
+for F in ${STC_TRIES}
+do
+  if [[ -x ${F} ]]
+    then
+    STC=${F}
+    break
+  fi
+done
+if [[ ${STC} == "" ]]
+then
+  print "Could not find STC!"
+  exit 1
+fi
 
 RUN_TEST=${STC_TESTS_DIR}/run-test.zsh
 
@@ -219,16 +233,25 @@ do
   print "test: ${TEST_COUNT} (${i}/${SWIFT_FILE_TOTAL})"
   compile_test
 
-  if (( ! EXIT_CODE ))
-  then
-    run_test
-    EXIT_CODE=${?}
-  fi
+  COMPILE_CODE=${EXIT_CODE}
 
   # Reverse exit code if the case was intended to fail to compile
   if grep -q "THIS-TEST-SHOULD-NOT-COMPILE" ${SWIFT_FILE}
   then
     EXIT_CODE=$(( ! EXIT_CODE ))
+  fi
+
+  if (( EXIT_CODE ))
+  then
+    print
+    cat ${STC_OUT_FILE}
+    cat ${STC_ERR_FILE}
+  fi
+
+  if (( ! COMPILE_CODE ))
+  then
+    run_test
+    EXIT_CODE=${?}
   fi
 
   report_result ${EXIT_CODE}
