@@ -761,11 +761,11 @@ ADLB_Enumerate_Cmd(ClientData cdata, Tcl_Interp *interp,
    Copy a blob from the distributed store into a local blob
    in the memory of this process
    Must be freed with adlb::blob_free
-   usage: adlb::blob_cache_retrieve <id> => [ list <pointer> <length> ]
+   usage: adlb::retrieve_blob <id> => [ list <pointer> <length> ]
  */
 static int
-ADLB_Blob_Cache_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
-                             int objc, Tcl_Obj *const objv[])
+ADLB_Retrieve_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
+                       int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
 
@@ -1265,7 +1265,7 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("store",     ADLB_Store_Cmd);
   COMMAND("retrieve",  ADLB_Retrieve_Cmd);
   COMMAND("enumerate", ADLB_Enumerate_Cmd);
-  COMMAND("blob_cache_retrieve", ADLB_Blob_Cache_Retrieve_Cmd);
+  COMMAND("retrieve_blob", ADLB_Retrieve_Blob_Cmd);
   COMMAND("blob_free",  ADLB_Blob_Free_Cmd);
   COMMAND("store_blob_floats", ADLB_Blob_store_floats_Cmd);
   COMMAND("slot_create", ADLB_Slot_Create_Cmd);
