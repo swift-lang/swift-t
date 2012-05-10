@@ -1064,13 +1064,8 @@ ADLB_Container_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::container_typeof <%li> failed!", id);
 
-  // DEBUG_ADLB("adlb::container_typeof: <%li> is: %i\n", id, type);
-
   char type_string[32];
   ADLB_Data_type_tostring(type_string, type);
-
-  // DEBUG_ADLB("adlb::container_typeof: <%li> is: %s",
-  //            id, type_string);
 
   Tcl_Obj* result = Tcl_NewStringObj(type_string, -1);
   Tcl_SetObjResult(interp, result);
