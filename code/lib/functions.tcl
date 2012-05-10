@@ -53,7 +53,7 @@ namespace eval turbine {
     proc trace_body { args } {
         set valuelist [ list ]
         foreach v $args {
-            set value [ get $v ]
+            set value [ retrieve $v ]
             lappend valuelist $value
         }
         trace_impl2 $valuelist
@@ -77,7 +77,7 @@ namespace eval turbine {
         }
         puts ""
     }
-    
+
     # For tests/debugging
     proc sleep_trace { stack outputs inputs } {
         # parent stack and output arguments not read
@@ -91,7 +91,7 @@ namespace eval turbine {
     }
     proc sleep_trace_body { secs inputs } {
         set secs_val [ retrieve_float $secs ]
-        after [ expr round($secs_val * 1000) ] 
+        after [ expr round($secs_val * 1000) ]
         puts "AFTER"
         trace_body $inputs
     }
@@ -273,8 +273,7 @@ namespace eval turbine {
     }
 
     proc toint_body { input result } {
-      set t [ get $input ]
-
+      set t [ retrieve $input ]
       store_integer $result [ check_str_int $t ]
     }
 
@@ -291,7 +290,7 @@ namespace eval turbine {
     }
 
     proc fromint_body { input result } {
-        set t [ get $input ]
+        set t [ retrieve_integer $input ]
         # Tcl performs the conversion naturally
         store_string $result $t
     }
@@ -332,7 +331,7 @@ namespace eval turbine {
     }
 
     proc blob_from_string_body { input result } {
-        set t [ get $input ]
+        set t [ retrieve $input ]
         store_blob_string $result $t
     }
 
@@ -359,7 +358,7 @@ namespace eval turbine {
         c::log "bff_body start"
         set A [ list ]
         for { set i 0 } { $i < $N } { incr i } {
-            set td [ container_get $container $i ]
+            set td [ container_lookup $container $i ]
             set v  [ retrieve_float $td ]
             lappend A $v
         }

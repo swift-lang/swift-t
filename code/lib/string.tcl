@@ -17,35 +17,35 @@ namespace eval turbine {
     proc strcat_body { result args } {
         set output [ list ]
         foreach input $args {
-            set t [ get $input ]
+            set t [ retrieve_string $input ]
             lappend output $t
         }
         set total [ join $output "" ]
         store_string $result $total
     }
 
+    # Substring of s starting at i of length n
     proc substring { stack result inputs  } {
 
-        set str [ lindex $inputs 0 ]
-        set first [ lindex $inputs 1 ]
-        set len [ lindex $inputs 2 ]
-        rule "substring-$str-$first-$len" $inputs \
-            $turbine::LOCAL \
-            "substring_body $result $str $first $len"
+        set s [ lindex $inputs 0 ]
+        set i [ lindex $inputs 1 ]
+        set n [ lindex $inputs 2 ]
+        rule "substring-$s-$i-$n" $inputs $turbine::LOCAL \
+            "substring_body $result $s $i $n"
     }
 
-    proc substring_body { result str first len } {
-        set str_val   [ get $str ]
-        set first_val [ get $first ]
-        set len_val   [ get $len ]
+    proc substring_body { result s i n } {
+        set s_value [ retrieve_string  $s ]
+        set i_value [ retrieve_integer $i ]
+        set n_value [ retrieve_integer $n ]
 
-        set result_val [ substring_impl $str_val $first_val $len_val ]
-        store_string $result $result_val
+        set result_value [ substring_impl $s_value $i_value $n_value ]
+        store_string $result $result_value
     }
 
-    proc substring_impl { str first len } {
-        set last [ expr $first + $len - 1 ]
-        return [ string range $str $first $last ]
+    proc substring_impl { s i n } {
+        set last [ expr $i + $n - 1 ]
+        return [ string range $s $i $n ]
     }
 
     # o = i;
@@ -107,13 +107,14 @@ namespace eval turbine {
     }
 
     proc sprintf { stack result inputs } {
-        rule sprintf $inputs $turbine::LOCAL "sprintf_body $result $inputs"
+        rule sprintf $inputs $turbine::LOCAL \
+            "sprintf_body $result $inputs"
     }
 
     proc sprintf_body { result args } {
         set L [ list ]
         foreach a $args {
-            lappend L [ get $a ]
+            lappend L [ retrieve $a ]
         }
 
         set s [ eval format $L ]

@@ -10,7 +10,7 @@ namespace eval turbine {
         rule "assert-$cond-$msg" "$cond $msg" \
             $turbine::LOCAL "assert_body $cond $msg"
     }
-    
+
     proc assert_body { cond msg } {
         set cond_value [ retrieve_integer $cond ]
         set msg_value [ retrieve_string $msg ]
@@ -24,7 +24,7 @@ namespace eval turbine {
             log "assert passed: $msg"
         }
     }
-    
+
     # assert(arg1, arg2, msg)
     # if arg1 != arg2 according to TCL's comparison rules
     #  (e.g. "1" == 1 and 1 == 1)
@@ -36,11 +36,11 @@ namespace eval turbine {
         rule "assertEqual-$arg1-$arg2-$msg" "$arg1 $arg2 $msg" \
             $turbine::LOCAL "assertEqual_body $arg1 $arg2 $msg"
     }
-    
+
     proc assertEqual_body { arg1 arg2 msg } {
-        set arg1_value [ get $arg1 ]
-        set arg2_value [ get $arg2 ]
-        set msg_value [ retrieve_string $msg ]
+        set arg1_value [ retrieve $arg1 ]
+        set arg2_value [ retrieve $arg2 ]
+        set msg_value  [ retrieve_string $msg ]
         assertEqual_impl "$arg1_value" "$arg2_value" "$msg_value"
     }
 
@@ -51,7 +51,7 @@ namespace eval turbine {
             log "assertEqual $arg1 $arg2 passed: $msg"
         }
     }
-    
+
     # assertLT(arg1, arg2, msg)
     # if arg1 >= arg2 according to TCL's comparison rules
     # then crash, printing the two values and the provided msg
@@ -62,18 +62,18 @@ namespace eval turbine {
         rule "assertLT-$arg1-$arg2-$msg" "$arg1 $arg2 $msg" \
             $turbine::LOCAL "assertLT_body $arg1 $arg2 $msg"
     }
-    
+
     proc assertLT_body { arg1 arg2 msg } {
-        set arg1_value [ get $arg1 ]
-        set arg2_value [ get $arg2 ]
+        set arg1_value [ retrieve $arg1 ]
+        set arg2_value [ retrieve $arg2 ]
         if { $arg1_value >= $arg2_value } {
-            set msg_value [ get $msg ]
+            set msg_value [ retrieve $msg ]
             error "Assertion failed $arg1_value >= $arg2_value: $msg_value"
         } else {
             log "assertLT: $arg1_value $arg2_value"
         }
     }
-    
+
     # assertLTE(arg1, arg2, msg)
     # if arg1 >= arg2 according to TCL's comparison rules
     # then crash, printing the two values and the provided msg
@@ -84,12 +84,12 @@ namespace eval turbine {
         rule "assertLTE-$arg1-$arg2-$msg" "$arg1 $arg2 $msg" \
             $turbine::LOCAL "assertLTE_body $arg1 $arg2 $msg"
     }
-    
+
     proc assertLTE_body { arg1 arg2 msg } {
-        set arg1_value [ get $arg1 ]
-        set arg2_value [ get $arg2 ]
+        set arg1_value [ retrieve $arg1 ]
+        set arg2_value [ retrieve $arg2 ]
         if { $arg1_value > $arg2_value } {
-            set msg_value [ get $msg ]
+            set msg_value [ retrieve $msg ]
             error "Assertion failed $arg1_value > $arg2_value: $msg_value"
         } else {
             log "assertLTE: $arg1_value $arg2_value"

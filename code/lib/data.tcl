@@ -4,7 +4,7 @@
 namespace eval turbine {
 
     namespace export                                  \
-        allocate get                                  \
+        allocate retrieve                             \
         create_string  store_string                   \
         create_integer store_integer retrieve_integer \
         create_float   store_float   retrieve_float   \
@@ -13,7 +13,7 @@ namespace eval turbine {
         create_blob                                   \
         retrieve_blob_string                          \
         allocate_container                            \
-        container_get container_list                  \
+        container_lookup container_list               \
         container_insert close_datum                  \
         filename
 
@@ -75,8 +75,10 @@ namespace eval turbine {
         return $u
     }
 
-    # usage: get <id>
-    proc get { id } {
+    # usage: retrieve <id>
+    # Not type checked
+    # Always tores result as Tcl string
+    proc retrieve { id } {
         set result [ adlb::retrieve $id ]
         debug "get: <$id>=$result"
         return $result
@@ -186,7 +188,7 @@ namespace eval turbine {
     }
 
     # Returns 0 if subscript is not found
-    proc container_get { id subscript } {
+    proc container_lookup { id subscript } {
         set s [ adlb::lookup $id $subscript ]
         return $s
     }

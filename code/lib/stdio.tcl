@@ -14,7 +14,7 @@ namespace eval turbine {
     proc printf_body { args } {
         set L [ list ]
         foreach a $args {
-            lappend L [ get $a ]
+            lappend L [ retrieve $a ]
         }
         set s [ eval format $L ]
         puts $s

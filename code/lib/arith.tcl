@@ -16,8 +16,8 @@ namespace eval turbine {
     }
 
     proc plus_integer_body { parent c a b } {
-        set a_value [ get $a ]
-        set b_value [ get $b ]
+        set a_value [ retrieve_integer $a ]
+        set b_value [ retrieve_integer $b ]
         set c_value [ expr $a_value + $b_value ]
         log "plus: $a_value + $b_value => $c_value"
         store_integer $c $c_value
@@ -50,8 +50,8 @@ namespace eval turbine {
             "minus_integer_body $c $a $b"
     }
     proc minus_integer_body {c a b } {
-        set a_value [ get $a ]
-        set b_value [ get $b ]
+        set a_value [ retrieve_integer $a ]
+        set b_value [ retrieve_integer $b ]
         set c_value [ expr $a_value - $b_value ]
         log "minus: $a_value - $b_value => $c_value"
         store_integer $c $c_value
@@ -85,8 +85,8 @@ namespace eval turbine {
             "multiply_integer_body $c $a $b"
     }
     proc multiply_integer_body {c a b } {
-        set a_value [ get $a ]
-        set b_value [ get $b ]
+        set a_value [ retrieve_integer $a ]
+        set b_value [ retrieve_integer $b ]
         set c_value [ expr $a_value * $b_value ]
         log "multiply: $a_value * $b_value => $c_value"
         # Emulate some computation time
@@ -162,7 +162,7 @@ namespace eval turbine {
     }
 
     proc negate_integer_body { c a } {
-        set a_value [ get $a ]
+        set a_value [ retrieve_integer $a ]
         set c_value [ expr 0 - $a_value ]
         log "negate: -1 * $a_value => $c_value"
         # Emulate some computation time
@@ -243,7 +243,7 @@ namespace eval turbine {
             "copy_integer_body $o $i"
     }
     proc copy_integer_body { o i } {
-        set i_value [ get $i ]
+        set i_value [ retrieve_integer $i ]
         set o_value $i_value
         log "copy $i_value => $o_value"
         store_integer $o $o_value
@@ -445,8 +445,8 @@ namespace eval turbine {
             "pow_integer_body $c $a $b"
     }
     proc pow_integer_body { c a b } {
-        set a_value [ get $a ]
-        set b_value [ get $b ]
+        set a_value [ retrieve_integer $a ]
+        set b_value [ retrieve_integer $b ]
         # convert to float otherwise doesn't handle negative
         # exponents right
         set c_value [ pow_integer_impl $a_value $b_value ]

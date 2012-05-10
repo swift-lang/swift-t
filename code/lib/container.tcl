@@ -6,20 +6,20 @@ namespace eval turbine {
     namespace export f_container_create_nested
 
 
-    # Same as container get, but fail if item does not exist
-    proc checked_container_get { c i } {
-        set res [ container_get $c $i ]
+    # Same as container_lookup, but fail if item does not exist
+    proc container_lookup_checked { c i } {
+        set res [ container_lookup $c $i ]
         if { $res == 0 } {
-            error "lookup failed: checked_container_get <$c>\[$i\]"
+            error "lookup failed: container_lookup <$c>\[$i\]"
         }
         return $res
     }
 
-    # When i is closed, set d := c[i]
+    # When i is closed, set d := c[i] (by value copy)
     # d: the destination, an integer
     # inputs: [ list c i ]
     # c: the container
-    # i: the subscript
+    # i: the subscript (any type)
     proc container_f_get_integer { parent d inputs } {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
@@ -29,19 +29,19 @@ namespace eval turbine {
     }
 
     proc container_f_get_integer_body { d c i } {
-        set t1 [ get $i ]
-        set t2 [ container_get $c $t1 ]
-        if { $t2 == 0 } {
-            error "lookup failed: container_f_get <$c>\[$t1\]"
+        set s [ retrieve $i ]
+        set t [ container_lookup $c $s ]
+        if { $t == 0 } {
+            error "lookup failed: container_f_get <$c>\[\"$s\"\]"
         }
-        set t3 [ get $t2 ]
-        store_integer $d $t3
+        set value [ retrieve_integer $t ]
+        store_integer $d $value
     }
 
-    # When i is closed, set c[i] := d
+    # When i is closed, set c[i] := d (by insertion)
     # inputs: [ list c i d ]
     # c: the container
-    # i: the subscript
+    # i: the subscript (any type)
     # d: the data
     # outputs: ignored.  To block on this, use turbine::reference
     proc container_f_insert { parent outputs inputs } {
@@ -56,14 +56,13 @@ namespace eval turbine {
     }
 
     proc container_f_insert_body { c i d } {
-        set t1 [ get $i ]
-        container_insert $c $t1 $d 1
+        set s [ retrieve $i ]
+        container_insert $c $s $d 1
     }
 
     # When i and r are closed, set c[i] := *(r)
     # inputs: [ list c i r ]
     # r: a reference to a turbine ID
-    #
     proc container_f_deref_insert { parent outputs inputs } {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
@@ -78,7 +77,7 @@ namespace eval turbine {
 
     proc container_f_deref_insert_body { c i r } {
         set t1 [ retrieve_integer $i ]
-        set d [ get $r ]
+        set d [ retrieve $r ]
         container_insert $c $t1 $d
     }
 
@@ -86,7 +85,6 @@ namespace eval turbine {
     # inputs: [ list c i r ]
     # i: an integer which is the index to insert into
     # r: a reference to a turbine ID
-    #
     proc container_deref_insert { parent outputs inputs } {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
@@ -100,7 +98,7 @@ namespace eval turbine {
     }
 
     proc container_deref_insert_body { c i r } {
-        set d [ get $r ]
+        set d [ retrieve $r ]
         container_insert $c $i $d
     }
 
@@ -120,7 +118,7 @@ namespace eval turbine {
     # inputs: [ list c i r ]
     # outputs: None.  You can block on d with turbine::dereference
     # c: the container
-    # i: the subscript
+    # i: the subscript (any type)
     # r: the reference TD
     proc f_reference { parent outputs inputs } {
         set c [ lindex $inputs 0 ]
@@ -132,7 +130,7 @@ namespace eval turbine {
             "turbine::f_reference_body $c $i $r"
     }
     proc f_reference_body { c i r } {
-        set t1 [ get $i ]
+        set t1 [ retrieve $i ]
         adlb::container_reference $c $t1 $r
     }
 
@@ -144,7 +142,7 @@ namespace eval turbine {
     }
     proc f_dereference_integer_body { v r } {
         # Get the TD from the reference
-        set id [ get $r ]
+        set id [ retrieve_integer $r ]
         # When the TD has a value, copy the value
         copy_integer no_stack $v $id
     }
@@ -157,7 +155,7 @@ namespace eval turbine {
 
     proc f_dereference_float_body { v r } {
         # Get the TD from the reference
-        set id [ get $r ]
+        set id [ retrieve_integer $r ]
         # When the TD has a value, copy the value
         copy_float no_stack $v $id
     }
@@ -170,7 +168,7 @@ namespace eval turbine {
     }
     proc f_dereference_string_body { v r } {
         # Get the TD from the reference
-        set id [ get $r ]
+        set id [ retrieve_integer $r ]
         # When the TD has a value, copy the value
         copy_string no_stack $v $id
     }
@@ -194,14 +192,15 @@ namespace eval turbine {
     proc f_cref_lookup_literal_body { cr i d } {
         # When this procedure is run, cr should be set and
         # i should be the literal index
-        set c [ get $cr ]
+        set c [ retrieve_integer $cr ]
         adlb::container_reference $c $i $d
     }
 
     # When reference cr is closed, store d = (*cr)[i]
     # Blocks on cr and i
     # inputs: [ list cr i d ]
-    #       cr is a reference to a container
+    #       cr: reference to container
+    #       i:  subscript (any type)
     # outputs: ignored
     proc f_cref_lookup { parent outputs inputs } {
         set cr [ lindex $inputs 0 ]
@@ -214,8 +213,8 @@ namespace eval turbine {
 
     proc f_cref_lookup_body { cr i d } {
         # When this procedure is run, cr and i should be set
-        set c [ get $cr ]
-        set t1 [ get $i ]
+        set c [ retrieve_integer $cr ]
+        set t1 [ retrieve $i ]
         adlb::container_reference $c $t1 $d
     }
 
@@ -280,7 +279,7 @@ namespace eval turbine {
     }
     proc cref_deref_insert_body { cr j dr oc } {
         set c [ retrieve_integer $cr ]
-        set d [ get $dr ]
+        set d [ retrieve $dr ]
         container_insert $c $j $d
         adlb::slot_drop $oc
     }
@@ -297,7 +296,7 @@ namespace eval turbine {
     }
     proc cref_f_deref_insert_body { cr j dr oc } {
         set c [ retrieve_integer $cr ]
-        set d [ get $dr ]
+        set d [ retrieve $dr ]
         set jval [ retrieve_integer $j ]
         container_insert $c $jval $d
         adlb::slot_drop $oc
@@ -380,7 +379,7 @@ namespace eval turbine {
 
         debug "f_container_create_nested: $r $c\[$i\] $type"
 
-        set s [ get $i ]
+        set s [ retrieve $i ]
         set res [ container_create_nested $c $s $type ]
         store_integer $r $res
     }
@@ -400,7 +399,7 @@ namespace eval turbine {
     }
 
     proc cref_create_nested_body { r cr i type } {
-        set c [ get $cr ]
+        set c [ retrieve_integer $cr ]
         set res [ container_create_nested $c $i $type ]
         store_integer $r $res
     }
@@ -420,8 +419,8 @@ namespace eval turbine {
     }
 
     proc f_cref_create_nested_body { r cr i type } {
-        set c [ get $cr ]
-        set s [ get $i ]
+        set c [ retrieve_integer $cr ]
+        set s [ retrieve $i ]
         set res [ container_create_nested $c $s $type ]
         store_integer $r $res
     }
@@ -555,7 +554,7 @@ namespace eval turbine {
           if { [ adlb::exists $turbine_id ] } {
             # retrieve value and make sure it's floating point
             # so we don't get surprised by integer division
-            set x [ get $turbine_id ]
+            set x [ retrieve_float $turbine_id ]
             set x [ expr double($x) ]
             puts "c\[$i\] = $x"
             if { $sum_out != 0 } {
@@ -662,12 +661,12 @@ namespace eval turbine {
       set i $next_index
       while { $i < $keycount } {
         set key [ lindex $keys $i ]
-        set struct [ container_get $container $key ]
+        set struct [ container_lookup $container $key ]
         # puts "key: $key"
         # struct should be closed
-        set n_id [ container_get $struct "n" ]
-        set mean_id [ container_get $struct "mean" ]
-        set M2_id [ container_get $struct "M2" ]
+        set n_id [ container_lookup $struct "n" ]
+        set mean_id [ container_lookup $struct "mean" ]
+        set M2_id [ container_lookup $struct "M2" ]
         if { [ adlb::exists $n_id ] && [ adlb::exists $mean_id ] \
             && [ adlb::exists $M2_id ] } {
           set n [ retrieve_integer $n_id ]
