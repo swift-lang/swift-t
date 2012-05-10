@@ -104,7 +104,7 @@ function disable_opt() {
   local OPTNAME=$(get_compiler_opt_name $1)
   if [ -z "$OPTNAME" ]; then
     echo "ERROR Invalid compiler option $1" 1>&2
-    exit 1
+    return 1
   fi
   COMPILER_OPTS+="-D${OPTNAME}=false"
 }
@@ -113,7 +113,7 @@ function enable_opt() {
   local OPTNAME=$(get_compiler_opt_name $1)
   if [ -z "$OPTNAME" ]; then
     echo "ERROR Invalid compiler option $1" 1>&2
-    exit 1
+    return 1
   fi
   COMPILER_OPTS+="-D${OPTNAME}=true"
 }
@@ -171,7 +171,7 @@ do
         fi
       else
         echo "Invalid optimization level -O ${OPTARG}"
-        exit 1
+        return 1
       fi
       ;;
     C) debug "IC Output: ${OPTARG}"
@@ -179,7 +179,7 @@ do
        ;;
     *)
       # getopts already printed an error message
-      exit ${EXIT_ERROR_SCRIPT}
+      return ${EXIT_ERROR_SCRIPT}
       ;;
   esac
 done
@@ -194,13 +194,13 @@ OUTPUT=$2
 if [[ ${INPUT} == "" ]]
 then
   print "stc: no input file"
-  exit ${EXIT_ERROR_SCRIPT}
+  return ${EXIT_ERROR_SCRIPT}
 fi
 
 if [[ ! -f ${INPUT} ]]
 then
   print "stc: not readable: ${INPUT}"
-  exit ${EXIT_ERROR_SCRIPT}
+  return ${EXIT_ERROR_SCRIPT}
 fi
 
 # Clear this in case the user has set it
@@ -243,7 +243,7 @@ fi
 if [[ -z ${TURBINE_HOME} ]]
 then
   print "Not set: TURBINE_HOME"
-  exit ${EXIT_ERROR_SCRIPT}
+  return ${EXIT_ERROR_SCRIPT}
 fi
 
 # Add last resort include paths
@@ -261,9 +261,21 @@ if [[ ${OUTPUT_MODE} == "cpp" ]]
 then
   # Just preprocess
   ${=CPP} ${INPUT} > ${OUTPUT}
-  exit ${?}
+  return ${?}
 fi
 
 # We use ZSH to make a special file for the pre-processed script
 java ${=ARGS} ${MAIN} <( ${=CPP} ${INPUT} ) ${OUTPUT}
+EXITCODE=${?}
+
+if (( EXITCODE ))
+then
+  # Compile did not succeed: remove output
+  if [[ ${OUTPUT} != /dev* && -f ${OUTPUT} ]]
+  then
+    rm ${OUTPUT}
+  fi
+fi
+
 # Return the exit code from the java process
+return ${EXITCODE}
