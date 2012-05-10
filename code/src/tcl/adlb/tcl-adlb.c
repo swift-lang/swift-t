@@ -642,9 +642,23 @@ report_type_mismatch(adlb_data_type expected,
          e_string, a_string);
 }
 
+static inline int set_enumerate_pointers(Tcl_Interp *interp,
+                                         Tcl_Obj *const objv[],
+                                         const char* token,
+                                         char** subscripts,
+                                         adlb_datum_id** member_ids);
+
+static inline void enumerate_object(Tcl_Interp *interp,
+                                    const char* token,
+                                    char* subscripts,
+                                    int length, int actual,
+                                    adlb_datum_id* member_ids,
+                                    Tcl_Obj** result);
+
 /**
    usage:
-   adlb::enumerate <id> subscripts|members|dict|count <count>|all <offset>
+   adlb::enumerate <id> subscripts|members|dict|count
+                   <count>|all <offset>
 
    subscripts: return list of subscript strings
    members: return list of member TDs
@@ -658,16 +672,14 @@ ADLB_Enumerate_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(5);
   int rc;
   long container_id;
-  char* token;
-  char* tmp;
   int count;
   int offset;
   rc = Tcl_GetLongFromObj(interp, objv[1], &container_id);
   TCL_CHECK_MSG(rc, "requires container id!");
-  token = Tcl_GetStringFromObj(objv[2], NULL);
+  char* token = Tcl_GetStringFromObj(objv[2], NULL);
   TCL_CONDITION(token, "requires token!");
   // This argument is either the integer count or "all", all == -1
-  tmp = Tcl_GetStringFromObj(objv[3], NULL);
+  char* tmp = Tcl_GetStringFromObj(objv[3], NULL);
   if (strcmp(tmp, "all"))
   {
     rc = Tcl_GetIntFromObj(interp, objv[3], &count);
@@ -678,55 +690,83 @@ ADLB_Enumerate_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_GetIntFromObj(interp, objv[4], &offset);
   TCL_CHECK_MSG(rc, "requires offset!");
 
+  // Set up call
   char* subscripts;
   int length;
   adlb_datum_id* member_ids;
   int actual;
-
-  if (!strcmp(token, "subscripts"))
-  {
-    subscripts = NULL+1;
-    member_ids = NULL;
-  }
-  else if (!strcmp(token, "members"))
-  {
-    subscripts = NULL;
-    member_ids = NULL+1;
-  }
-  else if (!strcmp(token, "dict"))
-  {
-    subscripts = NULL+1;
-    member_ids = NULL+1;
-  }
-  else if (!strcmp(token, "count"))
-  {
-    subscripts = NULL;
-    member_ids = NULL;
-  }
-  else 
-  {
-    tcl_condition_failed(interp, objv[0], "unknown token!");
-    return TCL_ERROR;
-  }
+  rc = set_enumerate_pointers(interp, objv, token,
+                              &subscripts, &member_ids);
+  TCL_CHECK_MSG(rc, "unknown token!");
 
   rc = ADLB_Enumerate(container_id, count, offset,
                       &subscripts, &length, &member_ids, &actual);
 
+  // Return results to Tcl
   Tcl_Obj* result;
+  enumerate_object(interp, token,
+                   subscripts, length, actual, member_ids, &result);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+/**
+   Encode results requested in pointers
+   interp, objv provided for error handling
+ */
+static inline int
+set_enumerate_pointers(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                       const char* token,
+                       char** subscripts, adlb_datum_id** member_ids)
+{
   if (!strcmp(token, "subscripts"))
   {
-    result = Tcl_NewStringObj(subscripts, length-1);
+    *subscripts = NULL+1;
+    *member_ids = NULL;
+  }
+  else if (!strcmp(token, "members"))
+  {
+    *subscripts = NULL;
+    *member_ids = NULL+1;
+  }
+  else if (!strcmp(token, "dict"))
+  {
+    *subscripts = NULL+1;
+    *member_ids = NULL+1;
+  }
+  else if (!strcmp(token, "count"))
+  {
+    *subscripts = NULL;
+    *member_ids = NULL;
+  }
+  else
+  {
+    return TCL_ERROR;
+  }
+  return TCL_OK;
+}
+
+/**
+   Pack ADLB_Enumerate results into Tcl object
+ */
+void
+enumerate_object(Tcl_Interp *interp, const char* token,
+                 char* subscripts, int length, int actual,
+                 adlb_datum_id* member_ids,
+                 Tcl_Obj** result)
+{
+  if (!strcmp(token, "subscripts"))
+  {
+    *result = Tcl_NewStringObj(subscripts, length-1);
     free(subscripts);
   }
   else if (!strcmp(token, "members"))
   {
     Tcl_Obj* objv[actual];
     for (int i = 0; i < actual; i++)
-    {
       objv[i] = Tcl_NewLongObj(member_ids[i]);
-    }
     free(member_ids);
-    result = Tcl_NewListObj(actual, objv);
+    *result = Tcl_NewListObj(actual, objv);
   }
   else if (!strcmp(token, "dict"))
   {
@@ -737,24 +777,21 @@ ADLB_Enumerate_Cmd(ClientData cdata, Tcl_Interp *interp,
     Tcl_Obj* m[actual];
     for (int i = 0; i < actual; i++)
       m[i] = Tcl_NewLongObj(member_ids[i]);
-    result = Tcl_NewDictObj();
+    *result = Tcl_NewDictObj();
     for (int i = 0; i < actual; i++)
     {
       Tcl_Obj* p;
       Tcl_ListObjIndex(interp, s, i, &p);
-      Tcl_DictObjPut(interp, result, p, m[i]);
+      Tcl_DictObjPut(interp, *result, p, m[i]);
     }
   }
   else if (!strcmp(token, "count"))
   {
-    result = Tcl_NewLongObj(actual);
+    *result = Tcl_NewLongObj(actual);
   }
   else
     // Cannot get here
-    return TCL_ERROR;
-
-  Tcl_SetObjResult(interp, result);
-  return TCL_OK;
+    assert(false);
 }
 
 /**
