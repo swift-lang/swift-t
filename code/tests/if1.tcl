@@ -27,7 +27,7 @@ proc f { x r } {
     # Leaf function
     # Set r to 1 if x is odd, else 0
 
-    set x_value [ get $x ]
+    set x_value [ retrieve_integer $x ]
     store_integer $r [ expr $x_value % 2 ]
 }
 
@@ -35,7 +35,7 @@ proc g { x r } {
     # Leaf function
     # Copy x into r
 
-    set x_value [ get $x ]
+    set x_value [ retrieve_integer $x ]
     store_integer $r $x_value
 }
 
@@ -43,7 +43,7 @@ proc h { x r } {
     # Leaf function
     # Copy x into r
 
-    set x_value [ get $x ]
+    set x_value [ retrieve_integer $x ]
     store_integer $r $x_value
 }
 
@@ -72,11 +72,11 @@ proc myfun { a b x } {
 proc if_1 { stack c } {
 
     # c is the condition variable
-    set c_value [ get $c ]
+    set c_value [ retrieve_integer $c ]
 
     # Locate stack variables
-    set a [ container_get $stack "a" ]
-    set x [ container_get $stack "x" ]
+    set a [ container_lookup $stack "a" ]
+    set x [ container_lookup $stack "x" ]
 
     if $c_value {
         rule IF_1_1 $x $turbine::WORK "h $x $a"

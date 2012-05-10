@@ -26,7 +26,7 @@ proc rules { } {
 
     # This is not a real Turbine loop
     foreach subscript $L {
-        set member [ turbine::container_get 1 $subscript ]
+        set member [ turbine::container_lookup 1 $subscript ]
         puts "member: $member"
         set filename [ turbine::filename $member ]
         puts "filename: $filename"
@@ -40,5 +40,5 @@ turbine::finalize
 
 puts OK
 
-# Help TCL free memory
+# Help Tcl free memory
 proc exit args {}

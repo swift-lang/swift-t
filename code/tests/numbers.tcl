@@ -16,8 +16,8 @@ proc rules { } {
     turbine::store_integer 11 2
     turbine::store_integer 12 2
 
-    set v1 [ turbine::get 11 ]
-    set v2 [ turbine::get 12 ]
+    set v1 [ turbine::retrieve_integer 11 ]
+    set v2 [ turbine::retrieve_integer 12 ]
     set v3 [ expr $v1 + $v2 ]
 
     turbine::store_integer 13 $v3

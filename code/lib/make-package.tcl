@@ -18,18 +18,19 @@ set items [ eval list -load libtcladlb.so   \
                 -source turbine.tcl    \
                 -source engine.tcl     \
                 -source data.tcl       \
-                -source functions.tcl  \
                 -source assert.tcl     \
                 -source logical.tcl    \
-                -source string.tcl     \
                 -source arith.tcl      \
                 -source container.tcl  \
+                -source functions.tcl  \
+                -source mpe.tcl        \
                 -source rand.tcl       \
+                -source stats.tcl      \
                 -source stdio.tcl      \
                 -source stdlib.tcl     \
+                -source string.tcl     \
                 -source updateable.tcl \
                 -source unistd.tcl     \
-                -source mpe.tcl        \
                 -source helpers.tcl ]
 
 # List of Turbine shared objects and Tcl libraries

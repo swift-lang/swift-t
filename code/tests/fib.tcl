@@ -24,7 +24,7 @@ proc fib { stack o n } {
 proc if-0 { stack } {
     set n [ stack_lookup $stack n ]
     set o [ stack_lookup $stack o ]
-    set n_value [ get $n ]
+    set n_value [ retrieve_integer $n ]
     if { $n_value } {
         set parent $stack
         allocate_container stack string
@@ -48,7 +48,7 @@ proc if-1 { stack } {
     set __pscope1 [ stack_lookup $stack _parent ]
     set n [ stack_lookup $__pscope1 n ]
     set o [ stack_lookup $__pscope1 o ]
-    set __t0_value [ get $__t0 ]
+    set __t0_value [ retrieve_integer $__t0 ]
     if { $__t0_value } {
         set parent $stack
         allocate_container stack string

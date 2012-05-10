@@ -530,6 +530,14 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static inline void report_type_mismatch(adlb_data_type expected,
+                                        adlb_data_type actual);
+
+static inline int retrieve_object(Tcl_Interp *interp,
+                                  Tcl_Obj *const objv[],
+                                  long id, adlb_data_type type,
+                                  int length, Tcl_Obj** result);
+
 /**
    usage: adlb::retrieve <id> [<type>]
    If id is a blob, we try to return it as a string.
@@ -552,57 +560,86 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   {
     int tmp;
     rc = Tcl_GetIntFromObj(interp, objv[2], &tmp);
-    given_type = tmp;
     TCL_CHECK_MSG(rc, "2nd arg must be adlb:: type!");
+    given_type = tmp;
   }
 
-  // DEBUG_ADLB("adlb_retrieve: <%li>", id);
+  // Retrieve the data, actual type, and length from server
   adlb_data_type type;
   int length;
-  int string_length;
   rc = ADLB_Retrieve(id, &type, xfer, &length);
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%li> failed!", id);
-  TCL_CONDITION((given_type == ADLB_DATA_TYPE_NULL ||
-                 given_type == type),
-                 "type mismatch: expected: %i actual: %i",
-                 given_type, type);
 
+  // Type check
+  if ((given_type != ADLB_DATA_TYPE_NULL &&
+       given_type != type))
+  {
+    report_type_mismatch(given_type, type);
+    return TCL_ERROR;
+  }
+
+  // Unpack from xfer to Tcl object
+  Tcl_Obj* result;
+  rc = retrieve_object(interp, objv, id, type, length, &result);
+  TCL_CHECK(rc);
+
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+/**
+   interp, objv, id, and length: just for error checking and messages
+ */
+static inline int
+retrieve_object(Tcl_Interp *interp, Tcl_Obj *const objv[], long id,
+                adlb_data_type type, int length, Tcl_Obj** result)
+{
   long tmp_long;
   double tmp_double;
+  int string_length;
 
-  Tcl_Obj* result;
   switch (type)
   {
     case ADLB_DATA_TYPE_INTEGER:
       memcpy(&tmp_long, xfer, sizeof(long));
-      result = Tcl_NewLongObj(tmp_long);
+      *result = Tcl_NewLongObj(tmp_long);
       break;
     case ADLB_DATA_TYPE_FLOAT:
       memcpy(&tmp_double, xfer, sizeof(double));
-      result = Tcl_NewDoubleObj(tmp_double);
+      *result = Tcl_NewDoubleObj(tmp_double);
       break;
     case ADLB_DATA_TYPE_STRING:
-      result = Tcl_NewStringObj(xfer, length-1);
+      *result = Tcl_NewStringObj(xfer, length-1);
       break;
     case ADLB_DATA_TYPE_BLOB:
       string_length = strnlen(xfer, length);
       TCL_CONDITION(string_length < length,
                     "adlb::retrieve: unterminated blob: <%li>", id);
-      result = Tcl_NewStringObj(xfer, string_length);
+      *result = Tcl_NewStringObj(xfer, string_length);
       break;
     case ADLB_DATA_TYPE_FILE:
-      result = Tcl_NewStringObj(xfer, length-1);
+      *result = Tcl_NewStringObj(xfer, length-1);
       break;
     case ADLB_DATA_TYPE_CONTAINER:
-      result = Tcl_NewStringObj(xfer, length-1);
+      *result = Tcl_NewStringObj(xfer, length-1);
       break;
     default:
       result = NULL;
       return TCL_ERROR;
   }
-
-  Tcl_SetObjResult(interp, result);
   return TCL_OK;
+}
+
+static inline void
+report_type_mismatch(adlb_data_type expected,
+                     adlb_data_type actual)
+{
+  char e_string[16];
+  char a_string[16];
+  ADLB_Data_type_tostring(e_string, expected);
+  ADLB_Data_type_tostring(a_string, actual);
+  printf("type mismatch: expected: %s actual: %s\n",
+         e_string, a_string);
 }
 
 /**

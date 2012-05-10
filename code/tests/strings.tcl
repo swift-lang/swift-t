@@ -17,8 +17,8 @@ proc rules { } {
     turbine::store_string 11 "hi"
     turbine::store_string 12 "bye"
 
-    set v1 [ turbine::get 11 ]
-    set v2 [ turbine::get 12 ]
+    set v1 [ turbine::retrieve_string 11 ]
+    set v2 [ turbine::retrieve_string 12 ]
 
     puts -nonewline "result: "
     # Use 0 as stack frame

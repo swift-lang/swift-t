@@ -30,7 +30,7 @@ proc rules { } {
 
     # This is not a real Turbine loop
     foreach subscript $L {
-        set member [ turbine::container_get $c $subscript ]
+        set member [ turbine::container_lookup $c $subscript ]
         puts "member: $member"
         set filename [ turbine::filename $member ]
         puts "filename: $filename"

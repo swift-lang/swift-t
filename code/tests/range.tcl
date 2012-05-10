@@ -24,8 +24,8 @@ proc rules { } {
 
 proc loop1_body { parent container key } {
     puts "loop1_body: $key"
-    set t [ turbine::get $key ]
-    set member [ turbine::container_get $container $t ]
+    set t [ turbine::retrieve $key ]
+    set member [ turbine::container_lookup $container $t ]
     # set value [ turbine::retrieve_integer $member ]
     turbine::trace $parent "" [ list $key $member ]
 }
@@ -37,5 +37,5 @@ turbine::finalize
 
 puts OK
 
-# Help TCL free memory
+# Help Tcl free memory
 proc exit args {}

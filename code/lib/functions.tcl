@@ -12,7 +12,7 @@
 namespace eval turbine {
 
     # User functions
-    namespace export argv_get enumerate literal shell
+    namespace export enumerate literal shell
 
     # Memory functions (will be in turbine::f namespace)
     namespace export f_dereference
@@ -156,9 +156,9 @@ namespace eval turbine {
 
     proc drange_body { result start end parts } {
 
-        set start_value [ get $start ]
-        set end_value   [ get $end ]
-        set parts_value [ get $parts ]
+        set start_value [ retrieve $start ]
+        set end_value   [ retrieve $end ]
+        set parts_value [ retrieve $parts ]
         set size        [ expr $end_value - $start_value + 1]
         set step        [ expr $size / $parts_value ]
 
@@ -194,7 +194,7 @@ namespace eval turbine {
         global WORK_TYPE
         foreach key $keys {
             c::log "log_dloop_body"
-            set c [ container_get $container $key ]
+            set c [ container_lookup $container $key ]
             release "loop_body $loop_body $stack $c"
         }
     }
@@ -207,7 +207,7 @@ namespace eval turbine {
 
     proc readdata_body { result filename } {
 
-        set name_value [ get $filename ]
+        set name_value [ retrieve $filename ]
         if { [ catch { set fd [ open $name_value r ] } e ] } {
             error "Could not open file: '$name_value'"
         }
@@ -301,7 +301,7 @@ namespace eval turbine {
     }
 
     proc tofloat_body { input result } {
-        set t [ get $input ]
+        set t [ retrieve $input ]
         #TODO: would be better if the accepted double types
         #     matched Swift float literals
         store_float $result [ check_str_float $t ]
@@ -320,7 +320,7 @@ namespace eval turbine {
     }
 
     proc fromfloat_body { input result } {
-        set t [ get $input ]
+        set t [ retrieve $input ]
         # Tcl performs the conversion naturally
         store_string $result $t
     }
@@ -417,7 +417,7 @@ namespace eval turbine {
         set inputs [ lreplace $args 0 0 ]
         set values [ list ]
         foreach i $inputs {
-            set value [ get $i ]
+            set value [ retrieve $i ]
             lappend values $value
         }
         debug "executing: $command $values"
@@ -430,10 +430,10 @@ namespace eval turbine {
 
         set result ""
         while true {
-            set result [ container_get $stack $symbol ]
+            set result [ container_lookup $stack $symbol ]
             if { [ string equal $result "0" ] } {
                 # Not found in local stack frame: check enclosing frame
-                set enclosure [ container_get $stack _enclosure ]
+                set enclosure [ container_lookup $stack _enclosure ]
                 if { ! [ string equal $enclosure "0" ] } {
                     set stack $enclosure
                 } else {
@@ -455,6 +455,17 @@ namespace eval turbine {
     proc copy_void_body { o i } {
         log "copy_void $i => $o"
         store_void $o
+    }
+
+    # Copy string value
+    proc copy_string { parent o i } {
+        rule "copystring-$o-$i" $i $turbine::LOCAL \
+            "copy_string_body $o $i"
+    }
+    proc copy_string_body { o i } {
+        set i_value [ retrieve_string $i ]
+        log "copy $i_value => $i_value"
+        store_string $o $i_value
     }
 
     # create a void type (i.e. just set it)

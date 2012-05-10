@@ -1,7 +1,8 @@
-#ifndef __STC_BUILTINS_SWIFT__
-#define __STC_BUILTINS_SWIFT__
 
 // Swift/Turbine builtins defined here
+
+#ifndef BUILTINS_SWIFT
+#define BUILTINS_SWIFT
 
 // NYI = Not Yet Implemented at Turbine layer
 
@@ -25,6 +26,9 @@
 (int o) min_integer     (int i1, int i2) "turbine" "0.0.2" "min_integer";
 (float o) pow_integer     (int i1, int i2) "turbine" "0.0.2" "pow_integer";
 
+// This is used by the string+ concatenation operator
+(string o) strcat(string... args) "turbine" "0.0.2" "strcat";
+
 (boolean o) and (boolean i1, boolean i2) "turbine" "0.0.2" "and";
 (boolean o) or  (boolean i1, boolean i2) "turbine" "0.0.2" "or";
 
@@ -40,19 +44,7 @@
 (float o) min_float     (float i1, float i2) "turbine" "0.0.2" "min_float";
 (float o) pow_float     (float i1, float i2) "turbine" "0.0.2" "pow_float";
 
-// Mathematical functions
-(int o) abs_integer     (int i) "turbine"  "0.0.2" "abs_integer";
-(float o) abs_float     (float i) "turbine"  "0.0.2" "abs_float";
-(int o) floor           (float i) "turbine"  "0.0.2" "floor";
-(int o) ceil            (float i) "turbine"  "0.0.2" "ceil";
-(int o) round           (float i) "turbine"  "0.0.2" "round";
-(float o) log           (float i) "turbine"  "0.0.2" "log_e";
-(float o) exp           (float i) "turbine"  "0.0.2" "exp";
-(float o) sqrt          (float i) "turbine"  "0.0.2" "sqrt";
-(boolean o) is_nan      (float i) "turbine"  "0.0.2" "is_nan";
-
 // Relational
-
 (boolean o) eq_integer (int i1, int i2) "turbine" "0.0.2" "eq_integer";
 (boolean o) neq_integer(int i1, int i2) "turbine" "0.0.2" "neq_integer";
 (boolean o) lt_integer (int i1, int i2) "turbine" "0.0.2" "lt_integer";
@@ -78,17 +70,6 @@
 (boolean o) eq_boolean (boolean i1, boolean i2) "turbine" "0.0.2" "eq_integer";
 (boolean o) neq_boolean(boolean i1, boolean i2) "turbine" "0.0.2" "neq_integer";
 
-// Random functions
-(float o) random() "turbine" "0.0.2" "random";
-// inclusive start, exclusive end
-(int o) randint(int start, int end) "turbine" "0.0.2" "randint";
-
-// String operations
-(string o) strcat(string... args) "turbine" "0.0.2" "strcat";
-(string o) substring(string s, int start, int length) "turbine" "0.0.2" "substring";
-(string t[]) split(string s, string delimiter) "turbine" "0.0.2" "split";
-(string o) sprintf(string fmt, int|float|string|boolean... args) "turbine" "0.0.2" "sprintf";
-
 // Type conversion
 (string o) fromint(int i)  "turbine" "0.0.2" "fromint";
 (int o)    toint(string i) "turbine" "0.0.2" "toint";
@@ -110,32 +91,6 @@ sleep_trace (float secs, int|float|string|boolean... args) "turbine" "0.0.2"
 
 // Updateable variables
 (updateable_float o) init_updateable(float i) "turbine" "0.0.2" "init_updateable";
-
-// Container aggregate functions
-(int res) sum_integer(int arr[]) "turbine" "0.0.2" "sum_integer";
-(float res) avg(int|float arr[]) "turbine" "0.0.2" "avg";
-// Population standard deviation
-(float res) std(int|float arr[]) "turbine" "0.0.2" "std";
-(float mean, float std) stats(int|float arr[]) "turbine" "0.0.2" "stats";
-
-
-// Aggregate partial statistics
-type PartialStats {
-  int n; /* number of samples */
-  float mean;
-  float M2; /* Variance * n_samples */
-}
-(int n, float mean, float M2) statagg(int|float arr[]) "turbine" "0.0.2" "statagg";
-(int n, float mean, float std) stat_combine(PartialStats arr[]) "turbine" "0.0.2" "stat_combine";
-
-// Misc
-assert(boolean condition, string msg) "turbine" "0.0.2" "assert";
-assertEqual(string|int|float|boolean v1, string|int|float|boolean v2,
-               string msg) "turbine" "0.0.2" "assertEqual";
-assertLT(string|int|float|boolean v1, string|int|float|boolean v2,
-               string msg) "turbine" "0.0.2" "assertLT";
-assertLTE(string|int|float|boolean v1, string|int|float|boolean v2,
-               string msg) "turbine" "0.0.2" "assertLTE";
 
 (int n) adlb_servers() "turbine" "0.0.2" "adlb_servers_future";
 (int n) turbine_engines() "turbine" "0.0.2" "turbine_engines_future";

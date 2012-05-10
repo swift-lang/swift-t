@@ -125,7 +125,7 @@ namespace eval turbine {
     proc argv_contains_body { result key } {
 
         variable turbine_argv
-        set t [ get $key ]
+        set t [ retrieve_string $key ]
         store_integer $result [ argv_contains_impl $t ]
     }
 
@@ -166,7 +166,7 @@ namespace eval turbine {
         set result [ lindex $args 0 ]
         set key    [ lindex $args 1 ]
 
-        set key_val [ get $key ]
+        set key_val [ retrieve $key ]
         if { $c == 2 } {
             set result_val [ argv_get_impl $key_val ]
         } elseif { $c == 3 } {

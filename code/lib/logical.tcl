@@ -1,20 +1,24 @@
 
-# Turbine builtin function for logical boolean expressions,
-# including boolean ops like or, along with relational ops like
-# equals and greater than
-# We follow the calling conventions for Turbine built-ins
+# Turbine builtin function for logical boolean expressions, including
+# boolean ops like or, along with relational ops like equals and
+# greater than. We follow the calling conventions for Turbine
+# built-ins
 #
-# There is a lot of redundancy in the definitions of the functions between
-# different Turbine types, but it is difficult in TCL to write polymorphic
-# code without doing funny things that hurt the ability of TCL to compile to
-# good bytecode like constructing function names at run.  Hopefully these
-# definitions will be fairly stable so the redundancy won't be a major issue.
+# There is a lot of redundancy in the definitions of the functions
+# between different Turbine types, but it is difficult in Tcl to write
+# polymorphic code without doing funny things that hurt the ability of
+# Tcl to compile to good bytecode like constructing function names at
+# run.  Hopefully these definitions will be fairly stable so the
+# redundancy won't be a major issue.
 
 namespace eval turbine {
     namespace export and or not
-    namespace export eq_integer neq_integer lt_integer gt_integer lte_integer \
-                                                                  gte_integer
-    namespace export eq_float neq_float lt_float gt_float lte_float gte_float
+    namespace export eq_integer  neq_integer \
+                     lt_integer  gt_integer  \
+                     lte_integer gte_integer
+    namespace export eq_float  neq_float \
+                     lt_float  gt_float  \
+                     lte_float gte_float
 
     # This is a Swift-2 function
     # o = ! i;
@@ -23,7 +27,7 @@ namespace eval turbine {
             $turbine::LOCAL "not_body $o $i"
     }
     proc not_body { o i } {
-        set i_value [ get $i ]
+        set i_value [ retrieve_integer $i ]
         set o_value [ expr ! $i_value ]
         log "not $i_value => $o_value"
         store_integer $o $o_value
@@ -38,8 +42,8 @@ namespace eval turbine {
             $turbine::LOCAL "and_body $c $a $b"
     }
     proc and_body { c a b } {
-        set a_value [ get $a ]
-        set b_value [ get $b ]
+        set a_value [ retrieve_integer $a ]
+        set b_value [ retrieve_integer $b ]
         set c_value [ expr $a_value && $b_value ]
         # Emulate some computation time
         log "and: $a_value && $b_value => $c_value"
@@ -64,7 +68,7 @@ namespace eval turbine {
         # exec sleep $c_value
         store_integer $c $c_value
     }
-    
+
     proc eq_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
@@ -84,7 +88,7 @@ namespace eval turbine {
         # exec sleep $c_value
         store_integer $c $c_value
     }
-    
+
     proc neq_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
@@ -104,7 +108,7 @@ namespace eval turbine {
         # exec sleep $c_value
         store_integer $c $c_value
     }
-    
+
     proc lt_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
@@ -124,7 +128,7 @@ namespace eval turbine {
         # exec sleep $c_value
         store_integer $c $c_value
     }
-    
+
     proc lte_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
@@ -164,7 +168,7 @@ namespace eval turbine {
         # exec sleep $c_value
         store_integer $c $c_value
     }
-    
+
     proc gte_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
@@ -184,7 +188,7 @@ namespace eval turbine {
         # exec sleep $c_value
         store_integer $c $c_value
     }
-    
+
     proc eq_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
@@ -204,7 +208,7 @@ namespace eval turbine {
         # exec sleep $c_value
         store_integer $c $c_value
     }
-    
+
     proc neq_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
@@ -224,7 +228,7 @@ namespace eval turbine {
         # exec sleep $c_value
         store_integer $c $c_value
     }
-    
+
     proc lt_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
@@ -244,7 +248,7 @@ namespace eval turbine {
         # exec sleep $c_value
         store_integer $c $c_value
     }
-    
+
     proc lte_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
@@ -284,7 +288,7 @@ namespace eval turbine {
         # exec sleep $c_value
         store_integer $c $c_value
     }
-    
+
     proc gte_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
@@ -304,7 +308,7 @@ namespace eval turbine {
         # exec sleep $c_value
         store_integer $c $c_value
     }
-    
+
     proc eq_string { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
@@ -324,7 +328,7 @@ namespace eval turbine {
         # exec sleep $c_value
         store_integer $c $c_value
     }
-    
+
     proc neq_string { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]

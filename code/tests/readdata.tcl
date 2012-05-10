@@ -24,8 +24,8 @@ proc rules { } {
 
 proc loop1_body { parent container key } {
     turbine::trace $parent "" $key
-    set t [ turbine::get $key ]
-    set value [ turbine::container_get $container $t ]
+    set t [ turbine::retrieve $key ]
+    set value [ turbine::container_lookup $container $t ]
     turbine::trace $parent "" $value
 }
 

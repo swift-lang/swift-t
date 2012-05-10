@@ -1,3 +1,4 @@
+
 # Turbine builtin string functions
 
 # All have the same signature
@@ -48,18 +49,6 @@ namespace eval turbine {
         return [ string range $s $i $n ]
     }
 
-    # o = i;
-    proc copy_string { parent o i } {
-
-        rule "copystring-$o-$i" $i $turbine::LOCAL \
-            "copy_string_body $o $i"
-    }
-    proc copy_string_body { o i } {
-        set i_value [ retrieve_string $i ]
-        log "copy $i_value => $i_value"
-        store_string $o $i_value
-    }
-
     # This accepts an optional delimiter
     # (STC does not yet support optional arguments)
     proc split { args } {
@@ -104,20 +93,5 @@ namespace eval turbine {
             container_insert $result $i $split_token
         }
         close_datum $result
-    }
-
-    proc sprintf { stack result inputs } {
-        rule sprintf $inputs $turbine::LOCAL \
-            "sprintf_body $result $inputs"
-    }
-
-    proc sprintf_body { result args } {
-        set L [ list ]
-        foreach a $args {
-            lappend L [ retrieve $a ]
-        }
-
-        set s [ eval format $L ]
-        store_string $result $s
     }
 }
