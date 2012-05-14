@@ -247,7 +247,8 @@ block: LBRACE stmt* RBRACE -> ^( BLOCK stmt* )
 
 
 stmt:
-        (declaration_multi)
+    SEMICOLON ->
+    |   (declaration_multi)
     |   (assignment_expr)
     |   (expr_stmt)         SEMICOLON -> expr_stmt
     |   (if_stmt)
@@ -488,7 +489,7 @@ literal:
 bool_lit: TRUE | FALSE
     ;
 
-function_call: 
+function_call:
              priority? f=ID a=expr_argument_list -> ^( CALL_FUNCTION $f $a priority?)
     ;
 
@@ -567,7 +568,7 @@ assign_path_element:
 // only allow function calls as non-assignment statements
 expr_stmt: e=function_call -> ^( EXPR_STMT $e )
     ;
-    
+
 update_stmt: v=ID LT cmd=ID GT MUTATE expr SEMICOLON
 			-> ^( UPDATE $cmd $v expr)
 	;
