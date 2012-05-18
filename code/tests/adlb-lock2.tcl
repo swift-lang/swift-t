@@ -31,7 +31,7 @@ if { ! [ adlb::amserver ] } {
         adlb::close $id
     } else {
         puts "waiting..."
-        after 10
+        after 100
     }
 
     for { set i 1 } { $i <= $iterations } { incr i } {
