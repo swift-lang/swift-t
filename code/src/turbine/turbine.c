@@ -589,13 +589,20 @@ turbine_code_tostring(char* output, turbine_code code)
   return result;
 }
 
+static void action_type_tostring(turbine_action_type action_type,
+                                 char* output);
+
 static int
 transform_tostring(char* output, transform* t)
 {
   int result = 0;
   char* p = output;
 
-  append(p, "%s:%i ", t->name, t->action_type);
+  char action_type_string[16];
+  action_type_tostring(t->action_type, action_type_string);
+
+  append(p, "%s ", t->name);
+  append(p, "%s ", action_type_string);
   append(p, "(");
   for (int i = 0; i < t->inputs; i++)
   {
@@ -613,6 +620,33 @@ transform_tostring(char* output, transform* t)
   return result;
 }
 
+/**
+   Convert given action_type to string representation
+*/
+static void
+action_type_tostring(turbine_action_type action_type, char* output)
+{
+  char* s = NULL;
+  switch (action_type)
+  {
+    case TURBINE_ACTION_LOCAL:
+      s = "LOCAL";
+      break;
+    case TURBINE_ACTION_CONTROL:
+      s = "CONTROL";
+      break;
+    case TURBINE_ACTION_WORK:
+      s = "WORK";
+      break;
+  }
+  if (s == NULL)
+  {
+    printf("action_type_tostring(): unknown: %i\n", action_type);
+    exit(1);
+  }
+  strcpy(output, s);
+}
+
 static void
 info_waiting()
 {
@@ -623,7 +657,9 @@ info_waiting()
          item; item = item->next)
     {
       transform* t = item->data;
-      int c = sprintf(buffer, "%6li ", t->id);
+      char id_string[24];
+      sprintf(id_string, "{%li}", t->id);
+      int c = sprintf(buffer, "%10s ", id_string);
       transform_tostring(buffer+c, t);
       printf("TRANSFORM: %s\n", buffer);
     }
