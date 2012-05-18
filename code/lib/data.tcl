@@ -17,6 +17,22 @@ namespace eval turbine {
         container_insert close_datum                  \
         filename
 
+    # Shorten strings in the log if the user requested that
+    # log_string_mode is set at init time
+    #                 and is either ON, OFF, or a length
+    proc log_string { s } {
+
+        variable log_string_mode
+        switch $log_string_mode {
+            ON  { return "\"$s\"" }
+            OFF { return "" }
+            default {
+                set t [ string range $s 0 $log_string_mode ]
+                return "\"$t\"..."
+            }
+        }
+    }
+
     # usage: allocate [<name>] <type>
     # If name is given, print a log message
     proc allocate { args } {
@@ -124,14 +140,14 @@ namespace eval turbine {
     }
 
     proc store_string { id value } {
-        log "store: <$id>=\"$value\""
+        log "store: <$id>=[ log_string $value ]"
         adlb::store $id $adlb::STRING $value
         close_datum $id
     }
 
     proc retrieve_string { id } {
         set result [ adlb::retrieve $id $adlb::STRING ]
-        debug "retrieve: <$id>=\"$result\""
+        debug "retrieve: <$id>=[ log_string $result ]"
         return $result
     }
 
@@ -157,14 +173,14 @@ namespace eval turbine {
     }
 
     proc store_blob_string { id value } {
-        log "store_blob: <$id>=$value"
+        log "store_blob: <$id>=[ log_string $value ]"
         adlb::store $id $adlb::BLOB $value
         close_datum $id
     }
 
     proc retrieve_blob_string { id } {
         set result [ adlb::retrieve $id $adlb::BLOB ]
-        debug "retrieve_string: <$id>=$result"
+        debug "retrieve_string: <$id>=[ log_string $result ]"
         return $result
     }
 

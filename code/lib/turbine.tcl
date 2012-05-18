@@ -23,10 +23,15 @@ namespace eval turbine {
     # Statistics: dict from string token to integer count
     variable stats
 
+    # How to display string values in the log
+    variable log_string_mode
+
     # User function
     # param e Number of engines
     # param s Number of ADLB servers
     proc init { engines servers } {
+
+        setup_log_string
 
         variable priority
         variable default_priority
@@ -61,6 +66,37 @@ namespace eval turbine {
         start_stats
 
         argv_init
+    }
+
+    proc setup_log_string { } {
+
+        global env
+        variable log_string_mode
+
+        # Read from environment
+        if { [ info exists env(TURBINE_LOG_STRING_MODE) ] } {
+            puts found
+            set log_string_mode $env(TURBINE_LOG_STRING_MODE)
+        } else {
+            puts nope
+            puts $env(TURBINE_LOG_STRING_MODE)
+            set log_string_mode "ON"
+        }
+
+        # Check validity
+        switch $log_string_mode {
+            ON  { return }
+            OFF { return }
+            default {
+                if { [ string is integer $log_string_mode ] } {
+                    incr log_string_mode -1
+                    return
+                }
+            }
+        }
+
+        error [ join [ "Requires integer:"
+                       "TURBINE_LOG_STRING_MODE=$log_string_mode" ] ]
     }
 
     proc reset_priority { } {
