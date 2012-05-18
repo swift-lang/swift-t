@@ -75,11 +75,8 @@ namespace eval turbine {
 
         # Read from environment
         if { [ info exists env(TURBINE_LOG_STRING_MODE) ] } {
-            puts found
             set log_string_mode $env(TURBINE_LOG_STRING_MODE)
         } else {
-            puts nope
-            puts $env(TURBINE_LOG_STRING_MODE)
             set log_string_mode "ON"
         }
 
