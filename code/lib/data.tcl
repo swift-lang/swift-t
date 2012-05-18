@@ -80,69 +80,69 @@ namespace eval turbine {
     # Always tores result as Tcl string
     proc retrieve { id } {
         set result [ adlb::retrieve $id ]
-        debug "get: <$id>=$result"
+        debug "retrieve: <$id>=$result"
         return $result
     }
 
     proc create_integer { id } {
-        debug "create_integer: <$id>"
+        debug "create integer: <$id>"
         adlb::create $id $adlb::INTEGER
     }
 
     proc store_integer { id value } {
-        log "set: <$id>=$value"
+        log "store: <$id>=$value"
         adlb::store $id $adlb::INTEGER $value
         close_datum $id
     }
 
     proc retrieve_integer { id } {
         set result [ adlb::retrieve $id $adlb::INTEGER ]
-        debug "retrieve_integer: <$id>=$result"
+        debug "retrieve: <$id>=$result"
         return $result
     }
 
     proc create_float { id } {
-        debug "create_float: <$id>"
+        debug "create float: <$id>"
         adlb::create $id $adlb::FLOAT
     }
 
     proc store_float { id value } {
-        log "set: <$id>=$value"
+        log "store: <$id>=$value"
         adlb::store $id $adlb::FLOAT $value
         close_datum $id
     }
 
     proc retrieve_float { id } {
         set result [ adlb::retrieve $id $adlb::FLOAT ]
-        debug "retrieve_float: <$id>=$result"
+        debug "retrieve: <$id>=$result"
         return $result
     }
 
     proc create_string { id } {
-        debug "create_string: <$id>"
+        debug "create string: <$id>"
         adlb::create $id $adlb::STRING
     }
 
     proc store_string { id value } {
-        log "set: <$id>=\"$value\""
+        log "store: <$id>=\"$value\""
         adlb::store $id $adlb::STRING $value
         close_datum $id
     }
 
     proc retrieve_string { id } {
         set result [ adlb::retrieve $id $adlb::STRING ]
-        debug "retrieve_string: <$id>=$result"
+        debug "retrieve: <$id>=\"$result\""
         return $result
     }
 
     proc create_void { id } {
-        debug "create_void: <$id>"
+        debug "create void: <$id>"
         # TODO: for now emulate void with integer
         adlb::create $id $adlb::INTEGER
     }
 
     proc store_void { id } {
-        debug "store_void: <$id>"
+        debug "store void: <$id>"
         # TODO: for now emulate void with integer
         adlb::store $id $adlb::INTEGER 12345
         close_datum $id
@@ -152,6 +152,7 @@ namespace eval turbine {
 
     # Create blob
     proc create_blob { id } {
+        log "create blob: <$id>"
         adlb::create $id $adlb::BLOB
     }
 
@@ -183,7 +184,7 @@ namespace eval turbine {
         if { [ llength $args ] == 4 } {
             set drops [ lindex $args 3 ]
         }
-        log "insert: <$id>\[$subscript\]=<$member>"
+        log "insert: <$id>\[\"$subscript\"\]=<$member>"
         adlb::insert $id $subscript $member $drops
     }
 
