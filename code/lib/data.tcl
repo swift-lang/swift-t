@@ -28,7 +28,11 @@ namespace eval turbine {
             OFF { return "" }
             default {
                 set t [ string range $s 0 $log_string_mode ]
-                return "\"$t\"..."
+                set t "\"$t\""
+                if { [ string length $s ] > $log_string_mode } {
+                    set t "${t}..."
+                }
+                return $t
             }
         }
     }
