@@ -1602,6 +1602,8 @@ public class ICInstructions {
      */
     private static HashSet<String> copyFunctions =  
                             new HashSet<String>();
+    private static HashSet<String> maxMinFunctions =  
+            new HashSet<String>();
     
     {  
       for (String numType: Arrays.asList("integer", "float")) {
@@ -1615,7 +1617,10 @@ public class ICInstructions {
         sideEffectFree.add("lt_" + numType);
         sideEffectFree.add("lte_" + numType);
         sideEffectFree.add("max_" + numType);
+        maxMinFunctions.add("max_" + numType);
         sideEffectFree.add("min_" + numType);
+        maxMinFunctions.add("min_" + numType);
+        
         sideEffectFree.add("abs_" + numType);
         sideEffectFree.add("pow_" + numType);
         
@@ -1956,33 +1961,38 @@ public class ICInstructions {
                         Map<ComputedValue, Oparg> existing) {
       // TODO: make order of args invariant where possible
       if (this.isDefinitelyDeterministic()) {
-        if (this.op == Opcode.CALL_BUILTIN && 
-            copyFunctions.contains(functionName)) {
-          // Handle copy as a special case
-          assert(inputs.size() == 1 && outputs.size() == 1);
-          return Collections.singletonList(
-                ComputedValue.makeCopyCV(this.outputs.get(0),
-                                         Oparg.createVar(this.inputs.get(0))));
-          
-        } else if (this.outputs.size() == 1) {
-          boolean outputClosed = false; // safe assumption
-          String canonicalFunctionName = this.functionName;
-          List<Oparg> in = Oparg.fromVarList(this.inputs);
-          if (commutative.contains(this.functionName)) {
-            // put in canonical order
-            Collections.sort(in);
-          } else if (flippedOps.containsKey(this.functionName)) {
-            // E.g. flip a > b to a < b
-            canonicalFunctionName = flippedOps.get(this.functionName);
-            Collections.reverse(in);
+        if (this.op == Opcode.CALL_BUILTIN) { 
+          if (copyFunctions.contains(functionName) ||
+             (maxMinFunctions.contains(functionName) 
+                && this.inputs.get(0).getName().equals(
+                            this.inputs.get(1).getName()))) {
+            // Handle copy as a special case
+            assert(outputs.size() == 1);
+            assert((copyFunctions.contains(functionName) && inputs.size() == 1) 
+                    || (maxMinFunctions.contains(functionName) && inputs.size() == 2));
+            return Collections.singletonList(
+                  ComputedValue.makeCopyCV(this.outputs.get(0),
+                                           Oparg.createVar(this.inputs.get(0))));
+          } else if (this.outputs.size() == 1) {
+            boolean outputClosed = false; // safe assumption
+            String canonicalFunctionName = this.functionName;
+            List<Oparg> in = Oparg.fromVarList(this.inputs);
+            if (commutative.contains(this.functionName)) {
+              // put in canonical order
+              Collections.sort(in);
+            } else if (flippedOps.containsKey(this.functionName)) {
+              // E.g. flip a > b to a < b
+              canonicalFunctionName = flippedOps.get(this.functionName);
+              Collections.reverse(in);
+            }
+              
+            return Collections.singletonList(
+                new ComputedValue(this.op, 
+                canonicalFunctionName, in, 
+                Oparg.createVar(this.outputs.get(0)), outputClosed));
+          } else {
+            // Not sure to do with multiple outputs
           }
-            
-          return Collections.singletonList(
-              new ComputedValue(this.op, 
-              canonicalFunctionName, in, 
-              Oparg.createVar(this.outputs.get(0)), outputClosed));
-        } else {
-          // Not sure to do with multiple outputs
         }
       }
       return null;
@@ -2688,6 +2698,15 @@ public class ICInstructions {
           // It might be assigning a constant val
           return Collections.singletonList(ComputedValue.makeCopyCV(
                 this.output, this.inputs.get(0)));
+        }
+        
+        if (localop == LocalOpcode.MAX_FLOAT || localop == LocalOpcode.MAX_INT
+                || localop == LocalOpcode.MIN_FLOAT || localop == LocalOpcode.MIN_INT) {
+          assert(this.inputs.size() == 2);
+          if (this.inputs.get(0).equals(this.inputs.get(1))) {
+            return Collections.singletonList(ComputedValue.makeCopyCV(
+                    this.output, this.inputs.get(0)));
+          }
         }
         
 
