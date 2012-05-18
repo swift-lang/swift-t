@@ -191,7 +191,7 @@ public class ConstantFinder {
             || (!ignoreLocalValConstants && inst.op == Opcode.LOCAL_OP && 
                   LocalBuiltin.isValueCopy(inst)))) {
           Oparg output = inst.getOutput(0); 
-          String varName = output.getVariable().getName();
+          String varName = output.getVar().getName();
           if ((!removeLocalConsts) || removalCandidates.contains(varName)) {
             logger.debug("Found constant " + varName);
             knownConstants.put(varName, input);

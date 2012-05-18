@@ -224,7 +224,7 @@ public class ICContinuations {
     }
     protected void checkNotRemoved(Oparg o, Set<String> removeVars) {
       if (o.type == OpargType.VAR) {
-        checkNotRemoved(o.getVariable(), removeVars);
+        checkNotRemoved(o.getVar(), removeVars);
       }
     }
 
@@ -325,17 +325,17 @@ public class ICContinuations {
     public void replaceVars(Map<String, Oparg> renames) {
       this.replaceVarsInBlocks(renames, false);
       if (renames.containsKey(arrayVar.getName())) {
-        arrayVar = renames.get(arrayVar.getName()).getVariable();
+        arrayVar = renames.get(arrayVar.getName()).getVar();
       }
       if (renames.containsKey(loopVar.getName())) {
-        loopVar = renames.get(loopVar.getName()).getVariable();
+        loopVar = renames.get(loopVar.getName()).getVar();
       }
       if (this.loopCounterVar != null &&
           renames.containsKey(loopCounterVar.getName())) {
-        loopCounterVar = renames.get(loopCounterVar.getName()).getVariable();
+        loopCounterVar = renames.get(loopCounterVar.getName()).getVar();
       }
-      ICUtil.replaceVarsInList2(renames, usedVariables, true);
-      ICUtil.replaceVarsInList2(renames, containersToRegister, true);
+      ICUtil.replaceVarsInList(renames, usedVariables, true);
+      ICUtil.replaceVarsInList(renames, containersToRegister, true);
     }
 
     @Override
@@ -343,9 +343,9 @@ public class ICContinuations {
       // Replace only those we're reading
       this.replaceVarsInBlocks(renames, true);
       if (renames.containsKey(arrayVar.getName())) {
-        arrayVar = renames.get(arrayVar.getName()).getVariable();
+        arrayVar = renames.get(arrayVar.getName()).getVar();
       }
-      ICUtil.replaceVarsInList2(renames, usedVariables, true);
+      ICUtil.replaceVarsInList(renames, usedVariables, true);
     }
 
     @Override
@@ -483,7 +483,7 @@ public class ICContinuations {
           boolean inputsOnly) {
       replaceVarsInBlocks(renames, inputsOnly);
       if (renames.containsKey(condVar.getName())) {
-        condVar = renames.get(condVar.getName()).getVariable();
+        condVar = renames.get(condVar.getName()).getVar();
       }
     }
 
@@ -661,15 +661,15 @@ public class ICContinuations {
     @Override
     public void replaceVars(Map<String, Oparg> renames) {
       this.replaceVarsInBlocks(renames, false);
-      ICUtil.replaceVarsInList2(renames, initVals, false);
-      ICUtil.replaceVarsInList2(renames, usedVariables, true);
-      ICUtil.replaceVarsInList2(renames, containersToRegister, true);
+      ICUtil.replaceVarsInList(renames, initVals, false);
+      ICUtil.replaceVarsInList(renames, usedVariables, true);
+      ICUtil.replaceVarsInList(renames, containersToRegister, true);
     }
 
     @Override
     public void replaceInputs(Map<String, Oparg> renames) {
       this.replaceVarsInBlocks(renames, true);
-      ICUtil.replaceVarsInList2(renames, initVals, false);
+      ICUtil.replaceVarsInList(renames, initVals, false);
     }
 
     @Override
@@ -896,13 +896,13 @@ public class ICContinuations {
             usedVariables, containersToRegister);
       assert(start.getType() == OpargType.INTVAL ||
           (start.getType() == OpargType.VAR &&
-              start.getVariable().getType().equals(Types.VALUE_INTEGER)));
+              start.getVar().getType().equals(Types.VALUE_INTEGER)));
       assert(end.getType() == OpargType.INTVAL ||
           (end.getType() == OpargType.VAR &&
-              end.getVariable().getType().equals(Types.VALUE_INTEGER)));
+              end.getVar().getType().equals(Types.VALUE_INTEGER)));
       assert(increment.getType() == OpargType.INTVAL ||
           (increment.getType() == OpargType.VAR &&
-                      increment.getVariable().getType().equals(Types.VALUE_INTEGER)));
+                      increment.getVar().getType().equals(Types.VALUE_INTEGER)));
       assert(loopVar.getType().equals(Types.VALUE_INTEGER));
       this.loopName = loopName;
       this.loopVar = loopVar;
@@ -969,8 +969,8 @@ public class ICContinuations {
       end = renameRangeArg(end, renames);
       increment = renameRangeArg(increment, renames);
 
-      ICUtil.replaceVarsInList2(renames, usedVariables, true);
-      ICUtil.replaceVarsInList2(renames, containersToRegister, true);
+      ICUtil.replaceVarsInList(renames, usedVariables, true);
+      ICUtil.replaceVarsInList(renames, containersToRegister, true);
     }
     @Override
     public void replaceInputs(Map<String, Oparg> renames) {
@@ -982,7 +982,7 @@ public class ICContinuations {
 
     private Oparg renameRangeArg(Oparg val, Map<String, Oparg> renames) {
       if (val.type == OpargType.VAR) {
-        String vName = val.getVariable().getName();
+        String vName = val.getVar().getName();
         if (renames.containsKey(vName)) {
           Oparg o = renames.get(vName);
           assert(o != null);
@@ -997,7 +997,7 @@ public class ICContinuations {
       Collection<Variable> res = super.requiredVars();
       for (Oparg o: Arrays.asList(start, end, increment)) {
         if (o.getType() == OpargType.VAR) {
-          res.add(o.getVariable());
+          res.add(o.getVar());
         }
       }
       return res;
@@ -1058,7 +1058,7 @@ public class ICContinuations {
       for (int i = 0; i < oldVals.length; i++) {
         Oparg old = oldVals[i];
         if (old.type == OpargType.VAR) {
-          Oparg replacement = knownConstants.get(old.getVariable().getName());
+          Oparg replacement = knownConstants.get(old.getVar().getName());
           if (replacement != null) {
             assert(replacement.getType() == OpargType.INTVAL);
             anyChanged = true;
@@ -1134,7 +1134,7 @@ public class ICContinuations {
         if (oldStep.getType() == OpargType.INTVAL) {
           this.increment = Oparg.createIntLit(oldStep.getIntLit() * desiredUnroll);
         } else {
-          Variable old = oldStep.getVariable();
+          Variable old = oldStep.getVar();
           Variable newIncrement = new Variable(old.getType(),
               old.getName() + "@unroll" + desiredUnroll,
               VariableStorage.LOCAL,
@@ -1293,7 +1293,7 @@ public class ICContinuations {
     public void replaceVars(Map<String, Oparg> renames) {
       replaceVarsInBlocks(renames, false);
       if (renames.containsKey(switchVar.getName())) {
-        switchVar = renames.get(switchVar.getName()).getVariable();
+        switchVar = renames.get(switchVar.getName()).getVar();
       }
     }
 
@@ -1301,7 +1301,7 @@ public class ICContinuations {
     public void replaceInputs(Map<String, Oparg> renames) {
       replaceVarsInBlocks(renames, true);
       if (renames.containsKey(switchVar.getName())) {
-        switchVar = renames.get(switchVar.getName()).getVariable();
+        switchVar = renames.get(switchVar.getName()).getVar();
       }
     }
 
@@ -1470,15 +1470,15 @@ public class ICContinuations {
     @Override
     public void replaceVars(Map<String, Oparg> renames) {
       replaceVarsInBlocks(renames, false);
-      ICUtil.replaceVarsInList2(renames, waitVars, true);
-      ICUtil.replaceVarsInList2(renames, usedVariables, true);
-      ICUtil.replaceVarsInList2(renames, containersToRegister, true);
+      ICUtil.replaceVarsInList(renames, waitVars, true);
+      ICUtil.replaceVarsInList(renames, usedVariables, true);
+      ICUtil.replaceVarsInList(renames, containersToRegister, true);
     }
 
     @Override
     public void replaceInputs(Map<String, Oparg> renames) {
       replaceVarsInBlocks(renames, true);
-      ICUtil.replaceVarsInList2(renames, waitVars, true);
+      ICUtil.replaceVarsInList(renames, waitVars, true);
     }
 
     @Override

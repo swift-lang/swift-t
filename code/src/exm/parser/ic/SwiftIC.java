@@ -690,7 +690,7 @@ public class SwiftIC {
             variables.remove(i);
             Oparg replacement = renames.get(varName);
             if (replacement.getType() ==  OpargType.VAR) {
-              variables.add(i, replacement.getVariable());
+              variables.add(i, replacement.getVar());
             } else {
               // value replaced with constant
               i--; // update
@@ -724,7 +724,7 @@ public class SwiftIC {
         String varName = arraysToClose.get(i).getName();
         if (renames.containsKey(varName)) {
           arraysToClose.remove(i);
-          arraysToClose.add(i, renames.get(varName).getVariable());
+          arraysToClose.add(i, renames.get(varName).getVar());
         }
       }
     }
@@ -769,7 +769,7 @@ public class SwiftIC {
             // Doesn't make sense to assign to anything other than
             //  variable
             assert(oa.getType() == OpargType.VAR);
-            if (! removeVars.contains(oa.getVariable().getName())) {
+            if (! removeVars.contains(oa.getVar().getName())) {
               allRemoveable = false; break;
             }
           }
@@ -845,14 +845,14 @@ public class SwiftIC {
         // check which variables are still needed
         for (Oparg oa: i.getInputs()) {
           if (oa.getType() == OpargType.VAR) {
-            stillNeeded.add(oa.getVariable().getName());
+            stillNeeded.add(oa.getVar().getName());
           }
         }
         // Can't eliminate instructions with side-effects
         if (i.hasSideEffects()) {
           for (Oparg oa: i.getOutputs()) {
             if (oa.getType() == OpargType.VAR) {
-              stillNeeded.add(oa.getVariable().getName());
+              stillNeeded.add(oa.getVar().getName());
             }
           }
         }

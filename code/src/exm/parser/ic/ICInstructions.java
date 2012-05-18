@@ -80,7 +80,7 @@ public class ICInstructions {
       // Writes to alias variables can have non-local effects
       for (Oparg out: this.getOutputs()) {
         if (out.getType() == OpargType.VAR &&
-            out.getVariable().getStorage() == VariableStorage.ALIAS) {
+            out.getVar().getStorage() == VariableStorage.ALIAS) {
           return true;
         }
       }
@@ -290,159 +290,159 @@ public class ICInstructions {
       // Recreate calls that were used to generate this instruction
       switch (op) {
       case STORE_INT:
-        gen.assignInt(args.get(0).getVariable(), args.get(1));
+        gen.assignInt(args.get(0).getVar(), args.get(1));
         break;
       case STORE_BOOL:
-        gen.assignBool(args.get(0).getVariable(), args.get(1));
+        gen.assignBool(args.get(0).getVar(), args.get(1));
         break;
       case STORE_FLOAT:
-        gen.assignFloat(args.get(0).getVariable(), args.get(1));
+        gen.assignFloat(args.get(0).getVar(), args.get(1));
         break;
       case STORE_STRING:
-        gen.assignString(args.get(0).getVariable(), args.get(1));
+        gen.assignString(args.get(0).getVar(), args.get(1));
         break;
       case ADDRESS_OF:
-        gen.assignReference(args.get(0).getVariable(), args.get(1).getVariable());
+        gen.assignReference(args.get(0).getVar(), args.get(1).getVar());
         break;
       case ARRAY_LOOKUP_FUTURE:
-        gen.arrayLookupFuture(args.get(0).getVariable(),
-              args.get(1).getVariable(), args.get(2).getVariable(), false);
+        gen.arrayLookupFuture(args.get(0).getVar(),
+              args.get(1).getVar(), args.get(2).getVar(), false);
         break;
       case ARRAYREF_LOOKUP_FUTURE:
-        gen.arrayLookupFuture(args.get(0).getVariable(),
-            args.get(1).getVariable(), args.get(2).getVariable(), true);
+        gen.arrayLookupFuture(args.get(0).getVar(),
+            args.get(1).getVar(), args.get(2).getVar(), true);
         break;
       case ARRAY_LOOKUP_REF_IMM:
-        gen.arrayLookupRefImm(args.get(0).getVariable(),
-            args.get(1).getVariable(), args.get(2), false);
+        gen.arrayLookupRefImm(args.get(0).getVar(),
+            args.get(1).getVar(), args.get(2), false);
         break;
       case ARRAY_LOOKUP_IMM:
-        gen.arrayLookupImm(args.get(0).getVariable(),
-            args.get(1).getVariable(), args.get(2));
+        gen.arrayLookupImm(args.get(0).getVar(),
+            args.get(1).getVar(), args.get(2));
         break;
       case ARRAYREF_LOOKUP_IMM:
-        gen.arrayLookupRefImm(args.get(0).getVariable(),
-            args.get(1).getVariable(), args.get(2), true);
+        gen.arrayLookupRefImm(args.get(0).getVar(),
+            args.get(1).getVar(), args.get(2), true);
         break;
       case ARRAY_INSERT_FUTURE:
-        gen.arrayInsertFuture(args.get(2).getVariable(),
-            args.get(0).getVariable(), args.get(1).getVariable());
+        gen.arrayInsertFuture(args.get(2).getVar(),
+            args.get(0).getVar(), args.get(1).getVar());
         break;
       case ARRAY_INSERT_IMM:
-        gen.arrayInsertImm(args.get(2).getVariable(),
-            args.get(0).getVariable(), args.get(1));
+        gen.arrayInsertImm(args.get(2).getVar(),
+            args.get(0).getVar(), args.get(1));
         break;
       case ARRAYREF_INSERT_FUTURE:
-        gen.arrayRefInsertFuture(args.get(2).getVariable(),
-            args.get(0).getVariable(), args.get(1).getVariable(),
-            args.get(3).getVariable());
+        gen.arrayRefInsertFuture(args.get(2).getVar(),
+            args.get(0).getVar(), args.get(1).getVar(),
+            args.get(3).getVar());
         break;
       case ARRAYREF_INSERT_IMM:
-        gen.arrayRefInsertImm(args.get(2).getVariable(),
-            args.get(0).getVariable(), args.get(1), args.get(3).getVariable());
+        gen.arrayRefInsertImm(args.get(2).getVar(),
+            args.get(0).getVar(), args.get(1), args.get(3).getVar());
         break;
       case STRUCT_LOOKUP:
-        gen.structLookup(args.get(1).getVariable(), args.get(2).getStringLit(),
-                                                    args.get(0).getVariable());
+        gen.structLookup(args.get(1).getVar(), args.get(2).getStringLit(),
+                                                    args.get(0).getVar());
         break;
       case STRUCTREF_LOOKUP:
-        gen.structRefLookup(args.get(1).getVariable(), args.get(2).getStringLit(),
-                                                    args.get(0).getVariable());
+        gen.structRefLookup(args.get(1).getVar(), args.get(2).getStringLit(),
+                                                    args.get(0).getVar());
         break;
       case STRUCT_INSERT:
-        gen.structInsert(args.get(0).getVariable(), args.get(1).getStringLit(),
-            args.get(2).getVariable());
+        gen.structInsert(args.get(0).getVar(), args.get(1).getStringLit(),
+            args.get(2).getVar());
         break;
       case STRUCT_CLOSE:
-        gen.structClose(args.get(0).getVariable());
+        gen.structClose(args.get(0).getVar());
         break;
       case DEREF_INT:
-        gen.dereferenceInt(args.get(0).getVariable(),
-                                args.get(1).getVariable());
+        gen.dereferenceInt(args.get(0).getVar(),
+                                args.get(1).getVar());
         break;
       case DEREF_BOOL:
-        gen.dereferenceBool(args.get(0).getVariable(),
-                                args.get(1).getVariable());
+        gen.dereferenceBool(args.get(0).getVar(),
+                                args.get(1).getVar());
         break;
       case DEREF_FLOAT:
-        gen.dereferenceFloat(args.get(0).getVariable(),
-                                args.get(1).getVariable());
+        gen.dereferenceFloat(args.get(0).getVar(),
+                                args.get(1).getVar());
         break;
       case DEREF_STRING:
-        gen.dereferenceString(args.get(0).getVariable(),
-                                args.get(1).getVariable());
+        gen.dereferenceString(args.get(0).getVar(),
+                                args.get(1).getVar());
         break;
       case DEREF_BLOB:
-        gen.dereferenceBlob(args.get(0).getVariable(),
-                                args.get(1).getVariable());
+        gen.dereferenceBlob(args.get(0).getVar(),
+                                args.get(1).getVar());
         break;
       case LOAD_REF:
-        gen.retrieveRef(args.get(0).getVariable(),
-                                args.get(1).getVariable());
+        gen.retrieveRef(args.get(0).getVar(),
+                                args.get(1).getVar());
         break;
       case COPY_REF:
-        gen.makeAlias(args.get(0).getVariable(), args.get(1).getVariable());
+        gen.makeAlias(args.get(0).getVar(), args.get(1).getVar());
         break;
       case ARRAY_CREATE_NESTED_FUTURE:
-        gen.arrayCreateNestedFuture(args.get(0).getVariable(),
-            args.get(1).getVariable(), args.get(2).getVariable());
+        gen.arrayCreateNestedFuture(args.get(0).getVar(),
+            args.get(1).getVar(), args.get(2).getVar());
         break;
       case ARRAY_REF_CREATE_NESTED_FUTURE:
-        gen.arrayRefCreateNestedFuture(args.get(0).getVariable(),
-            args.get(1).getVariable(), args.get(2).getVariable());
+        gen.arrayRefCreateNestedFuture(args.get(0).getVar(),
+            args.get(1).getVar(), args.get(2).getVar());
         break;
       case ARRAY_REF_CREATE_NESTED_IMM:
-        gen.arrayRefCreateNestedImm(args.get(0).getVariable(),
-            args.get(1).getVariable(), args.get(2));
+        gen.arrayRefCreateNestedImm(args.get(0).getVar(),
+            args.get(1).getVar(), args.get(2));
         break;
       case ARRAY_CREATE_NESTED_IMM:
-        gen.arrayCreateNestedImm(args.get(0).getVariable(),
-            args.get(1).getVariable(), args.get(2));
+        gen.arrayCreateNestedImm(args.get(0).getVar(),
+            args.get(1).getVar(), args.get(2));
         break;
       case LOAD_INT:
-        gen.retrieveInt(args.get(0).getVariable(),
-                  args.get(1).getVariable());
+        gen.retrieveInt(args.get(0).getVar(),
+                  args.get(1).getVar());
         break;
       case LOAD_STRING:
-        gen.retrieveString(args.get(0).getVariable(),
-            args.get(1).getVariable());
+        gen.retrieveString(args.get(0).getVar(),
+            args.get(1).getVar());
         break;
       case LOAD_BOOL:
-        gen.retrieveBool(args.get(0).getVariable(),
-            args.get(1).getVariable());
+        gen.retrieveBool(args.get(0).getVar(),
+            args.get(1).getVar());
         break;
       case LOAD_FLOAT:
-        gen.retrieveFloat(args.get(0).getVariable(),
-            args.get(1).getVariable());
+        gen.retrieveFloat(args.get(0).getVar(),
+            args.get(1).getVar());
         break;  
       case INIT_UPDATEABLE_FLOAT:
-        gen.initUpdateable(args.get(0).getVariable(), args.get(1));
+        gen.initUpdateable(args.get(0).getVar(), args.get(1));
         break;
       case LATEST_VALUE:
-        gen.latestValue(args.get(0).getVariable(), args.get(1).getVariable());
+        gen.latestValue(args.get(0).getVar(), args.get(1).getVar());
         break;
       case UPDATE_INCR:
-        gen.update(args.get(0).getVariable(), UpdateMode.INCR, 
-            args.get(1).getVariable());
+        gen.update(args.get(0).getVar(), UpdateMode.INCR, 
+            args.get(1).getVar());
         break;
       case UPDATE_MIN:
-        gen.update(args.get(0).getVariable(), UpdateMode.MIN, 
-            args.get(1).getVariable());
+        gen.update(args.get(0).getVar(), UpdateMode.MIN, 
+            args.get(1).getVar());
         break;
       case UPDATE_SCALE:
-        gen.update(args.get(0).getVariable(), UpdateMode.SCALE, 
-            args.get(1).getVariable());
+        gen.update(args.get(0).getVar(), UpdateMode.SCALE, 
+            args.get(1).getVar());
         break;
       case UPDATE_INCR_IMM:
-        gen.updateImm(args.get(0).getVariable(), UpdateMode.INCR, 
+        gen.updateImm(args.get(0).getVar(), UpdateMode.INCR, 
             args.get(1));
         break;
       case UPDATE_MIN_IMM:
-        gen.updateImm(args.get(0).getVariable(), UpdateMode.MIN, 
+        gen.updateImm(args.get(0).getVar(), UpdateMode.MIN, 
             args.get(1));
         break;
       case UPDATE_SCALE_IMM:
-        gen.updateImm(args.get(0).getVariable(), UpdateMode.SCALE, 
+        gen.updateImm(args.get(0).getVar(), UpdateMode.SCALE, 
             args.get(1));
         break;
       default:
@@ -712,7 +712,7 @@ public class ICInstructions {
 
     @Override
     public void renameVars(Map<String, Oparg> renames) {
-      ICUtil.replaceOpargsInList2(renames, args);
+      ICUtil.replaceOpargsInList(renames, args);
     }
   
     @Override
@@ -733,7 +733,7 @@ public class ICInstructions {
        } else {
          firstInputArg = numOutputArgs();
        }
-       ICUtil.replaceOpargsInList2(renames, args.subList(firstInputArg, 
+       ICUtil.replaceOpargsInList(renames, args.subList(firstInputArg, 
            args.size()));
     }
 
@@ -888,10 +888,10 @@ public class ICInstructions {
       case LOAD_STRING:
         // The input arg could be a var or a literal constant
         if (args.get(1).getType() == OpargType.VAR) {
-          Oparg val = knownConstants.get(args.get(1).getVariable().getName());
+          Oparg val = knownConstants.get(args.get(1).getVar().getName());
           if (val != null) {
             HashMap<String, Oparg> r = new HashMap<String, Oparg>();
-            r.put(args.get(0).getVariable().getName(), val);
+            r.put(args.get(0).getVar().getName(), val);
             return r;
           }
         }
@@ -906,29 +906,29 @@ public class ICInstructions {
       switch (op) {
       case ARRAY_LOOKUP_FUTURE:
       case ARRAYREF_LOOKUP_FUTURE:
-        Variable index = args.get(2).getVariable();
+        Variable index = args.get(2).getVar();
         if (knownConstants.containsKey(index.getName())) {
           Oparg cIndex = knownConstants.get(index.getName());
           if (op == Opcode.ARRAY_LOOKUP_FUTURE) {
-            return arrayLookupRefImm(args.get(0).getVariable(),
-                args.get(1).getVariable(), cIndex);
+            return arrayLookupRefImm(args.get(0).getVar(),
+                args.get(1).getVar(), cIndex);
           } else {
-            return arrayRefLookupImm(args.get(0).getVariable(),
-                args.get(1).getVariable(), cIndex);
+            return arrayRefLookupImm(args.get(0).getVar(),
+                args.get(1).getVar(), cIndex);
           }
         }
         break;
       case ARRAYREF_INSERT_FUTURE:
       case ARRAY_INSERT_FUTURE:
-        Variable sIndex = args.get(1).getVariable();
+        Variable sIndex = args.get(1).getVar();
         if (knownConstants.containsKey(sIndex.getName())) {
           Oparg cIndex = knownConstants.get(sIndex.getName());
           if (op == Opcode.ARRAY_INSERT_FUTURE) {
-            return arrayInsertImm(args.get(2).getVariable(),
-                      args.get(0).getVariable(), cIndex);
+            return arrayInsertImm(args.get(2).getVar(),
+                      args.get(0).getVar(), cIndex);
           } else {
-            return arrayRefInsertImm(args.get(2).getVariable(),
-                args.get(0).getVariable(), cIndex, args.get(3).getVariable());
+            return arrayRefInsertImm(args.get(2).getVar(),
+                args.get(0).getVar(), cIndex, args.get(3).getVar());
           }
         }
         break;
@@ -946,7 +946,7 @@ public class ICInstructions {
         // NOTE: could try to reduce other forms to this in one step,
         //      but its probably just easier to do it in multiple steps
         //      on subsequent passes
-        Variable arr = args.get(1).getVariable();
+        Variable arr = args.get(1).getVar();
         if (closedVars.contains(arr.getName())) {
           // Don't need to retrieve any value, but just use this protocol
           return new MakeImmRequest(null, new ArrayList<Variable>());
@@ -954,7 +954,7 @@ public class ICInstructions {
         break;
         
       case ARRAY_LOOKUP_FUTURE:
-        Variable index = args.get(2).getVariable();
+        Variable index = args.get(2).getVar();
         if (closedVars.contains(index.getName())) {
           return new MakeImmRequest(null, Arrays.asList(index));
         }
@@ -962,26 +962,26 @@ public class ICInstructions {
       case ARRAYREF_LOOKUP_FUTURE:
         // We will take either the index or the dereferenced array
         List<Variable> req = mkImmVarList(closedVars, 
-                  args.get(1).getVariable(), args.get(2).getVariable());
+                  args.get(1).getVar(), args.get(2).getVar());
         if (req.size() > 0) {
           return new MakeImmRequest(null, req);
         }
         break;
       case ARRAYREF_LOOKUP_IMM:
         // Could skip using reference
-        Variable arrRef2 = args.get(1).getVariable();
+        Variable arrRef2 = args.get(1).getVar();
         if (closedVars.contains(arrRef2.getName())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef2));
         }
         break;
       case ARRAY_INSERT_FUTURE:
-        Variable sIndex = args.get(1).getVariable();
+        Variable sIndex = args.get(1).getVar();
         if (closedVars.contains(sIndex.getName())) {
           return new MakeImmRequest(null, Arrays.asList(sIndex));
         }
         break;
       case ARRAYREF_INSERT_IMM:
-        Variable arrRef3 = args.get(0).getVariable();
+        Variable arrRef3 = args.get(0).getVar();
         if (closedVars.contains(arrRef3.getName())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef3));
         }
@@ -989,27 +989,27 @@ public class ICInstructions {
       case ARRAYREF_INSERT_FUTURE:
         // We will take either the index or the dereferenced array
         List<Variable> req2 = mkImmVarList(closedVars,
-                    args.get(0).getVariable(), args.get(1).getVariable());
+                    args.get(0).getVar(), args.get(1).getVar());
         if (req2.size() > 0) {
           return new MakeImmRequest(null, req2);
         }
         break;
       case ARRAY_CREATE_NESTED_FUTURE:
         // Try to get immediate index
-        Variable index2 = args.get(2).getVariable();
+        Variable index2 = args.get(2).getVar();
         if (closedVars.contains(index2.getName())) {
           return new MakeImmRequest(null, Arrays.asList(index2));
         }
         break;
       case ARRAY_REF_CREATE_NESTED_IMM:
-        Variable arrRef5 = args.get(1).getVariable();
+        Variable arrRef5 = args.get(1).getVar();
         if (closedVars.contains(arrRef5.getName())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef5));
         }
         break;
       case ARRAY_REF_CREATE_NESTED_FUTURE:
         List<Variable> req5 = mkImmVarList(closedVars, 
-            args.get(1).getVariable(), args.get(2).getVariable());
+            args.get(1).getVar(), args.get(2).getVar());
         if (req5.size() > 0) {
           return new MakeImmRequest(null, req5);
         }
@@ -1018,7 +1018,7 @@ public class ICInstructions {
       case UPDATE_MIN:
       case UPDATE_SCALE:
         return new MakeImmRequest(null, Arrays.asList(
-                  args.get(1).getVariable())); 
+                  args.get(1).getVar())); 
       }
       //TODO: add in create nested instructions
       return null;
@@ -1041,121 +1041,121 @@ public class ICInstructions {
       case ARRAY_LOOKUP_REF_IMM:
         assert(values.size() == 0);
         // OUtput switched from ref to value
-        Variable refOut = args.get(0).getVariable();
+        Variable refOut = args.get(0).getVar();
         Variable valOut = Variable.createDerefTmp(refOut, 
                                       VariableStorage.ALIAS);
         Instruction newI = arrayLookupImm(valOut,
-            args.get(1).getVariable(), args.get(2));
+            args.get(1).getVar(), args.get(2));
         return new MakeImmChange(valOut, refOut, newI);
       case ARRAY_LOOKUP_FUTURE:
         assert(values.size() == 1);
         return new MakeImmChange(
-                arrayLookupRefImm(args.get(0).getVariable(), 
-                args.get(1).getVariable(), values.get(0)));
+                arrayLookupRefImm(args.get(0).getVar(), 
+                args.get(1).getVar(), values.get(0)));
       case ARRAYREF_LOOKUP_FUTURE:
         assert(values.size() == 1 || values.size() == 2);
         // Could be either array ref, index, or both
         if (values.size() == 2) {
           return new MakeImmChange(arrayLookupRefImm(
-              args.get(0).getVariable(), values.get(0).getVariable(), 
+              args.get(0).getVar(), values.get(0).getVar(), 
               values.get(1)));
         } else { 
           Oparg v1 = values.get(0);
           if (v1.isImmediateInt()) {
             // replace index
             return new MakeImmChange(
-                    arrayRefLookupImm(args.get(0).getVariable(), 
-                    args.get(1).getVariable(), v1));
+                    arrayRefLookupImm(args.get(0).getVar(), 
+                    args.get(1).getVar(), v1));
           } else {
             // replace the array ref
             return new MakeImmChange(
-                    arrayLookupFuture(args.get(0).getVariable(), 
-                            v1.getVariable(), args.get(2).getVariable()));
+                    arrayLookupFuture(args.get(0).getVar(), 
+                            v1.getVar(), args.get(2).getVar()));
           }
         }
       case ARRAYREF_LOOKUP_IMM:
         assert(values.size() == 1);
         // Switch from ref to plain array
         return new MakeImmChange(arrayLookupRefImm(
-                args.get(0).getVariable(), values.get(0).getVariable(),
+                args.get(0).getVar(), values.get(0).getVar(),
                                                          args.get(2)));
       case ARRAY_INSERT_FUTURE:
         assert(values.size() == 1);
         return new MakeImmChange(
-                arrayInsertImm(args.get(2).getVariable(), 
-                args.get(0).getVariable(), values.get(0)));
+                arrayInsertImm(args.get(2).getVar(), 
+                args.get(0).getVar(), values.get(0)));
       case ARRAYREF_INSERT_IMM:
         assert(values.size() == 1);
         // Switch from ref to plain array
         return new MakeImmChange(arrayInsertImm(
-            args.get(2).getVariable(), values.get(0).getVariable(),
+            args.get(2).getVar(), values.get(0).getVar(),
                                                       args.get(1)));
       case ARRAYREF_INSERT_FUTURE:
         assert(values.size() == 1 || values.size() == 2);
         // Could be either array ref, index, or both
         if (values.size() == 2) {
           return new MakeImmChange(arrayInsertImm(
-              args.get(2).getVariable(),
-              values.get(0).getVariable(), values.get(1)));
+              args.get(2).getVar(),
+              values.get(0).getVar(), values.get(1)));
         } else { 
           Oparg v1 = values.get(0);
           if (v1.isImmediateInt()) {
             // replace index
             return new MakeImmChange(
-                    arrayRefInsertImm(args.get(2).getVariable(), 
-                    args.get(0).getVariable(), v1, args.get(3).getVariable()));
+                    arrayRefInsertImm(args.get(2).getVar(), 
+                    args.get(0).getVar(), v1, args.get(3).getVar()));
           } else {
             // replace the array ref
             return new MakeImmChange(
-                    arrayInsertFuture(args.get(2).getVariable(), 
-                            v1.getVariable(), args.get(1).getVariable()));
+                    arrayInsertFuture(args.get(2).getVar(), 
+                            v1.getVar(), args.get(1).getVar()));
           }
         }
       case ARRAY_CREATE_NESTED_FUTURE:
         assert(values.size() == 1);
         // Output type of instruction changed from ref to direct
         // array handle
-        Variable oldOut = args.get(0).getVariable();
+        Variable oldOut = args.get(0).getVar();
         assert(Types.isArrayRef(oldOut.getType()));
         Variable newOut = Variable.createDerefTmp(oldOut, 
                                                 VariableStorage.ALIAS);
         return new MakeImmChange(newOut, oldOut,
             arrayCreateNestedImm(newOut,
-                            args.get(1).getVariable(), values.get(0)));
+                            args.get(1).getVar(), values.get(0)));
       case ARRAY_REF_CREATE_NESTED_FUTURE:
         assert(values.size() == 1 || values.size() == 2);
         if (values.size() == 2) {
-          Variable oldOut2 = args.get(0).getVariable();
+          Variable oldOut2 = args.get(0).getVar();
           assert(Types.isArrayRef(oldOut2.getType()));
           Variable newOut2 = Variable.createDerefTmp(oldOut2,
                                           VariableStorage.ALIAS);
           return new MakeImmChange(newOut2, oldOut2,
               arrayCreateNestedImm(newOut2, 
-                  values.get(0).getVariable(), values.get(1)));
+                  values.get(0).getVar(), values.get(1)));
         } else {
           // We weren't able to switch to the version returning a plain
           // array
           Oparg newA = values.get(0);
           if (newA.isImmediateInt()) {
             return new MakeImmChange(
-                arrayRefCreateNestedImmIx(args.get(0).getVariable(),
-                    args.get(1).getVariable(), newA));
+                arrayRefCreateNestedImmIx(args.get(0).getVar(),
+                    args.get(1).getVar(), newA));
           } else {
             // Replacing array ref with array
             return new MakeImmChange(
-                arrayRefCreateNestedImmIx(args.get(0).getVariable(),
-                    newA.getVariable(), args.get(2)));
+                arrayRefCreateNestedImmIx(args.get(0).getVar(),
+                    newA.getVar(), args.get(2)));
           }
         }
       case ARRAY_REF_CREATE_NESTED_IMM:
         assert(values.size() == 1);
-        Variable oldOut3 = args.get(0).getVariable();
+        Variable oldOut3 = args.get(0).getVar();
         assert(Types.isArrayRef(oldOut3.getType()));
         Variable newOut3 = Variable.createDerefTmp(oldOut3,
                                                 VariableStorage.ALIAS);
         return new MakeImmChange(newOut3, oldOut3,
             arrayCreateNestedImm(newOut3,
-                            values.get(0).getVariable(), args.get(2)));
+                            values.get(0).getVar(), args.get(2)));
       case UPDATE_INCR:
       case UPDATE_MIN:
       case UPDATE_SCALE: {
@@ -1176,7 +1176,7 @@ public class ICInstructions {
                                     " ... shouldn't be here");
         }
         return new MakeImmChange(null, null, TurbineOp.updateImm(
-            this.args.get(0).getVariable(), mode, values.get(0)));
+            this.args.get(0).getVar(), mode, values.get(0)));
       }
       }
       throw new ParserRuntimeException("Couldn't make inst "
@@ -1189,7 +1189,7 @@ public class ICInstructions {
       ArrayList<Variable> blocksOn = new ArrayList<Variable>();
       for (Oparg oa: getInputs()) {
         if (oa.type == OpargType.VAR) {
-          Variable v = oa.getVariable();
+          Variable v = oa.getVar();
           SwiftType t = v.getType();
           if (Types.isScalarFuture(t)
               || Types.isReference(t)) {
@@ -1223,14 +1223,14 @@ public class ICInstructions {
           // retrieve* is invertible
           Oparg src = args.get(1);
           Oparg val = args.get(0);
-          if (Types.isScalarUpdateable(src.getVariable().getType())) {
+          if (Types.isScalarUpdateable(src.getVar().getType())) {
             return null;
           }
           ComputedValue retrieve = vanillaComputedValue(true);
           Opcode cvop = assignOpcode(src.getSwiftType());
           if (cvop == null) {
             throw new ParserRuntimeException("Need assign op for "
-                + src.getVariable());
+                + src.getVar());
           }
           ComputedValue assign = new ComputedValue(cvop,
                     "", Arrays.asList(val), src, true);
@@ -1312,7 +1312,7 @@ public class ICInstructions {
           arr = args.get(1);
           ix = args.get(2);
           contents = args.get(0);
-          Variable lookupRes = contents.getVariable();
+          Variable lookupRes = contents.getVar();
           
           cv = makeArrayComputedValue(arr, ix, contents);
   
@@ -1351,7 +1351,7 @@ public class ICInstructions {
         case ARRAY_REF_CREATE_NESTED_IMM: {
           // CREATE_NESTED <out inner array> <in array> <in index>
           contents = args.get(0);
-          Variable nestedArr = contents.getVariable();
+          Variable nestedArr = contents.getVar();
           arr = args.get(1);
           ix = args.get(2);
           cv = makeArrayComputedValue(arr, ix, contents);
@@ -1394,8 +1394,8 @@ public class ICInstructions {
 
     private ComputedValue makeArrayComputedValue(Oparg arr, Oparg ix, Oparg contents) {
       ComputedValue cv;
-      if (isMemberReference(contents.getVariable(),
-          arr.getVariable())) {
+      if (isMemberReference(contents.getVar(),
+          arr.getVar())) {
         cv = new ComputedValue(Opcode.FAKE, ComputedValue.REF_TO_ARRAY_CONTENTS, 
             Arrays.asList(arr, ix), contents, false);
       } else {
@@ -1438,7 +1438,7 @@ public class ICInstructions {
     private final List<Variable> inputs;
     private final List<Boolean> closedInputs; // which inputs are closed
     private final String functionName;
-    private final Oparg priority;
+    private Oparg priority;
   
     private FunctionCallInstruction(Opcode op, String functionName,
         List<Variable> inputs, List<Variable> outputs, Oparg priority) {
@@ -1541,8 +1541,9 @@ public class ICInstructions {
   
     @Override
     public void renameVars(Map<String, Oparg> renames) {
-      ICUtil.replaceVarsInList2(renames, outputs, false);
-      ICUtil.replaceVarsInList2(renames, inputs, false);
+      ICUtil.replaceVarsInList(renames, outputs, false);
+      ICUtil.replaceVarsInList(renames, inputs, false);
+      priority = ICUtil.replaceOparg(renames, priority, true);
     }
   
     public String getFunctionName() {
@@ -1550,7 +1551,8 @@ public class ICInstructions {
     }
     @Override
     public void renameInputs(Map<String, Oparg> renames) {
-      ICUtil.replaceVarsInList2(renames, inputs, false);
+      ICUtil.replaceVarsInList(renames, inputs, false);
+      priority = ICUtil.replaceOparg(renames, priority, true);
     }
   
     @Override
@@ -2015,14 +2017,14 @@ public class ICInstructions {
   
     @Override
     public void renameVars(Map<String, Oparg> renames) {
-      ICUtil.replaceVarsInList2(renames, newLoopVars, false);
-      ICUtil.replaceVarsInList2(renames, usedVariables, true);
-      ICUtil.replaceVarsInList2(renames, registeredContainers, true);
+      ICUtil.replaceVarsInList(renames, newLoopVars, false);
+      ICUtil.replaceVarsInList(renames, usedVariables, true);
+      ICUtil.replaceVarsInList(renames, registeredContainers, true);
     }
     
     @Override
     public void renameInputs(Map<String, Oparg> renames) {
-      ICUtil.replaceVarsInList2(renames, newLoopVars, false);
+      ICUtil.replaceVarsInList(renames, newLoopVars, false);
     }
 
     @Override
@@ -2159,7 +2161,7 @@ public class ICInstructions {
   
     @Override
     public void renameVars(Map<String, Oparg> renames) {
-      ICUtil.replaceVarsInList2(renames, containersToClose, true);
+      ICUtil.replaceVarsInList(renames, containersToClose, true);
     }
   
     @Override
@@ -2571,14 +2573,14 @@ public class ICInstructions {
     @Override
     public void renameVars(Map<String, Oparg> renames) {
       if (output != null && renames.containsKey(this.output.getName())) {
-        this.output = renames.get(this.output.getName()).getVariable();
+        this.output = renames.get(this.output.getName()).getVar();
       }
-      ICUtil.replaceOpargsInList2(renames, inputs);
+      ICUtil.replaceOpargsInList(renames, inputs);
     }
 
     @Override
     public void renameInputs(Map<String, Oparg> renames) {
-      ICUtil.replaceOpargsInList2(renames, inputs);
+      ICUtil.replaceOpargsInList(renames, inputs);
     }
 
     @Override
@@ -2636,7 +2638,7 @@ public class ICInstructions {
       for (int i = 0; i < inputs.size(); i++) {
         Oparg in = inputs.get(i);
         if (in.getType() == OpargType.VAR) {
-          Oparg c = knownConstants.get(in.getVariable().getName());
+          Oparg c = knownConstants.get(in.getVar().getName());
           constInputs.add(c);
           if (c != null) {
             // replace arg with constant
@@ -2822,7 +2824,7 @@ public class ICInstructions {
       }
     }
     
-    public Variable getVariable() {
+    public Variable getVar() {
       if (type == OpargType.VAR) {
         return var;
       } else {
@@ -2838,7 +2840,7 @@ public class ICInstructions {
               "replaceVariable for non-variable type");
       }
     }
-  
+    
     public SwiftType getSwiftType() {
       switch (type) {
       case INTVAL:
@@ -2978,7 +2980,7 @@ public class ICInstructions {
         case STRINGVAL:
           return stringlit.compareTo(o.stringlit);
         case VAR:
-          return var.getName().compareTo(o.getVariable().getName());
+          return var.getName().compareTo(o.getVar().getName());
         default:
           throw new ParserRuntimeException("couldn't compare oparg type "
               + this.type.toString());
@@ -2997,7 +2999,7 @@ public class ICInstructions {
                 Collection<Oparg> args) {
       for (Oparg o: args) {
         if (o.type == OpargType.VAR) {
-          addTo.add(o.getVariable().getName());
+          addTo.add(o.getVar().getName());
         }
       }
     }
@@ -3041,7 +3043,7 @@ public class ICInstructions {
     } else if (Types.isArray(dst.getType()) || Types.isStruct(dst.getType())) {
       assert(dst.getStorage() == VariableStorage.ALIAS);
       assert (value.getType() == OpargType.VAR);
-      return TurbineOp.copyRef(dst, value.getVariable());
+      return TurbineOp.copyRef(dst, value.getVar());
     }
 
     throw new ParserRuntimeException("Unhandled case in valueSet: "

@@ -677,7 +677,7 @@ public class SwiftICGenerator implements CompilerBackend {
   @Override
   public void addGlobal(String name, Oparg val) {
     assert(val.isConstant() ||
-        (Types.isScalarValue(val.getVariable().getType())));
+        (Types.isScalarValue(val.getVar().getType())));
     program.addGlobalConst(name, val);
   }
 

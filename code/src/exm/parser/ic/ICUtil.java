@@ -72,25 +72,13 @@ public class ICUtil {
     }
   }
 
-
-  /** replace matching variables in-place in list */
-  public static void replaceVarsInList(Map<String, Variable> replacements,
-      List<Variable> vars) {
-    for (int i = 0; i < vars.size(); i++) {
-      String varName = vars.get(i).getName();
-      if (replacements.containsKey(varName)) {
-        vars.set(i, replacements.get(varName));
-      }
-    }
-  }
-
   /**
    * Replace variables by name in list
    * Remove variables with duplicate names
    * @param replacements
    * @param vars
    */
-  public static void replaceVarsInList2(Map<String, Oparg> replacements,
+  public static void replaceVarsInList(Map<String, Oparg> replacements,
       List<Variable> vars, boolean removeDupes) {
     // Remove new duplicates
     ArrayList<String> alreadySeen = null;
@@ -105,12 +93,12 @@ public class ICUtil {
         Oparg oa = replacements.get(varName);
         if (oa.getType() == OpargType.VAR) {
           if (removeDupes && 
-                  alreadySeen.contains(oa.getVariable().getName())) {
+                  alreadySeen.contains(oa.getVar().getName())) {
             vars.remove(i); i--; n--;
           } else {
-            vars.set(i, oa.getVariable());
+            vars.set(i, oa.getVar());
             if (removeDupes) {
-              alreadySeen.add(oa.getVariable().getName());
+              alreadySeen.add(oa.getVar().getName());
             }
           }
         }
@@ -139,30 +127,40 @@ public class ICUtil {
     }
   }
 
-  public static void replaceOpargsInList(Map<String, Variable> renames,
+  public static void replaceOpargsInList(Map<String, Oparg> renames,
       List<Oparg> args) {
     for (int i = 0; i < args.size(); i++) {
       Oparg oa = args.get(i);
       if (oa.getType() == OpargType.VAR) {
-        String oldName = oa.getVariable().getName();
-        if (renames.containsKey(oldName)) {
-          oa.replaceVariable(renames.get(oldName));
-        }
-      }
-    }
-  }
-  
-  public static void replaceOpargsInList2(Map<String, Oparg> renames,
-      List<Oparg> args) {
-    for (int i = 0; i < args.size(); i++) {
-      Oparg oa = args.get(i);
-      if (oa.getType() == OpargType.VAR) {
-        String oldName = oa.getVariable().getName();
+        String oldName = oa.getVar().getName();
         if (renames.containsKey(oldName)) {
           args.set(i, renames.get(oldName));
         }
       }
     }
+  }
+  
+  /**
+   * If oa is a variable with a name in the renames map, replace
+   * @param renames
+   * @param oa
+   * @param nullsOk set to true if oa may be null, otherwise exception
+   *    will be thrown
+   * @return null if oa is null. If oa is variable and
+   *      is in renames, return the replacements.  If it isn't,
+   *      return the argument 
+   */
+  public static Oparg replaceOparg(Map<String, Oparg> renames, Oparg oa, boolean nullsOk) {
+    assert(nullsOk || oa != null);
+    if (oa != null && oa.getType() == OpargType.VAR) {
+      String name = oa.getVar().getName();
+      if (renames.containsKey(name)) {
+        Oparg res = renames.get(name);
+        assert(res != null);
+        return res;
+      }
+    }
+    return oa;
   }
   
   public static void removeVarInList(List<Variable> varList,

@@ -157,14 +157,14 @@ public class ForwardDataflow {
       Opcode op = newCV.getOp();
       availableVals.put(newCV, valLoc);
       if (valLoc.getType() == OpargType.VAR && outClosed) {
-        this.closed.add(valLoc.getVariable().getName());
+        this.closed.add(valLoc.getVar().getName());
       }
       if (op == Opcode.LOAD_BOOL || op == Opcode.LOAD_FLOAT
           || op == Opcode.LOAD_INT || op == Opcode.LOAD_REF 
           || op == Opcode.LOAD_STRING) {
         // If the value is available, it is effectively closed even if
         // the future isn't closed
-        this.closed.add(newCV.getInput(0).getVariable().getName());
+        this.closed.add(newCV.getInput(0).getVar().getName());
       }
     }
 
@@ -250,7 +250,7 @@ public class ForwardDataflow {
         if (ComputedValue.isCopy(currCV)) {
           // Copies are easy to handle: replace output of inst with input 
           // going forward
-          replaceInputs.put(currCV.getValLocation().getVariable().getName(),
+          replaceInputs.put(currCV.getValLocation().getVar().getName(),
                                               currCV.getInput(0));
           continue;
         }
@@ -261,11 +261,11 @@ public class ForwardDataflow {
         } else if (currLoc.isConstant()) {
           Oparg prevLoc = av.getLocation(currCV);
           if (prevLoc.getType() == OpargType.VAR) {
-            assert (Types.isScalarValue(prevLoc.getVariable().getType()));
+            assert (Types.isScalarValue(prevLoc.getVar().getType()));
             // Constants are the best... might as well replace
             av.addComputedValue(currCV, true);
             // System.err.println("replace " + prevLoc + " with " + currLoc);
-            replaceInputs.put(prevLoc.getVariable().getName(), currLoc);
+            replaceInputs.put(prevLoc.getVar().getName(), currLoc);
           } else {
             // Should be same, otherwise bug
             assert (currLoc.equals(prevLoc));
@@ -279,12 +279,12 @@ public class ForwardDataflow {
             usePrev = true;
           } else {
             assert (prevLoc.getType() == OpargType.VAR);
-            boolean currClosed = av.isClosed(currLoc.getVariable().getName());
-            boolean prevClosed = av.isClosed(prevLoc.getVariable().getName());
+            boolean currClosed = av.isClosed(currLoc.getVar().getName());
+            boolean prevClosed = av.isClosed(prevLoc.getVar().getName());
             if (currCV.equivType == EquivalenceType.REFERENCE) {
               // The two locations are both references to same thing, so can 
               // replace all references, including writes to currLoc
-              replaceAll.put(currLoc.getVariable().getName(), 
+              replaceAll.put(currLoc.getVar().getName(), 
                                                     prevLoc);
             }
             if (prevClosed || !currClosed) {
@@ -304,10 +304,10 @@ public class ForwardDataflow {
           // variable for the computed expression
           if (usePrev) {
             // Do it
-            replaceInputs.put(currLoc.getVariable().getName(), prevLoc);
+            replaceInputs.put(currLoc.getVar().getName(), prevLoc);
             // System.err.println("replace " + currLoc + " with " + prevLoc);
           } else {
-            replaceInputs.put(prevLoc.getVariable().getName(), currLoc);
+            replaceInputs.put(prevLoc.getVar().getName(), currLoc);
             // System.err.println("replace " + prevLoc + " with " + currLoc);
           }
         }
@@ -598,7 +598,7 @@ public class ForwardDataflow {
       List<Variable> in = inst.getBlockingInputs();
       if (in != null) {
         for (Oparg o : inst.getOutputs()) {
-          Variable ov = o.getVariable();
+          Variable ov = o.getVar();
           if (!Types.isScalarValue(ov.getType())) {
             cv.setDependencies(ov, in);
           }

@@ -1617,13 +1617,13 @@ public class TurbineGenerator implements CompilerBackend
       List<Variable> containersToRegister, int desiredUnroll, int splitDegree) {
     assert(start.getType() == OpargType.INTVAL ||
         (start.getType() == OpargType.VAR &&
-            start.getVariable().getType().equals(Types.VALUE_INTEGER)));
+            start.getVar().getType().equals(Types.VALUE_INTEGER)));
     assert(end.getType() == OpargType.INTVAL ||
         (end.getType() == OpargType.VAR &&
-            end.getVariable().getType().equals(Types.VALUE_INTEGER)));
+            end.getVar().getType().equals(Types.VALUE_INTEGER)));
     assert(increment.getType() == OpargType.INTVAL ||
         (increment.getType() == OpargType.VAR &&
-                    increment.getVariable().getType().equals(Types.VALUE_INTEGER)));
+                    increment.getVar().getType().equals(Types.VALUE_INTEGER)));
     assert(loopVar.getType().equals(Types.VALUE_INTEGER));
     Expression startE = opargToExpr(start);
     Expression endE = opargToExpr(end);
@@ -1868,7 +1868,7 @@ public class TurbineGenerator implements CompilerBackend
     case STRINGVAL:
       return new TclString(in.getStringLit(), true);
     case VAR:
-      return new Value(prefixVar(in.getVariable().getName()));
+      return new Value(prefixVar(in.getVar().getName()));
     case FLOATVAL:
       return new LiteralFloat(in.getFloatLit());
     default:
