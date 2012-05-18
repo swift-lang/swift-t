@@ -54,9 +54,6 @@ AC_ARG_WITH(c-utils,
                       fi
                     fi
                     AC_MSG_RESULT([using ExM c-utils in $withval ...])
-                    AC_DEFINE_UNQUOTED([C_UTILS_LOCATION],
-                                       "$withval",
-                                       [ExM c-utils location])
                     USE_C_UTILS=$withval
                  ],
                  [
@@ -109,8 +106,6 @@ AC_ARG_WITH(mpi,
                      AC_MSG_ERROR(Could not find MPI in $withval)
                   fi
                   AC_MSG_RESULT([using MPI in $withval])
-                  AC_DEFINE_UNQUOTED([MPI_LOCATION],
-                                     "$withval", [MPI location])
                   USE_MPI=$withval
                  ],
                  [
@@ -214,6 +209,7 @@ USE_MPE_WORD=no
 (( $USE_MPE )) && USE_MPE_WORD=yes
 AC_MSG_RESULT([MPE enabled? $USE_MPE_WORD ])
 AC_SUBST(USE_MPE)
+AC_DEFINE_UNQUOTED(USE_MPE,$USE_MPE,[Enables MPE])
 
 AC_ARG_WITH(adlb,
                  AS_HELP_STRING(
@@ -225,8 +221,6 @@ AC_ARG_WITH(adlb,
                      AC_MSG_ERROR(Could not find ADLB in $withval)
                   fi
                   AC_MSG_RESULT([using ADLB in $withval])
-                  AC_DEFINE_UNQUOTED([ADLB_LOCATION],
-                                     "$withval", [ADLB Location])
                   USE_ADLB=$withval
                  ],
                  [
@@ -245,8 +239,6 @@ AC_ARG_WITH(tcl,
                      AC_MSG_ERROR(Could not find Tcl in $withval)
                   fi
                   AC_MSG_RESULT([using Tcl in $withval])
-                  AC_DEFINE_UNQUOTED([TCL_LOCATION],
-                                     "$withval", [Tcl location])
                   USE_TCL=$withval
                   source $USE_TCL/lib/tclConfig.sh
                  ],

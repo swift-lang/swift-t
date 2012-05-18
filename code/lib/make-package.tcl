@@ -4,17 +4,11 @@
 set turbine_version $env(TURBINE_VERSION)
 set use_mpe         $env(USE_MPE)
 
-set load_mpe ""
-# Determine if we compiled MPE
-if { $use_mpe == 1 } {
-    set load_mpe "-load libtclmpe.so"
-}
-
 set metadata [ list -name turbine -version $turbine_version ]
 
 set items [ eval list -load libtcladlb.so   \
                 -load libtclturbine.so \
-                $load_mpe              \
+                -load libtclmpe.so     \
                 -source turbine.tcl    \
                 -source engine.tcl     \
                 -source data.tcl       \

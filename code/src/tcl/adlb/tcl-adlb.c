@@ -338,7 +338,8 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
 /**
    Convert type string to adlb_data_type
  */
-static inline adlb_data_type type_from_string(char* type_string)
+static inline
+adlb_data_type type_from_string(char* type_string)
 {
   adlb_data_type result;
   if (strcmp(type_string, "integer") == 0)
@@ -502,7 +503,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
         int p;
         rc = Tcl_GetIntFromObj(interp, objv[3], &p);
         TCL_CHECK_MSG(rc, "required pointer!");
-        data = (void*) p;
+        data = (void*) (long) p;
         rc = Tcl_GetIntFromObj(interp, objv[4], &length);
         TCL_CHECK_MSG(rc, "required length!");
       }

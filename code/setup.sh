@@ -3,7 +3,7 @@
 crash()
 {
   MSG=$1
-  echo "setup.sh ${MSG}"
+  echo "setup.sh: ${MSG}"
   exit 1
 }
 

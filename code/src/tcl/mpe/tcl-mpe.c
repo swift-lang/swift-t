@@ -8,57 +8,17 @@
 #include <assert.h>
 
 #include <tcl.h>
-#include <mpe.h>
+
+#if USE_MPE
+
 #include <adlb.h>
 
 #include "src/tcl/util.h"
 #include "src/util/debug.h"
 
-/*
-static int
-MPE_Get_IDs_Cmd(ClientData cdata, Tcl_Interp *interp,
-                int objc, Tcl_Obj *const objv[])
-{
-  TCL_ARGS(1);
-
-  int n1, n2;
-
-  MPE_Log_get_state_eventIDs(&n1, &n2);
-
-  Tcl_Obj* items[2];
-  items[0] = Tcl_NewIntObj(n1);
-  items[1] = Tcl_NewIntObj(n2);
-  Tcl_Obj* result = Tcl_NewListObj(2, items);
-  Tcl_SetObjResult(interp, result);
-  return TCL_OK;
-}
-
-static int
-MPE_Describe_Cmd(ClientData cdata, Tcl_Interp *interp,
-                 int objc, Tcl_Obj *const objv[])
-{
-  TCL_ARGS(5);
-
-  int n1, n2;
-  char* state;
-  char* color;
-  int error;
-  error = Tcl_GetIntFromObj(interp, objv[1], &n1);
-  TCL_CHECK(error);
-  error = Tcl_GetIntFromObj(interp, objv[2], &n2);
-  TCL_CHECK(error);
-  state = Tcl_GetStringFromObj(objv[3], NULL);
-  assert(state);
-  color = Tcl_GetStringFromObj(objv[4], NULL);
-  assert(color);
-
-  MPE_Describe_state(n1, n2, state, color);
-
-  return TCL_OK;
-}
-*/
-
+#include <mpe.h>
 static const char* MPE_CHOOSE_COLOR = "MPE_CHOOSE_COLOR";
+
 
 /**
   usage: mpe::create <symbol> => [ list start-ID stop-ID ]
@@ -107,6 +67,25 @@ MPE_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+#else                                           \
+// Not using MPE
+
+static int
+MPE_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
+               int objc, Tcl_Obj *const objv[])
+{
+  return TCL_OK;
+}
+
+static int
+MPE_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
+               int objc, Tcl_Obj *const objv[])
+{
+  return TCL_OK;
+}
+
+#endif
+
 /**
    Shorten object creation lines.  mpe:: namespace is prepended
  */
@@ -125,8 +104,6 @@ Tclmpe_Init(Tcl_Interp *interp)
   if (Tcl_PkgProvide(interp, "MPE", "0.1") == TCL_ERROR)
     return TCL_ERROR;
 
-  //  COMMAND("get_ids", MPE_Get_IDs_Cmd);
-  // COMMAND("describe", MPE_Describe_Cmd);
   COMMAND("create", MPE_Create_Cmd);
   COMMAND("log", MPE_Log_Cmd);
 

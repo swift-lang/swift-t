@@ -1,4 +1,9 @@
 
+# MODULE MPE
+
+# Even if MPE is disabled, we compile the mpe.o
+# object (full of noops) and install it
+
 DIR := src/tcl/mpe
 
 TCL_MPE_SRC := $(DIR)/tcl-mpe.c
@@ -13,7 +18,7 @@ $(TCL_MPE_SO): $(TCL_MPE_OBJS) $(TCL_TURBINE_SO)
                  $(TCL_LINK_FLAGS) \
                  $(TCL_MPE_OBJS) \
                  $(LDFLAGS) \
-                 -L $(ADLB) -l mpe \
+                 $(LIBS) \
                  -L lib -l tclturbine \
                  $(LIB_MPI) \
                  -Wl,-rpath -Wl,$(INSTALL_LIB) \
