@@ -50,6 +50,7 @@ namespace eval turbine {
             set v $u
         } elseif { $length == 1 } {
             set type $args
+            log "${type}: <$u>"
         } else {
             error "allocate: requires 1 or 2 args!"
         }
@@ -105,7 +106,6 @@ namespace eval turbine {
     }
 
     proc create_integer { id } {
-        debug "create integer: <$id>"
         adlb::create $id $adlb::INTEGER
     }
 
@@ -122,7 +122,6 @@ namespace eval turbine {
     }
 
     proc create_float { id } {
-        debug "create float: <$id>"
         adlb::create $id $adlb::FLOAT
     }
 
@@ -139,7 +138,7 @@ namespace eval turbine {
     }
 
     proc create_string { id } {
-        debug "create string: <$id>"
+        log "create string: <$id>"
         adlb::create $id $adlb::STRING
     }
 
