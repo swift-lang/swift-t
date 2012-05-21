@@ -2,6 +2,12 @@
 /**
  * Tcl extension for MPE
  *
+ * This is affected by preprocessor variable USE_MPE
+ * If true, create the real MPE commands
+ * Else, create noop commands
+ * This allows Tcl scripts that call mpe:: functions to run even
+ * if MPE is not enabled
+ *
  * @author wozniak
  * */
 
@@ -19,13 +25,12 @@
 #include <mpe.h>
 static const char* MPE_CHOOSE_COLOR = "MPE_CHOOSE_COLOR";
 
-
 /**
-  usage: mpe::create <symbol> => [ list start-ID stop-ID ]
+  usage: mpe::create_pair <symbol> => [ list start-ID stop-ID ]
 */
 static int
-MPE_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
-               int objc, Tcl_Obj *const objv[])
+MPE_Create_Pair_Cmd(ClientData cdata, Tcl_Interp *interp,
+                    int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
   char* state = Tcl_GetStringFromObj(objv[1], NULL);
@@ -41,6 +46,28 @@ MPE_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
   items[0] = Tcl_NewIntObj(event1);
   items[1] = Tcl_NewIntObj(event2);
   Tcl_Obj* result = Tcl_NewListObj(2, items);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+/**
+  usage: mpe::create_solo <symbol> => ID
+*/
+static int
+MPE_Create_Solo_Cmd(ClientData cdata, Tcl_Interp *interp,
+                    int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  char* token = Tcl_GetStringFromObj(objv[1], NULL);
+  assert(token);
+
+  int event;
+  // This is typically the first call to MPE
+  // A SEGV here probably means that ADLB was not configured with MPE
+  MPE_Log_get_solo_eventID(&event);
+  MPE_Describe_event(event, token, MPE_CHOOSE_COLOR);
+
+  Tcl_Obj* result = Tcl_NewIntObj(event);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
@@ -67,13 +94,23 @@ MPE_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-#else                                           \
-// Not using MPE
+#else
+
+// Not using MPE...
 
 static int
-MPE_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
-               int objc, Tcl_Obj *const objv[])
+MPE_Create_Pair_Cmd(ClientData cdata, Tcl_Interp *interp,
+                    int objc, Tcl_Obj *const objv[])
 {
+  // NOOP
+  return TCL_OK;
+}
+
+static int
+MPE_Create_Solo_Cmd(ClientData cdata, Tcl_Interp *interp,
+                    int objc, Tcl_Obj *const objv[])
+{
+  // NOOP
   return TCL_OK;
 }
 
@@ -81,6 +118,7 @@ static int
 MPE_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
                int objc, Tcl_Obj *const objv[])
 {
+  // NOOP
   return TCL_OK;
 }
 
@@ -104,7 +142,9 @@ Tclmpe_Init(Tcl_Interp *interp)
   if (Tcl_PkgProvide(interp, "MPE", "0.1") == TCL_ERROR)
     return TCL_ERROR;
 
-  COMMAND("create", MPE_Create_Cmd);
+  COMMAND("create_pair", MPE_Create_Pair_Cmd);
+  COMMAND("create_solo", MPE_Create_Solo_Cmd);
+
   COMMAND("log", MPE_Log_Cmd);
 
   return TCL_OK;
