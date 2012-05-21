@@ -44,14 +44,10 @@ AC_ARG_WITH(c-utils,
                     [location of ExM c-utils]),
                    [
                     USE_C_UTILS=0
-                    AC_CHECK_FILE(${withval}/lib/libexmcutils.a,
+                    AC_CHECK_FILE(${withval}/include/c-utils.h,
                                   [USE_C_UTILS=1], [])
                     if test "$USE_C_UTILS" = 0 ; then
-                      AC_CHECK_FILE(${withval}/lib/libexmcutils.so,
-                                    [USE_C_UTILS=1], [])
-                      if test "$USE_C_UTILS" = 0 ; then
-                        AC_MSG_ERROR([Could not find ExM c-utils in $withval])
-                      fi
+                       AC_MSG_ERROR([Could not find ExM c-utils in $withval])
                     fi
                     AC_MSG_RESULT([using ExM c-utils in $withval ...])
                     USE_C_UTILS=$withval
