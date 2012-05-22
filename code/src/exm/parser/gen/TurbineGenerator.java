@@ -360,7 +360,7 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     if (op == LocalOpcode.ASSERT || op == LocalOpcode.ASSERT_EQ ||
-        op == LocalOpcode.TRACE) {
+        op == LocalOpcode.TRACE || op == LocalOpcode.METADATA) {
       assert(out == null);
       String tclFn;
       switch (op) {
@@ -373,6 +373,9 @@ public class TurbineGenerator implements CompilerBackend
       case TRACE:
         tclFn = "turbine::trace_impl";
         break;
+      case METADATA:
+        tclFn = "turbine::metadata_impl";
+        break;
       default:
         throw new ParserRuntimeException("Cn't handle local op: "
             + op.toString());
@@ -382,7 +385,8 @@ public class TurbineGenerator implements CompilerBackend
       return;
     } else if (op == LocalOpcode.ARGC_GET || op == LocalOpcode.ARGV_CONTAINS
             || op == LocalOpcode.ARGV_GET || op == LocalOpcode.N_ADLB_SERVERS
-            || op == LocalOpcode.N_ENGINES ||op == LocalOpcode.N_WORKERS) {
+            || op == LocalOpcode.N_ENGINES ||op == LocalOpcode.N_WORKERS
+            || op == LocalOpcode.GETENV) {
       assert(out != null);
       String tclFn;
       switch (op) {
@@ -403,6 +407,9 @@ public class TurbineGenerator implements CompilerBackend
         break;
       case N_WORKERS:
         tclFn = "turbine::turbine_workers";
+        break;
+      case GETENV:
+        tclFn = "turbine::getenv_impl";
         break;
       default:
         throw new ParserRuntimeException("Can't handle local op: "

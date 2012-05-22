@@ -1676,9 +1676,11 @@ public class ICInstructions {
       sideEffectFree.add("argc");
       sideEffectFree.add("argv_contains");
       sideEffectFree.add("argv");
+      sideEffectFree.add("getenv");
       localEquivalents.put("argc", LocalOpcode.ARGC_GET);
       localEquivalents.put("argv_contains", LocalOpcode.ARGV_CONTAINS);
       localEquivalents.put("argv", LocalOpcode.ARGV_GET);
+      localEquivalents.put("getenv", LocalOpcode.GETENV);
       
       sideEffectFree.add("turbine_workers");
       sideEffectFree.add("turbine_engines");
@@ -1757,6 +1759,7 @@ public class ICInstructions {
       localEquivalents.put("assert", LocalOpcode.ASSERT);
       localEquivalents.put("assertEqual", LocalOpcode.ASSERT_EQ);
       localEquivalents.put("trace", LocalOpcode.TRACE);
+      localEquivalents.put("metadata", LocalOpcode.METADATA);
       localEquivalents.put("printf", LocalOpcode.PRINTF);
       localEquivalents.put("sprintf", LocalOpcode.SPRINTF);
       
@@ -2286,7 +2289,7 @@ public class ICInstructions {
     sideeffectLocalOps.add(LocalOpcode.ASSERT);
     sideeffectLocalOps.add(LocalOpcode.ASSERT_EQ);
     sideeffectLocalOps.add(LocalOpcode.PRINTF);
-    sideeffectLocalOps.add(LocalOpcode.SPRINTF);
+    sideeffectLocalOps.add(LocalOpcode.METADATA);
   }
   public static class LocalBuiltin extends Instruction {
     public final LocalOpcode localop;

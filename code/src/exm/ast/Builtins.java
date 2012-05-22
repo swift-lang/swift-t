@@ -176,8 +176,9 @@ public class Builtins {
     LOG, EXP, SQRT, IS_NAN,
     RANDOM, RAND_INT,
     TRACE, ASSERT_EQ, ASSERT, PRINTF, SPRINTF,
-    ARGC_GET, ARGV_GET, ARGV_CONTAINS,
+    ARGC_GET, ARGV_GET, ARGV_CONTAINS, GETENV,
     N_WORKERS, N_ENGINES, N_ADLB_SERVERS,
+    METADATA
   }
 
   public static enum UpdateMode {
