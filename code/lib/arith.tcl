@@ -332,7 +332,7 @@ namespace eval turbine {
 
     proc floor_body { parent c a } {
         set a_value [ retrieve_float $a ]
-        set c_value [ expr floor($a_value) ]
+        set c_value [ expr int(floor($a_value)) ]
         log "floor: $a_value => $c_value"
         store_integer $c $c_value
     }
@@ -345,7 +345,7 @@ namespace eval turbine {
 
     proc ceil_body { parent c a } {
         set a_value [ retrieve_float $a ]
-        set c_value [ expr ceil($a_value) ]
+        set c_value [ expr int(ceil($a_value)) ]
         log "ceil: $a_value => $c_value"
         store_integer $c $c_value
     }
@@ -357,7 +357,7 @@ namespace eval turbine {
 
     proc round_body { parent c a } {
         set a_value [ retrieve_float $a ]
-        set c_value [ expr round($a_value) ]
+        set c_value [ expr int(round($a_value)) ]
         log "round: $a_value => $c_value"
         store_integer $c $c_value
     }
@@ -369,7 +369,8 @@ namespace eval turbine {
 
     proc itof_body { parent c a } {
         set a_value [ retrieve_integer $a ]
-        store_float $c $a_value
+        # Convert to TCL float type 
+        store_float $c [ expr double($a_value) ]
     }
 
     proc log_e { parent c a } {
