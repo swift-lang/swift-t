@@ -56,7 +56,7 @@ COMPILER_OPTS=()
 O1_OPTS=("constant-fold" "branch-predict" "dead-code-elim"
                     "flatten-nested" "shared-constants"
                     "forward-dataflow" "unroll-loops")
-O2_OPTS=("disable-asserts")
+O2_OPTS=()
 O3_OPTS=("wait-coalesce" "controlflow-fusion")
 
 function get_compiler_opt_name() {
