@@ -29,11 +29,11 @@ namespace eval turbine {
     }
 
     proc metadata_body { message } {
+    }   metadata_impl [ turbine::retrieve_string $message ]
 
+    proc metadata_impl { msg } {
         variable event
         mpe_setup
-
-        set message_value [ turbine::retrieve_string $message ]
-        mpe::log $event "$message_value"
+        mpe::log $event "$msg"
     }
 }
