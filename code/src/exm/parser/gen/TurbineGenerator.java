@@ -565,7 +565,6 @@ public class TurbineGenerator implements CompilerBackend
       assert(argExpr.size() == 1);
       return new Expression[] {
           argExpr.get(0), new Token("!="), argExpr.get(0)};
-    case CEIL: case FLOOR: case ROUND:
     case LOG: case EXP: case SQRT:
     case ABS_FLOAT: case ABS_INT:
       // Single argument to expr function
@@ -580,7 +579,33 @@ public class TurbineGenerator implements CompilerBackend
           };
     case INTTOFLOAT:
       assert(argExpr.size() == 1);
-      return new Expression[] { argExpr.get(0) };
+      // Need to explicitly convert to floating point number, other
+      // TCL will do e.g. integer division
+      return new Expression[] { new Token("double("), 
+                        argExpr.get(0), new Token(")") };
+    case CEIL: 
+    case FLOOR:
+    case ROUND: {
+      String fname;
+      assert(argExpr.size() == 1);
+      switch(op) {
+      case CEIL:
+        fname = "ceil";
+        break;
+      case FLOOR:
+        fname = "floor";
+        break;
+      case ROUND:
+        fname = "round";
+        break;
+      default:
+        throw new STCRuntimeError("impossible");
+      }
+      // Need to apply int( conversion, as the rounding function still return
+      // a floating point (albeit one with no fractional part)
+      return new Expression[] { new Token("int(" + fname + "("), 
+          argExpr.get(0), new Token("))") };
+    }
     case MAX_FLOAT: case MAX_INT: case MIN_FLOAT: case MIN_INT:
       String fnName;
       if (op == LocalOpcode.MAX_FLOAT || op == LocalOpcode.MAX_INT) {
@@ -630,12 +655,6 @@ public class TurbineGenerator implements CompilerBackend
       return new Token("&&");
     case NOT:
       return new Token("!");
-    case CEIL:
-      return new Token("ceil");
-    case FLOOR:
-      return new Token("floor");
-    case ROUND:
-      return new Token("round");
     case EXP:
       return new Token("exp");
     case LOG:
