@@ -29,7 +29,8 @@ namespace eval turbine {
     }
 
     proc metadata_body { message } {
-    }   metadata_impl [ turbine::retrieve_string $message ]
+       metadata_impl [ turbine::retrieve_string $message ]
+    }
 
     proc metadata_impl { msg } {
         variable event
