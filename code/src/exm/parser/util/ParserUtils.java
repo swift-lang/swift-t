@@ -41,7 +41,7 @@ public class ParserUtils
   {
     if (s.charAt(0) != '"' ||
         s.charAt(s.length()-1) != '"')
-      throw new ParserRuntimeException("String not quoted: " + s);
+      throw new STCRuntimeError("String not quoted: " + s);
     return s.substring(1, s.length()-1);
   }
   

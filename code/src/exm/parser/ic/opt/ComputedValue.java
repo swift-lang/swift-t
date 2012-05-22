@@ -7,7 +7,7 @@ import exm.ast.Variable;
 import exm.parser.ic.ICInstructions.Instruction;
 import exm.parser.ic.ICInstructions.Oparg;
 import exm.parser.ic.ICInstructions.Opcode;
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 
 /**
  * A class that provides a canonical description of a computed value.
@@ -118,7 +118,7 @@ public class ComputedValue {
     result ^= this.subop.hashCode(); 
     for (Oparg o: this.inputs) {
       if (o == null) {
-        throw new ParserRuntimeException("Null oparg in " + this);
+        throw new STCRuntimeError("Null oparg in " + this);
       }
       result ^= o.hashCode();
     }

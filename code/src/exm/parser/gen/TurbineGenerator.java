@@ -192,14 +192,14 @@ public class TurbineGenerator implements CompilerBackend
       point.add(Turbine.allocateContainer(tclName, Turbine.STRING_TPREFIX));
     } else if (Types.isScalarValue(t)) {
       if (storage != VariableStorage.LOCAL) {
-        throw new ParserRuntimeException("Expected scalar value to have "
+        throw new STCRuntimeError("Expected scalar value to have "
             + "local storage");
       }
       point.add(new Comment("Value " + name + " with type " + t.toString() +
           " was defined"));
       // don't need to do anything
     } else {
-      throw new ParserRuntimeException("Code generation only implemented" +
+      throw new STCRuntimeError("Code generation only implemented" +
           " for initialisation of scalar, reference, array and struct types");
     }
 
@@ -240,7 +240,7 @@ public class TurbineGenerator implements CompilerBackend
       return Turbine.BLOB_TPREFIX;
     default:
       // If we did not find the type, fail
-      throw new ParserRuntimeException("generator: unknown type: " + type);
+      throw new STCRuntimeError("generator: unknown type: " + type);
     }
   }
 
@@ -268,7 +268,7 @@ public class TurbineGenerator implements CompilerBackend
   public void assignInt(Variable target, Oparg src) {
     assert(src.isImmediateInt());
     if (!Types.isInt(target.getType())) {
-      throw new ParserRuntimeException("Expected variable to be int, "
+      throw new STCRuntimeError("Expected variable to be int, "
           + " but was " + target.getType().toString());
     }
 
@@ -291,7 +291,7 @@ public class TurbineGenerator implements CompilerBackend
   public void assignBool(Variable target, Oparg src) {
     assert(src.isImmediateBool());
     if (!Types.isBool(target.getType())) {
-      throw new ParserRuntimeException("Expected variable to be bool, "
+      throw new STCRuntimeError("Expected variable to be bool, "
           + " but was " + target.getType().toString());
     }
 
@@ -313,7 +313,7 @@ public class TurbineGenerator implements CompilerBackend
   public void assignFloat(Variable target, Oparg src) {
     assert(src.isImmediateFloat());
     if (!Types.isFloat(target.getType())) {
-      throw new ParserRuntimeException("Expected variable to be float, "
+      throw new STCRuntimeError("Expected variable to be float, "
           + " but was " + target.getType().toString());
     }
 
@@ -335,7 +335,7 @@ public class TurbineGenerator implements CompilerBackend
   public void assignString(Variable target, Oparg src) {
     assert(src.isImmediateString());
     if (!Types.isString(target.getType())) {
-      throw new ParserRuntimeException("Expected variable to be string, "
+      throw new STCRuntimeError("Expected variable to be string, "
           + " but was " + target.getType().toString());
     }
 
@@ -377,7 +377,7 @@ public class TurbineGenerator implements CompilerBackend
         tclFn = "turbine::metadata_impl";
         break;
       default:
-        throw new ParserRuntimeException("Cn't handle local op: "
+        throw new STCRuntimeError("Cn't handle local op: "
             + op.toString());
       }
       Command cmd = new Command(tclFn, argExpr);
@@ -412,7 +412,7 @@ public class TurbineGenerator implements CompilerBackend
         tclFn = "turbine::getenv_impl";
         break;
       default:
-        throw new ParserRuntimeException("Can't handle local op: "
+        throw new STCRuntimeError("Can't handle local op: "
             + op.toString());
       }
       SetVariable cmd = new SetVariable(prefixVar(out.getName()), 
@@ -617,7 +617,7 @@ public class TurbineGenerator implements CompilerBackend
                      argExpr.get(0),
                      new Token(","), argExpr.get(1), new Token(")")};
     default:
-      throw new ParserRuntimeException("Haven't implement code gen for "
+      throw new STCRuntimeError("Haven't implement code gen for "
           + "local arithmetic op " + op.toString());
     }
   }
@@ -668,7 +668,7 @@ public class TurbineGenerator implements CompilerBackend
     case DIV_FLOAT:
       return new Token("/");
     default:
-      throw new ParserRuntimeException("need to add op " +
+      throw new STCRuntimeError("need to add op " +
                 op.toString());
     }
   }
@@ -717,7 +717,7 @@ public class TurbineGenerator implements CompilerBackend
     Sequence deref = null;
     pointStack.peek().add(deref);
     //TODO
-    throw new ParserRuntimeException("TODO: dereferenceBlob");
+    throw new STCRuntimeError("TODO: dereferenceBlob");
   }
 
   @Override
@@ -789,7 +789,7 @@ public class TurbineGenerator implements CompilerBackend
   public void appFunctionCall(String function,
               List<Variable> inputs, List<Variable> outputs, Oparg priority) {
     assert(priority == null || priority.isImmediateInt());
-    throw new ParserRuntimeException("appFunctionCall not implemented");
+    throw new STCRuntimeError("appFunctionCall not implemented");
   }
 
   @Override
@@ -804,7 +804,7 @@ public class TurbineGenerator implements CompilerBackend
     TCLFunRef tclf = builtinSymbols.get(function);
     if (tclf == null) {
       //should have all builtins in symbols
-      throw new ParserRuntimeException("call to undefined builtin function "
+      throw new STCRuntimeError("call to undefined builtin function "
           + function);
     }
     Token f = new Token(tclf.pkg + "::" + tclf.symbol);
@@ -963,12 +963,12 @@ public class TurbineGenerator implements CompilerBackend
 
     SwiftType oType = oVar.getType();
     if (!Types.isReference(oType)) {
-      throw new ParserRuntimeException("Output variable for " +
+      throw new STCRuntimeError("Output variable for " +
           "array lookup should be a reference " +
           " but had type " + oType.toString());
     }
     if (!oType.getMemberType().equals(memberType)) {
-      throw new ParserRuntimeException("Output variable for "
+      throw new STCRuntimeError("Output variable for "
           +" array lookup should be reference to "
           + memberType.toString() + ", but was reference to"
           + oType.getMemberType().toString());
@@ -1029,7 +1029,7 @@ public class TurbineGenerator implements CompilerBackend
         Oparg arrIx) {
     assert(Types.isArray(arrayVar.getType()));
     if (!arrIx.isImmediateInt()) {
-      throw new ParserRuntimeException("Not immediate int: " + arrIx);
+      throw new STCRuntimeError("Not immediate int: " + arrIx);
     }
     assert(arrIx.isImmediateInt());
 
@@ -1037,7 +1037,7 @@ public class TurbineGenerator implements CompilerBackend
     if (Types.isReference(iVar.getType())) {
       // Check that we get the right thing when we dereference it
       if (!iVar.getType().getMemberType().equals(memberType)) {
-        throw new ParserRuntimeException("Type mismatch when trying to store " +
+        throw new STCRuntimeError("Type mismatch when trying to store " +
             "from variable " + iVar.toString() + " into array " + arrayVar.toString());
       }
       Sequence r = Turbine.arrayDerefStore(
@@ -1046,7 +1046,7 @@ public class TurbineGenerator implements CompilerBackend
       pointStack.peek().add(r);
     } else {
       if (!iVar.getType().equals(memberType)) {
-        throw new ParserRuntimeException("Type mismatch when trying to store " +
+        throw new STCRuntimeError("Type mismatch when trying to store " +
             "from variable " + iVar.toString() + " into array " + arrayVar.toString());
       }
       Sequence r = Turbine.arrayStoreImmediate(
@@ -1067,7 +1067,7 @@ public class TurbineGenerator implements CompilerBackend
     if (Types.isReference(iVar.getType())) {
       // Check that we get the right thing when we dereference it
       if (!iVar.getType().getMemberType().equals(memberType)) {
-        throw new ParserRuntimeException("Type mismatch when trying to store " +
+        throw new STCRuntimeError("Type mismatch when trying to store " +
             "from variable " + iVar.toString() + " into array " + arrayVar.toString());
       }
       Sequence r = Turbine.arrayRefDerefStore(
@@ -1076,7 +1076,7 @@ public class TurbineGenerator implements CompilerBackend
       pointStack.peek().add(r);
     } else {
       if (!iVar.getType().equals(memberType)) {
-        throw new ParserRuntimeException("Type mismatch when trying to store " +
+        throw new STCRuntimeError("Type mismatch when trying to store " +
             "from variable " + iVar.toString() + " into array " + arrayVar.toString());
       }
       Sequence r = Turbine.arrayRefStoreImmediate(
@@ -1090,7 +1090,7 @@ public class TurbineGenerator implements CompilerBackend
   public void initUpdateable(Variable updateable, Oparg val) {
     assert(Types.isScalarUpdateable(updateable.getType()));
     if (!updateable.getType().equals(Types.UPDATEABLE_FLOAT)) {
-      throw new ParserRuntimeException(updateable.getType() +
+      throw new STCRuntimeError(updateable.getType() +
           " not yet supported");
     }
     assert(val.isImmediateFloat());
@@ -1105,7 +1105,7 @@ public class TurbineGenerator implements CompilerBackend
     assert(updateable.getType().getPrimitiveType() ==
                   result.getType().getPrimitiveType());
     if (!updateable.getType().equals(Types.UPDATEABLE_FLOAT)) {
-      throw new ParserRuntimeException(updateable.getType().typeName()
+      throw new STCRuntimeError(updateable.getType().typeName()
               + " not yet supported");
     }
     // just get the value the same as any other float future 
@@ -1138,7 +1138,7 @@ public class TurbineGenerator implements CompilerBackend
       builtinName = "turbine::update_scale";
       break;
     default:
-      throw new ParserRuntimeException("Unknown UpdateMode: " + updateMode);
+      throw new STCRuntimeError("Unknown UpdateMode: " + updateMode);
     }
     return builtinName;
   }
@@ -1150,7 +1150,7 @@ public class TurbineGenerator implements CompilerBackend
     if (updateable.getType().equals(Types.UPDATEABLE_FLOAT)) {
       assert(val.isImmediateFloat());
     } else {
-      throw new ParserRuntimeException("only updateable floats are"
+      throw new STCRuntimeError("only updateable floats are"
           + " implemented so far");
     }
     assert(updateMode != null);
@@ -1320,7 +1320,7 @@ public class TurbineGenerator implements CompilerBackend
       // String inputs  = Declaration.names(iList);
     // String outputs = Declaration.names(oList);
 
-    throw new ParserRuntimeException("defineApp not implemented yet");
+    throw new STCRuntimeError("defineApp not implemented yet");
     /*
     StringBuilder sb = new StringBuilder(1024);
     sb.append("proc ");
@@ -1342,13 +1342,14 @@ public class TurbineGenerator implements CompilerBackend
    *                will be called later for this if statement
    */
     @Override
-    public void startIfStatement(Variable condition, boolean hasElse)
+    public void startIfStatement(Oparg condition, boolean hasElse)
   {
     logger.trace("startIfStatement()...");
     assert(condition != null);
-    assert(condition.getStorage() == VariableStorage.LOCAL);
-    assert(condition.getType().equals(Types.VALUE_INTEGER) ||
-        condition.getType().equals(Types.VALUE_BOOLEAN));
+    assert(condition.getType() != OpargType.VAR
+        || condition.getVar().getStorage() == VariableStorage.LOCAL);
+    assert(condition.isImmediateBool()
+        || condition.isImmediateInt());
 
 
     Sequence thenBlock = new Sequence();
@@ -1360,7 +1361,7 @@ public class TurbineGenerator implements CompilerBackend
       }
     }
 
-    If i = new If(varToExpr(condition),
+    If i = new If(opargToExpr(condition),
         thenBlock, elseBlock);
     pointStack.peek().add(i);
 
@@ -1472,11 +1473,11 @@ public class TurbineGenerator implements CompilerBackend
             // Serialize
             ruleTokens.add(varToExpr(v));
           } else {
-            throw new ParserRuntimeException("Don't know how to pass" +
+            throw new STCRuntimeError("Don't know how to pass" +
             		" var with type " + v);
           }
         } else {
-          throw new ParserRuntimeException("Don't know how to pass var with type "
+          throw new STCRuntimeError("Don't know how to pass var with type "
               + v);
         }
       }
@@ -1484,12 +1485,13 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     @Override
-    public void startSwitch(Variable switchVar, List<Integer> caseLabels,
+    public void startSwitch(Oparg switchVar, List<Integer> caseLabels,
               boolean hasDefault) {
     logger.trace("startSwitch()...");
     assert(switchVar != null);
-    assert(switchVar.getStorage() == VariableStorage.LOCAL);
-    assert(switchVar.getType().equals(Types.VALUE_INTEGER));
+    assert(switchVar.getType() != OpargType.VAR ||
+        switchVar.getVar().getStorage() == VariableStorage.LOCAL);
+    assert(switchVar.isImmediateInt());
 
     int casecount = caseLabels.size();
     if (hasDefault) casecount++;
@@ -1504,7 +1506,7 @@ public class TurbineGenerator implements CompilerBackend
       caseBodies.add(casebody);
     }
 
-    Switch sw = new Switch(varToExpr(switchVar),
+    Switch sw = new Switch(opargToExpr(switchVar),
         caseLabels, hasDefault, caseBodies);
     pointStack.peek().add(sw);
 
@@ -1849,7 +1851,7 @@ public class TurbineGenerator implements CompilerBackend
       setCmd = Turbine.integerSet(tclName, expr);
       break;
     default:
-      throw new ParserRuntimeException("Non-constant oparg type "
+      throw new STCRuntimeError("Non-constant oparg type "
           + val.getType());
     }
     globInit.add(Turbine.allocate(tclName, typePrefix));
@@ -1898,7 +1900,7 @@ public class TurbineGenerator implements CompilerBackend
     case FLOATVAL:
       return new LiteralFloat(in.getFloatLit());
     default:
-      throw new ParserRuntimeException("Unknown oparg type: "
+      throw new STCRuntimeError("Unknown oparg type: "
           + in.getType().toString());
     }
   }
@@ -1958,7 +1960,7 @@ public class TurbineGenerator implements CompilerBackend
         no_stack_vars = Settings.getBoolean(Settings.TURBINE_NO_STACK_VARS);
       } catch (InvalidOptionException e) {
         e.printStackTrace();
-        throw new ParserRuntimeException(e.getMessage());
+        throw new STCRuntimeError(e.getMessage());
       }
       return no_stack_vars;
     }
@@ -1969,7 +1971,7 @@ public class TurbineGenerator implements CompilerBackend
         no_stack = Settings.getBoolean(Settings.TURBINE_NO_STACK);
       } catch (InvalidOptionException e) {
         e.printStackTrace();
-        throw new ParserRuntimeException(e.getMessage());
+        throw new STCRuntimeError(e.getMessage());
       }
       return no_stack;
     }

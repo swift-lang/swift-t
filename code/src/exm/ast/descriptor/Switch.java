@@ -10,7 +10,7 @@ import exm.ast.SwiftAST;
 import exm.ast.TypeChecker;
 import exm.ast.Types;
 import exm.parser.antlr.ExMParser;
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 import exm.parser.util.TypeMismatchException;
 import exm.parser.util.UserException;
 
@@ -65,7 +65,7 @@ public class Switch {
 
     int count = tree.getChildCount();
     if (count < 1) {
-      throw new ParserRuntimeException("switch: no children found");
+      throw new STCRuntimeError("switch: no children found");
     }
     SwiftAST switchExpr = tree.child(0);
 
@@ -85,7 +85,7 @@ public class Switch {
       SwiftAST thisCase = tree.child(i);
       if (thisCase.getType() == ExMParser.DEFAULT) {
         if (thisCase.getChildCount() != 1) {
-          throw new ParserRuntimeException("default case: should only have "
+          throw new STCRuntimeError("default case: should only have "
               + "one child, but had " + thisCase.getChildCount());
         }
         if (i != caseCount) {
@@ -98,7 +98,7 @@ public class Switch {
 
         // Numeric case label
         if (thisCase.getChildCount() != 2) {
-          throw new ParserRuntimeException("case: should have two children,"
+          throw new STCRuntimeError("case: should have two children,"
               + " but had " + thisCase.getChildCount());
         }
 
@@ -113,7 +113,7 @@ public class Switch {
           caseLabels.add(caseNum);
           caseLabelSet.add(caseNum);
         } catch (NumberFormatException e) {
-          throw new ParserRuntimeException(
+          throw new STCRuntimeError(
               "switch: grammar should only permit "
                   + "integer literals in case statement, but got " + caseStr);
         }

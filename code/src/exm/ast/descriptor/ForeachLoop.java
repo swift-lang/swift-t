@@ -16,7 +16,7 @@ import exm.ast.Variable.VariableStorage;
 import exm.parser.antlr.ExMParser;
 import exm.parser.util.DoubleDefineException;
 import exm.parser.util.InvalidAnnotationException;
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 import exm.parser.util.TypeMismatchException;
 import exm.parser.util.UserException;
 
@@ -185,7 +185,7 @@ public class ForeachLoop {
           + ", only expected one");
     } else if (annotations.size() == 1) {
       if (!annotations.get(0).equals(SYNC_ANNOTATION_NAME)) {
-        throw new ParserRuntimeException("Unknown loop annotation "
+        throw new STCRuntimeError("Unknown loop annotation "
             + annotations.get(0));
       }
     }

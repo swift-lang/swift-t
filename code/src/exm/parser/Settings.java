@@ -22,6 +22,9 @@ public class Settings
   public static final String OPT_DEAD_CODE_ELIM = "stc.opt.dead-code-elim";
   public static final String OPT_FORWARD_DATAFLOW = 
                       "stc.opt.forward-dataflow-analysis";
+  public static final String OPT_WAIT_COALESCE = "stc.opt.wait-coalesce";
+  public static final String OPT_CONTROLFLOW_FUSION =
+                                            "stc.opt.controlflow-fusion";
   public static final String OPT_DISABLE_ASSERTS = "stc.opt.disable-asserts";
   public static final String OPT_UNROLL_LOOPS = "stc.opt.unroll-loops";
   public static final String OPT_NUM_PASSES = "stc.opt.numpasses";
@@ -49,6 +52,8 @@ public class Settings
     defaults.setProperty(OPT_UNROLL_LOOPS, "true"); 
     defaults.setProperty(OPT_DISABLE_ASSERTS, "false");
     defaults.setProperty(OPT_FORWARD_DATAFLOW, "true");
+    defaults.setProperty(OPT_WAIT_COALESCE, "false");
+    defaults.setProperty(OPT_CONTROLFLOW_FUSION, "false");
     defaults.setProperty(OPT_NUM_PASSES, "5");
     defaults.setProperty(ARRAY_REF_SWITCHEROO, "true");
 
@@ -87,6 +92,8 @@ public class Settings
     getBoolean(OPT_DEAD_CODE_ELIM);
     getBoolean(OPT_DISABLE_ASSERTS);
     getBoolean(OPT_FORWARD_DATAFLOW);
+    getBoolean(OPT_WAIT_COALESCE);
+    getBoolean(OPT_CONTROLFLOW_FUSION);
     getBoolean(OPT_UNROLL_LOOPS);
     getBoolean(TURBINE_NO_STACK);
     getBoolean(TURBINE_NO_STACK_VARS);

@@ -3,7 +3,7 @@ package exm.parser.gen;
 
 import java.util.*;
 
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 import exm.tcl.*;
 
 /**
@@ -262,7 +262,7 @@ class Turbine
     case WORK:
       return new Value("turbine::WORK");
     default:
-      throw new ParserRuntimeException("Unexpected rule type: " + t);
+      throw new STCRuntimeError("Unexpected rule type: " + t);
     }
   }
 

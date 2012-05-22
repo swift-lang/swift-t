@@ -150,7 +150,7 @@ class VariableUsageAnalyzer {
     }
 
     if (block.getVariableUsage() != null) {
-      throw new ParserRuntimeException("Error: overwriting variable usage "
+      throw new STCRuntimeError("Error: overwriting variable usage "
           + " info " + " for block " + block.hashCode() + " at line "
           + line + "." + block.getCharPositionInLine());
     }
@@ -216,7 +216,7 @@ class VariableUsageAnalyzer {
         break;
         
       default:
-        throw new ParserRuntimeException
+        throw new STCRuntimeError
         ("Unexpected token type inside procedure: " +
             ExMParser.tokenNames[token]);
     }
@@ -279,7 +279,7 @@ class VariableUsageAnalyzer {
                                             UndefinedVariableException,
                                             InvalidSyntaxException {
     if (tree.getChildCount() < 2)
-      throw new ParserRuntimeException(
+      throw new STCRuntimeError(
                   "assign_expression: child count < 2");
     // walk LHS to see what is assigned, and to walk index expressions
     List<LValue> targets;
@@ -584,7 +584,7 @@ class VariableUsageAnalyzer {
           break;
 
         default:
-          throw new ParserRuntimeException
+          throw new STCRuntimeError
           ("Unexpected token type inside expression: " + ExMParser.tokenNames[token]
               + " at l." + node.getLine() + ":" + node.getCharPositionInLine());
       }

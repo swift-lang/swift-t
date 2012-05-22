@@ -188,7 +188,7 @@ public interface CompilerBackend {
    * @param hasElse whether there will be an else clause ie. whether startElseBlock()
    *                will be called later for this if statement
    */
-  public abstract void startIfStatement(Variable condition,
+  public abstract void startIfStatement(Oparg condition,
       boolean hasElse);
 
   public abstract void startElseBlock();
@@ -201,7 +201,7 @@ public interface CompilerBackend {
    * @param caseLabels
    * @param hasDefault
    */
-  public abstract void startSwitch(Variable switchVar,
+  public abstract void startSwitch(Oparg switchVar,
       List<Integer> caseLabels, boolean hasDefault);
 
   public abstract void endCase();

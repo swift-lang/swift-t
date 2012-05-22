@@ -39,7 +39,7 @@ import exm.parser.ic.SwiftIC.BuiltinFunction;
 import exm.parser.ic.SwiftIC.CompFunction;
 import exm.parser.ic.SwiftIC.Program;
 import exm.parser.util.InvalidWriteException;
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 import exm.parser.util.UndefinedTypeException;
 import exm.parser.util.UserException;
 
@@ -168,10 +168,10 @@ public class SwiftICGenerator implements CompilerBackend {
   }
 
   @Override
-  public void startIfStatement(Variable condition, boolean hasElse) {
+  public void startIfStatement(Oparg condition, boolean hasElse) {
     assert(currComposite != null);
-    assert(condition.getType().equals(Types.VALUE_INTEGER)
-          || condition.getType().equals(Types.VALUE_BOOLEAN));
+    assert(condition.getSwiftType().equals(Types.VALUE_INTEGER)
+          || condition.getSwiftType().equals(Types.VALUE_BOOLEAN));
 
     IfStatement stmt = new IfStatement(condition);
     currBlock().addContinuation(stmt);
@@ -219,7 +219,7 @@ public class SwiftICGenerator implements CompilerBackend {
   }
 
   @Override
-  public void startSwitch(Variable switchVar,
+  public void startSwitch(Oparg switchVar,
       List<Integer> caseLabels, boolean hasDefault) {
 
     logger.trace("startSwitch() stack size:" + blockStack.size());
@@ -259,7 +259,7 @@ public class SwiftICGenerator implements CompilerBackend {
                   int splitDegree, boolean arrayClosed,
          List<Variable> usedVariables, List<Variable> containersToRegister) {
     if(!Types.isArray(arrayVar.getType())) {
-      throw new ParserRuntimeException("foreach loop over non-array: " + 
+      throw new STCRuntimeError("foreach loop over non-array: " + 
                 arrayVar.toString()); 
     }
     assert(arrayVar.getType().getMemberType().equals(memberVar.getType()));
@@ -360,7 +360,7 @@ public class SwiftICGenerator implements CompilerBackend {
       Oparg priority) {
     assert(priority == null || priority.isImmediateInt());
     if (blockOn != null) {
-      throw new ParserRuntimeException("Swift IC generator doesn't support " +
+      throw new STCRuntimeError("Swift IC generator doesn't support " +
       		" blocking on composite function inputs");
     }
     currBlock().addInstruction(
@@ -685,7 +685,7 @@ public class SwiftICGenerator implements CompilerBackend {
   public void initUpdateable(Variable updateable, Oparg val) {
     assert(Types.isScalarUpdateable(updateable.getType()));
     if (!updateable.getType().equals(Types.UPDATEABLE_FLOAT)) {
-      throw new ParserRuntimeException(updateable.getType() +
+      throw new STCRuntimeError(updateable.getType() +
           " not yet supported");
     }
     assert(val.isImmediateFloat());
@@ -722,7 +722,7 @@ public class SwiftICGenerator implements CompilerBackend {
     if (updateable.getType().equals(Types.UPDATEABLE_FLOAT)) {
       assert(val.isImmediateFloat());
     } else {
-      throw new ParserRuntimeException("only updateable floats are"
+      throw new STCRuntimeError("only updateable floats are"
           + " implemented so far");
     }
     assert(updateMode != null);

@@ -14,7 +14,7 @@ import exm.ast.Variable.DefType;
 import exm.ast.Variable.VariableStorage;
 import exm.parser.antlr.ExMParser;
 import exm.parser.util.InvalidSyntaxException;
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 import exm.parser.util.TypeMismatchException;
 import exm.parser.util.UndefinedTypeException;
 
@@ -142,7 +142,7 @@ public class FunctionDecl {
     for (int i = 0; i < inNames.size(); i++) {
       InArgT it = ftype.getInputs().get(i);
       if (it.getAlternatives().length != 1) {
-        throw new ParserRuntimeException("Input argument doesn't have a " +
+        throw new STCRuntimeError("Input argument doesn't have a " +
         		" concrete type, instead is polymorphic: " + it);
       }
       SwiftType t = it.getAlternatives()[0];

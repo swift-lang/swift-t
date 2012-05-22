@@ -6,9 +6,9 @@ package exm.parser.util;
  * These always indicate a parser bug.
  * @author wozniak
  * */
-public class ParserRuntimeException extends RuntimeException
+public class STCRuntimeError extends RuntimeException
 {
-  public ParserRuntimeException(String msg)
+  public STCRuntimeError(String msg)
   {
     super(msg);
   }

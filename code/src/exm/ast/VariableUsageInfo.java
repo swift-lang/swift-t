@@ -599,7 +599,7 @@ public class VariableUsageInfo {
     public ArrayList<Violation> mergeBranchInfo(String file, int line, List<VInfo> branches,
                                       boolean exhaustive) {
       if (branches.size() == 0) {
-        throw new ParserRuntimeException("branches in mergeBranchInfo had size 0");
+        throw new STCRuntimeError("branches in mergeBranchInfo had size 0");
       }
 
       mergeBranchReadInfo(branches, exhaustive);

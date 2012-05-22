@@ -240,4 +240,21 @@ public class ICUtil {
       it.previous();
     }
   }
+  
+
+  /**
+   * Get variables from list if they are in set
+   * @param varNames
+   * @param varList
+   */
+  public static List<Variable> getVarsByName(Set<String> varNames,
+                      Collection<Variable> varList) {
+    List<Variable> res = new ArrayList<Variable>(varNames.size());
+    for (Variable v: varList) {
+      if (varNames.contains(v.getName())) {
+        res.add(v);
+      }
+    }
+    return res;
+  }
 }

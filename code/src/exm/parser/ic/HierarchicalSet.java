@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 
 public class HierarchicalSet<T> implements Set<T> {
   private final HierarchicalSet<T> parent;
@@ -58,7 +58,7 @@ public class HierarchicalSet<T> implements Set<T> {
 
   @Override
   public void clear() {
-    throw new ParserRuntimeException("not implemented");
+    throw new STCRuntimeError("not implemented");
   }
 
   @Override
@@ -69,7 +69,7 @@ public class HierarchicalSet<T> implements Set<T> {
 
   @Override
   public boolean containsAll(Collection<?> c) {
-    throw new ParserRuntimeException("not implemented");
+    throw new STCRuntimeError("not implemented");
   }
 
   @Override
@@ -103,7 +103,7 @@ public class HierarchicalSet<T> implements Set<T> {
       }
       @Override
       public void remove() {
-        throw new ParserRuntimeException("not implemented");
+        throw new STCRuntimeError("not implemented");
       }
       
     };
@@ -111,17 +111,17 @@ public class HierarchicalSet<T> implements Set<T> {
 
   @Override
   public boolean remove(Object o) {
-    throw new ParserRuntimeException("not implemented");
+    throw new STCRuntimeError("not implemented");
   }
 
   @Override
   public boolean removeAll(Collection<?> c) {
-    throw new ParserRuntimeException("not implemented");
+    throw new STCRuntimeError("not implemented");
   }
 
   @Override
   public boolean retainAll(Collection<?> c) {
-    throw new ParserRuntimeException("not implemented");
+    throw new STCRuntimeError("not implemented");
   }
 
   @Override
@@ -132,12 +132,12 @@ public class HierarchicalSet<T> implements Set<T> {
 
   @Override
   public Object[] toArray() {
-    throw new ParserRuntimeException("not implemented");
+    throw new STCRuntimeError("not implemented");
   }
 
   @Override
   public <S> S[] toArray(S[] a) {
-    throw new ParserRuntimeException("not implemented");
+    throw new STCRuntimeError("not implemented");
   }
   
   @Override

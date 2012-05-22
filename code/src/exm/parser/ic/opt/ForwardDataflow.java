@@ -15,14 +15,11 @@ import java.util.Stack;
 import org.apache.log4j.Logger;
 
 import exm.ast.Types;
-import exm.ast.Types.SwiftType;
 import exm.ast.Variable;
-import exm.ast.Variable.DefType;
 import exm.ast.Variable.VariableStorage;
 import exm.parser.Settings;
 import exm.parser.ic.HierarchicalMap;
 import exm.parser.ic.HierarchicalSet;
-import exm.parser.ic.ICUtil;
 import exm.parser.ic.ICContinuations.Continuation;
 import exm.parser.ic.ICContinuations.ContinuationType;
 import exm.parser.ic.ICContinuations.Loop;
@@ -34,14 +31,14 @@ import exm.parser.ic.ICInstructions.Instruction.MakeImmRequest;
 import exm.parser.ic.ICInstructions.Oparg;
 import exm.parser.ic.ICInstructions.OpargType;
 import exm.parser.ic.ICInstructions.Opcode;
-import exm.parser.ic.ICInstructions.TurbineOp;
+import exm.parser.ic.ICUtil;
 import exm.parser.ic.SwiftIC.Block;
 import exm.parser.ic.SwiftIC.CompFunction;
 import exm.parser.ic.SwiftIC.Program;
 import exm.parser.ic.opt.ComputedValue.EquivalenceType;
 import exm.parser.util.InvalidOptionException;
 import exm.parser.util.InvalidWriteException;
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 
 /**
  * This optimisation pass does a range of optimizations.  The overarching idea
@@ -63,7 +60,6 @@ import exm.parser.util.ParserRuntimeException;
  *
  */
 public class ForwardDataflow {
-  static long unique = 0;
   
   /**
    * State keep tracks of which variables are closed and which computed
@@ -145,11 +141,11 @@ public class ForwardDataflow {
       boolean outClosed = newCV.isOutClosed();
       if (availableVals.containsKey(newCV)) {
         if (!replace) {
-          throw new ParserRuntimeException("Unintended overwrite of "
+          throw new STCRuntimeError("Unintended overwrite of "
               + availableVals.get(newCV) + " with " + newCV);
         }
       } else if (replace) {
-        throw new ParserRuntimeException("Expected overwrite of " + " with "
+        throw new STCRuntimeError("Expected overwrite of " + " with "
             + newCV + " but no existing value");
       }
 
@@ -349,7 +345,7 @@ public class ForwardDataflow {
      * what should be happening, so its easier just to fix up broken things as a
      * post-optimization step
      */
-    fixupVariablePassing(logger, program);
+    FixupVariables.fixupVariablePassing(logger, program);
   }
 
   /**
@@ -523,7 +519,7 @@ public class ForwardDataflow {
     for (Continuation cont : block.getContinuations()) {
       State contCV = cv.makeCopy();
       // additional variables may be close once we're inside continuation
-      List<Variable> contClosedVars = cont.closedVarsInside();
+      List<Variable> contClosedVars = cont.blockingVars();
       if (contClosedVars != null) {
         for (Variable v : contClosedVars) {
           contCV.close(v.getName());
@@ -608,160 +604,16 @@ public class ForwardDataflow {
     return anotherPassNeeded;
   }
 
-  /**
-   * 
-   * @param logger
-   * @param block
-   * @param all
-   *          variables logically visible in this block. will be modified in fn
-   * @return
-   */
-  private static HashSet<String> fixupVariablePassing(Logger logger,
-      Block block, HierarchicalMap<String, Variable> visible) {
-    HashSet<String> availVars = new HashSet<String>();
-    for (Variable v : block.getVariables()) {
-      availVars.add(v.getName());
-      visible.put(v.getName(), v);
-    }
-
-    HashSet<String> neededVars = new HashSet<String>();
-    /*
-     * Work out which variables are needed which aren't locally declared
-     */
-    for (Instruction inst : block.getInstructions()) {
-      for (String n : Oparg.varNameList(inst.getInputs())) {
-        if (!availVars.contains(n)) {
-          neededVars.add(n);
-        }
-      }
-      for (String n : Oparg.varNameList(inst.getOutputs())) {
-        if (!availVars.contains(n)) {
-          neededVars.add(n);
-        }
-      }
-    }
-    for (Continuation c : block.getContinuations()) {
-      // First see what variables the continuation needs from the outer scope
-      for (Variable v: c.requiredVars()) {
-        if (!availVars.contains(v.getName())) {
-          neededVars.add(v.getName());
-        }
-      }
-      
-      // Then see what variables the continuation defines inside itself
-      List<Variable> constructVars = c.constructDefinedVars();
-      List<String> constructVarNames = null;
-      if (constructVars != null) {
-        constructVarNames = Variable.nameList(constructVars);
-      }
-
-      for (Block innerBlock : c.getBlocks()) {
-        HierarchicalMap<String, Variable> childVisible = visible.makeChildMap();
-        if (constructVars != null) {
-          for (Variable v : constructVars) {
-            childVisible.put(v.getName(), v);
-          }
-        }
-        HashSet<String> innerNeededVars = fixupVariablePassing(logger,
-            innerBlock, childVisible);
-
-        // construct will provide some vars
-        if (constructVars != null) {
-          innerNeededVars.removeAll(constructVarNames);
-        }
-
-        boolean passedInAutomatically = c.variablesPassedInAutomatically();
-        if (passedInAutomatically) {
-          // Might be some variables not yet defined in this scope
-          innerNeededVars.removeAll(availVars);
-          neededVars.addAll(innerNeededVars);
-        } else {
-          Set<String> passedInVars = Variable.nameSet(c.getPassedInVars());
-          // Check all variables passed in are available
-          // Check for redundant passing in, and any missing variables
-          for (String passedIn : passedInVars) {
-            if (!innerNeededVars.contains(passedIn)) {
-              c.removePassedInVar(visible.get(passedIn));
-            } else if (!availVars.contains(passedIn)) {
-              neededVars.add(passedIn);
-            }
-          }
-          for (String needed : innerNeededVars) {
-            if (!availVars.contains(needed)) {
-              neededVars.add(needed);
-            }
-            if (!passedInVars.contains(needed)) {
-              Variable v = visible.get(needed);
-              if (v == null) {
-                throw new ParserRuntimeException("Variable " + needed
-                    + " should have been " + "visible but wasn't");
-
-              }
-              c.addPassedInVar(v);
-            }
-          }
-        }
-      }
-    }
-
-    // if global constant missing, just add it
-    Set<String> globals = new HashSet<String>();
-    for (String needed : neededVars) {
-      if (visible.containsKey(needed)) {
-        Variable v = visible.get(needed);
-        if (v.getStorage() == VariableStorage.GLOBAL_CONST) {
-          block.addVariable(v);
-          globals.add(needed);
-        }
-      }
-    }
-    neededVars.removeAll(globals);
-    return neededVars;
-  }
-
-  /**
-   * Fix up any variables missing from the usedVariables passed through
-   * continuations. This is useful because it is easier to write other
-   * optimizations if they are allowed to mess up the usedVariables
-   */
-  public static void fixupVariablePassing(Logger logger, Program prog) {
-    HierarchicalMap<String, Variable> fnargs = new HierarchicalMap<String, Variable>();
-    for (CompFunction fn : prog.getComposites()) {
-      fnargs.clear();
-      for (Variable v : fn.getInputList()) {
-        fnargs.put(v.getName(), v);
-      }
-      for (Variable v : fn.getOutputList()) {
-        fnargs.put(v.getName(), v);
-      }
-      for (Entry<String, Oparg> e : prog.getGlobalConsts().entrySet()) {
-        Oparg a = e.getValue();
-        Variable v = new Variable(a.getSwiftType(), e.getKey(),
-            VariableStorage.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
-        fnargs.put(e.getKey(), v);
-      }
-      HashSet<String> neededVars = fixupVariablePassing(logger,
-          fn.getMainblock(), fnargs);
-      // Check that all variables referred to are available as args
-      neededVars.removeAll(Variable.nameList(fn.getInputList()));
-      neededVars.removeAll(Variable.nameList(fn.getOutputList()));
-
-      if (neededVars.size() > 0) {
-        throw new ParserRuntimeException("Reference in IC function "
-            + fn.getName() + " to undefined variables " + neededVars.toString());
-      }
-    }
-  }
 
   private static List<Instruction> switchToImmediateVersion(Logger logger,
       Block block, State cv, Instruction inst) {
     // First see if we can replace some futures with values
-    MakeImmRequest varsNeeded = inst.canMakeImmediate(cv.getClosed());
+    MakeImmRequest varsNeeded = inst.canMakeImmediate(cv.getClosed(), false);
 
     if (varsNeeded != null) {
       // Now load the values
       List<Instruction> alt = new ArrayList<Instruction>();
-      List<Oparg> values = new ArrayList<Oparg>(varsNeeded.in.size());
+      List<Oparg> inVals = new ArrayList<Oparg>(varsNeeded.in.size());
       
       // same var might appear multiple times
       HashMap<String, Oparg> alreadyFetched = new HashMap<String, Oparg>();  
@@ -780,94 +632,24 @@ public class ForwardDataflow {
            * the current scope, so we might have temporarily made the IC
            * invalid, but we rely on fixupVariablePassing to fix this later
            */
-          values.add(maybeVal);
+          inVals.add(maybeVal);
           alreadyFetched.put(v.getName(), maybeVal);
         } else {
-          SwiftType value_t = Types.derefResultType(v.getType());
-          if (Types.isScalarValue(value_t)) {
-            // The result will be a value
-            // Use the OPT_VALUE_VAR_PREFIX to make sure we don't clash with
-            //  something inserted by the frontend (this caused problems before)
-            Variable value_v = new Variable(value_t,
-                optVPrefix(v),
-                VariableStorage.LOCAL, DefType.LOCAL_COMPILER, null);
-            block.addVariable(value_v);
-            alt.add(ICInstructions.retrieveValueOf(value_v, v));
-            Oparg fetched = Oparg.createVar(value_v);
-            values.add(fetched);
-            alreadyFetched.put(v.getName(), fetched);
-          } else if (Types.isReference(v.getType())) {
-            // The result will be an alias
-            Variable deref = new Variable(value_t,
-                optVPrefix(v),
-                VariableStorage.ALIAS, DefType.LOCAL_COMPILER, null);
-            block.addVariable(deref);
-            alt.add(TurbineOp.retrieveRef(deref, v));
-            Oparg fetched = Oparg.createVar(deref);
-            values.add(fetched);
-            alreadyFetched.put(v.getName(), fetched);
-          }
+          // Generate instruction to fetch val, append to alt
+          Variable fetchedV = OptUtil.fetchValueOf(block, alt, v);
+          Oparg fetched = Oparg.createVar(fetchedV);
+          inVals.add(fetched);
+          alreadyFetched.put(v.getName(), fetched);
         }
       }
-      List<Variable> outValVars = null;
-      if (varsNeeded.out != null) {
-        outValVars = new ArrayList<Variable>(varsNeeded.out.size());
-        // Need to create output value variables
-        for (Variable v : varsNeeded.out) {
-          Variable valOut = block.declareVariable(
-              Types.derefResultType(v.getType()),
-              optVPrefix(v),
-              VariableStorage.LOCAL, DefType.LOCAL_COMPILER, null);
-          outValVars.add(valOut);
-        }
-      }
-      MakeImmChange change = inst.makeImmediate(outValVars, values);
-      alt.add(change.newInst);
-      // System.err.println("Swapped " + inst + " for " + change.newInst);
-      if (!change.isOutVarSame()) {
-        // Output variable of instruction changed, need to fix up
-        block.declareVariable(change.newOut);
-        if (Types.isReferenceTo(change.oldOut.getType(),
-            change.newOut.getType())) {
-          if (change.oldOut.getStorage() == VariableStorage.ALIAS) {
-            // Will need to initialise variable in this scope as before we
-            // were relying on instruction to initialise it
-            block.removeVarDeclaration(change.oldOut.getName());
-            block.declareVariable(change.oldOut.getType(),
-                change.oldOut.getName(), VariableStorage.TEMPORARY,
-                change.oldOut.getDefType(), change.oldOut.getMapping());
-          }
-          alt.add(TurbineOp.addressOf(change.oldOut, change.newOut));
-        } else {
-          throw new ParserRuntimeException("Tried to replace instruction"
-              + " output var " + change.oldOut + " with " + change.newOut
-              + " in instruction " + inst + ": this doesn't make sense"
-              + " to optimizer");
-        }
-      }
-
-      // Now copy back values into future
-      if (outValVars != null) {
-        for (int i = 0; i < outValVars.size(); i++) {
-          alt.add(ICInstructions.futureSet(varsNeeded.out.get(i),
-              Oparg.createVar(outValVars.get(i))));
-        }
-      }
+      List<Variable> outValVars = OptUtil.declareLocalOpOutputVars(block,
+                                                          varsNeeded.out);
+      MakeImmChange change = inst.makeImmediate(outValVars, inVals);
+      OptUtil.fixupImmChange(block, change, alt, outValVars, varsNeeded.out);
       return alt;
     } else {
       return null;
     }
-  }
-
-  /**
-   * Generate optimiser variable name guaranteed to be unique
-   * @param v
-   * @return
-   */
-  private static String optVPrefix(Variable v) {
-    String name = Variable.OPT_VALUE_VAR_PREFIX + v.getName() + "-"+ unique;
-    unique++;
-    return name;
   }
 
 }

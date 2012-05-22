@@ -10,11 +10,14 @@ import exm.parser.ic.SwiftIC.Block;
 import exm.parser.ic.SwiftIC.CompFunction;
 import exm.parser.ic.SwiftIC.Program;
 import exm.parser.ic.opt.ConstantFinder;
+import exm.parser.ic.opt.ContinuationFusion;
+import exm.parser.ic.opt.FixupVariables;
 import exm.parser.ic.opt.Flattener;
 import exm.parser.ic.opt.ForwardDataflow;
+import exm.parser.ic.opt.WaitCoalescer;
 import exm.parser.util.InvalidOptionException;
 import exm.parser.util.InvalidWriteException;
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 
 public class SwiftICOptimiser {
 
@@ -36,7 +39,7 @@ public class SwiftICOptimiser {
     try {
       // need variable names to be unique for rest of stages
       Flattener.makeVarNamesUnique(prog);
-      ForwardDataflow.fixupVariablePassing(logger, prog);
+      FixupVariables.fixupVariablePassing(logger, prog);
       
       if (Settings.getBoolean(Settings.OPT_FLATTEN_NESTED)) {
         prog = Flattener.flattenNestedBlocks(prog);
@@ -67,12 +70,34 @@ public class SwiftICOptimiser {
           }
         }
         
-        // Do this at end as it won't create any new constants, etc to be folded
+        // Do this after const folding so it won't create any new constants, 
+        // etc to be folded
         if (Settings.getBoolean(Settings.OPT_FORWARD_DATAFLOW)) {
           ForwardDataflow.forwardDataflow(logger, prog);
           if (logIC) {
             prog.log(icOutput, "Pass " + pass + ":" +
                           "IC after available var analysis");
+          }
+        }
+        
+        // Do this after forward dataflow to improve odds of fusing things
+        // one common subexpression elimination has happened
+        if (Settings.getBoolean(Settings.OPT_CONTROLFLOW_FUSION)) {
+          ContinuationFusion.fuse(logger, prog);
+          if (logIC) {
+            prog.log(icOutput, "Pass " + pass + ":" +
+                        "IC after continuation fusion");
+          }
+        }
+        
+        // Do this after forward dataflow since forward dataflow will be
+        // able to do strength reduction on many operations without spinning
+        // them off into wait statements
+        if (Settings.getBoolean(Settings.OPT_WAIT_COALESCE)) {
+          WaitCoalescer.rearrangeWaits(logger, prog);
+          if (logIC) {
+            prog.log(icOutput, "Pass " + pass + ":" +
+                        "IC after wait coalescing");
           }
         }
       }
@@ -86,7 +111,7 @@ public class SwiftICOptimiser {
       }
     } catch (InvalidOptionException e) {
       e.printStackTrace();
-      throw new ParserRuntimeException("Optimizer setting not correct in "
+      throw new STCRuntimeError("Optimizer setting not correct in "
           + " compiler settings dictionary: " + e.getMessage());
       
     }

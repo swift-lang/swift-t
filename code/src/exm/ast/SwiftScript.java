@@ -161,7 +161,7 @@ public class SwiftScript {
 
         default:
           String name = ExMParser.tokenNames[type];
-          throw new ParserRuntimeException("Unexpected token: " + name
+          throw new STCRuntimeError("Unexpected token: " + name
               + " at program top level");
         }
       }
@@ -179,7 +179,7 @@ public class SwiftScript {
         }
       }
     } else {
-      throw new ParserRuntimeException("Unexpected token: " +
+      throw new STCRuntimeError("Unexpected token: " +
           ExMParser.tokenNames[token] + " instead of PROGRAM");
     }
   }
@@ -277,7 +277,7 @@ public class SwiftScript {
           break;
           
         default:
-          throw new ParserRuntimeException
+          throw new STCRuntimeError
           ("Unexpected token type for statement: " +
            ExMParser.tokenNames[token]);
       }
@@ -331,7 +331,7 @@ public class SwiftScript {
     trace(context, "block start");
 
     if (tree.getType() != ExMParser.BLOCK) {
-      throw new ParserRuntimeException("Expected to find BLOCK token" + " at "
+      throw new STCRuntimeError("Expected to find BLOCK token" + " at "
           + tree.getLine() + ":" + tree.getCharPositionInLine());
     }
 
@@ -462,7 +462,7 @@ public class SwiftScript {
 
     Context waitContext = new LocalContext(context);
     Variable condVal = retrieveScalarVal(waitContext, conditionVar);
-    backend.startIfStatement(condVal, ifStmt.hasElse());
+    backend.startIfStatement(Oparg.createVar(condVal), ifStmt.hasElse());
     block(new LocalContext(waitContext), ifStmt.getThenBlock());
 
     if (ifStmt.hasElse()) {
@@ -612,7 +612,8 @@ public class SwiftScript {
     backend.retrieveInt(switchVal, switchVar);
 
     logger.trace("switch: " + sw.getCaseBodies().size() + " cases");
-    backend.startSwitch(switchVal, sw.getCaseLabels(), sw.hasDefault());
+    backend.startSwitch(Oparg.createVar(switchVal), sw.getCaseLabels(),
+                                                         sw.hasDefault());
     for (SwiftAST caseBody : sw.getCaseBodies()) {
       block(new LocalContext(waitContext), caseBody);
       backend.endCase();
@@ -725,7 +726,7 @@ public class SwiftScript {
 
     for (Variable v: containersToRegister) {
       if (v.getName().equals(arrayVar.getName())) {
-        throw new ParserRuntimeException("Array variable "
+        throw new STCRuntimeError("Array variable "
                   + v.getName() + " is written in the foreach loop "
                   + " it is the loop array for - currently this " +
                   "causes a deadlock due to technical limitations");
@@ -757,7 +758,7 @@ public class SwiftScript {
     Context loopBodyContext = loop.getBodyContext();
 
     if (loop.getDesiredUnroll() != 1) {
-      throw new ParserRuntimeException("Loop unrolling not"
+      throw new STCRuntimeError("Loop unrolling not"
           + " yet supported for loops over containers");
     }
     backend.startForeachLoop(realArray, loop.getMemberVar(), loop.getLoopCountVal(),
@@ -860,7 +861,7 @@ public class SwiftScript {
     Variable condVal = retrieveScalarVal(loopBodyContext, condArg);
     
     // branch depending on if loop should start
-    backend.startIfStatement(condVal, true);
+    backend.startIfStatement(Oparg.createVar(condVal), true);
     // If this iteration is good, run all of the stuff in the block
     block(loopBodyContext, forLoop.getBody());
     
@@ -929,7 +930,7 @@ public class SwiftScript {
       backend.retrieveFloat(val, future);
       break;
     default:
-      throw new ParserRuntimeException("Don't know how to retrieve value of "
+      throw new STCRuntimeError("Don't know how to retrieve value of "
           + " type " + futureType.typeName() + " for variable " 
           + future.getName());
     }
@@ -978,7 +979,7 @@ public class SwiftScript {
     // get value of condVar
     Variable condVal = retrieveScalarVal(bodyContext, condArg); 
     
-    backend.startIfStatement(condVal, true);
+    backend.startIfStatement(Oparg.createVar(condVal), true);
     if (containersToRegister.size() > 0) {
       backend.loopBreak(containersToRegister);
     }
@@ -990,7 +991,7 @@ public class SwiftScript {
         loop.getCond());
     if (condType.equals(Types.FUTURE_INTEGER)) {
       // TODO: for now, assume boolean
-      throw new ParserRuntimeException("don't support non-boolean conditions" +
+      throw new STCRuntimeError("don't support non-boolean conditions" +
       		" for iterate yet");
     } else if (!condType.equals(Types.FUTURE_BOOLEAN)) {
       throw new TypeMismatchException(bodyContext, 
@@ -1030,7 +1031,7 @@ public class SwiftScript {
       SwiftType exprType = typecheck.findSingleExprType(context, expr);
 
       if (!exprType.equals(argType)) {
-        throw new ParserRuntimeException("haven't implemented conversion " +
+        throw new STCRuntimeError("haven't implemented conversion " +
             " from " + exprType.typeName() + " to " + argType.typeName() +
             " for loop expressions");
       }
@@ -1048,7 +1049,7 @@ public class SwiftScript {
     assert(tree.getType() == ExMParser.DECLARATION);
     int count = tree.getChildCount();
     if (count < 2)
-      throw new ParserRuntimeException("declare_multi: child count < 2");
+      throw new STCRuntimeError("declare_multi: child count < 2");
     VariableDeclaration vd =  VariableDeclaration.fromAST(context, typecheck, 
                                                     tree, DefType.LOCAL_USER);
     
@@ -1083,16 +1084,16 @@ public class SwiftScript {
           }
         } 
         if (initVal == null) {
-          throw new ParserRuntimeException("Don't yet support non-constant" +
+          throw new STCRuntimeError("Don't yet support non-constant" +
           		" initialisers for updateable variables");
         }
         backend.initUpdateable(var, Oparg.createFloatLit(initVal));
       } else {
-        throw new ParserRuntimeException("Non-float updateables not yet" +
+        throw new STCRuntimeError("Non-float updateables not yet" +
         		" implemented");
       }
     } else {
-      throw new ParserRuntimeException("updateable variable " +
+      throw new STCRuntimeError("updateable variable " +
           var.getName() + " must be given an initial value upon creation");
     }
   }
@@ -1108,7 +1109,7 @@ public class SwiftScript {
     try {
       USE_ARRAY_REF_SWITCHEROO = Settings.getBoolean(Settings.ARRAY_REF_SWITCHEROO);
     } catch(InvalidOptionException e) {
-      throw new ParserRuntimeException("Option should have been set: " +
+      throw new STCRuntimeError("Option should have been set: " +
                                                             e.getMessage());
     }
     
@@ -1276,7 +1277,7 @@ public class SwiftScript {
           ScalarUpdateableType.asScalarFuture(src.getType()));
       backendDeclare(snapshot);
       if (!src.getType().equals(Types.UPDATEABLE_FLOAT)) {
-        throw new ParserRuntimeException(src.getType() + " not yet supported");
+        throw new STCRuntimeError(src.getType() + " not yet supported");
       }
       backend.assignFloat(snapshot, Oparg.createVar(val));
       src = snapshot;
@@ -1321,7 +1322,7 @@ public class SwiftScript {
         backend.builtinFunctionCall(Builtins.COPY_VOID, Arrays.asList(src),
             Arrays.asList(dst), null);
       } else {
-        throw new ParserRuntimeException(context.getFileLine() +
+        throw new STCRuntimeError(context.getFileLine() +
             "Haven't implemented copy for scalar type " +
                                         type.toString());
       }
@@ -1331,7 +1332,7 @@ public class SwiftScript {
     } else if (Types.isArray(type)) {
       copyArrayByValue(context, dst, src);
     } else {
-      throw new ParserRuntimeException(context.getFileLine() +
+      throw new STCRuntimeError(context.getFileLine() +
           " copying type " + type + " by value not yet "
           + " supported by compiler");
     }
@@ -1571,7 +1572,7 @@ public class SwiftScript {
       dereferenceStruct(context, lValVar, rValVar);
       return rValVar;
     } else {
-      throw new ParserRuntimeException("Don't support assigning an "
+      throw new STCRuntimeError("Don't support assigning an "
           + "expression with type " + rValType.toString() + " to variable "
           + lValVar.toString() + " yet");
     }
@@ -1956,7 +1957,7 @@ public class SwiftScript {
         arrayElems(context, tree, oVar, renames);
         break;
       default:
-        throw new ParserRuntimeException
+        throw new STCRuntimeError
         ("Unknown token type in expression context: "
             + ExMParser.tokenNames[token]);
     }
@@ -2042,14 +2043,14 @@ public class SwiftScript {
 
     FunctionType ftype = Builtins.getBuiltinType(builtin);
     if (ftype == null) {
-      throw new ParserRuntimeException("unknown builtin function: " + builtin
+      throw new STCRuntimeError("unknown builtin function: " + builtin
           + " for operator " + op);
     }
     int argcount = ftype.getInputs().size();
 
     if (op_argcount != argcount && 
         !(ftype.hasVarargs() && op_argcount >= argcount - 1)) {
-      throw new ParserRuntimeException("Operator " + op + " has " + op_argcount
+      throw new STCRuntimeError("Operator " + op + " has " + op_argcount
           + " arguments in AST, but expected" + argcount);
     }
 
@@ -2057,7 +2058,7 @@ public class SwiftScript {
     for (int i = 0; i < op_argcount; i++) {
       InArgT argtype = ftype.getInputs().get(Math.min(i, argcount - 1));
       if (argtype.getAlternatives().length != 1) {
-        throw new ParserRuntimeException("Builtin operator "
+        throw new STCRuntimeError("Builtin operator "
             + builtin + " should not have polymorphic type for input " +
             		"argument: " + argtype.toString());
       }
@@ -2102,7 +2103,7 @@ public class SwiftScript {
       UserException {
 
     if (storeInStack) {
-      throw new ParserRuntimeException("Dont know how to store results of "
+      throw new STCRuntimeError("Dont know how to store results of "
           + " struct lookup in stack");
     }
 
@@ -2239,7 +2240,7 @@ public class SwiftScript {
         Map<String, String> renames)
       throws UserException {
     if (tree.getChildCount() != 2) {
-      throw new ParserRuntimeException("array_load subtree should have "
+      throw new STCRuntimeError("array_load subtree should have "
           + " only two children, but has " + tree.getChildCount());
     }
 
@@ -2297,7 +2298,7 @@ public class SwiftScript {
                 + oVar.toString());
       }
     } else {
-      throw new ParserRuntimeException("Don't know how to deal with arrays"
+      throw new STCRuntimeError("Don't know how to deal with arrays"
           + " with member type" + memberType.toString());
     }
 
@@ -2331,7 +2332,7 @@ public class SwiftScript {
       try {
         arrayIndex = Long.parseLong(arrayIndexStr);
       } catch (NumberFormatException e) {
-        throw new ParserRuntimeException(
+        throw new STCRuntimeError(
             "Invalid non-numeric array index token " + arrayIndexStr);
       }
       backend.arrayLookupRefImm(lookupIntoVar, arrayVar, 
@@ -2430,7 +2431,7 @@ public class SwiftScript {
       } else if (primType.equals(Types.FUTURE_BOOLEAN)) {
         backend.dereferenceBool(dst, src);
       } else {
-        throw new ParserRuntimeException("Don't know how to dereference "
+        throw new STCRuntimeError("Don't know how to dereference "
             + " type " + src.getType().toString());
       }
     } else if (Types.isArray(dst.getType())) {
@@ -2439,7 +2440,7 @@ public class SwiftScript {
     } else if (Types.isStruct(dst.getType())) {
       dereferenceStruct(context, dst, src);
     } else {
-      throw new ParserRuntimeException("Can't dereference type "
+      throw new STCRuntimeError("Can't dereference type "
          + src.getType().toString());
     }
   }
@@ -2467,7 +2468,7 @@ public class SwiftScript {
         return;
       }
     } catch (InvalidOptionException e) {
-      throw new ParserRuntimeException("Expected option to be present: " +
+      throw new STCRuntimeError("Expected option to be present: " +
                                                           e.toString());
     }
 
@@ -2572,7 +2573,7 @@ public class SwiftScript {
     if (tree.getType() == ExMParser.ARRAY_LOAD
         && immediateArrayLoadPossible(tree)) {
       // Variable tmp = createTmp(context, type, storeInStack, true);
-      throw new ParserRuntimeException("Immediate array load not supported");
+      throw new STCRuntimeError("Immediate array load not supported");
     } else if (tree.getType() == ExMParser.STRUCT_LOAD
           && Types.isStruct(
                 typecheck.findSingleExprType(context, tree.child(0)))) {
@@ -2650,7 +2651,7 @@ public class SwiftScript {
         assignVariable(context, copy, input);
         realIList.add(copy);
       } else {
-        throw new ParserRuntimeException(context.getFileLine() + 
+        throw new STCRuntimeError(context.getFileLine() + 
                 " Shouldn't be here, don't know how to "
             + " convert " + inputType.toString() + " to " + expType.toString());
       }
@@ -2674,7 +2675,7 @@ public class SwiftScript {
         if (Types.isArrayRef(waitVars.get(i).getType())) {
           backend.retrieveRef(derefVar, waitVars.get(i));
         } else {
-          throw new ParserRuntimeException("Don't know how to " +
+          throw new STCRuntimeError("Don't know how to " +
           		"deref non-array function arg " + derefVar);
         }
       }
@@ -2897,7 +2898,7 @@ public class SwiftScript {
     assert (defnTree.getType() == ExMParser.DEFINE_NEW_TYPE);
     int children = defnTree.getChildCount();
     if (children < 1) {
-      throw new ParserRuntimeException("expected DEFINE_NEW_TYPE to have at "
+      throw new STCRuntimeError("expected DEFINE_NEW_TYPE to have at "
           + "least one child");
     }
     String typeName = defnTree.child(0).getText();
@@ -3014,7 +3015,7 @@ public class SwiftScript {
       backend.addGlobal(v.getName(), Oparg.createStringLit(sval));
       break;
     default:
-      throw new ParserRuntimeException("Unexpect value tree type in "
+      throw new STCRuntimeError("Unexpect value tree type in "
           + " global constant: " + ExMParser.tokenNames[val.getType()]);
     }
   }

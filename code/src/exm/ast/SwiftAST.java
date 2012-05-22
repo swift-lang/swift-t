@@ -8,7 +8,7 @@ import org.antlr.runtime.Token;
 import org.antlr.runtime.tree.CommonTree;
 
 import exm.ast.Types.SwiftType;
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 
 /**
  * A custom tree class for the Swift AST with slots to store semantic info 
@@ -26,7 +26,7 @@ public class SwiftAST extends CommonTree {
   
   public VariableUsageInfo checkedGetVariableUsage() {
     if (variableUsage == null) {
-      throw new ParserRuntimeException("Lookup of saved variable usage info"
+      throw new STCRuntimeError("Lookup of saved variable usage info"
             + " for block at " + this.getLine() + ":"
             + this.getCharPositionInLine() + " failed");
     }

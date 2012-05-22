@@ -2,7 +2,7 @@ package exm.ast;
 
 import java.util.*;
 
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 
 public class Types {
 
@@ -21,7 +21,7 @@ public class Types {
 
     @Override
     public PrimType getPrimitiveType() {
-      throw new ParserRuntimeException("getPrimitiveType not implemented " +
+      throw new STCRuntimeError("getPrimitiveType not implemented " +
       "for arrays");
     }
 
@@ -44,7 +44,7 @@ public class Types {
     @Override
     public boolean equals(Object other) {
       if (!(other instanceof SwiftType)) {
-        throw new ParserRuntimeException("Comparing ArrayType with non-type " +
+        throw new STCRuntimeError("Comparing ArrayType with non-type " +
         		"object");
       }
       SwiftType otherT = (SwiftType) other;
@@ -100,7 +100,7 @@ public class Types {
 
     @Override
     public PrimType getPrimitiveType() {
-      throw new ParserRuntimeException("getPrimitiveType not implemented "
+      throw new STCRuntimeError("getPrimitiveType not implemented "
           + "for references");
     }
 
@@ -122,7 +122,7 @@ public class Types {
     @Override
     public boolean equals(Object other) {
       if (!(other instanceof SwiftType)) {
-        throw new ParserRuntimeException("Comparing ReferenceType with " +
+        throw new STCRuntimeError("Comparing ReferenceType with " +
               "non-type object");
       }
       SwiftType otherT = (SwiftType) other;
@@ -171,7 +171,7 @@ public class Types {
 
     @Override
     public PrimType getPrimitiveType() {
-      throw new ParserRuntimeException("getPrimitiveType not defined for "
+      throw new STCRuntimeError("getPrimitiveType not defined for "
           + " StructType");
     }
 
@@ -206,7 +206,7 @@ public class Types {
     @Override
     public boolean equals(Object other) {
       if (!(other instanceof SwiftType)) {
-        throw new ParserRuntimeException("Comparing ReferenceType with " +
+        throw new STCRuntimeError("Comparing ReferenceType with " +
               "non-type object");
       }
       SwiftType otherT = (SwiftType) other;
@@ -280,7 +280,7 @@ public class Types {
     @Override
     public boolean equals(Object other) {
       if (!(other instanceof SwiftType)) {
-        throw new ParserRuntimeException("Comparing ScalarValueType with "
+        throw new STCRuntimeError("Comparing ScalarValueType with "
             + "non-type object");
       }
       SwiftType otherT = (SwiftType) other;
@@ -327,7 +327,7 @@ public class Types {
     @Override
     public boolean equals(Object other) {
       if (!(other instanceof SwiftType)) {
-        throw new ParserRuntimeException("Comparing ScalarFutureType with non-type "
+        throw new STCRuntimeError("Comparing ScalarFutureType with non-type "
             + "object");
       }
       SwiftType otherT = (SwiftType) other;
@@ -372,7 +372,7 @@ public class Types {
     @Override
     public boolean equals(Object other) {
       if (!(other instanceof SwiftType)) {
-        throw new ParserRuntimeException("Comparing ScalarUpdateableType " +
+        throw new STCRuntimeError("Comparing ScalarUpdateableType " +
             "with non-type object");
       }
       SwiftType otherT = (SwiftType) other;
@@ -421,7 +421,7 @@ public class Types {
     public abstract PrimType getPrimitiveType();
 
     public SwiftType getMemberType() {
-      throw new ParserRuntimeException("getMemberType not implemented " +
+      throw new STCRuntimeError("getMemberType not implemented " +
       "for this Type subclass");
     }
 
@@ -602,11 +602,16 @@ public class Types {
     } else if (isArrayRef(arrayT)) {
       return arrayT.getMemberType().getMemberType();
     } else {
-      throw new ParserRuntimeException("called getArrayMemberType on non-array"
+      throw new STCRuntimeError("called getArrayMemberType on non-array"
           + " type " + arrayT.toString());
     }
   }
 
+  
+  public static boolean isFuture(SwiftType t) {
+    return isScalarFuture(t) || isReference(t);
+  }
+  
   /**
    * Convenience function to check if a type is scalar
    * @param t
@@ -677,7 +682,7 @@ public class Types {
     } else if (future.getStructureType() == StructureType.REFERENCE) {
       return future.getMemberType();
     } else {
-      throw new ParserRuntimeException(future.toString() + " can't "
+      throw new STCRuntimeError(future.toString() + " can't "
           + " be dereferenced");
     }
     

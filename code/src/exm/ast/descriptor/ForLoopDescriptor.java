@@ -20,7 +20,7 @@ import exm.parser.util.DoubleDefineException;
 import exm.parser.util.InvalidAnnotationException;
 import exm.parser.util.InvalidSyntaxException;
 import exm.parser.util.InvalidWriteException;
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 import exm.parser.util.TypeMismatchException;
 import exm.parser.util.UndefinedTypeException;
 import exm.parser.util.UndefinedVariableException;
@@ -241,7 +241,7 @@ public class ForLoopDescriptor {
     
     int loopVarCount = init.getChildCount();
     if (loopVarCount == 0) {
-      throw new ParserRuntimeException("Must have at least one loop variable " +
+      throw new STCRuntimeError("Must have at least one loop variable " +
           " in for loop for now");
     }
     
@@ -274,7 +274,7 @@ public class ForLoopDescriptor {
         forLoop.addLoopVar(var, true, expr);
         
       } else {
-        throw new ParserRuntimeException("Don't support initializer type "
+        throw new STCRuntimeError("Don't support initializer type "
             + ExMParser.tokenNames[initType] + " yet ");
       }
     }

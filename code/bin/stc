@@ -43,6 +43,10 @@ EXIT_ERROR_SCRIPT=6
 #  flatten-nested: whether nested blocks should be flattened
 #  forward-dataflow: whether we should do forward dataflow analysis
 #               to eliminate common subexpressions, etc
+#  wait-coalesce: whether to attempt to rearrange the task dependencies
+#                to minimise the number of tasks/variable subscribes
+#  controlflow-fusion: whether to attempt to fuse control
+#               flow structures: loops and if statements
 #  disable-asserts: whether to disable assert statements
 #  unroll-loops: whether to unroll loops with @unroll annotation
 #  no-stack: whether we should disable the explicit stack
@@ -53,7 +57,7 @@ O1_OPTS=("constant-fold" "branch-predict" "dead-code-elim"
                     "flatten-nested" "shared-constants"
                     "forward-dataflow" "unroll-loops")
 O2_OPTS=("disable-asserts")
-O3_OPTS=()
+O3_OPTS=("wait-coalesce" "controlflow-fusion")
 
 function get_compiler_opt_name() {
     case $1
@@ -74,6 +78,12 @@ function get_compiler_opt_name() {
                     return 0
                     ;;
         forward-dataflow) echo "stc.opt.forward-dataflow-analysis"
+                    return 0
+                    ;;
+        wait-coalesce) echo "stc.opt.wait-coalesce"
+                    return 0
+                    ;;
+        controlflow-fusion) echo "stc.opt.controlflow-fusion"
                     return 0
                     ;;
         disable-asserts) echo "stc.opt.disable-asserts"

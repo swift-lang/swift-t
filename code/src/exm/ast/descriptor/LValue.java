@@ -11,7 +11,7 @@ import exm.ast.Variable;
 import exm.ast.Types.StructType;
 import exm.ast.Types.SwiftType;
 import exm.parser.antlr.ExMParser;
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 import exm.parser.util.TypeMismatchException;
 import exm.parser.util.UndefinedVariableException;
 
@@ -31,11 +31,11 @@ public class LValue {
   public SwiftType getType(Context context, int depth)
       throws TypeMismatchException {
     if (var == null) {
-      throw new ParserRuntimeException("invoked getType() on AssignTarget "
+      throw new STCRuntimeError("invoked getType() on AssignTarget "
           + "without var field");
     }
     if (indices.size() < depth) {
-      throw new ParserRuntimeException("Trying to get type beyond length "
+      throw new STCRuntimeError("Trying to get type beyond length "
           + " of path");
     }
 
@@ -70,7 +70,7 @@ public class LValue {
         }
         t = newType;
       } else {
-        throw new ParserRuntimeException("Unexpected token type"
+        throw new STCRuntimeError("Unexpected token type"
             + ExMParser.tokenNames[tree.getType()] + " on right hand side"
             + " of assignment");
       }
@@ -146,7 +146,7 @@ public class LValue {
  public static List<LValue> extractLVals(Context context,
      SwiftAST tree) throws UndefinedVariableException {
    if (tree.getType() != ExMParser.IDENTIFIER_LIST) {
-     throw new ParserRuntimeException("Expected token identifier_list "
+     throw new STCRuntimeError("Expected token identifier_list "
          + " but got " + tree.getText());
    }
    int count = tree.getChildCount();
@@ -165,16 +165,16 @@ public class LValue {
  private static LValue extractAssignmentID(Context context, SwiftAST subtree)
      throws UndefinedVariableException {
    if (subtree.getType() != ExMParser.ASSIGN_TARGET) {
-     throw new ParserRuntimeException("Expected ASSIGN_TARGET ast node");
+     throw new STCRuntimeError("Expected ASSIGN_TARGET ast node");
    }
    if (subtree.getChildCount() < 1) {
-     throw new ParserRuntimeException("Expected ASSIGN_TARGET ast node "
+     throw new STCRuntimeError("Expected ASSIGN_TARGET ast node "
          + "to have at least one child");
    }
 
    SwiftAST varTree = subtree.child(0);
    if (varTree.getType() != ExMParser.VARIABLE || varTree.getChildCount() != 1) {
-     throw new ParserRuntimeException("Expected VARIABLE with one child "
+     throw new STCRuntimeError("Expected VARIABLE with one child "
          + "as first child of ASSIGN_TARGET");
    }
 
@@ -188,7 +188,7 @@ public class LValue {
          || pathTree.getType() == ExMParser.STRUCT_PATH) {
        path.add(pathTree);
      } else {
-       throw new ParserRuntimeException("Unexpected token "
+       throw new STCRuntimeError("Unexpected token "
            + ExMParser.tokenNames[pathTree.getType()]);
      }
    }

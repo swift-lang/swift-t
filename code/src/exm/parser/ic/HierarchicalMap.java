@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 
 /**
  * An implementation of the Map interface that allows cheap creation of
@@ -66,7 +66,7 @@ public class HierarchicalMap<K, V> implements Map<K, V> {
 
   @Override
   public boolean containsValue(Object val) {
-    throw new ParserRuntimeException("not implemented");
+    throw new STCRuntimeError("not implemented");
   }
 
   @Override
@@ -115,7 +115,7 @@ public class HierarchicalMap<K, V> implements Map<K, V> {
 
   @Override
   public Collection<V> values() {
-    throw new ParserRuntimeException("not implemented");
+    throw new STCRuntimeError("not implemented");
   }
   
   public String toString() {

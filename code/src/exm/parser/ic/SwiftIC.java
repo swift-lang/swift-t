@@ -30,7 +30,7 @@ import exm.parser.ic.ICInstructions.Instruction;
 import exm.parser.ic.ICInstructions.Oparg;
 import exm.parser.ic.ICInstructions.OpargType;
 import exm.parser.ic.ICInstructions.Opcode;
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 import exm.parser.util.UndefinedTypeException;
 import exm.parser.util.UserException;
 
@@ -140,7 +140,7 @@ public class SwiftIC {
     
     public void addGlobalConst(String name, Oparg val) {
       if (globalConsts.put(name, val) != null) {
-        throw new ParserRuntimeException("Overwriting global constant "
+        throw new STCRuntimeError("Overwriting global constant "
             + name);
       }
       globalConstsInv.put(val, name);
@@ -177,9 +177,9 @@ public class SwiftIC {
             Math.min(10, onlyalphanum.length()));   
         break;
       case VAR:
-        throw new ParserRuntimeException("Variable can't be a constant");
+        throw new STCRuntimeError("Variable can't be a constant");
       default:
-        throw new ParserRuntimeException("Unknown enum value " + 
+        throw new STCRuntimeError("Unknown enum value " + 
                 val.type.toString()); 
       }
       
@@ -256,7 +256,7 @@ public class SwiftIC {
             + ic.toString());
         icOutput.flush();
         e.printStackTrace();
-        throw new ParserRuntimeException("Error while generating IC: " +
+        throw new STCRuntimeError("Error while generating IC: " +
         		e.toString());
       }
     }
@@ -392,7 +392,7 @@ public class SwiftIC {
     public CompFunction(String name, List<Variable> iList,
         List<Variable> oList, Block mainBlock, boolean async) {
       if (mainBlock.getType() != BlockType.MAIN_BLOCK) {
-        throw new ParserRuntimeException("Expected main block " +
+        throw new STCRuntimeError("Expected main block " +
         		"for composite function to be tagged as such");
       }
       this.name = name;
@@ -443,7 +443,7 @@ public class SwiftIC {
     public void addBlockingInput(String vName) {
       Variable v = Variable.findByName(iList, vName);
       if (v == null) {
-        throw new ParserRuntimeException(vName + " is not the name of " +
+        throw new STCRuntimeError(vName + " is not the name of " +
         		" an input argument to function " + name + ":\n" + this);
       }
       addBlockingInput(v);
@@ -470,7 +470,7 @@ public class SwiftIC {
       } else {
         StringBuilder fn = new StringBuilder();
         prettyPrint(fn);
-        throw new ParserRuntimeException("Tried to add blocking input" + v +
+        throw new STCRuntimeError("Tried to add blocking input" + v +
         		" which wasn't one of the input arguments of function: "
             + this.iList + "\n" + fn.toString());
       }
@@ -795,7 +795,8 @@ public class SwiftIC {
       this.variables.add(variable);
     }
 
-    public void addContinuations(List<Continuation> continuations) {
+    public void addContinuations(List<? extends Continuation>
+                                                continuations) {
       this.conds.addAll(continuations);
     }
     
@@ -877,13 +878,19 @@ public class SwiftIC {
     public void removeContinuation(Continuation c) {
       this.conds.remove(c);
     }
+    
+    public void removeContinuations(
+                    Collection<? extends Continuation> c) {
+      this.conds.removeAll(c);
+    }
 
     /**
      * Insert the instructions, variables, etc from b inline
      * in the current block
-     * @param b
+     * @param b 
+     * @param insertAtTop whether to insert at top of block or not
      */
-    public void insertInline(Block b) {
+    public void insertInline(Block b, boolean insertAtTop) {
       Set<String> varNames = Variable.nameSet(this.variables);
       for (Variable newVar: b.getVariables()) {
         // Check for duplicates (may be duplicate globals)
@@ -891,9 +898,18 @@ public class SwiftIC {
           variables.add(newVar);
         }
       }
-      this.addContinuations(b.getContinuations());
-      this.addInstructions(b.getInstructions());
+      if (insertAtTop) {
+        this.conds.addAll(0, b.getContinuations());
+        this.instructions.addAll(0, b.getInstructions());
+      } else {
+        this.conds.addAll(b.getContinuations());
+        this.instructions.addAll(b.getInstructions());
+      }
       this.addArraysToClose(b.getArraysToClose());
+    }
+    
+    public void insertInline(Block b) {
+      insertInline(b, false);
     }
 
     public void removeVarDeclarations(Set<String> varNames) {
@@ -911,6 +927,20 @@ public class SwiftIC {
       TreeSet<String> tmp = new TreeSet<String>();
       tmp.add(name);
       removeVarDeclarations(tmp);
+    }
+
+    /**
+     * Remove instructions by object identity
+     * @param insts
+     */
+    public void removeInstructions(Set<Instruction> insts) {
+      ListIterator<Instruction> it = this.instructionIterator();
+      while (it.hasNext()) {
+        Instruction i = it.next();
+        if (insts.contains(i)) {
+          it.remove();
+        }
+      }
     }
   }
   

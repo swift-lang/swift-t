@@ -23,7 +23,7 @@ import exm.parser.CompilerBackend;
 import exm.parser.ic.SwiftIC.GenInfo;
 import exm.parser.ic.opt.ComputedValue;
 import exm.parser.ic.opt.ComputedValue.EquivalenceType;
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 import exm.tcl.TclString;
 
 public class ICInstructions {
@@ -153,12 +153,15 @@ public class ICInstructions {
     
     /**
      * 
-     * @param closedVars
+     * @param closedVars variables closed at point of current instruction
+     * @param assumeAllInputsClosed if true, allowed to (must don't necessarily
+     *        have to) assume that all input vars are closed
      * @return null if it cannot be made immediate, if true,
      *            a list of vars that are the variables whose values are needed
      *            and output vars that need to be have value vars created
      */
-    public abstract MakeImmRequest canMakeImmediate(Set<String> closedVars);
+    public abstract MakeImmRequest canMakeImmediate(Set<String> closedVars, 
+                                                  boolean assumeAllClosed);
 
     public abstract MakeImmChange makeImmediate(List<Variable> outVals,
                                                 List<Oparg> inValues);
@@ -237,13 +240,13 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmRequest canMakeImmediate(Set<String> closedVars) {
+    public MakeImmRequest canMakeImmediate(Set<String> closedVars, boolean assumeAllInputsClosed) {
       return null;
     }
 
     @Override
     public MakeImmChange makeImmediate(List<Variable> out, List<Oparg> values) {
-      throw new ParserRuntimeException("Not valid on comment!");
+      throw new STCRuntimeError("Not valid on comment!");
     }
 
     @Override
@@ -446,7 +449,7 @@ public class ICInstructions {
             args.get(1));
         break;
       default:
-        throw new ParserRuntimeException("didn't expect to see op " +
+        throw new STCRuntimeError("didn't expect to see op " +
                   op.toString() + " here");
       }
   
@@ -682,7 +685,7 @@ public class ICInstructions {
         op = Opcode.UPDATE_SCALE;
         break;
       default:
-        throw new ParserRuntimeException("Unknown UpdateMode"
+        throw new STCRuntimeError("Unknown UpdateMode"
             + updateMode);
       }
       return new TurbineOp(op, Arrays.asList(Oparg.createVar(updateable), 
@@ -703,7 +706,7 @@ public class ICInstructions {
         op = Opcode.UPDATE_SCALE_IMM;
         break;
       default:
-        throw new ParserRuntimeException("Unknown UpdateMode"
+        throw new STCRuntimeError("Unknown UpdateMode"
             + updateMode);
       }
       return new TurbineOp(op, Arrays.asList(Oparg.createVar(updateable), 
@@ -787,7 +790,7 @@ public class ICInstructions {
       case COPY_REF:
           return 1;
       default:
-        throw new ParserRuntimeException("Need to add opcode " + op.toString()
+        throw new STCRuntimeError("Need to add opcode " + op.toString()
             + " to numOutputArgs");
       }
     }
@@ -859,7 +862,7 @@ public class ICInstructions {
            */ 
         return false;
       default:
-        throw new ParserRuntimeException("Need to add opcode " + op.toString()
+        throw new STCRuntimeError("Need to add opcode " + op.toString()
             + " to hasSideEffects");
       }
     }
@@ -937,7 +940,8 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmRequest canMakeImmediate(Set<String> closedVars) {
+    public MakeImmRequest canMakeImmediate(Set<String> closedVars,
+                                                boolean assumeAllInputsClosed) {
       // Try to take advantage of closed variables 
       switch (op) {
       case ARRAY_LOOKUP_REF_IMM:
@@ -1172,14 +1176,14 @@ public class ICInstructions {
           mode = UpdateMode.SCALE;
           break;
         default:
-          throw new ParserRuntimeException("op: " + op +
+          throw new STCRuntimeError("op: " + op +
                                     " ... shouldn't be here");
         }
         return new MakeImmChange(null, null, TurbineOp.updateImm(
             this.args.get(0).getVar(), mode, values.get(0)));
       }
       }
-      throw new ParserRuntimeException("Couldn't make inst "
+      throw new STCRuntimeError("Couldn't make inst "
           + this.toString() + " immediate with vars: "
           + values.toString());
     }
@@ -1199,7 +1203,7 @@ public class ICInstructions {
               Types.isScalarUpdateable(t)) {
             // No turbine ops block on these types
           } else {
-            throw new ParserRuntimeException("Don't handle type "
+            throw new STCRuntimeError("Don't handle type "
                 + t.toString() + " here");
           }
         }
@@ -1229,7 +1233,7 @@ public class ICInstructions {
           ComputedValue retrieve = vanillaComputedValue(true);
           Opcode cvop = assignOpcode(src.getSwiftType());
           if (cvop == null) {
-            throw new ParserRuntimeException("Need assign op for "
+            throw new STCRuntimeError("Need assign op for "
                 + src.getVar());
           }
           ComputedValue assign = new ComputedValue(cvop,
@@ -1410,18 +1414,18 @@ public class ICInstructions {
      * @param arr
      * @return true if member is a reference to the member type of arr,
      *          false if it is the same as member type of arr
-     * @throws ParserRuntimeException if member can't be a member or ref to 
+     * @throws STCRuntimeError if member can't be a member or ref to 
      *                                      member of array
      */
     private boolean isMemberReference(Variable member, Variable arr) 
-            throws ParserRuntimeException{
+            throws STCRuntimeError{
       SwiftType memberType = Types.getArrayMemberType(arr.getType());
       if (memberType.equals(member.getType())) {
         return false;
       } else if (Types.isReferenceTo(member.getType(), memberType)) {
         return true;
       }
-      throw new ParserRuntimeException("Inconsistent types in IC instruction:"
+      throw new STCRuntimeError("Inconsistent types in IC instruction:"
           + this.toString() + " array of type " + arr.getType() 
           + " with member of type " + member.getType());
     }
@@ -1445,7 +1449,7 @@ public class ICInstructions {
       super(op);
       if (op != Opcode.CALL_BUILTIN && op != Opcode.CALL &&
           op != Opcode.CALL_APP && op != Opcode.CALL_SYNC) {
-        throw new ParserRuntimeException("Tried to create function call"
+        throw new STCRuntimeError("Tried to create function call"
             + " instruction with invalid opcode");
       }
       this.functionName = functionName;
@@ -1535,7 +1539,7 @@ public class ICInstructions {
                                             async, priority);
         break;
       default:
-        throw new ParserRuntimeException("Huh?");
+        throw new STCRuntimeError("Huh?");
       }
     }
   
@@ -1879,15 +1883,18 @@ public class ICInstructions {
     }
     
     @Override
-    public MakeImmRequest canMakeImmediate(Set<String> closedVars) {
+    public MakeImmRequest canMakeImmediate(Set<String> closedVars
+                                      , boolean assumeAllInputsClosed) {
       // See which arguments are closed
       boolean allClosed = true;
-      for (int i = 0; i < this.inputs.size(); i++) {
-        Variable in = this.inputs.get(i);
-        if (closedVars.contains(in.getName())) {
-          this.closedInputs.set(i, true);
-        } else {
-          allClosed = false;
+      if (!assumeAllInputsClosed) {
+        for (int i = 0; i < this.inputs.size(); i++) {
+          Variable in = this.inputs.get(i);
+          if (closedVars.contains(in.getName())) {
+            this.closedInputs.set(i, true);
+          } else {
+            allClosed = false;
+          }
         }
       }
       if (allClosed && localEquivalents.containsKey(this.functionName)) {
@@ -2110,7 +2117,8 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmRequest canMakeImmediate(Set<String> closedVars) {
+    public MakeImmRequest canMakeImmediate(Set<String> closedVars,
+                                      boolean assumeAllInputsClosed) {
       // See if we need to block on all inputs
       HashSet<String> alreadyDone = new HashSet<String>();
       for (int i = 0; i < this.newLoopVars.size(); i++) {
@@ -2132,7 +2140,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmChange makeImmediate(List<Variable> out, List<Oparg> values) {
-      throw new ParserRuntimeException("Not valid on loop continue!");
+      throw new STCRuntimeError("Not valid on loop continue!");
     }
 
     @Override
@@ -2227,13 +2235,14 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmRequest canMakeImmediate(Set<String> closedVars) {
+    public MakeImmRequest canMakeImmediate(Set<String> closedVars,
+                                    boolean assumeAllInputsClosed) {
       return null;
     }
 
     @Override
     public MakeImmChange makeImmediate(List<Variable> out, List<Oparg> values) {
-      throw new ParserRuntimeException("Not valid on loop continue!");
+      throw new STCRuntimeError("Not valid on loop continue!");
     }
 
     @Override
@@ -2672,14 +2681,15 @@ public class ICInstructions {
     }
     
     @Override
-    public MakeImmRequest canMakeImmediate(Set<String> closedVars) {
+    public MakeImmRequest canMakeImmediate(Set<String> closedVars,
+                                    boolean assumeAllInputsClosed) {
       // already is immediate
       return null;
     }
 
     @Override
     public MakeImmChange makeImmediate(List<Variable> out, List<Oparg> values) {
-      throw new ParserRuntimeException("Already immediate!");
+      throw new STCRuntimeError("Already immediate!");
     }
 
     @Override
@@ -2818,7 +2828,7 @@ public class ICInstructions {
       if (type == OpargType.STRINGVAL) {
         return stringlit;
       } else {
-        throw new ParserRuntimeException("getStringVal for non-string type");
+        throw new STCRuntimeError("getStringVal for non-string type");
       }
     }
   
@@ -2826,7 +2836,7 @@ public class ICInstructions {
       if (type == OpargType.INTVAL) {
         return intlit;
       } else {
-        throw new ParserRuntimeException("getIntVal for non-int type");
+        throw new STCRuntimeError("getIntVal for non-int type");
       }
     }
   
@@ -2834,7 +2844,7 @@ public class ICInstructions {
       if (type == OpargType.FLOATVAL) {
         return floatlit;
       } else {
-        throw new ParserRuntimeException("getFloatVal for non-float type");
+        throw new STCRuntimeError("getFloatVal for non-float type");
       }
     }
   
@@ -2842,7 +2852,7 @@ public class ICInstructions {
       if (type == OpargType.BOOLVAL) {
         return boollit;
       } else {
-        throw new ParserRuntimeException("getBoolLit for non-bool type");
+        throw new STCRuntimeError("getBoolLit for non-bool type");
       }
     }
     
@@ -2850,7 +2860,7 @@ public class ICInstructions {
       if (type == OpargType.VAR) {
         return var;
       } else {
-        throw new ParserRuntimeException("getVariable for non-variable type");
+        throw new STCRuntimeError("getVariable for non-variable type");
       }
     }
   
@@ -2858,7 +2868,7 @@ public class ICInstructions {
       if (type == OpargType.VAR) {
         this.var = var;
       } else {
-        throw new ParserRuntimeException(
+        throw new STCRuntimeError(
               "replaceVariable for non-variable type");
       }
     }
@@ -2877,7 +2887,7 @@ public class ICInstructions {
       case VAR:
         return this.var.getType();
       default:
-        throw new ParserRuntimeException("Unknown oparg type "
+        throw new STCRuntimeError("Unknown oparg type "
             + this.type.toString());
       }
     }
@@ -2926,7 +2936,7 @@ public class ICInstructions {
       case VAR:
         return this.var.getName();
       default:
-        throw new ParserRuntimeException("Unknown oparg type "
+        throw new STCRuntimeError("Unknown oparg type "
             + this.type.toString());
       }
     }
@@ -2954,7 +2964,7 @@ public class ICInstructions {
         hash1 = this.var.getName().hashCode();
         break;
       default:
-        throw new ParserRuntimeException("Unknown oparg type "
+        throw new STCRuntimeError("Unknown oparg type "
             + this.type.toString());
       }
       return this.type.hashCode() ^ hash1;
@@ -2963,7 +2973,7 @@ public class ICInstructions {
     @Override
     public boolean equals(Object otherO) {
       if (!(otherO instanceof Oparg)) {
-        throw new ParserRuntimeException("cannot compare oparg and "
+        throw new STCRuntimeError("cannot compare oparg and "
             + otherO.getClass().getName());
       }
       Oparg other = (Oparg)otherO;
@@ -2983,7 +2993,7 @@ public class ICInstructions {
         // Compare only on name, assuming name is unique
         return this.var.getName().equals(other.var.getName());
       default:
-        throw new ParserRuntimeException("Unknown oparg type "
+        throw new STCRuntimeError("Unknown oparg type "
             + this.type.toString());
       }
     }
@@ -3004,7 +3014,7 @@ public class ICInstructions {
         case VAR:
           return var.getName().compareTo(o.getVar().getName());
         default:
-          throw new ParserRuntimeException("couldn't compare oparg type "
+          throw new STCRuntimeError("couldn't compare oparg type "
               + this.type.toString());
         }
       } else { 
@@ -3068,7 +3078,7 @@ public class ICInstructions {
       return TurbineOp.copyRef(dst, value.getVar());
     }
 
-    throw new ParserRuntimeException("Unhandled case in valueSet: "
+    throw new STCRuntimeError("Unhandled case in valueSet: "
         + " assign " + value.toString() + " to " + dst.toString());
   }
 
@@ -3086,7 +3096,7 @@ public class ICInstructions {
     case STRING:
       return TurbineOp.retrieveString(dst, src);
     default:
-      throw new ParserRuntimeException("method to retrieve " +
+      throw new STCRuntimeError("method to retrieve " +
       		src.getType().typeName() + " is not known yet");
     }
   }
@@ -3128,7 +3138,7 @@ public class ICInstructions {
           op = LocalOpcode.COPY_BLOB;
           break;
         default:
-          throw new ParserRuntimeException("Unhandled type: "
+          throw new STCRuntimeError("Unhandled type: "
               + dstType);
         }
         return new ComputedValue(Opcode.LOCAL_OP, 
@@ -3140,7 +3150,7 @@ public class ICInstructions {
                                                                           , true);
       }
     }
-    throw new ParserRuntimeException("DOn't know how to assign to " + dst);
+    throw new STCRuntimeError("DOn't know how to assign to " + dst);
   }
 
   private static Opcode assignOpcode(SwiftType dstType) {
@@ -3234,7 +3244,7 @@ public class ICInstructions {
       assert(src.isImmediateString());
       return TurbineOp.assignString(dst, src);
     default:
-      throw new ParserRuntimeException("method to set " +
+      throw new STCRuntimeError("method to set " +
           dst.getType().typeName() + " is not known yet");
     }
   }

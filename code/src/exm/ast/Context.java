@@ -112,7 +112,7 @@ public abstract class Context
   {
     for (Variable v : iList) {
       if (v == null) {
-        throw new ParserRuntimeException("Null variable in list");
+        throw new STCRuntimeError("Null variable in list");
       }
       getType(v.getName());
     }

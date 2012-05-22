@@ -1,7 +1,7 @@
 
 package exm.tcl;
 
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 
 /**
  * If-then construct
@@ -44,9 +44,9 @@ public class If extends Sequence
   public void appendTo(StringBuilder sb)
   {
     if (members.size() < 1) {
-      throw new ParserRuntimeException("if: no then block found");
+      throw new STCRuntimeError("if: no then block found");
     } else if (members.size() > 2) {
-      throw new ParserRuntimeException("if: additional block found after " +
+      throw new STCRuntimeError("if: additional block found after " +
                                        "else block");
     }
     indent(sb);

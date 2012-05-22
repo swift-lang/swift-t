@@ -3,6 +3,7 @@ package exm.parser.ic.opt;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -208,6 +209,16 @@ public class ConstantFinder {
     }
   }
 
+  static private class Predicted {
+    final Continuation cont;
+    final Block block;
+    private Predicted(Continuation cont, Block block) {
+      super();
+      this.cont = cont;
+      this.block = block;
+    }
+  }
+  
   /**
    * Predict which way a branch will go based on known values of variables
    * in the program
@@ -216,18 +227,17 @@ public class ConstantFinder {
    */
   public static void branchPredict(Block block,
       HierarchicalMap<String, Oparg> knownConstants) {
-    HashMap<Continuation, Block> toRemove = new HashMap<Continuation, Block>();
+    // Use list to preserve order
+    List<Predicted> predictedBranches = new ArrayList<Predicted>();
     for (Continuation c: block.getContinuations()) {
       // With constants, we might be able to predict branches
       Block branch = c.branchPredict(knownConstants);
       if (branch != null) {
-        toRemove.put(c, branch);
+        predictedBranches.add(new Predicted(c, branch));
       }
     }
-    for (Entry<Continuation, Block> e: toRemove.entrySet()) {
-      Continuation c = e.getKey();
-      Block branch = e.getValue();
-      c.inlineInto(block, branch);
+    for (Predicted p: predictedBranches) {
+      p.cont.inlineInto(block, p.block);
     }
   }
 

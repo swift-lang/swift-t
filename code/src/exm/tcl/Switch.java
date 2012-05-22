@@ -2,7 +2,7 @@ package exm.tcl;
 
 import java.util.List;
 
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 
 public class Switch extends Sequence {
   final TclTree condition;
@@ -20,7 +20,7 @@ public class Switch extends Sequence {
     int labelcount = caseLabels.size();
     if (hasDefault) labelcount++;
     if (cases.size() != labelcount) {
-      throw new ParserRuntimeException("Number of case labels " + labelcount + 
+      throw new STCRuntimeError("Number of case labels " + labelcount + 
                         " does not match number of case bodies " + cases.size());
     }
   }

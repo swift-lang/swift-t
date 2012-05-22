@@ -5,7 +5,7 @@ import exm.ast.SwiftAST;
 import exm.ast.TypeChecker;
 import exm.ast.Types;
 import exm.ast.Types.SwiftType;
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 import exm.parser.util.TypeMismatchException;
 import exm.parser.util.UserException;
 
@@ -52,7 +52,7 @@ public class If {
   public static If fromAST(Context context, SwiftAST tree) {
     int count = tree.getChildCount();
     if (count < 2 || count > 3)
-      throw new ParserRuntimeException("if: child count > 3 or < 2");
+      throw new STCRuntimeError("if: child count > 3 or < 2");
     SwiftAST condition = tree.child(0);
     SwiftAST thenBlock = tree.child(1);
 

@@ -8,7 +8,7 @@ import exm.ast.SwiftAST;
 import exm.ast.Types.SwiftType;
 import exm.parser.antlr.ExMParser;
 import exm.parser.util.InvalidSyntaxException;
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 import exm.parser.util.ParserUtils;
 import exm.parser.util.UndefinedTypeException;
 
@@ -155,7 +155,7 @@ public class Variable
         mappedTo = ParserUtils.unescapeString(context, 
                           ParserUtils.unquote(subtree.child(0).getText()));
       } else {
-        throw new ParserRuntimeException("Unexpected token in variable " +
+        throw new STCRuntimeError("Unexpected token in variable " +
         		"declaration: " + ExMParser.tokenNames[subtree.getType()]);
       }
     }

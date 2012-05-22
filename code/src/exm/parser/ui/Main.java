@@ -226,7 +226,7 @@ public class Main
 
     // Do we actually need this check? -Justin (10/26/2011)
     if (program == null)
-      throw new ParserRuntimeException("PARSER FAILED!");
+      throw new STCRuntimeError("PARSER FAILED!");
    
     
     SwiftAST tree = (SwiftAST) program.getTree();
@@ -270,7 +270,7 @@ public class Main
           tok.slashStarComments(false);
           tok.quoteChar('"');
           if (tok.nextToken() != StreamTokenizer.TT_NUMBER) {
-            throw new ParserRuntimeException("Confused by " +
+            throw new STCRuntimeError("Confused by " +
             		" preprocessor line " + t.getText());
           }
           int lineNum = (int)tok.nval;

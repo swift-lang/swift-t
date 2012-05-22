@@ -66,7 +66,7 @@ extends Context
   public Variable createIntermediateVariable(SwiftType type) throws UserException {
 	  String name;
 	  if (Types.requiresMapping(type)) {
-      throw new ParserRuntimeException("Can't create temporary mapped " +
+      throw new STCRuntimeError("Can't create temporary mapped " +
                         "variables yet");
     }
 	  do {
@@ -82,7 +82,7 @@ extends Context
   public Variable createLocalTmpVariable(SwiftType type) {
     String name;
     if (Types.requiresMapping(type)) {
-      throw new ParserRuntimeException("Can't create temporary mapped " +
+      throw new STCRuntimeError("Can't create temporary mapped " +
                         "variables yet");
     }
     do {

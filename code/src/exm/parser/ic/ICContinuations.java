@@ -17,7 +17,7 @@ import exm.parser.ic.ICInstructions.OpargType;
 import exm.parser.ic.SwiftIC.Block;
 import exm.parser.ic.SwiftIC.BlockType;
 import exm.parser.ic.SwiftIC.GenInfo;
-import exm.parser.util.ParserRuntimeException;
+import exm.parser.util.STCRuntimeError;
 import exm.parser.util.UndefinedTypeException;
 
 public class ICContinuations {
@@ -101,11 +101,11 @@ public class ICContinuations {
     /** @return true if the continuation does nothing */
     public abstract boolean isNoop();
 
-    /** Return list of variables that will be
-     * closed within continuation blocks
+    /** Return list of variables that the continuations waits for
+     * before executing
      * @return
      */
-    public abstract List<Variable> closedVarsInside();
+    public abstract List<Variable> blockingVars();
 
     /**
      * Return list of variables that are defined by construct and
@@ -218,7 +218,7 @@ public class ICContinuations {
 
     protected void checkNotRemoved(Variable v, Set<String> removeVars) {
       if (removeVars.contains(v.getName())) {
-        throw new ParserRuntimeException("bad optimization: tried to remove" +
+        throw new STCRuntimeError("bad optimization: tried to remove" +
         		" required variable " + v.toString());
       }
     }
@@ -246,7 +246,15 @@ public class ICContinuations {
 
     @Override
     public void inlineInto(Block block, Block predictedBranch) {
-      throw new ParserRuntimeException("Can't inline loops yet");
+      throw new STCRuntimeError("Can't inline loops yet");
+    }
+
+    protected void fuseIntoAbstract(AbstractLoop o, boolean insertAtTop) {
+      this.loopBody.insertInline(o.loopBody, insertAtTop);
+      this.containersToRegister.addAll(o.containersToRegister);
+      ICUtil.removeDuplicates(this.containersToRegister);
+      this.usedVariables.addAll(o.usedVariables);
+      ICUtil.removeDuplicates(this.usedVariables);
     }
   }
 
@@ -256,6 +264,10 @@ public class ICContinuations {
     private Variable loopCounterVar;
     private Variable loopVar;
     private final boolean isSync;
+    public Variable getArrayVar() {
+      return arrayVar;
+    }
+
     private final int splitDegree;
 
     private ForeachLoop(Block block, Variable arrayVar, Variable loopVar,
@@ -390,7 +402,7 @@ public class ICContinuations {
     }
 
     @Override
-    public List<Variable> closedVarsInside() {
+    public List<Variable> blockingVars() {
       return null;
     }
 
@@ -402,22 +414,51 @@ public class ICContinuations {
       return null;
     }
 
+    public Variable getLoopVar() {
+      return loopVar;
+    }
+
+    public boolean fuseable(ForeachLoop o) {
+      // annotation parameters should match to respect any
+      // user settings
+      return this.arrayVar.getName().equals(o.arrayVar.getName())
+          && this.isSync == o.isSync
+          && this.splitDegree == o.splitDegree;
+    }
+
+    public void fuseInto(ForeachLoop o, boolean insertAtTop) {
+      Map<String, Oparg> renames = new HashMap<String, Oparg>();
+      renames.put(o.loopVar.getName(), Oparg.createVar(this.loopVar));
+      // Handle optional loop counter var
+      if (o.loopCounterVar != null) {
+        if (this.loopCounterVar != null) {
+          renames.put(o.loopCounterVar.getName(),
+                      Oparg.createVar(this.loopCounterVar));    
+        } else {
+          this.loopCounterVar = o.loopCounterVar;
+        }
+      }
+      o.replaceVars(renames);
+      
+      fuseIntoAbstract(o, insertAtTop);
+    }
+
   }
 
-  static class IfStatement extends Continuation {
+  public static class IfStatement extends Continuation {
     private final Block thenBlock;
     private final Block elseBlock;
-    private Variable condVar;
+    private Oparg condition;
 
-    public IfStatement(Variable condVar) {
-      this(condVar, new Block(BlockType.THEN_BLOCK),
+    public IfStatement(Oparg condition) {
+      this(condition, new Block(BlockType.THEN_BLOCK),
                           new Block(BlockType.ELSE_BLOCK));
     }
 
-    private IfStatement(Variable condVar, Block thenBlock, Block elseBlock) {
+    private IfStatement(Oparg condition, Block thenBlock, Block elseBlock) {
       assert(thenBlock != null);
       assert(elseBlock != null);
-      this.condVar = condVar;
+      this.condition = condition;
       this.thenBlock = thenBlock;
       // Always have an else block to make more uniform: empty block is then
       // equivalent to no else block
@@ -426,7 +467,7 @@ public class ICContinuations {
 
     @Override
     public IfStatement clone() {
-      return new IfStatement(condVar, thenBlock.clone(), elseBlock.clone());
+      return new IfStatement(condition, thenBlock.clone(), elseBlock.clone());
     }
 
     public Block getThenBlock() {
@@ -441,7 +482,7 @@ public class ICContinuations {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
       boolean hasElse = !(elseBlock.isEmpty());
-      gen.startIfStatement(condVar, hasElse);
+      gen.startIfStatement(condition, hasElse);
       this.thenBlock.generate(logger, gen, info);
       if (hasElse) {
         gen.startElseBlock();
@@ -454,7 +495,7 @@ public class ICContinuations {
     public void prettyPrint(StringBuilder sb, String currentIndent) {
       String newIndent = currentIndent + indent;
       sb.append(currentIndent + "if (");
-      sb.append(this.condVar.getName());
+      sb.append(this.condition.toString());
       sb.append(") {\n");
       thenBlock.prettyPrint(sb, newIndent);
       if (!elseBlock.isEmpty()) {
@@ -482,9 +523,7 @@ public class ICContinuations {
     private void replaceShared(Map<String, Oparg> renames,
           boolean inputsOnly) {
       replaceVarsInBlocks(renames, inputsOnly);
-      if (renames.containsKey(condVar.getName())) {
-        condVar = renames.get(condVar.getName()).getVar();
-      }
+      condition = ICUtil.replaceOparg(renames, condition, false);
     }
 
     @Override
@@ -494,32 +533,44 @@ public class ICContinuations {
 
     @Override
     public Collection<Variable> requiredVars() {
-      return Arrays.asList(condVar);
+      if (condition.getType() == OpargType.VAR) {
+        return Arrays.asList(condition.getVar());
+      } else {
+        return Collections.emptyList();
+      }
     }
 
     @Override
     public void removeVars(Set<String> removeVars) {
       removeVarsInBlocks(removeVars);
-      assert(!removeVars.contains(condVar.getName()));
+      assert(condition.getType() != OpargType.VAR ||
+            (!removeVars.contains(condition.getVar().getName())));
     }
 
     @Override
     public Block branchPredict(Map<String, Oparg> knownConstants) {
-      Oparg condVal = knownConstants.get(condVar.getName());
-      if (condVal != null) {
-        assert(condVal.getType() == OpargType.INTVAL
-            || condVal.getType() == OpargType.BOOLVAL);
-        if (condVal.getType() == OpargType.INTVAL &&
-                                        condVal.getIntLit() != 0) {
-          return thenBlock;
-        } else if (condVal.getType() == OpargType.BOOLVAL &&
-            condVal.getBoolLit()) {
-          return thenBlock;
-        } else {
-          return elseBlock;
+      Oparg val;
+      
+      if (condition.getType() == OpargType.VAR) {
+        val = knownConstants.get(condition.getVar().getName());
+        if (val == null) {
+          return null;
         }
+      } else {
+       val = condition; 
       }
-      return null;
+      
+      assert(val.getType() == OpargType.INTVAL
+            || val.getType() == OpargType.BOOLVAL);
+      if (val.getType() == OpargType.INTVAL
+          && val.getIntLit() != 0) {
+        return thenBlock;
+      } else if (val.getType() == OpargType.BOOLVAL &&
+          val.getBoolLit()) {
+        return thenBlock;
+      } else {
+        return elseBlock;
+      }
     }
 
     @Override
@@ -540,12 +591,12 @@ public class ICContinuations {
 
     @Override
     public void addPassedInVar(Variable variable) {
-      throw new ParserRuntimeException("addPassedInVar not supported on if");
+      throw new STCRuntimeError("addPassedInVar not supported on if");
     }
 
     @Override
     public void removePassedInVar(Variable variable) {
-      throw new ParserRuntimeException("removePassedInVar not supported on " +
+      throw new STCRuntimeError("removePassedInVar not supported on " +
       		"if");
     }
 
@@ -555,8 +606,12 @@ public class ICContinuations {
     }
 
     @Override
-    public List<Variable> closedVarsInside() {
+    public List<Variable> blockingVars() {
       return null;
+    }
+
+    public Oparg getCondition() {
+      return condition;
     }
   }
 
@@ -597,7 +652,7 @@ public class ICContinuations {
         Variable loopV = loopVars.get(i);
         Variable initV = initVals.get(i);
         if (!loopV.getType().equals(initV.getType())) {
-          throw new ParserRuntimeException("loop variable " + loopV.toString()
+          throw new STCRuntimeError("loop variable " + loopV.toString()
               + " is given init value of wrong type: " + initV.toString());
         }
       }
@@ -720,7 +775,7 @@ public class ICContinuations {
     }
 
     @Override
-    public List<Variable> closedVarsInside() {
+    public List<Variable> blockingVars() {
       ArrayList<Variable> res = new ArrayList<Variable>();
       res.add(condVar);
       for (int i = 0; i < loopVars.size(); i++) {
@@ -845,13 +900,13 @@ public class ICContinuations {
 
     @Override
     public void addPassedInVar(Variable variable) {
-      throw new ParserRuntimeException("addPassedInVar not supported on " +
+      throw new STCRuntimeError("addPassedInVar not supported on " +
       		"nested");
     }
 
     @Override
     public void removePassedInVar(Variable variable) {
-      throw new ParserRuntimeException("removePassedInVar not supported on " +
+      throw new STCRuntimeError("removePassedInVar not supported on " +
           "nested block");
     }
 
@@ -861,7 +916,7 @@ public class ICContinuations {
     }
 
     @Override
-    public List<Variable> closedVarsInside() {
+    public List<Variable> blockingVars() {
       return null;
     }
   }
@@ -869,8 +924,28 @@ public class ICContinuations {
   public static class RangeLoop extends AbstractLoop {
     // arguments can be either value variable or integer literal
     private final String loopName;
-    private final Variable loopVar;
+    private Variable loopVar;
     private Oparg start;
+    public int getDesiredUnroll() {
+      return desiredUnroll;
+    }
+
+    public void setDesiredUnroll(int desiredUnroll) {
+      this.desiredUnroll = desiredUnroll;
+    }
+
+    public Variable getLoopVar() {
+      return loopVar;
+    }
+
+    public boolean isSync() {
+      return isSync;
+    }
+
+    public int getSplitDegree() {
+      return splitDegree;
+    }
+
     private Oparg end;
     private Oparg increment;
     private final boolean isSync;
@@ -962,8 +1037,7 @@ public class ICContinuations {
     public void replaceVars(Map<String, Oparg> renames) {
       this.replaceVarsInBlocks(renames, false);
       if (renames.containsKey(loopVar.getName())) {
-        throw new ParserRuntimeException("Can't rename loop var in" +
-        		" range loop");
+        loopVar = renames.get(loopVar.getName()).getVar();
       }
       start = renameRangeArg(start, renames);
       end = renameRangeArg(end, renames);
@@ -1094,7 +1168,7 @@ public class ICContinuations {
     }
 
     @Override
-    public List<Variable> closedVarsInside() {
+    public List<Variable> blockingVars() {
       return null;
     }
 
@@ -1185,7 +1259,8 @@ public class ICContinuations {
                   nextIterCheck, Arrays.asList(Oparg.createVar(nextIter),
                                           this.end)));
               // check to see if we should run next iteration
-              IfStatement ifSt = new IfStatement(nextIterCheck);
+              IfStatement ifSt = new IfStatement(Oparg.createVar(
+                                                        nextIterCheck));
               curr.addContinuation(ifSt);
 
               curr = ifSt.getThenBlock();
@@ -1199,15 +1274,51 @@ public class ICContinuations {
       }
       return false;
     }
+
+    public Oparg getStart() {
+      return start;
+    }
+
+    public Oparg getEnd() {
+      return end;
+    }
+
+    public Oparg getIncrement() {
+      return increment;
+    }
+    
+    public boolean fuseable(RangeLoop o) {
+      // Make sure loop bounds line up, but also annotations since we
+      // want to respect any user annotations
+      return this.start.equals(o.start)
+          && this.increment.equals(o.increment)
+          && this.end.equals(o.end)
+          && this.desiredUnroll == o.desiredUnroll
+          && this.splitDegree == o.splitDegree
+          && this.isSync == o.isSync;
+    }
+    
+    /**
+     * Fuse the other loop into this loop
+     */
+    public void fuseInto(RangeLoop o, boolean insertAtTop) {
+      Map<String, Oparg> renames = new HashMap<String, Oparg>();
+      // Update loop var in other loop
+      renames.put(o.loopVar.getName(),
+                  Oparg.createVar(this.loopVar));
+      o.replaceVars(renames);
+     
+      this.fuseIntoAbstract(o, insertAtTop);
+    }
   }
 
   static class SwitchStatement extends Continuation {
     private final ArrayList<Integer> caseLabels;
     private final ArrayList<Block> caseBlocks;
     private final Block defaultBlock;
-    private Variable switchVar;
+    private Oparg switchVar;
 
-    public SwitchStatement(Variable switchVar, List<Integer> caseLabels) {
+    public SwitchStatement(Oparg switchVar, List<Integer> caseLabels) {
       this(switchVar, new ArrayList<Integer>(caseLabels),
           new ArrayList<Block>(), new Block(BlockType.CASE_BLOCK));
 
@@ -1218,7 +1329,7 @@ public class ICContinuations {
       }
     }
 
-    private SwitchStatement(Variable switchVar, ArrayList<Integer> caseLabels,
+    private SwitchStatement(Oparg switchVar, ArrayList<Integer> caseLabels,
         ArrayList<Block> caseBlocks, Block defaultBlock) {
       super();
       this.switchVar = switchVar;
@@ -1267,7 +1378,7 @@ public class ICContinuations {
       assert(this.caseBlocks.size() == this.caseLabels.size());
       String caseIndent = currentIndent + indent;
       String caseBlockIndent = caseIndent + indent;
-      sb.append(currentIndent + "switch (" + switchVar.getName() + ") {\n");
+      sb.append(currentIndent + "switch (" + switchVar.toString() + ") {\n");
       for (int i = 0; i < caseLabels.size(); i++) {
         sb.append(caseIndent + "case " + caseLabels.get(i) + " {\n");
         caseBlocks.get(i).prettyPrint(sb, caseBlockIndent);
@@ -1292,17 +1403,13 @@ public class ICContinuations {
     @Override
     public void replaceVars(Map<String, Oparg> renames) {
       replaceVarsInBlocks(renames, false);
-      if (renames.containsKey(switchVar.getName())) {
-        switchVar = renames.get(switchVar.getName()).getVar();
-      }
+      switchVar = ICUtil.replaceOparg(renames, switchVar, false);
     }
 
     @Override
     public void replaceInputs(Map<String, Oparg> renames) {
       replaceVarsInBlocks(renames, true);
-      if (renames.containsKey(switchVar.getName())) {
-        switchVar = renames.get(switchVar.getName()).getVar();
-      }
+      switchVar = ICUtil.replaceOparg(renames, switchVar, false);
     }
 
     @Override
@@ -1312,12 +1419,17 @@ public class ICContinuations {
 
     @Override
     public Collection<Variable> requiredVars() {
-      return Arrays.asList(switchVar);
+      if (switchVar.getType() == OpargType.VAR) {
+        return Arrays.asList(switchVar.getVar());
+      } else {
+        return Collections.emptyList();
+      }
     }
 
     @Override
     public void removeVars(Set<String> removeVars) {
-      assert(!removeVars.contains(switchVar.getName()));
+      assert(switchVar.getType() != OpargType.VAR 
+          || !removeVars.contains(switchVar.getVar().getName()));
       defaultBlock.removeVars(removeVars);
       for (Block caseBlock: this.caseBlocks) {
         caseBlock.removeVars(removeVars);
@@ -1327,21 +1439,25 @@ public class ICContinuations {
 
     @Override
     public Block branchPredict(Map<String, Oparg> knownConstants) {
-      Oparg switchVal = knownConstants.get(switchVar.getName());
-      if (switchVal != null) {
-        assert(switchVal.getType() == OpargType.INTVAL);
-        long val = switchVal.getIntLit();
-        // Check cases
-        for (int i = 0; i < caseLabels.size(); i++) {
-          if (val == caseLabels.get(i)) {
-            return caseBlocks.get(i);
-          }
+      long val;
+      if (switchVar.getType() == OpargType.VAR) {
+        Oparg switchVal = knownConstants.get(switchVar.getVar().getName());
+        if (switchVal == null) {
+          return null;
         }
-        // Otherwise return (maybe empty) default block
-        return defaultBlock;
+        assert(switchVal.getType() == OpargType.INTVAL);
+        val = switchVal.getIntLit();
       } else {
-        return null;
+        val = switchVar.getIntLit();
       }
+      // Check cases
+      for (int i = 0; i < caseLabels.size(); i++) {
+        if (val == caseLabels.get(i)) {
+          return caseBlocks.get(i);
+        }
+      }
+      // Otherwise return (maybe empty) default block
+      return defaultBlock;
     }
 
     @Override
@@ -1366,12 +1482,12 @@ public class ICContinuations {
 
     @Override
     public void addPassedInVar(Variable variable) {
-      throw new ParserRuntimeException("addPassedInVar not supported on switch");
+      throw new STCRuntimeError("addPassedInVar not supported on switch");
     }
 
     @Override
     public void removePassedInVar(Variable variable) {
-      throw new ParserRuntimeException("removePassedInVar not supported on " +
+      throw new STCRuntimeError("removePassedInVar not supported on " +
           "switch");
     }
 
@@ -1381,7 +1497,7 @@ public class ICContinuations {
     }
 
     @Override
-    public List<Variable> closedVarsInside() {
+    public List<Variable> blockingVars() {
       return null;
     }
   }
@@ -1527,6 +1643,11 @@ public class ICContinuations {
       return this.block.isEmpty();
     }
 
+    public void removeWaitVars(Set<String> closedVars) {
+      // In our current implementation, this is equivalent
+      tryInline(closedVars);
+    }
+    
     @Override
     public Block tryInline(Set<String> closedVars) {
       boolean mustWait = false;
@@ -1549,7 +1670,7 @@ public class ICContinuations {
     }
 
     @Override
-    public List<Variable> closedVarsInside() {
+    public List<Variable> blockingVars() {
       return Collections.unmodifiableList(this.waitVars);
     }
 

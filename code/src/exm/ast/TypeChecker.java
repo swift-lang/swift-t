@@ -186,7 +186,7 @@ public class TypeChecker {
       ArrayElems ae = ArrayElems.fromAST(context, tree);
       List<SwiftAST> members = ae.getMembers();
       if (members.size() == 0) {
-        throw new ParserRuntimeException("Empty array constructor, " +
+        throw new STCRuntimeError("Empty array constructor, " +
         		"compiler doesn't yet know how to infer type");
       } else {
         SwiftAST first = members.get(0);
@@ -203,7 +203,7 @@ public class TypeChecker {
       }
     }
     default:
-      throw new ParserRuntimeException(
+      throw new STCRuntimeError(
           "Unknown token type in expression context: " + token);
     }
   }
@@ -298,7 +298,7 @@ public class TypeChecker {
     for (int i = 0; i < argTypes.size(); i++) {
       InArgT exp = opFnType.getInputs().get(Math.min(i, nInTypes));
       if (exp.getAlternatives().length != 1) {
-        throw new ParserRuntimeException("Builtin operator "
+        throw new STCRuntimeError("Builtin operator "
             + fnName + " should not have polymorphic type for input " +
                 "argument: " + exp.toString());
       }
@@ -451,7 +451,7 @@ public class TypeChecker {
     } else if (Types.isArray(memberType) || Types.isStruct(memberType)) {
       resultType = new ReferenceType(memberType);
     } else {
-      throw new ParserRuntimeException("Unexpected array member type"
+      throw new STCRuntimeError("Unexpected array member type"
           + memberType.toString());
     }
     return resultType;
