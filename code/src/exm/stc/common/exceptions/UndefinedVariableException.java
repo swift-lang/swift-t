@@ -1,0 +1,15 @@
+
+package exm.stc.common.exceptions;
+
+import exm.stc.frontend.Context;
+
+public class UndefinedVariableException
+extends UserException
+{
+  public UndefinedVariableException(Context context, String msg)
+  {
+    super(context, msg);
+  }
+
+  private static final long serialVersionUID = 1L;
+}

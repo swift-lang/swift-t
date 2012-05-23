@@ -1,0 +1,601 @@
+package exm.stc.frontend;
+
+import java.util.*;
+
+import org.apache.log4j.Logger;
+
+import exm.stc.antlr.gen.ExMParser;
+import exm.stc.ast.SwiftAST;
+import exm.stc.ast.Types;
+import exm.stc.ast.Variable;
+import exm.stc.ast.FilePosition.LineMapping;
+import exm.stc.ast.Variable.DefType;
+import exm.stc.ast.descriptor.ArrayElems;
+import exm.stc.ast.descriptor.ArrayRange;
+import exm.stc.ast.descriptor.ForLoopDescriptor;
+import exm.stc.ast.descriptor.ForeachLoop;
+import exm.stc.ast.descriptor.If;
+import exm.stc.ast.descriptor.IterateDescriptor;
+import exm.stc.ast.descriptor.LValue;
+import exm.stc.ast.descriptor.Switch;
+import exm.stc.ast.descriptor.Update;
+import exm.stc.ast.descriptor.VariableDeclaration;
+import exm.stc.ast.descriptor.Wait;
+import exm.stc.ast.descriptor.ForLoopDescriptor.LoopVar;
+import exm.stc.common.exceptions.InvalidSyntaxException;
+import exm.stc.common.exceptions.InvalidWriteException;
+import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.UndefinedVariableException;
+import exm.stc.common.exceptions.UserException;
+import exm.stc.common.exceptions.VariableUsageException;
+import exm.stc.frontend.VariableUsageInfo.Violation;
+import exm.stc.frontend.VariableUsageInfo.ViolationType;
+/**
+ * This module collects information about variable dataflow in the program, e.g.
+ * if a variable is read or not, whether it is assigned twice, etc.
+ *
+ * It uses some type information, but doesn't attempt to perform full type checking
+ */
+class VariableUsageAnalyzer {
+  private final Logger logger;
+  private final TypeChecker typecheck;
+  private final LineMapping lineMapping;
+
+  public VariableUsageAnalyzer(Logger logger, TypeChecker typecheck,
+      LineMapping lineMapping) {
+    this.logger = logger;
+    this.typecheck = typecheck;
+    this.lineMapping = lineMapping;
+  }
+
+  /**
+   * Analyse the variables that are present in the block and add
+   * VariableUsageInfo object to the BLOCK AST nodes
+   * @param function
+   * @param oList
+   * @param iList
+   * @param block
+   * @throws UserException
+   */
+  void analyzeVariableUsage(Context context,
+          String function, List<Variable> iList, List<Variable> oList, SwiftAST block)
+        throws UserException {
+    logger.debug("analyzer: starting: " + function);
+    
+    
+    VariableUsageInfo globVui = new VariableUsageInfo(); 
+    // Add global constants
+    for (Variable global: context.getScopeVariables()) {
+      globVui.declare(context.getInputFile(), context.getLine(),
+          global.getName(), global.getType());
+      globVui.assign(context.getInputFile(), context.getLine(), 
+          global.getName());
+    }
+    
+    VariableUsageInfo argVui = globVui.createNested(); // create copy with globals
+    Context fnContext = new LocalContext(context, function);
+    
+    // Add input and output variables to initial variable info
+    for (Variable i: iList) {
+      argVui.declare(context.getInputFile(), context.getLine(), i.getName(),
+          i.getType());
+      argVui.assign(context.getInputFile(), context.getLine(), i.getName());
+      fnContext.declareVariable(i.getType(), i.getName(), i.getStorage(), 
+            i.getDefType(), i.getMapping());
+    }
+    for (Variable o: oList) {
+      argVui.declare(context.getInputFile(), context.getLine(), o.getName(),
+          o.getType());
+      // We should assume that return variables will be read
+      argVui.read(context.getInputFile(), context.getLine(), o.getName());
+      fnContext.declareVariable(o.getType(), o.getName(), o.getStorage(), 
+          o.getDefType(), o.getMapping());
+    }
+
+    // obtain info about variable usage in function by walking tree
+    walkBlock(fnContext, block, argVui);
+
+    // Notify user of any warnings or errors, terminate compilation on errors
+    boolean fatalError = false;
+    for (Violation v: argVui.getViolations()) {
+      String msg = v.toException().getMessage();
+      if (v.getType() == ViolationType.ERROR) {
+        fatalError = true;
+        ASTWalker.logger.error(msg);
+      } else {
+        ASTWalker.logger.warn(msg);
+      }
+      //System.err.println(msg);
+    }
+    if (fatalError) {
+      throw new VariableUsageException("Previous variable usage error in function " +
+            function + " caused compilation termination");
+    }
+    ASTWalker.logger.debug("analyzer: done: " + function);
+  }
+
+  
+  private VariableUsageInfo walkBlock(Context context, SwiftAST block,
+      VariableUsageInfo initialVu) throws UserException {
+    return walkBlock(context, block, initialVu, true);
+  }
+  /**
+   *
+   * @param file
+   * @param block
+   * @param initialVu: initial variable usage info for this block
+   * @param vuiMap: map to insert info for this block and all children
+   * @param parent info about arguments, and about variables declared
+   *                outside this block but visible
+   * @return
+   * @throws UserException
+   */
+  private VariableUsageInfo walkBlock(Context context, SwiftAST block,
+                 VariableUsageInfo initialVu, boolean checkMisuse) 
+                                                   throws UserException {
+    assert(block.getType() == ExMParser.BLOCK);
+    context.syncFileLine(block.getLine(), lineMapping);
+    String file = context.getInputFile();
+    int line = context.getLine();
+
+    VariableUsageInfo vu;
+    if (initialVu != null) {
+      vu = initialVu;
+    } else {
+      vu = new VariableUsageInfo();
+    }
+
+    for (int i = 0; i < block.getChildCount(); i++) {
+      SwiftAST t = (SwiftAST)block.child(i);
+      context.syncFileLine(t.getLine(), lineMapping);
+      walk(context, t , vu);
+    }
+    //context.syncFileLine(context, block.getLine(), lineMapping);
+
+    // After having collected data for block, check for unread/unwritten vars
+    if (checkMisuse) {
+      vu.detectVariableMisuse(file, line);
+    }
+
+    if (block.getVariableUsage() != null) {
+      throw new STCRuntimeError("Error: overwriting variable usage "
+          + " info " + " for block " + block.hashCode() + " at line "
+          + line + "." + block.getCharPositionInLine());
+    }
+    block.setVariableUsage(vu);
+    return vu;
+  }
+
+  private void walk(Context context, SwiftAST tree, VariableUsageInfo vu)
+                                                throws UserException {
+    int token = tree.getType();
+    int line = context.getLine();
+
+    context.syncFileLine(tree.getLine(), lineMapping);
+    logger.trace("walk " + context.getLocation() +
+                 ExMParser.tokenNames[token]);
+    switch (token) {
+      case ExMParser.BLOCK:
+        VariableUsageInfo childVu = walkBlock(new LocalContext(context),
+                                            tree, vu.createNested());
+        vu.mergeNestedScopes(context.getInputFile(), line,
+                             Arrays.asList(childVu), true);
+        break;
+
+      case ExMParser.IF_STATEMENT:
+        ifStatement(context, vu, tree);
+        break;
+
+      case ExMParser.SWITCH_STATEMENT:
+        switchStatement(context, vu, tree);
+        break;
+
+      case ExMParser.FOREACH_LOOP:
+        foreach(context, vu, tree);
+        break;
+        
+      case ExMParser.FOR_LOOP:
+        forLoop(context, vu, tree);
+        break;
+        
+      case ExMParser.ITERATE:
+        iterate(context, vu, tree);
+        break;
+        
+      case ExMParser.WAIT_STATEMENT:
+        waitStmt(context, vu, tree);
+        break;
+        
+      case ExMParser.DECLARATION:
+        declareVariable(context, vu, tree);
+        break;
+
+      case ExMParser.ASSIGN_EXPRESSION:
+        assignExpression(context, vu, tree);
+        break;
+
+      case ExMParser.EXPR_STMT:
+        // Walk the expression to add in reads
+        walkExpr(context, vu, tree.child(0));
+        break;
+        
+      case ExMParser.UPDATE:
+        updateStmt(context, vu, tree);
+        break;
+        
+      default:
+        throw new STCRuntimeError
+        ("Unexpected token type inside procedure: " +
+            ExMParser.tokenNames[token]);
+    }
+  }
+
+  private void updateStmt(Context context, VariableUsageInfo vu, SwiftAST tree)
+                                      throws UserException {
+    Update up = Update.fromAST(context, tree);
+    walkExpr(context, vu, up.getExpr());
+    
+    // Treat the update as a read so that we know at least that the variable
+    //  is used in a particular scope
+    vu.read(context.getInputFile(), context.getLine(),
+                                up.getTarget().getName());
+  }
+
+  private void ifStatement(Context context, VariableUsageInfo vu,
+      SwiftAST tree) throws UserException {
+    If ifStmt = If.fromAST(context, tree);
+    
+    // First walk the condition expression
+    walkExpr(context, vu, ifStmt.getCondition());
+
+    // Collect and merge up info from branches
+    ArrayList<VariableUsageInfo> ifBranchVus = new ArrayList<VariableUsageInfo>();
+    ifBranchVus.add(walkBlock(new LocalContext(context),
+        ifStmt.getThenBlock(), vu.createNested()));
+    if (ifStmt.hasElse()) {
+      ifBranchVus.add(walkBlock(new LocalContext(context),
+          ifStmt.getElseBlock(), vu.createNested()));
+    }
+    vu.mergeNestedScopes(context.getInputFile(), context.getLine(), 
+        ifBranchVus, ifStmt.hasElse());
+  }
+
+  private void declareVariable(Context context,
+      VariableUsageInfo vu, SwiftAST tree) throws UserException {
+    String file = context.getInputFile();
+    int line = context.getLine();
+    
+    VariableDeclaration vd = VariableDeclaration.fromAST(context, typecheck, 
+                                                  tree, DefType.LOCAL_USER);
+    for (int i = 0; i < vd.count(); i++) {
+      Variable var = vd.getVar(i);
+      vu.declare(file, line, var.getName(), var.getType());
+      context.declareVariable(var.getType(), var.getName(), var.getStorage(),
+              var.getDefType(), var.getMapping());
+      SwiftAST assignExpr = vd.getVarExpr(i);
+      if (assignExpr != null) {
+        logger.debug("Variable " + var.getName() + 
+              " was declared and assigned"); 
+        walkExpr(context, vu, assignExpr);
+        vu.assign(context.getInputFile(), context.getLine(), var.getName());
+      }
+    }
+  }
+
+  private void assignExpression(Context context,
+      VariableUsageInfo vu, SwiftAST tree) throws InvalidWriteException,
+                                            UndefinedVariableException,
+                                            InvalidSyntaxException {
+    if (tree.getChildCount() < 2)
+      throw new STCRuntimeError(
+                  "assign_expression: child count < 2");
+    // walk LHS to see what is assigned, and to walk index expressions
+    List<LValue> targets;
+    targets = LValue.extractLVals(context, tree.child(0));
+    String file = context.getInputFile();
+    int line = context.getLine();
+
+    for (LValue target: targets) {
+      if (target.indices.size() == 0) {
+        vu.assign(file, line, target.varName);
+      } else {
+        int arrayDepth = 0;
+        // The path must have the structure
+        // (.<struct_field>)*([<array_index>])*
+        for (SwiftAST i: target.indices) {
+          if (i.getType() == ExMParser.STRUCT_PATH) {
+            if (arrayDepth > 0) {
+              throw new InvalidWriteException(context,
+                  "Cannot assign directly to struct field inside array: "
+                  + target.toString() + ".  Must create struct and then "
+                  + "insert into array ");
+            }
+          } else if (i.getType() == ExMParser.ARRAY_PATH) {
+            arrayDepth++;
+          }
+        }
+        vu.complexAssign(file, line, target.varName, target.structPath(),
+                                  arrayDepth);
+      }
+
+      // Indicies can also be expressions with variables in them
+      for (SwiftAST ixTree: target.indices) {
+        if (ixTree.getType() == ExMParser.ARRAY_PATH) {
+          walkExpr(context, vu, ixTree.child(0));
+        }
+      }
+    }
+    // Walk the expression to add in reads
+    for (int i = 1; i < tree.getChildCount(); i++) {
+      walkExpr(context, vu, tree.child(i));
+    }
+  }
+
+  private void switchStatement(Context context,
+      VariableUsageInfo vu, SwiftAST tree)
+          throws UserException {
+    Switch sw = Switch.fromAST(context, tree);
+
+    //First walk the condition expression
+    walkExpr(context, vu, sw.getSwitchExpr());
+
+    ArrayList<VariableUsageInfo> caseVus = new ArrayList<VariableUsageInfo>();
+    // Walk the different cases and merge info into this variable usage
+    for (SwiftAST caseBody: sw.getCaseBodies()) {
+      caseVus.add(walkBlock(new LocalContext(context), caseBody,
+                                        vu.createNested()));
+    }
+    vu.mergeNestedScopes(context.getInputFile(), context.getLine(), caseVus, sw.hasDefault());
+  }
+
+  private void foreach(Context context, VariableUsageInfo vu, SwiftAST tree)
+                                                        throws UserException {
+    ForeachLoop loop = ForeachLoop.fromAST(context, tree, typecheck);
+    
+    
+    // Variables might appear in array var expression, so walk that first
+    walkExpr(context, vu, loop.getArrayVarTree());
+
+    // Then setup the variable usage info for the loop body,
+    // taking into account the loop variables
+    Context loopContext = loop.setupLoopBodyContext(context, typecheck);
+    String file = context.getInputFile();
+    int line = context.getLine();
+    VariableUsageInfo initial = vu.createNested();
+    
+    // Both loop variables are assigned before loop body runs
+    initial.declare(file, line, loop.getMemberVarName(), 
+        loop.getMemberVar().getType());
+    initial.assign(file, line, loop.getMemberVarName());
+    if (loop.getCountVarName() != null) {
+      initial.declare(file, line, loop.getCountVarName(), Types.FUTURE_INTEGER);
+      initial.assign(file, line, loop.getCountVarName());
+    }
+    
+    // Workaround to get correct type info: have two nested variable usage infos.
+    // In the outer one we assign the two loop counters, so that they're assigned
+    // within the loop body
+    // In the inner one, all of the actual action inside the loop body occurs.
+    //  We merge the inner one with itself, which produces the same result as merging
+    //  with itself n (n >= 2) times, but without causing false double-assign error
+    // for loop counter
+    VariableUsageInfo loopInfo = initial.createNested();
+    VariableUsageInfo loopBodyInfo = walkBlock(loopContext,
+        loop.getBody(), loopInfo);
+
+    // Merge inner up into outer
+    initial.mergeNestedScopes(file, line,
+            Arrays.asList(loopBodyInfo, loopBodyInfo), false);
+
+    // Merge outer into the current scope
+    vu.mergeNestedScopes(context.getInputFile(), context.getLine(),
+        Arrays.asList(initial), true);
+  }
+
+  
+  private void forLoop(Context context, VariableUsageInfo vu, SwiftAST tree)
+      throws UserException {
+    ForLoopDescriptor forLoop = ForLoopDescriptor.fromAST(typecheck, context, 
+                                                                    tree);
+    // process initial exprs in the current context
+    for (SwiftAST initExpr: forLoop.getInitExprs().values()) {
+      walkExpr(context, vu, initExpr);
+    }
+    
+    VariableUsageInfo outerLoopInfo = vu.createNested();
+    Context bodyContext = forLoop.createBodyContext(context);
+    forLoop.validateCond(bodyContext);
+    for (LoopVar lv: forLoop.getLoopVars()) {
+      Variable v = lv.var;
+      logger.debug("declared loop var " + v.toString());
+      
+      
+      if (!lv.declaredOutsideLoop) {
+        outerLoopInfo.declare(context.getInputFile(), context.getLine(), v.getName(), 
+                                                               v.getType());
+      }
+      // we assume that each variable has an initializer and an update, so it
+      // will be assigned before each loop iteration
+      outerLoopInfo.assign(context.getInputFile(), context.getLine(), v.getName());
+    }
+    
+    // Create body context with loop vars
+    VariableUsageInfo bodyInfo = outerLoopInfo.createNested();
+    
+    // condition can refer to in loop body context
+    walkExpr(bodyContext, bodyInfo, forLoop.getCondition());
+    
+    walkBlock(bodyContext, forLoop.getBody(), bodyInfo, false);
+    
+    forLoop.validateCond(bodyContext);
+    for (SwiftAST updateExpr: forLoop.getUpdateRules().values()) {
+      walkExpr(bodyContext, bodyInfo, updateExpr);
+    }
+    // After walking the update expressions, check for warnings or errors
+    bodyInfo.detectVariableMisuse(context.getInputFile(), context.getLine());
+    
+    outerLoopInfo.mergeNestedScopes(context.getInputFile(), context.getLine(), 
+                                    Arrays.asList(bodyInfo, bodyInfo), false);
+    vu.mergeNestedScopes(context.getInputFile(), context.getLine(), 
+                                          Arrays.asList(outerLoopInfo), true);
+    //TODO: does this correctly add info about variables used in conditions etc
+    //    to the context attached to the body?
+  }
+  
+  private void iterate(Context context, VariableUsageInfo vu, SwiftAST tree)
+  throws UserException {
+    IterateDescriptor loop = IterateDescriptor.fromAST(typecheck, context, 
+        tree);
+    
+    VariableUsageInfo outerLoopInfo = vu.createNested();
+    VariableUsageInfo bodyInfo = outerLoopInfo.createNested();
+    Context bodyContext = loop.createBodyContext(context);
+    
+    Variable v = loop.getLoopVar();
+    logger.debug("declared loop var " + v.toString());
+    bodyInfo.declare(context.getInputFile(), context.getLine(), v.getName(), 
+       v.getType());
+    // we assume that each variable has an initializer and an update, so it
+    // will be assigned before each loop iteration
+    bodyInfo.assign(context.getInputFile(), context.getLine(), v.getName());
+    
+    walkBlock(bodyContext, loop.getBody(), bodyInfo);
+    
+    // condition can refer to any variable in loop body context, include those
+    //  defined in the block
+    walkExpr(bodyContext, bodyInfo, loop.getCond());
+    
+    outerLoopInfo.mergeNestedScopes(context.getInputFile(), context.getLine(), 
+    Arrays.asList(bodyInfo, bodyInfo), false);
+    vu.mergeNestedScopes(context.getInputFile(), context.getLine(), 
+    Arrays.asList(outerLoopInfo), true);
+  }
+  
+  private void waitStmt(Context context, VariableUsageInfo vu, SwiftAST tree)
+        throws UserException {
+    Wait wait = Wait.fromAST(context, tree);
+    for (SwiftAST expr: wait.getWaitExprs()) {
+      walkExpr(context, vu, expr);
+    }
+    LocalContext waitContext = new LocalContext(context);
+    VariableUsageInfo waitVU = vu.createNested();
+    walkBlock(waitContext, wait.getBlock(), waitVU);
+    vu.mergeNestedScopes(context.getInputFile(), context.getLine(),
+        Arrays.asList(waitVU), true);
+  }
+  
+  /**
+   * Walk an expression and add all variable reads to variable usage
+   * @param file
+   * @param vu the variable usage info to update
+   * @param exprRoot the root of an expression tree
+   * @throws InvalidSyntaxException 
+   */
+  private void walkExpr(Context context, VariableUsageInfo vu,
+      SwiftAST exprRoot) throws InvalidSyntaxException {
+
+    // Do a depth-first search of the expression tree to discover all
+    // references to variables
+    Deque<SwiftAST> exprNodes = new ArrayDeque<SwiftAST>();
+    exprNodes.push(exprRoot);
+    while (!exprNodes.isEmpty()) {
+      SwiftAST node = exprNodes.pop();
+      context.syncFileLine(node.getLine(), lineMapping);
+      int line = context.getLine();
+      int token = node.getType();
+      /*context.getLogger().debug("walkExpr: token " +
+              ExMParser.tokenNames[token] + " at " + context.getInputFile()
+              + ":" + line);*/
+      switch (token) {
+        case ExMParser.CALL_FUNCTION:
+          assert(node.getChildCount() >= 2 && node.getChildCount() <= 3);
+          // Walk all the arguments
+          SwiftAST argsTree = node.child(1);
+          for (int i=0; i < argsTree.getChildCount(); i++) {
+            SwiftAST argTree = argsTree.child(i);
+            exprNodes.push(argTree);
+          }
+          if (node.getChildCount() == 3) {
+            // Priority
+            exprNodes.push(node.child(2));
+          }
+          break;
+
+        case ExMParser.VARIABLE:
+          assert(node.getChildCount() == 1);
+          vu.read(context.getInputFile(), line, node.child(0).getText());
+          break;
+
+        case ExMParser.INT_LITERAL:
+        case ExMParser.STRING_LITERAL:
+        case ExMParser.FLOAT_LITERAL:
+        case ExMParser.BOOL_LITERAL:
+          // nothing
+          break;
+
+        case ExMParser.OPERATOR:
+          // Walk argument expressions
+          // skip the first child, which is the operator name
+          for (int i = 1; i < node.getChildCount(); i++) {
+            exprNodes.push(node.child(i));
+          }
+          break;
+        case ExMParser.ARRAY_RANGE:
+          // Walk all the expressions
+          ArrayRange ar = ArrayRange.fromAST(context, node);
+          for (SwiftAST arg: ar.getArgs()) {
+            exprNodes.push(arg);
+          }
+          break;
+        case ExMParser.ARRAY_ELEMS:
+          ArrayElems ae = ArrayElems.fromAST(context, node);
+          for (SwiftAST mem: ae.getMembers()) {
+            exprNodes.push(mem);
+          }
+          break;
+        case ExMParser.ARRAY_LOAD:
+        case ExMParser.STRUCT_LOAD:
+          // Handle struct and array loads together: assume n>=0 struct lookups
+          // and m>= array lookups
+          SwiftAST currNode = node;
+
+          // first count the number of array lookups
+          int arrDepth = 0;
+          while (currNode.getType() == ExMParser.ARRAY_LOAD) {
+            assert(currNode.getChildCount() == 2);
+            // Walk the array index expression to see which variables
+            // it depends on
+            exprNodes.push(currNode.child(1));
+            currNode = currNode.child(0);
+            arrDepth++;
+          }
+
+          LinkedList<String> fieldPath = new LinkedList<String>();
+          while(currNode.getType() == ExMParser.STRUCT_LOAD) {
+            assert(currNode.getChildCount() == 2);
+            String field = currNode.child(1).getText();
+            fieldPath.addFirst(field);
+            currNode = currNode.child(0);
+          }
+
+          if (currNode.getType() == ExMParser.VARIABLE) {
+            // Only need to add usage info if local variable
+            String varName = currNode.child(0).getText();
+            logger.debug("Complex read rooted at var: " + varName);
+            vu.complexRead(context.getInputFile(), line, varName, fieldPath,
+                arrDepth);
+
+          } else {
+            // make sure we register usage of variables inside this expr
+            exprNodes.push(currNode);
+          }
+          break;
+
+        default:
+          throw new STCRuntimeError
+          ("Unexpected token type inside expression: " + ExMParser.tokenNames[token]
+              + " at l." + node.getLine() + ":" + node.getCharPositionInLine());
+      }
+    }
+  }
+}

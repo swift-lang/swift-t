@@ -260,7 +260,7 @@ fi
 CPP_INCLUDE+="-I ${PWD} "
 CPP_INCLUDE+="-I ${TURBINE_HOME}/export"
 
-MAIN=exm.parser.ui.Main
+MAIN=exm.stc.ui.Main
 
 # Group all JVM args together
 ARGS="${DEBUG} ${FLAGS} ${COMPILER_OPTS} -cp ${CLASSPATH}"

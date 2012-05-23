@@ -20,7 +20,7 @@
   <property name="json.jar"
             value="lib/json.jar"/>
   <property name="grammar"
-            value="ExM.g"/>
+            value="src/exm/stc/antlr/ExM.g"/>
   <property name="classpath"
             value=".:${antlr.jar}:${log4j.jar}"/>
 
@@ -47,7 +47,7 @@
 
   <!-- ANTLR output directory -->
   <property name="antlr.pkg"
-            value="exm/parser/antlr" />
+            value="exm/stc/antlr/gen" />
   <property name="antlr.out"
             value="src/${antlr.pkg}" />
 
@@ -86,9 +86,9 @@
 
   <!-- Compile the AST sources -->
   <target name="compile.ast"
-          depends="compile.util,compile.antlr">
+          depends="compile.common,compile.antlr">
     <javac srcdir="src"
-           includes="exm/ast/*.java,exm/ast/descriptor/*.java"
+           includes="exm/stc/ast/*.java,exm/ast/**/*.java"
            listfiles="${lf}"
            debug="true"
            debuglevel="source,lines,vars"
@@ -103,7 +103,7 @@
   <target name="compile.ic"
           depends="compile.ast">
     <javac srcdir="src"
-           includes="exm/parser/ic/*.java,exm/parser/ic/opt/*.java"
+           includes="exm/stc/ic/*.java,exm/stc/ic/**/*.java"
            listfiles="${lf}"
            debug="true"
            debuglevel="source,lines,vars"
@@ -119,7 +119,7 @@
   <target name="compile.ui"
           depends="compile.antlr">
     <javac srcdir="src"
-           includes="exm/parser/ui/*.java"
+           includes="exm/stc/ui/*.java"
            listfiles="${lf}"
            debug="true"
            debuglevel="source,lines,vars"
@@ -129,10 +129,10 @@
     </javac>
   </target>
 
-  <!-- Compile the utilities -->
-  <target name="compile.util">
+  <!-- Compile the common utilities-->
+  <target name="compile.common">
     <javac srcdir="src"
-           includes="exm/parser/util/*.java"
+           includes="exm/stc/common/*.java,exm/stc/common/**/*.java"
            listfiles="${lf}"
            debug="true"
            debuglevel="source,lines,vars"
@@ -140,7 +140,7 @@
            classpath="${classpath}:${json.jar}">
     </javac>
     <javac srcdir="src"
-           includes="exm/parser/*.java"
+           includes="exm/stc/*.java"
            listfiles="${lf}"
            debug="true"
            debuglevel="source,lines,vars"
@@ -150,10 +150,9 @@
   </target>
 
   <!-- Compile the code generator -->
-  <target name="compile.gen"
-          depends="compile.tcl"> <!-- ,compile.tcl.tree -->
+  <target name="compile.gen"> 
     <javac srcdir="src"
-           includes="exm/parser/gen/*.java"
+           includes="exm/stc/tclbackend/*.java,exm/stc/tclbackend/**/*.java"
            listfiles="${lf}"
            debug="true"
            debuglevel="source,lines,vars"
@@ -161,32 +160,6 @@
            classpath=".:${antlr.jar}:${log4j.jar}:${json.jar}">
     </javac>
   </target>
-
-  <!-- Compile the Tcl code generator -->
-  <target name="compile.tcl">
-    <javac srcdir="src"
-           includes="exm/tcl/*.java"
-           listfiles="${lf}"
-           debug="true"
-           debuglevel="source,lines,vars"
-           includeantruntime="false"
-           classpath=".:${log4j.jar}">
-    </javac>
-  </target>
-
-  <!-- Compile the Tcl AST library -->
-  <!-- OBSOLETE
-  <target name="compile.tcl.tree">
-    <javac srcdir="src"
-           includes="exm/tcl/tree/*.java"
-           listfiles="${lf}"
-           debug="true"
-           debuglevel="source,lines,vars"
-           includeantruntime="false"
-           classpath=".:${log4j.jar}">
-    </javac>
-  </target>
-  -->
 
   <target name="clean">
     <delete file="${parser.jar}"/>
