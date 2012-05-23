@@ -30,34 +30,49 @@ public class ContinuationFusion {
 
   public static void fuse(Logger logger, Program prog) {
     for (CompFunction f: prog.getComposites()) {
-      fuse(logger, prog, f, f.getMainblock());
+      fuseRecursive(logger, prog, f, f.getMainblock());
     }
   }
 
-  private static void fuse(Logger logger, Program prog, CompFunction f,
-      Block block) {
-    if (block.getContinuations().size() <= 1) {
+  private static void fuseRecursive(Logger logger, Program prog, 
+            CompFunction f, Block block) {
+    if (block.getContinuations().size() > 1) {
       // no point trying to fuse anything if we don't have two continuations
       // to rub together
-      return;
+      fuseNonRecursive(block);
     }
     
-    // Use the simple n^2 algorithm, shouldn't be a problem on any 
-    // non-ridiculous programs
+    // Recurse on child blocks
+    for (Continuation c: block.getContinuations()) {
+      for (Block child: c.getBlocks()) {
+        fuseRecursive(logger, prog, f, child);
+      }
+    }
+  }
+
+  private static void fuseNonRecursive(Block block) {
     ListIterator<Continuation> it = block.continuationIterator();
     
-    // We want to check all pairs of continuations.  We create a copy of
-    //  the list and keep all of the Continuations that fall after the first
+    /* We want to check all pairs of continuations.  
+     * Use the simple n^2 algorithm rather than creating any index data
+     * structure, shouldn't be a problem on any non-ridiculous programs.
+     */
+    
+    // First create a copy of the list and keep all of the Continuations 
+    // that fall after the first
     assert(block.getContinuations().size() > 1);
     LinkedList<Continuation> mergeCands = new LinkedList<Continuation>(
                                               block.getContinuations());
-    mergeCands.removeFirst();
+    mergeCands.removeFirst(); // Don't compare first with itself
     
     while(it.hasNext()) {
+      // Iterate over all continuations except last 
       if (mergeCands.isEmpty()) {
         break;
       }
       Continuation c = it.next();
+      
+      // Check continuations [i..n) to see if they can be fused with this
       switch(c.getType()) {
         case IF_STATEMENT:
           fuseIfStatement(it, mergeCands, (IfStatement)c);
@@ -70,13 +85,6 @@ public class ContinuationFusion {
           break;
       } 
       mergeCands.removeFirst();
-    }
-    
-    // Recurse
-    for (Continuation c: block.getContinuations()) {
-      for (Block child: c.getBlocks()) {
-        fuse(logger, prog, f, child);
-      }
     }
   }
 
@@ -92,15 +100,11 @@ public class ContinuationFusion {
     for (Continuation c2: mergeCands) {
       if (c2.getType() == ContinuationType.IF_STATEMENT) {
         IfStatement if2 = (IfStatement)c2;
-        if (if1.getCondition().equals(
-            if2.getCondition())) {
-          
+        if (if1.fuseable(if2)) {
           // Inline if1's blocks into if2's at top (to retain order
           //  of statements in hope that this gives a higher prob of
           //   further optimisations)
-          if2.getThenBlock().insertInline(if1.getThenBlock(), true);
-          if2.getElseBlock().insertInline(if1.getElseBlock(), true);
-
+          if2.fuse(if1, true);
           it.remove();  // Remove first if statement
         }
       }

@@ -2,12 +2,9 @@ package exm.parser.ic.opt;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Stack;
@@ -26,6 +23,9 @@ import exm.parser.ic.ICInstructions.Instruction.MakeImmRequest;
 import exm.parser.ic.ICInstructions.Oparg;
 import exm.parser.ic.ICInstructions.OpargType;
 import exm.parser.ic.ICUtil;
+import exm.parser.ic.MultiMap;
+import exm.parser.ic.MultiMap.LinkedListFactory;
+import exm.parser.ic.MultiMap.ListFactory;
 import exm.parser.ic.SwiftIC.Block;
 import exm.parser.ic.SwiftIC.CompFunction;
 import exm.parser.ic.SwiftIC.Program;
@@ -214,23 +214,23 @@ public class WaitCoalescer {
   }
 
   private static void mergeWaits(Logger logger, CompFunction fn, Block block) {
-    boolean converged;
+    boolean fin;
     do {
-      converged = true;
-      Map<String, List<WaitStatement>> waitMap = buildWaitMap(block);
-      // Find the most shared variable
+      fin = true;
+      MultiMap<String, WaitStatement> waitMap = buildWaitMap(block);
+      // Greedy approach: find most shared variable and
+      //    merge wait based on that
       String winner = mostSharedVar(waitMap);
       if (winner != null) {
         // There is some shared variable between waits
-        converged = false;
+        fin = false;
         List<WaitStatement> waits = waitMap.get(winner);
         assert(waits != null && waits.size() >= 2);
         
-        // If one of the waits is explicit, new one must be
+        // If one of the waits is explicit, new one must be also
         boolean explicit = false; 
         
-        // Greedy approach: find most shared variable and
-        //    merge wait based on that
+        // Find out which variables are in common with all waits
         Set<String> intersection = null;
         for (WaitStatement wait: waits) {
           Set<String> nameSet = Variable.nameSet(wait.getWaitVars());
@@ -239,9 +239,7 @@ public class WaitCoalescer {
           } else {
             intersection.retainAll(nameSet);
           }
-          if (wait.isExplicit()) {
-            explicit = true;
-          }
+          explicit |= wait.isExplicit();
         }
         assert(intersection != null && !intersection.isEmpty());
         
@@ -254,7 +252,8 @@ public class WaitCoalescer {
                 "-optmerged", intersectionVs, new ArrayList<Variable>(0),
                 new ArrayList<Variable>(0), explicit);
         
-        
+        // Put the old waits under the new one, remove redundant wait
+        // vars
         for (WaitStatement wait: waits) {
           wait.removeWaitVars(intersection);
           if (wait.getWaitVars().isEmpty()) {
@@ -266,31 +265,37 @@ public class WaitCoalescer {
         block.addContinuation(newWait);
         block.removeContinuations(waits);
       }
-    } while (!converged);
+    } while (!fin);
     
   }
 
-  public static Map<String, List<WaitStatement>> buildWaitMap(Block block) {
-    Map<String, List<WaitStatement>> waitMap =
-                        new HashMap<String, List<WaitStatement>>(); 
+  /**
+   * Build a map of <variable name> --> wait statements blocking on that value 
+   * @param block
+   * @return
+   */
+  public static  MultiMap<String, WaitStatement> buildWaitMap(Block block) {
+    MultiMap<String, WaitStatement> waitMap =
+                        new MultiMap<String, WaitStatement>(); 
     for (Continuation c: block.getContinuations()) {
       if (c.getType() == ContinuationType.WAIT_STATEMENT) {
         WaitStatement wait = (WaitStatement)c;
         for (Variable v: wait.getWaitVars()) {
-          List<WaitStatement> waitList = waitMap.get(v.getName());
-          if (waitList == null) {
-            waitList = new ArrayList<WaitStatement>();
-            waitMap.put(v.getName(), waitList);
-          }
-          waitList.add(wait);
+          waitMap.put(v.getName(), wait);
         }
       }
     }
     return waitMap;
   }
 
+  /**
+   * Find the variable which appears the most times in a value of the
+   * map
+   * @param waitMap
+   * @return
+   */
   public static String mostSharedVar(
-            Map<String, List<WaitStatement>> waitMap) {
+          MultiMap<String, WaitStatement> waitMap) {
     String winner = null;
     int winCount = 0;
     for (Entry<String, List<WaitStatement>> e: waitMap.entrySet()) {
@@ -314,10 +319,10 @@ public class WaitCoalescer {
       }
     }
     
-    Map<String, LinkedList<InstOrCont>> waitMap = buildWaiterMap(block);
+    MultiMap<String, InstOrCont> waitMap = buildWaiterMap(block);
     
     while (!workStack.empty()) {
-      if (waitMap.size() == 0) {
+      if (waitMap.isDefinitelyEmpty()) {
         // If waitMap is empty, can't push anything down, so just
         // shortcircuit
         return;
@@ -369,7 +374,7 @@ public class WaitCoalescer {
   private static void relocateDependentInstructions(Logger logger,
       Block ancestorBlock, Block currBlock, 
       ListIterator<Instruction> currBlockInstructions,
-      Map<String, LinkedList<InstOrCont>> waitMap, Variable writtenV) {
+      MultiMap<String, InstOrCont> waitMap, Variable writtenV) {
     // Remove from outer block
     List<InstOrCont> waits = waitMap.get(writtenV.getName());
     Set<Instruction> movedI = new HashSet<Instruction>();
@@ -417,10 +422,10 @@ public class WaitCoalescer {
    * @param removedI
    */
   private static void updateWaiterMap(
-      Map<String, LinkedList<InstOrCont>> waitMap, Set<Continuation> removedC,
+          MultiMap<String, InstOrCont> waitMap, Set<Continuation> removedC,
       Set<Instruction> removedI) {
     List<String> keysToRemove = new ArrayList<String>();
-    for (Entry<String, LinkedList<InstOrCont>> e: waitMap.entrySet()) {
+    for (Entry<String, List<InstOrCont>> e: waitMap.entrySet()) {
       ListIterator<InstOrCont> it = e.getValue().listIterator();
       int count = 0;
       while (it.hasNext()) {
@@ -450,38 +455,39 @@ public class WaitCoalescer {
         keysToRemove.add(e.getKey());
       }
     }
+    // Explicitly remove key so that we cna tell if map is empty
+    // Do this outside loop to avoid concurrently modifying it while
+    // we are iterating over it
     for (String k: keysToRemove) {
       waitMap.remove(k);
     }
   }
 
-  public static Map<String, LinkedList<InstOrCont>> buildWaiterMap(Block block) {
-    Map<String, LinkedList<InstOrCont>> waitMap =
-                        new HashMap<String, LinkedList<InstOrCont>>(); 
+  private static ListFactory<InstOrCont> LL_FACT = 
+                    new LinkedListFactory<InstOrCont>();
+  public static MultiMap<String, InstOrCont> buildWaiterMap(Block block) {
+    // Use linked list to support more efficient removal in middle of list
+    MultiMap<String, InstOrCont> waitMap =
+                        new MultiMap<String, InstOrCont>(LL_FACT); 
     findRelocatableBlockingInstructions(block, waitMap);
     findBlockingContinuations(block, waitMap);
     return waitMap;
   }
 
   private static void findBlockingContinuations(Block block,
-      Map<String, LinkedList<InstOrCont>> waitMap) {
+          MultiMap<String, InstOrCont> waitMap) {
     for (Continuation c: block.getContinuations()) {
       List<Variable> blockingVars = c.blockingVars();
       if (blockingVars != null) {
         for (Variable v: blockingVars) {
-          LinkedList<InstOrCont> l = waitMap.get(v.getName());
-          if (l == null) {
-            l = new LinkedList<InstOrCont>();
-            waitMap.put(v.getName(), l);
-          }
-          l.add(new InstOrCont(c));
+          waitMap.put(v.getName(), new InstOrCont(c));
         }
       }
     }
   }
 
   private static void findRelocatableBlockingInstructions(Block block,
-      Map<String, LinkedList<InstOrCont>> waitMap) {
+          MultiMap<String, InstOrCont> waitMap) {
     for (Instruction inst: block.getInstructions()) {
       // check all outputs are non-alias futures - if not can't safely reorder
       boolean canMove = true;
@@ -499,12 +505,7 @@ public class WaitCoalescer {
         if (bi != null) {
           for (Variable in: bi) {
             if (Types.isFuture(in.getType())) {
-              LinkedList<InstOrCont> l = waitMap.get(in.getName());
-              if (l == null) {
-                l = new LinkedList<InstOrCont>();
-                waitMap.put(in.getName(), l);
-              }
-              l.add(new InstOrCont(inst));
+              waitMap.put(in.getName(), new InstOrCont(inst));
             }
           }
         }

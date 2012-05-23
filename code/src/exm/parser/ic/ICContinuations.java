@@ -414,10 +414,6 @@ public class ICContinuations {
       return null;
     }
 
-    public Variable getLoopVar() {
-      return loopVar;
-    }
-
     public boolean fuseable(ForeachLoop o) {
       // annotation parameters should match to respect any
       // user settings
@@ -610,8 +606,26 @@ public class ICContinuations {
       return null;
     }
 
-    public Oparg getCondition() {
-      return condition;
+    /**
+     * Can these be fused into one if statement
+     * @param other
+     * @return
+     */
+    public boolean fuseable(IfStatement other) {
+      return this.condition.equals(other.condition);
+              
+    }
+
+    /**
+     * Fuse other if statement into this
+     * @param other
+     * @param insertAtTop if true, insert code from other about
+     *    code from this in blcoks
+     */
+    public void fuse(IfStatement other, boolean insertAtTop) {
+      thenBlock.insertInline(other.thenBlock, insertAtTop);
+      elseBlock.insertInline(other.elseBlock, insertAtTop);
+      
     }
   }
 
@@ -926,26 +940,6 @@ public class ICContinuations {
     private final String loopName;
     private Variable loopVar;
     private Oparg start;
-    public int getDesiredUnroll() {
-      return desiredUnroll;
-    }
-
-    public void setDesiredUnroll(int desiredUnroll) {
-      this.desiredUnroll = desiredUnroll;
-    }
-
-    public Variable getLoopVar() {
-      return loopVar;
-    }
-
-    public boolean isSync() {
-      return isSync;
-    }
-
-    public int getSplitDegree() {
-      return splitDegree;
-    }
-
     private Oparg end;
     private Oparg increment;
     private final boolean isSync;
@@ -1273,18 +1267,6 @@ public class ICContinuations {
         return true;
       }
       return false;
-    }
-
-    public Oparg getStart() {
-      return start;
-    }
-
-    public Oparg getEnd() {
-      return end;
-    }
-
-    public Oparg getIncrement() {
-      return increment;
     }
     
     public boolean fuseable(RangeLoop o) {
