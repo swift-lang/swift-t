@@ -226,6 +226,9 @@ public class WaitCoalescer {
         List<WaitStatement> waits = waitMap.get(winner);
         assert(waits != null && waits.size() >= 2);
         
+        // If one of the waits is explicit, new one must be
+        boolean explicit = false; 
+        
         // Greedy approach: find most shared variable and
         //    merge wait based on that
         Set<String> intersection = null;
@@ -235,6 +238,9 @@ public class WaitCoalescer {
             intersection = nameSet;
           } else {
             intersection.retainAll(nameSet);
+          }
+          if (wait.isExplicit()) {
+            explicit = true;
           }
         }
         assert(intersection != null && !intersection.isEmpty());
@@ -246,7 +252,7 @@ public class WaitCoalescer {
         // of the above
         WaitStatement newWait = new WaitStatement(fn.getName() +
                 "-optmerged", intersectionVs, new ArrayList<Variable>(0),
-                new ArrayList<Variable>(0), false);
+                new ArrayList<Variable>(0), explicit);
         
         
         for (WaitStatement wait: waits) {
@@ -477,7 +483,7 @@ public class WaitCoalescer {
   private static void findRelocatableBlockingInstructions(Block block,
       Map<String, LinkedList<InstOrCont>> waitMap) {
     for (Instruction inst: block.getInstructions()) {
-      // TODO: check all outputs are futures
+      // check all outputs are non-alias futures - if not can't safely reorder
       boolean canMove = true;
       for (Oparg out: inst.getOutputs()) {
         if (out.getType() != OpargType.VAR || 
@@ -488,6 +494,7 @@ public class WaitCoalescer {
         }
       }
       if (canMove) {
+        // Put in map based on which inputs will block execution of task
         List<Variable> bi = inst.getBlockingInputs();
         if (bi != null) {
           for (Variable in: bi) {

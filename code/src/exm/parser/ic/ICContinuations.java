@@ -1597,6 +1597,10 @@ public class ICContinuations {
       ICUtil.replaceVarsInList(renames, waitVars, true);
     }
 
+    public boolean isExplicit() {
+      return explicit;
+    }
+
     @Override
     public ContinuationType getType() {
       return ContinuationType.WAIT_STATEMENT;
