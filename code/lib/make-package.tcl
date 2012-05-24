@@ -17,6 +17,7 @@ set items [ eval list -load libtcladlb.so   \
                 -source arith.tcl      \
                 -source container.tcl  \
                 -source functions.tcl  \
+                -source files.tcl  \
                 -source mpe.tcl        \
                 -source rand.tcl       \
                 -source stats.tcl      \
