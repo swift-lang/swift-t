@@ -96,6 +96,29 @@ namespace eval turbine {
         return $u
     }
 
+    # usage: [<name>] [<mapping>]
+    # mapping is option and should be a turbine
+    # string that will at some point be set to
+    # a value
+    proc allocate_file2 { name args } {
+        set is_mapped [ llength $args ]
+        # use integer to signal file availability
+        set signal [ allocate integer "signal:$name" ]
+        if { $is_mapped } {
+            set filename [ lindex $args 0 ]
+            log "file: $name=[ <$signal> <$filename> ] mapped"
+            upvar 1 $name v
+            set v $u
+        } else {
+            # use new string that will be set later to
+            # something arbitrary
+            set filename [ allocate string "filename:$name" ]
+            log "file: $name=[ <$signal> <$filename> ] unmapped"
+
+        }
+        return [ list $signal $filename $is_mapped ]
+    }
+
     # usage: retrieve <id>
     # Not type checked
     # Always tores result as Tcl string
