@@ -1,9 +1,11 @@
 
 package exm.stc.frontend;
 
-import java.util.*;
-
-import org.apache.log4j.Logger;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 
 import exm.stc.antlr.gen.ExMParser;
 import exm.stc.ast.Types;
@@ -11,7 +13,6 @@ import exm.stc.ast.Types.FunctionType;
 import exm.stc.ast.Types.PrimType;
 import exm.stc.ast.Types.SwiftType;
 import exm.stc.common.exceptions.InvalidSyntaxException;
-import exm.stc.ui.Main;
 
 public class Builtins {
 
@@ -21,9 +22,6 @@ public class Builtins {
  public static final String COPY_BOOLEAN = "copy_boolean";
  public static final String COPY_BLOB = "copy_blob";
  public static final String COPY_VOID = "copy_void";
-
-  @SuppressWarnings("unused")
-  private final static Logger logger = Main.getLogger();
 
   private static final Map<String, FunctionType> builtins =
                         new HashMap<String, FunctionType>();
