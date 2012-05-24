@@ -99,7 +99,8 @@ class Turbine
       new Token("turbine::f_dereference_float");
   private static final Token DEREFERENCE_STRING =
       new Token("turbine::f_dereference_string");
-  private static final String TURBINE_LOG = "turbine::c::log";
+  private static final Token TURBINE_LOG =
+      new Token("turbine::c::log");
   private static final Token ALLOCATE = new Token("turbine::allocate");
 
   public enum StackFrameType {
@@ -616,7 +617,11 @@ class Turbine
   }
 
   public static Command turbineLog(String msg) {
-    return new Command(TURBINE_LOG, msg);
+    return new Command(TURBINE_LOG, new Token(msg).quoted());
+  }
+
+  public static Command turbineLog(String... tokens) {
+    return new Command(TURBINE_LOG, new TclList(tokens));
   }
 
   public static TclTree declareReference(String refVarName) {

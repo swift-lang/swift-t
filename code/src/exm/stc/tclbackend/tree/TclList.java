@@ -31,6 +31,13 @@ public class TclList extends Square
     }
   }
 
+  public TclList(String... strings)
+  {
+    this();
+    for (String s : strings)
+      items.add(new Token(s));
+  }
+
   @Override
   public void add(Expression token)
   {

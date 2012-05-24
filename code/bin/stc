@@ -29,6 +29,12 @@
 #        toggle compiler option on
 #   -t <setting name>
 #        toggle compiler option off
+#   -u
+#        Only compile if target is not up-to-date
+#   -v
+#        Output version and exit (not yet implemented)
+#   -V
+#        Increase verbosity.  May be given twice
 
 # Exit codes: (cf. ExitCode.java)
 EXIT_ERROR_SCRIPT=6
@@ -128,39 +134,56 @@ function enable_opt() {
   COMPILER_OPTS+="-D${OPTNAME}=true"
 }
 
-STC_ZSH_DEBUG=0
-debug()
+# Set this to 1 to debug this script (-V)
+VERBOSE=0
+verbose()
 {
-  if (( STC_ZSH_DEBUG ))
+  if (( VERBOSE ))
   then
-    print ${*}
+    print "stc: ${*}"
   fi
 }
+
+report_version()
+{
+  print "STC: Swift-Turbine Compiler"
+  printf "\t for Turbine: "
+  cat ${PARSER_HOME}/turbine-version.txt
+  exit 0
+}
+
+PARSER_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
 
 # OUTPUT_MODE= turbine or cpp
 OUTPUT_MODE=turbine
 
-while getopts "d:EI:l:t:T:O:C:" OPTION
+# UPDATE= If 1, only compile if target not up-to-date
+UPDATE=0
+
+# JUST_VERSION= If 1, just report the version
+JUST_VERSION=0
+
+while getopts "d:EI:l:t:T:O:C:uvV" OPTION
 do
   case ${OPTION}
     in
     d) DEBUG_PORT=${OPTARG}
-      debug "DEBUG_PORT: ${DEBUG_PORT}"
+      verbose "DEBUG_PORT: ${DEBUG_PORT}"
       ;;
     E) OUTPUT_MODE=cpp
       ;;
     I) CPP_INCLUDE+="-I ${OPTARG} "
       ;;
     l) LOGFILE=${OPTARG}
-      debug "LOGFILE: ${LOGFILE}"
+      verbose "LOGFILE: ${LOGFILE}"
       ;;
-    t) debug "TURNOFF: ${OPTARG}"
+    t) verbose "TURNOFF: ${OPTARG}"
       disable_opt ${OPTARG}
       ;;
-    T) debug "TURNON: ${OPTARG}"
+    T) verbose "TURNON: ${OPTARG}"
       enable_opt ${OPTARG}
       ;;
-    O) debug "Optimization level ${OPTARG}"
+    O) verbose "Optimization level ${OPTARG}"
       if [ ${OPTARG} = 0 ]; then
         for opt in $O1_OPTS $O2_OPTS $O3_OPTS; do
             disable_opt ${opt}
@@ -187,6 +210,15 @@ do
     C) debug "IC Output: ${OPTARG}"
        COMPILER_OPTS+="-Dstc.ic.output-file=${OPTARG}"
        ;;
+    u) UPDATE=1
+      ;;
+    v)
+      report_version
+      ;;
+    V)
+      (( VERBOSE )) && set -x
+      VERBOSE=1
+      ;;
     *)
       # getopts already printed an error message
       return ${EXIT_ERROR_SCRIPT}
@@ -220,12 +252,25 @@ then
   export DEBUG=-agentlib:jdwp=transport=dt_socket,server=y,address=${DEBUG_PORT}
 fi
 
+STDOUT=/dev/stdout
 if [[ ${OUTPUT} == "" ]]
 then
-  OUTPUT=/dev/stdout
+  OUTPUT=${STDOUT}
 fi
 
-PARSER_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
+# Check timestamps (-u)
+if [[ ${UPDATE} == 1 && ${OUTPUT} != ${STDOUT} ]]
+then
+  if [[ -f ${OUTPUT} ]]
+  then
+    if [[ ${OUTPUT} -nt ${INPUT} ]]
+    then
+      # Output is up-to-date: done
+      verbose "output is up-to-date."
+      return 0
+    fi
+  fi
+fi
 
 ANTLR=${PARSER_HOME}/lib/antlr-3.4-complete-no-antlrv2.jar
 PARSER=${PARSER_HOME}/lib/parser.jar
@@ -233,10 +278,16 @@ LOG4J=${PARSER_HOME}/lib/log4j-1.2.16.jar
 JSON=${PARSER_HOME}/lib/json.jar
 CLASSPATH=${ANTLR}:${PARSER}:${LOG4J}:${JSON}
 
-FLAGS=( -ea )
+TURBINE_VERSION=$( < ${PARSER_HOME}/turbine-version.txt )
+
+FLAGS=( -ea -Dstc.turbine.version=${TURBINE_VERSION} )
 if [[ ${LOGFILE} != "" ]]
 then
   FLAGS+="-Dparser.logfile=${LOGFILE}"
+fi
+if [[ ${JUST_VERSION} == 1 ]]
+then
+  FLAGS+="-Dparser.just_version=1"
 fi
 
 # Find Turbine (for include path)

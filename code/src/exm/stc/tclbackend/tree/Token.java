@@ -10,6 +10,12 @@ public class Token extends Expression
     this.token = token;
   }
 
+  public Token quoted()
+  {
+    token = "\"" + token + "\"";
+    return this;
+  }
+
   @Override
   public void appendTo(StringBuilder sb, ExprContext mode)
   {

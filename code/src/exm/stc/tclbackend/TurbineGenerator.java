@@ -17,10 +17,7 @@ import exm.stc.ast.Variable.DefType;
 import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.InvalidOptionException;
-import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.UndefinedTypeException;
-import exm.stc.common.exceptions.UserException;
+import exm.stc.common.exceptions.*;
 import exm.stc.frontend.Builtins.LocalOpcode;
 import exm.stc.frontend.Builtins.UpdateMode;
 import exm.stc.ic.ICInstructions.Oparg;
@@ -41,9 +38,9 @@ public class TurbineGenerator implements CompilerBackend
   private static final Value TCLTMP_RANGE_HI_V = new Value(TCLTMP_RANGE_HI);
   private static final String TCLTMP_RANGE_INC = "tcltmp:inc";
   private static final Value TCLTMP_RANGE_INC_V = new Value(TCLTMP_RANGE_INC);
-  
-  private static final String MAIN_FUNCTION_NAME = "__swiftmain";
-  private static final String CONSTINIT_FUNCTION_NAME = "__consts";
+
+  private static final String MAIN_FUNCTION_NAME = "swift:main";
+  private static final String CONSTINIT_FUNCTION_NAME = "swift:constants";
 
   /** to avoid clashes with other tcl variables, prefix variables/functions
    * names from swift with these prefixes:
@@ -418,14 +415,14 @@ public class TurbineGenerator implements CompilerBackend
         throw new STCRuntimeError("Can't handle local op: "
             + op.toString());
       }
-      SetVariable cmd = new SetVariable(prefixVar(out.getName()), 
+      SetVariable cmd = new SetVariable(prefixVar(out.getName()),
                         Square.fnCall(tclFn, argExpr.toArray(
                             new Expression[argExpr.size()])));
       pointStack.peek().add(cmd);
       return;
     } else if (op == LocalOpcode.PRINTF || op == LocalOpcode.SPRINTF) {
       Square fmtArgs = new TclList(argExpr);
-      Square fmt = new Square(new Token("eval"), new Token("format"), 
+      Square fmt = new Square(new Token("eval"), new Token("format"),
                                                                 fmtArgs);
       if (op ==  LocalOpcode.PRINTF) {
         pointStack.peek().add(new Command(new Token("puts"), fmt));
@@ -584,9 +581,9 @@ public class TurbineGenerator implements CompilerBackend
       assert(argExpr.size() == 1);
       // Need to explicitly convert to floating point number, other
       // TCL will do e.g. integer division
-      return new Expression[] { new Token("double("), 
+      return new Expression[] { new Token("double("),
                         argExpr.get(0), new Token(")") };
-    case CEIL: 
+    case CEIL:
     case FLOOR:
     case ROUND: {
       String fname;
@@ -606,7 +603,7 @@ public class TurbineGenerator implements CompilerBackend
       }
       // Need to apply int( conversion, as the rounding function still return
       // a floating point (albeit one with no fractional part)
-      return new Expression[] { new Token("int(" + fname + "("), 
+      return new Expression[] { new Token("int(" + fname + "("),
           argExpr.get(0), new Token("))") };
     }
     case MAX_FLOAT: case MAX_INT: case MIN_FLOAT: case MIN_INT:
@@ -813,7 +810,7 @@ public class TurbineGenerator implements CompilerBackend
     Token f = new Token(tclf.pkg + "::" + tclf.symbol);
     Value s = new Value(Turbine.LOCAL_STACK_NAME);
     Command c = new Command(f, s, oList, iList);
-    
+
     setPriority(priority);
     pointStack.peek().add(c);
     clearPriority(priority);
@@ -836,7 +833,7 @@ public class TurbineGenerator implements CompilerBackend
         alreadyBlocking.add(v.getName());
       }
     }
-    
+
     setPriority(priority);
     if (async) {
       pointStack.peek().add(Turbine.callComposite(COMP_FN_PREFIX + function,
@@ -1097,9 +1094,9 @@ public class TurbineGenerator implements CompilerBackend
           " not yet supported");
     }
     assert(val.isImmediateFloat());
-    pointStack.peek().add(Turbine.floatSet(prefixVar(updateable.getName()), 
+    pointStack.peek().add(Turbine.floatSet(prefixVar(updateable.getName()),
                                                          opargToExpr(val)));
-  } 
+  }
 
   @Override
   public void latestValue(Variable result, Variable updateable) {
@@ -1111,8 +1108,8 @@ public class TurbineGenerator implements CompilerBackend
       throw new STCRuntimeError(updateable.getType().typeName()
               + " not yet supported");
     }
-    // just get the value the same as any other float future 
-    pointStack.peek().add(Turbine.floatGet(prefixVar(result.getName()), 
+    // just get the value the same as any other float future
+    pointStack.peek().add(Turbine.floatGet(prefixVar(result.getName()),
                                     varToExpr(updateable)));
   }
 
@@ -1231,10 +1228,12 @@ public class TurbineGenerator implements CompilerBackend
     List<String> inputs  = prefixVars(Variable.nameList(iList));
     // System.out.println("function" + functionName);
     boolean isMain = functionName.equals("main");
+    String prefixedFunctionName = null;
     if (isMain)
-      functionName = MAIN_FUNCTION_NAME;
+      prefixedFunctionName = MAIN_FUNCTION_NAME;
     else
-      functionName = COMP_FN_PREFIX + functionName;
+      prefixedFunctionName = COMP_FN_PREFIX+functionName;
+
     List<String> args =
       new ArrayList<String>(inputs.size()+outputs.size());
     if (!isMain) {
@@ -1248,10 +1247,12 @@ public class TurbineGenerator implements CompilerBackend
 
     //TODO: call const init code
     Sequence s = new Sequence();
-    Proc proc = new Proc(functionName, usedTclFunctionNames, args, s);
+    Proc proc = new Proc(prefixedFunctionName,
+                         usedTclFunctionNames, args, s);
 
     point.add(proc);
-    s.add(Turbine.turbineLog("function:"+functionName));
+    s.add(Turbine.turbineLog("enter composite function: " +
+                             functionName));
 
     if (noStack() && isMain) {
       s.add(Turbine.createDummyStackFrame());
@@ -1439,7 +1440,7 @@ public class TurbineGenerator implements CompilerBackend
         pointStack.peek().add(
               Turbine.containerSlotCreate(varToExpr(c)));
       }
-      
+
       TclList action = buildAction(uniqueName, usedVariables);
       pointStack.peek().add(
             Turbine.rule(uniqueName, inputs, action, shareWork));
@@ -1471,7 +1472,7 @@ public class TurbineGenerator implements CompilerBackend
           ruleTokens.add(varToExpr(v));
         } else if (Types.isScalarValue(t)) {
           PrimType pt = t.getPrimitiveType();
-          if (pt == PrimType.INTEGER || pt == PrimType.BOOLEAN 
+          if (pt == PrimType.INTEGER || pt == PrimType.BOOLEAN
               || pt == PrimType.FLOAT || pt == PrimType.STRING) {
             // Serialize
             ruleTokens.add(varToExpr(v));
@@ -1535,7 +1536,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void startForeachLoop(Variable arrayVar, Variable memberVar,
-                    Variable loopCountVar, boolean isSync, int splitDegree, 
+                    Variable loopCountVar, boolean isSync, int splitDegree,
                     boolean arrayClosed,
           List<Variable> usedVariables, List<Variable> containersToRegister) {
     assert(Types.isArray(arrayVar.getType()));
@@ -1553,41 +1554,41 @@ public class TurbineGenerator implements CompilerBackend
       startAsync(procName, Arrays.asList(arrayVar), passIn,
                   containersToRegister, false);
     }
-    
+
     boolean haveKeys = loopCountVar != null;
     String contentsVar = TCLTMP_ARRAY_CONTENTS;
-    
+
     if (splitDegree <= 0) {
-      pointStack.peek().add(Turbine.containerContents(contentsVar, 
+      pointStack.peek().add(Turbine.containerContents(contentsVar,
                           varToExpr(arrayVar), haveKeys));
     } else {
       // load array size
-      pointStack.peek().add(Turbine.containerSize(TCLTMP_CONTAINER_SIZE, 
+      pointStack.peek().add(Turbine.containerSize(TCLTMP_CONTAINER_SIZE,
                                         varToExpr(arrayVar)));
-      Expression lastIndex = Square.arithExpr(new Value(TCLTMP_CONTAINER_SIZE), 
+      Expression lastIndex = Square.arithExpr(new Value(TCLTMP_CONTAINER_SIZE),
             new Token("-"), new LiteralInt(1));
-      
+
       // recursively split the range
       ArrayList<Variable> splitUsedVars = new ArrayList<Variable>(
           usedVariables);
       splitUsedVars.add(arrayVar);
-      startRangeSplit(procName, splitUsedVars, containersToRegister, 
+      startRangeSplit(procName, splitUsedVars, containersToRegister,
             splitDegree, new LiteralInt(0), lastIndex, new LiteralInt(1));
-      
+
       // need to find the length of this split since that is what the turbine
       //  call wants
       pointStack.peek().add(new SetVariable(TCLTMP_SPLITLEN,
               Square.arithExpr(new Token(
               String.format("${%s} - ${%s} + 1", TCLTMP_RANGE_HI,
                                                  TCLTMP_RANGE_LO)))));
-              
+
       // load the subcontainer
-      pointStack.peek().add(Turbine.containerContents(contentsVar, 
+      pointStack.peek().add(Turbine.containerContents(contentsVar,
           varToExpr(arrayVar), haveKeys, new Value(TCLTMP_SPLITLEN),
           TCLTMP_RANGE_LO_V));
-      
+
     }
-    startForeachInner(new Value(contentsVar), memberVar, loopCountVar, 
+    startForeachInner(new Value(contentsVar), memberVar, loopCountVar,
         isSync, usedVariables, containersToRegister, foreach_num);
   }
 
@@ -1598,14 +1599,14 @@ public class TurbineGenerator implements CompilerBackend
     Sequence curr = pointStack.peek();
     boolean haveKeys = loopCountVar != null;
     Sequence loopBody = new Sequence();
-    
+
     String tclMemberVar = prefixVar(memberVar.getName());
     String tclCountVar = haveKeys ? prefixVar(loopCountVar.getName()) : null;
-    
+
     /* Iterate over keys and values, or just values */
     Sequence tclLoop;
     if (haveKeys) {
-      tclLoop = new DictFor(new Token(tclCountVar), new Token(tclMemberVar), 
+      tclLoop = new DictFor(new Token(tclCountVar), new Token(tclMemberVar),
                       arrayContents, loopBody);
     } else {
       tclLoop = new ForEach(new Token(tclMemberVar), arrayContents, loopBody);
@@ -1626,7 +1627,7 @@ public class TurbineGenerator implements CompilerBackend
 
 
   @Override
-  public void endForeachLoop(boolean isSync, int splitDegree, 
+  public void endForeachLoop(boolean isSync, int splitDegree,
           boolean arrayClosed, List<Variable> containersToRegister) {
     assert(pointStack.size() >= 2);
     if (!isSync) {
@@ -1659,7 +1660,7 @@ public class TurbineGenerator implements CompilerBackend
     Expression startE = opargToExpr(start);
     Expression endE = opargToExpr(end);
     Expression incrE = opargToExpr(increment);
-    
+
     if (splitDegree > 0) {
       startRangeSplit(loopName, usedVariables,
               containersToRegister, splitDegree, startE, endE, incrE);
@@ -1682,7 +1683,7 @@ public class TurbineGenerator implements CompilerBackend
       endAsync(containersToRegister); // Swift loop body
     }
     pointStack.pop(); // for loop body
-    
+
     if (splitDegree > 0) {
       endRangeSplit();
     }
@@ -1697,8 +1698,8 @@ public class TurbineGenerator implements CompilerBackend
     ForLoop tclLoop = new ForLoop(loopVarName, startE, endE, incrE, loopBody);
     pointStack.peek().add(tclLoop);
     pointStack.push(loopBody);
-  
-  
+
+
     ArrayList<Variable> loopUsedVars = new ArrayList<Variable>(usedVariables);
     loopUsedVars.add(loopVar);
     if (!isSync) {
@@ -1711,7 +1712,7 @@ public class TurbineGenerator implements CompilerBackend
   /**
    * After this function is called, in the TCL context at the top of the stack
    * will be available the bottom, top (inclusive) and increment of the split in
-   * tcl values: TCLTMP_RANGE_LO TCLTMP_RANGE_HI and TCLTMP_RANGE_INC 
+   * tcl values: TCLTMP_RANGE_LO TCLTMP_RANGE_HI and TCLTMP_RANGE_INC
    * @param loopName
    * @param usedVariables
    * @param containersToRegister
@@ -1725,7 +1726,7 @@ public class TurbineGenerator implements CompilerBackend
           List<Variable> containersToRegister, int splitDegree,
           Expression startE, Expression endE, Expression incrE) {
     // Create two procedures that will be called: an outer procedure
-    //  that recursively breaks up the foreach loop into chunks, 
+    //  that recursively breaks up the foreach loop into chunks,
     //  and an inner procedure that actually runs the loop
     ArrayList<String> args = new ArrayList<String>();
     args.add(Turbine.LOCAL_STACK_NAME);
@@ -1739,85 +1740,85 @@ public class TurbineGenerator implements CompilerBackend
     Value loVal = new Value(TCLTMP_RANGE_LO);
     Value hiVal = new Value(TCLTMP_RANGE_HI);
     Value incVal = new Value(TCLTMP_RANGE_INC);
-    
+
     List<Expression> commonArgs = new ArrayList<Expression>();
     commonArgs.add(new Value(Turbine.LOCAL_STACK_NAME));
     for (Variable uv: usedVariables) {
       commonArgs.add(varToExpr(uv));
     }
-    
+
     List<Expression> outerCallArgs = new ArrayList<Expression>(commonArgs);
     outerCallArgs.add(startE);
     outerCallArgs.add(endE);
     outerCallArgs.add(incrE);
-    
+
     List<Expression> innerCallArgs = new ArrayList<Expression>(commonArgs);
     innerCallArgs.add(loVal);
     innerCallArgs.add(hiVal);
     innerCallArgs.add(incVal);
-    
+
     Sequence outer = new Sequence();
     String outerProcName = loopName + ":outer";
-    tree.add(new Proc(outerProcName, 
+    tree.add(new Proc(outerProcName,
             usedTclFunctionNames, args, outer));
-    
+
     Sequence inner = new Sequence();
     String innerProcName = loopName + ":inner";
-    tree.add(new Proc(innerProcName, 
+    tree.add(new Proc(innerProcName,
           usedTclFunctionNames, args, inner));
-    
+
     // Call outer directly
-    pointStack.peek().add(new Command(outerProcName, 
+    pointStack.peek().add(new Command(outerProcName,
             outerCallArgs));
-                     
-    
+
+
     String itersLeft = "tcltmp:itersleft";
-    // itersLeft = ceil( (hi - lo + 1) /(double) inc)) 
-    // ==> itersLeft = ( (hi - lo) / inc ) + 1 
+    // itersLeft = ceil( (hi - lo + 1) /(double) inc))
+    // ==> itersLeft = ( (hi - lo) / inc ) + 1
     outer.add(new SetVariable(itersLeft, Square.arithExpr( new Token(
             String.format("((${%s} - ${%s}) / ${%s}) + 1",
                    TCLTMP_RANGE_HI, TCLTMP_RANGE_LO, TCLTMP_RANGE_INC)))));
     Expression doneSplitting = Square.arithExpr(
-            new Value(itersLeft), new Token("<="), 
+            new Value(itersLeft), new Token("<="),
             new LiteralInt(splitDegree));
     Sequence thenB = new Sequence();
     Sequence elseB = new Sequence();
-    
+
     // if (iters < splitFactor) then <call inner> else <split more>
     If splitIf = new If(doneSplitting, thenB, elseB);
     outer.add(splitIf);
-    
+
     thenB.add(new Command(innerProcName, innerCallArgs));
-    
+
     Sequence splitBody = new Sequence();
     String splitStart = "tcltmp:splitstart";
     String skip = "tcltmp:skip";
     // skip = max(splitFactor,  ceil(iters /(float) splitfactor))
     // skip = max(splitFactor,  ((iters - 1) /(int) splitfactor) + 1)
     elseB.add(new SetVariable(skip, Square.arithExpr(new Token(
-          String.format("max(%d, ((${%s} - 1) / %d ) + 1)", 
+          String.format("max(%d, ((${%s} - 1) / %d ) + 1)",
                   splitDegree, itersLeft, splitDegree)))));
-    
-    ForLoop splitLoop = new ForLoop(splitStart, loVal, 
+
+    ForLoop splitLoop = new ForLoop(splitStart, loVal,
             hiVal, new Value(skip), splitBody);
     elseB.add(splitLoop);
-    
-    
-    ArrayList<Expression> outerRecCall = new 
+
+
+    ArrayList<Expression> outerRecCall = new
                      ArrayList<Expression>();
     outerRecCall.add(new Token(outerProcName));
     outerRecCall.addAll(commonArgs);
     outerRecCall.add(new Value(splitStart));
     // splitEnd = min(hi, start + skip - 1)
     Square splitEnd = Square.arithExpr(new Token(String.format(
-            "min(${%s}, ${%s} + ${%s} - 1)", TCLTMP_RANGE_HI, 
+            "min(${%s}, ${%s} + ${%s} - 1)", TCLTMP_RANGE_HI,
             splitStart, skip)));
     outerRecCall.add(splitEnd);
     outerRecCall.add(incVal);
-    
+
     splitBody.add(Turbine.rule(outerProcName, new ArrayList<Value>(0),
                     new TclList(outerRecCall), true));
-    
+
     pointStack.push(inner);
   }
 

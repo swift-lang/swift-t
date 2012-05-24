@@ -20,7 +20,7 @@ public class Settings
   public static final String OPT_FLATTEN_NESTED = "stc.opt.flatten-nested";
   public static final String OPT_BRANCH_PREDICT = "stc.opt.branch-predict";
   public static final String OPT_DEAD_CODE_ELIM = "stc.opt.dead-code-elim";
-  public static final String OPT_FORWARD_DATAFLOW = 
+  public static final String OPT_FORWARD_DATAFLOW =
                       "stc.opt.forward-dataflow-analysis";
   public static final String OPT_WAIT_COALESCE = "stc.opt.wait-coalesce";
   public static final String OPT_CONTROLFLOW_FUSION =
@@ -33,7 +33,7 @@ public class Settings
 
   // TODO: get rid of this once no longer required
   public static final String ARRAY_REF_SWITCHEROO = "stc.array-ref-switcheroo";
-  
+
   private static final Properties properties;
 
   static {
@@ -49,7 +49,7 @@ public class Settings
     defaults.setProperty(OPT_SHARED_CONSTANTS, "true");
     defaults.setProperty(OPT_BRANCH_PREDICT, "true");
     defaults.setProperty(OPT_DEAD_CODE_ELIM, "true");
-    defaults.setProperty(OPT_UNROLL_LOOPS, "true"); 
+    defaults.setProperty(OPT_UNROLL_LOOPS, "true");
     defaults.setProperty(OPT_DISABLE_ASSERTS, "false");
     defaults.setProperty(OPT_FORWARD_DATAFLOW, "true");
     defaults.setProperty(OPT_WAIT_COALESCE, "true");
@@ -58,6 +58,8 @@ public class Settings
     defaults.setProperty(ARRAY_REF_SWITCHEROO, "true");
 
     // Turbine code generation
+    // Turbine version
+    defaults.setProperty(TURBINE_VERSION, "unknown");
     //If set to true, don't allocate any stacks at all
     defaults.setProperty(TURBINE_NO_STACK, "true");
     //If set to true, don't store any variables in stack
@@ -65,6 +67,10 @@ public class Settings
     properties = new Properties(defaults);
   }
 
+  /**
+     Try to overwrite each default property in {@link properties}
+     with value from System
+   */
   public static void initSTCProperties() throws InvalidOptionException {
     // Pull in properties from wrapper script
     for (String key: properties.stringPropertyNames()) {
@@ -98,7 +104,7 @@ public class Settings
     getBoolean(TURBINE_NO_STACK);
     getBoolean(TURBINE_NO_STACK_VARS);
     getBoolean(ARRAY_REF_SWITCHEROO);
-    
+
     getLong(OPT_NUM_PASSES);
 
     checkOneOf(DEBUG_LEVEL, Arrays.asList("off", "comments", "debugger"));
@@ -111,6 +117,7 @@ public class Settings
 
   public static String get(String key)
   {
+    // System.out.println("Setting: " + key + " " + properties.getProperty(key));
     return properties.getProperty(key);
   }
 
@@ -165,7 +172,7 @@ public class Settings
       		key + ": " + strVal);
     }
   }
-  
+
   public static boolean getBoolean(String key)
                   throws InvalidOptionException
 
