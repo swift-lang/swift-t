@@ -46,6 +46,8 @@ class Turbine
   // Commonly used things:
   private static final Token ALLOCATE_CONTAINER =
       new Token("turbine::allocate_container");
+  private static final Token ALLOCATE_FILE = 
+          new Token("turbine::allocate_file2");
   private static final Token CONTAINER_INSERT =
       new Token("turbine::container_insert");
   private static final Token CONTAINER_F_INSERT =
@@ -165,6 +167,19 @@ class Turbine
                                           String indexType) {
     return new Command(ALLOCATE_CONTAINER,
                        new Token(name), new Token(indexType));
+  }
+  
+  public static SetVariable allocateFile(Value mapVar, String tclName) {
+    Square alloc;
+    if (mapVar != null) {
+      alloc = new Square(ALLOCATE_FILE,
+            new Token(tclName), mapVar);
+    } else {
+      alloc = new Square(ALLOCATE_FILE,
+              new Token(tclName));
+    }
+    SetVariable fileDecl = new SetVariable(tclName, alloc);
+    return fileDecl;
   }
 
   public static SetVariable stackLookup(String stackName,

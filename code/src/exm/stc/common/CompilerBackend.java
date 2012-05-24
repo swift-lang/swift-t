@@ -29,7 +29,7 @@ public interface CompilerBackend {
    * @throws UndefinedTypeException
    */
   public abstract void declare(SwiftType t, String name,
-      VariableStorage storage, DefType defType, String mapping) 
+      VariableStorage storage, DefType defType, Variable mapping) 
            throws UndefinedTypeException;
 
   public abstract void closeArray(Variable arr);

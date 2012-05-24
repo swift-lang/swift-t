@@ -337,10 +337,10 @@ public class SwiftICGenerator implements CompilerBackend {
   
   @Override
   public void declare(SwiftType type, String name, VariableStorage storage,
-      DefType defType, String mapping)
+      DefType defType, Variable mapping)
       throws UndefinedTypeException {
     assert(mapping == null || Types.isMappable(type));
-    assert(mapping != null || (!Types.requiresMapping(type)));
+    assert(mapping == null || Types.isString(mapping.getType()));
     currBlock().declareVariable(type, name, storage, defType, mapping);
   }
 

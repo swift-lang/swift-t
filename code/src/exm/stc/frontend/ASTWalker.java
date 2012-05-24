@@ -34,6 +34,7 @@ import exm.stc.ast.descriptor.Update;
 import exm.stc.ast.descriptor.VariableDeclaration;
 import exm.stc.ast.descriptor.Wait;
 import exm.stc.ast.descriptor.ForLoopDescriptor.LoopVar;
+import exm.stc.ast.descriptor.VariableDeclaration.VariableDescriptor;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.DoubleDefineException;
@@ -1039,11 +1040,11 @@ public class ASTWalker {
     if (count < 2)
       throw new STCRuntimeError("declare_multi: child count < 2");
     VariableDeclaration vd =  VariableDeclaration.fromAST(context, typecheck, 
-                                                    tree, DefType.LOCAL_USER);
+                                                    tree);
     
     for (int i = 0; i < vd.count(); i++) {
-      Variable var = vd.getVar(i);
-      declareVariable(context, blockVu, var);
+      VariableDescriptor vDesc = vd.getVar(i);
+      Variable var = declareVariable(context, blockVu, vDesc);
       SwiftAST assignedExpr = vd.getVarExpr(i);
       if (Types.isScalarUpdateable(var.getType())) {
         initUpdateableVar(context, var, assignedExpr);
@@ -1086,13 +1087,32 @@ public class ASTWalker {
     }
   }
 
-  private void declareVariable(Context context, VariableUsageInfo blockVu,
-      Variable var) throws UserException, UndefinedTypeException {
-    VInfo vi = blockVu.lookupVariableInfo(var.getName());
-    SwiftType definedType = var.getType();
+  private Variable declareVariable(Context context, VariableUsageInfo blockVu,
+      VariableDescriptor vDesc) throws UserException, UndefinedTypeException {
+    VInfo vi = blockVu.lookupVariableInfo(vDesc.getName());
+    SwiftType definedType = vDesc.getType();
     // Sometimes we have to use a reference to an array instead of an array
     SwiftType internalType;
 
+    Variable mappedVar = null;
+    // First evaluate the mapping expr
+    if (vDesc.getMappingExpr() != null) {
+      if (Types.isMappable(vDesc.getType())) {
+        SwiftType mapType = typecheck.findSingleExprType(context, 
+                                          vDesc.getMappingExpr());
+        if (!Types.isString(mapType)) {
+          throw new TypeMismatchException(context, "Tried to map using " +
+          		"non-string expression with type " + mapType.typeName());
+        }
+        mappedVar = evalExprToTmp(context, vDesc.getMappingExpr(),
+                Types.FUTURE_STRING, false, null);
+      } else {
+        throw new TypeMismatchException(context, "Variable " + vDesc.getName()
+                + " of type " + vDesc.getType().typeName() + " cannot be " +
+                    " mapped");
+      }
+    }
+    
     boolean USE_ARRAY_REF_SWITCHEROO;
     try {
       USE_ARRAY_REF_SWITCHEROO = Settings.getBoolean(Settings.ARRAY_REF_SWITCHEROO);
@@ -1114,11 +1134,12 @@ public class ASTWalker {
     } else {
       internalType = definedType;
     }
-    createVariable(context, internalType, var.getName(), VariableStorage.STACK,
-        DefType.LOCAL_USER, var.getMapping());
+    Variable var = createVariable(context, internalType, 
+        vDesc.getName(), VariableStorage.STACK, DefType.LOCAL_USER, mappedVar);
 
     // Might need to close if array or struct containing array
     flagDeclaredVarForClosing(context, var, blockVu);
+    return var;
   }
 
   /**
@@ -1130,13 +1151,10 @@ public class ASTWalker {
    * @throws UserException
    */
   private Variable createVariable(Context context, SwiftType type, String name,
-      VariableStorage storage, DefType defType, String mapping)
+      VariableStorage storage, DefType defType, Variable mapping)
                                                 throws UserException {
 
-    if (mapping == null && Types.requiresMapping(type)) {
-      throw new UserException(context, "Variable " + name + " of type "
-           + type.toString() + " needs to be mapped, but no mapping provided");
-    } else if (mapping != null && (!Types.isMappable(type))) {
+    if (mapping != null && (!Types.isMappable(type))) {
       throw new UserException(context, "Variable " + name + " of type "
           + type.toString() + " cannot be mapped to " + mapping);
     }
@@ -2941,11 +2959,14 @@ public class ASTWalker {
     assert(varTree.getType() == ExMParser.DECLARATION);
     
     VariableDeclaration vd = VariableDeclaration.fromAST(context, typecheck,
-                    varTree, DefType.GLOBAL_CONST);
+                    varTree);
     assert(vd.count() == 1);
-    Variable v = vd.getVar(0);
-    context.declareVariable(v.getType(), v.getName(), VariableStorage.GLOBAL_CONST,
-                                                  DefType.GLOBAL_CONST, null);
+    VariableDescriptor vDesc = vd.getVar(0);
+    if (vDesc.getMappingExpr() != null) {
+      throw new UserException(context, "Can't have mapped global constant");
+    }
+    Variable v = context.declareVariable(vDesc.getType(), vDesc.getName(),
+                   VariableStorage.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
     
     
     SwiftAST val = vd.getVarExpr(0);

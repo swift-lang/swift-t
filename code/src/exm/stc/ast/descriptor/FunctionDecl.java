@@ -6,6 +6,7 @@ import java.util.List;
 
 import exm.stc.antlr.gen.ExMParser;
 import exm.stc.ast.SwiftAST;
+import exm.stc.ast.Types;
 import exm.stc.ast.Variable;
 import exm.stc.ast.Types.FunctionType;
 import exm.stc.ast.Types.SwiftType;
@@ -125,7 +126,7 @@ public class FunctionDecl {
       if (baseType == null) {
         throw new UndefinedTypeException(context, typeName);
       }
-      Variable v = Variable.fromDeclareVariableTree(context, baseType, 
+      Variable v = fromFormalArgTree(context, baseType, 
                                                     restDecl, DefType.INARG);
       varname = v.getName();
       alts[i] = v.getType();
@@ -136,6 +137,44 @@ public class FunctionDecl {
     argInfo = new ArgDecl(varname, argType, thisVarArgs);
     return argInfo;
   }
+  
+  
+  /**
+    * Take a DECLARE_VARIABLE_REST subtree of the AST and return the appropriate declared
+    * variable.  Doesn't check to see if variable already defined
+    * @param errorContext the current context, for info to add to error message
+    * @param baseType the type preceding the declaration 
+    * @param tree a parse tree with the root a DECLARE_MULTI or DECLARE_SINGLE 
+    *                                                               subtree
+    * @return
+    * @throws UndefinedTypeException
+   * @throws InvalidSyntaxException 
+    */
+    public static Variable fromFormalArgTree(
+        Context context, SwiftType baseType, SwiftAST tree, DefType deftype)
+    throws UndefinedTypeException, InvalidSyntaxException
+    {
+      assert(tree.getType() == ExMParser.DECLARE_VARIABLE_REST);
+      assert(tree.getChildCount() >= 1);
+      SwiftAST nameTree = tree.child(0);
+      assert(nameTree.getType() == ExMParser.ID);
+      String varName = nameTree.getText();
+      
+      SwiftType varType = baseType;
+      for (int i = 1; i < tree.getChildCount(); i++) {
+        SwiftAST subtree = tree.child(i);
+        if (subtree.getType() == ExMParser.ARRAY) {
+          varType = new Types.ArrayType(varType);
+        } else if (subtree.getType() == ExMParser.MAPPING) {
+          throw new InvalidSyntaxException(context, "Cannot map function argument");
+        } else {
+          throw new STCRuntimeError("Unexpected token in variable " +
+              "declaration: " + ExMParser.tokenNames[subtree.getType()]);
+        }
+      }
+      return new Variable(varType, varName, VariableStorage.STACK, deftype, 
+                                                                null);
+    }
 
   public List<Variable> getInVars() {
     ArrayList<Variable> inVars = new ArrayList<Variable>(inNames.size());

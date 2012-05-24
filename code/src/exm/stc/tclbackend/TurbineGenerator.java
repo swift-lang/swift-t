@@ -151,11 +151,10 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void declare(SwiftType t, String name, VariableStorage storage,
-        DefType defType, String mapping)
+        DefType defType, Variable mapping)
   throws UndefinedTypeException
   {
     assert(mapping == null || Types.isMappable(t));
-    assert(mapping != null || (!Types.requiresMapping(t)));
     String tclName = prefixVar(name);
     Sequence point = pointStack.peek();
 
@@ -176,9 +175,8 @@ public class TurbineGenerator implements CompilerBackend
     // Initialize the TD in ADLB with a type
     if (Types.isScalarFuture(t) || Types.isScalarUpdateable(t)) {
       if (Types.isFile(t)) {
-        point.add(new SetVariable(tclName,
-            new Square( new Token("turbine::allocate_file"),
-                new Token(tclName), new TclString(mapping, true))));
+        Value mapExpr = (mapping == null) ? null : varToExpr(mapping);
+        point.add(Turbine.allocateFile(mapExpr, tclName));
       } else {
         PrimType pt = t.getPrimitiveType();
         String tprefix = typeToString(pt);
@@ -213,6 +211,7 @@ public class TurbineGenerator implements CompilerBackend
       }
 
   }
+
 
   @Override
   public void closeArray(Variable arr) {

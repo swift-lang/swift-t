@@ -13,6 +13,8 @@ import exm.stc.ast.Types;
 import exm.stc.ast.Variable;
 import exm.stc.ast.Types.SwiftType;
 import exm.stc.ast.Variable.DefType;
+import exm.stc.ast.Variable.VariableStorage;
+import exm.stc.ast.descriptor.VariableDeclaration.VariableDescriptor;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.InvalidSyntaxException;
@@ -253,11 +255,15 @@ public class ForLoopDescriptor {
       int initType = loopVarInit.getType(); 
       if (initType == ExMParser.DECLARATION) {
         VariableDeclaration decl = VariableDeclaration.fromAST(context, 
-                        typecheck, loopVarInit, DefType.LOCAL_USER);
+                        typecheck, loopVarInit);
         assert(decl.count() == 1);
-        Variable loopVar = decl.getVar(0);
+        VariableDescriptor loopVarDesc = decl.getVar(0);
         SwiftAST expr = decl.getVarExpr(0);
-        assert(expr != null);
+        assert(loopVarDesc.getMappingExpr() == null); 
+        assert(expr != null);  // shouldn't be mapped, enforced by syntax
+        Variable loopVar = new Variable(loopVarDesc.getType(),
+                loopVarDesc.getName(), VariableStorage.STACK,
+                DefType.LOCAL_USER, null);
         forLoop.addLoopVar(loopVar, false, expr);
       } else if (initType == ExMParser.FOR_LOOP_ASSIGN) {
         // Not declaring new variable, using variable from outside loop

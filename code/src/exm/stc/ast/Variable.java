@@ -3,14 +3,7 @@ package exm.stc.ast;
 
 import java.util.*;
 
-import exm.stc.antlr.gen.ExMParser;
-import exm.stc.ast.SwiftAST;
 import exm.stc.ast.Types.SwiftType;
-import exm.stc.ast.descriptor.StringLiteral;
-import exm.stc.common.exceptions.InvalidSyntaxException;
-import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.UndefinedTypeException;
-import exm.stc.frontend.Context;
 
 public class Variable
 {
@@ -18,7 +11,7 @@ public class Variable
   private final String name;
   private final VariableStorage storage;
   private final DefType defType;
-  private final String mapping;
+  private final Variable mapping;
 
   public static final String TMP_VAR_PREFIX = "__t";
   public static final String LOCAL_TMP_VAR_PREFIX = "__l";
@@ -85,12 +78,13 @@ public class Variable
   }
   
   public Variable(SwiftType type, String name,
-      VariableStorage storage, DefType defType, String mapping)
+      VariableStorage storage, DefType defType, Variable mapping)
   {
     this.type = type;
     this.name = name;
     this.storage = storage;
     this.defType = defType;
+    assert(mapping == null || Types.isString(mapping.getType()));
     this.mapping = mapping;
   }
 
@@ -113,7 +107,7 @@ public class Variable
     return defType;
   }
 
-  public String getMapping() {
+  public Variable getMapping() {
     return mapping;
   }
 
@@ -121,47 +115,7 @@ public class Variable
     return mapping != null;
   }
 
-  
-/**
-  * Take a DECLARE_MULTI or DECLARE_SINGLE subtree of the AST and return the appropriate declared
-  * variable.  Doesn't check to see if variable already defined
-  * @param errorContext the current context, for info to add to error message
-  * @param baseType the type preceding the declaration 
-  * @param tree a parse tree with the root a DECLARE_MULTI or DECLARE_SINGLE 
-  *                                                               subtree
-  * @return
-  * @throws UndefinedTypeException
- * @throws InvalidSyntaxException 
-  */
-  public static Variable fromDeclareVariableTree(
-      Context context, SwiftType baseType, SwiftAST tree, DefType deftype)
-  throws UndefinedTypeException, InvalidSyntaxException
-  {
-    assert(tree.getType() == ExMParser.DECLARE_VARIABLE_REST);
-    String mappedTo = null;
-    assert(tree.getChildCount() >= 1);
-    SwiftAST nameTree = tree.child(0);
-    assert(nameTree.getType() == ExMParser.ID);
-    String varName = nameTree.getText();
-    
-    SwiftType varType = baseType;
-    for (int i = 1; i < tree.getChildCount(); i++) {
-      SwiftAST subtree = tree.child(i);
-      if (subtree.getType() == ExMParser.ARRAY) {
-        varType = new Types.ArrayType(varType);
-      } else if (subtree.getType() == ExMParser.MAPPING) {
-        assert(mappedTo == null); // should be first mapping
-        assert(subtree.getChildCount() == 1);
-        mappedTo = StringLiteral.extractLiteralString(context, 
-                                            subtree.child(0));
-      } else {
-        throw new STCRuntimeError("Unexpected token in variable " +
-        		"declaration: " + ExMParser.tokenNames[subtree.getType()]);
-      }
-    }
-    return new Variable(varType, varName, VariableStorage.STACK, deftype, 
-                                                              mappedTo);
-  }
+
 
   public static String names(List<Variable> list)
   {

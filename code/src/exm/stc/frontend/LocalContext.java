@@ -10,7 +10,6 @@ import exm.stc.ast.Types.SwiftType;
 import exm.stc.ast.Variable.DefType;
 import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.exceptions.DoubleDefineException;
-import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
 
@@ -55,7 +54,7 @@ extends Context
 
   @Override
   public Variable declareVariable(SwiftType type, String name, VariableStorage scope,
-      DefType defType, String mapping)
+      DefType defType, Variable mapping)
   throws UserException
   {
     logger.trace("context: declareVariable: " +
@@ -70,10 +69,6 @@ extends Context
   @Override
   public Variable createIntermediateVariable(SwiftType type) throws UserException {
 	  String name;
-	  if (Types.requiresMapping(type)) {
-      throw new STCRuntimeError("Can't create temporary mapped " +
-                        "variables yet");
-    }
 	  do {
 	    int counter = getFunctionContext().getCounterVal("intermediate_var");
 	    name = Variable.TMP_VAR_PREFIX + counter;
@@ -86,10 +81,6 @@ extends Context
   @Override
   public Variable createLocalTmpVariable(SwiftType type) {
     String name;
-    if (Types.requiresMapping(type)) {
-      throw new STCRuntimeError("Can't create temporary mapped " +
-                        "variables yet");
-    }
     do {
       int counter = getFunctionContext().getCounterVal("local_tmp_var");
       name = Variable.LOCAL_TMP_VAR_PREFIX + counter;

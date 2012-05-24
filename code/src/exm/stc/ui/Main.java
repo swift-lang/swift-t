@@ -51,18 +51,14 @@ public class Main
     }
     setupLogging();
 
-
     ANTLRInputStream input = setupInput();
-    LineMapping lineMapping = parsePreprocOutput(input);
-    input.rewind(); input.reset();
-    SwiftAST tree = runANTLR(input, lineMapping);
-    
     PrintStream output = setupOutput();
     PrintStream icOutput = setupICOutput();
-    ASTWalker walker = new ASTWalker(inputFilename, lineMapping);
-    compile(walker, output, icOutput, tree);
+    
+    compile(input, output, icOutput);
   }
 
+  
   private static void setupLogging()
   {
     Properties properties = System.getProperties();
@@ -308,22 +304,22 @@ public class Main
     }
   }
 
-  /**
-   * Run the whole compilation process
-   */
-  private static void compile(ASTWalker walker, 
-          PrintStream output, PrintStream icOutput, SwiftAST tree)
-  {
+  private static void compile(ANTLRInputStream input, PrintStream output,
+          PrintStream icOutput) {
+    LineMapping lineMapping = parsePreprocOutput(input);
+    input.rewind(); input.reset();
+    SwiftAST tree = runANTLR(input, lineMapping);
+    ASTWalker walker = new ASTWalker(inputFilename, lineMapping);
     try
     {
       SwiftICGenerator intermediate = new SwiftICGenerator(logger, icOutput);
       walker.walk(intermediate, tree);
       // Optimize, then pass through to turbine generator
       intermediate.optimise();
-
+    
       TurbineGenerator codeGen = new TurbineGenerator(logger, timestamp);
       intermediate.regenerate(codeGen);
-
+    
       String code = codeGen.code();
       output.println(code);
       output.close();

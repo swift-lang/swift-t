@@ -153,7 +153,7 @@ extends Context
    */
   @Override
   public Variable declareVariable(SwiftType type, String name,
-                       VariableStorage scope, DefType defType, String mapping)
+                       VariableStorage scope, DefType defType, Variable mapping)
                            throws DoubleDefineException
   {
     assert(defType == DefType.GLOBAL_CONST);

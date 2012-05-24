@@ -57,7 +57,7 @@ public abstract class Context
       throws DoubleDefineException;
 
   public abstract Variable declareVariable(SwiftType type, String name, VariableStorage scope,
-      DefType defType, String mapping) throws UserException;
+      DefType defType, Variable mapping) throws UserException;
 
   public abstract void flagArrayForClosing(Variable var);
   public abstract List<Variable> getArraysToClose();

@@ -372,7 +372,7 @@ array_marker:
     ;
 
 mapping:
-    LT s=STRING GT
+    LT s=expr GT
         -> ^( MAPPING $s )
     ;
 

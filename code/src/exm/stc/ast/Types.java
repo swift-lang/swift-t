@@ -695,15 +695,7 @@ public class Types {
     // We can only map files right now..
     return t.equals(FUTURE_FILE);
   }
-  
-  /**
-   * Do we need to map the file upon creation
-   */
-  public static boolean requiresMapping(SwiftType t) {
-    // We can only map files right now..
-    return t.equals(FUTURE_FILE);
-  }
-  
+
   public static final SwiftType FUTURE_INTEGER =
                       new ScalarFutureType(PrimType.INTEGER);
   public static final SwiftType VALUE_INTEGER =

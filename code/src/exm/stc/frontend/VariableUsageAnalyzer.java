@@ -10,6 +10,7 @@ import exm.stc.ast.Types;
 import exm.stc.ast.Variable;
 import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.Variable.DefType;
+import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.ast.descriptor.ArrayElems;
 import exm.stc.ast.descriptor.ArrayRange;
 import exm.stc.ast.descriptor.ForLoopDescriptor;
@@ -20,6 +21,7 @@ import exm.stc.ast.descriptor.LValue;
 import exm.stc.ast.descriptor.Switch;
 import exm.stc.ast.descriptor.Update;
 import exm.stc.ast.descriptor.VariableDeclaration;
+import exm.stc.ast.descriptor.VariableDeclaration.VariableDescriptor;
 import exm.stc.ast.descriptor.Wait;
 import exm.stc.ast.descriptor.ForLoopDescriptor.LoopVar;
 import exm.stc.common.exceptions.InvalidSyntaxException;
@@ -266,12 +268,18 @@ class VariableUsageAnalyzer {
     int line = context.getLine();
     
     VariableDeclaration vd = VariableDeclaration.fromAST(context, typecheck, 
-                                                  tree, DefType.LOCAL_USER);
+                                                  tree);
     for (int i = 0; i < vd.count(); i++) {
-      Variable var = vd.getVar(i);
+      VariableDescriptor var = vd.getVar(i);
+      //TODO: walk mapping
+      if (var.getMappingExpr() != null) {
+        walkExpr(context, vu, var.getMappingExpr());
+      }
+      // Don't retain mapping information in this pass since it might be
+      // mapped to a temporary var
       vu.declare(file, line, var.getName(), var.getType());
-      context.declareVariable(var.getType(), var.getName(), var.getStorage(),
-              var.getDefType(), var.getMapping());
+      context.declareVariable(var.getType(), var.getName(), 
+              VariableStorage.STACK, DefType.LOCAL_USER, null);
       SwiftAST assignExpr = vd.getVarExpr(i);
       if (assignExpr != null) {
         logger.debug("Variable " + var.getName() + 

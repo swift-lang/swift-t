@@ -18,6 +18,7 @@ import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.ast.Types;
 import exm.stc.ast.Variable;
 import exm.stc.ast.Types.FunctionType;
 import exm.stc.ast.Types.SwiftType;
@@ -576,7 +577,8 @@ public class SwiftIC {
     }
 
     public Variable declareVariable(SwiftType t, String name,
-        VariableStorage storage, DefType defType, String mapping) {
+        VariableStorage storage, DefType defType, Variable mapping) {
+      assert(mapping == null || Types.isString(mapping.getType()));
       Variable v = new Variable(t, name, storage, defType, mapping);
       this.variables.add(v);
       return v;
@@ -623,7 +625,12 @@ public class SwiftIC {
       for (Variable v: variables) {
         sb.append(indent);
         sb.append("alloc " + v.getType().typeName() + " " + v.getName() + 
-                " <" + v.getStorage().toString().toLowerCase() + ">\n");
+                " <" + v.getStorage().toString().toLowerCase() + ">");
+        
+        if (v.isMapped()) {
+          sb.append(" @mapping=" + v.getMapping().getName());
+        }
+        sb.append("\n");
       }
 
       for (Instruction i: instructions) {
@@ -684,16 +691,31 @@ public class SwiftIC {
     public void renameVars(Map<String, Oparg> renames, boolean inputsOnly) {
       if (!inputsOnly) {
         // Replace definition of var
-        for (int i = 0; i < variables.size(); i++) {
-          String varName = variables.get(i).getName();
+        ListIterator<Variable> it = variables.listIterator();
+        while (it.hasNext()) {
+          Variable v = it.next();
+          
+          // FIXME: this isn't quite right, need to consider
+          // interaction between replacing variable and replacing mapping
+          if (v.isMapped() && 
+                  renames.containsKey(v.getMapping().getName())) {
+            Oparg replacement = renames.get(v.getMapping().getName());
+            if (replacement.getType() == OpargType.VAR) {
+              Variable nv = new Variable(v.getType(), v.getName(),
+                      v.getStorage(), v.getDefType(), replacement.getVar());
+              it.set(nv);
+              v = nv;
+            }
+          }
+          
+          String varName = v.getName();
           if (renames.containsKey(varName)) {
-            variables.remove(i);
             Oparg replacement = renames.get(varName);
             if (replacement.getType() ==  OpargType.VAR) {
-              variables.add(i, replacement.getVar());
+              it.set(replacement.getVar());
             } else {
               // value replaced with constant
-              i--; // update
+              it.remove();
             }
           }
         }
@@ -840,6 +862,7 @@ public class SwiftIC {
       for (Variable v: this.getVariables()) {
         if (v.isMapped()) {
           stillNeeded.add(v.getName());
+          stillNeeded.add(v.getMapping().getName());
         }
       }
       for (Instruction i : this.getInstructions()) {

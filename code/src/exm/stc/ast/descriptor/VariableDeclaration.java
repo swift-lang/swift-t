@@ -4,29 +4,29 @@ import java.util.ArrayList;
 
 import exm.stc.antlr.gen.ExMParser;
 import exm.stc.ast.SwiftAST;
-import exm.stc.ast.Variable;
+import exm.stc.ast.Types;
 import exm.stc.ast.Types.SwiftType;
-import exm.stc.ast.Variable.DefType;
 import exm.stc.common.exceptions.InvalidSyntaxException;
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.TypeChecker;
 
 public class VariableDeclaration {
 
-  private final ArrayList<Variable> vars;
+  private final ArrayList<VariableDescriptor> vars;
   private final ArrayList<SwiftAST> exprs; // initial values, if provided
   
   public VariableDeclaration() {
-    this.vars = new ArrayList<Variable>();
+    this.vars = new ArrayList<VariableDescriptor>();
     this.exprs = new ArrayList<SwiftAST>();
   }
   
-  public void addVar(Variable var) {
+  public void addVar(VariableDescriptor var) {
     addVar(var, null);
   }
   
-  public void addVar(Variable var, SwiftAST expr) {
+  public void addVar(VariableDescriptor var, SwiftAST expr) {
     this.vars.add(var);
     this.exprs.add(expr);
   }
@@ -35,7 +35,7 @@ public class VariableDeclaration {
     return this.vars.size();
   }
   
-  public Variable getVar(int i) {
+  public VariableDescriptor getVar(int i) {
     return vars.get(i);
   }
   
@@ -48,7 +48,7 @@ public class VariableDeclaration {
   }
   
   public static VariableDeclaration fromAST(Context context, 
-                TypeChecker typecheck, SwiftAST tree, DefType defType) 
+                TypeChecker typecheck, SwiftAST tree) 
         throws UndefinedTypeException, InvalidSyntaxException  {
     VariableDeclaration res = new VariableDeclaration();
     assert(tree.getType() == ExMParser.DECLARATION);
@@ -74,10 +74,60 @@ public class VariableDeclaration {
         expr = null;
       }
       assert(restTree.getType() == ExMParser.DECLARE_VARIABLE_REST);
-      Variable var = Variable.fromDeclareVariableTree(context, baseType,
-          restTree, defType);
+      VariableDescriptor var =
+              fromDeclareVariableRest(context, baseType, restTree);
       res.addVar(var, expr);
     }
     return res;
   }
+  
+  public static VariableDescriptor fromDeclareVariableRest(
+          Context context, SwiftType baseType, SwiftAST tree)
+      throws UndefinedTypeException, InvalidSyntaxException {
+    assert(tree.getType() == ExMParser.DECLARE_VARIABLE_REST);
+    assert(tree.getChildCount() >= 1);
+    SwiftAST nameTree = tree.child(0);
+    assert(nameTree.getType() == ExMParser.ID);
+    String varName = nameTree.getText();
+    SwiftAST mappingExpr = null;
+    
+    SwiftType varType = baseType;
+    for (int i = 1; i < tree.getChildCount(); i++) {
+      SwiftAST subtree = tree.child(i);
+      if (subtree.getType() == ExMParser.ARRAY) {
+        varType = new Types.ArrayType(varType);
+      } else if (subtree.getType() == ExMParser.MAPPING) {
+        assert(mappingExpr == null);
+        assert(subtree.getChildCount() == 1);
+        mappingExpr = subtree.child(0);
+      } else {
+        throw new STCRuntimeError("Unexpected token in variable " +
+            "declaration: " + ExMParser.tokenNames[subtree.getType()]);
+      }
+    }
+    return new VariableDescriptor(varType, varName, mappingExpr);
+  }
+  
+  public static class VariableDescriptor {
+    private final SwiftType type;
+    private final String name;
+    private final SwiftAST mappingExpr;
+    public VariableDescriptor(SwiftType type, String name, SwiftAST mappingExpr) {
+      super();
+      this.type = type;
+      this.name = name;
+      this.mappingExpr = mappingExpr;
+    }
+    
+    public SwiftType getType() {
+      return type;
+    }
+    public String getName() {
+      return name;
+    }
+    public SwiftAST getMappingExpr() {
+      return mappingExpr;
+    }
+  }
+  
 }
