@@ -632,7 +632,7 @@ class Turbine
   }
 
   public static Command turbineLog(String msg) {
-    return new Command(TURBINE_LOG, new Token(msg).quoted());
+    return new Command(TURBINE_LOG, new TclString(msg, true));
   }
 
   public static Command turbineLog(String... tokens) {
