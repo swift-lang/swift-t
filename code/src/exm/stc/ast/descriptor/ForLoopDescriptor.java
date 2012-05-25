@@ -49,7 +49,6 @@ public class ForLoopDescriptor {
     }
   }
   
-  private final TypeChecker typecheck;
   private final SwiftAST body;
   private final SwiftAST condition;
   private final ArrayList<LoopVar> loopVars;
@@ -99,10 +98,9 @@ public class ForLoopDescriptor {
     return updateRules.get(loopVarName);
   }
 
-  public ForLoopDescriptor(TypeChecker typecheck, SwiftAST body, 
+  public ForLoopDescriptor(SwiftAST body, 
                             SwiftAST condition, int loopVarCount) {
     this.body = body;
-    this.typecheck = typecheck;
     loopVars = new ArrayList<LoopVar>(loopVarCount);
     initExprs = new HashMap<String, SwiftAST>();
     updateRules = new HashMap<String, SwiftAST>();
@@ -181,14 +179,14 @@ public class ForLoopDescriptor {
         throw new UserException(context, "loop variable " + v.getName()
             + " does not have an initial value");
       }
-      SwiftType initExprType = typecheck.findSingleExprType(context, initExpr);
-      typecheck.checkAssignment(context, initExprType, v.getType(), v.getName());
+      SwiftType initExprType = TypeChecker.findSingleExprType(context, initExpr);
+      TypeChecker.checkAssignment(context, initExprType, v.getType(), v.getName());
     }
   }
   
   public void validateCond(Context afterInitContext) throws UserException {
     //check condition type
-    SwiftType condType = typecheck.findSingleExprType(afterInitContext, 
+    SwiftType condType = TypeChecker.findSingleExprType(afterInitContext, 
                                                                   condition);
     if ((!Types.isBool(condType)) && (!Types.isInt(condType))) {
       throw new TypeMismatchException(afterInitContext, "for loop condition "
@@ -210,9 +208,9 @@ public class ForLoopDescriptor {
         throw new UserException(loopBodyContext, "loop variable " + v.getName()
             + " must be updated between iterations");
       }
-      SwiftType upExprType = typecheck.findSingleExprType(loopBodyContext, 
+      SwiftType upExprType = TypeChecker.findSingleExprType(loopBodyContext, 
                                                                   upExpr);
-      typecheck.checkAssignment(loopBodyContext, upExprType, v.getType(), 
+      TypeChecker.checkAssignment(loopBodyContext, upExprType, v.getType(), 
                                                               v.getName());
     }
 
@@ -222,8 +220,7 @@ public class ForLoopDescriptor {
     }
   }
   
-  public static ForLoopDescriptor fromAST(TypeChecker typecheck, Context context, 
-                                                                SwiftAST tree)
+  public static ForLoopDescriptor fromAST(Context context, SwiftAST tree)
       throws UndefinedTypeException, InvalidSyntaxException, UserException {
     assert(tree.getType() == ExMParser.FOR_LOOP);
     assert(tree.getChildCount() >= 4);
@@ -247,15 +244,15 @@ public class ForLoopDescriptor {
           " in for loop for now");
     }
     
-    ForLoopDescriptor forLoop = new ForLoopDescriptor(typecheck, body, cond,
-                                                            loopVarCount);
+    ForLoopDescriptor forLoop = new ForLoopDescriptor(body, cond, 
+                                                      loopVarCount);
     // Process the initializer
     for (int i = 0; i < loopVarCount; i++) {
       SwiftAST loopVarInit = init.child(i);
       int initType = loopVarInit.getType(); 
       if (initType == ExMParser.DECLARATION) {
         VariableDeclaration decl = VariableDeclaration.fromAST(context, 
-                        typecheck, loopVarInit);
+                        loopVarInit);
         assert(decl.count() == 1);
         VariableDescriptor loopVarDesc = decl.getVar(0);
         SwiftAST expr = decl.getVarExpr(0);

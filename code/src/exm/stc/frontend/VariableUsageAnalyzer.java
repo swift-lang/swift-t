@@ -2,8 +2,6 @@ package exm.stc.frontend;
 
 import java.util.*;
 
-import org.apache.log4j.Logger;
-
 import exm.stc.antlr.gen.ExMParser;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.Types;
@@ -39,14 +37,9 @@ import exm.stc.frontend.VariableUsageInfo.ViolationType;
  * It uses some type information, but doesn't attempt to perform full type checking
  */
 class VariableUsageAnalyzer {
-  private final Logger logger;
-  private final TypeChecker typecheck;
   private final LineMapping lineMapping;
 
-  public VariableUsageAnalyzer(Logger logger, TypeChecker typecheck,
-      LineMapping lineMapping) {
-    this.logger = logger;
-    this.typecheck = typecheck;
+  public VariableUsageAnalyzer(LineMapping lineMapping) {
     this.lineMapping = lineMapping;
   }
 
@@ -59,10 +52,10 @@ class VariableUsageAnalyzer {
    * @param block
    * @throws UserException
    */
-  void analyzeVariableUsage(Context context,
+  public void analyzeVariableUsage(Context context,
           String function, List<Variable> iList, List<Variable> oList, SwiftAST block)
         throws UserException {
-    logger.debug("analyzer: starting: " + function);
+    LogHelper.debug(context, "analyzer: starting: " + function);
     
     
     VariableUsageInfo globVui = new VariableUsageInfo(); 
@@ -103,9 +96,9 @@ class VariableUsageAnalyzer {
       String msg = v.toException().getMessage();
       if (v.getType() == ViolationType.ERROR) {
         fatalError = true;
-        ASTWalker.logger.error(msg);
+        LogHelper.error(context, msg);
       } else {
-        ASTWalker.logger.warn(msg);
+        LogHelper.warn(context, msg);
       }
       //System.err.println(msg);
     }
@@ -113,7 +106,7 @@ class VariableUsageAnalyzer {
       throw new VariableUsageException("Previous variable usage error in function " +
             function + " caused compilation termination");
     }
-    ASTWalker.logger.debug("analyzer: done: " + function);
+    LogHelper.debug(context, "analyzer: done: " + function);
   }
 
   
@@ -174,7 +167,7 @@ class VariableUsageAnalyzer {
     int line = context.getLine();
 
     context.syncFileLine(tree.getLine(), lineMapping);
-    logger.trace("walk " + context.getLocation() +
+    LogHelper.trace(context, "walk " + context.getLocation() +
                  ExMParser.tokenNames[token]);
     switch (token) {
       case ExMParser.BLOCK:
@@ -267,8 +260,7 @@ class VariableUsageAnalyzer {
     String file = context.getInputFile();
     int line = context.getLine();
     
-    VariableDeclaration vd = VariableDeclaration.fromAST(context, typecheck, 
-                                                  tree);
+    VariableDeclaration vd = VariableDeclaration.fromAST(context, tree);
     for (int i = 0; i < vd.count(); i++) {
       VariableDescriptor var = vd.getVar(i);
       //TODO: walk mapping
@@ -282,7 +274,7 @@ class VariableUsageAnalyzer {
               VariableStorage.STACK, DefType.LOCAL_USER, null);
       SwiftAST assignExpr = vd.getVarExpr(i);
       if (assignExpr != null) {
-        logger.debug("Variable " + var.getName() + 
+        LogHelper.debug(context, "Variable " + var.getName() + 
               " was declared and assigned"); 
         walkExpr(context, vu, assignExpr);
         vu.assign(context.getInputFile(), context.getLine(), var.getName());
@@ -358,7 +350,7 @@ class VariableUsageAnalyzer {
 
   private void foreach(Context context, VariableUsageInfo vu, SwiftAST tree)
                                                         throws UserException {
-    ForeachLoop loop = ForeachLoop.fromAST(context, tree, typecheck);
+    ForeachLoop loop = ForeachLoop.fromAST(context, tree);
     
     
     // Variables might appear in array var expression, so walk that first
@@ -366,7 +358,7 @@ class VariableUsageAnalyzer {
 
     // Then setup the variable usage info for the loop body,
     // taking into account the loop variables
-    Context loopContext = loop.setupLoopBodyContext(context, typecheck);
+    Context loopContext = loop.setupLoopBodyContext(context);
     String file = context.getInputFile();
     int line = context.getLine();
     VariableUsageInfo initial = vu.createNested();
@@ -403,8 +395,7 @@ class VariableUsageAnalyzer {
   
   private void forLoop(Context context, VariableUsageInfo vu, SwiftAST tree)
       throws UserException {
-    ForLoopDescriptor forLoop = ForLoopDescriptor.fromAST(typecheck, context, 
-                                                                    tree);
+    ForLoopDescriptor forLoop = ForLoopDescriptor.fromAST(context, tree);
     // process initial exprs in the current context
     for (SwiftAST initExpr: forLoop.getInitExprs().values()) {
       walkExpr(context, vu, initExpr);
@@ -415,7 +406,7 @@ class VariableUsageAnalyzer {
     forLoop.validateCond(bodyContext);
     for (LoopVar lv: forLoop.getLoopVars()) {
       Variable v = lv.var;
-      logger.debug("declared loop var " + v.toString());
+      LogHelper.debug(context, "declared loop var " + v.toString());
       
       
       if (!lv.declaredOutsideLoop) {
@@ -452,7 +443,7 @@ class VariableUsageAnalyzer {
   
   private void iterate(Context context, VariableUsageInfo vu, SwiftAST tree)
   throws UserException {
-    IterateDescriptor loop = IterateDescriptor.fromAST(typecheck, context, 
+    IterateDescriptor loop = IterateDescriptor.fromAST(context, 
         tree);
     
     VariableUsageInfo outerLoopInfo = vu.createNested();
@@ -460,7 +451,7 @@ class VariableUsageAnalyzer {
     Context bodyContext = loop.createBodyContext(context);
     
     Variable v = loop.getLoopVar();
-    logger.debug("declared loop var " + v.toString());
+    LogHelper.debug(context, "declared loop var " + v.toString());
     bodyInfo.declare(context.getInputFile(), context.getLine(), v.getName(), 
        v.getType());
     // we assume that each variable has an initializer and an update, so it
@@ -589,7 +580,7 @@ class VariableUsageAnalyzer {
           if (currNode.getType() == ExMParser.VARIABLE) {
             // Only need to add usage info if local variable
             String varName = currNode.child(0).getText();
-            logger.debug("Complex read rooted at var: " + varName);
+            LogHelper.debug(context, "Complex read rooted at var: " + varName);
             vu.complexRead(context.getInputFile(), line, varName, fieldPath,
                 arrDepth);
 

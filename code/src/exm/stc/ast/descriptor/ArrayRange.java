@@ -45,12 +45,11 @@ public class ArrayRange {
     this.step = step;
   }
 
-  public void typeCheck(Context context, TypeChecker typecheck) 
-                                            throws UserException {
-    SwiftType startT = typecheck.findSingleExprType(context, start);
-    SwiftType endT = typecheck.findSingleExprType(context, end);
+  public void typeCheck(Context context) throws UserException {
+    SwiftType startT = TypeChecker.findSingleExprType(context, start);
+    SwiftType endT = TypeChecker.findSingleExprType(context, end);
     if (step != null) {
-      SwiftType stepT = typecheck.findSingleExprType(context, step);
+      SwiftType stepT = TypeChecker.findSingleExprType(context, step);
       typeCheck(context, stepT, "step");
     }
     typeCheck(context, startT, "start");

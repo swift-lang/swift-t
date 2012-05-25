@@ -2,8 +2,6 @@ package exm.stc.frontend;
 
 import java.util.*;
 
-import org.apache.log4j.Logger;
-
 import exm.stc.antlr.gen.ExMParser;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.Types;
@@ -32,14 +30,7 @@ import exm.stc.common.exceptions.UserException;
  */
 public class TypeChecker {
 
-  private final Logger logger;
-
-  public TypeChecker(Logger logger) {
-    this.logger = logger;
-  }
-
-
-  public List<SwiftType> findExprType(Context context, SwiftAST tree) 
+  public static List<SwiftType> findExprType(Context context, SwiftAST tree) 
       throws UserException {
     return findExprType(context, tree, null);
   }
@@ -63,26 +54,24 @@ public class TypeChecker {
    * @return
    * @throws UserException
    */
-  public List<SwiftType> findExprType(Context context, SwiftAST tree, 
+  public static List<SwiftType> findExprType(Context context, SwiftAST tree, 
       List<SwiftType> expected)
       throws UserException {
     // Memoize this function to avoid recalculating type
     List<SwiftType> cached = tree.getSwiftType();
     if (cached != null) {
-      logger.trace("Expr at l." + tree.getLine() + "." + tree.getCharPositionInLine()
-          + " has cached type " + cached.toString());
+      LogHelper.trace(context, "Expr has cached type " + cached.toString());
       return cached;
     } else {
       List<SwiftType> calcedType = uncachedFindExprType(context, tree,
                                                                  expected);
       tree.setSwiftType(calcedType);
-      logger.trace("Expr at l." + tree.getLine() + "." + tree.getCharPositionInLine()
-          + " found type " + calcedType.toString());
+      LogHelper.trace(context, "Expr found type " + calcedType.toString());
       return calcedType;
     }
   }
   
-  private List<SwiftType> uncachedFindExprType(Context context, SwiftAST tree,
+  private static List<SwiftType> uncachedFindExprType(Context context, SwiftAST tree,
       List<SwiftType> expected) throws UserException {
     int token = tree.getType();
     switch (token) {
@@ -226,7 +215,7 @@ public class TypeChecker {
    * @throws TypeMismatchException if the type isn't a struct or struct ref, 
    *                or the field doesn't exist in the type 
    */
-  public SwiftType findStructFieldType(Context context, String fieldName,
+  public static SwiftType findStructFieldType(Context context, String fieldName,
       SwiftType type) throws TypeMismatchException {
     StructType structType;
     if (Types.isStruct(type)) {
@@ -247,7 +236,7 @@ public class TypeChecker {
 
 
   
-  public SwiftType findSingleExprType(Context context, SwiftAST tree)
+  public static SwiftType findSingleExprType(Context context, SwiftAST tree)
                 throws UserException {
     return findSingleExprType(context, tree, null);
   }
@@ -259,7 +248,7 @@ public class TypeChecker {
    * @return
    * @throws UserException
    */
-  public SwiftType findSingleExprType(Context context, SwiftAST tree, 
+  public static SwiftType findSingleExprType(Context context, SwiftAST tree, 
       SwiftType expType) throws UserException {
     List<SwiftType> typeL = findExprType(context, tree,
                            expType == null ? null : Arrays.asList(expType));
@@ -270,7 +259,7 @@ public class TypeChecker {
     return typeL.get(0);
   }
 
-  private List<SwiftType> findOperatorResultType(Context context, SwiftAST tree,
+  private static List<SwiftType> findOperatorResultType(Context context, SwiftAST tree,
       List<SwiftType> expected) throws TypeMismatchException, UserException {
     int opType = tree.child(0).getType();
     String opName = ExMParser.tokenNames[opType].toLowerCase();
@@ -325,7 +314,7 @@ public class TypeChecker {
   }
 
 
-  public String getBuiltInFromOpTree(Context context, SwiftAST tree)
+  public static String getBuiltInFromOpTree(Context context, SwiftAST tree)
         throws TypeMismatchException, UserException {
     return getBuiltInFromOpTree(context, tree, new ArrayList<SwiftType>(),
         null);
@@ -341,7 +330,7 @@ public class TypeChecker {
    * @throws TypeMismatchException
    * @throws UserException
    */
-  private String getBuiltInFromOpTree(Context context, SwiftAST tree,
+  private static String getBuiltInFromOpTree(Context context, SwiftAST tree,
       ArrayList<SwiftType> argTypes, List<SwiftType> expectedResult)
           throws TypeMismatchException,
       UserException {
@@ -386,7 +375,7 @@ public class TypeChecker {
    * @throws TypeMismatchException
    * @throws UserException
    */
-  private PrimType findOperatorArgTypes(Context context, SwiftAST tree,
+  private static PrimType findOperatorArgTypes(Context context, SwiftAST tree,
       ArrayList<SwiftType> argTypes, String opName, PrimType coerceTo)
       throws TypeMismatchException, UserException {
     
@@ -452,7 +441,7 @@ public class TypeChecker {
    *          the type of array memebrs for the array being dereferenced
    * @return
    */
-  private SwiftType dereferenceResultType(SwiftType memberType) {
+  private static SwiftType dereferenceResultType(SwiftType memberType) {
     SwiftType resultType;
     if (Types.isScalarFuture(memberType)) {
       resultType = memberType;
@@ -473,7 +462,7 @@ public class TypeChecker {
    * @param vars
    * @throws TypeMismatchException
    */
-  private void typeCheckIdentical(Context context, List<SwiftType> types,
+  private static void typeCheckIdentical(Context context, List<SwiftType> types,
       List<Variable> vars, String errContext) throws TypeMismatchException {
     if (types.size() != vars.size()) {
       throw new TypeMismatchException(context, "Number of variables "
@@ -490,7 +479,7 @@ public class TypeChecker {
 
   }
 
-  private TypeMismatchException argumentTypeException(Context context,
+  private static TypeMismatchException argumentTypeException(Context context,
       int argPos, InArgT expType, SwiftType actType, String errContext) {
     return new TypeMismatchException(context, "Expected argument " +
         (argPos + 1) + " to have one of the follow types: " 
@@ -499,7 +488,7 @@ public class TypeChecker {
   }
 
 
-  private void checkFunctionOutputs(Context context, List<SwiftType> types,
+  private static void checkFunctionOutputs(Context context, List<SwiftType> types,
       List<Variable> outputs, String errContext) throws TypeMismatchException {
     // Type system is simple enough that we just check the types match exactly
     typeCheckIdentical(context, types, outputs, errContext);
@@ -517,7 +506,7 @@ public class TypeChecker {
    * @return list of which of the alternative will be passed into fn
    * @throws TypeMismatchException
    */
-  private List<SwiftType> typeCheckFunargs(Context context, List<InArgT> funArgSpec,
+  private static List<SwiftType> typeCheckFunargs(Context context, List<InArgT> funArgSpec,
       List<Variable> vars, String errContext) throws TypeMismatchException {
     if (funArgSpec.size() != vars.size()) {
       throw new TypeMismatchException(context, "Number of variables "
@@ -540,7 +529,7 @@ public class TypeChecker {
     return concreteTypes;
   }
 
-  public SwiftType whichAlternativeType(InArgT funArgType, SwiftType varType) {
+  public static SwiftType whichAlternativeType(InArgT funArgType, SwiftType varType) {
     for (SwiftType alt: funArgType.getAlternatives()) {
       if (varType.equals(alt)) {
         // Obviously ok if types are exactly the same
@@ -565,7 +554,7 @@ public class TypeChecker {
    * @param errContext
    * @throws TypeMismatchException
    */
-  private List<SwiftType> checkFunctionInputs(Context context, FunctionType ftype,
+  private static List<SwiftType> checkFunctionInputs(Context context, FunctionType ftype,
       List<Variable> inputs, String errContext) throws TypeMismatchException {
     List<InArgT> types = ftype.getInputs();
     if (!ftype.hasVarargs()) {
@@ -609,7 +598,7 @@ public class TypeChecker {
    * @throws TypeMismatchException
    * @throws UndefinedFunctionException 
    */
-  public List<SwiftType> checkFunctionCall(Context context, String function,
+  public static List<SwiftType> checkFunctionCall(Context context, String function,
       List<Variable> oList, List<Variable> iList) 
           throws TypeMismatchException,UndefinedFunctionException {
     FunctionType ftype = context.lookupFunction(function);
@@ -625,7 +614,7 @@ public class TypeChecker {
   }
 
 
-  public void checkCopy(Context context, SwiftType srctype, SwiftType dsttype)
+  public static void checkCopy(Context context, SwiftType srctype, SwiftType dsttype)
       throws TypeMismatchException {
     if (!srctype.equals(dsttype)) {
       throw new TypeMismatchException(context, "Type mismatch: copying from "
@@ -634,7 +623,7 @@ public class TypeChecker {
   }
 
 
-  public void checkAssignment(Context context, SwiftType rValType,
+  public static void checkAssignment(Context context, SwiftType rValType,
       SwiftType lValType, String lValName) throws TypeMismatchException {
     if (!lValType.equals(rValType)
         && !(Types.isReference(rValType) && lValType.equals(rValType

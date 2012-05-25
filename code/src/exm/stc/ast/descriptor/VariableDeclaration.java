@@ -10,7 +10,6 @@ import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.frontend.Context;
-import exm.stc.frontend.TypeChecker;
 
 public class VariableDeclaration {
 
@@ -47,8 +46,8 @@ public class VariableDeclaration {
     return exprs.get(i) != null;
   }
   
-  public static VariableDeclaration fromAST(Context context, 
-                TypeChecker typecheck, SwiftAST tree) 
+  public static VariableDeclaration fromAST(Context context,
+                                              SwiftAST tree) 
         throws UndefinedTypeException, InvalidSyntaxException  {
     VariableDeclaration res = new VariableDeclaration();
     assert(tree.getType() == ExMParser.DECLARATION);

@@ -50,9 +50,8 @@ public class Switch {
     this.caseBodies = caseBodies;
   }
 
-  public void typeCheck(Context context, TypeChecker typecheck) 
-        throws UserException {
-    if (!typecheck.findSingleExprType(context, switchExpr).equals(
+  public void typeCheck(Context context) throws UserException {
+    if (!TypeChecker.findSingleExprType(context, switchExpr).equals(
         Types.FUTURE_INTEGER)) {
       throw new TypeMismatchException(context, "switch variable must "
            + "be of type int");

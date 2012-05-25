@@ -5,9 +5,96 @@ import exm.stc.ast.SwiftAST;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.frontend.Context;
+import exm.stc.frontend.LogHelper;
 
-public class StringLiteral {
+public class Literals {
+
+  /**
+   *
+   * @param context
+   * @param tree
+   * @return null if tree isn't a literal, the string otherwise e.g. "2312" or
+   *         "-1"
+   */
+  public static String extractIntLit(Context context, SwiftAST tree) {
+    // Literals are either represented as a plain non-negative literal,
+    // or the unary negation operator applied to a literal
+    if (tree.getType() == ExMParser.INT_LITERAL) {
+      return tree.child(0).getText();
+    } else if (tree.getType() == ExMParser.OPERATOR
+        && tree.getChildCount() == 2
+        && tree.child(1).getType() == ExMParser.INT_LITERAL) {
+      return "-" + tree.child(1).child(0).getText();
+    } else {
+      return null;
+    }
+  }
+
+  public static String extractBoolLit(Context context, SwiftAST tree) {
+    assert(tree.getType() == ExMParser.BOOL_LITERAL);
+    assert(tree.getChildCount() == 1);
+    return tree.child(0).getText();
+  }
+
+  public static Double extractFloatLit(Context context, SwiftAST tree) {
+    // Literals are either represented as a plain non-negative literal,
+    // or the unary negation operator applied to a literal
+    SwiftAST litTree;
+    boolean negate;
+    if (tree.getType() == ExMParser.FLOAT_LITERAL) {
+      litTree = tree.child(0);
+      negate = false;
+    } else if (tree.getType() == ExMParser.OPERATOR
+        && tree.getChildCount() == 2
+        && tree.child(0).getType() == ExMParser.NEGATE
+        && tree.child(1).getType() == ExMParser.FLOAT_LITERAL) {
+      litTree = tree.child(1).child(0);
+      negate = true;
+    } else {
+      return null;
+    }
+    double num;
+    if (litTree.getType() == ExMParser.NOTANUMBER) {
+      num = Double.NaN;
+    } else if (litTree.getType() == ExMParser.INFINITY) {
+      num = Double.POSITIVE_INFINITY;
+    } else {
+      assert(litTree.getType() == ExMParser.DECIMAL);
+      num = Double.parseDouble(litTree.getText());
+    }
+    return negate ? -1.0 * num : num;
+  }
+
+  public static String extractStringLit(Context context, SwiftAST tree) throws InvalidSyntaxException {
+    assert(tree.getType() == ExMParser.STRING_LITERAL);
+    assert(tree.getChildCount() == 1);
+    // E.g. "hello world\n" with plain escape codes and quotes
+    String result = extractLiteralString(context, tree.child(0));
+    LogHelper.trace(context, "Unescaped string '" + tree.child(0).getText() + 
+              "', resulting in '" + result + "'");
+    return result;
+  }
   
+
+
+  /**
+   * Interpret an integer literal as a float literal, warning
+   * if this would result in loss of precision
+   * @param value an integer literal string
+   * @return
+   */
+  public static double interpretIntAsFloat(Context context, String value) {
+    long longval = Long.parseLong(value);
+     // Casts from long to double can lost precision
+     double floatval = (double)longval;
+     if (longval !=  (long)(floatval)) {
+       LogHelper.warn(context, 
+             "Conversion of 64-bit integer constant " + longval
+           + " to double precision floating point resulted in a loss of"
+           + "  precision with result: " + (long)(floatval));
+     }
+    return floatval;
+  }
   
   public static String extractLiteralString(Context context, 
                                               SwiftAST stringLiteral) 

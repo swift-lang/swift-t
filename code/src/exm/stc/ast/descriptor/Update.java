@@ -38,12 +38,11 @@ public class Update {
     return mode;
   }
 
-  public SwiftType typecheck(Context context, TypeChecker typecheck) 
-                                                throws UserException {
+  public SwiftType typecheck(Context context) throws UserException {
     SwiftType expected = ScalarUpdateableType.asScalarFuture(
                             this.target.getType());
     
-    SwiftType exprType = typecheck.findSingleExprType(context, expr, expected);
+    SwiftType exprType = TypeChecker.findSingleExprType(context, expr, expected);
     if (expected.equals(exprType)) {
       return exprType;
     } else {

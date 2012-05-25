@@ -91,8 +91,8 @@ public class ForeachLoop {
     this.annotations = annotations;
   }
 
-  public static ForeachLoop fromAST(Context context, SwiftAST tree,
-      TypeChecker typecheck) throws UserException {
+  public static ForeachLoop fromAST(Context context, SwiftAST tree) 
+      throws UserException {
     assert (tree.getType() == ExMParser.FOREACH_LOOP);
 
     ArrayList<String> annotations = new ArrayList<String>();
@@ -202,9 +202,9 @@ public class ForeachLoop {
     return arrayVarTree.getType() == ExMParser.ARRAY_RANGE;
   }
 
-  public SwiftType findArrayType(Context context, TypeChecker typecheck)
+  public SwiftType findArrayType(Context context)
       throws UserException {
-    SwiftType arrayType = typecheck.findSingleExprType(context, arrayVarTree);
+    SwiftType arrayType = TypeChecker.findSingleExprType(context, arrayVarTree);
     if (!Types.isArray(arrayType) && !Types.isArrayRef(arrayType)) {
       throw new TypeMismatchException(context,
           "Expected array type in expression for foreach loop");
@@ -221,7 +221,7 @@ public class ForeachLoop {
    * @return
    * @throws UserException
    */
-  public Context setupLoopBodyContext(Context context, TypeChecker typecheck)
+  public Context setupLoopBodyContext(Context context)
       throws UserException {
     // Set up the context for the loop body with loop variables
     loopBodyContext = new LocalContext(context);
@@ -232,7 +232,7 @@ public class ForeachLoop {
       loopCountVal = null;
     }
 
-    SwiftType arrayType = findArrayType(context, typecheck);
+    SwiftType arrayType = findArrayType(context);
     memberVar = loopBodyContext.declareVariable(
         Types.getArrayMemberType(arrayType), getMemberVarName(),
         VariableStorage.STACK, DefType.LOCAL_USER, null);

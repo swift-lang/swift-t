@@ -38,9 +38,8 @@ public class If {
     return elseBlock != null;
   }
   
-  public SwiftType getCondType(Context context, TypeChecker typecheck) 
-                                                    throws UserException {
-    SwiftType condType = typecheck.findSingleExprType(context, condition);
+  public SwiftType getCondType(Context context) throws UserException {
+    SwiftType condType = TypeChecker.findSingleExprType(context, condition);
     if (!(condType.equals(Types.FUTURE_BOOLEAN) ||
         condType.equals(Types.FUTURE_INTEGER))) {
       throw new TypeMismatchException(context, "if statement condition must "
