@@ -20,6 +20,7 @@ import exm.stc.common.CompilerBackend;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.frontend.Builtins;
 import exm.stc.frontend.Builtins.LocalOpcode;
+import exm.stc.frontend.Builtins.SemanticInfo;
 import exm.stc.frontend.Builtins.UpdateMode;
 import exm.stc.ic.SwiftIC.GenInfo;
 import exm.stc.ic.opt.ComputedValue;
@@ -1572,219 +1573,10 @@ public class ICInstructions {
     public List<Oparg> getOutputs() {
       return Oparg.fromVarList(outputs);
     }
-  
-    /** Names of built-ins which don't have side effects */
-    private static HashSet<String> sideEffectFree =
-                                            new HashSet<String>();
-    
-    /** Names of built-ins which have a local equivalent operation */
-    private static HashMap<String, LocalOpcode>
-              localEquivalents = new HashMap<String, LocalOpcode>();
-    
-    
-    /** Built-ins which are known to be deterministic */
-    private static HashSet<String> knownDeterministic = 
-                                        new HashSet<String>();
-
-    /** Built-ins which are explicitly random */
-    private static HashSet<String> randomFunctions = 
-                          new HashSet<String>();
-    
-    /** Built-ins which are known to be deterministic */
-    private static HashSet<String> commutative = 
-                                        new HashSet<String>();
-    
-    /** Built-ins which are equivalent to another with
-     * reversed arguments.  Reverse arguments and swap
-     * to another function name to get canoical version
-     */
-    private static HashMap<String, String> flippedOps = 
-                            new HashMap<String, String>();
-    
-    /**
-     * Functions which just copy value of input to output
-     */
-    private static HashSet<String> copyFunctions =  
-                            new HashSet<String>();
-    private static HashSet<String> maxMinFunctions =  
-            new HashSet<String>();
-    
-    {  
-      for (String numType: Arrays.asList("integer", "float")) {
-        sideEffectFree.add("plus_" + numType);
-        sideEffectFree.add("minus_" + numType);
-        sideEffectFree.add("multiply_" + numType);
-        sideEffectFree.add("divide_" + numType);
-        sideEffectFree.add("negate_" + numType);
-        sideEffectFree.add("gt_" + numType);
-        sideEffectFree.add("gte_" + numType);
-        sideEffectFree.add("lt_" + numType);
-        sideEffectFree.add("lte_" + numType);
-        sideEffectFree.add("max_" + numType);
-        maxMinFunctions.add("max_" + numType);
-        sideEffectFree.add("min_" + numType);
-        maxMinFunctions.add("min_" + numType);
-        
-        sideEffectFree.add("abs_" + numType);
-        sideEffectFree.add("pow_" + numType);
-        
-        // Commutative operators
-        commutative.add("plus_" + numType);
-        commutative.add("multiply_" + numType);
-        commutative.add("max_" + numType);
-        commutative.add("min_" + numType);
-        
-        // e.g a > b is same as b < a
-        flippedOps.put("gt_" + numType, "lt_" + numType);
-        flippedOps.put("gte_" + numType, "lte_" + numType);
-      }
-    
-      for (String numType: Arrays.asList("integer", "float", 
-                                        "string", "boolean")) {
-        sideEffectFree.add("eq_" + numType);
-        sideEffectFree.add("copy_" + numType);
-        sideEffectFree.add("neq_" + numType);
-        commutative.add("eq_" + numType);
-        commutative.add("neq_" + numType);
-        copyFunctions.add("copy_" + numType);
-      }
-      
-      sideEffectFree.add("copy_void");
-      copyFunctions.add("copy_void");
-      sideEffectFree.add("make_void");
-    
-      sideEffectFree.add("strcat");
-      sideEffectFree.add("substring");
-    
-      sideEffectFree.add("and");
-      sideEffectFree.add("or");
-      sideEffectFree.add("xor");      
-      sideEffectFree.add("not");
-      commutative.add("and");
-      commutative.add("or");
-      commutative.add("xor");
-    
-      sideEffectFree.add("toint");
-      sideEffectFree.add("fromint");
-      sideEffectFree.add("tofloat");
-      sideEffectFree.add("fromfloat");
-      sideEffectFree.add("round");
-      sideEffectFree.add("floor");
-      sideEffectFree.add("ceil");
-      sideEffectFree.add("itof");
-      sideEffectFree.add("exp");
-      sideEffectFree.add("log");
-      sideEffectFree.add("sqrt");
-      sideEffectFree.add("is_nan");
-      
-      sideEffectFree.add("argc");
-      sideEffectFree.add("argv_contains");
-      sideEffectFree.add("argv");
-      sideEffectFree.add("getenv");
-      localEquivalents.put("argc", LocalOpcode.ARGC_GET);
-      localEquivalents.put("argv_contains", LocalOpcode.ARGV_CONTAINS);
-      localEquivalents.put("argv", LocalOpcode.ARGV_GET);
-      localEquivalents.put("getenv", LocalOpcode.GETENV);
-      
-      sideEffectFree.add("turbine_workers");
-      sideEffectFree.add("turbine_engines");
-      sideEffectFree.add("adlb_servers");
-      localEquivalents.put("turbine_workers", LocalOpcode.N_WORKERS);
-      localEquivalents.put("turbine_engines", LocalOpcode.N_ENGINES);
-      localEquivalents.put("adlb_servers", LocalOpcode.N_ADLB_SERVERS);
-      
-    
-      localEquivalents.put("plus_integer", LocalOpcode.PLUS_INT);
-      localEquivalents.put("minus_integer", LocalOpcode.MINUS_INT);
-      localEquivalents.put("multiply_integer", LocalOpcode.MULT_INT);
-      localEquivalents.put("divide_integer", LocalOpcode.DIV_INT);
-      localEquivalents.put("mod_integer", LocalOpcode.MOD_INT);
-      localEquivalents.put("negate_integer", LocalOpcode.NEGATE_INT);
-      localEquivalents.put("max_integer", LocalOpcode.MAX_INT);
-      localEquivalents.put("min_integer", LocalOpcode.MIN_INT);
-      localEquivalents.put("abs_integer", LocalOpcode.ABS_INT);
-      localEquivalents.put("pow_integer", LocalOpcode.POW_INT);
-      
-      localEquivalents.put("eq_integer", LocalOpcode.EQ_INT);
-      localEquivalents.put("neq_integer", LocalOpcode.NEQ_INT);
-      localEquivalents.put("lt_integer", LocalOpcode.LT_INT);
-      localEquivalents.put("lte_integer", LocalOpcode.LTE_INT);
-      localEquivalents.put("gt_integer", LocalOpcode.GT_INT);
-      localEquivalents.put("gte_integer", LocalOpcode.GTE_INT);
-      
-      localEquivalents.put("plus_float", LocalOpcode.PLUS_FLOAT);
-      localEquivalents.put("minus_float", LocalOpcode.MINUS_FLOAT);
-      localEquivalents.put("multiply_float", LocalOpcode.MULT_FLOAT);
-      localEquivalents.put("divide_float", LocalOpcode.DIV_FLOAT);
-      localEquivalents.put("negate_float", LocalOpcode.NEGATE_FLOAT);
-      localEquivalents.put("max_float", LocalOpcode.MAX_FLOAT);
-      localEquivalents.put("min_float", LocalOpcode.MIN_FLOAT);
-      localEquivalents.put("abs_float", LocalOpcode.ABS_FLOAT);
-      localEquivalents.put("pow_float", LocalOpcode.POW_FLOAT);
-      localEquivalents.put("is_nan", LocalOpcode.IS_NAN);
-      
-      localEquivalents.put("ceil", LocalOpcode.CEIL);
-      localEquivalents.put("floor", LocalOpcode.FLOOR);
-      localEquivalents.put("round", LocalOpcode.ROUND);
-      localEquivalents.put("itof", LocalOpcode.INTTOFLOAT);
-      localEquivalents.put("toint", LocalOpcode.STRTOINT);
-      localEquivalents.put("fromint", LocalOpcode.INTTOSTR);
-      localEquivalents.put("tofloat", LocalOpcode.STRTOFLOAT);
-      localEquivalents.put("fromfloat", LocalOpcode.FLOATTOSTR);
-      localEquivalents.put("exp", LocalOpcode.EXP);
-      localEquivalents.put("log", LocalOpcode.LOG);
-      localEquivalents.put("sqrt", LocalOpcode.SQRT);
-      
-      localEquivalents.put("eq_float", LocalOpcode.EQ_FLOAT);
-      localEquivalents.put("neq_float", LocalOpcode.NEQ_FLOAT);
-      localEquivalents.put("lt_float", LocalOpcode.LT_FLOAT);
-      localEquivalents.put("lte_float", LocalOpcode.LTE_FLOAT);
-      localEquivalents.put("gt_float", LocalOpcode.GT_FLOAT);
-      localEquivalents.put("gte_float", LocalOpcode.GTE_FLOAT);      
-      
-      localEquivalents.put("eq_string", LocalOpcode.EQ_STRING);
-      localEquivalents.put("neq_string", LocalOpcode.NEQ_STRING);
-      localEquivalents.put("strcat", LocalOpcode.STRCAT);
-      localEquivalents.put("substrict", LocalOpcode.SUBSTRING);
-      
-      localEquivalents.put("eq_bool", LocalOpcode.EQ_FLOAT);
-      localEquivalents.put("neq_bool", LocalOpcode.NEQ_FLOAT);
-      localEquivalents.put("and", LocalOpcode.AND);
-      localEquivalents.put("or", LocalOpcode.OR);
-      localEquivalents.put("xor", LocalOpcode.XOR);
-      localEquivalents.put("not", LocalOpcode.NOT);
-      
-      localEquivalents.put("copy_integer", LocalOpcode.COPY_INT);
-      localEquivalents.put("copy_float", LocalOpcode.COPY_FLOAT);
-      localEquivalents.put("copy_string", LocalOpcode.COPY_STRING);
-      localEquivalents.put("copy_boolean", LocalOpcode.COPY_BOOL);
-      localEquivalents.put("copy_blob", LocalOpcode.COPY_BLOB);
-
-      localEquivalents.put("assert", LocalOpcode.ASSERT);
-      localEquivalents.put("assertEqual", LocalOpcode.ASSERT_EQ);
-      localEquivalents.put("trace", LocalOpcode.TRACE);
-      localEquivalents.put("metadata", LocalOpcode.METADATA);
-      localEquivalents.put("printf", LocalOpcode.PRINTF);
-      localEquivalents.put("sprintf", LocalOpcode.SPRINTF);
-      
-      // Random functions
-      randomFunctions.add("random");
-      randomFunctions.add("randint");
-      localEquivalents.put("random", LocalOpcode.RANDOM);
-      localEquivalents.put("randint", LocalOpcode.RAND_INT);
-      
-      // All local arith ops are deterministic aside from random ones
-      knownDeterministic.addAll(localEquivalents.keySet());
-      knownDeterministic.removeAll(randomFunctions);
-      knownDeterministic.remove("trace");
-      knownDeterministic.remove("assert");
-      knownDeterministic.remove("assertEqual");
-      knownDeterministic.remove("printf");
-    }
 
     @Override
     public boolean hasSideEffects() {
-      return (!sideEffectFree.contains(functionName)) ||
+      return (!SemanticInfo.isSideEffectFree(functionName)) ||
             this.writesAliasVar();
     }
   
@@ -1800,9 +1592,9 @@ public class ICInstructions {
           constInputs.add(constVal);
         }
         if (op == Opcode.CALL_BUILTIN && 
-                          localEquivalents.containsKey(this.functionName)) {
+                          SemanticInfo.hasLocalEquiv(this.functionName)) {
           assert(outputs.size() == 1); // assume for now
-          LocalBuiltin.constantFold(localEquivalents.get(this.functionName),
+          LocalBuiltin.constantFold(SemanticInfo.getLocalEquiv(this.functionName),
               outputs.get(0).getName(), constInputs);
         }
       } else {
@@ -1897,7 +1689,7 @@ public class ICInstructions {
           }
         }
       }
-      if (allClosed && localEquivalents.containsKey(this.functionName)) {
+      if (allClosed && SemanticInfo.hasLocalEquiv(this.functionName)) {
           // All args are closed!
           return new MakeImmRequest(
               Collections.unmodifiableList(this.outputs),
@@ -1910,7 +1702,7 @@ public class ICInstructions {
     @Override
     public MakeImmChange makeImmediate(List<Variable> outVars, 
                                         List<Oparg> values) {
-      LocalOpcode newOp = localEquivalents.get(this.functionName);
+      LocalOpcode newOp = SemanticInfo.getLocalEquiv(this.functionName);
       assert(newOp != null);
       assert(values.size() == inputs.size());
       
@@ -1958,7 +1750,7 @@ public class ICInstructions {
       if (this.op == Opcode.CALL || this.op == Opcode.CALL_SYNC
           || this.op == Opcode.CALL_APP) {
         return false;
-      } else if (knownDeterministic.contains(functionName)) {
+      } else if (SemanticInfo.isSideEffectFree(functionName)) {
         return true;
       } else {
         // Safe default
@@ -1972,14 +1764,15 @@ public class ICInstructions {
       // TODO: make order of args invariant where possible
       if (this.isDefinitelyDeterministic()) {
         if (this.op == Opcode.CALL_BUILTIN) { 
-          if (copyFunctions.contains(functionName) ||
-             (maxMinFunctions.contains(functionName) 
+          if (SemanticInfo.isCopyFunction(functionName) ||
+             (SemanticInfo.isMinMaxFunction(functionName) 
                 && this.inputs.get(0).getName().equals(
                             this.inputs.get(1).getName()))) {
             // Handle copy as a special case
             assert(outputs.size() == 1);
-            assert((copyFunctions.contains(functionName) && inputs.size() == 1) 
-                    || (maxMinFunctions.contains(functionName) && inputs.size() == 2));
+            assert((SemanticInfo.isCopyFunction(functionName) && inputs.size() == 1) 
+                  || (SemanticInfo.isMinMaxFunction(functionName) 
+                                        && inputs.size() == 2));
             return Collections.singletonList(
                   ComputedValue.makeCopyCV(this.outputs.get(0),
                                            Oparg.createVar(this.inputs.get(0))));
@@ -1987,12 +1780,12 @@ public class ICInstructions {
             boolean outputClosed = false; // safe assumption
             String canonicalFunctionName = this.functionName;
             List<Oparg> in = Oparg.fromVarList(this.inputs);
-            if (commutative.contains(this.functionName)) {
+            if (SemanticInfo.isCommutative(this.functionName)) {
               // put in canonical order
               Collections.sort(in);
-            } else if (flippedOps.containsKey(this.functionName)) {
+            } else if (SemanticInfo.isFlippable(this.functionName)) {
               // E.g. flip a > b to a < b
-              canonicalFunctionName = flippedOps.get(this.functionName);
+              canonicalFunctionName = SemanticInfo.getFlipped(this.functionName);
               Collections.reverse(in);
             }
               
@@ -2285,21 +2078,7 @@ public class ICInstructions {
     INIT_UPDATEABLE_FLOAT, UPDATE_MIN, UPDATE_INCR, UPDATE_SCALE, LATEST_VALUE,
     UPDATE_MIN_IMM, UPDATE_INCR_IMM, UPDATE_SCALE_IMM,
   }
-  
-  /** Keep track of which of the above functions are randomized or have
-   * side effects, so we don't optimized these things out
-   */
-  private static HashSet<LocalOpcode> sideeffectLocalOps
-            = new HashSet<LocalOpcode>();
-  static {
-    sideeffectLocalOps.add(LocalOpcode.RANDOM);
-    sideeffectLocalOps.add(LocalOpcode.RAND_INT);
-    sideeffectLocalOps.add(LocalOpcode.TRACE);
-    sideeffectLocalOps.add(LocalOpcode.ASSERT);
-    sideeffectLocalOps.add(LocalOpcode.ASSERT_EQ);
-    sideeffectLocalOps.add(LocalOpcode.PRINTF);
-    sideeffectLocalOps.add(LocalOpcode.METADATA);
-  }
+
   public static class LocalBuiltin extends Instruction {
     public final LocalOpcode localop;
     
@@ -2639,7 +2418,7 @@ public class ICInstructions {
 
     @Override
     public boolean hasSideEffects() {
-      return sideeffectLocalOps.contains(localop);
+      return Builtins.hasSideEffect(localop);
     }
 
     @Override
@@ -2705,16 +2484,13 @@ public class ICInstructions {
         // Two invocations of this aren't equivalent
         return null;
       } else {
-        if (localop == LocalOpcode.COPY_INT || localop == LocalOpcode.COPY_BOOL
-            || localop == LocalOpcode.COPY_FLOAT || localop == LocalOpcode.COPY_STRING
-            || localop == LocalOpcode.COPY_BLOB) {
+        if (SemanticInfo.isCopyOp(localop)) {
           // It might be assigning a constant val
           return Collections.singletonList(ComputedValue.makeCopyCV(
                 this.output, this.inputs.get(0)));
         }
         
-        if (localop == LocalOpcode.MAX_FLOAT || localop == LocalOpcode.MAX_INT
-                || localop == LocalOpcode.MIN_FLOAT || localop == LocalOpcode.MIN_INT) {
+        if (SemanticInfo.isMinMaxOp(localop)) {
           assert(this.inputs.size() == 2);
           if (this.inputs.get(0).equals(this.inputs.get(1))) {
             return Collections.singletonList(ComputedValue.makeCopyCV(
@@ -2744,9 +2520,7 @@ public class ICInstructions {
     public static boolean isValueCopy(Instruction inst) {
       if (inst instanceof LocalBuiltin) {
         LocalOpcode aop = ((LocalBuiltin) inst).localop;
-        return aop == LocalOpcode.COPY_BLOB || aop == LocalOpcode.COPY_BOOL ||
-            aop == LocalOpcode.COPY_FLOAT || aop == LocalOpcode.COPY_INT ||
-            aop == LocalOpcode.COPY_STRING;
+        return SemanticInfo.isCopyOp(aop);
       }
       return false;
     }
