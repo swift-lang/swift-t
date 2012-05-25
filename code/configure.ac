@@ -32,7 +32,7 @@ AC_TYPE_UINT32_T
 
 # Checks for library functions.
 AC_FUNC_MALLOC
-AC_CHECK_FUNCS([strchr strdup strnlen gettimeofday])
+AC_CHECK_FUNCS([strchr strdup strlen strnlen gettimeofday])
 
 # Define templates
 AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
@@ -200,7 +200,7 @@ AC_ARG_ENABLE(mpe,
      AS_HELP_STRING(
                     [--enable-mpe],
                     [enable Tcl MPE module]),
-     [ [[ $enableval == yes ]] && USE_MPE=1 ], [] )
+     [ [[ $enableval == yes ]] && USE_MPE=1 ], [ : ] )
 USE_MPE_WORD=no
 (( $USE_MPE )) && USE_MPE_WORD=yes
 AC_MSG_RESULT([MPE enabled? $USE_MPE_WORD ])
