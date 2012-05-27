@@ -36,10 +36,6 @@ extends Context
     this.globals = parent.getGlobals();
     nested = true;
     line = parent.line;
-    this.structFieldMap = new HashMap<String, Variable>();
-    if (parent != null && parent instanceof LocalContext) { 
-      this.structFieldMap.putAll(((LocalContext)parent).structFieldMap);
-    }
   }
 
   @Override
@@ -283,22 +279,7 @@ extends Context
     }
     Variable tmp = new Variable(fieldType, name, storage, DefType.LOCAL_COMPILER);
     variables.put(tmp.getName(), tmp);
-    if (!structFieldMap.containsKey(fieldPath)) {
-      structFieldMap.put(struct.getName() + "." + fieldPath, tmp);
-    }
     return tmp;
-  }
-  
-  private final HashMap<String, Variable> structFieldMap;
-  
-  @Override
-  public Variable getStructFieldTmp(Variable struct, List<String> fieldPath) {
-    return structFieldMap.get(struct.getName() + "." + buildPathStr(fieldPath)); 
-  }
-
-  @Override
-  public Collection<Variable> getCachedStructFields() {
-    return Collections.unmodifiableCollection(structFieldMap.values());
   }
   
   @Override

@@ -258,11 +258,6 @@ public abstract class Context
     return createStructFieldTmp(struct, fieldType, pathStr, storage);
   }
   
-  abstract public Variable getStructFieldTmp(Variable struct, 
-                                    List<String> fieldPath);
-  
-  abstract public Collection<Variable> getCachedStructFields();
-  
   /** Get info about the enclosing function */
   abstract public FunctionContext getFunctionContext();
 

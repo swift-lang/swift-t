@@ -282,25 +282,15 @@ public class ExprWalker {
                                                     structVar.getType());
     Variable tmp;
     if (Types.isStructRef(structVar.getType())) {
-      tmp = context.getStructFieldTmp(rootStruct, fieldPath);
-      if (tmp == null) {
-        tmp = context.createStructFieldTmp(rootStruct, 
-            new ReferenceType(memType), 
-            fieldPath, VariableStorage.TEMPORARY);
-  
-        varCreator.declare(tmp);
-        backend.structRefLookup(structVar, fieldName, tmp);
-      }
+      tmp = varCreator.createStructFieldTmp(context, 
+          rootStruct, new ReferenceType(memType),
+          fieldPath, VariableStorage.TEMPORARY);
+      backend.structRefLookup(structVar, fieldName, tmp);
     } else {
       assert(Types.isStruct(structVar.getType()));
-      tmp = context.getStructFieldTmp(rootStruct, fieldPath);
-      if (tmp == null) {
-        tmp = context.createStructFieldTmp(rootStruct, 
-            memType, fieldPath, VariableStorage.ALIAS);
-  
-        varCreator.declare(tmp);
-        backend.structLookup(structVar, fieldName, tmp);
-      }
+      tmp = varCreator.createStructFieldTmp(context, 
+          rootStruct, memType, fieldPath, VariableStorage.ALIAS);
+      backend.structLookup(structVar, fieldName, tmp);
     }
     return tmp;
     
@@ -890,9 +880,9 @@ public class ExprWalker {
     if (Types.isScalarUpdateable(src.getType())) {
       // Create a future alias to the updateable type so that
       // types match
-      Variable val = context.createLocalValueVariable(
+      Variable val = varCreator.createTmpLocalVal(context,
           ScalarUpdateableType.asScalarValue(src.getType()));
-      varCreator.declare(val);
+
       backend.latestValue(val, src);
       /* Create a future with a snapshot of the value of the updateable
        * By making the retrieve and store explicit the optimizer should be
@@ -900,7 +890,7 @@ public class ExprWalker {
        */
       Variable snapshot = varCreator.createTmp(context,
           ScalarUpdateableType.asScalarFuture(src.getType()));
-      varCreator.declare(snapshot);
+
       if (!src.getType().equals(Types.UPDATEABLE_FLOAT)) {
         throw new STCRuntimeError(src.getType() + " not yet supported");
       }

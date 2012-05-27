@@ -232,16 +232,6 @@ extends Context
       String fieldPath, VariableStorage storage) {
     throw new UnsupportedOperationException("not yet implemented");
   }
-  
-  @Override
-  public Collection<Variable> getCachedStructFields() {
-    throw new UnsupportedOperationException("Not yet implemented");
-  }
-  
-  @Override
-  public Variable getStructFieldTmp(Variable struct, List<String> fieldPath) {
-    throw new UnsupportedOperationException("not yet implemented"); 
-  }
 
   @Override
   public FunctionContext getFunctionContext() {

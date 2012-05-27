@@ -1,5 +1,6 @@
 package exm.stc.frontend;
 
+import java.util.List;
 import java.util.Stack;
 
 import exm.stc.ast.Types;
@@ -126,6 +127,19 @@ public class VarCreator {
   }
   
   /**
+   * Shortcut to create tmp alias vars
+   * @param context
+   * @param type
+   * @return
+   * @throws UserException
+   * @throws UndefinedTypeException
+   */
+  public Variable createTmpAlias(Context context, SwiftType type) 
+      throws UserException, UndefinedTypeException {
+    return createTmp(context, type, false, true);
+  }
+  
+  /**
    * Creates a new tmp value, entering it in the provided context
    * and calling the backend to initialise it 
    * @param context
@@ -152,6 +166,23 @@ public class VarCreator {
     }
 
     initialiseVariable(context, tmp);
+    return tmp;
+  }
+  
+  public Variable createTmpLocalVal(Context context, SwiftType type) 
+        throws UserException {
+    assert(Types.isScalarValue(type));
+    Variable val = context.createLocalValueVariable(type);
+    declare(val);
+    return val;
+  }
+  
+  public Variable createStructFieldTmp(Context context, Variable rootStruct, 
+                  SwiftType memType, List<String> fieldPath,
+                  VariableStorage storage) throws UndefinedTypeException {
+    Variable tmp = context.createStructFieldTmp(rootStruct, memType,
+          fieldPath, storage);
+    declare(tmp);
     return tmp;
   }
 

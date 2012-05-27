@@ -37,7 +37,7 @@
        warnings on ANTLR-generated code that is outside our control
   -->
   <target name="compile"
-          depends="compile.antlr,compile.ui,compile.gen,compile.ast,compile.ic">
+          depends="compile.antlr,compile.ui,compile.gen,compile.ast,compile.ic,compile.frontend">
   </target>
 
   <!-- Check if the ANTLR code is up-to-date -->
@@ -98,10 +98,26 @@
       <compilerarg value="-Xlint:-cast"/>
     </javac>
   </target>
+
+  <!-- Compile the frontend sources -->
+  <target name="compile.frontend"
+          depends="compile.common,compile.antlr,compile.ast">
+    <javac srcdir="src"
+           includes="exm/stc/frontend/*.java,exm/frontend/**/*.java"
+           listfiles="${lf}"
+           debug="true"
+           debuglevel="source,lines,vars"
+           includeantruntime="false"
+           classpath="${classpath}:${json.jar}">
+      <compilerarg value="-Xlint"/>
+      <compilerarg value="-Xlint:-cast"/>
+    </javac>
+  </target>
+
   
   <!-- Compile the IC sources -->
   <target name="compile.ic"
-          depends="compile.ast">
+          depends="compile.frontend">
     <javac srcdir="src"
            includes="exm/stc/ic/*.java,exm/stc/ic/**/*.java"
            listfiles="${lf}"

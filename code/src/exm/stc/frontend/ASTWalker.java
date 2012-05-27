@@ -356,20 +356,15 @@ public class ASTWalker {
     for (StructField f: vtype.getFields()) {
       fieldPath.push(f.getName());
       if (Types.isArray(f.getType())) {
-        Variable fieldVar = context.getStructFieldTmp(root, fieldPath);
-        if (fieldVar == null) { 
-          fieldVar = exprWalker.structLookup(context, struct, f.getName(),
-                    false, root, fieldPath);
-        }
+        Variable fieldVar = exprWalker.structLookup(context, struct, 
+            f.getName(), false, root, fieldPath);
         arrays.add(new VarInfoPair(fieldVar, structVInfo.getFieldVInfo(f.getName())));
       } else if (Types.isStruct(f.getType())) {
         VInfo nestedVInfo = structVInfo.getFieldVInfo(f.getName());
         assert(nestedVInfo != null);
-        Variable field = context.getStructFieldTmp(root, fieldPath);
-        if (field == null) {
-          field = exprWalker.structLookup(context, struct, f.getName(),
+        Variable field = exprWalker.structLookup(context, struct, f.getName(),
               false, root, fieldPath);
-        }
+
         findArraysInStructToClose(context, root, field, nestedVInfo, fieldPath,
             arrays);
       }
@@ -524,12 +519,7 @@ public class ASTWalker {
         containersToRegister.addAll(alreadyFound);
       }
     }
-    
-    /* Conservatively assume that all cached structure fields are used
-     * This always produces correct results, but results in unnecessary
-     * variable passing.  IC optimisations can clean this up later
-     */
-    usedVariables.addAll(context.getCachedStructFields());
+
   }
 
   private void switchStatement(Context context, SwiftAST tree)
@@ -1291,16 +1281,13 @@ public class ASTWalker {
     Variable curr = rootVar;
     for (int i = 0; i < structPathLen; i++) {
       List<String> currPath = fieldPath.subList(0, i+1);
-      Variable next = context.getStructFieldTmp(rootVar, currPath);
-      if (next == null) {
-          next = context.createStructFieldTmp(rootVar, 
-              lval.getType(context, i+1), currPath, VariableStorage.ALIAS);
-          varCreator.declare(next);
-          backend.structLookup(curr, fieldPath.get(i), next);
-      }
-      curr = next;
+      Variable next = varCreator.createStructFieldTmp(context,
+          rootVar, lval.getType(context, i+1), currPath, VariableStorage.ALIAS);
+
+      backend.structLookup(curr, fieldPath.get(i), next);
       LogHelper.trace(context, "Lookup " + curr.getName() + "." +
                                fieldPath.get(i));
+      curr = next;
     }
     LValue newTarget = new LValue(curr,
         lval.indices.subList(structPathLen, lval.indices.size()));
@@ -1342,22 +1329,21 @@ public class ASTWalker {
           long arrIx = Long.parseLong(literal);
           // Add this variable to container
           if (Types.isArray(lvalArr.getType())) {
-            mVar = context.createAliasVariable(memberType);
-            varCreator.declare(mVar);
+            mVar = varCreator.createTmpAlias(context, memberType);
             backend.arrayCreateNestedImm(mVar, lvalArr, 
                         Oparg.createIntLit(arrIx));
           } else {
             assert(Types.isArrayRef(lvalArr.getType()));
-            mVar = context.createAliasVariable(new ReferenceType(memberType));
-            varCreator.declare(mVar);
+            mVar = varCreator.createTmpAlias(context, 
+                                  new ReferenceType(memberType));
             backend.arrayRefCreateNestedImm(mVar, lvalArr, 
                 Oparg.createIntLit(arrIx));
           }
 
         } else {
           // Handle the general case where the index must be computed
-          mVar = context.createAliasVariable(new ReferenceType(memberType));
-          varCreator.declare(mVar);
+          mVar = varCreator.createTmpAlias(context, 
+                                        new ReferenceType(memberType));
           Variable indexVar = exprWalker.evalExprToTmp(context, indexExpr.child(0), Types.FUTURE_INTEGER, false, null);
           
           if (Types.isArray(lvalArr.getType())) {
