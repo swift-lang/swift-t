@@ -67,29 +67,17 @@ extends Context
   }
 
   @Override
-  public Variable createIntermediateVariable(SwiftType type) throws UserException {
+  public Variable createTmpVar(SwiftType type, boolean storeInStack) 
+                                                      throws UserException {
 	  String name;
 	  do {
 	    int counter = getFunctionContext().getCounterVal("intermediate_var");
 	    name = Variable.TMP_VAR_PREFIX + counter;
 	  } while (getDeclaredVariable(name) != null); // In case variable name in use
 
-	  return declareVariable(type, name, VariableStorage.STACK, 
-	              DefType.LOCAL_COMPILER, null);
-  }
-
-  @Override
-  public Variable createLocalTmpVariable(SwiftType type) {
-    String name;
-    do {
-      int counter = getFunctionContext().getCounterVal("local_tmp_var");
-      name = Variable.LOCAL_TMP_VAR_PREFIX + counter;
-    } while (getDeclaredVariable(name) != null);
-
-    Variable v =  new Variable(type, name, VariableStorage.TEMPORARY,
-                                          DefType.LOCAL_COMPILER);
-    variables.put(name, v);
-    return v;
+	  VariableStorage storage = storeInStack ? 
+	              VariableStorage.STACK : VariableStorage.TEMPORARY;
+	  return declareVariable(type, name, storage, DefType.LOCAL_COMPILER, null);
   }
 
   @Override

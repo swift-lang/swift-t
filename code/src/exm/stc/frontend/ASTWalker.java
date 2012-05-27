@@ -423,7 +423,7 @@ public class ASTWalker {
                 usedVariables, containersToRegister, false);
 
     Context waitContext = new LocalContext(context);
-    Variable condVal = exprWalker.retrieveScalarVal(waitContext, conditionVar);
+    Variable condVal = varCreator.fetchValueOf(waitContext, conditionVar);
     backend.startIfStatement(Oparg.createVar(condVal), ifStmt.hasElse());
     block(new LocalContext(waitContext), ifStmt.getThenBlock());
 
@@ -569,9 +569,9 @@ public class ASTWalker {
                 usedVariables, containersToRegister, false);
 
     Context waitContext = new LocalContext(context);
-    Variable switchVal = waitContext.createLocalValueVariable(
-                        Types.VALUE_INTEGER, switchVar.getName());
-    varCreator.initialiseVariable(waitContext, switchVal);
+    Variable switchVal = varCreator.createValueOfVar(waitContext,
+                                                     switchVar); 
+
     backend.retrieveInt(switchVal, switchVar);
 
     LogHelper.trace(context, "switch: " + 
@@ -619,7 +619,7 @@ public class ASTWalker {
       step = exprWalker.evalExprToTmp(context, range.getStep(), Types.FUTURE_INTEGER, false, null);
     } else {
       // Inefficient but constant folding will clean up
-      step = varCreator.createTmp(context, Types.FUTURE_INTEGER, false, false);
+      step = varCreator.createTmp(context, Types.FUTURE_INTEGER);
       backend.assignInt(step, Oparg.createIntLit(1));
     }
     
@@ -642,14 +642,14 @@ public class ASTWalker {
                                 Arrays.asList(start, end, step), 
                                 waitUsedVariables, containersToRegister, false);
     Context waitContext = new LocalContext(context);
-    Variable startVal = exprWalker.retrieveScalarVal(waitContext, start);
-    Variable endVal = exprWalker.retrieveScalarVal(waitContext, end);
-    Variable stepVal = exprWalker.retrieveScalarVal(waitContext, step);
+    Variable startVal = varCreator.fetchValueOf(waitContext, start);
+    Variable endVal = varCreator.fetchValueOf(waitContext, end);
+    Variable stepVal = varCreator.fetchValueOf(waitContext, step);
     Context bodyContext = loop.setupLoopBodyContext(waitContext);
     
     // The per-iteration value of the range
-    Variable memberVal = bodyContext.createLocalValueVariable(
-        Types.VALUE_INTEGER, loop.getMemberVarName());
+    Variable memberVal = varCreator.createValueOfVar(bodyContext,
+                                            loop.getMemberVar(), false);
     backend.startRangeLoop("range" + loopNum, memberVal, 
             Oparg.createVar(startVal), Oparg.createVar(endVal), 
             Oparg.createVar(stepVal), loop.isSyncLoop(),
@@ -762,13 +762,12 @@ public class ASTWalker {
       if (lv.declaredOutsideLoop) {
         // Need to copy over value of loop variable on last iteration
         Variable parentAlias = 
-              context.declareVariable(lv.var.getType(), 
+            varCreator.createVariable(context, lv.var.getType(), 
                   Variable.OUTER_VAR_PREFIX + lv.var.getName(),
                   VariableStorage.ALIAS, DefType.LOCAL_COMPILER,
                   lv.var.getMapping());
         // Copy turbine ID
         backend.makeAlias(parentAlias, lv.var);
-        varCreator.declare(parentAlias);
         usedVariables.add(parentAlias);
         parentLoopVarAliases.put(lv.var.getName(), parentAlias);
       }
@@ -817,7 +816,7 @@ public class ASTWalker {
                       blockingVector);
     
     // get value of condVar
-    Variable condVal = exprWalker.retrieveScalarVal(loopBodyContext, condArg);
+    Variable condVal = varCreator.fetchValueOf(loopBodyContext, condArg);
     
     // branch depending on if loop should start
     backend.startIfStatement(Oparg.createVar(condVal), true);
@@ -865,12 +864,10 @@ public class ASTWalker {
     
     //TODO: this is a little funny since the condition expr might be of type int,
     //    but this will work for time being
-    Variable falseV = context.createLocalTmpVariable(Types.FUTURE_BOOLEAN);
-    varCreator.initialiseVariable(context, falseV);
+    Variable falseV = varCreator.createTmp(context, Types.FUTURE_BOOLEAN);
     backend.assignBool(falseV, Oparg.createBoolLit(false));
     
-    Variable zero = context.createLocalTmpVariable(Types.FUTURE_INTEGER);
-    varCreator.initialiseVariable(context, zero);
+    Variable zero = varCreator.createTmp(context, Types.FUTURE_INTEGER);
     backend.assignInt(zero, Oparg.createIntLit(0));
     
     FunctionContext fc = context.getFunctionContext();
@@ -897,7 +894,7 @@ public class ASTWalker {
         usedVariables, containersToRegister, blockingVars);
     
     // get value of condVar
-    Variable condVal = exprWalker.retrieveScalarVal(bodyContext, condArg); 
+    Variable condVal = varCreator.fetchValueOf(bodyContext, condArg); 
     
     backend.startIfStatement(Oparg.createVar(condVal), true);
     if (containersToRegister.size() > 0) {
@@ -919,12 +916,11 @@ public class ASTWalker {
     }
     
     Variable nextCond = exprWalker.evalExprToTmp(bodyContext, loop.getCond(), condType, false, null);
-    Variable nextCounter = bodyContext.createIntermediateVariable(
-                                            Types.FUTURE_INTEGER);
-    Variable one = bodyContext.createIntermediateVariable(
-        Types.FUTURE_INTEGER);
-    varCreator.initialiseVariable(bodyContext, nextCounter);
-    varCreator.initialiseVariable(bodyContext, one);
+    
+    Variable nextCounter = varCreator.createTmp(bodyContext,
+                                      Types.FUTURE_INTEGER);
+    Variable one = varCreator.createTmp(bodyContext, Types.FUTURE_INTEGER);
+
     backend.assignInt(one, Oparg.createIntLit(1));
     backend.builtinFunctionCall(
         Builtins.getArithBuiltin(PrimType.INTEGER, ExMParser.PLUS), 
@@ -1244,11 +1240,11 @@ public class ASTWalker {
     if (lValVar.getType().equals(rValType)) {
       return lValVar;
     } else if (Types.isReferenceTo(lValVar.getType(), rValType)) {
-      Variable rValVar = varCreator.createTmp(context, rValType, false, false);
+      Variable rValVar = varCreator.createTmp(context, rValType);
       backend.assignReference(lValVar, rValVar);
       return rValVar;
     } else if (Types.isReferenceTo(lValVar.getType(), rValType)) {
-      Variable rValVar = varCreator.createTmp(context, rValType, false, false);
+      Variable rValVar = varCreator.createTmp(context, rValType);
       exprWalker.dereference(context, lValVar, rValVar);
       return rValVar;
     } else {
@@ -1377,9 +1373,7 @@ public class ASTWalker {
          * must use reference because we might have to wait for the result to 
          * be inserted
          */
-        mVar = context.createLocalTmpVariable(new ReferenceType(memberType));
-        backend.declare(mVar.getType(), mVar.getName(), mVar.getStorage(),
-            mVar.getDefType(), null);
+        mVar = varCreator.createTmp(context, new ReferenceType(memberType));
       }
 
       return new LValue(mVar,
@@ -1427,15 +1421,13 @@ public class ASTWalker {
           assert(Types.isArrayRef(arrType));
           arrMemberType = arrType.getMemberType().getMemberType();
         }
-        lvalVar = context.createLocalTmpVariable(arrMemberType);
-        varCreator.declare(lvalVar);
+        lvalVar = varCreator.createTmp(context, arrMemberType);
       }
     } else {
       //Rval is a ref, so create a new value of the dereferenced type and
       // rely on the compiler frontend later inserting instruction to
       // copy
-      lvalVar = context.createLocalTmpVariable(rvalType);
-      varCreator.declare(lvalVar);
+      lvalVar = varCreator.createTmp(context, rvalType);
     }
 
     // We know what variable the result will go into now
@@ -1508,7 +1500,7 @@ public class ASTWalker {
     // Need to create throwaway temporaries for return values
     List<Variable> oList = new ArrayList<Variable>();
     for (SwiftType t : exprType) {
-      oList.add(varCreator.createTmp(context, t, false, false));
+      oList.add(varCreator.createTmp(context, t));
     }
 
     exprWalker.walkExpr(context, expr, oList, null);

@@ -168,13 +168,8 @@ extends Context
   }
 
   @Override
-  public Variable createIntermediateVariable(SwiftType type) {
+  public Variable createTmpVar(SwiftType type, boolean storeInStack) {
 	  throw new UnsupportedOperationException("not yet implemented");
-  }
-
-  @Override
-  public Variable createLocalTmpVariable(SwiftType type) {
-    throw new UnsupportedOperationException("not yet implemented");
   }
 
   @Override

@@ -62,17 +62,7 @@ public abstract class Context
   public abstract void flagArrayForClosing(Variable var);
   public abstract List<Variable> getArraysToClose();
   
-  public abstract Variable createIntermediateVariable(SwiftType type)
-  throws UserException;
-
-  /**
-   * Create a temporary variable which isn't entered into stack
-   * global data store
-   * @param type
-   * @return
-   * @throws UserException
-   */
-  public abstract Variable createLocalTmpVariable(SwiftType type)
+  public abstract Variable createTmpVar(SwiftType type, boolean storeInStack)
   throws UserException;
 
   /**

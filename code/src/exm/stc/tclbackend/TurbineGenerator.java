@@ -46,7 +46,6 @@ public class TurbineGenerator implements CompilerBackend
    * names from swift with these prefixes:
    */
   private static final String COMP_FN_PREFIX = "cmpf:";
-  private static final String TCL_LOCAL_TMP_VAR_PREFIX = "l:";
   private static final String TCL_TMP_VAR_PREFIX = "t:";
   private static final String TCL_ALIAS_VAR_PREFIX = "a:";
   private static final String TCL_USER_VAR_PREFIX = "u:";
@@ -1911,9 +1910,7 @@ public class TurbineGenerator implements CompilerBackend
     private static String prefixVar(String varname) {
       // Replace the internal names of temporary variables with
       // shorter ones for generated tcl code
-      if (varname.startsWith(Variable.LOCAL_TMP_VAR_PREFIX)) {
-        return TCL_LOCAL_TMP_VAR_PREFIX + varname.substring(Variable.LOCAL_TMP_VAR_PREFIX.length());
-      } else if (varname.startsWith(Variable.TMP_VAR_PREFIX)) {
+      if (varname.startsWith(Variable.TMP_VAR_PREFIX)) {
         return TCL_TMP_VAR_PREFIX + varname.substring(
                 Variable.TMP_VAR_PREFIX.length());
       } else if (varname.startsWith(Variable.ALIAS_VAR_PREFIX)) {

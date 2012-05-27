@@ -25,7 +25,6 @@ import exm.stc.ast.descriptor.ArrayRange;
 import exm.stc.ast.descriptor.Literals;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
@@ -40,7 +39,7 @@ import exm.stc.ic.ICInstructions.Oparg;
  */
 public class ExprWalker {
 
-  private VarCreator creator;
+  private VarCreator varCreator;
   private CompilerBackend backend;
   private LineMapping lineMapping;
   
@@ -48,7 +47,7 @@ public class ExprWalker {
                     CompilerBackend backend, 
                     LineMapping lineMapping) {
     super();
-    this.creator = creator;
+    this.varCreator = creator;
     this.backend = backend;
     this.lineMapping = lineMapping;
   }
@@ -200,7 +199,7 @@ public class ExprWalker {
       return lookupStructField(context, tree, type, storeInStack, null, 
                                                                renames);
     } else {
-      Variable tmp = creator.createTmp(context, type, storeInStack, false);
+      Variable tmp = varCreator.createTmp(context, type, storeInStack, false);
       ArrayList<Variable> childOList = new ArrayList<Variable>(1);
       childOList.add(tmp);
       walkExpr(context, tree, childOList, renames);
@@ -258,46 +257,6 @@ public class ExprWalker {
   }
 
 
-  
-  /**
-   * Create a value variable and retrieve value of future into it
-   * @param context
-   * @param type
-   * @param future
-   * @return
-   * @throws UserException
-   * @throws UndefinedTypeException
-   * @throws DoubleDefineException
-   */
-  public Variable retrieveScalarVal(Context context, Variable future) 
-      throws UserException, UndefinedTypeException, DoubleDefineException {
-    assert(Types.isScalarFuture(future.getType()));
-    SwiftType futureType = future.getType();
-    Variable val = context.createLocalValueVariable(
-        Types.derefResultType(futureType), future.getName());
-    creator.initialiseVariable(context, val);
-    switch (futureType.getPrimitiveType()) {
-    case BOOLEAN:
-      backend.retrieveBool(val, future);
-      break;
-    case INTEGER:
-      backend.retrieveInt(val, future);
-      break;
-    case STRING:
-      backend.retrieveString(val, future);
-      break;
-    case FLOAT:
-      backend.retrieveFloat(val, future);
-      break;
-    default:
-      throw new STCRuntimeError("Don't know how to retrieve value of "
-          + " type " + futureType.typeName() + " for variable " 
-          + future.getName());
-    }
-    
-    return val;
-  }
-
   /**
    * 
    * @param context
@@ -329,7 +288,7 @@ public class ExprWalker {
             new ReferenceType(memType), 
             fieldPath, VariableStorage.TEMPORARY);
   
-        creator.declare(tmp);
+        varCreator.declare(tmp);
         backend.structRefLookup(structVar, fieldName, tmp);
       }
     } else {
@@ -339,7 +298,7 @@ public class ExprWalker {
         tmp = context.createStructFieldTmp(rootStruct, 
             memType, fieldPath, VariableStorage.ALIAS);
   
-        creator.declare(tmp);
+        varCreator.declare(tmp);
         backend.structLookup(structVar, fieldName, tmp);
       }
     }
@@ -506,7 +465,7 @@ public class ExprWalker {
                         Arrays.asList(priorityFuture), usedVariables, waitContainers, false);
       openedWait = true;
       callContext = new LocalContext(context);
-      priorityVal = retrieveScalarVal(callContext, priorityFuture);
+      priorityVal = varCreator.fetchValueOf(callContext, priorityFuture);
       
     }
     
@@ -624,8 +583,8 @@ public class ExprWalker {
     boolean doDereference;
     if (memberType.equals(oVar.getType())) {
       // Need to dereference into temporary var
-      lookupIntoVar = creator.createTmp(context, 
-              new ReferenceType(memberType), false, false);
+      lookupIntoVar = varCreator.createTmp(context, 
+              new ReferenceType(memberType));
       doDereference = true;
     } else {
       assert(Types.isReference(oVar.getType()));
@@ -841,10 +800,9 @@ public class ExprWalker {
         derefVars.add(derefed);
         realIList.add(derefed);
       } else if (Types.isUpdateableEquiv(inputType, expType)) {
-        Variable copy = context.createLocalTmpVariable(
+        Variable copy = varCreator.createTmp(waitContext,
                   ScalarUpdateableType.asScalarFuture(inputType));
-        creator.initialiseVariable(waitContext, copy);
-        assignVariable(context, copy, input);
+        assignVariable(waitContext, copy, input);
         realIList.add(copy);
       } else {
         throw new STCRuntimeError(context.getFileLine() + 
@@ -867,7 +825,7 @@ public class ExprWalker {
       // wait statement
       for (int i = 0; i < waitVars.size(); i++) {
         Variable derefVar = derefVars.get(i);
-        creator.declare(derefVar);
+        varCreator.declare(derefVar);
         if (Types.isArrayRef(waitVars.get(i).getType())) {
           backend.retrieveRef(derefVar, waitVars.get(i));
         } else {
@@ -934,15 +892,15 @@ public class ExprWalker {
       // types match
       Variable val = context.createLocalValueVariable(
           ScalarUpdateableType.asScalarValue(src.getType()));
-      creator.declare(val);
+      varCreator.declare(val);
       backend.latestValue(val, src);
       /* Create a future with a snapshot of the value of the updateable
        * By making the retrieve and store explicit the optimizer should be
        * able to optimize out the future in many cases
        */
-      Variable snapshot = context.createLocalTmpVariable(
+      Variable snapshot = varCreator.createTmp(context,
           ScalarUpdateableType.asScalarFuture(src.getType()));
-      creator.declare(snapshot);
+      varCreator.declare(snapshot);
       if (!src.getType().equals(Types.UPDATEABLE_FLOAT)) {
         throw new STCRuntimeError(src.getType() + " not yet supported");
       }
@@ -1023,7 +981,7 @@ public class ExprWalker {
                     context.getFunctionContext().constructName("copystruct"), 
                     Arrays.asList(src), Arrays.asList(src, dst), 
                     new ArrayList<Variable>(), false);
-    Variable rValDerefed = creator.createTmp(context, 
+    Variable rValDerefed = varCreator.createTmp(context, 
             src.getType().getMemberType(), false, true);
     backend.retrieveRef(rValDerefed, src);
     copyByValue(context, rValDerefed, dst, dst.getType());

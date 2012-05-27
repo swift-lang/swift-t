@@ -14,7 +14,6 @@ public class Variable
   private final Variable mapping;
 
   public static final String TMP_VAR_PREFIX = "__t";
-  public static final String LOCAL_TMP_VAR_PREFIX = "__l";
   public static final String ALIAS_VAR_PREFIX = "__alias";
   public static final String STRUCT_FIELD_VAR_PREFIX = "__sf_";
   public static final String LOCAL_VALUE_VAR_PREFIX = "__v_";
