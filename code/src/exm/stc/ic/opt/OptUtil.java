@@ -103,10 +103,11 @@ public class OptUtil {
       if (oldOut.getStorage() == VariableStorage.ALIAS) {
         // Will need to initialise variable in this scope as before we
         // were relying on instruction to initialise it
-        block.removeVarDeclaration(oldOut.getName());
-        block.declareVariable(oldOut.getType(),
+        
+        Variable replacement = new Variable(oldOut.getType(),
             oldOut.getName(), VariableStorage.TEMPORARY,
             oldOut.getDefType(), oldOut.getMapping());
+        block.replaceVarDeclaration(oldOut, replacement);
       }
       instBuffer.add(TurbineOp.addressOf(oldOut, newOut));
     } else {

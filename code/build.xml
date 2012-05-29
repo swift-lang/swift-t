@@ -117,7 +117,7 @@
   
   <!-- Compile the IC sources -->
   <target name="compile.ic"
-          depends="compile.frontend">
+          depends="compile.frontend,compile.gen,compile.common">
     <javac srcdir="src"
            includes="exm/stc/ic/*.java,exm/stc/ic/**/*.java"
            listfiles="${lf}"
@@ -133,7 +133,7 @@
 
   <!-- Compile the UI -->
   <target name="compile.ui"
-          depends="compile.antlr">
+          depends="compile.antlr,compile.common">
     <javac srcdir="src"
            includes="exm/stc/ui/*.java"
            listfiles="${lf}"
@@ -166,7 +166,8 @@
   </target>
 
   <!-- Compile the code generator -->
-  <target name="compile.gen"> 
+  <target name="compile.gen"
+          depends="compile.common"> 
     <javac srcdir="src"
            includes="exm/stc/tclbackend/*.java,exm/stc/tclbackend/**/*.java"
            listfiles="${lf}"

@@ -169,17 +169,14 @@ class Turbine
                        new Token(name), new Token(indexType));
   }
   
-  public static SetVariable allocateFile(Value mapVar, String tclName) {
-    Square alloc;
+  public static TclTree allocateFile(Value mapVar, String tclName) {
     if (mapVar != null) {
-      alloc = new Square(ALLOCATE_FILE,
+      return new Command(ALLOCATE_FILE,
             new Token(tclName), mapVar);
     } else {
-      alloc = new Square(ALLOCATE_FILE,
+      return new Command(ALLOCATE_FILE,
               new Token(tclName));
     }
-    SetVariable fileDecl = new SetVariable(tclName, alloc);
-    return fileDecl;
   }
 
   public static SetVariable stackLookup(String stackName,

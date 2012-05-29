@@ -14,7 +14,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 
@@ -36,13 +35,20 @@ import exm.stc.ic.ICInstructions.OpargType;
 import exm.stc.ic.ICInstructions.Opcode;
 
 /**
+ * This has the definitions for the top-level constructs in Swift-IC,
+ * including functions and blocks 
+ * 
+ * The IC tree looks like:
+ * 
  * Program -> Comp Function
  *         -> App Function
  *         -> Comp Function
  *
- * Composite Function -> MainBlock
+ * Composite Function -> Block
  *
- * Block -> Instruction
+ * Block -> Variable
+ *       -> Variable
+ *       -> Instruction
  *       -> Instruction
  *       -> Instruction
  *       -> Continuation       -> Block
@@ -690,35 +696,7 @@ public class SwiftIC {
      */
     public void renameVars(Map<String, Oparg> renames, boolean inputsOnly) {
       if (!inputsOnly) {
-        // Replace definition of var
-        ListIterator<Variable> it = variables.listIterator();
-        while (it.hasNext()) {
-          Variable v = it.next();
-          
-          // FIXME: this isn't quite right, need to consider
-          // interaction between replacing variable and replacing mapping
-          if (v.isMapped() && 
-                  renames.containsKey(v.getMapping().getName())) {
-            Oparg replacement = renames.get(v.getMapping().getName());
-            if (replacement.getType() == OpargType.VAR) {
-              Variable nv = new Variable(v.getType(), v.getName(),
-                      v.getStorage(), v.getDefType(), replacement.getVar());
-              it.set(nv);
-              v = nv;
-            }
-          }
-          
-          String varName = v.getName();
-          if (renames.containsKey(varName)) {
-            Oparg replacement = renames.get(varName);
-            if (replacement.getType() ==  OpargType.VAR) {
-              it.set(replacement.getVar());
-            } else {
-              // value replaced with constant
-              it.remove();
-            }
-          }
-        }
+        renameVarsInBlockVarsList(renames);
       }
       
       for (Instruction i: instructions) {
@@ -738,6 +716,50 @@ public class SwiftIC {
         }
       }
       renameArraysToClose(renames);
+    }
+
+    private void renameVarsInBlockVarsList(Map<String, Oparg> renames) {
+      // Replace definition of var
+      ListIterator<Variable> it = variables.listIterator();
+      List<Variable> changedMappingVars = new ArrayList<Variable>();
+      while (it.hasNext()) {
+        Variable v = it.next();
+
+        if (v.isMapped()) {
+          if (renames.containsKey(v.getName())) {
+            throw new STCRuntimeError("Tried to replace mapped variable in " +
+            		"IC, this isn't supported so this probably indicates a " +
+            		"compiler bug");
+          }
+          
+          // Check to see if string variable for mapping is replaced
+          if (renames.containsKey(v.getMapping().getName())) {
+            Oparg replacement = renames.get(v.getMapping().getName());
+            if (replacement.getType() == OpargType.VAR) {
+              // Need to maintain variable ordering so that mapped vars appear
+              // after the variables containing the mapping string. Remove
+              // var declaration here and put it at end of list
+              it.remove();
+              changedMappingVars.add(new Variable(v.getType(), v.getName(),
+                  v.getStorage(), v.getDefType(), replacement.getVar()));
+            }
+          }
+        } else {
+          // V isn't mapped
+          String varName = v.getName();
+          if (renames.containsKey(varName)) {
+            Oparg replacement = renames.get(varName);
+            if (replacement.getType() ==  OpargType.VAR) {
+              it.set(replacement.getVar());
+            } else {
+              // value replaced with constant
+              it.remove();
+            }
+          }
+        }
+      }
+
+      this.variables.addAll(changedMappingVars);
     }
 
 
@@ -760,29 +782,11 @@ public class SwiftIC {
      * @param varName
      */
     public void removeVars(Set<String> removeVars) {
-      int n = variables.size();
-      for (int i = 0; i < n; i++) {
-        String currVar = variables.get(i).getName();
-        if (removeVars.contains(currVar)) {
-          variables.remove(i);
-          i--; // account for list being shorter
-          n--;
-        }
-      }
+      removeVarDeclarations(removeVars);
 
-      n = arraysToClose.size();
-      for (int i = 0; i < n; i++) {
-        String currVar = arraysToClose.get(i).getName();
-        if (removeVars.contains(currVar)) {
-          arraysToClose.remove(i);
-          i--; // account for list being shorter
-          n--;
-        }
-      }
-
-      int icount = instructions.size();
-      for (int i = 0; i < icount; i++) {
-        Instruction inst = instructions.get(i);
+      ListIterator<Instruction> it = instructionIterator();
+      while (it.hasNext()) {
+        Instruction inst = it.next();
         inst.removeVars(removeVars);
         // See if we can remove instruction
         if (!inst.hasSideEffects() && inst.op != Opcode.COMMENT) {
@@ -796,10 +800,7 @@ public class SwiftIC {
             }
           }
           if (allRemoveable) {
-            instructions.remove(i);
-            // account for removed instruction
-            i--;
-            icount--;
+            it.remove();
           }
         }
       }
@@ -936,20 +937,21 @@ public class SwiftIC {
     }
 
     public void removeVarDeclarations(Set<String> varNames) {
-      int n = variables.size();
-      for (int i = 0; i < n; i++) {
-        if (varNames.contains(variables.get(i).getName())) {
-          variables.remove(i);
-          i--;
-          n--;
+      ICUtil.removeVarsInList(variables, varNames);
+      ICUtil.removeVarsInList(arraysToClose, varNames);
+    }
+    
+    public void replaceVarDeclaration(Variable oldV, Variable newV) {
+      ListIterator<Variable> it = variables.listIterator();
+      while (it.hasNext()) {
+        Variable curr = it.next();
+        if (curr.getName().equals(oldV.getName())) {
+          it.set(newV);
+          return;
         }
       }
-    }
-
-    public void removeVarDeclaration(String name) {
-      TreeSet<String> tmp = new TreeSet<String>();
-      tmp.add(name);
-      removeVarDeclarations(tmp);
+      throw new STCRuntimeError("Variable: " + oldV.toString() + " not found" +
+      		" in block var declarations");
     }
 
     /**
