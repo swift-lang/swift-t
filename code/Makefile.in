@@ -1,0 +1,216 @@
+CC  = @CC@
+FC  = @F77@
+
+AR      = @AR@
+ARFLAGS = cr
+RANLIB  = @RANLIB@
+
+C_UTILS = @USE_C_UTILS@
+
+INC     = -I. -I$(srcdir) -I $(C_UTILS)/include
+FINC    = @F77_INCDIR@. @F77_INCDIR@$(srcdir)
+
+USE_XLC = @USE_XLC@
+ifeq ($(USE_XLC),0)
+#       Not XLC: GCC
+        PIC = -fPIC
+        STD = -std=gnu99
+        SHARED = -shared
+else
+#       Using XLC
+        PIC = -qpic
+        STD =
+        SHARED = -qnostaticlink
+endif
+
+# No logging
+LDFLAGS  = @LDFLAGS@
+CFLAGS  = @CFLAGS@ $(PIC) $(STD) $(INC) -g
+LDFLAGS  = @LDFLAGS@
+FFLAGS  = @FFLAGS@ $(FINC)
+# Both MPI and user-defined MPE logging
+CFLAGS_MPILOG  = $(CFLAGS) -DLOG_GUESS_USER_STATE @MPILOG_FLAG@
+FFLAGS_MPILOG  = $(FFLAGS) @MPILOG_FLAG@
+# user-defined MPE logging
+CFLAGS_LOG  = $(CFLAGS) -DNO_MPI_LOGGING -DLOG_GUESS_USER_STATE @LOG_FLAG@
+FFLAGS_LOG  = $(FFLAGS) @LOG_FLAG@
+
+LIBS    = @LIBS@ -l exmcutils
+# FLIBS   = @LIBS@ @FLIBS@
+FLIBS   = @LIBS@
+
+LIBDIR  = -L. -L $(C_UTILS)/lib
+FLIBDIR = @F77_LIBDIR_LEADER@.
+
+NLOBJS   = adlb_prof.o adlb.o
+OBJS     = xq.o data.o
+FOBJS    = adlbf.o
+ELOBJS   = adlb_prof.eo
+MLOBJS   = adlb_prof.mo adlb.mo
+
+SHELL    = @SHELL@
+MAKE     = @MAKE@
+srcdir   = @srcdir@
+
+BUILD_FORTRAN = @ADLB_BUILD_FORTRAN@
+BUILD_LOGGING = @ADLB_BUILD_LOGGING@
+
+ifeq ($(BUILD_LOGGING),1)
+	CFLAGS += -D ENABLE_MPE
+	LIBS += -l mpe -llmpe
+endif
+
+.SUFFIXES: .c .f .o .eo .mo
+
+.c.o:
+	$(CC) $(CFLAGS) -c $<
+
+.f.o:
+	$(FC) $(FFLAGS) -c $<
+
+# .eo are object file that does only user-defined MPE logging
+.c.eo:
+	$(CC) $(CFLAGS_LOG) -c -o $*.eo $<
+
+.f.eo:
+	$(FC) $(FFLAGS_LOG) -c -o $*.eo $<
+
+# .mo are object file that does both MPI and user-defined MPE logging
+.c.mo:
+	$(CC) $(CFLAGS_MPILOG) -c -o $*.mo $<
+
+.f.mo:
+	$(FC) $(FFLAGS_MPILOG) -c -o $*.mo $<
+
+all: libs
+
+steve: libs
+	cd ../mc ; ./makeit 14n m0 adlb
+
+tests: c1
+	@if [ "$(BUILD_FORTRAN)" = "yes" ] ; then \
+	     $(MAKE) f1 ; \
+	 fi
+	@if [ "$(BUILD_LOGGING)" = "yes" ] ; then \
+	     $(MAKE) c1log c1mpilog ; \
+	     if [ "$(BUILD_FORTRAN)" = "yes" ] ; then \
+	         $(MAKE) f1log f1mpilog ; \
+	     fi ; \
+	 fi
+
+acctests: libs
+	cd ../mc ; ./makeit 4he m0 adlb
+	cd ../mc ; ./makeit 8be m0 adlb
+
+c1:  c1.o libadlb.a
+	$(CC) $(CFLAGS) -o $@ c1.o $(LIBDIR) $(LDFLAGS) -ladlb $(LIBS) -lm
+
+c2:  c2.o libadlb.a
+	$(CC) $(CFLAGS) -o $@ c2.o $(LIBDIR) $(LDFLAGS) -ladlb $(LIBS) -lm
+
+t1:  t1.o libadlb.a
+	$(CC) $(CFLAGS) -o $@ t1.o $(LIBDIR) $(LDFLAGS) -ladlb $(LIBS) -lm
+
+tsp:  libadlb.a tsp.o
+	$(CC) $(CFLAGS) -o $@ tsp.o $(LIBDIR) $(LDFLAGS) -ladlb $(LIBS) -lm
+
+f1:  f1.o libfadlb.a libadlb.a
+	$(FC) $(FFLAGS) -o $@ f1.o $(FLIBDIR) $(LDFLAGS) -lfadlb -ladlb $(FLIBS) -lm
+
+sudoku:  sudoku.o libadlb.a
+	$(CC) $(CFLAGS) -o $@ sudoku.o $(LIBDIR) $(LDFLAGS) -ladlb $(LIBS) -lm
+
+sudoku_log:  sudoku.o libeladlb.a libadlb.a
+	$(CC) $(CFLAGS_LOG) -o $@ sudoku.o $(LIBDIR) -leladlb -ladlb $(LIBS) -lm
+
+sudoku_mpilog:  sudoku.o libmladlb.a libadlb.a
+	$(CC) $(CFLAGS_MPILOG) -o $@ sudoku.o $(LIBDIR) -lmladlb -ladlb $(LIBS) -lm
+
+model:  model.o libadlb.a
+	$(CC) $(CFLAGS) -o $@ model.o $(LIBDIR) $(LDFLAGS) -ladlb $(LIBS) -lm
+
+nq:  nq.o libadlb.a
+	$(CC) $(CFLAGS) -o $@ nq.o $(LIBDIR) $(LDFLAGS) -ladlb $(LIBS) -lm
+
+pmcmc:  pmcmc.o libadlb.a
+	$(CC) $(CFLAGS) -o $@ pmcmc.o $(LIBDIR) $(LDFLAGS) -ladlb $(LIBS) -lm
+
+batcher:  batcher.o libadlb.a
+	$(CC) $(CFLAGS) -o $@ batcher.o $(LIBDIR) $(LDFLAGS) -L $(C_UTILS)/lib -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils -Wl,-rpath -Wl,$(PWD) -ladlb $(LIBS) -lm
+
+batcher2:  batcher2.o libadlb.a
+	$(CC) $(CFLAGS) -o $@ batcher2.o $(LIBDIR) $(LDFLAGS) -ladlb $(LIBS) -lm
+
+satcher:  satcher.o simple_socket.o libadlb.a
+	$(CC) $(CFLAGS) -o $@ satcher.o simple_socket.o $(LIBDIR) $(LDFLAGS) -ladlb $(LIBS)
+
+simple_socket_test: simple_socket_test.o simple_socket.o
+	$(CC) $(CFLAGS) -o $@ simple_socket_test.o simple_socket.o $(LIBDIR) $(LDFLAGS) $(LIBS)
+
+# c1log does only user-defined MPE logging
+c1log:  c1.o libeladlb.a libadlb.a
+	$(CC) $(CFLAGS_LOG) -o $@ c1.o $(LIBDIR) -leladlb -ladlb $(LIBS) -lm
+
+# c1mpilog does both MPI and user-defined MPE logging
+c1mpilog:  c1.o libmladlb.a libadlb.a
+	$(CC) $(CFLAGS_MPILOG) -o $@ c1.o $(LIBDIR) -lmladlb -ladlb $(LIBS) -lm
+
+# f1log does only user-defined MPE logging
+f1log:  f1.o libfadlb.a libeladlb.a libadlb.a
+	$(FC) $(FFLAGS_LOG) -o $@ f1.o $(FLIBDIR) -lfadlb -leladlb -ladlb $(FLIBS) -lm
+
+# f1mpilog does only user-defined MPE logging
+f1mpilog:  f1.o libfadlb.a libmladlb.a libadlb.a
+	$(FC) $(FFLAGS_MPILOG) -o $@ f1.o $(FLIBDIR) -lfadlb -lmladlb -ladlb $(FLIBS) -lm
+
+
+libs: libadlb.a libadlb.so
+	@if [ "$(BUILD_FORTRAN)" = "yes" ] ; then \
+	     $(MAKE) libfadlb.a ; \
+	 fi
+	@if [ "$(BUILD_LOGGING)" = "yes" ] ; then \
+	     $(MAKE) libeladlb.a libmladlb.a ; \
+	 fi
+
+prep_for_commit:
+	./fix_version.py
+	./genfh.py
+
+libadlb.a: $(OBJS)
+	$(AR) $(ARFLAGS) $@ $(OBJS)
+	$(RANLIB) $@
+
+libadlb.so: $(OBJS) $(NLOBJS)
+	$(CC) -shared -o $(@) -fPIC $(NLOBJS) $(OBJS) \
+	-L $(C_UTILS)/lib -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils
+# -L . -l mpe -Wl,-rpath -Wl,$(PWD)
+
+# ADLB library, libeladlb.a, that does only user-defined MPE logging
+libeladlb.a: $(ELOBJS)
+	$(AR) $(ARFLAGS) $@ $(ELOBJS)
+	$(RANLIB) $@
+
+libeladlb.so: $(OBJS) $(ELOBJS)
+	gcc -shared -o $(@) -fPIC $(ELOBJS) $(OBJS) \
+	-L $(C_UTILS)/lib -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils
+
+# ADLB library, libmladlb.a, that does both MPI and user-defined MPE logging
+libmladlb.a: $(MLOBJS)
+	$(AR) $(ARFLAGS) $@ $(MLOBJS)
+	$(RANLIB) $@
+
+libmladlb.so: $(OBJS) $(MLOBJS)
+	mpicc -shared -o $(@) -fPIC $(MLOBJS) $(OBJS) \
+	-L $(C_UTILS)/lib -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils \
+        -L . -l mpe -Wl,-rpath -Wl,$(PWD)
+
+libfadlb.a: $(FOBJS)
+	$(AR) $(ARFLAGS) $@ $(FOBJS)
+	$(RANLIB) $@
+
+clean:
+	rm -fv $(OBJS) $(FOBJS) $(ELOBJS) $(MLOBJS) *.o *.eo *.mo *.a libadlb.so
+
+realclean: clean
+	rm -f *.o lib*.a
+	rm -f c1 c2 f1 c1log c1mpilog f1log f1mpilog tsp sudoku model nq pmcmc batcher
