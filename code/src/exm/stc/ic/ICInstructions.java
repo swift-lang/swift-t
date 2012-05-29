@@ -87,6 +87,17 @@ public class ICInstructions {
       }
       return false;
     }
+    
+    public boolean writesMappedVar() {
+      // Writes to alias variables can have non-local effects
+      for (Oparg out: this.getOutputs()) {
+        if (out.getType() == OpargType.VAR &&
+            out.getVar().getMapping() != null) {
+          return true;
+        }
+      }
+      return false;
+    }
   
     /**
      *
@@ -1577,7 +1588,7 @@ public class ICInstructions {
     @Override
     public boolean hasSideEffects() {
       return (!SemanticInfo.isSideEffectFree(functionName)) ||
-            this.writesAliasVar();
+            this.writesAliasVar() || this.writesMappedVar();
     }
   
     @Override
@@ -1764,10 +1775,7 @@ public class ICInstructions {
       // TODO: make order of args invariant where possible
       if (this.isDefinitelyDeterministic()) {
         if (this.op == Opcode.CALL_BUILTIN) { 
-          if (SemanticInfo.isCopyFunction(functionName) ||
-             (SemanticInfo.isMinMaxFunction(functionName) 
-                && this.inputs.get(0).getName().equals(
-                            this.inputs.get(1).getName()))) {
+          if (!this.writesMappedVar() && isCopyFunction()) {
             // Handle copy as a special case
             assert(outputs.size() == 1);
             assert((SemanticInfo.isCopyFunction(functionName) && inputs.size() == 1) 
@@ -1788,17 +1796,30 @@ public class ICInstructions {
               canonicalFunctionName = SemanticInfo.getFlipped(this.functionName);
               Collections.reverse(in);
             }
-              
-            return Collections.singletonList(
-                new ComputedValue(this.op, 
+            
+            List<ComputedValue> res = new ArrayList<ComputedValue>();
+            res.add(new ComputedValue(this.op, 
                 canonicalFunctionName, in, 
                 Oparg.createVar(this.outputs.get(0)), outputClosed));
+            if (this.functionName.equals(Builtins.INPUT_FILE)) {
+              res.add(new ComputedValue(Opcode.CALL_BUILTIN, Builtins.FILENAME,
+                  Arrays.asList(Oparg.createVar(this.outputs.get(0))),
+                  Oparg.createVar(this.inputs.get(0)), false));
+            }
+            return res;
           } else {
             // Not sure to do with multiple outputs
           }
         }
       }
       return null;
+    }
+
+    private boolean isCopyFunction() {
+      return SemanticInfo.isCopyFunction(functionName) ||
+         (SemanticInfo.isMinMaxFunction(functionName) 
+            && this.inputs.get(0).getName().equals(
+                        this.inputs.get(1).getName()));
     }
 
     @Override

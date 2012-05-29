@@ -574,6 +574,10 @@ public class SwiftIC {
       return Collections.unmodifiableList(conds);
     }
     
+    public ListIterator<Continuation> getContinuationIterator() {
+      return conds.listIterator();
+    }
+    
     public Continuation getContinuation(int i) {
       return conds.get(i);
     }

@@ -80,23 +80,29 @@ public class ICUtil {
    */
   public static void replaceVarsInList(Map<String, Oparg> replacements,
       List<Variable> vars, boolean removeDupes) {
+    replaceVarsInList(replacements, vars, removeDupes, true);
+  }
+  
+  public static void replaceVarsInList(Map<String, Oparg> replacements,
+        List<Variable> vars, boolean removeDupes, boolean removeMapped) {
     // Remove new duplicates
     ArrayList<String> alreadySeen = null;
     if (removeDupes) {
       alreadySeen = new ArrayList<String>(vars.size());
     }
     
-    int n = vars.size();
-    for (int i = 0; i < n; i++) {
-      String varName = vars.get(i).getName();
+    ListIterator<Variable> it = vars.listIterator();
+    while (it.hasNext()) {
+      Variable v = it.next();
+      String varName = v.getName();
       if (replacements.containsKey(varName)) {
         Oparg oa = replacements.get(varName);
         if (oa.getType() == OpargType.VAR) {
           if (removeDupes && 
                   alreadySeen.contains(oa.getVar().getName())) {
-            vars.remove(i); i--; n--;
+            it.remove();
           } else {
-            vars.set(i, oa.getVar());
+            it.set(oa.getVar());
             if (removeDupes) {
               alreadySeen.add(oa.getVar().getName());
             }
@@ -105,7 +111,7 @@ public class ICUtil {
       } else {
         if (removeDupes) {
           if (alreadySeen.contains(varName)) {
-            vars.remove(i); i--; n--;
+            it.remove();
           } else {
             alreadySeen.add(varName);
           }

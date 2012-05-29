@@ -196,7 +196,7 @@ public class ConstantFinder {
           if ((!removeLocalConsts) || removalCandidates.contains(varName)) {
             logger.debug("Found constant " + varName);
             knownConstants.put(varName, input);
-            if (removeLocalConsts && !inst.writesAliasVar()) {
+            if (removeLocalConsts && !inst.hasSideEffects()) {
               logger.trace("Removing instruction " + inst.toString());
               it.remove();
             }

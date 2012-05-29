@@ -23,6 +23,8 @@ public class Builtins {
  public static final String COPY_BLOB = "copy_blob";
  public static final String COPY_VOID = "copy_void";
  public static final String COPY_FILE = "copy_file";
+ public static final String FILENAME = "filename";
+ public static final String INPUT_FILE = "input_file";
 
   private static final Map<String, FunctionType> builtins =
                         new HashMap<String, FunctionType>();
@@ -289,7 +291,7 @@ public class Builtins {
     }
     
     /* Load all of the info (hardcoded for the time being) */
-    {  
+    static {  
       for (String numType: Arrays.asList("integer", "float")) {
         sideEffectFree.add("plus_" + numType);
         sideEffectFree.add("minus_" + numType);
@@ -332,6 +334,14 @@ public class Builtins {
       sideEffectFree.add("copy_void");
       copyFunctions.add("copy_void");
       sideEffectFree.add("make_void");
+      
+      sideEffectFree.add(COPY_FILE);
+      copyFunctions.add(COPY_FILE);
+
+      sideEffectFree.add(INPUT_FILE);
+      knownDeterministic.add(INPUT_FILE);
+      sideEffectFree.add(FILENAME);
+      knownDeterministic.add(FILENAME);
     
       sideEffectFree.add("strcat");
       sideEffectFree.add("substring");

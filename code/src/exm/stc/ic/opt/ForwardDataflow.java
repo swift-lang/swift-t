@@ -237,11 +237,14 @@ public class ForwardDataflow {
     }
   }
 
-  private static List<ComputedValue> updateReplacements(Instruction inst,
+  private static List<ComputedValue> updateReplacements(
+      Logger logger, Instruction inst,
       State av, HierarchicalMap<String, Oparg> replaceInputs, 
       HierarchicalMap<String, Oparg> replaceAll) {
     List<ComputedValue> icvs = inst.getComputedValues(av.availableVals);
+    logger.trace("no icvs");
     if (icvs != null) {
+      logger.trace("icvs: " + icvs.toString());
       for (ComputedValue currCV : icvs) {
         if (ComputedValue.isCopy(currCV)) {
           // Copies are easy to handle: replace output of inst with input 
@@ -280,8 +283,7 @@ public class ForwardDataflow {
             if (currCV.equivType == EquivalenceType.REFERENCE) {
               // The two locations are both references to same thing, so can 
               // replace all references, including writes to currLoc
-              replaceAll.put(currLoc.getVar().getName(), 
-                                                    prevLoc);
+              replaceAll.put(currLoc.getVar().getName(), prevLoc);
             }
             if (prevClosed || !currClosed) {
               // Use the prev value
@@ -488,6 +490,13 @@ public class ForwardDataflow {
         ComputedValue compVal = ICInstructions.assignComputedVal(v, val);
         cv.addComputedValue(compVal, cv.hasComputedValue(compVal));
       }
+      if (v.isMapped() && Types.isFile(v.getType())) {
+        // filename will return the mapping
+        ComputedValue filenameVal = new ComputedValue(Opcode.CALL_BUILTIN,
+            "filename", Arrays.asList(Oparg.createVar(v)),
+            Oparg.createVar(v.getMapping()), false, EquivalenceType.VALUE);
+        cv.addComputedValue(filenameVal, false);
+      }
     }
 
     boolean anotherPass2 =  forwardDataflow(logger, f, block, 
@@ -499,9 +508,8 @@ public class ForwardDataflow {
     
     // might be able to eliminate wait statements or reduce the number
     // of vars they are blocking on
-    int nconts = block.getContinuations().size();
-    for (int i = 0; i < nconts; i++) {
-      Continuation c = block.getContinuations().get(i);
+    for (int i = 0; i < block.getContinuations().size(); i++) {
+      Continuation c = block.getContinuation(i);
       
       // First make sure all variable replacements are done  
       c.replaceInputs(replaceInputs);
@@ -510,7 +518,7 @@ public class ForwardDataflow {
       if (toInline != null) {
         anotherPassNeeded = true;
         c.inlineInto(block, toInline);
-        i--; nconts--;
+        i--; // compensate for removal of continuation
       }
     }
 
@@ -588,7 +596,7 @@ public class ForwardDataflow {
        * on this pass, but rather rely on dead code elim to later clean up
        * unneeded instructions instead
        */
-      updateReplacements(inst, cv, replaceInputs, replaceAll);
+      updateReplacements(logger, inst, cv, replaceInputs, replaceAll);
   
       // Add dependencies
       List<Variable> in = inst.getBlockingInputs();

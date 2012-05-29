@@ -72,7 +72,7 @@ public class Flattener {
         } while(usedNames.contains(newName));
         renames.put(v.getName(),
             Oparg.createVar(new Variable(v.getType(), newName,
-                            v.getStorage(), v.getDefType())));
+                            v.getStorage(), v.getDefType(), v.getMapping())));
         usedNames.add(newName);
       } else {
         usedNames.add(v.getName());
