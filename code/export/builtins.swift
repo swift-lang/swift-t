@@ -13,6 +13,7 @@
 (boolean o) copy_boolean (boolean i) "turbine" "0.0.2" "copy_integer";
 (void o) copy_void (void i) "turbine" "0.0.2" "copy_void";
 (blob o) copy_blob (blob i) "turbine" "0.0.2" "copy_blob";
+(file o) copy_file (file i) "turbine" "0.0.2" "copy_file";
 (void o) make_void () "turbine" "0.0.2" "make_void";
 
 // Arithmetic
@@ -92,8 +93,13 @@ sleep_trace (float secs, int|float|string|boolean... args) "turbine" "0.0.2"
 // Updateable variables
 (updateable_float o) init_updateable(float i) "turbine" "0.0.2" "init_updateable";
 
+// Information about cluster
 (int n) adlb_servers() "turbine" "0.0.2" "adlb_servers_future";
 (int n) turbine_engines() "turbine" "0.0.2" "turbine_engines_future";
 (int n) turbine_workers() "turbine" "0.0.2" "turbine_workers_future";
+
+// Basic file ops
+(string n) filename(file x) "turbine" "0.0.2" "filename2";
+(file f) input_file(string filename) "turbine" "0.0.2" "input_file";
 
 #endif
