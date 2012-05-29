@@ -22,6 +22,7 @@ public class Builtins {
  public static final String COPY_BOOLEAN = "copy_boolean";
  public static final String COPY_BLOB = "copy_blob";
  public static final String COPY_VOID = "copy_void";
+ public static final String COPY_FILE = "copy_file";
 
   private static final Map<String, FunctionType> builtins =
                         new HashMap<String, FunctionType>();

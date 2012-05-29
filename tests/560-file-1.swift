@@ -1,5 +1,10 @@
+#include <builtins.swift>
+#include <swift/assert.swift>
 
 main {
-    file myfile <"bob.txt">;
+    file infile = input_file("alice.txt");
+    file outfile <"bob.txt"> = infile;
 
+    assertEqual(filename(infile), "alice.txt", "filename infile");
+    assertEqual(filename(outfile), "bob.txt", "filename outfile");
 }

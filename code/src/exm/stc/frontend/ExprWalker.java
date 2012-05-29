@@ -239,6 +239,9 @@ public class ExprWalker {
         // Sort of silly, but might be needed
         backend.builtinFunctionCall(Builtins.COPY_VOID, Arrays.asList(src),
             Arrays.asList(dst), null);
+      } else if (type.equals(Types.FUTURE_FILE)) {
+        backend.builtinFunctionCall(Builtins.COPY_FILE, Arrays.asList(src),
+            Arrays.asList(dst), null);
       } else {
         throw new STCRuntimeError(context.getFileLine() +
             "Haven't implemented copy for scalar type " +

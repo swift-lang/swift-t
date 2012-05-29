@@ -207,7 +207,7 @@ do
         return 1
       fi
       ;;
-    C) debug "IC Output: ${OPTARG}"
+    C) verbose "IC Output: ${OPTARG}"
        COMPILER_OPTS+="-Dstc.ic.output-file=${OPTARG}"
        ;;
     u) UPDATE=1
