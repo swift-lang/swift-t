@@ -103,20 +103,21 @@ namespace eval turbine {
     proc allocate_file2 { name args } {
         set is_mapped [ llength $args ]
         # use void to signal file availability
-        set signal [ allocate void "signal:$name" ]
+        set signal [ allocate "signal:$name" void ]
         if { $is_mapped } {
             set filename [ lindex $args 0 ]
-            log "file: $name=[ <$signal> <$filename> ] mapped"
-            upvar 1 $name v
-            set v $u
+            log "file: $name=\[ <$signal> <$filename> \] mapped"
         } else {
             # use new string that will be set later to
             # something arbitrary
-            set filename [ allocate string "filename:$name" ]
-            log "file: $name=[ <$signal> <$filename> ] unmapped"
+            set filename [ allocate "filename:$name" string ]
+            log "file: $name=\[ <$signal> <$filename> \] unmapped"
 
         }
-        return [ list $signal $filename $is_mapped ]
+        set u [ list $signal $filename $is_mapped ]
+        upvar 1 $name v
+        set v $u
+        return $u
     }
 
     # usage: retrieve <id>
