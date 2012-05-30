@@ -198,24 +198,12 @@ extends Context
   }
 
   @Override
-  public Map<String, VisibleVariable> getVisibleVariables()
-  {
-    Map<String, VisibleVariable> result =
-      new HashMap<String, VisibleVariable>(variables.size());
+  public List<Variable> getVisibleVariables() {
+    List<Variable> result = new ArrayList<Variable>();
 
-    // Add all from parent and update the scope level
-    result.putAll(parent.getVisibleVariables());
-
-    for (VisibleVariable v: result.values()) {
-      v.setScopeLevel(v.getScopeLevel() + 1);
-    }
-
-    for (Variable v: variables.values()) {
-      // Add to result, overwriting any parent variables with same name
-      if (v.getStorage() == VariableStorage.STACK) {
-        result.put(v.getName(), new VisibleVariable(0, v));
-      }
-    }
+    // All variable from parent visible, plus variables defined in this scope
+    result.addAll(parent.getVisibleVariables());
+    result.addAll(variables.values());
 
     return result;
   }

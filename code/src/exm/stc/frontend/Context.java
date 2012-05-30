@@ -82,7 +82,7 @@ public abstract class Context
    * or an ancestor stack frame.
    * @return
    */
-  public abstract Map<String, VisibleVariable> getVisibleVariables();
+  public abstract List<Variable> getVisibleVariables();
 
   public abstract boolean isAppFunction(String name);
 
@@ -187,41 +187,6 @@ public abstract class Context
   public Logger getLogger()
   {
     return logger;
-  }
-
-  public static class VisibleVariable {
-    private int scopeLevel; // The variable is defined how many scopes outside
-                            // the current scope
-    private final Variable variable;
-
-    public VisibleVariable(int scopeLevel, Variable variable) {
-      super();
-      this.scopeLevel = scopeLevel;
-      this.variable = variable;
-    }
-
-    public int getScopeLevel() {
-      return scopeLevel;
-    }
-
-    public void setScopeLevel(int scopeLevel) {
-      this.scopeLevel = scopeLevel;
-    }
-
-    public Variable getVariable() {
-      return variable;
-    }
-
-    public static final class ScopeComparator implements Comparator<VisibleVariable> {
-      @Override
-      public int compare(VisibleVariable o1, VisibleVariable o2) {
-        return o1.getScopeLevel() - o2.getScopeLevel();
-      }
-    }
-    @Override
-    public String toString() {
-      return this.variable.toString() + ": " + scopeLevel;
-    }
   }
 
   /**

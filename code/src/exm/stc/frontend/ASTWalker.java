@@ -46,7 +46,6 @@ import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.util.TernaryLogic.Ternary;
-import exm.stc.frontend.Context.VisibleVariable;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
 import exm.stc.ic.tree.ICInstructions.Oparg;
 /**
@@ -486,8 +485,7 @@ public class ASTWalker {
   private void summariseBranchVariableUsage(Context context,
       List<VariableUsageInfo> branchVUs, List<Variable> usedVariables,
       List<Variable> containersToRegister) throws UndefinedTypeException, UserException {
-    for (VisibleVariable vv : context.getVisibleVariables().values()) {
-      Variable v = vv.getVariable();
+    for (Variable v : context.getVisibleVariables()) {
       Ternary isUsed = Ternary.FALSE;
       for (VariableUsageInfo bvu : branchVUs) {
         VInfo vi = bvu.lookupVariableInfo(v.getName());

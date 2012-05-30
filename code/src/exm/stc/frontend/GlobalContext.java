@@ -196,14 +196,8 @@ extends Context
   }
 
   @Override
-  public Map<String, VisibleVariable> getVisibleVariables()
-  {
-    Map<String, VisibleVariable> result =
-      new HashMap<String, VisibleVariable>(variables.size());
-    for (Variable var: variables.values()) {
-      result.put(var.getName(), new VisibleVariable(0, var));
-    }
-    return result;
+  public List<Variable> getVisibleVariables() {
+    return new ArrayList<Variable>(variables.values());
   }
 
   @Override
