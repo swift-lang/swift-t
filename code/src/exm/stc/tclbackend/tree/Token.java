@@ -11,7 +11,7 @@ public class Token extends Expression
   }
 
   @Override
-  public void appendTo(StringBuilder sb, ExprContext mode)
+  public void appendTo(StringBuilder sb)
   {
     sb.append(token);
   }

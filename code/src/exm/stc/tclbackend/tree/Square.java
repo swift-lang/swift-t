@@ -3,6 +3,7 @@ package exm.stc.tclbackend.tree;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -47,7 +48,7 @@ public class Square extends Expression
   
   public void addAll(Expression... exprs)
   {
-    for (Expression e: items) {
+    for (Expression e: exprs) {
       items.add(e); 
     }
   }
@@ -58,19 +59,18 @@ public class Square extends Expression
   }
 
   @Override
-  public void appendTo(StringBuilder sb, ExprContext mode)
+  public void appendTo(StringBuilder sb)
   {
-    if (mode == ExprContext.VALUE_STRING) {
-      sb.append("\\[ ");
-    } else {
-      sb.append("[ ");
+    sb.append("[ ");
+    Iterator<Expression> it = items.iterator();
+    while (it.hasNext())
+    {
+      Expression tree = it.next();
+      tree.appendTo(sb);
+      if (it.hasNext())
+        sb.append(' ');
     }
-    super.appendTo(sb, mode);
-    if (mode == ExprContext.VALUE_STRING) {
-      sb.append(" \\]");
-    } else {
-      sb.append(" ]");
-    }
+    sb.append(" ]");
   }
   
   public static Square arithExpr(Expression... contents) {

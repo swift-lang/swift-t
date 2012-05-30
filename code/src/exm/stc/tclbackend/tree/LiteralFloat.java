@@ -12,7 +12,7 @@ public class LiteralFloat extends Expression {
   }
 
   @Override
-  public void appendTo(StringBuilder sb, ExprContext mode) {
+  public void appendTo(StringBuilder sb) {
     String tclLiteral; 
     if (Double.isInfinite(value)) {
       if (value > 0.0) {

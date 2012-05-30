@@ -15,7 +15,7 @@ public class Value extends Expression
   }
 
   @Override
-  public void appendTo(StringBuilder sb, ExprContext mode)
+  public void appendTo(StringBuilder sb)
   {
     // enclose in {} to allow a wider range of characters to be used in 
     // var names, such as :

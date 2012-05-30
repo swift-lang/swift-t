@@ -182,19 +182,17 @@ class Turbine
   public static SetVariable stackLookup(String stackName,
       String tclVarName, String containerVarName) {
     Token v = new Token(containerVarName);
-    Expression expression = new Expression(STACK_LOOKUP,
+    Square square = new Square(STACK_LOOKUP,
                           new Value(stackName), v);
-    Square square = new Square(expression);
     SetVariable sv = new SetVariable(tclVarName, square);
     return sv;
   }
 
   public static SetVariable lookupParentStack(String parentScope,
       String childScope) {
-    Expression expression = new Expression(STACK_LOOKUP,
+    Square square = new Square(STACK_LOOKUP,
                           new Value(childScope),
                           PARENT_STACK_ENTRY);
-    Square square = new Square(expression);
     SetVariable sv = new SetVariable(parentScope, square);
     return sv;
   }

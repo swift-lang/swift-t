@@ -9,7 +9,7 @@ public class LiteralInt extends Expression {
   }
 
   @Override
-  public void appendTo(StringBuilder sb, ExprContext mode) {
+  public void appendTo(StringBuilder sb) {
     sb.append(Long.toString(value));
   }
 
