@@ -76,7 +76,7 @@ public class MultiMap<K, V> {
             && map.get(key).size() > 0;
   }
 
-  public List<V> remove(Object key) {
+  public List<V> remove(K key) {
     return map.remove(key);
   }
 
