@@ -14,6 +14,11 @@ import exm.stc.ast.Types.PrimType;
 import exm.stc.ast.Types.SwiftType;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 
+/**
+ * This class is used to store information about built-in functions defined for the
+ * current program.
+ *
+ */
 public class Builtins {
 
  public static final String COPY_FLOAT = "copy_float";

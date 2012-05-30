@@ -54,7 +54,6 @@ public class Flattener {
    *
    * @param in
    * @param usedNames Names already used
-   * @return
    */
   private static void makeVarNamesUnique(Block in, Set<String> usedNames) {
     HashMap<String, Oparg> renames = new HashMap<String, Oparg>();

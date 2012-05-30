@@ -49,7 +49,11 @@ import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.Context.VisibleVariable;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
 import exm.stc.ic.tree.ICInstructions.Oparg;
-
+/**
+ * This class walks the Swift AST.
+ * It performs typechecking and dataflow analysis as it goes
+ *
+ */
 public class ASTWalker {
 
   private String inputFile;
@@ -67,6 +71,12 @@ public class ASTWalker {
   }
 
 
+  /**
+   * Walk the AST and make calls to backend to generate lower level code
+   * @param backend
+   * @param tree
+   * @throws UserException
+   */
   public void walk(CompilerBackend backend, SwiftAST tree) 
           throws UserException {
     this.backend = backend;

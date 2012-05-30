@@ -693,11 +693,10 @@ public class ICTree {
      * Rename variables in block (and nested blocks) according to map.
      * If the map doesn't have an entry, we don't rename anything
      *
-     * @param inputsOnly: if true, only change references which are reading
+     * @param inputsOnly  if true, only change references which are reading
      *      the var.  if false, completely remove the old variable and replace 
      *      with new
      * @param renames OldName -> NewName
-     * @return
      */
     public void renameVars(Map<String, Oparg> renames, boolean inputsOnly) {
       if (!inputsOnly) {

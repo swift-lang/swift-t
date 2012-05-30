@@ -178,6 +178,21 @@
     </javac>
   </target>
 
+  <target name="javadoc"> 
+    <javadoc packagenames="exm.*"
+           excludepackagenames="exm.stc.ast.antlr.*"
+           sourcepath="src"
+           defaultexcludes="yes"
+           destdir="javadoc"
+           author="true"
+           version="true"
+           use="true"
+           windowtitle="STC Compiler">
+    <doctitle><![CDATA[<h1>STC Compiler</h1>]]></doctitle>
+    <link href="http://download.oracle.com/javase/6/docs/api/" />
+    </javadoc>
+  </target>
+
   <target name="clean">
     <delete file="${parser.jar}"/>
     <!-- Delete all ANTLR-generated stuff -->

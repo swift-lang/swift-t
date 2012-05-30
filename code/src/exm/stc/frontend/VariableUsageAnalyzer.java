@@ -118,8 +118,8 @@ class VariableUsageAnalyzer {
    *
    * @param file
    * @param block
-   * @param initialVu: initial variable usage info for this block
-   * @param vuiMap: map to insert info for this block and all children
+   * @param initialVu initial variable usage info for this block
+   * @param vuiMap map to insert info for this block and all children
    * @param parent info about arguments, and about variables declared
    *                outside this block but visible
    * @return

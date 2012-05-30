@@ -135,7 +135,8 @@ public class ForwardDataflow {
     /**
      * 
      * @param newCV
-     * @param for debugging purposes, set to true if we intend to replace
+     * @param replace for debugging purposes, set to true if we intend to 
+     *        replace
      */
     public void addComputedValue(ComputedValue newCV, boolean replace) {
       boolean outClosed = newCV.isOutClosed();
@@ -361,7 +362,6 @@ public class ForwardDataflow {
    * @param logger
    * @param program
    * @param f
-   * @return
    */
   private static void liftWait(Logger logger, Program program, CompFunction f) {
     if (!f.isAsync()) {

@@ -2907,7 +2907,7 @@ public class ICInstructions {
   /**
    * Return the canonical ComputedValue representation for
    * retrieving the value of this type
-   * @param srcType
+   * @param src
    * @return null if cannot be retrieved
    */
   public static ComputedValue retrieveCompVal(Variable src) {

@@ -444,9 +444,9 @@ public class VariableUsageInfo {
      *  myVar[0].x
      * @param file
      * @param line
-     * @param name: the name of the variable(e.g. x)
-     * @param fieldPath: the path of struct fields (can be null for no path)
-     * @param arrayDepth: the number of array indices at end of assignment
+     * @param name the name of the variable(e.g. x)
+     * @param fieldPath the path of struct fields (can be null for no path)
+     * @param arrayDepth the number of array indices at end of assignment
      */
     public List<Violation> assign(String file, int line,
         List<String> fieldPath, int arrayDepth) {
