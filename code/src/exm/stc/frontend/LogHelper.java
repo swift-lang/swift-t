@@ -5,6 +5,11 @@ import org.apache.log4j.Logger;
 
 import exm.stc.ast.SwiftAST;
 
+/**
+ * Helper functions to augment log messages with contextual information about
+ * the current line.
+ *
+ */
 public class LogHelper {
   static final Logger logger = Logger.getLogger("");
   public static void logChildren(int indent, SwiftAST tree) {

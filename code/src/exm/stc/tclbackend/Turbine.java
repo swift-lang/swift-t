@@ -14,35 +14,13 @@ import exm.stc.tclbackend.tree.*;
  * */
 class Turbine
 {
-  private static final Token DIVIDE_INTEGER =
-      new Token("turbine::divide_integer_impl");
-  private static final Token MOD_INTEGER =
-      new Token("turbine::mod_integer_impl");
+  /* Names of types used by Turbine */
+  public static final String STRING_TYPENAME = "string";
+  public static final String INTEGER_TYPENAME = "integer";
+  public static final String VOID_TYPENAME = "void";
+  public static final String FLOAT_TYPENAME = "float";
+  public static final String BLOB_TYPENAME = "blob";
 
-  /* TODO: TPREFIX? These are no longer prefixes, right? -Justin */
-  public static final String STRING_TPREFIX = "string";
-  public static final String INTEGER_TPREFIX = "integer";
-  public static final String VOID_TPREFIX = "void";
-  public static final String FLOAT_TPREFIX = "float";
-  public static final String BLOB_TPREFIX = "blob";
-
-  static final Token CONTAINER_LOOKUP =
-      new Token("turbine::container_lookup");
-  static final Token CONTAINER_LOOKUP_CHECKED =
-      new Token("turbine::container_lookup_checked");
-  private static final Token STORE_INTEGER =
-      new Token("turbine::store_integer");
-  private static final Token STORE_FLOAT =
-      new Token("turbine::store_float");
-  private static final Token STORE_STRING =
-      new Token("turbine::store_string");
-  private static final Token CONTAINER_DEREF_INSERT =
-      new Token("turbine::container_deref_insert");
-  private static final Token CONTAINER_F_DEREF_INSERT =
-      new Token("turbine::container_f_deref_insert");
-
-  private static final Token CALL_COMPOSITE =
-      new Token("turbine::call_composite");
   // Commonly used things:
   private static final Token ALLOCATE_CONTAINER =
       new Token("turbine::allocate_container");
@@ -104,6 +82,29 @@ class Turbine
   private static final Token TURBINE_LOG =
       new Token("turbine::c::log");
   private static final Token ALLOCATE = new Token("turbine::allocate");
+  private static final Token DIVIDE_INTEGER =
+    new Token("turbine::divide_integer_impl");
+  private static final Token MOD_INTEGER =
+      new Token("turbine::mod_integer_impl");
+  
+  static final Token CONTAINER_LOOKUP =
+      new Token("turbine::container_lookup");
+  static final Token CONTAINER_LOOKUP_CHECKED =
+      new Token("turbine::container_lookup_checked");
+  private static final Token STORE_INTEGER =
+      new Token("turbine::store_integer");
+  private static final Token STORE_FLOAT =
+      new Token("turbine::store_float");
+  private static final Token STORE_STRING =
+      new Token("turbine::store_string");
+  private static final Token CONTAINER_DEREF_INSERT =
+      new Token("turbine::container_deref_insert");
+  private static final Token CONTAINER_F_DEREF_INSERT =
+      new Token("turbine::container_f_deref_insert");
+  
+  private static final Token CALL_COMPOSITE =
+      new Token("turbine::call_composite");
+
 
   public enum StackFrameType {
     MAIN,
@@ -132,7 +133,7 @@ class Turbine
       result[index++] = new SetVariable("parent", STACK);
     }
 
-    result[index++] = allocateContainer(LOCAL_STACK_NAME, STRING_TPREFIX);
+    result[index++] = allocateContainer(LOCAL_STACK_NAME, STRING_TYPENAME);
 
     if (type != StackFrameType.MAIN) {
       // main is the only procedure without a parent stack frame
@@ -158,7 +159,6 @@ class Turbine
 
 
   public static TclTree allocate(String tclName, String typePrefix) {
-    // return new SetVariable(tclName, new Square(ALLOCATE, new Token(typePrefix)));
     return new Command(ALLOCATE,
                        new Token(tclName), new Token(typePrefix));
   }
@@ -548,28 +548,28 @@ class Turbine
         String containerVar, String indexVar) {
     return new Command(F_CONTAINER_CREATE_NESTED,
             new Token(resultVar), new Value(containerVar),
-            new Value(indexVar), new Token(INTEGER_TPREFIX));
+            new Value(indexVar), new Token(INTEGER_TYPENAME));
   }
 
   public static TclTree containerRefCreateNested(String resultVar,
       String containerVar, String indexVar) {
     return new Command(F_CREF_CREATE_NESTED,
           new Token(resultVar), new Value(containerVar),
-          new Value(indexVar), new Token(INTEGER_TPREFIX));
+          new Value(indexVar), new Token(INTEGER_TYPENAME));
   }
 
   public static TclTree containerRefCreateNestedImmIx(String resultVar,
       String containerVar, Expression arrIx) {
     return new Command(F_CREF_CREATE_NESTED_STATIC,
         new Token(resultVar), new Value(containerVar),
-        arrIx, new Token(INTEGER_TPREFIX));
+        arrIx, new Token(INTEGER_TYPENAME));
   }
 
   public static TclTree containerCreateNestedImmIx(String resultVar,
       String containerVar, Expression arrIx) {
     return new SetVariable(resultVar,
         new Square(F_CONTAINER_CREATE_NESTED_STATIC,
-            new Value(containerVar), arrIx, new Token(INTEGER_TPREFIX)));
+            new Value(containerVar), arrIx, new Token(INTEGER_TYPENAME)));
   }
 
   public static TclTree containerSlotCreate(Value arr) {
@@ -637,7 +637,7 @@ class Turbine
   }
 
   public static TclTree declareReference(String refVarName) {
-    return allocate(refVarName, INTEGER_TPREFIX);
+    return allocate(refVarName, INTEGER_TYPENAME);
   }
 
   /**
@@ -659,7 +659,6 @@ class Turbine
 
   public static TclTree callComposite(String function, TclList oList,
                                       TclList iList, TclList blockOn) {
-    //TODO: blockon
     return new Command(CALL_COMPOSITE,
         new Value(Turbine.LOCAL_STACK_NAME), new Token(function),
                   oList, iList, blockOn);

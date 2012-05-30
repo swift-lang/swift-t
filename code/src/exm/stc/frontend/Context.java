@@ -14,30 +14,32 @@ import exm.stc.ast.Types.SwiftType;
 import exm.stc.ast.Variable.DefType;
 import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.exceptions.DoubleDefineException;
-import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
 
+/**
+ * Abstract interface used to track and access contextual information about the
+ * program at different points in the AST. 
+ */
 public abstract class Context
 {
-  int level = 0;
+  protected int level = 0;
 
-  Logger logger = null;
+  protected Logger logger = null;
 
   /**
      Map from variable name to Variable object
    */
-  Map<String,Variable> variables = new HashMap<String,Variable>();
+  protected Map<String,Variable> variables = new HashMap<String,Variable>();
 
   /**
      True if this context scope has a visible parent scope
    */
-  boolean nested = false;
+  protected boolean nested = false;
 
   /**
      Current line in input file
    */
-  int line = 0;
+  protected int line = 0;
 
   /**
      Return global context.
@@ -45,10 +47,7 @@ public abstract class Context
      else return the GlobalContext this is using.
    */
   public abstract GlobalContext getGlobals();
-
-  public abstract SwiftType getType(String target)
-      throws UndefinedVariableException;
-
+  
   public abstract void defineCompositeFunction(String name,
                               FunctionType ft, boolean async)
       throws DoubleDefineException;
@@ -56,12 +55,42 @@ public abstract class Context
   public abstract void defineAppFunction(String name, FunctionType ft)
       throws DoubleDefineException;
 
+  /**
+   * Declare a new variable that will be visible in the
+   * current scope and all descendant scopes
+   * @param type
+   * @param name
+   * @param scope
+   * @param defType
+   * @param mapping
+   * @return
+   * @throws UserException
+   */
   public abstract Variable declareVariable(SwiftType type, String name, VariableStorage scope,
       DefType defType, Variable mapping) throws UserException;
 
+  /**
+   * Flag that an array should have its writers count decremented at
+   * end of block.  Multiple calls for same variable will result
+   * in duplicates
+   * @param var
+   */
   public abstract void flagArrayForClosing(Variable var);
-  public abstract List<Variable> getArraysToClose();
   
+  /**
+   * Get list of all arrays that were flagged
+   * @return
+   */
+  public abstract List<Variable> getArraysToClose();
+
+  /**
+   * Define a temporary variable with a unique name in the
+   * current context
+   * @param type
+   * @param storeInStack
+   * @return
+   * @throws UserException
+   */
   public abstract Variable createTmpVar(SwiftType type, boolean storeInStack)
   throws UserException;
 
@@ -75,6 +104,11 @@ public abstract class Context
   public abstract Variable createAliasVariable(SwiftType type)
   throws UserException;
 
+  /**
+   * Lookup variable based on name
+   * @param name
+   * @return
+   */
   public abstract Variable getDeclaredVariable(String name);
 
   /**
@@ -95,22 +129,12 @@ public abstract class Context
            isCompositeFunction(name);
   }
 
-  public abstract FunctionType lookupFunction(String name);
-
   /**
-     Check for UndefinedVariableException on all names in list
-     @throws UndefinedVariableException
+   * Lookup the type of a function
+   * @param name
+   * @return
    */
-  public void checkDefinedVariables(List<Variable> iList)
-  throws UndefinedVariableException
-  {
-    for (Variable v : iList) {
-      if (v == null) {
-        throw new STCRuntimeError("Null variable in list");
-      }
-      getType(v.getName());
-    }
-  }
+  public abstract FunctionType lookupFunction(String name);
 
   public void setNested(boolean b)
   {
@@ -146,12 +170,6 @@ public abstract class Context
       setInputFile(pos.file);
       this.line = pos.line;
     }
-  }
-
-  public void setLine(int antlrLine)
-  {
-    this.line = antlrLine;
-    // System.out.println("setLine: " + line);
   }
 
   public int getLine() {

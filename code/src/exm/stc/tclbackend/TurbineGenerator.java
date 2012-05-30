@@ -182,11 +182,11 @@ public class TurbineGenerator implements CompilerBackend
         point.add(Turbine.allocate(tclName, tprefix));
       }
     } else if (Types.isArray(t)) {
-      point.add(Turbine.allocateContainer(tclName, Turbine.INTEGER_TPREFIX));
+      point.add(Turbine.allocateContainer(tclName, Turbine.INTEGER_TYPENAME));
     } else if (Types.isReference(t)) {
-      point.add(Turbine.allocate(tclName, Turbine.INTEGER_TPREFIX));
+      point.add(Turbine.allocate(tclName, Turbine.INTEGER_TYPENAME));
     } else if (Types.isStruct(t)) {
-      point.add(Turbine.allocateContainer(tclName, Turbine.STRING_TPREFIX));
+      point.add(Turbine.allocateContainer(tclName, Turbine.STRING_TYPENAME));
     } else if (Types.isScalarValue(t)) {
       if (storage != VariableStorage.LOCAL) {
         throw new STCRuntimeError("Expected scalar value to have "
@@ -225,17 +225,17 @@ public class TurbineGenerator implements CompilerBackend
   {
     switch(type) {
     case INTEGER:
-      return Turbine.INTEGER_TPREFIX;
+      return Turbine.INTEGER_TYPENAME;
     case STRING:
-      return Turbine.STRING_TPREFIX;
+      return Turbine.STRING_TYPENAME;
     case FLOAT:
-      return Turbine.FLOAT_TPREFIX;
+      return Turbine.FLOAT_TYPENAME;
     case BOOLEAN:
-      return Turbine.INTEGER_TPREFIX;
+      return Turbine.INTEGER_TYPENAME;
     case VOID:
-      return Turbine.VOID_TPREFIX;
+      return Turbine.VOID_TYPENAME;
     case BLOB:
-      return Turbine.BLOB_TPREFIX;
+      return Turbine.BLOB_TYPENAME;
     default:
       // If we did not find the type, fail
       throw new STCRuntimeError("generator: unknown type: " + type);
@@ -1833,22 +1833,22 @@ public class TurbineGenerator implements CompilerBackend
     Command setCmd;
     switch (val.getType()) {
     case INTVAL:
-      typePrefix = Turbine.INTEGER_TPREFIX;
+      typePrefix = Turbine.INTEGER_TYPENAME;
       expr = new LiteralInt(val.getIntLit());
       setCmd = Turbine.integerSet(tclName, expr);
       break;
     case FLOATVAL:
-      typePrefix = Turbine.FLOAT_TPREFIX;
+      typePrefix = Turbine.FLOAT_TYPENAME;
       expr = new LiteralFloat(val.getFloatLit());
       setCmd = Turbine.floatSet(tclName, expr);
       break;
     case STRINGVAL:
-      typePrefix = Turbine.STRING_TPREFIX;
+      typePrefix = Turbine.STRING_TYPENAME;
       expr = new TclString(val.getStringLit(), true);
       setCmd = Turbine.stringSet(tclName, expr);
       break;
     case BOOLVAL:
-      typePrefix = Turbine.INTEGER_TPREFIX;
+      typePrefix = Turbine.INTEGER_TYPENAME;
       expr = new LiteralInt(val.getBoolLit() ? 1 : 0);
       setCmd = Turbine.integerSet(tclName, expr);
       break;

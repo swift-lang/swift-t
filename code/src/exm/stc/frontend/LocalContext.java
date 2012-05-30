@@ -10,14 +10,18 @@ import exm.stc.ast.Types.SwiftType;
 import exm.stc.ast.Variable.DefType;
 import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.exceptions.DoubleDefineException;
-import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
 
+/**
+ * Track context within a function.  New child contexts are created
+ * for every new variable scope.
+ *
+ */
 public class LocalContext
 extends Context
 {
-  Context parent = null;
-  GlobalContext globals = null;
+  private Context parent = null;
+  private GlobalContext globals = null;
 
   private final FunctionContext functionContext;
 
@@ -138,17 +142,6 @@ extends Context
 
     variables.put(name, variable);
     return variable;
-  }
-
-  @Override
-  public SwiftType getType(String name)
-  throws UndefinedVariableException
-  {
-    Variable variable = getDeclaredVariable(name);
-    if (variable == null)
-      throw new UndefinedVariableException
-      (this, "undefined variable: " + name);
-    return variable.getType();
   }
 
   @Override

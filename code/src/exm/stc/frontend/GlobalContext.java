@@ -11,36 +11,39 @@ import exm.stc.ast.Types.SwiftType;
 import exm.stc.ast.Variable.DefType;
 import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.exceptions.DoubleDefineException;
-import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
 
+/**
+ * Global context for entire program
+ *
+ */
 public class GlobalContext
 extends Context
 {
   /**
      Map from composite function name to function information
    */
-  Map<String, FunctionType> composites = new HashMap<String, FunctionType>();
+  private Map<String, FunctionType> composites = new HashMap<String, FunctionType>();
 
   /**
    * Which composites should be called synchronously  
    */
-  Set<String> syncComposites = new HashSet<String>();
+  private Set<String> syncComposites = new HashSet<String>();
   
   /**
      Map from app function name to function information
    */
-  Map<String, FunctionType> apps = new HashMap<String, FunctionType>();
+  private Map<String, FunctionType> apps = new HashMap<String, FunctionType>();
 
   /**
    * Map from type name to the type object
    */
-  Map<String, SwiftType> types = new HashMap<String, SwiftType>();
+  private Map<String, SwiftType> types = new HashMap<String, SwiftType>();
   
   /**
      The name of the original SwiftScript file
    */
-  String inputFile = null;
+  private String inputFile = null;
 
   public GlobalContext(String inputFile, Logger logger)
   {
@@ -53,16 +56,6 @@ extends Context
     this.inputFile = inputFile;
     // Add all predefined types into type name dict
     types.putAll(Builtins.getNativeTypes());
-  }
-
-  @Override
-  public SwiftType getType(String name)
-      throws UndefinedVariableException
-  {
-    Variable variable = variables.get(name);
-    if (variable == null)
-      throw new UndefinedVariableException(this, "undefined: " + name);
-    return variable.getType();
   }
 
   @Override

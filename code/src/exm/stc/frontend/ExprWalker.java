@@ -762,7 +762,6 @@ public class ExprWalker {
   private void callFunction(Context context, String function,
       List<Variable> oList, List<Variable> iList, Variable priorityVal)
       throws UndefinedTypeException, UserException {
-    context.checkDefinedVariables(iList);
 
     List<SwiftType> expectedTypes = TypeChecker.checkFunctionCall(context,
         function, oList, iList);
