@@ -53,11 +53,16 @@ public class TclString extends Expression
   }
 
   @Override
-  public void appendTo(StringBuilder outSb)
+  public void appendTo(StringBuilder outSb, ExprContext mode)
   {
-    outSb.append('\"');
-    outSb.append(this.sb);
-    outSb.append('\"');
+    if (mode == ExprContext.TCL_CODE) {
+      outSb.append('\"');
+      outSb.append(this.sb);
+      outSb.append('\"');
+    } else {
+      assert(mode == ExprContext.VALUE_STRING);
+      outSb.append(this.sb);
+    }
   }
   
   public void stringAppend(String s, boolean escape) {
@@ -68,7 +73,11 @@ public class TclString extends Expression
   }
   
   public void add(Expression expr) {
-    expr.appendTo(sb);
+    expr.appendTo(sb, ExprContext.VALUE_STRING);
+  }
+  
+  public void add(Expression expr, ExprContext mode) {
+    expr.appendTo(sb, mode);
   }
   
   /**
