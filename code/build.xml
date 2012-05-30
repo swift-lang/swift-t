@@ -20,7 +20,7 @@
   <property name="json.jar"
             value="lib/json.jar"/>
   <property name="grammar"
-            value="src/exm/stc/antlr/ExM.g"/>
+            value="src/exm/stc/ast/ExM.g"/>
   <property name="classpath"
             value=".:${antlr.jar}:${log4j.jar}"/>
 
@@ -47,7 +47,7 @@
 
   <!-- ANTLR output directory -->
   <property name="antlr.pkg"
-            value="exm/stc/antlr/gen" />
+            value="exm/stc/ast/antlr" />
   <property name="antlr.out"
             value="src/${antlr.pkg}" />
 

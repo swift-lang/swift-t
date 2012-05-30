@@ -7,6 +7,10 @@ import java.util.Set;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 
+/**
+ * An implementation of the set interface that allows cheap
+ * creation of child maps.
+ */
 public class HierarchicalSet<T> implements Set<T> {
   private final HierarchicalSet<T> parent;
   private final Set<T> set;

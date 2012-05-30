@@ -4,6 +4,15 @@ import java.util.*;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 
+/**
+ * This module provides the type definitions used for Swift,
+ * along with convenience functions for creating, checking and
+ * manipulating types.  
+ * 
+ * The base class for variable types is SwiftType.
+ * Since we don't yet have first class functions, FunctionType is separate
+ * from the variable type system.
+ */
 public class Types {
 
   public static class ArrayType extends SwiftType {

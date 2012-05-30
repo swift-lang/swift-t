@@ -3,7 +3,7 @@ package exm.stc.common.exceptions;
 
 /**
  * This represents a parser internal error.
- * These always indicate a parser bug.
+ * These always indicate a parser bug (or missing feature).
  * @author wozniak
  * */
 public class STCRuntimeError extends RuntimeException

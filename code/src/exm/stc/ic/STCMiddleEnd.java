@@ -22,28 +22,36 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.frontend.Builtins.LocalOpcode;
 import exm.stc.frontend.Builtins.UpdateMode;
-import exm.stc.ic.ICContinuations.ForeachLoop;
-import exm.stc.ic.ICContinuations.IfStatement;
-import exm.stc.ic.ICContinuations.Loop;
-import exm.stc.ic.ICContinuations.NestedBlock;
-import exm.stc.ic.ICContinuations.RangeLoop;
-import exm.stc.ic.ICContinuations.SwitchStatement;
-import exm.stc.ic.ICContinuations.WaitStatement;
-import exm.stc.ic.ICInstructions.Comment;
-import exm.stc.ic.ICInstructions.FunctionCallInstruction;
-import exm.stc.ic.ICInstructions.LocalBuiltin;
-import exm.stc.ic.ICInstructions.LoopBreak;
-import exm.stc.ic.ICInstructions.LoopContinue;
-import exm.stc.ic.ICInstructions.Oparg;
-import exm.stc.ic.ICInstructions.TurbineOp;
-import exm.stc.ic.SwiftIC.AppFunction;
-import exm.stc.ic.SwiftIC.Block;
-import exm.stc.ic.SwiftIC.BlockType;
-import exm.stc.ic.SwiftIC.BuiltinFunction;
-import exm.stc.ic.SwiftIC.CompFunction;
-import exm.stc.ic.SwiftIC.Program;
+import exm.stc.ic.opt.ICOptimiser;
+import exm.stc.ic.tree.ICContinuations.ForeachLoop;
+import exm.stc.ic.tree.ICContinuations.IfStatement;
+import exm.stc.ic.tree.ICContinuations.Loop;
+import exm.stc.ic.tree.ICContinuations.NestedBlock;
+import exm.stc.ic.tree.ICContinuations.RangeLoop;
+import exm.stc.ic.tree.ICContinuations.SwitchStatement;
+import exm.stc.ic.tree.ICContinuations.WaitStatement;
+import exm.stc.ic.tree.ICInstructions.Comment;
+import exm.stc.ic.tree.ICInstructions.FunctionCallInstruction;
+import exm.stc.ic.tree.ICInstructions.LocalBuiltin;
+import exm.stc.ic.tree.ICInstructions.LoopBreak;
+import exm.stc.ic.tree.ICInstructions.LoopContinue;
+import exm.stc.ic.tree.ICInstructions.Oparg;
+import exm.stc.ic.tree.ICInstructions.TurbineOp;
+import exm.stc.ic.tree.ICTree.AppFunction;
+import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.BlockType;
+import exm.stc.ic.tree.ICTree.BuiltinFunction;
+import exm.stc.ic.tree.ICTree.CompFunction;
+import exm.stc.ic.tree.ICTree.Program;
 
-public class SwiftICGenerator implements CompilerBackend {
+/**
+ * This class can be used to create the intermediate representation for a 
+ * program.  The intermediate representation is built up by calling methods
+ * on this class in sequence.  Once the IR is built up, it can be optimised,
+ * or it can be "replayed" with the regenerate method in order to 
+ * do the final code generation.
+ */
+public class STCMiddleEnd implements CompilerBackend {
 
   private final Logger logger;
   private Program program;
@@ -61,7 +69,7 @@ public class SwiftICGenerator implements CompilerBackend {
     return blockStack.peek();
   }
 
-  public SwiftICGenerator(Logger logger, PrintStream icOutput) {
+  public STCMiddleEnd(Logger logger, PrintStream icOutput) {
     this.logger = logger;
     this.program = new Program();
     this.icOutput = icOutput;
@@ -77,7 +85,7 @@ public class SwiftICGenerator implements CompilerBackend {
   @Override
   public void optimise() throws InvalidWriteException {
     logger.debug("Optimising Swift IC");
-    this.program = SwiftICOptimiser.optimise(logger, icOutput, program);
+    this.program = ICOptimiser.optimise(logger, icOutput, program);
     logger.debug("Optimisation done");
   }
 

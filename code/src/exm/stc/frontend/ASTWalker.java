@@ -48,7 +48,7 @@ import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.Context.VisibleVariable;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
-import exm.stc.ic.ICInstructions.Oparg;
+import exm.stc.ic.tree.ICInstructions.Oparg;
 
 public class ASTWalker {
 

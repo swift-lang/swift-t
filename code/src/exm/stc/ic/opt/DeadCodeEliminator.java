@@ -5,8 +5,8 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.ic.ICContinuations.Continuation;
-import exm.stc.ic.SwiftIC.Block;
+import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICTree.Block;
 
 public class DeadCodeEliminator {
 

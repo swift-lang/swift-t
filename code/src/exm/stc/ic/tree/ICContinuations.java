@@ -1,4 +1,4 @@
-package exm.stc.ic;
+package exm.stc.ic.tree;
 
 import java.util.*;
 
@@ -11,15 +11,26 @@ import exm.stc.common.CompilerBackend;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.frontend.Builtins.LocalOpcode;
-import exm.stc.ic.ICInstructions.LocalBuiltin;
-import exm.stc.ic.ICInstructions.LoopBreak;
-import exm.stc.ic.ICInstructions.LoopContinue;
-import exm.stc.ic.ICInstructions.Oparg;
-import exm.stc.ic.ICInstructions.OpargType;
-import exm.stc.ic.SwiftIC.Block;
-import exm.stc.ic.SwiftIC.BlockType;
-import exm.stc.ic.SwiftIC.GenInfo;
+import exm.stc.ic.ICUtil;
+import exm.stc.ic.tree.ICInstructions.LocalBuiltin;
+import exm.stc.ic.tree.ICInstructions.LoopBreak;
+import exm.stc.ic.tree.ICInstructions.LoopContinue;
+import exm.stc.ic.tree.ICInstructions.Oparg;
+import exm.stc.ic.tree.ICInstructions.OpargType;
+import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.BlockType;
+import exm.stc.ic.tree.ICTree.GenInfo;
 
+/**
+ * This module contains definitions of all of the continuation varieties used
+ * in the intermediate representation.  Each continuation is some sort of
+ * control flow structure.
+ * 
+ * Each continuation object is responsible for being able to perform particular
+ * transformations and report information about itself.  See the Continuation
+ * base class to see what methods must be implemented. 
+ *
+ */
 public class ICContinuations {
   public static final String indent = ICUtil.indent;
 
@@ -826,7 +837,7 @@ public class ICContinuations {
    * proper variable renaming scheme for nested blocks we can just
    * flatten them into the main block
    */
-  static class NestedBlock extends Continuation {
+  public static class NestedBlock extends Continuation {
     private final Block block;
 
     public NestedBlock() {
@@ -1294,7 +1305,7 @@ public class ICContinuations {
     }
   }
 
-  static class SwitchStatement extends Continuation {
+  public static class SwitchStatement extends Continuation {
     private final ArrayList<Integer> caseLabels;
     private final ArrayList<Block> caseBlocks;
     private final Block defaultBlock;

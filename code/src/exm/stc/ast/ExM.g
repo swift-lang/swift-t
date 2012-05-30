@@ -73,7 +73,7 @@ tokens {
 }
 
 @parser::header {
-package exm.stc.antlr.gen;
+package exm.stc.ast.antlr;
 import exm.stc.ast.FilePosition;
 import exm.stc.ast.FilePosition.LineMapping;
 
@@ -112,7 +112,7 @@ import exm.stc.ast.FilePosition.LineMapping;
 }
 
 @lexer::header {
-package exm.stc.antlr.gen;
+package exm.stc.ast.antlr;
 import exm.stc.ast.FilePosition;
 import exm.stc.ast.FilePosition.LineMapping;
 }

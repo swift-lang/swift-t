@@ -10,12 +10,17 @@ import java.util.Map;
 import java.util.Set;
 
 import exm.stc.ast.Variable;
-import exm.stc.ic.ICContinuations.Continuation;
-import exm.stc.ic.ICInstructions.Instruction;
-import exm.stc.ic.ICInstructions.Oparg;
-import exm.stc.ic.ICInstructions.OpargType;
-import exm.stc.ic.SwiftIC.Block;
+import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Oparg;
+import exm.stc.ic.tree.ICInstructions.OpargType;
+import exm.stc.ic.tree.ICTree.Block;
 
+/**
+ * Miscellaneous useful utilities that are used in multiple places in the intermediate 
+ * code
+ *
+ */
 public class ICUtil {
 
   public static final String indent = "  ";

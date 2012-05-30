@@ -1,4 +1,4 @@
-package exm.stc.ic;
+package exm.stc.ic.opt;
 
 import java.io.PrintStream;
 
@@ -8,18 +8,9 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.ic.ICContinuations.Continuation;
-import exm.stc.ic.SwiftIC.Block;
-import exm.stc.ic.SwiftIC.CompFunction;
-import exm.stc.ic.SwiftIC.Program;
-import exm.stc.ic.opt.ConstantFinder;
-import exm.stc.ic.opt.ContinuationFusion;
-import exm.stc.ic.opt.FixupVariables;
-import exm.stc.ic.opt.Flattener;
-import exm.stc.ic.opt.ForwardDataflow;
-import exm.stc.ic.opt.WaitCoalescer;
+import exm.stc.ic.tree.ICTree.Program;
 
-public class SwiftICOptimiser {
+public class ICOptimiser {
 
   /**
    * Optimize the program and return a new one
@@ -64,7 +55,7 @@ public class SwiftICOptimiser {
             pass == 0) {
           // Can only unroll loops once.  Do after constant folding to make sure
           //  that we have a good chance of eliminating branches
-          unrollLoops(logger, prog);
+          LoopUnroller.unrollLoops(logger, prog);
           if (logIC) {
             prog.log(icOutput, "After unrolling loops");
           }
@@ -121,33 +112,6 @@ public class SwiftICOptimiser {
     }
     return prog;
   }
-  
-  private static void unrollLoops(Logger logger, Program prog) {
-    for (CompFunction f: prog.getComposites()) {
-      if (unrollLoops(logger, prog, f, f.getMainblock())) {
-        // Unrolling can introduce duplicate vars
-        Flattener.makeVarNamesUnique(f, prog.getGlobalConsts().keySet());
-        Flattener.flattenNestedBlocks(f.getMainblock());
-      }
-    }
-  }
 
-  private static boolean unrollLoops(Logger logger, Program prog, CompFunction f,
-      Block block) {
-    logger.debug("looking to unroll loops in " + f.getName());
-    boolean unrolled = false;
-    for (int i = 0; i < block.getContinuations().size(); i++) {
-      Continuation c = block.getContinuation(i);
-      
-      boolean cRes = c.tryUnroll(logger, block);
-      unrolled = unrolled || cRes;
-
-      for (Block b: c.getBlocks()) {
-        boolean res = unrollLoops(logger, prog, f, b);
-        unrolled = unrolled || res;
-      }
-    }
-    return unrolled;
-  }
 }
     

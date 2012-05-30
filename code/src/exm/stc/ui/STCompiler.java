@@ -21,7 +21,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.util.Misc;
 import exm.stc.frontend.ASTWalker;
-import exm.stc.ic.SwiftICGenerator;
+import exm.stc.ic.STCMiddleEnd;
 import exm.stc.tclbackend.TurbineGenerator;
 
 /**
@@ -183,7 +183,7 @@ public class STCompiler {
        * This is where type checking and other semantic analysis happens.
        */
       ASTWalker walker = new ASTWalker(inputFile, lineMapping);
-      SwiftICGenerator intermediate = new SwiftICGenerator(logger, icOutput);
+      STCMiddleEnd intermediate = new STCMiddleEnd(logger, icOutput);
       walker.walk(intermediate, tree);
       
       /* Optimise intermediate representation by repeatedly rewriting tree

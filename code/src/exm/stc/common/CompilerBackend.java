@@ -11,7 +11,7 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.frontend.Builtins.LocalOpcode;
 import exm.stc.frontend.Builtins.UpdateMode;
-import exm.stc.ic.ICInstructions.Oparg;
+import exm.stc.ic.tree.ICInstructions.Oparg;
 
 public interface CompilerBackend {
 

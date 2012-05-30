@@ -5,9 +5,9 @@ import java.util.List;
 
 import exm.stc.ast.Variable;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.ic.ICInstructions.Instruction;
-import exm.stc.ic.ICInstructions.Oparg;
-import exm.stc.ic.ICInstructions.Opcode;
+import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Oparg;
+import exm.stc.ic.tree.ICInstructions.Opcode;
 
 /**
  * A class that provides a canonical description of a computed value.

@@ -4,8 +4,7 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 
 /** 
- * Simple immutable class to record line/file
- * @author tga
+ * Simple immutable class to record line/file position
  *
  */
 public class FilePosition {
@@ -23,6 +22,11 @@ public class FilePosition {
     return file + ":" + line;
   }
 
+  /**
+   * Class used to keep track of correspondence between lines in 
+   * CPP output and lines in original input files
+   *
+   */
   public static class LineMapping {
     private final TreeMap<Integer, FilePosition> fileMap
           = new TreeMap<Integer, FilePosition>();

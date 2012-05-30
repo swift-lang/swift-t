@@ -32,7 +32,7 @@ import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.ic.ICInstructions.Oparg;
+import exm.stc.ic.tree.ICInstructions.Oparg;
 
 /**
  * This module contains logic to walk individual expression in Swift and generate code to evaluate them

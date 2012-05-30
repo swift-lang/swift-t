@@ -19,18 +19,18 @@ import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.MultiMap.LinkedListFactory;
 import exm.stc.common.util.MultiMap.ListFactory;
 import exm.stc.ic.ICUtil;
-import exm.stc.ic.ICContinuations.Continuation;
-import exm.stc.ic.ICContinuations.ContinuationType;
-import exm.stc.ic.ICContinuations.WaitStatement;
-import exm.stc.ic.ICInstructions.Instruction;
-import exm.stc.ic.ICInstructions.Oparg;
-import exm.stc.ic.ICInstructions.OpargType;
-import exm.stc.ic.ICInstructions.Instruction.MakeImmChange;
-import exm.stc.ic.ICInstructions.Instruction.MakeImmRequest;
-import exm.stc.ic.SwiftIC.Block;
-import exm.stc.ic.SwiftIC.CompFunction;
-import exm.stc.ic.SwiftIC.Program;
 import exm.stc.ic.opt.OptUtil.InstOrCont;
+import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICContinuations.ContinuationType;
+import exm.stc.ic.tree.ICContinuations.WaitStatement;
+import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Oparg;
+import exm.stc.ic.tree.ICInstructions.OpargType;
+import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
+import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
+import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.CompFunction;
+import exm.stc.ic.tree.ICTree.Program;
 
 /**
  * This optimization pass aims to rearrange task dependencies to:
@@ -321,6 +321,7 @@ public class WaitCoalescer {
     
     MultiMap<String, InstOrCont> waitMap = buildWaiterMap(block);
     
+    /* Iterate over all descendant blocks of the block */
     while (!workStack.empty()) {
       if (waitMap.isDefinitelyEmpty()) {
         // If waitMap is empty, can't push anything down, so just
@@ -329,6 +330,7 @@ public class WaitCoalescer {
       }
       Block curr = workStack.pop();
       
+      /* Iterate over all instructions in this descendant block */
       ListIterator<Instruction> it = curr.instructionIterator();
       while (it.hasNext()) {
         Instruction i = it.next();
@@ -341,6 +343,8 @@ public class WaitCoalescer {
             writtenFutures.add(outv);
           }
         }
+        
+        // Relocate instructions which depend on output future of this instruction
         for (Variable v: writtenFutures) {
           if (waitMap.containsKey(v.getName())) {
             relocateDependentInstructions(logger, block, curr, it, waitMap, v);

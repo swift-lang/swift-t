@@ -1,4 +1,4 @@
-package exm.stc.ic;
+package exm.stc.ic.tree;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -28,15 +28,16 @@ import exm.stc.common.CompilerBackend;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.ic.ICContinuations.Continuation;
-import exm.stc.ic.ICInstructions.Instruction;
-import exm.stc.ic.ICInstructions.Oparg;
-import exm.stc.ic.ICInstructions.OpargType;
-import exm.stc.ic.ICInstructions.Opcode;
+import exm.stc.ic.ICUtil;
+import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Oparg;
+import exm.stc.ic.tree.ICInstructions.OpargType;
+import exm.stc.ic.tree.ICInstructions.Opcode;
 
 /**
- * This has the definitions for the top-level constructs in Swift-IC,
- * including functions and blocks 
+ * This has the definitions for the top-level constructs in the intermediate
+ * representation, including functions and blocks 
  * 
  * The IC tree looks like:
  * 
@@ -54,7 +55,7 @@ import exm.stc.ic.ICInstructions.Opcode;
  *       -> Continuation       -> Block
  *                             -> Block
  */
-public class SwiftIC {
+public class ICTree {
 
   public static final String indent = ICUtil.indent;
   
@@ -269,7 +270,7 @@ public class SwiftIC {
     }
   }
 
-  static class AppFunction {
+  public static class AppFunction {
     private final String name;
     private final List<Variable> iList;
     private final List<Variable> oList;
@@ -307,7 +308,7 @@ public class SwiftIC {
 
   }
 
-  static class BuiltinFunction {
+  public static class BuiltinFunction {
     private final String name;
     private final String pkg;
     private final String version;
@@ -491,7 +492,7 @@ public class SwiftIC {
 
 
   // Keep track of block type, mainly for purpose of asserts
-  enum BlockType {
+  public enum BlockType {
     MAIN_BLOCK,
     NESTED_BLOCK,
     CASE_BLOCK,
@@ -974,7 +975,7 @@ public class SwiftIC {
   }
   
   /** State to pass around when doing code generation from SwiftIC */
-  static class GenInfo {
+  public static class GenInfo {
     /** Function name -> vector of which inputs are blocking */
     private final Map<String, List<Boolean>> compBlockingInputs;
 

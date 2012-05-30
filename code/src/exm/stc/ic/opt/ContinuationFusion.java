@@ -5,14 +5,14 @@ import java.util.ListIterator;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.ic.ICContinuations.Continuation;
-import exm.stc.ic.ICContinuations.ContinuationType;
-import exm.stc.ic.ICContinuations.ForeachLoop;
-import exm.stc.ic.ICContinuations.IfStatement;
-import exm.stc.ic.ICContinuations.RangeLoop;
-import exm.stc.ic.SwiftIC.Block;
-import exm.stc.ic.SwiftIC.CompFunction;
-import exm.stc.ic.SwiftIC.Program;
+import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICContinuations.ContinuationType;
+import exm.stc.ic.tree.ICContinuations.ForeachLoop;
+import exm.stc.ic.tree.ICContinuations.IfStatement;
+import exm.stc.ic.tree.ICContinuations.RangeLoop;
+import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.CompFunction;
+import exm.stc.ic.tree.ICTree.Program;
 
 /**
  * Fuse together equivalent continuations e.g. if statements with

@@ -1,4 +1,4 @@
-package exm.stc.ic;
+package exm.stc.ic.tree;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,11 +22,19 @@ import exm.stc.frontend.Builtins;
 import exm.stc.frontend.Builtins.LocalOpcode;
 import exm.stc.frontend.Builtins.SemanticInfo;
 import exm.stc.frontend.Builtins.UpdateMode;
-import exm.stc.ic.SwiftIC.GenInfo;
+import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
+import exm.stc.ic.tree.ICTree.GenInfo;
 import exm.stc.tclbackend.tree.TclString;
-
+/**
+ * This class contains instructions used in the intermediate representation.
+ * Each instruction is responsible for making particular modifications to
+ * itself, and for reporting particular information about itself. The
+ * Instruction interface has a number of methods that each instruction
+ * must implement for this purpose.
+ *
+ */
 public class ICInstructions {
   public static abstract class Instruction {
     public final Opcode op;

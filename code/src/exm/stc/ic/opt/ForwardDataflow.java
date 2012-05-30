@@ -23,22 +23,22 @@ import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.HierarchicalSet;
-import exm.stc.ic.ICInstructions;
 import exm.stc.ic.ICUtil;
-import exm.stc.ic.ICContinuations.Continuation;
-import exm.stc.ic.ICContinuations.ContinuationType;
-import exm.stc.ic.ICContinuations.Loop;
-import exm.stc.ic.ICContinuations.WaitStatement;
-import exm.stc.ic.ICInstructions.Instruction;
-import exm.stc.ic.ICInstructions.Oparg;
-import exm.stc.ic.ICInstructions.OpargType;
-import exm.stc.ic.ICInstructions.Opcode;
-import exm.stc.ic.ICInstructions.Instruction.MakeImmChange;
-import exm.stc.ic.ICInstructions.Instruction.MakeImmRequest;
-import exm.stc.ic.SwiftIC.Block;
-import exm.stc.ic.SwiftIC.CompFunction;
-import exm.stc.ic.SwiftIC.Program;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
+import exm.stc.ic.tree.ICInstructions;
+import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICContinuations.ContinuationType;
+import exm.stc.ic.tree.ICContinuations.Loop;
+import exm.stc.ic.tree.ICContinuations.WaitStatement;
+import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Oparg;
+import exm.stc.ic.tree.ICInstructions.OpargType;
+import exm.stc.ic.tree.ICInstructions.Opcode;
+import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
+import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
+import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.CompFunction;
+import exm.stc.ic.tree.ICTree.Program;
 
 /**
  * This optimisation pass does a range of optimizations.  The overarching idea

@@ -18,16 +18,16 @@ import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.util.HierarchicalMap;
-import exm.stc.ic.ICInstructions;
 import exm.stc.ic.ICUtil;
-import exm.stc.ic.ICContinuations.Continuation;
-import exm.stc.ic.ICInstructions.Instruction;
-import exm.stc.ic.ICInstructions.LocalBuiltin;
-import exm.stc.ic.ICInstructions.Oparg;
-import exm.stc.ic.ICInstructions.Opcode;
-import exm.stc.ic.SwiftIC.Block;
-import exm.stc.ic.SwiftIC.CompFunction;
-import exm.stc.ic.SwiftIC.Program;
+import exm.stc.ic.tree.ICInstructions;
+import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.LocalBuiltin;
+import exm.stc.ic.tree.ICInstructions.Oparg;
+import exm.stc.ic.tree.ICInstructions.Opcode;
+import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.CompFunction;
+import exm.stc.ic.tree.ICTree.Program;
 
 /**
  * This module contains a set of optimisations that either seek out or

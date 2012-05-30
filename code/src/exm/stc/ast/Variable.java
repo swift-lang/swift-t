@@ -5,6 +5,14 @@ import java.util.*;
 
 import exm.stc.ast.Types.SwiftType;
 
+/**
+ * This class is used to contain the relevant information about
+ * each variable in a Swift program.  All member variables
+ * in the Variable are final, which means that each variable
+ * instance can be treated as an immutable value and
+ * safely shared between multiple data structures
+ *
+ */
 public class Variable
 {
   private final SwiftType type;

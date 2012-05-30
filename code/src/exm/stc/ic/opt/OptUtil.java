@@ -9,13 +9,13 @@ import exm.stc.ast.Types.SwiftType;
 import exm.stc.ast.Variable.DefType;
 import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.ic.ICInstructions;
-import exm.stc.ic.ICContinuations.Continuation;
-import exm.stc.ic.ICInstructions.Instruction;
-import exm.stc.ic.ICInstructions.Oparg;
-import exm.stc.ic.ICInstructions.TurbineOp;
-import exm.stc.ic.ICInstructions.Instruction.MakeImmChange;
-import exm.stc.ic.SwiftIC.Block;
+import exm.stc.ic.tree.ICInstructions;
+import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Oparg;
+import exm.stc.ic.tree.ICInstructions.TurbineOp;
+import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
+import exm.stc.ic.tree.ICTree.Block;
 
 public class OptUtil {
 

@@ -12,12 +12,12 @@ import exm.stc.ast.Variable.DefType;
 import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.util.HierarchicalMap;
-import exm.stc.ic.ICContinuations.Continuation;
-import exm.stc.ic.ICInstructions.Instruction;
-import exm.stc.ic.ICInstructions.Oparg;
-import exm.stc.ic.SwiftIC.Block;
-import exm.stc.ic.SwiftIC.CompFunction;
-import exm.stc.ic.SwiftIC.Program;
+import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Oparg;
+import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.CompFunction;
+import exm.stc.ic.tree.ICTree.Program;
 
 public class FixupVariables {
 
