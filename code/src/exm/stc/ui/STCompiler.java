@@ -213,7 +213,7 @@ public class STCompiler {
       System.exit(ExitCode.ERROR_USER.code());
     }
     catch (AssertionError e) {
-      System.err.println("PARSER INTERNAL ERROR");
+      System.err.println("STC INTERNAL ERROR");
       System.err.println("Please report this");
       e.printStackTrace();
       System.exit(ExitCode.ERROR_INTERNAL.code());
@@ -226,7 +226,7 @@ public class STCompiler {
     catch (Throwable e)
     {
       // Other error, possibly ParserRuntimeException
-      System.err.println("PARSER INTERNAL ERROR");
+      System.err.println("STC INTERNAL ERROR");
       System.err.println("Please report this");
       e.printStackTrace();
       System.exit(ExitCode.ERROR_INTERNAL.code());

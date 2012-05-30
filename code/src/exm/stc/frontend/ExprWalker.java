@@ -412,6 +412,11 @@ public class ExprWalker {
       throw UndefinedFunctionException.unknownFunction(context, f);
     }
     
+    if (arglist.getChildCount() > 0 && ftype.getInputs().size() == 0) {
+      throw new TypeMismatchException(context, "Argument provided to " +
+      		"zero-argument function: " + f);
+    }
+    
     // evaluate argument expressions left to right, creating temporaries
     ArrayList<Variable> argVars = new ArrayList<Variable>(
             arglist.getChildCount());
