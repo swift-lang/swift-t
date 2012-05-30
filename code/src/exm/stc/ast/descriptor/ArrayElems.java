@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import exm.stc.antlr.gen.ExMParser;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
 import exm.stc.frontend.Context;
 

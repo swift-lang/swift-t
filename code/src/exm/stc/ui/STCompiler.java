@@ -13,8 +13,8 @@ import org.antlr.runtime.Token;
 import org.antlr.runtime.tree.CommonTreeAdaptor;
 import org.apache.log4j.Logger;
 
-import exm.stc.antlr.gen.ExMLexer;
-import exm.stc.antlr.gen.ExMParser;
+import exm.stc.ast.antlr.ExMLexer;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.common.exceptions.STCRuntimeError;

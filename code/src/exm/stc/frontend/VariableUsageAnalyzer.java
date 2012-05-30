@@ -2,7 +2,7 @@ package exm.stc.frontend;
 
 import java.util.*;
 
-import exm.stc.antlr.gen.ExMParser;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.Types;
 import exm.stc.ast.Variable;

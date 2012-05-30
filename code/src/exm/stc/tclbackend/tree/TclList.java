@@ -13,34 +13,24 @@ public class TclList extends Square
   {
     super();
 
-    items.add(new Token("list"));
+    add(new Token("list"));
   }
 
   public TclList(Expression... listItems) {
     this();
-    for (Expression e: listItems) {
-      items.add(e);
-    }
+    addAll(listItems);
   }
   
   public TclList(List<? extends Expression> listItems)
   {
     this();
-    for (Expression tok: listItems) {
-      items.add(tok);
-    }
+    addAll(listItems);
   }
 
   public TclList(String... strings)
   {
     this();
     for (String s : strings)
-      items.add(new Token(s));
-  }
-
-  @Override
-  public void add(Expression token)
-  {
-    items.add(token);
+      add(new Token(s));
   }
 }

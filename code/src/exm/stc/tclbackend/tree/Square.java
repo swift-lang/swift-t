@@ -2,32 +2,60 @@
 package exm.stc.tclbackend.tree;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Tcl square bracket expression, e.g., [ expr ... ]
  * */
 public class Square extends Expression
 {
+
+  private final List<Expression> items;
+  
   public Square()
   {
     super();
+    this.items = new ArrayList<Expression>();
   }
 
   public Square(Expression expression)
   {
-    super(expression);
-  }
-
-  public Square(String... tokens)
-  {
-    super(new Expression(tokens));
+    this();
+    this.add(expression);
   }
 
   public Square(Expression... tokens)
   {
-    super(new Expression(tokens));
+    this.items = new ArrayList<Expression>(tokens.length);
+    for (Expression e: tokens) {
+      items.add(e);
+    }
+  }
+
+  public Square(String... strings)
+  {
+    items = new ArrayList<Expression>(strings.length);
+    for (String s : strings)
+      items.add(new Token(s));
+  }
+
+  public void add(Expression item)
+  {
+    items.add(item);
   }
   
+  public void addAll(Expression... exprs)
+  {
+    for (Expression e: items) {
+      items.add(e); 
+    }
+  }
+  
+  public void addAll(Collection<? extends Expression> exprs)
+  {
+    items.addAll(exprs); 
+  }
 
   @Override
   public void appendTo(StringBuilder sb, ExprContext mode)

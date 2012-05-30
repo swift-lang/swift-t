@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
-import exm.stc.antlr.gen.ExMParser;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.Types;
 import exm.stc.ast.Types.FunctionType;
 import exm.stc.ast.Types.PrimType;

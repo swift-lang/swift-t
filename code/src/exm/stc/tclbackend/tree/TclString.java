@@ -72,7 +72,6 @@ public class TclString extends Expression
     this.sb.append(s);
   }
   
-  @Override
   public void add(Expression expr) {
     expr.appendTo(sb, ExprContext.VALUE_STRING);
   }

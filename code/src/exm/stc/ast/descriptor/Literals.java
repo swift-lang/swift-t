@@ -1,6 +1,6 @@
 package exm.stc.ast.descriptor;
 
-import exm.stc.antlr.gen.ExMParser;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
