@@ -34,4 +34,15 @@ WORKERS=1
 PROCS=$(( ENGINES + SERVERS + WORKERS ))
 
 ${TURBINE} -l -n ${PROCS} ${PROGRAM} ${ARGS} >& ${OUTPUT}
-# Return result from mpiexec
+EXITCODE=${?}
+[[ ${EXITCODE} != 0 ]] && exit ${EXITCODE}
+
+# Valgrind-related checks:
+grep -f ${STC_TESTS_DIR}/valgrind-patterns.grep ${OUTPUT}
+if [[ ${?} == 0 ]]
+then
+  print "run-test: valgrind detected error: ${PROGRAM}"
+  exit 1
+fi
+
+exit ${EXITCODE}
