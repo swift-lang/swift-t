@@ -1408,14 +1408,15 @@ int ADLBP_Server(double hi_malloc, double periodic_log_interval)
             MPI_CHECK(rc);
             if (opts.request_subscripts)
             {
-              rc = MPI_Send(subscripts, subscripts_length+1, MPI_CHAR, from_rank,
+              rc = MPI_Send(subscripts, subscripts_length+1,
+                            MPI_BYTE, from_rank,
                             TA_ACK_AND_RC, adlb_all_comm);
               MPI_CHECK(rc);
               free(subscripts);
             }
             if (opts.request_members)
             {
-              rc = MPI_Send(members, actual*sizeof(adlb_datum_id),
+              rc = MPI_Send(members, members_length,
                             MPI_BYTE, from_rank,
                             TA_ACK_AND_RC, adlb_all_comm);
               MPI_CHECK(rc);
