@@ -834,15 +834,13 @@ record_index(char* s, int x, int n, struct record_entry* entries)
   // Current pointer into buffer
   char* p = s;
   // Current output index
-  int i = 0;
-  while (i < x)
+  for (int i = 0; i < x; i++)
   {
     assert(p < p+n);
     char* r = strchr(p, RS);
     int length = r-p;
     entries[i].s = p;
     entries[i].length = length;
-    i++;
     p = r+1;
   }
 }
