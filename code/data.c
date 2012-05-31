@@ -460,8 +460,8 @@ data_retrieve(adlb_datum_id id, adlb_data_type* type,
    Extract the table members into a big string
  */
 void
-extract_members(char** output, int* output_length,
-                struct table* members, int count, int offset)
+extract_members(struct table* members, int count, int offset,
+                char** output, int* output_length)
 {
   // Pointer into output string
   char* p;
@@ -491,6 +491,8 @@ extract_members(char** output, int* output_length,
   }
   *output = A;
   *output_length = p - A;
+  TRACE("extract_members: output_length: %i\n",
+        *output_length);
 }
 
 /**
@@ -537,8 +539,8 @@ data_enumerate(adlb_datum_id container_id, int count, int offset,
                                       c->data.CONTAINER.members,
                                       count, offset);
   if (*members)
-    extract_members(members, members_length, c->data.CONTAINER.members,
-                    count, offset);
+    extract_members(c->data.CONTAINER.members,
+                    count, offset, members, members_length);
 
    return ADLB_DATA_SUCCESS;
 }
@@ -650,6 +652,7 @@ data_insert(adlb_datum_id container_id,
   else
     *count = 0;
 
+  TRACE("data_insert(): DONE");
   return ADLB_DATA_SUCCESS;
 }
 
