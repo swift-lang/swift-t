@@ -332,9 +332,9 @@ namespace eval turbine {
     }
 
     proc container_create_nested { c i type } {
-      debug "container_create_nested: $c\[$i\] $type"
+      debug "container_create_nested: $c\[\"$i\"\] $type"
       if [ adlb::insert_atomic $c $i ] {
-        debug "$c\[$i\] doesn't exist, creating"
+        debug "$c\[\"$i\"\] doesn't exist, creating"
         # Member did not exist: create it and get reference
         allocate_container t $type
         adlb::insert $c $i $t

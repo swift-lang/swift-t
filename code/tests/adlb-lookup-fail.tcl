@@ -9,6 +9,7 @@ if [ adlb::amserver ] {
 } else {
     adlb::create 3 $adlb::CONTAINER integer
     set result [ adlb::lookup 3 2 ]
+    # Should not get here- Tcl error not handled
     puts "lookup: $result"
 }
 

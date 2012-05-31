@@ -14,8 +14,11 @@ package require turbine 0.0.1
 proc rules { } {
 
     turbine::create_container 1 integer
-    turbine::create_file 2 file1.txt
-    turbine::create_file 3 file2.txt
+    turbine::create_string 2
+    turbine::create_string 3
+
+    turbine::store_string 2 "string2"
+    turbine::store_string 3 "string3"
 
     # set <container> <subscript> <member>
     turbine::container_insert 1 "0" 2
@@ -28,8 +31,8 @@ proc rules { } {
     foreach subscript $L {
         set member [ turbine::container_lookup 1 $subscript ]
         puts "member: $member"
-        set filename [ turbine::filename $member ]
-        puts "filename: $filename"
+        set s [ turbine::retrieve_string $member ]
+        puts "string: $s"
     }
 }
 

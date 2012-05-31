@@ -296,19 +296,19 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   // puts("exit reserve");
   if (rc == ADLB_DONE_BY_EXHAUSTION)
   {
-    // puts("ADLB_DONE_BY_EXHAUSTION!");
+    DEBUG("ADLB_DONE_BY_EXHAUSTION!");
     result[0] = '\0';
   }
   else if (rc == ADLB_NO_MORE_WORK ) {
-    // puts("ADLB_NO_MORE_WORK!");
+    DEBUG("ADLB_NO_MORE_WORK!");
     result[0] = '\0';
   }
   else if (rc == ADLB_NO_CURRENT_WORK) {
-    // puts("ADLB_NO_CURRENT_WORK");
+    DEBUG("ADLB_NO_CURRENT_WORK");
     result[0] = '\0';
   }
   else if (rc < 0) {
-    puts("rc < 0");
+    DEBUG("rc < 0");
     result[0] = '\0';
   }
   else
@@ -647,13 +647,15 @@ static inline int set_enumerate_pointers(Tcl_Interp *interp,
                                          Tcl_Obj *const objv[],
                                          const char* token,
                                          char** subscripts,
-                                         adlb_datum_id** member_ids);
+                                         char** members);
 
 static inline void enumerate_object(Tcl_Interp *interp,
                                     const char* token,
                                     char* subscripts,
-                                    int length, int actual,
-                                    adlb_datum_id* member_ids,
+                                    int subscripts_length,
+                                    char* members,
+                                    int members_length,
+                                    int records,
                                     Tcl_Obj** result);
 
 /**
@@ -693,20 +695,24 @@ ADLB_Enumerate_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   // Set up call
   char* subscripts;
-  int length;
-  adlb_datum_id* member_ids;
-  int actual;
+  int subscripts_length;
+  char* members;
+  int members_length;
+  int records;
   rc = set_enumerate_pointers(interp, objv, token,
-                              &subscripts, &member_ids);
+                              &subscripts, &members);
   TCL_CHECK_MSG(rc, "unknown token!");
 
+  // Call ADLB
   rc = ADLB_Enumerate(container_id, count, offset,
-                      &subscripts, &length, &member_ids, &actual);
+                      &subscripts, &subscripts_length,
+                      &members, &members_length, &records);
 
   // Return results to Tcl
   Tcl_Obj* result;
   enumerate_object(interp, token,
-                   subscripts, length, actual, member_ids, &result);
+                   subscripts, subscripts_length,
+                   members, members_length, records, &result);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
@@ -718,27 +724,27 @@ ADLB_Enumerate_Cmd(ClientData cdata, Tcl_Interp *interp,
 static inline int
 set_enumerate_pointers(Tcl_Interp *interp, Tcl_Obj *const objv[],
                        const char* token,
-                       char** subscripts, adlb_datum_id** member_ids)
+                       char** subscripts, char** members)
 {
   if (!strcmp(token, "subscripts"))
   {
     *subscripts = NULL+1;
-    *member_ids = NULL;
+    *members = NULL;
   }
   else if (!strcmp(token, "members"))
   {
     *subscripts = NULL;
-    *member_ids = NULL+1;
+    *members = NULL+1;
   }
   else if (!strcmp(token, "dict"))
   {
     *subscripts = NULL+1;
-    *member_ids = NULL+1;
+    *members = NULL+1;
   }
   else if (!strcmp(token, "count"))
   {
     *subscripts = NULL;
-    *member_ids = NULL;
+    *members = NULL;
   }
   else
   {
@@ -748,51 +754,97 @@ set_enumerate_pointers(Tcl_Interp *interp, Tcl_Obj *const objv[],
 }
 
 /**
+   Simple string struct for indices of strings
+   Note: s may not be NULL-terminated: user must refer to length
+ */
+struct record_entry
+{
+  char* s;
+  int length;
+};
+
+static void record_index(char* s, int x, int n,
+                         struct record_entry* entries);
+
+/**
    Pack ADLB_Enumerate results into Tcl object
  */
 void
 enumerate_object(Tcl_Interp *interp, const char* token,
-                 char* subscripts, int length, int actual,
-                 adlb_datum_id* member_ids,
-                 Tcl_Obj** result)
+                 char* subscripts, int subscripts_length,
+                 char* members, int members_length,
+                 int records, Tcl_Obj** result)
 {
   if (!strcmp(token, "subscripts"))
   {
-    *result = Tcl_NewStringObj(subscripts, length-1);
+    *result = Tcl_NewStringObj(subscripts, subscripts_length-1);
     free(subscripts);
   }
   else if (!strcmp(token, "members"))
   {
-    Tcl_Obj* objv[actual];
-    for (int i = 0; i < actual; i++)
-      objv[i] = Tcl_NewLongObj(member_ids[i]);
-    free(member_ids);
-    *result = Tcl_NewListObj(actual, objv);
+    // Scan the members buffer as string records
+    struct record_entry entries[records];
+    record_index(members, records, members_length, entries);
+    Tcl_Obj* objv[records];
+    for (int i = 0; i < records; i++)
+      objv[i] = Tcl_NewStringObj(entries[i].s, entries[i].length);
+    Tcl_Obj* L = Tcl_NewListObj(records, objv);
+    *result = L;
   }
   else if (!strcmp(token, "dict"))
   {
-    // Use Tcl to convert string to list
-    Tcl_Obj* s = Tcl_NewStringObj(subscripts, length);
+    // Use Tcl to convert subscripts string to list
+    Tcl_Obj* s = Tcl_NewStringObj(subscripts, subscripts_length);
 
-    // Member TDs
-    Tcl_Obj* m[actual];
-    for (int i = 0; i < actual; i++)
-      m[i] = Tcl_NewLongObj(member_ids[i]);
-    *result = Tcl_NewDictObj();
-    for (int i = 0; i < actual; i++)
+    // Scan the members buffer as string records
+    struct record_entry entries[records];
+    record_index(members, records, members_length, entries);
+
+    // Insert each key/value pair into result dict
+    Tcl_Obj* dict = Tcl_NewDictObj();
+    for (int i = 0; i < records; i++)
     {
-      Tcl_Obj* p;
-      Tcl_ListObjIndex(interp, s, i, &p);
-      Tcl_DictObjPut(interp, *result, p, m[i]);
+      Tcl_Obj* k;
+      Tcl_ListObjIndex(interp, s, i, &k);
+      Tcl_Obj* v = Tcl_NewStringObj(entries[i].s, entries[i].length);
+      Tcl_DictObjPut(interp, dict, k, v);
     }
+    *result = dict;
   }
   else if (!strcmp(token, "count"))
   {
-    *result = Tcl_NewLongObj(actual);
+    *result = Tcl_NewLongObj(records);
   }
   else
     // Cannot get here
     assert(false);
+}
+
+/**
+   Scan the buffer (of length n) for max RS-separated strings
+   RS defined in adlb-defs.h
+   @param s The buffer to scan
+   @param x The expected number of strings to be found
+   @param n The length of the buffer
+   @return Records
+ */
+void
+record_index(char* s, int x, int n, struct record_entry* entries)
+{
+  // Current pointer into buffer
+  char* p = s;
+  // Current output index
+  int i = 0;
+  while (i < x)
+  {
+    assert(p < p+n);
+    char* r = strchr(p, RS);
+    int length = r-p;
+    entries[i].s = p;
+    entries[i].length = length;
+    i++;
+    p = r+1;
+  }
 }
 
 /**
@@ -943,9 +995,9 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   long id;
   Tcl_GetLongFromObj(interp, objv[1], &id);
   char* subscript = Tcl_GetString(objv[2]);
-  long member;
-  rc = Tcl_GetLongFromObj(interp, objv[3], &member);
-  assert(rc == TCL_OK);
+  int member_length;
+  char* member = Tcl_GetStringFromObj(objv[3], &member_length);
+  assert(member);
   int drops = 0;
   if (objc == 5)
   {
@@ -953,11 +1005,11 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_CHECK(rc);
   }
 
-  rc = ADLB_Insert(id, subscript, member, drops);
+  rc = ADLB_Insert(id, subscript, member, member_length, drops);
 
   TCL_CONDITION(rc == ADLB_SUCCESS,
-                "failed: <%li>[%s]=<%li>\n",
-                id, subscript, member);
+                "failed: <%li>[\"%s\"]\n",
+                id, subscript);
   return TCL_OK;
 }
 
@@ -1006,15 +1058,19 @@ ADLB_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK_MSG(rc, "adlb::lookup could not parse given id!");
   char* subscript = Tcl_GetString(objv[2]);
 
-  long member;
-  rc = ADLB_Lookup(id, subscript, &member);
+  char member[ADLB_DATA_MEMBER_MAX];
+  int found;
+  rc = ADLB_Lookup(id, subscript, member, &found);
   TCL_CONDITION(rc == ADLB_SUCCESS, "lookup failed for: <%li>[%s]",
                 id, subscript);
 
-  DEBUG_ADLB("adlb::lookup <%li>[\"%s\"]=<%li>",
+  if (found == -1)
+    sprintf(member, "0");
+
+  DEBUG_ADLB("adlb::lookup <%li>[\"%s\"]=<%s>",
              id, subscript, member);
 
-  Tcl_Obj* result = Tcl_NewLongObj(member);
+  Tcl_Obj* result = Tcl_NewStringObj(member, -1);
   Tcl_SetObjResult(interp, result);
 
   return TCL_OK;
