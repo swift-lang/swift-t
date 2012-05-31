@@ -96,14 +96,14 @@ int ADLB_Retrieve(adlb_datum_id id, adlb_data_type* type,
 
 int ADLBP_Enumerate(adlb_datum_id container_id,
                    int count, int offset,
-                   char** subscripts, int* length,
-                   adlb_datum_id** member_ids,
-                   int* actual);
+                   char** subscripts, int* subscripts_length,
+                   char** members, int* members_length,
+                   int* records);
 int ADLB_Enumerate(adlb_datum_id container_id,
                    int count, int offset,
-                   char** subscripts, int* length,
-                   adlb_datum_id** member_ids,
-                   int* actual);
+                   char** subscripts, int* subscripts_length,
+                   char** members, int* members_length,
+                   int* records);
 
 int ADLBP_Slot_create(adlb_datum_id id);
 int ADLB_Slot_create(adlb_datum_id id);
@@ -112,17 +112,17 @@ int ADLBP_Slot_drop(adlb_datum_id id);
 int ADLB_Slot_drop(adlb_datum_id id);
 
 int ADLBP_Insert(adlb_datum_id id, const char *subscript,
-                 adlb_datum_id member, int drops);
+                 const char* member, int member_length, int drops);
 int ADLB_Insert(adlb_datum_id id, const char *subscript,
-                adlb_datum_id member, int drops);
+                const char* member, int member_length, int drops);
 
 int ADLBP_Insert_atomic(adlb_datum_id id, const char *subscript,
                         bool* result);
 int ADLB_Insert_atomic(adlb_datum_id id, const char *subscript,
                        bool* result);
 
-int ADLBP_Lookup(adlb_datum_id id, const char *subscript, long *member);
-int ADLB_Lookup(adlb_datum_id id, const char *subscript, long *member);
+int ADLBP_Lookup(adlb_datum_id id, const char *subscript, char* member, int* found);
+int ADLB_Lookup(adlb_datum_id id, const char *subscript, char* member, int* found);
 
 int ADLBP_Subscribe(adlb_datum_id id, int* subscribed);
 int ADLB_Subscribe(adlb_datum_id id, int* subscribed);

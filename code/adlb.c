@@ -1,3 +1,4 @@
+
 #define _GNU_SOURCE
 #include <assert.h>
 #include <inttypes.h>
@@ -119,7 +120,7 @@ void GetUnexpectedRequestTagsInDBGTagsBuf(int[]);
 
 static char *svn_revision = "$Revision: 417 $";
 static char *svn_date = "$LastChangedDate: 2011-02-07 08:26:54 -0600 (Mon, 07 Feb 2011) $";
-static char *svn_dummy = "A";  /* just to cause updates to above */
+// static char *svn_dummy = "A";  /* just to cause updates to above */
 
 static int num_world_nodes, num_servers, next_wqseqno, next_rqseqno, next_cqseqno,
            no_more_work_flag, num_apps_this_server, num_app_ranks, num_types,
@@ -146,7 +147,7 @@ static double max_malloc, job_start_time;
 static MPI_Comm adlb_all_comm, adlb_server_comm, adlb_debug_comm;
 static MPI_Request dummy_req;
 
-static int random_in_range(int,int);
+// static int random_in_range(int,int);
 static int get_type_idx(int);
 static int find_cand_rank_with_worktype(int,int);
 static void update_local_state();
@@ -155,14 +156,14 @@ static void unpack_qmstat(void);
 static void check_remote_work_for_queued_apps();
 static int get_server_idx(int);
 static int get_server_rank(int);
-static int dump_qmstat_info();
+// static int dump_qmstat_info();
 static void print_final_stats(void);
 static void print_proc_self_status(void);
 static void print_curr_mem_and_queue_status(void);
 static void print_circular_buffers(void);
 static void log_at_debug_server(void);
 void adlb_exit_handler(void);
-static void cblog(int flag, int for_rank, char *fmt, ...);
+// static void cblog(int flag, int for_rank, char *fmt, ...);
 static void adlb_server_abort(int,int);
 int adlbp_Reserve(int *, int *, int *, int *, int *, int *, int);
 int adlbp_Get_reserved_timed(void *, int *, double *);
@@ -247,7 +248,19 @@ extern int mpe_svr_get_start, mpe_svr_get_end;
 // The CHECK macros never report an error message in a correct
 // program: thus, they may be disabled for performance
 
+int x;
+
 #ifdef ENABLE_DEBUG
+/**
+  Asserts that condition is true, else returns given error code.
+  Note: This is disabled if ENABLE_DEBUG is not defined
+*/
+#define CHECK_MSG(rc, args...) \
+    { if (!(rc)) { \
+        printf("CHECK FAILED: adlb.c line: %i\n", __LINE__); \
+        printf(args); \
+        return ADLB_ERROR; }}
+
 /**
    Checks that an MPI return code is MPI_SUCCESS
    Note: This is disabled if ENABLE_DEBUG is not defined
@@ -274,6 +287,7 @@ extern int mpe_svr_get_start, mpe_svr_get_end;
     return ADLB_ERROR; }}
 #else
 // Make these noops for performance
+#define CHECK_MSG(rc, code, msg)
 #define MPI_CHECK(rc)
 #define ADLB_CHECK(rc)
 #define ADLB_DATA_CHECK(rc)
@@ -300,11 +314,20 @@ struct packed_code_id
 /**
    Simple struct for message packing
  */
+struct packed_code_length
+{
+  adlb_data_code code;
+  int length;
+};
+
+/**
+   Simple struct for message packing
+ */
 struct packed_enumerate
 {
   adlb_datum_id id;
   char request_subscripts;
-  char request_member_ids;
+  char request_members;
   int count;
   int offset;
 };
@@ -1263,16 +1286,27 @@ int ADLBP_Server(double hi_malloc, double periodic_log_interval)
           MPI_CHECK(rc);
           char subscript[ADLB_DATA_SUBSCRIPT_MAX];
           long id;
-          long member;
+          char* member;
+          int  member_length;
           int  drops;
-          int n = sscanf(xfer, "%li %s %li %i",
-                         &id, subscript, &member, &drops);
+          int n;
+          n = sscanf(xfer, "%li %s %i %i",
+                     &id, subscript, &member_length, &drops);
           // This can only fail on an internal error:
           assert(n == 4);
 
+          member = malloc((member_length+1) * sizeof(char));
+
           long* references;
           int count, slots;
-          DEBUG("Insert: <%li>[\"%s\"]=<%li>", id, subscript, member);
+
+          rc = MPI_Recv(member, ADLB_DATA_MEMBER_MAX, MPI_CHAR,
+                        from_rank, FA_INSERT_MSG, adlb_all_comm,
+                        &status);
+          MPI_CHECK(rc);
+
+          DEBUG("Insert: <%li>[\"%s\"]=<%s>", id, subscript, member);
+
           dc = data_insert(id, subscript, member, drops,
                             &references, &count, &slots);
           rc = MPI_Rsend(&dc, 1, MPI_INT, from_rank, TA_ACK_AND_RC,
@@ -1283,8 +1317,11 @@ int ADLBP_Server(double hi_malloc, double periodic_log_interval)
           {
             if (count > 0)
             {
+              long m;
+              n = sscanf(member, "%li", &m);
+              assert(n == 1);
               for (i = 0; i < count; i++)
-                set_reference_and_notify(references[i], member);
+                set_reference_and_notify(references[i], m);
               free(references);
             }
             if (slots == 0)
@@ -1353,13 +1390,14 @@ int ADLBP_Server(double hi_malloc, double periodic_log_interval)
 
           char* subscripts =
             (void*) (opts.request_subscripts ? NULL+1 : NULL);
-          adlb_datum_id* member_ids =
-            (void*) (opts.request_member_ids ? NULL+1 : NULL);
-          int length;
+          char* members =
+            (void*) (opts.request_members ? NULL+1 : NULL);
+          int subscripts_length;
+          int members_length;
           int actual;
           dc = data_enumerate(opts.id, opts.count, opts.offset,
-                              &subscripts, &length,
-                              &member_ids, &actual);
+                              &subscripts, &subscripts_length,
+                              &members, &members_length, &actual);
           rc = MPI_Rsend(&dc, 1, MPI_INT, from_rank,
                          TA_ACK_AND_RC, adlb_all_comm);
           MPI_CHECK(rc);
@@ -1370,18 +1408,18 @@ int ADLBP_Server(double hi_malloc, double periodic_log_interval)
             MPI_CHECK(rc);
             if (opts.request_subscripts)
             {
-              rc = MPI_Send(subscripts, length+1, MPI_CHAR, from_rank,
+              rc = MPI_Send(subscripts, subscripts_length+1, MPI_CHAR, from_rank,
                             TA_ACK_AND_RC, adlb_all_comm);
               MPI_CHECK(rc);
               free(subscripts);
             }
-            if (opts.request_member_ids)
+            if (opts.request_members)
             {
-              rc = MPI_Send(member_ids, actual*sizeof(adlb_datum_id),
+              rc = MPI_Send(members, actual*sizeof(adlb_datum_id),
                             MPI_BYTE, from_rank,
                             TA_ACK_AND_RC, adlb_all_comm);
               MPI_CHECK(rc);
-              free(member_ids);
+              free(members);
             }
           }
         }
@@ -1390,22 +1428,33 @@ int ADLBP_Server(double hi_malloc, double periodic_log_interval)
           TRACE("FA_LOOKUP\n");
           char msg[ADLB_DATA_SUBSCRIPT_MAX+32];
           char subscript[ADLB_DATA_SUBSCRIPT_MAX];
+          char* member;
           rc = MPI_Recv(msg, ADLB_DATA_SUBSCRIPT_MAX+32, MPI_BYTE,
                         from_rank, FA_LOOKUP_HDR,adlb_all_comm,&status);
           MPI_CHECK(rc);
 
           long id;
-          sscanf(msg, "%li %s", &id, subscript);
+          int n = sscanf(msg, "%li %s", &id, subscript);
+          assert(n == 2);
 
-          long member;
           dc = data_lookup(id, subscript, &member);
-          struct packed_code_id result = {dc, member};
 
-          rc = MPI_Rsend(&result, sizeof(struct packed_code_id),
-                         MPI_BYTE, from_rank,
+          struct packed_code_length p;
+          p.code = dc;
+          // Set this field to 1 if we found the entry, else -1
+          bool found = (member != ADLB_DATA_ID_NULL);
+          p.length = found ? 1 : -1;
+
+          rc = MPI_Rsend(&p, sizeof(p), MPI_BYTE, from_rank,
                          TA_ACK_AND_RC, adlb_all_comm);
           MPI_CHECK(rc);
 
+          if (dc == ADLB_DATA_SUCCESS && found)
+          {
+            rc = MPI_Send(member, strlen(member)+1, MPI_CHAR, from_rank,
+                          TA_ACK_AND_RC, adlb_all_comm);
+            MPI_CHECK(rc);
+          }
           prev_exhaust_chk_time = MPI_Wtime();
           // DEBUG("LOOKUP: <%li>[\"%s\"] => <%li>\n",
           //       id, subscript, member);
@@ -1447,7 +1496,7 @@ int ADLBP_Server(double hi_malloc, double periodic_log_interval)
                          &reference, &container_id, subscript);
           assert(n == 3);
 
-          DEBUG("CONTAINER_REFERENCE: <%li>[\"%s\"] => <%li>",
+          DEBUG("Container_reference: <%li>[\"%s\"] => <%li>",
                 container_id, subscript, reference);
 
           long member;
@@ -3031,7 +3080,7 @@ int ADLBP_Server(double hi_malloc, double periodic_log_interval)
 
 static int set_reference_and_notify(long id, long value)
 {
-  DEBUG("SET_REFERENCE: <%li>=%li", id, value);
+  DEBUG("set_reference: <%li>=%li", id, value);
   int rc;
   rc = ADLB_Store(id, &value, sizeof(long));
   ADLB_CHECK(rc);
@@ -3707,17 +3756,22 @@ int ADLBP_Slot_drop(long id)
     return ADLB_SUCCESS;
 }
 
-int ADLBP_Insert(adlb_datum_id id, const char* subscript, long member,
-                 int drops)
+int ADLBP_Insert(adlb_datum_id id,
+                 const char* subscript, const char* member,
+                 int member_length, int drops)
 {
     int rc;
     adlb_data_code dc;
     MPI_Status status;
     MPI_Request request;
 
-    DEBUG("ADLB_Insert: <%li>[\"%s\"]=<%li>", id, subscript, member);
-    int length = sprintf(xfer, "%li %s %li %i",
-                         id, subscript, member, drops);
+    CHECK_MSG(member_length < ADLB_DATA_MEMBER_MAX,
+              "ADLB_Insert(): member too long: <%li>[\"%s\"]\n",
+              id, subscript);
+
+    DEBUG("ADLB_Insert: <%li>[\"%s\"]=<%s>", id, subscript, member);
+    int length = sprintf(xfer, "%li %s %i %i",
+                         id, subscript, member_length, drops);
     int to_server_rank = locate(id);
 
     rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, TA_ACK_AND_RC,
@@ -3726,10 +3780,16 @@ int ADLBP_Insert(adlb_datum_id id, const char* subscript, long member,
     rc = MPI_Send(xfer, length+1, MPI_INT, to_server_rank,
                    FA_INSERT_HDR, adlb_all_comm);
     MPI_CHECK(rc);
+
+    rc = MPI_Send((char*) member, member_length+1, MPI_BYTE,
+                  to_server_rank, FA_INSERT_MSG, adlb_all_comm);
+    MPI_CHECK(rc);
+
     rc = MPI_Wait(&request, &status);
     MPI_CHECK(rc);
     if (dc != ADLB_DATA_SUCCESS)
         return ADLB_ERROR;
+
     return ADLB_SUCCESS;
 }
 
@@ -3802,14 +3862,14 @@ int ADLBP_Retrieve(adlb_datum_id id, adlb_data_type* type,
 }
 
 /**
-   Allocates fresh memory in subscripts and member_ids
+   Allocates fresh memory in subscripts and members
    Caller must free this when done
  */
 int ADLBP_Enumerate(adlb_datum_id container_id,
                     int count, int offset,
-                    char** subscripts, int* length,
-                    adlb_datum_id** member_ids,
-                    int* restrict actual)
+                    char** subscripts, int* subscripts_length,
+                    char** members, int* members_length,
+                    int* restrict records)
 {
   int rc;
   adlb_data_code dc;
@@ -3822,8 +3882,8 @@ int ADLBP_Enumerate(adlb_datum_id container_id,
   opts.id = container_id;
   // Are we requesting subscripts?
   opts.request_subscripts = *subscripts ? 1 : 0;
-  // Are we requesting member IDs?
-  opts.request_member_ids = *member_ids ? 1 : 0;
+  // Are we requesting members?
+  opts.request_members = *members ? 1 : 0;
   opts.count = count;
   opts.offset = offset;
 
@@ -3839,7 +3899,7 @@ int ADLBP_Enumerate(adlb_datum_id container_id,
 
   if (dc == ADLB_DATA_SUCCESS)
   {
-    rc = MPI_Recv(actual, 1, MPI_INT, to_server_rank,
+    rc = MPI_Recv(records, 1, MPI_INT, to_server_rank,
                   TA_ACK_AND_RC, adlb_all_comm, &status);
     MPI_CHECK(rc);
 
@@ -3850,17 +3910,20 @@ int ADLBP_Enumerate(adlb_datum_id container_id,
       MPI_CHECK(rc);
       *subscripts = strdup(xfer);
       // Set length output parameter
-      MPI_Get_count(&status, MPI_BYTE, length);
+      MPI_Get_count(&status, MPI_BYTE, subscripts_length);
     }
-    if (*member_ids)
+    if (*members)
     {
       rc = MPI_Recv(xfer, ADLB_MSG_MAX, MPI_BYTE, to_server_rank,
                     TA_ACK_AND_RC, adlb_all_comm, &status);
       MPI_CHECK(rc);
-      adlb_datum_id* A = malloc((*actual) * sizeof(adlb_datum_id));
+      int c;
+      MPI_Get_count(&status, MPI_BYTE, &c);
+      char* A = malloc(c);
       assert(A);
-      memcpy(A, xfer, (*actual) * sizeof(adlb_datum_id));
-      *member_ids = A;
+      memcpy(A, xfer, c);
+      *members = A;
+      *members_length = c;
     }
     MPI_CHECK(rc);
   }
@@ -3945,8 +4008,10 @@ int ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* type)
    Look in given container for subscript
    Store result in output member
    On error, output member is ADLB_DATA_ID_NULL
+   @param member Must be pre-allocated to ADLB_DATA_MEMBER_MAX
  */
-int ADLBP_Lookup(adlb_datum_id id, const char* subscript, long* member)
+int ADLBP_Lookup(adlb_datum_id id,
+                 const char* subscript, char* member, int* found)
 {
     int rc, to_server_rank;
     MPI_Status status;
@@ -3960,8 +4025,8 @@ int ADLBP_Lookup(adlb_datum_id id, const char* subscript, long* member)
     sprintf(msg, "%li %s", id, subscript);
     int msg_length = strlen(msg)+1;
 
-    struct packed_code_id result;
-    rc = MPI_Irecv(&result, sizeof(result), MPI_LONG, to_server_rank,
+    struct packed_code_length p;
+    rc = MPI_Irecv(&p, sizeof(p), MPI_BYTE, to_server_rank,
                    TA_ACK_AND_RC, adlb_all_comm,&request);
     MPI_CHECK(rc);
     rc = MPI_Send(msg, msg_length, MPI_CHAR, to_server_rank,
@@ -3970,11 +4035,18 @@ int ADLBP_Lookup(adlb_datum_id id, const char* subscript, long* member)
     rc = MPI_Wait(&request,&status);
     MPI_CHECK(rc);
 
-    // This may be ADLB_DATA_ID_NULL
-    *member = result.id;
-
-    if (result.code != ADLB_DATA_SUCCESS)
+    if (p.code != ADLB_DATA_SUCCESS)
       return ADLB_ERROR;
+
+    if (p.length == 1)
+    {
+      rc = MPI_Recv(member, ADLB_DATA_MEMBER_MAX, MPI_BYTE, to_server_rank,
+                    TA_ACK_AND_RC, adlb_all_comm, &status);
+      MPI_CHECK(rc);
+      *found = 1;
+    }
+    else
+      *found = -1;
 
     return ADLB_SUCCESS;
 }
@@ -4007,9 +4079,12 @@ int ADLBP_Subscribe(long id, int* subscribed)
     return ADLB_SUCCESS;
 }
 
-/** Return false in subscribed if data is already closed */
-int ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
-                              adlb_datum_id reference)
+/**
+   @return false in subscribed if data is already closed
+ */
+int
+ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
+                          adlb_datum_id reference)
 {
     int rc;
     adlb_data_code dc;
@@ -4676,7 +4751,8 @@ static void print_proc_self_status()
     }
 }
 
-static void cblog(int flag, int for_rank, char *fmt, ...)  /* circ buff log */
+/*
+static void cblog(int flag, int for_rank, char *fmt, ...)  /* circ buff log
 {
     char *s;
     va_list ap;
@@ -4700,6 +4776,7 @@ static void cblog(int flag, int for_rank, char *fmt, ...)  /* circ buff log */
     bufidx[for_rank] = (bufidx[for_rank] + 1) % num_bufs_in_circle;
     free(s);
 }
+*/
 
 void adlbp_dbgprintf(int flag, int linenum, char *fmt, ...)
 {
@@ -4912,11 +4989,14 @@ void adlb_exit_handler()
     aprintf(1,"end adlb_exit_handler:\n");
 }
 
+/*
 static int random_in_range(int lo, int hi)
 {
     return ( lo + random() / (RAND_MAX / (hi - lo + 1) + 1) );
 }
+*/
 
+/*
 static int dump_qmstat_info()
 {
     int i,j;
@@ -4932,6 +5012,7 @@ static int dump_qmstat_info()
                    get_server_rank(i),user_types[j],qmstat_tbl[i].type_hi_prio[j]);
     return 0;
 }
+*/
 
 #ifdef DEBUGGING_BGP
 int GetUnexpectedRequestCount( void )

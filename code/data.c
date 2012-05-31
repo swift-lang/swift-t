@@ -306,9 +306,15 @@ data_container_reference(adlb_datum_id container_id,
   void* t = table_search(d->data.CONTAINER.members, subscript);
   if (t != NULL)
   {
-    *member = *(long*)t;
-    if (*member != ADLB_DATA_ID_UNLINKED)
+    char* z;
+    long m = strtol(t, &z, 10);
+    if (z == t)
+      return ADLB_DATA_ERROR_NUMBER_FORMAT;
+    if (m != ADLB_DATA_ID_UNLINKED)
+    {
+      *member = m;
       return ADLB_DATA_SUCCESS;
+    }
   }
 
   // Is the container closed?
@@ -451,35 +457,40 @@ data_retrieve(adlb_datum_id id, adlb_data_type* type,
 }
 
 /**
-   Table members contains IDs
+   Extract the table members into a big string
  */
 void
-extract_members(adlb_datum_id** ids, struct table* members,
-                int count, int offset)
+extract_members(char** output, int* output_length,
+                struct table* members, int count, int offset)
 {
-  // Index into output array
-  int p = 0;
+  // Pointer into output string
+  char* p;
   int c = 0;
   int size = members->size;
-  adlb_datum_id* A = malloc(size*sizeof(adlb_datum_id));
+  char* A = malloc(size*ADLB_DATA_MEMBER_MAX*sizeof(char));
+  p = A;
   for (int i = 0; i < members->capacity; i++)
   {
     struct list_sp* L = members->array[i];
     for (struct list_sp_item* item = L->head; item;
          item = item->next)
     {
-      if (c < offset) {
+      if (c < offset)
+      {
         c++;
         continue;
       }
       if (c >= count+offset && count != -1)
         break;
-      // Copy the ID into the output array
-      memcpy(&A[p++], item->data, sizeof(adlb_datum_id));
+      // Copy the member into the output array
+      p = stpcpy(p, item->data);
+      *p = RS;
+      p++;
       c++;
     }
   }
-  *ids = A;
+  *output = A;
+  *output_length = p - A;
 }
 
 /**
@@ -496,8 +507,8 @@ extract_members(adlb_datum_id** ids, struct table* members,
  */
 adlb_data_code
 data_enumerate(adlb_datum_id container_id, int count, int offset,
-               char** subscripts, int* length,
-               adlb_datum_id** member_ids, int* actual)
+               char** subscripts, int* subscripts_length,
+               char** members, int* members_length, int* actual)
 {
   TRACE("data_enumerate(%li)", container_id);
   adlb_datum* c = table_lp_search(&tds, container_id);
@@ -522,11 +533,11 @@ data_enumerate(adlb_datum_id container_id, int count, int offset,
   *actual = slice_size;
 
   if (*subscripts)
-    *length = table_keys_string_slice(subscripts,
+    *subscripts_length = table_keys_string_slice(subscripts,
                                       c->data.CONTAINER.members,
                                       count, offset);
-  if (*member_ids)
-    extract_members(member_ids, c->data.CONTAINER.members,
+  if (*members)
+    extract_members(members, members_length, c->data.CONTAINER.members,
                     count, offset);
 
    return ADLB_DATA_SUCCESS;
@@ -578,7 +589,7 @@ data_slot_drop(adlb_datum_id container_id, int* result)
 
 adlb_data_code
 data_insert(adlb_datum_id container_id,
-            const char* subscript, adlb_datum_id member, int drops,
+            const char* subscript, const char* member, int drops,
             adlb_datum_id** references, int* count, int* slots)
 {
   adlb_datum* d = table_lp_search(&tds, container_id);
@@ -589,27 +600,32 @@ data_insert(adlb_datum_id container_id,
                 "not a container: <%li>",
                 container_id);
 
-  long* m;
-
   // Does the link already exist?
   void* t = table_search(d->data.CONTAINER.members, subscript);
   if (t != NULL)
   {
-    // Somebody did an insert_atomic
-    m = (long*) t;
-    check_verbose(*m == ADLB_DATA_ID_UNLINKED,
+    // Assert that this is an UNLINKED entry:
+    check_verbose(atol(t) == ADLB_DATA_ID_UNLINKED,
                   ADLB_DATA_ERROR_DOUBLE_WRITE,
                   "already exists: <%li>[%s]",
                   container_id, subscript);
-    *m = member;
+
+    // Ok- somebody did an Insert_atomic
+    char* s;
+    void* v;
+    // Reset entry
+    // Value v is UNLINKED, just free it
+    bool b =
+        table_set(d->data.CONTAINER.members, subscript, member, &v);
+    assert(b);
+    free(v);
   }
   else
   {
     // Copy key/value onto the heap so we can store them
     subscript = strdup(subscript);
-    m = malloc(sizeof(long));
-    *m = member;
-    table_add(d->data.CONTAINER.members, subscript, m);
+    printf("table_add: %s\n", member);
+    table_add(d->data.CONTAINER.members, subscript, member);
   }
 
   // Drop slot count for this container
@@ -623,15 +639,12 @@ data_insert(adlb_datum_id container_id,
   // Find, remove, and return any listening container references
   char s[ADLB_DATA_SUBSCRIPT_MAX+32];
   sprintf(s, "%li[%s]", container_id, subscript);
-  char* found;
   void* data;
-  bool result = table_remove(&container_listeners, s,
-                             &found, &data);
+  bool result = table_remove(&container_listeners, s, &data);
   struct list_l* listeners = data;
   if (result)
   {
     list_l_tolongs(listeners, references, count);
-    free(found);
     list_l_free(listeners);
   }
   else
@@ -661,9 +674,10 @@ data_insert_atomic(adlb_datum_id container_id, const char* subscript,
 
   // Copy key/value onto the heap so we can store them
   subscript = strdup(subscript);
-  long* m = malloc(sizeof(long));
-  *m = ADLB_DATA_ID_UNLINKED;
-  table_add(d->data.CONTAINER.members, subscript, m);
+  // Regression check:
+  assert(ADLB_DATA_ID_UNLINKED == -1);
+  char* member = strdup("-1");
+  table_add(d->data.CONTAINER.members, subscript, member);
   *result = true;
   return ADLB_DATA_SUCCESS;
 }
@@ -671,11 +685,11 @@ data_insert_atomic(adlb_datum_id container_id, const char* subscript,
 /**
    Look in container id for given subscript
    @param result output: found container member or
-                 ADLB_DATA_ID_NULL if subscript not found.
+                 undefined if subscript not found.
  */
 adlb_data_code
 data_lookup(adlb_datum_id id, const char* subscript,
-            adlb_datum_id* result)
+            char** result)
 {
   adlb_datum* d = table_lp_search(&tds, id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
@@ -690,14 +704,13 @@ data_lookup(adlb_datum_id id, const char* subscript,
     *result = ADLB_DATA_ID_NULL;
     return ADLB_DATA_SUCCESS;
   }
-  long* m = (long*) t;
-  if (*m == ADLB_DATA_ID_UNLINKED)
+  if (t == (char*) ADLB_DATA_ID_UNLINKED)
   {
     *result = ADLB_DATA_ID_NULL;
     return ADLB_DATA_SUCCESS;
   }
 
-  *result = *(adlb_datum_id*) t;
+  *result = t;
   return ADLB_DATA_SUCCESS;
 }
 

@@ -50,8 +50,10 @@ adlb_data_code data_retrieve(adlb_datum_id id, adlb_data_type* type,
 
 adlb_data_code data_enumerate(adlb_datum_id container_id,
                               int count, int offset,
-                              char** subscripts, int* length,
-                              adlb_datum_id** member_ids,
+                              char** subscripts,
+                              int* subscripts_length,
+                              char** members,
+                              int* members_length,
                               int* actual);
 
 adlb_data_code data_store(adlb_datum_id id, void* buffer, int length);
@@ -63,7 +65,7 @@ adlb_data_code data_slot_drop(adlb_datum_id container_id,
 
 adlb_data_code data_insert(adlb_datum_id id,
                            const char* subscript,
-                           adlb_datum_id member,
+                           const char* member,
                            int drops,
                            adlb_datum_id** references, int* count,
                            int* slots);
@@ -73,7 +75,7 @@ adlb_data_code data_insert_atomic(adlb_datum_id container_id,
                                   bool* result);
 
 adlb_data_code data_lookup(adlb_datum_id id, const char* subscript,
-                           adlb_datum_id* result);
+                           char** result);
 
 adlb_data_code data_unique(adlb_datum_id* result);
 

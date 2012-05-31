@@ -113,8 +113,19 @@ typedef enum
 #define ADLB_DATA_SUBSCRIPT_MAX 1024
 
 /**
+   The maximal string length of a container member string value
+*/
+#define ADLB_DATA_MEMBER_MAX 1024
+
+/**
    The maximal length of an ADLB datum (string, blob, etc.)
  */
 #define ADLB_DATA_MAX (1024*1024)
+
+/**
+   The ASCII control character Record Separator
+   Used glue strings together in a big buffer
+ */
+#define RS 30
 
 #endif
