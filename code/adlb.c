@@ -1305,7 +1305,8 @@ int ADLBP_Server(double hi_malloc, double periodic_log_interval)
                         &status);
           MPI_CHECK(rc);
 
-          DEBUG("Insert: <%li>[\"%s\"]=<%s>", id, subscript, member);
+          DEBUG("Insert: <%li>[\"%s\"]=\"%s\"",
+                id, subscript, member);
 
           dc = data_insert(id, subscript, member, drops,
                             &references, &count, &slots);
@@ -3770,7 +3771,7 @@ int ADLBP_Insert(adlb_datum_id id,
               "ADLB_Insert(): member too long: <%li>[\"%s\"]\n",
               id, subscript);
 
-    DEBUG("ADLB_Insert: <%li>[\"%s\"]=<%s>", id, subscript, member);
+    DEBUG("ADLB_Insert: <%li>[\"%s\"]=\"%s\"", id, subscript, member);
     int length = sprintf(xfer, "%li %s %i %i",
                          id, subscript, member_length, drops);
     int to_server_rank = locate(id);
