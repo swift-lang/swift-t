@@ -23,6 +23,8 @@ if { ! [ adlb::amserver ] } {
         adlb::insert $c $i $s
     }
 
+    adlb::insert $c string-test "string value"
+
     adlb::close $c
     set z [ adlb::container_size $c ]
     puts "container size: $z"
