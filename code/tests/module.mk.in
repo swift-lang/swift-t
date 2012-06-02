@@ -1,12 +1,15 @@
 
 DIR := tests
 
-TEST_SRC_C := $(DIR)/debug.c
+TEST_SRC_C :=
+TEST_SRC_C += $(DIR)/debug.c
 
 ifeq ($(USE_MPE),1)
 	TEST_SRC_C += $(DIR)/mpe-1.c \
                       $(DIR)/mpe-2.c
 endif
+
+TEST_SRC_C += $(DIR)/mpi-io-1.c
 
 TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/adlb-noop.tcl           \
