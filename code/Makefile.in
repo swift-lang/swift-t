@@ -95,7 +95,7 @@ LAUNCH = @USE_LAUNCHER@
 
 ADLB = @USE_ADLB@
 ifneq ($(ADLB),0)
-	CFLAGS += -I $(ADLB)
+	CFLAGS += -I $(ADLB)/src
 endif
 
 USE_MPE = @USE_MPE@
@@ -111,7 +111,7 @@ CFLAGS += -D VALGRIND
 CFLAGS += -D TURBINE_VERSION=\"$(TURBINE_VERSION)\"
 
 LIBS += -L $(C_UTILS)/lib -l exmcutils
-LIBS += -L $(ADLB) -l adlb
+LIBS += -L $(ADLB)/lib -l adlb
 ifeq ($(USE_MPE),1)
 	LIBS += -l mpe
 endif
@@ -289,7 +289,7 @@ install: package
 #       Copy shared objects so that libs are in rpath
 	$(E) cp -uv $(TCL)/lib/libtcl8.5.so        $(INSTALL_LIB)
 	$(E) cp -uv $(C_UTILS)/lib/libexmcutils.so $(INSTALL_LIB)
-	$(E) cp -uv $(ADLB)/libadlb.so             $(INSTALL_LIB)
+	$(E) cp -uv $(ADLB)/lib/libadlb.so         $(INSTALL_LIB)
 #            We assume libmpe.so is in the ADLB directory
 ifeq ($(USE_MPE),1)
 	$(E) cp -uv $(ADLB)/libmpe.so              $(INSTALL_LIB)

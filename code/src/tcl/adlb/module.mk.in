@@ -17,7 +17,7 @@ $(TCL_ADLB_SO): $(TCL_ADLB_OBJS) $(TCL_TURBINE_SO)
                  $(TCL_LINK_FLAGS) \
                  $(TCL_ADLB_OBJS) \
                  $(LDFLAGS) \
-                 -L $(ADLB) -l adlb \
+                 -L $(ADLB)/lib -l adlb \
                  -L lib -l tclturbine \
                  $(LIB_MPI) \
                  -Wl,-rpath -Wl,$(INSTALL_LIB) \
