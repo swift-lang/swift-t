@@ -79,4 +79,6 @@ adlb_data_code data_lookup(adlb_datum_id id, const char* subscript,
 
 adlb_data_code data_unique(adlb_datum_id* result);
 
+adlb_data_code data_finalize(void);
+
 #endif

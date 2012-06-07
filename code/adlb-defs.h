@@ -35,6 +35,7 @@ typedef struct
 {
   adlb_data_type type;
   adlb_data_status status;
+  int reference_count;
   union
   {
     struct

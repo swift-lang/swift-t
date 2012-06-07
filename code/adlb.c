@@ -4525,26 +4525,28 @@ int ADLBP_Info_get(int key, double *val)
     return ADLB_ERROR;
 }
 
-int ADLBP_Finalize()
+int
+ADLBP_Finalize()
 {
-    int rc, flag;
-
-    rc = MPI_Finalized(&flag);
-    if (flag)
-    {
-        printf("** OOPS; you should not call MPI_Finalize before ADLB_Finalize\n");
-        return ADLB_ERROR;
-    }
-    if (my_world_rank >= master_server_rank)
-    {
-        if (my_world_rank != debug_server_rank)
-            print_final_stats();
-    }
-    else  /* app; not a server */
-    {
-        rc = MPI_Ssend(NULL,0,MPI_INT,my_server_rank,FA_LOCAL_APP_DONE,adlb_all_comm);
-    }
-    return ADLB_SUCCESS;
+  int rc;
+  int flag;
+  MPI_Finalized(&flag);
+  if (flag)
+  {
+    printf("ERROR: MPI_Finalize() called before ADLB_Finalize()\n");
+    return ADLB_ERROR;
+  }
+  data_finalize();
+  if (my_world_rank >= master_server_rank)
+  {
+    if (my_world_rank != debug_server_rank)
+      print_final_stats();
+  }
+  else  /* app; not a server */
+  {
+    rc = MPI_Ssend(NULL,0,MPI_INT,my_server_rank,FA_LOCAL_APP_DONE,adlb_all_comm);
+  }
+  return ADLB_SUCCESS;
 }
 
 int ADLBP_Abort(int code)

@@ -233,6 +233,69 @@ data_close(adlb_datum_id id, int** result, int* count)
   return ADLB_DATA_SUCCESS;
 }
 
+static void garbage_collect(adlb_datum* d,
+                            char** output, int* output_length);
+
+/**
+   @param output: If the d was a container and it was decremented to
+                  0 and garbage-collected, this is the
+                  record-separated list of its members.  The caller
+                  will probably want to decrement each of them.
+                  Else, NULL.
+ */
+adlb_data_code
+data_reference_count(adlb_datum_id id, int increment,
+                     char** output, int* output_length)
+{
+  adlb_datum* d = table_lp_search(&tds, id);
+  check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
+                "not found: <%li>", id);
+  d->reference_count += increment;
+  // This is usually NULL
+  *output = NULL;
+  if (d->reference_count <= 0)
+    garbage_collect(d, output, output_length);
+  return ADLB_SUCCESS;
+}
+
+static void
+extract_members(struct table* members, int count, int offset,
+                char** output, int* output_length);
+
+static void
+garbage_collect(adlb_datum* d, char** output, int* output_length)
+{
+  switch (d->type)
+  {
+    ADLB_DATA_TYPE_STRING:
+    {
+      free(d->data.STRING.value);
+      break;
+    }
+    ADLB_DATA_TYPE_BLOB:
+    {
+      free(d->data.BLOB.value);
+      break;
+    }
+    ADLB_DATA_TYPE_CONTAINER:
+    {
+      struct table* members = d->data.CONTAINER.members;
+      extract_members(members, INT_MAX, 0, output, output_length);
+      break;
+    }
+    // These two are easy:
+    ADLB_DATA_TYPE_INTEGER:
+    ADLB_DATA_TYPE_FLOAT:
+      break;
+    default:
+      assert(false);
+      break;
+  }
+  // I think logically this list should be empty...
+  list_i_clear(&d->listeners);
+  free(d);
+}
+
 adlb_data_code
 data_lock(adlb_datum_id id, int rank, bool* result)
 {
@@ -457,7 +520,7 @@ data_retrieve(adlb_datum_id id, adlb_data_type* type,
 /**
    Extract the table members into a big string
  */
-void
+static void
 extract_members(struct table* members, int count, int offset,
                 char** output, int* output_length)
 {
@@ -799,4 +862,25 @@ ADLB_Data_type_tostring(char* output, adlb_data_type type)
       break;
   }
   return result;
+}
+
+void report_leaks(void);
+
+adlb_data_code
+data_finalize()
+{
+  report_leaks();
+  return ADLB_DATA_SUCCESS;
+}
+
+void report_leaks()
+{
+  for (int i = 0; i < tds.capacity; i++)
+  {
+    struct list_lp* L = tds.array[i];
+    for (struct list_lp_item* item = L->head; item; item = item->next)
+    {
+      printf("LEAK: %li\n", item->key);
+    }
+  }
 }
