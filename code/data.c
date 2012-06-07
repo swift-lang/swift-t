@@ -16,8 +16,6 @@
 #include <list_i.h>
 #include <list_l.h>
 
-#define append(string, args...) string += sprintf(string, ## args)
-
 /**
    Map from adlb_datum_id to adlb_datum
 */
@@ -49,13 +47,17 @@ static int servers = 1;
 static adlb_datum_id unique = -1;
 
 /**
-   When data_unique hits this, return an error- we have exhausted the longs
-   Defined in data_init()
+   When data_unique hits this, return an error- we have exhausted the
+   longs. Defined in data_init()
  */
 static adlb_datum_id last_id;
 
 #ifndef NDEBUG
-/** This is disabled if NDEBUG is set */
+/**
+    Allows user to check an exceptional condition,
+    print an error message, and return an error code in one swoop.
+    This is disabled if NDEBUG is set
+*/
 #define check_verbose(condition, code, format, args...) \
   check_verbose_impl(condition, code,                   \
                      __FILE__, __LINE__, __FUNCTION__,  \
@@ -115,12 +117,8 @@ adlb_data_code
 data_create(adlb_datum_id id, adlb_data_type type)
 {
   adlb_data_code result;
-  result = (id > 0) ? ADLB_DATA_SUCCESS : ADLB_DATA_ERROR_INVALID;
-  if (result == ADLB_ERROR)
-  {
-    printf("ERROR: attempt to create data: id=%li\n", id);
-    return result;
-  }
+  check_verbose(id > 0, ADLB_DATA_ERROR_INVALID,
+                "ERROR: attempt to create data: id=%li\n", id);
 
   adlb_datum* d = malloc(sizeof(adlb_datum));
   d->type = type;
