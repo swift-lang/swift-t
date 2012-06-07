@@ -2,19 +2,19 @@ package exm.stc.ic.opt;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.ast.Variable;
-import exm.stc.ast.Variable.DefType;
-import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Variable.DefType;
+import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Oparg;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CompFunction;
 import exm.stc.ic.tree.ICTree.Program;
@@ -42,12 +42,12 @@ public class FixupVariables {
      * Work out which variables are needed which aren't locally declared
      */
     for (Instruction inst : block.getInstructions()) {
-      for (String n : Oparg.varNameList(inst.getInputs())) {
+      for (String n : Arg.varNameList(inst.getInputs())) {
         if (!availVars.contains(n)) {
           neededVars.add(n);
         }
       }
-      for (String n : Oparg.varNameList(inst.getOutputs())) {
+      for (String n : Arg.varNameList(inst.getOutputs())) {
         if (!availVars.contains(n)) {
           neededVars.add(n);
         }
@@ -147,8 +147,8 @@ public class FixupVariables {
       for (Variable v : fn.getOutputList()) {
         fnargs.put(v.getName(), v);
       }
-      for (Entry<String, Oparg> e : prog.getGlobalConsts().entrySet()) {
-        Oparg a = e.getValue();
+      for (Entry<String, Arg> e : prog.getGlobalConsts().entrySet()) {
+        Arg a = e.getValue();
         Variable v = new Variable(a.getSwiftType(), e.getKey(),
             VariableStorage.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
         fnargs.put(e.getKey(), v);

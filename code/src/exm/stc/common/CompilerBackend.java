@@ -2,16 +2,16 @@ package exm.stc.common;
 
 import java.util.List;
 
-import exm.stc.ast.*;
-import exm.stc.ast.Types.FunctionType;
-import exm.stc.ast.Types.SwiftType;
-import exm.stc.ast.Variable.DefType;
-import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.frontend.Builtins.LocalOpcode;
-import exm.stc.frontend.Builtins.UpdateMode;
-import exm.stc.ic.tree.ICInstructions.Oparg;
+import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Builtins.UpdateMode;
+import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Variable.DefType;
+import exm.stc.common.lang.Variable.VariableStorage;
 
 public interface CompilerBackend {
 
@@ -34,8 +34,11 @@ public interface CompilerBackend {
 
   public abstract void closeArray(Variable arr);
 
-  public abstract void localArithOp(LocalOpcode op, Variable out, 
-                                            List<Oparg> in);
+  public abstract void localOp(BuiltinOpcode op, Variable out, 
+                                            List<Arg> in);
+  
+  public abstract void asyncOp(BuiltinOpcode op, Variable out, 
+                               List<Arg> in, Arg priority);  
   
   /**
    * Set target=addressof(src)
@@ -63,23 +66,23 @@ public interface CompilerBackend {
 
   /**assignInt, which can take a value variable or a literal int in oparg
    */
-  public abstract void assignInt(Variable target, Oparg src);
+  public abstract void assignInt(Variable target, Arg src);
   public abstract void retrieveInt(Variable target, Variable source);
 
-  public abstract void assignFloat(Variable target, Oparg src);
+  public abstract void assignFloat(Variable target, Arg src);
   public abstract void retrieveFloat(Variable target, Variable source);
 
   /** assignString, which can take a value variable or a literal int in oparg
    */
-  public abstract void assignString(Variable target, Oparg src);
+  public abstract void assignString(Variable target, Arg src);
 
   public abstract void retrieveString(Variable target, Variable source);
   
-  public abstract void assignBool(Variable target, Oparg src);
+  public abstract void assignBool(Variable target, Arg src);
   public abstract void retrieveBool(Variable target, Variable source);
 
   public abstract void appFunctionCall(String function, List<Variable> inputs,
-      List<Variable> outputs, Oparg priority);
+      List<Variable> outputs, Arg priority);
 
   /**
    * NOTE: all built-ins should be defined before composites
@@ -89,11 +92,11 @@ public interface CompilerBackend {
    * @param priorityVal 
    */
   public abstract void builtinFunctionCall(String function,
-      List<Variable> inputs, List<Variable> outputs, Oparg priority);
+      List<Variable> inputs, List<Variable> outputs, Arg priority);
 
   public abstract void compositeFunctionCall(String function,
       List<Variable> inputs, List<Variable> outputs, List<Boolean> blockOn, 
-      boolean async, Oparg priority);
+      boolean async, Arg priority);
 
   /**
    * lookup structVarName.structField and copy to oVarName
@@ -116,7 +119,7 @@ public interface CompilerBackend {
       Variable indexVar, boolean isArrayRef);
 
   public abstract void arrayLookupRefImm(Variable oVar, Variable arrayVar,
-      Oparg arrayIndex, boolean isArrayRef);
+      Arg arrayIndex, boolean isArrayRef);
   
   /**
    * Direct lookup of array without any blocking at all.  This is only
@@ -127,7 +130,7 @@ public interface CompilerBackend {
    * @param arrayIndex
    */
   public abstract void arrayLookupImm(Variable oVar, Variable arrayVar,
-      Oparg arrayIndex);
+      Arg arrayIndex);
 
   public abstract void arrayInsertFuture(Variable iVar,
       Variable arrayVar, Variable indexVar);
@@ -136,31 +139,31 @@ public interface CompilerBackend {
       Variable arrayVar, Variable indexVar, Variable outerArrayVar);
 
   public abstract void arrayInsertImm(Variable iVar, Variable arrayVar,
-      Oparg arrayIndex);
+      Arg arrayIndex);
   
   public abstract void arrayRefInsertImm(Variable iVar, 
-      Variable arrayVar, Oparg arrayIndex, Variable outerArrayVar);
+      Variable arrayVar, Arg arrayIndex, Variable outerArrayVar);
 
   public abstract void arrayCreateNestedFuture(Variable arrayResult,
       Variable arrayVar, Variable indexVar);
 
   public abstract void arrayCreateNestedImm(Variable arrayResult,
-      Variable arrayVar, Oparg arrIx);
+      Variable arrayVar, Arg arrIx);
 
   public abstract void arrayRefCreateNestedFuture(Variable arrayResult,
       Variable arrayVar, Variable indexVar);
 
   public abstract void arrayRefCreateNestedImm(Variable arrayResult,
-      Variable arrayVar, Oparg arrIx);
+      Variable arrayVar, Arg arrIx);
 
-  public abstract void initUpdateable(Variable updateable, Oparg val);
+  public abstract void initUpdateable(Variable updateable, Arg val);
   public abstract void latestValue(Variable result, Variable updateable);
   
   public abstract void update(Variable updateable, UpdateMode updateMode,
                               Variable val);
   /** Same as above, but takes a value or constant as arg */
   public abstract void updateImm(Variable updateable, UpdateMode updateMode,
-      Oparg val);
+      Arg val);
   
   public abstract void defineBuiltinFunction(String name,
                 String pkg, String version, String symbol,
@@ -188,7 +191,7 @@ public interface CompilerBackend {
    * @param hasElse whether there will be an else clause ie. whether startElseBlock()
    *                will be called later for this if statement
    */
-  public abstract void startIfStatement(Oparg condition,
+  public abstract void startIfStatement(Arg condition,
       boolean hasElse);
 
   public abstract void startElseBlock();
@@ -201,7 +204,7 @@ public interface CompilerBackend {
    * @param caseLabels
    * @param hasDefault
    */
-  public abstract void startSwitch(Oparg switchVar,
+  public abstract void startSwitch(Arg switchVar,
       List<Integer> caseLabels, boolean hasDefault);
 
   public abstract void endCase();
@@ -247,7 +250,7 @@ public interface CompilerBackend {
    * @param splitDegree the desired loop split factor (negative if no splitting)
    */
   public abstract void startRangeLoop(String loopName, Variable loopVar, 
-      Oparg start, Oparg end, Oparg increment, 
+      Arg start, Arg end, Arg increment, 
       boolean isSync, List<Variable> usedVariables, 
       List<Variable> containersToRegister, int desiredUnroll, int splitDegree);
   public abstract void endRangeLoop(boolean isSync, 
@@ -258,7 +261,7 @@ public interface CompilerBackend {
    * @param name
    * @param val
    */
-  public abstract void addGlobal(String name, Oparg val);
+  public abstract void addGlobal(String name, Arg val);
    
   /**
      Generate and return Tcl from our internal TclTree

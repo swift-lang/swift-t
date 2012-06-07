@@ -4,11 +4,11 @@ import java.util.ArrayList;
 
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
-import exm.stc.ast.Types;
-import exm.stc.ast.Types.SwiftType;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.frontend.Context;
 
 public class VariableDeclaration {

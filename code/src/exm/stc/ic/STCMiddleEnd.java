@@ -9,19 +9,20 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.ast.Types;
-import exm.stc.ast.Variable;
-import exm.stc.ast.Types.FunctionType;
-import exm.stc.ast.Types.SwiftType;
-import exm.stc.ast.Variable.DefType;
-import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.frontend.Builtins.LocalOpcode;
-import exm.stc.frontend.Builtins.UpdateMode;
+import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Builtins.UpdateMode;
+import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Variable.DefType;
+import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.ic.opt.ICOptimiser;
 import exm.stc.ic.tree.ICContinuations.ForeachLoop;
 import exm.stc.ic.tree.ICContinuations.IfStatement;
@@ -30,12 +31,11 @@ import exm.stc.ic.tree.ICContinuations.NestedBlock;
 import exm.stc.ic.tree.ICContinuations.RangeLoop;
 import exm.stc.ic.tree.ICContinuations.SwitchStatement;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
+import exm.stc.ic.tree.ICInstructions.Builtin;
 import exm.stc.ic.tree.ICInstructions.Comment;
-import exm.stc.ic.tree.ICInstructions.FunctionCallInstruction;
-import exm.stc.ic.tree.ICInstructions.LocalBuiltin;
+import exm.stc.ic.tree.ICInstructions.FunctionCall;
 import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICInstructions.LoopContinue;
-import exm.stc.ic.tree.ICInstructions.Oparg;
 import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.AppFunction;
 import exm.stc.ic.tree.ICTree.Block;
@@ -176,7 +176,7 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void startIfStatement(Oparg condition, boolean hasElse) {
+  public void startIfStatement(Arg condition, boolean hasElse) {
     assert(currComposite != null);
     assert(condition.getSwiftType().equals(Types.VALUE_INTEGER)
           || condition.getSwiftType().equals(Types.VALUE_BOOLEAN));
@@ -227,7 +227,7 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void startSwitch(Oparg switchVar,
+  public void startSwitch(Arg switchVar,
       List<Integer> caseLabels, boolean hasDefault) {
 
     logger.trace("startSwitch() stack size:" + blockStack.size());
@@ -289,7 +289,7 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void startRangeLoop(String loopName, Variable loopVar,
-      Oparg start, Oparg end, Oparg increment, boolean isSync,
+      Arg start, Arg end, Arg increment, boolean isSync,
       List<Variable> usedVariables, List<Variable> containersToRegister,
       int desiredUnroll, int splitDegree) {
     RangeLoop loop = new RangeLoop(loopName, loopVar, start, end, increment,
@@ -355,33 +355,33 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void builtinFunctionCall(String function, List<Variable> inputs,
-      List<Variable> outputs, Oparg priority) {
+      List<Variable> outputs, Arg priority) {
     assert(priority == null || priority.isImmediateInt());
     currBlock().addInstruction(
-        FunctionCallInstruction.createBuiltinCall(
+        FunctionCall.createBuiltinCall(
             function, inputs, outputs, priority));
   }
 
   @Override
   public void compositeFunctionCall(String function, List<Variable> inputs,
       List<Variable> outputs, List<Boolean> blockOn, boolean async, 
-      Oparg priority) {
+      Arg priority) {
     assert(priority == null || priority.isImmediateInt());
     if (blockOn != null) {
       throw new STCRuntimeError("Swift IC generator doesn't support " +
       		" blocking on composite function inputs");
     }
     currBlock().addInstruction(
-          FunctionCallInstruction.createCompositeCall(
+          FunctionCall.createCompositeCall(
               function, inputs, outputs, async, priority));
   }
 
   @Override
   public void appFunctionCall(String function, List<Variable> inputs,
-      List<Variable> outputs, Oparg priority) {
+      List<Variable> outputs, Arg priority) {
     assert(priority == null || priority.isImmediateInt());
     currBlock().addInstruction(
-          FunctionCallInstruction.createAppCall(function, inputs, outputs, priority));
+          FunctionCall.createAppCall(function, inputs, outputs, priority));
   }
 
 
@@ -406,7 +406,7 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void arrayLookupRefImm(Variable oVar, Variable arrayVar,
-      Oparg arrIx, boolean isArrayRef) {
+      Arg arrIx, boolean isArrayRef) {
     assert(arrIx.isImmediateInt());
     if (isArrayRef) {
       currBlock().addInstruction(
@@ -419,7 +419,7 @@ public class STCMiddleEnd implements CompilerBackend {
   
   @Override
   public void arrayLookupImm(Variable oVar, Variable arrayVar,
-      Oparg arrIx) {
+      Arg arrIx) {
     assert(oVar.getStorage() == VariableStorage.ALIAS);
     assert(Types.isArray(arrayVar.getType())); // Can't be reference to array
     assert(arrIx.isImmediateInt());
@@ -447,7 +447,7 @@ public class STCMiddleEnd implements CompilerBackend {
   
   @Override
   public void arrayInsertImm(Variable iVar, Variable arrayVar,
-      Oparg arrIx) {
+      Arg arrIx) {
     assert(arrIx.isImmediateInt());
     currBlock().addInstruction(
         TurbineOp.arrayInsertImm(iVar, arrayVar, arrIx));
@@ -455,7 +455,7 @@ public class STCMiddleEnd implements CompilerBackend {
   
   @Override
   public void arrayRefInsertImm(Variable iVar, Variable arrayVar,
-          Oparg arrIx, Variable outerArrayVar) {
+          Arg arrIx, Variable outerArrayVar) {
     assert(arrIx.isImmediateInt());
     assert(Types.isArrayRef(arrayVar.getType()));
     currBlock().addInstruction(
@@ -476,7 +476,7 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void arrayCreateNestedImm(Variable arrayResult,
-      Variable arrayVar, Oparg arrIx) {
+      Variable arrayVar, Arg arrIx) {
     assert(Types.isArray(arrayResult.getType()));
     assert(Types.isArray(arrayVar.getType()));
     assert(arrayResult.getStorage() == VariableStorage.ALIAS);
@@ -489,7 +489,7 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void arrayRefCreateNestedImm(Variable arrayResult,
-      Variable arrayVar, Oparg arrIx) {
+      Variable arrayVar, Arg arrIx) {
     assert(Types.isArrayRef(arrayResult.getType()));
     assert(Types.isArrayRef(arrayVar.getType()));
     assert(arrIx.isImmediateInt());
@@ -576,7 +576,7 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void assignInt(Variable target, Oparg src) {
+  public void assignInt(Variable target, Arg src) {
     assert(target.getType().equals(Types.FUTURE_INTEGER));
     assert(src.isImmediateInt());
     currBlock().addInstruction(
@@ -592,7 +592,7 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void assignBool(Variable target, Oparg src) {
+  public void assignBool(Variable target, Arg src) {
     assert(target.getType().equals(Types.FUTURE_BOOLEAN));
     assert(src.isImmediateBool());
     currBlock().addInstruction(
@@ -608,7 +608,7 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void assignFloat(Variable target, Oparg src) {
+  public void assignFloat(Variable target, Arg src) {
     assert(target.getType().equals(Types.FUTURE_FLOAT));
     assert(src.isImmediateFloat());
     currBlock().addInstruction(
@@ -624,7 +624,7 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void assignString(Variable target, Oparg src) {
+  public void assignString(Variable target, Arg src) {
     assert(target.getType().equals(Types.FUTURE_STRING));
     assert(src.isImmediateString());
     currBlock().addInstruction(
@@ -640,12 +640,21 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void localArithOp(LocalOpcode op, Variable out, 
-                                            List<Oparg> in) {
+  public void localOp(BuiltinOpcode op, Variable out, 
+                                            List<Arg> in) {
     if (out != null) {
       assert(Types.isScalarValue(out.getType()));
     }
-    currBlock().addInstruction(new LocalBuiltin(op, out, in));
+    currBlock().addInstruction(Builtin.createLocal(op, out, in));
+  }
+  
+  @Override
+  public void asyncOp(BuiltinOpcode op, Variable out, 
+                                    List<Arg> in, Arg priority) {
+    if (out != null) {
+      assert(Types.isScalarFuture(out.getType()));
+    }
+    currBlock().addInstruction(Builtin.createAsync(op, out, in, priority));
   }
 
   @Override
@@ -683,14 +692,14 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void addGlobal(String name, Oparg val) {
+  public void addGlobal(String name, Arg val) {
     assert(val.isConstant() ||
         (Types.isScalarValue(val.getVar().getType())));
     program.addGlobalConst(name, val);
   }
 
   @Override
-  public void initUpdateable(Variable updateable, Oparg val) {
+  public void initUpdateable(Variable updateable, Arg val) {
     assert(Types.isScalarUpdateable(updateable.getType()));
     if (!updateable.getType().equals(Types.UPDATEABLE_FLOAT)) {
       throw new STCRuntimeError(updateable.getType() +
@@ -725,7 +734,7 @@ public class STCMiddleEnd implements CompilerBackend {
   
   @Override
   public void updateImm(Variable updateable, UpdateMode updateMode,
-                                                Oparg val) {
+                                                Arg val) {
     assert(Types.isScalarUpdateable(updateable.getType()));
     if (updateable.getType().equals(Types.UPDATEABLE_FLOAT)) {
       assert(val.isImmediateFloat());

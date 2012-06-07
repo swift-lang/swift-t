@@ -17,22 +17,22 @@ import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.ast.Types;
-import exm.stc.ast.Variable;
-import exm.stc.ast.Types.FunctionType;
-import exm.stc.ast.Types.SwiftType;
-import exm.stc.ast.Types.FunctionType.InArgT;
-import exm.stc.ast.Variable.DefType;
-import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Arg.ArgType;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.FunctionType.InArgT;
+import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Variable.DefType;
+import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Oparg;
-import exm.stc.ic.tree.ICInstructions.OpargType;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 
 /**
@@ -63,10 +63,10 @@ public class ICTree {
     /**
      * Use treemap to keep them in alpha order
      */
-    private final TreeMap<String, Oparg> globalConsts = 
-                                            new TreeMap<String, Oparg>();
-    private final HashMap<Oparg, String> globalConstsInv = 
-                                            new HashMap<Oparg, String>();
+    private final TreeMap<String, Arg> globalConsts = 
+                                            new TreeMap<String, Arg>();
+    private final HashMap<Arg, String> globalConstsInv = 
+                                            new HashMap<Arg, String>();
 
     private final ArrayList<AppFunction> appFuns = new ArrayList<AppFunction>();
     private final ArrayList<CompFunction> compFuns = new ArrayList<CompFunction>();
@@ -109,9 +109,9 @@ public class ICTree {
       
       // Global Constants
       logger.debug("Generating global constants");
-      for (Entry<String, Oparg> c: globalConsts.entrySet()) {
+      for (Entry<String, Arg> c: globalConsts.entrySet()) {
         String name = c.getKey();
-        Oparg val = c.getValue();
+        Arg val = c.getValue();
         gen.addGlobal(name, val);
       }
       logger.debug("Done generating global constants");
@@ -146,7 +146,7 @@ public class ICTree {
       return Collections.unmodifiableList(this.appFuns);
     }
     
-    public void addGlobalConst(String name, Oparg val) {
+    public void addGlobalConst(String name, Arg val) {
       if (globalConsts.put(name, val) != null) {
         throw new STCRuntimeError("Overwriting global constant "
             + name);
@@ -159,7 +159,7 @@ public class ICTree {
      * @param val
      * @return
      */
-    public String addGlobalConst(Oparg val) {
+    public String addGlobalConst(Arg val) {
       
       String suffix;
       switch(val.type) {
@@ -202,17 +202,17 @@ public class ICTree {
       return name;
     }
     
-    public String invLookupGlobalConst(Oparg val) {
+    public String invLookupGlobalConst(Arg val) {
       return this.globalConstsInv.get(val);
  
     }
   
-    public Oparg lookupGlobalConst(String name) {
+    public Arg lookupGlobalConst(String name) {
       return this.globalConsts.get(name);
  
     }
 
-    public SortedMap<String, Oparg> getGlobalConsts() {
+    public SortedMap<String, Arg> getGlobalConsts() {
       return Collections.unmodifiableSortedMap(globalConsts);
     }
     
@@ -224,8 +224,8 @@ public class ICTree {
     }
   
     public void prettyPrint(StringBuilder out) {
-      for (Entry<String, Oparg> constE: globalConsts.entrySet()) {
-        Oparg val = constE.getValue();
+      for (Entry<String, Arg> constE: globalConsts.entrySet()) {
+        Arg val = constE.getValue();
         out.append("const " +   constE.getKey() + " = ");
         out.append(val.toString());
         out.append(" as " + val.getSwiftType().typeName());
@@ -698,7 +698,7 @@ public class ICTree {
      *      with new
      * @param renames OldName -> NewName
      */
-    public void renameVars(Map<String, Oparg> renames, boolean inputsOnly) {
+    public void renameVars(Map<String, Arg> renames, boolean inputsOnly) {
       if (!inputsOnly) {
         renameVarsInBlockVarsList(renames);
       }
@@ -722,7 +722,7 @@ public class ICTree {
       renameArraysToClose(renames);
     }
 
-    private void renameVarsInBlockVarsList(Map<String, Oparg> renames) {
+    private void renameVarsInBlockVarsList(Map<String, Arg> renames) {
       // Replace definition of var
       ListIterator<Variable> it = variables.listIterator();
       List<Variable> changedMappingVars = new ArrayList<Variable>();
@@ -738,8 +738,8 @@ public class ICTree {
           
           // Check to see if string variable for mapping is replaced
           if (renames.containsKey(v.getMapping().getName())) {
-            Oparg replacement = renames.get(v.getMapping().getName());
-            if (replacement.getType() == OpargType.VAR) {
+            Arg replacement = renames.get(v.getMapping().getName());
+            if (replacement.getType() == ArgType.VAR) {
               // Need to maintain variable ordering so that mapped vars appear
               // after the variables containing the mapping string. Remove
               // var declaration here and put it at end of list
@@ -752,8 +752,8 @@ public class ICTree {
           // V isn't mapped
           String varName = v.getName();
           if (renames.containsKey(varName)) {
-            Oparg replacement = renames.get(varName);
-            if (replacement.getType() ==  OpargType.VAR) {
+            Arg replacement = renames.get(varName);
+            if (replacement.getType() ==  ArgType.VAR) {
               it.set(replacement.getVar());
             } else {
               // value replaced with constant
@@ -767,7 +767,7 @@ public class ICTree {
     }
 
 
-    public void renameArraysToClose(Map<String, Oparg> renames) {
+    public void renameArraysToClose(Map<String, Arg> renames) {
       for (int i = 0; i < arraysToClose.size(); i++) {
         String varName = arraysToClose.get(i).getName();
         if (renames.containsKey(varName)) {
@@ -795,10 +795,10 @@ public class ICTree {
         // See if we can remove instruction
         if (!inst.hasSideEffects() && inst.op != Opcode.COMMENT) {
           boolean allRemoveable = true;
-          for (Oparg oa: inst.getOutputs()) {
+          for (Arg oa: inst.getOutputs()) {
             // Doesn't make sense to assign to anything other than
             //  variable
-            assert(oa.getType() == OpargType.VAR);
+            assert(oa.getType() == ArgType.VAR);
             if (! removeVars.contains(oa.getVar().getName())) {
               allRemoveable = false; break;
             }
@@ -872,15 +872,15 @@ public class ICTree {
       }
       for (Instruction i : this.getInstructions()) {
         // check which variables are still needed
-        for (Oparg oa: i.getInputs()) {
-          if (oa.getType() == OpargType.VAR) {
+        for (Arg oa: i.getInputs()) {
+          if (oa.getType() == ArgType.VAR) {
             stillNeeded.add(oa.getVar().getName());
           }
         }
         // Can't eliminate instructions with side-effects
         if (i.hasSideEffects()) {
-          for (Oparg oa: i.getOutputs()) {
-            if (oa.getType() == OpargType.VAR) {
+          for (Arg oa: i.getOutputs()) {
+            if (oa.getType() == ArgType.VAR) {
               stillNeeded.add(oa.getVar().getName());
             }
           }

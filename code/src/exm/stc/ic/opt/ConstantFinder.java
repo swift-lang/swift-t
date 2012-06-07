@@ -11,19 +11,21 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.ast.Types;
-import exm.stc.ast.Variable;
-import exm.stc.ast.Variable.DefType;
-import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
+import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Operators;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Variable.DefType;
+import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.ic.ICUtil;
-import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.LocalBuiltin;
-import exm.stc.ic.tree.ICInstructions.Oparg;
+import exm.stc.ic.tree.ICInstructions.Builtin;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CompFunction;
@@ -46,8 +48,8 @@ public class ConstantFinder {
    * @throws InvalidOptionException
    */
   public static Program constantFold(Logger logger, Program in) throws InvalidOptionException {
-    HierarchicalMap<String, Oparg> globalConsts = 
-              new HierarchicalMap<String, Oparg>();
+    HierarchicalMap<String, Arg> globalConsts = 
+              new HierarchicalMap<String, Arg>();
     // Populate global constants
     globalConsts.putAll(in.getGlobalConsts());
     
@@ -75,7 +77,7 @@ public class ConstantFinder {
   private static void constantFold(Logger logger, Program prog, 
       CompFunction fn, Block block, 
       HashMap<String, Variable> varMap,
-      HierarchicalMap<String, Oparg> knownConstants) throws InvalidOptionException {
+      HierarchicalMap<String, Arg> knownConstants) throws InvalidOptionException {
     for (Variable v: block.getVariables()) {
       varMap.put(v.getName(), v);
     }
@@ -93,7 +95,7 @@ public class ConstantFinder {
         Instruction inst = it.next();
         logger.debug("Candidate instruction for constant folding: " 
                                               + inst.toString());
-        Map<String, Oparg> newConsts = inst.constantFold(fn.getName(),
+        Map<String, Arg> newConsts = inst.constantFold(fn.getName(),
                                             knownConstants);
         if (newConsts == null) {
           logger.debug("Couldn't constant fold");
@@ -110,10 +112,10 @@ public class ConstantFinder {
           ArrayList<Instruction> replacements = 
                     new ArrayList<Instruction>(newConsts.size());
           
-          for (Entry<String, Oparg> newConst: newConsts.entrySet()) {              
+          for (Entry<String, Arg> newConst: newConsts.entrySet()) {              
             String name = newConst.getKey();
             Variable var = varMap.get(name);
-            Oparg newVal = newConst.getValue();
+            Arg newVal = newConst.getValue();
             logger.debug("New constant: " + name);
             if (Types.isScalarFuture(var.getType())) {
               replacements.add(ICInstructions.futureSet(var, newVal));
@@ -166,7 +168,7 @@ public class ConstantFinder {
    * @param removeDefs if true, remove the set instructions as we go
    */
   private static void findBlockConstants(Logger logger, Block block,
-      Map<String, Oparg> knownConstants, boolean removeLocalConsts,
+      Map<String, Arg> knownConstants, boolean removeLocalConsts,
       boolean ignoreLocalValConstants) {
     Set<String> removalCandidates = null;
     if (removeLocalConsts) {
@@ -185,17 +187,12 @@ public class ConstantFinder {
     while (it.hasNext()) {
       Instruction inst = it.next();
       if (inst.getInputs().size() == 1) {
-        Oparg input = inst.getInput(0);
-        if (input.isConstant() &&
-            (inst.op == Opcode.STORE_INT || inst.op == Opcode.STORE_BOOL            
-            || inst.op == Opcode.STORE_FLOAT || inst.op == Opcode.STORE_STRING
-            || (!ignoreLocalValConstants && inst.op == Opcode.LOCAL_OP && 
-                  LocalBuiltin.isValueCopy(inst)))) {
-          Oparg output = inst.getOutput(0); 
+        if (isValueStoreInst(inst, ignoreLocalValConstants)) {
+          Arg output = inst.getOutput(0); 
           String varName = output.getVar().getName();
           if ((!removeLocalConsts) || removalCandidates.contains(varName)) {
             logger.debug("Found constant " + varName);
-            knownConstants.put(varName, input);
+            knownConstants.put(varName, inst.getInput(0));
             if (removeLocalConsts && !inst.hasSideEffects()) {
               logger.trace("Removing instruction " + inst.toString());
               it.remove();
@@ -207,6 +204,28 @@ public class ConstantFinder {
     if (removeLocalConsts) {
       block.removeVarDeclarations(knownConstants.keySet());
     }
+  }
+
+  /**
+   * Return true if this instruction assigns a constant value to
+   * a variable
+   * @param inst
+   * @param ignoreLocalValConstants
+   * @return
+   */
+  private static boolean isValueStoreInst(Instruction inst,
+      boolean ignoreLocalValConstants) {
+    Arg input = inst.getInput(0);
+    if (input.isConstant()) {
+      if (inst.op == Opcode.STORE_INT || inst.op == Opcode.STORE_BOOL            
+          || inst.op == Opcode.STORE_FLOAT || inst.op == Opcode.STORE_STRING) {
+        return true;
+      } else if (!ignoreLocalValConstants && inst.op == Opcode.LOCAL_OP) {
+        BuiltinOpcode op = ((Builtin)inst).subop;
+        return (Operators.isCopy(op));
+      }
+    }
+    return false;
   }
 
   static private class Predicted {
@@ -226,7 +245,7 @@ public class ConstantFinder {
    * @param knownConstants
    */
   public static void branchPredict(Block block,
-      HierarchicalMap<String, Oparg> knownConstants) {
+      HierarchicalMap<String, Arg> knownConstants) {
     // Use list to preserve order
     List<Predicted> predictedBranches = new ArrayList<Predicted>();
     for (Continuation c: block.getContinuations()) {
@@ -267,18 +286,18 @@ public class ConstantFinder {
     logger.debug("Making constant futures shared globals");
     HashMap<String, Variable> localDeclsOfGlobalVars = 
           new HashMap<String, Variable>();
-    HashMap<String, Oparg> knownConstants = new HashMap<String, Oparg>();
+    HashMap<String, Arg> knownConstants = new HashMap<String, Arg>();
     
     findBlockConstants(logger, block, knownConstants, true, true);
     
-    HashMap<String, Oparg> globalReplacements = 
-                            new HashMap<String, Oparg>();
+    HashMap<String, Arg> globalReplacements = 
+                            new HashMap<String, Arg>();
                   
-    for (Entry<String, Oparg> c: knownConstants.entrySet()) {
+    for (Entry<String, Arg> c: knownConstants.entrySet()) {
       String oldName = c.getKey();
       // Remove from this block's variable entries 
       
-      Oparg val = c.getValue();
+      Arg val = c.getValue();
       Variable glob = null;
       String globName = prog.invLookupGlobalConst(val);
       if (globName == null) {
@@ -293,7 +312,7 @@ public class ConstantFinder {
                     null);
         localDeclsOfGlobalVars.put(globName, glob);
       }
-      globalReplacements.put(oldName, Oparg.createVar(glob));
+      globalReplacements.put(oldName, Arg.createVar(glob));
     }
     block.renameVars(globalReplacements, false);
     

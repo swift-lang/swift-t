@@ -1,9 +1,9 @@
 
-package exm.stc.ast;
+package exm.stc.common.lang;
 
 import java.util.*;
 
-import exm.stc.ast.Types.SwiftType;
+import exm.stc.common.lang.Types.SwiftType;
 
 /**
  * This class is used to contain the relevant information about

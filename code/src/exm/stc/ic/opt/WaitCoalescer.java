@@ -11,10 +11,12 @@ import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.ast.Types;
-import exm.stc.ast.Variable;
-import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Arg.ArgType;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.MultiMap.LinkedListFactory;
 import exm.stc.common.util.MultiMap.ListFactory;
@@ -24,8 +26,6 @@ import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Oparg;
-import exm.stc.ic.tree.ICInstructions.OpargType;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
 import exm.stc.ic.tree.ICTree.Block;
@@ -195,7 +195,7 @@ public class WaitCoalescer {
         List<Instruction> instBuffer = new ArrayList<Instruction>();
         
         // Fetch the inputs
-        List<Oparg> inVals = OptUtil.fetchValuesOf(wait.getBlock(),
+        List<Arg> inVals = OptUtil.fetchValuesOf(wait.getBlock(),
                                               instBuffer, req.in);
         
         // Create local instruction, copy out outputs
@@ -336,8 +336,8 @@ public class WaitCoalescer {
         Instruction i = it.next();
         logger.trace("Pushdown at: " + i.toString());
         List<Variable> writtenFutures = new ArrayList<Variable>();
-        for (Oparg out: i.getOutputs()) {
-          assert(out.getType() == OpargType.VAR);
+        for (Arg out: i.getOutputs()) {
+          assert(out.getType() == ArgType.VAR);
           Variable outv = out.getVar();
           if (Types.isFuture(outv.getType())) {
             writtenFutures.add(outv);
@@ -495,8 +495,8 @@ public class WaitCoalescer {
     for (Instruction inst: block.getInstructions()) {
       // check all outputs are non-alias futures - if not can't safely reorder
       boolean canMove = true;
-      for (Oparg out: inst.getOutputs()) {
-        if (out.getType() != OpargType.VAR || 
+      for (Arg out: inst.getOutputs()) {
+        if (out.getType() != ArgType.VAR || 
             !Types.isFuture(out.getVar().getType())
             || out.getVar().getStorage() == VariableStorage.ALIAS) {
           canMove = false;

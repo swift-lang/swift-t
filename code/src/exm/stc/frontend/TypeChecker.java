@@ -1,20 +1,12 @@
 package exm.stc.frontend;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
-import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
-import exm.stc.ast.Types;
-import exm.stc.ast.Variable;
-import exm.stc.ast.Types.ArrayType;
-import exm.stc.ast.Types.FunctionType;
-import exm.stc.ast.Types.PrimType;
-import exm.stc.ast.Types.ReferenceType;
-import exm.stc.ast.Types.ScalarFutureType;
-import exm.stc.ast.Types.ScalarUpdateableType;
-import exm.stc.ast.Types.StructType;
-import exm.stc.ast.Types.SwiftType;
-import exm.stc.ast.Types.FunctionType.InArgT;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.descriptor.ArrayElems;
 import exm.stc.ast.descriptor.ArrayRange;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -23,6 +15,20 @@ import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UndefinedOperatorException;
 import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Operators;
+import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Operators.OpType;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.ArrayType;
+import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.FunctionType.InArgT;
+import exm.stc.common.lang.Types.PrimType;
+import exm.stc.common.lang.Types.ReferenceType;
+import exm.stc.common.lang.Types.ScalarFutureType;
+import exm.stc.common.lang.Types.ScalarUpdateableType;
+import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Variable;
 
 /**
  * This module handles checking the internal consistency of expressions,
@@ -261,60 +267,44 @@ public class TypeChecker {
 
   private static List<SwiftType> findOperatorResultType(Context context, SwiftAST tree,
       List<SwiftType> expected) throws TypeMismatchException, UserException {
-    int opType = tree.child(0).getType();
-    String opName = ExMParser.tokenNames[opType].toLowerCase();
+    int op = tree.child(0).getType();
+    String opName = ExMParser.tokenNames[op].toLowerCase();
 
     ArrayList<SwiftType> argTypes = new ArrayList<SwiftType>();
 
-    String fnName = getBuiltInFromOpTree(context, tree, argTypes, expected);
-    assert(fnName != null);
+    BuiltinOpcode opcode = getBuiltInFromOpTree(context, tree, argTypes, 
+                                                              expected);
+    assert(opcode != null);
 
-    FunctionType opFnType = Builtins.getBuiltinType(fnName);
+    OpType opType = Operators.getBuiltinOpType(opcode);
+    assert(opType != null);
 
-    if (opFnType == null) {
-      throw new UserException(context, "built-in function " + fnName
-          + " did not have a type that we could find.  You probably forgot" +
-          " to include builtins.swift or are using an old turbine version" +
-          " that doesn't have this function");
-    }
 
-    if (opFnType.getInputs().size() != argTypes.size()) {
-      if (opFnType.hasVarargs() && 
-            opFnType.getInputs().size() <= argTypes.size() - 1) {
-        // this is ok
-      } else {
-        throw new TypeMismatchException(context, "Op " +
+    if (opType.in.length != argTypes.size()) {
+      throw new STCRuntimeError("Op " +
             opName + " expected "
-            + opFnType.getInputs().size() + " arguments but " +
-            + argTypes.size() + " were given");
-      }
+            + opType.in.length + " arguments but " +
+            + argTypes.size() + " were in AST");
     }
 
 
-    int nInTypes = opFnType.getInputs().size() - 1;
     for (int i = 0; i < argTypes.size(); i++) {
-      InArgT exp = opFnType.getInputs().get(Math.min(i, nInTypes));
-      if (exp.getAlternatives().length != 1) {
-        throw new STCRuntimeError("Builtin operator "
-            + fnName + " should not have polymorphic type for input " +
-                "argument: " + exp.toString());
-      }
-      SwiftType exp2 = exp.getAlternatives()[0];
+      SwiftType exp = new ScalarFutureType(opType.in[i]);
       SwiftType act = argTypes.get(i);
-      if (!exp2.equals(act)) {
+      if (!exp.equals(act)) {
         throw new TypeMismatchException(context, "Expected type " +
-            exp2.toString() + " in argument " + i + " to operator " +
+            exp.toString() + " in argument " + i + " to operator " +
             opName + " but found type "
             + act.toString());
 
       }
     }
 
-    return opFnType.getOutputs();
+    return Arrays.asList((SwiftType)new ScalarFutureType(opType.out));
   }
 
 
-  public static String getBuiltInFromOpTree(Context context, SwiftAST tree)
+  public static BuiltinOpcode getBuiltInFromOpTree(Context context, SwiftAST tree)
         throws TypeMismatchException, UserException {
     return getBuiltInFromOpTree(context, tree, new ArrayList<SwiftType>(),
         null);
@@ -326,11 +316,11 @@ public class TypeChecker {
    * @param tree
    * @param argTypes Put the argument types of the operator in this list
    * @param expectedResult 
-   * @return the builtin function name that implements the operator
+   * @return the builtin operator code
    * @throws TypeMismatchException
    * @throws UserException
    */
-  private static String getBuiltInFromOpTree(Context context, SwiftAST tree,
+  private static BuiltinOpcode getBuiltInFromOpTree(Context context, SwiftAST tree,
       ArrayList<SwiftType> argTypes, List<SwiftType> expectedResult)
           throws TypeMismatchException,
       UserException {
@@ -353,13 +343,13 @@ public class TypeChecker {
     }
                                                                         
 
-    String fnName = Builtins.getArithBuiltin(allArgType, opType);
-    if (fnName == null) {
+    BuiltinOpcode op = Operators.getArithBuiltin(allArgType, opType);
+    if (op == null) {
       throw new UndefinedOperatorException(context,
           "Operator " + opName + " applied to arguments of type " +
               allArgType.toString().toLowerCase() + " is not supported");
     }
-    return fnName;
+    return op;
   }
 
 

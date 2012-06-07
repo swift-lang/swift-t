@@ -1,11 +1,15 @@
 package exm.stc.ic.opt;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
-import exm.stc.ast.Variable;
-import exm.stc.ast.Variable.DefType;
+import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Variable.DefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
-import exm.stc.ic.tree.ICInstructions.Oparg;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CompFunction;
 import exm.stc.ic.tree.ICTree.Program;
@@ -56,7 +60,7 @@ public class Flattener {
    * @param usedNames Names already used
    */
   private static void makeVarNamesUnique(Block in, Set<String> usedNames) {
-    HashMap<String, Oparg> renames = new HashMap<String, Oparg>();
+    HashMap<String, Arg> renames = new HashMap<String, Arg>();
     for (Variable v: in.getVariables()) {
       if (v.getDefType() == DefType.GLOBAL_CONST) {
         continue;
@@ -70,7 +74,7 @@ public class Flattener {
           counter++;
         } while(usedNames.contains(newName));
         renames.put(v.getName(),
-            Oparg.createVar(new Variable(v.getType(), newName,
+            Arg.createVar(new Variable(v.getType(), newName,
                             v.getStorage(), v.getDefType(), v.getMapping())));
         usedNames.add(newName);
       } else {

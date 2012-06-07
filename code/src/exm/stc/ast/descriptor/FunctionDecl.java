@@ -6,17 +6,17 @@ import java.util.List;
 
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
-import exm.stc.ast.Types;
-import exm.stc.ast.Variable;
-import exm.stc.ast.Types.FunctionType;
-import exm.stc.ast.Types.SwiftType;
-import exm.stc.ast.Types.FunctionType.InArgT;
-import exm.stc.ast.Variable.DefType;
-import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedTypeException;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.FunctionType.InArgT;
+import exm.stc.common.lang.Variable.DefType;
+import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.frontend.Context;
 
 public class FunctionDecl {

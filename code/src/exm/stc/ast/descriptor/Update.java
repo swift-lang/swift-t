@@ -2,16 +2,16 @@ package exm.stc.ast.descriptor;
 
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
-import exm.stc.ast.Types;
-import exm.stc.ast.Variable;
-import exm.stc.ast.Types.ScalarUpdateableType;
-import exm.stc.ast.Types.SwiftType;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Builtins.UpdateMode;
+import exm.stc.common.lang.Types.ScalarUpdateableType;
+import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.TypeChecker;
-import exm.stc.frontend.Builtins.UpdateMode;
 
 public class Update {
   public Update(Variable target, SwiftAST expr, UpdateMode mode) {

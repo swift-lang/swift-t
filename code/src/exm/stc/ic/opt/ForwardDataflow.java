@@ -14,28 +14,28 @@ import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.ast.Types;
-import exm.stc.ast.Variable;
-import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Arg.ArgType;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
-import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.Loop;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
+import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Oparg;
-import exm.stc.ic.tree.ICInstructions.OpargType;
-import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
+import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CompFunction;
 import exm.stc.ic.tree.ICTree.Program;
@@ -71,7 +71,7 @@ public class ForwardDataflow {
      * Map of variable names to value variables or literals which have been
      * created and set at this point in the code
      */
-    private final HierarchicalMap<ComputedValue, Oparg> availableVals;
+    private final HierarchicalMap<ComputedValue, Arg> availableVals;
 
     /** variables which are closed at this point in time */
     private final HierarchicalSet<String> closed;
@@ -90,13 +90,13 @@ public class ForwardDataflow {
 
     State(Logger logger) {
       this.logger = logger;
-      this.availableVals = new HierarchicalMap<ComputedValue, Oparg>();
+      this.availableVals = new HierarchicalMap<ComputedValue, Arg>();
       this.closed = new HierarchicalSet<String>();
       this.dependsOn = new HashMap<String, HashSet<String>>();
     }
 
     private State(Logger logger,
-        HierarchicalMap<ComputedValue, Oparg> availableVals,
+        HierarchicalMap<ComputedValue, Arg> availableVals,
         HierarchicalSet<String> closed,
         HashMap<String, HashSet<String>> dependsOn) {
       this.logger = logger;
@@ -123,7 +123,7 @@ public class ForwardDataflow {
      * @param v
      * @return
      */
-    public Oparg findRetrieveResult(Variable v) {
+    public Arg findRetrieveResult(Variable v) {
       ComputedValue cvRetrieve = ICInstructions.retrieveCompVal(v);
       if (cvRetrieve == null) {
         return null;
@@ -150,10 +150,10 @@ public class ForwardDataflow {
             + newCV + " but no existing value");
       }
 
-      Oparg valLoc = newCV.getValLocation();
+      Arg valLoc = newCV.getValLocation();
       Opcode op = newCV.getOp();
       availableVals.put(newCV, valLoc);
-      if (valLoc.getType() == OpargType.VAR && outClosed) {
+      if (valLoc.getType() == ArgType.VAR && outClosed) {
         this.closed.add(valLoc.getVar().getName());
       }
       if (op == Opcode.LOAD_BOOL || op == Opcode.LOAD_FLOAT
@@ -175,7 +175,7 @@ public class ForwardDataflow {
      * @param val
      * @return
      */
-    public Oparg getLocation(ComputedValue val) {
+    public Arg getLocation(ComputedValue val) {
       return availableVals.get(val);
     }
 
@@ -240,8 +240,8 @@ public class ForwardDataflow {
 
   private static List<ComputedValue> updateReplacements(
       Logger logger, Instruction inst,
-      State av, HierarchicalMap<String, Oparg> replaceInputs, 
-      HierarchicalMap<String, Oparg> replaceAll) {
+      State av, HierarchicalMap<String, Arg> replaceInputs, 
+      HierarchicalMap<String, Arg> replaceAll) {
     List<ComputedValue> icvs = inst.getComputedValues(av.availableVals);
     logger.trace("no icvs");
     if (icvs != null) {
@@ -254,13 +254,13 @@ public class ForwardDataflow {
                                               currCV.getInput(0));
           continue;
         }
-        Oparg currLoc = currCV.getValLocation();
+        Arg currLoc = currCV.getValLocation();
         if (!av.isAvailable(currCV)) {
           // Can't replace, track this value
           av.addComputedValue(currCV, false);
         } else if (currLoc.isConstant()) {
-          Oparg prevLoc = av.getLocation(currCV);
-          if (prevLoc.getType() == OpargType.VAR) {
+          Arg prevLoc = av.getLocation(currCV);
+          if (prevLoc.getType() == ArgType.VAR) {
             assert (Types.isScalarValue(prevLoc.getVar().getType()));
             // Constants are the best... might as well replace
             av.addComputedValue(currCV, true);
@@ -272,13 +272,13 @@ public class ForwardDataflow {
           }
         } else {
           final boolean usePrev;
-          assert (currLoc.getType() == OpargType.VAR);
+          assert (currLoc.getType() == ArgType.VAR);
           // See if we should replace
-          Oparg prevLoc = av.getLocation(currCV);
+          Arg prevLoc = av.getLocation(currCV);
           if (prevLoc.isConstant()) {
             usePrev = true;
           } else {
-            assert (prevLoc.getType() == OpargType.VAR);
+            assert (prevLoc.getType() == ArgType.VAR);
             boolean currClosed = av.isClosed(currLoc.getVar().getName());
             boolean prevClosed = av.isClosed(prevLoc.getVar().getName());
             if (currCV.equivType == EquivalenceType.REFERENCE) {
@@ -460,8 +460,8 @@ public class ForwardDataflow {
    */
   private static boolean forwardDataflow(Logger logger, Program program,
       CompFunction f, Block block, State cv,
-      HierarchicalMap<String, Oparg> replaceInputs,
-      HierarchicalMap<String, Oparg> replaceAll) throws InvalidOptionException,
+      HierarchicalMap<String, Arg> replaceInputs,
+      HierarchicalMap<String, Arg> replaceAll) throws InvalidOptionException,
       InvalidWriteException {
     boolean anotherPassNeeded = false;
     if (cv == null) {
@@ -477,15 +477,15 @@ public class ForwardDataflow {
       }
     }
     if (replaceInputs == null) {
-      replaceInputs = new HierarchicalMap<String, Oparg>();
+      replaceInputs = new HierarchicalMap<String, Arg>();
     }
     if (replaceAll == null) {
-      replaceAll = new HierarchicalMap<String, Oparg>();
+      replaceAll = new HierarchicalMap<String, Arg>();
     }
     for (Variable v : block.getVariables()) {
       // First, all constants can be treated as being set
       if (v.getStorage() == VariableStorage.GLOBAL_CONST) {
-        Oparg val = program.lookupGlobalConst(v.getName());
+        Arg val = program.lookupGlobalConst(v.getName());
         assert (val != null): v.getName();
         ComputedValue compVal = ICInstructions.assignComputedVal(v, val);
         cv.addComputedValue(compVal, cv.hasComputedValue(compVal));
@@ -493,8 +493,8 @@ public class ForwardDataflow {
       if (v.isMapped() && Types.isFile(v.getType())) {
         // filename will return the mapping
         ComputedValue filenameVal = new ComputedValue(Opcode.CALL_BUILTIN,
-            "filename", Arrays.asList(Oparg.createVar(v)),
-            Oparg.createVar(v.getMapping()), false, EquivalenceType.VALUE);
+            "filename", Arrays.asList(Arg.createVar(v)),
+            Arg.createVar(v.getMapping()), false, EquivalenceType.VALUE);
         cv.addComputedValue(filenameVal, false);
       }
     }
@@ -560,8 +560,8 @@ public class ForwardDataflow {
   private static boolean forwardDataflow(Logger logger,
       CompFunction f, Block block,
       ListIterator<Instruction> insts, State cv,
-      HierarchicalMap<String, Oparg> replaceInputs,
-      HierarchicalMap<String, Oparg> replaceAll) throws InvalidWriteException {
+      HierarchicalMap<String, Arg> replaceInputs,
+      HierarchicalMap<String, Arg> replaceAll) throws InvalidWriteException {
     boolean anotherPassNeeded = false;
     while(insts.hasNext()) {
       Instruction inst = insts.next();
@@ -601,7 +601,7 @@ public class ForwardDataflow {
       // Add dependencies
       List<Variable> in = inst.getBlockingInputs();
       if (in != null) {
-        for (Oparg o : inst.getOutputs()) {
+        for (Arg o : inst.getOutputs()) {
           Variable ov = o.getVar();
           if (!Types.isScalarValue(ov.getType())) {
             cv.setDependencies(ov, in);
@@ -621,12 +621,12 @@ public class ForwardDataflow {
     if (varsNeeded != null) {
       // Now load the values
       List<Instruction> alt = new ArrayList<Instruction>();
-      List<Oparg> inVals = new ArrayList<Oparg>(varsNeeded.in.size());
+      List<Arg> inVals = new ArrayList<Arg>(varsNeeded.in.size());
       
       // same var might appear multiple times
-      HashMap<String, Oparg> alreadyFetched = new HashMap<String, Oparg>();  
+      HashMap<String, Arg> alreadyFetched = new HashMap<String, Arg>();  
       for (Variable v : varsNeeded.in) {
-        Oparg maybeVal;
+        Arg maybeVal;
         if (alreadyFetched.containsKey(v.getName())) {
           maybeVal = alreadyFetched.get(v.getName());
         } else {
@@ -645,7 +645,7 @@ public class ForwardDataflow {
         } else {
           // Generate instruction to fetch val, append to alt
           Variable fetchedV = OptUtil.fetchValueOf(block, alt, v);
-          Oparg fetched = Oparg.createVar(fetchedV);
+          Arg fetched = Arg.createVar(fetchedV);
           inVals.add(fetched);
           alreadyFetched.put(v.getName(), fetched);
         }

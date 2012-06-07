@@ -7,19 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
-import exm.stc.ast.antlr.ExMParser;
-import exm.stc.ast.SwiftAST;
-import exm.stc.ast.Types;
-import exm.stc.ast.Variable;
 import exm.stc.ast.FilePosition.LineMapping;
-import exm.stc.ast.Types.FunctionType;
-import exm.stc.ast.Types.ReferenceType;
-import exm.stc.ast.Types.ScalarUpdateableType;
-import exm.stc.ast.Types.StructType;
-import exm.stc.ast.Types.SwiftType;
-import exm.stc.ast.Types.FunctionType.InArgT;
-import exm.stc.ast.Types.StructType.StructField;
-import exm.stc.ast.Variable.VariableStorage;
+import exm.stc.ast.SwiftAST;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.descriptor.ArrayElems;
 import exm.stc.ast.descriptor.ArrayRange;
 import exm.stc.ast.descriptor.Literals;
@@ -32,7 +22,23 @@ import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.ic.tree.ICInstructions.Oparg;
+import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Builtins;
+import exm.stc.common.lang.Operators;
+import exm.stc.common.lang.Builtins.SemanticInfo;
+import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Operators.OpType;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.FunctionType.InArgT;
+import exm.stc.common.lang.Types.ReferenceType;
+import exm.stc.common.lang.Types.ScalarFutureType;
+import exm.stc.common.lang.Types.ScalarUpdateableType;
+import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.StructType.StructField;
+import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Variable.VariableStorage;
 
 /**
  * This module contains logic to walk individual expression in Swift and generate code to evaluate them
@@ -130,7 +136,11 @@ public class ExprWalker {
         } else if (floatLit != null ) {
           assignFloatLit(context, tree, oVar);
         } else {
-          callOperator(context, tree, oList, renames);
+          if (oList.size() != 1) {
+            throw new STCRuntimeError("Operator had " +
+            		oList.size() + " outputs, doesn't make sense");
+          }
+          callOperator(context, tree, oList.get(0), renames);
         }
         break;
 
@@ -221,24 +231,24 @@ public class ExprWalker {
       SwiftType type) throws UserException {
     if (Types.isScalarFuture(type)) {
       if (type.equals(Types.FUTURE_INTEGER)) {
-        backend.builtinFunctionCall(Builtins.COPY_INTEGER, Arrays.asList(src),
-                                          Arrays.asList(dst), null);
+        backend.asyncOp(BuiltinOpcode.COPY_INT, dst, 
+            Arrays.asList(Arg.createVar(src)), null);
       } else if (type.equals(Types.FUTURE_STRING)) {
-        backend.builtinFunctionCall(Builtins.COPY_STRING, Arrays.asList(src),
-            Arrays.asList(dst), null);
+        backend.asyncOp(BuiltinOpcode.COPY_STRING, dst, 
+            Arrays.asList(Arg.createVar(src)), null);
       } else if (type.equals(Types.FUTURE_FLOAT)) {
-        backend.builtinFunctionCall(Builtins.COPY_FLOAT, Arrays.asList(src),
-            Arrays.asList(dst), null);
+        backend.asyncOp(BuiltinOpcode.COPY_FLOAT, dst, 
+            Arrays.asList(Arg.createVar(src)), null);
       } else if (type.equals(Types.FUTURE_BOOLEAN)) {
-        backend.builtinFunctionCall(Builtins.COPY_BOOLEAN, Arrays.asList(src),
-            Arrays.asList(dst), null);
+        backend.asyncOp(BuiltinOpcode.COPY_BOOL, dst, 
+            Arrays.asList(Arg.createVar(src)), null);
       } else if (type.equals(Types.FUTURE_BLOB)) {
-        backend.builtinFunctionCall(Builtins.COPY_BLOB, Arrays.asList(src),
-            Arrays.asList(dst), null);
+        backend.asyncOp(BuiltinOpcode.COPY_BLOB, dst, 
+            Arrays.asList(Arg.createVar(src)), null);
       } else if (type.equals(Types.FUTURE_VOID)) {
         // Sort of silly, but might be needed
-        backend.builtinFunctionCall(Builtins.COPY_VOID, Arrays.asList(src),
-            Arrays.asList(dst), null);
+        backend.asyncOp(BuiltinOpcode.COPY_VOID, dst, 
+            Arrays.asList(Arg.createVar(src)), null);
       } else if (type.equals(Types.FUTURE_FILE)) {
         backend.builtinFunctionCall(Builtins.COPY_FILE, Arrays.asList(src),
             Arrays.asList(dst), null);
@@ -338,44 +348,34 @@ public class ExprWalker {
   }
 
   private void callOperator(Context context, SwiftAST tree, 
-      List<Variable> oList, Map<String, String> renames) throws UserException {
+      Variable out, Map<String, String> renames) throws UserException {
     String op = tree.child(0).getText();
     int op_argcount = tree.getChildCount() - 1;
 
-
     // Use the AST token label to find the actual operator
-    String builtin = TypeChecker.getBuiltInFromOpTree(context, tree);
+    BuiltinOpcode opcode = TypeChecker.getBuiltInFromOpTree(context, tree);
+    assert(opcode != null);
+    
+    OpType optype = Operators.getBuiltinOpType(opcode);
+    assert(optype != null);
+    
+    int argcount = optype.in.length;
 
-    FunctionType ftype = Builtins.getBuiltinType(builtin);
-    if (ftype == null) {
-      throw new STCRuntimeError("unknown builtin function: " + builtin
-          + " for operator " + op);
-    }
-    int argcount = ftype.getInputs().size();
-
-    if (op_argcount != argcount && 
-        !(ftype.hasVarargs() && op_argcount >= argcount - 1)) {
+    if (op_argcount != argcount) {
       throw new STCRuntimeError("Operator " + op + " has " + op_argcount
           + " arguments in AST, but expected" + argcount);
     }
 
-    ArrayList<Variable> iList = new ArrayList<Variable>(argcount);
+    ArrayList<Arg> iList = new ArrayList<Arg>(argcount);
     for (int i = 0; i < op_argcount; i++) {
-      InArgT argtype = ftype.getInputs().get(Math.min(i, argcount - 1));
-      if (argtype.getAlternatives().length != 1) {
-        throw new STCRuntimeError("Builtin operator "
-            + builtin + " should not have polymorphic type for input " +
-                "argument: " + argtype.toString());
-      }
-      SwiftType type = argtype.getAlternatives()[0];
+      SwiftType type = new ScalarFutureType(optype.in[i]);
 
       // Store into temporary variables
       Variable arg = evalExprToTmp(context, tree.child(i + 1), type, false,
                                                                   renames);
-      iList.add(arg);
+      iList.add(Arg.createVar(arg));
     }
-
-    backend.builtinFunctionCall(builtin, iList, oList, null);
+    backend.asyncOp(opcode, out, iList, null);
   }
   
 
@@ -602,7 +602,7 @@ public class ExprWalker {
             "Invalid non-numeric array index token " + arrayIndexStr);
       }
       backend.arrayLookupRefImm(lookupIntoVar, arrayVar, 
-          Oparg.createIntLit(arrayIndex), isRef);
+          Arg.createIntLit(arrayIndex), isRef);
     } else {
       // TODO: there may be special cases where we know the index
       // at composite runtime, so could do an arrayLoadImmediate
@@ -757,7 +757,7 @@ public class ExprWalker {
         Variable computedMember = evalExprToTmp(context, mem, 
             memType, false, renames);
         backend.arrayInsertImm(computedMember, oVar, 
-                                      Oparg.createIntLit(i));
+                                      Arg.createIntLit(i));
       }
       // Will need to close this array
       context.flagArrayForClosing(oVar);
@@ -832,10 +832,18 @@ public class ExprWalker {
     }
 
 
-    Oparg priority = priorityVal != null ? Oparg.createVar(priorityVal) : null;
-    if (context.isBuiltinFunction(function))
-      backend.builtinFunctionCall(function, realIList, oList, priority);
-    else if (context.isCompositeFunction(function))
+    Arg priority = priorityVal != null ? Arg.createVar(priorityVal) : null;
+    if (context.isBuiltinFunction(function)) {
+      if (SemanticInfo.hasLocalEquiv(function)) {
+        assert(oList.size() <= 1);
+        Variable out = oList.size() == 0 ? null : oList.get(0);
+        //TODO: priority?
+        backend.asyncOp(SemanticInfo.getLocalEquiv(function), out, 
+                        Arg.fromVarList(realIList), priority);
+      } else {
+        backend.builtinFunctionCall(function, realIList, oList, priority);
+      }
+    } else if (context.isCompositeFunction(function))
       backend.compositeFunctionCall(function, realIList, oList, null, 
           !context.isSyncComposite(function), priority);
     else
@@ -852,10 +860,10 @@ public class ExprWalker {
  throws UserException {
    LogHelper.trace(context, oVar.toString()+"="+value);
    if(Types.isInt(oVar.getType())) {
-     backend.assignInt(oVar, Oparg.createIntLit(Long.parseLong(value)));
+     backend.assignInt(oVar, Arg.createIntLit(Long.parseLong(value)));
    } else if (Types.isFloat(oVar.getType())) {
      double floatval = Literals.interpretIntAsFloat(context, value);
-     backend.assignFloat(oVar, Oparg.createFloatLit(floatval));
+     backend.assignFloat(oVar, Arg.createFloatLit(floatval));
      
    } else {
      assert false : "assignIntLit to variable" + oVar;
@@ -865,20 +873,20 @@ public class ExprWalker {
   private void assignBoolLit(Context context, SwiftAST tree, Variable oVar,
       String value) throws UserException {
    assert(Types.isBool(oVar.getType()));
-   backend.assignBool(oVar, Oparg.createBoolLit(Boolean.parseBoolean(value)));
+   backend.assignBool(oVar, Arg.createBoolLit(Boolean.parseBoolean(value)));
   }
 
   private void assignFloatLit(Context context, SwiftAST tree, Variable oVar) 
   throws UserException {
    assert(Types.isFloat(oVar.getType()));
    double val = Literals.extractFloatLit(context, tree);
-   backend.assignFloat(oVar, Oparg.createFloatLit(val));
+   backend.assignFloat(oVar, Arg.createFloatLit(val));
   }
 
   private void assignStringLit(Context context, SwiftAST tree, Variable oVar,
       String value) throws UserException {
     assert(Types.isString(oVar.getType()));
-    backend.assignString(oVar, Oparg.createStringLit(value));
+    backend.assignString(oVar, Arg.createStringLit(value));
   }
 
   private void assignVariable(Context context, Variable oVar,
@@ -900,7 +908,7 @@ public class ExprWalker {
       if (!src.getType().equals(Types.UPDATEABLE_FLOAT)) {
         throw new STCRuntimeError(src.getType() + " not yet supported");
       }
-      backend.assignFloat(snapshot, Oparg.createVar(val));
+      backend.assignFloat(snapshot, Arg.createVar(val));
       src = snapshot;
     }
     
@@ -924,7 +932,7 @@ public class ExprWalker {
     List<Variable> modifiedContainers = Arrays.asList(dst);
     backend.startForeachLoop(src, member, ix, true, -1, false, 
         Arrays.asList(src, dst), modifiedContainers);
-    backend.arrayInsertImm(member, dst, Oparg.createVar(ix));
+    backend.arrayInsertImm(member, dst, Arg.createVar(ix));
     backend.endForeachLoop(true, -1, false, modifiedContainers);
     backend.closeArray(dst);
   }

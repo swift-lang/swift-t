@@ -9,11 +9,11 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
-import exm.stc.ast.Variable;
+import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Arg.ArgType;
+import exm.stc.common.lang.Variable;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Oparg;
-import exm.stc.ic.tree.ICInstructions.OpargType;
 import exm.stc.ic.tree.ICTree.Block;
 
 /**
@@ -83,12 +83,12 @@ public class ICUtil {
    * @param replacements
    * @param vars
    */
-  public static void replaceVarsInList(Map<String, Oparg> replacements,
+  public static void replaceVarsInList(Map<String, Arg> replacements,
       List<Variable> vars, boolean removeDupes) {
     replaceVarsInList(replacements, vars, removeDupes, true);
   }
   
-  public static void replaceVarsInList(Map<String, Oparg> replacements,
+  public static void replaceVarsInList(Map<String, Arg> replacements,
         List<Variable> vars, boolean removeDupes, boolean removeMapped) {
     // Remove new duplicates
     ArrayList<String> alreadySeen = null;
@@ -101,8 +101,8 @@ public class ICUtil {
       Variable v = it.next();
       String varName = v.getName();
       if (replacements.containsKey(varName)) {
-        Oparg oa = replacements.get(varName);
-        if (oa.getType() == OpargType.VAR) {
+        Arg oa = replacements.get(varName);
+        if (oa.getType() == ArgType.VAR) {
           if (removeDupes && 
                   alreadySeen.contains(oa.getVar().getName())) {
             it.remove();
@@ -138,11 +138,11 @@ public class ICUtil {
     }
   }
 
-  public static void replaceOpargsInList(Map<String, Oparg> renames,
-      List<Oparg> args) {
+  public static void replaceOpargsInList(Map<String, Arg> renames,
+      List<Arg> args) {
     for (int i = 0; i < args.size(); i++) {
-      Oparg oa = args.get(i);
-      if (oa.getType() == OpargType.VAR) {
+      Arg oa = args.get(i);
+      if (oa.getType() == ArgType.VAR) {
         String oldName = oa.getVar().getName();
         if (renames.containsKey(oldName)) {
           args.set(i, renames.get(oldName));
@@ -161,12 +161,12 @@ public class ICUtil {
    *      is in renames, return the replacements.  If it isn't,
    *      return the argument 
    */
-  public static Oparg replaceOparg(Map<String, Oparg> renames, Oparg oa, boolean nullsOk) {
+  public static Arg replaceOparg(Map<String, Arg> renames, Arg oa, boolean nullsOk) {
     assert(nullsOk || oa != null);
-    if (oa != null && oa.getType() == OpargType.VAR) {
+    if (oa != null && oa.getType() == ArgType.VAR) {
       String name = oa.getVar().getName();
       if (renames.containsKey(name)) {
-        Oparg res = renames.get(name);
+        Arg res = renames.get(name);
         assert(res != null);
         return res;
       }
@@ -264,6 +264,22 @@ public class ICUtil {
     for (Variable v: varList) {
       if (varNames.contains(v.getName())) {
         res.add(v);
+      }
+    }
+    return res;
+  }
+
+  /**
+   * Return a list of all the variables contained in the
+   * input list.  Ignore any non-variable args
+   * @param inputs
+   * @return
+   */
+  public static List<Variable> extractVars(List<Arg> args) {
+    ArrayList<Variable> res = new ArrayList<Variable>();
+    for (Arg a: args) {
+      if (a.getType() == ArgType.VAR) {
+        res.add(a.getVar());
       }
     }
     return res;

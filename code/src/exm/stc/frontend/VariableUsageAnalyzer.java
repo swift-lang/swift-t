@@ -4,11 +4,7 @@ import java.util.*;
 
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
-import exm.stc.ast.Types;
-import exm.stc.ast.Variable;
 import exm.stc.ast.FilePosition.LineMapping;
-import exm.stc.ast.Variable.DefType;
-import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.ast.descriptor.ArrayElems;
 import exm.stc.ast.descriptor.ArrayRange;
 import exm.stc.ast.descriptor.ForLoopDescriptor;
@@ -28,6 +24,10 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Variable.DefType;
+import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.frontend.VariableUsageInfo.Violation;
 import exm.stc.frontend.VariableUsageInfo.ViolationType;
 /**

@@ -1,22 +1,31 @@
 package exm.stc.ic.tree;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.ast.*;
-import exm.stc.ast.Variable.DefType;
-import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
-import exm.stc.frontend.Builtins.LocalOpcode;
+import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Arg.ArgType;
+import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Variable.DefType;
+import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.ic.ICUtil;
-import exm.stc.ic.tree.ICInstructions.LocalBuiltin;
+import exm.stc.ic.tree.ICInstructions.Builtin;
 import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICInstructions.LoopContinue;
-import exm.stc.ic.tree.ICInstructions.Oparg;
-import exm.stc.ic.tree.ICInstructions.OpargType;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.GenInfo;
@@ -53,14 +62,14 @@ public class ICContinuations {
      * here: we will fix them up later
      * @param renames
      */
-    public abstract void replaceInputs(Map<String, Oparg> renames);
+    public abstract void replaceInputs(Map<String, Arg> renames);
 
-    public abstract void replaceVars(Map<String, Oparg> renames);
-    protected void replaceVarsInBlocks(Map<String, Oparg> renames,
+    public abstract void replaceVars(Map<String, Arg> renames);
+    protected void replaceVarsInBlocks(Map<String, Arg> renames,
         boolean inputsOnly) {
       for (Block b: this.getBlocks()) {
-        HashMap<String, Oparg> shadowed =
-                new HashMap<String, Oparg>();
+        HashMap<String, Arg> shadowed =
+                new HashMap<String, Arg>();
 
         // See if any of the renamed vars are redeclared,
         //  and if so temporarily remove them from the
@@ -97,14 +106,14 @@ public class ICContinuations {
      * @param knownConstants
      * @return a block which is the branch that will run
      */
-    public abstract Block branchPredict(Map<String, Oparg> knownConstants);
+    public abstract Block branchPredict(Map<String, Arg> knownConstants);
 
     /**
      * replace variables with constants in loop construct
      * @param knownConstants
      * @return true if anything changed
      */
-    public boolean constantReplace(Map<String, Oparg> knownConstants) {
+    public boolean constantReplace(Map<String, Arg> knownConstants) {
       // default: do nothing
       return false;
     }
@@ -233,8 +242,8 @@ public class ICContinuations {
         		" required variable " + v.toString());
       }
     }
-    protected void checkNotRemoved(Oparg o, Set<String> removeVars) {
-      if (o.type == OpargType.VAR) {
+    protected void checkNotRemoved(Arg o, Set<String> removeVars) {
+      if (o.type == ArgType.VAR) {
         checkNotRemoved(o.getVar(), removeVars);
       }
     }
@@ -345,7 +354,7 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceVars(Map<String, Oparg> renames) {
+    public void replaceVars(Map<String, Arg> renames) {
       this.replaceVarsInBlocks(renames, false);
       if (renames.containsKey(arrayVar.getName())) {
         arrayVar = renames.get(arrayVar.getName()).getVar();
@@ -362,7 +371,7 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceInputs(Map<String, Oparg> renames) {
+    public void replaceInputs(Map<String, Arg> renames) {
       // Replace only those we're reading
       this.replaceVarsInBlocks(renames, true);
       if (renames.containsKey(arrayVar.getName())) {
@@ -391,7 +400,7 @@ public class ICContinuations {
     }
 
     @Override
-    public Block branchPredict(Map<String, Oparg> knownConstants) {
+    public Block branchPredict(Map<String, Arg> knownConstants) {
       return null;
     }
 
@@ -434,13 +443,13 @@ public class ICContinuations {
     }
 
     public void fuseInto(ForeachLoop o, boolean insertAtTop) {
-      Map<String, Oparg> renames = new HashMap<String, Oparg>();
-      renames.put(o.loopVar.getName(), Oparg.createVar(this.loopVar));
+      Map<String, Arg> renames = new HashMap<String, Arg>();
+      renames.put(o.loopVar.getName(), Arg.createVar(this.loopVar));
       // Handle optional loop counter var
       if (o.loopCounterVar != null) {
         if (this.loopCounterVar != null) {
           renames.put(o.loopCounterVar.getName(),
-                      Oparg.createVar(this.loopCounterVar));    
+                      Arg.createVar(this.loopCounterVar));    
         } else {
           this.loopCounterVar = o.loopCounterVar;
         }
@@ -455,14 +464,14 @@ public class ICContinuations {
   public static class IfStatement extends Continuation {
     private final Block thenBlock;
     private final Block elseBlock;
-    private Oparg condition;
+    private Arg condition;
 
-    public IfStatement(Oparg condition) {
+    public IfStatement(Arg condition) {
       this(condition, new Block(BlockType.THEN_BLOCK),
                           new Block(BlockType.ELSE_BLOCK));
     }
 
-    private IfStatement(Oparg condition, Block thenBlock, Block elseBlock) {
+    private IfStatement(Arg condition, Block thenBlock, Block elseBlock) {
       assert(thenBlock != null);
       assert(elseBlock != null);
       this.condition = condition;
@@ -518,16 +527,16 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceVars(Map<String, Oparg> renames) {
+    public void replaceVars(Map<String, Arg> renames) {
       replaceShared(renames, false);
     }
 
     @Override
-    public void replaceInputs(Map<String, Oparg> renames) {
+    public void replaceInputs(Map<String, Arg> renames) {
       replaceShared(renames, true);
     }
 
-    private void replaceShared(Map<String, Oparg> renames,
+    private void replaceShared(Map<String, Arg> renames,
           boolean inputsOnly) {
       replaceVarsInBlocks(renames, inputsOnly);
       condition = ICUtil.replaceOparg(renames, condition, false);
@@ -540,7 +549,7 @@ public class ICContinuations {
 
     @Override
     public Collection<Variable> requiredVars() {
-      if (condition.getType() == OpargType.VAR) {
+      if (condition.getType() == ArgType.VAR) {
         return Arrays.asList(condition.getVar());
       } else {
         return Collections.emptyList();
@@ -550,15 +559,15 @@ public class ICContinuations {
     @Override
     public void removeVars(Set<String> removeVars) {
       removeVarsInBlocks(removeVars);
-      assert(condition.getType() != OpargType.VAR ||
+      assert(condition.getType() != ArgType.VAR ||
             (!removeVars.contains(condition.getVar().getName())));
     }
 
     @Override
-    public Block branchPredict(Map<String, Oparg> knownConstants) {
-      Oparg val;
+    public Block branchPredict(Map<String, Arg> knownConstants) {
+      Arg val;
       
-      if (condition.getType() == OpargType.VAR) {
+      if (condition.getType() == ArgType.VAR) {
         val = knownConstants.get(condition.getVar().getName());
         if (val == null) {
           return null;
@@ -567,12 +576,12 @@ public class ICContinuations {
        val = condition; 
       }
       
-      assert(val.getType() == OpargType.INTVAL
-            || val.getType() == OpargType.BOOLVAL);
-      if (val.getType() == OpargType.INTVAL
+      assert(val.getType() == ArgType.INTVAL
+            || val.getType() == ArgType.BOOLVAL);
+      if (val.getType() == ArgType.INTVAL
           && val.getIntLit() != 0) {
         return thenBlock;
-      } else if (val.getType() == OpargType.BOOLVAL &&
+      } else if (val.getType() == ArgType.BOOLVAL &&
           val.getBoolLit()) {
         return thenBlock;
       } else {
@@ -739,7 +748,7 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceVars(Map<String, Oparg> renames) {
+    public void replaceVars(Map<String, Arg> renames) {
       this.replaceVarsInBlocks(renames, false);
       ICUtil.replaceVarsInList(renames, initVals, false);
       ICUtil.replaceVarsInList(renames, usedVariables, true);
@@ -747,7 +756,7 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceInputs(Map<String, Oparg> renames) {
+    public void replaceInputs(Map<String, Arg> renames) {
       this.replaceVarsInBlocks(renames, true);
       ICUtil.replaceVarsInList(renames, initVals, false);
     }
@@ -774,7 +783,7 @@ public class ICContinuations {
     }
 
     @Override
-    public Block branchPredict(Map<String, Oparg> knownConstants) {
+    public Block branchPredict(Map<String, Arg> knownConstants) {
       return null;
     }
 
@@ -884,12 +893,12 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceVars(Map<String, Oparg> renames) {
+    public void replaceVars(Map<String, Arg> renames) {
       replaceVarsInBlocks(renames, false);
     }
 
     @Override
-    public void replaceInputs(Map<String, Oparg> renames) {
+    public void replaceInputs(Map<String, Arg> renames) {
       replaceVarsInBlocks(renames, true);
     }
 
@@ -904,7 +913,7 @@ public class ICContinuations {
     }
 
     @Override
-    public Block branchPredict(Map<String, Oparg> knownConstants) {
+    public Block branchPredict(Map<String, Arg> knownConstants) {
       return null;
     }
 
@@ -950,15 +959,15 @@ public class ICContinuations {
     // arguments can be either value variable or integer literal
     private final String loopName;
     private Variable loopVar;
-    private Oparg start;
-    private Oparg end;
-    private Oparg increment;
+    private Arg start;
+    private Arg end;
+    private Arg increment;
     private final boolean isSync;
     private int desiredUnroll;
     private final int splitDegree;
 
     public RangeLoop(String loopName, Variable loopVar,
-        Oparg start, Oparg end, Oparg increment,
+        Arg start, Arg end, Arg increment,
         boolean isSync,
         List<Variable> usedVariables, List<Variable> containersToRegister,
         int desiredUnroll, int splitDegree) {
@@ -968,20 +977,20 @@ public class ICContinuations {
     }
 
     private RangeLoop(String loopName, Block block, Variable loopVar,
-        Oparg start, Oparg end, Oparg increment,
+        Arg start, Arg end, Arg increment,
         boolean isSync,
         List<Variable> usedVariables, List<Variable> containersToRegister,
         int desiredUnroll, int splitDegree) {
       super(block,
             usedVariables, containersToRegister);
-      assert(start.getType() == OpargType.INTVAL ||
-          (start.getType() == OpargType.VAR &&
+      assert(start.getType() == ArgType.INTVAL ||
+          (start.getType() == ArgType.VAR &&
               start.getVar().getType().equals(Types.VALUE_INTEGER)));
-      assert(end.getType() == OpargType.INTVAL ||
-          (end.getType() == OpargType.VAR &&
+      assert(end.getType() == ArgType.INTVAL ||
+          (end.getType() == ArgType.VAR &&
               end.getVar().getType().equals(Types.VALUE_INTEGER)));
-      assert(increment.getType() == OpargType.INTVAL ||
-          (increment.getType() == OpargType.VAR &&
+      assert(increment.getType() == ArgType.INTVAL ||
+          (increment.getType() == ArgType.VAR &&
                       increment.getVar().getType().equals(Types.VALUE_INTEGER)));
       assert(loopVar.getType().equals(Types.VALUE_INTEGER));
       this.loopName = loopName;
@@ -1028,7 +1037,7 @@ public class ICContinuations {
 
       sb.append(" = " + start.toString() + " to " + end.toString() + " ");
 
-      if (increment.getType() != OpargType.INTVAL ||
+      if (increment.getType() != ArgType.INTVAL ||
             increment.getIntLit() != 1) {
           sb.append("incr " + increment.toString() + " ");
       }
@@ -1039,7 +1048,7 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceVars(Map<String, Oparg> renames) {
+    public void replaceVars(Map<String, Arg> renames) {
       this.replaceVarsInBlocks(renames, false);
       if (renames.containsKey(loopVar.getName())) {
         loopVar = renames.get(loopVar.getName()).getVar();
@@ -1052,18 +1061,18 @@ public class ICContinuations {
       ICUtil.replaceVarsInList(renames, containersToRegister, true);
     }
     @Override
-    public void replaceInputs(Map<String, Oparg> renames) {
+    public void replaceInputs(Map<String, Arg> renames) {
       this.replaceVarsInBlocks(renames, true);
       start = renameRangeArg(start, renames);
       end = renameRangeArg(end, renames);
       increment = renameRangeArg(increment, renames);
     }
 
-    private Oparg renameRangeArg(Oparg val, Map<String, Oparg> renames) {
-      if (val.type == OpargType.VAR) {
+    private Arg renameRangeArg(Arg val, Map<String, Arg> renames) {
+      if (val.type == ArgType.VAR) {
         String vName = val.getVar().getName();
         if (renames.containsKey(vName)) {
-          Oparg o = renames.get(vName);
+          Arg o = renames.get(vName);
           assert(o != null);
           return o;
         }
@@ -1074,8 +1083,8 @@ public class ICContinuations {
     @Override
     public Collection<Variable> requiredVars() {
       Collection<Variable> res = super.requiredVars();
-      for (Oparg o: Arrays.asList(start, end, increment)) {
-        if (o.getType() == OpargType.VAR) {
+      for (Arg o: Arrays.asList(start, end, increment)) {
+        if (o.getType() == ArgType.VAR) {
           res.add(o.getVar());
         }
       }
@@ -1093,9 +1102,9 @@ public class ICContinuations {
     }
 
     @Override
-    public Block branchPredict(Map<String, Oparg> knownConstants) {
+    public Block branchPredict(Map<String, Arg> knownConstants) {
       // Could inline loop if there is only one iteration...
-      if (start.getType() == OpargType.INTVAL && end.getType() == OpargType.INTVAL) {
+      if (start.getType() == ArgType.INTVAL && end.getType() == ArgType.INTVAL) {
         long startV = start.getIntLit();
         long endV = end.getIntLit();
         boolean singleIter = false;
@@ -1104,7 +1113,7 @@ public class ICContinuations {
           return new Block(BlockType.FOREACH_BODY);
         } else if (endV == startV) {
           singleIter = true;
-        } else if (increment.getType() == OpargType.INTVAL) {
+        } else if (increment.getType() == ArgType.INTVAL) {
           long incV = increment.getIntLit();
           if (startV + incV > endV) {
             singleIter = true;
@@ -1124,22 +1133,22 @@ public class ICContinuations {
       // Shift loop variable to body and inline loop body
       this.loopBody.declareVariable(loopVar);
       this.loopBody.addInstructionFront(
-          new LocalBuiltin(LocalOpcode.COPY_INT, this.loopVar, start));
+          Builtin.createLocal(BuiltinOpcode.COPY_INT, this.loopVar, start));
       block.insertInline(loopBody);
       block.removeContinuation(this);
     }
 
     @Override
-    public boolean constantReplace(Map<String, Oparg> knownConstants) {
+    public boolean constantReplace(Map<String, Arg> knownConstants) {
       boolean anyChanged = false;
-      Oparg oldVals[] = new Oparg[] {start, end, increment };
-      Oparg newVals[] = new Oparg[3];
+      Arg oldVals[] = new Arg[] {start, end, increment };
+      Arg newVals[] = new Arg[3];
       for (int i = 0; i < oldVals.length; i++) {
-        Oparg old = oldVals[i];
-        if (old.type == OpargType.VAR) {
-          Oparg replacement = knownConstants.get(old.getVar().getName());
+        Arg old = oldVals[i];
+        if (old.type == ArgType.VAR) {
+          Arg replacement = knownConstants.get(old.getVar().getName());
           if (replacement != null) {
-            assert(replacement.getType() == OpargType.INTVAL);
+            assert(replacement.getType() == ArgType.INTVAL);
             anyChanged = true;
             newVals[i] = replacement;
           } else {
@@ -1182,12 +1191,12 @@ public class ICContinuations {
       logger.trace("DesiredUnroll for " + loopName + ": " + desiredUnroll);
       if (this.desiredUnroll > 1) {
         logger.debug("Unrolling range loop " + desiredUnroll + " times ");
-        Oparg oldStep = this.increment;
+        Arg oldStep = this.increment;
 
         long checkIter; // the time we need to check
-        if(increment.getType() == OpargType.INTVAL &&
-            start.getType() == OpargType.INTVAL &&
-            end.getType() == OpargType.INTVAL) {
+        if(increment.getType() == ArgType.INTVAL &&
+            start.getType() == ArgType.INTVAL &&
+            end.getType() == ArgType.INTVAL) {
           long startV = start.getIntLit();
           long endV = end.getIntLit();
           long incV = increment.getIntLit();
@@ -1210,8 +1219,8 @@ public class ICContinuations {
         }
 
         // Update step
-        if (oldStep.getType() == OpargType.INTVAL) {
-          this.increment = Oparg.createIntLit(oldStep.getIntLit() * desiredUnroll);
+        if (oldStep.getType() == ArgType.INTVAL) {
+          this.increment = Arg.createIntLit(oldStep.getIntLit() * desiredUnroll);
         } else {
           Variable old = oldStep.getVar();
           Variable newIncrement = new Variable(old.getType(),
@@ -1219,10 +1228,10 @@ public class ICContinuations {
               VariableStorage.LOCAL,
               DefType.LOCAL_COMPILER, null);
           outerBlock.declareVariable(newIncrement);
-          outerBlock.addInstruction(new LocalBuiltin(LocalOpcode.MULT_INT,
-              newIncrement, Arrays.asList(oldStep, Oparg.createIntLit(desiredUnroll))));
+          outerBlock.addInstruction(Builtin.createLocal(BuiltinOpcode.MULT_INT,
+              newIncrement, Arrays.asList(oldStep, Arg.createIntLit(desiredUnroll))));
 
-          this.increment = Oparg.createVar(newIncrement);
+          this.increment = Arg.createVar(newIncrement);
         }
 
         // Create a copy of the original loop body for reference
@@ -1238,7 +1247,7 @@ public class ICContinuations {
           if (i != 0) {
             // Replace references to the iteration counter
             nb.replaceVars(Collections.singletonMap(this.loopVar.getName(),
-                                            Oparg.createVar(nextIter)));
+                                            Arg.createVar(nextIter)));
           }
 
           if (i < desiredUnroll - 1) {
@@ -1250,8 +1259,8 @@ public class ICContinuations {
 
             curr.addVariable(nextIter);
             // Loop counter
-            curr.addInstruction(new LocalBuiltin(LocalOpcode.PLUS_INT,
-                nextIter, Arrays.asList(Oparg.createVar(lastIter),
+            curr.addInstruction(Builtin.createLocal(BuiltinOpcode.PLUS_INT,
+                nextIter, Arrays.asList(Arg.createVar(lastIter),
                                         oldStep)));
 
             boolean mustCheck = checkIter < 0 || i + 1 == checkIter;
@@ -1260,11 +1269,11 @@ public class ICContinuations {
                   this.loopVar.getName() + "@" + (i + 1) + "_check",
                   VariableStorage.LOCAL, DefType.LOCAL_COMPILER, null);
               curr.addVariable(nextIterCheck);
-              curr.addInstruction(new LocalBuiltin(LocalOpcode.LTE_INT,
-                  nextIterCheck, Arrays.asList(Oparg.createVar(nextIter),
+              curr.addInstruction(Builtin.createLocal(BuiltinOpcode.LTE_INT,
+                  nextIterCheck, Arrays.asList(Arg.createVar(nextIter),
                                           this.end)));
               // check to see if we should run next iteration
-              IfStatement ifSt = new IfStatement(Oparg.createVar(
+              IfStatement ifSt = new IfStatement(Arg.createVar(
                                                         nextIterCheck));
               curr.addContinuation(ifSt);
 
@@ -1295,10 +1304,10 @@ public class ICContinuations {
      * Fuse the other loop into this loop
      */
     public void fuseInto(RangeLoop o, boolean insertAtTop) {
-      Map<String, Oparg> renames = new HashMap<String, Oparg>();
+      Map<String, Arg> renames = new HashMap<String, Arg>();
       // Update loop var in other loop
       renames.put(o.loopVar.getName(),
-                  Oparg.createVar(this.loopVar));
+                  Arg.createVar(this.loopVar));
       o.replaceVars(renames);
      
       this.fuseIntoAbstract(o, insertAtTop);
@@ -1309,9 +1318,9 @@ public class ICContinuations {
     private final ArrayList<Integer> caseLabels;
     private final ArrayList<Block> caseBlocks;
     private final Block defaultBlock;
-    private Oparg switchVar;
+    private Arg switchVar;
 
-    public SwitchStatement(Oparg switchVar, List<Integer> caseLabels) {
+    public SwitchStatement(Arg switchVar, List<Integer> caseLabels) {
       this(switchVar, new ArrayList<Integer>(caseLabels),
           new ArrayList<Block>(), new Block(BlockType.CASE_BLOCK));
 
@@ -1322,7 +1331,7 @@ public class ICContinuations {
       }
     }
 
-    private SwitchStatement(Oparg switchVar, ArrayList<Integer> caseLabels,
+    private SwitchStatement(Arg switchVar, ArrayList<Integer> caseLabels,
         ArrayList<Block> caseBlocks, Block defaultBlock) {
       super();
       this.switchVar = switchVar;
@@ -1394,13 +1403,13 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceVars(Map<String, Oparg> renames) {
+    public void replaceVars(Map<String, Arg> renames) {
       replaceVarsInBlocks(renames, false);
       switchVar = ICUtil.replaceOparg(renames, switchVar, false);
     }
 
     @Override
-    public void replaceInputs(Map<String, Oparg> renames) {
+    public void replaceInputs(Map<String, Arg> renames) {
       replaceVarsInBlocks(renames, true);
       switchVar = ICUtil.replaceOparg(renames, switchVar, false);
     }
@@ -1412,7 +1421,7 @@ public class ICContinuations {
 
     @Override
     public Collection<Variable> requiredVars() {
-      if (switchVar.getType() == OpargType.VAR) {
+      if (switchVar.getType() == ArgType.VAR) {
         return Arrays.asList(switchVar.getVar());
       } else {
         return Collections.emptyList();
@@ -1421,7 +1430,7 @@ public class ICContinuations {
 
     @Override
     public void removeVars(Set<String> removeVars) {
-      assert(switchVar.getType() != OpargType.VAR 
+      assert(switchVar.getType() != ArgType.VAR 
           || !removeVars.contains(switchVar.getVar().getName()));
       defaultBlock.removeVars(removeVars);
       for (Block caseBlock: this.caseBlocks) {
@@ -1431,14 +1440,14 @@ public class ICContinuations {
     }
 
     @Override
-    public Block branchPredict(Map<String, Oparg> knownConstants) {
+    public Block branchPredict(Map<String, Arg> knownConstants) {
       long val;
-      if (switchVar.getType() == OpargType.VAR) {
-        Oparg switchVal = knownConstants.get(switchVar.getVar().getName());
+      if (switchVar.getType() == ArgType.VAR) {
+        Arg switchVal = knownConstants.get(switchVar.getVar().getName());
         if (switchVal == null) {
           return null;
         }
-        assert(switchVal.getType() == OpargType.INTVAL);
+        assert(switchVal.getType() == ArgType.INTVAL);
         val = switchVal.getIntLit();
       } else {
         val = switchVar.getIntLit();
@@ -1577,7 +1586,7 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceVars(Map<String, Oparg> renames) {
+    public void replaceVars(Map<String, Arg> renames) {
       replaceVarsInBlocks(renames, false);
       ICUtil.replaceVarsInList(renames, waitVars, true);
       ICUtil.replaceVarsInList(renames, usedVariables, true);
@@ -1585,7 +1594,7 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceInputs(Map<String, Oparg> renames) {
+    public void replaceInputs(Map<String, Arg> renames) {
       replaceVarsInBlocks(renames, true);
       ICUtil.replaceVarsInList(renames, waitVars, true);
     }
@@ -1629,7 +1638,7 @@ public class ICContinuations {
     }
 
     @Override
-    public Block branchPredict(Map<String, Oparg> knownConstants) {
+    public Block branchPredict(Map<String, Arg> knownConstants) {
       // We can't really do branch prediction for a wait statement, but
       // it is a useful mechanism to piggy-back on to remove the wait
       return tryInline(knownConstants.keySet());

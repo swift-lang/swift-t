@@ -3,13 +3,13 @@ package exm.stc.frontend;
 import java.util.*;
 import java.util.Map.Entry;
 
-import exm.stc.ast.Types;
-import exm.stc.ast.Types.StructType;
-import exm.stc.ast.Types.SwiftType;
-import exm.stc.ast.Types.StructType.StructField;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.util.TernaryLogic.Ternary;
 
 /**

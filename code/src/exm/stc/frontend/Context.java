@@ -7,14 +7,14 @@ import java.util.*;
 import org.apache.log4j.Logger;
 
 import exm.stc.ast.FilePosition;
-import exm.stc.ast.Variable;
 import exm.stc.ast.FilePosition.LineMapping;
-import exm.stc.ast.Types.FunctionType;
-import exm.stc.ast.Types.SwiftType;
-import exm.stc.ast.Variable.DefType;
-import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Variable.DefType;
+import exm.stc.common.lang.Variable.VariableStorage;
 
 /**
  * Abstract interface used to track and access contextual information about the
@@ -53,6 +53,9 @@ public abstract class Context
       throws DoubleDefineException;
 
   public abstract void defineAppFunction(String name, FunctionType ft)
+      throws DoubleDefineException;
+  
+  public abstract void defineBuiltinFunction(String name, FunctionType ft)
       throws DoubleDefineException;
 
   /**

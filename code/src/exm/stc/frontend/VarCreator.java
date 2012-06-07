@@ -3,18 +3,18 @@ package exm.stc.frontend;
 import java.util.List;
 import java.util.Stack;
 
-import exm.stc.ast.Types;
-import exm.stc.ast.Variable;
-import exm.stc.ast.Types.StructType;
-import exm.stc.ast.Types.SwiftType;
-import exm.stc.ast.Types.StructType.StructField;
-import exm.stc.ast.Variable.DefType;
-import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.StructType.StructField;
+import exm.stc.common.lang.Variable.DefType;
+import exm.stc.common.lang.Variable.VariableStorage;
 
 /**
  * This module contains logic to create and initialise variables, in order

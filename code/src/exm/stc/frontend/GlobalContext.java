@@ -1,17 +1,24 @@
 
 package exm.stc.frontend;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.ast.Variable;
-import exm.stc.ast.Types.FunctionType;
-import exm.stc.ast.Types.SwiftType;
-import exm.stc.ast.Variable.DefType;
-import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Variable.DefType;
+import exm.stc.common.lang.Variable.VariableStorage;
 
 /**
  * Global context for entire program
@@ -36,6 +43,12 @@ extends Context
   private Map<String, FunctionType> apps = new HashMap<String, FunctionType>();
 
   /**
+   * Map from builtin function name to function info
+   */
+  private Map<String, FunctionType> builtins = 
+                              new HashMap<String, FunctionType>();
+  
+  /**
    * Map from type name to the type object
    */
   private Map<String, SwiftType> types = new HashMap<String, SwiftType>();
@@ -55,7 +68,7 @@ extends Context
   {
     this.inputFile = inputFile;
     // Add all predefined types into type name dict
-    types.putAll(Builtins.getNativeTypes());
+    types.putAll(Types.getBuiltInTypes());
   }
 
   @Override
@@ -79,15 +92,13 @@ extends Context
   @Override
   public boolean isBuiltinFunction(String name)
   {
-    return Builtins.exists(name);
+    return builtins.containsKey(name);
   }
 
   @Override
   public boolean isCompositeFunction(String name)
   {
-    if (composites.containsKey(name))
-      return true;
-    return false;
+    return composites.containsKey(name);
   }
   
   @Override
@@ -104,7 +115,7 @@ extends Context
     else if ((res = apps.get(name)) != null) {
       return res;
     }
-    else if ((res = Builtins.getBuiltinType(name)) != null) {
+    else if ((res = builtins.get(name)) != null) {
       return res;
     }
     else {
@@ -138,6 +149,16 @@ extends Context
                                       " already defined");
     }
     apps.put(name, ft);
+  }
+  
+  @Override
+  public void defineBuiltinFunction(String name, FunctionType ft)
+      throws DoubleDefineException {
+    if (isFunction(name)) {
+      throw new DoubleDefineException(this, "Function called "
+          + name + " already defined");
+    }
+    builtins.put(name, ft);
   }
   
   /**

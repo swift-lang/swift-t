@@ -1,4 +1,4 @@
-package exm.stc.ast;
+package exm.stc.common.lang;
 
 import java.util.*;
 
@@ -583,6 +583,10 @@ public class Types {
     }
   }
 
+  public static Map<String, SwiftType> getBuiltInTypes() {
+    return Collections.unmodifiableMap(nativeTypes);
+  }
+
   /**
    * Convenience function to check if a type is an array
    * @param t
@@ -756,5 +760,18 @@ public class Types {
   
   private static final String VALUE_SIGIL = "$";
 
+  private static final Map<String, SwiftType> nativeTypes;
+
+  static {
+    nativeTypes = new HashMap<String, SwiftType>();
+    nativeTypes.put("int", Types.FUTURE_INTEGER);
+    nativeTypes.put("string", Types.FUTURE_STRING);
+    nativeTypes.put("float", Types.FUTURE_FLOAT);
+    nativeTypes.put("boolean", Types.FUTURE_BOOLEAN);
+    nativeTypes.put("void", Types.FUTURE_VOID);
+    nativeTypes.put("blob", Types.FUTURE_BLOB);
+    nativeTypes.put("file", Types.FUTURE_FILE);
+    nativeTypes.put("updateable_float", Types.UPDATEABLE_FLOAT);
+  }
 
 }

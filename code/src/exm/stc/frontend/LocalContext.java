@@ -3,14 +3,14 @@ package exm.stc.frontend;
 
 import java.util.*;
 
-import exm.stc.ast.Types;
-import exm.stc.ast.Variable;
-import exm.stc.ast.Types.FunctionType;
-import exm.stc.ast.Types.SwiftType;
-import exm.stc.ast.Variable.DefType;
-import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Variable.DefType;
+import exm.stc.common.lang.Variable.VariableStorage;
 
 /**
  * Track context within a function.  New child contexts are created
@@ -182,6 +182,12 @@ extends Context
   public void defineAppFunction(String name, FunctionType ft)
     throws DoubleDefineException {
     globals.defineAppFunction(name, ft);
+  }
+  
+  @Override
+  public void defineBuiltinFunction(String name, FunctionType ft)
+    throws DoubleDefineException {
+    globals.defineBuiltinFunction(name, ft);
   }
 
   @Override

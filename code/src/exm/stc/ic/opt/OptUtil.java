@@ -3,18 +3,18 @@ package exm.stc.ic.opt;
 import java.util.ArrayList;
 import java.util.List;
 
-import exm.stc.ast.Types;
-import exm.stc.ast.Variable;
-import exm.stc.ast.Types.SwiftType;
-import exm.stc.ast.Variable.DefType;
-import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.ic.tree.ICInstructions;
+import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Variable.DefType;
+import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Oparg;
-import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
+import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
 
 public class OptUtil {
@@ -75,13 +75,13 @@ public class OptUtil {
    * @param vars
    * @return
    */
-  public static List<Oparg> fetchValuesOf(Block block, List<Instruction> instBuffer,
+  public static List<Arg> fetchValuesOf(Block block, List<Instruction> instBuffer,
           List<Variable> vars) {
-    List<Oparg> inVals = new ArrayList<Oparg>(vars.size());
+    List<Arg> inVals = new ArrayList<Arg>(vars.size());
 
     for (Variable v: vars) {
       Variable valueV = OptUtil.fetchValueOf(block, instBuffer, v);
-      Oparg value = Oparg.createVar(valueV);
+      Arg value = Arg.createVar(valueV);
       inVals.add(value);
     }
     return inVals;
@@ -153,7 +153,7 @@ public class OptUtil {
     if (newOutVars != null) {
       for (int i = 0; i < newOutVars.size(); i++) {
         instBuffer.add(ICInstructions.futureSet(oldOutVars.get(i),
-            Oparg.createVar(newOutVars.get(i))));
+            Arg.createVar(newOutVars.get(i))));
       }
     }
   }

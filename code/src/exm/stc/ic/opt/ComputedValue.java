@@ -3,10 +3,10 @@ package exm.stc.ic.opt;
 import java.util.Arrays;
 import java.util.List;
 
-import exm.stc.ast.Variable;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Variable;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Oparg;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 
 /**
@@ -15,6 +15,9 @@ import exm.stc.ic.tree.ICInstructions.Opcode;
  * represent that with a canonical version of this class.    
  * If cv1.equals(cv2) then that should mean that the expressions are 
  *    for all intents and purposes identical
+ *    
+ * This is related to the "Global Value Numbering" optimisation in the
+ * compiler literature.
  */
 public class ComputedValue {
   /** Ordered list of inputs of the expression.
@@ -33,13 +36,13 @@ public class ComputedValue {
   
   final Opcode op;
   final String subop;
-  final List<Oparg> inputs;
-  final Oparg valLocation; // The constant expression or variable where it can be found
+  final List<Arg> inputs;
+  final Arg valLocation; // The constant expression or variable where it can be found
   final boolean outClosed; // true if out is known to be closed
   final EquivalenceType equivType;
   
-  public ComputedValue(Opcode op, String subop, List<Oparg> inputs,
-      Oparg valLocation, boolean outClosed, EquivalenceType equivType) {
+  public ComputedValue(Opcode op, String subop, List<Arg> inputs,
+      Arg valLocation, boolean outClosed, EquivalenceType equivType) {
     super();
     assert(op != null);
     assert(subop != null);
@@ -52,20 +55,20 @@ public class ComputedValue {
     this.equivType = equivType;
   }
   
-  public ComputedValue(Opcode op, String subop, List<Oparg> inputs,
-      Oparg valLocation, boolean outClosed) {
+  public ComputedValue(Opcode op, String subop, List<Arg> inputs,
+      Arg valLocation, boolean outClosed) {
     this(op, subop, inputs, valLocation, outClosed, EquivalenceType.VALUE);
   }
-  public ComputedValue(Opcode op, String subop, Oparg input,
-      Oparg valLocation, boolean outClosed) {
+  public ComputedValue(Opcode op, String subop, Arg input,
+      Arg valLocation, boolean outClosed) {
     this(op, subop, Arrays.asList(input), valLocation, outClosed);
   }
   
-  public ComputedValue(Opcode op, String subop, Oparg input) {
+  public ComputedValue(Opcode op, String subop, Arg input) {
     this(op, subop, Arrays.asList(input));
   }
   
-  public ComputedValue(Opcode op, String subop, List<Oparg> inputs) {
+  public ComputedValue(Opcode op, String subop, List<Arg> inputs) {
     this(op, subop, inputs, null, false);
   }
   
@@ -77,15 +80,15 @@ public class ComputedValue {
     return subop;
   }
 
-  public List<Oparg> getInputs() {
+  public List<Arg> getInputs() {
     return inputs;
   }
   
-  public Oparg getInput(int i) {
+  public Arg getInput(int i) {
     return inputs.get(i);
   }
 
-  public Oparg getValLocation() {
+  public Arg getValLocation() {
     return valLocation;
   }
 
@@ -116,7 +119,7 @@ public class ComputedValue {
   public int hashCode() {
     int result = this.op.hashCode();
     result ^= this.subop.hashCode(); 
-    for (Oparg o: this.inputs) {
+    for (Arg o: this.inputs) {
       if (o == null) {
         throw new STCRuntimeError("Null oparg in " + this);
       }
@@ -169,8 +172,8 @@ public class ComputedValue {
   public static final String REF_TO_ARRAY_CONTENTS = "ref_to_array_contents";
   private static final String COPY_OF = "copy_of";
 
-  public static ComputedValue makeCopyCV(Variable dst, Oparg src) {
+  public static ComputedValue makeCopyCV(Variable dst, Arg src) {
     return new ComputedValue(Opcode.FAKE, COPY_OF, 
-                  src, Oparg.createVar(dst), false);
+                  src, Arg.createVar(dst), false);
   }
 }

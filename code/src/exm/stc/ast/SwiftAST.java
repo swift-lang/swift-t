@@ -9,8 +9,8 @@ import java.util.Stack;
 import org.antlr.runtime.Token;
 import org.antlr.runtime.tree.CommonTree;
 
-import exm.stc.ast.Types.SwiftType;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.frontend.VariableUsageInfo;
 
 /**

@@ -1,25 +1,24 @@
 package exm.stc.frontend;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.ast.antlr.ExMParser;
-import exm.stc.ast.SwiftAST;
-import exm.stc.ast.Types;
-import exm.stc.ast.Variable;
 import exm.stc.ast.FilePosition.LineMapping;
-import exm.stc.ast.Types.FunctionType;
-import exm.stc.ast.Types.PrimType;
-import exm.stc.ast.Types.ReferenceType;
-import exm.stc.ast.Types.StructType;
-import exm.stc.ast.Types.SwiftType;
-import exm.stc.ast.Types.FunctionType.InArgT;
-import exm.stc.ast.Types.StructType.StructField;
-import exm.stc.ast.Variable.DefType;
-import exm.stc.ast.Variable.VariableStorage;
+import exm.stc.ast.SwiftAST;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.descriptor.ArrayRange;
 import exm.stc.ast.descriptor.ForLoopDescriptor;
+import exm.stc.ast.descriptor.ForLoopDescriptor.LoopVar;
 import exm.stc.ast.descriptor.ForeachLoop;
 import exm.stc.ast.descriptor.FunctionDecl;
 import exm.stc.ast.descriptor.If;
@@ -29,9 +28,8 @@ import exm.stc.ast.descriptor.Literals;
 import exm.stc.ast.descriptor.Switch;
 import exm.stc.ast.descriptor.Update;
 import exm.stc.ast.descriptor.VariableDeclaration;
-import exm.stc.ast.descriptor.Wait;
-import exm.stc.ast.descriptor.ForLoopDescriptor.LoopVar;
 import exm.stc.ast.descriptor.VariableDeclaration.VariableDescriptor;
+import exm.stc.ast.descriptor.Wait;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.DoubleDefineException;
@@ -45,9 +43,20 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
+import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.FunctionType.InArgT;
+import exm.stc.common.lang.Types.ReferenceType;
+import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.StructType.StructField;
+import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Variable.DefType;
+import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
-import exm.stc.ic.tree.ICInstructions.Oparg;
 /**
  * This class walks the Swift AST.
  * It performs typechecking and dataflow analysis as it goes
@@ -428,7 +437,7 @@ public class ASTWalker {
 
     Context waitContext = new LocalContext(context);
     Variable condVal = varCreator.fetchValueOf(waitContext, conditionVar);
-    backend.startIfStatement(Oparg.createVar(condVal), ifStmt.hasElse());
+    backend.startIfStatement(Arg.createVar(condVal), ifStmt.hasElse());
     block(new LocalContext(waitContext), ifStmt.getThenBlock());
 
     if (ifStmt.hasElse()) {
@@ -574,7 +583,7 @@ public class ASTWalker {
 
     LogHelper.trace(context, "switch: " + 
             sw.getCaseBodies().size() + " cases");
-    backend.startSwitch(Oparg.createVar(switchVal), sw.getCaseLabels(),
+    backend.startSwitch(Arg.createVar(switchVal), sw.getCaseLabels(),
                                                          sw.hasDefault());
     for (SwiftAST caseBody : sw.getCaseBodies()) {
       block(new LocalContext(waitContext), caseBody);
@@ -618,7 +627,7 @@ public class ASTWalker {
     } else {
       // Inefficient but constant folding will clean up
       step = varCreator.createTmp(context, Types.FUTURE_INTEGER);
-      backend.assignInt(step, Oparg.createIntLit(1));
+      backend.assignInt(step, Arg.createIntLit(1));
     }
     
     ArrayList<Variable> usedVariables = new ArrayList<Variable>();
@@ -649,15 +658,15 @@ public class ASTWalker {
     Variable memberVal = varCreator.createValueOfVar(bodyContext,
                                             loop.getMemberVar(), false);
     backend.startRangeLoop("range" + loopNum, memberVal, 
-            Oparg.createVar(startVal), Oparg.createVar(endVal), 
-            Oparg.createVar(stepVal), loop.isSyncLoop(),
+            Arg.createVar(startVal), Arg.createVar(endVal), 
+            Arg.createVar(stepVal), loop.isSyncLoop(),
             usedVariables, containersToRegister, loop.getDesiredUnroll(),
             loop.getSplitDegree());
     
     // We have the current value, but need to put it in a future in case user
     //  code refers to it
     varCreator.initialiseVariable(bodyContext, loop.getMemberVar());
-    backend.assignInt(loop.getMemberVar(), Oparg.createVar(memberVal));
+    backend.assignInt(loop.getMemberVar(), Arg.createVar(memberVal));
     block(bodyContext, loop.getBody());
     backend.endRangeLoop(loop.isSyncLoop(), containersToRegister,
                                                   loop.getSplitDegree());
@@ -727,7 +736,7 @@ public class ASTWalker {
       Variable loopCountVar = varCreator.createVariable(loop.getBodyContext(),
           Types.FUTURE_INTEGER, loop.getCountVarName(), VariableStorage.STACK,
           DefType.LOCAL_USER, null);
-      backend.assignInt(loopCountVar, Oparg.createVar(loop.getLoopCountVal()));
+      backend.assignInt(loopCountVar, Arg.createVar(loop.getLoopCountVal()));
     }
     block(loopBodyContext, loop.getBody());
     backend.endForeachLoop(loop.isSyncLoop(), loop.getSplitDegree(), false, 
@@ -817,7 +826,7 @@ public class ASTWalker {
     Variable condVal = varCreator.fetchValueOf(loopBodyContext, condArg);
     
     // branch depending on if loop should start
-    backend.startIfStatement(Oparg.createVar(condVal), true);
+    backend.startIfStatement(Arg.createVar(condVal), true);
     // If this iteration is good, run all of the stuff in the block
     block(loopBodyContext, forLoop.getBody());
     
@@ -863,10 +872,10 @@ public class ASTWalker {
     //TODO: this is a little funny since the condition expr might be of type int,
     //    but this will work for time being
     Variable falseV = varCreator.createTmp(context, Types.FUTURE_BOOLEAN);
-    backend.assignBool(falseV, Oparg.createBoolLit(false));
+    backend.assignBool(falseV, Arg.createBoolLit(false));
     
     Variable zero = varCreator.createTmp(context, Types.FUTURE_INTEGER);
-    backend.assignInt(zero, Oparg.createIntLit(0));
+    backend.assignInt(zero, Arg.createIntLit(0));
     
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("iterate");
@@ -894,7 +903,7 @@ public class ASTWalker {
     // get value of condVar
     Variable condVal = varCreator.fetchValueOf(bodyContext, condArg); 
     
-    backend.startIfStatement(Oparg.createVar(condVal), true);
+    backend.startIfStatement(Arg.createVar(condVal), true);
     if (containersToRegister.size() > 0) {
       backend.loopBreak(containersToRegister);
     }
@@ -919,11 +928,11 @@ public class ASTWalker {
                                       Types.FUTURE_INTEGER);
     Variable one = varCreator.createTmp(bodyContext, Types.FUTURE_INTEGER);
 
-    backend.assignInt(one, Oparg.createIntLit(1));
-    backend.builtinFunctionCall(
-        Builtins.getArithBuiltin(PrimType.INTEGER, ExMParser.PLUS), 
-        Arrays.asList(loop.getLoopVar(), one), Arrays.asList(nextCounter),
+    backend.assignInt(one, Arg.createIntLit(1));
+    backend.asyncOp(BuiltinOpcode.PLUS_INT, nextCounter, 
+        Arrays.asList(Arg.createVar(loop.getLoopVar()), Arg.createVar(one)),
         null);
+    
     backend.loopContinue(Arrays.asList(nextCond, nextCounter), 
         usedVariables, containersToRegister, blockingVars);
 
@@ -1000,7 +1009,7 @@ public class ASTWalker {
           throw new STCRuntimeError("Don't yet support non-constant" +
           		" initialisers for updateable variables");
         }
-        backend.initUpdateable(var, Oparg.createFloatLit(initVal));
+        backend.initUpdateable(var, Arg.createFloatLit(initVal));
       } else {
         throw new STCRuntimeError("Non-float updateables not yet" +
         		" implemented");
@@ -1339,13 +1348,13 @@ public class ASTWalker {
           if (Types.isArray(lvalArr.getType())) {
             mVar = varCreator.createTmpAlias(context, memberType);
             backend.arrayCreateNestedImm(mVar, lvalArr, 
-                        Oparg.createIntLit(arrIx));
+                        Arg.createIntLit(arrIx));
           } else {
             assert(Types.isArrayRef(lvalArr.getType()));
             mVar = varCreator.createTmpAlias(context, 
                                   new ReferenceType(memberType));
             backend.arrayRefCreateNestedImm(mVar, lvalArr, 
-                Oparg.createIntLit(arrIx));
+                Arg.createIntLit(arrIx));
           }
 
         } else {
@@ -1448,13 +1457,13 @@ public class ASTWalker {
         afterActions.addFirst(new Runnable() {
           public void run() {
             backend.arrayRefInsertImm(lvalVar,
-                      arr, Oparg.createIntLit(arrIx), origLval.var);
+                      arr, Arg.createIntLit(arrIx), origLval.var);
           }});
       } else {
         afterActions.addFirst(new Runnable() {
           public void run() {
             backend.arrayInsertImm(lvalVar, arr, 
-                Oparg.createIntLit(arrIx));
+                Arg.createIntLit(arrIx));
           }});
       }
     } else {
@@ -1533,7 +1542,7 @@ public class ASTWalker {
           + " is already defined");
     }
     
-    Builtins.add(function, ft);
+    context.defineBuiltinFunction(function, ft);
     backend.defineBuiltinFunction(function, pkg, version, symbol, ft);
   }
 
@@ -1791,7 +1800,7 @@ public class ASTWalker {
       if (bval == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(v.getName(), Oparg.createBoolLit(
+      backend.addGlobal(v.getName(), Arg.createBoolLit(
                                   Boolean.parseBoolean(bval)));
       break;
     case INTEGER:
@@ -1799,7 +1808,7 @@ public class ASTWalker {
       if (ival == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(v.getName(), Oparg.createIntLit(
+      backend.addGlobal(v.getName(), Arg.createIntLit(
                                       Long.parseLong(ival)));
       break;
     case FLOAT:
@@ -1813,14 +1822,14 @@ public class ASTWalker {
         }
       }
       assert(fval != null);
-      backend.addGlobal(v.getName(), Oparg.createFloatLit(fval));
+      backend.addGlobal(v.getName(), Arg.createFloatLit(fval));
       break;
     case STRING:
       String sval = Literals.extractStringLit(context, val);
       if (sval == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(v.getName(), Oparg.createStringLit(sval));
+      backend.addGlobal(v.getName(), Arg.createStringLit(sval));
       break;
     default:
       throw new STCRuntimeError("Unexpect value tree type in "

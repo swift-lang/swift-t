@@ -5,25 +5,57 @@
  */
 package exm.stc.tclbackend;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.ast.*;
-import exm.stc.ast.Types.FunctionType;
-import exm.stc.ast.Types.PrimType;
-import exm.stc.ast.Types.SwiftType;
-import exm.stc.ast.Variable.DefType;
-import exm.stc.ast.Variable.VariableStorage;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.*;
-import exm.stc.frontend.Builtins.LocalOpcode;
-import exm.stc.frontend.Builtins.UpdateMode;
-import exm.stc.ic.tree.ICInstructions.Oparg;
-import exm.stc.ic.tree.ICInstructions.OpargType;
+import exm.stc.common.exceptions.InvalidOptionException;
+import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.UndefinedTypeException;
+import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Arg.ArgType;
+import exm.stc.common.lang.Builtins.UpdateMode;
+import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.PrimType;
+import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Variable.DefType;
+import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.tclbackend.Turbine.StackFrameType;
-import exm.stc.tclbackend.tree.*;
+import exm.stc.tclbackend.tree.Command;
+import exm.stc.tclbackend.tree.Comment;
+import exm.stc.tclbackend.tree.DictFor;
+import exm.stc.tclbackend.tree.Expression;
+import exm.stc.tclbackend.tree.ForEach;
+import exm.stc.tclbackend.tree.ForLoop;
+import exm.stc.tclbackend.tree.If;
+import exm.stc.tclbackend.tree.LiteralFloat;
+import exm.stc.tclbackend.tree.LiteralInt;
+import exm.stc.tclbackend.tree.PackageRequire;
+import exm.stc.tclbackend.tree.Proc;
+import exm.stc.tclbackend.tree.Sequence;
+import exm.stc.tclbackend.tree.SetVariable;
+import exm.stc.tclbackend.tree.Square;
+import exm.stc.tclbackend.tree.Switch;
+import exm.stc.tclbackend.tree.TclList;
+import exm.stc.tclbackend.tree.TclString;
+import exm.stc.tclbackend.tree.TclTree;
+import exm.stc.tclbackend.tree.Text;
+import exm.stc.tclbackend.tree.Token;
+import exm.stc.tclbackend.tree.Value;
 import exm.stc.ui.ExitCode;
 
 public class TurbineGenerator implements CompilerBackend
@@ -41,23 +73,6 @@ public class TurbineGenerator implements CompilerBackend
 
   private static final String MAIN_FUNCTION_NAME = "swift:main";
   private static final String CONSTINIT_FUNCTION_NAME = "swift:constants";
-
-  /** to avoid clashes with other tcl variables, prefix variables/functions
-   * names from swift with these prefixes:
-   */
-  private static final String COMP_FN_PREFIX = "cmpf:";
-  private static final String TCL_TMP_VAR_PREFIX = "t:";
-  private static final String TCL_ALIAS_VAR_PREFIX = "a:";
-  private static final String TCL_USER_VAR_PREFIX = "u:";
-  private static final String TCL_VALUE_VAR_PREFIX = "v:";
-  private static final String TCL_OPT_VALUE_VAR_PREFIX = "optv:";
-  private static final String TCL_STRUCT_FIELD_VAR_PREFIX = "sf:";
-  private static final String TCL_LOOPINDEX_VAR_PREFIX = "i:";
-  private static final String TCL_GLOBAL_CONST_VAR_PREFIX = "c:";
-  private static final String TCL_DEREF_COMPILER_VAR_PREFIX = "dr:";
-  private static final String TCL_LOOP_INDEX_VAR_PREFIX = "lv:";
-  private static final String TCL_OUTER_VAR_PREFIX = "outer:";
-
 
   final String timestamp;
   final Logger logger;
@@ -263,7 +278,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void assignInt(Variable target, Oparg src) {
+  public void assignInt(Variable target, Arg src) {
     assert(src.isImmediateInt());
     if (!Types.isInt(target.getType())) {
       throw new STCRuntimeError("Expected variable to be int, "
@@ -286,7 +301,7 @@ public class TurbineGenerator implements CompilerBackend
 
 
   @Override
-  public void assignBool(Variable target, Oparg src) {
+  public void assignBool(Variable target, Arg src) {
     assert(src.isImmediateBool());
     if (!Types.isBool(target.getType())) {
       throw new STCRuntimeError("Expected variable to be bool, "
@@ -308,7 +323,7 @@ public class TurbineGenerator implements CompilerBackend
 
 
   @Override
-  public void assignFloat(Variable target, Oparg src) {
+  public void assignFloat(Variable target, Arg src) {
     assert(src.isImmediateFloat());
     if (!Types.isFloat(target.getType())) {
       throw new STCRuntimeError("Expected variable to be float, "
@@ -330,7 +345,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void assignString(Variable target, Oparg src) {
+  public void assignString(Variable target, Arg src) {
     assert(src.isImmediateString());
     if (!Types.isString(target.getType())) {
       throw new STCRuntimeError("Expected variable to be string, "
@@ -350,327 +365,33 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void localArithOp(LocalOpcode op, Variable out,
-                                            List<Oparg> in) {
+  public void localOp(BuiltinOpcode op, Variable out,
+                                            List<Arg> in) {
     ArrayList<Expression> argExpr = new ArrayList<Expression>(in.size());
-    for (Oparg a: in) {
+    for (Arg a: in) {
       argExpr.add(opargToExpr(a));
     }
 
-    if (op == LocalOpcode.ASSERT || op == LocalOpcode.ASSERT_EQ ||
-        op == LocalOpcode.TRACE || op == LocalOpcode.METADATA) {
-      assert(out == null);
-      String tclFn;
-      switch (op) {
-      case ASSERT:
-        tclFn = "turbine::assert_impl";
-        break;
-      case ASSERT_EQ:
-        tclFn = "turbine::assertEqual_impl";
-        break;
-      case TRACE:
-        tclFn = "turbine::trace_impl";
-        break;
-      case METADATA:
-        tclFn = "turbine::metadata_impl";
-        break;
-      default:
-        throw new STCRuntimeError("Cn't handle local op: "
-            + op.toString());
-      }
-      Command cmd = new Command(tclFn, argExpr);
-      pointStack.peek().add(cmd);
-      return;
-    } else if (op == LocalOpcode.ARGC_GET || op == LocalOpcode.ARGV_CONTAINS
-            || op == LocalOpcode.ARGV_GET || op == LocalOpcode.N_ADLB_SERVERS
-            || op == LocalOpcode.N_ENGINES ||op == LocalOpcode.N_WORKERS
-            || op == LocalOpcode.GETENV) {
-      assert(out != null);
-      String tclFn;
-      switch (op) {
-      case ARGC_GET:
-        tclFn = "turbine::argc_get_impl";
-        break;
-      case ARGV_CONTAINS:
-        tclFn = "turbine::argv_contains_impl";
-        break;
-      case ARGV_GET:
-        tclFn = "turbine::argv_get_impl";
-        break;
-      case N_ADLB_SERVERS:
-        tclFn = "turbine::adlb_servers";
-        break;
-      case N_ENGINES:
-        tclFn = "turbine::turbine_engines";
-        break;
-      case N_WORKERS:
-        tclFn = "turbine::turbine_workers";
-        break;
-      case GETENV:
-        tclFn = "turbine::getenv_impl";
-        break;
-      default:
-        throw new STCRuntimeError("Can't handle local op: "
-            + op.toString());
-      }
-      SetVariable cmd = new SetVariable(prefixVar(out.getName()),
-                        Square.fnCall(tclFn, argExpr.toArray(
-                            new Expression[argExpr.size()])));
-      pointStack.peek().add(cmd);
-      return;
-    } else if (op == LocalOpcode.PRINTF || op == LocalOpcode.SPRINTF) {
-      Square fmtArgs = new TclList(argExpr);
-      Square fmt = new Square(new Token("eval"), new Token("format"),
-                                                                fmtArgs);
-      if (op ==  LocalOpcode.PRINTF) {
-        pointStack.peek().add(new Command(new Token("puts"), fmt));
-      } else {
-        assert(op == LocalOpcode.SPRINTF);
-        pointStack.peek().add(new SetVariable(prefixVar(out.getName()), fmt));
-      }
-      return;
-    } else {
-      assert(out != null);
-      assert(Types.isScalarValue(out.getType()));
-      Expression rhs;
-      // First handle special cases, then typical case
-      if (op == LocalOpcode.STRCAT) {
-        rhs = localStrCat(in, argExpr);
-      } else if (op == LocalOpcode.EQ_STRING
-                || op == LocalOpcode.NEQ_STRING) {
-        assert(argExpr.size() == 2);
-        rhs = new Square(new Token("string"), new Token("equal"),
-            argExpr.get(0), argExpr.get(1));
-        if (op == LocalOpcode.NEQ_STRING) {
-          // Negate previous result
-          rhs = Square.arithExpr(new Token("!"), rhs);
-        }
-      } else if (op == LocalOpcode.COPY_BLOB ||
-          op ==  LocalOpcode.COPY_BOOL ||
-          op == LocalOpcode.COPY_INT ||
-          op == LocalOpcode.COPY_FLOAT ||
-          op == LocalOpcode.COPY_STRING) {
-        assert(argExpr.size() == 1);
-        checkCopy(op, out, in.get(0));
-        rhs = argExpr.get(0);
-      } else if (op == LocalOpcode.MOD_INT) {
-        // Special implementation to emulate old swift
-        rhs = Turbine.modInteger(argExpr.get(0), argExpr.get(1));
-      } else if (op == LocalOpcode.DIV_INT) {
-        // special implementation to emulate old swift
-        rhs = Turbine.divideInteger(argExpr.get(0), argExpr.get(1));
-      } else if (op == LocalOpcode.RAND_INT) {
-        rhs = new Square(new Token("turbine::randint_impl"), argExpr.get(0),
-                                                    argExpr.get(1));
-      } else if (op == LocalOpcode.POW_INT) {
-        assert(argExpr.size() == 2);
-        assert(in.get(0).isImmediateInt() && in.get(1).isImmediateInt());
-        rhs = new Square(new Token("turbine::pow_integer_impl"), argExpr.get(0),
-                                                                argExpr.get(1));
-      } else if (op == LocalOpcode.SUBSTRING) {
-        assert(argExpr.size() == 3);
-        rhs = new Square(new Token("turbine::substring_impl"),
-            argExpr.get(0), argExpr.get(1), argExpr.get(2));
-      } else if (op == LocalOpcode.INTTOSTR || op == LocalOpcode.FLOATTOSTR) {
-        assert(argExpr.size() == 1);
-        // TCL will convert automatically
-        rhs = argExpr.get(0);
-      } else if (op == LocalOpcode.STRTOINT ||
-          op == LocalOpcode.STRTOFLOAT ) {
-        assert(argExpr.size() == 1);
-        String tclCheck = (op == LocalOpcode.STRTOINT) ?
-                  "turbine::check_str_int" : "turbine::check_str_float";
-        rhs = Square.fnCall(tclCheck, argExpr.get(0));
-
-
-      } else {
-        // Case for operations that are implemented directly with
-        // TCL's expr
-        Expression exp[] = arithOpExpr(op, argExpr);
-        rhs = Square.arithExpr(exp);
-      }
-      SetVariable sv = new SetVariable(prefixVar(out.getName()),
-          rhs);
-      pointStack.peek().add(sv);
-    }
+    pointStack.peek().add(BuiltinOps.genLocalOpTcl(op, out, in, argExpr));
   }
-
-  private void checkCopy(LocalOpcode op, Variable out, Oparg inArg) {
-    SwiftType expType = null;
-    switch (op) {
-    case COPY_BLOB:
-      expType = Types.VALUE_BLOB;
-      break;
-    case COPY_BOOL:
-      expType = Types.VALUE_BOOLEAN;
-      break;
-    case COPY_FLOAT:
-      expType = Types.VALUE_FLOAT;
-      break;
-    case COPY_INT:
-      expType = Types.VALUE_INTEGER;
-      break;
-    case COPY_STRING:
-      expType = Types.VALUE_STRING;
-      break;
+  
+  @Override
+  public void asyncOp(BuiltinOpcode op, Variable out, List<Arg> in,
+      Arg priority) {
+    //TODO: temporary hack to get working
+    String fnName = BuiltinOps.getBuiltinOpImpl(op);
+    if (fnName == null) {
+      throw new STCRuntimeError("No implementation for op "
+          + op + " known");
     }
-    if (inArg.getType() == OpargType.VAR) {
-      assert(expType.equals(inArg.getSwiftType()));
-    } else {
-      // getSwiftType returns futures for constant vals
-      assert(expType.getPrimitiveType()
-          == inArg.getSwiftType().getPrimitiveType());
+    
+    ArrayList<Variable> inputs = new ArrayList<Variable>();
+    for (Arg a: in) {
+      assert(a.getType() == ArgType.VAR);
+      inputs.add(a.getVar());
     }
-    assert(expType.equals(out.getType()));
+    builtinFunctionCall(fnName, inputs, Arrays.asList(out), priority);
   }
-
-  private Expression localStrCat(List<Oparg> in, ArrayList<Expression> argExpr) {
-    TclString rhs = new TclString("", false);
-    for (Expression e: argExpr) {
-      rhs.add(e);
-    }
-    return rhs;
-  }
-
-  private Expression[] arithOpExpr(LocalOpcode op,
-                        ArrayList<Expression> argExpr) {
-    switch(op) {
-    /* First handle binary ops that map nicely to TCL equivalent */
-    case PLUS_INT: case PLUS_FLOAT:
-    case MINUS_INT: case MINUS_FLOAT:
-    case MULT_INT: case MULT_FLOAT:
-    case DIV_FLOAT: case POW_FLOAT:
-    case EQ_INT: case NEQ_INT:
-    case LT_INT: case LTE_INT: case GT_INT: case GTE_INT:
-    case LT_FLOAT: case LTE_FLOAT: case GT_FLOAT: case GTE_FLOAT:
-    case EQ_FLOAT: case NEQ_FLOAT:
-    case EQ_BOOL: case NEQ_BOOL:
-    case EQ_STRING: case NEQ_STRING:
-    case AND: case OR:
-
-      assert(argExpr.size() == 2);
-      return new Expression[] {
-          argExpr.get(0), arithOpTok(op), argExpr.get(1)
-          };
-    case NOT: case NEGATE_INT: case NEGATE_FLOAT:
-
-      /* next unary ops with tcl equivalent */
-      assert(argExpr.size() == 1);
-      return new Expression[] {
-          arithOpTok(op), argExpr.get(0)
-          };
-    case IS_NAN:
-      assert(argExpr.size() == 1);
-      return new Expression[] {
-          argExpr.get(0), new Token("!="), argExpr.get(0)};
-    case LOG: case EXP: case SQRT:
-    case ABS_FLOAT: case ABS_INT:
-      // Single argument to expr function
-      return new Expression[] {
-          arithOpTok(op), new Token("("), argExpr.get(0),
-          new Token(")")
-          };
-    case RANDOM:
-      // No arguments to expr function
-      return new Expression[] {
-          arithOpTok(op), new Token("()")
-          };
-    case INTTOFLOAT:
-      assert(argExpr.size() == 1);
-      // Need to explicitly convert to floating point number, other
-      // TCL will do e.g. integer division
-      return new Expression[] { new Token("double("),
-                        argExpr.get(0), new Token(")") };
-    case CEIL:
-    case FLOOR:
-    case ROUND: {
-      String fname;
-      assert(argExpr.size() == 1);
-      switch(op) {
-      case CEIL:
-        fname = "ceil";
-        break;
-      case FLOOR:
-        fname = "floor";
-        break;
-      case ROUND:
-        fname = "round";
-        break;
-      default:
-        throw new STCRuntimeError("impossible");
-      }
-      // Need to apply int( conversion, as the rounding function still return
-      // a floating point (albeit one with no fractional part)
-      return new Expression[] { new Token("int(" + fname + "("),
-          argExpr.get(0), new Token("))") };
-    }
-    case MAX_FLOAT: case MAX_INT: case MIN_FLOAT: case MIN_INT:
-      String fnName;
-      if (op == LocalOpcode.MAX_FLOAT || op == LocalOpcode.MAX_INT) {
-        fnName = "max";
-      } else {
-        fnName = "min";
-      }
-      return new Expression[] {new Token(fnName), new Token("("),
-                     argExpr.get(0),
-                     new Token(","), argExpr.get(1), new Token(")")};
-    default:
-      throw new STCRuntimeError("Haven't implement code gen for "
-          + "local arithmetic op " + op.toString());
-    }
-  }
-
-  private Token arithOpTok(LocalOpcode op) {
-    switch (op) {
-    case EQ_INT: case EQ_FLOAT: case EQ_BOOL:
-      return new Token("==");
-    case NEQ_INT: case NEQ_FLOAT: case NEQ_BOOL:
-      return new Token("!=");
-    case PLUS_INT:
-    case PLUS_FLOAT:
-      return new Token("+");
-    case MINUS_INT:
-    case MINUS_FLOAT:
-    case NEGATE_INT:
-    case NEGATE_FLOAT:
-      return new Token("-");
-    case MULT_FLOAT:
-    case MULT_INT:
-      return new Token("*");
-    case POW_FLOAT:
-      return new Token("**");
-    case LT_INT: case LT_FLOAT:
-      return new Token("<");
-    case LTE_INT: case LTE_FLOAT:
-      return new Token("<=");
-    case GT_INT: case GT_FLOAT:
-      return new Token(">");
-    case GTE_INT: case GTE_FLOAT:
-      return new Token(">=");
-    case OR:
-      return new Token("||");
-    case AND:
-      return new Token("&&");
-    case NOT:
-      return new Token("!");
-    case EXP:
-      return new Token("exp");
-    case LOG:
-      return new Token("log");
-    case SQRT:
-      return new Token("sqrt");
-    case ABS_FLOAT: case ABS_INT:
-      return new Token("abs");
-    case RANDOM:
-      return new Token("rand");
-    case DIV_FLOAT:
-      return new Token("/");
-    default:
-      throw new STCRuntimeError("need to add op " +
-                op.toString());
-    }
-  }
-
 
   @Override
   public void dereferenceInt(Variable target, Variable src) {
@@ -756,7 +477,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void arrayCreateNestedImm(Variable arrayResult,
-      Variable arrayVar, Oparg arrIx) {
+      Variable arrayVar, Arg arrIx) {
     assert(Types.isArray(arrayVar.getType()));
     assert(Types.isArray(arrayResult.getType()));
     assert(arrayResult.getStorage() == VariableStorage.ALIAS);
@@ -770,7 +491,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void arrayRefCreateNestedImm(Variable arrayResult,
-      Variable arrayVar, Oparg arrIx) {
+      Variable arrayVar, Arg arrIx) {
     assert(Types.isArrayRef(arrayVar.getType()));
     assert(Types.isArrayRef(arrayResult.getType()));
     assert(arrayResult.getStorage() == VariableStorage.ALIAS);
@@ -785,14 +506,14 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void appFunctionCall(String function,
-              List<Variable> inputs, List<Variable> outputs, Oparg priority) {
+              List<Variable> inputs, List<Variable> outputs, Arg priority) {
     assert(priority == null || priority.isImmediateInt());
     throw new STCRuntimeError("appFunctionCall not implemented");
   }
 
   @Override
   public void builtinFunctionCall(String function,
-          List<Variable> inputs, List<Variable> outputs, Oparg priority)
+          List<Variable> inputs, List<Variable> outputs, Arg priority)
   {
     assert(priority == null || priority.isImmediateInt());
     logger.debug("call builtin: " + function);
@@ -817,7 +538,7 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void compositeFunctionCall(String function,
               List<Variable> inputs, List<Variable> outputs,
-              List<Boolean> blocking, boolean async, Oparg priority)  {
+              List<Boolean> blocking, boolean async, Arg priority)  {
     assert(priority == null || priority.isImmediateInt());
     logger.debug("call composite: " + function);
     TclList iList = tclListOfVariables(inputs);
@@ -834,24 +555,26 @@ public class TurbineGenerator implements CompilerBackend
 
     setPriority(priority);
     if (async) {
-      pointStack.peek().add(Turbine.callComposite(COMP_FN_PREFIX + function,
+      pointStack.peek().add(Turbine.callComposite(
+                            TclNamer.compFuncName(function),
                             oList, iList, tclListOfVariables(blockOn)));
     } else {
       // Calling synchronously, can't guarantee anything blocks
       assert(blocking.size() == 0);
-      pointStack.peek().add(Turbine.callCompositeSync(COMP_FN_PREFIX + function,
+      pointStack.peek().add(Turbine.callCompositeSync(
+          TclNamer.compFuncName(function),
           oList, iList));
     }
     clearPriority(priority);
   }
 
-  private void clearPriority(Oparg priority) {
+  private void clearPriority(Arg priority) {
     if (priority != null) {
       pointStack.peek().add(Turbine.resetPriority());
     }
   }
 
-  private void setPriority(Oparg priority) {
+  private void setPriority(Arg priority) {
     if (priority != null) {
       logger.trace("priority: " + priority);
       pointStack.peek().add(Turbine.setPriority(opargToExpr(priority)));
@@ -913,7 +636,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void arrayLookupRefImm(Variable oVar, Variable arrayVar, Oparg arrIx,
+  public void arrayLookupRefImm(Variable oVar, Variable arrayVar, Arg arrIx,
         boolean isArrayRef) {
     assert(arrIx.isImmediateInt());
     arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
@@ -927,7 +650,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void arrayLookupImm(Variable oVar, Variable arrayVar,
-                                                      Oparg arrIx) {
+                                                      Arg arrIx) {
     assert(arrIx.isImmediateInt());
     assert(oVar.getType().equals(
                       Types.getArrayMemberType(arrayVar.getType())));
@@ -1024,7 +747,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void arrayInsertImm(Variable iVar, Variable arrayVar,
-        Oparg arrIx) {
+        Arg arrIx) {
     assert(Types.isArray(arrayVar.getType()));
     if (!arrIx.isImmediateInt()) {
       throw new STCRuntimeError("Not immediate int: " + arrIx);
@@ -1056,7 +779,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void arrayRefInsertImm(Variable iVar, Variable arrayVar,
-        Oparg arrIx, Variable outerArrayVar) {
+        Arg arrIx, Variable outerArrayVar) {
     assert(Types.isArrayRef(arrayVar.getType()));
     assert(Types.isArray(outerArrayVar.getType()));
     assert(arrIx.isImmediateInt());
@@ -1085,7 +808,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void initUpdateable(Variable updateable, Oparg val) {
+  public void initUpdateable(Variable updateable, Arg val) {
     assert(Types.isScalarUpdateable(updateable.getType()));
     if (!updateable.getType().equals(Types.UPDATEABLE_FLOAT)) {
       throw new STCRuntimeError(updateable.getType() +
@@ -1143,7 +866,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void updateImm(Variable updateable, UpdateMode updateMode,
-                                                Oparg val) {
+                                                Arg val) {
     assert(Types.isScalarUpdateable(updateable.getType()));
     if (updateable.getType().equals(Types.UPDATEABLE_FLOAT)) {
       assert(val.isImmediateFloat());
@@ -1230,7 +953,7 @@ public class TurbineGenerator implements CompilerBackend
     if (isMain)
       prefixedFunctionName = MAIN_FUNCTION_NAME;
     else
-      prefixedFunctionName = COMP_FN_PREFIX+functionName;
+      prefixedFunctionName = TclNamer.compFuncName(functionName);
 
     List<String> args =
       new ArrayList<String>(inputs.size()+outputs.size());
@@ -1344,11 +1067,11 @@ public class TurbineGenerator implements CompilerBackend
    *                will be called later for this if statement
    */
     @Override
-    public void startIfStatement(Oparg condition, boolean hasElse)
+    public void startIfStatement(Arg condition, boolean hasElse)
   {
     logger.trace("startIfStatement()...");
     assert(condition != null);
-    assert(condition.getType() != OpargType.VAR
+    assert(condition.getType() != ArgType.VAR
         || condition.getVar().getStorage() == VariableStorage.LOCAL);
     assert(condition.isImmediateBool()
         || condition.isImmediateInt());
@@ -1487,11 +1210,11 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     @Override
-    public void startSwitch(Oparg switchVar, List<Integer> caseLabels,
+    public void startSwitch(Arg switchVar, List<Integer> caseLabels,
               boolean hasDefault) {
     logger.trace("startSwitch()...");
     assert(switchVar != null);
-    assert(switchVar.getType() != OpargType.VAR ||
+    assert(switchVar.getType() != ArgType.VAR ||
         switchVar.getVar().getStorage() == VariableStorage.LOCAL);
     assert(switchVar.isImmediateInt());
 
@@ -1642,17 +1365,17 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void startRangeLoop(String loopName, Variable loopVar, Oparg start,
-      Oparg end, Oparg increment, boolean isSync, List<Variable> usedVariables,
+  public void startRangeLoop(String loopName, Variable loopVar, Arg start,
+      Arg end, Arg increment, boolean isSync, List<Variable> usedVariables,
       List<Variable> containersToRegister, int desiredUnroll, int splitDegree) {
-    assert(start.getType() == OpargType.INTVAL ||
-        (start.getType() == OpargType.VAR &&
+    assert(start.getType() == ArgType.INTVAL ||
+        (start.getType() == ArgType.VAR &&
             start.getVar().getType().equals(Types.VALUE_INTEGER)));
-    assert(end.getType() == OpargType.INTVAL ||
-        (end.getType() == OpargType.VAR &&
+    assert(end.getType() == ArgType.INTVAL ||
+        (end.getType() == ArgType.VAR &&
             end.getVar().getType().equals(Types.VALUE_INTEGER)));
-    assert(increment.getType() == OpargType.INTVAL ||
-        (increment.getType() == OpargType.VAR &&
+    assert(increment.getType() == ArgType.INTVAL ||
+        (increment.getType() == ArgType.VAR &&
                     increment.getVar().getType().equals(Types.VALUE_INTEGER)));
     assert(loopVar.getType().equals(Types.VALUE_INTEGER));
     Expression startE = opargToExpr(start);
@@ -1825,7 +1548,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void addGlobal(String name, Oparg val) {
+  public void addGlobal(String name, Arg val) {
     String tclName = prefixVar(name);
     globInit.add(Turbine.makeTCLGlobal(tclName));
     String typePrefix;
@@ -1889,7 +1612,7 @@ public class TurbineGenerator implements CompilerBackend
     return new Value(prefixVar(v.getName()));
   }
 
-  private Expression opargToExpr(Oparg in) {
+  private Expression opargToExpr(Arg in) {
     switch (in.getType()) {
     case INTVAL:
       return new LiteralInt(in.getIntLit());
@@ -1908,49 +1631,11 @@ public class TurbineGenerator implements CompilerBackend
   }
 
     private static String prefixVar(String varname) {
-      // Replace the internal names of temporary variables with
-      // shorter ones for generated tcl code
-      if (varname.startsWith(Variable.TMP_VAR_PREFIX)) {
-        return TCL_TMP_VAR_PREFIX + varname.substring(
-                Variable.TMP_VAR_PREFIX.length());
-      } else if (varname.startsWith(Variable.ALIAS_VAR_PREFIX)) {
-        return TCL_ALIAS_VAR_PREFIX + varname.substring(Variable.ALIAS_VAR_PREFIX.length());
-      } else if (varname.startsWith(Variable.STRUCT_FIELD_VAR_PREFIX)) {
-        return TCL_STRUCT_FIELD_VAR_PREFIX + varname.substring(
-            Variable.STRUCT_FIELD_VAR_PREFIX.length());
-      } else if (varname.startsWith(Variable.LOCAL_VALUE_VAR_PREFIX))  {
-        return TCL_VALUE_VAR_PREFIX +
-            varname.substring(Variable.LOCAL_VALUE_VAR_PREFIX.length());
-      } else if (varname.startsWith(Variable.OPT_VALUE_VAR_PREFIX))  {
-        return TCL_OPT_VALUE_VAR_PREFIX +
-            varname.substring(Variable.OPT_VALUE_VAR_PREFIX.length());
-      } else if (varname.startsWith(Variable.LOOP_INDEX_VAR_PREFIX)) {
-        return TCL_LOOPINDEX_VAR_PREFIX +
-            varname.substring(Variable.LOOP_INDEX_VAR_PREFIX.length());
-      } else if (varname.startsWith(Variable.GLOBAL_CONST_VAR_PREFIX)) {
-        return TCL_GLOBAL_CONST_VAR_PREFIX +
-            varname.substring(Variable.GLOBAL_CONST_VAR_PREFIX.length());
-      } else if (varname.startsWith(Variable.DEREF_COMPILER_VAR_PREFIX)) {
-        return TCL_DEREF_COMPILER_VAR_PREFIX +
-            varname.substring(Variable.DEREF_COMPILER_VAR_PREFIX.length());
-      } else if (varname.startsWith(Variable.LOOP_INDEX_VAR_PREFIX)) {
-        return TCL_LOOP_INDEX_VAR_PREFIX +
-            varname.substring(Variable.LOOP_INDEX_VAR_PREFIX.length());
-      } else if (varname.startsWith(Variable.OUTER_VAR_PREFIX)) {
-        return TCL_OUTER_VAR_PREFIX +
-            varname.substring(Variable.OUTER_VAR_PREFIX.length());
-
-      } else {
-        return TCL_USER_VAR_PREFIX + varname;
-      }
+      return TclNamer.prefixVar(varname);
     }
 
     private static List<String> prefixVars(List<String> vlist) {
-      ArrayList<String> result = new ArrayList<String>(vlist.size());
-      for (String v: vlist) {
-        result.add(prefixVar(v));
-      }
-      return result;
+      return TclNamer.prefixVars(vlist);
     }
 
 
