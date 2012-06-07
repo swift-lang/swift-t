@@ -233,7 +233,7 @@ data_close(adlb_datum_id id, int** result, int* count)
   return ADLB_DATA_SUCCESS;
 }
 
-static void garbage_collect(adlb_datum* d,
+static void garbage_collect(adlb_datum_id id, adlb_datum* d,
                             char** output, int* output_length);
 
 /**
@@ -254,7 +254,7 @@ data_reference_count(adlb_datum_id id, int increment,
   // This is usually NULL
   *output = NULL;
   if (d->reference_count <= 0)
-    garbage_collect(d, output, output_length);
+    garbage_collect(id, d, output, output_length);
   return ADLB_SUCCESS;
 }
 
@@ -263,7 +263,8 @@ extract_members(struct table* members, int count, int offset,
                 char** output, int* output_length);
 
 static void
-garbage_collect(adlb_datum* d, char** output, int* output_length)
+garbage_collect(adlb_datum_id id, adlb_datum* d,
+                char** output, int* output_length)
 {
   switch (d->type)
   {
@@ -281,6 +282,7 @@ garbage_collect(adlb_datum* d, char** output, int* output_length)
     {
       struct table* members = d->data.CONTAINER.members;
       extract_members(members, INT_MAX, 0, output, output_length);
+      table_lp_remove(&container_slots, id);
       break;
     }
     // These two are easy:
@@ -291,8 +293,9 @@ garbage_collect(adlb_datum* d, char** output, int* output_length)
       assert(false);
       break;
   }
-  // I think logically this list should be empty...
-  list_i_clear(&d->listeners);
+  // I think logically this list should be empty:
+  assert(d->listeners.size == 0);
+  table_lp_remove(&tds, id);
   free(d);
 }
 
