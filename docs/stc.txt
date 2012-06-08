@@ -285,7 +285,7 @@ foreach i in [start:stop:step] {
 
 The +for+ statement allows for more general iteration and provides
 a form of updateable variable.  This example implements a counter
-basefd on the returns values of a function that accepts integers:
+based on the return values of a function that accepts integers:
 
 ----
 int N = 100;
