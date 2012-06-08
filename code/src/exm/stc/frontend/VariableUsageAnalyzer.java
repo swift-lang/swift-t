@@ -100,7 +100,6 @@ class VariableUsageAnalyzer {
       } else {
         LogHelper.warn(context, msg);
       }
-      //System.err.println(msg);
     }
     if (fatalError) {
       throw new VariableUsageException("Previous variable usage error in function " +

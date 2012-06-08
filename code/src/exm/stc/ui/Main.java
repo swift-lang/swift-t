@@ -64,10 +64,12 @@ public class Main
   {
     Properties properties = System.getProperties();
     String logfile = properties.getProperty("parser.logfile");
-    if (logfile != null && logfile.length() > 0)
+    if (logfile != null && logfile.length() > 0) {
+      setupLoggingToStderr();
       setupLoggingToFile(logfile);
-    else
-      disableLogging();
+    } else {
+      setupLoggingToStderr();
+    }
 
     // Even if logging is disabled, this must be valid:
     return Logger.getLogger("STC");
@@ -92,13 +94,14 @@ public class Main
   }
 
   /**
-     Configures Log4j with enough settings to prevent errors
-     Logger level set to WARN
+     Configures Log4j to log warnings to stderr
    */
-  private static void disableLogging()
+  private static void setupLoggingToStderr()
   {
     Layout layout = new PatternLayout("%-5p %m%n");
-    Appender appender = new ConsoleAppender(layout);
+    ConsoleAppender appender = new ConsoleAppender(layout,
+                          ConsoleAppender.SYSTEM_ERR);
+    appender.setThreshold(Level.WARN);
     Logger root = Logger.getRootLogger();
     root.addAppender(appender);
     root.setLevel(Level.WARN);
