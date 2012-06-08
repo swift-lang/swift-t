@@ -572,7 +572,8 @@ public class ExprWalker {
     SwiftType indexType = TypeChecker.findSingleExprType(context, arrayIndexTree);
     if (!indexType.equals(Types.FUTURE_INTEGER)) {
       throw new TypeMismatchException(context,
-          "array index expression does not" + "have integer type");
+          "array index expression does not have integer type.  Type of " +
+          "index expression was " + indexType.typeName());
     }
 
     // The direct result of the array lookup
