@@ -1,0 +1,4 @@
+
+To generate HTML, simply run:
+
+asciidoc stc.txt
