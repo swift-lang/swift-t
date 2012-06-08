@@ -337,8 +337,14 @@ public class ExprWalker {
             + " type " + src.getType().toString());
       }
     } else if (Types.isArray(dst.getType())) {
-      assert(dst.getStorage() == VariableStorage.ALIAS);
-      backend.retrieveRef(dst, src);
+      String wName = context.getFunctionContext().constructName("copy-wait");
+      List<Variable> writtenContainers = Arrays.asList(dst);
+      backend.startWaitStatement(wName, Arrays.asList(src),
+              Arrays.asList(src, dst), writtenContainers, false);
+      Variable derefed = varCreator.createTmpAlias(context, dst.getType());
+      backend.retrieveRef(derefed, src);
+      copyArrayByValue(context, dst, derefed);
+      backend.endWaitStatement(writtenContainers);
     } else if (Types.isStruct(dst.getType())) {
       dereferenceStruct(context, dst, src);
     } else {

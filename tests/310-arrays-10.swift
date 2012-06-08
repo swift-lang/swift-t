@@ -1,6 +1,5 @@
 #include <builtins.swift>
 // Test array copying by value
-//SKIP-THIS-TEST
 main {
 
     int x[] = [1,2,3];

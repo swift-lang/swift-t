@@ -1,7 +1,5 @@
 #include "builtins.swift"
 // Test for nested array insertion with computed indices
-// SKIP-THIS-TEST
-// TODO: doesn't work because of slots
 () f () {
     int A[][];
     A[0][i()] = 1;

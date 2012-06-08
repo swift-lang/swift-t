@@ -1250,7 +1250,7 @@ public class ASTWalker {
       Variable rValVar = varCreator.createTmp(context, rValType);
       backend.assignReference(lValVar, rValVar);
       return rValVar;
-    } else if (Types.isReferenceTo(lValVar.getType(), rValType)) {
+    } else if (Types.isReferenceTo(rValType, lValVar.getType())) {
       Variable rValVar = varCreator.createTmp(context, rValType);
       exprWalker.dereference(context, lValVar, rValVar);
       return rValVar;

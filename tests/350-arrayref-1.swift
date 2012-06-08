@@ -1,5 +1,4 @@
 #include "builtins.swift"
-// SKIP-THIS-TEST
 (int res[][]) g () {
     int a[];
     int b[];

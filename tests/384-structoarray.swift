@@ -1,5 +1,5 @@
 #include "builtins.swift"
-//SKIP-THIS-TEST
+#include "swift/assert.swift"
 // need to fix array closing logic
 
 

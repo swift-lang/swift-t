@@ -1,5 +1,4 @@
 #include <builtins.swift>
-//SKIP-THIS-TEST
 
 type X {
     int x;
