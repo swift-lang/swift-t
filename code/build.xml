@@ -155,14 +155,6 @@
            includeantruntime="false"
            classpath="${classpath}:${json.jar}">
     </javac>
-    <javac srcdir="src"
-           includes="exm/stc/*.java"
-           listfiles="${lf}"
-           debug="true"
-           debuglevel="source,lines,vars"
-           includeantruntime="false"
-           classpath="${classpath}:${json.jar}">
-    </javac>
   </target>
 
   <!-- Compile the code generator -->

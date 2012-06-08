@@ -1328,7 +1328,15 @@ public class ASTWalker {
     SwiftAST indexExpr = lval.indices.get(0);
     assert (indexExpr.getType() == ExMParser.ARRAY_PATH);
     assert (indexExpr.getChildCount() == 1);
-
+    // Typecheck index expression
+    SwiftType indexType = TypeChecker.findSingleExprType(context, 
+                                indexExpr.child(0), Types.FUTURE_INTEGER);
+    if (!indexType.equals(Types.FUTURE_INTEGER)) {
+      throw new TypeMismatchException(context, 
+          "Indexing array using non-integer expression in lval.  Type " +
+          "of expression was " + indexType.typeName());
+    }
+    
     if (lval.indices.size() == 1) {
       Variable lookedup = assignTo1DArray(context, origLval, lval, rValExpr, 
                                                       rValType, afterActions);
