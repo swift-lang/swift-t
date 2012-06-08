@@ -23,11 +23,13 @@
             value="src/exm/stc/ast/ExM.g"/>
   <property name="classpath"
             value=".:${antlr.jar}:${log4j.jar}"/>
+  <property name="build.dir"
+            value="classes"/>
 
   <target name="jar"
           depends="compile">
     <jar destfile="${parser.jar}"
-         basedir="src"
+         basedir="${build.dir}"
          includes="**/*.class"
          manifest="META-INF/MANIFEST.MF"/>
   </target>
@@ -54,7 +56,9 @@
   <!-- Compile the ANTLR-generated parser code -->
   <target name="compile.antlr"
           depends="antlr.generate">
+   <mkdir dir="${build.dir}" />
    <javac srcdir="src"
+          destdir="${build.dir}"
           includes="${antlr.pkg}/*.java"
           listfiles="${lf}"
           debug="true"
@@ -88,6 +92,7 @@
   <target name="compile.ast"
           depends="compile.common,compile.antlr">
     <javac srcdir="src"
+           destdir="${build.dir}"
            includes="exm/stc/ast/*.java,exm/ast/**/*.java"
            listfiles="${lf}"
            debug="true"
@@ -103,6 +108,7 @@
   <target name="compile.frontend"
           depends="compile.common,compile.antlr,compile.ast">
     <javac srcdir="src"
+           destdir="${build.dir}"
            includes="exm/stc/frontend/*.java,exm/frontend/**/*.java"
            listfiles="${lf}"
            debug="true"
@@ -119,6 +125,7 @@
   <target name="compile.ic"
           depends="compile.frontend,compile.gen,compile.common">
     <javac srcdir="src"
+           destdir="${build.dir}"
            includes="exm/stc/ic/*.java,exm/stc/ic/**/*.java"
            listfiles="${lf}"
            debug="true"
@@ -135,6 +142,7 @@
   <target name="compile.ui"
           depends="compile.antlr,compile.common">
     <javac srcdir="src"
+           destdir="${build.dir}"
            includes="exm/stc/ui/*.java"
            listfiles="${lf}"
            debug="true"
@@ -148,6 +156,7 @@
   <!-- Compile the common utilities-->
   <target name="compile.common">
     <javac srcdir="src"
+           destdir="${build.dir}"
            includes="exm/stc/common/*.java,exm/stc/common/**/*.java"
            listfiles="${lf}"
            debug="true"
@@ -161,6 +170,7 @@
   <target name="compile.gen"
           depends="compile.common"> 
     <javac srcdir="src"
+           destdir="${build.dir}"
            includes="exm/stc/tclbackend/*.java,exm/stc/tclbackend/**/*.java"
            listfiles="${lf}"
            debug="true"
@@ -190,8 +200,8 @@
     <delete file="${parser.jar}"/>
     <!-- Delete all ANTLR-generated stuff -->
     <delete dir="${antlr.out}"/>
-    <delete>
-      <fileset dir="src" includes="**/*.class"/>
+    <delete includeemptydirs="true">
+      <fileset dir="${build.dir}" includes="**/*"/>
     </delete>
   </target>
 
