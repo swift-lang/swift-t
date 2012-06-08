@@ -238,7 +238,12 @@ do
   # Reverse exit code if the case was intended to fail to compile
   if grep -q "THIS-TEST-SHOULD-NOT-COMPILE" ${SWIFT_FILE}
   then
-    EXIT_CODE=$(( ! EXIT_CODE ))
+    if grep -q "STC INTERNAL ERROR" ${STC_ERR_FILE}
+    then
+        :
+    else
+        EXIT_CODE=$(( ! EXIT_CODE ))
+    fi
   fi
 
   if (( EXIT_CODE ))
