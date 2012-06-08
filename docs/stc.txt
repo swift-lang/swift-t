@@ -1,0 +1,456 @@
+
+= STC: Swift-Turbine Compiler
+
+STC allows you to write Swift programs and run them using Turbine.
+
+== Usage
+
+== Program Structure
+
+Swift programs are composed of _composite_ functions.  These
+share syntax with C-like languages.  The program starts in +main()+.
+The following is a complete Swift program:
+
+----
+#include <builtins.swift>
+main
+{}
+----
+
+As shown, STC input is preprocessed by +cpp+, the C preprocessor.
+Including +builtins.swift+ is required.
+
+Hello world is thus:
+
+----
+#include <builtins.swift>
+#include <swift/stdio.swift>
+main
+{
+  printf("Hello world");
+}
+----
+
+The newline is supplied by +printf()+.
+
+== Comments
+
+Swift supports C/C++ comments:
+
+----
+// This is a comment
+/* This is a
+comment */
+/** Also a
+comment */
+----
+
+== Types and Expressions
+
+Swift has the conventional types:
+
++string+:: A complete string (not an array of characters).
++int+:: A 64-bit integer.
++float+:: A 64-bit (double-precision) floating point number.
++boolean+:: A boolean (true/false)
++blob+:: External byte data (see Section Blobs).
+
+Swift variables and expressions are syntactically conventional:
+
+Floating point numbers must be represented as ordinary decimals. The
+literals +NaN+ and +inf+ may be used.
+
+Booleans are may be used as integers.  The literals +true+ and +false+
+may be used.
+
+----
+int four = 2+2;
+string s = "hello ";
+string hw = s + "world";
+----
+
+== Dataflow Evaluation
+
+Swift expressions are evaluated in _dataflow_ order:
+
+----
+int z1,z2;
+int y;
+int x = f(y);
+y = g(2);
+z1 = h(x,y,1);
+z2 = h(x,y,2);
+int output = r(z1,z2);
+----
+
+This allows code to execute as concurrently as possible, limited
+only by data availability.  In this example, +g()+ runs first, because it
+is dependent only on a literal.  When +y+ is set, +f()+ runs, setting
++x+.  Then, two invocations of +h()+ execute.  Finally, +z1+ and +z2+
+are set, allowing +r()+ to run.
+
+Variables may be assigned only once.  Multiple assignment is typically
+detected at compile time, although in some cases it will result in a
+run time error.  Unassigned variables that are inputs to functions
+will lead to a stall in progress.
+
+== Composite functions
+
+Swift code is written in composite functions.
+
+Composite functions have the form:
+
+----
+[(<output list>)] function_name [(<input list>)]
+{
+  statement;
+  statement;
+  ...
+}
+----
+
+An empty input or output list may be omitted or written as +()+.
+
+The output list may have more than one entry.  Thus, assignments
+may be written as:
+----
+x1, x2 = f(i1, i2);
+// or equivalently:
+(x1, x2) = f(i1, i2);
+----
+
+== Data structures
+
+Swift provides two basic data structures: arrays and structs.
+
+=== Arrays
+
+Arrays are declared with empty square brackets:
+
+----
+int A[];
+----
+
+They are dynamically sized.  Arrays are indexed using square brackets.
+----
+int A[];
+int B[];
+B = function_returning_array();
+A[0] = B[0];
+A[1] = B[1];
+----
+
+A given array variable must be assigned either _in toto_ (as a whole)
+or _in partes_ (piece by piece).  In this example, +B+ is assigned in toto
+and +A+ is assigned in partes.
+
+Arrays may be used as inputs or outputs of functions.
+
+Arrays are part of Swift dataflow semantics. An array is closed
+when all possible insertions to it are complete.  Because of the
+in toto/in partes distiction, this is always complete when a
+function returns an array.
+
+----
+(int B[]) f(int j)
+{
+  int A[];
+  A = subroutine_function(1);
+
+  // Error: A has already been assigned in toto:
+  A[3] = 4;
+
+  // OK: assigning to output variable
+  B = subroutine_function(2);
+}
+
+----
+
+Array literals may be expressed using the range operator:
+----
+int start = 0;
+int stop = 10;
+int step = 2;
+// Array of length 10:
+int A[] = [start:stop];
+// Array of length 5, containing only even numbers:
+int B[] = [start:stop:step];
+----
+
+Array literals may also be expressed with list syntax:
+----
+int C[] = [4,5,6];
+----
+
+=== Structs
+
+In Swift, structs are defined with the +type+ keyword.  They define
+a new type.
+
+----
+type person
+{
+  string name;
+  int age;
+  int events[];
+}
+----
+
+Structs are accessed with the +.+ syntax:
+
+----
+person p;
+p.name = "Abe";
+p.age = 90;
+----
+
+== Control structures
+
+Swift provides control structures that may be placed as statements
+inside a composite function.
+
+=== Conditionals
+
+==== If statement
+
+If statements have the form:
+
+----
+if (<condition>)
+{
+  statement;
+  ...
+}
+else
+{
+  statement;
+  ...
+}
+----
+
+As required by dataflow processing, progress blocks on the availability
+of the condition value.
+
+==== Switch statement
+
+----
+int a = 20;
+switch (a)
+{
+  case 1:
+    int c;
+    c = a + a;
+    b = a + 1;
+  case 20:
+    b = 1;
+  case 2000:
+    b = 2;
+  default:
+    b = 2102 + 2420;
+}
+printf("b: %i\n", b);
+----
+
+=== Iteration
+
+Iteration is performed with the +foreach+ and +for+ statements.
+
+==== Foreach statement
+
+The +foreach+ statement allows for iteration over an array:
+
+----
+string A[];
+foreach index, value in A
+{
+  printf("A[%i] = %s\n", index, value);
+}
+----
+
+The +index+ and +value+ variables are automatically declared.  The
++index+ variable may be omitted from the syntax.
+
+==== For statement
+
+The +for+ statement allows for more general iteration and provides
+a form of updateable variable.  This example implements a counter
+basefd on the returns values of a function that accepts integers:
+
+----
+int N = 100;
+int count = 0;
+for (int i = 0; i < N; i = i+1, count = count+c)
+{
+  int c;
+  if (condition_function(i))
+  {
+    c = 1;
+  }
+  else
+  {
+    c = 0;
+  }
+}
+----
+
+The general form is:
+----
+for ( <initializer> ; <condition> ; <updates> )
+{
+  statement;
+  ...
+}
+----
+
+The initializer is executed first, once.  The initializer is a
+comma-separated list of statements.  The body statements are then
+executed.  Then, the updates are performed, formatted as a
+comma-separated list.  Each is a special assignment in which the
+left-hand-side is the variable as seen by the _next_ iteration of the
+loop, while the right-hand-side is the variable as seen by the
+_previous_ loop iteration.  Then, the condition is checked for loop exit.
+
+=== Scoping blocks
+
+Arbitrary scoping blocks may be used.  In this example, two different
+variables, both represented by +b+, are assigned different values.
+
+----
+{
+  int b;
+  b = 1;
+}
+{
+  int b;
+  b = 2;
+}
+----
+
+== Leaf functions
+
+Fundamentally, all work in Swift is performed by _leaf functions_;
+composite functions simply _compose_ leaf work together.  Leaf
+functions may be builtins or extension functions.
+
+=== Builtins
+
+Swift builtins consist of operators and builtin functions.
+
+==== Operators
+
+The following binary arithmetic operators on numbers are defined:
+
++&#43;+ (plus), +-+ (minus), +\*+ (times), +/+ (divide),
++%/+ (integer divide), +**+ (power)
+
++&&+ (boolean and), +||+ (boolean or),
++==+ (equals), +!=+ (not equals), +>+ (greater than), +<+ (less than),
++>=+ (greater than or equal to), +<=+ (less than or equal to)
+
+The following unary operators are defined:
+
++-+ (negate), +!+ (boolean not)
+
+String concatenation is also performed with +&#43;+ (plus).
++==+ and +!=+ may also be used on strings.
+
+==== Builtin functions
+
+Each category of function is shown with the required include
+statement, if necessary.
+
+Functions that accept an input of any type are denoted +anything+.
+Functions that accept variable numbers of arguments are denoted with
+ellipsis +...+.
+
+A function that accepts more than one type is denoted as +f(int|string)+.
+
+===== Type conversion
+
++fromint(int)     -> string+:: Convert integer to string
++toint(string)    -> int+::    Convert string to integer
++fromfloat(float) -> string+:: Convert float to string
++tofloat(string)  -> float+::  Convert string to float
+
+===== Output
+
++trace(anything, anything, ...)+:: Report the value of any variable
+
+ #include <swift/stdio.swift>
+
++printf(string format, int|float|string|boolean...)+::
+As +printf()+ in C
+
+===== String functions
+
++strcat(string,string)+: Concatenation
+
+ #include <swift/string.swift>
+
++substring(string s, int start, int length) -> string+::
+Obtain substring of given string +s+ starting at character +start+ and of
+length +length+
+
++split(string s, string delimiter) -> string[]+::
+Tokenize string +s+ with given delimiter
+
+ #include <swift/stdio.swift>
+
++sprintf(string format, int|float|string|boolean...)+::
+As +sprintf()+ in C
+
+
+===== Math
+
+ #include <swift/math.swift>
+
++floor(float i) -> int+:: Round down
++ceil(float i) -> int+:: Round up
++round(float i) -> int+:: Round nearest
++log(float i) -> float+:: Natural logarithm
++exp(float i) -> float+:: Natural exponentiation: e^i^
++sqrt(float i) -> float+:: Square root
++is_nan(float i) -> boolean+:: Check for NaN
+
+ #include <swift/stdlib.swift>
+
++abs_integer(int) -> int+:: Absolute value
++abs_float(float) -> float+:: Absolute value
++random() -> float+:: Obtain random number
++randint(int start, int end)+::
+Obtain random integer from +start+, inclusive, to +end+, exclusive
+
+===== Statistics
+
+ #include <swift/stats.swift>
+
++sum_integer(int[]) -> int+:: Sum
++avg(int|float[]) -> float+:: Average
+
+===== System
+
+ #include <swift/stdlib.swift>
+
++getenv(string) -> string+:: Obtain an environment variable
+
+argc/argv
+
+===== Debugging
+
+ #include <swift/assert.swift>
+
++assert(boolean condition, string message)+::
+If condition is false, report +message+ and exit immediately.
+
+===== Turbine information
+
++adlb_servers()    -> int+:: Number of ADLB servers
++turbine_engines() -> int+:: Number of Turbine engines
++turbine_workers() -> int+:: Number of Turbine workers
+
+=== Swift extension functions
+
+Extension
+
+== Running in Turbine
+
