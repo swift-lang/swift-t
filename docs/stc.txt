@@ -1,9 +1,37 @@
 
+:toc:
+
 = STC: Swift-Turbine Compiler
 
 STC allows you to write Swift programs and run them using Turbine.
 
 == Usage
+
+Swift code is conventionally written in +\*.swift+ files.  Turbine
+code is stored in Tcl files +*.tcl+.  After writing the Swift program
++program.swift+, run:
+----
+stc program.swift program.tcl
+----
+
+Then, to run the program, use Turbine:
+
+----
+turbine -n 4 program.tcl
+----
+
+See the Turbine section <<turbine>> for more information about
+running the program.
+
+STC accepts the following arguments:
+
++-E+:: Just run the preprocessor
++-I+:: Add a preprocessor include path
++-O+:: Set optimization level: 0, 1, 2, or 3.  See <<optimizations>>
++-T+:: Enable optimization
++-t+:: Disable optimization
++-u+:: Only compile if output file is not up-to-date
++-v+:: Output version number and exit
 
 == Program Structure
 
@@ -270,7 +298,7 @@ foreach index, value in A
 The +index+ and +value+ variables are automatically declared.  The
 +index+ variable may be omitted from the syntax.
 
-A special case of the foreach loop occurs when combined with the 
+A special case of the foreach loop occurs when combined with the
 array range operator.  This is the idiomatic way to iterate over
 a range of integer values in Swift. The STC compiler has special
 handling for this case that avoids constructing an array.
@@ -410,7 +438,6 @@ Tokenize string +s+ with given delimiter
 +sprintf(string format, int|float|string|boolean...)+::
 As +sprintf()+ in C
 
-
 ===== Math
 
  #include <swift/math.swift>
@@ -444,7 +471,50 @@ Obtain random integer from +start+, inclusive, to +end+, exclusive
 
 +getenv(string) -> string+:: Obtain an environment variable
 
-argc/argv
+[[argv]]
+===== Command line
+
+Consider this command line:
+
+ turbine -l -n 3 program.tcl -v -a=file1.txt file2.txt --exec="prog thing1 thing2" --help file4.txt
+
+The arguments to +program.tcl+ are just the tokens after +program.tcl+
+
++args() -> string+::
+Obtain all arguments as single string
+E.g., +"-v -a=file1.txt file2.txt --exec="prog thing1 thing2" --help file4.txt"+
+
+The remaining functions are convenience functions oriented around
+Swift conventions.  Under these conventions, the example command above
+has _flagged_ arguments +v+, +a=file.txt+, +exec="prog thing1
+thing2"+, and +help+. The command has _unflagged_ arguments
++file2.txt+ and +file4.txt+
+
++argc()+::
+Get count of unflagged arguments
+
++argv(string|int)+::
+Given a string, returns the flagged argument with that key:
++
+ argv("a") -> file1.txt
++
+Given an integer, returns the unflagged argument at that index:
++
+ argv(2) → file4.txt
++
+Given 0, returns the program name,
++
+ argv(0) → /path/to/program.tcl
+
++argv_accept(string...)+::
+If program is given command line arguments not contained in given list, abort
+E.g., +argv_accept("x")+ would cause program failure at run time
+
++argv_contains(string) -> boolean+::
+
+Test if the command line contains the given flagged argument:
+
+ argv_contains("v") -> true
 
 ===== Debugging
 
@@ -453,6 +523,7 @@ argc/argv
 +assert(boolean condition, string message)+::
 If condition is false, report +message+ and exit immediately.
 
+[[turbine_info]]
 ===== Turbine information
 
 +adlb_servers()    -> int+:: Number of ADLB servers
@@ -463,5 +534,63 @@ If condition is false, report +message+ and exit immediately.
 
 Extension
 
+[[optimizations]]
+== Optimizations
+
+The following optimizations are available in STC
+
+[[turbine]]
 == Running in Turbine
+
+The following describes how to run Turbine programs.
+
+=== Architecture
+
+Turbine runs as an MPI program consisting of many processes.  Turbine
+programs are ADLB programs.  Thus, they produce and execute discrete
+tasks that are distributed and load balanced at run time.
+
+Each process runs in a _mode_: _engine_, _worker_, or _server_.
+
+Engines:: Evaluate the Swift logic.  Produces tasks
+Workers:: Performs tasks
+Servers:: Distributes tasks
+
+Typical Swift programs perform compute-intensive work in extension
+functions.  These always execute on workers.
+
+Engines split up the control logic work among themselves.  This
+results in the generation of calls to extension functions.
+
+Servers distribute tasks in a scalable, load balanced manner.  They
+also store Swift data (integers, strings, etc.).
+
+=== Invocation
+
+The general form of a Turbine invocation for STC-generated
++program.tcl+ is:
+
+----
+turbine <turbine arguments> <program.tcl> <program arguments>
+----
+
+The program arguments are available to Swift (<<argv>>).
+
+Turbine accepts the following arguments:
+
++-l+:: Enable +mpiexec -l+ ranked output formatting
++-n+:: The total number of Turbine MPI processes
+
+The user controls the Turbine run time configuration through
+environment variables:
+
++TURBINE_ENGINES+:: Number of Turbine engines
++ADLB_SERVERS+:: Number of ADLB servers
+
+The remaining processes are workers.  These values are available to
+Swift (<<turbine_info>>).
+
++TURBINE_LAUNCH_OPTS+::
+Provide other arguments to +mpiexec+, such as a machine file, etc.
+
 
