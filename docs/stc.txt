@@ -270,6 +270,17 @@ foreach index, value in A
 The +index+ and +value+ variables are automatically declared.  The
 +index+ variable may be omitted from the syntax.
 
+A special case of the foreach loop occurs when combined with the 
+array range operator.  This is the idiomatic way to iterate over
+a range of integer values in Swift. The STC compiler has special
+handling for this case that avoids constructing an array.
+
+----
+foreach i in [start:stop:step] {
+    ...
+}
+----
+
 ==== For statement
 
 The +for+ statement allows for more general iteration and provides
