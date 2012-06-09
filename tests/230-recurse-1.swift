@@ -5,7 +5,7 @@
   int j;
   int n;
   n = 1;
-  (j) = minus_integer(i,n);
+  (j) = i - n;
   if (j)
   {
     (o) = f(j);

@@ -1,20 +1,20 @@
 package exm.stc.ast.descriptor;
 
-import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Variable;
-import exm.stc.common.lang.Builtins.UpdateMode;
 import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Variable;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.TypeChecker;
 
 public class Update {
-  public Update(Variable target, SwiftAST expr, UpdateMode mode) {
+  public Update(Variable target, SwiftAST expr, Operators.UpdateMode mode) {
     super();
     this.target = target;
     this.expr = expr;
@@ -23,7 +23,7 @@ public class Update {
 
   private final Variable target;
   private final SwiftAST expr;
-  private final UpdateMode mode;
+  private final Operators.UpdateMode mode;
   
   
   public Variable getTarget() {
@@ -34,7 +34,7 @@ public class Update {
     return expr;
   }
 
-  public UpdateMode getMode() {
+  public Operators.UpdateMode getMode() {
     return mode;
   }
 
@@ -65,7 +65,7 @@ public class Update {
     assert(var.getType() == ExMParser.ID);
     
     
-    UpdateMode mode = UpdateMode.fromString(context, cmd.getText());
+    Operators.UpdateMode mode = Operators.UpdateMode.fromString(context, cmd.getText());
     assert(mode != null);
     
     Variable v = context.getDeclaredVariable(var.getText());

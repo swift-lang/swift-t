@@ -15,7 +15,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Builtins.UpdateMode;
+import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -721,7 +721,7 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void update(Variable updateable, UpdateMode updateMode, Variable val) {
+  public void update(Variable updateable, Operators.UpdateMode updateMode, Variable val) {
     assert(Types.isScalarUpdateable(updateable.getType()));
     assert(Types.isScalarFuture(val.getType()));
     assert(updateable.getType().getPrimitiveType() ==
@@ -733,7 +733,7 @@ public class STCMiddleEnd implements CompilerBackend {
   }
   
   @Override
-  public void updateImm(Variable updateable, UpdateMode updateMode,
+  public void updateImm(Variable updateable, Operators.UpdateMode updateMode,
                                                 Arg val) {
     assert(Types.isScalarUpdateable(updateable.getType()));
     if (updateable.getType().equals(Types.UPDATEABLE_FLOAT)) {

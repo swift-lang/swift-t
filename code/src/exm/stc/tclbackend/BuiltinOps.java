@@ -5,13 +5,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgType;
+import exm.stc.common.lang.FunctionSemantics;
+import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Variable;
-import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.tclbackend.tree.Command;
 import exm.stc.tclbackend.tree.Expression;
 import exm.stc.tclbackend.tree.SetVariable;
@@ -374,29 +378,36 @@ public class BuiltinOps {
    * TODO: this is a temporary solution to get this working.
    * Will be better later on to have arith ops, etc in 
    * different namespace entirely
+   * @throws UserException 
    */
   public static String getBuiltinOpImpl(BuiltinOpcode op) {
-    return builtinOpImpls.get(op);
+    // first try hardcoded
+    String impl = builtinOpImpls.get(op);
+    if (impl != null) {
+      return impl;
+    }
+    
+    List<String> impls = FunctionSemantics.findOpImpl(op);
+    
+    // It should be impossible for there to be no implementation for a function
+    // like this
+    assert(impls == null);
+    assert(impls.size() > 0);
+    
+    if (impls.size() > 1) {
+      Logger.getLogger("").warn("Multiple implementations for operation " +
+      		op + ": " + impls.toString());
+    }
+    return impls.get(0);
   }
   
   private static void populateBuiltinOpImpls() {
-    builtinOpImpls.put(BuiltinOpcode.ARGC_GET, "argc");
-    builtinOpImpls.put(BuiltinOpcode.ARGV_CONTAINS, "argv_contains");
-    builtinOpImpls.put(BuiltinOpcode.ARGV_GET, "argv");
-    builtinOpImpls.put(BuiltinOpcode.GETENV, "getenv");
-    builtinOpImpls.put(BuiltinOpcode.N_WORKERS, "turbine_workers");
-    builtinOpImpls.put(BuiltinOpcode.N_ENGINES, "turbine_engines");
-    builtinOpImpls.put(BuiltinOpcode.N_ADLB_SERVERS, "adlb_servers");
     builtinOpImpls.put(BuiltinOpcode.PLUS_INT, "plus_integer");
     builtinOpImpls.put(BuiltinOpcode.MINUS_INT, "minus_integer");
     builtinOpImpls.put(BuiltinOpcode.MULT_INT, "multiply_integer");
     builtinOpImpls.put(BuiltinOpcode.DIV_INT, "divide_integer");
     builtinOpImpls.put(BuiltinOpcode.MOD_INT, "mod_integer");
     builtinOpImpls.put(BuiltinOpcode.NEGATE_INT, "negate_integer");
-    builtinOpImpls.put(BuiltinOpcode.MAX_INT, "max_integer");
-    builtinOpImpls.put(BuiltinOpcode.MIN_INT, "min_integer");
-    builtinOpImpls.put(BuiltinOpcode.ABS_INT, "abs_integer");
-    builtinOpImpls.put(BuiltinOpcode.POW_INT, "pow_integer");
     builtinOpImpls.put(BuiltinOpcode.EQ_INT, "eq_integer");
     builtinOpImpls.put(BuiltinOpcode.NEQ_INT, "neq_integer");
     builtinOpImpls.put(BuiltinOpcode.LT_INT, "lt_integer");
@@ -408,22 +419,6 @@ public class BuiltinOps {
     builtinOpImpls.put(BuiltinOpcode.MULT_FLOAT, "multiply_float");
     builtinOpImpls.put(BuiltinOpcode.DIV_FLOAT, "divide_float");
     builtinOpImpls.put(BuiltinOpcode.NEGATE_FLOAT, "negate_float");
-    builtinOpImpls.put(BuiltinOpcode.MAX_FLOAT, "max_float");
-    builtinOpImpls.put(BuiltinOpcode.MIN_FLOAT, "min_float");
-    builtinOpImpls.put(BuiltinOpcode.ABS_FLOAT, "abs_float");
-    builtinOpImpls.put(BuiltinOpcode.POW_FLOAT, "pow_float");
-    builtinOpImpls.put(BuiltinOpcode.IS_NAN, "is_nan");
-    builtinOpImpls.put(BuiltinOpcode.CEIL, "ceil");
-    builtinOpImpls.put(BuiltinOpcode.FLOOR, "floor");
-    builtinOpImpls.put(BuiltinOpcode.ROUND, "round");
-    builtinOpImpls.put(BuiltinOpcode.INTTOFLOAT, "itof");
-    builtinOpImpls.put(BuiltinOpcode.STRTOINT, "toint");
-    builtinOpImpls.put(BuiltinOpcode.INTTOSTR, "fromint");
-    builtinOpImpls.put(BuiltinOpcode.STRTOFLOAT, "tofloat");
-    builtinOpImpls.put(BuiltinOpcode.FLOATTOSTR, "fromfloat");
-    builtinOpImpls.put(BuiltinOpcode.EXP, "exp");
-    builtinOpImpls.put(BuiltinOpcode.LOG, "log");
-    builtinOpImpls.put(BuiltinOpcode.SQRT, "sqrt");
     builtinOpImpls.put(BuiltinOpcode.EQ_FLOAT, "eq_float");
     builtinOpImpls.put(BuiltinOpcode.NEQ_FLOAT, "neq_float");
     builtinOpImpls.put(BuiltinOpcode.LT_FLOAT, "lt_float");
@@ -433,12 +428,10 @@ public class BuiltinOps {
     builtinOpImpls.put(BuiltinOpcode.EQ_STRING, "eq_string");
     builtinOpImpls.put(BuiltinOpcode.NEQ_STRING, "neq_string");
     builtinOpImpls.put(BuiltinOpcode.STRCAT, "strcat");
-    builtinOpImpls.put(BuiltinOpcode.SUBSTRING, "substrict");
     builtinOpImpls.put(BuiltinOpcode.EQ_BOOL, "eq_boolean");
     builtinOpImpls.put(BuiltinOpcode.NEQ_BOOL, "neq_boolean");
     builtinOpImpls.put(BuiltinOpcode.AND, "and");
     builtinOpImpls.put(BuiltinOpcode.OR, "or");
-    builtinOpImpls.put(BuiltinOpcode.XOR, "xor");
     builtinOpImpls.put(BuiltinOpcode.NOT, "not");
     builtinOpImpls.put(BuiltinOpcode.COPY_INT, "copy_integer");
     builtinOpImpls.put(BuiltinOpcode.COPY_VOID, "copy_void");
@@ -446,14 +439,6 @@ public class BuiltinOps {
     builtinOpImpls.put(BuiltinOpcode.COPY_STRING, "copy_string");
     builtinOpImpls.put(BuiltinOpcode.COPY_BOOL, "copy_boolean");
     builtinOpImpls.put(BuiltinOpcode.COPY_BLOB, "copy_blob");
-    builtinOpImpls.put(BuiltinOpcode.ASSERT, "assert");
-    builtinOpImpls.put(BuiltinOpcode.ASSERT_EQ, "assertEqual");
-    builtinOpImpls.put(BuiltinOpcode.TRACE, "trace");
-    builtinOpImpls.put(BuiltinOpcode.METADATA, "metadata");
-    builtinOpImpls.put(BuiltinOpcode.PRINTF, "printf");
-    builtinOpImpls.put(BuiltinOpcode.SPRINTF, "sprintf");
-    builtinOpImpls.put(BuiltinOpcode.RANDOM, "random");
-    builtinOpImpls.put(BuiltinOpcode.RAND_INT, "randint");
   }
   
 }

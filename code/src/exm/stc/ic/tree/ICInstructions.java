@@ -16,11 +16,11 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgType;
 import exm.stc.common.lang.Builtins;
-import exm.stc.common.lang.Builtins.SemanticInfo;
-import exm.stc.common.lang.Builtins.UpdateMode;
+import exm.stc.common.lang.FunctionSemantics;
 import exm.stc.common.lang.OpEvaluator;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Variable;
@@ -1597,7 +1597,7 @@ public class ICInstructions {
 
     @Override
     public boolean hasSideEffects() {
-      return (!SemanticInfo.isSideEffectFree(functionName)) ||
+      return (!FunctionSemantics.isPure(functionName)) ||
             this.writesAliasVar() || this.writesMappedVar();
     }
   
@@ -1627,7 +1627,7 @@ public class ICInstructions {
           }
         }
       }
-      if (allClosed && SemanticInfo.hasLocalEquiv(this.functionName)) {
+      if (allClosed && FunctionSemantics.hasLocalEquiv(this.functionName)) {
           // All args are closed!
           return new MakeImmRequest(
               Collections.unmodifiableList(this.outputs),
@@ -1640,7 +1640,7 @@ public class ICInstructions {
     @Override
     public MakeImmChange makeImmediate(List<Variable> outVars, 
                                         List<Arg> values) {
-      BuiltinOpcode newOp = SemanticInfo.getLocalEquiv(this.functionName);
+      BuiltinOpcode newOp = FunctionSemantics.getLocalEquiv(this.functionName);
       assert(newOp != null);
       assert(values.size() == inputs.size());
       
@@ -1683,64 +1683,52 @@ public class ICInstructions {
       }
       return blocksOn;
     }
-
-    public boolean isDefinitelyDeterministic() {
-      if (this.op == Opcode.CALL || this.op == Opcode.CALL_SYNC
-          || this.op == Opcode.CALL_APP) {
-        return false;
-      } else if (SemanticInfo.isSideEffectFree(functionName)) {
-        return true;
-      } else {
-        // Safe default
-        return false;
-      }
-    }
     
     @Override
     public List<ComputedValue> getComputedValues(
                         Map<ComputedValue, Arg> existing) {
       // TODO: make order of args invariant where possible
-      if (this.isDefinitelyDeterministic()) {
-        if (this.op == Opcode.CALL_BUILTIN) { 
-          if (!this.writesMappedVar() && isCopyFunction()) {
-            // Handle copy as a special case
-            assert(outputs.size() == 1);
-            assert((SemanticInfo.isCopyFunction(functionName) && inputs.size() == 1) 
-                  || (SemanticInfo.isMinMaxFunction(functionName) 
-                                        && inputs.size() == 2));
-            return Collections.singletonList(
-                  ComputedValue.makeCopyCV(this.outputs.get(0),
-                                           Arg.createVar(this.inputs.get(0))));
-          } else if (this.outputs.size() == 1) {
-            boolean outputClosed = false; // safe assumption
-            String canonicalFunctionName = this.functionName;
-            List<Arg> in = Arg.fromVarList(this.inputs);
-            if (SemanticInfo.isCommutative(this.functionName)) {
-              // put in canonical order
-              Collections.sort(in);
-            }
-            
-            List<ComputedValue> res = new ArrayList<ComputedValue>();
-            res.add(new ComputedValue(this.op, 
-                canonicalFunctionName, in, 
-                Arg.createVar(this.outputs.get(0)), outputClosed));
-            if (this.functionName.equals(Builtins.INPUT_FILE)) {
-              res.add(new ComputedValue(Opcode.CALL_BUILTIN, Builtins.FILENAME,
-                  Arrays.asList(Arg.createVar(this.outputs.get(0))),
-                  Arg.createVar(this.inputs.get(0)), false));
-            }
-            return res;
-          } else {
-            // Not sure to do with multiple outputs
+      if (FunctionSemantics.isPure(functionName)) {
+        if (!this.writesMappedVar() && isCopyFunction()) {
+          // Handle copy as a special case
+          assert(outputs.size() == 1);
+          assert((FunctionSemantics.isCopyFunction(functionName) && inputs.size() == 1) 
+                || (FunctionSemantics.isMinMaxFunction(functionName) 
+                                      && inputs.size() == 2));
+          return Collections.singletonList(
+                ComputedValue.makeCopyCV(this.outputs.get(0),
+                                         Arg.createVar(this.inputs.get(0))));
+        } else if (this.outputs.size() == 1) {
+          // TODO: does it matter if this writes a mapped variable? 
+          
+          boolean outputClosed = false; // safe assumption
+          String canonicalFunctionName = this.functionName;
+          List<Arg> in = Arg.fromVarList(this.inputs);
+          if (FunctionSemantics.isCommutative(this.functionName)) {
+            // put in canonical order
+            Collections.sort(in);
           }
+          
+          List<ComputedValue> res = new ArrayList<ComputedValue>();
+          res.add(new ComputedValue(this.op, 
+              canonicalFunctionName, in, 
+              Arg.createVar(this.outputs.get(0)), outputClosed));
+          if (this.functionName.equals(Builtins.INPUT_FILE)) {
+            res.add(new ComputedValue(Opcode.CALL_BUILTIN, Builtins.FILENAME,
+                Arrays.asList(Arg.createVar(this.outputs.get(0))),
+                Arg.createVar(this.inputs.get(0)), false));
+          }
+          return res;
+        } else {
+          // Not sure to do with multiple outputs
         }
       }
       return null;
     }
 
     private boolean isCopyFunction() {
-      return SemanticInfo.isCopyFunction(functionName) ||
-         (SemanticInfo.isMinMaxFunction(functionName) 
+      return FunctionSemantics.isCopyFunction(functionName) ||
+         (FunctionSemantics.isMinMaxFunction(functionName) 
             && this.inputs.get(0).getName().equals(
                         this.inputs.get(1).getName()));
     }

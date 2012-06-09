@@ -39,7 +39,7 @@ public class Settings
   static {
     Properties defaults = new Properties();
     // Set defaults here
-    defaults.setProperty(TURBINE_VERSION, "0.0.1");
+    defaults.setProperty(TURBINE_VERSION, "0.0.3");
     defaults.setProperty(DEBUG_LEVEL, "COMMENTS");
     defaults.setProperty(IC_OUTPUT_FILE, "");
 

@@ -4,7 +4,7 @@
 {
   int i;
   int j;
-  (output) = plus_integer(a,b);
+  (output) = a + b;
 }
 
 main

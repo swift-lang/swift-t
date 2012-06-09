@@ -1,7 +1,7 @@
 
 #include <builtins.swift>
 #include <swift/assert.swift>
-#include <swift/stdlib.swift>
+#include <swift/math.swift>
 #include <swift/stats.swift>
 
 main {

@@ -6,5 +6,5 @@ main
     int y = 4;
     int z;
 
-    z = plus_integer(x, y);
+    z = x + y;
 }

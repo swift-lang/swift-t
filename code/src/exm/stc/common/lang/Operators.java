@@ -7,8 +7,10 @@ import java.util.Map;
 import java.util.Set;
 
 import exm.stc.ast.antlr.ExMParser;
+import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Types.PrimType;
+import exm.stc.frontend.Context;
 
 public class Operators {
 
@@ -50,23 +52,7 @@ public class Operators {
   private static void fillArithOps() {
     for (PrimType numType : Arrays.asList(PrimType.FLOAT, PrimType.INTEGER,
         PrimType.STRING, PrimType.BOOLEAN)) {
-      String opTypeName;
-      switch (numType) {
-      case BOOLEAN:
-        opTypeName = "BOOL";
-        break;
-      case INTEGER:
-        opTypeName = "INT";
-        break;
-      case STRING:
-        opTypeName = "STRING";
-        break;
-      case FLOAT:
-        opTypeName = "FLOAT";
-        break;
-      default:
-        throw new STCRuntimeError("mistake");
-      }
+      String opTypeName = getOpTypeName(numType);
       HashMap<Integer, BuiltinOpcode> opMapping = new HashMap<Integer, BuiltinOpcode>();
 
 
@@ -137,6 +123,21 @@ public class Operators {
       }
 
       arithOps.put(numType, opMapping);
+    }
+  }
+
+  private static String getOpTypeName(PrimType numType) {
+    switch (numType) {
+    case BOOLEAN:
+      return "BOOL";
+    case INTEGER:
+      return "INT";
+    case STRING:
+      return "STRING";
+    case FLOAT:
+      return "FLOAT";
+    default:
+      throw new STCRuntimeError("mistake");
     }
   }
 
@@ -243,6 +244,28 @@ public class Operators {
       super();
       this.out = out;
       this.in = in;
+    }
+  }
+
+  public static enum UpdateMode {
+    MIN, SCALE, INCR;
+  
+    @SuppressWarnings("serial")
+    private static final Map<String, UpdateMode> nameMap = new
+              HashMap<String, UpdateMode>() {{
+                put("min", MIN);
+                put("scale", SCALE);
+                put("incr", INCR);
+              }};
+    public static UpdateMode fromString(Context errContext, String modeName)
+                                            throws InvalidSyntaxException {
+      UpdateMode result = nameMap.get(modeName);
+      
+      if (result == null) {
+        throw new InvalidSyntaxException(errContext, "invalid update mode: "
+            + modeName + " valid options are: " + nameMap.values());
+      }
+      return result;
     }
   }
 

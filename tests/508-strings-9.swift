@@ -1,7 +1,7 @@
 
 #include <builtins.swift>
 #include <swift/assert.swift>
-#include <swift/stdio.swift>
+#include <swift/string.swift>
 
 (int r) id (int x) {
     r = x;

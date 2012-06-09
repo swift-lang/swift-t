@@ -44,6 +44,7 @@ import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.FunctionSemantics;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -130,13 +131,6 @@ public class ASTWalker {
         int type = topLevelDefn.getType();
         context.syncFileLine(topLevelDefn.getLine(), lineMapping);
         switch (type) {
-
-        /*
-         * Not used anymore: replaced with LineMapping
-        case ExMParser.CPP_LINEMARKER:
-          linemarker(context, topLevelDefn);
-          break;
-          */
 
         case ExMParser.DEFINE_BUILTIN_FUNCTION:
           defineBuiltinFunction(context, topLevelDefn);
@@ -1529,6 +1523,7 @@ public class ASTWalker {
   private void defineBuiltinFunction(Context context, SwiftAST tree)
   throws UserException
   {
+    assert(tree.getChildCount() >= 6);
     String function  = tree.child(0).getText();
     SwiftAST outputs = tree.child(1);
     SwiftAST inputs  = tree.child(2);
@@ -1538,6 +1533,8 @@ public class ASTWalker {
     String version = Literals.extractLiteralString(context,
                                                         tree.child(4));
     String symbol  = Literals.extractLiteralString(context, tree.child(5));
+    
+    
     
     FunctionDecl fdecl = FunctionDecl.fromAST(context, 
                                         inputs, outputs);
@@ -1550,9 +1547,74 @@ public class ASTWalker {
           + " is already defined");
     }
     
+    // Read annotations
+    for (int i = 6; i < tree.getChildCount(); i++) {
+      handleFunctionAnnotation(context, function, tree.child(i));
+    }
     context.defineBuiltinFunction(function, ft);
     backend.defineBuiltinFunction(function, pkg, version, symbol, ft);
   }
+
+
+  private void handleFunctionAnnotation(Context context, String function,
+      SwiftAST annotTree) throws UserException {
+    assert(annotTree.getType() == ExMParser.ANNOTATION);
+    
+    assert(annotTree.getChildCount() > 0);
+    String key = annotTree.child(0).getText();
+    if (annotTree.getChildCount() == 1) { 
+      registerFunctionAnnotation(context, function, key);
+    } else {
+      assert(annotTree.getChildCount() == 2);
+      String val = annotTree.child(1).getText();
+      if (key.equals("builtin_op")) {
+        addlocalEquiv(context, function, val);
+      } else {
+        throw new UserException(context, "Invalid annotation" +
+          " for TCL function: " + key + ":" + val);
+      }
+    }
+  }
+
+
+  private void addlocalEquiv(Context context, String function, String val)
+      throws UserException {
+    BuiltinOpcode opcode;
+    try {
+      opcode = BuiltinOpcode.valueOf(val);
+    } catch (IllegalArgumentException e) {
+      throw new UserException(context, "Unknown builtin op " + val);
+    }
+    assert(opcode != null);
+    FunctionSemantics.addLocalEquiv(function, opcode);
+  }
+
+  /**
+   * Check that an annotation for the named function is valid, and
+   * add it to the known semantic info
+   * @param function
+   * @param annotation
+   * @throws UserException 
+   */
+  private void registerFunctionAnnotation(Context context, String function,
+                  String annotation) throws UserException {
+    if (annotation.equals("assertion")) {
+      FunctionSemantics.addAssertVariable(function);
+    } else if (annotation.equals("pure")) {
+      FunctionSemantics.addPure(function);
+    } else if (annotation.equals("commutative")) {
+      FunctionSemantics.addCommutative("commutative");
+    } else if (annotation.equals("copy")) {
+      FunctionSemantics.addCopy("copy");
+    } else if (annotation.equals("minmax")) {
+      FunctionSemantics.addMinMax(function);
+    } else {
+      throw new UserException(context, "Undefined annotation for functions: "
+          + annotation + " for function " + function);
+    }
+    
+  }
+
 
   private void defineFunction(Context context, SwiftAST tree)
   throws UserException {

@@ -8,7 +8,7 @@ main
   a = 2;
   b = 1;
 
-  (c) = minus_integer(a,b);
+  (c) = a - b;
 
   trace(c);
 }

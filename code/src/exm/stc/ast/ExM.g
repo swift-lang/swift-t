@@ -195,9 +195,10 @@ composite_function_definition:
     ;
 
 builtin_function_definition:
+        annotation*
         o=formal_argument_list f=ID i=formal_argument_list
         pkg=STRING version=STRING symbol=STRING SEMICOLON ->
-        ^( DEFINE_BUILTIN_FUNCTION $f $o $i $pkg $version $symbol )
+        ^( DEFINE_BUILTIN_FUNCTION $f $o $i $pkg $version $symbol annotation* )
     ;
 
 global_const_definition:

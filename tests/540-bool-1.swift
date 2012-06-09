@@ -14,7 +14,7 @@ main {
     trace(x && y);
     assert(x && y, "x && y");
 
-    boolean z = copy_boolean(y);
+    boolean z = y;
 
     boolean a = x == y;
     assert(a, "a");

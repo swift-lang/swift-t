@@ -2,7 +2,7 @@
 
 (int o) sub_a(int a, int b)
 {
-  (o) = plus_integer(a,b);
+  (o) = a + b;
 }
 
 (int o, int u) sub_b(int a, int b, int c, int d)
@@ -10,8 +10,8 @@
   int k;
   int m;
   k = 2;
-  (o) = plus_integer(a,b);
-  (u) = plus_integer(c,d);
+  (o) = a + b;
+  (u) = c + d;
 }
 
 main

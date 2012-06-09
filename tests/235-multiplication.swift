@@ -12,16 +12,16 @@
   int n;
   int m;
   n = 1;
-  t = plus_integer(s,i);
+  t = s + i;
   if (j)
   {
     int k;
-    k = minus_integer(j,n);
+    k = j - n;
     o = my_mult_helper(i,k,t);
   }
   else
   {
-    o = copy_integer(s);
+    o = s;
   }
 }
 

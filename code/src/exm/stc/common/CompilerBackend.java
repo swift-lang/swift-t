@@ -5,7 +5,7 @@ import java.util.List;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Builtins.UpdateMode;
+import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.SwiftType;
@@ -159,10 +159,10 @@ public interface CompilerBackend {
   public abstract void initUpdateable(Variable updateable, Arg val);
   public abstract void latestValue(Variable result, Variable updateable);
   
-  public abstract void update(Variable updateable, UpdateMode updateMode,
+  public abstract void update(Variable updateable, Operators.UpdateMode updateMode,
                               Variable val);
   /** Same as above, but takes a value or constant as arg */
-  public abstract void updateImm(Variable updateable, UpdateMode updateMode,
+  public abstract void updateImm(Variable updateable, Operators.UpdateMode updateMode,
       Arg val);
   
   public abstract void defineBuiltinFunction(String name,

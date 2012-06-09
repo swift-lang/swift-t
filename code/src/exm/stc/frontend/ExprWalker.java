@@ -25,9 +25,9 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.Operators;
-import exm.stc.common.lang.Builtins.SemanticInfo;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.OpType;
+import exm.stc.common.lang.FunctionSemantics;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.FunctionType.InArgT;
@@ -402,7 +402,7 @@ public class ExprWalker {
     String f = tree.child(0).getText();
     try {
       // If this is an assert statement, disable it
-      if (Builtins.isAssertVariant(f) &&
+      if (FunctionSemantics.isAssertVariant(f) &&
               Settings.getBoolean(Settings.OPT_DISABLE_ASSERTS)) {
         return;
       }
@@ -841,11 +841,11 @@ public class ExprWalker {
 
     Arg priority = priorityVal != null ? Arg.createVar(priorityVal) : null;
     if (context.isBuiltinFunction(function)) {
-      if (SemanticInfo.hasLocalEquiv(function)) {
+      if (FunctionSemantics.hasLocalEquiv(function)) {
         assert(oList.size() <= 1);
         Variable out = oList.size() == 0 ? null : oList.get(0);
         //TODO: priority?
-        backend.asyncOp(SemanticInfo.getLocalEquiv(function), out, 
+        backend.asyncOp(FunctionSemantics.getLocalEquiv(function), out, 
                         Arg.fromVarList(realIList), priority);
       } else {
         backend.builtinFunctionCall(function, realIList, oList, priority);

@@ -2,7 +2,7 @@
 
 (int o) sub(int a, int b)
 {
-  (o) = plus_integer(a,b);
+  (o) = a + b;
 }
 
 main
