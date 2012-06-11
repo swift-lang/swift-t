@@ -255,11 +255,11 @@ int x;
   Asserts that condition is true, else returns given error code.
   Note: This is disabled if ENABLE_DEBUG is not defined
 */
-#define CHECK_MSG(rc, args...) \
-    { if (!(rc)) { \
-        printf("CHECK FAILED: adlb.c line: %i\n", __LINE__); \
-        printf(args); \
-        return ADLB_ERROR; }}
+#define CHECK_MSG(rc, args...)                  \
+  { if (!(rc)) {                                             \
+      printf("CHECK FAILED: adlb.c line: %i\n", __LINE__);   \
+      printf(args);                                          \
+      return ADLB_ERROR; }}
 
 /**
    Checks that an MPI return code is MPI_SUCCESS
@@ -287,7 +287,7 @@ int x;
     return ADLB_ERROR; }}
 #else
 // Make these noops for performance
-#define CHECK_MSG(rc, code, msg)
+#define CHECK_MSG(rc, args...)
 #define MPI_CHECK(rc)
 #define ADLB_CHECK(rc)
 #define ADLB_DATA_CHECK(rc)
