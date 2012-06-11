@@ -690,7 +690,6 @@ data_insert(adlb_datum_id container_id,
   {
     // Copy key/value onto the heap so we can store them
     subscript = strdup(subscript);
-    printf("table_add: %s\n", member);
     table_add(d->data.CONTAINER.members, subscript, member);
   }
 
