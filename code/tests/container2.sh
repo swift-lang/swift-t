@@ -12,7 +12,7 @@ bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || exit 1
 
 grep -q "enumeration: 0 1"    ${OUTPUT} || exit 1
-grep -q "retrieve:.*string2" ${OUTPUT} || exit 1
-grep -q "retrieve:.*string3" ${OUTPUT} || exit 1
+grep -q "string:.*string2" ${OUTPUT} || exit 1
+grep -q "string:.*string3" ${OUTPUT} || exit 1
 
 exit 0
