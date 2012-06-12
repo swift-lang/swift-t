@@ -1,8 +1,8 @@
 
 // STRING.SWIFT
 
-#ifndef STDLIB_SWIFT
-#define STDLIB_SWIFT
+#ifndef STRING_SWIFT
+#define STRING_SWIFT
 
 @pure @builtin_op=SUBSTRING
 (string o) substring(string s, int start, int length)
