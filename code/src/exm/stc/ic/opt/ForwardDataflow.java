@@ -601,8 +601,7 @@ public class ForwardDataflow {
       // Add dependencies
       List<Variable> in = inst.getBlockingInputs();
       if (in != null) {
-        for (Arg o : inst.getOutputs()) {
-          Variable ov = o.getVar();
+        for (Variable ov: inst.getOutputs()) {
           if (!Types.isScalarValue(ov.getType())) {
             cv.setDependencies(ov, in);
           }

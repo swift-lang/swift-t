@@ -47,7 +47,8 @@ public class FixupVariables {
           neededVars.add(n);
         }
       }
-      for (String n : Arg.varNameList(inst.getOutputs())) {
+      for (Variable v: inst.getOutputs()) {
+        String n = v.getName();
         if (!availVars.contains(n)) {
           neededVars.add(n);
         }

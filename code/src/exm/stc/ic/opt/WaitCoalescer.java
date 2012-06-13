@@ -13,7 +13,6 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Arg.ArgType;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.VariableStorage;
@@ -336,9 +335,7 @@ public class WaitCoalescer {
         Instruction i = it.next();
         logger.trace("Pushdown at: " + i.toString());
         List<Variable> writtenFutures = new ArrayList<Variable>();
-        for (Arg out: i.getOutputs()) {
-          assert(out.getType() == ArgType.VAR);
-          Variable outv = out.getVar();
+        for (Variable outv: i.getOutputs()) {
           if (Types.isFuture(outv.getType())) {
             writtenFutures.add(outv);
           }
@@ -495,10 +492,9 @@ public class WaitCoalescer {
     for (Instruction inst: block.getInstructions()) {
       // check all outputs are non-alias futures - if not can't safely reorder
       boolean canMove = true;
-      for (Arg out: inst.getOutputs()) {
-        if (out.getType() != ArgType.VAR || 
-            !Types.isFuture(out.getVar().getType())
-            || out.getVar().getStorage() == VariableStorage.ALIAS) {
+      for (Variable out: inst.getOutputs()) {
+        if (!Types.isFuture(out.getType())
+            || out.getStorage() == VariableStorage.ALIAS) {
           canMove = false;
           break;
         }

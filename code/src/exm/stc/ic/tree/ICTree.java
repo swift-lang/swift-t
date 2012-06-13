@@ -795,11 +795,10 @@ public class ICTree {
         // See if we can remove instruction
         if (!inst.hasSideEffects() && inst.op != Opcode.COMMENT) {
           boolean allRemoveable = true;
-          for (Arg oa: inst.getOutputs()) {
+          for (Variable out: inst.getOutputs()) {
             // Doesn't make sense to assign to anything other than
             //  variable
-            assert(oa.getType() == ArgType.VAR);
-            if (! removeVars.contains(oa.getVar().getName())) {
+            if (! removeVars.contains(out.getName())) {
               allRemoveable = false; break;
             }
           }
@@ -879,10 +878,8 @@ public class ICTree {
         }
         // Can't eliminate instructions with side-effects
         if (i.hasSideEffects()) {
-          for (Arg oa: i.getOutputs()) {
-            if (oa.getType() == ArgType.VAR) {
-              stillNeeded.add(oa.getVar().getName());
-            }
+          for (Variable out: i.getOutputs()) {
+            stillNeeded.add(out.getName());
           }
         }
       }

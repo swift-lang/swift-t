@@ -188,8 +188,7 @@ public class ConstantFinder {
       Instruction inst = it.next();
       if (inst.getInputs().size() == 1) {
         if (isValueStoreInst(inst, ignoreLocalValConstants)) {
-          Arg output = inst.getOutput(0); 
-          String varName = output.getVar().getName();
+          String varName = inst.getOutput(0).getName();
           if ((!removeLocalConsts) || removalCandidates.contains(varName)) {
             logger.debug("Found constant " + varName);
             knownConstants.put(varName, inst.getInput(0));

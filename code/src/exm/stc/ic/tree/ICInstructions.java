@@ -75,13 +75,13 @@ public class ICInstructions {
     public abstract List<Arg> getInputs();
   
     /** List of variables the instruction writes */
-    public abstract List<Arg> getOutputs();
+    public abstract List<Variable> getOutputs();
     
     public Arg getInput(int i) {
       return getInputs().get(i);
     }
     
-    public Arg getOutput(int i) {
+    public Variable getOutput(int i) {
       return getOutputs().get(i);
     }
   
@@ -89,9 +89,8 @@ public class ICInstructions {
   
     public boolean writesAliasVar() {
       // Writes to alias variables can have non-local effects
-      for (Arg out: this.getOutputs()) {
-        if (out.getType() == ArgType.VAR &&
-            out.getVar().getStorage() == VariableStorage.ALIAS) {
+      for (Variable out: this.getOutputs()) {
+        if (out.getStorage() == VariableStorage.ALIAS) {
           return true;
         }
       }
@@ -100,9 +99,8 @@ public class ICInstructions {
     
     public boolean writesMappedVar() {
       // Writes to alias variables can have non-local effects
-      for (Arg out: this.getOutputs()) {
-        if (out.getType() == ArgType.VAR &&
-            out.getVar().getMapping() != null) {
+      for (Variable out: this.getOutputs()) {
+        if (out.getMapping() != null) {
           return true;
         }
       }
@@ -241,8 +239,8 @@ public class ICInstructions {
     }
   
     @Override
-    public List<Arg> getOutputs() {
-      return new ArrayList<Arg>(0);
+    public List<Variable> getOutputs() {
+      return new ArrayList<Variable>(0);
     }
   
     @Override
@@ -890,8 +888,14 @@ public class ICInstructions {
     }
   
     @Override
-    public List<Arg> getOutputs() {
-      return args.subList(0, numOutputArgs());
+    public List<Variable> getOutputs() {
+      List<Arg> l = args.subList(0, numOutputArgs());
+      ArrayList<Variable> res = new ArrayList<Variable>(numOutputArgs());
+      for (Arg a: l) {
+        assert(a.getType() == ArgType.VAR);
+        res.add(a.getVar());
+      }
+      return res;
     }
   
     @Override
@@ -1591,8 +1595,8 @@ public class ICInstructions {
     }
   
     @Override
-    public List<Arg> getOutputs() {
-      return Arg.fromVarList(outputs);
+    public List<Variable> getOutputs() {
+      return Collections.unmodifiableList(outputs);
     }
 
     @Override
@@ -1818,9 +1822,9 @@ public class ICInstructions {
     }
   
     @Override
-    public List<Arg> getOutputs() {
+    public List<Variable> getOutputs() {
       // No outputs
-      return new ArrayList<Arg>();
+      return new ArrayList<Variable>(0);
     }
   
     @Override
@@ -1937,8 +1941,8 @@ public class ICInstructions {
     }
   
     @Override
-    public List<Arg> getOutputs() {
-      return new ArrayList<Arg>(0);
+    public List<Variable> getOutputs() {
+      return new ArrayList<Variable>(0);
     }
   
     @Override
@@ -2115,11 +2119,11 @@ public class ICInstructions {
     }
 
     @Override
-    public List<Arg> getOutputs() {
+    public List<Variable> getOutputs() {
       if (output != null) {
-        return Arrays.asList(Arg.createVar(output));
+        return Arrays.asList(output);
       } else {
-        return new ArrayList<Arg>(0);
+        return new ArrayList<Variable>(0);
       }
     }
 
