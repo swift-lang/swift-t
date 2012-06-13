@@ -939,7 +939,7 @@ ADLB_Store_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK_MSG(rc, "requires length!");
 
   rc = ADLB_Store(id, pointer, length);
-  TCL_CHECK_MSG(rc, "failed!");
+  TCL_CONDITION(rc == ADLB_SUCCESS, "failed!");
 
   return TCL_OK;
 }
