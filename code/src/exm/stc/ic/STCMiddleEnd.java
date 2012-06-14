@@ -16,6 +16,7 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators;
+import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -34,6 +35,7 @@ import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions.Builtin;
 import exm.stc.ic.tree.ICInstructions.Comment;
 import exm.stc.ic.tree.ICInstructions.FunctionCall;
+import exm.stc.ic.tree.ICInstructions.LocalFunctionCall;
 import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICInstructions.LoopContinue;
 import exm.stc.ic.tree.ICInstructions.TurbineOp;
@@ -120,13 +122,14 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void defineBuiltinFunction(String name, String pkg,
                                     String version, String symbol,
-                                    FunctionType fType)
+                                    FunctionType fType, 
+                                    TclOpTemplate inlineTclTemplate)
   throws UserException
   {
     assert(blockStack.size() == 0);
     assert(currComposite == null);
     BuiltinFunction bf =
-        new BuiltinFunction(name, pkg, version, symbol, fType);
+        new BuiltinFunction(name, pkg, version, symbol, fType, inlineTclTemplate);
     program.addBuiltin(bf);
   }
 
@@ -361,7 +364,14 @@ public class STCMiddleEnd implements CompilerBackend {
         FunctionCall.createBuiltinCall(
             function, inputs, outputs, priority));
   }
-
+  
+  @Override
+  public void builtinLocalFunctionCall(String functionName,
+          List<Arg> inputs, List<Variable> outputs) {
+    currBlock().addInstruction(new LocalFunctionCall(functionName,
+            inputs, outputs));
+  }
+  
   @Override
   public void compositeFunctionCall(String function, List<Variable> inputs,
       List<Variable> outputs, List<Boolean> blockOn, boolean async, 

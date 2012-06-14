@@ -391,7 +391,7 @@ public class BuiltinOps {
     
     // It should be impossible for there to be no implementation for a function
     // like this
-    assert(impls == null);
+    assert(impls != null);
     assert(impls.size() > 0);
     
     if (impls.size() > 1) {

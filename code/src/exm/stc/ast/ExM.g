@@ -70,6 +70,7 @@ tokens {
     ARRAY_ELEMS;
     ANNOTATION;
     GLOBAL_CONST;
+    INLINE_TCL;
 }
 
 @parser::header {
@@ -197,9 +198,13 @@ composite_function_definition:
 builtin_function_definition:
         annotation*
         o=formal_argument_list f=ID i=formal_argument_list
-        pkg=STRING version=STRING symbol=STRING SEMICOLON ->
-        ^( DEFINE_BUILTIN_FUNCTION $f $o $i $pkg $version $symbol annotation* )
+        pkg=STRING version=STRING symbol=STRING inline_tcl? SEMICOLON ->
+        ^( DEFINE_BUILTIN_FUNCTION $f $o $i $pkg $version $symbol 
+                                   inline_tcl? annotation* )
     ;
+
+inline_tcl:
+    LSQUARE tcl=STRING RSQUARE -> ^( INLINE_TCL $tcl );
 
 global_const_definition:
         GLOBAL CONST v=declare_assign_single SEMICOLON

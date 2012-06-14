@@ -6,6 +6,7 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators;
+import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.SwiftType;
@@ -98,6 +99,9 @@ public interface CompilerBackend {
       List<Variable> inputs, List<Variable> outputs, List<Boolean> blockOn, 
       boolean async, Arg priority);
 
+  public abstract void builtinLocalFunctionCall(String functionName,
+          List<Arg> inputs, List<Variable> outputs);
+  
   /**
    * lookup structVarName.structField and copy to oVarName
    * @param structVarName
@@ -167,7 +171,8 @@ public interface CompilerBackend {
   
   public abstract void defineBuiltinFunction(String name,
                 String pkg, String version, String symbol,
-                FunctionType type) throws UserException;
+                FunctionType type, TclOpTemplate inlineTclTemplate) 
+                    throws UserException;
 
   public abstract void startCompositeFunction(String functionName,
       List<Variable> oList, List<Variable> iList, boolean async)

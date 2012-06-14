@@ -1463,22 +1463,78 @@ public class ICInstructions {
   
   }
   
-  public static class FunctionCall extends Instruction {
+  public static abstract class CommonFunctionCall extends Instruction {
+    protected final String functionName;
+    
+    public CommonFunctionCall(Opcode op, String functionName) {
+      super(op);
+      this.functionName = functionName;
+    }
+    
+    private boolean isCopyFunction() {
+      if (FunctionSemantics.isCopyFunction(functionName)) {
+        return true;
+      } else if (FunctionSemantics.isMinMaxFunction(functionName)
+              && getInput(0).equals(getInput(1))) {
+        return true;
+      }
+      return false;
+    }
+    
+    @Override
+    public List<ComputedValue> getComputedValues(
+                        Map<ComputedValue, Arg> existing) {
+      // TODO: make order of args invariant where possible
+      if (FunctionSemantics.isPure(functionName)) {
+        if (!this.writesMappedVar() && isCopyFunction()) {
+          // Handle copy as a special case
+          return Collections.singletonList(
+                ComputedValue.makeCopyCV(getOutput(0),
+                                         getInput(0)));
+        } else if (getOutputs().size() == 1) {
+          // TODO: does it matter if this writes a mapped variable? 
+          
+          boolean outputClosed = false; // safe assumption
+          String canonicalFunctionName = this.functionName;
+          List<Arg> in = new ArrayList<Arg>(getInputs());
+          if (FunctionSemantics.isCommutative(this.functionName)) {
+            // put in canonical order
+            Collections.sort(in);
+          }
+          
+          List<ComputedValue> res = new ArrayList<ComputedValue>();
+          res.add(new ComputedValue(this.op, 
+              canonicalFunctionName, in, 
+              Arg.createVar(getOutput(0)), outputClosed));
+          if (op == Opcode.CALL_BUILTIN && 
+                  this.functionName.equals(Builtins.INPUT_FILE)) {
+            res.add(new ComputedValue(Opcode.CALL_BUILTIN, Builtins.FILENAME,
+                Arrays.asList(Arg.createVar(getOutput(0))),
+                              getInput(0), false));
+          }
+          return res;
+        } else {
+          // Not sure to do with multiple outputs
+        }
+      }
+      return null;
+    }
+  }
+  
+  public static class FunctionCall extends CommonFunctionCall {
     private final List<Variable> outputs;
     private final List<Variable> inputs;
     private final List<Boolean> closedInputs; // which inputs are closed
-    private final String functionName;
     private Arg priority;
   
     private FunctionCall(Opcode op, String functionName,
         List<Variable> inputs, List<Variable> outputs, Arg priority) {
-      super(op);
+      super(op, functionName);
       if (op != Opcode.CALL_BUILTIN && op != Opcode.CALL &&
           op != Opcode.CALL_APP && op != Opcode.CALL_SYNC) {
         throw new STCRuntimeError("Tried to create function call"
             + " instruction with invalid opcode");
       }
-      this.functionName = functionName;
       this.priority = priority;
       this.outputs = new ArrayList<Variable>();
       this.outputs.addAll(outputs);
@@ -1687,55 +1743,6 @@ public class ICInstructions {
       }
       return blocksOn;
     }
-    
-    @Override
-    public List<ComputedValue> getComputedValues(
-                        Map<ComputedValue, Arg> existing) {
-      // TODO: make order of args invariant where possible
-      if (FunctionSemantics.isPure(functionName)) {
-        if (!this.writesMappedVar() && isCopyFunction()) {
-          // Handle copy as a special case
-          assert(outputs.size() == 1);
-          assert((FunctionSemantics.isCopyFunction(functionName) && inputs.size() == 1) 
-                || (FunctionSemantics.isMinMaxFunction(functionName) 
-                                      && inputs.size() == 2));
-          return Collections.singletonList(
-                ComputedValue.makeCopyCV(this.outputs.get(0),
-                                         Arg.createVar(this.inputs.get(0))));
-        } else if (this.outputs.size() == 1) {
-          // TODO: does it matter if this writes a mapped variable? 
-          
-          boolean outputClosed = false; // safe assumption
-          String canonicalFunctionName = this.functionName;
-          List<Arg> in = Arg.fromVarList(this.inputs);
-          if (FunctionSemantics.isCommutative(this.functionName)) {
-            // put in canonical order
-            Collections.sort(in);
-          }
-          
-          List<ComputedValue> res = new ArrayList<ComputedValue>();
-          res.add(new ComputedValue(this.op, 
-              canonicalFunctionName, in, 
-              Arg.createVar(this.outputs.get(0)), outputClosed));
-          if (this.functionName.equals(Builtins.INPUT_FILE)) {
-            res.add(new ComputedValue(Opcode.CALL_BUILTIN, Builtins.FILENAME,
-                Arrays.asList(Arg.createVar(this.outputs.get(0))),
-                Arg.createVar(this.inputs.get(0)), false));
-          }
-          return res;
-        } else {
-          // Not sure to do with multiple outputs
-        }
-      }
-      return null;
-    }
-
-    private boolean isCopyFunction() {
-      return FunctionSemantics.isCopyFunction(functionName) ||
-         (FunctionSemantics.isMinMaxFunction(functionName) 
-            && this.inputs.get(0).getName().equals(
-                        this.inputs.get(1).getName()));
-    }
 
     @Override
     public Instruction clone() {
@@ -1743,6 +1750,113 @@ public class ICInstructions {
       return new FunctionCall(op, functionName, 
           new ArrayList<Variable>(inputs), new ArrayList<Variable>(outputs),
           priority);
+    }
+  }
+  
+  public static class LocalFunctionCall extends CommonFunctionCall {
+    private final List<Variable> outputs;
+    private final List<Arg> inputs;
+  
+    public LocalFunctionCall(String functionName,
+        List<Arg> inputs, List<Variable> outputs) {
+      super(Opcode.CALL_BUILTIN_LOCAL, functionName);
+      this.outputs = new ArrayList<Variable>();
+      this.outputs.addAll(outputs);
+      this.inputs = new ArrayList<Arg>();
+      this.inputs.addAll(inputs);
+      for(Variable v: outputs) {
+        assert(v != null);
+      }
+      
+      for(Arg a: inputs) {
+        assert(a != null);
+      }
+    }
+  
+    @Override
+    public String toString() {
+      String result = op.toString().toLowerCase() + " " + functionName;
+      result += " [";
+      for (Variable v: outputs) {
+        result += " " + v.getName();
+      }
+      result += " ] [";
+      for (Arg a: inputs) {
+        result += " " + a.toString();
+      }
+      result += " ]";
+      return result;
+    }
+  
+    @Override
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
+      gen.builtinLocalFunctionCall(functionName, inputs, outputs);
+    }
+  
+    @Override
+    public void renameVars(Map<String, Arg> renames) {
+      ICUtil.replaceVarsInList(renames, outputs, false);
+      ICUtil.replaceOpargsInList(renames, inputs);
+    }
+  
+    public String getFunctionName() {
+      return this.functionName;
+    }
+    @Override
+    public void renameInputs(Map<String, Arg> renames) {
+      ICUtil.replaceOpargsInList(renames, inputs);
+    }
+  
+    @Override
+    public List<Arg> getInputs() {
+      return Collections.unmodifiableList(inputs);
+    }
+  
+    @Override
+    public List<Variable> getOutputs() {
+      return Collections.unmodifiableList(outputs);
+    }
+
+    @Override
+    public boolean hasSideEffects() {
+      return (!FunctionSemantics.isPure(functionName)) ||
+            this.writesAliasVar() || this.writesMappedVar();
+    }
+  
+    @Override
+    public Map<String, Arg> constantFold(String enclosingFnName,
+                                  Map<String, Arg> knownConstants) {
+      return null;
+    }
+    
+    @Override
+    public Instruction constantReplace(Map<String, Arg> knownConstants) {
+      return null;
+    }
+    
+    @Override
+    public MakeImmRequest canMakeImmediate(Set<String> closedVars
+                                      , boolean assumeAllInputsClosed) {
+      return null; // already immediate
+    }
+
+    @Override
+    public MakeImmChange makeImmediate(List<Variable> outVars, 
+                                        List<Arg> values) {
+      throw new STCRuntimeError("Invalid method call");
+    }
+
+    @Override
+    public List<Variable> getBlockingInputs() {
+      // doesn't take futures as args
+      return null;
+    }
+    
+    @Override
+    public Instruction clone() {
+      // Variables are immutable so just need to clone lists
+      return new LocalFunctionCall(functionName, 
+          new ArrayList<Arg>(inputs), new ArrayList<Variable>(outputs));
     }
   }
   
@@ -1995,7 +2109,7 @@ public class ICInstructions {
   public static enum Opcode {
     FAKE, // Used for ComputedValue if there isn't a real opcode
     COMMENT,
-    CALL_BUILTIN, CALL, CALL_APP, CALL_SYNC,
+    CALL_BUILTIN, CALL_BUILTIN_LOCAL, CALL, CALL_APP, CALL_SYNC,
     DEREF_INT, DEREF_STRING, DEREF_FLOAT, DEREF_BOOL, DEREF_BLOB,
     STORE_INT, STORE_STRING, STORE_FLOAT, STORE_BOOL, ADDRESS_OF, 
     LOAD_INT, LOAD_STRING, LOAD_FLOAT, LOAD_BOOL, LOAD_REF,

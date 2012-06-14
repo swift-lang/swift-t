@@ -24,7 +24,9 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.FunctionSemantics;
 import exm.stc.common.lang.Arg.ArgType;
+import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.Types;
@@ -536,6 +538,34 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
+  public void builtinLocalFunctionCall(String functionName,
+          List<Arg> inputs, List<Variable> outputs) {
+    TclOpTemplate template = FunctionSemantics.getInlineTemplate(
+                                                    functionName);
+    HashMap<String, Expression> toks = new HashMap<String, Expression>();
+    
+    List<String> outNames = template.getOutNames();
+    for (int i = 0; i < outputs.size(); i++) {
+      Variable out = outputs.get(i);
+      String argName = outNames.get(i);
+      toks.put(argName, new Token(prefixVar(out.getName())));
+    }
+   
+    //TODO: how to handle distinction between inputs and outputs
+    // in general
+    List<String> inNames = template.getInNames();
+    assert(inNames.size() != inputs.size());
+    for (int i = 0; i < inputs.size(); i++) {
+      Arg in = inputs.get(i);
+      String argName = inNames.get(i);
+      toks.put(argName, opargToExpr(in));
+    }
+    
+    assert(template != null);
+    
+  }
+  
+  @Override
   public void compositeFunctionCall(String function,
               List<Variable> inputs, List<Variable> outputs,
               List<Boolean> blocking, boolean async, Arg priority)  {
@@ -922,7 +952,7 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void defineBuiltinFunction(String name, String pkg,
                       String version, String symbol,
-                      FunctionType type)
+                      FunctionType type, TclOpTemplate inlineTclTemplate)
   {
     String pv = pkg+version;
     if (!pkg.equals("turbine")) {

@@ -22,6 +22,7 @@ import exm.stc.ast.descriptor.ForLoopDescriptor.LoopVar;
 import exm.stc.ast.descriptor.ForeachLoop;
 import exm.stc.ast.descriptor.FunctionDecl;
 import exm.stc.ast.descriptor.If;
+import exm.stc.ast.descriptor.InlineCode;
 import exm.stc.ast.descriptor.IterateDescriptor;
 import exm.stc.ast.descriptor.LValue;
 import exm.stc.ast.descriptor.Literals;
@@ -45,6 +46,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.FunctionSemantics;
+import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -1534,8 +1536,6 @@ public class ASTWalker {
                                                         tree.child(4));
     String symbol  = Literals.extractLiteralString(context, tree.child(5));
     
-    
-    
     FunctionDecl fdecl = FunctionDecl.fromAST(context, 
                                         inputs, outputs);
 
@@ -1547,12 +1547,40 @@ public class ASTWalker {
           + " is already defined");
     }
     
-    // Read annotations
-    for (int i = 6; i < tree.getChildCount(); i++) {
+    TclOpTemplate inlineTcl = null;
+    
+    int inlineTclPos = 6;
+    if (tree.getChildCount() >= inlineTclPos + 1 && 
+          tree.child(inlineTclPos).getType() == ExMParser.INLINE_TCL) {
+      /* See if a template is provided for inline TCL code for function */
+      SwiftAST inlineTclTree = tree.child(inlineTclPos);
+      assert(inlineTclTree.getChildCount() == 1);
+      System.err.println(ExMParser.tokenNames[inlineTclTree.child(0).getType()]);
+      String tclTemplateString = 
+            Literals.extractLiteralString(context, inlineTclTree.child(0));
+      inlineTcl = InlineCode.templateFromString(context, tclTemplateString);
+     
+      if (ft.hasVarargs()) {
+        throw new STCRuntimeError("Inline tcl is not yet supported" +
+        		" in combination with variable argument lists");
+      }
+      
+      inlineTcl.addInNames(fdecl.getInNames());
+      inlineTcl.addOutNames(fdecl.getOutNames());
+      
+      System.err.println("inline template: '" + tclTemplateString + "' to "
+              + inlineTcl.toString());
+      FunctionSemantics.addInlineTemplate(function, inlineTcl);
+    }
+    
+    // Read annotations at end of child list
+    int i = tree.getChildCount() - 1;
+    while (tree.child(i).getType() == ExMParser.ANNOTATION) {
       handleFunctionAnnotation(context, function, tree.child(i));
+      i--;
     }
     context.defineBuiltinFunction(function, ft);
-    backend.defineBuiltinFunction(function, pkg, version, symbol, ft);
+    backend.defineBuiltinFunction(function, pkg, version, symbol, ft, inlineTcl);
   }
 
 

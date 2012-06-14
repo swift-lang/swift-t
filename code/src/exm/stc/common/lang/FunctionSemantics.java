@@ -1,13 +1,13 @@
 package exm.stc.common.lang;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.MultiMap.ListFactory;
@@ -44,6 +44,13 @@ public class FunctionSemantics {
   private static HashSet<String> copyFunctions = new HashSet<String>();
   private static HashSet<String> minMaxFunctions = new HashSet<String>();
   
+  
+  /**
+   * Templates for inline tcl code that can be used to generate
+   * local implementation of function
+   */
+  private static HashMap<String, TclOpTemplate> inlineTemplates
+    = new HashMap<String, TclOpTemplate>();
   
   public static void addPure(String builtinFunction) {
     pure.add(builtinFunction);
@@ -115,6 +122,18 @@ public class FunctionSemantics {
   }
   
   
+  public static void addInlineTemplate(String fnName, TclOpTemplate tmp) {
+    inlineTemplates.put(fnName, tmp);
+  }
+  
+  public static boolean hasLocalVersion(String fnName) {
+    return inlineTemplates.containsKey(fnName);
+  }
+  
+  public static TclOpTemplate getInlineTemplate(String fnName) {
+    return inlineTemplates.get(fnName);
+  }
+  
   public static class TemplateElem {
     public static enum ElemKind {
       TEXT,
@@ -130,7 +149,7 @@ public class FunctionSemantics {
       this.contents = contents;
     }
     
-    public static TemplateElem createText(String text) {
+    public static TemplateElem createTok(String text) {
       return new TemplateElem(ElemKind.TEXT, text);
     }
     
@@ -160,17 +179,54 @@ public class FunctionSemantics {
     
     public String toString() {
       if (kind == ElemKind.VARIABLE) {
-        return "var: " + contents;
+        return contents;
       } else {
         assert(kind == ElemKind.TEXT);
-        return contents;
+        return "\"" + contents + "\"";
       }
     }
   }
   
   public static class TclOpTemplate {
     private final ArrayList<TemplateElem> elems = 
-                              new ArrayList<TemplateElem>(); 
+                              new ArrayList<TemplateElem>();
+    
+    /**
+     * Names of positional input variables for template
+     */
+    private final ArrayList<String> outNames =
+                              new ArrayList<String>();
+    
+    /**
+     * Names of positional output variables for template
+     */
+    private final ArrayList<String> inNames =
+                              new ArrayList<String>();
+    
+    public boolean addInName(String e) {
+      return inNames.add(e);
+    }
+
+    public boolean addInNames(Collection<? extends String> c) {
+      return inNames.addAll(c);
+    }
+
+    public boolean addOutName(String e) {
+      return outNames.add(e);
+    }
+
+    public boolean addOutNames(Collection<? extends String> c) {
+      return outNames.addAll(c);
+    }
+    
+    public List<String> getInNames() {
+      return Collections.unmodifiableList(inNames);
+    }
+    
+    public List<String> getOutNames() {
+      return Collections.unmodifiableList(outNames);
+    }
+
     public void addElem(TemplateElem elem) {
       elems.add(elem);
     }
@@ -178,69 +234,7 @@ public class FunctionSemantics {
     public List<TemplateElem> getElems() {
       return Collections.unmodifiableList(elems);
     }
-    
-    /**
-     * Parse simple templates where we assume that variables are
-     * a dollar sign, followed by a series of: a-zA-Z0-9_{}
-     * @param in
-     * @return
-     * @throws ValueError 
-     */
-    public static TclOpTemplate templateFromString(String in) 
-                                      throws UserException {
-      TclOpTemplate template = new TclOpTemplate();
-      StringBuilder currTok = new StringBuilder();
-      StringBuilder currVar = null;
-      boolean inVar = false;
-      boolean varBraces = false;
-      for (int i = 0; i < in.length(); i++) {
-        char c = in.charAt(i);
-        if (inVar) {
-          if (Character.isLetterOrDigit(c) || c == '_') {
-            currVar.append(c);
-          } else if (c == '{') {
-            if (currVar.length() == 0) {
-              varBraces = true;
-            } else {
-              throw new UserException("Invalid variable name in TCL template" +
-              		" had '{' in middle of variable name.  Template was: " + in);
-            }
-          } else if (c == '}') {
-            if (varBraces) {
-              template.addElem(TemplateElem.createVar(currVar.toString()));
-              inVar = false;
-              currVar = null;
-              currTok = new StringBuilder();
-            } else {
-              throw new UserException("Invalid variable name in TCL template" +
-                " had '}' in middle of variable name.  Template was: " + in);
-            }
-          } else {
-            template.addElem(TemplateElem.createVar(currVar.toString()));
-            inVar = false;
-            currVar = null;
-            currTok = new StringBuilder();
-            currTok.append(c);
-          }
-        } else {
-          if (c == '$') {
-            template.addElem(TemplateElem.createText(currTok.toString()));
-            inVar = true;
-            currTok = null;
-            currVar = new StringBuilder();
-          } else {
-            currTok.append(c);
-          }
-        }
-      }
-      if (inVar) {
-        template.addElem(TemplateElem.createVar(currVar.toString()));
-      } else {
-        template.addElem(TemplateElem.createText(currTok.toString()));
-      }
-      return template;
-    }
-    
+
     public String toString() {
       return elems.toString();
     }
