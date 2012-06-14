@@ -105,21 +105,12 @@ public class TurbineGenerator implements CompilerBackend
 
   HashSet<String> usedTclFunctionNames = new HashSet<String>();
 
-  private static class TCLFunRef {
-    public final String pkg;
-    public final String symbol;
-    public TCLFunRef(String pkg, String symbol) {
-      super();
-      this.pkg = pkg;
-      this.symbol = symbol;
-    }
-  }
   /**
    * TCL symbol names for builtins
    * Swift function name -> TCL proc name
    */
-  private final HashMap<String, TCLFunRef> builtinSymbols =
-                      new HashMap<String, TCLFunRef>();
+  private final HashMap<String, TclFunRef> builtinSymbols =
+                      new HashMap<String, TclFunRef>();
 
   /**
      If true, enable debug comments in Tcl source
@@ -380,19 +371,34 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void asyncOp(BuiltinOpcode op, Variable out, List<Arg> in,
       Arg priority) {
-    //TODO: temporary hack to get working
-    String fnName = BuiltinOps.getBuiltinOpImpl(op);
-    if (fnName == null) {
-      throw new STCRuntimeError("No implementation for op "
-          + op + " known");
+    //TODO: for time being, share code with built-in function generation
+    TclFunRef fn = BuiltinOps.getBuiltinOpImpl(op);
+    if (fn == null) {
+      List<String> impls = FunctionSemantics.findOpImpl(op);
+      
+      // It should be impossible for there to be no implementation for a function
+      // like this
+      assert(impls != null);
+      assert(impls.size() > 0);
+      
+      if (impls.size() > 1) {
+        Logger.getLogger("").warn("Multiple implementations for operation " +
+            op + ": " + impls.toString());
+      }
+      fn = builtinSymbols.get(impls.get(0));
     }
     
     ArrayList<Variable> inputs = new ArrayList<Variable>();
     for (Arg a: in) {
+      // Arguments to async ops need to be vars
       assert(a.getType() == ArgType.VAR);
       inputs.add(a.getVar());
     }
-    builtinFunctionCall(fnName, inputs, Arrays.asList(out), priority);
+    
+    List<Variable> outL = (out == null) ? 
+          new ArrayList<Variable>(0) : Arrays.asList(out);
+    builtinFunctionCall("operator: " + op.toString(), fn, 
+                        inputs, outL, priority);
   }
 
   @Override
@@ -519,10 +525,16 @@ public class TurbineGenerator implements CompilerBackend
   {
     assert(priority == null || priority.isImmediateInt());
     logger.debug("call builtin: " + function);
+    TclFunRef tclf = builtinSymbols.get(function);
 
+    builtinFunctionCall(function, tclf, inputs, outputs, priority);
+  }
+
+  private void builtinFunctionCall(String function, TclFunRef tclf,
+      List<Variable> inputs, List<Variable> outputs, Arg priority) {
     TclList iList = tclListOfVariables(inputs);
     TclList oList = tclListOfVariables(outputs);
-    TCLFunRef tclf = builtinSymbols.get(function);
+    
     if (tclf == null) {
       //should have all builtins in symbols
       throw new STCRuntimeError("call to undefined builtin function "
@@ -964,7 +976,7 @@ public class TurbineGenerator implements CompilerBackend
         pointStack.peek().add(new Command(""));
       }
     }
-    builtinSymbols.put(name, new TCLFunRef(pkg, symbol));
+    builtinSymbols.put(name, new TclFunRef(pkg, symbol));
     logger.debug("TurbineGenerator: Defined built-in " + name);
   }
 

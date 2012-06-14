@@ -5,13 +5,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
-
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgType;
-import exm.stc.common.lang.FunctionSemantics;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.SwiftType;
@@ -366,8 +363,8 @@ public class BuiltinOps {
     return rhs;
   }
 
-  private static Map<BuiltinOpcode, String> builtinOpImpls
-    = new HashMap<BuiltinOpcode, String>();
+  private static Map<BuiltinOpcode, TclFunRef> builtinOpImpls
+    = new HashMap<BuiltinOpcode, TclFunRef>();
   
   static {
     populateBuiltinOpImpls();
@@ -380,65 +377,93 @@ public class BuiltinOps {
    * different namespace entirely
    * @throws UserException 
    */
-  public static String getBuiltinOpImpl(BuiltinOpcode op) {
+  public static TclFunRef getBuiltinOpImpl(BuiltinOpcode op) {
     // first try hardcoded
-    String impl = builtinOpImpls.get(op);
+    TclFunRef impl = builtinOpImpls.get(op);
     if (impl != null) {
       return impl;
     }
-    
-    List<String> impls = FunctionSemantics.findOpImpl(op);
-    
-    // It should be impossible for there to be no implementation for a function
-    // like this
-    assert(impls != null);
-    assert(impls.size() > 0);
-    
-    if (impls.size() > 1) {
-      Logger.getLogger("").warn("Multiple implementations for operation " +
-      		op + ": " + impls.toString());
-    }
-    return impls.get(0);
+    return null;
   }
   
+  /** Package in which async implementations of TCL operators live */
+  private static final String OP_TCL_PKG = "turbine";
   private static void populateBuiltinOpImpls() {
-    builtinOpImpls.put(BuiltinOpcode.PLUS_INT, "plus_integer");
-    builtinOpImpls.put(BuiltinOpcode.MINUS_INT, "minus_integer");
-    builtinOpImpls.put(BuiltinOpcode.MULT_INT, "multiply_integer");
-    builtinOpImpls.put(BuiltinOpcode.DIV_INT, "divide_integer");
-    builtinOpImpls.put(BuiltinOpcode.MOD_INT, "mod_integer");
-    builtinOpImpls.put(BuiltinOpcode.NEGATE_INT, "negate_integer");
-    builtinOpImpls.put(BuiltinOpcode.EQ_INT, "eq_integer");
-    builtinOpImpls.put(BuiltinOpcode.NEQ_INT, "neq_integer");
-    builtinOpImpls.put(BuiltinOpcode.LT_INT, "lt_integer");
-    builtinOpImpls.put(BuiltinOpcode.LTE_INT, "lte_integer");
-    builtinOpImpls.put(BuiltinOpcode.GT_INT, "gt_integer");
-    builtinOpImpls.put(BuiltinOpcode.GTE_INT, "gte_integer");
-    builtinOpImpls.put(BuiltinOpcode.PLUS_FLOAT, "plus_float");
-    builtinOpImpls.put(BuiltinOpcode.MINUS_FLOAT, "minus_float");
-    builtinOpImpls.put(BuiltinOpcode.MULT_FLOAT, "multiply_float");
-    builtinOpImpls.put(BuiltinOpcode.DIV_FLOAT, "divide_float");
-    builtinOpImpls.put(BuiltinOpcode.NEGATE_FLOAT, "negate_float");
-    builtinOpImpls.put(BuiltinOpcode.EQ_FLOAT, "eq_float");
-    builtinOpImpls.put(BuiltinOpcode.NEQ_FLOAT, "neq_float");
-    builtinOpImpls.put(BuiltinOpcode.LT_FLOAT, "lt_float");
-    builtinOpImpls.put(BuiltinOpcode.LTE_FLOAT, "lte_float");
-    builtinOpImpls.put(BuiltinOpcode.GT_FLOAT, "gt_float");
-    builtinOpImpls.put(BuiltinOpcode.GTE_FLOAT, "gte_float");      
-    builtinOpImpls.put(BuiltinOpcode.EQ_STRING, "eq_string");
-    builtinOpImpls.put(BuiltinOpcode.NEQ_STRING, "neq_string");
-    builtinOpImpls.put(BuiltinOpcode.STRCAT, "strcat");
-    builtinOpImpls.put(BuiltinOpcode.EQ_BOOL, "eq_boolean");
-    builtinOpImpls.put(BuiltinOpcode.NEQ_BOOL, "neq_boolean");
-    builtinOpImpls.put(BuiltinOpcode.AND, "and");
-    builtinOpImpls.put(BuiltinOpcode.OR, "or");
-    builtinOpImpls.put(BuiltinOpcode.NOT, "not");
-    builtinOpImpls.put(BuiltinOpcode.COPY_INT, "copy_integer");
-    builtinOpImpls.put(BuiltinOpcode.COPY_VOID, "copy_void");
-    builtinOpImpls.put(BuiltinOpcode.COPY_FLOAT, "copy_float");
-    builtinOpImpls.put(BuiltinOpcode.COPY_STRING, "copy_string");
-    builtinOpImpls.put(BuiltinOpcode.COPY_BOOL, "copy_boolean");
-    builtinOpImpls.put(BuiltinOpcode.COPY_BLOB, "copy_blob");
+    builtinOpImpls.put(BuiltinOpcode.PLUS_INT, new TclFunRef(
+        OP_TCL_PKG, "plus_integer"));
+    builtinOpImpls.put(BuiltinOpcode.MINUS_INT, new TclFunRef(
+        OP_TCL_PKG, "minus_integer"));
+    builtinOpImpls.put(BuiltinOpcode.MULT_INT, new TclFunRef(
+        OP_TCL_PKG, "multiply_integer"));
+    builtinOpImpls.put(BuiltinOpcode.DIV_INT, new TclFunRef(
+        OP_TCL_PKG, "divide_integer"));
+    builtinOpImpls.put(BuiltinOpcode.MOD_INT, new TclFunRef(
+        OP_TCL_PKG, "mod_integer"));
+    builtinOpImpls.put(BuiltinOpcode.NEGATE_INT, new TclFunRef(
+        OP_TCL_PKG, "negate_integer"));
+    builtinOpImpls.put(BuiltinOpcode.EQ_INT, new TclFunRef(
+        OP_TCL_PKG, "eq_integer"));
+    builtinOpImpls.put(BuiltinOpcode.NEQ_INT, new TclFunRef(
+        OP_TCL_PKG, "neq_integer"));
+    builtinOpImpls.put(BuiltinOpcode.LT_INT, new TclFunRef(
+        OP_TCL_PKG, "lt_integer"));
+    builtinOpImpls.put(BuiltinOpcode.LTE_INT, new TclFunRef(
+        OP_TCL_PKG, "lte_integer"));
+    builtinOpImpls.put(BuiltinOpcode.GT_INT, new TclFunRef(
+        OP_TCL_PKG, "gt_integer"));
+    builtinOpImpls.put(BuiltinOpcode.GTE_INT, new TclFunRef(
+        OP_TCL_PKG, "gte_integer"));
+    builtinOpImpls.put(BuiltinOpcode.PLUS_FLOAT, new TclFunRef(
+        OP_TCL_PKG, "plus_float"));
+    builtinOpImpls.put(BuiltinOpcode.MINUS_FLOAT, new TclFunRef(
+        OP_TCL_PKG, "minus_float"));
+    builtinOpImpls.put(BuiltinOpcode.MULT_FLOAT, new TclFunRef(
+        OP_TCL_PKG, "multiply_float"));
+    builtinOpImpls.put(BuiltinOpcode.DIV_FLOAT, new TclFunRef(
+        OP_TCL_PKG, "divide_float"));
+    builtinOpImpls.put(BuiltinOpcode.NEGATE_FLOAT, new TclFunRef(
+        OP_TCL_PKG, "negate_float"));
+    builtinOpImpls.put(BuiltinOpcode.EQ_FLOAT, new TclFunRef(
+        OP_TCL_PKG, "eq_float"));
+    builtinOpImpls.put(BuiltinOpcode.NEQ_FLOAT, new TclFunRef(
+        OP_TCL_PKG, "neq_float"));
+    builtinOpImpls.put(BuiltinOpcode.LT_FLOAT, new TclFunRef(
+        OP_TCL_PKG, "lt_float"));
+    builtinOpImpls.put(BuiltinOpcode.LTE_FLOAT, new TclFunRef(
+        OP_TCL_PKG, "lte_float"));
+    builtinOpImpls.put(BuiltinOpcode.GT_FLOAT, new TclFunRef(
+        OP_TCL_PKG, "gt_float"));
+    builtinOpImpls.put(BuiltinOpcode.GTE_FLOAT, new TclFunRef(
+        OP_TCL_PKG, "gte_float"));      
+    builtinOpImpls.put(BuiltinOpcode.EQ_STRING, new TclFunRef(
+        OP_TCL_PKG, "eq_string"));
+    builtinOpImpls.put(BuiltinOpcode.NEQ_STRING, new TclFunRef(
+        OP_TCL_PKG, "neq_string"));
+    builtinOpImpls.put(BuiltinOpcode.STRCAT, new TclFunRef(
+        OP_TCL_PKG, "strcat"));
+    builtinOpImpls.put(BuiltinOpcode.EQ_BOOL, new TclFunRef(
+        OP_TCL_PKG, "eq_boolean"));
+    builtinOpImpls.put(BuiltinOpcode.NEQ_BOOL, new TclFunRef(
+        OP_TCL_PKG, "neq_boolean"));
+    builtinOpImpls.put(BuiltinOpcode.AND, new TclFunRef(
+        OP_TCL_PKG, "and"));
+    builtinOpImpls.put(BuiltinOpcode.OR, new TclFunRef(
+        OP_TCL_PKG, "or"));
+    builtinOpImpls.put(BuiltinOpcode.NOT, new TclFunRef(
+        OP_TCL_PKG, "not"));
+    builtinOpImpls.put(BuiltinOpcode.COPY_INT, new TclFunRef(
+        OP_TCL_PKG, "copy_integer"));
+    builtinOpImpls.put(BuiltinOpcode.COPY_VOID, new TclFunRef(
+        OP_TCL_PKG, "copy_void"));
+    builtinOpImpls.put(BuiltinOpcode.COPY_FLOAT, new TclFunRef(
+        OP_TCL_PKG, "copy_float"));
+    builtinOpImpls.put(BuiltinOpcode.COPY_STRING, new TclFunRef(
+        OP_TCL_PKG, "copy_string"));
+    builtinOpImpls.put(BuiltinOpcode.COPY_BOOL, new TclFunRef(
+        OP_TCL_PKG, "copy_boolean"));
+    builtinOpImpls.put(BuiltinOpcode.COPY_BLOB, new TclFunRef(
+        OP_TCL_PKG, "copy_blob"));
+
   }
   
 }
