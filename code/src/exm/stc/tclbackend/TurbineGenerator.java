@@ -1180,9 +1180,23 @@ public class TurbineGenerator implements CompilerBackend
     private void startAsync(String procName, List<Variable> waitVars,
         List<Variable> usedVariables, List<Variable> containersToRegister,
         boolean shareWork) {
+      ArrayList<Variable> toPassIn = new ArrayList<Variable>();
+      HashSet<String> alreadyInSet = new HashSet<String>();
+      for (Variable v: usedVariables) {
+        toPassIn.add(v);
+        alreadyInSet.add(v.getName());
+      }
+      
+      // Also need to pass in refs to containers
+      for (Variable v: containersToRegister) {
+        if (!alreadyInSet.contains(v.getName())) {
+          toPassIn.add(v);
+        }
+      }
+      
       List<String> args = new ArrayList<String>();
       args.add(Turbine.LOCAL_STACK_NAME);
-      for (Variable v: usedVariables) {
+      for (Variable v: toPassIn) {
         args.add(prefixVar(v.getName()));
       }
 
@@ -1204,7 +1218,7 @@ public class TurbineGenerator implements CompilerBackend
               Turbine.containerSlotCreate(varToExpr(c)));
       }
 
-      TclList action = buildAction(uniqueName, usedVariables);
+      TclList action = buildAction(uniqueName, toPassIn);
       pointStack.peek().add(
             Turbine.rule(uniqueName, inputs, action, shareWork));
 
