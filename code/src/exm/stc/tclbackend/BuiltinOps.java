@@ -442,9 +442,9 @@ public class BuiltinOps {
     builtinOpImpls.put(BuiltinOpcode.STRCAT, new TclFunRef(
         OP_TCL_PKG, "strcat"));
     builtinOpImpls.put(BuiltinOpcode.EQ_BOOL, new TclFunRef(
-        OP_TCL_PKG, "eq_boolean"));
+        OP_TCL_PKG, "eq_integer"));
     builtinOpImpls.put(BuiltinOpcode.NEQ_BOOL, new TclFunRef(
-        OP_TCL_PKG, "neq_boolean"));
+        OP_TCL_PKG, "neq_integer"));
     builtinOpImpls.put(BuiltinOpcode.AND, new TclFunRef(
         OP_TCL_PKG, "and"));
     builtinOpImpls.put(BuiltinOpcode.OR, new TclFunRef(
@@ -460,7 +460,7 @@ public class BuiltinOps {
     builtinOpImpls.put(BuiltinOpcode.COPY_STRING, new TclFunRef(
         OP_TCL_PKG, "copy_string"));
     builtinOpImpls.put(BuiltinOpcode.COPY_BOOL, new TclFunRef(
-        OP_TCL_PKG, "copy_boolean"));
+        OP_TCL_PKG, "copy_integer"));
     builtinOpImpls.put(BuiltinOpcode.COPY_BLOB, new TclFunRef(
         OP_TCL_PKG, "copy_blob"));
 
