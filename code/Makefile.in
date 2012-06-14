@@ -1,6 +1,6 @@
 
 TURBINE = lib/libturbine.a
-TURBINE_VERSION = 0.0.3
+TURBINE_VERSION = 0.0.4
 
 PACKAGE = lib/pkgIndex.tcl
 
