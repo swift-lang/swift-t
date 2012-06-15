@@ -100,6 +100,9 @@ typedef enum
   ADLB_DATA_ERROR_UNKNOWN,
 } adlb_data_code;
 
+#define ADLB_RANK_ANY  -100
+#define ADLB_RANK_NULL -200
+
 #define ADLB_DATA_ID_NULL 0
 
 /**
@@ -122,6 +125,11 @@ typedef enum
    The maximal length of an ADLB datum (string, blob, etc.)
  */
 #define ADLB_DATA_MAX (1024*1024)
+
+/**
+   Maximum size for a given ADLB transaction
+*/
+#define ADLB_PAYLOAD_MAX (1024*1024)
 
 /**
    The ASCII control character Record Separator

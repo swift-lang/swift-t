@@ -9,12 +9,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "adlb.h"
-#include "data.h"
-#include <table_lp.h>
-#include <table.h>
 #include <list_i.h>
 #include <list_l.h>
+#include <table.h>
+#include <table_lp.h>
+
+#include "adlb.h"
+#include "data.h"
+#include "debug.h"
 
 /**
    Map from adlb_datum_id to adlb_datum
