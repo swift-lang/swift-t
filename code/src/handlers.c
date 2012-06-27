@@ -138,13 +138,35 @@ handle_put(int caller)
 static void
 put(struct packed_put* p)
 {
-  if (requestqueue_matches_target(p->target))
-    printf("X");;
+  int next_worker = 0;
+  int worker;
+  worker = requestqueue_matches_target(p->target);
+  if (worker != ADLB_RANK_NULL)
+  {
+    send_work(p, worker);
+    return;
+  }
+
+  worker = requestqueue_next();
+  send_work(worker);
 }
 
 adlb_code
 handle_get(int caller)
 {
+  struct packed_get p;
+  rc = MPI_Recv(&p, sizoeof(p), MPI_BYTE, caller, ADLB_TAG_GET,
+                adlb_all_comm, &status);
+  MPI_CHECK(rc);
+
+  struct work_unit* wu = workqueue_get(p);
+  if (wu == NULL)
+  {
+    requestqueue_add(caller);
+    return ADLB_SUCCESS;
+  }
+
+  send_work(worker, wu);
 
   return ADLB_SUCCESS;
 }
@@ -590,7 +612,8 @@ handle_container_reference(int caller)
   return ADLB_SUCCESS;
 }
 
-adlb_code handle_container_size(int caller)
+adlb_code
+handle_container_size(int caller)
 {
   long container_id;
   rc = MPI_Recv(&container_id, 1, MPI_LONG, caller,
@@ -611,7 +634,8 @@ adlb_code handle_container_size(int caller)
   return ADLB_SUCCESS;
 }
 
-adlb_code handle_lock(int caller)
+adlb_code
+handle_lock(int caller)
 {
   long id;
   MPI_Recv(&id, 1, MPI_LONG, caller, ADLB_TAG_LOCK,
@@ -636,7 +660,8 @@ adlb_code handle_lock(int caller)
   return ADLB_SUCCESS;
 }
 
-adlb_code handle_unlock(int caller)
+adlb_code
+handle_unlock(int caller)
 {
   long id;
   MPI_Recv(&id, 1, MPI_LONG, caller, ADLB_TAG_UNLOCK,

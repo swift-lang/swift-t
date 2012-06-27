@@ -27,6 +27,15 @@ struct packed_put
 /**
    Simple struct for message packing
  */
+struct packed_get
+{
+  int type;
+  int target;
+};
+
+/**
+   Simple struct for message packing
+ */
 struct packed_get_response
 {
   adlb_code code;
