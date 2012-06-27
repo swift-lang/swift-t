@@ -100,11 +100,13 @@ libs: libadlb.a libadlb.so
 
 $(ADLB_A): $(OBJS)
 	$(Q) "  AR		$(@)"
+	$(E) mkdir -p lib
 	$(E) $(AR) $(ARFLAGS) $@ $(OBJS)
 	$(E) $(RANLIB) $@
 
 $(ADLB_SO): $(OBJS) $(NLOBJS)
 	$(Q) "  LINK		$(@)"
+	$(E) mkdir -p lib
 	$(E) $(CC) -shared -o $(@) -fPIC $(NLOBJS) $(OBJS) \
 	-L $(C_UTILS)/lib -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils
 # -L . -l mpe -Wl,-rpath -Wl,$(PWD)
