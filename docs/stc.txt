@@ -5,6 +5,34 @@
 
 STC allows you to write Swift programs and run them using Turbine.
 
+== Installation
+
+Writing and running Swift/Turbine programs requires multiple packages.
+These have been packaged for convenient download and installation.
+
+1. Obtain the package
++
+wget http://www.mcs.anl.gov/~wozniak/exm-trunk.tar.gz
++
+2. Unpack and enter package directory
++
+----
+tar xfz exm-trunk.tar.gz
+cd exm-trunk
+----
+3. Edit the settings file: +exm-settings.sh+
++
+This allows you to change the installation location, etc.
++
+4. Run the setup script
++
+----
+./exm-setup.zsh
+----
+
+Alternatively, each component may be compiled separately.  The
++exm-setup.zsh+ script is relatively simple to read and modify.
+
 == Usage
 
 Swift code is conventionally written in +\*.swift+ files.  Turbine
