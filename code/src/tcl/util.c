@@ -68,3 +68,10 @@ void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
   fflush(stdout);
   Tcl_AddErrorInfo(interp, buffer);
 }
+
+void
+tcl_set_integer(Tcl_Interp* interp, char* name, int value)
+{
+  Tcl_ObjSetVar2(interp, Tcl_NewStringObj(name, -1), NULL,
+                 Tcl_NewIntObj(value), 0);
+}

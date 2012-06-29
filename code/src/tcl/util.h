@@ -43,6 +43,8 @@ void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
   __attribute__ ((format (printf, 3, 4)));
 
 
+void tcl_set_integer(Tcl_Interp* interp, char* name, int value);
+
 /**
    Print error message and return a Tcl error
  */
