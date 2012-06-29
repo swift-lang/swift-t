@@ -15,6 +15,10 @@
 // messages are more useful.  This file only packs and unpacks
 // calls to the ADLB C layer
 
+// SELECT: Old ADLB or new XLB
+#define USE_ADLB
+// #define USE_XLB
+
 #include <assert.h>
 
 // strnlen() is a GNU extension
@@ -38,7 +42,11 @@ static int workers;
 /** Number of servers */
 static int servers;
 
-static int am_server, am_debug_server;
+static int am_server;
+
+#ifdef USE_ADLB
+static int am_debug_server;
+#endif
 
 /** Size of MPI_COMM_WORLD */
 static int mpi_size = -1;
@@ -52,10 +60,12 @@ static MPI_Comm worker_comm;
 /** ADLB uses -1 to mean "any" in ADLB_Put() and ADLB_Reserve() */
 #define ADLB_ANY -1
 
-static char xfer[ADLB_MSG_MAX];
+static char xfer[ADLB_DATA_MAX];
 
 /** Map from TD to local blob pointers */
 static struct table_lp blob_cache;
+
+void set_namespace_constants(Tcl_Interp* interp);
 
 /**
    usage: adlb::init <servers> <types>
@@ -106,39 +116,36 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   // ADLB_Init(int num_servers, int use_debug_server,
   //           int aprintf_flag, int num_types, int *types,
   //           int *am_server, int *am_debug_server, MPI_Comm *app_comm)
+#ifdef USE_ADLB
   rc = ADLB_Init(servers, 0, 0, ntypes, type_vect,
                    &am_server, &am_debug_server, &worker_comm);
+#endif
+#ifdef USE_XLB
+  rc = ADLB_Init(servers, ntypes, type_vect,
+                 &am_server, &worker_comm);
+#endif
   assert(rc == ADLB_SUCCESS);
 
   if (! am_server)
     MPI_Comm_rank(worker_comm, &adlb_rank);
 
-  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::SUCCESS", -1), NULL,
-                 Tcl_NewIntObj(ADLB_SUCCESS), 0);
-
-  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::ANY", -1), NULL,
-                 Tcl_NewIntObj(ADLB_ANY), 0);
-
-  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::INTEGER", -1), NULL,
-                 Tcl_NewIntObj(ADLB_DATA_TYPE_INTEGER), 0);
-
-  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::FLOAT", -1), NULL,
-                 Tcl_NewIntObj(ADLB_DATA_TYPE_FLOAT), 0);
-
-  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::STRING", -1), NULL,
-                 Tcl_NewIntObj(ADLB_DATA_TYPE_STRING), 0);
-
-  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::FILE", -1), NULL,
-                 Tcl_NewIntObj(ADLB_DATA_TYPE_FILE), 0);
-
-  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::BLOB", -1), NULL,
-                 Tcl_NewIntObj(ADLB_DATA_TYPE_BLOB), 0);
-
-  Tcl_ObjSetVar2(interp, Tcl_NewStringObj("::adlb::CONTAINER", -1), NULL,
-                   Tcl_NewIntObj(ADLB_DATA_TYPE_CONTAINER), 0);
+  set_namespace_constants(interp);
 
   Tcl_SetObjResult(interp, Tcl_NewIntObj(ADLB_SUCCESS));
   return TCL_OK;
+}
+
+void
+set_namespace_constants(Tcl_Interp* interp)
+{
+  tcl_set_integer(interp, "::adlb::SUCCESS",   ADLB_SUCCESS);
+  tcl_set_integer(interp, "::adlb::ANY",       ADLB_ANY);
+  tcl_set_integer(interp, "::adlb::INTEGER",   ADLB_DATA_TYPE_INTEGER);
+  tcl_set_integer(interp, "::adlb::FLOAT",     ADLB_DATA_TYPE_FLOAT);
+  tcl_set_integer(interp, "::adlb::STRING",    ADLB_DATA_TYPE_STRING);
+  tcl_set_integer(interp, "::adlb::FILE",      ADLB_DATA_TYPE_FILE);
+  tcl_set_integer(interp, "::adlb::BLOB",      ADLB_DATA_TYPE_BLOB);
+  tcl_set_integer(interp, "::adlb::CONTAINER", ADLB_DATA_TYPE_CONTAINER);
 }
 
 /**
@@ -157,8 +164,13 @@ ADLB_Server_Cmd(ClientData cdata, Tcl_Interp *interp,
   DEBUG_ADLB("ADLB SERVER...");
   // Limit ADLB to 100MB
   int max_memory = 100*1024*1024;
+#ifdef USE_ADLB
   double logging = 0.0;
   int rc = ADLB_Server(max_memory, logging);
+#endif
+#ifdef USE_XLB
+  int rc = ADLB_Server(max_memory);
+#endif
   Tcl_SetObjResult(interp, Tcl_NewIntObj(rc));
   return TCL_OK;
 }
@@ -278,14 +290,21 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   DEBUG_ADLB("adlb::get: type=%i", req_type);
 
-  char result[ADLB_MSG_MAX];
   int work_type;
-  int work_prio;
+
+  void* result = &xfer[0];
+#ifdef USE_ADLB
   int work_handle[ADLB_HANDLE_SIZE];
+#endif
   int work_len;
   int answer_rank;
-  int req_types[4];
   bool found_work = false;
+
+#ifdef USE_ADLB
+
+
+  int req_types[4];
+  int work_prio;
 
   req_types[0] = req_type;
   req_types[1] = req_types[2] = req_types[3] = -1;
@@ -322,9 +341,14 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
     else
       found_work = true;
   }
+#endif
+
+#ifdef USE_XLB
+  ADLB_Get(req_type, result, &work_len, &answer_rank, &work_type );
+#endif
 
   if (found_work)
-    DEBUG_ADLB("adlb::get: %s", result);
+    DEBUG_ADLB("adlb::get: %s", (char*) result);
 
   // Store answer_rank in caller's stack frame
   Tcl_Obj* tcl_answer_rank = Tcl_NewIntObj(answer_rank);
@@ -480,7 +504,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
       TCL_CONDITION(data != NULL,
                     "adlb::store string <%li> failed!", id);
       length = strlen(data)+1;
-      TCL_CONDITION(length < ADLB_MSG_MAX,
+      TCL_CONDITION(length < ADLB_DATA_MAX,
           "adlb::store: string too long: <%li>", id);
       break;
     case ADLB_DATA_TYPE_BLOB:
@@ -492,7 +516,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
         TCL_CONDITION(data != NULL,
                       "adlb::store blob <%li> failed!", id);
         length = strlen(data)+1;
-        TCL_CONDITION(length < ADLB_MSG_MAX,
+        TCL_CONDITION(length < ADLB_DATA_MAX,
                       "adlb::store: string too long: <%li>", id);
         break;
       }
@@ -962,7 +986,7 @@ ADLB_Blob_store_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_ListObjGetElements(interp, objv[2], &length, &objs);
   TCL_CHECK_MSG(rc, "requires list!");
 
-  TCL_CONDITION(length*sizeof(double) <= ADLB_MSG_MAX,
+  TCL_CONDITION(length*sizeof(double) <= ADLB_DATA_MAX,
                 "list too long!");
 
   for (int i = 0; i < length; i++)
