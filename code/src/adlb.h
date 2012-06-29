@@ -15,30 +15,17 @@
 
 #include "version.h"
 
-#define  LB_VERSION
-
-typedef enum
-{
- ADLB_SUCCESS  =  1,
- ADLB_ERROR    = -1,
- /** Rejected: e.g., out of memory */
- ADLB_REJECTED = -2,
- /** Normal shutdown */
- ADLB_SHUTDOWN = -3
-} adlb_code;
+#define XLB_VERSION
 
 adlb_code ADLBP_Init(int nservers, int ntypes, int type_vect[],
-               int *am_server, MPI_Comm *worker_comm);
+                     int *am_server, MPI_Comm *worker_comm);
 adlb_code ADLB_Init(int nservers, int ntypes, int type_vect[],
-              int *am_server, MPI_Comm *worker_comm);
+                    int *am_server, MPI_Comm *worker_comm);
 
 adlb_code ADLB_Version(version* output);
 
 adlb_code ADLBP_Server(long max_memory);
 adlb_code ADLB_Server(long max_memory);
-
-adlb_code ADLBP_Debug_server(double timeout);
-adlb_code ADLB_Debug_server(double timeout);
 
 adlb_code ADLBP_Put(void* payload, int length, int target, int answer,
                     int type, int priority);

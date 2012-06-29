@@ -28,27 +28,10 @@
 #define DEBUGGING_SICORTEX 1
 #endif
 
-
-#define  THRESHOLD_TO_START_PUSH          (0.66 * max_malloc)
-#define  THRESHOLD_TO_STOP_PUT            (0.88 * max_malloc)
-
-#define  MAX_PUT_ATTEMPTS                  100
-
-
-#define  NUM_BUFS_IN_CIRCLE                 90
-
-static char *svn_revision = "$Revision: 417 $";
-static char *svn_date = "$LastChangedDate: 2011-02-07 08:26:54 -0600 (Mon, 07 Feb 2011) $";
-// static char *svn_dummy = "A";  /* just to cause updates to above */
-
-
 adlb_code next_server;
 
 // static int random_in_range(int,int);
 static int get_type_idx(int);
-
-static int get_server_idx(int);
-static int get_server_rank(int);
 
 static void print_proc_self_status(void);
 
@@ -81,10 +64,12 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   rc = MPI_Comm_size(MPI_COMM_WORLD, &world_size);
   rc = MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-  num_types = ntypes;
-  user_types = malloc(num_types * sizeof(int));
-  for (int i = 0; i < num_types; i++)
-    user_types[i] = type_vect[i];
+  gdb_spin(world_rank);
+
+  types_size = ntypes;
+  types = malloc(types_size * sizeof(int));
+  for (int i = 0; i < types_size; i++)
+    types[i] = type_vect[i];
   servers = nservers;
   workers = world_size - servers;
 
@@ -116,18 +101,6 @@ adlb_code
 ADLB_Version(version* output)
 {
   version_parse(output, "0.0.2");
-  return ADLB_SUCCESS;
-}
-
-/**
-   @param output Should point to 1024 valid chars
- */
-adlb_code
-ADLB_Revision(char* output)
-{
-  char* p = output;
-  append(p, "%s\n", svn_revision);
-  append(p, "%s\n", svn_date);
   return ADLB_SUCCESS;
 }
 
@@ -994,24 +967,31 @@ print_proc_self_status()
 static int
 get_type_idx(int work_type)
 {
-  for (int i = 0; i < num_types; i++)
-    if (user_types[i] == work_type)
+  for (int i = 0; i < types_size; i++)
+    if (types[i] == work_type)
       return i;
   printf("get_type_idx: INVALID type %d\n", work_type);
   return -1;
 }
 
+//static int get_server_idx(int);
+//static int get_server_rank(int);
+
+/*
 static int
 get_server_idx(int server_rank)
 {
   return server_rank - master_server_rank;
 }
+*/
 
+/*
 static int
 get_server_rank(int server_idx)
 {
   return master_server_rank + server_idx;
 }
+*/
 
 void
 adlb_exit_handler()

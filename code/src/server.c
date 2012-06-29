@@ -5,10 +5,12 @@
  **/
 
 #include <assert.h>
+#include <stddef.h>
 
 #include <mpi.h>
 
 #include <memory.h>
+#include <tools.h>
 
 #include "adlb.h"
 #include "adlb-mpe.h"
@@ -43,7 +45,16 @@ adlb_server_init()
       printf("%i ", i);
     }
   }
+  printf("\n");
   return ADLB_SUCCESS;
+}
+
+static inline bool
+xlb_is_server(int rank)
+{
+  if (rank > world_size - servers)
+    return true;
+  return false;
 }
 
 /**
@@ -51,11 +62,13 @@ adlb_server_init()
    @return rank of server for this worker rank
  */
 int
-adlb_map_to_server(int worker)
+adlb_map_to_server(int rank)
 {
-  assert(worker > 0);
-  assert(worker < world_size);
-  int w = worker % servers;
+  if (xlb_is_server(rank))
+    return rank;
+  valgrind_assert(rank >= 0);
+  valgrind_assert(rank < world_size);
+  int w = rank % servers;
   return w + workers;
 }
 
@@ -103,9 +116,6 @@ ADLBP_Server(long max_memory)
 
     from_rank = status.MPI_SOURCE;
     tag = status.MPI_TAG;
-
-    CHECK_MSG(handler_valid(tag) ,
-              "ADLB_Server: invalid tag: %i\n", tag);
 
     // Call appropriate RPC handler:
     code = handle(tag, from_rank);

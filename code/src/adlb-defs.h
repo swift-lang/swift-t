@@ -10,6 +10,16 @@
 #include <list.h>
 #include <list_l.h>
 
+typedef enum
+{
+ ADLB_SUCCESS  =  1,
+ ADLB_ERROR    = -1,
+ /** Rejected: e.g., out of memory */
+ ADLB_REJECTED = -2,
+ /** Normal shutdown */
+ ADLB_SHUTDOWN = -3
+} adlb_code;
+
 typedef long adlb_datum_id;
 
 typedef enum
@@ -102,6 +112,7 @@ typedef enum
 
 #define ADLB_RANK_ANY  -100
 #define ADLB_RANK_NULL -200
+#define ADLB_TYPE_ANY  -300
 
 #define ADLB_DATA_ID_NULL 0
 

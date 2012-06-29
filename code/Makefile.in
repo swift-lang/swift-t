@@ -37,7 +37,7 @@ RANLIB  = @RANLIB@
 
 C_UTILS = @USE_C_UTILS@
 
-INCLUDES = -I . -I $(C_UTILS)/include
+INCLUDES = -I . -I src -I $(C_UTILS)/include
 
 USE_XLC = @USE_XLC@
 ifeq ($(USE_XLC),0)
@@ -67,7 +67,7 @@ RPATHS = -Wl,-rpath -Wl,$(C_UTILS)/lib
 
 ADLB_RPATH = -Wl,-rpath -Wl,$(PWD)
 
-OBJS = src/server.o src/handlers.o src/data.o src/common.o src/debug.o
+OBJS = src/server.o src/handlers.o src/data.o src/common.o src/debug.o src/requestqueue.o src/workqueue.o
 # Objects with No Logging
 NLOBJS   = src/adlb_prof.o  src/adlb.o
 # Objects with MPE Logging
@@ -85,6 +85,10 @@ endif
 %.o: %.c
 	$(Q) "  CC		$(@)"
 	$(E) $(CC) $(CFLAGS) -c -o $(@) $(<)
+
+%.x: %.o $(ADLB_SO)
+	$(Q) "  LINK		$(@)"
+	$(E) $(CC) $(CFLAGS) -o $(@) $(<) -L lib -l adlb
 
 # .mo are object file that does both MPI and user-defined MPE logging
 .c.mo:
@@ -129,5 +133,5 @@ libmladlb.so: $(OBJS) $(MLOBJS)
         -L . -l mpe -Wl,-rpath -Wl,$(PWD)
 
 clean:
-	# @rm -fv $(OBJS) $(NLOBJS) $(ELOBJS) $(MLOBJS) $(ADLB)
-	echo $(OBJS) $(NLOBJS) $(ELOBJS) $(MLOBJS) $(ADLB)
+	@rm -fv $(OBJS) $(NLOBJS) $(ELOBJS) $(MLOBJS) $(ADLB)
+#echo $(OBJS) $(NLOBJS) $(ELOBJS) $(MLOBJS) $(ADLB)

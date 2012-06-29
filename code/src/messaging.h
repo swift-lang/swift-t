@@ -19,6 +19,7 @@ struct packed_put
 {
   int type;
   int priority;
+  int putter;
   int answer;
   int target;
   int length;

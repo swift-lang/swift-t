@@ -32,8 +32,8 @@ extern int master_server_rank;
 
 extern int my_workers;
 
-extern int num_types;
-extern int* user_types;
+extern int types_size;
+extern int* types;
 
 extern double max_malloc;
 

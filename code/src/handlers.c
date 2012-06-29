@@ -19,6 +19,7 @@
 #include "handlers.h"
 #include "messaging.h"
 #include "server.h"
+#include "requestqueue.h"
 #include "workqueue.h"
 
 #define MAX_HANDLERS 128
@@ -26,6 +27,9 @@
 static handler handlers[MAX_HANDLERS];
 
 static int handler_count = 0;
+
+/** Local MPI rank */
+static int mpi_rank;
 
 static void create(adlb_tag tag, handler h);
 
@@ -61,6 +65,8 @@ static adlb_code put_targeted(int type, int priority, int answer,
 void
 handlers_init(void)
 {
+  MPI_Comm_rank(adlb_all_comm, &mpi_rank);
+
   create(ADLB_TAG_PUT_HEADER, handle_put);
   create(ADLB_TAG_GET, handle_get);
   create(ADLB_TAG_CREATE_HEADER, handle_create);
@@ -116,7 +122,7 @@ int rc;
 /** Reusable status location */
 MPI_Status status;
 
-static void put(struct packed_put* p);
+static adlb_code put(struct packed_put* p);
 
 adlb_code
 handle_put(int caller)
@@ -128,45 +134,79 @@ handle_put(int caller)
 
   put(&p);
 
-  adlb_code code = ADLB_SUCCESS;
-  rc = MPI_Send(&code, sizeof(code), MPI_BYTE, caller,
-                ADLB_TAG_RESPONSE, adlb_all_comm);
-  MPI_CHECK(rc);
   return ADLB_SUCCESS;
 }
 
-static void
+static inline adlb_code redirect_work(struct packed_put* p,
+                                      int worker);
+
+static adlb_code
 put(struct packed_put* p)
 {
   int next_worker = 0;
   int worker;
-  worker = requestqueue_matches_target(p->target);
+  worker = requestqueue_matches_target(p->target, p->type);
   if (worker != ADLB_RANK_NULL)
   {
-    send_work(p, worker);
-    return;
+    redirect_work(p, worker);
+    return ADLB_SUCCESS;
+  }
+  worker = requestqueue_matches_type(p->type);
+  if (worker != ADLB_RANK_NULL)
+  {
+    redirect_work(p, worker);
+    return ADLB_SUCCESS;
   }
 
-  worker = requestqueue_next();
-  send_work(worker);
+  rc = MPI_Send(&mpi_rank, 1, MPI_INT, p->putter,
+                ADLB_TAG_RESPONSE, adlb_all_comm);
+  MPI_CHECK(rc);
+  rc = MPI_Recv(xfer, p->length, MPI_BYTE, p->putter,
+                ADLB_TAG_RESPONSE, adlb_all_comm, &status);
+  MPI_CHECK(rc);
+
+  // Enqueue this
+  workqueue_add(p->type, p->putter, p->priority, p->answer, p->target,
+                p->length, xfer);
+
+  return ADLB_SUCCESS;
+}
+
+/**
+   Set up direct transfer from putter to worker
+ */
+static inline adlb_code
+redirect_work(struct packed_put* p, int worker)
+{
+  rc = MPI_Send(p, sizeof(p), MPI_BYTE, worker,
+                ADLB_TAG_RESPONSE, adlb_all_comm);
+  MPI_CHECK(rc);
+  rc = MPI_Send(&worker, 1, MPI_INT, p->putter,
+                ADLB_TAG_RESPONSE, adlb_all_comm);
+  MPI_CHECK(rc);
+  rc = MPI_Send(&p->putter, 1, MPI_INT, worker,
+                  ADLB_TAG_RESPONSE, adlb_all_comm);
+  MPI_CHECK(rc);
+
+  return ADLB_SUCCESS;
 }
 
 adlb_code
 handle_get(int caller)
 {
   struct packed_get p;
-  rc = MPI_Recv(&p, sizoeof(p), MPI_BYTE, caller, ADLB_TAG_GET,
+  rc = MPI_Recv(&p, sizeof(p), MPI_BYTE, caller, ADLB_TAG_GET,
                 adlb_all_comm, &status);
   MPI_CHECK(rc);
 
-  struct work_unit* wu = workqueue_get(p);
+  work_unit* wu = workqueue_get(p.type, caller);
   if (wu == NULL)
   {
-    requestqueue_add(caller);
+    requestqueue_add(p.type, caller);
     return ADLB_SUCCESS;
   }
 
-  send_work(worker, wu);
+  // send_work(worker, wu);
 
   return ADLB_SUCCESS;
 }

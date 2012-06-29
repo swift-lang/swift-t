@@ -11,7 +11,9 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-extern int debug;
+#include <stdbool.h>
+
+extern bool xlb_debug_enabled;
 
 void debug_check_environment(void);
 
@@ -31,15 +33,14 @@ void debug_check_environment(void);
 
 /*
    Debugging may be disabled at compile-time via NDEBUG or
-   ENABLE_DEBUG or at run-time by setting environment variable ADLB_DEBUG=0
+   ENABLE_DEBUG or at run-time by setting environment variable XLB_DEBUG=0
  */
-extern int debug;
 #ifndef NDEBUG
 #define ENABLE_DEBUG 1
 #endif
 #ifdef ENABLE_DEBUG
 #define DEBUG(format, args...)              \
-  { if (debug) {                            \
+  { if (xlb_debug_enabled) {                            \
          printf("ADLB: " format "\n", ## args); \
          fflush(stdout);                    \
        } }
@@ -52,7 +53,7 @@ extern int debug;
 #endif
 #ifdef ENABLE_TRACE
 #define TRACE(format, args...)             \
-  { if (debug) {                           \
+  { if (xlb_debug_enabled) {                           \
   printf("ADLB_TRACE: " format "\n", ## args);  \
   fflush(stdout);                          \
   } }
