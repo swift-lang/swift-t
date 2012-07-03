@@ -292,7 +292,7 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   int work_type;
 
-  void* result = &xfer[0];
+  char* result = &xfer[0];
 #ifdef USE_ADLB
   int work_handle[ADLB_HANDLE_SIZE];
 #endif
