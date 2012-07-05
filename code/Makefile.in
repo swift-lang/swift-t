@@ -1,6 +1,6 @@
 
 TURBINE = lib/libturbine.a
-TURBINE_VERSION = 0.0.4
+TURBINE_VERSION = 0.0.3
 
 PACKAGE = lib/pkgIndex.tcl
 
@@ -53,7 +53,7 @@ LDFLAGS = @LDFLAGS@
 C_UTILS = @USE_C_UTILS@
 
 TCL := @USE_TCL@
-TCLSH := $(shell find $(TCL)/bin -name tclsh8.* )
+TCLSH := @USE_TCLSH@
 
 MACHINE = @USE_MACHINE@
 

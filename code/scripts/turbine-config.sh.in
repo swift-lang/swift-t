@@ -4,6 +4,7 @@
 TURBINE_HOME=@prefix@
 export C_UTILS=@USE_C_UTILS@
 export TCL=@USE_TCL@
+export TCLSH=@USE_TCLSH@
 export ADLB=@USE_ADLB@
 # Only one of the following is used
 export MPI=@USE_MPI@
@@ -24,16 +25,16 @@ fi
 TCLLIBPATH+="${TURBINE_HOME}/lib"
 export TCLLIBPATH
 
-# The default Tcl installation has executable "tclsh8.5",
-# but we prefer one named "tclsh"
-for tcl in ${TCL}/bin/{tclsh,tclsh8.5}
-do
- if [[ -x ${tcl} ]]
-   then
-   export TCLSH=${tcl}
-   break
- fi
-done
+# # The default Tcl installation has executable "tclsh8.5",
+# # but we prefer one named "tclsh"
+# for tcl in ${TCL}/bin/{tclsh,tclsh8.5}
+# do
+#  if [[ -x ${tcl} ]]
+#    then
+#    export TCLSH=${tcl}
+#    break
+#  fi
+# done
 
 if [[ ${TCLSH} == "" ]]
 then

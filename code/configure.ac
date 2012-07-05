@@ -246,6 +246,15 @@ AC_SUBST(USE_TCL)
 AC_SUBST(TCL_INCLUDE_SPEC)
 AC_SUBST(TCL_LIB_SPEC)
 
+USE_TCLSH=$( maint/find-tcl.zsh ${USE_TCL} )
+if [[ ${?} != 0 ]]
+then
+     echo "Could not find Tcl 8.5 binary!"
+     exit 1
+fi
+AC_MSG_RESULT([using Tcl binary: ${USE_TCLSH}])
+AC_SUBST(USE_TCLSH)
+
 DISABLE_LOG=0
 AC_ARG_ENABLE(log,
                 AS_HELP_STRING(
