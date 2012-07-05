@@ -6,7 +6,7 @@ THIS=$0
 SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
 
-bin/turbine -n 2 ${SCRIPT} >& ${OUTPUT}
+bin/turbine -l -n 2 ${SCRIPT} >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
 grep "nope: 0"   ${OUTPUT} || exit 1
