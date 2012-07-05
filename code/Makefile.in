@@ -150,7 +150,7 @@ deps: $(DEPS)
 
 %.d: %.c
 	$(Q) "  DEP		$(@)"
-	$(E) CC="$(CC)" $(srcdir)/depend.sh \
+	$(E) CC="$(CC)" $(srcdir)/maint/depend.sh \
              $(call dirname, $(*)) $(<) $(@) $(CFLAGS)
 
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
