@@ -176,11 +176,11 @@ EXISTING_D = $(shell find . -name *.d)
 
 check_includes: deps_contents.txt
 	$(Q) "  CHECK.SH"
-	$(E) $(srcdir)/check.sh deps_contents.txt
+	$(E) $(srcdir)/maint/check.sh deps_contents.txt
 
 deps_contents.txt:
 	$(Q) "  SH		$(@)"
-	$(E) $(srcdir)/collect.sh $(@) $(EXISTING_D)
+	$(E) $(srcdir)/maint/collect.sh $(@) $(EXISTING_D)
 
 %.o: %.c
 # 	The following string produces a false autoscan message (C++)
