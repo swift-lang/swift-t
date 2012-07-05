@@ -33,6 +33,9 @@ This allows you to change the installation location, etc.
 Alternatively, each component may be compiled separately.  The
 +exm-setup.zsh+ script is relatively simple to read and modify.
 
+If +exm-setup.zsh+ does not succeed on your system, see Section
+<<Build_settings, Build settings>> below.
+
 == Usage
 
 Swift code is conventionally written in +\*.swift+ files.  Turbine
@@ -48,14 +51,14 @@ Then, to run the program, use Turbine:
 turbine -n 4 program.tcl
 ----
 
-See the Turbine section <<turbine>> for more information about
+See the Turbine section <<Turbine>> for more information about
 running the program.
 
 STC accepts the following arguments:
 
 +-E+:: Just run the preprocessor
 +-I+:: Add a preprocessor include path
-+-O+:: Set optimization level: 0, 1, 2, or 3.  See <<optimizations>>
++-O+:: Set optimization level: 0, 1, 2, or 3.  See <<Optimizations>>
 +-T+:: Enable optimization
 +-t+:: Disable optimization
 +-u+:: Only compile if output file is not up-to-date
@@ -551,7 +554,7 @@ Test if the command line contains the given flagged argument:
 +assert(boolean condition, string message)+::
 If condition is false, report +message+ and exit immediately.
 
-[[turbine_info]]
+[[Turbine_information]]
 ===== Turbine information
 
 +adlb_servers()    -> int+:: Number of ADLB servers
@@ -562,12 +565,12 @@ If condition is false, report +message+ and exit immediately.
 
 Extension
 
-[[optimizations]]
+[[Optimizations]]
 == Optimizations
 
 The following optimizations are available in STC
 
-[[turbine]]
+[[Turbine]]
 == Running in Turbine
 
 The following describes how to run Turbine programs.
@@ -616,9 +619,32 @@ environment variables:
 +ADLB_SERVERS+:: Number of ADLB servers
 
 The remaining processes are workers.  These values are available to
-Swift (<<turbine_info>>).
+Swift (<<Turbine_information, Turbine information>>).
 
 +TURBINE_LAUNCH_OPTS+::
 Provide other arguments to +mpiexec+, such as a machine file, etc.
 
+=== Configuration
 
+The following describes how to turn Swift/T programs in Turbine
+on more complex systems.
+
+[[Build_settings]]
+==== Build settings
+
+If +exm-setup.zsh+ does not succeed, you may need to change how it
+tries to configure and compile Swift/T.
+
+Swift/T is built with standard Ant (Java) and Autotools/Makefile
+(C,Tcl) techniques.  The primary control is thus the arguments to
++ant+ or +configure+.
+
+Non-standard MPI locations::
+
+Configure Turbine with:
+
+----
+ --enable-custom --with-mpi-include=/path/to/mpi.h/include
+                 --with-mpi-lib-dir=/path/to/mpi_lib/lib
+                 --with-mpi-lib-name=funny.mpi.a
+----
