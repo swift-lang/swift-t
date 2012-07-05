@@ -1371,7 +1371,9 @@ static int
 ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
-  ADLB_Finalize();
+  int rc = ADLB_Finalize();
+  if (rc != ADLB_SUCCESS)
+    printf("WARNING: ADLB_Finalize() failed!\n");
   MPI_Finalize();
   turbine_debug_finalize();
   return TCL_OK;
