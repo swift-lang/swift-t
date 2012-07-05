@@ -12,7 +12,9 @@ These have been packaged for convenient download and installation.
 
 1. Obtain the package
 +
+----
 wget http://www.mcs.anl.gov/~wozniak/exm-trunk.tar.gz
+----
 +
 2. Unpack and enter package directory
 +
