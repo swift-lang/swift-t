@@ -264,6 +264,7 @@ adlb_code ADLB_Lookup(adlb_datum_id id, const char *subscript, char* member, int
 
 adlb_code ADLB_Unique(adlb_datum_id *result)
 {
+  printf("HERE\n");
   return ADLBP_Unique(result);
 }
 

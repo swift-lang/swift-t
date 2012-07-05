@@ -9,6 +9,7 @@
 
 #include <mpi.h>
 
+#include <list_i.h>
 #include <memory.h>
 #include <tools.h>
 
@@ -20,6 +21,7 @@
 #include "debug.h"
 #include "handlers.h"
 #include "messaging.h"
+#include "requestqueue.h"
 #include "server.h"
 
 /** Number of workers linked to this server */
@@ -31,10 +33,15 @@ double time_last_action;
 /** Time after which to shutdown because idle */
 double time_max_idle;
 
+/** Workers that have called ADLB_Shutdown() */
+struct list_i workers_shutdown;
+
 adlb_code
 adlb_server_init()
 {
   my_workers = 0;
+
+  list_i_init(&workers_shutdown);
 
   printf("SERVER for ranks: ");
   for (int i = 0; i < workers; i++)
@@ -94,7 +101,7 @@ ADLBP_Server(long max_memory)
   handlers_init();
 
   // Default: May be overridden below:
-  time_max_idle = 5.0;
+  time_max_idle = 1.0;
 
   code = setup_idle_time();
   assert(code == ADLB_SUCCESS);
@@ -165,6 +172,28 @@ master_server()
   return (world_rank == workers);
 }
 
+adlb_code
+shutdown_worker(int worker)
+{
+  DEBUG("shutdown_worker(): %i", worker);
+  list_i_add(&workers_shutdown, worker);
+  return ADLB_SUCCESS;
+}
+
+static bool
+workers_idle(void)
+{
+  int queued = requestqueue_size();
+  int shutdown = list_i_size(&workers_shutdown);
+
+  assert(queued+shutdown <= my_workers);
+
+  if (queued+shutdown == my_workers)
+    return true;
+
+  return false;
+}
+
 /**
    @return true when idle
  */
@@ -182,6 +211,10 @@ check_idle()
     // Not idle
     return false;
 
+  if (! workers_idle())
+    return false;
+
   // Issue idle check RPCs...
+
   return true;
 }

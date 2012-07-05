@@ -49,7 +49,7 @@ void debug_check_environment(void);
 #endif
 
 #ifndef NDEBUG
-// #define ENABLE_TRACE 1
+#define ENABLE_TRACE 1
 #endif
 #ifdef ENABLE_TRACE
 #define TRACE(format, args...)             \

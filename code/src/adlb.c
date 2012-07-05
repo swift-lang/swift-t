@@ -72,6 +72,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
     types[i] = type_vect[i];
   servers = nservers;
   workers = world_size - servers;
+  master_server_rank = world_size - servers;
 
   if (world_rank < workers)
   {
@@ -592,6 +593,8 @@ adlb_code ADLBP_Unique(long* result)
     MPI_Status status;
     MPI_Request request;
 
+    TRACE("ADLBP_Unique()...");
+
     // This is just something to send, it is ignored by the server
     static int msg = 0;
     int to_server_rank = random_server();
@@ -901,10 +904,24 @@ adlb_code ADLBP_Unlock(adlb_datum_id id)
   return ADLB_SUCCESS;
 }
 
+/**
+   Tell the server that this worker is shutting down
+ */
+static inline adlb_code
+ADLB_Shutdown(void)
+{
+  TRACE("ADLB_Shutdown()...");
+  int rc = MPI_Send(NULL, 0, MPI_INT, my_server,
+                    ADLB_TAG_SHUTDOWN, adlb_all_comm);
+  MPI_CHECK(rc);
+  return ADLB_SUCCESS;
+}
+
 adlb_code
 ADLBP_Finalize()
 {
-  int rc;
+  printf("ADLBP_Finalize(): %i %i\n", world_rank, master_server_rank);
+
   int flag;
   MPI_Finalized(&flag);
   CHECK_MSG(flag,
@@ -912,13 +929,14 @@ ADLBP_Finalize()
   data_finalize();
   if (world_rank >= master_server_rank)
   {
+    // Server:
     ; // print_final_stats();
   }
   else
   {
     // Worker:
-    rc = MPI_Send(NULL, 0, MPI_INT, my_server,
-                  ADLB_TAG_FINALIZE_WORKER, adlb_all_comm);
+    int rc = ADLB_Shutdown();
+    ADLB_CHECK(rc);
   }
   return ADLB_SUCCESS;
 }

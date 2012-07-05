@@ -17,4 +17,6 @@ int adlb_map_to_server(int worker);
 
 adlb_code ADLBP_Server(long max_memory);
 
+adlb_code shutdown_worker(int worker);
+
 #endif

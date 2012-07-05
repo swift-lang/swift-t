@@ -23,6 +23,9 @@ typedef struct
 /** Type-indexed array of requests */
 struct list2* type_requests;
 
+/** Table of all ranks requesting work
+    Map from int rank to request object
+ */
 struct table_ip targets;
 
 void
@@ -75,6 +78,12 @@ bool
 requestqueue_remove(int worker_rank)
 {
   return ADLB_RANK_NULL;
+}
+
+int
+requestqueue_size()
+{
+  return table_ip_size(&targets);
 }
 
 // void requestqueue_send_work(int worker);

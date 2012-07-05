@@ -54,6 +54,7 @@ adlb_code handle_container_reference(int caller);
 adlb_code handle_container_size(int caller);
 adlb_code handle_lock(int caller);
 adlb_code handle_unlock(int caller);
+adlb_code handle_shutdown(int caller);
 
 static int slot_notification(long id);
 static int close_notification(long id, int* ranks, int count);
@@ -88,6 +89,7 @@ handlers_init(void)
   create(ADLB_TAG_CONTAINER_SIZE, handle_container_size);
   create(ADLB_TAG_LOCK, handle_lock);
   create(ADLB_TAG_UNLOCK, handle_unlock);
+  create(ADLB_TAG_SHUTDOWN, handle_shutdown);
 }
 
 static void
@@ -108,6 +110,7 @@ handler_valid(adlb_tag tag)
 adlb_code
 handle(adlb_tag tag, int caller)
 {
+  TRACE("handle: %i", tag);
   CHECK_MSG(handler_valid(tag), "Invalid tag: %i\n", tag);
   adlb_code result = handlers[tag](caller);
   time_last_action = MPI_Wtime();
@@ -289,6 +292,14 @@ handle_store(int caller)
 
   int length;
   MPI_Get_count(&status, MPI_BYTE, &length);
+
+  int dc = data_store(id, xfer, length);
+
+  rc = MPI_Rsend(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE,
+                 adlb_all_comm);
+  MPI_CHECK(rc);
+  TRACE("STORE DONE");
+  // MPE_LOG_EVENT(mpe_svr_store_end);
 
   return ADLB_SUCCESS;
 }
@@ -697,6 +708,7 @@ handle_lock(int caller)
     c = 'x';
   rc = MPI_Rsend(&c, 1, MPI_CHAR, caller,
                  ADLB_TAG_RESPONSE, adlb_all_comm);
+  MPI_CHECK(rc);
   return ADLB_SUCCESS;
 }
 
@@ -704,9 +716,9 @@ adlb_code
 handle_unlock(int caller)
 {
   long id;
-  MPI_Recv(&id, 1, MPI_LONG, caller, ADLB_TAG_UNLOCK,
+  rc = MPI_Recv(&id, 1, MPI_LONG, caller, ADLB_TAG_UNLOCK,
            adlb_all_comm, &status);
-
+  MPI_CHECK(rc);
   DEBUG("Unlock: <%li> by rank: %i ", id, caller);
 
   adlb_data_code dc = data_unlock(id);
@@ -715,6 +727,18 @@ handle_unlock(int caller)
   rc = MPI_Rsend(&c, 1, MPI_CHAR, caller,
                  ADLB_TAG_RESPONSE, adlb_all_comm);
   return ADLB_SUCCESS;
+}
+
+/**
+   The calling worker is shutting down
+ */
+adlb_code
+handle_shutdown(int caller)
+{
+  rc = MPI_Recv(&caller, 0, MPI_INT, caller, ADLB_TAG_SHUTDOWN,
+                adlb_all_comm, &status);
+  MPI_CHECK(rc);
+  return shutdown_worker(caller);
 }
 
 static int

@@ -17,4 +17,6 @@ int requestqueue_matches_target(int target_rank, int type);
 
 int requestqueue_matches_type(int type);
 
+int requestqueue_size(void);
+
 #endif

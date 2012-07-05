@@ -4,7 +4,7 @@
 
 #include "debug.h"
 
-bool xlb_debug_enabled = false;
+bool xlb_debug_enabled = true;
 
 void
 debug_check_environment()
