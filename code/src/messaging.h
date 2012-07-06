@@ -43,6 +43,8 @@ struct packed_get_response
   int length;
   int answer_rank;
   int type;
+  /** From whom the payload will come (may be a redirect) */
+  int payload_source;
 };
 
 /**

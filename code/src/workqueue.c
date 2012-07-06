@@ -21,6 +21,7 @@
 
 #include "adlb-defs.h"
 #include "common.h"
+#include "debug.h"
 #include "workqueue.h"
 
 /** Uniquify work units on this server */
@@ -42,15 +43,19 @@ struct tree* typed_work;
 void
 workqueue_init(int work_types)
 {
+  DEBUG("workqueue_init(work_types=%i)", work_types);
   // heap_init(&prioritized_work, 128);
   table_ip_init(&targeted_work, 128);
-
+  typed_work = malloc(sizeof(struct tree) * work_types);
+  for (int i = 0; i < work_types; i++)
+    tree_init(&typed_work[i]);
 }
 
 void
 workqueue_add(int type, int putter, int priority, int answer,
               int target_rank, int length, void* item)
 {
+  DEBUG("workqueue_add");
   work_unit* wu = malloc(sizeof(work_unit));
   wu->id = unique++;
   wu->type = type;
@@ -62,7 +67,7 @@ workqueue_add(int type, int putter, int priority, int answer,
   wu->item = malloc(length);
   memcpy(wu->item, item, length);
 
-  if (target_rank == ADLB_RANK_ANY)
+  if (target_rank < 0)
   {
     struct tree* T = &typed_work[type];
     tree_add(T, -priority, wu);
@@ -114,26 +119,38 @@ workqueue_add(int type, int putter, int priority, int answer,
 work_unit*
 workqueue_get(int type, int target)
 {
+  DEBUG("workqueue_get(type=%i, target=%i)", type, target);
+
   work_unit* wu = NULL;
 
   heap* A = table_ip_search(&targeted_work, target);
   if (A != NULL)
+  {
     // Targeted work was found
-  {
     heap* H = &A[type];
-    if (heap_size(H) == 0)
-      return NULL;
-    wu = heap_root_val(H);
-    heap_del_root(H);
+    if (heap_size(H) != 0)
+    {
+      wu = heap_root_val(H);
+      heap_del_root(H);
+      return wu;
+    }
   }
-  else
-    // Select untargeted work
-  {
-    struct tree* T = &typed_work[type];
-    struct tree_node* node = tree_leftmost(T);
-    tree_remove_node(T, node);
-    wu = node->data;
-    free(node);
-  }
+
+  // Select untargeted work
+  struct tree* T = &typed_work[type];
+  struct tree_node* node = tree_leftmost(T);
+  if (node == NULL)
+    // We found nothing
+    return NULL;
+  tree_remove_node(T, node);
+  wu = node->data;
+  free(node);
   return wu;
+}
+
+void
+work_unit_free(work_unit* wu)
+{
+  free(wu->item);
+  free(wu);
 }

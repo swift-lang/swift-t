@@ -23,6 +23,7 @@
 #include "messaging.h"
 #include "requestqueue.h"
 #include "server.h"
+#include "workqueue.h"
 
 /** Number of workers linked to this server */
 int my_workers;
@@ -39,9 +40,12 @@ struct list_i workers_shutdown;
 adlb_code
 adlb_server_init()
 {
+  printf("adlb_server_init()...\n");
   my_workers = 0;
 
   list_i_init(&workers_shutdown);
+  requestqueue_init(types_size);
+  workqueue_init(types_size);
 
   printf("SERVER for ranks: ");
   for (int i = 0; i < workers; i++)
@@ -81,7 +85,9 @@ adlb_map_to_server(int rank)
 
 static adlb_code setup_idle_time(void);
 
-bool check_idle(void);
+static bool check_idle(void);
+
+static void shutdown_server(void);
 
 adlb_code
 ADLBP_Server(long max_memory)
@@ -128,17 +134,8 @@ ADLBP_Server(long max_memory)
     code = handle(tag, from_rank);
     ADLB_CHECK(code);
   }
-  DEBUG("ADLB_Server(): DONE\n");
-  return ADLB_SUCCESS;
-}
+  shutdown_server();
 
-adlb_code
-send_work(int requester, int type, int priority, int answer,
-          int target, int length, void* payload)
-{
-  int rc = MPI_Send(&length, 1, MPI_INT, requester,
-                    ADLB_TAG_WORKUNIT, adlb_all_comm);
-  MPI_CHECK(rc);
   return ADLB_SUCCESS;
 }
 
@@ -217,4 +214,11 @@ check_idle()
   // Issue idle check RPCs...
 
   return true;
+}
+
+static void
+shutdown_server()
+{
+  DEBUG("ADLB_Server(): Shutdown...\n");
+  requestqueue_shutdown();
 }

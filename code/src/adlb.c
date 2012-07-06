@@ -113,6 +113,8 @@ ADLBP_Put(void* payload, int length, int target, int answer,
   adlb_code code;
   MPI_Status status;
   MPI_Request request;
+  /** In a redirect, we send the payload to a worker */
+  int payload_dest;
 
   DEBUG("ADLB_Put: %s", (char*) payload);
 
@@ -129,16 +131,19 @@ ADLBP_Put(void* payload, int length, int target, int answer,
   struct packed_put p;
   p.type = type;
   p.priority = priority;
+  p.putter = world_rank;
   p.answer = answer;
   p.target = target;
   p.length = length;
 
-  rc = MPI_Irecv(&code, sizeof(code), MPI_BYTE, to_server,
+  rc = MPI_Irecv(&payload_dest, 1, MPI_INT, to_server,
                  ADLB_TAG_RESPONSE, adlb_all_comm, &request);
   MPI_CHECK(rc);
+
   rc = MPI_Send(&p, sizeof(p), MPI_BYTE, to_server,
-                ADLB_TAG_PUT_HEADER, adlb_all_comm);
+                  ADLB_TAG_PUT_HEADER, adlb_all_comm);
   MPI_CHECK(rc);
+
   rc = MPI_Wait(&request, &status);
   MPI_CHECK(rc);
   if (code == ADLB_REJECTED)
@@ -150,8 +155,12 @@ ADLBP_Put(void* payload, int length, int target, int answer,
     return code;
   }
 
+  DEBUG("ADLB_Put: payload to: %i", payload_dest);
+  if (payload_dest == ADLB_RANK_NULL)
+    return ADLB_ERROR;
   rc = MPI_Send(payload, length, MPI_BYTE, to_server,
                 ADLB_TAG_PUT_PAYLOAD, adlb_all_comm);
+  MPI_CHECK(rc);
 
   return ADLB_SUCCESS;
 }
@@ -169,31 +178,32 @@ ADLBP_Get(int type_requested, void* payload, int* length,
   CHECK_MSG(get_type_idx(type_requested) != -1,
                 "ADLB_Get(): Bad work type: %i\n", type_requested);
 
-  struct packed_get_response p;
+  struct packed_get_response g;
 
-  rc = MPI_Irecv(&p, sizeof(p), MPI_BYTE, my_server,
+  rc = MPI_Irecv(&g, sizeof(g), MPI_BYTE, MPI_ANY_SOURCE,
                  ADLB_TAG_RESPONSE, adlb_all_comm, &request);
   MPI_CHECK(rc);
   rc = MPI_Send(&type_requested, 1, MPI_INT, my_server,
-                ADLB_TAG_PUT_HEADER, adlb_all_comm);
+                ADLB_TAG_GET, adlb_all_comm);
   MPI_CHECK(rc);
 
   rc = MPI_Wait(&request, &status);
   MPI_CHECK(rc);
 
-  if (p.code == ADLB_SHUTDOWN)
+  if (g.code == ADLB_SHUTDOWN)
   {
     DEBUG("ADLB_Get(): SHUTDOWN");
     return ADLB_SHUTDOWN;
   }
 
-  rc = MPI_Recv(payload, p.length, MPI_BYTE, my_server,
+  DEBUG("ADLB_Get: payload source: %i", g.payload_source);
+  rc = MPI_Recv(payload, g.length, MPI_BYTE, g.payload_source,
                 ADLB_TAG_RESPONSE, adlb_all_comm, &status);
   MPI_CHECK(rc);
 
-  *length = p.length;
-  *answer = p.answer_rank;
-  *type_recvd = p.type;
+  *length = g.length;
+  *answer = g.answer_rank;
+  *type_recvd = g.type;
 
   return ADLB_SUCCESS;
 }

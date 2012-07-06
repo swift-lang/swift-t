@@ -110,9 +110,11 @@ typedef enum
   ADLB_DATA_ERROR_UNKNOWN,
 } adlb_data_code;
 
+//// Miscellaneous symbols:
 #define ADLB_RANK_ANY  -100
 #define ADLB_RANK_NULL -200
 #define ADLB_TYPE_ANY  -300
+#define ADLB_TYPE_NULL -400
 
 #define ADLB_DATA_ID_NULL 0
 

@@ -61,5 +61,6 @@ void debug_check_environment(void);
 #define TRACE(format, args...) // noop
 #endif
 
+#define DEBUG_START DEBUG("%s()...", __func__)
 
 #endif

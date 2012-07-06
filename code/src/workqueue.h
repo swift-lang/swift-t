@@ -52,4 +52,6 @@ adlb_code workqueue_pop(work_unit* w);
  */
 adlb_code workqueue_select_type(int type, work_unit* w);
 
+void work_unit_free(work_unit* wu);
+
 #endif

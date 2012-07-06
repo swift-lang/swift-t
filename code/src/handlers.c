@@ -20,6 +20,7 @@
 #include "messaging.h"
 #include "server.h"
 #include "requestqueue.h"
+#include "tools.h"
 #include "workqueue.h"
 
 #define MAX_HANDLERS 128
@@ -127,6 +128,14 @@ MPI_Status status;
 
 static adlb_code put(struct packed_put* p);
 
+static void
+mpi_recv_sanity(MPI_Status* status, MPI_Datatype type, int count)
+{
+  int c;
+  MPI_Get_count(status, MPI_BYTE, &c);
+  valgrind_assert(count == c);
+}
+
 adlb_code
 handle_put(int caller)
 {
@@ -134,6 +143,8 @@ handle_put(int caller)
   rc = MPI_Recv(&p, sizeof(p), MPI_BYTE, caller,
                 ADLB_TAG_PUT_HEADER, adlb_all_comm, &status);
   MPI_CHECK(rc);
+
+  mpi_recv_sanity(&status, MPI_BYTE, sizeof(p));
 
   put(&p);
 
@@ -148,11 +159,14 @@ put(struct packed_put* p)
 {
   int next_worker = 0;
   int worker;
-  worker = requestqueue_matches_target(p->target, p->type);
-  if (worker != ADLB_RANK_NULL)
+  if (p->target >= 0)
   {
-    redirect_work(p, worker);
-    return ADLB_SUCCESS;
+    worker = requestqueue_matches_target(p->target, p->type);
+    if (worker != ADLB_RANK_NULL)
+    {
+      redirect_work(p, worker);
+      return ADLB_SUCCESS;
+    }
   }
   worker = requestqueue_matches_type(p->type);
   if (worker != ADLB_RANK_NULL)
@@ -161,11 +175,13 @@ put(struct packed_put* p)
     return ADLB_SUCCESS;
   }
 
+  DEBUG("server storing work...");
+
   rc = MPI_Send(&mpi_rank, 1, MPI_INT, p->putter,
                 ADLB_TAG_RESPONSE, adlb_all_comm);
   MPI_CHECK(rc);
   rc = MPI_Recv(xfer, p->length, MPI_BYTE, p->putter,
-                ADLB_TAG_RESPONSE, adlb_all_comm, &status);
+                ADLB_TAG_PUT_PAYLOAD, adlb_all_comm, &status);
   MPI_CHECK(rc);
 
   // Enqueue this
@@ -181,18 +197,27 @@ put(struct packed_put* p)
 static inline adlb_code
 redirect_work(struct packed_put* p, int worker)
 {
-  rc = MPI_Send(p, sizeof(p), MPI_BYTE, worker,
+  DEBUG("redirect: %i->%i", p->putter, worker);
+  struct packed_get_response g;
+  g.answer_rank = p->answer;
+  g.code = ADLB_SUCCESS;
+  g.length = p->length;
+  g.type = p->type;
+  g.payload_source = p->putter;
+  rc = MPI_Send(&g, sizeof(g), MPI_BYTE, worker,
                 ADLB_TAG_RESPONSE, adlb_all_comm);
   MPI_CHECK(rc);
   rc = MPI_Send(&worker, 1, MPI_INT, p->putter,
                 ADLB_TAG_RESPONSE, adlb_all_comm);
   MPI_CHECK(rc);
   rc = MPI_Send(&p->putter, 1, MPI_INT, worker,
-                  ADLB_TAG_RESPONSE, adlb_all_comm);
+                ADLB_TAG_RESPONSE, adlb_all_comm);
   MPI_CHECK(rc);
 
   return ADLB_SUCCESS;
 }
+
+static adlb_code send_work(int worker, work_unit* wu);
 
 adlb_code
 handle_get(int caller)
@@ -209,7 +234,29 @@ handle_get(int caller)
     return ADLB_SUCCESS;
   }
 
-  // send_work(worker, wu);
+  send_work(caller, wu);
+  work_unit_free(wu);
+
+  return ADLB_SUCCESS;
+}
+
+static adlb_code
+send_work(int worker, work_unit* wu)
+{
+  struct packed_get_response g;
+  g.answer_rank = wu->answer;
+  g.code = ADLB_SUCCESS;
+  g.length = wu->length;
+  g.payload_source = mpi_rank;
+  g.type = wu->type;
+
+  int rc;
+  rc = MPI_Send(&g, sizeof(g), MPI_BYTE, worker,
+                ADLB_TAG_RESPONSE, adlb_all_comm);
+  MPI_CHECK(rc);
+
+  rc = MPI_Send(wu->item, wu->length, MPI_BYTE, worker,
+                ADLB_TAG_RESPONSE, adlb_all_comm);
 
   return ADLB_SUCCESS;
 }

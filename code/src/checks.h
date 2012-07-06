@@ -20,7 +20,7 @@
 */
 #define CHECK_MSG(rc, args...)                  \
   { if (!(rc)) {                                             \
-      printf("CHECK FAILED: adlb.c line: %i\n", __LINE__);   \
+      printf("CHECK FAILED: %s:%i\n", __FILE__, __LINE__);   \
       printf(args);                                          \
       return ADLB_ERROR; }}
 
@@ -30,7 +30,7 @@
  */
 #define MPI_CHECK(rc)  \
   { if (rc != MPI_SUCCESS) { \
-    printf("MPI_CHECK FAILED: adlb.c line: %i\n", __LINE__);\
+    printf("MPI_CHECK FAILED: %s:%i\n", __FILE__, __LINE__);\
     return ADLB_ERROR; }}
 
 /**
@@ -38,7 +38,7 @@
    Note: This is disabled if ENABLE_DEBUG is not defined
  */
 #define ADLB_CHECK(rc) { if (rc != ADLB_SUCCESS) { \
-    printf("ADLB_CHECK FAILED: adlb.c line: %i\n", __LINE__); \
+    printf("ADLB_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
     return rc; }}
 
 /**
@@ -46,7 +46,7 @@
    Note: This is disabled if ENABLE_DEBUG is not defined
  */
 #define ADLB_DATA_CHECK(dc) { if (dc != ADLB_DATA_SUCCESS) { \
-    printf("ADLB_DATA_CHECK FAILED: adlb.c line: %i\n", __LINE__); \
+    printf("ADLB_DATA_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
     return ADLB_ERROR; }}
 #else
 
