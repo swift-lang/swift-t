@@ -299,6 +299,7 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   int work_len;
   int answer_rank;
   bool found_work = false;
+  int rc;
 
 #ifdef USE_ADLB
 
@@ -310,8 +311,8 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   req_types[1] = req_types[2] = req_types[3] = -1;
 
   // puts("enter reserve");
-  int rc = ADLB_Reserve(req_types, &work_type, &work_prio,
-                        work_handle, &work_len, &answer_rank);
+  rc = ADLB_Reserve(req_types, &work_type, &work_prio,
+                    work_handle, &work_len, &answer_rank);
   // puts("exit reserve");
   if (rc == ADLB_DONE_BY_EXHAUSTION)
   {
@@ -344,7 +345,10 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
 #endif
 
 #ifdef USE_XLB
-  ADLB_Get(req_type, result, &work_len, &answer_rank, &work_type );
+  rc = ADLB_Get(req_type, result, &work_len,
+                &answer_rank, &work_type);
+  if (rc == ADLB_SHUTDOWN)
+    result[0] = '\0';
 #endif
 
   if (found_work)
