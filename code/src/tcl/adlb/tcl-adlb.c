@@ -342,13 +342,18 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
     else
       found_work = true;
   }
+  if (result[0] == '\0')
+    answer_rank = -1;
 #endif
 
 #ifdef USE_XLB
   rc = ADLB_Get(req_type, result, &work_len,
                 &answer_rank, &work_type);
   if (rc == ADLB_SHUTDOWN)
+  {
     result[0] = '\0';
+    answer_rank = ADLB_RANK_NULL;
+  }
 #endif
 
   if (found_work)
