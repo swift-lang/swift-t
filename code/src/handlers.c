@@ -32,7 +32,7 @@ static int handler_count = 0;
 /** Local MPI rank */
 static int mpi_rank;
 
-static void create(adlb_tag tag, handler h);
+static void create_rpc(adlb_tag tag, handler h);
 
 adlb_code handle_put(int caller);
 adlb_code handle_get(int caller);
@@ -64,6 +64,23 @@ static int set_reference_and_notify(long id, long value);
 static adlb_code put_targeted(int type, int priority, int answer,
                               int target, void* payload, int length);
 
+/** Tag names: just for debugging */
+char* tag_names[MAX_HANDLERS];
+
+static void
+add_tag_name(int tag, char* name)
+{
+  tag_names[tag] = strdup(name);
+}
+
+/**
+   @param tag The enum token: will be stringified
+ */
+#define create(tag,function) { \
+    add_tag_name(tag, #tag);   \
+    create_rpc(tag,function);  \
+}
+
 void
 handlers_init(void)
 {
@@ -94,7 +111,7 @@ handlers_init(void)
 }
 
 static void
-create(adlb_tag tag, handler h)
+create_rpc(adlb_tag tag, handler h)
 {
   handlers[tag] = h;
   handler_count++;
@@ -111,8 +128,8 @@ handler_valid(adlb_tag tag)
 adlb_code
 handle(adlb_tag tag, int caller)
 {
-  TRACE("handle: %i", tag);
-  CHECK_MSG(handler_valid(tag), "Invalid tag: %i\n", tag);
+  CHECK_MSG(handler_valid(tag), "handle(): invalid tag: %i\n", tag);
+  TRACE("handle: %s", tag_names[tag]);
   adlb_code result = handlers[tag](caller);
   time_last_action = MPI_Wtime();
   return result;
@@ -227,10 +244,10 @@ handle_get(int caller)
                 adlb_all_comm, &status);
   MPI_CHECK(rc);
 
-  work_unit* wu = workqueue_get(p.type, caller);
+  work_unit* wu = workqueue_get(caller, p.type);
   if (wu == NULL)
   {
-    requestqueue_add(p.type, caller);
+    requestqueue_add(caller, p.type);
     return ADLB_SUCCESS;
   }
 

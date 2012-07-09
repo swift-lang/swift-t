@@ -40,7 +40,7 @@ void workqueue_init(int work_types);
 void workqueue_add(int type, int putter, int priority, int answer,
                    int target, int length, void* work_unit);
 
-work_unit* workqueue_get(int type, int target);
+work_unit* workqueue_get(int target, int type);
 
 /**
    Return item with highest priority that is not targeted

@@ -117,9 +117,9 @@ workqueue_add(int type, int putter, int priority, int answer,
 //}
 
 work_unit*
-workqueue_get(int type, int target)
+workqueue_get(int target, int type)
 {
-  DEBUG("workqueue_get(type=%i, target=%i)", type, target);
+  DEBUG("workqueue_get(target=%i, type=%i)", target, type);
 
   work_unit* wu = NULL;
 
