@@ -92,11 +92,10 @@ struct packed_enumerate
 */
 typedef enum
 {
-  /// incoming tags
+  /// tags incoming to server
 
   // task operations
-  ADLB_TAG_PUT_HEADER = 0,
-  ADLB_TAG_PUT_PAYLOAD,
+  ADLB_TAG_PUT = 0,
   ADLB_TAG_GET,
 
   // data operations
@@ -124,10 +123,17 @@ typedef enum
   ADLB_TAG_UNLOCK,
   ADLB_TAG_SHUTDOWN,
 
-  /// outgoing tags
+  /// tags outgoing from server
   ADLB_TAG_RESPONSE,
+  ADLB_TAG_RESPONSE_GET,
+  ADLB_TAG_RESPONSE_PUT,
   ADLB_TAG_WORKUNIT,
-  ADLB_TAG_ABORT
+  ADLB_TAG_ABORT,
+
+  /// tags that may be to/from server/worker
+  /** Work unit payload */
+  ADLB_TAG_WORK
+
 
 } adlb_tag;
 

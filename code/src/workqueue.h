@@ -13,10 +13,12 @@
 
 #include "adlb-defs.h"
 
+typedef long work_unit_id;
+
 typedef struct
 {
   /** Unique ID wrt this server */
-  long id;
+  work_unit_id id;
   /** Time at which this was enqueued */
   double timestamp;
   /** Work type */
@@ -32,10 +34,12 @@ typedef struct
   /** Length of item */
   int length;
   /** Bulk work unit data */
-  void* item;
+  void* payload;
 } work_unit;
 
 void workqueue_init(int work_types);
+
+work_unit_id workqueue_unique(void);
 
 void workqueue_add(int type, int putter, int priority, int answer,
                    int target, int length, void* work_unit);

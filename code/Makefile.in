@@ -67,7 +67,7 @@ RPATHS = -Wl,-rpath -Wl,$(C_UTILS)/lib
 
 ADLB_RPATH = -Wl,-rpath -Wl,$(PWD)
 
-OBJS = src/server.o src/handlers.o src/data.o src/common.o src/debug.o src/requestqueue.o src/workqueue.o
+OBJS = src/server.o src/handlers.o src/data.o src/common.o src/debug.o src/requestqueue.o src/workqueue.o src/mpi-tools.o
 # Objects with No Logging
 NLOBJS   = src/adlb_prof.o  src/adlb.o
 # Objects with MPE Logging

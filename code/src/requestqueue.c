@@ -6,6 +6,7 @@
  *      Author: wozniak
  */
 
+#include <assert.h>
 #include <mpi.h>
 
 #include <list2.h>
@@ -55,14 +56,23 @@ requestqueue_add(int rank, int type)
 {
   DEBUG("requestqueue_add(rank=%i,type=%i)", rank, type);
   request* R = malloc(sizeof(request));
-  R->rank = rank;
-  R->type = type;
+  printf("R: %p\n", R);
+
   struct list2* L = &type_requests[type];
   struct list2_item* item = list2_add(L, R);
 
-  table_ip_add(&targets, rank, item);
+  R->rank = rank;
+  R->type = type;
+  R->item = item;
+  bool b = table_ip_add(&targets, rank, R);
+  // Assert rank was not already entered
+  assert(b);
 }
 
+/**
+   If target_rank is in the request_queue and requests work of
+   given type, pop and return that rank.  Else return ADLB_RANK_NULL.
+ */
 int
 requestqueue_matches_target(int target_rank, int type)
 {
@@ -74,13 +84,16 @@ requestqueue_matches_target(int target_rank, int type)
   {
     if (R->type != type)
       return ADLB_RANK_NULL;
-    struct list2_item* item = R->item;
     struct list2* L = &type_requests[type];
+    struct list2_item* item = R->item;
     list2_remove_item(L, item);
+    int result = R->rank;
+    printf("R: %p\n", R);
+    printf("result: %i\n", result);
     free(R);
     free(item);
     table_ip_remove(&targets, target_rank);
-    return R->rank;
+    return result;
   }
   return ADLB_RANK_NULL;
 }
@@ -93,7 +106,9 @@ requestqueue_matches_type(int type)
   request* R = list2_pop(L);
   if (R == NULL)
     return ADLB_RANK_NULL;
+
   int result = R->rank;
+  table_ip_remove(&targets, result);
   free(R);
   return result;
 }
@@ -139,14 +154,15 @@ static adlb_code
 shutdown_rank(int rank)
 {
   DEBUG("shutdown_rank(%i)", rank);
-  struct packed_get_response p;
-  p.code = ADLB_SHUTDOWN;
+  struct packed_get_response g;
+  g.code = ADLB_SHUTDOWN;
   // The rest of the fields are not used:
-  p.answer_rank = ADLB_RANK_NULL;
-  p.length = -1;
-  p.type = ADLB_TYPE_NULL;
-  int rc = MPI_Send(&p, sizeof(p), MPI_BYTE, rank,
-                    ADLB_TAG_RESPONSE, adlb_all_comm);
+  g.answer_rank = ADLB_RANK_NULL;
+  g.length = -1;
+  g.type = ADLB_TYPE_NULL;
+  g.payload_source = ADLB_RANK_NULL;
+  int rc = MPI_Send(&g, sizeof(g), MPI_BYTE, rank,
+                    ADLB_TAG_RESPONSE_GET, adlb_all_comm);
   MPI_CHECK(rc);
   return ADLB_SUCCESS;
 }

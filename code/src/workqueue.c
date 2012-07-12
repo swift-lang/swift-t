@@ -25,7 +25,7 @@
 #include "workqueue.h"
 
 /** Uniquify work units on this server */
-long unique = 1;
+work_unit_id unique = 1;
 
 /**
    Map from target rank to type array of priority heap -
@@ -51,21 +51,28 @@ workqueue_init(int work_types)
     tree_init(&typed_work[i]);
 }
 
+work_unit_id
+workqueue_unique()
+{
+  return unique++;
+}
+
 void
 workqueue_add(int type, int putter, int priority, int answer,
               int target_rank, int length, void* item)
 {
-  DEBUG("workqueue_add");
   work_unit* wu = malloc(sizeof(work_unit));
-  wu->id = unique++;
+  wu->id = workqueue_unique();
   wu->type = type;
   wu->putter = putter;
   wu->priority = priority;
   wu->answer = answer;
   wu->target = target_rank;
   wu->length = length;
-  wu->item = malloc(length);
-  memcpy(wu->item, item, length);
+  wu->payload = malloc(length);
+  memcpy(wu->payload, item, length);
+
+  DEBUG("workqueue_add(): %li: %s", wu->id, (char*) wu->payload);
 
   if (target_rank < 0)
   {
@@ -77,7 +84,7 @@ workqueue_add(int type, int putter, int priority, int answer,
     heap* A = table_ip_search(&targeted_work, target_rank);
     if (A == NULL)
     {
-      A = malloc(types_size * sizeof(heap*));
+      A = malloc(types_size * sizeof(heap));
       table_ip_add(&targeted_work, target_rank, A);
       for (int i = 0; i < types_size; i++)
       {
@@ -132,6 +139,7 @@ workqueue_get(int target, int type)
     {
       wu = heap_root_val(H);
       heap_del_root(H);
+      DEBUG("workqueue_get(): targeted: %li", wu->id);
       return wu;
     }
   }
@@ -144,6 +152,7 @@ workqueue_get(int target, int type)
     return NULL;
   tree_remove_node(T, node);
   wu = node->data;
+  DEBUG("workqueue_get(): untargeted: %li", wu->id);
   free(node);
   return wu;
 }
@@ -151,6 +160,6 @@ workqueue_get(int target, int type)
 void
 work_unit_free(work_unit* wu)
 {
-  free(wu->item);
+  free(wu->payload);
   free(wu);
 }
