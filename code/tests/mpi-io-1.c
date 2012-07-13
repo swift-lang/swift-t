@@ -15,7 +15,7 @@ main(int argc, char** argv)
 {
   int rc;
 
-  char* filename = "mpi-io.data";
+  char* filename = "tests/mpi-io.data";
   MPI_File file;
 
   MPI_Init(&argc, &argv);
