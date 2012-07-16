@@ -61,6 +61,9 @@ AC_SUBST(USE_C_UTILS)
 # Using the MPI library under Tcl apparently requires MPICH as a
 # shared library
 
+# There are many ways to set up MPI: make sure the user picks one
+MPI_SET=0
+
 # MPI defaults (may be overridden on special systems)
 USE_MACHINE=normal
 USE_LAUNCHER=mpiexec
@@ -76,6 +79,7 @@ AC_ARG_ENABLE(sicortex,
                         USE_MACHINE=sicortex
                         USE_LAUNCHER=srun
                         LIBMPI=libmpiP.a
+                        MPI_SET=1
                  ],
                  [])
 
@@ -87,6 +91,7 @@ AC_ARG_ENABLE(custom,
                  [
                         USE_MACHINE=custom
                         USE_LAUNCHER=mpiexec
+                        MPI_SET=1
                  ],
                  [])
 AC_SUBST(USE_MACHINE)
@@ -102,6 +107,7 @@ AC_ARG_WITH(mpi,
                      AC_MSG_ERROR(Could not find MPI in $withval)
                   fi
                   AC_MSG_RESULT([using MPI in $withval])
+                  MPI_SET=1
                   USE_MPI=$withval
                  ],
                  [
@@ -193,6 +199,8 @@ AC_ARG_WITH(mpi-lib-name,
                  ])
 AC_SUBST(USE_MPI_LIB_NAME)
 
+(( ${MPI_SET} )) || AC_MSG_ERROR([Insufficient MPI settings!])
+
 # We assume the libmpe.so is in the ADLB directory
 # See Turbine - Build for explanation
 USE_MPE=0
@@ -243,8 +251,6 @@ AC_ARG_WITH(tcl,
                   USE_TCL=0
                  ])
 AC_SUBST(USE_TCL)
-AC_SUBST(TCL_INCLUDE_SPEC)
-AC_SUBST(TCL_LIB_SPEC)
 
 USE_TCLSH=$( maint/find-tcl.zsh ${USE_TCL} )
 if [[ ${?} != 0 ]]
@@ -254,6 +260,23 @@ then
 fi
 AC_MSG_RESULT([using Tcl binary: ${USE_TCLSH}])
 AC_SUBST(USE_TCLSH)
+
+# Now, allow user to override Tcl include
+
+AC_ARG_WITH(tcl-include,
+            AS_HELP_STRING(
+               [--with-tcl-include],
+               [directory containing tcl.h]),
+            [AC_CHECK_FILE(${withval}/tcl.h,[],[FAIL=1])
+             [[ ${FAIL} == 1 ]] &&
+               AC_MSG_ERROR(Could not find tcl.h in ${withval})
+             AC_MSG_RESULT([using Tcl include: ${withval}/tcl.h])
+             TCL_INCLUDE_SPEC=-I${withval}
+            ],
+            [])
+
+AC_SUBST(TCL_INCLUDE_SPEC)
+AC_SUBST(TCL_LIB_SPEC)
 
 DISABLE_LOG=0
 AC_ARG_ENABLE(log,
