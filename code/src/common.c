@@ -6,7 +6,9 @@
  *      Author: wozniak
  */
 
-#include "src/common.h"
+#include <tools.h>
+
+#include "common.h"
 
 char xfer[XFER_SIZE];
 
@@ -23,3 +25,11 @@ double adlb_start_time;
 MPI_Comm adlb_all_comm;
 
 MPI_Comm adlb_server_comm;
+
+int
+random_server()
+{
+  int result = random_between(master_server_rank, world_size);
+  return result;
+}
+

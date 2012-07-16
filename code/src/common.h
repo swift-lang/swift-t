@@ -48,4 +48,6 @@ extern double adlb_start_time;
 /** Reusable transfer buffer */
 extern char xfer[];
 
+int random_server(void);
+
 #endif
