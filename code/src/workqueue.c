@@ -17,6 +17,7 @@
 #include <heap.h>
 #include <list.h>
 #include <table_ip.h>
+#include <tools.h>
 #include <tree.h>
 
 #include "adlb-defs.h"
@@ -38,6 +39,7 @@ struct table_ip targeted_work;
 /**
    Array of trees: one for each work type
    Does not contain targeted work
+   The tree contains work_unit*
  */
 struct tree* typed_work;
 
@@ -158,15 +160,15 @@ workqueue_get(int target, int type)
   return wu;
 }
 
-int draw(float* f) { return 0; }
 
 adlb_code
 workqueue_steal(int max_memory,
                 int* count, struct packed_put** wus,
                 void*** wu_payloads)
 {
-  struct list stolen;
-  list_init(&stolen);
+  // struct list stolen;
+  // list_init(&stolen);
+
 
   float fractions[types_size];
   int total;
@@ -181,11 +183,20 @@ workqueue_steal(int max_memory,
   // Number of work units we actually share
   int actual = 0;
 
+  work_unit** stolen = malloc(share * sizeof(work_unit*));
   for (int i = 0; i < share; i++)
   {
-    int type = draw(fractions);
-
+    int type = random_draw(fractions, types_size);
+    struct tree* T = &typed_work[type];
+    struct tree_node* node = tree_random(T);
+    if (node == NULL)
+      continue;
+    tree_remove_node(T, node);
+    stolen[actual] = (work_unit*) node->data;
+    actual++;
+    free(node);
   }
+
 
 
   return ADLB_SUCCESS;
