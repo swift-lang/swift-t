@@ -229,7 +229,7 @@ void dfree(void *,int,const char *,int);
  */
 extern int debug;
 #ifndef NDEBUG
-#define ENABLE_DEBUG 1
+// #define ENABLE_DEBUG 1
 #endif
 #ifdef ENABLE_DEBUG
 #define DEBUG(format, args...)              \
