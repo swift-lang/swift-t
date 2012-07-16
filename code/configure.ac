@@ -14,6 +14,9 @@ AC_INIT([Turbine], [0.1], [wozniak@mcs.anl.gov])
 AC_CONFIG_SRCDIR([src/turbine/turbine.c])
 AC_CONFIG_HEADERS([config.h])
 
+[[ ${prefix} != ${PWD} ]] ||
+  AC_MSG_ERROR([Your --prefix should not be the same as PWD: $PWD])
+
 # Checks for programs.
 AC_PROG_CC
 # We trust the user's install and omit AC_PROG_INSTALL
