@@ -373,17 +373,17 @@ adlb_code ADLBP_Store(adlb_datum_id id, void *data, int length)
 }
 
 /**
-   Obtain a random server index
+   Obtain the next server index
    Currently implemented as a round-robin loop through the ranks
  */
 static inline int
-random_server()
+get_next_server()
 {
-  static int random_server_index = 0;
-  int offset = random_server_index % servers;
+  static int next_server_index = 0;
+  int offset = next_server_index % servers;
   int rank = world_size - servers + offset;
   // DEBUG("random_server => %i\n", rank);
-  random_server_index = (random_server_index + 1) % servers;
+  next_server_index = (next_server_index + 1) % servers;
   return rank;
 }
 
@@ -621,7 +621,7 @@ adlb_code ADLBP_Unique(long* result)
 
     // This is just something to send, it is ignored by the server
     static int msg = 0;
-    int to_server_rank = random_server();
+    int to_server_rank = get_next_server();
     rc = MPI_Irecv(result, 1, MPI_LONG, to_server_rank,
                    ADLB_TAG_RESPONSE, adlb_all_comm, &request);
     MPI_CHECK(rc);
