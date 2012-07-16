@@ -37,6 +37,7 @@ static void create_rpc(adlb_tag tag, handler h);
 
 adlb_code handle_put(int caller);
 adlb_code handle_get(int caller);
+adlb_code handle_steal(int caller);
 adlb_code handle_create(int caller);
 adlb_code handle_exists(int caller);
 adlb_code handle_store(int caller);
@@ -90,6 +91,7 @@ handlers_init(void)
 
   create(ADLB_TAG_PUT, handle_put);
   create(ADLB_TAG_GET, handle_get);
+  create(ADLB_TAG_STEAL, handle_steal);
   create(ADLB_TAG_CREATE_HEADER, handle_create);
   create(ADLB_TAG_EXISTS, handle_exists);
   create(ADLB_TAG_STORE_HEADER, handle_store);
@@ -239,6 +241,10 @@ static adlb_code send_work_unit(int worker, work_unit* wu);
 static adlb_code send_work(int worker, long wuid, int type, int answer,
                            void* payload, int length);
 
+static inline bool check_workqueue(int caller, int type);
+
+static inline bool steal(void);
+
 adlb_code
 handle_get(int caller)
 {
@@ -247,18 +253,87 @@ handle_get(int caller)
                 adlb_all_comm, &status);
   MPI_CHECK(rc);
 
-  work_unit* wu = workqueue_get(caller, p.type);
-  if (wu == NULL)
+  bool b;
+  b = check_workqueue(caller, p.type);
+  if (b) return ADLB_SUCCESS;
+  b = steal();
+  if (b)
   {
-    requestqueue_add(caller, p.type);
-    return ADLB_SUCCESS;
+    b = check_workqueue(caller, p.type);
+    if (b) return ADLB_SUCCESS;
   }
 
-  send_work_unit(caller, wu);
-  work_unit_free(wu);
+  requestqueue_add(caller, p.type);
+  return ADLB_SUCCESS;
 
   return ADLB_SUCCESS;
 }
+
+static inline bool
+check_workqueue(int caller, int type)
+{
+  work_unit* wu = workqueue_get(caller, type);
+  if (wu != NULL)
+  {
+    send_work_unit(caller, wu);
+    work_unit_free(wu);
+    return true;
+  }
+  return false;
+}
+
+static inline bool
+steal(void)
+{
+  int target = random_server();
+
+  MPI_Request request;
+  MPI_Status status;
+
+  int rc;
+  int count;
+  rc = MPI_Irecv(&count, 1, MPI_INT, target,
+                 ADLB_TAG_RESPONSE, adlb_all_comm, &request);
+  MPI_CHECK(rc);
+  int max_memory = 1;
+  rc = MPI_Send(&max_memory, 1, MPI_INT, target,
+                ADLB_TAG_STEAL, adlb_all_comm);
+  MPI_CHECK(rc);
+
+  rc = MPI_Wait(&request, &status);
+  MPI_CHECK(rc);
+
+  if (count == 0)
+    return false;
+
+  int length = count * sizeof(struct packed_put);
+  struct packed_put* wus = malloc(length);
+  rc = MPI_Recv(wus, length, MPI_BYTE, target,
+                ADLB_TAG_RESPONSE, adlb_all_comm, &status);
+  MPI_CHECK(rc);
+
+  for (int i = 0; i < count; i++)
+  {
+    rc = MPI_Recv(xfer, wus[i].length, MPI_BYTE, target,
+                  ADLB_TAG_RESPONSE, adlb_all_comm, &status);
+    MPI_CHECK(rc);
+    workqueue_add(wus[i].type, wus[i].putter, wus[i].priority,
+                  wus[i].answer, wus[i].target, wus[i].length, xfer);
+  }
+
+  return false;
+}
+
+//struct packed_put
+//{
+//  int type;
+//  int priority;
+//  int putter;
+//  int answer;
+//  int target;
+//  int length;
+//};
+
 
 static adlb_code
 send_work_unit(int worker, work_unit* wu)
@@ -292,6 +367,47 @@ send_work(int worker, long wuid, int type, int answer,
 
   rc = MPI_Ssend(payload, length, MPI_BYTE, worker,
                 ADLB_TAG_WORK, adlb_all_comm);
+
+  return ADLB_SUCCESS;
+}
+
+adlb_code
+handle_steal(int caller)
+{
+  DEBUG("handle_steal(caller=%i)", caller);
+
+  MPI_Status status;
+
+  int rc;
+  int count;
+  struct packed_put* wus;
+  void** wu_payloads;
+  // Maximum amount of memory to return- currently unused
+  int max_memory;
+  rc = MPI_Recv(&max_memory, 1, MPI_INT, caller,
+                ADLB_TAG_STEAL, adlb_all_comm, &status);
+  MPI_CHECK(rc);
+
+  workqueue_steal(max_memory, &count, &wus, &wu_payloads);
+
+  rc = MPI_Rsend(&count, 1, MPI_INT, caller,
+                 ADLB_TAG_RESPONSE, adlb_all_comm);
+  MPI_CHECK(rc);
+
+  if (count == 0)
+    return ADLB_SUCCESS;
+
+  int wus_length = count*sizeof(struct packed_put);
+  rc = MPI_Send(wus, wus_length, MPI_BYTE, caller,
+                ADLB_TAG_RESPONSE, adlb_all_comm);
+  MPI_CHECK(rc);
+
+  for (int i = 0; i < count; i++)
+  {
+    rc = MPI_Send(wu_payloads[i], wus[i].length, MPI_BYTE, caller,
+                  ADLB_TAG_RESPONSE, adlb_all_comm);
+    MPI_CHECK(rc);
+  }
 
   return ADLB_SUCCESS;
 }
@@ -611,7 +727,8 @@ handle_insert(int caller)
   return ADLB_SUCCESS;
 }
 
-adlb_code handle_insert_atomic(int caller)
+adlb_code
+handle_insert_atomic(int caller)
 {
   rc = MPI_Recv(xfer, ADLB_DATA_SUBSCRIPT_MAX+128, MPI_CHAR,
                 caller, ADLB_TAG_INSERT_ATOMIC,

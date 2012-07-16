@@ -1042,9 +1042,4 @@ adlb_exit_handler()
     print_proc_self_status();
 }
 
-/*
-static int random_in_range(int lo, int hi)
-{
-    return ( lo + random() / (RAND_MAX / (hi - lo + 1) + 1) );
-}
-*/
+

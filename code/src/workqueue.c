@@ -22,6 +22,7 @@
 #include "adlb-defs.h"
 #include "common.h"
 #include "debug.h"
+#include "messaging.h"
 #include "workqueue.h"
 
 /** Uniquify work units on this server */
@@ -155,6 +156,39 @@ workqueue_get(int target, int type)
   DEBUG("workqueue_get(): untargeted: %li", wu->id);
   free(node);
   return wu;
+}
+
+int draw(float* f) { return 0; }
+
+adlb_code
+workqueue_steal(int max_memory,
+                int* count, struct packed_put** wus,
+                void*** wu_payloads)
+{
+  struct list stolen;
+  list_init(&stolen);
+
+  float fractions[types_size];
+  int total;
+  for (int i = 0; i < types_size; i++)
+    total += tree_size(&typed_work[i]);
+  DEBUG("workqueue_steal(): total=%i", total);
+  for (int i = 0; i < types_size; i++)
+    fractions[i] = tree_size(&typed_work[i])/total;
+
+  // Number of work units we are willing to share
+  int share = total / 2;
+  // Number of work units we actually share
+  int actual = 0;
+
+  for (int i = 0; i < share; i++)
+  {
+    int type = draw(fractions);
+
+  }
+
+
+  return ADLB_SUCCESS;
 }
 
 void

@@ -121,6 +121,7 @@ typedef enum
   ADLB_TAG_CONTAINER_SIZE,
   ADLB_TAG_LOCK,
   ADLB_TAG_UNLOCK,
+  ADLB_TAG_STEAL,
   ADLB_TAG_SHUTDOWN,
 
   /// tags outgoing from server

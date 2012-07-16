@@ -44,6 +44,11 @@ work_unit_id workqueue_unique(void);
 void workqueue_add(int type, int putter, int priority, int answer,
                    int target, int length, void* work_unit);
 
+/**
+   Return work unit for rank target and given type.
+   Caller must work_unit_free() the result if
+   Returns NULL if nothing found
+ */
 work_unit* workqueue_get(int target, int type);
 
 /**
