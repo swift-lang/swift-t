@@ -160,15 +160,6 @@ setup_idle_time()
    return ADLB_SUCCESS;
 }
 
-/**
-   Am I the master server? (server with lowest rank)
- */
-static bool
-master_server()
-{
-  return (world_rank == workers);
-}
-
 adlb_code
 shutdown_worker(int worker)
 {
@@ -177,7 +168,16 @@ shutdown_worker(int worker)
   return ADLB_SUCCESS;
 }
 
-static bool
+/**
+   Am I the master server? (server with lowest rank)
+ */
+static inline bool
+master_server()
+{
+  return (world_rank == workers);
+}
+
+static inline bool
 workers_idle(void)
 {
   int queued = requestqueue_size();
