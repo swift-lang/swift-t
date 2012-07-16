@@ -1,6 +1,6 @@
 
 TURBINE = lib/libturbine.a
-TURBINE_VERSION = 0.0.3
+TURBINE_VERSION = 0.0.4
 
 PACKAGE = lib/pkgIndex.tcl
 
@@ -54,6 +54,7 @@ C_UTILS = @USE_C_UTILS@
 
 TCL := @USE_TCL@
 TCLSH := @USE_TCLSH@
+TCL_LIB_DIR := @USE_TCL_LIB_DIR@
 
 MACHINE = @USE_MACHINE@
 
