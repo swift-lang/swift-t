@@ -9,6 +9,9 @@
 (int result) sum_integer(int A[])
 "turbine" "0.0.2" "sum_integer";
 
+(float result) sum_float(float A[])
+"turbine" "0.0.4" "sum_float";
+
 (float result) avg(int|float A[])
 "turbine" "0.0.2" "avg";
 

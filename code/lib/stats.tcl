@@ -49,6 +49,51 @@ namespace eval turbine {
         store_integer $result $accum
     }
 
+    # Sum all of the values in a container of floats
+    # inputs: [ list c r ]
+    # c: the container
+    # r: the turbine id to store the sum into
+    proc sum_float { stack result inputs } {
+        set container [ lindex $inputs 0 ]
+
+        rule "sum-$container" $container $turbine::LOCAL \
+            "sum_float_body $stack $container $result 0 0 -1"
+    }
+
+    proc sum_float_body { stack container result accum next_index n } {
+        debug "sum_float $container => $result"
+        set CHUNK_SIZE 1024
+        # TODO: could divide and conquer instead of doing linear search
+        if { $n == -1 } {
+          set n [ adlb::enumerate $container count all 0 ]
+        }
+        set i $next_index
+        while { $i < $n } {
+          set this_chunk_size [ expr min( $CHUNK_SIZE, $n - $i ) ]
+          set members [ adlb::enumerate $container members $this_chunk_size $i ]
+          puts "members of $container $i $this_chunk_size : $members"
+          foreach turbine_id $members {
+            puts "turbine_id: $turbine_id"
+            if { [ adlb::exists $turbine_id ] } {
+                # add to the sum
+                set val [ retrieve_float $turbine_id ]
+                #puts "C\[$i\] = $val"
+                set accum [ expr $accum + $val ]
+                incr i
+            } else {
+                # block until the next turbine id is finished,
+                #   then continue running
+                puts "sum_float_body $stack $container $result $accum $i $n"
+                rule "sum-$container" $turbine_id $turbine::LOCAL \
+                    "sum_float_body $stack $container $result $accum $i $n"
+                # return immediately without setting result
+                return
+            }
+          }
+        }
+        # If we get out of loop, we're done
+        store_float $result $accum
+    }
 
     # calculate mean of an array of floats or ints
     proc avg { parent result container } {
