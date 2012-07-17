@@ -120,7 +120,7 @@
     </javac>
   </target>
 
-  
+
   <!-- Compile the IC sources -->
   <target name="compile.ic"
           depends="compile.frontend,compile.gen,compile.common">
@@ -168,7 +168,7 @@
 
   <!-- Compile the code generator -->
   <target name="compile.gen"
-          depends="compile.common"> 
+          depends="compile.common">
     <javac srcdir="src"
            destdir="${build.dir}"
            includes="exm/stc/tclbackend/*.java,exm/stc/tclbackend/**/*.java"
@@ -180,10 +180,10 @@
     </javac>
   </target>
 
-  <target name="javadoc"> 
+  <target name="javadoc">
     <javadoc packagenames="exm.*"
            excludepackagenames="exm.stc.ast.antlr.*"
-           sourcepath="src"        
+           sourcepath="src"
            defaultexcludes="yes"
            destdir="javadoc"
            author="true"
@@ -194,6 +194,25 @@
     <doctitle><![CDATA[<h1>STC Compiler</h1>]]></doctitle>
     <link href="http://download.oracle.com/javase/6/docs/api/" />
     </javadoc>
+  </target>
+
+  <!-- Install: User must have set dist.dir -->
+  <target name="install"
+          depends="jar">
+
+    <fail unless="dist.dir"
+          message="Target install requires -Ddist.dir=..."/>
+
+    <echo message="INSTALL: dist.dir=${dist.dir}"/>
+
+    <mkdir dir="${dist.dir}/bin"/>
+    <mkdir dir="${dist.dir}/lib"/>
+    <copy file="turbine-version.txt" todir="${dist.dir}"/>
+    <copy file="bin/stc" todir="${dist.dir}/bin"/>
+    <copy todir="${dist.dir}/lib">
+      <fileset dir="lib" includes="*.jar"/>
+    </copy>
+    <chmod file="${dist.dir}/bin/stc" perm="u+x"/>
   </target>
 
   <target name="clean">
