@@ -52,6 +52,7 @@ adlb_code
 ADLBP_Init(int nservers, int ntypes, int type_vect[],
            int *am_server, MPI_Comm *worker_comm)
 {
+  DEBUG_START;
   int initialized, j, rc;
 
   check_versions();
@@ -61,6 +62,8 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   debug_check_environment();
 
   adlb_start_time = MPI_Wtime();
+
+  xlb_msg_init();
 
   rc = MPI_Comm_size(MPI_COMM_WORLD, &world_size);
   rc = MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
@@ -74,6 +77,9 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   servers = nservers;
   workers = world_size - servers;
   master_server_rank = world_size - servers;
+
+  rc = MPI_Comm_dup(MPI_COMM_WORLD, &adlb_all_comm);
+  assert(rc == MPI_SUCCESS);
 
   if (world_rank < workers)
   {
@@ -90,12 +96,11 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
     my_server = ADLB_RANK_NULL;
     MPI_Comm_split(MPI_COMM_WORLD,1, world_rank-workers,
                    &adlb_server_comm);
-    adlb_server_init();
+    xlb_server_init();
   }
-  rc = MPI_Comm_dup(MPI_COMM_WORLD,&adlb_all_comm);
-  assert(rc == MPI_SUCCESS);
 
   srandom(world_rank+1);
+  DEBUG_END;
   return ADLB_SUCCESS;
 }
 
@@ -110,14 +115,13 @@ adlb_code
 ADLBP_Put(void* payload, int length, int target, int answer,
           int type, int priority)
 {
-  int rc;
   adlb_code code;
   MPI_Status status;
   MPI_Request request;
   /** In a redirect, we send the payload to a worker */
   int payload_dest;
 
-  DEBUG("ADLB_Put: %s", (char*) payload);
+  DEBUG("ADLB_Put: target=%i %s", target, (char*) payload);
 
   CHECK_MSG(type >= 0 && get_type_idx(type) >= 0,
             "ADLB_Put(): invalid work type: %d\n", type);
@@ -137,16 +141,10 @@ ADLBP_Put(void* payload, int length, int target, int answer,
   p.target = target;
   p.length = length;
 
-  rc = MPI_Irecv(&payload_dest, 1, MPI_INT, to_server,
-                 ADLB_TAG_RESPONSE_PUT, adlb_all_comm, &request);
-  MPI_CHECK(rc);
+  IRECV(&payload_dest, 1, MPI_INT, to_server, ADLB_TAG_RESPONSE_PUT);
+  SEND(&p, sizeof(p), MPI_BYTE, to_server, ADLB_TAG_PUT);
 
-  rc = MPI_Send(&p, sizeof(p), MPI_BYTE, to_server,
-                ADLB_TAG_PUT, adlb_all_comm);
-  MPI_CHECK(rc);
-
-  rc = MPI_Wait(&request, &status);
-  MPI_CHECK(rc);
+  WAIT(&request, &status);
   if (payload_dest == ADLB_REJECTED)
   {
     printf("ADLB_Put(): REJECTED\n");
@@ -159,9 +157,7 @@ ADLBP_Put(void* payload, int length, int target, int answer,
   DEBUG("ADLB_Put: payload to: %i", payload_dest);
   if (payload_dest == ADLB_RANK_NULL)
     return ADLB_ERROR;
-  rc = MPI_Ssend(payload, length, MPI_BYTE, payload_dest,
-                 ADLB_TAG_WORK, adlb_all_comm);
-  MPI_CHECK(rc);
+  SSEND(payload, length, MPI_BYTE, payload_dest, ADLB_TAG_WORK);
   TRACE("ADLB_Put: DONE");
 
   return ADLB_SUCCESS;
@@ -182,18 +178,12 @@ ADLBP_Get(int type_requested, void* payload, int* length,
 
   struct packed_get_response g;
 
-  rc = MPI_Irecv(&g, sizeof(g), MPI_BYTE, my_server,
-                 ADLB_TAG_RESPONSE_GET, adlb_all_comm, &request);
-  MPI_CHECK(rc);
-  rc = MPI_Send(&type_requested, 1, MPI_INT, my_server,
-                ADLB_TAG_GET, adlb_all_comm);
-  MPI_CHECK(rc);
+  IRECV(&g, sizeof(g), MPI_BYTE, my_server, ADLB_TAG_RESPONSE_GET);
 
-  rc = MPI_Wait(&request, &status);
-  MPI_CHECK(rc);
+  SEND(&type_requested, 1, MPI_INT, my_server, ADLB_TAG_GET);
 
-  DEBUG("status: %p", &status);
-  DEBUG("error: %i %i", MPI_SUCCESS, rc);
+  WAIT(&request, &status);
+
   mpi_recv_sanity(&status, MPI_BYTE, sizeof(g));
 
   if (g.code == ADLB_SHUTDOWN)
@@ -203,14 +193,7 @@ ADLBP_Get(int type_requested, void* payload, int* length,
   }
 
   DEBUG("ADLB_Get: payload source: %i", g.payload_source);
-  rc = MPI_Recv(payload, g.length, MPI_BYTE, g.payload_source,
-                ADLB_TAG_WORK, adlb_all_comm, &status);
-  MPI_CHECK(rc);
-
-  int e = status.MPI_ERROR;
-
-  int a;
-  MPI_Get_count(&status, MPI_BYTE, &a);
+  RECV(payload, g.length, MPI_BYTE, g.payload_source, ADLB_TAG_WORK);
 
   mpi_recv_sanity(&status, MPI_BYTE, g.length);
   TRACE("ADLB_Get: got: %s", (char*) payload);
@@ -900,7 +883,8 @@ adlb_code ADLBP_Lock(adlb_datum_id id, bool* result)
 /**
    @return result 0->try again, 1->locked
  */
-adlb_code ADLBP_Unlock(adlb_datum_id id)
+adlb_code
+ADLBP_Unlock(adlb_datum_id id)
 {
   int rc;
   MPI_Status status;
@@ -929,22 +913,47 @@ adlb_code ADLBP_Unlock(adlb_datum_id id)
 }
 
 /**
+   Is the server at rank idle?
+ */
+adlb_code
+ADLB_Server_idle(int rank, bool* result)
+{
+  MPI_Request request;
+  MPI_Status status;
+  IRECV(result, sizeof(result), MPI_BYTE, rank, ADLB_TAG_RESPONSE);
+  SEND(NULL, 0, MPI_BYTE, rank, ADLB_TAG_CHECK_IDLE);
+  WAIT(&request, &status);
+  return ADLB_SUCCESS;
+}
+
+/**
+   Tell the server at rank to shutdown
+ */
+adlb_code
+ADLB_Server_shutdown(int rank)
+{
+  DEBUG_START;
+  SEND(NULL, 0, MPI_BYTE, rank, ADLB_TAG_SHUTDOWN);
+  DEBUG_END;
+  return ADLB_SUCCESS;
+}
+
+/**
    Tell the server that this worker is shutting down
  */
 static inline adlb_code
 ADLB_Shutdown(void)
 {
-  TRACE("ADLB_Shutdown()...");
-  int rc = MPI_Send(NULL, 0, MPI_INT, my_server,
-                    ADLB_TAG_SHUTDOWN, adlb_all_comm);
-  MPI_CHECK(rc);
+  DEBUG_START;
+  SEND(NULL, 0, MPI_INT, my_server, ADLB_TAG_SHUTDOWN);
+  DEBUG_END;
   return ADLB_SUCCESS;
 }
 
 adlb_code
 ADLBP_Finalize()
 {
-  printf("ADLBP_Finalize(): %i %i\n", world_rank, master_server_rank);
+  DEBUG_START;
 
   int flag;
   MPI_Finalized(&flag);

@@ -162,19 +162,25 @@ workqueue_get(int target, int type)
 
 
 adlb_code
-workqueue_steal(int max_memory,
-                int* count, struct packed_put** wus,
-                void*** wu_payloads)
+workqueue_steal(int max_memory, int* count, work_unit*** result)
 {
   // struct list stolen;
   // list_init(&stolen);
 
 
   float fractions[types_size];
-  int total;
+  int total = 0;
   for (int i = 0; i < types_size; i++)
     total += tree_size(&typed_work[i]);
+  printf("types_size: %i\n", types_size);
   DEBUG("workqueue_steal(): total=%i", total);
+
+  if (total == 0)
+  {
+    *count = 0;
+    return ADLB_SUCCESS;
+  }
+
   for (int i = 0; i < types_size; i++)
     fractions[i] = tree_size(&typed_work[i])/total;
 
@@ -197,8 +203,8 @@ workqueue_steal(int max_memory,
     free(node);
   }
 
-
-
+  *count = actual;
+  *result = stolen;
   return ADLB_SUCCESS;
 }
 

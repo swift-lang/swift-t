@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <unistd.h>
 
 #include <mpi.h>
 
@@ -37,20 +38,37 @@ double time_max_idle;
 /** Workers that have called ADLB_Shutdown() */
 struct list_i workers_shutdown;
 
+/** Is this server shutting down? */
+static bool shutting_down;
+
+static adlb_code setup_idle_time(void);
+
+
 adlb_code
-adlb_server_init()
+xlb_server_init()
 {
+  shutting_down = false;
   printf("adlb_server_init()...\n");
   my_workers = 0;
 
   list_i_init(&workers_shutdown);
   requestqueue_init(types_size);
   workqueue_init(types_size);
+  data_init(servers, world_rank);
+  adlb_code code = setup_idle_time();
+  ADLB_CHECK(code);
+  // Set a default value for now:
+  mm_set_max(mm_default, 10*MB);
+  handlers_init();
+  time_last_action = MPI_Wtime();
+
+  // Default: May be overridden below:
+  time_max_idle = 5.0;
 
   printf("SERVER for ranks: ");
   for (int i = 0; i < workers; i++)
   {
-    if (adlb_map_to_server(i) == world_rank)
+    if (xlb_map_to_server(i) == world_rank)
     {
       my_workers++;
       printf("%i ", i);
@@ -73,7 +91,7 @@ xlb_is_server(int rank)
    @return rank of server for this worker rank
  */
 int
-adlb_map_to_server(int rank)
+xlb_map_to_server(int rank)
 {
   if (xlb_is_server(rank))
     return rank;
@@ -83,60 +101,63 @@ adlb_map_to_server(int rank)
   return w + workers;
 }
 
-static adlb_code setup_idle_time(void);
-
-static bool check_idle(void);
-
-static void shutdown_server(void);
+static inline bool master_server();
+static inline void check_idle(void);
+static adlb_code server_shutdown(void);
 
 adlb_code
-ADLBP_Server(long max_memory)
+ADLB_Server(long max_memory)
 {
-  bool done = false;
-  int from_rank, tag;
-
-  /** Returns from ADLB */
-  adlb_code code;
-
-  MPI_Request *temp_req;
-
-  data_init(servers, world_rank);
-  code = setup_idle_time();
-  ADLB_CHECK(code)
   mm_set_max(mm_default, max_memory);
-  handlers_init();
-
-  // Default: May be overridden below:
-  time_max_idle = 1.0;
-
-  code = setup_idle_time();
-  assert(code == ADLB_SUCCESS);
-
-  done = 0;
-  while (! done)
+  while (true)
   {
-    if (check_idle())
+    if (master_server())
+      check_idle();
+    if (shutting_down)
       break;
 
-    int new_message;
-    MPI_Status status;
-    // May want to switch to PMPI call for speed
-    int rc = MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, adlb_all_comm,
-                        &new_message, &status);
-    MPI_CHECK(rc);
-    if (!new_message)
-      continue;
-
-    from_rank = status.MPI_SOURCE;
-    tag = status.MPI_TAG;
-
-    // Call appropriate RPC handler:
-    code = handle(tag, from_rank);
+    adlb_code code = xlb_serve_one();
     ADLB_CHECK(code);
   }
-  shutdown_server();
+  server_shutdown();
 
   return ADLB_SUCCESS;
+}
+
+static inline void backoff(void);
+
+adlb_code
+xlb_serve_one()
+{
+  DEBUG_START;
+  int new_message;
+  MPI_Status status;
+  // May want to switch to PMPI call for speed
+  int rc = MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, adlb_all_comm,
+                      &new_message, &status);
+  MPI_CHECK(rc);
+
+  if (!new_message)
+  {
+    backoff();
+    return ADLB_SUCCESS;
+  }
+
+  // This is a special case: this server has requested a steal and is
+  // now getting a response - do nothing
+  if (status.MPI_TAG == ADLB_TAG_RESPONSE_STEAL)
+    return ADLB_SUCCESS;
+
+  // Call appropriate RPC handler:
+  adlb_code code = handle(status.MPI_TAG, status.MPI_SOURCE);
+  DEBUG_END;
+  return code;
+}
+
+static inline void
+backoff()
+{
+  sleep(1);
 }
 
 /**
@@ -161,7 +182,7 @@ setup_idle_time()
 }
 
 adlb_code
-shutdown_worker(int worker)
+xlb_shutdown_worker(int worker)
 {
   DEBUG("shutdown_worker(): %i", worker);
   list_i_add(&workers_shutdown, worker);
@@ -191,34 +212,97 @@ workers_idle(void)
   return false;
 }
 
+static bool servers_idle(void);
+static void shutdown_all_servers(void);
+
 /**
+   Master server uses this to check for shutdown condition
    @return true when idle
  */
-bool
+static inline void
 check_idle()
 {
-  if (! master_server())
-    return false;
+  if (! xlb_server_check_idle_local())
+    // This server is not idle long enough...
+    return;
 
+  // Issue idle check RPCs...
+  if (! servers_idle())
+    // Some server is still not idle...
+    return;
+
+  shutdown_all_servers();
+}
+
+bool
+xlb_server_check_idle_local()
+{
   // Current time
   double t = MPI_Wtime();
+
   // Time idle
   double idle = t - time_last_action;
   if (idle < time_max_idle)
-    // Not idle
+    // Not idle long enough...
     return false;
 
   if (! workers_idle())
+    // A worker is busy...
     return false;
-
-  // Issue idle check RPCs...
 
   return true;
 }
 
-static void
-shutdown_server()
+static bool
+servers_idle()
 {
-  DEBUG("ADLB_Server(): Shutdown...\n");
-  requestqueue_shutdown();
+  for (int rank = master_server_rank+1; rank < world_size; rank++)
+  {
+    bool idle;
+    int rc = ADLB_Server_idle(rank, &idle);
+    assert(rc == ADLB_SUCCESS);
+    if (! idle)
+      return false;
+  }
+  return true;
 }
+
+static void
+shutdown_all_servers()
+{
+  shutting_down = true;
+  for (int rank = master_server_rank+1; rank < world_size; rank++)
+  {
+    int rc = ADLB_Server_shutdown(rank);
+    assert(rc == ADLB_SUCCESS);
+  }
+}
+
+/**
+   The master server has told this server to shut down
+ */
+adlb_code
+xlb_server_shutdown()
+{
+  DEBUG_START;
+  shutting_down = true;
+  return ADLB_SUCCESS;
+}
+
+bool
+xlb_server_shutting_down()
+{
+  return shutting_down;
+}
+
+/**
+   Actually shut down
+ */
+static adlb_code
+server_shutdown()
+{
+  DEBUG_START;
+  requestqueue_shutdown();
+  return ADLB_SUCCESS;
+}
+

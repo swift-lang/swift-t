@@ -17,15 +17,18 @@
 
 #define XLB_VERSION
 
+/*
+   These are the functions available to ADLB application code
+ */
+
 adlb_code ADLBP_Init(int nservers, int ntypes, int type_vect[],
                      int *am_server, MPI_Comm *worker_comm);
 adlb_code ADLB_Init(int nservers, int ntypes, int type_vect[],
                     int *am_server, MPI_Comm *worker_comm);
 
-adlb_code ADLB_Version(version* output);
-
-adlb_code ADLBP_Server(long max_memory);
 adlb_code ADLB_Server(long max_memory);
+
+adlb_code ADLB_Version(version* output);
 
 adlb_code ADLBP_Put(void* payload, int length, int target, int answer,
                     int type, int priority);
@@ -130,6 +133,9 @@ void ADLB_Data_string_totype(const char* type_string,
                              adlb_data_type* type);
 
 adlb_code ADLB_Data_type_tostring(char* output, adlb_data_type type);
+
+adlb_code ADLB_Server_idle(int rank, bool* result);
+adlb_code ADLB_Server_shutdown(int rank);
 
 adlb_code ADLBP_Finalize(void);
 adlb_code ADLB_Finalize(void);

@@ -15,8 +15,6 @@
 
 #include "messaging.h"
 
-typedef adlb_code (*handler)(int caller);
-
 void handlers_init(void);
 
 bool handler_valid(adlb_tag tag);

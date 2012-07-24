@@ -6,7 +6,7 @@
  *      Author: wozniak
  */
 
-#ifndef QUEUE_H
+#ifndef WORKQUEUE_H
 #define WORKQUEUE_H
 
 #include <stdbool.h>
@@ -62,8 +62,7 @@ adlb_code workqueue_pop(work_unit* w);
 adlb_code workqueue_select_type(int type, work_unit* w);
 
 adlb_code workqueue_steal(int max_memory, int* count,
-                          struct packed_put** wus,
-                          void*** wu_payloads);
+                          work_unit*** stolen);
 
 void work_unit_free(work_unit* wu);
 

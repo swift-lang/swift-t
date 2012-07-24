@@ -148,13 +148,6 @@ ADLB_Init(int num_servers, int num_types, int *types,
     return rc;
 }
 
-adlb_code ADLB_Server(long max_memory)
-{
-    int rc;
-    rc = ADLBP_Server(max_memory);
-    return rc;
-}
-
 adlb_code
 ADLB_Put(void *work_buf, int work_len, int reserve_rank,
          int answer_rank, int work_type, int work_prio)

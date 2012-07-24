@@ -26,6 +26,9 @@
 
 #define MAX_HANDLERS 128
 
+typedef adlb_code (*handler)(int caller);
+
+/** Map from incoming message tag to handler function */
 static handler handlers[MAX_HANDLERS];
 
 static int handler_count = 0;
@@ -33,31 +36,32 @@ static int handler_count = 0;
 /** Local MPI rank */
 static int mpi_rank;
 
-static void create_rpc(adlb_tag tag, handler h);
+static void create_handler(adlb_tag tag, handler h);
 
-adlb_code handle_put(int caller);
-adlb_code handle_get(int caller);
-adlb_code handle_steal(int caller);
-adlb_code handle_create(int caller);
-adlb_code handle_exists(int caller);
-adlb_code handle_store(int caller);
-adlb_code handle_retrieve(int caller);
-adlb_code handle_enumerate(int caller);
-adlb_code handle_close(int caller);
-adlb_code handle_subscribe(int caller);
-adlb_code handle_slot_create(int caller);
-adlb_code handle_slot_drop(int caller);
-adlb_code handle_insert(int caller);
-adlb_code handle_insert_atomic(int caller);
-adlb_code handle_lookup(int caller);
-adlb_code handle_unique(int caller);
-adlb_code handle_typeof(int caller);
-adlb_code handle_container_typeof(int caller);
-adlb_code handle_container_reference(int caller);
-adlb_code handle_container_size(int caller);
-adlb_code handle_lock(int caller);
-adlb_code handle_unlock(int caller);
-adlb_code handle_shutdown(int caller);
+static adlb_code handle_put(int caller);
+static adlb_code handle_get(int caller);
+static adlb_code handle_steal(int caller);
+static adlb_code handle_create(int caller);
+static adlb_code handle_exists(int caller);
+static adlb_code handle_store(int caller);
+static adlb_code handle_retrieve(int caller);
+static adlb_code handle_enumerate(int caller);
+static adlb_code handle_close(int caller);
+static adlb_code handle_subscribe(int caller);
+static adlb_code handle_slot_create(int caller);
+static adlb_code handle_slot_drop(int caller);
+static adlb_code handle_insert(int caller);
+static adlb_code handle_insert_atomic(int caller);
+static adlb_code handle_lookup(int caller);
+static adlb_code handle_unique(int caller);
+static adlb_code handle_typeof(int caller);
+static adlb_code handle_container_typeof(int caller);
+static adlb_code handle_container_reference(int caller);
+static adlb_code handle_container_size(int caller);
+static adlb_code handle_lock(int caller);
+static adlb_code handle_unlock(int caller);
+static adlb_code handle_check_idle(int caller);
+static adlb_code handle_shutdown(int caller);
 
 static int slot_notification(long id);
 static int close_notification(long id, int* ranks, int count);
@@ -67,55 +71,41 @@ static adlb_code put_targeted(int type, int putter, int priority,
                               int answer, int target,
                               void* payload, int length);
 
-/** Tag names: just for debugging */
-char* tag_names[MAX_HANDLERS];
-
-static void
-add_tag_name(int tag, char* name)
-{
-  tag_names[tag] = strdup(name);
-}
-
-/**
-   @param tag The enum token: will be stringified
- */
-#define create(tag,function) { \
-    add_tag_name(tag, #tag);   \
-    create_rpc(tag,function);  \
-}
-
 void
 handlers_init(void)
 {
   MPI_Comm_rank(adlb_all_comm, &mpi_rank);
 
-  create(ADLB_TAG_PUT, handle_put);
-  create(ADLB_TAG_GET, handle_get);
-  create(ADLB_TAG_STEAL, handle_steal);
-  create(ADLB_TAG_CREATE_HEADER, handle_create);
-  create(ADLB_TAG_EXISTS, handle_exists);
-  create(ADLB_TAG_STORE_HEADER, handle_store);
-  create(ADLB_TAG_RETRIEVE, handle_retrieve);
-  create(ADLB_TAG_ENUMERATE, handle_enumerate);
-  create(ADLB_TAG_CLOSE, handle_close);
-  create(ADLB_TAG_SUBSCRIBE, handle_subscribe);
-  create(ADLB_TAG_SLOT_CREATE, handle_slot_create);
-  create(ADLB_TAG_SLOT_DROP, handle_slot_drop);
-  create(ADLB_TAG_INSERT_HEADER, handle_insert);
-  create(ADLB_TAG_INSERT_ATOMIC, handle_insert_atomic);
-  create(ADLB_TAG_LOOKUP, handle_lookup);
-  create(ADLB_TAG_UNIQUE, handle_unique);
-  create(ADLB_TAG_TYPEOF, handle_typeof);
-  create(ADLB_TAG_CONTAINER_TYPEOF, handle_container_typeof);
-  create(ADLB_TAG_CONTAINER_REFERENCE, handle_container_reference);
-  create(ADLB_TAG_CONTAINER_SIZE, handle_container_size);
-  create(ADLB_TAG_LOCK, handle_lock);
-  create(ADLB_TAG_UNLOCK, handle_unlock);
-  create(ADLB_TAG_SHUTDOWN, handle_shutdown);
+  memset(handlers, '\0', MAX_HANDLERS*sizeof(handler));
+
+  create_handler(ADLB_TAG_PUT, handle_put);
+  create_handler(ADLB_TAG_GET, handle_get);
+  create_handler(ADLB_TAG_STEAL, handle_steal);
+  create_handler(ADLB_TAG_CREATE_HEADER, handle_create);
+  create_handler(ADLB_TAG_EXISTS, handle_exists);
+  create_handler(ADLB_TAG_STORE_HEADER, handle_store);
+  create_handler(ADLB_TAG_RETRIEVE, handle_retrieve);
+  create_handler(ADLB_TAG_ENUMERATE, handle_enumerate);
+  create_handler(ADLB_TAG_CLOSE, handle_close);
+  create_handler(ADLB_TAG_SUBSCRIBE, handle_subscribe);
+  create_handler(ADLB_TAG_SLOT_CREATE, handle_slot_create);
+  create_handler(ADLB_TAG_SLOT_DROP, handle_slot_drop);
+  create_handler(ADLB_TAG_INSERT_HEADER, handle_insert);
+  create_handler(ADLB_TAG_INSERT_ATOMIC, handle_insert_atomic);
+  create_handler(ADLB_TAG_LOOKUP, handle_lookup);
+  create_handler(ADLB_TAG_UNIQUE, handle_unique);
+  create_handler(ADLB_TAG_TYPEOF, handle_typeof);
+  create_handler(ADLB_TAG_CONTAINER_TYPEOF, handle_container_typeof);
+  create_handler(ADLB_TAG_CONTAINER_REFERENCE, handle_container_reference);
+  create_handler(ADLB_TAG_CONTAINER_SIZE, handle_container_size);
+  create_handler(ADLB_TAG_LOCK, handle_lock);
+  create_handler(ADLB_TAG_UNLOCK, handle_unlock);
+  create_handler(ADLB_TAG_CHECK_IDLE, handle_check_idle);
+  create_handler(ADLB_TAG_SHUTDOWN, handle_shutdown);
 }
 
 static void
-create_rpc(adlb_tag tag, handler h)
+create_handler(adlb_tag tag, handler h)
 {
   handlers[tag] = h;
   handler_count++;
@@ -133,30 +123,26 @@ adlb_code
 handle(adlb_tag tag, int caller)
 {
   CHECK_MSG(handler_valid(tag), "handle(): invalid tag: %i\n", tag);
-  TRACE("handle: caller=%i %i %s", caller, tag, tag_names[tag]);
+  TRACE("handle: caller=%i %s", caller, xlb_get_tag_name(tag));
+  assert(handlers[tag]);
   adlb_code result = handlers[tag](caller);
-  time_last_action = MPI_Wtime();
+  if (tag != ADLB_TAG_CHECK_IDLE)
+    time_last_action = MPI_Wtime();
   return result;
 }
 
 //// Individual handlers follow...
 
-/** Reusable MPI return code */
-int rc;
-
-/** Reusable status location */
-MPI_Status status;
-
 static adlb_code put(int type, int putter, int priority, int answer,
                      int target, int length);
 
-adlb_code
+static adlb_code
 handle_put(int caller)
 {
   struct packed_put p;
-  rc = MPI_Recv(&p, sizeof(p), MPI_BYTE, caller,
-                ADLB_TAG_PUT, adlb_all_comm, &status);
-  MPI_CHECK(rc);
+  MPI_Status status;
+  int rc;
+  RECV(&p, sizeof(p), MPI_BYTE, caller, ADLB_TAG_PUT);
 
   mpi_recv_sanity(&status, MPI_BYTE, sizeof(p));
 
@@ -174,6 +160,8 @@ static adlb_code
 put(int type, int putter, int priority, int answer, int target,
     int length)
 {
+  int rc;
+  MPI_Status status;
   int next_worker = 0;
   int worker;
   if (target >= 0)
@@ -196,12 +184,8 @@ put(int type, int putter, int priority, int answer, int target,
 
   DEBUG("server storing work...");
 
-  rc = MPI_Send(&mpi_rank, 1, MPI_INT, putter,
-                ADLB_TAG_RESPONSE_PUT, adlb_all_comm);
-  MPI_CHECK(rc);
-  rc = MPI_Recv(xfer, length, MPI_BYTE, putter,
-                ADLB_TAG_WORK, adlb_all_comm, &status);
-  MPI_CHECK(rc);
+  SEND(&mpi_rank, 1, MPI_INT, putter, ADLB_TAG_RESPONSE_PUT);
+  RECV(xfer, length, MPI_BYTE, putter, ADLB_TAG_WORK);
 
   // Enqueue this
   workqueue_add(type, putter, priority, answer, target,
@@ -217,6 +201,7 @@ static inline adlb_code
 redirect_work(int type, int putter, int priority, int answer,
               int target, int length, int worker)
 {
+  int rc;
   DEBUG("redirect: %i->%i", putter, worker);
   struct packed_get_response g;
   g.answer_rank = answer;
@@ -225,12 +210,9 @@ redirect_work(int type, int putter, int priority, int answer,
   g.type = type;
   g.payload_source = putter;
   DEBUG("redirect: worker");
-  rc = MPI_Send(&g, sizeof(g), MPI_BYTE, worker,
-                ADLB_TAG_RESPONSE_GET, adlb_all_comm);
-  MPI_CHECK(rc);
+  SEND(&g, sizeof(g), MPI_BYTE, worker, ADLB_TAG_RESPONSE_GET);
   DEBUG("redirect: putter");
-  rc = MPI_Send(&worker, 1, MPI_INT, putter,
-                ADLB_TAG_RESPONSE_PUT, adlb_all_comm);
+  SEND(&worker, 1, MPI_INT, putter, ADLB_TAG_RESPONSE_PUT);
   MPI_CHECK(rc);
 
   return ADLB_SUCCESS;
@@ -245,26 +227,41 @@ static inline bool check_workqueue(int caller, int type);
 
 static inline bool steal(void);
 
-adlb_code
+static bool stealing = false;
+static int deferred_gets = 0;
+
+static inline void requestqueue_recheck(void);
+
+static adlb_code
 handle_get(int caller)
 {
   struct packed_get p;
-  rc = MPI_Recv(&p, sizeof(p), MPI_BYTE, caller, ADLB_TAG_GET,
-                adlb_all_comm, &status);
-  MPI_CHECK(rc);
+  MPI_Status status;
+  int rc;
+  RECV(&p, sizeof(p), MPI_BYTE, caller, ADLB_TAG_GET);
 
-  bool b;
-  b = check_workqueue(caller, p.type);
+  bool found_work = false;
+  bool stole = false;
+  bool b = check_workqueue(caller, p.type);
   if (b) return ADLB_SUCCESS;
-  b = steal();
-  if (b)
+  if (!stealing)
   {
-    b = check_workqueue(caller, p.type);
-    if (b) return ADLB_SUCCESS;
+    stealing = true;
+    stole = steal();
+    stealing = false;
+    if (stole)
+      found_work = check_workqueue(caller, p.type);
+  }
+  else
+  {
+    deferred_gets++;
+    DEBUG("deferred_gets: %i", deferred_gets);
   }
 
-  requestqueue_add(caller, p.type);
-  return ADLB_SUCCESS;
+  if (!found_work)
+    requestqueue_add(caller, p.type);
+  if (stole)
+    requestqueue_recheck();
 
   return ADLB_SUCCESS;
 }
@@ -282,41 +279,55 @@ check_workqueue(int caller, int type)
   return false;
 }
 
+static inline void
+requestqueue_recheck()
+{
+  DEBUG_START;
+  DEBUG_END;
+}
+
+static adlb_code steal_sync(MPI_Request* request, MPI_Status* status);
+
 static inline bool
 steal(void)
 {
-  int target = random_server();
+  if (servers == 1)
+    return false;
+
+  // Target: another server
+  int target;
+  do
+  {
+    target = random_server();
+  } while (target == world_rank);
 
   MPI_Request request;
   MPI_Status status;
 
   int rc;
-  int count;
-  rc = MPI_Irecv(&count, 1, MPI_INT, target,
-                 ADLB_TAG_RESPONSE, adlb_all_comm, &request);
+  int count = 0;
+  IRECV(&count, 1, MPI_INT, target, ADLB_TAG_RESPONSE_STEAL);
   MPI_CHECK(rc);
   int max_memory = 1;
-  rc = MPI_Send(&max_memory, 1, MPI_INT, target,
-                ADLB_TAG_STEAL, adlb_all_comm);
+  SEND(&max_memory, 1, MPI_INT, target, ADLB_TAG_STEAL);
   MPI_CHECK(rc);
 
-  rc = MPI_Wait(&request, &status);
-  MPI_CHECK(rc);
+  steal_sync(&request, &status);
+
+  DEBUG("stole: %i", count);
 
   if (count == 0)
     return false;
 
   int length = count * sizeof(struct packed_put);
   struct packed_put* wus = malloc(length);
-  rc = MPI_Recv(wus, length, MPI_BYTE, target,
-                ADLB_TAG_RESPONSE, adlb_all_comm, &status);
+  RECV(wus, length, MPI_BYTE, target, ADLB_TAG_RESPONSE_STEAL);
   MPI_CHECK(rc);
 
   for (int i = 0; i < count; i++)
   {
-    rc = MPI_Recv(xfer, wus[i].length, MPI_BYTE, target,
-                  ADLB_TAG_RESPONSE, adlb_all_comm, &status);
-    MPI_CHECK(rc);
+    RECV(xfer, wus[i].length, MPI_BYTE, target,
+         ADLB_TAG_RESPONSE_STEAL);
     workqueue_add(wus[i].type, wus[i].putter, wus[i].priority,
                   wus[i].answer, wus[i].target, wus[i].length, xfer);
   }
@@ -324,16 +335,28 @@ steal(void)
   return false;
 }
 
-//struct packed_put
-//{
-//  int type;
-//  int priority;
-//  int putter;
-//  int answer;
-//  int target;
-//  int length;
-//};
-
+/**
+   Avoids server-to-server deadlocks
+   While waiting for a return from a steal, continue serving
+   requests
+ */
+static adlb_code
+steal_sync(MPI_Request* request, MPI_Status* status)
+{
+  DEBUG_START;
+  int flag = 0;
+  do
+  {
+    int rc = MPI_Test(request, &flag, status);
+    MPI_CHECK(rc);
+    adlb_code code = xlb_serve_one();
+    ADLB_CHECK(code);
+    if (xlb_server_shutting_down())
+      break;
+  } while (!flag);
+  DEBUG_END;
+  return ADLB_SUCCESS;
+}
 
 static adlb_code
 send_work_unit(int worker, work_unit* wu)
@@ -359,19 +382,13 @@ send_work(int worker, long wuid, int type, int answer,
   g.type = type;
 
   int rc;
-  rc = MPI_Ssend(&g, sizeof(g), MPI_BYTE, worker,
-                ADLB_TAG_RESPONSE_GET, adlb_all_comm);
-  MPI_CHECK(rc);
-
-  TRACE("sent g");
-
-  rc = MPI_Ssend(payload, length, MPI_BYTE, worker,
-                ADLB_TAG_WORK, adlb_all_comm);
+  SEND(&g, sizeof(g), MPI_BYTE, worker, ADLB_TAG_RESPONSE_GET);
+  SEND(payload, length, MPI_BYTE, worker, ADLB_TAG_WORK);
 
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_steal(int caller)
 {
   DEBUG("handle_steal(caller=%i)", caller);
@@ -380,71 +397,63 @@ handle_steal(int caller)
 
   int rc;
   int count;
-  struct packed_put* wus;
-  void** wu_payloads;
+  work_unit** stolen;
   // Maximum amount of memory to return- currently unused
   int max_memory;
-  rc = MPI_Recv(&max_memory, 1, MPI_INT, caller,
-                ADLB_TAG_STEAL, adlb_all_comm, &status);
-  MPI_CHECK(rc);
+  RECV(&max_memory, 1, MPI_INT, caller, ADLB_TAG_STEAL);
 
-  workqueue_steal(max_memory, &count, &wus, &wu_payloads);
+  workqueue_steal(max_memory, &count, &stolen);
 
-  rc = MPI_Rsend(&count, 1, MPI_INT, caller,
-                 ADLB_TAG_RESPONSE, adlb_all_comm);
-  MPI_CHECK(rc);
+  RSEND(&count, 1, MPI_INT, caller, ADLB_TAG_RESPONSE_STEAL);
 
   if (count == 0)
     return ADLB_SUCCESS;
 
-  int wus_length = count*sizeof(struct packed_put);
-  rc = MPI_Send(wus, wus_length, MPI_BYTE, caller,
-                ADLB_TAG_RESPONSE, adlb_all_comm);
-  MPI_CHECK(rc);
+  int p_length = count*sizeof(struct packed_put);
+  struct packed_put* p = malloc(count*sizeof(struct packed_put));
+  for (int i = 0; i < count; i++)
+    xlb_pack_work_unit(&p[i], stolen[i]);
+  SEND(p, p_length, MPI_BYTE, caller, ADLB_TAG_RESPONSE_STEAL);
 
   for (int i = 0; i < count; i++)
   {
-    rc = MPI_Send(wu_payloads[i], wus[i].length, MPI_BYTE, caller,
-                  ADLB_TAG_RESPONSE, adlb_all_comm);
-    MPI_CHECK(rc);
+    SEND(stolen[i]->payload, stolen[i]->length, MPI_BYTE, caller,
+         ADLB_TAG_RESPONSE_STEAL);
   }
 
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_create(int caller)
 {
   // MPE_LOG_EVENT(mpe_svr_create_start);
   TRACE("ADLB_TAG_CREATE\n");
   struct packed_id_type data;
+  int rc;
+  MPI_Status status;
 
-  rc = MPI_Recv(&data, sizeof(struct packed_id_type),
-                 MPI_BYTE, caller, ADLB_TAG_CREATE_HEADER,
-                 adlb_all_comm, &status);
-  MPI_CHECK(rc);
+  RECV(&data, sizeof(struct packed_id_type), MPI_BYTE, caller,
+       ADLB_TAG_CREATE_HEADER);
 
   long id = data.id;
   adlb_data_type type = data.type;
 
   adlb_data_code dc = data_create(id, type);
 
-  rc = MPI_Rsend(&dc, 1, MPI_INT, caller,
-                  ADLB_TAG_RESPONSE, adlb_all_comm);
-  MPI_CHECK(rc);
+  RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
 
   // Types file and container need additional information
   if (type == ADLB_DATA_TYPE_FILE)
   {
-    MPI_Recv(xfer, XFER_SIZE, MPI_CHAR, caller,
-             ADLB_TAG_CREATE_PAYLOAD, adlb_all_comm, &status);
+    RECV(xfer, XFER_SIZE, MPI_CHAR, caller, ADLB_TAG_CREATE_PAYLOAD);
     data_create_filename(id, xfer);
   }
   else if (type == ADLB_DATA_TYPE_CONTAINER)
   {
     adlb_data_type container_type;
-    MPI_Recv(&container_type, 1, MPI_INT, caller,
-             ADLB_TAG_CREATE_PAYLOAD, adlb_all_comm, &status);
+    RECV(&container_type, 1, MPI_INT, caller,
+         ADLB_TAG_CREATE_PAYLOAD);
     data_create_container(id, container_type);
   }
 
@@ -455,75 +464,64 @@ handle_create(int caller)
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_exists(int caller)
 {
   bool result;
   adlb_datum_id id;
+  int rc;
+  MPI_Status status;
 
-  rc = MPI_Recv(&id, 1, MPI_LONG, caller, ADLB_TAG_EXISTS,
-                adlb_all_comm, &status);
-  MPI_CHECK(rc);
-
+  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_EXISTS);
   data_exists(id, &result);
-
-  rc = MPI_Rsend(&result, sizeof(bool), MPI_BYTE, caller,
-                 ADLB_TAG_RESPONSE, adlb_all_comm);
-  MPI_CHECK(rc);
+  RSEND(&result, sizeof(bool), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_store(int caller)
 {
   // MPE_LOG_EVENT(mpe_svr_store_start);
   long id;
-  rc = MPI_Recv(&id, 1, MPI_LONG, caller, ADLB_TAG_STORE_HEADER,
-                adlb_all_comm, &status);
-  MPI_CHECK(rc);
+  int rc;
+  MPI_Status status;
+  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_STORE_HEADER);
 
   DEBUG("Store: <%li>", id);
 
-  rc = MPI_Recv(xfer, XFER_SIZE, MPI_BYTE, caller,
-                ADLB_TAG_STORE_PAYLOAD, adlb_all_comm, &status);
-  MPI_CHECK(rc);
+  RECV(xfer, XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_STORE_PAYLOAD);
 
   int length;
   MPI_Get_count(&status, MPI_BYTE, &length);
 
   int dc = data_store(id, xfer, length);
 
-  rc = MPI_Rsend(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE,
-                 adlb_all_comm);
-  MPI_CHECK(rc);
+  RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   TRACE("STORE DONE");
   // MPE_LOG_EVENT(mpe_svr_store_end);
 
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_retrieve(int caller)
 {
   // MPE_LOG_EVENT(mpe_svr_retrieve_start);
   // TRACE("ADLB_TAG_RETRIEVE");
   long id;
-  rc = MPI_Recv(&id, 1, MPI_LONG, caller, ADLB_TAG_RETRIEVE,
-                adlb_all_comm, &status);
-  MPI_CHECK(rc);
+  int rc;
+  MPI_Status status;
+  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_RETRIEVE);
 
   void* result = NULL;
   int length;
   adlb_data_type type;
   int dc = data_retrieve(id, &type, &result, &length);
-  MPI_Rsend(&dc, 1, MPI_INT, caller,
-            ADLB_TAG_RESPONSE, adlb_all_comm);
+  RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   if (dc == ADLB_DATA_SUCCESS)
   {
-    MPI_Send(&type, 1, MPI_INT, caller,
-             ADLB_TAG_RESPONSE, adlb_all_comm);
-    MPI_Send(result, length, MPI_BYTE, caller,
-             ADLB_TAG_RESPONSE, adlb_all_comm);
+    SEND(&type, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
+    SEND(result, length, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
     if (type == ADLB_DATA_TYPE_CONTAINER)
       free(result);
     DEBUG("Retrieve: <%li>", id);
@@ -531,15 +529,15 @@ handle_retrieve(int caller)
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_enumerate(int caller)
 {
   TRACE("ENUMERATE\n");
   struct packed_enumerate opts;
-  rc = MPI_Recv(&opts, sizeof(struct packed_enumerate),
-                MPI_BYTE, caller, ADLB_TAG_ENUMERATE,
-                adlb_all_comm, &status);
-  MPI_CHECK(rc);
+  int rc;
+  MPI_Status status;
+  RECV(&opts, sizeof(struct packed_enumerate), MPI_BYTE, caller,
+       ADLB_TAG_ENUMERATE);
 
   char* subscripts =
       (void*) (opts.request_subscripts ? NULL+1 : NULL);
@@ -552,9 +550,7 @@ handle_enumerate(int caller)
                                      &subscripts, &subscripts_length,
                                      &members, &members_length,
                                      &actual);
-  rc = MPI_Rsend(&dc, 1, MPI_INT, caller,
-                 ADLB_TAG_RESPONSE, adlb_all_comm);
-  MPI_CHECK(rc);
+  RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   if (dc == ADLB_DATA_SUCCESS)
   {
     rc = MPI_Send(&actual, 1, MPI_INT, caller,
@@ -562,31 +558,28 @@ handle_enumerate(int caller)
     MPI_CHECK(rc);
     if (opts.request_subscripts)
     {
-      rc = MPI_Send(subscripts, subscripts_length+1,
-                    MPI_BYTE, caller,
-                    ADLB_TAG_RESPONSE, adlb_all_comm);
-      MPI_CHECK(rc);
+      SEND(subscripts, subscripts_length+1, MPI_BYTE, caller,
+           ADLB_TAG_RESPONSE);
       free(subscripts);
     }
     if (opts.request_members)
     {
-      rc = MPI_Send(members, members_length,
-                    MPI_BYTE, caller,
-                    ADLB_TAG_RESPONSE, adlb_all_comm);
-      MPI_CHECK(rc);
+      SEND(members, members_length, MPI_BYTE, caller,
+           ADLB_TAG_RESPONSE);
       free(members);
     }
   }
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_close(int caller)
 {
   // MPE_LOG_EVENT(mpe_svr_close_start);
   long id;
-  MPI_Recv(&id, 1, MPI_LONG, caller, ADLB_TAG_CLOSE,
-           adlb_all_comm, &status);
+  int rc;
+  MPI_Status status;
+  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_CLOSE);
 
   DEBUG("Close: <%li>", id);
 
@@ -595,15 +588,11 @@ handle_close(int caller)
   adlb_data_code dc = data_close(id, &ranks, &count);
   if (dc != ADLB_DATA_SUCCESS)
     count = -1;
-  rc = MPI_Rsend(&count, 1, MPI_INT, caller,
-                 ADLB_TAG_RESPONSE, adlb_all_comm);
-  MPI_CHECK(rc);
+  RSEND(&count, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
 
   if (count > 0)
   {
-    rc = MPI_Send(ranks, count, MPI_INT, caller,
-                  ADLB_TAG_RESPONSE, adlb_all_comm);
-    MPI_CHECK(rc);
+    SEND(ranks, count, MPI_INT, caller, ADLB_TAG_RESPONSE);
     free(ranks);
   }
 
@@ -611,74 +600,70 @@ handle_close(int caller)
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_subscribe(int caller)
 {
   // MPE_LOG_EVENT(mpe_svr_subscribe_start);
   TRACE("ADLB_TAG_SUBSCRIBE\n");
 
   long id;
-  rc = MPI_Recv(&id, 1, MPI_LONG, caller,
-                ADLB_TAG_SUBSCRIBE, adlb_all_comm, &status);
-  MPI_CHECK(rc);
+  int rc;
+  MPI_Status status;
+  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_SUBSCRIBE);
 
   int result;
   adlb_data_code dc = data_subscribe(id, caller, &result);
   if (dc != ADLB_DATA_SUCCESS)
     result = -1;
-  rc = MPI_Rsend(&result, 1, MPI_INT, caller,
-                 ADLB_TAG_RESPONSE, adlb_all_comm);
-  MPI_CHECK(rc);
+  RSEND(&result, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
 
   TRACE("ADLB_TAG_SUBSCRIBE done\n");
   // MPE_LOG_EVENT(mpe_svr_subscribe_end);
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_slot_create(int caller)
 {
   long id;
-  rc = MPI_Recv(&id, 1, MPI_LONG, caller,
-                ADLB_TAG_SLOT_CREATE, adlb_all_comm, &status);
-  MPI_CHECK(rc);
+  int rc;
+  MPI_Status status;
+  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_SLOT_CREATE);
 
   adlb_data_code dc = data_slot_create(id);
   DEBUG("Slot_create: <%li>", id);
 
-  rc = MPI_Rsend(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE,
-                 adlb_all_comm);
+  RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_slot_drop(int caller)
 {
   long id;
-  rc = MPI_Recv(&id, 1, MPI_LONG, caller,
-                ADLB_TAG_SLOT_DROP, adlb_all_comm, &status);
-  MPI_CHECK(rc);
+  int rc;
+  MPI_Status status;
+  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_SLOT_DROP);
 
   int slots;
   DEBUG("Slot_drop: <%li>", id);
   adlb_data_code dc = data_slot_drop(id, &slots);
 
-  rc = MPI_Rsend(&dc, 1, MPI_INT, caller,
-                 ADLB_TAG_RESPONSE, adlb_all_comm);
-  MPI_CHECK(rc);
+  RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
 
   if (slots == 0)
     slot_notification(id);
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_insert(int caller)
 {
-  rc = MPI_Recv(xfer, ADLB_DATA_SUBSCRIPT_MAX+128, MPI_CHAR,
-                caller, ADLB_TAG_INSERT_HEADER, adlb_all_comm,
-                &status);
-  MPI_CHECK(rc);
+  int rc;
+  MPI_Status status;
+  RECV(xfer, ADLB_DATA_SUBSCRIPT_MAX+128, MPI_CHAR, caller,
+       ADLB_TAG_INSERT_HEADER);
+
   char subscript[ADLB_DATA_SUBSCRIPT_MAX];
   long id;
   char* member;
@@ -695,19 +680,15 @@ handle_insert(int caller)
   long* references;
   int count, slots;
 
-  rc = MPI_Recv(member, ADLB_DATA_MEMBER_MAX, MPI_CHAR,
-                caller, ADLB_TAG_INSERT_PAYLOAD, adlb_all_comm,
-                &status);
-  MPI_CHECK(rc);
+  RECV(member, ADLB_DATA_MEMBER_MAX, MPI_CHAR, caller,
+       ADLB_TAG_INSERT_PAYLOAD);
 
   DEBUG("Insert: <%li>[\"%s\"]=\"%s\"",
         id, subscript, member);
 
   adlb_data_code dc = data_insert(id, subscript, member, drops,
-                   &references, &count, &slots);
-  rc = MPI_Rsend(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE,
-                 adlb_all_comm);
-  MPI_CHECK(rc);
+                                  &references, &count, &slots);
+  RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
 
   if (dc == ADLB_DATA_SUCCESS)
   {
@@ -727,13 +708,15 @@ handle_insert(int caller)
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_insert_atomic(int caller)
 {
-  rc = MPI_Recv(xfer, ADLB_DATA_SUBSCRIPT_MAX+128, MPI_CHAR,
-                caller, ADLB_TAG_INSERT_ATOMIC,
-                adlb_all_comm, &status);
-  MPI_CHECK(rc);
+  int rc;
+  MPI_Status status;
+
+  RECV(xfer, ADLB_DATA_SUBSCRIPT_MAX+128, MPI_CHAR, caller,
+       ADLB_TAG_INSERT_ATOMIC);
+
   char subscript[ADLB_DATA_SUBSCRIPT_MAX];
   long id;
   int n = sscanf(xfer, "%li %s", &id, subscript);
@@ -744,26 +727,23 @@ handle_insert_atomic(int caller)
   adlb_data_code dc = data_insert_atomic(id, subscript, &result);
   DEBUG("Insert_atomic: <%li>[\"%s\"] => %i",
         id, subscript, result);
-  rc = MPI_Rsend(&dc, 1, MPI_INT, caller,
-                 ADLB_TAG_RESPONSE, adlb_all_comm);
-  MPI_CHECK(rc);
-  rc = MPI_Rsend(&result, sizeof(bool), MPI_BYTE, caller,
-                 ADLB_TAG_RESPONSE, adlb_all_comm);
-  MPI_CHECK(rc);
+  RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
+  RSEND(&result, sizeof(bool), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
 
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_lookup(int caller)
 {
+  int rc;
+  MPI_Status status;
   TRACE("ADLB_TAG_LOOKUP\n");
   char msg[ADLB_DATA_SUBSCRIPT_MAX+32];
   char subscript[ADLB_DATA_SUBSCRIPT_MAX];
   char* member;
-  rc = MPI_Recv(msg, ADLB_DATA_SUBSCRIPT_MAX+32, MPI_BYTE,
-                caller, ADLB_TAG_LOOKUP,adlb_all_comm,&status);
-  MPI_CHECK(rc);
+  RECV(msg, ADLB_DATA_SUBSCRIPT_MAX+32, MPI_BYTE, caller,
+       ADLB_TAG_LOOKUP);
 
   long id;
   int n = sscanf(msg, "%li %s", &id, subscript);
@@ -777,15 +757,12 @@ handle_lookup(int caller)
   bool found = (member != ADLB_DATA_ID_NULL);
   p.length = found ? 1 : -1;
 
-  rc = MPI_Rsend(&p, sizeof(p), MPI_BYTE, caller,
-                 ADLB_TAG_RESPONSE, adlb_all_comm);
-  MPI_CHECK(rc);
+  RSEND(&p, sizeof(p), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
 
   if (dc == ADLB_DATA_SUCCESS && found)
   {
-    rc = MPI_Send(member, strlen(member)+1, MPI_CHAR, caller,
-                  ADLB_TAG_RESPONSE, adlb_all_comm);
-    MPI_CHECK(rc);
+    SEND(member, strlen(member)+1, MPI_CHAR, caller,
+         ADLB_TAG_RESPONSE);
   }
   // DEBUG("LOOKUP: <%li>[\"%s\"] => <%li>\n",
   //       id, subscript, member);
@@ -793,32 +770,31 @@ handle_lookup(int caller)
   return ADLB_SUCCESS;
 }
 
-adlb_code handle_unique(int caller)
+static adlb_code
+handle_unique(int caller)
 {
   // MPE_LOG_EVENT(mpe_svr_unique_start);
   int msg;
-  rc = MPI_Recv(&msg, 1, MPI_INT, caller, ADLB_TAG_UNIQUE,
-                adlb_all_comm, &status);
-  MPI_CHECK(rc);
+  int rc;
+  MPI_Status status;
+  RECV(&msg, 1, MPI_INT, caller, ADLB_TAG_UNIQUE);
 
   long id;
   adlb_data_code dc = data_unique(&id);
 
-  rc = MPI_Rsend(&id, 1, MPI_LONG, caller,
-                 ADLB_TAG_RESPONSE, adlb_all_comm);
-  MPI_CHECK(rc);
+  RSEND(&id, 1, MPI_LONG, caller, ADLB_TAG_RESPONSE);
   // DEBUG("UNIQUE: <%li>\n", id);
   // MPE_LOG_EVENT(mpe_svr_unique_end);
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_typeof(int caller)
 {
   adlb_datum_id id;
-  rc = MPI_Recv(&id, 1, MPI_LONG, caller,
-                ADLB_TAG_TYPEOF, adlb_all_comm,
-                &status);
+  int rc;
+  MPI_Status status;
+  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_TYPEOF);
   MPI_CHECK(rc);
 
   adlb_data_type type;
@@ -826,38 +802,34 @@ handle_typeof(int caller)
   if (dc != ADLB_DATA_SUCCESS)
     type = -1;
 
-  rc = MPI_Rsend(&type, 1, MPI_INT, caller,
-                 ADLB_TAG_RESPONSE, adlb_all_comm);
-  MPI_CHECK(rc);
+  RSEND(&type, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
 
-adlb_code handle_container_typeof(int caller)
+static adlb_code
+handle_container_typeof(int caller)
 {
   adlb_datum_id id;
-  rc = MPI_Recv(&id, 1, MPI_LONG, caller,
-                ADLB_TAG_CONTAINER_TYPEOF, adlb_all_comm,
-                &status);
-  MPI_CHECK(rc);
+  int rc;
+  MPI_Status status;
+  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_CONTAINER_TYPEOF);
 
   adlb_data_type type;
   adlb_data_code dc = data_container_typeof(id, &type);
   if (dc != ADLB_DATA_SUCCESS)
     type = -1;
 
-  rc = MPI_Rsend(&type, 1, MPI_INT, caller,
-                 ADLB_TAG_RESPONSE, adlb_all_comm);
-  MPI_CHECK(rc);
+  RSEND(&type, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_container_reference(int caller)
 {
-  rc = MPI_Recv(xfer, XFER_SIZE, MPI_BYTE, caller,
-                ADLB_TAG_CONTAINER_REFERENCE, adlb_all_comm,
-                &status);
-  MPI_CHECK(rc);
+  int rc;
+  MPI_Status status;
+  RECV(xfer, XFER_SIZE, MPI_BYTE, caller,
+       ADLB_TAG_CONTAINER_REFERENCE);
 
   long container_id;
   char subscript[ADLB_DATA_SUBSCRIPT_MAX];
@@ -877,20 +849,17 @@ handle_container_reference(int caller)
     if (member != 0)
       set_reference_and_notify(reference, member);
 
-  rc = MPI_Rsend(&dc, 1, MPI_INT, caller,
-                 ADLB_TAG_RESPONSE, adlb_all_comm);
-  MPI_CHECK(rc);
+  RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_container_size(int caller)
 {
   long container_id;
-  rc = MPI_Recv(&container_id, 1, MPI_LONG, caller,
-                ADLB_TAG_CONTAINER_SIZE, adlb_all_comm,
-                &status);
-  MPI_CHECK(rc);
+  int rc;
+  MPI_Status status;
+  RECV(&container_id, 1, MPI_LONG, caller, ADLB_TAG_CONTAINER_SIZE);
 
   int size;
   adlb_data_code dc = data_container_size(container_id, &size);
@@ -905,12 +874,13 @@ handle_container_size(int caller)
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_lock(int caller)
 {
   long id;
-  MPI_Recv(&id, 1, MPI_LONG, caller, ADLB_TAG_LOCK,
-           adlb_all_comm, &status);
+  int rc;
+  MPI_Status status;
+  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_LOCK);
 
   DEBUG("Lock: <%li> by rank: %i", id, caller);
 
@@ -926,39 +896,60 @@ handle_lock(int caller)
   }
   else
     c = 'x';
-  rc = MPI_Rsend(&c, 1, MPI_CHAR, caller,
-                 ADLB_TAG_RESPONSE, adlb_all_comm);
-  MPI_CHECK(rc);
+  RSEND(&c, 1, MPI_CHAR, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 handle_unlock(int caller)
 {
   long id;
-  rc = MPI_Recv(&id, 1, MPI_LONG, caller, ADLB_TAG_UNLOCK,
-           adlb_all_comm, &status);
-  MPI_CHECK(rc);
+  int rc;
+  MPI_Status status;
+  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_UNLOCK);
+
   DEBUG("Unlock: <%li> by rank: %i ", id, caller);
 
   adlb_data_code dc = data_unlock(id);
 
   char c = (dc == ADLB_DATA_SUCCESS) ? '1' : 'x';
-  rc = MPI_Rsend(&c, 1, MPI_CHAR, caller,
-                 ADLB_TAG_RESPONSE, adlb_all_comm);
+  RSEND(&c, 1, MPI_CHAR, caller, ADLB_TAG_RESPONSE);
+  return ADLB_SUCCESS;
+}
+
+static adlb_code
+handle_check_idle(int caller)
+{
+  MPI_Status status;
+  RECV(NULL, 0, MPI_BYTE, caller, ADLB_TAG_CHECK_IDLE);
+  bool idle = xlb_server_check_idle_local();
+  SEND(&idle, sizeof(idle), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
 
 /**
-   The calling worker is shutting down
+   The calling rank is shutting down
+   If the caller is a server, then this server should shutdown too
  */
-adlb_code
+static adlb_code
 handle_shutdown(int caller)
 {
-  rc = MPI_Recv(&caller, 0, MPI_INT, caller, ADLB_TAG_SHUTDOWN,
-                adlb_all_comm, &status);
-  MPI_CHECK(rc);
-  return shutdown_worker(caller);
+  MPI_Status status;
+  RECV(&caller, 0, MPI_INT, caller, ADLB_TAG_SHUTDOWN);
+
+  if (xlb_map_to_server(caller) == caller)
+  {
+    // caller is a server
+    xlb_server_shutdown();
+  }
+  else
+  {
+    // caller is a worker
+    adlb_code code = xlb_shutdown_worker(caller);
+    ADLB_CHECK(code);
+  }
+
+  return ADLB_SUCCESS;
 }
 
 static int

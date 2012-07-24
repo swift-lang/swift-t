@@ -1,16 +1,70 @@
-/**
+
+/*
  * messaging.h
  *
  *  Created on: Jun 7, 2012
  *      Author: wozniak
  *
- *  ADLB messaging conventions
- * */
+ *  XLB messaging conventions
+ */
 
 #ifndef MESSAGING_H
 #define MESSAGING_H
 
 #include "adlb.h"
+#include "workqueue.h"
+
+void xlb_msg_init(void);
+
+void xlb_add_tag_name(int tag, char* name);
+
+char* xlb_get_tag_name(int tag);
+
+/*
+   All of these client/handler functions (adlb.c/handlers.c)
+   use messaging the same way:
+   - They use communicator adlb_all_comm
+   - They use the stack-allocated status or request object
+   - They check the return code rc with MPI_CHECK() to return errors.
+   Thus, we use these macros to make reading the logic easier
+   This also allows us to wrap each call with TRACE_MPI()
+        for easy message debugging
+ */
+
+#define SEND(data,length,type,rank,tag) { \
+  TRACE_MPI("SEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
+  int rc = MPI_Send(data,length,type,rank,tag,adlb_all_comm); \
+  MPI_CHECK(rc); }
+
+#define RSEND(data,length,type,rank,tag) { \
+  TRACE_MPI("RSEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
+  int rc = MPI_Rsend(data,length,type,rank,tag,adlb_all_comm); \
+  MPI_CHECK(rc); }
+
+#define SSEND(data,length,type,rank,tag) { \
+  TRACE_MPI("SSEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
+  int rc = MPI_Ssend(data,length,type,rank,tag,adlb_all_comm); \
+  TRACE_MPI("SSENT"); \
+  MPI_CHECK(rc); }
+
+#define RECV(data,length,type,rank,tag) { \
+  TRACE_MPI("RECV(from=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
+  int rc = MPI_Recv(data,length,type,rank,tag, \
+                    adlb_all_comm,&status); \
+  TRACE_MPI("RECVD"); \
+  MPI_CHECK(rc); }
+
+#define IRECV(data,length,type,rank,tag) { \
+  TRACE_MPI("IRECV(from=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
+  int rc = MPI_Irecv(data,length,type,rank,tag, \
+                     adlb_all_comm,&request); \
+  MPI_CHECK(rc); }
+
+#define WAIT(r,s) { \
+  TRACE_MPI("WAIT"); \
+  int rc = MPI_Wait(r,s); \
+  MPI_CHECK(rc); \
+  TRACE_MPI("WAITED"); }
 
 /**
    Simple struct for message packing
@@ -86,16 +140,21 @@ struct packed_enumerate
   int offset;
 };
 
+/** Member count of enum adlb_tag */
+#define MAX_TAGS 128
+
 /**
    ADLB message tags
    Some RPCs require two incoming messages: a header and a payload
 */
 typedef enum
 {
+  ADLB_TAG_NULL = 0,
+
   /// tags incoming to server
 
   // task operations
-  ADLB_TAG_PUT = 0,
+  ADLB_TAG_PUT = 1,
   ADLB_TAG_GET,
 
   // data operations
@@ -122,12 +181,14 @@ typedef enum
   ADLB_TAG_LOCK,
   ADLB_TAG_UNLOCK,
   ADLB_TAG_STEAL,
+  ADLB_TAG_CHECK_IDLE,
   ADLB_TAG_SHUTDOWN,
 
   /// tags outgoing from server
   ADLB_TAG_RESPONSE,
   ADLB_TAG_RESPONSE_GET,
   ADLB_TAG_RESPONSE_PUT,
+  ADLB_TAG_RESPONSE_STEAL,
   ADLB_TAG_WORKUNIT,
   ADLB_TAG_ABORT,
 
@@ -135,7 +196,9 @@ typedef enum
   /** Work unit payload */
   ADLB_TAG_WORK
 
-
 } adlb_tag;
+
+
+void xlb_pack_work_unit(struct packed_put* p, work_unit* wu);
 
 #endif

@@ -61,6 +61,22 @@ void debug_check_environment(void);
 #define TRACE(format, args...) // noop
 #endif
 
-#define DEBUG_START DEBUG("%s()...", __func__)
+#ifndef NDEBUG
+#define ENABLE_TRACE_MPI 1
+#endif
+#ifdef ENABLE_TRACE_MPI
+#define TRACE_MPI(format, args...)             \
+  { if (xlb_debug_enabled) {                           \
+  printf("MPI: " format "\n", ## args);  \
+  fflush(stdout);                          \
+  } }
+#else
+#define TRACE(format, args...) // noop
+#endif
+
+/** Print that we are entering a function */
+#define DEBUG_START DEBUG("%s()...",    __func__)
+/** Print that we are exiting a function */
+#define DEBUG_END   DEBUG("%s() done.", __func__)
 
 #endif

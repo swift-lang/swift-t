@@ -56,7 +56,6 @@ requestqueue_add(int rank, int type)
 {
   DEBUG("requestqueue_add(rank=%i,type=%i)", rank, type);
   request* R = malloc(sizeof(request));
-  printf("R: %p\n", R);
 
   struct list2* L = &type_requests[type];
   struct list2_item* item = list2_add(L, R);
@@ -161,9 +160,7 @@ shutdown_rank(int rank)
   g.length = -1;
   g.type = ADLB_TYPE_NULL;
   g.payload_source = ADLB_RANK_NULL;
-  int rc = MPI_Send(&g, sizeof(g), MPI_BYTE, rank,
-                    ADLB_TAG_RESPONSE_GET, adlb_all_comm);
-  MPI_CHECK(rc);
+  SEND(&g, sizeof(g), MPI_BYTE, rank, ADLB_TAG_RESPONSE_GET);
   return ADLB_SUCCESS;
 }
 
