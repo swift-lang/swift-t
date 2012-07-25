@@ -211,6 +211,12 @@ namespace eval turbine {
         return $result
     }
 
+    proc store_blob { id pointer length } {
+        log "store_blob: <$id>"
+        adlb::store_blob $id $pointer $length
+        close_datum $id
+    }
+
     proc create_container { id subscript_type } {
         log "create_container: <$id>\[$subscript_type\]"
         adlb::create $id $adlb::CONTAINER $subscript_type
