@@ -315,8 +315,11 @@ MAIN=exm.stc.ui.Main
 
 # Group all JVM args together
 ARGS="${DEBUG} ${FLAGS} ${COMPILER_OPTS} -cp ${CLASSPATH}"
+
 # Assemble preprocessor command line
-CPP="cpp ${CPP_INCLUDE}"
+# We use gcc -E because cpp is broken on Mac GCC 4.2.1
+#    Cf. http://stackoverflow.com/questions/4137923
+CPP="gcc -E -x c ${CPP_INCLUDE}"
 
 if [[ ${OUTPUT_MODE} == "cpp" ]]
 then
