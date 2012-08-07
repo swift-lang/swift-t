@@ -1,5 +1,5 @@
 
-# Turbine builtin function for logical boolean expressions, including
+# Turbine builtin functions for logical boolean expressions, including
 # boolean ops like or, along with relational ops like equals and
 # greater than. We follow the calling conventions for Turbine
 # built-ins
@@ -8,8 +8,8 @@
 # between different Turbine types, but it is difficult in Tcl to write
 # polymorphic code without doing funny things that hurt the ability of
 # Tcl to compile to good bytecode like constructing function names at
-# run.  Hopefully these definitions will be fairly stable so the
-# redundancy won't be a major issue.
+# run time.  These definitions will be fairly stable so the redundancy
+# won't be a major issue.
 
 namespace eval turbine {
     namespace export and or not
