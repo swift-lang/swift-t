@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "adlb.h"
+#include "src/adlb.h"
 
 #define CMDLINE 1
 
