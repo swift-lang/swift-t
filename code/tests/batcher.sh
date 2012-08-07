@@ -8,8 +8,7 @@ OUTPUT=${THIS%.sh}.out
 
 mkdir tests/data
 
-source scripts/turbine-config.sh
-${TURBINE_LAUNCH} -l -n 4 ${VALGRIND} ${TCLSH} ${SCRIPT} \
+turbine -l -n 4 ${VALGRIND} ${SCRIPT} \
                   tests/batcher.txt >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
