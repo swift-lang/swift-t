@@ -4,10 +4,16 @@ AC_PREREQ(2.63)
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_HEADER(config.h)
 
-echo "Configuring ADLB with $ac_configure_args"
-
 CC=${CC:-mpicc}
 F77=${F77:-mpif90}
+
+USE_MAC="no"
+if [[ $( uname ) == "Darwin" ]]
+then
+        AC_MSG_RESULT([detected Mac.])
+        USE_MAC="yes"
+fi
+AC_SUBST(USE_MAC)
 
 AC_PROG_CC
 AC_CHECK_PROG(AR, ar, ar, ;)
