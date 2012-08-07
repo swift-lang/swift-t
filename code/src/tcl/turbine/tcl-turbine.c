@@ -22,6 +22,8 @@
 #include "src/tcl/util.h"
 #include "src/tcl/turbine/tcl-turbine.h"
 
+#include "src/tcl/adlb/tcl-adlb.h"
+
 /**
    @see TURBINE_CHECK
 */
@@ -410,7 +412,7 @@ Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
    Called when Tcl loads this extension
  */
 int DLLEXPORT
-Tclturbine_Init(Tcl_Interp *interp)
+Tclturbine_Init(Tcl_Interp* interp)
 {
   if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
     return TCL_ERROR;
@@ -422,14 +424,13 @@ Tclturbine_Init(Tcl_Interp *interp)
   if (Tcl_PkgProvide(interp, "turbine", TURBINE_VERSION) == TCL_ERROR)
     return TCL_ERROR;
 
+  tcl_adlb_init(interp);
+
   COMMAND("init",      Turbine_Init_Cmd);
   COMMAND("version",   Turbine_Version_Cmd);
-  // COMMAND("declare",   Turbine_Declare_Cmd);
   COMMAND("rule",      Turbine_Rule_Cmd);
-  // COMMAND("rule_new",  Turbine_RuleNew_Cmd);
   COMMAND("push",      Turbine_Push_Cmd);
   COMMAND("ready",     Turbine_Ready_Cmd);
-  // COMMAND("type",      Turbine_ActionType_Cmd);
   COMMAND("action",    Turbine_Action_Cmd);
   COMMAND("priority",  Turbine_Priority_Cmd);
   COMMAND("complete",  Turbine_Complete_Cmd);

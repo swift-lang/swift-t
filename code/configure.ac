@@ -17,9 +17,36 @@ AC_CONFIG_HEADERS([config.h])
 [[ ${prefix} != ${PWD} ]] ||
   AC_MSG_ERROR([Your --prefix should not be the same as PWD: $PWD])
 
+# Check OS
+USE_MAC="no"
+if [[ $( uname ) == "Darwin" ]]
+then
+        AC_MSG_RESULT([detected Mac.])
+        USE_MAC="yes"
+fi
+AC_SUBST(USE_MAC)
+
 # Checks for programs.
 AC_PROG_CC
 # We trust the user's install and omit AC_PROG_INSTALL
+
+# We prefer to use cp -u for installation
+AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
+            [AC_PATH_PROGS_FEATURE_CHECK([CP_U], [cp],
+              [[cp_u_out=`cp -u /dev/null /dev/stdout > /dev/null 2>&1`
+                test "$?" = 0 \
+                && ac_cv_path_cp_u=yes]],
+              [])])
+          AC_SUBST([CP_U], [$ac_cv_path_cp_u])
+
+# We prefer to use cp --parents for installation
+AC_CACHE_CHECK([for cp that supports --parents], [ac_cv_path_cp_u],
+            [AC_PATH_PROGS_FEATURE_CHECK([CP_PARENTS], [cp],
+              [[cp_parents_out=`cp --parents /dev/null . > /dev/null 2>&1`
+                test "$?" = 0 \
+                && ac_cv_path_cp_parents=yes ]],
+              [])])
+          AC_SUBST([CP_PARENTS], [$ac_cv_path_cp_parents])
 
 # Checks for headers
 AC_CHECK_HEADERS([stddef.h sys/param.h sys/time.h])
@@ -35,7 +62,7 @@ AC_TYPE_UINT32_T
 
 # Checks for library functions.
 AC_FUNC_MALLOC
-AC_CHECK_FUNCS([strchr strdup strlen strnlen gettimeofday])
+AC_CHECK_FUNCS([gettimeofday memset strchr strdup strlen strnlen])
 
 # Define templates
 AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
@@ -70,7 +97,7 @@ MPI_SET=0
 # MPI defaults (may be overridden on special systems)
 USE_MACHINE=normal
 USE_LAUNCHER=mpiexec
-LIBMPI=libmpich.so
+MPI_LIB_NAME=mpich
 
 # Special systems:
 # On the SiCortex, we use srun and libmpiP.a
@@ -81,7 +108,7 @@ AC_ARG_ENABLE(sicortex,
                  [
                         USE_MACHINE=sicortex
                         USE_LAUNCHER=srun
-                        LIBMPI=libmpiP.a
+                        MPI_LIB_NAME=libmpiP.a
                         MPI_SET=1
                  ],
                  [])
@@ -99,24 +126,6 @@ AC_ARG_ENABLE(custom,
                  [])
 AC_SUBST(USE_MACHINE)
 AC_SUBST(USE_LAUNCHER)
-
-AC_ARG_WITH(mpi,
-                 AS_HELP_STRING(
-                    [--with-mpi],
-                    [location of MPI installation]),
-                 [AC_CHECK_FILE(${withval}/lib/${LIBMPI},
-                  [], [USE_MPI=0])
-                  if test "$USE_MPI" = 0 ; then
-                     AC_MSG_ERROR(Could not find MPI in $withval)
-                  fi
-                  AC_MSG_RESULT([using MPI in $withval])
-                  MPI_SET=1
-                  USE_MPI=$withval
-                 ],
-                 [
-                  USE_MPI=0
-                 ])
-AC_SUBST(USE_MPI)
 
 # Defaults: do not use custom MPI include, lib locations
 USE_MPI_INCLUDE=0
@@ -158,7 +167,7 @@ AC_SUBST(USE_MPI_INCLUDE)
 AC_ARG_WITH(mpi-lib-dir,
                  AS_HELP_STRING(
                     [--with-mpi-lib-dir],
-                    [directory containing MPI lib (usually libmpich.a)]),
+                    [directory containing MPI lib (usually libmpich)]),
                  [AC_CHECK_FILE(${withval},
                   [], [USE_MPI_LIB_DIR=NOTFOUND])
                   if test "$USE_MPI_LIB_DIR" = NOTFOUND ; then
@@ -173,13 +182,18 @@ AC_SUBST(USE_MPI_LIB_DIR)
 # Default: do not use custom MPI lib name
 USE_MPI_LIB_NAME=0
 
+SO_SUFFIX=so
+if test `uname` = Darwin; then
+   SO_SUFFIX=dylib
+fi
 AC_ARG_WITH(mpi-lib-name,
                  AS_HELP_STRING(
                     [--with-mpi-lib-name],
                     [name of MPI lib (usually mpich) -
                         assumes mpi-lib-dir has been given]),
                  [
-                  FILE=${USE_MPI_LIB_DIR}/lib${withval}.a
+                  MPI_LIB_NAME=${withval}
+                  FILE=${USE_MPI_LIB_DIR}/lib${MPI_LIB_NAME}.${SO_SUFFIX}
                   AC_CHECK_FILE(${FILE},
                   [], [USE_MPI_LIB_NAME=NOTFOUND])
                   if test "$USE_MPI_LIB_NAME" = NOTFOUND ; then
@@ -202,7 +216,46 @@ AC_ARG_WITH(mpi-lib-name,
                  ])
 AC_SUBST(USE_MPI_LIB_NAME)
 
+AC_ARG_WITH(mpi,
+                 AS_HELP_STRING(
+                    [--with-mpi],
+                    [location of MPI installation]),
+                 [AC_CHECK_FILE(${withval}/lib/lib${MPI_LIB_NAME}.${SO_SUFFIX},
+                  [], [USE_MPI=0])
+                  if test "$USE_MPI" = 0 ; then
+                     AC_MSG_ERROR(Could not find MPI in $withval)
+                  fi
+                  AC_MSG_RESULT([using MPI in $withval])
+                  MPI_SET=1
+                  USE_MPI=$withval
+                 ],
+                 [
+                  USE_MPI=0
+                 ])
+AC_SUBST(USE_MPI)
+
 (( ${MPI_SET} )) || AC_MSG_ERROR([Insufficient MPI settings!])
+
+# MPI_IMPL will be unknown, OpenMPI, or MPICH2
+MPI_IMPL=unknown
+if [[ ${USE_MPI_INCLUDE} != 0 ]]
+then
+   MPI_H=${USE_MPI_INCLUDE}/mpi.h
+else
+   MPI_H=${USE_MPI}/include/mpi.h
+fi
+AC_MSG_CHECKING([checking MPI implementation in ${MPI_H} ])
+if grep -q OMPI_MPI_H ${MPI_H}
+then
+   OMPI_MINOR_VERSION=$( grep OMPI_MINOR_VERSION ${MPI_H} | \
+                         head -1 | cut -d ' ' -f 3 )
+   MPI_IMPL=OpenMPI_1.${OMPI_MINOR_VERSION}
+elif grep -q MPICH_NAME ${MPI_H}
+then
+   MPI_IMPL=MPICH2
+fi
+AC_MSG_RESULT([${MPI_IMPL}])
+AC_SUBST(MPI_IMPL)
 
 # We assume the libmpe.so is in the ADLB directory
 # See Turbine - Build for explanation
@@ -222,7 +275,7 @@ AC_ARG_WITH(adlb,
                  AS_HELP_STRING(
                     [--with-adlb],
                     [location of ADLB]),
-                 [AC_CHECK_FILE(${withval}/lib/libadlb.so,
+                 [AC_CHECK_FILE(${withval}/include/adlb.h,
                   [], [USE_ADLB=0])
                   if test "$USE_ADLB" = 0 ; then
                      AC_MSG_ERROR(Could not find ADLB in $withval)

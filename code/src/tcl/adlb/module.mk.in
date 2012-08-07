@@ -3,25 +3,3 @@ DIR := src/tcl/adlb
 
 TCL_ADLB_SRC := $(DIR)/tcl-adlb.c
 
-TURBINE_SRC += $(TCL_ADLB_SRC)
-
-TCL_ADLB_OBJS := $(patsubst %.c, %.o, $(TCL_ADLB_SRC))
-
-TCL_ADLB_SO = lib/libtcladlb.so
-
-tcl_adlb: $(TCL_ADLB_SO)
-
-$(TCL_ADLB_SO): $(TCL_ADLB_OBJS) $(TCL_TURBINE_SO)
-	$(Q) "  LINK		$(@)"
-	$(E) $(CC) -shared -o $(@) \
-                 $(TCL_LINK_FLAGS) \
-                 $(TCL_ADLB_OBJS) \
-                 $(LDFLAGS) \
-                 -L $(ADLB)/lib -l adlb \
-                 -L lib -l tclturbine \
-                 $(LIB_MPI) \
-                 -Wl,-rpath -Wl,$(INSTALL_LIB) \
-                 -Wl,-rpath -Wl,$(MPI_LIB_DIR)
-
-clean::
-	@rm -fv $(TCL_ADLB_OBJS)

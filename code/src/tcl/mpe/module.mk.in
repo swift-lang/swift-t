@@ -2,27 +2,8 @@
 # MODULE MPE
 
 # Even if MPE is disabled, we compile the mpe.o
-# object (full of noops) and install it
+# object (full of noops)
 
 DIR := src/tcl/mpe
 
 TCL_MPE_SRC := $(DIR)/tcl-mpe.c
-TCL_MPE_OBJS := $(patsubst %.c, %.o, $(TCL_MPE_SRC))
-TCL_MPE_SO = lib/libtclmpe.so
-tcl_mpe: $(TCL_MPE_SO)
-
-# We assume libmpe.so is in the ADLB directory
-$(TCL_MPE_SO): $(TCL_MPE_OBJS) $(TCL_TURBINE_SO)
-	$(Q) "  LINK		$(@)"
-	$(E) $(CC) -shared -o $(@) \
-                 $(TCL_LINK_FLAGS) \
-                 $(TCL_MPE_OBJS) \
-                 $(LDFLAGS) \
-                 $(LIBS) \
-                 -L lib -l tclturbine \
-                 $(LIB_MPI) \
-                 -Wl,-rpath -Wl,$(INSTALL_LIB) \
-                 -Wl,-rpath -Wl,$(MPI_LIB_DIR)
-
-clean::
-	@rm -fv $(TCL_MPE_OBJS)

@@ -3,12 +3,17 @@
 
 set turbine_version $env(TURBINE_VERSION)
 set use_mpe         $env(USE_MPE)
+set use_mac         $env(USE_MAC)
+
+if { [ string equal $use_mac "yes" ] } {
+    set libtclturbine libtclturbine.dylib
+} else {
+    set libtclturbine libtclturbine.so
+}
 
 set metadata [ list -name turbine -version $turbine_version ]
 
-set items [ eval list -load libtcladlb.so   \
-                -load libtclturbine.so \
-                -load libtclmpe.so     \
+set items [ eval list -load $libtclturbine \
                 -source turbine.tcl    \
                 -source engine.tcl     \
                 -source data.tcl       \
@@ -17,7 +22,7 @@ set items [ eval list -load libtcladlb.so   \
                 -source arith.tcl      \
                 -source container.tcl  \
                 -source functions.tcl  \
-                -source files.tcl  \
+                -source files.tcl      \
                 -source mpe.tcl        \
                 -source rand.tcl       \
                 -source stats.tcl      \

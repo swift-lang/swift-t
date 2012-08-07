@@ -10,14 +10,15 @@
 # Defaults:
 # Number of processes
 PROCS=1
-# Use MPI rank line numbering?
-L=
+# Use MPI rank line prefixing?
+LINE_PREFIX_ENABLED=0
+LINE_PREFIX=
 
 while getopts ":ln:" opt
 do
   case $opt in
     l)
-      L="-l"
+      LINE_PREFIX_ENABLED=1
       ;;
     n)
       PROCS=${OPTARG}
@@ -45,23 +46,36 @@ then
   exit 1
 fi
 
-OPTS=
-OPTS+="${L} "
-OPTS+="-n ${PROCS} "
-OPTS+=${TURBINE_LAUNCH_OPTS}
-
 TURBINE_BIN=$( dirname $0 )
 if [[ -z ${TURBINE_HOME} ]]
 then
   TURBINE_HOME=$( cd ${TURBINE_BIN}/.. ; /bin/pwd )
 fi
 
+# Load Turbine configuration settings
 source ${TURBINE_HOME}/scripts/turbine-config.sh
+
 if [[ ${?} != 0 ]]
 then
   echo "turbine: configuration error!"
   exit 1
 fi
+
+if (( ${LINE_PREFIX_ENABLED} ))
+then
+  if [[ ${MPI_IMPL} == "MPICH2" ]]
+  then
+    LINE_PREFIX="-l"
+  elif [[ ${MPI_IMPL} == OpenMPI1.[3-5] ]]
+  then
+    LINE_PREFIX="-tag-output"
+  fi
+fi
+
+OPTS=
+OPTS+="${LINE_PREFIX} "
+OPTS+="-n ${PROCS} "
+OPTS+=${TURBINE_LAUNCH_OPTS}
 
 # Allow user to insert valgrind
 ${TURBINE_LAUNCH} ${OPTS} ${VALGRIND} ${TCLSH} ${PROGRAM} ${ARGS}

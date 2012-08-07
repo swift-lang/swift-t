@@ -1,6 +1,5 @@
 
-TURBINE = lib/libturbine.a
-TURBINE_VERSION = 0.0.4
+TURBINE_VERSION = $(shell cat version.txt )
 
 PACKAGE = lib/pkgIndex.tcl
 
@@ -10,9 +9,7 @@ turbine: $(TURBINE)
 
 package: $(PACKAGE)
 
-TCL_TURBINE_SO := lib/libtclturbine.so
-
-tcl_turbine: $(TCL_TURBINE_SO)
+USE_MAC = @USE_MAC@
 
 INSTALL_PREFIX  = @prefix@
 INSTALL_BIN     = $(INSTALL_PREFIX)/bin
@@ -20,6 +17,31 @@ INSTALL_LIB     = $(INSTALL_PREFIX)/lib
 INSTALL_SCRIPTS = $(INSTALL_PREFIX)/scripts
 INSTALL_EXPORT  = $(INSTALL_PREFIX)/export
 SCRIPTS_SUBMIT  = $(shell find scripts/submit -name "*sh" )
+
+# Shared object suffix is .so on Linux, .dylib on Mac
+# GCC shared library creation argument
+# Linux: -shared; Mac: -dynamiclib
+# Use -flat_namespace on the Mac
+ifeq ($(USE_MAC),no)
+# Linux
+  SO_SUFFIX = so
+  SHARED = -shared
+  MAC_FLAT =
+  MAC_NAME =
+else
+# Mac
+  SO_SUFFIX = dylib
+  MAC_FLAT = -flat_namespace
+  MAC_NAME = -install_name $(INSTALL_LIB)/libtclturbine.dylib
+  SHARED = -dynamiclib $(MAC_FLAT)
+endif
+
+TCL_TURBINE_SO = lib/libtclturbine.$(SO_SUFFIX)
+
+# Used only for testing:
+TURBINE_A = lib/libturbine.a
+
+tcl_turbine: $(TCL_TURBINE_SO)
 
 srcdir = @srcdir@
 
@@ -75,17 +97,17 @@ endif
 ifeq ($(MACHINE),normal)
 	MPI_LIB_DIR = $(MPI)/lib
 	MPI_LIB_NAME = libmpich.so
-	MPI_LIB	= -L $(MPI_LIB_DIR) -l mpich
+	MPI_LIB	= -L$(MPI_LIB_DIR) -l mpich
 endif
 ifeq ($(MACHINE),sicortex)
-	MPI_LIB = -L $(MPI)/lib -l scmpi
+	MPI_LIB = -L$(MPI)/lib -l scmpi
 endif
 ifeq ($(MACHINE),bgp-zeptoos)
 	MPI_LIB =
 endif
 ifeq ($(MACHINE),custom)
 	ifneq ($(MPI_LIB_DIR),0)
-		MPI_LIB += -L $(MPI_LIB_DIR)
+		MPI_LIB += -L$(MPI_LIB_DIR)
 	endif
 	ifneq ($(MPI_LIB_NAME),0)
 		MPI_LIB += -l $(MPI_LIB_NAME)
@@ -96,7 +118,7 @@ LAUNCH = @USE_LAUNCHER@
 
 ADLB = @USE_ADLB@
 ifneq ($(ADLB),0)
-	CFLAGS += -I $(ADLB)/src
+	CFLAGS += -I $(ADLB)/include
 endif
 
 USE_MPE = @USE_MPE@
@@ -111,14 +133,20 @@ CFLAGS += -fPIC
 CFLAGS += -D VALGRIND
 CFLAGS += -D TURBINE_VERSION=\"$(TURBINE_VERSION)\"
 
-LIBS += -L $(C_UTILS)/lib -l exmcutils
-LIBS += -L $(ADLB)/lib -l adlb
+LIBS += -L$(C_UTILS)/lib -l exmcutils
+LIBS += -L$(ADLB)/lib -l adlb
 ifeq ($(USE_MPE),1)
 	LIBS += -l mpe
 endif
 LIBS += $(MPI_LIB)
 
 dirname = $(patsubst %/,%,$(dir $(1)))
+
+RPATHS :=
+RPATHS += -Wl,-rpath -Wl,$(INSTALL_LIB)
+RPATHS += -Wl,-rpath -Wl,$(ADLB)/lib
+RPATHS += -Wl,-rpath -Wl,$(C_UTILS)/lib
+RPATHS += -Wl,-rpath -Wl,$(MPI_LIB_DIR)
 
 DIR :=
 
@@ -132,6 +160,9 @@ include src/tcl/turbine/module.mk
 include src/tcl/mpe/module.mk
 
 include lib/module.mk
+
+TURBINE_SRC += $(TCL_ADLB_SRC)
+TURBINE_SRC += $(TCL_MPE_SRC)
 
 TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC) $(TCL_TURBINE_SRC))
 
@@ -191,22 +222,22 @@ deps_contents.txt:
 
 TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
 
-$(TURBINE): $(TURBINE_OBJS)
+$(TURBINE_A): $(TURBINE_OBJS)
 	$(Q) "  AR		$(@)"
 	$(E) install -d lib
 	$(E) ar rcs $(@) $(TURBINE_OBJS)
 
 $(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_OBJS)
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) -shared -o $(@) \
+	$(E) $(CC) $(SHARED) -o $(@) \
              $(TCL_LINK_FLAGS) \
              $(TCL_TURBINE_OBJS) \
              $(TURBINE_OBJS) \
              $(LDFLAGS) \
              $(LIBS) \
              $(MPI_LIB) \
-             -Wl,-rpath -Wl,$(INSTALL_LIB) \
-             -Wl,-rpath -Wl,$(MPI_LIB_DIR)
+             $(RPATHS) \
+             $(MAC_NAME)
 
 # Test cases in C as objects
 TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC_C))
@@ -230,12 +261,13 @@ tests: $(TEST_BINS)
 test_results: $(TEST_RESULTS)
 
 # Binary executables in the test suite
-$(TEST_BINS): %.x: %.o $(TURBINE) $(C_UTILS_LIB)
+$(TEST_BINS): %.x: %.o install
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(LDFLAGS) $(<) $(TURBINE) \
-        $(LIBS) \
-        -Wl,-rpath -Wl,$(INSTALL_LIB) \
-        -Wl,-rpath -Wl,$(MPI_LIB_DIR) \
+	$(E) $(CC) $(LDFLAGS) $(<) \
+        $(MAC_FLAT) \
+	-L$(INSTALL_LIB) -l tclturbine \
+	$(LIBS) \
+	$(RPATHS) \
 	-o $(@)
 
 # Test result rule for C tests
@@ -257,7 +289,9 @@ $(TEST_BINS): %.x: %.o $(TURBINE) $(C_UTILS_LIB)
 	$(E) mv $(*).tmp $(@)
 
 clean::
-	@rm -fv  $(TURBINE) $(TCL_TURBINE_SO) $(TCL_ADLB_SO)
+	@echo
+	@echo "  CLEAN"
+	@rm -fv  $(TURBINE_A) $(TCL_TURBINE_SO)
 	@rm -fv  $(DEPS) $(TEST_DEPS) deps.txt deps_contents.txt TAGS
 	@rm -fv  $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT)
 	@rm -fv  $(TEST_RESULTS)
@@ -278,6 +312,24 @@ debug_build:
 	@echo TURBINE_OBJS: $(TURBINE_OBJS)
 	@echo TESTS: $(TESTS)
 
+HAVE_CP_U = @CP_U@
+ifeq ($(HAVE_CP_U),yes)
+	CP_ARGS = -uvf
+else
+	CP_ARGS = -vf
+endif
+
+HAVE_CP_PARENTS = @CP_PARENTS@
+ifeq ($(HAVE_CP_PARENTS),yes)
+	CP_PARENTS = cp --parents
+else
+	CP_PARENTS = maint/cp-parents.sh
+endif
+
+TCL_SO       = libtcl8.5.$(SO_SUFFIX)
+EXMCUTILS_SO = libexmcutils.$(SO_SUFFIX)
+ADLB_SO      = libadlb.$(SO_SUFFIX)
+
 install: package
 	@echo
 	$(Q) "  INSTALL: $(INSTALL_PREFIX)"
@@ -287,18 +339,16 @@ install: package
 	$(E) mkdir -pv $(INSTALL_BIN)
 	$(E) mkdir -pv $(INSTALL_SCRIPTS)
 	$(E) mkdir -pv $(INSTALL_EXPORT)
-#       Copy shared objects so that libs are in rpath
-	$(E) cp -uv $(TCL)/lib/libtcl8.5.so        $(INSTALL_LIB)
-	$(E) cp -uv $(C_UTILS)/lib/libexmcutils.so $(INSTALL_LIB)
-	$(E) cp -uv $(ADLB)/lib/libadlb.so         $(INSTALL_LIB)
 #            We assume libmpe.so is in the ADLB directory
 ifeq ($(USE_MPE),1)
-	$(E) cp -uv $(ADLB)/libmpe.so              $(INSTALL_LIB)
+	$(E) cp $(CP_ARGS) $(ADLB)/libmpe.so              $(INSTALL_LIB)
 endif
 #       Copy Turbine items
-	$(E) cp -uv bin/turbine $(INSTALL_BIN)
-	$(E) cp -uv lib/*.tcl lib/*.so $(INSTALL_LIB)
-	$(E) cp -uv scripts/*.zsh scripts/*.sh $(INSTALL_SCRIPTS)
-	$(E) cp -uv --parents $(SCRIPTS_SUBMIT) $(INSTALL_PREFIX)
-	$(E) cp -uv --parents export/*.swift $(INSTALL_PREFIX)
-	$(E) cp -uv --parents export/**/*.swift $(INSTALL_PREFIX)
+	$(E) cp $(CP_ARGS) bin/turbine                  $(INSTALL_BIN)
+	$(E) cp $(CP_ARGS) lib/*.tcl                    $(INSTALL_LIB)
+	$(E) cp $(CP_ARGS) lib/*.$(SO_SUFFIX)           $(INSTALL_LIB)
+	$(E) cp $(CP_ARGS) scripts/*.zsh scripts/*.sh   $(INSTALL_SCRIPTS)
+	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS_SUBMIT) $(INSTALL_PREFIX)
+	$(E) $(CP_PARENTS) $(CP_ARGS) export/*.swift    $(INSTALL_PREFIX)
+	$(E) $(CP_PARENTS) $(CP_ARGS) export/**/*.swift $(INSTALL_PREFIX)
+

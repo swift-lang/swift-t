@@ -25,8 +25,8 @@
 #define _GNU_SOURCE
 #define __USE_GNU
 #include <string.h>
+#include <exm-string.h>
 
-#include <tcl.h>
 #include <adlb.h>
 
 #include <log.h>
@@ -35,6 +35,8 @@
 
 #include "src/tcl/util.h"
 #include "src/util/debug.h"
+
+#include "tcl-adlb.h"
 
 static int adlb_rank;
 /** Number of workers */
@@ -1394,11 +1396,12 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
 #define COMMAND(tcl_function, c_function) \
     Tcl_CreateObjCommand(interp, "adlb::" tcl_function, c_function, \
                          NULL, NULL);
+
 /**
    Called when Tcl loads this extension
  */
 int DLLEXPORT
-Tcladlb_Init(Tcl_Interp *interp)
+Tcladlb_Init(Tcl_Interp* interp)
 {
   if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
     return TCL_ERROR;
@@ -1406,6 +1409,14 @@ Tcladlb_Init(Tcl_Interp *interp)
   if (Tcl_PkgProvide(interp, "ADLB", "0.1") == TCL_ERROR)
     return TCL_ERROR;
 
+  tcl_adlb_init(interp);
+
+  return TCL_OK;
+}
+
+void
+tcl_adlb_init(Tcl_Interp* interp)
+{
   COMMAND("init",      ADLB_Init_Cmd);
   COMMAND("server",    ADLB_Server_Cmd);
   COMMAND("rank",      ADLB_Rank_Cmd);
@@ -1440,6 +1451,4 @@ Tcladlb_Init(Tcl_Interp *interp)
   COMMAND("container_size",      ADLB_Container_Size_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
-
-  return TCL_OK;
 }
