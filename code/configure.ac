@@ -33,20 +33,22 @@ AC_PROG_CC
 # We prefer to use cp -u for installation
 AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
             [AC_PATH_PROGS_FEATURE_CHECK([CP_U], [cp],
-              [[cp_u_out=`cp -u /dev/null /dev/stdout > /dev/null 2>&1`
+              [[cp_u_out=`cp -u /dev/null /dev/stdout 2>&1 | cat > /dev/null`
                 test "$?" = 0 \
-                && ac_cv_path_cp_u=yes]],
+                && ac_cv_path_cp_u=yes || ac_cv_path_cp_u=no ]],
               [])])
-          AC_SUBST([CP_U], [$ac_cv_path_cp_u])
+AC_SUBST([CP_U], [$ac_cv_path_cp_u])
 
 # We prefer to use cp --parents for installation
-AC_CACHE_CHECK([for cp that supports --parents], [ac_cv_path_cp_u],
+AC_CACHE_CHECK([for cp that supports --parents], [ac_cv_path_cp_parents],
             [AC_PATH_PROGS_FEATURE_CHECK([CP_PARENTS], [cp],
               [[cp_parents_out=`cp --parents /dev/null . > /dev/null 2>&1`
                 test "$?" = 0 \
-                && ac_cv_path_cp_parents=yes ]],
+                && ac_cv_path_cp_parents=yes || ac_cv_path_cp_parents=no ]],
               [])])
-          AC_SUBST([CP_PARENTS], [$ac_cv_path_cp_parents])
+# If cp --parents succeeded, we have a directory to remove
+[[ -d dev ]] && rm -r dev
+AC_SUBST([CP_PARENTS], [$ac_cv_path_cp_parents])
 
 # Checks for headers
 AC_CHECK_HEADERS([stddef.h sys/param.h sys/time.h])
