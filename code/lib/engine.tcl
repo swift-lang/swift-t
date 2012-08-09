@@ -81,12 +81,12 @@ namespace eval turbine {
                 eval $command
             }
             2 { # $turbine::CONTROL
-                adlb::put $adlb::ANY $WORK_TYPE(CONTROL) \
+                adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
                     "command priority: $turbine::priority $command" \
                     $turbine::priority
             }
             3 { # $turbine::WORK
-                adlb::put $adlb::ANY $WORK_TYPE(WORK) \
+                adlb::put $adlb::RANK_ANY $WORK_TYPE(WORK) \
                     "$transform $command" $turbine::priority
             }
             default {
