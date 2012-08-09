@@ -83,7 +83,7 @@ LIBS = -l exmcutils
 
 RPATHS = -Wl,-rpath -Wl,$(C_UTILS)/lib
 
-ADLB_RPATH = -Wl,-rpath -Wl,$(PWD)
+ADLB_RPATH = -Wl,-rpath -Wl,$(INSTALL_LIB)
 
 OBJS     = src/xq.o src/data.o
 # Objects with No Logging
@@ -108,8 +108,8 @@ endif
 .c.mo:
 	$(CC) $(CFLAGS_MPILOG) -c -o $*.mo $<
 
-apps/%.x: apps/%.o install
-	$(CC) $(CFLAGS) $(MAC_FLAT) -o $(@) $(<) $(LIBDIRS) $(LDFLAGS) $(RPATHS) $(LIBS) -l adlb -lm
+apps/%.x: install apps/%.o
+	$(CC) $(CFLAGS) $(MAC_FLAT) -o $(@) $(<) $(LIBDIRS) $(LDFLAGS) $(ADLB_RPATH) $(RPATHS) $(LIBS) -l adlb -lm
 
 lib/$(ADLB_A): $(OBJS)
 	$(Q) "  AR		$(@)"
