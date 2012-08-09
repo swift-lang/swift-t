@@ -21,6 +21,17 @@ then
   exit 1
 fi
 
+if [[ ${TURBINE_HOME} != "" ]]
+then
+  TURBINE=${TURBINE_HOME}/bin/turbine
+  if [[ ! -x ${TURBINE} ]]
+  then
+    print "Bad TURBINE_HOME!"
+    print "Not executable: ${TURBINE}"
+    exit 1
+  fi
+fi
+
 if [[ ${TURBINE} == "" ]]
   then
   TURBINE=$( which turbine )
