@@ -45,7 +45,7 @@ proc do_client {argc argv} {
             gets $fd line
             set line [ string trimright $line ]
             if { [ string length $line ] } {
-                adlb::put $adlb::ANY $WORK_TYPE(CMDLINE) $line 0
+                adlb::put $adlb::RANK_ANY $WORK_TYPE(CMDLINE) $line 0
             }
             if { [ eof $fd ] } {
                 close $fd

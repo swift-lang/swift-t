@@ -8,8 +8,8 @@ OUTPUT=${THIS%.sh}.out
 
 mkdir tests/data
 
-turbine -l -n 4 ${VALGRIND} ${SCRIPT} \
-                  tests/batcher.txt >& ${OUTPUT}
+bin/turbine -l -n 4 ${VALGRIND} ${SCRIPT} \
+                    tests/batcher.txt >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
 LINES=$( ls tests/data/{1..4}.txt | wc -l )
