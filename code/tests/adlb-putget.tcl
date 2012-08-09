@@ -24,15 +24,20 @@ if { $amserver == 0 } {
 
     set rank [ adlb::rank ]
     if { $rank == 0 } {
-        adlb::put $adlb::ANY $WORK_TYPE(T) "hello" 0
-    } else {
+        puts "clock: [ clock seconds ]"
+        adlb::put $adlb::RANK_ANY $WORK_TYPE(T) "hello0" 0
+        puts "clock: [ clock seconds ]"
+    }
+    while 1 {
+        puts "clock: [ clock seconds ]"
         set msg [ adlb::get $WORK_TYPE(T) answer_rank ]
-        puts "answer_rank: $answer_rank"
-        puts "msg: $msg"
+        puts "msg: '$msg'"
+        if { [ string length $msg ] == 0 } break
     }
 } else {
     adlb::server
 }
 
+puts "finalizing..."
 adlb::finalize
 puts OK
