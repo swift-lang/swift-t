@@ -1,5 +1,9 @@
 #!/bin/zsh
 
+# STC RUN-TESTS
+
+# See About.txt for notes
+
 # Defaults
 EXIT_ON_FAIL=1
 MAX_TESTS=-1 # by default, unlimited
