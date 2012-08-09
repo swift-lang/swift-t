@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -25,6 +26,7 @@
 #define ADLB_NO_CURRENT_WORK    (-999999997)
 #define ADLB_PUT_REJECTED       (-999999996)
 #define ADLB_LOWEST_PRIO        (-999999999)
+#define ADLB_RANK_ANY (-1)
 
 /* for Info_get;  MUST match adlbf.h  */
 #define ADLB_INFO_MALLOC_HWM               1
