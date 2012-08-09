@@ -289,6 +289,8 @@ AC_ARG_WITH(adlb,
                  ])
 AC_SUBST(USE_ADLB)
 
+USE_TCL=unknown
+USE_TCL_LIB_DIR=0
 AC_ARG_WITH(tcl,
                  AS_HELP_STRING(
                     [--with-tcl],
@@ -306,7 +308,9 @@ AC_ARG_WITH(tcl,
                   AC_MSG_WARN([Not found: Tcl])
                   USE_TCL=0
                  ])
+USE_TCL_LIB_DIR=${USE_TCL}/lib
 AC_SUBST(USE_TCL)
+AC_SUBST(USE_TCL_LIB_DIR)
 
 USE_TCLSH=$( maint/find-tcl.zsh ${USE_TCL} )
 if [[ ${?} != 0 ]]
