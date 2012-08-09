@@ -59,15 +59,12 @@ static int mpi_rank = -1;
 /** Communicator for ADLB workers */
 static MPI_Comm worker_comm;
 
-/** ADLB uses -1 to mean "any" in ADLB_Put() and ADLB_Reserve() */
-#define ADLB_ANY -1
-
 static char xfer[ADLB_DATA_MAX];
 
 /** Map from TD to local blob pointers */
 static struct table_lp blob_cache;
 
-void set_namespace_constants(Tcl_Interp* interp);
+static void set_namespace_constants(Tcl_Interp* interp);
 
 /**
    usage: adlb::init <servers> <types>
@@ -137,11 +134,11 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-void
+static void
 set_namespace_constants(Tcl_Interp* interp)
 {
   tcl_set_integer(interp, "::adlb::SUCCESS",   ADLB_SUCCESS);
-  tcl_set_integer(interp, "::adlb::ANY",       ADLB_ANY);
+  tcl_set_integer(interp, "::adlb::RANK_ANY",  ADLB_RANK_ANY);
   tcl_set_integer(interp, "::adlb::INTEGER",   ADLB_DATA_TYPE_INTEGER);
   tcl_set_integer(interp, "::adlb::FLOAT",     ADLB_DATA_TYPE_FLOAT);
   tcl_set_integer(interp, "::adlb::STRING",    ADLB_DATA_TYPE_STRING);
@@ -305,36 +302,36 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 #ifdef USE_ADLB
 
-
   int req_types[4];
   int work_prio;
 
   req_types[0] = req_type;
   req_types[1] = req_types[2] = req_types[3] = -1;
 
-  // puts("enter reserve");
+  DEBUG_ADLB("enter reserve: type=%i\n", req_types[0]);
   rc = ADLB_Reserve(req_types, &work_type, &work_prio,
                     work_handle, &work_len, &answer_rank);
-  // puts("exit reserve");
+  DEBUG_ADLB("exit reserve\n");
   if (rc == ADLB_DONE_BY_EXHAUSTION)
   {
-    DEBUG("ADLB_DONE_BY_EXHAUSTION!");
+    DEBUG_ADLB("ADLB_DONE_BY_EXHAUSTION!");
     result[0] = '\0';
   }
   else if (rc == ADLB_NO_MORE_WORK ) {
-    DEBUG("ADLB_NO_MORE_WORK!");
+    DEBUG_ADLB("ADLB_NO_MORE_WORK!");
     result[0] = '\0';
   }
   else if (rc == ADLB_NO_CURRENT_WORK) {
-    DEBUG("ADLB_NO_CURRENT_WORK");
+    DEBUG_ADLB("ADLB_NO_CURRENT_WORK");
     result[0] = '\0';
   }
   else if (rc < 0) {
-    DEBUG("rc < 0");
+    DEBUG_ADLB("rc < 0");
     result[0] = '\0';
   }
   else
   {
+    DEBUG_ADLB("work is reserved.");
     rc = ADLB_Get_reserved(result, work_handle);
     if (rc == ADLB_NO_MORE_WORK)
     {
