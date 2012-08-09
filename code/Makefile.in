@@ -68,10 +68,6 @@ CFLAGS := @CFLAGS@
 CFLAGS += -I .
 # CFLAGS += additional system includes here
 
-# Set library locations
-LDFLAGS = @LDFLAGS@
-# LDFLAGS += additional system libs here
-
 C_UTILS = @USE_C_UTILS@
 
 TCL := @USE_TCL@
@@ -133,8 +129,10 @@ CFLAGS += -fPIC
 CFLAGS += -D VALGRIND
 CFLAGS += -D TURBINE_VERSION=\"$(TURBINE_VERSION)\"
 
-LIBS += -L$(C_UTILS)/lib -l exmcutils
+# LIBS: links to ADLB, c-utils, MPE, and MPI
+LIBS :=
 LIBS += -L$(ADLB)/lib -l adlb
+LIBS += -L$(C_UTILS)/lib -l exmcutils
 ifeq ($(USE_MPE),1)
 	LIBS += -l mpe
 endif
@@ -147,6 +145,7 @@ RPATHS += -Wl,-rpath -Wl,$(INSTALL_LIB)
 RPATHS += -Wl,-rpath -Wl,$(ADLB)/lib
 RPATHS += -Wl,-rpath -Wl,$(C_UTILS)/lib
 RPATHS += -Wl,-rpath -Wl,$(MPI_LIB_DIR)
+RPATHS += -Wl,-rpath -Wl,$(TCL_LIB_DIR)
 
 DIR :=
 
@@ -229,13 +228,13 @@ $(TURBINE_A): $(TURBINE_OBJS)
 
 $(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_OBJS)
 	$(Q) "  LINK		$(@)"
+	echo HOWDY
+	echo $(TCL_LINK_FLAGS)
 	$(E) $(CC) $(SHARED) -o $(@) \
-             $(TCL_LINK_FLAGS) \
              $(TCL_TURBINE_OBJS) \
              $(TURBINE_OBJS) \
-             $(LDFLAGS) \
+             $(TCL_LINK_FLAGS) \
              $(LIBS) \
-             $(MPI_LIB) \
              $(RPATHS) \
              $(MAC_NAME)
 
@@ -263,7 +262,7 @@ test_results: $(TEST_RESULTS)
 # Binary executables in the test suite
 $(TEST_BINS): %.x: %.o install
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(LDFLAGS) $(<) \
+	$(E) $(CC) $(<) \
         $(MAC_FLAT) \
 	-L$(INSTALL_LIB) -l tclturbine \
 	$(LIBS) \
