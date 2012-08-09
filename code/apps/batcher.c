@@ -8,6 +8,15 @@
 
 #define CMDLINE 1
 
+static void
+chomp(char* s)
+{
+  char* c = strchr(s, '\n');
+  if (c == NULL)
+    return;
+  *c = '\0';
+}
+
 int main(int argc, char *argv[])
 {
   FILE *fp;
@@ -80,6 +89,7 @@ int main(int argc, char *argv[])
 
       while (fgets(cmdbuffer,1024,fp) != NULL) {
 	cmdbuffer[strlen(cmdbuffer)] = '\0';
+	chomp(cmdbuffer);
         if (!quiet)
           printf("command = %s\n", cmdbuffer);
 
