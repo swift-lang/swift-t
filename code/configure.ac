@@ -238,6 +238,7 @@ AC_SUBST(USE_MPI)
 
 (( ${MPI_SET} )) || AC_MSG_ERROR([Insufficient MPI settings!])
 
+# Discover MPI implementation:
 # MPI_IMPL will be unknown, OpenMPI, or MPICH2
 MPI_IMPL=unknown
 if [[ ${USE_MPI_INCLUDE} != 0 ]]
