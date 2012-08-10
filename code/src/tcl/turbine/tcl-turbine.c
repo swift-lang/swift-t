@@ -23,6 +23,7 @@
 #include "src/tcl/turbine/tcl-turbine.h"
 
 #include "src/tcl/adlb/tcl-adlb.h"
+#include "src/tcl/mpe/tcl-mpe.h"
 
 /**
    @see TURBINE_CHECK
@@ -425,6 +426,7 @@ Tclturbine_Init(Tcl_Interp* interp)
     return TCL_ERROR;
 
   tcl_adlb_init(interp);
+  tcl_mpe_init(interp);
 
   COMMAND("init",      Turbine_Init_Cmd);
   COMMAND("version",   Turbine_Version_Cmd);

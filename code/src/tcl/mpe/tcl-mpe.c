@@ -15,6 +15,8 @@
 
 #include <tcl.h>
 
+#include "tcl-mpe.h"
+
 #if USE_MPE
 
 #include <adlb.h>
@@ -142,10 +144,13 @@ Tclmpe_Init(Tcl_Interp *interp)
   if (Tcl_PkgProvide(interp, "MPE", "0.1") == TCL_ERROR)
     return TCL_ERROR;
 
+  return TCL_OK;
+}
+
+void
+tcl_mpe_init(Tcl_Interp* interp)
+{
   COMMAND("create_pair", MPE_Create_Pair_Cmd);
   COMMAND("create_solo", MPE_Create_Solo_Cmd);
-
   COMMAND("log", MPE_Log_Cmd);
-
-  return TCL_OK;
 }
