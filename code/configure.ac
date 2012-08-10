@@ -22,18 +22,19 @@ AC_PROG_RANLIB
 AC_ARG_ENABLE(mpe,
         [--enable-mpe - Enable MPE. The default is disabled.],
         enable_mpe=yes , )
-if test "$enable_checkMPE" = "yes" ; then
-    ADLB_ENABLE_MPE=yes
+if test "$enable_mpe" = "yes" ; then
+    ENABLE_MPE=yes
 else
-    ADLB_ENABLE_MPE=no
+    ENABLE_MPE=no
 fi
 
-if test "$ADLB_ENABLE_MPE" = "yes" ; then
+if test "$ENABLE_MPE" = "yes" ; then
     AC_MSG_CHECKING( [for the MPE compiler flags] )
     MPILOG_FLAG="-mpe=mpilog"
     LOG_FLAG="-mpe=log"
     savedCFLAGS="$CFLAGS"
     CFLAGS="$CFLAGS $MPILOG_FLAG"
+    AC_MSG_CHECKING([MPE]);
     AC_LINK_IFELSE([AC_LANG_PROGRAM([#include "mpe.h"],[MPE_Init_log();])],
                    adlb_ok=yes,adlb_ok=no)
     CFLAGS="$savedCFLAGS"
@@ -52,7 +53,7 @@ if test "$ADLB_ENABLE_MPE" = "yes" ; then
         else
             MPILOG_FLAG=""
             LOG_FLAG=""
-            ADLB_ENABLE_MPE=no
+            ENABLE_MPE=no
             AC_MSG_RESULT([none])
             dnl If there isn't any MPE compiler flag,
             dnl should check for mpe.h, -llmpe and -lmpe.
@@ -63,7 +64,7 @@ else
 fi
 AC_SUBST(MPILOG_FLAG)
 AC_SUBST(LOG_FLAG)
-AC_SUBST(ADLB_ENABLE_MPE)
+AC_SUBST(ENABLE_MPE)
 
 AC_ARG_ENABLE(fast,
               AS_HELP_STRING(

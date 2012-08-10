@@ -53,7 +53,7 @@ ifeq ($(USE_XLC),1)
 #       Using IBM XLC
         PIC = -qpic
         STD =
-        SHARED = -qnostaticlink
+        SHARED = -qnostaticlink -qmkshrobj
 else
 ifeq ($(USE_MAC),yes)
 #       Mac
@@ -91,7 +91,7 @@ NLOBJS   = src/adlb_prof.o  src/adlb.o
 # Objects with MPE Logging
 MLOBJS   = src/adlb_prof.mo src/adlb.mo
 
-ENABLE_MPE = @ADLB_ENABLE_MPE@
+ENABLE_MPE = @ENABLE_MPE@
 
 ifeq ($(BUILD_LOGGING),1)
 	CFLAGS += -D ENABLE_MPE
@@ -120,7 +120,7 @@ lib/$(ADLB_A): $(OBJS)
 lib/$(ADLB_SO): $(OBJS) $(NLOBJS)
 	$(Q) "  LINK		$(@)"
 	$(E) mkdir -p lib
-	$(E) $(CC) $(SHARED) -o $(@) -fPIC $(NLOBJS) $(OBJS) \
+	$(E) $(CC) $(SHARED) -o $(@) $(PIC) $(NLOBJS) $(OBJS) \
         $(MAC_NAME) \
 	-L$(C_UTILS)/lib \
         -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils
@@ -140,10 +140,18 @@ libmladlb.a: $(MLOBJS)
 	$(AR) $(ARFLAGS) $@ $(MLOBJS)
 	$(RANLIB) $@
 
-libmladlb.so: $(OBJS) $(MLOBJS)
-	mpicc $(SHARED) -o $(@) -fPIC $(MLOBJS) $(OBJS) \
-	-L $(C_UTILS)/lib -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils \
-        -L . -l mpe -Wl,-rpath -Wl,$(PWD)
+lib/libmladlb.so: $(OBJS) $(MLOBJS)
+	$(Q) "  LINK		$(@)"
+	$(E) mkdir -p lib
+	$(E) $(CC) $(SHARED) -o $(@) $(PIC) $(OBJS) $(MLOBJS) \
+        $(MAC_NAME) \
+	-L$(C_UTILS)/lib \
+        -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils \
+	$(LDFLAGS)
+
+	# mpicc $(SHARED) -o $(@) -fPIC $(MLOBJS) $(OBJS) \
+	# -L $(C_UTILS)/lib -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils \
+        # -L . -l mpe -Wl,-rpath -Wl,$(PWD)
 
 clean:
 	@rm -fv $(OBJS) $(NLOBJS) $(ELOBJS) $(MLOBJS) $(ADLB)
@@ -155,3 +163,6 @@ install: lib/$(ADLB_SO)
 	cp -v src/adlb-defs.h $(INSTALL_INCLUDE)
 	cp -v src/xq.h $(INSTALL_INCLUDE)
 	cp -v lib/$(ADLB_SO) $(INSTALL_LIB)
+ifeq ($(ENABLE_MPE),yes)
+	cp -v libmpe.so $(INSTALL_LIB)
+endif
