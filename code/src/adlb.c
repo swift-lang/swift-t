@@ -4756,7 +4756,7 @@ static void print_proc_self_status()
 }
 
 /*
-static void cblog(int flag, int for_rank, char *fmt, ...)  /* circ buff log
+static void cblog(int flag, int for_rank, char *fmt, ...)  // circ buff log
 {
     char *s;
     va_list ap;
