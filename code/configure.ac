@@ -251,12 +251,12 @@ else
    MPI_H=${USE_MPI}/include/mpi.h
 fi
 AC_MSG_CHECKING([checking MPI implementation in ${MPI_H} ])
-if grep -q OMPI_MPI_H ${MPI_H}
+if grep -q OMPI_MPI_H ${MPI_H} > /dev/null 2>&1
 then
    OMPI_MINOR_VERSION=$( grep OMPI_MINOR_VERSION ${MPI_H} | \
                          head -1 | cut -d ' ' -f 3 )
    MPI_IMPL=OpenMPI_1.${OMPI_MINOR_VERSION}
-elif grep -q MPICH_NAME ${MPI_H}
+elif grep -q MPICH_NAME ${MPI_H} > /dev/null 2>&1
 then
    MPI_IMPL=MPICH2
 fi
