@@ -2,6 +2,7 @@
 # BASH-formatted setup script processed by turbine/configure
 
 TURBINE_HOME=@prefix@
+TURBINE_VERSION=@TURBINE_VERSION@
 export C_UTILS=@USE_C_UTILS@
 export TCL=@USE_TCL@
 export TCLSH=@USE_TCLSH@

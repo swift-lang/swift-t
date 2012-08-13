@@ -14,6 +14,10 @@ AC_INIT([Turbine], [0.1], [wozniak@mcs.anl.gov])
 AC_CONFIG_SRCDIR([src/turbine/turbine.c])
 AC_CONFIG_HEADERS([config.h])
 
+TURBINE_VERSION=$( cat version.txt )
+AC_MSG_RESULT([Turbine version: ${TURBINE_VERSION}])
+AC_SUBST(TURBINE_VERSION)
+
 [[ ${prefix} != ${PWD} ]] ||
   AC_MSG_ERROR([Your --prefix should not be the same as PWD: $PWD])
 

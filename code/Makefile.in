@@ -1,5 +1,5 @@
 
-TURBINE_VERSION = $(shell cat version.txt )
+TURBINE_VERSION = @TURBINE_VERSION@
 
 PACKAGE = lib/pkgIndex.tcl
 
