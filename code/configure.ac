@@ -130,8 +130,6 @@ AC_ARG_ENABLE(custom,
                         MPI_SET=1
                  ],
                  [])
-AC_SUBST(USE_MACHINE)
-AC_SUBST(USE_LAUNCHER)
 
 # Defaults: do not use custom MPI include, lib locations
 USE_MPI_INCLUDE=0
@@ -234,6 +232,7 @@ AC_ARG_WITH(mpi,
                   AC_MSG_RESULT([using MPI in $withval])
                   MPI_SET=1
                   USE_MPI=$withval
+                  USE_LAUNCHER=${USE_MPI}/bin/mpiexec
                  ],
                  [
                   USE_MPI=0
@@ -263,6 +262,9 @@ then
 fi
 AC_MSG_RESULT([${MPI_IMPL}])
 AC_SUBST(MPI_IMPL)
+
+AC_SUBST(USE_MACHINE)
+AC_SUBST(USE_LAUNCHER)
 
 # We assume the libmpe.so is in the ADLB directory
 # See Turbine - Build for explanation
