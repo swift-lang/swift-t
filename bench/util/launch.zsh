@@ -28,7 +28,6 @@ case ${MODE}
       -n ${PROCS} ${PROGRAM_TCL} ${=COMMAND}
     exitcode "turbine-cobalt failed!"
     read OUTPUT_DIR < ${OUTPUT_TOKEN_FILE}
-    declare OUTPUT_DIR
     rm ${OUTPUT_TOKEN_FILE}
     OUTPUT=$( ls ${OUTPUT_DIR}/*.output )
     ;;

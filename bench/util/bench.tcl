@@ -17,17 +17,21 @@ namespace eval bench {
 
         variable mpe_ready
         variable event
-        set event_names [ list metadata debug set1 set1rA set1rB sum ]
+        set event_names_solo [ list metadata debug ]
+        set event_names_pair [ list set1 set1rA set1rB sum ]
 
         if { ! [ info exists mpe_ready ] } {
 
-            foreach e $event_names {
-                set L [ mpe::create $e ]
+            foreach e $event_names_solo {
+                set event($e) [ mpe::create_solo $e ]
+            }
+
+            foreach e $event_names_pair {
+                set L [ mpe::create_pair $e ]
                 set event(start_$e) [ lindex $L 0 ]
                 set event(stop_$e)  [ lindex $L 1 ]
-
-                set mpe_ready 1
             }
+            set mpe_ready 1
         }
     }
 
@@ -43,8 +47,8 @@ namespace eval bench {
         variable event
         mpe_setup
 
-        set message_value [ turbine::get_string $message ]
-        mpe::log $event(start_metadata) "$message_value"
+        set message_value [ turbine::retrieve_string $message ]
+        mpe::log $event(metadata) "$message_value"
     }
 
     # usage: set1_float no_stack result delay
@@ -59,11 +63,11 @@ namespace eval bench {
         variable event
 
         mpe_setup
-        set delay_value [ get_float $delay ]
+        set delay_value [ retrieve_float $delay ]
         mpe::log $event(start_set1)
         after [ expr round($delay_value) ]
         mpe::log $event(stop_set1)
-        set_integer $result 1
+        store_integer $result 1
     }
 
     # usage: set1_integer no_stack result delay
@@ -74,9 +78,9 @@ namespace eval bench {
     }
 
     proc set1_integer_body { result delay } {
-        set delay_value [ get_integer $delay ]
+        set delay_value [ retrieve_integer $delay ]
         after $delay_value
-        set_integer $result 1
+        store_integer $result 1
     }
 
     # usage: set1_integer no_stack result delay
@@ -90,7 +94,7 @@ namespace eval bench {
 
         variable event
         mpe_setup
-        set delay_value [ get_integer $delay ]
+        set delay_value [ retrieve_integer $delay ]
         mpe::log $event(start_set1rA)
         # randomized delay value: rdv
         set rdv [ expr rand() * $delay_value ]
@@ -98,7 +102,7 @@ namespace eval bench {
         mpe::log $event(start_debug) "after:$rdv"
         after $rdv
         mpe::log $event(stop_set1rA)
-        set_integer $result 1
+        store_integer $result 1
     }
 
     # usage: set1_integer no_stack result delay
@@ -112,34 +116,36 @@ namespace eval bench {
 
         variable event
         mpe_setup
-        set delay_value [ get_integer $delay ]
+        set delay_value [ retrieve_integer $delay ]
         # randomized delay value: rdv
         set rdv [ expr rand() * $delay_value ]
         set rdv [ expr round($rdv) ]
         mpe::log $event(start_set1rB)
         after $rdv
         mpe::log $event(stop_set1rB)
-        set_integer $result 1
+        store_integer $result 1
     }
 
     # usage: set1_integer no_stack result delay
     # delay in milliseconds: rounded to nearest whole millisecond
-    proc add3 { stack result inputs } {
-        set x [ lindex $inputs 0 ]
-        set y [ lindex $inputs 1 ]
-        set z [ lindex $inputs 2 ]
-        turbine::rule "add3-$result" "$x $y $z" $turbine::WORK \
-            "bench::add3_body $result $x $y $z"
+    proc add4 { stack result inputs } {
+        set w [ lindex $inputs 0 ]
+        set x [ lindex $inputs 1 ]
+        set y [ lindex $inputs 2 ]
+        set z [ lindex $inputs 3 ]
+        turbine::rule "add4-$result" "$w $x $y $z" $turbine::WORK \
+            "bench::add4_body $result $w $x $y $z"
     }
 
-    proc add3_body { result x y z } {
-        set x_value [ get_integer $x ]
-        set y_value [ get_integer $y ]
-        set z_value [ get_integer $z ]
-        set r [ expr $x_value + $y_value + $z_value ]
-        set_integer $result $r
-    }
+    proc add4_body { result w x y z } {
+        set w_value [ retrieve_integer $w ]
+        set x_value [ retrieve_integer $x ]
+        set y_value [ retrieve_integer $y ]
+        set z_value [ retrieve_integer $z ]
 
+        set r [ expr $w_value + $x_value + $y_value + $z_value ]
+        store_integer $result $r
+    }
 
     # Sum all of the values in a container of integers
     # inputs: [ list c r ]
@@ -173,7 +179,7 @@ namespace eval bench {
             #puts "turbine_id: $turbine_id"
             if { [ adlb::exists $turbine_id ] } {
                 # add to the sum
-                set val [ get_integer $turbine_id ]
+                set val [ retrieve_integer $turbine_id ]
                 #puts "C\[$i\] = $val"
                 set accum [ expr $accum + $val ]
                 incr i
@@ -188,7 +194,7 @@ namespace eval bench {
           }
         }
         # If we get out of loop, we're done
-        set_integer $result $accum
+        store_integer $result $accum
         mpe::log $event(stop_sum)
     }
 }
