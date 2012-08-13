@@ -4,14 +4,14 @@ PROGRAM_SWIFT="foreach.swift"
 PROGRAM_TCL=${PROGRAM_SWIFT%.swift}.tcl
 
 # Benchmark parameters
-PROCS=${PROCS:-4}
+PROCS=${PROCS:-256}
 CONTROL=${CONTROL:-2}
 export TURBINE_ENGINES=$(( PROCS / CONTROL / 2 ))
 export ADLB_SERVERS=$(( PROCS / CONTROL / 2 ))
 TURBINE_WORKERS=$(( PROCS - TURBINE_ENGINES - ADLB_SERVERS ))
 N=${N:-1000}
 # Delay in milliseconds
-DELAY=${DELAY:-0}
+DELAY=${DELAY:-10000}
 
 # Load common features
 
@@ -52,12 +52,13 @@ declare TURBINE_HOME BENCH_UTIL
 declare N DELAY
 
 # Run stc if necessary
-compile ${PROGRAM_SWIFT} ${PROGRAM_TCL}
+stc -u ${PROGRAM_SWIFT} ${PROGRAM_TCL}
+exitcode
 
 COMMAND="foreach.tcl --N=${N} --delay=${DELAY}"
 
 source ${BENCH_UTIL}/launch.zsh
-[[ ${?} == 0 ]] || return 1
+exitcode
 
 # Start processing output
 
