@@ -144,11 +144,26 @@ verbose()
   fi
 }
 
+set_turbine_home()
+{
+  if [[ -z ${TURBINE_HOME} ]]
+  then
+  # Try to find turbine in PATH
+    TURBINE=$( which turbine )
+    if [[ ${?} == 0 ]]
+    then
+      TURBINE_HOME=$( cd $( dirname ${TURBINE} )/.. ; /bin/pwd )
+    fi
+  fi
+}
+
 report_version()
 {
   print "STC: Swift-Turbine Compiler"
   printf "\t for Turbine: "
   cat ${PARSER_HOME}/turbine-version.txt
+  set_turbine_home
+  print "TURBINE_HOME=${TURBINE_HOME}"
   exit 0
 }
 
@@ -291,15 +306,7 @@ then
 fi
 
 # Find Turbine (for include path)
-if [[ -z ${TURBINE_HOME} ]]
-then
-  # Try to find turbine in PATH
-  TURBINE=$( which turbine )
-  if [[ ${?} == 0 ]]
-  then
-    TURBINE_HOME=$( cd $( dirname ${TURBINE} )/.. ; /bin/pwd )
-  fi
-fi
+set_turbine_home
 
 if [[ -z ${TURBINE_HOME} ]]
 then
