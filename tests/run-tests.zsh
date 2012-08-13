@@ -44,19 +44,17 @@ do
     T)
       ADDTL_STC_ARGS+="-T${OPTARG}"
       ;;
-    v)
+    V)
       VERBOSE=1
       ;;
     O)
       STC_OPT_LEVEL=${OPTARG}
+      ;;
+    *)
+      # ZSH already prints an error message
+      exit 1
   esac
 done
-
-if [[ ${OPTION} == ":" ]]
-then
-  print "run-tests: arguments error!"
-  exit 1
-fi
 
 if (( VERBOSE ))
 then
