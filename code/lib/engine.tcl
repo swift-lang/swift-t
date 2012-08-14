@@ -70,7 +70,7 @@ namespace eval turbine {
     proc release { transform action } {
 
 	variable stats
-	dict incr stats tasks_released
+	# dict incr stats tasks_released
 
         global WORK_TYPE
         set type    [ lindex $action 0 ]
@@ -108,7 +108,7 @@ namespace eval turbine {
         # show header
         switch $header {
             command {
-		dict incr stats tasks_run
+		# dict incr stats tasks_run
                 set command [ lrange $msg 1 end ]
                 if { [ string equal [ lindex $command 0 ] \
                                     "priority:" ] } {
@@ -161,7 +161,7 @@ namespace eval turbine {
         debug "work: $command"
 
 	variable stats
-	dict incr stats tasks_run
+	# dict incr stats tasks_run
 
         debug "eval: $command"
 

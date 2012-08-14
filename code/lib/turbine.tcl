@@ -142,7 +142,7 @@ namespace eval turbine {
 	set rank [ adlb::rank ]
 
 	dict for { key value } $stats {
-	    puts "STATS\[$rank\]: $key $value"
+	    c::log "STATS\[$rank\]: $key $value"
 	}
     }
 
