@@ -3096,11 +3096,13 @@ static int set_reference_and_notify(long id, long value)
   return ADLB_SUCCESS;
 }
 
-static int slot_notification(long id)
+static int
+slot_notification(long id)
 {
   int rc;
   int* waiters;
   int count;
+  DEBUG("slot_notification(%li)", id);
   rc = data_close(id, &waiters, &count);
   if (count > 0)
   {
@@ -3110,26 +3112,37 @@ static int slot_notification(long id)
   return ADLB_SUCCESS;
 }
 
-static int close_notification(long id, int* ranks, int count)
+static int
+close_notification(long id, int* ranks, int count)
 {
   int dummy;
+  DEBUG("close_notification(%li)", id);
   for (int i = 0; i < count; i++)
   {
     char* t;
     int length = asprintf(&t, "close %li", id);
-    put_internal(1,        // work_type CONTROL
-                 1,        // work_prio
-                 -1,       // answer_rank
-                 ranks[i], // target_rank
-                 length+1, // work_len
-                 t,        // work_buf
-                 my_world_rank, // ws_hsr home_server_rank
-                 0,        // batch_flag OFF
-                 0,        // ws_common_len,
-                 -1,       // ws_common_server_rank,
-                 -1,       // ws_common_server_commseqno
-                 &dummy    // exhausted_flag
-    );
+    int to_server_rank = num_app_ranks + (ranks[i] % num_servers);
+    if (to_server_rank == my_world_rank)
+    {
+      put_internal(1,        // work_type CONTROL
+                   1,        // work_prio
+                   -1,       // answer_rank
+                   ranks[i], // target_rank
+                   length+1, // work_len
+                   t,        // work_buf
+                   my_world_rank, // ws_hsr home_server_rank
+                   0,        // batch_flag OFF
+                   0,        // ws_common_len,
+                   -1,       // ws_common_server_rank,
+                   -1,       // ws_common_server_commseqno
+                   &dummy    // exhausted_flag
+                   );
+    }
+    else
+    {
+      ADLB_Put(t, length, ranks[i], -1, 1, 1);
+      free(t);
+    }
   }
   return ADLB_SUCCESS;
 }
