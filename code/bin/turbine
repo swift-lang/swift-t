@@ -7,6 +7,8 @@
 # Usage:
 # turbine [-l] -n <processes> <program.tcl>
 
+# Set TURBINE_LAUNCH_OPTS to pass additional arguments to mpiexec
+
 # Defaults:
 # Number of processes
 PROCS=1
