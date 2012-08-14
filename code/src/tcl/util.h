@@ -28,8 +28,6 @@
     }                                                           \
   }
 
-#define TCL_CHECK(rc) { if (rc != TCL_OK) { return TCL_ERROR; }}
-
 turbine_code turbine_tcl_long_array(Tcl_Interp* interp,
                                     Tcl_Obj* list, int max,
                                     long* output, int* count);
@@ -45,8 +43,17 @@ void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
 
 void tcl_set_integer(Tcl_Interp* interp, char* name, int value);
 
+/*
+   Tcl check follow.  Note that these are disabled by NDEBUG.
+   Thus, they should never do anything in a correct Turbine program.
+ */
+#ifndef NDEBUG
+
+#define TCL_CHECK(rc) { if (rc != TCL_OK) { return TCL_ERROR; }}
+
 /**
    Print error message and return a Tcl error
+   Disabled by NDEBUG
  */
 #define TCL_RETURN_ERROR(format, args...)                        \
   {                                                              \
@@ -56,6 +63,7 @@ void tcl_set_integer(Tcl_Interp* interp, char* name, int value);
 
 /**
    If rc is not TCL_OK, return a Tcl error
+   Disabled by NDEBUG
  */
 #define TCL_CHECK_MSG(rc, format, args...)                        \
   if (rc != TCL_OK) {                                             \
@@ -64,10 +72,20 @@ void tcl_set_integer(Tcl_Interp* interp, char* name, int value);
 
 /**
    If condition is false, return a Tcl error
+   Disabled by NDEBUG
  */
 #define TCL_CONDITION(condition, format, args...)                \
   if (!(condition)) {                                            \
     TCL_RETURN_ERROR(format, ## args);                           \
   }
+
+#else
+
+#define TCL_CHECK(rc) ((void)(rc))
+#define TCL_RETURN_ERROR(format, args...)
+#define TCL_CHECK_MSG(rc, format, args...) ((void)(rc))
+#define TCL_CONDITION(condition, format, args...) ((void)(condition))
+
+#endif
 
 #endif

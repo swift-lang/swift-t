@@ -32,6 +32,7 @@
 #include <log.h>
 
 #include <table_lp.h>
+#include <tools.h>
 
 #include "src/tcl/util.h"
 #include "src/util/debug.h"
@@ -236,9 +237,8 @@ static int
 ADLB_Barrier_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
 {
-  __attribute__((unused)) int rc;
-  rc = MPI_Barrier(MPI_COMM_WORLD);
-  assert(rc == MPI_SUCCESS);
+  int rc = MPI_Barrier(MPI_COMM_WORLD);
+  ASSERT(rc == MPI_SUCCESS);
   return TCL_OK;
 }
 
@@ -264,11 +264,10 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   // int ADLB_Put(void *work_buf, int work_len, int reserve_rank,
   //              int answer_rank, int work_type, int work_prio)
-  __attribute__((unused)) int rc;
-  rc = ADLB_Put(cmd, strlen(cmd)+1, reserve_rank, adlb_rank,
-                work_type, priority);
+  int rc = ADLB_Put(cmd, strlen(cmd)+1, reserve_rank, adlb_rank,
+                    work_type, priority);
 
-  assert(rc == ADLB_SUCCESS);
+  ASSERT(rc == ADLB_SUCCESS);
   return TCL_OK;
 }
 
@@ -659,7 +658,7 @@ retrieve_object(Tcl_Interp *interp, Tcl_Obj *const objv[], long id,
       *result = Tcl_NewStringObj(xfer, length-1);
       break;
     default:
-      result = NULL;
+      *result = NULL;
       return TCL_ERROR;
   }
   return TCL_OK;
@@ -913,9 +912,8 @@ ADLB_Retrieve_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
   memcpy(blob, xfer, length);
 
   // Link the blob into the cache
-  __attribute__((unused)) bool b;
-  b = table_lp_add(&blob_cache, id, blob);
-  assert(b);
+  bool b = table_lp_add(&blob_cache, id, blob);
+  ASSERT(b);
 
   // printf("blob_cache: %p\n", blob);
 
@@ -1199,9 +1197,8 @@ ADLB_Unique_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(1);
 
   long id;
-  __attribute__((unused)) int rc;
-  rc = ADLB_Unique(&id);
-  assert(rc == ADLB_SUCCESS);
+  int rc = ADLB_Unique(&id);
+  ASSERT(rc == ADLB_SUCCESS);
 
   // DEBUG_ADLB("adlb::unique: <%li>", id);
 

@@ -352,7 +352,7 @@ add_to_ready(struct list* tmp)
   while ((T = list_poll(tmp)))
   {
     void* c = table_lp_remove(&transforms_waiting, T->id);
-    assert(c);
+    ASSERT(c != NULL);
     list_add(&transforms_ready, T);
   }
 }
