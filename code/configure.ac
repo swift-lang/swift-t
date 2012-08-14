@@ -3,6 +3,7 @@
 
 # NOTE: Default CFLAGS are "-g -O2"
 # Use ./configure CFLAGS="-g ..." to change the defaults
+#     or --enable-fast
 
 # CONVENTIONS:
 # For a path name value,
@@ -358,6 +359,17 @@ AC_ARG_ENABLE(log,
                  fi
                  ],
                  [])
+# DISABLE_LOG set below:
+
+ENABLE_FAST=
+AC_ARG_ENABLE(fast,
+     [  --enable-fast         Enable NDEBUG, -O3, disable log. ],
+        ENABLE_FAST=1
+        DISABLE_LOG=1
+        CFLAGS="-O3 -DNDEBUG")
+AC_SUBST(ENABLE_FAST)
+AC_SUBST(CFLAGS)
+
 AC_DEFINE_UNQUOTED(DISABLE_LOG,$DISABLE_LOG,[Disables logging])
 
 AC_CONFIG_FILES(
