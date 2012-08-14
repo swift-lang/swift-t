@@ -65,7 +65,8 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(4);
   int amserver, rank, size;
-  int rc;
+
+  __attribute__((unused)) int rc;
   rc = Tcl_GetIntFromObj(interp, objv[1], &amserver);
   assert(rc == TCL_OK);
   rc = Tcl_GetIntFromObj(interp, objv[2], &rank);
