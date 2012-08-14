@@ -228,8 +228,6 @@ $(TURBINE_A): $(TURBINE_OBJS)
 
 $(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_OBJS)
 	$(Q) "  LINK		$(@)"
-	echo HOWDY
-	echo $(TCL_LINK_FLAGS)
 	$(E) $(CC) $(SHARED) -o $(@) \
              $(TCL_TURBINE_OBJS) \
              $(TURBINE_OBJS) \
