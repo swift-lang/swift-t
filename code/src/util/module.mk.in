@@ -5,7 +5,7 @@ TURBINE_SRC += $(shell find $(DIR) -name *.c)
 
 src/util/debug.h: src/util/debug-tokens.tcl src/util/debug-auto.tcl
 	$(Q) "  TCL		$(@)"
-	$(E) $(TCLSH) src/util/debug-auto.tcl
+	$(E) $(TCLSH_LOCAL) src/util/debug-auto.tcl
 
 clean::
 	$(E) rm -fv src/util/debug.h

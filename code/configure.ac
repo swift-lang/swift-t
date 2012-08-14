@@ -81,12 +81,13 @@ AC_ARG_WITH(c-utils,
                     [location of ExM c-utils]),
                    [
                     USE_C_UTILS=0
-                    AC_CHECK_FILE(${withval}/include/c-utils.h,
-                                  [USE_C_UTILS=1], [])
-                    if test "$USE_C_UTILS" = 0 ; then
+                    AC_MSG_CHECKING([${withval}/include/c-utils.h])
+                    [[ -r ${withval}/include/c-utils.h ]] && USE_C_UTILS=1
+                    if [[ ${USE_C_UTILS} == 0 ]]
+                    then
                        AC_MSG_ERROR([Could not find ExM c-utils in $withval])
                     fi
-                    AC_MSG_RESULT([using ExM c-utils in $withval ...])
+                    AC_MSG_RESULT([yes])
                     USE_C_UTILS=$withval
                  ],
                  [
@@ -221,23 +222,29 @@ AC_ARG_WITH(mpi-lib-name,
                  ])
 AC_SUBST(USE_MPI_LIB_NAME)
 
+USE_MPI=1
 AC_ARG_WITH(mpi,
-                 AS_HELP_STRING(
-                    [--with-mpi],
-                    [location of MPI installation]),
-                 [AC_CHECK_FILE(${withval}/lib/lib${MPI_LIB_NAME}.${SO_SUFFIX},
-                  [], [USE_MPI=0])
-                  if test "$USE_MPI" = 0 ; then
-                     AC_MSG_ERROR(Could not find MPI in $withval)
-                  fi
-                  AC_MSG_RESULT([using MPI in $withval])
-                  MPI_SET=1
-                  USE_MPI=$withval
-                  USE_LAUNCHER=${USE_MPI}/bin/mpiexec
-                 ],
-                 [
-                  USE_MPI=0
-                 ])
+    AS_HELP_STRING(
+        [--with-mpi],
+        [location of MPI installation]),
+    [
+        if [[ ! -f ${withval}/lib/lib${MPI_LIB_NAME}.${SO_SUFFIX} ]]
+        then
+            USE_MPI=0
+        fi
+        if [[ ${USE_MPI} == 0 ]]
+        then
+            AC_MSG_ERROR(Could not find MPI in $withval)
+        fi
+        AC_MSG_RESULT([using MPI in $withval])
+        MPI_SET=1
+        USE_MPI=$withval
+        USE_LAUNCHER=${USE_MPI}/bin/mpiexec
+    ],
+    [
+        USE_MPI=0
+    ]
+)
 AC_SUBST(USE_MPI)
 
 (( ${MPI_SET} )) || AC_MSG_ERROR([Insufficient MPI settings!])
@@ -251,7 +258,7 @@ then
 else
    MPI_H=${USE_MPI}/include/mpi.h
 fi
-AC_MSG_CHECKING([checking MPI implementation in ${MPI_H} ])
+AC_MSG_CHECKING([MPI implementation in ${MPI_H} ])
 if grep -q OMPI_MPI_H ${MPI_H} > /dev/null 2>&1
 then
    OMPI_MINOR_VERSION=$( grep OMPI_MINOR_VERSION ${MPI_H} | \
@@ -281,55 +288,98 @@ AC_MSG_RESULT([MPE enabled? $USE_MPE_WORD ])
 AC_SUBST(USE_MPE)
 AC_DEFINE_UNQUOTED(USE_MPE,$USE_MPE,[Enables MPE])
 
+USE_ADLB=1
 AC_ARG_WITH(adlb,
-                 AS_HELP_STRING(
-                    [--with-adlb],
-                    [location of ADLB]),
-                 [AC_CHECK_FILE(${withval}/include/adlb.h,
-                  [], [USE_ADLB=0])
-                  if test "$USE_ADLB" = 0 ; then
-                     AC_MSG_ERROR(Could not find ADLB in $withval)
-                  fi
-                  AC_MSG_RESULT([using ADLB in $withval])
-                  USE_ADLB=$withval
-                 ],
-                 [
-                  AC_MSG_WARN([Not found: ADLB])
-                  USE_ADLB=0
-                 ])
+    AS_HELP_STRING(
+        [--with-adlb],
+        [location of ADLB]),
+    [
+        AC_MSG_CHECKING([for ${withval}/include/adlb.h])
+        if [[ ! -r ${withval}/include/adlb.h ]]
+        then
+            USE_ADLB=0
+        fi
+        if [[ ${USE_ADLB} == 0 ]]
+        then
+            AC_MSG_ERROR(Could not find ADLB in $withval)
+        fi
+        AC_MSG_RESULT(ok)
+        USE_ADLB=$withval
+    ],
+    [
+        AC_MSG_WARN([Not found: ADLB])
+        USE_ADLB=0
+    ]
+)
 AC_SUBST(USE_ADLB)
+
+# tclsh is used in the build process (cf. debug-auto.tcl)
+# Allow user to specify a native tclsh for use when cross-compiling
+# The user has not yet provided tclsh-local (default to USE_TCLSH):
+USE_TCLSH_LOCAL=0
+AC_ARG_WITH(tclsh-local,
+    AS_HELP_STRING(
+        [--with-tclsh-local],
+        [name of tclsh compatible with build system]),
+        [
+            AC_MSG_CHECKING([for Tcl local executable in: ${withval} ])
+            USE_TCLSH_LOCAL=$( maint/find-tcl.zsh ${withval} )
+            if [[ ${?} != 0 ]]
+            then
+                AC_MSG_ERROR([failed!])
+            fi
+            AC_MSG_RESULT($(basename ${USE_TCLSH_LOCAL}))
+        ],
+        [])
 
 USE_TCL=unknown
 USE_TCL_LIB_DIR=0
 AC_ARG_WITH(tcl,
-                 AS_HELP_STRING(
-                    [--with-tcl],
-                    [location of Tcl]),
-                 [AC_CHECK_FILE(${withval}/lib/tclConfig.sh,
-                  [], [USE_TCL=0])
-                  if test "$USE_TCL" = 0 ; then
-                     AC_MSG_ERROR(Could not find Tcl in $withval)
-                  fi
-                  AC_MSG_RESULT([using Tcl in $withval])
-                  USE_TCL=$withval
-                  source $USE_TCL/lib/tclConfig.sh
-                 ],
-                 [
-                  AC_MSG_WARN([Not found: Tcl])
-                  USE_TCL=0
-                 ])
+    AS_HELP_STRING(
+        [--with-tcl],
+        [location of Tcl]),
+    [
+        AC_MSG_CHECKING([for ${withval}/lib/tclConfig.sh ])
+        if [[ ! -r ${withval}/lib/tclConfig.sh ]]
+        then
+            USE_TCL=0
+        fi
+        if [[ ${USE_TCL} == 0 ]]
+        then
+            AC_MSG_ERROR(Could not find Tcl in $withval)
+        fi
+        AC_MSG_RESULT([ok])
+        USE_TCL=$withval
+        source $USE_TCL/lib/tclConfig.sh
+    ],
+    [
+        AC_MSG_WARN([Not given: Tcl])
+        USE_TCL=0
+    ]
+)
 USE_TCL_LIB_DIR=${USE_TCL}/lib
+
+if [[ ${USE_TCLSH_LOCAL} == 0 ]]
+then
+    USE_TCLSH=$( maint/find-tcl.zsh ${USE_TCL} )
+    if [[ ${?} != 0 ]]
+    then
+        AC_MSG_ERROR([Could not find Tcl 8.5 binary!])
+    fi
+    USE_TCLSH_LOCAL=${USE_TCLSH}
+else
+    export NO_RUN=1
+    USE_TCLSH=$( maint/find-tcl.zsh ${USE_TCL} )
+    if [[ ${?} != 0 ]]
+    then
+        AC_MSG_ERROR([Could not find Tcl 8.5 binary!])
+    fi
+fi
+AC_MSG_RESULT([using Turbine Tcl executable: ${USE_TCLSH}])
 AC_SUBST(USE_TCL)
 AC_SUBST(USE_TCL_LIB_DIR)
-
-USE_TCLSH=$( maint/find-tcl.zsh ${USE_TCL} )
-if [[ ${?} != 0 ]]
-then
-     echo "Could not find Tcl 8.5 binary!"
-     exit 1
-fi
-AC_MSG_RESULT([using Tcl binary: ${USE_TCLSH}])
 AC_SUBST(USE_TCLSH)
+AC_SUBST(USE_TCLSH_LOCAL)
 
 # Now, allow user to override Tcl include
 
