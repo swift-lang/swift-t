@@ -27,7 +27,7 @@ AC_PROG_RANLIB
 AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
     [AC_PATH_PROGS_FEATURE_CHECK([CP_U], [cp],
          [[cp_u_out=`cp -u /dev/null /dev/stdout 2>&1 | cat > /dev/null`
-           test "$?" = 0          \
+           [[ ${?} == 0 ]]        \
            && ac_cv_path_cp_u=yes \
            || ac_cv_path_cp_u=no  ]],
          [])])
