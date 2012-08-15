@@ -491,9 +491,9 @@ int ADLBP_Init(int nservers, int use_debug_server, int aprintf_flag, int ntypes,
         holding_end_loop_1 = 1;
     else
         holding_end_loop_1 = 0;
-    inside_batch_put = amalloc(num_app_ranks * sizeof(char));
-    first_time_on_rq = amalloc(num_app_ranks * sizeof(char));
-    for (i=0; i < num_app_ranks; i++)
+    inside_batch_put = amalloc(num_world_nodes * sizeof(char));
+    first_time_on_rq = amalloc(num_world_nodes * sizeof(char));
+    for (i=0; i < num_world_nodes; i++)
     {
         inside_batch_put[i] = 0;
         first_time_on_rq[i] = 1;
@@ -503,7 +503,8 @@ int ADLBP_Init(int nservers, int use_debug_server, int aprintf_flag, int ntypes,
     rfr_out = amalloc(num_world_nodes * sizeof(int));
     for (i=0; i < num_app_ranks; i++)
         rfr_to_rank[i] = -1;
-    for (i=0; i < num_app_ranks; i++)
+    // for (i=0; i < num_app_ranks; i++)
+    for (i=0; i < num_world_nodes; i++)
         rfr_out[i] = 0;
     if (use_dbg_prints)
     {
@@ -3140,7 +3141,7 @@ close_notification(long id, int* ranks, int count)
     }
     else
     {
-      ADLB_Put(t, length, ranks[i], -1, 1, 1);
+      ADLB_Put(t, length+1, ranks[i], -1, 1, 1);
       free(t);
     }
   }
