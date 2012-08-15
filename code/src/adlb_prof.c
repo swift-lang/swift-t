@@ -13,7 +13,7 @@
  * recent Reserve.
  */
 
-#ifdef ENABLE_MPE
+#ifdef ADLB_ENABLE_MPE
 
 #include <mpe.h>
 
@@ -48,22 +48,15 @@ ADLB_Init(int num_servers, int num_types, int *types,
 {
   int rc;
 
-#ifdef ENABLE_MPE
+#ifdef ADLB_ENABLE_MPE
     int i;
-#endif
-
-#ifdef ENABLE_MPE
     PMPI_Comm_rank(MPI_COMM_WORLD,&my_log_rank);
-#endif
 
-    /* MPE_Init_log() & MPE_Finish_log() are NOT needed when liblmpe.a is linked
-       because MPI_Init() would have called MPE_Init_log() already.
-    */
-#ifdef ENABLE_MPE
+    /* MPE_Init_log() & MPE_Finish_log() are NOT needed when liblmpe.a
+       is linked because MPI_Init() would have called MPE_Init_log()
+       already. */
     MPE_Init_log();
-#endif
 
-#ifdef ENABLE_MPE
     MPE_Log_get_state_eventIDs(&inita,&initb);
     MPE_Log_get_state_eventIDs(&puta,&putb);
     MPE_Log_get_state_eventIDs(&reservea,&reserveb);
@@ -114,13 +107,6 @@ ADLB_Init(int num_servers, int num_types, int *types,
         MPE_Describe_state(mpe_svr_get_start, mpe_svr_get_end, "ADLB_SVR_Get", "MPE_CHOOSE_COLOR");
     }
 
-#endif
-
-#ifdef ENABLE_MPE
-    MPE_Log_event(inita,0,NULL);
-#endif
-
-#ifdef ENABLE_MPE
     user_state_start = malloc(num_types * sizeof(int) );
     user_state_end   = malloc(num_types * sizeof(int) );
     user_types       = malloc(num_types * sizeof(int) );
@@ -136,12 +122,14 @@ ADLB_Init(int num_servers, int num_types, int *types,
                                 user_state_descr, "MPE_CHOOSE_COLOR" );
         }
     }
+
+    MPE_Log_event(inita,0,NULL);
 #endif
 
     rc = ADLBP_Init(num_servers, num_types, types, am_server,
                     app_comm);
 
-#ifdef ENABLE_MPE
+#ifdef ADLB_ENABLE_MPE
     MPE_Log_event(initb,0,NULL);
 #endif
 
@@ -154,14 +142,14 @@ ADLB_Put(void *work_buf, int work_len, int reserve_rank,
 {
   int rc;
 
-#ifdef ENABLE_MPE
+#ifdef ADLB_ENABLE_MPE
   MPE_Log_event(puta,0,NULL);
 #endif
 
   rc = ADLBP_Put(work_buf,work_len,reserve_rank,answer_rank,
                  work_type,work_prio);
 
-#ifdef ENABLE_MPE
+#ifdef ADLB_ENABLE_MPE
   MPE_Log_event(putb,0,NULL);
 #endif
 
@@ -187,13 +175,13 @@ adlb_code ADLB_Exists(adlb_datum_id id, bool* result)
 
 adlb_code ADLB_Store(adlb_datum_id id, void *data, int length)
 {
-#ifdef ENABLE_MPE
+#ifdef ADLB_ENABLE_MPE
     MPE_Log_event(storea,0,NULL);
 #endif
 
     int rc = ADLBP_Store(id, data, length);
 
-#ifdef ENABLE_MPE
+#ifdef ADLB_ENABLE_MPE
     MPE_Log_event(storeb,0,NULL);
 #endif
     return rc;
@@ -202,13 +190,13 @@ adlb_code ADLB_Store(adlb_datum_id id, void *data, int length)
 adlb_code ADLB_Retrieve(adlb_datum_id id, adlb_data_type* type,
 		  void *data, int *length)
 {
-#ifdef ENABLE_MPE
+#ifdef ADLB_ENABLE_MPE
     MPE_Log_event(retrievea,0,NULL);
 #endif
 
     int rc = ADLBP_Retrieve(id, type, data, length);
 
-#ifdef ENABLE_MPE
+#ifdef ADLB_ENABLE_MPE
     MPE_Log_event(retrieveb,0,NULL);
 #endif
 
@@ -310,17 +298,17 @@ ADLB_Get(int type_requested, void* payload, int* length,
 {
   int rc;
 
-#ifdef ENABLE_MPE
+#ifdef ADLB_ENABLE_MPE
   MPE_Log_event(reservea,0,NULL);
 #endif
 
   rc = ADLBP_Get(type_requested, payload, length, answer, type_recvd);
 
-#ifdef ENABLE_MPE
+#ifdef ADLB_ENABLE_MPE
   MPE_Log_event(reserveb,0,NULL);
 #endif
 
-#ifdef ENABLE_MPE
+#ifdef ADLB_ENABLE_MPE
   user_prev_type = user_curr_type;
   user_curr_type = *work_type;
 #endif
@@ -333,21 +321,21 @@ ADLB_Finalize()
 {
     int rc;
 
-#ifdef ENABLE_MPE
+#ifdef ADLB_ENABLE_MPE
     int i;
 #endif
 
-#ifdef ENABLE_MPE
+#ifdef ADLB_ENABLE_MPE
     MPE_Log_event(finalizea,0,NULL);
 #endif
 
     rc = ADLBP_Finalize();
 
-#ifdef ENABLE_MPE
+#ifdef ADLB_ENABLE_MPE
     MPE_Log_event(finalizeb,0,NULL);
 #endif
 
-#ifdef ENABLE_MPE
+#ifdef ADLB_ENABLE_MPE
     if ( ! log_user_state_first_time)
     {
         for (i=0; i < user_num_types; i++)

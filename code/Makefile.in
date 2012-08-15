@@ -11,6 +11,10 @@ ADLB = $(ADLB_A) $(ADLB_SO)
 
 all: $(ADLB)
 
+INSTALL_PREFIX  = @prefix@
+INSTALL_LIB     = $(INSTALL_PREFIX)/lib
+INSTALL_INCLUDE = $(INSTALL_PREFIX)/include
+
 # Verbosity control:
 ifeq ($(V),1)
   QUIET_COMPILE = 0
@@ -29,7 +33,6 @@ else
 endif
 
 CC  = @CC@
-FC  = @F77@
 
 AR      = @AR@
 ARFLAGS = cr
@@ -67,13 +70,17 @@ RPATHS = -Wl,-rpath -Wl,$(C_UTILS)/lib
 
 ADLB_RPATH = -Wl,-rpath -Wl,$(PWD)
 
-OBJS = src/server.o src/handlers.o src/data.o src/common.o src/debug.o src/requestqueue.o src/workqueue.o src/mpi-tools.o src/messaging.o
-# Objects with No Logging
-NLOBJS   = src/adlb_prof.o  src/adlb.o
-# Objects with MPE Logging
-MLOBJS   = src/adlb_prof.mo src/adlb.mo
-
 ENABLE_MPE = @ADLB_ENABLE_MPE@
+
+# Find source code
+SRCS :=
+OBJS :=
+DEPS :=
+include src/module.mk
+
+ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
+  -include $(DEPS)
+endif
 
 ifeq ($(BUILD_LOGGING),1)
 	CFLAGS += -D ENABLE_MPE
@@ -81,6 +88,12 @@ ifeq ($(BUILD_LOGGING),1)
 endif
 
 .SUFFIXES: .c .o .eo .mo
+
+# default rule for generating dependency files (deps)
+%.d: %.c
+	$(Q) "  DEP		$(@)"
+	$(E) CC=$(CC) maint/depend.sh \
+             $(dir $(<)) $(CFLAGS) $< > $@
 
 %.o: %.c
 	$(Q) "  CC		$(@)"
@@ -109,7 +122,7 @@ $(ADLB_A): $(OBJS)
 
 $(ADLB_SO): $(OBJS) $(NLOBJS)
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) -shared -o $(@) -fPIC $(NLOBJS) $(OBJS) \
+	$(E) $(CC) -shared -o $(@) -fPIC $(OBJS) \
 	-L $(C_UTILS)/lib -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils
 # -L . -l mpe -Wl,-rpath -Wl,$(PWD)
 
@@ -135,3 +148,22 @@ libmladlb.so: $(OBJS) $(MLOBJS)
 clean:
 	@rm -fv $(OBJS) $(NLOBJS) $(ELOBJS) $(MLOBJS) $(ADLB)
 #echo $(OBJS) $(NLOBJS) $(ELOBJS) $(MLOBJS) $(ADLB)
+
+HAVE_CP_U = @CP_U@
+ifeq ($(HAVE_CP_U),yes)
+	CP_ARGS = -uvf
+else
+	CP_ARGS = -vf
+endif
+
+install: $(ADLB_SO)
+	$(Q)
+	$(Q) "  INSTALL"
+	$(E) mkdir -pv $(INSTALL_INCLUDE)
+	$(E) mkdir -pv $(INSTALL_LIB)
+	$(E) cp $(CP_ARGS) src/adlb.h $(INSTALL_INCLUDE)
+	$(E) cp $(CP_ARGS) src/adlb-defs.h $(INSTALL_INCLUDE)
+	$(E) cp $(CP_ARGS) $(ADLB_SO) $(INSTALL_LIB)
+ifeq ($(ENABLE_MPE),yes)
+	$(E) cp $(CP_ARGS) libmpe.so $(INSTALL_LIB)
+endif

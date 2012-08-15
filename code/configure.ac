@@ -1,17 +1,37 @@
 
+# XLB: CONFIGURE
+
 AC_INIT()
 AC_PREREQ(2.63)
 AC_CONFIG_AUX_DIR([.])
-AC_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADER(config.h src/mpe-settings.h)
 
 echo "Configuring ADLB with $ac_configure_args"
 
 CC=${CC:-mpicc}
-F77=${F77:-mpif90}
 
+USE_MAC="no"
+if [[ $( uname ) == "Darwin" ]]
+then
+        AC_MSG_RESULT([detected Mac.])
+        USE_MAC="yes"
+fi
+AC_SUBST(USE_MAC)
+
+# Checks for programs
 AC_PROG_CC
 AC_CHECK_PROG(AR, ar, ar, ;)
 AC_PROG_RANLIB
+
+# We prefer to use cp -u for installation
+AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
+    [AC_PATH_PROGS_FEATURE_CHECK([CP_U], [cp],
+         [[cp_u_out=`cp -u /dev/null /dev/stdout 2>&1 | cat > /dev/null`
+           test "$?" = 0          \
+           && ac_cv_path_cp_u=yes \
+           || ac_cv_path_cp_u=no  ]],
+         [])])
+AC_SUBST([CP_U], [$ac_cv_path_cp_u])
 
 AC_ARG_ENABLE(mpe,
         [--enable-mpe - Enable MPE. The default is disabled.],
@@ -22,7 +42,8 @@ else
     ADLB_ENABLE_MPE=no
 fi
 
-if test "$ADLB_ENABLE_MPE" = "yes" ; then
+if [[ ${ADLB_ENABLE_MPE} == "yes" ]]
+then
     AC_MSG_CHECKING( [for the MPE compiler flags] )
     MPILOG_FLAG="-mpe=mpilog"
     LOG_FLAG="-mpe=log"
@@ -58,6 +79,8 @@ fi
 AC_SUBST(MPILOG_FLAG)
 AC_SUBST(LOG_FLAG)
 AC_SUBST(ADLB_ENABLE_MPE)
+AC_DEFINE_UNQUOTED(ADLB_ENABLE_MPE,
+                   "$ADLB_ENABLE_MPE", [Using MPE: yes/no])
 
 AC_ARG_ENABLE(fast,
               AS_HELP_STRING(
@@ -100,3 +123,4 @@ AC_ARG_WITH(c-utils,
 AC_SUBST(USE_C_UTILS)
 
 AC_OUTPUT(Makefile)
+AC_OUTPUT(src/module.mk)

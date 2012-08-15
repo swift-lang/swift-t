@@ -15,7 +15,8 @@
 
 #include "version.h"
 
-#define XLB_VERSION
+#define XLB
+#define XLB_VERSION 0
 
 /*
    These are the functions available to ADLB application code
@@ -144,3 +145,4 @@ adlb_code ADLBP_Abort(int);
 adlb_code ADLB_Abort(int);
 
 #endif
+
