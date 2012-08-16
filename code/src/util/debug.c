@@ -12,12 +12,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <memory.h>
+#include <tools.h>
+
 #include "src/util/debug.h"
 
 static bool  initialized = false;
 static bool  enabled = true;
 static char* buffer = NULL;
-static const int buffer_size = 2*1024;
+static int buffer_size;
 
 void
 turbine_debug_init()
@@ -35,16 +38,21 @@ turbine_debug_init()
       enabled = false;
       return;
     }
+  buffer_size = 32*KB;
   buffer = malloc(buffer_size);
 }
 
 /**
    Used only for snprintf checks in turbine_debug
 */
-#define BUFFER_SIZE_CHECK(count, buffer_size)                           \
-  if (count >= buffer_size)                                             \
-    printf("turbine_debug: message exceeded buffer_size (%i)\n",        \
-           buffer_size);
+#define BUFFER_SIZE_CHECK(count)                     \
+  if (count >= buffer_size) {                        \
+    printf("turbine_debug: "                         \
+           "message exceeded buffer_size (%i/%i)\n", \
+           count, buffer_size);               \
+    buffer[buffer_size-1] = '\0';                    \
+    printf("buffer: %s\n", buffer);  \
+}
 
 /**
    All turbine_debug messages may be disabled by setting
@@ -66,9 +74,9 @@ turbine_debug(const char* token, const char* format, ...)
   int count = 0;
   count += sprintf(buffer, "%s: ", token);
   count += vsnprintf(buffer+count, buffer_size-count, format, va);
-  BUFFER_SIZE_CHECK(count, buffer_size);
+  BUFFER_SIZE_CHECK(count);
   count += snprintf(buffer+count, buffer_size-count, "\n");
-  BUFFER_SIZE_CHECK(count, buffer_size);
+  BUFFER_SIZE_CHECK(count);
   printf("%s", buffer);
   fflush(stdout);
   va_end(va);
