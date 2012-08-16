@@ -314,10 +314,10 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   req_types[0] = req_type;
   req_types[1] = req_types[2] = req_types[3] = -1;
 
-  DEBUG_ADLB("enter reserve: type=%i\n", req_types[0]);
+  DEBUG_ADLB("enter reserve: type=%i", req_types[0]);
   rc = ADLB_Reserve(req_types, &work_type, &work_prio,
                     work_handle, &work_len, &answer_rank);
-  DEBUG_ADLB("exit reserve\n");
+  DEBUG_ADLB("exit reserve");
   if (rc == ADLB_DONE_BY_EXHAUSTION)
   {
     DEBUG_ADLB("ADLB_DONE_BY_EXHAUSTION!");
