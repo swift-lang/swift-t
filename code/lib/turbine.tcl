@@ -68,6 +68,8 @@ namespace eval turbine {
         argv_init
     }
 
+    # Turbine logging contains string values (possibly long)
+    # Setting TURBINE_LOG_STRING_MODE truncates these strings
     proc setup_log_string { } {
 
         global env
@@ -92,7 +94,7 @@ namespace eval turbine {
             }
         }
 
-        error [ join [ "Requires integer:"
+        error [ join [ "Requires integer or ON or OFF:"
                        "TURBINE_LOG_STRING_MODE=$log_string_mode" ] ]
     }
 
