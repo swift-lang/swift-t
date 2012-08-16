@@ -15,10 +15,6 @@
 // messages are more useful.  This file only packs and unpacks
 // calls to the ADLB C layer
 
-// SELECT: Old ADLB or new XLB
-#define USE_ADLB
-// #define USE_XLB
-
 #include <assert.h>
 
 // strnlen() is a GNU extension
@@ -31,6 +27,7 @@
 
 #include <log.h>
 
+#include <memory.h>
 #include <table_lp.h>
 #include <tools.h>
 
@@ -38,6 +35,13 @@
 #include "src/util/debug.h"
 
 #include "tcl-adlb.h"
+
+// Auto-detect: Old ADLB or new XLB
+#ifdef XLB
+#define USE_XLB
+#else
+#define USE_ADLB
+#endif
 
 static int adlb_rank;
 /** Number of workers */
@@ -78,6 +82,7 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(3);
 
+  mm_init();
   turbine_debug_init();
 
   int rc;
