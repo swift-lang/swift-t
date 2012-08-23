@@ -1,5 +1,16 @@
 
+////
+
+Swift/T guide, asciidoc format
+
+This is online at:
+
+http://www.mcs.anl.gov/~wozniak/stc.html
+
+////
+
 :toc:
+:numbered:
 
 = STC: Swift-Turbine Compiler
 
@@ -26,10 +37,17 @@ cd exm-trunk
 +
 This allows you to change the installation location, etc.
 +
+TIP: Save your +exm-settings.sh+ when you download a new package
++
 4. Run the setup script
 +
 ----
 ./exm-setup.zsh
+----
+5. Add Turbine and STC to your paths
+----
+PATH=${PATH}:/path/to/exm-install/turbine/bin
+PATH=${PATH}:/path/to/exm-install/stc/bin
 ----
 
 Alternatively, each component may be compiled separately.  The
@@ -618,10 +636,18 @@ The user controls the Turbine run time configuration through
 environment variables:
 
 +TURBINE_ENGINES+:: Number of Turbine engines
+
 +ADLB_SERVERS+:: Number of ADLB servers
 
 The remaining processes are workers.  These values are available to
 Swift (<<Turbine_information, Turbine information>>).
+
++TURBINE_LOG=0+:: Disable logging
+
++ADLB_EXHAUST_TIME+:: Time in seconds taken by ADLB task servers to
+shut down. Typically 1.  In very large runs, this may be set to 5 to
+ensure correctness.
+
 
 +TURBINE_LAUNCH_OPTS+::
 Provide other arguments to +mpiexec+, such as a machine file, etc.
@@ -641,7 +667,7 @@ Swift/T is built with standard Ant (Java) and Autotools/Makefile
 (C,Tcl) techniques.  The primary control is thus the arguments to
 +ant+ or +configure+.
 
-Non-standard MPI locations::
+==== Non-standard MPI locations
 
 Configure Turbine with:
 
@@ -650,3 +676,19 @@ Configure Turbine with:
                  --with-mpi-lib-dir=/path/to/mpi_lib/lib
                  --with-mpi-lib-name=funny.mpi.a
 ----
+
+=== Performance enhancements
+
+1. Disable logging/debugging via environment
++
+Use the environment variables.
+2. Disable logging/debugging at configure/compile time
+** Configure c-utils with +--disable-log+
+** Configure ADLB with +NDEBUG+
+3. Disable asserts
++
+Compile everything with +NDEBUG+
+
+
+
+
