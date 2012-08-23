@@ -129,6 +129,9 @@ CFLAGS += -fPIC
 # This is referenced in lookup3.c - may want to drop this for speed
 CFLAGS += -D VALGRIND
 CFLAGS += -D TURBINE_VERSION=\"$(TURBINE_VERSION)\"
+ifeq ($(USE_MPE),1)
+	CFLAGS += -D ENABLE_MPE
+endif
 
 # LIBS: links to ADLB, c-utils, MPE, and MPI
 LIBS :=
@@ -148,8 +151,9 @@ RPATHS += -Wl,-rpath -Wl,$(C_UTILS)/lib
 RPATHS += -Wl,-rpath -Wl,$(MPI_LIB_DIR)
 RPATHS += -Wl,-rpath -Wl,$(TCL_LIB_DIR)
 
-DIR :=
+### INCLUDES
 
+DIR :=
 TURBINE_SRC :=
 TCL_TURBINE_SRC :=
 include src/turbine/module.mk
@@ -164,9 +168,9 @@ include lib/module.mk
 TURBINE_SRC += $(TCL_ADLB_SRC)
 TURBINE_SRC += $(TCL_MPE_SRC)
 
-TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC) $(TCL_TURBINE_SRC))
+### DEPENDENCIES
 
-TCL_TURBINE_OBJS += $(patsubst %.c, %.o, $(TCL_TURBINE_SRC))
+TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC) $(TCL_TURBINE_SRC))
 
 TEST_SRC :=
 include tests/module.mk
@@ -189,12 +193,6 @@ ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
  -include $(DEPS)
 endif
 
-tags: TAGS
-
-TAGS: deps.txt
-	$(Q) "  TAGS "
-	$(E) etags `cat deps.txt`
-
 # Extract all files from *.d files, format and sort:
 # Formats to one file per line & extracts junk and extra files in *.d
 deps.txt: $(DEPS)
@@ -214,13 +212,26 @@ deps_contents.txt:
 	$(Q) "  SH		$(@)"
 	$(E) $(srcdir)/maint/collect.sh $(@) $(EXISTING_D)
 
+### TAGS
+
+tags: TAGS
+
+TAGS: deps.txt
+	$(Q) "  TAGS "
+	$(E) etags `cat deps.txt`
+
+### COMPILE
+
+TCL_TURBINE_OBJS += $(patsubst %.c, %.o, $(TCL_TURBINE_SRC))
+TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
+
 %.o: %.c
 # 	The following string produces a false autoscan message (C++)
 	$(Q) "  CC		$(@)"
 	$(E) $(CC) $(CFLAGS) \
              -c $(<) -o $(@)
 
-TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
+### LINK
 
 $(TURBINE_A): $(TURBINE_OBJS)
 	$(Q) "  AR		$(@)"
@@ -236,6 +247,8 @@ $(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_OBJS)
              $(LIBS) \
              $(RPATHS) \
              $(MAC_NAME)
+
+### TESTS
 
 # Test cases in C as objects
 TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC_C))
@@ -286,29 +299,7 @@ $(TEST_BINS): %.x: %.o install
 	$(E) LAUNCH=$(LAUNCH) $(<) > $(*).tmp 2>&1
 	$(E) mv $(*).tmp $(@)
 
-clean::
-	@echo
-	@echo "  CLEAN"
-	@rm -fv  $(TURBINE_A) $(TCL_TURBINE_SO)
-	@rm -fv  $(DEPS) $(TEST_DEPS) deps.txt deps_contents.txt TAGS
-	@rm -fv  $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT)
-	@rm -fv  $(TEST_RESULTS)
-	@rm -fv  $(TURBINE_OBJS)
-	@rm -fv  $(TCL_TURBINE_OBJS)
-	@rm -fvr tests/data
-
-# Clean *.result files that did not succeed
-clean-failed:
-	@rm -fv `grep -L "exit 0" **/*.result`
-
-.PHONY: clean
-
-# Useful target when debugging the build system
-debug_build:
-	@echo DEPS: $(DEPS)
-	@echo TURBINE_SRC: $(TURBINE_SRC)
-	@echo TURBINE_OBJS: $(TURBINE_OBJS)
-	@echo TESTS: $(TESTS)
+### INSTALL
 
 HAVE_CP_U = @CP_U@
 ifeq ($(HAVE_CP_U),yes)
@@ -337,9 +328,9 @@ install: package
 	$(E) mkdir -pv $(INSTALL_BIN)
 	$(E) mkdir -pv $(INSTALL_SCRIPTS)
 	$(E) mkdir -pv $(INSTALL_EXPORT)
-#            We assume libmpe.so is in the ADLB directory
+#            We assume libmpe.so is in the ADLB/lib directory
 ifeq ($(USE_MPE),1)
-	$(E) cp $(CP_ARGS) $(ADLB)/libmpe.so              $(INSTALL_LIB)
+	$(E) cp $(CP_ARGS) $(ADLB)/lib/libmpe.so        $(INSTALL_LIB)
 endif
 #       Copy Turbine items
 	$(E) cp $(CP_ARGS) bin/turbine                  $(INSTALL_BIN)
@@ -349,4 +340,33 @@ endif
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS_SUBMIT) $(INSTALL_PREFIX)
 	$(E) $(CP_PARENTS) $(CP_ARGS) export/*.swift    $(INSTALL_PREFIX)
 	$(E) $(CP_PARENTS) $(CP_ARGS) export/**/*.swift $(INSTALL_PREFIX)
+
+### CLEAN
+
+clean::
+	@echo
+	@echo "  CLEAN"
+	@rm -fv  $(TURBINE_A) $(TCL_TURBINE_SO)
+	@rm -fv  $(DEPS) $(TEST_DEPS) deps.txt deps_contents.txt TAGS
+	@rm -fv  $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT)
+	@rm -fv  $(TEST_RESULTS)
+	@rm -fv  $(TURBINE_OBJS)
+	@rm -fv  $(TCL_TURBINE_OBJS)
+	@rm -fvr tests/data
+
+# Clean *.result files that did not succeed
+clean-failed:
+	@rm -fv `grep -L "exit 0" **/*.result`
+
+.PHONY: clean
+
+### DEBUG BUILD SYSTEM
+
+# Useful target when debugging the build system
+debug_build:
+	@echo DEPS: $(DEPS)
+	@echo TURBINE_SRC: $(TURBINE_SRC)
+	@echo TURBINE_OBJS: $(TURBINE_OBJS)
+	@echo TESTS: $(TESTS)
+
 
