@@ -17,7 +17,7 @@
 
 #include "tcl-mpe.h"
 
-#if USE_MPE
+#ifdef ENABLE_MPE
 
 #include <adlb.h>
 
