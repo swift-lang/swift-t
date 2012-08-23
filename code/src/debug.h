@@ -6,12 +6,19 @@
  *      Author: wozniak
  *
  *  Debugging macros
+ *  These all may be disabled at compile time with NDEBUG
+ *  or at run time by setting environment variable XLB_DEBUG=0
  */
 
 #ifndef DEBUG_H
 #define DEBUG_H
 
 #include <stdbool.h>
+#include <stdio.h>
+
+#include <tools.h>
+
+#include "common.h"
 
 extern bool xlb_debug_enabled;
 
@@ -41,7 +48,7 @@ void debug_check_environment(void);
 #ifdef ENABLE_DEBUG
 #define DEBUG(format, args...)              \
   { if (xlb_debug_enabled) {                            \
-         printf("ADLB: " format "\n", ## args); \
+         printf("%5.0f ADLB: " format "\n", xlb_wtime(), ## args); \
          fflush(stdout);                    \
        } }
 #else
@@ -49,7 +56,7 @@ void debug_check_environment(void);
 #endif
 
 #ifndef NDEBUG
-#define ENABLE_TRACE 1
+// #define ENABLE_TRACE 1
 #endif
 #ifdef ENABLE_TRACE
 #define TRACE(format, args...)             \
@@ -67,16 +74,29 @@ void debug_check_environment(void);
 #ifdef ENABLE_TRACE_MPI
 #define TRACE_MPI(format, args...)             \
   { if (xlb_debug_enabled) {                           \
-  printf("MPI: " format "\n", ## args);  \
+  printf("%5.0f MPI: " format "\n", xlb_wtime(), ## args);  \
   fflush(stdout);                          \
   } }
 #else
-#define TRACE(format, args...) // noop
+#define TRACE_MPI(format, args...) // noop
+#endif
+
+#ifndef NDEBUG
+#define ENABLE_STATS
+#endif
+#ifdef ENABLE_STATS
+#define STATS(format, args...)             \
+  { if (xlb_debug_enabled) {               \
+  printf("STATS: " format "\n", ## args);  \
+  fflush(stdout);                          \
+  } }
+#else
+#define STATS(format, args...) // noop
 #endif
 
 /** Print that we are entering a function */
-#define DEBUG_START DEBUG("%s()...",    __func__)
+#define TRACE_START TRACE("%s()...",    __func__)
 /** Print that we are exiting a function */
-#define DEBUG_END   DEBUG("%s() done.", __func__)
+#define TRACE_END   TRACE("%s() done.", __func__)
 
 #endif

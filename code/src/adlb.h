@@ -2,6 +2,8 @@
 #ifndef ADLB_H
 #define ADLB_H
 
+// Need _GNU_SOURCE for asprintf()
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

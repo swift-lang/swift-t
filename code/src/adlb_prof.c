@@ -1,40 +1,40 @@
 
 /*
- * ADLB Profiling Interface
+   ADLB Profiling Interface
  */
 
 #include "adlb.h"
 #include "data.h"
 
-/* we either log adlb internals or a guess at user state */
-/* when guessing the user state, we assume that the user is processing
- * a piece of work of a given type if they have done a Get_reserved
- * for that type.  We also assume they do the Get_reserverd for the most
- * recent Reserve.
- */
+/*
+  When guessing the user state, we assume that the user is processing
+  a work unit of a given type if they have done a Get for that type.
+*/
 
-#ifdef ADLB_ENABLE_MPE
+#ifdef ENABLE_MPE
 
 #include <mpe.h>
 
 static int my_log_rank;
-// Events:
-static int inita, initb, puta, putb, reservea, reserveb, ireservea, ireserveb,
-           geta, getb, getat, getbt, nomoreworka, nomoreworkb,
-           beginbatchputa, beginbatchputb, endbatchputa, endbatchputb,
-           finalizea, finalizeb, probea, probeb;
-// Data module:
-static int storea, storeb, retrievea, retrieveb;
-// Server events:
-adlb_code mpe_svr_put_start, mpe_svr_put_end;
-adlb_code mpe_svr_create_start, mpe_svr_create_end;
-adlb_code mpe_svr_store_start, mpe_svr_store_end;
-adlb_code mpe_svr_retrieve_start, mpe_svr_retrieve_end;
-adlb_code mpe_svr_subscribe_start, mpe_svr_subscribe_end;
-adlb_code mpe_svr_close_start, mpe_svr_close_end;
-adlb_code mpe_svr_unique_start, mpe_svr_unique_end;
-adlb_code mpe_svr_reserve_start, mpe_svr_reserve_end;
-adlb_code mpe_svr_get_start, mpe_svr_get_end;
+
+// Event pairs
+// Note: these names must be conventional
+// The convention is: mpe_[svr|wkr]?_<OP>_[start|end]
+int mpe_init_start, mpe_init_end;
+int mpe_svr_put_start, mpe_svr_put_end;
+int mpe_wkr_put_start, mpe_wkr_put_end;
+int mpe_svr_get_start, mpe_svr_get_end;
+int mpe_wkr_get_start, mpe_wkr_get_end;
+int mpe_wkr_create_start, mpe_wkr_create_end;
+int mpe_wkr_store_start, mpe_wkr_store_end;
+int mpe_wkr_retrieve_start, mpe_wkr_retrieve_end;
+int mpe_wkr_subscribe_start, mpe_wkr_subscribe_end;
+int mpe_wkr_close_start, mpe_wkr_close_end;
+int mpe_wkr_unique_start, mpe_wkr_unique_end;
+
+int mpe_finalize_start, mpe_finalize_end;
+
+// Server solo events:
 
 static int user_prev_type, user_curr_type, user_num_types,
            *user_state_start, *user_state_end, *user_types;
@@ -42,99 +42,111 @@ static int log_user_state_first_time = 1;
 static char user_state_descr[256];
 #endif
 
+/** Automate MPE_Log_get_state_eventIDs calls */
+#define make_pair(token) \
+  MPE_Log_get_state_eventIDs(&mpe_##token##_start,\
+                             &mpe_##token##_end);
+
+/** Automate MPE_Describe_state calls */
+#define describe_pair(token) \
+  MPE_Describe_state(mpe_##token##_start, mpe_##token##_end, \
+                     "ADLB_" #token, "MPE_CHOOSE_COLOR")
+
+static void setup_mpe_events(int num_types, int* types);
+
 adlb_code
-ADLB_Init(int num_servers, int num_types, int *types,
-              int *am_server, MPI_Comm *app_comm)
+ADLB_Init(int num_servers, int num_types, int* types,
+          int* am_server, MPI_Comm* app_comm)
 {
-  int rc;
+  // In XLB, the types must be in simple order
+  for (int i = 0; i < num_types; i++)
+    if (types[i] != i)
+    {
+      printf("ADLB_Init(): types must be in order: 0,1,2...\n");
+      MPI_Abort(MPI_COMM_WORLD,1);
+    }
 
-#ifdef ADLB_ENABLE_MPE
-    int i;
-    PMPI_Comm_rank(MPI_COMM_WORLD,&my_log_rank);
+  setup_mpe_events(num_types, types);
 
-    /* MPE_Init_log() & MPE_Finish_log() are NOT needed when liblmpe.a
+#ifdef ENABLE_MPE
+  MPE_Log_event(mpe_init_start, 0, NULL);
+#endif
+
+  int rc = ADLBP_Init(num_servers, num_types, types, am_server,
+                      app_comm);
+
+#ifdef ENABLE_MPE
+  MPE_Log_event(mpe_init_end, 0, NULL);
+#endif
+
+  return rc;
+}
+
+/**
+   This does nothing if MPE is not enabled
+ */
+static void
+setup_mpe_events(int num_types, int* types)
+{
+#ifdef ENABLE_MPE
+  PMPI_Comm_rank(MPI_COMM_WORLD,&my_log_rank);
+
+  /* MPE_Init_log() & MPE_Finish_log() are NOT needed when liblmpe.a
        is linked because MPI_Init() would have called MPE_Init_log()
        already. */
-    MPE_Init_log();
+  MPE_Init_log();
 
-    MPE_Log_get_state_eventIDs(&inita,&initb);
-    MPE_Log_get_state_eventIDs(&puta,&putb);
-    MPE_Log_get_state_eventIDs(&reservea,&reserveb);
-    MPE_Log_get_state_eventIDs(&ireservea,&ireserveb);
-    MPE_Log_get_state_eventIDs(&geta,&getb);
-    MPE_Log_get_state_eventIDs(&getat,&getbt);
-    MPE_Log_get_state_eventIDs(&beginbatchputa,&beginbatchputb);
-    MPE_Log_get_state_eventIDs(&endbatchputa,&endbatchputb);
-    MPE_Log_get_state_eventIDs(&nomoreworka,&nomoreworkb);
-    MPE_Log_get_state_eventIDs(&finalizea,&finalizeb);
-    MPE_Log_get_state_eventIDs(&probea,&probeb);
+  // Server:
+  make_pair(init);
+  make_pair(svr_put);
+  make_pair(wkr_put);
+  make_pair(svr_get);
+  make_pair(wkr_get);
+  make_pair(finalize);
+
+  // Data module:
+  make_pair(wkr_unique);
+  make_pair(wkr_create);
+  make_pair(wkr_subscribe);
+  make_pair(wkr_store);
+  make_pair(wkr_close);
+  make_pair(wkr_retrieve);
+
+  if ( my_log_rank == 0 ) {
+    // Server events:
+    describe_pair(init);
+    describe_pair(finalize);
+    describe_pair(svr_put);
+    describe_pair(wkr_put);
+    describe_pair(svr_get);
+    describe_pair(wkr_get);
     // Data module:
-    MPE_Log_get_state_eventIDs(&storea,&storeb);
-    MPE_Log_get_state_eventIDs(&retrievea,&retrieveb);
-    // Server:
-    MPE_Log_get_state_eventIDs(&mpe_svr_put_start, &mpe_svr_put_end);
-    MPE_Log_get_state_eventIDs(&mpe_svr_create_start, &mpe_svr_create_end);
-    MPE_Log_get_state_eventIDs(&mpe_svr_store_start, &mpe_svr_store_end);
-    MPE_Log_get_state_eventIDs(&mpe_svr_retrieve_start, &mpe_svr_retrieve_end);
-    MPE_Log_get_state_eventIDs(&mpe_svr_subscribe_start, &mpe_svr_subscribe_end);
-    MPE_Log_get_state_eventIDs(&mpe_svr_close_start, &mpe_svr_close_end);
-    MPE_Log_get_state_eventIDs(&mpe_svr_unique_start, &mpe_svr_unique_end);
-    MPE_Log_get_state_eventIDs(&mpe_svr_reserve_start, &mpe_svr_reserve_end);
-    MPE_Log_get_state_eventIDs(&mpe_svr_get_start, &mpe_svr_get_end);
+    describe_pair(wkr_create);
+    describe_pair(wkr_store);
+    describe_pair(wkr_retrieve);
+    describe_pair(wkr_subscribe);
+    describe_pair(wkr_close);
+    describe_pair(wkr_unique);
+  }
 
-    if ( my_log_rank == 0 ) {
-        MPE_Describe_state( inita, initb, "ADLB_Init", "MPE_CHOOSE_COLOR" );
-        MPE_Describe_state( puta, putb, "ADLB_Put", "MPE_CHOOSE_COLOR" );
-        MPE_Describe_state( reservea, reserveb, "ADLB_Reserve", "MPE_CHOOSE_COLOR" );
-        MPE_Describe_state( ireservea, ireserveb, "ADLB_Ireserve", "MPE_CHOOSE_COLOR" );
-        MPE_Describe_state( geta, getb, "ADLB_Get", "MPE_CHOOSE_COLOR" );
-        MPE_Describe_state( getat, getbt, "ADLB_GetTimed", "MPE_CHOOSE_COLOR" );
-        MPE_Describe_state( nomoreworka, nomoreworkb, "ADLB_NoMoreWork", "MPE_CHOOSE_COLOR" );
-        MPE_Describe_state( beginbatchputa, endbatchputb, "ADLB_BatchPut", "MPE_CHOOSE_COLOR" );
-        MPE_Describe_state( finalizea, finalizeb, "ADLB_Finalize", "MPE_CHOOSE_COLOR" );
-        MPE_Describe_state( probea, probeb, "adlb_Probe", "MPE_CHOOSE_COLOR" );
-        // Data module:
-        MPE_Describe_state( storea, storeb, "ADLB_Store", "MPE_CHOOSE_COLOR" );
-        MPE_Describe_state( retrievea, retrieveb, "ADLB_Retrieve", "MPE_CHOOSE_COLOR" );
-        // Server events:
-        MPE_Describe_state(mpe_svr_put_start, mpe_svr_put_end, "ADLB_SVR_Put", "MPE_CHOOSE_COLOR");
-        MPE_Describe_state(mpe_svr_create_start, mpe_svr_create_end, "ADLB_SVR_Create", "MPE_CHOOSE_COLOR");
-        MPE_Describe_state(mpe_svr_store_start, mpe_svr_store_end, "ADLB_SVR_Store", "MPE_CHOOSE_COLOR");
-        MPE_Describe_state(mpe_svr_subscribe_start, mpe_svr_subscribe_end, "ADLB_SVR_Subscribe", "MPE_CHOOSE_COLOR");
-        MPE_Describe_state(mpe_svr_close_start, mpe_svr_close_end, "ADLB_SVR_Close", "MPE_CHOOSE_COLOR");
-        MPE_Describe_state(mpe_svr_unique_start, mpe_svr_unique_end, "ADLB_SVR_Unique", "MPE_CHOOSE_COLOR");
-        MPE_Describe_state(mpe_svr_reserve_start, mpe_svr_reserve_end, "ADLB_SVR_Reserve", "MPE_CHOOSE_COLOR");
-        MPE_Describe_state(mpe_svr_get_start, mpe_svr_get_end, "ADLB_SVR_Get", "MPE_CHOOSE_COLOR");
-    }
-
-    user_state_start = malloc(num_types * sizeof(int) );
-    user_state_end   = malloc(num_types * sizeof(int) );
-    user_types       = malloc(num_types * sizeof(int) );
-    user_num_types   = num_types;
-    for (i=0; i < num_types; i++)
+  user_state_start = malloc(num_types * sizeof(int));
+  user_state_end   = malloc(num_types * sizeof(int));
+  user_types       = malloc(num_types * sizeof(int));
+  int user_num_types   = num_types;
+  for (int i = 0; i < num_types; i++)
+  {
+    user_types[i] = types[i];
+    MPE_Log_get_state_eventIDs(&user_state_start[i],&user_state_end[i]);
+    if ( my_log_rank == 0 )
     {
-        user_types[i] = types[i];
-        MPE_Log_get_state_eventIDs(&user_state_start[i],&user_state_end[i]);
-        if ( my_log_rank == 0 )
-        {
-            sprintf(user_state_descr,"user_state_%d",types[i]);
-            MPE_Describe_state( user_state_start[i], user_state_end[i],
-                                user_state_descr, "MPE_CHOOSE_COLOR" );
-        }
+      sprintf(user_state_descr,"user_state_%d",types[i]);
+      MPE_Describe_state( user_state_start[i], user_state_end[i],
+                          user_state_descr, "MPE_CHOOSE_COLOR" );
     }
-
-    MPE_Log_event(inita,0,NULL);
+  }
 #endif
-
-    rc = ADLBP_Init(num_servers, num_types, types, am_server,
-                    app_comm);
-
-#ifdef ADLB_ENABLE_MPE
-    MPE_Log_event(initb,0,NULL);
-#endif
-
-    return rc;
 }
+
 
 adlb_code
 ADLB_Put(void *work_buf, int work_len, int reserve_rank,
@@ -142,15 +154,15 @@ ADLB_Put(void *work_buf, int work_len, int reserve_rank,
 {
   int rc;
 
-#ifdef ADLB_ENABLE_MPE
-  MPE_Log_event(puta,0,NULL);
+#ifdef ENABLE_MPE
+  MPE_Log_event(mpe_wkr_put_start,0,NULL);
 #endif
 
   rc = ADLBP_Put(work_buf,work_len,reserve_rank,answer_rank,
                  work_type,work_prio);
 
-#ifdef ADLB_ENABLE_MPE
-  MPE_Log_event(putb,0,NULL);
+#ifdef ENABLE_MPE
+  MPE_Log_event(mpe_wkr_put_end,0,NULL);
 #endif
 
   return rc;
@@ -175,14 +187,14 @@ adlb_code ADLB_Exists(adlb_datum_id id, bool* result)
 
 adlb_code ADLB_Store(adlb_datum_id id, void *data, int length)
 {
-#ifdef ADLB_ENABLE_MPE
-    MPE_Log_event(storea,0,NULL);
+#ifdef ENABLE_MPE
+    MPE_Log_event(mpe_wkr_store_start, 0, NULL);
 #endif
 
     int rc = ADLBP_Store(id, data, length);
 
-#ifdef ADLB_ENABLE_MPE
-    MPE_Log_event(storeb,0,NULL);
+#ifdef ENABLE_MPE
+    MPE_Log_event(mpe_wkr_store_end, 0, NULL);
 #endif
     return rc;
 }
@@ -190,14 +202,14 @@ adlb_code ADLB_Store(adlb_datum_id id, void *data, int length)
 adlb_code ADLB_Retrieve(adlb_datum_id id, adlb_data_type* type,
 		  void *data, int *length)
 {
-#ifdef ADLB_ENABLE_MPE
-    MPE_Log_event(retrievea,0,NULL);
+#ifdef ENABLE_MPE
+    MPE_Log_event(mpe_wkr_retrieve_start, 0, NULL);
 #endif
 
     int rc = ADLBP_Retrieve(id, type, data, length);
 
-#ifdef ADLB_ENABLE_MPE
-    MPE_Log_event(retrieveb,0,NULL);
+#ifdef ENABLE_MPE
+    MPE_Log_event(mpe_wkr_retrieve_end, 0, NULL);
 #endif
 
     return rc;
@@ -298,19 +310,19 @@ ADLB_Get(int type_requested, void* payload, int* length,
 {
   int rc;
 
-#ifdef ADLB_ENABLE_MPE
-  MPE_Log_event(reservea,0,NULL);
+#ifdef ENABLE_MPE
+  MPE_Log_event(mpe_wkr_get_start, 0, NULL);
 #endif
 
   rc = ADLBP_Get(type_requested, payload, length, answer, type_recvd);
 
-#ifdef ADLB_ENABLE_MPE
-  MPE_Log_event(reserveb,0,NULL);
+#ifdef ENABLE_MPE
+  MPE_Log_event(mpe_wkr_get_end, 0, NULL);
 #endif
 
-#ifdef ADLB_ENABLE_MPE
+#ifdef ENABLE_MPE
   user_prev_type = user_curr_type;
-  user_curr_type = *work_type;
+  user_curr_type = *type_recvd;
 #endif
 
   return rc;
@@ -319,39 +331,34 @@ ADLB_Get(int type_requested, void* payload, int* length,
 adlb_code
 ADLB_Finalize()
 {
-    int rc;
+#ifdef ENABLE_MPE
+  MPE_Log_event(mpe_finalize_start, 0, NULL);
+#endif
 
-#ifdef ADLB_ENABLE_MPE
+  int rc = ADLBP_Finalize();
+
+#ifdef ENABLE_MPE
+  MPE_Log_event(mpe_finalize_end, 0, NULL);
+#endif
+
+#ifdef ENABLE_MPE
+  if ( ! log_user_state_first_time)
+  {
     int i;
-#endif
-
-#ifdef ADLB_ENABLE_MPE
-    MPE_Log_event(finalizea,0,NULL);
-#endif
-
-    rc = ADLBP_Finalize();
-
-#ifdef ADLB_ENABLE_MPE
-    MPE_Log_event(finalizeb,0,NULL);
-#endif
-
-#ifdef ADLB_ENABLE_MPE
-    if ( ! log_user_state_first_time)
+    for (i = 0; i < user_num_types; i++)
+      if (user_prev_type == user_types[i])
+        break;
+    if (i >= user_num_types)
     {
-        for (i=0; i < user_num_types; i++)
-            if (user_prev_type == user_types[i])
-                break;
-        if (i >= user_num_types)
-        {
-            aprintf(1,"** invalid type while logging: %d\n",user_prev_type);
-            ADLBP_Abort(-1);
-        }
-        MPE_Log_event(user_state_end[i],user_prev_type,NULL);
+      printf("invalid type while logging: %d\n", user_prev_type);
+      ADLBP_Abort(1);
     }
+    MPE_Log_event(user_state_end[i],user_prev_type,NULL);
+  }
 #endif
 
-#if ENABLE_MPE
-    MPE_Finish_log( "adlb" );
+#ifdef ENABLE_MPE
+    MPE_Finish_log("adlb");
 #endif
 
     return rc;
@@ -359,7 +366,7 @@ ADLB_Finalize()
 
 adlb_code ADLB_Abort(int code)
 {
-    int rc;
-    rc = ADLBP_Abort(code);
-    return rc;
+  int rc;
+  rc = ADLBP_Abort(code);
+  return rc;
 }

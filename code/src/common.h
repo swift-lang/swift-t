@@ -13,34 +13,38 @@
 #include "adlb-defs.h"
 
 /** Number of processes in total */
-extern int world_size;
+extern int xlb_world_size;
 
 /** My rank in MPI_COMM_WORLD */
-extern int world_rank;
+extern int xlb_world_rank;
 
 /** Number of servers in total */
-extern int servers;
+extern int xlb_servers;
 
 /** Number of workers in total */
-extern int workers;
+extern int xlb_workers;
 
 /** Server with which this worker is associated */
-extern int my_server;
+extern int xlb_my_server;
 
 /** Lowest-ranked server */
-extern int master_server_rank;
+extern int xlb_master_server_rank;
 
-extern int my_workers;
-
+/** Number of work unit types */
 extern int types_size;
+
+/** Array of allowed work unit types */
 extern int* types;
 
 extern double max_malloc;
 
 extern MPI_Comm adlb_all_comm, adlb_server_comm;
 
-/** Start time from MPI_Wtime() */
-extern double adlb_start_time;
+/**
+   Start time from MPI_Wtime()
+   Note: this is used by debugging output
+ */
+extern double xlb_start_time;
 
 #define  MAX_PUSH_ATTEMPTS                1000
 
@@ -49,5 +53,11 @@ extern double adlb_start_time;
 extern char xfer[];
 
 int random_server(void);
+
+/**
+   Time since XLB was initialized
+   Note: this is used by debugging output
+ */
+double xlb_wtime(void);
 
 #endif

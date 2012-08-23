@@ -9,7 +9,7 @@ bool xlb_debug_enabled = true;
 void
 debug_check_environment()
 {
-  char* v = getenv("XLB_DEBUG");
+  char* v = getenv("ADLB_DEBUG");
   if (v == NULL)
     return;
   if (strcmp(v, "0") == 0)

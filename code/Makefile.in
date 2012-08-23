@@ -7,7 +7,7 @@
 # Products:
 ADLB_A  = lib/libadlb.a
 ADLB_SO = lib/libadlb.so
-ADLB = $(ADLB_A) $(ADLB_SO)
+ADLB = $(ADLB_SO)
 
 all: $(ADLB)
 
@@ -31,6 +31,8 @@ else
   Q = @ :
   E =
 endif
+
+### FLAGS
 
 CC  = @CC@
 
@@ -58,36 +60,31 @@ endif
 # No logging
 LDFLAGS  = @LDFLAGS@
 CFLAGS  = @CFLAGS@ $(PIC) $(STD) $(INCLUDES) -g
-# Both MPI and user-defined MPE logging
-CFLAGS_MPILOG  = $(CFLAGS) -DLOG_GUESS_USER_STATE @MPILOG_FLAG@
-# user-defined MPE logging
-CFLAGS_LOG  = $(CFLAGS) -DNO_MPI_LOGGING -DLOG_GUESS_USER_STATE @LOG_FLAG@
 
-LIBDIRS =: -L lib -L $(C_UTILS)/lib
-LIBS = -l exmcutils
+LIBS := -L $(C_UTILS)/lib -l exmcutils
 
-RPATHS = -Wl,-rpath -Wl,$(C_UTILS)/lib
-
-ADLB_RPATH = -Wl,-rpath -Wl,$(PWD)
+RPATH := -Wl,-rpath -Wl,$(C_UTILS)/lib
 
 ENABLE_MPE = @ADLB_ENABLE_MPE@
+MPE_FLAGS  = @MPE_FLAGS@
+ifeq ($(ENABLE_MPE),yes)
+	CFLAGS += -D ENABLE_MPE $(MPE_FLAGS)
+	LIBS += -L lib -l mpe
+	RPATH += -Wl,-rpath -Wl,$(INSTALL_LIB)
+endif
 
-# Find source code
+### INCLUDES
+
 SRCS :=
 OBJS :=
 DEPS :=
 include src/module.mk
 
+### DEPS
+
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
   -include $(DEPS)
 endif
-
-ifeq ($(BUILD_LOGGING),1)
-	CFLAGS += -D ENABLE_MPE
-	LIBS += -l mpe -llmpe
-endif
-
-.SUFFIXES: .c .o .eo .mo
 
 # default rule for generating dependency files (deps)
 %.d: %.c
@@ -95,59 +92,33 @@ endif
 	$(E) CC=$(CC) maint/depend.sh \
              $(dir $(<)) $(CFLAGS) $< > $@
 
+### COMPILE
+
 %.o: %.c
 	$(Q) "  CC		$(@)"
 	$(E) $(CC) $(CFLAGS) -c -o $(@) $(<)
 
-%.x: %.o $(ADLB_SO)
-	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(CFLAGS) -o $(@) $(<) -L lib -l adlb
-
-# .mo are object file that does both MPI and user-defined MPE logging
-.c.mo:
-	$(CC) $(CFLAGS_MPILOG) -c -o $*.mo $<
-
-apps/%.x: apps/%.o $(ADLB_A)
-	$(CC) $(CFLAGS) -o $(@) $(<) $(LIBDIRS) $(LDFLAGS) $(RPATHS) $(LIBS) -l adlb -lm
-
-batcher:  batcher.o libadlb.a
-	$(CC) $(CFLAGS) -o $@ batcher.o $(LIBDIR) $(LDFLAGS) -L $(C_UTILS)/lib -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils -Wl,-rpath -Wl,$(PWD) -ladlb $(LIBS) -lm
-
-libs: libadlb.a libadlb.so
+### LINK
 
 $(ADLB_A): $(OBJS)
 	$(Q) "  AR		$(@)"
-	$(E) $(AR) $(ARFLAGS) $@ $(OBJS)
-	$(E) $(RANLIB) $@
+	$(E) $(AR) $(ARFLAGS) $(@) $(OBJS)
+	$(E) $(RANLIB) $(@)
 
 $(ADLB_SO): $(OBJS) $(NLOBJS)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) -shared -o $(@) -fPIC $(OBJS) \
-	-L $(C_UTILS)/lib -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils
-# -L . -l mpe -Wl,-rpath -Wl,$(PWD)
+	           $(LIBS)
 
-# ADLB library, libeladlb.a, that does only user-defined MPE logging
-libeladlb.a: $(ELOBJS)
-	$(AR) $(ARFLAGS) $@ $(ELOBJS)
-	$(RANLIB) $@
+### APPS
 
-libeladlb.so: $(OBJS) $(ELOBJS)
-	gcc -shared -o $(@) -fPIC $(ELOBJS) $(OBJS) \
-	-L $(C_UTILS)/lib -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils
+apps/%.x: apps/%.o install
+	$(Q) "  LINK		$(@)"
+	$(E) $(CC) $(CFLAGS) -o $(@) $(<) $(LDFLAGS) \
+             -L lib -l adlb $(LIBS) \
+	     $(RPATH)
 
-# ADLB library, libmladlb.a, that does both MPI and user-defined MPE logging
-libmladlb.a: $(MLOBJS)
-	$(AR) $(ARFLAGS) $@ $(MLOBJS)
-	$(RANLIB) $@
-
-libmladlb.so: $(OBJS) $(MLOBJS)
-	mpicc -shared -o $(@) -fPIC $(MLOBJS) $(OBJS) \
-	-L $(C_UTILS)/lib -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils \
-        -L . -l mpe -Wl,-rpath -Wl,$(PWD)
-
-clean:
-	@rm -fv $(OBJS) $(NLOBJS) $(ELOBJS) $(MLOBJS) $(ADLB)
-#echo $(OBJS) $(NLOBJS) $(ELOBJS) $(MLOBJS) $(ADLB)
+### INSTALL
 
 HAVE_CP_U = @CP_U@
 ifeq ($(HAVE_CP_U),yes)
@@ -156,14 +127,21 @@ else
 	CP_ARGS = -vf
 endif
 
-install: $(ADLB_SO)
+install: $(ADLB)
 	$(Q)
 	$(Q) "  INSTALL"
 	$(E) mkdir -pv $(INSTALL_INCLUDE)
 	$(E) mkdir -pv $(INSTALL_LIB)
 	$(E) cp $(CP_ARGS) src/adlb.h $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) src/adlb-defs.h $(INSTALL_INCLUDE)
-	$(E) cp $(CP_ARGS) $(ADLB_SO) $(INSTALL_LIB)
+	$(E) cp $(CP_ARGS) $(ADLB) $(INSTALL_LIB)
 ifeq ($(ENABLE_MPE),yes)
-	$(E) cp $(CP_ARGS) libmpe.so $(INSTALL_LIB)
+	$(E) cp $(CP_ARGS) lib/libmpe.so $(INSTALL_LIB)
 endif
+	$(Q)
+
+### CLEAN
+
+clean:
+	$(Q) "  CLEAN"
+	$(E) rm -fv $(OBJS) $(ADLB)

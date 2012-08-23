@@ -9,7 +9,21 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-extern double time_last_action;
+/** Time of last activity: used to determine shutdown */
+extern double xlb_time_last_action;
+
+/** Are we currently trying to sync with another server?
+    Prevents nested syncs, which we do not support */
+extern bool xlb_server_sync_in_progress;
+
+/** Did we just get rejected when attempting to server sync? */
+extern bool server_sync_retry;
+
+/**
+   When was the last time we tried to steal?  In seconds.
+   Updated by steal()
+ */
+extern double xlb_steal_last;
 
 adlb_code xlb_server_init(void);
 
@@ -17,7 +31,13 @@ int xlb_map_to_server(int worker);
 
 // ADLB_Server prototype is in adlb.h
 
-adlb_code xlb_serve_one(void);
+/**
+   @param source MPI rank of allowable client:
+                 usually MPI_ANY_SOURCE unless syncing
+ */
+adlb_code xlb_serve_one(int source);
+
+adlb_code xlb_serve_server(int source);
 
 adlb_code xlb_shutdown_worker(int worker);
 

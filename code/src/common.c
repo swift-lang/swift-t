@@ -6,21 +6,23 @@
  *      Author: wozniak
  */
 
+#include <mpi.h>
+
 #include <tools.h>
 
 #include "common.h"
 
 char xfer[XFER_SIZE];
 
-int world_size;
-int world_rank;
-int servers;
-int workers;
-int my_server;
-int master_server_rank;
+int xlb_world_size;
+int xlb_world_rank;
+int xlb_servers;
+int xlb_workers;
+int xlb_my_server;
+int xlb_master_server_rank;
 int types_size;
 int* types;
-double adlb_start_time;
+double xlb_start_time;
 
 MPI_Comm adlb_all_comm;
 
@@ -29,7 +31,12 @@ MPI_Comm adlb_server_comm;
 int
 random_server()
 {
-  int result = random_between(master_server_rank, world_size);
+  int result = random_between(xlb_master_server_rank, xlb_world_size);
   return result;
 }
 
+double
+xlb_wtime(void)
+{
+  return MPI_Wtime() - xlb_start_time;
+}

@@ -19,8 +19,9 @@
 #include "handlers.h"
 #include "messaging.h"
 #include "mpi-tools.h"
-#include "server.h"
 #include "requestqueue.h"
+#include "server.h"
+#include "steal.h"
 #include "tools.h"
 #include "workqueue.h"
 
@@ -38,6 +39,7 @@ static int mpi_rank;
 
 static void create_handler(adlb_tag tag, handler h);
 
+static adlb_code handle_sync(int caller);
 static adlb_code handle_put(int caller);
 static adlb_code handle_get(int caller);
 static adlb_code handle_steal(int caller);
@@ -61,7 +63,8 @@ static adlb_code handle_container_size(int caller);
 static adlb_code handle_lock(int caller);
 static adlb_code handle_unlock(int caller);
 static adlb_code handle_check_idle(int caller);
-static adlb_code handle_shutdown(int caller);
+static adlb_code handle_shutdown_worker(int caller);
+static adlb_code handle_shutdown_server(int caller);
 
 static int slot_notification(long id);
 static int close_notification(long id, int* ranks, int count);
@@ -78,6 +81,7 @@ handlers_init(void)
 
   memset(handlers, '\0', MAX_HANDLERS*sizeof(handler));
 
+  create_handler(ADLB_TAG_SYNC_REQUEST, handle_sync);
   create_handler(ADLB_TAG_PUT, handle_put);
   create_handler(ADLB_TAG_GET, handle_get);
   create_handler(ADLB_TAG_STEAL, handle_steal);
@@ -101,7 +105,8 @@ handlers_init(void)
   create_handler(ADLB_TAG_LOCK, handle_lock);
   create_handler(ADLB_TAG_UNLOCK, handle_unlock);
   create_handler(ADLB_TAG_CHECK_IDLE, handle_check_idle);
-  create_handler(ADLB_TAG_SHUTDOWN, handle_shutdown);
+  create_handler(ADLB_TAG_SHUTDOWN_WORKER, handle_shutdown_worker);
+  create_handler(ADLB_TAG_SHUTDOWN_SERVER, handle_shutdown_server);
 }
 
 static void
@@ -123,15 +128,37 @@ adlb_code
 handle(adlb_tag tag, int caller)
 {
   CHECK_MSG(handler_valid(tag), "handle(): invalid tag: %i\n", tag);
-  TRACE("handle: caller=%i %s", caller, xlb_get_tag_name(tag));
-  assert(handlers[tag]);
+  CHECK_MSG(handlers[tag] != NULL, "handle(): invalid tag: %i", tag);
+  DEBUG("handle: caller=%i %s", caller, xlb_get_tag_name(tag));
+
+  // Call handler:
   adlb_code result = handlers[tag](caller);
-  if (tag != ADLB_TAG_CHECK_IDLE)
-    time_last_action = MPI_Wtime();
+
+  // Update timestamp:
+  if (tag != ADLB_TAG_CHECK_IDLE &&
+      tag != ADLB_TAG_SYNC_REQUEST &&
+      tag != ADLB_TAG_STEAL)
+    xlb_time_last_action = MPI_Wtime();
+
   return result;
 }
 
 //// Individual handlers follow...
+
+/**
+   Incoming sync request: no collision detection necessary
+   because this process is not attempting a sync
+ */
+static adlb_code
+handle_sync(int caller)
+{
+  MPI_Status status;
+
+  RECV_TAG(caller, ADLB_TAG_SYNC_REQUEST);
+  int rc = xlb_serve_server(caller);
+  ADLB_CHECK(rc);
+  return rc;
+}
 
 static adlb_code put(int type, int putter, int priority, int answer,
                      int target, int length);
@@ -147,6 +174,8 @@ handle_put(int caller)
   mpi_recv_sanity(&status, MPI_BYTE, sizeof(p));
 
   put(p.type, p.putter, p.priority, p.answer, p.target, p.length);
+
+  STATS("PUT");
 
   return ADLB_SUCCESS;
 }
@@ -187,6 +216,8 @@ put(int type, int putter, int priority, int answer, int target,
   SEND(&mpi_rank, 1, MPI_INT, putter, ADLB_TAG_RESPONSE_PUT);
   RECV(xfer, length, MPI_BYTE, putter, ADLB_TAG_WORK);
 
+  DEBUG("work unit: %s", xfer);
+
   // Enqueue this
   workqueue_add(type, putter, priority, answer, target,
                 length, xfer);
@@ -218,19 +249,16 @@ redirect_work(int type, int putter, int priority, int answer,
   return ADLB_SUCCESS;
 }
 
-static adlb_code send_work_unit(int worker, work_unit* wu);
+static inline adlb_code send_work_unit(int worker, xlb_work_unit* wu);
 
-static adlb_code send_work(int worker, long wuid, int type, int answer,
-                           void* payload, int length);
+static inline adlb_code send_work(int worker, long wuid, int type,
+                                  int answer,
+                                  void* payload, int length);
 
 static inline bool check_workqueue(int caller, int type);
 
-static inline bool steal(void);
-
 static bool stealing = false;
 static int deferred_gets = 0;
-
-static inline void requestqueue_recheck(void);
 
 static adlb_code
 handle_get(int caller)
@@ -258,108 +286,62 @@ handle_get(int caller)
     DEBUG("deferred_gets: %i", deferred_gets);
   }
 
+  DEBUG("stole?: %i", stole);
+
   if (!found_work)
     requestqueue_add(caller, p.type);
   if (stole)
+  {
+    DEBUG("rechecking...");
     requestqueue_recheck();
+  }
 
   return ADLB_SUCCESS;
 }
 
+/**
+   Find work and send it!
+   @return True if work was found and sent, else false.
+ */
 static inline bool
 check_workqueue(int caller, int type)
 {
-  work_unit* wu = workqueue_get(caller, type);
+  TRACE_START;
+  xlb_work_unit* wu = workqueue_get(caller, type);
+  bool result = false;
   if (wu != NULL)
   {
     send_work_unit(caller, wu);
     work_unit_free(wu);
-    return true;
+    result = true;
   }
-  return false;
+  TRACE_END;
+  return result;
 }
 
-static inline void
+void
 requestqueue_recheck()
 {
-  DEBUG_START;
-  DEBUG_END;
-}
+  TRACE_START;
 
-static adlb_code steal_sync(MPI_Request* request, MPI_Status* status);
+  int N = requestqueue_size();
+  xlb_request_pair* r = malloc(N*sizeof(xlb_request_pair));
+  requestqueue_get(r);
 
-static inline bool
-steal(void)
-{
-  if (servers == 1)
-    return false;
+  for (int i = 0; i < N; i++)
+    if (check_workqueue(r->rank, r->type))
+      requestqueue_remove(r->rank);
 
-  // Target: another server
-  int target;
-  do
-  {
-    target = random_server();
-  } while (target == world_rank);
+  free(r);
 
-  MPI_Request request;
-  MPI_Status status;
-
-  int rc;
-  int count = 0;
-  IRECV(&count, 1, MPI_INT, target, ADLB_TAG_RESPONSE_STEAL);
-  MPI_CHECK(rc);
-  int max_memory = 1;
-  SEND(&max_memory, 1, MPI_INT, target, ADLB_TAG_STEAL);
-  MPI_CHECK(rc);
-
-  steal_sync(&request, &status);
-
-  DEBUG("stole: %i", count);
-
-  if (count == 0)
-    return false;
-
-  int length = count * sizeof(struct packed_put);
-  struct packed_put* wus = malloc(length);
-  RECV(wus, length, MPI_BYTE, target, ADLB_TAG_RESPONSE_STEAL);
-  MPI_CHECK(rc);
-
-  for (int i = 0; i < count; i++)
-  {
-    RECV(xfer, wus[i].length, MPI_BYTE, target,
-         ADLB_TAG_RESPONSE_STEAL);
-    workqueue_add(wus[i].type, wus[i].putter, wus[i].priority,
-                  wus[i].answer, wus[i].target, wus[i].length, xfer);
-  }
-
-  return false;
+  TRACE_END;
 }
 
 /**
-   Avoids server-to-server deadlocks
-   While waiting for a return from a steal, continue serving
-   requests
+   Simple wrapper function
  */
-static adlb_code
-steal_sync(MPI_Request* request, MPI_Status* status)
-{
-  DEBUG_START;
-  int flag = 0;
-  do
-  {
-    int rc = MPI_Test(request, &flag, status);
-    MPI_CHECK(rc);
-    adlb_code code = xlb_serve_one();
-    ADLB_CHECK(code);
-    if (xlb_server_shutting_down())
-      break;
-  } while (!flag);
-  DEBUG_END;
-  return ADLB_SUCCESS;
-}
-
-static adlb_code
-send_work_unit(int worker, work_unit* wu)
+static inline adlb_code
+send_work_unit(int worker, xlb_work_unit* wu)
 {
   int rc = send_work(worker,
                      wu->id, wu->type, wu->answer,
@@ -367,7 +349,11 @@ send_work_unit(int worker, work_unit* wu)
   return rc;
 }
 
-static adlb_code
+/**
+   Send the work unit to a worker
+   Workers are blocked on the recv for this
+ */
+static inline adlb_code
 send_work(int worker, long wuid, int type, int answer,
           void* payload, int length)
 {
@@ -385,26 +371,30 @@ send_work(int worker, long wuid, int type, int answer,
   SEND(&g, sizeof(g), MPI_BYTE, worker, ADLB_TAG_RESPONSE_GET);
   SEND(payload, length, MPI_BYTE, worker, ADLB_TAG_WORK);
 
+  STATS("SEND_WORK");
+
   return ADLB_SUCCESS;
 }
 
 static adlb_code
 handle_steal(int caller)
 {
-  DEBUG("handle_steal(caller=%i)", caller);
+  TRACE_START;
+  DEBUG("\t caller: %i", caller);
 
   MPI_Status status;
 
   int rc;
   int count;
-  work_unit** stolen;
+  xlb_work_unit** stolen;
   // Maximum amount of memory to return- currently unused
   int max_memory;
   RECV(&max_memory, 1, MPI_INT, caller, ADLB_TAG_STEAL);
 
   workqueue_steal(max_memory, &count, &stolen);
+  STATS("LOST: %i", count);
 
-  RSEND(&count, 1, MPI_INT, caller, ADLB_TAG_RESPONSE_STEAL);
+  RSEND(&count, 1, MPI_INT, caller, ADLB_TAG_RESPONSE_STEAL_COUNT);
 
   if (count == 0)
     return ADLB_SUCCESS;
@@ -417,10 +407,12 @@ handle_steal(int caller)
 
   for (int i = 0; i < count; i++)
   {
+    DEBUG("stolen payload: %s", (char*) stolen[i]->payload);
     SEND(stolen[i]->payload, stolen[i]->length, MPI_BYTE, caller,
          ADLB_TAG_RESPONSE_STEAL);
   }
 
+  TRACE_END;
   return ADLB_SUCCESS;
 }
 
@@ -921,34 +913,33 @@ static adlb_code
 handle_check_idle(int caller)
 {
   MPI_Status status;
-  RECV(NULL, 0, MPI_BYTE, caller, ADLB_TAG_CHECK_IDLE);
+  RECV_TAG(caller, ADLB_TAG_CHECK_IDLE);
   bool idle = xlb_server_check_idle_local();
+  DEBUG("handle_check_idle: %s", bool2string(idle));
   SEND(&idle, sizeof(idle), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
 
 /**
-   The calling rank is shutting down
-   If the caller is a server, then this server should shutdown too
+   The calling worker rank is shutting down
  */
 static adlb_code
-handle_shutdown(int caller)
+handle_shutdown_worker(int caller)
 {
   MPI_Status status;
-  RECV(&caller, 0, MPI_INT, caller, ADLB_TAG_SHUTDOWN);
+  RECV(&caller, 0, MPI_INT, caller, ADLB_TAG_SHUTDOWN_WORKER);
 
-  if (xlb_map_to_server(caller) == caller)
-  {
-    // caller is a server
-    xlb_server_shutdown();
-  }
-  else
-  {
-    // caller is a worker
-    adlb_code code = xlb_shutdown_worker(caller);
-    ADLB_CHECK(code);
-  }
+  adlb_code code = xlb_shutdown_worker(caller);
+  ADLB_CHECK(code);
 
+  return ADLB_SUCCESS;
+}
+
+static adlb_code
+handle_shutdown_server(int caller)
+{
+  // caller is a server
+  xlb_server_shutdown();
   return ADLB_SUCCESS;
 }
 

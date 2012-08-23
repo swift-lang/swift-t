@@ -12,23 +12,43 @@
 #define MESSAGING_H
 
 #include "adlb.h"
+#include "checks.h"
+#include "debug.h"
 #include "workqueue.h"
 
+/**
+   Initialize the messaging functionality
+ */
 void xlb_msg_init(void);
 
+#ifndef NDEBUG
+
+/**
+   Set a string name for debugging MPI message tags
+ */
+
 void xlb_add_tag_name(int tag, char* name);
+/**
+   Lookup string name for debugging MPI message tags
+ */
 
 char* xlb_get_tag_name(int tag);
 
+#else
+#define xlb_add_tag_name(tag,name) // noop
+#define xlb_get_tag_name(tag)      // noop
+#endif
+
 /*
-   All of these client/handler functions (adlb.c/handlers.c)
+   All of these client/handler functions (adlb.c,handlers.c,etc.)
    use messaging the same way:
    - They use communicator adlb_all_comm
    - They use the stack-allocated status or request object
    - They check the return code rc with MPI_CHECK() to return errors.
-   Thus, we use these macros to make reading the logic easier
+   Thus, we use these macros to ease reading the message protocols
    This also allows us to wrap each call with TRACE_MPI()
-        for easy message debugging
+        for message debugging
+   Note that the rc (return code) used here is in a nested scope
  */
 
 #define SEND(data,length,type,rank,tag) { \
@@ -60,11 +80,23 @@ char* xlb_get_tag_name(int tag);
                      adlb_all_comm,&request); \
   MPI_CHECK(rc); }
 
+// We don't TRACE this
+#define IPROBE(target,tag,flag,status) { \
+    int rc = MPI_Iprobe(target,tag,adlb_all_comm,flag,status); \
+    MPI_CHECK(rc); }
+
 #define WAIT(r,s) { \
   TRACE_MPI("WAIT"); \
   int rc = MPI_Wait(r,s); \
   MPI_CHECK(rc); \
   TRACE_MPI("WAITED"); }
+
+/** Simplify cases when only a tag is sent */
+#define SEND_TAG(rank,tag) SEND(NULL,0,MPI_BYTE,rank,tag)
+
+/** Simplify cases when only a tag is recvd */
+#define RECV_TAG(rank,tag) RECV(NULL,0,MPI_BYTE,rank,tag)
+
 
 /**
    Simple struct for message packing
@@ -140,8 +172,22 @@ struct packed_enumerate
   int offset;
 };
 
+/**
+   Simple data type transfer
+ */
+static inline void
+xlb_pack_work_unit(struct packed_put* p, xlb_work_unit* wu)
+{
+  p->answer = wu->answer;
+  p->length = wu->length;
+  p->priority = wu->priority;
+  p->putter = wu->putter;
+  p->target = wu->target;
+  p->type = wu->type;
+}
+
 /** Member count of enum adlb_tag */
-#define MAX_TAGS 128
+#define XLB_MAX_TAGS 128
 
 /**
    ADLB message tags
@@ -180,15 +226,19 @@ typedef enum
   ADLB_TAG_CONTAINER_SIZE,
   ADLB_TAG_LOCK,
   ADLB_TAG_UNLOCK,
+  ADLB_TAG_SYNC_REQUEST,
   ADLB_TAG_STEAL,
   ADLB_TAG_CHECK_IDLE,
-  ADLB_TAG_SHUTDOWN,
+  ADLB_TAG_SHUTDOWN_WORKER,
+  ADLB_TAG_SHUTDOWN_SERVER,
 
   /// tags outgoing from server
   ADLB_TAG_RESPONSE,
   ADLB_TAG_RESPONSE_GET,
   ADLB_TAG_RESPONSE_PUT,
+  ADLB_TAG_RESPONSE_STEAL_COUNT,
   ADLB_TAG_RESPONSE_STEAL,
+  ADLB_TAG_SYNC_RESPONSE,
   ADLB_TAG_WORKUNIT,
   ADLB_TAG_ABORT,
 
@@ -197,8 +247,5 @@ typedef enum
   ADLB_TAG_WORK
 
 } adlb_tag;
-
-
-void xlb_pack_work_unit(struct packed_put* p, work_unit* wu);
 
 #endif

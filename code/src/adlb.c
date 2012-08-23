@@ -21,17 +21,8 @@
 #include "mpi-tools.h"
 #include "server.h"
 
-#define DBG_CHECK_TIME  30
-
-/* for sicortex */
-#if defined(linux) && defined(mips)
-#include <malloc.h>
-#define DEBUGGING_SICORTEX 1
-#endif
-
 adlb_code next_server;
 
-// static int random_in_range(int,int);
 static int get_type_idx(int);
 
 static void print_proc_self_status(void);
@@ -52,55 +43,55 @@ adlb_code
 ADLBP_Init(int nservers, int ntypes, int type_vect[],
            int *am_server, MPI_Comm *worker_comm)
 {
-  DEBUG_START;
+  TRACE_START;
   int initialized, j, rc;
 
   check_versions();
   rc = MPI_Initialized(&initialized);
   CHECK_MSG(initialized, "ADLB: MPI is not initialized!\n");
 
-  debug_check_environment();
+  xlb_start_time = MPI_Wtime();
 
-  adlb_start_time = MPI_Wtime();
+  debug_check_environment();
 
   xlb_msg_init();
 
-  rc = MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-  rc = MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+  rc = MPI_Comm_size(MPI_COMM_WORLD, &xlb_world_size);
+  rc = MPI_Comm_rank(MPI_COMM_WORLD, &xlb_world_rank);
 
-  gdb_spin(world_rank);
+  gdb_spin(xlb_world_rank);
 
   types_size = ntypes;
   types = malloc(types_size * sizeof(int));
   for (int i = 0; i < types_size; i++)
     types[i] = type_vect[i];
-  servers = nservers;
-  workers = world_size - servers;
-  master_server_rank = world_size - servers;
+  xlb_servers = nservers;
+  xlb_workers = xlb_world_size - xlb_servers;
+  xlb_master_server_rank = xlb_world_size - xlb_servers;
 
   rc = MPI_Comm_dup(MPI_COMM_WORLD, &adlb_all_comm);
   assert(rc == MPI_SUCCESS);
 
-  if (world_rank < workers)
+  if (xlb_world_rank < xlb_workers)
   {
     *am_server = 0;
-    MPI_Comm_split(MPI_COMM_WORLD, 0, world_rank, worker_comm);
-    my_server = workers + (world_rank % servers);
-    printf("my_server_rank: %i\n", my_server);
-    next_server = my_server;
+    MPI_Comm_split(MPI_COMM_WORLD, 0, xlb_world_rank, worker_comm);
+    xlb_my_server = xlb_workers + (xlb_world_rank % xlb_servers);
+    printf("my_server_rank: %i\n", xlb_my_server);
+    next_server = xlb_my_server;
   }
   else
   {
     *am_server = 1;
     // Don't have a server: I am one
-    my_server = ADLB_RANK_NULL;
-    MPI_Comm_split(MPI_COMM_WORLD,1, world_rank-workers,
+    xlb_my_server = ADLB_RANK_NULL;
+    MPI_Comm_split(MPI_COMM_WORLD,1, xlb_world_rank-xlb_workers,
                    &adlb_server_comm);
     xlb_server_init();
   }
 
-  srandom(world_rank+1);
-  DEBUG_END;
+  srandom(xlb_world_rank+1);
+  TRACE_END;
   return ADLB_SUCCESS;
 }
 
@@ -129,14 +120,14 @@ ADLBP_Put(void* payload, int length, int target, int answer,
   /** Server to contact */
   int to_server;
   if (target != ADLB_RANK_ANY)
-    to_server = workers + (target % servers);
+    to_server = xlb_workers + (target % xlb_servers);
   else
-    to_server = my_server;
+    to_server = xlb_my_server;
 
   struct packed_put p;
   p.type = type;
   p.priority = priority;
-  p.putter = world_rank;
+  p.putter = xlb_world_rank;
   p.answer = answer;
   p.target = target;
   p.length = length;
@@ -178,9 +169,9 @@ ADLBP_Get(int type_requested, void* payload, int* length,
 
   struct packed_get_response g;
 
-  IRECV(&g, sizeof(g), MPI_BYTE, my_server, ADLB_TAG_RESPONSE_GET);
+  IRECV(&g, sizeof(g), MPI_BYTE, xlb_my_server, ADLB_TAG_RESPONSE_GET);
 
-  SEND(&type_requested, 1, MPI_INT, my_server, ADLB_TAG_GET);
+  SEND(&type_requested, 1, MPI_INT, xlb_my_server, ADLB_TAG_GET);
 
   WAIT(&request, &status);
 
@@ -198,6 +189,8 @@ ADLBP_Get(int type_requested, void* payload, int* length,
   mpi_recv_sanity(&status, MPI_BYTE, g.length);
   TRACE("ADLB_Get: got: %s", (char*) payload);
 
+  STATS("GOT_WORK");
+
   *length = g.length;
   *answer = g.answer_rank;
   *type_recvd = g.type;
@@ -208,8 +201,8 @@ ADLBP_Get(int type_requested, void* payload, int* length,
 static inline int
 locate(long id)
 {
-  int offset = id % servers;
-  int rank = world_size - servers + offset;
+  int offset = id % xlb_servers;
+  int rank = xlb_world_size - xlb_servers + offset;
   // DEBUG("locate(%li) => %i\n", id, rank);
   return rank;
 }
@@ -330,7 +323,7 @@ adlb_code ADLBP_Store(adlb_datum_id id, void *data, int length)
 
   to_server_rank = locate(id);
 
-  if (to_server_rank == world_rank)
+  if (to_server_rank == xlb_world_rank)
   {
     // This is a server-to-server operation on myself
     TRACE("Store SELF");
@@ -363,10 +356,10 @@ static inline int
 get_next_server()
 {
   static int next_server_index = 0;
-  int offset = next_server_index % servers;
-  int rank = world_size - servers + offset;
+  int offset = next_server_index % xlb_servers;
+  int rank = xlb_world_size - xlb_servers + offset;
   // DEBUG("random_server => %i\n", rank);
-  next_server_index = (next_server_index + 1) % servers;
+  next_server_index = (next_server_index + 1) % xlb_servers;
   return rank;
 }
 
@@ -814,7 +807,7 @@ ADLBP_Close(adlb_datum_id id, int** ranks, int *count)
 
   int to_server_rank = locate(id);
 
-  if (to_server_rank == world_rank)
+  if (to_server_rank == xlb_world_rank)
   {
     TRACE("CLOSE SELF: <%li>\n", id);
     adlb_data_code dc = data_close(id, ranks, count);
@@ -921,7 +914,7 @@ ADLB_Server_idle(int rank, bool* result)
   MPI_Request request;
   MPI_Status status;
   IRECV(result, sizeof(result), MPI_BYTE, rank, ADLB_TAG_RESPONSE);
-  SEND(NULL, 0, MPI_BYTE, rank, ADLB_TAG_CHECK_IDLE);
+  SEND_TAG(rank, ADLB_TAG_CHECK_IDLE);
   WAIT(&request, &status);
   return ADLB_SUCCESS;
 }
@@ -932,9 +925,9 @@ ADLB_Server_idle(int rank, bool* result)
 adlb_code
 ADLB_Server_shutdown(int rank)
 {
-  DEBUG_START;
-  SEND(NULL, 0, MPI_BYTE, rank, ADLB_TAG_SHUTDOWN);
-  DEBUG_END;
+  TRACE_START;
+  SEND_TAG(rank, ADLB_TAG_SHUTDOWN_SERVER);
+  TRACE_END;
   return ADLB_SUCCESS;
 }
 
@@ -944,23 +937,23 @@ ADLB_Server_shutdown(int rank)
 static inline adlb_code
 ADLB_Shutdown(void)
 {
-  DEBUG_START;
-  SEND(NULL, 0, MPI_INT, my_server, ADLB_TAG_SHUTDOWN);
-  DEBUG_END;
+  TRACE_START;
+  SEND_TAG(xlb_my_server, ADLB_TAG_SHUTDOWN_WORKER);
+  TRACE_END;
   return ADLB_SUCCESS;
 }
 
 adlb_code
 ADLBP_Finalize()
 {
-  DEBUG_START;
+  TRACE_START;
 
   int flag;
   MPI_Finalized(&flag);
   CHECK_MSG(flag,
             "ERROR: MPI_Finalize() called before ADLB_Finalize()\n");
   data_finalize();
-  if (world_rank >= master_server_rank)
+  if (xlb_world_rank >= xlb_master_server_rank)
   {
     // Server:
     ; // print_final_stats();
@@ -979,7 +972,7 @@ ADLBP_Abort(int code)
 {
   printf("ADLB_Abort(%i)\n", code);
 
-  MPI_Send(&code, 1, MPI_INT, my_server, ADLB_TAG_ABORT, adlb_all_comm);
+  MPI_Send(&code, 1, MPI_INT, xlb_my_server, ADLB_TAG_ABORT, adlb_all_comm);
 
   // give servers a chance to shut down
   sleep(1);

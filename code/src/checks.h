@@ -36,8 +36,11 @@
 /**
    Checks that an ADLB return code is ADLB_SUCCESS
    Note: This is disabled if ENABLE_DEBUG is not defined
+   If used in nested functions that all return adlb_code, can
+   create something like a stack trace
  */
-#define ADLB_CHECK(rc) { if (rc != ADLB_SUCCESS) { \
+#define ADLB_CHECK(rc) { \
+  if (!(rc == ADLB_SUCCESS || rc == ADLB_NOTHING)) { \
     printf("ADLB_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
     return rc; }}
 

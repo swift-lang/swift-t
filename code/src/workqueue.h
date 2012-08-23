@@ -13,12 +13,12 @@
 
 #include "adlb-defs.h"
 
-typedef long work_unit_id;
+typedef long xlb_work_unit_id;
 
 typedef struct
 {
   /** Unique ID wrt this server */
-  work_unit_id id;
+  xlb_work_unit_id id;
   /** Time at which this was enqueued */
   double timestamp;
   /** Work type */
@@ -35,11 +35,11 @@ typedef struct
   int length;
   /** Bulk work unit data */
   void* payload;
-} work_unit;
+} xlb_work_unit;
 
 void workqueue_init(int work_types);
 
-work_unit_id workqueue_unique(void);
+xlb_work_unit_id workqueue_unique(void);
 
 void workqueue_add(int type, int putter, int priority, int answer,
                    int target, int length, void* work_unit);
@@ -49,21 +49,23 @@ void workqueue_add(int type, int putter, int priority, int answer,
    Caller must work_unit_free() the result if
    Returns NULL if nothing found
  */
-work_unit* workqueue_get(int target, int type);
+xlb_work_unit* workqueue_get(int target, int type);
 
 /**
    Return item with highest priority that is not targeted
  */
-adlb_code workqueue_pop(work_unit* w);
+adlb_code workqueue_pop(xlb_work_unit* w);
 
 /**
 
  */
-adlb_code workqueue_select_type(int type, work_unit* w);
+adlb_code workqueue_select_type(int type, xlb_work_unit* w);
 
 adlb_code workqueue_steal(int max_memory, int* count,
-                          work_unit*** stolen);
+                          xlb_work_unit*** stolen);
 
-void work_unit_free(work_unit* wu);
+void work_unit_free(xlb_work_unit* wu);
+
+void workqueue_finalize(void);
 
 #endif

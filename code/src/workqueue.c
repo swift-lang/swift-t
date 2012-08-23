@@ -27,7 +27,7 @@
 #include "workqueue.h"
 
 /** Uniquify work units on this server */
-work_unit_id unique = 1;
+xlb_work_unit_id unique = 1;
 
 /**
    Map from target rank to type array of priority heap -
@@ -51,10 +51,12 @@ workqueue_init(int work_types)
   table_ip_init(&targeted_work, 128);
   typed_work = malloc(sizeof(struct tree) * work_types);
   for (int i = 0; i < work_types; i++)
+  {
     tree_init(&typed_work[i]);
+  }
 }
 
-work_unit_id
+xlb_work_unit_id
 workqueue_unique()
 {
   return unique++;
@@ -64,7 +66,7 @@ void
 workqueue_add(int type, int putter, int priority, int answer,
               int target_rank, int length, void* item)
 {
-  work_unit* wu = malloc(sizeof(work_unit));
+  xlb_work_unit* wu = malloc(sizeof(xlb_work_unit));
   wu->id = workqueue_unique();
   wu->type = type;
   wu->putter = putter;
@@ -126,12 +128,12 @@ workqueue_add(int type, int putter, int priority, int answer,
 //  return highest_node->data;
 //}
 
-work_unit*
+xlb_work_unit*
 workqueue_get(int target, int type)
 {
   DEBUG("workqueue_get(target=%i, type=%i)", target, type);
 
-  work_unit* wu = NULL;
+  xlb_work_unit* wu = NULL;
 
   heap* A = table_ip_search(&targeted_work, target);
   if (A != NULL)
@@ -162,7 +164,7 @@ workqueue_get(int target, int type)
 
 
 adlb_code
-workqueue_steal(int max_memory, int* count, work_unit*** result)
+workqueue_steal(int max_memory, int* count, xlb_work_unit*** result)
 {
   // struct list stolen;
   // list_init(&stolen);
@@ -172,7 +174,7 @@ workqueue_steal(int max_memory, int* count, work_unit*** result)
   int total = 0;
   for (int i = 0; i < types_size; i++)
     total += tree_size(&typed_work[i]);
-  printf("types_size: %i\n", types_size);
+
   DEBUG("workqueue_steal(): total=%i", total);
 
   if (total == 0)
@@ -189,7 +191,7 @@ workqueue_steal(int max_memory, int* count, work_unit*** result)
   // Number of work units we actually share
   int actual = 0;
 
-  work_unit** stolen = malloc(share * sizeof(work_unit*));
+  xlb_work_unit** stolen = malloc(share * sizeof(xlb_work_unit*));
   for (int i = 0; i < share; i++)
   {
     int type = random_draw(fractions, types_size);
@@ -198,7 +200,7 @@ workqueue_steal(int max_memory, int* count, work_unit*** result)
     if (node == NULL)
       continue;
     tree_remove_node(T, node);
-    stolen[actual] = (work_unit*) node->data;
+    stolen[actual] = (xlb_work_unit*) node->data;
     actual++;
     free(node);
   }
@@ -209,8 +211,24 @@ workqueue_steal(int max_memory, int* count, work_unit*** result)
 }
 
 void
-work_unit_free(work_unit* wu)
+work_unit_free(xlb_work_unit* wu)
 {
   free(wu->payload);
   free(wu);
+}
+
+void
+workqueue_finalize()
+{
+  TRACE_START;
+  if (table_ip_size(&targeted_work) > 0)
+    printf("WARNING: server contains targeted work!\n");
+  for (int i = 0; i < types_size; i++)
+  {
+    int count = tree_size(&typed_work[i]);
+    if (count > 0)
+      printf("WARNING: server contains %i work units of type: %i\n",
+             count, i);
+  }
+  TRACE_END;
 }

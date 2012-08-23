@@ -112,16 +112,44 @@ requestqueue_matches_type(int type)
   return result;
 }
 
-bool
+void
 requestqueue_remove(int worker_rank)
 {
-  return ADLB_RANK_NULL;
+  request* r = (request*) table_ip_remove(&targets, worker_rank);
+  valgrind_assert(r);
+  int type = r->type;
+  struct list2* L = &type_requests[type];
+  list2_remove_item(L, r->item);
+  free(r);
 }
 
 int
 requestqueue_size()
 {
   return table_ip_size(&targets);
+}
+
+/**
+   r must be preallocated to requestqueue_size()*sizeof(request_pair)
+ */
+void
+requestqueue_get(xlb_request_pair* r)
+{
+  int index = 0;
+  DEBUG("rwt: %i", rq_work_types);
+  for (int t = 0; t < rq_work_types; t++)
+  {
+    DEBUG("t: %i", t);
+    struct list2* L = &type_requests[t];
+    assert(L != NULL);
+    for (struct list2_item* item = L->head; item; item = item->next)
+    {
+      request* rq = (request*) item->data;
+      r[index].rank = rq->rank;
+      r[index].type = rq->type;
+      index++;
+    }
+  }
 }
 
 // void requestqueue_send_work(int worker);
@@ -135,7 +163,7 @@ static adlb_code shutdown_rank(int rank);
 void
 requestqueue_shutdown()
 {
-  DEBUG_START;
+  TRACE_START;
   for (int i = 0; i < rq_work_types; i++)
     while (true)
     {

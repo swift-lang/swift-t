@@ -10,6 +10,9 @@
 #include <list.h>
 #include <list_l.h>
 
+/**
+   Common return codes
+ */
 typedef enum
 {
  ADLB_SUCCESS  =  1,
@@ -17,11 +20,19 @@ typedef enum
  /** Rejected: e.g., out of memory */
  ADLB_REJECTED = -2,
  /** Normal shutdown */
- ADLB_SHUTDOWN = -3
+ ADLB_SHUTDOWN = -3,
+ /** No error but indicate nothing happened */
+ ADLB_NOTHING = -4
 } adlb_code;
 
+/**
+   Identifier for all ADLB data module user data
+ */
 typedef long adlb_datum_id;
 
+/**
+   Status of future variables
+ */
 typedef enum
 {
   /** The datum was created but no value has been stored */
@@ -30,6 +41,9 @@ typedef enum
   ADLB_DATA_SET
 } adlb_data_status;
 
+/**
+   User data types
+ */
 typedef enum
 {
   ADLB_DATA_TYPE_NULL = 0,
@@ -41,6 +55,9 @@ typedef enum
   ADLB_DATA_TYPE_CONTAINER
 } adlb_data_type;
 
+/**
+   User data
+ */
 typedef struct
 {
   adlb_data_type type;
@@ -81,6 +98,9 @@ typedef struct
   struct list_i listeners;
 } adlb_datum;
 
+/**
+   Common return codes
+ */
 typedef enum
 {
   ADLB_DATA_SUCCESS,
@@ -116,6 +136,7 @@ typedef enum
 #define ADLB_TYPE_ANY  -300
 #define ADLB_TYPE_NULL -400
 
+/** The adlb_datum_id of nothing */
 #define ADLB_DATA_ID_NULL 0
 
 /**
@@ -124,29 +145,21 @@ typedef enum
  */
 #define ADLB_DATA_ID_UNLINKED -1
 
-/**
-   The maximal string length of a container subscript
- */
+/** The maximal string length of a container subscript */
 #define ADLB_DATA_SUBSCRIPT_MAX 1024
 
-/**
-   The maximal string length of a container member string value
-*/
+/** The maximal string length of a container member string value */
 #define ADLB_DATA_MEMBER_MAX 1024
 
-/**
-   The maximal length of an ADLB datum (string, blob, etc.)
- */
+/** The maximal length of an ADLB datum (string, blob, etc.) */
 #define ADLB_DATA_MAX (1024*1024)
 
-/**
-   Maximum size for a given ADLB transaction
-*/
+/** Maximum size for a given ADLB transaction */
 #define ADLB_PAYLOAD_MAX (1024*1024)
 
 /**
    The ASCII control character Record Separator
-   Used glue strings together in a big buffer
+   Used to glue strings together in a big buffer
  */
 #define RS 30
 

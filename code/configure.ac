@@ -33,14 +33,10 @@ AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
          [])])
 AC_SUBST([CP_U], [$ac_cv_path_cp_u])
 
+MPE_FLAGS=
 AC_ARG_ENABLE(mpe,
         [--enable-mpe - Enable MPE. The default is disabled.],
-        enable_mpe=yes , )
-if test "$enable_checkMPE" = "yes" ; then
-    ADLB_ENABLE_MPE=yes
-else
-    ADLB_ENABLE_MPE=no
-fi
+        ADLB_ENABLE_MPE=yes , )
 
 if [[ ${ADLB_ENABLE_MPE} == "yes" ]]
 then
@@ -54,6 +50,7 @@ then
     CFLAGS="$savedCFLAGS"
     if test "$adlb_ok" = "yes" ; then
         AC_MSG_RESULT([$MPILOG_FLAG and $LOG_FLAG])
+        MPE_FLAGS="-mpe=log"
     else
         MPILOG_FLAG="-mpilog"
         LOG_FLAG="-log"
@@ -64,6 +61,7 @@ then
         CFLAGS="$savedCFLAGS"
         if test "$adlb_ok" = "yes" ; then
             AC_MSG_RESULT([$MPILOG_FLAG and $LOG_FLAG])
+            MPE_FLAGS="-mpe=log"
         else
             MPILOG_FLAG=""
             LOG_FLAG=""
@@ -76,9 +74,9 @@ then
 else
      AC_MSG_RESULT([Not using MPE])
 fi
-AC_SUBST(MPILOG_FLAG)
-AC_SUBST(LOG_FLAG)
+
 AC_SUBST(ADLB_ENABLE_MPE)
+AC_SUBST(MPE_FLAGS)
 AC_DEFINE_UNQUOTED(ADLB_ENABLE_MPE,
                    "$ADLB_ENABLE_MPE", [Using MPE: yes/no])
 
