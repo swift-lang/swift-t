@@ -351,6 +351,7 @@ public class ASTWalker {
       this.vinfo = vinfo;
     }
     
+    @Override
     public String toString() {
       return this.var.toString() + " pair";
     }
@@ -1459,12 +1460,14 @@ public class ASTWalker {
       if (isRef) {
         // This should only be run when assigning to nested array
         afterActions.addFirst(new Runnable() {
+          @Override
           public void run() {
             backend.arrayRefInsertImm(lvalVar,
                       arr, Arg.createIntLit(arrIx), origLval.var);
           }});
       } else {
         afterActions.addFirst(new Runnable() {
+          @Override
           public void run() {
             backend.arrayInsertImm(lvalVar, arr, 
                 Arg.createIntLit(arrIx));
@@ -1476,12 +1479,14 @@ public class ASTWalker {
 
       if (isRef) {
         afterActions.addFirst(new Runnable() {
+          @Override
           public void run() {
             backend.arrayRefInsertFuture(lvalVar, arr, 
                                               indexVar, origLval.var);
           }});
       } else {
         afterActions.addFirst(new Runnable() {
+          @Override
           public void run() {
             backend.arrayInsertFuture(lvalVar, arr, indexVar);
           }});
@@ -1555,7 +1560,7 @@ public class ASTWalker {
       /* See if a template is provided for inline TCL code for function */
       SwiftAST inlineTclTree = tree.child(inlineTclPos);
       assert(inlineTclTree.getChildCount() == 1);
-      System.err.println(ExMParser.tokenNames[inlineTclTree.child(0).getType()]);
+      // System.err.println(ExMParser.tokenNames[inlineTclTree.child(0).getType()]);
       String tclTemplateString = 
             Literals.extractLiteralString(context, inlineTclTree.child(0));
       inlineTcl = InlineCode.templateFromString(context, tclTemplateString);
@@ -1568,8 +1573,8 @@ public class ASTWalker {
       inlineTcl.addInNames(fdecl.getInNames());
       inlineTcl.addOutNames(fdecl.getOutNames());
       
-      System.err.println("inline template: '" + tclTemplateString + "' to "
-              + inlineTcl.toString());
+      // System.err.println("inline template: '" + tclTemplateString + "' to "
+      //         + inlineTcl.toString());
       FunctionSemantics.addInlineTemplate(function, inlineTcl);
     }
     
