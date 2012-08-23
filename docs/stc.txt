@@ -682,6 +682,7 @@ Configure Turbine with:
 1. Disable logging/debugging via environment
 +
 Use the environment variables.
++
 2. Disable logging/debugging at configure/compile time
 ** Configure c-utils with +--disable-log+
 ** Configure ADLB with +NDEBUG+
