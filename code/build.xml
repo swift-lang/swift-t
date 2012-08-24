@@ -39,7 +39,7 @@
        warnings on ANTLR-generated code that is outside our control
   -->
   <target name="compile"
-          depends="compile.antlr,compile.ui,compile.gen,compile.ast,compile.ic,compile.frontend">
+          depends="compile.antlr,compile.ui,compile.gen,compile.ast,compile.ic,compile.frontend,bin.stc">
   </target>
 
   <!-- Check if the ANTLR code is up-to-date -->
@@ -178,6 +178,17 @@
            includeantruntime="false"
            classpath=".:${antlr.jar}:${log4j.jar}:${json.jar}">
     </javac>
+  </target>
+
+  <target name="bin.stc">
+    <fail unless="turbine.install"
+          message="You must provide -Dturbine.install=..."/>
+    <copy file="bin/stc.in" toFile="bin/stc">
+      <filterset>
+        <filter token="TURBINE_INSTALL" value="${turbine.install}"/>
+      </filterset>
+    </copy>
+    <chmod file="bin/stc" perm="u+x"/>
   </target>
 
   <target name="javadoc">

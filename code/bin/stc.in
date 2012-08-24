@@ -144,16 +144,13 @@ verbose()
   fi
 }
 
+TURBINE_INSTALL=@TURBINE_INSTALL@
+
 set_turbine_home()
 {
   if [[ -z ${TURBINE_HOME} ]]
   then
-  # Try to find turbine in PATH
-    TURBINE=$( which turbine )
-    if [[ ${?} == 0 ]]
-    then
-      TURBINE_HOME=$( cd $( dirname ${TURBINE} )/.. ; /bin/pwd )
-    fi
+    TURBINE_HOME=${TURBINE_INSTALL}
   fi
 }
 
