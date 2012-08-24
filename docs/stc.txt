@@ -21,30 +21,36 @@ STC allows you to write Swift programs and run them using Turbine.
 Writing and running Swift/Turbine programs requires multiple packages.
 These have been packaged for convenient download and installation.
 
-1. Obtain the package
+1. Install or locate MPICH
++
+Cf. http://www.mcs.anl.gov/research/projects/mpich2/documentation/index.php?s=docs[MPICH Guides]
++
+Other MPI implementations are supported as well.
++
+2. Obtain the package
 +
 ----
 wget http://www.mcs.anl.gov/~wozniak/exm-trunk.tar.gz
 ----
 +
-2. Unpack and enter package directory
+3. Unpack and enter package directory
 +
 ----
 tar xfz exm-trunk.tar.gz
 cd exm-trunk
 ----
-3. Edit the settings file: +exm-settings.sh+
+4. Edit the settings file: +exm-settings.sh+
 +
 This allows you to change the installation location, etc.
 +
 TIP: Save your +exm-settings.sh+ when you download a new package
 +
-4. Run the setup script
+5. Run the setup script
 +
 ----
 ./exm-setup.zsh
 ----
-5. Add Turbine and STC to your paths
+6. Add Turbine and STC to your paths
 ----
 PATH=${PATH}:/path/to/exm-install/turbine/bin
 PATH=${PATH}:/path/to/exm-install/stc/bin
