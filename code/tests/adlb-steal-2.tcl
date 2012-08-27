@@ -10,6 +10,7 @@
 package require turbine 0.0.1
 
 proc default { env_var d } {
+    global env
     if [ info exists env($env_var) ] {
         set result $env($env_var)
     } else {
