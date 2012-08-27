@@ -9,38 +9,36 @@
 
 package require turbine 0.0.1
 
+proc default { env_var d } {
+    if [ info exists env($env_var) ] {
+        set result $env($env_var)
+    } else {
+        set result $d
+    }
+    return $result
+}
+
 # Initial puts to bootstrap
-set task_count_initial 5
+set task_count_initial 10000
 
 # Maximal task length (seconds)
-set task_length_max 5
+set task_length_max 0
 
 # Probability of releasing new work
-set task_chance 0.5
+set task_chance 0
 
 # Maximal number of new tasks found
-set task_count_max 4
+set task_count_max 0
 
 # Seed for srand().  rank is added before using
 set rand_seed 1
 
-enum WORK_TYPE { T }
-
-if [ info exists env(ADLB_SERVERS) ] {
-    set servers $env(ADLB_SERVERS)
-} else {
-    set servers ""
-}
-if { [ string length $servers ] == 0 } {
-    set servers 2
-}
+set servers [ default ADLB_SERVERS 1 ]
 
 # duration in seconds
-if [ info exists env(TEST_DURATION) ] {
-    set duration $env(TEST_DURATION)
-} else {
-    set duration 6
-}
+set duration [ default TEST_DURATION 0 ]
+
+enum WORK_TYPE { T }
 
 # Walltime since this script started
 proc clock_wt { } {
@@ -52,7 +50,7 @@ proc clock_wt { } {
 
 proc clock_report { } {
     set d [ clock_wt ]
-    puts "clock: $d"
+    # puts "clock: $d"
 }
 
 proc clock_fmt { } {
@@ -60,7 +58,7 @@ proc clock_fmt { } {
 }
 
 proc log { msg } {
-    puts "LOG: [clock_fmt] $msg"
+    # puts "LOG: [clock_fmt] $msg"
 }
 
 # Obtain a random task length
@@ -102,35 +100,44 @@ set amserver [ adlb::amserver ]
 
 set rank [ adlb::rank ]
 
+set tasks_run 0
+
 expr srand($rand_seed + $rank)
 
 if { $amserver == 0 } {
+
+    if { $rank == 0 } { clock_report }
+
     if { $rank == 0 } {
         for { set i 0 } { $i < $task_count_initial } { incr i } {
-            clock_report
+            # clock_report
             adlb::put $adlb::RANK_ANY $WORK_TYPE(T) [random_task] 0
         }
     }
-    after 3000
+    # after 3000
     log "worker starting"
     while 1 {
-        clock_report
+        # clock_report
         set msg [ adlb::get $WORK_TYPE(T) answer_rank ]
-        log "msg: '$msg'"
+        # log "msg: '$msg'"
         if { [ string length $msg ] == 0 } break
         # log "answer_rank: $answer_rank"
         # Emulate work time
-        log "work unit start"
+        # log "work unit start"
         after [ expr $msg * 1000 ]
-        log "work unit stop"
+        # log "work unit stop"
         put_found_work
+        incr tasks_run
     }
 } else {
     adlb::server
 }
 
-clock_report
+if { $rank == 0 } { clock_report }
+
 adlb::finalize
-puts OK
+# puts OK
+
+puts "tasks_run: $tasks_run"
 
 proc exit args {}
