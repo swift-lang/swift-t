@@ -38,7 +38,7 @@ AC_ARG_ENABLE(mpe,
         [--enable-mpe - Enable MPE. The default is disabled.],
         ADLB_ENABLE_MPE=yes , )
 
-if [[ ${ADLB_ENABLE_MPE} == "yes" ]]
+if [[ "${ADLB_ENABLE_MPE}" == "yes" ]]
 then
     AC_MSG_CHECKING( [for the MPE compiler flags] )
     MPILOG_FLAG="-mpe=mpilog"
