@@ -43,37 +43,38 @@ enum WORK_TYPE { T }
 # "seconds" or "milliseconds"
 set clock_resolution "milliseconds"
 # In seconds.  Is a float if clock_resolution==milliseconds
-set clock_start
+set clock_start 0
 
-clock_init { } {
+proc clock_init { } {
     global clock_resolution
     global clock_start
     set clock_start [ clock $clock_resolution ]
 }
 
-# Walltime since this script started (seconds)
+# Walltime since this script started (clock_init) (in seconds)
 proc clock_wt { } {
     global clock_resolution
     global clock_start
     set t [ clock $clock_resolution ]
     set d [ expr $t - $clock_start ]
-    if { string equal $clock_resolution "milliseconds" } {
-        set d [ expr d/1000 ]
+    if { [ string equal $clock_resolution "milliseconds" ] } {
+        set d [ expr double($d) / 1000 ]
     }
     return $d
+}
+
+proc clock_fmt { } {
+    global clock_resolution
+    if { [ string equal $clock_resolution "seconds" ] } {
+        return format "%4i" [ clock_wt ]
+    } else {
+        return format "%7.3f" [ clock_wt ]
+    }
 }
 
 proc clock_report { } {
     set d [ clock_fmt ]
     puts "clock: $d"
-}
-
-proc clock_fmt { } {
-    if { string equal $clock_resolution "seconds" } {
-        return format "%4i" [ clock_wt ]
-    } else {
-        return format "%0.3f" [ clock_wt ]
-    }
 }
 
 proc log { msg } {
@@ -113,7 +114,7 @@ proc put_found_work { } {
 
 adlb::init $servers [ array size WORK_TYPE ]
 
-set clock_start [ clock_init ]
+clock_init
 
 set amserver [ adlb::amserver ]
 
