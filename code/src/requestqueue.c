@@ -129,11 +129,8 @@ requestqueue_size()
   return table_ip_size(&targets);
 }
 
-/**
-   r must be preallocated to requestqueue_size()*sizeof(request_pair)
- */
-void
-requestqueue_get(xlb_request_pair* r)
+int
+requestqueue_get(xlb_request_pair* r, int max)
 {
   int index = 0;
   DEBUG("rwt: %i", rq_work_types);
@@ -148,8 +145,11 @@ requestqueue_get(xlb_request_pair* r)
       r[index].rank = rq->rank;
       r[index].type = rq->type;
       index++;
+      if (index == max)
+        return max;
     }
   }
+  return index;
 }
 
 // void requestqueue_send_work(int worker);

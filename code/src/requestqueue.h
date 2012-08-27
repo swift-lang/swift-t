@@ -29,7 +29,13 @@ int requestqueue_matches_type(int type);
 
 int requestqueue_size(void);
 
-void requestqueue_get(xlb_request_pair* r);
+/**
+   @param r Where to write output request_pairs.
+            Must be preallocated to max*sizeof(request_pair)
+   @param max Maximal number of request_pairs to return
+   @return Actual number of request_pairs returned
+ */
+int requestqueue_get(xlb_request_pair* r, int max);
 
 void requestqueue_remove(int worker_rank);
 

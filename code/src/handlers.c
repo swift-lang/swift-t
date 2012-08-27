@@ -319,6 +319,9 @@ check_workqueue(int caller, int type)
   return result;
 }
 
+/**
+   Called after a steal
+ */
 void
 requestqueue_recheck()
 {
@@ -326,14 +329,13 @@ requestqueue_recheck()
 
   int N = requestqueue_size();
   xlb_request_pair* r = malloc(N*sizeof(xlb_request_pair));
-  requestqueue_get(r);
+  N = requestqueue_get(r, N);
 
   for (int i = 0; i < N; i++)
-    if (check_workqueue(r->rank, r->type))
-      requestqueue_remove(r->rank);
+    if (check_workqueue(r[i].rank, r[i].type))
+      requestqueue_remove(r[i].rank);
 
   free(r);
-
   TRACE_END;
 }
 
