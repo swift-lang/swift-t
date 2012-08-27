@@ -13,6 +13,9 @@ set fd [ open "$dir/debug.h" w ]
 
 array set tokens $INPUT
 
+# Output functions take multiple arguments for complex strings
+# String breaks were necessary to prevent Tcl string interpolation
+#        of C preprocessor syntax
 proc out { args } {
     global fd
     foreach arg $args {
@@ -20,11 +23,17 @@ proc out { args } {
     }
 }
 
-out "\n"
-out "// Header created by debug-auto.tcl at: [exec date]\n\n"
+proc outln { args } {
+    global fd
+    eval out $args
+    puts $fd ""
+}
 
-out "#ifndef DEBUG_H\n"
-out "#define DEBUG_H\n\n"
+outln
+outln "// Header created by debug-auto.tcl at: [exec date]\n"
+
+outln "#ifndef DEBUG_H"
+outln "#define DEBUG_H\n"
 
 out "void turbine_debug_init(void);\n\n"
 
@@ -34,19 +43,23 @@ out "void turbine_debug(const char* token, " \
 
 out "void turbine_debug_finalize(void);\n\n"
 
-# String breaks were necessary to prevent TCL string interpolation
+# Note that we provide a noop for NDEBUG
 foreach token [ array names tokens ] {
-    out "// Macros for user token: $token\n\n"
+    outln "// Macros for user token: $token\n"
+    outln "#ifndef NDEBUG"
     set symbol "ENABLE_DEBUG_$token"
     set macro "DEBUG_$token"
     if { $tokens($token) eq "ON" } {
-        out "#define $symbol\n"
-        out "#define $macro" "(format, args...) \\\n"
-        out "\t turbine_debug(\"$macro\", format, ## args)\n"
+        outln "#define $symbol"
+        outln "#define $macro" "(format, args...) \\"
+        outln "\t turbine_debug(\"$macro\", format, ## args)"
     } else {
-        out "#define $macro" "(format, args...)\n"
+        outln "#define $macro" "(format, args...)"
     }
-    out "\n"
+    outln "#else"
+    outln "// noop for NDEBUG"
+    outln "#define $macro" "(format, args...)"
+    outln "#endif\n"
 }
 
 out "\n"
