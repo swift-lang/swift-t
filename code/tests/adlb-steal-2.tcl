@@ -19,7 +19,7 @@ proc default { env_var d } {
 }
 
 # Initial puts to bootstrap
-set task_count_initial 10000
+set task_count_initial 100
 
 # Maximal task length (seconds)
 set task_length_max 0
@@ -40,21 +40,40 @@ set duration [ default TEST_DURATION 0 ]
 
 enum WORK_TYPE { T }
 
-# Walltime since this script started
-proc clock_wt { } {
+# "seconds" or "milliseconds"
+set clock_resolution "milliseconds"
+# In seconds.  Is a float if clock_resolution==milliseconds
+set clock_start
+
+clock_init { } {
+    global clock_resolution
     global clock_start
-    set t [ clock seconds ]
+    set clock_start [ clock $clock_resolution ]
+}
+
+# Walltime since this script started (seconds)
+proc clock_wt { } {
+    global clock_resolution
+    global clock_start
+    set t [ clock $clock_resolution ]
     set d [ expr $t - $clock_start ]
+    if { string equal $clock_resolution "milliseconds" } {
+        set d [ expr d/1000 ]
+    }
     return $d
 }
 
 proc clock_report { } {
-    set d [ clock_wt ]
-    # puts "clock: $d"
+    set d [ clock_fmt ]
+    puts "clock: $d"
 }
 
 proc clock_fmt { } {
-    return format "%4i" [clock_wt]
+    if { string equal $clock_resolution "seconds" } {
+        return format "%4i" [ clock_wt ]
+    } else {
+        return format "%0.3f" [ clock_wt ]
+    }
 }
 
 proc log { msg } {
@@ -94,7 +113,7 @@ proc put_found_work { } {
 
 adlb::init $servers [ array size WORK_TYPE ]
 
-set clock_start [ clock seconds ]
+set clock_start [ clock_init ]
 
 set amserver [ adlb::amserver ]
 
@@ -114,8 +133,8 @@ if { $amserver == 0 } {
             adlb::put $adlb::RANK_ANY $WORK_TYPE(T) [random_task] 0
         }
     }
-    # after 3000
-    log "worker starting"
+    # after 1000
+    # log "worker starting"
     while 1 {
         # clock_report
         set msg [ adlb::get $WORK_TYPE(T) answer_rank ]
