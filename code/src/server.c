@@ -48,8 +48,9 @@ static adlb_code setup_idle_time(void);
 adlb_code
 xlb_server_init()
 {
+  TRACE_START;
+
   shutting_down = false;
-  printf("adlb_server_init()...\n");
 
   list_i_init(&workers_shutdown);
   requestqueue_init(types_size);
@@ -62,17 +63,19 @@ xlb_server_init()
   handlers_init();
   xlb_time_last_action = MPI_Wtime();
 
-  printf("SERVER for ranks: ");
+  // Add up xlb_my_workers:
+  // printf("SERVER for ranks: ");
   xlb_my_workers = 0;
   for (int i = 0; i < xlb_workers; i++)
   {
     if (xlb_map_to_server(i) == xlb_world_rank)
     {
       xlb_my_workers++;
-      printf("%i ", i);
+      // printf("%i ", i);
     }
   }
-  printf("\n");
+  // printf("\n");
+  TRACE_END
   return ADLB_SUCCESS;
 }
 
