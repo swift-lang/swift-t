@@ -54,7 +54,7 @@ else
 #       Using XLC
         PIC = -qpic
         STD =
-        SHARED = -qnostaticlink
+        SHARED = -qmkshrobj
 endif
 
 # No logging
@@ -107,7 +107,7 @@ $(ADLB_A): $(OBJS)
 
 $(ADLB_SO): $(OBJS) $(NLOBJS)
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) -shared -o $(@) -fPIC $(OBJS) \
+	$(E) $(CC) $(SHARED) -o $(@) $(OBJS) \
 	           $(LIBS)
 
 ### APPS
