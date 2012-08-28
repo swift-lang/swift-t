@@ -31,10 +31,10 @@ extern int xlb_my_server;
 extern int xlb_master_server_rank;
 
 /** Number of work unit types */
-extern int types_size;
+extern int xlb_types_size;
 
 /** Array of allowed work unit types */
-extern int* types;
+extern int* xlb_types;
 
 extern double max_malloc;
 
@@ -59,5 +59,10 @@ int random_server(void);
    Note: this is used by debugging output
  */
 double xlb_wtime(void);
+
+/**
+   Given a work_type, obtain its index in xlb_types
+ */
+int xlb_type_index(int work_type);
 
 #endif

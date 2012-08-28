@@ -4,6 +4,7 @@
  */
 
 #include "adlb.h"
+#include "common.h"
 #include "data.h"
 
 /*
@@ -36,10 +37,19 @@ int mpe_finalize_start, mpe_finalize_end;
 
 // Server solo events:
 
-static int user_prev_type, user_curr_type, user_num_types,
-           *user_state_start, *user_state_end, *user_types;
-static int log_user_state_first_time = 1;
-static char user_state_descr[256];
+// User work type events:
+
+/** Previous work type from Get.  -1 indicates nothing */
+// static int user_type_previous = -1;
+/** Currently running work type from Get.  -1 indicates nothing */
+static int user_type_current = -1;
+/** Array of user state start events, one for each type */
+static int *user_state_start;
+/** Array of user state end events, one for each type */
+static int *user_state_end;
+// static int *user_types;
+
+static char user_state_description[256];
 #endif
 
 /** Automate MPE_Log_get_state_eventIDs calls */
@@ -53,6 +63,18 @@ static char user_state_descr[256];
                      "ADLB_" #token, "MPE_CHOOSE_COLOR")
 
 static void setup_mpe_events(int num_types, int* types);
+
+#ifdef ENABLE_MPE
+/**
+   Log an empty event
+ */
+static inline void
+mpe_log(int event)
+{
+  printf("mpe_log: %i\n", event);
+  MPE_Log_event(event, 0, NULL);
+}
+#endif
 
 adlb_code
 ADLB_Init(int num_servers, int num_types, int* types,
@@ -131,22 +153,20 @@ setup_mpe_events(int num_types, int* types)
 
   user_state_start = malloc(num_types * sizeof(int));
   user_state_end   = malloc(num_types * sizeof(int));
-  user_types       = malloc(num_types * sizeof(int));
   int user_num_types   = num_types;
   for (int i = 0; i < num_types; i++)
   {
-    user_types[i] = types[i];
-    MPE_Log_get_state_eventIDs(&user_state_start[i],&user_state_end[i]);
+    MPE_Log_get_state_eventIDs(&user_state_start[i],
+                               &user_state_end[i]);
     if ( my_log_rank == 0 )
     {
-      sprintf(user_state_descr,"user_state_%d",types[i]);
-      MPE_Describe_state( user_state_start[i], user_state_end[i],
-                          user_state_descr, "MPE_CHOOSE_COLOR" );
+      sprintf(user_state_description,"user_state_%d", types[i]);
+      MPE_Describe_state(user_state_start[i], user_state_end[i],
+                         user_state_description, "MPE_CHOOSE_COLOR");
     }
   }
 #endif
 }
-
 
 adlb_code
 ADLB_Put(void *work_buf, int work_len, int reserve_rank,
@@ -163,6 +183,59 @@ ADLB_Put(void *work_buf, int work_len, int reserve_rank,
 
 #ifdef ENABLE_MPE
   MPE_Log_event(mpe_wkr_put_end,0,NULL);
+#endif
+
+  return rc;
+}
+
+#ifdef ENABLE_MPE
+
+/**
+   Log that this worker is working on the given work type
+ */
+static inline void
+mpe_log_user_state(int type)
+{
+  if (type == -1)
+  {
+    // Starting a new Get() - ending user state
+    if (user_type_current != -1)
+    {
+      // We have a valid previous state to end (not first get())
+      int i = xlb_type_index(user_type_current);
+      mpe_log(user_state_end[i]);
+    }
+  }
+  else
+  {
+    // Just completed a Get() - starting user state
+    user_type_current = type;
+    int i = xlb_type_index(user_type_current);
+    mpe_log(user_state_start[i]);
+    printf("user_state: %i\n", user_type_current);
+  }
+
+  user_type_current = type;
+}
+
+#endif
+
+adlb_code
+ADLB_Get(int type_requested, void* payload, int* length,
+         int* answer, int* type_recvd)
+{
+#ifdef ENABLE_MPE
+  mpe_log(mpe_wkr_get_start);
+  mpe_log_user_state(-1);
+#endif
+
+  int rc = ADLBP_Get(type_requested, payload, length, answer,
+                     type_recvd);
+
+#ifdef ENABLE_MPE
+  mpe_log(mpe_wkr_get_end);
+  if (rc == ADLB_SUCCESS)
+    mpe_log_user_state(*type_recvd);
 #endif
 
   return rc;
@@ -305,30 +378,6 @@ adlb_code ADLB_Unlock(adlb_datum_id id)
 }
 
 adlb_code
-ADLB_Get(int type_requested, void* payload, int* length,
-         int* answer, int* type_recvd)
-{
-  int rc;
-
-#ifdef ENABLE_MPE
-  MPE_Log_event(mpe_wkr_get_start, 0, NULL);
-#endif
-
-  rc = ADLBP_Get(type_requested, payload, length, answer, type_recvd);
-
-#ifdef ENABLE_MPE
-  MPE_Log_event(mpe_wkr_get_end, 0, NULL);
-#endif
-
-#ifdef ENABLE_MPE
-  user_prev_type = user_curr_type;
-  user_curr_type = *type_recvd;
-#endif
-
-  return rc;
-}
-
-adlb_code
 ADLB_Finalize()
 {
 #ifdef ENABLE_MPE
@@ -339,34 +388,15 @@ ADLB_Finalize()
 
 #ifdef ENABLE_MPE
   MPE_Log_event(mpe_finalize_end, 0, NULL);
+  MPE_Finish_log("adlb");
 #endif
 
-#ifdef ENABLE_MPE
-  if ( ! log_user_state_first_time)
-  {
-    int i;
-    for (i = 0; i < user_num_types; i++)
-      if (user_prev_type == user_types[i])
-        break;
-    if (i >= user_num_types)
-    {
-      printf("invalid type while logging: %d\n", user_prev_type);
-      ADLBP_Abort(1);
-    }
-    MPE_Log_event(user_state_end[i],user_prev_type,NULL);
-  }
-#endif
-
-#ifdef ENABLE_MPE
-    MPE_Finish_log("adlb");
-#endif
-
-    return rc;
+  return rc;
 }
 
-adlb_code ADLB_Abort(int code)
+adlb_code
+ADLB_Abort(int code)
 {
-  int rc;
-  rc = ADLBP_Abort(code);
+  int rc = ADLBP_Abort(code);
   return rc;
 }

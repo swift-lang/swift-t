@@ -6,6 +6,8 @@
  *      Author: wozniak
  */
 
+#include <stdio.h>
+
 #include <mpi.h>
 
 #include <tools.h>
@@ -20,8 +22,8 @@ int xlb_servers;
 int xlb_workers;
 int xlb_my_server;
 int xlb_master_server_rank;
-int types_size;
-int* types;
+int xlb_types_size;
+int* xlb_types;
 double xlb_start_time;
 
 MPI_Comm adlb_all_comm;
@@ -39,4 +41,14 @@ double
 xlb_wtime(void)
 {
   return MPI_Wtime() - xlb_start_time;
+}
+
+int
+xlb_type_index(int work_type)
+{
+  for (int i = 0; i < xlb_types_size; i++)
+    if (xlb_types[i] == work_type)
+      return i;
+  printf("get_type_idx: INVALID type %d\n", work_type);
+  return -1;
 }

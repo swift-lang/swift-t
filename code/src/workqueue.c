@@ -89,9 +89,9 @@ workqueue_add(int type, int putter, int priority, int answer,
     heap* A = table_ip_search(&targeted_work, target_rank);
     if (A == NULL)
     {
-      A = malloc(types_size * sizeof(heap));
+      A = malloc(xlb_types_size * sizeof(heap));
       table_ip_add(&targeted_work, target_rank, A);
-      for (int i = 0; i < types_size; i++)
+      for (int i = 0; i < xlb_types_size; i++)
       {
         heap* H = &A[i];
         heap_init(H, 8);
@@ -170,9 +170,9 @@ workqueue_steal(int max_memory, int* count, xlb_work_unit*** result)
   // list_init(&stolen);
 
 
-  float fractions[types_size];
+  float fractions[xlb_types_size];
   int total = 0;
-  for (int i = 0; i < types_size; i++)
+  for (int i = 0; i < xlb_types_size; i++)
     total += tree_size(&typed_work[i]);
 
   DEBUG("workqueue_steal(): total=%i", total);
@@ -183,7 +183,7 @@ workqueue_steal(int max_memory, int* count, xlb_work_unit*** result)
     return ADLB_SUCCESS;
   }
 
-  for (int i = 0; i < types_size; i++)
+  for (int i = 0; i < xlb_types_size; i++)
     fractions[i] = tree_size(&typed_work[i])/total;
 
   // Number of work units we are willing to share
@@ -194,7 +194,7 @@ workqueue_steal(int max_memory, int* count, xlb_work_unit*** result)
   xlb_work_unit** stolen = malloc(share * sizeof(xlb_work_unit*));
   for (int i = 0; i < share; i++)
   {
-    int type = random_draw(fractions, types_size);
+    int type = random_draw(fractions, xlb_types_size);
     struct tree* T = &typed_work[type];
     struct tree_node* node = tree_random(T);
     if (node == NULL)
@@ -223,7 +223,7 @@ workqueue_finalize()
   TRACE_START;
   if (table_ip_size(&targeted_work) > 0)
     printf("WARNING: server contains targeted work!\n");
-  for (int i = 0; i < types_size; i++)
+  for (int i = 0; i < xlb_types_size; i++)
   {
     int count = tree_size(&typed_work[i]);
     if (count > 0)

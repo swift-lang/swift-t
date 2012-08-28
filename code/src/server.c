@@ -53,8 +53,8 @@ xlb_server_init()
   shutting_down = false;
 
   list_i_init(&workers_shutdown);
-  requestqueue_init(types_size);
-  workqueue_init(types_size);
+  requestqueue_init(xlb_types_size);
+  workqueue_init(xlb_types_size);
   data_init(xlb_servers, xlb_world_rank);
   adlb_code code = setup_idle_time();
   ADLB_CHECK(code);

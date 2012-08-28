@@ -23,8 +23,6 @@
 
 adlb_code next_server;
 
-static int get_type_idx(int);
-
 static void print_proc_self_status(void);
 
 void adlb_exit_handler(void);
@@ -61,10 +59,10 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
 
   gdb_spin(xlb_world_rank);
 
-  types_size = ntypes;
-  types = malloc(types_size * sizeof(int));
-  for (int i = 0; i < types_size; i++)
-    types[i] = type_vect[i];
+  xlb_types_size = ntypes;
+  xlb_types = malloc(xlb_types_size * sizeof(int));
+  for (int i = 0; i < xlb_types_size; i++)
+    xlb_types[i] = type_vect[i];
   xlb_servers = nservers;
   xlb_workers = xlb_world_size - xlb_servers;
   xlb_master_server_rank = xlb_world_size - xlb_servers;
@@ -114,7 +112,7 @@ ADLBP_Put(void* payload, int length, int target, int answer,
 
   DEBUG("ADLB_Put: target=%i %s", target, (char*) payload);
 
-  CHECK_MSG(type >= 0 && get_type_idx(type) >= 0,
+  CHECK_MSG(type >= 0 && xlb_type_index(type) >= 0,
             "ADLB_Put(): invalid work type: %d\n", type);
 
   /** Server to contact */
@@ -164,7 +162,7 @@ ADLBP_Get(int type_requested, void* payload, int* length,
   MPI_Status status;
   MPI_Request request;
 
-  CHECK_MSG(get_type_idx(type_requested) != -1,
+  CHECK_MSG(xlb_type_index(type_requested) != -1,
                 "ADLB_Get(): Bad work type: %i\n", type_requested);
 
   struct packed_get_response g;
@@ -1008,15 +1006,7 @@ print_proc_self_status()
   }
 }
 
-static int
-get_type_idx(int work_type)
-{
-  for (int i = 0; i < types_size; i++)
-    if (types[i] == work_type)
-      return i;
-  printf("get_type_idx: INVALID type %d\n", work_type);
-  return -1;
-}
+
 
 //static int get_server_idx(int);
 //static int get_server_rank(int);
