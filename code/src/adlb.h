@@ -135,7 +135,7 @@ adlb_code ADLB_Unlock(adlb_datum_id id);
 void ADLB_Data_string_totype(const char* type_string,
                              adlb_data_type* type);
 
-adlb_code ADLB_Data_type_tostring(char* output, adlb_data_type type);
+int ADLB_Data_type_tostring(char* output, adlb_data_type type);
 
 adlb_code ADLB_Server_idle(int rank, bool* result);
 adlb_code ADLB_Server_shutdown(int rank);

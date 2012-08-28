@@ -859,7 +859,7 @@ ADLB_Data_type_tostring(char* output, adlb_data_type type)
       result = sprintf(output, "container");
       break;
     case ADLB_DATA_TYPE_NULL:
-      sprintf(output, "ADLB_DATA_TYPE_NULL");
+      result = sprintf(output, "ADLB_DATA_TYPE_NULL");
       break;
     default:
       sprintf(output, "<unknown type>");
