@@ -16,24 +16,24 @@
 
 #include <mpe.h>
 
+#include "mpe-tools.h"
+
 static int my_log_rank;
 
 // Event pairs
 // Note: these names must be conventional
 // The convention is: mpe_[svr|wkr]?_<OP>_[start|end]
-int mpe_init_start, mpe_init_end;
-int mpe_svr_put_start, mpe_svr_put_end;
-int mpe_wkr_put_start, mpe_wkr_put_end;
-int mpe_svr_get_start, mpe_svr_get_end;
-int mpe_wkr_get_start, mpe_wkr_get_end;
-int mpe_wkr_create_start, mpe_wkr_create_end;
-int mpe_wkr_store_start, mpe_wkr_store_end;
-int mpe_wkr_retrieve_start, mpe_wkr_retrieve_end;
-int mpe_wkr_subscribe_start, mpe_wkr_subscribe_end;
-int mpe_wkr_close_start, mpe_wkr_close_end;
-int mpe_wkr_unique_start, mpe_wkr_unique_end;
+static int mpe_init_start, mpe_init_end;
+static int mpe_wkr_put_start, mpe_wkr_put_end;
+static int mpe_wkr_get_start, mpe_wkr_get_end;
+static int mpe_wkr_create_start, mpe_wkr_create_end;
+static int mpe_wkr_store_start, mpe_wkr_store_end;
+static int mpe_wkr_retrieve_start, mpe_wkr_retrieve_end;
+static int mpe_wkr_subscribe_start, mpe_wkr_subscribe_end;
+static int mpe_wkr_close_start, mpe_wkr_close_end;
+static int mpe_wkr_unique_start, mpe_wkr_unique_end;
 
-int mpe_finalize_start, mpe_finalize_end;
+static int mpe_finalize_start, mpe_finalize_end;
 
 // Server solo events:
 
@@ -52,29 +52,7 @@ static int *user_state_end;
 static char user_state_description[256];
 #endif
 
-/** Automate MPE_Log_get_state_eventIDs calls */
-#define make_pair(token) \
-  MPE_Log_get_state_eventIDs(&mpe_##token##_start,\
-                             &mpe_##token##_end);
-
-/** Automate MPE_Describe_state calls */
-#define describe_pair(token) \
-  MPE_Describe_state(mpe_##token##_start, mpe_##token##_end, \
-                     "ADLB_" #token, "MPE_CHOOSE_COLOR")
-
 static void setup_mpe_events(int num_types, int* types);
-
-#ifdef ENABLE_MPE
-/**
-   Log an empty event
- */
-static inline void
-mpe_log(int event)
-{
-  printf("mpe_log: %i\n", event);
-  MPE_Log_event(event, 0, NULL);
-}
-#endif
 
 adlb_code
 ADLB_Init(int num_servers, int num_types, int* types,
@@ -120,9 +98,7 @@ setup_mpe_events(int num_types, int* types)
 
   // Server:
   make_pair(init);
-  make_pair(svr_put);
   make_pair(wkr_put);
-  make_pair(svr_get);
   make_pair(wkr_get);
   make_pair(finalize);
 
@@ -136,19 +112,17 @@ setup_mpe_events(int num_types, int* types)
 
   if ( my_log_rank == 0 ) {
     // Server events:
-    describe_pair(init);
-    describe_pair(finalize);
-    describe_pair(svr_put);
-    describe_pair(wkr_put);
-    describe_pair(svr_get);
-    describe_pair(wkr_get);
+    describe_pair(ADLB, init);
+    describe_pair(ADLB, finalize);
+    describe_pair(ADLB, wkr_put);
+    describe_pair(ADLB, wkr_get);
     // Data module:
-    describe_pair(wkr_create);
-    describe_pair(wkr_store);
-    describe_pair(wkr_retrieve);
-    describe_pair(wkr_subscribe);
-    describe_pair(wkr_close);
-    describe_pair(wkr_unique);
+    describe_pair(ADLB, wkr_create);
+    describe_pair(ADLB, wkr_store);
+    describe_pair(ADLB, wkr_retrieve);
+    describe_pair(ADLB, wkr_subscribe);
+    describe_pair(ADLB, wkr_close);
+    describe_pair(ADLB, wkr_unique);
   }
 
   user_state_start = malloc(num_types * sizeof(int));
