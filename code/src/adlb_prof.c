@@ -20,22 +20,6 @@
 
 static int my_log_rank;
 
-// Event pairs
-// Note: these names must be conventional
-// The convention is: mpe_[svr|wkr]?_<OP>_[start|end]
-static int mpe_init_start, mpe_init_end;
-static int mpe_wkr_put_start, mpe_wkr_put_end;
-static int mpe_wkr_get_start, mpe_wkr_get_end;
-static int mpe_wkr_create_start, mpe_wkr_create_end;
-static int mpe_wkr_store_start, mpe_wkr_store_end;
-static int mpe_wkr_retrieve_start, mpe_wkr_retrieve_end;
-static int mpe_wkr_subscribe_start, mpe_wkr_subscribe_end;
-static int mpe_wkr_close_start, mpe_wkr_close_end;
-static int mpe_wkr_unique_start, mpe_wkr_unique_end;
-
-static int mpe_finalize_start, mpe_finalize_end;
-
-// Server solo events:
 
 // User work type events:
 
@@ -44,9 +28,9 @@ static int mpe_finalize_start, mpe_finalize_end;
 /** Currently running work type from Get.  -1 indicates nothing */
 static int user_type_current = -1;
 /** Array of user state start events, one for each type */
-static int *user_state_start;
+static int* user_state_start;
 /** Array of user state end events, one for each type */
-static int *user_state_end;
+static int* user_state_end;
 // static int *user_types;
 
 static char user_state_description[256];
@@ -66,23 +50,25 @@ ADLB_Init(int num_servers, int num_types, int* types,
       MPI_Abort(MPI_COMM_WORLD,1);
     }
 
+  MPE(xlb_mpe_setup());
   setup_mpe_events(num_types, types);
 
 #ifdef ENABLE_MPE
-  MPE_Log_event(mpe_init_start, 0, NULL);
+  MPE_Log_event(xlb_mpe_init_start, 0, NULL);
 #endif
 
   int rc = ADLBP_Init(num_servers, num_types, types, am_server,
                       app_comm);
 
 #ifdef ENABLE_MPE
-  MPE_Log_event(mpe_init_end, 0, NULL);
+  MPE_Log_event(xlb_mpe_init_end, 0, NULL);
 #endif
 
   return rc;
 }
 
 /**
+   Sets up user_state events
    This does nothing if MPE is not enabled
  */
 static void
@@ -90,40 +76,6 @@ setup_mpe_events(int num_types, int* types)
 {
 #ifdef ENABLE_MPE
   PMPI_Comm_rank(MPI_COMM_WORLD,&my_log_rank);
-
-  /* MPE_Init_log() & MPE_Finish_log() are NOT needed when liblmpe.a
-       is linked because MPI_Init() would have called MPE_Init_log()
-       already. */
-  MPE_Init_log();
-
-  // Server:
-  make_pair(init);
-  make_pair(wkr_put);
-  make_pair(wkr_get);
-  make_pair(finalize);
-
-  // Data module:
-  make_pair(wkr_unique);
-  make_pair(wkr_create);
-  make_pair(wkr_subscribe);
-  make_pair(wkr_store);
-  make_pair(wkr_close);
-  make_pair(wkr_retrieve);
-
-  if ( my_log_rank == 0 ) {
-    // Server events:
-    describe_pair(ADLB, init);
-    describe_pair(ADLB, finalize);
-    describe_pair(ADLB, wkr_put);
-    describe_pair(ADLB, wkr_get);
-    // Data module:
-    describe_pair(ADLB, wkr_create);
-    describe_pair(ADLB, wkr_store);
-    describe_pair(ADLB, wkr_retrieve);
-    describe_pair(ADLB, wkr_subscribe);
-    describe_pair(ADLB, wkr_close);
-    describe_pair(ADLB, wkr_unique);
-  }
 
   user_state_start = malloc(num_types * sizeof(int));
   user_state_end   = malloc(num_types * sizeof(int));
@@ -149,14 +101,14 @@ ADLB_Put(void *work_buf, int work_len, int reserve_rank,
   int rc;
 
 #ifdef ENABLE_MPE
-  MPE_Log_event(mpe_wkr_put_start,0,NULL);
+  MPE_Log_event(xlb_mpe_wkr_put_start,0,NULL);
 #endif
 
   rc = ADLBP_Put(work_buf,work_len,reserve_rank,answer_rank,
                  work_type,work_prio);
 
 #ifdef ENABLE_MPE
-  MPE_Log_event(mpe_wkr_put_end,0,NULL);
+  MPE_Log_event(xlb_mpe_wkr_put_end,0,NULL);
 #endif
 
   return rc;
@@ -199,7 +151,7 @@ ADLB_Get(int type_requested, void* payload, int* length,
          int* answer, int* type_recvd)
 {
 #ifdef ENABLE_MPE
-  mpe_log(mpe_wkr_get_start);
+  mpe_log(xlb_mpe_wkr_get_start);
   mpe_log_user_state(-1);
 #endif
 
@@ -207,7 +159,7 @@ ADLB_Get(int type_requested, void* payload, int* length,
                      type_recvd);
 
 #ifdef ENABLE_MPE
-  mpe_log(mpe_wkr_get_end);
+  mpe_log(xlb_mpe_wkr_get_end);
   if (rc == ADLB_SUCCESS)
     mpe_log_user_state(*type_recvd);
 #endif
@@ -235,13 +187,13 @@ adlb_code ADLB_Exists(adlb_datum_id id, bool* result)
 adlb_code ADLB_Store(adlb_datum_id id, void *data, int length)
 {
 #ifdef ENABLE_MPE
-    MPE_Log_event(mpe_wkr_store_start, 0, NULL);
+    MPE_Log_event(xlb_mpe_wkr_store_start, 0, NULL);
 #endif
 
     int rc = ADLBP_Store(id, data, length);
 
 #ifdef ENABLE_MPE
-    MPE_Log_event(mpe_wkr_store_end, 0, NULL);
+    MPE_Log_event(xlb_mpe_wkr_store_end, 0, NULL);
 #endif
     return rc;
 }
@@ -250,13 +202,13 @@ adlb_code ADLB_Retrieve(adlb_datum_id id, adlb_data_type* type,
 		  void *data, int *length)
 {
 #ifdef ENABLE_MPE
-    MPE_Log_event(mpe_wkr_retrieve_start, 0, NULL);
+    MPE_Log_event(xlb_mpe_wkr_retrieve_start, 0, NULL);
 #endif
 
     int rc = ADLBP_Retrieve(id, type, data, length);
 
 #ifdef ENABLE_MPE
-    MPE_Log_event(mpe_wkr_retrieve_end, 0, NULL);
+    MPE_Log_event(xlb_mpe_wkr_retrieve_end, 0, NULL);
 #endif
 
     return rc;
@@ -355,13 +307,13 @@ adlb_code
 ADLB_Finalize()
 {
 #ifdef ENABLE_MPE
-  MPE_Log_event(mpe_finalize_start, 0, NULL);
+  MPE_Log_event(xlb_mpe_finalize_start, 0, NULL);
 #endif
 
   int rc = ADLBP_Finalize();
 
 #ifdef ENABLE_MPE
-  MPE_Log_event(mpe_finalize_end, 0, NULL);
+  MPE_Log_event(xlb_mpe_finalize_end, 0, NULL);
   MPE_Finish_log("adlb");
 #endif
 

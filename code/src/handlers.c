@@ -18,6 +18,7 @@
 #include "debug.h"
 #include "handlers.h"
 #include "messaging.h"
+#include "mpe-tools.h"
 #include "mpi-tools.h"
 #include "requestqueue.h"
 #include "server.h"
@@ -74,25 +75,6 @@ static adlb_code put_targeted(int type, int putter, int priority,
                               int answer, int target,
                               void* payload, int length);
 
-#include "mpe-tools.h"
-#ifdef ENABLE_MPE
-
-static int mpe_svr_put_start, mpe_svr_put_end;
-static int mpe_svr_get_start, mpe_svr_get_end;
-static int mpe_svr_steal_start, mpe_svr_steal_end;
-
-static void
-setup_mpe(void)
-{
-  make_pair(svr_put);
-  make_pair(svr_get);
-  make_pair(svr_steal);
-  describe_pair(handler, svr_get);
-  describe_pair(handler, svr_put);
-  describe_pair(handler, svr_steal);
-}
-#endif
-
 void
 handlers_init(void)
 {
@@ -126,8 +108,6 @@ handlers_init(void)
   create_handler(ADLB_TAG_CHECK_IDLE, handle_check_idle);
   create_handler(ADLB_TAG_SHUTDOWN_WORKER, handle_shutdown_worker);
   create_handler(ADLB_TAG_SHUTDOWN_SERVER, handle_shutdown_server);
-
-  MPE(setup_mpe());
 }
 
 static void
@@ -191,7 +171,7 @@ handle_put(int caller)
   MPI_Status status;
   int rc;
 
-  MPE_LOG(mpe_svr_put_start);
+  MPE_LOG(xlb_mpe_svr_put_start);
 
   RECV(&p, sizeof(p), MPI_BYTE, caller, ADLB_TAG_PUT);
 
@@ -199,7 +179,7 @@ handle_put(int caller)
 
   put(p.type, p.putter, p.priority, p.answer, p.target, p.length);
 
-  MPE_LOG(mpe_svr_put_end);
+  MPE_LOG(xlb_mpe_svr_put_end);
   STATS("PUT");
 
   return ADLB_SUCCESS;
@@ -292,18 +272,20 @@ handle_get(int caller)
   MPI_Status status;
   int rc;
 
-  MPE_LOG(mpe_svr_get_start);
+  MPE_LOG(xlb_mpe_svr_get_start);
 
   RECV(&p, sizeof(p), MPI_BYTE, caller, ADLB_TAG_GET);
 
   bool found_work = false;
   bool stole = false;
   bool b = check_workqueue(caller, p.type);
-  if (b) return ADLB_SUCCESS;
+  if (b) goto end;
+
   if (!stealing)
   {
     stealing = true;
-    stole = steal();
+    rc = steal(&stole);
+    ADLB_CHECK(rc);
     stealing = false;
     if (stole)
       found_work = check_workqueue(caller, p.type);
@@ -324,7 +306,8 @@ handle_get(int caller)
     requestqueue_recheck();
   }
 
-  MPE_LOG(mpe_svr_get_end);
+  end:
+  MPE_LOG(xlb_mpe_svr_get_end);
 
   return ADLB_SUCCESS;
 }
@@ -412,7 +395,7 @@ static adlb_code
 handle_steal(int caller)
 {
   TRACE_START;
-  MPE_LOG(mpe_svr_steal_start);
+  MPE_LOG(xlb_mpe_svr_steal_start);
   DEBUG("\t caller: %i", caller);
 
   MPI_Status status;
@@ -445,7 +428,7 @@ handle_steal(int caller)
          ADLB_TAG_RESPONSE_STEAL);
   }
 
-  MPE_LOG(mpe_svr_steal_end);
+  MPE_LOG(xlb_mpe_svr_steal_end);
   TRACE_END;
   return ADLB_SUCCESS;
 }

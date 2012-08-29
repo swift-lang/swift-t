@@ -11,6 +11,6 @@
 
 #include <stdbool.h>
 
-bool steal(void);
+adlb_code steal(bool* result);
 
 #endif

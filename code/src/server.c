@@ -105,7 +105,7 @@ xlb_map_to_server(int rank)
 static inline bool master_server(void);
 static inline void check_idle(void);
 static adlb_code server_shutdown(void);
-static inline void check_steal(void);
+static inline adlb_code check_steal(void);
 
 adlb_code
 ADLB_Server(long max_memory)
@@ -197,26 +197,29 @@ double xlb_steal_last = 0.0;
    Steal work
    Operates at intervals defined by steal_backoff
  */
-static inline void
+static inline adlb_code
 check_steal(void)
 {
   double t = MPI_Wtime();
   if (t - xlb_steal_last < xlb_steal_backoff)
     // Too soon to try again
-    return;
+    return ADLB_SUCCESS;
   if (requestqueue_size() == 0)
     // Our workers are busy
-    return;
+    return ADLB_SUCCESS;
 
   // Steal...
   TRACE_START;
-  bool b = steal();
+  bool b;
+  int rc = steal(&b);
+  ADLB_CHECK(rc);
   if (b)
   {
     DEBUG("check_steal(): rechecking...");
     requestqueue_recheck();
   }
   TRACE_END;
+  return ADLB_SUCCESS;
 }
 
 /**

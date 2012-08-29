@@ -13,49 +13,41 @@
 #include "common.h"
 #include "debug.h"
 #include "messaging.h"
+#include "mpe-tools.h"
 #include "server.h"
 #include "sync.h"
 #include "steal.h"
 
-bool
-steal(void)
+/**
+   Target: another server
+ */
+static inline void
+get_target_server(int* result)
 {
-  TRACE_START;
-
-  // Record the time of this steal attempt
-  xlb_steal_last = MPI_Wtime();
-
-  if (xlb_servers == 1)
-    return false;
-
-  // Target: another server
-  int target;
   do
   {
-    target = random_server();
-  } while (target == xlb_world_rank);
+    *result = random_server();
+  } while (*result == xlb_world_rank);
+}
 
+static inline adlb_code
+steal_handshake(int target, int max_memory, int* count)
+{
   MPI_Request request;
   MPI_Status status;
 
-  int rc = xlb_sync(target);
-  if (rc == ADLB_SHUTDOWN)
-    return false;
-
-  int count = 0;
-  IRECV(&count, 1, MPI_INT, target, ADLB_TAG_RESPONSE_STEAL_COUNT);
-  int max_memory = 1;
+  IRECV(count, 1, MPI_INT, target, ADLB_TAG_RESPONSE_STEAL_COUNT);
   SEND(&max_memory, 1, MPI_INT, target, ADLB_TAG_STEAL);
 
   WAIT(&request, &status);
-  STATS("STOLE: %i", count);
+  STATS("STOLE: %i", *count);
+  return ADLB_SUCCESS;
+}
 
-  if (count == 0)
-  {
-    TRACE_END;
-    return false;
-  }
-
+static inline adlb_code
+steal_payloads(int target, int count )
+{
+  MPI_Status status;
   int length = count * sizeof(struct packed_put);
   struct packed_put* wus = malloc(length);
   RECV(wus, length, MPI_BYTE, target, ADLB_TAG_RESPONSE_STEAL);
@@ -68,6 +60,46 @@ steal(void)
                   wus[i].answer, wus[i].target, wus[i].length, xfer);
   }
   free(wus);
+  return ADLB_SUCCESS;
+}
+
+adlb_code
+steal(bool* result)
+{
+  MPI_Status status;
+  adlb_code rc;
+  int target;
+  *result = false;
+
+  TRACE_START;
+  MPE_LOG(xlb_mpe_dmn_steal_start);
+
+  // Record the time of this steal attempt
+  xlb_steal_last = MPI_Wtime();
+
+  if (xlb_servers == 1)
+    goto end;
+
+  get_target_server(&target);
+
+  rc = xlb_sync(target);
+  if (rc == ADLB_SHUTDOWN)
+    goto end;
+  ADLB_CHECK(rc);
+
+  int count = 0;
+  int max_memory = 1;
+  rc = steal_handshake(target, max_memory, &count);
+  ADLB_CHECK(rc);
+  if (count == 0)
+    goto end;
+
+  rc = steal_payloads(target, count);
+  ADLB_CHECK(rc);
+
+  end:
+  *result = true;
   TRACE_END;
-  return true;
+  MPE_LOG(xlb_mpe_dmn_steal_end);
+  return ADLB_SUCCESS;
 }

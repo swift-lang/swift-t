@@ -27,7 +27,8 @@ static void print_proc_self_status(void);
 
 void adlb_exit_handler(void);
 
-static void check_versions()
+static void
+check_versions()
 {
   version av, cuv, rcuv;
   // required c-utils version (rcuv):
