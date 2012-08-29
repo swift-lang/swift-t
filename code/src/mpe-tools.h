@@ -29,6 +29,7 @@ extern int xlb_mpe_finalize_start, xlb_mpe_finalize_end;
 extern int xlb_mpe_svr_put_start, xlb_mpe_svr_put_end;
 extern int xlb_mpe_svr_get_start, xlb_mpe_svr_get_end;
 extern int xlb_mpe_svr_steal_start, xlb_mpe_svr_steal_end;
+extern int xlb_mpe_svr_shutdown_start, xlb_mpe_svr_shutdown_end;
 
 // Server daemon events (steal, shutdown):
 extern int xlb_mpe_dmn_steal_start, xlb_mpe_dmn_steal_end;

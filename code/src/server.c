@@ -23,6 +23,7 @@
 #include "debug.h"
 #include "handlers.h"
 #include "messaging.h"
+#include "mpe-tools.h"
 #include "requestqueue.h"
 #include "server.h"
 #include "steal.h"
@@ -290,12 +291,17 @@ check_idle()
 
   DEBUG("check_idle(): checking other servers...");
 
+  MPE_LOG(xlb_mpe_dmn_shutdown_start)
+
   // Issue idle check RPCs...
   if (! servers_idle())
     // Some server is still not idle...
-    return;
+    goto end;
 
   shutdown_all_servers();
+
+  end:
+  MPE_LOG(xlb_mpe_dmn_shutdown_end);
 }
 
 bool
