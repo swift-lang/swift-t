@@ -69,7 +69,7 @@ void xlb_mpe_setup(void);
 static inline void
 mpe_log(int event)
 {
-  printf("mpe_log: %i\n", event);
+  // printf("mpe_log: %i\n", event);
   MPE_Log_event(event, 0, NULL);
 }
 

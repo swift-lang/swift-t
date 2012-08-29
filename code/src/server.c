@@ -114,10 +114,10 @@ ADLB_Server(long max_memory)
   mm_set_max(mm_default, max_memory);
   while (true)
   {
-    if (master_server())
-      check_idle();
     if (shutting_down)
       break;
+    if (master_server())
+      check_idle();
 
     adlb_code code = xlb_serve_one(MPI_ANY_SOURCE);
     ADLB_CHECK(code);
