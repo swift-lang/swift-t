@@ -369,8 +369,8 @@ turbine_rules_push()
   list_init(&tmp);
 
   for (int i = 0; i < transforms_waiting.capacity; i++)
-    for (struct list_lp_item* item = transforms_waiting.array[i]->head; item;
-         item = item->next)
+    for (struct list_lp_item* item = transforms_waiting.array[i].head;
+         item; item = item->next)
     {
       transform* T = item->data;
       assert(T);
@@ -653,7 +653,7 @@ info_waiting()
   printf("WAITING TRANSFORMS: %i\n", transforms_waiting.size);
   char buffer[1024];
   for (int i = 0; i < transforms_waiting.capacity; i++)
-    for (struct list_lp_item* item = transforms_waiting.array[i]->head;
+    for (struct list_lp_item* item = transforms_waiting.array[i].head;
          item; item = item->next)
     {
       transform* t = item->data;
