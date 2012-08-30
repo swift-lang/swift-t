@@ -1,0 +1,56 @@
+
+STC HELP
+
+OPTIONS
+----------------------------------------
+
+    -C <output file>
+         Write intermediate representation to this file (otherwise
+            does not output it)
+    -d <PORT>
+       Use JDWP debugging on given PORT.
+    -E
+       Just preprocess
+    -h
+       Show all options
+    -I <DIRECTORY>
+       Add an include path
+       TURBINE_HOME/export is always included to get builtins.swift
+    -l <LOG>
+       Log stc progress to given LOG.
+    -O <Optimization level>
+       Set compiler optimization level:
+         0 - no optimizations
+         1,2,3 - standard optimizations (DEFAULT) (this will change later)
+    -T <option name>
+         toggle compiler option on
+    -t <option name>
+         toggle compiler option off
+    -u
+         Only compile if target is not up-to-date
+    -v
+         Output version and exit
+    -V
+         Increase verbosity.  May be given twice
+
+COMPILER OPTION NAMES
+----------------------------------------
+
+(All are on by default, except assert disabling)
+
+constant-fold: whether constant folding/propagation should occur
+shared-constants: whether we should lift all constants into shared
+ global constant region
+branch-predict: whether static branch prediction should occur
+dead-code-elim: whether dead code elimination should occur
+flatten-nested: whether nested blocks should be flattened
+forward-dataflow: whether we should do forward dataflow analysis
+                   to eliminate common subexpressions, etc
+wait-coalesce: whether to attempt to rearrange the task dependencies
+               to minimise the number of tasks/variable subscribes
+controlflow-fusion: whether to attempt to fuse control
+                    flow structures: loops and if statements
+disable-asserts: whether to disable assert statements
+unroll-loops: whether to unroll loops with @unroll annotation
+no-stack: whether we should disable the explicit stack
+no-stack-vars: whether we should put user variables in the stack

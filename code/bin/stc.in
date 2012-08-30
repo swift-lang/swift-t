@@ -1,4 +1,5 @@
 #!/bin/zsh
+
 # STC: Swift-Turbine Compiler
 
 # Usage: stc <OPTIONS>* <INPUT> <OUTPUT>?
@@ -6,57 +7,11 @@
 # Output: Given OUTPUT file or standard output
 # Exit code: Result from java
 
-# User must set TURBINE_HOME
-
-# Options:
-#   -C <output file>
-#        Write intermediate representation to this file (otherwise
-#           does not output it)
-#   -d <PORT>
-#      Use JDWP debugging on given PORT.
-#   -E
-#      Just preprocess
-#   -I <DIRECTORY>
-#      Add an include path
-#      TURBINE_HOME/export is always included to get builtins.swift
-#   -l <LOG>
-#      Log stc progress to given LOG.
-#   -O <Optimization level>
-#      Set compiler optimization level:
-#        0 - no optimizations
-#        1,2,3 - standard optimizations (DEFAULT) (this will change later)
-#   -T <setting name>
-#        toggle compiler option on
-#   -t <setting name>
-#        toggle compiler option off
-#   -u
-#        Only compile if target is not up-to-date
-#   -v
-#        Output version and exit (not yet implemented)
-#   -V
-#        Increase verbosity.  May be given twice
+# See help.txt or run "stc -h" for full options list
 
 # Exit codes: (cf. ExitCode.java)
 EXIT_ERROR_SCRIPT=6
 
-#  COMPILER OPTIONS (All are on by default, except assert disabling)
-#  ----------------------------------------
-#  constant-fold: whether constant folding/propagation should occur
-#  shared-constants: whether we should lift all constants into shared
-#               global constant region
-#  branch-predict: whether static branch prediction should occur
-#  dead-code-elim: whether dead code elimination should occur
-#  flatten-nested: whether nested blocks should be flattened
-#  forward-dataflow: whether we should do forward dataflow analysis
-#               to eliminate common subexpressions, etc
-#  wait-coalesce: whether to attempt to rearrange the task dependencies
-#                to minimise the number of tasks/variable subscribes
-#  controlflow-fusion: whether to attempt to fuse control
-#               flow structures: loops and if statements
-#  disable-asserts: whether to disable assert statements
-#  unroll-loops: whether to unroll loops with @unroll annotation
-#  no-stack: whether we should disable the explicit stack
-#  no-stack-vars: whether we should put user variables in the stack
 COMPILER_OPTS=()
 
 O1_OPTS=("constant-fold" "branch-predict" "dead-code-elim"
@@ -64,6 +19,8 @@ O1_OPTS=("constant-fold" "branch-predict" "dead-code-elim"
                     "forward-dataflow" "unroll-loops")
 O2_OPTS=()
 O3_OPTS=("wait-coalesce" "controlflow-fusion")
+
+PARSER_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
 
 function get_compiler_opt_name() {
     case $1
@@ -134,6 +91,13 @@ function enable_opt() {
   COMPILER_OPTS+="-D${OPTNAME}=true"
 }
 
+help()
+{
+  echo  ${PARSER_HOME}/help.txt
+  cat ${PARSER_HOME}/help.txt
+  exit 0
+}
+
 # Set this to 1 to debug this script (-V)
 VERBOSE=0
 verbose()
@@ -164,8 +128,6 @@ report_version()
   exit 0
 }
 
-PARSER_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
-
 # OUTPUT_MODE= turbine or cpp
 OUTPUT_MODE=turbine
 
@@ -175,7 +137,7 @@ UPDATE=0
 # JUST_VERSION= If 1, just report the version
 JUST_VERSION=0
 
-while getopts "d:EI:l:t:T:O:C:uvV" OPTION
+while getopts "d:EhI:l:t:T:O:C:uvV" OPTION
 do
   case ${OPTION}
     in
@@ -183,6 +145,10 @@ do
       verbose "DEBUG_PORT: ${DEBUG_PORT}"
       ;;
     E) OUTPUT_MODE=cpp
+      ;;
+    h)
+      verbose "HELP:"
+      help
       ;;
     I) CPP_INCLUDE+="-I ${OPTARG} "
       ;;
