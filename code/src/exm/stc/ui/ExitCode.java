@@ -19,11 +19,11 @@ public enum ExitCode
   ERROR_USER(4),
   /** Bad command line argument */
   ERROR_COMMAND(5),
-  /** Internal error in STP */
-  ERROR_INTERNAL(90),
   /** Do not use this- reserved for wrapper script stc */
-  ERROR_SCRIPT(100);
-
+  ERROR_SCRIPT(6),
+  /** Internal error in STC */
+  ERROR_INTERNAL(90);
+  
   final int code;
 
   ExitCode(int code)

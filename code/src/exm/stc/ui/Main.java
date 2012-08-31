@@ -22,7 +22,7 @@ import exm.stc.common.exceptions.InvalidOptionException;
 
 /**
  * Command line interface to STC compiler.  Most compiler options
- * are passed indirectly through the environment.  See Settings.java
+ * are passed indirectly through Java properties.  See Settings.java
  * for handling of these options.
  */
 public class Main
