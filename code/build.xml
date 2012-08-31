@@ -1,8 +1,8 @@
 
-<project name="parser"
+<project name="stc"
          default="jar">
 
-  <!-- ExM parser build file
+  <!-- ExM STC build file
 
        Note:
        Eclipse generates class files in build/
@@ -13,12 +13,10 @@
   <!-- Locations of jars and ANTLR grammar file -->
   <property name="antlr.jar"
             value="lib/antlr-3.4-complete-no-antlrv2.jar"/>
-  <property name="parser.jar"
-            value="lib/parser.jar"/>
+  <property name="stc.jar"
+            value="lib/stc.jar"/>
   <property name="log4j.jar"
             value="lib/log4j-1.2.16.jar"/>
-  <property name="json.jar"
-            value="lib/json.jar"/>
   <property name="grammar"
             value="src/exm/stc/ast/ExM.g"/>
   <property name="classpath"
@@ -28,7 +26,7 @@
 
   <target name="jar"
           depends="compile">
-    <jar destfile="${parser.jar}"
+    <jar destfile="${stc.jar}"
          basedir="${build.dir}"
          includes="**/*.class"
          manifest="META-INF/MANIFEST.MF"/>
@@ -44,7 +42,7 @@
 
   <!-- Check if the ANTLR code is up-to-date -->
   <uptodate srcfile="${grammar}"
-            targetfile="${parser.jar}"
+            targetfile="${stc.jar}"
             property="antlr.uptodate"/>
 
   <!-- ANTLR output directory -->
@@ -228,7 +226,7 @@
   </target>
 
   <target name="clean">
-    <delete file="${parser.jar}"/>
+    <delete file="${stc.jar}"/>
     <!-- Delete all ANTLR-generated stuff -->
     <delete dir="${antlr.out}"/>
     <delete includeemptydirs="true">

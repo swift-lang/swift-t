@@ -8,8 +8,11 @@ import java.util.Properties;
 import exm.stc.common.exceptions.InvalidOptionException;
 
 /**
- * General parser settings
+ * General STC settings
  * @author wozniak
+ * 
+ * List of Java properties not processed here: 
+ * stc.logfile: used to set up logging in Main 
  * */
 public class Settings
 {

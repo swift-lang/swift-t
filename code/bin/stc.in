@@ -12,7 +12,7 @@
 # Exit codes: (cf. ExitCode.java)
 EXIT_ERROR_SCRIPT=6
 
-PARSER_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
+STC_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
 
 COMPILER_OPTS=()
 
@@ -27,9 +27,6 @@ OUTPUT_MODE=turbine
 
 # UPDATE= If 1, only compile if target not up-to-date
 UPDATE=0
-
-# JUST_VERSION= If 1, just report the version
-JUST_VERSION=0
 
 typeset -T RPATH rpath
 rpath=()
@@ -110,8 +107,7 @@ function enable_opt() {
 
 help()
 {
-  echo  ${PARSER_HOME}/help.txt
-  cat ${PARSER_HOME}/help.txt
+  cat ${STC_HOME}/help.txt
   exit 0
 }
 
@@ -139,7 +135,7 @@ report_version()
 {
   print "STC: Swift-Turbine Compiler"
   printf "\t for Turbine: "
-  cat ${PARSER_HOME}/turbine-version.txt
+  cat ${STC_HOME}/turbine-version.txt
   set_turbine_home
   print "TURBINE_HOME=${TURBINE_HOME}"
   exit 0
@@ -261,22 +257,17 @@ then
   fi
 fi
 
-ANTLR=${PARSER_HOME}/lib/antlr-3.4-complete-no-antlrv2.jar
-PARSER=${PARSER_HOME}/lib/parser.jar
-LOG4J=${PARSER_HOME}/lib/log4j-1.2.16.jar
-JSON=${PARSER_HOME}/lib/json.jar
-CLASSPATH=${ANTLR}:${PARSER}:${LOG4J}:${JSON}
+ANTLR=${STC_HOME}/lib/antlr-3.4-complete-no-antlrv2.jar
+STC=${STC_HOME}/lib/stc.jar
+LOG4J=${STC_HOME}/lib/log4j-1.2.16.jar
+CLASSPATH=${ANTLR}:${STC}:${LOG4J}
 
-TURBINE_VERSION=$( < ${PARSER_HOME}/turbine-version.txt )
+TURBINE_VERSION=$( < ${STC_HOME}/turbine-version.txt )
 
 FLAGS=( -ea -Dstc.turbine.version=${TURBINE_VERSION} )
 if [[ ${LOGFILE} != "" ]]
 then
-  FLAGS+="-Dparser.logfile=${LOGFILE}"
-fi
-if [[ ${JUST_VERSION} == 1 ]]
-then
-  FLAGS+="-Dparser.just_version=1"
+  FLAGS+="-Dstc.logfile=${LOGFILE}"
 fi
 if [[ ${RPATH} != "" ]]
   then

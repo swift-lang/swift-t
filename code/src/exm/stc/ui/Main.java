@@ -63,7 +63,7 @@ public class Main
   private static Logger setupLogging()
   {
     Properties properties = System.getProperties();
-    String logfile = properties.getProperty("parser.logfile");
+    String logfile = properties.getProperty("stc.logfile");
     if (logfile != null && logfile.length() > 0) {
       setupLoggingToStderr();
       setupLoggingToFile(logfile);
@@ -109,7 +109,8 @@ public class Main
 
   private static void usage()
   {
-    System.out.println("usage: parser <input> <output>");
+    System.out.println("requires arguments: <input> <output>");
+    System.out.println("see wrapper script for usage");
   }
 
   static FileInputStream setupInput(String inputFilename)
