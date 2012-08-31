@@ -1,7 +1,9 @@
 
 package exm.stc.common;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Properties;
 
 import exm.stc.common.exceptions.InvalidOptionException;
 
@@ -14,6 +16,8 @@ public class Settings
   public static final String TURBINE_VERSION = "stc.turbine.version";
   public static final String DEBUG_LEVEL = "stc.debugging";
 
+  public static final String RPATH = "stc.rpath";
+  
   public static final String IC_OUTPUT_FILE = "stc.ic.output-file";
   public static final String OPT_CONSTANT_FOLD = "stc.opt.constant-fold";
   public static final String OPT_SHARED_CONSTANTS = "stc.opt.shared-constants";
@@ -42,7 +46,8 @@ public class Settings
     defaults.setProperty(TURBINE_VERSION, "0.0.4");
     defaults.setProperty(DEBUG_LEVEL, "COMMENTS");
     defaults.setProperty(IC_OUTPUT_FILE, "");
-
+    defaults.setProperty(RPATH, "");
+    
     // Code optimisation settings - defaults
     defaults.setProperty(OPT_FLATTEN_NESTED, "true");
     defaults.setProperty(OPT_CONSTANT_FOLD, "true");
@@ -82,10 +87,17 @@ public class Settings
     validateProperties();
   }
 
-  public static String getIncludePath() {
-    return System.getProperty("stc.include.path");
+  /**
+     RPATH should be a Unix-style colon-separated list of directories
+     @return Possibly empty String array
+   */
+  public static String[] getRpaths() {
+    String rpaths = get(RPATH);
+    if (rpaths == null)
+      return new String[0];
+    return rpaths.split(":");
   }
-
+  
   /**
    * Do any checks for correctness of properties
    * @throws InvalidOptionException

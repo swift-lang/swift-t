@@ -24,8 +24,8 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.FunctionSemantics;
 import exm.stc.common.lang.Arg.ArgType;
+import exm.stc.common.lang.FunctionSemantics;
 import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
@@ -62,7 +62,12 @@ import exm.stc.ui.ExitCode;
 
 public class TurbineGenerator implements CompilerBackend
 {
-
+  /** 
+     This prevents duplicate "lappend auto_path" statements
+     We use a List because these should stay in order  
+   */
+  private final List<String> autoPaths = new ArrayList<String>();
+  
   private static final String TCLTMP_SPLITLEN = "tcltmp:splitlen";
   private static final String TCLTMP_CONTAINER_SIZE = "tcltmp:container_sz";
   private static final String TCLTMP_ARRAY_CONTENTS = "tcltmp:contents";
@@ -140,12 +145,28 @@ public class TurbineGenerator implements CompilerBackend
     tree.add(new Command("namespace import turbine::*"));
     tree.add(new Text(""));
 
+    addAutoPaths();
+    
     Proc globInitProc = new Proc(CONSTINIT_FUNCTION_NAME, usedTclFunctionNames,
                               new ArrayList<String>(), globInit);
     globInit.add(Turbine.turbineLog("function:"+CONSTINIT_FUNCTION_NAME));
     tree.add(globInitProc);
   }
 
+  private void addAutoPaths() {
+    String[] rpaths = Settings.getRpaths();
+    // Uniquify: 
+    for (String rpath : rpaths) 
+      if (rpath.length() > 0)
+        if (! autoPaths.contains(rpath))
+          autoPaths.add(rpath);
+    if (autoPaths.size() > 0)
+      tree.add(new Comment("rpath entries"));
+    // Add Tcl, put path in quotes
+    for (String p : autoPaths) 
+      tree.add(new Command("lappend auto_path \"" + p + "\""));
+  }
+  
   @Override
   public void turbineStartup()
   {

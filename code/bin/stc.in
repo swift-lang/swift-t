@@ -12,6 +12,8 @@
 # Exit codes: (cf. ExitCode.java)
 EXIT_ERROR_SCRIPT=6
 
+PARSER_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
+
 COMPILER_OPTS=()
 
 O1_OPTS=("constant-fold" "branch-predict" "dead-code-elim"
@@ -20,7 +22,17 @@ O1_OPTS=("constant-fold" "branch-predict" "dead-code-elim"
 O2_OPTS=()
 O3_OPTS=("wait-coalesce" "controlflow-fusion")
 
-PARSER_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
+# OUTPUT_MODE= turbine or cpp
+OUTPUT_MODE=turbine
+
+# UPDATE= If 1, only compile if target not up-to-date
+UPDATE=0
+
+# JUST_VERSION= If 1, just report the version
+JUST_VERSION=0
+
+typeset -T RPATH rpath
+rpath=()
 
 function get_compiler_opt_name() {
     case $1
@@ -71,6 +83,11 @@ function get_compiler_opt_name() {
          return 1
          ;;
     esac
+}
+
+function add_rpath() {
+  verbose "RPATH: $1"
+  rpath+=$1
 }
 
 function disable_opt() {
@@ -128,16 +145,7 @@ report_version()
   exit 0
 }
 
-# OUTPUT_MODE= turbine or cpp
-OUTPUT_MODE=turbine
-
-# UPDATE= If 1, only compile if target not up-to-date
-UPDATE=0
-
-# JUST_VERSION= If 1, just report the version
-JUST_VERSION=0
-
-while getopts "d:EhI:l:t:T:O:C:uvV" OPTION
+while getopts "d:EhI:l:t:T:O:C:r:uvV" OPTION
 do
   case ${OPTION}
     in
@@ -154,6 +162,9 @@ do
       ;;
     l) LOGFILE=${OPTARG}
       verbose "LOGFILE: ${LOGFILE}"
+      ;;
+    r)
+      add_rpath ${OPTARG}
       ;;
     t) verbose "TURNOFF: ${OPTARG}"
       disable_opt ${OPTARG}
@@ -266,6 +277,10 @@ fi
 if [[ ${JUST_VERSION} == 1 ]]
 then
   FLAGS+="-Dparser.just_version=1"
+fi
+if [[ ${RPATH} != "" ]]
+  then
+  FLAGS+="-Dstc.rpath=${RPATH}"
 fi
 
 # Find Turbine (for include path)
