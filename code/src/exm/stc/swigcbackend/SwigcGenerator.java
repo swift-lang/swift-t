@@ -19,10 +19,12 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.Settings;
+
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
+
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgType;
 import exm.stc.common.lang.FunctionSemantics;
@@ -36,7 +38,7 @@ import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.DefType;
 import exm.stc.common.lang.Variable.VariableStorage;
-//import exm.stc.swigcbackend.Turbine.StackFrameType;
+
 import exm.stc.swigcbackend.tree.Command;
 import exm.stc.swigcbackend.tree.Comment;
 import exm.stc.swigcbackend.tree.DictFor;
@@ -58,9 +60,10 @@ import exm.stc.swigcbackend.tree.TclTree;
 import exm.stc.swigcbackend.tree.Text;
 import exm.stc.swigcbackend.tree.Token;
 import exm.stc.swigcbackend.tree.Value;
+
 import exm.stc.ui.ExitCode;
 
-public class TurbineGenerator implements CompilerBackend
+public class SwigcGenerator implements CompilerBackend
 {
   /** 
      This prevents duplicate "lappend auto_path" statements
@@ -123,7 +126,7 @@ public class TurbineGenerator implements CompilerBackend
   boolean debuggerComments = false;
   private int foreach_counter = 0;
 
-  public TurbineGenerator(Logger logger, String timestamp)
+  public SwigcGenerator(Logger logger, String timestamp)
   {
     this.logger = logger;
     this.timestamp = timestamp;
