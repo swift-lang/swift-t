@@ -13,3 +13,5 @@ turbine::start rules
 turbine::finalize
 
 puts OK
+
+proc exit args {}
