@@ -27,6 +27,10 @@ proc rules { } {
     turbine::container_insert $c "0" $s1
     turbine::container_insert $c "1" $s2
 
+    # Output member TDs for check script:
+    puts "member1: $s1"
+    puts "member2: $s2"
+
     set L [ adlb::enumerate $c subscripts 2 0 ]
     puts "subscripts: $L"
 
@@ -35,7 +39,7 @@ proc rules { } {
 
     set L [ adlb::enumerate $c dict 2 0 ]
     puts "dict: $L"
-    
+
     set n [ adlb::enumerate $c count all 0 ]
     puts "count: $n"
 }
