@@ -28,6 +28,24 @@
     }                                                           \
   }
 
+/**
+   Check that the user gave us the correct number of arguments
+   for this subcommand
+   objc should be equal to count.  If not, fail.
+   Note that in Tcl, the command name counts as an argument
+   For example, for command "string length s":
+            command=string, objv[0]=length, objv[1]=s, count=2
+*/
+#define TCL_ARGS_SUB(command, count) {                                       \
+    if (objc != count) {                                        \
+      char* tmp = Tcl_GetStringFromObj(objv[0], NULL);          \
+      printf("command " #command                                \
+             " %s requires %i arguments, received %i\n",        \
+             tmp, count, objc);                                 \
+      return TCL_ERROR;                                         \
+    }                                                           \
+  }
+
 turbine_code turbine_tcl_long_array(Tcl_Interp* interp,
                                     Tcl_Obj* list, int max,
                                     long* output, int* count);
