@@ -137,10 +137,15 @@ namespace eval turbine {
         log "store: <$id>=$value"
         adlb::store $id $adlb::INTEGER $value
         close_datum $id
+        c::cache store $id $adlb::INTEGER $value
     }
 
     proc retrieve_integer { id } {
-        set result [ adlb::retrieve $id $adlb::INTEGER ]
+        if { [ c::cache check $id ] } {
+            set result [ c::cache retrieve $id ]
+        } else {
+            set result [ adlb::retrieve $id $adlb::INTEGER ]
+        }
         debug "retrieve: <$id>=$result"
         return $result
     }
