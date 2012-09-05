@@ -25,7 +25,8 @@
 
 #include "src/util/debug.h"
 
-#include "src/turbine/turbine.h"
+#include "cache.h"
+#include "turbine.h"
 
 typedef enum
 {
@@ -186,7 +187,14 @@ turbine_init(int amserver, int rank, int size)
 
   mpi_size = size;
   transform_unique_id = rank+mpi_size;
+  initialized = true;
 
+  return TURBINE_SUCCESS;
+}
+
+turbine_code
+turbine_engine_init()
+{
   bool result;
   result = table_lp_init(&transforms_waiting, 1024*1024);
   if (!result)
@@ -199,11 +207,13 @@ turbine_init(int amserver, int rank, int size)
   result = table_lp_init(&td_blockers, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
-  initialized = true;
+
+  turbine_cache_init(1024, 10*1024*1024);
   return TURBINE_SUCCESS;
 }
 
-void turbine_version(version* output)
+void
+turbine_version(version* output)
 {
 #ifndef TURBINE_VERSION
 #error TURBINE_VERSION must be set by the build system!
@@ -668,6 +678,7 @@ info_waiting()
 void
 turbine_finalize()
 {
+  turbine_cache_finalize();
   if (transforms_waiting.size != 0)
     info_waiting();
 }

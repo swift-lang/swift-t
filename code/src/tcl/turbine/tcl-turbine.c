@@ -18,6 +18,7 @@
 
 #include "src/util/debug.h"
 #include "src/turbine/turbine.h"
+#include "src/turbine/cache.h"
 
 #include "src/tcl/util.h"
 #include "src/tcl/turbine/tcl-turbine.h"
@@ -59,6 +60,8 @@ turbine_check_failed(Tcl_Interp* interp, turbine_code code,
     return TCL_ERROR;                                           \
   }
 
+static void set_namespace_constants(Tcl_Interp* interp);
+
 static int
 Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
@@ -66,7 +69,7 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(4);
   int amserver, rank, size;
 
-  __attribute__((unused)) int rc;
+  int rc;
   rc = Tcl_GetIntFromObj(interp, objv[1], &amserver);
   assert(rc == TCL_OK);
   rc = Tcl_GetIntFromObj(interp, objv[2], &rank);
@@ -81,18 +84,7 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
     return TCL_ERROR;
   }
 
-  Tcl_ObjSetVar2(interp,
-                 Tcl_NewStringObj("::turbine::LOCAL", -1),
-                 NULL,
-                 Tcl_NewIntObj(TURBINE_ACTION_LOCAL), 0);
-  Tcl_ObjSetVar2(interp,
-                 Tcl_NewStringObj("::turbine::CONTROL", -1),
-                 NULL,
-                 Tcl_NewIntObj(TURBINE_ACTION_CONTROL), 0);
-  Tcl_ObjSetVar2(interp,
-                 Tcl_NewStringObj("::turbine::WORK", -1),
-                 NULL,
-                 Tcl_NewIntObj(TURBINE_ACTION_WORK), 0);
+  set_namespace_constants(interp);
 
   log_init();
 
@@ -103,6 +95,22 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   else
     log_normalize();
 
+  return TCL_OK;
+}
+
+static void
+set_namespace_constants(Tcl_Interp* interp)
+{
+  tcl_set_integer(interp, "::turbine::LOCAL",   TURBINE_ACTION_LOCAL);
+  tcl_set_integer(interp, "::turbine::CONTROL", TURBINE_ACTION_CONTROL);
+  tcl_set_integer(interp, "::turbine::WORK",    TURBINE_ACTION_WORK);
+}
+
+static int
+Turbine_Engine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
+                        int objc, Tcl_Obj *const objv[])
+{
+  turbine_engine_init();
   return TCL_OK;
 }
 
@@ -194,22 +202,6 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
   TURBINE_CHECK(code, "could not add rule: %li", id);
   return TCL_OK;
 }
-
-/*
-static int
-Turbine_RuleNew_Cmd(ClientData cdata, Tcl_Interp *interp,
-                    int objc, Tcl_Obj *const objv[])
-{
-  TCL_ARGS(1);
-
-  turbine_transform_id id;
-  turbine_rule_new(&id);
-
-  Tcl_Obj* result = Tcl_NewLongObj(id);
-  Tcl_SetObjResult(interp, result);
-  return TCL_OK;
-}
-*/
 
 static int
 Turbine_Push_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -373,6 +365,206 @@ Turbine_Normalize_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int cache_check_cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[]);
+
+static int cache_retrieve_cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[]);
+
+static int cache_store_cmd(ClientData cdata, Tcl_Interp* interp,
+                           int objc, Tcl_Obj *const objv[]);
+static int
+Turbine_Cache_Cmd(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+  int rc = TCL_OK;
+  char* subcommand = Tcl_GetString(objv[1]);
+  assert(subcommand != NULL);
+  if (strcmp("check", subcommand) == 0)
+    rc = cache_check_cmd(cdata, interp, objc-1, objv+1);
+  else if (strcmp("retrieve", subcommand) == 0)
+    rc = cache_retrieve_cmd(cdata, interp, objc-1, objv+1);
+  else if (strcmp("store", subcommand) == 0)
+    rc = cache_store_cmd(cdata, interp, objc-1, objv+1);
+
+  return rc;
+}
+
+static int
+cache_check_cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS_SUB(cache, 2);
+  turbine_datum_id td;
+  int error = Tcl_GetLongFromObj(interp, objv[1], &td);
+  TCL_CHECK(error);
+
+  bool found = turbine_cache_check(td);
+
+  Tcl_Obj* result = Tcl_NewBooleanObj(found);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+static inline int retrieve_object(Tcl_Interp *interp,
+                                  Tcl_Obj *const objv[], long td,
+                                  turbine_type type,
+                                  void* data, int length,
+                                  Tcl_Obj** result);
+
+static int
+cache_retrieve_cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS_SUB(retrieve, 2);
+  turbine_datum_id td;
+  int error = Tcl_GetLongFromObj(interp, objv[1], &td);
+  TCL_CHECK(error);
+
+  turbine_type type;
+  void* data;
+  int length;
+  turbine_code rc = turbine_cache_retrieve(td, &type, &data, &length);
+  TURBINE_CHECK(rc, "cache retrieve failed: %li", td);
+
+  Tcl_Obj* result = NULL;
+  retrieve_object(interp, objv, td, type, data, length, &result);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+/**
+   interp, objv, id, and length: just for error checking and messages
+ */
+static inline int
+retrieve_object(Tcl_Interp *interp, Tcl_Obj *const objv[], long id,
+                turbine_type type, void* data, int length,
+                Tcl_Obj** result)
+{
+  long tmp_long;
+  double tmp_double;
+  int string_length;
+
+  switch (type)
+  {
+    case ADLB_DATA_TYPE_INTEGER:
+      memcpy(&tmp_long, data, sizeof(long));
+      *result = Tcl_NewLongObj(tmp_long);
+      break;
+    case ADLB_DATA_TYPE_FLOAT:
+      memcpy(&tmp_double, data, sizeof(double));
+      *result = Tcl_NewDoubleObj(tmp_double);
+      break;
+    case ADLB_DATA_TYPE_STRING:
+      *result = Tcl_NewStringObj(data, length-1);
+      break;
+    case ADLB_DATA_TYPE_BLOB:
+      string_length = strnlen(data, length);
+      TCL_CONDITION(string_length < length,
+                    "adlb::retrieve: unterminated blob: <%li>", id);
+      *result = Tcl_NewStringObj(data, string_length);
+      break;
+    case ADLB_DATA_TYPE_FILE:
+      *result = Tcl_NewStringObj(data, length-1);
+      break;
+    case ADLB_DATA_TYPE_CONTAINER:
+      *result = Tcl_NewStringObj(data, length-1);
+      break;
+    default:
+      *result = NULL;
+      return TCL_ERROR;
+  }
+  return TCL_OK;
+}
+
+int extract_object(Tcl_Interp* interp, Tcl_Obj *const objv[],
+                   turbine_datum_id td, turbine_type type,
+                   Tcl_Obj* obj, void** result, int* length);
+
+/**
+   usage turbine::cache store $td $type $value
+ */
+static int
+cache_store_cmd(ClientData cdata, Tcl_Interp* interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS_SUB(store, 4);
+
+  turbine_datum_id td;
+  turbine_type type;
+  void* data;
+  int length;
+
+  int error;
+  error = Tcl_GetLongFromObj(interp, objv[1], &td);
+  TCL_CHECK(error);
+  int t;
+  error = Tcl_GetIntFromObj(interp, objv[2], &t);
+  type = t;
+  TCL_CHECK(error);
+  error = extract_object(interp, objv, td, type, objv[3],
+                         &data, &length);
+  TCL_CHECK_MSG(error, "object extraction failed: <%li>", td);
+
+  turbine_code rc = turbine_cache_store(td, type, data, length);
+  TURBINE_CHECK(rc, "cache store failed: %li", td);
+  return TCL_OK;
+}
+
+int
+extract_object(Tcl_Interp* interp, Tcl_Obj *const objv[],
+               turbine_datum_id td,
+               turbine_type type,
+               Tcl_Obj* obj, void** result, int* length)
+{
+  int rc;
+  long tmp_long;
+  double tmp_double;
+
+  void* data = NULL;
+
+  switch (type)
+  {
+    case TURBINE_TYPE_INTEGER:
+      rc = Tcl_GetLongFromObj(interp, obj, &tmp_long);
+      TCL_CHECK_MSG(rc, "cache store failed: <%li>", td);
+      *length = sizeof(long);
+      data = malloc(*length);
+      memcpy(data, &tmp_long, *length);
+      break;
+    case TURBINE_TYPE_FLOAT:
+      rc = Tcl_GetDoubleFromObj(interp, obj, &tmp_double);
+      TCL_CHECK_MSG(rc, "cache store failed: <%li>", td);
+      *length = sizeof(double);
+      data = malloc(*length);
+      memcpy(data, &tmp_double, *length);
+      break;
+    case TURBINE_TYPE_STRING:
+      data = Tcl_GetStringFromObj(objv[3], length);
+      TCL_CONDITION(data != NULL,
+                    "cache store failed: <%li>", td);
+      *length = strlen(data)+1;
+      TCL_CONDITION(*length < ADLB_DATA_MAX,
+                    "cache store: string too long: <%li>", td);
+      break;
+    case TURBINE_TYPE_BLOB:
+      TCL_RETURN_ERROR("cannot cache a blob!");
+      break;
+    case TURBINE_TYPE_FILE:
+      TCL_RETURN_ERROR("cannot cache a file!");
+      break;
+    case TURBINE_TYPE_CONTAINER:
+      TCL_RETURN_ERROR("cannot cache a container!");
+      break;
+    case TURBINE_TYPE_NULL:
+      TCL_RETURN_ERROR("cache store: given TURBINE_TYPE_NULL!");
+      break;
+  }
+
+  *result = data;
+  return TCL_OK;
+}
+
 static int
 Turbine_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
@@ -429,19 +621,21 @@ Tclturbine_Init(Tcl_Interp* interp)
   tcl_adlb_init(interp);
   tcl_mpe_init(interp);
 
-  COMMAND("init",      Turbine_Init_Cmd);
-  COMMAND("version",   Turbine_Version_Cmd);
-  COMMAND("rule",      Turbine_Rule_Cmd);
-  COMMAND("push",      Turbine_Push_Cmd);
-  COMMAND("ready",     Turbine_Ready_Cmd);
-  COMMAND("action",    Turbine_Action_Cmd);
-  COMMAND("priority",  Turbine_Priority_Cmd);
-  COMMAND("complete",  Turbine_Complete_Cmd);
-  COMMAND("close",     Turbine_Close_Cmd);
-  COMMAND("log",       Turbine_Log_Cmd);
-  COMMAND("normalize", Turbine_Normalize_Cmd);
-  COMMAND("finalize",  Turbine_Finalize_Cmd);
-  COMMAND("debug",     Turbine_Debug_Cmd);
+  COMMAND("init",        Turbine_Init_Cmd);
+  COMMAND("engine_init", Turbine_Engine_Init_Cmd);
+  COMMAND("version",     Turbine_Version_Cmd);
+  COMMAND("rule",        Turbine_Rule_Cmd);
+  COMMAND("push",        Turbine_Push_Cmd);
+  COMMAND("ready",       Turbine_Ready_Cmd);
+  COMMAND("action",      Turbine_Action_Cmd);
+  COMMAND("priority",    Turbine_Priority_Cmd);
+  COMMAND("complete",    Turbine_Complete_Cmd);
+  COMMAND("close",       Turbine_Close_Cmd);
+  COMMAND("log",         Turbine_Log_Cmd);
+  COMMAND("normalize",   Turbine_Normalize_Cmd);
+  COMMAND("cache",       Turbine_Cache_Cmd);
+  COMMAND("finalize",    Turbine_Finalize_Cmd);
+  COMMAND("debug",       Turbine_Debug_Cmd);
 
   Tcl_Namespace* turbine =
     Tcl_FindNamespace(interp, "turbine::c", NULL, 0);

@@ -36,6 +36,7 @@ namespace eval turbine {
         global WORK_TYPE
 
         debug "TURBINE ENGINE..."
+        turbine::c::engine_init
         ::eval $startup
         if { [ adlb::rank ] == 0 } {
             eval $rules

@@ -2,3 +2,4 @@
 DIR := src/turbine
 
 TURBINE_SRC += $(DIR)/turbine.c
+TURBINE_SRC += $(DIR)/cache.c

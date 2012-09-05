@@ -27,6 +27,8 @@ typedef long turbine_transform_id;
 
 turbine_code turbine_init(int amserver, int rank, int size);
 
+turbine_code turbine_engine_init(void);
+
 void turbine_version(version* output);
 
 turbine_code turbine_rule(const char* name,

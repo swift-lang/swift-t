@@ -10,6 +10,9 @@
 
 #include <adlb-defs.h>
 
+#ifndef TURBINE_DEFS_H
+#define TURBINE_DEFS_H
+
 typedef adlb_datum_id turbine_datum_id;
 
 typedef enum
@@ -108,3 +111,5 @@ typedef enum
 #define TURBINE_DATA_MAX       ADLB_DATA_MAX
 
 #define turbine_string_totype adlb_data_string_totype
+
+#endif
