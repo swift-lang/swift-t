@@ -272,7 +272,7 @@ tests: $(TEST_BINS)
 test_results: $(TEST_RESULTS)
 
 # Binary executables in the test suite
-$(TEST_BINS): %.x: %.o install
+$(TEST_BINS): %.x: %.o
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(<) \
         $(MAC_FLAT) \
@@ -292,7 +292,7 @@ $(TEST_BINS): %.x: %.o install
 	$(E) mv $(*).tmp $(@) 2>&1
 
 # Test result rule for Tcl tests
-%.result: %.sh %.tcl $(PACKAGE) bin/turbine
+%.result: %.sh %.tcl $(PACKAGE) bin/turbine install
 	$(Q) "  SH		$(@)"
 	$(E) mkdir -p tests/data
 #       Remove old result if present
@@ -363,7 +363,7 @@ clean::
 clean-failed:
 	@rm -fv `grep -L "exit 0" **/*.result`
 
-.PHONY: clean
+.PHONY: clean install package
 
 ### DEBUG BUILD SYSTEM
 
@@ -373,5 +373,3 @@ debug_build:
 	@echo TURBINE_SRC: $(TURBINE_SRC)
 	@echo TURBINE_OBJS: $(TURBINE_OBJS)
 	@echo TESTS: $(TESTS)
-
-
