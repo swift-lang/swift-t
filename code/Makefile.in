@@ -295,8 +295,13 @@ $(TEST_BINS): %.x: %.o install
 %.result: %.sh %.tcl $(PACKAGE) bin/turbine
 	$(Q) "  SH		$(@)"
 	$(E) mkdir -p tests/data
+#       Remove old result if present
 	$(E) rm -f $(@)
+#       Run test script: %.sh
 	$(E) LAUNCH=$(LAUNCH) $(<) > $(*).tmp 2>&1
+#       Check for valgrind errors
+	$(E) ! grep -vq "==[0-9]*==" $(*).out
+#       Success: create result file
 	$(E) mv $(*).tmp $(@)
 
 ### INSTALL
