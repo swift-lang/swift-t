@@ -1016,6 +1016,7 @@ set_reference_and_notify(long id, long value)
   ADLB_CHECK(rc);
   rc = close_notification(id, ranks, count);
   ADLB_CHECK(rc);
+  free(ranks);
   TRACE("SET_REFERENCE DONE");
   return ADLB_SUCCESS;
 }
