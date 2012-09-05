@@ -300,7 +300,7 @@ $(TEST_BINS): %.x: %.o install
 #       Run test script: %.sh
 	$(E) LAUNCH=$(LAUNCH) $(<) > $(*).tmp 2>&1
 #       Check for valgrind errors
-	$(E) ! grep -vq "==[0-9]*==" $(*).out
+	$(E) ! grep -q "==[0-9]+==" $(*).out
 #       Success: create result file
 	$(E) mv $(*).tmp $(@)
 
