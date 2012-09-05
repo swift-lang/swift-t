@@ -96,9 +96,9 @@ steal(bool* result)
 
   rc = steal_payloads(target, count);
   ADLB_CHECK(rc);
+  *result = true;
 
   end:
-  *result = true;
   TRACE_END;
   MPE_LOG(xlb_mpe_dmn_steal_end);
   return ADLB_SUCCESS;
