@@ -12,6 +12,14 @@
 }
 
 {
+   tcl-realloc-1
+   Memcheck:Leak
+   fun:realloc
+   fun:TclpRealloc
+   ...
+}
+
+{
    tcl-pwuid-1
    Memcheck:Leak
    fun:malloc
