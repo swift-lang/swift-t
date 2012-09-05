@@ -8,7 +8,7 @@ OUTPUT=${THIS%.sh}.out
 
 mkdir tests/data
 
-bin/turbine -l -n 4 ${VALGRIND} ${SCRIPT} \
+bin/turbine -l -n 4 ${SCRIPT} \
                     tests/batcher.txt >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
