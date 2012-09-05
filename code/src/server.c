@@ -216,7 +216,7 @@ check_steal(void)
   ADLB_CHECK(rc);
   if (b)
   {
-    DEBUG("check_steal(): rechecking...");
+    TRACE("check_steal(): rechecking...");
     requestqueue_recheck();
   }
   TRACE_END;

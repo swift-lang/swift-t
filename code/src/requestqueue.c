@@ -133,10 +133,8 @@ int
 requestqueue_get(xlb_request_pair* r, int max)
 {
   int index = 0;
-  DEBUG("rwt: %i", rq_work_types);
   for (int t = 0; t < rq_work_types; t++)
   {
-    DEBUG("t: %i", t);
     struct list2* L = &type_requests[t];
     assert(L != NULL);
     for (struct list2_item* item = L->head; item; item = item->next)
