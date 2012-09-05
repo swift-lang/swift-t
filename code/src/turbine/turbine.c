@@ -189,6 +189,8 @@ turbine_init(int amserver, int rank, int size)
   transform_unique_id = rank+mpi_size;
   initialized = true;
 
+  turbine_cache_init(1024, 10*1024*1024);
+
   return TURBINE_SUCCESS;
 }
 
@@ -208,7 +210,6 @@ turbine_engine_init()
   if (!result)
     return TURBINE_ERROR_OOM;
 
-  turbine_cache_init(1024, 10*1024*1024);
   return TURBINE_SUCCESS;
 }
 
