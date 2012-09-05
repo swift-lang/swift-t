@@ -1,0 +1,28 @@
+
+# Valgrind memcheck suppressions file
+# To use: set
+#   VALGRIND='valgrind --suppressions=turbine.supp'
+
+{
+   tcl-alloc-1
+   Memcheck:Leak
+   fun:malloc
+   fun:TclpAlloc
+   ...
+}
+
+{
+   tcl-pwuid-1
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:TclpGetPwUid
+   ...
+}
+
+{
+   mpi-vcrt
+   Memcheck:Leak
+   fun:malloc
+   fun:MPID_VCRT_Create
+}
