@@ -8,4 +8,5 @@ set INPUT {
     TURBINE OFF
     TCL_TURBINE OFF
     ADLB OFF
+    CACHE OFF
 }
