@@ -11,8 +11,8 @@
 #include "backoffs.h"
 #include "tools.h"
 
-// Allow debugging user to toggle these values:
-// #define SLOW
+// Allow debugging user to define either FAST or SLOW:
+#define FAST
 #ifdef SLOW
        double xlb_max_idle          = 10;
        double xlb_steal_backoff     = 8;
@@ -21,7 +21,7 @@ static double backoff_sync          = 1;
 static double backoff_sync_rejected = 1;
 #else // FAST
        double xlb_max_idle          = 1;
-       double xlb_steal_backoff     = 0.001;
+       double xlb_steal_backoff     = 0.02;
 static double backoff_server_max    = 0.000001;
 static double backoff_sync          = 0.00001;
 static double backoff_sync_rejected = 0.0001;
