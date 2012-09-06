@@ -465,9 +465,9 @@ data_store(adlb_datum_id id, void* buffer, int length)
    Retrieve works on UNSET data for files and containers:
                   this is necessary for filenames,
                   and may be useful for containers.
-   Callee should use result before making further calls into
+   Caller should use result before making further calls into
    this module, except if type is container, in which case the
-   callee must free result pointer.  This is because the container
+   caller must free result pointer.  This is because the container
    subscript list must be dynamically created.
    @param type   Returns type
    @param result Returns pointer to data in data module memory,
