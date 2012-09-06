@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#define _GNU_SOURCE // for strnlen()
 #include <string.h>
 
 #include <tcl.h>
