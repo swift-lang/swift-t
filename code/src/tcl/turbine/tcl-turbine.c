@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #define _GNU_SOURCE // for strnlen()
+#define __USE_GNU   // for strnlen() (needed on BG/P)
 #include <string.h>
 
 #include <tcl.h>
