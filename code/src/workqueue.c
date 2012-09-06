@@ -162,7 +162,9 @@ workqueue_get(int target, int type)
   return wu;
 }
 
-
+/**
+   If count is not 0, caller must free results
+ */
 adlb_code
 workqueue_steal(int max_memory, int* count, xlb_work_unit*** result)
 {
@@ -187,7 +189,7 @@ workqueue_steal(int max_memory, int* count, xlb_work_unit*** result)
     fractions[i] = tree_size(&typed_work[i])/total;
 
   // Number of work units we are willing to share
-  int share = total / 2;
+  int share = total / 2 + 1;
   // Number of work units we actually share
   int actual = 0;
 
