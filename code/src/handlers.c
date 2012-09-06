@@ -8,6 +8,7 @@
 
 #define _GNU_SOURCE // for asprintf()
 #include <assert.h>
+#include <alloca.h>
 #include <stdio.h>
 
 #include <mpi.h>
@@ -416,7 +417,7 @@ handle_steal(int caller)
     goto end;
 
   int p_length = count*sizeof(struct packed_put);
-  struct packed_put* p = malloc(count*sizeof(struct packed_put));
+  struct packed_put* p = alloca(count*sizeof(struct packed_put));
   for (int i = 0; i < count; i++)
     xlb_pack_work_unit(&p[i], stolen[i]);
   SEND(p, p_length, MPI_BYTE, caller, ADLB_TAG_RESPONSE_STEAL);
@@ -427,6 +428,13 @@ handle_steal(int caller)
     SEND(stolen[i]->payload, stolen[i]->length, MPI_BYTE, caller,
          ADLB_TAG_RESPONSE_STEAL);
   }
+
+  for (int i = 0; i < count; i++)
+  {
+    free(stolen[i]->payload);
+    free(stolen[i]);
+  }
+  free(stolen);
 
   end:
   MPE_LOG(xlb_mpe_svr_steal_end);

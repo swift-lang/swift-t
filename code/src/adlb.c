@@ -27,6 +27,9 @@ static void print_proc_self_status(void);
 
 void adlb_exit_handler(void);
 
+/** True after a Get() receives a shutdown code */
+static bool got_shutdown = false;
+
 static void
 check_versions()
 {
@@ -179,6 +182,7 @@ ADLBP_Get(int type_requested, void* payload, int* length,
   if (g.code == ADLB_SHUTDOWN)
   {
     DEBUG("ADLB_Get(): SHUTDOWN");
+    got_shutdown = true;
     return ADLB_SHUTDOWN;
   }
 
@@ -409,76 +413,79 @@ adlb_code ADLBP_Slot_drop(long id)
     return ADLB_SUCCESS;
 }
 
-adlb_code ADLBP_Insert(adlb_datum_id id,
-                 const char* subscript, const char* member,
-                 int member_length, int drops)
+adlb_code
+ADLBP_Insert(adlb_datum_id id,
+             const char* subscript, const char* member,
+             int member_length, int drops)
 {
-    int rc;
-    adlb_data_code dc;
-    MPI_Status status;
-    MPI_Request request;
+  int rc;
+  adlb_data_code dc;
+  MPI_Status status;
+  MPI_Request request;
 
-    CHECK_MSG(member_length < ADLB_DATA_MEMBER_MAX,
-              "ADLB_Insert(): member too long: <%li>[\"%s\"]\n",
-              id, subscript);
+  CHECK_MSG(member_length < ADLB_DATA_MEMBER_MAX,
+            "ADLB_Insert(): member too long: <%li>[\"%s\"]\n",
+            id, subscript);
 
-    DEBUG("ADLB_Insert: <%li>[\"%s\"]=\"%s\"", id, subscript, member);
-    int length = sprintf(xfer, "%li %s %i %i",
-                         id, subscript, member_length, drops);
-    int to_server_rank = locate(id);
+  DEBUG("ADLB_Insert: <%li>[\"%s\"]=\"%s\"", id, subscript, member);
+  int length = sprintf(xfer, "%li %s %i %i",
+                       id, subscript, member_length, drops);
+  int to_server_rank = locate(id);
 
-    rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
-                    adlb_all_comm, &request);
-    MPI_CHECK(rc);
-    rc = MPI_Send(xfer, length+1, MPI_INT, to_server_rank,
-                   ADLB_TAG_INSERT_HEADER, adlb_all_comm);
-    MPI_CHECK(rc);
+  rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
+                 adlb_all_comm, &request);
+  MPI_CHECK(rc);
+  rc = MPI_Send(xfer, length+1, MPI_INT, to_server_rank,
+                ADLB_TAG_INSERT_HEADER, adlb_all_comm);
+  MPI_CHECK(rc);
 
-    rc = MPI_Send((char*) member, member_length+1, MPI_BYTE,
-                  to_server_rank, ADLB_TAG_INSERT_PAYLOAD, adlb_all_comm);
-    MPI_CHECK(rc);
+  rc = MPI_Send((char*) member, member_length+1, MPI_BYTE,
+                to_server_rank, ADLB_TAG_INSERT_PAYLOAD, adlb_all_comm);
+  MPI_CHECK(rc);
 
-    rc = MPI_Wait(&request, &status);
-    MPI_CHECK(rc);
-    if (dc != ADLB_DATA_SUCCESS)
-        return ADLB_ERROR;
+  rc = MPI_Wait(&request, &status);
+  MPI_CHECK(rc);
+  if (dc != ADLB_DATA_SUCCESS)
+    return ADLB_ERROR;
 
-    return ADLB_SUCCESS;
+  return ADLB_SUCCESS;
 }
 
-adlb_code ADLBP_Insert_atomic(adlb_datum_id id, const char* subscript,
-                        bool* result)
+adlb_code
+ADLBP_Insert_atomic(adlb_datum_id id, const char* subscript,
+                    bool* result)
 {
-    int rc;
-    adlb_data_code dc;
-    MPI_Status status;
-    MPI_Request request1, request2;
+  int rc;
+  adlb_data_code dc;
+  MPI_Status status;
+  MPI_Request request1, request2;
 
-    DEBUG("ADLB_Insert_atomic: <%li>[\"%s\"]", id, subscript);
-    int length = sprintf(xfer, "%li %s", id, subscript);
-    int to_server_rank = locate(id);
+  DEBUG("ADLB_Insert_atomic: <%li>[\"%s\"]", id, subscript);
+  int length = sprintf(xfer, "%li %s", id, subscript);
+  int to_server_rank = locate(id);
 
-    rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
-                    adlb_all_comm, &request1);
-    MPI_CHECK(rc);
-    rc = MPI_Irecv(result, sizeof(bool), MPI_BYTE, to_server_rank,
-                   ADLB_TAG_RESPONSE, adlb_all_comm, &request2);
-    MPI_CHECK(rc);
-    rc = MPI_Send(xfer, length+1, MPI_INT, to_server_rank,
-                  ADLB_TAG_INSERT_ATOMIC, adlb_all_comm);
-    MPI_CHECK(rc);
-    rc = MPI_Wait(&request1, &status);
-    MPI_CHECK(rc);
-    rc = MPI_Wait(&request2, &status);
-    MPI_CHECK(rc);
+  rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
+                 adlb_all_comm, &request1);
+  MPI_CHECK(rc);
+  rc = MPI_Irecv(result, sizeof(bool), MPI_BYTE, to_server_rank,
+                 ADLB_TAG_RESPONSE, adlb_all_comm, &request2);
+  MPI_CHECK(rc);
+  rc = MPI_Send(xfer, length+1, MPI_INT, to_server_rank,
+                ADLB_TAG_INSERT_ATOMIC, adlb_all_comm);
+  MPI_CHECK(rc);
+  rc = MPI_Wait(&request1, &status);
+  MPI_CHECK(rc);
+  rc = MPI_Wait(&request2, &status);
+  MPI_CHECK(rc);
 
-    if (dc != ADLB_DATA_SUCCESS)
-        return ADLB_ERROR;
-    return ADLB_SUCCESS;
+  if (dc != ADLB_DATA_SUCCESS)
+    return ADLB_ERROR;
+  return ADLB_SUCCESS;
 }
 
-adlb_code ADLBP_Retrieve(adlb_datum_id id, adlb_data_type* type,
-		   void *data, int *length)
+adlb_code
+ADLBP_Retrieve(adlb_datum_id id, adlb_data_type* type,
+               void *data, int *length)
 {
     int rc;
     adlb_data_code dc;
@@ -518,11 +525,12 @@ adlb_code ADLBP_Retrieve(adlb_datum_id id, adlb_data_type* type,
    Allocates fresh memory in subscripts and members
    Caller must free this when done
  */
-adlb_code ADLBP_Enumerate(adlb_datum_id container_id,
-                    int count, int offset,
-                    char** subscripts, int* subscripts_length,
-                    char** members, int* members_length,
-                    int* restrict records)
+adlb_code
+ADLBP_Enumerate(adlb_datum_id container_id,
+                int count, int offset,
+                char** subscripts, int* subscripts_length,
+                char** members, int* members_length,
+                int* restrict records)
 {
   int rc;
   adlb_data_code dc;
@@ -586,7 +594,8 @@ adlb_code ADLBP_Enumerate(adlb_datum_id container_id,
   return ADLB_SUCCESS;
 }
 
-adlb_code ADLBP_Unique(long* result)
+adlb_code
+ADLBP_Unique(long* result)
 {
     int rc;
     MPI_Status status;
@@ -611,7 +620,8 @@ adlb_code ADLBP_Unique(long* result)
     return ADLB_SUCCESS;
 }
 
-adlb_code ADLBP_Typeof(adlb_datum_id id, adlb_data_type* type)
+adlb_code
+ADLBP_Typeof(adlb_datum_id id, adlb_data_type* type)
 {
     int rc;
     MPI_Status status;
@@ -634,7 +644,8 @@ adlb_code ADLBP_Typeof(adlb_datum_id id, adlb_data_type* type)
     return ADLB_SUCCESS;
 }
 
-adlb_code ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* type)
+adlb_code
+ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* type)
 {
     int rc;
     MPI_Status status;
@@ -960,8 +971,11 @@ ADLBP_Finalize()
   else
   {
     // Worker:
-    int rc = ADLB_Shutdown();
-    ADLB_CHECK(rc);
+    if (!got_shutdown)
+    {
+      int rc = ADLB_Shutdown();
+      ADLB_CHECK(rc);
+    }
   }
   return ADLB_SUCCESS;
 }

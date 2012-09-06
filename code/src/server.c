@@ -118,6 +118,8 @@ ADLB_Server(long max_memory)
       break;
     if (master_server())
       check_idle();
+    if (shutting_down)
+      break;
 
     adlb_code code = xlb_serve_one(MPI_ANY_SOURCE);
     ADLB_CHECK(code);
@@ -178,7 +180,7 @@ adlb_code
 xlb_serve_server(int source)
 {
   TRACE_START;
-  DEBUG("\t source: %i", source);
+  DEBUG("\t serve_server: %i", source);
   MPI_Status status;
   static int response = 1;
   SEND(&response, 1, MPI_INT, source, ADLB_TAG_SYNC_RESPONSE);
@@ -291,17 +293,15 @@ check_idle()
 
   DEBUG("check_idle(): checking other servers...");
 
-  MPE_LOG(xlb_mpe_dmn_shutdown_start)
+
 
   // Issue idle check RPCs...
   if (! servers_idle())
     // Some server is still not idle...
-    goto end;
+    return;
+
 
   shutdown_all_servers();
-
-  end:
-  MPE_LOG(xlb_mpe_dmn_shutdown_end);
 }
 
 bool
@@ -327,7 +327,8 @@ static bool
 servers_idle()
 {
   int rc;
-  for (int rank = xlb_master_server_rank+1; rank < xlb_world_size; rank++)
+  for (int rank = xlb_master_server_rank+1; rank < xlb_world_size;
+      rank++)
   {
     bool idle;
     rc = xlb_sync(rank);
@@ -343,12 +344,17 @@ servers_idle()
 static void
 shutdown_all_servers()
 {
+  TRACE_START;
+  MPE_LOG(xlb_mpe_dmn_shutdown_start)
   shutting_down = true;
   for (int rank = xlb_master_server_rank+1; rank < xlb_world_size; rank++)
   {
     int rc = ADLB_Server_shutdown(rank);
     assert(rc == ADLB_SUCCESS);
   }
+  TRACE_END;
+
+  MPE_LOG(xlb_mpe_dmn_shutdown_end);
 }
 
 /**
@@ -374,7 +380,7 @@ xlb_server_shutting_down()
 static adlb_code
 server_shutdown()
 {
-  TRACE_START;
+  DEBUG("server down.");
   requestqueue_shutdown();
   workqueue_finalize();
   return ADLB_SUCCESS;
