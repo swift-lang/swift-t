@@ -40,10 +40,11 @@ void debug_check_environment(void);
 
 /*
    Debugging may be disabled at compile-time via NDEBUG or
-   ENABLE_DEBUG or at run-time by setting environment variable XLB_DEBUG=0
+   ENABLE_DEBUG or at run-time by setting environment variable
+   XLB_DEBUG=0
  */
 #ifndef NDEBUG
-#define ENABLE_DEBUG 1
+// #define ENABLE_DEBUG 1
 #endif
 #ifdef ENABLE_DEBUG
 #define DEBUG(format, args...)              \
@@ -69,7 +70,7 @@ void debug_check_environment(void);
 #endif
 
 #ifndef NDEBUG
-#define ENABLE_TRACE_MPI 1
+// #define ENABLE_TRACE_MPI 1
 #endif
 #ifdef ENABLE_TRACE_MPI
 #define TRACE_MPI(format, args...)             \
@@ -82,7 +83,7 @@ void debug_check_environment(void);
 #endif
 
 #ifndef NDEBUG
-#define ENABLE_STATS
+// #define ENABLE_STATS
 #endif
 #ifdef ENABLE_STATS
 #define STATS(format, args...)             \
