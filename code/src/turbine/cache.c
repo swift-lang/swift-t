@@ -45,6 +45,8 @@ struct entry
   turbine_type type;
   void* data;
   int length;
+  /** Counter as of last access */
+  long stamp;
 };
 
 void
@@ -79,6 +81,11 @@ turbine_cache_retrieve(turbine_datum_id td,
   *type   = e->type;
   *result = e->data;
   *length = e->length;
+
+  // Update LRU
+  tree_move(&lru, e->stamp, counter);
+  e->stamp = counter;
+  counter++;
 
   return TURBINE_SUCCESS;
 }
