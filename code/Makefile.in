@@ -150,27 +150,30 @@ RPATHS += -Wl,-rpath -Wl,$(ADLB)/lib
 RPATHS += -Wl,-rpath -Wl,$(C_UTILS)/lib
 RPATHS += -Wl,-rpath -Wl,$(MPI_LIB_DIR)
 RPATHS += -Wl,-rpath -Wl,$(TCL_LIB_DIR)
+RPATHS += -Wl,-rpath -Wl,$(HOME)/sfw/mpe
 
 ### INCLUDES
 
 DIR :=
 TURBINE_SRC :=
-TCL_TURBINE_SRC :=
 include src/turbine/module.mk
 include src/util/module.mk
 include src/tcl/module.mk
-include src/tcl/adlb/module.mk
 include src/tcl/turbine/module.mk
+include src/tcl/adlb/module.mk
 include src/tcl/mpe/module.mk
 
 include lib/module.mk
 
+TURBINE_SRC += $(TCL_TURBINE_SRC)
 TURBINE_SRC += $(TCL_ADLB_SRC)
 TURBINE_SRC += $(TCL_MPE_SRC)
+TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
+
 
 ### DEPENDENCIES
 
-TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC) $(TCL_TURBINE_SRC))
+TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC))
 
 TEST_SRC :=
 include tests/module.mk
@@ -222,9 +225,6 @@ TAGS: deps.txt
 
 ### COMPILE
 
-TCL_TURBINE_OBJS += $(patsubst %.c, %.o, $(TCL_TURBINE_SRC))
-TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
-
 %.o: %.c
 # 	The following string produces a false autoscan message (C++)
 	$(Q) "  CC		$(@)"
@@ -238,10 +238,9 @@ $(TURBINE_A): $(TURBINE_OBJS)
 	$(E) install -d lib
 	$(E) ar rcs $(@) $(TURBINE_OBJS)
 
-$(TCL_TURBINE_SO): $(TCL_TURBINE_OBJS) $(TURBINE_OBJS)
+$(TCL_TURBINE_SO): $(TURBINE_OBJS)
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(SHARED) -o $(@) \
-             $(TCL_TURBINE_OBJS) \
+	$(E) $(CC) $(SHARED) $(LDFLAGS) -o $(@) \
              $(TURBINE_OBJS) \
              $(TCL_LINK_FLAGS) \
              $(LIBS) \
@@ -335,7 +334,7 @@ install: package
 	$(E) mkdir -pv $(INSTALL_EXPORT)
 ifeq ($(USE_MPE),1)
 #       We assume libmpe.so is in the ADLB/lib directory
-	$(E) cp $(CP_ARGS) $(ADLB)/lib/libmpe.so        $(INSTALL_LIB)
+	# $(E) cp $(CP_ARGS) $(ADLB)/lib/libmpe.so        $(INSTALL_LIB)
 endif
 #       Copy Turbine items
 	$(E) cp $(CP_ARGS) bin/turbine                  $(INSTALL_BIN)
@@ -356,7 +355,6 @@ clean::
 	@rm -fv  $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT)
 	@rm -fv  $(TEST_RESULTS)
 	@rm -fv  $(TURBINE_OBJS)
-	@rm -fv  $(TCL_TURBINE_OBJS)
 	@rm -fvr tests/data
 
 # Clean *.result files that did not succeed
