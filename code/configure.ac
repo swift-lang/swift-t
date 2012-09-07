@@ -33,46 +33,32 @@ AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
          [])])
 AC_SUBST([CP_U], [$ac_cv_path_cp_u])
 
-MPE_FLAGS=
-AC_ARG_ENABLE(mpe,
-        [--enable-mpe - Enable MPE. The default is disabled.],
-        ADLB_ENABLE_MPE=yes , )
+ADLB_ENABLE_MPE=no
+AC_ARG_WITH(mpe,
+        [--with-mpe - Enable MPE, set directory with MPE library],
+        ADLB_ENABLE_MPE=yes
+        USE_MPE=${withval}, )
+AC_MSG_RESULT([using MPE: ${ADLB_ENABLE_MPE}])
 
+# From now on, make the user put -mpe=mpilog or -mpilog or -log in
+# CFLAGS and LDFLAGS.
+# I cannot figure this out. -Justin
+# On the BG/P, with Anthony's install_ibm_qpic, use
+#    CFLAGS='-mpilog'
+#    LDFLAGS='-mpilog -L /dir' where dir contains libmpe.so
 if [[ "${ADLB_ENABLE_MPE}" == "yes" ]]
 then
-    AC_MSG_CHECKING( [for the MPE compiler flags] )
-    MPILOG_FLAG="-mpe=mpilog"
-    LOG_FLAG="-mpe=log"
-    savedCFLAGS="$CFLAGS"
-    CFLAGS="$CFLAGS $MPILOG_FLAG"
-    AC_LINK_IFELSE([AC_LANG_PROGRAM([#include "mpe.h"],[MPE_Init_log();])],
-                   adlb_ok=yes,adlb_ok=no)
-    CFLAGS="$savedCFLAGS"
-    if test "$adlb_ok" = "yes" ; then
-        AC_MSG_RESULT([$MPILOG_FLAG and $LOG_FLAG])
-        MPE_FLAGS="-mpe=log"
+    AC_CHECK_FILE(${withval}/libmpe.so)
+    AC_MSG_CHECKING([if MPE works])
+    AC_LINK_IFELSE(
+        [AC_LANG_PROGRAM([#include "mpe.h"],[MPE_Init_log();])],
+        adlb_ok=yes,adlb_ok=no)
+    if [[ "${adlb_ok}" = "yes" ]]
+    then
+        AC_MSG_RESULT([yes])
     else
-        MPILOG_FLAG="-mpilog"
-        LOG_FLAG="-log"
-        savedCFLAGS="$CFLAGS"
-        CFLAGS="$CFLAGS $MPILOG_FLAG"
-        AC_LINK_IFELSE([AC_LANG_PROGRAM([#include "mpe.h"],[MPE_Init_log();])],
-                       adlb_ok=yes,adlb_ok=no)
-        CFLAGS="$savedCFLAGS"
-        if test "$adlb_ok" = "yes" ; then
-            AC_MSG_RESULT([$MPILOG_FLAG and $LOG_FLAG])
-            MPE_FLAGS="-mpe=log"
-        else
-            MPILOG_FLAG=""
-            LOG_FLAG=""
-            ADLB_ENABLE_MPE=no
-            AC_MSG_RESULT([none])
-            dnl If there isn't any MPE compiler flag,
-            dnl should check for mpe.h, -llmpe and -lmpe.
-        fi
+        AC_MSG_ERROR([failed])
     fi
-else
-     AC_MSG_RESULT([Not using MPE])
 fi
 
 AC_SUBST(ADLB_ENABLE_MPE)

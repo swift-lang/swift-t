@@ -35,6 +35,8 @@ endif
 ### FLAGS
 
 CC  = @CC@
+# Always link with gcc, even when using XLC
+LINKER = gcc
 
 AR      = @AR@
 ARFLAGS = cr
@@ -82,6 +84,8 @@ include src/module.mk
 
 ### DEPS
 
+deps: $(DEPS)
+
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
   -include $(DEPS)
 endif
@@ -90,7 +94,7 @@ endif
 %.d: %.c
 	$(Q) "  DEP		$(@)"
 	$(E) CC=$(CC) maint/depend.sh \
-             $(dir $(<)) $(CFLAGS) $< > $@
+             $(dir $(<)) $(CFLAGS) $(<) > $(@)
 
 ### COMPILE
 
@@ -107,8 +111,16 @@ $(ADLB_A): $(OBJS)
 
 $(ADLB_SO): $(OBJS) $(NLOBJS)
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(SHARED) -o $(@) $(OBJS) \
-	           $(LIBS)
+# 	$(E) $(CC) $(SHARED) $(LDFLAGS) -o $(@) $(OBJS)
+#	$(LIBS)
+	$(E) $(LINKER) -shared -fPIC -g			\
+	        $(OBJS) 				\
+	        -L /home/wozniak/sfw/mpe 		\
+	        -L $(C_UTILS)/lib 	\
+	        -l exmcutils -L lib -l mpe 		\
+	        -Wl,-rpath -Wl,$(C_UTILS)/lib 		\
+	        -Wl,-rpath -Wl,$(HOME)/sfw/mpe 		\
+	        -o $(@)
 
 ### APPS
 
@@ -135,13 +147,10 @@ install: $(ADLB)
 	$(E) cp $(CP_ARGS) src/adlb.h $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) src/adlb-defs.h $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) $(ADLB) $(INSTALL_LIB)
-ifeq ($(ENABLE_MPE),yes)
-	$(E) cp $(CP_ARGS) lib/libmpe.so $(INSTALL_LIB)
-endif
 	$(Q)
 
 ### CLEAN
 
 clean:
 	$(Q) "  CLEAN"
-	$(E) rm -fv $(OBJS) $(ADLB)
+	$(E) rm -fv $(OBJS) $(ADLB) $(DEPS)
