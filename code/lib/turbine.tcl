@@ -20,9 +20,6 @@ namespace eval turbine {
     variable priority
     variable default_priority
 
-    # Statistics: dict from string token to integer count
-    variable stats
-
     # How to display string values in the log
     variable log_string_mode
 
@@ -63,7 +60,8 @@ namespace eval turbine {
 	    set mode WORKER
         }
 
-        start_stats
+        adlb::barrier
+        c::normalize
 
         argv_init
     }
@@ -82,7 +80,7 @@ namespace eval turbine {
             set log_string_mode "ON"
         }
 
-        # Check validity
+        # Check validity - if valid, return without error
         switch $log_string_mode {
             ON  { return }
             OFF { return }
@@ -94,6 +92,7 @@ namespace eval turbine {
             }
         }
 
+        # Invalid- fall through to error
         error [ join [ "Requires integer or ON or OFF:"
                        "TURBINE_LOG_STRING_MODE=$log_string_mode" ] ]
     }
@@ -113,44 +112,8 @@ namespace eval turbine {
         c::debug $msg
     }
 
-    proc start_stats { } {
-
-	variable stats
-	set stats [ dict create ]
-
-        adlb::barrier
-        c::normalize
-        c::log "starting clock"
-	dict set stats clock_start [ clock clicks -milliseconds ]
-
-	# dict set stats set1 0
-    }
-
-    proc report_stats { } {
-
-	variable mode
-	variable engines
-	variable stats
-	set start [ dict get $stats clock_start ]
-	set stop [ clock clicks -milliseconds ]
-	set stats [ dict remove $stats clock_start ]
-        # duration in milliseconds
-        set duration [ expr $stop - $start ]
-        # walltime in seconds
-        set w [ expr $duration / 1000.0 ]
-        set walltime [ format "%0.3f" $w ]
-	dict set stats walltime $walltime
-
-	set rank [ adlb::rank ]
-
-	dict for { key value } $stats {
-	    c::log "STATS\[$rank\]: $key $value"
-	}
-    }
-
     proc finalize { } {
         log "turbine finalizing"
-        report_stats
         turbine::c::finalize
         adlb::finalize
     }

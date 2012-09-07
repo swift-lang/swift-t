@@ -5,9 +5,6 @@ namespace eval turbine {
 
     proc start { args } {
 
-	variable stats
-	dict set stats tasks_run 0
-
         set rules [ lindex $args 0 ]
         if { [ llength $args ] > 1 } {
             set engine_startup [ lindex $args 1 ]
@@ -42,9 +39,6 @@ namespace eval turbine {
             eval $rules
         }
 
-	variable stats
-	dict set stats tasks_released 0
-
         turbine::c::push
 
         while {true} {
@@ -69,9 +63,6 @@ namespace eval turbine {
 
     # Release a work unit for execution here or elsewhere
     proc release { transform action } {
-
-	variable stats
-	# dict incr stats tasks_released
 
         global WORK_TYPE
         set type    [ lindex $action 0 ]
@@ -101,7 +92,6 @@ namespace eval turbine {
 
         debug "control: $msg"
 
-	variable stats
         variable complete_rank
         set complete_rank $answer_rank
 
@@ -109,7 +99,6 @@ namespace eval turbine {
         # show header
         switch $header {
             command {
-		# dict incr stats tasks_run
                 set command [ lrange $msg 1 end ]
                 if { [ string equal [ lindex $command 0 ] \
                                     "priority:" ] } {
@@ -160,10 +149,6 @@ namespace eval turbine {
 
         debug "rule_id: $rule_id"
         debug "work: $command"
-
-	variable stats
-	# dict incr stats tasks_run
-
         debug "eval: $command"
 
         if { [ catch { eval $command } e ] } {
