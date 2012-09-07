@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/zsh -f
 
 # usage:
 #  turbine-cobalt -n <PROCS> [-e <ENV>]* [-o <OUTPUT>] -t <WALLTIME>
@@ -10,10 +10,11 @@
 TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 declare TURBINE_HOME
 source ${TURBINE_HOME}/scripts/turbine-config.sh
+source ${TURBINE_HOME}/scripts/helpers.zsh
 
 # Defaults:
 PROCS=0
-WALLTIME="00:15:00"
+WALLTIME=${WALLTIME:-00:15:00}
 TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
 
 # Place to store output directory name
@@ -23,7 +24,10 @@ OUTPUT_TOKEN_FILE=output.txt
 typeset -T ENV env
 env=()
 
-while getopts "d:e:n:o:t:" OPTION
+# Defaults:
+VERBOSE=0
+
+while getopts "d:e:n:o:t:v" OPTION
  do
  case ${OPTION}
    in
@@ -31,13 +35,15 @@ while getopts "d:e:n:o:t:" OPTION
      OUTPUT_TOKEN_FILE=${OPTARG}
      ;;
    e) env+=${OPTARG}
-     print a: $OPTARG
      ;;
    n) PROCS=${OPTARG}
      ;;
    o) TURBINE_OUTPUT_ROOT=${OPTARG}
      ;;
    t) WALLTIME=${OPTARG}
+     ;;
+   v)
+     VERBOSE=1
      ;;
    *)
      print "abort"
@@ -46,6 +52,11 @@ while getopts "d:e:n:o:t:" OPTION
  esac
 done
 shift $(( OPTIND-1 ))
+
+if (( VERBOSE ))
+then
+  set -x
+fi
 
 SCRIPT=$1
 shift
@@ -69,8 +80,11 @@ exitcode "mkdir failed: ${TURBINE_OUTPUT}"
 LOG=${TURBINE_OUTPUT}/log.txt
 
 print "SCRIPT: ${SCRIPT}" >> ${LOG}
-cp -v ${SCRIPT} ${TURBINE_OUTPUT}
 SCRIPT_NAME=$( basename ${SCRIPT} )
+[[ -f ${SCRIPT} ]]
+exitcode "script not found: ${SCRIPT}"
+cp ${SCRIPT} ${TURBINE_OUTPUT}
+exitcode "copy failed: ${SCRIPT} -> ${TURBINE_OUTPUT}"
 
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
 
@@ -78,16 +92,25 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 exitcode "turbine-config.sh failed!"
 
 # Turbine-specific environment
+TURBINE_ENGINES=${TURBINE_ENGINES:-1}
+ADLB_SERVERS=${ADLB_SERVERS:-1}
+TURBINE_WORKERS=$(( PROCS - TURBINE_ENGINES - ADLB_SERVERS ))
+ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME:-5}
+TURBINE_LOG=${TURBINE_LOG:-1}
+TURBINE_DEBUG=${TURBINE_DEBUG:-1}
+ADLB_DEBUG=${ADLB_DEBUG:-1}
+
 env+=( TCLLIBPATH="${TCLLIBPATH}"
-       TURBINE_DEBUG=${TURBINE_DEBUG:-1}
-       ADLB_DEBUG=${ADLB_DEBUG:-1}
-       LOGGING=${LOGGING:-1}
-       TURBINE_ENGINES=${TURBINE_ENGINES:-1}
-       ADLB_SERVERS=${ADLB_SERVERS:-1}
-       ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME:-5}
+       TURBINE_ENGINES=${TURBINE_ENGINES}
+       TURBINE_WORKERS=${TURBINE_WORKERS}
+       ADLB_SERVERS=${ADLB_SERVERS}
+       ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME}
+       TURBINE_LOG=${TURBINE_LOG}
+       TURBINE_DEBUG=${TURBINE_DEBUG}
+       ADLB_DEBUG=${ADLB_DEBUG}
 )
 
-declare TCLSH SCRIPT_NAME
+declare SCRIPT_NAME
 
 NODES=$(( PROCS/4 ))
 (( PROCS % 4 )) && (( NODES++ ))
@@ -98,7 +121,7 @@ qsub -n ${NODES} \
      --cwd ${TURBINE_OUTPUT} \
      --env "${ENV}" \
      --mode vn \
-      ${TCLSH} ${SCRIPT} ${ARGS} | read JOB_ID
+      ${TCLSH} ${SCRIPT_NAME} ${ARGS} | read JOB_ID
 
 if [[ ${JOB_ID} == "" ]]
 then
@@ -112,6 +135,7 @@ declare JOB_ID
   print "PROCS: ${PROCS}"
   print "SUBMITTED: $( date_nice )"
   print "TURBINE_ENGINES: ${TURBINE_ENGINES}"
+  print "TURBINE_WORKERS: ${TURBINE_WORKERS}"
   print "ADLB_SERVERS:    ${ADLB_SERVERS}"
 } >> ${LOG}
 
@@ -124,3 +148,15 @@ STOP=$( date +%s )
 TOOK=$( tformat $(( STOP-START )) )
 declare TOOK
 
+JOB_ERROR=${TURBINE_OUTPUT}/${JOB_ID}.error
+[[ -f ${JOB_ERROR} ]]
+exitcode "No job error file: expected: ${JOB_ERROR}"
+# Report non-zero job result codes
+grep "job result code:" ${JOB_ERROR} | grep -v "code: 0"
+if [[ $pipestatus[2] != 1 ]]
+then
+  print "JOB CRASHED"
+  exit 1
+fi
+
+exit 0
