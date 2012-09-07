@@ -93,6 +93,12 @@ date_nice()
   date "+%m/%d/%Y %I:%M%p"
 }
 
+date_path()
+# E.g., 2006/10/13/14/26/12 : Good for path names
+{
+  date "+%Y/%m/%d/%H/%M/%S"
+}
+
 nanos()
 {
   date +%s.%N
