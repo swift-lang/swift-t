@@ -64,7 +64,6 @@ xlb_mpe_setup()
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   if (rank == 0 ) {
     describe_pair(ADLB, init);
     describe_pair(ADLB, finalize);

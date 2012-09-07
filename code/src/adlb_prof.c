@@ -118,6 +118,7 @@ ADLB_Put(void *work_buf, int work_len, int reserve_rank,
 
 /**
    Log that this worker is working on the given work type
+   If type == -1, the worker is not working
  */
 static inline void
 mpe_log_user_state(int type)
@@ -138,7 +139,6 @@ mpe_log_user_state(int type)
     user_type_current = type;
     int i = xlb_type_index(user_type_current);
     mpe_log(user_state_start[i]);
-    printf("user_state: %i\n", user_type_current);
   }
 
   user_type_current = type;
@@ -151,8 +151,8 @@ ADLB_Get(int type_requested, void* payload, int* length,
          int* answer, int* type_recvd)
 {
 #ifdef ENABLE_MPE
-  mpe_log(xlb_mpe_wkr_get_start);
   mpe_log_user_state(-1);
+  mpe_log(xlb_mpe_wkr_get_start);
 #endif
 
   int rc = ADLBP_Get(type_requested, payload, length, answer,
