@@ -39,8 +39,21 @@ assert_mpe_initialized(void)
     valgrind_assert_failed_msg("TCL-MPE", 0, "MPE not initialized!");
 }
 #else
-#define assert_mpe_initialized(x)
+#define assert_mpe_initialized()
 #endif
+
+/**
+  usage: mpe::enabled => true
+ */
+static int
+MPE_Enabled_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  Tcl_Obj* result = Tcl_NewBooleanObj(true);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
 
 /**
   usage: mpe::create_pair <symbol> => [ list start-ID stop-ID ]
@@ -102,8 +115,6 @@ MPE_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   assert_mpe_initialized();
 
-  printf("MPE_LOG_CMD\n");
-
   TCL_CONDITION((objc == 2 || objc == 3),
                 "requires 1 or 2 args!");
 
@@ -122,6 +133,16 @@ MPE_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
 #else
 
 // Not using MPE...
+
+static int
+MPE_Enabled_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  Tcl_Obj* result = Tcl_NewBooleanObj(false);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
 
 static int
 MPE_Create_Pair_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -173,7 +194,8 @@ Tclmpe_Init(Tcl_Interp *interp)
 void
 tcl_mpe_init(Tcl_Interp* interp)
 {
+  COMMAND("enabled",     MPE_Enabled_Cmd);
   COMMAND("create_pair", MPE_Create_Pair_Cmd);
   COMMAND("create_solo", MPE_Create_Solo_Cmd);
-  COMMAND("log", MPE_Log_Cmd);
+  COMMAND("log",         MPE_Log_Cmd);
 }
