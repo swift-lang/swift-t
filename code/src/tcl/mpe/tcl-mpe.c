@@ -15,17 +15,32 @@
 
 #include <tcl.h>
 
+#include <config.h>
+
 #include "tcl-mpe.h"
 
 #ifdef ENABLE_MPE
 
 #include <adlb.h>
 
+#include <tools.h>
+
 #include "src/tcl/util.h"
 #include "src/util/debug.h"
 
 #include <mpe.h>
 static const char* MPE_CHOOSE_COLOR = "MPE_CHOOSE_COLOR";
+
+#ifndef NDEBUG
+static inline void
+assert_mpe_initialized(void)
+{
+  if (MPE_Initialized_logging() != 1)
+    valgrind_assert_failed_msg("TCL-MPE", 0, "MPE not initialized!");
+}
+#else
+#define assert_mpe_initialized(x)
+#endif
 
 /**
   usage: mpe::create_pair <symbol> => [ list start-ID stop-ID ]
@@ -34,6 +49,8 @@ static int
 MPE_Create_Pair_Cmd(ClientData cdata, Tcl_Interp *interp,
                     int objc, Tcl_Obj *const objv[])
 {
+  assert_mpe_initialized();
+
   TCL_ARGS(2);
   char* state = Tcl_GetStringFromObj(objv[1], NULL);
   assert(state);
@@ -59,6 +76,8 @@ static int
 MPE_Create_Solo_Cmd(ClientData cdata, Tcl_Interp *interp,
                     int objc, Tcl_Obj *const objv[])
 {
+  assert_mpe_initialized();
+
   TCL_ARGS(2);
   char* token = Tcl_GetStringFromObj(objv[1], NULL);
   assert(token);
@@ -81,6 +100,10 @@ static int
 MPE_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
         int objc, Tcl_Obj *const objv[])
 {
+  assert_mpe_initialized();
+
+  printf("MPE_LOG_CMD\n");
+
   TCL_CONDITION((objc == 2 || objc == 3),
                 "requires 1 or 2 args!");
 
