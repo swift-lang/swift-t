@@ -231,7 +231,7 @@ data_close(adlb_datum_id id, int** result, int* count)
   d->status = ADLB_DATA_SET;
 
   list_i_toints(&d->listeners, result, count);
-  TRACE("data_close: <%li> count: %i\n", id, *count);
+  DEBUG("data_close: <%li> listeners: %i\n", id, *count);
   return ADLB_DATA_SUCCESS;
 }
 
@@ -884,7 +884,7 @@ void report_leaks()
     struct list_lp* L = &tds.array[i];
     for (struct list_lp_item* item = L->head; item; item = item->next)
     {
-      printf("LEAK: %li\n", item->key);
+      DEBUG("LEAK: %li\n", item->key);
     }
   }
 }
