@@ -17,7 +17,6 @@ namespace eval turbine {
         if { ! [ info exists mpe_ready ] } {
             set event [ mpe::create_solo "metadata" ]
             set mpe_ready 1
-            puts "metadata event ID: $event"
         }
     }
 
