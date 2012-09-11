@@ -20,8 +20,14 @@
 
 #include "common.h"
 
+/** Is ADLB_DEBUG enabled? */
 extern bool xlb_debug_enabled;
+/** Is ADLB_TRACE enabled? */
+extern bool xlb_trace_enabled;
 
+/**
+   Check environment to see if user disabled ADLB_DEBUG, ADLB_TRACE
+ */
 void debug_check_environment(void);
 
 /**
