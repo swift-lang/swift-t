@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Autogenerates Makefile dependencies 
 # See the GCC documentation for -M, -MG 
