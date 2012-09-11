@@ -49,16 +49,6 @@ AC_MSG_RESULT([using MPE: ${ADLB_ENABLE_MPE}])
 if [[ "${ADLB_ENABLE_MPE}" == "yes" ]]
 then
     AC_CHECK_FILE(${withval}/libmpe.so)
-    AC_MSG_CHECKING([if MPE works])
-    AC_LINK_IFELSE(
-        [AC_LANG_PROGRAM([#include "mpe.h"],[MPE_Init_log();])],
-        adlb_ok=yes,adlb_ok=no)
-    if [[ "${adlb_ok}" = "yes" ]]
-    then
-        AC_MSG_RESULT([yes])
-    else
-        AC_MSG_ERROR([failed])
-    fi
 fi
 
 AC_SUBST(ADLB_ENABLE_MPE)
