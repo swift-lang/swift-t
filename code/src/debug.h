@@ -30,6 +30,19 @@ extern bool xlb_trace_enabled;
  */
 void debug_check_environment(void);
 
+
+#ifndef NDEBUG
+#define ENABLE_DEBUG 1
+#endif
+
+#ifndef NDEBUG
+// #define ENABLE_TRACE_MPI 1
+#endif
+
+#ifndef NDEBUG
+// #define ENABLE_TRACE 1
+#endif
+
 /**
    Most warnings will result in fatal errors at some point,
    but the user may turn these messages off
@@ -49,9 +62,6 @@ void debug_check_environment(void);
    ENABLE_DEBUG or at run-time by setting environment variable
    XLB_DEBUG=0
  */
-#ifndef NDEBUG
-// #define ENABLE_DEBUG 1
-#endif
 #ifdef ENABLE_DEBUG
 #define DEBUG(format, args...)              \
   { if (xlb_debug_enabled) {                            \
@@ -62,9 +72,6 @@ void debug_check_environment(void);
 #define DEBUG(format, args...) // noop
 #endif
 
-#ifndef NDEBUG
-// #define ENABLE_TRACE 1
-#endif
 #ifdef ENABLE_TRACE
 #define TRACE(format, args...)             \
   { if (xlb_debug_enabled) {                           \
@@ -75,9 +82,6 @@ void debug_check_environment(void);
 #define TRACE(format, args...) // noop
 #endif
 
-#ifndef NDEBUG
-// #define ENABLE_TRACE_MPI 1
-#endif
 #ifdef ENABLE_TRACE_MPI
 #define TRACE_MPI(format, args...)             \
   { if (xlb_debug_enabled) {                           \
