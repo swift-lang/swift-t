@@ -73,10 +73,10 @@ void debug_check_environment(void);
 #endif
 
 #ifdef ENABLE_TRACE
-#define TRACE(format, args...)             \
-  { if (xlb_debug_enabled) {                           \
-  printf("ADLB_TRACE: " format "\n", ## args);  \
-  fflush(stdout);                          \
+#define TRACE(format, args...)                    \
+  { if (xlb_trace_enabled && xlb_debug_enabled) { \
+  printf("ADLB_TRACE: " format "\n", ## args);    \
+  fflush(stdout);                                 \
   } }
 #else
 #define TRACE(format, args...) // noop
