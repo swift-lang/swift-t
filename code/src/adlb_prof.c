@@ -42,6 +42,7 @@ adlb_code
 ADLB_Init(int num_servers, int num_types, int* types,
           int* am_server, MPI_Comm* app_comm)
 {
+
   // In XLB, the types must be in simple order
   for (int i = 0; i < num_types; i++)
     if (types[i] != i)
@@ -53,16 +54,10 @@ ADLB_Init(int num_servers, int num_types, int* types,
   MPE(xlb_mpe_setup());
   setup_mpe_events(num_types, types);
 
-#ifdef ENABLE_MPE
-  MPE_Log_event(xlb_mpe_init_start, 0, NULL);
-#endif
-
+  MPE(MPE_Log_event(xlb_mpe_init_start, 0, NULL));
   int rc = ADLBP_Init(num_servers, num_types, types, am_server,
                       app_comm);
-
-#ifdef ENABLE_MPE
-  MPE_Log_event(xlb_mpe_init_end, 0, NULL);
-#endif
+  MPE(MPE_Log_event(xlb_mpe_init_end, 0, NULL));
 
   return rc;
 }
