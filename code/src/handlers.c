@@ -68,7 +68,7 @@ static adlb_code handle_check_idle(int caller);
 static adlb_code handle_shutdown_worker(int caller);
 static adlb_code handle_shutdown_server(int caller);
 
-static int slot_notification(long id);
+static adlb_code slot_notification(long id);
 static int close_notification(long id, int* ranks, int count);
 static int set_reference_and_notify(long id, long value);
 
@@ -659,7 +659,7 @@ static adlb_code
 handle_slot_drop(int caller)
 {
   long id;
-  int rc;
+  int rc = ADLB_SUCCESS;
   MPI_Status status;
   RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_SLOT_DROP);
 
@@ -670,8 +670,8 @@ handle_slot_drop(int caller)
   RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
 
   if (slots == 0)
-    slot_notification(id);
-  return ADLB_SUCCESS;
+    rc = slot_notification(id);
+  return rc;
 }
 
 static adlb_code
@@ -971,7 +971,7 @@ handle_shutdown_server(int caller)
   return ADLB_SUCCESS;
 }
 
-static int
+static adlb_code
 slot_notification(long id)
 {
   int rc;
