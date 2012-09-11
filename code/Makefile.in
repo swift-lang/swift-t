@@ -118,6 +118,7 @@ ifneq ($(ADLB),0)
 	CFLAGS += -I $(ADLB)/include
 endif
 
+ENABLE_MPE = @ENABLE_MPE@
 USE_MPE = @USE_MPE@
 
 CFLAGS += -std=gnu99
@@ -129,16 +130,13 @@ CFLAGS += -fPIC
 # This is referenced in lookup3.c - may want to drop this for speed
 CFLAGS += -D VALGRIND
 CFLAGS += -D TURBINE_VERSION=\"$(TURBINE_VERSION)\"
-ifeq ($(USE_MPE),1)
-	CFLAGS += -D ENABLE_MPE
-endif
 
 # LIBS: links to ADLB, c-utils, MPE, and MPI
 LIBS :=
 LIBS += -L$(ADLB)/lib -l adlb
 LIBS += -L$(C_UTILS)/lib -l exmcutils
-ifeq ($(USE_MPE),1)
-	LIBS += -l mpe
+ifeq ($(ENABLE_MPE),1)
+	LIBS += -L$(USE_MPE) -l mpe
 endif
 LIBS += $(MPI_LIB)
 
@@ -156,20 +154,19 @@ RPATHS += -Wl,-rpath -Wl,$(HOME)/sfw/mpe
 
 DIR :=
 TURBINE_SRC :=
+TCL_TURBINE_SRC :=
 include src/turbine/module.mk
 include src/util/module.mk
 include src/tcl/module.mk
 include src/tcl/turbine/module.mk
 include src/tcl/adlb/module.mk
 include src/tcl/mpe/module.mk
-
 include lib/module.mk
 
 TURBINE_SRC += $(TCL_TURBINE_SRC)
 TURBINE_SRC += $(TCL_ADLB_SRC)
 TURBINE_SRC += $(TCL_MPE_SRC)
 TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
-
 
 ### DEPENDENCIES
 
@@ -332,10 +329,6 @@ install: package
 	$(E) mkdir -pv $(INSTALL_BIN)
 	$(E) mkdir -pv $(INSTALL_SCRIPTS)
 	$(E) mkdir -pv $(INSTALL_EXPORT)
-ifeq ($(USE_MPE),1)
-#       We assume libmpe.so is in the ADLB/lib directory
-	# $(E) cp $(CP_ARGS) $(ADLB)/lib/libmpe.so        $(INSTALL_LIB)
-endif
 #       Copy Turbine items
 	$(E) cp $(CP_ARGS) bin/turbine                  $(INSTALL_BIN)
 	$(E) cp $(CP_ARGS) lib/*.tcl                    $(INSTALL_LIB)

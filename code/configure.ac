@@ -276,17 +276,21 @@ AC_SUBST(USE_LAUNCHER)
 
 # We assume the libmpe.so is in the ADLB directory
 # See Turbine - Build for explanation
+ENABLE_MPE=0
 USE_MPE=0
-AC_ARG_ENABLE(mpe,
+AC_ARG_WITH(mpe,
      AS_HELP_STRING(
-                    [--enable-mpe],
-                    [enable Tcl MPE module]),
-     [ [[ $enableval == yes ]] && USE_MPE=1 ], [ : ] )
-USE_MPE_WORD=no
-(( $USE_MPE )) && USE_MPE_WORD=yes
-AC_MSG_RESULT([MPE enabled? $USE_MPE_WORD ])
+                    [--with-mpe],
+                    [Enable Turbine MPE, set path to libmpe.so]),
+     [ USE_MPE=${withval} ], [] )
+if [[ ${USE_MPE} != 0 ]]
+then
+    AC_MSG_RESULT([Enabling MPE]);
+    AC_CHECK_FILE(${USE_MPE}/libmpe.so)
+    AC_DEFINE_UNQUOTED(ENABLE_MPE,ENABLE_MPE,[Enables MPE])
+fi
 AC_SUBST(USE_MPE)
-AC_DEFINE_UNQUOTED(USE_MPE,$USE_MPE,[Enables MPE])
+AC_SUBST(ENABLE_MPE)
 
 USE_ADLB=1
 AC_ARG_WITH(adlb,
