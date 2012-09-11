@@ -87,8 +87,8 @@ requestqueue_matches_target(int target_rank, int type)
     struct list2_item* item = R->item;
     list2_remove_item(L, item);
     int result = R->rank;
-    printf("R: %p\n", R);
-    printf("result: %i\n", result);
+    // printf("R: %p\n", R);
+    // printf("result: %i\n", result);
     free(R);
     free(item);
     table_ip_remove(&targets, target_rank);
