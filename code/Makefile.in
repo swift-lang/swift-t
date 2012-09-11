@@ -117,7 +117,7 @@ $(ADLB_SO): $(OBJS) $(NLOBJS)
 	        $(OBJS) 				\
 	        -L /home/wozniak/sfw/mpe 		\
 	        -L $(C_UTILS)/lib 	\
-	        -l exmcutils -L lib -l mpe 		\
+	        -l exmcutils -l mpe 		\
 	        -Wl,-rpath -Wl,$(C_UTILS)/lib 		\
 	        -Wl,-rpath -Wl,$(HOME)/sfw/mpe 		\
 	        -o $(@)
