@@ -420,7 +420,7 @@ AC_ARG_ENABLE(fast,
      [  --enable-fast         Enable NDEBUG, -O3, disable log. ],
         ENABLE_FAST=1
         DISABLE_LOG=1
-        CFLAGS="-O3 -DNDEBUG")
+        CFLAGS="${CFLAGS} -O3 -DNDEBUG")
 AC_SUBST(ENABLE_FAST)
 AC_SUBST(CFLAGS)
 
