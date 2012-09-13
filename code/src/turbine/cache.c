@@ -196,7 +196,9 @@ cache_shrink(void)
   {
     turbine_datum_id td;
     struct entry* e;
-    tree_pop(&lru, &td, (void**) &e);
+    void* v;
+    tree_pop(&lru, &td, &v);
+    e = (void*) v;
     free(e->data);
     memory += e->length;
     free(e);
