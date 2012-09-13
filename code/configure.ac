@@ -61,7 +61,7 @@ AC_ARG_ENABLE(fast,
                     [--enable-fast],
                     [Performance mode]),
               [
-                CFLAGS="-O3 -D NDEBUG"
+                CFLAGS="${CFLAGS} -O3 -D NDEBUG"
               ])
 
 USE_XLC=0
