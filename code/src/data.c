@@ -232,6 +232,7 @@ data_close(adlb_datum_id id, int** result, int* count)
 
   list_i_toints(&d->listeners, result, count);
   DEBUG("data_close: <%li> listeners: %i\n", id, *count);
+  list_i_clear(&d->listeners);
   return ADLB_DATA_SUCCESS;
 }
 
