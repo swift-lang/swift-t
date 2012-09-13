@@ -18,7 +18,6 @@
 #include <assert.h>
 
 // strnlen() is a GNU extension
-#define _GNU_SOURCE
 #define __USE_GNU
 #include <string.h>
 #include <exm-string.h>
@@ -816,7 +815,6 @@ enumerate_object(Tcl_Interp *interp, const char* token,
   if (!strcmp(token, "subscripts"))
   {
     *result = Tcl_NewStringObj(subscripts, subscripts_length-1);
-    free(subscripts);
   }
   else if (!strcmp(token, "members"))
   {
@@ -856,6 +854,11 @@ enumerate_object(Tcl_Interp *interp, const char* token,
   else
     // Cannot get here
     assert(false);
+
+  if (subscripts != NULL)
+    free(subscripts);
+  if (members != NULL)
+    free(members);
 }
 
 /**
