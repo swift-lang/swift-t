@@ -40,6 +40,7 @@ struct table_ip targeted_work;
    Array of trees: one for each work type
    Does not contain targeted work
    The tree contains work_unit*
+   Ordered by work unit priority
  */
 struct tree* typed_work;
 
@@ -47,7 +48,6 @@ void
 workqueue_init(int work_types)
 {
   DEBUG("workqueue_init(work_types=%i)", work_types);
-  // heap_init(&prioritized_work, 128);
   table_ip_init(&targeted_work, 128);
   typed_work = malloc(sizeof(struct tree) * work_types);
   for (int i = 0; i < work_types; i++)
@@ -128,6 +128,19 @@ workqueue_add(int type, int putter, int priority, int answer,
 //  return highest_node->data;
 //}
 
+/**
+   If we have no more targeted work for this rank, clean up data
+   structures
+ */
+static inline xlb_work_unit*
+pop_targeted(heap* H, int target)
+{
+  xlb_work_unit* result = heap_root_val(H);
+  DEBUG("workqueue_get(): targeted: %li", result->id);
+  heap_del_root(H);
+  return result;
+}
+
 xlb_work_unit*
 workqueue_get(int target, int type)
 {
@@ -142,9 +155,7 @@ workqueue_get(int target, int type)
     heap* H = &A[type];
     if (heap_size(H) != 0)
     {
-      wu = heap_root_val(H);
-      heap_del_root(H);
-      DEBUG("workqueue_get(): targeted: %li", wu->id);
+      wu = pop_targeted(H, target);
       return wu;
     }
   }
@@ -223,8 +234,20 @@ void
 workqueue_finalize()
 {
   TRACE_START;
-  if (table_ip_size(&targeted_work) > 0)
-    printf("WARNING: server contains targeted work!\n");
+  for (int i = 0; i < targeted_work.capacity; i++)
+  {
+    for (struct list_ip_item* item = targeted_work.array->head;
+        item; item = item->next)
+    {
+      heap* A = item->data;
+      for (int i = 0; i < xlb_types_size; i++)
+      {
+        heap* H = &A[i];
+        if (H->size > 0)
+          printf("WARNING: server contains targeted work!\n");
+      }
+    }
+  }
   for (int i = 0; i < xlb_types_size; i++)
   {
     int count = tree_size(&typed_work[i]);
