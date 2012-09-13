@@ -90,10 +90,6 @@ turbine_cache_retrieve(turbine_datum_id td,
   return TURBINE_SUCCESS;
 }
 
-static inline struct entry* entry_create(turbine_datum_id td,
-                                         turbine_type type,
-                                         void* data, int length);
-
 static inline void cache_add(turbine_datum_id td, turbine_type type,
                              void* data, int length);
 
@@ -122,12 +118,13 @@ turbine_cache_store(turbine_datum_id td, turbine_type type,
 static inline void
 entry_init(struct entry* result,
            turbine_datum_id td, turbine_type type,
-           void* data, int length)
+           void* data, int length, long counter)
 {
   result->td = td;
   result->type = type;
   result->data = data;
   result->length = length;
+  result->stamp = counter;
 }
 
 /**
@@ -135,10 +132,10 @@ entry_init(struct entry* result,
  */
 static inline struct entry*
 entry_create(turbine_datum_id td, turbine_type type,
-             void* data, int length)
+             void* data, int length, long counter)
 {
   struct entry* result = malloc(sizeof(struct entry));
-  entry_init(result, td, type, data, length);
+  entry_init(result, td, type, data, length, counter);
   return result;
 }
 
@@ -151,7 +148,7 @@ static inline void
 cache_add(turbine_datum_id td, turbine_type type,
           void* data, int length)
 {
-  struct entry* e = entry_create(td, type, data, length);
+  struct entry* e = entry_create(td, type, data, length, counter);
   table_lp_add(&entries, td, e);
   tree_add(&lru, counter, e);
   counter++;
@@ -176,7 +173,7 @@ cache_replace(turbine_datum_id td, turbine_type type,
   memory += e->length;
   free(e->data);
   // Replace the entry with the new data
-  entry_init(e, td, type, data, length);
+  entry_init(e, td, type, data, length, counter);
   node->key = counter;
   tree_add_node(&lru, node);
   table_lp_add(&entries, td, e);
