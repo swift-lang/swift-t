@@ -141,7 +141,7 @@ report_version()
   exit 0
 }
 
-while getopts "d:EhI:l:t:T:O:C:r:uvV" OPTION
+while getopts "d:EhI:l:t:T:O:C:r:uvV:x" OPTION
 do
   case ${OPTION}
     in
@@ -203,6 +203,10 @@ do
     V)
       (( VERBOSE )) && set -x
       VERBOSE=1
+      ;;
+    x)
+      echo "Under construction"
+      return ${EXIT_ERROR_SCRIPT}
       ;;
     *)
       # getopts already printed an error message
