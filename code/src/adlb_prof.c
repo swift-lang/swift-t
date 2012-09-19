@@ -20,7 +20,6 @@
 
 static int my_log_rank;
 
-
 // User work type events:
 
 /** Previous work type from Get.  -1 indicates nothing */
@@ -290,31 +289,16 @@ adlb_code ADLB_Close(adlb_datum_id id, int** ranks, int* count)
     return ADLBP_Close(id, ranks, count);
 }
 
-adlb_code ADLB_Lock(adlb_datum_id id, bool* result)
+adlb_code
+ADLB_Lock(adlb_datum_id id, bool* result)
 {
-    return ADLBP_Lock(id, result);
-}
-
-adlb_code ADLB_Unlock(adlb_datum_id id)
-{
-    return ADLBP_Unlock(id);
+  return ADLBP_Lock(id, result);
 }
 
 adlb_code
-ADLB_Finalize()
+ADLB_Unlock(adlb_datum_id id)
 {
-#ifdef ENABLE_MPE
-  MPE_Log_event(xlb_mpe_finalize_start, 0, NULL);
-#endif
-
-  int rc = ADLBP_Finalize();
-
-#ifdef ENABLE_MPE
-  MPE_Log_event(xlb_mpe_finalize_end, 0, NULL);
-  MPE_Finish_log("adlb");
-#endif
-
-  return rc;
+  return ADLBP_Unlock(id);
 }
 
 adlb_code

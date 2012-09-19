@@ -67,6 +67,7 @@ static adlb_code handle_unlock(int caller);
 static adlb_code handle_check_idle(int caller);
 static adlb_code handle_shutdown_worker(int caller);
 static adlb_code handle_shutdown_server(int caller);
+static adlb_code handle_abort(int caller);
 
 static adlb_code slot_notification(long id);
 static int close_notification(long id, int* ranks, int count);
@@ -109,6 +110,7 @@ handlers_init(void)
   create_handler(ADLB_TAG_CHECK_IDLE, handle_check_idle);
   create_handler(ADLB_TAG_SHUTDOWN_WORKER, handle_shutdown_worker);
   create_handler(ADLB_TAG_SHUTDOWN_SERVER, handle_shutdown_server);
+  create_handler(ADLB_TAG_ABORT, handle_abort);
 }
 
 static void
@@ -972,6 +974,19 @@ handle_shutdown_server(int caller)
   MPE_LOG(xlb_mpe_svr_shutdown_end);
   return ADLB_SUCCESS;
 }
+
+static adlb_code
+handle_abort(int caller)
+{
+  TRACE("");
+  MPI_Status status;
+  int code;
+  RECV(&code, 1, MPI_INT, caller, ADLB_TAG_ABORT);
+  // MPE_INFO("ABORT: caller: %i code: ", caller);
+  xlb_server_abort(code);
+  return ADLB_SUCCESS;
+}
+
 
 static adlb_code
 slot_notification(long id)

@@ -18,6 +18,7 @@
 #include "data.h"
 #include "debug.h"
 #include "messaging.h"
+#include "mpe-tools.h"
 #include "mpi-tools.h"
 #include "server.h"
 
@@ -955,10 +956,13 @@ ADLB_Shutdown(void)
 }
 
 adlb_code
-ADLBP_Finalize()
+ADLB_Finalize()
 {
   TRACE_START;
 
+  MPE_LOG(xlb_mpe_finalize_start);
+
+  int rc;
   int flag;
   MPI_Finalized(&flag);
   CHECK_MSG(flag,
@@ -974,9 +978,22 @@ ADLBP_Finalize()
     // Worker:
     if (!got_shutdown)
     {
-      int rc = ADLB_Shutdown();
+      rc = ADLB_Shutdown();
       ADLB_CHECK(rc);
     }
+  }
+
+  // Safely write log before exiting
+  MPE_LOG(xlb_mpe_finalize_end);
+  MPE(MPE_Finish_log("adlb"));
+
+  bool aborted;
+  int abort_code;
+  xlb_server_aborted(&aborted, &abort_code);
+  if (xlb_world_rank == xlb_master_server_rank && aborted)
+  {
+    printf("ABORTED: EXIT(%i)\n", abort_code);
+    exit(abort_code);
   }
   return ADLB_SUCCESS;
 }
@@ -986,15 +1003,12 @@ ADLBP_Abort(int code)
 {
   printf("ADLB_Abort(%i)\n", code);
 
-  MPI_Send(&code, 1, MPI_INT, xlb_my_server, ADLB_TAG_ABORT, adlb_all_comm);
+  SEND(&code, 1, MPI_INT, xlb_master_server_rank, ADLB_TAG_ABORT);
 
   // give servers a chance to shut down
   sleep(1);
 
-  MPI_Abort(MPI_COMM_WORLD,code);  /* only after servers have all reacted */
-  // Should not get here due to Abort above
-  assert(false);
-  return -1;
+  return ADLB_SUCCESS;
 }
 
 static void

@@ -44,6 +44,12 @@ bool server_sync_retry = false;
 /** Is this server shutting down? */
 static bool shutting_down;
 
+/** Was this server aborted? */
+static bool aborted = false;
+
+/** If we aborted, this contains the positive exit code */
+static bool abort_code = -1;
+
 static adlb_code setup_idle_time(void);
 
 adlb_code
@@ -293,8 +299,6 @@ check_idle()
 
   DEBUG("check_idle(): checking other servers...");
 
-
-
   // Issue idle check RPCs...
   if (! servers_idle())
     // Some server is still not idle...
@@ -328,7 +332,7 @@ servers_idle()
 {
   int rc;
   for (int rank = xlb_master_server_rank+1; rank < xlb_world_size;
-      rank++)
+       rank++)
   {
     bool idle;
     rc = xlb_sync(rank);
@@ -347,7 +351,8 @@ shutdown_all_servers()
   TRACE_START;
   MPE_LOG(xlb_mpe_dmn_shutdown_start)
   shutting_down = true;
-  for (int rank = xlb_master_server_rank+1; rank < xlb_world_size; rank++)
+  for (int rank = xlb_master_server_rank+1; rank < xlb_world_size;
+       rank++)
   {
     int rc = ADLB_Server_shutdown(rank);
     assert(rc == ADLB_SUCCESS);
@@ -355,6 +360,24 @@ shutdown_all_servers()
   TRACE_END;
 
   MPE_LOG(xlb_mpe_dmn_shutdown_end);
+}
+
+adlb_code
+xlb_server_abort(int code)
+{
+  valgrind_assert(xlb_world_rank == xlb_master_server_rank);
+  xlb_server_shutdown();
+  aborted = true;
+  abort_code = code;
+  return ADLB_SUCCESS;
+}
+
+adlb_code
+xlb_server_aborted(bool* a, int* code)
+{
+  *a = aborted;
+  *code = abort_code;
+  return ADLB_SUCCESS;
 }
 
 /**
