@@ -41,6 +41,7 @@ steal_handshake(int target, int max_memory, int* count)
 
   WAIT(&request, &status);
   STATS("STOLE: %i", *count);
+  // MPE_INFO(xlb_mpe_svr_info, "STOLE: %i FROM: %i", *count, target);
   return ADLB_SUCCESS;
 }
 
