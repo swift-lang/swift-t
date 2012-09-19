@@ -33,6 +33,8 @@ int xlb_mpe_wkr_subscribe_start, xlb_mpe_wkr_subscribe_end;
 int xlb_mpe_wkr_close_start, xlb_mpe_wkr_close_end;
 int xlb_mpe_wkr_unique_start, xlb_mpe_wkr_unique_end;
 
+int xlb_mpe_svr_info;
+
 void
 xlb_mpe_setup()
 {
@@ -62,9 +64,12 @@ xlb_mpe_setup()
   make_pair(wkr_close);
   make_pair(wkr_retrieve);
 
+  make_solo(svr_info);
+
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if (rank == 0 ) {
+  if (rank == 0 )
+  {
     describe_pair(ADLB, init);
     describe_pair(ADLB, finalize);
     describe_pair(ADLB, wkr_put);
@@ -81,6 +86,7 @@ xlb_mpe_setup()
     describe_pair(ADLB, wkr_subscribe);
     describe_pair(ADLB, wkr_close);
     describe_pair(ADLB, wkr_unique);
+    describe_solo(ADLB, svr_info);
   }
 }
 #endif

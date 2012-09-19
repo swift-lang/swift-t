@@ -47,12 +47,18 @@ extern int xlb_mpe_wkr_subscribe_start, xlb_mpe_wkr_subscribe_end;
 extern int xlb_mpe_wkr_close_start, xlb_mpe_wkr_close_end;
 extern int xlb_mpe_wkr_unique_start, xlb_mpe_wkr_unique_end;
 
+// Info event:
+extern int xlb_mpe_svr_info;
+
 /**
    Automate MPE_Log_get_state_eventIDs calls
  */
 #define make_pair(token) \
   MPE_Log_get_state_eventIDs(&xlb_mpe_##token##_start,\
                              &xlb_mpe_##token##_end);
+
+#define make_solo(token) \
+    MPE_Log_get_solo_eventID(&xlb_mpe_##token);
 
 /**
   Automate MPE_Describe_state calls
@@ -61,28 +67,32 @@ extern int xlb_mpe_wkr_unique_start, xlb_mpe_wkr_unique_end;
   MPE_Describe_state(xlb_mpe_##token##_start, xlb_mpe_##token##_end, \
                      #class "_" #token, "MPE_CHOOSE_COLOR")
 
-void xlb_mpe_setup(void);
+#define describe_solo(class, token) \
+   MPE_Describe_event(xlb_mpe_##token, #class "_" #token, \
+                          "MPE_CHOOSE_COLOR");
+//  MPE_Describe_info_event(xlb_mpe_##token, #class "_" #token, \
+//                          "MPE_CHOOSE_COLOR", NULL);
 
-/**
-   Log an empty event
- */
-static inline void
-mpe_log(int event)
-{
-  // printf("mpe_log: %i\n", event);
-  MPE_Log_event(event, 0, NULL);
-}
+void xlb_mpe_setup(void);
 
 /** Do x only if ENABLE_MPE is set */
 #define MPE(x) x;
+
+#define MPE_INFO(e,fmt,args...) { \
+  char t[32];                \
+  snprintf(t, 32, fmt, ## args);      \
+  printf("INFO: %s\n", t);\
+  MPE_Log_event(e,0,t);}
 
 #else
 
 /** MPE is not enabled - noop */
 #define MPE(x)
+/** MPE is not enabled - noop */
+#define MPE_INFO(e,msg...)
 
 #endif
 
-#define MPE_LOG(e) MPE(mpe_log(e));
+#define MPE_LOG(e) MPE(MPE_Log_bare_event(e));
 
 #endif
