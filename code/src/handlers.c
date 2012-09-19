@@ -1045,12 +1045,23 @@ put_targeted(int type, int putter, int priority, int answer,
 
   if (target >= 0)
   {
-    worker = requestqueue_matches_target(target, type);
-    if (worker != ADLB_RANK_NULL)
+    int server = xlb_map_to_server(target);
+    if (server == xlb_world_rank)
     {
-      int wuid = workqueue_unique();
-      send_work(target, wuid, type, answer, payload, length);
-      return ADLB_SUCCESS;
+      worker = requestqueue_matches_target(target, type);
+      if (worker != ADLB_RANK_NULL)
+      {
+        int wuid = workqueue_unique();
+        send_work(target, wuid, type, answer, payload, length);
+        return ADLB_SUCCESS;
+      }
+    }
+    else
+    {
+      xlb_sync(server);
+      int rc = ADLB_Put(payload, length, target, answer,
+                        type, priority);
+      ADLB_CHECK(rc);
     }
   }
 
