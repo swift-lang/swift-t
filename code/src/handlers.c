@@ -263,6 +263,7 @@ static inline adlb_code send_work(int worker, long wuid, int type,
 
 static inline bool check_workqueue(int caller, int type);
 
+/** Is this process currently stealing work? */
 static bool stealing = false;
 static int deferred_gets = 0;
 
@@ -410,6 +411,7 @@ handle_steal(int caller)
 
   workqueue_steal(max_memory, &count, &stolen);
   STATS("LOST: %i", count);
+  // MPE_INFO(xlb_mpe_svr_info, "LOST: %i TO: %i", count, caller);
 
   RSEND(&count, 1, MPI_INT, caller, ADLB_TAG_RESPONSE_STEAL_COUNT);
 
@@ -1022,9 +1024,12 @@ set_reference_and_notify(long id, long value)
   int count;
   rc = ADLB_Close(id, &ranks, &count);
   ADLB_CHECK(rc);
-  rc = close_notification(id, ranks, count);
-  ADLB_CHECK(rc);
-  free(ranks);
+  if (count > 0)
+  {
+    rc = close_notification(id, ranks, count);
+    ADLB_CHECK(rc);
+    free(ranks);
+  }
   TRACE("SET_REFERENCE DONE");
   return ADLB_SUCCESS;
 }
