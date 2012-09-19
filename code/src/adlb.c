@@ -122,7 +122,8 @@ ADLBP_Put(void* payload, int length, int target, int answer,
   /** Server to contact */
   int to_server;
   if (target != ADLB_RANK_ANY)
-    to_server = xlb_workers + (target % xlb_servers);
+    to_server = xlb_map_to_server(target);
+    // xlb_workers + (target % xlb_servers);
   else
     to_server = xlb_my_server;
 
