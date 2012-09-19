@@ -301,9 +301,3 @@ ADLB_Unlock(adlb_datum_id id)
   return ADLBP_Unlock(id);
 }
 
-adlb_code
-ADLB_Abort(int code)
-{
-  int rc = ADLBP_Abort(code);
-  return rc;
-}

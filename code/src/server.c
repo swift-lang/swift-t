@@ -44,11 +44,11 @@ bool server_sync_retry = false;
 /** Is this server shutting down? */
 static bool shutting_down;
 
-/** Was this server aborted? */
-static bool aborted = false;
+/** Was this server failed? */
+static bool failed = false;
 
-/** If we aborted, this contains the positive exit code */
-static bool abort_code = -1;
+/** If we failed, this contains the positive exit code */
+static bool fail_code = -1;
 
 static adlb_code setup_idle_time(void);
 
@@ -363,20 +363,21 @@ shutdown_all_servers()
 }
 
 adlb_code
-xlb_server_abort(int code)
+xlb_server_fail(int code)
 {
   valgrind_assert(xlb_world_rank == xlb_master_server_rank);
   xlb_server_shutdown();
-  aborted = true;
-  abort_code = code;
+  failed = true;
+  fail_code = code;
   return ADLB_SUCCESS;
 }
 
 adlb_code
-xlb_server_aborted(bool* a, int* code)
+xlb_server_failed(bool* f, int* code)
 {
-  *a = aborted;
-  *code = abort_code;
+  *f = failed;
+  if (code != NULL)
+    *code = fail_code;
   return ADLB_SUCCESS;
 }
 

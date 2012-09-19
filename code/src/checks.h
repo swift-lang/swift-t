@@ -1,3 +1,4 @@
+
 /*
  * checks.h
  *
@@ -7,13 +8,13 @@
  *  Various macros for easier error checking and reporting
  *
  *  The CHECK macros never report an error message in a correct
- *  program: thus, they may be disabled for performance
+ *  program: thus, they may be disabled by NDEBUG for performance
  * */
 
 #ifndef CHECKS_H
 #define CHECKS_H
 
-#ifdef ENABLE_DEBUG
+#ifndef NDEBUG
 /**
   Asserts that condition is true, else returns given error code.
   Note: This is disabled if ENABLE_DEBUG is not defined
@@ -40,6 +41,7 @@
    create something like a stack trace
  */
 #define ADLB_CHECK(rc) { \
+  printf("rc: %i\n", rc); \
   if (!(rc == ADLB_SUCCESS || rc == ADLB_NOTHING)) { \
     printf("ADLB_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
     return rc; }}

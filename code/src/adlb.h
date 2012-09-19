@@ -143,8 +143,9 @@ adlb_code ADLB_Server_shutdown(int rank);
 adlb_code ADLBP_Finalize(void);
 adlb_code ADLB_Finalize(void);
 
-adlb_code ADLBP_Abort(int);
-adlb_code ADLB_Abort(int);
+adlb_code ADLB_Fail(int code);
+
+void ADLB_Abort(int code);
 
 #endif
 

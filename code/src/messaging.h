@@ -240,7 +240,7 @@ typedef enum
   ADLB_TAG_RESPONSE_STEAL,
   ADLB_TAG_SYNC_RESPONSE,
   ADLB_TAG_WORKUNIT,
-  ADLB_TAG_ABORT,
+  ADLB_TAG_FAIL,
 
   /// tags that may be to/from server/worker
   /** Work unit payload */

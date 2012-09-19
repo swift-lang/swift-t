@@ -47,12 +47,12 @@ bool xlb_server_shutting_down(void);
 
 adlb_code xlb_server_shutdown(void);
 
-adlb_code xlb_server_abort(int code);
+adlb_code xlb_server_fail(int code);
 
 /**
-   Did we abort?  If so, obtain abort code.
+   Did we fail?  If so, obtain fail code.
    Given code may be NULL if caller does not require the code
  */
-adlb_code xlb_server_aborted(bool* aborted, int* code);
+adlb_code xlb_server_failed(bool* aborted, int* code);
 
 #endif

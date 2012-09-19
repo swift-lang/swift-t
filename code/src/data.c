@@ -219,6 +219,7 @@ data_container_typeof(adlb_datum_id id, adlb_data_type* type)
 adlb_data_code
 data_close(adlb_datum_id id, int** result, int* count)
 {
+  TRACE("%li", id);
   check_verbose(id != ADLB_DATA_ID_NULL,
                 ADLB_DATA_ERROR_NULL, "NULL: <%li>", id);
 
@@ -233,6 +234,7 @@ data_close(adlb_datum_id id, int** result, int* count)
   list_i_toints(&d->listeners, result, count);
   DEBUG("data_close: <%li> listeners: %i\n", id, *count);
   list_i_clear(&d->listeners);
+  TRACE_END;
   return ADLB_DATA_SUCCESS;
 }
 

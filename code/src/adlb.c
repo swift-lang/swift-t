@@ -987,28 +987,36 @@ ADLB_Finalize()
   MPE_LOG(xlb_mpe_finalize_end);
   MPE(MPE_Finish_log("adlb"));
 
-  bool aborted;
-  int abort_code;
-  xlb_server_aborted(&aborted, &abort_code);
-  if (xlb_world_rank == xlb_master_server_rank && aborted)
+  bool failed;
+  int fail_code;
+  xlb_server_failed(&failed, &fail_code);
+  if (xlb_world_rank == xlb_master_server_rank && failed)
   {
-    printf("ABORTED: EXIT(%i)\n", abort_code);
-    exit(abort_code);
+    printf("FAILED: EXIT(%i)\n", fail_code);
+    exit(fail_code);
   }
   return ADLB_SUCCESS;
 }
 
 adlb_code
-ADLBP_Abort(int code)
+ADLB_Fail(int code)
 {
-  printf("ADLB_Abort(%i)\n", code);
+  printf("ADLB_Fail(%i)\n", code);
 
-  SEND(&code, 1, MPI_INT, xlb_master_server_rank, ADLB_TAG_ABORT);
+  SEND(&code, 1, MPI_INT, xlb_master_server_rank, ADLB_TAG_FAIL);
 
   // give servers a chance to shut down
   sleep(1);
 
   return ADLB_SUCCESS;
+}
+
+void
+ADLB_Abort(int code)
+{
+  printf("ADLB_Abort(%i)\n", code);
+  printf("MPI_Abort(%i)\n", code);
+  MPI_Abort(MPI_COMM_WORLD, code);
 }
 
 static void
