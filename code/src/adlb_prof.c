@@ -125,7 +125,7 @@ mpe_log_user_state(int type)
     {
       // We have a valid previous state to end (not first get())
       int i = xlb_type_index(user_type_current);
-      mpe_log(user_state_end[i]);
+      MPE_Log_bare_event(user_state_end[i]);
     }
   }
   else
@@ -133,7 +133,7 @@ mpe_log_user_state(int type)
     // Just completed a Get() - starting user state
     user_type_current = type;
     int i = xlb_type_index(user_type_current);
-    mpe_log(user_state_start[i]);
+    MPE_Log_bare_event(user_state_start[i]);
   }
 
   user_type_current = type;
@@ -147,14 +147,14 @@ ADLB_Get(int type_requested, void* payload, int* length,
 {
 #ifdef ENABLE_MPE
   mpe_log_user_state(-1);
-  mpe_log(xlb_mpe_wkr_get_start);
+  MPE_Log_bare_event(xlb_mpe_wkr_get_start);
 #endif
 
   int rc = ADLBP_Get(type_requested, payload, length, answer,
                      type_recvd);
 
 #ifdef ENABLE_MPE
-  mpe_log(xlb_mpe_wkr_get_end);
+  MPE_Log_bare_event(xlb_mpe_wkr_get_end);
   if (rc == ADLB_SUCCESS)
     mpe_log_user_state(*type_recvd);
 #endif
@@ -209,23 +209,26 @@ adlb_code ADLB_Retrieve(adlb_datum_id id, adlb_data_type* type,
     return rc;
 }
 
-adlb_code ADLB_Enumerate(adlb_datum_id container_id,
-                   int count, int offset,
-                   char** subscripts, int* subscripts_length,
-                   char** members, int* members_length,
-                   int* records)
+adlb_code
+ADLB_Enumerate(adlb_datum_id container_id,
+               int count, int offset,
+               char** subscripts, int* subscripts_length,
+               char** members, int* members_length,
+               int* records)
 {
   return ADLBP_Enumerate(container_id, count, offset,
                          subscripts, subscripts_length,
                          members, members_length, records);
 }
 
-adlb_code ADLB_Slot_create(adlb_datum_id id)
+adlb_code
+ADLB_Slot_create(adlb_datum_id id)
 {
   return ADLBP_Slot_create(id);
 }
 
-adlb_code ADLB_Slot_drop(adlb_datum_id id)
+adlb_code
+ADLB_Slot_drop(adlb_datum_id id)
 {
   return ADLBP_Slot_drop(id);
 }
