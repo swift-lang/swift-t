@@ -1,6 +1,8 @@
 
 # MPE FEATURES
 
+# Note that if MPE is not enabled, the Tcl MPE extensions are noops
+
 namespace eval turbine {
 
     # Set by mpe_setup
