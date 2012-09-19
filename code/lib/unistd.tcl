@@ -137,8 +137,9 @@ namespace eval turbine {
         }
     }
 
-    # User function
-    # usage: argv_get <result> <optional:default> <key>
+    # usage: argv_get <result> <key> <optional:base>
+    # If key is not found, the base (default value) is used
+    # "default" is a Tcl keyword so we call it "base"
     proc argv_get { args } {
 
         set stack  [ lindex $args 0 ]
@@ -153,8 +154,7 @@ namespace eval turbine {
             "argv_get_body $result $key $base"
     }
 
-    # usage: argv_get <result> <key> <optional:default>
-    # "default" is a Tcl keyword so we call it "base"
+    # usage: argv_get <result> <key> <optional:base>
     proc argv_get_body { args } {
 
 
@@ -180,18 +180,19 @@ namespace eval turbine {
 
     proc argv_get_impl { key args } {
         variable turbine_argv
+        variable error_code
         set c [ llength $args ]
         if { $c == 0 } {
             set base_defined 0
         } elseif { $c == 1 } {
             set base_defined 1
-           set base [ lindex $args 0 ]
+            set base [ lindex $args 0 ]
         } else {
            error "argv_get_body: args: $c"
         }
         if { [ catch { set val [ dict get $turbine_argv $key ] } ] } {
             if { ! $base_defined } {
-                error "Could not find argv($key)"
+                return -code $error_code "Could not find argv($key)"
             }
             return $base
         }

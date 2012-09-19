@@ -23,12 +23,19 @@ namespace eval turbine {
     # How to display string values in the log
     variable log_string_mode
 
+    # The Turbine Tcl error code
+    # Catches known errors from Turbine libraries via Tcl return/catch
+    variable error_code
+
     # User function
     # param e Number of engines
     # param s Number of ADLB servers
     proc init { engines servers } {
 
         setup_log_string
+
+        variable error_code
+        set error_code 10
 
         variable priority
         variable default_priority
@@ -145,11 +152,19 @@ namespace eval turbine {
         }
     }
 
-    # e: A Tcl error object
-    proc abort { e } {
-        # Error handling
-        puts "CAUGHT ERROR:"
-        puts $::errorInfo
+    # Error handling
+    # e: A Tcl error message
+    # d: A Tcl error dict
+    proc abort { e d } {
+        variable error_code
+        set code [ dict get $d -code ]
+        if { $code == $error_code } {
+            puts "ERROR: $e"
+        } else {
+            puts "CAUGHT ERROR:"
+            puts $::errorInfo
+        }
+
         puts "CALLING adlb::abort"
         adlb::abort
     }

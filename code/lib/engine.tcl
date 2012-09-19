@@ -12,8 +12,8 @@ namespace eval turbine {
             set engine_startup ""
         }
 
-        if { [ catch { enter_mode $rules $engine_startup } e ] } {
-            abort $e
+        if { [ catch { enter_mode $rules $engine_startup } e d ] } {
+            abort $e $d
         }
     }
 
