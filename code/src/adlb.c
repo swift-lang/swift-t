@@ -965,7 +965,7 @@ ADLB_Finalize()
   int rc;
   int flag;
   MPI_Finalized(&flag);
-  CHECK_MSG(flag,
+  CHECK_MSG(!flag,
             "ERROR: MPI_Finalize() called before ADLB_Finalize()\n");
   data_finalize();
   if (xlb_world_rank >= xlb_master_server_rank)
