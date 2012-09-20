@@ -78,22 +78,22 @@ namespace eval turbine {
     }
 
     # # For tests/debugging
-    # proc sleep_trace { stack outputs inputs } {
-    #     # parent stack and output arguments not read
-    #     if { ! [ string length $inputs ] } {
-    #         error "trace: received no arguments!"
-    #     }
-    #     set secs [ lindex $inputs 0 ]
-    #     set args [ lreplace $inputs 0 0]
-    #     rule "sleep_trace" $inputs $turbine::WORK \
-    #         "turbine::sleep_trace_body $secs $args"
-    # }
-    # proc sleep_trace_body { secs inputs } {
-    #     set secs_val [ retrieve_float $secs ]
-    #     after [ expr round($secs_val * 1000) ]
-    #     puts "AFTER"
-    #     trace_body $inputs
-    # }
+    proc sleep_trace { stack outputs inputs } {
+      # parent stack and output arguments not read
+      if { ! [ string length $inputs ] } {
+        error "trace: received no arguments!"
+      }
+      set secs [ lindex $inputs 0 ]
+      set args [ lreplace $inputs 0 0]
+      rule "sleep_trace" $inputs $turbine::WORK \
+           "turbine::sleep_trace_body $secs $args"
+    }
+    proc sleep_trace_body { secs inputs } {
+      set secs_val [ retrieve_float $secs ]
+      after [ expr round($secs_val * 1000) ]
+      puts "AFTER"
+      trace_body $inputs
+    }
 
 
     # User function
