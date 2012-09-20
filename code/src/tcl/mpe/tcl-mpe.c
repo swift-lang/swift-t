@@ -17,6 +17,7 @@
 
 #include <config.h>
 
+#include "src/tcl/util.h"
 #include "tcl-mpe.h"
 
 #ifdef ENABLE_MPE
@@ -25,7 +26,6 @@
 
 #include <tools.h>
 
-#include "src/tcl/util.h"
 #include "src/util/debug.h"
 
 #include <mpe.h>
