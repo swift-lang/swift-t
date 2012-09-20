@@ -1,27 +1,7 @@
-/* adlb_conf.h.in.  Generated from configure.in by autoheader.  */
+/* config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Define if Fortran names are lowercase */
-#undef F77_NAME_LOWER
-
-/* Define if Fortran names containing an underscore have two trailing
-   underscores */
-#undef F77_NAME_LOWER_2USCORE
-
-/* Define if Fortran names are lowercase with a trailing underscore */
-#undef F77_NAME_LOWER_USCORE
-
-/* Define if Fortran names preserve the original case */
-#undef F77_NAME_MIXED
-
-/* Define if Fortran names preserve the original case and add a trailing
-   underscore */
-#undef F77_NAME_MIXED_USCORE
-
-/* Define if Fortran names are uppercase */
-#undef F77_NAME_UPPER
-
-/* Define if long long allowed */
-#undef HAVE_LONG_LONG
+/* ExM c-utils location */
+#undef C_UTILS_LOCATION
 
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
@@ -35,8 +15,8 @@
 /* Define to the one symbol short name of this package. */
 #undef PACKAGE_TARNAME
 
+/* Define to the home page for this package. */
+#undef PACKAGE_URL
+
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
-
-/* Define calling convention */
-#undef STDCALL
