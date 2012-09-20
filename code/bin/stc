@@ -14,6 +14,14 @@ EXIT_ERROR_SCRIPT=6
 
 STC_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
 
+STC_ENV=$STC_HOME/conf/stc-env.sh
+if [ -f ${STC_ENV} ]
+then 
+  source ${STC_ENV}
+else 
+  echo "Warning: Configuration file ${STC_ENV} does not exist."
+fi
+
 COMPILER_OPTS=()
 
 O1_OPTS=("constant-fold" "branch-predict" "dead-code-elim"
@@ -122,22 +130,12 @@ verbose()
   fi
 }
 
-TURBINE_INSTALL=@TURBINE_INSTALL@
-
-set_turbine_home()
-{
-  if [[ -z ${TURBINE_HOME} ]]
-  then
-    TURBINE_HOME=${TURBINE_INSTALL}
-  fi
-}
-
 report_version()
 {
   print "STC: Swift-Turbine Compiler"
   printf "\t for Turbine: "
   cat ${STC_HOME}/turbine-version.txt
-  set_turbine_home
+  print "TURBINE_INSTALL=${TURBINE_INSTALL}"
   print "TURBINE_HOME=${TURBINE_HOME}"
   exit 0
 }
@@ -280,12 +278,15 @@ if [[ ${RPATH} != "" ]]
 fi
 
 # Find Turbine (for include path)
-set_turbine_home
-
 if [[ -z ${TURBINE_HOME} ]]
 then
-  print "Not set: TURBINE_HOME"
-  return ${EXIT_ERROR_SCRIPT}
+  if [[ -z ${TURBINE_INSTALL} ]]
+  then
+    print "Not set: TURBINE_HOME or TURBINE_INSTALL"
+    return ${EXIT_ERROR_SCRIPT}
+  else
+    export TURBINE_HOME=${TURBINE_INSTALL}
+  fi
 fi
 
 # Add last resort include paths

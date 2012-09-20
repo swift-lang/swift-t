@@ -24,6 +24,7 @@
   <property name="build.dir"
             value="classes"/>
 
+
   <target name="jar"
           depends="compile">
     <jar destfile="${stc.jar}"
@@ -37,7 +38,7 @@
        warnings on ANTLR-generated code that is outside our control
   -->
   <target name="compile"
-          depends="compile.antlr,compile.ui,compile.gen,compile.ast,compile.ic,compile.frontend,bin.stc">
+          depends="compile.antlr,compile.ui,compile.gen,compile.ast,compile.ic,compile.frontend">
   </target>
 
   <!-- Check if the ANTLR code is up-to-date -->
@@ -178,17 +179,6 @@
     </javac>
   </target>
 
-  <target name="bin.stc">
-    <fail unless="turbine.home"
-          message="You must provide -Dturbine.home=..."/>
-    <copy file="bin/stc.in" toFile="bin/stc">
-      <filterset>
-        <filter token="TURBINE_INSTALL" value="${turbine.home}"/>
-      </filterset>
-    </copy>
-    <chmod file="bin/stc" perm="u+x"/>
-  </target>
-
   <target name="javadoc">
     <javadoc packagenames="exm.*"
            excludepackagenames="exm.stc.ast.antlr.*"
@@ -211,6 +201,9 @@
 
     <fail unless="dist.dir"
           message="Target install requires -Ddist.dir=..."/>
+    <!-- Empty turbine home unless already provided -->
+    <property name="turbine.home"
+              value=""/>
 
     <echo message="INSTALL: dist.dir=${dist.dir}"/>
 
@@ -219,6 +212,13 @@
     <copy file="turbine-version.txt" todir="${dist.dir}"/>
     <copy file="help.txt" todir="${dist.dir}"/>
     <copy file="bin/stc" todir="${dist.dir}/bin"/>
+    <copy file="conf/stc-env.sh.template" toFile="${dist.dir}/conf/stc-env.sh"
+          overwrite="true">
+      <filterset>
+        <filter token="TURBINE_INSTALL" value="${turbine.home}"/>
+      </filterset>
+    </copy>
+
     <copy todir="${dist.dir}/lib">
       <fileset dir="lib" includes="*.jar"/>
     </copy>
