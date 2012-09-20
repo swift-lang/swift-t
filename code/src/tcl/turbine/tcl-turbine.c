@@ -510,6 +510,8 @@ cache_store_cmd(ClientData cdata, Tcl_Interp* interp,
 
   turbine_code rc = turbine_cache_store(td, type, data, length);
   TURBINE_CHECK(rc, "cache store failed: %li", td);
+
+  free(data);
   return TCL_OK;
 }
 
