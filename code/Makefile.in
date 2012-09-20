@@ -68,11 +68,13 @@ LIBS := -L $(C_UTILS)/lib -l exmcutils
 RPATH := -Wl,-rpath -Wl,$(C_UTILS)/lib
 
 ENABLE_MPE = @ADLB_ENABLE_MPE@
+MPE = @USE_MPE@
 MPE_FLAGS  = @MPE_FLAGS@
 ifeq ($(ENABLE_MPE),yes)
 	CFLAGS += -D ENABLE_MPE $(MPE_FLAGS)
-	LIBS += -L lib -l mpe
+	LIBS += -L lib -lmpe -L $(MPE) 
 	RPATH += -Wl,-rpath -Wl,$(INSTALL_LIB)
+        RPATH += -Wl,-rpath -Wl,$(MPE)
 endif
 
 ### INCLUDES
@@ -110,16 +112,16 @@ $(ADLB_A): $(OBJS)
 	$(E) $(RANLIB) $(@)
 
 $(ADLB_SO): $(OBJS) $(NLOBJS)
+	echo $(LIBS)
 	$(Q) "  LINK		$(@)"
 # 	$(E) $(CC) $(SHARED) $(LDFLAGS) -o $(@) $(OBJS)
 #	$(LIBS)
 	$(E) $(LINKER) -shared -fPIC -g			\
 	        $(OBJS) 				\
-	        -L /home/wozniak/sfw/mpe 		\
+                $(LIBS)                                 \
 	        -L $(C_UTILS)/lib 	\
-	        -l exmcutils -l mpe 		\
-	        -Wl,-rpath -Wl,$(C_UTILS)/lib 		\
-	        -Wl,-rpath -Wl,$(HOME)/sfw/mpe 		\
+	        -l exmcutils \
+	        $(RPATH) \
 	        -o $(@)
 
 ### APPS

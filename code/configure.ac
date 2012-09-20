@@ -38,6 +38,7 @@ AC_ARG_WITH(mpe,
         [--with-mpe - Enable MPE, set directory with MPE library],
         ADLB_ENABLE_MPE=yes
         USE_MPE=${withval}, )
+AC_SUBST(USE_MPE)
 AC_MSG_RESULT([using MPE: ${ADLB_ENABLE_MPE}])
 
 # From now on, make the user put -mpe=mpilog or -mpilog or -log in
