@@ -172,7 +172,6 @@ handle_put(int caller)
 {
   struct packed_put p;
   MPI_Status status;
-  int rc;
 
   MPE_LOG(xlb_mpe_svr_put_start);
 
@@ -180,7 +179,9 @@ handle_put(int caller)
 
   mpi_recv_sanity(&status, MPI_BYTE, sizeof(p));
 
-  put(p.type, p.putter, p.priority, p.answer, p.target, p.length);
+  int rc = put(p.type, p.putter, p.priority, p.answer, p.target,
+               p.length);
+  ADLB_CHECK(rc);
 
   MPE_LOG(xlb_mpe_svr_put_end);
   STATS("PUT");
