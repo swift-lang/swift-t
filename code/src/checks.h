@@ -41,7 +41,6 @@
    create something like a stack trace
  */
 #define ADLB_CHECK(rc) { \
-  printf("rc: %i\n", rc); \
   if (!(rc == ADLB_SUCCESS || rc == ADLB_NOTHING)) { \
     printf("ADLB_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
     return rc; }}
