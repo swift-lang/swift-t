@@ -12,11 +12,11 @@
   a work unit of a given type if they have done a Get for that type.
 */
 
+#include "mpe-tools.h"
+
 #ifdef ENABLE_MPE
 
 #include <mpe.h>
-
-#include "mpe-tools.h"
 
 static int my_log_rank;
 

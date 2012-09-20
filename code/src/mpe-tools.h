@@ -11,11 +11,11 @@
 #ifndef MPE_TOOLS_H
 #define MPE_TOOLS_H
 
+#ifdef ENABLE_MPE
+
 #include <stdio.h>
 
 #include <mpe.h>
-
-#ifdef ENABLE_MPE
 
 // Event pairs
 // Note: these names must be conventional for use with our macros
