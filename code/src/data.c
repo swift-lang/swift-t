@@ -880,7 +880,7 @@ report_leaks()
 {
   for (int i = 0; i < tds.capacity; i++)
   {
-    struct list_lp* L = tds.array[i];
+    struct list_lp* L = &(tds.array[i]);
     for (struct list_lp_item* item = L->head; item; item = item->next)
     {
       DEBUG("LEAK: %li", item->key);
