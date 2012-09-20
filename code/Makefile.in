@@ -268,7 +268,7 @@ tests: $(TEST_BINS)
 test_results: $(TEST_RESULTS)
 
 # Binary executables in the test suite
-$(TEST_BINS): %.x: %.o
+$(TEST_BINS): %.x: %.o install.txt
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(<) \
         $(MAC_FLAT) \
@@ -278,7 +278,7 @@ $(TEST_BINS): %.x: %.o
 	-o $(@)
 
 # Test result rule for C tests
-%.result: %.sh %.x
+%.result: %.sh %.x install.txt
 #       Cannot use chmod in config.status
 	$(E) chmod u+x tests/runbin.zsh
 	$(Q) "  SH		$(@)"
@@ -288,7 +288,7 @@ $(TEST_BINS): %.x: %.o
 	$(E) mv $(*).tmp $(@) 2>&1
 
 # Test result rule for Tcl tests
-%.result: %.sh %.tcl $(PACKAGE) bin/turbine install
+%.result: %.sh %.tcl $(PACKAGE) bin/turbine install.txt
 	$(Q) "  SH		$(@)"
 	$(E) mkdir -p tests/data
 #       Remove old result if present
@@ -320,9 +320,14 @@ TCL_SO       = libtcl8.5.$(SO_SUFFIX)
 EXMCUTILS_SO = libexmcutils.$(SO_SUFFIX)
 ADLB_SO      = libadlb.$(SO_SUFFIX)
 
-install: package
+# Maintaining the install.txt file is a simple way to
+# create a dependency on the installation
+install: install.txt
+
+install.txt: $(PACKAGE)
 	@echo
-	$(Q) "  INSTALL: $(INSTALL_PREFIX)"
+	$(Q) "  INSTALL		$(INSTALL_PREFIX)"
+	$(E) rm -f $(@)
 #       Set up directories
 	$(E) mkdir -pv $(INSTALL_PREFIX)
 	$(E) mkdir -pv $(INSTALL_LIB)
@@ -337,6 +342,13 @@ install: package
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS_SUBMIT) $(INSTALL_PREFIX)
 	$(E) $(CP_PARENTS) $(CP_ARGS) export/*.swift    $(INSTALL_PREFIX)
 	$(E) $(CP_PARENTS) $(CP_ARGS) export/**/*.swift $(INSTALL_PREFIX)
+	$(Q) "  CREATE 		$(@)"
+	$(E) echo "PREFIX: $(INSTALL_PREFIX)"    >  $(@)
+	$(E) echo "SOURCE: $(PWD)"               >> $(@)
+	$(E) date "+%m/%d/%Y %I:%M%p"            >> $(@)
+#       Use true to ignore errors (if this is not an SVN checkout)
+	$(E) ( svn info | grep Revision ; true ) >> $(@)
+	$(E) cp $(CP_ARGS) $(@) $(INSTALL_PREFIX)
 
 ### CLEAN
 
@@ -354,7 +366,7 @@ clean::
 clean-failed:
 	@rm -fv `grep -L "exit 0" **/*.result`
 
-.PHONY: clean install package
+.PHONY: clean install package test_results
 
 ### DEBUG BUILD SYSTEM
 
