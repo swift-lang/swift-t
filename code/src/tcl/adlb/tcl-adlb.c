@@ -175,7 +175,9 @@ ADLB_Server_Cmd(ClientData cdata, Tcl_Interp *interp,
 #ifdef USE_XLB
   int rc = ADLB_Server(max_memory);
 #endif
-  Tcl_SetObjResult(interp, Tcl_NewIntObj(rc));
+
+  TCL_CONDITION(rc == ADLB_SUCCESS, "SERVER FAILED");
+
   return TCL_OK;
 }
 
@@ -1370,6 +1372,17 @@ ADLB_Slot_Drop_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
+   usage: adlb::fail
+ */
+static int
+ADLB_Fail_Cmd(ClientData cdata, Tcl_Interp *interp,
+               int objc, Tcl_Obj *const objv[])
+{
+  ADLB_Fail(1);
+  return TCL_OK;
+}
+
+/**
    usage: adlb::abort
  */
 static int
@@ -1377,9 +1390,9 @@ ADLB_Abort_Cmd(ClientData cdata, Tcl_Interp *interp,
                int objc, Tcl_Obj *const objv[])
 {
   ADLB_Abort(1);
-  // ADLB_Abort does not return
   return TCL_OK;
 }
+
 
 /**
    usage: adlb::finalize
@@ -1455,6 +1468,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("container_typeof",    ADLB_Container_Typeof_Cmd);
   COMMAND("container_reference", ADLB_Container_Reference_Cmd);
   COMMAND("container_size",      ADLB_Container_Size_Cmd);
+  COMMAND("fail",      ADLB_Fail_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
 }
