@@ -18,9 +18,10 @@ COMPILER_OPTS=()
 
 O1_OPTS=("constant-fold" "branch-predict" "dead-code-elim"
                     "flatten-nested" "shared-constants"
-                    "forward-dataflow" "unroll-loops")
+                    "forward-dataflow" "unroll-loops"
+                     "controlflow-fusion")
 O2_OPTS=()
-O3_OPTS=("wait-coalesce" "controlflow-fusion")
+O3_OPTS=("wait-coalesce")
 
 # OUTPUT_MODE= turbine or cpp
 OUTPUT_MODE=turbine
@@ -170,27 +171,27 @@ do
       ;;
     O) verbose "Optimization level ${OPTARG}"
       if [ ${OPTARG} = 0 ]; then
-        for opt in $O1_OPTS $O2_OPTS $O3_OPTS; do
-            disable_opt ${opt}
-        done
-      elif [ ${OPTARG} = 1 -o ${OPTARG} = 2 -o ${OPTARG} = 3 ]; then
-        for opt in $O1_OPTS; do
-            enable_opt ${opt}
-        done
-        if [ ${OPTARG} -ge 2 ]; then
-            for opt in $O2_OPTS; do
-                enable_opt ${opt}
-            done
-            if [ ${OPTARG} -ge 3 ]; then
-                for opt in $O3_OPTS; do
-                    enable_opt ${opt}
-                done
-            fi
-        fi
+        ENABLED_OPTS=()
+        DISABLED_OPTS=($O1_OPTS $O2_OPTS $O3_OPTS)
+      elif [ ${OPTARG} = 1 ]; then
+        ENABLED_OPTS=($O1_OPTS)
+        DISABLED_OPTS=($O2_OPTS $O3_OPTS)
+      elif [ ${OPTARG} = 2 ]; then
+        ENABLED_OPTS=($O1_OPTS $O2_OPTS)
+        DISABLED_OPTS=($O3_OPTS)
+      elif [ ${OPTARG} = 3 ]; then
+        ENABLED_OPTS=($O1_OPTS $O2_OPTS $O3_OPTS)
+        DISABLED_OPTS=()
       else
         echo "Invalid optimization level -O ${OPTARG}"
         return 1
       fi
+      for opt in $DISABLED_OPTS; do
+        disable_opt ${opt}
+      done
+      for opt in $ENABLED_OPTS; do
+        enable_opt ${opt}
+      done
       ;;
     C) verbose "IC Output: ${OPTARG}"
        COMPILER_OPTS+="-Dstc.ic.output-file=${OPTARG}"

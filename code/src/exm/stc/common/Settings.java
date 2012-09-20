@@ -60,7 +60,7 @@ public class Settings
     defaults.setProperty(OPT_UNROLL_LOOPS, "true");
     defaults.setProperty(OPT_DISABLE_ASSERTS, "false");
     defaults.setProperty(OPT_FORWARD_DATAFLOW, "true");
-    defaults.setProperty(OPT_WAIT_COALESCE, "true");
+    defaults.setProperty(OPT_WAIT_COALESCE, "false");
     defaults.setProperty(OPT_CONTROLFLOW_FUSION, "true");
     defaults.setProperty(OPT_NUM_PASSES, "5");
     defaults.setProperty(ARRAY_REF_SWITCHEROO, "false");
