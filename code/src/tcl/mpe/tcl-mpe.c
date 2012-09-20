@@ -2,7 +2,7 @@
 /**
  * Tcl extension for MPE
  *
- * This is affected by preprocessor variable USE_MPE
+ * This is affected by preprocessor variable ENABLE_MPE
  * If true, create the real MPE commands
  * Else, create noop commands
  * This allows Tcl scripts that call mpe:: functions to run even
@@ -99,7 +99,8 @@ MPE_Create_Solo_Cmd(ClientData cdata, Tcl_Interp *interp,
   // This is typically the first call to MPE
   // A SEGV here probably means that ADLB was not configured with MPE
   MPE_Log_get_solo_eventID(&event);
-  MPE_Describe_event(event, token, MPE_CHOOSE_COLOR);
+  MPE_Describe_info_event(event, token, MPE_CHOOSE_COLOR, "%s");
+  // MPE_Describe_event(event, token, MPE_CHOOSE_COLOR);
 
   Tcl_Obj* result = Tcl_NewIntObj(event);
   Tcl_SetObjResult(interp, result);
