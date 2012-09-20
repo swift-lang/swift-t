@@ -9,6 +9,7 @@
 #include <assert.h>
 
 #include <table_lp.h>
+#include <tools.h>
 #include <tree.h>
 
 #include "src/util/debug.h"
@@ -64,6 +65,9 @@ turbine_cache_init(int size, unsigned long max_memory)
 bool
 turbine_cache_check(turbine_datum_id td)
 {
+  if (max_entries == 0)
+    return false;
+
   bool result = table_lp_contains(&entries, td);
   DEBUG_CACHE("check: <%li> %s", td,
               result ? "hit" : "miss");
@@ -83,9 +87,12 @@ turbine_cache_retrieve(turbine_datum_id td,
   *length = e->length;
 
   // Update LRU
-  tree_move(&lru, e->stamp, counter);
+  bool b = tree_move(&lru, e->stamp, counter);
+  valgrind_assert(b);
   e->stamp = counter;
   counter++;
+
+  DEBUG_CACHE("retrieved");
 
   return TURBINE_SUCCESS;
 }
@@ -101,6 +108,9 @@ turbine_code
 turbine_cache_store(turbine_datum_id td, turbine_type type,
                     void* data, int length)
 {
+  if (max_entries == 0)
+    return TURBINE_SUCCESS;
+
   DEBUG_CACHE("store: <%li>", td);
   assert(entries.size <= max_entries);
   if (max_entries - entries.size == 1)

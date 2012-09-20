@@ -175,6 +175,8 @@ gdb_check(int rank)
   }
 }
 
+static bool setup_cache(void);
+
 turbine_code
 turbine_init(int amserver, int rank, int size)
 {
@@ -189,9 +191,37 @@ turbine_init(int amserver, int rank, int size)
   transform_unique_id = rank+mpi_size;
   initialized = true;
 
-  turbine_cache_init(1024, 10*1024*1024);
+  bool b = setup_cache();
+  if (!b) return TURBINE_ERROR_NUMBER_FORMAT;
 
   return TURBINE_SUCCESS;
+}
+
+static bool
+setup_cache()
+{
+  int size;
+  unsigned long max_memory;
+  bool b;
+
+  b = getenv_integer("TURBINE_CACHE_SIZE", 1024, &size);
+  if (!b)
+  {
+    printf("malformed integer in environment: TURBINE_CACHE_SIZE\n");
+    return false;
+  }
+  DEBUG_TURBINE("TURBINE_CACHE_SIZE: %i", size);
+  b = getenv_ulong("TURBINE_CACHE_MAX", 10*1024*1024, &max_memory);
+  if (!b)
+  {
+    printf("malformed integer in environment: TURBINE_CACHE_MAX\n");
+    return false;
+  }
+  DEBUG_TURBINE("TURBINE_CACHE_MAX: %lu", max_memory);
+
+  turbine_cache_init(size, max_memory);
+
+  return true;
 }
 
 turbine_code
