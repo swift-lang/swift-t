@@ -95,7 +95,6 @@ namespace eval turbine {
       trace_body $inputs
     }
 
-
     # User function
     proc range { stack result inputs } {
         # Assume that there was a container slot opened
@@ -470,5 +469,13 @@ namespace eval turbine {
     proc make_void { parent o i } {
         empty i
         store_void $o
+    }
+
+    proc zero { stack outputs inputs } {
+        rule "zero-$outputs-$inputs" $inputs $turbine::WORK \
+            "turbine::zero_body $outputs $inputs"
+    }
+    proc zero_body { output input } {
+        store_integer $output 0
     }
 }

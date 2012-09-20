@@ -224,4 +224,14 @@ namespace eval turbine {
             }
         }
     }
+
+    proc sleep { stack outputs inputs } {
+        rule "sleep-$outputs-$inputs" $inputs $turbine::WORK \
+            "turbine::sleep_body $outputs $inputs"
+    }
+    proc sleep_body { output secs } {
+        set secs_val [ retrieve_float $secs ]
+        after [ expr round($secs_val * 1000) ]
+        store_void $output
+    }
 }
