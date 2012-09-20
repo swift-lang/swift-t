@@ -155,18 +155,19 @@ namespace eval turbine {
     # Error handling
     # e: A Tcl error message
     # d: A Tcl error dict
-    proc abort { e d } {
+    proc fail { e d } {
         variable error_code
         set code [ dict get $d -code ]
         if { $code == $error_code } {
             puts "ERROR: $e"
+            puts "CALLING adlb::fail"
+            adlb::fail
         } else {
             puts "CAUGHT ERROR:"
             puts $::errorInfo
+            puts "CALLING adlb::abort"
+            adlb::abort
         }
-
-        puts "CALLING adlb::abort"
-        adlb::abort
     }
 
     proc turbine_workers { } {
