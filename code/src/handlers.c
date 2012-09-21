@@ -253,7 +253,6 @@ redirect_work(int type, int putter, int priority, int answer,
   SEND(&g, sizeof(g), MPI_BYTE, worker, ADLB_TAG_RESPONSE_GET);
   DEBUG("redirect: putter");
   SEND(&worker, 1, MPI_INT, putter, ADLB_TAG_RESPONSE_PUT);
-  MPI_CHECK(rc);
 
   return ADLB_SUCCESS;
 }
@@ -1057,6 +1056,7 @@ put_targeted(int type, int putter, int priority, int answer,
 {
   int next_worker = 0;
   int worker;
+  int rc;
 
   DEBUG("put_targeted: to: %i payload: %s", target, (char*) payload);
 
@@ -1065,28 +1065,34 @@ put_targeted(int type, int putter, int priority, int answer,
     int server = xlb_map_to_server(target);
     if (server == xlb_world_rank)
     {
+      // Work unit is for this server
+      // Is the target already waiting?
       worker = requestqueue_matches_target(target, type);
       if (worker != ADLB_RANK_NULL)
       {
         int wuid = workqueue_unique();
-        send_work(target, wuid, type, answer, payload, length);
+        rc = send_work(target, wuid, type, answer, payload, length);
+        ADLB_CHECK(rc);
         return ADLB_SUCCESS;
+      }
+      else
+      {
+        DEBUG("put_targeted(): server storing work...");
+        workqueue_add(type, putter, priority, answer, target,
+                      length, payload);
       }
     }
     else
     {
-      xlb_sync(server);
-      int rc = ADLB_Put(payload, length, target, answer,
+      // Work unit is for another server
+      rc = xlb_sync(server);
+      ADLB_CHECK(rc);
+      rc = ADLB_Put(payload, length, target, answer,
                         type, priority);
       ADLB_CHECK(rc);
     }
   }
 
-  DEBUG("put_targeted(): server storing work...");
-
-  // Enqueue this
-  workqueue_add(type, putter, priority, answer, target,
-                length, payload);
 
   return ADLB_SUCCESS;
 }
