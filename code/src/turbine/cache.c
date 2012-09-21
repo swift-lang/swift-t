@@ -8,6 +8,7 @@
 
 #include <assert.h>
 
+#include <stdio.h>
 #include <table_lp.h>
 #include <tools.h>
 #include <tree.h>
@@ -216,9 +217,16 @@ void
 turbine_cache_finalize()
 {
   if (!initialized)
-    // This process is not an engine
+    // This process is not an engine/worker
     return;
   DEBUG_CACHE("finalize");
+  for (int i = 0; i < entries.capacity; i++)
+    for (struct list_lp_item* item = entries.array[i].head; item;
+        item = item->next)
+    {
+      struct entry* e = (struct entry*) item->data;
+      free(e->data);
+    }
   table_lp_delete(&entries);
   table_lp_release(&entries);
   tree_clear(&lru);
