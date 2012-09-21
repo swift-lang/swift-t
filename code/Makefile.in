@@ -342,6 +342,7 @@ install.txt: $(PACKAGE)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS_SUBMIT) $(INSTALL_PREFIX)
 	$(E) $(CP_PARENTS) $(CP_ARGS) export/*.swift    $(INSTALL_PREFIX)
 	$(E) $(CP_PARENTS) $(CP_ARGS) export/**/*.swift $(INSTALL_PREFIX)
+	@echo
 	$(Q) "  CREATE 		$(@)"
 	$(E) echo "PREFIX: $(INSTALL_PREFIX)"    >  $(@)
 	$(E) echo "SOURCE: $(PWD)"               >> $(@)

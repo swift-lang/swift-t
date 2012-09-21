@@ -206,9 +206,9 @@ cache_shrink(void)
     struct entry* e;
     void* v;
     tree_pop(&lru, &td, &v);
-    e = (void*) v;
-    free(e->data);
+    e = (struct entry*) v;
     memory += e->length;
+    free(e->data);
     free(e);
   }
 }
