@@ -219,7 +219,7 @@ turbine_cache_finalize()
     // This process is not an engine
     return;
   DEBUG_CACHE("finalize");
-  table_lp_clear(&entries);
+  table_lp_delete(&entries);
   table_lp_release(&entries);
   tree_clear(&lru);
 }
