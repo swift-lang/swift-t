@@ -197,7 +197,11 @@ workqueue_steal(int max_memory, int* count, xlb_work_unit*** result)
   }
 
   for (int i = 0; i < xlb_types_size; i++)
-    fractions[i] = tree_size(&typed_work[i])/total;
+  {
+    float size = (float) tree_size(&typed_work[i]);
+    fractions[i] = size / total;
+    // TRACE("fractions[%i]=%0.5f", i, fractions[i]);
+  }
 
   // Number of work units we are willing to share
   int share = total / 2 + 1;
