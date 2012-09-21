@@ -71,7 +71,7 @@ static adlb_datum_id last_id;
     {                                                         \
       printf("ADLB DATA ERROR:\n");                           \
       printf(format "\n", ## args);                           \
-      printf("\t in: %s\n", func);                            \
+      printf("\t in: %s()\n", func);                            \
       printf("\t at: %s:%i\n", file, line);                   \
       return code;                                            \
     }                                                         \
@@ -887,7 +887,7 @@ void report_leaks()
     struct list_lp* L = &tds.array[i];
     for (struct list_lp_item* item = L->head; item; item = item->next)
     {
-      DEBUG("LEAK: %li\n", item->key);
+      DEBUG("LEAK: %li", item->key);
     }
   }
 }
