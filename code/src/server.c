@@ -142,7 +142,7 @@ xlb_serve_one(int source)
 {
   TRACE_START;
   if (source > 0)
-    DEBUG("\t source: %i", source);
+    TRACE("\t source: %i", source);
   int new_message;
   MPI_Status status;
   // May want to switch to PMPI call for speed
