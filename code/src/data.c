@@ -871,7 +871,7 @@ ADLB_Data_type_tostring(char* output, adlb_data_type type)
   return result;
 }
 
-void report_leaks(void);
+static void report_leaks(void);
 
 adlb_data_code
 data_finalize()
@@ -880,7 +880,8 @@ data_finalize()
   return ADLB_DATA_SUCCESS;
 }
 
-void report_leaks()
+static void
+report_leaks()
 {
   for (int i = 0; i < tds.capacity; i++)
   {

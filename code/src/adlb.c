@@ -46,16 +46,16 @@ adlb_code
 ADLBP_Init(int nservers, int ntypes, int type_vect[],
            int *am_server, MPI_Comm *worker_comm)
 {
+  debug_check_environment();
   TRACE_START;
-  int initialized, j, rc;
 
+  int initialized;
   check_versions();
+  int rc;
   rc = MPI_Initialized(&initialized);
   CHECK_MSG(initialized, "ADLB: MPI is not initialized!\n");
 
   xlb_start_time = MPI_Wtime();
-
-  debug_check_environment();
 
   xlb_msg_init();
 

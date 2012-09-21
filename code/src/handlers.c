@@ -996,7 +996,6 @@ slot_notification(long id)
   TRACE("slot_notification: %li", id);
   adlb_data_code dc = data_close(id, &waiters, &count);
   ADLB_DATA_CHECK(dc);
-  printf("sn: %i\n", dc);
   if (count > 0)
   {
     close_notification(id, waiters, count);

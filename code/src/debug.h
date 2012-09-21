@@ -85,7 +85,7 @@ void debug_check_environment(void);
 #ifdef ENABLE_TRACE_MPI
 #define TRACE_MPI(format, args...)             \
   { if (xlb_debug_enabled) {                           \
-  printf("%5.0f MPI: " format "\n", xlb_wtime(), ## args);  \
+  printf("%5.0f MPI:  " format "\n", xlb_wtime(), ## args);  \
   fflush(stdout);                          \
   } }
 #else
