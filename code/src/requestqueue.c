@@ -28,7 +28,7 @@ typedef struct
   struct list2_item* item;
 } request;
 
-/** Type-indexed array of requests */
+/** Type-indexed array of list of request object */
 static struct list2* type_requests;
 
 /** Table of all ranks requesting work
@@ -120,6 +120,7 @@ requestqueue_remove(int worker_rank)
   int type = r->type;
   struct list2* L = &type_requests[type];
   list2_remove_item(L, r->item);
+  free(r->item);
   free(r);
 }
 
@@ -172,6 +173,8 @@ requestqueue_shutdown()
       adlb_code rc = shutdown_rank(rank);
       valgrind_assert_msg(rc == ADLB_SUCCESS, "requestqueue: "
                           "worker did not shutdown: ", rank);
+      table_ip_remove(&targets, rank);
+      free(r);
     }
 }
 
