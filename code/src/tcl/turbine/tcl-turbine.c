@@ -381,14 +381,21 @@ Turbine_Cache_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   int rc = TCL_OK;
   char* subcommand = Tcl_GetString(objv[1]);
-  assert(subcommand != NULL);
+  if (subcommand == NULL)
+    subcommand = "";
+
   if (strcmp("check", subcommand) == 0)
     rc = cache_check_cmd(cdata, interp, objc-1, objv+1);
   else if (strcmp("retrieve", subcommand) == 0)
     rc = cache_retrieve_cmd(cdata, interp, objc-1, objv+1);
   else if (strcmp("store", subcommand) == 0)
     rc = cache_store_cmd(cdata, interp, objc-1, objv+1);
-
+  else
+  {
+    printf("turbine::cache received bad subcommand: '%s'\n",
+           subcommand);
+    return TCL_ERROR;
+  }
   return rc;
 }
 
@@ -511,7 +518,6 @@ cache_store_cmd(ClientData cdata, Tcl_Interp* interp,
   turbine_code rc = turbine_cache_store(td, type, data, length);
   TURBINE_CHECK(rc, "cache store failed: %li", td);
 
-  free(data);
   return TCL_OK;
 }
 
