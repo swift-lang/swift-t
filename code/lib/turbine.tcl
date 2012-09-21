@@ -49,14 +49,24 @@ namespace eval turbine {
         adlb::init $servers $types
         c::init [ adlb::amserver ] [ adlb::rank ] [ adlb::size ]
 
+        setup_mode $engines $servers
+
+        turbine::init_rng
+
+        adlb::barrier
+        c::normalize
+
+        argv_init
+    }
+
+    proc setup_mode { engines servers } {
+
         variable n_adlb_servers
         variable n_engines
         variable n_workers
         set n_adlb_servers $servers
         set n_engines $engines
         set n_workers [ expr [ adlb::size ] - $servers - $engines ]
-
-        turbine::init_rng
 
         variable mode
         if { [ adlb::rank ] < $engines } {
@@ -67,10 +77,20 @@ namespace eval turbine {
 	    set mode WORKER
         }
 
-        adlb::barrier
-        c::normalize
-
-        argv_init
+        log "MODE: $mode"
+        if { [ adlb::rank ] == 0 } {
+            log "ENGINES: $n_engines"
+            log "SERVERS: $n_adlb_servers"
+            log "WORKERS: $n_workers"
+            if { $n_adlb_servers <= 0 } {
+                puts "ERROR: SERVERS==0"
+                exit 1
+            }
+            if { $n_workers <= 0 } {
+                puts "ERROR: WORKERS==0"
+                exit 1
+            }
+        }
     }
 
     # Turbine logging contains string values (possibly long)

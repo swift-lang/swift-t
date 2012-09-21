@@ -32,7 +32,6 @@ namespace eval turbine {
 
         global WORK_TYPE
 
-        debug "TURBINE ENGINE..."
         turbine::c::engine_init
         ::eval $startup
         if { [ adlb::rank ] == 0 } {
@@ -126,7 +125,6 @@ namespace eval turbine {
     proc worker { } {
 
         global WORK_TYPE
-        debug "TURBINE WORKER..."
 
         while { true } {
             set msg [ adlb::get $WORK_TYPE(WORK) answer_rank ]
