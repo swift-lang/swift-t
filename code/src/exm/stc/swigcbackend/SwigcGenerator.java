@@ -19,12 +19,10 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.Settings;
-
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
-
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgType;
 import exm.stc.common.lang.FunctionSemantics;
@@ -38,7 +36,6 @@ import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.DefType;
 import exm.stc.common.lang.Variable.VariableStorage;
-
 import exm.stc.swigcbackend.tree.Command;
 import exm.stc.swigcbackend.tree.Comment;
 import exm.stc.swigcbackend.tree.DictFor;
@@ -60,11 +57,318 @@ import exm.stc.swigcbackend.tree.TclTree;
 import exm.stc.swigcbackend.tree.Text;
 import exm.stc.swigcbackend.tree.Token;
 import exm.stc.swigcbackend.tree.Value;
-
+import exm.stc.tclbackend.TclNamer;
 import exm.stc.ui.ExitCode;
 
 public class SwigcGenerator implements CompilerBackend
 {
+  
+
+  /**
+   * TODO Placeholder to stop compilation errors
+   *
+   */
+  private static class TclFunRef {
+
+    public TclFunRef(String pkg2, String symbol2) {
+      // TODO Auto-generated constructor stub
+    }
+    public String pkg;
+    public String symbol;
+    
+  }
+  
+  /**
+   * TODO Placeholder to stop compilation errors
+   *
+   */
+  private static class StackFrameType {
+
+    public static final String NESTED = null;
+    public static final String COMPOSITE = null;
+    public static String MAIN;
+    
+  }
+  
+  /**
+   * TODO Placeholder to stop compilation errors.
+   */
+  private static class Turbine {
+
+    public static final String LOCAL_STACK_NAME = null;
+    public static final String STRING_TYPENAME = null;
+    public static final String INTEGER_TYPENAME = null;
+    public static final String BLOB_TYPENAME = null;
+    public static final String VOID_TYPENAME = null;
+    public static final String FLOAT_TYPENAME = null;
+
+    public static Command storeInStack(String name, String tclName) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree containerSlotDrop(Value varToExpr) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree integerGet(String prefixVar, Value varToExpr) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static Command integerSet(String prefixVar, Expression opargToExpr) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree structInsert(String prefixVar, String fieldName,
+        String prefixVar2) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static Sequence
+        dereferenceString(String prefixVar, String prefixVar2) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree containerCreateNested(String prefixVar,
+        String prefixVar2, String prefixVar3) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static Sequence arrayRefStoreImmediate(String prefixVar,
+        String prefixVar2, Expression opargToExpr, String prefixVar3) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static Sequence arrayRefStoreComputed(String prefixVar,
+        String prefixVar2, String prefixVar3, String prefixVar4) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree arrayLookupImm(String prefixVar, String prefixVar2,
+        Expression opargToExpr) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static Sequence arrayStoreImmediate(String prefixVar,
+        String prefixVar2, Expression opargToExpr) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree turbineLog(String string) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree makeTCLGlobal(String tclName) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree allocateContainer(String tclName,
+        String stringTypename) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree allocate(String tclName, String integerTypename) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static Command stringSet(String prefixVar, Expression opargToExpr) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree stringGet(String prefixVar, Value varToExpr) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree setPriority(Expression opargToExpr) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree createDummyStackFrame() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree containerSize(String tcltmpContainerSize,
+        Value varToExpr) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree containerContents(String contentsVar,
+        Value varToExpr, boolean haveKeys) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree loopRule(String uniqueLoopName,
+        ArrayList<Value> firstIterArgs, ArrayList<Value> blockingVals) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree containerSlotCreate(Value varToExpr) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static Command floatSet(String tclName, Expression expr) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree rule(String outerProcName,
+        ArrayList<Value> arrayList, TclList tclList, boolean b) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree containerRefCreateNestedImmIx(String prefixVar,
+        String prefixVar2, Expression opargToExpr) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree resetPriority() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static Sequence arrayRefDerefStore(String prefixVar,
+        String prefixVar2, Expression opargToExpr, String prefixVar3) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static Sequence arrayStoreComputed(String prefixVar,
+        String prefixVar2, String prefixVar3) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static Sequence arrayRefDerefStoreComputed(String prefixVar,
+        String prefixVar2, String prefixVar3, String prefixVar4) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree[] createStackFrame(String nested) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree containerContents(String contentsVar,
+        Value varToExpr, boolean haveKeys, Value value, Value tcltmpRangeLoV) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree floatGet(String prefixVar, Value varToExpr) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree allocateFile(Value mapExpr, String tclName) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree structRefLookupFieldID(String prefixVar,
+        String structField, String prefixVar2) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static Sequence arrayLookupComputed(String prefixVar,
+        String prefixVar2, String prefixVar3, boolean isArrayRef) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static Sequence dereferenceInteger(String prefixVar,
+        String prefixVar2) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static Sequence
+        dereferenceFloat(String prefixVar, String prefixVar2) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree containerRefCreateNested(String prefixVar,
+        String prefixVar2, String prefixVar3) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree containerCreateNestedImmIx(String prefixVar,
+        String prefixVar2, Expression opargToExpr) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static Sequence arrayDerefStore(String prefixVar, String prefixVar2,
+        Expression opargToExpr) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree callComposite(String compFuncName, TclList oList,
+        TclList iList, TclList tclListOfVariables) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree callCompositeSync(String compFuncName, TclList oList,
+        TclList iList) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree structLookupFieldID(String prefixVar,
+        String structField, String prefixVar2) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static Sequence arrayLookupImmIx(String prefixVar,
+        String prefixVar2, Expression opargToExpr, boolean isArrayRef) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static Sequence arrayDerefStoreComputed(String prefixVar,
+        String prefixVar2, String prefixVar3) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public static TclTree rule(String uniqueName, List<Value> inputs,
+        TclList action, boolean shareWork) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+    
+  }
+  
   /** 
      This prevents duplicate "lappend auto_path" statements
      We use a List because these should stay in order  
@@ -389,14 +693,14 @@ public class SwigcGenerator implements CompilerBackend
       argExpr.add(opargToExpr(a));
     }
 
-    pointStack.peek().add(BuiltinOps.genLocalOpTcl(op, out, in, argExpr));
+    //pointStack.peek().add(BuiltinOps.genLocalOpTcl(op, out, in, argExpr));
   }
   
   @Override
   public void asyncOp(BuiltinOpcode op, Variable out, List<Arg> in,
       Arg priority) {
     //TODO: for time being, share code with built-in function generation
-    TclFunRef fn = BuiltinOps.getBuiltinOpImpl(op);
+    TclFunRef fn = null; //BuiltinOps.getBuiltinOpImpl(op);
     if (fn == null) {
       List<String> impls = FunctionSemantics.findOpImpl(op);
       
