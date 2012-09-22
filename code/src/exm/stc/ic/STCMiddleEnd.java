@@ -214,17 +214,17 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void startWaitStatement(String procName, List<Variable> waitVars,
-      List<Variable> usedVariables, List<Variable> containersToRegister,
+      List<Variable> usedVariables, List<Variable> keepOpenVars,
       boolean explicit) {
     assert(currComposite != null);
     WaitStatement wait = new WaitStatement(procName, waitVars, usedVariables,
-                                              containersToRegister, explicit);
+                                              keepOpenVars, explicit);
     currBlock().addContinuation(wait);
     blockStack.push(wait.getBlock());
   }
 
   @Override
-  public void endWaitStatement(List<Variable> containersToRegister) {
+  public void endWaitStatement(List<Variable> keepOpenVars) {
     assert(currBlock().getType() == BlockType.WAIT_BLOCK);
     blockStack.pop();
   }
@@ -268,7 +268,7 @@ public class STCMiddleEnd implements CompilerBackend {
   public void startForeachLoop(Variable arrayVar, Variable memberVar,
                   Variable loopCountVar, boolean isSync, 
                   int splitDegree, boolean arrayClosed,
-         List<Variable> usedVariables, List<Variable> containersToRegister) {
+         List<Variable> usedVariables, List<Variable> keepOpenVars) {
     if(!Types.isArray(arrayVar.getType())) {
       throw new STCRuntimeError("foreach loop over non-array: " + 
                 arrayVar.toString()); 
@@ -278,14 +278,14 @@ public class STCMiddleEnd implements CompilerBackend {
               loopCountVar.getType().equals(Types.VALUE_INTEGER));
     ForeachLoop loop = new ForeachLoop(arrayVar, memberVar, 
                 loopCountVar, isSync, splitDegree, arrayClosed, usedVariables, 
-                containersToRegister);
+                keepOpenVars);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
   }
 
   @Override
   public void endForeachLoop(boolean isSync, int splitDegree, 
-            boolean arrayClosed, List<Variable> containersToRegister) {
+            boolean arrayClosed, List<Variable> keepOpenVars) {
     assert(blockStack.peek().getType() == BlockType.FOREACH_BODY);
     blockStack.pop();
   }
@@ -293,10 +293,10 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void startRangeLoop(String loopName, Variable loopVar,
       Arg start, Arg end, Arg increment, boolean isSync,
-      List<Variable> usedVariables, List<Variable> containersToRegister,
+      List<Variable> usedVariables, List<Variable> keepOpenVars,
       int desiredUnroll, int splitDegree) {
     RangeLoop loop = new RangeLoop(loopName, loopVar, start, end, increment,
-                                isSync, usedVariables, containersToRegister,
+                                isSync, usedVariables, keepOpenVars,
                                 desiredUnroll, splitDegree);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
@@ -304,7 +304,7 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void endRangeLoop(boolean isSync, 
-                          List<Variable> containersToRegister,
+                          List<Variable> keepOpenVars,
                           int splitDegree) {
     assert(currBlock().getType() == BlockType.RANGELOOP_BODY);
     blockStack.pop();
@@ -313,9 +313,9 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void startLoop(String loopName, List<Variable> loopVars,
       List<Variable> initVals, List<Variable> usedVariables,
-      List<Variable> containersToRegister, List<Boolean> blockingVars) {
+      List<Variable> keepOpenVars, List<Boolean> blockingVars) {
     Loop loop = new Loop(loopName, loopVars, initVals,
-        usedVariables, containersToRegister, blockingVars);
+        usedVariables, keepOpenVars, blockingVars);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
     loopStack.push(loop);
@@ -323,18 +323,18 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void loopContinue(List<Variable> newVals, 
-        List<Variable> usedVariables, List<Variable> registeredContainers,
+        List<Variable> usedVariables, List<Variable> keepOpenVars,
         List<Boolean> blockingVars) {
     LoopContinue inst = new LoopContinue(newVals, usedVariables,
-        registeredContainers, blockingVars);
+        keepOpenVars, blockingVars);
     currBlock().addInstruction(inst);
     loopStack.peek().setLoopContinue(inst);
   }
 
   @Override
-  public void loopBreak(List<Variable> containersToClose) {
+  public void loopBreak(List<Variable> closeVars) {
     LoopBreak inst = new LoopBreak(
-        new ArrayList<Variable>(containersToClose));
+        new ArrayList<Variable>(closeVars));
     currBlock().addInstruction(inst);
     loopStack.peek().setLoopBreak(inst);
   }

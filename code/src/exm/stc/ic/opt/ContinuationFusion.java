@@ -21,7 +21,7 @@ import exm.stc.ic.tree.ICTree.Program;
  *  Currently we do:
  *  * if statements with same condition
  *  * range loops with same bounds and same loop settings
- *  * foreach loops over same container with same loop settings
+ *  * foreach loops over same array with same loop settings
  *  
  * Doing this for loops has the potential to reduce overhead, but the biggest
  * gains might be from the optimizations that can follow on after the fusion

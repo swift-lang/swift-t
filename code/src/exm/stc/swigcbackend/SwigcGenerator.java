@@ -1482,17 +1482,17 @@ public class SwigcGenerator implements CompilerBackend
 
     @Override
     public void startWaitStatement(String procName, List<Variable> waitVars,
-        List<Variable> usedVariables, List<Variable> containersToRegister,
+        List<Variable> usedVariables, List<Variable> keepOpenVars,
         boolean explicit) {
       logger.trace("startWaitStatement()...");
-      startAsync(procName, waitVars, usedVariables, containersToRegister,
+      startAsync(procName, waitVars, usedVariables, keepOpenVars,
                                                     false);
     }
 
     @Override
-    public void endWaitStatement(List<Variable> containersToRegister) {
+    public void endWaitStatement(List<Variable> keepOpenVars) {
       logger.trace("endWaitStatement()...");
-      endAsync(containersToRegister);
+      endAsync(keepOpenVars);
     }
 
     /**
@@ -1501,12 +1501,12 @@ public class SwigcGenerator implements CompilerBackend
      * @param procName
      * @param waitVars
      * @param usedVariables
-     * @param containersToRegister
+     * @param keepOpenVars
      * @param shareWork if true, work will be shared with other rule engines
      *                  at the cost of higher overhead
      */
     private void startAsync(String procName, List<Variable> waitVars,
-        List<Variable> usedVariables, List<Variable> containersToRegister,
+        List<Variable> usedVariables, List<Variable> keepOpenVars,
         boolean shareWork) {
       ArrayList<Variable> toPassIn = new ArrayList<Variable>();
       HashSet<String> alreadyInSet = new HashSet<String>();
@@ -1516,7 +1516,7 @@ public class SwigcGenerator implements CompilerBackend
       }
       
       // Also need to pass in refs to containers
-      for (Variable v: containersToRegister) {
+      for (Variable v: keepOpenVars) {
         if (!alreadyInSet.contains(v.getName())) {
           toPassIn.add(v);
         }
@@ -1541,7 +1541,7 @@ public class SwigcGenerator implements CompilerBackend
         inputs.add(varToExpr(w));
       }
 
-      for (Variable c: containersToRegister) {
+      for (Variable c: keepOpenVars) {
         pointStack.peek().add(
               Turbine.containerSlotCreate(varToExpr(c)));
       }
@@ -1553,8 +1553,8 @@ public class SwigcGenerator implements CompilerBackend
       pointStack.push(constructProc);
     }
 
-    private void endAsync(List<Variable> containersToRegister) {
-      for (Variable v: containersToRegister) {
+    private void endAsync(List<Variable> keepOpenVars) {
+      for (Variable v: keepOpenVars) {
         pointStack.peek().add(Turbine.containerSlotDrop(varToExpr(v)));
       }
       pointStack.pop();
@@ -1643,7 +1643,7 @@ public class SwigcGenerator implements CompilerBackend
   public void startForeachLoop(Variable arrayVar, Variable memberVar,
                     Variable loopCountVar, boolean isSync, int splitDegree,
                     boolean arrayClosed,
-          List<Variable> usedVariables, List<Variable> containersToRegister) {
+          List<Variable> usedVariables, List<Variable> keepOpenVars) {
     assert(Types.isArray(arrayVar.getType()));
     assert(loopCountVar == null ||
               loopCountVar.getType().equals(Types.VALUE_INTEGER));
@@ -1657,7 +1657,7 @@ public class SwigcGenerator implements CompilerBackend
         passIn.add(arrayVar);
       }
       startAsync(procName, Arrays.asList(arrayVar), passIn,
-                  containersToRegister, false);
+                  keepOpenVars, false);
     }
 
     boolean haveKeys = loopCountVar != null;
@@ -1677,7 +1677,7 @@ public class SwigcGenerator implements CompilerBackend
       ArrayList<Variable> splitUsedVars = new ArrayList<Variable>(
           usedVariables);
       splitUsedVars.add(arrayVar);
-      startRangeSplit(procName, splitUsedVars, containersToRegister,
+      startRangeSplit(procName, splitUsedVars, keepOpenVars,
             splitDegree, new LiteralInt(0), lastIndex, new LiteralInt(1));
 
       // need to find the length of this split since that is what the turbine
@@ -1694,13 +1694,13 @@ public class SwigcGenerator implements CompilerBackend
 
     }
     startForeachInner(new Value(contentsVar), memberVar, loopCountVar,
-        isSync, usedVariables, containersToRegister, foreach_num);
+        isSync, usedVariables, keepOpenVars, foreach_num);
   }
 
   private void startForeachInner(Value arrayContents,
       Variable memberVar, Variable loopCountVar,
       boolean isSync, List<Variable> usedVariables,
-      List<Variable> containersToRegister, int foreach_num) {
+      List<Variable> keepOpenVars, int foreach_num) {
     Sequence curr = pointStack.peek();
     boolean haveKeys = loopCountVar != null;
     Sequence loopBody = new Sequence();
@@ -1725,7 +1725,7 @@ public class SwigcGenerator implements CompilerBackend
       loopUsedVars.add(memberVar);
       if (loopCountVar != null) loopUsedVars.add(loopCountVar);
       startAsync("foreach:" + foreach_num + ":body",
-          new ArrayList<Variable>(), loopUsedVars, containersToRegister,
+          new ArrayList<Variable>(), loopUsedVars, keepOpenVars,
           true);
     }
   }
@@ -1733,25 +1733,25 @@ public class SwigcGenerator implements CompilerBackend
 
   @Override
   public void endForeachLoop(boolean isSync, int splitDegree,
-          boolean arrayClosed, List<Variable> containersToRegister) {
+          boolean arrayClosed, List<Variable> keepOpenVars) {
     assert(pointStack.size() >= 2);
     if (!isSync) {
       assert(pointStack.size() >= 3);
-      endAsync(containersToRegister); // Swift loop body
+      endAsync(keepOpenVars); // Swift loop body
     }
     pointStack.pop(); // tclloop body
     if (splitDegree > 0) {
       endRangeSplit();
     }
     if (!arrayClosed) {
-      endAsync(containersToRegister); // outer wait for container
+      endAsync(keepOpenVars); // outer wait for container
     }
   }
 
   @Override
   public void startRangeLoop(String loopName, Variable loopVar, Arg start,
       Arg end, Arg increment, boolean isSync, List<Variable> usedVariables,
-      List<Variable> containersToRegister, int desiredUnroll, int splitDegree) {
+      List<Variable> keepOpenVars, int desiredUnroll, int splitDegree) {
     assert(start.getType() == ArgType.INTVAL ||
         (start.getType() == ArgType.VAR &&
             start.getVar().getType().equals(Types.VALUE_INTEGER)));
@@ -1768,24 +1768,24 @@ public class SwigcGenerator implements CompilerBackend
 
     if (splitDegree > 0) {
       startRangeSplit(loopName, usedVariables,
-              containersToRegister, splitDegree, startE, endE, incrE);
+              keepOpenVars, splitDegree, startE, endE, incrE);
       startRangeLoopInner(loopName, loopVar, isSync, usedVariables,
-              containersToRegister, TCLTMP_RANGE_LO_V, TCLTMP_RANGE_HI_V,
+              keepOpenVars, TCLTMP_RANGE_LO_V, TCLTMP_RANGE_HI_V,
                                                       TCLTMP_RANGE_INC_V);
     } else {
       startRangeLoopInner(loopName, loopVar, isSync, usedVariables,
-              containersToRegister, startE, endE, incrE);
+              keepOpenVars, startE, endE, incrE);
     }
   }
 
   @Override
   public void endRangeLoop(boolean isSync,
-                        List<Variable> containersToRegister,
+                        List<Variable> keepOpenVars,
                         int splitDegree) {
     assert(pointStack.size() >= 2);
     if (!isSync) {
       assert(pointStack.size() >= 3);
-      endAsync(containersToRegister); // Swift loop body
+      endAsync(keepOpenVars); // Swift loop body
     }
     pointStack.pop(); // for loop body
 
@@ -1796,7 +1796,7 @@ public class SwigcGenerator implements CompilerBackend
 
   private void startRangeLoopInner(String loopName, Variable loopVar,
           boolean isSync, List<Variable> usedVariables,
-          List<Variable> containersToRegister, Expression startE,
+          List<Variable> keepOpenVars, Expression startE,
           Expression endE, Expression incrE) {
     Sequence loopBody = new Sequence();
     String loopVarName = prefixVar(loopVar.getName());
@@ -1809,7 +1809,7 @@ public class SwigcGenerator implements CompilerBackend
     loopUsedVars.add(loopVar);
     if (!isSync) {
       startAsync(loopName + ":body",
-          new ArrayList<Variable>(), loopUsedVars, containersToRegister,
+          new ArrayList<Variable>(), loopUsedVars, keepOpenVars,
           true);
     }
   }
@@ -1820,7 +1820,7 @@ public class SwigcGenerator implements CompilerBackend
    * tcl values: TCLTMP_RANGE_LO TCLTMP_RANGE_HI and TCLTMP_RANGE_INC
    * @param loopName
    * @param usedVariables
-   * @param containersToRegister
+   * @param keepOpenVars
    * @param splitDegree
    * @param startE start of range (inclusive)
    * @param endE end of range (inclusive)
@@ -1828,7 +1828,7 @@ public class SwigcGenerator implements CompilerBackend
    */
   private void startRangeSplit(String loopName,
           List<Variable> usedVariables,
-          List<Variable> containersToRegister, int splitDegree,
+          List<Variable> keepOpenVars, int splitDegree,
           Expression startE, Expression endE, Expression incrE) {
     // Create two procedures that will be called: an outer procedure
     //  that recursively breaks up the foreach loop into chunks,
@@ -2060,7 +2060,7 @@ public class SwigcGenerator implements CompilerBackend
     @Override
     public void startLoop(String loopName, List<Variable> loopVars,
         List<Variable> initVals, List<Variable> usedVariables,
-        List<Variable> containersToRegister, List<Boolean> blockingVars) {
+        List<Variable> keepOpenVars, List<Boolean> blockingVars) {
 
       // call rule to start the loop, pass in initVals, usedVariables
       ArrayList<String> loopFnArgs = new ArrayList<String>();
@@ -2093,7 +2093,7 @@ public class SwigcGenerator implements CompilerBackend
 
 
       // Keep containers open
-      for (Variable v: containersToRegister) {
+      for (Variable v: keepOpenVars) {
         pointStack.peek().add(Turbine.containerSlotCreate(varToExpr(v)));
       }
 

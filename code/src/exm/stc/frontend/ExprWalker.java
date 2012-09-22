@@ -338,13 +338,13 @@ public class ExprWalker {
       }
     } else if (Types.isArray(dst.getType())) {
       String wName = context.getFunctionContext().constructName("copy-wait");
-      List<Variable> writtenContainers = Arrays.asList(dst);
+      List<Variable> keepOpenVars = Arrays.asList(dst);
       backend.startWaitStatement(wName, Arrays.asList(src),
-              Arrays.asList(src, dst), writtenContainers, false);
+              Arrays.asList(src, dst), keepOpenVars, false);
       Variable derefed = varCreator.createTmpAlias(context, dst.getType());
       backend.retrieveRef(derefed, src);
       copyArrayByValue(context, dst, derefed);
-      backend.endWaitStatement(writtenContainers);
+      backend.endWaitStatement(keepOpenVars);
     } else if (Types.isStruct(dst.getType())) {
       dereferenceStruct(context, dst, src);
     } else {
@@ -452,20 +452,20 @@ public class ExprWalker {
     // the argument evaluation is outside the wait statement
     Variable priorityVal = null;
     boolean openedWait = false;
-    List<Variable> waitContainers = null;
+    List<Variable> keepOpen = null;
     Context callContext = context;
     if (tree.getChildCount() == 3) {
       SwiftAST priorityT = tree.child(2);
       Variable priorityFuture = evalExprToTmp(context, priorityT,
                             Types.FUTURE_INTEGER, false, renames);
-      waitContainers = new ArrayList<Variable>(0); // TODO: Do we need these?
-      //TODO: used variables: any input or output args
+      keepOpen = new ArrayList<Variable>(0); // TODO: Do we need these?
+      // used variables: any input or output args
       ArrayList<Variable> usedVariables = new ArrayList<Variable>();
       usedVariables.addAll(argVars);
       usedVariables.addAll(oList);
       
       backend.startWaitStatement(context.getFunctionContext().constructName("priority-wait"), 
-                        Arrays.asList(priorityFuture), usedVariables, waitContainers, false);
+                        Arrays.asList(priorityFuture), usedVariables, keepOpen, false);
       openedWait = true;
       callContext = new LocalContext(context);
       priorityVal = varCreator.fetchValueOf(callContext, priorityFuture);
@@ -475,7 +475,7 @@ public class ExprWalker {
     // callFunction will check that argument types match function
     callFunction(context, f, oList, argVars, priorityVal);
     if (openedWait) {
-      backend.endWaitStatement(waitContainers);
+      backend.endWaitStatement(keepOpen);
     }
   
   }
@@ -936,11 +936,11 @@ public class ExprWalker {
     Variable member = copyContext.createAliasVariable(memType);
     Variable ix = copyContext.createLocalValueVariable(Types.VALUE_INTEGER);
     
-    List<Variable> modifiedContainers = Arrays.asList(dst);
+    List<Variable> keepOpen = Arrays.asList(dst);
     backend.startForeachLoop(src, member, ix, true, -1, false, 
-        Arrays.asList(src, dst), modifiedContainers);
+        Arrays.asList(src, dst), keepOpen);
     backend.arrayInsertImm(member, dst, Arg.createVar(ix));
-    backend.endForeachLoop(true, -1, false, modifiedContainers);
+    backend.endForeachLoop(true, -1, false, keepOpen);
     backend.closeArray(dst);
   }
 

@@ -204,14 +204,14 @@ public class ICContinuations {
     protected Block loopBody;
 
     protected final List<Variable> usedVariables;
-    protected final List<Variable> containersToRegister;
+    protected final List<Variable> keepOpenVars;
 
     public AbstractLoop(Block block, List<Variable> usedVariables,
-        List<Variable> containersToRegister) {
+        List<Variable> keepOpenVars) {
 
       this.usedVariables = new ArrayList<Variable>(usedVariables);
-      this.containersToRegister =
-                      new ArrayList<Variable>(containersToRegister);
+      this.keepOpenVars =
+                      new ArrayList<Variable>(keepOpenVars);
       this.loopBody = block;
     }
 
@@ -227,7 +227,7 @@ public class ICContinuations {
     @Override
     public Collection<Variable> requiredVars() {
       ArrayList<Variable> res = new ArrayList<Variable>();
-      for (Variable c: containersToRegister) {
+      for (Variable c: keepOpenVars) {
         if (c.getStorage() == VariableStorage.ALIAS) {
           // We might be holding it open so that a different var can
           // be written inside
@@ -271,8 +271,8 @@ public class ICContinuations {
 
     protected void fuseIntoAbstract(AbstractLoop o, boolean insertAtTop) {
       this.loopBody.insertInline(o.loopBody, insertAtTop);
-      this.containersToRegister.addAll(o.containersToRegister);
-      ICUtil.removeDuplicates(this.containersToRegister);
+      this.keepOpenVars.addAll(o.keepOpenVars);
+      ICUtil.removeDuplicates(this.keepOpenVars);
       this.usedVariables.addAll(o.usedVariables);
       ICUtil.removeDuplicates(this.usedVariables);
     }
@@ -293,8 +293,8 @@ public class ICContinuations {
     private ForeachLoop(Block block, Variable arrayVar, Variable loopVar,
         Variable loopCounterVar, boolean isSync, int splitDegree,
         boolean arrayClosed,
-        List<Variable> usedVariables, List<Variable> containersToRegister) {
-      super(block, usedVariables, containersToRegister);
+        List<Variable> usedVariables, List<Variable> keepOpenVars) {
+      super(block, usedVariables, keepOpenVars);
       this.arrayVar = arrayVar;
       this.loopVar = loopVar;
       this.loopCounterVar = loopCounterVar;
@@ -306,9 +306,9 @@ public class ICContinuations {
     public ForeachLoop(Variable arrayVar, Variable loopVar,
         Variable loopCounterVar, boolean isSync, int splitDegree,
         boolean arrayClosed, List<Variable> usedVariables,
-        List<Variable> containersToRegister) {
+        List<Variable> keepOpenVars) {
       this(new Block(BlockType.FOREACH_BODY), arrayVar, loopVar, loopCounterVar,
-          isSync, splitDegree, arrayClosed, usedVariables, containersToRegister);
+          isSync, splitDegree, arrayClosed, usedVariables, keepOpenVars);
     }
 
     @Override
@@ -316,7 +316,7 @@ public class ICContinuations {
       return new ForeachLoop(this.loopBody.clone(),
           arrayVar, loopVar, loopCounterVar, isSync, splitDegree, arrayClosed,
           new ArrayList<Variable>(usedVariables),
-          new ArrayList<Variable>(containersToRegister));
+          new ArrayList<Variable>(keepOpenVars));
     }
 
     @Override
@@ -328,10 +328,10 @@ public class ICContinuations {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
       gen.startForeachLoop(arrayVar, loopVar, loopCounterVar, isSync,
-                splitDegree, arrayClosed, usedVariables, containersToRegister);
+                splitDegree, arrayClosed, usedVariables, keepOpenVars);
       this.loopBody.generate(logger, gen, info);
       gen.endForeachLoop(isSync, splitDegree, arrayClosed,
-                                          containersToRegister);
+                                          keepOpenVars);
     }
 
     @Override
@@ -347,7 +347,7 @@ public class ICContinuations {
         sb.append(", " + loopCounterVar.getName());
       }
       sb.append(" in " + arrayVar.getName() + " ");
-      ICUtil.prettyPrintVarInfo(sb, usedVariables, containersToRegister);
+      ICUtil.prettyPrintVarInfo(sb, usedVariables, keepOpenVars);
       sb.append(" {\n");
       loopBody.prettyPrint(sb, currentIndent + indent);
       sb.append(currentIndent + "}\n");
@@ -367,7 +367,7 @@ public class ICContinuations {
         loopCounterVar = renames.get(loopCounterVar.getName()).getVar();
       }
       ICUtil.replaceVarsInList(renames, usedVariables, true);
-      ICUtil.replaceVarsInList(renames, containersToRegister, true);
+      ICUtil.replaceVarsInList(renames, keepOpenVars, true);
     }
 
     @Override
@@ -395,7 +395,7 @@ public class ICContinuations {
       if (loopCounterVar != null) {
         checkNotRemoved(loopCounterVar, removeVars);
       }
-      ICUtil.removeVarsInList(this.containersToRegister, removeVars);
+      ICUtil.removeVarsInList(this.keepOpenVars, removeVars);
       ICUtil.removeVarsInList(this.usedVariables, removeVars);
     }
 
@@ -666,16 +666,16 @@ public class ICContinuations {
 
     public Loop(String loopName, List<Variable> loopVars,
             List<Variable> initVals, List<Variable> usedVariables,
-            List<Variable> containersToRegister, List<Boolean> blockingVars) {
+            List<Variable> keepOpenVars, List<Boolean> blockingVars) {
       this(loopName, new Block(BlockType.LOOP_BODY), loopVars, initVals,
-          usedVariables, containersToRegister, blockingVars);
+          usedVariables, keepOpenVars, blockingVars);
     }
 
     private Loop(String loopName, Block loopBody,
         List<Variable> loopVars,  List<Variable> initVals,
-        List<Variable> usedVariables, List<Variable> containersToRegister,
+        List<Variable> usedVariables, List<Variable> keepOpenVars,
         List<Boolean> blockingVars) {
-      super(loopBody, usedVariables, containersToRegister);
+      super(loopBody, usedVariables, keepOpenVars);
       this.loopName = loopName;
       this.condVar = loopVars.get(0);
       this.loopVars = new ArrayList<Variable>(loopVars);
@@ -696,7 +696,7 @@ public class ICContinuations {
     public Loop clone() {
       // Constructor creates copies of variable lists
       return new Loop(loopName, this.loopBody.clone(), loopVars, initVals,
-          usedVariables, containersToRegister, blockingVars);
+          usedVariables, keepOpenVars, blockingVars);
     }
 
     @Override
@@ -716,7 +716,7 @@ public class ICContinuations {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
       gen.startLoop(loopName, loopVars, initVals,
-                    usedVariables, containersToRegister, blockingVars);
+                    usedVariables, keepOpenVars, blockingVars);
       this.loopBody.generate(logger, gen, info);
       gen.endLoop();
     }
@@ -741,7 +741,7 @@ public class ICContinuations {
       }
 
       sb.append(")\n" + currentIndent + indent + indent);
-      ICUtil.prettyPrintVarInfo(sb, usedVariables, containersToRegister);
+      ICUtil.prettyPrintVarInfo(sb, usedVariables, keepOpenVars);
       sb.append(" {\n");
       loopBody.prettyPrint(sb, currentIndent + indent);
       sb.append(currentIndent + "}\n");
@@ -752,7 +752,7 @@ public class ICContinuations {
       this.replaceVarsInBlocks(renames, false);
       ICUtil.replaceVarsInList(renames, initVals, false);
       ICUtil.replaceVarsInList(renames, usedVariables, true);
-      ICUtil.replaceVarsInList(renames, containersToRegister, true);
+      ICUtil.replaceVarsInList(renames, keepOpenVars, true);
     }
 
     @Override
@@ -778,7 +778,7 @@ public class ICContinuations {
       for (Variable v: this.loopVars) {
         checkNotRemoved(v, removeVars);
       }
-      ICUtil.removeVarsInList(this.containersToRegister, removeVars);
+      ICUtil.removeVarsInList(this.keepOpenVars, removeVars);
       ICUtil.removeVarsInList(this.usedVariables, removeVars);
     }
 
@@ -969,20 +969,20 @@ public class ICContinuations {
     public RangeLoop(String loopName, Variable loopVar,
         Arg start, Arg end, Arg increment,
         boolean isSync,
-        List<Variable> usedVariables, List<Variable> containersToRegister,
+        List<Variable> usedVariables, List<Variable> keepOpenVars,
         int desiredUnroll, int splitDegree) {
       this(loopName, new Block(BlockType.RANGELOOP_BODY), loopVar,
-          start, end, increment, isSync, usedVariables, containersToRegister,
+          start, end, increment, isSync, usedVariables, keepOpenVars,
           desiredUnroll, splitDegree);
     }
 
     private RangeLoop(String loopName, Block block, Variable loopVar,
         Arg start, Arg end, Arg increment,
         boolean isSync,
-        List<Variable> usedVariables, List<Variable> containersToRegister,
+        List<Variable> usedVariables, List<Variable> keepOpenVars,
         int desiredUnroll, int splitDegree) {
       super(block,
-            usedVariables, containersToRegister);
+            usedVariables, keepOpenVars);
       assert(start.getType() == ArgType.INTVAL ||
           (start.getType() == ArgType.VAR &&
               start.getVar().getType().equals(Types.VALUE_INTEGER)));
@@ -1008,7 +1008,7 @@ public class ICContinuations {
       return new RangeLoop(loopName, this.loopBody.clone(), loopVar,
           start.clone(), end.clone(), increment.clone(), isSync,
           new ArrayList<Variable>(usedVariables),
-          new ArrayList<Variable>(containersToRegister), desiredUnroll,
+          new ArrayList<Variable>(keepOpenVars), desiredUnroll,
           splitDegree);
     }
 
@@ -1022,10 +1022,10 @@ public class ICContinuations {
         throws UndefinedTypeException {
       gen.startRangeLoop(loopName, loopVar, start, end, increment,
                          isSync,
-                         usedVariables, containersToRegister,
+                         usedVariables, keepOpenVars,
                          desiredUnroll, splitDegree);
       this.loopBody.generate(logger, gen, info);
-      gen.endRangeLoop(isSync, containersToRegister, splitDegree);
+      gen.endRangeLoop(isSync, keepOpenVars, splitDegree);
     }
 
     @Override
@@ -1041,7 +1041,7 @@ public class ICContinuations {
             increment.getIntLit() != 1) {
           sb.append("incr " + increment.toString() + " ");
       }
-      ICUtil.prettyPrintVarInfo(sb, usedVariables, containersToRegister);
+      ICUtil.prettyPrintVarInfo(sb, usedVariables, keepOpenVars);
       sb.append(" {\n");
       loopBody.prettyPrint(sb, currentIndent + indent);
       sb.append(currentIndent + "}\n");
@@ -1058,7 +1058,7 @@ public class ICContinuations {
       increment = renameRangeArg(increment, renames);
 
       ICUtil.replaceVarsInList(renames, usedVariables, true);
-      ICUtil.replaceVarsInList(renames, containersToRegister, true);
+      ICUtil.replaceVarsInList(renames, keepOpenVars, true);
     }
     @Override
     public void replaceInputs(Map<String, Arg> renames) {
@@ -1097,7 +1097,7 @@ public class ICContinuations {
       checkNotRemoved(end, removeVars);
       checkNotRemoved(increment, removeVars);
       removeVarsInBlocks(removeVars);
-      ICUtil.removeVarsInList(this.containersToRegister, removeVars);
+      ICUtil.removeVarsInList(this.keepOpenVars, removeVars);
       ICUtil.removeVarsInList(this.usedVariables, removeVars);
     }
 
@@ -1515,7 +1515,7 @@ public class ICContinuations {
     private final Block block;
     private final ArrayList<Variable> waitVars;
     private final ArrayList<Variable> usedVariables;
-    private final ArrayList<Variable> containersToRegister;
+    private final ArrayList<Variable> keepOpenVars;
     /* True if this wait was compiler-generated so can be removed if needed
      * We can only remove an explicit wait if we know that the variables are
      * already closed*/
@@ -1523,25 +1523,25 @@ public class ICContinuations {
 
     public WaitStatement(String procName, List<Variable> waitVars,
                     List<Variable> usedVariables,
-                    List<Variable> containersToRegister,
+                    List<Variable> keepOpenVars,
                     boolean explicit) {
       this(procName, new Block(BlockType.WAIT_BLOCK),
                         new ArrayList<Variable>(waitVars),
                         new ArrayList<Variable>(usedVariables),
-                        new ArrayList<Variable>(containersToRegister),
+                        new ArrayList<Variable>(keepOpenVars),
                         explicit);
     }
 
     private WaitStatement(String procName, Block block,
         ArrayList<Variable> waitVars, ArrayList<Variable> usedVariables,
-        ArrayList<Variable> containersToRegister, boolean explicit) {
+        ArrayList<Variable> keepOpenVars, boolean explicit) {
       super();
       this.procName = procName;
       this.block = block;
       this.waitVars = waitVars;
       ICUtil.removeDuplicates(waitVars);
       this.usedVariables = usedVariables;
-      this.containersToRegister = containersToRegister;
+      this.keepOpenVars = keepOpenVars;
       this.explicit = explicit;
     }
 
@@ -1550,7 +1550,7 @@ public class ICContinuations {
       return new WaitStatement(procName, this.block.clone(),
           new ArrayList<Variable>(waitVars),
           new ArrayList<Variable>(usedVariables),
-          new ArrayList<Variable>(containersToRegister), explicit);
+          new ArrayList<Variable>(keepOpenVars), explicit);
     }
 
     public Block getBlock() {
@@ -1562,9 +1562,9 @@ public class ICContinuations {
         throws UndefinedTypeException {
 
       gen.startWaitStatement(procName, waitVars, usedVariables,
-          containersToRegister, explicit);
+          keepOpenVars, explicit);
       this.block.generate(logger, gen, info);
-      gen.endWaitStatement(containersToRegister);
+      gen.endWaitStatement(keepOpenVars);
     }
 
     @Override
@@ -1574,7 +1574,7 @@ public class ICContinuations {
       ICUtil.prettyPrintVarList(sb, waitVars);
       sb.append(") ");
       sb.append("/*" + procName + "*/ " );
-      ICUtil.prettyPrintVarInfo(sb, usedVariables, containersToRegister);
+      ICUtil.prettyPrintVarInfo(sb, usedVariables, keepOpenVars);
       sb.append(" {\n");
       block.prettyPrint(sb, newIndent);
       sb.append(currentIndent + "}\n");
@@ -1590,7 +1590,7 @@ public class ICContinuations {
       replaceVarsInBlocks(renames, false);
       ICUtil.replaceVarsInList(renames, waitVars, true);
       ICUtil.replaceVarsInList(renames, usedVariables, true);
-      ICUtil.replaceVarsInList(renames, containersToRegister, true);
+      ICUtil.replaceVarsInList(renames, keepOpenVars, true);
     }
 
     @Override
@@ -1611,9 +1611,9 @@ public class ICContinuations {
     @Override
     public Collection<Variable> requiredVars() {
       ArrayList<Variable> res = new ArrayList<Variable>();
-      for (Variable c: containersToRegister) {
+      for (Variable c: keepOpenVars) {
         if (c.getStorage() == VariableStorage.ALIAS) {
-          // Might be alias for actual container written inside
+          // Might be alias for actual array written inside
           res.add(c);
         }
       }
@@ -1634,7 +1634,7 @@ public class ICContinuations {
       removeVarsInBlocks(removeVars);
       ICUtil.removeVarsInList(waitVars, removeVars);
       ICUtil.removeVarsInList(usedVariables, removeVars);
-      ICUtil.removeVarsInList(containersToRegister, removeVars);
+      ICUtil.removeVarsInList(keepOpenVars, removeVars);
     }
 
     @Override

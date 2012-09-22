@@ -225,15 +225,15 @@ public interface CompilerBackend {
    * @param splitDegree
    * @param arrayClosed if true, assume array is already closed
    * @param usedVariables
-   * @param containersToRegister
+   * @param keepOpenVars
    */
   public abstract void startForeachLoop(Variable arrayVar,
       Variable memberVar, Variable loopCountVar, boolean isSync,
       int splitDegree, boolean arrayClosed,
-      List<Variable> usedVariables, List<Variable> containersToRegister);
+      List<Variable> usedVariables, List<Variable> keepOpenVars);
 
   public abstract void endForeachLoop(boolean isSync, int splitDegree, 
-            boolean arrayClosed, List<Variable> containersToRegister);
+            boolean arrayClosed, List<Variable> keepOpenVars);
 
   
   /**
@@ -250,16 +250,16 @@ public interface CompilerBackend {
    * @param isSync if true, don't spawn a task per iteration: run loop   
    *            body synchronously
    * @param usedVariables variables used in loop body
-   * @param containersToRegister containers written in loop body
+   * @param keepOpenVars vars to keep open for assignment in loop body
    * @param desiredUnroll the suggested unrolling factor
    * @param splitDegree the desired loop split factor (negative if no splitting)
    */
   public abstract void startRangeLoop(String loopName, Variable loopVar, 
       Arg start, Arg end, Arg increment, 
       boolean isSync, List<Variable> usedVariables, 
-      List<Variable> containersToRegister, int desiredUnroll, int splitDegree);
+      List<Variable> keepOpenVars, int desiredUnroll, int splitDegree);
   public abstract void endRangeLoop(boolean isSync, 
-                                    List<Variable> containersToRegister,
+                                    List<Variable> keepOpenVars,
                                     int splitDegree);
   /**
    * Add a global variable (currently constant literals are supported)  
@@ -283,7 +283,7 @@ public interface CompilerBackend {
    *    tcl code can have a nice name for the block)
    * @param waitVars
    * @param usedVariables any variables which are read or written inside block
-   * @param containersToRegister any containers that might be written in this block
+   * @param keepOpenVars any vars that need to be kept open for wait
    * @param explicit true if this is a semantically meaningful wait statement,
    *            false if it can be removed safely without altering semantics.
    *            If true the wait statement will only be optimised out if it
@@ -292,10 +292,10 @@ public interface CompilerBackend {
    */
   public abstract void startWaitStatement(String procName,
       List<Variable> waitVars,
-      List<Variable> usedVariables, List<Variable> containersToRegister,
+      List<Variable> usedVariables, List<Variable> keepOpenVars,
       boolean explicit);
 
-  public abstract void endWaitStatement(List<Variable> containersToRegister);
+  public abstract void endWaitStatement(List<Variable> keepOpenVars);
 
   
   /**
@@ -304,17 +304,17 @@ public interface CompilerBackend {
    * @param loopVars first one is loop condition
    * @param initVals initial values for loop variables
    * @param usedVariables
-   * @param containersToRegister
+   * @param keepOpenVars
    * @param blockingLoopVars
    */
   public abstract void startLoop(String loopName, List<Variable> loopVars,
       List<Variable> initVals, List<Variable> usedVariables,
-      List<Variable> containersToRegister, List<Boolean> blockingVars);
+      List<Variable> keepOpenVars, List<Boolean> blockingVars);
   
   public abstract void loopContinue(List<Variable> newVals,
-      List<Variable> usedVariables, List<Variable> registeredContainers,
+      List<Variable> usedVariables, List<Variable> keepOpenVars,
       List<Boolean> blockingVars);
-  public abstract void loopBreak(List<Variable> containersToClose);
+  public abstract void loopBreak(List<Variable> varsToClose);
   public abstract void endLoop();
 
 }

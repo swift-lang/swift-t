@@ -269,28 +269,28 @@ public class ASTWalker {
     }
     
     ArrayList<Variable> usedVars = new ArrayList<Variable>();
-    ArrayList<Variable> writtenContainers = new ArrayList<Variable>();
+    ArrayList<Variable> keepOpenVars = new ArrayList<Variable>();
     summariseBranchVariableUsage(context, 
                     Arrays.asList(wait.getBlock().getVariableUsage()), 
-                                  usedVars, writtenContainers);
+                                  usedVars, keepOpenVars);
     
     
     // Quick sanity check to see we're not directly blocking
-    // on any containers written inside
+    // on any arrays written inside
     HashSet<String> waitVarSet = 
         new HashSet<String>(Variable.nameList(waitEvaled));
-    waitVarSet.retainAll(Variable.nameList(writtenContainers));
+    waitVarSet.retainAll(Variable.nameList(keepOpenVars));
     if (waitVarSet.size() > 0) {
       throw new UserException(context, 
-          "Deadlock in wait statement. The following containers are written "
+          "Deadlock in wait statement. The following arrays are written "
         + "inside the body of the wait: " + waitVarSet.toString());
     }
     
     backend.startWaitStatement(
           context.getFunctionContext().constructName("explicitwait"),
-                      waitEvaled, usedVars, writtenContainers, true);
+                      waitEvaled, usedVars, keepOpenVars, true);
     block(new LocalContext(context), wait.getBlock());
-    backend.endWaitStatement(writtenContainers);
+    backend.endWaitStatement(keepOpenVars);
   }
 
 
@@ -402,10 +402,10 @@ public class ASTWalker {
     // A list of variables that might be referenced in either branch
     List<Variable> usedVariables = new ArrayList<Variable>();
 
-    // List of containers that might be modified on one branch or the other
-    // IF a container is modified on a branch, then we have to make sure that
+    // List of arrays that might be modified on one branch or the other
+    // IF an array is modified on a branch, then we have to make sure that
     // it won't be prematurely closed
-    List<Variable> containersToRegister = new ArrayList<Variable>();
+    List<Variable> keepOpenVars = new ArrayList<Variable>();
 
     VariableUsageInfo thenVU = ifStmt.getThenBlock().checkedGetVariableUsage();
 
@@ -422,7 +422,7 @@ public class ASTWalker {
     checkConditionalDeadlock(context, conditionVar, branchVUs);
 
     summariseBranchVariableUsage(context, branchVUs, usedVariables,
-        containersToRegister);
+        keepOpenVars);
 
     if (!usedVariables.contains(conditionVar))
       usedVariables.add(conditionVar);
@@ -430,7 +430,7 @@ public class ASTWalker {
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("if"), 
               Arrays.asList(conditionVar),
-                usedVariables, containersToRegister, false);
+                usedVariables, keepOpenVars, false);
 
     Context waitContext = new LocalContext(context);
     Variable condVal = varCreator.fetchValueOf(waitContext, conditionVar);
@@ -442,7 +442,7 @@ public class ASTWalker {
       block(new LocalContext(waitContext), ifStmt.getElseBlock());
     }
     backend.endIfStatement();
-    backend.endWaitStatement(containersToRegister);
+    backend.endWaitStatement(keepOpenVars);
   }
 
   /**
@@ -483,14 +483,14 @@ public class ASTWalker {
    *          The variable usage info for all branches
    * @param usedVariables
    *          All variables read or written in a branch added here
-   * @param containersToRegister
-   *          All containers that might be written are added here
+   * @param keepOpenVars
+   *          All vars that might be written are added here
    * @throws UserException
    * @throws UndefinedTypeException
    */
   private void summariseBranchVariableUsage(Context context,
       List<VariableUsageInfo> branchVUs, List<Variable> usedVariables,
-      List<Variable> containersToRegister) throws UndefinedTypeException, UserException {
+      List<Variable> keepOpenVars) throws UndefinedTypeException, UserException {
     for (Variable v : context.getVisibleVariables()) {
       Ternary isUsed = Ternary.FALSE;
       for (VariableUsageInfo bvu : branchVUs) {
@@ -510,7 +510,7 @@ public class ASTWalker {
         for (VariableUsageInfo bvu : branchVUs) {
           VInfo vi = bvu.lookupVariableInfo(v.getName());
           if (vi != null && vi.isAssigned() != Ternary.FALSE) {
-            containersToRegister.add(v);
+            keepOpenVars.add(v);
             break;
           }
         }
@@ -530,7 +530,7 @@ public class ASTWalker {
             }
           }
         }
-        containersToRegister.addAll(alreadyFound);
+        keepOpenVars.addAll(alreadyFound);
       }
     }
 
@@ -550,10 +550,11 @@ public class ASTWalker {
     // A list of variables that might be referenced in either branch
     List<Variable> usedVariables = new ArrayList<Variable>();
 
-    // List of containers that might be modified on one branch or the other
-    // IF a container is modified on a branch, then we have to make sure that
-    // it won't be prematurely closed
-    List<Variable> containersToRegister = new ArrayList<Variable>();
+    // List of vars that might be modified on one branch or the other and
+    // need to be kept open
+    // IF an array, e.g., is modified on a branch, then we have to make sure 
+    // that it won't be prematurely closed
+    List<Variable> keepOpenVars = new ArrayList<Variable>();
 
     List<VariableUsageInfo> branchVUs = new ArrayList<VariableUsageInfo>();
     for (SwiftAST b : sw.getCaseBodies()) {
@@ -562,7 +563,7 @@ public class ASTWalker {
 
     checkConditionalDeadlock(context, switchVar, branchVUs);
     summariseBranchVariableUsage(context, branchVUs, usedVariables,
-        containersToRegister);
+        keepOpenVars);
     if (!usedVariables.contains(switchVar))
         usedVariables.add(switchVar);
 
@@ -570,7 +571,7 @@ public class ASTWalker {
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("switch"),
                 Arrays.asList(switchVar),
-                usedVariables, containersToRegister, false);
+                usedVariables, keepOpenVars, false);
 
     Context waitContext = new LocalContext(context);
     Variable switchVal = varCreator.createValueOfVar(waitContext,
@@ -587,7 +588,7 @@ public class ASTWalker {
       backend.endCase();
     }
     backend.endSwitch();
-    backend.endWaitStatement(containersToRegister);
+    backend.endWaitStatement(keepOpenVars);
   }
 
   private void foreach(Context context, SwiftAST tree) throws UserException {
@@ -628,12 +629,12 @@ public class ASTWalker {
     }
     
     ArrayList<Variable> usedVariables = new ArrayList<Variable>();
-    ArrayList<Variable> containersToRegister = new ArrayList<Variable>();
+    ArrayList<Variable> keepOpenVars = new ArrayList<Variable>();
 
     // TODO: correct??
     VariableUsageInfo bodyVU = loop.getBody().checkedGetVariableUsage();
     summariseBranchVariableUsage(context, Arrays.asList(bodyVU),
-        usedVariables, containersToRegister);
+        usedVariables, keepOpenVars);
     
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("foreach-range");
@@ -644,7 +645,7 @@ public class ASTWalker {
     waitUsedVariables.addAll(Arrays.asList(start, end, step));
     backend.startWaitStatement("wait-range" + loopNum, 
                                 Arrays.asList(start, end, step), 
-                                waitUsedVariables, containersToRegister, false);
+                                waitUsedVariables, keepOpenVars, false);
     Context waitContext = new LocalContext(context);
     Variable startVal = varCreator.fetchValueOf(waitContext, start);
     Variable endVal = varCreator.fetchValueOf(waitContext, end);
@@ -657,7 +658,7 @@ public class ASTWalker {
     backend.startRangeLoop("range" + loopNum, memberVal, 
             Arg.createVar(startVal), Arg.createVar(endVal), 
             Arg.createVar(stepVal), loop.isSyncLoop(),
-            usedVariables, containersToRegister, loop.getDesiredUnroll(),
+            usedVariables, keepOpenVars, loop.getDesiredUnroll(),
             loop.getSplitDegree());
     
     // We have the current value, but need to put it in a future in case user
@@ -665,9 +666,9 @@ public class ASTWalker {
     varCreator.initialiseVariable(bodyContext, loop.getMemberVar());
     backend.assignInt(loop.getMemberVar(), Arg.createVar(memberVal));
     block(bodyContext, loop.getBody());
-    backend.endRangeLoop(loop.isSyncLoop(), containersToRegister,
+    backend.endRangeLoop(loop.isSyncLoop(), keepOpenVars,
                                                   loop.getSplitDegree());
-    backend.endWaitStatement(containersToRegister);
+    backend.endWaitStatement(keepOpenVars);
   }
   
   /**
@@ -682,13 +683,13 @@ public class ASTWalker {
     Variable arrayVar = exprWalker.evalExprToTmp(context, loop.getArrayVarTree(), loop.findArrayType(context), true, null);
 
     ArrayList<Variable> usedVariables = new ArrayList<Variable>();
-    ArrayList<Variable> containersToRegister = new ArrayList<Variable>();
+    ArrayList<Variable> keepOpenVars = new ArrayList<Variable>();
 
     VariableUsageInfo bodyVU = loop.getBody().checkedGetVariableUsage();
     summariseBranchVariableUsage(context, Arrays.asList(bodyVU),
-        usedVariables, containersToRegister);
+        usedVariables, keepOpenVars);
 
-    for (Variable v: containersToRegister) {
+    for (Variable v: keepOpenVars) {
       if (v.getName().equals(arrayVar.getName())) {
         throw new STCRuntimeError("Array variable "
                   + v.getName() + " is written in the foreach loop "
@@ -708,7 +709,7 @@ public class ASTWalker {
       waitUsedVars.add(arrayVar);
 
       backend.startWaitStatement(fc.constructName("foreach_wait"),
-          Arrays.asList(arrayVar), waitUsedVars, containersToRegister, false);
+          Arrays.asList(arrayVar), waitUsedVars, keepOpenVars, false);
 
       outsideLoopContext = new LocalContext(context);
       realArray = varCreator.createTmp(outsideLoopContext,
@@ -723,11 +724,11 @@ public class ASTWalker {
 
     if (loop.getDesiredUnroll() != 1) {
       throw new STCRuntimeError("Loop unrolling not"
-          + " yet supported for loops over containers");
+          + " yet supported for loops over arrays");
     }
     backend.startForeachLoop(realArray, loop.getMemberVar(), loop.getLoopCountVal(),
         loop.isSyncLoop(), loop.getSplitDegree(), false, 
-        usedVariables, containersToRegister);
+        usedVariables, keepOpenVars);
     // If the user's code expects a loop count var, need to create it here
     if (loop.getCountVarName() != null) {
       Variable loopCountVar = varCreator.createVariable(loop.getBodyContext(),
@@ -737,10 +738,10 @@ public class ASTWalker {
     }
     block(loopBodyContext, loop.getBody());
     backend.endForeachLoop(loop.isSyncLoop(), loop.getSplitDegree(), false, 
-                                                    containersToRegister);
+                                                    keepOpenVars);
 
     if (Types.isArrayRef(arrayVar.getType())) {
-      backend.endWaitStatement(containersToRegister);
+      backend.endWaitStatement(keepOpenVars);
     }
   }
 
@@ -751,10 +752,10 @@ public class ASTWalker {
     List<Variable> initVals = evalLoopVarExprs(context, forLoop, 
                                                   forLoop.getInitExprs());
     List<Variable> usedVariables = new ArrayList<Variable>();
-    List<Variable> containersToRegister = new ArrayList<Variable>();
+    List<Variable> keepOpenVars = new ArrayList<Variable>();
     summariseBranchVariableUsage(context, 
             Arrays.asList(forLoop.getBody().getVariableUsage()), 
-            usedVariables, containersToRegister);
+            usedVariables, keepOpenVars);
     
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("forloop");
@@ -816,7 +817,7 @@ public class ASTWalker {
     initVals.add(0, initCond);
     
     backend.startLoop(loopName, loopVars, initVals, 
-                      usedVariables, containersToRegister,
+                      usedVariables, keepOpenVars,
                       blockingVector);
     
     // get value of condVar
@@ -840,10 +841,10 @@ public class ASTWalker {
     Variable nextCond = exprWalker.evalExprToTmp(loopBodyContext, 
               forLoop.getCondition(), condType, true, nextRenames);
     newLoopVars.add(0, nextCond);
-    backend.loopContinue(newLoopVars, usedVariables, containersToRegister,
+    backend.loopContinue(newLoopVars, usedVariables, keepOpenVars,
                                                             blockingVector);
     backend.startElseBlock();
-    // Terminate loop, clean up open containers and copy out final vals 
+    // Terminate loop, clean up open arrays and copy out final vals 
     // of loop vars
     for (LoopVar lv: forLoop.getLoopVars()) {
       if (lv.declaredOutsideLoop) {
@@ -853,7 +854,7 @@ public class ASTWalker {
       }
     }
     
-    backend.loopBreak(containersToRegister);
+    backend.loopBreak(keepOpenVars);
     backend.endIfStatement();
     // finish loop construct
     backend.endLoop();
@@ -879,10 +880,10 @@ public class ASTWalker {
     String loopName = fc.getFunctionName() + "-iterate-" + loopNum;
     
     List<Variable> usedVariables = new ArrayList<Variable>();
-    List<Variable> containersToRegister = new ArrayList<Variable>();
+    List<Variable> keepOpenVars = new ArrayList<Variable>();
     summariseBranchVariableUsage(context, 
             Arrays.asList(loop.getBody().getVariableUsage()), 
-            usedVariables, containersToRegister);
+            usedVariables, keepOpenVars);
 
     Context bodyContext = loop.createBodyContext(context);
     
@@ -895,14 +896,14 @@ public class ASTWalker {
     List<Boolean> blockingVars = Arrays.asList(true, false);
     backend.startLoop(loopName, 
         Arrays.asList(condArg, loop.getLoopVar()), Arrays.asList(falseV, zero), 
-        usedVariables, containersToRegister, blockingVars);
+        usedVariables, keepOpenVars, blockingVars);
     
     // get value of condVar
     Variable condVal = varCreator.fetchValueOf(bodyContext, condArg); 
     
     backend.startIfStatement(Arg.createVar(condVal), true);
-    if (containersToRegister.size() > 0) {
-      backend.loopBreak(containersToRegister);
+    if (keepOpenVars.size() > 0) {
+      backend.loopBreak(keepOpenVars);
     }
     backend.startElseBlock();
     block(bodyContext, loop.getBody());
@@ -931,7 +932,7 @@ public class ASTWalker {
         null);
     
     backend.loopContinue(Arrays.asList(nextCond, nextCounter), 
-        usedVariables, containersToRegister, blockingVars);
+        usedVariables, keepOpenVars, blockingVars);
 
     backend.endIfStatement();
     backend.endLoop();
@@ -1349,7 +1350,7 @@ public class ASTWalker {
         String literal = Literals.extractIntLit(context, indexExpr.child(0));
         if (literal != null) {
           long arrIx = Long.parseLong(literal);
-          // Add this variable to container
+          // Add this variable to array
           if (Types.isArray(lvalArr.getType())) {
             mVar = varCreator.createTmpAlias(context, memberType);
             backend.arrayCreateNestedImm(mVar, lvalArr, 
@@ -1456,7 +1457,7 @@ public class ASTWalker {
      */
     if (literal != null) {
       final long arrIx = Long.parseLong(literal);
-      // Add this variable to container
+      // Add this variable to array
       if (isRef) {
         // This should only be run when assigning to nested array
         afterActions.addFirst(new Runnable() {

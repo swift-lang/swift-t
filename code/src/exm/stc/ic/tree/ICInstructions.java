@@ -1863,18 +1863,17 @@ public class ICInstructions {
   public static class LoopContinue extends Instruction {
     private final ArrayList<Variable> newLoopVars;
     private final ArrayList<Variable> usedVariables;
-    private final ArrayList<Variable> registeredContainers;
+    private final ArrayList<Variable> keepOpenVars;
     private final ArrayList<Boolean> blockingVars;
   
     public LoopContinue(List<Variable> newLoopVars, 
                         List<Variable> usedVariables,
-                        List<Variable> registeredContainers,
+                        List<Variable> keepOpenVars,
                         List<Boolean> blockingVars) {
       super(Opcode.LOOP_CONTINUE);
       this.newLoopVars = new ArrayList<Variable>(newLoopVars);
       this.usedVariables = new ArrayList<Variable>(usedVariables);
-      this.registeredContainers = 
-                      new ArrayList<Variable>(registeredContainers);
+      this.keepOpenVars = new ArrayList<Variable>(keepOpenVars);
       this.blockingVars = new ArrayList<Boolean>(blockingVars);
     }
   
@@ -1882,7 +1881,7 @@ public class ICInstructions {
     public void renameVars(Map<String, Arg> renames) {
       ICUtil.replaceVarsInList(renames, newLoopVars, false);
       ICUtil.replaceVarsInList(renames, usedVariables, true);
-      ICUtil.replaceVarsInList(renames, registeredContainers, true);
+      ICUtil.replaceVarsInList(renames, keepOpenVars, true);
     }
     
     @Override
@@ -1894,7 +1893,7 @@ public class ICInstructions {
     public void removeVars(Set<String> removeVars) {
       assert(!removeVars.contains(newLoopVars.get(0).getName()));
       ICUtil.removeVarsInList(usedVariables, removeVars);
-      ICUtil.removeVarsInList(registeredContainers, removeVars);
+      ICUtil.removeVarsInList(keepOpenVars, removeVars);
       ICUtil.removeVarsInList(newLoopVars, removeVars);
     }
 
@@ -1921,7 +1920,7 @@ public class ICInstructions {
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       gen.loopContinue(this.newLoopVars, this.usedVariables,  
-                                      this.registeredContainers,
+                                      this.keepOpenVars,
                                       this.blockingVars);
     }
   
@@ -2010,22 +2009,25 @@ public class ICInstructions {
     public Instruction clone() {
       return new LoopContinue(new ArrayList<Variable>(newLoopVars), 
           new ArrayList<Variable>(usedVariables), 
-          new ArrayList<Variable>(registeredContainers), 
+          new ArrayList<Variable>(keepOpenVars), 
           new ArrayList<Boolean>(blockingVars));
     }
   }
   
   public static class LoopBreak extends Instruction {
-    private final List<Variable> containersToClose;
+    /**
+     * Variables to be closed upon loop termination
+     */
+    private final List<Variable> varsToClose;
   
-    public LoopBreak(List<Variable> containersToClose) {
+    public LoopBreak(List<Variable> varsToClose) {
       super(Opcode.LOOP_BREAK);
-      this.containersToClose = containersToClose;
+      this.varsToClose = varsToClose;
     }
   
     @Override
     public void renameVars(Map<String, Arg> renames) {
-      ICUtil.replaceVarsInList(renames, containersToClose, true);
+      ICUtil.replaceVarsInList(renames, varsToClose, true);
     }
   
     @Override
@@ -2037,7 +2039,7 @@ public class ICInstructions {
     public String toString() {
       StringBuilder sb = new StringBuilder();
       sb.append(this.op.toString().toLowerCase());
-      for (Variable v: this.containersToClose) {
+      for (Variable v: this.varsToClose) {
         sb.append(' ');
         sb.append(v.getName());
       }
@@ -2046,7 +2048,7 @@ public class ICInstructions {
   
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.loopBreak(containersToClose);
+      gen.loopBreak(varsToClose);
     }
   
     @Override
@@ -2102,7 +2104,7 @@ public class ICInstructions {
 
     @Override
     public Instruction clone() {
-      return new LoopBreak(new ArrayList<Variable>(containersToClose));
+      return new LoopBreak(new ArrayList<Variable>(varsToClose));
     }
   }
   
