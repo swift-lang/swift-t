@@ -121,6 +121,8 @@ public class ICContinuations {
     /** @return true if the continuation does nothing */
     public abstract boolean isNoop();
 
+    public abstract boolean isAsync();
+
     /** Return list of variables that the continuations waits for
      * before executing
      * @return
@@ -145,6 +147,42 @@ public class ICContinuations {
     public abstract void addPassedInVar(Variable variable);
 
     public abstract void removePassedInVar(Variable variable);
+
+    /** 
+     * Remove all variables (e.g. arrays that are kept open)
+     * This only makes sense to implement for async continuations, so
+     * default implementation is for sync
+     */
+    public void clearKeepOpenVars() {
+      // Implementation for synchronous continuations
+      assert(!this.isAsync());
+    }
+
+    /**
+     * 
+     * @return List of variables kept open in this scope.
+     *        null means none 
+     */
+    public Collection<Variable> getKeepOpenVars() {
+      // Implementation for synchronous continuations
+      assert(!this.isAsync());
+      return null;
+    }
+    
+    /** 
+     * Remove all variables (e.g. arrays that are kept open)
+     * This only makes sense to implement for async continuations.
+     */
+    public void addKeepOpenVar(Variable v) {
+      //Implementation for synchronous continuations
+      assert(!this.isAsync());
+    }
+
+    public void addKeepOpenVars(Collection<Variable> keepOpenVars) {
+      for (Variable v: keepOpenVars) {
+        addKeepOpenVar(v);
+      }
+    }
 
     /**
      * Remove this continuation from block, inlining one of
@@ -276,6 +314,16 @@ public class ICContinuations {
       this.usedVariables.addAll(o.usedVariables);
       ICUtil.removeDuplicates(this.usedVariables);
     }
+
+    @Override
+    public void clearKeepOpenVars() {
+      this.keepOpenVars.clear();
+    }
+
+    @Override
+    public void addKeepOpenVar(Variable v) {
+      this.keepOpenVars.add(v);
+    }
   }
 
   public static class ForeachLoop extends AbstractLoop {
@@ -322,6 +370,11 @@ public class ICContinuations {
     @Override
     public ContinuationType getType() {
       return ContinuationType.FOREACH_LOOP;
+    }
+
+    @Override
+    public boolean isAsync() { 
+      return !this.isSync;
     }
 
     @Override
@@ -548,6 +601,11 @@ public class ICContinuations {
     }
 
     @Override
+    public boolean isAsync() {
+      return false;
+    }
+
+    @Override
     public Collection<Variable> requiredVars() {
       if (condition.getType() == ArgType.VAR) {
         return Arrays.asList(condition.getVar());
@@ -702,6 +760,11 @@ public class ICContinuations {
     @Override
     public ContinuationType getType() {
       return ContinuationType.LOOP;
+    }
+
+    @Override
+    public boolean isAsync() {
+      return true;
     }
 
     public void setLoopBreak(LoopBreak loopBreak) {
@@ -893,6 +956,12 @@ public class ICContinuations {
     }
 
     @Override
+    public boolean isAsync() {
+      return false;
+    }
+
+
+    @Override
     public void replaceVars(Map<String, Arg> renames) {
       replaceVarsInBlocks(renames, false);
     }
@@ -1015,6 +1084,11 @@ public class ICContinuations {
     @Override
     public ContinuationType getType() {
       return ContinuationType.RANGE_LOOP;
+    }
+
+    @Override
+    public boolean isAsync() {
+      return !this.isSync;
     }
 
     @Override
@@ -1420,6 +1494,11 @@ public class ICContinuations {
     }
 
     @Override
+    public boolean isAsync() {
+      return false;
+    }
+
+    @Override
     public Collection<Variable> requiredVars() {
       if (switchVar.getType() == ArgType.VAR) {
         return Arrays.asList(switchVar.getVar());
@@ -1609,6 +1688,11 @@ public class ICContinuations {
     }
 
     @Override
+    public boolean isAsync() {
+      return true;
+    }
+
+    @Override
     public Collection<Variable> requiredVars() {
       ArrayList<Variable> res = new ArrayList<Variable>();
       for (Variable c: keepOpenVars) {
@@ -1684,6 +1768,20 @@ public class ICContinuations {
     public boolean variablesPassedInAutomatically() {
       return false;
     }
+    
+    @Override
+    public Collection<Variable> getKeepOpenVars() {
+      return Collections.unmodifiableList(this.keepOpenVars);
+    }
+
+    public Collection<Variable> getUsedVariables() {
+      return Collections.unmodifiableList(this.usedVariables);
+    }
+
+
+    public void addUsedVariables(Collection<Variable> usedVars) {
+      this.usedVariables.addAll(usedVars);
+    }
 
     @Override
     public Collection<Variable> getPassedInVars() {
@@ -1703,6 +1801,16 @@ public class ICContinuations {
     @Override
     public List<Variable> constructDefinedVars() {
       return null;
+    }
+
+    @Override
+    public void clearKeepOpenVars() {
+      this.keepOpenVars.clear();
+    }
+
+    @Override
+    public void addKeepOpenVar(Variable v) {
+      this.keepOpenVars.add(v);
     }
   }
 

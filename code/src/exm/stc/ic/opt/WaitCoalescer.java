@@ -1,16 +1,20 @@
 package exm.stc.ic.opt;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.antlr.gen.ExMParser.new_type_definition_return;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
@@ -246,10 +250,14 @@ public class WaitCoalescer {
                                               waits.get(0).getWaitVars());
         
         // Create a new wait statement waiting on the intersection
-        // of the above
+        // of the above.
         WaitStatement newWait = new WaitStatement(fn.getName() +
                 "-optmerged", intersectionVs, new ArrayList<Variable>(0),
                 new ArrayList<Variable>(0), explicit);
+        
+        // List of variables that are kept open, or used
+        ArrayList<Variable> usedVars = new ArrayList<Variable>();
+        ArrayList<Variable> keepOpen = new ArrayList<Variable>();
         
         // Put the old waits under the new one, remove redundant wait
         // vars
@@ -260,7 +268,18 @@ public class WaitCoalescer {
           } else {
             newWait.getBlock().addContinuation(wait);
           }
+          keepOpen.addAll(wait.getKeepOpenVars());
+          usedVars.addAll(wait.getUsedVariables());
         }
+        System.err.println("KeepOpen: " + keepOpen.toString());
+        System.err.println("UsedVars: " + usedVars.toString());
+        ICUtil.removeDuplicates(keepOpen);
+        for (Variable v: keepOpen) {
+          newWait.addKeepOpenVar(v);
+        }
+        ICUtil.removeDuplicates(usedVars);
+        newWait.addUsedVariables(usedVars);
+        
         block.addContinuation(newWait);
         block.removeContinuations(waits);
       }
@@ -308,61 +327,99 @@ public class WaitCoalescer {
     }
     return winner;
   }
+  
+  private static class AncestorContinuation {
+    private AncestorContinuation(Continuation continuation, Block block) {
+      super();
+      this.continuation = continuation;
+      this.block = block;
+    }
+    
+    public final Continuation continuation;
+    /** Block inside continuation */
+    public final Block block;
+  }
 
   private static void
           pushDownWaits(Logger logger, CompFunction fn, Block block) {
-    Stack<Block> workStack = new Stack<Block>();
-    for (Continuation c: block.getContinuations()) {
-      if (c.getType() == ContinuationType.WAIT_STATEMENT) {
-        workStack.addAll(c.getBlocks());
-      }
-    }
-    
     MultiMap<String, InstOrCont> waitMap = buildWaiterMap(block);
+    if (waitMap.isDefinitelyEmpty()) {
+      // If waitMap is empty, can't push anything down, so just
+      // shortcircuit
+      return;
+    }
     
-    /* Iterate over all descendant blocks of the block */
-    while (!workStack.empty()) {
-      if (waitMap.isDefinitelyEmpty()) {
-        // If waitMap is empty, can't push anything down, so just
-        // shortcircuit
-        return;
+    HashSet<Continuation> allPushedDown = new HashSet<Continuation>();
+    ArrayList<Continuation> contCopy = 
+                new ArrayList<Continuation>(block.getContinuations());
+    for (Continuation c: contCopy) {
+      if (allPushedDown.contains(c)) {
+        // Was moved
+        continue;
       }
-      Block curr = workStack.pop();
-      
-      /* Iterate over all instructions in this descendant block */
-      ListIterator<Instruction> it = curr.instructionIterator();
-      while (it.hasNext()) {
-        Instruction i = it.next();
-        logger.trace("Pushdown at: " + i.toString());
-        List<Variable> writtenFutures = new ArrayList<Variable>();
-        for (Variable outv: i.getOutputs()) {
-          if (Types.isFuture(outv.getType())) {
-            writtenFutures.add(outv);
-          }
-        }
-        
-        // Relocate instructions which depend on output future of this instruction
-        for (Variable v: writtenFutures) {
-          if (waitMap.containsKey(v.getName())) {
-            relocateDependentInstructions(logger, block, curr, it, waitMap, v);
-          }
-        }
-      }
-      
-      // Update the stack with child continuations
-      for (Continuation c: curr.getContinuations()) {
-        if (c.getType() == ContinuationType.WAIT_STATEMENT) {
-          workStack.addAll(c.getBlocks());
+      if (c.getType() == ContinuationType.WAIT_STATEMENT) {
+        for (Block innerBlock: c.getBlocks()) {
+          ArrayDeque<AncestorContinuation> ancestors =
+                                        new ArrayDeque<AncestorContinuation>();
+          ancestors.push(new AncestorContinuation(c, innerBlock));
+          List<Continuation> pushedDown = 
+               pushDownWaitsRec(logger, fn, block, ancestors, innerBlock, waitMap);
+          /* The list of continuations might be modified as continuations are
+           * pushed down - track which ones are relocated */
+          allPushedDown.addAll(pushedDown);
         }
       }
     }
-
+    
+  }
+  
+  private static List<Continuation> pushDownWaitsRec(Logger logger, 
+                CompFunction fn,
+                Block top, Deque<AncestorContinuation> ancestors, Block curr,
+                MultiMap<String, InstOrCont> waitMap) {
+    ArrayList<Continuation> pushedDown = new ArrayList<Continuation>();
+    /* Iterate over all instructions in this descendant block */
+    ListIterator<Instruction> it = curr.instructionIterator();
+    while (it.hasNext()) {
+      Instruction i = it.next();
+      logger.trace("Pushdown at: " + i.toString());
+      List<Variable> writtenFutures = new ArrayList<Variable>();
+      for (Variable outv: i.getOutputs()) {
+        if (Types.isFuture(outv.getType())) {
+          writtenFutures.add(outv);
+        }
+      }
+      
+      // Relocate instructions which depend on output future of this instruction
+      for (Variable v: writtenFutures) {
+        if (waitMap.containsKey(v.getName())) {
+          pushedDown.addAll(
+                relocateDependentInstructions(logger, top, ancestors,
+                                              curr, it, waitMap, v));
+        }
+      }
+    }
+    
+    // Update the stack with child continuations
+    for (Continuation c: curr.getContinuations()) {
+      if (c.getType() == ContinuationType.WAIT_STATEMENT) {
+        for (Block innerBlock: c.getBlocks()) {
+          ancestors.push(new AncestorContinuation(c, innerBlock));
+          pushedDown.addAll(
+               pushDownWaitsRec(logger, fn, top, ancestors,
+                                innerBlock, waitMap));
+          ancestors.pop();
+        }
+      }
+    }
+    return pushedDown;
   }
 
   /**
    * 
    * @param logger
    * @param ancestorBlock the block the instructions are moved from
+   * @param ancestors 
    * @param currBlock the block they are moved too (a descendant of the prior
    *              block)
    * @param currBlockInstructions  all changes to instructions in curr block
@@ -371,11 +428,14 @@ public class WaitCoalescer {
    * @param waitMap map of variable names to instructions/continuations they block
    *                  on
    * @param writtenV
+   * @return list of moved continuations
    */
-  private static void relocateDependentInstructions(Logger logger,
-      Block ancestorBlock, Block currBlock, 
-      ListIterator<Instruction> currBlockInstructions,
+  private static Set<Continuation> relocateDependentInstructions(
+      Logger logger,
+      Block ancestorBlock, Deque<AncestorContinuation> ancestors,
+      Block currBlock, ListIterator<Instruction> currBlockInstructions,
       MultiMap<String, InstOrCont> waitMap, Variable writtenV) {
+    
     // Remove from outer block
     List<InstOrCont> waits = waitMap.get(writtenV.getName());
     Set<Instruction> movedI = new HashSet<Instruction>();
@@ -392,12 +452,33 @@ public class WaitCoalescer {
       logger.trace("Pushing down: " + ic.toString());
       switch (ic.type()) {
         case CONTINUATION:
-          currBlock.addContinuation(ic.continuation());
-          movedC.add(ic.continuation());
+          Continuation c = ic.continuation();
+          currBlock.addContinuation(c);
+          movedC.add(c);
+          // Doesn't make sense to push down synchronous continuations
+          assert(c.isAsync());
+          updateAncestorKeepOpen(ancestors, c.getKeepOpenVars());
           break;
         case INSTRUCTION:
-          currBlockInstructions.add(ic.instruction());
-          movedI.add(ic.instruction());
+          boolean canRelocate = true;
+          Instruction inst = ic.instruction();
+          ArrayList<Variable> keepOpenVars = new ArrayList<Variable>();
+          for (Variable out: inst.getOutputs()) {
+            if (Types.isArray(out.getType())) {
+              keepOpenVars.add(out);
+            } else if (Types.isArrayRef(out.getType())) {
+              // Array ref might be from nested array, don't know yet
+              // how to keep parent array open
+              canRelocate = false;
+            }
+          }
+          if (canRelocate) {
+            currBlockInstructions.add(inst);
+            movedI.add(ic.instruction());
+            if (!keepOpenVars.isEmpty()) {
+              updateAncestorKeepOpen(ancestors, keepOpenVars);
+            }
+          }
           break;
         default:
           throw new STCRuntimeError("how on earth did we get here...");
@@ -413,6 +494,41 @@ public class WaitCoalescer {
     
     // Rebuild wait map to reflect changes
     updateWaiterMap(waitMap, movedC, movedI);
+    return movedC;
+  }
+
+  private static void updateAncestorKeepOpen(
+      Deque<AncestorContinuation> ancestors, Collection<Variable> keepOpenVars) {
+    Iterator<AncestorContinuation> it = ancestors.descendingIterator();
+    ArrayList<Variable> remainingVars = new ArrayList<Variable>(keepOpenVars);
+    while (it.hasNext()) {
+      AncestorContinuation ancestor = it.next();
+      
+      // if variable was defined in this scope, doesn't exist above
+      Set<String> defined = Variable.nameSet(ancestor.block.getVariables());
+      ListIterator<Variable> vit = remainingVars.listIterator();
+      while (vit.hasNext()) {
+        Variable v = vit.next();
+        if (defined.contains(v.getName())) {
+          vit.remove();
+        }
+      }
+
+      if (remainingVars.isEmpty()) {
+        return;
+      }
+      
+      // Add if missing
+      Continuation cont = ancestor.continuation;
+      if (cont.isAsync()) {
+        ArrayList<Variable> newKeepOpen =
+                        new ArrayList<Variable>(cont.getKeepOpenVars());
+        newKeepOpen.addAll(remainingVars);
+        ICUtil.removeDuplicates(newKeepOpen);
+        cont.clearKeepOpenVars();
+        cont.addKeepOpenVars(newKeepOpen);
+      }
+    }
   }
 
   /**
