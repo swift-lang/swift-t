@@ -123,6 +123,7 @@ public class VarCreator {
    */
   public Variable createTmp(Context context, SwiftType type) 
       throws UserException, UndefinedTypeException {
+    assert(context != null);
     return createTmp(context, type, false, false);
   }
   
@@ -154,6 +155,7 @@ public class VarCreator {
   public Variable createTmp(Context context, SwiftType type,
       boolean storeInStack, boolean isAlias) throws UserException,
       UndefinedTypeException {
+    assert(context != null);
     if (storeInStack && isAlias) {
       throw new STCRuntimeError("Cannot create variable which is both alias" +
       		" and on stack");

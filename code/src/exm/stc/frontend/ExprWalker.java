@@ -803,6 +803,9 @@ public class ExprWalker {
         derefVars.add(derefed);
         realIList.add(derefed);
       } else if (Types.isUpdateableEquiv(inputType, expType)) {
+        if (waitContext == null) {
+          waitContext = new LocalContext(context);
+        }
         Variable copy = varCreator.createTmp(waitContext,
                   ScalarUpdateableType.asScalarFuture(inputType));
         assignVariable(waitContext, copy, input);
