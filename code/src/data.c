@@ -372,18 +372,17 @@ data_container_reference(adlb_datum_id container_id,
                 "not found: <%li>", container_id);
 
   // Is the subscript already pointing to a data identifier?
-  void* t = table_search(d->data.CONTAINER.members, subscript);
-  if (t != NULL)
+  void* t;
+  bool data_found = table_search(d->data.CONTAINER.members, subscript, &t);
+  if (data_found && t != NULL)
   {
+    // Exists and was not unliked
     char* z;
     long m = strtol(t, &z, 10);
     if (z == t)
       return ADLB_DATA_ERROR_NUMBER_FORMAT;
-    if (m != ADLB_DATA_ID_UNLINKED)
-    {
-      *member = m;
-      return ADLB_DATA_SUCCESS;
-    }
+    *member = m;
+    return ADLB_DATA_SUCCESS;
   }
 
   // Is the container closed?
@@ -397,14 +396,19 @@ data_container_reference(adlb_datum_id container_id,
   check_verbose(length > 0, ADLB_DATA_ERROR_OOM,
                 "OUT OF MEMORY");
 
-  struct list_l* listeners =
-      table_search(&container_listeners, pair);
-  if (!listeners)
+  struct list_l* listeners = NULL;
+  bool found = table_search(&container_listeners, pair,
+                            (void*)&listeners);
+  if (!found)
   {
     // Nobody else has subscribed to this pair yet
     listeners = list_l_create();
     table_add(&container_listeners, pair, listeners);
   }
+  
+  check_verbose(listeners != NULL, ADLB_DATA_ERROR_NULL,
+                "Found null value in listeners table\n"
+                "for:  %li[%s]\n", container_id, subscript);
 
   list_l_unique_insert(listeners, reference);
   *member = 0;
@@ -672,11 +676,12 @@ data_insert(adlb_datum_id container_id,
                 container_id);
 
   // Does the link already exist?
-  void* t = table_search(d->data.CONTAINER.members, subscript);
-  if (t != NULL)
+  void* t = NULL;
+  bool found = table_search(d->data.CONTAINER.members, subscript, &t);
+  if (found)
   {
     // Assert that this is an UNLINKED entry:
-    check_verbose(atol(t) == ADLB_DATA_ID_UNLINKED,
+    check_verbose(t == NULL,
                   ADLB_DATA_ERROR_DOUBLE_WRITE,
                   "already exists: <%li>[%s]",
                   container_id, subscript);
@@ -685,11 +690,10 @@ data_insert(adlb_datum_id container_id,
     char* s;
     void* v;
     // Reset entry
-    // Value v is UNLINKED, just free it
     bool b =
         table_set(d->data.CONTAINER.members, subscript, member, &v);
     assert(b);
-    free(v);
+    assert(v == NULL); // Should have been NULL for unlinked
   }
   else
   {
@@ -745,9 +749,8 @@ data_insert_atomic(adlb_datum_id container_id, const char* subscript,
 
   // Copy key/value onto the heap so we can store them
   subscript = strdup(subscript);
-  // Regression check:
-  assert(ADLB_DATA_ID_UNLINKED == -1);
-  char* member = strdup("-1");
+  // Use NULL pointer value to represent unlinked 
+  char* member = NULL;
   table_add(d->data.CONTAINER.members, subscript, member);
   *result = true;
   return ADLB_DATA_SUCCESS;
@@ -769,13 +772,14 @@ data_lookup(adlb_datum_id id, const char* subscript,
                 ADLB_DATA_ERROR_TYPE,
                 "not a container: <%li>", id);
 
-  void* t = table_search(d->data.CONTAINER.members, subscript);
-  if (t == NULL)
+  void* t;
+  bool found = table_search(d->data.CONTAINER.members, subscript, &t);
+  if (!found)
   {
     *result = ADLB_DATA_ID_NULL;
     return ADLB_DATA_SUCCESS;
   }
-  if (t == (char*) ADLB_DATA_ID_UNLINKED)
+  if (t == NULL)
   {
     *result = ADLB_DATA_ID_NULL;
     return ADLB_DATA_SUCCESS;

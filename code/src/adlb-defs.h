@@ -139,12 +139,6 @@ typedef enum
 /** The adlb_datum_id of nothing */
 #define ADLB_DATA_ID_NULL 0
 
-/**
-   Container member that is not yet linked
-   Used by insert-atomic functionality
- */
-#define ADLB_DATA_ID_UNLINKED -1
-
 /** The maximal string length of a container subscript */
 #define ADLB_DATA_SUBSCRIPT_MAX 1024
 
