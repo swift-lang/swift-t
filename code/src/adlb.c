@@ -752,15 +752,16 @@ adlb_code ADLBP_Subscribe(long id, int* subscribed)
  */
 adlb_code
 ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
-                          adlb_datum_id reference)
+                          adlb_datum_id reference,
+                          adlb_data_type ref_type)
 {
   int rc;
   adlb_data_code dc;
   MPI_Status status;
   MPI_Request request;
 
-  int length = sprintf(xfer, "%li %li %s",
-                       reference, id, subscript);
+  int length = sprintf(xfer, "%li %li %s %i",
+                         reference, id, subscript, ref_type);
 
   int to_server_rank = locate(id);
 
@@ -772,8 +773,8 @@ ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
   MPI_CHECK(rc);
   rc = MPI_Wait(&request, &status);
   MPI_CHECK(rc);
-  DEBUG("ADLB_Container_reference: <%li>[\"%s\"] => <%li>",
-        id, subscript, reference);
+  DEBUG("ADLB_Container_reference: <%li>[\"%s\"] => <%li> (%i)",
+        id, subscript, reference, ref_type);
 
   if (dc != ADLB_DATA_SUCCESS)
     return ADLB_ERROR;

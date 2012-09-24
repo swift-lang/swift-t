@@ -71,7 +71,8 @@ static adlb_code handle_fail(int caller);
 
 static adlb_code slot_notification(long id);
 static int close_notification(long id, int* ranks, int count);
-static int set_reference_and_notify(long id, long value);
+static int set_int_reference_and_notify(long id, long value);
+static int set_str_reference_and_notify(long id, char* value);
 
 static adlb_code put_targeted(int type, int putter, int priority,
                               int answer, int target,
@@ -714,13 +715,29 @@ handle_insert(int caller)
 
   if (dc == ADLB_DATA_SUCCESS)
   {
+    TRACE("%d references to notify after insert\n", count);
     if (count > 0)
     {
-      long m;
-      n = sscanf(member, "%li", &m);
-      assert(n == 1);
+      long m = -1;
+      bool parsed = false;
       for (int i = 0; i < count; i++)
-        set_reference_and_notify(references[i], m);
+      {
+        TRACE("Notifying reference li\n", references[i]);
+        // Negative used to indicate string
+        if (references[i] >= 0)
+        {
+          if (!parsed) {
+            parsed = true;
+            n = sscanf(member, "%li", &m);
+            assert(n == 1);
+          }
+          set_int_reference_and_notify(references[i], m);
+        }
+        else
+        {
+          set_str_reference_and_notify(references[i] * -1, member);
+        }
+      }
       free(references);
     }
     if (slots == 0)
@@ -856,20 +873,33 @@ handle_container_reference(int caller)
   long container_id;
   char subscript[ADLB_DATA_SUBSCRIPT_MAX];
   long reference;
-  int n = sscanf(xfer, "%li %li %s",
-                 &reference, &container_id, subscript);
-  assert(n == 3);
+  adlb_data_type ref_type;
+  int n = sscanf(xfer, "%li %li %s %i",
+            &reference, &container_id, subscript,
+            (int*)&ref_type);
+  assert(n == 4);
 
-  DEBUG("Container_reference: <%li>[\"%s\"] => <%li>",
-        container_id, subscript, reference);
+  DEBUG("Container_reference: <%li>[\"%s\"] => <%li> (%i)",
+        container_id, subscript, reference, ref_type);
 
-  long member;
-  adlb_data_code dc =
-      data_container_reference(container_id, subscript,
-                               reference, &member);
+  char *member;
+  adlb_data_code dc = data_container_reference_str(container_id,
+                        subscript, reference, ref_type, &member);
   if (dc == ADLB_DATA_SUCCESS)
     if (member != 0)
-      set_reference_and_notify(reference, member);
+            {
+              if (ref_type == ADLB_DATA_TYPE_INTEGER)
+              {
+                long m;
+                int n = sscanf(member, "%li", &m);
+                assert(n == 1);
+                set_int_reference_and_notify(reference, m); 
+              }
+              else if (ref_type == ADLB_DATA_TYPE_STRING)
+                set_str_reference_and_notify(reference, member);
+              else
+                assert(false);
+            }
 
   RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
@@ -1029,9 +1059,10 @@ close_notification(long id, int* ranks, int count)
 }
 
 static int
-set_reference_and_notify(long id, long value)
+set_int_reference_and_notify(long id, long value)
 {
   DEBUG("set_reference: <%li>=%li", id, value);
+  DEBUG("set_int_reference: <%li>=%li", id, value);
   int rc;
   rc = ADLB_Store(id, &value, sizeof(long));
   ADLB_CHECK(rc);
@@ -1045,8 +1076,24 @@ set_reference_and_notify(long id, long value)
     ADLB_CHECK(rc);
     free(ranks);
   }
-  TRACE("SET_REFERENCE DONE");
+  TRACE("SET_INT_REFERENCE DONE");
   return ADLB_SUCCESS;
+}
+
+static int set_str_reference_and_notify(long id, char *value) {
+  DEBUG("set_str_reference: <%li>=%s", id, value);
+  int rc;
+  rc = ADLB_Store(id, value, (strlen(value)+1) * sizeof(char));
+  ADLB_CHECK(rc);
+  int* ranks;
+  int count;
+  rc = ADLB_Close(id, &ranks, &count);
+  ADLB_CHECK(rc);
+  rc = close_notification(id, ranks, count);
+  ADLB_CHECK(rc);
+  TRACE("SET_STR_REFERENCE DONE");
+  return ADLB_SUCCESS;
+
 }
 
 static adlb_code

@@ -107,10 +107,11 @@ adlb_code ADLBP_Subscribe(adlb_datum_id id, int* subscribed);
 adlb_code ADLB_Subscribe(adlb_datum_id id, int* subscribed);
 
 adlb_code ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
-                              adlb_datum_id reference);
+                              adlb_datum_id reference,
+                              adlb_data_type ref_type);
 adlb_code ADLB_Container_reference(adlb_datum_id id, const char *subscript,
-                             adlb_datum_id reference);
-
+                             adlb_datum_id reference,
+                              adlb_data_type ref_type);
 adlb_code ADLBP_Close(adlb_datum_id id, int** ranks, int* count);
 adlb_code ADLB_Close(adlb_datum_id id, int** ranks, int* count);
 
