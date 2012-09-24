@@ -7,6 +7,10 @@
 # Variables that may have defaults set in the environment:
 # PROJECT, QUEUE, TURBINE_OUTPUT_ROOT
 
+# Runs job in TURBINE_OUTPUT
+# Pipes output and error to TURBINE_OUTPUT/output.txt
+# Creates TURBINE_OUTPUT/log.txt and TURBINE_OUTPUT/jobid.txt
+
 TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 declare TURBINE_HOME
 source ${TURBINE_HOME}/scripts/turbine-config.sh
@@ -77,9 +81,10 @@ print ${TURBINE_OUTPUT} > ${OUTPUT_TOKEN_FILE}
 mkdir -p ${TURBINE_OUTPUT}
 exitcode "mkdir failed: ${TURBINE_OUTPUT}"
 
-LOG=${TURBINE_OUTPUT}/log.txt
+LOG_FILE=${TURBINE_OUTPUT}/log.txt
+OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
 
-print "SCRIPT: ${SCRIPT}" >> ${LOG}
+print "SCRIPT: ${SCRIPT}" >> ${LOG_FILE}
 SCRIPT_NAME=$( basename ${SCRIPT} )
 [[ -f ${SCRIPT} ]]
 exitcode "script not found: ${SCRIPT}"
@@ -113,6 +118,7 @@ env+=( TCLLIBPATH="${TCLLIBPATH}"
 
 declare SCRIPT_NAME
 
+# Round NODES up for extra processes
 NODES=$(( PROCS/4 ))
 (( PROCS % 4 )) && (( NODES++ ))
 declare NODES
@@ -120,6 +126,8 @@ qsub -n ${NODES} \
      -t ${WALLTIME} \
      -q ${QUEUE} \
      --cwd ${TURBINE_OUTPUT} \
+     -o ${TURBINE_OUTPUT}/output.txt \
+     -e ${TURBINE_OUTPUT}/output.txt \
      --env "${ENV}" \
      --mode vn \
       ${TCLSH} ${SCRIPT_NAME} ${ARGS} | read JOB_ID
@@ -138,22 +146,22 @@ declare JOB_ID
   print "TURBINE_ENGINES: ${TURBINE_ENGINES}"
   print "TURBINE_WORKERS: ${TURBINE_WORKERS}"
   print "ADLB_SERVERS:    ${ADLB_SERVERS}"
-} >> ${LOG}
+} >> ${LOG_FILE}
 
 print ${JOB_ID} > ${JOB_ID_FILE}
 
 cqwait ${JOB_ID}
 
-print "COMPLETE: $( date_nice )" >> ${LOG}
+print "COMPLETE: $( date_nice )" >> ${LOG_FILE}
 STOP=$( date +%s )
 TOOK=$( tformat $(( STOP-START )) )
 declare TOOK
 
-JOB_ERROR=${TURBINE_OUTPUT}/${JOB_ID}.error
-[[ -f ${JOB_ERROR} ]]
-exitcode "No job error file: expected: ${JOB_ERROR}"
+# Check for errors in output file
+[[ -f ${OUTPUT_FILE} ]]
+exitcode "No job error file: expected: ${OUTPUT_FILE}"
 # Report non-zero job result codes
-grep "job result code:" ${JOB_ERROR} | grep -v "code: 0"
+grep "job result code:" ${OUTPUT_FILE} | grep -v "code: 0"
 if [[ $pipestatus[2] != 1 ]]
 then
   print "JOB CRASHED"
