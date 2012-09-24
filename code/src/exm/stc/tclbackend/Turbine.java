@@ -79,6 +79,8 @@ class Turbine
       new Token("turbine::f_dereference_float");
   private static final Token DEREFERENCE_STRING =
       new Token("turbine::f_dereference_string");
+  private static final Token DEREFERENCE_FILE =
+          new Token("turbine::f_dereference_file");
   private static final Token TURBINE_LOG =
       new Token("turbine::c::log");
   private static final Token ALLOCATE = new Token("turbine::allocate");
@@ -471,6 +473,14 @@ class Turbine
    public static Sequence dereferenceString(String dstVar, String refVar) {
      Sequence result = new Sequence();
      Command deref = new Command(DEREFERENCE_STRING, NO_STACK,
+         new Value(dstVar), new Value(refVar));
+     result.add(deref);
+     return result;
+   }
+   
+   public static Sequence dereferenceFile(String dstVar, String refVar) {
+     Sequence result = new Sequence();
+     Command deref = new Command(DEREFERENCE_FILE, NO_STACK,
          new Value(dstVar), new Value(refVar));
      result.add(deref);
      return result;

@@ -2161,4 +2161,10 @@ public class SwigcGenerator implements CompilerBackend
       pointStack.pop();
       loopNameStack.pop();
     }
+
+    @Override
+    public void dereferenceFile(Variable dst, Variable src) {
+      // TODO Auto-generated method stub
+      
+    }
 }

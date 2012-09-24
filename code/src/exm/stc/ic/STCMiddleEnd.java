@@ -567,6 +567,14 @@ public class STCMiddleEnd implements CompilerBackend {
     currBlock().addInstruction(
         TurbineOp.dereferenceBlob(target, src));
   }
+
+  @Override
+  public void dereferenceFile(Variable target, Variable src) {
+    assert(target.getType().equals(Types.FUTURE_FILE));
+    assert(src.getType().equals(Types.REFERENCE_FILE));
+    currBlock().addInstruction(
+        TurbineOp.dereferenceFile(target, src));
+  }
   
   @Override
   public void retrieveRef(Variable target, Variable src) {

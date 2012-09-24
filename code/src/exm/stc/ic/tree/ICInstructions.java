@@ -399,6 +399,10 @@ public class ICInstructions {
         gen.dereferenceBlob(args.get(0).getVar(),
                                 args.get(1).getVar());
         break;
+      case DEREF_FILE:
+        gen.dereferenceFile(args.get(0).getVar(),
+                args.get(1).getVar());
+        break;
       case LOAD_REF:
         gen.retrieveRef(args.get(0).getVar(),
                                 args.get(1).getVar());
@@ -637,6 +641,11 @@ public class ICInstructions {
           Arrays.asList(Arg.createVar(target), Arg.createVar(src)));
     }
     
+    public static Instruction dereferenceFile(Variable target, Variable src) {
+      return new TurbineOp(Opcode.DEREF_FILE,
+          Arrays.asList(Arg.createVar(target), Arg.createVar(src)));
+    }
+    
     public static Instruction retrieveRef(Variable target, Variable src) {
       return new TurbineOp(Opcode.LOAD_REF,
           Arrays.asList(Arg.createVar(target), Arg.createVar(src)));
@@ -799,6 +808,7 @@ public class ICInstructions {
       case DEREF_FLOAT:
       case DEREF_STRING:
       case DEREF_BLOB:
+      case DEREF_FILE:
       case LOAD_INT:
       case LOAD_BOOL:
       case LOAD_FLOAT:
@@ -850,6 +860,7 @@ public class ICInstructions {
       case DEREF_FLOAT:
       case DEREF_STRING:
       case DEREF_BLOB:
+      case DEREF_FILE:
       case LOAD_INT:
       case LOAD_BOOL:
       case LOAD_FLOAT:
@@ -1305,6 +1316,7 @@ public class ICInstructions {
         case DEREF_FLOAT:
         case DEREF_INT:
         case DEREF_STRING: {
+          // TODO: can't handle DEREF_FILE here
           return Arrays.asList(vanillaComputedValue(false));
         }
         case STRUCT_INSERT: {
@@ -2113,6 +2125,7 @@ public class ICInstructions {
     COMMENT,
     CALL_BUILTIN, CALL_BUILTIN_LOCAL, CALL, CALL_APP, CALL_SYNC,
     DEREF_INT, DEREF_STRING, DEREF_FLOAT, DEREF_BOOL, DEREF_BLOB,
+    DEREF_FILE,
     STORE_INT, STORE_STRING, STORE_FLOAT, STORE_BOOL, ADDRESS_OF, 
     LOAD_INT, LOAD_STRING, LOAD_FLOAT, LOAD_BOOL, LOAD_REF,
     ARRAY_DECR_WRITERS,
@@ -2672,6 +2685,8 @@ public class ICInstructions {
         switch (refedType.getPrimitiveType()) {
         case BLOB:
           return Opcode.DEREF_BLOB;
+        case FILE:
+          return Opcode.DEREF_FILE;
         case BOOLEAN:
           return Opcode.DEREF_BOOL;
         case FLOAT:
@@ -2708,4 +2723,5 @@ public class ICInstructions {
     }
   }
 }
+
 

@@ -478,6 +478,15 @@ public class TurbineGenerator implements CompilerBackend
     //TODO
     throw new STCRuntimeError("TODO: dereferenceBlob");
   }
+  
+  @Override
+  public void dereferenceFile(Variable target, Variable src) {
+    assert(target.getType().equals(Types.FUTURE_FILE));
+    assert(src.getType().equals(Types.REFERENCE_FILE));
+    Sequence deref = Turbine.dereferenceFile(prefixVar(target.getName()),
+            prefixVar(src.getName()));
+        pointStack.peek().add(deref);
+  }
 
   @Override
   public void retrieveRef(Variable target, Variable src) {

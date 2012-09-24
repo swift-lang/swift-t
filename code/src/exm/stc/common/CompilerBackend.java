@@ -53,6 +53,8 @@ public interface CompilerBackend {
   public abstract void dereferenceFloat(Variable dst, Variable src);
   
   public abstract void dereferenceBlob(Variable dst, Variable src);
+  
+  public abstract void dereferenceFile(Variable dst, Variable src);
 
   public abstract void retrieveRef(Variable target, Variable src);
   

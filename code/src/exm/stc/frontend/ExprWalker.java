@@ -332,6 +332,8 @@ public class ExprWalker {
         backend.dereferenceFloat(dst, src);
       } else if (primType.equals(Types.FUTURE_BOOLEAN)) {
         backend.dereferenceBool(dst, src);
+      } else if (primType.equals(Types.FUTURE_FILE)) {
+        backend.dereferenceFile(dst, src);
       } else {
         throw new STCRuntimeError("Don't know how to dereference "
             + " type " + src.getType().toString());
