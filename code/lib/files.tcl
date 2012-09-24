@@ -37,6 +37,10 @@ namespace eval turbine {
 
     proc input_file_body { outfile filepath } {
       set filepath_val [ retrieve_string $filepath ]
+      input_file_impl $outfile $filepath_val
+    }
+    
+    proc input_file_impl { outfile filepath_val } {
       if { ! [ file exists $filepath_val ] } {
         error "input_file: file $filepath_val does not exist"
       }
