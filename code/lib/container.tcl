@@ -451,4 +451,24 @@ namespace eval turbine {
         set sz [ adlb::enumerate $container count all 0 ]
         store_integer $result $sz
     }
+
+    # If a reference to a struct is represented as a Turbine string
+    # future containing a serialized TCL dict, then lookup a 
+    # struct member 
+    proc struct_ref_lookup { structr field result type } {
+        rule "struct_ref_lookup-$structr" "$structr" $turbine::LOCAL \
+            "struct_ref_lookup_body $structr $field $result $type"
+    }
+
+    proc struct_ref_lookup_body { structr field result type } {
+        set struct_val [ get_string $structr ]
+        set result_val [ dict get $struct_val $field ]
+        if { $type == "int" } {
+            store_integer $result $result_val
+        } elseif { $type == "string" } {
+            store_string $result $result_val
+        } else {
+            error "Unknown reference representation type $type"
+        }
+    }
 }
