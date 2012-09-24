@@ -378,7 +378,7 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
    Convert type string to adlb_data_type
  */
 static inline
-adlb_data_type type_from_string(char* type_string)
+adlb_data_type type_from_string(const char* type_string)
 {
   adlb_data_type result;
   if (strcmp(type_string, "integer") == 0)
@@ -1276,13 +1276,17 @@ ADLB_Container_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /**
    usage: adlb::container_reference
-                  <container_id> <subscript> <reference>
+      <container_id> <subscript> <reference> <reference_type>
+
+      reference_type is type used internally to represent
+      the reference e.g. integer for plain turbine IDs, or
+      string if represented as a more complex datatype
 */
 static int
 ADLB_Container_Reference_Cmd(ClientData cdata, Tcl_Interp *interp,
                              int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(4);
+  TCL_ARGS(5);
 
   long container_id;
   int rc;
@@ -1295,9 +1299,29 @@ ADLB_Container_Reference_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK_MSG(rc, "adlb::container_reference: "
                 "argument 3 is not a long integer!");
 
+  const char *ref_type_name = Tcl_GetString(objv[4]);
+  TCL_CONDITION(ref_type_name != NULL,
+                "adlb::container_reference: "
+                "argument 4 not valid!");
+  int ref_type = type_from_string(ref_type_name);
+
+  switch (ref_type)
+  { 
+    case ADLB_DATA_TYPE_INTEGER:
+    case ADLB_DATA_TYPE_STRING:
+        break;
+    
+    default:
+        Tcl_AddErrorInfo(interp,
+                "adlb::container_reference: invalid type for "
+                "container_reference call.");
+        return TCL_ERROR;
+  }
+
   // DEBUG_ADLB("adlb::container_reference: <%li>[%s] => <%li>\n",
   //            container_id, subscript, reference);
-  rc = ADLB_Container_reference(container_id, subscript, reference);
+  rc = ADLB_Container_reference(container_id, subscript, reference,
+                                ref_type);
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::container_reference: <%li> failed!",
                 container_id);

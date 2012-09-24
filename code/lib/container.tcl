@@ -52,7 +52,7 @@ namespace eval turbine {
         adlb::slot_create $c
 
         rule "container_f_insert-$c-$i" $i $turbine::LOCAL \
-            "turbine::container_f_insert_body $c $i $d"
+            [ list turbine::container_f_insert_body $c $i $d ]
     }
 
     proc container_f_insert_body { c i d } {
@@ -115,23 +115,25 @@ namespace eval turbine {
     # When i is closed, get a reference on c[i] in TD r
     # Thus, you can block on r and be notified when c[i] exists
     # r is an integer.  The value of r is the TD of c[i]
-    # inputs: [ list c i r ]
+    # inputs: [ list c i r adlb_type ]
     # outputs: None.  You can block on d with turbine::dereference
     # c: the container
     # i: the subscript (any type)
     # r: the reference TD
+    # ref_type: internal representation type for reference
     proc f_reference { parent outputs inputs } {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set r [ lindex $inputs 2 ]
+        set ref_type [ lindex $inputs 3 ]
         # nonempty c i r
 
         rule "f_reference_body-$c-$i" $i $turbine::LOCAL \
-            "turbine::f_reference_body $c $i $r"
+            "turbine::f_reference_body $c $i $r $ref_type"
     }
-    proc f_reference_body { c i r } {
+    proc f_reference_body { c i r ref_type } {
         set t1 [ retrieve $i ]
-        adlb::container_reference $c $t1 $r
+        adlb::container_reference $c $t1 $r $ref_type
     }
 
     # When reference r is closed, copy its (integer) value in v
@@ -172,28 +174,44 @@ namespace eval turbine {
         # When the TD has a value, copy the value
         copy_string no_stack $v $id
     }
+    
+    # When reference r is closed, copy file to v
+    proc f_dereference_file { parent v r } {
+
+        rule "f_dereference-$v-$r" $r $turbine::LOCAL \
+            [ list turbine::f_dereference_file_body $v $r ]
+    }
+    proc f_dereference_file_body { v r } {
+        # Get the TD from the reference
+        set handle [ retrieve_string $r ]
+        # When the TD has a value, copy the value
+        copy_file no_stack [ list $v ] [ list $handle ]
+    }
 
     # When reference cr is closed, store d = (*cr)[i]
     # Blocks on cr
-    # inputs: [ list cr i d ]
+    # inputs: [ list cr i d d_type]
     #       cr is a reference to a container
     #       i is a literal int
+    #       d is the destination ref
+    #       d_type is the turbine type name for representation of d
     # outputs: ignored
     proc f_cref_lookup_literal { parent outputs inputs } {
         set cr [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set d [ lindex $inputs 2 ]
+        set d_type [ lindex $inputs 3 ]
 
         rule "f_cref_lookup_literal-$cr" "$cr" $turbine::LOCAL \
-            "turbine::f_cref_lookup_literal_body $cr $i $d"
+            "turbine::f_cref_lookup_literal_body $cr $i $d $d_type"
 
     }
 
-    proc f_cref_lookup_literal_body { cr i d } {
+    proc f_cref_lookup_literal_body { cr i d d_type } {
         # When this procedure is run, cr should be set and
         # i should be the literal index
         set c [ retrieve_integer $cr ]
-        adlb::container_reference $c $i $d
+        adlb::container_reference $c $i $d $d_type
     }
 
     # When reference cr is closed, store d = (*cr)[i]
@@ -201,21 +219,24 @@ namespace eval turbine {
     # inputs: [ list cr i d ]
     #       cr: reference to container
     #       i:  subscript (any type)
+    #       d is the destination ref
+    #       d_type is the turbine type name for representation of d
     # outputs: ignored
     proc f_cref_lookup { parent outputs inputs } {
         set cr [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set d [ lindex $inputs 2 ]
+        set d_type [ lindex $inputs 3 ]
 
         rule "f_cref_lookup-$cr" "$cr $i" $turbine::LOCAL \
-            "turbine::f_cref_lookup_body $cr $i $d"
+            "turbine::f_cref_lookup_body $cr $i $d $d_type"
     }
 
-    proc f_cref_lookup_body { cr i d } {
+    proc f_cref_lookup_body { cr i d d_type } {
         # When this procedure is run, cr and i should be set
         set c [ retrieve_integer $cr ]
         set t1 [ retrieve $i ]
-        adlb::container_reference $c $t1 $d
+        adlb::container_reference $c $t1 $d $d_type
     }
 
     # When reference r on c[i] is closed, store c[i][j] = d
@@ -232,7 +253,7 @@ namespace eval turbine {
         adlb::slot_create $oc
 
         rule "f_cref_insert-$r-$j-$d-$oc" "$r $j" $turbine::LOCAL \
-            "turbine::f_cref_insert_body $r $j $d $oc"
+            [ list turbine::f_cref_insert_body $r $j $d $oc ]
     }
     proc f_cref_insert_body { r j d oc } {
         # s: The subscripted container
@@ -256,7 +277,7 @@ namespace eval turbine {
         adlb::slot_create $oc
 
         rule "cref_insert-$cr-$j-$d-$oc" "$cr" $turbine::LOCAL \
-            "turbine::cref_insert_body $cr $j $d $oc"
+            [ list turbine::cref_insert_body $cr $j $d $oc ]
     }
     proc cref_insert_body { cr j d oc } {
         set c [ retrieve_integer $cr ]
@@ -308,7 +329,7 @@ namespace eval turbine {
 
 
         rule "fcni" "$i $j" $turbine::LOCAL \
-            "f_container_nested_insert_body_1 $c $i $j $d"
+            [ list f_container_nested_insert_body_1 $c $i $j $d ]
     }
 
     proc f_container_nested_insert_body_1 { c i j d } {
@@ -320,7 +341,7 @@ namespace eval turbine {
             container_insert $c $i $t
         } else {
             allocate r integer
-            container_reference $r $c $i
+            container_reference $r $c $i "integer"
 
             rule fcnib "$r" $turbine::LOCAL \
                 "container_nested_insert_body_2 $r $j $d"
@@ -461,9 +482,10 @@ namespace eval turbine {
     }
 
     proc struct_ref_lookup_body { structr field result type } {
-        set struct_val [ get_string $structr ]
+        set struct_val [ retrieve_string $structr ]
+        debug "<${result}> <= \{ ${struct_val} \}.${field}"
         set result_val [ dict get $struct_val $field ]
-        if { $type == "int" } {
+        if { $type == "integer" } {
             store_integer $result $result_val
         } elseif { $type == "string" } {
             store_string $result $result_val
