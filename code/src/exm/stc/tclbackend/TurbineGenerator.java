@@ -213,9 +213,15 @@ public class TurbineGenerator implements CompilerBackend
     } else if (Types.isArray(t)) {
       point.add(Turbine.allocateContainer(tclName, Turbine.INTEGER_TYPENAME));
     } else if (Types.isReference(t)) {
-      point.add(Turbine.allocate(tclName, Turbine.INTEGER_TYPENAME));
+      if (refIsString(t)) {
+        // Represent some reference types as strings, since they have multiple
+        // elements in the handle
+        point.add(Turbine.allocate(tclName, Turbine.STRING_TYPENAME)); 
+      } else {
+        point.add(Turbine.allocate(tclName, Turbine.INTEGER_TYPENAME));
+      }
     } else if (Types.isStruct(t)) {
-      point.add(Turbine.allocateContainer(tclName, Turbine.STRING_TYPENAME));
+      point.add(Turbine.allocateStruct(tclName));
     } else if (Types.isScalarValue(t)) {
       if (storage != VariableStorage.LOCAL) {
         throw new STCRuntimeError("Expected scalar value to have "
@@ -278,8 +284,13 @@ public class TurbineGenerator implements CompilerBackend
   public void assignReference(Variable target, Variable src) {
     assert(Types.isReference(target.getType()));
     assert(target.getType().getMemberType().equals(src.getType()));
-    pointStack.peek().add(Turbine.integerSet(
+    if (refIsString(target.getType())) {
+      pointStack.peek().add(Turbine.stringSet(
           prefixVar(target.getName()), varToExpr(src)));
+    } else {
+      pointStack.peek().add(Turbine.integerSet(
+          prefixVar(target.getName()), varToExpr(src)));
+    }
   }
 
 
@@ -472,8 +483,14 @@ public class TurbineGenerator implements CompilerBackend
   public void retrieveRef(Variable target, Variable src) {
     assert(Types.isReference(src.getType()));
     assert(Types.isReferenceTo(src.getType(), target.getType()));
-    TclTree deref = Turbine.integerGet(prefixVar(target.getName()),
+    TclTree deref;
+    if (refIsString(src.getType())) {
+      deref = Turbine.stringGet(prefixVar(target.getName()),
+          varToExpr(src));      
+    } else {
+      deref = Turbine.integerGet(prefixVar(target.getName()),
                                                    varToExpr(src));
+    }
     pointStack.peek().add(deref);
   }
 
@@ -658,8 +675,7 @@ public class TurbineGenerator implements CompilerBackend
    */
   @Override
   public void structClose(Variable struct) {
-    pointStack.peek().add(
-        Turbine.containerSlotDrop(varToExpr(struct)));
+    // Now we're using local dicts for struct, this is a noop
   }
 
   /**
@@ -679,9 +695,16 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void structRefLookup(Variable structVar, String structField,
         Variable alias) {
+    String refReprType; 
+    if (refIsString(alias.getType())) {
+      refReprType = Turbine.STRING_TYPENAME;
+    } else {
+      refReprType = Turbine.INTEGER_TYPENAME;
+    }
     pointStack.peek().add(
         Turbine.structRefLookupFieldID(prefixVar(structVar.getName()),
-            structField, prefixVar(alias.getName())));
+            structField, prefixVar(alias.getName()),
+            refReprType));
   }
 
 
@@ -693,7 +716,7 @@ public class TurbineGenerator implements CompilerBackend
     assert(Types.isReference(oVar.getType()));
     // Nested arrays - oVar should be a reference type
     Sequence getRef = Turbine.arrayLookupComputed(
-        prefixVar(oVar.getName()),
+        prefixVar(oVar.getName()), refIsString(oVar.getType()),
         prefixVar(arrayVar.getName()), prefixVar(indexVar.getName()), isArrayRef);
     pointStack.peek().add(getRef);
   }
@@ -705,6 +728,7 @@ public class TurbineGenerator implements CompilerBackend
     arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
     Sequence getRef = Turbine.arrayLookupImmIx(
           prefixVar(oVar.getName()),
+          refIsString(oVar.getType()),
           prefixVar(arrayVar.getName()),
           opargToExpr(arrIx), isArrayRef);
 
@@ -1738,6 +1762,16 @@ public class TurbineGenerator implements CompilerBackend
       return no_stack;
     }
 
+
+    /** Some types have handles which aren't simple integers:
+     * represent references to these types as strings
+     * @param t
+     * @return
+     */
+    private boolean refIsString(SwiftType t) {
+      return Types.isStructRef(t) || Types.isFileRef(t);
+    }
+    
     @Override
     public void optimise() {
       // do nothing

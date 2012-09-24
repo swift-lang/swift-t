@@ -654,6 +654,11 @@ public class Types {
     return t.getStructureType() == StructureType.REFERENCE 
                             && Types.isStruct(t.getMemberType());
   }
+  
+  public static boolean isFileRef(SwiftType t) {
+    return t.getStructureType() == StructureType.REFERENCE
+        && Types.isFile(t.getMemberType());
+  }
 
   public static boolean isBool(SwiftType t) {
     return isScalarFuture(t) && t.getPrimitiveType() == PrimType.BOOLEAN;

@@ -105,7 +105,6 @@ class Turbine
   private static final Token CALL_COMPOSITE =
       new Token("turbine::call_composite");
 
-
   public enum StackFrameType {
     MAIN,
     COMPOSITE,
@@ -326,12 +325,38 @@ class Turbine
   }
 
 
+  
+
+
+  public static TclTree allocateStruct(String tclName) {
+    Square createExpr = new Square(new Token("dict"), new Token("create"));
+    return new SetVariable(tclName, createExpr);
+  }
+  
+  /**
+   * Insert src into struct at container.field
+   * @param container
+   * @param field
+   * @param src
+   */
+  public static Sequence structInsert(String container, String field,
+                    String src) {
+    Sequence result = new Sequence();
+    Command storeCmd = new Command(
+        new Token("dict"), new Token("set"), 
+        new Token(container), new TclString(field, true), new Value(src));
+  
+    result.add(storeCmd);
+    return result;
+  
+  }
+
   public static Sequence structLookupFieldID(String structName, String structField,
       String resultVar) {
     Sequence result = new Sequence();
 
-    Square containerGet = new Square(CONTAINER_LOOKUP, new Value(structName),
-        new TclString(structField, true));
+    Square containerGet = new Square(new Token("dict"), new Token("get"),
+        new Value(structName), new TclString(structField, true));
 
     SetVariable loadCmd = new SetVariable(resultVar, containerGet);
     result.add(loadCmd);
@@ -340,12 +365,10 @@ class Turbine
 
 
   public static Command structRefLookupFieldID(String structName, String structField,
-      String resultVar) {
-
-    Command lookup = new Command(CREF_LOOKUP_LITERAL,
-        NO_STACK, new TclList(), new TclList(
-            Arrays.asList(new Value(structName),
-                new TclString(structField, true), new Value(resultVar))));
+      String resultVar, String resultTypeName) { 
+    Command lookup = new Command(new Token("turbine::struct_ref_lookup"),
+            new Value(structName), new TclString(structField, true),
+            new Value(resultVar), new TclString(resultTypeName, true));
 
     return lookup;
   }
@@ -358,18 +381,23 @@ class Turbine
    * @param isArrayRef
    * @return
    */
-  public static Sequence arrayLookupImmIx(String refVar, String arrayVar,
+  public static Sequence arrayLookupImmIx(String refVar, 
+      boolean refIsString, String arrayVar,
       Expression arrayIndex, boolean isArrayRef) {
     Sequence result = new Sequence();
+    
+    Token refType = refIsString ?  new Token(STRING_TYPENAME) 
+                                : new Token(INTEGER_TYPENAME); 
+    
     // set up reference to point to array data
     Command loadCmd;
     if (isArrayRef) {
       loadCmd = new Command(CREF_LOOKUP_LITERAL, NO_STACK,
           new TclList(),  new TclList(new Value(arrayVar),
-          arrayIndex, new Value(refVar)));
+          arrayIndex, new Value(refVar), refType));
     } else {
       loadCmd = new Command(CONTAINER_REFERENCE, new Value(arrayVar),
-        arrayIndex, new Value(refVar));
+        arrayIndex, new Value(refVar), refType);
     }
     result.add(loadCmd);
 
@@ -398,20 +426,26 @@ class Turbine
    * @param isArrayRef
    * @return
    */
-  public static Sequence arrayLookupComputed(String refVar, String arrayVar,
+  public static Sequence arrayLookupComputed(String refVar,
+                          boolean refIsString,
+                          String arrayVar,
                           String indexVar, boolean isArrayRef) {
 
     Sequence result = new Sequence();
 
     Command loadCmd;
+    
+    Token refType = refIsString ?  new Token(STRING_TYPENAME) 
+                                : new Token(INTEGER_TYPENAME); 
+    
     if (isArrayRef) {
       loadCmd = new Command(CREF_F_LOOKUP, NO_STACK,
           new TclList(), new TclList(new Value(arrayVar), new Value(indexVar),
-              new Value(refVar)));
+              new Value(refVar), refType));
     } else {
       loadCmd = new Command(CONTAINER_F_REFERENCE, NO_STACK,
          new TclList(), new TclList(new Value(arrayVar), new Value(indexVar),
-             new Value(refVar)));
+             new Value(refVar), refType));
     }
 
     result.add(loadCmd);
@@ -636,23 +670,6 @@ class Turbine
 
   public static TclTree declareReference(String refVarName) {
     return allocate(refVarName, INTEGER_TYPENAME);
-  }
-
-  /**
-   * Insert src into struct at container.field
-   * @param container
-   * @param field
-   * @param src
-   */
-  public static Sequence structInsert(String container, String field,
-                    String src) {
-    Sequence result = new Sequence();
-    Command storeCmd = new Command(CONTAINER_IMMEDIATE_INSERT,
-        new Value(container), new TclString(field, true), new Value(src));
-
-    result.add(storeCmd);
-    return result;
-
   }
 
   public static TclTree callComposite(String function, TclList oList,

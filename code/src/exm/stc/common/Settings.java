@@ -46,7 +46,7 @@ public class Settings
   static {
     Properties defaults = new Properties();
     // Set defaults here
-    defaults.setProperty(TURBINE_VERSION, "0.0.4");
+    defaults.setProperty(TURBINE_VERSION, "0.0.5");
     defaults.setProperty(DEBUG_LEVEL, "COMMENTS");
     defaults.setProperty(IC_OUTPUT_FILE, "");
     defaults.setProperty(RPATH, "");
