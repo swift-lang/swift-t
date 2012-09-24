@@ -361,6 +361,38 @@ data_container_reference(adlb_datum_id container_id,
                          adlb_datum_id reference,
                          adlb_datum_id* member)
 {
+  char *t;
+  adlb_data_code rc = data_container_reference_str(container_id,
+                            subscript, reference, ADLB_DATA_TYPE_INTEGER,
+                            &t);
+  if (rc == ADLB_DATA_SUCCESS)
+  {
+    // Translate to long
+    if (t != NULL) 
+    {
+      char* z;
+      long m = strtol(t, &z, 10);
+      if (z == t)
+        return ADLB_DATA_ERROR_NUMBER_FORMAT;
+      *member = m;
+      return ADLB_DATA_SUCCESS;
+    }
+    else
+    {
+      *member = ADLB_DATA_ID_NULL;
+      return ADLB_DATA_SUCCESS;
+    }
+  }
+  return rc;
+}
+
+
+
+adlb_data_code data_container_reference_str(adlb_datum_id container_id,
+                                        const char* subscript,
+                                        adlb_datum_id reference,
+                                        adlb_data_type ref_type,
+                                        char **member) {
   // Check that container_id is an initialized container
   adlb_datum* d = table_lp_search(&tds, container_id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
@@ -371,12 +403,8 @@ data_container_reference(adlb_datum_id container_id,
   bool data_found = table_search(d->data.CONTAINER.members, subscript, &t);
   if (data_found && t != NULL)
   {
-    // Exists and was not unliked
-    char* z;
-    long m = strtol(t, &z, 10);
-    if (z == t)
-      return ADLB_DATA_ERROR_NUMBER_FORMAT;
-    *member = m;
+    // Exists and was not unlinked
+    *member = t;
     return ADLB_DATA_SUCCESS;
   }
 
@@ -387,6 +415,7 @@ data_container_reference(adlb_datum_id container_id,
                 container_id, subscript);
 
   char* pair;
+  // encode container, index and ref type into string
   int length = asprintf(&pair, "%li[%s]", container_id, subscript);
   check_verbose(length > 0, ADLB_DATA_ERROR_OOM,
                 "OUT OF MEMORY");
@@ -405,7 +434,27 @@ data_container_reference(adlb_datum_id container_id,
                 "Found null value in listeners table\n"
                 "for:  %li[%s]\n", container_id, subscript);
 
-  list_l_unique_insert(listeners, reference);
+  adlb_datum_id ref_entry;
+  if (ref_type == ADLB_DATA_TYPE_INTEGER)
+  {
+    ref_entry = reference;
+  }
+  else if (ref_type == ADLB_DATA_TYPE_STRING)
+  {
+    // For the moment, exploit the fact that data ids are always positive
+    // and use the sign of the number to encode the fact that the reference
+    // is a string
+    ref_entry = -1 * reference;
+  }
+  else
+  {
+    check_verbose(false, ADLB_DATA_ERROR_INVALID,
+                  "Invalid reference type %i provided by caller\n",
+                  ref_type);
+  }
+  TRACE("Added %li to listeners for %li[%s]\n", ref_entry,
+        container_id, subscript);
+  list_l_unique_insert(listeners, ref_entry);
   *member = 0;
   return ADLB_DATA_SUCCESS;
 }

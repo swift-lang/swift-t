@@ -292,9 +292,10 @@ int ADLB_Subscribe(adlb_datum_id id, int* subscribed)
 }
 
 int ADLB_Container_reference(adlb_datum_id id, const char *subscript,
-                             adlb_datum_id reference)
+                             adlb_datum_id reference,
+                             adlb_data_type ref_type)
 {
-  return ADLBP_Container_reference(id, subscript, reference);
+  return ADLBP_Container_reference(id, subscript, reference, ref_type);
 }
 
 int ADLB_Container_size(adlb_datum_id id, int* size)

@@ -42,6 +42,12 @@ adlb_data_code data_container_reference(adlb_datum_id container_id,
                                         adlb_datum_id reference,
                                         adlb_datum_id* member);
 
+adlb_data_code data_container_reference_str(adlb_datum_id container_id,
+                                        const char* subscript,
+                                        adlb_datum_id reference,
+                                        adlb_data_type ref_type,
+                                        char **member);
+
 adlb_data_code data_container_size(adlb_datum_id container_id,
                                    int* size);
 
