@@ -20,20 +20,19 @@ source ${TURBINE_HOME}/scripts/helpers.zsh
 PROCS=0
 WALLTIME=${WALLTIME:-00:15:00}
 TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
+VERBOSE=0
 
 # Place to store output directory name
-OUTPUT_TOKEN_FILE=output.txt
+OUTPUT_TOKEN_FILE=turbine-cobalt-directory.txt
 
 # Job environment
 typeset -T ENV env
 env=()
 
-# Defaults:
-VERBOSE=0
-
+# Get options
 while getopts "d:e:n:o:t:v" OPTION
  do
- case ${OPTION}
+  case ${OPTION}
    in
    d)
      OUTPUT_TOKEN_FILE=${OPTARG}
@@ -75,13 +74,15 @@ exitcode "PROCS==0"
 
 RUN=$( date_path )
 
+# Create the directory in which to run
 TURBINE_OUTPUT=${TURBINE_OUTPUT_ROOT}/${RUN}
 declare TURBINE_OUTPUT
 print ${TURBINE_OUTPUT} > ${OUTPUT_TOKEN_FILE}
 mkdir -p ${TURBINE_OUTPUT}
 exitcode "mkdir failed: ${TURBINE_OUTPUT}"
 
-LOG_FILE=${TURBINE_OUTPUT}/log.txt
+# Log file for turbine-cobalt settings
+LOG_FILE=${TURBINE_OUTPUT}/turbine-cobalt.log
 OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
 
 print "SCRIPT: ${SCRIPT}" >> ${LOG_FILE}
@@ -96,7 +97,7 @@ JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 exitcode "turbine-config.sh failed!"
 
-# Turbine-specific environment
+# Turbine-specific environment (with defaults)
 TURBINE_ENGINES=${TURBINE_ENGINES:-1}
 ADLB_SERVERS=${ADLB_SERVERS:-1}
 TURBINE_WORKERS=$(( PROCS - TURBINE_ENGINES - ADLB_SERVERS ))
@@ -122,14 +123,16 @@ declare SCRIPT_NAME
 NODES=$(( PROCS/4 ))
 (( PROCS % 4 )) && (( NODES++ ))
 declare NODES
-qsub -n ${NODES} \
-     -t ${WALLTIME} \
-     -q ${QUEUE} \
+
+# Launch it
+qsub -n ${NODES}             \
+     -t ${WALLTIME}          \
+     -q ${QUEUE}             \
      --cwd ${TURBINE_OUTPUT} \
+     --env "${ENV}"          \
+     --mode vn               \
      -o ${TURBINE_OUTPUT}/output.txt \
      -e ${TURBINE_OUTPUT}/output.txt \
-     --env "${ENV}" \
-     --mode vn \
       ${TCLSH} ${SCRIPT_NAME} ${ARGS} | read JOB_ID
 
 if [[ ${JOB_ID} == "" ]]
@@ -139,32 +142,44 @@ then
 fi
 
 declare JOB_ID
+
+# Fill in log.txt
 {
-  print "JOB: ${JOB_ID}"
-  print "PROCS: ${PROCS}"
-  print "SUBMITTED: $( date_nice )"
-  print "TURBINE_ENGINES: ${TURBINE_ENGINES}"
-  print "TURBINE_WORKERS: ${TURBINE_WORKERS}"
-  print "ADLB_SERVERS:    ${ADLB_SERVERS}"
+  print "JOB:               ${JOB_ID}"
+  print "COMMAND:           ${SCRIPT_NAME} ${ARGS}"
+  print "HOSTNAME:          $( hostname -d )"
+  print "SUBMITTED:         $( date_nice )"
+  print "PROCS:             ${PROCS}"
+  print "TURBINE_ENGINES:   ${TURBINE_ENGINES}"
+  print "TURBINE_WORKERS:   ${TURBINE_WORKERS}"
+  print "ADLB_SERVERS:      ${ADLB_SERVERS}"
+  print "WALLTIME:          ${WALLTIME}"
+  print "ADLB_EXHAUST_TIME: ${ADLB_EXHAUST_TIME}"
 } >> ${LOG_FILE}
 
+# Fill in jobid.txt
 print ${JOB_ID} > ${JOB_ID_FILE}
 
+# Wait for job completion
 cqwait ${JOB_ID}
 
-print "COMPLETE: $( date_nice )" >> ${LOG_FILE}
 STOP=$( date +%s )
-TOOK=$( tformat $(( STOP-START )) )
-declare TOOK
+TOTAL_TIME=$( tformat $(( STOP-START )) )
+declare TOTAL_TIME
+
+print "COMPLETE:          $( date_nice )" >> ${LOG}
+print "TOTAL_TIME:        ${TOTAL_TIME}"  >> ${LOG}
 
 # Check for errors in output file
 [[ -f ${OUTPUT_FILE} ]]
 exitcode "No job error file: expected: ${OUTPUT_FILE}"
+
 # Report non-zero job result codes
 grep "job result code:" ${OUTPUT_FILE} | grep -v "code: 0"
 if [[ $pipestatus[2] != 1 ]]
 then
-  print "JOB CRASHED"
+  print "JOB CRASHED" | tee -a ${LOG}
+  grep "job result code:" ${OUTPUT_FILE} >> ${LOG}
   exit 1
 fi
 
