@@ -83,6 +83,7 @@ exitcode "mkdir failed: ${TURBINE_OUTPUT}"
 
 # Log file for turbine-cobalt settings
 LOG_FILE=${TURBINE_OUTPUT}/turbine-cobalt.log
+# All output from job, including error stream
 OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
 
 print "SCRIPT: ${SCRIPT}" >> ${LOG_FILE}
