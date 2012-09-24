@@ -860,7 +860,6 @@ public class ICInstructions {
       case DEREF_FLOAT:
       case DEREF_STRING:
       case DEREF_BLOB:
-      case DEREF_FILE:
       case LOAD_INT:
       case LOAD_BOOL:
       case LOAD_FLOAT:
@@ -871,6 +870,10 @@ public class ICInstructions {
       case ARRAYREF_LOOKUP_IMM:
           return this.writesAliasVar();
 
+      case DEREF_FILE:
+        return this.writesAliasVar() ||
+               this.args.get(0).getVar().isMapped();
+          
       case STRUCT_LOOKUP:
       case LOAD_REF:
       case ADDRESS_OF:
@@ -1316,9 +1319,17 @@ public class ICInstructions {
         case DEREF_FLOAT:
         case DEREF_INT:
         case DEREF_STRING: {
-          // TODO: can't handle DEREF_FILE here
           return Arrays.asList(vanillaComputedValue(false));
         }
+        case DEREF_FILE: {
+          if (args.get(0).getVar().isMapped()) {
+            // Can't use interchangably
+            return null;
+          } else {
+            return Arrays.asList(vanillaComputedValue(false));
+          }
+        }
+        
         case STRUCT_INSERT: {
           // Lookup
           ComputedValue lookup = new ComputedValue(Opcode.STRUCT_LOOKUP,
@@ -1519,10 +1530,11 @@ public class ICInstructions {
               canonicalFunctionName, in, 
               Arg.createVar(getOutput(0)), outputClosed));
           if (op == Opcode.CALL_BUILTIN && 
-                  this.functionName.equals(Builtins.INPUT_FILE)) {
+                      this.functionName.equals(Builtins.INPUT_FILE)) {
+            // Inferring filename is problematic
             res.add(new ComputedValue(Opcode.CALL_BUILTIN, Builtins.FILENAME,
-                Arrays.asList(Arg.createVar(getOutput(0))),
-                              getInput(0), false));
+                      Arrays.asList(Arg.createVar(getOutput(0))),
+                      getInput(0), false));
           }
           return res;
         } else {
@@ -2410,6 +2422,14 @@ public class ICInstructions {
       return (out == null) ? null : Collections.singletonMap(outVarName, out);
     }
     
+    private static boolean hasLocalVersion(BuiltinOpcode op) {
+      if (op == BuiltinOpcode.COPY_FILE) {
+        return false;
+      } else {
+        return true;
+      }
+    }
+
     @Override
     public MakeImmRequest canMakeImmediate(Set<String> closedVars,
                                     boolean assumeAllInputsClosed) {
@@ -2418,6 +2438,10 @@ public class ICInstructions {
         return null; 
       } else { 
         assert(op == Opcode.ASYNC_OP);
+        if (!hasLocalVersion(subop)) {
+          return null;
+        }
+        
         // See which arguments are closed
         if (!assumeAllInputsClosed) {
           for (Arg inarg: this.inputs) {
@@ -2486,6 +2510,10 @@ public class ICInstructions {
         // Two invocations of this aren't equivalent
         return null;
       } else if (Operators.isCopy(subop)) {
+        if (this.output.isMapped()) {
+          return null;
+        }
+        
         // It might be assigning a constant val
         return Collections.singletonList(ComputedValue.makeCopyCV(
               this.output, this.inputs.get(0)));
@@ -2608,6 +2636,9 @@ public class ICInstructions {
           break;
         case BLOB:
           op = BuiltinOpcode.COPY_BLOB;
+          break;
+        case FILE:
+          op = BuiltinOpcode.COPY_FILE;
           break;
         default:
           throw new STCRuntimeError("Unhandled type: "

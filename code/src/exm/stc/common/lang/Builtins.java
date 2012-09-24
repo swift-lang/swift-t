@@ -10,7 +10,6 @@ package exm.stc.common.lang;
  */
 public class Builtins {
 
- public static final String COPY_FILE = "copy_file";
  public static final String FILENAME = "filename";
  public static final String INPUT_FILE = "input_file";
   

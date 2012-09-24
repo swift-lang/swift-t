@@ -23,11 +23,10 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Builtins;
+import exm.stc.common.lang.FunctionSemantics;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.OpType;
-import exm.stc.common.lang.FunctionSemantics;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.FunctionType.InArgT;
@@ -250,8 +249,8 @@ public class ExprWalker {
         backend.asyncOp(BuiltinOpcode.COPY_VOID, dst, 
             Arrays.asList(Arg.createVar(src)), null);
       } else if (type.equals(Types.FUTURE_FILE)) {
-        backend.builtinFunctionCall(Builtins.COPY_FILE, Arrays.asList(src),
-            Arrays.asList(dst), null);
+        backend.asyncOp(BuiltinOpcode.COPY_FILE, dst, 
+                Arrays.asList(Arg.createVar(src)), null);
       } else {
         throw new STCRuntimeError(context.getFileLine() +
             "Haven't implemented copy for scalar type " +
