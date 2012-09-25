@@ -83,6 +83,9 @@ public class ContinuationFusion {
         case RANGE_LOOP:
           fuseRangeLoop(it, mergeCands, (RangeLoop)c);
           break;
+        default:
+          // don't do anything, can't handle
+          break;
       } 
       mergeCands.removeFirst();
     }

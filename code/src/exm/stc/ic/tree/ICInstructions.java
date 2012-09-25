@@ -939,6 +939,8 @@ public class ICInstructions {
           }
         }
         break;
+      default:
+        // do nothing
       }
   
       return null;
@@ -975,6 +977,8 @@ public class ICInstructions {
           }
         }
         break;
+      default:
+        // fall through
       }
       return null;
     }
@@ -1062,7 +1066,9 @@ public class ICInstructions {
       case UPDATE_MIN:
       case UPDATE_SCALE:
         return new MakeImmRequest(null, Arrays.asList(
-                  args.get(1).getVar())); 
+                  args.get(1).getVar()));
+      default:
+        // fall through
       }
       //TODO: add in create nested instructions
       return null;
@@ -1222,6 +1228,9 @@ public class ICInstructions {
         return new MakeImmChange(null, null, TurbineOp.updateImm(
             this.args.get(0).getVar(), mode, values.get(0)));
       }
+      default:
+        // fall through
+        break;
       }
       throw new STCRuntimeError("Couldn't make inst "
           + this.toString() + " immediate with vars: "
@@ -2583,6 +2592,9 @@ public class ICInstructions {
       case STRING:
         assert(value.isImmediateString());
         return Builtin.createLocal(BuiltinOpcode.COPY_STRING, dst, value);
+      default:
+        // fall through
+        break;
       }
     } else if (Types.isArray(dst.getType()) || Types.isStruct(dst.getType())) {
       assert(dst.getStorage() == VariableStorage.ALIAS);
@@ -2684,6 +2696,8 @@ public class ICInstructions {
        case STRING:
          op = Opcode.STORE_STRING;
          break;
+       default:
+         throw new STCRuntimeError("don't know how to assign " + dstType);
        }
     } else if (Types.isReference(dstType)) {
       op = Opcode.ADDRESS_OF;
@@ -2738,6 +2752,8 @@ public class ICInstructions {
           return Opcode.DEREF_INT;
         case STRING:
           return Opcode.DEREF_STRING;
+        case VOID:
+          throw new STCRuntimeError("Tried to dereference void");
         }
       }
     }

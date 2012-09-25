@@ -134,6 +134,7 @@ public class Main
     PrintStream output = null;
     try
     {
+      @SuppressWarnings("resource")
       FileOutputStream stream = new FileOutputStream(outputFileName);
       BufferedOutputStream buffer = new BufferedOutputStream(stream);
       output = new PrintStream(buffer);
@@ -156,6 +157,7 @@ public class Main
     PrintStream output = null;
     try
     {
+      @SuppressWarnings("resource")
       FileOutputStream stream = new FileOutputStream(icFileName);
       BufferedOutputStream buffer = new BufferedOutputStream(stream);
       output = new PrintStream(buffer);

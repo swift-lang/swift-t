@@ -84,6 +84,8 @@ public class OpEvaluator {
             return Arg.createBoolLit(arg1 || arg2);
           case AND:
             return Arg.createBoolLit(arg1 && arg2);
+          default:
+            // fall through
         }
       } else if (constInputs.size() == 1) {
         // see if we can short-circuit
@@ -119,6 +121,9 @@ public class OpEvaluator {
           return Arg.createBoolLit(arg1.equals(arg2));
         case NEQ_STRING:
           return Arg.createBoolLit(!arg1.equals(arg2));
+        default:
+          // fall through
+          break;
       }
     }
     return null;
@@ -252,6 +257,9 @@ public class OpEvaluator {
       switch (op) { 
         case NOT:
           return Arg.createBoolLit(!arg1);
+        default:
+          // fall through
+          break;
       }
     } else {
       // AND and OR are handled as shortcircuitable functions

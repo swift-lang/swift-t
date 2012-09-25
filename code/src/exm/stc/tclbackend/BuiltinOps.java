@@ -289,6 +289,8 @@ public class BuiltinOps {
     case COPY_VOID:
       expType = Types.VALUE_VOID;
       break;
+    default:
+      throw new STCRuntimeError("Unexpected op: " + op);
     }
     if (inArg.getType() == ArgType.VAR) {
       assert(expType.equals(inArg.getSwiftType()));
