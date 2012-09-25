@@ -270,8 +270,7 @@ public class WaitCoalescer {
           keepOpen.addAll(wait.getKeepOpenVars());
           usedVars.addAll(wait.getUsedVariables());
         }
-        System.err.println("KeepOpen: " + keepOpen.toString());
-        System.err.println("UsedVars: " + usedVars.toString());
+
         ICUtil.removeDuplicates(keepOpen);
         for (Variable v: keepOpen) {
           newWait.addKeepOpenVar(v);
