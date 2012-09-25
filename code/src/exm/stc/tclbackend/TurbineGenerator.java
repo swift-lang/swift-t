@@ -38,6 +38,7 @@ import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.DefType;
 import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.tclbackend.Turbine.CacheMode;
 import exm.stc.tclbackend.Turbine.StackFrameType;
 import exm.stc.tclbackend.tree.Command;
 import exm.stc.tclbackend.tree.Comment;
@@ -957,9 +958,9 @@ public class TurbineGenerator implements CompilerBackend
       throw new STCRuntimeError(updateable.getType().typeName()
               + " not yet supported");
     }
-    // just get the value the same as any other float future
+    // get with caching disabled
     pointStack.peek().add(Turbine.floatGet(prefixVar(result.getName()),
-                                    varToExpr(updateable)));
+                          varToExpr(updateable), CacheMode.UNCACHED));
   }
 
   @Override

@@ -1561,7 +1561,6 @@ public class ASTWalker {
       /* See if a template is provided for inline TCL code for function */
       SwiftAST inlineTclTree = tree.child(inlineTclPos);
       assert(inlineTclTree.getChildCount() == 1);
-      // System.err.println(ExMParser.tokenNames[inlineTclTree.child(0).getType()]);
       String tclTemplateString = 
             Literals.extractLiteralString(context, inlineTclTree.child(0));
       inlineTcl = InlineCode.templateFromString(context, tclTemplateString);
@@ -1573,9 +1572,6 @@ public class ASTWalker {
       }
       inlineTcl.addOutNames(fdecl.getOutNames());
       
-      
-      System.err.println("inline template: '" + tclTemplateString + "' to "
-               + inlineTcl.toString());
       FunctionSemantics.addInlineTemplate(function, inlineTcl);
     }
     

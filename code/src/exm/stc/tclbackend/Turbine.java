@@ -107,12 +107,23 @@ class Turbine
   private static final Token CALL_COMPOSITE =
       new Token("turbine::call_composite");
 
+  private static final Token UNCACHED_MODE = new Token("UNCACHED");
+
   public enum StackFrameType {
     MAIN,
     COMPOSITE,
     NESTED
   }
 
+  /**
+   * Used to specify what caching is allowed for retrieve
+   * @author tga
+   */
+  public enum CacheMode {
+    CACHED,
+    UNCACHED
+  }
+  
   public Turbine()
   {}
 
@@ -242,10 +253,19 @@ class Turbine
   }
 
   public static SetVariable floatGet(String target, Value variable) {
-    SetVariable result =
-      new SetVariable(target,
-          new Square(RETRIEVE_FLOAT, variable));
-    return result;
+    return floatGet(target, variable, CacheMode.CACHED);
+    
+  }
+  public static SetVariable floatGet(String target, Value variable,
+                                                    CacheMode caching) {
+    if (caching == CacheMode.CACHED) {
+      return new SetVariable(target,
+            new Square(RETRIEVE_FLOAT, variable));
+    } else {
+      assert(caching == CacheMode.UNCACHED);
+      return new SetVariable(target,
+              new Square(RETRIEVE_FLOAT, variable, UNCACHED_MODE));
+    }
   }
 
   /**
