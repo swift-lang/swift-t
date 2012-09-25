@@ -86,7 +86,7 @@ LOG_FILE=${TURBINE_OUTPUT}/turbine-cobalt.log
 # All output from job, including error stream
 OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
 
-print "SCRIPT: ${SCRIPT}" >> ${LOG_FILE}
+print "SCRIPT:            ${SCRIPT}" >> ${LOG_FILE}
 SCRIPT_NAME=$( basename ${SCRIPT} )
 [[ -f ${SCRIPT} ]]
 exitcode "script not found: ${SCRIPT}"
@@ -116,6 +116,7 @@ env+=( TCLLIBPATH="${TCLLIBPATH}"
        TURBINE_DEBUG=${TURBINE_DEBUG}
        ADLB_DEBUG=${ADLB_DEBUG}
        MPIRUN_LABEL=1
+       TURBINE_CACHE_SIZE=0
 )
 
 declare SCRIPT_NAME
@@ -168,8 +169,8 @@ STOP=$( date +%s )
 TOTAL_TIME=$( tformat $(( STOP-START )) )
 declare TOTAL_TIME
 
-print "COMPLETE:          $( date_nice )" >> ${LOG}
-print "TOTAL_TIME:        ${TOTAL_TIME}"  >> ${LOG}
+print "COMPLETE:          $( date_nice )" >> ${LOG_FILE}
+print "TOTAL_TIME:        ${TOTAL_TIME}"  >> ${LOG_FILE}
 
 # Check for errors in output file
 [[ -f ${OUTPUT_FILE} ]]
@@ -179,8 +180,8 @@ exitcode "No job error file: expected: ${OUTPUT_FILE}"
 grep "job result code:" ${OUTPUT_FILE} | grep -v "code: 0"
 if [[ $pipestatus[2] != 1 ]]
 then
-  print "JOB CRASHED" | tee -a ${LOG}
-  grep "job result code:" ${OUTPUT_FILE} >> ${LOG}
+  print "JOB CRASHED" | tee -a ${LOG_FILE}
+  grep "job result code:" ${OUTPUT_FILE} >> ${LOG_FILE}
   exit 1
 fi
 
