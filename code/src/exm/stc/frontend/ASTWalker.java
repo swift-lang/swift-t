@@ -948,7 +948,7 @@ public class ASTWalker {
       Variable v = forLoop.getLoopVars().get(i).var;
       SwiftType argType = v.getType();
       SwiftAST expr = loopVarExprs.get(v.getName());
-      SwiftType exprType = TypeChecker.findSingleExprType(context, expr);
+      SwiftType exprType = TypeChecker.findSingleExprType(context, expr, argType);
 
       if (!exprType.equals(argType)) {
         throw new STCRuntimeError("haven't implemented conversion " +

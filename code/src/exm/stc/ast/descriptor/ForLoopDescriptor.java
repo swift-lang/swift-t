@@ -179,7 +179,8 @@ public class ForLoopDescriptor {
         throw new UserException(context, "loop variable " + v.getName()
             + " does not have an initial value");
       }
-      SwiftType initExprType = TypeChecker.findSingleExprType(context, initExpr);
+      SwiftType initExprType = TypeChecker.findSingleExprType(context, initExpr,
+                                                              v.getType()); 
       TypeChecker.checkAssignment(context, initExprType, v.getType(), v.getName());
     }
   }
@@ -209,7 +210,7 @@ public class ForLoopDescriptor {
             + " must be updated between iterations");
       }
       SwiftType upExprType = TypeChecker.findSingleExprType(loopBodyContext, 
-                                                                  upExpr);
+                                                          upExpr, v.getType());
       TypeChecker.checkAssignment(loopBodyContext, upExprType, v.getType(), 
                                                               v.getName());
     }
