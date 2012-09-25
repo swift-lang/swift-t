@@ -20,10 +20,10 @@ proc default { env_var d } {
 }
 
 # Initial puts to bootstrap
-set task_count_initial 100
+set task_count_initial 3
 
 # Maximal task length (seconds)
-set task_length_max 0
+set task_length_max 1
 
 # Probability of releasing new work
 set task_chance 0
@@ -124,6 +124,11 @@ set rank [ adlb::rank ]
 set tasks_run 0
 
 expr srand($rand_seed + $rank)
+
+if { $rank == 0 && [ mpe::enabled ] } {
+    turbine::mpe_setup
+    turbine::metadata_impl "HELLO"
+}
 
 if { $amserver == 0 } {
 
