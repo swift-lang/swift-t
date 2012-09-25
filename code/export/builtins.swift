@@ -75,13 +75,15 @@ sleep_trace (float secs, int|float|string|boolean... args) "turbine" "0.0.2"
 
 // Information about cluster
 // pure because it won't change during program execution
-@pure @builtin_op=N_WORKERS
+@pure
 (int n) adlb_servers() "turbine" "0.0.2" "adlb_servers_future"
     [ "set <<n>> turbine::adlb_servers" ];
-@pure @builtin_op=N_ENGINES
-(int n) turbine_engines() "turbine" "0.0.2" "turbine_engines_future";
-@pure @builtin_op=N_ADLB_SERVERS
-(int n) turbine_workers() "turbine" "0.0.2" "turbine_workers_future";
+@pure
+(int n) turbine_engines() "turbine" "0.0.2" "turbine_engines_future"
+    [ "set <<n>> turbine::turbine_engines" ];
+@pure
+(int n) turbine_workers() "turbine" "0.0.2" "turbine_workers_future"
+    [ "set <<n>> turbine::turbine_workers" ];
 
 // Basic file ops
 @pure
