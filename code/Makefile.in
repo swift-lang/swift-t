@@ -324,7 +324,12 @@ ADLB_SO      = libadlb.$(SO_SUFFIX)
 # create a dependency on the installation
 install: install.txt
 
-install.txt: $(PACKAGE)
+# Installed files:
+EXPORTS = $(shell ls export/*.swift export/**/*.swift )
+SCRIPTS = $(shell ls scripts/*.zsh scripts/*.sh $(SCRIPTS_SUBMIT) )
+
+install.txt: $(PACKAGE) $(EXPORTS) $(SCRIPTS)
+#       Note: this is re-run if anything changes
 	@echo
 	$(Q) "  INSTALL		$(INSTALL_PREFIX)"
 	$(E) rm -f $(@)
@@ -335,13 +340,11 @@ install.txt: $(PACKAGE)
 	$(E) mkdir -pv $(INSTALL_SCRIPTS)
 	$(E) mkdir -pv $(INSTALL_EXPORT)
 #       Copy Turbine items
-	$(E) cp $(CP_ARGS) bin/turbine                  $(INSTALL_BIN)
-	$(E) cp $(CP_ARGS) lib/*.tcl                    $(INSTALL_LIB)
-	$(E) cp $(CP_ARGS) lib/*.$(SO_SUFFIX)           $(INSTALL_LIB)
-	$(E) cp $(CP_ARGS) scripts/*.zsh scripts/*.sh   $(INSTALL_SCRIPTS)
-	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS_SUBMIT) $(INSTALL_PREFIX)
-	$(E) $(CP_PARENTS) $(CP_ARGS) export/*.swift    $(INSTALL_PREFIX)
-	$(E) $(CP_PARENTS) $(CP_ARGS) export/**/*.swift $(INSTALL_PREFIX)
+	$(E) cp $(CP_ARGS) bin/turbine           $(INSTALL_BIN)
+	$(E) cp $(CP_ARGS) lib/*.tcl             $(INSTALL_LIB)
+	$(E) cp $(CP_ARGS) lib/*.$(SO_SUFFIX)    $(INSTALL_LIB)
+	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS) $(INSTALL_PREFIX)
+	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_PREFIX)
 	@echo
 	$(Q) "  CREATE 		$(@)"
 	$(E) echo "PREFIX: $(INSTALL_PREFIX)"    >  $(@)
