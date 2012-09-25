@@ -49,9 +49,10 @@ namespace eval turbine {
   }
 
   proc update_incr_impl { x val } {
-    # TODO: this version has a race condition
+    lock_loop $x
     set old [ turbine::retrieve_float $x ]
     adlb::store $x $adlb::FLOAT [ expr $val + $old ]
+    adlb::unlock $x
   }
 
   proc update_scale { x val } {
@@ -64,8 +65,9 @@ namespace eval turbine {
   }
 
   proc update_scale_impl { x val } {
-    # TODO: this version has a race condition
+    lock_loop $x
     set old [ turbine::retrieve_float $x ]
     adlb::store $x $adlb::FLOAT [ expr $val * $old ]
+    adlb::unlock $x
   }
 }

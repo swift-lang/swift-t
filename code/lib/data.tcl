@@ -140,8 +140,8 @@ namespace eval turbine {
         c::cache store $id $adlb::INTEGER $value
     }
 
-    proc retrieve_integer { id } {
-        if { [ c::cache check $id ] } {
+    proc retrieve_integer { id {cachemode CACHED} } {
+        if { [ string equal $cachemode CACHED ] && [ c::cache check $id ] } {
             set result [ c::cache retrieve $id ]
         } else {
             set result [ adlb::retrieve $id $adlb::INTEGER ]
@@ -154,14 +154,18 @@ namespace eval turbine {
         adlb::create $id $adlb::FLOAT
     }
 
-    proc store_float { id value } {
+    proc store_float { id value args } {
         log "store: <$id>=$value"
         adlb::store $id $adlb::FLOAT $value
         close_datum $id
     }
 
-    proc retrieve_float { id } {
-        set result [ adlb::retrieve $id $adlb::FLOAT ]
+    proc retrieve_float { id {cachemode CACHED} } {
+        if { [ string equal $cachemode CACHED ] && [ c::cache check $id ] } {
+            set result [ c::cache retrieve $id ]
+        } else {
+            set result [ adlb::retrieve $id $adlb::FLOAT ]
+        }
         debug "retrieve: <$id>=$result"
         return $result
     }
@@ -177,8 +181,12 @@ namespace eval turbine {
         close_datum $id
     }
 
-    proc retrieve_string { id } {
-        set result [ adlb::retrieve $id $adlb::STRING ]
+    proc retrieve_string { id {cachemode CACHED} } {
+        if { [ string equal $cachemode CACHED ] && [ c::cache check $id ] } {
+            set result [ c::cache retrieve $id ]
+        } else {
+            set result [ adlb::retrieve $id $adlb::STRING ]
+        }
         debug "retrieve: <$id>=[ log_string $result ]"
         return $result
     }
