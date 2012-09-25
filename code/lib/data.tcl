@@ -185,13 +185,13 @@ namespace eval turbine {
 
     proc create_void { id } {
         debug "create void: <$id>"
-        # TODO: for now emulate void with integer
+        # emulating void with integer
         adlb::create $id $adlb::INTEGER
     }
 
     proc store_void { id } {
         debug "store void: <$id>"
-        # TODO: for now emulate void with integer
+        # emulating void with integer
         adlb::store $id $adlb::INTEGER 12345
         close_datum $id
     }
