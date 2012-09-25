@@ -8,8 +8,7 @@
  * the context of a program
  */
 @pure  
-(string s) getenv(string key) "turbine" "0.0.2" "getenv"
-    [ "set <<s>> turbine::getenv_impl <<key>>" ];
+(string s) getenv(string key) "turbine" "0.0.2" "getenv";
 
 // Random functions
 @builtin_op=RANDOM
