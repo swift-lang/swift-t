@@ -28,8 +28,7 @@ public class BuiltinOps {
   public static TclTree genLocalOpTcl(BuiltinOpcode op, Variable out, List<Arg> in,
       ArrayList<Expression> argExpr) {
 
-    if (op == BuiltinOpcode.ASSERT || op == BuiltinOpcode.ASSERT_EQ ||
-        op == BuiltinOpcode.TRACE || op == BuiltinOpcode.METADATA) {
+    if (op == BuiltinOpcode.ASSERT || op == BuiltinOpcode.ASSERT_EQ) {
       assert(out == null);
       String tclFn;
       switch (op) {
@@ -39,63 +38,17 @@ public class BuiltinOps {
       case ASSERT_EQ:
         tclFn = "turbine::assertEqual_impl";
         break;
-      case TRACE:
-        tclFn = "turbine::trace_impl";
-        break;
-      case METADATA:
-        tclFn = "turbine::metadata_impl";
-        break;
       default:
         throw new STCRuntimeError("Cn't handle local op: "
             + op.toString());
       }
       return new Command(tclFn, argExpr);
     } else {
-      if (op == BuiltinOpcode.ARGC_GET || op == BuiltinOpcode.ARGV_CONTAINS
-              || op == BuiltinOpcode.ARGV_GET || op == BuiltinOpcode.N_ADLB_SERVERS
-              || op == BuiltinOpcode.N_ENGINES ||op == BuiltinOpcode.N_WORKERS
-              || op == BuiltinOpcode.GETENV) {
-        assert(out != null);
-        String tclFn;
-        switch (op) {
-        case ARGC_GET:
-          tclFn = "turbine::argc_get_impl";
-          break;
-        case ARGV_CONTAINS:
-          tclFn = "turbine::argv_contains_impl";
-          break;
-        case ARGV_GET:
-          tclFn = "turbine::argv_get_impl";
-          break;
-        case N_ADLB_SERVERS:
-          tclFn = "turbine::adlb_servers";
-          break;
-        case N_ENGINES:
-          tclFn = "turbine::turbine_engines";
-          break;
-        case N_WORKERS:
-          tclFn = "turbine::turbine_workers";
-          break;
-        case GETENV:
-          tclFn = "turbine::getenv_impl";
-          break;
-        default:
-          throw new STCRuntimeError("Can't handle local op: "
-              + op.toString());
-        }
-        return new SetVariable(TclNamer.prefixVar(out.getName()),
-                          Square.fnCall(tclFn, argExpr.toArray(
-                              new Expression[argExpr.size()])));
-      } else if (op == BuiltinOpcode.PRINTF || op == BuiltinOpcode.SPRINTF) {
+      if (op == BuiltinOpcode.SPRINTF) {
         Square fmtArgs = new TclList(argExpr);
         Square fmt = new Square(new Token("eval"), new Token("format"),
                                                                   fmtArgs);
-        if (op ==  BuiltinOpcode.PRINTF) {
-          return new Command(new Token("puts"), fmt);
-        } else {
-          assert(op == BuiltinOpcode.SPRINTF);
-          return new SetVariable(TclNamer.prefixVar(out.getName()), fmt);
-        }
+        return new SetVariable(TclNamer.prefixVar(out.getName()), fmt);
       } else {
         assert(out != null);
         assert(Types.isScalarValue(out.getType()));
@@ -127,9 +80,6 @@ public class BuiltinOps {
         } else if (op == BuiltinOpcode.DIV_INT) {
           // special implementation to emulate old swift
           rhs = Turbine.divideInteger(argExpr.get(0), argExpr.get(1));
-        } else if (op == BuiltinOpcode.RAND_INT) {
-          rhs = new Square(new Token("turbine::randint_impl"), argExpr.get(0),
-                                                      argExpr.get(1));
         } else if (op == BuiltinOpcode.POW_INT) {
           assert(argExpr.size() == 2);
           assert(in.get(0).isImmediateInt() && in.get(1).isImmediateInt());
@@ -214,9 +164,6 @@ public class BuiltinOps {
       // Single argument to expr function
       return new Expression[] { arithOpTok(op), new Token("("), argExpr.get(0),
           new Token(")") };
-    case RANDOM:
-      // No arguments to expr function
-      return new Expression[] { arithOpTok(op), new Token("()") };
     case INTTOFLOAT:
       assert (argExpr.size() == 1);
       // Need to explicitly convert to floating point number, other
@@ -314,8 +261,6 @@ public class BuiltinOps {
     case ABS_FLOAT:
     case ABS_INT:
       return new Token("abs");
-    case RANDOM:
-      return new Token("rand");
     case DIV_FLOAT:
       return new Token("/");
     default:

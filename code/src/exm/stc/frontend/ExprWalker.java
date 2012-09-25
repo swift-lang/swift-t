@@ -845,11 +845,11 @@ public class ExprWalker {
 
     Arg priority = priorityVal != null ? Arg.createVar(priorityVal) : null;
     if (context.isBuiltinFunction(function)) {
-      if (FunctionSemantics.hasLocalEquiv(function)) {
+      if (FunctionSemantics.hasOpEquiv(function)) {
         assert(oList.size() <= 1);
         Variable out = oList.size() == 0 ? null : oList.get(0);
         //TODO: priority?
-        backend.asyncOp(FunctionSemantics.getLocalEquiv(function), out, 
+        backend.asyncOp(FunctionSemantics.getOpEquiv(function), out, 
                         Arg.fromVarList(realIList), priority);
       } else {
         backend.builtinFunctionCall(function, realIList, oList, priority);

@@ -28,10 +28,8 @@ public class Operators {
     COPY_INT, COPY_FLOAT, COPY_BOOL, COPY_STRING, COPY_BLOB, COPY_VOID, 
     COPY_FILE,
     FLOOR, CEIL, ROUND, INTTOFLOAT, STRTOINT, INTTOSTR, STRTOFLOAT, FLOATTOSTR, 
-    LOG, EXP, SQRT, IS_NAN, RANDOM, RAND_INT, TRACE, 
-    ASSERT_EQ, ASSERT, PRINTF, SPRINTF, 
-    ARGC_GET, ARGV_GET, ARGV_CONTAINS, GETENV, 
-    N_WORKERS, N_ENGINES, N_ADLB_SERVERS, METADATA
+    LOG, EXP, SQRT, IS_NAN,
+    ASSERT_EQ, ASSERT, SPRINTF,
   }
   
   /** Map of <number type> -> ( <token type> -> <internal opcode> ) */
@@ -178,13 +176,8 @@ public class Operators {
    */
   private static HashSet<BuiltinOpcode> impureOps = new HashSet<BuiltinOpcode>();
   static {
-    impureOps.add(BuiltinOpcode.RANDOM);
-    impureOps.add(BuiltinOpcode.RAND_INT);
-    impureOps.add(BuiltinOpcode.TRACE);
     impureOps.add(BuiltinOpcode.ASSERT);
     impureOps.add(BuiltinOpcode.ASSERT_EQ);
-    impureOps.add(BuiltinOpcode.PRINTF);
-    impureOps.add(BuiltinOpcode.METADATA);
   }
 
   /**

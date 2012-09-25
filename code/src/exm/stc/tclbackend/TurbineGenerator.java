@@ -27,6 +27,8 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgType;
 import exm.stc.common.lang.FunctionSemantics;
 import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
+import exm.stc.common.lang.FunctionSemantics.TemplateElem;
+import exm.stc.common.lang.FunctionSemantics.TemplateElem.ElemKind;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.Types;
@@ -601,27 +603,57 @@ public class TurbineGenerator implements CompilerBackend
           List<Arg> inputs, List<Variable> outputs) {
     TclOpTemplate template = FunctionSemantics.getInlineTemplate(
                                                     functionName);
-    HashMap<String, Expression> toks = new HashMap<String, Expression>();
+    assert(template != null);
+    
+    // First work out values for different names
+    HashMap<String, Expression[]> toks = new HashMap<String, Expression[]>();
     
     List<String> outNames = template.getOutNames();
     for (int i = 0; i < outputs.size(); i++) {
       Variable out = outputs.get(i);
       String argName = outNames.get(i);
-      toks.put(argName, new Token(prefixVar(out.getName())));
+      toks.put(argName, new Expression[] {new Token(prefixVar(out.getName()))});
     }
    
-    //TODO: how to handle distinction between inputs and outputs
-    // in general
     List<String> inNames = template.getInNames();
-    assert(inNames.size() != inputs.size());
-    for (int i = 0; i < inputs.size(); i++) {
-      Arg in = inputs.get(i);
+    if (template.hasVarArgs()) {
+      assert(inputs.size() >= inNames.size() - 1);
+    } else {
+      assert(inNames.size() == inputs.size());
+    }
+    for (int i = 0; i < inNames.size(); i++) {
       String argName = inNames.get(i);
-      toks.put(argName, opargToExpr(in));
+      if (template.hasVarArgs() && i == inNames.size() - 1) {
+        // Last argument: varargs
+        Expression es[] = new Expression[inputs.size() - inNames.size() + 1];
+        for (int j = i; j < inputs.size(); j++) {
+          es[j - i] = opargToExpr(inputs.get(j));
+        }
+        toks.put(argName, es);
+      } else {
+        toks.put(argName, new Expression[] {opargToExpr(inputs.get(i))});
+      }
     }
     
-    assert(template != null);
+    ArrayList<TclTree> result = new ArrayList<TclTree>();
     
+    // Now fill in template 
+    for (TemplateElem elem: template.getElems()) {
+      if (elem.getKind() == ElemKind.TEXT) {
+        String tok = elem.getText().trim();
+        if (tok.length() > 0) {
+          result.add(new Token(tok));
+        }
+      } else {
+        assert(elem.getKind() == ElemKind.VARIABLE);
+        for (Expression e: toks.get(elem.getVarName())) {
+          result.add(e);
+        }
+      }
+    }
+    
+    Command cmd = new Command(result.toArray(new TclTree[result.size()]));
+    pointStack.peek().add(cmd);
   }
   
   @Override

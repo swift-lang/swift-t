@@ -56,7 +56,9 @@ public class InlineCode {
             i++;
             currTok.append('<');
           }
-          template.addElem(TemplateElem.createTok(currTok.toString()));
+          if (currTok.length() > 0) {
+            template.addElem(TemplateElem.createTok(currTok.toString()));
+          }
           currVar = new StringBuilder();
           currTok = null;
           inVar = true;
@@ -81,7 +83,9 @@ public class InlineCode {
           "\"" + currVar.toString() + "\" in " +
           "template string \"" + in + "\"");
     } else {
-      template.addElem(TemplateElem.createTok(currTok.toString()));
+      if (currTok.length() > 0) {
+        template.addElem(TemplateElem.createTok(currTok.toString()));
+      }
     }
     return template;
   }

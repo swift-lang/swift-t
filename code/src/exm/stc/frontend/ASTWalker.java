@@ -1565,17 +1565,17 @@ public class ASTWalker {
       String tclTemplateString = 
             Literals.extractLiteralString(context, inlineTclTree.child(0));
       inlineTcl = InlineCode.templateFromString(context, tclTemplateString);
-     
-      if (ft.hasVarargs()) {
-        throw new STCRuntimeError("Inline tcl is not yet supported" +
-        		" in combination with variable argument lists");
-      }
       
-      inlineTcl.addInNames(fdecl.getInNames());
+      List<String> inNames = fdecl.getInNames();
+      inlineTcl.addInNames(inNames);
+      if (ft.hasVarargs()) {
+        inlineTcl.setVarArgIn(inNames.get(inNames.size() - 1));
+      }
       inlineTcl.addOutNames(fdecl.getOutNames());
       
-      // System.err.println("inline template: '" + tclTemplateString + "' to "
-      //         + inlineTcl.toString());
+      
+      System.err.println("inline template: '" + tclTemplateString + "' to "
+               + inlineTcl.toString());
       FunctionSemantics.addInlineTemplate(function, inlineTcl);
     }
     
@@ -1620,7 +1620,7 @@ public class ASTWalker {
       throw new UserException(context, "Unknown builtin op " + val);
     }
     assert(opcode != null);
-    FunctionSemantics.addLocalEquiv(function, opcode);
+    FunctionSemantics.addOpEquiv(function, opcode);
   }
 
   /**

@@ -24,10 +24,10 @@ public class FunctionSemantics {
   
   /** Names of built-ins which have a local equivalent operation */
   private static HashMap<String, BuiltinOpcode>
-            localEquivalents = new HashMap<String, BuiltinOpcode>();
+            equivalentOps = new HashMap<String, BuiltinOpcode>();
 
   /** inverse of localEquivalents */
-  private static MultiMap<BuiltinOpcode, String> localEquivalentsInv
+  private static MultiMap<BuiltinOpcode, String> equivalentOpsInv
           = new MultiMap<BuiltinOpcode, String>(new ListFactory<String>() {
             public List<String> make() { // Will only have one entry most of time
               return new ArrayList<String>(1);
@@ -61,24 +61,24 @@ public class FunctionSemantics {
   }
   
 
-  public static void addLocalEquiv(String builtinFunction, BuiltinOpcode op) {
-    localEquivalents.put(builtinFunction, op);
-    localEquivalentsInv.put(op, builtinFunction);
+  public static void addOpEquiv(String builtinFunction, BuiltinOpcode op) {
+    equivalentOps.put(builtinFunction, op);
+    equivalentOpsInv.put(op, builtinFunction);
   }
   
-  public static boolean hasLocalEquiv(String builtinFunction) {
-    return localEquivalents.containsKey(builtinFunction);
+  public static boolean hasOpEquiv(String builtinFunction) {
+    return equivalentOps.containsKey(builtinFunction);
   }
   
-  public static BuiltinOpcode getLocalEquiv(String builtinFunction) {
-    return localEquivalents.get(builtinFunction);
+  public static BuiltinOpcode getOpEquiv(String builtinFunction) {
+    return equivalentOps.get(builtinFunction);
   }
   
   /**
    * Find an implementation of a built-in op
    */
   public static List<String> findOpImpl(BuiltinOpcode op) {
-    return localEquivalentsInv.get(op);
+    return equivalentOpsInv.get(op);
   }
   
   public static void addCommutative(String builtInFunction) {
@@ -126,7 +126,7 @@ public class FunctionSemantics {
     inlineTemplates.put(fnName, tmp);
   }
   
-  public static boolean hasLocalVersion(String fnName) {
+  public static boolean hasInlineVersion(String fnName) {
     return inlineTemplates.containsKey(fnName);
   }
   
@@ -203,6 +203,11 @@ public class FunctionSemantics {
     private final ArrayList<String> inNames =
                               new ArrayList<String>();
     
+    /**
+     * Name of varargs (null if no varargs)
+     */
+    private String varArgIn = null;
+    
     public boolean addInName(String e) {
       return inNames.add(e);
     }
@@ -219,12 +224,24 @@ public class FunctionSemantics {
       return outNames.addAll(c);
     }
     
+    public void setVarArgIn(String varArgIn) {
+      this.varArgIn = varArgIn;
+    }
+
     public List<String> getInNames() {
       return Collections.unmodifiableList(inNames);
     }
     
     public List<String> getOutNames() {
       return Collections.unmodifiableList(outNames);
+    }
+
+    public String getVarArgIn() {
+      return varArgIn;
+    }
+
+    public boolean hasVarArgs() {
+      return varArgIn != null;
     }
 
     public void addElem(TemplateElem elem) {

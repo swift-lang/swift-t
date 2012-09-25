@@ -1711,7 +1711,8 @@ public class ICInstructions {
           }
         }
       }
-      if (allClosed && FunctionSemantics.hasLocalEquiv(this.functionName)) {
+      if (allClosed && (FunctionSemantics.hasOpEquiv(this.functionName)
+                || FunctionSemantics.hasInlineVersion(this.functionName))) {
           // All args are closed!
           return new MakeImmRequest(
               Collections.unmodifiableList(this.outputs),
@@ -1724,19 +1725,30 @@ public class ICInstructions {
     @Override
     public MakeImmChange makeImmediate(List<Variable> outVars, 
                                         List<Arg> values) {
-      BuiltinOpcode newOp = FunctionSemantics.getLocalEquiv(this.functionName);
-      assert(newOp != null);
-      assert(values.size() == inputs.size());
-      
-      if (outputs.size() == 1) {
-        assert(Types.derefResultType(outputs.get(0).getType()).equals(
-            outVars.get(0).getType()));
-        return new MakeImmChange(
-            Builtin.createLocal(newOp, outVars.get(0), values));
+      if (FunctionSemantics.hasOpEquiv(functionName)) {
+        BuiltinOpcode newOp = FunctionSemantics.getOpEquiv(functionName);
+        assert(newOp != null);
+        assert(values.size() == inputs.size());
+        
+        if (outputs.size() == 1) {
+          assert(Types.derefResultType(outputs.get(0).getType()).equals(
+              outVars.get(0).getType()));
+          return new MakeImmChange(
+              Builtin.createLocal(newOp, outVars.get(0), values));
+        } else {
+          assert(outputs.size() == 0);
+          return new MakeImmChange(
+              Builtin.createLocal(newOp, null, values));
+        }
       } else {
-        assert(outputs.size() == 0);
+        assert(FunctionSemantics.hasInlineVersion(functionName));
+        for (int i = 0; i < outputs.size(); i++) {
+          Variable out = outputs.get(i);
+          assert(Types.derefResultType(out.getType()).equals(
+                 outVars.get(i).getType()));
+        }
         return new MakeImmChange(
-            Builtin.createLocal(newOp, null, values));
+                new LocalFunctionCall(functionName, values, outVars));
       }
     }
 
