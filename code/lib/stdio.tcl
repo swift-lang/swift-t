@@ -19,5 +19,13 @@ namespace eval turbine {
         set s [ eval format $L ]
         puts $s
     }
-
+    
+    proc printf_local { args } {
+        set L [ list ]
+        foreach a $args {
+            lappend L $a
+        }
+        set s [ eval format $L ]
+        puts $s
+    }
 }

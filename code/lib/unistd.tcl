@@ -117,19 +117,23 @@ namespace eval turbine {
         store_string $result $turbine_args
     }
 
+    proc args_get_local { } {
+        variable turbine_args
+        return $turbine_args
+    }
+
     proc argv_contains { stack result key } {
         rule "argv_contains-$key" $key $turbine::LOCAL \
             "argv_contains_body $result $key"
     }
 
     proc argv_contains_body { result key } {
-
-        variable turbine_argv
         set t [ retrieve_string $key ]
         store_integer $result [ argv_contains_impl $t ]
     }
 
     proc argv_contains_impl { key } {
+        variable turbine_argv
         if { [ catch { set val [ dict get $turbine_argv $key ] } ] } {
             return 0
         } else {
@@ -217,6 +221,11 @@ namespace eval turbine {
         foreach td $args {
             lappend accepted [ retrieve_string $td ]
         }
+        argv_accept_impl $accepted
+    }
+    proc argv_accept_impl { accepted } {
+        variable turbine_argv
+
         dict for { key value } $turbine_argv {
             if [ string is integer $key ] continue
             if { [ lsearch $accepted $key ] == -1 } {

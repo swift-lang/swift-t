@@ -20,9 +20,7 @@ namespace eval turbine {
       }
   }
 
-  proc update_min { stack o inputs } {
-    set x [ lindex $inputs 0 ]
-    set val [ lindex $inputs 1 ]
+  proc update_min { x val } {
     rule "update_min-$x-$val" $val \
         $turbine::LOCAL "update_min_body $x $val"
   }
@@ -41,9 +39,7 @@ namespace eval turbine {
       adlb::unlock $x
   }
 
-  proc update_incr { stack o inputs } {
-    set x [ lindex $inputs 0 ]
-    set val [ lindex $inputs 1 ]
+  proc update_incr { x val } {
     rule "update_incr-$x-$val" $val \
         $turbine::LOCAL "update_incr_body $x $val"
   }
@@ -58,9 +54,7 @@ namespace eval turbine {
     adlb::store $x $adlb::FLOAT [ expr $val + $old ]
   }
 
-  proc update_scale { stack o inputs } {
-    set x [ lindex $inputs 0 ]
-    set val [ lindex $inputs 1 ]
+  proc update_scale { x val } {
     rule "update_scale-$x-$val" $val \
         $turbine::LOCAL "update_scale_body $x $val"
   }
