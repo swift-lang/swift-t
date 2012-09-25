@@ -29,7 +29,7 @@ public class BuiltinOps {
       ArrayList<Expression> argExpr) {
 
     if (op == BuiltinOpcode.ASSERT || op == BuiltinOpcode.ASSERT_EQ ||
-        op == BuiltinOpcode.TRACE || op == BuiltinOpcode.METADATA) {
+        op == BuiltinOpcode.TRACE) {
       assert(out == null);
       String tclFn;
       switch (op) {
@@ -42,9 +42,6 @@ public class BuiltinOps {
       case TRACE:
         tclFn = "turbine::trace_impl";
         break;
-      case METADATA:
-        tclFn = "turbine::metadata_impl";
-        break;
       default:
         throw new STCRuntimeError("Cn't handle local op: "
             + op.toString());
@@ -52,8 +49,7 @@ public class BuiltinOps {
       return new Command(tclFn, argExpr);
     } else {
       if (op == BuiltinOpcode.ARGC_GET || op == BuiltinOpcode.ARGV_CONTAINS
-              || op == BuiltinOpcode.ARGV_GET || op == BuiltinOpcode.N_ADLB_SERVERS
-              || op == BuiltinOpcode.N_ENGINES ||op == BuiltinOpcode.N_WORKERS
+              || op == BuiltinOpcode.ARGV_GET
               || op == BuiltinOpcode.GETENV) {
         assert(out != null);
         String tclFn;
@@ -66,15 +62,6 @@ public class BuiltinOps {
           break;
         case ARGV_GET:
           tclFn = "turbine::argv_get_impl";
-          break;
-        case N_ADLB_SERVERS:
-          tclFn = "turbine::adlb_servers";
-          break;
-        case N_ENGINES:
-          tclFn = "turbine::turbine_engines";
-          break;
-        case N_WORKERS:
-          tclFn = "turbine::turbine_workers";
           break;
         case GETENV:
           tclFn = "turbine::getenv_impl";

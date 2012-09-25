@@ -30,8 +30,7 @@ public class Operators {
     FLOOR, CEIL, ROUND, INTTOFLOAT, STRTOINT, INTTOSTR, STRTOFLOAT, FLOATTOSTR, 
     LOG, EXP, SQRT, IS_NAN, RANDOM, RAND_INT, TRACE, 
     ASSERT_EQ, ASSERT, PRINTF, SPRINTF, 
-    ARGC_GET, ARGV_GET, ARGV_CONTAINS, GETENV, 
-    N_WORKERS, N_ENGINES, N_ADLB_SERVERS, METADATA
+    ARGC_GET, ARGV_GET, ARGV_CONTAINS, GETENV
   }
   
   /** Map of <number type> -> ( <token type> -> <internal opcode> ) */
@@ -184,7 +183,6 @@ public class Operators {
     impureOps.add(BuiltinOpcode.ASSERT);
     impureOps.add(BuiltinOpcode.ASSERT_EQ);
     impureOps.add(BuiltinOpcode.PRINTF);
-    impureOps.add(BuiltinOpcode.METADATA);
   }
 
   /**
