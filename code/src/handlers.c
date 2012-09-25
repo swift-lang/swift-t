@@ -831,10 +831,8 @@ static adlb_code
 handle_typeof(int caller)
 {
   adlb_datum_id id;
-  int rc;
   MPI_Status status;
   RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_TYPEOF);
-  MPI_CHECK(rc);
 
   adlb_data_type type;
   adlb_data_code dc = data_typeof(id, &type);
