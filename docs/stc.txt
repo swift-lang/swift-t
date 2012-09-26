@@ -27,30 +27,34 @@ Cf. http://www.mcs.anl.gov/research/projects/mpich2/documentation/index.php?s=do
 +
 Other MPI implementations are supported as well.
 +
-2. Obtain the package
+2. Install or locate Tcl 8.5
++
+Cf. http://www.tcl.tk[Tcl web site]
++
+3. Obtain the package
 +
 ----
 wget http://www.mcs.anl.gov/~wozniak/exm-trunk.tar.gz
 ----
 +
-3. Unpack and enter package directory
+4. Unpack and enter package directory
 +
 ----
 tar xfz exm-trunk.tar.gz
 cd exm-trunk
 ----
-4. Edit the settings file: +exm-settings.sh+
+5. Edit the settings file: +exm-settings.sh+
 +
 This allows you to change the installation location, etc.
 +
 TIP: Save your +exm-settings.sh+ when you download a new package
 +
-5. Run the setup script
+6. Run the setup script
 +
 ----
 ./exm-setup.zsh
 ----
-6. Add Turbine and STC to your paths
+7. Add Turbine and STC to your paths
 ----
 PATH=${PATH}:/path/to/exm-install/turbine/bin
 PATH=${PATH}:/path/to/exm-install/stc/bin
@@ -368,9 +372,9 @@ foreach i in [start:stop:step] {
 
 ==== For statement
 
-The +for+ statement allows for more general iteration and provides
-a form of updateable variable.  This example implements a counter
-based on the return values of a function that accepts integers:
+The +for+ statement allows for sequential iteration.  This example
+implements a counter based on the return values of a function that
+accepts integers:
 
 ----
 int N = 100;
@@ -400,11 +404,12 @@ for ( <initializer> ; <condition> ; <updates> )
 
 The initializer is executed first, once.  The initializer is a
 comma-separated list of statements.  The body statements are then
-executed.  Then, the updates are performed, formatted as a
+executed.  Then, the assignments are performed, formatted as a
 comma-separated list.  Each is a special assignment in which the
-left-hand-side is the variable as seen by the _next_ iteration of the
-loop, while the right-hand-side is the variable as seen by the
-_previous_ loop iteration.  Then, the condition is checked for loop exit.
+left-hand-side is the variable in the _next_ iteration of the loop,
+while the right-hand-side is the variable in the _previous_ loop
+iteration.  Then, the condition is checked for loop exit.  If the loop
+continues, the body is executed again, etc.
 
 === Scoping blocks
 
