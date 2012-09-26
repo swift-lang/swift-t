@@ -18,6 +18,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.SwiftType;
@@ -135,10 +136,10 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void startCompositeFunction(String functionName, List<Variable> oList,
-      List<Variable> iList, boolean async) throws UserException {
+      List<Variable> iList, TaskMode mode) throws UserException {
     assert(blockStack.size() == 0);
     assert(currComposite == null);
-    currComposite = new CompFunction(functionName, iList, oList, async);
+    currComposite = new CompFunction(functionName, iList, oList, mode);
     program.addComposite(currComposite);
     blockStack.add(currComposite.getMainblock());
   }
@@ -374,7 +375,7 @@ public class STCMiddleEnd implements CompilerBackend {
   
   @Override
   public void compositeFunctionCall(String function, List<Variable> inputs,
-      List<Variable> outputs, List<Boolean> blockOn, boolean async, 
+      List<Variable> outputs, List<Boolean> blockOn, TaskMode mode, 
       Arg priority) {
     assert(priority == null || priority.isImmediateInt());
     if (blockOn != null) {
@@ -383,7 +384,7 @@ public class STCMiddleEnd implements CompilerBackend {
     }
     currBlock().addInstruction(
           FunctionCall.createCompositeCall(
-              function, inputs, outputs, async, priority));
+              function, inputs, outputs, mode, priority));
   }
 
   @Override

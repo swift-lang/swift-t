@@ -4,6 +4,7 @@ package exm.stc.tclbackend;
 import java.util.*;
 
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.TaskMode;
 import exm.stc.tclbackend.tree.*;
 
 /**
@@ -279,19 +280,13 @@ class Turbine
     return result;
   }
 
-  static enum RuleType {
-    LOCAL,
-    CONTROL,
-    WORK
-  }
-
-  private static Value tclRuleType (RuleType t) {
+  private static Value tclRuleType (TaskMode t) {
     switch (t) {
     case LOCAL:
       return new Value("turbine::LOCAL");
     case CONTROL:
       return new Value("turbine::CONTROL");
-    case WORK:
+    case LEAF:
       return new Value("turbine::WORK");
     default:
       throw new STCRuntimeError("Unexpected rule type: " + t);
@@ -308,7 +303,7 @@ class Turbine
    * @return
    */
   private static Sequence ruleHelper(String symbol, List<Value> inputs,
-      TclList action, RuleType type) {
+      TclList action, TaskMode type) {
     Sequence result = new Sequence();
 
     Token s = new Token(symbol);
@@ -330,9 +325,8 @@ class Turbine
    * @return
    */
   public static Sequence rule(String symbol,
-      List<Value> inputs, TclList action, boolean shareWork) {
-    RuleType ruleType = shareWork ? RuleType.CONTROL : RuleType.LOCAL;
-    return ruleHelper(symbol, inputs, action, ruleType);
+      List<Value> inputs, TclList action, TaskMode mode) {
+    return ruleHelper(symbol, inputs, action, mode);
   }
 
   public static Sequence loopRule(String symbol,
@@ -343,7 +337,7 @@ class Turbine
       actionElems.add(arg);
     }
     TclList action = new TclList(actionElems);
-    return ruleHelper(symbol, blockOn, action, RuleType.CONTROL);
+    return ruleHelper(symbol, blockOn, action, TaskMode.CONTROL);
   }
 
 

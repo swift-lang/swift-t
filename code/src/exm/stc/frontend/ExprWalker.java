@@ -27,6 +27,7 @@ import exm.stc.common.lang.FunctionSemantics;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.OpType;
+import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.FunctionType.InArgT;
@@ -854,11 +855,18 @@ public class ExprWalker {
       } else {
         backend.builtinFunctionCall(function, realIList, oList, priority);
       }
-    } else if (context.isCompositeFunction(function))
+    } else if (context.isCompositeFunction(function)) {
+      TaskMode mode;
+      if (context.isSyncComposite(function)) {
+        mode = TaskMode.SYNC;
+      } else {
+        mode = TaskMode.CONTROL;
+      }
       backend.compositeFunctionCall(function, realIList, oList, null, 
-          !context.isSyncComposite(function), priority);
-    else
+          mode, priority);
+    } else {
       throw UndefinedFunctionException.unknownFunction(context, function);
+    }
 
     if (waitContext != null) {
       backend.endWaitStatement(new ArrayList<Variable>());

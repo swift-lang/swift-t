@@ -8,6 +8,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Variable;
@@ -99,7 +100,7 @@ public interface CompilerBackend {
 
   public abstract void compositeFunctionCall(String function,
       List<Variable> inputs, List<Variable> outputs, List<Boolean> blockOn, 
-      boolean async, Arg priority);
+      TaskMode mode, Arg priority);
 
   public abstract void builtinLocalFunctionCall(String functionName,
           List<Arg> inputs, List<Variable> outputs);
@@ -177,7 +178,7 @@ public interface CompilerBackend {
                     throws UserException;
 
   public abstract void startCompositeFunction(String functionName,
-      List<Variable> oList, List<Variable> iList, boolean async)
+      List<Variable> oList, List<Variable> iList, TaskMode mode)
             throws UserException;
 
   public abstract void endCompositeFunction();

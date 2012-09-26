@@ -24,6 +24,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgType;
 import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
+import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.FunctionType.InArgT;
@@ -394,16 +395,15 @@ public class ICTree {
     /** Wait until the below inputs are available before running function */
     private final List<Variable> blockingInputs;
 
-    private boolean async;
+    private TaskMode mode;
 
     public CompFunction(String name, List<Variable> iList,
-        List<Variable> oList, boolean async) {
-      this(name, iList, oList, new Block(BlockType.MAIN_BLOCK),
-          async);
+        List<Variable> oList, TaskMode mode) {
+      this(name, iList, oList, new Block(BlockType.MAIN_BLOCK), mode);
     }
 
     public CompFunction(String name, List<Variable> iList,
-        List<Variable> oList, Block mainBlock, boolean async) {
+        List<Variable> oList, Block mainBlock, TaskMode mode) {
       if (mainBlock.getType() != BlockType.MAIN_BLOCK) {
         throw new STCRuntimeError("Expected main block " +
         		"for composite function to be tagged as such");
@@ -413,7 +413,7 @@ public class ICTree {
       this.oList = oList;
       this.mainBlock = mainBlock;
       this.blockingInputs = new ArrayList<Variable>();
-      this.async = async;
+      this.mode = mode;
     }
 
 
@@ -432,7 +432,7 @@ public class ICTree {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UserException {
       logger.debug("Generating composite function " + name);
-      gen.startCompositeFunction(name, oList, iList, async);
+      gen.startCompositeFunction(name, oList, iList, mode);
       this.mainBlock.generate(logger, gen, info);
       gen.endCompositeFunction();
       logger.debug("Done generating composite function " + name);
@@ -489,9 +489,8 @@ public class ICTree {
       }
     }
 
-
     public boolean isAsync() {
-      return async;
+      return this.mode != TaskMode.SYNC;
     }
   }
 

@@ -31,6 +31,7 @@ import exm.stc.common.lang.FunctionSemantics.TemplateElem;
 import exm.stc.common.lang.FunctionSemantics.TemplateElem.ElemKind;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
+import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.PrimType;
@@ -660,7 +661,7 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void compositeFunctionCall(String function,
               List<Variable> inputs, List<Variable> outputs,
-              List<Boolean> blocking, boolean async, Arg priority)  {
+              List<Boolean> blocking, TaskMode mode, Arg priority)  {
     assert(priority == null || priority.isImmediateInt());
     logger.debug("call composite: " + function);
     TclList iList = tclListOfVariables(inputs);
@@ -676,16 +677,18 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     setPriority(priority);
-    if (async) {
+    if (mode == TaskMode.CONTROL) {
       pointStack.peek().add(Turbine.callComposite(
                             TclNamer.compFuncName(function),
                             oList, iList, tclListOfVariables(blockOn)));
-    } else {
+    } else if (mode == TaskMode.SYNC) {
       // Calling synchronously, can't guarantee anything blocks
       assert(blocking.size() == 0);
       pointStack.peek().add(Turbine.callCompositeSync(
           TclNamer.compFuncName(function),
           oList, iList));
+    } else {
+      throw new STCRuntimeError("Unexpected mode: " + mode);
     }
     clearPriority(priority);
   }
@@ -1071,7 +1074,7 @@ public class TurbineGenerator implements CompilerBackend
   public void startCompositeFunction(String functionName,
                                      List<Variable> oList,
                                      List<Variable> iList,
-                                     boolean async)
+                                     TaskMode mode)
   throws UserException
   {
     List<String> outputs = prefixVars(Variable.nameList(oList));
@@ -1306,8 +1309,15 @@ public class TurbineGenerator implements CompilerBackend
       }
 
       TclList action = buildAction(uniqueName, toPassIn);
+      
+      TaskMode mode;
+      if (shareWork) {
+        mode = TaskMode.CONTROL;
+      } else {
+        mode = TaskMode.LOCAL;
+      }
       pointStack.peek().add(
-            Turbine.rule(uniqueName, inputs, action, shareWork));
+            Turbine.rule(uniqueName, inputs, action, mode));
 
       pointStack.push(constructProc);
     }
@@ -1681,7 +1691,7 @@ public class TurbineGenerator implements CompilerBackend
     outerRecCall.add(incVal);
 
     splitBody.add(Turbine.rule(outerProcName, new ArrayList<Value>(0),
-                    new TclList(outerRecCall), true));
+                    new TclList(outerRecCall), TaskMode.CONTROL));
 
     pointStack.push(inner);
   }

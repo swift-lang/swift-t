@@ -48,6 +48,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.FunctionSemantics;
 import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.FunctionType.InArgT;
@@ -1734,8 +1735,14 @@ public class ASTWalker {
     functionContext.addDeclaredVariables(iList);
     functionContext.addDeclaredVariables(oList);
 
-    backend.startCompositeFunction(function, oList, iList,
-        !context.isSyncComposite(function));
+    TaskMode mode;
+    if (context.isSyncComposite(function)) {
+      mode = TaskMode.SYNC; 
+    } else {
+      mode = TaskMode.CONTROL;
+    }
+    
+    backend.startCompositeFunction(function, oList, iList, mode);
     
     VariableUsageInfo vu = block.getVariableUsage();
     // Make sure output arrays get closed

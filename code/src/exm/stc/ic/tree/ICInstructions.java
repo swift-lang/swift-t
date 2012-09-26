@@ -21,6 +21,7 @@ import exm.stc.common.lang.OpEvaluator;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
+import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Variable;
@@ -1563,7 +1564,7 @@ public class ICInstructions {
     private FunctionCall(Opcode op, String functionName,
         List<Variable> inputs, List<Variable> outputs, Arg priority) {
       super(op, functionName);
-      if (op != Opcode.CALL_BUILTIN && op != Opcode.CALL &&
+      if (op != Opcode.CALL_BUILTIN && op != Opcode.CALL_CONTROL &&
           op != Opcode.CALL_APP && op != Opcode.CALL_SYNC) {
         throw new STCRuntimeError("Tried to create function call"
             + " instruction with invalid opcode");
@@ -1596,12 +1597,14 @@ public class ICInstructions {
   
     public static FunctionCall createCompositeCall(
         String functionName, List<Variable> inputs, List<Variable> outputs,
-        boolean async, Arg priority) {
+        TaskMode mode, Arg priority) {
       Opcode op;
-      if (async) {
-        op = Opcode.CALL;
-      } else {
+      if (mode == TaskMode.SYNC) {
         op = Opcode.CALL_SYNC;
+      } else if (mode == TaskMode.CONTROL) {
+        op = Opcode.CALL_CONTROL;
+      } else {
+        throw new STCRuntimeError("Task mode " + mode + " not yet supported");
       }
       return new FunctionCall(op, functionName,
           inputs, outputs, priority);
@@ -1642,8 +1645,15 @@ public class ICInstructions {
         gen.builtinFunctionCall(functionName, inputs, outputs, priority);
         break;
       case CALL_SYNC:
-      case CALL:
-        boolean async = (op == Opcode.CALL);
+      case CALL_CONTROL:
+        TaskMode mode;
+        if (op == Opcode.CALL_CONTROL) {
+          mode = TaskMode.CONTROL;
+        } else if (op == Opcode.CALL_SYNC) {
+          mode = TaskMode.SYNC;
+        } else {
+          throw new STCRuntimeError("Unexpected op " + op);
+        }
         List<Boolean> blocking = info.getBlockingInputVector(functionName);
         assert(blocking != null && blocking.size() == inputs.size());
         List<Boolean> needToBlock = new ArrayList<Boolean>(inputs.size());
@@ -1651,7 +1661,7 @@ public class ICInstructions {
           needToBlock.add(blocking.get(i) && (!this.closedInputs.get(i)));
         }
         gen.compositeFunctionCall(functionName, inputs, outputs, needToBlock,
-                                            async, priority);
+                                            mode, priority);
         break;
       default:
         throw new STCRuntimeError("Huh?");
@@ -1782,7 +1792,7 @@ public class ICInstructions {
       } else if (op == Opcode.CALL_SYNC) {
         // Can't block because we need to enter the function immediately
         return null;
-      } else if (op == Opcode.CALL ) {
+      } else if (op == Opcode.CALL_CONTROL ) {
         //TODO: should see which arguments are blocking
         return null;
       }
@@ -2156,7 +2166,7 @@ public class ICInstructions {
   public static enum Opcode {
     FAKE, // Used for ComputedValue if there isn't a real opcode
     COMMENT,
-    CALL_BUILTIN, CALL_BUILTIN_LOCAL, CALL, CALL_APP, CALL_SYNC,
+    CALL_BUILTIN, CALL_BUILTIN_LOCAL, CALL_CONTROL, CALL_APP, CALL_SYNC,
     DEREF_INT, DEREF_STRING, DEREF_FLOAT, DEREF_BOOL, DEREF_BLOB,
     DEREF_FILE,
     STORE_INT, STORE_STRING, STORE_FLOAT, STORE_BOOL, ADDRESS_OF, 

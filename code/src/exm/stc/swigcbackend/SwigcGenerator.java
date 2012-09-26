@@ -29,6 +29,7 @@ import exm.stc.common.lang.FunctionSemantics;
 import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
+import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.PrimType;
@@ -908,7 +909,7 @@ public class SwigcGenerator implements CompilerBackend
   @Override
   public void compositeFunctionCall(String function,
               List<Variable> inputs, List<Variable> outputs,
-              List<Boolean> blocking, boolean async, Arg priority)  {
+              List<Boolean> blocking, TaskMode mode, Arg priority)  {
     assert(priority == null || priority.isImmediateInt());
     logger.debug("call composite: " + function);
     TclList iList = tclListOfVariables(inputs);
@@ -924,7 +925,7 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     setPriority(priority);
-    if (async) {
+    if (mode == TaskMode.CONTROL) {
       pointStack.peek().add(Turbine.callComposite(
                             TclNamer.compFuncName(function),
                             oList, iList, tclListOfVariables(blockOn)));
@@ -1312,7 +1313,7 @@ public class SwigcGenerator implements CompilerBackend
   public void startCompositeFunction(String functionName,
                                      List<Variable> oList,
                                      List<Variable> iList,
-                                     boolean async)
+                                     TaskMode mode)
   throws UserException
   {
     List<String> outputs = prefixVars(Variable.nameList(oList));
