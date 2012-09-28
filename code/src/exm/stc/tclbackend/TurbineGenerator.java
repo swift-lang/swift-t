@@ -1298,18 +1298,8 @@ public class TurbineGenerator implements CompilerBackend
       // Build up the rule string
       List<Expression> waitFor = new ArrayList<Expression>();
       for (Variable w: waitVars) {
-        Value wv = varToExpr(w);
-        if (Types.isFile(w.getType())) {
-          // Block on file status
-          waitFor.add(Turbine.getFileStatus(wv));
-        } else if (Types.isScalarFuture(w.getType()) ||
-                Types.isReference(w.getType()) ||
-                Types.isArray(w.getType())) {
-            waitFor.add(wv);
-        } else {
-          throw new STCRuntimeError("Don't know how to wait on var: "
-                  + w.toString());
-        }
+        Expression waitExpr = getTurbineWaitId(w);
+        waitFor.add(waitExpr);
       }
 
       for (Variable c: keepOpenVars) {
@@ -1772,6 +1762,29 @@ public class TurbineGenerator implements CompilerBackend
 
   private Value varToExpr(Variable v) {
     return new Value(prefixVar(v.getName()));
+  }
+
+  /**
+   * Return an expression for the Turbine id to
+   * wait on.
+   * @param var
+   * @return
+   */
+  private Expression getTurbineWaitId(Variable var) {
+    Value wv = varToExpr(var);
+    Expression waitExpr;
+    if (Types.isFile(var.getType())) {
+      // Block on file status
+      waitExpr = Turbine.getFileStatus(wv);
+    } else if (Types.isScalarFuture(var.getType()) ||
+            Types.isReference(var.getType()) ||
+            Types.isArray(var.getType())) {
+        waitExpr = wv;
+    } else {
+      throw new STCRuntimeError("Don't know how to wait on var: "
+              + var.toString());
+    }
+    return waitExpr;
   }
 
   private Expression opargToExpr(Arg in) {
