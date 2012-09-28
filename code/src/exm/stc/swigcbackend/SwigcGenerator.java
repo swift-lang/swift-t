@@ -839,14 +839,6 @@ public class SwigcGenerator implements CompilerBackend
         opargToExpr(arrIx));
     pointStack.peek().add(t);
   }
-  /** NOT UPDATED */
-
-  @Override
-  public void appFunctionCall(String function,
-              List<Variable> inputs, List<Variable> outputs, Arg priority) {
-    assert(priority == null || priority.isImmediateInt());
-    throw new STCRuntimeError("appFunctionCall not implemented");
-  }
 
   @Override
   public void builtinFunctionCall(String function,
@@ -2138,6 +2130,15 @@ public class SwigcGenerator implements CompilerBackend
 
     @Override
     public void dereferenceFile(Variable dst, Variable src) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public void
+        runExternal(String cmd, List<Arg> inputs, List<Variable> outputs,
+            List<ExtArgType> order,
+            boolean hasSideEffects, boolean deterministic) {
       // TODO Auto-generated method stub
       
     }

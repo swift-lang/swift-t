@@ -33,6 +33,7 @@ import exm.stc.ast.descriptor.VariableDeclaration.VariableDescriptor;
 import exm.stc.ast.descriptor.Wait;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.Settings;
+import exm.stc.common.CompilerBackend.ExtArgType;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.InvalidOptionException;
@@ -1788,21 +1789,83 @@ public class ASTWalker {
   private void defineAppFunction(Context context, SwiftAST tree)
       throws UserException {
     LogHelper.info(context.getLevel(), "defineAppFunction");
-    // logChildren(tree);
-
-    tree.printTree();
-
-    String function = tree.child(0).getText();
-    LogHelper.trace(context, "function: " + function);
-    SwiftAST command = tree.child(3);
-
+    
+    SwiftAST functionT = tree.child(0);
+    assert(functionT.getType() == ExMParser.ID);
+    String function = functionT.getText();
+    SwiftAST outArgsT = tree.child(1);
+    assert(outArgsT.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
+    SwiftAST inArgsT = tree.child(2);
+    assert(inArgsT.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
+    SwiftAST cmd = tree.child(3);
+    assert(cmd.getType() == ExMParser.COMMAND);
+    SwiftAST appNameT = cmd.child(0);
+    assert(appNameT.getType() == ExMParser.ID);
+    String appName = appNameT.getText();
+    
+    
+    SwiftAST cmdArgs = cmd.child(1);
+    
     // TODO: fix once we have variables defined
     context.defineAppFunction(function, 
         new FunctionType(new ArrayList<InArgT>(), new ArrayList<SwiftType>()));
     
-    //TODO: ...
+    // TODO: get these from annotations
+    boolean hasSideEffects = true, deterministic = false;
     
-    LogHelper.debug(context, "defineAppFunction done");
+    List<Variable> outArgs = null; //TODO
+    List<Variable> inArgs = null; //TODO
+    
+    LocalContext appContext = new LocalContext(context, function);
+    appContext.setNested(false);
+    appContext.addDeclaredVariables(outArgs);
+    appContext.addDeclaredVariables(inArgs);
+    
+    backend.startFunction(function, outArgs, inArgs, TaskMode.LEAF);
+    // Evaluate any argument expressions
+    ArrayList<ExtArgType> argOrder = new ArrayList<ExtArgType>();
+    ArrayList<Variable> inputs = new ArrayList<Variable>();
+    ArrayList<Variable> outputs = new ArrayList<Variable>(); 
+    for (int i = 0; i < cmdArgs.getChildCount(); i++) {
+      SwiftAST cmdArg = cmdArgs.child(i);
+      if (cmdArg.getType() == ExMParser.APP_FILENAME) {
+        assert(cmdArg.getChildCount() == 1);
+        String fileVarName = cmdArg.child(0).getText();
+        Variable file = context.getDeclaredVariable(fileVarName);
+        if (file.getDefType() == DefType.INARG) {
+          argOrder.add(ExtArgType.IN);
+          inputs.add(file);
+        } else {
+          argOrder.add(ExtArgType.OUT);
+          outputs.add(file);
+        }
+      } else {
+        SwiftType exprType = TypeChecker.findSingleExprType(appContext,
+                                                            cmdArg);
+        // TODO: check exprType is something sensible
+        Variable exprResult = exprWalker.evalExprToTmp(appContext, cmdArg,
+                                      exprType, false, null);
+        inputs.add(exprResult);
+        argOrder.add(ExtArgType.IN);
+      }
+    }
+    
+    ArrayList<Variable> used = new ArrayList<Variable>();
+    used.addAll(inputs);
+    used.addAll(outputs);
+    // TODO: use wait to dispatch task to worker
+    backend.startWaitStatement(
+          context.getFunctionContext().constructName("appfn"), inputs, used,
+          new ArrayList<Variable>(0), false);
+    ArrayList<Arg> localInputs = new ArrayList<Arg>();
+    for (Variable in: inputs) {
+      // TODO: fetch variable
+    }
+    backend.runExternal(appName, localInputs, outputs, argOrder, 
+                        hasSideEffects, deterministic);
+    backend.endWaitStatement(null);
+        
+    backend.endFunction();
   }
 
   private void defineNewType(Context context, SwiftAST defnTree)

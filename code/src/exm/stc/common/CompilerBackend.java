@@ -85,9 +85,6 @@ public interface CompilerBackend {
   public abstract void assignBool(Variable target, Arg src);
   public abstract void retrieveBool(Variable target, Variable source);
 
-  public abstract void appFunctionCall(String function, List<Variable> inputs,
-      List<Variable> outputs, Arg priority);
-
   /**
    * NOTE: all built-ins should be defined before other functions
    * @param function
@@ -104,6 +101,13 @@ public interface CompilerBackend {
 
   public abstract void builtinLocalFunctionCall(String functionName,
           List<Arg> inputs, List<Variable> outputs);
+  
+  /**
+   * Generate command to run an external application immediately
+   */
+  public abstract void runExternal(String cmd, List<Arg> inputs,
+                             List<Variable> outputs, List<ExtArgType> order,
+                             boolean hasSideEffects, boolean deterministic);
   
   /**
    * lookup structVarName.structField and copy to oVarName
@@ -315,4 +319,8 @@ public interface CompilerBackend {
   public abstract void loopBreak(List<Variable> varsToClose);
   public abstract void endLoop();
 
+  public static enum ExtArgType {
+    IN,
+    OUT,
+  }
 }

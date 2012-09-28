@@ -12,6 +12,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.CompilerBackend.ExtArgType;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgType;
@@ -1548,7 +1549,7 @@ public class ICInstructions {
           }
           return res;
         } else {
-          // Not sure to do with multiple outputs
+          // TODO: Not sure to do with multiple outputs
         }
       }
       return null;
@@ -1565,7 +1566,7 @@ public class ICInstructions {
         List<Variable> inputs, List<Variable> outputs, Arg priority) {
       super(op, functionName);
       if (op != Opcode.CALL_BUILTIN && op != Opcode.CALL_CONTROL &&
-          op != Opcode.CALL_APP && op != Opcode.CALL_SYNC) {
+          op != Opcode.CALL_SYNC) {
         throw new STCRuntimeError("Tried to create function call"
             + " instruction with invalid opcode");
       }
@@ -1586,13 +1587,6 @@ public class ICInstructions {
       for(Variable v: inputs) {
         assert(v != null);
       }
-    }
-  
-    public static FunctionCall createAppCall(
-        String functionName, List<Variable> inputs, List<Variable> outputs,
-        Arg priority) {
-      return new FunctionCall(Opcode.CALL_APP, functionName,
-          inputs, outputs, priority);
     }
   
     public static FunctionCall createFunctionCall(
@@ -1638,9 +1632,6 @@ public class ICInstructions {
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       switch(this.op) {
-      case CALL_APP:
-        gen.appFunctionCall(functionName, inputs, outputs, priority);
-        break;
       case CALL_BUILTIN:
         gen.builtinFunctionCall(functionName, inputs, outputs, priority);
         break;
@@ -1774,13 +1765,7 @@ public class ICInstructions {
     @Override
     public List<Variable> getBlockingInputs() {
       List<Variable> blocksOn = new ArrayList<Variable>();
-      if (op == Opcode.CALL_APP) {
-        for (Variable v: inputs) {
-          if (!Types.isScalarValue(v.getType())) {
-            blocksOn.add(v);
-          }
-        }
-      } else if (op == Opcode.CALL_BUILTIN) {
+      if (op == Opcode.CALL_BUILTIN) {
         for (Variable v: inputs) {
           if (Types.isScalarFuture(v.getType())
               || Types.isReference(v.getType())) {
@@ -1830,17 +1815,7 @@ public class ICInstructions {
   
     @Override
     public String toString() {
-      String result = op.toString().toLowerCase() + " " + functionName;
-      result += " [";
-      for (Variable v: outputs) {
-        result += " " + v.getName();
-      }
-      result += " ] [";
-      for (Arg a: inputs) {
-        result += " " + a.toString();
-      }
-      result += " ]";
-      return result;
+      return formatFunctionCall(op, functionName, outputs, inputs);
     }
   
     @Override
@@ -1881,6 +1856,8 @@ public class ICInstructions {
     @Override
     public Map<String, Arg> constantFold(String enclosingFnName,
                                   Map<String, Arg> knownConstants) {
+      // Replace any variables for which constant values are known
+      ICUtil.replaceOpargsInList(knownConstants, inputs);
       return null;
     }
     
@@ -1913,6 +1890,122 @@ public class ICInstructions {
       return new LocalFunctionCall(functionName, 
           new ArrayList<Arg>(inputs), new ArrayList<Variable>(outputs));
     }
+  }
+  
+  public static class RunExternal extends Instruction {
+    private final String cmd;
+    private final ArrayList<Variable> outputs;
+    private final ArrayList<Arg> inputs;
+    private final List<ExtArgType> order;
+    private final boolean hasSideEffects;
+    private final boolean deterministic;
+    
+    public RunExternal(String cmd, List<Variable> outputs, List<Arg> inputs,
+               List<ExtArgType> order, boolean hasSideEffects,
+               boolean deterministic) {
+      super(Opcode.RUN_EXTERNAL);
+      this.cmd = cmd;
+      this.outputs = new ArrayList<Variable>(outputs);
+      this.inputs = new ArrayList<Arg>(inputs);
+      this.order = new ArrayList<ExtArgType>(order);
+      this.deterministic = deterministic;
+      this.hasSideEffects = hasSideEffects;
+    }
+
+    @Override
+    public void renameVars(Map<String, Arg> renames) {
+      ICUtil.replaceOpargsInList(renames, inputs);
+      ICUtil.replaceVarsInList(renames, outputs, false);
+    }
+
+    @Override
+    public void renameInputs(Map<String, Arg> renames) {
+      ICUtil.replaceOpargsInList(renames, inputs);
+    }
+
+    @Override
+    public String toString() {
+      return formatFunctionCall(op, cmd, outputs, inputs);
+    }
+
+    @Override
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
+      gen.runExternal(cmd, inputs, outputs, order, hasSideEffects,
+                      deterministic);
+    }
+
+    @Override
+    public List<Arg> getInputs() {
+      return Collections.unmodifiableList(inputs);
+    }
+
+    @Override
+    public List<Variable> getOutputs() {
+      return Collections.unmodifiableList(outputs);
+    }
+
+    @Override
+    public boolean hasSideEffects() {
+      return hasSideEffects;
+    }
+
+    @Override
+    public Map<String, Arg> constantFold(String fnName,
+        Map<String, Arg> knownConstants) {
+      // Replace variables for which values are known
+      ICUtil.replaceOpargsInList(knownConstants, inputs);
+      return null;
+    }
+
+    @Override
+    public Instruction constantReplace(Map<String, Arg> knownConstants) {
+      return null;
+    }
+
+    @Override
+    public MakeImmRequest canMakeImmediate(Set<String> closedVars,
+        boolean assumeAllClosed) {
+      // Don't support reducing this
+      return null;
+    }
+
+    @Override
+    public MakeImmChange makeImmediate(List<Variable> outVals,
+        List<Arg> inValues) {
+      return null;
+    }
+
+    @Override
+    public List<Variable> getBlockingInputs() {
+      // This instruction runs immediately: we won't block on any inputs
+      return null;
+    }
+
+    @Override
+    public List<ComputedValue> getComputedValues(
+        Map<ComputedValue, Arg> existing) {
+      if (deterministic) {
+        ArrayList<ComputedValue> cvs = new ArrayList<ComputedValue>(
+                                                        outputs.size());
+        for (int i = 0; i < outputs.size(); i++) {
+          // Unique key for cv includes number of output
+          // Output file should be closed after external program executes
+          ComputedValue cv = new ComputedValue(op, cmd + "!!" + i,
+                     inputs, Arg.createVar(outputs.get(i)), true);
+          cvs.add(cv);
+        }
+        return cvs;
+      } else {
+        return null;
+      }
+    }
+
+    @Override
+    public Instruction clone() {
+      return new RunExternal(cmd, outputs, inputs, order,
+                             hasSideEffects, deterministic);
+    }
+    
   }
   
   public static class LoopContinue extends Instruction {
@@ -2166,7 +2259,7 @@ public class ICInstructions {
   public static enum Opcode {
     FAKE, // Used for ComputedValue if there isn't a real opcode
     COMMENT,
-    CALL_BUILTIN, CALL_BUILTIN_LOCAL, CALL_CONTROL, CALL_APP, CALL_SYNC,
+    CALL_BUILTIN, CALL_BUILTIN_LOCAL, CALL_CONTROL, CALL_SYNC,
     DEREF_INT, DEREF_STRING, DEREF_FLOAT, DEREF_BOOL, DEREF_BLOB,
     DEREF_FILE,
     STORE_INT, STORE_STRING, STORE_FLOAT, STORE_BOOL, ADDRESS_OF, 
@@ -2183,6 +2276,7 @@ public class ICInstructions {
     LOOP_BREAK, LOOP_CONTINUE, 
     COPY_REF,
     LOCAL_OP, ASYNC_OP,
+    RUN_EXTERNAL,
     INIT_UPDATEABLE_FLOAT, UPDATE_MIN, UPDATE_INCR, UPDATE_SCALE, LATEST_VALUE,
     UPDATE_MIN_IMM, UPDATE_INCR_IMM, UPDATE_SCALE_IMM,
   }
@@ -2790,6 +2884,21 @@ public class ICInstructions {
       throw new STCRuntimeError("method to set " +
           dst.getType().typeName() + " is not known yet");
     }
+  }
+
+  private static String formatFunctionCall(Opcode op, 
+      String functionName, List<Variable> outputs, List<Arg> inputs) {
+    String result = op.toString().toLowerCase() + " " + functionName;
+    result += " [";
+    for (Variable v: outputs) {
+      result += " " + v.getName();
+    }
+    result += " ] [";
+    for (Arg a: inputs) {
+      result += " " + a.toString();
+    }
+    result += " ]";
+    return result;
   }
 }
 

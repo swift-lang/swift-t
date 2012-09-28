@@ -15,6 +15,7 @@ import exm.stc.tclbackend.tree.*;
  * */
 class Turbine
 {
+  private static final String EXEC = "exec";
   /* Names of types used by Turbine */
   public static final String STRING_TYPENAME = "string";
   public static final String INTEGER_TYPENAME = "integer";
@@ -720,6 +721,23 @@ class Turbine
 
   public static Square divideInteger(Expression a, Expression b) {
     return new Square(new Expression[] {DIVIDE_INTEGER, a, b});
+  }
+  
+  /**
+   * @param cmd
+   * @param args
+   * @return Tcl code to execute external executable 
+   */
+  public static Command exec(String cmd, List<Expression> args) {
+    ArrayList<Expression> args2 = new ArrayList<Expression>(args.size() + 1);
+    args2.add(new Token(cmd));
+    args2.addAll(args);
+    return new Command(EXEC, args2);
+  }
+
+
+  public static Command closeFile(Value fileVar) {
+    return new Command(new Token("turbine::close_file"), fileVar);
   }
 
   public static TclTree resetPriority() {

@@ -561,14 +561,6 @@ public class TurbineGenerator implements CompilerBackend
         opargToExpr(arrIx));
     pointStack.peek().add(t);
   }
-  /** NOT UPDATED */
-
-  @Override
-  public void appFunctionCall(String function,
-              List<Variable> inputs, List<Variable> outputs, Arg priority) {
-    assert(priority == null || priority.isImmediateInt());
-    throw new STCRuntimeError("appFunctionCall not implemented");
-  }
 
   @Override
   public void builtinFunctionCall(String function,
@@ -691,6 +683,36 @@ public class TurbineGenerator implements CompilerBackend
       throw new STCRuntimeError("Unexpected mode: " + mode);
     }
     clearPriority(priority);
+  }
+
+  @Override
+  public void runExternal(String cmd, List<Arg> inputs, List<Variable> outputs,
+          List<ExtArgType> order,
+          boolean hasSideEffects, boolean deterministic) {
+    assert(inputs.size() + outputs.size() == order.size());
+    List<Expression> args = new ArrayList<Expression>();
+    // TODO: need to translate file types to filename strings: 
+    //    generate code to fetch filename?
+    int iPos = 0, oPos = 0;
+    for (ExtArgType a: order) {
+      if (a == ExtArgType.IN) {
+        assert(iPos < inputs.size());
+        args.add(opargToExpr(inputs.get(iPos)));
+        iPos++;
+      } else {
+        assert(a == ExtArgType.OUT);
+        assert(oPos < outputs.size());
+        args.add(varToExpr(outputs.get(oPos)));
+        oPos++;
+      }
+    }
+    pointStack.peek().add(Turbine.exec(cmd, args));
+        
+    // Close outputs
+    for (Variable o: outputs) {
+      assert(Types.isFile(o.getType()));
+      pointStack.peek().add(Turbine.closeFile(varToExpr(o)));
+    }
   }
 
   private void clearPriority(Arg priority) {

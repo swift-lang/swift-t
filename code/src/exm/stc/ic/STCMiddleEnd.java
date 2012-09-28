@@ -39,6 +39,7 @@ import exm.stc.ic.tree.ICInstructions.FunctionCall;
 import exm.stc.ic.tree.ICInstructions.LocalFunctionCall;
 import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICInstructions.LoopContinue;
+import exm.stc.ic.tree.ICInstructions.RunExternal;
 import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
@@ -372,7 +373,7 @@ public class STCMiddleEnd implements CompilerBackend {
     assert(priority == null || priority.isImmediateInt());
     if (blockOn != null) {
       throw new STCRuntimeError("Swift IC generator doesn't support " +
-      		" blocking on composite function inputs");
+      		" blocking on function inputs");
     }
     currBlock().addInstruction(
           FunctionCall.createFunctionCall(
@@ -380,13 +381,18 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void appFunctionCall(String function, List<Variable> inputs,
-      List<Variable> outputs, Arg priority) {
-    assert(priority == null || priority.isImmediateInt());
-    currBlock().addInstruction(
-          FunctionCall.createAppCall(function, inputs, outputs, priority));
+  public void runExternal(String cmd, List<Arg> inputs, List<Variable> outputs,
+                          List<ExtArgType> order,
+                          boolean hasSideEffects, boolean deterministic) {
+    for (Variable o: outputs) {
+      assert(Types.isFile(o.getType()));
+    }
+    assert(inputs.size() + outputs.size() == order.size());
+    
+    currBlock().addInstruction(new RunExternal(cmd, outputs, inputs,
+                                order, hasSideEffects, deterministic));
+        
   }
-
 
   @Override
   public void closeArray(Variable arr) {
