@@ -474,6 +474,8 @@ public class ICInstructions {
         gen.updateImm(args.get(0).getVar(), UpdateMode.SCALE, 
             args.get(1));
         break;
+      case GET_FILENAME:
+        gen.getFileName(args.get(0).getVar(), args.get(1).getVar());
       default:
         throw new STCRuntimeError("didn't expect to see op " +
                   op.toString() + " here");
@@ -743,6 +745,12 @@ public class ICInstructions {
       return new TurbineOp(op, Arrays.asList(Arg.createVar(updateable), 
                                                                    val));
     }
+    
+    public static Instruction getFileName(Variable filename, Variable file) {
+      return new TurbineOp(Opcode.GET_FILENAME, 
+              Arrays.asList(Arg.createVar(filename), Arg.createVar(file)));
+    }
+ 
 
     @Override
     public void renameVars(Map<String, Arg> renames) {
@@ -820,6 +828,7 @@ public class ICInstructions {
       case ADDRESS_OF:
       case LOAD_REF:
       case COPY_REF:
+      case GET_FILENAME:
           return 1;
       default:
         throw new STCRuntimeError("Need to add opcode " + op.toString()
@@ -870,6 +879,7 @@ public class ICInstructions {
       case ARRAY_LOOKUP_FUTURE:
       case ARRAYREF_LOOKUP_FUTURE:
       case ARRAYREF_LOOKUP_IMM:
+      case GET_FILENAME:
           return this.writesAliasVar();
 
       case DEREF_FILE:
@@ -1325,6 +1335,8 @@ public class ICInstructions {
           } 
           return Arrays.asList(retrieve, assign);
         }
+        case GET_FILENAME:
+          // TODO: standardise ComputedValue with related functions
         case DEREF_BLOB:
         case DEREF_BOOL:
         case DEREF_FLOAT:
@@ -1494,7 +1506,6 @@ public class ICInstructions {
     public Instruction clone() {
       return new TurbineOp(op, Arg.cloneList(args));
     }
-  
   }
   
   public static abstract class CommonFunctionCall extends Instruction {
@@ -2279,6 +2290,7 @@ public class ICInstructions {
     RUN_EXTERNAL,
     INIT_UPDATEABLE_FLOAT, UPDATE_MIN, UPDATE_INCR, UPDATE_SCALE, LATEST_VALUE,
     UPDATE_MIN_IMM, UPDATE_INCR_IMM, UPDATE_SCALE_IMM,
+    GET_FILENAME,
   }
 
   

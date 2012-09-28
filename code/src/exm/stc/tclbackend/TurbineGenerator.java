@@ -394,6 +394,16 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
+  public void getFileName(Variable filename, Variable file) {
+    assert(Types.isString(filename.getType()));
+    assert(filename.getStorage() == VariableStorage.ALIAS);
+    assert(Types.isFile(file.getType()));
+    SetVariable cmd = new SetVariable(prefixVar(filename.getName()),
+                              Turbine.getFileName(varToExpr(file)));
+    pointStack.peek().add(cmd);
+  }
+
+  @Override
   public void localOp(BuiltinOpcode op, Variable out,
                                             List<Arg> in) {
     ArrayList<Expression> argExpr = new ArrayList<Expression>(in.size());
@@ -1243,10 +1253,10 @@ public class TurbineGenerator implements CompilerBackend
     @Override
     public void startWaitStatement(String procName, List<Variable> waitVars,
         List<Variable> usedVariables, List<Variable> keepOpenVars,
-        boolean explicit) {
+        boolean explicit, TaskMode mode) {
       logger.trace("startWaitStatement()...");
       startAsync(procName, waitVars, usedVariables, keepOpenVars,
-                                                    false);
+                 mode);
     }
 
     @Override
@@ -1267,7 +1277,7 @@ public class TurbineGenerator implements CompilerBackend
      */
     private void startAsync(String procName, List<Variable> waitVars,
         List<Variable> usedVariables, List<Variable> keepOpenVars,
-        boolean shareWork) {
+        TaskMode mode) {
       ArrayList<Variable> toPassIn = new ArrayList<Variable>();
       HashSet<String> alreadyInSet = new HashSet<String>();
       for (Variable v: usedVariables) {
@@ -1309,12 +1319,6 @@ public class TurbineGenerator implements CompilerBackend
 
       TclList action = buildAction(uniqueName, toPassIn);
       
-      TaskMode mode;
-      if (shareWork) {
-        mode = TaskMode.CONTROL;
-      } else {
-        mode = TaskMode.LOCAL;
-      }
       pointStack.peek().add(
             Turbine.rule(uniqueName, waitFor, action, mode));
 
@@ -1425,7 +1429,7 @@ public class TurbineGenerator implements CompilerBackend
         passIn.add(arrayVar);
       }
       startAsync(procName, Arrays.asList(arrayVar), passIn,
-                  keepOpenVars, false);
+                  keepOpenVars, TaskMode.LOCAL);
     }
 
     boolean haveKeys = loopCountVar != null;
@@ -1494,7 +1498,7 @@ public class TurbineGenerator implements CompilerBackend
       if (loopCountVar != null) loopUsedVars.add(loopCountVar);
       startAsync("foreach:" + foreach_num + ":body",
           new ArrayList<Variable>(), loopUsedVars, keepOpenVars,
-          true);
+          TaskMode.CONTROL);
     }
   }
 
@@ -1578,7 +1582,7 @@ public class TurbineGenerator implements CompilerBackend
     if (!isSync) {
       startAsync(loopName + ":body",
           new ArrayList<Variable>(), loopUsedVars, keepOpenVars,
-          true);
+          TaskMode.CONTROL);
     }
   }
 
@@ -1779,7 +1783,11 @@ public class TurbineGenerator implements CompilerBackend
     } else if (Types.isScalarFuture(var.getType()) ||
             Types.isReference(var.getType()) ||
             Types.isArray(var.getType())) {
-        waitExpr = wv;
+      waitExpr = wv;
+    } else if (Types.isScalarUpdateable(var.getType())) {
+      // TODO: this is a hack for the time being required while we're
+      // using futures and updateables interchangably
+      waitExpr = wv;
     } else {
       throw new STCRuntimeError("Don't know how to wait on var: "
               + var.toString());

@@ -60,7 +60,9 @@ import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.DefType;
 import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
+import exm.stc.common.util.Triple;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
 /**
  * This class walks the Swift AST.
@@ -290,7 +292,7 @@ public class ASTWalker {
     
     backend.startWaitStatement(
           context.getFunctionContext().constructName("explicitwait"),
-                      waitEvaled, usedVars, keepOpenVars, true);
+                      waitEvaled, usedVars, keepOpenVars, true, TaskMode.LOCAL);
     block(new LocalContext(context), wait.getBlock());
     backend.endWaitStatement(keepOpenVars);
   }
@@ -432,7 +434,7 @@ public class ASTWalker {
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("if"), 
               Arrays.asList(conditionVar),
-                usedVariables, keepOpenVars, false);
+                usedVariables, keepOpenVars, false, TaskMode.LOCAL);
 
     Context waitContext = new LocalContext(context);
     Variable condVal = varCreator.fetchValueOf(waitContext, conditionVar);
@@ -573,7 +575,7 @@ public class ASTWalker {
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("switch"),
                 Arrays.asList(switchVar),
-                usedVariables, keepOpenVars, false);
+                usedVariables, keepOpenVars, false, TaskMode.LOCAL);
 
     Context waitContext = new LocalContext(context);
     Variable switchVal = varCreator.createValueOfVar(waitContext,
@@ -647,7 +649,7 @@ public class ASTWalker {
     waitUsedVariables.addAll(Arrays.asList(start, end, step));
     backend.startWaitStatement("wait-range" + loopNum, 
                                 Arrays.asList(start, end, step), 
-                                waitUsedVariables, keepOpenVars, false);
+                                waitUsedVariables, keepOpenVars, false, TaskMode.LOCAL);
     Context waitContext = new LocalContext(context);
     Variable startVal = varCreator.fetchValueOf(waitContext, start);
     Variable endVal = varCreator.fetchValueOf(waitContext, end);
@@ -711,7 +713,7 @@ public class ASTWalker {
       waitUsedVars.add(arrayVar);
 
       backend.startWaitStatement(fc.constructName("foreach_wait"),
-          Arrays.asList(arrayVar), waitUsedVars, keepOpenVars, false);
+          Arrays.asList(arrayVar), waitUsedVars, keepOpenVars, false, TaskMode.LOCAL);
 
       outsideLoopContext = new LocalContext(context);
       realArray = varCreator.createTmp(outsideLoopContext,
@@ -1789,49 +1791,136 @@ public class ASTWalker {
   private void defineAppFunction(Context context, SwiftAST tree)
       throws UserException {
     LogHelper.info(context.getLevel(), "defineAppFunction");
-    
+    assert(tree.getChildCount() == 4);
     SwiftAST functionT = tree.child(0);
     assert(functionT.getType() == ExMParser.ID);
     String function = functionT.getText();
     SwiftAST outArgsT = tree.child(1);
-    assert(outArgsT.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
     SwiftAST inArgsT = tree.child(2);
-    assert(inArgsT.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
-    SwiftAST cmd = tree.child(3);
-    assert(cmd.getType() == ExMParser.COMMAND);
-    SwiftAST appNameT = cmd.child(0);
-    assert(appNameT.getType() == ExMParser.ID);
-    String appName = appNameT.getText();
+    SwiftAST cmdT = tree.child(3);
     
-    
-    SwiftAST cmdArgs = cmd.child(1);
-    
-    // TODO: fix once we have variables defined
-    context.defineAppFunction(function, 
-        new FunctionType(new ArrayList<InArgT>(), new ArrayList<SwiftType>()));
+    FunctionDecl decl = FunctionDecl.fromAST(context, inArgsT, outArgsT);
+    context.defineAppFunction(function, decl.getFunctionType());
     
     // TODO: get these from annotations
     boolean hasSideEffects = true, deterministic = false;
     
-    List<Variable> outArgs = null; //TODO
-    List<Variable> inArgs = null; //TODO
-    
     LocalContext appContext = new LocalContext(context, function);
     appContext.setNested(false);
-    appContext.addDeclaredVariables(outArgs);
-    appContext.addDeclaredVariables(inArgs);
+    appContext.addDeclaredVariables(decl.getOutVars());
+    appContext.addDeclaredVariables(decl.getInVars());
     
-    backend.startFunction(function, outArgs, inArgs, TaskMode.LEAF);
+    backend.startFunction(function, decl.getOutVars(), decl.getInVars(),
+                          TaskMode.LEAF);
+    genAppFunctionBody(appContext, cmdT, hasSideEffects, deterministic);
+    backend.endFunction();
+  }
+
+
+  /**
+   * @param context local context for app function
+   * @param cmd AST for app function command
+   * @param hasSideEffects
+   * @param deterministic
+   * @throws UserException
+   */
+  private void genAppFunctionBody(Context context, SwiftAST cmd, 
+          boolean hasSideEffects,
+          boolean deterministic) throws UserException {
+    //TODO: don't yet handle situation where user is naughty and
+    //    uses output variable in expression context
+    
+    // Extract command from AST
+    assert(cmd.getType() == ExMParser.COMMAND);
+    assert(cmd.getChildCount() == 2);
+    SwiftAST appNameT = cmd.child(0);
+    assert(appNameT.getType() == ExMParser.ID);
+    String appName = appNameT.getText();
+    SwiftAST cmdArgs = cmd.child(1);
+    
     // Evaluate any argument expressions
-    ArrayList<ExtArgType> argOrder = new ArrayList<ExtArgType>();
-    ArrayList<Variable> inputs = new ArrayList<Variable>();
-    ArrayList<Variable> outputs = new ArrayList<Variable>(); 
+    Triple<List<ExtArgType>, List<Variable>, List<Variable>> argExprs
+        = evalAppCmdArgs(context, cmdArgs);
+    List<ExtArgType> argOrder = argExprs.val1;
+    List<Variable> inputs = argExprs.val2;
+    List<Variable> outputs = argExprs.val3;
+    
+    // Work out what variables must be closed before command line executes
+    Pair<Map<String, Variable>, List<Variable>> wait =
+            selectAppWaitVars(context, inputs, outputs);
+    Map<String, Variable> fileNames = wait.val1; 
+    List<Variable> waitVars = wait.val2;
+    
+    // Variables that need to be passed to worker
+    List<Variable> used = new ArrayList<Variable>();
+    used.addAll(inputs);
+    used.addAll(outputs);
+    
+    // use wait to wait for data then dispatch task to worker
+    String waitName = context.getFunctionContext().constructName("appfn");
+    backend.startWaitStatement(waitName, waitVars, used,
+                 Collections.<Variable>emptyList(), false, TaskMode.LEAF);
+    // On worker, just execute the required command directly
+    List<Arg> localInputs = appLocalInputs(context, inputs, fileNames);
+    backend.runExternal(appName, localInputs, outputs, argOrder, 
+                        hasSideEffects, deterministic);
+    backend.endWaitStatement(null);
+  }
+
+
+  /**
+   * Work out what the local inputs to the app function should be
+   * @param context
+   * @param inputs
+   * @param fileNames
+   * @return
+   * @throws UserException
+   * @throws UndefinedTypeException
+   * @throws DoubleDefineException
+   */
+  private List<Arg> appLocalInputs(Context context,
+          List<Variable> inputs, Map<String, Variable> fileNames)
+          throws UserException, UndefinedTypeException, DoubleDefineException {
+    List<Arg> localInputs = new ArrayList<Arg>();
+    for (Variable in: inputs) {
+      if (Types.isFile(in.getType())) {
+        Variable filenameFuture = fileNames.get(in.getName());
+        assert(filenameFuture != null);
+        Variable filenameVal = varCreator.createValueOfVar(context,
+                                                filenameFuture);
+        backend.retrieveString(filenameVal, filenameFuture);
+        localInputs.add(Arg.createVar(filenameVal));
+      } else { 
+        localInputs.add(Arg.createVar(varCreator.fetchValueOf(context, in)));
+      }
+    }
+    return localInputs;
+  }
+
+  /**
+   * Evaluates argument expressions for app command line
+   * @param context
+   * @param cmdArgs
+   * @return
+   * @throws TypeMismatchException
+   * @throws UserException
+   */
+  private Triple<List<ExtArgType>, List<Variable>, List<Variable>> 
+      evalAppCmdArgs(Context context, SwiftAST cmdArgs) 
+          throws TypeMismatchException, UserException {
+    List<ExtArgType> argOrder = new ArrayList<ExtArgType>();
+    List<Variable> inputs = new ArrayList<Variable>();
+    List<Variable> outputs = new ArrayList<Variable>();
     for (int i = 0; i < cmdArgs.getChildCount(); i++) {
       SwiftAST cmdArg = cmdArgs.child(i);
       if (cmdArg.getType() == ExMParser.APP_FILENAME) {
         assert(cmdArg.getChildCount() == 1);
         String fileVarName = cmdArg.child(0).getText();
         Variable file = context.getDeclaredVariable(fileVarName);
+        if (!Types.isFile(file.getType())) {
+          throw new TypeMismatchException(context, "Variable " + file.getName()
+                  + " is not a file, cannot use @ prefix for app");
+        }
         if (file.getDefType() == DefType.INARG) {
           argOrder.add(ExtArgType.IN);
           inputs.add(file);
@@ -1840,33 +1929,63 @@ public class ASTWalker {
           outputs.add(file);
         }
       } else {
-        SwiftType exprType = TypeChecker.findSingleExprType(appContext,
+        SwiftType exprType = TypeChecker.findSingleExprType(context,
                                                             cmdArg);
-        // TODO: check exprType is something sensible
-        Variable exprResult = exprWalker.evalExprToTmp(appContext, cmdArg,
+        if (!Types.isString(exprType)) {
+          //TODO: more types
+          throw new STCRuntimeError("Type " + exprType + " not yet "
+                  + " supported for app args");
+        }
+        Variable exprResult = exprWalker.evalExprToTmp(context, cmdArg,
                                       exprType, false, null);
         inputs.add(exprResult);
         argOrder.add(ExtArgType.IN);
       }
     }
-    
-    ArrayList<Variable> used = new ArrayList<Variable>();
-    used.addAll(inputs);
-    used.addAll(outputs);
-    // TODO: use wait to dispatch task to worker
-    backend.startWaitStatement(
-          context.getFunctionContext().constructName("appfn"), inputs, used,
-          new ArrayList<Variable>(0), false);
-    ArrayList<Arg> localInputs = new ArrayList<Arg>();
-    for (Variable in: inputs) {
-      // TODO: fetch variable
-    }
-    backend.runExternal(appName, localInputs, outputs, argOrder, 
-                        hasSideEffects, deterministic);
-    backend.endWaitStatement(null);
-        
-    backend.endFunction();
+    return Triple.create(argOrder, inputs, outputs);
   }
+
+  /**
+   * Choose which inputs/outputs to an app invocation should be blocked
+   * upon.  This is somewhat complex since we sometimes need to block
+   * on filenames/file statuses/etc  
+   * @param context
+   * @param inputs
+   * @param outputs
+   * @return
+   * @throws UserException
+   * @throws UndefinedTypeException
+   */
+  private Pair<Map<String, Variable>, List<Variable>> selectAppWaitVars(
+          Context context, List<Variable> inputs,
+          List<Variable> outputs) throws UserException,
+          UndefinedTypeException {
+    // map from file var to filename
+    Map<String, Variable> fileNames = new HashMap<String, Variable>(); 
+    List<Variable> waitVars = new ArrayList<Variable>();
+    for (Variable in: inputs) {
+      if (Types.isFile(in.getType())) {
+        Variable filenameFuture = varCreator.createTmpAlias(context,
+                                                Types.FUTURE_STRING); 
+        backend.getFileName(filenameFuture, in);
+        waitVars.add(filenameFuture);
+        fileNames.put(in.getName(), filenameFuture);
+      } else {
+        waitVars.add(in);
+      }
+    }
+    
+    for (Variable out: outputs) {
+      // Just need filename
+      Variable filenameFuture = varCreator.createTmpAlias(context,
+                                              Types.FUTURE_STRING); 
+      backend.getFileName(filenameFuture, out);
+      waitVars.add(filenameFuture);
+      fileNames.put(out.getName(), filenameFuture);
+    }
+    return Pair.create(fileNames, waitVars);
+  }
+
 
   private void defineNewType(Context context, SwiftAST defnTree)
       throws DoubleDefineException, UndefinedTypeException {

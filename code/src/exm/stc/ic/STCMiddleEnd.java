@@ -209,10 +209,10 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void startWaitStatement(String procName, List<Variable> waitVars,
       List<Variable> usedVariables, List<Variable> keepOpenVars,
-      boolean explicit) {
+      boolean explicit, TaskMode mode) {
     assert(currFunction != null);
     WaitStatement wait = new WaitStatement(procName, waitVars, usedVariables,
-                                              keepOpenVars, explicit);
+                                          keepOpenVars, explicit, mode);
     currBlock().addContinuation(wait);
     blockStack.push(wait.getBlock());
   }
@@ -763,6 +763,15 @@ public class STCMiddleEnd implements CompilerBackend {
     
     currBlock().addInstruction(
           TurbineOp.updateImm(updateable, updateMode, val));
+  }
+
+  @Override
+  public void getFileName(Variable filename, Variable file) {
+    assert(Types.isString(filename.getType()));
+    assert(filename.getStorage() == VariableStorage.ALIAS);
+    assert(Types.isFile(file.getType()));
+    currBlock().addInstruction(
+            TurbineOp.getFileName(filename, file));
   }
 
 }

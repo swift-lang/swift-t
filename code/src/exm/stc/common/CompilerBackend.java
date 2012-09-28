@@ -86,6 +86,10 @@ public interface CompilerBackend {
   public abstract void retrieveBool(Variable target, Variable source);
 
   /**
+   * Extract handle to filename future out of file variable
+   */
+  public abstract void getFileName(Variable filename, Variable file);
+  /**
    * NOTE: all built-ins should be defined before other functions
    * @param function
    * @param inputs
@@ -278,24 +282,26 @@ public interface CompilerBackend {
   public abstract void optimise() throws UserException;
 
   public abstract void regenerate(CompilerBackend codeGen) throws UserException;
-
+  
   /**
-   *
+   * Start code that will execute asynchronously
    * @param procName the name of the wait block (useful so generated
    *    tcl code can have a nice name for the block)
    * @param waitVars
-   * @param usedVariables any variables which are read or written inside block
+   * @param usedVars any variables which are read or written inside block
    * @param keepOpenVars any vars that need to be kept open for wait
    * @param explicit true if this is a semantically meaningful wait statement,
    *            false if it can be removed safely without altering semantics.
    *            If true the wait statement will only be optimised out if it
    *            can be shown that the variables are already closed when the
    *            wait is encountered
+   * @param mode TODO
+   * @param mode controls where asynchronous execution occurs
    */
   public abstract void startWaitStatement(String procName,
       List<Variable> waitVars,
-      List<Variable> usedVariables, List<Variable> keepOpenVars,
-      boolean explicit);
+      List<Variable> usedVars, List<Variable> keepOpenVars,
+      boolean explicit, TaskMode mode);
 
   public abstract void endWaitStatement(List<Variable> keepOpenVars);
 

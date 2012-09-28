@@ -18,6 +18,7 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgType;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.DefType;
@@ -1599,21 +1600,22 @@ public class ICContinuations {
      * We can only remove an explicit wait if we know that the variables are
      * already closed*/
     private final boolean explicit;
+    private final TaskMode mode;
 
     public WaitStatement(String procName, List<Variable> waitVars,
                     List<Variable> usedVariables,
                     List<Variable> keepOpenVars,
-                    boolean explicit) {
+                    boolean explicit, TaskMode mode) {
       this(procName, new Block(BlockType.WAIT_BLOCK),
                         new ArrayList<Variable>(waitVars),
                         new ArrayList<Variable>(usedVariables),
                         new ArrayList<Variable>(keepOpenVars),
-                        explicit);
+                        explicit, mode);
     }
 
     private WaitStatement(String procName, Block block,
         ArrayList<Variable> waitVars, ArrayList<Variable> usedVariables,
-        ArrayList<Variable> keepOpenVars, boolean explicit) {
+        ArrayList<Variable> keepOpenVars, boolean explicit, TaskMode mode) {
       super();
       this.procName = procName;
       this.block = block;
@@ -1622,6 +1624,7 @@ public class ICContinuations {
       this.usedVariables = usedVariables;
       this.keepOpenVars = keepOpenVars;
       this.explicit = explicit;
+      this.mode = mode;
     }
 
     @Override
@@ -1629,7 +1632,7 @@ public class ICContinuations {
       return new WaitStatement(procName, this.block.clone(),
           new ArrayList<Variable>(waitVars),
           new ArrayList<Variable>(usedVariables),
-          new ArrayList<Variable>(keepOpenVars), explicit);
+          new ArrayList<Variable>(keepOpenVars), explicit, mode);
     }
 
     public Block getBlock() {
@@ -1641,7 +1644,7 @@ public class ICContinuations {
         throws UndefinedTypeException {
 
       gen.startWaitStatement(procName, waitVars, usedVariables,
-          keepOpenVars, explicit);
+          keepOpenVars, explicit, mode);
       this.block.generate(logger, gen, info);
       gen.endWaitStatement(keepOpenVars);
     }
@@ -1654,6 +1657,7 @@ public class ICContinuations {
       sb.append(") ");
       sb.append("/*" + procName + "*/ " );
       ICUtil.prettyPrintVarInfo(sb, usedVariables, keepOpenVars);
+      sb.append(" <" + mode.toString() + ">");
       sb.append(" {\n");
       block.prettyPrint(sb, newIndent);
       sb.append(currentIndent + "}\n");

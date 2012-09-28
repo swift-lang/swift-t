@@ -16,6 +16,7 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.VariableStorage;
@@ -192,7 +193,8 @@ public class WaitCoalescer {
       MakeImmRequest req = i.canMakeImmediate(empty, true);
       if (req != null && req.in.size() > 0) {
         WaitStatement wait = new WaitStatement(fn.getName() + "-optinserted",
-                req.in, req.in, new ArrayList<Variable>(0), false);
+                req.in, req.in, new ArrayList<Variable>(0), false,
+                TaskMode.LOCAL);
 
         List<Instruction> instBuffer = new ArrayList<Instruction>();
         
@@ -252,7 +254,7 @@ public class WaitCoalescer {
         // of the above.
         WaitStatement newWait = new WaitStatement(fn.getName() +
                 "-optmerged", intersectionVs, new ArrayList<Variable>(0),
-                new ArrayList<Variable>(0), explicit);
+                new ArrayList<Variable>(0), explicit, TaskMode.LOCAL);
         
         // List of variables that are kept open, or used
         ArrayList<Variable> usedVars = new ArrayList<Variable>();

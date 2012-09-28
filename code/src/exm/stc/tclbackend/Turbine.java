@@ -744,7 +744,17 @@ class Turbine
    * @return
    */
   public static Expression getFileStatus(Value fileVar) {
-    return new Square(new Token("turbine::_filestatus"), fileVar);
+    return new Square(new Token("turbine::get_file_status"), fileVar);
+  }
+  
+  /**
+   * Expression that extracts the filename string future
+   * a file variable
+   * @param fileVar
+   * @return
+   */
+  public static Expression getFileName(Value fileVar) {
+    return new Square(new Token("turbine::get_file_path"), fileVar);
   }
   
   /**

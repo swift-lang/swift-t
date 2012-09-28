@@ -1450,7 +1450,7 @@ public class SwigcGenerator implements CompilerBackend
     @Override
     public void startWaitStatement(String procName, List<Variable> waitVars,
         List<Variable> usedVariables, List<Variable> keepOpenVars,
-        boolean explicit) {
+        boolean explicit, TaskMode mode) {
       logger.trace("startWaitStatement()...");
       startAsync(procName, waitVars, usedVariables, keepOpenVars,
                                                     false);
@@ -2140,6 +2140,12 @@ public class SwigcGenerator implements CompilerBackend
         runExternal(String cmd, List<Arg> inputs, List<Variable> outputs,
             List<ExtArgType> order,
             boolean hasSideEffects, boolean deterministic) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public void getFileName(Variable filename, Variable file) {
       // TODO Auto-generated method stub
       
     }
