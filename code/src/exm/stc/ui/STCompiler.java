@@ -200,10 +200,13 @@ public class STCompiler {
       String code = codeGen.code();
       output.println(code);
 
-      SwigcGenerator swigCodeGen = new SwigcGenerator(logger, timestamp);
-      intermediate.regenerate(swigCodeGen);
-      String swigcode = swigCodeGen.code();
-      output.println(swigcode);
+      boolean doILikeCrashes = false;
+      if (doILikeCrashes) {
+        SwigcGenerator swigCodeGen = new SwigcGenerator(logger, timestamp);
+        intermediate.regenerate(swigCodeGen);
+        String swigcode = swigCodeGen.code();
+        output.println(swigcode);
+      }
 
       output.close();
 
