@@ -1829,18 +1829,19 @@ public class ASTWalker {
           boolean deterministic) throws UserException {
     //TODO: don't yet handle situation where user is naughty and
     //    uses output variable in expression context
+    //TODO: how to handle app output args that aren't referenced in
+    //    command line
     
     // Extract command from AST
     assert(cmd.getType() == ExMParser.COMMAND);
-    assert(cmd.getChildCount() == 2);
+    assert(cmd.getChildCount() >= 1);
     SwiftAST appNameT = cmd.child(0);
     assert(appNameT.getType() == ExMParser.ID);
     String appName = appNameT.getText();
-    SwiftAST cmdArgs = cmd.child(1);
     
     // Evaluate any argument expressions
     Triple<List<ExtArgType>, List<Variable>, List<Variable>> argExprs
-        = evalAppCmdArgs(context, cmdArgs);
+        = evalAppCmdArgs(context, cmd);
     List<ExtArgType> argOrder = argExprs.val1;
     List<Variable> inputs = argExprs.val2;
     List<Variable> outputs = argExprs.val3;
@@ -1857,9 +1858,9 @@ public class ASTWalker {
     used.addAll(outputs);
     
     // use wait to wait for data then dispatch task to worker
-    String waitName = context.getFunctionContext().constructName("appfn");
+    String waitName = context.getFunctionContext().constructName("app-leaf");
     backend.startWaitStatement(waitName, waitVars, used,
-                 Collections.<Variable>emptyList(), false, TaskMode.LEAF);
+                 Collections.<Variable>emptyList(), true, TaskMode.LEAF);
     // On worker, just execute the required command directly
     List<Arg> localInputs = appLocalInputs(context, inputs, fileNames);
     backend.runExternal(appName, localInputs, outputs, argOrder, 
@@ -1886,12 +1887,12 @@ public class ASTWalker {
       if (Types.isFile(in.getType())) {
         Variable filenameFuture = fileNames.get(in.getName());
         assert(filenameFuture != null);
-        Variable filenameVal = varCreator.createValueOfVar(context,
+        Variable filenameVal = varCreator.fetchValueOf(context,
                                                 filenameFuture);
-        backend.retrieveString(filenameVal, filenameFuture);
         localInputs.add(Arg.createVar(filenameVal));
-      } else { 
-        localInputs.add(Arg.createVar(varCreator.fetchValueOf(context, in)));
+      } else {
+        Variable val = varCreator.fetchValueOf(context, in);
+        localInputs.add(Arg.createVar(val));
       }
     }
     return localInputs;
@@ -1911,7 +1912,8 @@ public class ASTWalker {
     List<ExtArgType> argOrder = new ArrayList<ExtArgType>();
     List<Variable> inputs = new ArrayList<Variable>();
     List<Variable> outputs = new ArrayList<Variable>();
-    for (int i = 0; i < cmdArgs.getChildCount(); i++) {
+    // Skip first arg: that is id
+    for (int i = 1; i < cmdArgs.getChildCount(); i++) {
       SwiftAST cmdArg = cmdArgs.child(i);
       if (cmdArg.getType() == ExMParser.APP_FILENAME) {
         assert(cmdArg.getChildCount() == 1);
@@ -1964,14 +1966,14 @@ public class ASTWalker {
     Map<String, Variable> fileNames = new HashMap<String, Variable>(); 
     List<Variable> waitVars = new ArrayList<Variable>();
     for (Variable in: inputs) {
+      waitVars.add(in);
       if (Types.isFile(in.getType())) {
+        // Also need to wait for filename for files
         Variable filenameFuture = varCreator.createTmpAlias(context,
                                                 Types.FUTURE_STRING); 
         backend.getFileName(filenameFuture, in);
         waitVars.add(filenameFuture);
         fileNames.put(in.getName(), filenameFuture);
-      } else {
-        waitVars.add(in);
       }
     }
     

@@ -190,6 +190,7 @@ command_args_more:
     
 command_arg:
         ID
+    |   literal
     |   LPAREN expr RPAREN -> expr
     |   '@' ID -> ^( APP_FILENAME ID )   
     ;

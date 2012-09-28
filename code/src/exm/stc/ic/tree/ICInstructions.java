@@ -476,6 +476,7 @@ public class ICInstructions {
         break;
       case GET_FILENAME:
         gen.getFileName(args.get(0).getVar(), args.get(1).getVar());
+        break;
       default:
         throw new STCRuntimeError("didn't expect to see op " +
                   op.toString() + " here");
@@ -1577,7 +1578,7 @@ public class ICInstructions {
         List<Variable> inputs, List<Variable> outputs, Arg priority) {
       super(op, functionName);
       if (op != Opcode.CALL_BUILTIN && op != Opcode.CALL_CONTROL &&
-          op != Opcode.CALL_SYNC) {
+          op != Opcode.CALL_SYNC && op != Opcode.CALL_LOCAL) {
         throw new STCRuntimeError("Tried to create function call"
             + " instruction with invalid opcode");
       }
@@ -1608,6 +1609,8 @@ public class ICInstructions {
         op = Opcode.CALL_SYNC;
       } else if (mode == TaskMode.CONTROL) {
         op = Opcode.CALL_CONTROL;
+      } else if (mode == TaskMode.LOCAL) {
+        op = Opcode.CALL_LOCAL;
       } else {
         throw new STCRuntimeError("Task mode " + mode + " not yet supported");
       }
@@ -1648,11 +1651,14 @@ public class ICInstructions {
         break;
       case CALL_SYNC:
       case CALL_CONTROL:
+      case CALL_LOCAL:
         TaskMode mode;
         if (op == Opcode.CALL_CONTROL) {
           mode = TaskMode.CONTROL;
         } else if (op == Opcode.CALL_SYNC) {
           mode = TaskMode.SYNC;
+        } else if (op == Opcode.CALL_LOCAL) {
+          mode = TaskMode.LOCAL;
         } else {
           throw new STCRuntimeError("Unexpected op " + op);
         }
@@ -2270,7 +2276,7 @@ public class ICInstructions {
   public static enum Opcode {
     FAKE, // Used for ComputedValue if there isn't a real opcode
     COMMENT,
-    CALL_BUILTIN, CALL_BUILTIN_LOCAL, CALL_CONTROL, CALL_SYNC,
+    CALL_BUILTIN, CALL_BUILTIN_LOCAL, CALL_CONTROL, CALL_SYNC, CALL_LOCAL,
     DEREF_INT, DEREF_STRING, DEREF_FLOAT, DEREF_BOOL, DEREF_BLOB,
     DEREF_FILE,
     STORE_INT, STORE_STRING, STORE_FLOAT, STORE_BOOL, ADDRESS_OF, 

@@ -679,7 +679,9 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     setPriority(priority);
-    if (mode == TaskMode.CONTROL) {
+    if (mode == TaskMode.CONTROL || mode == TaskMode.LOCAL) {
+      // TODO: should handle local separately - this will put local tasks
+      //      into load balancer
       pointStack.peek().add(Turbine.callFunction(
                             TclNamer.swiftFuncName(function),
                             oList, iList, tclListOfVariables(blockOn)));

@@ -650,8 +650,8 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void retrieveString(Variable target, Variable source) {
-    assert(target.getType().equals(Types.VALUE_INTEGER));
-    assert(source.getType().equals(Types.FUTURE_INTEGER));
+    assert(target.getType().equals(Types.VALUE_STRING));
+    assert(source.getType().equals(Types.FUTURE_STRING));
     currBlock().addInstruction(
         TurbineOp.retrieveString(target, source));
   }

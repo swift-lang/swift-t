@@ -864,8 +864,14 @@ public class ExprWalker {
       }
       backend.functionCall(function, realIList, oList, null, 
           mode, priority);
+    } else if (context.isAppFunction(function)) {
+      // Execute app function wrapper locally (real work will
+      //   be dispatched to worker by wrapper)
+      backend.functionCall(function, realIList, oList, null,
+              TaskMode.LOCAL, priority);
     } else {
-      throw UndefinedFunctionException.unknownFunction(context, function);
+      throw new STCRuntimeError("Couldn't locate function definition for " +
+      		"previously defined function " + function);
     }
 
     if (waitContext != null) {
