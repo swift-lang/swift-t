@@ -1296,9 +1296,20 @@ public class TurbineGenerator implements CompilerBackend
       tree.add(proc);
 
       // Build up the rule string
-      List<Value> inputs = new ArrayList<Value>();
+      List<Expression> waitFor = new ArrayList<Expression>();
       for (Variable w: waitVars) {
-        inputs.add(varToExpr(w));
+        Value wv = varToExpr(w);
+        if (Types.isFile(w.getType())) {
+          // Block on file status
+          waitFor.add(Turbine.getFileStatus(wv));
+        } else if (Types.isScalarFuture(w.getType()) ||
+                Types.isReference(w.getType()) ||
+                Types.isArray(w.getType())) {
+            waitFor.add(wv);
+        } else {
+          throw new STCRuntimeError("Don't know how to wait on var: "
+                  + w.toString());
+        }
       }
 
       for (Variable c: keepOpenVars) {
@@ -1315,7 +1326,7 @@ public class TurbineGenerator implements CompilerBackend
         mode = TaskMode.LOCAL;
       }
       pointStack.peek().add(
-            Turbine.rule(uniqueName, inputs, action, mode));
+            Turbine.rule(uniqueName, waitFor, action, mode));
 
       pointStack.push(constructProc);
     }
@@ -1759,7 +1770,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
 
-    private Value varToExpr(Variable v) {
+  private Value varToExpr(Variable v) {
     return new Value(prefixVar(v.getName()));
   }
 

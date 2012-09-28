@@ -303,7 +303,8 @@ class Turbine
    * @param type
    * @return
    */
-  private static Sequence ruleHelper(String symbol, List<Value> inputs,
+  private static Sequence ruleHelper(String symbol, 
+      List<? extends Expression> inputs,
       TclList action, TaskMode type) {
     Sequence result = new Sequence();
 
@@ -326,12 +327,12 @@ class Turbine
    * @return
    */
   public static Sequence rule(String symbol,
-      List<Value> inputs, TclList action, TaskMode mode) {
-    return ruleHelper(symbol, inputs, action, mode);
+      List<? extends Expression> blockOn, TclList action, TaskMode mode) {
+    return ruleHelper(symbol, blockOn, action, mode);
   }
 
   public static Sequence loopRule(String symbol,
-      List<Value> args, List<Value> blockOn) {
+      List<Value> args, List<? extends Expression> blockOn) {
     List<Expression> actionElems = new ArrayList<Expression>();
     actionElems.add(new Token(symbol));
     for (Value arg: args) {
@@ -734,8 +735,23 @@ class Turbine
     args2.addAll(args);
     return new Command(EXEC, args2);
   }
+  
 
-
+  /**
+   * Expression that extracts the void status variable for
+   * a file variable
+   * @param fileVar
+   * @return
+   */
+  public static Expression getFileStatus(Value fileVar) {
+    return new Square(new Token("turbine::_filestatus"), fileVar);
+  }
+  
+  /**
+   * Command to clsoe a file
+   * @param fileVar
+   * @return
+   */
   public static Command closeFile(Value fileVar) {
     return new Command(new Token("turbine::close_file"), fileVar);
   }

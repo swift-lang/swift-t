@@ -1,0 +1,15 @@
+#include <builtins.swift>
+
+
+(file o) q () {
+    o = input_file("alice.txt");
+}
+
+main {
+    file f = q();
+
+    // Test waiting on integer
+    wait (f) {
+        trace(filename(f));
+    }
+}
