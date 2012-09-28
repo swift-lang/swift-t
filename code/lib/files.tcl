@@ -102,4 +102,8 @@ namespace eval turbine {
       return "TODO"
     }
 
+    proc close_file { handle } {
+      store_void [ _filestatus $handle ]  
+    }
+
 }
