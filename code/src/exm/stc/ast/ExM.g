@@ -71,6 +71,7 @@ tokens {
     ANNOTATION;
     GLOBAL_CONST;
     INLINE_TCL;
+    APP_FILENAME;
 }
 
 @parser::header {
@@ -180,10 +181,18 @@ command:
     ;
 
 command_args:
-        i=ID -> $i
-    |   i=ID command_args -> $i command_args
+        command_arg command_args_more
     ;
-
+    
+command_args_more:
+        command_args |
+    ;
+    
+command_arg:
+        ID
+    |   LPAREN expr RPAREN -> expr
+    |   '@' ID -> ^( APP_FILENAME ID )   
+    ;
 include_statement:
         INCLUDE file=STRING SEMICOLON -> ^( INCLUDE $file )
     ;
