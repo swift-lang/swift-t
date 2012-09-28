@@ -170,7 +170,7 @@
           depends="compile.common">
     <javac srcdir="src"
            destdir="${build.dir}"
-           includes="exm/stc/tclbackend/*.java,exm/stc/tclbackend/**/*.java"
+           includes="exm/stc/tclbackend/*.java,exm/stc/tclbackend/**/*.java, exm/stc/swigcbackend/*.java, exm/stc/swigcbackend/**/*.java"
            listfiles="${lf}"
            debug="true"
            debuglevel="source,lines,vars"

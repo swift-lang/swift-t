@@ -23,6 +23,7 @@ import exm.stc.common.util.Misc;
 import exm.stc.frontend.ASTWalker;
 import exm.stc.ic.STCMiddleEnd;
 import exm.stc.tclbackend.TurbineGenerator;
+import exm.stc.swigcbackend.SwigcGenerator;
 
 /**
  * This is the main entry point to the compiler
@@ -198,7 +199,14 @@ public class STCompiler {
       intermediate.regenerate(codeGen);
       String code = codeGen.code();
       output.println(code);
+
+      SwigcGenerator swigCodeGen = new SwigcGenerator(logger, timestamp);
+      intermediate.regenerate(swigCodeGen);
+      String swigcode = swigCodeGen.code();
+      output.println(swigcode);
+
       output.close();
+
       if (icOutput != null) {
         icOutput.close();
       }
