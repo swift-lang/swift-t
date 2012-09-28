@@ -659,11 +659,11 @@ public class TurbineGenerator implements CompilerBackend
   }
   
   @Override
-  public void compositeFunctionCall(String function,
+  public void functionCall(String function,
               List<Variable> inputs, List<Variable> outputs,
               List<Boolean> blocking, TaskMode mode, Arg priority)  {
     assert(priority == null || priority.isImmediateInt());
-    logger.debug("call composite: " + function);
+    logger.debug("call: " + function);
     TclList iList = tclListOfVariables(inputs);
     TclList oList = tclListOfVariables(outputs);
     ArrayList<Variable> blockOn = new ArrayList<Variable>();
@@ -678,14 +678,14 @@ public class TurbineGenerator implements CompilerBackend
 
     setPriority(priority);
     if (mode == TaskMode.CONTROL) {
-      pointStack.peek().add(Turbine.callComposite(
-                            TclNamer.compFuncName(function),
+      pointStack.peek().add(Turbine.callFunction(
+                            TclNamer.swiftFuncName(function),
                             oList, iList, tclListOfVariables(blockOn)));
     } else if (mode == TaskMode.SYNC) {
       // Calling synchronously, can't guarantee anything blocks
       assert(blocking.size() == 0);
-      pointStack.peek().add(Turbine.callCompositeSync(
-          TclNamer.compFuncName(function),
+      pointStack.peek().add(Turbine.callFunctionSync(
+          TclNamer.swiftFuncName(function),
           oList, iList));
     } else {
       throw new STCRuntimeError("Unexpected mode: " + mode);
@@ -1071,7 +1071,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void startCompositeFunction(String functionName,
+  public void startFunction(String functionName,
                                      List<Variable> oList,
                                      List<Variable> iList,
                                      TaskMode mode)
@@ -1085,7 +1085,7 @@ public class TurbineGenerator implements CompilerBackend
     if (isMain)
       prefixedFunctionName = MAIN_FUNCTION_NAME;
     else
-      prefixedFunctionName = TclNamer.compFuncName(functionName);
+      prefixedFunctionName = TclNamer.swiftFuncName(functionName);
 
     List<String> args =
       new ArrayList<String>(inputs.size()+outputs.size());
@@ -1104,7 +1104,7 @@ public class TurbineGenerator implements CompilerBackend
                          usedTclFunctionNames, args, s);
 
     point.add(proc);
-    s.add(Turbine.turbineLog("enter composite function: " +
+    s.add(Turbine.turbineLog("enter function: " +
                              functionName));
 
     if (noStack() && isMain) {
@@ -1116,7 +1116,7 @@ public class TurbineGenerator implements CompilerBackend
       if (isMain) {
         setupStack = Turbine.createStackFrame(StackFrameType.MAIN);
       } else {
-        setupStack = Turbine.createStackFrame(StackFrameType.COMPOSITE);
+        setupStack = Turbine.createStackFrame(StackFrameType.FUNCTION);
       }
       s.add(setupStack);
       if (!noStackVars()) {
@@ -1139,7 +1139,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
     @Override
-    public void endCompositeFunction()
+    public void endFunction()
   {
     pointStack.pop();
   }
@@ -1168,30 +1168,6 @@ public class TurbineGenerator implements CompilerBackend
     }
 
   /** NOT UPDATED */
-
-    @Override
-    public void defineApp(String functionName,
-                          List<Variable> iList,
-                          List<Variable> oList, String body)
-  {
-      // String inputs  = Declaration.names(iList);
-    // String outputs = Declaration.names(oList);
-
-    throw new STCRuntimeError("defineApp not implemented yet");
-    /*
-    StringBuilder sb = new StringBuilder(1024);
-    sb.append("proc ");
-    sb.append(functionName);
-    sb.append(" { ");
-    sb.append(inputs);
-    sb.append(" ");
-    sb.append(outputs);
-    sb.append(" } { \n\n");
-    sb.append("\n");
-    sb.append(body);
-    sb.append("}\n");*/
-
-  }
 
   /**
    * @param condition the variable name to branch based on

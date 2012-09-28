@@ -1742,7 +1742,7 @@ public class ASTWalker {
       mode = TaskMode.CONTROL;
     }
     
-    backend.startCompositeFunction(function, oList, iList, mode);
+    backend.startFunction(function, oList, iList, mode);
     
     VariableUsageInfo vu = block.getVariableUsage();
     // Make sure output arrays get closed
@@ -1751,7 +1751,7 @@ public class ASTWalker {
     }
 
     block(functionContext, block);
-    backend.endCompositeFunction();
+    backend.endFunction();
 
     LogHelper.debug(context, "compile function: done: " + function);
   }
@@ -1794,24 +1794,15 @@ public class ASTWalker {
 
     String function = tree.child(0).getText();
     LogHelper.trace(context, "function: " + function);
-    // SwiftAST inputs = tree.getChild2(1);
-    // SwiftAST outputs = tree.getChild2(2);
     SwiftAST command = tree.child(3);
-
-    // List<Declaration> iList = Declaration.fromTree(inputs);
-    // List<Declaration> oList = Declaration.fromTree(outputs);
 
     // TODO: fix once we have variables defined
     context.defineAppFunction(function, 
         new FunctionType(new ArrayList<InArgT>(), new ArrayList<SwiftType>()));
-    // String code = generator.defineApp(function, iList, oList);
-    appFunctionBody(new LocalContext(context), command);
+    
+    //TODO: ...
+    
     LogHelper.debug(context, "defineAppFunction done");
-  }
-
-  private void appFunctionBody(LocalContext localContext, SwiftAST command) {
-    // TODO Auto-generated method stub
-
   }
 
   private void defineNewType(Context context, SwiftAST defnTree)

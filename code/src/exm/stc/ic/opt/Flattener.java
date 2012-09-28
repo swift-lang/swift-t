@@ -11,7 +11,7 @@ import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.DefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;
-import exm.stc.ic.tree.ICTree.CompFunction;
+import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
 public class Flattener {
@@ -42,12 +42,12 @@ public class Flattener {
 
   /**
    * Remove all nested blocks from program
-   * Precondition: all variable names in composites should be unique
+   * Precondition: all variable names in functions should be unique
    * @param in
    * @return
    */
   public static Program flattenNestedBlocks(Program in) {
-    for (CompFunction f: in.getComposites()) {
+    for (Function f: in.getFunctions()) {
       flattenNestedBlocks(f.getMainblock());
     }
     return in;
@@ -94,7 +94,7 @@ public class Flattener {
     }
   }
 
-  public static void makeVarNamesUnique(CompFunction in,
+  public static void makeVarNamesUnique(Function in,
             Set<String> globals) {
     Set<String> usedNames = new HashSet<String>(globals);
     for (Variable v: in.getInputList()) {
@@ -108,12 +108,12 @@ public class Flattener {
   }
 
   /**
-   * Make all of variable names in composite functions completely
+   * Make all of variable names in functions completely
    * unique within the function
    * @param in
    */
   public static void makeVarNamesUnique(Program in) {
-    for (CompFunction f: in.getComposites()) {
+    for (Function f: in.getFunctions()) {
       makeVarNamesUnique(f, in.getGlobalConsts().keySet());
     }
   }

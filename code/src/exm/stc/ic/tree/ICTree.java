@@ -47,7 +47,7 @@ import exm.stc.ic.tree.ICInstructions.Opcode;
  *         -> App Function
  *         -> Comp Function
  *
- * Composite Function -> Block
+ * Function -> Block
  *
  * Block -> Variable
  *       -> Variable
@@ -70,16 +70,15 @@ public class ICTree {
     private final HashMap<Arg, String> globalConstsInv = 
                                             new HashMap<Arg, String>();
 
-    private final ArrayList<AppFunction> appFuns = new ArrayList<AppFunction>();
-    private final ArrayList<CompFunction> compFuns = new ArrayList<CompFunction>();
+    private final ArrayList<Function> functions = new ArrayList<Function>();
     private final ArrayList<BuiltinFunction> builtinFuns = new ArrayList<BuiltinFunction>();
   
     public void generate(Logger logger, CompilerBackend gen)
         throws UserException {
       
       Map<String, List<Boolean>> blockVectors = new 
-              HashMap<String, List<Boolean>> (compFuns.size());
-      for (CompFunction f: compFuns) {
+              HashMap<String, List<Boolean>> (functions.size());
+      for (Function f: functions) {
         blockVectors.put(f.getName(), f.getBlockingInputVector());
       }
       GenInfo info = new GenInfo(blockVectors);
@@ -87,25 +86,18 @@ public class ICTree {
       logger.debug("Starting to generate program from Swift IC");
       gen.header();
   
-      // app functions can't refer to composites, so put these first
-      logger.debug("Generating app functions");
-      for (AppFunction f: appFuns) {
-        f.generate(logger, gen, info);
-      }
-      logger.debug("Done generating app functions");
-  
       logger.debug("Generating builtins");
       for (BuiltinFunction f: builtinFuns) {
         f.generate(logger, gen, info);
       }
       logger.debug("Done generating builtin functions");
   
-      logger.debug("Generating composite functions");
-      // output composite functions in original order
-      for (CompFunction f: compFuns) {
+      logger.debug("Generating functions");
+      // output functions in original order
+      for (Function f: functions) {
         f.generate(logger, gen, info);
       }
-      logger.debug("Done generating composite functions");
+      logger.debug("Done generating functions");
   
       gen.turbineStartup();
       
@@ -124,28 +116,16 @@ public class ICTree {
       this.builtinFuns.add(fn);
     }
   
-    public void addComposite(CompFunction fn) {
-      this.compFuns.add(fn);
+    public void addFunction(Function fn) {
+      this.functions.add(fn);
     }
   
-    public void addAppFun(AppFunction fn) {
-      this.appFuns.add(fn);
+    public void addFunctions(Collection<Function> c) {
+      functions.addAll(c);
     }
   
-    public void addAppFuns(Collection<AppFunction> c) {
-      appFuns.addAll(c);
-    }
-  
-    public void addComposites(Collection<CompFunction> c) {
-      compFuns.addAll(c);
-    }
-  
-    public List<CompFunction> getComposites() {
-      return Collections.unmodifiableList(this.compFuns);
-    }
-  
-    public List<AppFunction> getAppFuns() {
-      return Collections.unmodifiableList(this.appFuns);
+    public List<Function> getFunctions() {
+      return Collections.unmodifiableList(this.functions);
     }
     
     public void addGlobalConst(String name, Arg val) {
@@ -240,13 +220,8 @@ public class ICTree {
         f.prettyPrint(out);
         out.append("\n");
       }
-      
-      for (AppFunction f: appFuns) {
-        f.prettyPrint(out);
-        out.append("\n");
-      }
   
-      for (CompFunction f: compFuns) {
+      for (Function f: functions) {
         f.prettyPrint(out);
         out.append("\n");
       }
@@ -270,44 +245,6 @@ public class ICTree {
         		e.toString());
       }
     }
-  }
-
-  public static class AppFunction {
-    private final String name;
-    private final List<Variable> iList;
-    private final List<Variable> oList;
-    private final String body;
-
-    public AppFunction(String name, List<Variable> iList, List<Variable> oList,
-          String body) {
-      super();
-      this.name = name;
-      this.iList = iList;
-      this.oList = oList;
-      this.body = body;
-    }
-
-    public void prettyPrint(StringBuilder out) {
-      out.append("app ");
-      out.append("(");
-      ICUtil.prettyPrintFormalArgs(out, this.oList);
-      out.append(") @" + this.name + "(");
-      ICUtil.prettyPrintFormalArgs(out, this.iList);
-      out.append(") {");
-      out.append(indent + body);
-      out.append("\n}\n");
-    }
-
-    public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      logger.debug("Generating app function " + name);
-      gen.defineApp(name, iList, oList, body);
-      logger.debug("Done generating app function " + name);
-    }
-
-    public String getName() {
-      return name;
-    }
-
   }
 
   public static class BuiltinFunction {
@@ -370,7 +307,7 @@ public class ICTree {
     }
   }
 
-  public static class CompFunction {
+  public static class Function {
     private final Block mainBlock;
     private final String name;
     public String getName() {
@@ -397,16 +334,16 @@ public class ICTree {
 
     private TaskMode mode;
 
-    public CompFunction(String name, List<Variable> iList,
+    public Function(String name, List<Variable> iList,
         List<Variable> oList, TaskMode mode) {
       this(name, iList, oList, new Block(BlockType.MAIN_BLOCK), mode);
     }
 
-    public CompFunction(String name, List<Variable> iList,
+    public Function(String name, List<Variable> iList,
         List<Variable> oList, Block mainBlock, TaskMode mode) {
       if (mainBlock.getType() != BlockType.MAIN_BLOCK) {
         throw new STCRuntimeError("Expected main block " +
-        		"for composite function to be tagged as such");
+        		"for function to be tagged as such");
       }
       this.name = name;
       this.iList = iList;
@@ -431,11 +368,11 @@ public class ICTree {
 
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UserException {
-      logger.debug("Generating composite function " + name);
-      gen.startCompositeFunction(name, oList, iList, mode);
+      logger.debug("Generating function " + name);
+      gen.startFunction(name, oList, iList, mode);
       this.mainBlock.generate(logger, gen, info);
-      gen.endCompositeFunction();
-      logger.debug("Done generating composite function " + name);
+      gen.endFunction();
+      logger.debug("Done generating function " + name);
     }
 
     public void prettyPrint(StringBuilder sb) {

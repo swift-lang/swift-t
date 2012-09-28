@@ -862,7 +862,7 @@ public class ExprWalker {
       } else {
         mode = TaskMode.CONTROL;
       }
-      backend.compositeFunctionCall(function, realIList, oList, null, 
+      backend.functionCall(function, realIList, oList, null, 
           mode, priority);
     } else {
       throw UndefinedFunctionException.unknownFunction(context, function);

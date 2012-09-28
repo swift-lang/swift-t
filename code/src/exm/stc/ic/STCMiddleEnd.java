@@ -15,8 +15,8 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
+import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
@@ -40,11 +40,10 @@ import exm.stc.ic.tree.ICInstructions.LocalFunctionCall;
 import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICInstructions.LoopContinue;
 import exm.stc.ic.tree.ICInstructions.TurbineOp;
-import exm.stc.ic.tree.ICTree.AppFunction;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.BuiltinFunction;
-import exm.stc.ic.tree.ICTree.CompFunction;
+import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
 /**
@@ -60,7 +59,7 @@ public class STCMiddleEnd implements CompilerBackend {
   private Program program;
 
   // Keep track of current place in program
-  private CompFunction currComposite = null;
+  private Function currFunction = null;
   private final Deque<Block> blockStack = new ArrayDeque<Block>();
   
   private final Deque<Loop> loopStack = new ArrayDeque<Loop>();
@@ -128,36 +127,29 @@ public class STCMiddleEnd implements CompilerBackend {
   throws UserException
   {
     assert(blockStack.size() == 0);
-    assert(currComposite == null);
+    assert(currFunction == null);
     BuiltinFunction bf =
         new BuiltinFunction(name, pkg, version, symbol, fType, inlineTclTemplate);
     program.addBuiltin(bf);
   }
 
   @Override
-  public void startCompositeFunction(String functionName, List<Variable> oList,
+  public void startFunction(String functionName, List<Variable> oList,
       List<Variable> iList, TaskMode mode) throws UserException {
     assert(blockStack.size() == 0);
-    assert(currComposite == null);
-    currComposite = new CompFunction(functionName, iList, oList, mode);
-    program.addComposite(currComposite);
-    blockStack.add(currComposite.getMainblock());
+    assert(currFunction == null);
+    currFunction = new Function(functionName, iList, oList, mode);
+    program.addFunction(currFunction);
+    blockStack.add(currFunction.getMainblock());
   }
 
   @Override
-  public void endCompositeFunction() {
-    assert(currComposite != null);
+  public void endFunction() {
+    assert(currFunction != null);
     assert(blockStack.size() == 1);
 
-    currComposite = null;
+    currFunction = null;
     blockStack.pop();
-  }
-
-  @Override
-  public void defineApp(String functionName, List<Variable> iList,
-      List<Variable> oList, String body) {
-    AppFunction fn = new AppFunction(functionName, iList, oList, body);
-    program.addAppFun(fn);
   }
 
   @Override
@@ -181,7 +173,7 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void startIfStatement(Arg condition, boolean hasElse) {
-    assert(currComposite != null);
+    assert(currFunction != null);
     assert(condition.getSwiftType().equals(Types.VALUE_INTEGER)
           || condition.getSwiftType().equals(Types.VALUE_BOOLEAN));
 
@@ -217,7 +209,7 @@ public class STCMiddleEnd implements CompilerBackend {
   public void startWaitStatement(String procName, List<Variable> waitVars,
       List<Variable> usedVariables, List<Variable> keepOpenVars,
       boolean explicit) {
-    assert(currComposite != null);
+    assert(currFunction != null);
     WaitStatement wait = new WaitStatement(procName, waitVars, usedVariables,
                                               keepOpenVars, explicit);
     currBlock().addContinuation(wait);
@@ -374,7 +366,7 @@ public class STCMiddleEnd implements CompilerBackend {
   }
   
   @Override
-  public void compositeFunctionCall(String function, List<Variable> inputs,
+  public void functionCall(String function, List<Variable> inputs,
       List<Variable> outputs, List<Boolean> blockOn, TaskMode mode, 
       Arg priority) {
     assert(priority == null || priority.isImmediateInt());
@@ -383,7 +375,7 @@ public class STCMiddleEnd implements CompilerBackend {
       		" blocking on composite function inputs");
     }
     currBlock().addInstruction(
-          FunctionCall.createCompositeCall(
+          FunctionCall.createFunctionCall(
               function, inputs, outputs, mode, priority));
   }
 

@@ -105,14 +105,14 @@ class Turbine
   private static final Token CONTAINER_F_DEREF_INSERT =
       new Token("turbine::container_f_deref_insert");
   
-  private static final Token CALL_COMPOSITE =
+  private static final Token CALL_FUNCTION =
       new Token("turbine::call_composite");
 
   private static final Token UNCACHED_MODE = new Token("UNCACHED");
 
   public enum StackFrameType {
     MAIN,
-    COMPOSITE,
+    FUNCTION,
     NESTED
   }
 
@@ -140,9 +140,9 @@ class Turbine
       result = new TclTree[3];
 
 
-    if (type == StackFrameType.NESTED || type == StackFrameType.COMPOSITE) {
+    if (type == StackFrameType.NESTED || type == StackFrameType.FUNCTION) {
       // Make sure that there is a variable in scope called parent
-      // (parent is passed in as an argument for composites)
+      // (parent is passed in as an argument)
       result[index++] = new SetVariable("parent", STACK);
     }
 
@@ -696,15 +696,15 @@ class Turbine
     return allocate(refVarName, INTEGER_TYPENAME);
   }
 
-  public static TclTree callComposite(String function, TclList oList,
+  public static TclTree callFunction(String function, TclList oList,
                                       TclList iList, TclList blockOn) {
-    return new Command(CALL_COMPOSITE,
+    return new Command(CALL_FUNCTION,
         new Value(Turbine.LOCAL_STACK_NAME), new Token(function),
                   oList, iList, blockOn);
   }
 
 
-  public static TclTree callCompositeSync(String function, TclList oList,
+  public static TclTree callFunctionSync(String function, TclList oList,
       TclList iList) {
     return new Command(new Token(function), new Value(Turbine.LOCAL_STACK_NAME),
         oList, iList);

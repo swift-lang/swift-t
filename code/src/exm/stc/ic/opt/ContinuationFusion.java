@@ -11,7 +11,7 @@ import exm.stc.ic.tree.ICContinuations.ForeachLoop;
 import exm.stc.ic.tree.ICContinuations.IfStatement;
 import exm.stc.ic.tree.ICContinuations.RangeLoop;
 import exm.stc.ic.tree.ICTree.Block;
-import exm.stc.ic.tree.ICTree.CompFunction;
+import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
 /**
@@ -29,13 +29,13 @@ import exm.stc.ic.tree.ICTree.Program;
 public class ContinuationFusion {
 
   public static void fuse(Logger logger, Program prog) {
-    for (CompFunction f: prog.getComposites()) {
+    for (Function f: prog.getFunctions()) {
       fuseRecursive(logger, prog, f, f.getMainblock());
     }
   }
 
   private static void fuseRecursive(Logger logger, Program prog, 
-            CompFunction f, Block block) {
+            Function f, Block block) {
     if (block.getContinuations().size() > 1) {
       // no point trying to fuse anything if we don't have two continuations
       // to rub together

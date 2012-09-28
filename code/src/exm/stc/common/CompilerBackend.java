@@ -89,7 +89,7 @@ public interface CompilerBackend {
       List<Variable> outputs, Arg priority);
 
   /**
-   * NOTE: all built-ins should be defined before composites
+   * NOTE: all built-ins should be defined before other functions
    * @param function
    * @param inputs
    * @param outputs
@@ -98,7 +98,7 @@ public interface CompilerBackend {
   public abstract void builtinFunctionCall(String function,
       List<Variable> inputs, List<Variable> outputs, Arg priority);
 
-  public abstract void compositeFunctionCall(String function,
+  public abstract void functionCall(String function,
       List<Variable> inputs, List<Variable> outputs, List<Boolean> blockOn, 
       TaskMode mode, Arg priority);
 
@@ -177,22 +177,17 @@ public interface CompilerBackend {
                 FunctionType type, TclOpTemplate inlineTclTemplate) 
                     throws UserException;
 
-  public abstract void startCompositeFunction(String functionName,
+  public abstract void startFunction(String functionName,
       List<Variable> oList, List<Variable> iList, TaskMode mode)
             throws UserException;
 
-  public abstract void endCompositeFunction();
+  public abstract void endFunction();
 
   public abstract void startNestedBlock();
 
   public abstract void endNestedBlock();
 
   public abstract void addComment(String comment);
-
-  /** NOT UPDATED */
-
-  public abstract void defineApp(String functionName, List<Variable> iList,
-      List<Variable> oList, String body);
 
   /**
    * @param condition the variable name to branch based on (int or bool value type)

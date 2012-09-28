@@ -9,7 +9,7 @@ public class TclNamer {
   /** to avoid clashes with other tcl variables, prefix variables/functions
    * names from swift with these prefixes:
    */
-  private static final String COMP_FN_PREFIX = "cmpf:";
+  private static final String FN_PREFIX = "f:";
   private static final String TCL_TMP_VAR_PREFIX = "t:";
   private static final String TCL_ALIAS_VAR_PREFIX = "a:";
   private static final String TCL_USER_VAR_PREFIX = "u:";
@@ -68,7 +68,7 @@ public class TclNamer {
     return result;
   }
 
-  public static String compFuncName(String function) {
-    return COMP_FN_PREFIX + function;
+  public static String swiftFuncName(String function) {
+    return FN_PREFIX + function;
   }
 }

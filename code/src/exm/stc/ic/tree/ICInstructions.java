@@ -1595,7 +1595,7 @@ public class ICInstructions {
           inputs, outputs, priority);
     }
   
-    public static FunctionCall createCompositeCall(
+    public static FunctionCall createFunctionCall(
         String functionName, List<Variable> inputs, List<Variable> outputs,
         TaskMode mode, Arg priority) {
       Opcode op;
@@ -1660,7 +1660,7 @@ public class ICInstructions {
         for (int i = 0; i < inputs.size(); i++) {
           needToBlock.add(blocking.get(i) && (!this.closedInputs.get(i)));
         }
-        gen.compositeFunctionCall(functionName, inputs, outputs, needToBlock,
+        gen.functionCall(functionName, inputs, outputs, needToBlock,
                                             mode, priority);
         break;
       default:

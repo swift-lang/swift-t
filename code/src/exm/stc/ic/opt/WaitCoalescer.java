@@ -31,7 +31,7 @@ import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
 import exm.stc.ic.tree.ICTree.Block;
-import exm.stc.ic.tree.ICTree.CompFunction;
+import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
 /**
@@ -144,7 +144,7 @@ import exm.stc.ic.tree.ICTree.Program;
  */
 public class WaitCoalescer {
   public static void rearrangeWaits(Logger logger, Program prog) {
-    for (CompFunction f: prog.getComposites()) {
+    for (Function f: prog.getFunctions()) {
       rearrangeWaits(logger, f, f.getMainblock());
     }
     
@@ -152,7 +152,7 @@ public class WaitCoalescer {
     FixupVariables.fixupVariablePassing(logger, prog);
   }
 
-  public static void rearrangeWaits(Logger logger, CompFunction fn, Block block) {
+  public static void rearrangeWaits(Logger logger, Function fn, Block block) {
     StringBuilder sb = new StringBuilder();
     explodeFuncCalls(logger, fn, block);
 
@@ -171,7 +171,7 @@ public class WaitCoalescer {
   }
 
   private static void rearrangeWaitsRec(Logger logger,
-                  CompFunction fn, Block block) {
+                  Function fn, Block block) {
     for (Continuation c: block.getContinuations()) {
       for (Block childB: c.getBlocks()) {
         rearrangeWaits(logger, fn, childB);
@@ -184,7 +184,7 @@ public class WaitCoalescer {
    * @param logger
    * @param block
    */
-  private static void explodeFuncCalls(Logger logger, CompFunction fn, Block block) {
+  private static void explodeFuncCalls(Logger logger, Function fn, Block block) {
     Set<String> empty = Collections.emptySet();
     ListIterator<Instruction> it = block.instructionIterator();
     while (it.hasNext()) {
@@ -215,7 +215,7 @@ public class WaitCoalescer {
     }
   }
 
-  private static void mergeWaits(Logger logger, CompFunction fn, Block block) {
+  private static void mergeWaits(Logger logger, Function fn, Block block) {
     boolean fin;
     do {
       fin = true;
@@ -339,7 +339,7 @@ public class WaitCoalescer {
   }
 
   private static void
-          pushDownWaits(Logger logger, CompFunction fn, Block block) {
+          pushDownWaits(Logger logger, Function fn, Block block) {
     MultiMap<String, InstOrCont> waitMap = buildWaiterMap(block);
     if (waitMap.isDefinitelyEmpty()) {
       // If waitMap is empty, can't push anything down, so just
@@ -372,7 +372,7 @@ public class WaitCoalescer {
   }
   
   private static List<Continuation> pushDownWaitsRec(Logger logger, 
-                CompFunction fn,
+                Function fn,
                 Block top, Deque<AncestorContinuation> ancestors, Block curr,
                 MultiMap<String, InstOrCont> waitMap) {
     ArrayList<Continuation> pushedDown = new ArrayList<Continuation>();

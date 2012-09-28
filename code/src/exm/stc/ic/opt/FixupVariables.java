@@ -16,7 +16,7 @@ import exm.stc.common.util.HierarchicalMap;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
-import exm.stc.ic.tree.ICTree.CompFunction;
+import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
 public class FixupVariables {
@@ -140,7 +140,7 @@ public class FixupVariables {
    */
   public static void fixupVariablePassing(Logger logger, Program prog) {
     HierarchicalMap<String, Variable> fnargs = new HierarchicalMap<String, Variable>();
-    for (CompFunction fn : prog.getComposites()) {
+    for (Function fn : prog.getFunctions()) {
       fnargs.clear();
       for (Variable v : fn.getInputList()) {
         fnargs.put(v.getName(), v);

@@ -907,7 +907,7 @@ public class SwigcGenerator implements CompilerBackend
   }
   
   @Override
-  public void compositeFunctionCall(String function,
+  public void functionCall(String function,
               List<Variable> inputs, List<Variable> outputs,
               List<Boolean> blocking, TaskMode mode, Arg priority)  {
     assert(priority == null || priority.isImmediateInt());
@@ -927,13 +927,13 @@ public class SwigcGenerator implements CompilerBackend
     setPriority(priority);
     if (mode == TaskMode.CONTROL) {
       pointStack.peek().add(Turbine.callComposite(
-                            TclNamer.compFuncName(function),
+                            TclNamer.swiftFuncName(function),
                             oList, iList, tclListOfVariables(blockOn)));
     } else {
       // Calling synchronously, can't guarantee anything blocks
       assert(blocking.size() == 0);
       pointStack.peek().add(Turbine.callCompositeSync(
-          TclNamer.compFuncName(function),
+          TclNamer.swiftFuncName(function),
           oList, iList));
     }
     clearPriority(priority);
@@ -1310,7 +1310,7 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void startCompositeFunction(String functionName,
+  public void startFunction(String functionName,
                                      List<Variable> oList,
                                      List<Variable> iList,
                                      TaskMode mode)
@@ -1324,7 +1324,7 @@ public class SwigcGenerator implements CompilerBackend
     if (isMain)
       prefixedFunctionName = MAIN_FUNCTION_NAME;
     else
-      prefixedFunctionName = TclNamer.compFuncName(functionName);
+      prefixedFunctionName = TclNamer.swiftFuncName(functionName);
 
     List<String> args =
       new ArrayList<String>(inputs.size()+outputs.size());
@@ -1378,7 +1378,7 @@ public class SwigcGenerator implements CompilerBackend
   }
 
     @Override
-    public void endCompositeFunction()
+    public void endFunction()
   {
     pointStack.pop();
   }
@@ -1405,33 +1405,6 @@ public class SwigcGenerator implements CompilerBackend
     public void addComment(String comment) {
       pointStack.peek().add(new Comment(comment));
     }
-
-  /** NOT UPDATED */
-
-    @Override
-    public void defineApp(String functionName,
-                          List<Variable> iList,
-                          List<Variable> oList, String body)
-  {
-      // String inputs  = Declaration.names(iList);
-    // String outputs = Declaration.names(oList);
-
-    throw new STCRuntimeError("defineApp not implemented yet");
-    /*
-    StringBuilder sb = new StringBuilder(1024);
-    sb.append("proc ");
-    sb.append(functionName);
-    sb.append(" { ");
-    sb.append(inputs);
-    sb.append(" ");
-    sb.append(outputs);
-    sb.append(" } { \n\n");
-    sb.append("\n");
-    sb.append(body);
-    sb.append("}\n");*/
-
-  }
-
   /**
    * @param condition the variable name to branch based on
    * @param hasElse whether there will be an else clause ie. whether startElseBlock()

@@ -37,7 +37,7 @@ import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
-import exm.stc.ic.tree.ICTree.CompFunction;
+import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
 /**
@@ -327,7 +327,7 @@ public class ForwardDataflow {
    */
   public static void forwardDataflow(Logger logger, Program program)
       throws InvalidOptionException, InvalidWriteException {
-    for (CompFunction f : program.getComposites()) {
+    for (Function f : program.getFunctions()) {
       // Do repeated passes until converged
       boolean changes;
       int pass = 1;
@@ -363,7 +363,7 @@ public class ForwardDataflow {
    * @param program
    * @param f
    */
-  private static void liftWait(Logger logger, Program program, CompFunction f) {
+  private static void liftWait(Logger logger, Program program, Function f) {
     if (!f.isAsync()) {
       // Can only do this optimization if the function runs asynchronously
       return;
@@ -459,7 +459,7 @@ public class ForwardDataflow {
    * @throws InvalidWriteException
    */
   private static boolean forwardDataflow(Logger logger, Program program,
-      CompFunction f, Block block, State cv,
+      Function f, Block block, State cv,
       HierarchicalMap<String, Arg> replaceInputs,
       HierarchicalMap<String, Arg> replaceAll) throws InvalidOptionException,
       InvalidWriteException {
@@ -558,7 +558,7 @@ public class ForwardDataflow {
   }
 
   private static boolean forwardDataflow(Logger logger,
-      CompFunction f, Block block,
+      Function f, Block block,
       ListIterator<Instruction> insts, State cv,
       HierarchicalMap<String, Arg> replaceInputs,
       HierarchicalMap<String, Arg> replaceAll) throws InvalidWriteException {

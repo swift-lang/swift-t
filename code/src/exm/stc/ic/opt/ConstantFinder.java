@@ -28,7 +28,7 @@ import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Builtin;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
-import exm.stc.ic.tree.ICTree.CompFunction;
+import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
 /**
@@ -40,7 +40,7 @@ public class ConstantFinder {
 
   /**
    * Perform constant folding and propagations on the program
-   * NOTE: we assume that all variable names in a composite function are unique,
+   * NOTE: we assume that all variable names in a function are unique,
    * so the makeVarNamesUnique pass should be performed first
    * @param logger
    * @param in
@@ -53,7 +53,7 @@ public class ConstantFinder {
     // Populate global constants
     globalConsts.putAll(in.getGlobalConsts());
     
-    for (CompFunction f: in.getComposites()) {
+    for (Function f: in.getFunctions()) {
       HashMap<String, Variable> funVars = new HashMap<String, Variable>();
       for (Variable v: f.getInputList()) {
         funVars.put(v.getName(), v);  
@@ -75,7 +75,7 @@ public class ConstantFinder {
    * @throws InvalidOptionException 
    */
   private static void constantFold(Logger logger, Program prog, 
-      CompFunction fn, Block block, 
+      Function fn, Block block, 
       HashMap<String, Variable> varMap,
       HierarchicalMap<String, Arg> knownConstants) throws InvalidOptionException {
     for (Variable v: block.getVariables()) {
@@ -270,7 +270,7 @@ public class ConstantFinder {
    */
   public static void makeConstantsGlobal(Logger logger, Program prog) 
                                       throws InvalidOptionException {
-    for (CompFunction f: prog.getComposites()) {
+    for (Function f: prog.getFunctions()) {
       makeConstantsGlobal(logger, prog, f.getMainblock());
           
     }

@@ -19,8 +19,8 @@ public class DeadCodeEliminator {
    * 
    * We avoid eliminating any instructions with side-effects, and anything that
    * contributes to the return value of a function.  We currently assume that
-   * all composite and app functions have side effects as well as any builtin
-   * operations that are specifically marked as side-effect free.
+   * all non-builtin functions have side effects, as well as any builtins
+   * operations that are not specifically marked as side-effect free.
    * @param logger
    * @param block
    */
