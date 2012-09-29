@@ -25,9 +25,7 @@ namespace eval turbine {
 
     proc input_file { stack out filepath } {
       set outfile [ lindex $out 0 ]
-      puts "\[ $outfile \] $filepath"
       set mapped [ is_file_mapped $outfile ]
-      puts $mapped
       if { $mapped } {
         error "file \[ $outfile \] was already mapped, cannot use input_file"
       }
