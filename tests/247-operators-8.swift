@@ -1,7 +1,7 @@
 
 #include <builtins.swift>
 #include <swift/assert.swift>
-#include <swift/stdlib.swift>
+#include <swift/random.swift>
 
 main {
     foreach i in [1:100] {

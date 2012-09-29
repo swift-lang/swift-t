@@ -5,9 +5,9 @@
  */
 
 #include <builtins.swift>
-#include <swift/stdio.swift>
+#include <swift/io.swift>
 #include <swift/stats.swift>
-#include <swift/unistd.swift>
+#include <swift/sys.swift>
 
 (float result[]) cutoffs(float step)
 {

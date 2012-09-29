@@ -1,8 +1,8 @@
 
 #include <builtins.swift>
-#include <swift/stdio.swift>
+#include <swift/io.swift>
 #include <swift/string.swift>
-#include <swift/unistd.swift>
+#include <swift/sys.swift>
 
 main {
   argv_accept("v", "a", "exec", "help");

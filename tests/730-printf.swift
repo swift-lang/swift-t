@@ -1,6 +1,6 @@
 
 #include "builtins.swift"
-#include "swift/stdio.swift"
+#include "swift/io.swift"
 
 main {
   int i = 14;

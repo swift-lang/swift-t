@@ -1,7 +1,7 @@
 
 #include <builtins.swift>
-#include <swift/stdio.swift>
-#include <swift/unistd.swift>
+#include <swift/io.swift>
+#include <swift/sys.swift>
 
 // THIS-TEST-SHOULD-NOT-RUN
 
