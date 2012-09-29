@@ -325,7 +325,7 @@ ADLB_SO      = libadlb.$(SO_SUFFIX)
 install: install.txt
 
 # Installed files:
-EXPORTS = $(shell ls export/*.swift export/**/*.swift )
+EXPORTS = $(shell ls export/*.swift )
 SCRIPTS = $(shell ls scripts/*.zsh scripts/*.sh $(SCRIPTS_SUBMIT) )
 
 install.txt: $(PACKAGE) $(EXPORTS) $(SCRIPTS)
