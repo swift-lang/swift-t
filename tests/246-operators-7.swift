@@ -2,8 +2,8 @@
 // Test out log, sqrt, exp, etc
 
 #include <builtins.swift>
-#include <swift/assert.swift>
-#include <swift/math.swift>
+#include <assert.swift>
+#include <math.swift>
 
 main {
     assertEqual(abs_float(16.0), 16.0, "abs_float(16)");

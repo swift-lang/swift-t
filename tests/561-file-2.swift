@@ -1,5 +1,5 @@
 #include <builtins.swift>
-#include <swift/assert.swift>
+#include <assert.swift>
 
 main {
     // Check files in array

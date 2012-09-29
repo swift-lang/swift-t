@@ -2,7 +2,7 @@
 // Test string split()
 
 #include <builtins.swift>
-#include <swift/string.swift>
+#include <string.swift>
 
 main {
     string x = "hello world";

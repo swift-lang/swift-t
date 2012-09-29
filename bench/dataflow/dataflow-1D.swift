@@ -1,7 +1,7 @@
 
 #include <builtins.swift>
-#include <swift/stdlib.swift>
-#include <swift/unistd.swift>
+#include <stdlib.swift>
+#include <unistd.swift>
 #include "../util/bench.swift"
 
 main {

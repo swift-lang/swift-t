@@ -3,7 +3,7 @@
 // check that asserts fail as expected
 
 #include <builtins.swift>
-#include <swift/assert.swift>
+#include <assert.swift>
 
 main {
     assert(false, "false"); // should fail

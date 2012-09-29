@@ -2,8 +2,8 @@
 // Test out some more string functions
 
 #include <builtins.swift>
-#include <swift/assert.swift>
-#include <swift/string.swift>
+#include <assert.swift>
+#include <string.swift>
 
 testtoint() {
     trace(toint("123"), toint("-123"));

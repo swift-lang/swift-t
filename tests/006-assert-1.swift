@@ -2,7 +2,7 @@
 // Test that assert works ok when they pass
 
 #include <builtins.swift>
-#include <swift/assert.swift>
+#include <assert.swift>
 
 main {
     assert(true, "true");

@@ -1,7 +1,7 @@
 
 // Test relational operators on integers
 #include <builtins.swift>
-#include <swift/assert.swift>
+#include <assert.swift>
 
 (int r) f () {
     r = 1;

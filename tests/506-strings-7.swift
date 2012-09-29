@@ -1,6 +1,6 @@
 
 #include <builtins.swift>
-#include <swift/assert.swift>
+#include <assert.swift>
 
 (int r) iid (int x) {
     r = x;

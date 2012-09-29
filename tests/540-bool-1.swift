@@ -1,6 +1,6 @@
 
 #include <builtins.swift>
-#include <swift/assert.swift>
+#include <assert.swift>
 
 main {
     boolean x = 1 == 1;

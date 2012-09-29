@@ -1,6 +1,6 @@
 
 #include <builtins.swift>
-#include <swift/math.swift>
+#include <math.swift>
 
 main
 {

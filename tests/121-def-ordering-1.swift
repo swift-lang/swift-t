@@ -2,7 +2,7 @@
 // Test out that functions can be used before they are defined
 
 #include <builtins.swift>
-#include <swift/assert.swift>
+#include <assert.swift>
 
 main {
     assertEqual(f(), 1, "");

@@ -2,8 +2,8 @@
 // Test out some more string functions
 
 #include <builtins.swift>
-#include <swift/assert.swift>
-#include <swift/string.swift>
+#include <assert.swift>
+#include <string.swift>
 
 main {
     // check that + performs strcat

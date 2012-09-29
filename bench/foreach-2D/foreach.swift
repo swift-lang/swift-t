@@ -1,6 +1,6 @@
 
 #include <builtins.swift>
-#include <swift/unistd.swift>
+#include <unistd.swift>
 #include "../util/bench.swift"
 
 main {

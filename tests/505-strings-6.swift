@@ -2,7 +2,7 @@
 // Check relationship operators on strings
 
 #include <builtins.swift>
-#include <swift/assert.swift>
+#include <assert.swift>
 
 main {
     assert("hello" == "hello", "hello != hello");

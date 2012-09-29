@@ -1,7 +1,7 @@
 
 #include <builtins.swift>
-#include <swift/assert.swift>
-#include <swift/stats.swift>
+#include <assert.swift>
+#include <stats.swift>
 
 main {
     float a[];

@@ -1,6 +1,6 @@
 
 #include <builtins.swift>
-#include <swift/assert.swift>
+#include <assert.swift>
 
 // will need to support whole-array copying
 

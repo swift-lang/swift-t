@@ -1,8 +1,8 @@
 
 #include <builtins.swift>
-#include <swift/assert.swift>
-#include <swift/math.swift>
-#include <swift/stats.swift>
+#include <assert.swift>
+#include <math.swift>
+#include <stats.swift>
 
 main {
     testMultiAgg();

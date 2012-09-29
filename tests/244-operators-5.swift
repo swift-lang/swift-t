@@ -1,6 +1,6 @@
 
 #include <builtins.swift>
-#include <swift/assert.swift>
+#include <assert.swift>
 
 // Sanity check for max and min
 main {

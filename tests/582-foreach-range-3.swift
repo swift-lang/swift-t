@@ -2,7 +2,7 @@
 // Check that it compiles to good code with arrays
 
 #include <builtins.swift>
-#include <swift/stats.swift>
+#include <stats.swift>
 
 main {
     int A[][];
