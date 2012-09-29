@@ -1,8 +1,8 @@
 
-// UNISTD.SWIFT
+// SYS.SWIFT
 
-#ifndef UNISTD_SWIFT
-#define UNISTD_SWIFT
+#ifndef SYS_SWIFT
+#define SYS_SWIFT
 
 /* Model arg functions as pure, since they will be deterministic
  * within the scope of a program */
@@ -26,6 +26,13 @@ argv_accept(string... keys)
 (string s) argv(string|int key, string... default_val)
     "turbine" "0.0.2" "argv_get"
     [ "set <<s>> [ turbine::argv_get_impl <<key>> <<default_val>> ]" ];
+
+/* Model getenv as pure because it will be deterministic within
+ * the context of a program
+ */
+@pure  
+(string s) getenv(string key) "turbine" "0.0.2" "getenv"
+    [ "set <<s>> turbine::getenv_impl <<key>>" ];
 
 // Do not optimize this- it is for tests
 (void v) sleep(float seconds) "turbine" "0.0.4" "sleep";

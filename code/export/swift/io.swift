@@ -1,11 +1,11 @@
 
-// STDIO.SWIFT
+// IO.SWIFT
 
-#ifndef STDIO_SWIFT
-#define STDIO_SWIFT
+#ifndef IO_SWIFT
+#define IO_SWIFT
 
 printf(string fmt, int|float|string|boolean... args)
     "turbine" "0.0.2" "printf"
     [ "turbine::printf_local <<fmt>> <<args>>" ];
 
-#endif
+#endif // IO_SWIFT

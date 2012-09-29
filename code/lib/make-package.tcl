@@ -26,11 +26,10 @@ set items [ eval list -load $libtclturbine \
                 -source mpe.tcl        \
                 -source rand.tcl       \
                 -source stats.tcl      \
-                -source stdio.tcl      \
-                -source stdlib.tcl     \
+                -source io.tcl      \
                 -source string.tcl     \
                 -source updateable.tcl \
-                -source unistd.tcl     \
+                -source sys.tcl     \
                 -source helpers.tcl ]
 
 # List of Turbine shared objects and Tcl libraries
