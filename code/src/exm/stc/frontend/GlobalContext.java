@@ -198,6 +198,11 @@ extends Context
   }
 
   @Override
+  public Variable createFilenameAliasVariable(String name) {
+    throw new UnsupportedOperationException("not yet implemented");
+  }
+
+  @Override
   public GlobalContext getGlobals()
   {
     return this;

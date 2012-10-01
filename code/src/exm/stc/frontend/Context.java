@@ -261,5 +261,14 @@ public abstract class Context
         throws UserException {
     return createLocalValueVariable(type, null);
   }
+  
+  /**
+   * Create filename alias variable (a string future) for a file
+   * variable with provided name
+   * @param name name of file variable
+   * @return
+   */
+  abstract public Variable createFilenameAliasVariable(String name);
+
   abstract public boolean isSyncComposite(String name);
 }

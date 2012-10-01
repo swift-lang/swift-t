@@ -1983,8 +1983,7 @@ public class ASTWalker {
     for (Variable arg: args) {
       if (Types.isFile(arg.getType())) {
         // Need to wait for filename for files
-        Variable filenameFuture = varCreator.createTmpAlias(context,
-                                                Types.FUTURE_STRING); 
+        Variable filenameFuture = varCreator.createFilenameAlias(context, arg); 
         backend.getFileName(filenameFuture, arg);
         waitVars.add(filenameFuture);
         fileNames.put(arg.getName(), filenameFuture);

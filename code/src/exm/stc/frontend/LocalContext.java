@@ -1,14 +1,17 @@
 
 package exm.stc.frontend;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.DefType;
 import exm.stc.common.lang.Variable.VariableStorage;
 
@@ -106,27 +109,46 @@ extends Context
   @Override
   public Variable createLocalValueVariable(SwiftType type, String varName)
       throws UserException {
-    String name = null;
-    String prefix = Variable.LOCAL_VALUE_VAR_PREFIX;
-    boolean generate = true;
-    if (varName != null) {
-      prefix += varName;
+    String name = chooseVariableName(Variable.LOCAL_VALUE_VAR_PREFIX, varName,
+                                    "value_var");
+    Variable v =  new Variable(type, name, VariableStorage.LOCAL,
+                                          DefType.LOCAL_COMPILER);
+    variables.put(name, v);
+    return v;
+  }
+
+  /**
+   * Helper to choose variable name.  
+   * @param prefix Prefix that must be at start
+   * @param preferredSuffix Preferred suffix
+   * @param counterName name of counter to use to make unique if needed
+   * @return
+   */
+  private String chooseVariableName(String prefix, String preferredSuffix,
+      String counterName) {
+    if (preferredSuffix != null) {
+      prefix += preferredSuffix;
       // see if we can give it a nice name
       if (getDeclaredVariable(prefix) == null) {
-        name = prefix;
-        generate = false;
+        return prefix;
       }
     }
 
-    if (generate) {
-      do {
-        int counter = getFunctionContext().getCounterVal("value_var");
-        name = prefix + counter;
-      } while (getDeclaredVariable(name) != null);
-    }
-    assert(name != null);
-    Variable v =  new Variable(type, name, VariableStorage.LOCAL,
-                                          DefType.LOCAL_COMPILER);
+    String name = null;
+    do {
+      int counter = getFunctionContext().getCounterVal(counterName);
+      name = prefix + counter;
+    } while (getDeclaredVariable(name) != null);
+    return name;
+  }
+
+  @Override
+  public Variable createFilenameAliasVariable(String fileVarName) {
+    String name = chooseVariableName(Variable.FILENAME_OF_PREFIX,
+        fileVarName, "filename_of");
+    Variable v =  new Variable(Types.FUTURE_STRING, name,
+                               VariableStorage.ALIAS,
+                               DefType.LOCAL_COMPILER);
     variables.put(name, v);
     return v;
   }

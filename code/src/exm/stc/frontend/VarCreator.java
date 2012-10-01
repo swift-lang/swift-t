@@ -214,6 +214,21 @@ public class VarCreator {
     return val;
   }
   
+  /**
+   * Shortcut to create filename of
+   * @param context
+   * @param type
+   * @return
+   */
+  public Variable createFilenameAlias(Context context, Variable fileVar)
+      throws UserException, UndefinedTypeException {
+    assert(Types.isFile(fileVar.getType()));
+    Variable filename = context.createFilenameAliasVariable(
+        fileVar.getName());
+    initialiseVariable(context, filename);
+    return filename;
+  }
+  
   
   /**
    * Create a value variable and retrieve value of future into it

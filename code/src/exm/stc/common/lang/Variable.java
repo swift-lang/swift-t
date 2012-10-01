@@ -25,6 +25,7 @@ public class Variable
   public static final String ALIAS_VAR_PREFIX = "__alias";
   public static final String STRUCT_FIELD_VAR_PREFIX = "__sf_";
   public static final String LOCAL_VALUE_VAR_PREFIX = "__v_";
+  public static final String FILENAME_OF_PREFIX = "__filename_";
   /* Separate value prefix to avoid name clashes for optimizer 
    *    inserted variables */
   public static final String OPT_VALUE_VAR_PREFIX = "__ov_";
