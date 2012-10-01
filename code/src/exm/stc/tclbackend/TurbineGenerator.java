@@ -703,10 +703,16 @@ public class TurbineGenerator implements CompilerBackend
   public void runExternal(String cmd, List<Arg> args,
           List<Variable> outFiles,
           boolean hasSideEffects, boolean deterministic) {
-    List<Expression> tclArgs = new ArrayList<Expression>();
+    List<Expression> tclArgs = new ArrayList<Expression>(args.size());
+    List<Expression> logMsg = new ArrayList<Expression>();
+    logMsg.add(new Token("exec: " + cmd));
+    
     for (Arg arg: args) {
-      tclArgs.add(opargToExpr(arg));
+      Expression argExpr = opargToExpr(arg);
+      tclArgs.add(argExpr);
+      logMsg.add(argExpr);
     }
+    pointStack.peek().add(Turbine.turbineLog(logMsg));
     pointStack.peek().add(Turbine.exec(cmd, tclArgs));
         
     // Close outputs

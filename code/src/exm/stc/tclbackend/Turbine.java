@@ -694,6 +694,10 @@ class Turbine
     return new Command(TURBINE_LOG, new TclList(tokens));
   }
 
+  public static TclTree turbineLog(List<Expression> logMsg) {
+    return new Command(TURBINE_LOG, new TclList(logMsg));
+  }
+
   public static TclTree declareReference(String refVarName) {
     return allocate(refVarName, INTEGER_TYPENAME);
   }
