@@ -198,7 +198,7 @@ namespace eval turbine {
     }
 
     proc store_void { id } {
-        debug "store void: <$id>"
+        log "store: <$id>=void"
         # emulating void with integer
         adlb::store $id $adlb::INTEGER 12345
         close_datum $id

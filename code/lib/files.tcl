@@ -23,6 +23,15 @@ namespace eval turbine {
       copy_string NOSTACK $out [ get_file_path $file_handle ]
     }
 
+    # get the filename if mapped, assign if unmapped
+    proc get_output_file_path { file_handle } {
+      if { ! [ is_file_mapped $file_handle ] } {
+        set mapping [ init_unmapped $file_handle ]
+        debug "Mapping <${file_handle}> to ${mapping}"
+      }
+      return [ get_file_path $file_handle ]
+    }
+
     proc input_file { stack out filepath } {
       set outfile [ lindex $out 0 ]
       set mapped [ is_file_mapped $outfile ]
@@ -97,7 +106,9 @@ namespace eval turbine {
 
     # return the filename of a unique temporary file
     proc mktemp {} {
-      return "TODO"
+      #TODO: do something better!
+      set id [ expr int(100000000 * rand()) ]
+      return "/tmp/turbine-${id}"
     }
 
     proc close_file { handle } {
