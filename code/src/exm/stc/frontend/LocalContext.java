@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import exm.stc.common.exceptions.DoubleDefineException;
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -260,7 +261,7 @@ extends Context
   @Override
   public void defineType(String typeName, SwiftType newType)
     throws DoubleDefineException {
-    globals.defineType(typeName, newType);
+    throw new STCRuntimeError("Not yet implemented");
   }
   @Override
   public Map<String, SwiftType> getCurrentTypeMapping() {

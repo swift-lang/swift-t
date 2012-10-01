@@ -72,6 +72,7 @@ tokens {
     GLOBAL_CONST;
     INLINE_TCL;
     APP_FILENAME;
+    TYPE_PARAMETERS;
 }
 
 @parser::header {
@@ -208,10 +209,16 @@ composite_function_definition:
 
 builtin_function_definition:
         annotation*
+        tp=type_parameters
         o=formal_argument_list f=ID i=formal_argument_list
         pkg=STRING version=STRING symbol=STRING inline_tcl? SEMICOLON ->
-        ^( DEFINE_BUILTIN_FUNCTION $f $o $i $pkg $version $symbol 
+        ^( DEFINE_BUILTIN_FUNCTION $f $tp $o $i $pkg $version $symbol 
                                    inline_tcl? annotation* )
+    ;
+
+type_parameters:
+        /* empty */ -> ^( TYPE_PARAMETERS )   
+    |   LT ID* GT -> ^( TYPE_PARAMETERS ID* )
     ;
 
 inline_tcl:

@@ -403,6 +403,56 @@ public class Types {
     }
   }
   
+  /**
+   * A type variable that represents a wildcard type
+   */
+  public static class TypeVariable extends SwiftType {
+    private final String typeVarName;
+
+    public TypeVariable(String typeVarName) {
+      super();
+      this.typeVarName = typeVarName;
+    }
+
+    @Override
+    public StructureType getStructureType() {
+      return StructureType.TYPE_VARIABLE;
+    }
+
+    @Override
+    public PrimType getPrimitiveType() {
+      throw new STCRuntimeError("TypeVariable doesn't support " +
+                                "getPrimitiveType");
+    }
+
+    @Override
+    public String toString() {
+      return typeName();
+    }
+
+    @Override
+    public String typeName() {
+      return typeVarName;
+    }
+    
+    public String getTypeVarName() {
+      return typeVarName;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (!(obj instanceof SwiftType)) {
+        throw new STCRuntimeError("Comparing TypeVariable " +
+            "with non-type object");
+      }
+      if (obj instanceof TypeVariable) {
+        TypeVariable other = (TypeVariable) obj;
+        return this.typeVarName.equals(other.typeVarName);
+      }
+      return false;
+    }
+  }
+  
   private enum StructureType
   {
     SCALAR_UPDATEABLE,
@@ -412,6 +462,7 @@ public class Types {
     // Reference is only used internally in compiler
     REFERENCE,
     STRUCT,
+    TYPE_VARIABLE,
   }
 
   /**

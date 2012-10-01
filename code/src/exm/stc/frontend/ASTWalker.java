@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 
 import org.apache.log4j.Logger;
@@ -57,6 +58,7 @@ import exm.stc.common.lang.Types.ReferenceType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.TypeVariable;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.DefType;
 import exm.stc.common.lang.Variable.VariableStorage;
@@ -1531,23 +1533,35 @@ public class ASTWalker {
   }
 
 
-  private void defineBuiltinFunction(Context context, SwiftAST tree)
+  private void defineBuiltinFunction(Context global, SwiftAST tree)
   throws UserException
   {
-    assert(tree.getChildCount() >= 6);
+    final int REQUIRED_CHILDREN = 7;
+    assert(tree.getChildCount() >= REQUIRED_CHILDREN);
     String function  = tree.child(0).getText();
-    SwiftAST outputs = tree.child(1);
-    SwiftAST inputs  = tree.child(2);
+    SwiftAST typeParamsT = tree.child(1);
+    SwiftAST outputs = tree.child(2);
+    SwiftAST inputs  = tree.child(3);
     assert(inputs.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
     assert(outputs.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
-    String pkg     = Literals.extractLiteralString(context, tree.child(3));
-    String version = Literals.extractLiteralString(context,
-                                                        tree.child(4));
-    String symbol  = Literals.extractLiteralString(context, tree.child(5));
+    String pkg     = Literals.extractLiteralString(global, tree.child(4));
+    String version = Literals.extractLiteralString(global,
+                                                        tree.child(5));
+    String symbol  = Literals.extractLiteralString(global, tree.child(6));
     
-    FunctionDecl fdecl = FunctionDecl.fromAST(context, 
-                                        inputs, outputs);
-
+    Set<String> typeParams = extractTypeParams(typeParamsT);
+    if (typeParams.size() > 0) {
+      throw new STCRuntimeError("Type parameters not yet implemented: sorry!");
+    }    
+    
+    // Define new context for function (only for type parameters)
+    LocalContext context = new LocalContext(global, function);
+    for (String typeParam: typeParams) {
+      context.defineType(typeParam, new TypeVariable(typeParam));
+    }
+    
+    FunctionDecl fdecl = FunctionDecl.fromAST(context, inputs, outputs);
+    
     FunctionType ft = fdecl.getFunctionType();
     LogHelper.debug(context, "builtin: " + function + " " + ft);
     
@@ -1558,7 +1572,7 @@ public class ASTWalker {
     
     TclOpTemplate inlineTcl = null;
     
-    int inlineTclPos = 6;
+    int inlineTclPos = REQUIRED_CHILDREN;
     if (tree.getChildCount() >= inlineTclPos + 1 && 
           tree.child(inlineTclPos).getType() == ExMParser.INLINE_TCL) {
       /* See if a template is provided for inline TCL code for function */
@@ -1586,6 +1600,18 @@ public class ASTWalker {
     }
     context.defineBuiltinFunction(function, ft);
     backend.defineBuiltinFunction(function, pkg, version, symbol, ft, inlineTcl);
+  }
+
+
+  private Set<String> extractTypeParams(SwiftAST typeParamsT) {
+    assert(typeParamsT.getType() == ExMParser.TYPE_PARAMETERS);
+    Set<String> typeParams = new HashSet<String>();
+    for (int i = 0; i < typeParamsT.getChildCount(); i++) {
+      SwiftAST typeParam = typeParamsT.child(i);
+      assert(typeParam.getType() == ExMParser.ID);
+      typeParams.add(typeParam.getText());
+    }
+    return typeParams;
   }
 
 
