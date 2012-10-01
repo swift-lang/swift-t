@@ -1859,7 +1859,7 @@ public class ASTWalker {
     
     // use wait to wait for data then dispatch task to worker
     String waitName = context.getFunctionContext().constructName("app-leaf");
-    backend.startWaitStatement(waitName, waitVars, args,
+    backend.startWaitStatement(waitName, waitVars, passIn,
                  Collections.<Variable>emptyList(), true, TaskMode.LEAF);
     // On worker, just execute the required command directly
     List<Arg> localArgs = retrieveAppArgs(context, args, fileNames);
