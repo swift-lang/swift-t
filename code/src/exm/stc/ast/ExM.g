@@ -170,9 +170,10 @@ type_field:
         ^( STRUCT_FIELD_DEF $type $name array_marker* )
     ;
 app_function_definition:
+        annotation*
         APP o=formal_argument_list f=ID i=formal_argument_list
         LBRACE c=command SEMICOLON RBRACE ->
-        ^( DEFINE_APP_FUNCTION $f $o $i $c )
+        ^( DEFINE_APP_FUNCTION $f $o $i $c annotation* )
     ;
 
 // The app function command line

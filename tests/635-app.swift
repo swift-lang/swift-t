@@ -1,5 +1,6 @@
 #include <builtins.swift>
 
+@sideeffectfree @deterministic
 app (file dst) cp (file src) {
     "cp" @src @dst;
 }
@@ -9,6 +10,7 @@ main {
     // Test pipelines of app commands
     file x = input_file("635-rand.tmp");
     file y<"635-rand-end" + ".tmp">;
+    file y2; // should be optimised out
     
     file A[];
 
@@ -23,4 +25,5 @@ main {
       A[i] = z;
     }
     y = A[N];
+    y2 = y;
 }

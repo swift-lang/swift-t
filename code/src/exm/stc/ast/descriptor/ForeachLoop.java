@@ -11,6 +11,7 @@ import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Types.SwiftType;
@@ -21,9 +22,6 @@ import exm.stc.frontend.LocalContext;
 import exm.stc.frontend.TypeChecker;
 
 public class ForeachLoop {
-  private static final String UNROLL_ANNOTATION = "unroll";
-  private static final String SPLIT_DEGREE_ANNOTATION = "splitdegree";
-  private static final String SYNC_ANNOTATION_NAME = "sync";
   private final SwiftAST arrayVarTree;
   private final SwiftAST loopBodyTree;
   private final String memberVarName;
@@ -49,7 +47,7 @@ public class ForeachLoop {
   }
 
   public boolean isSyncLoop() {
-    return annotations.contains(SYNC_ANNOTATION_NAME);
+    return annotations.contains(Annotations.LOOP_SYNC);
   }
 
   public Variable getMemberVar() {
@@ -108,14 +106,14 @@ public class ForeachLoop {
       if (subtree.getType() == ExMParser.ANNOTATION) {
         if (subtree.getChildCount() == 2) {
           String key = subtree.child(0).getText();
-          if (key.equals(UNROLL_ANNOTATION)
-              || key.equals(SPLIT_DEGREE_ANNOTATION)) {
+          if (key.equals(Annotations.LOOP_UNROLL)
+              || key.equals(Annotations.LOOP_SPLIT_DEGREE)) {
             boolean posint = false;
             if (subtree.child(1).getType() == ExMParser.NUMBER) {
               int val = Integer.parseInt(subtree.child(1).getText());
               if (val > 0) {
                 posint = true;
-                if (key.equals(UNROLL_ANNOTATION)) {
+                if (key.equals(Annotations.LOOP_UNROLL)) {
                   unrollFactor = val;
                 } else {
                   splitDegree = val;
@@ -184,7 +182,7 @@ public class ForeachLoop {
           + " on foreach list: " + annotations.toString()
           + ", only expected one");
     } else if (annotations.size() == 1) {
-      if (!annotations.get(0).equals(SYNC_ANNOTATION_NAME)) {
+      if (!annotations.get(0).equals(Annotations.LOOP_SYNC)) {
         throw new STCRuntimeError("Unknown loop annotation "
             + annotations.get(0));
       }

@@ -44,6 +44,7 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
+import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.FunctionSemantics;
 import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
@@ -1630,15 +1631,15 @@ public class ASTWalker {
    */
   private void registerFunctionAnnotation(Context context, String function,
                   String annotation) throws UserException {
-    if (annotation.equals("assertion")) {
+    if (annotation.equals(Annotations.FN_ASSERTION)) {
       FunctionSemantics.addAssertVariable(function);
-    } else if (annotation.equals("pure")) {
+    } else if (annotation.equals(Annotations.FN_PURE)) {
       FunctionSemantics.addPure(function);
-    } else if (annotation.equals("commutative")) {
-      FunctionSemantics.addCommutative("commutative");
-    } else if (annotation.equals("copy")) {
-      FunctionSemantics.addCopy("copy");
-    } else if (annotation.equals("minmax")) {
+    } else if (annotation.equals(Annotations.FN_COMMUTATIVE)) {
+      FunctionSemantics.addCommutative(function);
+    } else if (annotation.equals(Annotations.FN_COPY)) {
+      FunctionSemantics.addCopy(function);
+    } else if (annotation.equals(Annotations.FN_MINMAX)) {
       FunctionSemantics.addMinMax(function);
     } else {
       throw new UserException(context, "Undefined annotation for functions: "
@@ -1658,19 +1659,7 @@ public class ASTWalker {
     SwiftAST outputs = tree.child(1);
     SwiftAST inputs = tree.child(2);
     
-    ArrayList<String> annotations = new ArrayList<String>();
-    for (int i = 4; i < tree.getChildCount(); i++) {
-      SwiftAST subtree =tree.child(i);
-      assert(subtree.getType() == ExMParser.ANNOTATION);
-      assert(subtree.getChildCount() == 1 || subtree.getChildCount() == 2);
-      if (subtree.getChildCount() == 2) {
-        throw new InvalidAnnotationException(context,
-                      "no key-value annotations for function defs");
-      }
-      String annotation = subtree.child(0).getText();
-      annotations.add(annotation);
-    }
-
+    List<String> annotations = extractFunctionAnnotations(context, tree, 4);
     
     FunctionDecl fdecl = FunctionDecl.fromAST(context, inputs, outputs);
     FunctionType ft = fdecl.getFunctionType();
@@ -1700,7 +1689,7 @@ public class ASTWalker {
           		"@sync annotation currently");
           
     } else if (annotations.size() == 1) {
-      if (annotations.get(0).equals("sync")) {
+      if (annotations.get(0).equals(Annotations.FN_SYNC)) {
         async = false;
       } else {
         throw new InvalidAnnotationException(context, "unknown annotation" +
@@ -1709,6 +1698,24 @@ public class ASTWalker {
     }
     
     context.defineCompositeFunction(function, ft, async);
+  }
+
+
+  private List<String> extractFunctionAnnotations(Context context,
+          SwiftAST tree, int firstChild) throws InvalidAnnotationException {
+    List<String> annotations = new ArrayList<String>();
+    for (int i = firstChild; i < tree.getChildCount(); i++) {
+      SwiftAST subtree =tree.child(i);
+      assert(subtree.getType() == ExMParser.ANNOTATION);
+      assert(subtree.getChildCount() == 1 || subtree.getChildCount() == 2);
+      if (subtree.getChildCount() == 2) {
+        throw new InvalidAnnotationException(context,
+                      "no key-value annotations for function defs");
+      }
+      String annotation = subtree.child(0).getText();
+      annotations.add(annotation);
+    }
+    return annotations;
   }
 
   /** Compile the function, assuming it is already defined in context */
@@ -1789,7 +1796,7 @@ public class ASTWalker {
   private void defineAppFunction(Context context, SwiftAST tree)
       throws UserException {
     LogHelper.info(context.getLevel(), "defineAppFunction");
-    assert(tree.getChildCount() == 4);
+    assert(tree.getChildCount() >= 4);
     SwiftAST functionT = tree.child(0);
     assert(functionT.getType() == ExMParser.ID);
     String function = functionT.getText();
@@ -1802,8 +1809,21 @@ public class ASTWalker {
     List<Variable> outArgs = decl.getOutVars();
     List<Variable> inArgs = decl.getInVars();
     
-    // TODO: get these from annotations
+    List<String> annotations = extractFunctionAnnotations(context, tree, 4);
     boolean hasSideEffects = true, deterministic = false;
+    for (String annotation: annotations) {
+      if (annotation.equals(Annotations.FN_PURE)) {
+        hasSideEffects = false;
+        deterministic = true;
+      } else if (annotation.equals(Annotations.FN_SIDE_EFFECT_FREE)) {
+        hasSideEffects = false;
+      } else if (annotation.equals(Annotations.FN_DETERMINISTIC)) {
+        deterministic = true;
+      } else {
+        throw new InvalidAnnotationException(context, "Unsupported annotation "
+                + "@" + annotation + " on app function: " + function);
+      }
+    }
     
     LocalContext appContext = new LocalContext(context, function);
     appContext.setNested(false);
