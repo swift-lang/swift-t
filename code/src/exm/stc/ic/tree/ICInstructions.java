@@ -1339,8 +1339,12 @@ public class ICInstructions {
           } 
           return Arrays.asList(retrieve, assign);
         }
-        case GET_FILENAME:
-          // TODO: standardise ComputedValue with related functions
+        case GET_FILENAME: {
+
+          Arg out = args.get(0);
+          Arg in = args.get(1);
+          return Arrays.asList(fileNameCV(out, in));
+        }
         case DEREF_BLOB:
         case DEREF_BOOL:
         case DEREF_FLOAT:
@@ -1558,9 +1562,7 @@ public class ICInstructions {
           if (op == Opcode.CALL_BUILTIN && 
                       this.functionName.equals(Builtins.INPUT_FILE)) {
             // Inferring filename is problematic
-            res.add(new ComputedValue(Opcode.CALL_BUILTIN, Builtins.FILENAME,
-                      Arrays.asList(Arg.createVar(getOutput(0))),
-                      getInput(0), false));
+            res.add(fileNameCV(Arg.createVar(getOutput(0)), getInput(0)));
           }
           return res;
         } else {
@@ -2905,6 +2907,11 @@ public class ICInstructions {
       throw new STCRuntimeError("method to set " +
           dst.getType().typeName() + " is not known yet");
     }
+  }
+
+  private static ComputedValue fileNameCV(Arg outFilename, Arg inFile) {
+    return new ComputedValue(Opcode.GET_FILENAME,
+        "", Arrays.asList(inFile), outFilename, false);
   }
 
   private static String formatFunctionCall(Opcode op, 
