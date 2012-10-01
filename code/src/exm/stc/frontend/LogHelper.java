@@ -3,8 +3,8 @@ package exm.stc.frontend;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import exm.stc.antlr.gen.ExMParser;
 import exm.stc.ast.SwiftAST;
+import exm.stc.ast.antlr.ExMParser;
 
 /**
  * Helper functions to augment log messages with contextual information about
