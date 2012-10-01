@@ -177,7 +177,7 @@ app_function_definition:
 
 // The app function command line
 command:
-        c=ID a=command_args -> ^( COMMAND $c $a )
+        c=STRING a=command_args -> ^( COMMAND $c $a )
     ;
 
 command_args:
@@ -189,7 +189,7 @@ command_args_more:
     ;
     
 command_arg:
-        ID
+        variable
     |   literal
     |   LPAREN expr RPAREN -> expr
     |   '@' ID -> ^( APP_FILENAME ID )   
@@ -487,7 +487,7 @@ struct_subscript:
 base_expr:
             literal
         |   function_call
-        |   ID -> ^( VARIABLE ID )
+        |   variable
         |    LPAREN e=expr RPAREN
             -> $e
         |   array_constructor
@@ -502,6 +502,9 @@ literal:
             |   b=bool_lit -> ^( BOOL_LITERAL $b)
     ;
 
+variable:
+        ID -> ^( VARIABLE ID )
+    ;
 bool_lit: TRUE | FALSE
     ;
 

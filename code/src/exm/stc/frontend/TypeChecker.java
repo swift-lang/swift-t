@@ -206,8 +206,8 @@ public class TypeChecker {
       }
     }
     default:
-      throw new STCRuntimeError(
-          "Unknown token type in expression context: " + token);
+      throw new STCRuntimeError("Unexpected token type in expression context: "
+          + LogHelper.tokName(token));
     }
   }
 
@@ -264,11 +264,20 @@ public class TypeChecker {
     }
     return typeL.get(0);
   }
+  
+  private static String extractOpName(SwiftAST opTree) {
+    int tok = opTree.child(0).getType();
+    try {
+      return ExMParser.tokenNames[tok].toLowerCase();
+    } catch (IndexOutOfBoundsException ex) {
+      throw new STCRuntimeError("Out of range token number: "
+          + tok);
+    }
+  }
 
   private static List<SwiftType> findOperatorResultType(Context context, SwiftAST tree,
       List<SwiftType> expected) throws TypeMismatchException, UserException {
-    int op = tree.child(0).getType();
-    String opName = ExMParser.tokenNames[op].toLowerCase();
+    String opName = extractOpName(tree);
 
     ArrayList<SwiftType> argTypes = new ArrayList<SwiftType>();
 
@@ -327,7 +336,7 @@ public class TypeChecker {
     assert(tree.getType() == ExMParser.OPERATOR);
     assert(tree.getChildCount() >= 1);
     int opType = tree.child(0).getType();
-    String opName = ExMParser.tokenNames[opType].toLowerCase();
+    String opName = extractOpName(tree);
  
     PrimType allArgType;
     if (opType == ExMParser.NEGATE && expectedResult != null && 

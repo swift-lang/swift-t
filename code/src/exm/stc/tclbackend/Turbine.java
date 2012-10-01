@@ -730,9 +730,11 @@ class Turbine
    * @return Tcl code to execute external executable 
    */
   public static Command exec(String cmd, List<Expression> args) {
-    ArrayList<Expression> args2 = new ArrayList<Expression>(args.size() + 1);
-    args2.add(new Token(cmd));
+    ArrayList<Expression> args2 = new ArrayList<Expression>(args.size() + 3);
+    args2.add(new TclString(cmd, true));
     args2.addAll(args);
+    args2.add(new Token(">@stdout"));
+    args2.add(new Token("2>@stderr"));
     return new Command(EXEC, args2);
   }
   

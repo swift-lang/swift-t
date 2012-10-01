@@ -26,6 +26,7 @@ import exm.stc.common.lang.Variable.DefType;
 import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
+import exm.stc.frontend.LogHelper;
 import exm.stc.frontend.TypeChecker;
 
 /**
@@ -279,7 +280,7 @@ public class ForLoopDescriptor {
         
       } else {
         throw new STCRuntimeError("Don't support initializer type "
-            + ExMParser.tokenNames[initType] + " yet ");
+            + LogHelper.tokName(initType) + " yet ");
       }
     }
     

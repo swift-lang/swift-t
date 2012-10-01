@@ -167,7 +167,7 @@ class VariableUsageAnalyzer {
 
     context.syncFileLine(tree.getLine(), lineMapping);
     LogHelper.trace(context, "walk " + context.getLocation() +
-                 ExMParser.tokenNames[token]);
+                    LogHelper.tokName(token));
     switch (token) {
       case ExMParser.BLOCK:
         VariableUsageInfo childVu = walkBlock(new LocalContext(context),
@@ -220,7 +220,7 @@ class VariableUsageAnalyzer {
       default:
         throw new STCRuntimeError
         ("Unexpected token type inside procedure: " +
-            ExMParser.tokenNames[token]);
+            LogHelper.tokName(token));
     }
   }
 
@@ -591,8 +591,10 @@ class VariableUsageAnalyzer {
 
         default:
           throw new STCRuntimeError
-          ("Unexpected token type inside expression: " + ExMParser.tokenNames[token]
-              + " at l." + node.getLine() + ":" + node.getCharPositionInLine());
+          ("Unexpected token type inside expression: " 
+              + LogHelper.tokName(token)
+              + " at l." + node.getLine() + ":" 
+              + node.getCharPositionInLine());
       }
     }
   }

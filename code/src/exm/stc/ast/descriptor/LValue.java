@@ -14,6 +14,7 @@ import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.frontend.Context;
+import exm.stc.frontend.LogHelper;
 
 public class LValue {
   public final Variable var;
@@ -71,7 +72,7 @@ public class LValue {
         t = newType;
       } else {
         throw new STCRuntimeError("Unexpected token type"
-            + ExMParser.tokenNames[tree.getType()] + " on right hand side"
+            + LogHelper.tokName(tree.getType()) + " on right hand side"
             + " of assignment");
       }
     }
@@ -189,7 +190,7 @@ public class LValue {
        path.add(pathTree);
      } else {
        throw new STCRuntimeError("Unexpected token "
-           + ExMParser.tokenNames[pathTree.getType()]);
+           + LogHelper.tokName(pathTree.getType()));
      }
    }
 

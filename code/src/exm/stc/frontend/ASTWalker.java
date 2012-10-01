@@ -163,7 +163,7 @@ public class ASTWalker {
           break;
 
         default:
-          String name = ExMParser.tokenNames[type];
+          String name = LogHelper.tokName(type);
           throw new STCRuntimeError("Unexpected token: " + name
               + " at program top level");
         }
@@ -183,7 +183,7 @@ public class ASTWalker {
       }
     } else {
       throw new STCRuntimeError("Unexpected token: " +
-          ExMParser.tokenNames[token] + " instead of PROGRAM");
+          LogHelper.tokName(token) + " instead of PROGRAM");
     }
   }
 
@@ -258,7 +258,7 @@ public class ASTWalker {
         default:
           throw new STCRuntimeError
           ("Unexpected token type for statement: " +
-           ExMParser.tokenNames[token]);
+              LogHelper.tokName(token));
       }
   }
 
@@ -1414,7 +1414,7 @@ public class ASTWalker {
     boolean isRef = Types.isArrayRef(arrType);
 
     LogHelper.debug(context, 
-            "Token type: " + ExMParser.tokenNames[rvalExpr.getType()]);
+            "Token type: " + LogHelper.tokName(rvalExpr.getType()));
     // Find or create variable to store expression result
 
     if (!Types.isReference(rvalType)) {
@@ -1836,8 +1836,8 @@ public class ASTWalker {
     assert(cmd.getType() == ExMParser.COMMAND);
     assert(cmd.getChildCount() >= 1);
     SwiftAST appNameT = cmd.child(0);
-    assert(appNameT.getType() == ExMParser.ID);
-    String appName = appNameT.getText();
+    assert(appNameT.getType() == ExMParser.STRING);
+    String appName = Literals.extractLiteralString(context, appNameT);
     
     // Evaluate any argument expressions
     Triple<List<ExtArgType>, List<Variable>, List<Variable>> argExprs
@@ -1933,9 +1933,10 @@ public class ASTWalker {
       } else {
         SwiftType exprType = TypeChecker.findSingleExprType(context,
                                                             cmdArg);
-        if (!Types.isString(exprType)) {
+        if (!(Types.isString(exprType) || Types.isInt(exprType))) {
           //TODO: more types
-          throw new STCRuntimeError("Type " + exprType + " not yet "
+          throw new STCRuntimeError("Missing feature: "
+                  + "Type " + exprType + " not yet"
                   + " supported for app args");
         }
         Variable exprResult = exprWalker.evalExprToTmp(context, cmdArg,
@@ -2115,7 +2116,7 @@ public class ASTWalker {
       break;
     default:
       throw new STCRuntimeError("Unexpect value tree type in "
-          + " global constant: " + ExMParser.tokenNames[val.getType()]);
+          + " global constant: " + LogHelper.tokName(val.getType()));
     }
   }
 }

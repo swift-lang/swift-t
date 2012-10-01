@@ -10,6 +10,7 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.frontend.Context;
+import exm.stc.frontend.LogHelper;
 
 public class VariableDeclaration {
 
@@ -101,7 +102,7 @@ public class VariableDeclaration {
         mappingExpr = subtree.child(0);
       } else {
         throw new STCRuntimeError("Unexpected token in variable " +
-            "declaration: " + ExMParser.tokenNames[subtree.getType()]);
+            "declaration: " + LogHelper.tokName(subtree.getType()));
       }
     }
     return new VariableDescriptor(varType, varName, mappingExpr);

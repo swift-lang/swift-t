@@ -18,6 +18,7 @@ import exm.stc.common.lang.Types.FunctionType.InArgT;
 import exm.stc.common.lang.Variable.DefType;
 import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.frontend.Context;
+import exm.stc.frontend.LogHelper;
 
 public class FunctionDecl {
   private final FunctionType ftype;
@@ -169,7 +170,7 @@ public class FunctionDecl {
           throw new InvalidSyntaxException(context, "Cannot map function argument");
         } else {
           throw new STCRuntimeError("Unexpected token in variable " +
-              "declaration: " + ExMParser.tokenNames[subtree.getType()]);
+              "declaration: " + LogHelper.tokName(subtree.getType()));
         }
       }
       return new Variable(varType, varName, VariableStorage.STACK, deftype, 

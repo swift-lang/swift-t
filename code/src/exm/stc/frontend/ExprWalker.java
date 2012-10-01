@@ -160,8 +160,8 @@ public class ExprWalker {
         break;
       default:
         throw new STCRuntimeError
-        ("Unknown token type in expression context: "
-            + ExMParser.tokenNames[token]);
+        ("Unexpected token type in expression context: "
+            + LogHelper.tokName(token));
     }
   }
 

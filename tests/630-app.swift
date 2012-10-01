@@ -1,13 +1,11 @@
 #include <builtins.swift>
+// SdKIP-THIS-TEST
 
-// SKIP-THIS-TEST
-
-app (file out) f (file input, string s, int i) {
-    blah @out "hello" @input (s + "232") (fromint(i));
+app () f (file input, string s, int i) {
+    "cat" @input;
 }
 
 main {
-    file x = input_file("/dev/null");
-    file y;
-    y = f(x, "sfds", 1);
+    file x = input_file("630-helloworld.txt");
+    f(x, "Bob", 1);
 }

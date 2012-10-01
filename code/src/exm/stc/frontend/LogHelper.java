@@ -3,6 +3,7 @@ package exm.stc.frontend;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import exm.stc.antlr.gen.ExMParser;
 import exm.stc.ast.SwiftAST;
 
 /**
@@ -15,6 +16,19 @@ public class LogHelper {
   public static void logChildren(int indent, SwiftAST tree) {
     for (int i = 0; i < tree.getChildCount(); i++) {
       trace(indent+2, tree.child(i).getText());
+    }
+  }
+  
+  /**
+   * @param tokenNum token number from AST
+   * @return descriptive string containing token name, or token number if
+   *        unknown token type
+   */
+  public static String tokName(int tokenNum) {
+    if (tokenNum < 0 || tokenNum > ExMParser.tokenNames.length - 1) {
+      return "Invalid token number (" + tokenNum + ")";
+    } else {
+      return ExMParser.tokenNames[tokenNum];
     }
   }
   
