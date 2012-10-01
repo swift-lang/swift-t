@@ -14,7 +14,6 @@ if { ! [ adlb::amserver ] } {
     set c [ adlb::unique ]
     adlb::create $c $adlb::CONTAINER integer
 
-    puts "loop"
     set iterations [ expr 5 + $c ]
     for { set i [ expr $c + 1 ] } { $i < $iterations } { incr i } {
         set s $i
