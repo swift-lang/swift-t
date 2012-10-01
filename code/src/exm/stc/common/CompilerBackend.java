@@ -87,8 +87,9 @@ public interface CompilerBackend {
 
   /**
    * Extract handle to filename future out of file variable
+   * @param initUnmapped if true, assign arbitrary filename to unmapped files
    */
-  public abstract void getFileName(Variable filename, Variable file);
+  public abstract void getFileName(Variable filename, Variable file, boolean initUnmapped);
   /**
    * NOTE: all built-ins should be defined before other functions
    * @param function

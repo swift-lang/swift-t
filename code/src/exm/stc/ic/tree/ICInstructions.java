@@ -474,7 +474,10 @@ public class ICInstructions {
             args.get(1));
         break;
       case GET_FILENAME:
-        gen.getFileName(args.get(0).getVar(), args.get(1).getVar());
+        gen.getFileName(args.get(0).getVar(), args.get(1).getVar(), false);
+        break;
+      case GET_OUTPUT_FILENAME:
+        gen.getFileName(args.get(0).getVar(), args.get(1).getVar(), true);
         break;
       default:
         throw new STCRuntimeError("didn't expect to see op " +
@@ -746,9 +749,15 @@ public class ICInstructions {
                                                                    val));
     }
     
-    public static Instruction getFileName(Variable filename, Variable file) {
-      return new TurbineOp(Opcode.GET_FILENAME, 
-              Arrays.asList(Arg.createVar(filename), Arg.createVar(file)));
+    public static Instruction getFileName(Variable filename, Variable file,
+                                          boolean initUnmapped) {
+      if (initUnmapped) {
+        return new TurbineOp(Opcode.GET_OUTPUT_FILENAME, 
+                Arrays.asList(Arg.createVar(filename), Arg.createVar(file)));
+      } else {
+        return new TurbineOp(Opcode.GET_FILENAME, 
+                Arrays.asList(Arg.createVar(filename), Arg.createVar(file)));
+      }
     }
  
 
@@ -829,6 +838,7 @@ public class ICInstructions {
       case LOAD_REF:
       case COPY_REF:
       case GET_FILENAME:
+      case GET_OUTPUT_FILENAME:
           return 1;
       default:
         throw new STCRuntimeError("Need to add opcode " + op.toString()
@@ -888,7 +898,9 @@ public class ICInstructions {
       case GET_FILENAME:
         // Only effect is setting alias var
         return false;
-        
+      case GET_OUTPUT_FILENAME:
+        // Might initialise mapping
+        return true;
       case STRUCT_LOOKUP:
       case LOAD_REF:
       case ADDRESS_OF:
@@ -1338,7 +1350,8 @@ public class ICInstructions {
           } 
           return Arrays.asList(retrieve, assign);
         }
-        case GET_FILENAME: {
+        case GET_FILENAME: 
+        case GET_OUTPUT_FILENAME: {
 
           Arg out = args.get(0);
           Arg in = args.get(1);
@@ -2297,7 +2310,7 @@ public class ICInstructions {
     RUN_EXTERNAL,
     INIT_UPDATEABLE_FLOAT, UPDATE_MIN, UPDATE_INCR, UPDATE_SCALE, LATEST_VALUE,
     UPDATE_MIN_IMM, UPDATE_INCR_IMM, UPDATE_SCALE_IMM,
-    GET_FILENAME,
+    GET_FILENAME, GET_OUTPUT_FILENAME
   }
 
   

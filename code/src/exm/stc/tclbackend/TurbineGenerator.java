@@ -394,12 +394,14 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void getFileName(Variable filename, Variable file) {
+  public void getFileName(Variable filename, Variable file,
+                          boolean initUnmapped) {
     assert(Types.isString(filename.getType()));
     assert(filename.getStorage() == VariableStorage.ALIAS);
     assert(Types.isFile(file.getType()));
+    
     SetVariable cmd = new SetVariable(prefixVar(filename.getName()),
-                              Turbine.getFileName(varToExpr(file)));
+                  Turbine.getFileName(varToExpr(file), initUnmapped));
     pointStack.peek().add(cmd);
   }
 

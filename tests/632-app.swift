@@ -1,7 +1,5 @@
 #include <builtins.swift>
 
-//SKIP-THIS-TEST
-
 /* Split file into head and tail */
 app (file out1, file out2) split (file input, int lines) {
     "./632-split.sh" @input lines @out1 @out2;

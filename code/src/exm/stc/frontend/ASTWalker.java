@@ -1832,8 +1832,6 @@ public class ASTWalker {
           boolean deterministic) throws UserException {
     //TODO: don't yet handle situation where user is naughty and
     //    uses output variable in expression context
-    //TODO: how to handle app output args that aren't referenced in
-    //    command line
     
     // Extract command from AST
     assert(cmd.getType() == ExMParser.COMMAND);
@@ -1983,8 +1981,14 @@ public class ASTWalker {
     for (Variable arg: args) {
       if (Types.isFile(arg.getType())) {
         // Need to wait for filename for files
-        Variable filenameFuture = varCreator.createFilenameAlias(context, arg); 
-        backend.getFileName(filenameFuture, arg);
+        Variable filenameFuture = varCreator.createFilenameAlias(context, arg);
+
+        if (arg.getDefType() != DefType.OUTARG) {
+          // If output is unmapped, need to assign file name
+          backend.getFileName(filenameFuture, arg, true);
+        } else {
+          backend.getFileName(filenameFuture, arg, false);
+        }
         waitVars.add(filenameFuture);
         fileNames.put(arg.getName(), filenameFuture);
         if (arg.getDefType() != DefType.OUTARG) {

@@ -753,10 +753,15 @@ class Turbine
    * Expression that extracts the filename string future
    * a file variable
    * @param fileVar
+   * @param initUnmapped 
    * @return
    */
-  public static Expression getFileName(Value fileVar) {
-    return new Square(new Token("turbine::get_file_path"), fileVar);
+  public static Expression getFileName(Value fileVar, boolean initUnmapped) {
+    if (initUnmapped) {
+      return new Square(new Token("turbine::get_file_path"), fileVar);
+    } else {
+      return new Square(new Token("turbine::get_output_file_path"), fileVar);
+    }
   }
   
   /**

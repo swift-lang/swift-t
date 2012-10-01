@@ -765,12 +765,13 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void getFileName(Variable filename, Variable file) {
+  public void getFileName(Variable filename, Variable file,
+                          boolean initUnmapped) {
     assert(Types.isString(filename.getType()));
     assert(filename.getStorage() == VariableStorage.ALIAS);
     assert(Types.isFile(file.getType()));
     currBlock().addInstruction(
-            TurbineOp.getFileName(filename, file));
+            TurbineOp.getFileName(filename, file, initUnmapped));
   }
 
 }

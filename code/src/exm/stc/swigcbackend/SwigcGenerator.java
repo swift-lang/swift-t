@@ -2145,7 +2145,7 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void getFileName(Variable filename, Variable file) {
+    public void getFileName(Variable filename, Variable file, boolean initUnmapped) {
       // TODO Auto-generated method stub
       
     }
