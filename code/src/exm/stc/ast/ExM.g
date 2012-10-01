@@ -177,7 +177,7 @@ app_function_definition:
 
 // The app function command line
 command:
-        c=STRING a=command_args -> ^( COMMAND $c $a )
+        c=STRING command_args? -> ^( COMMAND $c command_args? )
     ;
 
 command_args:
