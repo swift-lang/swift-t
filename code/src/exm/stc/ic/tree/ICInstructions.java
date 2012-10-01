@@ -880,13 +880,16 @@ public class ICInstructions {
       case ARRAY_LOOKUP_FUTURE:
       case ARRAYREF_LOOKUP_FUTURE:
       case ARRAYREF_LOOKUP_IMM:
-      case GET_FILENAME:
           return this.writesAliasVar();
 
       case DEREF_FILE:
         return this.writesAliasVar() ||
                this.args.get(0).getVar().isMapped();
           
+      case GET_FILENAME:
+        // Only effect is setting alias var
+        return false;
+        
       case STRUCT_LOOKUP:
       case LOAD_REF:
       case ADDRESS_OF:
