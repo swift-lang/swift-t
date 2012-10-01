@@ -80,7 +80,6 @@
       <arg value="${grammar}"/>
       <classpath>
          <pathelement location="${antlr.jar}"/>
-         <pathelement location="${json.jar}"/>
       </classpath>
     </java>
 
@@ -97,7 +96,7 @@
            debug="true"
            debuglevel="source,lines,vars"
            includeantruntime="false"
-           classpath="${classpath}:${json.jar}">
+           classpath="${classpath}">
       <compilerarg value="-Xlint"/>
       <compilerarg value="-Xlint:-cast"/>
     </javac>
@@ -113,7 +112,7 @@
            debug="true"
            debuglevel="source,lines,vars"
            includeantruntime="false"
-           classpath="${classpath}:${json.jar}">
+           classpath="${classpath}">
       <compilerarg value="-Xlint"/>
       <compilerarg value="-Xlint:-cast"/>
     </javac>
@@ -130,7 +129,7 @@
            debug="true"
            debuglevel="source,lines,vars"
            includeantruntime="false"
-           classpath="${classpath}:${json.jar}">
+           classpath="${classpath}">
       <compilerarg value="-Xlint"/>
       <compilerarg value="-Xlint:-cast"/>
     </javac>
@@ -147,7 +146,7 @@
            debug="true"
            debuglevel="source,lines,vars"
            includeantruntime="false"
-           classpath="${classpath}:${json.jar}">
+           classpath="${classpath}">
       <compilerarg value="-Xlint:-cast"/>
     </javac>
   </target>
@@ -161,7 +160,7 @@
            debug="true"
            debuglevel="source,lines,vars"
            includeantruntime="false"
-           classpath="${classpath}:${json.jar}">
+           classpath="${classpath}">
     </javac>
   </target>
 
@@ -175,7 +174,7 @@
            debug="true"
            debuglevel="source,lines,vars"
            includeantruntime="false"
-           classpath=".:${antlr.jar}:${log4j.jar}:${json.jar}">
+           classpath=".:${antlr.jar}:${log4j.jar}">
     </javac>
   </target>
 
