@@ -1,13 +1,24 @@
 #!/bin/sh
-if 
-if [ ! -f "630-outfile.txt" ]; then
-    echo "630-outfile.txt was not created"
+OUT="631-outfile.txt"
+
+if [ ! -f "${OUT}" ]; then
+    echo "${OUT} was not created"
     exit 1
 fi
 
-contents=`cat "630-outfile.txt"`
-exp_contents='
-if [ "$contents" = "hello world!" ] ; then
-    rm bob.txt alice.txt
+if [ -h 631-app-cat.sh ]; then
+    rm 631-app-cat.sh
+fi
+
+contents=`cat "${OUT}"`
+exp_contents='Hello World
+hello sfds
+1'
+
+if [ "$contents" = "${exp_contents}" ] ; then
+    rm "${OUT}"
     exit 0
 else
+    echo "${OUT} did not have expected contents"
+    exit 1
+fi

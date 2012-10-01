@@ -2137,8 +2137,8 @@ public class SwigcGenerator implements CompilerBackend
 
     @Override
     public void
-        runExternal(String cmd, List<Arg> inputs, List<Variable> outputs,
-            List<ExtArgType> order,
+        runExternal(String cmd, List<Arg> args,
+            List<Variable> outFiles,
             boolean hasSideEffects, boolean deterministic) {
       // TODO Auto-generated method stub
       

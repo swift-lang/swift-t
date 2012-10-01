@@ -698,30 +698,17 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void runExternal(String cmd, List<Arg> inputs, List<Variable> outputs,
-          List<ExtArgType> order,
+  public void runExternal(String cmd, List<Arg> args,
+          List<Variable> outFiles,
           boolean hasSideEffects, boolean deterministic) {
-    assert(inputs.size() + outputs.size() == order.size());
-    List<Expression> args = new ArrayList<Expression>();
-    // TODO: need to translate file types to filename strings: 
-    //    generate code to fetch filename?
-    int iPos = 0, oPos = 0;
-    for (ExtArgType a: order) {
-      if (a == ExtArgType.IN) {
-        assert(iPos < inputs.size());
-        args.add(opargToExpr(inputs.get(iPos)));
-        iPos++;
-      } else {
-        assert(a == ExtArgType.OUT);
-        assert(oPos < outputs.size());
-        args.add(varToExpr(outputs.get(oPos)));
-        oPos++;
-      }
+    List<Expression> tclArgs = new ArrayList<Expression>();
+    for (Arg arg: args) {
+      tclArgs.add(opargToExpr(arg));
     }
-    pointStack.peek().add(Turbine.exec(cmd, args));
+    pointStack.peek().add(Turbine.exec(cmd, tclArgs));
         
     // Close outputs
-    for (Variable o: outputs) {
+    for (Variable o: outFiles) {
       assert(Types.isFile(o.getType()));
       pointStack.peek().add(Turbine.closeFile(varToExpr(o)));
     }

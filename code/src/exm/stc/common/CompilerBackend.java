@@ -109,8 +109,8 @@ public interface CompilerBackend {
   /**
    * Generate command to run an external application immediately
    */
-  public abstract void runExternal(String cmd, List<Arg> inputs,
-                             List<Variable> outputs, List<ExtArgType> order,
+  public abstract void runExternal(String cmd, List<Arg> args,
+                             List<Variable> outFiles,
                              boolean hasSideEffects, boolean deterministic);
   
   /**
@@ -324,9 +324,4 @@ public interface CompilerBackend {
       List<Boolean> blockingVars);
   public abstract void loopBreak(List<Variable> varsToClose);
   public abstract void endLoop();
-
-  public static enum ExtArgType {
-    IN,
-    OUT,
-  }
 }

@@ -33,7 +33,6 @@ import exm.stc.ast.descriptor.VariableDeclaration.VariableDescriptor;
 import exm.stc.ast.descriptor.Wait;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.Settings;
-import exm.stc.common.CompilerBackend.ExtArgType;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.InvalidOptionException;
@@ -62,7 +61,6 @@ import exm.stc.common.lang.Variable.DefType;
 import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
-import exm.stc.common.util.Triple;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
 /**
  * This class walks the Swift AST.
@@ -1801,18 +1799,21 @@ public class ASTWalker {
     
     FunctionDecl decl = FunctionDecl.fromAST(context, inArgsT, outArgsT);
     context.defineAppFunction(function, decl.getFunctionType());
+    List<Variable> outArgs = decl.getOutVars();
+    List<Variable> inArgs = decl.getInVars();
     
     // TODO: get these from annotations
     boolean hasSideEffects = true, deterministic = false;
     
     LocalContext appContext = new LocalContext(context, function);
     appContext.setNested(false);
-    appContext.addDeclaredVariables(decl.getOutVars());
-    appContext.addDeclaredVariables(decl.getInVars());
+    appContext.addDeclaredVariables(outArgs);
+    appContext.addDeclaredVariables(inArgs);
     
-    backend.startFunction(function, decl.getOutVars(), decl.getInVars(),
+    backend.startFunction(function, outArgs, inArgs,
                           TaskMode.LEAF);
-    genAppFunctionBody(appContext, cmdT, hasSideEffects, deterministic);
+    genAppFunctionBody(appContext, cmdT, outArgs,
+                       hasSideEffects, deterministic);
     backend.endFunction();
   }
 
@@ -1820,11 +1821,13 @@ public class ASTWalker {
   /**
    * @param context local context for app function
    * @param cmd AST for app function command
+   * @param outputs output arguments for app
    * @param hasSideEffects
    * @param deterministic
    * @throws UserException
    */
-  private void genAppFunctionBody(Context context, SwiftAST cmd, 
+  private void genAppFunctionBody(Context context, SwiftAST cmd,
+          List<Variable> outputs,
           boolean hasSideEffects,
           boolean deterministic) throws UserException {
     //TODO: don't yet handle situation where user is naughty and
@@ -1840,37 +1843,58 @@ public class ASTWalker {
     String appName = Literals.extractLiteralString(context, appNameT);
     
     // Evaluate any argument expressions
-    Triple<List<ExtArgType>, List<Variable>, List<Variable>> argExprs
-        = evalAppCmdArgs(context, cmd);
-    List<ExtArgType> argOrder = argExprs.val1;
-    List<Variable> inputs = argExprs.val2;
-    List<Variable> outputs = argExprs.val3;
+    List<Variable> args = evalAppCmdArgs(context, cmd);
+    
+    checkAppOutputsReferenced(context, outputs, args);
     
     // Work out what variables must be closed before command line executes
     Pair<Map<String, Variable>, List<Variable>> wait =
-            selectAppWaitVars(context, inputs, outputs);
+            selectAppWaitVars(context, args);
     Map<String, Variable> fileNames = wait.val1; 
     List<Variable> waitVars = wait.val2;
     
-    // Variables that need to be passed to worker
-    List<Variable> used = new ArrayList<Variable>();
-    used.addAll(inputs);
-    used.addAll(outputs);
+    List<Variable> passIn = new ArrayList<Variable>();
+    passIn.addAll(fileNames.values());
+    passIn.addAll(args);
     
     // use wait to wait for data then dispatch task to worker
     String waitName = context.getFunctionContext().constructName("app-leaf");
-    backend.startWaitStatement(waitName, waitVars, used,
+    backend.startWaitStatement(waitName, waitVars, args,
                  Collections.<Variable>emptyList(), true, TaskMode.LEAF);
     // On worker, just execute the required command directly
-    List<Arg> localInputs = appLocalInputs(context, inputs, fileNames);
-    backend.runExternal(appName, localInputs, outputs, argOrder, 
-                        hasSideEffects, deterministic);
+    List<Arg> localArgs = retrieveAppArgs(context, args, fileNames);
+    backend.runExternal(appName, localArgs,
+                        outputs, hasSideEffects, deterministic);
     backend.endWaitStatement(null);
   }
 
 
   /**
-   * Work out what the local inputs to the app function should be
+   * Check that app output args are not omitted from command line
+   * Omit warning
+   * @param context
+   * @param outputs
+   * @param args
+   */
+  private void checkAppOutputsReferenced(Context context,
+      List<Variable> outputs, List<Variable> args) {
+    HashMap<String, Variable> outMap = new HashMap<String, Variable>();
+    for (Variable output: outputs) {
+      outMap.put(output.getName(), output);
+    }
+    for (Variable arg: args) {
+      if (arg.getDefType() == DefType.OUTARG) {
+        outMap.remove(arg.getName());
+      }
+    }
+    for (Variable unreferenced: outMap.values()) {
+      LogHelper.warn(context, "Output argument " + unreferenced.getName() 
+          + " is not referenced in app command line");
+    }
+  }
+
+  /**
+   * Work out what the local args to the app function should be
    * @param context
    * @param inputs
    * @param fileNames
@@ -1879,7 +1903,7 @@ public class ASTWalker {
    * @throws UndefinedTypeException
    * @throws DoubleDefineException
    */
-  private List<Arg> appLocalInputs(Context context,
+  private List<Arg> retrieveAppArgs(Context context,
           List<Variable> inputs, Map<String, Variable> fileNames)
           throws UserException, UndefinedTypeException, DoubleDefineException {
     List<Arg> localInputs = new ArrayList<Arg>();
@@ -1906,12 +1930,10 @@ public class ASTWalker {
    * @throws TypeMismatchException
    * @throws UserException
    */
-  private Triple<List<ExtArgType>, List<Variable>, List<Variable>> 
+  private List<Variable> 
       evalAppCmdArgs(Context context, SwiftAST cmdArgs) 
           throws TypeMismatchException, UserException {
-    List<ExtArgType> argOrder = new ArrayList<ExtArgType>();
-    List<Variable> inputs = new ArrayList<Variable>();
-    List<Variable> outputs = new ArrayList<Variable>();
+    List<Variable> args = new ArrayList<Variable>();
     // Skip first arg: that is id
     for (int i = 1; i < cmdArgs.getChildCount(); i++) {
       SwiftAST cmdArg = cmdArgs.child(i);
@@ -1923,13 +1945,7 @@ public class ASTWalker {
           throw new TypeMismatchException(context, "Variable " + file.getName()
                   + " is not a file, cannot use @ prefix for app");
         }
-        if (file.getDefType() == DefType.INARG) {
-          argOrder.add(ExtArgType.IN);
-          inputs.add(file);
-        } else {
-          argOrder.add(ExtArgType.OUT);
-          outputs.add(file);
-        }
+        args.add(file);
       } else {
         SwiftType exprType = TypeChecker.findSingleExprType(context,
                                                             cmdArg);
@@ -1941,11 +1957,10 @@ public class ASTWalker {
         }
         Variable exprResult = exprWalker.evalExprToTmp(context, cmdArg,
                                       exprType, false, null);
-        inputs.add(exprResult);
-        argOrder.add(ExtArgType.IN);
+        args.add(exprResult);
       }
     }
-    return Triple.create(argOrder, inputs, outputs);
+    return args;
   }
 
   /**
@@ -1960,31 +1975,26 @@ public class ASTWalker {
    * @throws UndefinedTypeException
    */
   private Pair<Map<String, Variable>, List<Variable>> selectAppWaitVars(
-          Context context, List<Variable> inputs,
-          List<Variable> outputs) throws UserException,
+          Context context, List<Variable> args) throws UserException,
           UndefinedTypeException {
     // map from file var to filename
     Map<String, Variable> fileNames = new HashMap<String, Variable>(); 
     List<Variable> waitVars = new ArrayList<Variable>();
-    for (Variable in: inputs) {
-      waitVars.add(in);
-      if (Types.isFile(in.getType())) {
-        // Also need to wait for filename for files
+    for (Variable arg: args) {
+      if (Types.isFile(arg.getType())) {
+        // Need to wait for filename for files
         Variable filenameFuture = varCreator.createTmpAlias(context,
                                                 Types.FUTURE_STRING); 
-        backend.getFileName(filenameFuture, in);
+        backend.getFileName(filenameFuture, arg);
         waitVars.add(filenameFuture);
-        fileNames.put(in.getName(), filenameFuture);
+        fileNames.put(arg.getName(), filenameFuture);
+        if (arg.getDefType() != DefType.OUTARG) {
+          // Don't wait for file to be closed for output arg
+          waitVars.add(arg);
+        }
+      } else {
+        waitVars.add(arg);
       }
-    }
-    
-    for (Variable out: outputs) {
-      // Just need filename
-      Variable filenameFuture = varCreator.createTmpAlias(context,
-                                              Types.FUTURE_STRING); 
-      backend.getFileName(filenameFuture, out);
-      waitVars.add(filenameFuture);
-      fileNames.put(out.getName(), filenameFuture);
     }
     return Pair.create(fileNames, waitVars);
   }

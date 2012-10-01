@@ -12,7 +12,6 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
-import exm.stc.common.CompilerBackend.ExtArgType;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgType;
@@ -1916,20 +1915,17 @@ public class ICInstructions {
   
   public static class RunExternal extends Instruction {
     private final String cmd;
-    private final ArrayList<Variable> outputs;
+    private final ArrayList<Variable> outFiles;
     private final ArrayList<Arg> inputs;
-    private final List<ExtArgType> order;
     private final boolean hasSideEffects;
     private final boolean deterministic;
     
-    public RunExternal(String cmd, List<Variable> outputs, List<Arg> inputs,
-               List<ExtArgType> order, boolean hasSideEffects,
-               boolean deterministic) {
+    public RunExternal(String cmd, List<Variable> outFiles, List<Arg> inputs,
+               boolean hasSideEffects, boolean deterministic) {
       super(Opcode.RUN_EXTERNAL);
       this.cmd = cmd;
-      this.outputs = new ArrayList<Variable>(outputs);
+      this.outFiles = new ArrayList<Variable>(outFiles);
       this.inputs = new ArrayList<Arg>(inputs);
-      this.order = new ArrayList<ExtArgType>(order);
       this.deterministic = deterministic;
       this.hasSideEffects = hasSideEffects;
     }
@@ -1937,7 +1933,7 @@ public class ICInstructions {
     @Override
     public void renameVars(Map<String, Arg> renames) {
       ICUtil.replaceOpargsInList(renames, inputs);
-      ICUtil.replaceVarsInList(renames, outputs, false);
+      ICUtil.replaceVarsInList(renames, outFiles, false);
     }
 
     @Override
@@ -1947,12 +1943,12 @@ public class ICInstructions {
 
     @Override
     public String toString() {
-      return formatFunctionCall(op, cmd, outputs, inputs);
+      return formatFunctionCall(op, cmd, outFiles, inputs);
     }
 
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.runExternal(cmd, inputs, outputs, order, hasSideEffects,
+      gen.runExternal(cmd, inputs, outFiles, hasSideEffects,
                       deterministic);
     }
 
@@ -1963,7 +1959,7 @@ public class ICInstructions {
 
     @Override
     public List<Variable> getOutputs() {
-      return Collections.unmodifiableList(outputs);
+      return Collections.unmodifiableList(outFiles);
     }
 
     @Override
@@ -2008,12 +2004,12 @@ public class ICInstructions {
         Map<ComputedValue, Arg> existing) {
       if (deterministic) {
         ArrayList<ComputedValue> cvs = new ArrayList<ComputedValue>(
-                                                        outputs.size());
-        for (int i = 0; i < outputs.size(); i++) {
+                                                        outFiles.size());
+        for (int i = 0; i < outFiles.size(); i++) {
           // Unique key for cv includes number of output
           // Output file should be closed after external program executes
           ComputedValue cv = new ComputedValue(op, cmd + "!!" + i,
-                     inputs, Arg.createVar(outputs.get(i)), true);
+                     inputs, Arg.createVar(outFiles.get(i)), true);
           cvs.add(cv);
         }
         return cvs;
@@ -2024,7 +2020,7 @@ public class ICInstructions {
 
     @Override
     public Instruction clone() {
-      return new RunExternal(cmd, outputs, inputs, order,
+      return new RunExternal(cmd, outFiles, inputs, 
                              hasSideEffects, deterministic);
     }
     
