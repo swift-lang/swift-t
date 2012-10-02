@@ -1,8 +1,5 @@
 
-# MODULE MPE
-
-# Even if MPE is disabled, we compile the mpe.o
-# object (full of noops)
+# MODULE C-UTILS
 
 DIR := src/tcl/c-utils
 
