@@ -57,6 +57,7 @@ namespace eval turbine {
             if { [ string length $msg ] } {
                 control $msg $answer_rank
             } else break
+            debug "heap size: [ bytes [ c_utils::heapsize ] ]"
         }
     }
 
