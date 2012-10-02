@@ -37,12 +37,6 @@ public class Types {
     }
 
     @Override
-    public PrimType getPrimitiveType() {
-      throw new STCRuntimeError("getPrimitiveType not implemented " +
-      "for arrays");
-    }
-
-    @Override
     public SwiftType getMemberType() {
       return memberType;
     }
@@ -119,13 +113,6 @@ public class Types {
     public StructureType getStructureType() {
       return StructureType.REFERENCE;
     }
-
-    @Override
-    public PrimType getPrimitiveType() {
-      throw new STCRuntimeError("getPrimitiveType not implemented "
-          + "for references");
-    }
-
     @Override
     public SwiftType getMemberType() {
       return referencedType;
@@ -194,12 +181,6 @@ public class Types {
     @Override
     public StructureType getStructureType() {
       return StructureType.STRUCT;
-    }
-
-    @Override
-    public PrimType getPrimitiveType() {
-      throw new STCRuntimeError("getPrimitiveType not defined for "
-          + " StructType");
     }
 
     public List<StructField> getFields() {
@@ -470,16 +451,6 @@ public class Types {
     }
 
     @Override
-    public PrimType getPrimitiveType() {
-      throw new STCRuntimeError("Not supported for UnionType");
-    }
-
-    @Override
-    public SwiftType getMemberType() {
-      throw new STCRuntimeError("Not supported for UnionType");
-    }
-
-    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
       boolean first = true;
@@ -567,12 +538,6 @@ public class Types {
     }
 
     @Override
-    public PrimType getPrimitiveType() {
-      throw new STCRuntimeError("TypeVariable doesn't support " +
-                                "getPrimitiveType");
-    }
-
-    @Override
     public String toString() {
       return typeName();
     }
@@ -616,6 +581,7 @@ public class Types {
     STRUCT,
     TYPE_VARIABLE,
     TYPE_UNION,
+    FUNCTION,
   }
 
   /**
@@ -623,19 +589,21 @@ public class Types {
    * constructed out of scalar types, arrays, and structures.
    *
    */
-  public abstract static class SwiftType
-  {
+  public abstract static class SwiftType {
     public abstract StructureType getStructureType();
 
     /**
      * Get the primitive type (only valid if scalar)
      * @return
      */
-    public abstract PrimType getPrimitiveType();
+    public PrimType getPrimitiveType() {
+      throw new STCRuntimeError("getPrimitiveType not implemented " +
+      "for class " + getClass().getName());
+    }
 
     public SwiftType getMemberType() {
       throw new STCRuntimeError("getMemberType not implemented " +
-      "for this Type subclass");
+      "for class " + getClass().getName());
     }
 
     /** Prints out a description of type for user */
@@ -645,6 +613,10 @@ public class Types {
     /** Print out a short unique name for type */
     public abstract String typeName();
     
+    /** equals is required */
+    @Override
+    public abstract boolean equals(Object o);
+    
     /** hashcode is required */
     @Override
     public abstract int hashCode();
@@ -653,7 +625,7 @@ public class Types {
   /**
    * Function types are kept distinct from value types
    */
-  public static class FunctionType {
+  public static class FunctionType extends SwiftType {
 
     private final ArrayList<SwiftType> inputs = new ArrayList<SwiftType>();
     private final ArrayList<SwiftType> outputs = new ArrayList<SwiftType>();
@@ -705,6 +677,50 @@ public class Types {
       }
       sb.append(')');
       return sb.toString();
+    }
+
+    @Override
+    public StructureType getStructureType() {
+      return StructureType.FUNCTION;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (!(obj instanceof SwiftType)) {
+        throw new STCRuntimeError("Comparing FunctionType " +
+            "with non-type object");
+      }
+      if (((SwiftType)obj).getStructureType() == StructureType.FUNCTION) {
+        FunctionType other = (FunctionType) obj;
+        // All fields should match
+        if (!(this.inputs.size() == other.inputs.size() &&
+              this.outputs.size() == other.outputs.size() &&
+              this.varargs == other.varargs)) {
+          return false;
+        }
+        return listsEqual(this.inputs, other.inputs) &&
+               listsEqual(this.outputs, other.outputs);
+      }
+      return false;
+    }
+
+    @Override
+    public String typeName() {
+      // TODO: canonical way to show type?
+      return toString();
+    }
+
+    @Override
+    public int hashCode() {
+      int code = FunctionType.class.hashCode();
+      for (SwiftType t: inputs) {
+        code ^= t.hashCode();
+      }
+      for (SwiftType t: outputs) {
+        code ^= t.hashCode();
+      }
+      code ^= ((Boolean)varargs).hashCode();
+      return code;
     }
   }
 
@@ -846,7 +862,22 @@ public class Types {
   public static boolean isPolymorphic(SwiftType type) {
     return type.getStructureType() == StructureType.TYPE_UNION ||
         type.getStructureType() == StructureType.TYPE_VARIABLE;
-        
+  }
+  
+  public static boolean isFunction(SwiftType type) {
+    return type.getStructureType() == StructureType.FUNCTION;
+  }
+  
+  public static boolean listsEqual(List<SwiftType> a, List<SwiftType> b) {
+    if (a.size() != b.size()) {
+      return false;
+    }
+    for (int i = 0; i < a.size(); i++) {
+      if (!a.get(i).equals(b.get(i))) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public static final SwiftType FUTURE_INTEGER =

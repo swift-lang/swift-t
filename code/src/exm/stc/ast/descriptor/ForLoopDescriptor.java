@@ -169,10 +169,7 @@ public class ForLoopDescriptor {
           		"declared before for loop");
         }
       } else {
-        if (outerV != null) {
-          throw new DoubleDefineException(context, "Loop variable " + v.getName()
-              + " is already defined in outer context: we don't allow shadowing");
-        }
+        context.checkNotDefined(v.getName());
       }
       
       SwiftAST initExpr = initExprs.get(v.getName());

@@ -30,7 +30,6 @@ import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Variable;
-import exm.stc.frontend.Context.DefinedFunction;
 
 /**
  * This module handles checking the internal consistency of expressions,
@@ -85,11 +84,11 @@ public class TypeChecker {
     switch (token) {
     case ExMParser.CALL_FUNCTION:
       String function = tree.child(0).getText();
-      DefinedFunction fn = context.lookupFunction(function);
-      if (fn == null) {
+      FunctionType ftype = context.lookupFunction(function);
+      if (ftype == null) {
         throw UndefinedFunctionException.unknownFunction(context, function);
       }
-      return fn.type.getOutputs();
+      return ftype.getOutputs();
     case ExMParser.VARIABLE: {
       Variable var = context.getDeclaredVariable(tree.child(0).getText());
       if (var == null) {
@@ -607,15 +606,15 @@ public class TypeChecker {
   public static List<SwiftType> checkFunctionCall(Context context, String function,
       List<Variable> oList, List<Variable> iList) 
           throws TypeMismatchException,UndefinedFunctionException {
-    DefinedFunction fn = context.lookupFunction(function);
+    FunctionType ftype = context.lookupFunction(function);
     //TODO: auto-convert int lit args to float lit args (this requires
     //      changes in called)
-    if (fn == null) {
+    if (ftype == null) {
       throw UndefinedFunctionException.unknownFunction(context, function);
     }
-    checkFunctionOutputs(context, fn.type.getOutputs(), oList,
+    checkFunctionOutputs(context, ftype.getOutputs(), oList,
           " in returns for call to function " + function);
-    return checkFunctionInputs(context, fn.type, iList, " in arguments for "
+    return checkFunctionInputs(context, ftype, iList, " in arguments for "
           + "call to function " + function);
   }
 

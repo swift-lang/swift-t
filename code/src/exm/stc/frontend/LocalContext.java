@@ -10,6 +10,7 @@ import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.DefType;
@@ -20,9 +21,7 @@ import exm.stc.common.lang.Variable.VariableStorage;
  * for every new variable scope.
  *
  */
-public class LocalContext
-extends Context
-{
+public class LocalContext extends Context {
   private Context parent = null;
   private GlobalContext globals = null;
 
@@ -44,7 +43,7 @@ extends Context
     nested = true;
     line = parent.line;
   }
-
+  
   @Override
   public Variable getDeclaredVariable(String name)
   {
@@ -76,7 +75,7 @@ extends Context
 	  do {
 	    int counter = getFunctionContext().getCounterVal("intermediate_var");
 	    name = Variable.TMP_VAR_PREFIX + counter;
-	  } while (getDeclaredVariable(name) != null); // In case variable name in use
+	  } while (lookupDef(name) != null); // In case variable name in use
 
 	  VariableStorage storage = storeInStack ? 
 	              VariableStorage.STACK : VariableStorage.TEMPORARY;
@@ -89,7 +88,7 @@ extends Context
     do {
       int counter = getFunctionContext().getCounterVal("alias_var");
       name = Variable.ALIAS_VAR_PREFIX + counter;
-    } while (getDeclaredVariable(name) != null);
+    } while (lookupDef(name) != null);
 
     Variable v =  new Variable(type, name, VariableStorage.ALIAS,
                                           DefType.LOCAL_COMPILER);
@@ -129,7 +128,7 @@ extends Context
     if (preferredSuffix != null) {
       prefix += preferredSuffix;
       // see if we can give it a nice name
-      if (getDeclaredVariable(prefix) == null) {
+      if (lookupDef(prefix) == null) {
         return prefix;
       }
     }
@@ -138,7 +137,7 @@ extends Context
     do {
       int counter = getFunctionContext().getCounterVal(counterName);
       name = prefix + counter;
-    } while (getDeclaredVariable(name) != null);
+    } while (lookupDef(name) != null);
     return name;
   }
 
@@ -157,23 +156,16 @@ extends Context
   throws DoubleDefineException
   {
     String name = variable.getName();
-    Variable t = getDeclaredVariable(name);
-    if (t != null)
-      throw new DoubleDefineException
-      (this, "variable already defined: " + name);
+    
+    checkNotDefined(name);
 
     variables.put(name, variable);
     return variable;
   }
 
   @Override
-  public DefinedFunction lookupFunction(String name) {
-    return globals.lookupFunction(name);
-  }
-
-  @Override
-  public void defineFunction(String name, DefinedFunction fn)
-        throws DoubleDefineException {
+  public void defineFunction(String name, FunctionType type)
+                                    throws DoubleDefineException {
     throw new STCRuntimeError("Cannot define function in local context");
   }
 
@@ -183,8 +175,8 @@ extends Context
   }
 
   @Override
-  public boolean lookupFunctionProperty(String name, FnProp prop) {
-    return globals.lookupFunctionProperty(name, prop);
+  public boolean hasFunctionProp(String name, FnProp prop) {
+    return parent.hasFunctionProp(name, prop);
   }
 
   @Override
@@ -257,7 +249,7 @@ extends Context
         + struct.getName() + "_" + fieldPath.replace('.', '_');
     String name = basename;
     int counter = 1;
-    while (getDeclaredVariable(name) != null) {
+    while (lookupDef(name) != null) {
       name = basename + "-" + counter;
       counter++;
     }

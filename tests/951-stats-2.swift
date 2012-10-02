@@ -25,16 +25,16 @@ main {
     ps3.n, ps3.mean, ps3.M2 = statagg(samples3);
     ps4.n, ps4.mean, ps4.M2 = statagg(samples4);
 
-    int n; float mean; float std;
+    int n; float mean; float stdev;
 
-    n, mean, std = stat_combine([ps1, ps2, ps3, ps4]);
+    n, mean, stdev = stat_combine([ps1, ps2, ps3, ps4]);
     // Expected values calculated with 950-calc.py
     assertEqual(n, 15, "n");
     assertLT(abs_float(mean - 65.733333333333), 0.00001, "mean");
     // M2 = variance * n
     // TODO: this is a loose bound
-    assertLT(abs_float(std - 104.93074965), 0.1, "std");
-    trace("fib results 2",n, mean, std);
+    assertLT(abs_float(stdev - 104.93074965), 0.1, "std");
+    trace("fib results 2",n, mean, stdev);
 
 }
 

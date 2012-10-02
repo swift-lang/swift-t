@@ -4,17 +4,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
-import exm.stc.common.exceptions.DoubleDefineException;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.DefType;
 import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.frontend.Context;
@@ -148,22 +147,15 @@ public class ForeachLoop {
     SwiftAST memberVarTree = tree.child(2);
     assert (memberVarTree.getType() == ExMParser.ID);
     String memberVarName = memberVarTree.getText();
-    if (context.getDeclaredVariable(memberVarName) != null) {
-      throw new DoubleDefineException(context, "Variable " + memberVarName
-          + " already defined");
-    }
+    
+    context.checkNotDefined(memberVarName);
 
     String loopCountVarName;
-
     if (childCount == 4 && tree.child(3).getType() != ExMParser.ANNOTATION) {
       SwiftAST loopCountTree = tree.child(3);
       assert (loopCountTree.getType() == ExMParser.ID);
       loopCountVarName = loopCountTree.getText();
-      if (context.getDeclaredVariable(loopCountVarName) != null) {
-        throw new DoubleDefineException(context, "Variable " + loopCountVarName
-            + " already defined");
-      }
-
+      context.checkNotDefined(loopCountVarName);
     } else {
       loopCountVarName = null;
     }

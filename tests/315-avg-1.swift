@@ -15,10 +15,10 @@ main {
                                     0.0000001, "std_integer");
 
 
-    float m; float std;
-    (m, std) = stats(a);
+    float m; float stdev;
+    (m, stdev) = stats(a);
     assertEqual(m, avg(a), "m");
-    assertEqual(std, std(a), "std");
+    assertEqual(stdev, std(a), "std");
 
     a[0] = 1.0;
     a[id(1)] = fid(2.0);

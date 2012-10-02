@@ -14,6 +14,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.DefType;
@@ -24,15 +25,7 @@ import exm.stc.common.util.Pair;
  * Global context for entire program
  *
  */
-public class GlobalContext
-extends Context
-{
-  /**
-     Map from composite function name to function information
-   */
-  private Map<String, DefinedFunction> functions = 
-                          new HashMap<String, DefinedFunction>();
-
+public class GlobalContext extends Context {
   /**
    * Which composites should be called synchronously  
    */
@@ -75,23 +68,17 @@ extends Context
   }
 
   @Override
-  public DefinedFunction lookupFunction(String name) {
-    return functions.get(name);
-  }
-
-  @Override
   public int getLevel()
   {
     return 0;
   }
 
   @Override
-  public void defineFunction(String name, DefinedFunction fn) 
+  public void defineFunction(String name, FunctionType type) 
       throws DoubleDefineException {
-    if (isFunction(name))
-      throw new DoubleDefineException
-      (this, "function: " + name + " is already defined");
-    functions.put(name, fn);
+    checkNotDefined(name);
+    declareVariable(type, name, VariableStorage.GLOBAL_CONST,
+                    DefType.GLOBAL_CONST, null);
   }
   
   @Override
@@ -100,7 +87,7 @@ extends Context
   }
   
   @Override
-  public boolean lookupFunctionProperty(String name, FnProp prop) {
+  public boolean hasFunctionProp(String name, FnProp prop) {
     return functionProps.contains(new Pair<String, FnProp>(name, prop));
   }
   

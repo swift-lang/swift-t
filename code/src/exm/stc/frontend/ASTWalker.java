@@ -63,8 +63,6 @@ import exm.stc.common.lang.Variable.DefType;
 import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
-import exm.stc.frontend.Context.DefinedFunction;
-import exm.stc.frontend.Context.FnKind;
 import exm.stc.frontend.Context.FnProp;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
 /**
@@ -112,8 +110,9 @@ public class ASTWalker {
 
     backend.header();
     walkProgram(context, tree);
-    DefinedFunction fn = context.lookupFunction("main");
-    if (fn == null || fn.kind != FnKind.COMPOSITE) {
+    FunctionType fn = context.lookupFunction("main");
+    if (fn == null || 
+          !context.hasFunctionProp("main", FnProp.COMPOSITE)) {
       throw new UndefinedFunctionException(context,
           "No composite main function was defined in the script");
     }
@@ -1601,7 +1600,8 @@ public class ASTWalker {
       handleFunctionAnnotation(context, function, tree.child(i));
       i--;
     }
-    global.defineFunction(function, new DefinedFunction(FnKind.BUILTIN, ft));
+    global.defineFunction(function, ft);
+    global.setFunctionProperty(function, FnProp.BUILTIN);
     backend.defineBuiltinFunction(function, pkg, version, symbol, ft, inlineTcl);
   }
 
@@ -1726,8 +1726,8 @@ public class ASTWalker {
       }
     }
     
-    context.defineFunction(function, new DefinedFunction(FnKind.COMPOSITE,
-                                                         ft));
+    context.defineFunction(function, ft);
+    context.setFunctionProperty(function, FnProp.COMPOSITE);
     if (!async) {
       context.setFunctionProperty(function, FnProp.SYNC);
     }
@@ -1758,7 +1758,7 @@ public class ASTWalker {
     LogHelper.debug(context, "compile function: starting: " + function );
     // defineFunction should already have been called
     assert(context.isFunction(function));
-    assert(context.lookupFunction(function).kind == FnKind.COMPOSITE);
+    assert(context.hasFunctionProp(function, FnProp.COMPOSITE));
     SwiftAST outputs = tree.child(1);
     SwiftAST inputs = tree.child(2);
     SwiftAST block = tree.child(3);
@@ -1778,7 +1778,7 @@ public class ASTWalker {
     functionContext.addDeclaredVariables(oList);
 
     TaskMode mode;
-    if (context.lookupFunctionProperty(function, FnProp.SYNC)) {
+    if (context.hasFunctionProp(function, FnProp.SYNC)) {
       mode = TaskMode.SYNC; 
     } else {
       mode = TaskMode.CONTROL;
@@ -1839,8 +1839,8 @@ public class ASTWalker {
     SwiftAST cmdT = tree.child(3);
     
     FunctionDecl decl = FunctionDecl.fromAST(context, inArgsT, outArgsT);
-    context.defineFunction(function, new DefinedFunction(FnKind.APP,
-                                            decl.getFunctionType()));
+    context.defineFunction(function, decl.getFunctionType());
+    context.setFunctionProperty(function, FnProp.APP);
     List<Variable> outArgs = decl.getOutVars();
     List<Variable> inArgs = decl.getInVars();
     

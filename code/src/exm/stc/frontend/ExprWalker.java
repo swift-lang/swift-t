@@ -29,6 +29,7 @@ import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.OpType;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.ReferenceType;
 import exm.stc.common.lang.Types.ScalarFutureType;
 import exm.stc.common.lang.Types.ScalarUpdateableType;
@@ -37,8 +38,6 @@ import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.VariableStorage;
-import exm.stc.frontend.Context.DefinedFunction;
-import exm.stc.frontend.Context.FnKind;
 import exm.stc.frontend.Context.FnProp;
 
 /**
@@ -416,12 +415,12 @@ public class ExprWalker {
 
     SwiftAST arglist = tree.child(1);
     
-    DefinedFunction fn = context.lookupFunction(f);
-    if (fn == null) {
+    FunctionType ftype = context.lookupFunction(f);
+    if (ftype == null) {
       throw UndefinedFunctionException.unknownFunction(context, f);
     }
     
-    if (arglist.getChildCount() > 0 && fn.type.getInputs().size() == 0) {
+    if (arglist.getChildCount() > 0 && ftype.getInputs().size() == 0) {
       throw new TypeMismatchException(context, "Argument provided to " +
       		"zero-argument function: " + f);
     }
@@ -432,8 +431,8 @@ public class ExprWalker {
     int argcount = arglist.getChildCount();
     for (int i = 0; i < argcount; i++) {
       SwiftAST argtree = arglist.child(i);
-      SwiftType expType = fn.type.getInputs().get(
-            Math.min(i, fn.type.getInputs().size() - 1));
+      SwiftType expType = ftype.getInputs().get(
+            Math.min(i, ftype.getInputs().size() - 1));
       
       
       SwiftType argtype;
@@ -850,12 +849,12 @@ public class ExprWalker {
 
 
     Arg priority = priorityVal != null ? Arg.createVar(priorityVal) : null;
-    DefinedFunction def = context.lookupFunction(function);
+    FunctionType def = context.lookupFunction(function);
     if (def == null) {
       throw new STCRuntimeError("Couldn't locate function definition for " +
           "previously defined function " + function);
     }
-    if (def.kind == FnKind.BUILTIN) {
+    if (context.hasFunctionProp(function, FnProp.BUILTIN)) {
       if (FunctionSemantics.hasOpEquiv(function)) {
         assert(oList.size() <= 1);
         Variable out = oList.size() == 0 ? null : oList.get(0);
@@ -865,9 +864,9 @@ public class ExprWalker {
       } else {
         backend.builtinFunctionCall(function, realIList, oList, priority);
       }
-    } else if (def.kind == FnKind.COMPOSITE) {
+    } else if (context.hasFunctionProp(function, FnProp.COMPOSITE)) {
       TaskMode mode;
-      if (context.lookupFunctionProperty(function, FnProp.SYNC)) {
+      if (context.hasFunctionProp(function, FnProp.SYNC)) {
         mode = TaskMode.SYNC;
       } else {
         mode = TaskMode.CONTROL;
@@ -875,7 +874,7 @@ public class ExprWalker {
       backend.functionCall(function, realIList, oList, null, 
           mode, priority);
     } else {
-      assert(def.kind == FnKind.APP);
+      assert(context.hasFunctionProp(function, FnProp.APP));
       // Execute app function wrapper locally (real work will
       //   be dispatched to worker by wrapper)
       backend.functionCall(function, realIList, oList, null,

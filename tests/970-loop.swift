@@ -9,7 +9,7 @@
 #include <stats.swift>
 #include <sys.swift>
 
-(float result[]) cutoffs(float step)
+(float result[]) calc_cutoffs(float step)
 {
   for (int i = 0; i < 10; i = i + 1)
   {
@@ -26,7 +26,7 @@ main
   string solutionPath = data + "primalsol_conv8";
   int nScenarios = toint(argv("N"));
 
-  float cutoffs[] = cutoffs(0.1);
+  float cutoffs[] = calc_cutoffs(0.1);
 
   foreach cutoff in cutoffs
   {

@@ -10,6 +10,7 @@ import exm.stc.ast.FilePosition;
 import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.SwiftType;
@@ -20,8 +21,7 @@ import exm.stc.common.lang.Variable.VariableStorage;
  * Abstract interface used to track and access contextual information about the
  * program at different points in the AST. 
  */
-public abstract class Context
-{
+public abstract class Context {
   protected int level = 0;
 
   protected Logger logger = null;
@@ -47,6 +47,29 @@ public abstract class Context
      else return the GlobalContext this is using.
    */
   public abstract GlobalContext getGlobals();
+  
+  /**
+   * Lookup definition corresponding to name
+   * @param name
+   * @return
+   */
+  public DefKind lookupDef(String name) {
+    if (lookupType(name) != null) {
+      return DefKind.TYPE;
+    } else if (getDeclaredVariable(name) != null) {
+      return DefKind.VARIABLE;
+    } else {
+      return null;
+    }
+  }
+  
+  public void checkNotDefined(String name) throws DoubleDefineException {
+    DefKind def = lookupDef(name);
+    if (def != null) {
+      throw new DoubleDefineException(this, def.toString().toLowerCase() + 
+          " called " + name + " already defined");
+    }
+  }
   
   /**
    * Declare a new variable that will be visible in the
@@ -115,19 +138,25 @@ public abstract class Context
     return lookupFunction(name) != null;
   }
 
-  public abstract void defineFunction(String name, DefinedFunction fn)
-      throws DoubleDefineException;
+  public abstract void defineFunction(String name, FunctionType type)
+                                          throws DoubleDefineException;
   
   public abstract void setFunctionProperty(String name, FnProp prop);
   
-  public abstract boolean lookupFunctionProperty(String name, FnProp prop);
+  public abstract boolean hasFunctionProp(String name, FnProp prop);
   
   /**
    * Lookup the type of a function
    * @param name
    * @return
    */
-  public abstract DefinedFunction lookupFunction(String name);
+  public FunctionType lookupFunction(String name) {
+    Variable var = getDeclaredVariable(name);
+    if (var == null || !Types.isFunction(var.getType())) {
+      return null;
+    }
+    return (FunctionType)var.getType();
+  }
 
   public void setNested(boolean b)
   {
@@ -260,21 +289,14 @@ public abstract class Context
    */
   abstract public Variable createFilenameAliasVariable(String name);
   
-  public static enum FnKind {
-    APP, COMPOSITE, BUILTIN;
-  }
-  
-  public static class DefinedFunction {
-    public DefinedFunction(FnKind kind, FunctionType type) {
-      super();
-      this.kind = kind;
-      this.type = type;
-    }
-    public final FnKind kind;
-    public final FunctionType type; 
-  }
-  
   public static enum FnProp {
-    SYNC;
+    APP, COMPOSITE, BUILTIN, SYNC;
+  }
+  
+  /**
+   * Different types of definition name can be associated with.
+   */
+  public static enum DefKind {
+    FUNCTION, VARIABLE, TYPE;
   }
 }
