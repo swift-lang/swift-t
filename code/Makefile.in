@@ -158,14 +158,16 @@ TCL_TURBINE_SRC :=
 include src/turbine/module.mk
 include src/util/module.mk
 include src/tcl/module.mk
-include src/tcl/turbine/module.mk
+include src/tcl/c-utils/module.mk
 include src/tcl/adlb/module.mk
+include src/tcl/turbine/module.mk
 include src/tcl/mpe/module.mk
 include lib/module.mk
 
 TURBINE_SRC += $(TCL_TURBINE_SRC)
 TURBINE_SRC += $(TCL_ADLB_SRC)
 TURBINE_SRC += $(TCL_MPE_SRC)
+TURBINE_SRC += $(TCL_C_UTILS_SRC)
 TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
 
 ### DEPENDENCIES
@@ -359,6 +361,7 @@ install.txt: $(PACKAGE) $(EXPORTS) $(SCRIPTS)
 clean::
 	@echo
 	@echo "  CLEAN"
+	@rm -fv  $(PACKAGE)
 	@rm -fv  $(TURBINE_A) $(TCL_TURBINE_SO)
 	@rm -fv  $(DEPS) $(TEST_DEPS) deps.txt deps_contents.txt TAGS
 	@rm -fv  $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT)

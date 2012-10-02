@@ -430,6 +430,7 @@ AC_CONFIG_FILES(
         src/turbine/module.mk
         src/util/module.mk
         src/tcl/module.mk
+        src/tcl/c-utils/module.mk
         src/tcl/adlb/module.mk
         src/tcl/turbine/module.mk
         src/tcl/mpe/module.mk

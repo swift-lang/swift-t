@@ -25,6 +25,7 @@
 #include "src/tcl/util.h"
 #include "src/tcl/turbine/tcl-turbine.h"
 
+#include "src/tcl/c-utils/tcl-c-utils.h"
 #include "src/tcl/adlb/tcl-adlb.h"
 #include "src/tcl/mpe/tcl-mpe.h"
 
@@ -628,6 +629,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   if (Tcl_PkgProvide(interp, "turbine", TURBINE_VERSION) == TCL_ERROR)
     return TCL_ERROR;
 
+  tcl_c_utils_init(interp);
   tcl_adlb_init(interp);
   tcl_mpe_init(interp);
 
