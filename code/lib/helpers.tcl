@@ -65,3 +65,31 @@ proc show { v } {
     upvar $v t
     turbine::debug "$v: $t"
 }
+
+set KB 1024
+set MB [ expr $KB * $KB ]
+set GB [ expr $MB * $KB ]
+
+# Human readable byte messages
+proc bytes { b } {
+    global KB
+    global MB
+    global GB
+    # 3 decimal digits
+    set fmt "%.3f"
+    if { $b < $KB } {
+        return "$b B"
+    } elseif { $b < $MB } {
+        set kb [ expr double($b) / $KB ]
+        set kbs [ format $fmt $kb ]
+        return "$kbs KB"
+    } elseif { $b < $GB } {
+        set mb [ expr double($b) / $MB ]
+        set mbs [ format $fmt $mb ]
+        return "$mbs MB"
+    }
+
+    set gb [ expr double($b) / $GB ]
+    set gbs [ format $fmt $gb ]
+    return "$gbs GB"
+}
