@@ -11,10 +11,10 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.SwiftType;
-import exm.stc.common.lang.Types.FunctionType.InArgT;
 import exm.stc.common.lang.Variable.DefType;
 import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.frontend.Context;
@@ -50,9 +50,9 @@ public class FunctionDecl {
   
   private static class ArgDecl {
     final String name;
-    final InArgT type;
+    final SwiftType type;
     final boolean varargs;
-    private ArgDecl(String name, InArgT type, boolean varargs) {
+    private ArgDecl(String name, SwiftType type, boolean varargs) {
       super();
       this.name = name;
       this.type = type;
@@ -65,7 +65,7 @@ public class FunctionDecl {
     assert(inArgTree.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
     assert(outArgTree.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
     ArrayList<String> inNames = new ArrayList<String>();
-    ArrayList<InArgT> inArgTypes = new ArrayList<InArgT>();
+    ArrayList<SwiftType> inArgTypes = new ArrayList<SwiftType>();
     boolean varArgs = false;
     for (int i = 0; i < inArgTree.getChildCount(); i++) {
       ArgDecl argInfo = extractArgInfo(context, inArgTree.child(i));
@@ -88,11 +88,11 @@ public class FunctionDecl {
       if (argInfo.varargs) {
         throw new TypeMismatchException(context, "cannot have variable" +
         		" argument specifier ... in output list");
-      } else if (argInfo.type.getAltCount() != 1) {
+      } else if (Types.isPolymorphic(argInfo.type)) {
         throw new TypeMismatchException(context, "Cannot have" +
         		" polymorphic function output type: " + argInfo.type.typeName());
       } else {
-        outArgTypes.add(argInfo.type.getAlt(0));
+        outArgTypes.add(argInfo.type);
         outNames.add(argInfo.name);
       }
     }
@@ -117,7 +117,8 @@ public class FunctionDecl {
     assert(baseTypes.getType() == ExMParser.MULTI_TYPE);
     assert(baseTypes.getChildCount() >= 1); // Grammar should ensure this
     assert(restDecl.getType() == ExMParser.DECLARE_VARIABLE_REST);
-    SwiftType alts[] = new SwiftType[baseTypes.getChildCount()];
+    ArrayList<SwiftType> alts =
+                new ArrayList<SwiftType>(baseTypes.getChildCount());
     String varname = null;
     for (int i = 0; i < baseTypes.getChildCount(); i++) {
       SwiftAST typeAlt = baseTypes.child(i);
@@ -130,11 +131,9 @@ public class FunctionDecl {
       Variable v = fromFormalArgTree(context, baseType, 
                                                     restDecl, DefType.INARG);
       varname = v.getName();
-      alts[i] = v.getType();
+      alts.add(v.getType());
     }
-    InArgT argType1 = new InArgT(alts);
-    
-    InArgT argType = argType1;
+    SwiftType argType = UnionType.createUnionType(alts);
     argInfo = new ArgDecl(varname, argType, thisVarArgs);
     return argInfo;
   }
@@ -180,12 +179,7 @@ public class FunctionDecl {
   public List<Variable> getInVars() {
     ArrayList<Variable> inVars = new ArrayList<Variable>(inNames.size());
     for (int i = 0; i < inNames.size(); i++) {
-      InArgT it = ftype.getInputs().get(i);
-      if (it.getAlternatives().length != 1) {
-        throw new STCRuntimeError("Input argument doesn't have a " +
-        		" concrete type, instead is polymorphic: " + it);
-      }
-      SwiftType t = it.getAlternatives()[0];
+      SwiftType t = ftype.getInputs().get(i);
       inVars.add(new Variable(t, inNames.get(i), VariableStorage.STACK,
                                     DefType.INARG, null));
     }

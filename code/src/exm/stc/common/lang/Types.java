@@ -1,6 +1,14 @@
 package exm.stc.common.lang;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 
@@ -62,6 +70,11 @@ public class Types {
       } else {
         return otherT.getMemberType().equals(memberType);
       }
+    }
+
+    @Override
+    public int hashCode() {
+      return memberType.hashCode() ^ ArrayType.class.hashCode();
     }
 
   }
@@ -140,6 +153,11 @@ public class Types {
       } else {
         return otherT.getMemberType().equals(referencedType);
       }
+    }
+
+    @Override
+    public int hashCode() {
+      return referencedType.hashCode() ^ ReferenceType.class.hashCode();
     }
   }
 
@@ -256,6 +274,11 @@ public class Types {
     public String typeName() {
       return this.typeName;
     }
+
+    @Override
+    public int hashCode() {
+      return StructType.class.hashCode() ^ typeName.hashCode();
+    }
   }
 
   public static class ScalarValueType extends SwiftType {
@@ -298,6 +321,11 @@ public class Types {
       } else {
         return otherT.getPrimitiveType().equals(this.type);
       }
+    }
+
+    @Override
+    public int hashCode() {
+      return type.hashCode() ^ ScalarValueType.class.hashCode();
     }
   }
 
@@ -345,6 +373,11 @@ public class Types {
       } else {
         return otherT.getPrimitiveType().equals(this.type);
       }
+    }
+
+    @Override
+    public int hashCode() {
+      return type.hashCode() ^ ScalarFutureType.class.hashCode();
     }
   }
 
@@ -401,6 +434,120 @@ public class Types {
       assert(Types.isScalarUpdateable(valType));
       return new ScalarValueType(valType.getPrimitiveType());
     }
+
+    @Override
+    public int hashCode() {
+      return type.hashCode() ^ ScalarUpdateableType.class.hashCode();
+    }
+  }
+  
+  public static class UnionType extends SwiftType {
+    private final Set<SwiftType> alts;
+    
+    private UnionType(Collection<SwiftType> alts) {
+      super();
+      this.alts = Collections.unmodifiableSet(new HashSet<SwiftType>(alts));
+    }
+    
+    public Set<SwiftType> getAlternatives() {
+      return alts;
+    }
+    
+    /**
+     * @return UnionType if multiple types, or plain type if singular
+     */
+    public static SwiftType createUnionType(List<SwiftType> alts) {
+      if (alts.size() == 1) {
+        return alts.get(0);
+      } else {
+        return new UnionType(alts);
+      }
+    }
+
+    @Override
+    public StructureType getStructureType() {
+      return StructureType.TYPE_UNION;
+    }
+
+    @Override
+    public PrimType getPrimitiveType() {
+      throw new STCRuntimeError("Not supported for UnionType");
+    }
+
+    @Override
+    public SwiftType getMemberType() {
+      throw new STCRuntimeError("Not supported for UnionType");
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      boolean first = true;
+      sb.append("(");
+      for (SwiftType alt: alts) {
+        if (first) {
+          first = false;
+        } else {
+          sb.append("|");
+        }
+        sb.append(alt.toString());
+      }
+      sb.append(")");
+      return sb.toString();
+    }
+
+    @Override
+    public String typeName() {
+      StringBuilder sb = new StringBuilder();
+      boolean first = true;
+      sb.append("(");
+      for (SwiftType alt: alts) {
+        if (first) {
+          first = false;
+        } else {
+          sb.append("|");
+        }
+        sb.append(alt.typeName());
+      }
+      sb.append(")");
+      return sb.toString();
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      if (!(other instanceof SwiftType)) {
+        throw new STCRuntimeError("Comparing UnionType " +
+            "with non-type object");
+      }
+      SwiftType otherT = (SwiftType) other;
+      if (otherT.getStructureType() != StructureType.TYPE_UNION) {
+        return false;
+      } else {
+        UnionType otherUT = (UnionType)otherT;
+        // Sets must be same size
+        if (this.alts.size() != otherUT.alts.size()) {
+          return false;
+        }
+        
+        // Check members are the same
+        for (SwiftType alt: this.alts) {
+          if (!otherUT.alts.contains(alt)) {
+            return false;
+          }
+        }
+        return true;
+      }
+    }
+
+    @Override
+    public int hashCode() {
+      int hash = UnionType.class.hashCode();
+      for (SwiftType alt: alts) {
+        // Iteration order doesn't matter for xor
+        hash ^= alt.hashCode();
+      }
+      return hash;
+    }
   }
   
   /**
@@ -445,11 +592,16 @@ public class Types {
         throw new STCRuntimeError("Comparing TypeVariable " +
             "with non-type object");
       }
-      if (obj instanceof TypeVariable) {
+      if (((SwiftType)obj).getStructureType() == StructureType.TYPE_VARIABLE) {
         TypeVariable other = (TypeVariable) obj;
         return this.typeVarName.equals(other.typeVarName);
       }
       return false;
+    }
+
+    @Override
+    public int hashCode() {
+      return typeVarName.hashCode() ^ TypeVariable.class.hashCode();
     }
   }
   
@@ -463,6 +615,7 @@ public class Types {
     REFERENCE,
     STRUCT,
     TYPE_VARIABLE,
+    TYPE_UNION,
   }
 
   /**
@@ -491,6 +644,10 @@ public class Types {
 
     /** Print out a short unique name for type */
     public abstract String typeName();
+    
+    /** hashcode is required */
+    @Override
+    public abstract int hashCode();
   }
 
   /**
@@ -498,108 +655,25 @@ public class Types {
    */
   public static class FunctionType {
 
-    /**
-     * Have a special class for input arguments to allow representation of
-     * polymorphic functions.  An input argument can be any of a list of
-     * types.
-     */
-    public static class InArgT {
-      private final SwiftType alternatives[];
-
-      public InArgT(SwiftType... alternatives) {
-        this.alternatives = alternatives;
-      }
-
-
-      public SwiftType[] getAlternatives() {
-        return alternatives;
-      }
-      
-      public SwiftType getAlt(int i) {
-        return alternatives[i];
-      }
-
-      public static InArgT fromSwiftT(SwiftType t) {
-        SwiftType alts[] = new SwiftType[1];
-        alts[0] = t;
-        return new InArgT(alts);
-      }
-
-
-      public static List<InArgT> convertList(List<SwiftType> inputs) {
-        ArrayList<InArgT> result = new ArrayList<InArgT>(inputs.size());
-        for (SwiftType t: inputs) {
-          result.add(InArgT.fromSwiftT(t));
-        }
-        return result;
-      }
-
-      @Override
-      public String toString() {
-        StringBuilder sb = new StringBuilder("(");
-        boolean first = true;
-        for (SwiftType alt: alternatives) {
-          if (first) {
-            first = false;
-          } else {
-            sb.append("|");
-          }
-          sb.append(alt.typeName());
-        }
-        sb.append(")");
-        return sb.toString();
-      }
-      
-      public String typeName() {
-        StringBuilder sb = new StringBuilder();
-        boolean first = true;
-        for (SwiftType alt: alternatives) {
-          if (first) {
-            first = false;
-          } else {
-            sb.append("|");
-          }
-          sb.append(alt.typeName());
-        }
-        return sb.toString();
-      }
-
-
-      public int getAltCount() {
-        return alternatives.length;
-      }
-    }
-
-    private final ArrayList<InArgT> inputs = new ArrayList<InArgT>();
+    private final ArrayList<SwiftType> inputs = new ArrayList<SwiftType>();
     private final ArrayList<SwiftType> outputs = new ArrayList<SwiftType>();
 
     /** if varargs is true, the final argument can be repeated many times */
     private final boolean varargs;
 
 
-    public FunctionType(List<InArgT> inputs, List<SwiftType> outputs) {
+    public FunctionType(List<SwiftType> inputs, List<SwiftType> outputs) {
       this(inputs, outputs, false);
     }
 
-    public FunctionType(List<InArgT> inputs, List<SwiftType> outputs,
+    public FunctionType(List<SwiftType> inputs, List<SwiftType> outputs,
                                                         boolean varargs) {
       this.inputs.addAll(inputs);
       this.outputs.addAll(outputs);
       this.varargs = varargs;
     }
 
-    /**
-     * Convenience function to convert from plain SwiftType to InArgT
-     * only reason this is static method instead of constructor is to avoid
-     * problem where two constructors have same erasure type
-     * @param inputs
-     * @param outputs
-     */
-    public static FunctionType create(List<SwiftType> inputs, List<SwiftType> outputs) {
-      return new FunctionType(InArgT.convertList(inputs), outputs, false);
-    }
-
-    public List<InArgT> getInputs() {
+    public List<SwiftType> getInputs() {
       return Collections.unmodifiableList(inputs);
     }
 
@@ -615,8 +689,8 @@ public class Types {
     public String toString() {
       StringBuilder sb = new StringBuilder(128);
       sb.append('(');
-      for (Iterator<InArgT> it = inputs.iterator(); it.hasNext(); ) {
-        InArgT t = it.next();
+      for (Iterator<SwiftType> it = inputs.iterator(); it.hasNext(); ) {
+        SwiftType t = it.next();
         sb.append(t);
         if (it.hasNext())
           sb.append(',');
@@ -763,6 +837,16 @@ public class Types {
   public static boolean isMappable(SwiftType t) {
     // We can only map files right now..
     return t.equals(FUTURE_FILE);
+  }
+
+  public static boolean isUnion(SwiftType type) {
+    return type.getStructureType() == StructureType.TYPE_UNION;
+  }
+  
+  public static boolean isPolymorphic(SwiftType type) {
+    return type.getStructureType() == StructureType.TYPE_UNION ||
+        type.getStructureType() == StructureType.TYPE_VARIABLE;
+        
   }
 
   public static final SwiftType FUTURE_INTEGER =

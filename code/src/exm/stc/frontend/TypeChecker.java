@@ -2,6 +2,7 @@ package exm.stc.frontend;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -21,13 +22,13 @@ import exm.stc.common.lang.Operators.OpType;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayType;
 import exm.stc.common.lang.Types.FunctionType;
-import exm.stc.common.lang.Types.FunctionType.InArgT;
 import exm.stc.common.lang.Types.PrimType;
 import exm.stc.common.lang.Types.ReferenceType;
 import exm.stc.common.lang.Types.ScalarFutureType;
 import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Variable;
 
 /**
@@ -471,17 +472,16 @@ public class TypeChecker {
     for (int i = 0; i < types.size(); i++) {
       if (!vars.get(i).getType().equals(types.get(i))) {
         throw argumentTypeException(context, i, 
-            InArgT.fromSwiftT(types.get(i)), vars.get(i).getType(), 
-                                                       errContext);
+            types.get(i), vars.get(i).getType(), errContext);
       }
     }
 
   }
 
   private static TypeMismatchException argumentTypeException(Context context,
-      int argPos, InArgT expType, SwiftType actType, String errContext) {
+      int argPos, SwiftType expType, SwiftType actType, String errContext) {
     return new TypeMismatchException(context, "Expected argument " +
-        (argPos + 1) + " to have one of the follow types: " 
+        (argPos + 1) + " to have one of the following types: " 
         + expType.typeName() + ", but had type: " + actType.typeName() 
         + errContext);
   }
@@ -505,7 +505,7 @@ public class TypeChecker {
    * @return list of which of the alternative will be passed into fn
    * @throws TypeMismatchException
    */
-  private static List<SwiftType> typeCheckFunargs(Context context, List<InArgT> funArgSpec,
+  private static List<SwiftType> typeCheckFunargs(Context context, List<SwiftType> funArgSpec,
       List<Variable> vars, String errContext) throws TypeMismatchException {
     if (funArgSpec.size() != vars.size()) {
       throw new TypeMismatchException(context, "Number of variables "
@@ -516,7 +516,7 @@ public class TypeChecker {
             new ArrayList<SwiftType>(funArgSpec.size());
     for (int i = 0; i < funArgSpec.size(); i++) {
       SwiftType varType= vars.get(i).getType();
-      InArgT funArgType = funArgSpec.get(i);
+      SwiftType funArgType = funArgSpec.get(i);
 
       SwiftType whichAlt = whichAlternativeType(funArgType, varType);
       if (whichAlt == null) {
@@ -528,8 +528,14 @@ public class TypeChecker {
     return concreteTypes;
   }
 
-  public static SwiftType whichAlternativeType(InArgT funArgType, SwiftType varType) {
-    for (SwiftType alt: funArgType.getAlternatives()) {
+  public static SwiftType whichAlternativeType(SwiftType funArgType, SwiftType varType) {
+    Collection<SwiftType> alts;
+    if (Types.isUnion(funArgType)) {
+      alts = ((UnionType)funArgType).getAlternatives();
+    } else {
+      alts = Collections.singleton(funArgType);
+    }
+    for (SwiftType alt: alts) {
       if (varType.equals(alt)) {
         // Obviously ok if types are exactly the same
         return alt;
@@ -555,13 +561,13 @@ public class TypeChecker {
    */
   private static List<SwiftType> checkFunctionInputs(Context context, FunctionType ftype,
       List<Variable> inputs, String errContext) throws TypeMismatchException {
-    List<InArgT> types = ftype.getInputs();
+    List<SwiftType> types = ftype.getInputs();
     if (!ftype.hasVarargs()) {
       List<SwiftType> concrete = typeCheckFunargs(context, types, inputs, errContext);
       return Collections.unmodifiableList(concrete);
     } else {
       List<Variable> nonVariadicInputs = new ArrayList<Variable>();
-      List<InArgT> nonVariadicTypes = new ArrayList<InArgT>();
+      List<SwiftType> nonVariadicTypes = new ArrayList<SwiftType>();
       for (int i = 0; i < types.size() - 1; i++) {
         nonVariadicTypes.add(types.get(i));
       }
@@ -569,7 +575,7 @@ public class TypeChecker {
         nonVariadicInputs.add(inputs.get(i));
       }
 
-      InArgT variadicType = types.get(types.size() - 1);
+      SwiftType variadicType = types.get(types.size() - 1);
       List<SwiftType> concreteNonvariadic =
             typeCheckFunargs(context, nonVariadicTypes, nonVariadicInputs, errContext);
       List<SwiftType> concreteTypeList =
@@ -577,7 +583,7 @@ public class TypeChecker {
       for (int i = types.size() - 1; i < inputs.size(); i++) {
         SwiftType argT = inputs.get(i).getType();
         SwiftType whichAlt = whichAlternativeType(variadicType, argT);
-
+        
         if (whichAlt == null) {
           throw argumentTypeException(context, i, variadicType, argT, errContext);
         }

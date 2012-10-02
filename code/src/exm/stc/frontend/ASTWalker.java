@@ -53,7 +53,6 @@ import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
-import exm.stc.common.lang.Types.FunctionType.InArgT;
 import exm.stc.common.lang.Types.ReferenceType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
@@ -1694,8 +1693,8 @@ public class ASTWalker {
       throw new TypeMismatchException(context, "composite function cannot" +
       		" have variable-length argument lists");
     }
-    for (InArgT it: ft.getInputs()) {
-      if (it.getAlternatives().length != 1) {
+    for (SwiftType it: ft.getInputs()) {
+      if (Types.isPolymorphic(it)) {
         throw new TypeMismatchException(context, "composite functions " +
         		"cannot have polymorphic input argument types, such as: " + it);
       }

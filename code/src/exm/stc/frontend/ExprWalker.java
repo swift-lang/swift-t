@@ -30,7 +30,6 @@ import exm.stc.common.lang.Operators.OpType;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
-import exm.stc.common.lang.Types.FunctionType.InArgT;
 import exm.stc.common.lang.Types.ReferenceType;
 import exm.stc.common.lang.Types.ScalarFutureType;
 import exm.stc.common.lang.Types.ScalarUpdateableType;
@@ -431,13 +430,14 @@ public class ExprWalker {
     int argcount = arglist.getChildCount();
     for (int i = 0; i < argcount; i++) {
       SwiftAST argtree = arglist.child(i);
-      InArgT expType = ftype.getInputs().get(Math.min(i, ftype.getInputs().size() - 1));
+      SwiftType expType = ftype.getInputs().get(
+            Math.min(i, ftype.getInputs().size() - 1));
       
       
       SwiftType argtype;
-      if (expType.getAltCount() == 1) {
-        argtype = TypeChecker.findSingleExprType(context, argtree, expType.getAlt(0));
-      } else {
+      if (!Types.isPolymorphic(expType)) {
+        argtype = TypeChecker.findSingleExprType(context, argtree, expType);
+      } else if (Types.isUnion(expType)){
         argtype = TypeChecker.findSingleExprType(context, argtree);
         SwiftType matching = TypeChecker.whichAlternativeType(expType, argtype);
         if (matching != null && Types.isUpdateableEquiv(argtype, matching)) {
@@ -445,6 +445,9 @@ public class ExprWalker {
           argtree.clearTypeInfo();
           argtype = TypeChecker.findSingleExprType(context, argtree, matching);
         }
+      } else {
+        throw new STCRuntimeError("Don't know how to handle polymorphic "
+            + " type " + expType);
       }
 
       argVars.add(evalExprToTmp(context, argtree, argtype, false, renames));

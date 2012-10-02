@@ -27,7 +27,6 @@ import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
-import exm.stc.common.lang.Types.FunctionType.InArgT;
 import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.DefType;
@@ -282,7 +281,7 @@ public class ICTree {
       }
       out.append(") @" + this.name + "(");
       first = true;
-      for(InArgT t: fType.getInputs()) {
+      for(SwiftType t: fType.getInputs()) {
         if (first) {
           first = false;
         } else {
