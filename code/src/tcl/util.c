@@ -1,6 +1,8 @@
 
 #include <assert.h>
 
+#include <tools.h>
+
 #include "src/tcl/util.h"
 
 /**
@@ -72,6 +74,16 @@ void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
 void
 tcl_set_integer(Tcl_Interp* interp, char* name, int value)
 {
-  Tcl_ObjSetVar2(interp, Tcl_NewStringObj(name, -1), NULL,
-                 Tcl_NewIntObj(value), 0);
+  Tcl_Obj* p = Tcl_ObjSetVar2(interp, Tcl_NewStringObj(name, -1),
+                              NULL, Tcl_NewIntObj(value), 0);
+  valgrind_assert(p != NULL);
+}
+
+void
+tcl_dict_put(Tcl_Interp* interp, Tcl_Obj* dict,
+             char* key, Tcl_Obj* value)
+{
+  Tcl_Obj* k = Tcl_NewStringObj(key, -1);
+  int rc = Tcl_DictObjPut(interp, dict, k, value);
+  valgrind_assert(rc == TCL_OK);
 }

@@ -61,6 +61,9 @@ void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
 
 void tcl_set_integer(Tcl_Interp* interp, char* name, int value);
 
+void tcl_dict_put(Tcl_Interp* interp, Tcl_Obj* dict,
+                  char* key, Tcl_Obj* value);
+
 /*
    Tcl check follow.  Note that these are disabled by NDEBUG.
    Thus, they should never do anything in a correct Turbine program.
