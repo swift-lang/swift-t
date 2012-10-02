@@ -48,16 +48,6 @@ public abstract class Context
    */
   public abstract GlobalContext getGlobals();
   
-  public abstract void defineCompositeFunction(String name,
-                              FunctionType ft, boolean async)
-      throws DoubleDefineException;
-
-  public abstract void defineAppFunction(String name, FunctionType ft)
-      throws DoubleDefineException;
-  
-  public abstract void defineBuiltinFunction(String name, FunctionType ft)
-      throws DoubleDefineException;
-
   /**
    * Declare a new variable that will be visible in the
    * current scope and all descendant scopes
@@ -121,23 +111,22 @@ public abstract class Context
    */
   public abstract List<Variable> getVisibleVariables();
 
-  public abstract boolean isAppFunction(String name);
-
-  public abstract boolean isBuiltinFunction(String name);
-
-  public abstract boolean isCompositeFunction(String name);
-
   public boolean isFunction(String name) {
-    return isAppFunction(name) || isBuiltinFunction(name) ||
-           isCompositeFunction(name);
+    return lookupFunction(name) != null;
   }
 
+  public abstract void defineFunction(String name, DefinedFunction fn)
+      throws DoubleDefineException;
+  
+  public abstract void defineCompositeFunction(String name,
+          FunctionType ftype, boolean async) throws DoubleDefineException;
+  
   /**
    * Lookup the type of a function
    * @param name
    * @return
    */
-  public abstract FunctionType lookupFunction(String name);
+  public abstract DefinedFunction lookupFunction(String name);
 
   public void setNested(boolean b)
   {
@@ -271,4 +260,18 @@ public abstract class Context
   abstract public Variable createFilenameAliasVariable(String name);
 
   abstract public boolean isSyncComposite(String name);
+  
+  public enum FnKind {
+    APP, COMPOSITE, BUILTIN;
+  }
+  
+  public static class DefinedFunction {
+    public DefinedFunction(FnKind kind, FunctionType type) {
+      super();
+      this.kind = kind;
+      this.type = type;
+    }
+    public final FnKind kind;
+    public final FunctionType type; 
+  }
 }

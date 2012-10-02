@@ -63,6 +63,8 @@ import exm.stc.common.lang.Variable.DefType;
 import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
+import exm.stc.frontend.Context.DefinedFunction;
+import exm.stc.frontend.Context.FnKind;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
 /**
  * This class walks the Swift AST.
@@ -109,9 +111,10 @@ public class ASTWalker {
 
     backend.header();
     walkProgram(context, tree);
-    if (!context.isCompositeFunction("main")) {
+    DefinedFunction fn = context.lookupFunction("main");
+    if (fn == null || fn.kind != FnKind.COMPOSITE) {
       throw new UndefinedFunctionException(context,
-          "No main function was defined in the script");
+          "No composite main function was defined in the script");
     }
     backend.turbineStartup();
   }
@@ -1597,7 +1600,7 @@ public class ASTWalker {
       handleFunctionAnnotation(context, function, tree.child(i));
       i--;
     }
-    context.defineBuiltinFunction(function, ft);
+    global.defineFunction(function, new DefinedFunction(FnKind.BUILTIN, ft));
     backend.defineBuiltinFunction(function, pkg, version, symbol, ft, inlineTcl);
   }
 
@@ -1749,7 +1752,8 @@ public class ASTWalker {
     String function = tree.child(0).getText();
     LogHelper.debug(context, "compile function: starting: " + function );
     // defineFunction should already have been called
-    assert(context.isCompositeFunction(function));
+    assert(context.isFunction(function));
+    assert(context.lookupFunction(function).kind == FnKind.COMPOSITE);
     SwiftAST outputs = tree.child(1);
     SwiftAST inputs = tree.child(2);
     SwiftAST block = tree.child(3);
@@ -1830,7 +1834,8 @@ public class ASTWalker {
     SwiftAST cmdT = tree.child(3);
     
     FunctionDecl decl = FunctionDecl.fromAST(context, inArgsT, outArgsT);
-    context.defineAppFunction(function, decl.getFunctionType());
+    context.defineFunction(function, new DefinedFunction(FnKind.APP,
+                                            decl.getFunctionType()));
     List<Variable> outArgs = decl.getOutVars();
     List<Variable> inArgs = decl.getInVars();
     

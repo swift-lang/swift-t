@@ -30,23 +30,13 @@ extends Context
   /**
      Map from composite function name to function information
    */
-  private Map<String, FunctionType> composites = new HashMap<String, FunctionType>();
+  private Map<String, DefinedFunction> functions = 
+                          new HashMap<String, DefinedFunction>();
 
   /**
    * Which composites should be called synchronously  
    */
   private Set<String> syncComposites = new HashSet<String>();
-  
-  /**
-     Map from app function name to function information
-   */
-  private Map<String, FunctionType> apps = new HashMap<String, FunctionType>();
-
-  /**
-   * Map from builtin function name to function info
-   */
-  private Map<String, FunctionType> builtins = 
-                              new HashMap<String, FunctionType>();
   
   /**
    * Map from type name to the type object
@@ -84,43 +74,13 @@ extends Context
   }
 
   @Override
-  public boolean isAppFunction(String name)
-  {
-    return apps.containsKey(name);
-  }
-
-  @Override
-  public boolean isBuiltinFunction(String name)
-  {
-    return builtins.containsKey(name);
-  }
-
-  @Override
-  public boolean isCompositeFunction(String name)
-  {
-    return composites.containsKey(name);
-  }
-  
-  @Override
   public boolean isSyncComposite(String name) {
     return syncComposites.contains(name);
   }
 
   @Override
-  public FunctionType lookupFunction(String name) {
-    FunctionType res;
-    if ((res = composites.get(name)) != null) {
-      return res;
-    }
-    else if ((res = apps.get(name)) != null) {
-      return res;
-    }
-    else if ((res = builtins.get(name)) != null) {
-      return res;
-    }
-    else {
-     return null;
-    }
+  public DefinedFunction lookupFunction(String name) {
+    return functions.get(name);
   }
 
   @Override
@@ -130,35 +90,21 @@ extends Context
   }
 
   @Override
-  public void defineCompositeFunction(String name, FunctionType ft,
-        boolean async) throws DoubleDefineException {
+  public void defineFunction(String name, DefinedFunction fn) 
+      throws DoubleDefineException {
     if (isFunction(name))
       throw new DoubleDefineException
       (this, "function: " + name + " is already defined");
-    composites.put(name, ft);
-    if (!async) {
-      syncComposites.add(name);
-    }
-  }
-
-  @Override
-  public void defineAppFunction(String name, FunctionType ft)
-              throws DoubleDefineException {
-    if (isFunction(name)) {
-      throw new DoubleDefineException(this, "Function called " + name +
-                                      " already defined");
-    }
-    apps.put(name, ft);
+    functions.put(name, fn);
   }
   
   @Override
-  public void defineBuiltinFunction(String name, FunctionType ft)
-      throws DoubleDefineException {
-    if (isFunction(name)) {
-      throw new DoubleDefineException(this, "Function called "
-          + name + " already defined");
+  public void defineCompositeFunction(String name, FunctionType ftype,
+          boolean async) throws DoubleDefineException {
+    defineFunction(name, new DefinedFunction(FnKind.COMPOSITE, ftype));
+    if (async) {
+      syncComposites.add(name);
     }
-    builtins.put(name, ft);
   }
   
   /**

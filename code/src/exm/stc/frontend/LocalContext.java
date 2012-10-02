@@ -166,18 +166,6 @@ extends Context
     variables.put(name, variable);
     return variable;
   }
-
-  @Override
-  public boolean isAppFunction(String name)
-  {
-    return globals.isAppFunction(name);
-  }
-
-  @Override
-  public boolean isBuiltinFunction(String name)
-  {
-    return globals.isBuiltinFunction(name);
-  }
   
   @Override
   public boolean isSyncComposite(String name) {
@@ -185,32 +173,20 @@ extends Context
   }
 
   @Override
-  public boolean isCompositeFunction(String name)
-  {
-    return globals.isCompositeFunction(name);
-  }
-
-  @Override
-  public FunctionType lookupFunction(String name) {
+  public DefinedFunction lookupFunction(String name) {
     return globals.lookupFunction(name);
   }
 
   @Override
-  public void defineCompositeFunction(String name, FunctionType ft,
-        boolean async) throws DoubleDefineException {
-    globals.defineCompositeFunction(name, ft, async);
-  }
-
-  @Override
-  public void defineAppFunction(String name, FunctionType ft)
-    throws DoubleDefineException {
-    globals.defineAppFunction(name, ft);
+  public void defineFunction(String name, DefinedFunction fn)
+        throws DoubleDefineException {
+    throw new STCRuntimeError("Cannot define function in local context");
   }
   
   @Override
-  public void defineBuiltinFunction(String name, FunctionType ft)
-    throws DoubleDefineException {
-    globals.defineBuiltinFunction(name, ft);
+  public void defineCompositeFunction(String name, FunctionType ftype,
+          boolean async) {
+    throw new STCRuntimeError("Cannot define function in local context");
   }
 
   @Override
