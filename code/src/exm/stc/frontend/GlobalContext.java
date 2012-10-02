@@ -14,11 +14,11 @@ import org.apache.log4j.Logger;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.DefType;
 import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.util.Pair;
 
 /**
  * Global context for entire program
@@ -36,7 +36,8 @@ extends Context
   /**
    * Which composites should be called synchronously  
    */
-  private Set<String> syncComposites = new HashSet<String>();
+  private Set<Pair<String, FnProp>> functionProps =
+                        new HashSet<Pair<String, FnProp>>();
   
   /**
    * Map from type name to the type object
@@ -74,11 +75,6 @@ extends Context
   }
 
   @Override
-  public boolean isSyncComposite(String name) {
-    return syncComposites.contains(name);
-  }
-
-  @Override
   public DefinedFunction lookupFunction(String name) {
     return functions.get(name);
   }
@@ -99,12 +95,13 @@ extends Context
   }
   
   @Override
-  public void defineCompositeFunction(String name, FunctionType ftype,
-          boolean async) throws DoubleDefineException {
-    defineFunction(name, new DefinedFunction(FnKind.COMPOSITE, ftype));
-    if (async) {
-      syncComposites.add(name);
-    }
+  public void setFunctionProperty(String name, FnProp prop) {
+    functionProps.add(new Pair<String, FnProp>(name, prop));
+  }
+  
+  @Override
+  public boolean lookupFunctionProperty(String name, FnProp prop) {
+    return functionProps.contains(new Pair<String, FnProp>(name, prop));
   }
   
   /**

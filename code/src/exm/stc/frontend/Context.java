@@ -118,8 +118,9 @@ public abstract class Context
   public abstract void defineFunction(String name, DefinedFunction fn)
       throws DoubleDefineException;
   
-  public abstract void defineCompositeFunction(String name,
-          FunctionType ftype, boolean async) throws DoubleDefineException;
+  public abstract void setFunctionProperty(String name, FnProp prop);
+  
+  public abstract boolean lookupFunctionProperty(String name, FnProp prop);
   
   /**
    * Lookup the type of a function
@@ -258,10 +259,8 @@ public abstract class Context
    * @return
    */
   abstract public Variable createFilenameAliasVariable(String name);
-
-  abstract public boolean isSyncComposite(String name);
   
-  public enum FnKind {
+  public static enum FnKind {
     APP, COMPOSITE, BUILTIN;
   }
   
@@ -273,5 +272,9 @@ public abstract class Context
     }
     public final FnKind kind;
     public final FunctionType type; 
+  }
+  
+  public static enum FnProp {
+    SYNC;
   }
 }

@@ -39,6 +39,7 @@ import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.frontend.Context.DefinedFunction;
 import exm.stc.frontend.Context.FnKind;
+import exm.stc.frontend.Context.FnProp;
 
 /**
  * This module contains logic to walk individual expression in Swift and generate code to evaluate them
@@ -866,7 +867,7 @@ public class ExprWalker {
       }
     } else if (def.kind == FnKind.COMPOSITE) {
       TaskMode mode;
-      if (context.isSyncComposite(function)) {
+      if (context.lookupFunctionProperty(function, FnProp.SYNC)) {
         mode = TaskMode.SYNC;
       } else {
         mode = TaskMode.CONTROL;

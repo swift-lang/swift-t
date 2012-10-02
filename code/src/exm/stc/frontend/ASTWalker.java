@@ -65,6 +65,7 @@ import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.Context.DefinedFunction;
 import exm.stc.frontend.Context.FnKind;
+import exm.stc.frontend.Context.FnProp;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
 /**
  * This class walks the Swift AST.
@@ -1725,7 +1726,11 @@ public class ASTWalker {
       }
     }
     
-    context.defineCompositeFunction(function, ft, async);
+    context.defineFunction(function, new DefinedFunction(FnKind.COMPOSITE,
+                                                         ft));
+    if (!async) {
+      context.setFunctionProperty(function, FnProp.SYNC);
+    }
   }
 
 
@@ -1773,7 +1778,7 @@ public class ASTWalker {
     functionContext.addDeclaredVariables(oList);
 
     TaskMode mode;
-    if (context.isSyncComposite(function)) {
+    if (context.lookupFunctionProperty(function, FnProp.SYNC)) {
       mode = TaskMode.SYNC; 
     } else {
       mode = TaskMode.CONTROL;

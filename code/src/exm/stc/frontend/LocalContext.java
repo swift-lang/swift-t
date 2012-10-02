@@ -10,7 +10,6 @@ import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.DefType;
@@ -166,11 +165,6 @@ extends Context
     variables.put(name, variable);
     return variable;
   }
-  
-  @Override
-  public boolean isSyncComposite(String name) {
-    return globals.isSyncComposite(name);
-  }
 
   @Override
   public DefinedFunction lookupFunction(String name) {
@@ -182,11 +176,15 @@ extends Context
         throws DoubleDefineException {
     throw new STCRuntimeError("Cannot define function in local context");
   }
-  
+
   @Override
-  public void defineCompositeFunction(String name, FunctionType ftype,
-          boolean async) {
+  public void setFunctionProperty(String name, FnProp prop) {
     throw new STCRuntimeError("Cannot define function in local context");
+  }
+
+  @Override
+  public boolean lookupFunctionProperty(String name, FnProp prop) {
+    return globals.lookupFunctionProperty(name, prop);
   }
 
   @Override
