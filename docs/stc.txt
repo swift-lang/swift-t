@@ -134,30 +134,6 @@ comment */
 comment */
 ----
 
-== Types and Expressions
-
-Swift has the conventional types:
-
-+string+:: A complete string (not an array of characters).
-+int+:: A 64-bit integer.
-+float+:: A 64-bit (double-precision) floating point number.
-+boolean+:: A boolean (true/false)
-+blob+:: External byte data (see Section Blobs).
-
-Swift variables and expressions are syntactically conventional:
-
-Floating point numbers must be represented as ordinary decimals. The
-literals +NaN+ and +inf+ may be used.
-
-Booleans are may be used as integers.  The literals +true+ and +false+
-may be used.
-
-----
-int four = 2+2;
-string s = "hello ";
-string hw = s + "world";
-----
-
 == Dataflow Evaluation
 
 Swift expressions are evaluated in _dataflow_ order:
@@ -208,9 +184,63 @@ x1, x2 = f(i1, i2);
 (x1, x2) = f(i1, i2);
 ----
 
-== Data structures
+== Types
+Swift provides a similar range of primitive types to many other
+programming languages.  Files are a primitive type in Swift, unlike
+in many other languages, and have a number of special characteristics
+that merit special mention.
+Two basic kinds of data structure are provided: arrays and structs.
 
-Swift provides two basic data structures: arrays and structs.
+=== Primitive Types
+Swift has the conventional types:
+
++string+:: A complete string (not an array of characters).
++int+:: A 64-bit integer.
++float+:: A 64-bit (double-precision) floating point number.
++boolean+:: A boolean (true/false).
++file+:: A file (see Section Files).
++blob+:: External byte data (see Section Blobs).
+
+Literals for these types use conventional syntax:
+
+* +int+ literals are written as decimal numbers, e.g. +-1234+
+* +float+ literals are written as decimal numbers with a decimal point,
+    e.g +5493.352+ or +1.0+.
+    The literals +NaN+ and +inf+ may be used.  In some contexts +int+
+    literals are promoted automatically to +float+.
+* +boolean+ literals
+* +string+ literals are enclosed in double quotes, with a range of escape
+    sequences supported:
+** \\ for a single backslash
+** \" for a quote
+** \n for newline
+** \t for tab
+** \a
+** \b
+** \f
+** \r
+** \v
+** hexadecimal escape codes, e.g. \xf2
+
+
+The literals +true+ and +false+ may be used for boolean.
+
+----
+int four = 2+2;
+string s = "hello ";
+string hw = s + "world";
+----
+
+=== Files
+TODO:
+
+* Basic file type
+* Assigning existing file
+* Mapping (output mapping)
+* Basic functions
+
+=== Blobs
+TODO
 
 === Arrays
 
@@ -231,15 +261,12 @@ A[1] = B[1];
 
 A given array variable must be assigned either _in toto_ (as a whole)
 or _in partes_ (piece by piece).  In this example, +B+ is assigned in toto
-and +A+ is assigned in partes.
+and +A+ is assigned in partes.  Code that attempts to do both is in error.
 
 Arrays may be used as inputs or outputs of functions.
 
 Arrays are part of Swift dataflow semantics. An array is closed
-when all possible insertions to it are complete.  Because of the
-in toto/in partes distiction, this is always complete when a
-function returns an array.
-
+when all possible insertions to it are complete.  
 ----
 (int B[]) f(int j)
 {
@@ -581,6 +608,9 @@ If condition is false, report +message+ and exit immediately.
 +turbine_engines() -> int+:: Number of Turbine engines
 +turbine_workers() -> int+:: Number of Turbine workers
 
+=== Files 
+
+TODO: filename, etc
 
 == Defining Leaf functions
 
@@ -594,13 +624,14 @@ functions in TCL.
 === Swift extension functions
 
 Currently we support TCL extension functions, where a function is implemented
-as a TCL function.  TCL has good support for wrapping native C/C++ functions,
+as a TCL function.  TCL has good support for wrapping native C/C\++ functions,
 so this provides an indirect way to call C/C++ functions from Swift.
 
-Several components are required to implement a TCL extension
-- A TCL function that supports Swift/T argument passing conventions
-- The requisite files required to build a TCL package (e.g pkgIndex.tcl)
-- Swift declarations for the function that specify the type of the function
+Several components are required to implement a TCL extension:
+
+-  A TCL function that supports Swift/T argument passing conventions
+-  The requisite files required to build a TCL package (e.g pkgIndex.tcl)
+-  Swift declarations for the function that specify the type of the function
     and the package/function name of the TCL function
 
 === App functions
