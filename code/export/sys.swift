@@ -23,7 +23,7 @@ argv_accept(string... keys)
     "turbine" "0.0.2" "argv_accept"
     [ "turbine::argv_accept_impl [ list <<keys>> ]" ];
 @pure
-(string s) argv(string|int key, string... default_val)
+(string s) argv(string key, string... default_val)
     "turbine" "0.0.2" "argv_get"
     [ "set <<s>> [ turbine::argv_get_impl <<key>> <<default_val>> ]" ];
 
