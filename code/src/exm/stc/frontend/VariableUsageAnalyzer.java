@@ -139,8 +139,7 @@ class VariableUsageAnalyzer {
       vu = new VariableUsageInfo();
     }
 
-    for (int i = 0; i < block.getChildCount(); i++) {
-      SwiftAST t = (SwiftAST)block.child(i);
+    for (SwiftAST t: block.children()) {
       context.syncFileLine(t.getLine(), lineMapping);
       walk(context, t , vu);
     }

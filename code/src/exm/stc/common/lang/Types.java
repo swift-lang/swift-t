@@ -4,11 +4,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 
@@ -349,10 +347,10 @@ public class Types {
             + "object");
       }
       SwiftType otherT = (SwiftType) other;
-      if (otherT.getStructureType() != StructureType.SCALAR_FUTURE) {
-        return false;
+      if (otherT.getStructureType() == StructureType.SCALAR_FUTURE) {
+        return otherT.getPrimitiveType() == this.type;
       } else {
-        return otherT.getPrimitiveType().equals(this.type);
+        return false;
       }
     }
 
@@ -423,15 +421,22 @@ public class Types {
   }
   
   public static class UnionType extends SwiftType {
-    private final Set<SwiftType> alts;
+    private final List<SwiftType> alts;
     
-    private UnionType(Collection<SwiftType> alts) {
-      super();
-      this.alts = Collections.unmodifiableSet(new HashSet<SwiftType>(alts));
+    private UnionType(ArrayList<SwiftType> alts) {
+      this.alts = Collections.unmodifiableList(alts);
+    }
+
+    public List<SwiftType> getAlternatives() {
+      return alts;
     }
     
-    public Set<SwiftType> getAlternatives() {
-      return alts;
+    public static List<SwiftType> getAlternatives(SwiftType type) {
+      if (Types.isUnion(type)) {
+        return ((UnionType)type).getAlternatives();
+      } else {
+        return Collections.singletonList(type);
+      }
     }
     
     /**
@@ -441,7 +446,19 @@ public class Types {
       if (alts.size() == 1) {
         return alts.get(0);
       } else {
-        return new UnionType(alts);
+        return new UnionType(new ArrayList<SwiftType>(alts));
+      }
+    }
+    
+    public static SwiftType createUnionType(SwiftType ...alts) {
+      if (alts.length == 1) {
+        return alts[0];
+      } else {
+        ArrayList<SwiftType> list = new ArrayList<SwiftType>();
+        for (SwiftType alt: alts) {
+          list.add(alt);
+        }
+        return new UnionType(list);
       }
     }
 
@@ -507,6 +524,22 @@ public class Types {
           }
         }
         return true;
+      }
+    }
+
+    @Override
+    public boolean assignableTo(SwiftType other) {
+      if (Types.isUnion(other)) { 
+        UnionType otherUnion = (UnionType)other;
+        // Check if subset
+        for (SwiftType alt: this.alts) {
+          if (!otherUnion.alts.contains(alt)) {
+            return false;
+          }
+        }
+        return true;
+      } else {
+        return alts.contains(other);
       }
     }
 
@@ -616,6 +649,18 @@ public class Types {
     /** equals is required */
     @Override
     public abstract boolean equals(Object o);
+    
+    /**
+     * Check if this type can be assigned to other type.
+     * By default this is only if types are equal
+     * In the case of union types, true if other is member
+     * of union
+     * @param other
+     * @return
+     */
+    public boolean assignableTo(SwiftType other) {
+      return equals(other);
+    }
     
     /** hashcode is required */
     @Override

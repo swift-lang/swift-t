@@ -2,7 +2,8 @@ package exm.stc.ast;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.Stack;
+import java.util.Collections;
+import java.util.List;
 
 import org.antlr.runtime.Token;
 import org.antlr.runtime.tree.CommonTree;
@@ -54,21 +55,24 @@ public class SwiftAST extends CommonTree {
     return (SwiftAST)super.getChild(i);
   }
 
-  public SwiftAST(Token t) {
-    super(t);
+  @SuppressWarnings("unchecked")
+  public List<SwiftAST> children() {
+    if (children == null) {
+      return Collections.emptyList();
+    }
+    return (List<SwiftAST>)this.children;
   }
   
-  /** Recursively clear all type annotations from AST */
-  public void clearTypeInfo() {
-    Stack<SwiftAST> nodes = new Stack<SwiftAST>();
-    nodes.push(this);
-    while(!nodes.empty()) {
-      SwiftAST node = nodes.pop();
-      node.setSwiftType(null);
-      for (int i = 0; i < node.getChildCount(); i++) {
-        nodes.push(node.child(i));
-      }
-    }
+  public List<SwiftAST> children(int start) {
+    return children().subList(start, children.size());
+  }
+  
+  public List<SwiftAST> children(int start, int end) {
+    return children().subList(start, end);
+  }
+
+  public SwiftAST(Token t) {
+    super(t);
   }
   
   public String printTree() {

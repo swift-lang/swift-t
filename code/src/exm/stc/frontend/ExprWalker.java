@@ -36,7 +36,6 @@ import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.SwiftType;
-import exm.stc.common.lang.Types.TypeVariable;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.frontend.Context.FnProp;
@@ -179,6 +178,7 @@ public class ExprWalker {
   
   public Variable evalExprToTmp(Context context, SwiftAST tree, SwiftType type,
       boolean storeInStack, Map<String, String> renames) throws UserException {
+    assert(type != null);
     if (tree.getType() == ExMParser.VARIABLE) {
       // Base case: don't need to create new variable
       String varName = tree.child(0).getText();
@@ -324,16 +324,16 @@ public class ExprWalker {
     assert(Types.isReferenceTo(src.getType(), dst.getType()));
   
     if (Types.isScalarFuture(dst.getType())) {
-      SwiftType primType = dst.getType();
-      if (primType.equals(Types.FUTURE_INTEGER)) {
+      SwiftType dstType = dst.getType();
+      if (dstType.equals(Types.FUTURE_INTEGER)) {
         backend.dereferenceInt(dst, src);
-      } else if (primType.equals(Types.FUTURE_STRING)) {
+      } else if (dstType.equals(Types.FUTURE_STRING)) {
         backend.dereferenceString(dst, src);
-      } else if (primType.equals(Types.FUTURE_FLOAT)) {
+      } else if (dstType.equals(Types.FUTURE_FLOAT)) {
         backend.dereferenceFloat(dst, src);
-      } else if (primType.equals(Types.FUTURE_BOOLEAN)) {
+      } else if (dstType.equals(Types.FUTURE_BOOLEAN)) {
         backend.dereferenceBool(dst, src);
-      } else if (primType.equals(Types.FUTURE_FILE)) {
+      } else if (dstType.equals(Types.FUTURE_FILE)) {
         backend.dereferenceFile(dst, src);
       } else {
         throw new STCRuntimeError("Don't know how to dereference "
@@ -362,7 +362,8 @@ public class ExprWalker {
     int op_argcount = tree.getChildCount() - 1;
 
     // Use the AST token label to find the actual operator
-    BuiltinOpcode opcode = TypeChecker.getBuiltInFromOpTree(context, tree);
+    BuiltinOpcode opcode = TypeChecker.getBuiltInFromOpTree(context, tree,
+                                                            out.getType());
     assert(opcode != null);
     
     OpType optype = Operators.getBuiltinOpType(opcode);
@@ -437,31 +438,10 @@ public class ExprWalker {
       SwiftAST argtree = arglist.child(i);
       SwiftType expType = ftype.getInputs().get(
             Math.min(i, ftype.getInputs().size() - 1));
-      
-      
-      SwiftType argtype;
-      if (!Types.isPolymorphic(expType)) {
-        argtype = TypeChecker.findSingleExprType(context, argtree, expType);
-      } else if (Types.isUnion(expType)){
-        argtype = TypeChecker.findSingleExprType(context, argtree);
-        SwiftType matching = TypeChecker.whichAlternativeType(expType, argtype);
-        if (matching != null && Types.isUpdateableEquiv(argtype, matching)) {
-          // Try to coerce
-          argtree.clearTypeInfo();
-          argtype = TypeChecker.findSingleExprType(context, argtree, matching);
-        } 
-      } else if (Types.isTypeVar(expType)) {
-        // TODO: this doesn't handle cases where type param is deeper in
-        TypeVariable tv = (TypeVariable)expType;
-        // TODO: this doesn't probably resolve ambiguity
-        SwiftType bound = typeVars.get(tv.getTypeVarName());
-        argtype = TypeChecker.findSingleExprType(context, argtree, bound);
-        typeVars.put(tv.getTypeVarName(), argtype);
-      } else {
-        throw new STCRuntimeError("Don't know how to handle"
-            + " type " + expType);
-      }
 
+      SwiftType exprType = TypeChecker.findSingleExprType(context, argtree);
+      SwiftType argtype =
+            TypeChecker.checkFunArg(context, "", i, expType, exprType).val2;
       argVars.add(evalExprToTmp(context, argtree, argtype, false, renames));
     }
     
@@ -593,7 +573,7 @@ public class ExprWalker {
     // Any integer expression can index into array
     SwiftAST arrayIndexTree = tree.child(1);
     SwiftType indexType = TypeChecker.findSingleExprType(context, arrayIndexTree);
-    if (!indexType.equals(Types.FUTURE_INTEGER)) {
+    if (!indexType.assignableTo(Types.FUTURE_INTEGER)) {
       throw new TypeMismatchException(context,
           "array index expression does not have integer type.  Type of " +
           "index expression was " + indexType.typeName());
@@ -770,11 +750,10 @@ public class ExprWalker {
       assert(Types.isArray(oVar.getType()));
       ArrayElems ae = ArrayElems.fromAST(context, tree);
       SwiftType arrType = TypeChecker.findSingleExprType(context, tree);
-      assert(Types.isArray(arrType));
-      assert(arrType.equals(oVar.getType()));
+      assert(Types.isArray(arrType) || Types.isUnion(arrType));
+      assert(arrType.assignableTo(oVar.getType()));
       
-      SwiftType memType = arrType.getMemberType();
-      
+      SwiftType memType = oVar.getType().getMemberType();
       /** Evaluate all the members and insert into list */
       for (int i = 0; i < ae.getMemberCount(); i++) {
         SwiftAST mem = ae.getMember(i);

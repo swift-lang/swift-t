@@ -36,8 +36,8 @@ public class Wait {
     }
     
     ArrayList<SwiftAST> waitExprs = new ArrayList<SwiftAST>();
-    for (int i = 0; i < exprs.getChildCount(); i++) {
-      waitExprs.add(exprs.child(i));
+    for (SwiftAST expr: exprs.children()) {
+      waitExprs.add(expr);
     }
     
     

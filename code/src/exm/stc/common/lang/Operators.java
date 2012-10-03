@@ -10,6 +10,8 @@ import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Types.PrimType;
+import exm.stc.common.lang.Types.ScalarFutureType;
+import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.frontend.Context;
 
 public class Operators {
@@ -33,8 +35,8 @@ public class Operators {
   }
   
   /** Map of <number type> -> ( <token type> -> <internal opcode> ) */
-  private static final Map<Types.PrimType, Map<Integer, BuiltinOpcode>> arithOps = 
-                    new HashMap<Types.PrimType, Map<Integer, BuiltinOpcode>>();
+  private static final Map<SwiftType, Map<Integer, BuiltinOpcode>> arithOps = 
+                    new HashMap<SwiftType, Map<Integer, BuiltinOpcode>>();
   
   /** Types of operations */
   private static final Map<BuiltinOpcode, OpType> optypes = 
@@ -121,7 +123,7 @@ public class Operators {
         optypes.put(BuiltinOpcode.OR, closedOpType);
       }
 
-      arithOps.put(numType, opMapping);
+      arithOps.put(new ScalarFutureType(numType), opMapping);
     }
   }
 
@@ -140,8 +142,8 @@ public class Operators {
     }
   }
 
-  public static BuiltinOpcode getArithBuiltin(Types.PrimType numType, int tokenType) {
-    Map<Integer, BuiltinOpcode> mp = arithOps.get(numType);
+  public static BuiltinOpcode getArithBuiltin(SwiftType argType, int tokenType) {
+    Map<Integer, BuiltinOpcode> mp = arithOps.get(argType);
     if (mp == null) {
       return null;
     }

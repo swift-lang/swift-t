@@ -82,9 +82,9 @@ public class LValue {
   @Override
   public String toString() {
     String res = varName;
-    for (int i = 0; i < indices.size(); i++) {
-      if (indices.get(i).getType() == ExMParser.STRUCT_PATH) {
-        res += "." + indices.get(i).child(0).getText();
+    for (SwiftAST index: indices) {
+      if (index.getType() == ExMParser.STRUCT_PATH) {
+        res += "." + index.child(0).getText();
       } else {
         res += "[_]";
       }
@@ -150,11 +150,9 @@ public class LValue {
      throw new STCRuntimeError("Expected token identifier_list "
          + " but got " + tree.getText());
    }
-   int count = tree.getChildCount();
-
-   ArrayList<LValue> ids = new ArrayList<LValue>(count);
-   for (int i = 0; i < count; i++) {
-     SwiftAST subtree = tree.child(i);
+   
+   ArrayList<LValue> ids = new ArrayList<LValue>(tree.getChildCount());
+   for (SwiftAST subtree: tree.children()) {
      ids.add(extractAssignmentID(context, subtree));
    }
    return ids;

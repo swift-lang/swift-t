@@ -56,11 +56,11 @@ public class ArrayRange {
     typeCheck(context, endT, "start");
   }
   
-  public void typeCheck(Context context, SwiftType type, String name) 
+  public void typeCheck(Context context, SwiftType exprType, String name) 
   throws TypeMismatchException {
-    if (!Types.isInt(type)) {
-      throw new TypeMismatchException(context, "Expected " + name + " in " +
-      		" range operators to be an integer, but type was " + type.typeName());
+    if (!exprType.assignableTo(Types.FUTURE_INTEGER)) {
+      throw new TypeMismatchException(context, "Expected " + name + " in" +
+      		" range operators to be int, but type was " + exprType.typeName());
     }
   }
   

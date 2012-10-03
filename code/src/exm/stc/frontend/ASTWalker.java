@@ -135,8 +135,7 @@ public class ASTWalker {
     context.syncFileLine(programTree.getLine(), lineMapping);
 
     if (token == ExMParser.PROGRAM) {
-      for (int i = 0; i < programTree.getChildCount(); i++) {
-        SwiftAST topLevelDefn = programTree.child(i);
+      for (SwiftAST topLevelDefn: programTree.children()) {
         int type = topLevelDefn.getType();
         context.syncFileLine(topLevelDefn.getLine(), lineMapping);
         switch (type) {
@@ -319,9 +318,8 @@ public class ASTWalker {
 
     VariableUsageInfo blockVu = tree.checkedGetVariableUsage();
 
-    for (int i = 0; i < tree.getChildCount(); i++) {
-      SwiftAST child = tree.child(i);
-      walkStatement(context, child, blockVu);
+    for (SwiftAST stmt: tree.children()) {
+      walkStatement(context, stmt, blockVu);
     }
 
     closeBlockVariables(context);
@@ -918,16 +916,13 @@ public class ASTWalker {
     // Check the condition type now that all loop body vars have been declared
     SwiftType condType = TypeChecker.findSingleExprType(bodyContext,
         loop.getCond());
-    if (condType.equals(Types.FUTURE_INTEGER)) {
-      // TODO: for now, assume boolean
-      throw new STCRuntimeError("don't support non-boolean conditions" +
-      		" for iterate yet");
-    } else if (!condType.equals(Types.FUTURE_BOOLEAN)) {
+    if (!condType.assignableTo(Types.FUTURE_BOOLEAN)) {
       throw new TypeMismatchException(bodyContext, 
           "iterate condition had invalid type: " + condType.typeName());
     }
     
-    Variable nextCond = exprWalker.evalExprToTmp(bodyContext, loop.getCond(), condType, false, null);
+    Variable nextCond = exprWalker.evalExprToTmp(bodyContext, loop.getCond(),
+                                          Types.FUTURE_BOOLEAN, false, null);
     
     Variable nextCounter = varCreator.createTmp(bodyContext,
                                       Types.FUTURE_INTEGER);
@@ -955,13 +950,9 @@ public class ASTWalker {
       Variable v = forLoop.getLoopVars().get(i).var;
       SwiftType argType = v.getType();
       SwiftAST expr = loopVarExprs.get(v.getName());
-      SwiftType exprType = TypeChecker.findSingleExprType(context, expr, argType);
-
-      if (!exprType.equals(argType)) {
-        throw new STCRuntimeError("haven't implemented conversion " +
-            " from " + exprType.typeName() + " to " + argType.typeName() +
-            " for loop expressions");
-      }
+      SwiftType exprType = TypeChecker.findSingleExprType(context, expr);
+      exprType = TypeChecker.checkAssignment(context, exprType,
+                                             argType,v.getName());
       results.add(exprWalker.evalExprToTmp(context, expr, exprType, false, null));
     }
     return results;
@@ -1129,8 +1120,7 @@ public class ASTWalker {
       lValTypes.add(lval.getType(context));
     }
     
-    ExprType rValTs = TypeChecker.findExprType(context, rValExpr,
-                                               new ExprType(lValTypes));
+    ExprType rValTs = TypeChecker.findExprType(context, rValExpr);
     if (rValTs.elems() != lVals.size()) {
       throw new TypeMismatchException(context, "Needed " + rValTs.elems()
           + " " + "assignment targets on LHS of assignment, but "
@@ -1146,12 +1136,13 @@ public class ASTWalker {
       SwiftType lValType = lValTypes.get(i);
       SwiftType rValType = rValTs.get(i);
       String targetName = lval.toString();
-      TypeChecker.checkAssignment(context, rValType, lValType, targetName);
+      SwiftType rValConcrete = TypeChecker.checkAssignment(context, rValType,
+                                                            lValType, targetName);
       backend.addComment("Swift l." + context.getLine() +
           ": assigning expression to " + targetName);
 
       // the variable we will evaluate expression into
-      Variable var = evalLValue(context, rValExpr, rValType, lval, 
+      Variable var = evalLValue(context, rValExpr, rValConcrete, lval, 
                                                       afterActions);
       
       if (lVals.size() == 1 && rValExpr.getType() == ExMParser.VARIABLE) {
@@ -1335,8 +1326,8 @@ public class ASTWalker {
     assert (indexExpr.getChildCount() == 1);
     // Typecheck index expression
     SwiftType indexType = TypeChecker.findSingleExprType(context, 
-                                indexExpr.child(0), Types.FUTURE_INTEGER);
-    if (!indexType.equals(Types.FUTURE_INTEGER)) {
+                                             indexExpr.child(0));
+    if (!indexType.assignableTo(Types.FUTURE_INTEGER)) {
       throw new TypeMismatchException(context, 
           "Indexing array using non-integer expression in lval.  Type " +
           "of expression was " + indexType.typeName());
@@ -1602,8 +1593,7 @@ public class ASTWalker {
   private Set<String> extractTypeParams(SwiftAST typeParamsT) {
     assert(typeParamsT.getType() == ExMParser.TYPE_PARAMETERS);
     Set<String> typeParams = new HashSet<String>();
-    for (int i = 0; i < typeParamsT.getChildCount(); i++) {
-      SwiftAST typeParam = typeParamsT.child(i);
+    for (SwiftAST typeParam: typeParamsT.children()) {
       assert(typeParam.getType() == ExMParser.ID);
       typeParams.add(typeParam.getText());
     }
@@ -1731,8 +1721,7 @@ public class ASTWalker {
   private List<String> extractFunctionAnnotations(Context context,
           SwiftAST tree, int firstChild) throws InvalidAnnotationException {
     List<String> annotations = new ArrayList<String>();
-    for (int i = firstChild; i < tree.getChildCount(); i++) {
-      SwiftAST subtree =tree.child(i);
+    for (SwiftAST subtree: tree.children(firstChild)) {
       assert(subtree.getType() == ExMParser.ANNOTATION);
       assert(subtree.getChildCount() == 1 || subtree.getChildCount() == 2);
       if (subtree.getChildCount() == 2) {
@@ -1984,8 +1973,7 @@ public class ASTWalker {
           throws TypeMismatchException, UserException {
     List<Variable> args = new ArrayList<Variable>();
     // Skip first arg: that is id
-    for (int i = 1; i < cmdArgs.getChildCount(); i++) {
-      SwiftAST cmdArg = cmdArgs.child(i);
+    for (SwiftAST cmdArg: cmdArgs.children(1)) {
       if (cmdArg.getType() == ExMParser.APP_FILENAME) {
         assert(cmdArg.getChildCount() == 1);
         String fileVarName = cmdArg.child(0).getText();
@@ -2132,8 +2120,8 @@ public class ASTWalker {
     SwiftAST val = vd.getVarExpr(0);
     assert(val != null);
     
-    SwiftType valType = TypeChecker.findSingleExprType(context, val, v.getType());
-    if (!valType.equals(v.getType())) {
+    SwiftType valType = TypeChecker.findSingleExprType(context, val);
+    if (!valType.assignableTo(v.getType())) {
       throw new TypeMismatchException(context, "trying to assign expression "
           + " of type " + valType.typeName() + " to global constant " 
           + v.getName() + " which has type " + v.getType());
@@ -2141,7 +2129,7 @@ public class ASTWalker {
     
     String msg = "Don't support non-literal "
         + "expressions for global constants";
-    switch (valType.getPrimitiveType()) {
+    switch (v.getType().getPrimitiveType()) {
     case BOOLEAN:
       String bval = Literals.extractBoolLit(context, val);
       if (bval == null) {

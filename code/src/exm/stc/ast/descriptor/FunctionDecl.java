@@ -174,8 +174,7 @@ public class FunctionDecl {
       String varName = nameTree.getText();
       
       SwiftType varType = baseType;
-      for (int i = 1; i < tree.getChildCount(); i++) {
-        SwiftAST subtree = tree.child(i);
+      for (SwiftAST subtree: tree.children(1)) {
         if (subtree.getType() == ExMParser.ARRAY) {
           varType = new Types.ArrayType(varType);
         } else if (subtree.getType() == ExMParser.MAPPING) {

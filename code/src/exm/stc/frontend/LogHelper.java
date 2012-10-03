@@ -14,8 +14,8 @@ import exm.stc.ast.antlr.ExMParser;
 public class LogHelper {
   static final Logger logger = Logger.getLogger("");
   public static void logChildren(int indent, SwiftAST tree) {
-    for (int i = 0; i < tree.getChildCount(); i++) {
-      trace(indent+2, tree.child(i).getText());
+    for (SwiftAST child: tree.children()) {
+      trace(indent+2, child.getText());
     }
   }
   

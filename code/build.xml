@@ -91,7 +91,7 @@
           depends="compile.common,compile.antlr">
     <javac srcdir="src"
            destdir="${build.dir}"
-           includes="exm/stc/ast/*.java,exm/ast/**/*.java"
+           includes="exm/stc/ast/*.java,exm/stc/ast/**/*.java"
            listfiles="${lf}"
            debug="true"
            debuglevel="source,lines,vars"

@@ -61,8 +61,7 @@ public class VariableDeclaration {
       throw new UndefinedTypeException(context, typeName);
     }
     
-    for (int i = 1; i < tree.getChildCount(); i++) {
-      SwiftAST declTree = tree.child(i);
+    for (SwiftAST declTree: tree.children(1)) {
       SwiftAST expr;
       SwiftAST restTree;
       if (declTree.getType() == ExMParser.DECLARE_ASSIGN) {
@@ -92,8 +91,7 @@ public class VariableDeclaration {
     SwiftAST mappingExpr = null;
     
     SwiftType varType = baseType;
-    for (int i = 1; i < tree.getChildCount(); i++) {
-      SwiftAST subtree = tree.child(i);
+    for (SwiftAST subtree: tree.children(1)) {
       if (subtree.getType() == ExMParser.ARRAY) {
         varType = new Types.ArrayType(varType);
       } else if (subtree.getType() == ExMParser.MAPPING) {

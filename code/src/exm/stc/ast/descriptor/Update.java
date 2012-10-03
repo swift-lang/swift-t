@@ -38,13 +38,18 @@ public class Update {
     return mode;
   }
 
+  /**
+   * @param context
+   * @return Concrete type of Rval expression
+   * @throws UserException
+   */
   public SwiftType typecheck(Context context) throws UserException {
     SwiftType expected = ScalarUpdateableType.asScalarFuture(
                             this.target.getType());
     
-    SwiftType exprType = TypeChecker.findSingleExprType(context, expr, expected);
-    if (expected.equals(exprType)) {
-      return exprType;
+    SwiftType exprType = TypeChecker.findSingleExprType(context, expr);
+    if (exprType.assignableTo(expected)) {
+      return expected;
     } else {
       throw new TypeMismatchException(context, "in update of variable "
           + target.getName() + " with type " + target.getType().typeName()

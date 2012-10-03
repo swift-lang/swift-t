@@ -40,12 +40,14 @@ public class If {
   
   public SwiftType getCondType(Context context) throws UserException {
     SwiftType condType = TypeChecker.findSingleExprType(context, condition);
-    if (!(condType.equals(Types.FUTURE_BOOLEAN) ||
-        condType.equals(Types.FUTURE_INTEGER))) {
+    if (condType.assignableTo(Types.FUTURE_BOOLEAN)) {
+      return Types.FUTURE_BOOLEAN;
+    } else if (condType.assignableTo(Types.FUTURE_INTEGER)) {
+      return Types.FUTURE_INTEGER;
+    } else {
       throw new TypeMismatchException(context, "if statement condition must "
-              + "be of type boolean or integer");
+              + "be of type boolean or int, but was " + condType);
     }
-    return condType;
   }
   
   public static If fromAST(Context context, SwiftAST tree) {
