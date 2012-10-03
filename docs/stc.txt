@@ -113,7 +113,7 @@ Hello world is thus:
 
 ----
 #include <builtins.swift>
-#include <swift/stdio.swift>
+#include <io.swift>
 main
 {
   printf("Hello world");
@@ -427,17 +427,7 @@ variables, both represented by +b+, are assigned different values.
 }
 ----
 
-== Leaf functions
-
-Fundamentally, all work in Swift is performed by _leaf functions_;
-composite functions simply _compose_ leaf work together.  Leaf
-functions may be builtins or extension functions.
-
-=== Builtins
-
-Swift builtins consist of operators and builtin functions.
-
-==== Operators
+== Operators
 
 The following binary arithmetic operators on numbers are defined:
 
@@ -455,7 +445,7 @@ The following unary operators are defined:
 String concatenation is also performed with +&#43;+ (plus).
 +==+ and +!=+ may also be used on strings.
 
-==== Builtin functions
+== Standard Library
 
 Each category of function is shown with the required include
 statement, if necessary.
@@ -466,27 +456,28 @@ ellipsis +...+.
 
 A function that accepts more than one type is denoted as +f(int|string)+.
 
-===== Type conversion
+=== Type conversion
 
 +fromint(int)     -> string+:: Convert integer to string
 +toint(string)    -> int+::    Convert string to integer
 +fromfloat(float) -> string+:: Convert float to string
 +tofloat(string)  -> float+::  Convert string to float
++itof(int)        -> float+::  Convert integer to float
 
-===== Output
+=== Output
 
 +trace(anything, anything, ...)+:: Report the value of any variable
 
- #include <swift/stdio.swift>
+ #include <io.swift>
 
 +printf(string format, int|float|string|boolean...)+::
 As +printf()+ in C
 
-===== String functions
+=== String functions
 
 +strcat(string,string)+: Concatenation
 
- #include <swift/string.swift>
+ #include <string.swift>
 
 +substring(string s, int start, int length) -> string+::
 Obtain substring of given string +s+ starting at character +start+ and of
@@ -495,14 +486,14 @@ length +length+
 +split(string s, string delimiter) -> string[]+::
 Tokenize string +s+ with given delimiter
 
- #include <swift/stdio.swift>
+ #include <io.swift>
 
 +sprintf(string format, int|float|string|boolean...)+::
 As +sprintf()+ in C
 
-===== Math
+=== Math
 
- #include <swift/math.swift>
+ #include <math.swift>
 
 +floor(float i) -> int+:: Round down
 +ceil(float i) -> int+:: Round up
@@ -511,30 +502,28 @@ As +sprintf()+ in C
 +exp(float i) -> float+:: Natural exponentiation: e^i^
 +sqrt(float i) -> float+:: Square root
 +is_nan(float i) -> boolean+:: Check for NaN
-
- #include <swift/stdlib.swift>
-
 +abs_integer(int) -> int+:: Absolute value
 +abs_float(float) -> float+:: Absolute value
+
+ #include <random.swift>
+
 +random() -> float+:: Obtain random number
 +randint(int start, int end)+::
 Obtain random integer from +start+, inclusive, to +end+, exclusive
 
-===== Statistics
-
- #include <swift/stats.swift>
+ #include <stats.swift>
 
 +sum_integer(int[]) -> int+:: Sum
 +avg(int|float[]) -> float+:: Average
 
-===== System
+=== System
 
- #include <swift/stdlib.swift>
+ #include <sys.swift>
 
 +getenv(string) -> string+:: Obtain an environment variable
 
 [[argv]]
-===== Command line
+==== Command line
 
 Consider this command line:
 
@@ -578,23 +567,43 @@ Test if the command line contains the given flagged argument:
 
  argv_contains("v") -> true
 
-===== Debugging
+==== Debugging
 
- #include <swift/assert.swift>
+ #include <assert.swift>
 
 +assert(boolean condition, string message)+::
 If condition is false, report +message+ and exit immediately.
 
 [[Turbine_information]]
-===== Turbine information
+==== Turbine information
 
 +adlb_servers()    -> int+:: Number of ADLB servers
 +turbine_engines() -> int+:: Number of Turbine engines
 +turbine_workers() -> int+:: Number of Turbine workers
 
+
+== Defining Leaf functions
+
+In typical Swift applications, the computationally intensive parts of the
+application are not written in the Swift language.  Rather,
+the work is done by _leaf functions_ that are _composed_ together with
+Swift code.  Leaf functions may be extension or app functions.
+The builtin functions mentioned above are implemented as extension
+functions in TCL.
+
 === Swift extension functions
 
-Extension
+Currently we support TCL extension functions, where a function is implemented
+as a TCL function.  TCL has good support for wrapping native C/C++ functions,
+so this provides an indirect way to call C/C++ functions from Swift.
+
+Several components are required to implement a TCL extension
+- A TCL function that supports Swift/T argument passing conventions
+- The requisite files required to build a TCL package (e.g pkgIndex.tcl)
+- Swift declarations for the function that specify the type of the function
+    and the package/function name of the TCL function
+
+=== App functions
 
 [[Optimizations]]
 == Optimizations
