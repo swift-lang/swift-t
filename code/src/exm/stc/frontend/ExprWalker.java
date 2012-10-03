@@ -802,10 +802,7 @@ public class ExprWalker {
         if (waitContext == null) {
           waitContext = new LocalContext(context);
         }
-        Variable copy = varCreator.createTmp(waitContext,
-                  ScalarUpdateableType.asScalarFuture(inputType));
-        assignVariable(waitContext, copy, input);
-        realIList.add(copy);
+        realIList.add(snapshotUpdateable(waitContext, input));
       } else {
         throw new STCRuntimeError(context.getFileLine() + 
                 " Shouldn't be here, don't know how to "
@@ -927,23 +924,7 @@ public class ExprWalker {
   private void assignVariable(Context context, Variable oVar,
       Variable src) throws UserException {
     if (Types.isScalarUpdateable(src.getType())) {
-      // Create a future alias to the updateable type so that
-      // types match
-      Variable val = varCreator.createTmpLocalVal(context,
-          ScalarUpdateableType.asScalarValue(src.getType()));
-
-      backend.latestValue(val, src);
-      /* Create a future with a snapshot of the value of the updateable
-       * By making the retrieve and store explicit the optimizer should be
-       * able to optimize out the future in many cases
-       */
-      Variable snapshot = varCreator.createTmp(context,
-          ScalarUpdateableType.asScalarFuture(src.getType()));
-
-      if (!src.getType().equals(Types.UPDATEABLE_FLOAT)) {
-        throw new STCRuntimeError(src.getType() + " not yet supported");
-      }
-      backend.assignFloat(snapshot, Arg.createVar(val));
+      Variable snapshot = snapshotUpdateable(context, src);
       src = snapshot;
     }
     
@@ -952,6 +933,29 @@ public class ExprWalker {
     TypeChecker.checkCopy(context, srctype, dsttype);
 
     copyByValue(context, src, oVar, srctype);
+  }
+
+  private Variable snapshotUpdateable(Context context, Variable src)
+      throws UserException, UndefinedTypeException {
+    assert(Types.isScalarUpdateable(src.getType()));
+    // Create a future alias to the updateable type so that
+    // types match
+    Variable val = varCreator.createTmpLocalVal(context,
+        ScalarUpdateableType.asScalarValue(src.getType()));
+
+    backend.latestValue(val, src);
+    /* Create a future with a snapshot of the value of the updateable
+     * By making the retrieve and store explicit the optimizer should be
+     * able to optimize out the future in many cases
+     */
+    Variable snapshot = varCreator.createTmp(context,
+        ScalarUpdateableType.asScalarFuture(src.getType()));
+
+    if (!src.getType().equals(Types.UPDATEABLE_FLOAT)) {
+      throw new STCRuntimeError(src.getType() + " not yet supported");
+    }
+    backend.assignFloat(snapshot, Arg.createVar(val));
+    return snapshot;
   }
 
   private void copyArrayByValue(Context context, Variable dst, Variable src) 
