@@ -282,7 +282,7 @@ AC_ARG_WITH(mpe,
      AS_HELP_STRING(
                     [--with-mpe],
                     [Enable Turbine MPE, set path to libmpe.so]),
-     [ USE_MPE=${withval} ], [] )
+     [ USE_MPE=${withval} ], [:] )
 if [[ ${USE_MPE} != 0 ]]
 then
     AC_MSG_RESULT([Enabling MPE]);
