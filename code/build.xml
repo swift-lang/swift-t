@@ -71,7 +71,7 @@
 
   <!-- Call ANTLR to generate the parser code -->
   <target name="antlr.generate"
-          unless="antlr.uptodate">
+          unless="antlr.uptodate" >
     <java classname="org.antlr.Tool"
           fork="true"
           failonerror="true">
@@ -84,6 +84,9 @@
     </java>
 
     <echo message="ANTLR OK: output in: ${antlr.out}"/>
+    <!-- Delete all compiled java classes to avoid mismatch with token number
+         constants in compiled .class files-->
+    <antcall target="clean.java" />
   </target>
 
   <!-- Compile the AST sources -->
@@ -224,10 +227,13 @@
     <chmod file="${dist.dir}/bin/stc" perm="u+x"/>
   </target>
 
-  <target name="clean">
+  <target name="clean"
+          depends="clean.java">
     <delete file="${stc.jar}"/>
     <!-- Delete all ANTLR-generated stuff -->
     <delete dir="${antlr.out}"/>
+  </target>
+  <target name="clean.java">
     <delete includeemptydirs="true">
       <fileset dir="${build.dir}" includes="**/*"/>
     </delete>
