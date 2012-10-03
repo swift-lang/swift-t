@@ -72,7 +72,7 @@ MPE = @USE_MPE@
 MPE_FLAGS  = @MPE_FLAGS@
 ifeq ($(ENABLE_MPE),yes)
 	CFLAGS += -D ENABLE_MPE $(MPE_FLAGS)
-	LIBS += -L lib -lmpe -L $(MPE) 
+	LIBS += -L lib -lmpe -L $(MPE)
 	RPATH += -Wl,-rpath -Wl,$(INSTALL_LIB)
         RPATH += -Wl,-rpath -Wl,$(MPE)
 endif
@@ -112,10 +112,7 @@ $(ADLB_A): $(OBJS)
 	$(E) $(RANLIB) $(@)
 
 $(ADLB_SO): $(OBJS) $(NLOBJS)
-	echo $(LIBS)
 	$(Q) "  LINK		$(@)"
-# 	$(E) $(CC) $(SHARED) $(LDFLAGS) -o $(@) $(OBJS)
-#	$(LIBS)
 	$(E) $(LINKER) -shared -fPIC -g			\
 	        $(OBJS) 				\
                 $(LIBS)                                 \
