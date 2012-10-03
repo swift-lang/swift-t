@@ -4,7 +4,6 @@ package exm.stc.frontend;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -24,7 +23,7 @@ import exm.stc.common.lang.Variable.VariableStorage;
 public class LocalContext extends Context {
   private Context parent = null;
   private GlobalContext globals = null;
-
+  
   private final FunctionContext functionContext;
 
   public LocalContext(Context parent) {
@@ -221,21 +220,20 @@ public class LocalContext extends Context {
 
   @Override
   public SwiftType lookupType(String typeName) {
-    return globals.lookupType(typeName);
+    SwiftType t = types.get(typeName);
+    if (t != null) {
+      return t;
+    } else {
+      return parent.lookupType(typeName);
+    }
   }
 
   @Override
   public void defineType(String typeName, SwiftType newType)
     throws DoubleDefineException {
-    throw new STCRuntimeError("Not yet implemented");
+    checkNotDefined(typeName);
+    types.put(typeName, newType);
   }
-  @Override
-  public Map<String, SwiftType> getCurrentTypeMapping() {
-    return globals.getCurrentTypeMapping();
-  }
-
-  /** <var>.<path> -> variable) */
-
 
   /**
    * Called when we want to create a new alias for a structure filed

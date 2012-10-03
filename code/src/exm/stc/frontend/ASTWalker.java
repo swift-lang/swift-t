@@ -57,7 +57,6 @@ import exm.stc.common.lang.Types.ReferenceType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.SwiftType;
-import exm.stc.common.lang.Types.TypeVariable;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.DefType;
 import exm.stc.common.lang.Variable.VariableStorage;
@@ -1552,17 +1551,10 @@ public class ASTWalker {
     String symbol  = Literals.extractLiteralString(global, tree.child(6));
     
     Set<String> typeParams = extractTypeParams(typeParamsT);
-    if (typeParams.size() > 0) {
-      throw new STCRuntimeError("Type parameters not yet implemented: sorry!");
-    }    
     
     // Define new context for function (only for type parameters)
     LocalContext context = new LocalContext(global, function);
-    for (String typeParam: typeParams) {
-      context.defineType(typeParam, new TypeVariable(typeParam));
-    }
-    
-    FunctionDecl fdecl = FunctionDecl.fromAST(context, inputs, outputs);
+    FunctionDecl fdecl = FunctionDecl.fromAST(context, inputs, outputs, typeParams);
     
     FunctionType ft = fdecl.getFunctionType();
     LogHelper.debug(context, "builtin: " + function + " " + ft);
@@ -1690,7 +1682,8 @@ public class ASTWalker {
     
     List<String> annotations = extractFunctionAnnotations(context, tree, 4);
     
-    FunctionDecl fdecl = FunctionDecl.fromAST(context, inputs, outputs);
+    FunctionDecl fdecl = FunctionDecl.fromAST(context, inputs, outputs,
+                                              Collections.<String>emptySet());
     FunctionType ft = fdecl.getFunctionType();
     
     if (ft.hasVarargs()) {
@@ -1763,7 +1756,8 @@ public class ASTWalker {
     SwiftAST inputs = tree.child(2);
     SwiftAST block = tree.child(3);
 
-    FunctionDecl fdecl = FunctionDecl.fromAST(context, inputs, outputs);
+    FunctionDecl fdecl = FunctionDecl.fromAST(context, inputs, outputs,
+                                    Collections.<String>emptySet());
     
     List<Variable> iList = fdecl.getInVars();
     List<Variable> oList = fdecl.getOutVars();
@@ -1838,7 +1832,8 @@ public class ASTWalker {
     SwiftAST inArgsT = tree.child(2);
     SwiftAST cmdT = tree.child(3);
     
-    FunctionDecl decl = FunctionDecl.fromAST(context, inArgsT, outArgsT);
+    FunctionDecl decl = FunctionDecl.fromAST(context, inArgsT, outArgsT,
+                                        Collections.<String>emptySet());
     context.defineFunction(function, decl.getFunctionType());
     context.setFunctionProperty(function, FnProp.APP);
     List<Variable> outArgs = decl.getOutVars();

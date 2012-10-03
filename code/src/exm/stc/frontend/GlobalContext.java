@@ -2,11 +2,8 @@
 package exm.stc.frontend;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -31,11 +28,6 @@ public class GlobalContext extends Context {
    */
   private Set<Pair<String, FnProp>> functionProps =
                         new HashSet<Pair<String, FnProp>>();
-  
-  /**
-   * Map from type name to the type object
-   */
-  private Map<String, SwiftType> types = new HashMap<String, SwiftType>();
   
   /**
      The name of the original SwiftScript file
@@ -163,11 +155,6 @@ public class GlobalContext extends Context {
     } else {
       types.put(typeName, newType);
     }
-  }
-
-  @Override
-  public Map<String, SwiftType> getCurrentTypeMapping() {
-    return Collections.unmodifiableMap(types);
   }
 
   @Override

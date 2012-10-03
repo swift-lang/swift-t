@@ -3,9 +3,11 @@ package exm.stc.ast.descriptor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
+import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
@@ -15,9 +17,11 @@ import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.TypeVariable;
 import exm.stc.common.lang.Variable.DefType;
 import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.frontend.Context;
+import exm.stc.frontend.LocalContext;
 import exm.stc.frontend.LogHelper;
 
 public class FunctionDecl {
@@ -61,14 +65,22 @@ public class FunctionDecl {
   }
 
   public static FunctionDecl fromAST(Context context, SwiftAST inArgTree, 
-                        SwiftAST outArgTree) throws TypeMismatchException, UndefinedTypeException, InvalidSyntaxException {
+                              SwiftAST outArgTree, Set<String> typeParams)
+       throws TypeMismatchException, UndefinedTypeException,
+              InvalidSyntaxException, DoubleDefineException {
+    LocalContext typeVarContext = new LocalContext(context);
+
+    for (String typeParam: typeParams) {
+      typeVarContext.defineType(typeParam, new TypeVariable(typeParam));
+    }
+    
     assert(inArgTree.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
     assert(outArgTree.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
     ArrayList<String> inNames = new ArrayList<String>();
     ArrayList<SwiftType> inArgTypes = new ArrayList<SwiftType>();
     boolean varArgs = false;
     for (int i = 0; i < inArgTree.getChildCount(); i++) {
-      ArgDecl argInfo = extractArgInfo(context, inArgTree.child(i));
+      ArgDecl argInfo = extractArgInfo(typeVarContext, inArgTree.child(i));
       inNames.add(argInfo.name);
       inArgTypes.add(argInfo.type);
       if (argInfo.varargs) {
@@ -88,16 +100,17 @@ public class FunctionDecl {
       if (argInfo.varargs) {
         throw new TypeMismatchException(context, "cannot have variable" +
         		" argument specifier ... in output list");
-      } else if (Types.isPolymorphic(argInfo.type)) {
+      } else if (Types.isUnion(argInfo.type)) {
         throw new TypeMismatchException(context, "Cannot have" +
-        		" polymorphic function output type: " + argInfo.type.typeName());
+        		" union function output type: " + argInfo.type.typeName());
       } else {
         outArgTypes.add(argInfo.type);
         outNames.add(argInfo.name);
       }
     }
     assert(outNames.size() == outArgTypes.size());
-    FunctionType ftype = new FunctionType(inArgTypes, outArgTypes, varArgs);
+    FunctionType ftype = 
+          new FunctionType(inArgTypes, outArgTypes, varArgs, typeParams);
     return new FunctionDecl(ftype, inNames, outNames);
   }
 

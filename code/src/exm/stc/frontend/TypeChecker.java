@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
@@ -87,6 +89,13 @@ public class TypeChecker {
       FunctionType ftype = context.lookupFunction(function);
       if (ftype == null) {
         throw UndefinedFunctionException.unknownFunction(context, function);
+      }
+      for (SwiftType out: ftype.getOutputs()) {
+        if (Types.isTypeVar(out)) {
+          //TODO
+          throw new STCRuntimeError("Don't support type checking output " +
+          		"typevar for function yet");
+        }
       }
       return ftype.getOutputs();
     case ExMParser.VARIABLE: {
@@ -488,7 +497,8 @@ public class TypeChecker {
 
 
   private static void checkFunctionOutputs(Context context, List<SwiftType> types,
-      List<Variable> outputs, String errContext) throws TypeMismatchException {
+      List<Variable> outputs, Map<String, SwiftType> typeVarBindings,
+      String errContext) throws TypeMismatchException {
     // Type system is simple enough that we just check the types match exactly
     typeCheckIdentical(context, types, outputs, errContext);
   }
@@ -556,11 +566,13 @@ public class TypeChecker {
    * @param context
    * @param ftype
    * @param inputs
+   * @param typeVarBindings 
    * @param errContext
    * @throws TypeMismatchException
    */
   private static List<SwiftType> checkFunctionInputs(Context context, FunctionType ftype,
-      List<Variable> inputs, String errContext) throws TypeMismatchException {
+      List<Variable> inputs, Map<String, SwiftType> typeVarBindings,
+      String errContext) throws TypeMismatchException {
     List<SwiftType> types = ftype.getInputs();
     if (!ftype.hasVarargs()) {
       List<SwiftType> concrete = typeCheckFunargs(context, types, inputs, errContext);
@@ -612,10 +624,11 @@ public class TypeChecker {
     if (ftype == null) {
       throw UndefinedFunctionException.unknownFunction(context, function);
     }
-    checkFunctionOutputs(context, ftype.getOutputs(), oList,
+    Map<String, SwiftType> typeVarBindings = typeVarBindings(ftype);
+    checkFunctionOutputs(context, ftype.getOutputs(), oList, typeVarBindings,
           " in returns for call to function " + function);
-    return checkFunctionInputs(context, ftype, iList, " in arguments for "
-          + "call to function " + function);
+    return checkFunctionInputs(context, ftype, iList, typeVarBindings,
+          " in arguments for " + "call to function " + function);
   }
 
 
@@ -640,6 +653,19 @@ public class TypeChecker {
           + lValType.toString() + " but RVal type " + rValType.toString()
           + " was expected");
     }
+  }
+
+  /**
+   * Create dictionary with null type var bindings
+   * @param ftype
+   * @return
+   */
+  public static Map<String, SwiftType> typeVarBindings(FunctionType ftype) {
+    Map<String, SwiftType> typeVarBindings = new HashMap<String, SwiftType>();
+    for (String typeVar: ftype.getTypeVars()) {
+      typeVarBindings.put(typeVar, null);
+    }
+    return typeVarBindings;
   }
 
 }

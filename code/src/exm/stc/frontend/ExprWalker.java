@@ -36,6 +36,7 @@ import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.TypeVariable;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.VariableStorage;
 import exm.stc.frontend.Context.FnProp;
@@ -420,6 +421,9 @@ public class ExprWalker {
       throw UndefinedFunctionException.unknownFunction(context, f);
     }
     
+    // Keep track of what concrete types type vars are bound to
+    Map<String, SwiftType> typeVars = TypeChecker.typeVarBindings(ftype);
+    
     if (arglist.getChildCount() > 0 && ftype.getInputs().size() == 0) {
       throw new TypeMismatchException(context, "Argument provided to " +
       		"zero-argument function: " + f);
@@ -445,9 +449,16 @@ public class ExprWalker {
           // Try to coerce
           argtree.clearTypeInfo();
           argtype = TypeChecker.findSingleExprType(context, argtree, matching);
-        }
+        } 
+      } else if (Types.isTypeVar(expType)) {
+        // TODO: this doesn't handle cases where type param is deeper in
+        TypeVariable tv = (TypeVariable)expType;
+        // TODO: this doesn't probably resolve ambiguity
+        SwiftType bound = typeVars.get(tv.getTypeVarName());
+        argtype = TypeChecker.findSingleExprType(context, argtree, bound);
+        typeVars.put(tv.getTypeVarName(), argtype);
       } else {
-        throw new STCRuntimeError("Don't know how to handle polymorphic "
+        throw new STCRuntimeError("Don't know how to handle"
             + " type " + expType);
       }
 

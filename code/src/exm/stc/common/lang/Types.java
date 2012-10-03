@@ -629,20 +629,24 @@ public class Types {
 
     private final ArrayList<SwiftType> inputs = new ArrayList<SwiftType>();
     private final ArrayList<SwiftType> outputs = new ArrayList<SwiftType>();
+    private final ArrayList<String> typeVars = new ArrayList<String>();
 
     /** if varargs is true, the final argument can be repeated many times */
     private final boolean varargs;
 
-
-    public FunctionType(List<SwiftType> inputs, List<SwiftType> outputs) {
-      this(inputs, outputs, false);
-    }
-
     public FunctionType(List<SwiftType> inputs, List<SwiftType> outputs,
-                                                        boolean varargs) {
+                                                boolean varargs) {
+      this(inputs, outputs, varargs, null);
+    }
+    public FunctionType(List<SwiftType> inputs, List<SwiftType> outputs,
+          boolean varargs, Collection<String> typeVars) {
       this.inputs.addAll(inputs);
       this.outputs.addAll(outputs);
       this.varargs = varargs;
+      if (typeVars != null) {
+        this.typeVars.addAll(typeVars);
+        Collections.sort(this.typeVars);
+      }
     }
 
     public List<SwiftType> getInputs() {
@@ -651,6 +655,10 @@ public class Types {
 
     public List<SwiftType> getOutputs() {
       return Collections.unmodifiableList(outputs);
+    }
+
+    public List<String> getTypeVars() {
+      return Collections.unmodifiableList(typeVars);
     }
 
     public boolean hasVarargs() {
@@ -859,6 +867,10 @@ public class Types {
     return type.getStructureType() == StructureType.TYPE_UNION;
   }
   
+  public static boolean isTypeVar(SwiftType type) {
+    return type.getStructureType() == StructureType.TYPE_VARIABLE;
+  }
+
   public static boolean isPolymorphic(SwiftType type) {
     return type.getStructureType() == StructureType.TYPE_UNION ||
         type.getStructureType() == StructureType.TYPE_VARIABLE;

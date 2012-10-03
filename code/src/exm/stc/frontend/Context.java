@@ -32,6 +32,11 @@ public abstract class Context {
   protected Map<String,Variable> variables = new HashMap<String,Variable>();
 
   /**
+   * Map from type name to the type object
+   */
+  protected Map<String, SwiftType> types = new HashMap<String, SwiftType>();
+  
+  /**
      True if this context scope has a visible parent scope
    */
   protected boolean nested = false;
@@ -240,8 +245,6 @@ public abstract class Context {
 
   abstract public void defineType(String typeName, SwiftType newType)
     throws DoubleDefineException;
-
-  public abstract Map<String, SwiftType> getCurrentTypeMapping();
 
   protected String buildPathStr(List<String> fieldPath) {
     StringBuilder build = new StringBuilder();
