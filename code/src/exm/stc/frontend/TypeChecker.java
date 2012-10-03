@@ -1,7 +1,6 @@
 package exm.stc.frontend;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -23,6 +22,7 @@ import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.OpType;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayType;
+import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.PrimType;
 import exm.stc.common.lang.Types.ReferenceType;
@@ -39,11 +39,11 @@ import exm.stc.common.lang.Variable;
  */
 public class TypeChecker {
 
-  public static List<SwiftType> findExprType(Context context, SwiftAST tree) 
+  public static ExprType findExprType(Context context, SwiftAST tree) 
       throws UserException {
     return findExprType(context, tree, null);
   }
-      
+  
   /**
    * Determine the expected type of an expression. If the expression is valid,
    * then this will return the type of the expression. If it is invalid, 
@@ -63,25 +63,24 @@ public class TypeChecker {
    * @return
    * @throws UserException
    */
-  public static List<SwiftType> findExprType(Context context, SwiftAST tree, 
-      List<SwiftType> expected)
+  public static ExprType findExprType(Context context, SwiftAST tree, 
+      ExprType expected)
       throws UserException {
     // Memoize this function to avoid recalculating type
-    List<SwiftType> cached = tree.getSwiftType();
+    ExprType cached = tree.getSwiftType();
     if (cached != null) {
       LogHelper.trace(context, "Expr has cached type " + cached.toString());
       return cached;
     } else {
-      List<SwiftType> calcedType = uncachedFindExprType(context, tree,
-                                                                 expected);
+      ExprType calcedType = uncachedFindExprType(context, tree, expected);
       tree.setSwiftType(calcedType);
       LogHelper.trace(context, "Expr found type " + calcedType.toString());
       return calcedType;
     }
   }
   
-  private static List<SwiftType> uncachedFindExprType(Context context, SwiftAST tree,
-      List<SwiftType> expected) throws UserException {
+  private static ExprType uncachedFindExprType(Context context, SwiftAST tree,
+      ExprType expected) throws UserException {
     int token = tree.getType();
     switch (token) {
     case ExMParser.CALL_FUNCTION:
@@ -97,7 +96,7 @@ public class TypeChecker {
           		"typevar for function yet");
         }
       }
-      return ftype.getOutputs();
+      return new ExprType(ftype.getOutputs());
     case ExMParser.VARIABLE: {
       Variable var = context.getDeclaredVariable(tree.child(0).getText());
       if (var == null) {
@@ -107,35 +106,35 @@ public class TypeChecker {
       SwiftType exprType = var.getType();
       if (Types.isScalarUpdateable(exprType)) {
         if (expected != null &&
-            expected.size() == 1 && Types.isScalarUpdateable(expected.get(0))) {
+            expected.elems() == 1 && Types.isScalarUpdateable(expected.get(0))) {
           // Keep type as updateable
         } else {
           // by default, coerce to future
           exprType = ScalarUpdateableType.asScalarFuture(exprType);
         }
       }
-      return Arrays.asList(exprType);
+      return new ExprType(exprType);
     }
     case ExMParser.INT_LITERAL:
-      if (expected != null && expected.size() == 1 && 
+      if (expected != null && expected.elems() == 1 && 
               expected.get(0).equals(Types.FUTURE_FLOAT)) {
         // interpret as float
-        return Arrays.asList(Types.FUTURE_FLOAT);
+        return new ExprType(Types.FUTURE_FLOAT);
       } else {
-        return Arrays.asList(Types.FUTURE_INTEGER);
+        return new ExprType(Types.FUTURE_INTEGER);
       }
     case ExMParser.FLOAT_LITERAL:
-      return Arrays.asList(Types.FUTURE_FLOAT);
+      return new ExprType(Types.FUTURE_FLOAT);
     case ExMParser.STRING_LITERAL:
-      return Arrays.asList(Types.FUTURE_STRING);
+      return new ExprType(Types.FUTURE_STRING);
     case ExMParser.BOOL_LITERAL:
-      return Arrays.asList(Types.FUTURE_BOOLEAN);
+      return new ExprType(Types.FUTURE_BOOLEAN);
     case ExMParser.OPERATOR:
       return findOperatorResultType(context, tree, expected);
     case ExMParser.STRUCT_LOAD:
-      List<SwiftType> structTypeL = findExprType(context, tree.child(0));
+      ExprType structTypeL = findExprType(context, tree.child(0));
       String fieldName = tree.child(1).getText();
-      if (structTypeL.size() != 1) {
+      if (structTypeL.elems() != 1) {
         throw new TypeMismatchException(context,
             "Trying to lookup field on return value of function with"
                 + " zero or multiple return values");
@@ -150,14 +149,14 @@ public class TypeChecker {
             + " in structure type " + ((StructType) structType).getTypeName());
       }
       if (Types.isStruct(structType)) {
-        return Arrays.asList(fieldType);
+        return new ExprType(fieldType);
       } else { assert(Types.isStructRef(structType));
-        return Arrays.asList(dereferenceResultType(fieldType));
+        return new ExprType(dereferenceResultType(fieldType));
       }
 
     case ExMParser.ARRAY_LOAD:
-      List<SwiftType> arrTypeL = findExprType(context, tree.child(0));
-      if (arrTypeL.size() != 1) {
+      ExprType arrTypeL = findExprType(context, tree.child(0));
+      if (arrTypeL.elems() != 1) {
         throw new TypeMismatchException(context,
             "Indexing into return value of"
                 + "function with zero or multiple return values");
@@ -179,7 +178,7 @@ public class TypeChecker {
       SwiftType resultType;
 
       resultType = dereferenceResultType(memberType);
-      return Arrays.asList(resultType);
+      return new ExprType(resultType);
     case ExMParser.ARRAY_RANGE: {
       // Check the arguments for type validity
       ArrayRange ar = ArrayRange.fromAST(context, tree);
@@ -192,7 +191,7 @@ public class TypeChecker {
         }
       }
       // Type is always the same: an array of integers
-      return Arrays.asList((SwiftType)new ArrayType(Types.FUTURE_INTEGER));
+      return new ExprType(new ArrayType(Types.FUTURE_INTEGER));
     }
     case ExMParser.ARRAY_ELEMS: {
       // Check to see all arguments have same type
@@ -212,7 +211,7 @@ public class TypeChecker {
             		+ " and " + elemType);
           }
         }
-        return Arrays.asList((SwiftType)new ArrayType(firstElemType));
+        return new ExprType(new ArrayType(firstElemType));
       }
     }
     default:
@@ -266,11 +265,10 @@ public class TypeChecker {
    */
   public static SwiftType findSingleExprType(Context context, SwiftAST tree, 
       SwiftType expType) throws UserException {
-    List<SwiftType> typeL = findExprType(context, tree,
-                           expType == null ? null : Arrays.asList(expType));
-    if (typeL.size() != 1) {
+    ExprType typeL = findExprType(context, tree, new ExprType(expType));
+    if (typeL.elems() != 1) {
       throw new TypeMismatchException(context, "Expected expression to have "
-          + " a single value, instead had " + typeL.size() + " values");
+          + " a single value, instead had " + typeL.elems() + " values");
     }
     return typeL.get(0);
   }
@@ -285,8 +283,8 @@ public class TypeChecker {
     }
   }
 
-  private static List<SwiftType> findOperatorResultType(Context context, SwiftAST tree,
-      List<SwiftType> expected) throws TypeMismatchException, UserException {
+  private static ExprType findOperatorResultType(Context context, SwiftAST tree,
+      ExprType expected) throws TypeMismatchException, UserException {
     String opName = extractOpName(tree);
 
     ArrayList<SwiftType> argTypes = new ArrayList<SwiftType>();
@@ -319,7 +317,7 @@ public class TypeChecker {
       }
     }
 
-    return Arrays.asList((SwiftType)new ScalarFutureType(opType.out));
+    return new ExprType(new ScalarFutureType(opType.out));
   }
 
 
@@ -340,7 +338,7 @@ public class TypeChecker {
    * @throws UserException
    */
   private static BuiltinOpcode getBuiltInFromOpTree(Context context, SwiftAST tree,
-      ArrayList<SwiftType> argTypes, List<SwiftType> expectedResult)
+      ArrayList<SwiftType> argTypes, ExprType expectedResult)
           throws TypeMismatchException,
       UserException {
     assert(tree.getType() == ExMParser.OPERATOR);
@@ -350,7 +348,7 @@ public class TypeChecker {
  
     PrimType allArgType;
     if (opType == ExMParser.NEGATE && expectedResult != null && 
-          expectedResult.size() == 1 
+          expectedResult.elems() == 1 
           && Types.isScalarFuture(expectedResult.get(0))) {
       // TODO: special case so that negative literals work as expected
       //      until we have more general handling of expected types

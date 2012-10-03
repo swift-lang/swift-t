@@ -732,6 +732,35 @@ public class Types {
     }
   }
 
+  /**
+   * Represents expression type.
+   * 
+   * Can have multiple elements because of multiple return valued functions
+   */
+  public static class ExprType {
+    private final ArrayList<SwiftType> types;
+
+    public ExprType(List<SwiftType> types) {
+      this.types = new ArrayList<SwiftType>(types);
+    }
+
+    public ExprType(SwiftType exprType) {
+      this.types = new ArrayList<SwiftType>(1);
+      this.types.add(exprType);
+    }
+
+    public List<SwiftType> getTypes() {
+      return Collections.unmodifiableList(types);
+    }
+    
+    public SwiftType get(int index) {
+      return types.get(index);
+    }
+
+    public int elems() {
+      return types.size();
+    }
+  }
   public static Map<String, SwiftType> getBuiltInTypes() {
     return Collections.unmodifiableMap(nativeTypes);
   }

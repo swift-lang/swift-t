@@ -52,6 +52,7 @@ import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.ReferenceType;
 import exm.stc.common.lang.Types.StructType;
@@ -1128,10 +1129,10 @@ public class ASTWalker {
       lValTypes.add(lval.getType(context));
     }
     
-    List<SwiftType> rValTypes = TypeChecker.findExprType(context, rValExpr,
-                                                                lValTypes);
-    if (rValTypes.size() != lVals.size()) {
-      throw new TypeMismatchException(context, "Needed " + rValTypes.size()
+    ExprType rValTs = TypeChecker.findExprType(context, rValExpr,
+                                               new ExprType(lValTypes));
+    if (rValTs.elems() != lVals.size()) {
+      throw new TypeMismatchException(context, "Needed " + rValTs.elems()
           + " " + "assignment targets on LHS of assignment, but "
           + lVals.size() + " were present");
     }
@@ -1143,7 +1144,7 @@ public class ASTWalker {
     for (int i = 0; i < lVals.size(); i++) {
       LValue lval = lVals.get(i);
       SwiftType lValType = lValTypes.get(i);
-      SwiftType rValType = rValTypes.get(i);
+      SwiftType rValType = rValTs.get(i);
       String targetName = lval.toString();
       TypeChecker.checkAssignment(context, rValType, lValType, targetName);
       backend.addComment("Swift l." + context.getLine() +
@@ -1510,15 +1511,15 @@ public class ASTWalker {
     assert (tree.getChildCount() == 1);
     SwiftAST expr = tree.child(0);
 
-    List<SwiftType> exprType = TypeChecker.findExprType(context, expr);
+    ExprType exprType = TypeChecker.findExprType(context, expr);
 
     backend.addComment("Swift l." + context.getLine() + " evaluating "
-        + " expression and throwing away " + exprType.size() +
+        + " expression and throwing away " + exprType.elems() +
         " results");
 
     // Need to create throwaway temporaries for return values
     List<Variable> oList = new ArrayList<Variable>();
-    for (SwiftType t : exprType) {
+    for (SwiftType t : exprType.getTypes()) {
       oList.add(varCreator.createTmp(context, t));
     }
 

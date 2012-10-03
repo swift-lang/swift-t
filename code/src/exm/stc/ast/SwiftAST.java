@@ -2,15 +2,13 @@ package exm.stc.ast;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.Collections;
-import java.util.List;
 import java.util.Stack;
 
 import org.antlr.runtime.Token;
 import org.antlr.runtime.tree.CommonTree;
 
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.ExprType;
 import exm.stc.frontend.VariableUsageInfo;
 
 /**
@@ -20,7 +18,7 @@ import exm.stc.frontend.VariableUsageInfo;
  */
 public class SwiftAST extends CommonTree {
   
-  private List<SwiftType> swiftType = null;
+  private ExprType exprType = null;
   private VariableUsageInfo variableUsage = null;
   
   public VariableUsageInfo getVariableUsage() {
@@ -40,12 +38,12 @@ public class SwiftAST extends CommonTree {
     this.variableUsage = variableUsage;
   }
 
-  public List<SwiftType> getSwiftType() {
-    return swiftType == null ? null : Collections.unmodifiableList(swiftType);
+  public ExprType getSwiftType() {
+    return exprType;
   }
 
-  public void setSwiftType(List<SwiftType> swiftType) {
-    this.swiftType = swiftType;
+  public void setSwiftType(ExprType exprType) {
+    this.exprType = exprType;
   }
   
   /**
