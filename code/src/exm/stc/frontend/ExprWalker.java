@@ -847,7 +847,25 @@ public class ExprWalker {
       }
     }
 
+    backendFunctionCall(context, function, oList, realIList, priorityVal);
 
+    if (waitContext != null) {
+      backend.endWaitStatement(new ArrayList<Variable>());
+    }
+  }
+
+  /**
+   * Generate backend instruction for function call
+   * @param context
+   * @param function name of function
+   * @param oList list of output variables
+   * @param iList list of input variables (with correct types)
+   * @param priorityVal optional priority value (can be null)
+   */
+  private void backendFunctionCall(Context context, String function,
+      List<Variable> oList, ArrayList<Variable> iList, Variable priorityVal) {
+    assert(priorityVal == null ||
+           priorityVal.getType().equals(Types.VALUE_INTEGER)); 
     Arg priority = priorityVal != null ? Arg.createVar(priorityVal) : null;
     FunctionType def = context.lookupFunction(function);
     if (def == null) {
@@ -858,11 +876,10 @@ public class ExprWalker {
       if (FunctionSemantics.hasOpEquiv(function)) {
         assert(oList.size() <= 1);
         Variable out = oList.size() == 0 ? null : oList.get(0);
-        //TODO: priority?
         backend.asyncOp(FunctionSemantics.getOpEquiv(function), out, 
-                        Arg.fromVarList(realIList), priority);
+                        Arg.fromVarList(iList), priority);
       } else {
-        backend.builtinFunctionCall(function, realIList, oList, priority);
+        backend.builtinFunctionCall(function, iList, oList, priority);
       }
     } else if (context.hasFunctionProp(function, FnProp.COMPOSITE)) {
       TaskMode mode;
@@ -871,18 +888,14 @@ public class ExprWalker {
       } else {
         mode = TaskMode.CONTROL;
       }
-      backend.functionCall(function, realIList, oList, null, 
+      backend.functionCall(function, iList, oList, null, 
           mode, priority);
     } else {
       assert(context.hasFunctionProp(function, FnProp.APP));
       // Execute app function wrapper locally (real work will
       //   be dispatched to worker by wrapper)
-      backend.functionCall(function, realIList, oList, null,
+      backend.functionCall(function, iList, oList, null,
               TaskMode.LOCAL, priority);
-    }
-
-    if (waitContext != null) {
-      backend.endWaitStatement(new ArrayList<Variable>());
     }
   }
 
