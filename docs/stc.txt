@@ -731,16 +731,9 @@ Configure Turbine with:
 === Performance enhancements
 
 1. Disable logging/debugging via environment
-+
-Use the environment variables.
-+
 2. Disable logging/debugging at configure/compile time
-** Configure c-utils with +--disable-log+
-** Configure ADLB with +NDEBUG+
-3. Disable asserts
 +
-Compile everything with +NDEBUG+
-
-
-
-
+** Configure c-utils with +--disable-log+
++
+3. Configure everything with +--enable-fast+. This disables assertions
+and other checks
