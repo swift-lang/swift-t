@@ -18,7 +18,7 @@ if [ -z ${ADLB_EXHAUST_TIME} ]; then
     export ADLB_EXHAUST_TIME=1
 fi
 
-while getopts "ck:n:p:vO:t:T:" OPTION
+while getopts "ck:n:p:VO:t:T:" OPTION
 do
   case ${OPTION}
     in
