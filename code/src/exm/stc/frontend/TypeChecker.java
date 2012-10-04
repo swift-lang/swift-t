@@ -665,8 +665,7 @@ public class TypeChecker {
     }
     throw new TypeMismatchException(context, "Cannot assign to "
         + lValName + ": LVal has type "
-        + lValType.toString() + " but RVal type " + rValType.toString()
-        + " was expected");
+        + lValType.toString() + " but RVal has type " + rValType.toString());
   }
 
   /**

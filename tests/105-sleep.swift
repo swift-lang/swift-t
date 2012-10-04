@@ -1,16 +1,15 @@
 #include "builtins.swift"
 
-// SKIP-THIS-TEST
-
-app (int o) s(int i)
+app (file o) s(int i)
 {
-  sleep i;
+  "sleep" i;
 }
 
 main
 {
   int k;
-  int m;
   k = 2;
-  (m) = s(k);
+  wait (s(k)) {
+    trace("DONE");
+  }
 }

@@ -1,9 +1,12 @@
 #include <builtins.swift>
+#include <assert.swift>
 
-
-//SKIP-THIS-TEST
 main {
-    blob x;
+    blob x = blob_from_string("hello world");
+    int res = f(x, x);
+    assertEqual(res, 1, "res");
+    string msg = string_from_blob(x);
+    assertEqual(msg, "hello world", "msg");
 }
 
 
