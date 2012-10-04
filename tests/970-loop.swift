@@ -1,7 +1,9 @@
 
 /*
  * Based on PIPS app
- * Exposes bug in placement of slot_drop instruction
+ *
+ * usage: 970-loop -N=... -C=...
+ * Number of loops is N x C
  */
 
 #include <builtins.swift>
@@ -11,10 +13,14 @@
 
 (float result[]) calc_cutoffs(float step)
 {
-  for (int i = 0; i < 10; i = i + 1)
+  float c = itof(count);
+  result[0] = 0.0;
+  foreach i in [1:count-2]
   {
-    result[i] = step*itof(i);
+    printf("i: %i", i);
+    result[i] = itof(i)/c;
   }
+  result[count-1] = 1.0;
 }
 
 main
@@ -25,22 +31,29 @@ main
   string dataPath = data + "4h_dump/uc_4h";
   string solutionPath = data + "primalsol_conv8";
   int nScenarios = toint(argv("N"));
+  int nCutoffs = toint(argv("C"));
 
   float cutoffs[] = calc_cutoffs(0.1);
 
   foreach cutoff in cutoffs
   {
-    float r = 2.0 * cutoff;
+    printf("cutoff: %0.5f", cutoff);
 
-    float v[];
+    float r = 2.0 * cutoff;
+    float A[];
     foreach i in [0 : nScenarios-1]
     {
-      v[i] = itof(i) + r;
+      // Create some artificial work
+      void v = sleep(1);
+      int z = zero(v);
+      A[i] = itof(i) + r + itof(z);
+      printf("scenario: %0.4f %i", cutoff, i);
     }
-    float result = sum_float(v);
+    float result = sum_float(A);
   }
 
   // Output some metadata
   int procs = adlb_servers() + turbine_engines() + turbine_workers();
   printf("procs: %i", procs);
+  metadata(sprintf("procs: %i", procs));
 }
