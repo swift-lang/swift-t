@@ -1,7 +1,6 @@
 package exm.stc.frontend;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -393,20 +392,19 @@ public class TypeChecker {
    */
   public static List<SwiftType> typeIntersection(List<SwiftType> types) {
     assert(types.size() > 0);
+    // Shortcircuit common cases
+    if (types.size() == 1 ||
+        (types.size() == 2 && types.get(0).equals(types.get(1)))) {
+      return UnionType.getAlternatives(types.get(0));
+    }
     
     Set<SwiftType> intersection = null;
     for (SwiftType argType: types) {
-      if (Types.isUnion(argType)) {
-        List<SwiftType> alts = ((UnionType)argType).getAlternatives();
-        if (intersection == null) {
-          intersection = new HashSet<SwiftType>();
-          intersection.addAll(alts);
-        } else {
-          intersection.retainAll(alts);
-        }
+      if (intersection == null) {
+        intersection = new HashSet<SwiftType>();
+        intersection.addAll(UnionType.getAlternatives(argType));
       } else {
-        // Shortcircuit: only one possible type
-        intersection = Collections.singleton(argType);
+        intersection.retainAll(UnionType.getAlternatives(argType));
       }
     }
     
@@ -529,35 +527,22 @@ public class TypeChecker {
 
   /**
    * 
-   * @param funArgType
-   * @param varType
+   * @param formalArgType
+   * @param argExprType
    * @return (selected type of argument, selected type of variable)
    */
   public static Pair<SwiftType, SwiftType> 
-        whichAlternativeType(SwiftType funArgType, SwiftType varType) {
+        whichAlternativeType(SwiftType formalArgType, SwiftType argExprType) {
     /*
      * Handles cases where both function formal argument type and expression type
      * are union types.  In case of multiple possibilities prefers picking first
      * alternative in expression type, followed by first formal argument alternative
      */
-    List<SwiftType> varTypes;
-    if (Types.isUnion(varType)) {
-      varTypes = ((UnionType)varType).getAlternatives();
-    } else {
-      varTypes = Collections.singletonList(varType);
-    }
-    
-    for (SwiftType varTypeChoice: varTypes) {
+    for (SwiftType argExprAlt: UnionType.getAlternatives(argExprType)) {
       // Handle if argument type is union.
-      Collection<SwiftType> alts;
-      if (Types.isUnion(funArgType)) {
-        alts = ((UnionType)funArgType).getAlternatives();
-      } else {
-        alts = Collections.singleton(funArgType);
-      }
-      for (SwiftType alt: alts) {
-        if (compatibleArgTypes(alt, varTypeChoice)) {
-          return Pair.create(alt, varTypeChoice);
+      for (SwiftType formalArgAlt: UnionType.getAlternatives(formalArgType)) {
+        if (compatibleArgTypes(formalArgAlt, argExprAlt)) {
+          return Pair.create(formalArgAlt, argExprAlt);
         }
       }
     }
