@@ -10,12 +10,15 @@
 # 0 means NOT SET
 # NOTFOUND means FILE NOT FOUND
 
+define([turbine_version],
+       regexp(esyscmd(cat version.txt),[\([.0-9]*\)],[\1]))
+
 AC_PREREQ([2.62])
-AC_INIT([Turbine], [esyscmd(cat version.txt)], [wozniak@mcs.anl.gov])
+AC_INIT([Turbine], [turbine_version()], [wozniak@mcs.anl.gov])
 AC_CONFIG_SRCDIR([src/turbine/turbine.c])
 AC_CONFIG_HEADERS([config.h])
 
-TURBINE_VERSION=$( cat version.txt )
+TURBINE_VERSION=turbine_version()
 AC_MSG_RESULT([Turbine version: ${TURBINE_VERSION}])
 AC_SUBST(TURBINE_VERSION)
 
@@ -210,7 +213,7 @@ AC_ARG_WITH(mpi-lib-name,
                  ],
                  [
                   if test "$USE_MPI_LIB_DIR" != 0; then
-                    FILE=${USE_MPI_LIB_DIR}/libmpich.a
+                    FILE=${USE_MPI_LIB_DIR}/libmpich.${SO_SUFFIX}
                     AC_CHECK_FILE(${FILE},
                     [], [USE_MPI_LIB_NAME=NOTFOUND])
                     if test "$USE_MPI_LIB_NAME" = NOTFOUND ; then
