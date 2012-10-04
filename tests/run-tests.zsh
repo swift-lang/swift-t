@@ -70,21 +70,26 @@ crash()
 
 export STC_TESTS_DIR=$( cd $( dirname $0 ) ; /bin/pwd )
 STC_ROOT_DIR=$( dirname $STC_TESTS_DIR )
-STC_TRIES=( ${STC_ROOT_DIR}/code/bin/stc ${STC_ROOT_DIR}/bin/stc )
+STC_TRIES=( ${STC_ROOT_DIR}/code ${STC_ROOT_DIR} )
 STC=""
-for F in ${STC_TRIES}
+for D in ${STC_TRIES}
 do
-  if [[ -x ${F} ]]
+  if [[ -x ${D}/bin/stc && -r ${D}/conf/stc-env.sh ]]
     then
-    STC=${F}
+    STC=${D}/bin/stc
     break
   fi
 done
 if [[ ${STC} == "" ]]
 then
+  STC=$( which stc )
+fi
+if [[ ${STC} == "" ]]
+then
   print "Could not find STC!"
   exit 1
 fi
+print "using stc: ${STC}\n"
 
 RUN_TEST=${STC_TESTS_DIR}/run-test.zsh
 
