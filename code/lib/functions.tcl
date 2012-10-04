@@ -277,10 +277,10 @@ namespace eval turbine {
     }
 
     proc check_str_int { input } {
-      if { ! [ string is integer $input ] } {
-        error "could not convert string '${input}' to integer"
-      }
-      return $input
+       if { ! [ string is integer -strict $input ] } {
+          error "could not convert string '${input}' to integer"
+       }
+       return $input
     }
 
     proc fromint { stack result input } {
@@ -479,3 +479,8 @@ namespace eval turbine {
         store_integer $output 0
     }
 }
+
+# Local Variables:
+# mode: tcl
+# tcl-indent-level: 4
+# End:
