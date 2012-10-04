@@ -6,7 +6,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -380,28 +379,20 @@ public class TypeChecker {
       argTypes.add(findSingleExprType(context, argTree));
     }
 
-    // We assume that all arguments to operator should have same type. 
-    Set<SwiftType> intersection = typeIntersection(argTypes);
-    
-    // Make sure in right order
-    ArrayList<SwiftType> result = 
-        new ArrayList<SwiftType>(UnionType.getAlternatives(argTypes.get(0)));
-    ListIterator<SwiftType> resultIt = result.listIterator();
-    while (resultIt.hasNext()) {
-      if (!intersection.contains(resultIt.next())) {
-        resultIt.remove();
-      }
-    }
-    return result;
+    // We assume that all arguments to operator should have same type.
+    return typeIntersection(argTypes);
   }
 
   /**
    * Find the intersection of a list of types where each element
    * is either a UnionType or a different non-union type
    * @param types
-   * @return
+   * @return a list of types in intersection, in order of appearance in
+   *         first type
    */
-  public static Set<SwiftType> typeIntersection(List<SwiftType> types) {
+  public static List<SwiftType> typeIntersection(List<SwiftType> types) {
+    assert(types.size() > 0);
+    
     Set<SwiftType> intersection = null;
     for (SwiftType argType: types) {
       if (Types.isUnion(argType)) {
@@ -417,7 +408,15 @@ public class TypeChecker {
         intersection = Collections.singleton(argType);
       }
     }
-    return intersection;
+    
+    // Make sure alternatives in original order
+    ArrayList<SwiftType> result = new ArrayList<SwiftType>();
+    for (SwiftType alt: UnionType.getAlternatives(types.get(0))) {
+      if (intersection.contains(alt)) {
+        result.add(alt);
+      }
+    }
+    return result;
   }
 
 

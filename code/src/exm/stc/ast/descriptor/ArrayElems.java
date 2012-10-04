@@ -3,7 +3,6 @@ package exm.stc.ast.descriptor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
@@ -64,7 +63,7 @@ public class ArrayElems {
       memberTypes.add(TypeChecker.findSingleExprType(context, elem));
     }
     
-    Set<SwiftType> possibleTypes = TypeChecker.typeIntersection(memberTypes);
+    List<SwiftType> possibleTypes = TypeChecker.typeIntersection(memberTypes);
     if (possibleTypes.size() == 0) {
       throw new TypeMismatchException(context, "Elements in array" +
           " constructor have incompatible types: " + memberTypes.toString());
