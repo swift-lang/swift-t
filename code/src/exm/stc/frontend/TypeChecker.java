@@ -33,6 +33,7 @@ import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Variable;
+import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 
 /**
@@ -475,7 +476,7 @@ public class TypeChecker {
 
 
   private static void checkFunctionOutputs(Context context, List<SwiftType> types,
-      List<Variable> outputs, Map<String, SwiftType> typeVarBindings,
+      List<Variable> outputs, MultiMap<String, SwiftType> typeVarBindings,
       String errContext) throws TypeMismatchException {
     // Type system is simple enough that we just check the types match exactly
     typeCheckIdentical(context, types, outputs, errContext);
@@ -594,7 +595,7 @@ public class TypeChecker {
    * @throws TypeMismatchException
    */
   private static List<SwiftType> checkFunctionInputs(Context context, FunctionType ftype,
-      List<Variable> inputs, Map<String, SwiftType> typeVarBindings,
+      List<Variable> inputs, MultiMap<String, SwiftType> typeVarBindings,
       String errContext) throws TypeMismatchException {
     List<SwiftType> types = ftype.getInputs();
     if (!ftype.hasVarargs()) {
@@ -639,12 +640,10 @@ public class TypeChecker {
       List<Variable> oList, List<Variable> iList) 
           throws TypeMismatchException,UndefinedFunctionException {
     FunctionType ftype = context.lookupFunction(function);
-    //TODO: auto-convert int lit args to float lit args (this requires
-    //      changes in called)
     if (ftype == null) {
       throw UndefinedFunctionException.unknownFunction(context, function);
     }
-    Map<String, SwiftType> typeVarBindings = typeVarBindings(ftype);
+    MultiMap<String, SwiftType> typeVarBindings = typeVarBindings(ftype);
     checkFunctionOutputs(context, ftype.getOutputs(), oList, typeVarBindings,
           " in returns for call to function " + function);
     return checkFunctionInputs(context, ftype, iList, typeVarBindings,
@@ -690,12 +689,45 @@ public class TypeChecker {
    * @param ftype
    * @return
    */
-  public static Map<String, SwiftType> typeVarBindings(FunctionType ftype) {
-    Map<String, SwiftType> typeVarBindings = new HashMap<String, SwiftType>();
-    for (String typeVar: ftype.getTypeVars()) {
-      typeVarBindings.put(typeVar, null);
+  public static MultiMap<String, SwiftType> typeVarBindings(FunctionType ftype) {
+    return new MultiMap<String, SwiftType>();
+  }
+  
+  /**
+   * 
+   * @param candidates MultiMap, with possible bindings for each type variable
+   * @return
+   * @throws TypeMismatchException
+   */
+  public static Map<String, SwiftType> unifyTypeVarBindings(
+      Context context, String function, List<String> typeVars,
+      MultiMap<String, SwiftType> candidates)
+      throws TypeMismatchException {
+    HashMap<String, SwiftType> concrete = new HashMap<String, SwiftType>();
+    /* Check whether type variables were left unbound */
+    for (String typeVar: typeVars) {
+      List<SwiftType> cands = candidates.get(typeVar);
+      if (cands == null || cands.size() == 0) {
+        LogHelper.warn(context, "Type variable " + typeVar + " for call to " +
+        		"function " + function + " was unbound");
+      } else {
+        List<SwiftType> intersection = typeIntersection(cands);
+        if (intersection.size() == 0) {
+          throw new TypeMismatchException(context, 
+              "Type variable " + typeVar + " for call to function " +
+              function + " could not be bound: no consistent type between " +
+              " types: " + candidates);
+        }
+        SwiftType chosen = intersection.get(0);
+        if (intersection.size() > 1) {
+          LogHelper.warn(context, "Type variable " + typeVar + " for call " +
+              "to function " + function + " had multiple valid bindings: " +
+              intersection + ".  Chose " + chosen);
+        }
+        concrete.put(typeVar, chosen);
+      }
     }
-    return typeVarBindings;
+    return concrete;
   }
 
 }

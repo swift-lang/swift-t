@@ -38,6 +38,7 @@ import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.util.MultiMap;
 import exm.stc.frontend.Context.FnProp;
 
 /**
@@ -423,7 +424,7 @@ public class ExprWalker {
     }
     
     // Keep track of what concrete types type vars are bound to
-    Map<String, SwiftType> typeVars = TypeChecker.typeVarBindings(ftype);
+    MultiMap<String, SwiftType> typeVars = TypeChecker.typeVarBindings(ftype);
     
     if (arglist.getChildCount() > 0 && ftype.getInputs().size() == 0) {
       throw new TypeMismatchException(context, "Argument provided to " +
