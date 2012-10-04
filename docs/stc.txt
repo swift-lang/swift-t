@@ -266,7 +266,7 @@ and +A+ is assigned in partes.  Code that attempts to do both is in error.
 Arrays may be used as inputs or outputs of functions.
 
 Arrays are part of Swift dataflow semantics. An array is closed
-when all possible insertions to it are complete.  
+when all possible insertions to it are complete.
 ----
 (int B[]) f(int j)
 {
@@ -608,7 +608,7 @@ If condition is false, report +message+ and exit immediately.
 +turbine_engines() -> int+:: Number of Turbine engines
 +turbine_workers() -> int+:: Number of Turbine workers
 
-=== Files 
+=== Files
 
 TODO: filename, etc
 
@@ -619,20 +619,20 @@ application are not written in the Swift language.  Rather,
 the work is done by _leaf functions_ that are _composed_ together with
 Swift code.  Leaf functions may be extension or app functions.
 The builtin functions mentioned above are implemented as extension
-functions in TCL.
+functions in Tcl.
 
 === Swift extension functions
 
-Currently we support TCL extension functions, where a function is implemented
-as a TCL function.  TCL has good support for wrapping native C/C\++ functions,
+Currently we support Tcl extension functions, where a function is implemented
+as a Tcl function.  Tcl has good support for wrapping native C/C\++ functions,
 so this provides an indirect way to call C/C++ functions from Swift.
 
-Several components are required to implement a TCL extension:
+Several components are required to implement a Tcl extension:
 
--  A TCL function that supports Swift/T argument passing conventions
--  The requisite files required to build a TCL package (e.g pkgIndex.tcl)
+-  A Tcl function that supports Swift/T argument passing conventions
+-  The requisite files required to build a Tcl package (e.g pkgIndex.tcl)
 -  Swift declarations for the function that specify the type of the function
-    and the package/function name of the TCL function
+    and the package/function name of the Tcl function
 
 === App functions
 
