@@ -4,12 +4,18 @@
 #  turbine-cobalt -n <PROCS> [-e <ENV>]* [-o <OUTPUT>] -t <WALLTIME>
 #                 <SCRIPT> [<ARG>]*
 
-# Variables that may have defaults set in the environment:
-# PROJECT, QUEUE, TURBINE_OUTPUT_ROOT
+# Variables that may be set in the environment:
+# PROJECT, QUEUE, TURBINE_OUTPUT_ROOT, TURBINE_MACHINE, TURBINE_PPN
+
+# On the BG/P, usually set TURBINE_PPN=4  (default 4)
+# On the BG/Q, usually set TURBINE_PPN=16 (default 4)
 
 # Runs job in TURBINE_OUTPUT
 # Pipes output and error to TURBINE_OUTPUT/output.txt
 # Creates TURBINE_OUTPUT/log.txt and TURBINE_OUTPUT/jobid.txt
+
+# Convention note: This script uses -n <processes>
+#                  Cobalt qsub uses -n <nodes>
 
 TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 declare TURBINE_HOME
@@ -106,6 +112,7 @@ ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME:-5}
 TURBINE_LOG=${TURBINE_LOG:-1}
 TURBINE_DEBUG=${TURBINE_DEBUG:-1}
 ADLB_DEBUG=${ADLB_DEBUG:-1}
+TURBINE_PPN=${TURBINE_PPN:-4}
 
 env+=( TCLLIBPATH="${TCLLIBPATH}"
        TURBINE_ENGINES=${TURBINE_ENGINES}
@@ -117,13 +124,28 @@ env+=( TCLLIBPATH="${TCLLIBPATH}"
        ADLB_DEBUG=${ADLB_DEBUG}
        MPIRUN_LABEL=1
        TURBINE_CACHE_SIZE=0
-)
+     )
+
+if [[ ${TURBINE_BG} == "Q" ]]
+then
+  env+=( BG_SHAREDMEMSIZE=32MB
+         PAMID_VERBOSE=1
+       )
+fi
 
 declare SCRIPT_NAME
 
+# Default: works on BG/P
+MODE="--mode vn"
+if [[ ${TURBINE_BG} == "Q" ]]
+then
+  # On the BG/Q, we need TURBINE_PPN: default 1
+  MODE="--proccount ${PROCS} --mode c${TURBINE_PPN}"
+fi
+
 # Round NODES up for extra processes
-NODES=$(( PROCS/4 ))
-(( PROCS % 4 )) && (( NODES++ ))
+NODES=$(( PROCS/TURBINE_PPN ))
+(( PROCS % TURBINE_PPN )) && (( NODES++ ))
 declare NODES
 
 # Launch it
@@ -132,7 +154,7 @@ qsub -n ${NODES}             \
      -q ${QUEUE}             \
      --cwd ${TURBINE_OUTPUT} \
      --env "${ENV}"          \
-     --mode vn               \
+     ${=MODE}                 \
      -o ${TURBINE_OUTPUT}/output.txt \
      -e ${TURBINE_OUTPUT}/output.txt \
       ${TCLSH} ${SCRIPT_NAME} ${ARGS} | read JOB_ID
