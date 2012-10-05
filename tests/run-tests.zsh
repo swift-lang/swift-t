@@ -108,17 +108,17 @@ compile_test()
 run_test()
 # Run test under Turbine/MPI
 {
-  SETUP_SCRIPT=${SWIFT_FILE%.swift}.setup.sh
-  CHECK_SCRIPT=${SWIFT_FILE%.swift}.check.sh
+  SETUP_SCRIPT=${TEST_PATH}.setup.sh
+  CHECK_SCRIPT=${TEST_PATH}.check.sh
 
   SETUP_OUTPUT=${SETUP_SCRIPT%.sh}.out
   CHECK_OUTPUT=${CHECK_SCRIPT%.sh}.out
-  EXP_OUTPUT=${SWIFT_FILE%.swift}.exp
+  EXP_OUTPUT=${TEST_PATH}.exp
   TURBINE_OUTPUT=${TCL_FILE%.tcl}.out
   export TURBINE_OUTPUT
 
   ARGS=""
-  ARGS_FILE=${SWIFT_FILE%.swift}.args
+  ARGS_FILE=${TEST_PATH}.args
 
   # Set up the test
   if [ -x ${SETUP_SCRIPT} ]
@@ -184,13 +184,15 @@ run_test()
 
 report_result()
 {
-  local EXIT_CODE=$1
+  local TEST_PATH=$1
+  local EXIT_CODE=$2
 
   if (( EXIT_CODE == 0 ))
   then
     printf "PASSED\n\n"
   else
     printf "FAILED\n\n"
+    FAILED_TESTS+=${TEST_PATH}
     if (( EXIT_ON_FAIL ))
       then
       print "EXIT CODE: ${EXIT_CODE}"
@@ -202,9 +204,12 @@ report_result()
 TEST_COUNT=0
 SWIFT_FILES=( ${STC_TESTS_DIR}/*.swift )
 SWIFT_FILE_TOTAL=${#SWIFT_FILES}
+FAILED_TESTS=()
 for (( i=1 ; i<=SWIFT_FILE_TOTAL ; i++ ))
 do
   SWIFT_FILE=${SWIFT_FILES[i]}
+  TEST_PATH=${SWIFT_FILE%.swift}
+  TEST_NAME=$( basename ${TEST_PATH} )
 
   if (( SKIP_COUNT ))
   then
@@ -231,11 +236,11 @@ do
   fi
 
   (( TEST_COUNT++ ))
-  TCL_FILE=${SWIFT_FILE%.swift}.tcl
-  STC_OUT_FILE=${SWIFT_FILE%.swift}.stc.out
-  STC_ERR_FILE=${SWIFT_FILE%.swift}.stc.err
-  STC_LOG_FILE=${SWIFT_FILE%.swift}.stc.log
-  STC_IC_FILE=${SWIFT_FILE%.swift}.ic
+  TCL_FILE=${TEST_PATH}.tcl
+  STC_OUT_FILE=${TEST_PATH}.stc.out
+  STC_ERR_FILE=${TEST_PATH}.stc.err
+  STC_LOG_FILE=${TEST_PATH}.stc.log
+  STC_IC_FILE=${TEST_PATH}.ic
 
   print "test: ${TEST_COUNT} (${i}/${SWIFT_FILE_TOTAL})"
   compile_test
@@ -266,10 +271,12 @@ do
     EXIT_CODE=${?}
   fi
 
-  report_result ${EXIT_CODE}
+  report_result ${TEST_NAME} ${EXIT_CODE} 
 done
 
 print -- "--"
 print "tests: ${TEST_COUNT}"
-
+if [ "${FAILED_TESTS}" != "" ]; then
+    print "failed tests: ${#FAILED_TESTS} (${FAILED_TESTS})"
+fi
 exit 0
