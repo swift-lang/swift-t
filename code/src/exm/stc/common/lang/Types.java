@@ -82,6 +82,11 @@ public class Types {
       return null;
     }
 
+    @Override
+    public boolean hasTypeVar() {
+      return memberType.hasTypeVar();
+    }
+
   }
 
   public enum PrimType
@@ -170,6 +175,11 @@ public class Types {
         return referencedType.matchTypeVars(concreteMember);
       }
       return null;
+    }
+
+    @Override
+    public boolean hasTypeVar() {
+      return referencedType.hasTypeVar();
     }
   }
 
@@ -300,6 +310,16 @@ public class Types {
         return null;
       }
     }
+
+    @Override
+    public boolean hasTypeVar() {
+      for (StructField field: fields) {
+        if (field.type.hasTypeVar()) {
+          return true;
+        }
+      }
+      return false;
+    }
   }
 
   public static class ScalarValueType extends SwiftType {
@@ -361,6 +381,11 @@ public class Types {
       } else {
         return null;
       }
+    }
+
+    @Override
+    public boolean hasTypeVar() {
+      return false;
     }
   }
 
@@ -427,6 +452,11 @@ public class Types {
       } else {
         return null;
       }
+    }
+
+    @Override
+    public boolean hasTypeVar() {
+      return false;
     }
   }
 
@@ -501,6 +531,11 @@ public class Types {
       } else {
         return null;
       }
+    }
+
+    @Override
+    public boolean hasTypeVar() {
+      return false;
     }
   }
   
@@ -651,6 +686,16 @@ public class Types {
       throw new STCRuntimeError("Not yet implemented: matching typevars for"
           + " union types");
     }
+
+    @Override
+    public boolean hasTypeVar() {
+      for (SwiftType alt: alts) {
+        if (alt.hasTypeVar()) {
+          return true;
+        }
+      }
+      return false;
+    }
   }
   
   /**
@@ -679,6 +724,7 @@ public class Types {
       return typeVarName;
     }
     
+    @Override
     public String getTypeVarName() {
       return typeVarName;
     }
@@ -714,6 +760,11 @@ public class Types {
     @Override
     public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
       return Collections.singletonMap(typeVarName, concrete);
+    }
+
+    @Override
+    public boolean hasTypeVar() {
+      return true;
     }
   }
   
@@ -780,6 +831,11 @@ public class Types {
     @Override
     public abstract int hashCode();
 
+    /**
+     * Bind any type variables provided in map
+     * @param vals type variable bindings
+     * @return new type with bound variables
+     */
     public abstract SwiftType bindTypeVars(Map<String, SwiftType> vals);
     
     /**
@@ -787,6 +843,16 @@ public class Types {
      * and return the type var binding. Returns null if types can't be matched
      */
     public abstract Map<String, SwiftType> matchTypeVars(SwiftType concrete);
+    
+    /**
+     * @return true if any type variables in type
+     */
+    public abstract boolean hasTypeVar();
+
+    public String getTypeVarName() {
+      throw new STCRuntimeError("getTypeVarName not supported for type "
+                              + toString());
+    }
   }
 
   /**
@@ -915,6 +981,20 @@ public class Types {
     public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
       throw new STCRuntimeError("Not yet implemented: matching typevars for"
           + " function types");
+    }
+    @Override
+    public boolean hasTypeVar() {
+      for (SwiftType input: inputs) {
+        if (input.hasTypeVar()) {
+          return true;
+        }
+      }
+      for (SwiftType output: outputs) {
+        if (output.hasTypeVar()) {
+          return true;
+        }
+      }
+      return false;
     }
   }
 

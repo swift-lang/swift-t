@@ -1526,7 +1526,7 @@ public class ASTWalker {
   }
 
 
-  private void defineBuiltinFunction(Context global, SwiftAST tree)
+  private void defineBuiltinFunction(Context context, SwiftAST tree)
   throws UserException
   {
     final int REQUIRED_CHILDREN = 7;
@@ -1537,16 +1537,15 @@ public class ASTWalker {
     SwiftAST inputs  = tree.child(3);
     assert(inputs.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
     assert(outputs.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
-    String pkg     = Literals.extractLiteralString(global, tree.child(4));
-    String version = Literals.extractLiteralString(global,
+    String pkg     = Literals.extractLiteralString(context, tree.child(4));
+    String version = Literals.extractLiteralString(context,
                                                         tree.child(5));
-    String symbol  = Literals.extractLiteralString(global, tree.child(6));
+    String symbol  = Literals.extractLiteralString(context, tree.child(6));
     
     Set<String> typeParams = extractTypeParams(typeParamsT);
-    
-    // Define new context for function (only for type parameters)
-    LocalContext context = new LocalContext(global, function);
-    FunctionDecl fdecl = FunctionDecl.fromAST(context, inputs, outputs, typeParams);
+
+    FunctionDecl fdecl = FunctionDecl.fromAST(context, function, inputs,
+                                              outputs, typeParams);
     
     FunctionType ft = fdecl.getFunctionType();
     LogHelper.debug(context, "builtin: " + function + " " + ft);
@@ -1584,8 +1583,8 @@ public class ASTWalker {
       handleFunctionAnnotation(context, function, tree.child(i));
       i--;
     }
-    global.defineFunction(function, ft);
-    global.setFunctionProperty(function, FnProp.BUILTIN);
+    context.defineFunction(function, ft);
+    context.setFunctionProperty(function, FnProp.BUILTIN);
     backend.defineBuiltinFunction(function, pkg, version, symbol, ft, inlineTcl);
   }
 
@@ -1673,8 +1672,8 @@ public class ASTWalker {
     
     List<String> annotations = extractFunctionAnnotations(context, tree, 4);
     
-    FunctionDecl fdecl = FunctionDecl.fromAST(context, inputs, outputs,
-                                              Collections.<String>emptySet());
+    FunctionDecl fdecl = FunctionDecl.fromAST(context, function, inputs,
+                          outputs, Collections.<String>emptySet());
     FunctionType ft = fdecl.getFunctionType();
     
     if (ft.hasVarargs()) {
@@ -1746,8 +1745,8 @@ public class ASTWalker {
     SwiftAST inputs = tree.child(2);
     SwiftAST block = tree.child(3);
 
-    FunctionDecl fdecl = FunctionDecl.fromAST(context, inputs, outputs,
-                                    Collections.<String>emptySet());
+    FunctionDecl fdecl = FunctionDecl.fromAST(context, function, 
+                  inputs, outputs, Collections.<String>emptySet());
     
     List<Variable> iList = fdecl.getInVars();
     List<Variable> oList = fdecl.getOutVars();
@@ -1822,8 +1821,8 @@ public class ASTWalker {
     SwiftAST inArgsT = tree.child(2);
     SwiftAST cmdT = tree.child(3);
     
-    FunctionDecl decl = FunctionDecl.fromAST(context, inArgsT, outArgsT,
-                                        Collections.<String>emptySet());
+    FunctionDecl decl = FunctionDecl.fromAST(context, function, inArgsT,
+                        outArgsT,   Collections.<String>emptySet());
     context.defineFunction(function, decl.getFunctionType());
     context.setFunctionProperty(function, FnProp.APP);
     List<Variable> outArgs = decl.getOutVars();

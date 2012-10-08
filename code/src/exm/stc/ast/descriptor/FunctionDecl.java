@@ -64,11 +64,11 @@ public class FunctionDecl {
     }
   }
 
-  public static FunctionDecl fromAST(Context context, SwiftAST inArgTree, 
-                              SwiftAST outArgTree, Set<String> typeParams)
+  public static FunctionDecl fromAST(Context context, String function,
+                 SwiftAST inArgTree, SwiftAST outArgTree, Set<String> typeParams)
        throws TypeMismatchException, UndefinedTypeException,
               InvalidSyntaxException, DoubleDefineException {
-    LocalContext typeVarContext = new LocalContext(context);
+    LocalContext typeVarContext = new LocalContext(context, function);
 
     for (String typeParam: typeParams) {
       typeVarContext.defineType(typeParam, new TypeVariable(typeParam));
@@ -96,7 +96,7 @@ public class FunctionDecl {
     ArrayList<String> outNames = new ArrayList<String>();
     ArrayList<SwiftType> outArgTypes = new ArrayList<SwiftType>();
     for (int i = 0; i < outArgTree.getChildCount(); i++) {
-      ArgDecl argInfo = extractArgInfo(context, outArgTree.child(i));
+      ArgDecl argInfo = extractArgInfo(typeVarContext, outArgTree.child(i));
       if (argInfo.varargs) {
         throw new TypeMismatchException(context, "cannot have variable" +
         		" argument specifier ... in output list");

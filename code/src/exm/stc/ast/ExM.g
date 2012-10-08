@@ -218,9 +218,16 @@ builtin_function_definition:
 
 type_parameters:
         /* empty */ -> ^( TYPE_PARAMETERS )   
-    |   LT ID* GT -> ^( TYPE_PARAMETERS ID* )
+    |   LT id_list GT -> ^( TYPE_PARAMETERS id_list )
     ;
-
+    
+id_list:
+        ID id_list_more
+    ;
+id_list_more:
+        /* empty */
+    |   COMMA id_list -> id_list
+    ;
 inline_tcl:
     LSQUARE tcl=STRING RSQUARE -> ^( INLINE_TCL $tcl );
 

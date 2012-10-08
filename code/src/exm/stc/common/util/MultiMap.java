@@ -25,7 +25,7 @@ public class MultiMap<K, V> {
   public MultiMap() {
     this(new ArrayListFactory<V>());
   }
-  
+
   public MultiMap(ListFactory<V> f) {
     this.factory = f;
   }
@@ -106,7 +106,11 @@ public class MultiMap<K, V> {
   public boolean isDefinitelyEmpty() {
     return map.isEmpty();
   }
-  
+
+  @Override
+  public String toString() {
+    return map.toString();
+  }  
   
   public static interface ListFactory<V1> {
     public List<V1> make();

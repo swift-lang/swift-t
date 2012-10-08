@@ -267,10 +267,25 @@ do
 
   if (( ! COMPILE_CODE ))
   then
-    run_test
-    EXIT_CODE=${?}
+    if grep -q "COMPILE-ONLY-TEST" ${SWIFT_FILE}
+    then
+        EXIT_CODE=0
+    else
+        run_test
+        EXIT_CODE=${?}
+    fi
   fi
 
+  if grep -q "THIS-TEST-SHOULD-CAUSE-WARNING" ${SWIFT_FILE}
+  then
+    if grep -q "^WARN" ${STC_ERR_FILE}
+    then
+        :
+    else
+        EXIT_CODE=1
+        printf "No warning in stc output\n"
+    fi
+  fi
   report_result ${TEST_NAME} ${EXIT_CODE} 
 done
 

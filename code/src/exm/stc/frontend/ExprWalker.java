@@ -405,7 +405,7 @@ public class ExprWalker {
       List<Variable> oList, Map<String, String> renames) throws UserException {
     FunctionCall f = FunctionCall.fromAST(context, tree);
     FunctionType concrete = TypeChecker.concretiseFunctionCall(context,
-                                f.function(), f.type(), f.args(), oList); 
+                                f.function(), f.type(), f.args(), oList, false); 
     
     try {
       // If this is an assert statement, disable it
@@ -783,10 +783,7 @@ public class ExprWalker {
         derefVars.add(derefed);
         realIList.add(derefed);
       } else if (Types.isUpdateableEquiv(inputType, expType)) {
-        if (waitContext == null) {
-          waitContext = new LocalContext(context);
-        }
-        realIList.add(snapshotUpdateable(waitContext, input));
+        realIList.add(snapshotUpdateable(context, input));
       } else {
         throw new STCRuntimeError(context.getFileLine() + 
                 " Shouldn't be here, don't know how to "

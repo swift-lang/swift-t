@@ -1,7 +1,5 @@
 #include <builtins.swift>
-// SKIP-THIS-TEST
-// THIS-TEST-SHOULD-NOT-RUN
-// (but it should compile)
+// COMPILE-ONLY-TEST 
 
 <T>
 (T x) f (T y) "package" "0.0.0" "f";
