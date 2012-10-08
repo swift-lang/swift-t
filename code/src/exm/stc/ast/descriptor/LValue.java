@@ -10,26 +10,26 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LogHelper;
 
 public class LValue {
-  public final Variable var;
+  public final Var var;
   public final String varName;
   public final List<SwiftAST> indices;
   
-  public LValue(Variable var) {
+  public LValue(Var var) {
     this(var, new ArrayList<SwiftAST>(0));
   }
 
-  public SwiftType getType(Context context) throws TypeMismatchException {
+  public Type getType(Context context) throws TypeMismatchException {
     return getType(context, indices.size());
   }
 
-  public SwiftType getType(Context context, int depth)
+  public Type getType(Context context, int depth)
       throws TypeMismatchException {
     if (var == null) {
       throw new STCRuntimeError("invoked getType() on AssignTarget "
@@ -40,14 +40,14 @@ public class LValue {
           + " of path");
     }
 
-    SwiftType t = var.getType();
+    Type t = var.type();
     for (int i = 0; i < depth; i++) {
       SwiftAST tree = indices.get(i);
       if (tree.getType() == ExMParser.ARRAY_PATH) {
         if (Types.isArray(t)) {
-          t = t.getMemberType();
+          t = t.memberType();
         } else if (Types.isArrayRef(t)) {
-          t = t.getMemberType().getMemberType();
+          t = t.memberType().memberType();
         } else {
           throw new TypeMismatchException(context, "Assignment target "
               + toString() + " does not have a valid type: can only "
@@ -64,7 +64,7 @@ public class LValue {
         StructType st = (StructType) t;
         assert (tree.getChildCount() == 1);
         String fieldName = tree.child(0).getText();
-        SwiftType newType = st.getFieldTypeByName(fieldName);
+        Type newType = st.getFieldTypeByName(fieldName);
         if (newType == null) {
           throw new TypeMismatchException(context, "Struct type "
               + st.getTypeName() + " does not have field called " + fieldName);
@@ -120,9 +120,9 @@ public class LValue {
     return structPath;
   }
 
-  public LValue(Variable var, List<SwiftAST> indicies) {
+  public LValue(Var var, List<SwiftAST> indicies) {
     this.var = var;
-    this.varName = var.getName();
+    this.varName = var.name();
     this.indices = Collections.unmodifiableList(indicies);
   }
 
@@ -192,7 +192,7 @@ public class LValue {
      }
    }
 
-   Variable var = context.getDeclaredVariable(varName);
+   Var var = context.getDeclaredVariable(varName);
    if (var == null) {
      throw new UndefinedVariableException(context, "Variable " + varName
          + " is not defined");

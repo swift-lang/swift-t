@@ -2,8 +2,8 @@ package exm.stc.ast.descriptor;
 
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
-import exm.stc.common.lang.FunctionSemantics.TemplateElem;
+import exm.stc.common.lang.Builtins.TclOpTemplate;
+import exm.stc.common.lang.Builtins.TemplateElem;
 import exm.stc.frontend.Context;
 
 public class InlineCode {

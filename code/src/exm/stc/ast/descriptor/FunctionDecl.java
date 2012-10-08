@@ -14,12 +14,12 @@ import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.UnionType;
-import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Types.FunctionType;
-import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.TypeVariable;
-import exm.stc.common.lang.Variable.DefType;
-import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
 import exm.stc.frontend.LogHelper;
@@ -54,9 +54,9 @@ public class FunctionDecl {
   
   private static class ArgDecl {
     final String name;
-    final SwiftType type;
+    final Type type;
     final boolean varargs;
-    private ArgDecl(String name, SwiftType type, boolean varargs) {
+    private ArgDecl(String name, Type type, boolean varargs) {
       super();
       this.name = name;
       this.type = type;
@@ -77,7 +77,7 @@ public class FunctionDecl {
     assert(inArgTree.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
     assert(outArgTree.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
     ArrayList<String> inNames = new ArrayList<String>();
-    ArrayList<SwiftType> inArgTypes = new ArrayList<SwiftType>();
+    ArrayList<Type> inArgTypes = new ArrayList<Type>();
     boolean varArgs = false;
     for (int i = 0; i < inArgTree.getChildCount(); i++) {
       ArgDecl argInfo = extractArgInfo(typeVarContext, inArgTree.child(i));
@@ -94,7 +94,7 @@ public class FunctionDecl {
     assert(inNames.size() == inArgTypes.size());
 
     ArrayList<String> outNames = new ArrayList<String>();
-    ArrayList<SwiftType> outArgTypes = new ArrayList<SwiftType>();
+    ArrayList<Type> outArgTypes = new ArrayList<Type>();
     for (int i = 0; i < outArgTree.getChildCount(); i++) {
       ArgDecl argInfo = extractArgInfo(typeVarContext, outArgTree.child(i));
       if (argInfo.varargs) {
@@ -130,23 +130,23 @@ public class FunctionDecl {
     assert(baseTypes.getType() == ExMParser.MULTI_TYPE);
     assert(baseTypes.getChildCount() >= 1); // Grammar should ensure this
     assert(restDecl.getType() == ExMParser.DECLARE_VARIABLE_REST);
-    ArrayList<SwiftType> alts =
-                new ArrayList<SwiftType>(baseTypes.getChildCount());
+    ArrayList<Type> alts =
+                new ArrayList<Type>(baseTypes.getChildCount());
     String varname = null;
     for (int i = 0; i < baseTypes.getChildCount(); i++) {
       SwiftAST typeAlt = baseTypes.child(i);
       assert(typeAlt.getType() == ExMParser.ID);
       String typeName = typeAlt.getText();
-      SwiftType baseType = context.lookupType(typeName);
+      Type baseType = context.lookupType(typeName);
       if (baseType == null) {
         throw new UndefinedTypeException(context, typeName);
       }
-      Variable v = fromFormalArgTree(context, baseType, 
+      Var v = fromFormalArgTree(context, baseType, 
                                                     restDecl, DefType.INARG);
-      varname = v.getName();
-      alts.add(v.getType());
+      varname = v.name();
+      alts.add(v.type());
     }
-    SwiftType argType = UnionType.makeUnion(alts);
+    Type argType = UnionType.makeUnion(alts);
     argInfo = new ArgDecl(varname, argType, thisVarArgs);
     return argInfo;
   }
@@ -163,8 +163,8 @@ public class FunctionDecl {
     * @throws UndefinedTypeException
    * @throws InvalidSyntaxException 
     */
-    public static Variable fromFormalArgTree(
-        Context context, SwiftType baseType, SwiftAST tree, DefType deftype)
+    public static Var fromFormalArgTree(
+        Context context, Type baseType, SwiftAST tree, DefType deftype)
     throws UndefinedTypeException, InvalidSyntaxException
     {
       assert(tree.getType() == ExMParser.DECLARE_VARIABLE_REST);
@@ -173,7 +173,7 @@ public class FunctionDecl {
       assert(nameTree.getType() == ExMParser.ID);
       String varName = nameTree.getText();
       
-      SwiftType varType = baseType;
+      Type varType = baseType;
       for (SwiftAST subtree: tree.children(1)) {
         if (subtree.getType() == ExMParser.ARRAY) {
           varType = new Types.ArrayType(varType);
@@ -184,25 +184,25 @@ public class FunctionDecl {
               "declaration: " + LogHelper.tokName(subtree.getType()));
         }
       }
-      return new Variable(varType, varName, VariableStorage.STACK, deftype, 
+      return new Var(varType, varName, VarStorage.STACK, deftype, 
                                                                 null);
     }
 
-  public List<Variable> getInVars() {
-    ArrayList<Variable> inVars = new ArrayList<Variable>(inNames.size());
+  public List<Var> getInVars() {
+    ArrayList<Var> inVars = new ArrayList<Var>(inNames.size());
     for (int i = 0; i < inNames.size(); i++) {
-      SwiftType t = ftype.getInputs().get(i);
-      inVars.add(new Variable(t, inNames.get(i), VariableStorage.STACK,
+      Type t = ftype.getInputs().get(i);
+      inVars.add(new Var(t, inNames.get(i), VarStorage.STACK,
                                     DefType.INARG, null));
     }
     return inVars;
   }
   
-  public List<Variable> getOutVars() {
-    ArrayList<Variable> outVars = new ArrayList<Variable>(outNames.size());
+  public List<Var> getOutVars() {
+    ArrayList<Var> outVars = new ArrayList<Var>(outNames.size());
     for (int i = 0; i < outNames.size(); i++) {
-      outVars.add(new Variable(ftype.getOutputs().get(i), outNames.get(i),
-                             VariableStorage.STACK, DefType.OUTARG, null));
+      outVars.add(new Var(ftype.getOutputs().get(i), outNames.get(i),
+                             VarStorage.STACK, DefType.OUTARG, null));
     }
     return outVars;
   }

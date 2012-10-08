@@ -47,20 +47,20 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.FunctionSemantics;
-import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
+import exm.stc.common.lang.Builtins;
+import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.FunctionType;
-import exm.stc.common.lang.Types.ReferenceType;
+import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
-import exm.stc.common.lang.Types.SwiftType;
-import exm.stc.common.lang.Variable;
-import exm.stc.common.lang.Variable.DefType;
-import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.Context.FnProp;
@@ -267,15 +267,15 @@ public class ASTWalker {
   private void waitStmt(Context context, SwiftAST tree) 
                                   throws UserException {
     Wait wait = Wait.fromAST(context, tree);
-    ArrayList<Variable> waitEvaled = new ArrayList<Variable>();
+    ArrayList<Var> waitEvaled = new ArrayList<Var>();
     for (SwiftAST expr: wait.getWaitExprs()) {
-      Variable res = exprWalker.evalExprToTmp(context, expr, 
+      Var res = exprWalker.eval(context, expr, 
           TypeChecker.findSingleExprType(context, expr), false, null);
       waitEvaled.add(res);
     }
     
-    ArrayList<Variable> usedVars = new ArrayList<Variable>();
-    ArrayList<Variable> keepOpenVars = new ArrayList<Variable>();
+    ArrayList<Var> usedVars = new ArrayList<Var>();
+    ArrayList<Var> keepOpenVars = new ArrayList<Var>();
     summariseBranchVariableUsage(context, 
                     Arrays.asList(wait.getBlock().getVariableUsage()), 
                                   usedVars, keepOpenVars);
@@ -284,8 +284,8 @@ public class ASTWalker {
     // Quick sanity check to see we're not directly blocking
     // on any arrays written inside
     HashSet<String> waitVarSet = 
-        new HashSet<String>(Variable.nameList(waitEvaled));
-    waitVarSet.retainAll(Variable.nameList(keepOpenVars));
+        new HashSet<String>(Var.nameList(waitEvaled));
+    waitVarSet.retainAll(Var.nameList(keepOpenVars));
     if (waitVarSet.size() > 0) {
       throw new UserException(context, 
           "Deadlock in wait statement. The following arrays are written "
@@ -340,17 +340,17 @@ public class ASTWalker {
    */
   private void closeBlockVariables(Context context) 
           throws UndefinedTypeException, UserException {
-    for (Variable v : context.getArraysToClose()) {
-      assert(v.getDefType() != DefType.INARG);
-      assert(Types.isArray(v.getType()));
+    for (Var v : context.getArraysToClose()) {
+      assert(v.defType() != DefType.INARG);
+      assert(Types.isArray(v.type()));
       backend.closeArray(v);
     }
   }
 
   private static class VarInfoPair {
-    public final Variable var;
+    public final Var var;
     public final VInfo vinfo;
-    public VarInfoPair(Variable var, VInfo vinfo) {
+    public VarInfoPair(Var var, VInfo vinfo) {
       super();
       this.var = var;
       this.vinfo = vinfo;
@@ -362,27 +362,27 @@ public class ASTWalker {
     }
   }
   private void findArraysInStruct(Context context,
-      Variable root, VInfo structVInfo, List<VarInfoPair> arrays)
+      Var root, VInfo structVInfo, List<VarInfoPair> arrays)
           throws UndefinedTypeException, UserException {
     findArraysInStructToClose(context, root, root, structVInfo,
         new Stack<String>(), arrays);
   }
 
   private void findArraysInStructToClose(Context context,
-      Variable root, Variable struct, VInfo structVInfo,
+      Var root, Var struct, VInfo structVInfo,
       Stack<String> fieldPath, List<VarInfoPair> arrays) throws UndefinedTypeException,
                                                                       UserException {
-    StructType vtype = (StructType)struct.getType();
+    StructType vtype = (StructType)struct.type();
     for (StructField f: vtype.getFields()) {
       fieldPath.push(f.getName());
       if (Types.isArray(f.getType())) {
-        Variable fieldVar = exprWalker.structLookup(context, struct, 
+        Var fieldVar = exprWalker.structLookup(context, struct, 
             f.getName(), false, root, fieldPath);
         arrays.add(new VarInfoPair(fieldVar, structVInfo.getFieldVInfo(f.getName())));
       } else if (Types.isStruct(f.getType())) {
         VInfo nestedVInfo = structVInfo.getFieldVInfo(f.getName());
         assert(nestedVInfo != null);
-        Variable field = exprWalker.structLookup(context, struct, f.getName(),
+        Var field = exprWalker.structLookup(context, struct, f.getName(),
               false, root, fieldPath);
 
         findArraysInStructToClose(context, root, field, nestedVInfo, fieldPath,
@@ -399,18 +399,18 @@ public class ASTWalker {
     
     
     // Condition must be boolean and stored to be retrieved later
-    Variable conditionVar = exprWalker.evalExprToTmp(context,
+    Var conditionVar = exprWalker.eval(context,
         ifStmt.getCondition(), ifStmt.getCondType(context),
         false, null);
     assert (conditionVar != null);
 
     // A list of variables that might be referenced in either branch
-    List<Variable> usedVariables = new ArrayList<Variable>();
+    List<Var> usedVariables = new ArrayList<Var>();
 
     // List of arrays that might be modified on one branch or the other
     // IF an array is modified on a branch, then we have to make sure that
     // it won't be prematurely closed
-    List<Variable> keepOpenVars = new ArrayList<Variable>();
+    List<Var> keepOpenVars = new ArrayList<Var>();
 
     VariableUsageInfo thenVU = ifStmt.getThenBlock().checkedGetVariableUsage();
 
@@ -438,7 +438,7 @@ public class ASTWalker {
                 usedVariables, keepOpenVars, false, TaskMode.LOCAL);
 
     Context waitContext = new LocalContext(context);
-    Variable condVal = varCreator.fetchValueOf(waitContext, conditionVar);
+    Var condVal = varCreator.fetchValueOf(waitContext, conditionVar);
     backend.startIfStatement(Arg.createVar(condVal), ifStmt.hasElse());
     block(new LocalContext(waitContext), ifStmt.getThenBlock());
 
@@ -468,14 +468,14 @@ public class ASTWalker {
    * @param branchVU
    * @throws VariableUsageException
    */
-  private void checkConditionalDeadlock(Context context, Variable conditionVar,
+  private void checkConditionalDeadlock(Context context, Var conditionVar,
       List<VariableUsageInfo> branchVUs) throws VariableUsageException {
     for (VariableUsageInfo branchVU: branchVUs) {
       assert(branchVU != null);
-      VInfo vinfo = branchVU.lookupVariableInfo(conditionVar.getName());
+      VInfo vinfo = branchVU.lookupVariableInfo(conditionVar.name());
       if (vinfo != null && vinfo.isAssigned() != Ternary.FALSE) {
         throw new VariableUsageException(context, "Deadlock on " +
-            conditionVar.getName() + ", var is assigned inside conditional"
+            conditionVar.name() + ", var is assigned inside conditional"
             + " branch for which it is the condition");
       }
     }
@@ -494,12 +494,12 @@ public class ASTWalker {
    * @throws UndefinedTypeException
    */
   private void summariseBranchVariableUsage(Context context,
-      List<VariableUsageInfo> branchVUs, List<Variable> usedVariables,
-      List<Variable> keepOpenVars) throws UndefinedTypeException, UserException {
-    for (Variable v : context.getVisibleVariables()) {
+      List<VariableUsageInfo> branchVUs, List<Var> usedVariables,
+      List<Var> keepOpenVars) throws UndefinedTypeException, UserException {
+    for (Var v : context.getVisibleVariables()) {
       Ternary isUsed = Ternary.FALSE;
       for (VariableUsageInfo bvu : branchVUs) {
-        VInfo vi = bvu.lookupVariableInfo(v.getName());
+        VInfo vi = bvu.lookupVariableInfo(v.name());
         if (vi == null) {
           isUsed = Ternary.or(isUsed, Ternary.FALSE);
         } else {
@@ -511,23 +511,23 @@ public class ASTWalker {
       }
 
       // Secondly, see if it is an array that might be modified
-      if (Types.isArray(v.getType())) {
+      if (Types.isArray(v.type())) {
         for (VariableUsageInfo bvu : branchVUs) {
-          VInfo vi = bvu.lookupVariableInfo(v.getName());
+          VInfo vi = bvu.lookupVariableInfo(v.name());
           if (vi != null && vi.isAssigned() != Ternary.FALSE) {
             keepOpenVars.add(v);
             break;
           }
         }
-      } else if (Types.isStruct(v.getType())) {
+      } else if (Types.isStruct(v.type())) {
         // Need to find arrays inside structs
         ArrayList<VarInfoPair> arrs = new ArrayList<VarInfoPair>();
         // This procedure might add the same array multiple times,
         // so use a set to avoid duplicates
-        HashSet<Variable> alreadyFound = new HashSet<Variable>();
+        HashSet<Var> alreadyFound = new HashSet<Var>();
         for (VariableUsageInfo bvu : branchVUs) {
           arrs.clear();
-          findArraysInStruct(context, v, bvu.lookupVariableInfo(v.getName()),
+          findArraysInStruct(context, v, bvu.lookupVariableInfo(v.name()),
                                                                         arrs);
           for (VarInfoPair p: arrs) {
             if (p.vinfo.isAssigned() != Ternary.FALSE) {
@@ -550,16 +550,16 @@ public class ASTWalker {
     Switch sw = Switch.fromAST(context, tree);
     sw.typeCheck(context);
     
-    Variable switchVar = exprWalker.evalExprToTmp(context, sw.getSwitchExpr(), Types.FUTURE_INTEGER, true, null);
+    Var switchVar = exprWalker.eval(context, sw.getSwitchExpr(), Types.F_INT, true, null);
 
     // A list of variables that might be referenced in either branch
-    List<Variable> usedVariables = new ArrayList<Variable>();
+    List<Var> usedVariables = new ArrayList<Var>();
 
     // List of vars that might be modified on one branch or the other and
     // need to be kept open
     // IF an array, e.g., is modified on a branch, then we have to make sure 
     // that it won't be prematurely closed
-    List<Variable> keepOpenVars = new ArrayList<Variable>();
+    List<Var> keepOpenVars = new ArrayList<Var>();
 
     List<VariableUsageInfo> branchVUs = new ArrayList<VariableUsageInfo>();
     for (SwiftAST b : sw.getCaseBodies()) {
@@ -579,7 +579,7 @@ public class ASTWalker {
                 usedVariables, keepOpenVars, false, TaskMode.LOCAL);
 
     Context waitContext = new LocalContext(context);
-    Variable switchVal = varCreator.createValueOfVar(waitContext,
+    Var switchVal = varCreator.createValueOfVar(waitContext,
                                                      switchVar); 
 
     backend.retrieveInt(switchVal, switchVar);
@@ -622,19 +622,19 @@ public class ASTWalker {
     /* Just evaluate all of the expressions into futures and rely
      * on constant folding in IC to clean up where possible
      */ 
-    Variable start = exprWalker.evalExprToTmp(context, range.getStart(), Types.FUTURE_INTEGER, false, null);
-    Variable end = exprWalker.evalExprToTmp(context, range.getEnd(), Types.FUTURE_INTEGER, false, null);
-    Variable step;
+    Var start = exprWalker.eval(context, range.getStart(), Types.F_INT, false, null);
+    Var end = exprWalker.eval(context, range.getEnd(), Types.F_INT, false, null);
+    Var step;
     if (range.getStep() != null) {
-      step = exprWalker.evalExprToTmp(context, range.getStep(), Types.FUTURE_INTEGER, false, null);
+      step = exprWalker.eval(context, range.getStep(), Types.F_INT, false, null);
     } else {
       // Inefficient but constant folding will clean up
-      step = varCreator.createTmp(context, Types.FUTURE_INTEGER);
+      step = varCreator.createTmp(context, Types.F_INT);
       backend.assignInt(step, Arg.createIntLit(1));
     }
     
-    ArrayList<Variable> usedVariables = new ArrayList<Variable>();
-    ArrayList<Variable> keepOpenVars = new ArrayList<Variable>();
+    ArrayList<Var> usedVariables = new ArrayList<Var>();
+    ArrayList<Var> keepOpenVars = new ArrayList<Var>();
 
     // TODO: correct??
     VariableUsageInfo bodyVU = loop.getBody().checkedGetVariableUsage();
@@ -645,20 +645,20 @@ public class ASTWalker {
     int loopNum = fc.getCounterVal("foreach-range");
     
     // Need to pass in futures along with user vars
-    ArrayList<Variable> waitUsedVariables = 
-        new ArrayList<Variable>(usedVariables);
+    ArrayList<Var> waitUsedVariables = 
+        new ArrayList<Var>(usedVariables);
     waitUsedVariables.addAll(Arrays.asList(start, end, step));
     backend.startWaitStatement("wait-range" + loopNum, 
                                 Arrays.asList(start, end, step), 
                                 waitUsedVariables, keepOpenVars, false, TaskMode.LOCAL);
     Context waitContext = new LocalContext(context);
-    Variable startVal = varCreator.fetchValueOf(waitContext, start);
-    Variable endVal = varCreator.fetchValueOf(waitContext, end);
-    Variable stepVal = varCreator.fetchValueOf(waitContext, step);
+    Var startVal = varCreator.fetchValueOf(waitContext, start);
+    Var endVal = varCreator.fetchValueOf(waitContext, end);
+    Var stepVal = varCreator.fetchValueOf(waitContext, step);
     Context bodyContext = loop.setupLoopBodyContext(waitContext);
     
     // The per-iteration value of the range
-    Variable memberVal = varCreator.createValueOfVar(bodyContext,
+    Var memberVal = varCreator.createValueOfVar(bodyContext,
                                             loop.getMemberVar(), false);
     backend.startRangeLoop("range" + loopNum, memberVal, 
             Arg.createVar(startVal), Arg.createVar(endVal), 
@@ -685,32 +685,32 @@ public class ASTWalker {
    */
   private void foreachArray(Context context, ForeachLoop loop)
       throws UserException, UndefinedTypeException {
-    Variable arrayVar = exprWalker.evalExprToTmp(context, loop.getArrayVarTree(), loop.findArrayType(context), true, null);
+    Var arrayVar = exprWalker.eval(context, loop.getArrayVarTree(), loop.findArrayType(context), true, null);
 
-    ArrayList<Variable> usedVariables = new ArrayList<Variable>();
-    ArrayList<Variable> keepOpenVars = new ArrayList<Variable>();
+    ArrayList<Var> usedVariables = new ArrayList<Var>();
+    ArrayList<Var> keepOpenVars = new ArrayList<Var>();
 
     VariableUsageInfo bodyVU = loop.getBody().checkedGetVariableUsage();
     summariseBranchVariableUsage(context, Arrays.asList(bodyVU),
         usedVariables, keepOpenVars);
 
-    for (Variable v: keepOpenVars) {
-      if (v.getName().equals(arrayVar.getName())) {
+    for (Var v: keepOpenVars) {
+      if (v.name().equals(arrayVar.name())) {
         throw new STCRuntimeError("Array variable "
-                  + v.getName() + " is written in the foreach loop "
+                  + v.name() + " is written in the foreach loop "
                   + " it is the loop array for - currently this " +
                   "causes a deadlock due to technical limitations");
       }
     }
     
     // Need to get handle to real array before running loop
-    Variable realArray;
+    Var realArray;
     Context outsideLoopContext;
-    if (Types.isArrayRef(arrayVar.getType())) {
+    if (Types.isArrayRef(arrayVar.type())) {
       // If its a reference, wrap a wait() around the loop call
       FunctionContext fc = context.getFunctionContext();
-      ArrayList<Variable> waitUsedVars =
-            new ArrayList<Variable>(usedVariables);
+      ArrayList<Var> waitUsedVars =
+            new ArrayList<Var>(usedVariables);
       waitUsedVars.add(arrayVar);
 
       backend.startWaitStatement(fc.constructName("foreach_wait"),
@@ -718,7 +718,7 @@ public class ASTWalker {
 
       outsideLoopContext = new LocalContext(context);
       realArray = varCreator.createTmp(outsideLoopContext,
-                              arrayVar.getType().getMemberType(), false, true);
+                              arrayVar.type().memberType(), false, true);
       backend.retrieveRef(realArray, arrayVar);
     } else {
       realArray = arrayVar;
@@ -736,8 +736,8 @@ public class ASTWalker {
         usedVariables, keepOpenVars);
     // If the user's code expects a loop count var, need to create it here
     if (loop.getCountVarName() != null) {
-      Variable loopCountVar = varCreator.createVariable(loop.getBodyContext(),
-          Types.FUTURE_INTEGER, loop.getCountVarName(), VariableStorage.STACK,
+      Var loopCountVar = varCreator.createVariable(loop.getBodyContext(),
+          Types.F_INT, loop.getCountVarName(), VarStorage.STACK,
           DefType.LOCAL_USER, null);
       backend.assignInt(loopCountVar, Arg.createVar(loop.getLoopCountVal()));
     }
@@ -745,7 +745,7 @@ public class ASTWalker {
     backend.endForeachLoop(loop.isSyncLoop(), loop.getSplitDegree(), false, 
                                                     keepOpenVars);
 
-    if (Types.isArrayRef(arrayVar.getType())) {
+    if (Types.isArrayRef(arrayVar.type())) {
       backend.endWaitStatement(keepOpenVars);
     }
   }
@@ -754,10 +754,10 @@ public class ASTWalker {
     ForLoopDescriptor forLoop = ForLoopDescriptor.fromAST(context, tree);
     
     // Evaluate initial values of loop vars
-    List<Variable> initVals = evalLoopVarExprs(context, forLoop, 
+    List<Var> initVals = evalLoopVarExprs(context, forLoop, 
                                                   forLoop.getInitExprs());
-    List<Variable> usedVariables = new ArrayList<Variable>();
-    List<Variable> keepOpenVars = new ArrayList<Variable>();
+    List<Var> usedVariables = new ArrayList<Var>();
+    List<Var> keepOpenVars = new ArrayList<Var>();
     summariseBranchVariableUsage(context, 
             Arrays.asList(forLoop.getBody().getVariableUsage()), 
             usedVariables, keepOpenVars);
@@ -766,20 +766,20 @@ public class ASTWalker {
     int loopNum = fc.getCounterVal("forloop");
     String loopName = fc.getFunctionName() + "-forloop-" + loopNum;
     
-    HashMap<String, Variable> parentLoopVarAliases = 
-        new HashMap<String, Variable>();
+    HashMap<String, Var> parentLoopVarAliases = 
+        new HashMap<String, Var>();
     for (LoopVar lv: forLoop.getLoopVars()) {
       if (lv.declaredOutsideLoop) {
         // Need to copy over value of loop variable on last iteration
-        Variable parentAlias = 
-            varCreator.createVariable(context, lv.var.getType(), 
-                  Variable.OUTER_VAR_PREFIX + lv.var.getName(),
-                  VariableStorage.ALIAS, DefType.LOCAL_COMPILER,
-                  lv.var.getMapping());
+        Var parentAlias = 
+            varCreator.createVariable(context, lv.var.type(), 
+                  Var.OUTER_VAR_PREFIX + lv.var.name(),
+                  VarStorage.ALIAS, DefType.LOCAL_COMPILER,
+                  lv.var.mapping());
         // Copy turbine ID
         backend.makeAlias(parentAlias, lv.var);
         usedVariables.add(parentAlias);
-        parentLoopVarAliases.put(lv.var.getName(), parentAlias);
+        parentLoopVarAliases.put(lv.var.name(), parentAlias);
       }
     }
     
@@ -790,27 +790,27 @@ public class ASTWalker {
     // Create context with loop variables
     Context loopBodyContext = forLoop.createBodyContext(context);
     forLoop.validateCond(loopBodyContext);
-    SwiftType condType = TypeChecker.findSingleExprType(loopBodyContext, 
+    Type condType = TypeChecker.findSingleExprType(loopBodyContext, 
                                               forLoop.getCondition());
 
     // Evaluate the conditional expression for the first iteration outside the
     // loop, directly using temp names for loop variables
     HashMap<String, String> initRenames = new HashMap<String, String>();
     for (int i = 0; i < forLoop.loopVarCount(); i++) {
-      initRenames.put(forLoop.getLoopVars().get(i).var.getName(), 
-            initVals.get(i).getName());
+      initRenames.put(forLoop.getLoopVars().get(i).var.name(), 
+            initVals.get(i).name());
     }
-    Variable initCond = exprWalker.evalExprToTmp(context, forLoop.getCondition(), condType, true, initRenames);
+    Var initCond = exprWalker.eval(context, forLoop.getCondition(), condType, true, initRenames);
     
     // Start the loop construct with some initial values
-    Variable condArg = 
-        loopBodyContext.declareVariable(condType, Variable.LOOP_COND_PREFIX + 
-            loopNum, VariableStorage.TEMPORARY, DefType.INARG, null);
+    Var condArg = 
+        loopBodyContext.declareVariable(condType, Var.LOOP_COND_PREFIX + 
+            loopNum, VarStorage.TEMP, DefType.INARG, null);
 
 
 
     /* Pack the variables into vectors with the first element the condition */
-    ArrayList<Variable> loopVars = new ArrayList<Variable>(
+    ArrayList<Var> loopVars = new ArrayList<Var>(
                                               forLoop.loopVarCount() + 1);
     loopVars.add(condArg);
     loopVars.addAll(forLoop.getUnpackedLoopVars());
@@ -826,7 +826,7 @@ public class ASTWalker {
                       blockingVector);
     
     // get value of condVar
-    Variable condVal = varCreator.fetchValueOf(loopBodyContext, condArg);
+    Var condVal = varCreator.fetchValueOf(loopBodyContext, condArg);
     
     // branch depending on if loop should start
     backend.startIfStatement(Arg.createVar(condVal), true);
@@ -835,15 +835,15 @@ public class ASTWalker {
     
     forLoop.validateUpdates(loopBodyContext);
     //evaluate update expressions
-    List<Variable> newLoopVars = evalLoopVarExprs(loopBodyContext, forLoop, 
+    List<Var> newLoopVars = evalLoopVarExprs(loopBodyContext, forLoop, 
                                                 forLoop.getUpdateRules());
     
     HashMap<String, String> nextRenames = new HashMap<String, String>();
     for (int i = 0; i < forLoop.loopVarCount(); i++) {
-      nextRenames.put(forLoop.getLoopVars().get(i).var.getName(), 
-            newLoopVars.get(i).getName());
+      nextRenames.put(forLoop.getLoopVars().get(i).var.name(), 
+            newLoopVars.get(i).name());
     }
-    Variable nextCond = exprWalker.evalExprToTmp(loopBodyContext, 
+    Var nextCond = exprWalker.eval(loopBodyContext, 
               forLoop.getCondition(), condType, true, nextRenames);
     newLoopVars.add(0, nextCond);
     backend.loopContinue(newLoopVars, usedVariables, keepOpenVars,
@@ -854,8 +854,8 @@ public class ASTWalker {
     for (LoopVar lv: forLoop.getLoopVars()) {
       if (lv.declaredOutsideLoop) {
         exprWalker.copyByValue(loopBodyContext, 
-            lv.var, parentLoopVarAliases.get(lv.var.getName()), 
-            lv.var.getType());
+            lv.var, parentLoopVarAliases.get(lv.var.name()), 
+            lv.var.type());
       }
     }
     
@@ -874,18 +874,18 @@ public class ASTWalker {
     
     //TODO: this is a little funny since the condition expr might be of type int,
     //    but this will work for time being
-    Variable falseV = varCreator.createTmp(context, Types.FUTURE_BOOLEAN);
+    Var falseV = varCreator.createTmp(context, Types.F_BOOL);
     backend.assignBool(falseV, Arg.createBoolLit(false));
     
-    Variable zero = varCreator.createTmp(context, Types.FUTURE_INTEGER);
+    Var zero = varCreator.createTmp(context, Types.F_INT);
     backend.assignInt(zero, Arg.createIntLit(0));
     
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("iterate");
     String loopName = fc.getFunctionName() + "-iterate-" + loopNum;
     
-    List<Variable> usedVariables = new ArrayList<Variable>();
-    List<Variable> keepOpenVars = new ArrayList<Variable>();
+    List<Var> usedVariables = new ArrayList<Var>();
+    List<Var> keepOpenVars = new ArrayList<Var>();
     summariseBranchVariableUsage(context, 
             Arrays.asList(loop.getBody().getVariableUsage()), 
             usedVariables, keepOpenVars);
@@ -894,9 +894,9 @@ public class ASTWalker {
     
     
     // Start the loop construct with some initial values
-    Variable condArg = 
-      bodyContext.declareVariable(Types.FUTURE_BOOLEAN, Variable.LOOP_COND_PREFIX + 
-            loopNum, VariableStorage.TEMPORARY, DefType.INARG, null);
+    Var condArg = 
+      bodyContext.declareVariable(Types.F_BOOL, Var.LOOP_COND_PREFIX + 
+            loopNum, VarStorage.TEMP, DefType.INARG, null);
     
     List<Boolean> blockingVars = Arrays.asList(true, false);
     backend.startLoop(loopName, 
@@ -904,7 +904,7 @@ public class ASTWalker {
         usedVariables, keepOpenVars, blockingVars);
     
     // get value of condVar
-    Variable condVal = varCreator.fetchValueOf(bodyContext, condArg); 
+    Var condVal = varCreator.fetchValueOf(bodyContext, condArg); 
     
     backend.startIfStatement(Arg.createVar(condVal), true);
     if (keepOpenVars.size() > 0) {
@@ -914,19 +914,19 @@ public class ASTWalker {
     block(bodyContext, loop.getBody());
     
     // Check the condition type now that all loop body vars have been declared
-    SwiftType condType = TypeChecker.findSingleExprType(bodyContext,
+    Type condType = TypeChecker.findSingleExprType(bodyContext,
         loop.getCond());
-    if (!condType.assignableTo(Types.FUTURE_BOOLEAN)) {
+    if (!condType.assignableTo(Types.F_BOOL)) {
       throw new TypeMismatchException(bodyContext, 
           "iterate condition had invalid type: " + condType.typeName());
     }
     
-    Variable nextCond = exprWalker.evalExprToTmp(bodyContext, loop.getCond(),
-                                          Types.FUTURE_BOOLEAN, false, null);
+    Var nextCond = exprWalker.eval(bodyContext, loop.getCond(),
+                                          Types.F_BOOL, false, null);
     
-    Variable nextCounter = varCreator.createTmp(bodyContext,
-                                      Types.FUTURE_INTEGER);
-    Variable one = varCreator.createTmp(bodyContext, Types.FUTURE_INTEGER);
+    Var nextCounter = varCreator.createTmp(bodyContext,
+                                      Types.F_INT);
+    Var one = varCreator.createTmp(bodyContext, Types.F_INT);
 
     backend.assignInt(one, Arg.createIntLit(1));
     backend.asyncOp(BuiltinOpcode.PLUS_INT, nextCounter, 
@@ -941,19 +941,19 @@ public class ASTWalker {
   }
 
 
-  private ArrayList<Variable> evalLoopVarExprs(Context context,
+  private ArrayList<Var> evalLoopVarExprs(Context context,
       ForLoopDescriptor forLoop, Map<String, SwiftAST> loopVarExprs)
       throws UserException {
-    ArrayList<Variable> results = new ArrayList<Variable>(
+    ArrayList<Var> results = new ArrayList<Var>(
                                                 forLoop.loopVarCount() + 1);
     for (int i = 0; i < forLoop.loopVarCount(); i++) {
-      Variable v = forLoop.getLoopVars().get(i).var;
-      SwiftType argType = v.getType();
-      SwiftAST expr = loopVarExprs.get(v.getName());
-      SwiftType exprType = TypeChecker.findSingleExprType(context, expr);
+      Var v = forLoop.getLoopVars().get(i).var;
+      Type argType = v.type();
+      SwiftAST expr = loopVarExprs.get(v.name());
+      Type exprType = TypeChecker.findSingleExprType(context, expr);
       exprType = TypeChecker.checkAssignment(context, exprType,
-                                             argType,v.getName());
-      results.add(exprWalker.evalExprToTmp(context, expr, exprType, false, null));
+                                             argType,v.name());
+      results.add(exprWalker.eval(context, expr, exprType, false, null));
     }
     return results;
   }
@@ -973,9 +973,9 @@ public class ASTWalker {
     
     for (int i = 0; i < vd.count(); i++) {
       VariableDescriptor vDesc = vd.getVar(i);
-      Variable var = declareVariable(context, blockVu, vDesc);
+      Var var = declareVariable(context, blockVu, vDesc);
       SwiftAST assignedExpr = vd.getVarExpr(i);
-      if (Types.isScalarUpdateable(var.getType())) {
+      if (Types.isScalarUpdateable(var.type())) {
         initUpdateableVar(context, var, assignedExpr);
       } else {
          if (assignedExpr != null) {
@@ -987,13 +987,13 @@ public class ASTWalker {
   }
 
 
-  private void initUpdateableVar(Context context, Variable var,
+  private void initUpdateableVar(Context context, Var var,
                                                 SwiftAST initExpr) {
     if (initExpr != null) {
       // TODO
       // Handle as special case because currently we need an initial
       // value for the updateable variable right away
-      if (var.getType().equals(Types.UPDATEABLE_FLOAT)) {
+      if (var.type().equals(Types.UP_FLOAT)) {
         Double initVal = Literals.extractFloatLit(context, initExpr);
         if (initVal == null) {
           String intLit = Literals.extractIntLit(context, initExpr);
@@ -1012,28 +1012,28 @@ public class ASTWalker {
       }
     } else {
       throw new STCRuntimeError("updateable variable " +
-          var.getName() + " must be given an initial value upon creation");
+          var.name() + " must be given an initial value upon creation");
     }
   }
 
-  private Variable declareVariable(Context context, VariableUsageInfo blockVu,
+  private Var declareVariable(Context context, VariableUsageInfo blockVu,
       VariableDescriptor vDesc) throws UserException, UndefinedTypeException {
     VInfo vi = blockVu.lookupVariableInfo(vDesc.getName());
-    SwiftType definedType = vDesc.getType();
+    Type definedType = vDesc.getType();
     // Sometimes we have to use a reference to an array instead of an array
-    SwiftType internalType;
+    Type internalType;
 
-    Variable mappedVar = null;
+    Var mappedVar = null;
     // First evaluate the mapping expr
     if (vDesc.getMappingExpr() != null) {
       if (Types.isMappable(vDesc.getType())) {
-        SwiftType mapType = TypeChecker.findSingleExprType(context, 
+        Type mapType = TypeChecker.findSingleExprType(context, 
                                           vDesc.getMappingExpr());
         if (!Types.isString(mapType)) {
           throw new TypeMismatchException(context, "Tried to map using " +
           		"non-string expression with type " + mapType.typeName());
         }
-        mappedVar = exprWalker.evalExprToTmp(context, vDesc.getMappingExpr(), Types.FUTURE_STRING, false, null);
+        mappedVar = exprWalker.eval(context, vDesc.getMappingExpr(), Types.F_STRING, false, null);
       } else {
         throw new TypeMismatchException(context, "Variable " + vDesc.getName()
                 + " of type " + vDesc.getType().typeName() + " cannot be " +
@@ -1058,12 +1058,12 @@ public class ASTWalker {
      */
     if (USE_ARRAY_REF_SWITCHEROO && Types.isArray(definedType)
         && vi.isAssigned() != Ternary.FALSE && vi.getArrayAssignDepth() == 0) {
-      internalType = new ReferenceType(definedType);
+      internalType = new RefType(definedType);
     } else {
       internalType = definedType;
     }
-    Variable var = varCreator.createVariable(context, internalType, 
-        vDesc.getName(), VariableStorage.STACK, DefType.LOCAL_USER, mappedVar);
+    Var var = varCreator.createVariable(context, internalType, 
+        vDesc.getName(), VarStorage.STACK, DefType.LOCAL_USER, mappedVar);
 
     // Might need to close if array or struct containing array
     flagDeclaredVarForClosing(context, var, blockVu);
@@ -1115,7 +1115,7 @@ public class ASTWalker {
   private void assignSingleExpr(Context context, List<LValue> lVals,
       SwiftAST rValExpr) throws UserException, TypeMismatchException,
       UndefinedVariableException, UndefinedTypeException {
-    List<SwiftType> lValTypes = new ArrayList<SwiftType>(lVals.size());
+    List<Type> lValTypes = new ArrayList<Type>(lVals.size());
     for (LValue lval: lVals) {
       lValTypes.add(lval.getType(context));
     }
@@ -1127,22 +1127,22 @@ public class ASTWalker {
           + lVals.size() + " were present");
     }
 
-    List<Variable> result = new ArrayList<Variable>(lVals.size());
+    List<Var> result = new ArrayList<Var>(lVals.size());
     Deque<Runnable> afterActions = new LinkedList<Runnable>();
     boolean skipEval = false;
     // TODO: need to handle ambiguous input types
     for (int i = 0; i < lVals.size(); i++) {
       LValue lval = lVals.get(i);
-      SwiftType lValType = lValTypes.get(i);
-      SwiftType rValType = rValTs.get(i);
+      Type lValType = lValTypes.get(i);
+      Type rValType = rValTs.get(i);
       String targetName = lval.toString();
-      SwiftType rValConcrete = TypeChecker.checkAssignment(context, rValType,
+      Type rValConcrete = TypeChecker.checkAssignment(context, rValType,
                                                             lValType, targetName);
       backend.addComment("Swift l." + context.getLine() +
           ": assigning expression to " + targetName);
 
       // the variable we will evaluate expression into
-      Variable var = evalLValue(context, rValExpr, rValConcrete, lval, 
+      Var var = evalLValue(context, rValExpr, rValConcrete, lval, 
                                                       afterActions);
       
       if (lVals.size() == 1 && rValExpr.getType() == ExMParser.VARIABLE) {
@@ -1154,7 +1154,7 @@ public class ASTWalker {
          * now just an alias for x.  So we're done and can return!
          */
         String rValVar = rValExpr.child(0).getText();
-        if (var.getName().equals(rValVar)) {
+        if (var.name().equals(rValVar)) {
           // LHS is just an alias for RHS.  This is ok if this is e.g.
           // A[i] = x; but not if it is x = x;
           if (lval.indices.size() == 0) {
@@ -1170,7 +1170,7 @@ public class ASTWalker {
     }
 
     if (! skipEval ) {
-      exprWalker.walkExpr(context, rValExpr, result, null);
+      exprWalker.evalToVars(context, rValExpr, result, null);
     }
     
     for (Runnable action: afterActions) {
@@ -1191,8 +1191,8 @@ public class ASTWalker {
    *                    the Rvalue is evaluated
    * @return the variable referred to by the LValue
    */
-  private Variable evalLValue(Context context, SwiftAST rValExpr,
-      SwiftType rValType, LValue lval, Deque<Runnable> afterActions)
+  private Var evalLValue(Context context, SwiftAST rValExpr,
+      Type rValType, LValue lval, Deque<Runnable> afterActions)
       throws UndefinedVariableException, UserException, UndefinedTypeException,
       TypeMismatchException {
     LValue arrayBaseLval = null; // Keep track of the root of the array
@@ -1208,7 +1208,7 @@ public class ASTWalker {
         if (arrayBaseLval == null) { 
             arrayBaseLval = lval;
         }
-        assert(Types.isArray(arrayBaseLval.var.getType()));
+        assert(Types.isArray(arrayBaseLval.var.type()));
         lval = reduceArrayLVal(context, arrayBaseLval, lval, rValExpr, rValType,
                                 afterActions);
         LogHelper.trace(context, "Reduced to lval " + lval.toString() + 
@@ -1217,7 +1217,7 @@ public class ASTWalker {
     }
 
     String varName = lval.varName;
-    Variable lValVar = context.getDeclaredVariable(varName);
+    Var lValVar = context.getDeclaredVariable(varName);
     if (lValVar == null) {
       throw new UndefinedVariableException(context, "variable " + varName
           + " is not defined");
@@ -1238,16 +1238,16 @@ public class ASTWalker {
    * @throws UserException
    * @throws UndefinedTypeException
    */
-  private Variable fixupRefValMismatch(Context context, SwiftType rValType,
-      Variable lValVar) throws UserException, UndefinedTypeException {
-    if (lValVar.getType().equals(rValType)) {
+  private Var fixupRefValMismatch(Context context, Type rValType,
+      Var lValVar) throws UserException, UndefinedTypeException {
+    if (lValVar.type().equals(rValType)) {
       return lValVar;
-    } else if (Types.isReferenceTo(lValVar.getType(), rValType)) {
-      Variable rValVar = varCreator.createTmp(context, rValType);
+    } else if (Types.isRefTo(lValVar.type(), rValType)) {
+      Var rValVar = varCreator.createTmp(context, rValType);
       backend.assignReference(lValVar, rValVar);
       return rValVar;
-    } else if (Types.isReferenceTo(rValType, lValVar.getType())) {
-      Variable rValVar = varCreator.createTmp(context, rValType);
+    } else if (Types.isRefTo(rValType, lValVar.type())) {
+      Var rValVar = varCreator.createTmp(context, rValType);
       exprWalker.dereference(context, lValVar, rValVar);
       return rValVar;
     } else {
@@ -1277,7 +1277,7 @@ public class ASTWalker {
       LValue lval) throws UserException, UndefinedTypeException,
       TypeMismatchException {
     // The variable at root of the current struct path
-    Variable rootVar = context.getDeclaredVariable(lval.varName);
+    Var rootVar = context.getDeclaredVariable(lval.varName);
 
     ArrayList<String> fieldPath = new ArrayList<String>();
 
@@ -1291,14 +1291,14 @@ public class ASTWalker {
     }
     final int structPathLen = structPathIndex;
 
-    Variable curr = rootVar;
+    Var curr = rootVar;
     for (int i = 0; i < structPathLen; i++) {
       List<String> currPath = fieldPath.subList(0, i+1);
-      Variable next = varCreator.createStructFieldTmp(context,
-          rootVar, lval.getType(context, i+1), currPath, VariableStorage.ALIAS);
+      Var next = varCreator.createStructFieldTmp(context,
+          rootVar, lval.getType(context, i+1), currPath, VarStorage.ALIAS);
 
       backend.structLookup(curr, fieldPath.get(i), next);
-      LogHelper.trace(context, "Lookup " + curr.getName() + "." +
+      LogHelper.trace(context, "Lookup " + curr.name() + "." +
                                fieldPath.get(i));
       curr = next;
     }
@@ -1318,45 +1318,45 @@ public class ASTWalker {
    * @throws UndefinedTypeException
    * @throws TypeMismatchException */
   private LValue reduceArrayLVal(Context context, LValue origLval,
-    LValue lval, SwiftAST rValExpr, SwiftType rValType, Deque<Runnable> afterActions)
+    LValue lval, SwiftAST rValExpr, Type rValType, Deque<Runnable> afterActions)
         throws TypeMismatchException, UndefinedTypeException, UserException {
 
     SwiftAST indexExpr = lval.indices.get(0);
     assert (indexExpr.getType() == ExMParser.ARRAY_PATH);
     assert (indexExpr.getChildCount() == 1);
     // Typecheck index expression
-    SwiftType indexType = TypeChecker.findSingleExprType(context, 
+    Type indexType = TypeChecker.findSingleExprType(context, 
                                              indexExpr.child(0));
-    if (!indexType.assignableTo(Types.FUTURE_INTEGER)) {
+    if (!indexType.assignableTo(Types.F_INT)) {
       throw new TypeMismatchException(context, 
           "Indexing array using non-integer expression in lval.  Type " +
           "of expression was " + indexType.typeName());
     }
     
     if (lval.indices.size() == 1) {
-      Variable lookedup = assignTo1DArray(context, origLval, lval, rValExpr, 
+      Var lookedup = assignTo1DArray(context, origLval, lval, rValExpr, 
                                                       rValType, afterActions);
       return new LValue(lookedup, new ArrayList<SwiftAST>());
     } else {
       //TODO: multi-dimensional array handling goes here: need to
       //    dynamically create subarray
-      Variable lvalArr = context.getDeclaredVariable(lval.varName);
-      SwiftType memberType = lval.getType(context, 1);
-      Variable mVar; // Variable for member we're looking up
+      Var lvalArr = context.getDeclaredVariable(lval.varName);
+      Type memberType = lval.getType(context, 1);
+      Var mVar; // Variable for member we're looking up
       if (Types.isArray(memberType)) {
 
         String literal = Literals.extractIntLit(context, indexExpr.child(0));
         if (literal != null) {
           long arrIx = Long.parseLong(literal);
           // Add this variable to array
-          if (Types.isArray(lvalArr.getType())) {
+          if (Types.isArray(lvalArr.type())) {
             mVar = varCreator.createTmpAlias(context, memberType);
             backend.arrayCreateNestedImm(mVar, lvalArr, 
                         Arg.createIntLit(arrIx));
           } else {
-            assert(Types.isArrayRef(lvalArr.getType()));
+            assert(Types.isArrayRef(lvalArr.type()));
             mVar = varCreator.createTmpAlias(context, 
-                                  new ReferenceType(memberType));
+                                  new RefType(memberType));
             backend.arrayRefCreateNestedImm(mVar, lvalArr, 
                 Arg.createIntLit(arrIx));
           }
@@ -1364,13 +1364,13 @@ public class ASTWalker {
         } else {
           // Handle the general case where the index must be computed
           mVar = varCreator.createTmpAlias(context, 
-                                        new ReferenceType(memberType));
-          Variable indexVar = exprWalker.evalExprToTmp(context, indexExpr.child(0), Types.FUTURE_INTEGER, false, null);
+                                        new RefType(memberType));
+          Var indexVar = exprWalker.eval(context, indexExpr.child(0), Types.F_INT, false, null);
           
-          if (Types.isArray(lvalArr.getType())) {
+          if (Types.isArray(lvalArr.type())) {
             backend.arrayCreateNestedFuture(mVar, lvalArr, indexVar);
           } else {
-            assert(Types.isArrayRef(lvalArr.getType()));
+            assert(Types.isArrayRef(lvalArr.type()));
             backend.arrayRefCreateNestedFuture(mVar, lvalArr, indexVar);
           }
         }
@@ -1380,7 +1380,7 @@ public class ASTWalker {
          * must use reference because we might have to wait for the result to 
          * be inserted
          */
-        mVar = varCreator.createTmp(context, new ReferenceType(memberType));
+        mVar = varCreator.createTmp(context, new RefType(memberType));
       }
 
       return new LValue(mVar,
@@ -1388,21 +1388,21 @@ public class ASTWalker {
     }
 }
 
-  private Variable assignTo1DArray(Context context, final LValue origLval,
-      LValue lval, SwiftAST rvalExpr, SwiftType rvalType,
+  private Var assignTo1DArray(Context context, final LValue origLval,
+      LValue lval, SwiftAST rvalExpr, Type rvalType,
       Deque<Runnable> afterActions)
       throws TypeMismatchException, UserException, UndefinedTypeException {
     assert (rvalExpr.getType() != ExMParser.ARRAY_PATH);
     assert(lval.indices.size() == 1);
-    assert(Types.isArray(origLval.var.getType()));
-    final Variable lvalVar;
+    assert(Types.isArray(origLval.var.type()));
+    final Var lvalVar;
     // Check that it is a valid array
-    final Variable arr = lval.var;
+    final Var arr = lval.var;
 
-    SwiftType arrType = arr.getType();
+    Type arrType = arr.type();
 
     if (!Types.isArray(arrType) && !Types.isArrayRef(arrType)) {
-      throw new TypeMismatchException(context, "Variable " + arr.getName()
+      throw new TypeMismatchException(context, "Variable " + arr.name()
           + "is not an array, cannot index\n.");
     }
     boolean isRef = Types.isArrayRef(arrType);
@@ -1411,7 +1411,7 @@ public class ASTWalker {
             "Token type: " + LogHelper.tokName(rvalExpr.getType()));
     // Find or create variable to store expression result
 
-    if (!Types.isReference(rvalType)) {
+    if (!Types.isRef(rvalType)) {
       if (rvalExpr.getType() == ExMParser.VARIABLE) {
         // Get a handle to the variable, so we can just insert the variable
         //  directly into the array
@@ -1421,12 +1421,12 @@ public class ASTWalker {
         lvalVar = context.getDeclaredVariable(rvalExpr.child(0).getText());
       } else {
         // In other cases we need an intermediate variable
-        SwiftType arrMemberType;
+        Type arrMemberType;
         if (Types.isArray(arrType)) {
-          arrMemberType = arrType.getMemberType();
+          arrMemberType = arrType.memberType();
         } else {
           assert(Types.isArrayRef(arrType));
-          arrMemberType = arrType.getMemberType().getMemberType();
+          arrMemberType = arrType.memberType().memberType();
         }
         lvalVar = varCreator.createTmp(context, arrMemberType);
       }
@@ -1474,7 +1474,7 @@ public class ASTWalker {
       }
     } else {
       // Handle the general case where the index must be computed
-      final Variable indexVar = exprWalker.evalExprToTmp(context, indexExpr, Types.FUTURE_INTEGER, false, null);
+      final Var indexVar = exprWalker.eval(context, indexExpr, Types.F_INT, false, null);
 
       if (isRef) {
         afterActions.addFirst(new Runnable() {
@@ -1509,19 +1509,19 @@ public class ASTWalker {
         " results");
 
     // Need to create throwaway temporaries for return values
-    List<Variable> oList = new ArrayList<Variable>();
-    for (SwiftType t : exprType.getTypes()) {
+    List<Var> oList = new ArrayList<Var>();
+    for (Type t : exprType.getTypes()) {
       oList.add(varCreator.createTmp(context, t));
     }
 
-    exprWalker.walkExpr(context, expr, oList, null);
+    exprWalker.evalToVars(context, expr, oList, null);
   }
 
   private void updateStmt(Context context, SwiftAST tree) 
         throws UserException {
     Update up = Update.fromAST(context, tree);
-    SwiftType exprType = up.typecheck(context);
-    Variable evaled = exprWalker.evalExprToTmp(context, up.getExpr(), exprType, false, null);
+    Type exprType = up.typecheck(context);
+    Var evaled = exprWalker.eval(context, up.getExpr(), exprType, false, null);
     backend.update(up.getTarget(), up.getMode(), evaled);
   }
 
@@ -1574,7 +1574,7 @@ public class ASTWalker {
       }
       inlineTcl.addOutNames(fdecl.getOutNames());
       
-      FunctionSemantics.addInlineTemplate(function, inlineTcl);
+      Builtins.addInlineTemplate(function, inlineTcl);
     }
     
     // Read annotations at end of child list
@@ -1630,7 +1630,7 @@ public class ASTWalker {
       throw new UserException(context, "Unknown builtin op " + val);
     }
     assert(opcode != null);
-    FunctionSemantics.addOpEquiv(function, opcode);
+    Builtins.addOpEquiv(function, opcode);
   }
 
   /**
@@ -1643,15 +1643,15 @@ public class ASTWalker {
   private void registerFunctionAnnotation(Context context, String function,
                   String annotation) throws UserException {
     if (annotation.equals(Annotations.FN_ASSERTION)) {
-      FunctionSemantics.addAssertVariable(function);
+      Builtins.addAssertVariable(function);
     } else if (annotation.equals(Annotations.FN_PURE)) {
-      FunctionSemantics.addPure(function);
+      Builtins.addPure(function);
     } else if (annotation.equals(Annotations.FN_COMMUTATIVE)) {
-      FunctionSemantics.addCommutative(function);
+      Builtins.addCommutative(function);
     } else if (annotation.equals(Annotations.FN_COPY)) {
-      FunctionSemantics.addCopy(function);
+      Builtins.addCopy(function);
     } else if (annotation.equals(Annotations.FN_MINMAX)) {
-      FunctionSemantics.addMinMax(function);
+      Builtins.addMinMax(function);
     } else {
       throw new UserException(context, "Undefined annotation for functions: "
           + annotation + " for function " + function);
@@ -1680,7 +1680,7 @@ public class ASTWalker {
       throw new TypeMismatchException(context, "composite function cannot" +
       		" have variable-length argument lists");
     }
-    for (SwiftType it: ft.getInputs()) {
+    for (Type it: ft.getInputs()) {
       if (Types.isPolymorphic(it)) {
         throw new TypeMismatchException(context, "composite functions " +
         		"cannot have polymorphic input argument types, such as: " + it);
@@ -1748,8 +1748,8 @@ public class ASTWalker {
     FunctionDecl fdecl = FunctionDecl.fromAST(context, function, 
                   inputs, outputs, Collections.<String>emptySet());
     
-    List<Variable> iList = fdecl.getInVars();
-    List<Variable> oList = fdecl.getOutVars();
+    List<Var> iList = fdecl.getInVars();
+    List<Var> oList = fdecl.getOutVars();
     
     // Analyse variable usage inside function and annotate AST
     context.syncFileLine(tree.getLine(), lineMapping);
@@ -1771,7 +1771,7 @@ public class ASTWalker {
     
     VariableUsageInfo vu = block.getVariableUsage();
     // Make sure output arrays get closed
-    for (Variable o: oList) {
+    for (Var o: oList) {
       flagDeclaredVarForClosing(functionContext, o, vu);
     }
 
@@ -1782,15 +1782,15 @@ public class ASTWalker {
   }
 
 
-  private void flagDeclaredVarForClosing(Context context, Variable var,
+  private void flagDeclaredVarForClosing(Context context, Var var,
       VariableUsageInfo vu) throws UndefinedTypeException, UserException {
     List<VarInfoPair> foundArrs = null;
 
     // First find all of the arrays and the vinfo for them
-    VInfo vi = vu.lookupVariableInfo(var.getName());
-    if (Types.isArray(var.getType())) {
+    VInfo vi = vu.lookupVariableInfo(var.name());
+    if (Types.isArray(var.type())) {
       foundArrs = Collections.singletonList(new VarInfoPair(var, vi));
-    } else if (Types.isStruct(var.getType())) {
+    } else if (Types.isStruct(var.type())) {
       // Might have to dig into struct and load members to see if we 
       // should close it
       foundArrs = new ArrayList<VarInfoPair>();
@@ -1800,7 +1800,7 @@ public class ASTWalker {
     if (foundArrs != null) {        
       for (VarInfoPair p: foundArrs) {
         VInfo arrVI = p.vinfo;
-        Variable arr = p.var;
+        Var arr = p.var;
         if (arrVI.isAssigned() == Ternary.FALSE ||
                           arrVI.getArrayAssignDepth() > 0) {
           // should def be closed if not touched, or if assigned by index
@@ -1825,8 +1825,8 @@ public class ASTWalker {
                         outArgsT,   Collections.<String>emptySet());
     context.defineFunction(function, decl.getFunctionType());
     context.setFunctionProperty(function, FnProp.APP);
-    List<Variable> outArgs = decl.getOutVars();
-    List<Variable> inArgs = decl.getInVars();
+    List<Var> outArgs = decl.getOutVars();
+    List<Var> inArgs = decl.getInVars();
     
     List<String> annotations = extractFunctionAnnotations(context, tree, 4);
     boolean hasSideEffects = true, deterministic = false;
@@ -1866,7 +1866,7 @@ public class ASTWalker {
    * @throws UserException
    */
   private void genAppFunctionBody(Context context, SwiftAST cmd,
-          List<Variable> outputs,
+          List<Var> outputs,
           boolean hasSideEffects,
           boolean deterministic) throws UserException {
     //TODO: don't yet handle situation where user is naughty and
@@ -1880,24 +1880,24 @@ public class ASTWalker {
     String appName = Literals.extractLiteralString(context, appNameT);
     
     // Evaluate any argument expressions
-    List<Variable> args = evalAppCmdArgs(context, cmd);
+    List<Var> args = evalAppCmdArgs(context, cmd);
     
     checkAppOutputsReferenced(context, outputs, args);
     
     // Work out what variables must be closed before command line executes
-    Pair<Map<String, Variable>, List<Variable>> wait =
+    Pair<Map<String, Var>, List<Var>> wait =
             selectAppWaitVars(context, args);
-    Map<String, Variable> fileNames = wait.val1; 
-    List<Variable> waitVars = wait.val2;
+    Map<String, Var> fileNames = wait.val1; 
+    List<Var> waitVars = wait.val2;
     
-    List<Variable> passIn = new ArrayList<Variable>();
+    List<Var> passIn = new ArrayList<Var>();
     passIn.addAll(fileNames.values());
     passIn.addAll(args);
     
     // use wait to wait for data then dispatch task to worker
     String waitName = context.getFunctionContext().constructName("app-leaf");
     backend.startWaitStatement(waitName, waitVars, passIn,
-                 Collections.<Variable>emptyList(), true, TaskMode.LEAF);
+                 Collections.<Var>emptyList(), true, TaskMode.LEAF);
     // On worker, just execute the required command directly
     List<Arg> localArgs = retrieveAppArgs(context, args, fileNames);
     backend.runExternal(appName, localArgs,
@@ -1914,18 +1914,18 @@ public class ASTWalker {
    * @param args
    */
   private void checkAppOutputsReferenced(Context context,
-      List<Variable> outputs, List<Variable> args) {
-    HashMap<String, Variable> outMap = new HashMap<String, Variable>();
-    for (Variable output: outputs) {
-      outMap.put(output.getName(), output);
+      List<Var> outputs, List<Var> args) {
+    HashMap<String, Var> outMap = new HashMap<String, Var>();
+    for (Var output: outputs) {
+      outMap.put(output.name(), output);
     }
-    for (Variable arg: args) {
-      if (arg.getDefType() == DefType.OUTARG) {
-        outMap.remove(arg.getName());
+    for (Var arg: args) {
+      if (arg.defType() == DefType.OUTARG) {
+        outMap.remove(arg.name());
       }
     }
-    for (Variable unreferenced: outMap.values()) {
-      LogHelper.warn(context, "Output argument " + unreferenced.getName() 
+    for (Var unreferenced: outMap.values()) {
+      LogHelper.warn(context, "Output argument " + unreferenced.name() 
           + " is not referenced in app command line");
     }
   }
@@ -1941,18 +1941,18 @@ public class ASTWalker {
    * @throws DoubleDefineException
    */
   private List<Arg> retrieveAppArgs(Context context,
-          List<Variable> inputs, Map<String, Variable> fileNames)
+          List<Var> inputs, Map<String, Var> fileNames)
           throws UserException, UndefinedTypeException, DoubleDefineException {
     List<Arg> localInputs = new ArrayList<Arg>();
-    for (Variable in: inputs) {
-      if (Types.isFile(in.getType())) {
-        Variable filenameFuture = fileNames.get(in.getName());
+    for (Var in: inputs) {
+      if (Types.isFile(in.type())) {
+        Var filenameFuture = fileNames.get(in.name());
         assert(filenameFuture != null);
-        Variable filenameVal = varCreator.fetchValueOf(context,
+        Var filenameVal = varCreator.fetchValueOf(context,
                                                 filenameFuture);
         localInputs.add(Arg.createVar(filenameVal));
       } else {
-        Variable val = varCreator.fetchValueOf(context, in);
+        Var val = varCreator.fetchValueOf(context, in);
         localInputs.add(Arg.createVar(val));
       }
     }
@@ -1967,23 +1967,23 @@ public class ASTWalker {
    * @throws TypeMismatchException
    * @throws UserException
    */
-  private List<Variable> 
+  private List<Var> 
       evalAppCmdArgs(Context context, SwiftAST cmdArgs) 
           throws TypeMismatchException, UserException {
-    List<Variable> args = new ArrayList<Variable>();
+    List<Var> args = new ArrayList<Var>();
     // Skip first arg: that is id
     for (SwiftAST cmdArg: cmdArgs.children(1)) {
       if (cmdArg.getType() == ExMParser.APP_FILENAME) {
         assert(cmdArg.getChildCount() == 1);
         String fileVarName = cmdArg.child(0).getText();
-        Variable file = context.getDeclaredVariable(fileVarName);
-        if (!Types.isFile(file.getType())) {
-          throw new TypeMismatchException(context, "Variable " + file.getName()
+        Var file = context.getDeclaredVariable(fileVarName);
+        if (!Types.isFile(file.type())) {
+          throw new TypeMismatchException(context, "Variable " + file.name()
                   + " is not a file, cannot use @ prefix for app");
         }
         args.add(file);
       } else {
-        SwiftType exprType = TypeChecker.findSingleExprType(context,
+        Type exprType = TypeChecker.findSingleExprType(context,
                                                             cmdArg);
         if (!(Types.isString(exprType) || Types.isInt(exprType))) {
           //TODO: more types
@@ -1991,7 +1991,7 @@ public class ASTWalker {
                   + "Type " + exprType + " not yet"
                   + " supported for app args");
         }
-        Variable exprResult = exprWalker.evalExprToTmp(context, cmdArg,
+        Var exprResult = exprWalker.eval(context, cmdArg,
                                       exprType, false, null);
         args.add(exprResult);
       }
@@ -2010,26 +2010,26 @@ public class ASTWalker {
    * @throws UserException
    * @throws UndefinedTypeException
    */
-  private Pair<Map<String, Variable>, List<Variable>> selectAppWaitVars(
-          Context context, List<Variable> args) throws UserException,
+  private Pair<Map<String, Var>, List<Var>> selectAppWaitVars(
+          Context context, List<Var> args) throws UserException,
           UndefinedTypeException {
     // map from file var to filename
-    Map<String, Variable> fileNames = new HashMap<String, Variable>(); 
-    List<Variable> waitVars = new ArrayList<Variable>();
-    for (Variable arg: args) {
-      if (Types.isFile(arg.getType())) {
+    Map<String, Var> fileNames = new HashMap<String, Var>(); 
+    List<Var> waitVars = new ArrayList<Var>();
+    for (Var arg: args) {
+      if (Types.isFile(arg.type())) {
         // Need to wait for filename for files
-        Variable filenameFuture = varCreator.createFilenameAlias(context, arg);
+        Var filenameFuture = varCreator.createFilenameAlias(context, arg);
 
-        if (arg.getDefType() != DefType.OUTARG) {
+        if (arg.defType() != DefType.OUTARG) {
           // If output is unmapped, need to assign file name
           backend.getFileName(filenameFuture, arg, true);
         } else {
           backend.getFileName(filenameFuture, arg, false);
         }
         waitVars.add(filenameFuture);
-        fileNames.put(arg.getName(), filenameFuture);
-        if (arg.getDefType() != DefType.OUTARG) {
+        fileNames.put(arg.name(), filenameFuture);
+        if (arg.defType() != DefType.OUTARG) {
           // Don't wait for file to be closed for output arg
           waitVars.add(arg);
         }
@@ -2062,7 +2062,7 @@ public class ASTWalker {
       assert(fieldTree.child(0).getType() == ExMParser.ID);
       assert(fieldTree.child(1).getType() == ExMParser.ID);
       String baseTypeName = fieldTree.child(0).getText();
-      SwiftType fieldType = context.lookupType(baseTypeName);
+      Type fieldType = context.lookupType(baseTypeName);
       if (fieldType == null) {
         throw new UndefinedTypeException(context, baseTypeName);
       }
@@ -2112,37 +2112,37 @@ public class ASTWalker {
     if (vDesc.getMappingExpr() != null) {
       throw new UserException(context, "Can't have mapped global constant");
     }
-    Variable v = context.declareVariable(vDesc.getType(), vDesc.getName(),
-                   VariableStorage.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
+    Var v = context.declareVariable(vDesc.getType(), vDesc.getName(),
+                   VarStorage.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
     
     
     SwiftAST val = vd.getVarExpr(0);
     assert(val != null);
     
-    SwiftType valType = TypeChecker.findSingleExprType(context, val);
-    if (!valType.assignableTo(v.getType())) {
+    Type valType = TypeChecker.findSingleExprType(context, val);
+    if (!valType.assignableTo(v.type())) {
       throw new TypeMismatchException(context, "trying to assign expression "
           + " of type " + valType.typeName() + " to global constant " 
-          + v.getName() + " which has type " + v.getType());
+          + v.name() + " which has type " + v.type());
     }
     
     String msg = "Don't support non-literal "
         + "expressions for global constants";
-    switch (v.getType().getPrimitiveType()) {
-    case BOOLEAN:
+    switch (v.type().primType()) {
+    case BOOL:
       String bval = Literals.extractBoolLit(context, val);
       if (bval == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(v.getName(), Arg.createBoolLit(
+      backend.addGlobal(v.name(), Arg.createBoolLit(
                                   Boolean.parseBoolean(bval)));
       break;
-    case INTEGER:
+    case INT:
       String ival = Literals.extractIntLit(context, val);
       if (ival == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(v.getName(), Arg.createIntLit(
+      backend.addGlobal(v.name(), Arg.createIntLit(
                                       Long.parseLong(ival)));
       break;
     case FLOAT:
@@ -2156,14 +2156,14 @@ public class ASTWalker {
         }
       }
       assert(fval != null);
-      backend.addGlobal(v.getName(), Arg.createFloatLit(fval));
+      backend.addGlobal(v.name(), Arg.createFloatLit(fval));
       break;
     case STRING:
       String sval = Literals.extractStringLit(context, val);
       if (sval == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(v.getName(), Arg.createStringLit(sval));
+      backend.addGlobal(v.name(), Arg.createStringLit(sval));
       break;
     default:
       throw new STCRuntimeError("Unexpect value tree type in "

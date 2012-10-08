@@ -16,10 +16,10 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
-import exm.stc.common.lang.Variable.DefType;
-import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -54,12 +54,12 @@ public class ConstantFinder {
     globalConsts.putAll(in.getGlobalConsts());
     
     for (Function f: in.getFunctions()) {
-      HashMap<String, Variable> funVars = new HashMap<String, Variable>();
-      for (Variable v: f.getInputList()) {
-        funVars.put(v.getName(), v);  
+      HashMap<String, Var> funVars = new HashMap<String, Var>();
+      for (Var v: f.getInputList()) {
+        funVars.put(v.name(), v);  
       }
-      for (Variable v: f.getOutputList()) {
-        funVars.put(v.getName(), v);
+      for (Var v: f.getOutputList()) {
+        funVars.put(v.name(), v);
       }
       constantFold(logger, in, f, f.getMainblock(), funVars, 
                           globalConsts.makeChildMap());
@@ -76,10 +76,10 @@ public class ConstantFinder {
    */
   private static void constantFold(Logger logger, Program prog, 
       Function fn, Block block, 
-      HashMap<String, Variable> varMap,
+      HashMap<String, Var> varMap,
       HierarchicalMap<String, Arg> knownConstants) throws InvalidOptionException {
-    for (Variable v: block.getVariables()) {
-      varMap.put(v.getName(), v);
+    for (Var v: block.getVariables()) {
+      varMap.put(v.name(), v);
     }
     
     // Find all constants in block
@@ -114,13 +114,13 @@ public class ConstantFinder {
           
           for (Entry<String, Arg> newConst: newConsts.entrySet()) {              
             String name = newConst.getKey();
-            Variable var = varMap.get(name);
+            Var var = varMap.get(name);
             Arg newVal = newConst.getValue();
             logger.debug("New constant: " + name);
-            if (Types.isScalarFuture(var.getType())) {
+            if (Types.isScalarFuture(var.type())) {
               replacements.add(ICInstructions.futureSet(var, newVal));
             } else {
-              assert(Types.isScalarValue(var.getType()));
+              assert(Types.isScalarValue(var.type()));
               replacements.add(ICInstructions.valueSet(var, newVal));
             }
           }
@@ -175,10 +175,10 @@ public class ConstantFinder {
       removalCandidates = new HashSet<String>();
       // Only remove variables defined in this scope: don't know how they
       // are used in other scopes
-      for (Variable v: block.getVariables()) {
+      for (Var v: block.getVariables()) {
         // Avoid removing alias variables as writes to them have side-effects
-        if (v.getStorage() != VariableStorage.ALIAS) {
-          removalCandidates.add(v.getName());
+        if (v.storage() != VarStorage.ALIAS) {
+          removalCandidates.add(v.name());
         }
       }
     }
@@ -188,7 +188,7 @@ public class ConstantFinder {
       Instruction inst = it.next();
       if (inst.getInputs().size() == 1) {
         if (isValueStoreInst(inst, ignoreLocalValConstants)) {
-          String varName = inst.getOutput(0).getName();
+          String varName = inst.getOutput(0).name();
           if ((!removeLocalConsts) || removalCandidates.contains(varName)) {
             logger.debug("Found constant " + varName);
             knownConstants.put(varName, inst.getInput(0));
@@ -283,8 +283,8 @@ public class ConstantFinder {
             Block block) throws InvalidOptionException {   
     // Find the remaining constant futures and delete assignments to them
     logger.debug("Making constant futures shared globals");
-    HashMap<String, Variable> localDeclsOfGlobalVars = 
-          new HashMap<String, Variable>();
+    HashMap<String, Var> localDeclsOfGlobalVars = 
+          new HashMap<String, Var>();
     HashMap<String, Arg> knownConstants = new HashMap<String, Arg>();
     
     findBlockConstants(logger, block, knownConstants, true, true);
@@ -297,7 +297,7 @@ public class ConstantFinder {
       // Remove from this block's variable entries 
       
       Arg val = c.getValue();
-      Variable glob = null;
+      Var glob = null;
       String globName = prog.invLookupGlobalConst(val);
       if (globName == null) {
         // Add new global constant
@@ -306,8 +306,8 @@ public class ConstantFinder {
         glob = localDeclsOfGlobalVars.get(globName);
       }
       if (glob == null) {
-        glob = block.declareVariable(val.getSwiftType(), globName, 
-                    VariableStorage.GLOBAL_CONST, DefType.GLOBAL_CONST,
+        glob = block.declareVariable(val.getType(), globName, 
+                    VarStorage.GLOBAL_CONST, DefType.GLOBAL_CONST,
                     null);
         localDeclsOfGlobalVars.put(globName, glob);
       }

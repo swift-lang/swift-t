@@ -12,10 +12,10 @@ import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.SwiftType;
-import exm.stc.common.lang.Variable;
-import exm.stc.common.lang.Variable.DefType;
-import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
 import exm.stc.frontend.TypeChecker;
@@ -27,8 +27,8 @@ public class ForeachLoop {
   private final String loopCountVarName;
 
   private LocalContext loopBodyContext = null;
-  private Variable loopCountVal = null;
-  private Variable memberVar = null;
+  private Var loopCountVal = null;
+  private Var memberVar = null;
   private final ArrayList<String> annotations;
   private int unroll = 1;
   private int splitDegree = -1;
@@ -49,11 +49,11 @@ public class ForeachLoop {
     return annotations.contains(Annotations.LOOP_SYNC);
   }
 
-  public Variable getMemberVar() {
+  public Var getMemberVar() {
     return memberVar;
   }
 
-  public Variable getLoopCountVal() {
+  public Var getLoopCountVal() {
     return loopCountVal;
   }
 
@@ -192,9 +192,9 @@ public class ForeachLoop {
     return arrayVarTree.getType() == ExMParser.ARRAY_RANGE;
   }
 
-  public SwiftType findArrayType(Context context)
+  public Type findArrayType(Context context)
       throws UserException {
-    SwiftType arrayType = TypeChecker.findSingleExprType(context, arrayVarTree);
+    Type arrayType = TypeChecker.findSingleExprType(context, arrayVarTree);
     if (!Types.isArray(arrayType) && !Types.isArrayRef(arrayType)) {
       throw new TypeMismatchException(context,
           "Expected array type in expression for foreach loop");
@@ -216,16 +216,16 @@ public class ForeachLoop {
     // Set up the context for the loop body with loop variables
     loopBodyContext = new LocalContext(context);
     if (loopCountVarName != null) {
-      loopCountVal = context.createLocalValueVariable(Types.VALUE_INTEGER,
+      loopCountVal = context.createLocalValueVariable(Types.V_INT,
           loopCountVarName);
     } else {
       loopCountVal = null;
     }
 
-    SwiftType arrayType = findArrayType(context);
+    Type arrayType = findArrayType(context);
     memberVar = loopBodyContext.declareVariable(
         Types.getArrayMemberType(arrayType), getMemberVarName(),
-        VariableStorage.STACK, DefType.LOCAL_USER, null);
+        VarStorage.STACK, DefType.LOCAL_USER, null);
     return loopBodyContext;
   }
 }

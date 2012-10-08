@@ -8,11 +8,10 @@ import java.util.Map;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Arg.ArgType;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.SwiftType;
-import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
 import exm.stc.tclbackend.tree.Command;
 import exm.stc.tclbackend.tree.Expression;
 import exm.stc.tclbackend.tree.SetVariable;
@@ -25,7 +24,7 @@ import exm.stc.tclbackend.tree.Token;
 public class BuiltinOps {
 
 
-  public static TclTree genLocalOpTcl(BuiltinOpcode op, Variable out, List<Arg> in,
+  public static TclTree genLocalOpTcl(BuiltinOpcode op, Var out, List<Arg> in,
       ArrayList<Expression> argExpr) {
 
     if (op == BuiltinOpcode.ASSERT || op == BuiltinOpcode.ASSERT_EQ) {
@@ -48,10 +47,10 @@ public class BuiltinOps {
         Square fmtArgs = new TclList(argExpr);
         Square fmt = new Square(new Token("eval"), new Token("format"),
                                                                   fmtArgs);
-        return new SetVariable(TclNamer.prefixVar(out.getName()), fmt);
+        return new SetVariable(TclNamer.prefixVar(out.name()), fmt);
       } else {
         assert(out != null);
-        assert(Types.isScalarValue(out.getType()));
+        assert(Types.isScalarValue(out.type()));
         Expression rhs;
         // First handle special cases, then typical case
         if (op == BuiltinOpcode.STRCAT) {
@@ -107,7 +106,7 @@ public class BuiltinOps {
           Expression exp[] = arithOpExpr(op, argExpr);
           rhs = Square.arithExpr(exp);
         }
-        return new SetVariable(TclNamer.prefixVar(out.getName()), rhs); 
+        return new SetVariable(TclNamer.prefixVar(out.name()), rhs); 
       }
     }
   }
@@ -268,38 +267,37 @@ public class BuiltinOps {
     }
   }
   
-  private static void checkCopy(BuiltinOpcode op, Variable out, Arg inArg) {
-    SwiftType expType = null;
+  private static void checkCopy(BuiltinOpcode op, Var out, Arg inArg) {
+    Type expType = null;
     switch (op) {
     case COPY_BLOB:
-      expType = Types.VALUE_BLOB;
+      expType = Types.V_BLOB;
       break;
     case COPY_BOOL:
-      expType = Types.VALUE_BOOLEAN;
+      expType = Types.V_BOOL;
       break;
     case COPY_FLOAT:
-      expType = Types.VALUE_FLOAT;
+      expType = Types.V_FLOAT;
       break;
     case COPY_INT:
-      expType = Types.VALUE_INTEGER;
+      expType = Types.V_INT;
       break;
     case COPY_STRING:
-      expType = Types.VALUE_STRING;
+      expType = Types.V_STRING;
       break;
     case COPY_VOID:
-      expType = Types.VALUE_VOID;
+      expType = Types.V_VOID;
       break;
     default:
       throw new STCRuntimeError("Unexpected op: " + op);
     }
-    if (inArg.getType() == ArgType.VAR) {
-      assert(expType.equals(inArg.getSwiftType()));
+    if (inArg.isVar()) {
+      assert(expType.equals(inArg.getType()));
     } else {
-      // getSwiftType returns futures for constant vals
-      assert(expType.getPrimitiveType()
-          == inArg.getSwiftType().getPrimitiveType());
+      // getType returns futures for constant vals
+      assert(expType.primType() == inArg.getType().primType());
     }
-    assert(expType.equals(out.getType()));
+    assert(expType.equals(out.type()));
   }
 
   private static Expression localStrCat(List<Arg> in, ArrayList<Expression> argExpr) {

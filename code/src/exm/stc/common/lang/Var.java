@@ -1,9 +1,14 @@
 
 package exm.stc.common.lang;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
-import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.Type;
 
 /**
  * This class is used to contain the relevant information about
@@ -13,13 +18,12 @@ import exm.stc.common.lang.Types.SwiftType;
  * safely shared between multiple data structures
  *
  */
-public class Variable
-{
-  private final SwiftType type;
+public class Var {
+  private final Type type;
   private final String name;
-  private final VariableStorage storage;
+  private final VarStorage storage;
   private final DefType defType;
-  private final Variable mapping;
+  private final Var mapping;
 
   public static final String TMP_VAR_PREFIX = "__t";
   public static final String ALIAS_VAR_PREFIX = "__alias";
@@ -35,12 +39,11 @@ public class Variable
   public static final String LOOP_COND_PREFIX = "__xcond";
   public static final String OUTER_VAR_PREFIX = "__outer";
 
-  public enum VariableStorage
-  {
+  public enum VarStorage {
     /** Reference stored in global stack frame */
     STACK,
     /** Reference stored only temporarily in control flow */
-    TEMPORARY,
+    TEMP,
     /** Reference to variable allocated elsewhere */
     ALIAS,
     /** Value only stored in interpreter */
@@ -66,17 +69,17 @@ public class Variable
     GLOBAL_CONST,
   }
 
-  public Variable(SwiftType type)
+  public Var(Type type)
   {
     this.type = type;
     this.name = "...";
-    this.storage = VariableStorage.ALIAS;
+    this.storage = VarStorage.ALIAS;
     this.defType = DefType.INARG;
     this.mapping = null;
   }
 
-  public Variable(SwiftType type, String name,
-                  VariableStorage storage, DefType defType)
+  public Var(Type type, String name,
+                  VarStorage storage, DefType defType)
   {
     this.type = type;
     this.name = name;
@@ -85,37 +88,33 @@ public class Variable
     this.mapping = null;
   }
   
-  public Variable(SwiftType type, String name,
-      VariableStorage storage, DefType defType, Variable mapping)
-  {
+  public Var(Type type, String name,
+      VarStorage storage, DefType defType, Var mapping) {
     this.type = type;
     this.name = name;
     this.storage = storage;
     this.defType = defType;
-    assert(mapping == null || Types.isString(mapping.getType()));
+    assert(mapping == null || Types.isString(mapping.type()));
     this.mapping = mapping;
   }
 
-  public String getName()
-  {
+  public String name() {
     return name;
   }
 
-  public SwiftType getType()
-  {
+  public Type type() {
     return type;
   }
 
-  public VariableStorage getStorage()
-  {
+  public VarStorage storage() {
     return storage;
   }
 
- public DefType getDefType() {
+  public DefType defType() {
     return defType;
   }
 
-  public Variable getMapping() {
+  public Var mapping() {
     return mapping;
   }
 
@@ -125,28 +124,28 @@ public class Variable
 
 
 
-  public static String names(List<Variable> list)
+  public static String names(List<Var> list)
   {
     StringBuilder sb = new StringBuilder(list.size()*16);
-    Iterator<Variable> it = list.iterator();
+    Iterator<Var> it = list.iterator();
     while (it.hasNext())
     {
-      Variable v = it.next();
-      sb.append(v.getName());
+      Var v = it.next();
+      sb.append(v.name());
       if (it.hasNext())
         sb.append(' ');
     }
     return sb.toString();
   }
 
-  public static List<String> nameList(Collection<Variable> variables)
+  public static List<String> nameList(Collection<Var> variables)
   {
     List<String> result = new ArrayList<String>(variables.size());
     nameFill(result, variables);
     return result;
   }
   
-  public static Set<String> nameSet(Collection<Variable> variables)
+  public static Set<String> nameSet(Collection<Var> variables)
   {
     Set<String> result = new HashSet<String>(variables.size());
     nameFill(result, variables);
@@ -154,17 +153,17 @@ public class Variable
   }
   
   private static void nameFill(Collection<String> names,
-                                  Collection<Variable> variables)
+                                  Collection<Var> variables)
   {
-    for (Variable v : variables)
-      names.add(v.getName());
+    for (Var v : variables)
+      names.add(v.name());
   }
 
-  public static List<SwiftType> extractTypes(List<Variable> variables)
+  public static List<Type> extractTypes(List<Var> variables)
   {
-    ArrayList<SwiftType> result = new ArrayList<SwiftType>(variables.size());
-    for (Variable v: variables) {
-      result.add(v.getType());
+    ArrayList<Type> result = new ArrayList<Type>(variables.size());
+    for (Var v: variables) {
+      result.add(v.type());
     }
 
     return result;
@@ -173,13 +172,13 @@ public class Variable
   /**
    * Create dereferenced variable given a reference
    */
-  public static Variable createDerefTmp(Variable ref, VariableStorage storage) {
-    assert(Types.isReference(ref.getType()));
-    Variable res = new Variable(ref.getType().getMemberType(),
-        DEREF_COMPILER_VAR_PREFIX + ref.getName(),
+  public static Var createDerefTmp(Var ref, VarStorage storage) {
+    assert(Types.isRef(ref.type()));
+    Var res = new Var(ref.type().memberType(),
+        DEREF_COMPILER_VAR_PREFIX + ref.name(),
         storage, DefType.LOCAL_COMPILER, 
         null);
-    assert(Types.isReferenceTo(ref.getType(), res.getType()));
+    assert(Types.isRefTo(ref.type(), res.type()));
     return res;
   }
 
@@ -195,10 +194,10 @@ public class Variable
    * @param name
    * @return
    */
-  public static Variable findByName(Collection<Variable> variables,
+  public static Var findByName(Collection<Var> variables,
       String name) {
-    for (Variable v: variables) {
-      if (v.getName().equals(name)) {
+    for (Var v: variables) {
+      if (v.name().equals(name)) {
         return v;
       }
     }

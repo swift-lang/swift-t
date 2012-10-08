@@ -6,14 +6,14 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators;
-import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
+import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types.FunctionType;
-import exm.stc.common.lang.Types.SwiftType;
-import exm.stc.common.lang.Variable;
-import exm.stc.common.lang.Variable.DefType;
-import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarStorage;
 
 public interface CompilerBackend {
 
@@ -30,66 +30,66 @@ public interface CompilerBackend {
    * @param mapping null if no mapping
    * @throws UndefinedTypeException
    */
-  public abstract void declare(SwiftType t, String name,
-      VariableStorage storage, DefType defType, Variable mapping) 
+  public abstract void declare(Type t, String name,
+      VarStorage storage, DefType defType, Var mapping) 
            throws UndefinedTypeException;
 
-  public abstract void closeArray(Variable arr);
+  public abstract void closeArray(Var arr);
 
-  public abstract void localOp(BuiltinOpcode op, Variable out, 
+  public abstract void localOp(BuiltinOpcode op, Var out, 
                                             List<Arg> in);
   
-  public abstract void asyncOp(BuiltinOpcode op, Variable out, 
+  public abstract void asyncOp(BuiltinOpcode op, Var out, 
                                List<Arg> in, Arg priority);  
   
   /**
    * Set target=addressof(src)
    */
-  public abstract void assignReference(Variable target, Variable src);
+  public abstract void assignReference(Var target, Var src);
 
-  public abstract void dereferenceInt(Variable target, Variable src);
+  public abstract void dereferenceInt(Var target, Var src);
   
-  public abstract void dereferenceBool(Variable target, Variable src);
+  public abstract void dereferenceBool(Var target, Var src);
 
-  public abstract void dereferenceFloat(Variable dst, Variable src);
+  public abstract void dereferenceFloat(Var dst, Var src);
   
-  public abstract void dereferenceBlob(Variable dst, Variable src);
+  public abstract void dereferenceBlob(Var dst, Var src);
   
-  public abstract void dereferenceFile(Variable dst, Variable src);
+  public abstract void dereferenceFile(Var dst, Var src);
 
-  public abstract void retrieveRef(Variable target, Variable src);
+  public abstract void retrieveRef(Var target, Var src);
   
   /**
    * Copy the handle to a future, creating an alias
    * @param dst
    * @param src
    */
-  public abstract void makeAlias(Variable dst, Variable src);
+  public abstract void makeAlias(Var dst, Var src);
 
-  public abstract void dereferenceString (Variable target, Variable src);
+  public abstract void dereferenceString (Var target, Var src);
 
   /**assignInt, which can take a value variable or a literal int in oparg
    */
-  public abstract void assignInt(Variable target, Arg src);
-  public abstract void retrieveInt(Variable target, Variable source);
+  public abstract void assignInt(Var target, Arg src);
+  public abstract void retrieveInt(Var target, Var source);
 
-  public abstract void assignFloat(Variable target, Arg src);
-  public abstract void retrieveFloat(Variable target, Variable source);
+  public abstract void assignFloat(Var target, Arg src);
+  public abstract void retrieveFloat(Var target, Var source);
 
   /** assignString, which can take a value variable or a literal int in oparg
    */
-  public abstract void assignString(Variable target, Arg src);
+  public abstract void assignString(Var target, Arg src);
 
-  public abstract void retrieveString(Variable target, Variable source);
+  public abstract void retrieveString(Var target, Var source);
   
-  public abstract void assignBool(Variable target, Arg src);
-  public abstract void retrieveBool(Variable target, Variable source);
+  public abstract void assignBool(Var target, Arg src);
+  public abstract void retrieveBool(Var target, Var source);
 
   /**
    * Extract handle to filename future out of file variable
    * @param initUnmapped if true, assign arbitrary filename to unmapped files
    */
-  public abstract void getFileName(Variable filename, Variable file, boolean initUnmapped);
+  public abstract void getFileName(Var filename, Var file, boolean initUnmapped);
   /**
    * NOTE: all built-ins should be defined before other functions
    * @param function
@@ -98,20 +98,20 @@ public interface CompilerBackend {
    * @param priorityVal 
    */
   public abstract void builtinFunctionCall(String function,
-      List<Variable> inputs, List<Variable> outputs, Arg priority);
+      List<Var> inputs, List<Var> outputs, Arg priority);
 
   public abstract void functionCall(String function,
-      List<Variable> inputs, List<Variable> outputs, List<Boolean> blockOn, 
+      List<Var> inputs, List<Var> outputs, List<Boolean> blockOn, 
       TaskMode mode, Arg priority);
 
   public abstract void builtinLocalFunctionCall(String functionName,
-          List<Arg> inputs, List<Variable> outputs);
+          List<Arg> inputs, List<Var> outputs);
   
   /**
    * Generate command to run an external application immediately
    */
   public abstract void runExternal(String cmd, List<Arg> args,
-                             List<Variable> outFiles,
+                             List<Var> outFiles,
                              boolean hasSideEffects, boolean deterministic);
   
   /**
@@ -120,21 +120,21 @@ public interface CompilerBackend {
    * @param structField
    * @param oVarName
    */
-  public abstract void structLookup(Variable structVar, String structField,
-      Variable result);
+  public abstract void structLookup(Var structVar, String structField,
+      Var result);
   
-  public abstract void structRefLookup(Variable structVar, String fieldName,
-      Variable tmp);
+  public abstract void structRefLookup(Var structVar, String fieldName,
+      Var tmp);
 
-  public abstract void structClose(Variable struct);
+  public abstract void structClose(Var struct);
 
-  public abstract void structInsert(Variable structVar, String fieldName,
-                                          Variable fieldContents);
+  public abstract void structInsert(Var structVar, String fieldName,
+                                          Var fieldContents);
 
-  public abstract void arrayLookupFuture(Variable oVar, Variable arrayVar,
-      Variable indexVar, boolean isArrayRef);
+  public abstract void arrayLookupFuture(Var oVar, Var arrayVar,
+      Var indexVar, boolean isArrayRef);
 
-  public abstract void arrayLookupRefImm(Variable oVar, Variable arrayVar,
+  public abstract void arrayLookupRefImm(Var oVar, Var arrayVar,
       Arg arrayIndex, boolean isArrayRef);
   
   /**
@@ -145,40 +145,40 @@ public interface CompilerBackend {
    * @param arrayVar
    * @param arrayIndex
    */
-  public abstract void arrayLookupImm(Variable oVar, Variable arrayVar,
+  public abstract void arrayLookupImm(Var oVar, Var arrayVar,
       Arg arrayIndex);
 
-  public abstract void arrayInsertFuture(Variable iVar,
-      Variable arrayVar, Variable indexVar);
+  public abstract void arrayInsertFuture(Var iVar,
+      Var arrayVar, Var indexVar);
   
-  public abstract void arrayRefInsertFuture(Variable iVar,
-      Variable arrayVar, Variable indexVar, Variable outerArrayVar);
+  public abstract void arrayRefInsertFuture(Var iVar,
+      Var arrayVar, Var indexVar, Var outerArrayVar);
 
-  public abstract void arrayInsertImm(Variable iVar, Variable arrayVar,
+  public abstract void arrayInsertImm(Var iVar, Var arrayVar,
       Arg arrayIndex);
   
-  public abstract void arrayRefInsertImm(Variable iVar, 
-      Variable arrayVar, Arg arrayIndex, Variable outerArrayVar);
+  public abstract void arrayRefInsertImm(Var iVar, 
+      Var arrayVar, Arg arrayIndex, Var outerArrayVar);
 
-  public abstract void arrayCreateNestedFuture(Variable arrayResult,
-      Variable arrayVar, Variable indexVar);
+  public abstract void arrayCreateNestedFuture(Var arrayResult,
+      Var arrayVar, Var indexVar);
 
-  public abstract void arrayCreateNestedImm(Variable arrayResult,
-      Variable arrayVar, Arg arrIx);
+  public abstract void arrayCreateNestedImm(Var arrayResult,
+      Var arrayVar, Arg arrIx);
 
-  public abstract void arrayRefCreateNestedFuture(Variable arrayResult,
-      Variable arrayVar, Variable indexVar);
+  public abstract void arrayRefCreateNestedFuture(Var arrayResult,
+      Var arrayVar, Var indexVar);
 
-  public abstract void arrayRefCreateNestedImm(Variable arrayResult,
-      Variable arrayVar, Arg arrIx);
+  public abstract void arrayRefCreateNestedImm(Var arrayResult,
+      Var arrayVar, Arg arrIx);
 
-  public abstract void initUpdateable(Variable updateable, Arg val);
-  public abstract void latestValue(Variable result, Variable updateable);
+  public abstract void initUpdateable(Var updateable, Arg val);
+  public abstract void latestValue(Var result, Var updateable);
   
-  public abstract void update(Variable updateable, Operators.UpdateMode updateMode,
-                              Variable val);
+  public abstract void update(Var updateable, Operators.UpdateMode updateMode,
+                              Var val);
   /** Same as above, but takes a value or constant as arg */
-  public abstract void updateImm(Variable updateable, Operators.UpdateMode updateMode,
+  public abstract void updateImm(Var updateable, Operators.UpdateMode updateMode,
       Arg val);
   
   public abstract void defineBuiltinFunction(String name,
@@ -187,7 +187,7 @@ public interface CompilerBackend {
                     throws UserException;
 
   public abstract void startFunction(String functionName,
-      List<Variable> oList, List<Variable> iList, TaskMode mode)
+      List<Var> oList, List<Var> iList, TaskMode mode)
             throws UserException;
 
   public abstract void endFunction();
@@ -234,13 +234,13 @@ public interface CompilerBackend {
    * @param usedVariables
    * @param keepOpenVars
    */
-  public abstract void startForeachLoop(Variable arrayVar,
-      Variable memberVar, Variable loopCountVar, boolean isSync,
+  public abstract void startForeachLoop(Var arrayVar,
+      Var memberVar, Var loopCountVar, boolean isSync,
       int splitDegree, boolean arrayClosed,
-      List<Variable> usedVariables, List<Variable> keepOpenVars);
+      List<Var> usedVariables, List<Var> keepOpenVars);
 
   public abstract void endForeachLoop(boolean isSync, int splitDegree, 
-            boolean arrayClosed, List<Variable> keepOpenVars);
+            boolean arrayClosed, List<Var> keepOpenVars);
 
   
   /**
@@ -261,12 +261,12 @@ public interface CompilerBackend {
    * @param desiredUnroll the suggested unrolling factor
    * @param splitDegree the desired loop split factor (negative if no splitting)
    */
-  public abstract void startRangeLoop(String loopName, Variable loopVar, 
+  public abstract void startRangeLoop(String loopName, Var loopVar, 
       Arg start, Arg end, Arg increment, 
-      boolean isSync, List<Variable> usedVariables, 
-      List<Variable> keepOpenVars, int desiredUnroll, int splitDegree);
+      boolean isSync, List<Var> usedVariables, 
+      List<Var> keepOpenVars, int desiredUnroll, int splitDegree);
   public abstract void endRangeLoop(boolean isSync, 
-                                    List<Variable> keepOpenVars,
+                                    List<Var> keepOpenVars,
                                     int splitDegree);
   /**
    * Add a global variable (currently constant literals are supported)  
@@ -300,11 +300,11 @@ public interface CompilerBackend {
    * @param mode controls where asynchronous execution occurs
    */
   public abstract void startWaitStatement(String procName,
-      List<Variable> waitVars,
-      List<Variable> usedVars, List<Variable> keepOpenVars,
+      List<Var> waitVars,
+      List<Var> usedVars, List<Var> keepOpenVars,
       boolean explicit, TaskMode mode);
 
-  public abstract void endWaitStatement(List<Variable> keepOpenVars);
+  public abstract void endWaitStatement(List<Var> keepOpenVars);
 
   
   /**
@@ -316,13 +316,13 @@ public interface CompilerBackend {
    * @param keepOpenVars
    * @param blockingLoopVars
    */
-  public abstract void startLoop(String loopName, List<Variable> loopVars,
-      List<Variable> initVals, List<Variable> usedVariables,
-      List<Variable> keepOpenVars, List<Boolean> blockingVars);
+  public abstract void startLoop(String loopName, List<Var> loopVars,
+      List<Var> initVals, List<Var> usedVariables,
+      List<Var> keepOpenVars, List<Boolean> blockingVars);
   
-  public abstract void loopContinue(List<Variable> newVals,
-      List<Variable> usedVariables, List<Variable> keepOpenVars,
+  public abstract void loopContinue(List<Var> newVals,
+      List<Var> usedVariables, List<Var> keepOpenVars,
       List<Boolean> blockingVars);
-  public abstract void loopBreak(List<Variable> varsToClose);
+  public abstract void loopBreak(List<Var> varsToClose);
   public abstract void endLoop();
 }

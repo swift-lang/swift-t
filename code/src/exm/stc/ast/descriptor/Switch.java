@@ -52,7 +52,7 @@ public class Switch {
 
   public void typeCheck(Context context) throws UserException {
     if (!TypeChecker.findSingleExprType(context, switchExpr).assignableTo(
-        Types.FUTURE_INTEGER)) {
+        Types.F_INT)) {
       throw new TypeMismatchException(context, "switch variable must "
            + "be of type int");
     }

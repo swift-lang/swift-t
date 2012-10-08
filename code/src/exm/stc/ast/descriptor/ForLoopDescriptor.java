@@ -19,10 +19,10 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.SwiftType;
-import exm.stc.common.lang.Variable;
-import exm.stc.common.lang.Variable.DefType;
-import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
 import exm.stc.frontend.LogHelper;
@@ -39,10 +39,10 @@ public class ForLoopDescriptor {
 
 
   public static class LoopVar {
-    public final Variable var;
+    public final Var var;
     /** true if the variable was declared outside loop scope */
     public final boolean declaredOutsideLoop;
-    public LoopVar(Variable var, boolean declaredOutsideLoop) {
+    public LoopVar(Var var, boolean declaredOutsideLoop) {
       super();
       this.var = var;
       this.declaredOutsideLoop = declaredOutsideLoop;
@@ -70,8 +70,8 @@ public class ForLoopDescriptor {
     return Collections.unmodifiableList(loopVars);
   }
   
-  public List<Variable> getUnpackedLoopVars() {
-    ArrayList<Variable> res = new ArrayList<Variable>(loopVars.size());
+  public List<Var> getUnpackedLoopVars() {
+    ArrayList<Var> res = new ArrayList<Var>(loopVars.size());
     for (LoopVar v: loopVars) {
       res.add(v.var);
     }
@@ -108,12 +108,12 @@ public class ForLoopDescriptor {
     this.condition = condition; 
   }
   
-  public void addLoopVar(Variable loopVar, boolean declaredOutsideLoop,
+  public void addLoopVar(Var loopVar, boolean declaredOutsideLoop,
                 SwiftAST initExpr) {
     assert(loopVar != null);
     assert(initExpr != null);
     this.loopVars.add(new LoopVar(loopVar, declaredOutsideLoop));
-    this.initExprs.put(loopVar.getName(), initExpr);
+    this.initExprs.put(loopVar.name(), initExpr);
   }
   
   public void makeLoopVarBlocking(Context context, String loopVarName) 
@@ -122,7 +122,7 @@ public class ForLoopDescriptor {
     if (!initExprs.containsKey(loopVarName)) {
       throw new InvalidAnnotationException(context, loopVarName 
           + " specified to block on is not a loop variable, should be one of: "
-          + Variable.nameList(this.getUnpackedLoopVars()).toString());
+          + Var.nameList(this.getUnpackedLoopVars()).toString());
     }
     
     blockingLoopVars.add(loopVarName);
@@ -139,7 +139,7 @@ public class ForLoopDescriptor {
   public List<Boolean> blockingLoopVarVector() {
     ArrayList<Boolean> res = new ArrayList<Boolean>(loopVars.size());
     for (LoopVar v: loopVars) {
-      res.add(blockingLoopVars.contains(v.var.getName()));
+      res.add(blockingLoopVars.contains(v.var.name()));
     }
     return res;
   }
@@ -160,30 +160,30 @@ public class ForLoopDescriptor {
   public void validateInit(Context context) throws UserException {
     //each loop var should have an update rule, with the correct type
     for (LoopVar lv: loopVars) {
-      Variable v = lv.var;
-      Variable outerV = context.getDeclaredVariable(v.getName());
+      Var v = lv.var;
+      Var outerV = context.getDeclaredVariable(v.name());
       if (lv.declaredOutsideLoop) {
         if (outerV == null) {
           throw new UndefinedVariableException(context, v.toString() + " was not " +
           		"declared before for loop");
         }
       } else {
-        context.checkNotDefined(v.getName());
+        context.checkNotDefined(v.name());
       }
       
-      SwiftAST initExpr = initExprs.get(v.getName());
+      SwiftAST initExpr = initExprs.get(v.name());
       if (initExpr == null) {
-        throw new UserException(context, "loop variable " + v.getName()
+        throw new UserException(context, "loop variable " + v.name()
             + " does not have an initial value");
       }
-      SwiftType initExprType = TypeChecker.findSingleExprType(context, initExpr);
-      TypeChecker.checkAssignment(context, initExprType, v.getType(), v.getName());
+      Type initExprType = TypeChecker.findSingleExprType(context, initExpr);
+      TypeChecker.checkAssignment(context, initExprType, v.type(), v.name());
     }
   }
   
   public void validateCond(Context afterInitContext) throws UserException {
     //check condition type
-    SwiftType condType = TypeChecker.findSingleExprType(afterInitContext, 
+    Type condType = TypeChecker.findSingleExprType(afterInitContext, 
                                                                   condition);
     if ((!Types.isBool(condType)) && (!Types.isInt(condType))) {
       throw new TypeMismatchException(afterInitContext, "for loop condition "
@@ -199,16 +199,16 @@ public class ForLoopDescriptor {
    */
   public void validateUpdates(Context loopBodyContext) throws UserException {
     for (LoopVar lv: loopVars) {
-      Variable v = lv.var;
-      SwiftAST upExpr = updateRules.get(v.getName());
+      Var v = lv.var;
+      SwiftAST upExpr = updateRules.get(v.name());
       if (upExpr == null) {
-        throw new UserException(loopBodyContext, "loop variable " + v.getName()
+        throw new UserException(loopBodyContext, "loop variable " + v.name()
             + " must be updated between iterations");
       }
-      SwiftType upExprType = TypeChecker.findSingleExprType(loopBodyContext, 
+      Type upExprType = TypeChecker.findSingleExprType(loopBodyContext, 
                                                             upExpr);
-      TypeChecker.checkAssignment(loopBodyContext, upExprType, v.getType(), 
-                                                              v.getName());
+      TypeChecker.checkAssignment(loopBodyContext, upExprType, v.type(), 
+                                                              v.name());
     }
 
     if (updateRules.size() > loopVars.size()) {
@@ -255,8 +255,8 @@ public class ForLoopDescriptor {
         SwiftAST expr = decl.getVarExpr(0);
         assert(loopVarDesc.getMappingExpr() == null); 
         assert(expr != null);  // shouldn't be mapped, enforced by syntax
-        Variable loopVar = new Variable(loopVarDesc.getType(),
-                loopVarDesc.getName(), VariableStorage.STACK,
+        Var loopVar = new Var(loopVarDesc.getType(),
+                loopVarDesc.getName(), VarStorage.STACK,
                 DefType.LOCAL_USER, null);
         forLoop.addLoopVar(loopVar, false, expr);
       } else if (initType == ExMParser.FOR_LOOP_ASSIGN) {
@@ -266,7 +266,7 @@ public class ForLoopDescriptor {
         SwiftAST expr = loopVarInit.child(1);
         assert(lvalTree.getType() == ExMParser.ID);
         String varName = lvalTree.getText();
-        Variable var = context.getDeclaredVariable(varName);
+        Var var = context.getDeclaredVariable(varName);
         if (var == null) {
           throw new UndefinedVariableException(context, "Variable in " +
           		"for loop: " + varName + " has not been declared"); 
@@ -299,7 +299,7 @@ public class ForLoopDescriptor {
         String annText = ann.child(0).getText();
         if (annText.equals(WAITONALL_ANNOTATION)) {
           for (LoopVar v: forLoop.getLoopVars()) {
-            forLoop.makeLoopVarBlocking(context, v.var.getName());
+            forLoop.makeLoopVarBlocking(context, v.var.name());
           }
         } else {
           throw new InvalidAnnotationException(context, "Unknown annotation " +
@@ -332,9 +332,9 @@ public class ForLoopDescriptor {
     Context bodyContext = new LocalContext(context);
     for (LoopVar lv: this.getLoopVars()) {
       if (!lv.declaredOutsideLoop) {
-        Variable v = lv.var;
-        bodyContext.declareVariable(v.getType(), v.getName(), v.getStorage(), 
-                                              v.getDefType(), v.getMapping());
+        Var v = lv.var;
+        bodyContext.declareVariable(v.type(), v.name(), v.storage(), 
+                                              v.defType(), v.mapping());
       }
     }
     return bodyContext;

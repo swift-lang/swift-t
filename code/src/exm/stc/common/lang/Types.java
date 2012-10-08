@@ -15,27 +15,27 @@ import exm.stc.common.exceptions.STCRuntimeError;
  * along with convenience functions for creating, checking and
  * manipulating types.  
  * 
- * The base class for variable types is SwiftType.
+ * The base class for variable types is Type.
  * Since we don't yet have first class functions, FunctionType is separate
  * from the variable type system.
  */
 public class Types {
 
-  public static class ArrayType extends SwiftType {
-    private final SwiftType memberType;
+  public static class ArrayType extends Type {
+    private final Type memberType;
 
-    public ArrayType(SwiftType memberType) {
+    public ArrayType(Type memberType) {
       super();
       this.memberType = memberType;
     }
 
     @Override
-    public StructureType getStructureType() {
+    public StructureType structureType() {
       return StructureType.ARRAY;
     }
 
     @Override
-    public SwiftType getMemberType() {
+    public Type memberType() {
       return memberType;
     }
 
@@ -52,15 +52,15 @@ public class Types {
 
     @Override
     public boolean equals(Object other) {
-      if (!(other instanceof SwiftType)) {
+      if (!(other instanceof Type)) {
         throw new STCRuntimeError("Comparing ArrayType with non-type " +
         		"object");
       }
-      SwiftType otherT = (SwiftType) other;
-      if (!otherT.getStructureType().equals(StructureType.ARRAY)) {
+      Type otherT = (Type) other;
+      if (!otherT.structureType().equals(StructureType.ARRAY)) {
         return false;
       } else {
-        return otherT.getMemberType().equals(memberType);
+        return otherT.memberType().equals(memberType);
       }
     }
 
@@ -70,12 +70,12 @@ public class Types {
     }
 
     @Override
-    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
+    public Type bindTypeVars(Map<String, Type> vals) {
       return new ArrayType(memberType.bindTypeVars(vals));
     }
 
     @Override
-    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
+    public Map<String, Type> matchTypeVars(Type concrete) {
       if (concrete instanceof ArrayType) {
         return memberType.matchTypeVars(((ArrayType)concrete).memberType);
       }
@@ -91,20 +91,20 @@ public class Types {
 
   public enum PrimType
   {
-    INTEGER, STRING, FLOAT, BOOLEAN, 
+    INT, STRING, FLOAT, BOOL, 
     BLOB, FILE,
      // Void is a type with no information (i.e. the external type in Swift, or 
      // the unit type in functional languages)
     VOID; 
 
     static String toString(PrimType pt) {
-      if (pt == INTEGER) {
+      if (pt == INT) {
         return "int";
       } else if (pt == STRING) {
         return "string";
       } else if (pt == FLOAT) {
         return "float";
-      } else if (pt == BOOLEAN) {
+      } else if (pt == BOOL) {
         return "boolean";
       } else if (pt == VOID) {
         return "void";
@@ -119,18 +119,18 @@ public class Types {
 
   }
 
-  public static class ReferenceType extends SwiftType {
-    private final SwiftType referencedType;
-    public ReferenceType(SwiftType referencedType) {
+  public static class RefType extends Type {
+    private final Type referencedType;
+    public RefType(Type referencedType) {
       this.referencedType = referencedType;
     }
 
     @Override
-    public StructureType getStructureType() {
+    public StructureType structureType() {
       return StructureType.REFERENCE;
     }
     @Override
-    public SwiftType getMemberType() {
+    public Type memberType() {
       return referencedType;
     }
 
@@ -146,32 +146,32 @@ public class Types {
 
     @Override
     public boolean equals(Object other) {
-      if (!(other instanceof SwiftType)) {
+      if (!(other instanceof Type)) {
         throw new STCRuntimeError("Comparing ReferenceType with " +
               "non-type object");
       }
-      SwiftType otherT = (SwiftType) other;
-      if (!otherT.getStructureType().equals(StructureType.REFERENCE)) {
+      Type otherT = (Type) other;
+      if (!otherT.structureType().equals(StructureType.REFERENCE)) {
         return false;
       } else {
-        return otherT.getMemberType().equals(referencedType);
+        return otherT.memberType().equals(referencedType);
       }
     }
 
     @Override
     public int hashCode() {
-      return referencedType.hashCode() ^ ReferenceType.class.hashCode();
+      return referencedType.hashCode() ^ RefType.class.hashCode();
     }
 
     @Override
-    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
-      return new ReferenceType(referencedType.bindTypeVars(vals));
+    public Type bindTypeVars(Map<String, Type> vals) {
+      return new RefType(referencedType.bindTypeVars(vals));
     }
 
     @Override
-    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
-      if (concrete instanceof ReferenceType) {
-        SwiftType concreteMember = ((ReferenceType)concrete).referencedType;
+    public Map<String, Type> matchTypeVars(Type concrete) {
+      if (concrete instanceof RefType) {
+        Type concreteMember = ((RefType)concrete).referencedType;
         return referencedType.matchTypeVars(concreteMember);
       }
       return null;
@@ -183,16 +183,16 @@ public class Types {
     }
   }
 
-  public static class StructType extends SwiftType {
+  public static class StructType extends Type {
     public static class StructField {
-      private final SwiftType type;
+      private final Type type;
       private final String name;
-      public StructField(SwiftType type, String name) {
+      public StructField(Type type, String name) {
         this.type = type;
         this.name = name;
       }
 
-      public SwiftType getType() {
+      public Type getType() {
         return type;
       }
 
@@ -214,7 +214,7 @@ public class Types {
     }
 
     @Override
-    public StructureType getStructureType() {
+    public StructureType structureType() {
       return StructureType.STRUCT;
     }
 
@@ -227,7 +227,7 @@ public class Types {
     }
 
 
-    public SwiftType getFieldTypeByName(String name) {
+    public Type getFieldTypeByName(String name) {
       for (StructField field: fields) {
         if (field.getName().equals(name)) {
           return field.getType();
@@ -248,12 +248,12 @@ public class Types {
 
     @Override
     public boolean equals(Object other) {
-      if (!(other instanceof SwiftType)) {
+      if (!(other instanceof Type)) {
         throw new STCRuntimeError("Comparing ReferenceType with " +
               "non-type object");
       }
-      SwiftType otherT = (SwiftType) other;
-      if (!otherT.getStructureType().equals(StructureType.STRUCT)) {
+      Type otherT = (Type) other;
+      if (!otherT.structureType().equals(StructureType.STRUCT)) {
         return false;
       } else {
         // Type names should match, along with fields
@@ -297,13 +297,13 @@ public class Types {
     }
 
     @Override
-    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
+    public Type bindTypeVars(Map<String, Type> vals) {
       // Assume no type variables inside struct
       return this;
     }
 
     @Override
-    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
+    public Map<String, Type> matchTypeVars(Type concrete) {
       if (this.equals(concrete)) {
         return Collections.emptyMap();
       } else {
@@ -322,7 +322,7 @@ public class Types {
     }
   }
 
-  public static class ScalarValueType extends SwiftType {
+  public static class ScalarValueType extends Type {
     private final PrimType type;
 
     public ScalarValueType(PrimType type) {
@@ -331,12 +331,12 @@ public class Types {
     }
 
     @Override
-    public StructureType getStructureType() {
+    public StructureType structureType() {
       return StructureType.SCALAR_VALUE;
     }
 
     @Override
-    public PrimType getPrimitiveType() {
+    public PrimType primType() {
       return this.type;
     }
 
@@ -352,15 +352,15 @@ public class Types {
 
     @Override
     public boolean equals(Object other) {
-      if (!(other instanceof SwiftType)) {
+      if (!(other instanceof Type)) {
         throw new STCRuntimeError("Comparing ScalarValueType with "
             + "non-type object");
       }
-      SwiftType otherT = (SwiftType) other;
-      if (otherT.getStructureType() != StructureType.SCALAR_VALUE) {
+      Type otherT = (Type) other;
+      if (otherT.structureType() != StructureType.SCALAR_VALUE) {
         return false;
       } else {
-        return otherT.getPrimitiveType().equals(this.type);
+        return otherT.primType().equals(this.type);
       }
     }
 
@@ -370,12 +370,12 @@ public class Types {
     }
 
     @Override
-    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
+    public Type bindTypeVars(Map<String, Type> vals) {
       return this;
     }
 
     @Override
-    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
+    public Map<String, Type> matchTypeVars(Type concrete) {
       if (this.equals(concrete)) {
         return Collections.emptyMap();
       } else {
@@ -390,7 +390,7 @@ public class Types {
   }
 
 
-  public static class ScalarFutureType extends SwiftType {
+  public static class ScalarFutureType extends Type {
     private final PrimType type;
     public ScalarFutureType(PrimType type) {
       super();
@@ -398,12 +398,12 @@ public class Types {
     }
 
     @Override
-    public StructureType getStructureType() {
+    public StructureType structureType() {
       return StructureType.SCALAR_FUTURE;
     }
 
     @Override
-    public PrimType getPrimitiveType() {
+    public PrimType primType() {
       return this.type;
     }
 
@@ -423,13 +423,13 @@ public class Types {
 
     @Override
     public boolean equals(Object other) {
-      if (!(other instanceof SwiftType)) {
+      if (!(other instanceof Type)) {
         throw new STCRuntimeError("Comparing ScalarFutureType with non-type "
             + "object");
       }
-      SwiftType otherT = (SwiftType) other;
-      if (otherT.getStructureType() == StructureType.SCALAR_FUTURE) {
-        return otherT.getPrimitiveType() == this.type;
+      Type otherT = (Type) other;
+      if (otherT.structureType() == StructureType.SCALAR_FUTURE) {
+        return otherT.primType() == this.type;
       } else {
         return false;
       }
@@ -441,12 +441,12 @@ public class Types {
     }
 
     @Override
-    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
+    public Type bindTypeVars(Map<String, Type> vals) {
       return this;
     }
 
     @Override
-    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
+    public Map<String, Type> matchTypeVars(Type concrete) {
       if (this.equals(concrete)) {
         return Collections.emptyMap();
       } else {
@@ -460,7 +460,7 @@ public class Types {
     }
   }
 
-  public static class ScalarUpdateableType extends SwiftType {
+  public static class ScalarUpdateableType extends Type {
     private final PrimType type;
     public ScalarUpdateableType(PrimType type) {
       super();
@@ -468,12 +468,12 @@ public class Types {
     }
 
     @Override
-    public StructureType getStructureType() {
+    public StructureType structureType() {
       return StructureType.SCALAR_UPDATEABLE;
     }
 
     @Override
-    public PrimType getPrimitiveType() {
+    public PrimType primType() {
       return this.type;
     }
 
@@ -492,26 +492,26 @@ public class Types {
 
     @Override
     public boolean equals(Object other) {
-      if (!(other instanceof SwiftType)) {
+      if (!(other instanceof Type)) {
         throw new STCRuntimeError("Comparing ScalarUpdateableType " +
             "with non-type object");
       }
-      SwiftType otherT = (SwiftType) other;
-      if (otherT.getStructureType() != StructureType.SCALAR_UPDATEABLE) {
+      Type otherT = (Type) other;
+      if (otherT.structureType() != StructureType.SCALAR_UPDATEABLE) {
         return false;
       } else {
-        return otherT.getPrimitiveType().equals(this.type);
+        return otherT.primType().equals(this.type);
       }
     }
 
-    public static ScalarFutureType asScalarFuture(SwiftType upType) {
+    public static ScalarFutureType asScalarFuture(Type upType) {
       assert(Types.isScalarUpdateable(upType));
-      return new ScalarFutureType(upType.getPrimitiveType());
+      return new ScalarFutureType(upType.primType());
     }
     
-    public static ScalarValueType asScalarValue(SwiftType valType) {
+    public static ScalarValueType asScalarValue(Type valType) {
       assert(Types.isScalarUpdateable(valType));
-      return new ScalarValueType(valType.getPrimitiveType());
+      return new ScalarValueType(valType.primType());
     }
 
     @Override
@@ -520,12 +520,12 @@ public class Types {
     }
 
     @Override
-    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
+    public Type bindTypeVars(Map<String, Type> vals) {
       return this;
     }
 
     @Override
-    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
+    public Map<String, Type> matchTypeVars(Type concrete) {
       if (this.equals(concrete)) {
         return Collections.emptyMap();
       } else {
@@ -539,18 +539,18 @@ public class Types {
     }
   }
   
-  public static class UnionType extends SwiftType {
-    private final List<SwiftType> alts;
+  public static class UnionType extends Type {
+    private final List<Type> alts;
     
-    private UnionType(ArrayList<SwiftType> alts) {
+    private UnionType(ArrayList<Type> alts) {
       this.alts = Collections.unmodifiableList(alts);
     }
 
-    public List<SwiftType> getAlternatives() {
+    public List<Type> getAlternatives() {
       return alts;
     }
     
-    public static List<SwiftType> getAlternatives(SwiftType type) {
+    public static List<Type> getAlternatives(Type type) {
       if (Types.isUnion(type)) {
         return ((UnionType)type).getAlternatives();
       } else {
@@ -561,20 +561,20 @@ public class Types {
     /**
      * @return UnionType if multiple types, or plain type if singular
      */
-    public static SwiftType makeUnion(List<SwiftType> alts) {
+    public static Type makeUnion(List<Type> alts) {
       if (alts.size() == 1) {
         return alts.get(0);
       } else {
-        return new UnionType(new ArrayList<SwiftType>(alts));
+        return new UnionType(new ArrayList<Type>(alts));
       }
     }
     
-    public static SwiftType createUnionType(SwiftType ...alts) {
+    public static Type createUnionType(Type ...alts) {
       if (alts.length == 1) {
         return alts[0];
       } else {
-        ArrayList<SwiftType> list = new ArrayList<SwiftType>();
-        for (SwiftType alt: alts) {
+        ArrayList<Type> list = new ArrayList<Type>();
+        for (Type alt: alts) {
           list.add(alt);
         }
         return new UnionType(list);
@@ -582,7 +582,7 @@ public class Types {
     }
 
     @Override
-    public StructureType getStructureType() {
+    public StructureType structureType() {
       return StructureType.TYPE_UNION;
     }
 
@@ -591,7 +591,7 @@ public class Types {
       StringBuilder sb = new StringBuilder();
       boolean first = true;
       sb.append("(");
-      for (SwiftType alt: alts) {
+      for (Type alt: alts) {
         if (first) {
           first = false;
         } else {
@@ -608,7 +608,7 @@ public class Types {
       StringBuilder sb = new StringBuilder();
       boolean first = true;
       sb.append("(");
-      for (SwiftType alt: alts) {
+      for (Type alt: alts) {
         if (first) {
           first = false;
         } else {
@@ -622,12 +622,12 @@ public class Types {
 
     @Override
     public boolean equals(Object other) {
-      if (!(other instanceof SwiftType)) {
+      if (!(other instanceof Type)) {
         throw new STCRuntimeError("Comparing UnionType " +
             "with non-type object");
       }
-      SwiftType otherT = (SwiftType) other;
-      if (otherT.getStructureType() != StructureType.TYPE_UNION) {
+      Type otherT = (Type) other;
+      if (otherT.structureType() != StructureType.TYPE_UNION) {
         return false;
       } else {
         UnionType otherUT = (UnionType)otherT;
@@ -637,7 +637,7 @@ public class Types {
         }
         
         // Check members are the same
-        for (SwiftType alt: this.alts) {
+        for (Type alt: this.alts) {
           if (!otherUT.alts.contains(alt)) {
             return false;
           }
@@ -647,11 +647,11 @@ public class Types {
     }
 
     @Override
-    public boolean assignableTo(SwiftType other) {
+    public boolean assignableTo(Type other) {
       if (Types.isUnion(other)) { 
         UnionType otherUnion = (UnionType)other;
         // Check if subset
-        for (SwiftType alt: this.alts) {
+        for (Type alt: this.alts) {
           if (!otherUnion.alts.contains(alt)) {
             return false;
           }
@@ -665,7 +665,7 @@ public class Types {
     @Override
     public int hashCode() {
       int hash = UnionType.class.hashCode();
-      for (SwiftType alt: alts) {
+      for (Type alt: alts) {
         // Iteration order doesn't matter for xor
         hash ^= alt.hashCode();
       }
@@ -673,23 +673,23 @@ public class Types {
     }
 
     @Override
-    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
-      ArrayList<SwiftType> boundAlts = new ArrayList<SwiftType>(alts.size());
-      for (SwiftType alt: alts) {
+    public Type bindTypeVars(Map<String, Type> vals) {
+      ArrayList<Type> boundAlts = new ArrayList<Type>(alts.size());
+      for (Type alt: alts) {
         boundAlts.add(alt.bindTypeVars(vals));
       }
       return new UnionType(boundAlts);
     }
 
     @Override
-    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
+    public Map<String, Type> matchTypeVars(Type concrete) {
       throw new STCRuntimeError("Not yet implemented: matching typevars for"
           + " union types");
     }
 
     @Override
     public boolean hasTypeVar() {
-      for (SwiftType alt: alts) {
+      for (Type alt: alts) {
         if (alt.hasTypeVar()) {
           return true;
         }
@@ -701,7 +701,7 @@ public class Types {
   /**
    * A type variable that represents a wildcard type
    */
-  public static class TypeVariable extends SwiftType {
+  public static class TypeVariable extends Type {
     private final String typeVarName;
 
     public TypeVariable(String typeVarName) {
@@ -710,7 +710,7 @@ public class Types {
     }
 
     @Override
-    public StructureType getStructureType() {
+    public StructureType structureType() {
       return StructureType.TYPE_VARIABLE;
     }
 
@@ -725,17 +725,17 @@ public class Types {
     }
     
     @Override
-    public String getTypeVarName() {
+    public String typeVarName() {
       return typeVarName;
     }
 
     @Override
     public boolean equals(Object obj) {
-      if (!(obj instanceof SwiftType)) {
+      if (!(obj instanceof Type)) {
         throw new STCRuntimeError("Comparing TypeVariable " +
             "with non-type object");
       }
-      if (((SwiftType)obj).getStructureType() == StructureType.TYPE_VARIABLE) {
+      if (((Type)obj).structureType() == StructureType.TYPE_VARIABLE) {
         TypeVariable other = (TypeVariable) obj;
         return this.typeVarName.equals(other.typeVarName);
       }
@@ -748,8 +748,8 @@ public class Types {
     }
 
     @Override
-    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
-      SwiftType binding = vals.get(typeVarName);
+    public Type bindTypeVars(Map<String, Type> vals) {
+      Type binding = vals.get(typeVarName);
       if (binding == null) {
         return this;
       } else {
@@ -758,7 +758,7 @@ public class Types {
     }
 
     @Override
-    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
+    public Map<String, Type> matchTypeVars(Type concrete) {
       return Collections.singletonMap(typeVarName, concrete);
     }
 
@@ -787,20 +787,20 @@ public class Types {
    * constructed out of scalar types, arrays, and structures.
    *
    */
-  public abstract static class SwiftType {
-    public abstract StructureType getStructureType();
+  public abstract static class Type {
+    public abstract StructureType structureType();
 
     /**
      * Get the primitive type (only valid if scalar)
      * @return
      */
-    public PrimType getPrimitiveType() {
-      throw new STCRuntimeError("getPrimitiveType not implemented " +
+    public PrimType primType() {
+      throw new STCRuntimeError("primitiveType() not implemented " +
       "for class " + getClass().getName());
     }
 
-    public SwiftType getMemberType() {
-      throw new STCRuntimeError("getMemberType not implemented " +
+    public Type memberType() {
+      throw new STCRuntimeError("memberType() not implemented " +
       "for class " + getClass().getName());
     }
 
@@ -823,7 +823,7 @@ public class Types {
      * @param other
      * @return
      */
-    public boolean assignableTo(SwiftType other) {
+    public boolean assignableTo(Type other) {
       return equals(other);
     }
     
@@ -836,21 +836,21 @@ public class Types {
      * @param vals type variable bindings
      * @return new type with bound variables
      */
-    public abstract SwiftType bindTypeVars(Map<String, SwiftType> vals);
+    public abstract Type bindTypeVars(Map<String, Type> vals);
     
     /**
      * Match up any typevars in this type to vars in a concrete type
      * and return the type var binding. Returns null if types can't be matched
      */
-    public abstract Map<String, SwiftType> matchTypeVars(SwiftType concrete);
+    public abstract Map<String, Type> matchTypeVars(Type concrete);
     
     /**
      * @return true if any type variables in type
      */
     public abstract boolean hasTypeVar();
 
-    public String getTypeVarName() {
-      throw new STCRuntimeError("getTypeVarName not supported for type "
+    public String typeVarName() {
+      throw new STCRuntimeError("typeVarName() not supported for type "
                               + toString());
     }
   }
@@ -858,20 +858,20 @@ public class Types {
   /**
    * Function types are kept distinct from value types
    */
-  public static class FunctionType extends SwiftType {
+  public static class FunctionType extends Type {
 
-    private final ArrayList<SwiftType> inputs = new ArrayList<SwiftType>();
-    private final ArrayList<SwiftType> outputs = new ArrayList<SwiftType>();
+    private final ArrayList<Type> inputs = new ArrayList<Type>();
+    private final ArrayList<Type> outputs = new ArrayList<Type>();
     private final ArrayList<String> typeVars = new ArrayList<String>();
 
     /** if varargs is true, the final argument can be repeated many times */
     private final boolean varargs;
 
-    public FunctionType(List<SwiftType> inputs, List<SwiftType> outputs,
+    public FunctionType(List<Type> inputs, List<Type> outputs,
                                                 boolean varargs) {
       this(inputs, outputs, varargs, null);
     }
-    public FunctionType(List<SwiftType> inputs, List<SwiftType> outputs,
+    public FunctionType(List<Type> inputs, List<Type> outputs,
           boolean varargs, Collection<String> typeVars) {
       this.inputs.addAll(inputs);
       this.outputs.addAll(outputs);
@@ -882,11 +882,11 @@ public class Types {
       }
     }
 
-    public List<SwiftType> getInputs() {
+    public List<Type> getInputs() {
       return Collections.unmodifiableList(inputs);
     }
 
-    public List<SwiftType> getOutputs() {
+    public List<Type> getOutputs() {
       return Collections.unmodifiableList(outputs);
     }
 
@@ -902,16 +902,16 @@ public class Types {
     public String toString() {
       StringBuilder sb = new StringBuilder(128);
       sb.append('(');
-      for (Iterator<SwiftType> it = inputs.iterator(); it.hasNext(); ) {
-        SwiftType t = it.next();
+      for (Iterator<Type> it = inputs.iterator(); it.hasNext(); ) {
+        Type t = it.next();
         sb.append(t);
         if (it.hasNext())
           sb.append(',');
       }
       sb.append(") -> (");
-      for (Iterator<SwiftType> it = outputs.iterator();
+      for (Iterator<Type> it = outputs.iterator();
            it.hasNext(); ) {
-        SwiftType t = it.next();
+        Type t = it.next();
         sb.append(t);
         if (it.hasNext())
           sb.append(',');
@@ -921,17 +921,17 @@ public class Types {
     }
 
     @Override
-    public StructureType getStructureType() {
+    public StructureType structureType() {
       return StructureType.FUNCTION;
     }
 
     @Override
     public boolean equals(Object obj) {
-      if (!(obj instanceof SwiftType)) {
+      if (!(obj instanceof Type)) {
         throw new STCRuntimeError("Comparing FunctionType " +
             "with non-type object");
       }
-      if (((SwiftType)obj).getStructureType() == StructureType.FUNCTION) {
+      if (((Type)obj).structureType() == StructureType.FUNCTION) {
         FunctionType other = (FunctionType) obj;
         // All fields should match
         if (!(this.inputs.size() == other.inputs.size() &&
@@ -954,42 +954,42 @@ public class Types {
     @Override
     public int hashCode() {
       int code = FunctionType.class.hashCode();
-      for (SwiftType t: inputs) {
+      for (Type t: inputs) {
         code ^= t.hashCode();
       }
-      for (SwiftType t: outputs) {
+      for (Type t: outputs) {
         code ^= t.hashCode();
       }
       code ^= ((Boolean)varargs).hashCode();
       return code;
     }
     @Override
-    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
-      List<SwiftType> boundInputs = new ArrayList<SwiftType>();
-      for (SwiftType input: inputs) {
+    public Type bindTypeVars(Map<String, Type> vals) {
+      List<Type> boundInputs = new ArrayList<Type>();
+      for (Type input: inputs) {
         boundInputs.add(input.bindTypeVars(vals));
       }
       
-      List<SwiftType> boundOutputs = new ArrayList<SwiftType>();
-      for (SwiftType output: outputs) {
+      List<Type> boundOutputs = new ArrayList<Type>();
+      for (Type output: outputs) {
         boundOutputs.add(output.bindTypeVars(vals));
       }
       
       return new FunctionType(boundInputs, boundOutputs, varargs);
     }
     @Override
-    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
+    public Map<String, Type> matchTypeVars(Type concrete) {
       throw new STCRuntimeError("Not yet implemented: matching typevars for"
           + " function types");
     }
     @Override
     public boolean hasTypeVar() {
-      for (SwiftType input: inputs) {
+      for (Type input: inputs) {
         if (input.hasTypeVar()) {
           return true;
         }
       }
-      for (SwiftType output: outputs) {
+      for (Type output: outputs) {
         if (output.hasTypeVar()) {
           return true;
         }
@@ -1004,22 +1004,22 @@ public class Types {
    * Can have multiple elements because of multiple return valued functions
    */
   public static class ExprType {
-    private final ArrayList<SwiftType> types;
+    private final ArrayList<Type> types;
 
-    public ExprType(List<SwiftType> types) {
-      this.types = new ArrayList<SwiftType>(types);
+    public ExprType(List<Type> types) {
+      this.types = new ArrayList<Type>(types);
     }
 
-    public ExprType(SwiftType exprType) {
-      this.types = new ArrayList<SwiftType>(1);
+    public ExprType(Type exprType) {
+      this.types = new ArrayList<Type>(1);
       this.types.add(exprType);
     }
 
-    public List<SwiftType> getTypes() {
+    public List<Type> getTypes() {
       return Collections.unmodifiableList(types);
     }
     
-    public SwiftType get(int index) {
+    public Type get(int index) {
       return types.get(index);
     }
 
@@ -1031,7 +1031,7 @@ public class Types {
       return types.toString();
     }
   }
-  public static Map<String, SwiftType> getBuiltInTypes() {
+  public static Map<String, Type> getBuiltInTypes() {
     return Collections.unmodifiableMap(nativeTypes);
   }
 
@@ -1040,8 +1040,8 @@ public class Types {
    * @param t
    * @return
    */
-  public static boolean isArray(SwiftType t) {
-    return t.getStructureType() == StructureType.ARRAY;
+  public static boolean isArray(Type t) {
+    return t.structureType() == StructureType.ARRAY;
   }
 
   /**
@@ -1049,19 +1049,19 @@ public class Types {
    * @param t
    * @return
    */
-  public static boolean isArrayRef(SwiftType t) {
-    return t.getStructureType() == StructureType.REFERENCE &&
-        t.getMemberType().getStructureType() == StructureType.ARRAY;
+  public static boolean isArrayRef(Type t) {
+    return t.structureType() == StructureType.REFERENCE &&
+        t.memberType().structureType() == StructureType.ARRAY;
   }
 
   /**
    * Convenience function to get member type of array or array ref
    */
-  public static SwiftType getArrayMemberType(SwiftType arrayT) {
+  public static Type getArrayMemberType(Type arrayT) {
     if (isArray(arrayT)) {
-      return arrayT.getMemberType();
+      return arrayT.memberType();
     } else if (isArrayRef(arrayT)) {
-      return arrayT.getMemberType().getMemberType();
+      return arrayT.memberType().memberType();
     } else {
       throw new STCRuntimeError("called getArrayMemberType on non-array"
           + " type " + arrayT.toString());
@@ -1069,8 +1069,8 @@ public class Types {
   }
 
   
-  public static boolean isFuture(SwiftType t) {
-    return isScalarFuture(t) || isReference(t);
+  public static boolean isFuture(Type t) {
+    return isScalarFuture(t) || isRef(t);
   }
   
   /**
@@ -1078,75 +1078,75 @@ public class Types {
    * @param t
    * @return
    */
-  public static boolean isScalarFuture(SwiftType t) {
-    return t.getStructureType() == StructureType.SCALAR_FUTURE;
+  public static boolean isScalarFuture(Type t) {
+    return t.structureType() == StructureType.SCALAR_FUTURE;
   }
 
-  public static boolean isScalarValue(SwiftType t) {
-    return t.getStructureType() == StructureType.SCALAR_VALUE;
+  public static boolean isScalarValue(Type t) {
+    return t.structureType() == StructureType.SCALAR_VALUE;
   }
   
-  public static boolean isScalarUpdateable(SwiftType t) {
-    return t.getStructureType() == StructureType.SCALAR_UPDATEABLE;
+  public static boolean isScalarUpdateable(Type t) {
+    return t.structureType() == StructureType.SCALAR_UPDATEABLE;
   }
 
-  public static boolean isReference(SwiftType t) {
-    return t.getStructureType() == StructureType.REFERENCE;
+  public static boolean isRef(Type t) {
+    return t.structureType() == StructureType.REFERENCE;
   }
 
-  public static boolean isStruct(SwiftType t) {
-    return t.getStructureType() == StructureType.STRUCT;
+  public static boolean isStruct(Type t) {
+    return t.structureType() == StructureType.STRUCT;
   }
   
-  public static boolean isStructRef(SwiftType t) {
-    return t.getStructureType() == StructureType.REFERENCE 
-                            && Types.isStruct(t.getMemberType());
+  public static boolean isStructRef(Type t) {
+    return t.structureType() == StructureType.REFERENCE 
+                            && Types.isStruct(t.memberType());
   }
   
-  public static boolean isFileRef(SwiftType t) {
-    return t.getStructureType() == StructureType.REFERENCE
-        && Types.isFile(t.getMemberType());
+  public static boolean isFileRef(Type t) {
+    return t.structureType() == StructureType.REFERENCE
+        && Types.isFile(t.memberType());
   }
 
-  public static boolean isBool(SwiftType t) {
-    return isScalarFuture(t) && t.getPrimitiveType() == PrimType.BOOLEAN;
+  public static boolean isBool(Type t) {
+    return isScalarFuture(t) && t.primType() == PrimType.BOOL;
   }
   
-  public static boolean isInt(SwiftType t) {
-    return isScalarFuture(t) && t.getPrimitiveType() == PrimType.INTEGER;
+  public static boolean isInt(Type t) {
+    return isScalarFuture(t) && t.primType() == PrimType.INT;
   }
 
-  public static boolean isFloat(SwiftType t) {
-    return isScalarFuture(t) && t.getPrimitiveType() == PrimType.FLOAT;
+  public static boolean isFloat(Type t) {
+    return isScalarFuture(t) && t.primType() == PrimType.FLOAT;
   }
 
-  public static boolean isString(SwiftType t) {
-    return isScalarFuture(t) && t.getPrimitiveType() == PrimType.STRING;
+  public static boolean isString(Type t) {
+    return isScalarFuture(t) && t.primType() == PrimType.STRING;
   }
   
-  public static boolean isVoid(SwiftType t) {
-    return isScalarFuture(t) && t.getPrimitiveType() == PrimType.VOID;
+  public static boolean isVoid(Type t) {
+    return isScalarFuture(t) && t.primType() == PrimType.VOID;
   }
 
-  public static boolean isFile(SwiftType t) {
-    return isScalarFuture(t) && t.getPrimitiveType() == PrimType.FILE;
+  public static boolean isFile(Type t) {
+    return isScalarFuture(t) && t.primType() == PrimType.FILE;
   }
   
-  public static boolean isReferenceTo(SwiftType refType, SwiftType valType) {
-    return isReference(refType) && refType.getMemberType().equals(valType);
+  public static boolean isRefTo(Type refType, Type valType) {
+    return isRef(refType) && refType.memberType().equals(valType);
   }
 
-  public static boolean isUpdateableEquiv(SwiftType up, SwiftType future) {
+  public static boolean isUpdateableEquiv(Type up, Type future) {
     return isScalarFuture(future) && isScalarUpdateable(up) && 
-                      future.getPrimitiveType() == up.getPrimitiveType();
+                      future.primType() == up.primType();
   }
   
-  public static SwiftType derefResultType(SwiftType future) {
-    if (future.getStructureType() == StructureType.SCALAR_FUTURE
-          || future.getStructureType() == StructureType.SCALAR_UPDATEABLE) {
-      return new ScalarValueType(future.getPrimitiveType());
-    } else if (future.getStructureType() == StructureType.REFERENCE) {
-      return future.getMemberType();
+  public static Type derefResultType(Type future) {
+    if (future.structureType() == StructureType.SCALAR_FUTURE
+          || future.structureType() == StructureType.SCALAR_UPDATEABLE) {
+      return new ScalarValueType(future.primType());
+    } else if (future.structureType() == StructureType.REFERENCE) {
+      return future.memberType();
     } else {
       throw new STCRuntimeError(future.toString() + " can't "
           + " be dereferenced");
@@ -1157,29 +1157,29 @@ public class Types {
   /**
    * Is it a type we can map to a file?
    */
-  public static boolean isMappable(SwiftType t) {
+  public static boolean isMappable(Type t) {
     // We can only map files right now..
-    return t.equals(FUTURE_FILE);
+    return t.equals(F_FILE);
   }
 
-  public static boolean isUnion(SwiftType type) {
-    return type.getStructureType() == StructureType.TYPE_UNION;
+  public static boolean isUnion(Type type) {
+    return type.structureType() == StructureType.TYPE_UNION;
   }
   
-  public static boolean isTypeVar(SwiftType type) {
-    return type.getStructureType() == StructureType.TYPE_VARIABLE;
+  public static boolean isTypeVar(Type type) {
+    return type.structureType() == StructureType.TYPE_VARIABLE;
   }
 
-  public static boolean isPolymorphic(SwiftType type) {
-    return type.getStructureType() == StructureType.TYPE_UNION ||
-        type.getStructureType() == StructureType.TYPE_VARIABLE;
+  public static boolean isPolymorphic(Type type) {
+    return type.structureType() == StructureType.TYPE_UNION ||
+        type.structureType() == StructureType.TYPE_VARIABLE;
   }
   
-  public static boolean isFunction(SwiftType type) {
-    return type.getStructureType() == StructureType.FUNCTION;
+  public static boolean isFunction(Type type) {
+    return type.structureType() == StructureType.FUNCTION;
   }
   
-  public static boolean listsEqual(List<SwiftType> a, List<SwiftType> b) {
+  public static boolean listsEqual(List<Type> a, List<Type> b) {
     if (a.size() != b.size()) {
       return false;
     }
@@ -1191,69 +1191,48 @@ public class Types {
     return true;
   }
 
-  public static final SwiftType FUTURE_INTEGER =
-                      new ScalarFutureType(PrimType.INTEGER);
-  public static final SwiftType VALUE_INTEGER =
-      new ScalarValueType(PrimType.INTEGER);
-  public static final SwiftType REFERENCE_INTEGER =
-        new ReferenceType(FUTURE_INTEGER);
+  public static final Type F_INT = new ScalarFutureType(PrimType.INT);
+  public static final Type V_INT = new ScalarValueType(PrimType.INT);
+  public static final Type R_INT = new RefType(F_INT);
 
-  public static final SwiftType FUTURE_STRING =
-                      new ScalarFutureType(PrimType.STRING);
-  public static final SwiftType VALUE_STRING =
-                      new ScalarValueType(PrimType.STRING);
-  public static final SwiftType REFERENCE_STRING =
-        new ReferenceType(FUTURE_STRING);
+  public static final Type F_STRING = new ScalarFutureType(PrimType.STRING);
+  public static final Type V_STRING = new ScalarValueType(PrimType.STRING);
+  public static final Type R_STRING = new RefType(F_STRING);
 
-  public static final SwiftType FUTURE_FLOAT =
-        new ScalarFutureType(PrimType.FLOAT);
-  public static final SwiftType VALUE_FLOAT =
-        new ScalarValueType(PrimType.FLOAT);
-  public static final SwiftType REFERENCE_FLOAT =
-        new ReferenceType(FUTURE_FLOAT);
-  public static final SwiftType UPDATEABLE_FLOAT =
-        new ScalarUpdateableType(PrimType.FLOAT);
+  public static final Type F_FLOAT = new ScalarFutureType(PrimType.FLOAT);
+  public static final Type V_FLOAT = new ScalarValueType(PrimType.FLOAT);
+  public static final Type R_FLOAT = new RefType(F_FLOAT);
+  public static final Type UP_FLOAT = new ScalarUpdateableType(PrimType.FLOAT);
 
-  public static final SwiftType FUTURE_BOOLEAN =
-        new ScalarFutureType(PrimType.BOOLEAN);
-  public static final SwiftType VALUE_BOOLEAN =
-        new ScalarValueType(PrimType.BOOLEAN);
-  public static final SwiftType REFERENCE_BOOLEAN =
-        new ReferenceType(FUTURE_BOOLEAN);
+  public static final Type F_BOOL = new ScalarFutureType(PrimType.BOOL);
+  public static final Type V_BOOL = new ScalarValueType(PrimType.BOOL);
+  public static final Type R_BOOL = new RefType(F_BOOL);
   
-  public static final SwiftType FUTURE_BLOB =
-      new ScalarFutureType(PrimType.BLOB);
-  public static final SwiftType REFERENCE_BLOB =
-      new ReferenceType(FUTURE_BLOB);
-  public static final SwiftType VALUE_BLOB =
-      new ScalarValueType(PrimType.BLOB);
+  public static final Type F_BLOB = new ScalarFutureType(PrimType.BLOB);
+  public static final Type R_BLOB = new RefType(F_BLOB);
+  public static final Type V_BLOB =
+      new ScalarValueType(PrimType.BLOB);   
+  public static final Type F_FILE = new ScalarFutureType(PrimType.FILE);
+  public static final Type REF_FILE = new RefType(F_FILE);
   
-  public static final SwiftType FUTURE_FILE =
-      new ScalarFutureType(PrimType.FILE);
-  public static final SwiftType REFERENCE_FILE =
-      new ReferenceType(FUTURE_FILE);
-  
-  public static final SwiftType VALUE_VOID =
-      new ScalarValueType(PrimType.VOID);
-  public static final SwiftType FUTURE_VOID =
-      new ScalarFutureType(PrimType.VOID);
-  public static final SwiftType REFERENCE_VOID =
-      new ReferenceType(FUTURE_VOID);
+  public static final Type V_VOID = new ScalarValueType(PrimType.VOID);
+  public static final Type F_VOID = new ScalarFutureType(PrimType.VOID);
+  public static final Type REF_VOID = new RefType(F_VOID);
   
   private static final String VALUE_SIGIL = "$";
 
-  private static final Map<String, SwiftType> nativeTypes;
+  private static final Map<String, Type> nativeTypes;
 
   static {
-    nativeTypes = new HashMap<String, SwiftType>();
-    nativeTypes.put("int", Types.FUTURE_INTEGER);
-    nativeTypes.put("string", Types.FUTURE_STRING);
-    nativeTypes.put("float", Types.FUTURE_FLOAT);
-    nativeTypes.put("boolean", Types.FUTURE_BOOLEAN);
-    nativeTypes.put("void", Types.FUTURE_VOID);
-    nativeTypes.put("blob", Types.FUTURE_BLOB);
-    nativeTypes.put("file", Types.FUTURE_FILE);
-    nativeTypes.put("updateable_float", Types.UPDATEABLE_FLOAT);
+    nativeTypes = new HashMap<String, Type>();
+    nativeTypes.put("int", Types.F_INT);
+    nativeTypes.put("string", Types.F_STRING);
+    nativeTypes.put("float", Types.F_FLOAT);
+    nativeTypes.put("boolean", Types.F_BOOL);
+    nativeTypes.put("void", Types.F_VOID);
+    nativeTypes.put("blob", Types.F_BLOB);
+    nativeTypes.put("file", Types.F_FILE);
+    nativeTypes.put("updateable_float", Types.UP_FLOAT);
   }
 
 }

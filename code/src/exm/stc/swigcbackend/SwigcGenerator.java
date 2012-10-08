@@ -24,19 +24,19 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Arg.ArgType;
-import exm.stc.common.lang.FunctionSemantics;
-import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
+import exm.stc.common.lang.Arg.ArgKind;
+import exm.stc.common.lang.Builtins;
+import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.PrimType;
-import exm.stc.common.lang.Types.SwiftType;
-import exm.stc.common.lang.Variable;
-import exm.stc.common.lang.Variable.DefType;
-import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.swigcbackend.tree.Command;
 import exm.stc.swigcbackend.tree.Comment;
 import exm.stc.swigcbackend.tree.DictFor;
@@ -487,21 +487,21 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void declare(SwiftType t, String name, VariableStorage storage,
-        DefType defType, Variable mapping)
+  public void declare(Type t, String name, VarStorage storage,
+        DefType defType, Var mapping)
   throws UndefinedTypeException
   {
     assert(mapping == null || Types.isMappable(t));
     String tclName = prefixVar(name);
     Sequence point = pointStack.peek();
 
-    if (storage == VariableStorage.ALIAS) {
+    if (storage == VarStorage.ALIAS) {
       point.add(new Comment("Alias " + name + " with type " + t.toString() +
           " was defined"));
       return;
     }
 
-    if (storage == VariableStorage.GLOBAL_CONST) {
+    if (storage == VarStorage.GLOBAL_CONST) {
       // If global, it should already be in TCL global scope, just need to
       // make sure that we've imported it
       point.add(Turbine.makeTCLGlobal(tclName));
@@ -515,18 +515,18 @@ public class SwigcGenerator implements CompilerBackend
         Value mapExpr = (mapping == null) ? null : varToExpr(mapping);
         point.add(Turbine.allocateFile(mapExpr, tclName));
       } else {
-        PrimType pt = t.getPrimitiveType();
+        PrimType pt = t.primType();
         String tprefix = typeToString(pt);
         point.add(Turbine.allocate(tclName, tprefix));
       }
     } else if (Types.isArray(t)) {
       point.add(Turbine.allocateContainer(tclName, Turbine.INTEGER_TYPENAME));
-    } else if (Types.isReference(t)) {
+    } else if (Types.isRef(t)) {
       point.add(Turbine.allocate(tclName, Turbine.INTEGER_TYPENAME));
     } else if (Types.isStruct(t)) {
       point.add(Turbine.allocateContainer(tclName, Turbine.STRING_TYPENAME));
     } else if (Types.isScalarValue(t)) {
-      if (storage != VariableStorage.LOCAL) {
+      if (storage != VarStorage.LOCAL) {
         throw new STCRuntimeError("Expected scalar value to have "
             + "local storage");
       }
@@ -541,7 +541,7 @@ public class SwigcGenerator implements CompilerBackend
 
     // Store the name->TD in the stack
 
-      if (storage == VariableStorage.STACK && !noStackVars()) {
+      if (storage == VarStorage.STACK && !noStackVars()) {
         Command s = Turbine.storeInStack(name, tclName);
         // Store the name->TD in the stack
         point.add(s);
@@ -551,8 +551,8 @@ public class SwigcGenerator implements CompilerBackend
 
 
   @Override
-  public void closeArray(Variable arr) {
-    SwiftType type = arr.getType();
+  public void closeArray(Var arr) {
+    Type type = arr.type();
     assert(Types.isArray(type));
     // Close array by removing the slot we created at startup
     pointStack.peek().add(Turbine.containerSlotDrop(varToExpr(arr)));
@@ -562,13 +562,13 @@ public class SwigcGenerator implements CompilerBackend
   throws UndefinedTypeException
   {
     switch(type) {
-    case INTEGER:
+    case INT:
       return Turbine.INTEGER_TYPENAME;
     case STRING:
       return Turbine.STRING_TYPENAME;
     case FLOAT:
       return Turbine.FLOAT_TYPENAME;
-    case BOOLEAN:
+    case BOOL:
       return Turbine.INTEGER_TYPENAME;
     case VOID:
       return Turbine.VOID_TYPENAME;
@@ -584,111 +584,111 @@ public class SwigcGenerator implements CompilerBackend
    * Set target=addressof(src)
    */
   @Override
-  public void assignReference(Variable target, Variable src) {
-    assert(Types.isReference(target.getType()));
-    assert(target.getType().getMemberType().equals(src.getType()));
+  public void assignReference(Var target, Var src) {
+    assert(Types.isRef(target.type()));
+    assert(target.type().memberType().equals(src.type()));
     pointStack.peek().add(Turbine.integerSet(
-          prefixVar(target.getName()), varToExpr(src)));
+          prefixVar(target.name()), varToExpr(src)));
   }
 
 
   @Override
-  public void makeAlias(Variable dst, Variable src) {
-    assert(src.getType().equals(dst.getType()));
-    assert(dst.getStorage() == VariableStorage.ALIAS);
-    pointStack.peek().add(new SetVariable(prefixVar(dst.getName()),
+  public void makeAlias(Var dst, Var src) {
+    assert(src.type().equals(dst.type()));
+    assert(dst.storage() == VarStorage.ALIAS);
+    pointStack.peek().add(new SetVariable(prefixVar(dst.name()),
         varToExpr(src)));
   }
 
   @Override
-  public void assignInt(Variable target, Arg src) {
+  public void assignInt(Var target, Arg src) {
     assert(src.isImmediateInt());
-    if (!Types.isInt(target.getType())) {
+    if (!Types.isInt(target.type())) {
       throw new STCRuntimeError("Expected variable to be int, "
-          + " but was " + target.getType().toString());
+          + " but was " + target.type().toString());
     }
 
     pointStack.peek().add(Turbine.integerSet(
-                              prefixVar(target.getName()),
+                              prefixVar(target.name()),
                               opargToExpr(src)));
   }
 
   @Override
-  public void retrieveInt(Variable target, Variable source) {
-    assert(target.getType().equals(Types.VALUE_INTEGER));
-    assert(source.getType().equals(Types.FUTURE_INTEGER));
-    pointStack.peek().add(Turbine.integerGet(prefixVar(target.getName()),
+  public void retrieveInt(Var target, Var source) {
+    assert(target.type().equals(Types.V_INT));
+    assert(source.type().equals(Types.F_INT));
+    pointStack.peek().add(Turbine.integerGet(prefixVar(target.name()),
                                                 varToExpr(source)));
   }
 
 
 
   @Override
-  public void assignBool(Variable target, Arg src) {
+  public void assignBool(Var target, Arg src) {
     assert(src.isImmediateBool());
-    if (!Types.isBool(target.getType())) {
+    if (!Types.isBool(target.type())) {
       throw new STCRuntimeError("Expected variable to be bool, "
-          + " but was " + target.getType().toString());
+          + " but was " + target.type().toString());
     }
 
     pointStack.peek().add(Turbine.integerSet(
-                             prefixVar(target.getName()),
+                             prefixVar(target.name()),
                              opargToExpr(src)));
   }
 
   @Override
-  public void retrieveBool(Variable target, Variable source) {
-    assert(target.getType().equals(Types.VALUE_BOOLEAN));
-    assert(source.getType().equals(Types.FUTURE_BOOLEAN));
-    pointStack.peek().add(Turbine.integerGet(prefixVar(target.getName()),
+  public void retrieveBool(Var target, Var source) {
+    assert(target.type().equals(Types.V_BOOL));
+    assert(source.type().equals(Types.F_BOOL));
+    pointStack.peek().add(Turbine.integerGet(prefixVar(target.name()),
         varToExpr(source)));
   }
 
 
   @Override
-  public void assignFloat(Variable target, Arg src) {
+  public void assignFloat(Var target, Arg src) {
     assert(src.isImmediateFloat());
-    if (!Types.isFloat(target.getType())) {
+    if (!Types.isFloat(target.type())) {
       throw new STCRuntimeError("Expected variable to be float, "
-          + " but was " + target.getType().toString());
+          + " but was " + target.type().toString());
     }
 
     pointStack.peek().add(Turbine.floatSet(
-                              prefixVar(target.getName()),
+                              prefixVar(target.name()),
                               opargToExpr(src)));
   }
 
   @Override
-  public void retrieveFloat(Variable target, Variable source) {
-    assert(target.getType().equals(Types.VALUE_FLOAT));
-    assert(source.getType().equals(Types.FUTURE_FLOAT)
-            || source.getType().equals(Types.UPDATEABLE_FLOAT));
-    pointStack.peek().add(Turbine.floatGet(prefixVar(target.getName()),
+  public void retrieveFloat(Var target, Var source) {
+    assert(target.type().equals(Types.V_FLOAT));
+    assert(source.type().equals(Types.F_FLOAT)
+            || source.type().equals(Types.UP_FLOAT));
+    pointStack.peek().add(Turbine.floatGet(prefixVar(target.name()),
                                                   varToExpr(source)));
   }
 
   @Override
-  public void assignString(Variable target, Arg src) {
+  public void assignString(Var target, Arg src) {
     assert(src.isImmediateString());
-    if (!Types.isString(target.getType())) {
+    if (!Types.isString(target.type())) {
       throw new STCRuntimeError("Expected variable to be string, "
-          + " but was " + target.getType().toString());
+          + " but was " + target.type().toString());
     }
 
-    pointStack.peek().add(Turbine.stringSet(prefixVar(target.getName()),
+    pointStack.peek().add(Turbine.stringSet(prefixVar(target.name()),
                                                 opargToExpr(src)));
   }
 
   @Override
-  public void retrieveString(Variable target, Variable source) {
-    assert(target.getType().equals(Types.VALUE_STRING));
-    assert(source.getType().equals(Types.FUTURE_STRING));
-    pointStack.peek().add(Turbine.stringGet(prefixVar(target.getName()),
+  public void retrieveString(Var target, Var source) {
+    assert(target.type().equals(Types.V_STRING));
+    assert(source.type().equals(Types.F_STRING));
+    pointStack.peek().add(Turbine.stringGet(prefixVar(target.name()),
                                                     varToExpr(source)));
   }
 
   @Override
-  public void localOp(BuiltinOpcode op, Variable out,
+  public void localOp(BuiltinOpcode op, Var out,
                                             List<Arg> in) {
     ArrayList<Expression> argExpr = new ArrayList<Expression>(in.size());
     for (Arg a: in) {
@@ -699,12 +699,12 @@ public class SwigcGenerator implements CompilerBackend
   }
   
   @Override
-  public void asyncOp(BuiltinOpcode op, Variable out, List<Arg> in,
+  public void asyncOp(BuiltinOpcode op, Var out, List<Arg> in,
       Arg priority) {
     //TODO: for time being, share code with built-in function generation
     TclFunRef fn = null; //BuiltinOps.getBuiltinOpImpl(op);
     if (fn == null) {
-      List<String> impls = FunctionSemantics.findOpImpl(op);
+      List<String> impls = Builtins.findOpImpl(op);
       
       // It should be impossible for there to be no implementation for a function
       // like this
@@ -718,59 +718,59 @@ public class SwigcGenerator implements CompilerBackend
       fn = builtinSymbols.get(impls.get(0));
     }
     
-    ArrayList<Variable> inputs = new ArrayList<Variable>();
+    ArrayList<Var> inputs = new ArrayList<Var>();
     for (Arg a: in) {
       // Arguments to async ops need to be vars
-      assert(a.getType() == ArgType.VAR);
+      assert(a.isVar());
       inputs.add(a.getVar());
     }
     
-    List<Variable> outL = (out == null) ? 
-          new ArrayList<Variable>(0) : Arrays.asList(out);
+    List<Var> outL = (out == null) ? 
+          new ArrayList<Var>(0) : Arrays.asList(out);
     builtinFunctionCall("operator: " + op.toString(), fn, 
                         inputs, outL, priority);
   }
 
   @Override
-  public void dereferenceInt(Variable target, Variable src) {
-    assert(target.getType().equals(Types.FUTURE_INTEGER));
-    assert(src.getType().equals(Types.REFERENCE_INTEGER));
-    Sequence deref = Turbine.dereferenceInteger(prefixVar(target.getName()),
-        prefixVar(src.getName()));
+  public void dereferenceInt(Var target, Var src) {
+    assert(target.type().equals(Types.F_INT));
+    assert(src.type().equals(Types.R_INT));
+    Sequence deref = Turbine.dereferenceInteger(prefixVar(target.name()),
+        prefixVar(src.name()));
     pointStack.peek().add(deref);
   }
 
   @Override
-  public void dereferenceBool(Variable target, Variable src) {
-    assert(target.getType().equals(Types.FUTURE_BOOLEAN));
-    assert(src.getType().equals(Types.REFERENCE_BOOLEAN));
-    Sequence deref = Turbine.dereferenceInteger(prefixVar(target.getName()),
-        prefixVar(src.getName()));
+  public void dereferenceBool(Var target, Var src) {
+    assert(target.type().equals(Types.F_BOOL));
+    assert(src.type().equals(Types.R_BOOL));
+    Sequence deref = Turbine.dereferenceInteger(prefixVar(target.name()),
+        prefixVar(src.name()));
     pointStack.peek().add(deref);
   }
 
   @Override
-  public void dereferenceFloat(Variable target, Variable src) {
-    assert(target.getType().equals(Types.FUTURE_FLOAT));
-    assert(src.getType().equals(Types.REFERENCE_FLOAT));
-    Sequence deref = Turbine.dereferenceFloat(prefixVar(target.getName()),
-        prefixVar(src.getName()));
+  public void dereferenceFloat(Var target, Var src) {
+    assert(target.type().equals(Types.F_FLOAT));
+    assert(src.type().equals(Types.R_FLOAT));
+    Sequence deref = Turbine.dereferenceFloat(prefixVar(target.name()),
+        prefixVar(src.name()));
     pointStack.peek().add(deref);
   }
 
   @Override
-  public void dereferenceString(Variable target, Variable src) {
-    assert(target.getType().equals(Types.FUTURE_STRING));
-    assert(src.getType().equals(Types.REFERENCE_STRING));
-    Sequence deref = Turbine.dereferenceString(prefixVar(target.getName()),
-        prefixVar(src.getName()));
+  public void dereferenceString(Var target, Var src) {
+    assert(target.type().equals(Types.F_STRING));
+    assert(src.type().equals(Types.R_STRING));
+    Sequence deref = Turbine.dereferenceString(prefixVar(target.name()),
+        prefixVar(src.name()));
     pointStack.peek().add(deref);
   }
 
   @Override
-  public void dereferenceBlob(Variable target, Variable src) {
-    assert(target.getType().equals(Types.FUTURE_BLOB));
-    assert(src.getType().equals(Types.REFERENCE_BLOB));
+  public void dereferenceBlob(Var target, Var src) {
+    assert(target.type().equals(Types.F_BLOB));
+    assert(src.type().equals(Types.R_BLOB));
     Sequence deref = null;
     pointStack.peek().add(deref);
     //TODO
@@ -778,72 +778,72 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void retrieveRef(Variable target, Variable src) {
-    assert(Types.isReference(src.getType()));
-    assert(Types.isReferenceTo(src.getType(), target.getType()));
-    TclTree deref = Turbine.integerGet(prefixVar(target.getName()),
+  public void retrieveRef(Var target, Var src) {
+    assert(Types.isRef(src.type()));
+    assert(Types.isRefTo(src.type(), target.type()));
+    TclTree deref = Turbine.integerGet(prefixVar(target.name()),
                                                    varToExpr(src));
     pointStack.peek().add(deref);
   }
 
   @Override
-  public void arrayCreateNestedFuture(Variable arrayResult,
-      Variable arrayVar, Variable indexVar) {
-    assert(Types.isArray(arrayVar.getType()));
-    assert(Types.isArrayRef(arrayResult.getType()));
-    assert(arrayResult.getStorage() == VariableStorage.ALIAS);
+  public void arrayCreateNestedFuture(Var arrayResult,
+      Var arrayVar, Var indexVar) {
+    assert(Types.isArray(arrayVar.type()));
+    assert(Types.isArrayRef(arrayResult.type()));
+    assert(arrayResult.storage() == VarStorage.ALIAS);
 
     TclTree t = Turbine.containerCreateNested(
-        prefixVar(arrayResult.getName()), prefixVar(arrayVar.getName()),
-        prefixVar(indexVar.getName()));
+        prefixVar(arrayResult.name()), prefixVar(arrayVar.name()),
+        prefixVar(indexVar.name()));
     pointStack.peek().add(t);
   }
 
   @Override
-  public void arrayRefCreateNestedFuture(Variable arrayResult,
-      Variable arrayRefVar, Variable indexVar) {
-    assert(Types.isArrayRef(arrayRefVar.getType()));
-    assert(Types.isArrayRef(arrayResult.getType()));
-    assert(arrayResult.getStorage() == VariableStorage.ALIAS);
+  public void arrayRefCreateNestedFuture(Var arrayResult,
+      Var arrayRefVar, Var indexVar) {
+    assert(Types.isArrayRef(arrayRefVar.type()));
+    assert(Types.isArrayRef(arrayResult.type()));
+    assert(arrayResult.storage() == VarStorage.ALIAS);
 
     TclTree t = Turbine.containerRefCreateNested(
-        prefixVar(arrayResult.getName()), prefixVar(arrayRefVar.getName()),
-        prefixVar(indexVar.getName()));
+        prefixVar(arrayResult.name()), prefixVar(arrayRefVar.name()),
+        prefixVar(indexVar.name()));
     pointStack.peek().add(t);
   }
 
 
   @Override
-  public void arrayCreateNestedImm(Variable arrayResult,
-      Variable arrayVar, Arg arrIx) {
-    assert(Types.isArray(arrayVar.getType()));
-    assert(Types.isArray(arrayResult.getType()));
-    assert(arrayResult.getStorage() == VariableStorage.ALIAS);
+  public void arrayCreateNestedImm(Var arrayResult,
+      Var arrayVar, Arg arrIx) {
+    assert(Types.isArray(arrayVar.type()));
+    assert(Types.isArray(arrayResult.type()));
+    assert(arrayResult.storage() == VarStorage.ALIAS);
     assert(arrIx.isImmediateInt());
 
     TclTree t = Turbine.containerCreateNestedImmIx(
-        prefixVar(arrayResult.getName()), prefixVar(arrayVar.getName()),
+        prefixVar(arrayResult.name()), prefixVar(arrayVar.name()),
         opargToExpr(arrIx));
     pointStack.peek().add(t);
   }
 
   @Override
-  public void arrayRefCreateNestedImm(Variable arrayResult,
-      Variable arrayVar, Arg arrIx) {
-    assert(Types.isArrayRef(arrayVar.getType()));
-    assert(Types.isArrayRef(arrayResult.getType()));
-    assert(arrayResult.getStorage() == VariableStorage.ALIAS);
+  public void arrayRefCreateNestedImm(Var arrayResult,
+      Var arrayVar, Arg arrIx) {
+    assert(Types.isArrayRef(arrayVar.type()));
+    assert(Types.isArrayRef(arrayResult.type()));
+    assert(arrayResult.storage() == VarStorage.ALIAS);
     assert(arrIx.isImmediateInt());
 
     TclTree t = Turbine.containerRefCreateNestedImmIx(
-        prefixVar(arrayResult.getName()), prefixVar(arrayVar.getName()),
+        prefixVar(arrayResult.name()), prefixVar(arrayVar.name()),
         opargToExpr(arrIx));
     pointStack.peek().add(t);
   }
 
   @Override
   public void builtinFunctionCall(String function,
-          List<Variable> inputs, List<Variable> outputs, Arg priority)
+          List<Var> inputs, List<Var> outputs, Arg priority)
   {
     assert(priority == null || priority.isImmediateInt());
     logger.debug("call builtin: " + function);
@@ -853,7 +853,7 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   private void builtinFunctionCall(String function, TclFunRef tclf,
-      List<Variable> inputs, List<Variable> outputs, Arg priority) {
+      List<Var> inputs, List<Var> outputs, Arg priority) {
     TclList iList = tclListOfVariables(inputs);
     TclList oList = tclListOfVariables(outputs);
     
@@ -873,16 +873,16 @@ public class SwigcGenerator implements CompilerBackend
 
   @Override
   public void builtinLocalFunctionCall(String functionName,
-          List<Arg> inputs, List<Variable> outputs) {
-    TclOpTemplate template = FunctionSemantics.getInlineTemplate(
+          List<Arg> inputs, List<Var> outputs) {
+    TclOpTemplate template = Builtins.getInlineTemplate(
                                                     functionName);
     HashMap<String, Expression> toks = new HashMap<String, Expression>();
     
     List<String> outNames = template.getOutNames();
     for (int i = 0; i < outputs.size(); i++) {
-      Variable out = outputs.get(i);
+      Var out = outputs.get(i);
       String argName = outNames.get(i);
-      toks.put(argName, new Token(prefixVar(out.getName())));
+      toks.put(argName, new Token(prefixVar(out.name())));
     }
    
     //TODO: how to handle distinction between inputs and outputs
@@ -901,19 +901,19 @@ public class SwigcGenerator implements CompilerBackend
   
   @Override
   public void functionCall(String function,
-              List<Variable> inputs, List<Variable> outputs,
+              List<Var> inputs, List<Var> outputs,
               List<Boolean> blocking, TaskMode mode, Arg priority)  {
     assert(priority == null || priority.isImmediateInt());
     logger.debug("call composite: " + function);
     TclList iList = tclListOfVariables(inputs);
     TclList oList = tclListOfVariables(outputs);
-    ArrayList<Variable> blockOn = new ArrayList<Variable>();
+    ArrayList<Var> blockOn = new ArrayList<Var>();
     HashSet<String> alreadyBlocking = new HashSet<String>();
     for (int i = 0; i < inputs.size(); i++) {
-      Variable v = inputs.get(i);
-      if (blocking.get(i) && !alreadyBlocking.contains(v.getName())) {
+      Var v = inputs.get(i);
+      if (blocking.get(i) && !alreadyBlocking.contains(v.name())) {
         blockOn.add(v);
-        alreadyBlocking.add(v.getName());
+        alreadyBlocking.add(v.name());
       }
     }
 
@@ -946,11 +946,11 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void structInsert(Variable structVar, String fieldName,
-      Variable fieldContents) {
+  public void structInsert(Var structVar, String fieldName,
+      Var fieldContents) {
     pointStack.peek().add(
-        Turbine.structInsert(prefixVar(structVar.getName()),
-            fieldName, prefixVar(fieldContents.getName())));
+        Turbine.structInsert(prefixVar(structVar.name()),
+            fieldName, prefixVar(fieldContents.name())));
   }
 
   /**
@@ -958,7 +958,7 @@ public class SwigcGenerator implements CompilerBackend
    * @param struct
    */
   @Override
-  public void structClose(Variable struct) {
+  public void structClose(Var struct) {
     pointStack.peek().add(
         Turbine.containerSlotDrop(varToExpr(struct)));
   }
@@ -970,57 +970,57 @@ public class SwigcGenerator implements CompilerBackend
    * @param alias
    */
   @Override
-  public void structLookup(Variable structVar, String structField,
-        Variable alias) {
+  public void structLookup(Var structVar, String structField,
+        Var alias) {
     pointStack.peek().add(
-        Turbine.structLookupFieldID(prefixVar(structVar.getName()),
-            structField, prefixVar(alias.getName())));
+        Turbine.structLookupFieldID(prefixVar(structVar.name()),
+            structField, prefixVar(alias.name())));
   }
 
   @Override
-  public void structRefLookup(Variable structVar, String structField,
-        Variable alias) {
+  public void structRefLookup(Var structVar, String structField,
+        Var alias) {
     pointStack.peek().add(
-        Turbine.structRefLookupFieldID(prefixVar(structVar.getName()),
-            structField, prefixVar(alias.getName())));
+        Turbine.structRefLookupFieldID(prefixVar(structVar.name()),
+            structField, prefixVar(alias.name())));
   }
 
 
   @Override
-  public void arrayLookupFuture(Variable oVar, Variable arrayVar, Variable indexVar,
+  public void arrayLookupFuture(Var oVar, Var arrayVar, Var indexVar,
         boolean isArrayRef) {
     arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
-    assert(indexVar.getType().equals(Types.FUTURE_INTEGER));
-    assert(Types.isReference(oVar.getType()));
+    assert(indexVar.type().equals(Types.F_INT));
+    assert(Types.isRef(oVar.type()));
     // Nested arrays - oVar should be a reference type
     Sequence getRef = Turbine.arrayLookupComputed(
-        prefixVar(oVar.getName()),
-        prefixVar(arrayVar.getName()), prefixVar(indexVar.getName()), isArrayRef);
+        prefixVar(oVar.name()),
+        prefixVar(arrayVar.name()), prefixVar(indexVar.name()), isArrayRef);
     pointStack.peek().add(getRef);
   }
 
   @Override
-  public void arrayLookupRefImm(Variable oVar, Variable arrayVar, Arg arrIx,
+  public void arrayLookupRefImm(Var oVar, Var arrayVar, Arg arrIx,
         boolean isArrayRef) {
     assert(arrIx.isImmediateInt());
     arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
     Sequence getRef = Turbine.arrayLookupImmIx(
-          prefixVar(oVar.getName()),
-          prefixVar(arrayVar.getName()),
+          prefixVar(oVar.name()),
+          prefixVar(arrayVar.name()),
           opargToExpr(arrIx), isArrayRef);
 
     pointStack.peek().add(getRef);
   }
 
   @Override
-  public void arrayLookupImm(Variable oVar, Variable arrayVar,
+  public void arrayLookupImm(Var oVar, Var arrayVar,
                                                       Arg arrIx) {
     assert(arrIx.isImmediateInt());
-    assert(oVar.getType().equals(
-                      Types.getArrayMemberType(arrayVar.getType())));
+    assert(oVar.type().equals(
+                      Types.getArrayMemberType(arrayVar.type())));
      pointStack.peek().add(Turbine.arrayLookupImm(
-         prefixVar(oVar.getName()),
-         prefixVar(arrayVar.getName()),
+         prefixVar(oVar.name()),
+         prefixVar(arrayVar.name()),
          opargToExpr(arrIx)));
   }
 
@@ -1031,78 +1031,78 @@ public class SwigcGenerator implements CompilerBackend
    * @param isReference
    * @return the member type of the array
    */
-  private SwiftType arrayLoadCheckTypes(Variable oVar, Variable arrayVar,
+  private Type arrayLoadCheckTypes(Var oVar, Var arrayVar,
       boolean isReference) {
-    SwiftType memberType;
+    Type memberType;
     // Check that the types of the array variable are correct
     if (isReference) {
-      assert(Types.isArrayRef(arrayVar.getType()));
-      SwiftType arrayType = arrayVar.getType().getMemberType();
+      assert(Types.isArrayRef(arrayVar.type()));
+      Type arrayType = arrayVar.type().memberType();
       assert(Types.isArray(arrayType));
-      memberType = arrayType.getMemberType();
+      memberType = arrayType.memberType();
     } else {
-      assert(Types.isArray(arrayVar.getType()));
-      memberType = arrayVar.getType().getMemberType();
+      assert(Types.isArray(arrayVar.type()));
+      memberType = arrayVar.type().memberType();
     }
 
 
-    SwiftType oType = oVar.getType();
-    if (!Types.isReference(oType)) {
+    Type oType = oVar.type();
+    if (!Types.isRef(oType)) {
       throw new STCRuntimeError("Output variable for " +
           "array lookup should be a reference " +
           " but had type " + oType.toString());
     }
-    if (!oType.getMemberType().equals(memberType)) {
+    if (!oType.memberType().equals(memberType)) {
       throw new STCRuntimeError("Output variable for "
           +" array lookup should be reference to "
           + memberType.toString() + ", but was reference to"
-          + oType.getMemberType().toString());
+          + oType.memberType().toString());
     }
 
     return memberType;
   }
 
   @Override
-  public void arrayInsertFuture(Variable iVar, Variable arrayVar,
-                                                      Variable indexVar) {
-    assert(Types.isArray(arrayVar.getType()));
-    SwiftType memberType = arrayVar.getType().getMemberType();
-    if (Types.isReference(iVar.getType())) {
-      assert(iVar.getType().getMemberType().equals(memberType));
+  public void arrayInsertFuture(Var iVar, Var arrayVar,
+                                                      Var indexVar) {
+    assert(Types.isArray(arrayVar.type()));
+    Type memberType = arrayVar.type().memberType();
+    if (Types.isRef(iVar.type())) {
+      assert(iVar.type().memberType().equals(memberType));
       Sequence r = Turbine.arrayDerefStoreComputed(
-          prefixVar(iVar.getName()), prefixVar(arrayVar.getName()),
-          prefixVar(indexVar.getName()));
+          prefixVar(iVar.name()), prefixVar(arrayVar.name()),
+          prefixVar(indexVar.name()));
 
       pointStack.peek().add(r);
     } else {
-      assert(iVar.getType().equals(memberType));
+      assert(iVar.type().equals(memberType));
       Sequence r = Turbine.arrayStoreComputed(
-          prefixVar(iVar.getName()), prefixVar(arrayVar.getName()),
-          prefixVar(indexVar.getName()));
+          prefixVar(iVar.name()), prefixVar(arrayVar.name()),
+          prefixVar(indexVar.name()));
 
       pointStack.peek().add(r);
     }
   }
 
   @Override
-  public void arrayRefInsertFuture(Variable iVar, Variable arrayVar,
-                                Variable indexVar, Variable outerArrayVar) {
-    assert(Types.isArrayRef(arrayVar.getType()));
-    assert(Types.isArray(outerArrayVar.getType()));
-    assert(Types.isInt(indexVar.getType()));
-    SwiftType memberType = arrayVar.getType().getMemberType().getMemberType();
-    if (Types.isReference(iVar.getType())) {
-      assert(iVar.getType().getMemberType().equals(memberType));
+  public void arrayRefInsertFuture(Var iVar, Var arrayVar,
+                                Var indexVar, Var outerArrayVar) {
+    assert(Types.isArrayRef(arrayVar.type()));
+    assert(Types.isArray(outerArrayVar.type()));
+    assert(Types.isInt(indexVar.type()));
+    Type memberType = arrayVar.type().memberType().memberType();
+    if (Types.isRef(iVar.type())) {
+      assert(iVar.type().memberType().equals(memberType));
       Sequence r = Turbine.arrayRefDerefStoreComputed(
-          prefixVar(iVar.getName()), prefixVar(arrayVar.getName()),
-          prefixVar(indexVar.getName()), prefixVar(outerArrayVar.getName()));
+          prefixVar(iVar.name()), prefixVar(arrayVar.name()),
+          prefixVar(indexVar.name()), prefixVar(outerArrayVar.name()));
 
       pointStack.peek().add(r);
     } else {
-      assert(iVar.getType().equals(memberType));
+      assert(iVar.type().equals(memberType));
       Sequence r = Turbine.arrayRefStoreComputed(
-          prefixVar(iVar.getName()), prefixVar(arrayVar.getName()),
-          prefixVar(indexVar.getName()), prefixVar(outerArrayVar.getName()));
+          prefixVar(iVar.name()), prefixVar(arrayVar.name()),
+          prefixVar(indexVar.name()), prefixVar(outerArrayVar.name()));
 
       pointStack.peek().add(r);
     }
@@ -1110,100 +1110,100 @@ public class SwigcGenerator implements CompilerBackend
 
 
   @Override
-  public void arrayInsertImm(Variable iVar, Variable arrayVar,
+  public void arrayInsertImm(Var iVar, Var arrayVar,
         Arg arrIx) {
-    assert(Types.isArray(arrayVar.getType()));
+    assert(Types.isArray(arrayVar.type()));
     if (!arrIx.isImmediateInt()) {
       throw new STCRuntimeError("Not immediate int: " + arrIx);
     }
     assert(arrIx.isImmediateInt());
 
-    SwiftType memberType = arrayVar.getType().getMemberType();
-    if (Types.isReference(iVar.getType())) {
+    Type memberType = arrayVar.type().memberType();
+    if (Types.isRef(iVar.type())) {
       // Check that we get the right thing when we dereference it
-      if (!iVar.getType().getMemberType().equals(memberType)) {
+      if (!iVar.type().memberType().equals(memberType)) {
         throw new STCRuntimeError("Type mismatch when trying to store " +
             "from variable " + iVar.toString() + " into array " + arrayVar.toString());
       }
       Sequence r = Turbine.arrayDerefStore(
-          prefixVar(iVar.getName()), prefixVar(arrayVar.getName()),
+          prefixVar(iVar.name()), prefixVar(arrayVar.name()),
           opargToExpr(arrIx));
       pointStack.peek().add(r);
     } else {
-      if (!iVar.getType().equals(memberType)) {
+      if (!iVar.type().equals(memberType)) {
         throw new STCRuntimeError("Type mismatch when trying to store " +
             "from variable " + iVar.toString() + " into array " + arrayVar.toString());
       }
       Sequence r = Turbine.arrayStoreImmediate(
-          prefixVar(iVar.getName()), prefixVar(arrayVar.getName()),
+          prefixVar(iVar.name()), prefixVar(arrayVar.name()),
           opargToExpr(arrIx));
       pointStack.peek().add(r);
     }
   }
 
   @Override
-  public void arrayRefInsertImm(Variable iVar, Variable arrayVar,
-        Arg arrIx, Variable outerArrayVar) {
-    assert(Types.isArrayRef(arrayVar.getType()));
-    assert(Types.isArray(outerArrayVar.getType()));
+  public void arrayRefInsertImm(Var iVar, Var arrayVar,
+        Arg arrIx, Var outerArrayVar) {
+    assert(Types.isArrayRef(arrayVar.type()));
+    assert(Types.isArray(outerArrayVar.type()));
     assert(arrIx.isImmediateInt());
 
-    SwiftType memberType = arrayVar.getType().getMemberType().getMemberType();
-    if (Types.isReference(iVar.getType())) {
+    Type memberType = arrayVar.type().memberType().memberType();
+    if (Types.isRef(iVar.type())) {
       // Check that we get the right thing when we dereference it
-      if (!iVar.getType().getMemberType().equals(memberType)) {
+      if (!iVar.type().memberType().equals(memberType)) {
         throw new STCRuntimeError("Type mismatch when trying to store " +
             "from variable " + iVar.toString() + " into array " + arrayVar.toString());
       }
       Sequence r = Turbine.arrayRefDerefStore(
-          prefixVar(iVar.getName()), prefixVar(arrayVar.getName()),
-          opargToExpr(arrIx), prefixVar(outerArrayVar.getName()));
+          prefixVar(iVar.name()), prefixVar(arrayVar.name()),
+          opargToExpr(arrIx), prefixVar(outerArrayVar.name()));
       pointStack.peek().add(r);
     } else {
-      if (!iVar.getType().equals(memberType)) {
+      if (!iVar.type().equals(memberType)) {
         throw new STCRuntimeError("Type mismatch when trying to store " +
             "from variable " + iVar.toString() + " into array " + arrayVar.toString());
       }
       Sequence r = Turbine.arrayRefStoreImmediate(
-          prefixVar(iVar.getName()), prefixVar(arrayVar.getName()),
-          opargToExpr(arrIx), prefixVar(outerArrayVar.getName()));
+          prefixVar(iVar.name()), prefixVar(arrayVar.name()),
+          opargToExpr(arrIx), prefixVar(outerArrayVar.name()));
       pointStack.peek().add(r);
     }
   }
 
   @Override
-  public void initUpdateable(Variable updateable, Arg val) {
-    assert(Types.isScalarUpdateable(updateable.getType()));
-    if (!updateable.getType().equals(Types.UPDATEABLE_FLOAT)) {
-      throw new STCRuntimeError(updateable.getType() +
+  public void initUpdateable(Var updateable, Arg val) {
+    assert(Types.isScalarUpdateable(updateable.type()));
+    if (!updateable.type().equals(Types.UP_FLOAT)) {
+      throw new STCRuntimeError(updateable.type() +
           " not yet supported");
     }
     assert(val.isImmediateFloat());
-    pointStack.peek().add(Turbine.floatSet(prefixVar(updateable.getName()),
+    pointStack.peek().add(Turbine.floatSet(prefixVar(updateable.name()),
                                                          opargToExpr(val)));
   }
 
   @Override
-  public void latestValue(Variable result, Variable updateable) {
-    assert(Types.isScalarUpdateable(updateable.getType()));
-    assert(Types.isScalarValue(result.getType()));
-    assert(updateable.getType().getPrimitiveType() ==
-                  result.getType().getPrimitiveType());
-    if (!updateable.getType().equals(Types.UPDATEABLE_FLOAT)) {
-      throw new STCRuntimeError(updateable.getType().typeName()
+  public void latestValue(Var result, Var updateable) {
+    assert(Types.isScalarUpdateable(updateable.type()));
+    assert(Types.isScalarValue(result.type()));
+    assert(updateable.type().primType() ==
+                  result.type().primType());
+    if (!updateable.type().equals(Types.UP_FLOAT)) {
+      throw new STCRuntimeError(updateable.type().typeName()
               + " not yet supported");
     }
     // just get the value the same as any other float future
-    pointStack.peek().add(Turbine.floatGet(prefixVar(result.getName()),
+    pointStack.peek().add(Turbine.floatGet(prefixVar(result.name()),
                                     varToExpr(updateable)));
   }
 
   @Override
-  public void update(Variable updateable, UpdateMode updateMode, Variable val) {
-    assert(Types.isScalarUpdateable(updateable.getType()));
-    assert(Types.isScalarFuture(val.getType()));
-    assert(updateable.getType().getPrimitiveType() ==
-                             val.getType().getPrimitiveType());
+  public void update(Var updateable, UpdateMode updateMode, Var val) {
+    assert(Types.isScalarUpdateable(updateable.type()));
+    assert(Types.isScalarFuture(val.type()));
+    assert(updateable.type().primType() ==
+                             val.type().primType());
     assert(updateMode != null);
     String builtinName = getUpdateBuiltin(updateMode);
     pointStack.peek().add(new Command(builtinName, Arrays.asList(
@@ -1229,10 +1229,10 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void updateImm(Variable updateable, UpdateMode updateMode,
+  public void updateImm(Var updateable, UpdateMode updateMode,
                                                 Arg val) {
-    assert(Types.isScalarUpdateable(updateable.getType()));
-    if (updateable.getType().equals(Types.UPDATEABLE_FLOAT)) {
+    assert(Types.isScalarUpdateable(updateable.type()));
+    if (updateable.type().equals(Types.UP_FLOAT)) {
       assert(val.isImmediateFloat());
     } else {
       throw new STCRuntimeError("only updateable floats are"
@@ -1245,24 +1245,24 @@ public class SwigcGenerator implements CompilerBackend
   }
 
 
-  TclList tclListOfVariables(List<Variable> inputs)
+  TclList tclListOfVariables(List<Var> inputs)
   {
     TclList result = new TclList();
-    for (Variable v : inputs)
+    for (Var v : inputs)
       result.add(varToExpr(v));
     return result;
   }
 
-  String stringOfVariables(List<Variable> inputs, List<Variable> outputs)
+  String stringOfVariables(List<Var> inputs, List<Var> outputs)
   {
     StringBuilder sb =
       new StringBuilder(inputs.size()+outputs.size()*32);
 
-    Iterator<Variable> it1 = inputs.iterator();
-    Iterator<Variable> it2 = outputs.iterator();
+    Iterator<Var> it1 = inputs.iterator();
+    Iterator<Var> it2 = outputs.iterator();
     while (it1.hasNext())
     {
-      Variable v = it1.next();
+      Var v = it1.next();
       Value val = varToExpr(v);
       val.appendTo(sb);
       if (it1.hasNext() || it2.hasNext())
@@ -1270,7 +1270,7 @@ public class SwigcGenerator implements CompilerBackend
     }
     while (it2.hasNext())
     {
-      Variable v = it2.next();
+      Var v = it2.next();
       Value val = varToExpr(v);
       val.appendTo(sb);
       if (it2.hasNext())
@@ -1304,13 +1304,13 @@ public class SwigcGenerator implements CompilerBackend
 
   @Override
   public void startFunction(String functionName,
-                                     List<Variable> oList,
-                                     List<Variable> iList,
+                                     List<Var> oList,
+                                     List<Var> iList,
                                      TaskMode mode)
   throws UserException
   {
-    List<String> outputs = prefixVars(Variable.nameList(oList));
-    List<String> inputs  = prefixVars(Variable.nameList(iList));
+    List<String> outputs = prefixVars(Var.nameList(oList));
+    List<String> inputs  = prefixVars(Var.nameList(iList));
     // System.out.println("function" + functionName);
     boolean isMain = functionName.equals("main");
     String prefixedFunctionName = null;
@@ -1352,16 +1352,16 @@ public class SwigcGenerator implements CompilerBackend
       }
       s.add(setupStack);
       if (!noStackVars()) {
-        for (Variable v : iList)
+        for (Var v : iList)
         {
-          Command command = Turbine.storeInStack(v.getName(),
-                                      prefixVar(v.getName()));
+          Command command = Turbine.storeInStack(v.name(),
+                                      prefixVar(v.name()));
           s.add(command);
         }
-        for (Variable v : oList)
+        for (Var v : oList)
         {
-          Command command = Turbine.storeInStack(v.getName(),
-                                            prefixVar(v.getName()));
+          Command command = Turbine.storeInStack(v.name(),
+                                            prefixVar(v.name()));
           s.add(command);
         }
       }
@@ -1408,8 +1408,8 @@ public class SwigcGenerator implements CompilerBackend
   {
     logger.trace("startIfStatement()...");
     assert(condition != null);
-    assert(condition.getType() != ArgType.VAR
-        || condition.getVar().getStorage() == VariableStorage.LOCAL);
+    assert(condition.getKind() != ArgKind.VAR
+        || condition.getVar().storage() == VarStorage.LOCAL);
     assert(condition.isImmediateBool()
         || condition.isImmediateInt());
 
@@ -1448,8 +1448,8 @@ public class SwigcGenerator implements CompilerBackend
   }
 
     @Override
-    public void startWaitStatement(String procName, List<Variable> waitVars,
-        List<Variable> usedVariables, List<Variable> keepOpenVars,
+    public void startWaitStatement(String procName, List<Var> waitVars,
+        List<Var> usedVariables, List<Var> keepOpenVars,
         boolean explicit, TaskMode mode) {
       logger.trace("startWaitStatement()...");
       startAsync(procName, waitVars, usedVariables, keepOpenVars,
@@ -1457,7 +1457,7 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void endWaitStatement(List<Variable> keepOpenVars) {
+    public void endWaitStatement(List<Var> keepOpenVars) {
       logger.trace("endWaitStatement()...");
       endAsync(keepOpenVars);
     }
@@ -1472,27 +1472,27 @@ public class SwigcGenerator implements CompilerBackend
      * @param shareWork if true, work will be shared with other rule engines
      *                  at the cost of higher overhead
      */
-    private void startAsync(String procName, List<Variable> waitVars,
-        List<Variable> usedVariables, List<Variable> keepOpenVars,
+    private void startAsync(String procName, List<Var> waitVars,
+        List<Var> usedVariables, List<Var> keepOpenVars,
         boolean shareWork) {
-      ArrayList<Variable> toPassIn = new ArrayList<Variable>();
+      ArrayList<Var> toPassIn = new ArrayList<Var>();
       HashSet<String> alreadyInSet = new HashSet<String>();
-      for (Variable v: usedVariables) {
+      for (Var v: usedVariables) {
         toPassIn.add(v);
-        alreadyInSet.add(v.getName());
+        alreadyInSet.add(v.name());
       }
       
       // Also need to pass in refs to containers
-      for (Variable v: keepOpenVars) {
-        if (!alreadyInSet.contains(v.getName())) {
+      for (Var v: keepOpenVars) {
+        if (!alreadyInSet.contains(v.name())) {
           toPassIn.add(v);
         }
       }
       
       List<String> args = new ArrayList<String>();
       args.add(Turbine.LOCAL_STACK_NAME);
-      for (Variable v: toPassIn) {
-        args.add(prefixVar(v.getName()));
+      for (Var v: toPassIn) {
+        args.add(prefixVar(v.name()));
       }
 
       Sequence constructProc = new Sequence();
@@ -1504,11 +1504,11 @@ public class SwigcGenerator implements CompilerBackend
 
       // Build up the rule string
       List<Value> inputs = new ArrayList<Value>();
-      for (Variable w: waitVars) {
+      for (Var w: waitVars) {
         inputs.add(varToExpr(w));
       }
 
-      for (Variable c: keepOpenVars) {
+      for (Var c: keepOpenVars) {
         pointStack.peek().add(
               Turbine.containerSlotCreate(varToExpr(c)));
       }
@@ -1520,8 +1520,8 @@ public class SwigcGenerator implements CompilerBackend
       pointStack.push(constructProc);
     }
 
-    private void endAsync(List<Variable> keepOpenVars) {
-      for (Variable v: keepOpenVars) {
+    private void endAsync(List<Var> keepOpenVars) {
+      for (Var v: keepOpenVars) {
         pointStack.peek().add(Turbine.containerSlotDrop(varToExpr(v)));
       }
       pointStack.pop();
@@ -1529,22 +1529,22 @@ public class SwigcGenerator implements CompilerBackend
 
 
     private TclList buildAction(String procName,
-        List<Variable> usedVariables) {
+        List<Var> usedVariables) {
 
       ArrayList<Expression> ruleTokens = new ArrayList<Expression>();
       ruleTokens.add(new Token(procName));
       ruleTokens.add(new Value(Turbine.LOCAL_STACK_NAME));
       // Pass in variable ids directly in rule string
-      for (Variable v: usedVariables) {
-        SwiftType t = v.getType();
-        if (Types.isScalarFuture(t) || Types.isReference(t) ||
+      for (Var v: usedVariables) {
+        Type t = v.type();
+        if (Types.isScalarFuture(t) || Types.isRef(t) ||
             Types.isArray(t) || Types.isStruct(t) ||
             Types.isScalarUpdateable(t)) {
           // Just passing turbine id
           ruleTokens.add(varToExpr(v));
         } else if (Types.isScalarValue(t)) {
-          PrimType pt = t.getPrimitiveType();
-          if (pt == PrimType.INTEGER || pt == PrimType.BOOLEAN
+          PrimType pt = t.primType();
+          if (pt == PrimType.INT || pt == PrimType.BOOL
               || pt == PrimType.FLOAT || pt == PrimType.STRING) {
             // Serialize
             ruleTokens.add(varToExpr(v));
@@ -1565,8 +1565,8 @@ public class SwigcGenerator implements CompilerBackend
               boolean hasDefault) {
     logger.trace("startSwitch()...");
     assert(switchVar != null);
-    assert(switchVar.getType() != ArgType.VAR ||
-        switchVar.getVar().getStorage() == VariableStorage.LOCAL);
+    assert(switchVar.getKind() != ArgKind.VAR ||
+        switchVar.getVar().storage() == VarStorage.LOCAL);
     assert(switchVar.isImmediateInt());
 
     int casecount = caseLabels.size();
@@ -1607,19 +1607,19 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void startForeachLoop(Variable arrayVar, Variable memberVar,
-                    Variable loopCountVar, boolean isSync, int splitDegree,
+  public void startForeachLoop(Var arrayVar, Var memberVar,
+                    Var loopCountVar, boolean isSync, int splitDegree,
                     boolean arrayClosed,
-          List<Variable> usedVariables, List<Variable> keepOpenVars) {
-    assert(Types.isArray(arrayVar.getType()));
+          List<Var> usedVariables, List<Var> keepOpenVars) {
+    assert(Types.isArray(arrayVar.type()));
     assert(loopCountVar == null ||
-              loopCountVar.getType().equals(Types.VALUE_INTEGER));
+              loopCountVar.type().equals(Types.V_INT));
 
     int foreach_num = foreach_counter++;
     String procName = "foreach:" + foreach_num;
 
     if (!arrayClosed) {
-      ArrayList<Variable> passIn = new ArrayList<Variable>(usedVariables);
+      ArrayList<Var> passIn = new ArrayList<Var>(usedVariables);
       if (!passIn.contains(arrayVar)) {
         passIn.add(arrayVar);
       }
@@ -1641,7 +1641,7 @@ public class SwigcGenerator implements CompilerBackend
             new Token("-"), new LiteralInt(1));
 
       // recursively split the range
-      ArrayList<Variable> splitUsedVars = new ArrayList<Variable>(
+      ArrayList<Var> splitUsedVars = new ArrayList<Var>(
           usedVariables);
       splitUsedVars.add(arrayVar);
       startRangeSplit(procName, splitUsedVars, keepOpenVars,
@@ -1665,15 +1665,15 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   private void startForeachInner(Value arrayContents,
-      Variable memberVar, Variable loopCountVar,
-      boolean isSync, List<Variable> usedVariables,
-      List<Variable> keepOpenVars, int foreach_num) {
+      Var memberVar, Var loopCountVar,
+      boolean isSync, List<Var> usedVariables,
+      List<Var> keepOpenVars, int foreach_num) {
     Sequence curr = pointStack.peek();
     boolean haveKeys = loopCountVar != null;
     Sequence loopBody = new Sequence();
 
-    String tclMemberVar = prefixVar(memberVar.getName());
-    String tclCountVar = haveKeys ? prefixVar(loopCountVar.getName()) : null;
+    String tclMemberVar = prefixVar(memberVar.name());
+    String tclCountVar = haveKeys ? prefixVar(loopCountVar.name()) : null;
 
     /* Iterate over keys and values, or just values */
     Sequence tclLoop;
@@ -1688,11 +1688,11 @@ public class SwigcGenerator implements CompilerBackend
 
     if (!isSync) {
       // pass in the array member and loop count var along with other used vars
-      ArrayList<Variable> loopUsedVars = new ArrayList<Variable>(usedVariables);
+      ArrayList<Var> loopUsedVars = new ArrayList<Var>(usedVariables);
       loopUsedVars.add(memberVar);
       if (loopCountVar != null) loopUsedVars.add(loopCountVar);
       startAsync("foreach:" + foreach_num + ":body",
-          new ArrayList<Variable>(), loopUsedVars, keepOpenVars,
+          new ArrayList<Var>(), loopUsedVars, keepOpenVars,
           true);
     }
   }
@@ -1700,7 +1700,7 @@ public class SwigcGenerator implements CompilerBackend
 
   @Override
   public void endForeachLoop(boolean isSync, int splitDegree,
-          boolean arrayClosed, List<Variable> keepOpenVars) {
+          boolean arrayClosed, List<Var> keepOpenVars) {
     assert(pointStack.size() >= 2);
     if (!isSync) {
       assert(pointStack.size() >= 3);
@@ -1716,19 +1716,19 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void startRangeLoop(String loopName, Variable loopVar, Arg start,
-      Arg end, Arg increment, boolean isSync, List<Variable> usedVariables,
-      List<Variable> keepOpenVars, int desiredUnroll, int splitDegree) {
-    assert(start.getType() == ArgType.INTVAL ||
-        (start.getType() == ArgType.VAR &&
-            start.getVar().getType().equals(Types.VALUE_INTEGER)));
-    assert(end.getType() == ArgType.INTVAL ||
-        (end.getType() == ArgType.VAR &&
-            end.getVar().getType().equals(Types.VALUE_INTEGER)));
-    assert(increment.getType() == ArgType.INTVAL ||
-        (increment.getType() == ArgType.VAR &&
-                    increment.getVar().getType().equals(Types.VALUE_INTEGER)));
-    assert(loopVar.getType().equals(Types.VALUE_INTEGER));
+  public void startRangeLoop(String loopName, Var loopVar, Arg start,
+      Arg end, Arg increment, boolean isSync, List<Var> usedVariables,
+      List<Var> keepOpenVars, int desiredUnroll, int splitDegree) {
+    assert(start.isIntVal() ||
+        (start.isVar() &&
+            start.getVar().type().equals(Types.V_INT)));
+    assert(end.isIntVal() ||
+        (end.isVar() &&
+            end.getVar().type().equals(Types.V_INT)));
+    assert(increment.isIntVal() ||
+        (increment.isVar() &&
+                    increment.getVar().type().equals(Types.V_INT)));
+    assert(loopVar.type().equals(Types.V_INT));
     Expression startE = opargToExpr(start);
     Expression endE = opargToExpr(end);
     Expression incrE = opargToExpr(increment);
@@ -1747,7 +1747,7 @@ public class SwigcGenerator implements CompilerBackend
 
   @Override
   public void endRangeLoop(boolean isSync,
-                        List<Variable> keepOpenVars,
+                        List<Var> keepOpenVars,
                         int splitDegree) {
     assert(pointStack.size() >= 2);
     if (!isSync) {
@@ -1761,22 +1761,22 @@ public class SwigcGenerator implements CompilerBackend
     }
   }
 
-  private void startRangeLoopInner(String loopName, Variable loopVar,
-          boolean isSync, List<Variable> usedVariables,
-          List<Variable> keepOpenVars, Expression startE,
+  private void startRangeLoopInner(String loopName, Var loopVar,
+          boolean isSync, List<Var> usedVariables,
+          List<Var> keepOpenVars, Expression startE,
           Expression endE, Expression incrE) {
     Sequence loopBody = new Sequence();
-    String loopVarName = prefixVar(loopVar.getName());
+    String loopVarName = prefixVar(loopVar.name());
     ForLoop tclLoop = new ForLoop(loopVarName, startE, endE, incrE, loopBody);
     pointStack.peek().add(tclLoop);
     pointStack.push(loopBody);
 
 
-    ArrayList<Variable> loopUsedVars = new ArrayList<Variable>(usedVariables);
+    ArrayList<Var> loopUsedVars = new ArrayList<Var>(usedVariables);
     loopUsedVars.add(loopVar);
     if (!isSync) {
       startAsync(loopName + ":body",
-          new ArrayList<Variable>(), loopUsedVars, keepOpenVars,
+          new ArrayList<Var>(), loopUsedVars, keepOpenVars,
           true);
     }
   }
@@ -1794,16 +1794,16 @@ public class SwigcGenerator implements CompilerBackend
    * @param incrE
    */
   private void startRangeSplit(String loopName,
-          List<Variable> usedVariables,
-          List<Variable> keepOpenVars, int splitDegree,
+          List<Var> usedVariables,
+          List<Var> keepOpenVars, int splitDegree,
           Expression startE, Expression endE, Expression incrE) {
     // Create two procedures that will be called: an outer procedure
     //  that recursively breaks up the foreach loop into chunks,
     //  and an inner procedure that actually runs the loop
     ArrayList<String> args = new ArrayList<String>();
     args.add(Turbine.LOCAL_STACK_NAME);
-    for (Variable uv: usedVariables) {
-      args.add(prefixVar(uv.getName()));
+    for (Var uv: usedVariables) {
+      args.add(prefixVar(uv.name()));
     }
     args.add(TCLTMP_RANGE_LO);
     args.add(TCLTMP_RANGE_HI);
@@ -1815,7 +1815,7 @@ public class SwigcGenerator implements CompilerBackend
 
     List<Expression> commonArgs = new ArrayList<Expression>();
     commonArgs.add(new Value(Turbine.LOCAL_STACK_NAME));
-    for (Variable uv: usedVariables) {
+    for (Var uv: usedVariables) {
       commonArgs.add(varToExpr(uv));
     }
 
@@ -1905,7 +1905,7 @@ public class SwigcGenerator implements CompilerBackend
     String typePrefix;
     Expression expr;
     Command setCmd;
-    switch (val.getType()) {
+    switch (val.getKind()) {
     case INTVAL:
       typePrefix = Turbine.INTEGER_TYPENAME;
       expr = new LiteralInt(val.getIntLit());
@@ -1928,7 +1928,7 @@ public class SwigcGenerator implements CompilerBackend
       break;
     default:
       throw new STCRuntimeError("Non-constant oparg type "
-          + val.getType());
+          + val.getKind());
     }
     globInit.add(Turbine.allocate(tclName, typePrefix));
     globInit.add(setCmd);
@@ -1959,12 +1959,12 @@ public class SwigcGenerator implements CompilerBackend
   }
 
 
-    private Value varToExpr(Variable v) {
-    return new Value(prefixVar(v.getName()));
+    private Value varToExpr(Var v) {
+    return new Value(prefixVar(v.name()));
   }
 
   private Expression opargToExpr(Arg in) {
-    switch (in.getType()) {
+    switch (in.getKind()) {
     case INTVAL:
       return new LiteralInt(in.getIntLit());
     case BOOLVAL:
@@ -1972,12 +1972,12 @@ public class SwigcGenerator implements CompilerBackend
     case STRINGVAL:
       return new TclString(in.getStringLit(), true);
     case VAR:
-      return new Value(prefixVar(in.getVar().getName()));
+      return new Value(prefixVar(in.getVar().name()));
     case FLOATVAL:
       return new LiteralFloat(in.getFloatLit());
     default:
       throw new STCRuntimeError("Unknown oparg type: "
-          + in.getType().toString());
+          + in.getKind().toString());
     }
   }
 
@@ -2025,9 +2025,9 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void startLoop(String loopName, List<Variable> loopVars,
-        List<Variable> initVals, List<Variable> usedVariables,
-        List<Variable> keepOpenVars, List<Boolean> blockingVars) {
+    public void startLoop(String loopName, List<Var> loopVars,
+        List<Var> initVals, List<Var> usedVariables,
+        List<Var> keepOpenVars, List<Boolean> blockingVars) {
 
       // call rule to start the loop, pass in initVals, usedVariables
       ArrayList<String> loopFnArgs = new ArrayList<String>();
@@ -2035,15 +2035,15 @@ public class SwigcGenerator implements CompilerBackend
       loopFnArgs.add(Turbine.LOCAL_STACK_NAME);
       firstIterArgs.add(new Value(Turbine.LOCAL_STACK_NAME));
 
-      for (Variable arg: loopVars) {
-        loopFnArgs.add(prefixVar(arg.getName()));
+      for (Var arg: loopVars) {
+        loopFnArgs.add(prefixVar(arg.name()));
       }
-      for (Variable init: initVals) {
+      for (Var init: initVals) {
         firstIterArgs.add(varToExpr(init));
       }
 
-      for (Variable uv: usedVariables) {
-        loopFnArgs.add(prefixVar(uv.getName()));
+      for (Var uv: usedVariables) {
+        loopFnArgs.add(prefixVar(uv.name()));
         firstIterArgs.add(varToExpr(uv));
       }
 
@@ -2052,7 +2052,7 @@ public class SwigcGenerator implements CompilerBackend
       ArrayList<Value> blockingVals = new ArrayList<Value>();
       assert(blockingVars.size() == initVals.size());
       for (int i = 0; i < blockingVars.size(); i++) {
-        Variable iv = initVals.get(i);
+        Var iv = initVals.get(i);
         if (blockingVars.get(i)) {
           blockingVals.add(varToExpr(iv));
         }
@@ -2060,7 +2060,7 @@ public class SwigcGenerator implements CompilerBackend
 
 
       // Keep containers open
-      for (Variable v: keepOpenVars) {
+      for (Var v: keepOpenVars) {
         pointStack.peek().add(Turbine.containerSlotCreate(varToExpr(v)));
       }
 
@@ -2089,17 +2089,17 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void loopContinue(List<Variable> newVals,
-           List<Variable> usedVariables, List<Variable> registeredContainers,
+    public void loopContinue(List<Var> newVals,
+           List<Var> usedVariables, List<Var> registeredContainers,
            List<Boolean> blockingVars) {
       ArrayList<Value> nextIterArgs = new ArrayList<Value>();
       String loopName = loopNameStack.peek();
       nextIterArgs.add(new Value(Turbine.LOCAL_STACK_NAME));
 
-      for (Variable v: newVals) {
+      for (Var v: newVals) {
         nextIterArgs.add(varToExpr(v));
       }
-      for (Variable v: usedVariables) {
+      for (Var v: usedVariables) {
         nextIterArgs.add(varToExpr(v));
       }
       ArrayList<Value> blockingVals = new ArrayList<Value>();
@@ -2114,8 +2114,8 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void loopBreak(List<Variable> containersToClose) {
-      for (Variable arr: containersToClose) {
+    public void loopBreak(List<Var> containersToClose) {
+      for (Var arr: containersToClose) {
         pointStack.peek().add(
              Turbine.containerSlotDrop(varToExpr(arr)));
       }
@@ -2130,7 +2130,7 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void dereferenceFile(Variable dst, Variable src) {
+    public void dereferenceFile(Var dst, Var src) {
       // TODO Auto-generated method stub
       
     }
@@ -2138,14 +2138,14 @@ public class SwigcGenerator implements CompilerBackend
     @Override
     public void
         runExternal(String cmd, List<Arg> args,
-            List<Variable> outFiles,
+            List<Var> outFiles,
             boolean hasSideEffects, boolean deterministic) {
       // TODO Auto-generated method stub
       
     }
 
     @Override
-    public void getFileName(Variable filename, Variable file, boolean initUnmapped) {
+    public void getFileName(Var filename, Var file, boolean initUnmapped) {
       // TODO Auto-generated method stub
       
     }

@@ -15,16 +15,16 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
+import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
-import exm.stc.common.lang.Types.SwiftType;
-import exm.stc.common.lang.Variable;
-import exm.stc.common.lang.Variable.DefType;
-import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.ic.opt.ICOptimiser;
 import exm.stc.ic.tree.ICContinuations.ForeachLoop;
 import exm.stc.ic.tree.ICContinuations.IfStatement;
@@ -135,8 +135,8 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void startFunction(String functionName, List<Variable> oList,
-      List<Variable> iList, TaskMode mode) throws UserException {
+  public void startFunction(String functionName, List<Var> oList,
+      List<Var> iList, TaskMode mode) throws UserException {
     assert(blockStack.size() == 0);
     assert(currFunction == null);
     currFunction = new Function(functionName, iList, oList, mode);
@@ -175,8 +175,8 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void startIfStatement(Arg condition, boolean hasElse) {
     assert(currFunction != null);
-    assert(condition.getSwiftType().equals(Types.VALUE_INTEGER)
-          || condition.getSwiftType().equals(Types.VALUE_BOOLEAN));
+    assert(condition.getType().equals(Types.V_INT)
+          || condition.getType().equals(Types.V_BOOL));
 
     IfStatement stmt = new IfStatement(condition);
     currBlock().addContinuation(stmt);
@@ -207,8 +207,8 @@ public class STCMiddleEnd implements CompilerBackend {
 
 
   @Override
-  public void startWaitStatement(String procName, List<Variable> waitVars,
-      List<Variable> usedVariables, List<Variable> keepOpenVars,
+  public void startWaitStatement(String procName, List<Var> waitVars,
+      List<Var> usedVariables, List<Var> keepOpenVars,
       boolean explicit, TaskMode mode) {
     assert(currFunction != null);
     WaitStatement wait = new WaitStatement(procName, waitVars, usedVariables,
@@ -218,7 +218,7 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void endWaitStatement(List<Variable> keepOpenVars) {
+  public void endWaitStatement(List<Var> keepOpenVars) {
     assert(currBlock().getType() == BlockType.WAIT_BLOCK);
     blockStack.pop();
   }
@@ -259,17 +259,17 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void startForeachLoop(Variable arrayVar, Variable memberVar,
-                  Variable loopCountVar, boolean isSync, 
+  public void startForeachLoop(Var arrayVar, Var memberVar,
+                  Var loopCountVar, boolean isSync, 
                   int splitDegree, boolean arrayClosed,
-         List<Variable> usedVariables, List<Variable> keepOpenVars) {
-    if(!Types.isArray(arrayVar.getType())) {
+         List<Var> usedVariables, List<Var> keepOpenVars) {
+    if(!Types.isArray(arrayVar.type())) {
       throw new STCRuntimeError("foreach loop over non-array: " + 
                 arrayVar.toString()); 
     }
-    assert(arrayVar.getType().getMemberType().equals(memberVar.getType()));
+    assert(arrayVar.type().memberType().equals(memberVar.type()));
     assert(loopCountVar == null || 
-              loopCountVar.getType().equals(Types.VALUE_INTEGER));
+              loopCountVar.type().equals(Types.V_INT));
     ForeachLoop loop = new ForeachLoop(arrayVar, memberVar, 
                 loopCountVar, isSync, splitDegree, arrayClosed, usedVariables, 
                 keepOpenVars);
@@ -279,15 +279,15 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void endForeachLoop(boolean isSync, int splitDegree, 
-            boolean arrayClosed, List<Variable> keepOpenVars) {
+            boolean arrayClosed, List<Var> keepOpenVars) {
     assert(blockStack.peek().getType() == BlockType.FOREACH_BODY);
     blockStack.pop();
   }
 
   @Override
-  public void startRangeLoop(String loopName, Variable loopVar,
+  public void startRangeLoop(String loopName, Var loopVar,
       Arg start, Arg end, Arg increment, boolean isSync,
-      List<Variable> usedVariables, List<Variable> keepOpenVars,
+      List<Var> usedVariables, List<Var> keepOpenVars,
       int desiredUnroll, int splitDegree) {
     RangeLoop loop = new RangeLoop(loopName, loopVar, start, end, increment,
                                 isSync, usedVariables, keepOpenVars,
@@ -298,16 +298,16 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void endRangeLoop(boolean isSync, 
-                          List<Variable> keepOpenVars,
+                          List<Var> keepOpenVars,
                           int splitDegree) {
     assert(currBlock().getType() == BlockType.RANGELOOP_BODY);
     blockStack.pop();
   }
 
   @Override
-  public void startLoop(String loopName, List<Variable> loopVars,
-      List<Variable> initVals, List<Variable> usedVariables,
-      List<Variable> keepOpenVars, List<Boolean> blockingVars) {
+  public void startLoop(String loopName, List<Var> loopVars,
+      List<Var> initVals, List<Var> usedVariables,
+      List<Var> keepOpenVars, List<Boolean> blockingVars) {
     Loop loop = new Loop(loopName, loopVars, initVals,
         usedVariables, keepOpenVars, blockingVars);
     currBlock().addContinuation(loop);
@@ -316,8 +316,8 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void loopContinue(List<Variable> newVals, 
-        List<Variable> usedVariables, List<Variable> keepOpenVars,
+  public void loopContinue(List<Var> newVals, 
+        List<Var> usedVariables, List<Var> keepOpenVars,
         List<Boolean> blockingVars) {
     LoopContinue inst = new LoopContinue(newVals, usedVariables,
         keepOpenVars, blockingVars);
@@ -326,9 +326,9 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void loopBreak(List<Variable> closeVars) {
+  public void loopBreak(List<Var> closeVars) {
     LoopBreak inst = new LoopBreak(
-        new ArrayList<Variable>(closeVars));
+        new ArrayList<Var>(closeVars));
     currBlock().addInstruction(inst);
     loopStack.peek().setLoopBreak(inst);
   }
@@ -341,18 +341,18 @@ public class STCMiddleEnd implements CompilerBackend {
   }
   
   @Override
-  public void declare(SwiftType type, String name, VariableStorage storage,
-      DefType defType, Variable mapping)
+  public void declare(Type type, String name, VarStorage storage,
+      DefType defType, Var mapping)
       throws UndefinedTypeException {
     assert(mapping == null || Types.isMappable(type));
-    assert(mapping == null || Types.isString(mapping.getType()));
+    assert(mapping == null || Types.isString(mapping.type()));
     currBlock().declareVariable(type, name, storage, defType, mapping);
   }
 
 
   @Override
-  public void builtinFunctionCall(String function, List<Variable> inputs,
-      List<Variable> outputs, Arg priority) {
+  public void builtinFunctionCall(String function, List<Var> inputs,
+      List<Var> outputs, Arg priority) {
     assert(priority == null || priority.isImmediateInt());
     currBlock().addInstruction(
         FunctionCall.createBuiltinCall(
@@ -361,14 +361,14 @@ public class STCMiddleEnd implements CompilerBackend {
   
   @Override
   public void builtinLocalFunctionCall(String functionName,
-          List<Arg> inputs, List<Variable> outputs) {
+          List<Arg> inputs, List<Var> outputs) {
     currBlock().addInstruction(new LocalFunctionCall(functionName,
             inputs, outputs));
   }
   
   @Override
-  public void functionCall(String function, List<Variable> inputs,
-      List<Variable> outputs, List<Boolean> blockOn, TaskMode mode, 
+  public void functionCall(String function, List<Var> inputs,
+      List<Var> outputs, List<Boolean> blockOn, TaskMode mode, 
       Arg priority) {
     assert(priority == null || priority.isImmediateInt());
     if (blockOn != null) {
@@ -382,10 +382,10 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void runExternal(String cmd, List<Arg> args,
-                          List<Variable> outFiles,
+                          List<Var> outFiles,
                           boolean hasSideEffects, boolean deterministic) {
-    for (Variable o: outFiles) {
-      assert(Types.isFile(o.getType()));
+    for (Var o: outFiles) {
+      assert(Types.isFile(o.type()));
     }
     
     currBlock().addInstruction(new RunExternal(cmd, outFiles, args,
@@ -394,15 +394,15 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void closeArray(Variable arr) {
-    assert(Types.isArray(arr.getType()));
+  public void closeArray(Var arr) {
+    assert(Types.isArray(arr.type()));
     currBlock().addArrayToClose(arr);
   }
 
   @Override
-  public void arrayLookupFuture(Variable oVar, Variable arrayVar,
-      Variable indexVar, boolean isArrayRef) {
-    assert(indexVar.getType().equals(Types.FUTURE_INTEGER));
+  public void arrayLookupFuture(Var oVar, Var arrayVar,
+      Var indexVar, boolean isArrayRef) {
+    assert(indexVar.type().equals(Types.F_INT));
     if (isArrayRef) {
       currBlock().addInstruction(
           TurbineOp.arrayRefLookupFuture(oVar, arrayVar, indexVar));
@@ -413,7 +413,7 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void arrayLookupRefImm(Variable oVar, Variable arrayVar,
+  public void arrayLookupRefImm(Var oVar, Var arrayVar,
       Arg arrIx, boolean isArrayRef) {
     assert(arrIx.isImmediateInt());
     if (isArrayRef) {
@@ -426,35 +426,35 @@ public class STCMiddleEnd implements CompilerBackend {
   }
   
   @Override
-  public void arrayLookupImm(Variable oVar, Variable arrayVar,
+  public void arrayLookupImm(Var oVar, Var arrayVar,
       Arg arrIx) {
-    assert(oVar.getStorage() == VariableStorage.ALIAS);
-    assert(Types.isArray(arrayVar.getType())); // Can't be reference to array
+    assert(oVar.storage() == VarStorage.ALIAS);
+    assert(Types.isArray(arrayVar.type())); // Can't be reference to array
     assert(arrIx.isImmediateInt());
     currBlock().addInstruction(
         TurbineOp.arrayLookupImm(oVar, arrayVar, arrIx));
   }
 
   @Override
-  public void arrayInsertFuture(Variable iVar, Variable arrayVar,
-      Variable indexVar) {
-    assert(indexVar.getType().equals(Types.FUTURE_INTEGER));
+  public void arrayInsertFuture(Var iVar, Var arrayVar,
+      Var indexVar) {
+    assert(indexVar.type().equals(Types.F_INT));
     currBlock().addInstruction(
         TurbineOp.arrayInsertFuture(iVar, arrayVar, indexVar));
   }
 
   @Override
-  public void arrayRefInsertFuture(Variable iVar,
-      Variable arrayVar, Variable indexVar, Variable outerArrayVar) {
-    assert(indexVar.getType().equals(Types.FUTURE_INTEGER));
-    assert(Types.isArrayRef(arrayVar.getType()));
+  public void arrayRefInsertFuture(Var iVar,
+      Var arrayVar, Var indexVar, Var outerArrayVar) {
+    assert(indexVar.type().equals(Types.F_INT));
+    assert(Types.isArrayRef(arrayVar.type()));
     currBlock().addInstruction(
         TurbineOp.arrayRefInsertFuture(iVar, arrayVar, indexVar, 
                                               outerArrayVar));
   }
   
   @Override
-  public void arrayInsertImm(Variable iVar, Variable arrayVar,
+  public void arrayInsertImm(Var iVar, Var arrayVar,
       Arg arrIx) {
     assert(arrIx.isImmediateInt());
     currBlock().addInstruction(
@@ -462,20 +462,20 @@ public class STCMiddleEnd implements CompilerBackend {
   }
   
   @Override
-  public void arrayRefInsertImm(Variable iVar, Variable arrayVar,
-          Arg arrIx, Variable outerArrayVar) {
+  public void arrayRefInsertImm(Var iVar, Var arrayVar,
+          Arg arrIx, Var outerArrayVar) {
     assert(arrIx.isImmediateInt());
-    assert(Types.isArrayRef(arrayVar.getType()));
+    assert(Types.isArrayRef(arrayVar.type()));
     currBlock().addInstruction(
         TurbineOp.arrayRefInsertImm(iVar, arrayVar, arrIx, outerArrayVar));
   }
 
   @Override
-  public void arrayCreateNestedFuture(Variable arrayResult,
-      Variable arrayVar, Variable indexVar) {
-    assert(Types.isArrayRef(arrayResult.getType()));
-    assert(Types.isArray(arrayVar.getType()));
-    assert(indexVar.getType().equals(Types.FUTURE_INTEGER));
+  public void arrayCreateNestedFuture(Var arrayResult,
+      Var arrayVar, Var indexVar) {
+    assert(Types.isArrayRef(arrayResult.type()));
+    assert(Types.isArray(arrayVar.type()));
+    assert(indexVar.type().equals(Types.F_INT));
 
     currBlock().addInstruction(
       TurbineOp.arrayCreateNestedComputed(arrayResult,
@@ -483,11 +483,11 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void arrayCreateNestedImm(Variable arrayResult,
-      Variable arrayVar, Arg arrIx) {
-    assert(Types.isArray(arrayResult.getType()));
-    assert(Types.isArray(arrayVar.getType()));
-    assert(arrayResult.getStorage() == VariableStorage.ALIAS);
+  public void arrayCreateNestedImm(Var arrayResult,
+      Var arrayVar, Arg arrIx) {
+    assert(Types.isArray(arrayResult.type()));
+    assert(Types.isArray(arrayVar.type()));
+    assert(arrayResult.storage() == VarStorage.ALIAS);
     assert(arrIx.isImmediateInt());
 
     currBlock().addInstruction(
@@ -496,10 +496,10 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void arrayRefCreateNestedImm(Variable arrayResult,
-      Variable arrayVar, Arg arrIx) {
-    assert(Types.isArrayRef(arrayResult.getType()));
-    assert(Types.isArrayRef(arrayVar.getType()));
+  public void arrayRefCreateNestedImm(Var arrayResult,
+      Var arrayVar, Arg arrIx) {
+    assert(Types.isArrayRef(arrayResult.type()));
+    assert(Types.isArrayRef(arrayVar.type()));
     assert(arrIx.isImmediateInt());
 
     currBlock().addInstruction(
@@ -507,11 +507,11 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void arrayRefCreateNestedFuture(Variable arrayResult,
-      Variable arrayVar, Variable indexVar) {
-    assert(Types.isArrayRef(arrayResult.getType()));
-    assert(Types.isArrayRef(arrayVar.getType()));
-    assert(indexVar.getType().equals(Types.FUTURE_INTEGER));
+  public void arrayRefCreateNestedFuture(Var arrayResult,
+      Var arrayVar, Var indexVar) {
+    assert(Types.isArrayRef(arrayResult.type()));
+    assert(Types.isArrayRef(arrayVar.type()));
+    assert(indexVar.type().equals(Types.F_INT));
 
     currBlock().addInstruction(
       TurbineOp.arrayRefCreateNestedComputed(arrayResult,
@@ -520,188 +520,188 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void assignReference(Variable target, Variable src) {
+  public void assignReference(Var target, Var src) {
     currBlock().addInstruction(
         TurbineOp.addressOf(target, src));
   }
 
 
   @Override
-  public void dereferenceInt(Variable target, Variable src) {
-    assert(target.getType().equals(Types.FUTURE_INTEGER));
-    assert(src.getType().equals(Types.REFERENCE_INTEGER));
+  public void dereferenceInt(Var target, Var src) {
+    assert(target.type().equals(Types.F_INT));
+    assert(src.type().equals(Types.R_INT));
     currBlock().addInstruction(
         TurbineOp.dereferenceInt(target, src));
   }
   
   @Override
-  public void dereferenceBool(Variable target, Variable src) {
-    assert(target.getType().equals(Types.FUTURE_BOOLEAN));
-    assert(src.getType().equals(Types.REFERENCE_BOOLEAN));
+  public void dereferenceBool(Var target, Var src) {
+    assert(target.type().equals(Types.F_BOOL));
+    assert(src.type().equals(Types.R_BOOL));
     currBlock().addInstruction(
         TurbineOp.dereferenceBool(target, src));
   }
 
   @Override
-  public void dereferenceFloat(Variable target, Variable src) {
-    assert(target.getType().equals(Types.FUTURE_FLOAT));
-    assert(src.getType().equals(Types.REFERENCE_FLOAT));
+  public void dereferenceFloat(Var target, Var src) {
+    assert(target.type().equals(Types.F_FLOAT));
+    assert(src.type().equals(Types.R_FLOAT));
     currBlock().addInstruction(
         TurbineOp.dereferenceFloat(target, src));
   }
 
   @Override
-  public void dereferenceString(Variable target, Variable src) {
-    assert(target.getType().equals(Types.FUTURE_STRING));
-    assert(src.getType().equals(Types.REFERENCE_STRING));
+  public void dereferenceString(Var target, Var src) {
+    assert(target.type().equals(Types.F_STRING));
+    assert(src.type().equals(Types.R_STRING));
     currBlock().addInstruction(
         TurbineOp.dereferenceString(target, src));
   }
 
   @Override
-  public void dereferenceBlob(Variable target, Variable src) {
-    assert(target.getType().equals(Types.FUTURE_BLOB));
-    assert(src.getType().equals(Types.REFERENCE_BLOB));
+  public void dereferenceBlob(Var target, Var src) {
+    assert(target.type().equals(Types.F_BLOB));
+    assert(src.type().equals(Types.R_BLOB));
     currBlock().addInstruction(
         TurbineOp.dereferenceBlob(target, src));
   }
 
   @Override
-  public void dereferenceFile(Variable target, Variable src) {
-    assert(target.getType().equals(Types.FUTURE_FILE));
-    assert(src.getType().equals(Types.REFERENCE_FILE));
+  public void dereferenceFile(Var target, Var src) {
+    assert(target.type().equals(Types.F_FILE));
+    assert(src.type().equals(Types.REF_FILE));
     currBlock().addInstruction(
         TurbineOp.dereferenceFile(target, src));
   }
   
   @Override
-  public void retrieveRef(Variable target, Variable src) {
-    assert(Types.isReference(src.getType()));
-    assert(Types.isReferenceTo(src.getType(), target.getType()));
+  public void retrieveRef(Var target, Var src) {
+    assert(Types.isRef(src.type()));
+    assert(Types.isRefTo(src.type(), target.type()));
     currBlock().addInstruction(
         TurbineOp.retrieveRef(target, src));
 
   }
   
   @Override
-  public void makeAlias(Variable dst, Variable src) {
-    assert(src.getType().equals(dst.getType()));
-    assert(dst.getStorage() == VariableStorage.ALIAS);
+  public void makeAlias(Var dst, Var src) {
+    assert(src.type().equals(dst.type()));
+    assert(dst.storage() == VarStorage.ALIAS);
     currBlock().addInstruction(
         TurbineOp.copyRef(dst, src));
   }
 
   @Override
-  public void assignInt(Variable target, Arg src) {
-    assert(target.getType().equals(Types.FUTURE_INTEGER));
+  public void assignInt(Var target, Arg src) {
+    assert(target.type().equals(Types.F_INT));
     assert(src.isImmediateInt());
     currBlock().addInstruction(
         TurbineOp.assignInt(target, src));
   }
 
   @Override
-  public void retrieveInt(Variable target, Variable source) {
-    assert(target.getType().equals(Types.VALUE_INTEGER));
-    assert(source.getType().equals(Types.FUTURE_INTEGER));
+  public void retrieveInt(Var target, Var source) {
+    assert(target.type().equals(Types.V_INT));
+    assert(source.type().equals(Types.F_INT));
     currBlock().addInstruction(
         TurbineOp.retrieveInt(target, source));
   }
 
   @Override
-  public void assignBool(Variable target, Arg src) {
-    assert(target.getType().equals(Types.FUTURE_BOOLEAN));
+  public void assignBool(Var target, Arg src) {
+    assert(target.type().equals(Types.F_BOOL));
     assert(src.isImmediateBool());
     currBlock().addInstruction(
         TurbineOp.assignBool(target, src));
   }
 
   @Override
-  public void retrieveBool(Variable target, Variable source) {
-    assert(target.getType().equals(Types.VALUE_BOOLEAN));
-    assert(source.getType().equals(Types.FUTURE_BOOLEAN));
+  public void retrieveBool(Var target, Var source) {
+    assert(target.type().equals(Types.V_BOOL));
+    assert(source.type().equals(Types.F_BOOL));
     currBlock().addInstruction(
         TurbineOp.retrieveBool(target, source));
   }
 
   @Override
-  public void assignFloat(Variable target, Arg src) {
-    assert(target.getType().equals(Types.FUTURE_FLOAT));
+  public void assignFloat(Var target, Arg src) {
+    assert(target.type().equals(Types.F_FLOAT));
     assert(src.isImmediateFloat());
     currBlock().addInstruction(
         TurbineOp.assignFloat(target, src));
   }
 
   @Override
-  public void retrieveFloat(Variable target, Variable source) {
-    assert(target.getType().equals(Types.VALUE_FLOAT));
-    assert(source.getType().equals(Types.FUTURE_FLOAT));
+  public void retrieveFloat(Var target, Var source) {
+    assert(target.type().equals(Types.V_FLOAT));
+    assert(source.type().equals(Types.F_FLOAT));
     currBlock().addInstruction(
         TurbineOp.retrieveFloat(target, source));
   }
 
   @Override
-  public void assignString(Variable target, Arg src) {
-    assert(target.getType().equals(Types.FUTURE_STRING));
+  public void assignString(Var target, Arg src) {
+    assert(target.type().equals(Types.F_STRING));
     assert(src.isImmediateString());
     currBlock().addInstruction(
         TurbineOp.assignString(target, src));
   }
 
   @Override
-  public void retrieveString(Variable target, Variable source) {
-    assert(target.getType().equals(Types.VALUE_STRING));
-    assert(source.getType().equals(Types.FUTURE_STRING));
+  public void retrieveString(Var target, Var source) {
+    assert(target.type().equals(Types.V_STRING));
+    assert(source.type().equals(Types.F_STRING));
     currBlock().addInstruction(
         TurbineOp.retrieveString(target, source));
   }
 
   @Override
-  public void localOp(BuiltinOpcode op, Variable out, 
+  public void localOp(BuiltinOpcode op, Var out, 
                                             List<Arg> in) {
     if (out != null) {
-      assert(Types.isScalarValue(out.getType()));
+      assert(Types.isScalarValue(out.type()));
     }
     currBlock().addInstruction(Builtin.createLocal(op, out, in));
   }
   
   @Override
-  public void asyncOp(BuiltinOpcode op, Variable out, 
+  public void asyncOp(BuiltinOpcode op, Var out, 
                                     List<Arg> in, Arg priority) {
     if (out != null) {
-      assert(Types.isScalarFuture(out.getType()));
+      assert(Types.isScalarFuture(out.type()));
     }
     currBlock().addInstruction(Builtin.createAsync(op, out, in, priority));
   }
 
   @Override
-  public void structLookup(Variable structVar, String structField,
-      Variable result) {
-    assert(Types.isStruct(structVar.getType()));
-    assert(result.getStorage() == VariableStorage.ALIAS);
+  public void structLookup(Var structVar, String structField,
+      Var result) {
+    assert(Types.isStruct(structVar.type()));
+    assert(result.storage() == VarStorage.ALIAS);
     currBlock().addInstruction(
         TurbineOp.structLookup(result, structVar, structField));
 
   }
   
   @Override
-  public void structRefLookup(Variable structVar, String structField,
-      Variable result) {
-    assert(Types.isStructRef(structVar.getType()));
-    assert(Types.isReference(result.getType()));
-    assert(result.getStorage() != VariableStorage.ALIAS);
+  public void structRefLookup(Var structVar, String structField,
+      Var result) {
+    assert(Types.isStructRef(structVar.type()));
+    assert(Types.isRef(result.type()));
+    assert(result.storage() != VarStorage.ALIAS);
     currBlock().addInstruction(
         TurbineOp.structRefLookup(result, structVar, structField));
   }
 
   @Override
-  public void structClose(Variable struct) {
+  public void structClose(Var struct) {
     currBlock().addInstruction(
         TurbineOp.structClose(struct));
   }
 
   @Override
-  public void structInsert(Variable structVar, String fieldName,
-      Variable fieldContents) {
+  public void structInsert(Var structVar, String fieldName,
+      Var fieldContents) {
     currBlock().addInstruction(
         TurbineOp.structInsert(structVar, fieldName, fieldContents));
 
@@ -710,15 +710,15 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void addGlobal(String name, Arg val) {
     assert(val.isConstant() ||
-        (Types.isScalarValue(val.getVar().getType())));
+        (Types.isScalarValue(val.getVar().type())));
     program.addGlobalConst(name, val);
   }
 
   @Override
-  public void initUpdateable(Variable updateable, Arg val) {
-    assert(Types.isScalarUpdateable(updateable.getType()));
-    if (!updateable.getType().equals(Types.UPDATEABLE_FLOAT)) {
-      throw new STCRuntimeError(updateable.getType() +
+  public void initUpdateable(Var updateable, Arg val) {
+    assert(Types.isScalarUpdateable(updateable.type()));
+    if (!updateable.type().equals(Types.UP_FLOAT)) {
+      throw new STCRuntimeError(updateable.type() +
           " not yet supported");
     }
     assert(val.isImmediateFloat());
@@ -727,21 +727,21 @@ public class STCMiddleEnd implements CompilerBackend {
   }
   
   @Override
-  public void latestValue(Variable result, Variable updateable) {
-    assert(Types.isScalarUpdateable(updateable.getType()));
-    assert(Types.isScalarValue(result.getType()));
-    assert(updateable.getType().getPrimitiveType() ==
-                  result.getType().getPrimitiveType());
+  public void latestValue(Var result, Var updateable) {
+    assert(Types.isScalarUpdateable(updateable.type()));
+    assert(Types.isScalarValue(result.type()));
+    assert(updateable.type().primType() ==
+                  result.type().primType());
     currBlock().addInstruction(
           TurbineOp.latestValue(result, updateable));
   }
 
   @Override
-  public void update(Variable updateable, Operators.UpdateMode updateMode, Variable val) {
-    assert(Types.isScalarUpdateable(updateable.getType()));
-    assert(Types.isScalarFuture(val.getType()));
-    assert(updateable.getType().getPrimitiveType() ==
-                             val.getType().getPrimitiveType());
+  public void update(Var updateable, Operators.UpdateMode updateMode, Var val) {
+    assert(Types.isScalarUpdateable(updateable.type()));
+    assert(Types.isScalarFuture(val.type()));
+    assert(updateable.type().primType() ==
+                             val.type().primType());
     assert(updateMode != null);
     
     currBlock().addInstruction(
@@ -749,10 +749,10 @@ public class STCMiddleEnd implements CompilerBackend {
   }
   
   @Override
-  public void updateImm(Variable updateable, Operators.UpdateMode updateMode,
+  public void updateImm(Var updateable, Operators.UpdateMode updateMode,
                                                 Arg val) {
-    assert(Types.isScalarUpdateable(updateable.getType()));
-    if (updateable.getType().equals(Types.UPDATEABLE_FLOAT)) {
+    assert(Types.isScalarUpdateable(updateable.type()));
+    if (updateable.type().equals(Types.UP_FLOAT)) {
       assert(val.isImmediateFloat());
     } else {
       throw new STCRuntimeError("only updateable floats are"
@@ -765,11 +765,11 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void getFileName(Variable filename, Variable file,
+  public void getFileName(Var filename, Var file,
                           boolean initUnmapped) {
-    assert(Types.isString(filename.getType()));
-    assert(filename.getStorage() == VariableStorage.ALIAS);
-    assert(Types.isFile(file.getType()));
+    assert(Types.isString(filename.type()));
+    assert(filename.storage() == VarStorage.ALIAS);
+    assert(Types.isFile(file.type()));
     currBlock().addInstruction(
             TurbineOp.getFileName(filename, file, initUnmapped));
   }

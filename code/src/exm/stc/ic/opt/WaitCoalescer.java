@@ -18,8 +18,8 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Variable;
-import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.MultiMap.LinkedListFactory;
 import exm.stc.common.util.MultiMap.ListFactory;
@@ -193,7 +193,7 @@ public class WaitCoalescer {
       MakeImmRequest req = i.canMakeImmediate(empty, true);
       if (req != null && req.in.size() > 0) {
         WaitStatement wait = new WaitStatement(fn.getName() + "-optinserted",
-                req.in, req.in, new ArrayList<Variable>(0), false,
+                req.in, req.in, new ArrayList<Var>(0), false,
                 TaskMode.LOCAL);
 
         List<Instruction> instBuffer = new ArrayList<Instruction>();
@@ -203,7 +203,7 @@ public class WaitCoalescer {
                                               instBuffer, req.in);
         
         // Create local instruction, copy out outputs
-        List<Variable> localOutputs = OptUtil.declareLocalOpOutputVars(
+        List<Var> localOutputs = OptUtil.declareLocalOpOutputVars(
                                             wait.getBlock(), req.out);
         MakeImmChange change = i.makeImmediate(localOutputs, inVals);
         OptUtil.fixupImmChange(wait.getBlock(), change, instBuffer,
@@ -237,7 +237,7 @@ public class WaitCoalescer {
         // Find out which variables are in common with all waits
         Set<String> intersection = null;
         for (WaitStatement wait: waits) {
-          Set<String> nameSet = Variable.nameSet(wait.getWaitVars());
+          Set<String> nameSet = Var.nameSet(wait.getWaitVars());
           if (intersection == null) {
             intersection = nameSet;
           } else {
@@ -247,18 +247,18 @@ public class WaitCoalescer {
         }
         assert(intersection != null && !intersection.isEmpty());
         
-        List<Variable> intersectionVs = ICUtil.getVarsByName(intersection,
+        List<Var> intersectionVs = ICUtil.getVarsByName(intersection,
                                               waits.get(0).getWaitVars());
         
         // Create a new wait statement waiting on the intersection
         // of the above.
         WaitStatement newWait = new WaitStatement(fn.getName() +
-                "-optmerged", intersectionVs, new ArrayList<Variable>(0),
-                new ArrayList<Variable>(0), explicit, TaskMode.LOCAL);
+                "-optmerged", intersectionVs, new ArrayList<Var>(0),
+                new ArrayList<Var>(0), explicit, TaskMode.LOCAL);
         
         // List of variables that are kept open, or used
-        ArrayList<Variable> usedVars = new ArrayList<Variable>();
-        ArrayList<Variable> keepOpen = new ArrayList<Variable>();
+        ArrayList<Var> usedVars = new ArrayList<Var>();
+        ArrayList<Var> keepOpen = new ArrayList<Var>();
         
         // Put the old waits under the new one, remove redundant wait
         // vars
@@ -274,7 +274,7 @@ public class WaitCoalescer {
         }
 
         ICUtil.removeDuplicates(keepOpen);
-        for (Variable v: keepOpen) {
+        for (Var v: keepOpen) {
           newWait.addKeepOpenVar(v);
         }
         ICUtil.removeDuplicates(usedVars);
@@ -298,8 +298,8 @@ public class WaitCoalescer {
     for (Continuation c: block.getContinuations()) {
       if (c.getType() == ContinuationType.WAIT_STATEMENT) {
         WaitStatement wait = (WaitStatement)c;
-        for (Variable v: wait.getWaitVars()) {
-          waitMap.put(v.getName(), wait);
+        for (Var v: wait.getWaitVars()) {
+          waitMap.put(v.name(), wait);
         }
       }
     }
@@ -383,16 +383,16 @@ public class WaitCoalescer {
     while (it.hasNext()) {
       Instruction i = it.next();
       logger.trace("Pushdown at: " + i.toString());
-      List<Variable> writtenFutures = new ArrayList<Variable>();
-      for (Variable outv: i.getOutputs()) {
-        if (Types.isFuture(outv.getType())) {
+      List<Var> writtenFutures = new ArrayList<Var>();
+      for (Var outv: i.getOutputs()) {
+        if (Types.isFuture(outv.type())) {
           writtenFutures.add(outv);
         }
       }
       
       // Relocate instructions which depend on output future of this instruction
-      for (Variable v: writtenFutures) {
-        if (waitMap.containsKey(v.getName())) {
+      for (Var v: writtenFutures) {
+        if (waitMap.containsKey(v.name())) {
           pushedDown.addAll(
                 relocateDependentInstructions(logger, top, ancestors,
                                               curr, it, waitMap, v));
@@ -434,10 +434,10 @@ public class WaitCoalescer {
       Logger logger,
       Block ancestorBlock, Deque<AncestorContinuation> ancestors,
       Block currBlock, ListIterator<Instruction> currBlockInstructions,
-      MultiMap<String, InstOrCont> waitMap, Variable writtenV) {
+      MultiMap<String, InstOrCont> waitMap, Var writtenV) {
     
     // Remove from outer block
-    List<InstOrCont> waits = waitMap.get(writtenV.getName());
+    List<InstOrCont> waits = waitMap.get(writtenV.name());
     Set<Instruction> movedI = new HashSet<Instruction>();
     Set<Continuation> movedC = new HashSet<Continuation>();
     // Rely on later forward Dataflow pass to remove
@@ -462,11 +462,11 @@ public class WaitCoalescer {
         case INSTRUCTION:
           boolean canRelocate = true;
           Instruction inst = ic.instruction();
-          ArrayList<Variable> keepOpenVars = new ArrayList<Variable>();
-          for (Variable out: inst.getOutputs()) {
-            if (Types.isArray(out.getType())) {
+          ArrayList<Var> keepOpenVars = new ArrayList<Var>();
+          for (Var out: inst.getOutputs()) {
+            if (Types.isArray(out.type())) {
               keepOpenVars.add(out);
-            } else if (Types.isArrayRef(out.getType())) {
+            } else if (Types.isArrayRef(out.type())) {
               // Array ref might be from nested array, don't know yet
               // how to keep parent array open
               canRelocate = false;
@@ -498,18 +498,18 @@ public class WaitCoalescer {
   }
 
   private static void updateAncestorKeepOpen(
-      Deque<AncestorContinuation> ancestors, Collection<Variable> keepOpenVars) {
+      Deque<AncestorContinuation> ancestors, Collection<Var> keepOpenVars) {
     Iterator<AncestorContinuation> it = ancestors.descendingIterator();
-    ArrayList<Variable> remainingVars = new ArrayList<Variable>(keepOpenVars);
+    ArrayList<Var> remainingVars = new ArrayList<Var>(keepOpenVars);
     while (it.hasNext()) {
       AncestorContinuation ancestor = it.next();
       
       // if variable was defined in this scope, doesn't exist above
-      Set<String> defined = Variable.nameSet(ancestor.block.getVariables());
-      ListIterator<Variable> vit = remainingVars.listIterator();
+      Set<String> defined = Var.nameSet(ancestor.block.getVariables());
+      ListIterator<Var> vit = remainingVars.listIterator();
       while (vit.hasNext()) {
-        Variable v = vit.next();
-        if (defined.contains(v.getName())) {
+        Var v = vit.next();
+        if (defined.contains(v.name())) {
           vit.remove();
         }
       }
@@ -521,8 +521,8 @@ public class WaitCoalescer {
       // Add if missing
       Continuation cont = ancestor.continuation;
       if (cont.isAsync()) {
-        ArrayList<Variable> newKeepOpen =
-                        new ArrayList<Variable>(cont.getKeepOpenVars());
+        ArrayList<Var> newKeepOpen =
+                        new ArrayList<Var>(cont.getKeepOpenVars());
         newKeepOpen.addAll(remainingVars);
         ICUtil.removeDuplicates(newKeepOpen);
         cont.clearKeepOpenVars();
@@ -594,10 +594,10 @@ public class WaitCoalescer {
   private static void findBlockingContinuations(Block block,
           MultiMap<String, InstOrCont> waitMap) {
     for (Continuation c: block.getContinuations()) {
-      List<Variable> blockingVars = c.blockingVars();
+      List<Var> blockingVars = c.blockingVars();
       if (blockingVars != null) {
-        for (Variable v: blockingVars) {
-          waitMap.put(v.getName(), new InstOrCont(c));
+        for (Var v: blockingVars) {
+          waitMap.put(v.name(), new InstOrCont(c));
         }
       }
     }
@@ -608,20 +608,20 @@ public class WaitCoalescer {
     for (Instruction inst: block.getInstructions()) {
       // check all outputs are non-alias futures - if not can't safely reorder
       boolean canMove = true;
-      for (Variable out: inst.getOutputs()) {
-        if (!Types.isFuture(out.getType())
-            || out.getStorage() == VariableStorage.ALIAS) {
+      for (Var out: inst.getOutputs()) {
+        if (!Types.isFuture(out.type())
+            || out.storage() == VarStorage.ALIAS) {
           canMove = false;
           break;
         }
       }
       if (canMove) {
         // Put in map based on which inputs will block execution of task
-        List<Variable> bi = inst.getBlockingInputs();
+        List<Var> bi = inst.getBlockingInputs();
         if (bi != null) {
-          for (Variable in: bi) {
-            if (Types.isFuture(in.getType())) {
-              waitMap.put(in.getName(), new InstOrCont(inst));
+          for (Var in: bi) {
+            if (Types.isFuture(in.type())) {
+              waitMap.put(in.name(), new InstOrCont(inst));
             }
           }
         }

@@ -9,7 +9,7 @@ import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.TypeChecker;
 
@@ -46,19 +46,19 @@ public class ArrayRange {
   }
 
   public void typeCheck(Context context) throws UserException {
-    SwiftType startT = TypeChecker.findSingleExprType(context, start);
-    SwiftType endT = TypeChecker.findSingleExprType(context, end);
+    Type startT = TypeChecker.findSingleExprType(context, start);
+    Type endT = TypeChecker.findSingleExprType(context, end);
     if (step != null) {
-      SwiftType stepT = TypeChecker.findSingleExprType(context, step);
+      Type stepT = TypeChecker.findSingleExprType(context, step);
       typeCheck(context, stepT, "step");
     }
     typeCheck(context, startT, "start");
     typeCheck(context, endT, "start");
   }
   
-  public void typeCheck(Context context, SwiftType exprType, String name) 
+  public void typeCheck(Context context, Type exprType, String name) 
   throws TypeMismatchException {
-    if (!exprType.assignableTo(Types.FUTURE_INTEGER)) {
+    if (!exprType.assignableTo(Types.F_INT)) {
       throw new TypeMismatchException(context, "Expected " + name + " in" +
       		" range operators to be int, but type was " + exprType.typeName());
     }

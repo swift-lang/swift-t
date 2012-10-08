@@ -11,7 +11,7 @@ import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types.ArrayType;
 import exm.stc.common.lang.Types.ExprType;
-import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.TypeChecker;
@@ -58,19 +58,19 @@ public class ArrayElems {
       throw new STCRuntimeError("Empty array constructor, " +
           "compiler doesn't yet know how to infer type");
     }
-    List<SwiftType> memberTypes = new ArrayList<SwiftType>(members.size());
+    List<Type> memberTypes = new ArrayList<Type>(members.size());
     for (SwiftAST elem: members) {
       memberTypes.add(TypeChecker.findSingleExprType(context, elem));
     }
     
-    List<SwiftType> possibleTypes = TypeChecker.typeIntersection(memberTypes);
+    List<Type> possibleTypes = TypeChecker.typeIntersection(memberTypes);
     if (possibleTypes.size() == 0) {
       throw new TypeMismatchException(context, "Elements in array" +
           " constructor have incompatible types: " + memberTypes.toString());
     }
     
-    List<SwiftType> possibleArrayTypes = new ArrayList<SwiftType>();
-    for (SwiftType alt: possibleTypes) {
+    List<Type> possibleArrayTypes = new ArrayList<Type>();
+    for (Type alt: possibleTypes) {
       possibleArrayTypes.add(new ArrayType(alt));
     }
     return new ExprType(UnionType.makeUnion(possibleArrayTypes));

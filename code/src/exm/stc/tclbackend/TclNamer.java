@@ -3,7 +3,7 @@ package exm.stc.tclbackend;
 import java.util.ArrayList;
 import java.util.List;
 
-import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Var;
 
 public class TclNamer {
   /** to avoid clashes with other tcl variables, prefix variables/functions
@@ -26,38 +26,38 @@ public class TclNamer {
   public static String prefixVar(String varname) {
     // Replace the internal names of temporary variables with
     // shorter ones for generated tcl code
-    if (varname.startsWith(Variable.TMP_VAR_PREFIX)) {
+    if (varname.startsWith(Var.TMP_VAR_PREFIX)) {
       return TCL_TMP_VAR_PREFIX + varname.substring(
-              Variable.TMP_VAR_PREFIX.length());
-    } else if (varname.startsWith(Variable.ALIAS_VAR_PREFIX)) {
-      return TCL_ALIAS_VAR_PREFIX + varname.substring(Variable.ALIAS_VAR_PREFIX.length());
-    } else if (varname.startsWith(Variable.STRUCT_FIELD_VAR_PREFIX)) {
+              Var.TMP_VAR_PREFIX.length());
+    } else if (varname.startsWith(Var.ALIAS_VAR_PREFIX)) {
+      return TCL_ALIAS_VAR_PREFIX + varname.substring(Var.ALIAS_VAR_PREFIX.length());
+    } else if (varname.startsWith(Var.STRUCT_FIELD_VAR_PREFIX)) {
       return TCL_STRUCT_FIELD_VAR_PREFIX + varname.substring(
-          Variable.STRUCT_FIELD_VAR_PREFIX.length());
-    } else if (varname.startsWith(Variable.LOCAL_VALUE_VAR_PREFIX))  {
+          Var.STRUCT_FIELD_VAR_PREFIX.length());
+    } else if (varname.startsWith(Var.LOCAL_VALUE_VAR_PREFIX))  {
       return TCL_VALUE_VAR_PREFIX +
-          varname.substring(Variable.LOCAL_VALUE_VAR_PREFIX.length());
-    } else if (varname.startsWith(Variable.OPT_VALUE_VAR_PREFIX))  {
+          varname.substring(Var.LOCAL_VALUE_VAR_PREFIX.length());
+    } else if (varname.startsWith(Var.OPT_VALUE_VAR_PREFIX))  {
       return TCL_OPT_VALUE_VAR_PREFIX +
-          varname.substring(Variable.OPT_VALUE_VAR_PREFIX.length());
-    } else if (varname.startsWith(Variable.LOOP_INDEX_VAR_PREFIX)) {
+          varname.substring(Var.OPT_VALUE_VAR_PREFIX.length());
+    } else if (varname.startsWith(Var.LOOP_INDEX_VAR_PREFIX)) {
       return TCL_LOOPINDEX_VAR_PREFIX +
-          varname.substring(Variable.LOOP_INDEX_VAR_PREFIX.length());
-    } else if (varname.startsWith(Variable.GLOBAL_CONST_VAR_PREFIX)) {
+          varname.substring(Var.LOOP_INDEX_VAR_PREFIX.length());
+    } else if (varname.startsWith(Var.GLOBAL_CONST_VAR_PREFIX)) {
       return TCL_GLOBAL_CONST_VAR_PREFIX +
-          varname.substring(Variable.GLOBAL_CONST_VAR_PREFIX.length());
-    } else if (varname.startsWith(Variable.DEREF_COMPILER_VAR_PREFIX)) {
+          varname.substring(Var.GLOBAL_CONST_VAR_PREFIX.length());
+    } else if (varname.startsWith(Var.DEREF_COMPILER_VAR_PREFIX)) {
       return TCL_DEREF_COMPILER_VAR_PREFIX +
-          varname.substring(Variable.DEREF_COMPILER_VAR_PREFIX.length());
-    } else if (varname.startsWith(Variable.LOOP_INDEX_VAR_PREFIX)) {
+          varname.substring(Var.DEREF_COMPILER_VAR_PREFIX.length());
+    } else if (varname.startsWith(Var.LOOP_INDEX_VAR_PREFIX)) {
       return TCL_LOOP_INDEX_VAR_PREFIX +
-          varname.substring(Variable.LOOP_INDEX_VAR_PREFIX.length());
-    } else if (varname.startsWith(Variable.OUTER_VAR_PREFIX)) {
+          varname.substring(Var.LOOP_INDEX_VAR_PREFIX.length());
+    } else if (varname.startsWith(Var.OUTER_VAR_PREFIX)) {
       return TCL_OUTER_VAR_PREFIX +
-          varname.substring(Variable.OUTER_VAR_PREFIX.length());
-    } else if (varname.startsWith(Variable.FILENAME_OF_PREFIX)) {
+          varname.substring(Var.OUTER_VAR_PREFIX.length());
+    } else if (varname.startsWith(Var.FILENAME_OF_PREFIX)) {
       return TCL_FILENAME_OF_PREFIX + 
-          varname.substring(Variable.FILENAME_OF_PREFIX.length());
+          varname.substring(Var.FILENAME_OF_PREFIX.length());
     } else {
       return TCL_USER_VAR_PREFIX + varname;
     }

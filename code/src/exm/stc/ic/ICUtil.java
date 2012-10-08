@@ -10,8 +10,7 @@ import java.util.Map;
 import java.util.Set;
 
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Arg.ArgType;
-import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Var;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
@@ -27,21 +26,21 @@ public class ICUtil {
   
   /** Print a formal argument list, e.g. "(int a, int b, int c)" */
   public static void prettyPrintFormalArgs(StringBuilder sb,
-                                                  List<Variable> args) {
+                                                  List<Var> args) {
     boolean first = true;
     sb.append("(");
-    for (Variable a: args) {
+    for (Var a: args) {
       if (!first) {
         sb.append(", ");
       }
-      sb.append(a.getType().typeName() + " " + a.getName());
+      sb.append(a.type().typeName() + " " + a.name());
       first = false;
     }
     sb.append(")");
   }
 
   public static void prettyPrintVarInfo(StringBuilder sb,
-          List<Variable> usedVariables, List<Variable> keepOpenVars) {
+          List<Var> usedVariables, List<Var> keepOpenVars) {
     boolean printed = false;
     if (usedVariables.size() > 0 ) {
       sb.append("#passin[");
@@ -65,15 +64,15 @@ public class ICUtil {
    * @param vars
    */
   public static void prettyPrintVarList(StringBuilder sb, 
-                Collection<Variable> vars) {
+                Collection<Var> vars) {
     boolean first = true;
-    for (Variable v: vars) {
+    for (Var v: vars) {
       if (first) {
         first = false;
       } else {
         sb.append(", ");
       }
-      sb.append(v.getName());
+      sb.append(v.name());
     }
   }
 
@@ -84,32 +83,32 @@ public class ICUtil {
    * @param vars
    */
   public static void replaceVarsInList(Map<String, Arg> replacements,
-      List<Variable> vars, boolean removeDupes) {
+      List<Var> vars, boolean removeDupes) {
     replaceVarsInList(replacements, vars, removeDupes, true);
   }
   
   public static void replaceVarsInList(Map<String, Arg> replacements,
-        List<Variable> vars, boolean removeDupes, boolean removeMapped) {
+        List<Var> vars, boolean removeDupes, boolean removeMapped) {
     // Remove new duplicates
     ArrayList<String> alreadySeen = null;
     if (removeDupes) {
       alreadySeen = new ArrayList<String>(vars.size());
     }
     
-    ListIterator<Variable> it = vars.listIterator();
+    ListIterator<Var> it = vars.listIterator();
     while (it.hasNext()) {
-      Variable v = it.next();
-      String varName = v.getName();
+      Var v = it.next();
+      String varName = v.name();
       if (replacements.containsKey(varName)) {
         Arg oa = replacements.get(varName);
-        if (oa.getType() == ArgType.VAR) {
+        if (oa.isVar()) {
           if (removeDupes && 
-                  alreadySeen.contains(oa.getVar().getName())) {
+                  alreadySeen.contains(oa.getVar().name())) {
             it.remove();
           } else {
             it.set(oa.getVar());
             if (removeDupes) {
-              alreadySeen.add(oa.getVar().getName());
+              alreadySeen.add(oa.getVar().name());
             }
           }
         }
@@ -125,15 +124,15 @@ public class ICUtil {
     }
   }
   
-  public static void removeDuplicates(List<Variable> varList) {
-    ListIterator<Variable> it = varList.listIterator();
+  public static void removeDuplicates(List<Var> varList) {
+    ListIterator<Var> it = varList.listIterator();
     HashSet<String> alreadySeen = new HashSet<String>();
     while (it.hasNext()) {
-      Variable v = it.next();
-      if (alreadySeen.contains(v.getName())) {
+      Var v = it.next();
+      if (alreadySeen.contains(v.name())) {
         it.remove();
       } else {
-        alreadySeen.add(v.getName());
+        alreadySeen.add(v.name());
       }
     }
   }
@@ -142,8 +141,8 @@ public class ICUtil {
       List<Arg> args) {
     for (int i = 0; i < args.size(); i++) {
       Arg oa = args.get(i);
-      if (oa.getType() == ArgType.VAR) {
-        String oldName = oa.getVar().getName();
+      if (oa.isVar()) {
+        String oldName = oa.getVar().name();
         if (renames.containsKey(oldName)) {
           args.set(i, renames.get(oldName));
         }
@@ -163,8 +162,8 @@ public class ICUtil {
    */
   public static Arg replaceOparg(Map<String, Arg> renames, Arg oa, boolean nullsOk) {
     assert(nullsOk || oa != null);
-    if (oa != null && oa.getType() == ArgType.VAR) {
-      String name = oa.getVar().getName();
+    if (oa != null && oa.isVar()) {
+      String name = oa.getVar().name();
       if (renames.containsKey(name)) {
         Arg res = renames.get(name);
         assert(res != null);
@@ -174,23 +173,23 @@ public class ICUtil {
     return oa;
   }
   
-  public static void removeVarInList(List<Variable> varList,
+  public static void removeVarInList(List<Var> varList,
         String toRemove) {
     int n = varList.size();
     for (int i = 0; i < n; i ++) {
-      if (varList.get(i).getName().equals(toRemove)) {
+      if (varList.get(i).name().equals(toRemove)) {
         varList.remove(i);
         i--; n--;
       }
     }
   }
   
-  public static void removeVarsInList(List<Variable> varList,
+  public static void removeVarsInList(List<Var> varList,
       Set<String> removeVars) {
       int n = varList.size();
       
       for (int i = 0; i < n; i++) {
-        if (removeVars.contains(varList.get(i).getName())) {
+        if (removeVars.contains(varList.get(i).name())) {
           varList.remove(i);
           n--;
           i--;
@@ -258,11 +257,11 @@ public class ICUtil {
    * @param varNames
    * @param varList
    */
-  public static List<Variable> getVarsByName(Set<String> varNames,
-                      Collection<Variable> varList) {
-    List<Variable> res = new ArrayList<Variable>(varNames.size());
-    for (Variable v: varList) {
-      if (varNames.contains(v.getName())) {
+  public static List<Var> getVarsByName(Set<String> varNames,
+                      Collection<Var> varList) {
+    List<Var> res = new ArrayList<Var>(varNames.size());
+    for (Var v: varList) {
+      if (varNames.contains(v.name())) {
         res.add(v);
       }
     }
@@ -277,10 +276,10 @@ public class ICUtil {
    * @param inputs
    * @return
    */
-  public static List<Variable> extractVars(List<Arg> args) {
-    ArrayList<Variable> res = new ArrayList<Variable>();
+  public static List<Var> extractVars(List<Arg> args) {
+    ArrayList<Var> res = new ArrayList<Var>();
     for (Arg a: args) {
-      if (a.getType() == ArgType.VAR) {
+      if (a.isVar()) {
         res.add(a.getVar());
       }
     }

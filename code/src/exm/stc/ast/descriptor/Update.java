@@ -8,25 +8,25 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ScalarUpdateableType;
-import exm.stc.common.lang.Types.SwiftType;
-import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.TypeChecker;
 
 public class Update {
-  public Update(Variable target, SwiftAST expr, Operators.UpdateMode mode) {
+  public Update(Var target, SwiftAST expr, Operators.UpdateMode mode) {
     super();
     this.target = target;
     this.expr = expr;
     this.mode = mode;
   }
 
-  private final Variable target;
+  private final Var target;
   private final SwiftAST expr;
   private final Operators.UpdateMode mode;
   
   
-  public Variable getTarget() {
+  public Var getTarget() {
     return target;
   }
 
@@ -43,16 +43,16 @@ public class Update {
    * @return Concrete type of Rval expression
    * @throws UserException
    */
-  public SwiftType typecheck(Context context) throws UserException {
-    SwiftType expected = ScalarUpdateableType.asScalarFuture(
-                            this.target.getType());
+  public Type typecheck(Context context) throws UserException {
+    Type expected = ScalarUpdateableType.asScalarFuture(
+                            this.target.type());
     
-    SwiftType exprType = TypeChecker.findSingleExprType(context, expr);
+    Type exprType = TypeChecker.findSingleExprType(context, expr);
     if (exprType.assignableTo(expected)) {
       return expected;
     } else {
       throw new TypeMismatchException(context, "in update of variable "
-          + target.getName() + " with type " + target.getType().typeName()
+          + target.name() + " with type " + target.type().typeName()
           + " expected expression of type " + expected.typeName() 
           + " but got expression of type " + exprType);
     }
@@ -73,16 +73,16 @@ public class Update {
     Operators.UpdateMode mode = Operators.UpdateMode.fromString(context, cmd.getText());
     assert(mode != null);
     
-    Variable v = context.getDeclaredVariable(var.getText());
+    Var v = context.getDeclaredVariable(var.getText());
     if (v == null) {
       throw new UndefinedVariableException(context, "variable "
           + var.getType() + " is not defined");
     }
     
-    if (!Types.isScalarUpdateable(v.getType())) {
+    if (!Types.isScalarUpdateable(v.type())) {
       throw new TypeMismatchException(context, "can only update" +
-          " updateable variables: variable " + v.getName() + " had " +
-          " type " + v.getType().typeName());
+          " updateable variables: variable " + v.name() + " had " +
+          " type " + v.type().typeName());
     }
     
     return new Update(v, expr, mode);

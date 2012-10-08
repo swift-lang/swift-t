@@ -12,10 +12,10 @@ import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
-import exm.stc.common.lang.Types.SwiftType;
-import exm.stc.common.lang.Variable;
-import exm.stc.common.lang.Variable.DefType;
-import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.Pair;
 
 /**
@@ -69,7 +69,7 @@ public class GlobalContext extends Context {
   public void defineFunction(String name, FunctionType type) 
       throws DoubleDefineException {
     checkNotDefined(name);
-    declareVariable(type, name, VariableStorage.GLOBAL_CONST,
+    declareVariable(type, name, VarStorage.GLOBAL_CONST,
                     DefType.GLOBAL_CONST, null);
   }
   
@@ -88,39 +88,39 @@ public class GlobalContext extends Context {
    * @throws DoubleDefineException 
    */
   @Override
-  public Variable declareVariable(SwiftType type, String name,
-                       VariableStorage scope, DefType defType, Variable mapping)
+  public Var declareVariable(Type type, String name,
+                       VarStorage scope, DefType defType, Var mapping)
                            throws DoubleDefineException
   {
     assert(defType == DefType.GLOBAL_CONST);
-    assert(scope == VariableStorage.GLOBAL_CONST);
+    assert(scope == VarStorage.GLOBAL_CONST);
     if (variables.containsKey(name)) {
       throw new DoubleDefineException(this, "Variable called " + 
                 name + " declared twice in global scope");
     }
-    Variable v = new Variable(type, name, scope, defType, mapping);
+    Var v = new Var(type, name, scope, defType, mapping);
     variables.put(name, v);
     return v;
   }
 
   @Override
-  public Variable createTmpVar(SwiftType type, boolean storeInStack) {
+  public Var createTmpVar(Type type, boolean storeInStack) {
 	  throw new UnsupportedOperationException("not yet implemented");
   }
 
   @Override
-  public Variable createAliasVariable(SwiftType type) throws UserException {
+  public Var createAliasVariable(Type type) throws UserException {
     throw new UnsupportedOperationException("not yet implemented");
   }
 
   @Override
-  public Variable createLocalValueVariable(SwiftType type, String varName)
+  public Var createLocalValueVariable(Type type, String varName)
       throws UserException {
     throw new UnsupportedOperationException("not yet implemented");
   }
 
   @Override
-  public Variable createFilenameAliasVariable(String name) {
+  public Var createFilenameAliasVariable(String name) {
     throw new UnsupportedOperationException("not yet implemented");
   }
 
@@ -131,23 +131,23 @@ public class GlobalContext extends Context {
   }
 
   @Override
-  public Variable getDeclaredVariable(String variable)
+  public Var getDeclaredVariable(String variable)
   {
     return variables.get(variable);
   }
 
   @Override
-  public List<Variable> getVisibleVariables() {
-    return new ArrayList<Variable>(variables.values());
+  public List<Var> getVisibleVariables() {
+    return new ArrayList<Var>(variables.values());
   }
 
   @Override
-  public SwiftType lookupType(String typeName) {
+  public Type lookupType(String typeName) {
     return types.get(typeName);
   }
 
   @Override
-  public void defineType(String typeName, SwiftType newType)
+  public void defineType(String typeName, Type newType)
           throws DoubleDefineException {
     if (types.get(typeName) != null) {
       throw new DoubleDefineException(this, "Type name " + typeName +
@@ -158,8 +158,8 @@ public class GlobalContext extends Context {
   }
 
   @Override
-  protected Variable createStructFieldTmp(Variable struct, SwiftType fieldType,
-      String fieldPath, VariableStorage storage) {
+  protected Var createStructFieldTmp(Var struct, Type fieldType,
+      String fieldPath, VarStorage storage) {
     throw new UnsupportedOperationException("not yet implemented");
   }
 
@@ -169,12 +169,12 @@ public class GlobalContext extends Context {
   }
 
   @Override
-  public void flagArrayForClosing(Variable var) {
+  public void flagArrayForClosing(Var var) {
     throw new UnsupportedOperationException("Not yet implemented");
   }
 
   @Override
-  public List<Variable> getArraysToClose() {
+  public List<Var> getArraysToClose() {
     throw new UnsupportedOperationException("Not yet implemented");
   }
 

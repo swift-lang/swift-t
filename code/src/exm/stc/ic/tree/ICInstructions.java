@@ -14,18 +14,17 @@ import org.apache.log4j.Logger;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Arg.ArgType;
+import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.Builtins;
-import exm.stc.common.lang.FunctionSemantics;
 import exm.stc.common.lang.OpEvaluator;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.SwiftType;
-import exm.stc.common.lang.Variable;
-import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
@@ -76,13 +75,13 @@ public class ICInstructions {
     public abstract List<Arg> getInputs();
   
     /** List of variables the instruction writes */
-    public abstract List<Variable> getOutputs();
+    public abstract List<Var> getOutputs();
     
     public Arg getInput(int i) {
       return getInputs().get(i);
     }
     
-    public Variable getOutput(int i) {
+    public Var getOutput(int i) {
       return getOutputs().get(i);
     }
   
@@ -90,8 +89,8 @@ public class ICInstructions {
   
     public boolean writesAliasVar() {
       // Writes to alias variables can have non-local effects
-      for (Variable out: this.getOutputs()) {
-        if (out.getStorage() == VariableStorage.ALIAS) {
+      for (Var out: this.getOutputs()) {
+        if (out.storage() == VarStorage.ALIAS) {
           return true;
         }
       }
@@ -100,8 +99,8 @@ public class ICInstructions {
     
     public boolean writesMappedVar() {
       // Writes to alias variables can have non-local effects
-      for (Variable out: this.getOutputs()) {
-        if (out.getMapping() != null) {
+      for (Var out: this.getOutputs()) {
+        if (out.mapping() != null) {
           return true;
         }
       }
@@ -128,9 +127,9 @@ public class ICInstructions {
   
     
     public static class MakeImmRequest {
-      public final List<Variable> out;
-      public final List<Variable> in;
-      public MakeImmRequest(List<Variable> out, List<Variable> in) {
+      public final List<Var> out;
+      public final List<Var> in;
+      public MakeImmRequest(List<Var> out, List<Var> in) {
         this.out = out;
         this.in = in;
       }
@@ -138,8 +137,8 @@ public class ICInstructions {
     
     public static class MakeImmChange {
       /** Optional: if the output variable of op changed */
-      public final Variable newOut;
-      public final Variable oldOut;
+      public final Var newOut;
+      public final Var oldOut;
       public final Instruction newInst;
       
       /**
@@ -148,7 +147,7 @@ public class ICInstructions {
        * @param oldOut
        * @param newInst
        */
-      public MakeImmChange(Variable newOut, Variable oldOut, Instruction newInst) {
+      public MakeImmChange(Var newOut, Var oldOut, Instruction newInst) {
         this.newOut = newOut;
         this.oldOut = oldOut;
         this.newInst = newInst;
@@ -184,7 +183,7 @@ public class ICInstructions {
     public abstract MakeImmRequest canMakeImmediate(Set<String> closedVars, 
                                                   boolean assumeAllClosed);
 
-    public abstract MakeImmChange makeImmediate(List<Variable> outVals,
+    public abstract MakeImmChange makeImmediate(List<Var> outVals,
                                                 List<Arg> inValues);
 
     /**
@@ -192,7 +191,7 @@ public class ICInstructions {
      *        it is ok if it forgets variables which aren't blocked on,
      *        but all variables returned must be blocked on
      */
-    public abstract List<Variable> getBlockingInputs();
+    public abstract List<Var> getBlockingInputs();
     
     /**
      * @param existing already known values (sometimes needed to 
@@ -240,8 +239,8 @@ public class ICInstructions {
     }
   
     @Override
-    public List<Variable> getOutputs() {
-      return new ArrayList<Variable>(0);
+    public List<Var> getOutputs() {
+      return new ArrayList<Var>(0);
     }
   
     @Override
@@ -266,12 +265,12 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmChange makeImmediate(List<Variable> out, List<Arg> values) {
+    public MakeImmChange makeImmediate(List<Var> out, List<Arg> values) {
       throw new STCRuntimeError("Not valid on comment!");
     }
 
     @Override
-    public List<Variable> getBlockingInputs() {
+    public List<Var> getBlockingInputs() {
       return null;
     }
 
@@ -486,64 +485,64 @@ public class ICInstructions {
   
     }
   
-    public static TurbineOp arrayRefLookupFuture(Variable oVar, Variable arrayRefVar,
-        Variable indexVar) {
+    public static TurbineOp arrayRefLookupFuture(Var oVar, Var arrayRefVar,
+        Var indexVar) {
       return new TurbineOp(Opcode.ARRAYREF_LOOKUP_FUTURE,
           Arrays.asList(Arg.createVar(oVar), Arg.createVar(arrayRefVar),
                                     Arg.createVar(indexVar)));
     }
   
-    public static TurbineOp arrayLookupFuture(Variable oVar, Variable arrayVar,
-        Variable indexVar) {
+    public static TurbineOp arrayLookupFuture(Var oVar, Var arrayVar,
+        Var indexVar) {
       return new TurbineOp(Opcode.ARRAY_LOOKUP_FUTURE,
           Arrays.asList(Arg.createVar(oVar), Arg.createVar(arrayVar),
                                                 Arg.createVar(indexVar)));
     }
   
-    public static Instruction arrayInsertFuture(Variable iVar,
-        Variable arrayVar, Variable indexVar) {
+    public static Instruction arrayInsertFuture(Var iVar,
+        Var arrayVar, Var indexVar) {
       return new TurbineOp(Opcode.ARRAY_INSERT_FUTURE,
           Arrays.asList(Arg.createVar(arrayVar), Arg.createVar(indexVar),
               Arg.createVar(iVar)));
     }
   
-    public static Instruction arrayRefInsertFuture(Variable iVar,
-        Variable arrayVar, Variable indexVar, Variable outerArrayVar) {
+    public static Instruction arrayRefInsertFuture(Var iVar,
+        Var arrayVar, Var indexVar, Var outerArrayVar) {
       return new TurbineOp(Opcode.ARRAYREF_INSERT_FUTURE,
           Arrays.asList(Arg.createVar(arrayVar), Arg.createVar(indexVar),
               Arg.createVar(iVar), Arg.createVar(outerArrayVar)));
     }
     
-    public static Instruction arrayRefLookupImm(Variable oVar,
-        Variable arrayVar, Arg arrayIndex) {
+    public static Instruction arrayRefLookupImm(Var oVar,
+        Var arrayVar, Arg arrayIndex) {
       return new TurbineOp(Opcode.ARRAYREF_LOOKUP_IMM,
           Arrays.asList(Arg.createVar(oVar), Arg.createVar(arrayVar),
                                                arrayIndex));
     }
   
-    public static Instruction arrayLookupRefImm(Variable oVar, Variable arrayVar,
+    public static Instruction arrayLookupRefImm(Var oVar, Var arrayVar,
         Arg arrayIndex) {
       return new TurbineOp(Opcode.ARRAY_LOOKUP_REF_IMM,
           Arrays.asList(Arg.createVar(oVar), Arg.createVar(arrayVar),
                                                arrayIndex));
     }
     
-    public static Instruction arrayLookupImm(Variable oVar, Variable arrayVar,
+    public static Instruction arrayLookupImm(Var oVar, Var arrayVar,
         Arg arrayIndex) {
       return new TurbineOp(Opcode.ARRAY_LOOKUP_IMM,
           Arrays.asList(Arg.createVar(oVar), Arg.createVar(arrayVar),
                                                arrayIndex));
     }
   
-    public static Instruction arrayInsertImm(Variable iVar,
-        Variable arrayVar, Arg arrayIndex) {
+    public static Instruction arrayInsertImm(Var iVar,
+        Var arrayVar, Arg arrayIndex) {
       return new TurbineOp(Opcode.ARRAY_INSERT_IMM,
           Arrays.asList(Arg.createVar(arrayVar), arrayIndex,
                         Arg.createVar(iVar)));
     }
     
-    public static Instruction arrayRefInsertImm(Variable iVar,
-        Variable arrayVar, Arg arrayIndex, Variable outerArray) {
+    public static Instruction arrayRefInsertImm(Var iVar,
+        Var arrayVar, Arg arrayIndex, Var outerArray) {
       return new TurbineOp(Opcode.ARRAYREF_INSERT_IMM,
           Arrays.asList(Arg.createVar(arrayVar), arrayIndex,
                         Arg.createVar(iVar),
@@ -551,164 +550,164 @@ public class ICInstructions {
     }
   
   
-    public static Instruction structLookup(Variable oVar, Variable structVar,
+    public static Instruction structLookup(Var oVar, Var structVar,
                                                           String fieldName) {
       return new TurbineOp(Opcode.STRUCT_LOOKUP,
           Arrays.asList(Arg.createVar(oVar), Arg.createVar(structVar),
               Arg.createStringLit(fieldName)));
     }
     
-    public static Instruction structRefLookup(Variable oVar, Variable structVar,
+    public static Instruction structRefLookup(Var oVar, Var structVar,
         String fieldName) {
       return new TurbineOp(Opcode.STRUCTREF_LOOKUP,
               Arrays.asList(Arg.createVar(oVar), Arg.createVar(structVar),
               Arg.createStringLit(fieldName)));
     }
   
-    public static Instruction assignInt(Variable target, Arg src) {
+    public static Instruction assignInt(Var target, Arg src) {
       return new TurbineOp(Opcode.STORE_INT,
           Arrays.asList(Arg.createVar(target), src));
     }
 
-    public static Instruction assignBool(Variable target, Arg src) {
+    public static Instruction assignBool(Var target, Arg src) {
       return new TurbineOp(Opcode.STORE_BOOL,
           Arrays.asList(Arg.createVar(target), src));
     }
   
-    public static Instruction assignFloat(Variable target, Arg src) {
+    public static Instruction assignFloat(Var target, Arg src) {
       return new TurbineOp(Opcode.STORE_FLOAT,
           Arrays.asList(Arg.createVar(target), src));
     }
   
-    public static Instruction assignString(Variable target, Arg src) {
+    public static Instruction assignString(Var target, Arg src) {
       return new TurbineOp(Opcode.STORE_STRING,
           Arrays.asList(Arg.createVar(target), src));
     }
   
-    public static Instruction retrieveString(Variable target, Variable source) {
+    public static Instruction retrieveString(Var target, Var source) {
       return new TurbineOp(Opcode.LOAD_STRING,
           Arrays.asList(Arg.createVar(target), Arg.createVar(source)));
     }
   
-    public static Instruction retrieveInt(Variable target, Variable source) {
+    public static Instruction retrieveInt(Var target, Var source) {
       return new TurbineOp(Opcode.LOAD_INT,
           Arrays.asList(Arg.createVar(target), Arg.createVar(source)));
     }
   
-    public static Instruction retrieveBool(Variable target, Variable source) {
+    public static Instruction retrieveBool(Var target, Var source) {
       return new TurbineOp(Opcode.LOAD_BOOL,
           Arrays.asList(Arg.createVar(target), Arg.createVar(source)));
     }
     
-    public static Instruction retrieveFloat(Variable target, Variable source) {
+    public static Instruction retrieveFloat(Var target, Var source) {
       return new TurbineOp(Opcode.LOAD_FLOAT,
           Arrays.asList(Arg.createVar(target), Arg.createVar(source)));
     }
   
-    public static Instruction structClose(Variable struct) {
+    public static Instruction structClose(Var struct) {
       return new TurbineOp(Opcode.STRUCT_CLOSE,
           Arrays.asList(Arg.createVar(struct)));
     }
   
-    public static Instruction structInsert(Variable structVar,
-        String fieldName, Variable fieldContents) {
+    public static Instruction structInsert(Var structVar,
+        String fieldName, Var fieldContents) {
       return new TurbineOp(Opcode.STRUCT_INSERT,
           Arrays.asList(Arg.createVar(structVar),
                       Arg.createStringLit(fieldName),
                       Arg.createVar(fieldContents)));
     }
   
-    public static Instruction addressOf(Variable target, Variable src) {
+    public static Instruction addressOf(Var target, Var src) {
       return new TurbineOp(Opcode.ADDRESS_OF,
           Arrays.asList(Arg.createVar(target), Arg.createVar(src)));
     }
   
-    public static Instruction dereferenceInt(Variable target, Variable src) {
+    public static Instruction dereferenceInt(Var target, Var src) {
       return new TurbineOp(Opcode.DEREF_INT,
           Arrays.asList(Arg.createVar(target), Arg.createVar(src)));
     }
     
-    public static Instruction dereferenceBool(Variable target, Variable src) {
+    public static Instruction dereferenceBool(Var target, Var src) {
       return new TurbineOp(Opcode.DEREF_BOOL,
           Arrays.asList(Arg.createVar(target), Arg.createVar(src)));
     }
   
-    public static Instruction dereferenceFloat(Variable target, Variable src) {
+    public static Instruction dereferenceFloat(Var target, Var src) {
       return new TurbineOp(Opcode.DEREF_FLOAT,
           Arrays.asList(Arg.createVar(target), Arg.createVar(src)));
     }
   
-    public static Instruction dereferenceString(Variable target, Variable src) {
+    public static Instruction dereferenceString(Var target, Var src) {
       return new TurbineOp(Opcode.DEREF_STRING,
           Arrays.asList(Arg.createVar(target), Arg.createVar(src)));
     }
   
-    public static Instruction dereferenceBlob(Variable target, Variable src) {
+    public static Instruction dereferenceBlob(Var target, Var src) {
       return new TurbineOp(Opcode.DEREF_BLOB,
           Arrays.asList(Arg.createVar(target), Arg.createVar(src)));
     }
     
-    public static Instruction dereferenceFile(Variable target, Variable src) {
+    public static Instruction dereferenceFile(Var target, Var src) {
       return new TurbineOp(Opcode.DEREF_FILE,
           Arrays.asList(Arg.createVar(target), Arg.createVar(src)));
     }
     
-    public static Instruction retrieveRef(Variable target, Variable src) {
+    public static Instruction retrieveRef(Var target, Var src) {
       return new TurbineOp(Opcode.LOAD_REF,
           Arrays.asList(Arg.createVar(target), Arg.createVar(src)));
     }
     
-    public static Instruction copyRef(Variable dst, Variable src) {
+    public static Instruction copyRef(Var dst, Var src) {
       return new TurbineOp(Opcode.COPY_REF,
           Arrays.asList(Arg.createVar(dst), Arg.createVar(src)));
           
     }
   
-    public static Instruction arrayCreateNestedComputed(Variable arrayResult,
-        Variable arrayVar, Variable indexVar) {
+    public static Instruction arrayCreateNestedComputed(Var arrayResult,
+        Var arrayVar, Var indexVar) {
       return new TurbineOp(Opcode.ARRAY_CREATE_NESTED_FUTURE,
           Arrays.asList(Arg.createVar(arrayResult),
               Arg.createVar(arrayVar), Arg.createVar(indexVar)));
     }
   
-    public static Instruction arrayCreateNestedImm(Variable arrayResult,
-        Variable arrayVar, Arg arrIx) {
+    public static Instruction arrayCreateNestedImm(Var arrayResult,
+        Var arrayVar, Arg arrIx) {
       return new TurbineOp(Opcode.ARRAY_CREATE_NESTED_IMM,
           Arrays.asList(Arg.createVar(arrayResult),
               Arg.createVar(arrayVar), arrIx));
     }
   
-    public static Instruction arrayRefCreateNestedComputed(Variable arrayResult,
-        Variable arrayVar, Variable indexVar) {
+    public static Instruction arrayRefCreateNestedComputed(Var arrayResult,
+        Var arrayVar, Var indexVar) {
       return new TurbineOp(Opcode.ARRAY_REF_CREATE_NESTED_FUTURE,
           Arrays.asList(Arg.createVar(arrayResult),
               Arg.createVar(arrayVar), Arg.createVar(indexVar)));
     }
   
   
-    public static Instruction arrayRefCreateNestedImmIx(Variable arrayResult,
-        Variable arrayVar, Arg arrIx) {
+    public static Instruction arrayRefCreateNestedImmIx(Var arrayResult,
+        Var arrayVar, Arg arrIx) {
       return new TurbineOp(Opcode.ARRAY_REF_CREATE_NESTED_IMM,
           Arrays.asList(Arg.createVar(arrayResult),
               Arg.createVar(arrayVar), arrIx));
     }
   
   
-    public static Instruction initUpdateableFloat(Variable updateable, 
+    public static Instruction initUpdateableFloat(Var updateable, 
                                                               Arg val) {
       return new TurbineOp(Opcode.INIT_UPDATEABLE_FLOAT, 
           Arrays.asList(Arg.createVar(updateable), val));
       
     }
 
-    public static Instruction latestValue(Variable result, 
-                              Variable updateable) {
+    public static Instruction latestValue(Var result, 
+                              Var updateable) {
       return new TurbineOp(Opcode.LATEST_VALUE, Arrays.asList(
           Arg.createVar(result), Arg.createVar(updateable)));
     }
     
-    public static Instruction update(Variable updateable,
-        UpdateMode updateMode, Variable val) {
+    public static Instruction update(Var updateable,
+        UpdateMode updateMode, Var val) {
       Opcode op;
       switch (updateMode) {
       case MIN:
@@ -728,7 +727,7 @@ public class ICInstructions {
                                              Arg.createVar(val)));
     }
 
-    public static Instruction updateImm(Variable updateable,
+    public static Instruction updateImm(Var updateable,
         UpdateMode updateMode, Arg val) {
       Opcode op;
       switch (updateMode) {
@@ -749,7 +748,7 @@ public class ICInstructions {
                                                                    val));
     }
     
-    public static Instruction getFileName(Variable filename, Variable file,
+    public static Instruction getFileName(Var filename, Var file,
                                           boolean initUnmapped) {
       if (initUnmapped) {
         return new TurbineOp(Opcode.GET_OUTPUT_FILENAME, 
@@ -929,11 +928,11 @@ public class ICInstructions {
     }
   
     @Override
-    public List<Variable> getOutputs() {
+    public List<Var> getOutputs() {
       List<Arg> l = args.subList(0, numOutputArgs());
-      ArrayList<Variable> res = new ArrayList<Variable>(numOutputArgs());
+      ArrayList<Var> res = new ArrayList<Var>(numOutputArgs());
       for (Arg a: l) {
-        assert(a.getType() == ArgType.VAR);
+        assert(a.isVar());
         res.add(a.getVar());
       }
       return res;
@@ -957,11 +956,11 @@ public class ICInstructions {
       case LOAD_INT:
       case LOAD_STRING:
         // The input arg could be a var or a literal constant
-        if (args.get(1).getType() == ArgType.VAR) {
-          Arg val = knownConstants.get(args.get(1).getVar().getName());
+        if (args.get(1).isVar()) {
+          Arg val = knownConstants.get(args.get(1).getVar().name());
           if (val != null) {
             HashMap<String, Arg> r = new HashMap<String, Arg>();
-            r.put(args.get(0).getVar().getName(), val);
+            r.put(args.get(0).getVar().name(), val);
             return r;
           }
         }
@@ -978,9 +977,9 @@ public class ICInstructions {
       switch (op) {
       case ARRAY_LOOKUP_FUTURE:
       case ARRAYREF_LOOKUP_FUTURE:
-        Variable index = args.get(2).getVar();
-        if (knownConstants.containsKey(index.getName())) {
-          Arg cIndex = knownConstants.get(index.getName());
+        Var index = args.get(2).getVar();
+        if (knownConstants.containsKey(index.name())) {
+          Arg cIndex = knownConstants.get(index.name());
           if (op == Opcode.ARRAY_LOOKUP_FUTURE) {
             return arrayLookupRefImm(args.get(0).getVar(),
                 args.get(1).getVar(), cIndex);
@@ -992,9 +991,9 @@ public class ICInstructions {
         break;
       case ARRAYREF_INSERT_FUTURE:
       case ARRAY_INSERT_FUTURE:
-        Variable sIndex = args.get(1).getVar();
-        if (knownConstants.containsKey(sIndex.getName())) {
-          Arg cIndex = knownConstants.get(sIndex.getName());
+        Var sIndex = args.get(1).getVar();
+        if (knownConstants.containsKey(sIndex.name())) {
+          Arg cIndex = knownConstants.get(sIndex.name());
           if (op == Opcode.ARRAY_INSERT_FUTURE) {
             return arrayInsertImm(args.get(2).getVar(),
                       args.get(0).getVar(), cIndex);
@@ -1021,22 +1020,22 @@ public class ICInstructions {
         // NOTE: could try to reduce other forms to this in one step,
         //      but its probably just easier to do it in multiple steps
         //      on subsequent passes
-        Variable arr = args.get(1).getVar();
-        if (closedVars.contains(arr.getName())) {
+        Var arr = args.get(1).getVar();
+        if (closedVars.contains(arr.name())) {
           // Don't need to retrieve any value, but just use this protocol
-          return new MakeImmRequest(null, new ArrayList<Variable>());
+          return new MakeImmRequest(null, new ArrayList<Var>());
         }
         break;
         
       case ARRAY_LOOKUP_FUTURE:
-        Variable index = args.get(2).getVar();
-        if (closedVars.contains(index.getName())) {
+        Var index = args.get(2).getVar();
+        if (closedVars.contains(index.name())) {
           return new MakeImmRequest(null, Arrays.asList(index));
         }
         break;
       case ARRAYREF_LOOKUP_FUTURE:
         // We will take either the index or the dereferenced array
-        List<Variable> req = mkImmVarList(closedVars, 
+        List<Var> req = mkImmVarList(closedVars, 
                   args.get(1).getVar(), args.get(2).getVar());
         if (req.size() > 0) {
           return new MakeImmRequest(null, req);
@@ -1044,26 +1043,26 @@ public class ICInstructions {
         break;
       case ARRAYREF_LOOKUP_IMM:
         // Could skip using reference
-        Variable arrRef2 = args.get(1).getVar();
-        if (closedVars.contains(arrRef2.getName())) {
+        Var arrRef2 = args.get(1).getVar();
+        if (closedVars.contains(arrRef2.name())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef2));
         }
         break;
       case ARRAY_INSERT_FUTURE:
-        Variable sIndex = args.get(1).getVar();
-        if (closedVars.contains(sIndex.getName())) {
+        Var sIndex = args.get(1).getVar();
+        if (closedVars.contains(sIndex.name())) {
           return new MakeImmRequest(null, Arrays.asList(sIndex));
         }
         break;
       case ARRAYREF_INSERT_IMM:
-        Variable arrRef3 = args.get(0).getVar();
-        if (closedVars.contains(arrRef3.getName())) {
+        Var arrRef3 = args.get(0).getVar();
+        if (closedVars.contains(arrRef3.name())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef3));
         }
         break;
       case ARRAYREF_INSERT_FUTURE:
         // We will take either the index or the dereferenced array
-        List<Variable> req2 = mkImmVarList(closedVars,
+        List<Var> req2 = mkImmVarList(closedVars,
                     args.get(0).getVar(), args.get(1).getVar());
         if (req2.size() > 0) {
           return new MakeImmRequest(null, req2);
@@ -1071,19 +1070,19 @@ public class ICInstructions {
         break;
       case ARRAY_CREATE_NESTED_FUTURE:
         // Try to get immediate index
-        Variable index2 = args.get(2).getVar();
-        if (closedVars.contains(index2.getName())) {
+        Var index2 = args.get(2).getVar();
+        if (closedVars.contains(index2.name())) {
           return new MakeImmRequest(null, Arrays.asList(index2));
         }
         break;
       case ARRAY_REF_CREATE_NESTED_IMM:
-        Variable arrRef5 = args.get(1).getVar();
-        if (closedVars.contains(arrRef5.getName())) {
+        Var arrRef5 = args.get(1).getVar();
+        if (closedVars.contains(arrRef5.name())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef5));
         }
         break;
       case ARRAY_REF_CREATE_NESTED_FUTURE:
-        List<Variable> req5 = mkImmVarList(closedVars, 
+        List<Var> req5 = mkImmVarList(closedVars, 
             args.get(1).getVar(), args.get(2).getVar());
         if (req5.size() > 0) {
           return new MakeImmRequest(null, req5);
@@ -1101,11 +1100,11 @@ public class ICInstructions {
       return null;
     }
     
-    private List<Variable> mkImmVarList(Set<String> closedVars, 
-                                              Variable... args) {
-      ArrayList<Variable> req = new ArrayList<Variable>(args.length);
-      for (Variable v: args) {
-        if (closedVars.contains(v.getName())) {
+    private List<Var> mkImmVarList(Set<String> closedVars, 
+                                              Var... args) {
+      ArrayList<Var> req = new ArrayList<Var>(args.length);
+      for (Var v: args) {
+        if (closedVars.contains(v.name())) {
           req.add(v);
         }
       }
@@ -1113,14 +1112,14 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmChange makeImmediate(List<Variable> out, List<Arg> values) {
+    public MakeImmChange makeImmediate(List<Var> out, List<Arg> values) {
       switch (op) {
       case ARRAY_LOOKUP_REF_IMM:
         assert(values.size() == 0);
         // OUtput switched from ref to value
-        Variable refOut = args.get(0).getVar();
-        Variable valOut = Variable.createDerefTmp(refOut, 
-                                      VariableStorage.ALIAS);
+        Var refOut = args.get(0).getVar();
+        Var valOut = Var.createDerefTmp(refOut, 
+                                      VarStorage.ALIAS);
         Instruction newI = arrayLookupImm(valOut,
             args.get(1).getVar(), args.get(2));
         return new MakeImmChange(valOut, refOut, newI);
@@ -1192,20 +1191,20 @@ public class ICInstructions {
         assert(values.size() == 1);
         // Output type of instruction changed from ref to direct
         // array handle
-        Variable oldOut = args.get(0).getVar();
-        assert(Types.isArrayRef(oldOut.getType()));
-        Variable newOut = Variable.createDerefTmp(oldOut, 
-                                                VariableStorage.ALIAS);
+        Var oldOut = args.get(0).getVar();
+        assert(Types.isArrayRef(oldOut.type()));
+        Var newOut = Var.createDerefTmp(oldOut, 
+                                                VarStorage.ALIAS);
         return new MakeImmChange(newOut, oldOut,
             arrayCreateNestedImm(newOut,
                             args.get(1).getVar(), values.get(0)));
       case ARRAY_REF_CREATE_NESTED_FUTURE:
         assert(values.size() == 1 || values.size() == 2);
         if (values.size() == 2) {
-          Variable oldOut2 = args.get(0).getVar();
-          assert(Types.isArrayRef(oldOut2.getType()));
-          Variable newOut2 = Variable.createDerefTmp(oldOut2,
-                                          VariableStorage.ALIAS);
+          Var oldOut2 = args.get(0).getVar();
+          assert(Types.isArrayRef(oldOut2.type()));
+          Var newOut2 = Var.createDerefTmp(oldOut2,
+                                          VarStorage.ALIAS);
           return new MakeImmChange(newOut2, oldOut2,
               arrayCreateNestedImm(newOut2, 
                   values.get(0).getVar(), values.get(1)));
@@ -1226,10 +1225,10 @@ public class ICInstructions {
         }
       case ARRAY_REF_CREATE_NESTED_IMM:
         assert(values.size() == 1);
-        Variable oldOut3 = args.get(0).getVar();
-        assert(Types.isArrayRef(oldOut3.getType()));
-        Variable newOut3 = Variable.createDerefTmp(oldOut3,
-                                                VariableStorage.ALIAS);
+        Var oldOut3 = args.get(0).getVar();
+        assert(Types.isArrayRef(oldOut3.type()));
+        Var newOut3 = Var.createDerefTmp(oldOut3,
+                                                VarStorage.ALIAS);
         return new MakeImmChange(newOut3, oldOut3,
             arrayCreateNestedImm(newOut3,
                             values.get(0).getVar(), args.get(2)));
@@ -1265,14 +1264,14 @@ public class ICInstructions {
     }
 
     @Override
-    public List<Variable> getBlockingInputs() {
-      ArrayList<Variable> blocksOn = new ArrayList<Variable>();
+    public List<Var> getBlockingInputs() {
+      ArrayList<Var> blocksOn = new ArrayList<Var>();
       for (Arg oa: getInputs()) {
-        if (oa.type == ArgType.VAR) {
-          Variable v = oa.getVar();
-          SwiftType t = v.getType();
+        if (oa.kind == ArgKind.VAR) {
+          Var v = oa.getVar();
+          Type t = v.type();
           if (Types.isScalarFuture(t)
-              || Types.isReference(t)) {
+              || Types.isRef(t)) {
             blocksOn.add(v);
           } else if (Types.isScalarValue(t) ||
               Types.isStruct(t) || Types.isArray(t) ||
@@ -1303,11 +1302,11 @@ public class ICInstructions {
           // retrieve* is invertible
           Arg src = args.get(1);
           Arg val = args.get(0);
-          if (Types.isScalarUpdateable(src.getVar().getType())) {
+          if (Types.isScalarUpdateable(src.getVar().type())) {
             return null;
           }
           ComputedValue retrieve = vanillaComputedValue(true);
-          Opcode cvop = assignOpcode(src.getSwiftType());
+          Opcode cvop = assignOpcode(src.getType());
           if (cvop == null) {
             throw new STCRuntimeError("Need assign op for "
                 + src.getVar());
@@ -1315,7 +1314,7 @@ public class ICInstructions {
           ComputedValue assign = new ComputedValue(cvop,
                     "", Arrays.asList(val), src, true);
           
-          Opcode derefOp = derefOpCode(src.getSwiftType());
+          Opcode derefOp = derefOpCode(src.getType());
           
           if (derefOp == null) {
             return Arrays.asList(retrieve, assign);
@@ -1337,10 +1336,10 @@ public class ICInstructions {
           Arg dst = args.get(0);
           Arg src = args.get(1);
           ComputedValue retrieve = new ComputedValue(
-                    retrieveOpcode(dst.getSwiftType()),
+                    retrieveOpcode(dst.getType()),
                     "", Arrays.asList(dst), src, false);
           if (op == Opcode.ADDRESS_OF) {
-            Opcode derefOp = derefOpCode(dst.getSwiftType());
+            Opcode derefOp = derefOpCode(dst.getType());
             if (derefOp != null) {
               ComputedValue deref = 
                    new ComputedValue(derefOp, "", Arrays.asList(dst),
@@ -1408,18 +1407,18 @@ public class ICInstructions {
           arr = args.get(1);
           ix = args.get(2);
           contents = args.get(0);
-          Variable lookupRes = contents.getVar();
+          Var lookupRes = contents.getVar();
           
           cv = makeArrayComputedValue(arr, ix, contents);
   
           if (op == Opcode.ARRAY_LOOKUP_IMM) {
-            assert(lookupRes.getType().equals(
-                Types.getArrayMemberType(arr.getSwiftType())));
+            assert(lookupRes.type().equals(
+                Types.getArrayMemberType(arr.getType())));
             // This just retrieves the item immediately
             return Arrays.asList(cv);
           } else {
-            assert (Types.isReferenceTo(lookupRes.getType(), 
-                Types.getArrayMemberType(arr.getSwiftType())));
+            assert (Types.isRefTo(lookupRes.type(), 
+                Types.getArrayMemberType(arr.getType())));
             Arg prev = existing.get(new ComputedValue(Opcode.FAKE,
                 ComputedValue.ARRAY_CONTENTS, Arrays.asList(arr, ix)));
             if (prev != null) {
@@ -1427,8 +1426,8 @@ public class ICInstructions {
                * was previously inserted at this index, then we can 
                * short-circuit this as we know what is in the reference */
               ComputedValue retrieveCV = new ComputedValue(retrieveOpcode(
-                  lookupRes.getType()), "", contents, prev, false);
-              Opcode derefOp = derefOpCode(lookupRes.getType());
+                  lookupRes.type()), "", contents, prev, false);
+              Opcode derefOp = derefOpCode(lookupRes.type());
               if (derefOp == null) {
                 return Arrays.asList(retrieveCV, cv);
               } else {
@@ -1447,7 +1446,7 @@ public class ICInstructions {
         case ARRAY_REF_CREATE_NESTED_IMM: {
           // CREATE_NESTED <out inner array> <in array> <in index>
           contents = args.get(0);
-          Variable nestedArr = contents.getVar();
+          Var nestedArr = contents.getVar();
           arr = args.get(1);
           ix = args.get(2);
           cv = makeArrayComputedValue(arr, ix, contents);
@@ -1458,12 +1457,12 @@ public class ICInstructions {
           } else {
             Arg prev = existing.get(new ComputedValue(Opcode.FAKE,
                 ComputedValue.ARRAY_CONTENTS, Arrays.asList(arr, ix)));
-            assert (Types.isReferenceTo(nestedArr.getType(), 
-                        Types.getArrayMemberType(arr.getSwiftType())));
+            assert (Types.isRefTo(nestedArr.type(), 
+                        Types.getArrayMemberType(arr.getType())));
             if (prev != null) {
               // See if we know the value of this reference already
               ComputedValue derefCV = new ComputedValue(retrieveOpcode(
-                  nestedArr.getType()), "", Arrays.asList(contents),
+                  nestedArr.type()), "", Arrays.asList(contents),
                                                         prev, false);
               return Arrays.asList(derefCV, cv);
             } else {
@@ -1509,17 +1508,17 @@ public class ICInstructions {
      * @throws STCRuntimeError if member can't be a member or ref to 
      *                                      member of array
      */
-    private boolean isMemberReference(Variable member, Variable arr) 
+    private boolean isMemberReference(Var member, Var arr) 
             throws STCRuntimeError{
-      SwiftType memberType = Types.getArrayMemberType(arr.getType());
-      if (memberType.equals(member.getType())) {
+      Type memberType = Types.getArrayMemberType(arr.type());
+      if (memberType.equals(member.type())) {
         return false;
-      } else if (Types.isReferenceTo(member.getType(), memberType)) {
+      } else if (Types.isRefTo(member.type(), memberType)) {
         return true;
       }
       throw new STCRuntimeError("Inconsistent types in IC instruction:"
-          + this.toString() + " array of type " + arr.getType() 
-          + " with member of type " + member.getType());
+          + this.toString() + " array of type " + arr.type() 
+          + " with member of type " + member.type());
     }
 
     @Override
@@ -1537,9 +1536,9 @@ public class ICInstructions {
     }
     
     private boolean isCopyFunction() {
-      if (FunctionSemantics.isCopyFunction(functionName)) {
+      if (Builtins.isCopyFunction(functionName)) {
         return true;
-      } else if (FunctionSemantics.isMinMaxFunction(functionName)
+      } else if (Builtins.isMinMaxFunction(functionName)
               && getInput(0).equals(getInput(1))) {
         return true;
       }
@@ -1550,7 +1549,7 @@ public class ICInstructions {
     public List<ComputedValue> getComputedValues(
                         Map<ComputedValue, Arg> existing) {
       // TODO: make order of args invariant where possible
-      if (FunctionSemantics.isPure(functionName)) {
+      if (Builtins.isPure(functionName)) {
         if (!this.writesMappedVar() && isCopyFunction()) {
           // Handle copy as a special case
           return Collections.singletonList(
@@ -1562,7 +1561,7 @@ public class ICInstructions {
           boolean outputClosed = false; // safe assumption
           String canonicalFunctionName = this.functionName;
           List<Arg> in = new ArrayList<Arg>(getInputs());
-          if (FunctionSemantics.isCommutative(this.functionName)) {
+          if (Builtins.isCommutative(this.functionName)) {
             // put in canonical order
             Collections.sort(in);
           }
@@ -1586,13 +1585,13 @@ public class ICInstructions {
   }
   
   public static class FunctionCall extends CommonFunctionCall {
-    private final List<Variable> outputs;
-    private final List<Variable> inputs;
+    private final List<Var> outputs;
+    private final List<Var> inputs;
     private final List<Boolean> closedInputs; // which inputs are closed
     private Arg priority;
   
     private FunctionCall(Opcode op, String functionName,
-        List<Variable> inputs, List<Variable> outputs, Arg priority) {
+        List<Var> inputs, List<Var> outputs, Arg priority) {
       super(op, functionName);
       if (op != Opcode.CALL_BUILTIN && op != Opcode.CALL_CONTROL &&
           op != Opcode.CALL_SYNC && op != Opcode.CALL_LOCAL) {
@@ -1600,26 +1599,26 @@ public class ICInstructions {
             + " instruction with invalid opcode");
       }
       this.priority = priority;
-      this.outputs = new ArrayList<Variable>();
+      this.outputs = new ArrayList<Var>();
       this.outputs.addAll(outputs);
-      this.inputs = new ArrayList<Variable>();
+      this.inputs = new ArrayList<Var>();
       this.inputs.addAll(inputs);
       this.closedInputs = new ArrayList<Boolean>(inputs.size());
       for (int i = 0; i < inputs.size(); i++) {
         this.closedInputs.add(false);
       }
       
-      for(Variable v: outputs) {
+      for(Var v: outputs) {
         assert(v != null);
       }
       
-      for(Variable v: inputs) {
+      for(Var v: inputs) {
         assert(v != null);
       }
     }
   
     public static FunctionCall createFunctionCall(
-        String functionName, List<Variable> inputs, List<Variable> outputs,
+        String functionName, List<Var> inputs, List<Var> outputs,
         TaskMode mode, Arg priority) {
       Opcode op;
       if (mode == TaskMode.SYNC) {
@@ -1636,7 +1635,7 @@ public class ICInstructions {
     }
   
     public static FunctionCall createBuiltinCall(
-        String functionName, List<Variable> inputs, List<Variable> outputs,
+        String functionName, List<Var> inputs, List<Var> outputs,
         Arg priority) {
       return new FunctionCall(Opcode.CALL_BUILTIN, functionName,
           inputs, outputs, priority);
@@ -1646,12 +1645,12 @@ public class ICInstructions {
     public String toString() {
       String result = op.toString().toLowerCase() + " " + functionName;
       result += " [";
-      for (Variable v: outputs) {
-        result += " " + v.getName();
+      for (Var v: outputs) {
+        result += " " + v.name();
       }
       result += " ] [";
-      for (Variable v: inputs) {
-        result += " " + v.getName();
+      for (Var v: inputs) {
+        result += " " + v.name();
       }
       result += " ]";
       if (priority != null) {
@@ -1719,13 +1718,13 @@ public class ICInstructions {
     }
   
     @Override
-    public List<Variable> getOutputs() {
+    public List<Var> getOutputs() {
       return Collections.unmodifiableList(outputs);
     }
 
     @Override
     public boolean hasSideEffects() {
-      return (!FunctionSemantics.isPure(functionName)) ||
+      return (!Builtins.isPure(functionName)) ||
             this.writesAliasVar() || this.writesMappedVar();
     }
   
@@ -1747,16 +1746,16 @@ public class ICInstructions {
       boolean allClosed = true;
       if (!assumeAllInputsClosed) {
         for (int i = 0; i < this.inputs.size(); i++) {
-          Variable in = this.inputs.get(i);
-          if (closedVars.contains(in.getName())) {
+          Var in = this.inputs.get(i);
+          if (closedVars.contains(in.name())) {
             this.closedInputs.set(i, true);
           } else {
             allClosed = false;
           }
         }
       }
-      if (allClosed && (FunctionSemantics.hasOpEquiv(this.functionName)
-                || FunctionSemantics.hasInlineVersion(this.functionName))) {
+      if (allClosed && (Builtins.hasOpEquiv(this.functionName)
+                || Builtins.hasInlineVersion(this.functionName))) {
           // All args are closed!
           return new MakeImmRequest(
               Collections.unmodifiableList(this.outputs),
@@ -1767,16 +1766,16 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmChange makeImmediate(List<Variable> outVars, 
+    public MakeImmChange makeImmediate(List<Var> outVars, 
                                         List<Arg> values) {
-      if (FunctionSemantics.hasOpEquiv(functionName)) {
-        BuiltinOpcode newOp = FunctionSemantics.getOpEquiv(functionName);
+      if (Builtins.hasOpEquiv(functionName)) {
+        BuiltinOpcode newOp = Builtins.getOpEquiv(functionName);
         assert(newOp != null);
         assert(values.size() == inputs.size());
         
         if (outputs.size() == 1) {
-          assert(Types.derefResultType(outputs.get(0).getType()).equals(
-              outVars.get(0).getType()));
+          assert(Types.derefResultType(outputs.get(0).type()).equals(
+              outVars.get(0).type()));
           return new MakeImmChange(
               Builtin.createLocal(newOp, outVars.get(0), values));
         } else {
@@ -1785,11 +1784,11 @@ public class ICInstructions {
               Builtin.createLocal(newOp, null, values));
         }
       } else {
-        assert(FunctionSemantics.hasInlineVersion(functionName));
+        assert(Builtins.hasInlineVersion(functionName));
         for (int i = 0; i < outputs.size(); i++) {
-          Variable out = outputs.get(i);
-          assert(Types.derefResultType(out.getType()).equals(
-                 outVars.get(i).getType()));
+          Var out = outputs.get(i);
+          assert(Types.derefResultType(out.type()).equals(
+                 outVars.get(i).type()));
         }
         return new MakeImmChange(
                 new LocalFunctionCall(functionName, values, outVars));
@@ -1797,12 +1796,12 @@ public class ICInstructions {
     }
 
     @Override
-    public List<Variable> getBlockingInputs() {
-      List<Variable> blocksOn = new ArrayList<Variable>();
+    public List<Var> getBlockingInputs() {
+      List<Var> blocksOn = new ArrayList<Var>();
       if (op == Opcode.CALL_BUILTIN) {
-        for (Variable v: inputs) {
-          if (Types.isScalarFuture(v.getType())
-              || Types.isReference(v.getType())) {
+        for (Var v: inputs) {
+          if (Types.isScalarFuture(v.type())
+              || Types.isRef(v.type())) {
             // TODO: this is a conservative idea of which ones
             // are set
             blocksOn.add(v);
@@ -1822,23 +1821,23 @@ public class ICInstructions {
     public Instruction clone() {
       // Variables are immutable so just need to clone lists
       return new FunctionCall(op, functionName, 
-          new ArrayList<Variable>(inputs), new ArrayList<Variable>(outputs),
+          new ArrayList<Var>(inputs), new ArrayList<Var>(outputs),
           priority);
     }
   }
   
   public static class LocalFunctionCall extends CommonFunctionCall {
-    private final List<Variable> outputs;
+    private final List<Var> outputs;
     private final List<Arg> inputs;
   
     public LocalFunctionCall(String functionName,
-        List<Arg> inputs, List<Variable> outputs) {
+        List<Arg> inputs, List<Var> outputs) {
       super(Opcode.CALL_BUILTIN_LOCAL, functionName);
-      this.outputs = new ArrayList<Variable>();
+      this.outputs = new ArrayList<Var>();
       this.outputs.addAll(outputs);
       this.inputs = new ArrayList<Arg>();
       this.inputs.addAll(inputs);
-      for(Variable v: outputs) {
+      for(Var v: outputs) {
         assert(v != null);
       }
       
@@ -1877,13 +1876,13 @@ public class ICInstructions {
     }
   
     @Override
-    public List<Variable> getOutputs() {
+    public List<Var> getOutputs() {
       return Collections.unmodifiableList(outputs);
     }
 
     @Override
     public boolean hasSideEffects() {
-      return (!FunctionSemantics.isPure(functionName)) ||
+      return (!Builtins.isPure(functionName)) ||
             this.writesAliasVar() || this.writesMappedVar();
     }
   
@@ -1907,13 +1906,13 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmChange makeImmediate(List<Variable> outVars, 
+    public MakeImmChange makeImmediate(List<Var> outVars, 
                                         List<Arg> values) {
       throw new STCRuntimeError("Invalid method call");
     }
 
     @Override
-    public List<Variable> getBlockingInputs() {
+    public List<Var> getBlockingInputs() {
       // doesn't take futures as args
       return null;
     }
@@ -1922,22 +1921,22 @@ public class ICInstructions {
     public Instruction clone() {
       // Variables are immutable so just need to clone lists
       return new LocalFunctionCall(functionName, 
-          new ArrayList<Arg>(inputs), new ArrayList<Variable>(outputs));
+          new ArrayList<Arg>(inputs), new ArrayList<Var>(outputs));
     }
   }
   
   public static class RunExternal extends Instruction {
     private final String cmd;
-    private final ArrayList<Variable> outFiles;
+    private final ArrayList<Var> outFiles;
     private final ArrayList<Arg> inputs;
     private final boolean hasSideEffects;
     private final boolean deterministic;
     
-    public RunExternal(String cmd, List<Variable> outFiles, List<Arg> inputs,
+    public RunExternal(String cmd, List<Var> outFiles, List<Arg> inputs,
                boolean hasSideEffects, boolean deterministic) {
       super(Opcode.RUN_EXTERNAL);
       this.cmd = cmd;
-      this.outFiles = new ArrayList<Variable>(outFiles);
+      this.outFiles = new ArrayList<Var>(outFiles);
       this.inputs = new ArrayList<Arg>(inputs);
       this.deterministic = deterministic;
       this.hasSideEffects = hasSideEffects;
@@ -1971,7 +1970,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<Variable> getOutputs() {
+    public List<Var> getOutputs() {
       return Collections.unmodifiableList(outFiles);
     }
 
@@ -2001,13 +2000,13 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmChange makeImmediate(List<Variable> outVals,
+    public MakeImmChange makeImmediate(List<Var> outVals,
         List<Arg> inValues) {
       return null;
     }
 
     @Override
-    public List<Variable> getBlockingInputs() {
+    public List<Var> getBlockingInputs() {
       // This instruction runs immediately: we won't block on any inputs
       return null;
     }
@@ -2040,19 +2039,19 @@ public class ICInstructions {
   }
   
   public static class LoopContinue extends Instruction {
-    private final ArrayList<Variable> newLoopVars;
-    private final ArrayList<Variable> usedVariables;
-    private final ArrayList<Variable> keepOpenVars;
+    private final ArrayList<Var> newLoopVars;
+    private final ArrayList<Var> usedVariables;
+    private final ArrayList<Var> keepOpenVars;
     private final ArrayList<Boolean> blockingVars;
   
-    public LoopContinue(List<Variable> newLoopVars, 
-                        List<Variable> usedVariables,
-                        List<Variable> keepOpenVars,
+    public LoopContinue(List<Var> newLoopVars, 
+                        List<Var> usedVariables,
+                        List<Var> keepOpenVars,
                         List<Boolean> blockingVars) {
       super(Opcode.LOOP_CONTINUE);
-      this.newLoopVars = new ArrayList<Variable>(newLoopVars);
-      this.usedVariables = new ArrayList<Variable>(usedVariables);
-      this.keepOpenVars = new ArrayList<Variable>(keepOpenVars);
+      this.newLoopVars = new ArrayList<Var>(newLoopVars);
+      this.usedVariables = new ArrayList<Var>(usedVariables);
+      this.keepOpenVars = new ArrayList<Var>(keepOpenVars);
       this.blockingVars = new ArrayList<Boolean>(blockingVars);
     }
   
@@ -2070,7 +2069,7 @@ public class ICInstructions {
 
     @Override
     public void removeVars(Set<String> removeVars) {
-      assert(!removeVars.contains(newLoopVars.get(0).getName()));
+      assert(!removeVars.contains(newLoopVars.get(0).name()));
       ICUtil.removeVarsInList(usedVariables, removeVars);
       ICUtil.removeVarsInList(keepOpenVars, removeVars);
       ICUtil.removeVarsInList(newLoopVars, removeVars);
@@ -2082,13 +2081,13 @@ public class ICInstructions {
       sb.append(this.op.toString().toLowerCase());
       boolean first = true;
       sb.append(" [");
-      for (Variable v: this.newLoopVars) {
+      for (Var v: this.newLoopVars) {
         if (first) {
           first = false;
         } else {
           sb.append(' ');
         }
-        sb.append(v.getName());
+        sb.append(v.name());
       }
       sb.append("] #passin[");
       ICUtil.prettyPrintVarList(sb, this.usedVariables);
@@ -2107,16 +2106,16 @@ public class ICInstructions {
     public List<Arg> getInputs() {
       // need to make sure that these variables are avail in scope
       ArrayList<Arg> res = new ArrayList<Arg>(newLoopVars.size());
-      for (Variable v: newLoopVars) {
+      for (Var v: newLoopVars) {
         res.add(Arg.createVar(v));
       }
       return res;
     }
   
     @Override
-    public List<Variable> getOutputs() {
+    public List<Var> getOutputs() {
       // No outputs
-      return new ArrayList<Variable>(0);
+      return new ArrayList<Var>(0);
     }
   
     @Override
@@ -2144,15 +2143,15 @@ public class ICInstructions {
       HashSet<String> alreadyDone = new HashSet<String>();
       for (int i = 0; i < this.newLoopVars.size(); i++) {
         if (this.blockingVars.get(i)) {
-          Variable v = this.newLoopVars.get(i);
-          if (closedVars.contains(v.getName())) {
+          Var v = this.newLoopVars.get(i);
+          if (closedVars.contains(v.name())) {
             // Don't need to block
             this.blockingVars.set(i, false);
-          } else if (alreadyDone.contains(v.getName())) {
+          } else if (alreadyDone.contains(v.name())) {
             // In case of repeated elements
             this.blockingVars.set(i, false);
           } else {
-            alreadyDone.add(v.getName());
+            alreadyDone.add(v.name());
           }
         }
       }
@@ -2160,21 +2159,21 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmChange makeImmediate(List<Variable> out, List<Arg> values) {
+    public MakeImmChange makeImmediate(List<Var> out, List<Arg> values) {
       throw new STCRuntimeError("Not valid on loop continue!");
     }
 
     @Override
-    public List<Variable> getBlockingInputs() {
+    public List<Var> getBlockingInputs() {
       return null;
     }
 
-    public void addUsedVar(Variable variable) {
+    public void addUsedVar(Var variable) {
       this.usedVariables.add(variable);
     }
 
-    public void removeUsedVar(Variable variable) {
-      ICUtil.removeVarInList(usedVariables, variable.getName());
+    public void removeUsedVar(Var variable) {
+      ICUtil.removeVarInList(usedVariables, variable.name());
     }
 
     @Override
@@ -2186,9 +2185,9 @@ public class ICInstructions {
 
     @Override
     public Instruction clone() {
-      return new LoopContinue(new ArrayList<Variable>(newLoopVars), 
-          new ArrayList<Variable>(usedVariables), 
-          new ArrayList<Variable>(keepOpenVars), 
+      return new LoopContinue(new ArrayList<Var>(newLoopVars), 
+          new ArrayList<Var>(usedVariables), 
+          new ArrayList<Var>(keepOpenVars), 
           new ArrayList<Boolean>(blockingVars));
     }
   }
@@ -2197,9 +2196,9 @@ public class ICInstructions {
     /**
      * Variables to be closed upon loop termination
      */
-    private final List<Variable> varsToClose;
+    private final List<Var> varsToClose;
   
-    public LoopBreak(List<Variable> varsToClose) {
+    public LoopBreak(List<Var> varsToClose) {
       super(Opcode.LOOP_BREAK);
       this.varsToClose = varsToClose;
     }
@@ -2218,9 +2217,9 @@ public class ICInstructions {
     public String toString() {
       StringBuilder sb = new StringBuilder();
       sb.append(this.op.toString().toLowerCase());
-      for (Variable v: this.varsToClose) {
+      for (Var v: this.varsToClose) {
         sb.append(' ');
-        sb.append(v.getName());
+        sb.append(v.name());
       }
       return sb.toString();
     }
@@ -2236,8 +2235,8 @@ public class ICInstructions {
     }
   
     @Override
-    public List<Variable> getOutputs() {
-      return new ArrayList<Variable>(0);
+    public List<Var> getOutputs() {
+      return new ArrayList<Var>(0);
     }
   
     @Override
@@ -2265,12 +2264,12 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmChange makeImmediate(List<Variable> out, List<Arg> values) {
+    public MakeImmChange makeImmediate(List<Var> out, List<Arg> values) {
       throw new STCRuntimeError("Not valid on loop continue!");
     }
 
     @Override
-    public List<Variable> getBlockingInputs() {
+    public List<Var> getBlockingInputs() {
       return null;
     }
 
@@ -2283,7 +2282,7 @@ public class ICInstructions {
 
     @Override
     public Instruction clone() {
-      return new LoopBreak(new ArrayList<Variable>(varsToClose));
+      return new LoopBreak(new ArrayList<Var>(varsToClose));
     }
   }
   
@@ -2323,11 +2322,11 @@ public class ICInstructions {
   public static class Builtin extends Instruction {
     public final BuiltinOpcode subop;
     
-    private Variable output; // null if no output
+    private Var output; // null if no output
     private List<Arg> inputs;
     private Arg priority; // priority of op if async.  null for default prio
 
-    private Builtin(Opcode op, BuiltinOpcode subop, Variable output, 
+    private Builtin(Opcode op, BuiltinOpcode subop, Var output, 
           List<Arg> inputs, Arg priority) {
       super(op);
       assert(op == Opcode.LOCAL_OP || op == Opcode.ASYNC_OP);
@@ -2340,32 +2339,32 @@ public class ICInstructions {
       this.priority = priority;
     }
     
-    public static Builtin createLocal(BuiltinOpcode subop, Variable output, 
+    public static Builtin createLocal(BuiltinOpcode subop, Var output, 
         Arg input) {
       return new Builtin(Opcode.LOCAL_OP, subop, output, Arrays.asList(input),
                           null);
     }
     
-    public static Builtin createLocal(BuiltinOpcode subop, Variable output, 
+    public static Builtin createLocal(BuiltinOpcode subop, Var output, 
         List<Arg> inputs) {
       return new Builtin(Opcode.LOCAL_OP, subop, output, inputs, null);
     }
     
-    public static Builtin createAsync(BuiltinOpcode subop, Variable output, 
+    public static Builtin createAsync(BuiltinOpcode subop, Var output, 
         Arg input, Arg priority) {
       return new Builtin(Opcode.ASYNC_OP, subop, output, Arrays.asList(input),
                   priority);
     }
     
-    public static Builtin createAsync(BuiltinOpcode subop, Variable output, 
+    public static Builtin createAsync(BuiltinOpcode subop, Var output, 
         List<Arg> inputs, Arg priority) {
       return new Builtin(Opcode.ASYNC_OP, subop, output, inputs, priority);
     }
 
     @Override
     public void renameVars(Map<String, Arg> renames) {
-      if (output != null && renames.containsKey(this.output.getName())) {
-        this.output = renames.get(this.output.getName()).getVar();
+      if (output != null && renames.containsKey(this.output.name())) {
+        this.output = renames.get(this.output.name()).getVar();
       }
       ICUtil.replaceOpargsInList(renames, inputs);
       priority = ICUtil.replaceOparg(renames, priority, true);
@@ -2381,7 +2380,7 @@ public class ICInstructions {
     public String toString() {
       String res = op.toString().toLowerCase() + " ";
       if (output != null) {
-        res +=  output.getName() + " = ";
+        res +=  output.name() + " = ";
       }
       res += subop.toString().toLowerCase();
       for (Arg input: inputs) {
@@ -2417,11 +2416,11 @@ public class ICInstructions {
     }
 
     @Override
-    public List<Variable> getOutputs() {
+    public List<Var> getOutputs() {
       if (output != null) {
         return Arrays.asList(output);
       } else {
-        return new ArrayList<Variable>(0);
+        return new ArrayList<Var>(0);
       }
     }
 
@@ -2452,8 +2451,8 @@ public class ICInstructions {
       /* First try to replace arguments with constants */
       for (int i = 0; i < inputs.size(); i++) {
         Arg in = inputs.get(i);
-        if (in.getType() == ArgType.VAR) {
-          Arg c = knownConstants.get(in.getVar().getName());
+        if (in.isVar()) {
+          Arg c = knownConstants.get(in.getVar().name());
           constInputs.add(c);
           if (c != null && op == Opcode.LOCAL_OP) {
             // can replace local value arg with constant
@@ -2463,7 +2462,7 @@ public class ICInstructions {
           constInputs.add(in);
         }
       }
-      return Builtin.constantFold(this.subop, this.output.getName(),
+      return Builtin.constantFold(this.subop, this.output.name(),
           constInputs);
     }
 
@@ -2472,13 +2471,13 @@ public class ICInstructions {
         String enclosingFnName) {
       if (subop2 == BuiltinOpcode.ASSERT) {
         Arg cond;
-        if (inputs2.get(0).getType() == ArgType.VAR) {
-          cond = knownConstants.get(inputs2.get(0).getVar().getName());
+        if (inputs2.get(0).isVar()) {
+          cond = knownConstants.get(inputs2.get(0).getVar().name());
         } else {
           cond = inputs2.get(0);
         }
         if (cond != null) {
-          assert(cond.getType() == ArgType.BOOLVAL);
+          assert(cond.isBoolVal());
           if(!cond.getBoolLit()) {
             compileTimeAssertWarn(enclosingFnName, 
                 "constant condition evaluated to false",
@@ -2489,14 +2488,14 @@ public class ICInstructions {
         assert(subop2 == BuiltinOpcode.ASSERT_EQ);
         
         Arg a1;
-        if (inputs2.get(0).getType() == ArgType.VAR) {
-          a1 = knownConstants.get(inputs2.get(0).getVar().getName());
+        if (inputs2.get(0).isVar()) {
+          a1 = knownConstants.get(inputs2.get(0).getVar().name());
         } else {
           a1 = inputs2.get(0);
         }
         Arg a2;
-        if (inputs2.get(1).getType() == ArgType.VAR) {
-          a2 = knownConstants.get(inputs2.get(1).getVar().getName());
+        if (inputs2.get(1).isVar()) {
+          a2 = knownConstants.get(inputs2.get(1).getVar().name());
         } else {
           a2 = inputs2.get(0);
         } 
@@ -2517,8 +2516,8 @@ public class ICInstructions {
       String errMessage;
       if (assertMsg.isConstant()) {
         errMessage = assertMsg.getStringLit();
-      } else if (knownConstants.containsKey(assertMsg.getVar().getName())) {
-        errMessage = knownConstants.get(assertMsg.getVar().getName())
+      } else if (knownConstants.containsKey(assertMsg.getVar().name())) {
+        errMessage = knownConstants.get(assertMsg.getVar().name())
                                                   .getStringLit();
       } else {
         errMessage = "<RUNTIME ERROR MESSAGE>";
@@ -2542,12 +2541,12 @@ public class ICInstructions {
 
     private Builtin tryShortCircuit(Map<String, Arg> knownConstants) {
       List<Arg> constArgs = new ArrayList<Arg>(2);
-      List<Variable> varArgs = new ArrayList<Variable>(2);
+      List<Var> varArgs = new ArrayList<Var>(2);
       for (Arg in: inputs) {
         if (in.isConstant()) {
           constArgs.add(in);
         } else {
-          Arg constIn = knownConstants.get(in.getVar().getName());
+          Arg constIn = knownConstants.get(in.getVar().name());
           if (constIn == null) {
             varArgs.add(in.getVar());
           } else {
@@ -2602,9 +2601,9 @@ public class ICInstructions {
         // See which arguments are closed
         if (!assumeAllInputsClosed) {
           for (Arg inarg: this.inputs) {
-            assert(inarg.getType() == ArgType.VAR);
-            Variable in = inarg.getVar();
-            if (!closedVars.contains(in.getName())) {
+            assert(inarg.isVar());
+            Var in = inarg.getVar();
+            if (!closedVars.contains(in.name())) {
               // Non-closed arg
               return null;
             }
@@ -2619,15 +2618,15 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmChange makeImmediate(List<Variable> newOut, List<Arg> newIn) {
+    public MakeImmChange makeImmediate(List<Var> newOut, List<Arg> newIn) {
       if (op == Opcode.LOCAL_OP) {
         throw new STCRuntimeError("Already immediate!");
       } else {
         assert(newIn.size() == inputs.size());
         if (output != null) {
           assert(newOut.size() == 1);
-          assert(Types.derefResultType(output.getType()).equals(
-              newOut.get(0).getType()));
+          assert(Types.derefResultType(output.type()).equals(
+              newOut.get(0).type()));
           return new MakeImmChange(
               Builtin.createLocal(subop, newOut.get(0), newIn));
         } else {
@@ -2639,19 +2638,19 @@ public class ICInstructions {
     }
 
     @Override
-    public List<Variable> getBlockingInputs() {
+    public List<Var> getBlockingInputs() {
       if (op == Opcode.LOCAL_OP) {
         // doesn't take futures as args
         return null;
       } else {
         assert(op == Opcode.ASYNC_OP);
         // blocks on all scalar inputs
-        ArrayList<Variable> result = new ArrayList<Variable>();
+        ArrayList<Var> result = new ArrayList<Var>();
         for (Arg inarg: inputs) {
-          if (inarg.getType() == ArgType.VAR) {
-            Variable invar = inarg.getVar();
-            if (Types.isReference(invar.getType())
-                || Types.isScalarFuture(invar.getType())) {
+          if (inarg.isVar()) {
+            Var invar = inarg.getVar();
+            if (Types.isRef(invar.type())
+                || Types.isScalarFuture(invar.type())) {
               result.add(invar);
             }
           }
@@ -2713,13 +2712,13 @@ public class ICInstructions {
     }
   }
 
-  public static Instruction valueSet(Variable dst, Arg value) {
-    if (Types.isScalarValue(dst.getType())) {
-      switch (dst.getType().getPrimitiveType()) {
-      case BOOLEAN:
+  public static Instruction valueSet(Var dst, Arg value) {
+    if (Types.isScalarValue(dst.type())) {
+      switch (dst.type().primType()) {
+      case BOOL:
         assert(value.isImmediateBool());
         return Builtin.createLocal(BuiltinOpcode.COPY_BOOL, dst, value);
-      case INTEGER:
+      case INT:
         assert(value.isImmediateInt());
         return Builtin.createLocal(BuiltinOpcode.COPY_INT, dst, value);
       case FLOAT:
@@ -2732,9 +2731,9 @@ public class ICInstructions {
         // fall through
         break;
       }
-    } else if (Types.isArray(dst.getType()) || Types.isStruct(dst.getType())) {
-      assert(dst.getStorage() == VariableStorage.ALIAS);
-      assert (value.getType() == ArgType.VAR);
+    } else if (Types.isArray(dst.type()) || Types.isStruct(dst.type())) {
+      assert(dst.storage() == VarStorage.ALIAS);
+      assert (value.isVar());
       return TurbineOp.copyRef(dst, value.getVar());
     }
 
@@ -2742,14 +2741,14 @@ public class ICInstructions {
         + " assign " + value.toString() + " to " + dst.toString());
   }
 
-  public static Instruction retrieveValueOf(Variable dst, Variable src) {
-    assert(Types.isScalarValue(dst.getType()));
-    assert(Types.isScalarFuture(src.getType())
-            || Types.isScalarUpdateable(src.getType()));
-    switch (src.getType().getPrimitiveType()) {
-    case BOOLEAN:
+  public static Instruction retrieveValueOf(Var dst, Var src) {
+    assert(Types.isScalarValue(dst.type()));
+    assert(Types.isScalarFuture(src.type())
+            || Types.isScalarUpdateable(src.type()));
+    switch (src.type().primType()) {
+    case BOOL:
       return TurbineOp.retrieveBool(dst, src);
-    case INTEGER:
+    case INT:
       return TurbineOp.retrieveInt(dst, src);
     case FLOAT:
       return TurbineOp.retrieveFloat(dst, src);
@@ -2757,7 +2756,7 @@ public class ICInstructions {
       return TurbineOp.retrieveString(dst, src);
     default:
       throw new STCRuntimeError("method to retrieve " +
-      		src.getType().typeName() + " is not known yet");
+      		src.type().typeName() + " is not known yet");
     }
   }
   
@@ -2767,8 +2766,8 @@ public class ICInstructions {
    * @param src
    * @return null if cannot be retrieved
    */
-  public static ComputedValue retrieveCompVal(Variable src) {
-    SwiftType srcType = src.getType();
+  public static ComputedValue retrieveCompVal(Var src) {
+    Type srcType = src.type();
     Opcode op = retrieveOpcode(srcType);
     if (op == null) {
       return null;
@@ -2777,15 +2776,15 @@ public class ICInstructions {
         Collections.singletonList(Arg.createVar(src)));
   }
 
-  public static ComputedValue assignComputedVal(Variable dst, Arg val) {
-    SwiftType dstType = dst.getType();
+  public static ComputedValue assignComputedVal(Var dst, Arg val) {
+    Type dstType = dst.type();
     if (Types.isScalarValue(dstType)) {
         BuiltinOpcode op;
-        switch(dstType.getPrimitiveType()) {
-        case BOOLEAN:
+        switch(dstType.primType()) {
+        case BOOL:
           op = BuiltinOpcode.COPY_BOOL;
           break;
-        case INTEGER:
+        case INT:
           op = BuiltinOpcode.COPY_INT;
           break;
         case FLOAT:
@@ -2816,14 +2815,14 @@ public class ICInstructions {
     throw new STCRuntimeError("DOn't know how to assign to " + dst);
   }
 
-  private static Opcode assignOpcode(SwiftType dstType) {
+  private static Opcode assignOpcode(Type dstType) {
     Opcode op = null;
     if (Types.isScalarFuture(dstType)) {
-       switch(dstType.getPrimitiveType()) {
-       case BOOLEAN:
+       switch(dstType.primType()) {
+       case BOOL:
          op = Opcode.STORE_BOOL;
          break;
-       case INTEGER:
+       case INT:
          op = Opcode.STORE_INT;
          break;
        case FLOAT:
@@ -2835,20 +2834,20 @@ public class ICInstructions {
        default:
          throw new STCRuntimeError("don't know how to assign " + dstType);
        }
-    } else if (Types.isReference(dstType)) {
+    } else if (Types.isRef(dstType)) {
       op = Opcode.ADDRESS_OF;
     }
     return op;
   }
   
-  private static Opcode retrieveOpcode(SwiftType srcType) {
+  private static Opcode retrieveOpcode(Type srcType) {
     Opcode op;
     if (Types.isScalarFuture(srcType)) {
-      switch(srcType.getPrimitiveType()) {
-      case BOOLEAN:
+      switch(srcType.primType()) {
+      case BOOL:
         op = Opcode.LOAD_BOOL;
         break;
-      case INTEGER:
+      case INT:
         op = Opcode.LOAD_INT;
         break;
       case FLOAT:
@@ -2862,7 +2861,7 @@ public class ICInstructions {
         op = null;
       }
 
-    } else if (Types.isReference(srcType)) {
+    } else if (Types.isRef(srcType)) {
       op = Opcode.LOAD_REF;
     } else {
       op = null;
@@ -2871,20 +2870,20 @@ public class ICInstructions {
   }
   
 
-  private static Opcode derefOpCode(SwiftType type) {
-    if (Types.isReference(type)) {
-      SwiftType refedType = type.getMemberType();
+  private static Opcode derefOpCode(Type type) {
+    if (Types.isRef(type)) {
+      Type refedType = type.memberType();
       if (Types.isScalarFuture(refedType)) {
-        switch (refedType.getPrimitiveType()) {
+        switch (refedType.primType()) {
         case BLOB:
           return Opcode.DEREF_BLOB;
         case FILE:
           return Opcode.DEREF_FILE;
-        case BOOLEAN:
+        case BOOL:
           return Opcode.DEREF_BOOL;
         case FLOAT:
           return Opcode.DEREF_FLOAT;
-        case INTEGER:
+        case INT:
           return Opcode.DEREF_INT;
         case STRING:
           return Opcode.DEREF_STRING;
@@ -2897,13 +2896,13 @@ public class ICInstructions {
   }
 
 
-  public static Instruction futureSet(Variable dst, Arg src) {
-    assert(Types.isScalarFuture(dst.getType()));
-    switch (dst.getType().getPrimitiveType()) {
-    case BOOLEAN:
+  public static Instruction futureSet(Var dst, Arg src) {
+    assert(Types.isScalarFuture(dst.type()));
+    switch (dst.type().primType()) {
+    case BOOL:
       assert(src.isImmediateBool());
       return TurbineOp.assignBool(dst, src);
-    case INTEGER:
+    case INT:
       assert(src.isImmediateInt());
       return TurbineOp.assignInt(dst, src);
     case FLOAT:
@@ -2914,7 +2913,7 @@ public class ICInstructions {
       return TurbineOp.assignString(dst, src);
     default:
       throw new STCRuntimeError("method to set " +
-          dst.getType().typeName() + " is not known yet");
+          dst.type().typeName() + " is not known yet");
     }
   }
 
@@ -2924,11 +2923,11 @@ public class ICInstructions {
   }
 
   private static String formatFunctionCall(Opcode op, 
-      String functionName, List<Variable> outputs, List<Arg> inputs) {
+      String functionName, List<Var> outputs, List<Arg> inputs) {
     String result = op.toString().toLowerCase() + " " + functionName;
     result += " [";
-    for (Variable v: outputs) {
-      result += " " + v.getName();
+    for (Var v: outputs) {
+      result += " " + v.name();
     }
     result += " ] [";
     for (Arg a: inputs) {

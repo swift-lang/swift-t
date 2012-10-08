@@ -5,7 +5,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.TypeChecker;
 
@@ -38,12 +38,12 @@ public class If {
     return elseBlock != null;
   }
   
-  public SwiftType getCondType(Context context) throws UserException {
-    SwiftType condType = TypeChecker.findSingleExprType(context, condition);
-    if (condType.assignableTo(Types.FUTURE_BOOLEAN)) {
-      return Types.FUTURE_BOOLEAN;
-    } else if (condType.assignableTo(Types.FUTURE_INTEGER)) {
-      return Types.FUTURE_INTEGER;
+  public Type getCondType(Context context) throws UserException {
+    Type condType = TypeChecker.findSingleExprType(context, condition);
+    if (condType.assignableTo(Types.F_BOOL)) {
+      return Types.F_BOOL;
+    } else if (condType.assignableTo(Types.F_INT)) {
+      return Types.F_INT;
     } else {
       throw new TypeMismatchException(context, "if statement condition must "
               + "be of type boolean or int, but was " + condType);

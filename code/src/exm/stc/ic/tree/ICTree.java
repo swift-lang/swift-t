@@ -22,15 +22,14 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Arg.ArgType;
-import exm.stc.common.lang.FunctionSemantics.TclOpTemplate;
+import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
-import exm.stc.common.lang.Types.SwiftType;
-import exm.stc.common.lang.Variable;
-import exm.stc.common.lang.Variable.DefType;
-import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -143,7 +142,7 @@ public class ICTree {
     public String addGlobalConst(Arg val) {
       
       String suffix;
-      switch(val.type) {
+      switch(val.kind) {
       case BOOLVAL:
         suffix = "b_" + Boolean.toString(val.getBoolLit());
         break;
@@ -169,10 +168,10 @@ public class ICTree {
         throw new STCRuntimeError("Variable can't be a constant");
       default:
         throw new STCRuntimeError("Unknown enum value " + 
-                val.type.toString()); 
+                val.kind.toString()); 
       }
       
-      String origname = Variable.GLOBAL_CONST_VAR_PREFIX + suffix;
+      String origname = Var.GLOBAL_CONST_VAR_PREFIX + suffix;
       String name = origname;
       int seq = 0;
       while (globalConsts.containsKey(name)) {
@@ -209,7 +208,7 @@ public class ICTree {
         Arg val = constE.getValue();
         out.append("const " +   constE.getKey() + " = ");
         out.append(val.toString());
-        out.append(" as " + val.getSwiftType().typeName());
+        out.append(" as " + val.getType().typeName());
         out.append("\n");
       }
       
@@ -271,7 +270,7 @@ public class ICTree {
       out.append("(");
       //ICUtil.prettyPrintFormalArgs(out, this.oList);
       boolean first = true;
-      for(SwiftType t: fType.getOutputs()) {
+      for(Type t: fType.getOutputs()) {
         if (first) {
           first = false;
         } else {
@@ -281,7 +280,7 @@ public class ICTree {
       }
       out.append(") @" + this.name + "(");
       first = true;
-      for(SwiftType t: fType.getInputs()) {
+      for(Type t: fType.getInputs()) {
         if (first) {
           first = false;
         } else {
@@ -316,30 +315,30 @@ public class ICTree {
 
     public List<Boolean> getBlockingInputVector() {
       ArrayList<Boolean> res = new ArrayList<Boolean>(iList.size());
-      Set<String> blocks = Variable.nameSet(this.blockingInputs);
-      for (Variable input: this.iList) {
-        boolean isBlocking = blocks.contains(input.getName());
+      Set<String> blocks = Var.nameSet(this.blockingInputs);
+      for (Var input: this.iList) {
+        boolean isBlocking = blocks.contains(input.name());
         res.add(isBlocking);
       }
       return res;
     }
 
 
-    private final List<Variable> iList;
-    private final List<Variable> oList;
+    private final List<Var> iList;
+    private final List<Var> oList;
     
     /** Wait until the below inputs are available before running function */
-    private final List<Variable> blockingInputs;
+    private final List<Var> blockingInputs;
 
     private TaskMode mode;
 
-    public Function(String name, List<Variable> iList,
-        List<Variable> oList, TaskMode mode) {
+    public Function(String name, List<Var> iList,
+        List<Var> oList, TaskMode mode) {
       this(name, iList, oList, new Block(BlockType.MAIN_BLOCK), mode);
     }
 
-    public Function(String name, List<Variable> iList,
-        List<Variable> oList, Block mainBlock, TaskMode mode) {
+    public Function(String name, List<Var> iList,
+        List<Var> oList, Block mainBlock, TaskMode mode) {
       if (mainBlock.getType() != BlockType.MAIN_BLOCK) {
         throw new STCRuntimeError("Expected main block " +
         		"for function to be tagged as such");
@@ -348,16 +347,16 @@ public class ICTree {
       this.iList = iList;
       this.oList = oList;
       this.mainBlock = mainBlock;
-      this.blockingInputs = new ArrayList<Variable>();
+      this.blockingInputs = new ArrayList<Var>();
       this.mode = mode;
     }
 
 
-    public List<Variable> getInputList() {
+    public List<Var> getInputList() {
       return Collections.unmodifiableList(this.iList);
     }
 
-    public List<Variable> getOutputList() {
+    public List<Var> getOutputList() {
       return Collections.unmodifiableList(this.oList);
     }
 
@@ -385,12 +384,12 @@ public class ICTree {
       sb.append("}\n");
     }
     
-    public List<Variable> getBlockingInputs() {
+    public List<Var> getBlockingInputs() {
       return blockingInputs;
     }
     
     public void addBlockingInput(String vName) {
-      Variable v = Variable.findByName(iList, vName);
+      Var v = Var.findByName(iList, vName);
       if (v == null) {
         throw new STCRuntimeError(vName + " is not the name of " +
         		" an input argument to function " + name + ":\n" + this);
@@ -398,19 +397,19 @@ public class ICTree {
       addBlockingInput(v);
     }
     
-    public void addBlockingInput(Variable v) {
-      assert(v.getDefType() == DefType.INARG);
+    public void addBlockingInput(Var v) {
+      assert(v.defType() == DefType.INARG);
       boolean oneOfArgs = false;
-      for (Variable ia: iList) {
-        if (ia.getName().equals(v.getName())
-            && ia.getType().equals(v.getType())) {
+      for (Var ia: iList) {
+        if (ia.name().equals(v.name())
+            && ia.type().equals(v.type())) {
           oneOfArgs = true;
           break;
         }
       }
       if (oneOfArgs) {
-        for (Variable i: blockingInputs) {
-          if (i.getName().equals(v.getName())) {
+        for (Var i: blockingInputs) {
+          if (i.name().equals(v.name())) {
             // already there
             return;
           }
@@ -448,8 +447,8 @@ public class ICTree {
 
     private final BlockType type;
     public Block(BlockType type) {
-      this(type, new LinkedList<Instruction>(), new ArrayList<Variable>(),
-          new ArrayList<Continuation>(), new ArrayList<Variable>());
+      this(type, new LinkedList<Instruction>(), new ArrayList<Var>(),
+          new ArrayList<Continuation>(), new ArrayList<Var>());
     }
     
     /**
@@ -459,8 +458,8 @@ public class ICTree {
      * @param instructions
      */
     private Block(BlockType type, LinkedList<Instruction> instructions, 
-        ArrayList<Variable> variables, ArrayList<Continuation> conds,
-        ArrayList<Variable> arraysToClose) {
+        ArrayList<Var> variables, ArrayList<Continuation> conds,
+        ArrayList<Var> arraysToClose) {
       this.type = type;
       this.instructions = instructions;
       this.variables = variables;
@@ -477,9 +476,9 @@ public class ICTree {
     
     public Block clone(BlockType newType) {
       return new Block(newType, ICUtil.cloneInstructions(this.instructions),
-          new ArrayList<Variable>(this.variables),
+          new ArrayList<Var>(this.variables),
           ICUtil.cloneContinuations(this.conds), 
-          new ArrayList<Variable>(this.arraysToClose));
+          new ArrayList<Var>(this.arraysToClose));
     }
 
     public BlockType getType() {
@@ -488,9 +487,9 @@ public class ICTree {
 
     private final LinkedList<Instruction> instructions;
     
-    private final ArrayList<Variable> arraysToClose;
+    private final ArrayList<Var> arraysToClose;
 
-    private final ArrayList<Variable> variables;
+    private final ArrayList<Var> variables;
 
     /** conditional statements for block */
     private final ArrayList<Continuation> conds;
@@ -523,19 +522,19 @@ public class ICTree {
       return conds.get(i);
     }
 
-    public List<Variable> getVariables() {
+    public List<Var> getVariables() {
       return Collections.unmodifiableList(variables);
     }
 
-    public Variable declareVariable(SwiftType t, String name,
-        VariableStorage storage, DefType defType, Variable mapping) {
-      assert(mapping == null || Types.isString(mapping.getType()));
-      Variable v = new Variable(t, name, storage, defType, mapping);
+    public Var declareVariable(Type t, String name,
+        VarStorage storage, DefType defType, Var mapping) {
+      assert(mapping == null || Types.isString(mapping.type()));
+      Var v = new Var(t, name, storage, defType, mapping);
       this.variables.add(v);
       return v;
     }
     
-    public Variable declareVariable(Variable v) {
+    public Var declareVariable(Var v) {
       this.variables.add(v);
       return v;
     }
@@ -549,10 +548,10 @@ public class ICTree {
 
       logger.trace("Generate code for block of type " + this.type.toString());
       // Can push forward variable declaration to top of block
-      for (Variable v: variables) {
+      for (Var v: variables) {
         logger.trace("generating variable decl for " + v.toString());
-        gen.declare(v.getType(), v.getName(), v.getStorage(), v.getDefType(),
-            v.getMapping());
+        gen.declare(v.type(), v.name(), v.storage(), v.defType(),
+            v.mapping());
       }
       for (Instruction i: instructions) {
         i.generate(logger, gen, info);
@@ -565,7 +564,7 @@ public class ICTree {
         c.generate(logger, gen, info);
       }
 
-      for (Variable v: arraysToClose) {
+      for (Var v: arraysToClose) {
         gen.closeArray(v);
       }
       logger.trace("Done with code for block of type " + this.type.toString());
@@ -573,13 +572,13 @@ public class ICTree {
     }
 
     public void prettyPrint(StringBuilder sb, String indent) {
-      for (Variable v: variables) {
+      for (Var v: variables) {
         sb.append(indent);
-        sb.append("alloc " + v.getType().typeName() + " " + v.getName() + 
-                " <" + v.getStorage().toString().toLowerCase() + ">");
+        sb.append("alloc " + v.type().typeName() + " " + v.name() + 
+                " <" + v.storage().toString().toLowerCase() + ">");
         
         if (v.isMapped()) {
-          sb.append(" @mapping=" + v.getMapping().getName());
+          sb.append(" @mapping=" + v.mapping().name());
         }
         sb.append("\n");
       }
@@ -594,10 +593,10 @@ public class ICTree {
         c.prettyPrint(sb, indent);
       }
 
-      for (Variable v: arraysToClose) {
+      for (Var v: arraysToClose) {
         sb.append(indent);
         sb.append(Opcode.ARRAY_DECR_WRITERS.toString().toLowerCase() + " " +
-                                v.getName());
+                                v.name());
         sb.append("\n");
       }
     }
@@ -606,7 +605,7 @@ public class ICTree {
       return conds.listIterator();
     }
 
-    public ListIterator<Variable> variableIterator() {
+    public ListIterator<Var> variableIterator() {
       return variables.listIterator();
     }
     public List<Instruction> getInstructions() {
@@ -617,15 +616,15 @@ public class ICTree {
       return instructions.listIterator();
     }
     
-    public void addArrayToClose(Variable array) {
+    public void addArrayToClose(Var array) {
       this.arraysToClose.add(array);
     }
     
-    public void addArraysToClose(Collection<Variable> arrays) {
+    public void addArraysToClose(Collection<Var> arrays) {
       this.arraysToClose.addAll(arrays);
     }
     
-    public List<Variable> getArraysToClose() {
+    public List<Var> getArraysToClose() {
       return Collections.unmodifiableList(arraysToClose);
     }
 
@@ -664,36 +663,36 @@ public class ICTree {
 
     private void renameVarsInBlockVarsList(Map<String, Arg> renames) {
       // Replace definition of var
-      ListIterator<Variable> it = variables.listIterator();
-      List<Variable> changedMappingVars = new ArrayList<Variable>();
+      ListIterator<Var> it = variables.listIterator();
+      List<Var> changedMappingVars = new ArrayList<Var>();
       while (it.hasNext()) {
-        Variable v = it.next();
+        Var v = it.next();
 
         if (v.isMapped()) {
-          if (renames.containsKey(v.getName())) {
+          if (renames.containsKey(v.name())) {
             throw new STCRuntimeError("Tried to replace mapped variable in " +
             		"IC, this isn't supported so this probably indicates a " +
             		"compiler bug");
           }
           
           // Check to see if string variable for mapping is replaced
-          if (renames.containsKey(v.getMapping().getName())) {
-            Arg replacement = renames.get(v.getMapping().getName());
-            if (replacement.getType() == ArgType.VAR) {
+          if (renames.containsKey(v.mapping().name())) {
+            Arg replacement = renames.get(v.mapping().name());
+            if (replacement.isVar()) {
               // Need to maintain variable ordering so that mapped vars appear
               // after the variables containing the mapping string. Remove
               // var declaration here and put it at end of list
               it.remove();
-              changedMappingVars.add(new Variable(v.getType(), v.getName(),
-                  v.getStorage(), v.getDefType(), replacement.getVar()));
+              changedMappingVars.add(new Var(v.type(), v.name(),
+                  v.storage(), v.defType(), replacement.getVar()));
             }
           }
         } else {
           // V isn't mapped
-          String varName = v.getName();
+          String varName = v.name();
           if (renames.containsKey(varName)) {
             Arg replacement = renames.get(varName);
-            if (replacement.getType() ==  ArgType.VAR) {
+            if (replacement.isVar()) {
               it.set(replacement.getVar());
             } else {
               // value replaced with constant
@@ -709,7 +708,7 @@ public class ICTree {
 
     public void renameArraysToClose(Map<String, Arg> renames) {
       for (int i = 0; i < arraysToClose.size(); i++) {
-        String varName = arraysToClose.get(i).getName();
+        String varName = arraysToClose.get(i).name();
         if (renames.containsKey(varName)) {
           arraysToClose.remove(i);
           arraysToClose.add(i, renames.get(varName).getVar());
@@ -735,10 +734,10 @@ public class ICTree {
         // See if we can remove instruction
         if (!inst.hasSideEffects() && inst.op != Opcode.COMMENT) {
           boolean allRemoveable = true;
-          for (Variable out: inst.getOutputs()) {
+          for (Var out: inst.getOutputs()) {
             // Doesn't make sense to assign to anything other than
             //  variable
-            if (! removeVars.contains(out.getName())) {
+            if (! removeVars.contains(out.name())) {
               allRemoveable = false; break;
             }
           }
@@ -753,11 +752,11 @@ public class ICTree {
     }
 
 
-    public void addVariables(List<Variable> variables) {
+    public void addVariables(List<Var> variables) {
       this.variables.addAll(variables);
     }
 
-    public void addVariable(Variable variable) {
+    public void addVariable(Var variable) {
       this.variables.add(variable);
     }
 
@@ -786,9 +785,9 @@ public class ICTree {
     public Set<String> unneededVars() {
       HashSet<String> toRemove = new HashSet<String>();
       Set<String> stillNeeded = findEssentialVars();
-      for (Variable v: getVariables()) {
-        if (!stillNeeded.contains(v.getName())) {
-          toRemove.add(v.getName());
+      for (Var v: getVariables()) {
+        if (!stillNeeded.contains(v.name())) {
+          toRemove.add(v.name());
         }
       }
       return toRemove;
@@ -803,39 +802,39 @@ public class ICTree {
 
     private void findEssentialVars(HashSet<String> stillNeeded) {
       // Need to hold on to mapped variables
-      for (Variable v: this.getVariables()) {
+      for (Var v: this.getVariables()) {
         if (v.isMapped()) {
-          stillNeeded.add(v.getName());
-          stillNeeded.add(v.getMapping().getName());
+          stillNeeded.add(v.name());
+          stillNeeded.add(v.mapping().name());
         }
       }
       for (Instruction i : this.getInstructions()) {
         // check which variables are still needed
         for (Arg oa: i.getInputs()) {
-          if (oa.getType() == ArgType.VAR) {
-            stillNeeded.add(oa.getVar().getName());
+          if (oa.isVar()) {
+            stillNeeded.add(oa.getVar().name());
           }
         }
         // Can't eliminate instructions with side-effects
         if (i.hasSideEffects()) {
-          for (Variable out: i.getOutputs()) {
-            stillNeeded.add(out.getName());
+          for (Var out: i.getOutputs()) {
+            stillNeeded.add(out.name());
           }
         }
       }
 
       for (Continuation c: this.getContinuations()) {
-        for (Variable v: c.requiredVars()) {
-          stillNeeded.add(v.getName());
+        for (Var v: c.requiredVars()) {
+          stillNeeded.add(v.name());
         }
         for (Block b: c.getBlocks()) {
           b.findEssentialVars(stillNeeded);
         }
       }
       
-      for (Variable v: this.arraysToClose) {
-        if (v.getStorage() == VariableStorage.ALIAS) {
-          stillNeeded.add(v.getName());
+      for (Var v: this.arraysToClose) {
+        if (v.storage() == VarStorage.ALIAS) {
+          stillNeeded.add(v.name());
         }
       }
     }
@@ -856,10 +855,10 @@ public class ICTree {
      * @param insertAtTop whether to insert at top of block or not
      */
     public void insertInline(Block b, boolean insertAtTop) {
-      Set<String> varNames = Variable.nameSet(this.variables);
-      for (Variable newVar: b.getVariables()) {
+      Set<String> varNames = Var.nameSet(this.variables);
+      for (Var newVar: b.getVariables()) {
         // Check for duplicates (may be duplicate globals)
-        if (!varNames.contains(newVar.getName())) {
+        if (!varNames.contains(newVar.name())) {
           variables.add(newVar);
         }
       }
@@ -882,11 +881,11 @@ public class ICTree {
       ICUtil.removeVarsInList(arraysToClose, varNames);
     }
     
-    public void replaceVarDeclaration(Variable oldV, Variable newV) {
-      ListIterator<Variable> it = variables.listIterator();
+    public void replaceVarDeclaration(Var oldV, Var newV) {
+      ListIterator<Var> it = variables.listIterator();
       while (it.hasNext()) {
-        Variable curr = it.next();
-        if (curr.getName().equals(oldV.getName())) {
+        Var curr = it.next();
+        if (curr.name().equals(oldV.name())) {
           it.set(newV);
           return;
         }

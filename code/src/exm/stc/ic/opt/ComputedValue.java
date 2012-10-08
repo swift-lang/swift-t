@@ -5,7 +5,7 @@ import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Var;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 
@@ -172,7 +172,7 @@ public class ComputedValue {
   public static final String REF_TO_ARRAY_CONTENTS = "ref_to_array_contents";
   private static final String COPY_OF = "copy_of";
 
-  public static ComputedValue makeCopyCV(Variable dst, Arg src) {
+  public static ComputedValue makeCopyCV(Var dst, Arg src) {
     return new ComputedValue(Opcode.FAKE, COPY_OF, 
                   src, Arg.createVar(dst), false);
   }

@@ -19,10 +19,9 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Arg.ArgType;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Variable;
-import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.ic.ICUtil;
@@ -123,7 +122,7 @@ public class ForwardDataflow {
      * @param v
      * @return
      */
-    public Arg findRetrieveResult(Variable v) {
+    public Arg findRetrieveResult(Var v) {
       ComputedValue cvRetrieve = ICInstructions.retrieveCompVal(v);
       if (cvRetrieve == null) {
         return null;
@@ -153,15 +152,15 @@ public class ForwardDataflow {
       Arg valLoc = newCV.getValLocation();
       Opcode op = newCV.getOp();
       availableVals.put(newCV, valLoc);
-      if (valLoc.getType() == ArgType.VAR && outClosed) {
-        this.closed.add(valLoc.getVar().getName());
+      if (valLoc.isVar() && outClosed) {
+        this.closed.add(valLoc.getVar().name());
       }
       if (op == Opcode.LOAD_BOOL || op == Opcode.LOAD_FLOAT
           || op == Opcode.LOAD_INT || op == Opcode.LOAD_REF 
           || op == Opcode.LOAD_STRING) {
         // If the value is available, it is effectively closed even if
         // the future isn't closed
-        this.closed.add(newCV.getInput(0).getVar().getName());
+        this.closed.add(newCV.getInput(0).getVar().name());
       }
     }
 
@@ -210,16 +209,16 @@ public class ForwardDataflow {
      * @param depend
      *          more scalar futures
      */
-    public void setDependencies(Variable future, Collection<Variable> depend) {
-      assert (!Types.isScalarValue(future.getType()));
-      HashSet<String> depset = dependsOn.get(future.getName());
+    public void setDependencies(Var future, Collection<Var> depend) {
+      assert (!Types.isScalarValue(future.type()));
+      HashSet<String> depset = dependsOn.get(future.name());
       if (depset == null) {
         depset = new HashSet<String>();
-        dependsOn.put(future.getName(), depset);
+        dependsOn.put(future.name(), depset);
       }
-      for (Variable v : depend) {
-        assert (!Types.isScalarValue(v.getType()));
-        depset.add(v.getName());
+      for (Var v : depend) {
+        assert (!Types.isScalarValue(v.type()));
+        depset.add(v.name());
       }
     }
 
@@ -250,7 +249,7 @@ public class ForwardDataflow {
         if (ComputedValue.isCopy(currCV)) {
           // Copies are easy to handle: replace output of inst with input 
           // going forward
-          replaceInputs.put(currCV.getValLocation().getVar().getName(),
+          replaceInputs.put(currCV.getValLocation().getVar().name(),
                                               currCV.getInput(0));
           continue;
         }
@@ -260,31 +259,31 @@ public class ForwardDataflow {
           av.addComputedValue(currCV, false);
         } else if (currLoc.isConstant()) {
           Arg prevLoc = av.getLocation(currCV);
-          if (prevLoc.getType() == ArgType.VAR) {
-            assert (Types.isScalarValue(prevLoc.getVar().getType()));
+          if (prevLoc.isVar()) {
+            assert (Types.isScalarValue(prevLoc.getVar().type()));
             // Constants are the best... might as well replace
             av.addComputedValue(currCV, true);
             // System.err.println("replace " + prevLoc + " with " + currLoc);
-            replaceInputs.put(prevLoc.getVar().getName(), currLoc);
+            replaceInputs.put(prevLoc.getVar().name(), currLoc);
           } else {
             // Should be same, otherwise bug
             assert (currLoc.equals(prevLoc));
           }
         } else {
           final boolean usePrev;
-          assert (currLoc.getType() == ArgType.VAR);
+          assert (currLoc.isVar());
           // See if we should replace
           Arg prevLoc = av.getLocation(currCV);
           if (prevLoc.isConstant()) {
             usePrev = true;
           } else {
-            assert (prevLoc.getType() == ArgType.VAR);
-            boolean currClosed = av.isClosed(currLoc.getVar().getName());
-            boolean prevClosed = av.isClosed(prevLoc.getVar().getName());
+            assert (prevLoc.isVar());
+            boolean currClosed = av.isClosed(currLoc.getVar().name());
+            boolean prevClosed = av.isClosed(prevLoc.getVar().name());
             if (currCV.equivType == EquivalenceType.REFERENCE) {
               // The two locations are both references to same thing, so can 
               // replace all references, including writes to currLoc
-              replaceAll.put(currLoc.getVar().getName(), prevLoc);
+              replaceAll.put(currLoc.getVar().name(), prevLoc);
             }
             if (prevClosed || !currClosed) {
               // Use the prev value
@@ -303,10 +302,10 @@ public class ForwardDataflow {
           // variable for the computed expression
           if (usePrev) {
             // Do it
-            replaceInputs.put(currLoc.getVar().getName(), prevLoc);
+            replaceInputs.put(currLoc.getVar().name(), prevLoc);
             // System.err.println("replace " + currLoc + " with " + prevLoc);
           } else {
-            replaceInputs.put(prevLoc.getVar().getName(), currLoc);
+            replaceInputs.put(prevLoc.getVar().name(), currLoc);
             // System.err.println("replace " + prevLoc + " with " + currLoc);
           }
         }
@@ -371,7 +370,7 @@ public class ForwardDataflow {
     Block main = f.getMainblock();
     Set<String> blockingVariables = findBlockingVariables(main);
     if (blockingVariables != null) {
-      Set<String> localNames = Variable.nameSet(main.getVariables());
+      Set<String> localNames = Var.nameSet(main.getVariables());
       logger.trace("Blocking " + f.getName() + ": " + blockingVariables);
       for (String vName: blockingVariables) {
         boolean isConst = program.lookupGlobalConst(vName) != null;
@@ -426,10 +425,10 @@ public class ForwardDataflow {
     for (Continuation c: block.getContinuations()) {
       List<String> waitOn = null;
       if (c.getType() == ContinuationType.WAIT_STATEMENT) {
-        waitOn = Variable.nameList(
+        waitOn = Var.nameList(
             ((WaitStatement) c).getWaitVars());
       } else if (c.getType() == ContinuationType.LOOP) {
-        waitOn = Arrays.asList(((Loop)c).getInitCond().getName());
+        waitOn = Arrays.asList(((Loop)c).getInitCond().name());
       } else {
         // can't handle other continuations
         return null;
@@ -466,13 +465,13 @@ public class ForwardDataflow {
     boolean anotherPassNeeded = false;
     if (cv == null) {
       cv = new State(logger);
-      for (Variable v: f.getBlockingInputs()) {
-        cv.close(v.getName());
+      for (Var v: f.getBlockingInputs()) {
+        cv.close(v.name());
       }
-      for (Variable v: f.getInputList()) {
-        if (Types.isScalarUpdateable(v.getType())) {
+      for (Var v: f.getInputList()) {
+        if (Types.isScalarUpdateable(v.type())) {
           // Updateables always have a value
-          cv.close(v.getName());
+          cv.close(v.name());
         }
       }
     }
@@ -482,19 +481,19 @@ public class ForwardDataflow {
     if (replaceAll == null) {
       replaceAll = new HierarchicalMap<String, Arg>();
     }
-    for (Variable v : block.getVariables()) {
+    for (Var v : block.getVariables()) {
       // First, all constants can be treated as being set
-      if (v.getStorage() == VariableStorage.GLOBAL_CONST) {
-        Arg val = program.lookupGlobalConst(v.getName());
-        assert (val != null): v.getName();
+      if (v.storage() == VarStorage.GLOBAL_CONST) {
+        Arg val = program.lookupGlobalConst(v.name());
+        assert (val != null): v.name();
         ComputedValue compVal = ICInstructions.assignComputedVal(v, val);
         cv.addComputedValue(compVal, cv.hasComputedValue(compVal));
       }
-      if (v.isMapped() && Types.isFile(v.getType())) {
+      if (v.isMapped() && Types.isFile(v.type())) {
         // filename will return the mapping
         ComputedValue filenameVal = new ComputedValue(Opcode.CALL_BUILTIN,
             "filename", Arrays.asList(Arg.createVar(v)),
-            Arg.createVar(v.getMapping()), false, EquivalenceType.VALUE);
+            Arg.createVar(v.mapping()), false, EquivalenceType.VALUE);
         cv.addComputedValue(filenameVal, false);
       }
     }
@@ -527,10 +526,10 @@ public class ForwardDataflow {
     for (Continuation cont : block.getContinuations()) {
       State contCV = cv.makeCopy();
       // additional variables may be close once we're inside continuation
-      List<Variable> contClosedVars = cont.blockingVars();
+      List<Var> contClosedVars = cont.blockingVars();
       if (contClosedVars != null) {
-        for (Variable v : contClosedVars) {
-          contCV.close(v.getName());
+        for (Var v : contClosedVars) {
+          contCV.close(v.name());
         }
       }
       
@@ -599,10 +598,10 @@ public class ForwardDataflow {
       updateReplacements(logger, inst, cv, replaceInputs, replaceAll);
   
       // Add dependencies
-      List<Variable> in = inst.getBlockingInputs();
+      List<Var> in = inst.getBlockingInputs();
       if (in != null) {
-        for (Variable ov: inst.getOutputs()) {
-          if (!Types.isScalarValue(ov.getType())) {
+        for (Var ov: inst.getOutputs()) {
+          if (!Types.isScalarValue(ov.type())) {
             cv.setDependencies(ov, in);
           }
         }
@@ -624,10 +623,10 @@ public class ForwardDataflow {
       
       // same var might appear multiple times
       HashMap<String, Arg> alreadyFetched = new HashMap<String, Arg>();  
-      for (Variable v : varsNeeded.in) {
+      for (Var v : varsNeeded.in) {
         Arg maybeVal;
-        if (alreadyFetched.containsKey(v.getName())) {
-          maybeVal = alreadyFetched.get(v.getName());
+        if (alreadyFetched.containsKey(v.name())) {
+          maybeVal = alreadyFetched.get(v.name());
         } else {
           maybeVal = cv.findRetrieveResult(v);
         }
@@ -640,16 +639,16 @@ public class ForwardDataflow {
            * invalid, but we rely on fixupVariablePassing to fix this later
            */
           inVals.add(maybeVal);
-          alreadyFetched.put(v.getName(), maybeVal);
+          alreadyFetched.put(v.name(), maybeVal);
         } else {
           // Generate instruction to fetch val, append to alt
-          Variable fetchedV = OptUtil.fetchValueOf(block, alt, v);
+          Var fetchedV = OptUtil.fetchValueOf(block, alt, v);
           Arg fetched = Arg.createVar(fetchedV);
           inVals.add(fetched);
-          alreadyFetched.put(v.getName(), fetched);
+          alreadyFetched.put(v.name(), fetched);
         }
       }
-      List<Variable> outValVars = OptUtil.declareLocalOpOutputVars(block,
+      List<Var> outValVars = OptUtil.declareLocalOpOutputVars(block,
                                                           varsNeeded.out);
       MakeImmChange change = inst.makeImmediate(outValVars, inVals);
       OptUtil.fixupImmChange(block, change, alt, outValVars, varsNeeded.out);

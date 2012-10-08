@@ -39,11 +39,11 @@ public class SwiftAST extends CommonTree {
     this.variableUsage = variableUsage;
   }
 
-  public ExprType getSwiftType() {
+  public ExprType getExprType() {
     return exprType;
   }
 
-  public void setSwiftType(ExprType exprType) {
+  public void setType(ExprType exprType) {
     this.exprType = exprType;
   }
   

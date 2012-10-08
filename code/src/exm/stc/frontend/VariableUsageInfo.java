@@ -8,7 +8,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.util.TernaryLogic.Ternary;
 
@@ -52,7 +52,7 @@ public class VariableUsageInfo {
   }
 
   public Violation declare(String file, int line, String name,
-                                            SwiftType type) {
+                                            Type type) {
     if (vars.get(name) != null) {
       return new Violation(ViolationType.ERROR, "Variable " + name +
             " declared twice", file, line);
@@ -297,7 +297,7 @@ public class VariableUsageInfo {
    * Track whether a named variable has been assigned to multiple times
    */
   public static class VInfo {
-    private final SwiftType type;
+    private final Type type;
 
     /*
      * really need to handle struct specially:
@@ -316,11 +316,11 @@ public class VariableUsageInfo {
     private int arrayAssignDepth;
     private int maxReadDepth;
 
-    public VInfo(SwiftType type, String name, boolean locallyDeclared) {
+    public VInfo(Type type, String name, boolean locallyDeclared) {
       this(type, locallyDeclared, name, Ternary.FALSE, Ternary.FALSE, 0, -1);
     }
 
-    private VInfo(SwiftType type, Map<String, VInfo> structFields,
+    private VInfo(Type type, Map<String, VInfo> structFields,
         boolean locallyDeclared, String name,
         Ternary assigned, Ternary read, int arrayAssignDepth,
         int maxReadDepth) {
@@ -335,7 +335,7 @@ public class VariableUsageInfo {
 
     }
 
-    private VInfo(SwiftType type, boolean locallyDeclared, String name,
+    private VInfo(Type type, boolean locallyDeclared, String name,
         Ternary assigned, Ternary read, int arrayAssignDepth, int maxReadDepth) {
       this.type = type;
       if (Types.isStruct(type)) {
@@ -796,7 +796,7 @@ public class VariableUsageInfo {
       }
     }
 
-    public SwiftType getType() {
+    public Type getType() {
       return type;
     }
     

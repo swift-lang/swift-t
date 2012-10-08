@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Set;
 
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Variable;
-import exm.stc.common.lang.Variable.DefType;
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
@@ -61,24 +61,24 @@ public class Flattener {
    */
   private static void makeVarNamesUnique(Block in, Set<String> usedNames) {
     HashMap<String, Arg> renames = new HashMap<String, Arg>();
-    for (Variable v: in.getVariables()) {
-      if (v.getDefType() == DefType.GLOBAL_CONST) {
+    for (Var v: in.getVariables()) {
+      if (v.defType() == DefType.GLOBAL_CONST) {
         continue;
       }
-      if (usedNames.contains(v.getName())) {
+      if (usedNames.contains(v.name())) {
         int counter = 1;
         String newName;
         // try x_1 x_2 x_3, etc until we find something
         do {
-          newName = v.getName() + "_" + counter;
+          newName = v.name() + "_" + counter;
           counter++;
         } while(usedNames.contains(newName));
-        renames.put(v.getName(),
-            Arg.createVar(new Variable(v.getType(), newName,
-                            v.getStorage(), v.getDefType(), v.getMapping())));
+        renames.put(v.name(),
+            Arg.createVar(new Var(v.type(), newName,
+                            v.storage(), v.defType(), v.mapping())));
         usedNames.add(newName);
       } else {
-        usedNames.add(v.getName());
+        usedNames.add(v.name());
       }
     }
 
@@ -97,11 +97,11 @@ public class Flattener {
   public static void makeVarNamesUnique(Function in,
             Set<String> globals) {
     Set<String> usedNames = new HashSet<String>(globals);
-    for (Variable v: in.getInputList()) {
-      usedNames.add(v.getName());
+    for (Var v: in.getInputList()) {
+      usedNames.add(v.name());
     }
-    for (Variable v: in.getOutputList()) {
-      usedNames.add(v.getName());
+    for (Var v: in.getOutputList()) {
+      usedNames.add(v.name());
     }
 
     makeVarNamesUnique(in.getMainblock(), usedNames);

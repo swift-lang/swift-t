@@ -11,11 +11,11 @@ import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Types.FunctionType;
-import exm.stc.common.lang.Types.SwiftType;
-import exm.stc.common.lang.Variable.DefType;
-import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarStorage;
 
 /**
  * Abstract interface used to track and access contextual information about the
@@ -29,12 +29,12 @@ public abstract class Context {
   /**
      Map from variable name to Variable object
    */
-  protected Map<String,Variable> variables = new HashMap<String,Variable>();
+  protected Map<String,Var> variables = new HashMap<String,Var>();
 
   /**
    * Map from type name to the type object
    */
-  protected Map<String, SwiftType> types = new HashMap<String, SwiftType>();
+  protected Map<String, Type> types = new HashMap<String, Type>();
   
   /**
      True if this context scope has a visible parent scope
@@ -87,8 +87,8 @@ public abstract class Context {
    * @return
    * @throws UserException
    */
-  public abstract Variable declareVariable(SwiftType type, String name, VariableStorage scope,
-      DefType defType, Variable mapping) throws UserException;
+  public abstract Var declareVariable(Type type, String name, VarStorage scope,
+      DefType defType, Var mapping) throws UserException;
 
   /**
    * Flag that an array should have its writers count decremented at
@@ -96,13 +96,13 @@ public abstract class Context {
    * in duplicates
    * @param var
    */
-  public abstract void flagArrayForClosing(Variable var);
+  public abstract void flagArrayForClosing(Var var);
   
   /**
    * Get list of all arrays that were flagged
    * @return
    */
-  public abstract List<Variable> getArraysToClose();
+  public abstract List<Var> getArraysToClose();
 
   /**
    * Define a temporary variable with a unique name in the
@@ -112,7 +112,7 @@ public abstract class Context {
    * @return
    * @throws UserException
    */
-  public abstract Variable createTmpVar(SwiftType type, boolean storeInStack)
+  public abstract Var createTmpVar(Type type, boolean storeInStack)
   throws UserException;
 
   /**
@@ -122,7 +122,7 @@ public abstract class Context {
    * @return
    * @throws UserException
    */
-  public abstract Variable createAliasVariable(SwiftType type)
+  public abstract Var createAliasVariable(Type type)
   throws UserException;
 
   /**
@@ -130,14 +130,14 @@ public abstract class Context {
    * @param name
    * @return
    */
-  public abstract Variable getDeclaredVariable(String name);
+  public abstract Var getDeclaredVariable(String name);
 
   /**
    * Returns a list of all variables that are stored in the current stack
    * or an ancestor stack frame.
    * @return
    */
-  public abstract List<Variable> getVisibleVariables();
+  public abstract List<Var> getVisibleVariables();
 
   public boolean isFunction(String name) {
     return lookupFunction(name) != null;
@@ -156,11 +156,11 @@ public abstract class Context {
    * @return
    */
   public FunctionType lookupFunction(String name) {
-    Variable var = getDeclaredVariable(name);
-    if (var == null || !Types.isFunction(var.getType())) {
+    Var var = getDeclaredVariable(name);
+    if (var == null || !Types.isFunction(var.type())) {
       return null;
     }
-    return (FunctionType)var.getType();
+    return (FunctionType)var.type();
   }
 
   public void setNested(boolean b)
@@ -237,13 +237,13 @@ public abstract class Context {
   /**
    * @return the variables which were declared in this scope
    */
-  public Collection<Variable> getScopeVariables() {
+  public Collection<Var> getScopeVariables() {
     return Collections.unmodifiableCollection(variables.values());
   }
 
-  abstract public SwiftType lookupType(String typeName);
+  abstract public Type lookupType(String typeName);
 
-  abstract public void defineType(String typeName, SwiftType newType)
+  abstract public void defineType(String typeName, Type newType)
     throws DoubleDefineException;
 
   protected String buildPathStr(List<String> fieldPath) {
@@ -257,11 +257,11 @@ public abstract class Context {
     return build.toString();
   }
 
-  abstract protected Variable createStructFieldTmp(Variable struct,
-      SwiftType fieldType, String fieldPath, VariableStorage storage);
+  abstract protected Var createStructFieldTmp(Var struct,
+      Type fieldType, String fieldPath, VarStorage storage);
 
-  public Variable createStructFieldTmp(Variable struct,
-      SwiftType fieldType, List<String> fieldPath, VariableStorage storage) {
+  public Var createStructFieldTmp(Var struct,
+      Type fieldType, List<String> fieldPath, VarStorage storage) {
     String pathStr = buildPathStr(fieldPath);
     return createStructFieldTmp(struct, fieldType, pathStr, storage);
   }
@@ -276,10 +276,10 @@ public abstract class Context {
    * @return
    * @throws UserException
    */
-  abstract public Variable createLocalValueVariable(SwiftType type,
+  abstract public Var createLocalValueVariable(Type type,
       String varName) throws UserException;
 
-  public Variable createLocalValueVariable(SwiftType type) 
+  public Var createLocalValueVariable(Type type) 
         throws UserException {
     return createLocalValueVariable(type, null);
   }
@@ -290,7 +290,7 @@ public abstract class Context {
    * @param name name of file variable
    * @return
    */
-  abstract public Variable createFilenameAliasVariable(String name);
+  abstract public Var createFilenameAliasVariable(String name);
   
   public static enum FnProp {
     APP, COMPOSITE, BUILTIN, SYNC;

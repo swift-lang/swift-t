@@ -9,12 +9,12 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Variable;
+import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.StructType.StructField;
-import exm.stc.common.lang.Variable.DefType;
-import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarStorage;
 
 /**
  * This module contains logic to create and initialise variables, in order
@@ -39,15 +39,15 @@ public class VarCreator {
    * @return
    * @throws UserException
    */
-  public Variable createVariable(Context context, SwiftType type, String name,
-      VariableStorage storage, DefType defType, Variable mapping)
+  public Var createVariable(Context context, Type type, String name,
+      VarStorage storage, DefType defType, Var mapping)
                                                 throws UserException {
 
     if (mapping != null && (!Types.isMappable(type))) {
       throw new UserException(context, "Variable " + name + " of type "
           + type.toString() + " cannot be mapped to " + mapping);
     }
-    Variable v;
+    Var v;
 
     try {
       v = context.declareVariable(type, name, storage, defType, mapping);
@@ -58,9 +58,9 @@ public class VarCreator {
     return v;
   }
   
-  public void initialiseVariable(Context context, Variable v)
+  public void initialiseVariable(Context context, Var v)
       throws UndefinedTypeException, DoubleDefineException {
-    if (!Types.isStruct(v.getType())) {
+    if (!Types.isStruct(v.type())) {
       declare(v);
     } else {
       // Need to handle structs specially because they have lots of nested
@@ -74,29 +74,29 @@ public class VarCreator {
    * @param var
    * @throws UndefinedTypeException
    */
-  public void declare(Variable var) throws UndefinedTypeException {
-    backend.declare(var.getType(), var.getName(), 
-        var.getStorage(), var.getDefType(), var.getMapping());
+  public void declare(Var var) throws UndefinedTypeException {
+    backend.declare(var.type(), var.name(), 
+        var.storage(), var.defType(), var.mapping());
   }
 
-  private void initialiseStruct(Context context, Variable rootStruct,
-              Variable structToInit, Stack<String> path)
+  private void initialiseStruct(Context context, Var rootStruct,
+              Var structToInit, Stack<String> path)
       throws UndefinedTypeException, DoubleDefineException {
-    assert(Types.isStruct(structToInit.getType()));
+    assert(Types.isStruct(structToInit.type()));
     
     declare(structToInit);
     
-    if (structToInit.getStorage() == VariableStorage.ALIAS) {
+    if (structToInit.storage() == VarStorage.ALIAS) {
       // Skip recursive initialisation if its just an alias
       return;
     } else {
-      StructType type = (StructType)structToInit.getType();
+      StructType type = (StructType)structToInit.type();
   
       for (StructField f: type.getFields()) {
         path.push(f.getName());
   
-        Variable tmp = context.createStructFieldTmp(
-            rootStruct, f.getType(), path, VariableStorage.TEMPORARY);
+        Var tmp = context.createStructFieldTmp(
+            rootStruct, f.getType(), path, VarStorage.TEMP);
   
         if (Types.isStruct(f.getType())) {
           // Continue recursive structure initialisation,
@@ -121,7 +121,7 @@ public class VarCreator {
    * @throws UserException
    * @throws UndefinedTypeException
    */
-  public Variable createTmp(Context context, SwiftType type) 
+  public Var createTmp(Context context, Type type) 
       throws UserException, UndefinedTypeException {
     assert(context != null);
     return createTmp(context, type, false, false);
@@ -135,7 +135,7 @@ public class VarCreator {
    * @throws UserException
    * @throws UndefinedTypeException
    */
-  public Variable createTmpAlias(Context context, SwiftType type) 
+  public Var createTmpAlias(Context context, Type type) 
       throws UserException, UndefinedTypeException {
     return createTmp(context, type, false, true);
   }
@@ -152,7 +152,7 @@ public class VarCreator {
    * @throws UserException
    * @throws UndefinedTypeException
    */
-  public Variable createTmp(Context context, SwiftType type,
+  public Var createTmp(Context context, Type type,
       boolean storeInStack, boolean isAlias) throws UserException,
       UndefinedTypeException {
     assert(context != null);
@@ -160,7 +160,7 @@ public class VarCreator {
       throw new STCRuntimeError("Cannot create variable which is both alias" +
       		" and on stack");
     }
-    Variable tmp;
+    Var tmp;
     if ((!storeInStack) && isAlias) {
       tmp = context.createAliasVariable(type);
     } else {
@@ -171,24 +171,24 @@ public class VarCreator {
     return tmp;
   }
   
-  public Variable createTmpLocalVal(Context context, SwiftType type) 
+  public Var createTmpLocalVal(Context context, Type type) 
         throws UserException {
     assert(Types.isScalarValue(type));
-    Variable val = context.createLocalValueVariable(type);
+    Var val = context.createLocalValueVariable(type);
     declare(val);
     return val;
   }
   
-  public Variable createStructFieldTmp(Context context, Variable rootStruct, 
-                  SwiftType memType, List<String> fieldPath,
-                  VariableStorage storage) throws UndefinedTypeException {
-    Variable tmp = context.createStructFieldTmp(rootStruct, memType,
+  public Var createStructFieldTmp(Context context, Var rootStruct, 
+                  Type memType, List<String> fieldPath,
+                  VarStorage storage) throws UndefinedTypeException {
+    Var tmp = context.createStructFieldTmp(rootStruct, memType,
           fieldPath, storage);
     declare(tmp);
     return tmp;
   }
 
-  public Variable createValueOfVar(Context context, Variable future) 
+  public Var createValueOfVar(Context context, Var future) 
       throws UserException {
     return createValueOfVar(context, future, true);
   }
@@ -202,12 +202,12 @@ public class VarCreator {
    * @return
    * @throws UserException
    */
-  public Variable createValueOfVar(Context context, Variable future,
+  public Var createValueOfVar(Context context, Var future,
         boolean initialise)
                                                   throws UserException {
-    assert(Types.isScalarFuture(future.getType()));
-    SwiftType valType = Types.derefResultType(future.getType());
-    Variable val = context.createLocalValueVariable(valType, future.getName());
+    assert(Types.isScalarFuture(future.type()));
+    Type valType = Types.derefResultType(future.type());
+    Var val = context.createLocalValueVariable(valType, future.name());
     if (initialise) {
       initialiseVariable(context, val);
     }
@@ -217,14 +217,14 @@ public class VarCreator {
   /**
    * Shortcut to create filename of
    * @param context
-   * @param type
+   * @param kind
    * @return
    */
-  public Variable createFilenameAlias(Context context, Variable fileVar)
+  public Var createFilenameAlias(Context context, Var fileVar)
       throws UserException, UndefinedTypeException {
-    assert(Types.isFile(fileVar.getType()));
-    Variable filename = context.createFilenameAliasVariable(
-        fileVar.getName());
+    assert(Types.isFile(fileVar.type()));
+    Var filename = context.createFilenameAliasVariable(
+        fileVar.name());
     initialiseVariable(context, filename);
     return filename;
   }
@@ -233,23 +233,23 @@ public class VarCreator {
   /**
    * Create a value variable and retrieve value of future into it
    * @param context
-   * @param type
+   * @param kind
    * @param future
    * @return
    * @throws UserException
    * @throws UndefinedTypeException
    * @throws DoubleDefineException
    */
-  public Variable fetchValueOf(Context context, Variable future) 
+  public Var fetchValueOf(Context context, Var future) 
       throws UserException, UndefinedTypeException, DoubleDefineException {
-    assert(Types.isScalarFuture(future.getType()));
-    SwiftType futureType = future.getType();
-    Variable val = createValueOfVar(context, future);
-    switch (futureType.getPrimitiveType()) {
-    case BOOLEAN:
+    assert(Types.isScalarFuture(future.type()));
+    Type futureType = future.type();
+    Var val = createValueOfVar(context, future);
+    switch (futureType.primType()) {
+    case BOOL:
       backend.retrieveBool(val, future);
       break;
-    case INTEGER:
+    case INT:
       backend.retrieveInt(val, future);
       break;
     case STRING:
@@ -261,7 +261,7 @@ public class VarCreator {
     default:
       throw new STCRuntimeError("Don't know how to retrieve value of "
           + " type " + futureType.typeName() + " for variable " 
-          + future.getName());
+          + future.name());
     }
     
     return val;

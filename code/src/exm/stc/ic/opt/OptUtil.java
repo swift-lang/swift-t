@@ -6,10 +6,10 @@ import java.util.List;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.SwiftType;
-import exm.stc.common.lang.Variable;
-import exm.stc.common.lang.Variable.DefType;
-import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -27,8 +27,8 @@ public class OptUtil {
    * @param v
    * @return
    */
-  public static String optVPrefix(Variable v) {
-    String name = Variable.OPT_VALUE_VAR_PREFIX + v.getName() + "-"+ unique;
+  public static String optVPrefix(Var v) {
+    String name = Var.OPT_VALUE_VAR_PREFIX + v.name() + "-"+ unique;
     unique++;
     return name;
   }
@@ -40,24 +40,24 @@ public class OptUtil {
    * @param var the variable to fetch the value of
    * @return variable holding value
    */
-  public static Variable fetchValueOf(Block block, List<Instruction> instBuffer,
-          Variable var) {
-    SwiftType value_t = Types.derefResultType(var.getType());
+  public static Var fetchValueOf(Block block, List<Instruction> instBuffer,
+          Var var) {
+    Type value_t = Types.derefResultType(var.type());
     if (Types.isScalarValue(value_t)) {
       // The result will be a value
       // Use the OPT_VALUE_VAR_PREFIX to make sure we don't clash with
       //  something inserted by the frontend (this caused problems before)
-      Variable value_v = new Variable(value_t,
+      Var value_v = new Var(value_t,
           optVPrefix(var),
-          VariableStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+          VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
       block.addVariable(value_v);
       instBuffer.add(ICInstructions.retrieveValueOf(value_v, var));
       return value_v;
-    } else if (Types.isReference(var.getType())) {
+    } else if (Types.isRef(var.type())) {
       // The result will be an alias
-      Variable deref = new Variable(value_t,
+      Var deref = new Var(value_t,
           optVPrefix(var),
-          VariableStorage.ALIAS, DefType.LOCAL_COMPILER, null);
+          VarStorage.ALIAS, DefType.LOCAL_COMPILER, null);
       block.addVariable(deref);
       instBuffer.add(TurbineOp.retrieveRef(deref, var));
       return deref;
@@ -76,11 +76,11 @@ public class OptUtil {
    * @return
    */
   public static List<Arg> fetchValuesOf(Block block, List<Instruction> instBuffer,
-          List<Variable> vars) {
+          List<Var> vars) {
     List<Arg> inVals = new ArrayList<Arg>(vars.size());
 
-    for (Variable v: vars) {
-      Variable valueV = OptUtil.fetchValueOf(block, instBuffer, v);
+    for (Var v: vars) {
+      Var valueV = OptUtil.fetchValueOf(block, instBuffer, v);
       Arg value = Arg.createVar(valueV);
       inVals.add(value);
     }
@@ -96,17 +96,17 @@ public class OptUtil {
    * @param oldOut
    */
   public static void replaceInstructionOutputVar(Block block,
-          List<Instruction> instBuffer, Variable newOut, Variable oldOut) {
+          List<Instruction> instBuffer, Var newOut, Var oldOut) {
     block.declareVariable(newOut);
-    if (Types.isReferenceTo(oldOut.getType(),
-        newOut.getType())) {
-      if (oldOut.getStorage() == VariableStorage.ALIAS) {
+    if (Types.isRefTo(oldOut.type(),
+        newOut.type())) {
+      if (oldOut.storage() == VarStorage.ALIAS) {
         // Will need to initialise variable in this scope as before we
         // were relying on instruction to initialise it
         
-        Variable replacement = new Variable(oldOut.getType(),
-            oldOut.getName(), VariableStorage.TEMPORARY,
-            oldOut.getDefType(), oldOut.getMapping());
+        Var replacement = new Var(oldOut.type(),
+            oldOut.name(), VarStorage.TEMP,
+            oldOut.defType(), oldOut.mapping());
         block.replaceVarDeclaration(oldOut, replacement);
       }
       instBuffer.add(TurbineOp.addressOf(oldOut, newOut));
@@ -117,19 +117,19 @@ public class OptUtil {
     }
   }
   
-  public static List<Variable> declareLocalOpOutputVars(Block block,
-          List<Variable> localOutputs) {
+  public static List<Var> declareLocalOpOutputVars(Block block,
+          List<Var> localOutputs) {
     if (localOutputs == null) {
       return null;
     }
-    List<Variable> outValVars;
-    outValVars = new ArrayList<Variable>(localOutputs.size());
+    List<Var> outValVars;
+    outValVars = new ArrayList<Var>(localOutputs.size());
     // Need to create output value variables
-    for (Variable v : localOutputs) {
-      Variable valOut = block.declareVariable(
-          Types.derefResultType(v.getType()),
+    for (Var v : localOutputs) {
+      Var valOut = block.declareVariable(
+          Types.derefResultType(v.type()),
           OptUtil.optVPrefix(v),
-          VariableStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+          VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
       outValVars.add(valOut);
     }
     return outValVars;
@@ -137,14 +137,14 @@ public class OptUtil {
   
 
   public static void fixupImmChange(Block block, MakeImmChange change,
-          List<Instruction> instBuffer, List<Variable> newOutVars,
-                                        List<Variable> oldOutVars) {
+          List<Instruction> instBuffer, List<Var> newOutVars,
+                                        List<Var> oldOutVars) {
     instBuffer.add(change.newInst);
     // System.err.println("Swapped " + inst + " for " + change.newInst);
     if (!change.isOutVarSame()) {
       // Output variable of instruction changed, need to fix up
-      Variable newOut = change.newOut;
-      Variable oldOut = change.oldOut;
+      Var newOut = change.newOut;
+      Var oldOut = change.oldOut;
       
       OptUtil.replaceInstructionOutputVar(block, instBuffer, newOut, oldOut);
     }

@@ -3,7 +3,6 @@ package exm.stc.common.lang;
 import java.util.ArrayList;
 import java.util.List;
 
-import exm.stc.common.lang.Arg.ArgType;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 
 /**
@@ -37,10 +36,10 @@ public class OpEvaluator {
         if (in == null) {
           return null;
         }
-        allInt = allInt && in.getType() == ArgType.INTVAL;
-        allFloat = allFloat && in.getType() == ArgType.FLOATVAL;
-        allString = allString && in.getType() == ArgType.STRINGVAL;
-        allBool = allBool && in.getType() == ArgType.BOOLVAL;
+        allInt = allInt && in.isIntVal();
+        allFloat = allFloat && in.isFloatVal();
+        allString = allString && in.isStringVal();
+        allBool = allBool && in.isBoolVal();
       }
 
       if (allInt) {
@@ -70,7 +69,7 @@ public class OpEvaluator {
     List<Arg> constInputs = new ArrayList<Arg>(2);
     for (Arg in : constArgs) {
       if (in != null) {
-        assert (in.getType() == ArgType.BOOLVAL);
+        assert (in.isBoolVal());
         constInputs.add(in);
       }
     }

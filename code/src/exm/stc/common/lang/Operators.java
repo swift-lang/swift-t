@@ -11,7 +11,7 @@ import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Types.PrimType;
 import exm.stc.common.lang.Types.ScalarFutureType;
-import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.frontend.Context;
 
 public class Operators {
@@ -35,8 +35,8 @@ public class Operators {
   }
   
   /** Map of <number type> -> ( <token type> -> <internal opcode> ) */
-  private static final Map<SwiftType, Map<Integer, BuiltinOpcode>> arithOps = 
-                    new HashMap<SwiftType, Map<Integer, BuiltinOpcode>>();
+  private static final Map<Type, Map<Integer, BuiltinOpcode>> arithOps = 
+                    new HashMap<Type, Map<Integer, BuiltinOpcode>>();
   
   /** Types of operations */
   private static final Map<BuiltinOpcode, OpType> optypes = 
@@ -51,13 +51,13 @@ public class Operators {
    * Load mapping from AST tags and arg types to actual op codes 
    */
   private static void fillArithOps() {
-    for (PrimType numType : Arrays.asList(PrimType.FLOAT, PrimType.INTEGER,
-        PrimType.STRING, PrimType.BOOLEAN)) {
+    for (PrimType numType : Arrays.asList(PrimType.FLOAT, PrimType.INT,
+        PrimType.STRING, PrimType.BOOL)) {
       String opTypeName = getOpTypeName(numType);
       HashMap<Integer, BuiltinOpcode> opMapping = new HashMap<Integer, BuiltinOpcode>();
 
 
-      OpType relOpType = new OpType(PrimType.BOOLEAN, numType, numType);
+      OpType relOpType = new OpType(PrimType.BOOL, numType, numType);
       OpType closedOpType = new OpType(numType, numType, numType);
       
       // Want equality tests for all primitives
@@ -73,7 +73,7 @@ public class Operators {
         optypes.put(BuiltinOpcode.STRCAT, closedOpType);
       }
 
-      if (numType == PrimType.INTEGER) {
+      if (numType == PrimType.INT) {
         opMapping.put(ExMParser.INTDIV, BuiltinOpcode.DIV_INT);
         optypes.put(BuiltinOpcode.DIV_INT, closedOpType);
         opMapping.put(ExMParser.MOD, BuiltinOpcode.MOD_INT);
@@ -84,7 +84,7 @@ public class Operators {
       }
 
       OpType closeUnaryOpType = new OpType(numType, numType);
-      if (numType == PrimType.INTEGER || numType == PrimType.FLOAT) {
+      if (numType == PrimType.INT || numType == PrimType.FLOAT) {
         BuiltinOpcode plus = BuiltinOpcode.valueOf("PLUS_" + opTypeName);
         opMapping.put(ExMParser.PLUS, plus);
         optypes.put(plus, closedOpType);
@@ -114,7 +114,7 @@ public class Operators {
         optypes.put(pow, new OpType(PrimType.FLOAT, numType, numType));
       }
 
-      if (numType == PrimType.BOOLEAN) {
+      if (numType == PrimType.BOOL) {
         opMapping.put(ExMParser.NOT, BuiltinOpcode.NOT);
         optypes.put(BuiltinOpcode.NOT, closeUnaryOpType);
         opMapping.put(ExMParser.AND, BuiltinOpcode.AND);
@@ -129,9 +129,9 @@ public class Operators {
 
   private static String getOpTypeName(PrimType numType) {
     switch (numType) {
-    case BOOLEAN:
+    case BOOL:
       return "BOOL";
-    case INTEGER:
+    case INT:
       return "INT";
     case STRING:
       return "STRING";
@@ -142,7 +142,7 @@ public class Operators {
     }
   }
 
-  public static BuiltinOpcode getArithBuiltin(SwiftType argType, int tokenType) {
+  public static BuiltinOpcode getArithBuiltin(Type argType, int tokenType) {
     Map<Integer, BuiltinOpcode> mp = arithOps.get(argType);
     if (mp == null) {
       return null;

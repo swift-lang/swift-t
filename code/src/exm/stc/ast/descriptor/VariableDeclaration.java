@@ -8,7 +8,7 @@ import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.SwiftType;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LogHelper;
 
@@ -56,7 +56,7 @@ public class VariableDeclaration {
     assert(tree.child(0).getType() == ExMParser.ID);
     
     String typeName = tree.child(0).getText();
-    SwiftType baseType = context.lookupType(typeName);
+    Type baseType = context.lookupType(typeName);
     if (baseType == null) {
       throw new UndefinedTypeException(context, typeName);
     }
@@ -81,7 +81,7 @@ public class VariableDeclaration {
   }
   
   public static VariableDescriptor fromDeclareVariableRest(
-          Context context, SwiftType baseType, SwiftAST tree)
+          Context context, Type baseType, SwiftAST tree)
       throws UndefinedTypeException, InvalidSyntaxException {
     assert(tree.getType() == ExMParser.DECLARE_VARIABLE_REST);
     assert(tree.getChildCount() >= 1);
@@ -90,7 +90,7 @@ public class VariableDeclaration {
     String varName = nameTree.getText();
     SwiftAST mappingExpr = null;
     
-    SwiftType varType = baseType;
+    Type varType = baseType;
     for (SwiftAST subtree: tree.children(1)) {
       if (subtree.getType() == ExMParser.ARRAY) {
         varType = new Types.ArrayType(varType);
@@ -107,17 +107,17 @@ public class VariableDeclaration {
   }
   
   public static class VariableDescriptor {
-    private final SwiftType type;
+    private final Type type;
     private final String name;
     private final SwiftAST mappingExpr;
-    public VariableDescriptor(SwiftType type, String name, SwiftAST mappingExpr) {
+    public VariableDescriptor(Type type, String name, SwiftAST mappingExpr) {
       super();
       this.type = type;
       this.name = name;
       this.mappingExpr = mappingExpr;
     }
     
-    public SwiftType getType() {
+    public Type getType() {
       return type;
     }
     public String getName() {

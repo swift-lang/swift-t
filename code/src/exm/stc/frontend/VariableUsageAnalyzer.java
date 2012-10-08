@@ -25,9 +25,9 @@ import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Variable;
-import exm.stc.common.lang.Variable.DefType;
-import exm.stc.common.lang.Variable.VariableStorage;
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.frontend.VariableUsageInfo.Violation;
 import exm.stc.frontend.VariableUsageInfo.ViolationType;
 /**
@@ -53,38 +53,38 @@ class VariableUsageAnalyzer {
    * @throws UserException
    */
   public void analyzeVariableUsage(Context context,
-          String function, List<Variable> iList, List<Variable> oList, SwiftAST block)
+          String function, List<Var> iList, List<Var> oList, SwiftAST block)
         throws UserException {
     LogHelper.debug(context, "analyzer: starting: " + function);
     
     
     VariableUsageInfo globVui = new VariableUsageInfo(); 
     // Add global constants
-    for (Variable global: context.getScopeVariables()) {
+    for (Var global: context.getScopeVariables()) {
       globVui.declare(context.getInputFile(), context.getLine(),
-          global.getName(), global.getType());
+          global.name(), global.type());
       globVui.assign(context.getInputFile(), context.getLine(), 
-          global.getName());
+          global.name());
     }
     
     VariableUsageInfo argVui = globVui.createNested(); // create copy with globals
     Context fnContext = new LocalContext(context, function);
     
     // Add input and output variables to initial variable info
-    for (Variable i: iList) {
-      argVui.declare(context.getInputFile(), context.getLine(), i.getName(),
-          i.getType());
-      argVui.assign(context.getInputFile(), context.getLine(), i.getName());
-      fnContext.declareVariable(i.getType(), i.getName(), i.getStorage(), 
-            i.getDefType(), i.getMapping());
+    for (Var i: iList) {
+      argVui.declare(context.getInputFile(), context.getLine(), i.name(),
+          i.type());
+      argVui.assign(context.getInputFile(), context.getLine(), i.name());
+      fnContext.declareVariable(i.type(), i.name(), i.storage(), 
+            i.defType(), i.mapping());
     }
-    for (Variable o: oList) {
-      argVui.declare(context.getInputFile(), context.getLine(), o.getName(),
-          o.getType());
+    for (Var o: oList) {
+      argVui.declare(context.getInputFile(), context.getLine(), o.name(),
+          o.type());
       // We should assume that return variables will be read
-      argVui.read(context.getInputFile(), context.getLine(), o.getName());
-      fnContext.declareVariable(o.getType(), o.getName(), o.getStorage(), 
-          o.getDefType(), o.getMapping());
+      argVui.read(context.getInputFile(), context.getLine(), o.name());
+      fnContext.declareVariable(o.type(), o.name(), o.storage(), 
+          o.defType(), o.mapping());
     }
 
     // obtain info about variable usage in function by walking tree
@@ -231,7 +231,7 @@ class VariableUsageAnalyzer {
     // Treat the update as a read so that we know at least that the variable
     //  is used in a particular scope
     vu.read(context.getInputFile(), context.getLine(),
-                                up.getTarget().getName());
+                                up.getTarget().name());
   }
 
   private void ifStatement(Context context, VariableUsageInfo vu,
@@ -269,7 +269,7 @@ class VariableUsageAnalyzer {
       // mapped to a temporary var
       vu.declare(file, line, var.getName(), var.getType());
       context.declareVariable(var.getType(), var.getName(), 
-              VariableStorage.STACK, DefType.LOCAL_USER, null);
+              VarStorage.STACK, DefType.LOCAL_USER, null);
       SwiftAST assignExpr = vd.getVarExpr(i);
       if (assignExpr != null) {
         LogHelper.debug(context, "Variable " + var.getName() + 
@@ -363,10 +363,10 @@ class VariableUsageAnalyzer {
     
     // Both loop variables are assigned before loop body runs
     initial.declare(file, line, loop.getMemberVarName(), 
-        loop.getMemberVar().getType());
+        loop.getMemberVar().type());
     initial.assign(file, line, loop.getMemberVarName());
     if (loop.getCountVarName() != null) {
-      initial.declare(file, line, loop.getCountVarName(), Types.FUTURE_INTEGER);
+      initial.declare(file, line, loop.getCountVarName(), Types.F_INT);
       initial.assign(file, line, loop.getCountVarName());
     }
     
@@ -403,17 +403,17 @@ class VariableUsageAnalyzer {
     Context bodyContext = forLoop.createBodyContext(context);
     forLoop.validateCond(bodyContext);
     for (LoopVar lv: forLoop.getLoopVars()) {
-      Variable v = lv.var;
+      Var v = lv.var;
       LogHelper.debug(context, "declared loop var " + v.toString());
       
       
       if (!lv.declaredOutsideLoop) {
-        outerLoopInfo.declare(context.getInputFile(), context.getLine(), v.getName(), 
-                                                               v.getType());
+        outerLoopInfo.declare(context.getInputFile(), context.getLine(), v.name(), 
+                                                               v.type());
       }
       // we assume that each variable has an initializer and an update, so it
       // will be assigned before each loop iteration
-      outerLoopInfo.assign(context.getInputFile(), context.getLine(), v.getName());
+      outerLoopInfo.assign(context.getInputFile(), context.getLine(), v.name());
     }
     
     // Create body context with loop vars
@@ -448,13 +448,13 @@ class VariableUsageAnalyzer {
     VariableUsageInfo bodyInfo = outerLoopInfo.createNested();
     Context bodyContext = loop.createBodyContext(context);
     
-    Variable v = loop.getLoopVar();
+    Var v = loop.getLoopVar();
     LogHelper.debug(context, "declared loop var " + v.toString());
-    bodyInfo.declare(context.getInputFile(), context.getLine(), v.getName(), 
-       v.getType());
+    bodyInfo.declare(context.getInputFile(), context.getLine(), v.name(), 
+       v.type());
     // we assume that each variable has an initializer and an update, so it
     // will be assigned before each loop iteration
-    bodyInfo.assign(context.getInputFile(), context.getLine(), v.getName());
+    bodyInfo.assign(context.getInputFile(), context.getLine(), v.name());
     
     walkBlock(bodyContext, loop.getBody(), bodyInfo);
     
