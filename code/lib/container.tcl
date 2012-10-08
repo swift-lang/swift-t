@@ -472,6 +472,26 @@ namespace eval turbine {
         set sz [ adlb::enumerate $container count all 0 ]
         store_integer $result $sz
     }
+    
+    # When container is closed, return whether itstrue
+    # result: a turbine integer, 0 if not present, 1 if true
+    proc contains { stack result inputs } {
+        set c [ lindex $inputs 0 ]
+        set i [ lindex $inputs 1 ]
+        rule "contains-$c" "$c $i" $turbine::LOCAL \
+            "contains_body $result $c $i"
+    }
+
+    proc contains_body { result c i } {
+        set i_val [ turbine::retrieve_integer $i ]
+        set res [ container_lookup $c $i_val ]
+        if { $res == 0 } {
+            set exists 0
+        } else {
+            set exists 1
+        }
+        store_integer $result $exists
+    }
 
     # If a reference to a struct is represented as a Turbine string
     # future containing a serialized TCL dict, then lookup a 

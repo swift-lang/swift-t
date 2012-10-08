@@ -69,6 +69,10 @@ sleep_trace (float secs, int|float|string|boolean... args) "turbine" "0.0.2"
 (int res[]) range(int start, int end) "turbine" "0.0.2" "range";
 @pure
 (int res[]) rangestep(int start, int end, int step) "turbine" "0.0.2" "rangestep";
+@pure
+<T> (int n) size(T A[]) "turbine" "0.0.5" "container_size";
+@pure
+<T> (boolean o) contains(T A[], int i) "turbine" "0.0.5" "contains";
 
 // Updateable variables
 (updateable_float o) init_updateable(float i) "turbine" "0.0.2" "init_updateable";
