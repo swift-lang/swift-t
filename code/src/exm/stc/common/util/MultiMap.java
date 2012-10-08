@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -69,6 +70,21 @@ public class MultiMap<K, V> {
       map.put(key, list);
     }
     list.add(val);
+  }
+
+  public void putAll(K key, List<V> vals) {
+    List<V> list = map.get(key);
+    if (list == null) {
+      list = factory.make();
+      map.put(key, list);
+    }
+    list.addAll(vals);
+  }
+  
+  public void putAll(Map<K, V> map) {
+    for (Entry<K, V> e: map.entrySet()) {
+      put(e.getKey(), e.getValue());
+    }
   }
 
   public boolean containsKey(K key) {

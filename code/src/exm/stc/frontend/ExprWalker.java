@@ -12,6 +12,7 @@ import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.descriptor.ArrayElems;
 import exm.stc.ast.descriptor.ArrayRange;
+import exm.stc.ast.descriptor.FunctionCall;
 import exm.stc.ast.descriptor.Literals;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.Settings;
@@ -38,7 +39,6 @@ import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Variable;
 import exm.stc.common.lang.Variable.VariableStorage;
-import exm.stc.common.util.MultiMap;
 import exm.stc.frontend.Context.FnProp;
 
 /**
@@ -403,11 +403,13 @@ public class ExprWalker {
    */
   private void callFunctionExpression(Context context, SwiftAST tree,
       List<Variable> oList, Map<String, String> renames) throws UserException {
-    assert(tree.getChildCount() >= 2 && tree.getChildCount() <= 3);
-    String f = tree.child(0).getText();
+    FunctionCall f = FunctionCall.fromAST(context, tree);
+    FunctionType concrete = TypeChecker.concretiseFunctionCall(context,
+                                f.function(), f.type(), f.args(), oList); 
+    
     try {
       // If this is an assert statement, disable it
-      if (FunctionSemantics.isAssertVariant(f) &&
+      if (FunctionSemantics.isAssertVariant(f.function()) &&
               Settings.getBoolean(Settings.OPT_DISABLE_ASSERTS)) {
         return;
       }
@@ -415,34 +417,18 @@ public class ExprWalker {
       throw new STCRuntimeError("Expected option to be present: " +
                                                           e.toString());
     }
-
-    SwiftAST arglist = tree.child(1);
-    
-    FunctionType ftype = context.lookupFunction(f);
-    if (ftype == null) {
-      throw UndefinedFunctionException.unknownFunction(context, f);
-    }
-    
-    // Keep track of what concrete types type vars are bound to
-    MultiMap<String, SwiftType> typeVars = TypeChecker.typeVarBindings(ftype);
-    
-    if (arglist.getChildCount() > 0 && ftype.getInputs().size() == 0) {
-      throw new TypeMismatchException(context, "Argument provided to " +
-      		"zero-argument function: " + f);
-    }
     
     // evaluate argument expressions left to right, creating temporaries
     ArrayList<Variable> argVars = new ArrayList<Variable>(
-            arglist.getChildCount());
-    int argcount = arglist.getChildCount();
-    for (int i = 0; i < argcount; i++) {
-      SwiftAST argtree = arglist.child(i);
-      SwiftType expType = ftype.getInputs().get(
-            Math.min(i, ftype.getInputs().size() - 1));
+            f.args().size());
+    
+    for (int i = 0; i < f.args().size(); i++) {
+      SwiftAST argtree = f.args().get(i);
+      SwiftType expType = concrete.getInputs().get(i);
 
       SwiftType exprType = TypeChecker.findSingleExprType(context, argtree);
-      SwiftType argtype =
-            TypeChecker.checkFunArg(context, "", i, expType, exprType).val2;
+      SwiftType argtype = TypeChecker.checkFunArg(context, f.function(), i,
+                                                    expType, exprType).val2;
       argVars.add(evalExprToTmp(context, argtree, argtype, false, renames));
     }
     
@@ -471,7 +457,7 @@ public class ExprWalker {
     }
     
     // callFunction will check that argument types match function
-    callFunction(context, f, oList, argVars, priorityVal);
+    callFunction(context, f.function(), concrete, oList, argVars, priorityVal);
     if (openedWait) {
       backend.endWaitStatement(keepOpen);
     }
@@ -769,12 +755,9 @@ public class ExprWalker {
 
 
   private void callFunction(Context context, String function,
+      FunctionType concrete,
       List<Variable> oList, List<Variable> iList, Variable priorityVal)
       throws UndefinedTypeException, UserException {
-
-    List<SwiftType> expectedTypes = TypeChecker.checkFunctionCall(context,
-        function, oList, iList);
-
 
     // The expected types might not be same as current input types, work out
     // what we need to do to make theme the same
@@ -783,11 +766,11 @@ public class ExprWalker {
     ArrayList<Variable> waitVars = new ArrayList<Variable>();
     Context waitContext = null;
 
-    assert(expectedTypes.size() == iList.size());
+    assert(concrete.getInputs().size() == iList.size());
     for (int i = 0; i < iList.size(); i++) {
       Variable input = iList.get(i);
       SwiftType inputType = input.getType();
-      SwiftType expType = expectedTypes.get(i);
+      SwiftType expType = concrete.getInputs().get(i);
       if (inputType.equals(expType)) {
         realIList.add(input);
       } else if (Types.isReferenceTo(inputType, expType)) {

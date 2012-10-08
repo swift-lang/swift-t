@@ -69,6 +69,19 @@ public class Types {
       return memberType.hashCode() ^ ArrayType.class.hashCode();
     }
 
+    @Override
+    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
+      return new ArrayType(memberType.bindTypeVars(vals));
+    }
+
+    @Override
+    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
+      if (concrete instanceof ArrayType) {
+        return memberType.matchTypeVars(((ArrayType)concrete).memberType);
+      }
+      return null;
+    }
+
   }
 
   public enum PrimType
@@ -143,6 +156,20 @@ public class Types {
     @Override
     public int hashCode() {
       return referencedType.hashCode() ^ ReferenceType.class.hashCode();
+    }
+
+    @Override
+    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
+      return new ReferenceType(referencedType.bindTypeVars(vals));
+    }
+
+    @Override
+    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
+      if (concrete instanceof ReferenceType) {
+        SwiftType concreteMember = ((ReferenceType)concrete).referencedType;
+        return referencedType.matchTypeVars(concreteMember);
+      }
+      return null;
     }
   }
 
@@ -258,6 +285,21 @@ public class Types {
     public int hashCode() {
       return StructType.class.hashCode() ^ typeName.hashCode();
     }
+
+    @Override
+    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
+      // Assume no type variables inside struct
+      return this;
+    }
+
+    @Override
+    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
+      if (this.equals(concrete)) {
+        return Collections.emptyMap();
+      } else {
+        return null;
+      }
+    }
   }
 
   public static class ScalarValueType extends SwiftType {
@@ -305,6 +347,20 @@ public class Types {
     @Override
     public int hashCode() {
       return type.hashCode() ^ ScalarValueType.class.hashCode();
+    }
+
+    @Override
+    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
+      return this;
+    }
+
+    @Override
+    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
+      if (this.equals(concrete)) {
+        return Collections.emptyMap();
+      } else {
+        return null;
+      }
     }
   }
 
@@ -357,6 +413,20 @@ public class Types {
     @Override
     public int hashCode() {
       return type.hashCode() ^ ScalarFutureType.class.hashCode();
+    }
+
+    @Override
+    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
+      return this;
+    }
+
+    @Override
+    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
+      if (this.equals(concrete)) {
+        return Collections.emptyMap();
+      } else {
+        return null;
+      }
     }
   }
 
@@ -417,6 +487,20 @@ public class Types {
     @Override
     public int hashCode() {
       return type.hashCode() ^ ScalarUpdateableType.class.hashCode();
+    }
+
+    @Override
+    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
+      return this;
+    }
+
+    @Override
+    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
+      if (this.equals(concrete)) {
+        return Collections.emptyMap();
+      } else {
+        return null;
+      }
     }
   }
   
@@ -552,6 +636,21 @@ public class Types {
       }
       return hash;
     }
+
+    @Override
+    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
+      ArrayList<SwiftType> boundAlts = new ArrayList<SwiftType>(alts.size());
+      for (SwiftType alt: alts) {
+        boundAlts.add(alt.bindTypeVars(vals));
+      }
+      return new UnionType(boundAlts);
+    }
+
+    @Override
+    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
+      throw new STCRuntimeError("Not yet implemented: matching typevars for"
+          + " union types");
+    }
   }
   
   /**
@@ -600,6 +699,21 @@ public class Types {
     @Override
     public int hashCode() {
       return typeVarName.hashCode() ^ TypeVariable.class.hashCode();
+    }
+
+    @Override
+    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
+      SwiftType binding = vals.get(typeVarName);
+      if (binding == null) {
+        return this;
+      } else {
+        return binding;
+      }
+    }
+
+    @Override
+    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
+      return Collections.singletonMap(typeVarName, concrete);
     }
   }
   
@@ -665,6 +779,14 @@ public class Types {
     /** hashcode is required */
     @Override
     public abstract int hashCode();
+
+    public abstract SwiftType bindTypeVars(Map<String, SwiftType> vals);
+    
+    /**
+     * Match up any typevars in this type to vars in a concrete type
+     * and return the type var binding. Returns null if types can't be matched
+     */
+    public abstract Map<String, SwiftType> matchTypeVars(SwiftType concrete);
   }
 
   /**
@@ -775,6 +897,25 @@ public class Types {
       code ^= ((Boolean)varargs).hashCode();
       return code;
     }
+    @Override
+    public SwiftType bindTypeVars(Map<String, SwiftType> vals) {
+      List<SwiftType> boundInputs = new ArrayList<SwiftType>();
+      for (SwiftType input: inputs) {
+        boundInputs.add(input.bindTypeVars(vals));
+      }
+      
+      List<SwiftType> boundOutputs = new ArrayList<SwiftType>();
+      for (SwiftType output: outputs) {
+        boundOutputs.add(output.bindTypeVars(vals));
+      }
+      
+      return new FunctionType(boundInputs, boundOutputs, varargs);
+    }
+    @Override
+    public Map<String, SwiftType> matchTypeVars(SwiftType concrete) {
+      throw new STCRuntimeError("Not yet implemented: matching typevars for"
+          + " function types");
+    }
   }
 
   /**
@@ -804,6 +945,10 @@ public class Types {
 
     public int elems() {
       return types.size();
+    }
+    
+    public String toString() {
+      return types.toString();
     }
   }
   public static Map<String, SwiftType> getBuiltInTypes() {

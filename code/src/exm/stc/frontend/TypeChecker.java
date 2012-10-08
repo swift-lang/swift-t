@@ -12,6 +12,7 @@ import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.descriptor.ArrayElems;
 import exm.stc.ast.descriptor.ArrayRange;
+import exm.stc.ast.descriptor.FunctionCall;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
@@ -79,20 +80,9 @@ public class TypeChecker {
       throws UserException {
     int token = tree.getType();
     switch (token) {
-    case ExMParser.CALL_FUNCTION:
-      String function = tree.child(0).getText();
-      FunctionType ftype = context.lookupFunction(function);
-      if (ftype == null) {
-        throw UndefinedFunctionException.unknownFunction(context, function);
-      }
-      for (SwiftType out: ftype.getOutputs()) {
-        if (Types.isTypeVar(out)) {
-          //TODO
-          throw new STCRuntimeError("Don't support type checking output " +
-          		"typevar for function yet");
-        }
-      }
-      return new ExprType(ftype.getOutputs());
+    case ExMParser.CALL_FUNCTION: {
+      return callFunction(context, tree);
+    }
     case ExMParser.VARIABLE: {
       Variable var = context.getDeclaredVariable(tree.child(0).getText());
       if (var == null) {
@@ -183,7 +173,6 @@ public class TypeChecker {
     }
   }
 
-
   /**
    * Find the type of a particular field
    * @param context
@@ -230,6 +219,35 @@ public class TypeChecker {
     return typeL.get(0);
   }
   
+  private static ExprType callFunction(Context context, SwiftAST tree)
+      throws UndefinedFunctionException, UserException {
+    FunctionCall f = FunctionCall.fromAST(context, tree);
+    List<FunctionType> alts = concretiseFunctionCall(context, 
+              f.function(), f.type(), f.args());
+    if (alts.size() == 1) {
+      // Function type determined entirely by input type
+      return new ExprType(alts.get(0).getOutputs());
+    } else {
+      // Ambiguous type variable binding (based on inputs)
+      assert(alts.size() > 2);
+      int numOutputs = f.type().getOutputs().size(); 
+      if (numOutputs == 0) {
+        return new ExprType(Collections.<SwiftType>emptyList());
+      } else {
+        // Turn into a list of UnionTypes
+        List<SwiftType> altOutputs = new ArrayList<SwiftType>();
+        for (int out = 0; out < numOutputs; out++) {
+          List<SwiftType> altOutput = new ArrayList<SwiftType>();
+          for (FunctionType ft: alts) {
+            altOutputs.add(ft.getOutputs().get(out));
+          }
+          altOutputs.add(UnionType.createUnionType(altOutput));
+        }
+        return new ExprType(altOutputs);
+      }
+    }
+  }
+
   private static String extractOpName(SwiftAST opTree) {
     int tok = opTree.child(0).getType();
     try {
@@ -440,30 +458,6 @@ public class TypeChecker {
     return resultType;
   }
 
-  /**
-   * Check that the variables in vars have the exact types of types. Throw an
-   * exception otherwise
-   *
-   * @param types
-   * @param vars
-   * @throws TypeMismatchException
-   */
-  private static void typeCheckIdentical(Context context, List<SwiftType> types,
-      List<Variable> vars, String errContext) throws TypeMismatchException {
-    if (types.size() != vars.size()) {
-      throw new TypeMismatchException(context, "Number of variables "
-          + vars.size() + " does not match expected number " + types.size()
-          + errContext);
-    }
-    for (int i = 0; i < types.size(); i++) {
-      if (!vars.get(i).getType().equals(types.get(i))) {
-        throw argumentTypeException(context, i, 
-            types.get(i), vars.get(i).getType(), errContext);
-      }
-    }
-
-  }
-
   private static TypeMismatchException argumentTypeException(Context context,
       int argPos, SwiftType expType, SwiftType actType, String errContext) {
     return new TypeMismatchException(context, "Expected argument " +
@@ -472,47 +466,9 @@ public class TypeChecker {
         + errContext);
   }
 
-
-  private static void checkFunctionOutputs(Context context, List<SwiftType> types,
-      List<Variable> outputs, MultiMap<String, SwiftType> typeVarBindings,
-      String errContext) throws TypeMismatchException {
-    // Type system is simple enough that we just check the types match exactly
-    typeCheckIdentical(context, types, outputs, errContext);
-  }
-
-
-  /**
-   * Check input types for the function.  In order to pass, we don't require
-   * that the types exactly match, only that the compiler knows how to
-   * transform them into the types required by funArgSpec
-   * @param context
-   * @param types
-   * @param vars
-   * @param errContext
-   * @return list of which of the alternative will be passed into fn
-   * @throws TypeMismatchException
-   */
-  private static List<SwiftType> typeCheckFunargs(Context context, List<SwiftType> funArgSpec,
-      List<Variable> vars, String errContext) throws TypeMismatchException {
-    if (funArgSpec.size() != vars.size()) {
-      throw new TypeMismatchException(context, "Number of variables "
-          + vars.size() + " does not match expected number " +
-          funArgSpec.size() + errContext);
-    }
-    ArrayList<SwiftType> concreteTypes =
-            new ArrayList<SwiftType>(funArgSpec.size());
-    for (int i = 0; i < funArgSpec.size(); i++) {
-      SwiftType varType= vars.get(i).getType();
-      SwiftType funArgType = funArgSpec.get(i);
-      concreteTypes.add(checkFunArg(context, errContext, i, funArgType,
-                        varType).val1);
-    }
-    return concreteTypes;
-  }
-
-  public static Pair<SwiftType, SwiftType> checkFunArg(Context context, String errContext,
-      int argNum, SwiftType argDeclaredType, SwiftType argExprType)
-      throws TypeMismatchException {
+  public static Pair<SwiftType, SwiftType> checkFunArg(Context context,
+      String function, int argNum, SwiftType argDeclaredType,
+      SwiftType argExprType) throws TypeMismatchException {
     Pair<SwiftType, SwiftType> whichAlt = whichAlternativeType(argDeclaredType, argExprType);
     if (whichAlt == null && Types.isScalarUpdateable(argExprType)) {
       SwiftType futureExprType = new ScalarFutureType(argExprType.getPrimitiveType());
@@ -520,7 +476,7 @@ public class TypeChecker {
     }
     if (whichAlt == null) {
       throw argumentTypeException(context, argNum, argDeclaredType, argExprType, 
-                                                                     errContext);
+                                             " in call to function " + function);
     }
     return whichAlt;
   }
@@ -567,74 +523,170 @@ public class TypeChecker {
       return false;
     }
   }
-
+  
+  public static FunctionType concretiseFunctionCall(Context context,
+      String function, FunctionType abstractType, List<SwiftAST> args,
+      List<Variable> outputs) throws UserException {
+    List<SwiftType> outTs = new ArrayList<SwiftType>(outputs.size());
+    for (Variable output: outputs) {
+      outTs.add(output.getType());
+    }
+    List<FunctionType> alts = concretiseFunctionCall(context, function,
+                                                    abstractType, args);
+    assert(alts.size() > 0);
+    for (FunctionType alt: alts) {
+      assert(alt.getOutputs().size() == outputs.size());
+      boolean match = true;
+      for (int i = 0; i < outTs.size(); i++) {
+        if (!alt.getOutputs().get(i).equals(outTs.get(i))) {
+          match = false;
+          break;
+        }
+      }
+      // Choose first viable alternative
+      if (match) {
+        return alt;
+      }
+    }
+    throw new TypeMismatchException(context, "Could not find consistent " +
+    		" binding for type variables.  Viable function signatures based on " +
+    		" input arguments were: " + alts + " but output types were " + outTs);
+  }
 
   /**
-   * Returns a list of the types the function arguments need
-   * to be transformed into
    * @param context
-   * @param ftype
-   * @param inputs
-   * @param typeVarBindings 
-   * @param errContext
-   * @throws TypeMismatchException
+   * @param abstractType function type with varargs, typevars, union types
+   * @param args input argument expressions
+   * @return list of possible concrete function types with varargs, typevars
+   *          and union type args removed
+   * @throws UserException 
    */
-  private static List<SwiftType> checkFunctionInputs(Context context, FunctionType ftype,
-      List<Variable> inputs, MultiMap<String, SwiftType> typeVarBindings,
-      String errContext) throws TypeMismatchException {
-    List<SwiftType> types = ftype.getInputs();
-    if (!ftype.hasVarargs()) {
-      List<SwiftType> concrete = typeCheckFunargs(context, types, inputs, errContext);
-      return Collections.unmodifiableList(concrete);
+  public static List<FunctionType> concretiseFunctionCall(Context context,
+          String function, FunctionType abstractType,
+          List<SwiftAST> args) throws UserException {
+    List<SwiftType> argTypes = new ArrayList<SwiftType>(args.size());
+    for (SwiftAST arg: args) {
+      argTypes.add(findSingleExprType(context, arg));
+    }
+    
+    // Expand varargs
+    List<SwiftType> expandedInputs = expandVarargs(context, abstractType,
+                              function, args.size());
+    
+    // Narrow down possible bindings - choose union types
+    // find possible typevar bindings
+    List<SwiftType> specificInputs = new ArrayList<SwiftType>(args.size());
+    MultiMap<String, SwiftType> possibleBindings =
+                                new MultiMap<String, SwiftType>(); 
+    for (int i = 0; i < args.size(); i++) {
+      SwiftType expected = expandedInputs.get(i);
+      SwiftType actual = argTypes.get(i);
+      // TODO: change to method capable of matching up typevars to concrete
+      // types
+      Pair<SwiftType, SwiftType> t = 
+            checkFunArg(context, function, i, expected, actual);
+      specificInputs.add(t.val1);
+    }
+    
+    MultiMap<String, SwiftType> binding = unifyTypeVarBindings(context,
+              function, abstractType.getTypeVars(), possibleBindings);
+    
+    List<FunctionType> possibilities = findPossibleFunctionTypes(context,
+        function, abstractType, specificInputs, binding);
+
+    if (possibilities.size() == 0) {
+      throw new TypeMismatchException(context, "Arguments for call to " +
+          "function " + function + " were incompatible with function " +
+          "type.  Function input types were: " + abstractType.getInputs() +
+          ", argument types were " + argTypes);
+    }
+    
+    return possibilities;
+  }
+
+  private static List<FunctionType> findPossibleFunctionTypes(Context context,
+      String function, FunctionType abstractType,
+      List<SwiftType> specificInputs, MultiMap<String, SwiftType> binding)
+      throws TypeMismatchException {
+    List<String> typeVars = abstractType.getTypeVars();
+    
+    int currChoices[] = new int[typeVars.size()]; // initialized to zero
+    
+    List<FunctionType> possibilities = new ArrayList<FunctionType>();
+    while (true) {
+      Map<String, SwiftType> currBinding = new HashMap<String, SwiftType>();
+      for (int i = 0; i < currChoices.length; i++) {
+        String tv = typeVars.get(i);
+        currBinding.put(tv, binding.get(tv).get(currChoices[i]));
+      }
+      
+      possibilities.add(constructFunctionType(abstractType, specificInputs,
+                        currBinding));
+      
+      int pos = currChoices.length - 1;
+      while (pos >= 0 &&
+            currChoices[pos] >= binding.get(typeVars.get(pos)).size() - 1) {
+        pos--;
+      }
+      if (pos < 0) {
+        break;
+      } else {
+        currChoices[pos]++;
+        for (int i = pos + 1; i < currChoices.length; i++) {
+          currChoices[i] = 0;
+        }
+      }
+    }
+    return possibilities;
+  }
+
+  private static FunctionType constructFunctionType(FunctionType abstractType,
+      List<SwiftType> inputs, Map<String, SwiftType> binding) {
+    List<SwiftType> concreteInputs = bindTypeVariables(inputs, binding);
+    List<SwiftType> concreteOutputs = bindTypeVariables(
+                                    abstractType.getOutputs(), binding);
+    return new FunctionType(concreteInputs, concreteOutputs, false);
+  }
+
+  private static List<SwiftType> expandVarargs(Context context, 
+       FunctionType abstractType, String function, int numArgs)
+           throws TypeMismatchException {
+    List<SwiftType> abstractInputs = abstractType.getInputs();
+    if (abstractType.hasVarargs()) {
+      if (numArgs < abstractInputs.size() - 1) {
+        throw new TypeMismatchException(context,  "Too few arguments in "
+            + " call to function " + function + ": expected >= " 
+            + (abstractInputs.size() - 1) + " but got " + numArgs);
+      }
+    } else if (abstractInputs.size() != numArgs) {
+      throw new TypeMismatchException(context,  "Wrong number of arguments in "
+          + " call to function " + function + ": expected " 
+          + abstractInputs.size() + " but got " + numArgs);
+    }
+    
+    if (abstractType.hasVarargs()) {
+      List<SwiftType> expandedInputs;
+      expandedInputs = new ArrayList<SwiftType>();
+      expandedInputs.addAll(abstractInputs.subList(0,
+                            abstractInputs.size() - 1));
+      SwiftType varArgType = abstractInputs.get(abstractInputs.size() - 1);
+      for (int i = abstractInputs.size() - 1; i < numArgs; i++) { 
+        expandedInputs.add(varArgType);
+      }
+      return expandedInputs;
     } else {
-      List<Variable> nonVariadicInputs = new ArrayList<Variable>();
-      List<SwiftType> nonVariadicTypes = new ArrayList<SwiftType>();
-      for (int i = 0; i < types.size() - 1; i++) {
-        nonVariadicTypes.add(types.get(i));
-      }
-      for (int i = 0; i < types.size() - 1 && i < inputs.size(); i++) {
-        nonVariadicInputs.add(inputs.get(i));
-      }
-
-      SwiftType variadicType = types.get(types.size() - 1);
-      List<SwiftType> concreteNonvariadic =
-            typeCheckFunargs(context, nonVariadicTypes, nonVariadicInputs, errContext);
-      List<SwiftType> concreteTypeList =
-                    new ArrayList<SwiftType>(concreteNonvariadic);
-      for (int i = types.size() - 1; i < inputs.size(); i++) {
-        SwiftType argT = inputs.get(i).getType();
-        SwiftType whichAlt = checkFunArg(context, errContext, i, variadicType,
-            argT).val2;
-        concreteTypeList.add(whichAlt);
-      }
-      return Collections.unmodifiableList(concreteTypeList);
+      return abstractInputs;
     }
   }
 
-  /**
-   * Check that a function call is valid
-   * @param context the current context (to look up function type)
-   * @param function the function name
-   * @param oList list of variables function output is going into
-   * @param iList list of variables used as input arguments
-   * @return concrete list of the types expected to be passed into function
-   * @throws TypeMismatchException
-   * @throws UndefinedFunctionException 
-   */
-  public static List<SwiftType> checkFunctionCall(Context context, String function,
-      List<Variable> oList, List<Variable> iList) 
-          throws TypeMismatchException,UndefinedFunctionException {
-    FunctionType ftype = context.lookupFunction(function);
-    if (ftype == null) {
-      throw UndefinedFunctionException.unknownFunction(context, function);
+  private static List<SwiftType> bindTypeVariables(List<SwiftType> types,
+          Map<String, SwiftType> binding) {
+    List<SwiftType> res = new ArrayList<SwiftType>(types.size());
+    for (SwiftType type: types) {
+      res.add(type.bindTypeVars(binding));
     }
-    MultiMap<String, SwiftType> typeVarBindings = typeVarBindings(ftype);
-    checkFunctionOutputs(context, ftype.getOutputs(), oList, typeVarBindings,
-          " in returns for call to function " + function);
-    return checkFunctionInputs(context, ftype, iList, typeVarBindings,
-          " in arguments for " + "call to function " + function);
+    return res;
   }
-
 
   public static void checkCopy(Context context, SwiftType srctype, SwiftType dsttype)
       throws TypeMismatchException {
@@ -683,11 +735,11 @@ public class TypeChecker {
    * @return
    * @throws TypeMismatchException
    */
-  public static Map<String, SwiftType> unifyTypeVarBindings(
+  public static MultiMap<String, SwiftType> unifyTypeVarBindings(
       Context context, String function, List<String> typeVars,
       MultiMap<String, SwiftType> candidates)
       throws TypeMismatchException {
-    HashMap<String, SwiftType> concrete = new HashMap<String, SwiftType>();
+    MultiMap<String, SwiftType> narrowed = new MultiMap<String, SwiftType>();
     /* Check whether type variables were left unbound */
     for (String typeVar: typeVars) {
       List<SwiftType> cands = candidates.get(typeVar);
@@ -702,16 +754,11 @@ public class TypeChecker {
               function + " could not be bound: no consistent type between " +
               " types: " + candidates);
         }
-        SwiftType chosen = intersection.get(0);
-        if (intersection.size() > 1) {
-          LogHelper.warn(context, "Type variable " + typeVar + " for call " +
-              "to function " + function + " had multiple valid bindings: " +
-              intersection + ".  Chose " + chosen);
+        for (SwiftType t: intersection) {
+          narrowed.put(typeVar, t);
         }
-        concrete.put(typeVar, chosen);
       }
     }
-    return concrete;
+    return narrowed;
   }
-
 }

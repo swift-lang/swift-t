@@ -1130,7 +1130,7 @@ public class ASTWalker {
     List<Variable> result = new ArrayList<Variable>(lVals.size());
     Deque<Runnable> afterActions = new LinkedList<Runnable>();
     boolean skipEval = false;
-    
+    // TODO: need to handle ambiguous input types
     for (int i = 0; i < lVals.size(); i++) {
       LValue lval = lVals.get(i);
       SwiftType lValType = lValTypes.get(i);
