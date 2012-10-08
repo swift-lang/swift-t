@@ -73,6 +73,6 @@ public class ArrayElems {
     for (SwiftType alt: possibleTypes) {
       possibleArrayTypes.add(new ArrayType(alt));
     }
-    return new ExprType(UnionType.createUnionType(possibleArrayTypes));
+    return new ExprType(UnionType.makeUnion(possibleArrayTypes));
   }
 }

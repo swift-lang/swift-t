@@ -1,5 +1,4 @@
 #include <builtins.swift>
-// SKIP-THIS-TEST
 // COMPILE-ONLY-TEST 
 
 // Check more deeply nested types

@@ -134,30 +134,23 @@ public class TypeChecker {
       }
 
     case ExMParser.ARRAY_LOAD:
-      ExprType arrTypeL = findExprType(context, tree.child(0));
-      if (arrTypeL.elems() != 1) {
-        throw new TypeMismatchException(context,
-            "Indexing into return value of"
-                + "function with zero or multiple return values");
+      SwiftType arrType = findSingleExprType(context, tree.child(0));
+
+      List<SwiftType> resultAlts = new ArrayList<SwiftType>();
+      for (SwiftType arrAlt: UnionType.getAlternatives(arrType)) {
+        if (Types.isArray(arrAlt) || Types.isArrayRef(arrAlt)) {
+          SwiftType memberType = Types.getArrayMemberType(arrAlt);
+
+          // Depending on the member type of the array, the result type might be
+          // the actual member type, or a reference to the member type
+          resultAlts.add(dereferenceResultType(memberType));
+        } else {
+          throw new TypeMismatchException(context,
+              "Trying to index into non-array expression of type "
+                  + arrType.toString());
+        }
       }
-
-      SwiftType arrType = arrTypeL.get(0);
-      SwiftType memberType;
-
-      if (Types.isArray(arrType) || Types.isArrayRef(arrType)) {
-        memberType = Types.getArrayMemberType(arrType);
-      } else {
-        throw new TypeMismatchException(context,
-            "Trying to index into non-array " + "expression of type "
-                + arrType.toString());
-      }
-
-      // Depending on the member type of the array, the result type might be
-      // the actual member type, or a reference to the member type
-      SwiftType resultType;
-
-      resultType = dereferenceResultType(memberType);
-      return new ExprType(resultType);
+      return new ExprType(UnionType.makeUnion(resultAlts));
     case ExMParser.ARRAY_RANGE: {
       // Check the arguments for type validity
       ArrayRange ar = ArrayRange.fromAST(context, tree);
@@ -249,7 +242,7 @@ public class TypeChecker {
       checkOp(context, opName, opType, argTypes);
       alternatives.add(new ScalarFutureType(opType.out));
     }
-    return new ExprType(UnionType.createUnionType(alternatives));
+    return new ExprType(UnionType.makeUnion(alternatives));
   }
 
   private static void checkOp(Context context, String opName, OpType opType,
@@ -417,7 +410,7 @@ public class TypeChecker {
    *          the type of array memebrs for the array being dereferenced
    * @return
    */
-  private static SwiftType dereferenceResultType(SwiftType memberType) {
+  public static SwiftType dereferenceResultType(SwiftType memberType) {
     SwiftType resultType;
     if (Types.isScalarFuture(memberType)) {
       resultType = memberType;
@@ -503,7 +496,7 @@ public class TypeChecker {
           for (FunctionType ft: alts) {
             altOutput.add(ft.getOutputs().get(out));
           }
-          altOutputs.add(UnionType.createUnionType(altOutput));
+          altOutputs.add(UnionType.makeUnion(altOutput));
         }
         return new ExprType(altOutputs);
       }
@@ -668,24 +661,33 @@ public class TypeChecker {
     // TODO: for now handle a few special cases only
     if (Types.isUnion(formalArgT)) {
       throw new STCRuntimeError("Unions with type var not supported yet");
-    } else if (Types.isTypeVar(formalArgT)) {
-      SwiftType actConv;
-      if (Types.isReference(argExprT)) {
-        actConv = argExprT.getMemberType();
-      } else {
-        actConv = argExprT;
+    } 
+    
+    if (Types.isReference(formalArgT)) {
+      // Will be dereferenced
+      argExprT = argExprT.getMemberType();
+    }
+    if (Types.isUnion(argExprT)) {
+      List<Map<String, SwiftType>> possible = new ArrayList<Map<String,SwiftType>>(); 
+      for (SwiftType alt: UnionType.getAlternatives(argExprT)) {
+        possible.add(formalArgT.matchTypeVars(alt));
       }
-      tvConstraints.put(formalArgT.getTypeVarName(), actConv);
-    } else if ((Types.isArray(formalArgT) || Types.isArray(formalArgT)) &&
-              Types.isTypeVar(Types.getArrayMemberType(formalArgT))) {
-      if (!Types.isArray(argExprT) && !Types.isArrayRef(argExprT)) {
-        throw argumentTypeException(context, arg, formalArgT, argExprT, func);
+      // Sanity check: ensure that all bind the same type variables
+      for (Map<String, SwiftType> m: possible) {
+        assert(m.keySet().equals(possible.get(0).keySet()));
       }
-      tvConstraints.put(Types.getArrayMemberType(formalArgT).getTypeVarName(), 
-                           Types.getArrayMemberType(argExprT));
+      
+      for (String boundVar: possible.get(0).keySet()) {
+        List<SwiftType> choices = new ArrayList<SwiftType>();
+        for (Map<String, SwiftType> m: possible) {
+          SwiftType t = m.get(boundVar);
+          assert(!Types.isUnion(t)); // Shouldn't be union inside union
+          choices.add(t);
+        }
+        tvConstraints.put(boundVar, UnionType.makeUnion(choices));
+      }
     } else {
-      throw new STCRuntimeError("No support yet for argument with" +
-      		" complex type variable: " + formalArgT);
+      tvConstraints.putAll(formalArgT.matchTypeVars(argExprT));
     }
     // Leave type var
     return formalArgT;

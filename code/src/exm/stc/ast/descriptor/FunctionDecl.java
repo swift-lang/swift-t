@@ -146,7 +146,7 @@ public class FunctionDecl {
       varname = v.getName();
       alts.add(v.getType());
     }
-    SwiftType argType = UnionType.createUnionType(alts);
+    SwiftType argType = UnionType.makeUnion(alts);
     argInfo = new ArgDecl(varname, argType, thisVarArgs);
     return argInfo;
   }

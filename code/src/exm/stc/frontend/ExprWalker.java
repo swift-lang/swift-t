@@ -35,6 +35,7 @@ import exm.stc.common.lang.Types.ReferenceType;
 import exm.stc.common.lang.Types.ScalarFutureType;
 import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.SwiftType;
 import exm.stc.common.lang.Variable;
@@ -201,11 +202,7 @@ public class ExprWalker {
       }
     }
   
-    if (tree.getType() == ExMParser.ARRAY_LOAD
-        && immediateArrayLoadPossible(tree)) {
-      // Variable tmp = createTmp(context, type, storeInStack, true);
-      throw new STCRuntimeError("Immediate array load not supported");
-    } else if (tree.getType() == ExMParser.STRUCT_LOAD
+    if (tree.getType() == ExMParser.STRUCT_LOAD
           && Types.isStruct(
                 TypeChecker.findSingleExprType(context, tree.child(0)))) {
       return lookupStructField(context, tree, type, storeInStack, null, 
@@ -464,15 +461,6 @@ public class ExprWalker {
   
   }
   
-
-  private boolean immediateArrayLoadPossible(SwiftAST tree) {
-    assert (tree.getType() == ExMParser.ARRAY_LOAD);
-    // TODO later this would detect if we can immediately look up array value
-    // at this point in the procedure
-    // For the moment, disable this check
-    return false;
-  }
-  
   private void structLoad(Context context, SwiftAST tree, Variable oVar,
       Map<String, String> renames) throws UserException {
     LogHelper.trace(context, "structLoad");
@@ -502,60 +490,27 @@ public class ExprWalker {
     // Work out the type of the array so we know the type of the temp var
     SwiftAST arrayTree = tree.child(0);
     SwiftType arrExprType = TypeChecker.findSingleExprType(context, arrayTree);
+    SwiftType arrType = null;
+    
+    for (SwiftType altType: UnionType.getAlternatives(arrExprType)) {
+      assert(Types.isArray(altType) || Types.isArrayRef(altType));
+      SwiftType lookupRes = TypeChecker.dereferenceResultType(
+                                Types.getArrayMemberType(altType));
+      if (lookupRes.equals(oVar.getType())) {
+        arrType = altType;
+        break;
+      }
+    }
+    if (arrType == null) {
+      throw new STCRuntimeError("No viable array type for lookup up "
+              + arrExprType + " into " + oVar);
+    }
 
     // Evaluate the array
-    Variable arrayVar = evalExprToTmp(context, arrayTree, arrExprType, false,
-                                                                    renames);
+    Variable arrayVar = evalExprToTmp(context, arrayTree, arrType,
+                                      false, renames);
 
-    // At this point arrayVar could either be an array, or a reference to an
-    // array
-
-    // Check that the types make sense for array indexing
-    boolean isRef;
-    SwiftType arrayType = arrayVar.getType();
-    SwiftType memberType;
-    if (Types.isArray(arrayType)) {
-      isRef = false;
-      memberType = arrayType.getMemberType();
-    } else if (Types.isArrayRef(arrayType)) {
-      isRef = true;
-      memberType = arrayType.getMemberType().getMemberType();
-    } else {
-      throw new TypeMismatchException(context,
-          "Cannot index variable that is not array or reference to" + " array");
-    }
-
-    // Check the match between member type and output var type
-    if (Types.isArray(memberType)) {
-      // Output should be *reference* to the member type
-      if (!(Types.isArrayRef(oVar.getType()) && oVar.getType().getMemberType()
-          .equals(memberType))) {
-        SwiftType expType = new Types.ReferenceType(memberType);
-        throw new TypeMismatchException(context, "Need variable of type "
-            + expType.toString() + " for output of array lookup for array "
-            + arrayVar.getName() + " of type " + arrayVar.getType().toString()
-            + " but output variable had type " + oVar.getType().toString());
-      }
-    } else if (Types.isStruct(memberType)) {
-      if (!(Types.isStructRef(oVar.getType()) && oVar.getType().getMemberType()
-          .equals(memberType))) { 
-        SwiftType expType = new Types.ReferenceType(memberType);
-        throw new TypeMismatchException(context, "Need variable of type "
-                + expType.toString() + " for output of array lookup for array "
-                + arrayVar.getName() + " of type " + arrayVar.getType().toString()
-                + " but output variable had type " + oVar.getType().toString());
-      }
-    } else if (Types.isScalarFuture(memberType)) {
-      // Types should match
-      if (!memberType.equals(oVar.getType())) {
-        throw new TypeMismatchException(context,
-            "Cannot assign from element of " + arrayVar.toString() + " to "
-                + oVar.toString());
-      }
-    } else {
-      throw new STCRuntimeError("Don't know how to deal with arrays"
-          + " with member type" + memberType.toString());
-    }
+    SwiftType memberType = Types.getArrayMemberType(arrType);
 
     // Any integer expression can index into array
     SwiftAST arrayIndexTree = tree.child(1);
@@ -575,8 +530,7 @@ public class ExprWalker {
               new ReferenceType(memberType));
       doDereference = true;
     } else {
-      assert(Types.isReference(oVar.getType()));
-      assert(memberType.equals(oVar.getType().getMemberType()));
+      assert(Types.isReferenceTo(oVar.getType(), memberType));
       lookupIntoVar = oVar;
       doDereference = false;
     }
@@ -593,15 +547,13 @@ public class ExprWalker {
             "Invalid non-numeric array index token " + arrayIndexStr);
       }
       backend.arrayLookupRefImm(lookupIntoVar, arrayVar, 
-          Arg.createIntLit(arrayIndex), isRef);
+          Arg.createIntLit(arrayIndex), Types.isArrayRef(arrType));
     } else {
-      // TODO: there may be special cases where we know the index
-      // at composite runtime, so could do an arrayLoadImmediate
-
       // Handle the general case where the index must be computed
       Variable indexVar = evalExprToTmp(context, arrayIndexTree,
           Types.FUTURE_INTEGER, false, renames);
-      backend.arrayLookupFuture(lookupIntoVar, arrayVar, indexVar, isRef);
+      backend.arrayLookupFuture(lookupIntoVar, arrayVar, indexVar,
+                                Types.isArrayRef(arrType));
     }
     // Do the dereference down here so that it is generated in a more logical
     // order

@@ -561,7 +561,7 @@ public class Types {
     /**
      * @return UnionType if multiple types, or plain type if singular
      */
-    public static SwiftType createUnionType(List<SwiftType> alts) {
+    public static SwiftType makeUnion(List<SwiftType> alts) {
       if (alts.size() == 1) {
         return alts.get(0);
       } else {
