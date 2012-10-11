@@ -277,6 +277,14 @@ if [[ ${RPATH} != "" ]]
   FLAGS+="-Dstc.rpath=${RPATH}"
 fi
 
+# Check stc is compiled
+if [[ ! -f ${STC} ]]
+then
+    print "Compiled STC jar not found at path ${STC}."
+    print "Did you forget to compile STC?"
+    return ${EXIT_ERROR_SCRIPT}
+fi
+
 # Find Turbine (for include path)
 if [[ -z ${TURBINE_HOME} ]]
 then
