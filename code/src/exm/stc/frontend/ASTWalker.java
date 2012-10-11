@@ -1609,6 +1609,7 @@ public class ASTWalker {
         inlineTcl.setVarArgIn(inNames.get(inNames.size() - 1));
       }
       inlineTcl.addOutNames(fdecl.getOutNames());
+      inlineTcl.verifyNames(context);
       
       Builtins.addInlineTemplate(function, inlineTcl);
     }

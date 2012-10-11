@@ -7,7 +7,7 @@
 main {
   argv_accept("v", "a", "exec", "help");
 
-  string program = argv(0);
+  string program = argp(0);
   printf("program: %s", program);
 
   int c = argc();
@@ -16,9 +16,9 @@ main {
   string a = argv("a");
   printf("argv a: %s", a);
 
-  string s1 = argv(1);
+  string s1 = argp(1);
   printf("argv 1: %s", s1);
-  string s2 = argv(2);
+  string s2 = argp(2);
   printf("argv 2: %s", s2);
 
   string e = argv("exec");

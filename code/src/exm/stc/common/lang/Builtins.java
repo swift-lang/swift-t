@@ -8,9 +8,13 @@ import java.util.HashSet;
 import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.UndefinedVariableException;
+import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Builtins.TemplateElem.ElemKind;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.MultiMap.ListFactory;
+import exm.stc.frontend.Context;
 
 /**
  * Static class to track info about semantics of built-in functions.
@@ -257,6 +261,27 @@ public class Builtins {
 
     public String toString() {
       return elems.toString();
+    }
+
+    /**
+     * Check all variables reference in template are in names or out names
+     * @throws UserException 
+     */
+    public void verifyNames(Context context) throws UserException {
+      List<String> badNames = new ArrayList<String>();
+      for (TemplateElem elem: elems) {
+        if (elem.getKind() == ElemKind.VARIABLE) {
+          String varName = elem.getVarName();
+          if (!outNames.contains(varName) && 
+              !inNames.contains(varName)) {
+            badNames.add(varName);
+          }
+        }
+      }
+      if (badNames.size() > 0) {
+        throw new UndefinedVariableException(context, "Variables " + badNames +
+            " undefined in TCL template");
+      }
     }
   }
 }
