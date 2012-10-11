@@ -28,6 +28,7 @@ import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICInstructions.Builtin;
 import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICInstructions.LoopContinue;
+import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.GenInfo;
@@ -333,7 +334,6 @@ public class ICContinuations {
     private boolean arrayClosed;
     private Var loopCounterVar;
     private Var loopVar;
-    private final boolean isSync;
     public Var getArrayVar() {
       return arrayVar;
     }
@@ -341,30 +341,29 @@ public class ICContinuations {
     private final int splitDegree;
 
     private ForeachLoop(Block block, Var arrayVar, Var loopVar,
-        Var loopCounterVar, boolean isSync, int splitDegree,
+        Var loopCounterVar, int splitDegree,
         boolean arrayClosed,
         List<Var> usedVariables, List<Var> keepOpenVars) {
       super(block, usedVariables, keepOpenVars);
       this.arrayVar = arrayVar;
       this.loopVar = loopVar;
       this.loopCounterVar = loopCounterVar;
-      this.isSync = isSync;
       this.arrayClosed = arrayClosed;
       this.splitDegree = splitDegree;
     }
 
     public ForeachLoop(Var arrayVar, Var loopVar,
-        Var loopCounterVar, boolean isSync, int splitDegree,
+        Var loopCounterVar, int splitDegree,
         boolean arrayClosed, List<Var> usedVariables,
         List<Var> keepOpenVars) {
       this(new Block(BlockType.FOREACH_BODY), arrayVar, loopVar, loopCounterVar,
-          isSync, splitDegree, arrayClosed, usedVariables, keepOpenVars);
+          splitDegree, arrayClosed, usedVariables, keepOpenVars);
     }
 
     @Override
     public ForeachLoop clone() {
       return new ForeachLoop(this.loopBody.clone(),
-          arrayVar, loopVar, loopCounterVar, isSync, splitDegree, arrayClosed,
+          arrayVar, loopVar, loopCounterVar, splitDegree, arrayClosed,
           new ArrayList<Var>(usedVariables),
           new ArrayList<Var>(keepOpenVars));
     }
@@ -376,24 +375,21 @@ public class ICContinuations {
 
     @Override
     public boolean isAsync() { 
-      return !this.isSync;
+      return !arrayClosed || splitDegree > 0;
     }
 
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
-      gen.startForeachLoop(arrayVar, loopVar, loopCounterVar, isSync,
+      gen.startForeachLoop(arrayVar, loopVar, loopCounterVar,
                 splitDegree, arrayClosed, usedVariables, keepOpenVars);
       this.loopBody.generate(logger, gen, info);
-      gen.endForeachLoop(isSync, splitDegree, arrayClosed,
+      gen.endForeachLoop(splitDegree, arrayClosed,
                                           keepOpenVars);
     }
 
     @Override
     public void prettyPrint(StringBuilder sb, String currentIndent) {
-      if (isSync) {
-        sb.append(currentIndent + "@sync\n");
-      }
       if (arrayClosed) {
         sb.append(currentIndent + "@skiparrayblock\n");
       }
@@ -493,7 +489,6 @@ public class ICContinuations {
       // annotation parameters should match to respect any
       // user settings
       return this.arrayVar.name().equals(o.arrayVar.name())
-          && this.isSync == o.isSync
           && this.splitDegree == o.splitDegree;
     }
 
@@ -1030,48 +1025,45 @@ public class ICContinuations {
     // arguments can be either value variable or integer literal
     private final String loopName;
     private Var loopVar;
+    private Var countVar;
     private Arg start;
     private Arg end;
     private Arg increment;
-    private final boolean isSync;
     private int desiredUnroll;
     private final int splitDegree;
 
-    public RangeLoop(String loopName, Var loopVar,
+    public RangeLoop(String loopName, Var loopVar, Var countVar,
         Arg start, Arg end, Arg increment,
-        boolean isSync,
         List<Var> usedVariables, List<Var> keepOpenVars,
         int desiredUnroll, int splitDegree) {
-      this(loopName, new Block(BlockType.RANGELOOP_BODY), loopVar,
-          start, end, increment, isSync, usedVariables, keepOpenVars,
+      this(loopName, new Block(BlockType.RANGELOOP_BODY), loopVar, countVar,
+          start, end, increment, usedVariables, keepOpenVars,
           desiredUnroll, splitDegree);
     }
 
-    private RangeLoop(String loopName, Block block, Var loopVar,
+    private RangeLoop(String loopName, Block block, Var loopVar, Var countVar,
         Arg start, Arg end, Arg increment,
-        boolean isSync,
         List<Var> usedVariables, List<Var> keepOpenVars,
         int desiredUnroll, int splitDegree) {
-      super(block,
-            usedVariables, keepOpenVars);
+      super(block, usedVariables, keepOpenVars);
       assert(start.isImmediateInt());
       assert(end.isImmediateInt());
       assert(increment.isImmediateInt());
       assert(loopVar.type().equals(Types.V_INT));
       this.loopName = loopName;
       this.loopVar = loopVar;
+      this.countVar = countVar;
       this.start = start;
       this.end = end;
       this.increment = increment;
-      this.isSync = isSync;
       this.desiredUnroll = desiredUnroll;
       this.splitDegree = splitDegree;
     }
 
     @Override
     public RangeLoop clone() {
-      return new RangeLoop(loopName, this.loopBody.clone(), loopVar,
-          start.clone(), end.clone(), increment.clone(), isSync,
+      return new RangeLoop(loopName, this.loopBody.clone(), loopVar, countVar,
+          start.clone(), end.clone(), increment.clone(),
           new ArrayList<Var>(usedVariables),
           new ArrayList<Var>(keepOpenVars), desiredUnroll,
           splitDegree);
@@ -1084,26 +1076,25 @@ public class ICContinuations {
 
     @Override
     public boolean isAsync() {
-      return !this.isSync;
+      return splitDegree > 0;
     }
 
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
-      gen.startRangeLoop(loopName, loopVar, start, end, increment,
-                         isSync,
+      gen.startRangeLoop(loopName, loopVar, countVar, start, end, increment,
                          usedVariables, keepOpenVars,
                          desiredUnroll, splitDegree);
       this.loopBody.generate(logger, gen, info);
-      gen.endRangeLoop(isSync, keepOpenVars, splitDegree);
+      gen.endRangeLoop(keepOpenVars, splitDegree);
     }
 
     @Override
     public void prettyPrint(StringBuilder sb, String currentIndent) {
-      if (isSync) {
-        sb.append(currentIndent + "@sync\n");
-      }
       sb.append(currentIndent +   "for " + loopVar.name());
+      if (countVar != null) {
+        sb.append(", " + countVar.name());
+      }
 
       sb.append(" = " + start.toString() + " to " + end.toString() + " ");
 
@@ -1121,6 +1112,9 @@ public class ICContinuations {
       this.replaceVarsInBlocks(renames, false);
       if (renames.containsKey(loopVar.name())) {
         loopVar = renames.get(loopVar.name()).getVar();
+      }
+      if (renames.containsKey(countVar.name())) {
+        countVar = renames.get(countVar.name()).getVar();
       }
       start = renameRangeArg(start, renames);
       end = renameRangeArg(end, renames);
@@ -1203,6 +1197,11 @@ public class ICContinuations {
       this.loopBody.declareVariable(loopVar);
       this.loopBody.addInstructionFront(
           Builtin.createLocal(BuiltinOpcode.COPY_INT, this.loopVar, start));
+      if (countVar != null) {
+        this.loopBody.declareVariable(countVar);
+        this.loopBody.addInstructionFront(
+            TurbineOp.assignInt(countVar, Arg.createIntLit(0)));
+      }
       block.insertInline(loopBody);
       block.removeContinuation(this);
     }
@@ -1247,7 +1246,11 @@ public class ICContinuations {
 
     @Override
     public List<Var> constructDefinedVars() {
-      return Arrays.asList(loopVar);
+      if (countVar != null) {
+        return Arrays.asList(loopVar, countVar);
+      } else {
+        return Arrays.asList(loopVar);
+      }
     }
 
     @Override
@@ -1259,6 +1262,11 @@ public class ICContinuations {
     public boolean tryUnroll(Logger logger, Block outerBlock) {
       logger.trace("DesiredUnroll for " + loopName + ": " + desiredUnroll);
       if (this.desiredUnroll > 1) {
+        if (this.countVar != null) {
+          logger.warn("Can't unroll range loop with counter variable yet," +
+                      " ignoring unroll annotation");
+          return false;
+        }
         logger.debug("Unrolling range loop " + desiredUnroll + " times ");
         Arg oldStep = this.increment;
 
@@ -1365,8 +1373,7 @@ public class ICContinuations {
           && this.increment.equals(o.increment)
           && this.end.equals(o.end)
           && this.desiredUnroll == o.desiredUnroll
-          && this.splitDegree == o.splitDegree
-          && this.isSync == o.isSync;
+          && this.splitDegree == o.splitDegree;
     }
     
     /**
@@ -1375,8 +1382,9 @@ public class ICContinuations {
     public void fuseInto(RangeLoop o, boolean insertAtTop) {
       Map<String, Arg> renames = new HashMap<String, Arg>();
       // Update loop var in other loop
-      renames.put(o.loopVar.name(),
-                  Arg.createVar(this.loopVar));
+      renames.put(o.loopVar.name(), Arg.createVar(this.loopVar));
+      if (countVar != null)
+        renames.put(o.countVar.name(), Arg.createVar(this.countVar));
       o.replaceVars(renames);
      
       this.fuseIntoAbstract(o, insertAtTop);
@@ -1611,6 +1619,9 @@ public class ICContinuations {
         ArrayList<Var> waitVars, ArrayList<Var> usedVariables,
         ArrayList<Var> keepOpenVars, WaitMode mode, TaskMode target) {
       super();
+      assert(waitVars != null);
+      assert(usedVariables != null);
+      assert(keepOpenVars != null);
       this.procName = procName;
       this.block = block;
       this.waitVars = waitVars;

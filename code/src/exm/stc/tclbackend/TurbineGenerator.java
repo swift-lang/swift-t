@@ -1408,13 +1408,14 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void startForeachLoop(Var arrayVar, Var memberVar,
-                    Var loopCountVar, boolean isSync, int splitDegree,
-                    boolean arrayClosed,
-          List<Var> usedVariables, List<Var> keepOpenVars) {
+          Var loopCountVar, int splitDegree,
+          boolean arrayClosed, List<Var> usedVariables, List<Var> keepOpenVars) {
     assert(Types.isArray(arrayVar.type()));
     assert(loopCountVar == null ||
               loopCountVar.type().equals(Types.V_INT));
-
+    if (!arrayClosed) {
+      throw new STCRuntimeError("Loops over open containers not yet supported");
+    }
     int foreach_num = foreach_counter++;
     String procName = "foreach:" + foreach_num;
 
@@ -1461,13 +1462,12 @@ public class TurbineGenerator implements CompilerBackend
 
     }
     startForeachInner(new Value(contentsVar), memberVar, loopCountVar,
-        isSync, usedVariables, keepOpenVars, foreach_num);
+        usedVariables, keepOpenVars, foreach_num);
   }
 
   private void startForeachInner(Value arrayContents,
       Var memberVar, Var loopCountVar,
-      boolean isSync, List<Var> usedVariables,
-      List<Var> keepOpenVars, int foreach_num) {
+      List<Var> usedVariables, List<Var> keepOpenVars, int foreach_num) {
     Sequence curr = pointStack.peek();
     boolean haveKeys = loopCountVar != null;
     Sequence loopBody = new Sequence();
@@ -1485,44 +1485,32 @@ public class TurbineGenerator implements CompilerBackend
     }
     curr.add(tclLoop);
     pointStack.push(loopBody);
-
-    if (!isSync) {
-      // pass in the array member and loop count var along with other used vars
-      ArrayList<Var> loopUsedVars = new ArrayList<Var>(usedVariables);
-      loopUsedVars.add(memberVar);
-      if (loopCountVar != null) loopUsedVars.add(loopCountVar);
-      startAsync("foreach:" + foreach_num + ":body",
-          new ArrayList<Var>(), loopUsedVars, keepOpenVars,
-          TaskMode.CONTROL);
-    }
   }
 
 
   @Override
-  public void endForeachLoop(boolean isSync, int splitDegree,
-          boolean arrayClosed, List<Var> keepOpenVars) {
+  public void endForeachLoop(int splitDegree, boolean arrayClosed,
+                             List<Var> keepOpenVars) {
     assert(pointStack.size() >= 2);
-    if (!isSync) {
-      assert(pointStack.size() >= 3);
-      endAsync(keepOpenVars); // Swift loop body
-    }
     pointStack.pop(); // tclloop body
     if (splitDegree > 0) {
       endRangeSplit();
     }
-    if (!arrayClosed) {
-      endAsync(keepOpenVars); // outer wait for container
-    }
   }
 
   @Override
-  public void startRangeLoop(String loopName, Var loopVar, Arg start,
-      Arg end, Arg increment, boolean isSync, List<Var> usedVariables,
+  public void startRangeLoop(String loopName, Var loopVar, Var countVar,
+      Arg start, Arg end, Arg increment, List<Var> usedVariables,
       List<Var> keepOpenVars, int desiredUnroll, int splitDegree) {
     assert(start.isImmediateInt());
     assert(end.isImmediateInt());
     assert(increment.isImmediateInt());
     assert(loopVar.type().equals(Types.V_INT));
+    if (countVar != null) { 
+      throw new STCRuntimeError("Backend doesn't support counter var in range " +
+      		                      "loop yet");
+      
+    }
     Expression startE = opargToExpr(start);
     Expression endE = opargToExpr(end);
     Expression incrE = opargToExpr(increment);
@@ -1530,24 +1518,19 @@ public class TurbineGenerator implements CompilerBackend
     if (splitDegree > 0) {
       startRangeSplit(loopName, usedVariables,
               keepOpenVars, splitDegree, startE, endE, incrE);
-      startRangeLoopInner(loopName, loopVar, isSync, usedVariables,
+      startRangeLoopInner(loopName, loopVar, usedVariables,
               keepOpenVars, TCLTMP_RANGE_LO_V, TCLTMP_RANGE_HI_V,
                                                       TCLTMP_RANGE_INC_V);
     } else {
-      startRangeLoopInner(loopName, loopVar, isSync, usedVariables,
+      startRangeLoopInner(loopName, loopVar, usedVariables,
               keepOpenVars, startE, endE, incrE);
     }
   }
 
   @Override
-  public void endRangeLoop(boolean isSync,
-                        List<Var> keepOpenVars,
+  public void endRangeLoop(List<Var> keepOpenVars,
                         int splitDegree) {
     assert(pointStack.size() >= 2);
-    if (!isSync) {
-      assert(pointStack.size() >= 3);
-      endAsync(keepOpenVars); // Swift loop body
-    }
     pointStack.pop(); // for loop body
 
     if (splitDegree > 0) {
@@ -1556,23 +1539,16 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   private void startRangeLoopInner(String loopName, Var loopVar,
-          boolean isSync, List<Var> usedVariables,
-          List<Var> keepOpenVars, Expression startE,
-          Expression endE, Expression incrE) {
+          List<Var> usedVariables, List<Var> keepOpenVars,
+          Expression startE, Expression endE, Expression incrE) {
     Sequence loopBody = new Sequence();
     String loopVarName = prefixVar(loopVar.name());
     ForLoop tclLoop = new ForLoop(loopVarName, startE, endE, incrE, loopBody);
     pointStack.peek().add(tclLoop);
     pointStack.push(loopBody);
 
-
     ArrayList<Var> loopUsedVars = new ArrayList<Var>(usedVariables);
     loopUsedVars.add(loopVar);
-    if (!isSync) {
-      startAsync(loopName + ":body",
-          new ArrayList<Var>(), loopUsedVars, keepOpenVars,
-          TaskMode.CONTROL);
-    }
   }
 
   /**

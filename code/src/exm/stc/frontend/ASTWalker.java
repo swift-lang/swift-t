@@ -601,8 +601,7 @@ public class ASTWalker {
   private void foreach(Context context, SwiftAST tree) throws UserException {
     ForeachLoop loop = ForeachLoop.fromAST(context, tree); 
     
-    if (loop.iteratesOverRange() && loop.getCountVarName() == null) {
-      //TODO: don't bother about optimizing cases with loop counter yet
+    if (loop.iteratesOverRange() && loop.getCountVarName() != null) {
       foreachRange(context, loop);
     } else {
       foreachArray(context, loop);
@@ -661,19 +660,30 @@ public class ASTWalker {
     // The per-iteration value of the range
     Var memberVal = varCreator.createValueOfVar(bodyContext,
                                             loop.getMemberVar(), false);
-    backend.startRangeLoop("range" + loopNum, memberVal, 
+    Var counterVal = loop.getLoopCountVal();
+    
+    backend.startRangeLoop("range" + loopNum, memberVal, counterVal,
             Arg.createVar(startVal), Arg.createVar(endVal), 
-            Arg.createVar(stepVal), loop.isSyncLoop(),
-            usedVariables, keepOpenVars, loop.getDesiredUnroll(),
-            loop.getSplitDegree());
+            Arg.createVar(stepVal), usedVariables, keepOpenVars,
+            loop.getDesiredUnroll(), loop.getSplitDegree());
+    // Need to spawn off task per iteration
+    if (!loop.isSyncLoop()) {
+      List<Var> waitUsedVars = new ArrayList<Var>(usedVariables);
+      waitUsedVars.add(memberVal);
+      backend.startWaitStatement("range-iter" + loopNum,
+          Collections.<Var>emptyList(), waitUsedVars, keepOpenVars,
+          WaitMode.TASK_DISPATCH, TaskMode.CONTROL);
+    }
     
     // We have the current value, but need to put it in a future in case user
     //  code refers to it
     varCreator.initialiseVariable(bodyContext, loop.getMemberVar());
     backend.assignInt(loop.getMemberVar(), Arg.createVar(memberVal));
     block(bodyContext, loop.getBody());
-    backend.endRangeLoop(loop.isSyncLoop(), keepOpenVars,
-                                                  loop.getSplitDegree());
+    if (!loop.isSyncLoop()) {
+      backend.endWaitStatement(keepOpenVars);
+    }
+    backend.endRangeLoop(keepOpenVars, loop.getSplitDegree());
     backend.endWaitStatement(keepOpenVars);
   }
   
@@ -705,16 +715,15 @@ public class ASTWalker {
     }
     
     // Need to get handle to real array before running loop
+    FunctionContext fc = context.getFunctionContext();
+    
     Var realArray;
     Context outsideLoopContext;
     if (Types.isArrayRef(arrayVar.type())) {
-      // If its a reference, wrap a wait() around the loop call
-      FunctionContext fc = context.getFunctionContext();
-      ArrayList<Var> waitUsedVars =
-            new ArrayList<Var>(usedVariables);
+      ArrayList<Var> waitUsedVars = new ArrayList<Var>(usedVariables);
       waitUsedVars.add(arrayVar);
-
-      backend.startWaitStatement(fc.constructName("foreach_wait"),
+      // If its a reference, wrap a wait() around the loop call
+      backend.startWaitStatement(fc.constructName("foreach_ref_wait"),
           Arrays.asList(arrayVar), waitUsedVars, keepOpenVars,
           WaitMode.DATA_ONLY, TaskMode.LOCAL);
 
@@ -726,16 +735,28 @@ public class ASTWalker {
       realArray = arrayVar;
       outsideLoopContext = context;
     }
+    
+    // Block on array
+    ArrayList<Var> waitUsedVars = new ArrayList<Var>(usedVariables);
+    waitUsedVars.add(realArray);
+    backend.startWaitStatement(fc.constructName("foreach_arr_wait"),
+        Arrays.asList(realArray), waitUsedVars, keepOpenVars,
+        WaitMode.DATA_ONLY, TaskMode.LOCAL);
+    
     loop.setupLoopBodyContext(outsideLoopContext);
     Context loopBodyContext = loop.getBodyContext();
 
-    if (loop.getDesiredUnroll() != 1) {
-      throw new STCRuntimeError("Loop unrolling not"
-          + " yet supported for loops over arrays");
-    }
     backend.startForeachLoop(realArray, loop.getMemberVar(), loop.getLoopCountVal(),
-        loop.isSyncLoop(), loop.getSplitDegree(), false, 
-        usedVariables, keepOpenVars);
+        loop.getSplitDegree(), true, usedVariables, keepOpenVars);
+    // May need to spawn off each iteration as task - use wait for this
+    if (!loop.isSyncLoop()) {
+      ArrayList<Var> iterUsedVars = new ArrayList<Var>(usedVariables);
+      if (loop.getLoopCountVal() != null)
+        iterUsedVars.add(loop.getLoopCountVal());
+      backend.startWaitStatement(fc.constructName("foreach_iter"),
+          Collections.<Var>emptyList(), iterUsedVars, keepOpenVars,
+          WaitMode.TASK_DISPATCH, TaskMode.CONTROL);
+    }
     // If the user's code expects a loop count var, need to create it here
     if (loop.getCountVarName() != null) {
       Var loopCountVar = varCreator.createVariable(loop.getBodyContext(),
@@ -744,10 +765,17 @@ public class ASTWalker {
       backend.assignInt(loopCountVar, Arg.createVar(loop.getLoopCountVal()));
     }
     block(loopBodyContext, loop.getBody());
-    backend.endForeachLoop(loop.isSyncLoop(), loop.getSplitDegree(), false, 
-                                                    keepOpenVars);
+    
+    // Close spawn wait
+    if (!loop.isSyncLoop()) {
+      backend.endWaitStatement(keepOpenVars);
+    }
+    backend.endForeachLoop(loop.getSplitDegree(), true, keepOpenVars);
 
+    // Wait for array
+    backend.endWaitStatement(keepOpenVars);
     if (Types.isArrayRef(arrayVar.type())) {
+      // Wait for array ref
       backend.endWaitStatement(keepOpenVars);
     }
   }

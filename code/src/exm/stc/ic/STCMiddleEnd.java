@@ -259,10 +259,9 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void startForeachLoop(Var arrayVar, Var memberVar,
-                  Var loopCountVar, boolean isSync, 
+  public void startForeachLoop(Var arrayVar, Var memberVar, Var loopCountVar, 
                   int splitDegree, boolean arrayClosed,
-         List<Var> usedVariables, List<Var> keepOpenVars) {
+                  List<Var> usedVariables, List<Var> keepOpenVars) {
     if(!Types.isArray(arrayVar.type())) {
       throw new STCRuntimeError("foreach loop over non-array: " + 
                 arrayVar.toString()); 
@@ -271,34 +270,34 @@ public class STCMiddleEnd implements CompilerBackend {
     assert(loopCountVar == null || 
               loopCountVar.type().equals(Types.V_INT));
     ForeachLoop loop = new ForeachLoop(arrayVar, memberVar, 
-                loopCountVar, isSync, splitDegree, arrayClosed, usedVariables, 
+                loopCountVar, splitDegree, arrayClosed, usedVariables, 
                 keepOpenVars);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
   }
 
   @Override
-  public void endForeachLoop(boolean isSync, int splitDegree, 
+  public void endForeachLoop(int splitDegree, 
             boolean arrayClosed, List<Var> keepOpenVars) {
     assert(blockStack.peek().getType() == BlockType.FOREACH_BODY);
     blockStack.pop();
   }
 
   @Override
-  public void startRangeLoop(String loopName, Var loopVar,
-      Arg start, Arg end, Arg increment, boolean isSync,
+  public void startRangeLoop(String loopName, Var loopVar, Var countVar,
+      Arg start, Arg end, Arg increment,
       List<Var> usedVariables, List<Var> keepOpenVars,
       int desiredUnroll, int splitDegree) {
-    RangeLoop loop = new RangeLoop(loopName, loopVar, start, end, increment,
-                                isSync, usedVariables, keepOpenVars,
+    RangeLoop loop = new RangeLoop(loopName, loopVar, countVar,
+                                start, end, increment,
+                                usedVariables, keepOpenVars,
                                 desiredUnroll, splitDegree);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
   }
 
   @Override
-  public void endRangeLoop(boolean isSync, 
-                          List<Var> keepOpenVars,
+  public void endRangeLoop(List<Var> keepOpenVars,
                           int splitDegree) {
     assert(currBlock().getType() == BlockType.RANGELOOP_BODY);
     blockStack.pop();

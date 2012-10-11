@@ -895,11 +895,17 @@ public class ExprWalker {
     Var ix = copyContext.createLocalValueVariable(Types.V_INT);
     
     List<Var> keepOpen = Arrays.asList(dst);
-    backend.startForeachLoop(src, member, ix, true, -1, false, 
-        Arrays.asList(src, dst), keepOpen);
+    List<Var> usedVars = Arrays.asList(src, dst);
+    backend.startWaitStatement(
+        context.getFunctionContext().constructName("arrcopy"),
+        Arrays.asList(src), usedVars, keepOpen,
+        WaitMode.DATA_ONLY, TaskMode.LOCAL);
+    backend.startForeachLoop(src, member, ix, -1, true,
+                             usedVars, keepOpen);
     backend.arrayInsertImm(member, dst, Arg.createVar(ix));
-    backend.endForeachLoop(true, -1, false, keepOpen);
+    backend.endForeachLoop(-1, true, keepOpen);
     backend.closeArray(dst);
+    backend.endWaitStatement(keepOpen);
   }
 
 

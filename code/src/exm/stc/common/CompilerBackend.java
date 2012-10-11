@@ -228,18 +228,16 @@ public interface CompilerBackend {
    * @param arrayVar
    * @param memberVar
    * @param loopCountVar counter variable, can be null
-   * @param isSync if true, don't spawn off tasks to run iterations asynchronously
    * @param splitDegree
    * @param arrayClosed if true, assume array is already closed
    * @param usedVariables
    * @param keepOpenVars
    */
   public abstract void startForeachLoop(Var arrayVar,
-      Var memberVar, Var loopCountVar, boolean isSync,
-      int splitDegree, boolean arrayClosed,
-      List<Var> usedVariables, List<Var> keepOpenVars);
+      Var memberVar, Var loopCountVar, int splitDegree,
+      boolean arrayClosed, List<Var> usedVariables, List<Var> keepOpenVars);
 
-  public abstract void endForeachLoop(boolean isSync, int splitDegree, 
+  public abstract void endForeachLoop(int splitDegree, 
             boolean arrayClosed, List<Var> keepOpenVars);
 
   
@@ -250,26 +248,24 @@ public interface CompilerBackend {
    *   The loop construct should run immediately, but have the loop iterations
    *   run in parallel
    * @param loopName unique name for loop
-   * @param loopVar variable (integer value) used to store iteration number 
+   * @param loopVar variable (integer value) used to store iteration parameter
+   * @param countVar variable (integer value) used to store iteration number starting
+   *                from 0 (optional) 
    * @param start start (inclusive) of the loop: should be int or int value var
    * @param end end (inclusive) of the loop: should be int or int value var
    * @param increment increment of the loop: should be int or int value var
-   * @param isSync if true, don't spawn a task per iteration: run loop   
-   *            body synchronously
    * @param usedVariables variables used in loop body
    * @param keepOpenVars vars to keep open for assignment in loop body
    * @param desiredUnroll the suggested unrolling factor
    * @param splitDegree the desired loop split factor (negative if no splitting)
    */
-  public abstract void startRangeLoop(String loopName, Var loopVar, 
-      Arg start, Arg end, Arg increment, 
-      boolean isSync, List<Var> usedVariables, 
+  public abstract void startRangeLoop(String loopName, Var loopVar,
+      Var countVar, Arg start, Arg end, Arg increment, List<Var> usedVariables, 
       List<Var> keepOpenVars, int desiredUnroll, int splitDegree);
-  public abstract void endRangeLoop(boolean isSync, 
-                                    List<Var> keepOpenVars,
+  public abstract void endRangeLoop(List<Var> keepOpenVars,
                                     int splitDegree);
   /**
-   * Add a global variable (currently constant literals are supported)  
+   * Add a global variable (currently constant literals are supported)
    * @param name
    * @param val
    */

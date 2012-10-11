@@ -1608,7 +1608,7 @@ public class SwigcGenerator implements CompilerBackend
 
   @Override
   public void startForeachLoop(Var arrayVar, Var memberVar,
-                    Var loopCountVar, boolean isSync, int splitDegree,
+                    Var loopCountVar, int splitDegree,
                     boolean arrayClosed,
           List<Var> usedVariables, List<Var> keepOpenVars) {
     assert(Types.isArray(arrayVar.type()));
@@ -1661,7 +1661,7 @@ public class SwigcGenerator implements CompilerBackend
 
     }
     startForeachInner(new Value(contentsVar), memberVar, loopCountVar,
-        isSync, usedVariables, keepOpenVars, foreach_num);
+        true, usedVariables, keepOpenVars, foreach_num);
   }
 
   private void startForeachInner(Value arrayContents,
@@ -1699,13 +1699,9 @@ public class SwigcGenerator implements CompilerBackend
 
 
   @Override
-  public void endForeachLoop(boolean isSync, int splitDegree,
+  public void endForeachLoop(int splitDegree,
           boolean arrayClosed, List<Var> keepOpenVars) {
     assert(pointStack.size() >= 2);
-    if (!isSync) {
-      assert(pointStack.size() >= 3);
-      endAsync(keepOpenVars); // Swift loop body
-    }
     pointStack.pop(); // tclloop body
     if (splitDegree > 0) {
       endRangeSplit();
@@ -1716,8 +1712,8 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void startRangeLoop(String loopName, Var loopVar, Arg start,
-      Arg end, Arg increment, boolean isSync, List<Var> usedVariables,
+  public void startRangeLoop(String loopName, Var loopVar, Var countVar,
+      Arg start, Arg end, Arg increment, List<Var> usedVariables,
       List<Var> keepOpenVars, int desiredUnroll, int splitDegree) {
     assert(start.isIntVal() ||
         (start.isVar() &&
@@ -1736,24 +1732,19 @@ public class SwigcGenerator implements CompilerBackend
     if (splitDegree > 0) {
       startRangeSplit(loopName, usedVariables,
               keepOpenVars, splitDegree, startE, endE, incrE);
-      startRangeLoopInner(loopName, loopVar, isSync, usedVariables,
+      startRangeLoopInner(loopName, loopVar, true, usedVariables,
               keepOpenVars, TCLTMP_RANGE_LO_V, TCLTMP_RANGE_HI_V,
                                                       TCLTMP_RANGE_INC_V);
     } else {
-      startRangeLoopInner(loopName, loopVar, isSync, usedVariables,
+      startRangeLoopInner(loopName, loopVar, true, usedVariables,
               keepOpenVars, startE, endE, incrE);
     }
   }
 
   @Override
-  public void endRangeLoop(boolean isSync,
-                        List<Var> keepOpenVars,
+  public void endRangeLoop(List<Var> keepOpenVars,
                         int splitDegree) {
     assert(pointStack.size() >= 2);
-    if (!isSync) {
-      assert(pointStack.size() >= 3);
-      endAsync(keepOpenVars); // Swift loop body
-    }
     pointStack.pop(); // for loop body
 
     if (splitDegree > 0) {
