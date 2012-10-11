@@ -13,7 +13,8 @@ main {
         // Calculate squares of numbers in A
         B[i] = n * n;
     }
-
+    
+    @async
     foreach n, i in B {
         // Calculate cubes of numbers in A
         C[i] = A[i] * n;

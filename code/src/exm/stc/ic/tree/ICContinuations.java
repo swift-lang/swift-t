@@ -1199,8 +1199,8 @@ public class ICContinuations {
           Builtin.createLocal(BuiltinOpcode.COPY_INT, this.loopVar, start));
       if (countVar != null) {
         this.loopBody.declareVariable(countVar);
-        this.loopBody.addInstructionFront(
-            TurbineOp.assignInt(countVar, Arg.createIntLit(0)));
+        this.loopBody.addInstructionFront(Builtin.createLocal(
+                     BuiltinOpcode.COPY_INT, countVar, Arg.createIntLit(0)));
       }
       block.insertInline(loopBody);
       block.removeContinuation(this);
@@ -1373,7 +1373,8 @@ public class ICContinuations {
           && this.increment.equals(o.increment)
           && this.end.equals(o.end)
           && this.desiredUnroll == o.desiredUnroll
-          && this.splitDegree == o.splitDegree;
+          && this.splitDegree == o.splitDegree
+          && (this.countVar == null) == (o.countVar == null);
     }
     
     /**

@@ -601,7 +601,7 @@ public class ASTWalker {
   private void foreach(Context context, SwiftAST tree) throws UserException {
     ForeachLoop loop = ForeachLoop.fromAST(context, tree); 
     
-    if (loop.iteratesOverRange() && loop.getCountVarName() != null) {
+    if (loop.iteratesOverRange() && loop.getLoopCountVal() != null) {
       foreachRange(context, loop);
     } else {
       foreachArray(context, loop);
@@ -679,6 +679,12 @@ public class ASTWalker {
     //  code refers to it
     varCreator.initialiseVariable(bodyContext, loop.getMemberVar());
     backend.assignInt(loop.getMemberVar(), Arg.createVar(memberVal));
+    if (loop.getCountVarName() != null) {
+      Var loopCountVar = varCreator.createVariable(bodyContext,
+          Types.F_INT, loop.getCountVarName(), VarStorage.STACK,
+          DefType.LOCAL_USER, null);
+      backend.assignInt(loopCountVar, Arg.createVar(counterVal));
+    }
     block(bodyContext, loop.getBody());
     if (!loop.isSyncLoop()) {
       backend.endWaitStatement(keepOpenVars);

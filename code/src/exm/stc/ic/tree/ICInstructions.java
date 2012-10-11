@@ -1335,8 +1335,10 @@ public class ICInstructions {
           // add retrieve so we can avoid retrieving later
           Arg dst = args.get(0);
           Arg src = args.get(1);
-          ComputedValue retrieve = new ComputedValue(
-                    retrieveOpcode(dst.getType()),
+          Opcode cvop = retrieveOpcode(dst.getType());
+          assert(cvop != null);
+
+          ComputedValue retrieve = new ComputedValue(cvop,
                     "", Arrays.asList(dst), src, false);
           if (op == Opcode.ADDRESS_OF) {
             Opcode derefOp = derefOpCode(dst.getType());

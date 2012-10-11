@@ -7,13 +7,13 @@
 main {
     int A[][];
     int n = 20;
-    @sync
+    @async
     foreach j in [0:n] {
         A[0][j] = n;
     }
 
     foreach i in [1:n] {
-        @sync
+        @async
         foreach j in [0:n] {
             A[i][j] = A[i-1][j] + 1;
         }

@@ -21,6 +21,7 @@ import exm.stc.frontend.LocalContext;
 import exm.stc.frontend.TypeChecker;
 
 public class ForeachLoop {
+  private static final int DEFAULT_SPLIT_DEGREE = 16;
   private final SwiftAST arrayVarTree;
   private final SwiftAST loopBodyTree;
   private final String memberVarName;
@@ -31,7 +32,7 @@ public class ForeachLoop {
   private Var memberVar = null;
   private final ArrayList<String> annotations;
   private int unroll = 1;
-  private int splitDegree = -1;
+  private int splitDegree = DEFAULT_SPLIT_DEGREE;
 
   public int getDesiredUnroll() {
     return unroll;
@@ -46,7 +47,7 @@ public class ForeachLoop {
   }
 
   public boolean isSyncLoop() {
-    return annotations.contains(Annotations.LOOP_SYNC);
+    return !annotations.contains(Annotations.LOOP_ASYNC);
   }
 
   public Var getMemberVar() {
@@ -138,6 +139,11 @@ public class ForeachLoop {
         break;
       }
     }
+    
+    if (annotations.contains(Annotations.LOOP_NOSPLIT)) {
+      // Disable splitting
+      splitDegree = -1;
+    }
 
     int childCount = tree.getChildCount() - annotationCount;
     assert(childCount == 3 || childCount == 4);
@@ -169,15 +175,18 @@ public class ForeachLoop {
 
   private void validateAnnotations(Context context)
       throws InvalidAnnotationException {
-    if (annotations.size() > 1) {
-      throw new InvalidAnnotationException(context, "Too many annotations "
-          + " on foreach list: " + annotations.toString()
-          + ", only expected one");
-    } else if (annotations.size() == 1) {
-      if (!annotations.get(0).equals(Annotations.LOOP_SYNC)) {
-        throw new STCRuntimeError("Unknown loop annotation "
-            + annotations.get(0));
+    for (String annotation: annotations) {
+      if (!annotation.equals(Annotations.LOOP_SYNC) &&
+          !annotation.equals(Annotations.LOOP_ASYNC) &&
+          !annotation.equals(Annotations.LOOP_NOSPLIT)) {
+        throw new InvalidAnnotationException(context, "Invalid loop"
+                + "annotation @" + annotation);
       }
+    }
+    if (annotations.contains(Annotations.LOOP_SYNC) &&
+        annotations.contains(Annotations.LOOP_ASYNC)) {
+      throw new InvalidAnnotationException(context, "Contradictory "
+        + " loop annotations");
     }
   }
 

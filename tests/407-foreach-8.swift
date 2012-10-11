@@ -1,11 +1,11 @@
 #include <builtins.swift>
+#include <assert.swift>
 
 (int o) f (int i) {
   o = i;
 }
 main {
   // Iterate over fixed range using both loop vars
-
   foreach i, j in [2:5] {
     trace("loop1", i, j);
     assert(i >= 2 && i <= 5, "loop1 range");

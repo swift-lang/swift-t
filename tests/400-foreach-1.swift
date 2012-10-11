@@ -12,6 +12,7 @@ main {
     A[5] = 3;
     A[6] = 4;
 
+    @async
     foreach x in A {
         trace(x);
     }
