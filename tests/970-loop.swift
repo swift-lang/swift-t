@@ -10,9 +10,12 @@
 #include <io.swift>
 #include <stats.swift>
 #include <sys.swift>
+#include <string.swift>
+#include <mpe.swift>
 
 (float result[]) calc_cutoffs(float step)
 {
+  int count = toint(argv("C"));
   float c = itof(count);
   result[0] = 0.0;
   foreach i in [1:count-2]
