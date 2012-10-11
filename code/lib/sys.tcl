@@ -12,7 +12,9 @@ namespace eval turbine {
     # Map from key to value for flagged arguments like:
     # -key or --key or -key= or -key=value or --key=value
     variable turbine_argv
-    # Simple string containing all arguments (unused)
+    # List of unflagged arguments by position
+    variable turbine_argp
+    # Simple string containing all arguments
     variable turbine_args
 
     # Called by turbine::init to setup Turbine's argv
@@ -23,6 +25,7 @@ namespace eval turbine {
         variable turbine_program
         variable turbine_argc
         variable turbine_argv
+        variable turbine_argp
         variable turbine_args
         variable mode
 
@@ -31,10 +34,11 @@ namespace eval turbine {
         set turbine_program [ info script ]
         set turbine_argc 0
         set turbine_argv [ dict create ]
+        set turbine_argp [ list ]
         set turbine_args $::argv
 
         # Set Tcl program name at argv(0)
-        dict set turbine_argv 0 $turbine_program
+        lappend turbine_argp $turbine_program
 
         set L [ argv_helper $::argv ]
         for { set i 0 } { $i < $argc } { incr i } {
@@ -49,13 +53,11 @@ namespace eval turbine {
                     set key [ string range $key 1 end ]
                 }
                 set value [ lindex $tokens 1 ]
+                dict set turbine_argv $key $value
             } else {
+                lappend turbine_argp $arg
                 incr turbine_argc
-                set key $turbine_argc
-                set value $token
             }
-
-            dict set turbine_argv $key $value
         }
     }
 
@@ -170,7 +172,7 @@ namespace eval turbine {
         set result [ lindex $args 0 ]
         set key    [ lindex $args 1 ]
 
-        set key_val [ retrieve $key ]
+        set key_val [ retrieve_string $key ]
         if { $c == 2 } {
             set result_val [ argv_get_impl $key_val ]
         } elseif { $c == 3 } {
@@ -201,6 +203,70 @@ namespace eval turbine {
             return $base
         }
         return $val
+    }
+    
+    # usage: argv_get <result> <index> <optional:base>
+    # If index >= argc, the base (default value) is used
+    # "default" is a Tcl keyword so we call it "base"
+    proc argp_get { args } {
+        set stack  [ lindex $args 0 ]
+        set result [ lindex $args 1 ]
+        set i    [ lindex $args 2 ]
+        set base ""
+        if { [ llength $args ] == 4 }  {
+            set base [ lindex $args 3 ]
+        }
+
+        rule "argp_get-$i" $i $turbine::LOCAL \
+            "argp_get_body $result $key $base"
+    }
+
+    # usage: argp_get <result> <index> <optional:base>
+    proc argp_get_body { args } {
+        set c [ llength $args ]
+        if { $c != 2 && $c != 3 } {
+            error "argp_get_body: args: $c"
+        }
+
+        set result [ lindex $args 0 ]
+        set i    [ lindex $args 1 ]
+
+        set i_val [ retrieve_integer $i ]
+        if { $c == 2 } {
+            set result_val [ argv_get_impl $i_val ]
+        } elseif { $c == 3 } {
+            set base [ lindex $args 2 ]
+            set base_val [ retrieve_string $base ]
+            set result_val [ argv_get_impl $i_val $base_val ]
+        }
+
+        store_string $result $result_val
+    }
+
+    proc argp_get_impl { i args } {
+        variable turbine_argp
+        variable turbine_argc
+        variable error_code
+        set c [ llength $args ]
+        if { $c == 0 } {
+            set base_defined 0
+        } elseif { $c == 1 } {
+            set base_defined 1
+            set base [ lindex $args 0 ]
+        } else {
+            error "argp_get_body: args: $c"
+        }
+        if { $i < 0 } {
+            error "argp_get_body: i < 0: $i"
+        }
+        if { $i > $turbine_argc } {
+            if { ! $base_defined } {
+                return -code $error_code "argp: index $i > argc $turbine_argc"
+            }
+            return $base
+        } else {
+            return [ lindex $turbine_argp $i ]
+        }
     }
 
     proc argv_accept { args } {

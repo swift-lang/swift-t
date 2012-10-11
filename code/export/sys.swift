@@ -22,10 +22,16 @@
 argv_accept(string... keys)
     "turbine" "0.0.2" "argv_accept"
     [ "turbine::argv_accept_impl [ list <<keys>> ]" ];
+// argv - get named argument
 @pure
-(string s) argv(string|int key, string... default_val)
+(string s) argv(string key, string... default_val)
     "turbine" "0.0.2" "argv_get"
     [ "set <<s>> [ turbine::argv_get_impl <<key>> <<default_val>> ]" ];
+// argp - get unnamed argument by position
+@pure
+(string s) argp(int pos, string... default_val)
+    "turbine" "0.0.2" "argp_get"
+    [ "set <<s>> [ turbine::argp_get_impl <<pos>> <<default_val>> ]" ];
 
 /* Model getenv as pure because it will be deterministic within
  * the context of a program
