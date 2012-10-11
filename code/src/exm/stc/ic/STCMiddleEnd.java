@@ -653,6 +653,29 @@ public class STCMiddleEnd implements CompilerBackend {
     currBlock().addInstruction(
         TurbineOp.retrieveString(target, source));
   }
+  
+  @Override
+  public void assignBlob(Var target, Arg src) {
+    assert(target.type().equals(Types.F_BLOB));
+    assert(src.isImmediateBlob());
+    currBlock().addInstruction(
+        TurbineOp.assignBlob(target, src));
+  }
+  
+  @Override
+  public void retrieveBlob(Var target, Var src) {
+    assert(target.type().equals(Types.V_BLOB));
+    assert(src.type().equals(Types.F_BLOB));
+    currBlock().addInstruction(
+        TurbineOp.retrieveBlob(target, src));
+  }
+  
+  @Override
+  public void freeBlob(Var blob) {
+    assert(blob.type().equals(Types.V_BLOB));
+    currBlock().addInstruction(
+        TurbineOp.freeBlob(blob));
+  }
 
   @Override
   public void localOp(BuiltinOpcode op, Var out, 

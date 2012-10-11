@@ -85,6 +85,9 @@ public interface CompilerBackend {
   public abstract void assignBool(Var target, Arg src);
   public abstract void retrieveBool(Var target, Var source);
 
+  public abstract void assignBlob(Var target, Arg src);
+  public abstract void retrieveBlob(Var target, Var src);
+  public abstract void freeBlob(Var blob);
   /**
    * Extract handle to filename future out of file variable
    * @param initUnmapped if true, assign arbitrary filename to unmapped files

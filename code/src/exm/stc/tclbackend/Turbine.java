@@ -1,11 +1,23 @@
 
 package exm.stc.tclbackend;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.TaskMode;
-import exm.stc.tclbackend.tree.*;
+import exm.stc.tclbackend.tree.Command;
+import exm.stc.tclbackend.tree.Expression;
+import exm.stc.tclbackend.tree.LiteralInt;
+import exm.stc.tclbackend.tree.Sequence;
+import exm.stc.tclbackend.tree.SetVariable;
+import exm.stc.tclbackend.tree.Square;
+import exm.stc.tclbackend.tree.TclList;
+import exm.stc.tclbackend.tree.TclString;
+import exm.stc.tclbackend.tree.TclTree;
+import exm.stc.tclbackend.tree.Token;
+import exm.stc.tclbackend.tree.Value;
 
 /**
  * Automates creation of Turbine-specific Tcl constructs
@@ -64,6 +76,7 @@ class Turbine
       new Token("turbine::retrieve_float");
   private static final Token RETRIEVE_STRING =
       new Token("turbine::retrieve_string");
+  private static final Token RETRIEVE_BLOB = new Token("adlb::retrieve_blob");
   private static final Token STACK_LOOKUP =
       new Token("turbine::stack_lookup");
   static final String LOCAL_STACK_NAME = "stack";
@@ -101,6 +114,7 @@ class Turbine
       new Token("turbine::store_float");
   private static final Token STORE_STRING =
       new Token("turbine::store_string");
+  private static final Token STORE_BLOB = new Token("adlb::store_blob");
   private static final Token CONTAINER_DEREF_INSERT =
       new Token("turbine::container_deref_insert");
   private static final Token CONTAINER_F_DEREF_INSERT =
@@ -110,6 +124,8 @@ class Turbine
       new Token("turbine::call_composite");
 
   private static final Token UNCACHED_MODE = new Token("UNCACHED");
+  private static final Token FREE_BLOB = new Token("adlb::blob_free");
+  private static final Token LIST_INDEX = new Token("lindex");
 
   public enum StackFrameType {
     MAIN,
@@ -214,36 +230,20 @@ class Turbine
   /**
      Do a data get operation to load the value from the TD
    */
-  public static SetVariable integerGet(String target, Value variable)
-  {
-    SetVariable result =
-      new SetVariable(target,
-                      new Square(RETRIEVE_INTEGER, variable));
-    return result;
+  public static SetVariable integerGet(String target, Value variable) {
+    return new SetVariable(target, new Square(RETRIEVE_INTEGER, variable));
   }
 
-
-  public static SetVariable refGet(String target, Value variable)
-  {
-   SetVariable result =
-     new SetVariable(target,
-                     new Square(RETRIEVE_UNTYPED, variable));
-   return result;
+  public static SetVariable refGet(String target, Value variable) {
+   return new SetVariable(target, new Square(RETRIEVE_UNTYPED, variable));
   }
 
   public static Command stringSet(String turbineDstVar, Expression src) {
-    // The TD is a Value
-    Value t = new Value(turbineDstVar);
-    Command c = new Command(STORE_STRING, t, src);
-    return c;
+    return new Command(STORE_STRING, new Value(turbineDstVar), src);
   }
 
   public static Command integerSet(String turbineDstVar, Expression src) {
-    // The TD is a Value
-    Value t = new Value(turbineDstVar);
-    // The value is a literal Token
-    Command c = new Command(STORE_INTEGER, t, src);
-    return c;
+    return new Command(STORE_INTEGER, new Value(turbineDstVar), src);
   }
 
   public static Command floatSet(String turbineDstVar, Expression src) {
@@ -256,7 +256,6 @@ class Turbine
 
   public static SetVariable floatGet(String target, Value variable) {
     return floatGet(target, variable, CacheMode.CACHED);
-    
   }
   public static SetVariable floatGet(String target, Value variable,
                                                     CacheMode caching) {
@@ -273,12 +272,23 @@ class Turbine
   /**
    * Do a data get operation to load the value from the TD
    */
-  public static SetVariable stringGet(String target, Value variable)
-  {
-    SetVariable result =
-      new SetVariable(target,
-                     new Square(RETRIEVE_STRING, variable));
-    return result;
+  public static SetVariable stringGet(String target, Value variable) {
+    return new SetVariable(target, new Square(RETRIEVE_STRING, variable));
+  }
+
+  public static SetVariable blobGet(String target, Value var) {
+    return new SetVariable(target, new Square(RETRIEVE_BLOB, var));
+  }
+
+  public static Command blobFree(Value var) {
+    return new Command(FREE_BLOB, var);
+  }
+
+  public static Command blobSet(Value target, Expression src) {
+    // Calling convention requires separate pointer and length args
+    Square ptr = new Square(LIST_INDEX, src, new LiteralInt(0));
+    Square len = new Square(LIST_INDEX, src, new LiteralInt(1));
+    return new Command(STORE_BLOB, target, ptr, len);
   }
 
   private static Value tclRuleType (TaskMode t) {

@@ -324,6 +324,9 @@ public class ICInstructions {
       case STORE_STRING:
         gen.assignString(args.get(0).getVar(), args.get(1));
         break;
+      case STORE_BLOB:
+        gen.assignBlob(args.get(0).getVar(), args.get(1));
+        break;
       case ADDRESS_OF:
         gen.assignReference(args.get(0).getVar(), args.get(1).getVar());
         break;
@@ -442,6 +445,12 @@ public class ICInstructions {
         gen.retrieveFloat(args.get(0).getVar(),
             args.get(1).getVar());
         break;  
+      case LOAD_BLOB:
+        gen.retrieveBlob(args.get(0).getVar(),
+            args.get(1).getVar());
+        break;
+      case FREE_BLOB:
+        gen.freeBlob(args.get(0).getVar());
       case INIT_UPDATEABLE_FLOAT:
         gen.initUpdateable(args.get(0).getVar(), args.get(1));
         break;
@@ -584,6 +593,11 @@ public class ICInstructions {
           Arrays.asList(Arg.createVar(target), src));
     }
   
+    public static Instruction assignBlob(Var target, Arg src) {
+      return new TurbineOp(Opcode.STORE_BLOB,
+          Arrays.asList(Arg.createVar(target), src));
+    }
+    
     public static Instruction retrieveString(Var target, Var source) {
       return new TurbineOp(Opcode.LOAD_STRING,
           Arrays.asList(Arg.createVar(target), Arg.createVar(source)));
@@ -603,7 +617,18 @@ public class ICInstructions {
       return new TurbineOp(Opcode.LOAD_FLOAT,
           Arrays.asList(Arg.createVar(target), Arg.createVar(source)));
     }
+    
+    public static Instruction retrieveBlob(Var target, Var source) {
+      throw new STCRuntimeError("Need to insert logic to free cached blob");
+      //return new TurbineOp(Opcode.LOAD_BLOB,
+      //    Arrays.asList(Arg.createVar(target), Arg.createVar(source)));
+    }
   
+    public static Instruction freeBlob(Var blob) {
+      return new TurbineOp(Opcode.FREE_BLOB,
+                            Arrays.asList(Arg.createVar(blob)));
+    }
+    
     public static Instruction structClose(Var struct) {
       return new TurbineOp(Opcode.STRUCT_CLOSE,
           Arrays.asList(Arg.createVar(struct)));
@@ -2296,6 +2321,7 @@ public class ICInstructions {
     DEREF_FILE,
     STORE_INT, STORE_STRING, STORE_FLOAT, STORE_BOOL, ADDRESS_OF, 
     LOAD_INT, LOAD_STRING, LOAD_FLOAT, LOAD_BOOL, LOAD_REF,
+    STORE_BLOB, LOAD_BLOB, FREE_BLOB,
     ARRAY_DECR_WRITERS,
     
     ARRAYREF_LOOKUP_FUTURE, ARRAY_LOOKUP_FUTURE,
@@ -2756,6 +2782,8 @@ public class ICInstructions {
       return TurbineOp.retrieveFloat(dst, src);
     case STRING:
       return TurbineOp.retrieveString(dst, src);
+    case BLOB:
+      return TurbineOp.retrieveBlob(dst, src);
     default:
       throw new STCRuntimeError("method to retrieve " +
             src.type().typeName() + " is not known yet");
@@ -2832,6 +2860,9 @@ public class ICInstructions {
          break;
        case STRING:
          op = Opcode.STORE_STRING;
+         break;
+       case BLOB:
+         op = Opcode.STORE_BLOB;
          break;
        default:
          throw new STCRuntimeError("don't know how to assign " + dstType);

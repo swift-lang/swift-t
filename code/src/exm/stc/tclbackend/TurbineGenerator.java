@@ -393,6 +393,28 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
+  public void assignBlob(Var target, Arg src) {
+    assert(target.type().equals(Types.F_BLOB));
+    assert(src.isImmediateBlob());
+    pointStack.peek().add(Turbine.blobSet(varToExpr(target),
+                                          opargToExpr(src)));
+  }
+
+  @Override
+  public void retrieveBlob(Var target, Var src) {
+    assert(target.type().equals(Types.V_BLOB));
+    assert(src.type().equals(Types.F_BLOB));
+    pointStack.peek().add(Turbine.blobGet(prefixVar(target.name()),
+                                                varToExpr(src)));
+  }
+
+  @Override
+  public void freeBlob(Var blob) {
+    assert(blob.type().equals(Types.V_BLOB));
+    pointStack.peek().add(Turbine.blobFree(varToExpr(blob)));
+  }
+  
+  @Override
   public void getFileName(Var filename, Var file,
                           boolean initUnmapped) {
     assert(Types.isString(filename.type()));

@@ -189,6 +189,10 @@ public class Arg implements Comparable<Arg> {
     return kind == ArgKind.BOOLVAL
         || (kind == ArgKind.VAR && var.type().equals(Types.V_BOOL));
   }
+  
+  public boolean isImmediateBlob() {
+    return kind == ArgKind.VAR && var.type().equals(Types.V_BLOB);
+  }
 
   @Override
   public String toString() {
@@ -317,5 +321,4 @@ public class Arg implements Comparable<Arg> {
   public boolean isConstant() {
     return this.kind != ArgKind.VAR;
   }
-
 }
