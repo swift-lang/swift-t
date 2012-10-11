@@ -60,7 +60,7 @@ public class ArrayRange {
   throws TypeMismatchException {
     if (!exprType.assignableTo(Types.F_INT)) {
       throw new TypeMismatchException(context, "Expected " + name + " in" +
-      		" range operators to be int, but type was " + exprType.typeName());
+              " range operators to be int, but type was " + exprType.typeName());
     }
   }
   
@@ -71,7 +71,7 @@ public class ArrayRange {
     int n = tree.getChildCount();
     if (n < 2 || n > 3) {
       throw new InvalidSyntaxException(context, "Array range operator" +
-      		" can take two or three parameters [start:end] or [start:end:step]"
+              " can take two or three parameters [start:end] or [start:end:step]"
         + " but this array range had " + n + " parameters");
     }
     

@@ -1248,10 +1248,10 @@ public class TurbineGenerator implements CompilerBackend
     @Override
     public void startWaitStatement(String procName, List<Var> waitVars,
         List<Var> usedVariables, List<Var> keepOpenVars,
-        boolean explicit, TaskMode mode) {
+        WaitMode mode, TaskMode target) {
       logger.trace("startWaitStatement()...");
       startAsync(procName, waitVars, usedVariables, keepOpenVars,
-                 mode);
+                 target);
     }
 
     @Override
@@ -1350,7 +1350,7 @@ public class TurbineGenerator implements CompilerBackend
             ruleTokens.add(varToExpr(v));
           } else {
             throw new STCRuntimeError("Don't know how to pass" +
-            		" var with type " + v);
+                  " var with type " + v);
           }
         } else {
           throw new STCRuntimeError("Don't know how to pass var with type "

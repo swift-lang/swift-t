@@ -5,8 +5,8 @@ import java.util.List;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Builtins.TclOpTemplate;
+import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types.FunctionType;
@@ -284,6 +284,19 @@ public interface CompilerBackend {
 
   public abstract void regenerate(CompilerBackend codeGen) throws UserException;
   
+  
+  /**
+   * Different kinds of wait statements that can be optimized in
+   * different ways
+   */
+  public static enum WaitMode {
+  DATA_ONLY, /* Used to allow data load inside wait */
+  EXPLICIT, /* Explicit synchronisation on variable, 
+         can only eliminate if var closed */
+  TASK_DISPATCH; /* Used to dispatch async task to 
+  load balancer/other node */
+  }
+  
   /**
    * Start code that will execute asynchronously
    * @param procName the name of the wait block (useful so generated
@@ -296,13 +309,13 @@ public interface CompilerBackend {
    *            If true the wait statement will only be optimised out if it
    *            can be shown that the variables are already closed when the
    *            wait is encountered
-   * @param mode TODO
-   * @param mode controls where asynchronous execution occurs
+   * @param mode what guarantees wait statement should provide
+   * @param target controls where asynchronous execution occurs
    */
   public abstract void startWaitStatement(String procName,
       List<Var> waitVars,
       List<Var> usedVars, List<Var> keepOpenVars,
-      boolean explicit, TaskMode mode);
+      WaitMode mode, TaskMode target);
 
   public abstract void endWaitStatement(List<Var> keepOpenVars);
 

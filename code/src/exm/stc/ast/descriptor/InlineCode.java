@@ -38,15 +38,15 @@ public class InlineCode {
             inVar = false;
           } else {
             throw new InvalidSyntaxException(context, "Invalid " +
-            		"variable name for substitution: did not end with " +
-            		"\">>\" in template string \"" + in + "\". " + 
-            		"Name up to \" " + currVar.toString() + "\" was ok");
+                    "variable name for substitution: did not end with " +
+                    "\">>\" in template string \"" + in + "\". " + 
+                    "Name up to \" " + currVar.toString() + "\" was ok");
           }
         } else {
           throw new InvalidSyntaxException(context, "Unexpected " +
-          		"character '" + c + "' in variable substitution name" +
-          				" after text \"" + currVar.toString() + "\" in " +
-          						"template string \"" + in + "\"");
+                  "character '" + c + "' in variable substitution name" +
+                          " after text \"" + currVar.toString() + "\" in " +
+                                  "template string \"" + in + "\"");
         }
       } else {
         if (c == '<' && i < in.length() - 1 && in.charAt(i+1) == '<') {
@@ -70,7 +70,7 @@ public class InlineCode {
             currTok.append(in.charAt(i));
           } else {
             throw new InvalidSyntaxException(context, "Trailing '\'" +
-            		" in template string \"" + in + "\"");
+                    " in template string \"" + in + "\"");
           }
         } else {
           currTok.append(c);
@@ -79,7 +79,7 @@ public class InlineCode {
     }
     if (inVar) {
       throw new InvalidSyntaxException(context, "Unterminated variable " +
-      		"substitution: unterminated variable name was " +
+              "substitution: unterminated variable name was " +
           "\"" + currVar.toString() + "\" in " +
           "template string \"" + in + "\"");
     } else {

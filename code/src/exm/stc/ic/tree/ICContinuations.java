@@ -13,6 +13,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.lang.Arg;
@@ -278,7 +279,7 @@ public class ICContinuations {
     protected void checkNotRemoved(Var v, Set<String> removeVars) {
       if (removeVars.contains(v.name())) {
         throw new STCRuntimeError("bad optimization: tried to remove" +
-        		" required variable " + v.toString());
+        " required variable " + v.toString());
       }
     }
     protected void checkNotRemoved(Arg o, Set<String> removeVars) {
@@ -672,7 +673,7 @@ public class ICContinuations {
     @Override
     public void removePassedInVar(Var variable) {
       throw new STCRuntimeError("removePassedInVar not supported on " +
-      		"if");
+      "if");
     }
 
     @Override
@@ -1005,7 +1006,7 @@ public class ICContinuations {
     @Override
     public void addPassedInVar(Var variable) {
       throw new STCRuntimeError("addPassedInVar not supported on " +
-      		"nested");
+      "nested");
     }
 
     @Override
@@ -1592,23 +1593,23 @@ public class ICContinuations {
     /* True if this wait was compiler-generated so can be removed if needed
      * We can only remove an explicit wait if we know that the variables are
      * already closed*/
-    private final boolean explicit;
-    private final TaskMode mode;
+    private final WaitMode mode;
+    private final TaskMode target;
 
     public WaitStatement(String procName, List<Var> waitVars,
                     List<Var> usedVariables,
                     List<Var> keepOpenVars,
-                    boolean explicit, TaskMode mode) {
+                    WaitMode mode, TaskMode target) {
       this(procName, new Block(BlockType.WAIT_BLOCK),
                         new ArrayList<Var>(waitVars),
                         new ArrayList<Var>(usedVariables),
                         new ArrayList<Var>(keepOpenVars),
-                        explicit, mode);
+                        mode, target);
     }
 
     private WaitStatement(String procName, Block block,
         ArrayList<Var> waitVars, ArrayList<Var> usedVariables,
-        ArrayList<Var> keepOpenVars, boolean explicit, TaskMode mode) {
+        ArrayList<Var> keepOpenVars, WaitMode mode, TaskMode target) {
       super();
       this.procName = procName;
       this.block = block;
@@ -1616,8 +1617,8 @@ public class ICContinuations {
       ICUtil.removeDuplicates(waitVars);
       this.usedVariables = usedVariables;
       this.keepOpenVars = keepOpenVars;
-      this.explicit = explicit;
       this.mode = mode;
+      this.target = target;
     }
 
     @Override
@@ -1625,7 +1626,7 @@ public class ICContinuations {
       return new WaitStatement(procName, this.block.clone(),
           new ArrayList<Var>(waitVars),
           new ArrayList<Var>(usedVariables),
-          new ArrayList<Var>(keepOpenVars), explicit, mode);
+          new ArrayList<Var>(keepOpenVars), mode, target);
     }
 
     public Block getBlock() {
@@ -1637,7 +1638,7 @@ public class ICContinuations {
         throws UndefinedTypeException {
 
       gen.startWaitStatement(procName, waitVars, usedVariables,
-          keepOpenVars, explicit, mode);
+          keepOpenVars, mode, target);
       this.block.generate(logger, gen, info);
       gen.endWaitStatement(keepOpenVars);
     }
@@ -1675,10 +1676,13 @@ public class ICContinuations {
       ICUtil.replaceVarsInList(renames, waitVars, true);
     }
 
-    public boolean isExplicit() {
-      return explicit;
+    public WaitMode getMode() {
+      return mode;
     }
-
+    
+    public TaskMode getTarget() {
+      return target;
+    }
     @Override
     public ContinuationType getType() {
       return ContinuationType.WAIT_STATEMENT;
@@ -1698,7 +1702,7 @@ public class ICContinuations {
           res.add(c);
         }
       }
-      if (explicit) {
+      if (mode == WaitMode.EXPLICIT) {
         for (Var v: waitVars) {
           res.add(v);
         }
@@ -1737,7 +1741,7 @@ public class ICContinuations {
     
     @Override
     public Block tryInline(Set<String> closedVars) {
-      boolean mustWait = false;
+      boolean varsLeft = false;
       // iterate over wait vars, remove those in list
       ListIterator<Var> it = waitVars.listIterator();
       while(it.hasNext()) {
@@ -1745,10 +1749,11 @@ public class ICContinuations {
         if (closedVars.contains(wv.name())) {
           it.remove();
         } else {
-          mustWait = true;
+          varsLeft = true;
         }
       }
-      if (mustWait) {
+      // Can't eliminate if purpose of wait is to dispatch task
+      if (varsLeft || mode == WaitMode.TASK_DISPATCH) {
         return null;
       } else {
         // if at end we have nothing left, return the inner block for inlining

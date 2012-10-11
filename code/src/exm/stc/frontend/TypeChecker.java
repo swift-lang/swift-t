@@ -530,8 +530,8 @@ public class TypeChecker {
       }
     }
     throw new TypeMismatchException(context, "Could not find consistent" +
-    		" binding for type variables.  Viable function signatures based on" +
-    		" input arguments were: " + alts + " but output types were " + outTs);
+            " binding for type variables.  Viable function signatures based on" +
+            " input arguments were: " + alts + " but output types were " + outTs);
   }
 
   /**
@@ -842,7 +842,7 @@ public class TypeChecker {
       if (cands == null || cands.size() == 0) {
         if (!noWarn) {
           LogHelper.warn(context, "Type variable " + typeVar + " for call to " +
-        		"function " + function + " was unbound");
+                "function " + function + " was unbound");
         }
       } else {
         List<Type> intersection = typeIntersection(cands);

@@ -70,15 +70,15 @@ public class LocalContext extends Context {
   @Override
   public Var createTmpVar(Type type, boolean storeInStack) 
                                                       throws UserException {
-	  String name;
-	  do {
-	    int counter = getFunctionContext().getCounterVal("intermediate_var");
-	    name = Var.TMP_VAR_PREFIX + counter;
-	  } while (lookupDef(name) != null); // In case variable name in use
+      String name;
+      do {
+        int counter = getFunctionContext().getCounterVal("intermediate_var");
+        name = Var.TMP_VAR_PREFIX + counter;
+      } while (lookupDef(name) != null); // In case variable name in use
 
-	  VarStorage storage = storeInStack ? 
-	              VarStorage.STACK : VarStorage.TEMP;
-	  return declareVariable(type, name, storage, DefType.LOCAL_COMPILER, null);
+      VarStorage storage = storeInStack ? 
+                  VarStorage.STACK : VarStorage.TEMP;
+      return declareVariable(type, name, storage, DefType.LOCAL_COMPILER, null);
   }
 
   @Override

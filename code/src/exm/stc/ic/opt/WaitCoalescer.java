@@ -14,6 +14,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.TaskMode;
@@ -193,7 +194,7 @@ public class WaitCoalescer {
       MakeImmRequest req = i.canMakeImmediate(empty, true);
       if (req != null && req.in.size() > 0) {
         WaitStatement wait = new WaitStatement(fn.getName() + "-optinserted",
-                req.in, req.in, new ArrayList<Var>(0), false,
+                req.in, req.in, new ArrayList<Var>(0), WaitMode.DATA_ONLY,
                 TaskMode.LOCAL);
 
         List<Instruction> instBuffer = new ArrayList<Instruction>();
@@ -243,7 +244,7 @@ public class WaitCoalescer {
           } else {
             intersection.retainAll(nameSet);
           }
-          explicit |= wait.isExplicit();
+          explicit |= wait.getMode() != WaitMode.DATA_ONLY;
         }
         assert(intersection != null && !intersection.isEmpty());
         
@@ -252,19 +253,20 @@ public class WaitCoalescer {
         
         // Create a new wait statement waiting on the intersection
         // of the above.
-        WaitStatement newWait = new WaitStatement(fn.getName() +
-                "-optmerged", intersectionVs, new ArrayList<Var>(0),
-                new ArrayList<Var>(0), explicit, TaskMode.LOCAL);
+        WaitStatement newWait = new WaitStatement(fn.getName() + "-optmerged",
+            intersectionVs, new ArrayList<Var>(0), new ArrayList<Var>(0),
+            explicit ? WaitMode.EXPLICIT : WaitMode.DATA_ONLY, TaskMode.LOCAL);
         
         // List of variables that are kept open, or used
         ArrayList<Var> usedVars = new ArrayList<Var>();
         ArrayList<Var> keepOpen = new ArrayList<Var>();
         
-        // Put the old waits under the new one, remove redundant wait
-        // vars
+        // Put the old waits under the new one, remove redundant wait vars
+        // Exception: don't eliminate task dispatch waits
         for (WaitStatement wait: waits) {
           wait.removeWaitVars(intersection);
-          if (wait.getWaitVars().isEmpty()) {
+          if (wait.getWaitVars().isEmpty() &&
+              wait.getMode() != WaitMode.TASK_DISPATCH) {
             newWait.getBlock().insertInline(wait.getBlock());
           } else {
             newWait.getBlock().addContinuation(wait);
@@ -357,7 +359,8 @@ public class WaitCoalescer {
         // Was moved
         continue;
       }
-      if (c.getType() == ContinuationType.WAIT_STATEMENT) {
+      // Can push down into 
+      if (canPushDownInto(c)) {
         for (Block innerBlock: c.getBlocks()) {
           ArrayDeque<AncestorContinuation> ancestors =
                                         new ArrayDeque<AncestorContinuation>();
@@ -402,17 +405,31 @@ public class WaitCoalescer {
     
     // Update the stack with child continuations
     for (Continuation c: curr.getContinuations()) {
-      if (c.getType() == ContinuationType.WAIT_STATEMENT) {
+      if (canPushDownInto(c)) {
         for (Block innerBlock: c.getBlocks()) {
           ancestors.push(new AncestorContinuation(c, innerBlock));
-          pushedDown.addAll(
-               pushDownWaitsRec(logger, fn, top, ancestors,
-                                innerBlock, waitMap));
+          pushedDown.addAll(pushDownWaitsRec(logger, fn, top, ancestors,
+                                             innerBlock, waitMap));
           ancestors.pop();
         }
       }
     }
     return pushedDown;
+  }
+
+  private static boolean canPushDownInto(Continuation c) {
+    /* Can push down into wait statements unless they are being dispatched
+     *  to worker node */
+    if (c.getType() == ContinuationType.WAIT_STATEMENT) {
+      WaitStatement w = (WaitStatement)c;
+      if (w.getMode() == WaitMode.TASK_DISPATCH &&
+          w.getTarget() == TaskMode.LEAF) {
+        return false;
+      } else {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

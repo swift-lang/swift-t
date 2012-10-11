@@ -54,7 +54,7 @@ public class Types {
     public boolean equals(Object other) {
       if (!(other instanceof Type)) {
         throw new STCRuntimeError("Comparing ArrayType with non-type " +
-        		"object");
+                "object");
       }
       Type otherT = (Type) other;
       if (!otherT.structureType().equals(StructureType.ARRAY)) {

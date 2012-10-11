@@ -209,10 +209,10 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void startWaitStatement(String procName, List<Var> waitVars,
       List<Var> usedVariables, List<Var> keepOpenVars,
-      boolean explicit, TaskMode mode) {
+      WaitMode mode, TaskMode target) {
     assert(currFunction != null);
     WaitStatement wait = new WaitStatement(procName, waitVars, usedVariables,
-                                          keepOpenVars, explicit, mode);
+                                          keepOpenVars, mode, target);
     currBlock().addContinuation(wait);
     blockStack.push(wait.getBlock());
   }
@@ -373,7 +373,7 @@ public class STCMiddleEnd implements CompilerBackend {
     assert(priority == null || priority.isImmediateInt());
     if (blockOn != null) {
       throw new STCRuntimeError("Swift IC generator doesn't support " +
-      		" blocking on function inputs");
+      " blocking on function inputs");
     }
     currBlock().addInstruction(
           FunctionCall.createFunctionCall(

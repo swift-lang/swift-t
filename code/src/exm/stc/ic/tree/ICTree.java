@@ -240,7 +240,7 @@ public class ICTree {
         icOutput.flush();
         e.printStackTrace();
         throw new STCRuntimeError("Error while generating IC: " +
-        		e.toString());
+        e.toString());
       }
     }
   }
@@ -341,7 +341,7 @@ public class ICTree {
         List<Var> oList, Block mainBlock, TaskMode mode) {
       if (mainBlock.getType() != BlockType.MAIN_BLOCK) {
         throw new STCRuntimeError("Expected main block " +
-        		"for function to be tagged as such");
+        "for function to be tagged as such");
       }
       this.name = name;
       this.iList = iList;
@@ -392,7 +392,7 @@ public class ICTree {
       Var v = Var.findByName(iList, vName);
       if (v == null) {
         throw new STCRuntimeError(vName + " is not the name of " +
-        		" an input argument to function " + name + ":\n" + this);
+        " an input argument to function " + name + ":\n" + this);
       }
       addBlockingInput(v);
     }
@@ -419,7 +419,7 @@ public class ICTree {
         StringBuilder fn = new StringBuilder();
         prettyPrint(fn);
         throw new STCRuntimeError("Tried to add blocking input" + v +
-        		" which wasn't one of the input arguments of function: "
+        " which wasn't one of the input arguments of function: "
             + this.iList + "\n" + fn.toString());
       }
     }
@@ -671,8 +671,8 @@ public class ICTree {
         if (v.isMapped()) {
           if (renames.containsKey(v.name())) {
             throw new STCRuntimeError("Tried to replace mapped variable in " +
-            		"IC, this isn't supported so this probably indicates a " +
-            		"compiler bug");
+            "IC, this isn't supported so this probably indicates a " +
+            "compiler bug");
           }
           
           // Check to see if string variable for mapping is replaced
@@ -891,7 +891,7 @@ public class ICTree {
         }
       }
       throw new STCRuntimeError("Variable: " + oldV.toString() + " not found" +
-      		" in block var declarations");
+      " in block var declarations");
     }
 
     /**

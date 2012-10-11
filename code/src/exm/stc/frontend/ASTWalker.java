@@ -33,6 +33,7 @@ import exm.stc.ast.descriptor.VariableDeclaration;
 import exm.stc.ast.descriptor.VariableDeclaration.VariableDescriptor;
 import exm.stc.ast.descriptor.Wait;
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
@@ -294,7 +295,8 @@ public class ASTWalker {
     
     backend.startWaitStatement(
           context.getFunctionContext().constructName("explicitwait"),
-                      waitEvaled, usedVars, keepOpenVars, true, TaskMode.LOCAL);
+                      waitEvaled, usedVars, keepOpenVars,
+                      WaitMode.EXPLICIT, TaskMode.LOCAL);
     block(new LocalContext(context), wait.getBlock());
     backend.endWaitStatement(keepOpenVars);
   }
@@ -434,8 +436,8 @@ public class ASTWalker {
 
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("if"), 
-              Arrays.asList(conditionVar),
-                usedVariables, keepOpenVars, false, TaskMode.LOCAL);
+              Arrays.asList(conditionVar), usedVariables, keepOpenVars, 
+                WaitMode.DATA_ONLY, TaskMode.LOCAL);
 
     Context waitContext = new LocalContext(context);
     Var condVal = varCreator.fetchValueOf(waitContext, conditionVar);
@@ -575,8 +577,8 @@ public class ASTWalker {
     // Generate all of the code
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("switch"),
-                Arrays.asList(switchVar),
-                usedVariables, keepOpenVars, false, TaskMode.LOCAL);
+                Arrays.asList(switchVar), usedVariables, keepOpenVars,
+                WaitMode.DATA_ONLY, TaskMode.LOCAL);
 
     Context waitContext = new LocalContext(context);
     Var switchVal = varCreator.createValueOfVar(waitContext,
@@ -648,9 +650,8 @@ public class ASTWalker {
     ArrayList<Var> waitUsedVariables = 
         new ArrayList<Var>(usedVariables);
     waitUsedVariables.addAll(Arrays.asList(start, end, step));
-    backend.startWaitStatement("wait-range" + loopNum, 
-                                Arrays.asList(start, end, step), 
-                                waitUsedVariables, keepOpenVars, false, TaskMode.LOCAL);
+    backend.startWaitStatement("wait-range" + loopNum,  Arrays.asList(start, end, step), 
+                waitUsedVariables, keepOpenVars, WaitMode.DATA_ONLY, TaskMode.LOCAL);
     Context waitContext = new LocalContext(context);
     Var startVal = varCreator.fetchValueOf(waitContext, start);
     Var endVal = varCreator.fetchValueOf(waitContext, end);
@@ -714,7 +715,8 @@ public class ASTWalker {
       waitUsedVars.add(arrayVar);
 
       backend.startWaitStatement(fc.constructName("foreach_wait"),
-          Arrays.asList(arrayVar), waitUsedVars, keepOpenVars, false, TaskMode.LOCAL);
+          Arrays.asList(arrayVar), waitUsedVars, keepOpenVars,
+          WaitMode.DATA_ONLY, TaskMode.LOCAL);
 
       outsideLoopContext = new LocalContext(context);
       realArray = varCreator.createTmp(outsideLoopContext,
@@ -1003,12 +1005,12 @@ public class ASTWalker {
         } 
         if (initVal == null) {
           throw new STCRuntimeError("Don't yet support non-constant" +
-          		" initialisers for updateable variables");
+                  " initialisers for updateable variables");
         }
         backend.initUpdateable(var, Arg.createFloatLit(initVal));
       } else {
         throw new STCRuntimeError("Non-float updateables not yet" +
-        		" implemented");
+                " implemented");
       }
     } else {
       throw new STCRuntimeError("updateable variable " +
@@ -1031,7 +1033,7 @@ public class ASTWalker {
                                           vDesc.getMappingExpr());
         if (!Types.isString(mapType)) {
           throw new TypeMismatchException(context, "Tried to map using " +
-          		"non-string expression with type " + mapType.typeName());
+                  "non-string expression with type " + mapType.typeName());
         }
         mappedVar = exprWalker.eval(context, vDesc.getMappingExpr(), Types.F_STRING, false, null);
       } else {
@@ -1102,9 +1104,9 @@ public class ASTWalker {
       // Match up RVals and LVals
       if (rValExprs.size() != lVals.size()) {
         throw new InvalidSyntaxException(context, "number of expressions on " +
-        		" right hand side of assignment (" + rValExprs.size() + ") does " +
-    				"not match the number of targets on the left hand size (" +
-        		lVals.size());
+                " right hand side of assignment (" + rValExprs.size() + ") does " +
+                    "not match the number of targets on the left hand size (" +
+                lVals.size());
       }
       for (int i = 0; i < lVals.size(); i++) {
         assignSingleExpr(context, lVals.subList(i, i+1), rValExprs.get(i));
@@ -1678,12 +1680,12 @@ public class ASTWalker {
     
     if (ft.hasVarargs()) {
       throw new TypeMismatchException(context, "composite function cannot" +
-      		" have variable-length argument lists");
+              " have variable-length argument lists");
     }
     for (Type it: ft.getInputs()) {
       if (Types.isPolymorphic(it)) {
         throw new TypeMismatchException(context, "composite functions " +
-        		"cannot have polymorphic input argument types, such as: " + it);
+                "cannot have polymorphic input argument types, such as: " + it);
       }
     }
     
@@ -1696,16 +1698,16 @@ public class ASTWalker {
     boolean async = true;
     if (annotations.size() > 1) {
       throw new InvalidAnnotationException(context, "declaration of composite " +
-      		"function " + function + " has multiple annotations: " + 
+              "function " + function + " has multiple annotations: " + 
           annotations.toString() + " but composite functions only take the " +
-          		"@sync annotation currently");
+                  "@sync annotation currently");
           
     } else if (annotations.size() == 1) {
       if (annotations.get(0).equals(Annotations.FN_SYNC)) {
         async = false;
       } else {
         throw new InvalidAnnotationException(context, "unknown annotation" +
-        		" for composite function: @" + annotations.get(0));
+                " for composite function: @" + annotations.get(0));
       }
     }
     
@@ -1897,7 +1899,7 @@ public class ASTWalker {
     // use wait to wait for data then dispatch task to worker
     String waitName = context.getFunctionContext().constructName("app-leaf");
     backend.startWaitStatement(waitName, waitVars, passIn,
-                 Collections.<Var>emptyList(), true, TaskMode.LEAF);
+        Collections.<Var>emptyList(), WaitMode.TASK_DISPATCH, TaskMode.LEAF);
     // On worker, just execute the required command directly
     List<Arg> localArgs = retrieveAppArgs(context, args, fileNames);
     backend.runExternal(appName, localArgs,

@@ -165,7 +165,7 @@ public class ForLoopDescriptor {
       if (lv.declaredOutsideLoop) {
         if (outerV == null) {
           throw new UndefinedVariableException(context, v.toString() + " was not " +
-          		"declared before for loop");
+                  "declared before for loop");
         }
       } else {
         context.checkNotDefined(v.name());
@@ -269,7 +269,7 @@ public class ForLoopDescriptor {
         Var var = context.getDeclaredVariable(varName);
         if (var == null) {
           throw new UndefinedVariableException(context, "Variable in " +
-          		"for loop: " + varName + " has not been declared"); 
+                  "for loop: " + varName + " has not been declared"); 
         }
         forLoop.addLoopVar(var, true, expr);
         
@@ -303,7 +303,7 @@ public class ForLoopDescriptor {
           }
         } else {
           throw new InvalidAnnotationException(context, "Unknown annotation " +
-          		annText + " on for loop, only " + VALID_ANN_TEXT + " supported ");
+                  annText + " on for loop, only " + VALID_ANN_TEXT + " supported ");
         }
       } else {
         String annName = ann.child(0).getText();
@@ -313,7 +313,7 @@ public class ForLoopDescriptor {
             forLoop.makeLoopVarBlocking(context, annVal);
           } else {
             throw new InvalidAnnotationException(context, "Expected value" +
-            		"for " + WAITON_ANNOTATION + " to be a variable name, but was"
+                    "for " + WAITON_ANNOTATION + " to be a variable name, but was"
             + annVal);
           }
         } else {

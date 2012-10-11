@@ -184,7 +184,7 @@ public class Settings
       return Long.parseLong(strVal);
     } catch (NumberFormatException e) {
       throw new InvalidOptionException("Invalid integral value for option " +
-      		key + ": " + strVal);
+      key + ": " + strVal);
     }
   }
 

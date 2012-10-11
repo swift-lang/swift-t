@@ -188,7 +188,7 @@ public class OptUtil {
     public Instruction instruction() {
       if (_type != InstOrContType.INSTRUCTION) {
         throw new STCRuntimeError("InstOrCont not an " +
-        		"instruction, was: " + _type); 
+                "instruction, was: " + _type); 
             
       }
       return inst;

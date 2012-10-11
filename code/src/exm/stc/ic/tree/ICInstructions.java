@@ -2756,7 +2756,7 @@ public class ICInstructions {
       return TurbineOp.retrieveString(dst, src);
     default:
       throw new STCRuntimeError("method to retrieve " +
-      		src.type().typeName() + " is not known yet");
+            src.type().typeName() + " is not known yet");
     }
   }
   

@@ -99,10 +99,10 @@ public class FunctionDecl {
       ArgDecl argInfo = extractArgInfo(typeVarContext, outArgTree.child(i));
       if (argInfo.varargs) {
         throw new TypeMismatchException(context, "cannot have variable" +
-        		" argument specifier ... in output list");
+                " argument specifier ... in output list");
       } else if (Types.isUnion(argInfo.type)) {
         throw new TypeMismatchException(context, "Cannot have" +
-        		" union function output type: " + argInfo.type.typeName());
+                " union function output type: " + argInfo.type.typeName());
       } else {
         outArgTypes.add(argInfo.type);
         outNames.add(argInfo.name);

@@ -15,6 +15,7 @@ import exm.stc.ast.descriptor.ArrayRange;
 import exm.stc.ast.descriptor.FunctionCall;
 import exm.stc.ast.descriptor.Literals;
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -135,7 +136,7 @@ public class ExprWalker {
         } else {
           if (oList.size() != 1) {
             throw new STCRuntimeError("Operator had " +
-            		oList.size() + " outputs, doesn't make sense");
+                oList.size() + " outputs, doesn't make sense");
           }
           callOperator(context, tree, oList.get(0), renames);
         }
@@ -333,7 +334,8 @@ public class ExprWalker {
       String wName = context.getFunctionContext().constructName("copy-wait");
       List<Var> keepOpenVars = Arrays.asList(dst);
       backend.startWaitStatement(wName, Arrays.asList(src),
-              Arrays.asList(src, dst), keepOpenVars, false, TaskMode.LOCAL);
+              Arrays.asList(src, dst), keepOpenVars,
+              WaitMode.DATA_ONLY, TaskMode.LOCAL);
       Var derefed = varCreator.createTmpAlias(context, dst.type());
       backend.retrieveRef(derefed, src);
       copyArrayByValue(context, dst, derefed);
@@ -436,7 +438,8 @@ public class ExprWalker {
       usedVariables.addAll(oList);
       
       backend.startWaitStatement(context.getFunctionContext().constructName("priority-wait"), 
-                        Arrays.asList(priorityFuture), usedVariables, keepOpen, false, TaskMode.LOCAL);
+                        Arrays.asList(priorityFuture), usedVariables, keepOpen,
+                        WaitMode.DATA_ONLY, TaskMode.LOCAL);
       openedWait = true;
       callContext = new LocalContext(context);
       priorityVal = varCreator.fetchValueOf(callContext, priorityFuture);
@@ -740,7 +743,7 @@ public class ExprWalker {
       backend.startWaitStatement(
            fc.constructName("call-" + function),
            waitVars, usedVars, new ArrayList<Var>(),
-           false, TaskMode.LOCAL);
+           WaitMode.DATA_ONLY, TaskMode.LOCAL);
 
       assert(waitVars.size() == derefVars.size());
       // Generate code to fetch actual array IDs  inside
@@ -946,7 +949,7 @@ public class ExprWalker {
     backend.startWaitStatement( 
                     context.getFunctionContext().constructName("copystruct"), 
                     Arrays.asList(src), Arrays.asList(src, dst), 
-                    new ArrayList<Var>(), false, TaskMode.LOCAL);
+                    new ArrayList<Var>(), WaitMode.DATA_ONLY, TaskMode.LOCAL);
     Var rValDerefed = varCreator.createTmp(context, 
             src.type().memberType(), false, true);
     backend.retrieveRef(rValDerefed, src);

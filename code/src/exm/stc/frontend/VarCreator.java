@@ -158,7 +158,7 @@ public class VarCreator {
     assert(context != null);
     if (storeInStack && isAlias) {
       throw new STCRuntimeError("Cannot create variable which is both alias" +
-      		" and on stack");
+              " and on stack");
     }
     Var tmp;
     if ((!storeInStack) && isAlias) {
