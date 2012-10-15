@@ -4,10 +4,19 @@
 # Compile this with: ./setup.sh
 # After compiling this, get help with: ./configure --help
 
+define([c_utils_version],
+       regexp(esyscmd(cat version.txt),[\([.0-9]*\)],[\1]))
+
 AC_PREREQ([2.62])
-AC_INIT([EXMCUTILS], [0.1], [wozniak@mcs.anl.gov])
+AC_INIT([EXMCUTILS], [c_utils_version()], [wozniak@mcs.anl.gov])
 AC_CONFIG_SRCDIR([src/table.c])
 AC_CONFIG_HEADERS([c-utils-config.h])
+
+C_UTILS_VERSION=c_utils_version()
+AC_MSG_RESULT([Turbine version: ${C_UTILS_VERSION}])
+AC_SUBST(C_UTILS_VERSION)
+
+echo ${PWD} > source.txt
 
 # Check OS
 USE_MAC="no"
@@ -74,6 +83,7 @@ AC_CONFIG_FILES(
 	Makefile
         src/module.mk
         tests/module.mk
+        src/c-utils.h
 )
 
 AC_OUTPUT

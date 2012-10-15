@@ -39,9 +39,9 @@ exmcutils: $(EXMCUTILS)
 srcdir = @srcdir@
 
 INSTALL_PREFIX  = @prefix@
-INSTALL_BIN     = $(INSTALL_PREFIX)/bin
-INSTALL_LIB     = $(INSTALL_PREFIX)/lib
+INSTALL_ETC     = $(INSTALL_PREFIX)/etc
 INSTALL_INCLUDE = $(INSTALL_PREFIX)/include
+INSTALL_LIB     = $(INSTALL_PREFIX)/lib
 
 ifeq ($(V),1)
 	QUIET_COMPILE = 0
@@ -122,6 +122,8 @@ $(EXMCUTILS): $(OBJS)
 	$(Q) "  LINK		$@"
 	$(E) install -d lib
 	$(E) $(CC) $(SHARED) $(PIC) $(MAC_NAME) -o $(@) $(OBJS) -lm
+#       Touch this so re-installation has the correct source directory
+	$(E) touch source.txt
 
 else
 
@@ -176,13 +178,17 @@ else
 	CP_ARGS = -v
 endif
 
+PROVENANCE = version.txt source.txt config.log
+
 install: $(EXMCUTILS)
 	@echo
 	$(Q) "  INSTALL: $(INSTALL_PREFIX)"
 #       Set up directories
 	$(E) mkdir -pv $(INSTALL_PREFIX)
+	$(E) mkdir -pv $(INSTALL_ETC)
 	$(E) mkdir -pv $(INSTALL_INCLUDE)
 	$(E) mkdir -pv $(INSTALL_LIB)
+	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
 #       Install the headers and library
 	$(E) cp $(CP_ARGS) c-utils-config.h $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) src/*.h $(INSTALL_INCLUDE)

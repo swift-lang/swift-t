@@ -6,6 +6,7 @@
  *      Author: wozniak
  *
  *  Administrative functionality for c-utils project
+ *  Note that this file is filtered by config.status
  * */
 
 #ifndef C_UTILS_H
@@ -13,9 +14,10 @@
 
 #include <version.h>
 
-static void c_utils_version(version* output)
+static void
+c_utils_version(version* output)
 {
-  version_parse(output, "0.0.3");
+  version_parse(output, @C_UTILS_VERSION@);
 }
 
 #endif
