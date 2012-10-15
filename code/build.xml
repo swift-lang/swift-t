@@ -24,9 +24,9 @@
   <property name="build.dir"
             value="classes"/>
 
-
   <target name="jar"
           depends="compile">
+    <mkdir dir="${build.dir}"/>
     <jar destfile="${stc.jar}"
          basedir="${build.dir}"
          includes="**/*.class"
@@ -209,10 +209,16 @@
 
     <echo message="INSTALL: dist.dir=${dist.dir}"/>
 
+    <!-- Record source directory -->
+    <echo message="${user.dir}${line.separator}" output="source.txt"/>
+
     <mkdir dir="${dist.dir}/bin"/>
+    <mkdir dir="${dist.dir}/etc"/>
     <mkdir dir="${dist.dir}/lib"/>
     <copy file="turbine-version.txt" todir="${dist.dir}"/>
     <copy file="help.txt" todir="${dist.dir}"/>
+    <copy file="version.txt" todir="${dist.dir}/etc"/>
+    <copy file="source.txt" todir="${dist.dir}/etc"/>
     <copy file="bin/stc" todir="${dist.dir}/bin"/>
     <copy file="conf/stc-env.sh.template" toFile="${dist.dir}/conf/stc-env.sh"
           overwrite="true">
