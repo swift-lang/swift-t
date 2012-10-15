@@ -125,10 +125,9 @@ public class ASTWalker {
     /*
      * Do two passes over the program
      * First pass:
-     *  - Register (but don't compile) composites
-     *  - Fully process app functions and built-in functions
+     *  - Register (but don't compile) all functions
      * Second pass:
-     *  - Compile composites, now that all function names are known
+     *  - Compile composite and app functions, now that all function names are known
      */
     int token = programTree.getType();
     
@@ -181,6 +180,10 @@ public class ASTWalker {
         switch (type) {
         case ExMParser.DEFINE_FUNCTION:
           compileFunction(context, topLevelDefn);
+          break;
+
+        case ExMParser.DEFINE_APP_FUNCTION:
+          compileAppFunction(context, topLevelDefn);
           break;
         }
       }
@@ -1846,10 +1849,26 @@ public class ASTWalker {
       }
     }
   }
-
+  
   private void defineAppFunction(Context context, SwiftAST tree)
       throws UserException {
     LogHelper.info(context.getLevel(), "defineAppFunction");
+    assert(tree.getChildCount() >= 4);
+    SwiftAST functionT = tree.child(0);
+    assert(functionT.getType() == ExMParser.ID);
+    String function = functionT.getText();
+    SwiftAST outArgsT = tree.child(1);
+    SwiftAST inArgsT = tree.child(2);
+    
+    FunctionDecl decl = FunctionDecl.fromAST(context, function, inArgsT,
+                        outArgsT,   Collections.<String>emptySet());
+    context.defineFunction(function, decl.getFunctionType());
+    context.setFunctionProperty(function, FnProp.APP);
+  }
+
+  private void compileAppFunction(Context context, SwiftAST tree)
+      throws UserException {
+    LogHelper.info(context.getLevel(), "compileAppFunction");
     assert(tree.getChildCount() >= 4);
     SwiftAST functionT = tree.child(0);
     assert(functionT.getType() == ExMParser.ID);
@@ -1860,8 +1879,6 @@ public class ASTWalker {
     
     FunctionDecl decl = FunctionDecl.fromAST(context, function, inArgsT,
                         outArgsT,   Collections.<String>emptySet());
-    context.defineFunction(function, decl.getFunctionType());
-    context.setFunctionProperty(function, FnProp.APP);
     List<Var> outArgs = decl.getOutVars();
     List<Var> inArgs = decl.getInVars();
     
