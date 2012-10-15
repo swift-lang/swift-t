@@ -1,14 +1,22 @@
 
-# XLB: CONFIGURE
+# EXM ADLB/X (XLB)
+# configure.ac
+# Compile this with: ./setup.sh
+# After compiling this, get help with: ./configure --help
 
-AC_INIT()
+define([adlb_version],
+       regexp(esyscmd(cat version.txt),[\([.0-9]*\)],[\1]))
+
+AC_INIT([XLB], [adlb_version()], [wozniak@mcs.anl.gov])
 AC_PREREQ(2.63)
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_HEADER(config.h src/mpe-settings.h)
 
-echo "Configuring ADLB with $ac_configure_args"
+ADLB_VERSION=adlb_version()
+AC_MSG_RESULT([ADLB/X version: ${ADLB_VERSION}])
+AC_SUBST(ADLB_VERSION)
 
-CC=${CC:-mpicc}
+echo ${PWD} > source.txt
 
 USE_MAC="no"
 if [[ $( uname ) == "Darwin" ]]
@@ -20,7 +28,7 @@ AC_SUBST(USE_MAC)
 
 # Checks for programs
 AC_PROG_CC
-AC_CHECK_PROG(AR, ar, ar, ;)
+AC_CHECK_PROG(AR, ar)
 AC_PROG_RANLIB
 
 # We prefer to use cp -u for installation
@@ -99,3 +107,4 @@ AC_SUBST(USE_C_UTILS)
 
 AC_OUTPUT(Makefile)
 AC_OUTPUT(src/module.mk)
+AC_OUTPUT(src/adlb-version.h)

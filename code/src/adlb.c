@@ -13,6 +13,7 @@
 #include <tools.h>
 
 #include "adlb.h"
+#include "adlb-version.h"
 #include "checks.h"
 #include "common.h"
 #include "data.h"
@@ -37,7 +38,7 @@ check_versions()
   version av, cuv, rcuv;
   // required c-utils version (rcuv):
   ADLB_Version(&av);
-  version_parse(&rcuv, "0.0.1");
+  version_parse(&rcuv, C_UTILS_REQUIRED_VERSION);
   c_utils_version(&cuv);
   version_require("ADLB", &av, "c-utils", &cuv, &rcuv);
 }
@@ -101,7 +102,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
 adlb_code
 ADLB_Version(version* output)
 {
-  version_parse(output, "0.0.2");
+  version_parse(output, ADLB_VERSION);
   return ADLB_SUCCESS;
 }
 

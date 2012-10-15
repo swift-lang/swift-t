@@ -1,5 +1,5 @@
 
-# ADLB Makefile
+# ADLB/X Makefile
 
 # Usage notes:
 # make V=1 turns on verbose output
@@ -12,6 +12,7 @@ ADLB = $(ADLB_SO)
 all: $(ADLB)
 
 INSTALL_PREFIX  = @prefix@
+INSTALL_ETC     = $(INSTALL_PREFIX)/etc
 INSTALL_LIB     = $(INSTALL_PREFIX)/lib
 INSTALL_INCLUDE = $(INSTALL_PREFIX)/include
 
@@ -120,6 +121,8 @@ $(ADLB_SO): $(OBJS) $(NLOBJS)
 	        -l exmcutils \
 	        $(RPATH) \
 	        -o $(@)
+#       Touch this so re-installation has the correct source directory
+	$(E) touch source.txt
 
 ### APPS
 
@@ -138,11 +141,15 @@ else
 	CP_ARGS = -vf
 endif
 
+PROVENANCE = version.txt source.txt config.log
+
 install: $(ADLB)
 	$(Q)
-	$(Q) "  INSTALL"
+	$(Q) "  INSTALL		$(INSTALL_PREFIX)"
+	$(E) mkdir -pv $(INSTALL_ETC)
 	$(E) mkdir -pv $(INSTALL_INCLUDE)
 	$(E) mkdir -pv $(INSTALL_LIB)
+	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
 	$(E) cp $(CP_ARGS) src/adlb.h $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) src/adlb-defs.h $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) $(ADLB) $(INSTALL_LIB)
