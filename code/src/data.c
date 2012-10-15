@@ -9,12 +9,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "adlb.h"
-#include "data.h"
-#include <table_lp.h>
-#include <table.h>
 #include <list_i.h>
 #include <list_l.h>
+#include <table.h>
+#include <table_lp.h>
+
+#include "adlb.h"
+#include "data.h"
+#include "debug.h"
 
 /**
    Map from adlb_datum_id to adlb_datum
@@ -69,7 +71,7 @@ static adlb_datum_id last_id;
     {                                                         \
       printf("ADLB DATA ERROR:\n");                           \
       printf(format "\n", ## args);                           \
-      printf("\t in: %s\n", func);                            \
+      printf("\t in: %s()\n", func);                            \
       printf("\t at: %s:%i\n", file, line);                   \
       return code;                                            \
     }                                                         \
@@ -217,6 +219,7 @@ data_container_typeof(adlb_datum_id id, adlb_data_type* type)
 adlb_data_code
 data_close(adlb_datum_id id, int** result, int* count)
 {
+  TRACE("%li", id);
   check_verbose(id != ADLB_DATA_ID_NULL,
                 ADLB_DATA_ERROR_NULL, "NULL: <%li>", id);
 
@@ -229,7 +232,9 @@ data_close(adlb_datum_id id, int** result, int* count)
   d->status = ADLB_DATA_SET;
 
   list_i_toints(&d->listeners, result, count);
-  DEBUG("data_close: <%li> count: %i\n", id, *count);
+  DEBUG("data_close: <%li> listeners: %i\n", id, *count);
+  list_i_clear(&d->listeners);
+  TRACE_END;
   return ADLB_DATA_SUCCESS;
 }
 
@@ -388,7 +393,8 @@ data_container_reference(adlb_datum_id container_id,
 
 
 
-adlb_data_code data_container_reference_str(adlb_datum_id container_id,
+adlb_data_code
+data_container_reference_str(adlb_datum_id container_id,
                                         const char* subscript,
                                         adlb_datum_id reference,
                                         adlb_data_type ref_type,
@@ -516,9 +522,9 @@ data_store(adlb_datum_id id, void* buffer, int length)
    Retrieve works on UNSET data for files and containers:
                   this is necessary for filenames,
                   and may be useful for containers.
-   Callee should use result before making further calls into
+   Caller should use result before making further calls into
    this module, except if type is container, in which case the
-   callee must free result pointer.  This is because the container
+   caller must free result pointer.  This is because the container
    subscript list must be dynamically created.
    @param type   Returns type
    @param result Returns pointer to data in data module memory,
@@ -910,7 +916,7 @@ ADLB_Data_type_tostring(char* output, adlb_data_type type)
       result = sprintf(output, "container");
       break;
     case ADLB_DATA_TYPE_NULL:
-      sprintf(output, "ADLB_DATA_TYPE_NULL");
+      result = sprintf(output, "ADLB_DATA_TYPE_NULL");
       break;
     default:
       sprintf(output, "<unknown type>");
@@ -919,7 +925,7 @@ ADLB_Data_type_tostring(char* output, adlb_data_type type)
   return result;
 }
 
-void report_leaks(void);
+static void report_leaks(void);
 
 adlb_data_code
 data_finalize()
@@ -928,12 +934,12 @@ data_finalize()
   return ADLB_DATA_SUCCESS;
 }
 
-void
+static void
 report_leaks()
 {
   for (int i = 0; i < tds.capacity; i++)
   {
-    struct list_lp* L = &(tds.array[i]);
+    struct list_lp* L = &tds.array[i];
     for (struct list_lp_item* item = L->head; item; item = item->next)
     {
       DEBUG("LEAK: %li", item->key);

@@ -4,18 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "src/adlb.h"
+#include "adlb.h"
 
-#define CMDLINE 1
-
-static void
-chomp(char* s)
-{
-  char* c = strchr(s, '\n');
-  if (c == NULL)
-    return;
-  *c = '\0';
-}
+// Work unit type
+#define CMDLINE 0
 
 int main(int argc, char *argv[])
 {
@@ -31,9 +23,8 @@ int main(int argc, char *argv[])
   int num_types = 1;
   int type_vect[2] = {CMDLINE};
 
-  int work_prio, work_type, work_handle[ADLB_HANDLE_SIZE], work_len,
+  int work_prio, work_type,  work_len,
     answer_rank;
-  int req_types[4];
 
   int quiet = 1;
 
@@ -44,34 +35,27 @@ int main(int argc, char *argv[])
 
   rc = MPI_Init( &argc, &argv );
   assert(rc == MPI_SUCCESS);
-  printf("MPI_Init!\n");
-    fflush(NULL);
 
   MPI_Comm_rank( MPI_COMM_WORLD, &my_world_rank );
-
-  printf("COMM!\n");
-      fflush(NULL);
 
   aprintf_flag = 0;		/* no output from adlb itself */
   num_servers = 1;		/* one server should be enough */
   use_debug_server = 0;		/* default: no debug server */
-  rc = ADLB_Init(num_servers, use_debug_server, aprintf_flag, 1,
-		 type_vect, &am_server, &am_debug_server, &app_comm);
+  rc = ADLB_Init(num_servers, 1, type_vect, &am_server, &app_comm);
   if ( !am_server && !am_debug_server ) /* application process */
-    {
-      MPI_Comm_rank( app_comm, &my_app_rank );
-    }
+  {
+    MPI_Comm_rank( app_comm, &my_app_rank );
+  }
 
   rc = MPI_Barrier( MPI_COMM_WORLD );
   start_time = MPI_Wtime();
 
-  if ( am_server ) {
-    ADLB_Server( 3000000, 0.0 );
+  if ( am_server )
+  {
+    ADLB_Server(3000000);
   }
-  else if ( am_debug_server ) {
-    ADLB_Debug_server( 300.0 );
-  }
-  else {                                 /* application process */
+  else
+  {                                 /* application process */
     if ( my_app_rank == 0 ) {  /* if master app, read and put cmds */
 
       if (argc != 2) {
@@ -89,16 +73,14 @@ int main(int argc, char *argv[])
 
       while (fgets(cmdbuffer,1024,fp) != NULL) {
 	cmdbuffer[strlen(cmdbuffer)] = '\0';
-	chomp(cmdbuffer);
         if (!quiet)
           printf("command = %s\n", cmdbuffer);
 
 	if (cmdbuffer[0] != '#') {
 	  /* put command into adlb here */
-
-	  rc = ADLB_Put( cmdbuffer, strlen(cmdbuffer)+1, -1, -1,
-			 CMDLINE, 1 );
-	  aprintf( 1, "put cmd, rc = %d\n", rc );
+	  rc = ADLB_Put(cmdbuffer, strlen(cmdbuffer)+1, -1, -1,
+	                CMDLINE, 1);
+	  printf("put cmd, rc = %d\n", rc);
 	}
       }
       printf("\nall commands submitted\n");
@@ -107,51 +89,30 @@ int main(int argc, char *argv[])
        execute this loop */
 
     done = 0;
-    while ( !done ) {
-      req_types[0] = -1;
-      req_types[1] = req_types[2] = req_types[3] = -1;
-      aprintf( 1, "Getting a command\n" );
-      rc = ADLB_Reserve( req_types, &work_type, &work_prio,
-			 work_handle, &work_len, &answer_rank);
-      /* (work_handle is an array, so no & in above call) */
-      aprintf( 1, "rc from getting command = %d\n", rc );
-      if ( rc == ADLB_DONE_BY_EXHAUSTION ) {
-	aprintf( 1, "All jobs done\n" );
+    while (!done)
+    {
+      printf("Getting a command\n");
+      rc = ADLB_Get(CMDLINE,
+                    cmdbuffer, &work_len, &answer_rank, &work_type);
+
+      if ( rc == ADLB_SHUTDOWN )
+      {
+	printf("All jobs done\n");
 	break;
       }
-      if ( rc == ADLB_NO_MORE_WORK ) {
-	aprintf( 1, "No more work on reserve\n" );
-	break;
-      }
-      else if (rc < 0) {
-	aprintf( 1, "Reserve failed, rc = %d\n", rc );
-	ADLB_Abort(-1);
-      }
-      else if ( work_type != CMDLINE) {
-	aprintf( 1, "unexpected work type %d\n", work_type );
-	ADLB_Abort( 99 );
-      }
-      else {			/* reserved good work */
-	rc = ADLB_Get_reserved( cmdbuffer, work_handle );
-	if (rc == ADLB_NO_MORE_WORK) {
-	  aprintf( 1, "No more work on get_reserved\n" );
-	  break;
-	}
-	else { 			/* got good work */
-	  /* print command to be executed */
-	  /* printf("executing command line :%s:\n", cmdbuffer); */
-	  rc = system( cmdbuffer );
-          if (rc != 0)
-            printf("WARNING: COMMAND: (%s) EXIT CODE: %i\n",
-                   cmdbuffer, rc);
-	}
-      }
+      /* printf("executing command line :%s:\n", cmdbuffer); */
+      rc = system( cmdbuffer );
+      if (rc != 0)
+        printf("WARNING: COMMAND: (%s) EXIT CODE: %i\n",
+               cmdbuffer, rc);
+    }
+
+    if (my_app_rank == 0)
+    {
+      end_time = MPI_Wtime();
+      printf("TOOK: %.3f\n", end_time-start_time);
     }
   }
-  end_time = MPI_Wtime();
-
-  if (my_app_rank == 0)
-    printf("TOOK: %.3f\n", end_time-start_time);
 
   ADLB_Finalize();
   MPI_Finalize();

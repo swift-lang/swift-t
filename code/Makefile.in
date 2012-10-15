@@ -4,17 +4,16 @@
 # Usage notes:
 # make V=1 turns on verbose output
 
-USE_MAC = @USE_MAC@
-
 # Products:
-ADLB_A  = libadlb.a
-ifeq ($(USE_MAC),no)
-ADLB_SO = libadlb.so
-else
-ADLB_SO = libadlb.dylib
-endif
+ADLB_A  = lib/libadlb.a
+ADLB_SO = lib/libadlb.so
+ADLB = $(ADLB_SO)
 
-all: lib/$(ADLB_SO)
+all: $(ADLB)
+
+INSTALL_PREFIX  = @prefix@
+INSTALL_LIB     = $(INSTALL_PREFIX)/lib
+INSTALL_INCLUDE = $(INSTALL_PREFIX)/include
 
 # Verbosity control:
 ifeq ($(V),1)
@@ -33,12 +32,11 @@ else
   E =
 endif
 
-INSTALL_PREFIX  = @prefix@
-INSTALL_LIB     = $(INSTALL_PREFIX)/lib
-INSTALL_INCLUDE = $(INSTALL_PREFIX)/include
+### FLAGS
 
 CC  = @CC@
-FC  = @F77@
+# Always link with gcc, even when using XLC
+LINKER = gcc
 
 AR      = @AR@
 ARFLAGS = cr
@@ -46,123 +44,112 @@ RANLIB  = @RANLIB@
 
 C_UTILS = @USE_C_UTILS@
 
-INCLUDES = -I . -I $(C_UTILS)/include
+INCLUDES = -I . -I src -I $(C_UTILS)/include
 
 USE_XLC = @USE_XLC@
-ifeq ($(USE_XLC),1)
-#       Using IBM XLC
-        PIC = -qpic
-        STD =
-        SHARED = -qnostaticlink -qmkshrobj
-else
-ifeq ($(USE_MAC),yes)
-#       Mac
-	MAC_FLAT = -flat_namespace
-	MAC_NAME = -install_name $(INSTALL_LIB)/$(ADLB_SO)
-	SHARED = -dynamiclib $(MAC_FLAT)
-else
-#       Linux
-	MAC_FLAT =
-        SHARED = -shared
-endif
-#       Linux and Mac
+ifeq ($(USE_XLC),0)
+#       Not XLC: GCC
         PIC = -fPIC
         STD = -std=gnu99
+        SHARED = -shared
+else
+#       Using XLC
+        PIC = -qpic
+        STD =
+        SHARED = -qmkshrobj
 endif
 
 # No logging
 LDFLAGS  = @LDFLAGS@
 CFLAGS  = @CFLAGS@ $(PIC) $(STD) $(INCLUDES) -g
-# Both MPI and user-defined MPE logging
-CFLAGS_MPILOG  = $(CFLAGS) -DLOG_GUESS_USER_STATE @MPILOG_FLAG@
-# user-defined MPE logging
-CFLAGS_LOG  = $(CFLAGS) -DNO_MPI_LOGGING -DLOG_GUESS_USER_STATE @LOG_FLAG@
 
-LIBDIRS = -L$(INSTALL_LIB) -L$(C_UTILS)/lib
-LIBS = -l exmcutils
+LIBS := -L $(C_UTILS)/lib -l exmcutils
 
-RPATHS = -Wl,-rpath -Wl,$(C_UTILS)/lib
+RPATH := -Wl,-rpath -Wl,$(C_UTILS)/lib
 
-ADLB_RPATH = -Wl,-rpath -Wl,$(INSTALL_LIB)
-
-OBJS     = src/xq.o src/data.o
-# Objects with No Logging
-NLOBJS   = src/adlb_prof.o  src/adlb.o
-# Objects with MPE Logging
-MLOBJS   = src/adlb_prof.mo src/adlb.mo
-
-ENABLE_MPE = @ENABLE_MPE@
-
-ifeq ($(BUILD_LOGGING),1)
-	CFLAGS += -D ENABLE_MPE
-	LIBS += -l mpe -llmpe
+ENABLE_MPE = @ADLB_ENABLE_MPE@
+MPE = @USE_MPE@
+MPE_FLAGS  = @MPE_FLAGS@
+ifeq ($(ENABLE_MPE),yes)
+	CFLAGS += -D ENABLE_MPE $(MPE_FLAGS)
+	LIBS += -L lib -lmpe -L $(MPE)
+	RPATH += -Wl,-rpath -Wl,$(INSTALL_LIB)
+        RPATH += -Wl,-rpath -Wl,$(MPE)
 endif
 
-.SUFFIXES: .c .o .eo .mo
+### INCLUDES
+
+SRCS :=
+OBJS :=
+DEPS :=
+include src/module.mk
+
+### DEPS
+
+deps: $(DEPS)
+
+ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
+  -include $(DEPS)
+endif
+
+# default rule for generating dependency files (deps)
+%.d: %.c
+	$(Q) "  DEP		$(@)"
+	$(E) CC=$(CC) maint/depend.sh \
+             $(dir $(<)) $(CFLAGS) $(<) > $(@)
+
+### COMPILE
 
 %.o: %.c
 	$(Q) "  CC		$(@)"
 	$(E) $(CC) $(CFLAGS) -c -o $(@) $(<)
 
-# .mo are object file that does both MPI and user-defined MPE logging
-.c.mo:
-	$(CC) $(CFLAGS_MPILOG) -c -o $*.mo $<
+### LINK
 
-apps/%.x: install apps/%.o
-	$(CC) $(CFLAGS) $(MAC_FLAT) -o $(@) $(<) $(LIBDIRS) $(LDFLAGS) $(ADLB_RPATH) $(RPATHS) $(LIBS) -l adlb -lm
-
-lib/$(ADLB_A): $(OBJS)
+$(ADLB_A): $(OBJS)
 	$(Q) "  AR		$(@)"
-	$(E) mkdir -p lib
-	$(E) $(AR) $(ARFLAGS) $@ $(OBJS)
-	$(E) $(RANLIB) $@
+	$(E) $(AR) $(ARFLAGS) $(@) $(OBJS)
+	$(E) $(RANLIB) $(@)
 
-lib/$(ADLB_SO): $(OBJS) $(NLOBJS)
+$(ADLB_SO): $(OBJS) $(NLOBJS)
 	$(Q) "  LINK		$(@)"
-	$(E) mkdir -p lib
-	$(E) $(CC) $(SHARED) -o $(@) $(PIC) $(NLOBJS) $(OBJS) \
-        $(MAC_NAME) \
-	-L$(C_UTILS)/lib \
-        -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils
-# -L . -l mpe -Wl,-rpath -Wl,$(PWD)
+	$(E) $(LINKER) -shared -fPIC -g			\
+	        $(OBJS) 				\
+                $(LIBS)                                 \
+	        -L $(C_UTILS)/lib 	\
+	        -l exmcutils \
+	        $(RPATH) \
+	        -o $(@)
 
-# ADLB library, libeladlb.a, that does only user-defined MPE logging
-libeladlb.a: $(ELOBJS)
-	$(AR) $(ARFLAGS) $@ $(ELOBJS)
-	$(RANLIB) $@
+### APPS
 
-libeladlb.so: $(OBJS) $(ELOBJS)
-	gcc -shared -o $(@) -fPIC $(ELOBJS) $(OBJS) \
-	-L $(C_UTILS)/lib -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils
-
-# ADLB library, libmladlb.a, that does both MPI and user-defined MPE logging
-libmladlb.a: $(MLOBJS)
-	$(AR) $(ARFLAGS) $@ $(MLOBJS)
-	$(RANLIB) $@
-
-lib/libmladlb.so: $(OBJS) $(MLOBJS)
+apps/%.x: apps/%.o install
 	$(Q) "  LINK		$(@)"
-	$(E) mkdir -p lib
-	$(E) $(CC) $(SHARED) -o $(@) $(PIC) $(OBJS) $(MLOBJS) \
-        $(MAC_NAME) \
-	-L$(C_UTILS)/lib \
-        -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils \
-	$(LDFLAGS)
+	$(E) $(CC) $(CFLAGS) -o $(@) $(<) $(LDFLAGS) \
+             -L lib -l adlb $(LIBS) \
+	     $(RPATH)
 
-	# mpicc $(SHARED) -o $(@) -fPIC $(MLOBJS) $(OBJS) \
-	# -L $(C_UTILS)/lib -Wl,-rpath -Wl,$(C_UTILS)/lib -l exmcutils \
-        # -L . -l mpe -Wl,-rpath -Wl,$(PWD)
+### INSTALL
+
+HAVE_CP_U = @CP_U@
+ifeq ($(HAVE_CP_U),yes)
+	CP_ARGS = -uvf
+else
+	CP_ARGS = -vf
+endif
+
+install: $(ADLB)
+	$(Q)
+	$(Q) "  INSTALL"
+	$(E) mkdir -pv $(INSTALL_INCLUDE)
+	$(E) mkdir -pv $(INSTALL_LIB)
+	$(E) cp $(CP_ARGS) src/adlb.h $(INSTALL_INCLUDE)
+	$(E) cp $(CP_ARGS) src/adlb-defs.h $(INSTALL_INCLUDE)
+	$(E) cp $(CP_ARGS) $(ADLB) $(INSTALL_LIB)
+	$(Q)
+
+### CLEAN
 
 clean:
-	@rm -fv $(OBJS) $(NLOBJS) $(ELOBJS) $(MLOBJS) $(ADLB)
-
-install: lib/$(ADLB_SO)
-	mkdir -pv $(INSTALL_INCLUDE)
-	mkdir -pv $(INSTALL_LIB)
-	cp -v src/adlb.h $(INSTALL_INCLUDE)
-	cp -v src/adlb-defs.h $(INSTALL_INCLUDE)
-	cp -v src/xq.h $(INSTALL_INCLUDE)
-	cp -v lib/$(ADLB_SO) $(INSTALL_LIB)
-ifeq ($(ENABLE_MPE),yes)
-	cp -v libmpe.so $(INSTALL_LIB)
-endif
+	$(Q) "  CLEAN"
+	$(E) rm -fv $(OBJS) $(ADLB) $(DEPS)
