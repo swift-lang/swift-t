@@ -233,13 +233,15 @@
     <chmod file="${dist.dir}/bin/stc" perm="u+x"/>
   </target>
 
+  <available property="classes.exists" file="classes"/>
+
   <target name="clean"
           depends="clean.java">
     <delete file="${stc.jar}"/>
     <!-- Delete all ANTLR-generated stuff -->
     <delete dir="${antlr.out}"/>
   </target>
-  <target name="clean.java">
+  <target name="clean.java" if="classes.exists">
     <delete includeemptydirs="true">
       <fileset dir="${build.dir}" includes="**/*"/>
     </delete>
