@@ -13,7 +13,7 @@ AC_CONFIG_SRCDIR([src/table.c])
 AC_CONFIG_HEADERS([c-utils-config.h])
 
 C_UTILS_VERSION=c_utils_version()
-AC_MSG_RESULT([Turbine version: ${C_UTILS_VERSION}])
+AC_MSG_RESULT([c-utils version: ${C_UTILS_VERSION}])
 AC_SUBST(C_UTILS_VERSION)
 
 echo ${PWD} > source.txt

@@ -17,7 +17,7 @@
 static void
 c_utils_version(version* output)
 {
-  version_parse(output, @C_UTILS_VERSION@);
+  version_parse(output, "@C_UTILS_VERSION@");
 }
 
 #endif
