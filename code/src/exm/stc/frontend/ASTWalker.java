@@ -811,7 +811,7 @@ public class ASTWalker {
       if (lv.declaredOutsideLoop) {
         // Need to copy over value of loop variable on last iteration
         Var parentAlias = 
-            varCreator.createVariable(context, lv.var.type(), 
+            varCreator.createVariable(context, lv.var.type(),
                   Var.OUTER_VAR_PREFIX + lv.var.name(),
                   VarStorage.ALIAS, DefType.LOCAL_COMPILER,
                   lv.var.mapping());
