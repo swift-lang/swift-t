@@ -204,7 +204,7 @@ namespace eval turbine {
         }
         return $val
     }
-    
+
     # usage: argv_get <result> <index> <optional:base>
     # If index >= argc, the base (default value) is used
     # "default" is a Tcl keyword so we call it "base"
@@ -218,7 +218,7 @@ namespace eval turbine {
         }
 
         rule "argp_get-$i" $i $turbine::LOCAL \
-            "argp_get_body $result $key $base"
+            "argp_get_body $result $i $base"
     }
 
     # usage: argp_get <result> <index> <optional:base>
@@ -233,7 +233,7 @@ namespace eval turbine {
 
         set i_val [ retrieve_integer $i ]
         if { $c == 2 } {
-            set result_val [ argv_get_impl $i_val ]
+            set result_val [ argp_get_impl $i_val ]
         } elseif { $c == 3 } {
             set base [ lindex $args 2 ]
             set base_val [ retrieve_string $base ]
@@ -299,7 +299,7 @@ namespace eval turbine {
             }
         }
     }
-    
+
     proc getenv { stack outputs inputs } {
         rule getenv-$inputs $inputs $turbine::LOCAL \
             "turbine::getenv_body $outputs $inputs"

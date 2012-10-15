@@ -18,7 +18,7 @@ proc rules { } {
     # Get 2nd unflagged parameter
     turbine::literal k2 integer 2
     turbine::create_string 21
-    turbine::argv_get no_stack 21 $k2
+    turbine::argp_get no_stack 21 $k2
     turbine::trace no_stack {} 21
 
     # Check non-existant parameter -G
