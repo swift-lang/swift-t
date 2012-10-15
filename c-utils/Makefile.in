@@ -1,0 +1,205 @@
+
+# EXM C UTILS
+
+# Usage notes:
+# make V=1 turns on verbose output
+
+# Useful targets: all, install, tests, test_results
+
+USE_MAC = @USE_MAC@
+
+# Shared object suffix is .so on Linux, .dylib on Mac
+# GCC shared library creation argument:
+#            Linux: -shared; Mac: -dynamiclib
+ifeq ($(USE_MAC),no)
+  MAC_NAME =
+  SO_SUFFIX = so
+  SHARED = -shared
+else
+  MAC_NAME = -install_name $(INSTALL_LIB)/libexmcutils.dylib
+  SO_SUFFIX = dylib
+  SHARED = -dynamiclib -flat_namespace
+endif
+
+EXMCUTILS_SO = libexmcutils.$(SO_SUFFIX)
+
+ENABLE_SHARED = @ENABLE_SHARED@
+
+# Name the main product:
+ifeq ($(ENABLE_SHARED),1)
+	EXMCUTILS = lib/$(EXMCUTILS_SO)
+else
+	EXMCUTILS = lib/libexmcutils.a
+endif
+
+all: exmcutils
+
+exmcutils: $(EXMCUTILS)
+
+srcdir = @srcdir@
+
+INSTALL_PREFIX  = @prefix@
+INSTALL_BIN     = $(INSTALL_PREFIX)/bin
+INSTALL_LIB     = $(INSTALL_PREFIX)/lib
+INSTALL_INCLUDE = $(INSTALL_PREFIX)/include
+
+ifeq ($(V),1)
+	QUIET_COMPILE = 0
+else
+	QUIET_COMPILE = 1
+endif
+
+ifeq ($(QUIET_COMPILE),1)
+  # Prints a short description of the action, does not show command
+  Q=@echo
+  E=@
+else
+  # Just echo the entire command
+  Q=@echo >/dev/null
+  E=
+endif
+
+# INCLUDES
+
+SRCS :=
+DEPS :=
+OBJS :=
+include src/module.mk
+
+dirname = $(patsubst %/,%,$(dir $(1)))
+
+### FLAGS
+
+CC = @CC@
+CFLAGS := @CFLAGS@
+CFLAGS += -I $(srcdir) -I $(srcdir)/src -std=gnu99 -Wall
+
+ifeq ($(ENABLE_SHARED),1)
+	PIC = -fPIC
+	CFLAGS += $(PIC)
+endif
+
+RPATH = -Wl,-rpath -Wl,$(INSTALL_LIB)
+
+### DEPENDENCIES
+
+deps: $(DEPS)
+
+# default rule for generating dependency files (deps)
+%.d: %.c
+	$(Q) "  DEP		$@"
+	$(E) CC="$(CC)" $(srcdir)/maint/depend.sh \
+             $(call dirname, $*) $(CFLAGS) $< > $@
+
+ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
+  -include $(DEPS)
+endif
+
+# Check existing *.d files for files that do not exist
+# Useful when dependency file generation is failing
+# Must "make clean" to re-check correctly
+EXISTING_D = $(shell find . -name *.d)
+
+check_includes: deps_contents.txt
+	$(Q) "  CHECK.SH"
+	$(E) $(srcdir)/maint/check.sh deps_contents.txt
+
+deps_contents.txt:
+	$(Q) "  SH		$(@)"
+	$(E) $(srcdir)/maint/collect.sh $(@) $(EXISTING_D)
+
+### COMPILE
+
+%.o: %.c
+	$(Q) "  CC		$@"
+	$(E) $(CC) $(CFLAGS) -c $(<) -o $(@)
+
+### LINK
+
+ifeq ($(ENABLE_SHARED),1)
+
+$(EXMCUTILS): $(OBJS)
+	$(Q) "  LINK		$@"
+	$(E) install -d lib
+	$(E) $(CC) $(SHARED) $(PIC) $(MAC_NAME) -o $(@) $(OBJS) -lm
+
+else
+
+$(EXMCUTILS): $(OBJS)
+	$(Q) "  AR		$@"
+	$(E) install -d lib
+	$(E) ar rcs $(@) $(OBJS)
+
+endif
+
+### TEST
+
+TEST_SRC :=
+include tests/module.mk
+TEST_DEPS = $(patsubst %.c, %.d, $(TEST_SRC))
+TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC))
+TESTS     = $(patsubst %.c, %.x, $(TEST_SRC))
+# Test case results
+TEST_SCRIPTS = $(patsubst %.c,  %.sh, $(TEST_SRC))
+# Test case outputs
+TEST_OUTPUT  = $(patsubst %.c, %.out, $(TEST_SRC))
+# Test case results
+TEST_RESULTS = $(patsubst %.c, %.result, $(TEST_SRC))
+
+# Target to just build all C tests
+tests: $(TESTS)
+
+# Run all tests
+test_results: $(TEST_RESULTS)
+
+# Test result rule for C tests
+%.result: %.sh %.x
+	$(Q) "  SH		$(@)"
+	$(E) rm -f $(@)
+	$(E) $(<) > $(*).tmp 2>&1
+	$(E) mv $(*).tmp $(@) 2>&1
+
+
+$(TESTS): %.x: %.o $(EXMCUTILS) install
+	$(Q) "  LINK		$(@)"
+	$(E) $(CC) $(PIC) $(LDFLAGS) $(<) \
+                   -L$(INSTALL_LIB) -l exmcutils \
+                   -o $(@) \
+                   $(RPATH)
+
+### INSTALL
+
+HAVE_CP_U = @CP_U@
+ifeq ($(HAVE_CP_U),yes)
+	CP_ARGS = -uv
+else
+	CP_ARGS = -v
+endif
+
+install: $(EXMCUTILS)
+	@echo
+	$(Q) "  INSTALL: $(INSTALL_PREFIX)"
+#       Set up directories
+	$(E) mkdir -pv $(INSTALL_PREFIX)
+	$(E) mkdir -pv $(INSTALL_INCLUDE)
+	$(E) mkdir -pv $(INSTALL_LIB)
+#       Install the headers and library
+	$(E) cp $(CP_ARGS) c-utils-config.h $(INSTALL_INCLUDE)
+	$(E) cp $(CP_ARGS) src/*.h $(INSTALL_INCLUDE)
+	$(E) cp $(CP_ARGS) $(EXMCUTILS) $(INSTALL_LIB)
+
+### CLEAN
+
+clean:
+	$(Q) "  CLEAN:"
+	$(E) rm -fv $(DEPS) deps_contents.txt
+	$(E) rm -fv src/*.o
+	$(E) rm -fv $(EXMCUTILS)
+	$(E) rm -fv $(TESTS) $(TEST_DEPS) $(TEST_OBJS)
+
+.PHONY: clean
+
+### MAKEFILE DEBUGGING
+
+debug_build:
+	@echo DEPS: $(DEPS)
