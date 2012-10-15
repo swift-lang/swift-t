@@ -114,6 +114,7 @@ $(ADLB_A): $(OBJS)
 
 $(ADLB_SO): $(OBJS) $(NLOBJS)
 	$(Q) "  LINK		$(@)"
+	$(E) mkdir -pv lib
 	$(E) $(LINKER) -shared -fPIC -g			\
 	        $(OBJS) 				\
                 $(LIBS)                                 \
