@@ -15,7 +15,7 @@
 
 static void c_utils_version(version* output)
 {
-  version_parse(output, "0.0.2");
+  version_parse(output, "0.0.3");
 }
 
 #endif
