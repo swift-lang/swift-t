@@ -20,11 +20,11 @@ public class LValue {
   public final Var var;
   public final String varName;
   public final List<SwiftAST> indices;
+  public final SwiftAST tree;
   
-  public LValue(Var var) {
-    this(var, new ArrayList<SwiftAST>(0));
+  public LValue(SwiftAST tree, Var var) {
+    this(tree, var, new ArrayList<SwiftAST>(0));
   }
-
   public Type getType(Context context) throws TypeMismatchException {
     return getType(context, indices.size());
   }
@@ -120,21 +120,20 @@ public class LValue {
     return structPath;
   }
 
-  public LValue(Var var, List<SwiftAST> indicies) {
+  public LValue(SwiftAST tree, Var var, List<SwiftAST> indicies) {
+    this.tree = tree;
     this.var = var;
     this.varName = var.name();
     this.indices = Collections.unmodifiableList(indicies);
   }
 
-  public LValue(String varName, List<SwiftAST> indicies) {
+  public LValue(SwiftAST tree, String varName, List<SwiftAST> indicies) {
+    this.tree = tree;
     this.var = null;
     this.varName = varName;
     this.indices = Collections.unmodifiableList(indicies);
   }
 
-  public LValue(String varName) {
-    this(varName, new ArrayList<SwiftAST>(0));
-  }
   /**
   *
   * @param context
@@ -151,11 +150,12 @@ public class LValue {
          + " but got " + tree.getText());
    }
    
-   ArrayList<LValue> ids = new ArrayList<LValue>(tree.getChildCount());
+   ArrayList<LValue> lvals = new ArrayList<LValue>(tree.getChildCount());
    for (SwiftAST subtree: tree.children()) {
-     ids.add(extractAssignmentID(context, subtree));
+     LValue lval = extractAssignmentID(context, subtree);
+     lvals.add(lval);
    }
-   return ids;
+   return lvals;
  }
 
  /**
@@ -197,7 +197,7 @@ public class LValue {
      throw new UndefinedVariableException(context, "Variable " + varName
          + " is not defined");
    }
-   return new LValue(var, path);
+   return new LValue(subtree, var, path);
  }
 }
 

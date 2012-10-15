@@ -76,7 +76,7 @@ public class ExprWalker {
     LogHelper.debug(context, "walkExpr " + tree.getText() +
           " assigning to vars: " + oList);
     int token = tree.getType();
-    context.syncFileLine(tree.getLine(), lineMapping);
+    context.syncFilePos(tree, lineMapping);
 
     if (token == ExMParser.CALL_FUNCTION) {
       callFunctionExpression(context, tree, oList, renames);
@@ -174,6 +174,7 @@ public class ExprWalker {
   public Var eval(Context context, SwiftAST tree, Type type,
       boolean storeInStack, Map<String, String> renames) throws UserException {
     assert(type != null);
+    context.syncFilePos(tree, lineMapping);
     if (tree.getType() == ExMParser.VARIABLE) {
       // Base case: don't need to create new variable
       String varName = tree.child(0).getText();

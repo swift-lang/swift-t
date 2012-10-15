@@ -51,11 +51,11 @@ public class VariableUsageInfo {
     return this.vars.get(name);
   }
 
-  public Violation declare(String file, int line, String name,
+  public Violation declare(Context context, String name,
                                             Type type) {
     if (vars.get(name) != null) {
       return new Violation(ViolationType.ERROR, "Variable " + name +
-            " declared twice", file, line);
+            " declared twice", context);
     }
 
     vars.put(name, new VInfo(type, name, true));
@@ -63,8 +63,8 @@ public class VariableUsageInfo {
     return null;
   }
 
-  public void assign(String file, int line, String name) {
-    complexAssign(file, line, name, null, 0);
+  public void assign(Context context, String name) {
+    complexAssign(context, name, null, 0);
   }
 
   /**
@@ -76,13 +76,13 @@ public class VariableUsageInfo {
    * @param fieldPath
    * @param arrayDepth
    */
-  public void complexAssign(String file, int line, String name,
+  public void complexAssign(Context context, String name,
       List<String> fieldPath, int arrayDepth) {
     if (!vars.containsKey(name)) {
       violations.add(new Violation(ViolationType.ERROR, "Variable " +
-          name + " not yet declared", file, line));
+          name + " not yet declared", context));
     } else {
-      List<Violation> v = vars.get(name).assign(file, line,
+      List<Violation> v = vars.get(name).assign(context,
                                     fieldPath, arrayDepth);
       if (v != null) violations.addAll(v);
     }
@@ -97,12 +97,12 @@ public class VariableUsageInfo {
    * @param line
    * @param name
    */
-  public void read(String file, int line, String name) {
+  public void read(Context context, String name) {
     if (!vars.containsKey(name)) {
       violations.add(new Violation(ViolationType.ERROR, "Variable " +
-          name + " not yet declared", file, line));
+          name + " not yet declared", context));
     } else {
-      vars.get(name).read(file, line, null, 0);
+      vars.get(name).read(context, null, 0);
     }
   }
 
@@ -119,13 +119,13 @@ public class VariableUsageInfo {
    * @param fieldPath
    * @param arrDepth
    */
-  public Violation complexRead(String file, int line, String name,
+  public Violation complexRead(Context context, String name,
       LinkedList<String> fieldPath, int arrDepth) {
     if (!vars.containsKey(name)) {
       violations.add(new Violation(ViolationType.ERROR, "Variable " +
-          name + " not yet declared", file, line));
+          name + " not yet declared", context));
     } else {
-      return vars.get(name).read(file, line, fieldPath, arrDepth);
+      return vars.get(name).read(context, fieldPath, arrDepth);
     }
     return null;
   }
@@ -148,14 +148,13 @@ public class VariableUsageInfo {
 
   /**
    * Merge in results of variable analysis from nested scopes
-   * @param file
-   * @param line
+   * @param context
    * @param nested a list of variableusageinfo objects for a set of mutually
    *                exclusive nested scopes
    * @param exhaustive whether the scopes are also exhaustive (i.e. whether
    *                  one of the scopes is definitely entered)
    */
-  public void mergeNestedScopes(String file, int line,
+  public void mergeNestedScopes(Context context,
                   List<VariableUsageInfo> nested, boolean exhaustive) {
     // Add all violations in
     for (VariableUsageInfo vu: nested) {
@@ -178,7 +177,7 @@ public class VariableUsageInfo {
       }
 
       ArrayList<Violation> problems =
-            v.mergeBranchInfo(file, line, nestedVs, exhaustive);
+            v.mergeBranchInfo(context, nestedVs, exhaustive);
 
       // Merge the info for this particular variable
       this.violations.addAll(problems);
@@ -190,7 +189,7 @@ public class VariableUsageInfo {
    * are not yet assigned or errors if they are assigned but not read.
    *
    */
-  public void detectVariableMisuse(String file, int line) {
+  public void detectVariableMisuse(Context context) {
     for (VInfo v: this.vars.values()) {
       if (!v.wasDeclaredInCurrentScope()) {
         // variables from outer scopes might be read or written elsewhere
@@ -211,29 +210,28 @@ public class VariableUsageInfo {
           if (v.isAssigned() == Ternary.FALSE) {
             violations.add(new Violation(ViolationType.ERROR,
                 "Variable " + v.getName() + " never written and is read " +
-                "on some code paths", file, line));
+                "on some code paths", context));
           }
           else if (v.isAssigned() == Ternary.MAYBE) {
               violations.add(new Violation(ViolationType.WARNING,
                   "Variable " + v.getName() + " might be read and not written, "
-                + "possibly leading to deadlock", file, line));
+                + "possibly leading to deadlock", context));
           }
         }
       }
       else {
         // v isn't read, but still should issue warnings
         violations.add(new Violation(ViolationType.WARNING,
-              "Variable " + v.getName() + " is not used", file, line));
+              "Variable " + v.getName() + " is not used", context));
         if (v.isAssigned() == Ternary.FALSE) {
           violations.add(new Violation(ViolationType.WARNING,
-              "Variable " + v.getName() + " is not written", file, line));
+              "Variable " + v.getName() + " is not written", context));
         } else if (v.isAssigned() == Ternary.MAYBE) {
           violations.add(new Violation(ViolationType.WARNING,
-              "Variable " + v.getName() + " might not be written", file,
-                                                                  line));
+              "Variable " + v.getName() + " might not be written", context));
         }
       }
-      List<Violation> more = v.isIncompletelyDefinedStruct(file, line);
+      List<Violation> more = v.isIncompletelyDefinedStruct(context);
       if (more != null) violations.addAll(more);
     }
   }
@@ -252,13 +250,20 @@ public class VariableUsageInfo {
     private final String message;
     private final String file;
     private final int line;
+    private final int col;
 
-    public Violation(ViolationType type, String message, String file, int line) {
+    public Violation(ViolationType type, String message, Context context) {
+      this(type, message, context.getInputFile(), context.getLine(),
+           context.getColumn());
+    }
+    public Violation(ViolationType type, String message, String file,
+                     int line, int col) {
       super();
       this.type = type;
       this.message = message;
       this.file = file;
       this.line = line;
+      this.col = col;
     }
 
     public ViolationType getType() {
@@ -276,6 +281,10 @@ public class VariableUsageInfo {
     public int getLine() {
       return line;
     }
+    
+    public int getCol() {
+      return col;
+    }
 
     public UserException toException() {
       String fullMessage;
@@ -285,7 +294,7 @@ public class VariableUsageInfo {
         fullMessage = "Variable usage warning. ";
       }
       fullMessage += message;
-      return new VariableUsageException(file, line, fullMessage);
+      return new VariableUsageException(file, line, col, fullMessage);
     }
     
     public String toString() {
@@ -448,39 +457,39 @@ public class VariableUsageInfo {
      * @param fieldPath the path of struct fields (can be null for no path)
      * @param arrayDepth the number of array indices at end of assignment
      */
-    public List<Violation> assign(String file, int line,
+    public List<Violation> assign(Context context,
         List<String> fieldPath, int arrayDepth) {
       if (fieldPath != null && fieldPath.size() > 0) {
-        return structAssign(file, line, fieldPath, arrayDepth);
+        return structAssign(context, fieldPath, arrayDepth);
       } else if (arrayDepth > 0) {
-        return arrayAssign(file, line, arrayDepth);
+        return arrayAssign(context, arrayDepth);
       } else {
         // Assigning to the whole variable
         assert(arrayDepth == 0);
         assert(fieldPath == null || fieldPath.size() == 0);
-        return plainAssign(file, line);
+        return plainAssign(context);
       }
     }
 
 
-    private List<Violation> plainAssign(String file, int line) {
+    private List<Violation> plainAssign(Context context) {
       if (assigned == Ternary.TRUE) {
         // There will definitely be a double assignment
         return Arrays.asList(new Violation(
             ViolationType.ERROR, "Variable " + name
             + " cannot be written: it already has been assigned a value",
-            file, line));
+            context));
       } else {
         // Let assignment proceed
         ArrayList<Violation> res = new ArrayList<Violation>();
         if (assigned == Ternary.MAYBE) {
           res.add(new Violation(ViolationType.WARNING,
-              "Possible double write of " + "variable " + name, file, line));
+              "Possible double write of " + "variable " + name, context));
         }
         if (Types.isStruct(type)) {
           // All internal fields are assigned with this action
           for (VInfo fieldVI: this.structFields.values()) {
-            fieldVI.plainAssign(file, line);
+            fieldVI.plainAssign(context);
           }
         }
         this.assigned = Ternary.TRUE;
@@ -489,11 +498,11 @@ public class VariableUsageInfo {
     }
 
 
-    private List<Violation> arrayAssign(String file, int line, int arrayDepth) {
+    private List<Violation> arrayAssign(Context context, int arrayDepth) {
       // Assigning to an index of the array
       if (assigned != Ternary.FALSE) {
         if (arrayAssignDepth != arrayDepth) {
-          return Arrays.asList(makeArrDepthViolation(file, line, arrayDepth));
+          return Arrays.asList(makeArrDepthViolation(context, arrayDepth));
         }
         assigned = Ternary.TRUE;
       } else {
@@ -503,23 +512,23 @@ public class VariableUsageInfo {
       return null;
     }
 
-    private Violation makeArrDepthViolation(String file, int line,
+    private Violation makeArrDepthViolation(Context context,
         int arrayDepth) {
       return new Violation(ViolationType.ERROR,
           "Array assignment, indexing at depth" + arrayDepth
           + " when previous assignment was at index depth " +
-              arrayAssignDepth, file, line);
+              arrayAssignDepth, context);
     }
 
 
-    private List<Violation> structAssign(String file, int line,
+    private List<Violation> structAssign(Context context,
         List<String> fieldPath, int arrayDepth) {
       VInfo fieldVInfo;
       if (structFields != null) {
         if (this.assigned != Ternary.FALSE) {
           return Arrays.asList(new Violation(ViolationType.ERROR,
               "Assigning to field of variable " + this.name +
-              " which was already assigned in full", file, line));
+              " which was already assigned in full", context));
         }
         String field = fieldPath.get(0);
 
@@ -529,18 +538,18 @@ public class VariableUsageInfo {
           return Arrays.asList(new Violation(ViolationType.ERROR,
             "Tried to assign to field " + field + " of variable " +
                 this.name + " but field doesn't exist in struct type "
-                + ((StructType)type).getTypeName(), file, line));
+                + ((StructType)type).getTypeName(), context));
         }
       } else {
         return Arrays.asList(new Violation(ViolationType.ERROR,
             "Tried to assign to field of variable " +
-                this.name + " but variable isn't a struct", file, line));
+                this.name + " but variable isn't a struct", context));
       }
       fieldPath.remove(0);
-      return fieldVInfo.assign(file, line, fieldPath, arrayDepth);
+      return fieldVInfo.assign(context, fieldPath, arrayDepth);
     }
 
-    public Violation read(String file, int line,
+    public Violation read(Context context,
         LinkedList<String> fieldPath, int arrDepth) {
 
       if (fieldPath != null && fieldPath.size() > 0) {
@@ -554,15 +563,15 @@ public class VariableUsageInfo {
             return new Violation(ViolationType.ERROR,
               "Tried to read field " + field + " of variable " +
                   this.name + " but field doesn't exist in struct type "
-                  + ((StructType)type).getTypeName(), file, line);
+                  + type.typeName(), context);
           }
         } else {
           return new Violation(ViolationType.ERROR,
               "Tried to read field " + field + " of variable " +
-                  this.name + " but variable isn't a struct", file, line);
+                  this.name + " but variable isn't a struct", context);
         }
         fieldPath.removeFirst();
-        Violation v = fieldVInfo.read(file, line, fieldPath, arrDepth);
+        Violation v = fieldVInfo.read(context, fieldPath, arrDepth);
         fieldPath.addFirst(field); // restore to old state
         this.read = Ternary.TRUE;
         return v;
@@ -599,7 +608,7 @@ public class VariableUsageInfo {
      * @param exhaustive are these branches exhaustive
      * @return
      */
-    public ArrayList<Violation> mergeBranchInfo(String file, int line, List<VInfo> branches,
+    public ArrayList<Violation> mergeBranchInfo(Context context, List<VInfo> branches,
                                       boolean exhaustive) {
       if (branches.size() == 0) {
         throw new STCRuntimeError("branches in mergeBranchInfo had size 0");
@@ -607,7 +616,7 @@ public class VariableUsageInfo {
 
       mergeBranchReadInfo(branches, exhaustive);
 
-      ArrayList<Violation> errs = mergeBranchWriteInfo(file, line, branches, exhaustive);
+      ArrayList<Violation> errs = mergeBranchWriteInfo(context, branches, exhaustive);
       if (structFields != null) {
         for (VInfo fieldVI: this.structFields.values()) {
           List<VInfo> vis = new ArrayList<VInfo>(branches.size());
@@ -616,8 +625,7 @@ public class VariableUsageInfo {
 
           }
 
-          errs.addAll(fieldVI.mergeBranchInfo(file, line,
-                                        branches, exhaustive));
+          errs.addAll(fieldVI.mergeBranchInfo(context, branches, exhaustive));
         }
       }
       return errs;
@@ -670,7 +678,7 @@ public class VariableUsageInfo {
      * @param exhaustive
      * @return
      */
-    private ArrayList<Violation>  mergeBranchWriteInfo(String file, int line,
+    private ArrayList<Violation>  mergeBranchWriteInfo(Context context,
         List<VInfo> branches, boolean exhaustive) {
       ArrayList<Violation> result = new ArrayList<Violation>();
       /* We need to know whether the variable will be assigned or not all
@@ -707,7 +715,7 @@ public class VariableUsageInfo {
           if (currBr.arrayAssignDepth != expectAssignedDepth) {
               result.add(new Violation(ViolationType.ERROR, "Variable " + name
                   + " is assigned at different subscript levels on different "
-                  + " branches", file, line));
+                  + " branches", context));
           }
         }
 
@@ -729,7 +737,7 @@ public class VariableUsageInfo {
         // Arrays can be assigned multiple times, the depth just has to match
         this.assigned = Ternary.or(assigned, assignedInBranch);
         if (this.arrayAssignDepth != expectAssignedDepth) {
-          result.add(makeArrDepthViolation(file, line, expectAssignedDepth));
+          result.add(makeArrDepthViolation(context, expectAssignedDepth));
         }
         return result;
       } else {
@@ -737,19 +745,19 @@ public class VariableUsageInfo {
         if (Ternary.and(assignedInBranch, this.assigned) ==
                                                           Ternary.TRUE) {
           result.add(new Violation(ViolationType.ERROR, "Variable " + name
-              + " is assigned twice", file, line));
+              + " is assigned twice", context));
            return result;
         }
         if (assignedInBranch == Ternary.MAYBE) {
           result.add(new Violation(ViolationType.WARNING, "Variable " + name
-              + " is assigned on some code paths but not others", file, line));
+              + " is assigned on some code paths but not others", context));
         }
         if ((this.assigned != Ternary.FALSE &&
                                             assignedInBranch == Ternary.MAYBE)
             || (assignedInBranch != Ternary.FALSE &&
                                             this.assigned == Ternary.MAYBE)) {
           result.add(new Violation(ViolationType.WARNING, "Variable " + name
-              + " might be assigned twice", file, line));
+              + " might be assigned twice", context));
         }
         this.assigned = Ternary.or(this.assigned, assignedInBranch);
         return result;
@@ -760,7 +768,7 @@ public class VariableUsageInfo {
      * Called once all usage info is collected
      * @return violations if this is a struct and it is incompletely specified
      */
-    public List<Violation> isIncompletelyDefinedStruct(String file, int line) {
+    public List<Violation> isIncompletelyDefinedStruct(Context context) {
       if (Types.isStruct(this.type)) {
 
         ArrayList<Violation> result = new ArrayList<Violation>();
@@ -768,7 +776,7 @@ public class VariableUsageInfo {
           return result;
         } else if (assigned == Ternary.MAYBE) {
          result.add(new Violation(ViolationType.WARNING,
-             this.getName() + " might not be assigned", file, line));
+             this.getName() + " might not be assigned", context));
          return result;
         }
 
@@ -779,14 +787,14 @@ public class VariableUsageInfo {
               // certain deadlock
               result.add(new Violation(ViolationType.ERROR,
                   "Deadlock detected: " + vi.getName() + " is "
-                 + " never assigned but is read", file, line));
+                 + " never assigned but is read", context));
             } else {
               result.add(new Violation(ViolationType.WARNING,
                   vi.getName() + " is not guaranteed to be written to"
-                  + ", this has potential to cause havoc!", file, line));
+                  + ", this has potential to cause havoc!", context));
             }
           }
-          List<Violation> more = vi.isIncompletelyDefinedStruct(file, line);
+          List<Violation> more = vi.isIncompletelyDefinedStruct(context);
           if (more != null) result.addAll(more);
         }
 

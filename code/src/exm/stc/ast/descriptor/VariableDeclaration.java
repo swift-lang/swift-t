@@ -15,19 +15,22 @@ import exm.stc.frontend.LogHelper;
 public class VariableDeclaration {
 
   private final ArrayList<VariableDescriptor> vars;
+  private final ArrayList<SwiftAST> declTrees;
   private final ArrayList<SwiftAST> exprs; // initial values, if provided
   
   public VariableDeclaration() {
     this.vars = new ArrayList<VariableDescriptor>();
     this.exprs = new ArrayList<SwiftAST>();
+    this.declTrees = new ArrayList<SwiftAST>();
   }
   
-  public void addVar(VariableDescriptor var) {
-    addVar(var, null);
+  public void addVar(VariableDescriptor var, SwiftAST declTree) {
+    addVar(var, declTree, null);
   }
   
-  public void addVar(VariableDescriptor var, SwiftAST expr) {
+  public void addVar(VariableDescriptor var, SwiftAST declTree, SwiftAST expr) {
     this.vars.add(var);
+    this.declTrees.add(declTree);
     this.exprs.add(expr);
   }
   
@@ -37,6 +40,15 @@ public class VariableDeclaration {
   
   public VariableDescriptor getVar(int i) {
     return vars.get(i);
+  }
+  
+  /**
+   * Return the AST for the variable declaration
+   * @param i
+   * @return
+   */
+  public SwiftAST getDeclTree(int i) {
+    return declTrees.get(i);
   }
   
   public SwiftAST getVarExpr(int i) {
@@ -75,7 +87,7 @@ public class VariableDeclaration {
       assert(restTree.getType() == ExMParser.DECLARE_VARIABLE_REST);
       VariableDescriptor var =
               fromDeclareVariableRest(context, baseType, restTree);
-      res.addVar(var, expr);
+      res.addVar(var, declTree, expr);
     }
     return res;
   }

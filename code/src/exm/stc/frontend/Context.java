@@ -7,6 +7,7 @@ import java.util.*;
 import org.apache.log4j.Logger;
 
 import exm.stc.ast.FilePosition;
+import exm.stc.ast.SwiftAST;
 import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.UserException;
@@ -45,7 +46,12 @@ public abstract class Context {
      Current line in input file
    */
   protected int line = 0;
-
+  
+  /**
+   * Current column in input file.  0 if unknown
+   */
+  protected int col = 0;
+  
   /**
      Return global context.
      If this is a GlobalContext, return this,
@@ -190,17 +196,22 @@ public abstract class Context {
    * @param antlrLine
    * @param lineMapping
    */
-  public void syncFileLine(int antlrLine, LineMapping lineMapping) {
+  public void syncFilePos(SwiftAST tree, LineMapping lineMapping) {
     // Sometime antlr nodes give bad line info - negative numbers
-    if (antlrLine > 0) {
-      FilePosition pos = lineMapping.getFilePosition(antlrLine);
+    if (tree.getLine() > 0) {
+      FilePosition pos = lineMapping.getFilePosition(tree.getLine());
       setInputFile(pos.file);
       this.line = pos.line;
+      this.col = tree.getCharPositionInLine();
     }
   }
-
+  
   public int getLine() {
     return line;
+  }
+  
+  public int getColumn() {
+    return col;
   }
 
   /**
@@ -216,7 +227,11 @@ public abstract class Context {
    */
   public String getLocation()
   {
-    return getInputFileBasename() + ":" + getLine() + ": ";
+    String res = getInputFileBasename() + ":" + getLine() + ":";
+    if (col > 0) {
+      res += (col + 1) + ":";
+    }
+    return res + " ";
   }
 
   public String getInputFileBasename()

@@ -12,11 +12,13 @@ extends Exception
 {
   public UserException(Context context, String message)
   {
-    this(context.getInputFile(), context.getLine(), message);
+    this(context.getInputFile(), context.getLine(),
+         context.getColumn(), message);
   }
   
-  public UserException(String file, int line, String message) {
-    super(file + " l." + line + ": " + message);
+  public UserException(String file, int line, int col, String message) {
+    super(file + ":" + line + ":" + (col > 0 ? (col + 1) + ":" : "") + 
+          " " + message);
   }
   
   public UserException(String message) {

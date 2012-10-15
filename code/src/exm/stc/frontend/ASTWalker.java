@@ -132,12 +132,12 @@ public class ASTWalker {
     int token = programTree.getType();
     
 
-    context.syncFileLine(programTree.getLine(), lineMapping);
+    context.syncFilePos(programTree, lineMapping);
 
     if (token == ExMParser.PROGRAM) {
       for (SwiftAST topLevelDefn: programTree.children()) {
         int type = topLevelDefn.getType();
-        context.syncFileLine(topLevelDefn.getLine(), lineMapping);
+        context.syncFilePos(topLevelDefn, lineMapping);
         switch (type) {
 
         case ExMParser.DEFINE_BUILTIN_FUNCTION:
@@ -171,11 +171,11 @@ public class ASTWalker {
         }
       }
       
-      context.syncFileLine(programTree.getLine(), lineMapping);
+      context.syncFilePos(programTree, lineMapping);
       // Second pass to compile functions
       for (int i = 0; i < programTree.getChildCount(); i++) {
         SwiftAST topLevelDefn = programTree.child(i);
-        context.syncFileLine(topLevelDefn.getLine(), lineMapping);
+        context.syncFilePos(topLevelDefn, lineMapping);
         int type = topLevelDefn.getType();
         switch (type) {
         case ExMParser.DEFINE_FUNCTION:
@@ -207,7 +207,7 @@ public class ASTWalker {
   throws UserException
   {
       int token = tree.getType();
-      context.syncFileLine(tree.getLine(), lineMapping);
+      context.syncFilePos(tree, lineMapping);
       switch (token) {
         case ExMParser.BLOCK:
           // Create a local context (stack frame) for this nested block
@@ -1013,13 +1013,14 @@ public class ASTWalker {
     for (int i = 0; i < vd.count(); i++) {
       VariableDescriptor vDesc = vd.getVar(i);
       Var var = declareVariable(context, blockVu, vDesc);
+      SwiftAST declTree = vd.getDeclTree(i);
       SwiftAST assignedExpr = vd.getVarExpr(i);
       if (Types.isScalarUpdateable(var.type())) {
         initUpdateableVar(context, var, assignedExpr);
       } else {
          if (assignedExpr != null) {
-           assignMultiExpression(context, Arrays.asList(new LValue(var)),
-                                  Arrays.asList(assignedExpr));
+           assignMultiExpression(context, Arrays.asList(
+               new LValue(declTree, var)), Arrays.asList(assignedExpr));
          }
       }
     }
@@ -1181,6 +1182,7 @@ public class ASTWalker {
           ": assigning expression to " + targetName);
 
       // the variable we will evaluate expression into
+      context.syncFilePos(lval.tree, lineMapping);
       Var var = evalLValue(context, rValExpr, rValConcrete, lval, 
                                                       afterActions);
       
@@ -1341,7 +1343,7 @@ public class ASTWalker {
                                fieldPath.get(i));
       curr = next;
     }
-    LValue newTarget = new LValue(curr,
+    LValue newTarget = new LValue(lval.tree, curr,
         lval.indices.subList(structPathLen, lval.indices.size()));
     LogHelper.trace(context, "Transform target " + lval.toString() +
         "<" + lval.getType(context).toString() + "> to " +
@@ -1375,7 +1377,7 @@ public class ASTWalker {
     if (lval.indices.size() == 1) {
       Var lookedup = assignTo1DArray(context, origLval, lval, rValExpr, 
                                                       rValType, afterActions);
-      return new LValue(lookedup, new ArrayList<SwiftAST>());
+      return new LValue(lval.tree, lookedup, new ArrayList<SwiftAST>());
     } else {
       //TODO: multi-dimensional array handling goes here: need to
       //    dynamically create subarray
@@ -1422,7 +1424,7 @@ public class ASTWalker {
         mVar = varCreator.createTmp(context, new RefType(memberType));
       }
 
-      return new LValue(mVar,
+      return new LValue(lval.tree, mVar,
           lval.indices.subList(1, lval.indices.size()));
     }
 }
@@ -1702,7 +1704,7 @@ public class ASTWalker {
 
   private void defineFunction(Context context, SwiftAST tree)
   throws UserException {
-    context.syncFileLine(tree.getLine(), lineMapping);
+    context.syncFilePos(tree, lineMapping);
     String function = tree.child(0).getText();
     LogHelper.debug(context, "define function: " + context.getLocation() +
                               function);
@@ -1792,7 +1794,7 @@ public class ASTWalker {
     List<Var> oList = fdecl.getOutVars();
     
     // Analyse variable usage inside function and annotate AST
-    context.syncFileLine(tree.getLine(), lineMapping);
+    context.syncFilePos(tree, lineMapping);
     varAnalyzer.analyzeVariableUsage(context, function, iList, oList, block);
 
     LocalContext functionContext = new LocalContext(context, function);
