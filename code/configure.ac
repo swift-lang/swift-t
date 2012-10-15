@@ -22,8 +22,12 @@ TURBINE_VERSION=turbine_version()
 AC_MSG_RESULT([Turbine version: ${TURBINE_VERSION}])
 AC_SUBST(TURBINE_VERSION)
 
-[[ ${prefix} != ${PWD} ]] ||
+if [[ ${prefix} == ${PWD} ]]
+then
   AC_MSG_ERROR([Your --prefix should not be the same as PWD: $PWD])
+fi
+
+echo ${PWD} > source.txt
 
 # Check OS
 USE_MAC="no"
@@ -430,6 +434,7 @@ AC_SUBST(CFLAGS)
 AC_DEFINE_UNQUOTED(DISABLE_LOG,$DISABLE_LOG,[Disables logging])
 
 AC_CONFIG_FILES(
+        src/turbine/turbine-version.h
         src/turbine/module.mk
         src/util/module.mk
         src/tcl/module.mk

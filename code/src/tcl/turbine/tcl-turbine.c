@@ -19,6 +19,7 @@
 #include <tools.h>
 
 #include "src/util/debug.h"
+#include "src/turbine/turbine-version.h"
 #include "src/turbine/turbine.h"
 #include "src/turbine/cache.h"
 
@@ -621,10 +622,6 @@ Tclturbine_Init(Tcl_Interp* interp)
 {
   if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
     return TCL_ERROR;
-
-#ifndef TURBINE_VERSION
-#error TURBINE_VERSION must be set by the build system!
-#endif
 
   if (Tcl_PkgProvide(interp, "turbine", TURBINE_VERSION) == TCL_ERROR)
     return TCL_ERROR;

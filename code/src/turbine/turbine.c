@@ -25,6 +25,7 @@
 
 #include "src/util/debug.h"
 
+#include "turbine-version.h"
 #include "cache.h"
 #include "turbine.h"
 
@@ -128,10 +129,10 @@ check_versions()
   turbine_version(&tv);
   ADLB_Version(&av);
   // Required ADLB version:
-  version_parse(&rav, "0.0.2");
+  version_parse(&rav, ADLB_REQUIRED_VERSION);
   c_utils_version(&cuv);
   // Required c-utils version:
-  version_parse(&rcuv, "0.0.2");
+  version_parse(&rcuv, C_UTILS_REQUIRED_VERSION);
   version_require("Turbine", &tv, "c-utils", &cuv, &rcuv);
   version_require("Turbine", &tv, "ADLB",    &av,  &rav);
 }
@@ -246,9 +247,6 @@ turbine_engine_init()
 void
 turbine_version(version* output)
 {
-#ifndef TURBINE_VERSION
-#error TURBINE_VERSION must be set by the build system!
-#endif
   version_parse(output, TURBINE_VERSION);
 }
 

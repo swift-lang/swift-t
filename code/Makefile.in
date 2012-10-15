@@ -13,6 +13,7 @@ USE_MAC = @USE_MAC@
 
 INSTALL_PREFIX  = @prefix@
 INSTALL_BIN     = $(INSTALL_PREFIX)/bin
+INSTALL_ETC     = $(INSTALL_PREFIX)/etc
 INSTALL_LIB     = $(INSTALL_PREFIX)/lib
 INSTALL_SCRIPTS = $(INSTALL_PREFIX)/scripts
 INSTALL_EXPORT  = $(INSTALL_PREFIX)/export
@@ -129,7 +130,6 @@ CFLAGS += @TCL_INCLUDE_SPEC@
 CFLAGS += -fPIC
 # This is referenced in lookup3.c - may want to drop this for speed
 CFLAGS += -D VALGRIND
-CFLAGS += -D TURBINE_VERSION=\"$(TURBINE_VERSION)\"
 
 # LIBS: links to ADLB, c-utils, MPE, and MPI
 LIBS :=
@@ -322,6 +322,8 @@ TCL_SO       = libtcl8.5.$(SO_SUFFIX)
 EXMCUTILS_SO = libexmcutils.$(SO_SUFFIX)
 ADLB_SO      = libadlb.$(SO_SUFFIX)
 
+PROVENANCE = version.txt source.txt config.log
+
 # Maintaining the install.txt file is a simple way to
 # create a dependency on the installation
 install: install.txt
@@ -337,10 +339,12 @@ install.txt: $(PACKAGE) $(EXPORTS) $(SCRIPTS)
 	$(E) rm -f $(@)
 #       Set up directories
 	$(E) mkdir -pv $(INSTALL_PREFIX)
-	$(E) mkdir -pv $(INSTALL_LIB)
 	$(E) mkdir -pv $(INSTALL_BIN)
+	$(E) mkdir -pv $(INSTALL_ETC)
+	$(E) mkdir -pv $(INSTALL_LIB)
 	$(E) mkdir -pv $(INSTALL_SCRIPTS)
 	$(E) mkdir -pv $(INSTALL_EXPORT)
+	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
 #       Copy Turbine items
 	$(E) cp $(CP_ARGS) bin/turbine           $(INSTALL_BIN)
 	$(E) cp $(CP_ARGS) lib/*.tcl             $(INSTALL_LIB)
