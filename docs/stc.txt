@@ -1,20 +1,16 @@
 
 ////
-
 Swift/T guide, asciidoc format
-
-This is online at:
-
-http://www.mcs.anl.gov/~wozniak/stc.html
-
+http://www.mcs.anl.gov/exm/local/guides/stc.html
 ////
 
 :toc:
 :numbered:
 
-= STC: Swift-Turbine Compiler
+= Swift/T Guide
 
-STC allows you to write Swift programs and run them using Turbine.
+The Swift/Turbine Compiler (STC) allows you to write Swift programs
+and run them using Turbine.
 
 == Installation
 
@@ -34,8 +30,11 @@ Cf. http://www.tcl.tk[Tcl web site]
 3. Obtain the package
 +
 ----
-wget http://www.mcs.anl.gov/~wozniak/exm-trunk.tar.gz
+wget http://www.mcs.anl.gov/exm/local/downloads/exm-0.1.0.tar.gz
 ----
++
+Cf. http://www.mcs.anl.gov/exm/local/downloads/downloads.html[Swift/T Downloads]
+for other packages
 +
 4. Unpack and enter package directory
 +
