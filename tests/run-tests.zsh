@@ -35,7 +35,7 @@ do
       MAX_TESTS=${OPTARG}
       ;;
     p)
-      # run tests that match the pattern
+      # run only tests that match the pattern
       PATTERN=${OPTARG}
       ;;
     t)
@@ -227,7 +227,7 @@ do
     break
   fi
 
-  if (( ${PATTERN} ))
+  if [[ ${PATTERN} != "" ]]
   then
     if [[ ! ${SWIFT_FILE} =~ ${PATTERN} ]]
       then
@@ -286,7 +286,7 @@ do
         printf "No warning in stc output\n"
     fi
   fi
-  report_result ${TEST_NAME} ${EXIT_CODE} 
+  report_result ${TEST_NAME} ${EXIT_CODE}
 done
 
 print -- "--"
