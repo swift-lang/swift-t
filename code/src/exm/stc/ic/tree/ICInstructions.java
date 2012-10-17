@@ -451,6 +451,7 @@ public class ICInstructions {
         break;
       case FREE_BLOB:
         gen.freeBlob(args.get(0).getVar());
+        break;
       case INIT_UPDATEABLE_FLOAT:
         gen.initUpdateable(args.get(0).getVar(), args.get(1));
         break;
