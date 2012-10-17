@@ -210,7 +210,7 @@
     <echo message="INSTALL: dist.dir=${dist.dir}"/>
 
     <!-- Record source directory -->
-    <echo message="${user.dir}${line.separator}" output="source.txt"/>
+    <echo message="${user.dir}${line.separator}" file="source.txt"/>
 
     <mkdir dir="${dist.dir}/bin"/>
     <mkdir dir="${dist.dir}/etc"/>
