@@ -235,13 +235,20 @@ AC_ARG_WITH(mpi,
         [--with-mpi],
         [location of MPI installation]),
     [
+        if [[ ! -d ${withval} ]]
+        then
+            AC_MSG_ERROR(No MPI directory at $withval)
+        fi
         if [[ ! -f ${withval}/lib/lib${MPI_LIB_NAME}.${SO_SUFFIX} ]]
         then
             USE_MPI=0
         fi
         if [[ ${USE_MPI} == 0 ]]
         then
-            AC_MSG_ERROR(Could not find MPI in $withval)
+            AC_MSG_ERROR(Could not find MPI shared library at 
+                ${withval}/lib/lib${MPI_LIB_NAME}.${SO_SUFFIX}.  
+                MPI may not be installed at this location or
+                shared library may not have been built.)
         fi
         AC_MSG_RESULT([using MPI in $withval])
         MPI_SET=1
