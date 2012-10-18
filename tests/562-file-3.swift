@@ -8,7 +8,7 @@
 main {
     file f = q();
 
-    // Test waiting on integer
+    // Test waiting on file
     wait (f) {
         trace(filename(f));
     }
