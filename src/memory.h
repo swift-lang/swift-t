@@ -13,6 +13,10 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 
+// Must be first include:
+#define _GNU_SOURCE // for strnlen()
+#include <string.h>
+
 #include <stdbool.h>
 
 #ifdef NDEBUG

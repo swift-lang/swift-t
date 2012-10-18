@@ -21,8 +21,6 @@ mm_context mm_null = -1;
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#define _GNU_SOURCE // for strnlen()
-#include <string.h>
 
 typedef struct
 {
