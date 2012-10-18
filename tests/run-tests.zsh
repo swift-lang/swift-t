@@ -7,7 +7,7 @@
 # Defaults
 EXIT_ON_FAIL=1
 MAX_TESTS=-1 # by default, unlimited
-PATTERN=0
+PATTERN=""
 SKIP_COUNT=0
 VERBOSE=0
 STC_OPT_LEVEL=1 #-O level for STC
