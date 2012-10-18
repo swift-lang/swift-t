@@ -3,7 +3,7 @@
 
 main {
     foreach i in [1:100] {
-        @i@trace_comp(i);
+        @prio=i trace_comp(i);
     }
 }
 

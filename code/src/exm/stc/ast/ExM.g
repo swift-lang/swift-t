@@ -73,6 +73,7 @@ tokens {
     INLINE_TCL;
     APP_FILENAME;
     TYPE_PARAMETERS;
+    DEPRECATED;
 }
 
 @parser::header {
@@ -194,7 +195,7 @@ command_arg:
         variable
     |   literal
     |   LPAREN expr RPAREN -> expr
-    |   '@' ID -> ^( APP_FILENAME ID )   
+    |   ATSIGN ID -> ^( APP_FILENAME ID )   
     ;
 include_statement:
         INCLUDE file=STRING SEMICOLON -> ^( INCLUDE $file )
@@ -524,11 +525,16 @@ bool_lit: TRUE | FALSE
     ;
 
 function_call:
-             priority? f=ID a=expr_argument_list -> ^( CALL_FUNCTION $f $a priority?)
+         priority? f=function_call_name a=expr_argument_list -> ^( CALL_FUNCTION $f $a priority?)
+    ;
+
+function_call_name:
+         ID 
+    |    ATSIGN ID -> ^( DEPRECATED ID )
     ;
 
 priority:
-            '@' expr '@' -> expr
+         ATSIGN PRIORITY ASSIGN expr -> expr
     ;
 
 expr_argument_list:
@@ -676,6 +682,7 @@ FALSE: 'false';
 GLOBAL: 'global';
 CONST: 'const';
 TYPE:  'type';
+PRIORITY: 'prio';
 
 NUMBER: (DIGIT)+ ;
 DECIMAL: (DIGIT)+ '.' (DIGIT)+;

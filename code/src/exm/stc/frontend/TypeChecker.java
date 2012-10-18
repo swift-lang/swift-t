@@ -476,7 +476,7 @@ public class TypeChecker {
   
   private static ExprType callFunction(Context context, SwiftAST tree,
           boolean noWarn) throws UndefinedFunctionException, UserException {
-    FunctionCall f = FunctionCall.fromAST(context, tree);
+    FunctionCall f = FunctionCall.fromAST(context, tree, false);
     List<FunctionType> alts = concretiseFunctionCall(context, 
               f.function(), f.type(), f.args(), noWarn);
     if (alts.size() == 1) {

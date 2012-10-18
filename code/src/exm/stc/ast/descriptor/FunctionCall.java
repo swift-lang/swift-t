@@ -3,9 +3,11 @@ package exm.stc.ast.descriptor;
 import java.util.List;
 
 import exm.stc.ast.SwiftAST;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.frontend.Context;
+import exm.stc.frontend.LogHelper;
 
 public class FunctionCall {
   private final String function;
@@ -32,10 +34,24 @@ public class FunctionCall {
     return type;
   }
 
-  public static FunctionCall fromAST(Context context, SwiftAST tree) 
-        throws UndefinedFunctionException {
+  public static FunctionCall fromAST(Context context, SwiftAST tree,
+          boolean doWarn) throws UndefinedFunctionException {
     assert(tree.getChildCount() >= 2 && tree.getChildCount() <= 3);
-    String f = tree.child(0).getText();
+    SwiftAST fTree = tree.child(0);
+    String f;
+    if (fTree.getType() == ExMParser.DEPRECATED) {
+      fTree = fTree.child(0);
+      assert(fTree.getType() == ExMParser.ID);
+      f = fTree.getText();
+      if (doWarn) {
+        LogHelper.warn(context, "Deprecated prefix @ in call to function " + f +
+                " was ignored");
+      }
+    } else {
+      assert(fTree.getType() == ExMParser.ID);
+      f = fTree.getText();
+    }
+    
     SwiftAST arglist = tree.child(1); 
     
     FunctionType ftype = context.lookupFunction(f);

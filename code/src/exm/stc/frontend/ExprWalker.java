@@ -393,7 +393,7 @@ public class ExprWalker {
    */
   private void callFunctionExpression(Context context, SwiftAST tree,
       List<Var> oList, Map<String, String> renames) throws UserException {
-    FunctionCall f = FunctionCall.fromAST(context, tree);
+    FunctionCall f = FunctionCall.fromAST(context, tree, true);
     FunctionType concrete = TypeChecker.concretiseFunctionCall(context,
                                 f.function(), f.type(), f.args(), oList, false); 
     
