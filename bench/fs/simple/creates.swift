@@ -10,8 +10,13 @@
 #include <sys.swift>
 
 // Only choose one!
-#define ACTION printf("i: %i", i)
-//#define ACTION sleep(0)
+//#define ACTION printf("i: %i", i)
+#define ACTION app_sleep()
+
+app () app_sleep()
+{
+  "sleep" "0";
+}
 
 main
 {
