@@ -52,13 +52,13 @@ public class VariableUsageInfo {
   }
 
   public Violation declare(Context context, String name,
-                                            Type type) {
+                                Type type, boolean mapped) {
     if (vars.get(name) != null) {
       return new Violation(ViolationType.ERROR, "Variable " + name +
             " declared twice", context);
     }
 
-    vars.put(name, new VInfo(type, name, true));
+    vars.put(name, new VInfo(type, mapped, name, true));
 
     return null;
   }
@@ -212,11 +212,12 @@ public class VariableUsageInfo {
                 + "possibly leading to deadlock", context));
           }
         }
-      }
-      else {
+      } else {
         // v isn't read, but still should issue warnings
-        violations.add(new Violation(ViolationType.WARNING,
+        if (!v.isMapped()) {
+          violations.add(new Violation(ViolationType.WARNING,
               "Variable " + v.getName() + " is not used", context));
+        }
         if (v.isAssigned() == Ternary.FALSE) {
           violations.add(new Violation(ViolationType.WARNING,
               "Variable " + v.getName() + " is not written", context));
@@ -301,6 +302,7 @@ public class VariableUsageInfo {
    */
   public static class VInfo {
     private final Type type;
+    private final boolean mapped;
 
     /*
      * really need to handle struct specially:
@@ -319,15 +321,20 @@ public class VariableUsageInfo {
     private int arrayAssignDepth;
     private int maxReadDepth;
 
-    public VInfo(Type type, String name, boolean locallyDeclared) {
-      this(type, locallyDeclared, name, Ternary.FALSE, Ternary.FALSE, 0, -1);
+    public VInfo(Type type, boolean mapped, String name, boolean locallyDeclared) {
+      this(type, mapped, locallyDeclared, name, Ternary.FALSE, Ternary.FALSE, 0, -1);
     }
 
-    private VInfo(Type type, Map<String, VInfo> structFields,
+    public boolean isMapped() {
+      return mapped;
+    }
+
+    private VInfo(Type type, boolean mapped, Map<String, VInfo> structFields,
         boolean locallyDeclared, String name,
         Ternary assigned, Ternary read, int arrayAssignDepth,
         int maxReadDepth) {
       this.type = type;
+      this.mapped = mapped;
       this.structFields = structFields;
       this.declaredInCurrentScope = locallyDeclared;
       this.name = name;
@@ -338,14 +345,15 @@ public class VariableUsageInfo {
 
     }
 
-    private VInfo(Type type, boolean locallyDeclared, String name,
+    private VInfo(Type type, boolean mapped, boolean locallyDeclared, String name,
         Ternary assigned, Ternary read, int arrayAssignDepth, int maxReadDepth) {
       this.type = type;
+      this.mapped = mapped;
       if (Types.isStruct(type)) {
         structFields = new HashMap<String, VInfo>();
         for (StructField f:  ((StructType)type).getFields()) {
           structFields.put(f.getName(),
-              new VInfo(f.getType(), name + "." + f.getName(), locallyDeclared));
+              new VInfo(f.getType(), mapped, name + "." + f.getName(), locallyDeclared));
         }
       } else {
         structFields = null;
@@ -426,7 +434,7 @@ public class VariableUsageInfo {
         }
       }
 
-      return new VInfo(type, structFields,
+      return new VInfo(type, mapped, structFields,
           locallyDeclared, name, Ternary.FALSE, Ternary.FALSE, 0, -1);
     }
 

@@ -64,7 +64,7 @@ class VariableUsageAnalyzer {
     // Add global constants
     for (Var global: context.getScopeVariables()) {
       globVui.declare(context,
-          global.name(), global.type());
+          global.name(), global.type(), false);
       globVui.assign(context, 
           global.name());
     }
@@ -74,15 +74,13 @@ class VariableUsageAnalyzer {
     
     // Add input and output variables to initial variable info
     for (Var i: iList) {
-      argVui.declare(context, i.name(),
-          i.type());
+      argVui.declare(context, i.name(), i.type(), false);
       argVui.assign(context, i.name());
       fnContext.declareVariable(i.type(), i.name(), i.storage(), 
             i.defType(), i.mapping());
     }
     for (Var o: oList) {
-      argVui.declare(context, o.name(),
-          o.type());
+      argVui.declare(context, o.name(), o.type(), false);
       // We should assume that return variables will be read
       argVui.read(context, o.name());
       fnContext.declareVariable(o.type(), o.name(), o.storage(), 
@@ -264,7 +262,7 @@ class VariableUsageAnalyzer {
       context.syncFilePos(tree, lineMapping);
       // Don't retain mapping information in this pass since it might be
       // mapped to a temporary var
-      vu.declare(context, var.getName(), var.getType());
+      vu.declare(context, var.getName(), var.getType(), var.getMappingExpr() != null);
       context.declareVariable(var.getType(), var.getName(), 
               VarStorage.STACK, DefType.LOCAL_USER, null);
       SwiftAST assignExpr = vd.getVarExpr(i);
@@ -358,10 +356,10 @@ class VariableUsageAnalyzer {
     
     // Both loop variables are assigned before loop body runs
     initial.declare(context, loop.getMemberVarName(), 
-        loop.getMemberVar().type());
+        loop.getMemberVar().type(), loop.getMemberVar().isMapped());
     initial.assign(context, loop.getMemberVarName());
     if (loop.getCountVarName() != null) {
-      initial.declare(context, loop.getCountVarName(), Types.F_INT);
+      initial.declare(context, loop.getCountVarName(), Types.F_INT, false);
       initial.assign(context, loop.getCountVarName());
     }
     
@@ -405,8 +403,7 @@ class VariableUsageAnalyzer {
       
       
       if (!lv.declaredOutsideLoop) {
-        outerLoopInfo.declare(context, v.name(), 
-                                                               v.type());
+        outerLoopInfo.declare(context, v.name(), v.type(), v.isMapped());
       }
       // we assume that each variable has an initializer and an update, so it
       // will be assigned before each loop iteration
@@ -449,8 +446,7 @@ class VariableUsageAnalyzer {
     
     Var v = loop.getLoopVar();
     LogHelper.debug(context, "declared loop var " + v.toString());
-    bodyInfo.declare(context, v.name(), 
-       v.type());
+    bodyInfo.declare(context, v.name(), v.type(), v.isMapped());
     // we assume that each variable has an initializer and an update, so it
     // will be assigned before each loop iteration
     bodyInfo.assign(context, v.name());
