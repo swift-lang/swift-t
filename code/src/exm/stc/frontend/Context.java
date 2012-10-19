@@ -192,9 +192,8 @@ public abstract class Context {
   /**
    * Synchronize preprocessed line numbers with input file
    * line numbers
-   * @param context
-   * @param antlrLine
-   * @param lineMapping
+   * @param tree antlr tree for current position
+   * @param lineMapping map from input lines to source lines
    */
   public void syncFilePos(SwiftAST tree, LineMapping lineMapping) {
     // Sometime antlr nodes give bad line info - negative numbers

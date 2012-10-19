@@ -190,7 +190,8 @@ public class ICContinuations {
      * Remove this continuation from block, inlining one of
      * the nested blocks inside the continuation (e.g. the predicted branch
      *  of an if statement)
-     * @param b
+     * @param block the parent block of continuation
+     * @param predictedBranch the branch in continuation that will be executed
      */
     public void inlineInto(Block block, Block predictedBranch) {
       // Default implementation

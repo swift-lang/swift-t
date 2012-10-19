@@ -273,7 +273,7 @@ public class ICUtil {
   /**
    * Return a list of all the variables contained in the
    * input list.  Ignore any non-variable args
-   * @param inputs
+   * @param args
    * @return
    */
   public static List<Var> extractVars(List<Arg> args) {

@@ -16,8 +16,7 @@ public abstract class Expression extends TclTree
   /**
    * 
    * @param sb
-   * @param escapeForString escape expression for insertion into double
-   *              quoted TCL string.  
+   * @param mode how to escape expression  
    */
   public abstract void appendTo(StringBuilder sb, ExprContext mode);
 }

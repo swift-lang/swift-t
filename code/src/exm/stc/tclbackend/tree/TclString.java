@@ -20,7 +20,6 @@ public class TclString extends Expression
    * Create a string from the expressions each expression
    * separated by a space
    * @param exprs
-   * @param escape
    */
   public TclString(List<? extends Expression> exprs) {
     this(exprs, true);
@@ -30,7 +29,6 @@ public class TclString extends Expression
    * This constructor lets you control if spaces are added between
    * items
    * @param exprs
-   * @param escape
    * @param insertSpaces
    */
   public TclString(List<? extends Expression> exprs, boolean insertSpaces)

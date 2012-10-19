@@ -60,7 +60,7 @@ public class ICInstructions {
      * Replace any input variable with a replacement, which is another
      * variable in scope which should have the same value
      * Assume that the variable being replaced will be kept around
-     * @param replacements
+     * @param renames
      */
     public abstract void renameInputs(Map<String, Arg> renames);
 
@@ -174,7 +174,7 @@ public class ICInstructions {
     /**
      * 
      * @param closedVars variables closed at point of current instruction
-     * @param assumeAllInputsClosed if true, allowed to (must don't necessarily
+     * @param assumeAllClosed if true, allowed to (must don't necessarily
      *        have to) assume that all input vars are closed
      * @return null if it cannot be made immediate, if true,
      *            a list of vars that are the variables whose values are needed

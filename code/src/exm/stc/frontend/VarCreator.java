@@ -217,7 +217,6 @@ public class VarCreator {
   /**
    * Shortcut to create filename of
    * @param context
-   * @param kind
    * @return
    */
   public Var createFilenameAlias(Context context, Var fileVar)
@@ -233,7 +232,6 @@ public class VarCreator {
   /**
    * Create a value variable and retrieve value of future into it
    * @param context
-   * @param kind
    * @param future
    * @return
    * @throws UserException

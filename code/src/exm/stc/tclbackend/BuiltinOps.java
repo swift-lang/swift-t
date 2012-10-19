@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
@@ -319,8 +318,7 @@ public class BuiltinOps {
    * Get asynchronous implementation of builtin op
    * TODO: this is a temporary solution to get this working.
    * Will be better later on to have arith ops, etc in 
-   * different namespace entirely
-   * @throws UserException 
+   * different namespace entirely 
    */
   public static TclFunRef getBuiltinOpImpl(BuiltinOpcode op) {
     // first try hardcoded

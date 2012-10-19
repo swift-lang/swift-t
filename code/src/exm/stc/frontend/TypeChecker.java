@@ -55,10 +55,6 @@ public class TypeChecker {
    *          the context in which the expression resides
    * @param tree
    *          the expression tree
-   * @param expected
-   *          the type we expect this expression to have.  Can be null.
-   *          If not null, in the case of an expression with ambiguous type,
-   *          the typechecker will attempt to interpret it as that type.
    * @return
    * @throws UserException
    */

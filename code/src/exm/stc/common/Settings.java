@@ -76,7 +76,7 @@ public class Settings
   }
 
   /**
-     Try to overwrite each default property in {@link properties}
+     Try to overwrite each default property in properties
      with value from System
    */
   public static void initSTCProperties() throws InvalidOptionException {

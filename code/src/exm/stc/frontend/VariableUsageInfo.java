@@ -70,8 +70,6 @@ public class VariableUsageInfo {
   /**
    * An all-purpose method to register assignments involving
    * plain variables, struct fields and array indices
-   * @param file
-   * @param line
    * @param name
    * @param fieldPath
    * @param arrayDepth
@@ -93,8 +91,6 @@ public class VariableUsageInfo {
   /**
    * Called when a read to a variable occurs
    *
-   * @param file
-   * @param line
    * @param name
    */
   public void read(Context context, String name) {
@@ -113,8 +109,6 @@ public class VariableUsageInfo {
    *  In the above example fieldPath would be ["fielda", "fieldb"] and
    *  arrDepth would be 3
    * TODO: handle array index reads separately
-   * @param file
-   * @param line
    * @param name
    * @param fieldPath
    * @param arrDepth
@@ -422,9 +416,6 @@ public class VariableUsageInfo {
     /**
      * make a copy, except it might be in a different scope
      * All of the usage tracking is reset
-     *
-     * @param
-     * @return
      */
     public VInfo makeEmptyCopy(boolean locallyDeclared) {
       HashMap<String, VInfo> structFieldsNew = null;
@@ -451,9 +442,6 @@ public class VariableUsageInfo {
      *  myVar.x.y.z[0][1][2] = ..
      *  but not:
      *  myVar[0].x
-     * @param file
-     * @param line
-     * @param name the name of the variable(e.g. x)
      * @param fieldPath the path of struct fields (can be null for no path)
      * @param arrayDepth the number of array indices at end of assignment
      */

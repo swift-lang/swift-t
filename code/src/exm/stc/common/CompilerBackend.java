@@ -98,7 +98,7 @@ public interface CompilerBackend {
    * @param function
    * @param inputs
    * @param outputs
-   * @param priorityVal 
+   * @param priority 
    */
   public abstract void builtinFunctionCall(String function,
       List<Var> inputs, List<Var> outputs, Arg priority);
@@ -119,9 +119,9 @@ public interface CompilerBackend {
   
   /**
    * lookup structVarName.structField and copy to oVarName
-   * @param structVarName
+   * @param structVar
    * @param structField
-   * @param oVarName
+   * @param result
    */
   public abstract void structLookup(Var structVar, String structField,
       Var result);
@@ -303,11 +303,6 @@ public interface CompilerBackend {
    * @param waitVars
    * @param usedVars any variables which are read or written inside block
    * @param keepOpenVars any vars that need to be kept open for wait
-   * @param explicit true if this is a semantically meaningful wait statement,
-   *            false if it can be removed safely without altering semantics.
-   *            If true the wait statement will only be optimised out if it
-   *            can be shown that the variables are already closed when the
-   *            wait is encountered
    * @param mode what guarantees wait statement should provide
    * @param target controls where asynchronous execution occurs
    */
@@ -326,7 +321,7 @@ public interface CompilerBackend {
    * @param initVals initial values for loop variables
    * @param usedVariables
    * @param keepOpenVars
-   * @param blockingLoopVars
+   * @param blockingVars
    */
   public abstract void startLoop(String loopName, List<Var> loopVars,
       List<Var> initVals, List<Var> usedVariables,

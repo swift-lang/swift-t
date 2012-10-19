@@ -155,7 +155,7 @@ public class FunctionDecl {
   /**
     * Take a DECLARE_VARIABLE_REST subtree of the AST and return the appropriate declared
     * variable.  Doesn't check to see if variable already defined
-    * @param errorContext the current context, for info to add to error message
+    * @param context the current context, for info to add to error message
     * @param baseType the type preceding the declaration 
     * @param tree a parse tree with the root a DECLARE_MULTI or DECLARE_SINGLE 
     *                                                               subtree

@@ -330,10 +330,10 @@ class Turbine
   /**
    * Same as rule, but store the rule ID into the TCL variable named by
    * ruleIDVarName so that it can be provided as an argument to the procedure
-   * @param procName
-   * @param inputs
+   * @param symbol
+   * @param blockOn
    * @param action
-   * @param shareWork
+   * @param mode
    * @return
    */
   public static Sequence rule(String symbol,
@@ -435,10 +435,6 @@ class Turbine
   /**
    * Lookup arrayVar[arrayIndex] right away, regardless of whether
    * it is closed
-   * @param refVar
-   * @param arrayIndex
-   * @param isArrayRef
-   * @return
    */
   public static SetVariable arrayLookupImm(String dst, String arrayVar,
       Expression arrayIndex) {

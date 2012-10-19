@@ -215,7 +215,6 @@ public class ForeachLoop {
    * (optionally) for the loop count
    * 
    * @param context
-   * @param typecheck
    * @return
    * @throws UserException
    */

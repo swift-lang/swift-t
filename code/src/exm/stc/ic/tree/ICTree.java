@@ -722,7 +722,6 @@ public class ICTree {
      * preconditions: variable is not used as input for any instruction,
      *            variable is not used as output for any instruction with a sideeffect,
      *            variable is not required for any constructs
-     * @param varName
      */
     public void removeVars(Set<String> removeVars) {
       removeVarDeclarations(removeVars);

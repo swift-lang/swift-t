@@ -217,7 +217,7 @@ public class ExprWalker {
    * @param context
    * @param src
    * @param dst
-   * @param srctype
+   * @param type
    * @throws UserException
    */
   public void copyByValue(Context context, Var src, Var dst,
@@ -269,8 +269,8 @@ public class ExprWalker {
    * @param structVar Variable of type struct or struct ref
    * @param fieldName
    * @param storeInStack
-   * @param structToCache
-   * @param fieldPathToCache
+   * @param rootStruct top level variable for structure
+   * @param fieldPath path from top level
    * @return the contents of the struct field if structVar is a non-ref, 
    *        a reference to the contents of the struct field if structVar is 
    *        a ref
@@ -305,8 +305,8 @@ public class ExprWalker {
   /**
    * Dereference src into dst
    * ie. dst = *src
-   * @param oVar
-   * @param lookupIntoVar
+   * @param dst
+   * @param src
    * @throws UserException 
    * @throws UndefinedTypeException 
    */

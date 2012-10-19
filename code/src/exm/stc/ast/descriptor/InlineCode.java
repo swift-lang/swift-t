@@ -14,8 +14,7 @@ public class InlineCode {
    *  In the event of more than two << signs, start the substitution
    *  at the innermost pair
    * @param in
-   * @return
-   * @throws ValueError 
+   * @return 
    */
   public static TclOpTemplate templateFromString(Context context,
                                                  String in) 
