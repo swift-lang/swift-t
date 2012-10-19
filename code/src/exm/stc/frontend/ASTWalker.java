@@ -604,7 +604,7 @@ public class ASTWalker {
   private void foreach(Context context, SwiftAST tree) throws UserException {
     ForeachLoop loop = ForeachLoop.fromAST(context, tree); 
     
-    if (loop.iteratesOverRange() && loop.getLoopCountVal() != null) {
+    if (loop.iteratesOverRange() && loop.getCountVarName() == null) {
       foreachRange(context, loop);
     } else {
       foreachArray(context, loop);

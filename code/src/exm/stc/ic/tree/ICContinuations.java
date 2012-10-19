@@ -1113,7 +1113,7 @@ public class ICContinuations {
       if (renames.containsKey(loopVar.name())) {
         loopVar = renames.get(loopVar.name()).getVar();
       }
-      if (renames.containsKey(countVar.name())) {
+      if (countVar != null && renames.containsKey(countVar.name())) {
         countVar = renames.get(countVar.name()).getVar();
       }
       start = renameRangeArg(start, renames);
