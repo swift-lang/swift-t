@@ -174,7 +174,7 @@ type_field:
 app_function_definition:
         annotation*
         APP o=formal_argument_list f=ID i=formal_argument_list
-        LBRACE c=command SEMICOLON RBRACE ->
+        LBRACE c=command SEMICOLON? RBRACE ->
         ^( DEFINE_APP_FUNCTION $f $o $i $c annotation* )
     ;
 
