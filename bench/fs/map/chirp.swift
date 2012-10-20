@@ -23,7 +23,8 @@ app (file o) process(file i)
 main
 {
   string user = "wozniak"; // getenv("USER");
-  string fs = "/chirp/localhost";
+  // string fs = "/chirp/localhost";
+  string fs = "/chirp/bb05";
   // string fs = "/sandbox";which
   // string fs = "/dev/shm";
   string tmpdir = fs;
