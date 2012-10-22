@@ -7,10 +7,16 @@
  */
 
 #define _GNU_SOURCE // for asprintf()
+
+#include "config.h"
+
 #include <assert.h>
 #include <alloca.h>
-#include <malloc.h>
 #include <stdio.h>
+
+#if HAVE_MALLOC_H
+#include <malloc.h>
+#endif
 
 #include <mpi.h>
 
@@ -511,8 +517,10 @@ handle_store(int caller)
   MPI_Status status;
   RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_STORE_HEADER);
 
+  // #if HAVE_MALLOC_H
   // struct mallinfo s = mallinfo();
   // DEBUG("Store: heap size: %i", s.uordblks);
+  // #endif
   DEBUG("Store: <%li>", id);
 
   RECV(xfer, XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_STORE_PAYLOAD);
@@ -825,7 +833,7 @@ handle_unique(int caller)
   adlb_data_code dc = data_unique(&id);
 
   RSEND(&id, 1, MPI_LONG, caller, ADLB_TAG_RESPONSE);
-  DEBUG("Unique: <%li>\n", id);
+  DEBUG("Unique: <%li>", id);
   // MPE_LOG_EVENT(mpe_svr_unique_end);
   return ADLB_SUCCESS;
 }
