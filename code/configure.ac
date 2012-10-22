@@ -31,6 +31,21 @@ AC_PROG_CC
 AC_CHECK_PROG(AR, ar)
 AC_PROG_RANLIB
 
+# Checks for functions
+AC_CHECK_FUNCS([memset stpcpy strdup strtol])
+AC_FUNC_ALLOCA
+AC_FUNC_MALLOC
+
+# Checks for headers
+# Note: Mac OS does not have malloc.h
+AC_CHECK_HEADERS([inttypes.h limits.h malloc.h memory.h stddef.h])
+AC_CHECK_HEADERS([stdlib.h string.h unistd.h])
+AC_HEADER_STDBOOL
+
+# Checks for compiler features
+AC_C_INLINE
+AC_C_RESTRICT
+
 # We prefer to use cp -u for installation
 AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
     [AC_PATH_PROGS_FEATURE_CHECK([CP_U], [cp],

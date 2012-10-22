@@ -102,6 +102,7 @@ endif
 ### COMPILE
 
 %.o: %.c
+#       This gives a false autoscan warning for C++ (token 'CC'):
 	$(Q) "  CC		$(@)"
 	$(E) $(CC) $(CFLAGS) -c -o $(@) $(<)
 
@@ -127,6 +128,7 @@ $(ADLB_SO): $(OBJS) $(NLOBJS)
 
 ### APPS
 
+# This gives a false autoscan warning for token 'install'
 apps/%.x: apps/%.o install
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(CFLAGS) -o $(@) $(<) $(LDFLAGS) \
