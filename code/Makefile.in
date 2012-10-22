@@ -225,13 +225,14 @@ TAGS: deps.txt
 ### COMPILE
 
 %.o: %.c
-# 	The following string produces a false autoscan message (C++)
+# This line produces a false autoscan message on token 'CC' (C++)
 	$(Q) "  CC		$(@)"
 	$(E) $(CC) $(CFLAGS) \
              -c $(<) -o $(@)
 
 ### LINK
 
+# This rule produces a false autoscan message on token 'install'
 $(TURBINE_A): $(TURBINE_OBJS)
 	$(Q) "  AR		$(@)"
 	$(E) install -d lib

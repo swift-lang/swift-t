@@ -63,7 +63,7 @@ AC_CACHE_CHECK([for cp that supports --parents], [ac_cv_path_cp_parents],
 AC_SUBST([CP_PARENTS], [$ac_cv_path_cp_parents])
 
 # Checks for headers
-AC_CHECK_HEADERS([stddef.h sys/param.h sys/time.h])
+AC_CHECK_HEADERS([malloc.h stddef.h sys/param.h sys/time.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
@@ -75,8 +75,10 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 
 # Checks for library functions.
-AC_FUNC_MALLOC
+# Although autoscan 2.68 warns for AC_FUNC_STRNLEN, we do not use it
+# because of known autoconf issues.  We do check for strnlen here:
 AC_CHECK_FUNCS([gettimeofday memset strchr strdup strlen strnlen])
+AC_FUNC_MALLOC
 
 # Define templates
 AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
