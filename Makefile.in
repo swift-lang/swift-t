@@ -112,6 +112,7 @@ deps_contents.txt:
 
 %.o: %.c
 	$(Q) "  CC		$@"
+#       This line causes a false autoscan warning on token 'CC' (C++)
 	$(E) $(CC) $(CFLAGS) -c $(<) -o $(@)
 
 ### LINK
@@ -120,6 +121,7 @@ ifeq ($(ENABLE_SHARED),1)
 
 $(EXMCUTILS): $(OBJS)
 	$(Q) "  LINK		$@"
+#       This line causes a false autoscan warning on token 'install'
 	$(E) install -d lib
 	$(E) $(CC) $(SHARED) $(PIC) $(MAC_NAME) -o $(@) $(OBJS) -lm
 #       Touch this so re-installation has the correct source directory

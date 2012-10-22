@@ -30,6 +30,26 @@ AC_SUBST(USE_MAC)
 # Checks for programs
 AC_PROG_CC
 
+# Checks for header files
+AC_CHECK_HEADERS([stddef.h stdint.h stdlib.h string.h])
+AC_CHECK_HEADERS([sys/param.h] [sys/time.h])
+AC_HEADER_STDBOOL
+
+# Checks for typedefs, structures, and compiler characteristics
+AC_C_INLINE
+AC_TYPE_PID_T
+AC_TYPE_UINT16_T
+AC_TYPE_UINT32_T
+AC_TYPE_UINT8_T
+AC_TYPE_SIZE_T
+
+# Checks for library functions.
+# Although autoscan 2.68 warns for AC_FUNC_STRNLEN, we do not use it
+# because of known autoconf issues.  We do check for strnlen here:
+AC_CHECK_FUNCS([floor gettimeofday memchr strchr strdup strnlen])
+AC_FUNC_MALLOC
+AC_FUNC_REALLOC
+
 # We prefer to use cp -u for installation
 AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
     [AC_PATH_PROGS_FEATURE_CHECK([CP_U], [cp],
@@ -39,31 +59,6 @@ AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
                 || ac_cv_path_cp_u=no  ]],
         [])])
 AC_SUBST([CP_U], [$ac_cv_path_cp_u])
-
-# This does not work:
-# AC_PROG_INSTALL
-
-# autoscan finds a false positive on C++
-# AC_PROG_CXX
-
-# Checks for header files
-AC_CHECK_HEADERS([stddef.h stdint.h stdlib.h string.h])
-AC_CHECK_HEADERS([sys/param.h] [sys/time.h])
-
-AC_C_INLINE
-AC_TYPE_UINT16_T
-AC_TYPE_UINT32_T
-AC_TYPE_UINT8_T
-
-# Checks for typedefs, structures, and compiler characteristics
-AC_HEADER_STDBOOL
-AC_TYPE_SIZE_T
-
-# Checks for library functions.
-AC_FUNC_MALLOC
-
-# Checks for libraries
-AC_CHECK_FUNCS([gettimeofday strchr strnlen])
 
 ENABLE_SHARED=
 AC_ARG_ENABLE(shared,
