@@ -2756,6 +2756,9 @@ public class ICInstructions {
       case STRING:
         assert(value.isImmediateString());
         return Builtin.createLocal(BuiltinOpcode.COPY_STRING, dst, value);
+      case BLOB:
+        assert(value.isImmediateBlob());
+        return Builtin.createLocal(BuiltinOpcode.COPY_BLOB, dst, value);
       default:
         // fall through
         break;
