@@ -17,11 +17,8 @@ mm_context mm_null = -1;
 
 #ifndef DISABLE_MM
 
-#include <assert.h>
-#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-
 typedef struct
 {
   char* name;
