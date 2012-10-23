@@ -743,3 +743,7 @@ Configure Turbine with:
 +
 3. Configure everything with +--enable-fast+. This disables assertions
 and other checks
+
+//// Local Variables:
+//// mode: doc
+//// End:
