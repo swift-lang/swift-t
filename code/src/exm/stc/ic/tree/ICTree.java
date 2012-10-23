@@ -803,7 +803,6 @@ public class ICTree {
       HashSet<String> stillNeeded = new HashSet<String>();
       findEssentialVars(stillNeeded);
       return stillNeeded;
-
     }
 
     private void findEssentialVars(HashSet<String> stillNeeded) {
@@ -839,8 +838,14 @@ public class ICTree {
       }
       
       for (CleanupAction a: cleanupActions) {
-        if (a.action.hasSideEffects()) {
+        // See if the variable might an an alias for out of scope
+        if (a.action.writesAliasVar()) {
           stillNeeded.add(a.var.name());
+        }
+        for (Arg out: a.action.getInputs()) {
+          if (out.isVar()) {
+            stillNeeded.add(out.getVar().name());
+          }
         }
       }
     }

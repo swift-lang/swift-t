@@ -1,5 +1,6 @@
 
 #include <builtins.swift>
+#include <blob.swift>
 
 main {
   blob b;

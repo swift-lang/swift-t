@@ -551,7 +551,7 @@ public class SwigcGenerator implements CompilerBackend
 
 
   @Override
-  public void closeArray(Var arr) {
+  public void decrArrayWriters(Var arr) {
     Type type = arr.type();
     assert(Types.isArray(type));
     // Close array by removing the slot we created at startup
@@ -2154,7 +2154,7 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void freeBlob(Var blob) {
+    public void decrBlobRef(Var blob) {
       // TODO Auto-generated method stub
       
     }

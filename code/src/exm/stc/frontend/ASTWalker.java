@@ -348,7 +348,7 @@ public class ASTWalker {
     for (Var v : context.getArraysToClose()) {
       assert(v.defType() != DefType.INARG);
       assert(Types.isArray(v.type()));
-      backend.closeArray(v);
+      backend.decrArrayWriters(v);
     }
   }
 

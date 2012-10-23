@@ -393,7 +393,7 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void closeArray(Var arr) {
+  public void decrArrayWriters(Var arr) {
     assert(Types.isArray(arr.type()));
     currBlock().addCleanup(arr, TurbineOp.arrayDecrWriters(arr));
   }
@@ -671,10 +671,9 @@ public class STCMiddleEnd implements CompilerBackend {
   }
   
   @Override
-  public void freeBlob(Var blob) {
-    assert(blob.type().equals(Types.V_BLOB));
-    currBlock().addInstruction(
-        TurbineOp.freeBlob(blob));
+  public void decrBlobRef(Var blob) {
+    assert(blob.type().equals(Types.F_BLOB));
+    currBlock().addInstruction(TurbineOp.decrBlobRef(blob));
   }
 
   @Override

@@ -34,7 +34,7 @@ public interface CompilerBackend {
       VarStorage storage, DefType defType, Var mapping) 
            throws UndefinedTypeException;
 
-  public abstract void closeArray(Var arr);
+  public abstract void decrArrayWriters(Var arr);
 
   public abstract void localOp(BuiltinOpcode op, Var out, 
                                             List<Arg> in);
@@ -87,7 +87,12 @@ public interface CompilerBackend {
 
   public abstract void assignBlob(Var target, Arg src);
   public abstract void retrieveBlob(Var target, Var src);
-  public abstract void freeBlob(Var blob);
+  
+  /**
+   * Decrement reference count for cached blob
+   * @param blob handle to future
+   */
+  public abstract void decrBlobRef(Var blob);
   /**
    * Extract handle to filename future out of file variable
    * @param initUnmapped if true, assign arbitrary filename to unmapped files

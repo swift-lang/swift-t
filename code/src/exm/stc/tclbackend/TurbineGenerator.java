@@ -254,11 +254,11 @@ public class TurbineGenerator implements CompilerBackend
 
 
   @Override
-  public void closeArray(Var arr) {
+  public void decrArrayWriters(Var arr) {
     Type type = arr.type();
     assert(Types.isArray(type));
     // Close array by removing the slot we created at startup
-    pointStack.peek().add(Turbine.containerSlotDrop(varToExpr(arr)));
+    pointStack.peek().add(Turbine.decrArrayWriters(varToExpr(arr)));
   }
 
   String typeToString(PrimType type)
@@ -412,9 +412,9 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void freeBlob(Var blob) {
-    assert(blob.type().equals(Types.V_BLOB));
-    pointStack.peek().add(Turbine.blobFree(varToExpr(blob)));
+  public void decrBlobRef(Var blob) {
+    assert(blob.type().equals(Types.F_BLOB));
+    pointStack.peek().add(Turbine.decrBlobRef(varToExpr(blob)));
   }
   
   @Override
@@ -477,8 +477,8 @@ public class TurbineGenerator implements CompilerBackend
   public void dereferenceInt(Var target, Var src) {
     assert(target.type().equals(Types.F_INT));
     assert(src.type().equals(Types.R_INT));
-    Sequence deref = Turbine.dereferenceInteger(prefixVar(target.name()),
-        prefixVar(src.name()));
+    Command deref = Turbine.dereferenceInteger(varToExpr(target),
+                                               varToExpr(src));
     pointStack.peek().add(deref);
   }
 
@@ -486,8 +486,8 @@ public class TurbineGenerator implements CompilerBackend
   public void dereferenceBool(Var target, Var src) {
     assert(target.type().equals(Types.F_BOOL));
     assert(src.type().equals(Types.R_BOOL));
-    Sequence deref = Turbine.dereferenceInteger(prefixVar(target.name()),
-        prefixVar(src.name()));
+    Command deref = Turbine.dereferenceInteger(varToExpr(target),
+                                               varToExpr(src));
     pointStack.peek().add(deref);
   }
 
@@ -495,8 +495,8 @@ public class TurbineGenerator implements CompilerBackend
   public void dereferenceFloat(Var target, Var src) {
     assert(target.type().equals(Types.F_FLOAT));
     assert(src.type().equals(Types.R_FLOAT));
-    Sequence deref = Turbine.dereferenceFloat(prefixVar(target.name()),
-        prefixVar(src.name()));
+    Command deref = Turbine.dereferenceFloat(varToExpr(target),
+                                             varToExpr(src));
     pointStack.peek().add(deref);
   }
 
@@ -504,8 +504,8 @@ public class TurbineGenerator implements CompilerBackend
   public void dereferenceString(Var target, Var src) {
     assert(target.type().equals(Types.F_STRING));
     assert(src.type().equals(Types.R_STRING));
-    Sequence deref = Turbine.dereferenceString(prefixVar(target.name()),
-        prefixVar(src.name()));
+    Command deref = Turbine.dereferenceString(varToExpr(target), 
+                                              varToExpr(src));
     pointStack.peek().add(deref);
   }
 
@@ -513,19 +513,17 @@ public class TurbineGenerator implements CompilerBackend
   public void dereferenceBlob(Var target, Var src) {
     assert(target.type().equals(Types.F_BLOB));
     assert(src.type().equals(Types.R_BLOB));
-    Sequence deref = null;
+    Command deref = Turbine.dereferenceBlob(varToExpr(target), varToExpr(src));
     pointStack.peek().add(deref);
-    //TODO
-    throw new STCRuntimeError("TODO: dereferenceBlob");
   }
   
   @Override
   public void dereferenceFile(Var target, Var src) {
     assert(target.type().equals(Types.F_FILE));
     assert(src.type().equals(Types.REF_FILE));
-    Sequence deref = Turbine.dereferenceFile(prefixVar(target.name()),
-            prefixVar(src.name()));
-        pointStack.peek().add(deref);
+    Command deref = Turbine.dereferenceFile(varToExpr(target),
+                                            varToExpr(src));
+    pointStack.peek().add(deref);
   }
 
   @Override
@@ -813,7 +811,7 @@ public class TurbineGenerator implements CompilerBackend
     assert(indexVar.type().equals(Types.F_INT));
     assert(Types.isRef(oVar.type()));
     // Nested arrays - oVar should be a reference type
-    Sequence getRef = Turbine.arrayLookupComputed(
+    Command getRef = Turbine.arrayLookupComputed(
         prefixVar(oVar.name()), refIsString(oVar.type()),
         prefixVar(arrayVar.name()), prefixVar(indexVar.name()), isArrayRef);
     pointStack.peek().add(getRef);
@@ -824,7 +822,7 @@ public class TurbineGenerator implements CompilerBackend
         boolean isArrayRef) {
     assert(arrIx.isImmediateInt());
     arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
-    Sequence getRef = Turbine.arrayLookupImmIx(
+    Command getRef = Turbine.arrayLookupImmIx(
           prefixVar(oVar.name()),
           refIsString(oVar.type()),
           prefixVar(arrayVar.name()),
@@ -890,14 +888,14 @@ public class TurbineGenerator implements CompilerBackend
     Type memberType = arrayVar.type().memberType();
     if (Types.isRef(iVar.type())) {
       assert(iVar.type().memberType().equals(memberType));
-      Sequence r = Turbine.arrayDerefStoreComputed(
+      Command r = Turbine.arrayDerefStoreComputed(
           prefixVar(iVar.name()), prefixVar(arrayVar.name()),
           prefixVar(indexVar.name()));
 
       pointStack.peek().add(r);
     } else {
       assert(iVar.type().equals(memberType));
-      Sequence r = Turbine.arrayStoreComputed(
+      Command r = Turbine.arrayStoreComputed(
           prefixVar(iVar.name()), prefixVar(arrayVar.name()),
           prefixVar(indexVar.name()));
 
@@ -914,14 +912,14 @@ public class TurbineGenerator implements CompilerBackend
     Type memberType = arrayVar.type().memberType().memberType();
     if (Types.isRef(iVar.type())) {
       assert(iVar.type().memberType().equals(memberType));
-      Sequence r = Turbine.arrayRefDerefStoreComputed(
+      Command r = Turbine.arrayRefDerefStoreComputed(
           prefixVar(iVar.name()), prefixVar(arrayVar.name()),
           prefixVar(indexVar.name()), prefixVar(outerArrayVar.name()));
 
       pointStack.peek().add(r);
     } else {
       assert(iVar.type().equals(memberType));
-      Sequence r = Turbine.arrayRefStoreComputed(
+      Command r = Turbine.arrayRefStoreComputed(
           prefixVar(iVar.name()), prefixVar(arrayVar.name()),
           prefixVar(indexVar.name()), prefixVar(outerArrayVar.name()));
 
@@ -946,7 +944,7 @@ public class TurbineGenerator implements CompilerBackend
         throw new STCRuntimeError("Type mismatch when trying to store " +
             "from variable " + iVar.toString() + " into array " + arrayVar.toString());
       }
-      Sequence r = Turbine.arrayDerefStore(
+      Command r = Turbine.arrayDerefStore(
           prefixVar(iVar.name()), prefixVar(arrayVar.name()),
           opargToExpr(arrIx));
       pointStack.peek().add(r);
@@ -955,7 +953,7 @@ public class TurbineGenerator implements CompilerBackend
         throw new STCRuntimeError("Type mismatch when trying to store " +
             "from variable " + iVar.toString() + " into array " + arrayVar.toString());
       }
-      Sequence r = Turbine.arrayStoreImmediate(
+      Command r = Turbine.arrayStoreImmediate(
           prefixVar(iVar.name()), prefixVar(arrayVar.name()),
           opargToExpr(arrIx));
       pointStack.peek().add(r);
@@ -976,7 +974,7 @@ public class TurbineGenerator implements CompilerBackend
         throw new STCRuntimeError("Type mismatch when trying to store " +
             "from variable " + iVar.toString() + " into array " + arrayVar.toString());
       }
-      Sequence r = Turbine.arrayRefDerefStore(
+      Command r = Turbine.arrayRefDerefStore(
           prefixVar(iVar.name()), prefixVar(arrayVar.name()),
           opargToExpr(arrIx), prefixVar(outerArrayVar.name()));
       pointStack.peek().add(r);
@@ -985,7 +983,7 @@ public class TurbineGenerator implements CompilerBackend
         throw new STCRuntimeError("Type mismatch when trying to store " +
             "from variable " + iVar.toString() + " into array " + arrayVar.toString());
       }
-      Sequence r = Turbine.arrayRefStoreImmediate(
+      Command r = Turbine.arrayRefStoreImmediate(
           prefixVar(iVar.name()), prefixVar(arrayVar.name()),
           opargToExpr(arrIx), prefixVar(outerArrayVar.name()));
       pointStack.peek().add(r);
@@ -1303,6 +1301,9 @@ public class TurbineGenerator implements CompilerBackend
       for (Var v: usedVariables) {
         toPassIn.add(v);
         alreadyInSet.add(v.name());
+        if (v.type().equals(Types.V_BLOB)) {
+          throw new STCRuntimeError("Can't directly pass blob value");
+        }
       }
       
       // Also need to pass in refs to containers
@@ -1373,7 +1374,7 @@ public class TurbineGenerator implements CompilerBackend
       Sequence seq = new Sequence();
       for (Var v: vars) {
         if (decr == null) {
-          seq.add(Turbine.containerSlotDrop(varToExpr(v)));
+          seq.add(Turbine.decrArrayWriters(varToExpr(v)));
         } else {
           seq.add(Turbine.containerSlotDrop(varToExpr(v), decr));
         }

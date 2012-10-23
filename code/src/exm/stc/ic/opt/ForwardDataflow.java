@@ -393,6 +393,7 @@ public class ForwardDataflow {
                             HashSet<ICInstructions.Opcode>();
   static {
     nonProgressOpcodes.add(Opcode.ARRAY_DECR_WRITERS);
+    nonProgressOpcodes.add(Opcode.DECR_BLOB_REF);
     nonProgressOpcodes.add(Opcode.LOCAL_OP);
     nonProgressOpcodes.add(Opcode.STORE_BOOL);
     nonProgressOpcodes.add(Opcode.STORE_INT);

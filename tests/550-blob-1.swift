@@ -1,5 +1,6 @@
 #include <builtins.swift>
 #include <assert.swift>
+#include <blob.swift>
 
 main {
     blob x = blob_from_string("hello world");

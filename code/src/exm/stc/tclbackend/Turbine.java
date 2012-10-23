@@ -76,7 +76,7 @@ class Turbine
       new Token("turbine::retrieve_float");
   private static final Token RETRIEVE_STRING =
       new Token("turbine::retrieve_string");
-  private static final Token RETRIEVE_BLOB = new Token("adlb::retrieve_blob");
+  private static final Token RETRIEVE_BLOB = new Token("turbine::retrieve_blob");
   private static final Token STACK_LOOKUP =
       new Token("turbine::stack_lookup");
   static final String LOCAL_STACK_NAME = "stack";
@@ -94,6 +94,8 @@ class Turbine
       new Token("turbine::f_dereference_float");
   private static final Token DEREFERENCE_STRING =
       new Token("turbine::f_dereference_string");
+  private static final Token DEREFERENCE_BLOB =
+          new Token("turbine::f_dereference_blob");
   private static final Token DEREFERENCE_FILE =
           new Token("turbine::f_dereference_file");
   private static final Token TURBINE_LOG =
@@ -114,7 +116,7 @@ class Turbine
       new Token("turbine::store_float");
   private static final Token STORE_STRING =
       new Token("turbine::store_string");
-  private static final Token STORE_BLOB = new Token("adlb::store_blob");
+  private static final Token STORE_BLOB = new Token("turbine::store_blob");
   private static final Token CONTAINER_DEREF_INSERT =
       new Token("turbine::container_deref_insert");
   private static final Token CONTAINER_F_DEREF_INSERT =
@@ -124,8 +126,7 @@ class Turbine
       new Token("turbine::call_composite");
 
   private static final Token UNCACHED_MODE = new Token("UNCACHED");
-  private static final Token FREE_BLOB = new Token("adlb::blob_free");
-  private static final Token LIST_INDEX = new Token("lindex");
+  private static final Token FREE_BLOB = new Token("turbine::free_blob");
 
   public enum StackFrameType {
     MAIN,
@@ -280,15 +281,13 @@ class Turbine
     return new SetVariable(target, new Square(RETRIEVE_BLOB, var));
   }
 
-  public static Command blobFree(Value var) {
+  public static Command decrBlobRef(Value var) {
     return new Command(FREE_BLOB, var);
   }
 
   public static Command blobSet(Value target, Expression src) {
     // Calling convention requires separate pointer and length args
-    Square ptr = new Square(LIST_INDEX, src, new LiteralInt(0));
-    Square len = new Square(LIST_INDEX, src, new LiteralInt(1));
-    return new Command(STORE_BLOB, target, ptr, len);
+    return new Command(STORE_BLOB, target, src);
   }
 
   private static Value tclRuleType (TaskMode t) {
@@ -409,27 +408,21 @@ class Turbine
    * @param isArrayRef
    * @return
    */
-  public static Sequence arrayLookupImmIx(String refVar, 
+  public static Command arrayLookupImmIx(String refVar, 
       boolean refIsString, String arrayVar,
       Expression arrayIndex, boolean isArrayRef) {
-    Sequence result = new Sequence();
-    
     Token refType = refIsString ?  new Token(STRING_TYPENAME) 
                                 : new Token(INTEGER_TYPENAME); 
     
     // set up reference to point to array data
-    Command loadCmd;
     if (isArrayRef) {
-      loadCmd = new Command(CREF_LOOKUP_LITERAL, NO_STACK,
+      return new Command(CREF_LOOKUP_LITERAL, NO_STACK,
           new TclList(),  new TclList(new Value(arrayVar),
           arrayIndex, new Value(refVar), refType));
     } else {
-      loadCmd = new Command(CONTAINER_REFERENCE, new Value(arrayVar),
+      return new Command(CONTAINER_REFERENCE, new Value(arrayVar),
         arrayIndex, new Value(refVar), refType);
     }
-    result.add(loadCmd);
-
-    return result;
   }
 
   /**
@@ -450,162 +443,108 @@ class Turbine
    * @param isArrayRef
    * @return
    */
-  public static Sequence arrayLookupComputed(String refVar,
+  public static Command arrayLookupComputed(String refVar,
                           boolean refIsString,
                           String arrayVar,
                           String indexVar, boolean isArrayRef) {
-
-    Sequence result = new Sequence();
-
-    Command loadCmd;
-    
     Token refType = refIsString ?  new Token(STRING_TYPENAME) 
                                 : new Token(INTEGER_TYPENAME); 
-    
     if (isArrayRef) {
-      loadCmd = new Command(CREF_F_LOOKUP, NO_STACK,
+      return new Command(CREF_F_LOOKUP, NO_STACK,
           new TclList(), new TclList(new Value(arrayVar), new Value(indexVar),
               new Value(refVar), refType));
     } else {
-      loadCmd = new Command(CONTAINER_F_REFERENCE, NO_STACK,
+      return new Command(CONTAINER_F_REFERENCE, NO_STACK,
          new TclList(), new TclList(new Value(arrayVar), new Value(indexVar),
              new Value(refVar), refType));
     }
-
-    result.add(loadCmd);
-    return result;
    }
 
-   public static Sequence dereferenceInteger(String dstVar, String refVar) {
-     Sequence result = new Sequence();
-     Command deref = new Command(DEREFERENCE_INTEGER, NO_STACK,
-         new Value(dstVar), new Value(refVar));
-     result.add(deref);
-     return result;
+   public static Command dereferenceInteger(Value dstVar, Value refVar) {
+     return new Command(DEREFERENCE_INTEGER, NO_STACK, dstVar, refVar);
    }
 
-   public static Sequence dereferenceFloat(String dstVar, String refVar) {
-     Sequence result = new Sequence();
-     Command deref = new Command(DEREFERENCE_FLOAT, NO_STACK,
-         new Value(dstVar), new Value(refVar));
-     result.add(deref);
-     return result;
+   public static Command dereferenceFloat(Value dstVar, Value refVar) {
+     return new Command(DEREFERENCE_FLOAT, NO_STACK, dstVar, refVar);
    }
 
-   public static Sequence dereferenceString(String dstVar, String refVar) {
-     Sequence result = new Sequence();
-     Command deref = new Command(DEREFERENCE_STRING, NO_STACK,
-         new Value(dstVar), new Value(refVar));
-     result.add(deref);
-     return result;
+   public static Command dereferenceString(Value dstVar, Value refVar) {
+     return new Command(DEREFERENCE_STRING, NO_STACK,
+         dstVar, refVar);
    }
    
-   public static Sequence dereferenceFile(String dstVar, String refVar) {
-     Sequence result = new Sequence();
-     Command deref = new Command(DEREFERENCE_FILE, NO_STACK,
-         new Value(dstVar), new Value(refVar));
-     result.add(deref);
-     return result;
+   public static Command dereferenceBlob(Value dstVar, Value refVar) {
+     return new Command(DEREFERENCE_BLOB, NO_STACK, dstVar, refVar);
+   }
+   
+   public static Command dereferenceFile(Value dstVar, Value refVar) {
+     return new Command(DEREFERENCE_FILE, NO_STACK, dstVar, refVar);
    }
 
-  public static Sequence arrayStoreImmediate(String srcVar, String arrayVar,
+  public static Command arrayStoreImmediate(String srcVar, String arrayVar,
                                                   Expression arrayIndex) {
-    Sequence result = new Sequence();
-
-    Command storeCmd = new Command(CONTAINER_IMMEDIATE_INSERT,
+    return new Command(CONTAINER_IMMEDIATE_INSERT,
         new Value(arrayVar), arrayIndex, new Value(srcVar));
-
-    result.add(storeCmd);
-    return result;
   }
 
-  public static Sequence arrayDerefStore(String srcRefVar, String arrayVar,
+  public static Command arrayDerefStore(String srcRefVar, String arrayVar,
       Expression arrayIndex) {
-    Sequence result = new Sequence();
-
     Square outputs = new TclList();
     Square inputs =  new TclList(new Value(arrayVar),
                       arrayIndex, new Value(srcRefVar));
-    Command storeCmd = new Command(CONTAINER_DEREF_INSERT, NO_STACK, outputs, inputs);
-
-    result.add(storeCmd);
-    return result;
+    return new Command(CONTAINER_DEREF_INSERT, NO_STACK, outputs, inputs);
   }
 
-  public static Sequence arrayDerefStoreComputed(String srcRefVar, String arrayVar,
+  public static Command arrayDerefStoreComputed(String srcRefVar, String arrayVar,
       String indexVar) {
-    Sequence result = new Sequence();
     Square outputs = new TclList();
     Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
-    new Value(srcRefVar));
-    Command storeCmd = new Command(CONTAINER_F_DEREF_INSERT,
-                                           NO_STACK, outputs, inputs);
-    result.add(storeCmd);
-    return result;
+                     new Value(srcRefVar));
+    return new Command(CONTAINER_F_DEREF_INSERT, NO_STACK, outputs, inputs);
   }
 
-  public static Sequence arrayStoreComputed(String srcVar, String arrayVar,
+  public static Command arrayStoreComputed(String srcVar, String arrayVar,
                                                     String indexVar) {
-    Sequence result = new Sequence();
     Square outputs = new TclList();
     Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
           new Value(srcVar));
-    Command storeCmd = new Command(CONTAINER_F_INSERT, NO_STACK,
-                                          outputs, inputs);
-    result.add(storeCmd);
-    return result;
+    return new Command(CONTAINER_F_INSERT, NO_STACK, outputs, inputs);
   }
 
-  public static Sequence arrayRefStoreImmediate(String srcVar, String arrayVar,
+  public static Command arrayRefStoreImmediate(String srcVar, String arrayVar,
       Expression arrayIndex, String outerArray) {
-    Sequence result = new Sequence();
-
-    Command storeCmd = new Command(new Token("turbine::cref_insert"),
+    return new Command(new Token("turbine::cref_insert"),
                     NO_STACK, new TclList(), new TclList(
                     new Value(arrayVar), arrayIndex, new Value(srcVar),
                     new Value(outerArray)));
-
-    result.add(storeCmd);
-    return result;
   }
 
 
-  public static Sequence arrayRefStoreComputed(String srcVar, String arrayVar,
+  public static Command arrayRefStoreComputed(String srcVar, String arrayVar,
       String indexVar, String outerArray) {
-    Sequence result = new Sequence();
     Square outputs = new TclList();
     Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
         new Value(srcVar), new Value(outerArray));
-    Command storeCmd = new Command(new Token("turbine::f_cref_insert"),
+    return new Command(new Token("turbine::f_cref_insert"),
                         NO_STACK, outputs, inputs);
-    result.add(storeCmd);
-    return result;
   }
 
-  public static Sequence arrayRefDerefStore(String srcRefVar, String arrayVar,
+  public static Command arrayRefDerefStore(String srcRefVar, String arrayVar,
       Expression arrayIndex, String outerArrayVar) {
-    Sequence result = new Sequence();
-
     Square outputs = new TclList();
     Square inputs =  new TclList(new Value(arrayVar),
         arrayIndex, new Value(srcRefVar), new Value(outerArrayVar));
-    Command storeCmd = new Command(new Token("turbine::cref_deref_insert"),
+    return new Command(new Token("turbine::cref_deref_insert"),
                                               NO_STACK, outputs, inputs);
-
-    result.add(storeCmd);
-    return result;
   }
 
-  public static Sequence arrayRefDerefStoreComputed(String srcRefVar, String arrayVar,
+  public static Command arrayRefDerefStoreComputed(String srcRefVar, String arrayVar,
       String indexVar, String outerArrayVar) {
-    Sequence result = new Sequence();
     Square outputs = new TclList();
     Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
         new Value(srcRefVar), new Value(outerArrayVar));
-    Command storeCmd = new Command(new Token("turbine::cref_f_deref_insert"),
+    return new Command(new Token("turbine::cref_f_deref_insert"),
                                     NO_STACK, outputs, inputs);
-    result.add(storeCmd);
-    return result;
   }
 
   public static TclTree containerCreateNested(String resultVar,
@@ -644,7 +583,7 @@ class Turbine
     return new Command(CONTAINER_SLOT_CREATE, arr, incr);
   }
 
-  public static TclTree containerSlotDrop(Value arr) {
+  public static TclTree decrArrayWriters(Value arr) {
     return new Command(CONTAINER_SLOT_DROP, arr);
   }
   

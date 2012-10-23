@@ -52,6 +52,11 @@ public class OptUtil {
           VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
       block.addVariable(value_v);
       instBuffer.add(ICInstructions.retrieveValueOf(value_v, var));
+      
+      // Add cleanup action if needed
+      if (value_t.equals(Types.V_BLOB)) {
+        block.addCleanup(value_v, TurbineOp.decrBlobRef(var));
+      }
       return value_v;
     } else if (Types.isRef(var.type())) {
       // The result will be an alias

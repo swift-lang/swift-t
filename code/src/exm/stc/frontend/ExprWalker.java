@@ -905,7 +905,7 @@ public class ExprWalker {
                              usedVars, keepOpen);
     backend.arrayInsertImm(member, dst, Arg.createVar(ix));
     backend.endForeachLoop(-1, true, keepOpen);
-    backend.closeArray(dst);
+    backend.decrArrayWriters(dst);
     backend.endWaitStatement(keepOpen);
   }
 

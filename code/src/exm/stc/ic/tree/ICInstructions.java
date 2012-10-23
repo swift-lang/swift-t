@@ -368,7 +368,7 @@ public class ICInstructions {
             args.get(0).getVar(), args.get(1), args.get(3).getVar());
         break;
       case ARRAY_DECR_WRITERS:
-        gen.closeArray(args.get(0).getVar());
+        gen.decrArrayWriters(args.get(0).getVar());
         break;
       case STRUCT_LOOKUP:
         gen.structLookup(args.get(1).getVar(), args.get(2).getStringLit(),
@@ -452,8 +452,8 @@ public class ICInstructions {
         gen.retrieveBlob(args.get(0).getVar(),
             args.get(1).getVar());
         break;
-      case FREE_BLOB:
-        gen.freeBlob(args.get(0).getVar());
+      case DECR_BLOB_REF:
+        gen.decrBlobRef(args.get(0).getVar());
         break;
       case INIT_UPDATEABLE_FLOAT:
         gen.initUpdateable(args.get(0).getVar(), args.get(1));
@@ -628,13 +628,12 @@ public class ICInstructions {
     }
     
     public static Instruction retrieveBlob(Var target, Var source) {
-      throw new STCRuntimeError("Need to insert logic to free cached blob");
-      //return new TurbineOp(Opcode.LOAD_BLOB,
-      //    Arrays.asList(Arg.createVar(target), Arg.createVar(source)));
+      return new TurbineOp(Opcode.LOAD_BLOB,
+          Arrays.asList(Arg.createVar(target), Arg.createVar(source)));
     }
   
-    public static Instruction freeBlob(Var blob) {
-      return new TurbineOp(Opcode.FREE_BLOB,
+    public static Instruction decrBlobRef(Var blob) {
+      return new TurbineOp(Opcode.DECR_BLOB_REF,
                             Arrays.asList(Arg.createVar(blob)));
     }
     
@@ -852,6 +851,7 @@ public class ICInstructions {
       case STORE_BOOL:
       case STORE_FLOAT:
       case STORE_STRING:
+      case STORE_BLOB:
       case ARRAY_CREATE_NESTED_FUTURE:
       case ARRAY_REF_CREATE_NESTED_FUTURE:
       case ARRAY_CREATE_NESTED_IMM:
@@ -866,6 +866,7 @@ public class ICInstructions {
       case LOAD_BOOL:
       case LOAD_FLOAT:
       case LOAD_STRING:
+      case LOAD_BLOB:
       case STRUCT_LOOKUP:
       case STRUCTREF_LOOKUP:
       case ADDRESS_OF:
@@ -873,7 +874,10 @@ public class ICInstructions {
       case COPY_REF:
       case GET_FILENAME:
       case GET_OUTPUT_FILENAME:
-          return 1;
+        return 1;
+      case DECR_BLOB_REF:
+        // View blob as output
+        return 1;
       default:
         throw new STCRuntimeError("Need to add opcode " + op.toString()
             + " to numOutputArgs");
@@ -910,6 +914,7 @@ public class ICInstructions {
       case STORE_BOOL:
       case STORE_FLOAT:
       case STORE_STRING:
+      case STORE_BLOB:
       case DEREF_INT:
       case DEREF_BOOL:
       case DEREF_FLOAT:
@@ -919,6 +924,7 @@ public class ICInstructions {
       case LOAD_BOOL:
       case LOAD_FLOAT:
       case LOAD_STRING:
+      case LOAD_BLOB:
       case ARRAY_LOOKUP_REF_IMM:
       case ARRAY_LOOKUP_FUTURE:
       case ARRAYREF_LOOKUP_FUTURE:
@@ -956,6 +962,8 @@ public class ICInstructions {
            * created is subsequently used in a store operation
            */ 
         return false;
+      case DECR_BLOB_REF:
+        return true;
       default:
         throw new STCRuntimeError("Need to add opcode " + op.toString()
             + " to hasSideEffects");
@@ -2331,7 +2339,7 @@ public class ICInstructions {
     DEREF_FILE,
     STORE_INT, STORE_STRING, STORE_FLOAT, STORE_BOOL, ADDRESS_OF, 
     LOAD_INT, LOAD_STRING, LOAD_FLOAT, LOAD_BOOL, LOAD_REF,
-    STORE_BLOB, LOAD_BLOB, FREE_BLOB,
+    STORE_BLOB, LOAD_BLOB, DECR_BLOB_REF,
     ARRAY_DECR_WRITERS,
     
     ARRAYREF_LOOKUP_FUTURE, ARRAY_LOOKUP_FUTURE,
