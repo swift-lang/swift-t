@@ -27,7 +27,7 @@ public class If extends Sequence
     this(new Token(condition), thenBlock, null);
   }
 
-  public If(Value condition, TclTree thenBlock)
+  public If(Expression condition, TclTree thenBlock)
   {
     this((TclTree) condition, thenBlock, null);
   }
@@ -35,7 +35,7 @@ public class If extends Sequence
   /**
      The user must do an add() later to set the then-block
    */
-  public If(Value condition)
+  public If(Expression condition)
   {
     this((TclTree) condition, null, null);
   }

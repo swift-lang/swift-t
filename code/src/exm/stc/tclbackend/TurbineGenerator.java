@@ -49,6 +49,7 @@ import exm.stc.tclbackend.tree.ForLoop;
 import exm.stc.tclbackend.tree.If;
 import exm.stc.tclbackend.tree.LiteralFloat;
 import exm.stc.tclbackend.tree.LiteralInt;
+import exm.stc.tclbackend.tree.Not;
 import exm.stc.tclbackend.tree.PackageRequire;
 import exm.stc.tclbackend.tree.Proc;
 import exm.stc.tclbackend.tree.Sequence;
@@ -81,6 +82,8 @@ public class TurbineGenerator implements CompilerBackend
   private static final String TCLTMP_RANGE_INC = "tcltmp:inc";
   private static final Value TCLTMP_RANGE_INC_V = new Value(TCLTMP_RANGE_INC);
 
+  private static final String TCLTMP_FIRSTCALL = "tcltmp:firstcall";
+  
   private static final String MAIN_FUNCTION_NAME = "swift:main";
   private static final String CONSTINIT_FUNCTION_NAME = "swift:constants";
 
@@ -1329,10 +1332,7 @@ public class TurbineGenerator implements CompilerBackend
         waitFor.add(waitExpr);
       }
 
-      for (Var c: keepOpenVars) {
-        pointStack.peek().add(
-              Turbine.containerSlotCreate(varToExpr(c)));
-      }
+      pointStack.peek().append(incrementWriters(keepOpenVars));
 
       TclList action = buildAction(uniqueName, toPassIn);
       
@@ -1343,12 +1343,25 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     private void endAsync(List<Var> keepOpenVars) {
-      for (Var v: keepOpenVars) {
-        pointStack.peek().add(Turbine.containerSlotDrop(varToExpr(v)));
-      }
+      pointStack.peek().append(decrementWriters(keepOpenVars));
       pointStack.pop();
     }
 
+    private Sequence incrementWriters(List<Var> keepOpenVars) {
+      Sequence seq = new Sequence();
+      for (Var c: keepOpenVars) {
+        seq.add(Turbine.containerSlotCreate(varToExpr(c)));
+      }
+      return seq;
+    }
+
+    private static Sequence decrementWriters(List<Var> keepOpenVars) {
+      Sequence seq = new Sequence();
+      for (Var v: keepOpenVars) {
+        seq.add(Turbine.containerSlotDrop(varToExpr(v)));
+      }
+      return seq;
+    }
 
     private TclList buildAction(String procName,
         List<Var> usedVariables) {
@@ -1457,34 +1470,39 @@ public class TurbineGenerator implements CompilerBackend
       pointStack.peek().add(Turbine.containerContents(contentsVar,
                           varToExpr(arrayVar), haveKeys));
     } else {
-      // load array size
-      pointStack.peek().add(Turbine.containerSize(TCLTMP_CONTAINER_SIZE,
-                                        varToExpr(arrayVar)));
-      Expression lastIndex = Square.arithExpr(new Value(TCLTMP_CONTAINER_SIZE),
-            new Token("-"), new LiteralInt(1));
-
-      // recursively split the range
-      ArrayList<Var> splitUsedVars = new ArrayList<Var>(
-          usedVariables);
-      splitUsedVars.add(arrayVar);
-      startRangeSplit(procName, splitUsedVars, keepOpenVars,
-            splitDegree, new LiteralInt(0), lastIndex, new LiteralInt(1));
-
-      // need to find the length of this split since that is what the turbine
-      //  call wants
-      pointStack.peek().add(new SetVariable(TCLTMP_SPLITLEN,
-              Square.arithExpr(new Token(
-              String.format("${%s} - ${%s} + 1", TCLTMP_RANGE_HI,
-                                                 TCLTMP_RANGE_LO)))));
-
-      // load the subcontainer
-      pointStack.peek().add(Turbine.containerContents(contentsVar,
-          varToExpr(arrayVar), haveKeys, new Value(TCLTMP_SPLITLEN),
-          TCLTMP_RANGE_LO_V));
-
+      startForeachSplit(procName, arrayVar, contentsVar, splitDegree, haveKeys,
+          usedVariables, keepOpenVars);
     }
     startForeachInner(new Value(contentsVar), memberVar, loopCountVar,
         usedVariables, keepOpenVars, foreach_num);
+  }
+
+  private void startForeachSplit(String procName, Var arrayVar,
+      String contentsVar, int splitDegree, boolean haveKeys,
+      List<Var> usedVars, List<Var> keepOpenVars) {
+    // load array size
+    pointStack.peek().add(Turbine.containerSize(TCLTMP_CONTAINER_SIZE,
+                                      varToExpr(arrayVar)));
+    Expression lastIndex = Square.arithExpr(new Value(TCLTMP_CONTAINER_SIZE),
+          new Token("-"), new LiteralInt(1));
+
+    // recursively split the range
+    ArrayList<Var> splitUsedVars = new ArrayList<Var>(usedVars);
+    splitUsedVars.add(arrayVar);
+    startRangeSplit(procName, splitUsedVars, keepOpenVars,
+          splitDegree, new LiteralInt(0), lastIndex, new LiteralInt(1));
+
+    // need to find the length of this split since that is what the turbine
+    //  call wants
+    pointStack.peek().add(new SetVariable(TCLTMP_SPLITLEN,
+            Square.arithExpr(new Token(
+            String.format("${%s} - ${%s} + 1", TCLTMP_RANGE_HI,
+                                               TCLTMP_RANGE_LO)))));
+
+    // load the subcontainer
+    pointStack.peek().add(Turbine.containerContents(contentsVar,
+        varToExpr(arrayVar), haveKeys, new Value(TCLTMP_SPLITLEN),
+        TCLTMP_RANGE_LO_V));
   }
 
   private void startForeachInner(Value arrayContents,
@@ -1516,7 +1534,7 @@ public class TurbineGenerator implements CompilerBackend
     assert(pointStack.size() >= 2);
     pointStack.pop(); // tclloop body
     if (splitDegree > 0) {
-      endRangeSplit();
+      endRangeSplit(keepOpenVars);
     }
   }
 
@@ -1556,7 +1574,7 @@ public class TurbineGenerator implements CompilerBackend
     pointStack.pop(); // for loop body
 
     if (splitDegree > 0) {
-      endRangeSplit();
+      endRangeSplit(keepOpenVars);
     }
   }
 
@@ -1592,14 +1610,17 @@ public class TurbineGenerator implements CompilerBackend
     // Create two procedures that will be called: an outer procedure
     //  that recursively breaks up the foreach loop into chunks,
     //  and an inner procedure that actually runs the loop
-    ArrayList<String> args = new ArrayList<String>();
-    args.add(Turbine.LOCAL_STACK_NAME);
+    List<String> commonFormalArgs = new ArrayList<String>();
+    commonFormalArgs.add(Turbine.LOCAL_STACK_NAME);
     for (Var uv: usedVariables) {
-      args.add(prefixVar(uv.name()));
+      commonFormalArgs.add(prefixVar(uv.name()));
     }
-    args.add(TCLTMP_RANGE_LO);
-    args.add(TCLTMP_RANGE_HI);
-    args.add(TCLTMP_RANGE_INC);
+    commonFormalArgs.add(TCLTMP_RANGE_LO);
+    commonFormalArgs.add(TCLTMP_RANGE_HI);
+    commonFormalArgs.add(TCLTMP_RANGE_INC);
+    List<String> outerFormalArgs = new ArrayList<String>(commonFormalArgs);
+    outerFormalArgs.add(TCLTMP_FIRSTCALL);
+    
 
     Value loVal = new Value(TCLTMP_RANGE_LO);
     Value hiVal = new Value(TCLTMP_RANGE_HI);
@@ -1615,6 +1636,7 @@ public class TurbineGenerator implements CompilerBackend
     outerCallArgs.add(startE);
     outerCallArgs.add(endE);
     outerCallArgs.add(incrE);
+    outerCallArgs.add(LiteralInt.TRUE); // First call
 
     List<Expression> innerCallArgs = new ArrayList<Expression>(commonArgs);
     innerCallArgs.add(loVal);
@@ -1624,16 +1646,15 @@ public class TurbineGenerator implements CompilerBackend
     Sequence outer = new Sequence();
     String outerProcName = loopName + ":outer";
     tree.add(new Proc(outerProcName,
-            usedTclFunctionNames, args, outer));
+            usedTclFunctionNames, outerFormalArgs, outer));
 
     Sequence inner = new Sequence();
     String innerProcName = loopName + ":inner";
     tree.add(new Proc(innerProcName,
-          usedTclFunctionNames, args, inner));
+          usedTclFunctionNames, commonFormalArgs, inner));
 
     // Call outer directly
-    pointStack.peek().add(new Command(outerProcName,
-            outerCallArgs));
+    pointStack.peek().add(new Command(outerProcName, outerCallArgs));
 
 
     String itersLeft = "tcltmp:itersleft";
@@ -1668,8 +1689,7 @@ public class TurbineGenerator implements CompilerBackend
     elseB.add(splitLoop);
 
 
-    ArrayList<Expression> outerRecCall = new
-                     ArrayList<Expression>();
+    ArrayList<Expression> outerRecCall = new ArrayList<Expression>();
     outerRecCall.add(new Token(outerProcName));
     outerRecCall.addAll(commonArgs);
     outerRecCall.add(new Value(splitStart));
@@ -1679,14 +1699,28 @@ public class TurbineGenerator implements CompilerBackend
             splitStart, skip)));
     outerRecCall.add(splitEnd);
     outerRecCall.add(incVal);
+    outerRecCall.add(LiteralInt.FALSE); // Not the first call
 
+    // Increment once per loop, then decrement one to account for 
+    // this task finishing.  TODO: just increment correct amount
+    splitBody.append(incrementWriters(keepOpenVars));
+    elseB.add(conditionalClose(new Not(new Value(TCLTMP_FIRSTCALL)),
+                               keepOpenVars));
     splitBody.add(Turbine.rule(outerProcName, new ArrayList<Value>(0),
                     new TclList(outerRecCall), TaskMode.CONTROL));
 
     pointStack.push(inner);
   }
 
-  private void endRangeSplit() {
+  private static TclTree conditionalClose(Expression cond, List<Var> vars) {
+    Sequence decrementBlock = new Sequence();
+    If decrementBranch = new If(cond, decrementBlock);
+    decrementBlock.append(decrementWriters(vars));
+    return decrementBranch;
+  }
+
+  private void endRangeSplit(List<Var> keepOpenVars) {
+    pointStack.peek().append(decrementWriters(keepOpenVars));
     pointStack.pop(); // inner proc body
   }
 
@@ -1751,7 +1785,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
 
-  private Value varToExpr(Var v) {
+  private static Value varToExpr(Var v) {
     return new Value(prefixVar(v.name()));
   }
 
@@ -1888,10 +1922,7 @@ public class TurbineGenerator implements CompilerBackend
       }
 
 
-      // Keep containers open
-      for (Var v: keepOpenVars) {
-        pointStack.peek().add(Turbine.containerSlotCreate(varToExpr(v)));
-      }
+      pointStack.peek().append(incrementWriters(keepOpenVars));
 
       String uniqueLoopName = uniqueTCLFunctionName(loopName);
 

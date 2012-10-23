@@ -22,6 +22,15 @@ public class Sequence extends TclTree
     for (TclTree tree : trees)
       add(tree);
   }
+  
+  /**
+   * Append at end of current sequence
+   * @param seq
+   */
+  public void append(Sequence seq)
+  {
+    members.addAll(seq.members);
+  }
 
   @Override
   public void appendTo(StringBuilder sb)
