@@ -1348,17 +1348,35 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     private Sequence incrementWriters(List<Var> keepOpenVars) {
+      return incrementWriters(keepOpenVars, null);
+    }
+    
+    private Sequence incrementWriters(List<Var> keepOpenVars,
+          Expression incr) {
       Sequence seq = new Sequence();
       for (Var c: keepOpenVars) {
-        seq.add(Turbine.containerSlotCreate(varToExpr(c)));
+        if (incr == null) {
+          seq.add(Turbine.containerSlotCreate(varToExpr(c)));
+        } else {
+          seq.add(Turbine.containerSlotCreate(varToExpr(c), incr));
+        }
       }
       return seq;
     }
 
-    private static Sequence decrementWriters(List<Var> keepOpenVars) {
+    private static Sequence decrementWriters(List<Var> vars) {
+      return decrementWriters(vars, null);
+    }
+    
+    private static Sequence decrementWriters(List<Var> vars,
+                                             Expression decr) {
       Sequence seq = new Sequence();
-      for (Var v: keepOpenVars) {
-        seq.add(Turbine.containerSlotDrop(varToExpr(v)));
+      for (Var v: vars) {
+        if (decr == null) {
+          seq.add(Turbine.containerSlotDrop(varToExpr(v)));
+        } else {
+          seq.add(Turbine.containerSlotDrop(varToExpr(v), decr));
+        }
       }
       return seq;
     }
@@ -1702,20 +1720,22 @@ public class TurbineGenerator implements CompilerBackend
     outerRecCall.add(LiteralInt.FALSE); // Not the first call
 
     // Increment once per loop, then decrement one to account for 
-    // this task finishing.  TODO: just increment correct amount
+    // this task finishing.  
+    // TODO: just increment correct amount
     splitBody.append(incrementWriters(keepOpenVars));
-    elseB.add(conditionalClose(new Not(new Value(TCLTMP_FIRSTCALL)),
-                               keepOpenVars));
+    elseB.add(conditionalDecr(new Not(new Value(TCLTMP_FIRSTCALL)),
+                               keepOpenVars, new LiteralInt(1)));
     splitBody.add(Turbine.rule(outerProcName, new ArrayList<Value>(0),
                     new TclList(outerRecCall), TaskMode.CONTROL));
 
     pointStack.push(inner);
   }
 
-  private static TclTree conditionalClose(Expression cond, List<Var> vars) {
+  private static TclTree conditionalDecr(Expression cond, List<Var> vars,
+        Expression decr) {
     Sequence decrementBlock = new Sequence();
     If decrementBranch = new If(cond, decrementBlock);
-    decrementBlock.append(decrementWriters(vars));
+    decrementBlock.append(decrementWriters(vars, decr));
     return decrementBranch;
   }
 
@@ -1975,10 +1995,7 @@ public class TurbineGenerator implements CompilerBackend
 
     @Override
     public void loopBreak(List<Var> containersToClose) {
-      for (Var arr: containersToClose) {
-        pointStack.peek().add(
-             Turbine.containerSlotDrop(varToExpr(arr)));
-      }
+      pointStack.peek().append(decrementWriters(containersToClose));
     }
 
     @Override

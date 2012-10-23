@@ -639,12 +639,17 @@ class Turbine
   public static TclTree containerSlotCreate(Value arr) {
     return new Command(CONTAINER_SLOT_CREATE, arr);
   }
+  
+  public static TclTree containerSlotCreate(Value arr, Expression incr) {
+    return new Command(CONTAINER_SLOT_CREATE, arr, incr);
+  }
 
-  public static Sequence containerSlotDrop(Value arr) {
-    Sequence result = new Sequence();
-    Command c = new Command(CONTAINER_SLOT_DROP, arr);
-    result.add(c);
-    return result;
+  public static TclTree containerSlotDrop(Value arr) {
+    return new Command(CONTAINER_SLOT_DROP, arr);
+  }
+  
+  public static TclTree containerSlotDrop(Value arr, Expression decr) {
+    return new Command(CONTAINER_SLOT_DROP, arr, decr);
   }
 
   /**
