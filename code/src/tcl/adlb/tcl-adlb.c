@@ -1356,19 +1356,24 @@ ADLB_Container_Size_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::slot_create <container_id>
+   usage: adlb::slot_create <container_id> [ increment ]
 */
 static int
 ADLB_Slot_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(2);
+  TCL_CONDITION((objc == 2 || objc == 3),
+                "requires 1 or 2 args!");
 
   long container_id;
   Tcl_GetLongFromObj(interp, objv[1], &container_id);
 
+  int incr = 1;
+  if (objc == 3)
+    Tcl_GetIntFromObj(interp, objv[2], &incr);
+
   // DEBUG_ADLB("adlb::slot_create: <%li>", container_id);
-  int rc = ADLB_Slot_create(container_id);
+  int rc = ADLB_Slot_create(container_id, incr);
 
   if (rc != ADLB_SUCCESS)
     return TCL_ERROR;
@@ -1382,13 +1387,18 @@ static int
 ADLB_Slot_Drop_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(2);
+  TCL_CONDITION((objc == 2 || objc == 3),
+                "requires 1 or 2 args!");
 
   long container_id;
   Tcl_GetLongFromObj(interp, objv[1], &container_id);
 
+  int decr = 1;
+  if (objc == 3)
+    Tcl_GetIntFromObj(interp, objv[2], &decr);
+
   // DEBUG_ADLB("adlb::slot_drop: <%li>", container_id);
-  int rc = ADLB_Slot_drop(container_id);
+  int rc = ADLB_Slot_drop(container_id, decr);
 
   if (rc != ADLB_SUCCESS)
     return TCL_ERROR;
