@@ -324,51 +324,10 @@ namespace eval turbine {
         store_string $result $t
     }
 
-    proc blob_from_string { stack result input } {
-        rule "bfs-$input-$result" $input $turbine::LOCAL \
-            "blob_from_string_body $input $result"
-    }
-    proc blob_from_string_body { input result } {
-        set t [ retrieve $input ]
-        store_blob_string $result $t
-    }
-
-    proc string_from_blob { stack result input } {
-        rule "sfb-$input-$result" $input $turbine::LOCAL \
-            "string_from_blob_body $input $result"
-    }
-    proc string_from_blob_body { input result } {
-        set s [ retrieve_blob_string $input ]
-        store_string $result $s
-    }
-
-    # Container must be indexed from 0,N-1
-    proc blob_from_floats { stack result input } {
-        rule "bff-$input-$result" $input $turbine::LOCAL \
-            "blob_from_floats_body $input $result"
-    }
-
-    proc blob_from_floats_body { container result } {
-
-        set type [ container_typeof $container ]
-        set N    [ adlb::container_size $container ]
-        c::log "bff_body start"
-        set A [ list ]
-        for { set i 0 } { $i < $N } { incr i } {
-            set td [ container_lookup $container $i ]
-            set v  [ retrieve_float $td ]
-            lappend A $v
-        }
-
-        adlb::store_blob_floats $result $A
-        turbine::close_datum $result
-    }
-
     # Good for performance testing
     # c = 1;
     # and sleeps
     proc set0 { parent c } {
-
         rule "set0-$" "" $turbine::WORK "set0_body $parent $c"
     }
     proc set0_body { parent c } {
@@ -463,6 +422,18 @@ namespace eval turbine {
         set i_value [ retrieve_string $i ]
         log "copy $i_value => $i_value"
         store_string $o $i_value
+    }
+    
+    # Copy blob value
+    proc copy_blob { parent o i } {
+        rule "copyblob-$o-$i" $i $turbine::LOCAL \
+            "copy_blob_body $o $i"
+    }
+    proc copy_blob_body { o i } {
+        set i_value [ retrieve_blob $i ]
+        log "copy $i_value => $i_value"
+        store_blob $o $i_value
+        free_blob $i
     }
 
     # create a void type (i.e. just set it)

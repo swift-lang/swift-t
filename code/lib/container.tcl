@@ -187,6 +187,18 @@ namespace eval turbine {
         # When the TD has a value, copy the value
         copy_file no_stack [ list $v ] [ list $handle ]
     }
+    
+    # When reference r is closed, copy blob to v
+    proc f_dereference_blob { parent v r } {
+        rule "f_dereference-$v-$r" $r $turbine::LOCAL \
+            [ list turbine::f_dereference_blob_body $v $r ]
+    }
+    proc f_dereference_blob_body { v r } {
+        # Get the TD from the reference
+        set handle [ retrieve_integer $r ]
+        # When the TD has a value, copy the value
+        copy_blob no_stack [ list $v ] [ list $handle ]
+    }
 
     # When reference cr is closed, store d = (*cr)[i]
     # Blocks on cr

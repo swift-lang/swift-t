@@ -10,8 +10,8 @@ namespace eval turbine {
         create_float   store_float   retrieve_float   \
         create_void    store_void                     \
         create_file    store_file                     \
-        create_blob                                   \
-        retrieve_blob_string                          \
+        create_blob    store_blob                     \
+        retrieve_blob  retrieve_blob_string           \
         allocate_container                            \
         container_lookup container_list               \
         container_insert close_datum                  \
@@ -211,23 +211,39 @@ namespace eval turbine {
         log "create blob: <$id>"
         adlb::create $id $adlb::BLOB
     }
+    
+    proc store_blob { id value } {
+      set ptr [ lindex $result 0 ]
+      set len [ lindex $result 1 ] 
+      log [ format "store_blob: <%d>=\[%x %d\]" $id $ptr $len ]
+      adlb::store_blob $id $ptr $len
+      close_datum $id
+    }
 
     proc store_blob_string { id value } {
-        log "store_blob: <$id>=[ log_string $value ]"
+        log "store_blob_string: <$id>=[ log_string $value ]"
         adlb::store $id $adlb::BLOB $value
         close_datum $id
     }
+    
+    # Retrieve and cache blob
+    proc retrieve_blob { id } {
+      set result [ adlb::retrieve_blob $id ]
+      debug [ format "retrieve_blob: <%d>=\[%x %d\]" $id \
+                    [ lindex $result 0 ] [ lindex $result 1 ] ]
+      return $result
+    }
 
+    # release reference to cached blob
+    proc free_blob { id } {
+      debug "free_blob: <$id>"
+      adlb::blob_free $id
+    }
+    
     proc retrieve_blob_string { id } {
         set result [ adlb::retrieve $id $adlb::BLOB ]
         debug "retrieve_string: <$id>=[ log_string $result ]"
         return $result
-    }
-
-    proc store_blob { id pointer length } {
-        log "store_blob: <$id>"
-        adlb::store_blob $id $pointer $length
-        close_datum $id
     }
 
     proc create_container { id subscript_type } {

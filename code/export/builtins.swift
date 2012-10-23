@@ -49,12 +49,6 @@
 (float o) tofloat(string i)  "turbine" "0.0.2" "tofloat";
 @pure @builtin_op=INTTOFLOAT
 (float o) itof    (int i) "turbine"  "0.0.2" "itof";
-@pure
-(blob o)   blob_from_string(string s) "turbine" "0.0.2" "blob_from_string";
-@pure
-(string o) string_from_blob(blob b) "turbine" "0.0.2" "string_from_blob";
-@pure
-(blob o) blob_from_floats(float f[]) "turbine" "0.0.2" "blob_from_floats";
 // Do not optimize this- it is for synchronization tests
 (int o) zero(void v) "turbine" "0.0.4" "zero";
 

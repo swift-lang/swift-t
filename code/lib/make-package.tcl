@@ -30,6 +30,7 @@ set items [ eval list -load $libtclturbine \
                 -source string.tcl     \
                 -source updateable.tcl \
                 -source sys.tcl     \
+                -source blob.tcl    \
                 -source helpers.tcl ]
 
 # List of Turbine shared objects and Tcl libraries
