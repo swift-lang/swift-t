@@ -237,7 +237,7 @@ namespace eval turbine {
         } elseif { $c == 3 } {
             set base [ lindex $args 2 ]
             set base_val [ retrieve_string $base ]
-            set result_val [ argv_get_impl $i_val $base_val ]
+            set result_val [ argp_get_impl $i_val $base_val ]
         }
 
         store_string $result $result_val
