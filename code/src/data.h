@@ -64,9 +64,9 @@ adlb_data_code data_enumerate(adlb_datum_id container_id,
 
 adlb_data_code data_store(adlb_datum_id id, void* buffer, int length);
 
-adlb_data_code data_slot_create(adlb_datum_id container_id);
+adlb_data_code data_slot_create(adlb_datum_id container_id, int incr);
 
-adlb_data_code data_slot_drop(adlb_datum_id container_id,
+adlb_data_code data_slot_drop(adlb_datum_id container_id, int decr,
                               int* result);
 
 adlb_data_code data_insert(adlb_datum_id id,

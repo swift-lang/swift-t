@@ -659,13 +659,13 @@ handle_subscribe(int caller)
 static adlb_code
 handle_slot_create(int caller)
 {
-  long id;
   int rc;
   MPI_Status status;
-  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_SLOT_CREATE);
+  struct packed_incr msg;
+  RECV(&msg, sizeof(msg), MPI_BYTE, caller, ADLB_TAG_SLOT_CREATE);
 
-  adlb_data_code dc = data_slot_create(id);
-  DEBUG("Slot_create: <%li>", id);
+  adlb_data_code dc = data_slot_create(msg.id, msg.incr);
+  DEBUG("Slot_create: <%li> %i", msg.id, msg.incr);
 
   RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
@@ -674,19 +674,23 @@ handle_slot_create(int caller)
 static adlb_code
 handle_slot_drop(int caller)
 {
-  long id;
   int rc = ADLB_SUCCESS;
   MPI_Status status;
-  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_SLOT_DROP);
+  struct packed_incr msg;
+  RECV(&msg, sizeof(msg), MPI_BYTE, caller, ADLB_TAG_SLOT_DROP);
 
   int slots;
-  DEBUG("Slot_drop: <%li>", id);
-  adlb_data_code dc = data_slot_drop(id, &slots);
+  DEBUG("Slot_drop: <%li> %i", msg.id, msg.incr);
+  adlb_data_code dc = data_slot_drop(msg.id, msg.incr, &slots);
 
   RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
 
-  if (slots == 0)
-    rc = slot_notification(id);
+  if (slots < 0) {
+    printf("slot_drop dropped below 0: %i\n", slots);
+    return ADLB_ERROR;
+  } else if (slots == 0) {
+    rc = slot_notification(msg.id);
+  }
   return rc;
 }
 

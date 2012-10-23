@@ -173,6 +173,15 @@ struct packed_enumerate
 };
 
 /**
+   Count increment or decrement
+ */
+struct packed_incr
+{
+  adlb_datum_id id;
+  int incr;
+};
+
+/**
    Simple data type transfer
  */
 static inline void

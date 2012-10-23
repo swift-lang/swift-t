@@ -84,11 +84,11 @@ adlb_code ADLB_Enumerate(adlb_datum_id container_id,
                    char** members, int* members_length,
                    int* records);
 
-adlb_code ADLBP_Slot_create(adlb_datum_id id);
-adlb_code ADLB_Slot_create(adlb_datum_id id);
+adlb_code ADLBP_Slot_create(adlb_datum_id id, int slots);
+adlb_code ADLB_Slot_create(adlb_datum_id id, int slots);
 
-adlb_code ADLBP_Slot_drop(adlb_datum_id id);
-adlb_code ADLB_Slot_drop(adlb_datum_id id);
+adlb_code ADLBP_Slot_drop(adlb_datum_id id, int slots);
+adlb_code ADLB_Slot_drop(adlb_datum_id id, int slots);
 
 adlb_code ADLBP_Insert(adlb_datum_id id, const char *subscript,
                  const char* member, int member_length, int drops);

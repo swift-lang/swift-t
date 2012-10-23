@@ -221,15 +221,15 @@ ADLB_Enumerate(adlb_datum_id container_id,
 }
 
 adlb_code
-ADLB_Slot_create(adlb_datum_id id)
+ADLB_Slot_create(adlb_datum_id id, int slots)
 {
-  return ADLBP_Slot_create(id);
+  return ADLBP_Slot_create(id, slots);
 }
 
 adlb_code
-ADLB_Slot_drop(adlb_datum_id id)
+ADLB_Slot_drop(adlb_datum_id id, int slots)
 {
-  return ADLBP_Slot_drop(id);
+  return ADLBP_Slot_drop(id, slots);
 }
 
 adlb_code ADLB_Insert(adlb_datum_id id, const char *subscript,

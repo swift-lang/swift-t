@@ -684,28 +684,28 @@ data_container_size(adlb_datum_id container_id, int* size)
 }
 
 adlb_data_code
-data_slot_create(adlb_datum_id container_id)
+data_slot_create(adlb_datum_id container_id, int incr)
 {
   // Check that this is a valid container
   int* slots = table_lp_search(&container_slots, container_id);
   check_verbose(slots != NULL, ADLB_DATA_ERROR_TYPE,
                 "not a container: <%li>", container_id);
 
-  *slots = (*slots) + 1;
+  *slots = (*slots) + incr;
   DEBUG("slots: <%li> => %i", container_id, *slots);
 
   return ADLB_DATA_SUCCESS;
 }
 
 adlb_data_code
-data_slot_drop(adlb_datum_id container_id, int* result)
+data_slot_drop(adlb_datum_id container_id, int decr, int* result)
 {
   // Check that this is a valid container
   int* slots = table_lp_search(&container_slots, container_id);
   check_verbose(slots != NULL, ADLB_DATA_ERROR_TYPE,
                 "not a container: <%li>", container_id);
 
-  *slots = (*slots) - 1;
+  *slots = (*slots) - decr;
   DEBUG("slots: <%li> => %i", container_id, *slots);
 
   *result = *slots;

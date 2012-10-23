@@ -369,7 +369,7 @@ get_next_server()
   return rank;
 }
 
-adlb_code ADLBP_Slot_create(long id)
+adlb_code ADLBP_Slot_create(adlb_datum_id id, int slots)
 {
     adlb_data_code dc;
     int rc;
@@ -377,13 +377,15 @@ adlb_code ADLBP_Slot_create(long id)
     MPI_Status status;
     MPI_Request request;
 
-    DEBUG("ADLB_Slot_create: <%li>", id);
+    DEBUG("ADLB_Slot_create: <%li> %i", id, slots);
     int to_server_rank = locate(id);
 
     rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
                     adlb_all_comm, &request);
     MPI_CHECK(rc);
-    rc = MPI_Send(&id, 1, MPI_LONG, to_server_rank,
+
+    struct packed_incr msg = { .id = id, .incr = slots };
+    rc = MPI_Send(&msg, sizeof(msg), MPI_BYTE, to_server_rank,
                    ADLB_TAG_SLOT_CREATE, adlb_all_comm);
     MPI_CHECK(rc);
     rc = MPI_Wait(&request, &status);
@@ -393,20 +395,21 @@ adlb_code ADLBP_Slot_create(long id)
     return ADLB_SUCCESS;
 }
 
-adlb_code ADLBP_Slot_drop(long id)
+adlb_code ADLBP_Slot_drop(adlb_datum_id id, int slots)
 {
     int rc;
     adlb_data_code dc;
     MPI_Status status;
     MPI_Request request;
 
-    DEBUG("ADLB_Slot_drop: <%li>", id);
+    DEBUG("ADLB_Slot_drop: <%li> %i", id, slots);
     int to_server_rank = locate(id);
 
     rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
                     adlb_all_comm, &request);
     MPI_CHECK(rc);
-    rc = MPI_Send(&id, 1, MPI_LONG, to_server_rank,
+    struct packed_incr msg = { .id = id, .incr = slots };
+    rc = MPI_Send(&msg, sizeof(msg), MPI_BYTE, to_server_rank,
                    ADLB_TAG_SLOT_DROP, adlb_all_comm);
     MPI_CHECK(rc);
     rc = MPI_Wait(&request, &status);
