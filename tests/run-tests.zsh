@@ -142,18 +142,18 @@ run_test()
   then
     # This test was intended to fail at run time
     EXIT_CODE=$(( ! EXIT_CODE ))
+  else
+    # Check for unexecuted transforms
+    grep -q "WAITING TRANSFORMS" ${TURBINE_OUTPUT}
+    # This is 0 if nothing was found
+    WAITING_TRANSFORMS=$(( ! ${?} ))
+    if (( WAITING_TRANSFORMS ))
+      then
+      print "Transforms were left in the rule engine!"
+      return 1
+    fi
   fi
   (( EXIT_CODE )) && return ${EXIT_CODE}
-
-  # Check for unexecuted transforms
-  grep -q "WAITING TRANSFORMS" ${TURBINE_OUTPUT}
-  # This is 0 if nothing was found
-  WAITING_TRANSFORMS=$(( ! ${?} ))
-  if (( WAITING_TRANSFORMS ))
-    then
-    print "Transforms were left in the rule engine!"
-    return 1
-  fi
 
   # Check the test output with the test-specific check script
   if [ -x ${CHECK_SCRIPT} ]
