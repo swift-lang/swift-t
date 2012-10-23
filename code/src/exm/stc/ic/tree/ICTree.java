@@ -443,12 +443,29 @@ public class ICTree {
     RANGELOOP_BODY
   }
 
+  public static class CleanupAction {
+    private CleanupAction(Var var, Instruction action) {
+      super();
+      this.var = var;
+      this.action = action;
+    }
+    private final Var var;
+    private final Instruction action;
+    
+    public Var var() {
+      return var;
+    }
+    public Instruction action() {
+      return action;
+    }
+  }
+  
   public static class Block {
 
     private final BlockType type;
     public Block(BlockType type) {
       this(type, new LinkedList<Instruction>(), new ArrayList<Var>(),
-          new ArrayList<Continuation>(), new ArrayList<Var>());
+          new ArrayList<Continuation>(), new ArrayList<CleanupAction>());
     }
     
     /**
@@ -459,12 +476,12 @@ public class ICTree {
      */
     private Block(BlockType type, LinkedList<Instruction> instructions, 
         ArrayList<Var> variables, ArrayList<Continuation> conds,
-        ArrayList<Var> arraysToClose) {
+        ArrayList<CleanupAction> cleanupActions) {
       this.type = type;
       this.instructions = instructions;
       this.variables = variables;
       this.conds = conds;
-      this.arraysToClose = arraysToClose;
+      this.cleanupActions = cleanupActions;
     }
 
     /**
@@ -478,7 +495,7 @@ public class ICTree {
       return new Block(newType, ICUtil.cloneInstructions(this.instructions),
           new ArrayList<Var>(this.variables),
           ICUtil.cloneContinuations(this.conds), 
-          new ArrayList<Var>(this.arraysToClose));
+          new ArrayList<CleanupAction>(this.cleanupActions));
     }
 
     public BlockType getType() {
@@ -487,7 +504,7 @@ public class ICTree {
 
     private final LinkedList<Instruction> instructions;
     
-    private final ArrayList<Var> arraysToClose;
+    private final ArrayList<CleanupAction> cleanupActions;
 
     private final ArrayList<Var> variables;
 
@@ -564,8 +581,8 @@ public class ICTree {
         c.generate(logger, gen, info);
       }
 
-      for (Var v: arraysToClose) {
-        gen.closeArray(v);
+      for (CleanupAction cleanup: cleanupActions) {
+        cleanup.action().generate(logger, gen, info);
       }
       logger.trace("Done with code for block of type " + this.type.toString());
 
@@ -593,10 +610,10 @@ public class ICTree {
         c.prettyPrint(sb, indent);
       }
 
-      for (Var v: arraysToClose) {
+      for (CleanupAction a: cleanupActions) {
         sb.append(indent);
-        sb.append(Opcode.ARRAY_DECR_WRITERS.toString().toLowerCase() + " " +
-                                v.name());
+        sb.append(a.action().toString());
+        sb.append("# cleanup " + a.var.name());
         sb.append("\n");
       }
     }
@@ -616,18 +633,11 @@ public class ICTree {
       return instructions.listIterator();
     }
     
-    public void addArrayToClose(Var array) {
-      this.arraysToClose.add(array);
+    
+    public void addCleanup(Var var, Instruction action) {
+      this.cleanupActions.add(new CleanupAction(var, action));
     }
     
-    public void addArraysToClose(Collection<Var> arrays) {
-      this.arraysToClose.addAll(arrays);
-    }
-    
-    public List<Var> getArraysToClose() {
-      return Collections.unmodifiableList(arraysToClose);
-    }
-
     /**
      * Rename variables in block (and nested blocks) according to map.
      * If the map doesn't have an entry, we don't rename anything
@@ -658,7 +668,7 @@ public class ICTree {
           c.replaceVars(renames);
         }
       }
-      renameArraysToClose(renames);
+      renameCleanupActions(renames, inputsOnly);
     }
 
     private void renameVarsInBlockVarsList(Map<String, Arg> renames) {
@@ -706,12 +716,26 @@ public class ICTree {
     }
 
 
-    public void renameArraysToClose(Map<String, Arg> renames) {
-      for (int i = 0; i < arraysToClose.size(); i++) {
-        String varName = arraysToClose.get(i).name();
-        if (renames.containsKey(varName)) {
-          arraysToClose.remove(i);
-          arraysToClose.add(i, renames.get(varName).getVar());
+    public void renameCleanupActions(Map<String, Arg> renames,
+                                                boolean inputsOnly) {
+      ListIterator<CleanupAction> it = cleanupActions.listIterator();
+      while (it.hasNext()) {
+        CleanupAction a = it.next();
+        if (inputsOnly) {
+          a.action.renameInputs(renames);
+        } else {
+          a.action.renameVars(renames);
+        }
+        if (!inputsOnly && renames.containsKey(a.var.name())) {
+          Arg replacement = renames.get(a.var.name());
+          if (replacement.isVar()) {
+            CleanupAction newCleanup = new CleanupAction(replacement.getVar(),
+                  a.action);
+            it.set(newCleanup);
+          } else {
+            // Was replaced with constant
+            it.remove();
+          }
         }
       }
     }
@@ -763,23 +787,6 @@ public class ICTree {
                                                 continuations) {
       this.conds.addAll(continuations);
     }
-    
-    /*
-    public void replaceInstruction(int i, Instruction inst) {
-      this.instructions.set(i, inst);
-
-    }*/
-
-    /** replace one instruction with multiple instructions */
-    /*public void replaceInstruction(int pos,
-                                List<Instruction> replacements) {
-      instructions.remove(pos);
-      instructions.addAll(pos, replacements);
-    }*/
-
-    /*public void insertInstruction(int i, Instruction inst) {
-      this.instructions.add(i, inst);
-    } */
 
     public Set<String> unneededVars() {
       HashSet<String> toRemove = new HashSet<String>();
@@ -831,9 +838,9 @@ public class ICTree {
         }
       }
       
-      for (Var v: this.arraysToClose) {
-        if (v.storage() == VarStorage.ALIAS) {
-          stillNeeded.add(v.name());
+      for (CleanupAction a: cleanupActions) {
+        if (a.action.hasSideEffects()) {
+          stillNeeded.add(a.var.name());
         }
       }
     }
@@ -868,7 +875,7 @@ public class ICTree {
         this.conds.addAll(b.getContinuations());
         this.instructions.addAll(b.getInstructions());
       }
-      this.addArraysToClose(b.getArraysToClose());
+      this.cleanupActions.addAll(b.cleanupActions);
     }
     
     public void insertInline(Block b) {
@@ -877,7 +884,13 @@ public class ICTree {
 
     public void removeVarDeclarations(Set<String> varNames) {
       ICUtil.removeVarsInList(variables, varNames);
-      ICUtil.removeVarsInList(arraysToClose, varNames);
+      ListIterator<CleanupAction> it = cleanupActions.listIterator();
+      while (it.hasNext()) {
+        CleanupAction a = it.next();
+        if (varNames.contains(a.var.name())) {
+          it.remove();
+        }
+      }
     }
     
     public void replaceVarDeclaration(Var oldV, Var newV) {

@@ -395,7 +395,7 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void closeArray(Var arr) {
     assert(Types.isArray(arr.type()));
-    currBlock().addArrayToClose(arr);
+    currBlock().addCleanup(arr, TurbineOp.arrayDecrWriters(arr));
   }
 
   @Override

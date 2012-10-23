@@ -502,8 +502,8 @@ public class ForwardDataflow {
             block.instructionIterator(), cv, replaceInputs, replaceAll);
     anotherPassNeeded = anotherPassNeeded || anotherPass2;
 
-    block.renameArraysToClose(replaceInputs);
-    block.renameArraysToClose(replaceAll);
+    block.renameCleanupActions(replaceInputs, true);
+    block.renameCleanupActions(replaceAll, false);
     
     // might be able to eliminate wait statements or reduce the number
     // of vars they are blocking on

@@ -367,6 +367,9 @@ public class ICInstructions {
         gen.arrayRefInsertImm(args.get(2).getVar(),
             args.get(0).getVar(), args.get(1), args.get(3).getVar());
         break;
+      case ARRAY_DECR_WRITERS:
+        gen.closeArray(args.get(0).getVar());
+        break;
       case STRUCT_LOOKUP:
         gen.structLookup(args.get(1).getVar(), args.get(2).getStringLit(),
                                                     args.get(0).getVar());
@@ -574,6 +577,11 @@ public class ICInstructions {
               Arg.createStringLit(fieldName)));
     }
   
+    public static Instruction arrayDecrWriters(Var array) {
+      return new TurbineOp(Opcode.ARRAY_DECR_WRITERS, 
+              Arrays.asList(Arg.createVar(array)));
+    }
+
     public static Instruction assignInt(Var target, Arg src) {
       return new TurbineOp(Opcode.STORE_INT,
           Arrays.asList(Arg.createVar(target), src));
@@ -829,6 +837,7 @@ public class ICInstructions {
       case ARRAY_INSERT_IMM:
       case STRUCT_CLOSE:
       case STRUCT_INSERT:
+      case ARRAY_DECR_WRITERS:
         // We view array as output
         return 1;
       case ARRAYREF_INSERT_FUTURE:
