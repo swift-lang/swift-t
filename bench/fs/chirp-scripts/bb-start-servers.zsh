@@ -8,7 +8,8 @@ source ${CHIRP_SCRIPTS_HOME}/bb.zsh
 # Check if chirp servers are up
 check_servers()
 {
-  local HOSTS=( ${*} )
+  local HOSTS
+  HOSTS=( ${*} )
   print "Checking ${#HOSTS} servers..."
   touch sanity.txt
   for H in ${HOSTS}
