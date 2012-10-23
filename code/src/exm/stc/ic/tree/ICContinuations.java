@@ -1714,7 +1714,7 @@ public class ICContinuations {
           res.add(c);
         }
       }
-      if (mode == WaitMode.EXPLICIT) {
+      if (mode == WaitMode.EXPLICIT || mode == WaitMode.TASK_DISPATCH) {
         for (Var v: waitVars) {
           res.add(v);
         }
