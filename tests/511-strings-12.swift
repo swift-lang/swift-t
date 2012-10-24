@@ -30,12 +30,12 @@ main {
     assertEqual(0, f, "f");
 
     int f1 = find(x, "ldir", 0, -1);
-    assertEqual(0, f1, "f1");
+    assertEqual(-1, f1, "f1");
     
     int f2 = find("banana", "ana", 3, 0);
-    assertEqual(0, f2, "f2");
+    assertEqual(-1, f2, "f2");
 
     int f3 = find("banana", "ana", 4, 5);
-    assertEqual(1, f3, "f3");
+    assertEqual(-1, f3, "f3");
 
 }
