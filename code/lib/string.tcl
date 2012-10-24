@@ -122,10 +122,11 @@ namespace eval turbine {
 	set str_value  [ retrieve_string $str ]
 	set subs_value [ retrieve_string $subs ]
 	set start_index_value [ retrieve_integer $start_index ]
-	set end_index__value  [ retrieve_integer $end_index ]
+	set end_index_value  [ retrieve_integer $end_index ]
 
 	set result_value [ find_impl $str_value $subs_value \
-			       $start_index $end_index ]
+			       $start_index_value $end_index_value ]
+
 	store_integer $result $result_value	
     }
 
