@@ -67,6 +67,7 @@ namespace eval turbine {
         set n_adlb_servers $servers
         set n_engines $engines
         set n_workers [ expr [ adlb::size ] - $servers - $engines ]
+        
 
         variable mode
         if { [ adlb::rank ] < $engines } {
@@ -82,6 +83,13 @@ namespace eval turbine {
             log "ENGINES: $n_engines"
             log "SERVERS: $n_adlb_servers"
             log "WORKERS: $n_workers"
+            set adlb_procs [ adlb::size ]
+            if { $adlb_procs < 3 } {
+              puts "ERROR: too few Turbine processes specified by user:\
+                    $adlb_procs, must be at least 3"
+              exit 1
+            }
+
             if { $n_adlb_servers <= 0 } {
                 puts "ERROR: SERVERS==0"
                 exit 1
