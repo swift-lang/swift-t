@@ -34,6 +34,7 @@ public class Settings
                                             "stc.opt.controlflow-fusion";
   public static final String OPT_DISABLE_ASSERTS = "stc.opt.disable-asserts";
   public static final String OPT_UNROLL_LOOPS = "stc.opt.unroll-loops";
+  public static final String OPT_HOIST = "stc.opt.hoist";
   public static final String OPT_NUM_PASSES = "stc.opt.numpasses";
   public static final String TURBINE_NO_STACK = "stc.codegen.no-stack";
   public static final String TURBINE_NO_STACK_VARS = "stc.codegen.no-stack-vars";
@@ -42,7 +43,6 @@ public class Settings
   public static final String ARRAY_REF_SWITCHEROO = "stc.array-ref-switcheroo";
 
   private static final Properties properties;
-
   static {
     Properties defaults = new Properties();
     // Set defaults here
@@ -62,6 +62,7 @@ public class Settings
     defaults.setProperty(OPT_FORWARD_DATAFLOW, "true");
     defaults.setProperty(OPT_WAIT_COALESCE, "true");
     defaults.setProperty(OPT_CONTROLFLOW_FUSION, "true");
+    defaults.setProperty(OPT_HOIST, "false");
     defaults.setProperty(OPT_NUM_PASSES, "5");
     defaults.setProperty(ARRAY_REF_SWITCHEROO, "false");
 

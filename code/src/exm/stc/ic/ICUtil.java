@@ -197,6 +197,25 @@ public class ICUtil {
       }
    }
 
+  /**
+   * Do intersection by name
+   * @param vs1
+   * @param vs2
+   * @return
+   */
+  public static List<Var> varIntersection(List<Var> vs1, List<Var> vs2) {
+    List<Var> res = new ArrayList<Var>();
+    for (Var v1: vs1) {
+      for (Var v2: vs2) {
+        if (v1.name().equals(v2.name())) {
+          res.add(v1);
+          break;
+        }
+      }
+    }
+    return res;
+  }
+  
   public static LinkedList<Instruction> cloneInstructions(
       List<Instruction> instructions) {
     LinkedList<Instruction> output = new LinkedList<Instruction>();

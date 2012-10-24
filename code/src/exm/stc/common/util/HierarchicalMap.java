@@ -50,8 +50,43 @@ public class HierarchicalMap<K, V> implements Map<K, V> {
     }
   }
 
+  /**
+   * @param key
+   * @return the depth at which the key is defined
+   */
+  public int getDepth(K key) {
+    int depth = 0;
+    HierarchicalMap<K, V> curr = this;
+    while (curr != null) {
+      if (curr.map.containsKey(key)) {
+        return depth;
+      }
+      depth++;
+      curr = curr.parent;
+    }
+    return -1;
+  }
+
   public V put(K key, V value) {
     return map.put(key, value);
+  }
+
+  /**
+   * Put at a higher level in map
+   * @param key
+   * @param value
+   * @param depth
+   */
+  public void put(K key, V value, int depth) throws IllegalArgumentException {
+    HierarchicalMap<K, V> curr = this;
+    for (int i = 0; i < depth; i++) {
+      curr = curr.parent;
+      if (curr == null) {
+        throw new IllegalArgumentException("Hierarchical map didn't have "
+                    + depth + " ancestors"); 
+      }
+    }
+    curr.put(key, value);
   }
 
   public void putAll(Map<? extends K, ? extends V> m) {

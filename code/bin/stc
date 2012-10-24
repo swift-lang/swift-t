@@ -27,9 +27,10 @@ COMPILER_OPTS=()
 O1_OPTS=("constant-fold" "branch-predict" "dead-code-elim"
                     "flatten-nested" "shared-constants"
                     "forward-dataflow" "unroll-loops"
-                     "controlflow-fusion")
-O2_OPTS=("wait-coalesce")
+                     "controlflow-fusion" )
+O2_OPTS=("wait-coalesce" )
 O3_OPTS=()
+EXPERIMENTAL_OPTS=("hoisting")
 
 # OUTPUT_MODE= turbine or cpp
 OUTPUT_MODE=turbine
@@ -65,6 +66,9 @@ function get_compiler_opt_name() {
                     return 0
                     ;;
         controlflow-fusion) echo "stc.opt.controlflow-fusion"
+                    return 0
+                    ;; 
+        hoisting) echo "stc.opt.hoist"
                     return 0
                     ;;
         disable-asserts) echo "stc.opt.disable-asserts"
@@ -170,16 +174,16 @@ do
     O) verbose "Optimization level ${OPTARG}"
       if [ ${OPTARG} = 0 ]; then
         ENABLED_OPTS=()
-        DISABLED_OPTS=($O1_OPTS $O2_OPTS $O3_OPTS)
+        DISABLED_OPTS=($O1_OPTS $O2_OPTS $O3_OPTS $EXPERIMENTAL_OPTS)
       elif [ ${OPTARG} = 1 ]; then
         ENABLED_OPTS=($O1_OPTS)
-        DISABLED_OPTS=($O2_OPTS $O3_OPTS)
+        DISABLED_OPTS=($O2_OPTS $O3_OPTS $EXPERIMENTAL_OPTS)
       elif [ ${OPTARG} = 2 ]; then
         ENABLED_OPTS=($O1_OPTS $O2_OPTS)
-        DISABLED_OPTS=($O3_OPTS)
+        DISABLED_OPTS=($O3_OPTS $EXPERIMENTAL_OPTS)
       elif [ ${OPTARG} = 3 ]; then
         ENABLED_OPTS=($O1_OPTS $O2_OPTS $O3_OPTS)
-        DISABLED_OPTS=()
+        DISABLED_OPTS=($EXPERIMENTAL_OPTS)
       else
         echo "Invalid optimization level -O ${OPTARG}"
         return 1

@@ -924,6 +924,13 @@ public class ICTree {
         }
       }
     }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      prettyPrint(sb, "");
+      return sb.toString();
+    }
   }
   
   /** State to pass around when doing code generation from SwiftIC */

@@ -61,6 +61,15 @@ public class ICOptimiser {
           }
         }
         
+        // Try to hoist variables out of loops, etc
+        // Do before forward dataflow since it may open up new opportunites
+        if (Settings.getBoolean(Settings.OPT_HOIST)) {
+          HoistLoops.hoist(logger, prog);
+          if (logIC) {
+            prog.log(icOutput, "After hoisting");
+          }
+        }
+        
         // Do this after const folding so it won't create any new constants, 
         // etc to be folded
         if (Settings.getBoolean(Settings.OPT_FORWARD_DATAFLOW)) {
