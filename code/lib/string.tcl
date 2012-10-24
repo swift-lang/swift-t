@@ -107,4 +107,165 @@ namespace eval turbine {
         set s [ eval format $L ]
         store_string $result $s
     }
+
+    proc find { stack result inputs } {	
+	set str         [ lindex $inputs 0 ]
+	set subs        [ lindex $inputs 1 ]
+	set start_index [ lindex $inputs 2 ]
+	set end_index   [ lindex $inputs 3 ]	
+	rule "find-$str-$subs-$start_index-$end_index" $inputs  \
+	    $turbine::LOCAL "find_body $result $str $subs       \
+            $start_index $end_index"
+    }
+
+    proc find_body { result str subs start_index end_index } {
+	set str_value  [ retrieve_string $str ]
+	set subs_value [ retrieve_string $subs ]
+	set start_index_value [ retrieve_integer $start_index ]
+	set end_index__value  [ retrieve_integer $end_index ]
+
+	set result_value [ find_impl $str_value $subs_value \
+			       $start_index $end_index ]
+	store_integer $result $result_value	
+    }
+
+    # Find the index of the first occurence of the substring in the
+    # given string. Returns -1 if there was no valid match
+    # By default start_index is 0 and end_index is -1
+    proc find_impl {str subs {start_index 0} {end_index -1} } {
+	if { $end_index == -1 } {
+	    set end_index [string length $str]
+	}
+	set ret [string first $subs $str $start_index]
+	set len [string length $subs]
+	set subs_end [expr $ret+$len]
+	if { $subs_end <= $end_index } {
+	    return $ret
+	} else {
+	    return -1
+	}
+    }
+
+    proc count { stack result inputs } {
+	set str         [ lindex $inputs 0 ]
+	set subs        [ lindex $inputs 1 ]
+	set start_index [ lindex $inputs 2 ]
+	set end_index   [ lindex $inputs 3 ]	
+	rule "count-$str-$subs-$start_index-$end_index" $inputs  \
+	    $turbine::LOCAL "count_body $result $str $subs       \
+            $start_index $end_index"	
+    }
+    
+    proc count_body { results str subs start_index end_index } {
+	set str_value  [ retrieve_string $str ]
+	set subs_value [ retrieve_string $subs ]
+	set start_index_value [ retrieve_integer $start_index ]
+	set end_index_value  [ retrieve_integer $end_index ]
+
+	set result_value [ count_impl $str_value $subs_value \
+			  $start_index_value $end_index_value ]
+	store_integer $result $result_value
+    }
+
+    # Find the number of occurences of the substring in the given
+    # string. Returns 0 if no matches are present. By default
+    # start_index is set to 0 and end_index is set to -1 which 
+    # implies the end of the string.
+    proc count_impl {str subs {start_index 0} {end_index -1} } {
+	if { $end_index == -1 } {
+	    set end_index [string length $str]
+	}
+	set found 0
+	for {set index $start_index} { $index <= $end_index } {incr index} {
+	    set r [find $str $subs $index $end_index];
+	    set index $r
+	    if { $r == -1} { return $found }
+	    incr found
+	}
+    }
+
+    proc isnum { stack result inputs } {
+	set str [ lindex $inputs 0 ]
+	rule "isnum-$str" $inputs $turbine::LOCAL "isnum_body \
+              $result $str"
+    }
+
+    proc isnum_body { result str } {
+	set str_value [ retrieve_string $str ]
+	set result_value [ isnum_impl $str ]
+	store_integer $result_value;
+    }
+
+    # Returns 1 if string is an integer, 0 otherwise
+    proc isnum_impl {string} {
+	return [string is integer -strict $string];
+    }
+
+
+    proc replace { stack result inputs } {
+	set str         [ lindex $inputs 0 ]
+	set subsstring  [ lindex $inputs 1 ]
+	set rep_string  [ lindex $inputs 2 ]
+	set start_index [ lindex $inputs 3 ]	
+	rule "replace-$str-$subsstring-$rep_string-$start_index" \
+	    $inputs $turbine::LOCAL "replace_body $result $str   \
+            $substring $rep_string $start_index"	
+    }
+    
+    proc replace_body { results str substring rep_string start_index } {
+	set str_value         [ retrieve_string $str ]
+	set substring_value   [ retrieve_string $substring ]
+	set rep_string_value  [ retrieve_string $rep_string ]
+	set start_index_value [ retrieve_integer $start_index ]
+
+	set result_value [ replace_impl $str_value $subsstring_value \
+			       $rep_string_value $start_index_value ]
+	store_integer $result $result_value
+    }
+
+    # Replaces the first occurrence of the substring with the replacement
+    # string. If no matches were possible returns the original string.
+    proc replace_impl {str substring rep_string {start_index 0} } {
+	set start [find $str $substring $start_index]
+	#If the substring is absent the string is NOT modified 
+	if { $start == -1 } { return $str };
+	set end [expr $start + [string length $substring]]
+	set part1 [string range $str 0  [expr $start-1]]
+	set part2  [string range $str $end end]
+    return "$part1$rep_string$part2"
+    }
+
+    proc replace_all { stack result inputs } {
+	set str         [ lindex $inputs 0 ]
+	set subsstring  [ lindex $inputs 1 ]
+	set rep_string  [ lindex $inputs 2 ]
+	rule "replace_all-$str-$subsstring-$rep_string" $inputs \
+	    $turbine::LOCAL "replace_body $result $str          \
+            $substring $rep_string"	
+    }
+    
+    proc replace_all_body { results str substring rep_string start_index } {
+	set str_value         [ retrieve_string $str ]
+	set substring_value   [ retrieve_string $substring ]
+	set rep_string_value  [ retrieve_string $rep_string ]
+
+	set result_value [ replace_all_impl $str_value \
+			   $subsstring_value $rep_string_value]
+	store_integer $result $result_value
+    }
+
+    # Replaces all occurrences of the substring with the replacement
+    # string. Returns the original string if no replacement was possible
+    proc replace_all_impl {str substring rep_string} {
+	set end_index [string length $str]
+
+	for {set index 0} { $index <= $end_index } {incr index} {
+	    set r [find $str $substring $index $end_index];
+	    set str [replace $str $substring $rep_string $index]
+	    set index [expr $r+[string length $rep_string]]
+	    if { $r == -1} { return $str }
+	}
+    return $str
+    }
+
 }

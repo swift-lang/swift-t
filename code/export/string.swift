@@ -16,4 +16,19 @@
 (string o) sprintf(string fmt, int|float|string|boolean... args)
 "turbine" "0.0.2" "sprintf";
 
+(int o) find(string s, string substring, int start_index, int end_index)
+"turbine" "0.0.1" "find";
+
+(int o) count(string s, string substring, int start_index, int end_index)
+"turbine" "0.0.1" "find";
+
+(int o) isnum(string s)
+"turbine" "0.0.1" "isnum";
+
+(string o) replace (string s, string substring, string rep_string, int start_index)
+"turbine" "0.0.1" "replace";
+
+(string o) replace_all (string s, string substring, string rep_string)
+"turbine" "0.0.1" "replace_all";
+
 #endif
