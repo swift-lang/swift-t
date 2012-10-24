@@ -157,7 +157,7 @@ namespace eval turbine {
             $start_index $end_index"	
     }
     
-    proc count_body { results str subs start_index end_index } {
+    proc count_body { result str subs start_index end_index } {
 	set str_value  [ retrieve_string $str ]
 	set subs_value [ retrieve_string $subs ]
 	set start_index_value [ retrieve_integer $start_index ]
@@ -165,6 +165,8 @@ namespace eval turbine {
 
 	set result_value [ count_impl $str_value $subs_value \
 			  $start_index_value $end_index_value ]
+        puts "count_impl $str_value $subs_value $start_index_value $end_index_value = $result_value"
+
 	store_integer $result $result_value
     }
 
@@ -178,7 +180,7 @@ namespace eval turbine {
 	}
 	set found 0
 	for {set index $start_index} { $index <= $end_index } {incr index} {
-	    set r [find $str $subs $index $end_index];
+	    set r [ find_impl $str $subs $index $end_index ];
 	    set index $r
 	    if { $r == -1} { return $found }
 	    incr found
