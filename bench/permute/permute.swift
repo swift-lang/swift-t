@@ -5,7 +5,7 @@
 
 #include <builtins.swift>
 
-#include <stdio.swift>
+#include <io.swift>
 
 (int r) pow(int n, int d)
 {
