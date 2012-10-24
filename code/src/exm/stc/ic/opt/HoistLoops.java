@@ -19,6 +19,7 @@ import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
@@ -32,7 +33,7 @@ public class HoistLoops {
       for (String gc: prog.getGlobalConsts().keySet()) {
         Var gcV = new Var(prog.lookupGlobalConst(gc).getType(), gc,
                 VarStorage.GLOBAL_CONST, DefType.GLOBAL_CONST);
-        if (trackVar(gcV)) { 
+        if (trackWrites(gcV)) { 
           globalMap.put(gc, null);
         }
       }
@@ -41,7 +42,7 @@ public class HoistLoops {
       HierarchicalMap<String, Block> writeMap = globalMap.makeChildMap();
       // Inputs are written
       for (Var in: f.getInputList()) {
-        if (trackVar(in)) {
+        if (trackWrites(in)) {
           writeMap.put(in.name(), block);
         }
       }
@@ -80,14 +81,26 @@ public class HoistLoops {
       int childHoist = canHoistThrough(c) ? maxHoist + 1 : 0;
       for (Block b: c.getBlocks()) {
         HierarchicalMap<String, Block> childWriteMap = writeMap.makeChildMap();
+        
+        // make sure loop iteration variables, etc are tracked
         List<Var> constructVars = c.constructDefinedVars();
         if (constructVars != null) {
           for (Var v: constructVars) {
-            if (trackVar(v)) {
+            if (trackWrites(v)) {
               childWriteMap.put(v.name(), b);
             }
           }
         }
+        
+        // If we are waiting for var, don't hoist out past that
+        if (c.getType() == ContinuationType.WAIT_STATEMENT) {
+          for (Var waitVar: ((WaitStatement)c).getWaitVars()) {
+            if (trackWrites(waitVar)) {
+              childWriteMap.put(waitVar.name(), b);
+            }
+          }
+        }
+        
         hoistRec(logger, b, ancestors, childHoist, childWriteMap);
       }
     }
@@ -98,9 +111,16 @@ public class HoistLoops {
           HierarchicalMap<String, Block> writeMap) {
     for (Instruction inst: curr.getInstructions()) {
       for (Var out: inst.getOutputs()) {
-        if (trackVar(out)) {
+        if (trackWrites(out)) {
           writeMap.put(out.name(), curr);
         }
+      }
+    }
+    
+    // We can immediately do any array operations
+    for (Var declared: curr.getVariables()) {
+      if (Types.isArray(declared.type())) {
+        writeMap.put(declared.name(), curr);
       }
     }
   }
@@ -110,7 +130,7 @@ public class HoistLoops {
    * @param in
    * @return
    */
-  private static boolean trackVar(Var in) {
+  private static boolean trackWrites(Var in) {
     Type t = in.type();
     if (Types.isScalarFuture(t) || Types.isScalarValue(t)) {
       return true;
@@ -215,16 +235,45 @@ public class HoistLoops {
         int ancestorPos = ancestors.size() - i;
         ancestor = ancestors.get(ancestorPos);
       } 
-      ListIterator<Var> varIt = ancestor.variableIterator();
-      while (varIt.hasNext()) {
-        Var def = varIt.next();
-        for (Var out: inst.getOutputs()) {
-          if (def.name().equals(out.name())) {
-            varIt.remove();
-            target.addVariable(def);
-            break;
-          }
+      relocateVarDefs(ancestor, target, inst);
+    }
+  }
+
+  /**
+   * Relocate output variables to target block
+   * @param source
+   * @param target
+   * @param inst
+   */
+  private static void relocateVarDefs(Block source, Block target,
+      Instruction inst) {
+    ListIterator<Var> varIt = source.variableIterator();
+    while (varIt.hasNext()) {
+      Var def = varIt.next();
+      for (Var out: inst.getOutputs()) {
+        if (def.name().equals(out.name())) {
+          varIt.remove();
+          target.addVariable(def);
+          moveVarCleanupAction(out, source, target);
+          break;
         }
+      }
+    }
+  }
+
+  /**
+   * Relocate cleanup actions for variable to target block
+   * @param var
+   * @param source
+   * @param target
+   */
+  private static void moveVarCleanupAction(Var var, Block source, Block target) {
+    ListIterator<CleanupAction> actIt = source.cleanupIterator();
+    while (actIt.hasNext()) {
+      CleanupAction ca = actIt.next();
+      if (ca.var().name().equals(var.name())) {
+        actIt.remove();
+        target.addCleanup(ca.var(), ca.action());
       }
     }
   }

@@ -34,6 +34,7 @@ import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Opcode;
+import exm.stc.ic.tree.ICTree.CleanupAction;
 
 /**
  * This has the definitions for the top-level constructs in the intermediate
@@ -613,7 +614,7 @@ public class ICTree {
       for (CleanupAction a: cleanupActions) {
         sb.append(indent);
         sb.append(a.action().toString());
-        sb.append("# cleanup " + a.var.name());
+        sb.append(" # cleanup " + a.var.name());
         sb.append("\n");
       }
     }
@@ -634,6 +635,10 @@ public class ICTree {
     }
     
     
+    public ListIterator<CleanupAction> cleanupIterator() {
+      return cleanupActions.listIterator();
+    }
+
     public void addCleanup(Var var, Instruction action) {
       this.cleanupActions.add(new CleanupAction(var, action));
     }
