@@ -26,10 +26,11 @@
 (int o) count(string s, string substring, int start_index, int end_index)
 "turbine" "0.0.1" "count";
 
-/* returns true if string is a decimal integer */
+/* returns true if string is a decimal integer within range of Swift's
+  int type */
 @pure
-(boolean o) isnum(string s)
-"turbine" "0.0.1" "isnum";
+(boolean o) isint(string s)
+"turbine" "0.0.1" "isint";
 
 /* replace first occurence of substring with rep_string */
 @pure
@@ -38,7 +39,7 @@
 
 /* replace all occurences of substring with rep_string */
 @pure
-(string o) replace_all (string s, string substring, string rep_string)
+(string o) replace_all (string s, string substring, string rep_string, int start_index)
 "turbine" "0.0.1" "replace_all";
 
 #endif

@@ -178,30 +178,35 @@ namespace eval turbine {
 	if { $end_index == -1 } {
 	    set end_index [string length $str]
 	}
+        set subs_len [ string length $subs ]
 	set found 0
 	for {set index $start_index} { $index <= $end_index } {incr index} {
 	    set r [ find_impl $str $subs $index $end_index ];
-	    set index $r
-	    if { $r == -1} { return $found }
+	    if { $r == -1} { 
+              return $found
+            } else {
+              # Move to end of occurrence to avoid counting overlaps
+	      set index [ expr $r  + $subs_len - 1 ]
+            }
 	    incr found
 	}
     }
 
-    proc isnum { stack result inputs } {
+    proc isint { stack result inputs } {
 	set str [ lindex $inputs 0 ]
-	rule "isnum-$str" $inputs $turbine::LOCAL "isnum_body \
+	rule "isint-$str" $inputs $turbine::LOCAL "isint_body \
               $result $str"
     }
 
-    proc isnum_body { result str } {
+    proc isint_body { result str } {
 	set str_value [ retrieve_string $str ]
-	set result_value [ isnum_impl $str ]
+	set result_value [ isint_impl $str_value ]
 	store_integer $result $result_value
     }
 
     # Returns 1 if string is an integer, 0 otherwise
-    proc isnum_impl {string} {
-	return [string is integer -strict $string];
+    proc isint_impl { str } {
+	return [ string is wideinteger -strict $str ];
     }
 
 
@@ -210,65 +215,75 @@ namespace eval turbine {
 	set substring  [ lindex $inputs 1 ]
 	set rep_string  [ lindex $inputs 2 ]
 	set start_index [ lindex $inputs 3 ]	
-	rule "replace-$str-$subsstring-$rep_string-$start_index" \
-	    $inputs $turbine::LOCAL "replace_body $result $str   \
-            $substring $rep_string $start_index"	
+	rule "replace-$str-$substring-$rep_string-$start_index" \
+	    $inputs $turbine::LOCAL [ list replace_body $result $str \
+                                  $substring $rep_string $start_index ]
     }
     
-    proc replace_body { results str substring rep_string start_index } {
+    proc replace_body { result str substring rep_string start_index } {
 	set str_value         [ retrieve_string $str ]
 	set substring_value   [ retrieve_string $substring ]
 	set rep_string_value  [ retrieve_string $rep_string ]
 	set start_index_value [ retrieve_integer $start_index ]
 
-	set result_value [ replace_impl $str_value $subsstring_value \
+	set result_value [ replace_impl $str_value $substring_value \
 			       $rep_string_value $start_index_value ]
-	store_integer $result $result_value
+	store_string $result $result_value
     }
 
     # Replaces the first occurrence of the substring with the replacement
     # string. If no matches were possible returns the original string.
     proc replace_impl {str substring rep_string {start_index 0} } {
-	set start [find $str $substring $start_index]
+	set start [find_impl $str $substring $start_index]
 	#If the substring is absent the string is NOT modified 
 	if { $start == -1 } { return $str };
 	set end [expr $start + [string length $substring]]
 	set part1 [string range $str 0  [expr $start-1]]
 	set part2  [string range $str $end end]
-    return "$part1$rep_string$part2"
+        return "$part1$rep_string$part2"
     }
 
     proc replace_all { stack result inputs } {
 	set str         [ lindex $inputs 0 ]
-	set subsstring  [ lindex $inputs 1 ]
+	set substring  [ lindex $inputs 1 ]
 	set rep_string  [ lindex $inputs 2 ]
-	rule "replace_all-$str-$subsstring-$rep_string" $inputs \
-	    $turbine::LOCAL "replace_body $result $str          \
-            $substring $rep_string"	
+	set start_index  [ lindex $inputs 3 ]
+	rule "replace_all-$str-$substring-$rep_string" $inputs \
+	    $turbine::LOCAL [ list replace_all_body $result $str \
+                              $substring $rep_string $start_index ] 
     }
     
-    proc replace_all_body { results str substring rep_string start_index } {
+    proc replace_all_body { result str substring rep_string start_index } {
 	set str_value         [ retrieve_string $str ]
 	set substring_value   [ retrieve_string $substring ]
 	set rep_string_value  [ retrieve_string $rep_string ]
+	set start_index_value [ retrieve_integer $start_index ]
 
 	set result_value [ replace_all_impl $str_value \
-			   $subsstring_value $rep_string_value]
-	store_integer $result $result_value
+                 $substring_value $rep_string_value $start_index_value ]
+	store_string $result $result_value
     }
 
     # Replaces all occurrences of the substring with the replacement
     # string. Returns the original string if no replacement was possible
-    proc replace_all_impl {str substring rep_string} {
-	set end_index [string length $str]
+    proc replace_all_impl {str substring rep_string start_index } {
+	set end_index [string length $str ]
+        set substring_len [ string length $substring ]
+        set result [ string range $str 0 [ expr $start_index - 1] ]
 
-	for {set index 0} { $index <= $end_index } {incr index} {
-	    set r [find $str $substring $index $end_index];
-	    set str [replace $str $substring $rep_string $index]
-	    set index [expr $r+[string length $rep_string]]
-	    if { $r == -1} { return $str }
+	for {set index $start_index} { $index <= $end_index } {incr index} {
+	    set r [ find_impl $str $substring $index $end_index ];
+	    if { $r == -1 } {
+              append result [ string range $str $index $end_index ]
+              return $result
+            }
+            # append skipped part
+            append result [ string range $str $index [ expr $r - 1 ] ]
+            # append the replacement and skip over rest of substring
+            append result $rep_string
+	    set index [ expr $r + $substring_len - 1 ]
 	}
-    return $str
+        return $result
     }
 
 }
