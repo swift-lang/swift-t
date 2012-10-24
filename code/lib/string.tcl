@@ -193,7 +193,7 @@ namespace eval turbine {
     proc isnum_body { result str } {
 	set str_value [ retrieve_string $str ]
 	set result_value [ isnum_impl $str ]
-	store_integer $result_value;
+	store_integer $result $result_value
     }
 
     # Returns 1 if string is an integer, 0 otherwise
@@ -204,7 +204,7 @@ namespace eval turbine {
 
     proc replace { stack result inputs } {
 	set str         [ lindex $inputs 0 ]
-	set subsstring  [ lindex $inputs 1 ]
+	set substring  [ lindex $inputs 1 ]
 	set rep_string  [ lindex $inputs 2 ]
 	set start_index [ lindex $inputs 3 ]	
 	rule "replace-$str-$subsstring-$rep_string-$start_index" \
