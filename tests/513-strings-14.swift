@@ -1,0 +1,42 @@
+
+#include <builtins.swift>
+#include <assert.swift>
+#include <string.swift>
+
+main {
+    string x = "hello world\n";
+    string y = "banana nana\n";
+    trace(x);
+    assertEqual(x, "hello world\n","");
+
+    // Success cases
+    string s = replace("hello world", "world", "folks", 0);
+    assertEqual("hello folks", s, "s");
+
+    string s1 = replace("banana", "an", "ah", 0);
+    assertEqual("bahana", s1, "s1");
+
+
+    string s2 = replace(y, "ana", "i", 0);
+    assertEqual("bina nana", s2, "s2");
+
+    string s3 = replace_all("banana", "an", "ah");
+    assertEqual("bahaha", s3, "s3");
+
+    string s4 = replace_all(y, "ana", "i");
+    assertEqual("bina ni", s4, "s4");
+
+    // Failure cases
+    string s5 = replace("hello world", "", "folks", 0);
+    assertEqual("hello folks", s5, "s5");
+
+    string s6 = replace("banana", "an", "ah", 5);
+    assertEqual("banana", s6, "s6");
+
+    string s7 = replace("banana", "", "ah", 5);
+    assertEqual("banana", s7, "s7");
+
+    string s8 = replace_all("banana", "an", "anana");
+    assertEqual("bananaananaa", s8, "s8");
+
+}
