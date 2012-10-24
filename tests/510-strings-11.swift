@@ -22,7 +22,7 @@ main {
     assertEqual(3, s3, "s3");
 
     int s4 = find("banana", "an", 0, 3);
-    assertEqual(2, s4, "s4");
+    assertEqual(1, s4, "s4");
 
     // Failure cases
     int f = find("hello world", "black", 0, -1);
