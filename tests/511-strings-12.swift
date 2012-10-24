@@ -36,6 +36,6 @@ main {
     assertEqual(0, f2, "f2");
 
     int f3 = find("banana", "ana", 4, 5);
-    assertEqual(0, f3, "f3");
+    assertEqual(1, f3, "f3");
 
 }
