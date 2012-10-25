@@ -618,23 +618,6 @@ public class ForwardDataflow {
   }
 
   
-  /**
-   * Remove unpassable vars from map
-   * @param replaceInputs
-   */
-  private static void purgeUnpassableVars(HierarchicalMap<String, Arg> replacements) {
-    ArrayList<String> toPurge = new ArrayList<String>();
-    for (Entry<String, Arg> e: replacements.entrySet()) {
-      Arg val = e.getValue();
-      if (val.isVar() && cantPass(val.getVar().type())) {
-        toPurge.add(e.getKey());
-      }
-    }
-    for (String key: toPurge) {
-      replacements.remove(key);
-    }
-  }
-
   private static boolean forwardDataflow(Logger logger,
       Function f, Block block,
       ListIterator<Instruction> insts, State cv,
@@ -655,6 +638,15 @@ public class ForwardDataflow {
       inst.renameInputs(replaceInputs);
       inst.renameVars(replaceAll);
   
+
+      /*
+       * See if value is already computed somewhere and see if we should
+       * replace variables going forward NOTE: we don't delete any instructions
+       * on this pass, but rather rely on dead code elim to later clean up
+       * unneeded instructions instead
+       */
+      updateReplacements(logger, inst, cv, replaceInputs, replaceAll);
+      
       // now try to see if we can change to the immediate version
       List<Instruction> alt = switchToImmediateVersion(logger, block, cv,
                                                         inst);
@@ -668,14 +660,6 @@ public class ForwardDataflow {
         ICUtil.rewindIterator(insts, alt.size());
         continue;
       }
-  
-      /*
-       * Next: see if value is already computed somewhere and see if we should
-       * replace variables going forwardNOTE: we don't delete any instructions
-       * on this pass, but rather rely on dead code elim to later clean up
-       * unneeded instructions instead
-       */
-      updateReplacements(logger, inst, cv, replaceInputs, replaceAll);
   
       // Add dependencies
       List<Var> in = inst.getBlockingInputs();
@@ -735,6 +719,23 @@ public class ForwardDataflow {
       return alt;
     } else {
       return null;
+    }
+  }
+
+  /**
+   * Remove unpassable vars from map
+   * @param replaceInputs
+   */
+  private static void purgeUnpassableVars(HierarchicalMap<String, Arg> replacements) {
+    ArrayList<String> toPurge = new ArrayList<String>();
+    for (Entry<String, Arg> e: replacements.entrySet()) {
+      Arg val = e.getValue();
+      if (val.isVar() && cantPass(val.getVar().type())) {
+        toPurge.add(e.getKey());
+      }
+    }
+    for (String key: toPurge) {
+      replacements.remove(key);
     }
   }
 
