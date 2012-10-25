@@ -1590,12 +1590,7 @@ public class ASTWalker {
     
     FunctionType ft = fdecl.getFunctionType();
     LogHelper.debug(context, "builtin: " + function + " " + ft);
-    
-    if (context.isFunction(function)) {
-      throw new DoubleDefineException(context, "function called " + function 
-          + " is already defined");
-    }
-    
+
     TclOpTemplate inlineTcl = null;
     
     int inlineTclPos = REQUIRED_CHILDREN;
@@ -2135,12 +2130,6 @@ public class ASTWalker {
       }
       fields.add(new StructField(fieldType, name));
       usedFieldNames.add(name);
-    }
-
-    if (context.lookupType(typeName) != null) {
-      // don't allow type names to be redefined
-      throw new DoubleDefineException(context, "Type called " + typeName
-          + " is already defined");
     }
 
     StructType newType = new StructType(typeName, fields);

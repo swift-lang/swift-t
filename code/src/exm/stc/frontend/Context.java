@@ -67,10 +67,14 @@ public abstract class Context {
   public DefKind lookupDef(String name) {
     if (lookupType(name) != null) {
       return DefKind.TYPE;
-    } else if (getDeclaredVariable(name) != null) {
-      return DefKind.VARIABLE;
-    } else {
+    }
+    Var v = getDeclaredVariable(name);
+    if (v == null) {
       return null;
+    } else if (Types.isFunction(v.type())) {
+      return DefKind.FUNCTION;
+    } else {
+      return DefKind.VARIABLE;
     }
   }
   
