@@ -19,27 +19,32 @@
 /* find: returns first index of substring in string, or -1 if not found */
 @pure
 (int o) find(string s, string substring, int start_index, int end_index)
-"turbine" "0.0.1" "find";
+  "turbine" "0.0.1" "find" 
+  [ "set <<o>> [ turbine::find_impl <<s>> <<substring>> <<start_index>> <<end_index>> ]" ];
 
 /* count: number of non-overlapping occurences of substring in string */
 @pure
 (int o) count(string s, string substring, int start_index, int end_index)
-"turbine" "0.0.1" "count";
+  "turbine" "0.0.1" "count"
+  [ "set <<o>> [ turbine::count_impl <<s>> <<substring>> <<start_index>> <<end_index>> ]" ];
 
 /* returns true if string is a decimal integer within range of Swift's
   int type */
 @pure
 (boolean o) isint(string s)
-"turbine" "0.0.1" "isint";
+  "turbine" "0.0.1" "isint"
+  [ "set <<o>> [ turbine::isint_impl <<s>> ]" ];
 
 /* replace first occurence of substring with rep_string */
 @pure
 (string o) replace (string s, string substring, string rep_string, int start_index)
-"turbine" "0.0.1" "replace";
+  "turbine" "0.0.1" "replace"
+  [ "set <<o>> [ turbine::replace_impl <<s>> <<substring>> <<rep_string>> <<start_index>> ]" ];
 
 /* replace all occurences of substring with rep_string */
 @pure
 (string o) replace_all (string s, string substring, string rep_string, int start_index)
-"turbine" "0.0.1" "replace_all";
+  "turbine" "0.0.1" "replace_all"
+  [ "set <<o>> [ turbine::replace_all_impl <<s>> <<substring>> <<rep_string>> <<start_index>> ]" ];
 
 #endif
