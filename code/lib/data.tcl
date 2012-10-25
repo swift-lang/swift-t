@@ -213,8 +213,8 @@ namespace eval turbine {
     }
     
     proc store_blob { id value } {
-      set ptr [ lindex $result 0 ]
-      set len [ lindex $result 1 ] 
+      set ptr [ lindex $value 0 ]
+      set len [ lindex $value 1 ] 
       log [ format "store_blob: <%d>=\[%x %d\]" $id $ptr $len ]
       adlb::store_blob $id $ptr $len
       close_datum $id
@@ -238,6 +238,13 @@ namespace eval turbine {
     proc free_blob { id } {
       debug "free_blob: <$id>"
       adlb::blob_free $id
+    }
+
+    # Free local blob
+    proc free_local_blob { blob } {
+      debug [ format "free_local_blob: \[%x %d\]" \
+                    [ lindex $blob 0 ] [ lindex $blob 1 ] ]
+      adlb::local_blob_free [ lindex $blob 0 ]
     }
     
     proc retrieve_blob_string { id } {

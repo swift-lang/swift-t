@@ -960,6 +960,28 @@ ADLB_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
+   Free a local blob with provided pointer
+   usage: adlb::local_blob_free <ptr>
+ */
+static int
+ADLB_Local_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  int rc;
+
+  long ptrVal;
+  void *ptr;
+  rc = Tcl_GetLongFromObj(interp, objv[1], &ptrVal);
+  TCL_CHECK_MSG(rc, "requires ptr!");
+
+  ptr = (void *)ptrVal;
+  free(ptr);
+  return TCL_OK;
+}
+
+/**
    adlb::store_blob <id> <pointer> <length>
  */
 static int
@@ -1019,6 +1041,35 @@ ADLB_Blob_store_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::store <%li> failed!", id);
+  return TCL_OK;
+}
+
+/**
+   adlb::blob_from_string <string value>
+ */
+static int
+ADLB_Blob_From_String_Cmd(ClientData cdata, Tcl_Interp *interp,
+                           int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  int length; 
+  char *data = Tcl_GetStringFromObj(objv[1], &length);
+
+  TCL_CONDITION(data != NULL,
+                "adlb::blob_from_string failed!");
+  int length2 = strlen(data)+1; // TODO: remote
+  printf("length1: %i length2: %i\n", length, length2);
+
+  void *blob = malloc(length2 * sizeof(char));
+  memcpy(blob, data, length2);
+  
+  Tcl_Obj* list[2];
+  list[0] = Tcl_NewLongObj((long)blob);
+  list[1] = Tcl_NewIntObj(length2);
+  Tcl_Obj* result = Tcl_NewListObj(2, list);
+
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
   return TCL_OK;
 }
 
@@ -1487,8 +1538,10 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("enumerate", ADLB_Enumerate_Cmd);
   COMMAND("retrieve_blob", ADLB_Retrieve_Blob_Cmd);
   COMMAND("blob_free",  ADLB_Blob_Free_Cmd);
+  COMMAND("local_blob_free",  ADLB_Local_Blob_Free_Cmd);
   COMMAND("store_blob", ADLB_Store_Blob_Cmd);
   COMMAND("store_blob_floats", ADLB_Blob_store_floats_Cmd);
+  COMMAND("blob_from_string", ADLB_Blob_From_String_Cmd);
   COMMAND("slot_create", ADLB_Slot_Create_Cmd);
   COMMAND("slot_drop", ADLB_Slot_Drop_Cmd);
   COMMAND("insert",    ADLB_Insert_Cmd);
