@@ -22,9 +22,9 @@
   "turbine" "0.0.1" "find" 
   [ "set <<o>> [ turbine::find_impl <<s>> <<substring>> <<start_index>> <<end_index>> ]" ];
 
-/* count: number of non-overlapping occurences of substring in string */
+/* string_count: number of non-overlapping occurences of substring in string */
 @pure
-(int o) count(string s, string substring, int start_index, int end_index)
+(int o) string_count(string s, string substring, int start_index, int end_index)
   "turbine" "0.0.1" "count"
   [ "set <<o>> [ turbine::count_impl <<s>> <<substring>> <<start_index>> <<end_index>> ]" ];
 
