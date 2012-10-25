@@ -193,6 +193,10 @@ public class ICInstructions {
      */
     public abstract List<Var> getBlockingInputs();
     
+    public static interface CVMap {
+      public Arg getLocation(ComputedValue val);
+    }
+    
     /**
      * @param existing already known values (sometimes needed to 
      *              work out which vales are created by an instruction)
@@ -200,8 +204,7 @@ public class ICInstructions {
      *        returned should have the out field set so we know where to find 
      *        it 
      */
-    public abstract List<ComputedValue> getComputedValues(
-                        Map<ComputedValue, Arg> existing);
+    public abstract List<ComputedValue> getComputedValues(CVMap existing);
    
     public abstract Instruction clone();
   }
@@ -275,8 +278,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ComputedValue> getComputedValues(
-                        Map<ComputedValue, Arg> existing) {
+    public List<ComputedValue> getComputedValues(CVMap existing) {
       return null;
     }
 
@@ -1341,8 +1343,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ComputedValue> getComputedValues(
-                        Map<ComputedValue, Arg> existing) {
+    public List<ComputedValue> getComputedValues(CVMap existing) {
       Arg arr = null;
       Arg ix = null;
       Arg contents = null;
@@ -1352,7 +1353,8 @@ public class ICInstructions {
         case LOAD_FLOAT:
         case LOAD_INT:
         case LOAD_REF:
-        case LOAD_STRING: {
+        case LOAD_STRING: 
+        case LOAD_BLOB: {
           // retrieve* is invertible
           Arg src = args.get(1);
           Arg val = args.get(0);
@@ -1476,7 +1478,7 @@ public class ICInstructions {
           } else {
             assert (Types.isRefTo(lookupRes.type(), 
                 Types.getArrayMemberType(arr.getType())));
-            Arg prev = existing.get(new ComputedValue(Opcode.FAKE,
+            Arg prev = existing.getLocation(new ComputedValue(Opcode.FAKE,
                 ComputedValue.ARRAY_CONTENTS, Arrays.asList(arr, ix)));
             if (prev != null) {
               /* All these array loads give back a reference, but if a value
@@ -1512,7 +1514,7 @@ public class ICInstructions {
             // array directly
             return Arrays.asList(cv);
           } else {
-            Arg prev = existing.get(new ComputedValue(Opcode.FAKE,
+            Arg prev = existing.getLocation(new ComputedValue(Opcode.FAKE,
                 ComputedValue.ARRAY_CONTENTS, Arrays.asList(arr, ix)));
             assert (Types.isRefTo(nestedArr.type(), 
                         Types.getArrayMemberType(arr.getType())));
@@ -1603,8 +1605,7 @@ public class ICInstructions {
     }
     
     @Override
-    public List<ComputedValue> getComputedValues(
-                        Map<ComputedValue, Arg> existing) {
+    public List<ComputedValue> getComputedValues(CVMap existing) {
       // TODO: make order of args invariant where possible
       if (Builtins.isPure(functionName)) {
         if (!this.writesMappedVar() && isCopyFunction()) {
@@ -2069,8 +2070,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ComputedValue> getComputedValues(
-        Map<ComputedValue, Arg> existing) {
+    public List<ComputedValue> getComputedValues(CVMap existing) {
       if (deterministic) {
         ArrayList<ComputedValue> cvs = new ArrayList<ComputedValue>(
                                                         outFiles.size());
@@ -2234,8 +2234,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ComputedValue> getComputedValues(
-                        Map<ComputedValue, Arg> existing) {
+    public List<ComputedValue> getComputedValues(CVMap existing) {
       // Nothing
       return null;
     }
@@ -2331,8 +2330,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ComputedValue> getComputedValues(
-                        Map<ComputedValue, Arg> existing) {
+    public List<ComputedValue> getComputedValues(CVMap existing) {
       // nothing
       return null;
     }
@@ -2718,8 +2716,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ComputedValue> getComputedValues(
-                        Map<ComputedValue, Arg> existing) {
+    public List<ComputedValue> getComputedValues(CVMap existing) {
       if (this.hasSideEffects()) {
         // Two invocations of this aren't equivalent
         return null;

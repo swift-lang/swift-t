@@ -56,17 +56,23 @@ public class ICContinuations {
 
     /** Returns all nested blocks in this continuation */
     public abstract List<Block> getBlocks();
-
-
-    /**
-     * Replace usage of the values of the specified variables throughotu
-     * where possible.  It is ok if the usedVariables get messed up a bit
-     * here: we will fix them up later
+    
+    /** 
      * @param renames
+     * @param inputsOnly only change inputs
+     * @param recursive recursively do replacement in inner blocks
      */
-    public abstract void replaceInputs(Map<String, Arg> renames);
-
-    public abstract void replaceVars(Map<String, Arg> renames);
+    public void replaceVars(Map<String, Arg> renames, boolean inputsOnly,
+                                     boolean recursive) {
+      if (recursive) {
+        this.replaceVarsInBlocks(renames, inputsOnly);
+      }
+      this.replaceConstructVars(renames, inputsOnly);
+    }
+    
+    protected abstract void replaceConstructVars(Map<String, Arg> renames,
+                                                 boolean inputsOnly);
+    
     protected void replaceVarsInBlocks(Map<String, Arg> renames,
         boolean inputsOnly) {
       for (Block b: this.getBlocks()) {
@@ -405,30 +411,26 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceVars(Map<String, Arg> renames) {
-      this.replaceVarsInBlocks(renames, false);
+    public void replaceConstructVars(Map<String, Arg> renames,
+            boolean inputsOnly) {
       if (renames.containsKey(arrayVar.name())) {
         arrayVar = renames.get(arrayVar.name()).getVar();
       }
-      if (renames.containsKey(loopVar.name())) {
-        loopVar = renames.get(loopVar.name()).getVar();
+      
+      if (!inputsOnly) {
+        if (renames.containsKey(loopVar.name())) {
+          loopVar = renames.get(loopVar.name()).getVar();
+        }
+        if (this.loopCounterVar != null &&
+            renames.containsKey(loopCounterVar.name())) {
+          loopCounterVar = renames.get(loopCounterVar.name()).getVar();
+        }
       }
-      if (this.loopCounterVar != null &&
-          renames.containsKey(loopCounterVar.name())) {
-        loopCounterVar = renames.get(loopCounterVar.name()).getVar();
+      
+      if (!inputsOnly) {
+        ICUtil.replaceVarsInList(renames, usedVariables, true);
+        ICUtil.replaceVarsInList(renames, keepOpenVars, true);
       }
-      ICUtil.replaceVarsInList(renames, usedVariables, true);
-      ICUtil.replaceVarsInList(renames, keepOpenVars, true);
-    }
-
-    @Override
-    public void replaceInputs(Map<String, Arg> renames) {
-      // Replace only those we're reading
-      this.replaceVarsInBlocks(renames, true);
-      if (renames.containsKey(arrayVar.name())) {
-        arrayVar = renames.get(arrayVar.name()).getVar();
-      }
-      ICUtil.replaceVarsInList(renames, usedVariables, true);
     }
 
     @Override
@@ -504,7 +506,7 @@ public class ICContinuations {
           this.loopCounterVar = o.loopCounterVar;
         }
       }
-      o.replaceVars(renames);
+      o.replaceVars(renames, false, true);
       
       fuseIntoAbstract(o, insertAtTop);
     }
@@ -577,18 +579,8 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceVars(Map<String, Arg> renames) {
-      replaceShared(renames, false);
-    }
-
-    @Override
-    public void replaceInputs(Map<String, Arg> renames) {
-      replaceShared(renames, true);
-    }
-
-    private void replaceShared(Map<String, Arg> renames,
+    protected void replaceConstructVars(Map<String, Arg> renames,
           boolean inputsOnly) {
-      replaceVarsInBlocks(renames, inputsOnly);
       condition = ICUtil.replaceOparg(renames, condition, false);
     }
 
@@ -806,19 +798,15 @@ public class ICContinuations {
       loopBody.prettyPrint(sb, currentIndent + indent);
       sb.append(currentIndent + "}\n");
     }
-
+    
     @Override
-    public void replaceVars(Map<String, Arg> renames) {
-      this.replaceVarsInBlocks(renames, false);
+    public void replaceConstructVars(Map<String, Arg> renames,
+        boolean inputsOnly) {
       ICUtil.replaceVarsInList(renames, initVals, false);
-      ICUtil.replaceVarsInList(renames, usedVariables, true);
-      ICUtil.replaceVarsInList(renames, keepOpenVars, true);
-    }
-
-    @Override
-    public void replaceInputs(Map<String, Arg> renames) {
-      this.replaceVarsInBlocks(renames, true);
-      ICUtil.replaceVarsInList(renames, initVals, false);
+      if (!inputsOnly) {
+        ICUtil.replaceVarsInList(renames, usedVariables, true);
+        ICUtil.replaceVarsInList(renames, keepOpenVars, true);
+      }
     }
 
     @Override
@@ -959,13 +947,9 @@ public class ICContinuations {
 
 
     @Override
-    public void replaceVars(Map<String, Arg> renames) {
-      replaceVarsInBlocks(renames, false);
-    }
-
-    @Override
-    public void replaceInputs(Map<String, Arg> renames) {
-      replaceVarsInBlocks(renames, true);
+    protected void replaceConstructVars(Map<String, Arg> renames, 
+                  boolean inputsOnly) {
+      // Do nothing
     }
 
     @Override
@@ -1108,27 +1092,23 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceVars(Map<String, Arg> renames) {
-      this.replaceVarsInBlocks(renames, false);
+    public void replaceConstructVars(Map<String, Arg> renames, 
+                                        boolean inputsOnly) {
+      start = renameRangeArg(start, renames);
+      end = renameRangeArg(end, renames);
+      increment = renameRangeArg(increment, renames);
+      
       if (renames.containsKey(loopVar.name())) {
         loopVar = renames.get(loopVar.name()).getVar();
       }
       if (countVar != null && renames.containsKey(countVar.name())) {
         countVar = renames.get(countVar.name()).getVar();
       }
-      start = renameRangeArg(start, renames);
-      end = renameRangeArg(end, renames);
-      increment = renameRangeArg(increment, renames);
 
-      ICUtil.replaceVarsInList(renames, usedVariables, true);
-      ICUtil.replaceVarsInList(renames, keepOpenVars, true);
-    }
-    @Override
-    public void replaceInputs(Map<String, Arg> renames) {
-      this.replaceVarsInBlocks(renames, true);
-      start = renameRangeArg(start, renames);
-      end = renameRangeArg(end, renames);
-      increment = renameRangeArg(increment, renames);
+      if (!inputsOnly) {
+        ICUtil.replaceVarsInList(renames, usedVariables, true);
+        ICUtil.replaceVarsInList(renames, keepOpenVars, true);
+      }
     }
 
     private Arg renameRangeArg(Arg val, Map<String, Arg> renames) {
@@ -1324,7 +1304,7 @@ public class ICContinuations {
           if (i != 0) {
             // Replace references to the iteration counter
             nb.replaceVars(Collections.singletonMap(this.loopVar.name(),
-                                            Arg.createVar(nextIter)));
+                                 Arg.createVar(nextIter)), false, true);
           }
 
           if (i < desiredUnroll - 1) {
@@ -1386,7 +1366,7 @@ public class ICContinuations {
       renames.put(o.loopVar.name(), Arg.createVar(this.loopVar));
       if (countVar != null)
         renames.put(o.countVar.name(), Arg.createVar(this.countVar));
-      o.replaceVars(renames);
+      o.replaceVars(renames, false, true);
      
       this.fuseIntoAbstract(o, insertAtTop);
     }
@@ -1479,16 +1459,10 @@ public class ICContinuations {
       result.add(defaultBlock);
       return result;
     }
-
+    
     @Override
-    public void replaceVars(Map<String, Arg> renames) {
-      replaceVarsInBlocks(renames, false);
-      switchVar = ICUtil.replaceOparg(renames, switchVar, false);
-    }
-
-    @Override
-    public void replaceInputs(Map<String, Arg> renames) {
-      replaceVarsInBlocks(renames, true);
+    public void replaceConstructVars(Map<String, Arg> renames, 
+            boolean inputsOnly) {
       switchVar = ICUtil.replaceOparg(renames, switchVar, false);
     }
 
@@ -1675,19 +1649,15 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceVars(Map<String, Arg> renames) {
-      replaceVarsInBlocks(renames, false);
+    public void replaceConstructVars(Map<String, Arg> renames, 
+        boolean inputsOnly) {
       ICUtil.replaceVarsInList(renames, waitVars, true);
-      ICUtil.replaceVarsInList(renames, usedVariables, true);
-      ICUtil.replaceVarsInList(renames, keepOpenVars, true);
+      if (!inputsOnly) {
+        ICUtil.replaceVarsInList(renames, usedVariables, true);
+        ICUtil.replaceVarsInList(renames, keepOpenVars, true);
+      }
     }
-
-    @Override
-    public void replaceInputs(Map<String, Arg> renames) {
-      replaceVarsInBlocks(renames, true);
-      ICUtil.replaceVarsInList(renames, waitVars, true);
-    }
-
+    
     public WaitMode getMode() {
       return mode;
     }

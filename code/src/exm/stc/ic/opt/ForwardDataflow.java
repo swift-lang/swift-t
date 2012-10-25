@@ -20,6 +20,7 @@ import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalMap;
@@ -32,6 +33,7 @@ import exm.stc.ic.tree.ICContinuations.Loop;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Instruction.CVMap;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
 import exm.stc.ic.tree.ICInstructions.Opcode;
@@ -64,13 +66,17 @@ public class ForwardDataflow {
    * State keep tracks of which variables are closed and which computed
    * expressions are available at different points in the IC
    */
-  private static class State {
+  private static class State implements CVMap {
     private final Logger logger;
+    
+    private final State parent; 
+    private final boolean varsPassedFromParent;
+    
     /**
      * Map of variable names to value variables or literals which have been
-     * created and set at this point in the code
+     * created and set in this scope
      */
-    private final HierarchicalMap<ComputedValue, Arg> availableVals;
+    private final HashMap<ComputedValue, Arg> availableVals;
 
     /** variables which are closed at this point in time */
     private final HierarchicalSet<String> closed;
@@ -89,16 +95,21 @@ public class ForwardDataflow {
 
     State(Logger logger) {
       this.logger = logger;
-      this.availableVals = new HierarchicalMap<ComputedValue, Arg>();
+      this.parent = null;
+      this.varsPassedFromParent = false;
+      this.availableVals = new HashMap<ComputedValue, Arg>();
       this.closed = new HierarchicalSet<String>();
       this.dependsOn = new HashMap<String, HashSet<String>>();
     }
 
-    private State(Logger logger,
-        HierarchicalMap<ComputedValue, Arg> availableVals,
+    private State(Logger logger, State parent,
+        boolean varsPassedFromParent,
+        HashMap<ComputedValue, Arg> availableVals,
         HierarchicalSet<String> closed,
         HashMap<String, HashSet<String>> dependsOn) {
       this.logger = logger;
+      this.parent = parent;
+      this.varsPassedFromParent = varsPassedFromParent;
       this.availableVals = availableVals;
       this.closed = closed;
       this.dependsOn = dependsOn;
@@ -113,7 +124,7 @@ public class ForwardDataflow {
     }
 
     public boolean isAvailable(ComputedValue val) {
-      return availableVals.containsKey(val);
+      return getLocation(val) != null;
     }
 
     /**
@@ -127,7 +138,7 @@ public class ForwardDataflow {
       if (cvRetrieve == null) {
         return null;
       } else {
-        return this.availableVals.get(cvRetrieve);
+        return getLocation(cvRetrieve);
       }
     }
 
@@ -139,10 +150,10 @@ public class ForwardDataflow {
      */
     public void addComputedValue(ComputedValue newCV, boolean replace) {
       boolean outClosed = newCV.isOutClosed();
-      if (availableVals.containsKey(newCV)) {
+      if (isAvailable(newCV)) {
         if (!replace) {
           throw new STCRuntimeError("Unintended overwrite of "
-              + availableVals.get(newCV) + " with " + newCV);
+              + getLocation(newCV) + " with " + newCV);
         }
       } else if (replace) {
         throw new STCRuntimeError("Expected overwrite of " + " with "
@@ -164,10 +175,6 @@ public class ForwardDataflow {
       }
     }
 
-    public boolean hasComputedValue(ComputedValue compVal) {
-      return availableVals.containsKey(compVal);
-    }
-
     /**
      * Return an oparg with the variable or constant for the computed value
      * 
@@ -175,7 +182,27 @@ public class ForwardDataflow {
      * @return
      */
     public Arg getLocation(ComputedValue val) {
-      return availableVals.get(val);
+      boolean passRequired = false;
+      State curr = this;
+      
+      while (curr != null) {
+        Arg loc = curr.availableVals.get(val);
+        if (loc != null) {
+          // Found a value, now see if it is actually visible
+          if (!passRequired) {
+            return loc;
+          } else if (cantPass(loc.getType())) {
+            return null;
+          } else {
+            return loc;
+          }
+        }
+        
+        passRequired = passRequired || (!curr.varsPassedFromParent);
+        curr = curr.parent;
+      }
+      
+      return null;
     }
 
     /**
@@ -226,14 +253,14 @@ public class ForwardDataflow {
      * Make an exact copy for a nested scope, such that any changes to the new
      * copy aren't reflected in this one
      */
-    State makeCopy() {
+    State makeChild(boolean varsPassedFromParent) {
       HashMap<String, HashSet<String>> newDO = new HashMap<String, HashSet<String>>();
 
       for (Entry<String, HashSet<String>> e : dependsOn.entrySet()) {
         newDO.put(e.getKey(), new HashSet<String>(e.getValue()));
       }
-      return new State(logger, availableVals.makeChildMap(),
-          closed.makeChild(), newDO);
+      return new State(logger, this, varsPassedFromParent, 
+          new HashMap<ComputedValue, Arg>(), closed.makeChild(), newDO);
     }
   }
 
@@ -241,7 +268,7 @@ public class ForwardDataflow {
       Logger logger, Instruction inst,
       State av, HierarchicalMap<String, Arg> replaceInputs, 
       HierarchicalMap<String, Arg> replaceAll) {
-    List<ComputedValue> icvs = inst.getComputedValues(av.availableVals);
+    List<ComputedValue> icvs = inst.getComputedValues(av);
     logger.trace("no icvs");
     if (icvs != null) {
       logger.trace("icvs: " + icvs.toString());
@@ -312,6 +339,10 @@ public class ForwardDataflow {
       }
     }
     return icvs;
+  }
+
+  public static boolean cantPass(Type t) {
+    return t.equals(Types.V_BLOB);
   }
 
   /**
@@ -489,7 +520,7 @@ public class ForwardDataflow {
         Arg val = program.lookupGlobalConst(v.name());
         assert (val != null): v.name();
         ComputedValue compVal = ICInstructions.assignComputedVal(v, val);
-        cv.addComputedValue(compVal, cv.hasComputedValue(compVal));
+        cv.addComputedValue(compVal, cv.isAvailable(compVal));
       }
       if (v.isMapped() && Types.isFile(v.type())) {
         // filename will return the mapping
@@ -507,26 +538,42 @@ public class ForwardDataflow {
     block.renameCleanupActions(replaceInputs, true);
     block.renameCleanupActions(replaceAll, false);
     
+    
+    boolean inlined = false;
     // might be able to eliminate wait statements or reduce the number
     // of vars they are blocking on
     for (int i = 0; i < block.getContinuations().size(); i++) {
       Continuation c = block.getContinuation(i);
       
-      // First make sure all variable replacements are done  
-      c.replaceInputs(replaceInputs);
-      c.replaceVars(replaceAll);
+      // Replace all variables in the continuation construct
+      c.replaceVars(replaceInputs, true, false);
+      c.replaceVars(replaceAll, false, false);
+      
       Block toInline = c.tryInline(cv.closed);
       if (toInline != null) {
         anotherPassNeeded = true;
         c.inlineInto(block, toInline);
         i--; // compensate for removal of continuation
+        inlined = true;
+      }
+    }
+    
+    if (inlined) {
+      // Redo replacements for newly inserted instructions/continuations
+      for (Instruction i: block.getInstructions()) {
+        i.renameInputs(replaceInputs);
+        i.renameVars(replaceAll);
+      }
+      for (Continuation c: block.getContinuations()) {
+        c.replaceVars(replaceInputs, true, false);
+        c.replaceVars(replaceAll, false, false);
       }
     }
 
     // Note: assume that continuations aren't added to rule engine until after
     // all code in block has run
     for (Continuation cont : block.getContinuations()) {
-      State contCV = cv.makeCopy();
+      State contCV = cv.makeChild(cont.variablesPassedInAutomatically());
       // additional variables may be close once we're inside continuation
       List<Var> contClosedVars = cont.blockingVars();
       if (contClosedVars != null) {
@@ -537,13 +584,25 @@ public class ForwardDataflow {
       
       List<Block> contBlocks = cont.getBlocks();
       for (int i = 0; i < contBlocks.size(); i++) {
+        // Update based on whether values available within continuation
+        HierarchicalMap<String, Arg> contReplaceInputs;
+        HierarchicalMap<String, Arg> contReplaceAll;
+        if (cont.variablesPassedInAutomatically()) {
+          contReplaceInputs = replaceInputs;
+          contReplaceAll = replaceAll;
+        } else {
+          contReplaceInputs = replaceInputs.makeChildMap();
+          contReplaceAll = replaceAll.makeChildMap();
+          purgeUnpassableVars(contReplaceInputs);
+          purgeUnpassableVars(contReplaceAll);
+        }
         boolean again;
         int pass = 1;
         do {
           logger.debug("closed variable analysis on nested block pass " + pass);
           again = forwardDataflow(logger, program, f, contBlocks.get(i),
-              contCV.makeCopy(), replaceInputs.makeChildMap(),
-                                 replaceAll.makeChildMap());
+              contCV.makeChild(true), contReplaceInputs.makeChildMap(),
+                                     contReplaceAll.makeChildMap());
           // changes within nested scope don't require another pass
           // over this scope
           pass++;
@@ -558,6 +617,24 @@ public class ForwardDataflow {
     return anotherPassNeeded;
   }
 
+  
+  /**
+   * Remove unpassable vars from map
+   * @param replaceInputs
+   */
+  private static void purgeUnpassableVars(HierarchicalMap<String, Arg> replacements) {
+    ArrayList<String> toPurge = new ArrayList<String>();
+    for (Entry<String, Arg> e: replacements.entrySet()) {
+      Arg val = e.getValue();
+      if (val.isVar() && cantPass(val.getVar().type())) {
+        toPurge.add(e.getKey());
+      }
+    }
+    for (String key: toPurge) {
+      replacements.remove(key);
+    }
+  }
+
   private static boolean forwardDataflow(Logger logger,
       Function f, Block block,
       ListIterator<Instruction> insts, State cv,
@@ -569,7 +646,8 @@ public class ForwardDataflow {
       
       logger.trace("Input renames in effect: " + replaceInputs);
       logger.trace("Output renames in effect: " + replaceAll);
-      logger.trace("Available values: " + cv.availableVals);
+      // TODO: no longer prints all avail vals
+      logger.trace("Available values in block: " + cv.availableVals);
       logger.trace("Closed variables: " + cv.closed);
       logger.trace("-----------------------------");
       logger.trace("At instruction: " + inst);

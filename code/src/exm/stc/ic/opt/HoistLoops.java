@@ -219,7 +219,8 @@ public class HoistLoops {
     
     // need to update write map to reflect moved instruction
     for (Var out: inst.getOutputs()) {
-      writeMap.remove(out.name());
+      // Update map and parent maps
+      writeMap.remove(out.name(), false);
       writeMap.put(out.name(), target, hoistDepth);
     }
   }

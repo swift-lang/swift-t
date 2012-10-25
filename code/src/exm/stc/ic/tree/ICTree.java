@@ -666,11 +666,7 @@ public class ICTree {
 
       // Rename in nested blocks
       for (Continuation c: conds) {
-        if (inputsOnly) {
-          c.replaceInputs(renames);
-        } else {
-          c.replaceVars(renames);
-        }
+        c.replaceVars(renames, inputsOnly, true);
       }
       renameCleanupActions(renames, inputsOnly);
     }

@@ -17,19 +17,28 @@ public class HierarchicalMap<K, V> implements Map<K, V> {
   private final HashMap<K, V> map;
   private HierarchicalMap<K, V> parent;
   
+  /** True if a copy on write was performed on parent */
+  private boolean parentCopy;
+  
   public HierarchicalMap() {
     this(null);
   }
   
   private void copyOnWrite() {
+    if (parentCopy || parent == null) {
+      // Already have exclusively owned copy
+      return;
+    }
     HierarchicalMap<K, V> newParent = new HierarchicalMap<K,V>();
     newParent.putAll(parent);
     parent = newParent;
+    parentCopy = true;
   }
   
   private HierarchicalMap(HierarchicalMap<K, V> parent) {
     this.map = new HashMap<K, V>();
     this.parent = parent;
+    this.parentCopy = false;
   }
 
   public HierarchicalMap<K, V> makeChildMap() {
@@ -129,11 +138,17 @@ public class HierarchicalMap<K, V> implements Map<K, V> {
   
   @Override
   public V remove(Object key) {
+    return remove(key, true);
+  }
+  
+  public V remove(Object key, boolean copyOnWrite) {
     V removed = map.remove(key);
     if (parent != null) {
       if (parent.containsKey(key)) {
-        copyOnWrite();
-        V parentRemoved = parent.remove(key);
+        if (copyOnWrite) {
+          copyOnWrite();
+        }
+        V parentRemoved = parent.remove(key, copyOnWrite);
         if (removed == null) {
           removed = parentRemoved;
         }
