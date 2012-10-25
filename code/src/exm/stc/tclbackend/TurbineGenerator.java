@@ -414,7 +414,13 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void decrBlobRef(Var blob) {
     assert(blob.type().equals(Types.F_BLOB));
-    pointStack.peek().add(Turbine.decrBlobRef(varToExpr(blob)));
+    pointStack.peek().add(Turbine.freeBlob(varToExpr(blob)));
+  }
+
+  @Override
+  public void freeBlob(Var blobVal) {
+    assert(blobVal.type().equals(Types.V_BLOB));
+    pointStack.peek().add(Turbine.freeLocalBlob(varToExpr(blobVal)));
   }
   
   @Override

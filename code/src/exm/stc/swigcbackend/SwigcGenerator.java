@@ -2158,4 +2158,10 @@ public class SwigcGenerator implements CompilerBackend
       // TODO Auto-generated method stub
       
     }
+
+    @Override
+    public void freeBlob(Var blobval) {
+      // TODO Auto-generated method stub
+      
+    }
 }

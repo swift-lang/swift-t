@@ -34,7 +34,6 @@ import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Opcode;
-import exm.stc.ic.tree.ICTree.CleanupAction;
 
 /**
  * This has the definitions for the top-level constructs in the intermediate

@@ -157,8 +157,12 @@ public class OptUtil {
     // Now copy back values into future
     if (newOutVars != null) {
       for (int i = 0; i < newOutVars.size(); i++) {
-        instBuffer.add(ICInstructions.futureSet(oldOutVars.get(i),
-            Arg.createVar(newOutVars.get(i))));
+        Var oldOut = oldOutVars.get(i);
+        Var newOut = newOutVars.get(i);
+        instBuffer.add(ICInstructions.futureSet(oldOut, Arg.createVar(newOut)));
+        if (newOut.type().equals(Types.V_BLOB)) {
+          block.addCleanup(newOut, TurbineOp.freeBlob(newOut));
+        }
       }
     }
   }

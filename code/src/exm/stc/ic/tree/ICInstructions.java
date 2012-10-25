@@ -455,6 +455,9 @@ public class ICInstructions {
       case DECR_BLOB_REF:
         gen.decrBlobRef(args.get(0).getVar());
         break;
+      case FREE_BLOB:
+        gen.freeBlob(args.get(0).getVar());
+        break;
       case INIT_UPDATEABLE_FLOAT:
         gen.initUpdateable(args.get(0).getVar(), args.get(1));
         break;
@@ -637,6 +640,11 @@ public class ICInstructions {
                             Arrays.asList(Arg.createVar(blob)));
     }
     
+    public static Instruction freeBlob(Var blobVal) {
+      return new TurbineOp(Opcode.FREE_BLOB, 
+              Arrays.asList(Arg.createVar(blobVal)));
+    }
+
     public static Instruction structClose(Var struct) {
       return new TurbineOp(Opcode.STRUCT_CLOSE,
           Arrays.asList(Arg.createVar(struct)));
@@ -876,6 +884,7 @@ public class ICInstructions {
       case GET_OUTPUT_FILENAME:
         return 1;
       case DECR_BLOB_REF:
+      case FREE_BLOB:
         // View blob as output
         return 1;
       default:
@@ -963,6 +972,8 @@ public class ICInstructions {
            */ 
         return false;
       case DECR_BLOB_REF:
+        return true;
+      case FREE_BLOB:
         return true;
       default:
         throw new STCRuntimeError("Need to add opcode " + op.toString()
@@ -1371,7 +1382,8 @@ public class ICInstructions {
         case STORE_BOOL:
         case STORE_FLOAT:
         case STORE_INT:
-        case STORE_STRING: {
+        case STORE_STRING: 
+        case STORE_BLOB: {
           // add assign so we can avoid recreating future 
           // (true b/c this instruction closes val immediately)
           ComputedValue assign = vanillaComputedValue(true);
@@ -2339,7 +2351,7 @@ public class ICInstructions {
     DEREF_FILE,
     STORE_INT, STORE_STRING, STORE_FLOAT, STORE_BOOL, ADDRESS_OF, 
     LOAD_INT, LOAD_STRING, LOAD_FLOAT, LOAD_BOOL, LOAD_REF,
-    STORE_BLOB, LOAD_BLOB, DECR_BLOB_REF,
+    STORE_BLOB, LOAD_BLOB, DECR_BLOB_REF, FREE_BLOB,
     ARRAY_DECR_WRITERS,
     
     ARRAYREF_LOOKUP_FUTURE, ARRAY_LOOKUP_FUTURE,
@@ -2910,6 +2922,9 @@ public class ICInstructions {
       case STRING:
         op = Opcode.LOAD_STRING;
         break;
+      case BLOB:
+        op = Opcode.LOAD_BLOB;
+        break;
       default:
         // Can't retrieve other types
         op = null;
@@ -2965,6 +2980,9 @@ public class ICInstructions {
     case STRING:
       assert(src.isImmediateString());
       return TurbineOp.assignString(dst, src);
+    case BLOB:
+      assert(src.isImmediateBlob());
+      return TurbineOp.assignBlob(dst, src);
     default:
       throw new STCRuntimeError("method to set " +
           dst.type().typeName() + " is not known yet");

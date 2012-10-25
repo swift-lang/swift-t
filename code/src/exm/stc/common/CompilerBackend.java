@@ -93,6 +93,14 @@ public interface CompilerBackend {
    * @param blob handle to future
    */
   public abstract void decrBlobRef(Var blob);
+  
+
+  /**
+   * Free local blob value
+   * @param var
+   */
+  public abstract void freeBlob(Var blobval);
+  
   /**
    * Extract handle to filename future out of file variable
    * @param initUnmapped if true, assign arbitrary filename to unmapped files
@@ -337,4 +345,5 @@ public interface CompilerBackend {
       List<Boolean> blockingVars);
   public abstract void loopBreak(List<Var> varsToClose);
   public abstract void endLoop();
+
 }

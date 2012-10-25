@@ -675,6 +675,12 @@ public class STCMiddleEnd implements CompilerBackend {
     assert(blob.type().equals(Types.F_BLOB));
     currBlock().addInstruction(TurbineOp.decrBlobRef(blob));
   }
+  
+  @Override
+  public void freeBlob(Var blobVal) {
+    assert(blobVal.type().equals(Types.V_BLOB));
+    currBlock().addInstruction(TurbineOp.freeBlob(blobVal));
+  }
 
   @Override
   public void localOp(BuiltinOpcode op, Var out, 
