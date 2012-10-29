@@ -65,7 +65,11 @@ static MPI_Comm worker_comm;
 
 static char xfer[ADLB_DATA_MAX];
 
-/** Map from TD to local blob pointers */
+/**
+   Map from TD to local blob pointers.
+   This is not an LRU cache: the user must use blob_free to
+   free memory
+ */
 static struct table_lp blob_cache;
 
 static void set_namespace_constants(Tcl_Interp* interp);
