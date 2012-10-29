@@ -41,7 +41,6 @@ adlb_code
 ADLB_Init(int num_servers, int num_types, int* types,
           int* am_server, MPI_Comm* app_comm)
 {
-
   // In XLB, the types must be in simple order
   for (int i = 0; i < num_types; i++)
     if (types[i] != i)
@@ -53,13 +52,14 @@ ADLB_Init(int num_servers, int num_types, int* types,
   MPE(xlb_mpe_setup());
   setup_mpe_events(num_types, types);
 
-  MPE(MPE_Log_event(xlb_mpe_init_start, 0, NULL));
+  MPE_LOG(xlb_mpe_all_init_start);
   int rc = ADLBP_Init(num_servers, num_types, types, am_server,
                       app_comm);
-  MPE(MPE_Log_event(xlb_mpe_init_end, 0, NULL));
+  MPE_LOG(xlb_mpe_all_init_end);
 
   return rc;
 }
+
 
 /**
    Sets up user_state events
@@ -88,22 +88,17 @@ setup_mpe_events(int num_types, int* types)
 #endif
 }
 
+
 adlb_code
 ADLB_Put(void *work_buf, int work_len, int reserve_rank,
          int answer_rank, int work_type, int work_prio)
 {
-  int rc;
+  MPE_LOG(xlb_mpe_wkr_put_start);
 
-#ifdef ENABLE_MPE
-  MPE_Log_event(xlb_mpe_wkr_put_start,0,NULL);
-#endif
-
-  rc = ADLBP_Put(work_buf,work_len,reserve_rank,answer_rank,
+  int rc = ADLBP_Put(work_buf,work_len,reserve_rank,answer_rank,
                  work_type,work_prio);
 
-#ifdef ENABLE_MPE
-  MPE_Log_event(xlb_mpe_wkr_put_end,0,NULL);
-#endif
+  MPE_LOG(xlb_mpe_wkr_put_end);
 
   return rc;
 }
@@ -164,48 +159,41 @@ ADLB_Get(int type_requested, void* payload, int* length,
 /**
    Applications should use the ADLB_Create_type macros in adlb.h
  */
-adlb_code ADLB_Create(long id, adlb_data_type type,
-                const char* filename,
-                adlb_data_type container_type)
+adlb_code
+ADLB_Create(long id, adlb_data_type type,
+            const char* filename,
+            adlb_data_type container_type)
 {
-  return ADLBP_Create(id, type, filename, container_type);
+  MPE_LOG(xlb_mpe_wkr_create_start);
+  adlb_code rc = ADLBP_Create(id, type, filename, container_type);
+  MPE_LOG(xlb_mpe_wkr_create_end);
+  return rc;
 }
 
-adlb_code ADLB_Exists(adlb_datum_id id, bool* result)
+adlb_code
+ADLB_Exists(adlb_datum_id id, bool* result)
 {
-    int rc = ADLBP_Exists(id, result);
-
-    return rc;
+  int rc = ADLBP_Exists(id, result);
+  return rc;
 }
 
-adlb_code ADLB_Store(adlb_datum_id id, void *data, int length)
+adlb_code
+ADLB_Store(adlb_datum_id id, void *data, int length)
 {
-#ifdef ENABLE_MPE
-    MPE_Log_event(xlb_mpe_wkr_store_start, 0, NULL);
-#endif
-
-    int rc = ADLBP_Store(id, data, length);
-
-#ifdef ENABLE_MPE
-    MPE_Log_event(xlb_mpe_wkr_store_end, 0, NULL);
-#endif
-    return rc;
+  MPE_LOG(xlb_mpe_wkr_store_start);
+  int rc = ADLBP_Store(id, data, length);
+  MPE_LOG(xlb_mpe_wkr_store_end);
+  return rc;
 }
 
-adlb_code ADLB_Retrieve(adlb_datum_id id, adlb_data_type* type,
-		  void *data, int *length)
+adlb_code
+ADLB_Retrieve(adlb_datum_id id, adlb_data_type* type,
+              void *data, int *length)
 {
-#ifdef ENABLE_MPE
-    MPE_Log_event(xlb_mpe_wkr_retrieve_start, 0, NULL);
-#endif
-
-    int rc = ADLBP_Retrieve(id, type, data, length);
-
-#ifdef ENABLE_MPE
-    MPE_Log_event(xlb_mpe_wkr_retrieve_end, 0, NULL);
-#endif
-
-    return rc;
+  MPE_LOG(xlb_mpe_wkr_retrieve_start);
+  int rc = ADLBP_Retrieve(id, type, data, length);
+  MPE_LOG(xlb_mpe_wkr_retrieve_end);
+  return rc;
 }
 
 adlb_code
@@ -232,11 +220,15 @@ ADLB_Slot_drop(adlb_datum_id id, int slots)
   return ADLBP_Slot_drop(id, slots);
 }
 
-adlb_code ADLB_Insert(adlb_datum_id id, const char *subscript,
-                const char* member, int member_length,
-                int drops)
+adlb_code
+ADLB_Insert(adlb_datum_id id, const char *subscript,
+            const char* member, int member_length, int drops)
 {
-  return ADLBP_Insert(id, subscript, member, member_length, drops);
+  MPE_LOG(xlb_mpe_wkr_insert_start);
+  adlb_code rc =
+      ADLBP_Insert(id, subscript, member, member_length, drops);
+  MPE_LOG(xlb_mpe_wkr_insert_end);
+  return rc;
 }
 
 adlb_code ADLB_Insert_atomic(adlb_datum_id id, const char *subscript,
@@ -246,7 +238,8 @@ adlb_code ADLB_Insert_atomic(adlb_datum_id id, const char *subscript,
   return rc;
 }
 
-adlb_code ADLB_Lookup(adlb_datum_id id, const char *subscript, char* member, int* found)
+adlb_code ADLB_Lookup(adlb_datum_id id,
+                      const char *subscript, char* member, int* found)
 {
   return ADLBP_Lookup(id, subscript, member, found);
 }
@@ -266,9 +259,13 @@ adlb_code ADLB_Container_typeof(adlb_datum_id id, adlb_data_type* type)
   return ADLBP_Container_typeof(id, type);
 }
 
-adlb_code ADLB_Subscribe(adlb_datum_id id, int* subscribed)
+adlb_code
+ADLB_Subscribe(adlb_datum_id id, int* subscribed)
 {
-  return  ADLBP_Subscribe(id, subscribed);
+  MPE_LOG(xlb_mpe_wkr_subscribe_start);
+  adlb_code rc = ADLBP_Subscribe(id, subscribed);
+  MPE_LOG(xlb_mpe_wkr_subscribe_end);
+  return rc;
 }
 
 adlb_code ADLB_Container_reference(adlb_datum_id id, const char *subscript,
@@ -285,9 +282,13 @@ adlb_code ADLB_Container_size(adlb_datum_id id, int* size)
   return rc;
 }
 
-adlb_code ADLB_Close(adlb_datum_id id, int** ranks, int* count)
+adlb_code
+ADLB_Close(adlb_datum_id id, int** ranks, int* count)
 {
-    return ADLBP_Close(id, ranks, count);
+  MPE_LOG(xlb_mpe_wkr_close_start);
+  adlb_code rc = ADLBP_Close(id, ranks, count);
+  MPE_LOG(xlb_mpe_wkr_close_end);
+  return rc;
 }
 
 adlb_code
@@ -302,3 +303,13 @@ ADLB_Unlock(adlb_datum_id id)
   return ADLBP_Unlock(id);
 }
 
+adlb_code
+ADLB_Finalize()
+{
+  MPE_LOG(xlb_mpe_all_finalize_start);
+  adlb_code rc = ADLBP_Finalize();
+  MPE_LOG(xlb_mpe_all_finalize_end);
+  // Safely write log before exiting
+  MPE(MPE_Finish_log("adlb"));
+  return rc;
+}

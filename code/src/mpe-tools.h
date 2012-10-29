@@ -21,57 +21,43 @@
 // Note: these names must be conventional for use with our macros
 // The convention is: xlb_mpe_[svr|wkr]?_<OP>_[start|end]
 
+#define extern_declare_pair(component, function) \
+  extern int xlb_mpe_##component##_##function##_start, \
+  xlb_mpe_##component##_##function##_end;
+
 // Events for servers and workers:
-extern int xlb_mpe_init_start, xlb_mpe_init_end;
-extern int xlb_mpe_finalize_start, xlb_mpe_finalize_end;
+extern_declare_pair(all, init);
+extern_declare_pair(all, finalize);
 
 // Server handler events:
-extern int xlb_mpe_svr_put_start, xlb_mpe_svr_put_end;
-extern int xlb_mpe_svr_get_start, xlb_mpe_svr_get_end;
-extern int xlb_mpe_svr_steal_start, xlb_mpe_svr_steal_end;
-extern int xlb_mpe_svr_shutdown_start, xlb_mpe_svr_shutdown_end;
+// Task operations:
+extern_declare_pair(svr, put);
+extern_declare_pair(svr, get);
+extern_declare_pair(svr, steal);
+extern_declare_pair(svr, shutdown);
+// Data module:
+extern_declare_pair(svr, create);
 
 // Server daemon events (steal, shutdown):
-extern int xlb_mpe_dmn_steal_start, xlb_mpe_dmn_steal_end;
-extern int xlb_mpe_dmn_shutdown_start, xlb_mpe_dmn_shutdown_end;
+extern_declare_pair(dmn, steal);
+extern_declare_pair(dmn, shutdown);
 
 // Client calls:
 // Task operations:
-extern int xlb_mpe_wkr_put_start, xlb_mpe_wkr_put_end;
-extern int xlb_mpe_wkr_get_start, xlb_mpe_wkr_get_end;
+extern_declare_pair(wkr, put);
+extern_declare_pair(wkr, get);
 // Data module:
-extern int xlb_mpe_wkr_create_start, xlb_mpe_wkr_create_end;
-extern int xlb_mpe_wkr_store_start, xlb_mpe_wkr_store_end;
-extern int xlb_mpe_wkr_retrieve_start, xlb_mpe_wkr_retrieve_end;
-extern int xlb_mpe_wkr_subscribe_start, xlb_mpe_wkr_subscribe_end;
-extern int xlb_mpe_wkr_close_start, xlb_mpe_wkr_close_end;
-extern int xlb_mpe_wkr_unique_start, xlb_mpe_wkr_unique_end;
+extern_declare_pair(wkr, unique);
+extern_declare_pair(wkr, create);
+extern_declare_pair(wkr, subscribe);
+extern_declare_pair(wkr, store);
+extern_declare_pair(wkr, retrieve);
+extern_declare_pair(wkr, subscribe);
+extern_declare_pair(wkr, close);
+extern_declare_pair(wkr, insert);
 
 // Info event:
 extern int xlb_mpe_svr_info;
-
-/**
-   Automate MPE_Log_get_state_eventIDs calls
- */
-#define make_pair(token) \
-  MPE_Log_get_state_eventIDs(&xlb_mpe_##token##_start,\
-                             &xlb_mpe_##token##_end);
-
-#define make_solo(token) \
-    MPE_Log_get_solo_eventID(&xlb_mpe_##token);
-
-/**
-  Automate MPE_Describe_state calls
- */
-#define describe_pair(class,token) \
-  MPE_Describe_state(xlb_mpe_##token##_start, xlb_mpe_##token##_end, \
-                     #class "_" #token, "MPE_CHOOSE_COLOR")
-
-#define describe_solo(class, token) \
-   MPE_Describe_event(xlb_mpe_##token, #class "_" #token, \
-                          "MPE_CHOOSE_COLOR");
-//  MPE_Describe_info_event(xlb_mpe_##token, #class "_" #token, \
-//                          "MPE_CHOOSE_COLOR", NULL);
 
 void xlb_mpe_setup(void);
 

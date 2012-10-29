@@ -118,6 +118,7 @@ data_init(int s, int r)
 adlb_data_code
 data_create(adlb_datum_id id, adlb_data_type type)
 {
+  TRACE("data_create(%li)", id);
   adlb_data_code result;
   check_verbose(id > 0, ADLB_DATA_ERROR_INVALID,
                 "ERROR: attempt to create data: id=%li\n", id);
@@ -155,6 +156,7 @@ data_create_filename(adlb_datum_id id, const char* filename)
 adlb_data_code
 data_create_container(adlb_datum_id id, adlb_data_type type)
 {
+  TRACE("data_create_container(%li)", id);
   adlb_datum* d = table_lp_search(&tds, id);
   // This can only fail on an internal error
   assert(d != NULL);
@@ -232,7 +234,7 @@ data_close(adlb_datum_id id, int** result, int* count)
   d->status = ADLB_DATA_SET;
 
   list_i_toints(&d->listeners, result, count);
-  DEBUG("data_close: <%li> listeners: %i\n", id, *count);
+  DEBUG("data_close: <%li> listeners: %i", id, *count);
   list_i_clear(&d->listeners);
   TRACE_END;
   return ADLB_DATA_SUCCESS;

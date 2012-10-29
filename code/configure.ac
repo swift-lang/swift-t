@@ -4,8 +4,8 @@
 # Compile this with: ./setup.sh
 # After compiling this, get help with: ./configure --help
 
-define([adlb_version],
-       regexp(esyscmd(cat version.txt),[\([.0-9]*\)],[\1]))
+define([adlb_version], regexp(esyscmd(cat
+       version.txt),[\([.0-9]*\)],[\1]))
 
 AC_INIT([XLB], [adlb_version()], [wozniak@mcs.anl.gov])
 AC_PREREQ(2.63)

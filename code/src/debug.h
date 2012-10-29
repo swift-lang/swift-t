@@ -60,7 +60,7 @@ void debug_check_environment(void);
 /*
    Debugging may be disabled at compile-time via NDEBUG or
    ENABLE_DEBUG or at run-time by setting environment variable
-   XLB_DEBUG=0
+   ADLB_DEBUG=0
  */
 #ifdef ENABLE_DEBUG
 #define DEBUG(format, args...)              \

@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 
       if (argc != 2) {
 	printf("usage: %s <filename>\n", argv[0]);
-	ADLB_Abort(-1);
+	ADLB_Fail(-1);
       }
       else
 	printf("command file is %s\n", argv[1]);
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
       fp = fopen(argv[1], "r");
       if (fp == NULL) {
 	printf("could not open command file\n");
-	ADLB_Abort(-1);
+	ADLB_Fail(-1);
       }
 
       while (fgets(cmdbuffer,1024,fp) != NULL) {

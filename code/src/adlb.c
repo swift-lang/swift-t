@@ -159,7 +159,6 @@ ADLBP_Put(void* payload, int length, int target, int answer,
   return ADLB_SUCCESS;
 }
 
-
 adlb_code
 ADLBP_Get(int type_requested, void* payload, int* length,
           int* answer, int* type_recvd)
@@ -493,38 +492,30 @@ adlb_code
 ADLBP_Retrieve(adlb_datum_id id, adlb_data_type* type,
                void *data, int *length)
 {
-    int rc;
-    adlb_data_code dc;
-    MPI_Status status;
-    MPI_Request request;
+  int rc;
+  adlb_data_code dc;
+  MPI_Status status;
+  MPI_Request request;
 
-    int to_server_rank = locate(id);
+  int to_server_rank = locate(id);
 
-    rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank,
-                   ADLB_TAG_RESPONSE, adlb_all_comm, &request);
+  IRECV(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
+  SEND(&id, 1, MPI_LONG, to_server_rank, ADLB_TAG_RETRIEVE);
+  WAIT(&request,&status);
 
-    rc = MPI_Send(&id, 1, MPI_LONG, to_server_rank,
-                  ADLB_TAG_RETRIEVE, adlb_all_comm);
-    MPI_CHECK(rc);
-    rc = MPI_Wait(&request,&status);
-    MPI_CHECK(rc);
+  if (dc == ADLB_DATA_SUCCESS)
+  {
+    RECV(type, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
+    RECV(data, ADLB_PAYLOAD_MAX, MPI_BYTE, to_server_rank,
+         ADLB_TAG_RESPONSE);
+  }
+  else
+    return ADLB_ERROR;
 
-    if (dc == ADLB_DATA_SUCCESS)
-    {
-      rc = MPI_Recv(type, 1, MPI_INT, to_server_rank,
-		    ADLB_TAG_RESPONSE, adlb_all_comm, &status);
-      MPI_CHECK(rc);
-      rc = MPI_Recv(data, ADLB_PAYLOAD_MAX, MPI_BYTE, to_server_rank,
-		    ADLB_TAG_RESPONSE, adlb_all_comm, &status);
-      MPI_CHECK(rc);
-    }
-    else
-      return ADLB_ERROR;
-
-    // Set length output parameter
-    MPI_Get_count(&status, MPI_BYTE, length);
-    // DEBUG("RETRIEVE: <%li>=%s\n", hashcode, (char*) data);
-    return ADLB_SUCCESS;
+  // Set length output parameter
+  MPI_Get_count(&status, MPI_BYTE, length);
+  DEBUG("RETRIEVE: <%li> (%i bytes)\n", id, *length);
+  return ADLB_SUCCESS;
 }
 
 /**
@@ -961,11 +952,9 @@ ADLB_Shutdown(void)
 }
 
 adlb_code
-ADLB_Finalize()
+ADLBP_Finalize()
 {
   TRACE_START;
-
-  MPE_LOG(xlb_mpe_finalize_start);
 
   int rc;
   int flag;
@@ -987,10 +976,6 @@ ADLB_Finalize()
       ADLB_CHECK(rc);
     }
   }
-
-  // Safely write log before exiting
-  MPE_LOG(xlb_mpe_finalize_end);
-  MPE(MPE_Finish_log("adlb"));
 
   bool failed;
   int fail_code;

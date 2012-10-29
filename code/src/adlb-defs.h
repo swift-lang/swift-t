@@ -146,10 +146,10 @@ typedef enum
 #define ADLB_DATA_MEMBER_MAX 1024
 
 /** The maximal length of an ADLB datum (string, blob, etc.) */
-#define ADLB_DATA_MAX (1024*1024)
+#define ADLB_DATA_MAX (20*1024*1024)
 
 /** Maximum size for a given ADLB transaction */
-#define ADLB_PAYLOAD_MAX (1024*1024)
+#define ADLB_PAYLOAD_MAX ADLB_DATA_MAX
 
 /**
    The ASCII control character Record Separator

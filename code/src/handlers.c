@@ -184,7 +184,6 @@ handle_put(int caller)
   MPE_LOG(xlb_mpe_svr_put_start);
 
   RECV(&p, sizeof(p), MPI_BYTE, caller, ADLB_TAG_PUT);
-
   mpi_recv_sanity(&status, MPI_BYTE, sizeof(p));
 
   int rc = put(p.type, p.putter, p.priority, p.answer, p.target,
@@ -192,7 +191,6 @@ handle_put(int caller)
   ADLB_CHECK(rc);
 
   MPE_LOG(xlb_mpe_svr_put_end);
-  STATS("PUT");
 
   return ADLB_SUCCESS;
 }
@@ -457,7 +455,7 @@ handle_steal(int caller)
 static adlb_code
 handle_create(int caller)
 {
-  // MPE_LOG_EVENT(mpe_svr_create_start);
+  MPE_LOG(xlb_mpe_svr_create_start);
   TRACE("ADLB_TAG_CREATE\n");
   struct packed_id_type data;
   int rc;
@@ -489,7 +487,7 @@ handle_create(int caller)
 
   // DEBUG("CREATE: <%li> %s\n", id, (char*) work_buf);
   TRACE("ADLB_TAG_CREATE done\n");
-  // MPE_LOG_EVENT(mpe_svr_create_end);
+  MPE_LOG(xlb_mpe_svr_create_end);
 
   return ADLB_SUCCESS;
 }

@@ -13,27 +13,65 @@
 
 #ifdef ENABLE_MPE
 
-int xlb_mpe_init_start, xlb_mpe_init_end;
-int xlb_mpe_finalize_start, xlb_mpe_finalize_end;
+/**
+   Glue component and function tokens together to make MPE event pair,
+   which is just a pair of integers
+ */
+#define declare_pair(component, function) \
+  int xlb_mpe_##component##_##function##_start, \
+  xlb_mpe_##component##_##function##_end;
 
-int xlb_mpe_svr_put_start, xlb_mpe_svr_put_end;
-int xlb_mpe_svr_get_start, xlb_mpe_svr_get_end;
-int xlb_mpe_svr_steal_start, xlb_mpe_svr_steal_end;
+declare_pair(all, init);
+declare_pair(all, finalize);
 
-int xlb_mpe_dmn_steal_start, xlb_mpe_dmn_steal_end;
-int xlb_mpe_dmn_shutdown_start, xlb_mpe_dmn_shutdown_end;
-int xlb_mpe_svr_shutdown_start, xlb_mpe_svr_shutdown_end;
+declare_pair(svr, put);
+declare_pair(svr, get);
+declare_pair(svr, steal);
+declare_pair(svr, create);
+declare_pair(svr, shutdown);
 
-int xlb_mpe_wkr_put_start, xlb_mpe_wkr_put_end;
-int xlb_mpe_wkr_get_start, xlb_mpe_wkr_get_end;
-int xlb_mpe_wkr_create_start, xlb_mpe_wkr_create_end;
-int xlb_mpe_wkr_store_start, xlb_mpe_wkr_store_end;
-int xlb_mpe_wkr_retrieve_start, xlb_mpe_wkr_retrieve_end;
-int xlb_mpe_wkr_subscribe_start, xlb_mpe_wkr_subscribe_end;
-int xlb_mpe_wkr_close_start, xlb_mpe_wkr_close_end;
-int xlb_mpe_wkr_unique_start, xlb_mpe_wkr_unique_end;
+declare_pair(dmn, steal);
+declare_pair(dmn, shutdown);
+
+declare_pair(wkr, put);
+declare_pair(wkr, get);
+declare_pair(wkr, unique);
+declare_pair(wkr, create);
+declare_pair(wkr, subscribe);
+declare_pair(wkr, store);
+declare_pair(wkr, retrieve);
+declare_pair(wkr, close);
+declare_pair(wkr, insert);
 
 int xlb_mpe_svr_info;
+
+/**
+   Automate MPE_Log_get_state_eventIDs calls
+ */
+#define make_pair(component, token) \
+  MPE_Log_get_state_eventIDs(&xlb_mpe_##component##_##token##_start,\
+                             &xlb_mpe_##component##_##token##_end);
+
+/**
+   Automate MPE_Log_get_solo_eventIDs calls
+ */
+#define make_solo(component, token) \
+    MPE_Log_get_solo_eventID(&xlb_mpe_##component##_##token);
+
+
+/**
+  Automate MPE_Describe_state calls
+ */
+#define describe_pair(component, token) \
+  MPE_Describe_state(xlb_mpe_##component##_##token##_start, \
+                     xlb_mpe_##component##_##token##_end, \
+                     "ADLB_" #component "_" #token, \
+                     "MPE_CHOOSE_COLOR")
+
+#define describe_solo(component, token) \
+   MPE_Describe_event(xlb_mpe_##component##_##token, \
+                      "ADLB_" #component "_" #token, \
+                      "MPE_CHOOSE_COLOR");
 
 void
 xlb_mpe_setup()
@@ -43,50 +81,54 @@ xlb_mpe_setup()
         already. */
   MPE_Init_log();
 
-  make_pair(init);
-  make_pair(finalize);
+  make_pair(all, init);
+  make_pair(all, finalize);
 
-  make_pair(svr_put);
-  make_pair(svr_get);
-  make_pair(svr_steal);
-  make_pair(svr_shutdown);
+  make_pair(svr, put);
+  make_pair(svr, get);
+  make_pair(svr, steal);
+  make_pair(svr, shutdown);
+  make_pair(svr, create);
 
-  make_pair(dmn_steal);
-  make_pair(dmn_shutdown);
+  make_pair(dmn, steal);
+  make_pair(dmn, shutdown);
 
-  make_pair(wkr_put);
-  make_pair(wkr_get);
+  make_pair(wkr, put);
+  make_pair(wkr, get);
 
-  make_pair(wkr_unique);
-  make_pair(wkr_create);
-  make_pair(wkr_subscribe);
-  make_pair(wkr_store);
-  make_pair(wkr_close);
-  make_pair(wkr_retrieve);
+  make_pair(wkr, unique);
+  make_pair(wkr, create);
+  make_pair(wkr, subscribe);
+  make_pair(wkr, store);
+  make_pair(wkr, close);
+  make_pair(wkr, retrieve);
+  make_pair(wkr, insert);
 
-  make_solo(svr_info);
+  make_solo(svr, info);
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if (rank == 0 )
+  if (rank == 0)
   {
-    describe_pair(ADLB, init);
-    describe_pair(ADLB, finalize);
-    describe_pair(ADLB, wkr_put);
-    describe_pair(ADLB, wkr_get);
-    describe_pair(handler, svr_get);
-    describe_pair(handler, svr_put);
-    describe_pair(handler, svr_steal);
-    describe_pair(handler, svr_shutdown);
-    describe_pair(daemon, dmn_steal);
-    describe_pair(daemon, dmn_shutdown);
-    describe_pair(ADLB, wkr_create);
-    describe_pair(ADLB, wkr_store);
-    describe_pair(ADLB, wkr_retrieve);
-    describe_pair(ADLB, wkr_subscribe);
-    describe_pair(ADLB, wkr_close);
-    describe_pair(ADLB, wkr_unique);
-    describe_solo(ADLB, svr_info);
+    describe_pair(all, init);
+    describe_pair(all, finalize);
+    describe_pair(svr, get);
+    describe_pair(svr, put);
+    describe_pair(svr, create);
+    describe_pair(svr, steal);
+    describe_pair(svr, shutdown);
+    describe_pair(dmn, steal);
+    describe_pair(dmn, shutdown);
+    describe_pair(wkr, put);
+    describe_pair(wkr, get);
+    describe_pair(wkr, create);
+    describe_pair(wkr, store);
+    describe_pair(wkr, retrieve);
+    describe_pair(wkr, subscribe);
+    describe_pair(wkr, close);
+    describe_pair(wkr, unique);
+    describe_pair(wkr, insert);
+    describe_solo(svr, info);
   }
 }
 #endif
