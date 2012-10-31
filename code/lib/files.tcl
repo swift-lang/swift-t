@@ -115,4 +115,21 @@ namespace eval turbine {
       store_void [ get_file_status $handle ]  
     }
 
+    proc glob { stack result inputs } {
+        rule glob $inputs $turbine::LOCAL \
+            "glob_body $result $inputs"
+    }
+    proc glob_body { result args } {
+        set s_value [ retrieve_string $args ]
+        set r_value [ ::glob $s_value ]
+        set n [ llength $r_value ]
+        log "glob: $s_value tokens: $n"
+        for { set i 0 } { $i < $n } { incr i } {
+            set v [ lindex $r_value $i ]
+            literal split_token string $v
+            container_insert $result $i $split_token
+        }
+        close_datum $result 
+    }
+
 }
