@@ -29,6 +29,8 @@ The tests are numbered for lexical sorting by shell glob.
 300::       Arrays, structs
 400::       For loops
 500::       Types
+        560:: files
+        580::
         590: blobs
 600::       User builtins, interesting CPP uses
 700::       STC standard library
@@ -37,7 +39,7 @@ The tests are numbered for lexical sorting by shell glob.
         730: stdio
         780: MPE
 800::       Error outputs
-900::       ??? Formerly advanced constructs
+900::       Apps??? Formerly advanced constructs
 
 == Clean
 
