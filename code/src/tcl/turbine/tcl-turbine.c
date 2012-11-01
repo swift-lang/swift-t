@@ -135,7 +135,6 @@ Turbine_Version_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-
 #define string_tomode(mode, mode_string)                        \
   if (strcmp(mode_string, "field") == 0)                        \
     mode = TURBINE_ENTRY_FIELD;                                 \
@@ -218,6 +217,7 @@ Turbine_Push_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /**
    usage: ready => [ list ids ]
+   Note that this may not return all ready TRs
  */
 static int
 Turbine_Ready_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -242,71 +242,31 @@ Turbine_Ready_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-/**
-   usage: turbine::action id => [ list action_type action ]
- */
 static int
-Turbine_Action_Cmd(ClientData cdata, Tcl_Interp *interp,
-                       int objc, Tcl_Obj *const objv[])
+Turbine_Pop_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
+
   turbine_transform_id id;
   int error = Tcl_GetLongFromObj(interp, objv[1], &id);
   TCL_CHECK(error);
 
-  // Pointer into Turbine memory
-  char* action;
-  turbine_action_type action_type;
-  turbine_code code = turbine_action(id, &action_type, &action);
-  TCL_CONDITION(code == TURBINE_SUCCESS,
-                "could not find transform id: %li", id);
-
-  Tcl_Obj* items[2];
-  items[0] = Tcl_NewIntObj(action_type);
-  items[1] = Tcl_NewStringObj(action, -1);
-
-  Tcl_Obj* result = Tcl_NewListObj(2, items);
-  Tcl_SetObjResult(interp, result);
-  return TCL_OK;
-}
-
-/**
-   usage: turbine::priority id => priority
- */
-static int
-Turbine_Priority_Cmd(ClientData cdata, Tcl_Interp *interp,
-                     int objc, Tcl_Obj *const objv[])
-{
-  TCL_ARGS(2);
-  turbine_transform_id id;
-  int error = Tcl_GetLongFromObj(interp, objv[1], &id);
-  TCL_CHECK(error);
-
-
+  turbine_action_type type;
+  char action[TURBINE_ACTION_MAX];
   int priority;
-  turbine_code code = turbine_priority(id, &priority);
-  TCL_CONDITION(code == TURBINE_SUCCESS,
-                "could not find transform id: %li", id);
 
-  Tcl_Obj* result = Tcl_NewIntObj(priority);
+  turbine_code code = turbine_pop(id, &type, action, &priority);
+  TCL_CONDITION(code == TURBINE_SUCCESS,
+                 "could not pop transform id: %li", id);
+
+  Tcl_Obj* items[3];
+  items[0] = Tcl_NewIntObj(type);
+  items[1] = Tcl_NewStringObj(action, -1);
+  items[2] = Tcl_NewIntObj(priority);
+
+  Tcl_Obj* result = Tcl_NewListObj(3, items);
   Tcl_SetObjResult(interp, result);
-  return TCL_OK;
-}
-
-static int
-Turbine_Complete_Cmd(ClientData cdata, Tcl_Interp *interp,
-                     int objc, Tcl_Obj *const objv[])
-{
-  TCL_ARGS(2);
-
-  turbine_transform_id id;
-  int error = Tcl_GetLongFromObj(interp, objv[1], &id);
-  TCL_CHECK(error);
-
-  turbine_code code = turbine_complete(id);
-  TCL_CONDITION(code == TURBINE_SUCCESS,
-                "could not complete transform id: %li", id);
-
   return TCL_OK;
 }
 
@@ -326,28 +286,6 @@ Turbine_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   return TCL_OK;
 }
-
-/*
-static int
-Turbine_Declare_Cmd(ClientData cdata, Tcl_Interp *interp,
-                    int objc, Tcl_Obj *const objv[])
-{
-  TCL_ARGS(2);
-
-  turbine_transform_id id;
-  int error = Tcl_GetLongFromObj(interp, objv[1], &id);
-  TCL_CHECK(error);
-
-  turbine_code code = turbine_declare(id, NULL);
-
-  if (code == TURBINE_ERROR_DOUBLE_DECLARE)
-    printf("error: trying to declare twice: %li", id);
-  TCL_CONDITION(code == TURBINE_SUCCESS,
-                "could not declare data id: %li", id);
-
-  return TCL_OK;
-}
-*/
 
 static int
 Turbine_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -488,9 +426,9 @@ retrieve_object(Tcl_Interp *interp, Tcl_Obj *const objv[], long id,
   return TCL_OK;
 }
 
-int extract_object(Tcl_Interp* interp, Tcl_Obj *const objv[],
-                   turbine_datum_id td, turbine_type type,
-                   Tcl_Obj* obj, void** result, int* length);
+static int extract_object(Tcl_Interp* interp, Tcl_Obj *const objv[],
+                          turbine_datum_id td, turbine_type type,
+                          Tcl_Obj* obj, void** result, int* length);
 
 /**
    usage turbine::cache store $td $type $value
@@ -523,7 +461,7 @@ cache_store_cmd(ClientData cdata, Tcl_Interp* interp,
   return TCL_OK;
 }
 
-int
+static int
 extract_object(Tcl_Interp* interp, Tcl_Obj *const objv[],
                turbine_datum_id td,
                turbine_type type,
@@ -636,9 +574,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("rule",        Turbine_Rule_Cmd);
   COMMAND("push",        Turbine_Push_Cmd);
   COMMAND("ready",       Turbine_Ready_Cmd);
-  COMMAND("action",      Turbine_Action_Cmd);
-  COMMAND("priority",    Turbine_Priority_Cmd);
-  COMMAND("complete",    Turbine_Complete_Cmd);
+  COMMAND("pop",         Turbine_Pop_Cmd);
   COMMAND("close",       Turbine_Close_Cmd);
   COMMAND("log",         Turbine_Log_Cmd);
   COMMAND("normalize",   Turbine_Normalize_Cmd);

@@ -46,9 +46,11 @@ namespace eval turbine {
                 set ready [ turbine::c::ready ]
                 if { [ llength $ready ] == 0 } break
                 foreach {transform} $ready {
-                    set action   [ turbine::c::action   $transform ]
-                    set_priority [ turbine::c::priority $transform ]
-                    release $transform $action
+                    set L [ turbine::c::pop $transform ]
+                    set type     [ lindex $L 0 ]
+                    set action   [ lindex $L 1 ]
+                    set_priority [ lindex $L 2 ]
+                    release $transform $type $action
                 }
             }
 
@@ -62,24 +64,22 @@ namespace eval turbine {
     }
 
     # Release a work unit for execution here or elsewhere
-    proc release { transform action } {
+    proc release { transform action_type action } {
 
         global WORK_TYPE
-        set type    [ lindex $action 0 ]
-        set command [ lindex $action 1 ]
 
-        switch $type {
+        switch $action_type {
             1 { # $turbine::LOCAL
-                eval $command
+                eval $action
             }
             2 { # $turbine::CONTROL
                 adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
-                    "command priority: $turbine::priority $command" \
+                    "command priority: $turbine::priority $action" \
                     $turbine::priority
             }
             3 { # $turbine::WORK
                 adlb::put $adlb::RANK_ANY $WORK_TYPE(WORK) \
-                    "$transform $command" $turbine::priority
+                    "$transform $action" $turbine::priority
             }
             default {
                 error "unknown action type!"
@@ -90,7 +90,7 @@ namespace eval turbine {
     # Handle a message coming into this rule engine
     proc control { msg answer_rank } {
 
-        debug "control: $msg"
+        log "control: $msg"
 
         variable complete_rank
         set complete_rank $answer_rank
@@ -106,11 +106,6 @@ namespace eval turbine {
                     set command [ lrange $command 2 end ]
                 }
                 eval $command
-            }
-            complete {
-                set id [ lindex $msg 1 ]
-                turbine::c::complete $id
-                # branch_complete $id
             }
             close {
                 set id [ lindex $msg 1 ]
@@ -156,7 +151,5 @@ namespace eval turbine {
             # puts "[dict get $e -errorinfo]"
             error "rule: transform failed in command: $command"
         }
-        adlb::put $answer_rank $WORK_TYPE(CONTROL) \
-            "complete $rule_id" $turbine::default_priority
     }
 }

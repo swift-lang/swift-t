@@ -110,6 +110,11 @@ typedef enum
  */
 #define TURBINE_DATA_MAX       ADLB_DATA_MAX
 
+/**
+   Maximal storage of a Turbine action string
+ */
+#define TURBINE_ACTION_MAX 1024
+
 #define turbine_string_totype adlb_data_string_totype
 
 #endif

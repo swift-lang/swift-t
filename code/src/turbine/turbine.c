@@ -6,6 +6,7 @@
  *      Author: wozniak
  *
  * TD means Turbine Datum, which is a variable id stored in ADLB
+ * TR means TRansform, the in-memory record from a rule
  * */
 
 #include <assert.h>
@@ -21,7 +22,6 @@
 #include <table.h>
 #include <table_lp.h>
 #include <tools.h>
-// #include <exm-string.h>
 
 #include "src/util/debug.h"
 
@@ -35,10 +35,8 @@ typedef enum
   TRANSFORM_WAITING,
   /** Inputs ready */
   TRANSFORM_READY,
-  /** Application level has started the action */
-  TRANSFORM_RUNNING,
-  /** Application level has completed the action */
-  TRANSFORM_DONE
+  /** Application level has received this TR as ready */
+  TRANSFORM_RETURNED
 } transform_status;
 
 /**
@@ -80,10 +78,11 @@ struct table_lp transforms_waiting;
 struct list transforms_ready;
 
 /**
-   Running transforms
+   Transforms whose IDs have been returned to application
+   We retain these until the application pops them
    Map from transform ID to transform
  */
-struct table_lp transforms_running;
+struct table_lp transforms_returned;
 
 /**
    TD inputs blocking their transforms
@@ -234,7 +233,7 @@ turbine_engine_init()
     return TURBINE_ERROR_OOM;
 
   list_init(&transforms_ready);
-  result = table_lp_init(&transforms_running, 1024*1024);
+  result = table_lp_init(&transforms_returned, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
   result = table_lp_init(&td_blockers, 1024*1024);
@@ -268,6 +267,14 @@ transform_create(const char* name,
   assert(name);
   assert(action);
 
+  if (strlen(action) > TURBINE_ACTION_MAX)
+  {
+    printf("error: turbine rule action string storage exceeds %i\n",
+           TURBINE_ACTION_MAX);
+    *result = NULL;
+    return TURBINE_ERROR_INVALID;
+  }
+
   transform* T = malloc(sizeof(transform));
 
   T->id = make_unique_id();
@@ -279,8 +286,7 @@ transform_create(const char* name,
 
   if (inputs > 0)
   {
-    T->input_list =
-        malloc(inputs*sizeof(turbine_datum_id));
+    T->input_list = malloc(inputs*sizeof(turbine_datum_id));
     if (! T->input_list)
       return TURBINE_ERROR_OOM;
   }
@@ -326,8 +332,8 @@ static int transform_tostring(char* output,
 #define DEBUG_TURBINE_RULE(transform, id)
 #endif
 
-static bool progress(transform* T);
-static void rule_inputs(transform* T);
+static inline bool progress(transform* T);
+static inline void rule_inputs(transform* T);
 
 turbine_code
 turbine_rule(const char* name,
@@ -341,6 +347,9 @@ turbine_rule(const char* name,
   turbine_code code = transform_create(name, inputs, input_list,
                                        action_type, action,
                                        priority, &T);
+  if (code != TURBINE_SUCCESS)
+    return code;
+
   *id = T->id;
   DEBUG_TURBINE_RULE(T, *id);
   turbine_check(code);
@@ -367,7 +376,7 @@ turbine_code declare_datum(turbine_datum_id id,
 /**
    Record that this transform is blocked by its inputs
 */
-static void
+static inline void
 rule_inputs(transform* T)
 {
   for (int i = 0; i < T->inputs; i++)
@@ -444,9 +453,6 @@ declare_datum(turbine_datum_id id, struct list_l** result)
   return TURBINE_SUCCESS;
 }
 
-/**
-   Obtain the list of trs ready to run
- */
 turbine_code
 turbine_ready(int count, turbine_transform_id* output,
               int* result)
@@ -457,7 +463,7 @@ turbine_ready(int count, turbine_transform_id* output,
   while (i < count && (v = list_poll(&transforms_ready)))
   {
     transform* T = (transform*) v;
-    table_lp_add(&transforms_running, T->id, T);
+    table_lp_add(&transforms_returned, T->id, T);
     output[i] = T->id;
     DEBUG_TURBINE("\t %li", output[i]);
     i++;
@@ -466,61 +472,30 @@ turbine_ready(int count, turbine_transform_id* output,
   return TURBINE_SUCCESS;
 }
 
-/**
-   Retrieve action string for given transform
-   @param action Pointer into Turbine memory
-                 Use this before calling turbine_complete
- */
 turbine_code
-turbine_action(turbine_transform_id id,
-               turbine_action_type* action_type, char** action)
+turbine_pop(turbine_transform_id id, turbine_action_type* action_type,
+            char* action, int* priority)
 {
+  // Check inputs
   if (id == TURBINE_ID_NULL)
-    return TURBINE_ERROR_NULL;
-
-  transform* T = table_lp_search(&transforms_running, id);
+     return TURBINE_ERROR_NULL;
+  transform* T = table_lp_remove(&transforms_returned, id);
   if (!T)
     return TURBINE_ERROR_NOT_FOUND;
 
-  *action = T->action;
+  // Debugging
+  DEBUG_TURBINE("pop: TR: {%li}", id);
+  DEBUG_TURBINE("\t action: {%li} %s: %s", id, T->name, T->action);
+  DEBUG_TURBINE("\t priority: {%li} => %i\n", id, T->priority);
+
+  // Copy outputs
   *action_type = T->action_type;
-
-  DEBUG_TURBINE("action: {%li} %s: %s", id, T->name, T->action);
-  return TURBINE_SUCCESS;
-}
-
-/**
-   Retrieve priority for given transform
-*/
-turbine_code
-turbine_priority(turbine_transform_id id, int* priority)
-{
-  if (id == TURBINE_ID_NULL)
-    return TURBINE_ERROR_NULL;
-
-  transform* T = table_lp_search(&transforms_running, id);
-  if (!T)
-    return TURBINE_ERROR_NOT_FOUND;
-
+  strcpy(action, T->action);
   *priority = T->priority;
-  DEBUG_TURBINE("priority: {%li} => %i\n", T->id, T->priority);
-  return TURBINE_SUCCESS;
-}
 
-/**
-   Indicate a transform action is no longer running
-   Free the transform
- */
-turbine_code
-turbine_complete(turbine_transform_id id)
-{
-  if (id == TURBINE_ID_NULL)
-    return TURBINE_ERROR_NULL;
-
-  transform* T = table_lp_remove(&transforms_running, id);
-  assert(T);
-  DEBUG_TURBINE("complete: {%li} %s", id, T->name);
+  // Clean up
   transform_free(T);
+
   return TURBINE_SUCCESS;
 }
 
@@ -561,7 +536,7 @@ turbine_close(turbine_datum_id id)
   return TURBINE_SUCCESS;
 }
 
-static bool
+static inline bool
 progress(transform* T)
 {
   int subscribed = 0;

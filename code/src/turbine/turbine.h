@@ -41,18 +41,20 @@ turbine_code turbine_rule(const char* name,
 
 turbine_code turbine_rules_push(void);
 
+/**
+   Obtain the list of TRs ready to run
+   @param count: maximum number to return
+   @param output: location to store TR IDs
+   @param result: number of TR IDs returned
+ */
 turbine_code turbine_ready(int count, turbine_transform_id* output,
                            int *result);
 
 turbine_code turbine_close(turbine_datum_id id);
 
-turbine_code turbine_action(turbine_transform_id id,
-                            turbine_action_type* action_type,
-                            char** action);
-
-turbine_code turbine_priority(turbine_transform_id id, int* priority);
-
-turbine_code turbine_complete(turbine_transform_id id);
+turbine_code turbine_pop(turbine_transform_id id,
+                         turbine_action_type* action_type,
+                         char* action, int* priority);
 
 int turbine_code_tostring(char* output, turbine_code code);
 
