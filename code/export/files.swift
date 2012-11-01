@@ -1,8 +1,8 @@
 
-// GLOB.SWIFT
+// FILES.SWIFT
 
-#ifndef GLOB_SWIFT
-#define GLOB_SWIFT
+#ifndef FILES_SWIFT
+#define FILES_SWIFT
 
 @pure
 (string t[]) glob(string s)
@@ -12,4 +12,4 @@
 (string t) readFile(string s)
 "turbine" "0.0.2" "readFile";
 
-#endif
+#endif // FILES_SWIFT
