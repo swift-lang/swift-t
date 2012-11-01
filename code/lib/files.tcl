@@ -119,6 +119,7 @@ namespace eval turbine {
         rule glob $inputs $turbine::LOCAL \
             "glob_body $result $inputs"
     }
+
     proc glob_body { result args } {
         set s_value [ retrieve_string $args ]
         set r_value [ ::glob $s_value ]
@@ -132,4 +133,15 @@ namespace eval turbine {
         close_datum $result 
     }
 
+    proc readFile { stack result inputs } {
+        rule readFile $inputs $turbine::LOCAL \
+            "readFile_body $result $inputs"
+    }
+
+    proc readFile_body { result args } {
+        set s_value [ retrieve_string $args ]
+        set fp [ ::open $s_value r ]
+	set file_data [ read $fp ]
+	store_string $result $file_data
+    }
 }
