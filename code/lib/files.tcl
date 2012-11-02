@@ -32,11 +32,41 @@ namespace eval turbine {
       return [ get_file_path $file_handle ]
     }
 
+    # Helper that can be used in place of rule that handles
+    # mapped and unmapped output files.
+    # Will make sure that output files are mapped before executing cmd
+    # msg: log msg
+    # waitfor: list of regular 
+    # outfiles: output files, will wait correctly for these
+    # infiles: input files, will wait correctly for these
+    # target: Where to send work e.g. $turbine::WORK
+    # cmd: command to execute when closed
+    proc rule_file_helper { msg waitfor outfiles infiles target cmd } {
+      foreach outfile $outfiles {
+        if { [ is_file_mapped $outfile ] } {
+          # Wait for mapping to be ready
+	  set outpath [ get_file_path $outfile ]
+          lappend waitfor $outpath
+        } else {
+          # Assign temporary mapping
+          init_unmapped $outfile
+        }
+      }
+
+      foreach infile $infiles {
+        # Wait for both path and status
+	set inpath [ get_file_path $infile ]
+	set instatus [ get_file_status $infile ]
+        lappend waitfor $inpath $instatus
+      }
+      rule $msg $waitfor $target $cmd
+    }
+
     proc input_file { stack out filepath } {
       set outfile [ lindex $out 0 ]
       set mapped [ is_file_mapped $outfile ]
       if { $mapped } {
-        error "file \[ $outfile \] was already mapped, cannot use input_file"
+         error "file \[ $outfile \] was already mapped, cannot use input_file"
       }
       rule "input_file-$outfile-$filepath" "$filepath" \
             $turbine::LOCAL [ list input_file_body $outfile $filepath ]
@@ -135,9 +165,8 @@ namespace eval turbine {
 
     proc readFile { stack result inputs } {
 	set src [ lindex $inputs 0 ]
-	set srcpath [ get_file_path $src ]
-	set srcstatus [ get_file_status $src ]
-        rule "read_file-$src" "$srcpath $srcstatus" \
+        rule_file_helper "read_file-$src" [ list ] \
+            [ list ] [ list $src ] \
             $turbine::WORK [ list readFile_body $result $src ]
     }
 
@@ -152,7 +181,8 @@ namespace eval turbine {
     proc writeFile { stack outputs inputs } {
 	set dst [ lindex $outputs 0 ]
 	set s_value [ retrieve_string $inputs ]
-	rule "write_file" "$inputs" \
+	rule_file_helper "write_file" "$inputs" \
+            [ list $dst ] [ list ] \
 	    $turbine::WORK [ list writeFile_body $outputs $s_value ]
     }
 
