@@ -5,5 +5,6 @@ These are pretty rough and ready, but work for me.  Feel free to extend.
 Copy build-vars.sh.template to build-vars.sh and then modify to match
 your own directory structure.
 
-./rebuild-all.sh - rebuilds c-utils/adlb/turbine/stc
+./rebuild-all.sh - rebuilds c-utils/adlb/turbine/stc from scratch
+./fast-build.sh - does a build without reconfiguring
 ./mpi_build.sh - build mpich2 with my config options
