@@ -4,7 +4,7 @@
 #include <files.swift>
 #include <sys.swift>
 
-#usage: stc 563-glob.swift -S=/home/zzhang/*.swift
+//usage: stc 563-glob.swift -S=/home/zzhang/*.swift
 main
 {
   string s[];	
