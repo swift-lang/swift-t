@@ -134,14 +134,35 @@ namespace eval turbine {
     }
 
     proc readFile { stack result inputs } {
-        rule readFile $inputs $turbine::LOCAL \
-            "readFile_body $result $inputs"
+	set src [ lindex $inputs 0 ]
+	set srcpath [ get_file_path $src ]
+	set srcstatus [ get_file_status $src ]
+        rule "read_file-$src" "$srcpath $srcstatus" \
+            $turbine::WORK [ list readFile_body $result $src ]
     }
 
-    proc readFile_body { result args } {
-        set s_value [ retrieve_string $args ]
-        set fp [ ::open $s_value r ]
+    proc readFile_body { result src} {
+	set srcpath [ get_file_path $src ]
+	set s [retrieve_string $srcpath]
+        set fp [ ::open $s r ]
 	set file_data [ read $fp ]
 	store_string $result $file_data
+    }
+
+    proc writeFile { stack outputs inputs } {
+	set dst [ lindex $outputs 0 ]
+	set s_value [ retrieve_string $inputs ]
+	rule "write_file" "$inputs" \
+	    $turbine::WORK [ list writeFile_body $outputs $s_value ]
+    }
+
+    proc writeFile_body { outputs str } {
+	set dst [ lindex $outputs 0 ]
+	set dstpath [ get_file_path $dst ]
+	set d [ retrieve_string $dstpath ]
+	set fp [ ::open $d w+ ]
+	puts $fp $str
+	close $fp 
+	store_void [ get_file_status $dst ]
     }
 }
