@@ -1,0 +1,22 @@
+THISDIR=`dirname $0`
+DEV_DIR=`cd ${THISDIR}; pwd`
+
+REPO_ROOT=${DEV_DIR}/../..
+
+# Install dir locations
+# Modify
+INST=${REPO_ROOT}/../inst
+TCL_INST=${INST}/tcl
+MPICH_INST=${INST}/mpich2
+MPE_INST=${INST}/mpe
+LB_INST=${INST}/lb
+C_UTILS_INST=${INST}/c-utils
+TURBINE_INST=${INST}/turbine
+
+# Source locations
+# Modify to match your layout if you do not have full svn repo checked out
+SFW_ROOT=${REPO_ROOT}/sfw
+C_UTILS=${SFW_ROOT}/c-utils/trunk
+LB=${SFW_ROOT}/lb/trunk/code
+TURBINE=${SFW_ROOT}/turbine/trunk/code
+STC=${SFW_ROOT}/stc/trunk/code

@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -x
+set -e
+THISDIR=`dirname $0`
+
+BUILDVARS=${THISDIR}/build-vars.sh
+if [ ! -f ${BUILDVARS} ] ; then
+  echo "Need ${BUILDVARS} to exist"
+  exit 1
+fi
+source ${BUILDVARS}
+
+cd ${C_UTILS}
+${DEV_DIR}/cutil_build.sh
+
+cd ${DEV_DIR}
+export DEST=${MPE_INST}
+export MPICH=${MPICH_INST}
+${REPO_ROOT}/adlb_patches/make-libmpe.so.zsh
+
+cd ${LB}
+${DEV_DIR}/adlb_build.sh 
+
+cd ${TURBINE}
+${DEV_DIR}/turbine-build.sh
+
+cd ${STC}
+ant clean && ant
