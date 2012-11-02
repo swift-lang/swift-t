@@ -10,7 +10,8 @@ MAX_TESTS=-1 # by default, unlimited
 PATTERN=""
 SKIP_COUNT=0
 VERBOSE=0
-STC_OPT_LEVEL=1 #-O level for STC
+STC_OPT_LEVELS=() #-O levels to test for STC
+DEFAULT_STC_OPT_LEVEL=1
 ADDTL_STC_ARGS=()
 
 # Speed up the tests
@@ -48,7 +49,7 @@ do
       VERBOSE=1
       ;;
     O)
-      STC_OPT_LEVEL=${OPTARG}
+      STC_OPT_LEVELS+=${OPTARG}
       ;;
     *)
       # ZSH already prints an error message
@@ -59,6 +60,11 @@ done
 if (( VERBOSE ))
 then
   set -x
+fi
+
+if [ ${#STC_OPT_LEVELS} -eq 0 ]
+then
+  STC_OPT_LEVELS=($DEFAULT_STC_OPT_LEVEL)
 fi
 
 crash()
@@ -96,7 +102,8 @@ RUN_TEST=${STC_TESTS_DIR}/run-test.zsh
 compile_test()
 # Translate test
 {
-  print "compiling: $( basename ${SWIFT_FILE} )"
+  local STC_OPT_LEVEL=$1
+  print "compiling: $( basename ${SWIFT_FILE} ) at O${STC_OPT_LEVEL}"
 
   ${STC} -l ${STC_LOG_FILE} -O ${STC_OPT_LEVEL} -C ${STC_IC_FILE} \
             ${ADDTL_STC_ARGS} \
@@ -185,14 +192,20 @@ run_test()
 report_result()
 {
   local TEST_PATH=$1
-  local EXIT_CODE=$2
+  local OPT_LEVEL=$2
+  local EXIT_CODE=$3
 
   if (( EXIT_CODE == 0 ))
   then
     printf "PASSED\n\n"
   else
     printf "FAILED\n\n"
-    FAILED_TESTS+=${TEST_PATH}
+    if [ ${#STC_OPT_LEVELS} -eq 1 ]
+    then
+      FAILED_TESTS+=${TEST_PATH}
+    else
+      FAILED_TESTS+="${TEST_PATH}@O${OPT_LEVEL}"
+    fi
     if (( EXIT_ON_FAIL ))
       then
       print "EXIT CODE: ${EXIT_CODE}"
@@ -243,50 +256,53 @@ do
   STC_IC_FILE=${TEST_PATH}.ic
 
   print "test: ${TEST_COUNT} (${i}/${SWIFT_FILE_TOTAL})"
-  compile_test
+  for OPT_LEVEL in $STC_OPT_LEVELS
+  do
+    compile_test ${OPT_LEVEL}
 
-  COMPILE_CODE=${EXIT_CODE}
+    COMPILE_CODE=${EXIT_CODE}
 
-  # Reverse exit code if the case was intended to fail to compile
-  if grep -q "THIS-TEST-SHOULD-NOT-COMPILE" ${SWIFT_FILE}
-  then
-    if grep -q "STC INTERNAL ERROR" ${STC_ERR_FILE}
+    # Reverse exit code if the case was intended to fail to compile
+    if grep -q "THIS-TEST-SHOULD-NOT-COMPILE" ${SWIFT_FILE}
     then
-        :
-    else
-        EXIT_CODE=$(( ! EXIT_CODE ))
+      if grep -q "STC INTERNAL ERROR" ${STC_ERR_FILE}
+      then
+          :
+      else
+          EXIT_CODE=$(( ! EXIT_CODE ))
+      fi
     fi
-  fi
 
-  if (( EXIT_CODE ))
-  then
-    print
-    cat ${STC_OUT_FILE}
-    cat ${STC_ERR_FILE}
-  fi
-
-  if (( ! COMPILE_CODE ))
-  then
-    if grep -q "COMPILE-ONLY-TEST" ${SWIFT_FILE}
+    if (( EXIT_CODE ))
     then
-        EXIT_CODE=0
-    else
-        run_test
-        EXIT_CODE=${?}
+      print
+      cat ${STC_OUT_FILE}
+      cat ${STC_ERR_FILE}
     fi
-  fi
 
-  if grep -q "THIS-TEST-SHOULD-CAUSE-WARNING" ${SWIFT_FILE}
-  then
-    if grep -q "^WARN" ${STC_ERR_FILE}
+    if (( ! COMPILE_CODE ))
     then
-        :
-    else
-        EXIT_CODE=1
-        printf "No warning in stc output\n"
+      if grep -q "COMPILE-ONLY-TEST" ${SWIFT_FILE}
+      then
+          EXIT_CODE=0
+      else
+          run_test
+          EXIT_CODE=${?}
+      fi
     fi
-  fi
-  report_result ${TEST_NAME} ${EXIT_CODE}
+
+    if grep -q "THIS-TEST-SHOULD-CAUSE-WARNING" ${SWIFT_FILE}
+    then
+      if grep -q "^WARN" ${STC_ERR_FILE}
+      then
+          :
+      else
+          EXIT_CODE=1
+          printf "No warning in stc output\n"
+      fi
+    fi
+    report_result ${TEST_NAME} ${OPT_LEVEL} ${EXIT_CODE}
+  done
 done
 
 print -- "--"
