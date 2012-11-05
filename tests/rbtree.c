@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "src/tools.h"
+
 #include "src/rbtree.h"
 
 static void
@@ -69,17 +71,19 @@ main()
 
   // TEST 3: random insertion / in-order deletion
 
-#if 0
-  int n = 5;
+  int n = 100;
   long A[n];
   for (int i = 0; i < n; i++)
     A[i] = i;
   shuffle(A, n);
   for (int i = 0; i < n; i++)
-    rbtree_add(&T, A[i]);
+    rbtree_add(&T, A[i], NULL);
+
+  printf("COMPLETE TREE:\n");
+  rbtree_print(&T);
+  printf("\n");
 
   pop_all(&T);
-#endif
 
 #if 0
   // TEST 4: random insertion / random deletion

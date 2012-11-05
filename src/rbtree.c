@@ -575,7 +575,7 @@ static void delete_case4(struct rbtree* target, struct rbtree_node* P,
 static void delete_case5(struct rbtree* target, struct rbtree_node* P,
                          struct rbtree_node* N, struct rbtree_node* S);
 static void delete_case6(struct rbtree* target, struct rbtree_node* P,
-                         struct rbtree_node* N, struct rbtree_node* S);
+                         struct rbtree_node* N);
 
 /**
    Preconditions:
@@ -725,38 +725,33 @@ delete_case5(struct rbtree* target, struct rbtree_node* P,
              struct rbtree_node* N, struct rbtree_node* S)
 {
   printf("delete_case5: %li->%li\n", P->key, N->key);
-  if  (S->color == BLACK) { /* this if statement is trivial,
-due to case 2 (even though case 2 changed the sibling to a sibling's child,
-the sibling's child can't be red, since no red parent can have a red child). */
-    /* the following statements just force the red to be on the left of the left of the parent,
-   or right of the right, so case six will rotate correctly. */
-    if ((N == P->left) &&
-        (S->right->color == BLACK) &&
-        (S->left->color == RED))
-    {
-      /* this last test is trivial too due to cases 2-4. */
-      S->color = RED;
-      S->left->color = BLACK;
-      rotate_right(target, S);
-    }
-    else if ((N == P->right) &&
-               (S->left->color == BLACK) &&
-               (S->right->color == RED))
-    {
-      /* this last test is trivial too due to cases 2-4. */
-      S->color = RED;
-      S->right->color = BLACK;
-      rotate_left(target, S);
-    }
+  valgrind_assert(S->color == BLACK);
+  if ((N == P->left) &&
+      (S->right == NULL || S->right->color == BLACK))
+  {
+    valgrind_assert(S->left->color == RED);
+    S->color = RED;
+    S->left->color = BLACK;
+    rotate_right(target, S);
   }
-  delete_case6(target, P, N, S);
+  else if ((N == P->right) &&
+           (S->left == NULL || S->left->color == BLACK))
+  {
+    valgrind_assert(S->right->color == RED);
+    S->color = RED;
+    S->right->color = BLACK;
+    rotate_left(target, S);
+  }
+  delete_case6(target, P, N);
 }
 
 static void
 delete_case6(struct rbtree* target, struct rbtree_node* P,
-             struct rbtree_node* N, struct rbtree_node* S)
+             struct rbtree_node* N)
 {
   printf("delete_case6: %li->%li\n", P->key, N->key);
+  struct rbtree_node* S = sibling(P, N);
+  show_node(S);
   S->color = P->color;
   P->color = BLACK;
 
