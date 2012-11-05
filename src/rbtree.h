@@ -52,6 +52,12 @@ struct rbtree_node* rbtree_leftmost(struct rbtree* target);
 
 long rbtree_leftmost_key(struct rbtree* target);
 
+bool rbtree_move(struct rbtree* target, long key_old, long key_new);
+
 void rbtree_print(struct rbtree* target);
+
+void rbtree_clear(struct rbtree* target);
+
+void rbtree_free(struct rbtree* target);
 
 #endif

@@ -256,6 +256,9 @@ insert_case5(struct rbtree* target, struct rbtree_node* node)
     rotate_left(target, g);
 }
 
+static inline void rbtree_add_node(struct rbtree* target,
+                                   struct rbtree_node* node);
+
 bool
 rbtree_add(struct rbtree* target, long key, void* data)
 {
@@ -263,6 +266,16 @@ rbtree_add(struct rbtree* target, long key, void* data)
   struct rbtree_node* node = create_node(key, data);
   if (node == NULL) return false;
 
+  rbtree_add_node(target, node);
+
+  printf("add(): ok.\n");
+  return true;
+}
+
+static inline void
+rbtree_add_node(struct rbtree* target,
+                struct rbtree_node* node)
+{
   if (target->size == 0)
   {
     target->root = node;
@@ -275,12 +288,9 @@ rbtree_add(struct rbtree* target, long key, void* data)
     struct rbtree_node* root = target->root;
     rbtree_add_loop(target, node, root);
     printf("added:\n");
-    // rbtree_print(target);
+    rbtree_print(target);
     insert_case2(target, node);
   }
-
-  printf("add(): ok.\n");
-  return true;
 }
 
 static inline void
@@ -569,14 +579,12 @@ static void delete_case1(struct rbtree* target, struct rbtree_node* P,
                          struct rbtree_node* N);
 static void delete_case2(struct rbtree* target, struct rbtree_node* P,
                          struct rbtree_node* N);
-static void delete_case3(struct rbtree* target, struct rbtree_node* P,
-                         struct rbtree_node* N);
+static void delete_case3(struct rbtree* target, struct rbtree_node* N);
 static void delete_case4(struct rbtree* target, struct rbtree_node* P,
                          struct rbtree_node* N, struct rbtree_node* S);
 static void delete_case5(struct rbtree* target, struct rbtree_node* P,
                          struct rbtree_node* N, struct rbtree_node* S);
-static void delete_case6(struct rbtree* target, struct rbtree_node* P,
-                         struct rbtree_node* N);
+static void delete_case6(struct rbtree* target, struct rbtree_node* N);
 
 /**
    Preconditions:
@@ -593,11 +601,13 @@ delete_one_child(struct rbtree* target, struct rbtree_node* N)
   valgrind_assert(N->right == NULL || N->left == NULL);
 
   rbtree_print(target);
+  struct rbtree_node* P = N->parent;
   struct rbtree_node* C =
       (N->right == NULL) ? N->left : N->right;
-  struct rbtree_node* P = N->parent;
-  show_node(P);
 
+  show_node(P);
+  show_node(N);
+  show_node(C);
   if (C == NULL)
   {
     printf("C: NULL\n");
@@ -618,9 +628,6 @@ delete_one_child(struct rbtree* target, struct rbtree_node* N)
     C = t;
   }
 
-  show_node(P);
-  show_node(N);
-  show_node(C);
   if (N->color == BLACK)
   {
     if (C != NULL && C->color == RED)
@@ -682,16 +689,21 @@ delete_case2(struct rbtree* target, struct rbtree_node* P,
     else
       rotate_right(target, P);
   }
-  delete_case3(target, P, N);
+  delete_case3(target, N);
 }
 
 static void
-delete_case3(struct rbtree* target, struct rbtree_node* P,
+delete_case3(struct rbtree* target,
              struct rbtree_node* N)
 {
-  printf("delete_case3: %li->%li\n", P->key, N->key);
+  printf("delete_case3: \n");
+  struct rbtree_node* P = N->parent;
   struct rbtree_node* S = sibling(P, N);
+
+  show_node(P);
+  show_node(N);
   show_node(S);
+
   if ((P->color == BLACK) &&
       (S->color == BLACK) &&
       (S->left  == NULL || S->left->color  == BLACK) &&
@@ -743,33 +755,58 @@ delete_case5(struct rbtree* target, struct rbtree_node* P,
     S->right->color = BLACK;
     rotate_left(target, S);
   }
-  delete_case6(target, P, N);
+  delete_case6(target, N);
 }
 
 static void
-delete_case6(struct rbtree* target, struct rbtree_node* P,
+delete_case6(struct rbtree* target,
              struct rbtree_node* N)
 {
-  printf("delete_case6: %li->%li\n", P->key, N->key);
+  printf("delete_case6:\n");
+  struct rbtree_node* P = N->parent;
   struct rbtree_node* S = sibling(P, N);
+  show_node(P);
+  show_node(N);
   show_node(S);
   S->color = P->color;
   P->color = BLACK;
 
-  if (N == P->left)
+  tree_side s = which_side(P, N);
+  if (s == LEFT)
   {
     S->right->color = BLACK;
     rotate_left(target, P);
   }
-  else
+  else if (s == RIGHT)
   {
     S->left->color = BLACK;
     rotate_right(target, P);
   }
+  else
+    valgrind_fail("X");
 }
 
-static void
-rbtree_print_loop(struct rbtree_node* node, int level);
+bool
+rbtree_move(struct rbtree* target, long key_old, long key_new)
+{
+  struct rbtree_node* p = rbtree_search_node(target, key_old);
+  if (p == NULL)
+    return false;
+  rbtree_remove_node(target, p);
+
+  rbtree_print(target);
+
+  p->key   = key_new;
+  p->color = RED; // new nodes are always RED
+  p->left  = NULL;
+  p->right = NULL;
+  printf("move: add...\n");
+  rbtree_add_node(target, p);
+
+  return true;
+}
+
+static void rbtree_print_loop(struct rbtree_node* node, int level);
 
 void
 rbtree_print(struct rbtree* target)
@@ -816,4 +853,33 @@ rbtree_print_loop(struct rbtree_node* node, int level)
   }
   else
     print_x(level+1);
+}
+
+static void rbtree_free_subtree(struct rbtree_node* node);
+
+void
+rbtree_clear(struct rbtree* target)
+{
+  if (target->size != 0)
+  {
+    rbtree_free_subtree(target->root);
+    target->size = 0;
+  }
+}
+
+static void
+rbtree_free_subtree(struct rbtree_node* node)
+{
+  if (node->left != NULL)
+    rbtree_free_subtree(node->left);
+  if (node->right != NULL)
+    rbtree_free_subtree(node->right);
+  free(node);
+}
+
+void
+rbtree_free(struct rbtree* target)
+{
+  rbtree_clear(target);
+  free(target);
 }

@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "src/tools.h"
@@ -20,6 +21,8 @@ pop_all(struct rbtree* T)
 {
   long k;
   void* v;
+  int size = T->size;
+  int pops = 0;
   while (true)
   {
     bool b = rbtree_pop(T, &k, &v);
@@ -27,7 +30,9 @@ pop_all(struct rbtree* T)
     printf("popped: %li=%s\n\n", k, (char*) v);
     printf("STABLE:\n");
     rbtree_print(T);
+    pops++;
   }
+  assert(pops == size);
 }
 
 int
@@ -94,27 +99,67 @@ main()
   for (int i = 0; i < n; i++)
   {
     printf("removing: %li\n", A[i]);
-    rbtree_remove(&T, A[i], NULL);
+    bool b = rbtree_remove(&T, A[i], NULL);
+    assert(b);
   }
 
+  // TEST 5: moves
 
-//  printf("move 13 -> 1\n");
-//  rbtree_move(&T, 13, 1);
-//  rbtree_print(&T);
-//  rbtree_pop(&T, &k, &v);
-//  printf("popped: %li=%s\n\n", k, (char*) v);
-//
-//  printf("move 9 -> 20\n");
-//  rbtree_move(&T, 9, 20);
-//  rbtree_print(&T);
-//  printf("\n");
-//
-//  printf("move 12 -> 9\n");
-//  rbtree_move(&T, 12, 9);
-//  rbtree_print(&T);
-//  printf("\n");
-//
-//  rbtree_clear(&T);
+  int m = 8;
+  int moves = 2;
+  assert(moves < m/2);
+
+  long B[m];
+  for (int i = 0; i < m; i++)
+    B[i] = i;
+
+  long tmp[m];
+  memcpy(tmp, B, m*sizeof(long));
+  shuffle(tmp, m);
+
+  // sources
+  long S[moves];
+  // dests
+  long D[moves];
+  for (int i = 0; i < moves; i++)
+  {
+    S[i] = tmp[i];
+    D[i] = tmp[m-i-1];
+  }
+
+  printf("B:\n");
+  print_longs(B, m);
+  printf("\n");
+  printf("S:\n");
+  print_longs(S, moves);
+  printf("\n");
+  printf("D:\n");
+  print_longs(D, moves);
+  printf("\n");
+
+  // add all data
+  printf("ADDING...\n");
+  for (int i = 0; i < m; i++)
+    rbtree_add(&T, B[i], NULL);
+  rbtree_print(&T);
+
+  // remove all dests (make space for moves)
+  printf("REMOVING DESTS...\n");
+  for (int i = 0; i < moves; i++)
+    rbtree_remove(&T, D[i], NULL);
+  rbtree_print(&T);
+
+  printf("MOVING...\n");
+  // do each move
+  for (int i = 0; i < moves; i++)
+  {
+    printf("moving: %li to %li\n", S[i], D[i]);
+    rbtree_move(&T, S[i], D[i]);
+    printf("move done.\n");
+    rbtree_print(&T);
+  }
+
+  rbtree_clear(&T);
 
   printf("SIZE: %i\n", T.size);
   printf("DONE\n");
