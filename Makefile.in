@@ -157,14 +157,13 @@ tests: $(TESTS)
 test_results: $(TEST_RESULTS)
 
 # Test result rule for C tests
-%.result: %.sh %.x
+%.result: %.sh %.x install.txt
 	$(Q) "  SH		$(@)"
 	$(E) rm -f $(@)
 	$(E) $(<) > $(*).tmp 2>&1
 	$(E) mv $(*).tmp $(@) 2>&1
 
-
-$(TESTS): %.x: %.o $(EXMCUTILS) install
+$(TESTS): %.x: %.o $(EXMCUTILS) install.txt
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(PIC) $(LDFLAGS) $(<) \
                    -L$(INSTALL_LIB) -l exmcutils \
@@ -182,19 +181,25 @@ endif
 
 PROVENANCE = version.txt source.txt config.log
 
-install: $(EXMCUTILS)
+install.txt: $(EXMCUTILS)
 	@echo
 	$(Q) "  INSTALL: $(INSTALL_PREFIX)"
+	$(E) touch install.txt
 #       Set up directories
 	$(E) mkdir -pv $(INSTALL_PREFIX)
 	$(E) mkdir -pv $(INSTALL_ETC)
 	$(E) mkdir -pv $(INSTALL_INCLUDE)
 	$(E) mkdir -pv $(INSTALL_LIB)
 	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
+	$(E) cp $(CP_ARGS) install.txt $(INSTALL_ETC)
 #       Install the headers and library
 	$(E) cp $(CP_ARGS) c-utils-config.h $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) src/*.h $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) $(EXMCUTILS) $(INSTALL_LIB)
+
+# Maintaining the install.txt file is a simple way to
+# create a dependency on the installation
+install: install.txt
 
 ### CLEAN
 
@@ -205,7 +210,7 @@ clean:
 	$(E) rm -fv $(EXMCUTILS)
 	$(E) rm -fv $(TESTS) $(TEST_DEPS) $(TEST_OBJS)
 
-.PHONY: clean
+.PHONY: clean install
 
 ### MAKEFILE DEBUGGING
 
