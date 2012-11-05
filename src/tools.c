@@ -198,3 +198,37 @@ getenv_ulong(const char* name, unsigned long dflt,
   return true;
 }
 
+/**
+
+ */
+void
+shuffle(long* A, int count)
+{
+  // Shuffled working space: initially empty
+  long buffer[count];
+  // Index into buffer
+  int index = 0;
+  // Number of remaining inputs
+  int inputs = count;
+
+  while (inputs > 0)
+  {
+    int r = random_between(0, inputs);
+    buffer[index++] = A[r];
+    // Shift remaining inputs into bottom of A (no gaps)
+    memmove(&A[r], &A[r+1], (inputs-r-1)*sizeof(long));
+    inputs--;
+  }
+
+  // Store result
+  memcpy(A, buffer, count*sizeof(long));
+}
+
+void
+print_longs(long* A, int count)
+{
+  int i;
+  for (i = 0; i < count-1; i++)
+    printf("%li,", A[i]);
+  printf("%li", A[i]);
+}

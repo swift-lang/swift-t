@@ -156,4 +156,14 @@ bool getenv_integer(const char* name, int dflt, int* result);
 bool getenv_ulong(const char* name, unsigned long dflt,
                   unsigned long* result);
 
+/**
+   Shuffle array A in-place
+ */
+void shuffle(long* A, int count);
+
+/**
+   Simply print comma-separated array of longs
+ */
+void print_longs(long* A, int count);
+
 #endif
