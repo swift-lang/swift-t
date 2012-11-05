@@ -214,19 +214,19 @@ tree_random_loop(struct tree_node* p)
 
 typedef enum
 {
-  TREE_LEFT, TREE_RIGHT, TREE_ROOT, TREE_NEITHER
+  LEFT, RIGHT, ROOT, NEITHER
 } tree_side;
 
 static inline tree_side
 which_side(struct tree_node* parent, struct tree_node* child)
 {
   if (parent == NULL)
-    return TREE_ROOT;
+    return ROOT;
   else if (parent->left == child)
-    return TREE_LEFT;
+    return LEFT;
   else if (parent->right == child)
-    return TREE_RIGHT;
-  return TREE_NEITHER;
+    return RIGHT;
+  return NEITHER;
 }
 
 void
@@ -256,10 +256,10 @@ tree_remove_node(struct tree* target, struct tree_node* node)
 
   tree_side s = which_side(node->parent, node);
 
-  assert(s != TREE_NEITHER);
-  if (s == TREE_LEFT)
+  assert(s != NEITHER);
+  if (s == LEFT)
     node->parent->left = replacement;
-  else if (s == TREE_RIGHT)
+  else if (s == RIGHT)
     node->parent->right = replacement;
   if (replacement != NULL)
     replacement->parent = node->parent;
