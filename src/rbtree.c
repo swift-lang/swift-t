@@ -356,7 +356,8 @@ rbtree_remove(struct rbtree* target, long key, void** data)
   if (N == NULL)
     return false;
 
-  *data = N->data;
+  if (data != NULL)
+    *data = N->data;
 
   rbtree_remove_node(target, N);
 

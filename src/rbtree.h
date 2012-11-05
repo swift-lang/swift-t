@@ -37,6 +37,10 @@ bool rbtree_add(struct rbtree* target, long key, void* data);
 struct rbtree_node* rbtree_search_node(struct rbtree* target,
                                        long key);
 
+/**
+   Remove key from tree
+   @param data If non-NULL, store data here
+ */
 bool rbtree_remove(struct rbtree* target, long key, void** data);
 
 void rbtree_remove_node(struct rbtree* target,

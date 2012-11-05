@@ -71,7 +71,7 @@ main()
 
   // TEST 3: random insertion / in-order deletion
 
-  int n = 100;
+  int n = 20;
   long A[n];
   for (int i = 0; i < n; i++)
     A[i] = i;
@@ -85,18 +85,19 @@ main()
 
   pop_all(&T);
 
-#if 0
   // TEST 4: random insertion / random deletion
 
   shuffle(A, n);
   for (int i = 0; i < n; i++)
-    rbtree_add(&T, A[i]);
+    rbtree_add(&T, A[i], NULL);
   shuffle(A, n);
   for (int i = 0; i < n; i++)
-    rbtree_remove(&T, A[i]);
-#endif
+  {
+    printf("removing: %li\n", A[i]);
+    rbtree_remove(&T, A[i], NULL);
+  }
 
-//
+
 //  printf("move 13 -> 1\n");
 //  rbtree_move(&T, 13, 1);
 //  rbtree_print(&T);
@@ -115,6 +116,7 @@ main()
 //
 //  rbtree_clear(&T);
 
+  printf("SIZE: %i\n", T.size);
   printf("DONE\n");
   return 0;
 }
