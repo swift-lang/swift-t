@@ -35,9 +35,9 @@ mm_init_units(void)
   GB = MB*1024;
 }
 
-#ifndef DISABLE_MM
-
 typedef int mm_context;
+
+#ifndef DISABLE_MM
 
 /**
    Default context
@@ -119,7 +119,7 @@ mm_init(void)
 static inline mm_context
 mm_create(long max, char* name)
 {
-  return mm_default;
+  return -1;
 }
 
 static inline bool
