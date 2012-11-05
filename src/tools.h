@@ -105,6 +105,7 @@ void valgrind_assert_failed_msg(const char *file, int line,
                            const char* format, ...);
 
 /**
+   VALGRIND_ASSERT
    Substitute for assert(): provide stack trace via valgrind
    If not running under valgrind, works like assert()
  */
@@ -119,6 +120,12 @@ void valgrind_assert_failed_msg(const char *file, int line,
     if (!(condition)) \
     { valgrind_assert_failed_msg(__FILE__, __LINE__, ## msg); }
 #endif
+
+/**
+   Cause valgrind assertion error behavior w/o condition
+ */
+#define valgrind_fail(msg...) \
+  valgrind_assert_failed_msg(__FILE__, __LINE__, ## msg);
 
 void gdb_spin(int target);
 
