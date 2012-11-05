@@ -8,7 +8,7 @@ THIS=$0
 BIN=${THIS%.sh}.x
 OUTPUT=${THIS%.sh}.out
 
-${BIN} >& ${OUTPUT}
+${VALGRIND} ${BIN} >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
 grep DONE ${OUTPUT} || exit 1
