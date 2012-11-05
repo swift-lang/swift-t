@@ -275,12 +275,11 @@ rbtree_add(struct rbtree* target, long key, void* data)
     struct rbtree_node* root = target->root;
     rbtree_add_loop(target, node, root);
     printf("added:\n");
-    rbtree_print(target);
+    // rbtree_print(target);
     insert_case2(target, node);
   }
 
-  printf("ok.\n");
-  rbtree_print(target);
+  printf("add(): ok.\n");
   return true;
 }
 
@@ -596,6 +595,7 @@ delete_one_child(struct rbtree* target, struct rbtree_node* N)
   struct rbtree_node* C =
       (N->right == NULL) ? N->left : N->right;
   struct rbtree_node* P = N->parent;
+  show_node(P);
 
   if (C == NULL)
   {
@@ -603,7 +603,7 @@ delete_one_child(struct rbtree* target, struct rbtree_node* N)
     printf("NO CHILDREN\n");
     if (N->color == RED)
     {
-      replace(N->parent, N, NULL);
+      replace(P, N, NULL);
       return;
     }
   }
@@ -787,6 +787,7 @@ rbtree_print(struct rbtree* target)
 static void
 rbtree_print_loop(struct rbtree_node* node, int level)
 {
+  valgrind_assert(node != NULL);
   char buffer[level+16];
   char* p = &buffer[0];
   append(p, "+ ");

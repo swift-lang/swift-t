@@ -13,11 +13,29 @@
 
 #include "src/rbtree.h"
 
+static void
+pop_all(struct rbtree* T)
+{
+  long k;
+  void* v;
+  while (true)
+  {
+    bool b = rbtree_pop(T, &k, &v);
+    if (!b) { printf("POPPED NULL\n"); break; }
+    printf("popped: %li=%s\n\n", k, (char*) v);
+    printf("STABLE:\n");
+    rbtree_print(T);
+  }
+}
+
 int
 main()
 {
   struct rbtree T;
   rbtree_init(&T);
+
+  // TEST 1: special case
+
   rbtree_add(&T, 12, "hello");
   rbtree_add(&T, 8,  "hello");
   rbtree_add(&T, 9,  "hello");
@@ -35,24 +53,44 @@ main()
   printf("remove ok.\n");
   rbtree_print(&T);
 
-  long k;
-  void* v;
-  // works up to i<4
-  for (int i = 0; i < 8; i++)
-  {
-    printf("\nPOP:\n");
-    bool b = rbtree_pop(&T, &k, &v);
-    if (!b) { printf("POPPED NULL\n"); break; }
-    printf("popped: %li=%s\n\n", k, (char*) v);
-    printf("STABLE:\n");
-    rbtree_print(&T);
-  }
+  pop_all(&T);
 
   printf("\n--\n\n");
 
-  // for (long i = 0; i <
+ // TEST 2: in-order insertion
 
+  for (long i = 1; i <= 20; i++)
+  {
+    rbtree_add(&T, i, "hello");
+    rbtree_print(&T);
+  }
 
+  pop_all(&T);
+
+  // TEST 3: random insertion / in-order deletion
+
+#if 0
+  int n = 5;
+  long A[n];
+  for (int i = 0; i < n; i++)
+    A[i] = i;
+  shuffle(A, n);
+  for (int i = 0; i < n; i++)
+    rbtree_add(&T, A[i]);
+
+  pop_all(&T);
+#endif
+
+#if 0
+  // TEST 4: random insertion / random deletion
+
+  shuffle(A, n);
+  for (int i = 0; i < n; i++)
+    rbtree_add(&T, A[i]);
+  shuffle(A, n);
+  for (int i = 0; i < n; i++)
+    rbtree_remove(&T, A[i]);
+#endif
 
 //
 //  printf("move 13 -> 1\n");
