@@ -50,7 +50,10 @@ main()
 
   printf("\n--\n\n");
 
-  exit(0);
+  // for (long i = 0; i <
+
+
+
 //
 //  printf("move 13 -> 1\n");
 //  rbtree_move(&T, 13, 1);
