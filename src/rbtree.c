@@ -15,11 +15,7 @@
 #include "tools.h"
 
 #include "rbtree.h"
-
-typedef enum
-{
-  LEFT, RIGHT, ROOT, NEITHER
-} tree_side;
+#include "tree-common.h"
 
 static inline tree_side
 which_side(struct rbtree_node* parent, struct rbtree_node* child)
@@ -783,18 +779,6 @@ rbtree_print(struct rbtree* target)
     printf("TREE EMPTY\n");
   else
     rbtree_print_loop(target->root, 0);
-}
-
-static void
-print_x(int level)
-{
-  char buffer[level+16];
-  char* p = &buffer[0];
-  append(p, "+ ");
-  for (int i = 0; i < level; i++)
-    append(p, " ");
-  append(p, "X");
-  printf("%s\n", buffer);
 }
 
 static void

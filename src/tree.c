@@ -13,6 +13,7 @@
 
 #include "tools.h"
 
+#include "tree-common.h"
 #include "tree.h"
 
 void
@@ -212,11 +213,6 @@ tree_random_loop(struct tree_node* p)
   return tree_random_loop(p->left);
 }
 
-typedef enum
-{
-  LEFT, RIGHT, ROOT, NEITHER
-} tree_side;
-
 static inline tree_side
 which_side(struct tree_node* parent, struct tree_node* child)
 {
@@ -313,18 +309,6 @@ tree_print(struct tree* target)
     printf("TREE EMPTY\n");
   else
     tree_print_loop(target->root, 0);
-}
-
-static void
-print_x(int level)
-{
-  char buffer[level];
-  int i;
-  for (i = 0; i < level; i++)
-    buffer[i] = ' ';
-  buffer[i++] = 'X';
-  buffer[i] = '\0';
-  printf("%s\n", buffer);
 }
 
 static void
