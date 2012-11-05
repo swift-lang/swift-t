@@ -575,16 +575,25 @@ rbtree_leftmost_loop(struct rbtree_node* N)
   return result;
 }
 
+// All of these can be inlined except delete_case1(), which is
+// called recursively
 static void delete_case1(struct rbtree* target, struct rbtree_node* P,
                          struct rbtree_node* N);
-static void delete_case2(struct rbtree* target, struct rbtree_node* P,
-                         struct rbtree_node* N);
-static void delete_case3(struct rbtree* target, struct rbtree_node* N);
-static void delete_case4(struct rbtree* target, struct rbtree_node* P,
-                         struct rbtree_node* N, struct rbtree_node* S);
-static void delete_case5(struct rbtree* target, struct rbtree_node* P,
-                         struct rbtree_node* N, struct rbtree_node* S);
-static void delete_case6(struct rbtree* target, struct rbtree_node* N);
+static inline void delete_case2(struct rbtree* target,
+                                struct rbtree_node* P,
+                                struct rbtree_node* N);
+static inline void delete_case3(struct rbtree* target,
+                                struct rbtree_node* N);
+static inline void delete_case4(struct rbtree* target,
+                                struct rbtree_node* P,
+                                struct rbtree_node* N,
+                                struct rbtree_node* S);
+static inline void delete_case5(struct rbtree* target,
+                                struct rbtree_node* P,
+                                struct rbtree_node* N,
+                                struct rbtree_node* S);
+static inline void delete_case6(struct rbtree* target,
+                                struct rbtree_node* N);
 
 /**
    Preconditions:
@@ -672,7 +681,7 @@ sibling(struct rbtree_node* P, struct rbtree_node* N)
     return P->left;
 }
 
-static void
+static inline void
 delete_case2(struct rbtree* target, struct rbtree_node* P,
              struct rbtree_node* N)
 {
@@ -692,7 +701,7 @@ delete_case2(struct rbtree* target, struct rbtree_node* P,
   delete_case3(target, N);
 }
 
-static void
+static inline void
 delete_case3(struct rbtree* target,
              struct rbtree_node* N)
 {
@@ -716,7 +725,7 @@ delete_case3(struct rbtree* target,
     delete_case4(target, P, N, S);
 }
 
-static void
+static inline void
 delete_case4(struct rbtree* target, struct rbtree_node* P,
              struct rbtree_node* N, struct rbtree_node* S)
 {
@@ -733,7 +742,7 @@ delete_case4(struct rbtree* target, struct rbtree_node* P,
     delete_case5(target, P, N, S);
 }
 
-static void
+static inline void
 delete_case5(struct rbtree* target, struct rbtree_node* P,
              struct rbtree_node* N, struct rbtree_node* S)
 {
@@ -758,7 +767,7 @@ delete_case5(struct rbtree* target, struct rbtree_node* P,
   delete_case6(target, N);
 }
 
-static void
+static inline void
 delete_case6(struct rbtree* target,
              struct rbtree_node* N)
 {
