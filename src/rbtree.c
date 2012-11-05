@@ -4,6 +4,9 @@
  *
  *  Created on: Oct 26, 2012
  *      Author: wozniak
+ *
+ * Implementation based on:
+ * http://en.wikipedia.org/wiki/Red%E2%80%93black_tree
  */
 
 #include <assert.h>
