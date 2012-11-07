@@ -18,7 +18,7 @@
 #include <list.h>
 #include <table_ip.h>
 #include <tools.h>
-#include <tree.h>
+#include <rbtree.h>
 
 #include "adlb-defs.h"
 #include "common.h"
@@ -27,14 +27,14 @@
 #include "workqueue.h"
 
 /** Uniquify work units on this server */
-xlb_work_unit_id unique = 1;
+static xlb_work_unit_id unique = 1;
 
 /**
    Map from target rank to type array of priority heap -
    heap sorted by negative priority.
    Only contains targeted work
 */
-struct table_ip targeted_work;
+static struct table_ip targeted_work;
 
 /**
    Array of trees: one for each work type
@@ -42,18 +42,16 @@ struct table_ip targeted_work;
    The tree contains work_unit*
    Ordered by work unit priority
  */
-struct tree* typed_work;
+static struct rbtree* typed_work;
 
 void
 workqueue_init(int work_types)
 {
   DEBUG("workqueue_init(work_types=%i)", work_types);
   table_ip_init(&targeted_work, 128);
-  typed_work = malloc(sizeof(struct tree) * work_types);
+  typed_work = malloc(sizeof(struct rbtree) * work_types);
   for (int i = 0; i < work_types; i++)
-  {
-    tree_init(&typed_work[i]);
-  }
+    rbtree_init(&typed_work[i]);
 }
 
 xlb_work_unit_id
@@ -81,8 +79,8 @@ workqueue_add(int type, int putter, int priority, int answer,
 
   if (target_rank < 0)
   {
-    struct tree* T = &typed_work[type];
-    tree_add(T, -priority, wu);
+    struct rbtree* T = &typed_work[type];
+    rbtree_add(T, -priority, wu);
   }
   else
   {
@@ -101,32 +99,6 @@ workqueue_add(int type, int putter, int priority, int answer,
     heap_add(H, -priority, wu);
   }
 }
-
-//static work_unit*
-//select_untargeted(void)
-//{
-//  long highest_key = LONG_MIN;
-//  int  highest_type = -1;
-//  struct tree_node* highest_node = NULL;
-//  for (int i = 0; i < num_types; i++)
-//  {
-//    struct tree* T = &typed_work[i];
-//    if (T->size == 0)
-//      continue;
-//    long k = tree_leftmost_key(T);
-//    if (k > highest_key)
-//    {
-//      highest_key = k;
-//      highest_type = i;
-//    }
-//  }
-//  if (highest_node == NULL)
-//    return NULL;
-//
-//  struct tree* T = &typed_work[highest_type];
-//  tree_remove_node(T, highest_node);
-//  return highest_node->data;
-//}
 
 /**
    If we have no more targeted work for this rank, clean up data
@@ -161,12 +133,12 @@ workqueue_get(int target, int type)
   }
 
   // Select untargeted work
-  struct tree* T = &typed_work[type];
-  struct tree_node* node = tree_leftmost(T);
+  struct rbtree* T = &typed_work[type];
+  struct rbtree_node* node = rbtree_leftmost(T);
   if (node == NULL)
     // We found nothing
     return NULL;
-  tree_remove_node(T, node);
+  rbtree_remove_node(T, node);
   wu = node->data;
   DEBUG("workqueue_get(): untargeted: %li", wu->id);
   free(node);
@@ -186,7 +158,7 @@ workqueue_steal(int max_memory, int* count, xlb_work_unit*** result)
   float fractions[xlb_types_size];
   int total = 0;
   for (int i = 0; i < xlb_types_size; i++)
-    total += tree_size(&typed_work[i]);
+    total += (&typed_work[i])->size;
 
   DEBUG("workqueue_steal(): total=%i", total);
 
@@ -198,7 +170,7 @@ workqueue_steal(int max_memory, int* count, xlb_work_unit*** result)
 
   for (int i = 0; i < xlb_types_size; i++)
   {
-    float size = (float) tree_size(&typed_work[i]);
+    float size = (float) (&typed_work[i])->size;
     fractions[i] = size / total;
     // TRACE("fractions[%i]=%0.5f", i, fractions[i]);
   }
@@ -212,11 +184,11 @@ workqueue_steal(int max_memory, int* count, xlb_work_unit*** result)
   for (int i = 0; i < share; i++)
   {
     int type = random_draw(fractions, xlb_types_size);
-    struct tree* T = &typed_work[type];
-    struct tree_node* node = tree_random(T);
+    struct rbtree* T = &typed_work[type];
+    struct rbtree_node* node = rbtree_random(T);
     if (node == NULL)
       continue;
-    tree_remove_node(T, node);
+    rbtree_remove_node(T, node);
     stolen[actual] = (xlb_work_unit*) node->data;
     actual++;
     free(node);
@@ -254,7 +226,7 @@ workqueue_finalize()
   }
   for (int i = 0; i < xlb_types_size; i++)
   {
-    int count = tree_size(&typed_work[i]);
+    int count = (&typed_work[i])->size;
     if (count > 0)
       printf("WARNING: server contains %i work units of type: %i\n",
              count, i);
