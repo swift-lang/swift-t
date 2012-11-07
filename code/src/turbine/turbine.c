@@ -484,8 +484,8 @@ turbine_pop(turbine_transform_id id, turbine_action_type* action_type,
     return TURBINE_ERROR_NOT_FOUND;
 
   // Debugging
-  DEBUG_TURBINE("pop: TR: {%li}", id);
-  DEBUG_TURBINE("\t action: {%li} %s: %s", id, T->name, T->action);
+  DEBUG_TURBINE("pop: transform: {%li}", id);
+  DEBUG_TURBINE("\t action:   {%li} %s: %s", id, T->name, T->action);
   DEBUG_TURBINE("\t priority: {%li} => %i\n", id, T->priority);
 
   // Copy outputs
