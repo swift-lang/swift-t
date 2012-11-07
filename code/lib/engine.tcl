@@ -68,8 +68,11 @@ namespace eval turbine {
 
         global WORK_TYPE
 
+        debug "release: $transform"
+
         switch $action_type {
             1 { # $turbine::LOCAL
+                debug "executing local action: $transform $action"
                 eval $action
             }
             2 { # $turbine::CONTROL
