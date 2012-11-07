@@ -148,4 +148,43 @@ mm_context_name(mm_context ctx, char* name)
   return true;
 }
 
+#else
+// Disable this module
+
+void
+mm_init(void)
+{
+  mm_init_units();
+}
+
+mm_context
+mm_create(long max, char* name)
+{
+  return -1;
+}
+
+bool
+mm_set_max(mm_context context, long max)
+{
+  return true;
+}
+
+bool
+mm_try(mm_context ctx, long bytes)
+{
+  return true;
+}
+
+bool
+mm_take(mm_context ctx, long bytes)
+{
+  return true;
+}
+
+bool
+mm_release(mm_context ctx, long bytes)
+{
+  return true;
+}
+
 #endif

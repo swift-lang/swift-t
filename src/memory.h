@@ -16,7 +16,6 @@
 // Must be first include:
 #define _GNU_SOURCE // for strnlen()
 #include <string.h>
-
 #include <stdbool.h>
 
 #ifdef NDEBUG
@@ -36,8 +35,6 @@ mm_init_units(void)
 }
 
 typedef int mm_context;
-
-#ifndef DISABLE_MM
 
 /**
    Default context
@@ -106,46 +103,5 @@ bool mm_context_info(mm_context ctx, mm_info* info);
    @return false if ctx is not defined
  */
 bool mm_context_name(mm_context ctx, char* name);
-
-#else
-// Disable this module
-
-static inline void
-mm_init(void)
-{
-  mm_init_units();
-}
-
-static inline mm_context
-mm_create(long max, char* name)
-{
-  return -1;
-}
-
-static inline bool
-mm_set_max(mm_context context, long max)
-{
-  return true;
-}
-
-static inline bool
-mm_try(mm_context ctx, long bytes)
-{
-  return true;
-}
-
-static inline bool
-mm_take(mm_context ctx, long bytes)
-{
-  return true;
-}
-
-static inline bool
-mm_release(mm_context ctx, long bytes)
-{
-  return true;
-}
-
-#endif
 
 #endif
