@@ -108,16 +108,11 @@ static inline void rbtree_add_loop(struct rbtree* target,
 static inline void
 rotate_right(struct rbtree* target, struct rbtree_node* N)
 {
-  printf("rotate right: %li\n", N->key);
   struct rbtree_node* P = N->parent;
-  if (P == NULL)
-  {
-    printf("root!\n");
-
-  }
   struct rbtree_node* C = N->left;
-  valgrind_assert(C != NULL);
   struct rbtree_node* X = C->right;
+
+  valgrind_assert(C != NULL);
 
   C->right  = N;
   N->parent = C;
@@ -130,9 +125,6 @@ rotate_right(struct rbtree* target, struct rbtree_node* N)
   N->left   = X;
   if (X != NULL)
     X->parent = N;
-  printf("rotate right: result:\n");
-  rbtree_print(target);
-  printf("rotate right: ok.\n");
 }
 
 /*
@@ -144,18 +136,12 @@ rotate_right(struct rbtree* target, struct rbtree_node* N)
 static inline void
 rotate_left(struct rbtree* target, struct rbtree_node* N)
 {
-  printf("rotate left: %li\n", N->key);
   struct rbtree_node* P = N->parent;
-
-  if (P == NULL)
-  {
-    printf("root!\n");
-  }
-
-  // struct rbtree_node* B = N->left;
   struct rbtree_node* C = N->right;
-  valgrind_assert(C != NULL);
   struct rbtree_node* X = C->left;
+
+  valgrind_assert(C != NULL);
+
 
   C->left = N;
   N->parent = C;
@@ -169,21 +155,21 @@ rotate_left(struct rbtree* target, struct rbtree_node* N)
   N->right = X;
   if (X != NULL)
     X->parent = N;
-  printf("rotate left: result:\n");
-  rbtree_print(target);
-  printf("rotate left: ok.\n");
 }
+
+// All of these are inlined except insert_case3(), which makes a
+// recursive call
 
 static inline void insert_case1(struct rbtree* target,
                                 struct rbtree_node* node);
 static inline void insert_case2(struct rbtree* target,
                                 struct rbtree_node* node);
-static void insert_case3(struct rbtree* target,
-                         struct rbtree_node* node);
-static void insert_case4(struct rbtree* target,
-                         struct rbtree_node* node);
-static void insert_case5(struct rbtree* target,
-                         struct rbtree_node* node);
+static        void insert_case3(struct rbtree* target,
+                                struct rbtree_node* node);
+static inline void insert_case4(struct rbtree* target,
+                                struct rbtree_node* node);
+static inline void insert_case5(struct rbtree* target,
+                                struct rbtree_node* node);
 
 static inline void
 insert_case1(struct rbtree* target, struct rbtree_node* node)
@@ -193,7 +179,6 @@ insert_case1(struct rbtree* target, struct rbtree_node* node)
   else
     insert_case2(target, node);
 }
-
 
 static inline void
 insert_case2(struct rbtree* target, struct rbtree_node* node)
@@ -233,7 +218,6 @@ insert_case4(struct rbtree* target, struct rbtree_node* node)
   {
     rotate_left(target, node->parent);
     node = node->left;
-    rbtree_print(target);
   }
   else if ((node == node->parent->left) && (node->parent == g->right))
   {
@@ -262,13 +246,11 @@ static inline void rbtree_add_node(struct rbtree* target,
 bool
 rbtree_add(struct rbtree* target, long key, void* data)
 {
-  printf("adding: %li %s\n", key, (char*) data);
   struct rbtree_node* node = create_node(key, data);
   if (node == NULL) return false;
 
   rbtree_add_node(target, node);
 
-  printf("add(): ok.\n");
   return true;
 }
 
@@ -287,8 +269,6 @@ rbtree_add_node(struct rbtree* target,
     // Normal tree insertion
     struct rbtree_node* root = target->root;
     rbtree_add_loop(target, node, root);
-    printf("added:\n");
-    rbtree_print(target);
     insert_case2(target, node);
   }
 }
@@ -361,7 +341,6 @@ static inline void delete_one_child(struct rbtree* target,
 bool
 rbtree_remove(struct rbtree* target, long key, void** data)
 {
-  printf("rbtree_remove(%li)\n", key);
   struct rbtree_node* N = search_node_loop(target->root, key);
   if (N == NULL)
     return false;
@@ -391,6 +370,9 @@ color(struct rbtree_node* N)
   return '?';
 }
 
+/**
+   Debugging routine: pretty-print node with color and key
+ */
 #define show_node(t) { \
   if (t == NULL) printf("%s: NULL\n", #t); \
   else printf("%s: %c%li\n", #t, color(t), t->key); \
@@ -402,11 +384,6 @@ static inline void swap_nodes(struct rbtree* target,
 void
 rbtree_remove_node(struct rbtree* target, struct rbtree_node* N)
 {
-  valgrind_assert(target->size != 0);
-
-  printf("remove_node:\n");
-  show_node(N);
-
   valgrind_assert(target->size >= 1);
 
   if (target->size == 1)
@@ -422,11 +399,7 @@ rbtree_remove_node(struct rbtree* target, struct rbtree_node* N)
     R = rbtree_leftmost_loop(N->right);
 
   if (R != NULL)
-  {
     swap_nodes(target, N, R);
-  }
-  else
-    printf("R==NULL\n");
 
   delete_one_child(target, N);
 
@@ -434,8 +407,14 @@ rbtree_remove_node(struct rbtree* target, struct rbtree_node* N)
   target->size--;
 }
 
-/** == replace_node - replaces keys and nodes (so pointers to keys
-    still work but keeps colors intact */
+/**
+   P                     P
+      N                     R
+     B C        -\         B C
+       ...      -/          ...
+        R                     N
+       X Y                   X Y
+ */
 static inline void
 swap_nodes(struct rbtree* target,
            struct rbtree_node* N, struct rbtree_node* R)
@@ -445,14 +424,6 @@ swap_nodes(struct rbtree* target,
   struct rbtree_node* C = N->right;
   struct rbtree_node* X = R->left;
   struct rbtree_node* Y = R->right;
-
-  printf("swap_nodes:\n");
-
-  show_node(P);
-  show_node(N);
-  show_node(R);
-  show_node(B);
-  show_node(C);
 
   // Possibilities
   // N, R unrelated
@@ -514,9 +485,6 @@ swap_nodes(struct rbtree* target,
   rbtree_color tmp = R->color;
   R->color = N->color;
   N->color = tmp;
-  rbtree_print(target);
-
-  printf("swap_nodes: ok.\n");
 }
 
 bool
@@ -575,14 +543,14 @@ rbtree_leftmost_loop(struct rbtree_node* N)
   return result;
 }
 
-// All of these can be inlined except delete_case1(), which is
-// called recursively
-static void delete_case1(struct rbtree* target, struct rbtree_node* P,
+// All of these are inlined except delete_case3(), which makes a
+// recursive call
+static inline void delete_case1(struct rbtree* target, struct rbtree_node* P,
                          struct rbtree_node* N);
 static inline void delete_case2(struct rbtree* target,
                                 struct rbtree_node* P,
                                 struct rbtree_node* N);
-static inline void delete_case3(struct rbtree* target,
+static        void delete_case3(struct rbtree* target,
                                 struct rbtree_node* N);
 static inline void delete_case4(struct rbtree* target,
                                 struct rbtree_node* P,
@@ -603,24 +571,15 @@ static inline void delete_case6(struct rbtree* target,
 static inline void
 delete_one_child(struct rbtree* target, struct rbtree_node* N)
 {
-  printf("delete_one_child:\n");
-  show_node(N);
-
   valgrind_assert(target->size >= 2);
   valgrind_assert(N->right == NULL || N->left == NULL);
 
-  rbtree_print(target);
   struct rbtree_node* P = N->parent;
   struct rbtree_node* C =
       (N->right == NULL) ? N->left : N->right;
 
-  show_node(P);
-  show_node(N);
-  show_node(C);
   if (C == NULL)
   {
-    printf("C: NULL\n");
-    printf("NO CHILDREN\n");
     if (N->color == RED)
     {
       replace(P, N, NULL);
@@ -630,7 +589,6 @@ delete_one_child(struct rbtree* target, struct rbtree_node* N)
 
   if (C != NULL)
   {
-    printf("C: %li\n", C->key);
     swap_nodes(target, N, C);
     struct rbtree_node* t = N;
     N = C;
@@ -656,14 +614,11 @@ delete_one_child(struct rbtree* target, struct rbtree_node* N)
   }
 }
 
-static void
+static inline void
 delete_case1(struct rbtree* target,
              struct rbtree_node* P,
              struct rbtree_node* N)
 {
-  printf("delete_case1:\n");
-  show_node(P);
-  show_node(N);
   if (P != NULL)
     delete_case2(target, P, N);
 }
@@ -685,9 +640,7 @@ static inline void
 delete_case2(struct rbtree* target, struct rbtree_node* P,
              struct rbtree_node* N)
 {
-  printf("delete_case2: %li->%li\n", P->key, N->key);
   struct rbtree_node* S = sibling(P, N);
-  show_node(S);
 
   if (S->color == RED)
   {
@@ -701,17 +654,12 @@ delete_case2(struct rbtree* target, struct rbtree_node* P,
   delete_case3(target, N);
 }
 
-static inline void
+static void
 delete_case3(struct rbtree* target,
              struct rbtree_node* N)
 {
-  printf("delete_case3: \n");
   struct rbtree_node* P = N->parent;
   struct rbtree_node* S = sibling(P, N);
-
-  show_node(P);
-  show_node(N);
-  show_node(S);
 
   if ((P->color == BLACK) &&
       (S->color == BLACK) &&
@@ -729,7 +677,6 @@ static inline void
 delete_case4(struct rbtree* target, struct rbtree_node* P,
              struct rbtree_node* N, struct rbtree_node* S)
 {
-  printf("delete_case4: %li->%li\n", P->key, N->key);
   if ((P->color == RED) &&
       (S->color == BLACK) &&
       (S->left  == NULL || S->left->color  == BLACK) &&
@@ -746,7 +693,6 @@ static inline void
 delete_case5(struct rbtree* target, struct rbtree_node* P,
              struct rbtree_node* N, struct rbtree_node* S)
 {
-  printf("delete_case5: %li->%li\n", P->key, N->key);
   valgrind_assert(S->color == BLACK);
   if ((N == P->left) &&
       (S->right == NULL || S->right->color == BLACK))
@@ -771,12 +717,8 @@ static inline void
 delete_case6(struct rbtree* target,
              struct rbtree_node* N)
 {
-  printf("delete_case6:\n");
   struct rbtree_node* P = N->parent;
   struct rbtree_node* S = sibling(P, N);
-  show_node(P);
-  show_node(N);
-  show_node(S);
   S->color = P->color;
   P->color = BLACK;
 
@@ -809,7 +751,6 @@ rbtree_move(struct rbtree* target, long key_old, long key_new)
   p->color = RED; // new nodes are always RED
   p->left  = NULL;
   p->right = NULL;
-  printf("move: add...\n");
   rbtree_add_node(target, p);
 
   return true;
