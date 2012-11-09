@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <table_lp.h>
 #include <tools.h>
-#include <tree.h>
+#include <rbtree.h>
 
 #include "src/util/debug.h"
 
@@ -38,7 +38,7 @@ static struct table_lp entries;
    Maps from counter stamp to entry
    Older entries have lower counter stamps; they will be evicted first
  */
-static struct tree lru;
+static struct rbtree lru;
 
 /** Cache entry */
 struct entry
@@ -58,7 +58,7 @@ turbine_cache_init(int size, unsigned long max_memory)
   assert(!initialized);
   initialized = true;
   table_lp_init(&entries, size);
-  tree_init(&lru);
+  rbtree_init(&lru);
   max_entries = size;
   memory = max_memory;
 }
@@ -88,7 +88,7 @@ turbine_cache_retrieve(turbine_datum_id td,
   *length = e->length;
 
   // Update LRU
-  bool b = tree_move(&lru, e->stamp, counter);
+  bool b = rbtree_move(&lru, e->stamp, counter);
   valgrind_assert(b);
   e->stamp = counter;
   counter++;
@@ -107,20 +107,21 @@ static inline void cache_replace(turbine_datum_id td,
 
 turbine_code
 turbine_cache_store(turbine_datum_id td, turbine_type type,
-                    void* data, int length)
+                    void* data, int size)
 {
   if (max_entries == 0)
     return TURBINE_SUCCESS;
 
-  DEBUG_CACHE("store: <%li>", td);
+  DEBUG_CACHE("store: <%li> size: %i counter: %li",
+              td, size, counter);
   assert(entries.size <= max_entries);
   if (max_entries - entries.size == 1)
   {
-    cache_replace(td, type, data, length);
+    cache_replace(td, type, data, size);
   }
   else
   {
-    cache_add(td, type, data, length);
+    cache_add(td, type, data, size);
   }
 
   return TURBINE_SUCCESS;
@@ -161,7 +162,7 @@ cache_add(turbine_datum_id td, turbine_type type,
 {
   struct entry* e = entry_create(td, type, data, length, counter);
   table_lp_add(&entries, td, e);
-  tree_add(&lru, counter, e);
+  rbtree_add(&lru, counter, e);
   counter++;
   memory -= length;
   cache_shrink();
@@ -176,17 +177,18 @@ cache_replace(turbine_datum_id td, turbine_type type,
               void* data, int length)
 {
   // Lookup the least-recently-used entry
-  struct tree_node* node = tree_leftmost(&lru);
+  struct rbtree_node* node = rbtree_leftmost(&lru);
   struct entry* e = node->data;
+  DEBUG_CACHE("cache_replace(): LRU victim: <%li>", e->td);
   // Remove the victim from cache data structures
-  tree_remove_node(&lru, node);
+  rbtree_remove_node(&lru, node);
   table_lp_remove(&entries, e->td);
   memory += e->length;
   free(e->data);
   // Replace the entry with the new data
   entry_init(e, td, type, data, length, counter);
   node->key = counter;
-  tree_add_node(&lru, node);
+  rbtree_add_node(&lru, node);
   table_lp_add(&entries, td, e);
   memory -= length;
   counter++;
@@ -202,15 +204,17 @@ cache_shrink(void)
 {
   while (memory < 0)
   {
-    turbine_datum_id td;
-    struct entry* e;
+    long stamp;
     void* v;
-    tree_pop(&lru, &td, &v);
-    e = (struct entry*) v;
+    rbtree_pop(&lru, &stamp, &v);
+    struct entry* e = (struct entry*) v;
+    DEBUG_CACHE("cache_shrink(): LRU victim: <%li>", e->td);
     memory += e->length;
     free(e->data);
     free(e);
   }
+
+  DEBUG_CACHE("cache_shrink(): memory: %li", memory);
 }
 
 void
@@ -229,5 +233,5 @@ turbine_cache_finalize()
     }
   table_lp_delete(&entries);
   table_lp_release(&entries);
-  tree_clear(&lru);
+  rbtree_clear(&lru);
 }
