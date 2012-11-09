@@ -526,6 +526,35 @@ As +printf()+ in C
 Obtain substring of given string +s+ starting at character +start+ and of
 length +length+
 
++find(string s, string substring, int start_index, int end_index) -> int+::
+Find the index of the first occurence of the string +substring+ within
+the string +s+ between the indices +start_index+ and +end_index+. Here
+an index of +-1+ passed to +end_index+ results in +end_index+ being
+treated as the length of the string +s+. +find+ returns +-1+ in case
+there is no occurence of +substring+ in +s+ in the specified range.
+
++count(string s, string substring, int start_index, int end_index) -> int+::
+Counts the occurences of the string +substring+ within the string +s+
+between the indices +start_index+ and +end_index+. Here an index of
++-1+ passed to +end_index+ results in +end_index+ being treated as the
+length of the string +s+
+
++isnum(string s) -> boolean+::
+Returns true if string +s+ is a number, else false.
+
++replace(string s, string substring, string rep_string, int start_index) -> string+::
+Obtain the string created by replacing the first occurence of the
+string +substring+ within string +s+, after the index +start_index+,
+with the string +rep_string+. In case there is no such occurence of
+the string +substring+ in string +s+, the original string +s+ is
+returned unmodified.
+
++replace_all(string s, string substring, string rep_string, int start_index) -> string+::
+Obtain the string created by replacing all the occurences of the
+string +substring+ within string +s+, after the index +start_index+,
+with the string +rep_string+. In case no such occurence of +substring+
+exists in +s+, the original string +s+ is returned unmodified.
+
 +split(string s, string delimiter) -> string[]+::
 Tokenize string +s+ with given delimiter
 
