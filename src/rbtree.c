@@ -20,6 +20,12 @@
 #include "rbtree.h"
 #include "tree-common.h"
 
+#if 0
+#define DEBUG_RBTREE(args...) printf(args)
+#else
+#define DEBUG_RBTREE(args...)
+#endif
+
 static inline tree_side
 which_side(struct rbtree_node* parent, struct rbtree_node* child)
 {
@@ -77,7 +83,7 @@ void
 rbtree_init(struct rbtree* target)
 {
   target->size = 0;
-  target->root = 0;
+  target->root = NULL;
 }
 
 static inline struct rbtree_node*
@@ -183,25 +189,28 @@ insert_case1(struct rbtree* target, struct rbtree_node* node)
 static inline void
 insert_case2(struct rbtree* target, struct rbtree_node* node)
 {
+  DEBUG_RBTREE("insert_case2\n");
   if (node->parent->color == BLACK)
     return;
   else
     insert_case3(target, node);
+  DEBUG_RBTREE("insert_case2 done.\n");
 }
 
 static void
 insert_case3(struct rbtree* target, struct rbtree_node* node)
 {
-  struct rbtree_node* u = uncle(node);
-  struct rbtree_node* g;
+  struct rbtree_node* U = uncle(node);
+  struct rbtree_node* G;
 
-  if (u != NULL && u->color == RED)
+  DEBUG_RBTREE("insert_case3\n");
+  if (U != NULL && U->color == RED)
   {
     node->parent->color = BLACK;
-    u->color = BLACK;
-    g = grandparent(node);
-    g->color = RED;
-    insert_case1(target, g);
+    U->color = BLACK;
+    G = grandparent(node);
+    G->color = RED;
+    insert_case1(target, G);
   }
   else
   {
@@ -212,6 +221,7 @@ insert_case3(struct rbtree* target, struct rbtree_node* node)
 static void
 insert_case4(struct rbtree* target, struct rbtree_node* node)
 {
+  DEBUG_RBTREE("insert_case4\n");
   struct rbtree_node* g = grandparent(node);
 
   if ((node == node->parent->right) && (node->parent == g->left))
@@ -240,8 +250,8 @@ insert_case5(struct rbtree* target, struct rbtree_node* node)
     rotate_left(target, g);
 }
 
-static inline void rbtree_add_node(struct rbtree* target,
-                                   struct rbtree_node* node);
+static inline void rbtree_add_node_impl(struct rbtree* target,
+                                        struct rbtree_node* N);
 
 bool
 rbtree_add(struct rbtree* target, long key, void* data)
@@ -249,28 +259,41 @@ rbtree_add(struct rbtree* target, long key, void* data)
   struct rbtree_node* node = create_node(key, data);
   if (node == NULL) return false;
 
-  rbtree_add_node(target, node);
+  rbtree_add_node_impl(target, node);
 
   return true;
 }
 
-static inline void
+void
 rbtree_add_node(struct rbtree* target,
                 struct rbtree_node* node)
 {
+  rbtree_add_node_impl(target, node);
+}
+
+static inline void
+rbtree_add_node_impl(struct rbtree* target,
+                     struct rbtree_node* N)
+{
+  DEBUG_RBTREE("rbtree_add_node_impl: %li\n", N->key);
+  DEBUG_RBTREE("before:\n");
+  // rbtree_print(target);
+  N->color = RED;
   if (target->size == 0)
   {
-    target->root = node;
+    target->root = N;
     target->size = 1;
-    insert_case1(target, node);
+    insert_case1(target, N);
   }
   else
   {
     // Normal tree insertion
     struct rbtree_node* root = target->root;
-    rbtree_add_loop(target, node, root);
-    insert_case2(target, node);
+    rbtree_add_loop(target, N, root);
+    insert_case2(target, N);
   }
+  DEBUG_RBTREE("after:\n");
+  // rbtree_print(target);
 }
 
 static inline void
@@ -278,6 +301,7 @@ rbtree_add_loop(struct rbtree* target,
                 struct rbtree_node* node,
                 struct rbtree_node* p)
 {
+  DEBUG_RBTREE("rbtree_add_loop\n");
   target->size++;
   while (true)
   {
@@ -374,8 +398,8 @@ color(struct rbtree_node* N)
    Debugging routine: pretty-print node with color and key
  */
 #define show_node(t) { \
-  if (t == NULL) printf("%s: NULL\n", #t); \
-  else printf("%s: %c%li\n", #t, color(t), t->key); \
+  if (t == NULL) DEBUG_RBTREE("%s: NULL\n", #t); \
+  else DEBUG_RBTREE("%s: %c%li\n", #t, color(t), t->key); \
 }
 
 static inline void swap_nodes(struct rbtree* target,
@@ -384,7 +408,11 @@ static inline void swap_nodes(struct rbtree* target,
 void
 rbtree_remove_node(struct rbtree* target, struct rbtree_node* N)
 {
+  DEBUG_RBTREE("rbtree_remove_node: %li\n", N->key);
   valgrind_assert(target->size >= 1);
+
+  DEBUG_RBTREE("before:\n");
+  // rbtree_print(target);
 
   if (target->size == 1)
   {
@@ -402,6 +430,9 @@ rbtree_remove_node(struct rbtree* target, struct rbtree_node* N)
     swap_nodes(target, N, R);
 
   delete_one_child(target, N);
+
+  DEBUG_RBTREE("after:\n");
+  // rbtree_print(target);
 
   end:
   target->size--;
@@ -510,6 +541,7 @@ rbtree_leftmost(struct rbtree* target)
     return NULL;
 
   struct rbtree_node* result = rbtree_leftmost_loop(target->root);
+  DEBUG_RBTREE("rbtree_leftmost: %li\n", result->key);
   return result;
 }
 
@@ -740,20 +772,57 @@ delete_case6(struct rbtree* target,
 bool
 rbtree_move(struct rbtree* target, long key_old, long key_new)
 {
+  DEBUG_RBTREE("rbtree_move: %li -> %li\n", key_old, key_new);
   struct rbtree_node* p = rbtree_search_node(target, key_old);
   if (p == NULL)
     return false;
-  rbtree_remove_node(target, p);
 
-  rbtree_print(target);
+  DEBUG_RBTREE("before:\n");
+  // rbtree_print(target);
+
+  rbtree_remove_node(target, p);
 
   p->key   = key_new;
   p->color = RED; // new nodes are always RED
   p->left  = NULL;
   p->right = NULL;
-  rbtree_add_node(target, p);
+  rbtree_add_node_impl(target, p);
+
+  DEBUG_RBTREE("after:\n");
+  // rbtree_print(target);
 
   return true;
+}
+
+static inline struct rbtree_node*
+rbtree_random_loop(struct rbtree_node* p);
+
+struct rbtree_node*
+rbtree_random(struct rbtree* target)
+{
+  if (target->size == 0)
+    return NULL;
+
+  struct rbtree_node* result = rbtree_random_loop(target->root);
+  return result;
+}
+
+static inline struct rbtree_node*
+rbtree_random_loop(struct rbtree_node* p)
+{
+  if (p->left == NULL && p->right == NULL)
+    // Leaf
+    return p;
+
+  if (p->left == NULL)
+    return rbtree_random_loop(p->right);
+  else if (p->right == NULL)
+    return rbtree_random_loop(p->left);
+
+  bool b = random_bool();
+  if (b)
+    return rbtree_random_loop(p->right);
+  return rbtree_random_loop(p->left);
 }
 
 static void rbtree_print_loop(struct rbtree_node* node, int level);

@@ -34,6 +34,8 @@ void rbtree_init(struct rbtree* target);
 
 bool rbtree_add(struct rbtree* target, long key, void* data);
 
+void rbtree_add_node(struct rbtree* target, struct rbtree_node* node);
+
 struct rbtree_node* rbtree_search_node(struct rbtree* target,
                                        long key);
 
@@ -53,6 +55,8 @@ struct rbtree_node* rbtree_leftmost(struct rbtree* target);
 long rbtree_leftmost_key(struct rbtree* target);
 
 bool rbtree_move(struct rbtree* target, long key_old, long key_new);
+
+struct rbtree_node* rbtree_random(struct rbtree* target);
 
 void rbtree_print(struct rbtree* target);
 
