@@ -673,6 +673,20 @@ results in the generation of calls to extension functions.
 Servers distribute tasks in a scalable, load balanced manner.  They
 also store Swift data (integers, strings, etc.).
 
+=== Concurrency
+
+The available concurrency and efficiency in your Swift script is
+limited by the following factors:
+
+* The available concurrency in the Swift logic.  Sequential
+  dependencies will be evaluated sequentially.  +foreach+ loops and
+  branching function calls may be evaluated concurrently
+* The number of workers available to process leaf functions
+  concurrently
+* The number of engines and servers available to control the Turbine
+  run.  Adding more engines and servers usually improves performance
+  but costs processes
+
 === Invocation
 
 The general form of a Turbine invocation for STC-generated
@@ -704,7 +718,6 @@ Swift (<<Turbine_information, Turbine information>>).
 +ADLB_EXHAUST_TIME+:: Time in seconds taken by ADLB task servers to
 shut down. Typically 1.  In very large runs, this may be set to 5 to
 ensure correctness.
-
 
 +TURBINE_LAUNCH_OPTS+::
 Provide other arguments to +mpiexec+, such as a machine file, etc.
@@ -744,6 +757,8 @@ Configure Turbine with:
 3. Configure everything with +--enable-fast+. This disables assertions
 and other checks
 
-//// Local Variables:
-//// mode: doc
-//// End:
+////
+Local Variables:
+mode: doc
+End:
+////
