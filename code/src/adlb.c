@@ -214,13 +214,14 @@ locate(long id)
 
 /**
    Reusable internal data creation function
-   Applications should use the ADLB_Create_type macros in adlb.h
+   Applications should use the ADLB_Create_type functions in adlb.h
    @param filename Only used for file-type data
    @param subscript_type Only used for container-type data
  */
-adlb_code ADLBP_Create(adlb_datum_id id, adlb_data_type type,
-                       const char* filename,
-                       adlb_data_type subscript_type)
+static inline adlb_code
+ADLBP_Create_impl(adlb_datum_id id, adlb_data_type type,
+                  const char* filename,
+                  adlb_data_type subscript_type, bool updateable)
 {
   int rc, to_server_rank;
   adlb_data_code dc;
@@ -228,18 +229,15 @@ adlb_code ADLBP_Create(adlb_datum_id id, adlb_data_type type,
   MPI_Request request;
 
   to_server_rank = locate(id);
-  struct packed_id_type data = { id, type };
+  struct packed_id_type_updateable data = { id, type, writable };
 
-  rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
-                 adlb_all_comm, &request);
-  MPI_CHECK(rc);
+  IRECV(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
 
-  rc = MPI_Send(&data, sizeof(struct packed_id_type), MPI_BYTE,
-                to_server_rank, ADLB_TAG_CREATE_HEADER, adlb_all_comm);
-  MPI_CHECK(rc);
+  SEND(&data, sizeof(struct packed_id_type_updateable), MPI_BYTE,
+       to_server_rank, ADLB_TAG_CREATE_HEADER);
 
-  rc = MPI_Wait(&request, &status);
-  MPI_CHECK(rc);
+  WAIT(&request, &status);
+
   ADLB_DATA_CHECK(dc);
 
   if (type == ADLB_DATA_TYPE_FILE)
@@ -262,37 +260,63 @@ adlb_code ADLBP_Create(adlb_datum_id id, adlb_data_type type,
   return ADLB_SUCCESS;
 }
 
-adlb_code ADLB_Create_integer(adlb_datum_id id)
+/**
+   Extern version of this (unused)
+ */
+adlb_code
+ADLBP_Create(adlb_datum_id id, adlb_data_type type,
+             const char* filename,
+             adlb_data_type subscript_type, bool updateable)
 {
-  return ADLB_Create(id, ADLB_DATA_TYPE_INTEGER, NULL, ADLB_DATA_TYPE_NULL);
+  return ADLBP_Create_impl(id, type, filename, subscript_type,
+                           updateable);
 }
 
-adlb_code ADLB_Create_float(adlb_datum_id id)
+adlb_code
+ADLB_Create_integer(adlb_datum_id id, bool updateable)
 {
-  return ADLB_Create(id, ADLB_DATA_TYPE_FLOAT, NULL, ADLB_DATA_TYPE_NULL);
+  return ADLBP_Create_impl(id, ADLB_DATA_TYPE_INTEGER, NULL,
+                           ADLB_DATA_TYPE_NULL, updateable);
 }
 
-adlb_code ADLB_Create_string(adlb_datum_id id)
+adlb_code
+ADLB_Create_float(adlb_datum_id id, bool updateable)
 {
-  return ADLB_Create(id, ADLB_DATA_TYPE_STRING, NULL, ADLB_DATA_TYPE_NULL);
+  return ADLBP_Create_impl(id, ADLB_DATA_TYPE_FLOAT, NULL,
+                           ADLB_DATA_TYPE_NULL, updateable);
 }
 
-adlb_code ADLB_Create_blob(adlb_datum_id id)
+adlb_code
+ADLB_Create_string(adlb_datum_id id, bool updateable)
 {
-  return ADLB_Create(id, ADLB_DATA_TYPE_BLOB, NULL, ADLB_DATA_TYPE_NULL);
+  return ADLBP_Create_impl(id, ADLB_DATA_TYPE_STRING, NULL,
+                           ADLB_DATA_TYPE_NULL, updateable);
 }
 
-adlb_code ADLB_Create_file(adlb_datum_id id, const char* filename)
+adlb_code
+ADLB_Create_blob(adlb_datum_id id, bool updateable)
 {
-  return ADLB_Create(id, ADLB_DATA_TYPE_FILE, filename, ADLB_DATA_TYPE_NULL);
+  return ADLBP_Create_impl(id, ADLB_DATA_TYPE_BLOB, NULL,
+                           ADLB_DATA_TYPE_NULL, updateable);
 }
 
-adlb_code ADLB_Create_container(adlb_datum_id id, adlb_data_type subscript_type)
+adlb_code
+ADLB_Create_file(adlb_datum_id id, const char* filename,
+                           bool updateable)
 {
-  return ADLB_Create(id, ADLB_DATA_TYPE_CONTAINER, NULL, subscript_type);
+  return ADLBP_Create_impl(id, ADLB_DATA_TYPE_FILE, filename,
+                          ADLB_DATA_TYPE_NULL, updateable);
 }
 
-adlb_code ADLBP_Exists(adlb_datum_id id, bool* result)
+adlb_code
+ADLB_Create_container(adlb_datum_id id, adlb_data_type subscript_type)
+{
+  return ADLBP_Create_impl(id, ADLB_DATA_TYPE_CONTAINER, NULL,
+                           subscript_type, false);
+}
+
+adlb_code
+ADLBP_Exists(adlb_datum_id id, bool* result)
 {
   int to_server_rank = locate(id);
 
@@ -368,54 +392,56 @@ get_next_server()
   return rank;
 }
 
-adlb_code ADLBP_Slot_create(adlb_datum_id id, int slots)
+adlb_code
+ADLBP_Slot_create(adlb_datum_id id, int slots)
 {
-    adlb_data_code dc;
-    int rc;
+  adlb_data_code dc;
+  int rc;
 
-    MPI_Status status;
-    MPI_Request request;
+  MPI_Status status;
+  MPI_Request request;
 
-    DEBUG("ADLB_Slot_create: <%li> %i", id, slots);
-    int to_server_rank = locate(id);
+  DEBUG("ADLB_Slot_create: <%li> %i", id, slots);
+  int to_server_rank = locate(id);
 
-    rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
-                    adlb_all_comm, &request);
-    MPI_CHECK(rc);
+  rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
+                 adlb_all_comm, &request);
+  MPI_CHECK(rc);
 
-    struct packed_incr msg = { .id = id, .incr = slots };
-    rc = MPI_Send(&msg, sizeof(msg), MPI_BYTE, to_server_rank,
-                   ADLB_TAG_SLOT_CREATE, adlb_all_comm);
-    MPI_CHECK(rc);
-    rc = MPI_Wait(&request, &status);
-    MPI_CHECK(rc);
-    if (dc != ADLB_DATA_SUCCESS)
-      return ADLB_ERROR;
-    return ADLB_SUCCESS;
+  struct packed_incr msg = { .id = id, .incr = slots };
+  rc = MPI_Send(&msg, sizeof(msg), MPI_BYTE, to_server_rank,
+                ADLB_TAG_SLOT_CREATE, adlb_all_comm);
+  MPI_CHECK(rc);
+  rc = MPI_Wait(&request, &status);
+  MPI_CHECK(rc);
+  if (dc != ADLB_DATA_SUCCESS)
+    return ADLB_ERROR;
+  return ADLB_SUCCESS;
 }
 
-adlb_code ADLBP_Slot_drop(adlb_datum_id id, int slots)
+adlb_code
+ADLBP_Slot_drop(adlb_datum_id id, int slots)
 {
-    int rc;
-    adlb_data_code dc;
-    MPI_Status status;
-    MPI_Request request;
+  int rc;
+  adlb_data_code dc;
+  MPI_Status status;
+  MPI_Request request;
 
-    DEBUG("ADLB_Slot_drop: <%li> %i", id, slots);
-    int to_server_rank = locate(id);
+  DEBUG("ADLB_Slot_drop: <%li> %i", id, slots);
+  int to_server_rank = locate(id);
 
-    rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
-                    adlb_all_comm, &request);
-    MPI_CHECK(rc);
-    struct packed_incr msg = { .id = id, .incr = slots };
-    rc = MPI_Send(&msg, sizeof(msg), MPI_BYTE, to_server_rank,
-                   ADLB_TAG_SLOT_DROP, adlb_all_comm);
-    MPI_CHECK(rc);
-    rc = MPI_Wait(&request, &status);
-    MPI_CHECK(rc);
-    if (dc != ADLB_DATA_SUCCESS)
-        return ADLB_ERROR;
-    return ADLB_SUCCESS;
+  rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
+                 adlb_all_comm, &request);
+  MPI_CHECK(rc);
+  struct packed_incr msg = { .id = id, .incr = slots };
+  rc = MPI_Send(&msg, sizeof(msg), MPI_BYTE, to_server_rank,
+                ADLB_TAG_SLOT_DROP, adlb_all_comm);
+  MPI_CHECK(rc);
+  rc = MPI_Wait(&request, &status);
+  MPI_CHECK(rc);
+  if (dc != ADLB_DATA_SUCCESS)
+    return ADLB_ERROR;
+  return ADLB_SUCCESS;
 }
 
 adlb_code

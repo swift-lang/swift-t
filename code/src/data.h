@@ -17,7 +17,8 @@ adlb_data_code data_typeof(adlb_datum_id id, adlb_data_type* type);
 adlb_data_code data_container_typeof(adlb_datum_id id,
                                      adlb_data_type* type);
 
-adlb_data_code data_create(adlb_datum_id id, adlb_data_type type);
+adlb_data_code data_create(adlb_datum_id id, adlb_data_type type,
+                           bool updateable);
 
 adlb_data_code data_create_filename(adlb_datum_id id,
                                     const char* filename);

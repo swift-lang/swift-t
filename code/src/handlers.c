@@ -457,17 +457,18 @@ handle_create(int caller)
 {
   MPE_LOG(xlb_mpe_svr_create_start);
   TRACE("ADLB_TAG_CREATE\n");
-  struct packed_id_type data;
+  struct packed_id_type_updateable data;
   int rc;
   MPI_Status status;
 
-  RECV(&data, sizeof(struct packed_id_type), MPI_BYTE, caller,
-       ADLB_TAG_CREATE_HEADER);
+  RECV(&data, sizeof(struct packed_id_type_updateable), MPI_BYTE,
+       caller, ADLB_TAG_CREATE_HEADER);
 
   long id = data.id;
   adlb_data_type type = data.type;
+  bool updateable = data.writable;
 
-  adlb_data_code dc = data_create(id, type);
+  adlb_data_code dc = data_create(id, type, updateable);
 
   RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
 
@@ -684,7 +685,6 @@ handle_slot_drop(int caller)
   RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
 
   if (slots < 0) {
-    printf("slot_drop dropped below 0: %i\n", slots);
     return ADLB_ERROR;
   } else if (slots == 0) {
     rc = slot_notification(msg.id);

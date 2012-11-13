@@ -136,10 +136,11 @@ struct packed_get_response
 /**
    Simple struct for message packing
  */
-struct packed_id_type
+struct packed_id_type_updateable
 {
   adlb_datum_id id;
   adlb_data_type type;
+  bool updateable;
 };
 
 /**

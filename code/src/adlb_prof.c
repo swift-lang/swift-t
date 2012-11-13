@@ -157,15 +157,16 @@ ADLB_Get(int type_requested, void* payload, int* length,
 }
 
 /**
-   Applications should use the ADLB_Create_type macros in adlb.h
+   Applications should use the ADLB_Create_type functions in adlb.h
  */
 adlb_code
 ADLB_Create(long id, adlb_data_type type,
             const char* filename,
-            adlb_data_type container_type)
+            adlb_data_type container_type, bool updateable)
 {
   MPE_LOG(xlb_mpe_wkr_create_start);
-  adlb_code rc = ADLBP_Create(id, type, filename, container_type);
+  adlb_code rc = ADLBP_Create(id, type, filename, container_type,
+                              updateable);
   MPE_LOG(xlb_mpe_wkr_create_end);
   return rc;
 }

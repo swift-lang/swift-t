@@ -116,7 +116,7 @@ data_init(int s, int r)
 }
 
 adlb_data_code
-data_create(adlb_datum_id id, adlb_data_type type)
+data_create(adlb_datum_id id, adlb_data_type type, bool updateable)
 {
   TRACE("data_create(%li)", id);
   adlb_data_code result;
@@ -125,6 +125,7 @@ data_create(adlb_datum_id id, adlb_data_type type)
 
   adlb_datum* d = malloc(sizeof(adlb_datum));
   d->type = type;
+  d->updateable = writable;
   d->status = ADLB_DATA_UNSET;
   list_i_init(&d->listeners);
 
@@ -152,6 +153,7 @@ data_create_filename(adlb_datum_id id, const char* filename)
 /**
    container-type data should have the subscript type set at creation
    time
+   TODO: Drop entry in container_slots on close
  */
 adlb_data_code
 data_create_container(adlb_datum_id id, adlb_data_type type)
@@ -477,6 +479,13 @@ data_store(adlb_datum_id id, void* buffer, int length)
                 "not found: <%li>", id);
 
   adlb_data_type type = d->type;
+  adlb_data_status status = d->status;
+  bool updateable = d->writable;
+
+  // Make sure we are allowed to write this data
+  check_verbose(status == ADLB_DATA_UNSET || updateable,
+                ADLB_DATA_ERROR_DOUBLE_WRITE,
+                "attempt to rewrite: <%li>", id);
 
   int n;
   switch (type)
