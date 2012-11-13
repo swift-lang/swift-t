@@ -141,7 +141,7 @@ run_test()
   fi
 
   # Run the test
-  print "running: $( basename ${TCL_FILE} )"
+  print "running:   $( basename ${TCL_FILE} )"
   ${RUN_TEST} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS}
   EXIT_CODE=${?}
 
