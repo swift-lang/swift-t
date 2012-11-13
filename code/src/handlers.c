@@ -466,8 +466,7 @@ handle_create(int caller)
 
   long id = data.id;
   adlb_data_type type = data.type;
-  bool updateable = data.writable;
-
+  bool updateable = data.updateable;
   adlb_data_code dc = data_create(id, type, updateable);
 
   RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
@@ -903,7 +902,7 @@ handle_container_reference(int caller)
                 long m;
                 int n = sscanf(member, "%li", &m);
                 assert(n == 1);
-                set_int_reference_and_notify(reference, m); 
+                set_int_reference_and_notify(reference, m);
               }
               else if (ref_type == ADLB_DATA_TYPE_STRING)
                 set_str_reference_and_notify(reference, member);

@@ -125,7 +125,7 @@ data_create(adlb_datum_id id, adlb_data_type type, bool updateable)
 
   adlb_datum* d = malloc(sizeof(adlb_datum));
   d->type = type;
-  d->updateable = writable;
+  d->updateable = updateable;
   d->status = ADLB_DATA_UNSET;
   list_i_init(&d->listeners);
 
@@ -377,7 +377,7 @@ data_container_reference(adlb_datum_id container_id,
   if (rc == ADLB_DATA_SUCCESS)
   {
     // Translate to long
-    if (t != NULL) 
+    if (t != NULL)
     {
       char* z;
       long m = strtol(t, &z, 10);
@@ -439,7 +439,7 @@ data_container_reference_str(adlb_datum_id container_id,
     listeners = list_l_create();
     table_add(&container_listeners, pair, listeners);
   }
-  
+
   check_verbose(listeners != NULL, ADLB_DATA_ERROR_NULL,
                 "Found null value in listeners table\n"
                 "for:  %li[%s]\n", container_id, subscript);
@@ -480,7 +480,7 @@ data_store(adlb_datum_id id, void* buffer, int length)
 
   adlb_data_type type = d->type;
   adlb_data_status status = d->status;
-  bool updateable = d->writable;
+  bool updateable = d->updateable;
 
   // Make sure we are allowed to write this data
   check_verbose(status == ADLB_DATA_UNSET || updateable,
@@ -810,7 +810,7 @@ data_insert_atomic(adlb_datum_id container_id, const char* subscript,
 
   // Copy key/value onto the heap so we can store them
   subscript = strdup(subscript);
-  // Use NULL pointer value to represent unlinked 
+  // Use NULL pointer value to represent unlinked
   char* member = NULL;
   table_add(d->data.CONTAINER.members, subscript, member);
   *result = true;

@@ -229,7 +229,7 @@ ADLBP_Create_impl(adlb_datum_id id, adlb_data_type type,
   MPI_Request request;
 
   to_server_rank = locate(id);
-  struct packed_id_type_updateable data = { id, type, writable };
+  struct packed_id_type_updateable data = { id, type, updateable };
 
   IRECV(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
 
