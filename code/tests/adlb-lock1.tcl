@@ -30,7 +30,7 @@ if { ! [ adlb::amserver ] } {
 
     for { set i 1 } { $i <= $iterations } { incr i } {
         set id [ adlb::unique ]
-        adlb::create $id $adlb::STRING
+        adlb::create $id $adlb::STRING 0
         adlb::store $id $adlb::STRING "message rank:$rank:$i"
         adlb::close $id
         set b [ adlb::lock $id ]

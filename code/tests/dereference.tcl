@@ -13,7 +13,7 @@ proc rules { } {
 
     turbine::literal i integer 3
     turbine::literal r integer $i
-    turbine::allocate v integer
+    turbine::allocate v integer 0
 
     turbine::f_dereference_integer no_stack $v $r
     turbine::trace no_stack "" $v
@@ -26,5 +26,5 @@ turbine::finalize
 
 puts OK
 
-# Help TCL free memory
+# Help Tcl free memory
 proc exit args {}

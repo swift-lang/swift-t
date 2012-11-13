@@ -137,7 +137,7 @@ namespace eval turbine {
     proc range_work { result start end step } {
         set k 0
         for { set i $start } { $i <= $end } { incr i $step } {
-            allocate td integer
+            allocate td integer 0
             store_integer $td $i
             container_insert $result $k $td
             incr k
@@ -248,12 +248,12 @@ namespace eval turbine {
         if { [ llength $args ] == 2 } {
             set type   [ lindex $args 0 ]
             set value  [ lindex $args 1 ]
-            set result [ allocate $type ]
+            set result [ allocate $type 0 ]
         } elseif { [ llength $args ] == 3 } {
             set name   [ lindex $args 0 ]
             set type   [ lindex $args 1 ]
             set value  [ lindex $args 2 ]
-            set result [ allocate $name $type ]
+            set result [ allocate $name $type 0 ]
             upvar 1 $name n
             set n $result
         } else {
@@ -423,7 +423,7 @@ namespace eval turbine {
         log "copy $i_value => $i_value"
         store_string $o $i_value
     }
-    
+
     # Copy blob value
     proc copy_blob { parent o i } {
         rule "copyblob-$o-$i" $i $turbine::LOCAL \

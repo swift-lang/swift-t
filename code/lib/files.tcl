@@ -1,4 +1,8 @@
+
+# Turbine FILES.TCL
+
 # Filesystem related functions
+# TODO: Need some Turbine tests for this
 
 namespace eval turbine {
 
@@ -36,7 +40,7 @@ namespace eval turbine {
     # mapped and unmapped output files.
     # Will make sure that output files are mapped before executing cmd
     # msg: log msg
-    # waitfor: list of regular 
+    # waitfor: list of regular
     # outfiles: output files, will wait correctly for these
     # infiles: input files, will wait correctly for these
     # target: Where to send work e.g. $turbine::WORK
@@ -76,7 +80,7 @@ namespace eval turbine {
       set filepath_val [ retrieve_string $filepath ]
       input_file_impl $outfile $filepath_val
     }
-    
+
     proc input_file_impl { outfile filepath_val } {
       if { ! [ file exists $filepath_val ] } {
         error "input_file: file $filepath_val does not exist"
@@ -115,7 +119,7 @@ namespace eval turbine {
         rule "copy_file-$dst-$src" "$dstpath $srcpath $srcstatus" \
             $turbine::WORK [ list copy_file_body $dst $src ]
       } else {
-        # not mapped.  As shortcut, just make them both point to the 
+        # not mapped.  As shortcut, just make them both point to the
         # same file and update status once src file is closed
         copy_void NO_STACK [ get_file_status $dst ] [ get_file_status $src ]
         copy_string NO_STACK [ get_file_path $dst ] [ get_file_path $src ]
@@ -142,7 +146,7 @@ namespace eval turbine {
     }
 
     proc close_file { handle } {
-      store_void [ get_file_status $handle ]  
+      store_void [ get_file_status $handle ]
     }
 
     proc glob { stack result inputs } {
@@ -160,7 +164,7 @@ namespace eval turbine {
             literal split_token string $v
             container_insert $result $i $split_token
         }
-        close_datum $result 
+        close_datum $result
     }
 
     proc readFile { stack result inputs } {
@@ -192,7 +196,7 @@ namespace eval turbine {
 	set d [ retrieve_string $dstpath ]
 	set fp [ ::open $d w+ ]
 	puts $fp $str
-	close $fp 
+	close $fp
 	store_void [ get_file_status $dst ]
     }
 }

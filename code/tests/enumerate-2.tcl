@@ -28,8 +28,8 @@ proc rules { } {
     turbine::allocate_container c integer
     set i1 [ turbine::literal integer 0 ]
     set i2 [ turbine::literal integer 1 ]
-    turbine::allocate t1 integer
-    turbine::allocate t2 integer
+    turbine::allocate t1 integer 0
+    turbine::allocate t2 integer 0
 
     turbine::call_composite no_stack f $t1 $i1 $t1
     turbine::call_composite no_stack f $t2 $i2 $t1
@@ -38,7 +38,7 @@ proc rules { } {
     turbine::container_f_insert no_stack "" "$c $i2 $t2"
     adlb::slot_drop $c
 
-    turbine::allocate s string
+    turbine::allocate s string 0
     turbine::enumerate no_stack $s $c
     turbine::trace no_stack "" $s
 }

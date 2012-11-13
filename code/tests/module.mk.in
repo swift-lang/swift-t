@@ -24,14 +24,11 @@ TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/adlb-data.tcl           \
                 $(DIR)/adlb-lock1.tcl          \
                 $(DIR)/adlb-lock2.tcl          \
-                $(DIR)/diamond2.tcl            \
-                $(DIR)/linear-10.tcl           \
                 $(DIR)/numbers.tcl             \
                 $(DIR)/strings.tcl             \
                 $(DIR)/float1.tcl              \
                 $(DIR)/dht.tcl                 \
                 $(DIR)/container2.tcl          \
-                $(DIR)/container3.tcl          \
                 $(DIR)/container_load.tcl      \
                 $(DIR)/container-enumerate.tcl \
                 $(DIR)/container-close-1.tcl   \
@@ -46,13 +43,18 @@ TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/2Darray-2.tcl           \
                 $(DIR)/if1.tcl                 \
                 $(DIR)/loop1.tcl               \
-                $(DIR)/readdata.tcl            \
                 $(DIR)/range.tcl               \
                 $(DIR)/drange.tcl              \
                 $(DIR)/printf.tcl              \
                 $(DIR)/blob1.tcl               \
                 $(DIR)/blob3.tcl               \
                 $(DIR)/argv.tcl
+
+#                 $(DIR)/linear-10.tcl           \
+#                 $(DIR)/diamond2.tcl            \
+#                 $(DIR)/container3.tcl          \
+#                 $(DIR)/readdata.tcl            \
+
 
 ifeq ($(USE_MPE),1)
 	TEST_SRC_TCL += $(DIR)/mpe-3.tcl

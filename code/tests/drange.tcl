@@ -12,10 +12,10 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    turbine::allocate i integer
-    turbine::allocate j integer
+    turbine::allocate i integer 0
+    turbine::allocate j integer 0
     turbine::allocate_container c integer
-    turbine::allocate p integer
+    turbine::allocate p integer 0
 
     global env
     if { [ info exists env(COUNT) ] } {
@@ -38,5 +38,5 @@ turbine::finalize
 
 puts OK
 
-# Help TCL free memory
+# Help Tcl free memory
 proc exit args {}

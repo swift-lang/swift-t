@@ -12,10 +12,10 @@ proc function_touch { d } {
 
 proc rules { } {
 
-    turbine::create_file 101 "tests/data/A.txt"
-    turbine::create_file 102 "tests/data/B.txt"
-    turbine::create_file 103 "tests/data/C.txt"
-    turbine::create_file 104 "tests/data/D.txt"
+    turbine::create_file 101 0 "tests/data/A.txt"
+    turbine::create_file 102 0 "tests/data/B.txt"
+    turbine::create_file 103 0 "tests/data/C.txt"
+    turbine::create_file 104 0 "tests/data/D.txt"
 
     turbine::rule A {     } $turbine::WORK { function_touch 101 }
     turbine::rule B { 101 } $turbine::WORK { function_touch 102 }

@@ -13,9 +13,9 @@ proc rules { } {
     namespace import turbine::float_*
     namespace import turbine::arithmetic
 
-    turbine::allocate t1 float
-    turbine::allocate t2 float
-    turbine::allocate x float
+    turbine::allocate t1 float 0
+    turbine::allocate t2 float 0
+    turbine::allocate x float 0
 
     turbine::store_float $t1 3
     turbine::store_float $t2 5

@@ -11,8 +11,8 @@
 package require turbine 0.0.1
 
 proc rules { } {
-    turbine::allocate i integer
-    turbine::allocate j integer
+    turbine::allocate i integer 0
+    turbine::allocate j integer 0
     turbine::allocate_container c integer
 
     turbine::store_integer $i 1

@@ -9,11 +9,11 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    turbine::create_integer 11
-    turbine::create_integer 12
-    turbine::create_string  13
-    turbine::create_string  14
-    turbine::create_float   15
+    turbine::create_integer 11 0
+    turbine::create_integer 12 0
+    turbine::create_string  13 0
+    turbine::create_string  14 0
+    turbine::create_float   15 0
 
     turbine::store_integer 11 2
     turbine::store_integer 12 2

@@ -37,24 +37,26 @@ namespace eval turbine {
         }
     }
 
-    # usage: allocate [<name>] <type>
+    # usage: allocate [<name>] <type> <updateable>
     # If name is given, print a log message
     proc allocate { args } {
         set u [ adlb::unique ]
         set length [ llength $args ]
-        if { $length == 2 } {
-            set name [ lindex $args 0 ]
-            set type [ lindex $args 1 ]
+        if { $length == 3 } {
+            set name       [ lindex $args 0 ]
+            set type       [ lindex $args 1 ]
+            set updateable [ lindex $args 2 ]
             log "${type}: $name=<$u>"
             upvar 1 $name v
             set v $u
-        } elseif { $length == 1 } {
-            set type $args
+        } elseif { $length == 2 } {
+            set type       [ lindex $args 0 ]
+            set updateable [ lindex $args 1 ]
             log "${type}: <$u>"
         } else {
-            error "allocate: requires 1 or 2 args!"
+            error "allocate: requires 2 or 3 args!"
         }
-        create_$type $u
+        create_$type $u $updateable
         return $u
     }
 
@@ -103,14 +105,14 @@ namespace eval turbine {
     proc allocate_file2 { name args } {
         set is_mapped [ llength $args ]
         # use void to signal file availability
-        set signal [ allocate "signal:$name" void ]
+        set signal [ allocate "signal:$name" void 0 ]
         if { $is_mapped } {
             set filename [ lindex $args 0 ]
             log "file: $name=\[ <$signal> <$filename> \] mapped"
         } else {
             # use new string that will be set later to
             # something arbitrary
-            set filename [ allocate "filename:$name" string ]
+            set filename [ allocate "filename:$name" string 0 ]
             log "file: $name=\[ <$signal> <$filename> \] unmapped"
 
         }
@@ -129,8 +131,8 @@ namespace eval turbine {
         return $result
     }
 
-    proc create_integer { id } {
-        adlb::create $id $adlb::INTEGER
+    proc create_integer { id updateable } {
+        adlb::create $id $adlb::INTEGER $updateable
     }
 
     proc store_integer { id value } {
@@ -150,8 +152,8 @@ namespace eval turbine {
         return $result
     }
 
-    proc create_float { id } {
-        adlb::create $id $adlb::FLOAT
+    proc create_float { id updateable } {
+        adlb::create $id $adlb::FLOAT $updateable
     }
 
     proc store_float { id value args } {
@@ -170,9 +172,9 @@ namespace eval turbine {
         return $result
     }
 
-    proc create_string { id } {
+    proc create_string { id updateable } {
         log "create string: <$id>"
-        adlb::create $id $adlb::STRING
+        adlb::create $id $adlb::STRING $updateable
     }
 
     proc store_string { id value } {
@@ -191,10 +193,13 @@ namespace eval turbine {
         return $result
     }
 
-    proc create_void { id } {
+    proc create_void { id updateable } {
         debug "create void: <$id>"
+        if { $updateable == 1 } {
+            error "create_void: Cannot update void!"
+        }
         # emulating void with integer
-        adlb::create $id $adlb::INTEGER
+        adlb::create $id $adlb::INTEGER 0
     }
 
     proc store_void { id } {
@@ -207,14 +212,14 @@ namespace eval turbine {
     # retrieve_void not provided as it wouldn't do anything
 
     # Create blob
-    proc create_blob { id } {
+    proc create_blob { id updateable } {
         log "create blob: <$id>"
-        adlb::create $id $adlb::BLOB
+        adlb::create $id $adlb::BLOB $updateable
     }
-    
+
     proc store_blob { id value } {
       set ptr [ lindex $value 0 ]
-      set len [ lindex $value 1 ] 
+      set len [ lindex $value 1 ]
       log [ format "store_blob: <%d>=\[%x %d\]" $id $ptr $len ]
       adlb::store_blob $id $ptr $len
       close_datum $id
@@ -225,7 +230,7 @@ namespace eval turbine {
         adlb::store $id $adlb::BLOB $value
         close_datum $id
     }
-    
+
     # Retrieve and cache blob
     proc retrieve_blob { id } {
       set result [ adlb::retrieve_blob $id ]
@@ -246,7 +251,7 @@ namespace eval turbine {
                     [ lindex $blob 0 ] [ lindex $blob 1 ] ]
       adlb::local_blob_free [ lindex $blob 0 ]
     }
-    
+
     proc retrieve_blob_string { id } {
         set result [ adlb::retrieve $id $adlb::BLOB ]
         debug "retrieve_string: <$id>=[ log_string $result ]"
@@ -255,7 +260,7 @@ namespace eval turbine {
 
     proc create_container { id subscript_type } {
         log "create_container: <$id>\[$subscript_type\]"
-        adlb::create $id $adlb::CONTAINER $subscript_type
+        adlb::create $id $adlb::CONTAINER 0 $subscript_type
     }
 
     # usage: container_insert <id> <subscript> <member> [<drops>]

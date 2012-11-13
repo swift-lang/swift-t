@@ -174,7 +174,7 @@ namespace eval turbine {
         # When the TD has a value, copy the value
         copy_string no_stack $v $id
     }
-    
+
     # When reference r is closed, copy file to v
     proc f_dereference_file { parent v r } {
 
@@ -187,7 +187,7 @@ namespace eval turbine {
         # When the TD has a value, copy the value
         copy_file no_stack [ list $v ] [ list $handle ]
     }
-    
+
     # When reference r is closed, copy blob to v
     proc f_dereference_blob { parent v r } {
         rule "f_dereference-$v-$r" $r $turbine::LOCAL \
@@ -349,10 +349,10 @@ namespace eval turbine {
         if [ container_insert_atomic $c $i ] {
             # c[i] does not exist
             set t [ data_new ]
-            allocate_container t integer
+            allocate_container t integer 0
             container_insert $c $i $t
         } else {
-            allocate r integer
+            allocate r integer 0
             container_reference $r $c $i "integer"
 
             rule fcnib "$r" $turbine::LOCAL \
@@ -397,7 +397,7 @@ namespace eval turbine {
         upvar 1 $r v
 
         # Create reference
-        allocate tmp_r integer
+        allocate tmp_r integer 0
         set v $tmp_r
 
 
@@ -423,7 +423,7 @@ namespace eval turbine {
         upvar 1 $r v
 
         # Create reference
-        allocate tmp_r integer
+        allocate tmp_r integer 0
         set v $tmp_r
 
 
@@ -443,7 +443,7 @@ namespace eval turbine {
         upvar 1 $r v
 
         # Create reference
-        allocate tmp_r integer
+        allocate tmp_r integer 0
         set v $tmp_r
 
 
@@ -484,7 +484,7 @@ namespace eval turbine {
         set sz [ adlb::enumerate $container count all 0 ]
         store_integer $result $sz
     }
-    
+
     # When container is closed, return whether itstrue
     # result: a turbine integer, 0 if not present, 1 if true
     proc contains { stack result inputs } {
@@ -506,8 +506,8 @@ namespace eval turbine {
     }
 
     # If a reference to a struct is represented as a Turbine string
-    # future containing a serialized TCL dict, then lookup a 
-    # struct member 
+    # future containing a serialized TCL dict, then lookup a
+    # struct member
     proc struct_ref_lookup { structr field result type } {
         rule "struct_ref_lookup-$structr" "$structr" $turbine::LOCAL \
             "struct_ref_lookup_body $structr $field $result $type"

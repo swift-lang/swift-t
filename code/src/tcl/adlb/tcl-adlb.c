@@ -403,48 +403,53 @@ adlb_data_type type_from_string(const char* type_string)
 }
 
 /**
-   usage: adlb::create <id> <type> [<extra>]
+   usage: adlb::create <id> <type> <updateable> [<extra>]
    @param extra is only used for files and containers
 */
 static int
 ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
-  TCL_CONDITION(objc >= 3, "adlb::create requires >= 3 args!");
+  TCL_CONDITION(objc >= 4, "adlb::create requires >= 3 args!");
 
   int rc;
   long id;
   rc = Tcl_GetLongFromObj(interp, objv[1], &id);
-  TCL_CONDITION(rc == TCL_OK, "adlb:create could not get data id");
+  TCL_CHECK_MSG(rc, "adlb::create could not get data id");
 
   int type;
-  Tcl_GetIntFromObj(interp, objv[2], &type);
+  rc = Tcl_GetIntFromObj(interp, objv[2], &type);
+  TCL_CHECK_MSG(rc, "adlb::create could not get data type");
+
+  int updateable;
+  rc = Tcl_GetBooleanFromObj(interp, objv[3], &updateable);
+  TCL_CHECK_MSG(rc, "adlb::create could not get rewriteable argument");
 
   switch (type)
   {
     case ADLB_DATA_TYPE_INTEGER:
-      rc = ADLB_Create_integer(id);
+      rc = ADLB_Create_integer(id, updateable);
       break;
     case ADLB_DATA_TYPE_FLOAT:
-      rc = ADLB_Create_float(id);
+      rc = ADLB_Create_float(id, updateable);
       break;
     case ADLB_DATA_TYPE_STRING:
-      rc = ADLB_Create_string(id);
+      rc = ADLB_Create_string(id, updateable);
       break;
     case ADLB_DATA_TYPE_BLOB:
-      rc = ADLB_Create_blob(id);
+      rc = ADLB_Create_blob(id, updateable);
       break;
     case ADLB_DATA_TYPE_FILE:
-      TCL_CONDITION(objc >= 4,
+      TCL_CONDITION(objc >= 5,
                     "adlb::create type=file requires file name!");
-      char* filename = Tcl_GetString(objv[3]);
-      rc = ADLB_Create_file(id, filename);
+      char* filename = Tcl_GetString(objv[4]);
+      rc = ADLB_Create_file(id, filename, updateable);
       break;
     case ADLB_DATA_TYPE_CONTAINER:
-      TCL_CONDITION(objc >= 4,
+      TCL_CONDITION(objc >= 5,
                     "adlb::create type=container requires "
                     "subscript type!");
-      char* subscript_type_string = Tcl_GetString(objv[3]);
+      char* subscript_type_string = Tcl_GetString(objv[4]);
       adlb_data_type subscript_type =
           type_from_string(subscript_type_string);
       rc = ADLB_Create_container(id, subscript_type);
