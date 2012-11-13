@@ -341,7 +341,7 @@ public class STCMiddleEnd implements CompilerBackend {
   
   @Override
   public void declare(Type type, String name, VarStorage storage,
-      DefType defType, Var mapping)
+      DefType defType, Var mapping, boolean updateable)
       throws UndefinedTypeException {
     assert(mapping == null || Types.isMappable(type));
     assert(mapping == null || Types.isString(mapping.type()));
@@ -734,8 +734,11 @@ public class STCMiddleEnd implements CompilerBackend {
 
   }
 
+  /**
+     TODO: Handle updateable globals
+   */
   @Override
-  public void addGlobal(String name, Arg val) {
+  public void addGlobal(String name, Arg val, boolean updateable) {
     assert(val.isConstant() ||
         (Types.isScalarValue(val.getVar().type())));
     program.addGlobalConst(name, val);

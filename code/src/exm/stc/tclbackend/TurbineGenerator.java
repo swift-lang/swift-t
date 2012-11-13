@@ -185,7 +185,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void declare(Type t, String name, VarStorage storage,
-        DefType defType, Var mapping)
+        DefType defType, Var mapping, boolean updateable)
   throws UndefinedTypeException
   {
     assert(mapping == null || Types.isMappable(t));
@@ -214,7 +214,7 @@ public class TurbineGenerator implements CompilerBackend
       } else {
         PrimType pt = t.primType();
         String tprefix = typeToString(pt);
-        point.add(Turbine.allocate(tclName, tprefix));
+        point.add(Turbine.allocate(tclName, tprefix, updateable));
       }
     } else if (Types.isArray(t)) {
       point.add(Turbine.allocateContainer(tclName, Turbine.INTEGER_TYPENAME));
@@ -222,9 +222,9 @@ public class TurbineGenerator implements CompilerBackend
       if (refIsString(t)) {
         // Represent some reference types as strings, since they have multiple
         // elements in the handle
-        point.add(Turbine.allocate(tclName, Turbine.STRING_TYPENAME)); 
+        point.add(Turbine.allocate(tclName, Turbine.STRING_TYPENAME, updateable)); 
       } else {
-        point.add(Turbine.allocate(tclName, Turbine.INTEGER_TYPENAME));
+        point.add(Turbine.allocate(tclName, Turbine.INTEGER_TYPENAME, updateable));
       }
     } else if (Types.isStruct(t)) {
       point.add(Turbine.allocateStruct(tclName));
@@ -1752,7 +1752,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void addGlobal(String name, Arg val) {
+  public void addGlobal(String name, Arg val, boolean updateable) {
     String tclName = prefixVar(name);
     globInit.add(Turbine.makeTCLGlobal(tclName));
     String typePrefix;
@@ -1783,7 +1783,7 @@ public class TurbineGenerator implements CompilerBackend
       throw new STCRuntimeError("Non-constant oparg type "
           + val.getKind());
     }
-    globInit.add(Turbine.allocate(tclName, typePrefix));
+    globInit.add(Turbine.allocate(tclName, typePrefix, updateable));
     globInit.add(setCmd);
   }
 

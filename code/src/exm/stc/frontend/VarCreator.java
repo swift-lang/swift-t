@@ -9,10 +9,10 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.StructType.StructField;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
 
@@ -76,7 +76,8 @@ public class VarCreator {
    */
   public void declare(Var var) throws UndefinedTypeException {
     backend.declare(var.type(), var.name(), 
-        var.storage(), var.defType(), var.mapping());
+        var.storage(), var.defType(), var.mapping(), 
+        Types.isScalarUpdateable(var.type()));
   }
 
   private void initialiseStruct(Context context, Var rootStruct,

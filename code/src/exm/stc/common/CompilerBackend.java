@@ -31,7 +31,8 @@ public interface CompilerBackend {
    * @throws UndefinedTypeException
    */
   public abstract void declare(Type t, String name,
-      VarStorage storage, DefType defType, Var mapping) 
+      VarStorage storage, DefType defType, Var mapping, 
+      boolean updateable) 
            throws UndefinedTypeException;
 
   public abstract void decrArrayWriters(Var arr);
@@ -285,7 +286,7 @@ public interface CompilerBackend {
    * @param name
    * @param val
    */
-  public abstract void addGlobal(String name, Arg val);
+  public abstract void addGlobal(String name, Arg val, boolean updateable);
    
   /**
      Generate and return Tcl from our internal TclTree

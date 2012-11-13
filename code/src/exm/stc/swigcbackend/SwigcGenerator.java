@@ -488,7 +488,7 @@ public class SwigcGenerator implements CompilerBackend
 
   @Override
   public void declare(Type t, String name, VarStorage storage,
-        DefType defType, Var mapping)
+        DefType defType, Var mapping, boolean updateable)
   throws UndefinedTypeException
   {
     assert(mapping == null || Types.isMappable(t));
@@ -1890,7 +1890,7 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void addGlobal(String name, Arg val) {
+  public void addGlobal(String name, Arg val, boolean updateable) {
     String tclName = prefixVar(name);
     globInit.add(Turbine.makeTCLGlobal(tclName));
     String typePrefix;

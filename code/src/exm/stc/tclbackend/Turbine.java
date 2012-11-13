@@ -191,9 +191,11 @@ class Turbine
   }
 
 
-  public static TclTree allocate(String tclName, String typePrefix) {
+  public static TclTree allocate(String tclName, String typePrefix, 
+                                 boolean updateable) {
     return new Command(ALLOCATE,
-                       new Token(tclName), new Token(typePrefix));
+                       new Token(tclName), new Token(typePrefix), 
+                       new Token(updateable));
   }
 
   public static TclTree allocateContainer(String name,
@@ -655,7 +657,7 @@ class Turbine
   }
 
   public static TclTree declareReference(String refVarName) {
-    return allocate(refVarName, INTEGER_TYPENAME);
+    return allocate(refVarName, INTEGER_TYPENAME, false);
   }
 
   public static TclTree callFunction(String function, TclList oList,

@@ -2171,6 +2171,8 @@ public class ASTWalker {
           + v.name() + " which has type " + v.type());
     }
     
+    boolean updateable = Types.isScalarUpdateable(valType);
+    
     String msg = "Don't support non-literal "
         + "expressions for global constants";
     switch (v.type().primType()) {
@@ -2180,7 +2182,7 @@ public class ASTWalker {
         throw new UserException(context, msg);
       }
       backend.addGlobal(v.name(), Arg.createBoolLit(
-                                  Boolean.parseBoolean(bval)));
+                                  Boolean.parseBoolean(bval)), updateable);
       break;
     case INT:
       String ival = Literals.extractIntLit(context, val);
@@ -2188,7 +2190,7 @@ public class ASTWalker {
         throw new UserException(context, msg);
       }
       backend.addGlobal(v.name(), Arg.createIntLit(
-                                      Long.parseLong(ival)));
+                                      Long.parseLong(ival)), updateable);
       break;
     case FLOAT:
       Double fval = Literals.extractFloatLit(context, val);
@@ -2201,14 +2203,14 @@ public class ASTWalker {
         }
       }
       assert(fval != null);
-      backend.addGlobal(v.name(), Arg.createFloatLit(fval));
+      backend.addGlobal(v.name(), Arg.createFloatLit(fval), updateable);
       break;
     case STRING:
       String sval = Literals.extractStringLit(context, val);
       if (sval == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(v.name(), Arg.createStringLit(sval));
+      backend.addGlobal(v.name(), Arg.createStringLit(sval), updateable);
       break;
     default:
       throw new STCRuntimeError("Unexpect value tree type in "

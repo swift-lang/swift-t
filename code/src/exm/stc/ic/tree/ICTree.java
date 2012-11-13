@@ -104,7 +104,8 @@ public class ICTree {
       for (Entry<String, Arg> c: globalConsts.entrySet()) {
         String name = c.getKey();
         Arg val = c.getValue();
-        gen.addGlobal(name, val);
+        // TODO: Can this be updateable?
+        gen.addGlobal(name, val, false);
       }
       logger.debug("Done generating global constants");
       
@@ -487,6 +488,7 @@ public class ICTree {
     /**
      * Make a copy without any shared mutable state
      */
+    @Override
     public Block clone() {
       return this.clone(this.type);
     }
@@ -568,7 +570,7 @@ public class ICTree {
       for (Var v: variables) {
         logger.trace("generating variable decl for " + v.toString());
         gen.declare(v.type(), v.name(), v.storage(), v.defType(),
-            v.mapping());
+            v.mapping(), Types.isScalarUpdateable(v.type()));
       }
       for (Instruction i: instructions) {
         i.generate(logger, gen, info);
