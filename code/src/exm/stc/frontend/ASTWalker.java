@@ -1571,7 +1571,7 @@ public class ASTWalker {
   private void defineBuiltinFunction(Context context, SwiftAST tree)
   throws UserException
   {
-    final int REQUIRED_CHILDREN = 5;
+    final int REQUIRED_CHILDREN = 4;
     assert(tree.getChildCount() >= REQUIRED_CHILDREN);
     String function  = tree.child(0).getText();
     SwiftAST typeParamsT = tree.child(1);
@@ -1589,48 +1589,68 @@ public class ASTWalker {
     LogHelper.debug(context, "builtin: " + function + " " + ft);
 
     
-    SwiftAST tclImplRef = tree.child(4);
-    assert(tclImplRef.getType() == ExMParser.TCL_FUN_REF);
+    int pos = REQUIRED_CHILDREN;
+    TclFunRef impl = null;
+    if (pos < tree.getChildCount() && 
+              tree.child(pos).getType() == ExMParser.TCL_FUN_REF) {
+      SwiftAST tclImplRef = tree.child(pos);
+      String pkg     = Literals.extractLiteralString(context, 
+                                                     tclImplRef.child(0));
+      String version = Literals.extractLiteralString(context, 
+                                                     tclImplRef.child(1));
+      String symbol  = Literals.extractLiteralString(context, 
+                                                     tclImplRef.child(2));
+      impl = new TclFunRef(pkg, symbol, version);
+      pos++;
+    }
     
-    String pkg     = Literals.extractLiteralString(context, 
-                                                   tclImplRef.child(0));
-    String version = Literals.extractLiteralString(context, 
-                                                   tclImplRef.child(1));
-    String symbol  = Literals.extractLiteralString(context, 
-                                                   tclImplRef.child(2));
-    TclFunRef impl = new TclFunRef(pkg, symbol, version);
-    
-    TclOpTemplate inlineTcl = null;
-    int inlineTclPos = REQUIRED_CHILDREN;
-    if (tree.getChildCount() >= inlineTclPos + 1 && 
-          tree.child(inlineTclPos).getType() == ExMParser.INLINE_TCL) {
+    SwiftAST inlineTclTree = null;
+    if (pos < tree.getChildCount() && 
+          tree.child(pos).getType() == ExMParser.INLINE_TCL) {
       /* See if a template is provided for inline TCL code for function */
-      SwiftAST inlineTclTree = tree.child(inlineTclPos);
-      assert(inlineTclTree.getChildCount() == 1);
-      String tclTemplateString = 
-            Literals.extractLiteralString(context, inlineTclTree.child(0));
-      inlineTcl = InlineCode.templateFromString(context, tclTemplateString);
-      
-      List<String> inNames = fdecl.getInNames();
-      inlineTcl.addInNames(inNames);
-      if (ft.hasVarargs()) {
-        inlineTcl.setVarArgIn(inNames.get(inNames.size() - 1));
-      }
-      inlineTcl.addOutNames(fdecl.getOutNames());
-      inlineTcl.verifyNames(context);
-      
-      Builtins.addInlineTemplate(function, inlineTcl);
+      inlineTclTree = tree.child(pos);
+      handleInlineTcl(context, function, fdecl, ft, inlineTclTree);
+      pos++;
     }
     
     // Read annotations at end of child list
-    int i = tree.getChildCount() - 1;
-    while (tree.child(i).getType() == ExMParser.ANNOTATION) {
-      handleFunctionAnnotation(context, function, tree.child(i));
-      i--;
+    for (; pos < tree.getChildCount(); pos++) {
+      handleFunctionAnnotation(context, function, tree.child(pos));
     }
+    
     context.defineFunction(function, ft);
-    context.setFunctionProperty(function, FnProp.BUILTIN);
-    backend.defineBuiltinFunction(function, ft, impl);
+    if (impl != null) {
+      context.setFunctionProperty(function, FnProp.BUILTIN);
+      backend.defineBuiltinFunction(function, ft, impl);
+    } else {
+      if (inlineTclTree == null) {
+        throw new UserException(context, "Must provide TCL implementation or " +
+        		"inline TCL for function " + function);
+      }
+      // TODO: generate composite functino wrapping inline tcl
+      throw new STCRuntimeError("cannot yet generate auto stub");
+    }
+  }
+
+
+  private void handleInlineTcl(Context context, String function,
+          FunctionDecl fdecl, FunctionType ft, SwiftAST inlineTclTree)
+          throws InvalidSyntaxException, UserException {
+    assert(inlineTclTree.getType() == ExMParser.INLINE_TCL);
+    TclOpTemplate inlineTcl;
+    assert(inlineTclTree.getChildCount() == 1);
+    String tclTemplateString = 
+          Literals.extractLiteralString(context, inlineTclTree.child(0));
+    inlineTcl = InlineCode.templateFromString(context, tclTemplateString);
+    
+    List<String> inNames = fdecl.getInNames();
+    inlineTcl.addInNames(inNames);
+    if (ft.hasVarargs()) {
+      inlineTcl.setVarArgIn(inNames.get(inNames.size() - 1));
+    }
+    inlineTcl.addOutNames(fdecl.getOutNames());
+    inlineTcl.verifyNames(context);
+    Builtins.addInlineTemplate(function, inlineTcl);
   }
 
 
