@@ -1753,7 +1753,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void addGlobal(String name, Arg val, boolean updateable) {
+  public void addGlobal(String name, Arg val) {
     String tclName = prefixVar(name);
     globInit.add(Turbine.makeTCLGlobal(tclName));
     String typePrefix;
@@ -1784,7 +1784,7 @@ public class TurbineGenerator implements CompilerBackend
       throw new STCRuntimeError("Non-constant oparg type "
           + val.getKind());
     }
-    globInit.add(Turbine.allocate(tclName, typePrefix, updateable));
+    globInit.add(Turbine.allocate(tclName, typePrefix, false));
     globInit.add(setCmd);
   }
 

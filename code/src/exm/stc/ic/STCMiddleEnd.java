@@ -738,7 +738,7 @@ public class STCMiddleEnd implements CompilerBackend {
      TODO: Handle updateable globals
    */
   @Override
-  public void addGlobal(String name, Arg val, boolean updateable) {
+  public void addGlobal(String name, Arg val) {
     assert(val.isConstant() ||
         (Types.isScalarValue(val.getVar().type())));
     program.addGlobalConst(name, val);

@@ -285,7 +285,7 @@ public interface CompilerBackend {
    * @param name
    * @param val
    */
-  public abstract void addGlobal(String name, Arg val, boolean updateable);
+  public abstract void addGlobal(String name, Arg val);
    
   /**
      Generate and return Tcl from our internal TclTree

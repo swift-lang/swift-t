@@ -1890,7 +1890,7 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void addGlobal(String name, Arg val, boolean updateable) {
+  public void addGlobal(String name, Arg val) {
     String tclName = prefixVar(name);
     globInit.add(Turbine.makeTCLGlobal(tclName));
     String typePrefix;

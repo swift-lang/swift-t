@@ -104,8 +104,7 @@ public class ICTree {
       for (Entry<String, Arg> c: globalConsts.entrySet()) {
         String name = c.getKey();
         Arg val = c.getValue();
-        // TODO: Can this be updateable?
-        gen.addGlobal(name, val, false);
+        gen.addGlobal(name, val);
       }
       logger.debug("Done generating global constants");
       
