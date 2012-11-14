@@ -1132,6 +1132,10 @@ public class Types {
     return isScalarFuture(t) && t.primType() == PrimType.FILE;
   }
   
+  public static boolean isBlob(Type t) {
+    return isScalarFuture(t) && t.primType() == PrimType.BLOB;
+  }
+
   public static boolean isRefTo(Type refType, Type valType) {
     return isRef(refType) && refType.memberType().equals(valType);
   }

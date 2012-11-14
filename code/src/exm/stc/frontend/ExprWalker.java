@@ -348,6 +348,31 @@ public class ExprWalker {
     }
   }
 
+  public void assign(Var dst, Arg src) {
+    assert(Types.isScalarValue(src.getType()));
+    assert(Types.isScalarFuture(dst.type()));
+    switch (src.getType().primType()) {
+      case INT:
+        backend.assignInt(dst, src);
+        break;
+      case BOOL:
+        backend.assignBool(dst, src);
+        break;
+      case FLOAT:
+        backend.assignFloat(dst, src);
+        break;
+      case STRING:
+        backend.assignInt(dst, src);
+        break;
+      case BLOB:
+        backend.assignBlob(dst, src);
+        break;
+      default:
+        throw new STCRuntimeError("assigning from type " + src.getType()
+                + " not supported internally");
+    }
+  }
+
   private void callOperator(Context context, SwiftAST tree, 
       Var out, Map<String, String> renames) throws UserException {
     String op = tree.child(0).getText();

@@ -1604,12 +1604,12 @@ public class ASTWalker {
       pos++;
     }
     
-    SwiftAST inlineTclTree = null;
+    TclOpTemplate inlineTcl = null;
     if (pos < tree.getChildCount() && 
           tree.child(pos).getType() == ExMParser.INLINE_TCL) {
       /* See if a template is provided for inline TCL code for function */
-      inlineTclTree = tree.child(pos);
-      handleInlineTcl(context, function, fdecl, ft, inlineTclTree);
+      SwiftAST inlineTclTree = tree.child(pos);
+      inlineTcl = handleInlineTcl(context, function, fdecl, ft, inlineTclTree);
       pos++;
     }
     
@@ -1623,17 +1623,80 @@ public class ASTWalker {
       context.setFunctionProperty(function, FnProp.BUILTIN);
       backend.defineBuiltinFunction(function, ft, impl);
     } else {
-      if (inlineTclTree == null) {
+      if (inlineTcl == null) {
         throw new UserException(context, "Must provide TCL implementation or " +
         		"inline TCL for function " + function);
       }
-      // TODO: generate composite functino wrapping inline tcl
+      // generate composite functino wrapping inline tcl
+      context.setFunctionProperty(function, FnProp.COMPOSITE);
+      generateWrapperFunction(context, function, ft, fdecl, inlineTcl);
       throw new STCRuntimeError("cannot yet generate auto stub");
     }
   }
 
 
-  private void handleInlineTcl(Context context, String function,
+  /**
+   * Generate a function that wraps some inline tcl
+   * @param function
+   * @param ft 
+   * @param fdecl
+   * @param inlineTcl 
+   * @throws UserException
+   */
+  private void generateWrapperFunction(Context global,
+           String function, FunctionType ft,
+           FunctionDecl fdecl, TclOpTemplate inlineTclinlineTcl)
+          throws UserException {
+    List<Var> outVars = fdecl.getOutVars();
+    List<Var> inVars = fdecl.getInVars();
+    
+    Context context = new LocalContext(global, function);
+    
+    backend.startFunction(function, outVars, inVars, TaskMode.LEAF);
+    List<Arg> inVals = new ArrayList<Arg>(inVars.size());
+    List<Var> outVals = new ArrayList<Var>(outVars.size());
+    // TODO: check types
+    
+    for (Var in: inVars) {
+      Var inVal = varCreator.fetchValueOf(context, in);
+      inVals.add(Arg.createVar(inVal));
+      if (Types.isBlob(in.type())) {
+        //TODO
+        throw new STCRuntimeError("Dont handle blob yet");
+      } else if (Types.isVoid(in.type())) {
+        //TODO
+        throw new STCRuntimeError("Dont handle void yet");
+      }
+    }
+    for (Var out: outVars) {
+      Var outVal = varCreator.createValueOfVar(context, out);
+      outVals.add(outVal);
+      if (Types.isBlob(out.type())) {
+        //TODO
+        throw new STCRuntimeError("Dont handle blob yet");
+      } else if (Types.isVoid(out.type())) {
+        //TODO
+        throw new STCRuntimeError("Dont handle void yet");
+      }
+    }
+    
+    backend.builtinLocalFunctionCall(function, inVals, outVals);
+    
+    for (int i = 0; i < outVars.size(); i++) {
+      Var outFuture = outVars.get(i);
+      Var outVal = outVals.get(i);
+      if (Types.isVoid(outFuture.type())) {
+        // TODO
+        throw new STCRuntimeError("assign void: TODO"); 
+      } else {
+        exprWalker.assign(outFuture, Arg.createVar(outVal));
+      }
+    }
+    backend.endFunction();
+  }
+
+
+  private TclOpTemplate handleInlineTcl(Context context, String function,
           FunctionDecl fdecl, FunctionType ft, SwiftAST inlineTclTree)
           throws InvalidSyntaxException, UserException {
     assert(inlineTclTree.getType() == ExMParser.INLINE_TCL);
@@ -1651,6 +1714,7 @@ public class ASTWalker {
     inlineTcl.addOutNames(fdecl.getOutNames());
     inlineTcl.verifyNames(context);
     Builtins.addInlineTemplate(function, inlineTcl);
+    return inlineTcl;
   }
 
 
