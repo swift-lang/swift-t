@@ -14,5 +14,5 @@ fi
             --with-c-utils=${C_UTILS_INST} \
             --prefix=${LB_INST}
 make clean
-make
+make -j ${MAKE_PARALLELISM}
 make install

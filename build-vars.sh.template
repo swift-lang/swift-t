@@ -20,3 +20,6 @@ C_UTILS=${SFW_ROOT}/c-utils/trunk
 LB=${SFW_ROOT}/lb/trunk/code
 TURBINE=${SFW_ROOT}/turbine/trunk/code
 STC=${SFW_ROOT}/stc/trunk/code
+
+# Misc settings
+MAKE_PARALLELISM=2

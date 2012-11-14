@@ -11,5 +11,5 @@ if [ -f Makefile ]; then
 fi
 ./setup.sh
 ./configure --enable-shared --prefix=${C_UTILS_INST}
-make
+make -j ${MAKE_PARALLELISM}
 make install

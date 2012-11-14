@@ -23,13 +23,15 @@ cd ${LB}
 echo
 echo "Building lb"
 echo "================"
-make && make install
+make -j ${MAKE_PARALLELISM}
+make install
 
 cd ${TURBINE}
 echo
 echo "Building Turbine"
 echo "================"
-make && make install
+make -j ${MAKE_PARALLELISM}
+make install
 
 cd ${STC}
 echo

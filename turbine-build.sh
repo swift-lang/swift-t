@@ -16,6 +16,6 @@ fi
             --with-mpe \
             --prefix=${TURBINE_INST} #\
 #            --disable-log
-make package
+make package -j ${MAKE_PARALLELISM}
 make install
 #make test_results

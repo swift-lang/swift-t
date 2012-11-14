@@ -11,5 +11,5 @@ source ${THISDIR}/build-vars.sh
 
 cd unix
 ./configure --prefix=${TCL_INST} 
-make
+make -j ${MAKE_PARALLELISM}
 make install
