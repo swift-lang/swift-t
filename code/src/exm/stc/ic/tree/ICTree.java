@@ -23,7 +23,6 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -250,16 +249,13 @@ public class ICTree {
     private final String name;
     private final TclFunRef impl;
     private final FunctionType fType;
-    private final TclOpTemplate inlineTclTemplate;
     
 
     public BuiltinFunction(String name, FunctionType fType,
-                           TclFunRef impl,
-                           TclOpTemplate inlineTclTemplate) {
+                           TclFunRef impl) {
       this.name = name;
       this.impl = impl;
       this.fType = fType;
-      this.inlineTclTemplate = inlineTclTemplate;
     }
 
     public void prettyPrint(StringBuilder out) {
@@ -297,8 +293,7 @@ public class ICTree {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
     throws UserException {
       logger.debug("generating: " + name);
-      gen.defineBuiltinFunction(name, fType, impl, 
-                                inlineTclTemplate);
+      gen.defineBuiltinFunction(name, fType, impl);
     }
   }
 

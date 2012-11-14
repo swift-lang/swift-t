@@ -5,7 +5,6 @@ import java.util.List;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.TaskMode;
@@ -198,16 +197,13 @@ public interface CompilerBackend {
       Arg val);
   
   /**
-   * impl or inlineTclTemplate must be provided
    * @param name
    * @param type
-   * @param impl null if no implementation provided and wrapper should be created
-   * @param inlineTclTemplate null if no inline version
+   * @param impl tcl function implementing this.  Must be provided
    * @throws UserException
    */
   public abstract void defineBuiltinFunction(String name,
-                FunctionType type, TclFunRef impl, TclOpTemplate inlineTclTemplate) 
-                    throws UserException;
+                FunctionType type, TclFunRef impl) throws UserException;
 
   public abstract void startFunction(String functionName,
       List<Var> oList, List<Var> iList, TaskMode mode)

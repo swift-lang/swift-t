@@ -1112,8 +1112,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void defineBuiltinFunction(String name, FunctionType type,
-            TclFunRef impl, TclOpTemplate inlineTclTemplate)
-  {
+            TclFunRef impl) {
     String pv = impl.pkg + impl.version;
     if (!impl.pkg.equals("turbine")) {
       if (!requiredPackages.contains(pv))

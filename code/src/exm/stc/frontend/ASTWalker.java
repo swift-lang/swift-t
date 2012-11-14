@@ -1630,7 +1630,7 @@ public class ASTWalker {
     }
     context.defineFunction(function, ft);
     context.setFunctionProperty(function, FnProp.BUILTIN);
-    backend.defineBuiltinFunction(function, ft, impl, inlineTcl);
+    backend.defineBuiltinFunction(function, ft, impl);
   }
 
 

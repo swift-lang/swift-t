@@ -16,7 +16,6 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.TaskMode;
@@ -124,14 +123,12 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void defineBuiltinFunction(String name,
                                     FunctionType fType,
-                                    TclFunRef impl,
-                                    TclOpTemplate inlineTclTemplate)
+                                    TclFunRef impl)
   throws UserException
   {
     assert(blockStack.size() == 0);
     assert(currFunction == null);
-    BuiltinFunction bf =
-        new BuiltinFunction(name, fType, impl, inlineTclTemplate);
+    BuiltinFunction bf = new BuiltinFunction(name, fType, impl);
     program.addBuiltin(bf);
   }
 
