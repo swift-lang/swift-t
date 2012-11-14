@@ -570,7 +570,7 @@ public class ICTree {
       for (Var v: variables) {
         logger.trace("generating variable decl for " + v.toString());
         gen.declare(v.type(), v.name(), v.storage(), v.defType(),
-            v.mapping(), Types.isScalarUpdateable(v.type()));
+            v.mapping());
       }
       for (Instruction i: instructions) {
         i.generate(logger, gen, info);

@@ -185,7 +185,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void declare(Type t, String name, VarStorage storage,
-        DefType defType, Var mapping, boolean updateable)
+        DefType defType, Var mapping)
   throws UndefinedTypeException
   {
     assert(mapping == null || Types.isMappable(t));
@@ -214,7 +214,8 @@ public class TurbineGenerator implements CompilerBackend
       } else {
         PrimType pt = t.primType();
         String tprefix = typeToString(pt);
-        point.add(Turbine.allocate(tclName, tprefix, updateable));
+        point.add(Turbine.allocate(tclName, tprefix,
+                          Types.isScalarUpdateable(t)));
       }
     } else if (Types.isArray(t)) {
       point.add(Turbine.allocateContainer(tclName, Turbine.INTEGER_TYPENAME));
@@ -222,9 +223,9 @@ public class TurbineGenerator implements CompilerBackend
       if (refIsString(t)) {
         // Represent some reference types as strings, since they have multiple
         // elements in the handle
-        point.add(Turbine.allocate(tclName, Turbine.STRING_TYPENAME, updateable)); 
+        point.add(Turbine.allocate(tclName, Turbine.STRING_TYPENAME, false)); 
       } else {
-        point.add(Turbine.allocate(tclName, Turbine.INTEGER_TYPENAME, updateable));
+        point.add(Turbine.allocate(tclName, Turbine.INTEGER_TYPENAME, false));
       }
     } else if (Types.isStruct(t)) {
       point.add(Turbine.allocateStruct(tclName));

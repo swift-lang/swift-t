@@ -195,7 +195,7 @@ class Turbine
                                  boolean updateable) {
     return new Command(ALLOCATE,
                        new Token(tclName), new Token(typePrefix), 
-                       new Token(updateable));
+                       LiteralInt.boolValue(updateable));
   }
 
   public static TclTree allocateContainer(String name,

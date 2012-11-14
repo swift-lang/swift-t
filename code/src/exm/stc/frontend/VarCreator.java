@@ -76,8 +76,7 @@ public class VarCreator {
    */
   public void declare(Var var) throws UndefinedTypeException {
     backend.declare(var.type(), var.name(), 
-        var.storage(), var.defType(), var.mapping(), 
-        Types.isScalarUpdateable(var.type()));
+        var.storage(), var.defType(), var.mapping());
   }
 
   private void initialiseStruct(Context context, Var rootStruct,

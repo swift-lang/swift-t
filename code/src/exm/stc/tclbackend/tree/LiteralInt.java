@@ -16,4 +16,8 @@ public class LiteralInt extends Expression {
     sb.append(Long.toString(value));
   }
 
+  public static Expression boolValue(boolean val) {
+    return val ? TRUE : FALSE;
+  }
+
 }

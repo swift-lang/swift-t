@@ -31,8 +31,7 @@ public interface CompilerBackend {
    * @throws UndefinedTypeException
    */
   public abstract void declare(Type t, String name,
-      VarStorage storage, DefType defType, Var mapping, 
-      boolean updateable) 
+      VarStorage storage, DefType defType, Var mapping) 
            throws UndefinedTypeException;
 
   public abstract void decrArrayWriters(Var arr);
@@ -98,7 +97,7 @@ public interface CompilerBackend {
 
   /**
    * Free local blob value
-   * @param var
+   * @param blobval
    */
   public abstract void freeBlob(Var blobval);
   

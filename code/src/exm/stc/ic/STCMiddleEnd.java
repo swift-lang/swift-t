@@ -341,7 +341,7 @@ public class STCMiddleEnd implements CompilerBackend {
   
   @Override
   public void declare(Type type, String name, VarStorage storage,
-      DefType defType, Var mapping, boolean updateable)
+      DefType defType, Var mapping)
       throws UndefinedTypeException {
     assert(mapping == null || Types.isMappable(type));
     assert(mapping == null || Types.isString(mapping.type()));
