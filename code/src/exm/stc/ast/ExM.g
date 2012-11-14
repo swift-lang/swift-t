@@ -70,6 +70,7 @@ tokens {
     ARRAY_ELEMS;
     ANNOTATION;
     GLOBAL_CONST;
+    TCL_FUN_REF;
     INLINE_TCL;
     APP_FILENAME;
     TYPE_PARAMETERS;
@@ -212,9 +213,13 @@ builtin_function_definition:
         annotation*
         tp=type_parameters
         o=formal_argument_list f=ID i=formal_argument_list
-        pkg=STRING version=STRING symbol=STRING inline_tcl? SEMICOLON ->
-        ^( DEFINE_BUILTIN_FUNCTION $f $tp $o $i $pkg $version $symbol 
+         tcl_fun_reference inline_tcl? SEMICOLON ->
+        ^( DEFINE_BUILTIN_FUNCTION $f $tp $o $i tcl_fun_reference  
                                    inline_tcl? annotation* )
+    ;
+    
+tcl_fun_reference:
+        pkg=STRING version=STRING symbol=STRING -> ^( TCL_FUN_REF $pkg $version $symbol ) 
     ;
 
 type_parameters:

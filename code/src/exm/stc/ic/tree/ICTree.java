@@ -18,6 +18,7 @@ import java.util.TreeMap;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
@@ -247,20 +248,16 @@ public class ICTree {
 
   public static class BuiltinFunction {
     private final String name;
-    private final String pkg;
-    private final String version;
-    private final String symbol;
+    private final TclFunRef impl;
     private final FunctionType fType;
     private final TclOpTemplate inlineTclTemplate;
     
 
-    public BuiltinFunction(String name, String pkg, String version,
-                           String symbol, FunctionType fType,
+    public BuiltinFunction(String name, FunctionType fType,
+                           TclFunRef impl,
                            TclOpTemplate inlineTclTemplate) {
-      this.name    = name;
-      this.pkg     = pkg;
-      this.version = version;
-      this.symbol  = symbol;
+      this.name = name;
+      this.impl = impl;
       this.fType = fType;
       this.inlineTclTemplate = inlineTclTemplate;
     }
@@ -289,8 +286,8 @@ public class ICTree {
         out.append(t.typeName());
       }
       out.append(") { ");
-      out.append(pkg + "::" + symbol + " ");
-      out.append("pkgversion: " + version + " ");
+      out.append(impl.pkg + "::" + impl.symbol + " ");
+      out.append("pkgversion: " + impl.version + " ");
       
       
       out.append(" }\n");
@@ -300,7 +297,7 @@ public class ICTree {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
     throws UserException {
       logger.debug("generating: " + name);
-      gen.defineBuiltinFunction(name, pkg, version, symbol, fType, 
+      gen.defineBuiltinFunction(name, fType, impl, 
                                 inlineTclTemplate);
     }
   }

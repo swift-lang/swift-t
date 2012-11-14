@@ -197,9 +197,16 @@ public interface CompilerBackend {
   public abstract void updateImm(Var updateable, Operators.UpdateMode updateMode,
       Arg val);
   
+  /**
+   * impl or inlineTclTemplate must be provided
+   * @param name
+   * @param type
+   * @param impl null if no implementation provided and wrapper should be created
+   * @param inlineTclTemplate null if no inline version
+   * @throws UserException
+   */
   public abstract void defineBuiltinFunction(String name,
-                String pkg, String version, String symbol,
-                FunctionType type, TclOpTemplate inlineTclTemplate) 
+                FunctionType type, TclFunRef impl, TclOpTemplate inlineTclTemplate) 
                     throws UserException;
 
   public abstract void startFunction(String functionName,

@@ -35,6 +35,7 @@ import exm.stc.ast.descriptor.Wait;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Settings;
+import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.InvalidOptionException;
@@ -1570,7 +1571,7 @@ public class ASTWalker {
   private void defineBuiltinFunction(Context context, SwiftAST tree)
   throws UserException
   {
-    final int REQUIRED_CHILDREN = 7;
+    final int REQUIRED_CHILDREN = 5;
     assert(tree.getChildCount() >= REQUIRED_CHILDREN);
     String function  = tree.child(0).getText();
     SwiftAST typeParamsT = tree.child(1);
@@ -1578,10 +1579,6 @@ public class ASTWalker {
     SwiftAST inputs  = tree.child(3);
     assert(inputs.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
     assert(outputs.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
-    String pkg     = Literals.extractLiteralString(context, tree.child(4));
-    String version = Literals.extractLiteralString(context,
-                                                        tree.child(5));
-    String symbol  = Literals.extractLiteralString(context, tree.child(6));
     
     Set<String> typeParams = extractTypeParams(typeParamsT);
 
@@ -1591,8 +1588,19 @@ public class ASTWalker {
     FunctionType ft = fdecl.getFunctionType();
     LogHelper.debug(context, "builtin: " + function + " " + ft);
 
-    TclOpTemplate inlineTcl = null;
     
+    SwiftAST tclImplRef = tree.child(4);
+    assert(tclImplRef.getType() == ExMParser.TCL_FUN_REF);
+    
+    String pkg     = Literals.extractLiteralString(context, 
+                                                   tclImplRef.child(0));
+    String version = Literals.extractLiteralString(context, 
+                                                   tclImplRef.child(1));
+    String symbol  = Literals.extractLiteralString(context, 
+                                                   tclImplRef.child(2));
+    TclFunRef impl = new TclFunRef(pkg, symbol, version);
+    
+    TclOpTemplate inlineTcl = null;
     int inlineTclPos = REQUIRED_CHILDREN;
     if (tree.getChildCount() >= inlineTclPos + 1 && 
           tree.child(inlineTclPos).getType() == ExMParser.INLINE_TCL) {
@@ -1622,7 +1630,7 @@ public class ASTWalker {
     }
     context.defineFunction(function, ft);
     context.setFunctionProperty(function, FnProp.BUILTIN);
-    backend.defineBuiltinFunction(function, pkg, version, symbol, ft, inlineTcl);
+    backend.defineBuiltinFunction(function, ft, impl, inlineTcl);
   }
 
 

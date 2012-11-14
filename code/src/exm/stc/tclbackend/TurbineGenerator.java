@@ -19,6 +19,7 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.Settings;
+import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
@@ -1110,21 +1111,20 @@ public class TurbineGenerator implements CompilerBackend
   private final Set<String> requiredPackages = new HashSet<String>();
 
   @Override
-  public void defineBuiltinFunction(String name, String pkg,
-                      String version, String symbol,
-                      FunctionType type, TclOpTemplate inlineTclTemplate)
+  public void defineBuiltinFunction(String name, FunctionType type,
+            TclFunRef impl, TclOpTemplate inlineTclTemplate)
   {
-    String pv = pkg+version;
-    if (!pkg.equals("turbine")) {
+    String pv = impl.pkg + impl.version;
+    if (!impl.pkg.equals("turbine")) {
       if (!requiredPackages.contains(pv))
       {
-        PackageRequire pr = new PackageRequire(pkg, version);
+        PackageRequire pr = new PackageRequire(impl.pkg, impl.version);
         pointStack.peek().add(pr);
         requiredPackages.add(pv);
         pointStack.peek().add(new Command(""));
       }
     }
-    builtinSymbols.put(name, new TclFunRef(pkg, symbol));
+    builtinSymbols.put(name, impl);
     logger.debug("TurbineGenerator: Defined built-in " + name);
   }
 

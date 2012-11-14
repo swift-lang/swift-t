@@ -10,6 +10,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
@@ -121,16 +122,16 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void defineBuiltinFunction(String name, String pkg,
-                                    String version, String symbol,
-                                    FunctionType fType, 
+  public void defineBuiltinFunction(String name,
+                                    FunctionType fType,
+                                    TclFunRef impl,
                                     TclOpTemplate inlineTclTemplate)
   throws UserException
   {
     assert(blockStack.size() == 0);
     assert(currFunction == null);
     BuiltinFunction bf =
-        new BuiltinFunction(name, pkg, version, symbol, fType, inlineTclTemplate);
+        new BuiltinFunction(name, fType, impl, inlineTclTemplate);
     program.addBuiltin(bf);
   }
 
