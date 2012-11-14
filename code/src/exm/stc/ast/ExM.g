@@ -213,8 +213,8 @@ builtin_function_definition:
         annotation*
         tp=type_parameters
         o=formal_argument_list f=ID i=formal_argument_list
-         tcl_fun_reference inline_tcl? SEMICOLON ->
-        ^( DEFINE_BUILTIN_FUNCTION $f $tp $o $i tcl_fun_reference  
+         tcl_fun_reference? inline_tcl? SEMICOLON ->
+        ^( DEFINE_BUILTIN_FUNCTION $f $tp $o $i tcl_fun_reference?  
                                    inline_tcl? annotation* )
     ;
     

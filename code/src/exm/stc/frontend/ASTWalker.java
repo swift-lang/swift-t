@@ -1630,7 +1630,6 @@ public class ASTWalker {
       // generate composite functino wrapping inline tcl
       context.setFunctionProperty(function, FnProp.COMPOSITE);
       generateWrapperFunction(context, function, ft, fdecl, inlineTcl);
-      throw new STCRuntimeError("cannot yet generate auto stub");
     }
   }
 
