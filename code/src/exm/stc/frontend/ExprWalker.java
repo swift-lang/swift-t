@@ -933,7 +933,7 @@ public class ExprWalker {
                              usedVars, keepOpen);
     backend.arrayInsertImm(member, dst, Arg.createVar(ix));
     backend.endForeachLoop(-1, true, keepOpen);
-    backend.decrArrayWriters(dst);
+    backend.decrWriters(dst);
     backend.endWaitStatement(keepOpen);
   }
 

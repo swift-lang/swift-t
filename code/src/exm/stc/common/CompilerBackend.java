@@ -33,7 +33,9 @@ public interface CompilerBackend {
       VarStorage storage, DefType defType, Var mapping) 
            throws UndefinedTypeException;
 
-  public abstract void decrArrayWriters(Var arr);
+  public abstract void decrRef(Var var);
+  
+  public abstract void decrWriters(Var var);
 
   public abstract void localOp(BuiltinOpcode op, Var out, 
                                             List<Arg> in);

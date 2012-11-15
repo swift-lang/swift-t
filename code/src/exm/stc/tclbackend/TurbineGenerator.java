@@ -256,11 +256,16 @@ public class TurbineGenerator implements CompilerBackend
 
 
   @Override
-  public void decrArrayWriters(Var arr) {
+  public void decrWriters(Var arr) {
     Type type = arr.type();
     assert(Types.isArray(type));
     // Close array by removing the slot we created at startup
     pointStack.peek().add(Turbine.decrArrayWriters(varToExpr(arr)));
+  }
+  
+  @Override
+  public void decrRef(Var var) {
+    // TODO: currently just ignore
   }
 
   String typeToString(PrimType type)

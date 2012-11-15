@@ -336,10 +336,6 @@ public class ASTWalker {
   /**
    * Make sure all arrays in block are closed upon exiting
    *
-   * TODO: this is currently broken, because we want to run this code after all
-   * branches have finished executing, but we don't currently have a way to know
-   * that all branches are actually done
-   *
    * @param context
    * @throws UserException
    * @throws UndefinedTypeException
@@ -349,7 +345,13 @@ public class ASTWalker {
     for (Var v : context.getArraysToClose()) {
       assert(v.defType() != DefType.INARG);
       assert(Types.isArray(v.type()));
-      backend.decrArrayWriters(v);
+      backend.decrWriters(v);
+    }
+    
+    for (Var v: context.getScopeVariables()) {
+      if (v.storage() == VarStorage.STACK || v.storage() == VarStorage.TEMP) {
+        backend.decrRef(v);
+      }
     }
   }
 

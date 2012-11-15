@@ -391,11 +391,16 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void decrArrayWriters(Var arr) {
+  public void decrWriters(Var arr) {
     assert(Types.isArray(arr.type()));
     currBlock().addCleanup(arr, TurbineOp.arrayDecrWriters(arr));
   }
 
+  @Override
+  public void decrRef(Var v) {
+    currBlock().addCleanup(v, TurbineOp.decrRef(v));
+  }
+  
   @Override
   public void arrayLookupFuture(Var oVar, Var arrayVar,
       Var indexVar, boolean isArrayRef) {

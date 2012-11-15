@@ -373,7 +373,10 @@ public class ICInstructions {
             args.get(0).getVar(), args.get(1), args.get(3).getVar());
         break;
       case ARRAY_DECR_WRITERS:
-        gen.decrArrayWriters(args.get(0).getVar());
+        gen.decrWriters(args.get(0).getVar());
+        break;
+      case DECR_REF:
+        gen.decrRef(args.get(0).getVar());
         break;
       case STRUCT_LOOKUP:
         gen.structLookup(args.get(1).getVar(), args.get(2).getStringLit(),
@@ -592,6 +595,11 @@ public class ICInstructions {
     public static Instruction arrayDecrWriters(Var array) {
       return new TurbineOp(Opcode.ARRAY_DECR_WRITERS, 
               Arrays.asList(Arg.createVar(array)));
+    }
+
+    public static Instruction decrRef(Var var) {
+      return new TurbineOp(Opcode.DECR_REF, 
+              Arrays.asList(Arg.createVar(var)));
     }
 
     public static Instruction assignInt(Var target, Arg src) {
@@ -864,6 +872,7 @@ public class ICInstructions {
       case STRUCT_CLOSE:
       case STRUCT_INSERT:
       case ARRAY_DECR_WRITERS:
+      case DECR_REF:
         // We view array as output
         return 1;
       case ARRAYREF_INSERT_FUTURE:
@@ -924,6 +933,7 @@ public class ICInstructions {
       case STRUCT_CLOSE:
       case STRUCT_INSERT:
       case ARRAY_DECR_WRITERS:
+      case DECR_REF:
         return this.writesAliasVar();
         
       case ARRAYREF_INSERT_FUTURE:
@@ -2377,7 +2387,7 @@ public class ICInstructions {
     LOAD_INT, LOAD_STRING, LOAD_FLOAT, LOAD_BOOL, LOAD_REF,
     STORE_BLOB, LOAD_BLOB, DECR_BLOB_REF, FREE_BLOB,
     STORE_VOID, LOAD_VOID, 
-    ARRAY_DECR_WRITERS,
+    ARRAY_DECR_WRITERS, DECR_REF,
     
     ARRAYREF_LOOKUP_FUTURE, ARRAY_LOOKUP_FUTURE,
     ARRAYREF_LOOKUP_IMM, ARRAY_LOOKUP_REF_IMM, ARRAY_LOOKUP_IMM,

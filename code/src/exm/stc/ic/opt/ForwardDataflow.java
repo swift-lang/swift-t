@@ -426,6 +426,7 @@ public class ForwardDataflow {
     nonProgressOpcodes.add(Opcode.ARRAY_DECR_WRITERS);
     nonProgressOpcodes.add(Opcode.DECR_BLOB_REF);
     nonProgressOpcodes.add(Opcode.FREE_BLOB);
+    nonProgressOpcodes.add(Opcode.DECR_REF);
     nonProgressOpcodes.add(Opcode.LOCAL_OP);
     nonProgressOpcodes.add(Opcode.STORE_BOOL);
     nonProgressOpcodes.add(Opcode.STORE_VOID);
