@@ -1822,18 +1822,11 @@ public class ASTWalker {
           "main() is not allowed to have input or output arguments");
 
     boolean async = true;
-    if (annotations.size() > 1) {
-      throw new InvalidAnnotationException(context, "declaration of composite " +
-              "function " + function + " has multiple annotations: " + 
-          annotations.toString() + " but composite functions only take the " +
-                  "@sync annotation currently");
-          
-    } else if (annotations.size() == 1) {
-      if (annotations.get(0).equals(Annotations.FN_SYNC)) {
+    for (String annotation: annotations) {
+      if (annotation.equals(Annotations.FN_SYNC)) {
         async = false;
       } else {
-        throw new InvalidAnnotationException(context, "unknown annotation" +
-                " for composite function: @" + annotations.get(0));
+        registerFunctionAnnotation(context, function, annotation);
       }
     }
     
