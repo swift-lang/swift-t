@@ -14,7 +14,12 @@ cd ${TURBINE}
 echo
 echo "Testing Turbine"
 echo "================"
-make test_results
+if make test_results
+then
+    echo "All Turbine tests passed"
+else
+    echo "Turbine tests failed"
+fi
 
 cd ${STC}
 echo
