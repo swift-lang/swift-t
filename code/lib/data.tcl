@@ -295,7 +295,7 @@ namespace eval turbine {
     }
 
     proc create_file { id path } {
-        adlb::create $id $adlb::FILE $path
+        adlb::create $id $adlb::FILE 0 $path
     }
 
     proc store_file { id } {
