@@ -468,15 +468,26 @@ public class WaitCoalescer {
     for (InstOrCont ic: waits) {
       logger.trace("Pushing down: " + ic.toString());
       switch (ic.type()) {
-        case CONTINUATION:
+        case CONTINUATION: {
           Continuation c = ic.continuation();
-          currBlock.addContinuation(c);
-          movedC.add(c);
-          // Doesn't make sense to push down synchronous continuations
-          assert(c.isAsync());
-          updateAncestorKeepOpen(ancestors, c.getKeepOpenVars());
+          boolean canRelocate = true;
+          // Check we're not relocating continuation into itself
+          for (AncestorContinuation ancestor: ancestors) {
+            if (c == ancestor.continuation) {
+              canRelocate = false;
+              break;
+            }
+          }
+          if (canRelocate) {
+            currBlock.addContinuation(c);
+            movedC.add(c);
+            // Doesn't make sense to push down synchronous continuations
+            assert(c.isAsync());
+            updateAncestorKeepOpen(ancestors, c.getKeepOpenVars());
+          }
           break;
-        case INSTRUCTION:
+        } 
+        case INSTRUCTION: {
           boolean canRelocate = true;
           Instruction inst = ic.instruction();
           ArrayList<Var> keepOpenVars = new ArrayList<Var>();
@@ -497,6 +508,7 @@ public class WaitCoalescer {
             }
           }
           break;
+        }
         default:
           throw new STCRuntimeError("how on earth did we get here...");
       }
