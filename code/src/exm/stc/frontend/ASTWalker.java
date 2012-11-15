@@ -1654,14 +1654,23 @@ public class ASTWalker {
     backend.startFunction(function, outVars, inVars, TaskMode.LEAF);
     List<Arg> inVals = new ArrayList<Arg>(inVars.size());
     List<Var> outVals = new ArrayList<Var>(outVars.size());
-    // TODO: check types
     
+    List<Var> waitVars = new ArrayList<Var>(inVars.size());
     for (Var in: inVars) {
       if (!Types.isScalarFuture(in.type()) ||
               Types.isFile(in.type())) {
         throw new STCRuntimeError("Can't handle type of " + in.type()
                + " for function " + function);
       } 
+      waitVars.add(in);
+    }
+    
+    backend.startWaitStatement(
+              context.getFunctionContext().constructName("wrap:" + function),
+              waitVars, inVars, Arrays.<Var>asList(), WaitMode.DATA_ONLY,
+              TaskMode.LOCAL);
+    
+    for (Var in: inVars) {
       Var inVal = varCreator.fetchValueOf(context, in);
       inVals.add(Arg.createVar(inVal));
     }
@@ -1696,6 +1705,7 @@ public class ASTWalker {
         backend.decrBlobRef(inFuture);
       }
     }
+    backend.endWaitStatement(Arrays.<Var>asList());
     backend.endFunction();
   }
 
