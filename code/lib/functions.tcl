@@ -213,7 +213,7 @@ namespace eval turbine {
 
         set i 0
         while { [ gets $fd line ] >= 0 } {
-            allocate s string
+            allocate s string 0
             store_string $s $line
             container_insert $result $i $s
             incr i
