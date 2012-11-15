@@ -2150,4 +2150,16 @@ public class SwigcGenerator implements CompilerBackend
       // TODO Auto-generated method stub
       
     }
+
+    @Override
+    public void assignVoid(Var target, Arg src) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public void retrieveVoid(Var target, Var source) {
+      // TODO Auto-generated method stub
+      
+    }
 }

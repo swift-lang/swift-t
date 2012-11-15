@@ -218,7 +218,7 @@ public class ConstantFinder {
     if (input.isConstant()) {
       if (inst.op == Opcode.STORE_INT || inst.op == Opcode.STORE_BOOL            
           || inst.op == Opcode.STORE_FLOAT || inst.op == Opcode.STORE_STRING
-          || inst.op == Opcode.STORE_BLOB) {
+          || inst.op == Opcode.STORE_BLOB || inst.op == Opcode.STORE_VOID) {
         return true;
       } else if (!ignoreLocalValConstants && inst.op == Opcode.LOCAL_OP) {
         BuiltinOpcode op = ((Builtin)inst).subop;

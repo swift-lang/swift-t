@@ -367,6 +367,9 @@ public class ExprWalker {
       case BLOB:
         backend.assignBlob(dst, src);
         break;
+      case VOID:
+        backend.assignVoid(dst, src);
+        break;
       default:
         throw new STCRuntimeError("assigning from type " + src.getType()
                 + " not supported internally");

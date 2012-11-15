@@ -168,7 +168,7 @@ public class ForwardDataflow {
       }
       if (op == Opcode.LOAD_BOOL || op == Opcode.LOAD_FLOAT
           || op == Opcode.LOAD_INT || op == Opcode.LOAD_REF 
-          || op == Opcode.LOAD_STRING) {
+          || op == Opcode.LOAD_STRING || op == Opcode.LOAD_VOID) {
         // If the value is available, it is effectively closed even if
         // the future isn't closed
         this.closed.add(newCV.getInput(0).getVar().name());
@@ -428,12 +428,14 @@ public class ForwardDataflow {
     nonProgressOpcodes.add(Opcode.FREE_BLOB);
     nonProgressOpcodes.add(Opcode.LOCAL_OP);
     nonProgressOpcodes.add(Opcode.STORE_BOOL);
+    nonProgressOpcodes.add(Opcode.STORE_VOID);
     nonProgressOpcodes.add(Opcode.STORE_INT);
     nonProgressOpcodes.add(Opcode.STORE_FLOAT);
     nonProgressOpcodes.add(Opcode.STORE_STRING);
     nonProgressOpcodes.add(Opcode.COPY_REF);
     nonProgressOpcodes.add(Opcode.ADDRESS_OF);
     nonProgressOpcodes.add(Opcode.LOAD_BOOL);
+    nonProgressOpcodes.add(Opcode.LOAD_VOID);
     nonProgressOpcodes.add(Opcode.LOAD_FLOAT);
     nonProgressOpcodes.add(Opcode.LOAD_INT);
     nonProgressOpcodes.add(Opcode.LOAD_REF);

@@ -256,6 +256,12 @@ public class VarCreator {
     case FLOAT:
       backend.retrieveFloat(val, future);
       break;
+    case BLOB:
+      backend.retrieveBlob(val, future);
+      break;
+    case VOID:
+      backend.retrieveVoid(val, future);
+      break;
     default:
       throw new STCRuntimeError("Don't know how to retrieve value of "
           + " type " + futureType.typeName() + " for variable " 

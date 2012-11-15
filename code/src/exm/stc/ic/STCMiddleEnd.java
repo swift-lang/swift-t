@@ -619,6 +619,21 @@ public class STCMiddleEnd implements CompilerBackend {
     currBlock().addInstruction(
         TurbineOp.retrieveBool(target, source));
   }
+  
+  @Override
+  public void assignVoid(Var target, Arg src) {
+    assert(target.type().equals(Types.F_VOID));
+    assert(src.getType().equals(Types.V_VOID));
+    currBlock().addInstruction(TurbineOp.assignVoid(target, src));
+  }
+
+  @Override
+  public void retrieveVoid(Var target, Var source) {
+    assert(target.type().equals(Types.V_VOID));
+    assert(source.type().equals(Types.F_VOID));
+    currBlock().addInstruction(
+        TurbineOp.retrieveVoid(target, source));
+  }
 
   @Override
   public void assignFloat(Var target, Arg src) {

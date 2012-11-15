@@ -353,6 +353,22 @@ public class TurbineGenerator implements CompilerBackend
     pointStack.peek().add(Turbine.integerGet(prefixVar(target.name()),
         varToExpr(source)));
   }
+  
+  @Override
+  public void assignVoid(Var target, Arg src) {
+    assert(Types.isVoid(target.type()));
+    assert(src.getType().equals(Types.V_VOID));
+    pointStack.peek().add(Turbine.voidSet(varToExpr(target)));
+  }
+
+  @Override
+  public void retrieveVoid(Var target, Var source) {
+    assert(target.type().equals(Types.V_VOID));
+    assert(source.type().equals(Types.F_VOID));
+    // Don't actually need to retrieve value as it has no contents
+    pointStack.peek().add(new SetVariable(prefixVar(target.name()),
+                          Turbine.VOID_DUMMY_VAL));
+  }
 
 
   @Override

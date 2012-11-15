@@ -72,6 +72,15 @@ public interface CompilerBackend {
   public abstract void assignInt(Var target, Arg src);
   public abstract void retrieveInt(Var target, Var source);
 
+  public abstract void assignVoid(Var target, Arg src);
+  /**
+   * Used to represent dataflow dependency.  Sets target to
+   * arbitrary value
+   * @param target
+   * @param source
+   */
+  public abstract void retrieveVoid(Var target, Var source);
+  
   public abstract void assignFloat(Var target, Arg src);
   public abstract void retrieveFloat(Var target, Var source);
 

@@ -320,6 +320,9 @@ public class ICInstructions {
       case STORE_BOOL:
         gen.assignBool(args.get(0).getVar(), args.get(1));
         break;
+      case STORE_VOID:
+        gen.assignVoid(args.get(0).getVar(), args.get(1));
+        break;
       case STORE_FLOAT:
         gen.assignFloat(args.get(0).getVar(), args.get(1));
         break;
@@ -444,6 +447,10 @@ public class ICInstructions {
         break;
       case LOAD_BOOL:
         gen.retrieveBool(args.get(0).getVar(),
+            args.get(1).getVar());
+        break;
+      case LOAD_VOID:
+        gen.retrieveVoid(args.get(0).getVar(),
             args.get(1).getVar());
         break;
       case LOAD_FLOAT:
@@ -596,6 +603,11 @@ public class ICInstructions {
       return new TurbineOp(Opcode.STORE_BOOL,
           Arrays.asList(Arg.createVar(target), src));
     }
+
+    public static Instruction assignVoid(Var target, Arg src) {
+      return new TurbineOp(Opcode.STORE_VOID,
+              Arrays.asList(Arg.createVar(target), src));
+    }
   
     public static Instruction assignFloat(Var target, Arg src) {
       return new TurbineOp(Opcode.STORE_FLOAT,
@@ -624,6 +636,11 @@ public class ICInstructions {
   
     public static Instruction retrieveBool(Var target, Var source) {
       return new TurbineOp(Opcode.LOAD_BOOL,
+          Arrays.asList(Arg.createVar(target), Arg.createVar(source)));
+    }
+
+    public static Instruction retrieveVoid(Var target, Var source) {
+      return new TurbineOp(Opcode.LOAD_VOID,
           Arrays.asList(Arg.createVar(target), Arg.createVar(source)));
     }
     
@@ -859,6 +876,7 @@ public class ICInstructions {
       case ARRAY_LOOKUP_FUTURE:
       case STORE_INT:
       case STORE_BOOL:
+      case STORE_VOID:
       case STORE_FLOAT:
       case STORE_STRING:
       case STORE_BLOB:
@@ -874,6 +892,7 @@ public class ICInstructions {
       case DEREF_FILE:
       case LOAD_INT:
       case LOAD_BOOL:
+      case LOAD_VOID:
       case LOAD_FLOAT:
       case LOAD_STRING:
       case LOAD_BLOB:
@@ -926,6 +945,7 @@ public class ICInstructions {
       case STORE_FLOAT:
       case STORE_STRING:
       case STORE_BLOB:
+      case STORE_VOID:
       case DEREF_INT:
       case DEREF_BOOL:
       case DEREF_FLOAT:
@@ -936,6 +956,7 @@ public class ICInstructions {
       case LOAD_FLOAT:
       case LOAD_STRING:
       case LOAD_BLOB:
+      case LOAD_VOID:
       case ARRAY_LOOKUP_REF_IMM:
       case ARRAY_LOOKUP_FUTURE:
       case ARRAYREF_LOOKUP_FUTURE:
@@ -1006,8 +1027,10 @@ public class ICInstructions {
       case STORE_INT:
       case STORE_STRING:
       case STORE_BOOL:
+      case STORE_VOID:
       case STORE_FLOAT:
       case LOAD_BOOL:
+      case LOAD_VOID:
       case LOAD_FLOAT:
       case LOAD_INT:
       case LOAD_STRING:
@@ -1354,7 +1377,8 @@ public class ICInstructions {
         case LOAD_INT:
         case LOAD_REF:
         case LOAD_STRING: 
-        case LOAD_BLOB: {
+        case LOAD_BLOB: 
+        case LOAD_VOID: {
           // retrieve* is invertible
           Arg src = args.get(1);
           Arg val = args.get(0);
@@ -1385,7 +1409,8 @@ public class ICInstructions {
         case STORE_FLOAT:
         case STORE_INT:
         case STORE_STRING: 
-        case STORE_BLOB: {
+        case STORE_BLOB: 
+        case STORE_VOID: {
           // add assign so we can avoid recreating future 
           // (true b/c this instruction closes val immediately)
           ComputedValue assign = vanillaComputedValue(true);
@@ -1584,6 +1609,7 @@ public class ICInstructions {
     public Instruction clone() {
       return new TurbineOp(op, Arg.cloneList(args));
     }
+
   }
   
   public static abstract class CommonFunctionCall extends Instruction {
@@ -2350,6 +2376,7 @@ public class ICInstructions {
     STORE_INT, STORE_STRING, STORE_FLOAT, STORE_BOOL, ADDRESS_OF, 
     LOAD_INT, LOAD_STRING, LOAD_FLOAT, LOAD_BOOL, LOAD_REF,
     STORE_BLOB, LOAD_BLOB, DECR_BLOB_REF, FREE_BLOB,
+    STORE_VOID, LOAD_VOID, 
     ARRAY_DECR_WRITERS,
     
     ARRAYREF_LOOKUP_FUTURE, ARRAY_LOOKUP_FUTURE,
@@ -2894,6 +2921,9 @@ public class ICInstructions {
        case BLOB:
          op = Opcode.STORE_BLOB;
          break;
+       case VOID:
+         op = Opcode.STORE_VOID;
+         break;
        default:
          throw new STCRuntimeError("don't know how to assign " + dstType);
        }
@@ -2921,6 +2951,9 @@ public class ICInstructions {
         break;
       case BLOB:
         op = Opcode.LOAD_BLOB;
+        break;
+      case VOID:
+        op = Opcode.LOAD_VOID;
         break;
       default:
         // Can't retrieve other types

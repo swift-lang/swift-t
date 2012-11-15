@@ -112,6 +112,8 @@ class Turbine
       new Token("turbine::container_lookup_checked");
   private static final Token STORE_INTEGER =
       new Token("turbine::store_integer");
+  private static final Token STORE_VOID =
+          new Token("turbine::store_void");
   private static final Token STORE_FLOAT =
       new Token("turbine::store_float");
   private static final Token STORE_STRING =
@@ -129,6 +131,8 @@ class Turbine
   private static final Token FREE_BLOB = new Token("turbine::free_blob");
   private static final Token FREE_LOCAL_BLOB = 
       new Token("turbine::free_local_blob");
+  
+  public static final LiteralInt VOID_DUMMY_VAL = new LiteralInt(12345);
 
   public enum StackFrameType {
     MAIN,
@@ -249,6 +253,10 @@ class Turbine
 
   public static Command integerSet(String turbineDstVar, Expression src) {
     return new Command(STORE_INTEGER, new Value(turbineDstVar), src);
+  }
+  
+  public static TclTree voidSet(Value voidVar) {
+    return new Command(STORE_VOID, voidVar);
   }
 
   public static Command floatSet(String turbineDstVar, Expression src) {

@@ -1657,38 +1657,43 @@ public class ASTWalker {
     // TODO: check types
     
     for (Var in: inVars) {
+      if (!Types.isScalarFuture(in.type()) ||
+              Types.isFile(in.type())) {
+        throw new STCRuntimeError("Can't handle type of " + in.type()
+               + " for function " + function);
+      } 
       Var inVal = varCreator.fetchValueOf(context, in);
       inVals.add(Arg.createVar(inVal));
-      if (Types.isBlob(in.type())) {
-        //TODO
-        throw new STCRuntimeError("Dont handle blob yet");
-      } else if (Types.isVoid(in.type())) {
-        //TODO
-        throw new STCRuntimeError("Dont handle void yet");
-      }
     }
     for (Var out: outVars) {
+      if (!Types.isScalarFuture(out.type()) ||
+              Types.isFile(out.type())) {
+        throw new STCRuntimeError("Can't handle type of " + out.type()
+               + " for function " + function);
+      } 
       Var outVal = varCreator.createValueOfVar(context, out);
       outVals.add(outVal);
-      if (Types.isBlob(out.type())) {
-        //TODO
-        throw new STCRuntimeError("Dont handle blob yet");
-      } else if (Types.isVoid(out.type())) {
-        //TODO
-        throw new STCRuntimeError("Dont handle void yet");
-      }
     }
     
     backend.builtinLocalFunctionCall(function, inVals, outVals);
     
+    // Assign output values and cleanup
     for (int i = 0; i < outVars.size(); i++) {
       Var outFuture = outVars.get(i);
       Var outVal = outVals.get(i);
-      if (Types.isVoid(outFuture.type())) {
-        // TODO
-        throw new STCRuntimeError("assign void: TODO"); 
-      } else {
-        exprWalker.assign(outFuture, Arg.createVar(outVal));
+      exprWalker.assign(outFuture, Arg.createVar(outVal));
+      
+      if (Types.isBlob(outFuture.type())) {
+        backend.freeBlob(outVal);
+      }
+    }
+    
+    // Cleanup input values
+    for (int i = 0; i < inVars.size(); i++) {
+      Var inFuture = inVars.get(i);
+      Arg inVal = inVals.get(i);
+      if (Types.isBlob(inFuture.type())) {
+        backend.decrBlobRef(inFuture);
       }
     }
     backend.endFunction();
