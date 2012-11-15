@@ -15,9 +15,10 @@ TCL_SRC := $(DIR)/helpers.tcl             \
            $(DIR)/container.tcl           \
            $(DIR)/rand.tcl                \
            $(DIR)/stats.tcl               \
-           $(DIR)/io.tcl                \
+           $(DIR)/io.tcl                  \
            $(DIR)/updateable.tcl          \
-           $(DIR)/sys.tcl              \
+           $(DIR)/sys.tcl                 \
+           $(DIR)/blob.tcl                \
            $(DIR)/mpe.tcl		  \
 	   $(DIR)/files.tcl
 
