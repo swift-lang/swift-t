@@ -30,6 +30,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -783,7 +784,27 @@ public class ICTree {
 
     public Set<String> unneededVars() {
       HashSet<String> toRemove = new HashSet<String>();
-      Set<String> stillNeeded = findEssentialVars();
+      Pair<Set<String>, List<List<Var>>> res = findEssentialVars();
+      Set<String> stillNeeded = res.val1; 
+      
+      // Check to see if we have to retain additional
+      // variables based on interdependencies
+      for (List<Var> dependentSet: res.val2) { {
+        boolean needed = false;
+        for (Var v: dependentSet) {
+          if (stillNeeded.contains(v.name())) {
+            needed = true;
+            break;
+          }
+        }
+        if (needed) {
+          for (Var v: dependentSet) {
+            stillNeeded.add(v.name());
+          }
+        }
+      }
+        
+      }
       for (Var v: getVariables()) {
         if (!stillNeeded.contains(v.name())) {
           toRemove.add(v.name());
@@ -792,13 +813,20 @@ public class ICTree {
       return toRemove;
     }
 
-    public Set<String> findEssentialVars() {
-      HashSet<String> stillNeeded = new HashSet<String>();
-      findEssentialVars(stillNeeded);
-      return stillNeeded;
+    /**
+     * 
+     * @return First element: list of essential vars
+     *         Second element: list of vars which are interdependent: if one var in
+     *                         list is needed, all are needed
+     */
+    public Pair<Set<String>, List<List<Var>>> findEssentialVars() {
+      Set<String> stillNeeded = new HashSet<String>();
+      List<List<Var>> interdependencies = new ArrayList<List<Var>>();
+      findEssentialVars(stillNeeded, interdependencies);
+      return Pair.create(stillNeeded,  interdependencies);
     }
 
-    private void findEssentialVars(HashSet<String> stillNeeded) {
+    private void findEssentialVars(Set<String> stillNeeded, List<List<Var>> interdependencies) {
       // Need to hold on to mapped variables
       for (Var v: this.getVariables()) {
         if (v.isMapped()) {
@@ -818,6 +846,9 @@ public class ICTree {
           for (Var out: i.getOutputs()) {
             stillNeeded.add(out.name());
           }
+        } else {
+          // Can only eliminate one var if can eliminate all
+          interdependencies.add(i.getOutputs());
         }
       }
 
@@ -826,7 +857,7 @@ public class ICTree {
           stillNeeded.add(v.name());
         }
         for (Block b: c.getBlocks()) {
-          b.findEssentialVars(stillNeeded);
+          b.findEssentialVars(stillNeeded, interdependencies);
         }
       }
       
