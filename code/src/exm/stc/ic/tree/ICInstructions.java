@@ -2851,6 +2851,8 @@ public class ICInstructions {
       return TurbineOp.retrieveString(dst, src);
     case BLOB:
       return TurbineOp.retrieveBlob(dst, src);
+    case VOID:
+      return TurbineOp.retrieveVoid(dst, src);
     default:
       throw new STCRuntimeError("method to retrieve " +
             src.type().typeName() + " is not known yet");
@@ -2895,6 +2897,9 @@ public class ICInstructions {
           break;
         case FILE:
           op = BuiltinOpcode.COPY_FILE;
+          break;
+        case VOID:
+          op = BuiltinOpcode.COPY_VOID;
           break;
         default:
           throw new STCRuntimeError("Unhandled type: "
@@ -3023,6 +3028,9 @@ public class ICInstructions {
     case BLOB:
       assert(src.isImmediateBlob());
       return TurbineOp.assignBlob(dst, src);
+    case VOID:
+      assert(src.isVar() && src.getVar().type().equals(Types.V_VOID));
+      return TurbineOp.assignVoid(dst, src);
     default:
       throw new STCRuntimeError("method to set " +
           dst.type().typeName() + " is not known yet");
