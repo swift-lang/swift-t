@@ -39,6 +39,8 @@ public class Settings
   public static final String TURBINE_NO_STACK = "stc.codegen.no-stack";
   public static final String TURBINE_NO_STACK_VARS = "stc.codegen.no-stack-vars";
 
+  public static final String EXPERIMENTAL_REFCOUNTING = "stc.exp.refcounting";
+  
   // TODO: get rid of this once no longer required
   public static final String ARRAY_REF_SWITCHEROO = "stc.array-ref-switcheroo";
 
@@ -65,6 +67,7 @@ public class Settings
     defaults.setProperty(OPT_HOIST, "false");
     defaults.setProperty(OPT_NUM_PASSES, "5");
     defaults.setProperty(ARRAY_REF_SWITCHEROO, "false");
+    defaults.setProperty(EXPERIMENTAL_REFCOUNTING, "false");
 
     // Turbine code generation
     // Turbine version
@@ -120,6 +123,7 @@ public class Settings
     getBoolean(TURBINE_NO_STACK);
     getBoolean(TURBINE_NO_STACK_VARS);
     getBoolean(ARRAY_REF_SWITCHEROO);
+    getBoolean(EXPERIMENTAL_REFCOUNTING);
 
     getLong(OPT_NUM_PASSES);
 

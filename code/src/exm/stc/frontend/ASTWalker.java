@@ -302,7 +302,7 @@ public class ASTWalker {
                       waitEvaled, usedVars, keepOpenVars,
                       WaitMode.EXPLICIT, TaskMode.LOCAL);
     block(new LocalContext(context), wait.getBlock());
-    backend.endWaitStatement(keepOpenVars);
+    backend.endWaitStatement(usedVars, keepOpenVars);
   }
 
 
@@ -455,7 +455,7 @@ public class ASTWalker {
       block(new LocalContext(waitContext), ifStmt.getElseBlock());
     }
     backend.endIfStatement();
-    backend.endWaitStatement(keepOpenVars);
+    backend.endWaitStatement(usedVariables, keepOpenVars);
   }
 
   /**
@@ -601,7 +601,7 @@ public class ASTWalker {
       backend.endCase();
     }
     backend.endSwitch();
-    backend.endWaitStatement(keepOpenVars);
+    backend.endWaitStatement(usedVariables, keepOpenVars);
   }
 
   private void foreach(Context context, SwiftAST tree) throws UserException {
@@ -673,8 +673,9 @@ public class ASTWalker {
             Arg.createVar(stepVal), usedVariables, keepOpenVars,
             loop.getDesiredUnroll(), loop.getSplitDegree());
     // Need to spawn off task per iteration
+    List<Var> waitUsedVars = null;
     if (!loop.isSyncLoop()) {
-      List<Var> waitUsedVars = new ArrayList<Var>(usedVariables);
+      waitUsedVars = new ArrayList<Var>(usedVariables);
       waitUsedVars.add(memberVal);
       backend.startWaitStatement("range-iter" + loopNum,
           Collections.<Var>emptyList(), waitUsedVars, keepOpenVars,
@@ -693,10 +694,10 @@ public class ASTWalker {
     }
     block(bodyContext, loop.getBody());
     if (!loop.isSyncLoop()) {
-      backend.endWaitStatement(keepOpenVars);
+      backend.endWaitStatement(waitUsedVars, keepOpenVars);
     }
-    backend.endRangeLoop(keepOpenVars, loop.getSplitDegree());
-    backend.endWaitStatement(keepOpenVars);
+    backend.endRangeLoop(usedVariables, keepOpenVars, loop.getSplitDegree());
+    backend.endWaitStatement(usedVariables, keepOpenVars);
   }
   
   /**
@@ -731,12 +732,13 @@ public class ASTWalker {
     
     Var realArray;
     Context outsideLoopContext;
+    ArrayList<Var> arrRefWaitUsedVars = null;
     if (Types.isArrayRef(arrayVar.type())) {
-      ArrayList<Var> waitUsedVars = new ArrayList<Var>(usedVariables);
-      waitUsedVars.add(arrayVar);
+      arrRefWaitUsedVars = new ArrayList<Var>(usedVariables);
+      arrRefWaitUsedVars.add(arrayVar);
       // If its a reference, wrap a wait() around the loop call
       backend.startWaitStatement(fc.constructName("foreach_ref_wait"),
-          Arrays.asList(arrayVar), waitUsedVars, keepOpenVars,
+          Arrays.asList(arrayVar), arrRefWaitUsedVars, keepOpenVars,
           WaitMode.DATA_ONLY, TaskMode.LOCAL);
 
       outsideLoopContext = new LocalContext(context);
@@ -761,8 +763,9 @@ public class ASTWalker {
     backend.startForeachLoop(realArray, loop.getMemberVar(), loop.getLoopCountVal(),
         loop.getSplitDegree(), true, usedVariables, keepOpenVars);
     // May need to spawn off each iteration as task - use wait for this
+    ArrayList<Var> iterUsedVars = null;
     if (!loop.isSyncLoop()) {
-      ArrayList<Var> iterUsedVars = new ArrayList<Var>(usedVariables);
+      iterUsedVars = new ArrayList<Var>(usedVariables);
       if (loop.getLoopCountVal() != null)
         iterUsedVars.add(loop.getLoopCountVal());
       backend.startWaitStatement(fc.constructName("foreach_iter"),
@@ -780,15 +783,16 @@ public class ASTWalker {
     
     // Close spawn wait
     if (!loop.isSyncLoop()) {
-      backend.endWaitStatement(keepOpenVars);
+      backend.endWaitStatement(iterUsedVars, keepOpenVars);
     }
-    backend.endForeachLoop(loop.getSplitDegree(), true, keepOpenVars);
+    backend.endForeachLoop(loop.getSplitDegree(), true, usedVariables,
+                           keepOpenVars);
 
     // Wait for array
-    backend.endWaitStatement(keepOpenVars);
+    backend.endWaitStatement(waitUsedVars, keepOpenVars);
     if (Types.isArrayRef(arrayVar.type())) {
       // Wait for array ref
-      backend.endWaitStatement(keepOpenVars);
+      backend.endWaitStatement(arrRefWaitUsedVars, keepOpenVars);
     }
   }
 
@@ -1707,7 +1711,7 @@ public class ASTWalker {
         backend.decrBlobRef(inFuture);
       }
     }
-    backend.endWaitStatement(Arrays.<Var>asList());
+    backend.endWaitStatement(inVars, Arrays.<Var>asList());
     backend.endFunction();
   }
 
@@ -2054,7 +2058,7 @@ public class ASTWalker {
     List<Arg> localArgs = retrieveAppArgs(context, args, fileNames);
     backend.runExternal(appName, localArgs,
                         outputs, hasSideEffects, deterministic);
-    backend.endWaitStatement(null);
+    backend.endWaitStatement(passIn, Arrays.<Var>asList());
   }
 
 

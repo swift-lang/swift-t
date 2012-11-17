@@ -216,7 +216,7 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void endWaitStatement(List<Var> keepOpenVars) {
+  public void endWaitStatement(List<Var> usedVars, List<Var> keepOpenVars) {
     assert(currBlock().getType() == BlockType.WAIT_BLOCK);
     blockStack.pop();
   }
@@ -276,7 +276,8 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void endForeachLoop(int splitDegree, 
-            boolean arrayClosed, List<Var> keepOpenVars) {
+            boolean arrayClosed, List<Var> usedVars,
+            List<Var> keepOpenVars) {
     assert(blockStack.peek().getType() == BlockType.FOREACH_BODY);
     blockStack.pop();
   }
@@ -295,7 +296,7 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void endRangeLoop(List<Var> keepOpenVars,
+  public void endRangeLoop(List<Var> usedVars, List<Var> keepOpenVars,
                           int splitDegree) {
     assert(currBlock().getType() == BlockType.RANGELOOP_BODY);
     blockStack.pop();

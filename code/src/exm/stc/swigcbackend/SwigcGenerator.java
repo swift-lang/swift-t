@@ -1443,7 +1443,7 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void endWaitStatement(List<Var> keepOpenVars) {
+    public void endWaitStatement(List<Var> usedVars, List<Var> keepOpenVars) {
       logger.trace("endWaitStatement()...");
       endAsync(keepOpenVars);
     }
@@ -1686,7 +1686,7 @@ public class SwigcGenerator implements CompilerBackend
 
   @Override
   public void endForeachLoop(int splitDegree,
-          boolean arrayClosed, List<Var> keepOpenVars) {
+          boolean arrayClosed, List<Var> usedVars, List<Var> keepOpenVars) {
     assert(pointStack.size() >= 2);
     pointStack.pop(); // tclloop body
     if (splitDegree > 0) {
@@ -1728,7 +1728,7 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void endRangeLoop(List<Var> keepOpenVars,
+  public void endRangeLoop(List<Var> usedVars, List<Var> keepOpenVars,
                         int splitDegree) {
     assert(pointStack.size() >= 2);
     pointStack.pop(); // for loop body

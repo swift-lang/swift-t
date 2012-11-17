@@ -89,6 +89,10 @@ function get_compiler_opt_name() {
                     echo "stc.codegen.no-stack-vars"
                     return 0
                     ;;
+        refcounting)
+                    echo "stc.exp.refcounting"
+                    return 0
+                    ;;
        *)
          return 1
          ;;

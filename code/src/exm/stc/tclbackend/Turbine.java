@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import exm.stc.common.Settings;
+import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.tclbackend.tree.Command;
@@ -133,6 +135,8 @@ class Turbine
       new Token("turbine::free_local_blob");
   
   public static final LiteralInt VOID_DUMMY_VAL = new LiteralInt(12345);
+  private static final Token REFCOUNT_INCR = new Token("adlb::refcount_incr");
+  private static final Value REFCOUNT_READ = new Value("adlb::READ_REFCOUNT");
 
   public enum StackFrameType {
     MAIN,
@@ -606,7 +610,33 @@ class Turbine
   public static TclTree containerSlotDrop(Value arr, Expression decr) {
     return new Command(CONTAINER_SLOT_DROP, arr, decr);
   }
-
+  
+  /**
+   * Modify reference count by amount
+   * @param var
+   * @param change
+   * @return
+   */
+  public static TclTree incrRef(Value var, Expression change) {
+    try {
+      if (Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
+        return new Command(REFCOUNT_INCR, var, REFCOUNT_READ, change);
+      } else {
+        return new Token("");
+      }
+    } catch (InvalidOptionException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
+  }
+  
+  public static TclTree incrRef(Value var) {
+    return incrRef(var, new LiteralInt(1));
+  }
+  
+  public static TclTree decrRef(Value var) {
+    return incrRef(var, new LiteralInt(-1));
+  }
+  
   /**
    * Get entire contents of container
    * @param resultVar

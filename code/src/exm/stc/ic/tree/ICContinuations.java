@@ -390,7 +390,7 @@ public class ICContinuations {
       gen.startForeachLoop(arrayVar, loopVar, loopCounterVar,
                 splitDegree, arrayClosed, usedVariables, keepOpenVars);
       this.loopBody.generate(logger, gen, info);
-      gen.endForeachLoop(splitDegree, arrayClosed,
+      gen.endForeachLoop(splitDegree, arrayClosed, usedVariables,
                                           keepOpenVars);
     }
 
@@ -1070,7 +1070,7 @@ public class ICContinuations {
                          usedVariables, keepOpenVars,
                          desiredUnroll, splitDegree);
       this.loopBody.generate(logger, gen, info);
-      gen.endRangeLoop(keepOpenVars, splitDegree);
+      gen.endRangeLoop(usedVariables, keepOpenVars, splitDegree);
     }
 
     @Override
@@ -1626,7 +1626,7 @@ public class ICContinuations {
       gen.startWaitStatement(procName, waitVars, usedVariables,
           keepOpenVars, mode, target);
       this.block.generate(logger, gen, info);
-      gen.endWaitStatement(keepOpenVars);
+      gen.endWaitStatement(usedVariables, keepOpenVars);
     }
 
     @Override

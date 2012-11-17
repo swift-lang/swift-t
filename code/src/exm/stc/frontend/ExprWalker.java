@@ -334,13 +334,14 @@ public class ExprWalker {
     } else if (Types.isArray(dst.type())) {
       String wName = context.getFunctionContext().constructName("copy-wait");
       List<Var> keepOpenVars = Arrays.asList(dst);
+      List<Var> usedVars = Arrays.asList(src, dst);
       backend.startWaitStatement(wName, Arrays.asList(src),
-              Arrays.asList(src, dst), keepOpenVars,
+              usedVars, keepOpenVars,
               WaitMode.DATA_ONLY, TaskMode.LOCAL);
       Var derefed = varCreator.createTmpAlias(context, dst.type());
       backend.retrieveRef(derefed, src);
       copyArrayByValue(context, dst, derefed);
-      backend.endWaitStatement(keepOpenVars);
+      backend.endWaitStatement(usedVars, keepOpenVars);
     } else if (Types.isStruct(dst.type())) {
       dereferenceStruct(context, dst, src);
     } else {
@@ -454,6 +455,7 @@ public class ExprWalker {
     // the argument evaluation is outside the wait statement
     Var priorityVal = null;
     boolean openedWait = false;
+    ArrayList<Var> usedVariables = null;
     List<Var> keepOpen = null;
     Context callContext = context;
     if (tree.getChildCount() == 3) {
@@ -462,7 +464,7 @@ public class ExprWalker {
                             Types.F_INT, false, renames);
       keepOpen = new ArrayList<Var>(0); // TODO: Do we need these?
       // used variables: any input or output args
-      ArrayList<Var> usedVariables = new ArrayList<Var>();
+      usedVariables = new ArrayList<Var>();
       usedVariables.addAll(argVars);
       usedVariables.addAll(oList);
       
@@ -478,7 +480,7 @@ public class ExprWalker {
     // callFunction will check that argument types match function
     callFunction(context, f.function(), concrete, oList, argVars, priorityVal);
     if (openedWait) {
-      backend.endWaitStatement(keepOpen);
+      backend.endWaitStatement(usedVariables, keepOpen);
     }
   
   }
@@ -765,9 +767,10 @@ public class ExprWalker {
       }
     }
 
+    ArrayList<Var> usedVars = null;
     if (waitContext != null) {
       FunctionContext fc = context.getFunctionContext();
-      ArrayList<Var> usedVars = new ArrayList<Var>();
+      usedVars = new ArrayList<Var>();
       usedVars.addAll(iList); usedVars.addAll(oList);
       backend.startWaitStatement(
            fc.constructName("call-" + function),
@@ -792,7 +795,7 @@ public class ExprWalker {
     backendFunctionCall(context, function, oList, realIList, priorityVal);
 
     if (waitContext != null) {
-      backend.endWaitStatement(new ArrayList<Var>());
+      backend.endWaitStatement(usedVars, new ArrayList<Var>());
     }
   }
 
@@ -932,9 +935,9 @@ public class ExprWalker {
     backend.startForeachLoop(src, member, ix, -1, true,
                              usedVars, keepOpen);
     backend.arrayInsertImm(member, dst, Arg.createVar(ix));
-    backend.endForeachLoop(-1, true, keepOpen);
+    backend.endForeachLoop(-1, true, usedVars, keepOpen);
     backend.decrWriters(dst);
-    backend.endWaitStatement(keepOpen);
+    backend.endWaitStatement(usedVars, keepOpen);
   }
 
 
@@ -981,15 +984,16 @@ public class ExprWalker {
    */
   private void dereferenceStruct(Context context, Var dst, Var src)
       throws UserException, UndefinedTypeException {
+    List<Var> usedVars = Arrays.asList(src, dst);
     backend.startWaitStatement( 
                     context.getFunctionContext().constructName("copystruct"), 
-                    Arrays.asList(src), Arrays.asList(src, dst), 
+                    Arrays.asList(src), usedVars, 
                     new ArrayList<Var>(), WaitMode.DATA_ONLY, TaskMode.LOCAL);
     Var rValDerefed = varCreator.createTmp(context, 
             src.type().memberType(), false, true);
     backend.retrieveRef(rValDerefed, src);
     copyByValue(context, rValDerefed, dst, dst.type());
-    backend.endWaitStatement(new ArrayList<Var>());
+    backend.endWaitStatement(usedVars, new ArrayList<Var>());
   }
   
 }

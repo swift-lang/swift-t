@@ -268,7 +268,7 @@ public interface CompilerBackend {
       boolean arrayClosed, List<Var> usedVariables, List<Var> keepOpenVars);
 
   public abstract void endForeachLoop(int splitDegree, 
-            boolean arrayClosed, List<Var> keepOpenVars);
+            boolean arrayClosed, List<Var> usedVars, List<Var> keepOpenVars);
 
   
   /**
@@ -292,8 +292,8 @@ public interface CompilerBackend {
   public abstract void startRangeLoop(String loopName, Var loopVar,
       Var countVar, Arg start, Arg end, Arg increment, List<Var> usedVariables, 
       List<Var> keepOpenVars, int desiredUnroll, int splitDegree);
-  public abstract void endRangeLoop(List<Var> keepOpenVars,
-                                    int splitDegree);
+  public abstract void endRangeLoop(List<Var> usedVars,
+              List<Var> keepOpenVars, int splitDegree);
   /**
    * Add a global variable (currently constant literals are supported)
    * @param name
@@ -338,7 +338,7 @@ public interface CompilerBackend {
       List<Var> usedVars, List<Var> keepOpenVars,
       WaitMode mode, TaskMode target);
 
-  public abstract void endWaitStatement(List<Var> keepOpenVars);
+  public abstract void endWaitStatement(List<Var> usedVars, List<Var> keepOpenVars);
 
   
   /**

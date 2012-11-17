@@ -170,6 +170,23 @@ public class Var {
   }
   
   /**
+   * Different by variable name
+   * @param list
+   * @param subtract
+   * @return
+   */
+  public static List<Var> varListDiff(List<Var> list, List<Var> subtract) {
+    Set<String> subSet = nameSet(subtract);
+    ArrayList<Var> diff = new ArrayList<Var>();
+    for (Var v: list) {
+      if (!subSet.contains(v.name())) {
+        diff.add(v);
+      }
+    }
+    return diff;
+  }
+  
+  /**
    * Create dereferenced variable given a reference
    */
   public static Var createDerefTmp(Var ref, VarStorage storage) {
