@@ -16,7 +16,7 @@ main
   {
     foreach j in [0:columns-1]
     {
-      A[i][j] = 1;
+      A[i][j+1] = 1;
     }
   }
 }
