@@ -8,8 +8,8 @@ main
 {
   int A[][];
 
-  int rows = 10;
-  int columns = 10;
+  int rows = 20;
+  int columns = 20;
   foreach i in [0:rows-1]
   {
     A[i][0] = 0;
@@ -22,7 +22,7 @@ main
     }
   }
 
-  print_square_array(A, rows, columns);
+  print_square_array(A, rows, columns+1);
 }
 
 print_square_array(int A[][], int rows, int cols) {
