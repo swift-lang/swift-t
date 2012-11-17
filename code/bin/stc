@@ -28,9 +28,9 @@ O1_OPTS=("constant-fold" "branch-predict" "dead-code-elim"
                     "flatten-nested" "shared-constants"
                     "forward-dataflow" "unroll-loops"
                      "controlflow-fusion" )
-O2_OPTS=("wait-coalesce" )
+O2_OPTS=("wait-coalesce" "hoisting")
 O3_OPTS=()
-EXPERIMENTAL_OPTS=("hoisting")
+EXPERIMENTAL_OPTS=()
 
 # OUTPUT_MODE= turbine or cpp
 OUTPUT_MODE=turbine
