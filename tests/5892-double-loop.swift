@@ -21,7 +21,7 @@ main
     }
   }
 
-  print_square_array(A, rows, columns+1);
+  print_square_array(A, rows, columns);
 }
 
 print_square_array(int A[][], int rows, int cols) {
