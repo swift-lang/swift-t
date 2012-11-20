@@ -113,9 +113,11 @@ $(ADLB_A): $(OBJS)
 	$(E) $(AR) $(ARFLAGS) $(@) $(OBJS)
 	$(E) $(RANLIB) $(@)
 
-$(ADLB_SO): $(OBJS) $(NLOBJS)
-	$(Q) "  LINK		$(@)"
+lib:
 	$(E) mkdir -pv lib
+
+$(ADLB_SO): $(OBJS) $(NLOBJS) lib
+	$(Q) "  LINK		$(@)"
 	$(E) $(LINKER) -shared -fPIC -g			\
 	        $(OBJS) 				\
                 $(LIBS)                                 \
