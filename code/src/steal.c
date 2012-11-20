@@ -10,6 +10,7 @@
 
 #include <tools.h>
 
+#include "backoffs.h"
 #include "common.h"
 #include "debug.h"
 #include "messaging.h"
@@ -62,6 +63,19 @@ steal_payloads(int target, int count )
   }
   free(wus);
   return ADLB_SUCCESS;
+}
+
+/**
+   Are we allowed to steal yet?
+ */
+bool
+steal_allowed()
+{
+  double t = MPI_Wtime();
+  if (t - xlb_steal_last < xlb_steal_backoff)
+    // Too soon to try again
+    return false;
+  return true;
 }
 
 adlb_code

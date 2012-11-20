@@ -291,7 +291,7 @@ handle_get(int caller)
   bool b = check_workqueue(caller, p.type);
   if (b) goto end;
 
-  if (!stealing)
+  if (!stealing && steal_allowed())
   {
     stealing = true;
     rc = steal(&stole);

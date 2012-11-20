@@ -209,8 +209,7 @@ double xlb_steal_last = 0.0;
 static inline adlb_code
 check_steal(void)
 {
-  double t = MPI_Wtime();
-  if (t - xlb_steal_last < xlb_steal_backoff)
+  if (! steal_allowed())
     // Too soon to try again
     return ADLB_SUCCESS;
   if (requestqueue_size() == 0)
