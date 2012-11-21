@@ -285,6 +285,7 @@ if [[ ${RPATH} != "" ]]
   FLAGS+="-Dstc.rpath=${RPATH}"
 fi
 
+#FLAGS+="
 # Check stc is compiled
 if [[ ! -f ${STC} ]]
 then
@@ -304,6 +305,12 @@ then
     export TURBINE_HOME=${TURBINE_INSTALL}
   fi
 fi
+
+# Extra info flags
+FLAGS+="-Dstc.input_filename=${INPUT}";
+FLAGS+="-Dstc.output_filename=${OUTPUT}";
+FLAGS+="-Dstc.stc_home=${STC_HOME}";
+FLAGS+="-Dstc.turbine_home=${TURBINE_HOME}";
 
 # Add last resort include paths
 CPP_INCLUDE+="-I ${PWD} "
@@ -328,6 +335,7 @@ fi
 
 # We use ZSH to make a special file for the pre-processed script
 java ${=ARGS} ${MAIN} <( ${=CPP} ${INPUT} ) ${OUTPUT}
+
 EXITCODE=${?}
 
 if (( EXITCODE ))

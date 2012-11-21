@@ -40,7 +40,11 @@ public class Settings
   public static final String TURBINE_NO_STACK_VARS = "stc.codegen.no-stack-vars";
 
   public static final String EXPERIMENTAL_REFCOUNTING = "stc.exp.refcounting";
-  
+  // New 
+  public static final String INPUT_FILENAME = "stc.input_filename";
+  public static final String OUTPUT_FILENAME = "stc.output_filename";
+  public static final String STC_HOME = "stc.stc_home";
+  public static final String TURBINE_HOME = "stc.turbine_home";
   // TODO: get rid of this once no longer required
   public static final String ARRAY_REF_SWITCHEROO = "stc.array-ref-switcheroo";
 
@@ -52,6 +56,10 @@ public class Settings
     defaults.setProperty(DEBUG_LEVEL, "COMMENTS");
     defaults.setProperty(IC_OUTPUT_FILE, "");
     defaults.setProperty(RPATH, "");
+    defaults.setProperty(INPUT_FILENAME, "");
+    defaults.setProperty(OUTPUT_FILENAME, "");
+    defaults.setProperty(STC_HOME, "");
+    defaults.setProperty(TURBINE_HOME, "");
     
     // Code optimisation settings - defaults
     defaults.setProperty(OPT_FLATTEN_NESTED, "true");
@@ -84,13 +92,13 @@ public class Settings
      with value from System
    */
   public static void initSTCProperties() throws InvalidOptionException {
-    // Pull in properties from wrapper script
+    // Pull in properties from wrapper script	 
     for (String key: properties.stringPropertyNames()) {
       String sysVal = System.getProperty(key);
       if (sysVal != null) {
         properties.setProperty(key, sysVal);
       }
-    }
+    } 
     validateProperties();
   }
 
