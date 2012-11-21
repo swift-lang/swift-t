@@ -4,14 +4,16 @@ PROGRAM_SWIFT="foreach.swift"
 PROGRAM_TCL=${PROGRAM_SWIFT%.swift}.tcl
 
 # Benchmark parameters
-PROCS=${PROCS:-256}
-CONTROL=${CONTROL:-2}
+PROCS=${PROCS:-8192}
+CONTROL=${CONTROL:-64}
 export TURBINE_ENGINES=$(( PROCS / CONTROL / 2 ))
 export ADLB_SERVERS=$(( PROCS / CONTROL / 2 ))
 TURBINE_WORKERS=$(( PROCS - TURBINE_ENGINES - ADLB_SERVERS ))
-N=${N:-1000}
+N=$(( TURBINE_WORKERS ))  # N*10 # ${N:-10}
 # Delay in milliseconds
-DELAY=${DELAY:-10000}
+DELAY=${DELAY:-100000}
+
+export WALLTIME="00:20:00"
 
 # Load common features
 
@@ -31,8 +33,8 @@ exitcode
 # System settings
 export TURBINE_DEBUG=${TURBINE_DEBUG:-0}
 export ADLB_DEBUG=${ADLB_DEBUG:-0}
-export LOGGING=${LOGGING:-0}
-export ADLB_EXHAUST_TIME=1
+export TURBINE_LOG=${TURBINE_LOG:-0}
+export ADLB_EXHAUST_TIME=5
 export TURBINE_USER_LIB=${BENCH_UTIL}
 # Mode defaults to MPIEXEC (local execution)
 MODE=mpiexec
