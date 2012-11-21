@@ -39,7 +39,7 @@ fi
   if (( DELAY ))
   then
     WORK_TIME=$(( N * DELAY/1000 ))
-    TOTAL_TIME=$(( TIME * TURBINE_WORKERS ))
+    TOTAL_TIME=$(( TIME * PROCS ))
     UTIL=$(( WORK_TIME / TOTAL_TIME ))
     print "UTIL: ${UTIL}"
   fi

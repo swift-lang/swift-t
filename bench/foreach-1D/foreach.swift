@@ -21,7 +21,6 @@ main {
   // Make
   // No actual container
 
-  @splitdegree=2
   foreach i in [0:N-1]
   {
     A[i] = set1_float(delay);
