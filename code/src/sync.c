@@ -34,7 +34,7 @@ adlb_code
 xlb_sync(int target)
 {
   TRACE_START;
-  DEBUG("\t target: %i", target);
+  DEBUG("\t xlb_sync() target: %i", target);
   int rc = ADLB_SUCCESS;
 
   MPI_Status status1, status2, status3;
