@@ -305,12 +305,12 @@ namespace eval turbine {
             "turbine::getenv_body $outputs $inputs"
     }
     proc getenv_body { result key } {
-        global env
         set key_value [ retrieve_string $key ]
         store_string $result [ getenv_impl $key_value ]
     }
 
     proc getenv_impl { key } {
+        global env
         if [ info exists env($key) ] {
             set result_value $env($key)
         } else {
