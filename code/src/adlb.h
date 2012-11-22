@@ -43,6 +43,11 @@ adlb_code ADLBP_Get(int type_requested, void* payload, int* length,
 adlb_code ADLB_Get(int type_requested, void* payload, int* length,
                    int* answer, int* type_recvd);
 
+/**
+   Obtain server rank responsible for data id
+ */
+int ADLB_Locate(long id);
+
 // Applications should not call these directly but
 // should use the typed forms defined below
 adlb_code ADLBP_Create(long id, adlb_data_type type,

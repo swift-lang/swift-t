@@ -77,9 +77,9 @@ static adlb_code handle_shutdown_server(int caller);
 static adlb_code handle_fail(int caller);
 
 static adlb_code slot_notification(long id);
-static int close_notification(long id, int* ranks, int count);
-static int set_int_reference_and_notify(long id, long value);
-static int set_str_reference_and_notify(long id, char* value);
+static adlb_code close_notification(long id, int* ranks, int count);
+static adlb_code set_int_reference_and_notify(long id, long value);
+static adlb_code set_str_reference_and_notify(long id, char* value);
 
 static adlb_code put_targeted(int type, int putter, int priority,
                               int answer, int target,
@@ -1047,7 +1047,7 @@ static adlb_code
 put_targeted(int type, int putter, int priority, int answer,
              int target, void* payload, int length);
 
-static int
+static adlb_code
 close_notification(long id, int* ranks, int count)
 {
   for (int i = 0; i < count; i++)
@@ -1067,16 +1067,23 @@ close_notification(long id, int* ranks, int count)
   return ADLB_SUCCESS;
 }
 
-static int
+static adlb_code
 set_int_reference_and_notify(long id, long value)
 {
   DEBUG("set_reference: <%li>=%li", id, value);
   DEBUG("set_int_reference: <%li>=%li", id, value);
-  int rc;
+  adlb_code rc = ADLB_SUCCESS;
+  int server = ADLB_Locate(id);
+  if (server != xlb_world_rank)
+    rc = xlb_sync(server);
+  ADLB_CHECK(rc);
   rc = ADLB_Store(id, &value, sizeof(long));
   ADLB_CHECK(rc);
   int* ranks;
   int count;
+  if (server != xlb_world_rank)
+    rc = xlb_sync(server);
+  ADLB_CHECK(rc);
   rc = ADLB_Close(id, &ranks, &count);
   ADLB_CHECK(rc);
   if (count > 0)
@@ -1089,20 +1096,28 @@ set_int_reference_and_notify(long id, long value)
   return ADLB_SUCCESS;
 }
 
-static int set_str_reference_and_notify(long id, char *value) {
+static adlb_code
+set_str_reference_and_notify(long id, char *value)
+{
   DEBUG("set_str_reference: <%li>=%s", id, value);
-  int rc;
+  int rc = ADLB_SUCCESS;
+  int server = ADLB_Locate(id);
+  if (server != xlb_world_rank)
+    rc = xlb_sync(server);
+  ADLB_CHECK(rc);
   rc = ADLB_Store(id, value, (strlen(value)+1) * sizeof(char));
   ADLB_CHECK(rc);
   int* ranks;
   int count;
+  if (server != xlb_world_rank)
+    rc = xlb_sync(server);
+  ADLB_CHECK(rc);
   rc = ADLB_Close(id, &ranks, &count);
   ADLB_CHECK(rc);
   rc = close_notification(id, ranks, count);
   ADLB_CHECK(rc);
   TRACE("SET_STR_REFERENCE DONE");
   return ADLB_SUCCESS;
-
 }
 
 static adlb_code

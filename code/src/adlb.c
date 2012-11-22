@@ -203,12 +203,12 @@ ADLBP_Get(int type_requested, void* payload, int* length,
   return ADLB_SUCCESS;
 }
 
-static inline int
-locate(long id)
+int
+ADLB_Locate(long id)
 {
   int offset = id % xlb_servers;
   int rank = xlb_world_size - xlb_servers + offset;
-  // DEBUG("locate(%li) => %i\n", id, rank);
+  // DEBUG("ADLB_Locate(%li) => %i\n", id, rank);
   return rank;
 }
 
@@ -228,7 +228,7 @@ ADLBP_Create_impl(adlb_datum_id id, adlb_data_type type,
   MPI_Status status;
   MPI_Request request;
 
-  to_server_rank = locate(id);
+  to_server_rank = ADLB_Locate(id);
   struct packed_id_type_updateable data = { id, type, updateable };
 
   IRECV(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
@@ -318,7 +318,7 @@ ADLB_Create_container(adlb_datum_id id, adlb_data_type subscript_type)
 adlb_code
 ADLBP_Exists(adlb_datum_id id, bool* result)
 {
-  int to_server_rank = locate(id);
+  int to_server_rank = ADLB_Locate(id);
 
   int rc;
   MPI_Status status;
@@ -350,7 +350,7 @@ adlb_code ADLBP_Store(adlb_datum_id id, void *data, int length)
   MPI_Status status;
   MPI_Request request;
 
-  to_server_rank = locate(id);
+  to_server_rank = ADLB_Locate(id);
 
   if (to_server_rank == xlb_world_rank)
   {
@@ -402,7 +402,7 @@ ADLBP_Slot_create(adlb_datum_id id, int slots)
   MPI_Request request;
 
   DEBUG("ADLB_Slot_create: <%li> %i", id, slots);
-  int to_server_rank = locate(id);
+  int to_server_rank = ADLB_Locate(id);
 
   rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
                  adlb_all_comm, &request);
@@ -428,7 +428,7 @@ ADLBP_Slot_drop(adlb_datum_id id, int slots)
   MPI_Request request;
 
   DEBUG("ADLB_Slot_drop: <%li> %i", id, slots);
-  int to_server_rank = locate(id);
+  int to_server_rank = ADLB_Locate(id);
 
   rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
                  adlb_all_comm, &request);
@@ -461,7 +461,7 @@ ADLBP_Insert(adlb_datum_id id,
   DEBUG("ADLB_Insert: <%li>[\"%s\"]=\"%s\"", id, subscript, member);
   int length = sprintf(xfer, "%li %s %i %i",
                        id, subscript, member_length, drops);
-  int to_server_rank = locate(id);
+  int to_server_rank = ADLB_Locate(id);
 
   rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
                  adlb_all_comm, &request);
@@ -493,7 +493,7 @@ ADLBP_Insert_atomic(adlb_datum_id id, const char* subscript,
 
   DEBUG("ADLB_Insert_atomic: <%li>[\"%s\"]", id, subscript);
   int length = sprintf(xfer, "%li %s", id, subscript);
-  int to_server_rank = locate(id);
+  int to_server_rank = ADLB_Locate(id);
 
   rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
                  adlb_all_comm, &request1);
@@ -523,7 +523,7 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_data_type* type,
   MPI_Status status;
   MPI_Request request;
 
-  int to_server_rank = locate(id);
+  int to_server_rank = ADLB_Locate(id);
 
   IRECV(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
   SEND(&id, 1, MPI_LONG, to_server_rank, ADLB_TAG_RETRIEVE);
@@ -560,7 +560,7 @@ ADLBP_Enumerate(adlb_datum_id container_id,
   MPI_Status status;
   MPI_Request request;
 
-  int to_server_rank = locate(container_id);
+  int to_server_rank = ADLB_Locate(container_id);
 
   struct packed_enumerate opts;
   opts.id = container_id;
@@ -650,7 +650,7 @@ ADLBP_Typeof(adlb_datum_id id, adlb_data_type* type)
     MPI_Status status;
     MPI_Request request;
 
-    int to_server_rank = locate(id);
+    int to_server_rank = ADLB_Locate(id);
     rc = MPI_Irecv(type, 1, MPI_INT, to_server_rank,
                    ADLB_TAG_RESPONSE, adlb_all_comm, &request);
     MPI_CHECK(rc);
@@ -676,7 +676,7 @@ ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* type)
 
     // DEBUG("ADLB_Container_typeof: %li", id);
 
-    int to_server_rank = locate(id);
+    int to_server_rank = ADLB_Locate(id);
     rc = MPI_Irecv(type, 1, MPI_INT, to_server_rank,
                    ADLB_TAG_RESPONSE, adlb_all_comm, &request);
     MPI_CHECK(rc);
@@ -708,7 +708,7 @@ adlb_code ADLBP_Lookup(adlb_datum_id id,
 
     // DEBUG("lookup: %li\n", hashcode);
 
-    to_server_rank = locate(id);
+    to_server_rank = ADLB_Locate(id);
 
     char msg[ADLB_DATA_SUBSCRIPT_MAX+32];
     sprintf(msg, "%li %s", id, subscript);
@@ -750,7 +750,7 @@ adlb_code ADLBP_Subscribe(long id, int* subscribed)
     MPI_Status status;
     MPI_Request request;
 
-    to_server_rank = locate(id);
+    to_server_rank = ADLB_Locate(id);
 
     rc = MPI_Irecv(subscribed, 1, MPI_INT, to_server_rank,
                    ADLB_TAG_RESPONSE, adlb_all_comm, &request);
@@ -784,7 +784,7 @@ ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
   int length = sprintf(xfer, "%li %li %s %i",
                          reference, id, subscript, ref_type);
 
-  int to_server_rank = locate(id);
+  int to_server_rank = ADLB_Locate(id);
 
   rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
                  adlb_all_comm, &request);
@@ -811,7 +811,7 @@ ADLBP_Container_size(adlb_datum_id container_id, int* size)
   MPI_Status status;
   MPI_Request request;
 
-  int to_server_rank = locate(container_id);
+  int to_server_rank = ADLB_Locate(container_id);
 
   rc = MPI_Irecv(size, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
                  adlb_all_comm, &request);
@@ -839,7 +839,7 @@ ADLBP_Close(adlb_datum_id id, int** ranks, int *count)
   MPI_Status status;
   MPI_Request request;
 
-  int to_server_rank = locate(id);
+  int to_server_rank = ADLB_Locate(id);
 
   if (to_server_rank == xlb_world_rank)
   {
@@ -881,7 +881,7 @@ adlb_code ADLBP_Lock(adlb_datum_id id, bool* result)
   MPI_Status status;
   MPI_Request request;
 
-  int to_server_rank = locate(id);
+  int to_server_rank = ADLB_Locate(id);
 
   // c 0->try again, 1->locked, x->failed
   char c;
@@ -917,7 +917,7 @@ ADLBP_Unlock(adlb_datum_id id)
   MPI_Status status;
   MPI_Request request;
 
-  int to_server_rank = locate(id);
+  int to_server_rank = ADLB_Locate(id);
 
   // c: 1->success, x->failed
   char c;
