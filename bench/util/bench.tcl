@@ -7,50 +7,6 @@ namespace eval bench {
 
     package provide bench 0.0.1
 
-    # Set by mpe_setup
-    variable mpe_ready
-
-    # MPE event IDs
-    variable event
-
-    proc mpe_setup { } {
-
-        variable mpe_ready
-        variable event
-        set event_names_solo [ list metadata debug ]
-        set event_names_pair [ list set1 set1rA set1rB sum ]
-
-        if { ! [ info exists mpe_ready ] } {
-
-            foreach e $event_names_solo {
-                set event($e) [ mpe::create_solo $e ]
-            }
-
-            foreach e $event_names_pair {
-                set L [ mpe::create_pair $e ]
-                set event(start_$e) [ lindex $L 0 ]
-                set event(stop_$e)  [ lindex $L 1 ]
-            }
-            set mpe_ready 1
-        }
-    }
-
-    # Add an arbitrary string to the MPE log as "metadata"
-    # The string length limit is 32
-    proc metadata { stack result input } {
-        turbine::rule "metadata-$input" $input $turbine::WORK \
-            "bench::metadata_body $input"
-    }
-
-    proc metadata_body { message } {
-
-        variable event
-        mpe_setup
-
-        set message_value [ turbine::retrieve_string $message ]
-        mpe::log $event(metadata) "$message_value"
-    }
-
     # usage: set1_float no_stack result delay
     # delay in milliseconds: rounded to nearest whole millisecond
     proc set1_float { stack result delay } {
