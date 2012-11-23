@@ -486,6 +486,7 @@ list_i_clear(struct list_i* target)
     free(item);
     item = next_item;
   }
+  target->size = 0;
 }
 
 /**
