@@ -13,13 +13,14 @@ VERBOSE=0
 STC_OPT_LEVELS=() #-O levels to test for STC
 DEFAULT_STC_OPT_LEVEL=1
 ADDTL_STC_ARGS=()
+LEAK_CHECK=0
 
 # Speed up the tests
 if [ -z ${ADLB_EXHAUST_TIME} ]; then
     export ADLB_EXHAUST_TIME=1
 fi
 
-while getopts "ck:n:p:VO:t:T:" OPTION
+while getopts "ck:n:p:VO:t:T:l" OPTION
 do
   case ${OPTION}
     in
@@ -50,6 +51,9 @@ do
       ;;
     O)
       STC_OPT_LEVELS+=${OPTARG}
+      ;;
+    l)
+      LEAK_CHECK=1
       ;;
     *)
       # ZSH already prints an error message
@@ -158,6 +162,19 @@ run_test()
       then
       print "Transforms were left in the rule engine!"
       return 1
+    fi
+
+    if (( LEAK_CHECK ))
+    then
+      # Check for leaks
+      grep -q "ADLB: LEAK:" ${TURBINE_OUTPUT}
+      # This is 0 if nothing was found
+      LEAKS=$(( ! ${?} ))
+      if (( LEAKS ))
+        then
+        print "Memory leak!"
+        return 1
+      fi
     fi
   fi
   (( EXIT_CODE )) && return ${EXIT_CODE}
