@@ -49,7 +49,6 @@ import exm.stc.tclbackend.tree.ForLoop;
 import exm.stc.tclbackend.tree.If;
 import exm.stc.tclbackend.tree.LiteralFloat;
 import exm.stc.tclbackend.tree.LiteralInt;
-import exm.stc.tclbackend.tree.Not;
 import exm.stc.tclbackend.tree.PackageRequire;
 import exm.stc.tclbackend.tree.Proc;
 import exm.stc.tclbackend.tree.Sequence;
@@ -66,6 +65,7 @@ import exm.stc.ui.ExitCode;
 
 public class TurbineGenerator implements CompilerBackend
 {
+
   /** 
      This prevents duplicate "lappend auto_path" statements
      We use a List because these should stay in order  
@@ -81,8 +81,9 @@ public class TurbineGenerator implements CompilerBackend
   private static final Value TCLTMP_RANGE_HI_V = new Value(TCLTMP_RANGE_HI);
   private static final String TCLTMP_RANGE_INC = "tcltmp:inc";
   private static final Value TCLTMP_RANGE_INC_V = new Value(TCLTMP_RANGE_INC);
-
-  private static final String TCLTMP_FIRSTCALL = "tcltmp:firstcall";
+  private static final String TCLTMP_ITERSLEFT = "tcltmp:itersleft";
+  private static final String TCLTMP_ITERSTOTAL = "tcltmp:iterstotal";
+  private static final String TCLTMP_REF_DECR = "tcltmp:ref_decr";
   
   private static final String MAIN_FUNCTION_NAME = "swift:main";
   private static final String CONSTINIT_FUNCTION_NAME = "swift:constants";
@@ -1649,7 +1650,6 @@ public class TurbineGenerator implements CompilerBackend
     commonFormalArgs.add(TCLTMP_RANGE_HI);
     commonFormalArgs.add(TCLTMP_RANGE_INC);
     List<String> outerFormalArgs = new ArrayList<String>(commonFormalArgs);
-    outerFormalArgs.add(TCLTMP_FIRSTCALL);
     
 
     Value loVal = new Value(TCLTMP_RANGE_LO);
@@ -1666,7 +1666,6 @@ public class TurbineGenerator implements CompilerBackend
     outerCallArgs.add(startE);
     outerCallArgs.add(endE);
     outerCallArgs.add(incrE);
-    outerCallArgs.add(LiteralInt.TRUE); // First call
 
     List<Expression> innerCallArgs = new ArrayList<Expression>(commonArgs);
     innerCallArgs.add(loVal);
@@ -1683,18 +1682,28 @@ public class TurbineGenerator implements CompilerBackend
     tree.add(new Proc(innerProcName,
           usedTclFunctionNames, commonFormalArgs, inner));
 
+    // Increment references by # of iterations
+    pointStack.peek().add(new SetVariable(TCLTMP_ITERSTOTAL,
+                     rangeItersLeft(startE, endE, incrE)));
+    List<Var> readOnlyUsedVars = Var.varListDiff(usedVariables,
+                                                 keepOpenVars);
+    pointStack.peek().append(incrementReaders(readOnlyUsedVars,
+                                 new Value(TCLTMP_ITERSTOTAL)));
+    pointStack.peek().append(incrementWriters(keepOpenVars,
+                                 new Value(TCLTMP_ITERSTOTAL)));
+    
     // Call outer directly
     pointStack.peek().add(new Command(outerProcName, outerCallArgs));
 
 
-    String itersLeft = "tcltmp:itersleft";
     // itersLeft = ceil( (hi - lo + 1) /(double) inc))
     // ==> itersLeft = ( (hi - lo) / inc ) + 1
-    outer.add(new SetVariable(itersLeft, Square.arithExpr( new Token(
-            String.format("((${%s} - ${%s}) / ${%s}) + 1",
-                   TCLTMP_RANGE_HI, TCLTMP_RANGE_LO, TCLTMP_RANGE_INC)))));
+    outer.add(new SetVariable(TCLTMP_ITERSLEFT,
+              rangeItersLeft(new Value(TCLTMP_RANGE_LO),
+                             new Value(TCLTMP_RANGE_HI),
+                             new Value(TCLTMP_RANGE_INC))));
     Expression doneSplitting = Square.arithExpr(
-            new Value(itersLeft), new Token("<="),
+            new Value(TCLTMP_ITERSLEFT), new Token("<="),
             new LiteralInt(splitDegree));
     Sequence thenB = new Sequence();
     Sequence elseB = new Sequence();
@@ -1712,7 +1721,7 @@ public class TurbineGenerator implements CompilerBackend
     // skip = max(splitFactor,  ((iters - 1) /(int) splitfactor) + 1)
     elseB.add(new SetVariable(skip, Square.arithExpr(new Token(
           String.format("max(%d, ((${%s} - 1) / %d ) + 1)",
-                  splitDegree, itersLeft, splitDegree)))));
+                  splitDegree, TCLTMP_ITERSLEFT, splitDegree)))));
 
     ForLoop splitLoop = new ForLoop(splitStart, loVal,
             hiVal, new Value(skip), splitBody);
@@ -1729,21 +1738,17 @@ public class TurbineGenerator implements CompilerBackend
             splitStart, skip)));
     outerRecCall.add(splitEnd);
     outerRecCall.add(incVal);
-    outerRecCall.add(LiteralInt.FALSE); // Not the first call
 
-    // Increment once per loop, then decrement one to account for 
-    // this task finishing.  
-    // TODO: just increment correct amount
-    List<Var> readOnlyUsedVars = Var.varListDiff(usedVariables,
-                                                 keepOpenVars);
-    pointStack.peek().append(incrementReaders(readOnlyUsedVars));
-    splitBody.append(incrementWriters(keepOpenVars));
-    elseB.add(conditionalDecr(new Not(new Value(TCLTMP_FIRSTCALL)),
-                               keepOpenVars, new LiteralInt(1)));
     splitBody.add(Turbine.rule(outerProcName, new ArrayList<Value>(0),
                     new TclList(outerRecCall), TaskMode.CONTROL));
 
     pointStack.push(inner);
+  }
+
+  private Square rangeItersLeft(Expression lo, Expression hi, Expression inc) {
+    return Square.arithExpr(new Token("(("), hi, new Token("-"), 
+            lo, new Token(")"), new Token("/"), inc, new Token(")"),
+            new Token("+"), new LiteralInt(1));
   }
 
   private static TclTree conditionalDecr(Expression cond, List<Var> vars,
@@ -1755,10 +1760,16 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   private void endRangeSplit(List<Var> usedVars, List<Var> keepOpenVars) {
+    // Decrement # of iterations executed in inner block
+    pointStack.peek().add(new SetVariable(TCLTMP_REF_DECR, 
+                            rangeItersLeft(new Value(TCLTMP_RANGE_LO),
+                                           new Value(TCLTMP_RANGE_HI),
+                                           new Value(TCLTMP_RANGE_INC))));
     List<Var> readOnlyUsedVars = Var.varListDiff(usedVars,
                                                  keepOpenVars);
-    pointStack.peek().append(decrementReaders(readOnlyUsedVars));
-    pointStack.peek().append(decrementWriters(keepOpenVars));
+    Value refDecr = new Value(TCLTMP_REF_DECR);
+    pointStack.peek().append(decrementReaders(readOnlyUsedVars, refDecr));
+    pointStack.peek().append(decrementWriters(keepOpenVars, refDecr));
     pointStack.pop(); // inner proc body
   }
 
