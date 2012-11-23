@@ -28,8 +28,6 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.Builtins.TclOpTemplate;
-import exm.stc.common.lang.Builtins.TemplateElem;
-import exm.stc.common.lang.Builtins.TemplateElem.ElemKind;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.TaskMode;
@@ -663,8 +661,8 @@ public class TurbineGenerator implements CompilerBackend
 
   private void builtinFunctionCall(String function, TclFunRef tclf,
       List<Var> inputs, List<Var> outputs, Arg priority) {
-    TclList iList = tclListOfVariables(inputs);
-    TclList oList = tclListOfVariables(outputs);
+    TclList iList = TclUtil.tclListOfVariables(inputs);
+    TclList oList = TclUtil.tclListOfVariables(outputs);
     
     if (tclf == null) {
       //should have all builtins in symbols
@@ -683,60 +681,17 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void builtinLocalFunctionCall(String functionName,
           List<Arg> inputs, List<Var> outputs) {
-    TclOpTemplate template = Builtins.getInlineTemplate(
-                                                    functionName);
+    TclOpTemplate template = Builtins.getInlineTemplate(functionName);
     assert(template != null);
     
-    // First work out values for different names
-    HashMap<String, Expression[]> toks = new HashMap<String, Expression[]>();
-    
-    List<String> outNames = template.getOutNames();
-    for (int i = 0; i < outputs.size(); i++) {
-      Var out = outputs.get(i);
-      String argName = outNames.get(i);
-      toks.put(argName, new Expression[] {new Token(prefixVar(out.name()))});
-    }
-   
-    List<String> inNames = template.getInNames();
-    if (template.hasVarArgs()) {
-      assert(inputs.size() >= inNames.size() - 1);
-    } else {
-      assert(inNames.size() == inputs.size());
-    }
-    for (int i = 0; i < inNames.size(); i++) {
-      String argName = inNames.get(i);
-      if (template.hasVarArgs() && i == inNames.size() - 1) {
-        // Last argument: varargs
-        Expression es[] = new Expression[inputs.size() - inNames.size() + 1];
-        for (int j = i; j < inputs.size(); j++) {
-          es[j - i] = opargToExpr(inputs.get(j));
-        }
-        toks.put(argName, es);
-      } else {
-        toks.put(argName, new Expression[] {opargToExpr(inputs.get(i))});
-      }
-    }
-    
-    ArrayList<TclTree> result = new ArrayList<TclTree>();
-    
-    // Now fill in template 
-    for (TemplateElem elem: template.getElems()) {
-      if (elem.getKind() == ElemKind.TEXT) {
-        String tok = elem.getText().trim();
-        if (tok.length() > 0) {
-          result.add(new Token(tok));
-        }
-      } else {
-        assert(elem.getKind() == ElemKind.VARIABLE);
-        for (Expression e: toks.get(elem.getVarName())) {
-          result.add(e);
-        }
-      }
-    }
+    List<TclTree> result = TclTemplateProcessor.processTemplate(template,
+                                                        inputs, outputs);
     
     Command cmd = new Command(result.toArray(new TclTree[result.size()]));
     pointStack.peek().add(cmd);
   }
+
+  
   
   @Override
   public void functionCall(String function,
@@ -744,8 +699,8 @@ public class TurbineGenerator implements CompilerBackend
               List<Boolean> blocking, TaskMode mode, Arg priority)  {
     assert(priority == null || priority.isImmediateInt());
     logger.debug("call: " + function);
-    TclList iList = tclListOfVariables(inputs);
-    TclList oList = tclListOfVariables(outputs);
+    TclList iList = TclUtil.tclListOfVariables(inputs);
+    TclList oList = TclUtil.tclListOfVariables(outputs);
     ArrayList<Var> blockOn = new ArrayList<Var>();
     HashSet<String> alreadyBlocking = new HashSet<String>();
     for (int i = 0; i < inputs.size(); i++) {
@@ -762,7 +717,7 @@ public class TurbineGenerator implements CompilerBackend
       //      into load balancer
       pointStack.peek().add(Turbine.callFunction(
                             TclNamer.swiftFuncName(function),
-                            oList, iList, tclListOfVariables(blockOn)));
+                            oList, iList, TclUtil.tclListOfVariables(blockOn)));
     } else if (mode == TaskMode.SYNC) {
       // Calling synchronously, can't guarantee anything blocks
       assert(blocking.size() == 0);
@@ -1115,42 +1070,6 @@ public class TurbineGenerator implements CompilerBackend
     String builtinName = getUpdateBuiltin(updateMode) + "_impl";
     pointStack.peek().add(new Command(builtinName, Arrays.asList(
         (Expression)varToExpr(updateable), opargToExpr(val))));
-  }
-
-
-  TclList tclListOfVariables(List<Var> inputs)
-  {
-    TclList result = new TclList();
-    for (Var v : inputs)
-      result.add(varToExpr(v));
-    return result;
-  }
-
-  String stringOfVariables(List<Var> inputs, List<Var> outputs)
-  {
-    StringBuilder sb =
-      new StringBuilder(inputs.size()+outputs.size()*32);
-
-    Iterator<Var> it1 = inputs.iterator();
-    Iterator<Var> it2 = outputs.iterator();
-    while (it1.hasNext())
-    {
-      Var v = it1.next();
-      Value val = varToExpr(v);
-      val.appendTo(sb);
-      if (it1.hasNext() || it2.hasNext())
-        sb.append(' ');
-    }
-    while (it2.hasNext())
-    {
-      Var v = it2.next();
-      Value val = varToExpr(v);
-      val.appendTo(sb);
-      if (it2.hasNext())
-        sb.append(' ');
-    }
-
-    return sb.toString();
   }
 
   /** This prevents duplicate "package require" statements */
@@ -1905,7 +1824,7 @@ public class TurbineGenerator implements CompilerBackend
 
 
   private static Value varToExpr(Var v) {
-    return new Value(prefixVar(v.name()));
+    return TclUtil.varToExpr(v);
   }
 
   /**
@@ -1936,21 +1855,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   private Expression opargToExpr(Arg in) {
-    switch (in.getKind()) {
-    case INTVAL:
-      return new LiteralInt(in.getIntLit());
-    case BOOLVAL:
-      return new LiteralInt(in.getBoolLit() ? 1 : 0);
-    case STRINGVAL:
-      return new TclString(in.getStringLit(), true);
-    case VAR:
-      return new Value(prefixVar(in.getVar().name()));
-    case FLOATVAL:
-      return new LiteralFloat(in.getFloatLit());
-    default:
-      throw new STCRuntimeError("Unknown oparg type: "
-          + in.getKind().toString());
-    }
+    return TclUtil.opargToExpr(in);
   }
 
     private static String prefixVar(String varname) {
