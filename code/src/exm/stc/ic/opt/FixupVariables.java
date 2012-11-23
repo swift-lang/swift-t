@@ -84,7 +84,7 @@ public class FixupVariables {
           innerNeededVars.removeAll(constructVarNames);
         }
 
-        boolean passedInAutomatically = c.variablesPassedInAutomatically();
+        boolean passedInAutomatically = c.inheritsParentVars();
         if (passedInAutomatically) {
           // Might be some variables not yet defined in this scope
           innerNeededVars.removeAll(availVars);

@@ -272,7 +272,7 @@ public class WaitCoalescer {
             newWait.getBlock().addContinuation(wait);
           }
           keepOpen.addAll(wait.getKeepOpenVars());
-          usedVars.addAll(wait.getUsedVariables());
+          usedVars.addAll(wait.getPassedInVars());
         }
 
         ICUtil.removeDuplicates(keepOpen);
@@ -280,7 +280,7 @@ public class WaitCoalescer {
           newWait.addKeepOpenVar(v);
         }
         ICUtil.removeDuplicates(usedVars);
-        newWait.addUsedVariables(usedVars);
+        newWait.addPassedInVars(usedVars);
         
         block.addContinuation(newWait);
         block.removeContinuations(waits);

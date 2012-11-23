@@ -135,7 +135,11 @@ public class ICContinuations {
      * before executing
      * @return
      */
-    public abstract List<Var> blockingVars();
+    public List<Var> blockingVars() {
+      // default implementation for sync continuations
+      assert(!isAsync());
+      return null;
+    }
 
     /**
      * Return list of variables that are defined by construct and
@@ -148,13 +152,31 @@ public class ICContinuations {
      * @return true if all variables in block containing continuation are
      *        automatically visible in inner blocks
      */
-    public abstract boolean variablesPassedInAutomatically();
+    public boolean inheritsParentVars() {
+      // Generally non-async continuations inherit scope
+      return !isAsync();
+    }
 
-    public abstract Collection<Var> getPassedInVars();
-
-    public abstract void addPassedInVar(Var variable);
-
-    public abstract void removePassedInVar(Var variable);
+    public Collection<Var> getPassedInVars() {
+      // Implementation for synchronous continuations
+      assert(!this.isAsync());
+      return null;
+    }
+    
+    public void addPassedInVar(Var variable) {
+      // Implementation for synchronous continuations
+      assert(!this.isAsync());
+    }
+    
+    public void addPassedInVars(Collection<Var> variables) {
+      for (Var v: variables) {
+        addPassedInVar(v);
+      }
+    }
+    public void removePassedInVar(Var variable) {
+      // Implementation for synchronous continuations
+      assert(!this.isAsync());
+    }
 
     /** 
      * Remove all variables (e.g. arrays that are kept open)
@@ -246,19 +268,89 @@ public class ICContinuations {
     LOOP,
     WAIT_STATEMENT
   }
+  
+  public static abstract class AsyncContinuation extends Continuation {
+    protected final List<Var> passedInVars;
+    protected final List<Var> keepOpenVars;
+    public AsyncContinuation(List<Var> usedVars, List<Var> keepOpenVars) {
+      this.passedInVars = new ArrayList<Var>(usedVars);
+      this.keepOpenVars = new ArrayList<Var>(keepOpenVars);
+    }
+    @Override
+    public Collection<Var> getPassedInVars() {
+      return Collections.unmodifiableList(this.passedInVars);
+    }
+    @Override
+    public void addPassedInVar(Var variable) {
+      assert(variable != null);
+      this.passedInVars.add(variable);
+    }
+    @Override
+    public void addPassedInVars(Collection<Var> vars) {
+      assert(vars != null);
+      this.passedInVars.addAll(vars);
+    }
+    @Override
+    public void removePassedInVar(Var variable) {
+      ICUtil.removeVarInList(passedInVars, variable.name());
+    }
+    @Override
+    public void clearKeepOpenVars() {
+      this.keepOpenVars.clear();
+    }
+    @Override
+    public void addKeepOpenVar(Var v) {
+      this.keepOpenVars.add(v);
+    }
+    
+    @Override
+    public void addKeepOpenVars(Collection<Var> v) {
+      this.keepOpenVars.addAll(v);
+    }
 
-  public static abstract class AbstractLoop extends Continuation {
+    @Override
+    public Collection<Var> getKeepOpenVars() {
+      return Collections.unmodifiableList(this.keepOpenVars);
+    }
+    /**
+     * For overriding by child class
+     * @param renames
+     * @param inputsOnly
+     */
+    public abstract void replaceConstructVars_(Map<String, Arg> renames, 
+            boolean inputsOnly);
+    
+    @Override
+    public final void replaceConstructVars(Map<String, Arg> renames, 
+        boolean inputsOnly) {
+      this.replaceConstructVars_(renames, inputsOnly);
+      if (!inputsOnly) {
+        ICUtil.replaceVarsInList(renames, passedInVars, true);
+        ICUtil.replaceVarsInList(renames, keepOpenVars, true);
+      }
+    }
+    
+    /**
+     * For overriding by child class
+     */
+    public abstract void removeVars_(Set<String> removeVars);
+    
+    @Override
+    public final void removeVars(Set<String> removeVars) {
+      removeVars_(removeVars);
+      removeVarsInBlocks(removeVars);
+      ICUtil.removeVarsInList(passedInVars, removeVars);
+      ICUtil.removeVarsInList(keepOpenVars, removeVars);
+    }
+    
+  }
+
+  public static abstract class AbstractLoop extends AsyncContinuation {
     protected Block loopBody;
 
-    protected final List<Var> usedVariables;
-    protected final List<Var> keepOpenVars;
-
-    public AbstractLoop(Block block, List<Var> usedVariables,
+    public AbstractLoop(Block block, List<Var> usedVars,
         List<Var> keepOpenVars) {
-
-      this.usedVariables = new ArrayList<Var>(usedVariables);
-      this.keepOpenVars =
-                      new ArrayList<Var>(keepOpenVars);
+      super(usedVars, keepOpenVars);
       this.loopBody = block;
     }
 
@@ -296,22 +388,6 @@ public class ICContinuations {
     }
 
     @Override
-    public Collection<Var> getPassedInVars() {
-      return Collections.unmodifiableList(this.usedVariables);
-    }
-
-    @Override
-    public void addPassedInVar(Var variable) {
-      assert(variable != null);
-      this.usedVariables.add(variable);
-    }
-
-    @Override
-    public void removePassedInVar(Var variable) {
-      ICUtil.removeVarInList(usedVariables, variable.name());
-    }
-
-    @Override
     public void inlineInto(Block block, Block predictedBranch) {
       throw new STCRuntimeError("Can't inline loops yet");
     }
@@ -320,18 +396,8 @@ public class ICContinuations {
       this.loopBody.insertInline(o.loopBody, insertAtTop);
       this.keepOpenVars.addAll(o.keepOpenVars);
       ICUtil.removeDuplicates(this.keepOpenVars);
-      this.usedVariables.addAll(o.usedVariables);
-      ICUtil.removeDuplicates(this.usedVariables);
-    }
-
-    @Override
-    public void clearKeepOpenVars() {
-      this.keepOpenVars.clear();
-    }
-
-    @Override
-    public void addKeepOpenVar(Var v) {
-      this.keepOpenVars.add(v);
+      this.passedInVars.addAll(o.passedInVars);
+      ICUtil.removeDuplicates(this.passedInVars);
     }
   }
 
@@ -370,7 +436,7 @@ public class ICContinuations {
     public ForeachLoop clone() {
       return new ForeachLoop(this.loopBody.clone(),
           arrayVar, loopVar, loopCounterVar, splitDegree, arrayClosed,
-          new ArrayList<Var>(usedVariables),
+          new ArrayList<Var>(passedInVars),
           new ArrayList<Var>(keepOpenVars));
     }
 
@@ -384,13 +450,22 @@ public class ICContinuations {
       return !arrayClosed || splitDegree > 0;
     }
 
+    /** Return list of variables that the continuations waits for
+     * before executing
+     * @return
+     */
+    @Override
+    public List<Var> blockingVars() {
+      return null;
+    }
+
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
       gen.startForeachLoop(arrayVar, loopVar, loopCounterVar,
-                splitDegree, arrayClosed, usedVariables, keepOpenVars);
+                splitDegree, arrayClosed, passedInVars, keepOpenVars);
       this.loopBody.generate(logger, gen, info);
-      gen.endForeachLoop(splitDegree, arrayClosed, usedVariables,
+      gen.endForeachLoop(splitDegree, arrayClosed, passedInVars,
                                           keepOpenVars);
     }
 
@@ -404,14 +479,14 @@ public class ICContinuations {
         sb.append(", " + loopCounterVar.name());
       }
       sb.append(" in " + arrayVar.name() + " ");
-      ICUtil.prettyPrintVarInfo(sb, usedVariables, keepOpenVars);
+      ICUtil.prettyPrintVarInfo(sb, passedInVars, keepOpenVars);
       sb.append(" {\n");
       loopBody.prettyPrint(sb, currentIndent + indent);
       sb.append(currentIndent + "}\n");
     }
 
     @Override
-    public void replaceConstructVars(Map<String, Arg> renames,
+    public void replaceConstructVars_(Map<String, Arg> renames,
             boolean inputsOnly) {
       if (renames.containsKey(arrayVar.name())) {
         arrayVar = renames.get(arrayVar.name()).getVar();
@@ -426,11 +501,6 @@ public class ICContinuations {
           loopCounterVar = renames.get(loopCounterVar.name()).getVar();
         }
       }
-      
-      if (!inputsOnly) {
-        ICUtil.replaceVarsInList(renames, usedVariables, true);
-        ICUtil.replaceVarsInList(renames, keepOpenVars, true);
-      }
     }
 
     @Override
@@ -441,15 +511,12 @@ public class ICContinuations {
     }
 
     @Override
-    public void removeVars(Set<String> removeVars) {
-      removeVarsInBlocks(removeVars);
+    public void removeVars_(Set<String> removeVars) {
       checkNotRemoved(arrayVar, removeVars);
       checkNotRemoved(loopVar, removeVars);
       if (loopCounterVar != null) {
         checkNotRemoved(loopCounterVar, removeVars);
       }
-      ICUtil.removeVarsInList(this.keepOpenVars, removeVars);
-      ICUtil.removeVarsInList(this.usedVariables, removeVars);
     }
 
     @Override
@@ -463,20 +530,10 @@ public class ICContinuations {
     }
 
     @Override
-    public boolean variablesPassedInAutomatically() {
-      return false;
-    }
-
-    @Override
     public List<Var> constructDefinedVars() {
       return loopCounterVar == null ?
                 Arrays.asList(loopVar)
               : Arrays.asList(loopCounterVar, loopVar);
-    }
-
-    @Override
-    public List<Var> blockingVars() {
-      return null;
     }
 
     @Override
@@ -510,7 +567,6 @@ public class ICContinuations {
       
       fuseIntoAbstract(o, insertAtTop);
     }
-
   }
 
   public static class IfStatement extends Continuation {
@@ -642,11 +698,6 @@ public class ICContinuations {
     }
 
     @Override
-    public boolean variablesPassedInAutomatically() {
-      return true;
-    }
-
-    @Override
     public Collection<Var> getPassedInVars() {
       // doesn't apply
       return null;
@@ -665,11 +716,6 @@ public class ICContinuations {
 
     @Override
     public List<Var> constructDefinedVars() {
-      return null;
-    }
-
-    @Override
-    public List<Var> blockingVars() {
       return null;
     }
 
@@ -743,7 +789,7 @@ public class ICContinuations {
     public Loop clone() {
       // Constructor creates copies of variable lists
       return new Loop(loopName, this.loopBody.clone(), loopVars, initVals,
-          usedVariables, keepOpenVars, blockingVars);
+          passedInVars, keepOpenVars, blockingVars);
     }
 
     @Override
@@ -768,7 +814,7 @@ public class ICContinuations {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
       gen.startLoop(loopName, loopVars, initVals,
-                    usedVariables, keepOpenVars, blockingVars);
+                    passedInVars, keepOpenVars, blockingVars);
       this.loopBody.generate(logger, gen, info);
       gen.endLoop();
     }
@@ -793,20 +839,16 @@ public class ICContinuations {
       }
 
       sb.append(")\n" + currentIndent + indent + indent);
-      ICUtil.prettyPrintVarInfo(sb, usedVariables, keepOpenVars);
+      ICUtil.prettyPrintVarInfo(sb, passedInVars, keepOpenVars);
       sb.append(" {\n");
       loopBody.prettyPrint(sb, currentIndent + indent);
       sb.append(currentIndent + "}\n");
     }
     
     @Override
-    public void replaceConstructVars(Map<String, Arg> renames,
+    public void replaceConstructVars_(Map<String, Arg> renames,
         boolean inputsOnly) {
       ICUtil.replaceVarsInList(renames, initVals, false);
-      if (!inputsOnly) {
-        ICUtil.replaceVarsInList(renames, usedVariables, true);
-        ICUtil.replaceVarsInList(renames, keepOpenVars, true);
-      }
     }
 
     @Override
@@ -817,8 +859,7 @@ public class ICContinuations {
     }
 
     @Override
-    public void removeVars(Set<String> removeVars) {
-      removeVarsInBlocks(removeVars);
+    public void removeVars_(Set<String> removeVars) {
       // check it isn't removing initial values
       for (Var v: this.initVals) {
         checkNotRemoved(v, removeVars);
@@ -826,8 +867,6 @@ public class ICContinuations {
       for (Var v: this.loopVars) {
         checkNotRemoved(v, removeVars);
       }
-      ICUtil.removeVarsInList(this.keepOpenVars, removeVars);
-      ICUtil.removeVarsInList(this.usedVariables, removeVars);
     }
 
     @Override
@@ -839,11 +878,6 @@ public class ICContinuations {
     public boolean isNoop() {
       // TODO: think about particular conditions that would render it a noop.
       //
-      return false;
-    }
-
-    @Override
-    public boolean variablesPassedInAutomatically() {
       return false;
     }
 
@@ -973,11 +1007,6 @@ public class ICContinuations {
     }
 
     @Override
-    public boolean variablesPassedInAutomatically() {
-      return true;
-    }
-
-    @Override
     public Collection<Var> getPassedInVars() {
       return null;
     }
@@ -996,11 +1025,6 @@ public class ICContinuations {
 
     @Override
     public List<Var> constructDefinedVars() {
-      return null;
-    }
-
-    @Override
-    public List<Var> blockingVars() {
       return null;
     }
   }
@@ -1048,7 +1072,7 @@ public class ICContinuations {
     public RangeLoop clone() {
       return new RangeLoop(loopName, this.loopBody.clone(), loopVar, countVar,
           start.clone(), end.clone(), increment.clone(),
-          new ArrayList<Var>(usedVariables),
+          new ArrayList<Var>(passedInVars),
           new ArrayList<Var>(keepOpenVars), desiredUnroll,
           splitDegree);
     }
@@ -1064,13 +1088,18 @@ public class ICContinuations {
     }
 
     @Override
+    public List<Var> blockingVars() {
+      return null;
+    }
+    
+    @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
       gen.startRangeLoop(loopName, loopVar, countVar, start, end, increment,
-                         usedVariables, keepOpenVars,
+                         passedInVars, keepOpenVars,
                          desiredUnroll, splitDegree);
       this.loopBody.generate(logger, gen, info);
-      gen.endRangeLoop(usedVariables, keepOpenVars, splitDegree);
+      gen.endRangeLoop(passedInVars, keepOpenVars, splitDegree);
     }
 
     @Override
@@ -1085,14 +1114,14 @@ public class ICContinuations {
       if (!increment.isIntVal() || increment.getIntLit() != 1) {
           sb.append("incr " + increment.toString() + " ");
       }
-      ICUtil.prettyPrintVarInfo(sb, usedVariables, keepOpenVars);
+      ICUtil.prettyPrintVarInfo(sb, passedInVars, keepOpenVars);
       sb.append(" {\n");
       loopBody.prettyPrint(sb, currentIndent + indent);
       sb.append(currentIndent + "}\n");
     }
 
     @Override
-    public void replaceConstructVars(Map<String, Arg> renames, 
+    public void replaceConstructVars_(Map<String, Arg> renames, 
                                         boolean inputsOnly) {
       start = renameRangeArg(start, renames);
       end = renameRangeArg(end, renames);
@@ -1103,11 +1132,6 @@ public class ICContinuations {
       }
       if (countVar != null && renames.containsKey(countVar.name())) {
         countVar = renames.get(countVar.name()).getVar();
-      }
-
-      if (!inputsOnly) {
-        ICUtil.replaceVarsInList(renames, usedVariables, true);
-        ICUtil.replaceVarsInList(renames, keepOpenVars, true);
       }
     }
 
@@ -1135,13 +1159,10 @@ public class ICContinuations {
     }
 
     @Override
-    public void removeVars(Set<String> removeVars) {
+    public void removeVars_(Set<String> removeVars) {
       checkNotRemoved(start, removeVars);
       checkNotRemoved(end, removeVars);
       checkNotRemoved(increment, removeVars);
-      removeVarsInBlocks(removeVars);
-      ICUtil.removeVarsInList(this.keepOpenVars, removeVars);
-      ICUtil.removeVarsInList(this.usedVariables, removeVars);
     }
 
     @Override
@@ -1220,22 +1241,12 @@ public class ICContinuations {
     }
 
     @Override
-    public boolean variablesPassedInAutomatically() {
-      return false;
-    }
-
-    @Override
     public List<Var> constructDefinedVars() {
       if (countVar != null) {
         return Arrays.asList(loopVar, countVar);
       } else {
         return Arrays.asList(loopVar);
       }
-    }
-
-    @Override
-    public List<Var> blockingVars() {
-      return null;
     }
 
     @Override
@@ -1530,11 +1541,6 @@ public class ICContinuations {
     }
 
     @Override
-    public boolean variablesPassedInAutomatically() {
-      return true;
-    }
-
-    @Override
     public Collection<Var> getPassedInVars() {
       return null;
     }
@@ -1554,11 +1560,6 @@ public class ICContinuations {
     public List<Var> constructDefinedVars() {
       return null;
     }
-
-    @Override
-    public List<Var> blockingVars() {
-      return null;
-    }
   }
 
   /**
@@ -1566,13 +1567,11 @@ public class ICContinuations {
    * and only runs the contents once all of those variables are closed
    *
    */
-  public static class WaitStatement extends Continuation {
+  public static class WaitStatement extends AsyncContinuation {
     /** Label name to use in final generated code */
     private final String procName;
     private final Block block;
     private final ArrayList<Var> waitVars;
-    private final ArrayList<Var> usedVariables;
-    private final ArrayList<Var> keepOpenVars;
     /* True if this wait was compiler-generated so can be removed if needed
      * We can only remove an explicit wait if we know that the variables are
      * already closed*/
@@ -1580,29 +1579,27 @@ public class ICContinuations {
     private final TaskMode target;
 
     public WaitStatement(String procName, List<Var> waitVars,
-                    List<Var> usedVariables,
+                    List<Var> usedVars,
                     List<Var> keepOpenVars,
                     WaitMode mode, TaskMode target) {
       this(procName, new Block(BlockType.WAIT_BLOCK),
-                        new ArrayList<Var>(waitVars),
-                        new ArrayList<Var>(usedVariables),
-                        new ArrayList<Var>(keepOpenVars),
+                        waitVars,
+                        usedVars,
+                        keepOpenVars,
                         mode, target);
     }
 
     private WaitStatement(String procName, Block block,
-        ArrayList<Var> waitVars, ArrayList<Var> usedVariables,
-        ArrayList<Var> keepOpenVars, WaitMode mode, TaskMode target) {
-      super();
+        List<Var> waitVars, List<Var> usedVars,
+        List<Var> keepOpenVars, WaitMode mode, TaskMode target) {
+      super(usedVars, keepOpenVars);
       assert(waitVars != null);
-      assert(usedVariables != null);
+      assert(usedVars != null);
       assert(keepOpenVars != null);
       this.procName = procName;
       this.block = block;
-      this.waitVars = waitVars;
-      ICUtil.removeDuplicates(waitVars);
-      this.usedVariables = usedVariables;
-      this.keepOpenVars = keepOpenVars;
+      this.waitVars = new ArrayList<Var>(waitVars);
+      ICUtil.removeDuplicates(this.waitVars);
       this.mode = mode;
       this.target = target;
     }
@@ -1610,9 +1607,7 @@ public class ICContinuations {
     @Override
     public WaitStatement clone() {
       return new WaitStatement(procName, this.block.clone(),
-          new ArrayList<Var>(waitVars),
-          new ArrayList<Var>(usedVariables),
-          new ArrayList<Var>(keepOpenVars), mode, target);
+          waitVars, passedInVars, keepOpenVars, mode, target);
     }
 
     public Block getBlock() {
@@ -1623,10 +1618,10 @@ public class ICContinuations {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
 
-      gen.startWaitStatement(procName, waitVars, usedVariables,
+      gen.startWaitStatement(procName, waitVars, passedInVars,
           keepOpenVars, mode, target);
       this.block.generate(logger, gen, info);
-      gen.endWaitStatement(usedVariables, keepOpenVars);
+      gen.endWaitStatement(passedInVars, keepOpenVars);
     }
 
     @Override
@@ -1636,7 +1631,7 @@ public class ICContinuations {
       ICUtil.prettyPrintVarList(sb, waitVars);
       sb.append(") ");
       sb.append("/*" + procName + "*/ " );
-      ICUtil.prettyPrintVarInfo(sb, usedVariables, keepOpenVars);
+      ICUtil.prettyPrintVarInfo(sb, passedInVars, keepOpenVars);
       sb.append(" <" + mode.toString() + ">");
       sb.append(" {\n");
       block.prettyPrint(sb, newIndent);
@@ -1649,13 +1644,9 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceConstructVars(Map<String, Arg> renames, 
+    public void replaceConstructVars_(Map<String, Arg> renames, 
         boolean inputsOnly) {
       ICUtil.replaceVarsInList(renames, waitVars, true);
-      if (!inputsOnly) {
-        ICUtil.replaceVarsInList(renames, usedVariables, true);
-        ICUtil.replaceVarsInList(renames, keepOpenVars, true);
-      }
     }
     
     public WaitMode getMode() {
@@ -1678,12 +1669,6 @@ public class ICContinuations {
     @Override
     public Collection<Var> requiredVars() {
       ArrayList<Var> res = new ArrayList<Var>();
-      for (Var c: keepOpenVars) {
-        if (c.storage() == VarStorage.ALIAS) {
-          // Might be alias for actual array written inside
-          res.add(c);
-        }
-      }
       if (mode == WaitMode.EXPLICIT || mode == WaitMode.TASK_DISPATCH) {
         for (Var v: waitVars) {
           res.add(v);
@@ -1697,11 +1682,8 @@ public class ICContinuations {
     }
 
     @Override
-    public void removeVars(Set<String> removeVars) {
-      removeVarsInBlocks(removeVars);
+    public void removeVars_(Set<String> removeVars) {
       ICUtil.removeVarsInList(waitVars, removeVars);
-      ICUtil.removeVarsInList(usedVariables, removeVars);
-      ICUtil.removeVarsInList(keepOpenVars, removeVars);
     }
 
     @Override
@@ -1749,52 +1731,8 @@ public class ICContinuations {
     }
 
     @Override
-    public boolean variablesPassedInAutomatically() {
-      return false;
-    }
-    
-    @Override
-    public Collection<Var> getKeepOpenVars() {
-      return Collections.unmodifiableList(this.keepOpenVars);
-    }
-
-    public Collection<Var> getUsedVariables() {
-      return Collections.unmodifiableList(this.usedVariables);
-    }
-
-
-    public void addUsedVariables(Collection<Var> usedVars) {
-      this.usedVariables.addAll(usedVars);
-    }
-
-    @Override
-    public Collection<Var> getPassedInVars() {
-      return Collections.unmodifiableList(this.usedVariables);
-    }
-
-    @Override
-    public void addPassedInVar(Var variable) {
-      this.usedVariables.add(variable);
-    }
-
-    @Override
-    public void removePassedInVar(Var variable) {
-      ICUtil.removeVarInList(this.usedVariables, variable.name());
-    }
-
-    @Override
     public List<Var> constructDefinedVars() {
       return null;
-    }
-
-    @Override
-    public void clearKeepOpenVars() {
-      this.keepOpenVars.clear();
-    }
-
-    @Override
-    public void addKeepOpenVar(Var v) {
-      this.keepOpenVars.add(v);
     }
   }
 

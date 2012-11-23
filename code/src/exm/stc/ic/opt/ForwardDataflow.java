@@ -28,9 +28,6 @@ import exm.stc.common.util.HierarchicalSet;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
-import exm.stc.ic.tree.ICContinuations.ContinuationType;
-import exm.stc.ic.tree.ICContinuations.Loop;
-import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.CVMap;
@@ -401,12 +398,12 @@ public class ForwardDataflow {
     Block main = f.getMainblock();
     Set<String> blockingVariables = findBlockingVariables(main);
     if (blockingVariables != null) {
-      Set<String> localNames = Var.nameSet(main.getVariables());
+      Set<String> localNames = Var.nameSet(f.getInputList());
       logger.trace("Blocking " + f.getName() + ": " + blockingVariables);
       for (String vName: blockingVariables) {
         boolean isConst = program.lookupGlobalConst(vName) != null;
         // Global constants are already set
-        if (!isConst && !localNames.contains(vName)) {
+        if (!isConst && localNames.contains(vName)) {
           // Check if a non-arg
           f.addBlockingInput(vName);
         }
@@ -459,16 +456,9 @@ public class ForwardDataflow {
     }
     
     for (Continuation c: block.getContinuations()) {
-      List<String> waitOn = null;
-      if (c.getType() == ContinuationType.WAIT_STATEMENT) {
-        waitOn = Var.nameList(
-            ((WaitStatement) c).getWaitVars());
-      } else if (c.getType() == ContinuationType.LOOP) {
-        waitOn = Arrays.asList(((Loop)c).getInitCond().name());
-      } else {
-        // can't handle other continuations
-        return null;
-      }
+      List<Var> waitOnVars = c.blockingVars();
+      List<String> waitOn = waitOnVars == null ? Arrays.<String>asList() 
+                                               : Var.nameList(waitOnVars);
       assert(waitOn != null);
       //System.err.println("waitOn: " + waitOn);
       if (blockingVariables == null) {
@@ -576,7 +566,7 @@ public class ForwardDataflow {
     // Note: assume that continuations aren't added to rule engine until after
     // all code in block has run
     for (Continuation cont : block.getContinuations()) {
-      State contCV = cv.makeChild(cont.variablesPassedInAutomatically());
+      State contCV = cv.makeChild(cont.inheritsParentVars());
       // additional variables may be close once we're inside continuation
       List<Var> contClosedVars = cont.blockingVars();
       if (contClosedVars != null) {
@@ -590,7 +580,7 @@ public class ForwardDataflow {
         // Update based on whether values available within continuation
         HierarchicalMap<String, Arg> contReplaceInputs;
         HierarchicalMap<String, Arg> contReplaceAll;
-        if (cont.variablesPassedInAutomatically()) {
+        if (cont.inheritsParentVars()) {
           contReplaceInputs = replaceInputs;
           contReplaceAll = replaceAll;
         } else {
