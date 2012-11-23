@@ -96,7 +96,7 @@ public class ForeachLoop {
 
     // How many times to unroll loop (1 == don't unroll)
     int unrollFactor = 1;
-    int splitDegree = -1; // Don't split by default
+    int splitDegree = DEFAULT_SPLIT_DEGREE;
 
     
     int annotationCount = 0;
