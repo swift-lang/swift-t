@@ -5,6 +5,7 @@ import org.apache.log4j.Logger;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
+import exm.stc.common.Logging;
 
 /**
  * Helper functions to augment log messages with contextual information about
@@ -12,7 +13,7 @@ import exm.stc.ast.antlr.ExMParser;
  *
  */
 public class LogHelper {
-  static final Logger logger = Logger.getLogger("");
+  static final Logger logger = Logging.getSTCLogger();
   public static void logChildren(int indent, SwiftAST tree) {
     for (SwiftAST child: tree.children()) {
       trace(indent+2, child.getText());

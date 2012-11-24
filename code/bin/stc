@@ -148,7 +148,7 @@ report_version()
   exit 0
 }
 
-while getopts "d:EhI:l:t:T:O:C:r:uvV:x" OPTION
+while getopts "d:EhI:l:L:t:T:O:C:r:uvVx" OPTION
 do
   case ${OPTION}
     in
@@ -165,6 +165,10 @@ do
       ;;
     l) LOGFILE=${OPTARG}
       verbose "LOGFILE: ${LOGFILE}"
+      ;;
+    L) LOGFILE=${OPTARG}
+      verbose "LOGFILE: ${LOGFILE} trace enabled"
+      LOGTRACE=true
       ;;
     r)
       add_rpath ${OPTARG}
@@ -278,8 +282,14 @@ TURBINE_VERSION=$( < ${STC_HOME}/turbine-version.txt )
 FLAGS=( -ea -Dstc.turbine.version=${TURBINE_VERSION} )
 if [[ ${LOGFILE} != "" ]]
 then
-  FLAGS+="-Dstc.logfile=${LOGFILE}"
+  FLAGS+="-Dstc.log.file=${LOGFILE}"
 fi
+
+if [[ ${LOGTRACE} = true ]]
+then
+  FLAGS+="-Dstc.log.trace=true"
+fi
+
 if [[ ${RPATH} != "" ]]
   then
   FLAGS+="-Dstc.rpath=${RPATH}"

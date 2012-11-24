@@ -12,8 +12,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
-import org.apache.log4j.Logger;
-
 import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
@@ -34,6 +32,7 @@ import exm.stc.ast.descriptor.VariableDeclaration.VariableDescriptor;
 import exm.stc.ast.descriptor.Wait;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.CompilerBackend.WaitMode;
+import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.DoubleDefineException;
@@ -100,7 +99,7 @@ public class ASTWalker {
     this.backend = backend;
     this.varCreator = new VarCreator(backend);
     this.exprWalker = new ExprWalker(varCreator, backend, lineMapping);
-    GlobalContext context = new GlobalContext(inputFile, Logger.getLogger(""));
+    GlobalContext context = new GlobalContext(inputFile, Logging.getSTCLogger());
 
     // Dump ANTLR's view of the SwiftAST (unsightly):
     // if (logger.isDebugEnabled())

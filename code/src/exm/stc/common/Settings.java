@@ -40,11 +40,14 @@ public class Settings
   public static final String TURBINE_NO_STACK_VARS = "stc.codegen.no-stack-vars";
 
   public static final String EXPERIMENTAL_REFCOUNTING = "stc.exp.refcounting";
-  // New 
   public static final String INPUT_FILENAME = "stc.input_filename";
   public static final String OUTPUT_FILENAME = "stc.output_filename";
   public static final String STC_HOME = "stc.stc_home";
   public static final String TURBINE_HOME = "stc.turbine_home";
+  
+  public static final String LOG_FILE = "stc.log.file";
+  public static final String LOG_TRACE = "stc.log.trace";
+  
   // TODO: get rid of this once no longer required
   public static final String ARRAY_REF_SWITCHEROO = "stc.array-ref-switcheroo";
 
@@ -76,6 +79,8 @@ public class Settings
     defaults.setProperty(OPT_NUM_PASSES, "5");
     defaults.setProperty(ARRAY_REF_SWITCHEROO, "false");
     defaults.setProperty(EXPERIMENTAL_REFCOUNTING, "false");
+    defaults.setProperty(LOG_FILE, "");
+    defaults.setProperty(LOG_TRACE, "false");
 
     // Turbine code generation
     // Turbine version

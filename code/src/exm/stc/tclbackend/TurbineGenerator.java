@@ -19,6 +19,7 @@ import java.io.File;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.InvalidOptionException;
@@ -507,7 +508,7 @@ public class TurbineGenerator implements CompilerBackend
       assert(impls.size() > 0);
       
       if (impls.size() > 1) {
-        Logger.getLogger("").warn("Multiple implementations for operation " +
+        Logging.getSTCLogger().warn("Multiple implementations for operation " +
             op + ": " + impls.toString());
       }
       fn = builtinSymbols.get(impls.get(0));

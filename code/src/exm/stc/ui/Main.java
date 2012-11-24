@@ -7,9 +7,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
-import java.util.Properties;
 
-import org.apache.log4j.Appender;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Layout;
@@ -17,6 +15,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 
+import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 
@@ -37,7 +36,13 @@ public class Main
       System.err.println("Error setting up options: " + ex.getMessage());
       System.exit(1);
     }
-    Logger logger = setupLogging();
+    Logger logger = null;
+    try {
+      logger = setupLogging();
+    } catch (InvalidOptionException ex) {
+      System.err.println("Error setting up logging: " + ex.getMessage());
+      System.exit(1);
+    }
 
     InputStream input = setupInput(stcArgs.inputFilename);
     PrintStream output = setupOutput(stcArgs.outputFilename);
@@ -60,31 +65,37 @@ public class Main
   }
 
   
-  private static Logger setupLogging()
-  {
-    Properties properties = System.getProperties();
-    String logfile = properties.getProperty("stc.logfile");
+  private static Logger setupLogging() throws InvalidOptionException {
+    String logfile = Settings.get(Settings.LOG_FILE);
+    Logger stcLogger = Logging.getSTCLogger();
+    boolean trace = Settings.getBoolean(Settings.LOG_TRACE);
     if (logfile != null && logfile.length() > 0) {
-      setupLoggingToStderr();
-      setupLoggingToFile(logfile);
+      setupLoggingToStderr(stcLogger);
+      setupLoggingToFile(stcLogger, logfile, trace);
     } else {
-      setupLoggingToStderr();
+      setupLoggingToStderr(stcLogger);
     }
 
     // Even if logging is disabled, this must be valid:
-    return Logger.getLogger("STC");
+    return stcLogger;
   }
 
-  private static void setupLoggingToFile(String logfile)
+  private static void setupLoggingToFile(Logger stcLogger, String logfile, boolean trace)
   {
     Layout layout = new PatternLayout("%-5p %m%n");
     boolean append = false;
     try
     {
-      Logger root = Logger.getRootLogger();
-      Appender appender = new FileAppender(layout, logfile, append);
-      root.addAppender(appender);
-      root.setLevel(Level.TRACE);
+      FileAppender appender = new FileAppender(layout, logfile, append);
+      Level threshold;
+      if (trace) {
+        threshold = Level.TRACE; 
+      } else {
+        threshold = Level.DEBUG;
+      }
+      appender.setThreshold(threshold);
+      stcLogger.addAppender(appender);
+      stcLogger.setLevel(threshold);
     }
     catch (IOException e)
     {
@@ -95,16 +106,16 @@ public class Main
 
   /**
      Configures Log4j to log warnings to stderr
+   * @param stcLogger 
    */
-  private static void setupLoggingToStderr()
+  private static void setupLoggingToStderr(Logger stcLogger)
   {
     Layout layout = new PatternLayout("%-5p %m%n");
     ConsoleAppender appender = new ConsoleAppender(layout,
                           ConsoleAppender.SYSTEM_ERR);
     appender.setThreshold(Level.WARN);
-    Logger root = Logger.getRootLogger();
-    root.addAppender(appender);
-    root.setLevel(Level.WARN);
+    stcLogger.addAppender(appender);
+    stcLogger.setLevel(Level.WARN);
   }
 
   private static void usage()
