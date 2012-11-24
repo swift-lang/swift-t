@@ -742,6 +742,10 @@ public class ICTree {
      *            variable is not required for any constructs
      */
     public void removeVars(Set<String> removeVars) {
+      if (removeVars.isEmpty()) {
+        return;
+      }
+      
       removeVarDeclarations(removeVars);
 
       ListIterator<Instruction> it = instructionIterator();
@@ -828,13 +832,13 @@ public class ICTree {
 
     private void findEssentialVars(Set<String> stillNeeded, List<List<Var>> interdependencies) {
       // Need to hold on to mapped variables
-      for (Var v: this.getVariables()) {
+      for (Var v: variables) {
         if (v.isMapped()) {
           stillNeeded.add(v.name());
           stillNeeded.add(v.mapping().name());
         }
       }
-      for (Instruction i : this.getInstructions()) {
+      for (Instruction i : instructions) {
         // check which variables are still needed
         for (Arg oa: i.getInputs()) {
           if (oa.isVar()) {
@@ -852,7 +856,7 @@ public class ICTree {
         }
       }
 
-      for (Continuation c: this.getContinuations()) {
+      for (Continuation c: conds) {
         for (Var v: c.requiredVars()) {
           stillNeeded.add(v.name());
         }

@@ -1016,9 +1016,10 @@ public class ICInstructions {
   
     @Override
     public List<Var> getOutputs() {
-      List<Arg> l = args.subList(0, numOutputArgs());
-      ArrayList<Var> res = new ArrayList<Var>(numOutputArgs());
-      for (Arg a: l) {
+      int nOutputs = numOutputArgs();
+      ArrayList<Var> res = new ArrayList<Var>();
+      for (int i = 0; i < nOutputs; i++) {
+        Arg a = args.get(i);
         assert(a.isVar());
         res.add(a.getVar());
       }

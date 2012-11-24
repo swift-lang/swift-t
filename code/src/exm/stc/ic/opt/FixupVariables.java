@@ -139,31 +139,35 @@ public class FixupVariables {
    * optimizations if they are allowed to mess up the usedVariables
    */
   public static void fixupVariablePassing(Logger logger, Program prog) {
-    HierarchicalMap<String, Var> fnargs = new HierarchicalMap<String, Var>();
     for (Function fn : prog.getFunctions()) {
-      fnargs.clear();
-      for (Var v : fn.getInputList()) {
-        fnargs.put(v.name(), v);
-      }
-      for (Var v : fn.getOutputList()) {
-        fnargs.put(v.name(), v);
-      }
-      for (Entry<String, Arg> e : prog.getGlobalConsts().entrySet()) {
-        Arg a = e.getValue();
-        Var v = new Var(a.getType(), e.getKey(),
-            VarStorage.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
-        fnargs.put(e.getKey(), v);
-      }
-      HashSet<String> neededVars = fixupVariablePassing(logger,
-          fn.getMainblock(), fnargs);
-      // Check that all variables referred to are available as args
-      neededVars.removeAll(Var.nameList(fn.getInputList()));
-      neededVars.removeAll(Var.nameList(fn.getOutputList()));
+      fixupVariablePassing(logger, prog, fn);
+    }
+  }
 
-      if (neededVars.size() > 0) {
-        throw new STCRuntimeError("Reference in IC function "
-            + fn.getName() + " to undefined variables " + neededVars.toString());
-      }
+  public static void fixupVariablePassing(Logger logger, Program prog,
+          Function fn) {
+    HierarchicalMap<String, Var> fnargs = new HierarchicalMap<String, Var>();
+    for (Var v : fn.getInputList()) {
+      fnargs.put(v.name(), v);
+    }
+    for (Var v : fn.getOutputList()) {
+      fnargs.put(v.name(), v);
+    }
+    for (Entry<String, Arg> e : prog.getGlobalConsts().entrySet()) {
+      Arg a = e.getValue();
+      Var v = new Var(a.getType(), e.getKey(),
+          VarStorage.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
+      fnargs.put(e.getKey(), v);
+    }
+    HashSet<String> neededVars = fixupVariablePassing(logger,
+        fn.getMainblock(), fnargs);
+    // Check that all variables referred to are available as args
+    neededVars.removeAll(Var.nameList(fn.getInputList()));
+    neededVars.removeAll(Var.nameList(fn.getOutputList()));
+
+    if (neededVars.size() > 0) {
+      throw new STCRuntimeError("Reference in IC function "
+          + fn.getName() + " to undefined variables " + neededVars.toString());
     }
   }
 }

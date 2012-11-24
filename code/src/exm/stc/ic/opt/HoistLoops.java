@@ -46,14 +46,17 @@ public class HoistLoops {
           writeMap.put(in.name(), block);
         }
       }
-      hoistRec(logger, block, new ArrayList<Block>(), 0, writeMap);
+      boolean changed = hoistRec(logger, block, new ArrayList<Block>(), 0, writeMap);
+      
+      if (changed) {
+        FixupVariables.fixupVariablePassing(logger, prog, f);
+      }
     }
     /*
     StringBuilder sb = new StringBuilder();
     prog.prettyPrint(sb);
     System.err.println(sb.toString()); */
     // Might need to be updated
-    FixupVariables.fixupVariablePassing(logger, prog);
   }
   
   /**
@@ -64,15 +67,17 @@ public class HoistLoops {
    * @param maxHoist maximum number of blocks can lift out
    * @param writeMap map for current block filled in with anything defined 
    *                by construct or outer blocks
+   * @return true if change made
    */
-  private static void hoistRec(Logger logger, Block curr, List<Block> ancestors,
+  private static boolean hoistRec(Logger logger, Block curr, List<Block> ancestors,
             int maxHoist, HierarchicalMap<String, Block> writeMap) {
+    boolean changed = false;
     // Update map with variables written in this block
     updateMapWithWrites(curr, writeMap);
     
     // See if we can move any instructions from this block up
     if (maxHoist > 0) {
-      tryHoist(logger, curr, ancestors, maxHoist, writeMap);
+      changed = tryHoist(logger, curr, ancestors, maxHoist, writeMap);
     }
     
     // Recurse down to child blocks
@@ -101,10 +106,13 @@ public class HoistLoops {
           }
         }
         
-        hoistRec(logger, b, ancestors, childHoist, childWriteMap);
+        if (hoistRec(logger, b, ancestors, childHoist, childWriteMap)) {
+          changed = true;
+        }
       }
     }
     ancestors.remove(ancestors.size() - 1);
+    return changed;
   }
 
   private static void updateMapWithWrites(Block curr,
@@ -153,9 +161,10 @@ public class HoistLoops {
     return false;
   }
 
-  private static void tryHoist(Logger logger, Block curr,
+  private static boolean tryHoist(Logger logger, Block curr,
           List<Block> ancestors, int maxHoist,
           HierarchicalMap<String, Block> writeMap) {
+    boolean changed = false;
     // See if we can lift any instructions out of block
     ListIterator<Instruction> it = curr.instructionIterator();
     while (it.hasNext()) {
@@ -194,9 +203,11 @@ public class HoistLoops {
 
         if (hoistDepth > 0) {
           doHoist(logger, ancestors, curr, inst, it, hoistDepth, writeMap);
+          changed = true;
         }
       }
     }
+    return changed;
   }
 
   private static void doHoist(Logger logger,

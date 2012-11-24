@@ -24,6 +24,7 @@ import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.MultiMap.LinkedListFactory;
 import exm.stc.common.util.MultiMap.ListFactory;
+import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.OptUtil.InstOrCont;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -147,46 +148,59 @@ import exm.stc.ic.tree.ICTree.Program;
 public class WaitCoalescer {
   public static void rearrangeWaits(Logger logger, Program prog) {
     for (Function f: prog.getFunctions()) {
-      rearrangeWaits(logger, f, f.getMainblock());
-    }
-    
-    // This pass can mess up variable passing
-    FixupVariables.fixupVariablePassing(logger, prog);
-  }
-
-  public static void rearrangeWaits(Logger logger, Function fn, Block block) {
-    StringBuilder sb = new StringBuilder();
-    explodeFuncCalls(logger, fn, block);
-
-    fn.prettyPrint(sb);
-    logger.trace("After exploding " + fn.getName() +":\n" + sb.toString());
-    
-    mergeWaits(logger, fn, block);
-    sb = new StringBuilder();
-    fn.prettyPrint(sb);
-    logger.trace("After merging " + fn.getName() +":\n" + sb.toString());
-    
-    pushDownWaits(logger, fn, block);
-    
-    // Recurse on child blocks
-    rearrangeWaitsRec(logger, fn, block);
-  }
-
-  private static void rearrangeWaitsRec(Logger logger,
-                  Function fn, Block block) {
-    for (Continuation c: block.getContinuations()) {
-      for (Block childB: c.getBlocks()) {
-        rearrangeWaits(logger, fn, childB);
+      boolean changed = rearrangeWaits(logger, f, f.getMainblock());
+      if (changed) {
+        // This pass can mess up variable passing
+        FixupVariables.fixupVariablePassing(logger, prog, f);
       }
     }
+  }
+
+  public static boolean rearrangeWaits(Logger logger, Function fn, Block block) {
+    StringBuilder sb = new StringBuilder();
+    boolean exploded = explodeFuncCalls(logger, fn, block);
+
+    if (logger.isTraceEnabled()) {
+      fn.prettyPrint(sb);
+      logger.trace("After exploding " + fn.getName() +":\n" + sb.toString());
+    }
+    
+    boolean merged = mergeWaits(logger, fn, block);
+    
+    if (logger.isTraceEnabled()) {
+      sb = new StringBuilder();
+      fn.prettyPrint(sb);
+      logger.trace("After merging " + fn.getName() +":\n" + sb.toString());
+    }
+    
+    boolean pushedDown = pushDownWaits(logger, fn, block);
+    
+    // Recurse on child blocks
+    boolean recChanged = rearrangeWaitsRec(logger, fn, block);
+    return exploded || merged || pushedDown || recChanged;
+  }
+
+  private static boolean rearrangeWaitsRec(Logger logger,
+                  Function fn, Block block) {
+    boolean changed = false;
+    for (Continuation c: block.getContinuations()) {
+      for (Block childB: c.getBlocks()) {
+        if (rearrangeWaits(logger, fn, childB)) {
+          changed = true;
+        }
+      }
+    }
+    return changed;
   }
 
   /**
    * Convert dataflow f() to local f_l() with wait around it
    * @param logger
    * @param block
+   * @return
    */
-  private static void explodeFuncCalls(Logger logger, Function fn, Block block) {
+  private static boolean explodeFuncCalls(Logger logger, Function fn, Block block) {
+    boolean changed = false;
     Set<String> empty = Collections.emptySet();
     ListIterator<Instruction> it = block.instructionIterator();
     while (it.hasNext()) {
@@ -214,11 +228,14 @@ public class WaitCoalescer {
         it.remove();
         block.addContinuation(wait);
         wait.getBlock().addInstructions(instBuffer);
+        changed = true;
       }
     }
+    return changed;
   }
 
-  private static void mergeWaits(Logger logger, Function fn, Block block) {
+  private static boolean mergeWaits(Logger logger, Function fn, Block block) {
+    boolean changed = false;
     boolean fin;
     do {
       fin = true;
@@ -229,6 +246,7 @@ public class WaitCoalescer {
       if (winner != null) {
         // There is some shared variable between waits
         fin = false;
+        changed = true;
         List<WaitStatement> waits = waitMap.get(winner);
         assert(waits != null && waits.size() >= 2);
         
@@ -285,8 +303,9 @@ public class WaitCoalescer {
         block.addContinuation(newWait);
         block.removeContinuations(waits);
       }
+      changed = changed || !fin;
     } while (!fin);
-    
+    return changed;
   }
 
   /**
@@ -341,15 +360,27 @@ public class WaitCoalescer {
     /** Block inside continuation */
     public final Block block;
   }
+  
+  private static class PushDownResult {
+    public final boolean anyChanges;
+    public final List<Continuation> relocated;
+    
+    public PushDownResult(boolean anyChanges, List<Continuation> relocated) {
+      super();
+      this.anyChanges = anyChanges;
+      this.relocated = relocated;
+    }
+  }
 
-  private static void
+  private static boolean
           pushDownWaits(Logger logger, Function fn, Block block) {
     MultiMap<String, InstOrCont> waitMap = buildWaiterMap(block);
     if (waitMap.isDefinitelyEmpty()) {
       // If waitMap is empty, can't push anything down, so just
       // shortcircuit
-      return;
+      return false;
     }
+    boolean changed = false;
     
     HashSet<Continuation> allPushedDown = new HashSet<Continuation>();
     ArrayList<Continuation> contCopy = 
@@ -365,27 +396,31 @@ public class WaitCoalescer {
           ArrayDeque<AncestorContinuation> ancestors =
                                         new ArrayDeque<AncestorContinuation>();
           ancestors.push(new AncestorContinuation(c, innerBlock));
-          List<Continuation> pushedDown = 
+          PushDownResult pdRes = 
                pushDownWaitsRec(logger, fn, block, ancestors, innerBlock, waitMap);
+           changed = changed || pdRes.anyChanges;
           /* The list of continuations might be modified as continuations are
            * pushed down - track which ones are relocated */
-          allPushedDown.addAll(pushedDown);
+          allPushedDown.addAll(pdRes.relocated);
         }
       }
     }
-    
+    return changed;
   }
   
-  private static List<Continuation> pushDownWaitsRec(Logger logger, 
-                Function fn,
+  private static PushDownResult pushDownWaitsRec(
+                Logger logger,  Function fn,
                 Block top, Deque<AncestorContinuation> ancestors, Block curr,
                 MultiMap<String, InstOrCont> waitMap) {
+    boolean changed = false;
     ArrayList<Continuation> pushedDown = new ArrayList<Continuation>();
     /* Iterate over all instructions in this descendant block */
     ListIterator<Instruction> it = curr.instructionIterator();
     while (it.hasNext()) {
       Instruction i = it.next();
-      logger.trace("Pushdown at: " + i.toString());
+      if (logger.isTraceEnabled()) {
+        logger.trace("Pushdown at: " + i.toString());
+      }
       List<Var> writtenFutures = new ArrayList<Var>();
       for (Var outv: i.getOutputs()) {
         if (Types.isFuture(outv.type())) {
@@ -396,9 +431,11 @@ public class WaitCoalescer {
       // Relocate instructions which depend on output future of this instruction
       for (Var v: writtenFutures) {
         if (waitMap.containsKey(v.name())) {
-          pushedDown.addAll(
-                relocateDependentInstructions(logger, top, ancestors,
-                                              curr, it, waitMap, v));
+          Pair<Boolean, Set<Continuation>> pdRes =
+              relocateDependentInstructions(logger, top, ancestors, 
+                                            curr, it, waitMap, v);
+          changed = changed || pdRes.val1;
+          pushedDown.addAll(pdRes.val2);
         }
       }
     }
@@ -408,13 +445,15 @@ public class WaitCoalescer {
       if (canPushDownInto(c)) {
         for (Block innerBlock: c.getBlocks()) {
           ancestors.push(new AncestorContinuation(c, innerBlock));
-          pushedDown.addAll(pushDownWaitsRec(logger, fn, top, ancestors,
-                                             innerBlock, waitMap));
+          PushDownResult pdRes = pushDownWaitsRec(logger, fn, top, ancestors,
+                                             innerBlock, waitMap);
+          pushedDown.addAll(pdRes.relocated);
+          changed = changed || pdRes.anyChanges;
           ancestors.pop();
         }
       }
     }
-    return pushedDown;
+    return new PushDownResult(changed, pushedDown);
   }
 
   private static boolean canPushDownInto(Continuation c) {
@@ -445,14 +484,14 @@ public class WaitCoalescer {
    * @param waitMap map of variable names to instructions/continuations they block
    *                  on
    * @param writtenV
-   * @return list of moved continuations
+   * @return true if change made, list of moved continuations
    */
-  private static Set<Continuation> relocateDependentInstructions(
+  private static Pair<Boolean, Set<Continuation>> relocateDependentInstructions(
       Logger logger,
       Block ancestorBlock, Deque<AncestorContinuation> ancestors,
       Block currBlock, ListIterator<Instruction> currBlockInstructions,
       MultiMap<String, InstOrCont> waitMap, Var writtenV) {
-    
+    boolean changed = false;
     // Remove from outer block
     List<InstOrCont> waits = waitMap.get(writtenV.name());
     Set<Instruction> movedI = new HashSet<Instruction>();
@@ -466,7 +505,8 @@ public class WaitCoalescer {
      * optimization pass
      */
     for (InstOrCont ic: waits) {
-      logger.trace("Pushing down: " + ic.toString());
+      if (logger.isTraceEnabled())
+        logger.trace("Pushing down: " + ic.toString());
       switch (ic.type()) {
         case CONTINUATION: {
           Continuation c = ic.continuation();
@@ -484,6 +524,7 @@ public class WaitCoalescer {
             // Doesn't make sense to push down synchronous continuations
             assert(c.isAsync());
             updateAncestorKeepOpen(ancestors, c.getKeepOpenVars());
+            changed = true;
           }
           break;
         } 
@@ -506,6 +547,7 @@ public class WaitCoalescer {
             if (!keepOpenVars.isEmpty()) {
               updateAncestorKeepOpen(ancestors, keepOpenVars);
             }
+            changed = true;
           }
           break;
         }
@@ -523,7 +565,7 @@ public class WaitCoalescer {
     
     // Rebuild wait map to reflect changes
     updateWaiterMap(waitMap, movedC, movedI);
-    return movedC;
+    return Pair.create(changed, movedC);
   }
 
   private static void updateAncestorKeepOpen(

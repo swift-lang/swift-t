@@ -1,5 +1,6 @@
 package exm.stc.ic.opt;
 
+import java.util.ArrayList;
 import java.util.ListIterator;
 import java.util.Set;
 
@@ -7,6 +8,7 @@ import org.apache.log4j.Logger;
 
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.Function;
 
 public class DeadCodeEliminator {
 
@@ -49,8 +51,18 @@ public class DeadCodeEliminator {
         converged = false;
       }
       block.removeVars(unneeded);
-      
-  
+    }
+  }
+
+  public static void eliminate(Logger logger, Function f) {
+    ArrayList<Block> stack = new ArrayList<Block>();
+    stack.add(f.getMainblock());
+    while (!stack.isEmpty()) {
+      Block b = stack.remove(stack.size() - 1);
+      eliminate(logger, b);
+      for (Continuation c: b.getContinuations()) {
+        stack.addAll(c.getBlocks());
+      }
     }
   }
 

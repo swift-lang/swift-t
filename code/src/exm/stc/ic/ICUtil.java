@@ -139,12 +139,16 @@ public class ICUtil {
 
   public static void replaceOpargsInList(Map<String, Arg> renames,
       List<Arg> args) {
+    if (renames.isEmpty()) {
+      return;
+    }
     for (int i = 0; i < args.size(); i++) {
       Arg oa = args.get(i);
       if (oa.isVar()) {
         String oldName = oa.getVar().name();
-        if (renames.containsKey(oldName)) {
-          args.set(i, renames.get(oldName));
+        Arg val = renames.get(oldName);
+        if (val != null) {
+          args.set(i, val);
         }
       }
     }

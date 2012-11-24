@@ -72,9 +72,10 @@ public class ConstantFinder {
    * @param logger
    * @param block
    * @param varMap variables known from outer scope
+   * @return true if change made
    * @throws InvalidOptionException 
    */
-  private static void constantFold(Logger logger, Program prog, 
+  private static boolean constantFold(Logger logger, Program prog, 
       Function fn, Block block, 
       HashMap<String, Var> varMap,
       HierarchicalMap<String, Arg> knownConstants) throws InvalidOptionException {
@@ -85,6 +86,7 @@ public class ConstantFinder {
     // Find all constants in block
     findBlockConstants(logger, block, knownConstants, false, false);
     
+    boolean changed = false; 
     boolean converged = false;
     while (!converged) {
       converged = true; // assume no changes
@@ -93,20 +95,26 @@ public class ConstantFinder {
       ListIterator<Instruction> it = block.instructionIterator();
       while (it.hasNext()) {
         Instruction inst = it.next();
-        logger.debug("Candidate instruction for constant folding: " 
+        if (logger.isDebugEnabled()) {
+          logger.debug("Candidate instruction for constant folding: " 
                                               + inst.toString());
+        }
         Map<String, Arg> newConsts = inst.constantFold(fn.getName(),
                                             knownConstants);
         if (newConsts == null) {
           logger.debug("Couldn't constant fold");
+          
           Instruction newInst = inst.constantReplace(knownConstants);
           if (newInst != null) {
             it.set(newInst);
           }
         } else {
-          logger.debug("Can replace instruction " + inst.toString() + 
+          if (logger.isDebugEnabled()) {
+            logger.debug("Can replace instruction " + inst.toString() + 
                                                   " with constant");
+          }
           converged = false;
+          changed = true;
           knownConstants.putAll(newConsts);
           // replace with multiple set instructions
           ArrayList<Instruction> replacements = 
@@ -130,6 +138,7 @@ public class ConstantFinder {
       for (Continuation c: block.getContinuations()) {
         boolean updated = c.constantReplace(knownConstants);
         converged = converged && !updated;
+        changed = changed || updated;
       }
       if (!converged) {
         logger.debug("Didn't converge, doing another constant folding pass");
@@ -143,8 +152,9 @@ public class ConstantFinder {
     for (Continuation c: block.getContinuations()) {
       for (Block b: c.getBlocks()) {
         // Make copy of constant map so that binds don't get mixed up
-        constantFold(logger, prog, fn, b, varMap, 
-                    knownConstants.makeChildMap());
+        boolean changedRec = constantFold(logger, prog, fn, b, varMap, 
+                            knownConstants.makeChildMap());
+        changed = changed || changedRec;
       }
     }
   
@@ -156,8 +166,11 @@ public class ConstantFinder {
     // where possible (this will catch unneeded variables created by 
     // constant folding but also some previously unneeded ones)
     if (Settings.getBoolean(Settings.OPT_DEAD_CODE_ELIM)) {
-      DeadCodeEliminator.eliminate(logger, block);
+      if (changed) {
+        DeadCodeEliminator.eliminate(logger, block);
+      }
     }
+    return changed;
   }
 
   /**
@@ -280,13 +293,14 @@ public class ConstantFinder {
   /* Lift constants up to global scope to avoid reinitializing and 
    * duplication of constants
    */
-  private static void makeConstantsGlobal(Logger logger, Program prog,
+  private static boolean makeConstantsGlobal(Logger logger, Program prog,
             Block block) throws InvalidOptionException {   
     // Find the remaining constant futures and delete assignments to them
     logger.debug("Making constant futures shared globals");
     HashMap<String, Var> localDeclsOfGlobalVars = 
           new HashMap<String, Var>();
     HashMap<String, Arg> knownConstants = new HashMap<String, Arg>();
+    boolean changed = false;
     
     findBlockConstants(logger, block, knownConstants, true, true);
     
@@ -311,6 +325,7 @@ public class ConstantFinder {
                     VarStorage.GLOBAL_CONST, DefType.GLOBAL_CONST,
                     null);
         localDeclsOfGlobalVars.put(globName, glob);
+        changed = true;
       }
       globalReplacements.put(oldName, Arg.createVar(glob));
     }
@@ -321,14 +336,17 @@ public class ConstantFinder {
       for (Block childBlock: c.getBlocks()) {
         // We could pass in localDeclsOfGlobalVars, but
         // it doesn't matter if global vars are redeclared in inner scope
-        makeConstantsGlobal(logger, prog, childBlock);
+        boolean recChanged = makeConstantsGlobal(logger, prog, childBlock);
+        changed = changed || recChanged;
       }
     }
     
     // Remove now redundant local constants
     if (Settings.getBoolean(Settings.OPT_DEAD_CODE_ELIM)) {
-      DeadCodeEliminator.eliminate(logger, block);
+      if (changed) {
+        DeadCodeEliminator.eliminate(logger, block);
+      }
     }
+    return changed;
   }
-
 }

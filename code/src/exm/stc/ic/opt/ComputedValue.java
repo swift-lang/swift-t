@@ -118,12 +118,12 @@ public class ComputedValue {
   @Override
   public int hashCode() {
     int result = this.op.hashCode();
-    result ^= this.subop.hashCode(); 
+    result = 37 * result + this.subop.hashCode(); 
     for (Arg o: this.inputs) {
       if (o == null) {
         throw new STCRuntimeError("Null oparg in " + this);
       }
-      result ^= o.hashCode();
+      result = 37 * result + o.hashCode();
     }
     return result;
   }

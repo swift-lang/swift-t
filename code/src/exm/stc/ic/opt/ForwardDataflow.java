@@ -23,6 +23,7 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.util.CopyOnWriteSmallSet;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.ic.ICUtil;
@@ -88,7 +89,7 @@ public class ForwardDataflow {
      * We maintain this data structure because it lets us infer which variables
      * will be closed if we block on a given variable
      */
-    private final HashMap<String, HashSet<String>> dependsOn;
+    private final HashMap<String, CopyOnWriteSmallSet<String>> dependsOn;
 
     State(Logger logger) {
       this.logger = logger;
@@ -96,14 +97,14 @@ public class ForwardDataflow {
       this.varsPassedFromParent = false;
       this.availableVals = new HashMap<ComputedValue, Arg>();
       this.closed = new HierarchicalSet<String>();
-      this.dependsOn = new HashMap<String, HashSet<String>>();
+      this.dependsOn = new HashMap<String, CopyOnWriteSmallSet<String>>();
     }
 
     private State(Logger logger, State parent,
         boolean varsPassedFromParent,
         HashMap<ComputedValue, Arg> availableVals,
         HierarchicalSet<String> closed,
-        HashMap<String, HashSet<String>> dependsOn) {
+        HashMap<String, CopyOnWriteSmallSet<String>> dependsOn) {
       this.logger = logger;
       this.parent = parent;
       this.varsPassedFromParent = varsPassedFromParent;
@@ -216,7 +217,7 @@ public class ForwardDataflow {
         String v = work.pop();
         // they might already be in closed, but add anyway
         closed.add(v);
-        HashSet<String> deps = dependsOn.remove(v);
+        CopyOnWriteSmallSet<String> deps = dependsOn.remove(v);
         if (deps != null) {
           work.addAll(deps);
         }
@@ -235,9 +236,9 @@ public class ForwardDataflow {
      */
     public void setDependencies(Var future, Collection<Var> depend) {
       assert (!Types.isScalarValue(future.type()));
-      HashSet<String> depset = dependsOn.get(future.name());
+      CopyOnWriteSmallSet<String> depset = dependsOn.get(future.name());
       if (depset == null) {
-        depset = new HashSet<String>();
+        depset = new CopyOnWriteSmallSet<String>();
         dependsOn.put(future.name(), depset);
       }
       for (Var v : depend) {
@@ -251,10 +252,11 @@ public class ForwardDataflow {
      * copy aren't reflected in this one
      */
     State makeChild(boolean varsPassedFromParent) {
-      HashMap<String, HashSet<String>> newDO = new HashMap<String, HashSet<String>>();
+      HashMap<String, CopyOnWriteSmallSet<String>> newDO = 
+              new HashMap<String, CopyOnWriteSmallSet<String>>();
 
-      for (Entry<String, HashSet<String>> e : dependsOn.entrySet()) {
-        newDO.put(e.getKey(), new HashSet<String>(e.getValue()));
+      for (Entry<String, CopyOnWriteSmallSet<String>> e : dependsOn.entrySet()) {
+        newDO.put(e.getKey(), new CopyOnWriteSmallSet<String>(e.getValue()));
       }
       return new State(logger, this, varsPassedFromParent, 
           new HashMap<ComputedValue, Arg>(), closed.makeChild(), newDO);
@@ -268,7 +270,9 @@ public class ForwardDataflow {
     List<ComputedValue> icvs = inst.getComputedValues(av);
     logger.trace("no icvs");
     if (icvs != null) {
-      logger.trace("icvs: " + icvs.toString());
+      if (logger.isTraceEnabled()) {
+        logger.trace("icvs: " + icvs.toString());
+      }
       for (ComputedValue currCV : icvs) {
         if (ComputedValue.isCopy(currCV)) {
           // Copies are easy to handle: replace output of inst with input 
@@ -368,6 +372,11 @@ public class ForwardDataflow {
         pass++;
       } while (changes);
 
+
+      // We might have created some dead code to clean up
+      if (Settings.getBoolean(Settings.OPT_DEAD_CODE_ELIM)) {
+        DeadCodeEliminator.eliminate(logger, f);
+      }
     }
     /*
      * The previous optimisation sometimes results in variables not being passed
@@ -399,7 +408,9 @@ public class ForwardDataflow {
     Set<String> blockingVariables = findBlockingVariables(main);
     if (blockingVariables != null) {
       Set<String> localNames = Var.nameSet(f.getInputList());
-      logger.trace("Blocking " + f.getName() + ": " + blockingVariables);
+      if (logger.isTraceEnabled()) {
+        logger.trace("Blocking " + f.getName() + ": " + blockingVariables);
+      }
       for (String vName: blockingVariables) {
         boolean isConst = program.lookupGlobalConst(vName) != null;
         // Global constants are already set
@@ -603,10 +614,6 @@ public class ForwardDataflow {
       }
     }
 
-    // We might have created some dead code to clean up
-    if (Settings.getBoolean(Settings.OPT_DEAD_CODE_ELIM)) {
-      DeadCodeEliminator.eliminate(logger, block);
-    }
     return anotherPassNeeded;
   }
 
@@ -620,13 +627,16 @@ public class ForwardDataflow {
     while(insts.hasNext()) {
       Instruction inst = insts.next();
       
-      logger.trace("Input renames in effect: " + replaceInputs);
-      logger.trace("Output renames in effect: " + replaceAll);
-      // TODO: no longer prints all avail vals
-      logger.trace("Available values in block: " + cv.availableVals);
-      logger.trace("Closed variables: " + cv.closed);
-      logger.trace("-----------------------------");
-      logger.trace("At instruction: " + inst);
+      if (logger.isTraceEnabled()) {
+        logger.trace("Input renames in effect: " + replaceInputs);
+        logger.trace("Output renames in effect: " + replaceAll);
+        // TODO: no longer prints all avail vals
+        logger.trace("Available values in block: " + cv.availableVals);
+        logger.trace("Closed variables: " + cv.closed);
+        logger.trace("-----------------------------");
+        logger.trace("At instruction: " + inst);
+      }
+      
       // Immediately apply the variable renames
       inst.renameInputs(replaceInputs);
       inst.renameVars(replaceAll);
@@ -644,8 +654,10 @@ public class ForwardDataflow {
       List<Instruction> alt = switchToImmediateVersion(logger, block, cv,
                                                         inst);
       if (alt != null) {
-        logger.trace("Replacing instruction <" + inst + "> with sequence "
-            + alt.toString());
+        if (logger.isTraceEnabled()) {
+          logger.trace("Replacing instruction <" + inst + "> with sequence "
+              + alt.toString());
+        }
         ICUtil.replaceInsts(insts, alt);
         
         // Continue pass at the start of the newly inserted sequence
