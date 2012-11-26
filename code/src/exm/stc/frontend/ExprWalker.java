@@ -929,11 +929,12 @@ public class ExprWalker {
     List<Var> keepOpen = Arrays.asList(dst);
     List<Var> usedVars = Arrays.asList(src, dst);
     backend.startWaitStatement(
-        context.getFunctionContext().constructName("arrcopy"),
+        context.getFunctionContext().constructName("arrcopy-wait"),
         Arrays.asList(src), usedVars, keepOpen,
         WaitMode.DATA_ONLY, TaskMode.LOCAL);
-    backend.startForeachLoop(src, member, ix, -1, true,
-                             usedVars, keepOpen);
+    backend.startForeachLoop(
+            context.getFunctionContext().constructName("arrcopy"),
+            src, member, ix, -1, true, usedVars, keepOpen);
     backend.arrayInsertImm(member, dst, Arg.createVar(ix));
     backend.endForeachLoop(-1, true, usedVars, keepOpen);
     backend.decrWriters(dst);

@@ -257,9 +257,10 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void startForeachLoop(Var arrayVar, Var memberVar, Var loopCountVar, 
-                  int splitDegree, boolean arrayClosed,
-                  List<Var> usedVariables, List<Var> keepOpenVars) {
+  public void startForeachLoop(String loopName,
+          Var arrayVar, Var memberVar, Var loopCountVar, 
+          int splitDegree, boolean arrayClosed,
+          List<Var> usedVariables, List<Var> keepOpenVars) {
     if(!Types.isArray(arrayVar.type())) {
       throw new STCRuntimeError("foreach loop over non-array: " + 
                 arrayVar.toString()); 
@@ -267,9 +268,9 @@ public class STCMiddleEnd implements CompilerBackend {
     assert(arrayVar.type().memberType().equals(memberVar.type()));
     assert(loopCountVar == null || 
               loopCountVar.type().equals(Types.V_INT));
-    ForeachLoop loop = new ForeachLoop(arrayVar, memberVar, 
-                loopCountVar, splitDegree, arrayClosed, usedVariables, 
-                keepOpenVars);
+    ForeachLoop loop = new ForeachLoop(loopName,
+            arrayVar, memberVar, loopCountVar, splitDegree,
+            arrayClosed, usedVariables, keepOpenVars);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
   }

@@ -654,8 +654,9 @@ public class ASTWalker {
     ArrayList<Var> waitUsedVariables = 
         new ArrayList<Var>(usedVariables);
     waitUsedVariables.addAll(Arrays.asList(start, end, step));
-    backend.startWaitStatement("wait-range" + loopNum,  Arrays.asList(start, end, step), 
-                waitUsedVariables, keepOpenVars, WaitMode.DATA_ONLY, TaskMode.LOCAL);
+    backend.startWaitStatement(fc.getFunctionName() + "-wait-range" + loopNum,
+               Arrays.asList(start, end, step), waitUsedVariables,
+               keepOpenVars, WaitMode.DATA_ONLY, TaskMode.LOCAL);
     Context waitContext = new LocalContext(context);
     Var startVal = varCreator.fetchValueOf(waitContext, start);
     Var endVal = varCreator.fetchValueOf(waitContext, end);
@@ -667,7 +668,8 @@ public class ASTWalker {
                                             loop.getMemberVar(), false);
     Var counterVal = loop.getLoopCountVal();
     
-    backend.startRangeLoop("range" + loopNum, memberVal, counterVal,
+    backend.startRangeLoop(fc.getFunctionName() + "-range" + loopNum,
+            memberVal, counterVal,
             Arg.createVar(startVal), Arg.createVar(endVal), 
             Arg.createVar(stepVal), usedVariables, keepOpenVars,
             loop.getDesiredUnroll(), loop.getSplitDegree());
@@ -676,7 +678,7 @@ public class ASTWalker {
     if (!loop.isSyncLoop()) {
       waitUsedVars = new ArrayList<Var>(usedVariables);
       waitUsedVars.add(memberVal);
-      backend.startWaitStatement("range-iter" + loopNum,
+      backend.startWaitStatement(fc.getFunctionName() + "range-iter" + loopNum,
           Collections.<Var>emptyList(), waitUsedVars, keepOpenVars,
           WaitMode.TASK_DISPATCH, TaskMode.CONTROL);
     }
@@ -728,6 +730,7 @@ public class ASTWalker {
     
     // Need to get handle to real array before running loop
     FunctionContext fc = context.getFunctionContext();
+    int loopNum = fc.getCounterVal("foreach-array");
     
     Var realArray;
     Context outsideLoopContext;
@@ -736,7 +739,8 @@ public class ASTWalker {
       arrRefWaitUsedVars = new ArrayList<Var>(usedVariables);
       arrRefWaitUsedVars.add(arrayVar);
       // If its a reference, wrap a wait() around the loop call
-      backend.startWaitStatement(fc.constructName("foreach_ref_wait"),
+      backend.startWaitStatement(
+          fc.getFunctionName() + "-foreach-refwait" + loopNum,
           Arrays.asList(arrayVar), arrRefWaitUsedVars, keepOpenVars,
           WaitMode.DATA_ONLY, TaskMode.LOCAL);
 
@@ -752,14 +756,16 @@ public class ASTWalker {
     // Block on array
     ArrayList<Var> waitUsedVars = new ArrayList<Var>(usedVariables);
     waitUsedVars.add(realArray);
-    backend.startWaitStatement(fc.constructName("foreach_arr_wait"),
+    backend.startWaitStatement(
+        fc.getFunctionName() + "-foreach-wait" + loopNum,
         Arrays.asList(realArray), waitUsedVars, keepOpenVars,
         WaitMode.DATA_ONLY, TaskMode.LOCAL);
     
     loop.setupLoopBodyContext(outsideLoopContext);
     Context loopBodyContext = loop.getBodyContext();
 
-    backend.startForeachLoop(realArray, loop.getMemberVar(), loop.getLoopCountVal(),
+    backend.startForeachLoop(fc.getFunctionName() + "-foreach" + loopNum,
+        realArray, loop.getMemberVar(), loop.getLoopCountVal(),
         loop.getSplitDegree(), true, usedVariables, keepOpenVars);
     // May need to spawn off each iteration as task - use wait for this
     ArrayList<Var> iterUsedVars = null;
@@ -767,7 +773,8 @@ public class ASTWalker {
       iterUsedVars = new ArrayList<Var>(usedVariables);
       if (loop.getLoopCountVal() != null)
         iterUsedVars.add(loop.getLoopCountVal());
-      backend.startWaitStatement(fc.constructName("foreach_iter"),
+      backend.startWaitStatement(
+          fc.getFunctionName() + "-foreach-spawn" + loopNum,
           Collections.<Var>emptyList(), iterUsedVars, keepOpenVars,
           WaitMode.TASK_DISPATCH, TaskMode.CONTROL);
     }

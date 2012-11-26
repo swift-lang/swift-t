@@ -402,6 +402,7 @@ public class ICContinuations {
   }
 
   public static class ForeachLoop extends AbstractLoop {
+    private String loopName;
     private Var arrayVar;
     private boolean arrayClosed;
     private Var loopCounterVar;
@@ -412,11 +413,13 @@ public class ICContinuations {
 
     private final int splitDegree;
 
-    private ForeachLoop(Block block, Var arrayVar, Var loopVar,
+    private ForeachLoop(String loopName,
+        Block block, Var arrayVar, Var loopVar,
         Var loopCounterVar, int splitDegree,
         boolean arrayClosed,
         List<Var> usedVariables, List<Var> keepOpenVars) {
       super(block, usedVariables, keepOpenVars);
+      this.loopName = loopName;
       this.arrayVar = arrayVar;
       this.loopVar = loopVar;
       this.loopCounterVar = loopCounterVar;
@@ -424,17 +427,18 @@ public class ICContinuations {
       this.splitDegree = splitDegree;
     }
 
-    public ForeachLoop(Var arrayVar, Var loopVar,
-        Var loopCounterVar, int splitDegree,
+    public ForeachLoop(String loopName, Var arrayVar,
+        Var loopVar, Var loopCounterVar, int splitDegree,
         boolean arrayClosed, List<Var> usedVariables,
         List<Var> keepOpenVars) {
-      this(new Block(BlockType.FOREACH_BODY), arrayVar, loopVar, loopCounterVar,
+      this(loopName, 
+          new Block(BlockType.FOREACH_BODY), arrayVar, loopVar, loopCounterVar,
           splitDegree, arrayClosed, usedVariables, keepOpenVars);
     }
 
     @Override
     public ForeachLoop clone() {
-      return new ForeachLoop(this.loopBody.clone(),
+      return new ForeachLoop(loopName, this.loopBody.clone(),
           arrayVar, loopVar, loopCounterVar, splitDegree, arrayClosed,
           new ArrayList<Var>(passedInVars),
           new ArrayList<Var>(keepOpenVars));
@@ -462,7 +466,7 @@ public class ICContinuations {
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
-      gen.startForeachLoop(arrayVar, loopVar, loopCounterVar,
+      gen.startForeachLoop(loopName, arrayVar, loopVar, loopCounterVar,
                 splitDegree, arrayClosed, passedInVars, keepOpenVars);
       this.loopBody.generate(logger, gen, info);
       gen.endForeachLoop(splitDegree, arrayClosed, passedInVars,

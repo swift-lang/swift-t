@@ -255,6 +255,7 @@ public interface CompilerBackend {
 
   /**
    * 
+   * @param loopName unique name for loop
    * @param arrayVar
    * @param memberVar
    * @param loopCountVar counter variable, can be null
@@ -263,8 +264,8 @@ public interface CompilerBackend {
    * @param usedVariables
    * @param keepOpenVars
    */
-  public abstract void startForeachLoop(Var arrayVar,
-      Var memberVar, Var loopCountVar, int splitDegree,
+  public abstract void startForeachLoop(String loopName,
+      Var arrayVar, Var memberVar, Var loopCountVar, int splitDegree,
       boolean arrayClosed, List<Var> usedVariables, List<Var> keepOpenVars);
 
   public abstract void endForeachLoop(int splitDegree, 

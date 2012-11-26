@@ -129,7 +129,6 @@ public class TurbineGenerator implements CompilerBackend
      If true, enable debug comments in Tcl source
    */
   boolean debuggerComments = false;
-  private int foreach_counter = 0;
 
   public TurbineGenerator(Logger logger, String timestamp)
   {
@@ -1474,7 +1473,8 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void startForeachLoop(Var arrayVar, Var memberVar,
+  public void startForeachLoop(String loopName,
+          Var arrayVar, Var memberVar,
           Var loopCountVar, int splitDegree,
           boolean arrayClosed, List<Var> usedVariables, List<Var> keepOpenVars) {
     assert(Types.isArray(arrayVar.type()));
@@ -1483,15 +1483,14 @@ public class TurbineGenerator implements CompilerBackend
     if (!arrayClosed) {
       throw new STCRuntimeError("Loops over open containers not yet supported");
     }
-    int foreach_num = foreach_counter++;
-    String procName = "foreach:" + foreach_num;
 
     if (!arrayClosed) {
       ArrayList<Var> passIn = new ArrayList<Var>(usedVariables);
       if (!passIn.contains(arrayVar)) {
         passIn.add(arrayVar);
       }
-      startAsync(procName, Arrays.asList(arrayVar), passIn,
+      startAsync(loopName + ":arrwait", 
+                  Arrays.asList(arrayVar), passIn,
                   keepOpenVars, TaskMode.LOCAL);
     }
 
@@ -1502,11 +1501,11 @@ public class TurbineGenerator implements CompilerBackend
       pointStack.peek().add(Turbine.containerContents(contentsVar,
                           varToExpr(arrayVar), haveKeys));
     } else {
-      startForeachSplit(procName, arrayVar, contentsVar, splitDegree, haveKeys,
+      startForeachSplit(loopName, arrayVar, contentsVar, splitDegree, haveKeys,
           usedVariables, keepOpenVars);
     }
     startForeachInner(new Value(contentsVar), memberVar, loopCountVar,
-        usedVariables, keepOpenVars, foreach_num);
+        usedVariables, keepOpenVars);
   }
 
   private void startForeachSplit(String procName, Var arrayVar,
@@ -1537,9 +1536,9 @@ public class TurbineGenerator implements CompilerBackend
         TCLTMP_RANGE_LO_V));
   }
 
-  private void startForeachInner(Value arrayContents,
-      Var memberVar, Var loopCountVar,
-      List<Var> usedVariables, List<Var> keepOpenVars, int foreach_num) {
+  private void startForeachInner(
+      Value arrayContents, Var memberVar, Var loopCountVar,
+      List<Var> usedVariables, List<Var> keepOpenVars) {
     Sequence curr = pointStack.peek();
     boolean haveKeys = loopCountVar != null;
     Sequence loopBody = new Sequence();
@@ -1674,12 +1673,12 @@ public class TurbineGenerator implements CompilerBackend
     innerCallArgs.add(incVal);
 
     Sequence outer = new Sequence();
-    String outerProcName = loopName + ":outer";
+    String outerProcName = uniqueTCLFunctionName(loopName + ":outer");
     tree.add(new Proc(outerProcName,
             usedTclFunctionNames, outerFormalArgs, outer));
 
     Sequence inner = new Sequence();
-    String innerProcName = loopName + ":inner";
+    String innerProcName = uniqueTCLFunctionName(loopName + ":inner");
     tree.add(new Proc(innerProcName,
           usedTclFunctionNames, commonFormalArgs, inner));
 

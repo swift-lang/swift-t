@@ -1593,7 +1593,8 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void startForeachLoop(Var arrayVar, Var memberVar,
+  public void startForeachLoop(String loopName,
+          Var arrayVar, Var memberVar,
                     Var loopCountVar, int splitDegree,
                     boolean arrayClosed,
           List<Var> usedVariables, List<Var> keepOpenVars) {
