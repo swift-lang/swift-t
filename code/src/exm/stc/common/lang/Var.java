@@ -187,6 +187,28 @@ public class Var {
   }
   
   /**
+   * Union of lists with one instance of each variable by name
+   * included in result
+   * @param lists
+   * @return
+   */
+  public static List<Var> varListUnion(List<Var> list1, List<Var> list2) {
+    ArrayList<Var> res = new ArrayList<Var>();
+    Set<String> present = new HashSet<String>();
+    for (Var v: list1) {
+      if (!present.contains(v.name())) {
+        res.add(v);
+      }
+    }
+    for (Var v: list2) {
+      if (!present.contains(v.name())) {
+        res.add(v);
+      }
+    }
+    return res;
+  }
+  
+  /**
    * Create dereferenced variable given a reference
    */
   public static Var createDerefTmp(Var ref, VarStorage storage) {

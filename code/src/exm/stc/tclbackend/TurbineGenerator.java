@@ -5,16 +5,15 @@
  */
 package exm.stc.tclbackend;
 
+import java.io.File;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.io.File;
 
 import org.apache.log4j.Logger;
 
@@ -1638,12 +1637,16 @@ public class TurbineGenerator implements CompilerBackend
           List<Var> usedVariables,
           List<Var> keepOpenVars, int splitDegree,
           Expression startE, Expression endE, Expression incrE) {
+    
+    // All variables that must be passed in, including any keepopenvars
+    List<Var> allUsedVars = Var.varListUnion(usedVariables, keepOpenVars);
+    
     // Create two procedures that will be called: an outer procedure
     //  that recursively breaks up the foreach loop into chunks,
     //  and an inner procedure that actually runs the loop
     List<String> commonFormalArgs = new ArrayList<String>();
     commonFormalArgs.add(Turbine.LOCAL_STACK_NAME);
-    for (Var uv: usedVariables) {
+    for (Var uv: allUsedVars) {
       commonFormalArgs.add(prefixVar(uv.name()));
     }
     commonFormalArgs.add(TCLTMP_RANGE_LO);
@@ -1658,7 +1661,7 @@ public class TurbineGenerator implements CompilerBackend
 
     List<Expression> commonArgs = new ArrayList<Expression>();
     commonArgs.add(new Value(Turbine.LOCAL_STACK_NAME));
-    for (Var uv: usedVariables) {
+    for (Var uv: allUsedVars) {
       commonArgs.add(varToExpr(uv));
     }
 
