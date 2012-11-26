@@ -10,11 +10,9 @@ if [ adlb::amserver ] {
     set d1 [ adlb::unique ]
     adlb::create $d1 $adlb::INTEGER 0
     adlb::store  $d1 $adlb::INTEGER 25
-    adlb::close  $d1
     set d2 [ adlb::unique ]
     adlb::create $d2 $adlb::INTEGER 0
     adlb::store  $d2 $adlb::INTEGER 26
-    adlb::close  $d2
 
     adlb::retrieve $d1 $adlb::INTEGER
     adlb::retrieve $d2 $adlb::STRING

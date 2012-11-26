@@ -13,11 +13,11 @@ if [ adlb::amserver ] {
     adlb::create $d1 $adlb::INTEGER 0
     set d2 [ adlb::unique ]
     adlb::create $d2 $adlb::INTEGER 0
-    adlb::store $d2 $adlb::INTEGER 25
+    # Don't decrement writer
+    adlb::store $d2 $adlb::INTEGER 25 0
     set d3 [ adlb::unique ]
     adlb::create $d3 $adlb::INTEGER 0
     adlb::store $d3 $adlb::INTEGER 35
-    adlb::close $d3
     set L [ list $z $d0 $d1 $d2 $d3 ]
     foreach d $L {
         if { [ adlb::exists $d ] } {

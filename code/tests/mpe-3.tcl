@@ -40,7 +40,6 @@ if { ! [ adlb::amserver ] } {
         set id [ expr $rank + $i * ($workers + 1) ]
         adlb::create $id $adlb::STRING 0
         adlb::store $id $adlb::STRING "message rank:$rank:$i"
-        adlb::close $id
 
         # turbine::c::debug "get"
         set msg [ adlb::retrieve $id ]

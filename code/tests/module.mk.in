@@ -14,6 +14,8 @@ TEST_SRC_C += $(DIR)/mpi-io-1.c
 TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/adlb-noop.tcl           \
 	        $(DIR)/adlb-exists.tcl         \
+	        $(DIR)/adlb-garbage-collect1.tcl \
+	        $(DIR)/adlb-garbage-collect2.tcl \
 	        $(DIR)/adlb-get-fail.tcl       \
 	        $(DIR)/adlb-lookup-fail.tcl    \
 	        $(DIR)/adlb-type-error.tcl     \

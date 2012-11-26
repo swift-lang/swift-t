@@ -164,7 +164,8 @@ namespace eval turbine {
             literal split_token string $v
             container_insert $result $i $split_token
         }
-        close_datum $result
+        # close container
+        adlb::slot_drop $result
     }
 
     proc readFile { stack result inputs } {

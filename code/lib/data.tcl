@@ -14,7 +14,7 @@ namespace eval turbine {
         retrieve_blob  retrieve_blob_string           \
         allocate_container                            \
         container_lookup container_list               \
-        container_insert close_datum                  \
+        container_insert notify_waiter                \
         filename
 
     # Shorten strings in the log if the user requested that
@@ -137,8 +137,8 @@ namespace eval turbine {
 
     proc store_integer { id value } {
         log "store: <$id>=$value"
-        adlb::store $id $adlb::INTEGER $value
-        close_datum $id
+        set waiters [ adlb::store $id $adlb::INTEGER $value ]
+        notify_waiters $id $waiters 
         c::cache store $id $adlb::INTEGER $value
     }
 
@@ -158,8 +158,8 @@ namespace eval turbine {
 
     proc store_float { id value args } {
         log "store: <$id>=$value"
-        adlb::store $id $adlb::FLOAT $value
-        close_datum $id
+        set waiters [ adlb::store $id $adlb::FLOAT $value ]
+        notify_waiters $id $waiters
     }
 
     proc retrieve_float { id {cachemode CACHED} } {
@@ -179,8 +179,8 @@ namespace eval turbine {
 
     proc store_string { id value } {
         log "store: <$id>=[ log_string $value ]"
-        adlb::store $id $adlb::STRING $value
-        close_datum $id
+        set waiters [ adlb::store $id $adlb::STRING $value ]
+        notify_waiters $id $waiters
     }
 
     proc retrieve_string { id {cachemode CACHED} } {
@@ -205,8 +205,8 @@ namespace eval turbine {
     proc store_void { id } {
         log "store: <$id>=void"
         # emulating void with integer
-        adlb::store $id $adlb::INTEGER 12345
-        close_datum $id
+        set waiters [ adlb::store $id $adlb::INTEGER 12345 ]
+        notify_waiters $id $waiters
     }
 
     # retrieve_void not provided as it wouldn't do anything
@@ -221,14 +221,14 @@ namespace eval turbine {
       set ptr [ lindex $value 0 ]
       set len [ lindex $value 1 ]
       log [ format "store_blob: <%d>=\[%x %d\]" $id $ptr $len ]
-      adlb::store_blob $id $ptr $len
-      close_datum $id
+      set waiters [ adlb::store_blob $id $ptr $len ]
+      notify_waiters $id $waiters
     }
 
     proc store_blob_string { id value } {
         log "store_blob_string: <$id>=[ log_string $value ]"
-        adlb::store $id $adlb::BLOB $value
-        close_datum $id
+        set waiters [ adlb::store $id $adlb::BLOB $value ]
+        notify_waiters $id $waiters
     }
 
     # Retrieve and cache blob
@@ -299,7 +299,8 @@ namespace eval turbine {
     }
 
     proc store_file { id } {
-        close_datum $id
+        set waiters [ adlb::store $id $adlb::FILE "" ]
+        notify_waiters $id $waiters
     }
 
     proc filename { id } {
@@ -311,9 +312,8 @@ namespace eval turbine {
         return $result
     }
 
-    proc close_datum { id } {
+    proc notify_waiters { id ranks } {
         global WORK_TYPE
-        set ranks [ adlb::close $id ]
         foreach rank $ranks {
             debug "notify: $rank"
             adlb::put $rank $WORK_TYPE(CONTROL) "close $id" \

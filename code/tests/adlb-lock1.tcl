@@ -32,7 +32,6 @@ if { ! [ adlb::amserver ] } {
         set id [ adlb::unique ]
         adlb::create $id $adlb::STRING 0
         adlb::store $id $adlb::STRING "message rank:$rank:$i"
-        adlb::close $id
         set b [ adlb::lock $id ]
         puts "lock: $id => $b"
         set msg [ adlb::retrieve $id ]

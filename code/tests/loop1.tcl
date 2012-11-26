@@ -29,7 +29,7 @@ proc rules { } {
     container_insert $c "0" $s1
     container_insert $c "1" $s2
 
-    close_datum $c
+    adlb::slot_drop $c
 
     turbine::loop loop1_body $stack $c
 }

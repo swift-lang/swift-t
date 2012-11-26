@@ -16,7 +16,7 @@ if { ! [ adlb::amserver ] } {
 
     set iterations [ expr 5 + $c ]
     for { set i [ expr $c + 1 ] } { $i < $iterations } { incr i } {
-        set s $i
+        set s [ adlb::unique ]
         adlb::create $s $adlb::STRING 0
         adlb::store $s $adlb::STRING "message $i"
         adlb::insert $c $i $s
@@ -24,7 +24,8 @@ if { ! [ adlb::amserver ] } {
 
     adlb::insert $c string-test "string value"
 
-    adlb::close $c
+    # Drop final slot to close array
+    adlb::slot_drop $c
     set z [ adlb::container_size $c ]
     puts "container size: $z"
 } else {

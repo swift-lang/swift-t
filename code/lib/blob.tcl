@@ -58,8 +58,8 @@ namespace eval turbine {
       set v  [ retrieve_float $td ]
       lappend A $v
     }
-    adlb::store_blob_floats $result $A
-    turbine::close_datum $result
+    set waiters [ adlb::store_blob_floats $result $A ]
+    turbine::notify_waiters $result $waiters
   }
 
   # Assumes A is closed

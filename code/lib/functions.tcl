@@ -174,7 +174,8 @@ namespace eval turbine {
                 "command priority: $turbine::priority range_work $c $s $e 1" \
                 $turbine::priority
         }
-        close_datum $result
+        # close container
+        adlb::slot_drop $result
     }
 
     # User function
@@ -218,7 +219,7 @@ namespace eval turbine {
             container_insert $result $i $s
             incr i
         }
-        close_datum $result
+        adlb::slot_drop $result
     }
 
     # User function

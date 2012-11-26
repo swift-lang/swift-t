@@ -17,12 +17,6 @@ typedef adlb_datum_id turbine_datum_id;
 
 typedef enum
 {
-  TD_UNSET = ADLB_DATA_UNSET,
-  TD_SET = ADLB_DATA_SET
-} turbine_status;
-
-typedef enum
-{
   TURBINE_TYPE_NULL = 0,
   TURBINE_TYPE_INTEGER   = ADLB_DATA_TYPE_INTEGER,
   TURBINE_TYPE_FLOAT     = ADLB_DATA_TYPE_FLOAT,
@@ -36,40 +30,6 @@ typedef struct
 {
   char* name;
 } turbine_entry;
-
-typedef struct
-{
-  turbine_type type;
-  turbine_datum_id id;
-  turbine_status status;
-  union
-  {
-    struct
-    {
-      char* path;
-    } file;
-    struct
-    {
-      /** type of container keys */
-      turbine_type type;
-      struct list members;
-    } container;
-    struct
-    {
-      long value;
-    } integer;
-    struct
-    {
-      double value;
-    } FLOAT;
-    struct
-    {
-      char* value;
-      int length;
-    } string;
-  } data;
-  struct list_i listeners;
-} turbine_datum;
 
 typedef enum
 {

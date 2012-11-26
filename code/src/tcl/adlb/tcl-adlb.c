@@ -74,6 +74,15 @@ static struct table_lp blob_cache;
 
 static void set_namespace_constants(Tcl_Interp* interp);
 
+static Tcl_Obj* TclListFromArray(Tcl_Interp *interp, int *vals, int count);
+
+static int
+ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[], bool decr);
+static int
+ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[], bool decr);
+
 /**
    usage: adlb::init <servers> <types>
    Simplified use of ADLB_Init type_vect: just give adlb_init
@@ -154,6 +163,9 @@ set_namespace_constants(Tcl_Interp* interp)
   tcl_set_integer(interp, "::adlb::FILE",      ADLB_DATA_TYPE_FILE);
   tcl_set_integer(interp, "::adlb::BLOB",      ADLB_DATA_TYPE_BLOB);
   tcl_set_integer(interp, "::adlb::CONTAINER", ADLB_DATA_TYPE_CONTAINER);
+  tcl_set_integer(interp, "::adlb::READ_REFCOUNT", ADLB_READ_REFCOUNT);
+  tcl_set_integer(interp, "::adlb::WRITE_REFCOUNT", ADLB_WRITE_REFCOUNT);
+  tcl_set_integer(interp, "::adlb::READWRITE_REFCOUNT", ADLB_READWRITE_REFCOUNT);
 }
 
 /**
@@ -486,16 +498,38 @@ ADLB_Exists_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::store <id> <type> <value>
+ * Create a tcl list from an array.
+ * Free vals if count > 0
+ */
+static Tcl_Obj* TclListFromArray(Tcl_Interp *interp, int *vals, int count) {
+  Tcl_Obj* result = Tcl_NewListObj(0, NULL);
+  if (count > 0)
+  {
+    for (int i = 0; i < count; i++)
+    {
+      Tcl_Obj* o = Tcl_NewIntObj(vals[i]);
+      Tcl_ListObjAppendElement(interp, result, o);
+    }
+    free(vals);
+  }
+  return result;
+}
+
+/**
+   usage: adlb::store <id> <type> <value> [ <decrement> ]
    @param value Ignored for types file, container
    If given a blob, the value must be a string
    This allows users to store a string in a blob
+   @param decrement Optional  If true, decrement the writers reference
+                count by 1.  Default if not provided is true
+   returns list of int ranks that must be notified
 */
 static int
 ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
                int objc, Tcl_Obj *const objv[])
 {
-  TCL_CONDITION(objc >= 4, "adlb::create requires >= 4 args!");
+  TCL_CONDITION(objc == 4 || objc == 5,
+                "adlb::store requires 4 or 5 args!");
 
   long id;
   int length = 0;
@@ -510,20 +544,17 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   switch (type)
   {
     case ADLB_DATA_TYPE_INTEGER:
-      TCL_CONDITION(objc == 4, "incorrect arguments!");
       rc = Tcl_GetLongFromObj(interp, objv[3], (long*) xfer);
       TCL_CHECK_MSG(rc, "adlb::store long <%li> failed!", id);
       length = sizeof(long);
       break;
     case ADLB_DATA_TYPE_FLOAT:
-      TCL_CONDITION(objc == 4, "incorrect arguments!");
       rc = Tcl_GetDoubleFromObj(interp, objv[3], &tmp_double);
       TCL_CHECK_MSG(rc, "adlb::store double <%li> failed!", id);
       memcpy(xfer, &tmp_double, sizeof(double));
       length = sizeof(double);
       break;
     case ADLB_DATA_TYPE_STRING:
-      TCL_CONDITION(objc == 4, "incorrect arguments!");
       data = Tcl_GetStringFromObj(objv[3], &length);
       TCL_CONDITION(data != NULL,
                     "adlb::store string <%li> failed!", id);
@@ -532,31 +563,13 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
           "adlb::store: string too long: <%li>", id);
       break;
     case ADLB_DATA_TYPE_BLOB:
-      if (objc == 4)
-      {
-        // User is storing a Tcl string in a blob
-        TCL_CONDITION(objc == 4, "incorrect arguments!");
-        data = Tcl_GetStringFromObj(objv[3], &length);
-        TCL_CONDITION(data != NULL,
-                      "adlb::store blob <%li> failed!", id);
-        length = strlen(data)+1;
-        TCL_CONDITION(length < ADLB_DATA_MAX,
-                      "adlb::store: string too long: <%li>", id);
-        break;
-      }
-      else if (objc == 5)
-      {
-        // User is providing a pointer+length
-        TCL_CONDITION(objc == 5, "incorrect arguments!");
-        int p;
-        rc = Tcl_GetIntFromObj(interp, objv[3], &p);
-        TCL_CHECK_MSG(rc, "required pointer!");
-        data = (void*) (long) p;
-        rc = Tcl_GetIntFromObj(interp, objv[4], &length);
-        TCL_CHECK_MSG(rc, "required length!");
-      }
-      else
-        TCL_RETURN_ERROR("incorrect arguments!");
+      // User is storing a Tcl string in a blob
+      data = Tcl_GetStringFromObj(objv[3], &length);
+      TCL_CONDITION(data != NULL,
+                    "adlb::store blob <%li> failed!", id);
+      length = strlen(data)+1;
+      TCL_CONDITION(length < ADLB_DATA_MAX,
+                    "adlb::store: string too long: <%li>", id);
       break;
     case ADLB_DATA_TYPE_FILE:
       // Ignore objv[3]
@@ -571,11 +584,25 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
       break;
   }
 
+  // Handle optional decr_write_refcount
+  bool decr = true;
+  if (objc == 5) {
+    int decr_int;
+    rc = Tcl_GetIntFromObj(interp, objv[4], &decr_int);
+    TCL_CHECK_MSG(rc, "adlb::store decrement arg must be int!");
+    decr = decr_int != 0;
+  }
+
   // DEBUG_ADLB("adlb::store: <%li>=%s", id, data);
-  rc = ADLB_Store(id, data, length);
+  int *notify_ranks;
+  int notify_count;
+  rc = ADLB_Store(id, data, length, decr, &notify_ranks, &notify_count);
 
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::store <%li> failed!", id);
+
+  Tcl_Obj* result = TclListFromArray(interp, notify_ranks, notify_count);
+  Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
 
@@ -595,6 +622,24 @@ static inline int retrieve_object(Tcl_Interp *interp,
 static int
 ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
+{
+  return ADLB_Retrieve_Impl(cdata, interp, objc, objv, false);
+}
+
+/**
+   usage: adlb::retrieve_decr <id> [<type>]
+   same as retrieve, but also decrement read reference count by one
+*/
+static int
+ADLB_Retrieve_Decr_Cmd(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+  return ADLB_Retrieve_Impl(cdata, interp, objc, objv, true);
+}
+
+static int
+ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[], bool decr)
 {
   TCL_CONDITION((objc == 2 || objc == 3),
                 "requires 1 or 2 args!");
@@ -616,7 +661,7 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   // Retrieve the data, actual type, and length from server
   adlb_data_type type;
   int length;
-  rc = ADLB_Retrieve(id, &type, xfer, &length);
+  rc = ADLB_Retrieve(id, &type, decr, xfer, &length);
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%li> failed!", id);
 
   // Type check
@@ -635,6 +680,7 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
+
 
 /**
    interp, objv, id, and length: just for error checking and messages
@@ -907,6 +953,20 @@ static int
 ADLB_Retrieve_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
                        int objc, Tcl_Obj *const objv[])
 {
+  return ADLB_Retrieve_Blob_Impl(cdata, interp, objc, objv, false);
+}
+
+static int
+ADLB_Retrieve_Blob_Decr_Cmd(ClientData cdata, Tcl_Interp *interp,
+                       int objc, Tcl_Obj *const objv[])
+{
+  return ADLB_Retrieve_Blob_Impl(cdata, interp, objc, objv, true);
+}
+
+static int
+ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[], bool decr)
+{
   TCL_ARGS(2);
 
   int rc;
@@ -917,7 +977,7 @@ ADLB_Retrieve_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
   // Retrieve the blob data
   adlb_data_type type;
   int length;
-  rc = ADLB_Retrieve(id, &type, xfer, &length);
+  rc = ADLB_Retrieve(id, &type, decr, xfer, &length);
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%li> failed!", id);
   TCL_CONDITION(type == ADLB_DATA_TYPE_BLOB,
                 "type mismatch: expected: %i actual: %i",
@@ -991,13 +1051,14 @@ ADLB_Local_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   adlb::store_blob <id> <pointer> <length>
+   adlb::store_blob <id> <pointer> <length> [<decr>]
  */
 static int
 ADLB_Store_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
                     int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(4);
+  TCL_CONDITION(objc == 4 || objc == 5,
+                "adlb::store_blob requires 4 or 5 args!");
 
   int rc;
   long id;
@@ -1012,9 +1073,21 @@ ADLB_Store_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_GetIntFromObj(interp, objv[3], &length);
   TCL_CHECK_MSG(rc, "requires length!");
 
-  rc = ADLB_Store(id, pointer, length);
+  bool decr = true;
+  if (objc == 5) {
+    int decr_int;
+    rc = Tcl_GetIntFromObj(interp, objv[4], &decr_int);
+    TCL_CHECK_MSG(rc, "decr must be int!");
+    decr = decr_int != 0;
+  }
+
+  int *notify_ranks;
+  int notify_count;
+  rc = ADLB_Store(id, pointer, length, decr, &notify_ranks, &notify_count);
   TCL_CONDITION(rc == ADLB_SUCCESS, "failed!");
 
+  Tcl_Obj* result = TclListFromArray(interp, notify_ranks, notify_count);
+  Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
 
@@ -1046,10 +1119,15 @@ ADLB_Blob_store_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
     memcpy(xfer+i*sizeof(double), &v, sizeof(double));
   }
 
-  rc = ADLB_Store(id, xfer, length*sizeof(double));
-
+  int *notify_ranks;
+  int notify_count;
+  rc = ADLB_Store(id, xfer, length*sizeof(double), true,
+                  &notify_ranks, &notify_count);
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::store <%li> failed!", id);
+
+  Tcl_Obj* result = TclListFromArray(interp, notify_ranks, notify_count);
+  Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
 
@@ -1061,7 +1139,7 @@ ADLB_Blob_From_String_Cmd(ClientData cdata, Tcl_Interp *interp,
                            int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
-  int length; 
+  int length;
   char *data = Tcl_GetStringFromObj(objv[1], &length);
 
   TCL_CONDITION(data != NULL,
@@ -1071,7 +1149,7 @@ ADLB_Blob_From_String_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   void *blob = malloc(length2 * sizeof(char));
   memcpy(blob, data, length2);
-  
+
   Tcl_Obj* list[2];
   list[0] = Tcl_NewLongObj((long)blob);
   list[1] = Tcl_NewIntObj(length2);
@@ -1172,42 +1250,6 @@ ADLB_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
              id, subscript, member);
 
   Tcl_Obj* result = Tcl_NewStringObj(member, -1);
-  Tcl_SetObjResult(interp, result);
-
-  return TCL_OK;
-}
-
-/**
-   usage: adlb::close <id>
-   returns list of int ranks that must be notified
-*/
-static int
-ADLB_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
-               int objc, Tcl_Obj *const objv[])
-{
-  TCL_ARGS(2);
-
-  int rc;
-  long id;
-  rc = Tcl_GetLongFromObj(interp, objv[1], &id);
-  TCL_CHECK_MSG(rc, "argument must be a long integer!");
-
-  // DEBUG_ADLB("adlb::close: <%li>\n", id);
-  int* ranks;
-  int count;
-  rc = ADLB_Close(id, &ranks, &count);
-  TCL_CONDITION(rc == ADLB_SUCCESS, "<%li> failed!", id);
-
-  Tcl_Obj* result = Tcl_NewListObj(0, NULL);
-  if (count > 0)
-  {
-    for (int i = 0; i < count; i++)
-    {
-      Tcl_Obj* o = Tcl_NewIntObj(ranks[i]);
-      Tcl_ListObjAppendElement(interp, result, o);
-    }
-    free(ranks);
-  }
   Tcl_SetObjResult(interp, result);
 
   return TCL_OK;
@@ -1366,11 +1408,11 @@ ADLB_Container_Reference_Cmd(ClientData cdata, Tcl_Interp *interp,
   int ref_type = type_from_string(ref_type_name);
 
   switch (ref_type)
-  { 
+  {
     case ADLB_DATA_TYPE_INTEGER:
     case ADLB_DATA_TYPE_STRING:
         break;
-    
+
     default:
         Tcl_AddErrorInfo(interp,
                 "adlb::container_reference: invalid type for "
@@ -1433,7 +1475,8 @@ ADLB_Slot_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
     Tcl_GetIntFromObj(interp, objv[2], &incr);
 
   // DEBUG_ADLB("adlb::slot_create: <%li>", container_id);
-  int rc = ADLB_Slot_create(container_id, incr);
+  int rc = ADLB_Refcount_incr(container_id, ADLB_WRITE_REFCOUNT,
+                              incr);
 
   if (rc != ADLB_SUCCESS)
     return TCL_ERROR;
@@ -1458,7 +1501,58 @@ ADLB_Slot_Drop_Cmd(ClientData cdata, Tcl_Interp *interp,
     Tcl_GetIntFromObj(interp, objv[2], &decr);
 
   // DEBUG_ADLB("adlb::slot_drop: <%li>", container_id);
-  int rc = ADLB_Slot_drop(container_id, decr);
+  int rc = ADLB_Refcount_incr(container_id, ADLB_WRITE_REFCOUNT,
+                              -1 * decr);
+
+  if (rc != ADLB_SUCCESS)
+    return TCL_ERROR;
+  return TCL_OK;
+}
+
+/**
+   usage: adlb::permanent <id>
+  
+   Ensures that data is never garbage collected
+*/
+static int
+ADLB_Permanent_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_CONDITION((objc == 2), "requires 2 args!");
+
+  int rc;
+  long id;
+  rc = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK_MSG(rc, "adlb::permanent could not get data id");
+  
+  rc = ADLB_Permanent(id);
+
+  if (rc != ADLB_SUCCESS)
+    return TCL_ERROR;
+  return TCL_OK;
+}
+
+/**
+   usage: adlb::refcount_incr <container_id> <refcount_type> <change>
+   refcount_type in { $adlb::READ_REFCOUNT , $adlb::WRITE_REFCOUNT }
+*/
+static int
+ADLB_Refcount_Incr_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_CONDITION((objc == 4), "requires 4 args!");
+
+  long container_id;
+  Tcl_GetLongFromObj(interp, objv[1], &container_id);
+
+  adlb_refcount_type type;
+  Tcl_GetIntFromObj(interp, objv[2], (int*)&type);
+
+  int change = 1;
+  Tcl_GetIntFromObj(interp, objv[3], &change);
+
+  // DEBUG_ADLB("adlb::refcount_incr: <%li>", container_id);
+  int rc = ADLB_Refcount_incr(container_id, type, change);
 
   if (rc != ADLB_SUCCESS)
     return TCL_ERROR;
@@ -1544,8 +1638,10 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("exists",    ADLB_Exists_Cmd);
   COMMAND("store",     ADLB_Store_Cmd);
   COMMAND("retrieve",  ADLB_Retrieve_Cmd);
+  COMMAND("retrieve_decr",  ADLB_Retrieve_Decr_Cmd);
   COMMAND("enumerate", ADLB_Enumerate_Cmd);
   COMMAND("retrieve_blob", ADLB_Retrieve_Blob_Cmd);
+  COMMAND("retrieve_blob_decr", ADLB_Retrieve_Blob_Decr_Cmd);
   COMMAND("blob_free",  ADLB_Blob_Free_Cmd);
   COMMAND("local_blob_free",  ADLB_Local_Blob_Free_Cmd);
   COMMAND("store_blob", ADLB_Store_Blob_Cmd);
@@ -1553,12 +1649,13 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("blob_from_string", ADLB_Blob_From_String_Cmd);
   COMMAND("slot_create", ADLB_Slot_Create_Cmd);
   COMMAND("slot_drop", ADLB_Slot_Drop_Cmd);
+  COMMAND("permanent", ADLB_Permanent_Cmd);
+  COMMAND("refcount_incr", ADLB_Refcount_Incr_Cmd);
   COMMAND("insert",    ADLB_Insert_Cmd);
   COMMAND("insert_atomic", ADLB_Insert_Atomic_Cmd);
   COMMAND("lookup",    ADLB_Lookup_Cmd);
   COMMAND("lock",      ADLB_Lock_Cmd);
   COMMAND("unlock",    ADLB_Unlock_Cmd);
-  COMMAND("close",     ADLB_Close_Cmd);
   COMMAND("unique",    ADLB_Unique_Cmd);
   COMMAND("typeof",    ADLB_Typeof_Cmd);
   COMMAND("container_typeof",    ADLB_Container_Typeof_Cmd);
