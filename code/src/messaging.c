@@ -55,10 +55,8 @@ add_tags()
   add_tag(ADLB_TAG_STORE_HEADER);
   add_tag(ADLB_TAG_RETRIEVE);
   add_tag(ADLB_TAG_ENUMERATE);
-  add_tag(ADLB_TAG_CLOSE);
   add_tag(ADLB_TAG_SUBSCRIBE);
-  add_tag(ADLB_TAG_SLOT_CREATE);
-  add_tag(ADLB_TAG_SLOT_DROP);
+  add_tag(ADLB_TAG_REFCOUNT_INCR);
   add_tag(ADLB_TAG_INSERT_HEADER);
   add_tag(ADLB_TAG_INSERT_ATOMIC);
   add_tag(ADLB_TAG_LOOKUP);

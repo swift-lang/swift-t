@@ -31,15 +31,19 @@ typedef enum
 typedef long adlb_datum_id;
 
 /**
-   Status of future variables
+   Status vector for Turbine variables
  */
-typedef enum
-{
-  /** The datum was created but no value has been stored */
-  ADLB_DATA_UNSET,
-  /** A value was stored */
-  ADLB_DATA_SET
-} adlb_data_status;
+typedef unsigned char adlb_data_status;
+
+/** SET: Whether a value has been stored in future */
+#define ADLB_DATA_SET_MASK ((adlb_data_status)0x1)
+#define ADLB_DATA_SET(status) ((status & ADLB_DATA_SET_MASK) != 0)
+
+/** PERMANENT: Whether garbage collection is disabled for data item */
+#define ADLB_DATA_PERMANENT_MASK ((adlb_data_status)0x2)
+#define ADLB_DATA_PERMANENT(status) ((status & ADLB_DATA_PERMANENT_MASK) != 0)
+
+
 
 /**
    User data types
@@ -55,15 +59,22 @@ typedef enum
   ADLB_DATA_TYPE_CONTAINER
 } adlb_data_type;
 
+
+typedef enum {
+  ADLB_READ_REFCOUNT,
+  ADLB_WRITE_REFCOUNT,
+  ADLB_READWRITE_REFCOUNT, // Used to specify that op should affect both
+} adlb_refcount_type;
+
 /**
    User data
  */
 typedef struct
 {
   adlb_data_type type;
-  bool updateable;
   adlb_data_status status;
-  int reference_count;
+  int read_refcount; // Number of open read refs
+  int write_refcount; // Number of open write refs
   union
   {
     struct

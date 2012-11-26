@@ -341,7 +341,8 @@ ADLBP_Exists(adlb_datum_id id, bool* result)
   return ADLB_SUCCESS;
 }
 
-adlb_code ADLBP_Store(adlb_datum_id id, void *data, int length)
+adlb_code ADLBP_Store(adlb_datum_id id, void *data, int length,
+                      bool decr_write_refcount, int** ranks, int *count)
 {
   int to_server_rank;
   int rc;
@@ -356,24 +357,40 @@ adlb_code ADLBP_Store(adlb_datum_id id, void *data, int length)
   {
     // This is a server-to-server operation on myself
     TRACE("Store SELF");
-    dc = data_store(id, data, length);
+    dc = data_store(id, data, length, decr_write_refcount, ranks, count);
     ADLB_DATA_CHECK(dc);
     return ADLB_SUCCESS;
   }
 
-  rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
+  rc = MPI_Irecv(count, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
                   adlb_all_comm,&request);
   MPI_CHECK(rc);
 
-  rc = MPI_Send(&id, 1, MPI_LONG, to_server_rank, ADLB_TAG_STORE_HEADER,
-                 adlb_all_comm);
+  struct packed_store_hdr hdr = { .id = id,
+                  .decr_write_refcount = decr_write_refcount };
+  rc = MPI_Send(&hdr, sizeof(struct packed_store_hdr), MPI_BYTE,
+                to_server_rank, ADLB_TAG_STORE_HEADER, adlb_all_comm);
   MPI_CHECK(rc);
+
   rc = MPI_Send(data, length, MPI_BYTE, to_server_rank,
 		ADLB_TAG_STORE_PAYLOAD, adlb_all_comm);
   MPI_CHECK(rc);
 
   rc = MPI_Wait(&request, &status);
   MPI_CHECK(rc);
+
+  // Check to see if list of notifications will be received
+  if (*count == -1)
+    return ADLB_ERROR;
+
+  if (*count > 0)
+  {
+    *ranks = malloc(*count*sizeof(int));
+    rc = MPI_Recv(*ranks, *count, MPI_INT, to_server_rank,
+                  ADLB_TAG_RESPONSE, adlb_all_comm, &status);
+    MPI_CHECK(rc);
+  }
+
   return ADLB_SUCCESS;
 }
 
@@ -392,25 +409,20 @@ get_next_server()
   return rank;
 }
 
-adlb_code
-ADLBP_Slot_create(adlb_datum_id id, int slots)
-{
-  adlb_data_code dc;
+adlb_code ADLBP_Permanent(adlb_datum_id id) {
   int rc;
-
+  adlb_data_code dc;
   MPI_Status status;
   MPI_Request request;
+  DEBUG("ADLB_Permanent: <%li>", id);
 
-  DEBUG("ADLB_Slot_create: <%li> %i", id, slots);
   int to_server_rank = ADLB_Locate(id);
 
   rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
                  adlb_all_comm, &request);
   MPI_CHECK(rc);
-
-  struct packed_incr msg = { .id = id, .incr = slots };
-  rc = MPI_Send(&msg, sizeof(msg), MPI_BYTE, to_server_rank,
-                ADLB_TAG_SLOT_CREATE, adlb_all_comm);
+  rc = MPI_Send(&id, 1, MPI_LONG, to_server_rank,
+                ADLB_TAG_PERMANENT, adlb_all_comm);
   MPI_CHECK(rc);
   rc = MPI_Wait(&request, &status);
   MPI_CHECK(rc);
@@ -420,22 +432,29 @@ ADLBP_Slot_create(adlb_datum_id id, int slots)
 }
 
 adlb_code
-ADLBP_Slot_drop(adlb_datum_id id, int slots)
+ADLBP_Refcount_incr(adlb_datum_id id, adlb_refcount_type type, int change)
 {
   int rc;
   adlb_data_code dc;
   MPI_Status status;
   MPI_Request request;
 
-  DEBUG("ADLB_Slot_drop: <%li> %i", id, slots);
+  if (type == ADLB_READ_REFCOUNT) {
+    DEBUG("ADLB_Refcount_incr: <%li> READ_REFCOUNT %i", id, change);
+  } else if (type == ADLB_WRITE_REFCOUNT) {
+    DEBUG("ADLB_Refcount_incr: <%li> WRITE_REFCOUNT %i", id, change);
+  } else {
+    assert(type == ADLB_READWRITE_REFCOUNT);
+    DEBUG("ADLB_Refcount_incr: <%li> READWRITE_REFCOUNT %i", id, change);
+  }
   int to_server_rank = ADLB_Locate(id);
 
   rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
                  adlb_all_comm, &request);
   MPI_CHECK(rc);
-  struct packed_incr msg = { .id = id, .incr = slots };
+  struct packed_incr msg = { .id = id, .type = type, .incr = change };
   rc = MPI_Send(&msg, sizeof(msg), MPI_BYTE, to_server_rank,
-                ADLB_TAG_SLOT_DROP, adlb_all_comm);
+                ADLB_TAG_REFCOUNT_INCR, adlb_all_comm);
   MPI_CHECK(rc);
   rc = MPI_Wait(&request, &status);
   MPI_CHECK(rc);
@@ -516,7 +535,7 @@ ADLBP_Insert_atomic(adlb_datum_id id, const char* subscript,
 
 adlb_code
 ADLBP_Retrieve(adlb_datum_id id, adlb_data_type* type,
-               void *data, int *length)
+               bool decr_read_refcount, void *data, int *length)
 {
   int rc;
   adlb_data_code dc;
@@ -525,8 +544,10 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_data_type* type,
 
   int to_server_rank = ADLB_Locate(id);
 
+  struct packed_retrieve_hdr hdr =
+          { .id = id, .decr_read_refcount = decr_read_refcount };
   IRECV(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
-  SEND(&id, 1, MPI_LONG, to_server_rank, ADLB_TAG_RETRIEVE);
+  SEND(&hdr, sizeof(hdr), MPI_BYTE, to_server_rank, ADLB_TAG_RETRIEVE);
   WAIT(&request,&status);
 
   if (dc == ADLB_DATA_SUCCESS)
@@ -826,49 +847,6 @@ ADLBP_Container_size(adlb_datum_id container_id, int* size)
 
   if (*size < 0)
     return ADLB_ERROR;
-  return ADLB_SUCCESS;
-}
-
-/**
-   Allocates fresh storage in ranks iff count > 0
- */
-adlb_code
-ADLBP_Close(adlb_datum_id id, int** ranks, int *count)
-{
-  int rc;
-  MPI_Status status;
-  MPI_Request request;
-
-  int to_server_rank = ADLB_Locate(id);
-
-  if (to_server_rank == xlb_world_rank)
-  {
-    TRACE("CLOSE SELF: <%li>\n", id);
-    adlb_data_code dc = data_close(id, ranks, count);
-    ADLB_DATA_CHECK(dc);
-    return ADLB_SUCCESS;
-  }
-
-  rc = MPI_Irecv(count, 1, MPI_INT, to_server_rank,
-                 ADLB_TAG_RESPONSE, adlb_all_comm, &request);
-  MPI_CHECK(rc);
-  rc = MPI_Send(&id, 1, MPI_LONG, to_server_rank,
-                ADLB_TAG_CLOSE, adlb_all_comm);
-  MPI_CHECK(rc);
-  rc = MPI_Wait(&request,&status);
-  MPI_CHECK(rc);
-
-  if (*count == -1)
-    return ADLB_ERROR;
-
-  if (*count > 0)
-  {
-    *ranks = malloc(*count*sizeof(int));
-    rc = MPI_Recv(*ranks, *count, MPI_INT, to_server_rank,
-                  ADLB_TAG_RESPONSE, adlb_all_comm, &status);
-    MPI_CHECK(rc);
-  }
-
   return ADLB_SUCCESS;
 }
 

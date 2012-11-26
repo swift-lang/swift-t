@@ -28,9 +28,6 @@ adlb_data_code data_create_container(adlb_datum_id id,
 
 void           data_exists(adlb_datum_id id, bool* result);
 
-adlb_data_code data_close(adlb_datum_id id,
-                          int** result, int* count);
-
 adlb_data_code data_lock(adlb_datum_id id, int rank, bool* result);
 
 adlb_data_code data_unlock(adlb_datum_id id);
@@ -63,19 +60,20 @@ adlb_data_code data_enumerate(adlb_datum_id container_id,
                               int* members_length,
                               int* actual);
 
-adlb_data_code data_store(adlb_datum_id id, void* buffer, int length);
+adlb_data_code data_store(adlb_datum_id id, void* buffer, int length,
+          bool decr_write_refcount, int** notify_ranks, int* notify_count);
 
-adlb_data_code data_slot_create(adlb_datum_id container_id, int incr);
+adlb_data_code data_permanent(adlb_datum_id id);
 
-adlb_data_code data_slot_drop(adlb_datum_id container_id, int decr,
-                              int* result);
+adlb_data_code data_reference_count(adlb_datum_id id, adlb_refcount_type type,
+                int increment, int** notify_ranks, int* notify_count);
 
 adlb_data_code data_insert(adlb_datum_id id,
                            const char* subscript,
                            const char* member,
                            int drops,
-                           adlb_datum_id** references, int* count,
-                           int* slots);
+                           adlb_datum_id** references, int* references_count,
+                           int **notify_ranks, int *notify_count);
 
 adlb_data_code data_insert_atomic(adlb_datum_id container_id,
                                   const char* subscript,

@@ -75,13 +75,15 @@ adlb_code ADLB_Create_container(adlb_datum_id id,
 adlb_code ADLBP_Exists(adlb_datum_id id, bool* result);
 adlb_code ADLB_Exists(adlb_datum_id id, bool* result);
 
-adlb_code ADLBP_Store(adlb_datum_id id, void *data, int length);
-adlb_code ADLB_Store(adlb_datum_id id, void *data, int length);
+adlb_code ADLBP_Store(adlb_datum_id id, void *data, int length,
+                      bool decr_write_refcount, int** ranks, int *count);
+adlb_code ADLB_Store(adlb_datum_id id, void *data, int length,
+                      bool decr_write_refcount, int** ranks, int *count);
 
 adlb_code ADLBP_Retrieve(adlb_datum_id id, adlb_data_type* type,
-		   void *data, int *length);
+      bool decr_read_refcount, void *data, int *length);
 adlb_code ADLB_Retrieve(adlb_datum_id id, adlb_data_type* type,
-		  void *data, int *length);
+      bool decr_read_refcount, void *data, int *length);
 
 adlb_code ADLBP_Enumerate(adlb_datum_id container_id,
                    int count, int offset,
@@ -94,11 +96,13 @@ adlb_code ADLB_Enumerate(adlb_datum_id container_id,
                    char** members, int* members_length,
                    int* records);
 
-adlb_code ADLBP_Slot_create(adlb_datum_id id, int slots);
-adlb_code ADLB_Slot_create(adlb_datum_id id, int slots);
+adlb_code ADLBP_Permanent(adlb_datum_id id);
+adlb_code ADLB_Permanent(adlb_datum_id id);
 
-adlb_code ADLBP_Slot_drop(adlb_datum_id id, int slots);
-adlb_code ADLB_Slot_drop(adlb_datum_id id, int slots);
+adlb_code ADLBP_Refcount_incr(adlb_datum_id id, adlb_refcount_type type,
+                              int change);
+adlb_code ADLB_Refcount_incr(adlb_datum_id id, adlb_refcount_type type,
+                              int change);
 
 adlb_code ADLBP_Insert(adlb_datum_id id, const char *subscript,
                  const char* member, int member_length, int drops);
@@ -122,8 +126,6 @@ adlb_code ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
 adlb_code ADLB_Container_reference(adlb_datum_id id, const char *subscript,
                              adlb_datum_id reference,
                               adlb_data_type ref_type);
-adlb_code ADLBP_Close(adlb_datum_id id, int** ranks, int* count);
-adlb_code ADLB_Close(adlb_datum_id id, int** ranks, int* count);
 
 adlb_code ADLBP_Unique(adlb_datum_id *result);
 adlb_code ADLB_Unique(adlb_datum_id *result);

@@ -57,10 +57,9 @@ static adlb_code handle_exists(int caller);
 static adlb_code handle_store(int caller);
 static adlb_code handle_retrieve(int caller);
 static adlb_code handle_enumerate(int caller);
-static adlb_code handle_close(int caller);
 static adlb_code handle_subscribe(int caller);
-static adlb_code handle_slot_create(int caller);
-static adlb_code handle_slot_drop(int caller);
+static adlb_code handle_permanent(int caller);
+static adlb_code handle_refcount_incr(int caller);
 static adlb_code handle_insert(int caller);
 static adlb_code handle_insert_atomic(int caller);
 static adlb_code handle_lookup(int caller);
@@ -76,7 +75,6 @@ static adlb_code handle_shutdown_worker(int caller);
 static adlb_code handle_shutdown_server(int caller);
 static adlb_code handle_fail(int caller);
 
-static adlb_code slot_notification(long id);
 static adlb_code close_notification(long id, int* ranks, int count);
 static adlb_code set_int_reference_and_notify(long id, long value);
 static adlb_code set_str_reference_and_notify(long id, char* value);
@@ -101,10 +99,9 @@ handlers_init(void)
   create_handler(ADLB_TAG_STORE_HEADER, handle_store);
   create_handler(ADLB_TAG_RETRIEVE, handle_retrieve);
   create_handler(ADLB_TAG_ENUMERATE, handle_enumerate);
-  create_handler(ADLB_TAG_CLOSE, handle_close);
   create_handler(ADLB_TAG_SUBSCRIBE, handle_subscribe);
-  create_handler(ADLB_TAG_SLOT_CREATE, handle_slot_create);
-  create_handler(ADLB_TAG_SLOT_DROP, handle_slot_drop);
+  create_handler(ADLB_TAG_PERMANENT, handle_permanent);
+  create_handler(ADLB_TAG_REFCOUNT_INCR, handle_refcount_incr);
   create_handler(ADLB_TAG_INSERT_HEADER, handle_insert);
   create_handler(ADLB_TAG_INSERT_ATOMIC, handle_insert_atomic);
   create_handler(ADLB_TAG_LOOKUP, handle_lookup);
@@ -510,25 +507,37 @@ static adlb_code
 handle_store(int caller)
 {
   // MPE_LOG_EVENT(mpe_svr_store_start);
-  long id;
+  struct packed_store_hdr hdr;
   int rc;
   MPI_Status status;
-  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_STORE_HEADER);
+  RECV(&hdr, sizeof(struct packed_store_hdr), MPI_BYTE, caller,
+       ADLB_TAG_STORE_HEADER);
 
   // #if HAVE_MALLOC_H
   // struct mallinfo s = mallinfo();
   // DEBUG("Store: heap size: %i", s.uordblks);
   // #endif
-  DEBUG("Store: <%li>", id);
+  DEBUG("Store: <%li>", hdr.id);
 
   RECV(xfer, XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_STORE_PAYLOAD);
 
   int length;
   MPI_Get_count(&status, MPI_BYTE, &length);
 
-  int dc = data_store(id, xfer, length);
+  int* ranks;
+  int count;
+  int dc = data_store(hdr.id, xfer, length, hdr.decr_write_refcount,
+                      &ranks, &count);
 
-  RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
+  if (dc != ADLB_DATA_SUCCESS)
+    count = -1;
+  RSEND(&count, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
+
+  if (count > 0)
+  {
+    SEND(ranks, count, MPI_INT, caller, ADLB_TAG_RESPONSE);
+    free(ranks);
+  }
   TRACE("STORE DONE");
   // MPE_LOG_EVENT(mpe_svr_store_end);
 
@@ -540,15 +549,24 @@ handle_retrieve(int caller)
 {
   // MPE_LOG_EVENT(mpe_svr_retrieve_start);
   // TRACE("ADLB_TAG_RETRIEVE");
-  long id;
+  struct packed_retrieve_hdr hdr;
   int rc;
   MPI_Status status;
-  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_RETRIEVE);
+
+  RECV(&hdr, sizeof(hdr), MPI_BYTE, caller, ADLB_TAG_RETRIEVE);
 
   void* result = NULL;
   int length;
   adlb_data_type type;
-  int dc = data_retrieve(id, &type, &result, &length);
+  int dc = data_retrieve(hdr.id, &type, &result, &length);
+  if (dc == ADLB_DATA_SUCCESS && hdr.decr_read_refcount) {
+    int notify_count;
+    int *notify_ranks;
+    dc = data_reference_count(hdr.id, ADLB_READ_REFCOUNT, -1,
+                              &notify_ranks, &notify_count);
+    assert(notify_count == 0);  // Shouldn't close anything
+  }
+
   RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   if (dc == ADLB_DATA_SUCCESS)
   {
@@ -556,7 +574,7 @@ handle_retrieve(int caller)
     SEND(result, length, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
     if (type == ADLB_DATA_TYPE_CONTAINER)
       free(result);
-    DEBUG("Retrieve: <%li>", id);
+    DEBUG("Retrieve: <%li>", hdr.id);
   }
   return ADLB_SUCCESS;
 }
@@ -605,34 +623,6 @@ handle_enumerate(int caller)
 }
 
 static adlb_code
-handle_close(int caller)
-{
-  // MPE_LOG_EVENT(mpe_svr_close_start);
-  long id;
-  int rc;
-  MPI_Status status;
-  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_CLOSE);
-
-  DEBUG("Close: <%li>", id);
-
-  int* ranks;
-  int count;
-  adlb_data_code dc = data_close(id, &ranks, &count);
-  if (dc != ADLB_DATA_SUCCESS)
-    count = -1;
-  RSEND(&count, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
-
-  if (count > 0)
-  {
-    SEND(ranks, count, MPI_INT, caller, ADLB_TAG_RESPONSE);
-    free(ranks);
-  }
-
-  //  MPE_LOG_EVENT(mpe_svr_close_end);
-  return ADLB_SUCCESS;
-}
-
-static adlb_code
 handle_subscribe(int caller)
 {
   // MPE_LOG_EVENT(mpe_svr_subscribe_start);
@@ -655,40 +645,52 @@ handle_subscribe(int caller)
 }
 
 static adlb_code
-handle_slot_create(int caller)
+handle_permanent(int caller)
 {
-  int rc;
   MPI_Status status;
-  struct packed_incr msg;
-  RECV(&msg, sizeof(msg), MPI_BYTE, caller, ADLB_TAG_SLOT_CREATE);
+  long id;
+  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_PERMANENT);
 
-  adlb_data_code dc = data_slot_create(msg.id, msg.incr);
-  DEBUG("Slot_create: <%li> %i", msg.id, msg.incr);
+  DEBUG("Permanent: <%li> ", id);
 
+  adlb_data_code dc = data_permanent(id);
   RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
 
 static adlb_code
-handle_slot_drop(int caller)
+handle_refcount_incr(int caller)
 {
-  int rc = ADLB_SUCCESS;
+  int rc;
   MPI_Status status;
   struct packed_incr msg;
-  RECV(&msg, sizeof(msg), MPI_BYTE, caller, ADLB_TAG_SLOT_DROP);
+  RECV(&msg, sizeof(msg), MPI_BYTE, caller, ADLB_TAG_REFCOUNT_INCR);
 
-  int slots;
-  DEBUG("Slot_drop: <%li> %i", msg.id, msg.incr);
-  adlb_data_code dc = data_slot_drop(msg.id, msg.incr, &slots);
-
-  RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
-
-  if (slots < 0) {
-    return ADLB_ERROR;
-  } else if (slots == 0) {
-    rc = slot_notification(msg.id);
+  if (msg.type == ADLB_READ_REFCOUNT) {
+    DEBUG("Refcount_incr: <%li> READ_REFCOUNT %i", msg.id, msg.incr);
+  } else if (msg.type == ADLB_WRITE_REFCOUNT) {
+    DEBUG("Refcount_incr: <%li> WRITE_REFCOUNT %i", msg.id, msg.incr);
+  } else {
+    assert(msg.type == ADLB_READWRITE_REFCOUNT);
+    DEBUG("Refcount_incr: <%li> READWRITE_REFCOUNT %i", msg.id, msg.incr);
   }
-  return rc;
+
+  int notify_count;
+  int *notify_ranks;
+  adlb_data_code dc = data_reference_count(msg.id, msg.type,
+                     msg.incr, &notify_ranks, &notify_count);
+  if (dc != ADLB_DATA_SUCCESS) {
+    return ADLB_ERROR;
+  }
+
+  if (notify_count > 0) {
+    close_notification(msg.id, notify_ranks, notify_count);
+    free(notify_ranks);
+  }
+
+  DEBUG("data_reference_count => %i", dc);
+  RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
+  return ADLB_SUCCESS;
 }
 
 static adlb_code
@@ -712,8 +714,9 @@ handle_insert(int caller)
 
   member = malloc((member_length+1) * sizeof(char));
 
+  int references_count, notify_count;
   long* references;
-  int count, slots;
+  int *notify_ranks;
 
   RECV(member, ADLB_DATA_MEMBER_MAX, MPI_CHAR, caller,
        ADLB_TAG_INSERT_PAYLOAD);
@@ -722,17 +725,18 @@ handle_insert(int caller)
         id, subscript, member);
 
   adlb_data_code dc = data_insert(id, subscript, member, drops,
-                                  &references, &count, &slots);
+                                  &references, &references_count,
+                                  &notify_ranks, &notify_count);
   RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
 
   if (dc == ADLB_DATA_SUCCESS)
   {
     TRACE("%d references to notify after insert\n", count);
-    if (count > 0)
+    if (references_count > 0)
     {
       long m = -1;
       bool parsed = false;
-      for (int i = 0; i < count; i++)
+      for (int i = 0; i < references_count; i++)
       {
         TRACE("Notifying reference li\n", references[i]);
         // Negative used to indicate string
@@ -752,8 +756,10 @@ handle_insert(int caller)
       }
       free(references);
     }
-    if (slots == 0)
-      slot_notification(id);
+    // Notify of entire container closed
+    if (notify_count > 0) {
+      close_notification(id, notify_ranks, notify_count);
+    }
   }
   TRACE("INSERT DONE");
   return ADLB_SUCCESS;
@@ -1026,23 +1032,6 @@ handle_fail(int caller)
   return ADLB_SUCCESS;
 }
 
-
-static adlb_code
-slot_notification(long id)
-{
-  int* waiters;
-  int count;
-  TRACE("slot_notification: %li", id);
-  adlb_data_code dc = data_close(id, &waiters, &count);
-  ADLB_DATA_CHECK(dc);
-  if (count > 0)
-  {
-    close_notification(id, waiters, count);
-    free(waiters);
-  }
-  return ADLB_SUCCESS;
-}
-
 static adlb_code
 put_targeted(int type, int putter, int priority, int answer,
              int target, void* payload, int length);
@@ -1072,19 +1061,15 @@ set_int_reference_and_notify(long id, long value)
 {
   DEBUG("set_reference: <%li>=%li", id, value);
   DEBUG("set_int_reference: <%li>=%li", id, value);
+  int* ranks;
+  int count;
+
   adlb_code rc = ADLB_SUCCESS;
   int server = ADLB_Locate(id);
   if (server != xlb_world_rank)
     rc = xlb_sync(server);
   ADLB_CHECK(rc);
-  rc = ADLB_Store(id, &value, sizeof(long));
-  ADLB_CHECK(rc);
-  int* ranks;
-  int count;
-  if (server != xlb_world_rank)
-    rc = xlb_sync(server);
-  ADLB_CHECK(rc);
-  rc = ADLB_Close(id, &ranks, &count);
+  rc = ADLB_Store(id, &value, sizeof(long), true, &ranks, &count);
   ADLB_CHECK(rc);
   if (count > 0)
   {
@@ -1100,19 +1085,16 @@ static adlb_code
 set_str_reference_and_notify(long id, char *value)
 {
   DEBUG("set_str_reference: <%li>=%s", id, value);
+  int* ranks;
+  int count;
+
   int rc = ADLB_SUCCESS;
   int server = ADLB_Locate(id);
   if (server != xlb_world_rank)
     rc = xlb_sync(server);
   ADLB_CHECK(rc);
-  rc = ADLB_Store(id, value, (strlen(value)+1) * sizeof(char));
-  ADLB_CHECK(rc);
-  int* ranks;
-  int count;
-  if (server != xlb_world_rank)
-    rc = xlb_sync(server);
-  ADLB_CHECK(rc);
-  rc = ADLB_Close(id, &ranks, &count);
+  rc = ADLB_Store(id, value, (strlen(value)+1) * sizeof(char), true,
+                  &ranks, &count);
   ADLB_CHECK(rc);
   rc = close_notification(id, ranks, count);
   ADLB_CHECK(rc);

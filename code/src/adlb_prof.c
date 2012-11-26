@@ -179,20 +179,22 @@ ADLB_Exists(adlb_datum_id id, bool* result)
 }
 
 adlb_code
-ADLB_Store(adlb_datum_id id, void *data, int length)
+ADLB_Store(adlb_datum_id id, void *data, int length,
+           bool decr_write_refcount, int** ranks, int *count)
 {
   MPE_LOG(xlb_mpe_wkr_store_start);
-  int rc = ADLBP_Store(id, data, length);
+  int rc = ADLBP_Store(id, data, length, decr_write_refcount,
+                       ranks, count);
   MPE_LOG(xlb_mpe_wkr_store_end);
   return rc;
 }
 
 adlb_code
 ADLB_Retrieve(adlb_datum_id id, adlb_data_type* type,
-              void *data, int *length)
+      bool decr_read_refcount, void *data, int *length)
 {
   MPE_LOG(xlb_mpe_wkr_retrieve_start);
-  int rc = ADLBP_Retrieve(id, type, data, length);
+  int rc = ADLBP_Retrieve(id, type, decr_read_refcount, data, length);
   MPE_LOG(xlb_mpe_wkr_retrieve_end);
   return rc;
 }
@@ -210,15 +212,14 @@ ADLB_Enumerate(adlb_datum_id container_id,
 }
 
 adlb_code
-ADLB_Slot_create(adlb_datum_id id, int slots)
-{
-  return ADLBP_Slot_create(id, slots);
+ADLB_Permanent(adlb_datum_id id) {
+  return ADLBP_Permanent(id);
 }
 
 adlb_code
-ADLB_Slot_drop(adlb_datum_id id, int slots)
+ADLB_Refcount_incr(adlb_datum_id id, adlb_refcount_type type, int change)
 {
-  return ADLBP_Slot_drop(id, slots);
+  return ADLBP_Refcount_incr(id, type, change);
 }
 
 adlb_code
@@ -280,15 +281,6 @@ adlb_code ADLB_Container_size(adlb_datum_id id, int* size)
 {
   int rc;
   rc = ADLBP_Container_size(id, size);
-  return rc;
-}
-
-adlb_code
-ADLB_Close(adlb_datum_id id, int** ranks, int* count)
-{
-  MPE_LOG(xlb_mpe_wkr_close_start);
-  adlb_code rc = ADLBP_Close(id, ranks, count);
-  MPE_LOG(xlb_mpe_wkr_close_end);
   return rc;
 }
 

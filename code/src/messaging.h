@@ -179,7 +179,26 @@ struct packed_enumerate
 struct packed_incr
 {
   adlb_datum_id id;
+  adlb_refcount_type type;
   int incr;
+};
+
+/**
+ * Header for store message
+ */
+struct packed_store_hdr
+{
+  adlb_datum_id id;
+  bool decr_write_refcount;
+};
+
+/**
+ * Header for retrieve message
+ */
+struct packed_retrieve_hdr
+{
+  adlb_datum_id id;
+  bool decr_read_refcount;
 };
 
 /**
@@ -221,10 +240,9 @@ typedef enum
   ADLB_TAG_STORE_PAYLOAD,
   ADLB_TAG_RETRIEVE,
   ADLB_TAG_ENUMERATE,
-  ADLB_TAG_CLOSE,
   ADLB_TAG_SUBSCRIBE,
-  ADLB_TAG_SLOT_CREATE,
-  ADLB_TAG_SLOT_DROP,
+  ADLB_TAG_PERMANENT,
+  ADLB_TAG_REFCOUNT_INCR,
   ADLB_TAG_INSERT_HEADER,
   ADLB_TAG_INSERT_PAYLOAD,
   ADLB_TAG_INSERT_ATOMIC,

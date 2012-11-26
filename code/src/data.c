@@ -29,11 +29,6 @@ struct table_lp tds;
 struct table container_listeners;
 
 /**
-   Map from container id to number of slots allocated (integer)
- */
-struct table_lp container_slots;
-
-/**
    Map from adlb_datum_id to int rank if locked
 */
 struct table_lp locked;
@@ -84,6 +79,12 @@ static adlb_datum_id last_id;
 #define check_verbose(condition, code, format, args...)
 #endif
 
+
+static adlb_data_code
+data_close(adlb_datum_id id, int** result, int* count);
+static adlb_data_code garbage_collect(adlb_datum_id id, adlb_datum* d);
+static adlb_data_code garbage_collect_members(struct table* members);
+
 /**
    @param s Number of servers
    @param r My rank
@@ -99,10 +100,6 @@ data_init(int s, int r)
   if (!result)
     return ADLB_DATA_ERROR_OOM;
   result = table_init(&container_listeners, 1024*1024);
-  if (!result)
-    return ADLB_DATA_ERROR_OOM;
-
-  result = table_lp_init(&container_slots, 1024);
   if (!result)
     return ADLB_DATA_ERROR_OOM;
 
@@ -125,8 +122,18 @@ data_create(adlb_datum_id id, adlb_data_type type, bool updateable)
 
   adlb_datum* d = malloc(sizeof(adlb_datum));
   d->type = type;
-  d->updateable = updateable;
-  d->status = ADLB_DATA_UNSET;
+  d->status = 0;
+  if (updateable) {
+    // initial reference is a read-write reference
+    // write_refcount is not decremented on update
+    d->write_refcount = 1;
+    d->read_refcount = 0;
+  } else {
+    // write_refcount will be decremented on first write to signal closed
+    d->write_refcount = 1;
+    // initial reference is counted as a read reference
+    d->read_refcount = 1;
+  }
   list_i_init(&d->listeners);
 
   table_lp_add(&tds, id, d);
@@ -147,6 +154,8 @@ data_create_filename(adlb_datum_id id, const char* filename)
   assert(d != NULL);
 
   d->data.FILE.path = strdup(filename);
+  d->write_refcount = 1;
+  d->read_refcount = 0;
   return ADLB_DATA_SUCCESS;
 }
 
@@ -164,9 +173,9 @@ data_create_container(adlb_datum_id id, adlb_data_type type)
   assert(d != NULL);
   d->data.CONTAINER.members = table_create(1024);
   d->data.CONTAINER.type = type;
-  int* z = malloc(sizeof(int));
-  *z = 1;
-  table_lp_add(&container_slots, id, z);
+  // Initially have read reference and write reference
+  d->write_refcount = 1;
+  d->read_refcount = 1;
   return ADLB_DATA_SUCCESS;
 }
 
@@ -175,8 +184,7 @@ data_exists(adlb_datum_id id, bool* result)
 {
   adlb_datum* d = table_lp_search(&tds, id);
 
-  if (d == NULL ||
-      d->status == ADLB_DATA_UNSET)
+  if (d == NULL || !ADLB_DATA_SET(d->status))
     *result = false;
   else
     *result = true;
@@ -216,34 +224,13 @@ data_container_typeof(adlb_datum_id id, adlb_data_type* type)
   return ADLB_DATA_SUCCESS;
 }
 
-/**
-   Allocates fresh memory in result unless count==0
-   Caller must free result
- */
-adlb_data_code
-data_close(adlb_datum_id id, int** result, int* count)
-{
-  TRACE("%li", id);
-  check_verbose(id != ADLB_DATA_ID_NULL,
-                ADLB_DATA_ERROR_NULL, "NULL: <%li>", id);
-
+adlb_data_code data_permanent(adlb_datum_id id) {
   adlb_datum* d = table_lp_search(&tds, id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%li>", id);
-  check_verbose(d->status == ADLB_DATA_UNSET,
-                ADLB_DATA_ERROR_DOUBLE_WRITE,
-                "double write: <%li>", id);
-  d->status = ADLB_DATA_SET;
-
-  list_i_toints(&d->listeners, result, count);
-  DEBUG("data_close: <%li> listeners: %i", id, *count);
-  list_i_clear(&d->listeners);
-  TRACE_END;
+  d->status |= ADLB_DATA_PERMANENT_MASK;
   return ADLB_DATA_SUCCESS;
 }
-
-static void garbage_collect(adlb_datum_id id, adlb_datum* d,
-                            char** output, int* output_length);
 
 /**
    @param output: If the d was a container and it was decremented to
@@ -251,61 +238,103 @@ static void garbage_collect(adlb_datum_id id, adlb_datum* d,
                   record-separated list of its members.  The caller
                   will probably want to decrement each of them.
                   Else, NULL.
+
+   Allocates fresh memory in result unless notify_count==0
+   Caller must free result
  */
 adlb_data_code
-data_reference_count(adlb_datum_id id, int increment,
-                     char** output, int* output_length)
+data_reference_count(adlb_datum_id id, adlb_refcount_type type,
+          int increment, int** notify_ranks, int* notify_count)
 {
   adlb_datum* d = table_lp_search(&tds, id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%li>", id);
-  d->reference_count += increment;
-  // This is usually NULL
-  *output = NULL;
-  if (d->reference_count <= 0)
-    garbage_collect(id, d, output, output_length);
-  return ADLB_SUCCESS;
+
+  *notify_count = 0; // default: no notification needed
+  if (type == ADLB_READ_REFCOUNT || type == ADLB_READWRITE_REFCOUNT) {
+    if (ADLB_DATA_PERMANENT(d->status)) {
+        // Ignore read reference count operations for permanent variables
+        return ADLB_DATA_SUCCESS;
+      }
+    // Should not go negative
+    assert(d->read_refcount > 0);
+    assert(d->read_refcount + increment >= 0);
+    d->read_refcount += increment;
+    DEBUG("read_refcount: <%li> => %i", id, d->read_refcount);
+  }
+
+  if (type == ADLB_WRITE_REFCOUNT || type == ADLB_READWRITE_REFCOUNT) {
+    // Should not go negative
+    assert(type == ADLB_WRITE_REFCOUNT);
+    assert(d->write_refcount > 0);
+    assert(d->write_refcount + increment >= 0);
+    d->write_refcount += increment;
+    if (d->write_refcount == 0) {
+      data_close(id, notify_ranks, notify_count);
+    }
+    DEBUG("write_refcount: <%li> => %i", id, d->write_refcount);
+  }
+
+  if (d->read_refcount <= 0 && d->write_refcount <= 0) {
+    return garbage_collect(id, d);
+  }
+
+  return ADLB_DATA_SUCCESS;
 }
 
 static void
 extract_members(struct table* members, int count, int offset,
                 char** output, int* output_length);
 
-static void
-garbage_collect(adlb_datum_id id, adlb_datum* d,
-                char** output, int* output_length)
+static adlb_data_code
+garbage_collect(adlb_datum_id id, adlb_datum* d)
 {
+  DEBUG("garbage_collect: <%ld>", id);
+  check_verbose(!ADLB_DATA_PERMANENT(d->status), ADLB_DATA_ERROR_UNKNOWN,
+          "Garbage collecting permanent data");
   switch (d->type)
   {
-    ADLB_DATA_TYPE_STRING:
+    case ADLB_DATA_TYPE_STRING:
     {
       free(d->data.STRING.value);
       break;
     }
-    ADLB_DATA_TYPE_BLOB:
+    case ADLB_DATA_TYPE_BLOB:
     {
       free(d->data.BLOB.value);
       break;
     }
-    ADLB_DATA_TYPE_CONTAINER:
+    case ADLB_DATA_TYPE_CONTAINER:
     {
-      struct table* members = d->data.CONTAINER.members;
-      extract_members(members, INT_MAX, 0, output, output_length);
-      table_lp_remove(&container_slots, id);
+      adlb_data_code rc = garbage_collect_members(d->data.CONTAINER.members);
+      if (rc != ADLB_DATA_SUCCESS) {
+        return rc;
+      }
       break;
     }
     // These two are easy:
-    ADLB_DATA_TYPE_INTEGER:
-    ADLB_DATA_TYPE_FLOAT:
+    case ADLB_DATA_TYPE_INTEGER:
+    case ADLB_DATA_TYPE_FLOAT:
       break;
     default:
-      assert(false);
+      check_verbose(false, ADLB_DATA_ERROR_TYPE,
+                    "garbage_collect(): unknown type %u of <%li>",
+                    d->type, id);
       break;
   }
-  // I think logically this list should be empty:
-  assert(d->listeners.size == 0);
+  // This list should be empty since data being destroyed
+  check_verbose(d->listeners.size == 0, ADLB_DATA_ERROR_TYPE,
+                "%i listeners for garbage collected td <%li>",
+                d->listeners.size, id);
   table_lp_remove(&tds, id);
   free(d);
+  return ADLB_DATA_SUCCESS;
+}
+
+static adlb_data_code garbage_collect_members(struct table* members)
+{
+  //TODO: iterate over members and free
+  return ADLB_DATA_SUCCESS;
 }
 
 adlb_data_code
@@ -352,7 +381,7 @@ data_subscribe(adlb_datum_id id, int rank, int* result)
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%li>", id);
 
-  if (d->status == ADLB_DATA_SET)
+  if (d->write_refcount == 0)
   {
     *result = 0;
   }
@@ -419,7 +448,7 @@ data_container_reference_str(adlb_datum_id container_id,
   }
 
   // Is the container closed?
-  check_verbose(d->status != ADLB_DATA_SET, ADLB_DATA_ERROR_INVALID,
+  check_verbose(d->write_refcount > 0, ADLB_DATA_ERROR_INVALID,
                 "Attempting to subscribe to non-existent subscript\n"
                 "on a closed container:  %li[%s]\n",
                 container_id, subscript);
@@ -469,8 +498,13 @@ data_container_reference_str(adlb_datum_id container_id,
   return ADLB_DATA_SUCCESS;
 }
 
+/**
+   Allocates fresh memory in result unless notify_count==0
+   Caller must free result
+ */
 adlb_data_code
-data_store(adlb_datum_id id, void* buffer, int length)
+data_store(adlb_datum_id id, void* buffer, int length,
+         bool decr_write_refcount, int** notify_ranks, int* notify_count)
 {
   TRACE("data_store(%li)\n", id);
 
@@ -479,13 +513,11 @@ data_store(adlb_datum_id id, void* buffer, int length)
                 "not found: <%li>", id);
 
   adlb_data_type type = d->type;
-  adlb_data_status status = d->status;
-  bool updateable = d->updateable;
 
   // Make sure we are allowed to write this data
-  check_verbose(status == ADLB_DATA_UNSET || updateable,
+  check_verbose(d->write_refcount > 0,
                 ADLB_DATA_ERROR_DOUBLE_WRITE,
-                "attempt to rewrite: <%li>", id);
+                "attempt to write closed var: <%li>", id);
 
   int n;
   switch (type)
@@ -517,6 +549,46 @@ data_store(adlb_datum_id id, void* buffer, int length)
       break;
   }
 
+  // Default: not closed
+  *notify_count = 0;
+  
+  d->status |= ADLB_DATA_SET_MASK;
+
+  if (decr_write_refcount) {
+    adlb_data_code dc = data_reference_count(id, ADLB_WRITE_REFCOUNT,
+                         -1, notify_ranks, notify_count);
+    if (dc != ADLB_DATA_SUCCESS)
+      return dc;
+  }
+
+  return ADLB_DATA_SUCCESS;
+}
+
+
+/**
+   Notify all waiters on variable that it was closed
+
+   Allocates fresh memory in result unless count==0
+   Caller must free result
+ */
+adlb_data_code
+data_close(adlb_datum_id id, int** result, int* count)
+{
+  TRACE("%li", id);
+  check_verbose(id != ADLB_DATA_ID_NULL,
+                ADLB_DATA_ERROR_NULL, "NULL: <%li>", id);
+
+  adlb_datum* d = table_lp_search(&tds, id);
+  check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
+                "not found: <%li>", id);
+
+  // For containers, mark that it has a complete value
+  d->status |= ADLB_DATA_SET_MASK;
+
+  list_i_toints(&d->listeners, result, count);
+  DEBUG("data_close: <%li> listeners: %i", id, *count);
+  list_i_clear(&d->listeners);
+  TRACE_END;
   return ADLB_DATA_SUCCESS;
 }
 
@@ -524,7 +596,7 @@ data_store(adlb_datum_id id, void* buffer, int length)
    Used by data_retrieve()
 */
 #define CHECK_SET(id, d)                              \
-  if (d->status == ADLB_DATA_UNSET) {                 \
+  if (!ADLB_DATA_SET(d->status)) {                 \
     printf("not set: %li\n", id);    \
     return ADLB_DATA_ERROR_UNSET;                     \
   }
@@ -694,39 +766,16 @@ data_container_size(adlb_datum_id container_id, int* size)
   return ADLB_DATA_SUCCESS;
 }
 
-adlb_data_code
-data_slot_create(adlb_datum_id container_id, int incr)
-{
-  // Check that this is a valid container
-  int* slots = table_lp_search(&container_slots, container_id);
-  check_verbose(slots != NULL, ADLB_DATA_ERROR_TYPE,
-                "not a container: <%li>", container_id);
 
-  *slots = (*slots) + incr;
-  DEBUG("slots: <%li> => %i", container_id, *slots);
-
-  return ADLB_DATA_SUCCESS;
-}
-
-adlb_data_code
-data_slot_drop(adlb_datum_id container_id, int decr, int* result)
-{
-  // Check that this is a valid container
-  int* slots = table_lp_search(&container_slots, container_id);
-  check_verbose(slots != NULL, ADLB_DATA_ERROR_TYPE,
-                "not a container: <%li>", container_id);
-
-  *slots = (*slots) - decr;
-  DEBUG("slots: <%li> => %i", container_id, *slots);
-
-  *result = *slots;
-  return ADLB_DATA_SUCCESS;
-}
-
+/**
+   Allocates fresh memory in result unless notify_count==0
+   Caller must free result
+ */
 adlb_data_code
 data_insert(adlb_datum_id container_id,
             const char* subscript, const char* member, int drops,
-            adlb_datum_id** references, int* count, int* slots)
+            adlb_datum_id** references, int* references_count,
+            int **notify_ranks, int *notify_count)
 {
   adlb_datum* d = table_lp_search(&tds, container_id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
@@ -763,13 +812,12 @@ data_insert(adlb_datum_id container_id,
     table_add(d->data.CONTAINER.members, subscript, member);
   }
 
-  // Drop slot count for this container
-  int* p  = table_lp_search(&container_slots, container_id);
-  *p = (*p) - drops;
-  *slots = *p;
-  DEBUG("slots: <%li> => %i", container_id, *slots);
-  if (slots < 0)
-    return ADLB_DATA_ERROR_SLOTS_NEGATIVE;
+  *notify_count = 0; // Default: no notification needed
+  // Drop writer count for this container
+  if (drops != 0) {
+    data_reference_count(container_id, ADLB_WRITE_REFCOUNT, -1 * drops,
+                         notify_ranks, notify_count);
+  }
 
   // Find, remove, and return any listening container references
   char s[ADLB_DATA_SUBSCRIPT_MAX+32];
@@ -779,11 +827,11 @@ data_insert(adlb_datum_id container_id,
   struct list_l* listeners = data;
   if (result)
   {
-    list_l_tolongs(listeners, references, count);
+    list_l_tolongs(listeners, references, references_count);
     list_l_free(listeners);
   }
   else
-    *count = 0;
+    *references_count = 0;
 
   TRACE("data_insert(): DONE");
   return ADLB_DATA_SUCCESS;
@@ -953,7 +1001,10 @@ report_leaks()
     struct list_lp* L = &tds.array[i];
     for (struct list_lp_item* item = L->head; item; item = item->next)
     {
-      DEBUG("LEAK: %li", item->key);
+      adlb_datum *d = item->data;
+      if (d == NULL || !ADLB_DATA_PERMANENT(d->status)) {
+        DEBUG("LEAK: %li", item->key);
+      }
     }
   }
 }
