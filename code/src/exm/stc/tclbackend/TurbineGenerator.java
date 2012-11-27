@@ -521,7 +521,11 @@ public class TurbineGenerator implements CompilerBackend
     }
     
     List<Var> outL = (out == null) ? 
-          new ArrayList<Var>(0) : Arrays.asList(out);
+          Arrays.<Var>asList() : Arrays.asList(out);
+
+    // Increment refcount so function owns ref
+    pointStack.peek().add(incrementReaders(inputs, null));
+
     builtinFunctionCall("operator: " + op.toString(), fn, 
                         inputs, outL, priority);
   }
@@ -656,6 +660,9 @@ public class TurbineGenerator implements CompilerBackend
     assert(priority == null || priority.isImmediateInt());
     logger.debug("call builtin: " + function);
     TclFunRef tclf = builtinSymbols.get(function);
+
+    // Increment references so that function owns ref
+    pointStack.peek().add(incrementReaders(inputs, null));
 
     builtinFunctionCall(function, tclf, inputs, outputs, priority);
   }
