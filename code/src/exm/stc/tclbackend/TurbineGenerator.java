@@ -1346,9 +1346,20 @@ public class TurbineGenerator implements CompilerBackend
                                    refIncrAmount));
     }
 
-    private Sequence incrementReaders(List<Var> vars, Expression incr) {
+    /**
+     * @param t
+     * @return true if type has refcount to be managed
+     */
+    private static boolean hasRefcount(Var v) {
+      return !Types.isScalarValue(v.type());
+    }
+
+    private static Sequence incrementReaders(List<Var> vars, Expression incr) {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(vars)) {
+        if (!hasRefcount(vc.var)) {
+          continue;
+        }
         if (incr == null) {
           seq.add(Turbine.incrRef(varToExpr(vc.var), new LiteralInt(vc.count)));
         } else if (vc.count == 1) {
@@ -1361,10 +1372,13 @@ public class TurbineGenerator implements CompilerBackend
       return seq;
     }
     
-    private Sequence incrementWriters(List<Var> keepOpenVars,
+    private static Sequence incrementWriters(List<Var> keepOpenVars,
           Expression incr) {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(keepOpenVars)) {
+        if (!hasRefcount(vc.var)) {
+          continue;
+        }
         if (incr == null) {
           seq.add(Turbine.containerSlotCreate(varToExpr(vc.var), new LiteralInt(vc.count)));
         } else if (vc.count == 1) {
@@ -1391,6 +1405,9 @@ public class TurbineGenerator implements CompilerBackend
     private Sequence decrementReaders(List<Var> vars, Expression incr) {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(vars)) {
+        if (!hasRefcount(vc.var)) {
+          continue;
+        }
         if (incr == null) {
           seq.add(Turbine.incrRef(varToExpr(vc.var), new LiteralInt(-1 * vc.count)));
         } else if (vc.count == 1) {
@@ -1412,6 +1429,9 @@ public class TurbineGenerator implements CompilerBackend
                                              Expression decr) {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(vars)) {
+        if (!hasRefcount(vc.var)) {
+          continue;
+        }
         if (decr == null) {
           seq.add(Turbine.containerSlotDrop(varToExpr(vc.var), new LiteralInt(vc.count)));
         } else if (vc.count == 1) {
