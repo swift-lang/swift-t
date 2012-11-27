@@ -1898,10 +1898,6 @@ public class TurbineGenerator implements CompilerBackend
             Types.isRef(var.type()) ||
             Types.isArray(var.type())) {
       waitExpr = wv;
-    } else if (Types.isScalarUpdateable(var.type())) {
-      // TODO: this is a hack for the time being required while we're
-      // using futures and updateables interchangably
-      waitExpr = wv;
     } else {
       throw new STCRuntimeError("Don't know how to wait on var: "
               + var.toString());

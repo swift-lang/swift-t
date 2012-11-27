@@ -207,8 +207,9 @@ public class WaitCoalescer {
       Instruction i = it.next();
       MakeImmRequest req = i.canMakeImmediate(empty, true);
       if (req != null && req.in.size() > 0) {
+        List<Var> waitVars = ICUtil.filterBlockingOnly(req.in);
         WaitStatement wait = new WaitStatement(fn.getName() + "-optinserted",
-                req.in, req.in, new ArrayList<Var>(0), WaitMode.DATA_ONLY,
+                waitVars, req.in, new ArrayList<Var>(0), WaitMode.DATA_ONLY,
                 TaskMode.LOCAL);
 
         List<Instruction> instBuffer = new ArrayList<Instruction>();

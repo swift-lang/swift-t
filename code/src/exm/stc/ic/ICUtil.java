@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -304,6 +305,21 @@ public class ICUtil {
     for (Arg a: args) {
       if (a.isVar()) {
         res.add(a.getVar());
+      }
+    }
+    return res;
+  }
+
+  /**
+   * Return only variables that need to be blocked on to read results
+   */
+  public static List<Var> filterBlockingOnly(List<Var> vars) {
+    List<Var> res = new ArrayList<Var>();
+    for (Var var: vars) {
+      if (Types.isScalarFuture(var.type()) ||
+          Types.isRef(var.type()) || 
+          Types.isArray(var.type())) {
+        res.add(var);
       }
     }
     return res;
