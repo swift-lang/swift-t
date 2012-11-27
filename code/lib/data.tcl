@@ -156,7 +156,7 @@ namespace eval turbine {
         adlb::create $id $adlb::FLOAT $updateable
     }
 
-    proc store_float { id value args } {
+    proc store_float { id value } {
         log "store: <$id>=$value"
         set waiters [ adlb::store $id $adlb::FLOAT $value ]
         notify_waiters $id $waiters

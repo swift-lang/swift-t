@@ -2,10 +2,10 @@
 
 namespace eval turbine {
 
-  # initialise updateable variable o with value in future i
-  # for now, assume floats
-  proc init_updateable { stack o i } {
-    #TODO
+  # initialise updateable variable o with provided float value
+  # must be initialized before other operations can proceed
+  proc init_updateable_float { id val } {
+    adlb::store $id $adlb::FLOAT $val 0
   }
 
   proc lock_loop { id } {
