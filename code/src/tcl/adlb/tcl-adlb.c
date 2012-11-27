@@ -1534,7 +1534,8 @@ ADLB_Permanent_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /**
    usage: adlb::refcount_incr <container_id> <refcount_type> <change>
-   refcount_type in { $adlb::READ_REFCOUNT , $adlb::WRITE_REFCOUNT }
+   refcount_type in { $adlb::READ_REFCOUNT , $adlb::WRITE_REFCOUNT ,
+          $adlb::READWRITE_REFCOUNT }
 */
 static int
 ADLB_Refcount_Incr_Cmd(ClientData cdata, Tcl_Interp *interp,

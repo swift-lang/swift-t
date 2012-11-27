@@ -27,6 +27,9 @@ namespace eval turbine {
     # Catches known errors from Turbine libraries via Tcl return/catch
     variable error_code
 
+    # Whether read reference counting is enabled.  Default to off
+    variable read_refcounting_on
+
     # User function
     # param e Number of engines
     # param s Number of ADLB servers
@@ -41,6 +44,9 @@ namespace eval turbine {
         variable default_priority
         set default_priority 0
         reset_priority
+
+        variable read_refcounting_on
+        set read_refcounting_on 0
 
         # Set up work types
         enum WORK_TYPE { WORK CONTROL }
@@ -141,6 +147,11 @@ namespace eval turbine {
     proc set_priority { p } {
         variable priority
         set priority $p
+    }
+
+    proc enable_read_refcounting {} {
+      variable read_refcounting_on
+      set read_refcounting_on 1
     }
 
     proc debug { msg } {
