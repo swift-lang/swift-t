@@ -25,7 +25,13 @@ do
       # check if branch exists
       if git checkout $b &> /dev/null; then
         # rebase against remote
-        git rebase remotes/svn/$b
+        
+        if git rebase remotes/svn/$b; then
+          :
+        else
+          echo "Rebase of branch $b of $subrepo failed, you will need to resolve yourself"
+          exit 1
+        fi
       else
         # Checkout as local branch
         git branch $b remotes/svn/$b
