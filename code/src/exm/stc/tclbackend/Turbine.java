@@ -611,6 +611,10 @@ class Turbine
     return new Command(CONTAINER_SLOT_DROP, arr, decr);
   }
   
+  public static Command enableReferenceCounting() {
+    return new Command("turbine::enable_read_refcounting");
+  }
+
   /**
    * Modify reference count by amount
    * @param var
