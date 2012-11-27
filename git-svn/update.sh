@@ -10,28 +10,31 @@ do
   
   # rebase against trunk
   echo "Updating branch master" 
-  git checkout master
+  git checkout -q master
   git svn rebase
   SVN_BRANCHES=$(git branch -r | grep 'svn/' | sed 's, *svn/,,')
   for b in ${SVN_BRANCHES}
   do
     if [[ "$b" =~ tags/.* ]]; then
       tag=`echo "$b" | sed 's,tags/,,'`
-      echo "Updating tag $tag"
+      echo "Updating tag $tag of $subrepo"
       git tag -f -a $tag -m "SVN tag $tag" remotes/svn/tags/$tag
+      echo
     elif [[ "$b" != trunk && !("$b" =~ .*@.*) ]]; then
-      echo "Updating branch $b"
+      echo "Updating branch $b of $subrepo"
       # check if branch exists
       if git checkout $b &> /dev/null; then
         # rebase against remote
-        git svn rebase
+        git rebase remotes/svn/$b
       else
         # Checkout as local branch
-        git checkout -b $b remotes/svn/$b
+        git branch $b remotes/svn/$b
       fi
+      echo
     fi
   done
-  git checkout master
+  echo
+  git checkout -q master
   popd > /dev/null
 done
 
