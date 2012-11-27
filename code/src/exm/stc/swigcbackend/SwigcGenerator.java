@@ -2092,7 +2092,7 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void loopBreak(List<Var> containersToClose) {
+    public void loopBreak(List<Var> usedVars, List<Var> containersToClose) {
       for (Var arr: containersToClose) {
         pointStack.peek().add(
              Turbine.containerSlotDrop(varToExpr(arr)));

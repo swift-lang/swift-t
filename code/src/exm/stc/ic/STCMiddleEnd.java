@@ -325,9 +325,8 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void loopBreak(List<Var> closeVars) {
-    LoopBreak inst = new LoopBreak(
-        new ArrayList<Var>(closeVars));
+  public void loopBreak(List<Var> loopUsedVars, List<Var> closeVars) {
+    LoopBreak inst = new LoopBreak(loopUsedVars, closeVars);
     currBlock().addInstruction(inst);
     loopStack.peek().setLoopBreak(inst);
   }

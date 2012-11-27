@@ -911,7 +911,7 @@ public class ASTWalker {
       }
     }
     
-    backend.loopBreak(keepOpenVars);
+    backend.loopBreak(usedVariables, keepOpenVars);
     backend.endIfStatement();
     // finish loop construct
     backend.endLoop();
@@ -959,9 +959,7 @@ public class ASTWalker {
     Var condVal = varCreator.fetchValueOf(bodyContext, condArg); 
     
     backend.startIfStatement(Arg.createVar(condVal), true);
-    if (keepOpenVars.size() > 0) {
-      backend.loopBreak(keepOpenVars);
-    }
+    backend.loopBreak(usedVariables, keepOpenVars);
     backend.startElseBlock();
     block(bodyContext, loop.getBody());
     

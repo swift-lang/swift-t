@@ -358,7 +358,12 @@ public interface CompilerBackend {
   public abstract void loopContinue(List<Var> newVals,
       List<Var> usedVariables, List<Var> keepOpenVars,
       List<Boolean> blockingVars);
-  public abstract void loopBreak(List<Var> varsToClose);
+  /**
+   * @param loopUsedVars variables from outside loop referred to in loop.
+   *              references decremented at loop break
+   * @param keepOpenVars
+   */
+  public abstract void loopBreak(List<Var> loopUsedVars, List<Var> keepOpenVars);
   public abstract void endLoop();
 
 }

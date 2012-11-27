@@ -3,6 +3,8 @@ package exm.stc.common.lang;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -186,6 +188,36 @@ public class Var {
     return diff;
   }
   
+  public static class VarCount {
+    public Var var;
+    public int count;
+    public VarCount(Var var, int count) {
+      super();
+      this.var = var;
+      this.count = count;
+    }
+  }
+  public static List<VarCount> countVars(List<Var> list) {
+    ArrayList<Var> sorted = new ArrayList<Var>(list);
+    Collections.sort(sorted, new Comparator<Var>() {
+      @Override
+      public int compare(Var v1, Var v2) {
+        return v1.name().compareTo(v2.name());
+      }
+    });
+    ArrayList<VarCount> res = new ArrayList<VarCount>();
+    VarCount curr = null;
+    for (Var v: sorted) {
+      if (curr == null || !v.name().equals(curr.var.name())) {
+        curr = new VarCount(v, 1);
+        res.add(curr);
+      } else {
+        curr.count++;
+      }
+    }
+    return res;
+  }
+
   /**
    * Union of lists with one instance of each variable by name
    * included in result

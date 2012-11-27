@@ -37,6 +37,7 @@ import exm.stc.common.lang.Types.PrimType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.tclbackend.Turbine.CacheMode;
 import exm.stc.tclbackend.Turbine.StackFrameType;
@@ -713,6 +714,9 @@ public class TurbineGenerator implements CompilerBackend
 
     setPriority(priority);
     if (mode == TaskMode.CONTROL || mode == TaskMode.LOCAL) {
+      // Increment reference counts to keep open
+      pointStack.peek().append(incrementReaders(outputs, null));
+      pointStack.peek().append(incrementReaders(inputs, null));
       // TODO: should handle local separately - this will put local tasks
       //      into load balancer
       pointStack.peek().add(Turbine.callFunction(
@@ -1305,9 +1309,7 @@ public class TurbineGenerator implements CompilerBackend
       }
 
       // increment read or write refs as needed
-      List<Var> refIncVars = Var.varListDiff(usedVariables, keepOpenVars);
-      pointStack.peek().append(incrementReaders(refIncVars));
-      pointStack.peek().append(incrementWriters(keepOpenVars));
+      incrementAllRefs(usedVariables, keepOpenVars);
 
       TclList action = buildAction(uniqueName, toPassIn);
       
@@ -1319,75 +1321,97 @@ public class TurbineGenerator implements CompilerBackend
 
     private void endAsync(List<Var> usedVars, List<Var> keepOpenVars) {
       // decrement read or write refs as needed
-      List<Var> refIncVars = Var.varListDiff(usedVars, keepOpenVars);
-      pointStack.peek().append(decrementReaders(refIncVars));
-      pointStack.peek().append(decrementWriters(keepOpenVars));
+      decrementAllRefs(usedVars, keepOpenVars);
       pointStack.pop();
     }
 
-    private Sequence incrementReaders(List<Var> vars) { 
-      return incrementReaders(vars, null);
+
+    private void incrementAllRefs(List<Var> usedVars, List<Var> keepOpenVars) {
+      incrementAllRefs(usedVars, keepOpenVars, null);
     }
     
+    private void incrementAllRefs(List<Var> usedVars, List<Var> keepOpenVars, Expression refIncrAmount) {
+      List<Var> readOnlyUsedVars = Var.varListDiff(usedVars,
+                                                   keepOpenVars);
+      pointStack.peek().append(incrementReaders(readOnlyUsedVars,
+                                   refIncrAmount));
+      pointStack.peek().append(incrementWriters(keepOpenVars,
+                                   refIncrAmount));
+    }
+
     private Sequence incrementReaders(List<Var> vars, Expression incr) {
       Sequence seq = new Sequence();
-      for (Var v: vars) {
+      for (VarCount vc: Var.countVars(vars)) {
         if (incr == null) {
-          seq.add(Turbine.incrRef(varToExpr(v)));
+          seq.add(Turbine.incrRef(varToExpr(vc.var), new LiteralInt(vc.count)));
+        } else if (vc.count == 1) {
+          seq.add(Turbine.incrRef(varToExpr(vc.var), incr));
         } else {
-          seq.add(Turbine.incrRef(varToExpr(v), incr));
+          seq.add(Turbine.incrRef(varToExpr(vc.var),
+              Square.arithExpr(new LiteralInt(vc.count), new Token("*"), incr)));
         }
       }
       return seq;
-    }
-    
-    private Sequence decrementReaders(List<Var> vars) { 
-      return decrementReaders(vars, null);
-    }
-    
-    private Sequence decrementReaders(List<Var> vars, Expression incr) {
-      Sequence seq = new Sequence();
-      for (Var v: vars) {
-        if (incr == null) {
-          seq.add(Turbine.decrRef(varToExpr(v)));
-        } else {
-          Square negated = Square.arithExpr(new LiteralInt(-1),
-                  new Token("*"), incr);
-          seq.add(Turbine.incrRef(varToExpr(v), negated));
-        }
-      }
-      return seq;
-    }
-    
-    private Sequence incrementWriters(List<Var> keepOpenVars) {
-      return incrementWriters(keepOpenVars, null);
     }
     
     private Sequence incrementWriters(List<Var> keepOpenVars,
           Expression incr) {
       Sequence seq = new Sequence();
-      for (Var c: keepOpenVars) {
+      for (VarCount vc: Var.countVars(keepOpenVars)) {
         if (incr == null) {
-          seq.add(Turbine.containerSlotCreate(varToExpr(c)));
+          seq.add(Turbine.containerSlotCreate(varToExpr(vc.var), new LiteralInt(vc.count)));
+        } else if (vc.count == 1) {
+          seq.add(Turbine.containerSlotCreate(varToExpr(vc.var), incr));
         } else {
-          seq.add(Turbine.containerSlotCreate(varToExpr(c), incr));
+          seq.add(Turbine.containerSlotCreate(varToExpr(vc.var),
+              Square.arithExpr(new LiteralInt(vc.count), new Token("*"), incr)));
+        }
+      }
+      return seq;
+    }
+    
+    private void decrementAllRefs(List<Var> usedVars, List<Var> keepOpenVars) {
+      decrementAllRefs(usedVars, keepOpenVars, null);
+    }
+    
+    private void decrementAllRefs(List<Var> usedVars, List<Var> keepOpenVars,
+        Expression refDecrAmount) {
+      List<Var> readOnlyUsedVars = Var.varListDiff(usedVars, keepOpenVars);
+      pointStack.peek().append(decrementReaders(readOnlyUsedVars, refDecrAmount));
+      pointStack.peek().append(decrementWriters(keepOpenVars, refDecrAmount));
+    }
+
+    private Sequence decrementReaders(List<Var> vars, Expression incr) {
+      Sequence seq = new Sequence();
+      for (VarCount vc: Var.countVars(vars)) {
+        if (incr == null) {
+          seq.add(Turbine.incrRef(varToExpr(vc.var), new LiteralInt(-1 * vc.count)));
+        } else if (vc.count == 1) {
+          seq.add(Turbine.incrRef(varToExpr(vc.var), negate(incr)));
+        } else {
+          seq.add(Turbine.incrRef(varToExpr(vc.var),
+              Square.arithExpr(new LiteralInt(vc.count * -1), new Token("*"), incr)));
         }
       }
       return seq;
     }
 
-    private static Sequence decrementWriters(List<Var> vars) {
-      return decrementWriters(vars, null);
+    private Square negate(Expression expr) {
+      return Square.arithExpr(new LiteralInt(-1),
+              new Token("*"), expr);
     }
-    
+
     private static Sequence decrementWriters(List<Var> vars,
                                              Expression decr) {
       Sequence seq = new Sequence();
-      for (Var v: vars) {
+      for (VarCount vc: Var.countVars(vars)) {
         if (decr == null) {
-          seq.add(Turbine.decrArrayWriters(varToExpr(v)));
+          seq.add(Turbine.containerSlotDrop(varToExpr(vc.var), new LiteralInt(vc.count)));
+        } else if (vc.count == 1) {
+          seq.add(Turbine.containerSlotDrop(varToExpr(vc.var), decr));
         } else {
-          seq.add(Turbine.containerSlotDrop(varToExpr(v), decr));
+          seq.add(Turbine.containerSlotDrop(varToExpr(vc.var),
+              Square.arithExpr(new LiteralInt(vc.count), new Token("*"), decr)));
         }
       }
       return seq;
@@ -1688,12 +1712,7 @@ public class TurbineGenerator implements CompilerBackend
     // Increment references by # of iterations
     pointStack.peek().add(new SetVariable(TCLTMP_ITERSTOTAL,
                      rangeItersLeft(startE, endE, incrE)));
-    List<Var> readOnlyUsedVars = Var.varListDiff(usedVariables,
-                                                 keepOpenVars);
-    pointStack.peek().append(incrementReaders(readOnlyUsedVars,
-                                 new Value(TCLTMP_ITERSTOTAL)));
-    pointStack.peek().append(incrementWriters(keepOpenVars,
-                                 new Value(TCLTMP_ITERSTOTAL)));
+    incrementAllRefs(usedVariables, keepOpenVars, new Value(TCLTMP_ITERSTOTAL));
     
     // Call outer directly
     pointStack.peek().add(new Command(outerProcName, outerCallArgs));
@@ -1755,25 +1774,13 @@ public class TurbineGenerator implements CompilerBackend
             new Token("+"), new LiteralInt(1));
   }
 
-  private static TclTree conditionalDecr(Expression cond, List<Var> vars,
-        Expression decr) {
-    Sequence decrementBlock = new Sequence();
-    If decrementBranch = new If(cond, decrementBlock);
-    decrementBlock.append(decrementWriters(vars, decr));
-    return decrementBranch;
-  }
-
   private void endRangeSplit(List<Var> usedVars, List<Var> keepOpenVars) {
     // Decrement # of iterations executed in inner block
     pointStack.peek().add(new SetVariable(TCLTMP_REF_DECR, 
                             rangeItersLeft(new Value(TCLTMP_RANGE_LO),
                                            new Value(TCLTMP_RANGE_HI),
                                            new Value(TCLTMP_RANGE_INC))));
-    List<Var> readOnlyUsedVars = Var.varListDiff(usedVars,
-                                                 keepOpenVars);
-    Value refDecr = new Value(TCLTMP_REF_DECR);
-    pointStack.peek().append(decrementReaders(readOnlyUsedVars, refDecr));
-    pointStack.peek().append(decrementWriters(keepOpenVars, refDecr));
+    decrementAllRefs(usedVars, keepOpenVars, new Value(TCLTMP_REF_DECR));
     pointStack.pop(); // inner proc body
   }
 
@@ -1959,12 +1966,8 @@ public class TurbineGenerator implements CompilerBackend
           blockingVals.add(varToExpr(iv));
         }
       }
-
-
-      List<Var> readOnlyUsedVars = Var.varListDiff(usedVariables,
-                                                   keepOpenVars);
-      pointStack.peek().append(incrementReaders(readOnlyUsedVars));
-      pointStack.peek().append(incrementWriters(keepOpenVars));
+      // Increment references before async call
+      incrementAllRefs(usedVariables, keepOpenVars);
 
       String uniqueLoopName = uniqueTCLFunctionName(loopName);
 
@@ -2016,8 +2019,8 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     @Override
-    public void loopBreak(List<Var> containersToClose) {
-      pointStack.peek().append(decrementWriters(containersToClose));
+    public void loopBreak(List<Var> loopUsedVars, List<Var> keepOpenVars) {
+      decrementAllRefs(loopUsedVars, keepOpenVars);
     }
 
     @Override

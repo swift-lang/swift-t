@@ -2287,17 +2287,24 @@ public class ICInstructions {
   
   public static class LoopBreak extends Instruction {
     /**
+     * Variables where refcount should be decremented upon loop termination
+     */
+    private final ArrayList<Var> loopUsedVars;
+
+    /**
      * Variables to be closed upon loop termination
      */
-    private final List<Var> varsToClose;
+    private final ArrayList<Var> varsToClose;
   
-    public LoopBreak(List<Var> varsToClose) {
+    public LoopBreak(List<Var> loopUsedVars, List<Var> varsToClose) {
       super(Opcode.LOOP_BREAK);
-      this.varsToClose = varsToClose;
+      this.loopUsedVars = new ArrayList<Var>(loopUsedVars);
+      this.varsToClose = new ArrayList<Var>(varsToClose);
     }
   
     @Override
     public void renameVars(Map<String, Arg> renames) {
+    ICUtil.replaceVarsInList(renames, loopUsedVars, true);
       ICUtil.replaceVarsInList(renames, varsToClose, true);
     }
   
@@ -2310,6 +2317,12 @@ public class ICInstructions {
     public String toString() {
       StringBuilder sb = new StringBuilder();
       sb.append(this.op.toString().toLowerCase());
+      sb.append("[");
+      for (Var v: this.loopUsedVars) {
+        sb.append(' ');
+        sb.append(v.name());
+      }
+      sb.append("] [");
       for (Var v: this.varsToClose) {
         sb.append(' ');
         sb.append(v.name());
@@ -2319,7 +2332,7 @@ public class ICInstructions {
   
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.loopBreak(varsToClose);
+      gen.loopBreak(loopUsedVars, varsToClose);
     }
   
     @Override
@@ -2374,7 +2387,7 @@ public class ICInstructions {
 
     @Override
     public Instruction clone() {
-      return new LoopBreak(new ArrayList<Var>(varsToClose));
+      return new LoopBreak(loopUsedVars, varsToClose);
     }
   }
   
