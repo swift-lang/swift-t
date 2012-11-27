@@ -331,10 +331,10 @@ public class TurbineGenerator implements CompilerBackend
     assert(target.type().memberType().equals(src.type()));
     if (refIsString(target.type())) {
       pointStack.peek().add(Turbine.stringSet(
-          prefixVar(target.name()), varToExpr(src)));
+          varToExpr(target), varToExpr(src)));
     } else {
       pointStack.peek().add(Turbine.integerSet(
-          prefixVar(target.name()), varToExpr(src)));
+          varToExpr(target), varToExpr(src)));
     }
   }
 
@@ -356,8 +356,7 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     pointStack.peek().add(Turbine.integerSet(
-                              prefixVar(target.name()),
-                              opargToExpr(src)));
+        varToExpr(target), opargToExpr(src)));
   }
 
   @Override
@@ -379,8 +378,7 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     pointStack.peek().add(Turbine.integerSet(
-                             prefixVar(target.name()),
-                             opargToExpr(src)));
+        varToExpr(target), opargToExpr(src)));
   }
 
   @Override
@@ -417,8 +415,7 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     pointStack.peek().add(Turbine.floatSet(
-                              prefixVar(target.name()),
-                              opargToExpr(src)));
+          varToExpr(target), opargToExpr(src)));
   }
 
   @Override
@@ -438,8 +435,8 @@ public class TurbineGenerator implements CompilerBackend
           + " but was " + target.type().toString());
     }
 
-    pointStack.peek().add(Turbine.stringSet(prefixVar(target.name()),
-                                                opargToExpr(src)));
+    pointStack.peek().add(Turbine.stringSet(
+        varToExpr(target), opargToExpr(src)));
   }
 
   @Override
@@ -1026,8 +1023,8 @@ public class TurbineGenerator implements CompilerBackend
           " not yet supported");
     }
     assert(val.isImmediateFloat());
-    pointStack.peek().add(Turbine.floatSet(prefixVar(updateable.name()),
-                                                         opargToExpr(val)));
+    pointStack.peek().add(Turbine.updateableFloatInit(varToExpr(updateable),
+                                                      opargToExpr(val)));
   }
 
   @Override
@@ -1822,6 +1819,7 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void addGlobal(String name, Arg val) {
     String tclName = prefixVar(name);
+    Value tclVal = new Value(tclName);
     globInit.add(Turbine.makeTCLGlobal(tclName));
     String typePrefix;
     Expression expr;
@@ -1830,22 +1828,22 @@ public class TurbineGenerator implements CompilerBackend
     case INTVAL:
       typePrefix = Turbine.INTEGER_TYPENAME;
       expr = new LiteralInt(val.getIntLit());
-      setCmd = Turbine.integerSet(tclName, expr);
+      setCmd = Turbine.integerSet(tclVal, expr);
       break;
     case FLOATVAL:
       typePrefix = Turbine.FLOAT_TYPENAME;
       expr = new LiteralFloat(val.getFloatLit());
-      setCmd = Turbine.floatSet(tclName, expr);
+      setCmd = Turbine.floatSet(tclVal, expr);
       break;
     case STRINGVAL:
       typePrefix = Turbine.STRING_TYPENAME;
       expr = new TclString(val.getStringLit(), true);
-      setCmd = Turbine.stringSet(tclName, expr);
+      setCmd = Turbine.stringSet(tclVal, expr);
       break;
     case BOOLVAL:
       typePrefix = Turbine.INTEGER_TYPENAME;
       expr = new LiteralInt(val.getBoolLit() ? 1 : 0);
-      setCmd = Turbine.integerSet(tclName, expr);
+      setCmd = Turbine.integerSet(tclVal, expr);
       break;
     default:
       throw new STCRuntimeError("Non-constant oparg type "
@@ -1856,7 +1854,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   /**
-     Generate and return Tcl from our internal TclTree
+     Generate and return Tcl from  our internal TclTree
    */
     @Override
     public String code()

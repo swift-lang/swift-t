@@ -121,6 +121,8 @@ class Turbine
   private static final Token STORE_STRING =
       new Token("turbine::store_string");
   private static final Token STORE_BLOB = new Token("turbine::store_blob");
+  private static final Token INIT_UPD_FLOAT =
+      new Token("turbine::init_updateable_float");
   private static final Token CONTAINER_DEREF_INSERT =
       new Token("turbine::container_deref_insert");
   private static final Token CONTAINER_F_DEREF_INSERT =
@@ -251,24 +253,24 @@ class Turbine
    return new SetVariable(target, new Square(RETRIEVE_UNTYPED, variable));
   }
 
-  public static Command stringSet(String turbineDstVar, Expression src) {
-    return new Command(STORE_STRING, new Value(turbineDstVar), src);
+  public static Command stringSet(Value turbineDstVar, Expression src) {
+    return new Command(STORE_STRING, turbineDstVar, src);
   }
 
-  public static Command integerSet(String turbineDstVar, Expression src) {
-    return new Command(STORE_INTEGER, new Value(turbineDstVar), src);
+  public static Command integerSet(Value turbineDstVar, Expression src) {
+    return new Command(STORE_INTEGER, turbineDstVar, src);
   }
   
   public static TclTree voidSet(Value voidVar) {
     return new Command(STORE_VOID, voidVar);
   }
 
-  public static Command floatSet(String turbineDstVar, Expression src) {
-    // The TD is a Value
-    Value t = new Value(turbineDstVar);
-    // The value is a literal Token
-    Command c = new Command(STORE_FLOAT, t, src);
-    return c;
+  public static Command floatSet(Value turbineDstVar, Expression src) {
+    return new Command(STORE_FLOAT, turbineDstVar, src);
+  }
+  
+  public static Command updateableFloatInit(Value turbineDstVar, Expression src) {
+    return new Command(INIT_UPD_FLOAT, turbineDstVar, src);
   }
 
   public static SetVariable floatGet(String target, Value variable) {
