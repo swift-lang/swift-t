@@ -187,10 +187,10 @@ public class ExprWalker {
         throw new UndefinedVariableException(context, "Variable " + varName
             + " is not defined");
       }
-  
+      
       // Check to see that the current variable's storage is adequate
       // Might need to convert type, can't do that here
-      if (var.storage() == VarStorage.STACK || (!storeInStack)
+      if ((var.storage() == VarStorage.STACK || (!storeInStack))
               && var.type().equals(type)) {
         return var;
       }
