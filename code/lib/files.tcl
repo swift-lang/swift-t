@@ -78,9 +78,8 @@ namespace eval turbine {
     }
 
     proc input_file_body { outfile filepath } {
-      set filepath_val [ retrieve_string $filepath ]
+      set filepath_val [ retrieve_decr_string $filepath ]
       input_file_impl $outfile $filepath_val
-      read_refcount_decr $filepath
     }
 
     proc input_file_impl { outfile filepath_val } {
@@ -172,7 +171,7 @@ namespace eval turbine {
     }
 
     proc glob_body { result s } {
-        set s_value [ retrieve_string $s ]
+        set s_value [ retrieve_decr_string $s ]
         set r_value [ ::glob $s_value ]
         set n [ llength $r_value ]
         log "glob: $s_value tokens: $n"
@@ -183,7 +182,6 @@ namespace eval turbine {
         }
         # close container
         adlb::slot_drop $result
-        read_refcount_decr $s
     }
 
     proc readFile { stack result inputs } {
@@ -213,11 +211,10 @@ namespace eval turbine {
     proc writeFile_body { outputs str } {
 	set dst [ lindex $outputs 0 ]
 	set dstpath [ get_file_path $dst ]
-	set d [ retrieve_string $dstpath ]
+	set d [ retrieve_decr_string $dstpath ]
 	set fp [ ::open $d w+ ]
 	puts $fp $str
 	close $fp
 	store_void [ get_file_status $dst ]
-        read_refcount_decr $dstpath
     }
 }

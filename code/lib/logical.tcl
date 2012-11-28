@@ -27,11 +27,10 @@ namespace eval turbine {
             $turbine::LOCAL "not_body $o $i"
     }
     proc not_body { o i } {
-        set i_value [ retrieve_integer $i ]
+        set i_value [ retrieve_decr_integer $i ]
         set o_value [ expr ! $i_value ]
         log "not $i_value => $o_value"
         store_integer $o $o_value
-        read_refcount_decr $i
     }
 
     # This is a Swift-2 function
@@ -43,15 +42,13 @@ namespace eval turbine {
             $turbine::LOCAL "and_body $c $a $b"
     }
     proc and_body { c a b } {
-        set a_value [ retrieve_integer $a ]
-        set b_value [ retrieve_integer $b ]
+        set a_value [ retrieve_decr_integer $a ]
+        set b_value [ retrieve_decr_integer $b ]
         set c_value [ expr $a_value && $b_value ]
         # Emulate some computation time
         log "and: $a_value && $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
-        read_refcount_decr $a
-        read_refcount_decr $b
     }
 
     # This is a Swift-2 function
@@ -63,15 +60,13 @@ namespace eval turbine {
             $turbine::LOCAL "or_body $c $a $b"
     }
     proc or_body { c a b } {
-        set a_value [ retrieve_integer $a ]
-        set b_value [ retrieve_integer $b ]
+        set a_value [ retrieve_decr_integer $a ]
+        set b_value [ retrieve_decr_integer $b ]
         set c_value [ expr $a_value || $b_value ]
         # Emulate some computation time
         log "or: $a_value || $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
-        read_refcount_decr $a
-        read_refcount_decr $b
     }
 
     proc eq_integer { parent c inputs } {
@@ -81,8 +76,8 @@ namespace eval turbine {
             $turbine::LOCAL "eq_integer_body $c $a $b"
     }
     proc eq_integer_body { c a b } {
-        set a_value [ retrieve_integer $a ]
-        set b_value [ retrieve_integer $b ]
+        set a_value [ retrieve_decr_integer $a ]
+        set b_value [ retrieve_decr_integer $b ]
         if { [ expr $a_value == $b_value ] } {
             set c_value 1
         } else {
@@ -92,8 +87,6 @@ namespace eval turbine {
         log "eq_integer $a_value == $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
-        read_refcount_decr $a
-        read_refcount_decr $b
     }
 
     proc neq_integer { parent c inputs } {
@@ -103,8 +96,8 @@ namespace eval turbine {
             $turbine::LOCAL "neq_integer_body $c $a $b"
     }
     proc neq_integer_body { c a b } {
-        set a_value [ retrieve_integer $a ]
-        set b_value [ retrieve_integer $b ]
+        set a_value [ retrieve_decr_integer $a ]
+        set b_value [ retrieve_decr_integer $b ]
         if { [ expr $a_value != $b_value ] } {
             set c_value 1
         } else {
@@ -114,8 +107,6 @@ namespace eval turbine {
         log "neq_integer $a_value == $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
-        read_refcount_decr $a
-        read_refcount_decr $b
     }
 
     proc lt_integer { parent c inputs } {
@@ -125,8 +116,8 @@ namespace eval turbine {
             $turbine::LOCAL "lt_integer_body $c $a $b"
     }
     proc lt_integer_body { c a b } {
-        set a_value [ retrieve_integer $a ]
-        set b_value [ retrieve_integer $b ]
+        set a_value [ retrieve_decr_integer $a ]
+        set b_value [ retrieve_decr_integer $b ]
         if { [ expr $a_value < $b_value ] } {
             set c_value 1
         } else {
@@ -136,8 +127,6 @@ namespace eval turbine {
         log "lt_integer $a_value < $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
-        read_refcount_decr $a
-        read_refcount_decr $b
     }
 
     proc lte_integer { parent c inputs } {
@@ -147,8 +136,8 @@ namespace eval turbine {
             $turbine::LOCAL "lte_integer_body $c $a $b"
     }
     proc lte_integer_body { c a b } {
-        set a_value [ retrieve_integer $a ]
-        set b_value [ retrieve_integer $b ]
+        set a_value [ retrieve_decr_integer $a ]
+        set b_value [ retrieve_decr_integer $b ]
         if { [ expr $a_value <= $b_value ] } {
             set c_value 1
         } else {
@@ -158,8 +147,6 @@ namespace eval turbine {
         log "lte_integer $a_value <= $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
-        read_refcount_decr $a
-        read_refcount_decr $b
     }
 
     proc gt_integer { parent c inputs } {
@@ -169,8 +156,8 @@ namespace eval turbine {
             $turbine::LOCAL "gt_integer_body $c $a $b"
     }
     proc gt_integer_body { c a b } {
-        set a_value [ retrieve_integer $a ]
-        set b_value [ retrieve_integer $b ]
+        set a_value [ retrieve_decr_integer $a ]
+        set b_value [ retrieve_decr_integer $b ]
         if { [ expr $a_value > $b_value ] } {
             set c_value 1
         } else {
@@ -180,8 +167,6 @@ namespace eval turbine {
         log "gt_integer $a_value > $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
-        read_refcount_decr $a
-        read_refcount_decr $b
     }
 
     proc gte_integer { parent c inputs } {
@@ -191,8 +176,8 @@ namespace eval turbine {
             $turbine::LOCAL "gte_integer_body $c $a $b"
     }
     proc gte_integer_body { c a b } {
-        set a_value [ retrieve_integer $a ]
-        set b_value [ retrieve_integer $b ]
+        set a_value [ retrieve_decr_integer $a ]
+        set b_value [ retrieve_decr_integer $b ]
         if { [ expr $a_value >= $b_value ] } {
             set c_value 1
         } else {
@@ -202,8 +187,6 @@ namespace eval turbine {
         log "gte_integer $a_value >= $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
-        read_refcount_decr $a
-        read_refcount_decr $b
     }
 
     proc eq_float { parent c inputs } {
@@ -213,8 +196,8 @@ namespace eval turbine {
             $turbine::LOCAL "eq_float_body $c $a $b"
     }
     proc eq_float_body { c a b } {
-        set a_value [ retrieve_float $a ]
-        set b_value [ retrieve_float $b ]
+        set a_value [ retrieve_decr_float $a ]
+        set b_value [ retrieve_decr_float $b ]
         if { [ expr $a_value == $b_value ] } {
             set c_value 1
         } else {
@@ -224,8 +207,6 @@ namespace eval turbine {
         log "eq_float $a_value == $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
-        read_refcount_decr $a
-        read_refcount_decr $b
     }
 
     proc neq_float { parent c inputs } {
@@ -235,8 +216,8 @@ namespace eval turbine {
             $turbine::LOCAL "neq_float_body $c $a $b"
     }
     proc neq_float_body { c a b } {
-        set a_value [ retrieve_float $a ]
-        set b_value [ retrieve_float $b ]
+        set a_value [ retrieve_decr_float $a ]
+        set b_value [ retrieve_decr_float $b ]
         if { [ expr $a_value != $b_value ] } {
             set c_value 1
         } else {
@@ -246,8 +227,6 @@ namespace eval turbine {
         log "neq_float $a_value == $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
-        read_refcount_decr $a
-        read_refcount_decr $b
     }
 
     proc lt_float { parent c inputs } {
@@ -257,8 +236,8 @@ namespace eval turbine {
             $turbine::LOCAL "lt_float_body $c $a $b"
     }
     proc lt_float_body { c a b } {
-        set a_value [ retrieve_float $a ]
-        set b_value [ retrieve_float $b ]
+        set a_value [ retrieve_decr_float $a ]
+        set b_value [ retrieve_decr_float $b ]
         if { [ expr $a_value < $b_value ] } {
             set c_value 1
         } else {
@@ -268,8 +247,6 @@ namespace eval turbine {
         log "lt_float $a_value < $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
-        read_refcount_decr $a
-        read_refcount_decr $b
     }
 
     proc lte_float { parent c inputs } {
@@ -279,8 +256,8 @@ namespace eval turbine {
             $turbine::LOCAL "lte_float_body $c $a $b"
     }
     proc lte_float_body { c a b } {
-        set a_value [ retrieve_float $a ]
-        set b_value [ retrieve_float $b ]
+        set a_value [ retrieve_decr_float $a ]
+        set b_value [ retrieve_decr_float $b ]
         if { [ expr $a_value <= $b_value ] } {
             set c_value 1
         } else {
@@ -290,8 +267,6 @@ namespace eval turbine {
         log "lte_float $a_value <= $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
-        read_refcount_decr $a
-        read_refcount_decr $b
     }
 
     proc gt_float { parent c inputs } {
@@ -301,8 +276,8 @@ namespace eval turbine {
             $turbine::LOCAL "gt_float_body $c $a $b"
     }
     proc gt_float_body { c a b } {
-        set a_value [ retrieve_float $a ]
-        set b_value [ retrieve_float $b ]
+        set a_value [ retrieve_decr_float $a ]
+        set b_value [ retrieve_decr_float $b ]
         if { [ expr $a_value > $b_value ] } {
             set c_value 1
         } else {
@@ -312,8 +287,6 @@ namespace eval turbine {
         log "gt_float $a_value > $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
-        read_refcount_decr $a
-        read_refcount_decr $b
     }
 
     proc gte_float { parent c inputs } {
@@ -323,8 +296,8 @@ namespace eval turbine {
             $turbine::LOCAL "gte_float_body $c $a $b"
     }
     proc gte_float_body { c a b } {
-        set a_value [ retrieve_float $a ]
-        set b_value [ retrieve_float $b ]
+        set a_value [ retrieve_decr_float $a ]
+        set b_value [ retrieve_decr_float $b ]
         if { [ expr $a_value >= $b_value ] } {
             set c_value 1
         } else {
@@ -334,8 +307,6 @@ namespace eval turbine {
         log "gte_float $a_value >= $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
-        read_refcount_decr $a
-        read_refcount_decr $b
     }
 
     proc eq_string { parent c inputs } {
@@ -345,8 +316,8 @@ namespace eval turbine {
             $turbine::LOCAL "eq_string_body $c $a $b"
     }
     proc eq_string_body { c a b } {
-        set a_value [ retrieve_string $a ]
-        set b_value [ retrieve_string $b ]
+        set a_value [ retrieve_decr_string $a ]
+        set b_value [ retrieve_decr_string $b ]
         if {[ string equal $a_value $b_value ] } {
             set c_value 1
         } else {
@@ -356,8 +327,6 @@ namespace eval turbine {
         log "eq_string \"$a_value\" == \"$b_value\" => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
-        read_refcount_decr $a
-        read_refcount_decr $b
     }
 
     proc neq_string { parent c inputs } {
@@ -367,8 +336,8 @@ namespace eval turbine {
             $turbine::LOCAL "neq_string_body $c $a $b"
     }
     proc neq_string_body { c a b } {
-        set a_value [ retrieve_string $a ]
-        set b_value [ retrieve_string $b ]
+        set a_value [ retrieve_decr_string $a ]
+        set b_value [ retrieve_decr_string $b ]
         if {! [string equal $a_value $b_value]} {
             set c_value 1
         } else {
@@ -378,7 +347,5 @@ namespace eval turbine {
         log "neq_string \"$a_value\" == \"$b_value\" => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
-        read_refcount_decr $a
-        read_refcount_decr $b
     }
 }

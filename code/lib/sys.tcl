@@ -130,9 +130,8 @@ namespace eval turbine {
     }
 
     proc argv_contains_body { result key } {
-        set t [ retrieve_string $key ]
+        set t [ retrieve_decr_string $key ]
         store_integer $result [ argv_contains_impl $t ]
-        read_refcount_decr $key
     }
 
     proc argv_contains_impl { key } {
@@ -173,14 +172,12 @@ namespace eval turbine {
         set result [ lindex $args 0 ]
         set key    [ lindex $args 1 ]
 
-        set key_val [ retrieve_string $key ]
-        read_refcount_decr $key_val
+        set key_val [ retrieve_decr_string $key ]
         if { $c == 2 } {
             set result_val [ argv_get_impl $key_val ]
         } elseif { $c == 3 } {
             set base [ lindex $args 2 ]
-            set base_val [ retrieve_string $base ]
-            read_refcount_decr $base
+            set base_val [ retrieve_decr_string $base ]
             set result_val [ argv_get_impl $key_val $base_val ]
         }
 
@@ -234,15 +231,13 @@ namespace eval turbine {
         set result [ lindex $args 0 ]
         set i    [ lindex $args 1 ]
 
-        set i_val [ retrieve_integer $i ]
-        read_refcount_decr $i
+        set i_val [ retrieve_decr_integer $i ]
         if { $c == 2 } {
             set result_val [ argp_get_impl $i_val ]
         } elseif { $c == 3 } {
             set base [ lindex $args 2 ]
-            set base_val [ retrieve_string $base ]
+            set base_val [ retrieve_decr_string $base ]
             set result_val [ argp_get_impl $i_val $base_val ]
-            read_refcount_decr $base
         }
 
         store_string $result $result_val
@@ -290,8 +285,7 @@ namespace eval turbine {
 
         set accepted [ list ]
         foreach td $args {
-            lappend accepted [ retrieve_string $td ]
-            read_refcount_decr $td
+            lappend accepted [ retrieve_decr_string $td ]
         }
         argv_accept_impl $accepted
     }
@@ -311,9 +305,8 @@ namespace eval turbine {
             "turbine::getenv_body $outputs $inputs"
     }
     proc getenv_body { result key } {
-        set key_value [ retrieve_string $key ]
+        set key_value [ retrieve_decr_string $key ]
         store_string $result [ getenv_impl $key_value ]
-        read_refcount_decr $key
     }
 
     proc getenv_impl { key } {
@@ -330,9 +323,8 @@ namespace eval turbine {
             "turbine::sleep_body $outputs $inputs"
     }
     proc sleep_body { output secs } {
-        set secs_val [ retrieve_float $secs ]
+        set secs_val [ retrieve_decr_float $secs ]
         after [ expr round($secs_val * 1000) ]
         store_void $output
-        read_refcount_decr $secs
     }
 }

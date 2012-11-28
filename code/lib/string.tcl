@@ -18,9 +18,8 @@ namespace eval turbine {
     proc strcat_body { result args } {
         set output [ list ]
         foreach input $args {
-            set t [ retrieve_string $input ]
+            set t [ retrieve_decr_string $input ]
             lappend output $t
-            read_refcount_decr $input
         }
         set total [ join $output "" ]
         store_string $result $total
@@ -37,15 +36,12 @@ namespace eval turbine {
     }
 
     proc substring_body { result s i n } {
-        set s_value [ retrieve_string  $s ]
-        set i_value [ retrieve_integer $i ]
-        set n_value [ retrieve_integer $n ]
+        set s_value [ retrieve_decr_string  $s ]
+        set i_value [ retrieve_decr_integer $i ]
+        set n_value [ retrieve_decr_integer $n ]
 
         set result_value [ substring_impl $s_value $i_value $n_value ]
         store_string $result $result_value
-        read_refcount_decr $s
-        read_refcount_decr $i
-        read_refcount_decr $n
     }
 
     proc substring_impl { s i n } {
@@ -82,13 +78,11 @@ namespace eval turbine {
     # Tcl split should handle spaces correctly:
     # http://tmml.sourceforge.net/doc/tcl/split.html
     proc split_body { result s delimiter } {
-        set s_value [ retrieve_string $s ]
-        read_refcount_decr $s
+        set s_value [ retrieve_decr_string $s ]
         if { $delimiter == 0 } {
             set d_value " "
         } else {
-            set d_value [ retrieve_string $delimiter ]
-            read_refcount_decr $delimiter
+            set d_value [ retrieve_decr_string $delimiter ]
         }
         set r_value [ ::split $s_value $d_value ]
         set n [ llength $r_value ]
@@ -109,8 +103,7 @@ namespace eval turbine {
     proc sprintf_body { result args } {
         set L [ list ]
         foreach a $args {
-            lappend L [ retrieve $a ]
-            read_refcount_decr $a
+            lappend L [ retrieve_decr $a ]
         }
         set s [ eval format $L ]
         store_string $result $s
@@ -127,19 +120,15 @@ namespace eval turbine {
     }
 
     proc find_body { result str subs start_index end_index } {
-	set str_value  [ retrieve_string $str ]
-	set subs_value [ retrieve_string $subs ]
-	set start_index_value [ retrieve_integer $start_index ]
-	set end_index_value  [ retrieve_integer $end_index ]
+	set str_value  [ retrieve_decr_string $str ]
+	set subs_value [ retrieve_decr_string $subs ]
+	set start_index_value [ retrieve_decr_integer $start_index ]
+	set end_index_value  [ retrieve_decr_integer $end_index ]
 
 	set result_value [ find_impl $str_value $subs_value \
 			       $start_index_value $end_index_value ]
 
 	store_integer $result $result_value	
-        read_refcount_decr $str
-        read_refcount_decr $subs
-        read_refcount_decr $start_index
-        read_refcount_decr $end_index
     }
 
     # Find the index of the first occurence of the substring in the
@@ -170,20 +159,16 @@ namespace eval turbine {
     }
     
     proc count_body { result str subs start_index end_index } {
-	set str_value  [ retrieve_string $str ]
-	set subs_value [ retrieve_string $subs ]
-	set start_index_value [ retrieve_integer $start_index ]
-	set end_index_value  [ retrieve_integer $end_index ]
+	set str_value  [ retrieve_decr_string $str ]
+	set subs_value [ retrieve_decr_string $subs ]
+	set start_index_value [ retrieve_decr_integer $start_index ]
+	set end_index_value  [ retrieve_decr_integer $end_index ]
 
 	set result_value [ count_impl $str_value $subs_value \
 			  $start_index_value $end_index_value ]
         puts "count_impl $str_value $subs_value $start_index_value $end_index_value = $result_value"
 
 	store_integer $result $result_value
-        read_refcount_decr $str
-        read_refcount_decr $subs
-        read_refcount_decr $start_index
-        read_refcount_decr $end_index
     }
 
     # Find the number of occurences of the substring in the given
@@ -215,10 +200,9 @@ namespace eval turbine {
     }
 
     proc isint_body { result str } {
-	set str_value [ retrieve_string $str ]
+	set str_value [ retrieve_decr_string $str ]
 	set result_value [ isint_impl $str_value ]
 	store_integer $result $result_value
-        read_refcount_decr $str
     }
 
     # Returns 1 if string is an integer, 0 otherwise
@@ -238,18 +222,14 @@ namespace eval turbine {
     }
     
     proc replace_body { result str substring rep_string start_index } {
-	set str_value         [ retrieve_string $str ]
-	set substring_value   [ retrieve_string $substring ]
-	set rep_string_value  [ retrieve_string $rep_string ]
-	set start_index_value [ retrieve_integer $start_index ]
+	set str_value         [ retrieve_decr_string $str ]
+	set substring_value   [ retrieve_decr_string $substring ]
+	set rep_string_value  [ retrieve_decr_string $rep_string ]
+	set start_index_value [ retrieve_decr_integer $start_index ]
 
 	set result_value [ replace_impl $str_value $substring_value \
 			       $rep_string_value $start_index_value ]
 	store_string $result $result_value
-        read_refcount_decr $str
-        read_refcount_decr $substring
-        read_refcount_decr $rep_string
-        read_refcount_decr $start_indexV
     }
 
     # Replaces the first occurrence of the substring with the replacement
@@ -275,18 +255,14 @@ namespace eval turbine {
     }
     
     proc replace_all_body { result str substring rep_string start_index } {
-	set str_value         [ retrieve_string $str ]
-	set substring_value   [ retrieve_string $substring ]
-	set rep_string_value  [ retrieve_string $rep_string ]
-	set start_index_value [ retrieve_integer $start_index ]
+	set str_value         [ retrieve_decr_string $str ]
+	set substring_value   [ retrieve_decr_string $substring ]
+	set rep_string_value  [ retrieve_decr_string $rep_string ]
+	set start_index_value [ retrieve_decr_integer $start_index ]
 
 	set result_value [ replace_all_impl $str_value \
                  $substring_value $rep_string_value $start_index_value ]
 	store_string $result $result_value
-        read_refcount_decr $str
-        read_refcount_decr $substring
-        read_refcount_decr $rep_string
-        read_refcount_decr $start_indexV
     }
 
     # Replaces all occurrences of the substring with the replacement

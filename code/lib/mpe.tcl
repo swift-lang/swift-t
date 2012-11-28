@@ -30,8 +30,7 @@ namespace eval turbine {
     }
 
     proc metadata_body { message } {
-       metadata_impl [ turbine::retrieve_string $message ]
-       read_refcount_decr $message
+       metadata_impl [ turbine::retrieve_decr_string $message ]
     }
 
     proc metadata_impl { msg } {

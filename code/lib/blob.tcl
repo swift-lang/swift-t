@@ -9,11 +9,10 @@ namespace eval turbine {
   }
 
   proc blob_size_body { out blob } {
-    set blob_val [ retrieve_blob $blob ]
+    set blob_val [ retrieve_decr_blob $blob ]
     set sz [ blob_size $blob_val ]
     store_integer $out $sz
     adlb::blob_free $blob
-    read_refcount_decr $blob
   }
 
   proc blob_size { blob_val } {
@@ -25,9 +24,8 @@ namespace eval turbine {
       "blob_from_string_body $input $result"
   }
   proc blob_from_string_body { input result } {
-    set t [ retrieve $input ]
+    set t [ retrieve_decr $input ]
     store_blob_string $result $t
-    read_refcount_decr $input
   }
 
   proc string_from_blob { stack result input } {
@@ -35,9 +33,8 @@ namespace eval turbine {
       "string_from_blob_body $input $result"
   }
   proc string_from_blob_body { input result } {
-    set s [ retrieve_blob_string $input ]
+    set s [ retrieve_decr_blob_string $input ]
     store_string $result $s
-    read_refcount_decr $input
   }
 
   # Container must be indexed from 0,N-1
@@ -58,12 +55,11 @@ namespace eval turbine {
     set A [ list ]
     for { set i 0 } { $i < $N } { incr i } {
       set td [ container_lookup $container $i ]
-      set v  [ retrieve_float $td ]
+      set v  [ retrieve_decr_float $td ]
       lappend A $v
     }
     set waiters [ adlb::store_blob_floats $result $A ]
     turbine::notify_waiters $result $waiters
-    read_refcount_decr $container
   }
 
   # Assumes A is closed

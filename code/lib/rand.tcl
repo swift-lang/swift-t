@@ -40,12 +40,10 @@ namespace eval turbine {
     }
 
     proc randint_body { o lo hi } {
-        set lo_value [ retrieve_integer $lo ]
-        set hi_value [ retrieve_integer $hi ]
+        set lo_value [ retrieve_decr_integer $lo ]
+        set hi_value [ retrieve_decr_integer $hi ]
         set o_value [ randint_impl $lo_value $hi_value ]
         store_integer $o $o_value
-        read_refcount_decr $lo
-        read_refcount_decr $hi
     }
 
     proc randint_impl { lo hi } {

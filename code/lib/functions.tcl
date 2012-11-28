@@ -52,9 +52,8 @@ namespace eval turbine {
     proc trace_body { args } {
         set valuelist [ list ]
         foreach v $args {
-            set value [ retrieve $v ]
+            set value [ retrieve_decr $v ]
             lappend valuelist $value
-            read_refcount_decr $v
         }
         trace_impl2 $valuelist
     }
@@ -90,11 +89,10 @@ namespace eval turbine {
            "turbine::sleep_trace_body $secs $args"
     }
     proc sleep_trace_body { secs inputs } {
-      set secs_val [ retrieve_float $secs ]
+      set secs_val [ retrieve_decr_float $secs ]
       after [ expr round($secs_val * 1000) ]
       puts "AFTER"
       trace_body $inputs
-      read_refcount_decr $secs
     }
 
     # User function
@@ -110,12 +108,10 @@ namespace eval turbine {
 
     proc range_body { result start end } {
 
-        set start_value [ retrieve_integer $start ]
-        set end_value   [ retrieve_integer $end ]
+        set start_value [ retrieve_decr_integer $start ]
+        set end_value   [ retrieve_decr_integer $end ]
 
         range_work $result $start_value $end_value 1
-        read_refcount_decr $start
-        read_refcount_decr $end
     }
 
     proc rangestep { stack result inputs } {
@@ -127,16 +123,13 @@ namespace eval turbine {
         rule "rangestep-$result" [ list $start $end $step ] \
             $turbine::CONTROL \
             "rangestep_body $result $start $end $step"
-        read_refcount_decr $start
-        read_refcount_decr $end
-        read_refcount_decr $step
     }
 
     proc rangestep_body { result start end step } {
 
-        set start_value [ retrieve_integer $start ]
-        set end_value   [ retrieve_integer $end ]
-        set step_value   [ retrieve_integer $step ]
+        set start_value [ retrieve_decr_integer $start ]
+        set end_value   [ retrieve_decr_integer $end ]
+        set step_value   [ retrieve_decr_integer $step ]
 
         range_work $result $start_value $end_value $step_value
     }
@@ -162,9 +155,9 @@ namespace eval turbine {
 
     proc drange_body { result start end parts } {
 
-        set start_value [ retrieve $start ]
-        set end_value   [ retrieve $end ]
-        set parts_value [ retrieve $parts ]
+        set start_value [ retrieve_decr $start ]
+        set end_value   [ retrieve_decr $end ]
+        set parts_value [ retrieve_decr $parts ]
         set size        [ expr $end_value - $start_value + 1]
         set step        [ expr $size / $parts_value ]
 
@@ -183,9 +176,6 @@ namespace eval turbine {
         }
         # close container
         adlb::slot_drop $result
-        read_refcount_decr $start
-        read_refcount_decr $end
-        read_refcount_decr $parts
     }
 
     # User function
@@ -217,7 +207,7 @@ namespace eval turbine {
 
     proc readdata_body { result filename } {
 
-        set name_value [ retrieve $filename ]
+        set name_value [ retrieve_decr $filename ]
         if { [ catch { set fd [ open $name_value r ] } e ] } {
             error "Could not open file: '$name_value'"
         }
@@ -230,7 +220,6 @@ namespace eval turbine {
             incr i
         }
         adlb::slot_drop $result
-        read_refcount_decr $filename
     }
 
     # User function
@@ -284,9 +273,8 @@ namespace eval turbine {
     }
 
     proc toint_body { input result } {
-      set t [ retrieve $input ]
+      set t [ retrieve_decr $input ]
       store_integer $result [ check_str_int $t ]
-      read_refcount_decr $input
     }
 
     proc check_str_int { input } {
@@ -302,10 +290,9 @@ namespace eval turbine {
     }
 
     proc fromint_body { input result } {
-        set t [ retrieve_integer $input ]
+        set t [ retrieve_decr_integer $input ]
         # Tcl performs the conversion naturally
         store_string $result $t
-        read_refcount_decr $input
     }
 
     proc tofloat { stack result input } {
@@ -314,11 +301,10 @@ namespace eval turbine {
     }
 
     proc tofloat_body { input result } {
-        set t [ retrieve $input ]
+        set t [ retrieve_decr $input ]
         #TODO: would be better if the accepted double types
         #     matched Swift float literals
         store_float $result [ check_str_float $t ]
-        read_refcount_decr $input
     }
 
     proc check_str_float { input } {
@@ -334,10 +320,9 @@ namespace eval turbine {
     }
 
     proc fromfloat_body { input result } {
-        set t [ retrieve $input ]
+        set t [ retrieve_decr $input ]
         # Tcl performs the conversion naturally
         store_string $result $t
-        read_refcount_decr $input
     }
 
     # Good for performance testing
@@ -389,9 +374,8 @@ namespace eval turbine {
         set inputs [ lreplace $args 0 0 ]
         set values [ list ]
         foreach i $inputs {
-            set value [ retrieve $i ]
+            set value [ retrieve_decr $i ]
             lappend values $value
-            read_refcount_decr $i
         }
         debug "executing: $command $values"
         exec $command $values
@@ -437,10 +421,9 @@ namespace eval turbine {
             "copy_string_body $o $i"
     }
     proc copy_string_body { o i } {
-        set i_value [ retrieve_string $i ]
+        set i_value [ retrieve_decr_string $i ]
         log "copy $i_value => $i_value"
         store_string $o $i_value
-        read_refcount_decr $i
     }
 
     # Copy blob value
@@ -449,11 +432,10 @@ namespace eval turbine {
             "copy_blob_body $o $i"
     }
     proc copy_blob_body { o i } {
-        set i_value [ retrieve_blob $i ]
+        set i_value [ retrieve_decr_blob $i ]
         log "copy $i_value => $i_value"
         store_blob $o $i_value
         free_blob $i
-        read_refcount_decr $i
     }
 
     # create a void type (i.e. just set it)
