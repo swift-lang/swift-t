@@ -539,6 +539,7 @@ public class TurbineGenerator implements CompilerBackend
   public void dereferenceInt(Var target, Var src) {
     assert(target.type().equals(Types.F_INT));
     assert(src.type().equals(Types.R_INT));
+    incrementReaders(src);
     Command deref = Turbine.dereferenceInteger(varToExpr(target),
                                                varToExpr(src));
     pointStack.peek().add(deref);
@@ -548,6 +549,7 @@ public class TurbineGenerator implements CompilerBackend
   public void dereferenceBool(Var target, Var src) {
     assert(target.type().equals(Types.F_BOOL));
     assert(src.type().equals(Types.R_BOOL));
+    incrementReaders(src);
     Command deref = Turbine.dereferenceInteger(varToExpr(target),
                                                varToExpr(src));
     pointStack.peek().add(deref);
@@ -557,6 +559,7 @@ public class TurbineGenerator implements CompilerBackend
   public void dereferenceFloat(Var target, Var src) {
     assert(target.type().equals(Types.F_FLOAT));
     assert(src.type().equals(Types.R_FLOAT));
+    incrementReaders(src);
     Command deref = Turbine.dereferenceFloat(varToExpr(target),
                                              varToExpr(src));
     pointStack.peek().add(deref);
@@ -566,6 +569,7 @@ public class TurbineGenerator implements CompilerBackend
   public void dereferenceString(Var target, Var src) {
     assert(target.type().equals(Types.F_STRING));
     assert(src.type().equals(Types.R_STRING));
+    incrementReaders(src);
     Command deref = Turbine.dereferenceString(varToExpr(target), 
                                               varToExpr(src));
     pointStack.peek().add(deref);
@@ -575,6 +579,7 @@ public class TurbineGenerator implements CompilerBackend
   public void dereferenceBlob(Var target, Var src) {
     assert(target.type().equals(Types.F_BLOB));
     assert(src.type().equals(Types.R_BLOB));
+    incrementReaders(src);
     Command deref = Turbine.dereferenceBlob(varToExpr(target), varToExpr(src));
     pointStack.peek().add(deref);
   }
@@ -583,6 +588,7 @@ public class TurbineGenerator implements CompilerBackend
   public void dereferenceFile(Var target, Var src) {
     assert(target.type().equals(Types.F_FILE));
     assert(src.type().equals(Types.REF_FILE));
+    incrementReaders(src);
     Command deref = Turbine.dereferenceFile(varToExpr(target),
                                             varToExpr(src));
     pointStack.peek().add(deref);
@@ -609,7 +615,7 @@ public class TurbineGenerator implements CompilerBackend
     assert(Types.isArray(arrayVar.type()));
     assert(Types.isArrayRef(arrayResult.type()));
     assert(arrayResult.storage() == VarStorage.ALIAS);
-
+    incrementReaders(arrayVar, indexVar);
     TclTree t = Turbine.containerCreateNested(
         prefixVar(arrayResult.name()), prefixVar(arrayVar.name()),
         prefixVar(indexVar.name()));
@@ -622,6 +628,7 @@ public class TurbineGenerator implements CompilerBackend
     assert(Types.isArrayRef(arrayRefVar.type()));
     assert(Types.isArrayRef(arrayResult.type()));
     assert(arrayResult.storage() == VarStorage.ALIAS);
+    incrementReaders(arrayRefVar, indexVar);
 
     TclTree t = Turbine.containerRefCreateNested(
         prefixVar(arrayResult.name()), prefixVar(arrayRefVar.name()),
@@ -822,6 +829,7 @@ public class TurbineGenerator implements CompilerBackend
     } else {
       refReprType = Turbine.INTEGER_TYPENAME;
     }
+    incrementReaders(structVar);
     pointStack.peek().add(
         Turbine.structRefLookupFieldID(prefixVar(structVar.name()),
             structField, prefixVar(alias.name()),
@@ -835,6 +843,7 @@ public class TurbineGenerator implements CompilerBackend
     arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
     assert(indexVar.type().equals(Types.F_INT));
     assert(Types.isRef(oVar.type()));
+    incrementReaders(arrayVar, indexVar);
     // Nested arrays - oVar should be a reference type
     Command getRef = Turbine.arrayLookupComputed(
         prefixVar(oVar.name()), refIsString(oVar.type()),
@@ -846,6 +855,9 @@ public class TurbineGenerator implements CompilerBackend
   public void arrayLookupRefImm(Var oVar, Var arrayVar, Arg arrIx,
         boolean isArrayRef) {
     assert(arrIx.isImmediateInt());
+    if (isArrayRef) {
+      incrementReaders(arrayVar);
+    }
     arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
     Command getRef = Turbine.arrayLookupImmIx(
           prefixVar(oVar.name()),
@@ -910,6 +922,8 @@ public class TurbineGenerator implements CompilerBackend
   public void arrayInsertFuture(Var iVar, Var arrayVar,
                                                       Var indexVar) {
     assert(Types.isArray(arrayVar.type()));
+    // Increment reference for var being inserted into container
+    incrementReaders(iVar, arrayVar, indexVar);
     Type memberType = arrayVar.type().memberType();
     if (Types.isRef(iVar.type())) {
       assert(iVar.type().memberType().equals(memberType));
@@ -934,6 +948,7 @@ public class TurbineGenerator implements CompilerBackend
     assert(Types.isArrayRef(arrayVar.type()));
     assert(Types.isArray(outerArrayVar.type()));
     assert(Types.isInt(indexVar.type()));
+    incrementReaders(iVar, arrayVar, indexVar, outerArrayVar);
     Type memberType = arrayVar.type().memberType().memberType();
     if (Types.isRef(iVar.type())) {
       assert(iVar.type().memberType().equals(memberType));
@@ -961,6 +976,10 @@ public class TurbineGenerator implements CompilerBackend
       throw new STCRuntimeError("Not immediate int: " + arrIx);
     }
     assert(arrIx.isImmediateInt());
+
+    // Reference for var in array.  Don't need to increment refs for other vars since
+    // they aren't held
+    incrementReaders(iVar);
 
     Type memberType = arrayVar.type().memberType();
     if (Types.isRef(iVar.type())) {
@@ -991,7 +1010,7 @@ public class TurbineGenerator implements CompilerBackend
     assert(Types.isArrayRef(arrayVar.type()));
     assert(Types.isArray(outerArrayVar.type()));
     assert(arrIx.isImmediateInt());
-
+    incrementReaders(iVar, arrayVar, outerArrayVar);
     Type memberType = arrayVar.type().memberType().memberType();
     if (Types.isRef(iVar.type())) {
       // Check that we get the right thing when we dereference it
@@ -1359,6 +1378,20 @@ public class TurbineGenerator implements CompilerBackend
       return !Types.isScalarValue(v.type());
     }
 
+    /**
+     * Increment refcount of all vars by one
+     * @param vars
+     */
+    private void incrementReaders(Var ...vars) {
+      pointStack.peek().append(incrementReaders(Arrays.asList(vars), null));
+    }
+
+    /**
+     * TODO: handle struct and file vars
+     * @param vars
+     * @param incr
+     * @return
+     */
     private static Sequence incrementReaders(List<Var> vars, Expression incr) {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(vars)) {
