@@ -297,7 +297,7 @@ public class TurbineGenerator implements CompilerBackend
   
   @Override
   public void decrRef(Var var) {
-    pointStack.peek().add(Turbine.decrRef(varToExpr(var)));
+    decrementReaders(var);
   }
 
   String typeToString(PrimType type)
@@ -1387,24 +1387,52 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     /**
+     * Decrement refcount of all vars by one
+     * @param vars
+     */
+    private void decrementReaders(Var ...vars) {
+      pointStack.peek().append(decrementReaders(Arrays.asList(vars), null));
+    }
+
+    private static Sequence incrementReaders(List<Var> vars, Expression incr) {
+      return incrementReaders(vars, incr, false);
+    }
+
+    private Sequence decrementReaders(List<Var> vars, Expression incr) {
+      return incrementReaders(vars, incr, true);
+    }
+
+    /**
+     * Increment readers by a
      * TODO: handle struct and file vars
      * @param vars
-     * @param incr
+     * @param incr expression for the amount of increment/decrement.  If null, assume 1
+     * @param if true, then negate incr
      * @return
      */
-    private static Sequence incrementReaders(List<Var> vars, Expression incr) {
+    private static Sequence incrementReaders(List<Var> vars, Expression incr, boolean negate) {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(vars)) {
-        if (!hasRefcount(vc.var)) {
+        Var var = vc.var;
+        if (!hasRefcount(var)) {
           continue;
         }
+        int count = vc.count * (negate ? -1 : 1);
+        Expression amount;
         if (incr == null) {
-          seq.add(Turbine.incrRef(varToExpr(vc.var), new LiteralInt(vc.count)));
-        } else if (vc.count == 1) {
-          seq.add(Turbine.incrRef(varToExpr(vc.var), incr));
+          amount = new LiteralInt(count);
+        } else if (count == 1) {
+          amount = incr;
         } else {
-          seq.add(Turbine.incrRef(varToExpr(vc.var),
-              Square.arithExpr(new LiteralInt(vc.count), new Token("*"), incr)));
+          amount = Square.arithExpr(new LiteralInt(count), new Token("*"), incr);
+        }
+        if (Types.isFile(var.type())) {
+          // Need to use different function to handle file reference
+          seq.add(Turbine.incrFileRef(varToExpr(var), amount));
+        } else if (Types.isStruct(var.type())) {
+          // TODO: how to refcount for struct
+        } else {
+          seq.add(Turbine.incrRef(varToExpr(var), amount));
         }
       }
       return seq;
@@ -1438,24 +1466,6 @@ public class TurbineGenerator implements CompilerBackend
       List<Var> readOnlyUsedVars = Var.varListDiff(usedVars, keepOpenVars);
       pointStack.peek().append(decrementReaders(readOnlyUsedVars, refDecrAmount));
       pointStack.peek().append(decrementWriters(keepOpenVars, refDecrAmount));
-    }
-
-    private Sequence decrementReaders(List<Var> vars, Expression incr) {
-      Sequence seq = new Sequence();
-      for (VarCount vc: Var.countVars(vars)) {
-        if (!hasRefcount(vc.var)) {
-          continue;
-        }
-        if (incr == null) {
-          seq.add(Turbine.incrRef(varToExpr(vc.var), new LiteralInt(-1 * vc.count)));
-        } else if (vc.count == 1) {
-          seq.add(Turbine.incrRef(varToExpr(vc.var), negate(incr)));
-        } else {
-          seq.add(Turbine.incrRef(varToExpr(vc.var),
-              Square.arithExpr(new LiteralInt(vc.count * -1), new Token("*"), incr)));
-        }
-      }
-      return seq;
     }
 
     private Square negate(Expression expr) {

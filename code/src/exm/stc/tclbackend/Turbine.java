@@ -137,8 +137,8 @@ class Turbine
       new Token("turbine::free_local_blob");
   
   public static final LiteralInt VOID_DUMMY_VAL = new LiteralInt(12345);
-  private static final Token REFCOUNT_INCR = new Token("adlb::refcount_incr");
-  private static final Value REFCOUNT_READ = new Value("adlb::READ_REFCOUNT");
+  private static final Token REFCOUNT_INCR = new Token("turbine::read_refcount_incr");
+  private static final Token FILE_REFCOUNT_INCR = new Token("turbine::file_read_refcount_incr");
 
   public enum StackFrameType {
     MAIN,
@@ -623,10 +623,10 @@ class Turbine
    * @param change
    * @return
    */
-  public static TclTree incrRef(Value var, Expression change) {
+  public static TclTree incrRef(Expression var, Expression change) {
     try {
       if (Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
-        return new Command(REFCOUNT_INCR, var, REFCOUNT_READ, change);
+        return new Command(REFCOUNT_INCR, var, change);
       } else {
         return new Token("");
       }
@@ -643,6 +643,25 @@ class Turbine
     return incrRef(var, new LiteralInt(-1));
   }
   
+  /**
+   * Modify reference count by amount
+   * @param var
+   * @param change
+   * @return
+   */
+  public static TclTree incrFileRef(Expression var, Expression change) {
+    try {
+      if (Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
+        return new Command(FILE_REFCOUNT_INCR, var, change);
+      } else {
+        return new Token("");
+      }
+    } catch (InvalidOptionException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
+  }
+
+
   /**
    * Get entire contents of container
    * @param resultVar
