@@ -798,7 +798,7 @@ Configure Turbine with:
 4. When making performance measurements, always subtract 1 second
    (or the value of +ADLB_EXHAUST_TIME+) from the Turbine run time
    due to the ADLB shutdown protocol, which does not start until the
-   system is idle for 1 second.
+   system is idle for that amount of time.
 
 ////
 Local Variables:
