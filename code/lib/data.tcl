@@ -6,12 +6,15 @@ namespace eval turbine {
     namespace export                                  \
         allocate retrieve                             \
         create_string  store_string                   \
-        create_integer store_integer retrieve_integer \
-        create_float   store_float   retrieve_float   \
+        create_integer store_integer                  \
+        retrieve_integer retrieve_decr_integer        \
+        create_float   store_float                    \
+        retrieve_float retrieve_decr_float            \
         create_void    store_void                     \
         create_file    store_file                     \
         create_blob    store_blob                     \
-        retrieve_blob  retrieve_blob_string           \
+        retrieve_blob retrieve_decr_blob              \
+        retrieve_blob retrieve_decr_blob_string       \
         allocate_container                            \
         container_lookup container_list               \
         container_insert notify_waiter                \
@@ -126,11 +129,19 @@ namespace eval turbine {
 
     # usage: retrieve <id>
     # Not type checked
-    # Always tores result as Tcl string
-    proc retrieve { id } {
-        set result [ adlb::retrieve $id ]
+    # Always stores result as Tcl string
+    proc retrieve { id {decrref 0} } {
+        if { $decrref } {
+          set result [ adlb::retrieve_decr $id ]
+        } else {
+          set result [ adlb::retrieve $id ]
+        }
         debug "retrieve: <$id>=$result"
         return $result
+    }
+
+    proc retrieve_decr { id } {
+        return [ retrieve $id 1 ]
     }
 
     proc create_integer { id updateable } {
@@ -144,14 +155,25 @@ namespace eval turbine {
         c::cache store $id $adlb::INTEGER $value
     }
 
-    proc retrieve_integer { id {cachemode CACHED} } {
+    proc retrieve_integer { id {cachemode CACHED} {decrref 0} } {
         if { [ string equal $cachemode CACHED ] && [ c::cache check $id ] } {
             set result [ c::cache retrieve $id ]
+            if { $decrref } {
+              read_refcount_decr $id
+            }
         } else {
-            set result [ adlb::retrieve $id $adlb::INTEGER ]
+            if { $decrref } {
+              set result [ adlb::retrieve_decr $id $adlb::INTEGER ]
+            } else {
+              set result [ adlb::retrieve $id $adlb::INTEGER ]
+            }
         }
         debug "retrieve: <$id>=$result"
         return $result
+    }
+
+    proc retrieve_decr_integer { id {cachemode CACHED} } {
+      return [ retrieve_integer $id $cachemode 1 ]
     }
 
     proc create_float { id updateable } {
@@ -164,14 +186,25 @@ namespace eval turbine {
         notify_waiters $id $waiters
     }
 
-    proc retrieve_float { id {cachemode CACHED} } {
+    proc retrieve_float { id {cachemode CACHED} {decrref 0} } {
         if { [ string equal $cachemode CACHED ] && [ c::cache check $id ] } {
             set result [ c::cache retrieve $id ]
+            if { $decrref } {
+              read_refcount_decr $id
+            }
         } else {
-            set result [ adlb::retrieve $id $adlb::FLOAT ]
+            if { $decrref } {
+              set result [ adlb::retrieve_decr $id $adlb::FLOAT ]
+            } else {
+              set result [ adlb::retrieve $id $adlb::FLOAT ]
+            }
         }
         debug "retrieve: <$id>=$result"
         return $result
+    }
+
+    proc retrieve_decr_float { id {cachemode CACHED} } {
+      return [ retrieve_float $id $cachemode 1 ]
     }
 
     proc create_string { id updateable } {
@@ -185,14 +218,25 @@ namespace eval turbine {
         notify_waiters $id $waiters
     }
 
-    proc retrieve_string { id {cachemode CACHED} } {
+    proc retrieve_string { id {cachemode CACHED} {decrref 0} } {
         if { [ string equal $cachemode CACHED ] && [ c::cache check $id ] } {
             set result [ c::cache retrieve $id ]
+            if { $decrref } {
+              read_refcount_decr $id
+            }
         } else {
-            set result [ adlb::retrieve $id $adlb::STRING ]
+            if { $decrref } {
+              set result [ adlb::retrieve_decr $id $adlb::STRING ]
+            } else {
+              set result [ adlb::retrieve $id $adlb::STRING ]
+            }
         }
         debug "retrieve: <$id>=[ log_string $result ]"
         return $result
+    }
+
+    proc retrieve_decr_string { id {cachemode CACHED} } {
+      return [ retrieve_string $id $cachemode 1 ]
     }
 
     proc create_void { id updateable } {
@@ -234,13 +278,20 @@ namespace eval turbine {
     }
 
     # Retrieve and cache blob
-    proc retrieve_blob { id } {
-      set result [ adlb::retrieve_blob $id ]
+    proc retrieve_blob { id {decrref 0} } {
+      if { $decrref } {
+        set result [ adlb::retrieve_decr_blob $id ]
+      } else {
+        set result [ adlb::retrieve_blob $id ]
+      }
       debug [ format "retrieve_blob: <%d>=\[%x %d\]" $id \
                     [ lindex $result 0 ] [ lindex $result 1 ] ]
       return $result
     }
 
+    proc retrieve_decr_blob { id } {
+      return [ retrieve_blob $id 1 ]
+    }
     # release reference to cached blob
     proc free_blob { id } {
       debug "free_blob: <$id>"
@@ -254,10 +305,18 @@ namespace eval turbine {
       adlb::local_blob_free [ lindex $blob 0 ]
     }
 
-    proc retrieve_blob_string { id } {
-        set result [ adlb::retrieve $id $adlb::BLOB ]
+    proc retrieve_blob_string { id {decrref 0} } {
+        if { $decrref } {
+          set result [ adlb::retrieve_decr $id $adlb::BLOB ]
+        } else {
+          set result [ adlb::retrieve $id $adlb::BLOB ]
+        }
         debug "retrieve_string: <$id>=[ log_string $result ]"
         return $result
+    }
+
+    proc retrieve_decr_blob_string { id } {
+      return [ retrieve_blob_string $id 1 ]
     }
 
     proc create_container { id subscript_type } {
