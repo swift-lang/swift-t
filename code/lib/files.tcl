@@ -25,6 +25,7 @@ namespace eval turbine {
     proc filename2 { stack out in } {
       set file_handle [ lindex $in 0 ]
       copy_string NOSTACK $out [ get_file_path $file_handle ]
+      read_refcount_decr [ get_file_status $file_handle ]
     }
 
     # get the filename if mapped, assign if unmapped
