@@ -20,6 +20,7 @@ namespace eval turbine {
         foreach input $args {
             set t [ retrieve_string $input ]
             lappend output $t
+            read_refcount_decr $input
         }
         set total [ join $output "" ]
         store_string $result $total
@@ -42,6 +43,9 @@ namespace eval turbine {
 
         set result_value [ substring_impl $s_value $i_value $n_value ]
         store_string $result $result_value
+        read_refcount_decr $s
+        read_refcount_decr $i
+        read_refcount_decr $n
     }
 
     proc substring_impl { s i n } {
@@ -79,10 +83,12 @@ namespace eval turbine {
     # http://tmml.sourceforge.net/doc/tcl/split.html
     proc split_body { result s delimiter } {
         set s_value [ retrieve_string $s ]
+        read_refcount_decr $s
         if { $delimiter == 0 } {
             set d_value " "
         } else {
             set d_value [ retrieve_string $delimiter ]
+            read_refcount_decr $delimiter
         }
         set r_value [ ::split $s_value $d_value ]
         set n [ llength $r_value ]
@@ -104,6 +110,7 @@ namespace eval turbine {
         set L [ list ]
         foreach a $args {
             lappend L [ retrieve $a ]
+            read_refcount_decr $a
         }
         set s [ eval format $L ]
         store_string $result $s
@@ -129,6 +136,10 @@ namespace eval turbine {
 			       $start_index_value $end_index_value ]
 
 	store_integer $result $result_value	
+        read_refcount_decr $str
+        read_refcount_decr $subs
+        read_refcount_decr $start_index
+        read_refcount_decr $end_index
     }
 
     # Find the index of the first occurence of the substring in the
@@ -169,6 +180,10 @@ namespace eval turbine {
         puts "count_impl $str_value $subs_value $start_index_value $end_index_value = $result_value"
 
 	store_integer $result $result_value
+        read_refcount_decr $str
+        read_refcount_decr $subs
+        read_refcount_decr $start_index
+        read_refcount_decr $end_index
     }
 
     # Find the number of occurences of the substring in the given
@@ -203,6 +218,7 @@ namespace eval turbine {
 	set str_value [ retrieve_string $str ]
 	set result_value [ isint_impl $str_value ]
 	store_integer $result $result_value
+        read_refcount_decr $str
     }
 
     # Returns 1 if string is an integer, 0 otherwise
@@ -230,6 +246,10 @@ namespace eval turbine {
 	set result_value [ replace_impl $str_value $substring_value \
 			       $rep_string_value $start_index_value ]
 	store_string $result $result_value
+        read_refcount_decr $str
+        read_refcount_decr $substring
+        read_refcount_decr $rep_string
+        read_refcount_decr $start_indexV
     }
 
     # Replaces the first occurrence of the substring with the replacement
@@ -263,6 +283,10 @@ namespace eval turbine {
 	set result_value [ replace_all_impl $str_value \
                  $substring_value $rep_string_value $start_index_value ]
 	store_string $result $result_value
+        read_refcount_decr $str
+        read_refcount_decr $substring
+        read_refcount_decr $rep_string
+        read_refcount_decr $start_indexV
     }
 
     # Replaces all occurrences of the substring with the replacement

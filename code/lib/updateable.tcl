@@ -27,6 +27,7 @@ namespace eval turbine {
   proc update_min_body { x val } {
     set val2 [ retrieve_float $val ]
     update_min_impl $x $val2
+    read_refcount_decr $val
   }
 
   proc update_min_impl { x val } {
@@ -46,6 +47,7 @@ namespace eval turbine {
   proc update_incr_body { x val } {
     set val2 [ retrieve_float $val ]
     update_incr_impl $x $val2
+    read_refcount_decr $val
   }
 
   proc update_incr_impl { x val } {
@@ -62,6 +64,7 @@ namespace eval turbine {
   proc update_scale_body { x val } {
     set val2 [ retrieve_float $val ]
     update_scale_impl $x $val2
+    read_refcount_decr $val
   }
 
   proc update_scale_impl { x val } {

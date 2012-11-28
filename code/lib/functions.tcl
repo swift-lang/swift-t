@@ -54,6 +54,7 @@ namespace eval turbine {
         foreach v $args {
             set value [ retrieve $v ]
             lappend valuelist $value
+            read_refcount_decr $v
         }
         trace_impl2 $valuelist
     }
@@ -93,6 +94,7 @@ namespace eval turbine {
       after [ expr round($secs_val * 1000) ]
       puts "AFTER"
       trace_body $inputs
+      read_refcount_decr $secs
     }
 
     # User function
@@ -112,6 +114,8 @@ namespace eval turbine {
         set end_value   [ retrieve_integer $end ]
 
         range_work $result $start_value $end_value 1
+        read_refcount_decr $start
+        read_refcount_decr $end
     }
 
     proc rangestep { stack result inputs } {
@@ -123,6 +127,9 @@ namespace eval turbine {
         rule "rangestep-$result" [ list $start $end $step ] \
             $turbine::CONTROL \
             "rangestep_body $result $start $end $step"
+        read_refcount_decr $start
+        read_refcount_decr $end
+        read_refcount_decr $step
     }
 
     proc rangestep_body { result start end step } {
@@ -176,6 +183,9 @@ namespace eval turbine {
         }
         # close container
         adlb::slot_drop $result
+        read_refcount_decr $start
+        read_refcount_decr $end
+        read_refcount_decr $parts
     }
 
     # User function
@@ -220,6 +230,7 @@ namespace eval turbine {
             incr i
         }
         adlb::slot_drop $result
+        read_refcount_decr $filename
     }
 
     # User function
@@ -275,6 +286,7 @@ namespace eval turbine {
     proc toint_body { input result } {
       set t [ retrieve $input ]
       store_integer $result [ check_str_int $t ]
+      read_refcount_decr $input
     }
 
     proc check_str_int { input } {
@@ -293,6 +305,7 @@ namespace eval turbine {
         set t [ retrieve_integer $input ]
         # Tcl performs the conversion naturally
         store_string $result $t
+        read_refcount_decr $input
     }
 
     proc tofloat { stack result input } {
@@ -305,6 +318,7 @@ namespace eval turbine {
         #TODO: would be better if the accepted double types
         #     matched Swift float literals
         store_float $result [ check_str_float $t ]
+        read_refcount_decr $input
     }
 
     proc check_str_float { input } {
@@ -323,6 +337,7 @@ namespace eval turbine {
         set t [ retrieve $input ]
         # Tcl performs the conversion naturally
         store_string $result $t
+        read_refcount_decr $input
     }
 
     # Good for performance testing
@@ -376,6 +391,7 @@ namespace eval turbine {
         foreach i $inputs {
             set value [ retrieve $i ]
             lappend values $value
+            read_refcount_decr $i
         }
         debug "executing: $command $values"
         exec $command $values
@@ -412,6 +428,7 @@ namespace eval turbine {
     proc copy_void_body { o i } {
         log "copy_void $i => $o"
         store_void $o
+        read_refcount_decr $i
     }
 
     # Copy string value
@@ -423,6 +440,7 @@ namespace eval turbine {
         set i_value [ retrieve_string $i ]
         log "copy $i_value => $i_value"
         store_string $o $i_value
+        read_refcount_decr $i
     }
 
     # Copy blob value
@@ -435,6 +453,7 @@ namespace eval turbine {
         log "copy $i_value => $i_value"
         store_blob $o $i_value
         free_blob $i
+        read_refcount_decr $i
     }
 
     # create a void type (i.e. just set it)

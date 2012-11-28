@@ -21,6 +21,8 @@ namespace eval turbine {
         set c_value [ expr $a_value + $b_value ]
         log "plus: $a_value + $b_value => $c_value"
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc plus_float { parent c inputs } {
@@ -37,6 +39,8 @@ namespace eval turbine {
         set c_value [ expr $a_value + $b_value ]
         log "plus: $a_value + $b_value => $c_value"
         store_float $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     # This is a Swift-2 function
@@ -55,6 +59,8 @@ namespace eval turbine {
         set c_value [ expr $a_value - $b_value ]
         log "minus: $a_value - $b_value => $c_value"
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     # This is a Swift-5 function
@@ -73,6 +79,8 @@ namespace eval turbine {
         set c_value [ expr $a_value - $b_value ]
         log "minus: $a_value - $b_value => $c_value"
         store_float $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     # c = a*b;
@@ -92,6 +100,8 @@ namespace eval turbine {
         # Emulate some computation time
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     # c = a*b;
@@ -111,6 +121,8 @@ namespace eval turbine {
         # Emulate some computation time
         # exec sleep $c_value
         store_float $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     # c = a/b; with integer division
@@ -131,6 +143,8 @@ namespace eval turbine {
         # Emulate some computation time
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     # c = a/b; with float division
@@ -150,6 +164,8 @@ namespace eval turbine {
         # Emulate some computation time
         # exec sleep $c_value
         store_float $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     # This is a Swift-2 function
@@ -168,6 +184,7 @@ namespace eval turbine {
         # Emulate some computation time
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
     }
 
     # This is a Swift-5 function
@@ -186,6 +203,7 @@ namespace eval turbine {
         # Emulate some computation time
         # exec sleep $c_value
         store_float $c $c_value
+        read_refcount_decr $a
     }
 
 
@@ -203,6 +221,8 @@ namespace eval turbine {
         set c_value [ mod_integer_impl $a_value $b_value ]
         log "mod: $a_value % $b_value => $c_value"
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     # emulate java's mod and div operator behaviour for negative numbers
@@ -247,6 +267,7 @@ namespace eval turbine {
         set o_value $i_value
         log "copy $i_value => $o_value"
         store_integer $o $o_value
+        read_refcount_decr $i
     }
 
     # o = i;
@@ -258,6 +279,7 @@ namespace eval turbine {
         set i_value [ retrieve_float $i ]
         log "copy $i_value => $i_value"
         store_float $o $i_value
+        read_refcount_decr $i
     }
 
     proc max_integer { parent c inputs } {
@@ -274,6 +296,8 @@ namespace eval turbine {
         set c_value [ expr max ($a_value, $b_value) ]
         log "max: $a_value $b_value => $c_value"
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc min_integer { parent c inputs } {
@@ -290,6 +314,8 @@ namespace eval turbine {
         set c_value [ expr min ($a_value, $b_value) ]
         log "min: $a_value $b_value => $c_value"
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc max_float { parent c inputs } {
@@ -306,6 +332,8 @@ namespace eval turbine {
         set c_value [ expr max ($a_value, $b_value) ]
         log "max: $a_value $b_value => $c_value"
         store_float $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc min_float { parent c inputs } {
@@ -322,6 +350,8 @@ namespace eval turbine {
         set c_value [ expr min ($a_value, $b_value) ]
         log "min: $a_value $b_value => $c_value"
         store_float $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc floor { parent c a } {
@@ -335,6 +365,7 @@ namespace eval turbine {
         set c_value [ expr int(floor($a_value)) ]
         log "floor: $a_value => $c_value"
         store_integer $c $c_value
+        read_refcount_decr $a
     }
 
     proc ceil { parent c a } {
@@ -348,6 +379,7 @@ namespace eval turbine {
         set c_value [ expr int(ceil($a_value)) ]
         log "ceil: $a_value => $c_value"
         store_integer $c $c_value
+        read_refcount_decr $a
     }
 
     proc round { parent c a } {
@@ -360,6 +392,7 @@ namespace eval turbine {
         set c_value [ expr int(round($a_value)) ]
         log "round: $a_value => $c_value"
         store_integer $c $c_value
+        read_refcount_decr $a
     }
 
     proc itof { parent c a } {
@@ -371,6 +404,7 @@ namespace eval turbine {
         set a_value [ retrieve_integer $a ]
         # Convert to TCL float type 
         store_float $c [ expr double($a_value) ]
+        read_refcount_decr $a
     }
 
     proc log_e { parent c a } {
@@ -384,6 +418,7 @@ namespace eval turbine {
         set c_value [ expr log($a_value) ]
         log "log_e: $a_value => $c_value"
         store_float $c $c_value
+        read_refcount_decr $a
     }
 
     proc exp { parent c a } {
@@ -397,6 +432,7 @@ namespace eval turbine {
         set c_value [ expr exp($a_value) ]
         log "exp: $a_value => $c_value"
         store_float $c $c_value
+        read_refcount_decr $a
     }
 
     proc sqrt { parent c a } {
@@ -410,6 +446,7 @@ namespace eval turbine {
         set c_value [ expr sqrt($a_value) ]
         log "sqrt: $a_value => $c_value"
         store_float $c $c_value
+        read_refcount_decr $a
     }
 
     proc abs_float { parent c a } {
@@ -423,6 +460,7 @@ namespace eval turbine {
         set c_value [ expr abs($a_value) ]
         log "abs_float: $a_value => $c_value"
         store_float $c $c_value
+        read_refcount_decr $a
     }
 
     proc abs_integer { parent c a } {
@@ -436,6 +474,7 @@ namespace eval turbine {
         set c_value [ expr abs($a_value) ]
         log "abs_integer: $a_value => $c_value"
         store_integer $c $c_value
+        read_refcount_decr $a
     }
 
     proc pow_integer { parent c inputs } {
@@ -453,6 +492,8 @@ namespace eval turbine {
         set c_value [ pow_integer_impl $a_value $b_value ]
         log "pow_integer: $a_value ** $b_value => $c_value"
         store_float $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc pow_integer_impl { a b } {
@@ -476,6 +517,8 @@ namespace eval turbine {
         set c_value [ expr $a_value ** $b_value ]
         log "pow_float: $a_value ** $b_value => $c_value"
         store_float $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     # checks to see if float i is NaN, sets o to true or false accordingly
@@ -487,5 +530,6 @@ namespace eval turbine {
       set i_value [ retrieve_float $i ]
       # NaN is the only floating point value not equal to itself
       store_integer $o [ expr $i_value != $i_value ]
+      read_refcount_decr $i
     }
 }

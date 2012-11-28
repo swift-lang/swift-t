@@ -15,6 +15,8 @@ namespace eval turbine {
         set cond_value [ retrieve_integer $cond ]
         set msg_value [ retrieve_string $msg ]
         assert_impl $cond_value $msg_value
+        read_refcount_decr $cond
+        read_refcount_decr $msg
     }
 
     proc assert_impl { cond msg } {
@@ -42,6 +44,9 @@ namespace eval turbine {
         set arg2_value [ retrieve $arg2 ]
         set msg_value  [ retrieve_string $msg ]
         assertEqual_impl "$arg1_value" "$arg2_value" "$msg_value"
+        read_refcount_decr $arg1
+        read_refcount_decr $arg2
+        read_refcount_decr $msg
     }
 
     proc assertEqual_impl { arg1 arg2 msg } {
@@ -72,6 +77,9 @@ namespace eval turbine {
         } else {
             log "assertLT: $arg1_value $arg2_value"
         }
+        read_refcount_decr $arg1
+        read_refcount_decr $arg2
+        read_refcount_decr $msg
     }
 
     # assertLTE(arg1, arg2, msg)
@@ -94,5 +102,8 @@ namespace eval turbine {
         } else {
             log "assertLTE: $arg1_value $arg2_value"
         }
+        read_refcount_decr $arg1
+        read_refcount_decr $arg2
+        read_refcount_decr $msg
     }
 }

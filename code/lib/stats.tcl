@@ -47,6 +47,7 @@ namespace eval turbine {
         }
         # If we get out of loop, we're done
         store_integer $result $accum
+        read_refcount_decr $container
     }
 
     # Sum all of the values in a container of floats
@@ -93,6 +94,7 @@ namespace eval turbine {
         }
         # If we get out of loop, we're done
         store_float $result $accum
+        read_refcount_decr $container
     }
 
     # calculate mean of an array of floats or ints
@@ -234,6 +236,7 @@ namespace eval turbine {
         }
         store_float $pop_std_out [ expr sqrt($M2_accum / $n) ]
       }
+      read_refcount_decr $container
     }
 
 
@@ -302,5 +305,6 @@ namespace eval turbine {
       store_integer $n_out $n_accum
       store_float $mean_out $mean_accum
       store_float $std_out [ expr sqrt($M2_accum / (double($n_accum))) ]
+      read_refcount_decr $container
     }
 }

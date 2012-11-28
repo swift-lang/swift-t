@@ -31,6 +31,7 @@ namespace eval turbine {
         set o_value [ expr ! $i_value ]
         log "not $i_value => $o_value"
         store_integer $o $o_value
+        read_refcount_decr $i
     }
 
     # This is a Swift-2 function
@@ -49,6 +50,8 @@ namespace eval turbine {
         log "and: $a_value && $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     # This is a Swift-2 function
@@ -67,6 +70,8 @@ namespace eval turbine {
         log "or: $a_value || $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc eq_integer { parent c inputs } {
@@ -87,6 +92,8 @@ namespace eval turbine {
         log "eq_integer $a_value == $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc neq_integer { parent c inputs } {
@@ -107,6 +114,8 @@ namespace eval turbine {
         log "neq_integer $a_value == $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc lt_integer { parent c inputs } {
@@ -127,6 +136,8 @@ namespace eval turbine {
         log "lt_integer $a_value < $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc lte_integer { parent c inputs } {
@@ -147,6 +158,8 @@ namespace eval turbine {
         log "lte_integer $a_value <= $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc gt_integer { parent c inputs } {
@@ -167,6 +180,8 @@ namespace eval turbine {
         log "gt_integer $a_value > $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc gte_integer { parent c inputs } {
@@ -187,6 +202,8 @@ namespace eval turbine {
         log "gte_integer $a_value >= $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc eq_float { parent c inputs } {
@@ -207,6 +224,8 @@ namespace eval turbine {
         log "eq_float $a_value == $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc neq_float { parent c inputs } {
@@ -227,6 +246,8 @@ namespace eval turbine {
         log "neq_float $a_value == $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc lt_float { parent c inputs } {
@@ -247,6 +268,8 @@ namespace eval turbine {
         log "lt_float $a_value < $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc lte_float { parent c inputs } {
@@ -267,6 +290,8 @@ namespace eval turbine {
         log "lte_float $a_value <= $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc gt_float { parent c inputs } {
@@ -287,6 +312,8 @@ namespace eval turbine {
         log "gt_float $a_value > $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc gte_float { parent c inputs } {
@@ -307,6 +334,8 @@ namespace eval turbine {
         log "gte_float $a_value >= $b_value => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc eq_string { parent c inputs } {
@@ -327,6 +356,8 @@ namespace eval turbine {
         log "eq_string \"$a_value\" == \"$b_value\" => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 
     proc neq_string { parent c inputs } {
@@ -347,5 +378,7 @@ namespace eval turbine {
         log "neq_string \"$a_value\" == \"$b_value\" => $c_value"
         # exec sleep $c_value
         store_integer $c $c_value
+        read_refcount_decr $a
+        read_refcount_decr $b
     }
 }
