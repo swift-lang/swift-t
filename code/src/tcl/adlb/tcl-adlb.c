@@ -1642,7 +1642,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("retrieve_decr",  ADLB_Retrieve_Decr_Cmd);
   COMMAND("enumerate", ADLB_Enumerate_Cmd);
   COMMAND("retrieve_blob", ADLB_Retrieve_Blob_Cmd);
-  COMMAND("retrieve_blob_decr", ADLB_Retrieve_Blob_Decr_Cmd);
+  COMMAND("retrieve_decr_blob", ADLB_Retrieve_Blob_Decr_Cmd);
   COMMAND("blob_free",  ADLB_Blob_Free_Cmd);
   COMMAND("local_blob_free",  ADLB_Local_Blob_Free_Cmd);
   COMMAND("store_blob", ADLB_Store_Blob_Cmd);
