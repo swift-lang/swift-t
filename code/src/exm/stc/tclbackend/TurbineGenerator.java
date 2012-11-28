@@ -1412,7 +1412,7 @@ public class TurbineGenerator implements CompilerBackend
      * TODO: handle struct and file vars
      * @param vars
      * @param incr expression for the amount of increment/decrement.  If null, assume 1
-     * @param if true, then negate incr
+     * @param negate if true, then negate incr
      * @return
      */
     private static Sequence incrementReaders(List<Var> vars, Expression incr, boolean negate) {
@@ -1480,11 +1480,6 @@ public class TurbineGenerator implements CompilerBackend
       List<Var> readOnlyUsedVars = Var.varListDiff(usedVars, keepOpenVars);
       pointStack.peek().append(decrementReaders(readOnlyUsedVars, refDecrAmount));
       pointStack.peek().append(decrementWriters(keepOpenVars, refDecrAmount));
-    }
-
-    private Square negate(Expression expr) {
-      return Square.arithExpr(new LiteralInt(-1),
-              new Token("*"), expr);
     }
 
     private static Sequence decrementWriters(List<Var> vars,

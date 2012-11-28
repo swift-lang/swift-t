@@ -221,7 +221,8 @@ public class Var {
   /**
    * Union of lists with one instance of each variable by name
    * included in result
-   * @param lists
+   * @param list1
+   * @param list2
    * @return
    */
   public static List<Var> varListUnion(List<Var> list1, List<Var> list2) {
