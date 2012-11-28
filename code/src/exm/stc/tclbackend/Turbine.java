@@ -616,7 +616,7 @@ class Turbine
   }
   
   public static Command enableReferenceCounting() {
-    return new Command("turbine::enable_read_refcounting");
+    return new Command("turbine::enable_read_refcount");
   }
 
   /**
