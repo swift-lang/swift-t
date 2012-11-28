@@ -2030,6 +2030,9 @@ public class TurbineGenerator implements CompilerBackend
       }
       // Increment references before async call
       incrementAllRefs(usedVariables, keepOpenVars);
+      // Increment references for condition variable and loop var
+      pointStack.peek().append(incrementReaders(initVals, null));
+
 
       String uniqueLoopName = uniqueTCLFunctionName(loopName);
 
@@ -2076,6 +2079,7 @@ public class TurbineGenerator implements CompilerBackend
           blockingVals.add(varToExpr(newVals.get(i)));
         }
       }
+      pointStack.peek().append(incrementReaders(newVals, null));
       pointStack.peek().add(Turbine.loopRule(loopName,
           nextIterArgs, blockingVals));
     }

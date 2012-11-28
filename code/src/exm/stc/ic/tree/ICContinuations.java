@@ -394,9 +394,9 @@ public class ICContinuations {
 
     protected void fuseIntoAbstract(AbstractLoop o, boolean insertAtTop) {
       this.loopBody.insertInline(o.loopBody, insertAtTop);
-      this.keepOpenVars.addAll(o.keepOpenVars);
+      this.addKeepOpenVars(o.keepOpenVars);
       ICUtil.removeDuplicates(this.keepOpenVars);
-      this.passedInVars.addAll(o.passedInVars);
+      this.addPassedInVars(o.passedInVars);
       ICUtil.removeDuplicates(this.passedInVars);
     }
   }
@@ -755,7 +755,7 @@ public class ICContinuations {
     /*
      * Have handles to the termination instructions
      */
-    // private LoopBreak loopBreak;
+    private LoopBreak loopBreak;
 
     private LoopContinue loopContinue;
     private final ArrayList<Boolean> blockingVars;
@@ -792,6 +792,7 @@ public class ICContinuations {
     @Override
     public Loop clone() {
       // Constructor creates copies of variable lists
+      // TODO: this needs to fix up the reference to the loopContinue/loopBreak instructions
       return new Loop(loopName, this.loopBody.clone(), loopVars, initVals,
           passedInVars, keepOpenVars, blockingVars);
     }
@@ -807,7 +808,7 @@ public class ICContinuations {
     }
 
     public void setLoopBreak(LoopBreak loopBreak) {
-      // this.loopBreak = loopBreak;
+      this.loopBreak = loopBreak;
     }
 
     public void setLoopContinue(LoopContinue loopContinue) {
@@ -853,6 +854,10 @@ public class ICContinuations {
     public void replaceConstructVars_(Map<String, Arg> renames,
         boolean inputsOnly) {
       ICUtil.replaceVarsInList(renames, initVals, false);
+      if (!inputsOnly) {
+        loopContinue.renameVars(renames);
+        loopBreak.renameVars(renames);
+      }
     }
 
     @Override
@@ -906,13 +911,13 @@ public class ICContinuations {
       return res;
     }
 
-
     @Override
     public void addPassedInVar(Var variable) {
       // special implementation to also fix up the loopContinue instruction
       assert(variable != null);
       super.addPassedInVar(variable);
       this.loopContinue.addUsedVar(variable);
+      this.loopBreak.addUsedVar(variable);
     }
 
     @Override
@@ -920,6 +925,31 @@ public class ICContinuations {
       // special implementation to also fix up the loopContinue instruction
       super.removePassedInVar(variable);
       this.loopContinue.removeUsedVar(variable);
+      this.loopBreak.removeUsedVar(variable);
+    }
+
+    @Override
+    public void addPassedInVars(Collection<Var> vars) {
+      // special implementation to also fix up the loopContinue instruction
+      super.addPassedInVars(vars);
+      this.loopContinue.removeUsedVars(vars);
+      this.loopBreak.removeUsedVars(vars);
+    }
+
+    @Override
+    public void addKeepOpenVar(Var v) {
+      // special implementation to also fix up the loopContinue instruction
+      super.addKeepOpenVar(v);
+      this.loopContinue.addKeepOpenVar(v);
+      this.loopBreak.addKeepOpenVar(v);
+    }
+
+    @Override
+    public void addKeepOpenVars(Collection<Var> v) {
+      // special implementation to also fix up the loopContinue instruction
+      super.addKeepOpenVars(v);
+      this.loopContinue.removeKeepOpenVars(v);
+      this.loopBreak.removeKeepOpenVars(v);
     }
 
     public Var getInitCond() {
