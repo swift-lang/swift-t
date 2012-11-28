@@ -12,5 +12,7 @@
 (string o) string_from_blob(blob b) "turbine" "0.0.2" "string_from_blob";
 @pure
 (blob o) blob_from_floats(float f[]) "turbine" "0.0.2" "blob_from_floats";
+@pure
+(float f[]) floats_from_blob(blob b) "turbine" "0.0.2" "floats_from_blob";
 
 #endif // BLOB_SWIFT

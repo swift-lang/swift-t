@@ -37,6 +37,20 @@ namespace eval turbine {
     store_string $result $s
   }
 
+  proc floats_from_blob { stack result input } {
+      rule "ffb-$result-$input" $input $turbine::LOCAL \
+          "floats_from_blob_body $result $input"
+  }
+  proc floats_from_blob_body { result input } {
+      set s      [ SwiftBlob_sizeof_float ]
+      set length [ SwiftBlob_length_get $input ]
+      set n      [ expr $length / $s ]
+      for { set i 0 } { $i < $n } { incr i } {
+          set d [ SwiftBlob_double_get $input ]
+          puts "$i : $d"
+      }
+  }
+
   # Container must be indexed from 0,N-1
   proc blob_from_floats { stack result input } {
     rule "bff-$input-$result" $input $turbine::LOCAL \
