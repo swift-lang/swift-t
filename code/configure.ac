@@ -1,4 +1,6 @@
 
+# TURBINE CONFIGURE.AC
+
 # Process this file with autoconf to produce a configure script.
 
 # NOTE: Default CFLAGS are "-g -O2"
@@ -304,7 +306,7 @@ AC_ARG_WITH(mpe,
      AS_HELP_STRING(
                     [--with-mpe],
                     [Enable Turbine MPE, set path to libmpe.so]),
-     [ USE_MPE=${withval} ], [:] )
+     [ USE_MPE=${withval} ; ENABLE_MPE=1], [:] )
 if [[ ${USE_MPE} != 0 ]]
 then
     AC_MSG_RESULT([Enabling MPE]);
@@ -455,6 +457,7 @@ AC_CONFIG_FILES(
         src/tcl/module.mk
         src/tcl/c-utils/module.mk
         src/tcl/adlb/module.mk
+        src/tcl/blob/module.mk
         src/tcl/turbine/module.mk
         src/tcl/mpe/module.mk
         lib/module.mk
