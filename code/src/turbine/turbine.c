@@ -56,10 +56,19 @@ typedef struct
   turbine_action_type action_type;
   /** ADLB priority for this action */
   int priority;
+  /** Closed inputs - bit vector */
+  unsigned char *closed_inputs;
   /** Index of next subscribed input (starts at 0) */
   int blocker;
   transform_status status;
 } transform;
+
+static int bitfield_size(int inputs);
+
+// Check if input closed
+static inline bool input_closed(transform *T, int i);
+
+static inline void mark_input_closed(transform *T, int i);
 
 /**
    Has turbine_init() been called successfully?
@@ -89,6 +98,12 @@ struct table_lp transforms_returned;
    Map from TD ID to list of transforms
  */
 struct table_lp td_blockers;
+
+/**
+  TDs to which this engine has subscribed, used to avoid
+  subscribing multiple times
+ */
+struct table_lp td_subscribed;
 
 #define turbine_check(code) if (code != TURBINE_SUCCESS) return code;
 
@@ -239,6 +254,10 @@ turbine_engine_init()
   result = table_lp_init(&td_blockers, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
+  
+  result = table_lp_init(&td_subscribed, 1024*1024);
+  if (!result)
+    return TURBINE_ERROR_OOM;
 
   return TURBINE_SUCCESS;
 }
@@ -287,15 +306,22 @@ transform_create(const char* name,
   if (inputs > 0)
   {
     T->input_list = malloc(inputs*sizeof(turbine_datum_id));
-    if (! T->input_list)
+    T->closed_inputs = malloc(bitfield_size(inputs)*sizeof(unsigned char));
+    if (! T->input_list || ! T->closed_inputs)
       return TURBINE_ERROR_OOM;
   }
-  else
+  else {
     T->input_list = NULL;
+    T->closed_inputs = NULL;
+  }
 
   T->inputs = inputs;
-  for (int i = 0; i < inputs; i++)
+  for (int i = 0; i < inputs; i++) {
     T->input_list[i] = input_list[i];
+  }
+  for (int i =0; i < bitfield_size(inputs); i++) {
+    T->closed_inputs[i] = 0;
+  }
 
   T->status = TRANSFORM_WAITING;
 
@@ -313,10 +339,24 @@ transform_free(transform* T)
   free(T);
 }
 
-static inline void
-subscribe(turbine_transform_id id, int* result)
+/**
+ * Return true if subscribed, false if data already set
+ */
+static inline bool
+subscribe(turbine_transform_id id)
 {
-  ADLB_Subscribe(id, result);
+  if (table_lp_search(&td_subscribed, id) != NULL) {
+    // Already subscribed
+    return true;
+  }
+  int result;
+  ADLB_Subscribe(id, &result);
+
+  if (result != 0) {
+    // Record it was subscribed
+    table_lp_add(&td_subscribed, id, (void*)1);
+  }
+  return result != 0;
 }
 
 static int transform_tostring(char* output,
@@ -351,12 +391,13 @@ turbine_rule(const char* name,
     return code;
 
   *id = T->id;
-  DEBUG_TURBINE_RULE(T, *id);
   turbine_check(code);
 
   rule_inputs(T);
 
   bool subscribed = progress(T);
+  
+  DEBUG_TURBINE_RULE(T, *id);
 
   if (subscribed)
   {
@@ -505,6 +546,9 @@ turbine_pop(turbine_transform_id id, turbine_action_type* action_type,
 turbine_code
 turbine_close(turbine_datum_id id)
 {
+  // Record no longer subscribed
+  table_lp_remove(&td_subscribed, id);
+
   // Look up transforms that this td was blocking
   struct list_l* L = table_lp_search(&td_blockers, id);
   if (L == NULL)
@@ -523,6 +567,13 @@ turbine_close(turbine_datum_id id)
     if (!T)
       continue;
 
+    // update closed vector
+    for (int i = T->blocker; i < T->inputs; i++) {
+      if (T->input_list[i] == id) {
+        mark_input_closed(T, i);
+      }
+    }
+
     bool subscribed = progress(T);
     if (!subscribed)
     {
@@ -536,20 +587,28 @@ turbine_close(turbine_datum_id id)
   return TURBINE_SUCCESS;
 }
 
+/**
+ * Make progress on transform. Provided is a list of
+ * ids that are closed.  We contact server to check
+ * status of any IDs not in list.
+ */
 static inline bool
 progress(transform* T)
 {
-  int subscribed = 0;
-  while (T->blocker < T->inputs)
+  for (; T->blocker < T->inputs; T->blocker++)
   {
-    turbine_datum_id td = T->input_list[T->blocker];
-    subscribe(td, &subscribed);
-    if (!subscribed)
-      T->blocker++;
-    else
-      break;
+    if (!input_closed(T, T->blocker))
+    {
+      // Contact server to check if available
+      turbine_datum_id td = T->input_list[T->blocker];
+      if (subscribe(td)) {
+        // Need to block on this id
+        return true;
+      }
+    }
   }
-  return subscribed;
+  // Ready to run
+  return false;
 }
 
 /**
@@ -632,6 +691,29 @@ transform_tostring(char* output, transform* t)
 
   result = p - output;
   return result;
+}
+
+static inline bool
+input_closed(transform *T, int i)
+{
+  unsigned char field = T->closed_inputs[i / 8];
+  return (field >> (i % 8)) & 0x1;
+}
+
+// Extract bit from closed_inputs
+static inline void
+mark_input_closed(transform *T, int i)
+{
+  unsigned char mask = 0x1 << (i % 8);
+  T->closed_inputs[i / 8] |= mask;
+}
+
+static int
+bitfield_size(int inputs) {
+  if (inputs <= 0)
+    return 0;
+  // Round up to nearest multiple of 8
+  return (inputs - 1) / 8 + 1;
 }
 
 /**
