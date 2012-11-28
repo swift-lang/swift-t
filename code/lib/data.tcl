@@ -15,6 +15,7 @@ namespace eval turbine {
         allocate_container                            \
         container_lookup container_list               \
         container_insert notify_waiter                \
+        read_refcount_incr read_refcount_decr         \
         filename
 
     # Shorten strings in the log if the user requested that
@@ -108,6 +109,7 @@ namespace eval turbine {
         set signal [ allocate "signal:$name" void 0 ]
         if { $is_mapped } {
             set filename [ lindex $args 0 ]
+            read_refcount_incr $filename
             log "file: $name=\[ <$signal> <$filename> \] mapped"
         } else {
             # use new string that will be set later to

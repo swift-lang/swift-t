@@ -15,6 +15,7 @@ namespace eval turbine {
         set L [ list ]
         foreach a $args {
             lappend L [ retrieve $a ]
+            read_refcount_decr $a
         }
         set s [ eval format $L ]
         puts $s

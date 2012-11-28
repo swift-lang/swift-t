@@ -79,6 +79,7 @@ namespace eval turbine {
     proc input_file_body { outfile filepath } {
       set filepath_val [ retrieve_string $filepath ]
       input_file_impl $outfile $filepath_val
+      read_refcount_decr $filepath
     }
 
     proc input_file_impl { outfile filepath_val } {
@@ -136,6 +137,7 @@ namespace eval turbine {
       file copy -force $srcpath_val $dstpath_val
       # signal that output is now available
       store_void [ get_file_status $dst ]
+      file_read_refcount_decr $src
     }
 
     # return the filename of a unique temporary file
@@ -149,13 +151,27 @@ namespace eval turbine {
       store_void [ get_file_status $handle ]
     }
 
+    proc file_read_refcount_incr { handle args } {
+      set status [ get_file_status $handle ]
+      set path [ get_file_path $handle ]
+      read_refcount_incr $status {*}$args
+      read_refcount_incr $path {*}$args
+    }
+
+    proc file_read_refcount_decr { handle args } {
+      set status [ get_file_status $handle ]
+      set path [ get_file_path $handle ]
+      read_refcount_decr $status {*}$args
+      read_refcount_decr $path {*}$args
+    }
+
     proc glob { stack result inputs } {
         rule glob $inputs $turbine::LOCAL \
             "glob_body $result $inputs"
     }
 
-    proc glob_body { result args } {
-        set s_value [ retrieve_string $args ]
+    proc glob_body { result s } {
+        set s_value [ retrieve_string $s ]
         set r_value [ ::glob $s_value ]
         set n [ llength $r_value ]
         log "glob: $s_value tokens: $n"
@@ -166,6 +182,7 @@ namespace eval turbine {
         }
         # close container
         adlb::slot_drop $result
+        read_refcount_decr $s
     }
 
     proc readFile { stack result inputs } {
@@ -181,6 +198,7 @@ namespace eval turbine {
         set fp [ ::open $s r ]
 	set file_data [ read $fp ]
 	store_string $result $file_data
+        file_read_refcount_decr $src
     }
 
     proc writeFile { stack outputs inputs } {
@@ -199,5 +217,6 @@ namespace eval turbine {
 	puts $fp $str
 	close $fp
 	store_void [ get_file_status $dst ]
+        read_refcount_decr $dstpath
     }
 }
