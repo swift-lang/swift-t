@@ -755,7 +755,7 @@ Swift (<<Turbine_information, Turbine information>>).
 +TURBINE_LOG=0+:: Disable logging
 
 +ADLB_EXHAUST_TIME+:: Time in seconds taken by ADLB task servers to
-shut down. Typically 1.  In very large runs, this may be set to 5 to
+shut down.  Default 1.  In very large runs, this may be set to 5 to
 ensure correctness.
 
 +TURBINE_LAUNCH_OPTS+::
@@ -794,7 +794,11 @@ Configure Turbine with:
 ** Configure c-utils with +--disable-log+
 +
 3. Configure everything with +--enable-fast+. This disables assertions
-and other checks
+   and other checks
+4. When making performance measurements, always subtract 1 second
+   (or the value of +ADLB_EXHAUST_TIME+) from the Turbine run time
+   due to the ADLB shutdown protocol, which does not start until the
+   system is idle for 1 second.
 
 ////
 Local Variables:
