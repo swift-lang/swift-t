@@ -1,10 +1,7 @@
 
-# Test trace and basic string functionality
+# Test string split function
 
-# SwiftScript
-# string s1 = "hi";
-# string s2 = "bye";
-# trace(s1,s2);
+# Requires TURBINE_LOG=1
 
 package require turbine 0.0.1
 
@@ -13,7 +10,6 @@ proc rules { } {
     turbine::create_string 11 0
     turbine::create_string 12 0
     turbine::create_string 13 0
-    # c::string 3
 
     turbine::store_string 11 "hi how are you"
 
