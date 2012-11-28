@@ -127,7 +127,7 @@ data_create(adlb_datum_id id, adlb_data_type type, bool updateable)
     // initial reference is a read-write reference
     // write_refcount is not decremented on update
     d->write_refcount = 1;
-    d->read_refcount = 0;
+    d->read_refcount = 1;
   } else {
     // write_refcount will be decremented on first write to signal closed
     d->write_refcount = 1;
