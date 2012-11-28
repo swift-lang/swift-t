@@ -382,32 +382,16 @@ namespace eval turbine {
         }
     }
 
-    proc read_refcount_decr { id args } {
-      set num_args [ llength $args ]
-      if { $num_args == 0 } {
-        read_refcount_incr $id -1
-      } elseif { $num_args == 1 } {
-        set decr [ lindex $args 0 ]
-        read_refcount_incr $id [ expr -1 * $decr ]
-      } else {
-        error "read_refcount_decr: requires 1 or 2 args"
-      }
+    proc read_refcount_decr { id { amount 1 } } {
+      read_refcount_incr $id [ expr -1 * $amount ]
     }
 
-    proc read_refcount_incr { id args } {
+    proc read_refcount_incr { id {amount 1} } {
       variable read_refcounting_on
       if { ! $read_refcounting_on } {
         return
       }
 
-      set num_args [ llength $args ]
-      if { $num_args == 0 } {
-        set incr_amount 1
-      } elseif { $num_args == 1 } {
-        set incr_amount [ lindex $args 0 ]
-      } else {
-        error "read_refcount_decr: requires 1 or 2 args"
-      }
-      adlb::refcount_incr $id $adlb::READ_REFCOUNT $incr_amount
+      adlb::refcount_incr $id $adlb::READ_REFCOUNT $amount
     }
 }

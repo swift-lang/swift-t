@@ -151,18 +151,15 @@ namespace eval turbine {
       store_void [ get_file_status $handle ]
     }
 
-    proc file_read_refcount_incr { handle args } {
+    proc file_read_refcount_incr { handle { amount 1 } } {
       set status [ get_file_status $handle ]
       set path [ get_file_path $handle ]
-      read_refcount_incr $status {*}$args
-      read_refcount_incr $path {*}$args
+      read_refcount_incr $status $amount
+      read_refcount_incr $path $amount
     }
 
-    proc file_read_refcount_decr { handle args } {
-      set status [ get_file_status $handle ]
-      set path [ get_file_path $handle ]
-      read_refcount_decr $status {*}$args
-      read_refcount_decr $path {*}$args
+    proc file_read_refcount_decr { handle { amount 1 } } {
+      file_read_refcount_incr $handle [ expr $amount * -1 ]
     }
 
     proc glob { stack result inputs } {
