@@ -54,6 +54,9 @@ static int am_server;
 static int am_debug_server;
 #endif
 
+/** If false, intercept and disable all read refcount operations */
+static bool read_refcount_enabled = false;
+
 /** Size of MPI_COMM_WORLD */
 static int mpi_size = -1;
 
@@ -644,6 +647,8 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION((objc == 2 || objc == 3),
                 "requires 1 or 2 args!");
 
+  /* Only decrement if refcounting enabled */
+  decr = read_refcount_enabled && decr;
   int rc;
   long id;
   rc = Tcl_GetLongFromObj(interp, objv[1], &id);
@@ -968,6 +973,9 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[], bool decr)
 {
   TCL_ARGS(2);
+
+  /* Only decrement if refcounting enabled */
+  decr = read_refcount_enabled && decr;
 
   int rc;
   long id;
@@ -1552,11 +1560,36 @@ ADLB_Refcount_Incr_Cmd(ClientData cdata, Tcl_Interp *interp,
   int change = 1;
   Tcl_GetIntFromObj(interp, objv[3], &change);
 
+  if (!read_refcount_enabled) {
+    // Intercept any read refcount operations
+    if (type == ADLB_READ_REFCOUNT)
+    {
+      return TCL_OK;
+    }
+    else if (type == ADLB_READWRITE_REFCOUNT)
+    {
+      type = ADLB_WRITE_REFCOUNT;
+    }
+  }
+
   // DEBUG_ADLB("adlb::refcount_incr: <%li>", container_id);
   int rc = ADLB_Refcount_incr(container_id, type, change);
 
   if (rc != ADLB_SUCCESS)
     return TCL_ERROR;
+  return TCL_OK;
+}
+
+
+/**
+   usage: adlb::read_refcount_enableding
+   If not set, all read reference count operations are ignored
+ **/
+static int
+ADLB_Enable_Read_Refcount_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  read_refcount_enabled = true;
   return TCL_OK;
 }
 
@@ -1651,6 +1684,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("slot_create", ADLB_Slot_Create_Cmd);
   COMMAND("slot_drop", ADLB_Slot_Drop_Cmd);
   COMMAND("permanent", ADLB_Permanent_Cmd);
+  COMMAND("enable_read_refcount",  ADLB_Enable_Read_Refcount_Cmd);
   COMMAND("refcount_incr", ADLB_Refcount_Incr_Cmd);
   COMMAND("insert",    ADLB_Insert_Cmd);
   COMMAND("insert_atomic", ADLB_Insert_Atomic_Cmd);

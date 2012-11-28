@@ -45,9 +45,6 @@ namespace eval turbine {
         set default_priority 0
         reset_priority
 
-        variable read_refcounting_on
-        set read_refcounting_on 0
-
         # Set up work types
         enum WORK_TYPE { WORK CONTROL }
         global WORK_TYPE
@@ -149,9 +146,8 @@ namespace eval turbine {
         set priority $p
     }
 
-    proc enable_read_refcounting {} {
-      variable read_refcounting_on
-      set read_refcounting_on 1
+    proc enable_read_refcount {} {
+      adlb::enable_read_refcount
     }
 
     proc debug { msg } {

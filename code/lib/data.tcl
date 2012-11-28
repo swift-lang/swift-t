@@ -387,11 +387,6 @@ namespace eval turbine {
     }
 
     proc read_refcount_incr { id {amount 1} } {
-      variable read_refcounting_on
-      if { ! $read_refcounting_on } {
-        return
-      }
-
       adlb::refcount_incr $id $adlb::READ_REFCOUNT $amount
     }
 }

@@ -5,6 +5,7 @@ package require turbine 0.0.1
 
 turbine::defaults
 turbine::init $engines $servers
+turbine::enable_read_refcount
 
 proc test_insert_then_decr_ref {} {
   puts test_insert_then_decr_ref
