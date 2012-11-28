@@ -364,6 +364,8 @@ namespace eval turbine {
         container_insert $r $j $d
     }
 
+    # Create container c[i] inside of container c
+    # c[i] may already exist, if so, that's fine
     proc container_create_nested { c i type } {
       debug "container_create_nested: $c\[\"$i\"\] $type"
       if [ adlb::insert_atomic $c $i ] {
