@@ -138,7 +138,9 @@ class Turbine
   
   public static final LiteralInt VOID_DUMMY_VAL = new LiteralInt(12345);
   private static final Token REFCOUNT_INCR = new Token("turbine::read_refcount_incr");
+  private static final Token REFCOUNT_DECR = new Token("turbine::read_refcount_decr");
   private static final Token FILE_REFCOUNT_INCR = new Token("turbine::file_read_refcount_incr");
+  private static final Token FILE_REFCOUNT_DECR = new Token("turbine::file_read_refcount_decr");
 
   public enum StackFrameType {
     MAIN,
@@ -626,7 +628,33 @@ class Turbine
   public static TclTree incrRef(Expression var, Expression change) {
     try {
       if (Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
-        return new Command(REFCOUNT_INCR, var, change);
+        if (change == null) {
+          return new Command(REFCOUNT_INCR, var);
+        } else {
+          return new Command(REFCOUNT_INCR, var, change);
+        }
+      } else {
+        return new Token("");
+      }
+    } catch (InvalidOptionException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
+  }
+
+  /**
+   * Modify reference count by amount
+   * @param var
+   * @param change
+   * @return
+   */
+  public static TclTree decrRef(Expression var, Expression change) {
+    try {
+      if (Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
+        if (change == null) {
+          return new Command(REFCOUNT_DECR, var);
+        } else {
+          return new Command(REFCOUNT_DECR, var, change);
+        }
       } else {
         return new Token("");
       }
@@ -640,7 +668,7 @@ class Turbine
   }
   
   public static TclTree decrRef(Value var) {
-    return incrRef(var, new LiteralInt(-1));
+    return decrRef(var, new LiteralInt(1));
   }
   
   /**
@@ -652,7 +680,27 @@ class Turbine
   public static TclTree incrFileRef(Expression var, Expression change) {
     try {
       if (Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
-        return new Command(FILE_REFCOUNT_INCR, var, change);
+        if (change == null) {
+          return new Command(FILE_REFCOUNT_INCR, var);
+        } else {
+          return new Command(FILE_REFCOUNT_INCR, var, change);
+        }
+      } else {
+        return new Token("");
+      }
+    } catch (InvalidOptionException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
+  }
+
+  public static TclTree decrFileRef(Expression var, Expression change) {
+    try {
+      if (Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
+        if (change == null) {
+          return new Command(FILE_REFCOUNT_DECR, var);
+        } else {
+          return new Command(FILE_REFCOUNT_DECR, var, change);
+        }
       } else {
         return new Token("");
       }

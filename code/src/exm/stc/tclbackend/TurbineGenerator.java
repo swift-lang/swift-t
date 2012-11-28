@@ -1422,22 +1422,31 @@ public class TurbineGenerator implements CompilerBackend
         if (!hasRefcount(var)) {
           continue;
         }
-        int count = vc.count * (negate ? -1 : 1);
         Expression amount;
-        if (incr == null) {
-          amount = new LiteralInt(count);
-        } else if (count == 1) {
+        if (vc.count == 1 && incr == null) {
+          amount = null;
+        } else if (incr == null) {
+          amount = new LiteralInt(vc.count);
+        } else if (vc.count == 1 && incr != null) {
           amount = incr;
         } else {
-          amount = Square.arithExpr(new LiteralInt(count), new Token("*"), incr);
+          amount = Square.arithExpr(new LiteralInt(vc.count), new Token("*"), incr);
         }
         if (Types.isFile(var.type())) {
           // Need to use different function to handle file reference
-          seq.add(Turbine.incrFileRef(varToExpr(var), amount));
+          if (negate) {
+            seq.add(Turbine.decrFileRef(varToExpr(var), amount));
+          } else {
+            seq.add(Turbine.incrFileRef(varToExpr(var), amount));
+          }
         } else if (Types.isStruct(var.type())) {
           // TODO: how to refcount for struct
         } else {
-          seq.add(Turbine.incrRef(varToExpr(var), amount));
+          if (negate) {
+            seq.add(Turbine.decrRef(varToExpr(var), amount));
+          } else {
+            seq.add(Turbine.incrRef(varToExpr(var), amount));
+          }
         }
       }
       return seq;
