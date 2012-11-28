@@ -806,4 +806,8 @@ class Turbine
     return new Command("turbine::set_priority", Arrays.asList(priority));
   }
 
+  public static Command makePermanent(Value value) {
+    return new Command("adlb::permanent", Arrays.asList(value));
+  }
+
 }

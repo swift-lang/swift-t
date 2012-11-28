@@ -12,7 +12,7 @@ public class Command extends TclTree
     this.tokens = Arrays.asList(tokens);
   }
 
-  public Command(String cmd, List<Expression> args) {
+  public Command(String cmd, List<? extends Expression> args) {
     tokens = new ArrayList<TclTree>(args.size() + 1);
     tokens.add(new Token(cmd));
     tokens.addAll(args);

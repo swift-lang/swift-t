@@ -1375,7 +1375,12 @@ public class TurbineGenerator implements CompilerBackend
      * @return true if type has refcount to be managed
      */
     private static boolean hasRefcount(Var v) {
-      return !Types.isScalarValue(v.type());
+      if (Types.isScalarValue(v.type())) {
+        return false;
+      } else if (v.defType() == DefType.GLOBAL_CONST) {
+        return false;
+      }
+      return true;
     }
 
     /**
@@ -1894,6 +1899,13 @@ public class TurbineGenerator implements CompilerBackend
     }
     globInit.add(Turbine.allocate(tclName, typePrefix, false));
     globInit.add(setCmd);
+    try {
+      if (Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
+        globInit.add(Turbine.makePermanent(new Value(tclName)));
+      }
+    } catch (InvalidOptionException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
   }
 
   /**
