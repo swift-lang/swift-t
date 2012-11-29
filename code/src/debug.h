@@ -32,7 +32,7 @@ void debug_check_environment(void);
 
 
 #ifndef NDEBUG
-#define ENABLE_DEBUG 1
+// #define ENABLE_DEBUG 1
 #endif
 
 #ifndef NDEBUG
