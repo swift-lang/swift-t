@@ -16,6 +16,16 @@ typedef struct
   int length;
 } SwiftBlob;
 
+/*
+  Based on the SwiftBlob struct, SWIG will generate the following
+  Tcl functions:
+
+  new_SwiftBlob()    -> SwiftBlob*
+  delete_SwiftBlob() -> void
+  SwiftBlob_pointer_set/get
+  SwiftBlob_length_set/get
+ */
+
 SwiftBlob* SwiftBlob_make_test(void);
 
 int SwiftBlob_sizeof_float(void);
