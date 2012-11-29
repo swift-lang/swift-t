@@ -6,6 +6,14 @@ Turbine Internals
 Justin M. Wozniak <wozniak@mcs.anl.gov>
 v0.0.7, November 2012
 
+////
+
+This file is on the web at:
+
+http://www.mcs.anl.gov/exm/local/guides/turbine-internals.html
+
+////
+
 == Overview
 
 
