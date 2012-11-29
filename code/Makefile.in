@@ -95,7 +95,8 @@ endif
 ifeq ($(MACHINE),normal)
 	MPI_LIB_DIR = $(MPI)/lib
 	MPI_LIB_NAME = libmpich.so
-	MPI_LIB	= -L$(MPI_LIB_DIR) -l mpich -l mpl
+	MPI_LIB	= -L$(MPI_LIB_DIR) -l mpich
+# -l mpl # Needed for older MPICH
 endif
 ifeq ($(MACHINE),sicortex)
 	MPI_LIB = -L$(MPI)/lib -l scmpi
