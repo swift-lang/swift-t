@@ -315,6 +315,7 @@ static int cache_retrieve_cmd(ClientData cdata, Tcl_Interp *interp,
 
 static int cache_store_cmd(ClientData cdata, Tcl_Interp* interp,
                            int objc, Tcl_Obj *const objv[]);
+
 static int
 Turbine_Cache_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
@@ -552,6 +553,10 @@ Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
                        "turbine::c::" tcl_function, c_function,     \
                        NULL, NULL);
 
+// We assume SWIG correctly generates this function
+// See the tcl/blob module
+int Swiftblob_Init(Tcl_Interp* interp);
+
 /**
    Called when Tcl loads this extension
  */
@@ -567,6 +572,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   tcl_c_utils_init(interp);
   tcl_adlb_init(interp);
   tcl_mpe_init(interp);
+  Swiftblob_Init(interp);
 
   COMMAND("init",        Turbine_Init_Cmd);
   COMMAND("engine_init", Turbine_Engine_Init_Cmd);
