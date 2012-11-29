@@ -1519,7 +1519,7 @@ ADLB_Slot_Drop_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /**
    usage: adlb::permanent <id>
-  
+
    Ensures that data is never garbage collected
 */
 static int
@@ -1532,7 +1532,7 @@ ADLB_Permanent_Cmd(ClientData cdata, Tcl_Interp *interp,
   long id;
   rc = Tcl_GetLongFromObj(interp, objv[1], &id);
   TCL_CHECK_MSG(rc, "adlb::permanent could not get data id");
-  
+
   rc = ADLB_Permanent(id);
 
   if (rc != ADLB_SUCCESS)
@@ -1555,7 +1555,9 @@ ADLB_Refcount_Incr_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_GetLongFromObj(interp, objv[1], &container_id);
 
   adlb_refcount_type type;
-  Tcl_GetIntFromObj(interp, objv[2], (int*)&type);
+  int t;
+  Tcl_GetIntFromObj(interp, objv[2], &t);
+  type = t;
 
   int change = 1;
   Tcl_GetIntFromObj(interp, objv[3], &change);

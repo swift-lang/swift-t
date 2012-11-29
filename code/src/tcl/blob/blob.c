@@ -36,7 +36,7 @@ SwiftBlob_pointer_as_integer(void* p)
 double*
 SwiftBlob_cast_to_pointer(int i)
 {
-  return (double*) i;
+  return (double*) (size_t) i;
 }
 
 double
