@@ -175,81 +175,6 @@ This describes the symbols available to the Turbine programmer.  These
 features are required when writing STC or constructing Swift/T
 extensions.
 
-=== ADLB layer
-
-Turbine uses ADLB to distribute tasks and locate data.
-
-All Turbine variables are stored in a customized data store built into
-ADLB.  This required the construction of additional ADLB API calls.
-
-The following ADLB features are available to Turbine.  They are used
-internally by the Turbine features, they are not called directly by
-the user script.  Cf. +src/tcl/adlb/tcl-adlb.c+.
-
-adlb::SUCCESS::
-
-Variable represents +ADLB_SUCCESS+.
-
-adlb::ANY::
-
-Variable represents "any", which is -1 in ADLB.
-
-adlb::init <servers> <types>::
-
-Start ADLB with the given number of servers and work types.
-
-adlb::finalize::
-
-Stop ADLB.
-
-adlb::put <reserve_rank> <work type> <work unit>::
-
-Submit a work unit as a string of given integer type.  Sent to given
-rank, which may be +adlb::ANY+.
-
-adlb::get <req_type> <answer_rank>::
-
-Get a work unit as a string of given integer type, which may be
-+adlb::ANY+.  ADLB answer rank stored in +answer_rank+.
-
-adlb::create <id> <data>::
-
-Instantiate the given data but do not close it.  Data may be:
-
-* +string:+
-* +integer:+
-* +container:<type>+
-  where +type+ is the type of the container keys.
-* +file:<name>+
-  where +name+ is the file name.
-
-adlb::store <id> <data>::
-
-Store the TD.
-
-adlb::retrieve <id>::
-
-Retrieve the TD.
-
-adlb::insert <id> <subscript> <member>::
-
-Store TD +member+ at the given +subscript+ in container +id+.
-
-adlb::lookup <id> <subscript>::
-
-Obtain the TD for the given +subscript+ in container +id+.
-
-adlb::unique::
-
-Return a unique TD.
-
-==== Internals
-
-ADLB_Subscribe(id)::
-
-Called only by Turbine rule processing.  Request that the calling rank
-be notified when TD +id+ is closed.
-
 === Turbine core
 
 The core Turbine features are as follows.
@@ -298,6 +223,87 @@ Initializes ADLB
 
 +finalize+::
 Shuts down and reports unused rules
+
+=== ADLB layer
+
+Turbine uses ADLB to distribute tasks and locate data.
+
+All Turbine variables are stored in a customized data store built into
+ADLB.  This required the construction of additional ADLB API calls.
+
+The following ADLB features are available to Turbine.  Usually, they
+are used internally by the Turbine features, they are not called
+directly by the user script.
+
+*tcl-adlb.c*
+
++adlb::SUCCESS+::
+
+Variable represents +ADLB_SUCCESS+.
+
++adlb::ANY+::
+
+Variable represents "any", which is -1 in ADLB.
+
++adlb::init servers types+::
+
+Start ADLB with the given number of servers and work types.
+
++adlb::finalize+::
+
+Stop ADLB.
+
++adlb::put reserve_rank work type work_unit+::
+
+Submit a work unit as a string of given integer type.  Sent to given
+rank, which may be +adlb::ANY+.
+
++adlb::get req_type answer_rank+::
+
+Get a work unit as a string of given integer type, which may be
++adlb::ANY+.  ADLB answer rank stored in +answer_rank+.
+
++adlb::create id data+::
+
+Instantiate the given data but do not close it.  Data may be:
+
+* +string:+
+* +integer:+
+* +container:<type>+
+  where +type+ is the type of the container keys.
+* +file:<name>+
+  where +name+ is the file name.
+
++adlb::store id data+::
+
+Store the TD.
+
++adlb::retrieve id+::
+
+Retrieve the TD.
+
++adlb::insert id subscript member+::
+
+Store TD +member+ at the given +subscript+ in container +id+.
+
++adlb::lookup id subscript+::
+
+Obtain the TD for the given +subscript+ in container +id+.
+
++adlb::unique+::
+
+Return a unique TD.
+
+==== Internals
+
+*adlb.c*
+
++ADLB_Subscribe(id)+::
+
+Called only by Turbine rule processing.  Request that the calling rank
+be notified when TD +id+ is closed.
+
+=== Data
 
 ==== Data allocation
 
@@ -355,7 +361,7 @@ literal x integer 3
 
 Now x is a closed TD of type integer with value 3.
 
-==== Progress (rules)
+=== Progress (rules)
 
 Data-dependent progress is controlled by Turbine rules.
 
@@ -376,7 +382,7 @@ the action ready for execution, based on the +action_type+.  The
 execution string can be any Tcl expression - it is typically used to
 jump into a Tcl function that represents a Swift function.
 
-===== Semantics
+==== Semantics
 
 The rule statement semantics are as follows, with respect to the Tcl
 thread of execution.
@@ -389,12 +395,12 @@ thread of execution.
 * For +CONTROL+ or +WORK+, you can execute my action on a different node
 (I will be able to find my data (and call stack) in the global store)
 
-===== Naming
+==== Naming
 
 The name "rule" was chosen because this is somewhat like a Makefile
 rule, and the analogy was intended to be helpful.
 
-===== Rationale
+==== Rationale
 
 A Turbine rule is not just a control structure, it is data- it has an
 identifier and debug token, is stored in data structures, is loggable,
