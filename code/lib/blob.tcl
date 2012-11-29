@@ -1,6 +1,5 @@
 # Turbine builtin functions for blob manipulation
 
-
 namespace eval turbine {
 
   proc blob_size_async { stack out blob } {
@@ -42,13 +41,24 @@ namespace eval turbine {
           "floats_from_blob_body $result $input"
   }
   proc floats_from_blob_body { result input } {
+      log "floats_from_blob_body: result=<$result> input=<$input>"
       set s      [ SwiftBlob_sizeof_float ]
-      set length [ SwiftBlob_length_get $input ]
-      set n      [ expr $length / $s ]
+      set L [ adlb::retrieve_blob $input ]
+      set p      [ lindex $L 0 ]
+      set length [ lindex $L 1 ]
+      set blob   [ new_SwiftBlob ]
+      SwiftBlob_pointer_set $blob [ SwiftBlob_cast_to_pointer $p ]
+      SwiftBlob_length_set  $blob $length
+
+      set n [ expr $length / $s ]
       for { set i 0 } { $i < $n } { incr i } {
-          set d [ SwiftBlob_double_get $input ]
-          puts "$i : $d"
+          set d [ SwiftBlob_double_get $blob $i ]
+          literal t float $d
+          container_immediate_insert $result $i $t
       }
+      adlb::refcount_incr $result $adlb::WRITE_REFCOUNT -1
+      adlb::blob_free $input
+      log "floats_from_blob_body: done"
   }
 
   # Container must be indexed from 0,N-1
