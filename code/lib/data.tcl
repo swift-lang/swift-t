@@ -151,7 +151,7 @@ namespace eval turbine {
     proc store_integer { id value } {
         log "store: <$id>=$value"
         set waiters [ adlb::store $id $adlb::INTEGER $value ]
-        notify_waiters $id $waiters 
+        notify_waiters $id $waiters
         c::cache store $id $adlb::INTEGER $value
     }
 
@@ -266,7 +266,8 @@ namespace eval turbine {
     proc store_blob { id value } {
       set ptr [ lindex $value 0 ]
       set len [ lindex $value 1 ]
-      log [ format "store_blob: <%d>=\[%x %d\]" $id $ptr $len ]
+      log [ format "store_blob: <%d>=\[pointer=%x length=%d\]" \
+                                $id            $ptr      $len  ]
       set waiters [ adlb::store_blob $id $ptr $len ]
       notify_waiters $id $waiters
     }
