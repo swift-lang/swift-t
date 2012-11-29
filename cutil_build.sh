@@ -9,7 +9,11 @@ set -e
 if [ -f Makefile ]; then
     make clean
 fi
+EXTRA_ARGS=
+if [ ! -z "$EXM_OPT_BUILD" ]; then
+    EXTRA_ARGS+="--enable-fast"
+fi
 ./setup.sh
-./configure --enable-shared --prefix=${C_UTILS_INST}
+./configure --enable-shared --prefix=${C_UTILS_INST} ${EXTRA_ARGS}
 make -j ${MAKE_PARALLELISM}
 make install
