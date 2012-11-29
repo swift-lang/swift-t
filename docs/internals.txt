@@ -491,6 +491,16 @@ op_impl inputs -> outputs
 |                    | +is_nan+
 |===================================
 
+==== Statistics
+
+Statistics functions are in *stats.tcl*.  These make straightforward
+use of the Turbine API and Tcl arithmetic capabilities.
+
+==== String manipulation
+
+String functions are in *string.tcl*.  These make straightforward use
+of the Turbine API and Tcl string capabilities.
+
 === Containers
 
 A container is a TD that is allows one to insert and retrieve TDs
@@ -519,13 +529,6 @@ type
 Get the subscript type of the container as a Tcl string.
 Use +typeof+ to get the type of a member.
 
-+container_insert container_td subscript member+::
-Link member TD into the container at given subscript member is
-typically a TD, allowing for linked data.
-
-+container_lookup container td subscript -> member+::
-Lookup the member corresponding to the subscript in the given container
-
 +enumerate subscripts|members|dict|count count|all offset+::
 * +subscripts+:: Return list of subscript strings
 * +members+::    Return list of member TDs
@@ -544,6 +547,15 @@ Obtain all subscripts in the container as a big Tcl list
 Make +r+ a reference for +c[i]+. Thus, when +c[i]+ is inserted, +r+ is
 closed by the system.  +r+ is a copy of +c[i]+,
 thus, +r+ must be of the same type as +c[i]+.
+
+*data.tcl*
+
++container_insert container_td subscript member+::
+Link member TD into the container at given subscript member is
+typically a TD, allowing for linked data.
+
++container_lookup container td subscript -> member+::
+Lookup the member corresponding to the subscript in the given container
 
 *container.tcl*
 
@@ -626,7 +638,83 @@ turbine::store_blob $id2 $pointer2 $length2
 adlb::blob_free $id1
 ----
 
+=== I/O
+
+Turbine I/O capabilities.
+
+*functions.tcl*
+
++trace+::
+Simply outputs the values of the given TDs without formatting.
+
+*io.tcl*
+
++printf+::
+As +printf()+ in C.  The format string is handled with the Tcl
++format+ command.
+
+*files.tcl*
+
+*TODO: files.tcl*
+
+=== Void
+
+Operations for +void+ variables
+
+*functions.tcl*
+
++make_void+::
+Create and close a +void+ TD
+
++zero+::
+Convert a +void+ to the integer 0.
+
+=== Updateables
+
+*updateable.tcl*
+
+TODO: updateables
+
+=== Assertions
+
+*assert.tcl*
+
+Assertion functions are in *assert.tcl*.  These make straightforward
+use of the Turbine API and Tcl capabilities.  When they fail, they
+bring the whole Turbine execution down.
+
+=== Logging
+
+*tcl-turbine.c*
+
++log+::
+Simply report the given string to stdout with a timestamp.  This may
+be disabled by setting environment variable +TURBINE_LOG=0+.
+
+=== MPE
+
+MPE is the primary way to obtain profiling and debugging information
+from Turbine/ADLB.  MPE log entries are automatically created by ADLB
+if enabled at configure time.  One additional MPE function is
+available from Turbine:
+
++metadata+::
+Simply insert the given string into the log.
+
+The MPE log will contain solo events with the "metadata" event type.
+
+It is safe to call this function even if MPE is not configured - it
+will simply be a noop.
+
+=== System
+
+System functions are in *sys.tcl*.  These make straightforward use of
+the Turbine API and Tcl capabilities.  See the Swift/T documentation
+for a sense of the purpose of these features.
+
 === Blob manipulation
+
+TODO
 
 ////
 Local Variables:
