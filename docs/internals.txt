@@ -450,6 +450,47 @@ opportunity to show things in full detail.
 
 Implementation reference: the Turbine tests and any STC-generated code.
 
+=== Operations
+
+These are the operations available in Turbine.
+
+==== Arithmetic
+
+All arithmetic functions operate on TDs and are of the form:
+----
+op stack outputs inputs
+----
+The impl versions operate on values and are of the form:
+----
+op_impl inputs -> outputs
+----
+
+*arith.tcl*
+
+[width="50%",options="header"]
+|===================================
+| *Integer*          | *Float*
+| +plus_integer+     | +plus_float+
+| +minus_integer+    | +minus_float+
+| +multiply_integer+ | +multiply_float+
+| +divide_integer+   | +divide_float+
+| +negate_integer+   | +negate_float+
+| +mod_integer+      |
+| +copy_integer+     | +copy_float+
+| +max_integer+      | +max_float+
+| +min_integer+      | +min_float+
+|                    | +floor+
+|                    | +ceil+
+|                    | +round+
+| +itof+             |
+|                    | +log_e+
+|                    | +exp+
+|                    | +sqrt+
+| +abs_integer+      | +abs_float+
+| +pow_integer+      | +pow_float+
+|                    | +is_nan+
+|===================================
+
 === Containers
 
 A container is a TD that is allows one to insert and retrieve TDs
@@ -523,6 +564,11 @@ native data from C/C++/Fortran.
 When blobs are retrieved from ADLB, they are stored in a local cache.
 These entries should be freed before returning control to Turbine.
 
+In Tcl, the blob is a +[ list pointer length ]+ where +pointer+ and
++length+ are integers.  +pointer+ is the real pointer to the blob's
+data- it may be passed into a C function as +void*+.  +length+ is the
+size in bytes.
+
 *blob.tcl*
 
 +blob_from_string+::
@@ -537,6 +583,9 @@ array of doubles
 
 +floats_from_blob+::
 Convert a blob into a container of floats
+
++blob_size_async+::
+Obtain the size of a blob in bytes
 
 *tcl-adlb.c*
 
