@@ -18,6 +18,7 @@
 
 #include <tools.h>
 
+#include "config.h"
 #include "common.h"
 
 /** Is ADLB_DEBUG enabled? */
@@ -29,19 +30,6 @@ extern bool xlb_trace_enabled;
    Check environment to see if user disabled ADLB_DEBUG, ADLB_TRACE
  */
 void debug_check_environment(void);
-
-
-#ifndef NDEBUG
-// #define ENABLE_DEBUG 1
-#endif
-
-#ifndef NDEBUG
-// #define ENABLE_TRACE_MPI 1
-#endif
-
-#ifndef NDEBUG
-// #define ENABLE_TRACE 1
-#endif
 
 /**
    Most warnings will result in fatal errors at some point,
@@ -58,11 +46,12 @@ void debug_check_environment(void);
 #endif
 
 /*
+   Debugging may be enabled at configure time
    Debugging may be disabled at compile-time via NDEBUG or
    ENABLE_DEBUG or at run-time by setting environment variable
    ADLB_DEBUG=0
  */
-#ifdef ENABLE_DEBUG
+#if ENABLE_LOG_DEBUG && !defined(NDEBUG)
 #define DEBUG(format, args...)              \
   { if (xlb_debug_enabled) {                            \
          printf("%5.0f ADLB: " format "\n", xlb_wtime(), ## args); \
@@ -72,7 +61,7 @@ void debug_check_environment(void);
 #define DEBUG(format, args...) // noop
 #endif
 
-#ifdef ENABLE_TRACE
+#if ENABLE_LOG_TRACE && !defined(NDEBUG)
 #define TRACE(format, args...)                    \
   { if (xlb_trace_enabled && xlb_debug_enabled) { \
   printf("ADLB_TRACE: " format "\n", ## args);    \
@@ -82,7 +71,7 @@ void debug_check_environment(void);
 #define TRACE(format, args...) // noop
 #endif
 
-#ifdef ENABLE_TRACE_MPI
+#if ENABLE_LOG_TRACE_MPI && !defined(NDEBUG)
 #define TRACE_MPI(format, args...)             \
   { if (xlb_debug_enabled) {                           \
   printf("%5.0f MPI:  " format "\n", xlb_wtime(), ## args);  \

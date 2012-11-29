@@ -4,7 +4,7 @@
 # Compile this with: ./setup.sh
 # After compiling this, get help with: ./configure --help
 
-define([adlb_version], 
+define([adlb_version],
     regexp(esyscmd(cat version.txt),[\([.0-9]*\)],[\1]))
 
 AC_INIT([XLB], [adlb_version()], [wozniak@mcs.anl.gov])
@@ -58,9 +58,10 @@ AC_SUBST([CP_U], [$ac_cv_path_cp_u])
 
 ADLB_ENABLE_MPE=no
 AC_ARG_WITH(mpe,
-        [--with-mpe - Enable MPE, set directory with MPE library],
-        ADLB_ENABLE_MPE=yes
-        USE_MPE=${withval}, )
+  AS_HELP_STRING([--with-mpe],
+                 [Enable MPE, set directory with MPE library]),
+                 [ADLB_ENABLE_MPE=yes
+                 USE_MPE=${withval}], [])
 AC_SUBST(USE_MPE)
 AC_MSG_RESULT([using MPE: ${ADLB_ENABLE_MPE}])
 
@@ -119,6 +120,28 @@ AC_ARG_WITH(c-utils,
                    USE_C_UTILS=0
                  ])
 AC_SUBST(USE_C_UTILS)
+
+dnl Log settings.  See debug.h
+ENABLE_LOG_DEBUG=0
+ENABLE_LOG_TRACE=0
+ENABLE_LOG_TRACE_MPI=0
+
+AC_ARG_ENABLE(log-debug,
+  AS_HELP_STRING([--enable-log-debug], [enable debug logging]),
+  ENABLE_LOG_DEBUG=1)
+AC_ARG_ENABLE(log-trace,
+  AS_HELP_STRING([--enable-log-trace], [enable trace logging]),
+  ENABLE_LOG_TRACE=1)
+AC_ARG_ENABLE(log-trace-mpi,
+  AS_HELP_STRING([--with-log-trace-mpi], [trace MPI calls]),
+  ENABLE_LOG_TRACE_MPI=1)
+
+AC_DEFINE_UNQUOTED(ENABLE_LOG_DEBUG, [${ENABLE_LOG_DEBUG}],
+                   [Whether to use debug logging])
+AC_DEFINE_UNQUOTED(ENABLE_LOG_TRACE, [${ENABLE_LOG_TRACE}],
+                   [Whether to use trace logging])
+AC_DEFINE_UNQUOTED(ENABLE_LOG_TRACE_MPI, [${ENABLE_LOG_TRACE_MPI}],
+                   [Whether to trace MPI calls])
 
 AC_OUTPUT(Makefile)
 AC_OUTPUT(src/module.mk)
