@@ -41,7 +41,7 @@ void
 xlb_backoff_server()
 {
   // DEBUG("backoff()");
-  int delay = random_between_double(0,backoff_server_max);
+  double delay = random_between_double(0,backoff_server_max);
   time_delay(delay);
 }
 
