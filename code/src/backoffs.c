@@ -69,7 +69,7 @@ xlb_backoff_server(int attempt)
       delay = pow(2, exponent) * backoff_server_max;
     }
     time_delay(delay);
-    return attempt < BACKOFF_SERVER_TOTAL_ATTEMPTS;
+    return attempt < BACKOFF_SERVER_TOTAL_ATTEMPTS - 1;
   }
 }
 
