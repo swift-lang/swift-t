@@ -318,6 +318,7 @@ namespace eval turbine {
         }
     }
 
+    # Sleep for given time in seconds.  Return void
     proc sleep { stack outputs inputs } {
         rule "sleep-$outputs-$inputs" $inputs $turbine::WORK \
             "turbine::sleep_body $outputs $inputs"
