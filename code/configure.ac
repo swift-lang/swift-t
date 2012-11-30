@@ -26,6 +26,12 @@ then
 fi
 AC_SUBST(USE_MAC)
 
+# Check that the user has given us a valid CC
+if [[ "${CC}" == "" ]]
+then
+  echo "You must set CC!"
+  exit 1
+fi
 which ${CC} >& /dev/null
 if [[ ${?} != 0 ]]
 then
