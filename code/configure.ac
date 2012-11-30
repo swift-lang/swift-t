@@ -26,6 +26,13 @@ then
 fi
 AC_SUBST(USE_MAC)
 
+which ${CC} >& /dev/null
+if [[ ${?} != 0 ]]
+then
+  echo "CC=${CC}: not found in PATH!"
+  exit 1
+fi
+
 # Checks for programs
 AC_PROG_CC
 AC_CHECK_PROG(AR, ar)
