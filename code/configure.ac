@@ -39,6 +39,10 @@ then
   exit 1
 fi
 
+echo "PREFIX: ${prefix}"
+SOFTWARE=$( cd ${prefix}/.. ; /bin/pwd )
+echo "SOFTWARE: ${SOFTWARE}"
+
 # Checks for programs
 AC_PROG_CC
 AC_CHECK_PROG(AR, ar)
@@ -113,25 +117,33 @@ AC_ARG_ENABLE(xlc,
 AC_SUBST(USE_XLC)
 
 AC_ARG_WITH(c-utils,
-                 AS_HELP_STRING(
-                    [--with-c-utils],
-                    [location of ExM c-utils]),
-                   [
-                    USE_C_UTILS=0
-                    AC_CHECK_FILE( ${withval}/include/c-utils.h,
-                                   [USE_C_UTILS=1], [])
-                    if test "$USE_C_UTILS" = 0 ; then
-                        AC_MSG_ERROR([Could not find ExM c-utils in $withval])
-                    fi
-                    AC_MSG_RESULT([using ExM c-utils in $withval ...])
-                    AC_DEFINE_UNQUOTED([C_UTILS_LOCATION],
-                                       "$withval", [ExM c-utils location])
-                    USE_C_UTILS=$withval
-                 ],
-                 [
-                   AC_MSG_ERROR([Not found: ExM c-utils])
-                   USE_C_UTILS=0
-                 ])
+  AS_HELP_STRING(
+    [--with-c-utils], [location of ExM c-utils]),
+  [
+    USE_C_UTILS=0
+    AC_CHECK_FILE(${withval}/include/c-utils.h,
+                  [USE_C_UTILS=1], [])
+    if [[ ${USE_C_UTILS} == 0 ]]
+    then
+      AC_MSG_ERROR([Could not find ExM c-utils in ${withval}])
+    fi
+    AC_MSG_RESULT([using ExM c-utils in $withval ...])
+    AC_DEFINE_UNQUOTED([C_UTILS_LOCATION],
+                       ${withval}, [ExM c-utils location])
+    USE_C_UTILS=${withval}
+  ],
+  [
+    dnl If not given, look in SOFTWARE
+    location=${SOFTWARE}/c-utils
+    AC_CHECK_FILE(${location}/include/c-utils.h,
+                  [USE_C_UTILS=1], [])
+    if [[ ${USE_C_UTILS} == 1 ]]
+    then
+        USE_C_UTILS=${location}
+    else
+        AC_MSG_ERROR([Not found: ExM c-utils])
+    fi
+  ])
 AC_SUBST(USE_C_UTILS)
 
 dnl Log settings.  See debug.h
