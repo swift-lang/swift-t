@@ -43,7 +43,7 @@ argv_accept(string... keys)
 // Do not optimize this- it is for tests
 @dispatch=LEAF
 (void v) sleep(float seconds) "turbine" "0.0.4" "sleep" [
-  "after [ expr round(<<seconds>> * 1000) ]"
+  "if { <<seconds>> > 0 } { after [ expr round(<<seconds>> * 1000) ] }"
 ];
 
 #endif
