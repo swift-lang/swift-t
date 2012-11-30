@@ -50,27 +50,33 @@ int ADLB_Locate(long id);
 
 // Applications should not call these directly but
 // should use the typed forms defined below
-adlb_code ADLBP_Create(long id, adlb_data_type type,
+adlb_code ADLBP_Create(adlb_datum_id id, adlb_data_type type,
                        const char* filename,
-                       adlb_data_type subscript_type, bool updateable);
-adlb_code ADLB_Create(long id, adlb_data_type type,
+                       adlb_data_type subscript_type, bool updateable,
+                       adlb_datum_id *new_id);
+adlb_code ADLB_Create(adlb_datum_id id, adlb_data_type type,
                       const char* filename,
                       adlb_data_type subscript_type,
-                      bool updateable);
+                      bool updateable, adlb_datum_id *new_id);
 
-adlb_code ADLB_Create_integer(adlb_datum_id id, bool updateable);
+adlb_code ADLB_Create_integer(adlb_datum_id id, bool updateable,
+                              adlb_datum_id *new_id);
 
-adlb_code ADLB_Create_float(adlb_datum_id id, bool updateable);
+adlb_code ADLB_Create_float(adlb_datum_id id, bool updateable,
+                              adlb_datum_id *new_id);
 
-adlb_code ADLB_Create_string(adlb_datum_id id, bool updateable);
+adlb_code ADLB_Create_string(adlb_datum_id id, bool updateable,
+                              adlb_datum_id *new_id);
 
-adlb_code ADLB_Create_blob(adlb_datum_id id, bool updateable);
+adlb_code ADLB_Create_blob(adlb_datum_id id, bool updateable,
+                              adlb_datum_id *new_id);
 
 adlb_code ADLB_Create_file(adlb_datum_id id, const char* filename,
-                           bool updateable);
+                           bool updateable, adlb_datum_id *new_id);
 
 adlb_code ADLB_Create_container(adlb_datum_id id,
-                                adlb_data_type subscript_type);
+                                adlb_data_type subscript_type,
+                                adlb_datum_id *new_id);
 
 adlb_code ADLBP_Exists(adlb_datum_id id, bool* result);
 adlb_code ADLB_Exists(adlb_datum_id id, bool* result);

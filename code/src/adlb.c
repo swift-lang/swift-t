@@ -221,24 +221,36 @@ ADLB_Locate(long id)
 static inline adlb_code
 ADLBP_Create_impl(adlb_datum_id id, adlb_data_type type,
                   const char* filename,
-                  adlb_data_type subscript_type, bool updateable)
+                  adlb_data_type subscript_type, bool updateable,
+                  adlb_datum_id *new_id)
 {
   int rc, to_server_rank;
-  adlb_data_code dc;
   MPI_Status status;
   MPI_Request request;
 
   to_server_rank = ADLB_Locate(id);
   struct packed_id_type_updateable data = { id, type, updateable };
 
-  IRECV(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
+  struct packed_create_response resp;
+  IRECV(&resp, sizeof(resp), MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
 
   SEND(&data, sizeof(struct packed_id_type_updateable), MPI_BYTE,
        to_server_rank, ADLB_TAG_CREATE_HEADER);
 
   WAIT(&request, &status);
 
-  ADLB_DATA_CHECK(dc);
+  ADLB_DATA_CHECK(resp.dc);
+
+  // Check id makes sense
+  assert(id == ADLB_DATA_ID_NULL || id == resp.id);
+  if (id == ADLB_DATA_ID_NULL && new_id != NULL) {
+    // Tell caller about new id
+    *new_id = resp.id;
+  }
+
+  if (resp.dc != ADLB_DATA_SUCCESS) {
+    return ADLB_ERROR;
+  }
 
   if (type == ADLB_DATA_TYPE_FILE)
   {
@@ -266,53 +278,59 @@ ADLBP_Create_impl(adlb_datum_id id, adlb_data_type type,
 adlb_code
 ADLBP_Create(adlb_datum_id id, adlb_data_type type,
              const char* filename,
-             adlb_data_type subscript_type, bool updateable)
+             adlb_data_type subscript_type, bool updateable,
+             adlb_datum_id *new_id)
 {
   return ADLBP_Create_impl(id, type, filename, subscript_type,
-                           updateable);
+                           updateable, new_id);
 }
 
 adlb_code
-ADLB_Create_integer(adlb_datum_id id, bool updateable)
+ADLB_Create_integer(adlb_datum_id id, bool updateable,
+                  adlb_datum_id *new_id)
 {
   return ADLBP_Create_impl(id, ADLB_DATA_TYPE_INTEGER, NULL,
-                           ADLB_DATA_TYPE_NULL, updateable);
+                   ADLB_DATA_TYPE_NULL, updateable, new_id);
 }
 
 adlb_code
-ADLB_Create_float(adlb_datum_id id, bool updateable)
+ADLB_Create_float(adlb_datum_id id, bool updateable,
+                  adlb_datum_id *new_id)
 {
   return ADLBP_Create_impl(id, ADLB_DATA_TYPE_FLOAT, NULL,
-                           ADLB_DATA_TYPE_NULL, updateable);
+                   ADLB_DATA_TYPE_NULL, updateable, new_id);
 }
 
 adlb_code
-ADLB_Create_string(adlb_datum_id id, bool updateable)
+ADLB_Create_string(adlb_datum_id id, bool updateable,
+                  adlb_datum_id *new_id)
 {
   return ADLBP_Create_impl(id, ADLB_DATA_TYPE_STRING, NULL,
-                           ADLB_DATA_TYPE_NULL, updateable);
+                   ADLB_DATA_TYPE_NULL, updateable, new_id);
 }
 
 adlb_code
-ADLB_Create_blob(adlb_datum_id id, bool updateable)
+ADLB_Create_blob(adlb_datum_id id, bool updateable,
+                  adlb_datum_id *new_id)
 {
   return ADLBP_Create_impl(id, ADLB_DATA_TYPE_BLOB, NULL,
-                           ADLB_DATA_TYPE_NULL, updateable);
+                   ADLB_DATA_TYPE_NULL, updateable, new_id);
 }
 
 adlb_code
 ADLB_Create_file(adlb_datum_id id, const char* filename,
-                           bool updateable)
+                 bool updateable, adlb_datum_id *new_id)
 {
   return ADLBP_Create_impl(id, ADLB_DATA_TYPE_FILE, filename,
-                          ADLB_DATA_TYPE_NULL, updateable);
+                  ADLB_DATA_TYPE_NULL, updateable, new_id);
 }
 
 adlb_code
-ADLB_Create_container(adlb_datum_id id, adlb_data_type subscript_type)
+ADLB_Create_container(adlb_datum_id id, adlb_data_type subscript_type,
+                      adlb_datum_id *new_id)
 {
   return ADLBP_Create_impl(id, ADLB_DATA_TYPE_CONTAINER, NULL,
-                           subscript_type, false);
+                           subscript_type, false, new_id);
 }
 
 adlb_code

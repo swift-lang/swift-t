@@ -133,6 +133,13 @@ struct packed_get_response
   int payload_source;
 };
 
+struct packed_create_response
+{
+  adlb_data_code dc;
+  /* id of created item */
+  long id;
+};
+
 /**
    Simple struct for message packing
  */

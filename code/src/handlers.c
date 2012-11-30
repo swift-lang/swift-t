@@ -461,25 +461,37 @@ handle_create(int caller)
   RECV(&data, sizeof(struct packed_id_type_updateable), MPI_BYTE,
        caller, ADLB_TAG_CREATE_HEADER);
 
-  long id = data.id;
+  adlb_datum_id id = data.id;
   adlb_data_type type = data.type;
   bool updateable = data.updateable;
-  adlb_data_code dc = data_create(id, type, updateable);
-
-  RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
-
-  // Types file and container need additional information
-  if (type == ADLB_DATA_TYPE_FILE)
-  {
-    RECV(xfer, XFER_SIZE, MPI_CHAR, caller, ADLB_TAG_CREATE_PAYLOAD);
-    data_create_filename(id, xfer);
+ 
+  adlb_data_code dc = ADLB_DATA_SUCCESS;
+  if (id == ADLB_DATA_ID_NULL) {
+    // Allocate a new id
+    dc = data_unique(&id);
   }
-  else if (type == ADLB_DATA_TYPE_CONTAINER)
-  {
-    adlb_data_type container_type;
-    RECV(&container_type, 1, MPI_INT, caller,
-         ADLB_TAG_CREATE_PAYLOAD);
-    data_create_container(id, container_type);
+
+  if (dc == ADLB_DATA_SUCCESS) {
+    dc = data_create(id, type, updateable);
+  }
+  
+  struct packed_create_response resp = { .dc = dc, .id = id };
+  RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+
+  if (dc == ADLB_DATA_SUCCESS) {
+    // Types file and container need additional information
+    if (type == ADLB_DATA_TYPE_FILE)
+    {
+      RECV(xfer, XFER_SIZE, MPI_CHAR, caller, ADLB_TAG_CREATE_PAYLOAD);
+      data_create_filename(id, xfer);
+    }
+    else if (type == ADLB_DATA_TYPE_CONTAINER)
+    {
+      adlb_data_type container_type;
+      RECV(&container_type, 1, MPI_INT, caller,
+           ADLB_TAG_CREATE_PAYLOAD);
+      data_create_container(id, container_type);
+    }
   }
 
   // DEBUG("CREATE: <%li> %s\n", id, (char*) work_buf);
