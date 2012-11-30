@@ -14,7 +14,7 @@
 TCLSH=tclsh8.5
 
 PIDS=$(pidof "$TCLSH")
-INTERVAL=0.01
+INTERVAL=0.5
 
 set -e
 
