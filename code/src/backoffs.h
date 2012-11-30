@@ -9,6 +9,8 @@
 #ifndef BACKOFFS_H
 #define BACKOFFS_H
 
+#include <stdbool.h>
+
 /**
    Time after which to exit because idle
    Default: May be overridden by ADLB_EXHAUST_TIME
@@ -25,8 +27,9 @@ extern double xlb_steal_backoff;
 
 /**
    Backoff while in server loop
+   returns true if should retry again later
  */
-void xlb_backoff_server(void);
+bool xlb_backoff_server(int attempt);
 
 /**
    Backoff during sync() spin loop

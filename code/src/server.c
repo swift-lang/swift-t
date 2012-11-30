@@ -143,20 +143,30 @@ xlb_serve_one(int source)
   TRACE_START;
   if (source > 0)
     TRACE("\t source: %i", source);
-  int new_message;
+  int new_message = 0;
   MPI_Status status;
-  // May want to switch to PMPI call for speed
   int rc;
-  rc = MPI_Iprobe(source, MPI_ANY_TAG, adlb_all_comm,
-                  &new_message, &status);
-  MPI_CHECK(rc);
 
-  if (!new_message)
+  int attempt = 0;
+  bool repeat = true;
+  // May want to switch to PMPI call for speed
+  while (!new_message)
   {
-    xlb_backoff_server();
-    TRACE_END;
-    return ADLB_NOTHING;
+    rc = MPI_Iprobe(source, MPI_ANY_TAG, adlb_all_comm,
+                    &new_message, &status);
+    MPI_CHECK(rc);
+    if (!new_message)
+    {
+      if (!repeat)
+      {
+        TRACE_END;
+        return ADLB_NOTHING;
+      }
+      repeat = xlb_backoff_server(attempt);
+      attempt++;
+    }
   }
+
 
   if (status.MPI_TAG == ADLB_TAG_SYNC_RESPONSE)
   {
