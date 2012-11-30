@@ -41,6 +41,9 @@ argv_accept(string... keys)
     [ "set <<s>> turbine::getenv_impl <<key>>" ];
 
 // Do not optimize this- it is for tests
-(void v) sleep(float seconds) "turbine" "0.0.4" "sleep";
+@dispatch=LEAF
+(void v) sleep(float seconds) "turbine" "0.0.4" "sleep" [
+  "after [ expr round(<<seconds>> * 1000) ]"
+];
 
 #endif
