@@ -165,6 +165,7 @@ set_namespace_constants(Tcl_Interp* interp)
   tcl_set_integer(interp, "::adlb::STRING",    ADLB_DATA_TYPE_STRING);
   tcl_set_integer(interp, "::adlb::FILE",      ADLB_DATA_TYPE_FILE);
   tcl_set_integer(interp, "::adlb::BLOB",      ADLB_DATA_TYPE_BLOB);
+  tcl_set_long(interp, "::adlb::NULL_ID",      ADLB_DATA_ID_NULL);
   tcl_set_integer(interp, "::adlb::CONTAINER", ADLB_DATA_TYPE_CONTAINER);
   tcl_set_integer(interp, "::adlb::READ_REFCOUNT", ADLB_READ_REFCOUNT);
   tcl_set_integer(interp, "::adlb::WRITE_REFCOUNT", ADLB_WRITE_REFCOUNT);
@@ -419,6 +420,7 @@ adlb_data_type type_from_string(const char* type_string)
 
 /**
    usage: adlb::create <id> <type> <updateable> [<extra>]
+   if <id> is adlb::NULL_ID, returns a newly created id
    @param extra is only used for files and containers
 */
 static int
@@ -440,25 +442,27 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_GetBooleanFromObj(interp, objv[3], &updateable);
   TCL_CHECK_MSG(rc, "adlb::create could not get rewriteable argument");
 
+  long new_id = ADLB_DATA_ID_NULL;
+
   switch (type)
   {
     case ADLB_DATA_TYPE_INTEGER:
-      rc = ADLB_Create_integer(id, updateable);
+      rc = ADLB_Create_integer(id, updateable, &new_id);
       break;
     case ADLB_DATA_TYPE_FLOAT:
-      rc = ADLB_Create_float(id, updateable);
+      rc = ADLB_Create_float(id, updateable, &new_id);
       break;
     case ADLB_DATA_TYPE_STRING:
-      rc = ADLB_Create_string(id, updateable);
+      rc = ADLB_Create_string(id, updateable, &new_id);
       break;
     case ADLB_DATA_TYPE_BLOB:
-      rc = ADLB_Create_blob(id, updateable);
+      rc = ADLB_Create_blob(id, updateable, &new_id);
       break;
     case ADLB_DATA_TYPE_FILE:
       TCL_CONDITION(objc >= 5,
                     "adlb::create type=file requires file name!");
       char* filename = Tcl_GetString(objv[4]);
-      rc = ADLB_Create_file(id, filename, updateable);
+      rc = ADLB_Create_file(id, filename, updateable, &new_id);
       break;
     case ADLB_DATA_TYPE_CONTAINER:
       TCL_CONDITION(objc >= 5,
@@ -467,7 +471,7 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
       char* subscript_type_string = Tcl_GetString(objv[4]);
       adlb_data_type subscript_type =
           type_from_string(subscript_type_string);
-      rc = ADLB_Create_container(id, subscript_type);
+      rc = ADLB_Create_container(id, subscript_type, &new_id);
       break;
     case ADLB_DATA_TYPE_NULL:
       Tcl_AddErrorInfo(interp,
@@ -475,6 +479,14 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
       return TCL_ERROR;
       break;
   }
+ 
+  if (id == ADLB_DATA_ID_NULL) {
+    // need to return new ID
+    Tcl_Obj* result = Tcl_NewLongObj(new_id);
+    Tcl_SetObjResult(interp, result);
+  }
+  return TCL_OK;
+
   TCL_CONDITION(rc == ADLB_SUCCESS, "adlb::create <%li> failed!", id);
   return TCL_OK;
 }

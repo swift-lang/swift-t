@@ -61,6 +61,8 @@ void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
 
 void tcl_set_integer(Tcl_Interp* interp, char* name, int value);
 
+void tcl_set_long(Tcl_Interp* interp, char* name, long value);
+
 void tcl_dict_put(Tcl_Interp* interp, Tcl_Obj* dict,
                   char* key, Tcl_Obj* value);
 

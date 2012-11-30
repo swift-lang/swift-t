@@ -80,6 +80,14 @@ tcl_set_integer(Tcl_Interp* interp, char* name, int value)
 }
 
 void
+tcl_set_long(Tcl_Interp* interp, char* name, long value)
+{
+  Tcl_Obj* p = Tcl_ObjSetVar2(interp, Tcl_NewStringObj(name, -1),
+                              NULL, Tcl_NewLongObj(value), 0);
+  valgrind_assert(p != NULL);
+}
+
+void
 tcl_dict_put(Tcl_Interp* interp, Tcl_Obj* dict,
              char* key, Tcl_Obj* value)
 {

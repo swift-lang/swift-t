@@ -44,43 +44,49 @@ namespace eval turbine {
     # usage: allocate [<name>] <type> <updateable>
     # If name is given, print a log message
     proc allocate { args } {
-        set u [ adlb::unique ]
         set length [ llength $args ]
         if { $length == 3 } {
             set name       [ lindex $args 0 ]
             set type       [ lindex $args 1 ]
             set updateable [ lindex $args 2 ]
-            log "${type}: $name=<$u>"
-            upvar 1 $name v
-            set v $u
         } elseif { $length == 2 } {
+            set name       ""
             set type       [ lindex $args 0 ]
             set updateable [ lindex $args 1 ]
-            log "${type}: <$u>"
         } else {
             error "allocate: requires 2 or 3 args!"
         }
-        create_$type $u $updateable
-        return $u
+        set id [ create_$type $adlb::NULL_ID $updateable ]
+
+        if { $name == "" } {
+            log "allocated $type: <$id>"
+        } else {
+            log "allocated $type: $name=<$id>"
+            upvar 1 $name v
+            set v $id
+        }
+        return $id
     }
 
     # usage: [<name>] <subscript_type>
     proc allocate_container { args } {
-        set u [ adlb::unique ]
         set length [ llength $args ]
         if { $length == 2  } {
             set name           [ lindex $args 0 ]
             set subscript_type [ lindex $args 1 ]
-            log "container: $name\[$subscript_type\]=<$u>"
-            upvar 1 $name v
-            set v $u
         } elseif { $length == 1 } {
+            set name           ""
             set subscript_type $args
         } else {
             error "allocate_container: requires 1 or 2 args!"
         }
-        create_container $u $subscript_type
-        return $u
+        set id [ create_container $adlb::NULL_ID $subscript_type ]
+        log "container: $name\[$subscript_type\]=<$id>"
+        if { $name != "" } {
+            upvar 1 $name v
+            set v $id
+        }
+        return $id
     }
 
     # usage: [<name>] [<mapping>]
@@ -145,7 +151,7 @@ namespace eval turbine {
     }
 
     proc create_integer { id updateable } {
-        adlb::create $id $adlb::INTEGER $updateable
+        return [ adlb::create $id $adlb::INTEGER $updateable ]
     }
 
     proc store_integer { id value } {
@@ -177,7 +183,7 @@ namespace eval turbine {
     }
 
     proc create_float { id updateable } {
-        adlb::create $id $adlb::FLOAT $updateable
+        return [ adlb::create $id $adlb::FLOAT $updateable ]
     }
 
     proc store_float { id value } {
@@ -208,8 +214,7 @@ namespace eval turbine {
     }
 
     proc create_string { id updateable } {
-        log "create string: <$id>"
-        adlb::create $id $adlb::STRING $updateable
+        return [ adlb::create $id $adlb::STRING $updateable ]
     }
 
     proc store_string { id value } {
@@ -240,12 +245,11 @@ namespace eval turbine {
     }
 
     proc create_void { id updateable } {
-        debug "create void: <$id>"
         if { $updateable == 1 } {
             error "create_void: Cannot update void!"
         }
         # emulating void with integer
-        adlb::create $id $adlb::INTEGER 0
+        return [ adlb::create $id $adlb::INTEGER 0 ]
     }
 
     proc store_void { id } {
@@ -259,8 +263,7 @@ namespace eval turbine {
 
     # Create blob
     proc create_blob { id updateable } {
-        log "create blob: <$id>"
-        adlb::create $id $adlb::BLOB $updateable
+        return [ adlb::create $id $adlb::BLOB $updateable ]
     }
 
     proc store_blob { id value } {
@@ -321,8 +324,7 @@ namespace eval turbine {
     }
 
     proc create_container { id subscript_type } {
-        log "create_container: <$id>\[$subscript_type\]"
-        adlb::create $id $adlb::CONTAINER 0 $subscript_type
+        return [ adlb::create $id $adlb::CONTAINER 0 $subscript_type ]
     }
 
     # usage: container_insert <id> <subscript> <member> [<drops>]
@@ -357,7 +359,7 @@ namespace eval turbine {
     }
 
     proc create_file { id path } {
-        adlb::create $id $adlb::FILE 0 $path
+        return [ adlb::create $id $adlb::FILE 0 $path ]
     }
 
     proc store_file { id } {
