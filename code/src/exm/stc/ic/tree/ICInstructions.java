@@ -130,9 +130,18 @@ public class ICInstructions {
     public static class MakeImmRequest {
       public final List<Var> out;
       public final List<Var> in;
+      /** Where immediate code should run.  Default is local: in the current context */
+      public final TaskMode mode;
+      
+      
       public MakeImmRequest(List<Var> out, List<Var> in) {
+        this(out, in, TaskMode.LOCAL);
+      }
+      
+      public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode) {
         this.out = out;
         this.in = in;
+        this.mode = mode;
       }
     }
     
@@ -1852,10 +1861,14 @@ public class ICInstructions {
       }
       if (allClosed && (Builtins.hasOpEquiv(this.functionName)
                 || Builtins.hasInlineVersion(this.functionName))) {
-          // All args are closed!
-          return new MakeImmRequest(
-              Collections.unmodifiableList(this.outputs),
-              Collections.unmodifiableList(this.inputs));
+        TaskMode mode = Builtins.getTaskMode(this.functionName);
+        if (mode == null) {
+          mode = TaskMode.LOCAL;
+        }
+        // All args are closed!
+        return new MakeImmRequest(
+            Collections.unmodifiableList(this.outputs),
+            Collections.unmodifiableList(this.inputs), mode);
 
       }
       return null;

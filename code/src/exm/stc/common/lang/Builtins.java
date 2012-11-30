@@ -59,6 +59,9 @@ public class Builtins {
   private static HashMap<String, TclOpTemplate> inlineTemplates
     = new HashMap<String, TclOpTemplate>();
   
+  private static HashMap<String, TaskMode> taskModes
+    = new HashMap<String, TaskMode>();
+  
   public static void addPure(String builtinFunction) {
     pure.add(builtinFunction);
   }
@@ -141,6 +144,20 @@ public class Builtins {
     return inlineTemplates.get(fnName);
   }
   
+  public static void addTaskMode(String functionName, TaskMode mode) {
+    taskModes.put(functionName, mode);
+  }
+  
+  /**
+   * Return the intended task mode for the function (e.g. if it should run on worker
+   * or locally)
+   * @param functionName
+   * @return
+   */
+  public static TaskMode getTaskMode(String functionName) {
+    return taskModes.get(functionName);
+  }
+
   public static class TemplateElem {
     public static enum ElemKind {
       TEXT,

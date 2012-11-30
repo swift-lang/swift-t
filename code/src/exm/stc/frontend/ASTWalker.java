@@ -1625,7 +1625,8 @@ public class ASTWalker {
     
     // Read annotations at end of child list
     for (; pos < tree.getChildCount(); pos++) {
-      handleFunctionAnnotation(context, function, tree.child(pos));
+      handleFunctionAnnotation(context, function, tree.child(pos),
+                                inlineTcl != null);
     }
     
     context.defineFunction(function, ft);
@@ -1754,7 +1755,7 @@ public class ASTWalker {
 
 
   private void handleFunctionAnnotation(Context context, String function,
-      SwiftAST annotTree) throws UserException {
+      SwiftAST annotTree, boolean hasLocalVersion) throws UserException {
     assert(annotTree.getType() == ExMParser.ANNOTATION);
     
     assert(annotTree.getChildCount() > 0);
@@ -1764,8 +1765,16 @@ public class ASTWalker {
     } else {
       assert(annotTree.getChildCount() == 2);
       String val = annotTree.child(1).getText();
-      if (key.equals("builtin_op")) {
+      if (key.equals(Annotations.FN_BUILTIN_OP)) {
         addlocalEquiv(context, function, val);
+      } else if (key.equals(Annotations.FN_DISPATCH)) {
+        try {
+          TaskMode mode = TaskMode.valueOf(val);
+          Builtins.addTaskMode(function, mode);
+        } catch (IllegalArgumentException e) {
+          throw new UserException(context, "Unknown dispatch mode " + val + ". "
+              + " Valid options are: " + TaskMode.values());
+        }
       } else {
         throw new UserException(context, "Invalid annotation" +
           " for TCL function: " + key + ":" + val);

@@ -14,11 +14,13 @@ import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
@@ -29,6 +31,7 @@ import exm.stc.common.util.HierarchicalSet;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.CVMap;
@@ -651,18 +654,9 @@ public class ForwardDataflow {
       updateReplacements(logger, inst, cv, replaceInputs, replaceAll);
       
       // now try to see if we can change to the immediate version
-      List<Instruction> alt = switchToImmediateVersion(logger, block, cv,
-                                                        inst);
-      if (alt != null) {
-        if (logger.isTraceEnabled()) {
-          logger.trace("Replacing instruction <" + inst + "> with sequence "
-              + alt.toString());
-        }
-        ICUtil.replaceInsts(insts, alt);
-        
+      if (switchToImmediateVersion(logger, f, block, cv, inst, insts)) {
         // Continue pass at the start of the newly inserted sequence
         // as if it was always there
-        ICUtil.rewindIterator(insts, alt.size());
         continue;
       }
   
@@ -678,53 +672,104 @@ public class ForwardDataflow {
     }
     return anotherPassNeeded;
   }
-
-
-  private static List<Instruction> switchToImmediateVersion(Logger logger,
-      Block block, State cv, Instruction inst) {
+  
+  /**
+   * 
+   * @param logger
+   * @param fn
+   * @param block
+   * @param cv
+   * @param inst
+   * @param insts if instructions inserted, leaves iterator pointing at previous instruction
+   * @return
+   */
+  private static boolean switchToImmediateVersion(Logger logger,
+      Function fn, Block block, State cv, Instruction inst, ListIterator<Instruction> insts) {
     // First see if we can replace some futures with values
-    MakeImmRequest varsNeeded = inst.canMakeImmediate(cv.getClosed(), false);
+    MakeImmRequest req = inst.canMakeImmediate(cv.getClosed(), false);
 
-    if (varsNeeded != null) {
-      // Now load the values
-      List<Instruction> alt = new ArrayList<Instruction>();
-      List<Arg> inVals = new ArrayList<Arg>(varsNeeded.in.size());
-      
-      // same var might appear multiple times
-      HashMap<String, Arg> alreadyFetched = new HashMap<String, Arg>();  
-      for (Var v : varsNeeded.in) {
-        Arg maybeVal;
-        if (alreadyFetched.containsKey(v.name())) {
-          maybeVal = alreadyFetched.get(v.name());
-        } else {
-          maybeVal = cv.findRetrieveResult(v);
-        }
-        // Can only retrieve value of future or reference
-         
-        if (maybeVal != null) {
-          /*
-           * this variable might not actually be passed through continuations to
-           * the current scope, so we might have temporarily made the IC
-           * invalid, but we rely on fixupVariablePassing to fix this later
-           */
-          inVals.add(maybeVal);
-          alreadyFetched.put(v.name(), maybeVal);
-        } else {
-          // Generate instruction to fetch val, append to alt
-          Var fetchedV = OptUtil.fetchValueOf(block, alt, v);
-          Arg fetched = Arg.createVar(fetchedV);
-          inVals.add(fetched);
-          alreadyFetched.put(v.name(), fetched);
-        }
-      }
-      List<Var> outValVars = OptUtil.declareLocalOpOutputVars(block,
-                                                          varsNeeded.out);
-      MakeImmChange change = inst.makeImmediate(outValVars, inVals);
-      OptUtil.fixupImmChange(block, change, alt, outValVars, varsNeeded.out);
-      return alt;
-    } else {
-      return null;
+    if (req == null) {
+      return false;
     }
+    
+    // Create replacement sequence
+    Block insertContext;
+    ListIterator<Instruction> insertPoint;
+    boolean rewind; // if we need to rewind iterator
+    if (req.mode == TaskMode.LOCAL) {
+      insertContext = block;
+      insertPoint = insts;
+      rewind = true;
+    } else {
+      List<Var> used = Var.varListUnion(req.in, req.out);
+      WaitStatement wait = new WaitStatement(fn.getName() + "-optinserted",
+          Collections.<Var>emptyList(), used, Collections.<Var>emptyList(),
+          WaitMode.TASK_DISPATCH, req.mode);
+      insertContext = wait.getBlock();
+      block.addContinuation(wait);
+      // Insert at start of block
+      insertPoint = insertContext.instructionIterator();
+      rewind = false;
+    }
+    
+    // Now load the values
+    List<Instruction> alt = new ArrayList<Instruction>();
+    List<Arg> inVals = new ArrayList<Arg>(req.in.size());
+    
+    // same var might appear multiple times
+    HashMap<String, Arg> alreadyFetched = new HashMap<String, Arg>();  
+    for (Var v : req.in) {
+      Arg maybeVal;
+      if (alreadyFetched.containsKey(v.name())) {
+        maybeVal = alreadyFetched.get(v.name());
+      } else {
+        maybeVal = cv.findRetrieveResult(v);
+      }
+      // Can only retrieve value of future or reference
+       
+      if (maybeVal != null) {
+        /*
+         * this variable might not actually be passed through continuations to
+         * the current scope, so we might have temporarily made the IC
+         * invalid, but we rely on fixupVariablePassing to fix this later
+         */
+        inVals.add(maybeVal);
+        alreadyFetched.put(v.name(), maybeVal);
+      } else {
+        // Generate instruction to fetch val, append to alt
+        Var fetchedV = OptUtil.fetchValueOf(insertContext, alt, v);
+        Arg fetched = Arg.createVar(fetchedV);
+        inVals.add(fetched);
+        alreadyFetched.put(v.name(), fetched);
+      }
+    }
+    List<Var> outValVars = OptUtil.declareLocalOpOutputVars(insertContext,
+                                                            req.out);
+    MakeImmChange change = inst.makeImmediate(outValVars, inVals);
+    OptUtil.fixupImmChange(insertContext, change, alt, outValVars, req.out);
+    
+
+    if (logger.isTraceEnabled()) {
+      logger.trace("Replacing instruction <" + inst + "> with sequence "
+          + alt.toString());
+    }
+    
+
+    // Remove existing instruction
+    insts.remove();
+    
+    // Add new instructions at insert point
+    for (Instruction newInst: alt) {
+      insertPoint.add(newInst);
+    }
+    
+    // Rewind argument iterator to instruction before replaced one
+    if (inst == insertPoint) {
+      ICUtil.rewindIterator(insts, alt.size());
+    } else {
+      insts.previous();
+    }
+    return true;
   }
 
   /**
