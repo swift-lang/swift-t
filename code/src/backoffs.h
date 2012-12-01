@@ -25,6 +25,12 @@ extern double xlb_max_idle;
  */
 extern double xlb_steal_backoff;
 
+// Maximum requests to serve before yielding to main server loop
+extern int xlb_loop_max_requests;
+
+// Maximum polls before yielding to main server loop
+extern int xlb_loop_max_polls;
+
 /**
    Backoff while in server loop
    @param attempt: what level we should go to

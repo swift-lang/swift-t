@@ -146,12 +146,6 @@ ADLB_Server(long max_memory)
   return ADLB_SUCCESS;
 }
 
-// Maximum requests to serve before yielding to main server loop
-#define XLB_LOOP_MAX_REQUESTS (128)
-
-// Maximum polls before yielding to main server loop
-#define XLB_LOOP_MAX_POLLS (10000)
-
 // Track current backoff amount for adaptive backoff
 static int curr_server_backoff = 0;
 
@@ -168,8 +162,8 @@ xlb_serve_several() {
 
   int reqs = 0; // count of requests served
   int total_polls = 0; // total polls
-  while (reqs < XLB_LOOP_MAX_REQUESTS &&
-         total_polls < XLB_LOOP_MAX_POLLS) {
+  while (reqs < xlb_loop_max_requests &&
+         total_polls < xlb_loop_max_polls) {
     MPI_Status req_status;
     adlb_code code = xlb_poll(MPI_ANY_SOURCE, &req_status);
     ADLB_CHECK(code);

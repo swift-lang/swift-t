@@ -25,6 +25,8 @@ static double backoff_server_max    = 2;
 static int    backoff_server_no_delay_attempts  = 0;
 static int    backoff_server_min_delay_attempts = 1;
 static int    backoff_server_exp_delay_attempts = 0;
+       int    xlb_loop_max_requests = 1;
+       int    xlb_loop_max_polls    = 1;
 static double backoff_sync          = 1;
 static double backoff_sync_rejected = 1;
 #elif SPEED == MEDIUM
@@ -34,6 +36,8 @@ static double backoff_server_max    = 0.001;
 static int    backoff_server_no_delay_attempts  = 0;
 static int    backoff_server_min_delay_attempts = 1;
 static int    backoff_server_exp_delay_attempts = 0;
+       int    xlb_loop_max_requests = 16;
+       int    xlb_loop_max_polls    = 16;
 static double backoff_sync          = 0.01;
 static double backoff_sync_rejected = 0.01;
 #elif SPEED == FAST
@@ -43,6 +47,8 @@ static double backoff_server_max    = 0.000001;
 static int    backoff_server_no_delay_attempts  = 1024;
 static int    backoff_server_min_delay_attempts = 4;
 static int    backoff_server_exp_delay_attempts = 16;
+       int    xlb_loop_max_requests = 128;
+       int    xlb_loop_max_polls    = 1000;
 static double backoff_sync          = 0.00001;
 static double backoff_sync_rejected = 0.0001;
 #endif
