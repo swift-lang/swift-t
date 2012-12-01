@@ -162,8 +162,10 @@ xlb_serve_several() {
 
   int reqs = 0; // count of requests served
   int total_polls = 0; // total polls
+  int sleeps = 0;
   while (reqs < xlb_loop_max_requests &&
-         total_polls < xlb_loop_max_polls) {
+         total_polls < xlb_loop_max_polls &&
+         sleeps < xlb_loop_max_sleeps) {
     MPI_Status req_status;
     adlb_code code = xlb_poll(MPI_ANY_SOURCE, &req_status);
     ADLB_CHECK(code);
@@ -176,10 +178,13 @@ xlb_serve_several() {
       curr_server_backoff /= 2;
     } else {
       // Backoff
-      bool again = xlb_backoff_server(curr_server_backoff);
+      bool slept;
+      bool again = xlb_backoff_server(curr_server_backoff, &slept);
       // If we reach max backoff, exit
       if (!again)
         break;
+      if (slept)
+        sleeps++;
       // Back off more
       curr_server_backoff++;
     }

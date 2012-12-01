@@ -27,6 +27,7 @@ static int    backoff_server_min_delay_attempts = 1;
 static int    backoff_server_exp_delay_attempts = 0;
        int    xlb_loop_max_requests = 1;
        int    xlb_loop_max_polls    = 1;
+       int    xlb_loop_max_sleeps   = 10;
 static double backoff_sync          = 1;
 static double backoff_sync_rejected = 1;
 #elif SPEED == MEDIUM
@@ -38,6 +39,7 @@ static int    backoff_server_min_delay_attempts = 1;
 static int    backoff_server_exp_delay_attempts = 0;
        int    xlb_loop_max_requests = 16;
        int    xlb_loop_max_polls    = 16;
+       int    xlb_loop_max_sleeps   = 10;
 static double backoff_sync          = 0.01;
 static double backoff_sync_rejected = 0.01;
 #elif SPEED == FAST
@@ -46,9 +48,10 @@ static double backoff_sync_rejected = 0.01;
 static double backoff_server_max    = 0.000001;
 static int    backoff_server_no_delay_attempts  = 1024;
 static int    backoff_server_min_delay_attempts = 4;
-static int    backoff_server_exp_delay_attempts = 16;
+static int    backoff_server_exp_delay_attempts = 4;
        int    xlb_loop_max_requests = 128;
-       int    xlb_loop_max_polls    = 1000;
+       int    xlb_loop_max_polls    = 10000;
+       int    xlb_loop_max_sleeps   = 100;
 static double backoff_sync          = 0.00001;
 static double backoff_sync_rejected = 0.0001;
 #endif
@@ -58,10 +61,11 @@ static double backoff_sync_rejected = 0.0001;
     + backoff_server_exp_delay_attempts)
 
 bool
-xlb_backoff_server(int attempt)
+xlb_backoff_server(int attempt, bool *slept)
 {
   // DEBUG("backoff()");
   if (attempt < backoff_server_no_delay_attempts) {
+    *slept = false;
     return true;
   } else  {
     double delay;
@@ -75,6 +79,7 @@ xlb_backoff_server(int attempt)
       delay = pow(2, exponent) * backoff_server_max;
     }
     time_delay(delay);
+    *slept = true;
     return attempt < BACKOFF_SERVER_TOTAL_ATTEMPTS - 1;
   }
 }

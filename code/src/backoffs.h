@@ -31,12 +31,16 @@ extern int xlb_loop_max_requests;
 // Maximum polls before yielding to main server loop
 extern int xlb_loop_max_polls;
 
+// Maximum sleeps before yielding to main server loop
+extern int xlb_loop_max_sleeps;
+
 /**
    Backoff while in server loop
    @param attempt: what level we should go to
+   @param slept: true if this function slept
    returns true if should retry again later with higher level
  */
-bool xlb_backoff_server(int attempt);
+bool xlb_backoff_server(int attempt, bool *slept);
 
 /**
    Backoff during sync() spin loop
