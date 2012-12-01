@@ -67,10 +67,12 @@ char* xlb_get_tag_name(int tag);
   TRACE_MPI("SSENT"); \
   MPI_CHECK(rc); }
 
-#define RECV(data,length,type,rank,tag) { \
+#define RECV(data,length,type,rank,tag) RECV2(data,length,type,rank,tag,&status)
+
+#define RECV2(data,length,type,rank,tag,status_ptr) { \
   TRACE_MPI("RECV(from=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
   int rc = MPI_Recv(data,length,type,rank,tag, \
-                    adlb_all_comm,&status); \
+                    adlb_all_comm,status_ptr); \
   TRACE_MPI("RECVD"); \
   MPI_CHECK(rc); }
 

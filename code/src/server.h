@@ -37,6 +37,11 @@ int xlb_map_to_server(int worker);
  */
 adlb_code xlb_serve_one(int source);
 
+/**
+ * Serve several requests
+ */
+adlb_code xlb_serve_several();
+
 adlb_code xlb_serve_server(int source);
 
 adlb_code xlb_shutdown_worker(int worker);

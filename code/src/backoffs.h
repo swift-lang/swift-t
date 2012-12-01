@@ -27,7 +27,8 @@ extern double xlb_steal_backoff;
 
 /**
    Backoff while in server loop
-   returns true if should retry again later
+   @param attempt: what level we should go to
+   returns true if should retry again later with higher level
  */
 bool xlb_backoff_server(int attempt);
 

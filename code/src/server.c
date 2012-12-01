@@ -52,6 +52,14 @@ static bool fail_code = -1;
 
 static adlb_code setup_idle_time(void);
 
+// Poll msg queue for requests
+static inline adlb_code
+xlb_poll(int source,  MPI_Status *req_status);
+
+// Service request from queue
+static inline adlb_code
+xlb_handle_pending(MPI_Status *status);
+
 adlb_code
 xlb_server_init()
 {
@@ -127,7 +135,8 @@ ADLB_Server(long max_memory)
     if (shutting_down)
       break;
 
-    adlb_code code = xlb_serve_one(MPI_ANY_SOURCE);
+
+    adlb_code code = xlb_serve_several();
     ADLB_CHECK(code);
 
     check_steal();
@@ -137,44 +146,75 @@ ADLB_Server(long max_memory)
   return ADLB_SUCCESS;
 }
 
-adlb_code
-xlb_serve_one(int source)
-{
-  TRACE_START;
-  if (source > 0)
-    TRACE("\t source: %i", source);
-  int new_message = 0;
-  MPI_Status status;
-  int rc;
+// Maximum requests to serve before yielding to main server loop
+#define XLB_LOOP_MAX_REQUESTS (128)
 
-  int attempt = 0;
-  bool repeat = true;
-  // May want to switch to PMPI call for speed
-  while (!new_message)
-  {
-    rc = MPI_Iprobe(source, MPI_ANY_TAG, adlb_all_comm,
-                    &new_message, &status);
-    MPI_CHECK(rc);
-    if (!new_message)
-    {
-      if (!repeat)
-      {
-        TRACE_END;
-        return ADLB_NOTHING;
-      }
-      repeat = xlb_backoff_server(attempt);
-      attempt++;
+// Maximum polls before yielding to main server loop
+#define XLB_LOOP_MAX_POLLS (10000)
+
+// Track current backoff amount for adaptive backoff
+static int curr_server_backoff = 0;
+
+adlb_code
+xlb_serve_several() {
+  /*
+   * Serve several requests before returning.
+   * If there are pending requests in the queue, we try to serve them
+   * as quickly as possible.  If there are no requests we busy-wait
+   * then back off several times with sleeps so as to avoid using
+   * excessive CPU.  We use an adaptive algorithm that backs off
+   * more if the queue has been empty recently.
+   */
+
+  int reqs = 0; // count of requests served
+  int total_polls = 0; // total polls
+  while (reqs < XLB_LOOP_MAX_REQUESTS &&
+         total_polls < XLB_LOOP_MAX_POLLS) {
+    MPI_Status req_status;
+    adlb_code code = xlb_poll(MPI_ANY_SOURCE, &req_status);
+    ADLB_CHECK(code);
+    if (code == ADLB_SUCCESS) {
+      code = xlb_handle_pending(&req_status);
+      ADLB_CHECK(code);
+      reqs++;
+
+      // Back off less on each successful request
+      curr_server_backoff /= 2;
+    } else {
+      // Backoff
+      bool again = xlb_backoff_server(curr_server_backoff);
+      // If we reach max backoff, exit
+      if (!again)
+        break;
+      // Back off more
+      curr_server_backoff++;
     }
+    total_polls++;
   }
 
+  return reqs > 0 ? ADLB_SUCCESS : ADLB_NOTHING;
+}
 
-  if (status.MPI_TAG == ADLB_TAG_SYNC_RESPONSE)
+static inline adlb_code
+xlb_poll(int source, MPI_Status *req_status)
+{
+  int new_message;
+  int rc = MPI_Iprobe(source, MPI_ANY_TAG, adlb_all_comm,
+                  &new_message, req_status);
+  MPI_CHECK(rc);
+  return new_message ?  ADLB_SUCCESS : ADLB_NOTHING;
+}
+
+static inline adlb_code
+xlb_handle_pending(MPI_Status *status)
+{
+  if (status->MPI_TAG == ADLB_TAG_SYNC_RESPONSE)
   {
     // Corner case: this process is trying to sync with source
     // Source is rejecting the sync request
     int response;
-    RECV(&response, 1, MPI_INT, status.MPI_SOURCE,
-         ADLB_TAG_SYNC_RESPONSE);
+    RECV2(&response, 1, MPI_INT, status->MPI_SOURCE,
+         ADLB_TAG_SYNC_RESPONSE, status);
     server_sync_retry = true;
     assert(response == 0);
     TRACE_END;
@@ -182,9 +222,28 @@ xlb_serve_one(int source)
   }
 
   // Call appropriate RPC handler:
-  rc = handle(status.MPI_TAG, status.MPI_SOURCE);
+  adlb_code rc = handle(status->MPI_TAG, status->MPI_SOURCE);
   ADLB_CHECK(rc);
+  return rc;
+}
+
+adlb_code
+xlb_serve_one(int source)
+{
+  TRACE_START;
+  if (source > 0)
+    TRACE("\t source: %i", source);
+  MPI_Status status;
+  adlb_code code = xlb_poll(source, &status);
+  ADLB_CHECK(code);
+
+  if (code == ADLB_NOTHING)
+    return ADLB_NOTHING;
+
+  int rc = xlb_handle_pending(&status);
+
   TRACE_END;
+  
   return rc;
 }
 

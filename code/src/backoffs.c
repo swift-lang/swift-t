@@ -41,8 +41,8 @@ static double backoff_sync_rejected = 0.01;
        double xlb_steal_backoff     = 0.01;
 static double backoff_server_max    = 0.000001;
 static int    backoff_server_no_delay_attempts  = 1024;
-static int    backoff_server_min_delay_attempts = 8;
-static int    backoff_server_exp_delay_attempts = 4;
+static int    backoff_server_min_delay_attempts = 4;
+static int    backoff_server_exp_delay_attempts = 16;
 static double backoff_sync          = 0.00001;
 static double backoff_sync_rejected = 0.0001;
 #endif
