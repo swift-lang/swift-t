@@ -320,6 +320,10 @@ check_idle()
 bool
 xlb_server_check_idle_local()
 {
+  if (! workers_idle())
+    // A worker is busy...
+    return false;
+
   // Current time
   double t = MPI_Wtime();
 
@@ -327,10 +331,6 @@ xlb_server_check_idle_local()
   double idle = t - xlb_time_last_action;
   if (idle < xlb_max_idle)
     // Not idle long enough...
-    return false;
-
-  if (! workers_idle())
-    // A worker is busy...
     return false;
 
   return true;
