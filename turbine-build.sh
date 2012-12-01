@@ -15,11 +15,14 @@ if [ ! -z "$EXM_OPT_BUILD" ]; then
     EXTRA_ARGS+="--enable-fast"
 fi
 
+if [ ! -z "$ENABLE_MPE"]; then
+    EXTRA_ARGS+="--with-mpe"
+fi
+
 ./configure --with-adlb=${LB_INST} \
             --with-mpi=${MPICH_INST} \
             --with-tcl=${TCL_INST} \
             --with-c-utils=${C_UTILS_INST} \
-            --with-mpe \
             --prefix=${TURBINE_INST} \
             ${EXTRA_ARGS}
 #            --disable-log
