@@ -16,6 +16,11 @@ ADLB_VERSION=adlb_version()
 AC_MSG_RESULT([ADLB/X version: ${ADLB_VERSION}])
 AC_SUBST(ADLB_VERSION)
 
+if [[ ${prefix} == ${PWD} ]]
+then
+  AC_MSG_ERROR([Your --prefix should not be the same as PWD: $PWD])
+fi
+
 echo ${PWD} > source.txt
 
 USE_MAC="no"
