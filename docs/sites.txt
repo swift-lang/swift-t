@@ -1,0 +1,89 @@
+
+:toc:
+
+Turbine Sites Guide
+===================
+Justin M. Wozniak <wozniak@mcs.anl.gov>
+v0.0.7, December 2012
+
+////
+
+This file is on the web at:
+
+http://www.mcs.anl.gov/exm/local/guides/turbine-sites.html
+
+////
+
+== Overview
+
+This manual provides an index of sites maintained by the Swift/T team
+for use by Turbine.
+
+For each machine, a *public installation* and/or a *build procedure* will
+be provided.  The user need only follow one set of directions.
+
+To follow a build procedure, you may start with the +exm+ download
+package.  Simply edit the +exm-setup+ script and modify the
+configuration settings as described here.
+
+== Cray
+
+=== Beagle
+
+Beagle is a Cray XE6 at the University of Chicago
+
+==== Public installation
+
+* Based on trunk
+* Turbine: +/lustre/beagle/wozniak/Public/turbine/bin/turbine+
+* STC: +~wozniak/Public/stc/bin/stc+
+
+To run:
+
+1. Copy out the sample submit script:
++/lustre/beagle/wozniak/Public/turbine/scripts/submit/cray/aprun.sh+
+2. Edit and submit with +qsub+.
+
+==== Build procedure
+
+* Configure ADLB with:
++
+----
+./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/xt/gemini/mpich2-gnu/include
+LDFLAGS="-L/opt/cray/mpt/default/xt/gemini/mpich2-gnu/lib -lmpich"
+----
++
+* In the Turbine configure step, replace the +--with-mpi+ option with:
++
+----
+--enable-custom --with-mpi-dir=/opt/cray/mpt/default/xt/gemini/mpich2-gnu
+----
+
+=== Crow
+
+Crow is a Cray XT at Cray
+
+==== Build procedure
+
+* Configure ADLB with:
++
+----
+./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/5.3.0/xt/seastar/mpich2-gnu/include
+LDFLAGS="-L/opt/cray/mpt/5.3.0/xt/seastar/mpich2-gnu/lib -lmpich"
+----
++
+* In the Turbine configure step, replace the +--with-mpi+ option with:
++
+----
+--enable-custom --with-mpi-dir=/opt/cray/mpt/5.3.0/xt/seastar/mpich2-gnu
+----
+
+To run:
+
+1. Copy out the sample submit script:
++turbine/scripts/submit/cray/aprun.sh+
+2. Edit and submit with +qsub+.
