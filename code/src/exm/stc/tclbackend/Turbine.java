@@ -29,7 +29,7 @@ import exm.stc.tclbackend.tree.Value;
  * */
 class Turbine
 {
-  private static final String EXEC = "exec";
+  private static final String EXEC_EXTERNAL = "turbine::exec_external";
   /* Names of types used by Turbine */
   public static final String STRING_TYPENAME = "string";
   public static final String INTEGER_TYPENAME = "integer";
@@ -806,9 +806,7 @@ class Turbine
     ArrayList<Expression> args2 = new ArrayList<Expression>(args.size() + 3);
     args2.add(new TclString(cmd, true));
     args2.addAll(args);
-    args2.add(new Token(">@stdout"));
-    args2.add(new Token("2>@stderr"));
-    return new Command(EXEC, args2);
+    return new Command(EXEC_EXTERNAL, args2);
   }
   
 
