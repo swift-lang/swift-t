@@ -527,4 +527,103 @@ namespace eval turbine {
             error "Unknown reference representation type $type"
         }
     }
+
+    # Wait, recursively for container contents
+    # Supports plain futures and files
+    # rule_prefix: prefix for rule names
+    # inputs: list of tds to wait on
+    # nest_levels: list corresponding to inputs with nesting level
+    #             of containers
+    # is_file: list of booleans: whether file
+    # target: where to send work
+    # cmd: command to execute when closed
+    proc deeprule { rule_prefix inputs nest_levels target cmd } {
+      # signals: list of variables that must be closed to signal deep closing
+      # allocated_signals: signal variables that were allocated
+      set signals [ list ]
+      set allocated_signals [ list ]
+      set i 0
+      for input $inputs {
+        set isf [ lindex is_file $i ]
+        set nest_level [ lindex $nest_levels $i ]
+        assert [ expr $next_level >= 0 ] "nest_level must be non-negative"
+        if { $nest_level == 0 } {
+          # Just need to wait on right thing
+          if { $isf } {
+            lappend signals [ get_file_status $input ]
+          } else {
+            lappend signals $input
+          }
+        } else {
+          # Wait for deep close of container
+          # Use void variable to signal recursive container closing
+          set signal [ allocate void 0 ]
+          lappend signals $signal
+          lappend allocated_signals $signal # make sure cleaned up later
+          container_deep_wait $rule_prefix $container $nest_level $isf $signal
+        }
+        incr i
+      }
+      
+      # Once all signals closed, run finalizer
+      rule "${rule_prefix}-final" $signals $target \
+            [ list deeprule_finish $allocated_signals $cmd ]
+    }
+
+    # Check for container contents being closed and once true,
+    # set signal
+    # Called after container itself is closed
+    proc container_deep_wait { rule_prefix container nest_level is_file signal } {
+      if { $nest_level == 0 } {
+        # First wait for container to be closed
+        set rule_name "${rule_prefix}-$container-close" 
+        rule $rule_name $container $turbine::LOCAL \
+            [ list container_deep_wait_continue $rule_name $container 0 -1 \
+                                            $nest_level $is_file $signal ]
+      } else {  
+        error "Recursive container wait for nest_level $next_level > 0 \
+               not supported yet"
+      }
+    }
+    
+    proc container_deep_wait_continue { rule_prefix container progress n
+                                        nest_level is_file signal } {
+      set MAX_CHUNK_SIZE 64
+      # TODO: could divide and conquer instead of doing linear search
+      if { $n == -1 } {
+        set n [ adlb::enumerate $container count all 0 ]
+      }
+      while { $progress < $n } {
+        set chunk_size [ expr min($MAX_CHUNK_SIZE, $n - $progress) ]
+        set members [ adlb::enumerate $container members \
+                                      $chunk_size $progress ]
+        foreach member $members {
+          if {$is_file} {
+            set signal [ get_file_status $member ]
+          } else {
+            set signal $member
+          }
+          if { [ adlb::exists $signal ] } {
+            incr progress
+          } else {
+            # Suspend execution until next item closed
+            rule "${rule_prefix}-$signal" $signal $turbine::LOCAL \
+                [ list container_deep_wait_continue $container $progress $n \
+                                                   $nest_level $isf $signal ]
+          }
+        }
+      }
+      # Finished
+      log "Container <$container> deep closed"
+      store_void $signal
+    }
+
+    # Cleanup allocated things for 
+    # Decrement references for signals
+    proc deeprule_finish { allocated_signals cmd } {
+      for signal $allocated_signals {
+        read_refcount_decr $signal 
+      }
+      eval $cmd
+    }
 }
