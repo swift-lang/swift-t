@@ -24,6 +24,10 @@ TURBINE_VERSION=turbine_version()
 AC_MSG_RESULT([Turbine version: ${TURBINE_VERSION}])
 AC_SUBST(TURBINE_VERSION)
 
+echo "PREFIX: ${prefix}"
+SOFTWARE=$( cd ${prefix}/.. ; /bin/pwd )
+echo "SOFTWARE: ${SOFTWARE}"
+
 if [[ ${prefix} == ${PWD} ]]
 then
   AC_MSG_ERROR([Your --prefix should not be the same as PWD: $PWD])
@@ -87,30 +91,35 @@ AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
 AC_DEFINE([HAVE_SYS_PARAM_H], [], [Do we have sys/param.h?])
 
 AC_ARG_WITH(c-utils,
-                 AS_HELP_STRING(
-                    [--with-c-utils],
-                    [location of ExM c-utils]),
-                   [
-                    USE_C_UTILS=0
-                    AC_MSG_CHECKING([${withval}/include/c-utils.h])
-                    [[ -r ${withval}/include/c-utils.h ]] && USE_C_UTILS=1
-                    if [[ ${USE_C_UTILS} == 0 ]]
-                    then
-                       AC_MSG_ERROR([Could not find ExM c-utils in $withval])
-                    fi
-                    AC_MSG_RESULT([yes])
-                    USE_C_UTILS=$withval
-                 ],
-                 [
-                   AC_MSG_ERROR([Not found: ExM c-utils])
-                   USE_C_UTILS=0
-                 ])
+    AS_HELP_STRING([--with-c-utils], [location of ExM c-utils]),
+    [
+        USE_C_UTILS=0
+        AC_MSG_CHECKING([${withval}/include/c-utils.h])
+        [[ -r ${withval}/include/c-utils.h ]] && USE_C_UTILS=1
+        if [[ ${USE_C_UTILS} == 0 ]]
+        then
+            AC_MSG_ERROR([Could not find ExM c-utils in $withval])
+        fi
+        AC_MSG_RESULT([yes])
+        USE_C_UTILS=${withval}
+    ],
+    [
+        dnl If not given, look in SOFTWARE
+        location=${SOFTWARE}/c-utils
+        AC_CHECK_FILE(${location}/include/c-utils.h,
+                      [USE_C_UTILS=1], [])
+        if [[ ${USE_C_UTILS} == 1 ]]
+        then
+            USE_C_UTILS=${location}
+        else
+            AC_MSG_ERROR([Not found: ExM c-utils])
+        fi
+    ]
+)
 AC_SUBST(USE_C_UTILS)
 
-# Using the MPI library under Tcl apparently requires MPICH as a
-# shared library
-
 # There are many ways to set up MPI: make sure the user picks one
+# If MPI_SET==0, the user has not yet set MPI properly
 MPI_SET=0
 
 # MPI defaults (may be overridden on special systems)
@@ -134,15 +143,14 @@ AC_ARG_ENABLE(sicortex,
 
 # In custom, the user will optionally specify MPI directories below
 AC_ARG_ENABLE(custom,
-                 AS_HELP_STRING(
-                 [--enable-custom],
-                 [Select MPI include and lib separately]),
-                 [
-                        USE_MACHINE=custom
-                        USE_LAUNCHER=mpiexec
-                        MPI_SET=1
-                 ],
-                 [])
+    AS_HELP_STRING([--enable-custom],
+                   [Select MPI include and lib separately]),
+    [
+        USE_MACHINE=custom
+        USE_LAUNCHER=mpiexec
+        MPI_SET=1
+    ],
+    [])
 
 # Defaults: do not use custom MPI include, lib locations
 USE_MPI_INCLUDE=0
@@ -235,9 +243,7 @@ AC_SUBST(USE_MPI_LIB_NAME)
 
 USE_MPI=1
 AC_ARG_WITH(mpi,
-    AS_HELP_STRING(
-        [--with-mpi],
-        [location of MPI installation]),
+    AS_HELP_STRING([--with-mpi], [location of MPI installation]),
     [
         AC_MSG_CHECKING(MPI settings...)
         if [[ ! -d ${withval} ]]
@@ -269,6 +275,36 @@ AC_ARG_WITH(mpi,
         USE_MPI=0
     ]
 )
+
+if (( ! ${MPI_SET} ))
+then
+   # Last chance to configure MPI: look for mpiexec in PATH
+   program=$( which mpiexec )
+   if [[ ${?} == 0 ]]
+   then
+       AC_MSG_RESULT([PATH contains: ${program}])
+       location=$( cd $(dirname ${program})/.. ; /bin/pwd )
+       AC_MSG_CHECKING([for MPI in ${location} ])
+       USE_MPI=${location}
+       MPI_H=${location}/include/mpi.h
+       if [[ ! -f ${MPI_H} ]]
+       then
+           AC_MSG_ERROR([Could not find: ${MPI_H}])
+           USE_MPI=0
+       fi
+       MPI_SO=${location}/lib/lib${MPI_LIB_NAME}.${SO_SUFFIX}
+       if [[ ! -f ${MPI_SO} ]]
+       then
+           AC_MSG_ERROR([Could not find: ${MPI_SO}])
+           USE_MPI=0
+       fi
+       if [[ ${USE_MPI} != 0 ]]
+       then
+           MPI_SET=1
+           AC_MSG_RESULT([ok])
+       fi
+   fi
+fi
 AC_SUBST(USE_MPI)
 
 (( ${MPI_SET} )) || AC_MSG_ERROR([Insufficient MPI settings!])
@@ -325,18 +361,21 @@ AC_ARG_WITH(adlb,
         AC_MSG_CHECKING([for ${withval}/include/adlb.h])
         if [[ ! -r ${withval}/include/adlb.h ]]
         then
-            USE_ADLB=0
-        fi
-        if [[ ${USE_ADLB} == 0 ]]
-        then
             AC_MSG_ERROR(Could not find ADLB in $withval)
         fi
         AC_MSG_RESULT(ok)
-        USE_ADLB=$withval
+        USE_ADLB=${withval}
     ],
     [
-        AC_MSG_WARN([Not found: ADLB])
-        USE_ADLB=0
+        dnl If not given, look in SOFTWARE
+        location=${SOFTWARE}/lb
+        AC_CHECK_FILE(${location}/include/adlb.h, [USE_ADLB=1], [])
+        if [[ ${USE_ADLB} == 1 ]]
+        then
+            USE_ADLB=${location}
+        else
+            AC_MSG_ERROR([Not found: ADLB])
+        fi
     ]
 )
 AC_SUBST(USE_ADLB)
@@ -349,30 +388,24 @@ AC_ARG_WITH(tclsh-local,
     AS_HELP_STRING(
         [--with-tclsh-local],
         [name of tclsh compatible with build system]),
-        [
-            AC_MSG_CHECKING([for Tcl local executable in: ${withval} ])
-            USE_TCLSH_LOCAL=$( maint/find-tcl.zsh ${withval} )
-            if [[ ${?} != 0 ]]
-            then
-                AC_MSG_ERROR([failed!])
-            fi
-            AC_MSG_RESULT($(basename ${USE_TCLSH_LOCAL}))
-        ],
-        [])
+    [
+        AC_MSG_CHECKING([for Tcl local executable in: ${withval} ])
+        USE_TCLSH_LOCAL=$( maint/find-tcl.zsh ${withval} )
+        if [[ ${?} != 0 ]]
+        then
+            AC_MSG_ERROR([failed!])
+        fi
+        AC_MSG_RESULT($(basename ${USE_TCLSH_LOCAL}))
+    ],
+    [])
 
 USE_TCL=unknown
 USE_TCL_LIB_DIR=0
 AC_ARG_WITH(tcl,
-    AS_HELP_STRING(
-        [--with-tcl],
-        [location of Tcl]),
+    AS_HELP_STRING([--with-tcl], [location of Tcl]),
     [
         AC_MSG_CHECKING([for ${withval}/lib/tclConfig.sh ])
         if [[ ! -r ${withval}/lib/tclConfig.sh ]]
-        then
-            USE_TCL=0
-        fi
-        if [[ ${USE_TCL} == 0 ]]
         then
             AC_MSG_ERROR(Could not find Tcl in $withval)
         fi
@@ -381,8 +414,21 @@ AC_ARG_WITH(tcl,
         source $USE_TCL/lib/tclConfig.sh
     ],
     [
-        AC_MSG_WARN([Not given: Tcl])
-        USE_TCL=0
+        program=$( which tclsh8.5 )
+        if [[ ${?} != 0 ]]
+        then
+            AC_MSG_ERROR([Could not find tclsh8.5!])
+        fi
+        AC_MSG_RESULT([PATH contains: ${program}])
+        location=$( cd $(dirname ${program})/.. ; /bin/pwd )
+        AC_MSG_CHECKING([for ${location}/lib/tclConfig.sh ])
+        if [[ -r ${location}/lib/tclConfig.sh ]]
+        then
+            USE_TCL=${location}
+            AC_MSG_RESULT([ok])
+        else
+            AC_MSG_ERROR([Could not find Tcl!])
+        fi
     ]
 )
 USE_TCL_LIB_DIR=${USE_TCL}/lib
@@ -439,12 +485,13 @@ AC_ARG_ENABLE(log,
                  [])
 # DISABLE_LOG set below:
 
-ENABLE_FAST=
+ENABLE_FAST=0
 AC_ARG_ENABLE(fast,
-     [  --enable-fast         Enable NDEBUG, -O3, disable log. ],
-        ENABLE_FAST=1
-        DISABLE_LOG=1
-        CFLAGS="${CFLAGS} -O3 -DNDEBUG")
+    AS_HELP_STRING([--enable-fast],
+                   [Enable NDEBUG, -O3, disable log.]),
+    ENABLE_FAST=1
+    DISABLE_LOG=1
+    CFLAGS="${CFLAGS} -O3 -DNDEBUG")
 AC_SUBST(ENABLE_FAST)
 AC_SUBST(CFLAGS)
 
