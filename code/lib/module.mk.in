@@ -20,7 +20,8 @@ TCL_SRC := $(DIR)/helpers.tcl             \
            $(DIR)/sys.tcl                 \
            $(DIR)/blob.tcl                \
            $(DIR)/mpe.tcl		  \
-	   $(DIR)/files.tcl
+	   $(DIR)/files.tcl               \
+	   $(DIR)/app.tcl               \
 
 ALL_SO := $(TCL_TURBINE_SO)
 

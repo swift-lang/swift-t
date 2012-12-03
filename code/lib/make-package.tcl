@@ -23,10 +23,11 @@ set items [ eval list -load $libtclturbine \
                 -source container.tcl  \
                 -source functions.tcl  \
                 -source files.tcl      \
+                -source app.tcl        \
                 -source mpe.tcl        \
                 -source rand.tcl       \
                 -source stats.tcl      \
-                -source io.tcl      \
+                -source io.tcl         \
                 -source string.tcl     \
                 -source updateable.tcl \
                 -source sys.tcl     \
