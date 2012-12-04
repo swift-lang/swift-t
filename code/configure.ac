@@ -118,199 +118,132 @@ AC_ARG_WITH(c-utils,
 )
 AC_SUBST(USE_C_UTILS)
 
-# There are many ways to set up MPI: make sure the user picks one
-# If MPI_SET==0, the user has not yet set MPI properly
-MPI_SET=0
-
 # MPI defaults (may be overridden on special systems)
 USE_MACHINE=normal
 USE_LAUNCHER=mpiexec
-MPI_LIB_NAME=mpich
-
-# Special systems:
-# On the SiCortex, we use srun and libmpiP.a
-AC_ARG_ENABLE(sicortex,
-                 AS_HELP_STRING(
-                    [--enable-sicortex],
-                    [Required if running on SiCortex]),
-                 [
-                        USE_MACHINE=sicortex
-                        USE_LAUNCHER=srun
-                        MPI_LIB_NAME=libmpiP.a
-                        MPI_SET=1
-                 ],
-                 [])
-
-# In custom, the user will optionally specify MPI directories below
-AC_ARG_ENABLE(custom,
-    AS_HELP_STRING([--enable-custom],
-                   [Select MPI include and lib separately]),
-    [
-        USE_MACHINE=custom
-        USE_LAUNCHER=mpiexec
-        MPI_SET=1
-    ],
-    [])
-
-# Defaults: do not use custom MPI include, lib locations
+USE_MPI_DIR=0
 USE_MPI_INCLUDE=0
 USE_MPI_LIB_DIR=0
+USE_MPI_LIB_NAME=mpich
+ENABLE_CUSTOM_MPI=0
 
-# This is an MPI installation without mpicc (e.g., Cray)
-AC_ARG_WITH(mpi-dir,
-                 AS_HELP_STRING(
-                    [--with-mpi-dir],
-                    [location of MPI installation]),
-                 [AC_CHECK_FILE(${withval}/include/mpi.h,
-                  [], [USE_MPI_INCLUDE=NOTFOUND])
-                  if test "$USE_MPI_INCLUDE" = NOTFOUND ; then
-                     AC_MSG_ERROR(Could not find mpi.h
-                                  in $withval/include)
-                  fi
-                  AC_MSG_RESULT([using MPI in $withval])
-                  USE_MPI_INCLUDE=$withval/include
-                  USE_MPI_LIB_DIR=$withval/lib
-                 ],
-                 [])
-# AC_SUBST commands below
-
-AC_ARG_WITH(mpi-include,
-                 AS_HELP_STRING(
-                 [--with-mpi-include],
-                 [location of MPI header (mpi.h)]),
-                 [AC_CHECK_FILE(${withval}/mpi.h,
-                  [], [USE_MPI_INCLUDE=NOTFOUND])
-                  if test "$USE_MPI_INCLUDE" = NOTFOUND ; then
-                     AC_MSG_ERROR(Could not find mpi.h in $withval)
-                  fi
-                  AC_MSG_RESULT([using mpi.h in $withval])
-                  USE_MPI_INCLUDE=$withval
-                 ],
-                 [])
-AC_SUBST(USE_MPI_INCLUDE)
-
-AC_ARG_WITH(mpi-lib-dir,
-                 AS_HELP_STRING(
-                    [--with-mpi-lib-dir],
-                    [directory containing MPI lib (usually libmpich)]),
-                 [AC_CHECK_FILE(${withval},
-                  [], [USE_MPI_LIB_DIR=NOTFOUND])
-                  if test "$USE_MPI_LIB_DIR" = NOTFOUND ; then
-                     AC_MSG_ERROR(Could not find directory $withval)
-                  fi
-                  AC_MSG_RESULT([using MPI lib directory $withval])
-                  USE_MPI_LIB_DIR=$withval
-                 ],
-                 [])
-AC_SUBST(USE_MPI_LIB_DIR)
-
-# Default: do not use custom MPI lib name
-USE_MPI_LIB_NAME=0
-
+# Set shared object suffix (.so on Linux, .dylib on Mac)
 SO_SUFFIX=so
-if test `uname` = Darwin; then
+if [[ $(uname) = "Darwin" ]]
+then
    SO_SUFFIX=dylib
 fi
-AC_ARG_WITH(mpi-lib-name,
-                 AS_HELP_STRING(
-                    [--with-mpi-lib-name],
-                    [name of MPI lib (usually mpich) -
-                        assumes mpi-lib-dir has been given]),
-                 [
-                  MPI_LIB_NAME=${withval}
-                  FILE=${USE_MPI_LIB_DIR}/lib${MPI_LIB_NAME}.${SO_SUFFIX}
-                  AC_CHECK_FILE(${FILE},
-                  [], [USE_MPI_LIB_NAME=NOTFOUND])
-                  if test "$USE_MPI_LIB_NAME" = NOTFOUND ; then
-                     AC_MSG_ERROR(Could not find ${FILE})
-                  fi
-                  AC_MSG_RESULT([using MPI lib $FILE])
-                  USE_MPI_LIB_NAME=$withval
-                 ],
-                 [
-                  if test "$USE_MPI_LIB_DIR" != 0; then
-                    FILE=${USE_MPI_LIB_DIR}/libmpich.${SO_SUFFIX}
-                    AC_CHECK_FILE(${FILE},
-                    [], [USE_MPI_LIB_NAME=NOTFOUND])
-                    if test "$USE_MPI_LIB_NAME" = NOTFOUND ; then
-                       AC_MSG_ERROR(Could not find ${FILE})
-                    fi
-                    AC_MSG_RESULT([using MPI lib $FILE])
-                    USE_MPI_LIB_NAME=mpich
-                  fi
-                 ])
-AC_SUBST(USE_MPI_LIB_NAME)
 
-USE_MPI=1
+# Set MPI_DIR directly
 AC_ARG_WITH(mpi,
     AS_HELP_STRING([--with-mpi], [location of MPI installation]),
     [
-        AC_MSG_CHECKING(MPI settings...)
         if [[ ! -d ${withval} ]]
         then
             AC_MSG_ERROR(No MPI directory at $withval)
         fi
-        MPI_H=${withval}/include/mpi.h
-        if [[ ! -f ${MPI_H} ]]
-        then
-            AC_MSG_ERROR(Could not find: ${MPI_H})
-        fi
-        if [[ ! -f ${withval}/lib/lib${MPI_LIB_NAME}.${SO_SUFFIX} ]]
-        then
-            USE_MPI=0
-        fi
-        if [[ ${USE_MPI} == 0 ]]
-        then
-            AC_MSG_ERROR(Could not find MPI shared library at
-                ${withval}/lib/lib${MPI_LIB_NAME}.${SO_SUFFIX}.
-                MPI may not be installed at this location or
-                shared library may not have been built.)
-        fi
-        AC_MSG_RESULT([using MPI in $withval])
-        MPI_SET=1
-        USE_MPI=$withval
-        USE_LAUNCHER=${USE_MPI}/bin/mpiexec
+        USE_MPI_DIR=${withval}
+        USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+        USE_MPI_LIB_DIR=${USE_MPI_DIR}/lib
+        AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
     ],
-    [
-        USE_MPI=0
-    ]
-)
+    [])
 
-if (( ! ${MPI_SET} ))
+# In custom-mpi, the user will optionally specify MPI directories below
+AC_ARG_ENABLE(custom-mpi,
+    AS_HELP_STRING([--enable-custom-mpi],
+                   [Select MPI include and lib separately]),
+    [
+        ENABLE_CUSTOM_MPI=1
+        USE_MACHINE=custom
+        USE_LAUNCHER=mpiexec
+    ],
+    [])
+
+# Special systems:
+# On the SiCortex, we use srun and libmpiP.a
+AC_ARG_ENABLE(sicortex,
+    AS_HELP_STRING([--enable-sicortex],
+                   [Required if running on SiCortex]),
+    [
+        USE_MACHINE=sicortex
+        USE_LAUNCHER=srun
+        USE_MPI_DIR=/usr
+        USE_MPI_LIB_NAME=scmpi
+    ],
+    [])
+
+# Set MPI_DIR with respect to an mpicc in PATH
+if [[ ${USE_MPI_DIR} == 0 ]]
 then
    # Last chance to configure MPI: look for mpiexec in PATH
-   program=$( which mpiexec )
+   program=$( which mpicc )
    if [[ ${?} == 0 ]]
    then
        AC_MSG_RESULT([PATH contains: ${program}])
-       location=$( cd $(dirname ${program})/.. ; /bin/pwd )
-       AC_MSG_CHECKING([for MPI in ${location} ])
-       USE_MPI=${location}
-       MPI_H=${location}/include/mpi.h
-       if [[ ! -f ${MPI_H} ]]
-       then
-           AC_MSG_ERROR([Could not find: ${MPI_H}])
-           USE_MPI=0
-       fi
-       MPI_SO=${location}/lib/lib${MPI_LIB_NAME}.${SO_SUFFIX}
-       if [[ ! -f ${MPI_SO} ]]
-       then
-           AC_MSG_ERROR([Could not find: ${MPI_SO}])
-           USE_MPI=0
-       fi
-       if [[ ${USE_MPI} != 0 ]]
-       then
-           MPI_SET=1
-           AC_MSG_RESULT([ok])
-       fi
+       USE_MPI_DIR=$( cd $(dirname ${program})/.. ; /bin/pwd )
+       USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+       USE_MPI_LIB_DIR=${USE_MPI_DIR}/lib
+       AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
+   elif (( ! ${ENABLE_CUSTOM} ))
+   then
+       AC_MSG_ERROR([Turbine requires --with-mpi or
+                                  --enable-custom-mpi or
+                                  or mpicc in PATH .])
    fi
 fi
-AC_SUBST(USE_MPI)
 
-(( ${MPI_SET} )) || AC_MSG_ERROR([Insufficient MPI settings!])
+AC_ARG_WITH(mpi-include,
+    AS_HELP_STRING([--with-mpi-include],
+                   [directory containing MPI header (mpi.h)]),
+    [
+        USE_MPI_INCLUDE=${withval}
+    ],
+    [])
+
+AC_ARG_WITH(mpi-lib-dir,
+    AS_HELP_STRING([--with-mpi-lib-dir],
+                   [directory containing MPI lib (usually libmpich)]),
+    [
+        USE_MPI_LIB_DIR=${withval}
+    ],
+    [])
+
+AC_ARG_WITH(mpi-lib-name,
+    AS_HELP_STRING([--with-mpi-lib-name],
+                   [name of MPI lib (usually mpich) -
+                    assumes mpi-lib-dir has been given]),
+    [
+        USE_MPI_LIB_NAME=${withval}
+    ],
+    [])
+
+# Now check MPI settings
+
+AC_CHECK_FILE(${USE_MPI_LIB_DIR},
+              [], [AC_MSG_ERROR(Could not find directory ${withval})])
+
+AC_CHECK_FILE(${USE_MPI_INCLUDE}/mpi.h,
+              [],
+              [AC_MSG_ERROR([Could not find mpi.h in ${withval}])])
+
+MPI_LIB=${USE_MPI_LIB_DIR}/lib${USE_MPI_LIB_NAME}.${SO_SUFFIX}
+AC_CHECK_FILE(${MPI_LIB},
+              [], AC_MSG_ERROR([Could not find MPI shared library:
+                               ${MPI_LIB}.
+                               MPI may not be installed at this
+                               location or shared library may not
+                               have been built.]))
+
+# Write out MPI settings
+AC_SUBST(USE_MACHINE)
+AC_SUBST(USE_LAUNCHER)
+AC_SUBST(USE_MPI_INCLUDE)
+AC_SUBST(USE_MPI_LIB_DIR)
+AC_SUBST(USE_MPI_LIB_NAME)
 
 # Discover MPI implementation:
-# MPI_IMPL will be unknown, OpenMPI, or MPICH2
+# MPI_IMPL will be unknown, OpenMPI, or MPICH
 MPI_IMPL=unknown
 if [[ ${USE_MPI_INCLUDE} != 0 ]]
 then
@@ -330,9 +263,6 @@ then
 fi
 AC_MSG_RESULT([${MPI_IMPL}])
 AC_SUBST(MPI_IMPL)
-
-AC_SUBST(USE_MACHINE)
-AC_SUBST(USE_LAUNCHER)
 
 # We assume the libmpe.so is in the ADLB directory
 # See Turbine - Build for explanation
@@ -389,7 +319,7 @@ AC_ARG_WITH(tclsh-local,
         [--with-tclsh-local],
         [name of tclsh compatible with build system]),
     [
-        AC_MSG_CHECKING([for Tcl local executable in: ${withval} ])
+        AC_MSG_CHECKING([for Tcl local executable in: ${withval}])
         USE_TCLSH_LOCAL=$( maint/find-tcl.zsh ${withval} )
         if [[ ${?} != 0 ]]
         then
@@ -399,19 +329,12 @@ AC_ARG_WITH(tclsh-local,
     ],
     [])
 
-USE_TCL=unknown
-USE_TCL_LIB_DIR=0
+USE_TCL=0
+# Set USE_TCL
 AC_ARG_WITH(tcl,
     AS_HELP_STRING([--with-tcl], [location of Tcl]),
     [
-        AC_MSG_CHECKING([for ${withval}/lib/tclConfig.sh ])
-        if [[ ! -r ${withval}/lib/tclConfig.sh ]]
-        then
-            AC_MSG_ERROR(Could not find Tcl in $withval)
-        fi
-        AC_MSG_RESULT([ok])
-        USE_TCL=$withval
-        source $USE_TCL/lib/tclConfig.sh
+        USE_TCL=${withval}
     ],
     [
         program=$( which tclsh8.5 )
@@ -420,19 +343,29 @@ AC_ARG_WITH(tcl,
             AC_MSG_ERROR([Could not find tclsh8.5!])
         fi
         AC_MSG_RESULT([PATH contains: ${program}])
-        location=$( cd $(dirname ${program})/.. ; /bin/pwd )
-        AC_MSG_CHECKING([for ${location}/lib/tclConfig.sh ])
-        if [[ -r ${location}/lib/tclConfig.sh ]]
-        then
-            USE_TCL=${location}
-            AC_MSG_RESULT([ok])
-        else
-            AC_MSG_ERROR([Could not find Tcl!])
-        fi
+        USE_TCL=$( cd $(dirname ${program})/.. ; /bin/pwd )
     ]
 )
+
+# Check USE_TCL: set USE_TCL_LIB_DIR
+USE_TCL_LIB_DIR=0
+AC_MSG_CHECKING([for tclConfig.sh ])
+if [[ -r ${USE_TCL}/lib/tclConfig.sh ]]
+then
+    USE_TCL_LIB_DIR=${USE_TCL}/lib
+elif [[ -r ${USE_TCL}/lib64/tclConfig.sh ]]
+then
+    USE_TCL_LIB_DIR=${USE_TCL}/lib64
+fi
+if [[ ${USE_TCL_LIB_DIR} == 0 ]]
+then
+    AC_MSG_ERROR([Could not find tclConfig.sh!])
+fi
+AC_MSG_RESULT([ok])
+source ${USE_TCL_LIB_DIR}/tclConfig.sh
 USE_TCL_LIB_DIR=${USE_TCL}/lib
 
+# Find tclsh binary name (may be tclsh8.5)
 if [[ ${USE_TCLSH_LOCAL} == 0 ]]
 then
     USE_TCLSH=$( maint/find-tcl.zsh ${USE_TCL} )

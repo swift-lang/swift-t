@@ -80,38 +80,13 @@ MACHINE = @USE_MACHINE@
 
 # On some systems, the user will use mpicc,
 # on others, the user will specify the MPI include and lib paths
-MPI = @USE_MPI@
 MPI_INCLUDE = @USE_MPI_INCLUDE@
 MPI_LIB_DIR = @USE_MPI_LIB_DIR@
 MPI_LIB_NAME = @USE_MPI_LIB_NAME@
 # The actual linker arguments:
-MPI_LIB :=
-ifneq ($(MPI),0)
-	CFLAGS += -I $(MPI)/include
-endif
-ifneq ($(MPI_INCLUDE),0)
-	CFLAGS += -I $(MPI_INCLUDE)
-endif
-ifeq ($(MACHINE),normal)
-	MPI_LIB_DIR = $(MPI)/lib
-	MPI_LIB_NAME = libmpich.so
-	MPI_LIB	= -L$(MPI_LIB_DIR) -l mpich
-# -l mpl # Needed for older MPICH
-endif
-ifeq ($(MACHINE),sicortex)
-	MPI_LIB = -L$(MPI)/lib -l scmpi
-endif
-ifeq ($(MACHINE),bgp-zeptoos)
-	MPI_LIB =
-endif
-ifeq ($(MACHINE),custom)
-	ifneq ($(MPI_LIB_DIR),0)
-		MPI_LIB += -L$(MPI_LIB_DIR)
-	endif
-	ifneq ($(MPI_LIB_NAME),0)
-		MPI_LIB += -l $(MPI_LIB_NAME)
-	endif
-endif
+CFLAGS += -I $(MPI_INCLUDE)
+MPI_LIB	:= -L$(MPI_LIB_DIR) -l $(MPI_LIB_NAME)
+           # -l mpl # Needed for older MPICH
 
 LAUNCH = @USE_LAUNCHER@
 
