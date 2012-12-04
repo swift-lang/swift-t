@@ -19,7 +19,7 @@ namespace eval turbine {
         container_lookup container_list               \
         container_insert notify_waiter                \
         read_refcount_incr read_refcount_decr         \
-        filename
+        allocate_file2 filename
 
     # Shorten strings in the log if the user requested that
     # log_string_mode is set at init time

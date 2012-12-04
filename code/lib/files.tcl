@@ -5,7 +5,8 @@
 # TODO: Need some Turbine tests for this
 
 namespace eval turbine {
-
+    namespace export get_file_status get_file_path is_file_mapped \
+                     filename2 copy_file close_file writeFile readFile
     # Extract file status future from handle
     proc get_file_status { file_handle } {
       return [ lindex $file_handle 0 ]

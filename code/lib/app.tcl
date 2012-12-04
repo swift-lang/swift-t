@@ -42,10 +42,9 @@ namespace eval turbine {
     set contents [ adlb::enumerate $container dict all 0 ]
     set sorted_keys [ lsort -integer [ dict keys $contents ] ]
     foreach key $sorted_keys {
-      puts "key: $key"
       set member [ dict get $contents $key ]
       if { $is_file } {
-        lappend res [ retrieve_string [ get_file_name $member ] ]
+        lappend res [ retrieve_string [ get_file_path $member ] ]
       } else {
         lappend res [ retrieve $member ]
       }

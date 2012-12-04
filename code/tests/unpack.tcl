@@ -4,13 +4,19 @@ package require turbine 0.0.1
 namespace import turbine::*
 
 proc main { } {
+  test_1D
+  test_1D_file
+}
+
+proc test_1D { } {
+  puts "test_1D"
   allocate_container C integer
   allocate x1 integer 0
   allocate x2 string 0
   allocate x3 float 0
   allocate x4 string 0
-  container_insert $C 1 $x1
   container_insert $C 4 $x2
+  container_insert $C 1 $x1
   container_insert $C 8 $x3
   container_insert $C 12 $x4
   store_integer $x1 1234
@@ -33,6 +39,46 @@ proc main { } {
     error {C[8]}
   }
   if { ! [ string equal [ lindex $res 3 ] "quick brown fox" ] } {
+    error {C[12]}
+  }
+}
+
+proc test_1D_file { } {
+  puts "test_1D_file"
+  allocate_container C string
+  allocate name1 string 0
+  allocate name2 string 0
+  allocate name3 string 0
+  
+  store_string $name1 "name1.sh"
+  store_string $name2 "name2.txt"
+  store_string $name3 "name3.swift"
+
+  allocate_file2 x1 $name1
+  allocate_file2 x2 $name2
+  allocate_file2 x3 $name1
+  allocate_file2 x4 $name3
+
+  container_insert $C 1 $x1
+  container_insert $C 4 $x2
+  container_insert $C 8 $x3
+  container_insert $C 12 $x4
+
+  set res [ unpack_args $C 0 1 ]
+  puts "res: $res"
+  if { [ llength $res ] != 4 } {
+    error "length of res wrong"
+  }
+  if { ! [ string equal [ lindex $res 0 ] "name1.sh" ] } {
+    error {C[1]}
+  }
+  if { ! [ string equal [ lindex $res 1 ] "name2.txt" ] } {
+    error {C[4]}
+  }
+  if { ! [ string equal [ lindex $res 2 ] "name1.sh" ] } {
+    error {C[8]}
+  }
+  if { ! [ string equal [ lindex $res 3 ] "name3.swift" ] } {
     error {C[12]}
   }
 }
