@@ -6,6 +6,7 @@ namespace import turbine::*
 proc main { } {
   test_1D
   test_1D_file
+  test_2D
 }
 
 proc test_1D { } {
@@ -80,6 +81,66 @@ proc test_1D_file { } {
   }
   if { ! [ string equal [ lindex $res 3 ] "name3.swift" ] } {
     error {C[12]}
+  }
+}
+
+proc test_2D { } {
+  puts "test_2D"
+  # Outer
+  allocate_container C integer
+  
+  # inner container
+  allocate_container C1 integer
+  allocate_container C2 integer
+  allocate_container C3 integer
+  allocate_container C4 integer
+
+  container_insert $C 0 $C1
+  container_insert $C 1 $C2
+  container_insert $C 2 $C3
+  container_insert $C 3 $C4
+
+  allocate x integer 0
+  store_integer $x 1
+  allocate y integer 0
+  store_integer $y 2
+  allocate z integer 0
+  store_integer $z 1234
+  allocate a integer 0
+  store_integer $a 321
+  allocate b integer 0
+  store_integer $b 3
+  allocate c integer 0
+  store_integer $c 4
+
+  set expected [ list 1 1 1 1 2 2 2 2 1234 321 ]
+  container_insert $C1 0 $x
+  container_insert $C1 1 $x
+  container_insert $C1 2 $x
+  container_insert $C1 3 $x
+  
+  container_insert $C2 0 $y
+  container_insert $C2 1 $y
+  container_insert $C2 2 $y
+  container_insert $C2 3 $y
+
+  # Leave C3 empty
+  
+  container_insert $C4 0 $z
+  container_insert $C4 1 $a
+
+  set res [ unpack_args $C 1 0 ]
+  puts "res: $res"
+
+  if { [ llength $expected ] != [ llength $res ] } {
+    error "Length wasn't right"
+  }
+  for { set i 0 } { $i < [ llength $expected ] } { incr i } {
+    set act [ lindex $res $i ]
+    set exp [ lindex $expected $i ]
+    if { $act != $exp } {
+      error "Index $i doesn't match: $act != $exp"
+    }
   }
 }
 

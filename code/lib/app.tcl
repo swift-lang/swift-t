@@ -26,7 +26,7 @@ namespace eval turbine {
       unpack_unnested_container $container $is_file res
     } else {
       # Iterate in key order
-      set contents [ adlb::enumerate $container members all 0 ]
+      set contents [ adlb::enumerate $container dict all 0 ]
       set sorted_keys [ lsort -integer [ dict keys $contents ] ]
       foreach key $sorted_keys {
         set inner [ dict get $contents $key ]
