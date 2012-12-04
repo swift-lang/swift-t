@@ -53,6 +53,7 @@ import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.ArrayInfo;
 import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
@@ -2152,17 +2153,22 @@ public class ASTWalker {
         }
         args.add(file);
       } else {
-        Type exprType = TypeChecker.findSingleExprType(context,
-                                                            cmdArg);
-        if (!(Types.isString(exprType) || Types.isInt(exprType))) {
-          //TODO: more types
-          throw new STCRuntimeError("Missing feature: "
-                  + "Type " + exprType + " not yet"
-                  + " supported for app args");
+        Type exprType = TypeChecker.findSingleExprType(context, cmdArg);
+        Type baseType; // Type after expanding arrays
+        if (Types.isArray(exprType)) {
+          ArrayInfo info = new ArrayInfo(exprType);
+          baseType = info.baseType;
+        } else {
+          baseType = exprType;
         }
-        Var exprResult = exprWalker.eval(context, cmdArg,
-                                      exprType, false, null);
-        args.add(exprResult);
+        if (Types.isString(baseType) || Types.isInt(baseType) ||
+            Types.isFloat(baseType) || Types.isBool(baseType) ||
+            Types.isFile(baseType)) {
+            args.add(exprWalker.eval(context, cmdArg, exprType, false, null));
+        } else {
+          throw new TypeMismatchException(context, "Cannot convert type " +
+                        baseType.typeName() + " to app command line arg");
+        }
       }
     }
     return args;

@@ -1183,6 +1183,35 @@ public class Types {
     return type.structureType() == StructureType.FUNCTION;
   }
   
+  /** 
+   * More convenient way of representing array types for some analysies
+   *
+   */
+  public static class ArrayInfo {
+    public ArrayInfo(Type baseType, int nesting) {
+      super();
+      this.baseType = baseType;
+      this.nesting = nesting;
+    }
+    /**
+     * Construct from regular SwiftType
+     * @param type
+     */
+    public ArrayInfo(Type type) {
+      assert(type.structureType() == StructureType.ARRAY);
+      int depth = 0;
+      while (type.structureType() == StructureType.ARRAY) {
+        type = type.memberType();
+        depth++;
+      }
+      this.nesting = depth;
+      this.baseType = type;
+    }
+    
+    public final Type baseType; 
+    public final int nesting;
+  }
+  
   public static boolean listsEqual(List<Type> a, List<Type> b) {
     if (a.size() != b.size()) {
       return false;
