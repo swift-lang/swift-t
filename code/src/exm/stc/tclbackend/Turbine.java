@@ -856,4 +856,11 @@ class Turbine
     return new Command("adlb::permanent", Arrays.asList(value));
   }
 
+  public static Expression unpackArray(Expression array, int nestLevel,
+                                       boolean isFile) {
+    assert(nestLevel >= 0);
+    return Square.fnCall("turbine::unpack_args", array,
+          new LiteralInt(nestLevel), LiteralInt.boolValue(isFile));
+  }
+
 }

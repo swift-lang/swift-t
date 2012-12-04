@@ -2066,6 +2066,7 @@ public class ASTWalker {
     
     // use wait to wait for data then dispatch task to worker
     String waitName = context.getFunctionContext().constructName("app-leaf");
+    // TODO: do deep wait for array args
     backend.startWaitStatement(waitName, waitVars, passIn,
         Collections.<Var>emptyList(), WaitMode.TASK_DISPATCH, TaskMode.LEAF);
     // On worker, just execute the required command directly
@@ -2121,6 +2122,9 @@ public class ASTWalker {
         Var filenameVal = varCreator.fetchValueOf(context,
                                                 filenameFuture);
         localInputs.add(Arg.createVar(filenameVal));
+      } else if (Types.isArray(in.type())) {
+        // Pass array reference directly
+        localInputs.add(Arg.createVar(in));
       } else {
         Var val = varCreator.fetchValueOf(context, in);
         localInputs.add(Arg.createVar(val));

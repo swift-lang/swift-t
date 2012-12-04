@@ -32,6 +32,7 @@ import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.ArrayInfo;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.PrimType;
 import exm.stc.common.lang.Types.Type;
@@ -44,6 +45,7 @@ import exm.stc.tclbackend.Turbine.StackFrameType;
 import exm.stc.tclbackend.tree.Command;
 import exm.stc.tclbackend.tree.Comment;
 import exm.stc.tclbackend.tree.DictFor;
+import exm.stc.tclbackend.tree.Expand;
 import exm.stc.tclbackend.tree.Expression;
 import exm.stc.tclbackend.tree.ForEach;
 import exm.stc.tclbackend.tree.ForLoop;
@@ -762,7 +764,15 @@ public class TurbineGenerator implements CompilerBackend
     logMsg.add(new Token("exec: " + cmd));
     
     for (Arg arg: args) {
-      Expression argExpr = opargToExpr(arg);
+      Expression argExpr;
+      if (Types.isArray(arg.getType())) {
+        // Special case: expand arrays to list
+        ArrayInfo ai = new ArrayInfo(arg.getType());
+        argExpr = new Expand(Turbine.unpackArray(opargToExpr(arg),
+                        ai.nesting, Types.isFile(ai.baseType)));
+      } else {
+        argExpr = opargToExpr(arg);
+      }
       tclArgs.add(argExpr);
       logMsg.add(argExpr);
     }

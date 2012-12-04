@@ -1199,7 +1199,7 @@ public class Types {
      */
     public ArrayInfo(Type type) {
       assert(type.structureType() == StructureType.ARRAY);
-      int depth = 0;
+      int depth = -1;
       while (type.structureType() == StructureType.ARRAY) {
         type = type.memberType();
         depth++;
