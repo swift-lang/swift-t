@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# TURBINE-SLURM.SH
+
+# Defaults
+L=""
+NODES=0
+PROGRAM=""
+WALLTIME="0:05:00"
+
+while getopts "ln:t:" OPT
+do
+  case ${OPT} in
+    l)
+      L="-l"
+      shift
+      ;;
+    n)
+      NODES=${OPTARG}
+      echo before $*
+      shift 2
+      echo after $*
+      ;;
+    t)
+      WALLTIME=${OPTARG}
+      shift 2
+      ;;
+  esac
+done
+
+PROGRAM=$1
+
+if [[ ${PROGRAM} == "" ]]
+then
+  echo "No program!"
+  exit 1
+fi
+
+if [[ ${NODES} == 0 ]]
+then
+  echo "Cannot run with 0 processes!"
+  exit 1
+fi
+
+#SBATCH --time=${WALLTIME}
+#SBATCH --nodes=${NODES}
+
+TURBINE=$( which turbine )
+if [[ ${?} != 0 ]]
+then
+  echo "turbine not found in PATH!"
+  exit 1
+fi
+
+TURBINE_HOME=$( cd $(dirname ${TURBINE})/.. ; /bin/pwd )
+
+echo "TURBINE_HOME: ${TURBINE_HOME}"
+echo "PROGRAM:      ${PROGRAM}"
+echo "NODES:        ${NODES}"
+echo "WALLTIME:     ${WALLTIME}"
+
+source ${TURBINE_HOME}/scripts/turbine-config.sh
+if [[ ${?} != 0 ]]
+then
+  echo "Could not find Turbine settings!"
+  exit 1
+fi
+
+${TURBINE_LAUNCH} ${L} -n ${NODES} ${TCLSH} ${PROGRAM}
+# Return exit code from slurm
