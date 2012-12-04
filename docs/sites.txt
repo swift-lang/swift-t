@@ -26,6 +26,40 @@ To follow a build procedure, you may start with the +exm+ download
 package.  Simply edit the +exm-setup+ script and modify the
 configuration settings as described here.
 
+See the link:./stc.html[Swift/T Guide] for more information
+
+== x86 clusters
+
+=== Midway
+
+Midway is a mid-sized SLURM cluster at the University of Chicago
+
+==== Public installation
+
+* Based on trunk
+* STC: +~wozniak/Public/stc/bin/stc+
+
+To run:
+
+----
+srun ~wozniak/Public/turbine/scripts/submit/slurm/turbine-slurm.sh -n 3 ~/program.tcl
+----
+
+==== Build procedure
+
+* Midway uses OpenMPI.  We have tested with +/software/openmpi-1.6-el6-x86_64+
+* Put +mpicc+ in your +PATH+
+* Configure ADLB with:
++
+----
+CC=mpicc LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib"
+----
+* Configure Turbine with:
++
+----
+ --with-mpi-lib-name=mpi
+----
+
 == Cray
 
 === Beagle
@@ -87,3 +121,9 @@ To run:
 1. Copy out the sample submit script:
 +turbine/scripts/submit/cray/aprun.sh+
 2. Edit and submit with +qsub+.
+
+////
+Local Variables:
+mode: doc
+End:
+////
