@@ -19,6 +19,7 @@ main
      printf("The sleeptime is: %f\n", sleepTime);
 
      // run the sleep
+     @splitdegree=8192
      foreach i in [1:bound:1]{
                sleep(sleepTime);
      }
