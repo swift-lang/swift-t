@@ -2,6 +2,7 @@
 
 # Functions for launching external apps
 namespace eval turbine {
+  namespace export unpack_args exec_external
   
   # Run external appplication
   # cmd: executable to run
@@ -38,9 +39,10 @@ namespace eval turbine {
     upvar 1 $res_var res
 
     # Iterate in key order
-    set contents [ adlb::enumerate $container members all 0 ]
+    set contents [ adlb::enumerate $container dict all 0 ]
     set sorted_keys [ lsort -integer [ dict keys $contents ] ]
     foreach key $sorted_keys {
+      puts "key: $key"
       set member [ dict get $contents $key ]
       if { $is_file } {
         lappend res [ retrieve_string [ get_file_name $member ] ]

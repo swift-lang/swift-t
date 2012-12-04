@@ -2,7 +2,7 @@
 # Shutdown TCL if condition does not hold
 proc assert { condition msg } {
     if [ expr ! $condition ] {
-        puts msg
+        puts $msg
         exit 1
     }
 }
