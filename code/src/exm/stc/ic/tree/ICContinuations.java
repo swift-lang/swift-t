@@ -135,7 +135,7 @@ public class ICContinuations {
      * before executing
      * @return
      */
-    public List<Var> blockingVars() {
+    public List<BlockingVar> blockingVars() {
       // default implementation for sync continuations
       assert(!isAsync());
       return null;
@@ -246,11 +246,13 @@ public class ICContinuations {
      * Try to inline a block, depending on which variables are closed
      * This is also a mechanism to let the continuation know what variables
      * are closed so it can make internal optimizations
-     * @param closedVars
+     * @param closedVars variables which are closed
+     * @param recClosedVars variables which are recursively closed (may
+     *    overlap with closed)
      * @return null if it cannot be inlined, a block that is equivalent to
      *          the continuation otherwise
      */
-    public Block tryInline(Set<String> closedVars) {
+    public Block tryInline(Set<String> closedVars, Set<String> recClosedVars) {
       // Default: do nothing
       return null;
     }
@@ -267,6 +269,22 @@ public class ICContinuations {
     RANGE_LOOP,
     LOOP,
     WAIT_STATEMENT
+  }
+  
+  /**
+   * A variable that must be closed for a computation to proceed
+   */
+  public static class BlockingVar {
+    public final Var var;
+    /** Whether variable must be recursively closed */
+    public final boolean recursive;
+    
+    public BlockingVar(Var var, boolean recursive) {
+      super();
+      this.var = var;
+      this.recursive = recursive;
+    }
+    
   }
   
   public static abstract class AsyncContinuation extends Continuation {
@@ -459,7 +477,7 @@ public class ICContinuations {
      * @return
      */
     @Override
-    public List<Var> blockingVars() {
+    public List<BlockingVar> blockingVars() {
       return null;
     }
 
@@ -541,8 +559,9 @@ public class ICContinuations {
     }
 
     @Override
-    public Block tryInline(Set<String> closedVars) {
-      if (closedVars.contains(arrayVar.name())) {
+    public Block tryInline(Set<String> closedVars, Set<String> recClosedVars) {
+      if (closedVars.contains(arrayVar.name()) ||
+          recClosedVars.contains(arrayVar.name())) {
         this.arrayClosed = true;
       }
       return null;
@@ -900,12 +919,12 @@ public class ICContinuations {
     }
 
     @Override
-    public List<Var> blockingVars() {
-      ArrayList<Var> res = new ArrayList<Var>();
-      res.add(condVar);
+    public List<BlockingVar> blockingVars() {
+      ArrayList<BlockingVar> res = new ArrayList<BlockingVar>();
+      res.add(new BlockingVar(condVar, false));
       for (int i = 0; i < loopVars.size(); i++) {
         if (blockingVars.get(i)) {
-          res.add(loopVars.get(i));
+          res.add(new BlockingVar(loopVars.get(i), false));
         }
       }
       return res;
@@ -1122,7 +1141,7 @@ public class ICContinuations {
     }
 
     @Override
-    public List<Var> blockingVars() {
+    public List<BlockingVar> blockingVars() {
       return null;
     }
     
@@ -1610,22 +1629,24 @@ public class ICContinuations {
      * We can only remove an explicit wait if we know that the variables are
      * already closed*/
     private final WaitMode mode;
+    private final boolean recursive;
     private final TaskMode target;
 
     public WaitStatement(String procName, List<Var> waitVars,
                     List<Var> usedVars,
                     List<Var> keepOpenVars,
-                    WaitMode mode, TaskMode target) {
+                    WaitMode mode, boolean recursive, TaskMode target) {
       this(procName, new Block(BlockType.WAIT_BLOCK),
                         waitVars,
                         usedVars,
                         keepOpenVars,
-                        mode, target);
+                        mode, recursive, target);
     }
 
     private WaitStatement(String procName, Block block,
         List<Var> waitVars, List<Var> usedVars,
-        List<Var> keepOpenVars, WaitMode mode, TaskMode target) {
+        List<Var> keepOpenVars, WaitMode mode, boolean recursive,
+        TaskMode target) {
       super(usedVars, keepOpenVars);
       assert(waitVars != null);
       assert(usedVars != null);
@@ -1635,13 +1656,14 @@ public class ICContinuations {
       this.waitVars = new ArrayList<Var>(waitVars);
       ICUtil.removeDuplicates(this.waitVars);
       this.mode = mode;
+      this.recursive = recursive;
       this.target = target;
     }
 
     @Override
     public WaitStatement clone() {
       return new WaitStatement(procName, this.block.clone(),
-          waitVars, passedInVars, keepOpenVars, mode, target);
+          waitVars, passedInVars, keepOpenVars, mode, recursive, target);
     }
 
     public Block getBlock() {
@@ -1653,7 +1675,7 @@ public class ICContinuations {
         throws UndefinedTypeException {
 
       gen.startWaitStatement(procName, waitVars, passedInVars,
-          keepOpenVars, mode, target);
+          keepOpenVars, mode, recursive, target);
       this.block.generate(logger, gen, info);
       gen.endWaitStatement(passedInVars, keepOpenVars);
     }
@@ -1666,7 +1688,8 @@ public class ICContinuations {
       sb.append(") ");
       sb.append("/*" + procName + "*/ " );
       ICUtil.prettyPrintVarInfo(sb, passedInVars, keepOpenVars);
-      sb.append(" <" + mode.toString() + ">");
+      sb.append(" <" + mode + ", " + target + ", " +
+                (recursive ? "RECURSIVE" : "NONRECURSIVE") + ">");
       sb.append(" {\n");
       block.prettyPrint(sb, newIndent);
       sb.append(currentIndent + "}\n");
@@ -1685,6 +1708,10 @@ public class ICContinuations {
     
     public WaitMode getMode() {
       return mode;
+    }
+    
+    public boolean isRecursive() {
+      return recursive;
     }
     
     public TaskMode getTarget() {
@@ -1724,7 +1751,7 @@ public class ICContinuations {
     public Block branchPredict(Map<String, Arg> knownConstants) {
       // We can't really do branch prediction for a wait statement, but
       // it is a useful mechanism to piggy-back on to remove the wait
-      return tryInline(knownConstants.keySet());
+      return tryInline(Collections.<String>emptySet(), knownConstants.keySet());
     }
 
     @Override
@@ -1732,19 +1759,16 @@ public class ICContinuations {
       return this.block.isEmpty();
     }
 
-    public void removeWaitVars(Set<String> closedVars) {
-      // In our current implementation, this is equivalent
-      tryInline(closedVars);
-    }
-    
     @Override
-    public Block tryInline(Set<String> closedVars) {
+    public Block tryInline(Set<String> closedVars, Set<String> recClosedVars) {
       boolean varsLeft = false;
       // iterate over wait vars, remove those in list
       ListIterator<Var> it = waitVars.listIterator();
       while(it.hasNext()) {
         Var wv = it.next();
-        if (closedVars.contains(wv.name())) {
+        // See if we can skip waiting on var
+        if ((closedVars.contains(wv.name()) && !recursionRequired(wv))
+            || recClosedVars.contains(wv.name())) {
           it.remove();
         } else {
           varsLeft = true;
@@ -1759,9 +1783,29 @@ public class ICContinuations {
       }
     }
 
+    /**
+     * @param wv
+     * @return true if we need to recursively check closing for variable, i.e.
+     *      if superficial closing isn't enough to consider it closed for this
+     *      wait statement
+     */
+    private boolean recursionRequired(Var wv) {
+      if (!recursive) {
+        return false;
+      }
+      if (Types.isScalarFuture(wv.type())) {
+        return false;
+      }
+      return true;
+    }
+
     @Override
-    public List<Var> blockingVars() {
-      return Collections.unmodifiableList(this.waitVars);
+    public List<BlockingVar> blockingVars() {
+      ArrayList<BlockingVar> res = new ArrayList<BlockingVar>(waitVars.size());
+      for (Var wv: waitVars) {
+        res.add(new BlockingVar(wv, this.recursive));
+      }
+      return res;
     }
 
     @Override

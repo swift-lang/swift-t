@@ -1287,10 +1287,10 @@ public class TurbineGenerator implements CompilerBackend
     @Override
     public void startWaitStatement(String procName, List<Var> waitVars,
         List<Var> usedVariables, List<Var> keepOpenVars,
-        WaitMode mode, TaskMode target) {
+        WaitMode mode, boolean recursive, TaskMode target) {
       logger.trace("startWaitStatement()...");
       startAsync(procName, waitVars, usedVariables, keepOpenVars,
-                 target);
+                 recursive, target);
     }
 
     @Override
@@ -1306,12 +1306,13 @@ public class TurbineGenerator implements CompilerBackend
      * @param waitVars
      * @param usedVariables
      * @param keepOpenVars
+     * @param recursive 
      * @param shareWork if true, work will be shared with other rule engines
      *                  at the cost of higher overhead
      */
     private void startAsync(String procName, List<Var> waitVars,
         List<Var> usedVariables, List<Var> keepOpenVars,
-        TaskMode mode) {
+        boolean recursive, TaskMode mode) {
       ArrayList<Var> toPassIn = new ArrayList<Var>();
       HashSet<String> alreadyInSet = new HashSet<String>();
       for (Var v: usedVariables) {
@@ -1345,6 +1346,13 @@ public class TurbineGenerator implements CompilerBackend
       // Build up the rule string
       List<Expression> waitFor = new ArrayList<Expression>();
       for (Var w: waitVars) {
+        if (recursive) {
+          if (!Types.isScalarFuture(w.type())) {
+            throw new STCRuntimeError("Recursive wait not yet supported"
+                + " for type: " + w.type().typeName());
+          }
+        }
+        
         Expression waitExpr = getTurbineWaitId(w);
         waitFor.add(waitExpr);
       }
@@ -1608,7 +1616,7 @@ public class TurbineGenerator implements CompilerBackend
       }
       startAsync(loopName + ":arrwait", 
                   Arrays.asList(arrayVar), passIn,
-                  keepOpenVars, TaskMode.LOCAL);
+                  keepOpenVars, false, TaskMode.LOCAL);
     }
 
     boolean haveKeys = loopCountVar != null;

@@ -27,6 +27,7 @@ import exm.stc.common.util.MultiMap.ListFactory;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.OptUtil.InstOrCont;
+import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
@@ -210,7 +211,7 @@ public class WaitCoalescer {
         List<Var> waitVars = ICUtil.filterBlockingOnly(req.in);
         WaitStatement wait = new WaitStatement(fn.getName() + "-optinserted",
                 waitVars, req.in, new ArrayList<Var>(0), WaitMode.DATA_ONLY,
-                TaskMode.LOCAL);
+                true, TaskMode.LOCAL);
 
         List<Instruction> instBuffer = new ArrayList<Instruction>();
         
@@ -254,6 +255,9 @@ public class WaitCoalescer {
         // If one of the waits is explicit, new one must be also
         boolean explicit = false; 
         
+        // If all waits are recursive
+        boolean allRecursive = true;
+        
         // Find out which variables are in common with all waits
         Set<String> intersection = null;
         for (WaitStatement wait: waits) {
@@ -263,7 +267,8 @@ public class WaitCoalescer {
           } else {
             intersection.retainAll(nameSet);
           }
-          explicit |= wait.getMode() != WaitMode.DATA_ONLY;
+          explicit = explicit || wait.getMode() != WaitMode.DATA_ONLY;
+          allRecursive = allRecursive && wait.isRecursive();
         }
         assert(intersection != null && !intersection.isEmpty());
         
@@ -274,7 +279,8 @@ public class WaitCoalescer {
         // of the above.
         WaitStatement newWait = new WaitStatement(fn.getName() + "-optmerged",
             intersectionVs, new ArrayList<Var>(0), new ArrayList<Var>(0),
-            explicit ? WaitMode.EXPLICIT : WaitMode.DATA_ONLY, TaskMode.LOCAL);
+            explicit ? WaitMode.EXPLICIT : WaitMode.DATA_ONLY, allRecursive,
+            TaskMode.LOCAL);
         
         // List of variables that are kept open, or used
         ArrayList<Var> usedVars = new ArrayList<Var>();
@@ -283,7 +289,11 @@ public class WaitCoalescer {
         // Put the old waits under the new one, remove redundant wait vars
         // Exception: don't eliminate task dispatch waits
         for (WaitStatement wait: waits) {
-          wait.removeWaitVars(intersection);
+          if (allRecursive) {
+            wait.tryInline(Collections.<String>emptySet(), intersection);
+          } else {
+            wait.tryInline(intersection, Collections.<String>emptySet());
+          }
           if (wait.getWaitVars().isEmpty() &&
               wait.getMode() != WaitMode.TASK_DISPATCH) {
             newWait.getBlock().insertInline(wait.getBlock());
@@ -666,10 +676,10 @@ public class WaitCoalescer {
   private static void findBlockingContinuations(Block block,
           MultiMap<String, InstOrCont> waitMap) {
     for (Continuation c: block.getContinuations()) {
-      List<Var> blockingVars = c.blockingVars();
+      List<BlockingVar> blockingVars = c.blockingVars();
       if (blockingVars != null) {
-        for (Var v: blockingVars) {
-          waitMap.put(v.name(), new InstOrCont(c));
+        for (BlockingVar v: blockingVars) {
+          waitMap.put(v.var.name(), new InstOrCont(c));
         }
       }
     }

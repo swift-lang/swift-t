@@ -207,10 +207,10 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void startWaitStatement(String procName, List<Var> waitVars,
       List<Var> usedVariables, List<Var> keepOpenVars,
-      WaitMode mode, TaskMode target) {
+      WaitMode mode, boolean recursive, TaskMode target) {
     assert(currFunction != null);
     WaitStatement wait = new WaitStatement(procName, waitVars, usedVariables,
-                                          keepOpenVars, mode, target);
+                                      keepOpenVars, mode, recursive, target);
     currBlock().addContinuation(wait);
     blockStack.push(wait.getBlock());
   }

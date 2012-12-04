@@ -337,7 +337,7 @@ public class ExprWalker {
       List<Var> usedVars = Arrays.asList(src, dst);
       backend.startWaitStatement(wName, Arrays.asList(src),
               usedVars, keepOpenVars,
-              WaitMode.DATA_ONLY, TaskMode.LOCAL);
+              WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
       Var derefed = varCreator.createTmpAlias(context, dst.type());
       backend.retrieveRef(derefed, src);
       copyArrayByValue(context, dst, derefed);
@@ -470,7 +470,7 @@ public class ExprWalker {
       
       backend.startWaitStatement(context.getFunctionContext().constructName("priority-wait"), 
                         Arrays.asList(priorityFuture), usedVariables, keepOpen,
-                        WaitMode.DATA_ONLY, TaskMode.LOCAL);
+                        WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
       openedWait = true;
       callContext = new LocalContext(context);
       priorityVal = varCreator.fetchValueOf(callContext, priorityFuture);
@@ -775,7 +775,7 @@ public class ExprWalker {
       backend.startWaitStatement(
            fc.constructName("call-" + function),
            waitVars, usedVars, new ArrayList<Var>(),
-           WaitMode.DATA_ONLY, TaskMode.LOCAL);
+           WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
 
       assert(waitVars.size() == derefVars.size());
       // Generate code to fetch actual array IDs  inside
@@ -931,7 +931,7 @@ public class ExprWalker {
     backend.startWaitStatement(
         context.getFunctionContext().constructName("arrcopy-wait"),
         Arrays.asList(src), usedVars, keepOpen,
-        WaitMode.DATA_ONLY, TaskMode.LOCAL);
+        WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
     backend.startForeachLoop(
             context.getFunctionContext().constructName("arrcopy"),
             src, member, ix, -1, true, usedVars, keepOpen);
@@ -989,7 +989,7 @@ public class ExprWalker {
     backend.startWaitStatement( 
                     context.getFunctionContext().constructName("copystruct"), 
                     Arrays.asList(src), usedVars, 
-                    new ArrayList<Var>(), WaitMode.DATA_ONLY, TaskMode.LOCAL);
+                    new ArrayList<Var>(), WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
     Var rValDerefed = varCreator.createTmp(context, 
             src.type().memberType(), false, true);
     backend.retrieveRef(rValDerefed, src);

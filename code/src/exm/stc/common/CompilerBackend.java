@@ -332,12 +332,14 @@ public interface CompilerBackend {
    * @param usedVars any variables which are read or written inside block
    * @param keepOpenVars any vars that need to be kept open for wait
    * @param mode what guarantees wait statement should provide
+   * @param recursive if true, wait until all contents of arrays/structs
+   *                   (recursively) are closed
    * @param target controls where asynchronous execution occurs
    */
   public abstract void startWaitStatement(String procName,
       List<Var> waitVars,
       List<Var> usedVars, List<Var> keepOpenVars,
-      WaitMode mode, TaskMode target);
+      WaitMode mode, boolean recursive, TaskMode target);
 
   public abstract void endWaitStatement(List<Var> usedVars, List<Var> keepOpenVars);
 

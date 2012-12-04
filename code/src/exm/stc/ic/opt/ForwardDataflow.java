@@ -30,6 +30,7 @@ import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
+import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions;
@@ -79,9 +80,12 @@ public class ForwardDataflow {
      */
     private final HashMap<ComputedValue, Arg> availableVals;
 
-    /** variables which are closed at this point in time */
+    /** variables which are closed at this point in program */
     private final HierarchicalSet<String> closed;
 
+    /** variables which are recursively closed at this point in program */
+    private final HierarchicalSet<String> recursivelyClosed;
+    
     /**
      * Multimap of var1 -> [ var2, var3]
      * 
@@ -100,6 +104,7 @@ public class ForwardDataflow {
       this.varsPassedFromParent = false;
       this.availableVals = new HashMap<ComputedValue, Arg>();
       this.closed = new HierarchicalSet<String>();
+      this.recursivelyClosed = new HierarchicalSet<String>();
       this.dependsOn = new HashMap<String, CopyOnWriteSmallSet<String>>();
     }
 
@@ -107,12 +112,14 @@ public class ForwardDataflow {
         boolean varsPassedFromParent,
         HashMap<ComputedValue, Arg> availableVals,
         HierarchicalSet<String> closed,
+        HierarchicalSet<String> recursivelyClosed,
         HashMap<String, CopyOnWriteSmallSet<String>> dependsOn) {
       this.logger = logger;
       this.parent = parent;
       this.varsPassedFromParent = varsPassedFromParent;
       this.availableVals = availableVals;
       this.closed = closed;
+      this.recursivelyClosed = recursivelyClosed;
       this.dependsOn = dependsOn;
     }
 
@@ -121,7 +128,7 @@ public class ForwardDataflow {
     }
 
     public boolean isClosed(String name) {
-      return closed.contains(name);
+      return closed.contains(name) || recursivelyClosed.contains(name);
     }
 
     public boolean isAvailable(ComputedValue val) {
@@ -211,7 +218,7 @@ public class ForwardDataflow {
      * 
      * @param varName
      */
-    public void close(String varName) {
+    public void close(String varName, boolean recursive) {
       // Do DFS on the dependency graph to find all dependencies
       // that are now enabled
       Stack<String> work = new Stack<String>();
@@ -225,12 +232,16 @@ public class ForwardDataflow {
           work.addAll(deps);
         }
       }
+      if (recursive) {
+        recursivelyClosed.add(varName);
+      }
     }
 
     /**
      * Register that variable future depends on all of the variables in the
      * collection, so that if future is closed, then the other variables must be
      * closed
+     * TODO: later could allow specification that something is recursively closed
      * 
      * @param future
      *          a scalar future
@@ -262,7 +273,8 @@ public class ForwardDataflow {
         newDO.put(e.getKey(), new CopyOnWriteSmallSet<String>(e.getValue()));
       }
       return new State(logger, this, varsPassedFromParent, 
-          new HashMap<ComputedValue, Arg>(), closed.makeChild(), newDO);
+          new HashMap<ComputedValue, Arg>(), closed.makeChild(),
+          recursivelyClosed.makeChild(), newDO);
     }
   }
 
@@ -439,11 +451,13 @@ public class ForwardDataflow {
     nonProgressOpcodes.add(Opcode.FREE_BLOB);
     nonProgressOpcodes.add(Opcode.DECR_REF);
     nonProgressOpcodes.add(Opcode.LOCAL_OP);
+    nonProgressOpcodes.add(Opcode.CALL_LOCAL);
     nonProgressOpcodes.add(Opcode.STORE_BOOL);
     nonProgressOpcodes.add(Opcode.STORE_VOID);
     nonProgressOpcodes.add(Opcode.STORE_INT);
     nonProgressOpcodes.add(Opcode.STORE_FLOAT);
     nonProgressOpcodes.add(Opcode.STORE_STRING);
+    nonProgressOpcodes.add(Opcode.STORE_BLOB);
     nonProgressOpcodes.add(Opcode.COPY_REF);
     nonProgressOpcodes.add(Opcode.ADDRESS_OF);
     nonProgressOpcodes.add(Opcode.LOAD_BOOL);
@@ -452,9 +466,11 @@ public class ForwardDataflow {
     nonProgressOpcodes.add(Opcode.LOAD_INT);
     nonProgressOpcodes.add(Opcode.LOAD_REF);
     nonProgressOpcodes.add(Opcode.LOAD_STRING);
+    nonProgressOpcodes.add(Opcode.LOAD_BLOB);
   }
   /**
-   * Find the set of variables required to make progress in block
+   * Find the set of variables required to be closed (recursively or not)
+   * to make progress in block
    * @param block
    * @return
    */
@@ -470,9 +486,17 @@ public class ForwardDataflow {
     }
     
     for (Continuation c: block.getContinuations()) {
-      List<Var> waitOnVars = c.blockingVars();
-      List<String> waitOn = waitOnVars == null ? Arrays.<String>asList() 
-                                               : Var.nameList(waitOnVars);
+      List<BlockingVar> waitOnVars = c.blockingVars();
+      List<String> waitOn;
+      if (waitOnVars == null) {
+        waitOn = Collections.<String>emptyList(); 
+      } else {
+        waitOn = new ArrayList<String>(waitOnVars.size());
+        for (BlockingVar bv: waitOnVars) {
+          waitOn.add(bv.var.name());
+        }
+      }
+
       assert(waitOn != null);
       //System.err.println("waitOn: " + waitOn);
       if (blockingVariables == null) {
@@ -506,12 +530,12 @@ public class ForwardDataflow {
     if (cv == null) {
       cv = new State(logger);
       for (Var v: f.getBlockingInputs()) {
-        cv.close(v.name());
+        cv.close(v.name(), false);
       }
       for (Var v: f.getInputList()) {
         if (Types.isScalarUpdateable(v.type())) {
           // Updateables always have a value
-          cv.close(v.name());
+          cv.close(v.name(), false);
         }
       }
     }
@@ -556,7 +580,7 @@ public class ForwardDataflow {
       c.replaceVars(replaceInputs, true, false);
       c.replaceVars(replaceAll, false, false);
       
-      Block toInline = c.tryInline(cv.closed);
+      Block toInline = c.tryInline(cv.closed, cv.recursivelyClosed);
       if (toInline != null) {
         anotherPassNeeded = true;
         c.inlineInto(block, toInline);
@@ -582,10 +606,10 @@ public class ForwardDataflow {
     for (Continuation cont : block.getContinuations()) {
       State contCV = cv.makeChild(cont.inheritsParentVars());
       // additional variables may be close once we're inside continuation
-      List<Var> contClosedVars = cont.blockingVars();
+      List<BlockingVar> contClosedVars = cont.blockingVars();
       if (contClosedVars != null) {
-        for (Var v : contClosedVars) {
-          contCV.close(v.name());
+        for (BlockingVar bv : contClosedVars) {
+          contCV.close(bv.var.name(), bv.recursive);
         }
       }
       
@@ -695,21 +719,18 @@ public class ForwardDataflow {
     // Create replacement sequence
     Block insertContext;
     ListIterator<Instruction> insertPoint;
-    boolean rewind; // if we need to rewind iterator
     if (req.mode == TaskMode.LOCAL) {
       insertContext = block;
       insertPoint = insts;
-      rewind = true;
     } else {
       List<Var> used = Var.varListUnion(req.in, req.out);
       WaitStatement wait = new WaitStatement(fn.getName() + "-optinserted",
           Collections.<Var>emptyList(), used, Collections.<Var>emptyList(),
-          WaitMode.TASK_DISPATCH, req.mode);
+          WaitMode.TASK_DISPATCH, false, req.mode);
       insertContext = wait.getBlock();
       block.addContinuation(wait);
       // Insert at start of block
       insertPoint = insertContext.instructionIterator();
-      rewind = false;
     }
     
     // Now load the values
