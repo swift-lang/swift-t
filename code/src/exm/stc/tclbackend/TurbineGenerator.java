@@ -27,6 +27,7 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Builtins;
+import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
@@ -358,7 +359,7 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     pointStack.peek().add(Turbine.integerSet(
-        varToExpr(target), opargToExpr(src)));
+        varToExpr(target), argToExpr(src)));
   }
 
   @Override
@@ -380,7 +381,7 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     pointStack.peek().add(Turbine.integerSet(
-        varToExpr(target), opargToExpr(src)));
+        varToExpr(target), argToExpr(src)));
   }
 
   @Override
@@ -417,7 +418,7 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     pointStack.peek().add(Turbine.floatSet(
-          varToExpr(target), opargToExpr(src)));
+          varToExpr(target), argToExpr(src)));
   }
 
   @Override
@@ -438,7 +439,7 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     pointStack.peek().add(Turbine.stringSet(
-        varToExpr(target), opargToExpr(src)));
+        varToExpr(target), argToExpr(src)));
   }
 
   @Override
@@ -454,7 +455,7 @@ public class TurbineGenerator implements CompilerBackend
     assert(target.type().equals(Types.F_BLOB));
     assert(src.isImmediateBlob());
     pointStack.peek().add(Turbine.blobSet(varToExpr(target),
-                                          opargToExpr(src)));
+                                          argToExpr(src)));
   }
 
   @Override
@@ -494,7 +495,7 @@ public class TurbineGenerator implements CompilerBackend
                                             List<Arg> in) {
     ArrayList<Expression> argExpr = new ArrayList<Expression>(in.size());
     for (Arg a: in) {
-      argExpr.add(opargToExpr(a));
+      argExpr.add(argToExpr(a));
     }
 
     pointStack.peek().add(BuiltinOps.genLocalOpTcl(op, out, in, argExpr));
@@ -649,7 +650,7 @@ public class TurbineGenerator implements CompilerBackend
 
     TclTree t = Turbine.containerCreateNestedImmIx(
         prefixVar(arrayResult.name()), prefixVar(arrayVar.name()),
-        opargToExpr(arrIx));
+        argToExpr(arrIx));
     pointStack.peek().add(t);
   }
 
@@ -663,7 +664,7 @@ public class TurbineGenerator implements CompilerBackend
 
     TclTree t = Turbine.containerRefCreateNestedImmIx(
         prefixVar(arrayResult.name()), prefixVar(arrayVar.name()),
-        opargToExpr(arrIx));
+        argToExpr(arrIx));
     pointStack.peek().add(t);
   }
 
@@ -757,7 +758,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void runExternal(String cmd, List<Arg> args,
-          List<Var> outFiles,
+          List<Var> outFiles, Redirects<Arg> redirects,
           boolean hasSideEffects, boolean deterministic) {
     List<Expression> tclArgs = new ArrayList<Expression>(args.size());
     List<Expression> logMsg = new ArrayList<Expression>();
@@ -768,18 +769,18 @@ public class TurbineGenerator implements CompilerBackend
       if (Types.isArray(arg.getType())) {
         // Special case: expand arrays to list
         ArrayInfo ai = new ArrayInfo(arg.getType());
-        argExpr = new Expand(Turbine.unpackArray(opargToExpr(arg),
+        argExpr = new Expand(Turbine.unpackArray(argToExpr(arg),
                         ai.nesting, Types.isFile(ai.baseType)));
       } else {
-        argExpr = opargToExpr(arg);
+        argExpr = argToExpr(arg);
       }
       tclArgs.add(argExpr);
       logMsg.add(argExpr);
     }
     
-    Expression stdinFilename = null;
-    Expression stdoutFilename = null;
-    Expression stderrFilename = null;
+    Expression stdinFilename = TclUtil.argToExpr(redirects.stdin, true);
+    Expression stdoutFilename = TclUtil.argToExpr(redirects.stdout, true);
+    Expression stderrFilename = TclUtil.argToExpr(redirects.stderr, true);
     
     pointStack.peek().add(Turbine.turbineLog(logMsg));
     pointStack.peek().add(Turbine.exec(cmd, stdinFilename,
@@ -806,7 +807,7 @@ public class TurbineGenerator implements CompilerBackend
   private void setPriority(Arg priority) {
     if (priority != null) {
       logger.trace("priority: " + priority);
-      pointStack.peek().add(Turbine.setPriority(opargToExpr(priority)));
+      pointStack.peek().add(Turbine.setPriority(argToExpr(priority)));
     }
   }
 
@@ -884,7 +885,7 @@ public class TurbineGenerator implements CompilerBackend
           prefixVar(oVar.name()),
           refIsString(oVar.type()),
           prefixVar(arrayVar.name()),
-          opargToExpr(arrIx), isArrayRef);
+          argToExpr(arrIx), isArrayRef);
 
     pointStack.peek().add(getRef);
   }
@@ -898,7 +899,7 @@ public class TurbineGenerator implements CompilerBackend
      pointStack.peek().add(Turbine.arrayLookupImm(
          prefixVar(oVar.name()),
          prefixVar(arrayVar.name()),
-         opargToExpr(arrIx)));
+         argToExpr(arrIx)));
   }
 
   /**
@@ -1011,7 +1012,7 @@ public class TurbineGenerator implements CompilerBackend
       }
       Command r = Turbine.arrayDerefStore(
           prefixVar(iVar.name()), prefixVar(arrayVar.name()),
-          opargToExpr(arrIx));
+          argToExpr(arrIx));
       pointStack.peek().add(r);
     } else {
       if (!iVar.type().equals(memberType)) {
@@ -1020,7 +1021,7 @@ public class TurbineGenerator implements CompilerBackend
       }
       Command r = Turbine.arrayStoreImmediate(
           prefixVar(iVar.name()), prefixVar(arrayVar.name()),
-          opargToExpr(arrIx));
+          argToExpr(arrIx));
       pointStack.peek().add(r);
     }
   }
@@ -1041,7 +1042,7 @@ public class TurbineGenerator implements CompilerBackend
       }
       Command r = Turbine.arrayRefDerefStore(
           prefixVar(iVar.name()), prefixVar(arrayVar.name()),
-          opargToExpr(arrIx), prefixVar(outerArrayVar.name()));
+          argToExpr(arrIx), prefixVar(outerArrayVar.name()));
       pointStack.peek().add(r);
     } else {
       if (!iVar.type().equals(memberType)) {
@@ -1050,7 +1051,7 @@ public class TurbineGenerator implements CompilerBackend
       }
       Command r = Turbine.arrayRefStoreImmediate(
           prefixVar(iVar.name()), prefixVar(arrayVar.name()),
-          opargToExpr(arrIx), prefixVar(outerArrayVar.name()));
+          argToExpr(arrIx), prefixVar(outerArrayVar.name()));
       pointStack.peek().add(r);
     }
   }
@@ -1064,7 +1065,7 @@ public class TurbineGenerator implements CompilerBackend
     }
     assert(val.isImmediateFloat());
     pointStack.peek().add(Turbine.updateableFloatInit(varToExpr(updateable),
-                                                      opargToExpr(val)));
+                                                      argToExpr(val)));
   }
 
   @Override
@@ -1125,7 +1126,7 @@ public class TurbineGenerator implements CompilerBackend
     assert(updateMode != null);
     String builtinName = getUpdateBuiltin(updateMode) + "_impl";
     pointStack.peek().add(new Command(builtinName, Arrays.asList(
-        (Expression)varToExpr(updateable), opargToExpr(val))));
+        (Expression)varToExpr(updateable), argToExpr(val))));
   }
 
   /** This prevents duplicate "package require" statements */
@@ -1271,7 +1272,7 @@ public class TurbineGenerator implements CompilerBackend
       }
     }
 
-    If i = new If(opargToExpr(condition),
+    If i = new If(argToExpr(condition),
         thenBlock, elseBlock);
     pointStack.peek().add(i);
 
@@ -1613,7 +1614,7 @@ public class TurbineGenerator implements CompilerBackend
       caseBodies.add(casebody);
     }
 
-    Switch sw = new Switch(opargToExpr(switchVar),
+    Switch sw = new Switch(argToExpr(switchVar),
         caseLabels, hasDefault, caseBodies);
     pointStack.peek().add(sw);
 
@@ -1747,9 +1748,9 @@ public class TurbineGenerator implements CompilerBackend
       		                      "loop yet");
       
     }
-    Expression startE = opargToExpr(start);
-    Expression endE = opargToExpr(end);
-    Expression incrE = opargToExpr(increment);
+    Expression startE = argToExpr(start);
+    Expression endE = argToExpr(end);
+    Expression incrE = argToExpr(increment);
 
     if (splitDegree > 0) {
       startRangeSplit(loopName, usedVariables,
@@ -2022,8 +2023,8 @@ public class TurbineGenerator implements CompilerBackend
     return waitExpr;
   }
 
-  private Expression opargToExpr(Arg in) {
-    return TclUtil.opargToExpr(in);
+  private Expression argToExpr(Arg in) {
+    return TclUtil.argToExpr(in);
   }
 
     private static String prefixVar(String varname) {

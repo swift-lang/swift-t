@@ -39,11 +39,11 @@ public class TclTemplateProcessor {
         // Last argument: varargs
         Expression es[] = new Expression[inputs.size() - inNames.size() + 1];
         for (int j = i; j < inputs.size(); j++) {
-          es[j - i] = TclUtil.opargToExpr(inputs.get(j));
+          es[j - i] = TclUtil.argToExpr(inputs.get(j));
         }
         toks.put(argName, es);
       } else {
-        toks.put(argName, new Expression[] {TclUtil.opargToExpr(inputs.get(i))});
+        toks.put(argName, new Expression[] {TclUtil.argToExpr(inputs.get(i))});
       }
     }
     

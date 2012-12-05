@@ -1,9 +1,8 @@
 #include <builtins.swift>
 #include <files.swift>
+#include <assert.swift>
 
 // Test redirection
-
-// SKIP-THIS-TEST
 
 app (file out) echo (string arg) {
   "/bin/echo" arg @stdout=out; 

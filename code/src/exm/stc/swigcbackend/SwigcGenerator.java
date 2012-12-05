@@ -30,6 +30,7 @@ import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
+import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -2116,7 +2117,7 @@ public class SwigcGenerator implements CompilerBackend
     @Override
     public void
         runExternal(String cmd, List<Arg> args,
-            List<Var> outFiles,
+            List<Var> outFiles, Redirects<Arg> redirects,
             boolean hasSideEffects, boolean deterministic) {
       // TODO Auto-generated method stub
       

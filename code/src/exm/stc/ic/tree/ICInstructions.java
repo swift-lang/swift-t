@@ -19,6 +19,7 @@ import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.OpEvaluator;
 import exm.stc.common.lang.Operators;
+import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.TaskMode;
@@ -2038,15 +2039,18 @@ public class ICInstructions {
     private final String cmd;
     private final ArrayList<Var> outFiles;
     private final ArrayList<Arg> inputs;
+    private final Redirects<Arg> redirects;
     private final boolean hasSideEffects;
     private final boolean deterministic;
     
     public RunExternal(String cmd, List<Var> outFiles, List<Arg> inputs,
+               Redirects<Arg> redirects,
                boolean hasSideEffects, boolean deterministic) {
       super(Opcode.RUN_EXTERNAL);
       this.cmd = cmd;
       this.outFiles = new ArrayList<Var>(outFiles);
       this.inputs = new ArrayList<Arg>(inputs);
+      this.redirects = redirects.clone();
       this.deterministic = deterministic;
       this.hasSideEffects = hasSideEffects;
     }
@@ -2055,27 +2059,43 @@ public class ICInstructions {
     public void renameVars(Map<String, Arg> renames) {
       ICUtil.replaceOpargsInList(renames, inputs);
       ICUtil.replaceVarsInList(renames, outFiles, false);
+      redirects.stdin = ICUtil.replaceOparg(renames, redirects.stdin, true);
+      redirects.stdout = ICUtil.replaceOparg(renames, redirects.stdout, true);
+      redirects.stderr = ICUtil.replaceOparg(renames, redirects.stderr, true);
     }
 
     @Override
     public void renameInputs(Map<String, Arg> renames) {
       ICUtil.replaceOpargsInList(renames, inputs);
+      redirects.stdin = ICUtil.replaceOparg(renames, redirects.stdin, true);
     }
 
     @Override
     public String toString() {
-      return formatFunctionCall(op, cmd, outFiles, inputs);
+      String res = formatFunctionCall(op, cmd, outFiles, inputs);
+      String redirectString = redirects.toString();
+      if (redirectString.length() > 0) {
+        res += " " + redirectString;
+      }
+      return res;
     }
 
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.runExternal(cmd, inputs, outFiles, hasSideEffects,
+      gen.runExternal(cmd, inputs, outFiles, redirects, hasSideEffects,
                       deterministic);
     }
 
     @Override
     public List<Arg> getInputs() {
-      return Collections.unmodifiableList(inputs);
+      ArrayList<Arg> res = new ArrayList<Arg>(inputs.size() + 3);
+      res.addAll(inputs);
+      for (Arg redirFilename: redirects.redirections(true, true)) {
+        if (redirFilename != null) {
+          res.add(redirFilename);
+        }
+      }
+      return res;
     }
 
     @Override
@@ -2140,7 +2160,7 @@ public class ICInstructions {
 
     @Override
     public Instruction clone() {
-      return new RunExternal(cmd, outFiles, inputs, 
+      return new RunExternal(cmd, outFiles, inputs, redirects,
                              hasSideEffects, deterministic);
     }
     

@@ -14,7 +14,17 @@ import exm.stc.tclbackend.tree.Value;
 
 public class TclUtil {
 
-  public static Expression opargToExpr(Arg in) {
+  public static Expression argToExpr(Arg in) {
+    return argToExpr(in, false);
+  } 
+  public static Expression argToExpr(Arg in, boolean passThroughNull) {
+    if (in == null) {
+      if (passThroughNull) {
+        return null;
+      } else {
+        throw new STCRuntimeError("Unexpected null variable in argToExpr");
+      }
+    }
     switch (in.getKind()) {
     case INTVAL:
       return new LiteralInt(in.getIntLit());
@@ -33,6 +43,17 @@ public class TclUtil {
   }
 
   public static Value varToExpr(Var v) {
+    return varToExpr(v, false);
+  }
+  
+  public static Value varToExpr(Var v, boolean passThroughNull) {
+    if (v == null) {
+      if (passThroughNull) {
+        return null;
+      } else {
+        throw new STCRuntimeError("Unexpected null variable in varToExpr");
+      }
+    }
     return new Value(TclNamer.prefixVar(v.name()));
   }
 

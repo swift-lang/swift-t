@@ -18,6 +18,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -380,14 +381,14 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void runExternal(String cmd, List<Arg> args,
-                          List<Var> outFiles,
+                          List<Var> outFiles, Redirects<Arg> redirects,
                           boolean hasSideEffects, boolean deterministic) {
     for (Var o: outFiles) {
       assert(Types.isFile(o.type()) || Types.isVoid(o.type()));
     }
 
     currBlock().addInstruction(new RunExternal(cmd, outFiles, args,
-                                hasSideEffects, deterministic));
+                         redirects, hasSideEffects, deterministic));
   }
 
   @Override

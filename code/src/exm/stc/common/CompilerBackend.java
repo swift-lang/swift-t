@@ -7,6 +7,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
@@ -135,9 +136,10 @@ public interface CompilerBackend {
   
   /**
    * Generate command to run an external application immediately
+   * @param redirects 
    */
   public abstract void runExternal(String cmd, List<Arg> args,
-                             List<Var> outFiles,
+                             List<Var> outFiles, Redirects<Arg> redirects,
                              boolean hasSideEffects, boolean deterministic);
   
   /**

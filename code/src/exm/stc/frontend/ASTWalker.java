@@ -51,7 +51,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
-import exm.stc.common.lang.Redirections;
+import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayInfo;
@@ -2063,14 +2063,14 @@ public class ASTWalker {
     List<Var> args = evalAppCmdArgs(context, cmd);
     
     // Process any redirections
-    Redirections redirFutures = processAppRedirects(context,
+    Redirects<Var> redirFutures = processAppRedirects(context,
                                                     appBody.children(1));
     
     checkAppOutputs(context, appName, outputs, args, redirFutures);
     
     // Work out what variables must be closed before command line executes
     Pair<Map<String, Var>, List<Var>> wait =
-            selectAppWaitVars(context, args);
+            selectAppWaitVars(context, args, redirFutures);
     Map<String, Var> fileNames = wait.val1; 
     List<Var> waitVars = wait.val2;
     
@@ -2085,16 +2085,19 @@ public class ASTWalker {
         Collections.<Var>emptyList(), WaitMode.TASK_DISPATCH,
         true, TaskMode.LEAF);
     // On worker, just execute the required command directly
-    List<Arg> localArgs = retrieveAppArgs(context, args, fileNames);
-    backend.runExternal(appName, localArgs,
-                        outputs, hasSideEffects, deterministic);
+    Pair<List<Arg>, Redirects<Arg>> retrieved = retrieveAppArgs(context,
+                                          args, redirFutures, fileNames);
+    List<Arg> localArgs = retrieved.val1; 
+    Redirects<Arg> localRedirects = retrieved.val2;
+    backend.runExternal(appName, localArgs, outputs, localRedirects,
+                        hasSideEffects, deterministic);
     backend.endWaitStatement(passIn, Arrays.<Var>asList());
   }
 
 
-  private Redirections processAppRedirects(Context context,
+  private Redirects<Var> processAppRedirects(Context context,
                              List<SwiftAST> redirects) throws UserException {    
-    Redirections redir = new Redirections();
+    Redirects<Var> redir = new Redirects<Var>();
 
     // Process redirections
     for (SwiftAST redirT: redirects) {
@@ -2112,8 +2115,8 @@ public class ASTWalker {
             " app redirection, must be file: " + type.typeName());
       }
       
-      Arg result = Arg.createVar(exprWalker.eval(context, redirExpr, type,
-                                                 false, null));
+      Var result = exprWalker.eval(context, redirExpr, type, false, null);
+      boolean mustBeOutArg = false;
       boolean doubleDefine = false;
       switch (redirType.getType()) {
         case ExMParser.STDIN:
@@ -2132,13 +2135,15 @@ public class ASTWalker {
           throw new STCRuntimeError("Unexpected token type: " +
                               LogHelper.tokName(redirType.getType())); 
       }
+      if (result.defType() != DefType.OUTARG && mustBeOutArg) { 
+        throw new UserException(context, redirTypeName + " parameter "
+          + " must be output file");
+      }
 
       if (doubleDefine) {
         throw new UserException(context, "Specified redirection " +
                 redirTypeName + " more than once");
       }
-      
-      throw new STCRuntimeError("Redirection for app not yet implemented");
     }
 
     return redir;
@@ -2154,7 +2159,7 @@ public class ASTWalker {
    * @throws UserException 
    */
   private void checkAppOutputs(Context context, String function,
-      List<Var> outputs, List<Var> args, Redirections redirFutures)
+      List<Var> outputs, List<Var> args, Redirects<Var> redirFutures)
                                                       throws UserException {
     boolean deferredError = false;
     HashMap<String, Var> outMap = new HashMap<String, Var>();
@@ -2169,7 +2174,7 @@ public class ASTWalker {
     }
     if (redirFutures.stdout != null) {
       // Already typechecked
-      Var output = redirFutures.stdout.getVar();
+      Var output = redirFutures.stdout;
       outMap.put(output.name(), output);
     }
     
@@ -2178,6 +2183,12 @@ public class ASTWalker {
         outMap.remove(arg.name());
       }
     }
+    for (Var redir: redirFutures.redirections(false, true)) {
+      if (redir.defType() == DefType.OUTARG) {
+        outMap.remove(redir.name());
+      }
+    }
+    
     for (Var unreferenced: outMap.values()) {
       if (!Types.isVoid(unreferenced.type())) {
         LogHelper.warn(context, "Output argument " + unreferenced.name() 
@@ -2193,33 +2204,54 @@ public class ASTWalker {
   /**
    * Work out what the local args to the app function should be
    * @param context
-   * @param inputs
+   * @param args
    * @param fileNames
-   * @return
+   * @return pair of the command line arguments, and local redirects
    * @throws UserException
    * @throws UndefinedTypeException
    * @throws DoubleDefineException
    */
-  private List<Arg> retrieveAppArgs(Context context,
-          List<Var> inputs, Map<String, Var> fileNames)
+  private Pair<List<Arg>, Redirects<Arg>> retrieveAppArgs(Context context,
+          List<Var> args, Redirects<Var> redirFutures,
+          Map<String, Var> fileNames)
           throws UserException, UndefinedTypeException, DoubleDefineException {
     List<Arg> localInputs = new ArrayList<Arg>();
-    for (Var in: inputs) {
-      if (Types.isFile(in.type())) {
-        Var filenameFuture = fileNames.get(in.name());
-        assert(filenameFuture != null);
-        Var filenameVal = varCreator.fetchValueOf(context,
-                                                filenameFuture);
-        localInputs.add(Arg.createVar(filenameVal));
-      } else if (Types.isArray(in.type())) {
-        // Pass array reference directly
-        localInputs.add(Arg.createVar(in));
-      } else {
-        Var val = varCreator.fetchValueOf(context, in);
-        localInputs.add(Arg.createVar(val));
-      }
+    for (Var in: args) {
+      localInputs.add(Arg.createVar(retrieveAppArg(context, fileNames, in)));
     }
-    return localInputs;
+    Redirects<Arg> redirValues = new Redirects<Arg>();
+    if (redirFutures.stdin != null) {
+      redirValues.stdin = Arg.createVar(retrieveAppArg(context, fileNames,
+                                                 redirFutures.stdin));
+    }
+    if (redirFutures.stdout != null) {
+      redirValues.stdout = Arg.createVar(retrieveAppArg(context, fileNames,
+                                                 redirFutures.stdout));
+    }
+    if (redirFutures.stderr != null) {
+      redirValues.stderr = Arg.createVar(retrieveAppArg(context, fileNames,
+                                                 redirFutures.stderr));
+    }
+    
+    return Pair.create(localInputs, redirValues);
+  }
+
+
+  private Var
+      retrieveAppArg(Context context, Map<String, Var> fileNames, Var in)
+          throws UserException, UndefinedTypeException, DoubleDefineException {
+    Var localInput;
+    if (Types.isFile(in.type())) {
+      Var filenameFuture = fileNames.get(in.name());
+      assert(filenameFuture != null);
+      localInput = varCreator.fetchValueOf(context, filenameFuture);
+    } else if (Types.isArray(in.type())) {
+      // Pass array reference directly
+      localInput = in;
+    } else {
+      localInput = varCreator.fetchValueOf(context, in);
+    }
+    return localInput;
   }
 
   /**
@@ -2276,6 +2308,7 @@ public class ASTWalker {
    * upon.  This is somewhat complex since we sometimes need to block
    * on filenames/file statuses/etc  
    * @param context
+   * @param redirFutures 
    * @param inputs
    * @param outputs
    * @return
@@ -2283,13 +2316,21 @@ public class ASTWalker {
    * @throws UndefinedTypeException
    */
   private Pair<Map<String, Var>, List<Var>> selectAppWaitVars(
-          Context context, List<Var> args) throws UserException,
+          Context context, List<Var> args, Redirects<Var> redirFutures)
+                                                throws UserException,
           UndefinedTypeException {
+    List<Var> allArgs = new ArrayList<Var>();
+    allArgs.addAll(args);
+    allArgs.addAll(redirFutures.redirections(true, true));
+    
     // map from file var to filename
     Map<String, Var> fileNames = new HashMap<String, Var>(); 
     List<Var> waitVars = new ArrayList<Var>();
-    for (Var arg: args) {
+    for (Var arg: allArgs) {
       if (Types.isFile(arg.type())) {
+        if (fileNames.containsKey(arg.name())) {
+          continue;
+        }
         // Need to wait for filename for files
         Var filenameFuture = varCreator.createFilenameAlias(context, arg);
 
@@ -2309,6 +2350,7 @@ public class ASTWalker {
         waitVars.add(arg);
       }
     }
+    
     return Pair.create(fileNames, waitVars);
   }
 
