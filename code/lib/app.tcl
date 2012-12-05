@@ -23,6 +23,11 @@ namespace eval turbine {
     upvar 1 $res_var res
 
     if { $nest_level == 0 } {
+      error "Nest_level < 1: $nest_level"
+    }
+
+    if { $nest_level == 1 } {
+      # 1d array
       unpack_unnested_container $container $is_file res
     } else {
       # Iterate in key order
