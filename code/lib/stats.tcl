@@ -25,9 +25,9 @@ namespace eval turbine {
         while { $i < $n } {
           set this_chunk_size [ expr min( $CHUNK_SIZE, $n - $i ) ]
           set members [ adlb::enumerate $container members $this_chunk_size $i ]
-          puts "members of $container $i $this_chunk_size : $members"
+          # puts "members of $container $i $this_chunk_size : $members"
           foreach turbine_id $members {
-            puts "turbine_id: $turbine_id"
+            # puts "turbine_id: $turbine_id"
             if { [ adlb::exists $turbine_id ] } {
                 # add to the sum
                 set val [ retrieve_integer $turbine_id ]
@@ -37,7 +37,7 @@ namespace eval turbine {
             } else {
                 # block until the next turbine id is finished,
                 #   then continue running
-                puts "sum_integer_body $stack $container $result $accum $i $n"
+                # puts "sum_integer_body $stack $container $result $accum $i $n"
                 rule "sum-$container" $turbine_id $turbine::LOCAL \
                     "sum_integer_body $stack $container $result $accum $i $n"
                 # return immediately without setting result

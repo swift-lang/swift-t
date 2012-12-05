@@ -111,7 +111,7 @@ namespace eval turbine {
     proc copy_file { parent outputs inputs } {
       set dst [ lindex $outputs 0 ]
       set src [ lindex $inputs 0 ]
-      puts "dst: $dst"
+      #  puts "dst: $dst"
       set mapped [ is_file_mapped $dst ]
       if { $mapped } {
         # is mapped, so need to make sure that file is at mapped path
