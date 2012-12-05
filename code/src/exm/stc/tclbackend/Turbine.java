@@ -89,6 +89,7 @@ class Turbine
   private static final Token PARENT_STACK_ENTRY =
       new Token("_parent");
   private static final Token RULE = new Token("turbine::c::rule");
+  private static final Token DEEPRULE = new Token("turbine::deeprule");
   private static final Token NO_STACK = new Token("no_stack");
   private static final Token DEREFERENCE_INTEGER =
       new Token("turbine::f_dereference_integer");
@@ -336,18 +337,13 @@ class Turbine
    * @param type
    * @return
    */
-  private static Sequence ruleHelper(String symbol, 
+  private static Command ruleHelper(String symbol, 
       List<? extends Expression> inputs,
       TclList action, TaskMode type) {
-    Sequence result = new Sequence();
-
     Token s = new Token(symbol);
     TclList i = new TclList(inputs);
 
-    Command r = new Command(RULE, s, i, tclRuleType(type), action);
-    result.add(r);
-
-    return result;
+    return new Command(RULE, s, i, tclRuleType(type), action);
   }
 
   /**
@@ -359,12 +355,34 @@ class Turbine
    * @param mode
    * @return
    */
-  public static Sequence rule(String symbol,
+  public static Command rule(String symbol,
       List<? extends Expression> blockOn, TclList action, TaskMode mode) {
     return ruleHelper(symbol, blockOn, action, mode);
   }
 
-  public static Sequence loopRule(String symbol,
+  public static Command deepRule(String symbol,
+      List<? extends Expression> inputs, int[] depths, boolean[] isFile,
+      TclList action, TaskMode mode) {
+    assert(inputs.size() == depths.length);
+    assert(inputs.size() == isFile.length);
+    
+    List<Expression> depthExprs = new ArrayList<Expression>(depths.length);
+    List<Expression> isFileExprs = new ArrayList<Expression>(isFile.length);
+    
+    for (int depth: depths) {
+      depthExprs.add(new LiteralInt(depth));
+    }
+    
+    for (boolean b: isFile) {
+      isFileExprs.add(LiteralInt.boolValue(b));
+    }
+    
+    return new Command(DEEPRULE, new Token(symbol), new TclList(inputs), 
+          new TclList(depthExprs), new TclList(isFileExprs),
+          tclRuleType(mode), action);
+  }
+  
+  public static Command loopRule(String symbol,
       List<Value> args, List<? extends Expression> blockOn) {
     List<Expression> actionElems = new ArrayList<Expression>();
     actionElems.add(new Token(symbol));

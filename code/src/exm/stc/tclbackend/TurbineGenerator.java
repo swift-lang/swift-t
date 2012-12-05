@@ -1343,11 +1343,20 @@ public class TurbineGenerator implements CompilerBackend
                                                     constructProc);
       tree.add(proc);
 
+      boolean useDeepWait = false; // True if we have to use special wait impl. 
+      
       // Build up the rule string
       List<Expression> waitFor = new ArrayList<Expression>();
       for (Var w: waitVars) {
         if (recursive) {
-          if (!Types.isScalarFuture(w.type())) {
+          Type baseType = w.type();
+          if (Types.isArray(w.type())) {
+            baseType = new ArrayInfo(w.type()).baseType;
+            useDeepWait = true;
+          }
+          if (Types.isScalarFuture(baseType)) {
+            // ok
+          } else {
             throw new STCRuntimeError("Recursive wait not yet supported"
                 + " for type: " + w.type().typeName());
           }
@@ -1362,9 +1371,29 @@ public class TurbineGenerator implements CompilerBackend
 
       TclList action = buildAction(uniqueName, toPassIn);
       
-      pointStack.peek().add(
-            Turbine.rule(uniqueName, waitFor, action, mode));
-
+      if (useDeepWait) {
+        // Nesting depth of arrays (0 == not array)
+        int depths[] = new int[waitVars.size()];
+        boolean isFile[] = new boolean[waitVars.size()];
+        for (int i = 0; i < waitVars.size(); i++) {
+          Type waitVarType = waitVars.get(i).type();
+          Type baseType;
+          if (Types.isArray(waitVarType)) {
+            ArrayInfo ai = new ArrayInfo(waitVarType);
+            depths[i] = ai.nesting;
+            baseType = ai.baseType;
+          } else {
+            depths[i] = 0;
+            baseType = waitVarType;
+          }
+          isFile[i] = Types.isFile(baseType);
+        }
+        pointStack.peek().add(
+              Turbine.deepRule(uniqueName, waitFor, depths, isFile, action, mode));
+      } else {
+        pointStack.peek().add(
+              Turbine.rule(uniqueName, waitFor, action, mode));
+      }
       pointStack.push(constructProc);
     }
 
