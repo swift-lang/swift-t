@@ -11,5 +11,9 @@ app (file out) echo (string arg) {
 main () {
   string msg = "hello,world";
   file tmp = echo(msg);
-  assertEqual(readFile(tmp), msg, "contents of tmp");
+  // echo appends newline
+  assertEqual(readFile(tmp), msg + "\n", "contents of tmp");
+
+  // Also write out to file for external checking
+  file f<"6390.txt"> = echo(msg);
 }

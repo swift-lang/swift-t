@@ -16,7 +16,7 @@ app (file out) cat (file input) {
 main () {
   foreach s in ["one", "two", "three", "four"] {
     string s2 = id(s);
-    assertEqual(s2, s, "'" + s + "'" + " != " + "'" + s2 + "'");
+    assertEqual(s2, s + "\n", "'" + s + "'" + " != " + "'" + s2 + "'");
   }
 }
 
