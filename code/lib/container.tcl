@@ -611,9 +611,9 @@ namespace eval turbine {
             incr progress
           } else {
             # Suspend execution until next item closed
-            rule "${rule_prefix}-$signal" $signal $turbine::LOCAL \
-                [ list container_deep_wait_continue $container $progress $n \
-                                                   $nest_level $isf $signal ]
+            rule "${rule_prefix}-$signal" $td $turbine::LOCAL \
+                [ list container_deep_wait_continue $rule_prefix $container \
+                          $progress $n $nest_level $is_file $signal ]
             return
           }
         }
@@ -627,14 +627,26 @@ namespace eval turbine {
                                    signal } {
       set inner_signals [ list ]
 
-      foreach inner [ adlb::enumerate $container members all 0 ] {
-        set inner_signal [ allocate void 0 ]
-        lappend inner_signals $inner_signal
+      set members [ adlb::enumerate $container members all 0 ]
+      if { [ llength $members ] == 0 } {
+        # short-circuit
+        store_void $signal
+        return
+      } elseif { [ llength $members ] == 1 } {
+        # skip allocating new signal
+        set inner [ lindex $members 0 ]
         container_deep_wait "$rule_prefix-$inner-close" $inner \
-                     [ expr $nest_level - 1 ] $is_file $inner_signal
+                     [ expr $nest_level - 1 ] $is_file $signal
+      } else {
+        foreach inner $members {
+          set inner_signal [ allocate void 0 ]
+          lappend inner_signals $inner_signal
+          container_deep_wait $rule_prefix $inner \
+                       [ expr $nest_level - 1 ] $is_file $inner_signal
+        }
+        rule "$rule_prefix-final" $inner_signals $turbine::LOCAL \
+          [ list deeprule_finish $inner_signals [ list store_void $signal ] ]
       }
-      rule "$rule_prefix-final" $inner_signals $turbine::LOCAL \
-        [ list deeprule_finish $inner_signals [ list store_void $signal ] ]
     }
 
     # Cleanup allocated things for
