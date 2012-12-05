@@ -12,8 +12,8 @@ main {
       [
         ["ein"], ["zwei", "drei"], ["vier"]
       ],
-      [ ["fuenf", f("sechs")] ],
-      [ ["sieben"] ],
+      f3([ ["fuenf", f("sechs")] ]),
+      [ f2(["sieben"]) ],
       [ [] ],
       [
         [f("acht")], ["neun"], ["zehn"]
@@ -31,5 +31,13 @@ app (void signal) echo2 (string args[][][]) {
 }
 
 (string o) f (string i) {
+  o = i;
+}
+
+(string o[]) f2 (string i[]) {
+  o = i;
+}
+
+(string o[][]) f3 (string i[][]) {
   o = i;
 }
