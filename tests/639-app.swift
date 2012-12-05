@@ -12,11 +12,11 @@ main {
       [
         ["ein"], ["zwei", "drei"], ["vier"]
       ],
-      [ ["fuenf", "sechs"] ],
+      [ ["fuenf", f("sechs")] ],
       [ ["sieben"] ],
       [ [] ],
       [
-        ["acht"], ["neun"], ["zehn"]
+        [f("acht")], ["neun"], ["zehn"]
       ]]);
   wait (done2) {
     trace("DONE2");
@@ -28,4 +28,8 @@ app (void signal) echo (string args[][]) {
 
 app (void signal) echo2 (string args[][][]) {
     "/usr/bin/env" "echo" args; 
+}
+
+(string o) f (string i) {
+  o = i;
 }
