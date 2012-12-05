@@ -566,7 +566,7 @@ namespace eval turbine {
         }
         incr i
       }
-      
+
       # Once all signals closed, run finalizer
       rule "${rule_prefix}-final" $signals $target \
             [ list deeprule_finish $allocated_signals $cmd ]
@@ -578,16 +578,18 @@ namespace eval turbine {
     proc container_deep_wait { rule_prefix container nest_level is_file signal } {
       if { $nest_level == 1 } {
         # First wait for container to be closed
-        set rule_name "${rule_prefix}-$container-close" 
+        set rule_name "${rule_prefix}-$container-close"
         rule $rule_name $container $turbine::LOCAL \
             [ list container_deep_wait_continue $rule_name $container 0 -1 \
                                             $nest_level $is_file $signal ]
-      } else {  
-        error "Recursive container wait for nest_level $nest_level > 1 \
-               not supported yet"
+      } else {
+        set rule_name "${rule_prefix}-$container-close"
+        rule $rule_name $container $turbine::LOCAL \
+            [ list container_rec_deep_wait $rule_name $container \
+                                    $nest_level $is_file $signal ]
       }
     }
-    
+
     proc container_deep_wait_continue { rule_prefix container progress n
                                         nest_level is_file signal } {
       set MAX_CHUNK_SIZE 64
@@ -620,12 +622,26 @@ namespace eval turbine {
       log "Container <$container> deep closed"
       store_void $signal
     }
+    
+    proc container_rec_deep_wait { rule_prefix container nest_level is_file
+                                   signal } {
+      set inner_signals [ list ]
 
-    # Cleanup allocated things for 
+      foreach inner [ adlb::enumerate $container members all 0 ] {
+        set inner_signal [ allocate void 0 ]
+        lappend inner_signals $inner_signal
+        container_deep_wait "$rule_prefix-$inner-close" $inner \
+                     [ expr $nest_level - 1 ] $is_file $inner_signal
+      }
+      rule "$rule_prefix-final" $inner_signals $turbine::LOCAL \
+        [ list deeprule_finish $inner_signals [ list store_void $signal ] ]
+    }
+
+    # Cleanup allocated things for
     # Decrement references for signals
     proc deeprule_finish { allocated_signals cmd } {
       foreach signal $allocated_signals {
-        read_refcount_decr $signal 
+        read_refcount_decr $signal
       }
       eval $cmd
     }
