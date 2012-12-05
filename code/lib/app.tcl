@@ -6,9 +6,28 @@ namespace eval turbine {
   
   # Run external appplication
   # cmd: executable to run
+  # kwopts: keyword options.  Valid are:
+  #         stdout=file stderr=file
   # args: command line args as strings
-  proc exec_external { cmd args } {
-    exec $cmd {*}$args >@stdout 2>@stderr
+  proc exec_external { cmd kwopts args } {
+    #FIXME: strange behaviour can happen if user args have e.g "<" 
+    # or ">" or "|" at start
+    
+    # Default to sending stdout/stderr to process stdout/stderr
+    set stdout_dst ">@stdout"
+    set stderr_dst "2>@stderr"
+    set stdin_src "<@stdin"
+
+    if { [ dict exists $kwopts stdin ] } {
+      set stdin_src "<[ dict get $kwopts stdin ]"
+    }
+    if { [ dict exists $kwopts stdout ] } {
+      set stdout_dst ">[ dict get $kwopts stdout ]"
+    }
+    if { [ dict exists $kwopts stderr ] } {
+      set stderr_dst "2>[ dict get $kwopts stderr ]"
+    }
+    exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst
   }
 
   # Unpack arguments from closed container of any nesting into flat list
