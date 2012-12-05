@@ -51,6 +51,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Redirections;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayInfo;
@@ -1879,6 +1880,7 @@ public class ASTWalker {
           SwiftAST tree, int firstChild) throws InvalidAnnotationException {
     List<String> annotations = new ArrayList<String>();
     for (SwiftAST subtree: tree.children(firstChild)) {
+      context.syncFilePos(subtree, lineMapping);
       assert(subtree.getType() == ExMParser.ANNOTATION);
       assert(subtree.getChildCount() == 1 || subtree.getChildCount() == 2);
       if (subtree.getChildCount() == 2) {
@@ -1993,14 +1995,16 @@ public class ASTWalker {
     String function = functionT.getText();
     SwiftAST outArgsT = tree.child(1);
     SwiftAST inArgsT = tree.child(2);
-    SwiftAST cmdT = tree.child(3);
+    SwiftAST appBodyT = tree.child(3);
     
     FunctionDecl decl = FunctionDecl.fromAST(context, function, inArgsT,
                         outArgsT,   Collections.<String>emptySet());
     List<Var> outArgs = decl.getOutVars();
     List<Var> inArgs = decl.getInVars();
     
+    context.syncFilePos(tree, lineMapping);
     List<String> annotations = extractFunctionAnnotations(context, tree, 4);
+    context.syncFilePos(tree, lineMapping);
     boolean hasSideEffects = true, deterministic = false;
     for (String annotation: annotations) {
       if (annotation.equals(Annotations.FN_PURE)) {
@@ -2021,9 +2025,10 @@ public class ASTWalker {
     appContext.addDeclaredVariables(outArgs);
     appContext.addDeclaredVariables(inArgs);
     
+    
     backend.startFunction(function, outArgs, inArgs,
                           TaskMode.LEAF);
-    genAppFunctionBody(appContext, cmdT, outArgs,
+    genAppFunctionBody(appContext, appBodyT, outArgs,
                        hasSideEffects, deterministic);
     backend.endFunction();
   }
@@ -2037,14 +2042,17 @@ public class ASTWalker {
    * @param deterministic
    * @throws UserException
    */
-  private void genAppFunctionBody(Context context, SwiftAST cmd,
+  private void genAppFunctionBody(Context context, SwiftAST appBody,
           List<Var> outputs,
           boolean hasSideEffects,
           boolean deterministic) throws UserException {
     //TODO: don't yet handle situation where user is naughty and
     //    uses output variable in expression context
+    assert(appBody.getType() == ExMParser.APP_BODY);
+    assert(appBody.getChildCount() >= 1);
     
     // Extract command from AST
+    SwiftAST cmd = appBody.child(0);
     assert(cmd.getType() == ExMParser.COMMAND);
     assert(cmd.getChildCount() >= 1);
     SwiftAST appNameT = cmd.child(0);
@@ -2054,7 +2062,11 @@ public class ASTWalker {
     // Evaluate any argument expressions
     List<Var> args = evalAppCmdArgs(context, cmd);
     
-    checkAppOutputs(context, appName, outputs, args);
+    // Process any redirections
+    Redirections redirFutures = processAppRedirects(context,
+                                                    appBody.children(1));
+    
+    checkAppOutputs(context, appName, outputs, args, redirFutures);
     
     // Work out what variables must be closed before command line executes
     Pair<Map<String, Var>, List<Var>> wait =
@@ -2080,16 +2092,70 @@ public class ASTWalker {
   }
 
 
+  private Redirections processAppRedirects(Context context,
+                             List<SwiftAST> redirects) throws UserException {    
+    Redirections redir = new Redirections();
+
+    // Process redirections
+    for (SwiftAST redirT: redirects) {
+      context.syncFilePos(redirT, lineMapping);
+      assert(redirT.getChildCount() == 2);
+      SwiftAST redirType = redirT.child(0);
+      SwiftAST redirExpr = redirT.child(1);
+      String redirTypeName = redirT.getText();
+      
+      // Now typecheck
+      Type type = TypeChecker.findSingleExprType(context, redirExpr);
+      // TODO: maybe could have plain string for filename, e.g. /dev/null?
+      if (!Types.isFile(type)) {
+        throw new TypeMismatchException(context, "Invalid type for" +
+            " app redirection, must be file: " + type.typeName());
+      }
+      
+      Arg result = Arg.createVar(exprWalker.eval(context, redirExpr, type,
+                                                 false, null));
+      boolean doubleDefine = false;
+      switch (redirType.getType()) {
+        case ExMParser.STDIN:
+          doubleDefine = redir.stdin != null;
+          redir.stdin = result;
+          break;
+        case ExMParser.STDOUT:
+          doubleDefine = redir.stdout != null;
+          redir.stdout = result;
+          break;
+        case ExMParser.STDERR:
+          doubleDefine = redir.stderr != null;
+          redir.stderr = result;
+          break;
+        default:
+          throw new STCRuntimeError("Unexpected token type: " +
+                              LogHelper.tokName(redirType.getType())); 
+      }
+
+      if (doubleDefine) {
+        throw new UserException(context, "Specified redirection " +
+                redirTypeName + " more than once");
+      }
+      
+      throw new STCRuntimeError("Redirection for app not yet implemented");
+    }
+
+    return redir;
+  }
+
   /**
    * Check that app output args are not omitted from command line
    * Omit warning
    * @param context
    * @param outputs
    * @param args
+   * @param redir 
    * @throws UserException 
    */
   private void checkAppOutputs(Context context, String function,
-      List<Var> outputs, List<Var> args) throws UserException {
+      List<Var> outputs, List<Var> args, Redirections redirFutures)
+                                                      throws UserException {
     boolean deferredError = false;
     HashMap<String, Var> outMap = new HashMap<String, Var>();
     for (Var output: outputs) {
@@ -2101,6 +2167,12 @@ public class ASTWalker {
       }
       outMap.put(output.name(), output);
     }
+    if (redirFutures.stdout != null) {
+      // Already typechecked
+      Var output = redirFutures.stdout.getVar();
+      outMap.put(output.name(), output);
+    }
+    
     for (Var arg: args) {
       if (arg.defType() == DefType.OUTARG) {
         outMap.remove(arg.name());

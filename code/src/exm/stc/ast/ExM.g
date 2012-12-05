@@ -72,9 +72,11 @@ tokens {
     GLOBAL_CONST;
     TCL_FUN_REF;
     INLINE_TCL;
-    APP_FILENAME;
     TYPE_PARAMETERS;
     DEPRECATED;
+    APP_BODY;
+    APP_FILENAME;
+    APP_REDIRECTION;
 }
 
 @parser::header {
@@ -175,9 +177,13 @@ type_field:
 app_function_definition:
         annotation*
         APP o=formal_argument_list f=ID i=formal_argument_list
-        LBRACE c=command SEMICOLON? RBRACE ->
-        ^( DEFINE_APP_FUNCTION $f $o $i $c annotation* )
+        LBRACE app_body SEMICOLON? RBRACE ->
+        ^( DEFINE_APP_FUNCTION $f $o $i app_body annotation* )
     ;
+    
+app_body:
+    command app_redirection* 
+        -> ^( APP_BODY command app_redirection* );
 
 // The app function command line
 command:
@@ -198,6 +204,16 @@ command_arg:
     |   LPAREN expr RPAREN -> expr
     |   ATSIGN ID -> ^( APP_FILENAME ID )   
     ;
+ 
+app_redirection:
+      ATSIGN redirect_type ASSIGN expr ->
+        ^( APP_REDIRECTION redirect_type expr )        
+    ;   
+    
+redirect_type: 
+        (STDIN|STDOUT|STDERR)
+    ;
+ 
 include_statement:
         INCLUDE file=STRING SEMICOLON -> ^( INCLUDE $file )
     ;
@@ -688,6 +704,10 @@ GLOBAL: 'global';
 CONST: 'const';
 TYPE:  'type';
 PRIORITY: 'prio';
+
+STDIN: 'stdin';
+STDOUT: 'stdout';
+STDERR: 'stderr';
 
 NUMBER: (DIGIT)+ ;
 DECIMAL: (DIGIT)+ '.' (DIGIT)+;
