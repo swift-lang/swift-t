@@ -383,12 +383,11 @@ public class STCMiddleEnd implements CompilerBackend {
                           List<Var> outFiles,
                           boolean hasSideEffects, boolean deterministic) {
     for (Var o: outFiles) {
-      assert(Types.isFile(o.type()));
+      assert(Types.isFile(o.type()) || Types.isVoid(o.type()));
     }
-    
+
     currBlock().addInstruction(new RunExternal(cmd, outFiles, args,
                                 hasSideEffects, deterministic));
-        
   }
 
   @Override

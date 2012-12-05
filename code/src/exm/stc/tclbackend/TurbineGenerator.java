@@ -781,8 +781,13 @@ public class TurbineGenerator implements CompilerBackend
         
     // Close outputs
     for (Var o: outFiles) {
-      assert(Types.isFile(o.type()));
-      pointStack.peek().add(Turbine.closeFile(varToExpr(o)));
+      if (Types.isFile(o.type())) {
+        pointStack.peek().add(Turbine.closeFile(varToExpr(o)));
+      } else if (Types.isVoid(o.type())) {
+        pointStack.peek().add(Turbine.voidSet(varToExpr(o)));
+      } else {
+        throw new STCRuntimeError("Invalid app output type: " + o);
+      }
     }
   }
 

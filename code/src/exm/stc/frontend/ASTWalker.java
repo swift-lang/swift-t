@@ -2052,7 +2052,7 @@ public class ASTWalker {
     // Evaluate any argument expressions
     List<Var> args = evalAppCmdArgs(context, cmd);
     
-    checkAppOutputsReferenced(context, outputs, args);
+    checkAppOutputs(context, appName, outputs, args);
     
     // Work out what variables must be closed before command line executes
     Pair<Map<String, Var>, List<Var>> wait =
@@ -2084,11 +2084,19 @@ public class ASTWalker {
    * @param context
    * @param outputs
    * @param args
+   * @throws UserException 
    */
-  private void checkAppOutputsReferenced(Context context,
-      List<Var> outputs, List<Var> args) {
+  private void checkAppOutputs(Context context, String function,
+      List<Var> outputs, List<Var> args) throws UserException {
+    boolean deferredError = false;
     HashMap<String, Var> outMap = new HashMap<String, Var>();
     for (Var output: outputs) {
+      // Check output types
+      if (!Types.isFile(output.type()) && !Types.isVoid(output.type())) {
+        LogHelper.error(context, "Output argument " + output.name() + " has "
+            + " invalid type for app output: " + output.type().typeName());
+        deferredError = true;
+      }
       outMap.put(output.name(), output);
     }
     for (Var arg: args) {
@@ -2097,8 +2105,14 @@ public class ASTWalker {
       }
     }
     for (Var unreferenced: outMap.values()) {
-      LogHelper.warn(context, "Output argument " + unreferenced.name() 
+      if (!Types.isVoid(unreferenced.type())) {
+        LogHelper.warn(context, "Output argument " + unreferenced.name() 
           + " is not referenced in app command line");
+      }
+    }
+    if (deferredError) {
+      throw new UserException(context, "Compilation failed due to type "
+          + "error in definition of function " + function);
     }
   }
 
