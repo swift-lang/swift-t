@@ -1293,13 +1293,15 @@ public class ASTWalker {
    */
   private Var fixupRefValMismatch(Context context, Type rValType,
       Var lValVar) throws UserException, UndefinedTypeException {
-    if (lValVar.type().equals(rValType)) {
+    if (rValType.assignableTo(lValVar.type())) {
       return lValVar;
-    } else if (Types.isRefTo(lValVar.type(), rValType)) {
+    } else if (Types.isRef(lValVar.type())
+            && rValType.assignableTo(lValVar.type())) {
       Var rValVar = varCreator.createTmp(context, rValType);
       backend.assignReference(lValVar, rValVar);
       return rValVar;
-    } else if (Types.isRefTo(rValType, lValVar.type())) {
+    } else if (Types.isRef(rValType) 
+            && rValType.memberType().assignableTo(lValVar.type())) {
       Var rValVar = varCreator.createTmp(context, rValType);
       exprWalker.dereference(context, lValVar, rValVar);
       return rValVar;

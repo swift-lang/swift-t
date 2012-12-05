@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -33,6 +34,7 @@ import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
+import exm.stc.common.lang.Types.WildcardType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
@@ -370,21 +372,51 @@ public class TypeChecker {
    *         first type
    */
   public static List<Type> typeIntersection(List<Type> types) {
-    assert(types.size() > 0);
+    if(types.size() == 0) {
+      return Collections.<Type>singletonList(new WildcardType());
+    }
     // Shortcircuit common cases
     if (types.size() == 1 ||
         (types.size() == 2 && types.get(0).equals(types.get(1)))) {
       return UnionType.getAlternatives(types.get(0));
     }
     
+    boolean sawWildcard = true;
     Set<Type> intersection = null;
     for (Type argType: types) {
-      if (intersection == null) {
+      if (Types.isWildcard(argType)) {
+        // do nothing
+        sawWildcard = true;
+      } else if (intersection == null) {
         intersection = new HashSet<Type>();
         intersection.addAll(UnionType.getAlternatives(argType));
       } else {
-        intersection.retainAll(UnionType.getAlternatives(argType));
+        Iterator<Type> it = intersection.iterator();
+        while (it.hasNext()) {
+          Type t1 = it.next();
+          boolean compatible = false;
+          for (Type t2: UnionType.getAlternatives(argType)) {
+            // Check to see if types are compatible
+            Map<String, Type> requiredMappings = t2.matchTypeVars(t1);
+            if (requiredMappings != null && requiredMappings.size() == 0) {
+              compatible = true;
+            }
+            requiredMappings = t1.matchTypeVars(t2);
+            if (requiredMappings != null && requiredMappings.size() == 0) {
+              compatible = true;
+            }
+          } 
+          
+          if (!compatible) {
+            it.remove();
+          }
+        }
       }
+    }
+    
+    if (intersection == null) {
+      assert(sawWildcard);
+      return Collections.<Type>singletonList(new WildcardType());
     }
     
     // Make sure alternatives in original order
@@ -801,9 +833,11 @@ public class TypeChecker {
   public static Type checkAssignment(Context context, Type rValType,
       Type lValType, String lValName) throws TypeMismatchException {
     for (Type altRValType: UnionType.getAlternatives(rValType)) {
-      if (lValType.equals(altRValType)
-          || Types.isRefTo(altRValType, lValType)
-          || Types.isRefTo(lValType, altRValType)) {
+      if (altRValType.assignableTo(lValType)
+          || (Types.isRef(lValType) &&
+                altRValType.assignableTo(lValType.memberType()))
+          || (Types.isRef(altRValType) &&
+                altRValType.memberType().assignableTo(lValType))) {
         return altRValType;
       }
     }

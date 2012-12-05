@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.Types.Type;
 
 /**
  * This module provides the type definitions used for Swift,
@@ -80,6 +81,12 @@ public class Types {
         return memberType.matchTypeVars(((ArrayType)concrete).memberType);
       }
       return null;
+    }
+
+    @Override
+    public boolean assignableTo(Type other) {
+      return other.structureType() == StructureType.ARRAY &&
+            memberType.assignableTo(other.memberType());
     }
 
     @Override
@@ -768,6 +775,59 @@ public class Types {
     }
   }
   
+  public static class WildcardType extends Type {
+
+    @Override
+    public StructureType structureType() {
+      return StructureType.WILDCARD;
+    }
+
+    @Override
+    public String toString() {
+      return typeName();
+    }
+
+    @Override
+    public String typeName() {
+      return "?";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof Type)) {
+        return false;
+      } else {
+        return ((Type)o).structureType() == StructureType.WILDCARD;
+      }
+    }
+
+    @Override
+    public int hashCode() {
+      return WildcardType.class.hashCode();
+    }
+
+    @Override
+    public Type bindTypeVars(Map<String, Type> vals) {
+      return this;
+    }
+
+    @Override
+    public Map<String, Type> matchTypeVars(Type concrete) {
+      return Collections.emptyMap();
+    }
+
+    @Override
+    public boolean assignableTo(Type other) {
+      return true;
+    }
+
+    @Override
+    public boolean hasTypeVar() {
+      return false;
+    }
+    
+  }
+  
   private enum StructureType
   {
     SCALAR_UPDATEABLE,
@@ -778,6 +838,7 @@ public class Types {
     REFERENCE,
     STRUCT,
     TYPE_VARIABLE,
+    WILDCARD,
     TYPE_UNION,
     FUNCTION,
   }
@@ -1182,7 +1243,11 @@ public class Types {
   public static boolean isFunction(Type type) {
     return type.structureType() == StructureType.FUNCTION;
   }
-  
+
+  public static boolean isWildcard(Type argType) {
+    return argType.structureType() == StructureType.WILDCARD;
+  }
+
   /** 
    * More convenient way of representing array types for some analysies
    *

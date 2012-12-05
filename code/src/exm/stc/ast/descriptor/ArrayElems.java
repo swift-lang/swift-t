@@ -6,13 +6,13 @@ import java.util.List;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
-import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types.ArrayType;
 import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
+import exm.stc.common.lang.Types.WildcardType;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.TypeChecker;
 
@@ -55,8 +55,7 @@ public class ArrayElems {
     // Check to see all arguments have compatible types
     List<SwiftAST> members = getMembers();
     if (members.size() == 0) {
-      throw new STCRuntimeError("Empty array constructor, " +
-          "compiler doesn't yet know how to infer type");
+      return new ExprType(new ArrayType(new WildcardType()));
     }
     List<Type> memberTypes = new ArrayList<Type>(members.size());
     for (SwiftAST elem: members) {
