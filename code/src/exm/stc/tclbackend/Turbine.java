@@ -9,7 +9,9 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.TaskMode;
+import exm.stc.common.util.Pair;
 import exm.stc.tclbackend.tree.Command;
+import exm.stc.tclbackend.tree.Dict;
 import exm.stc.tclbackend.tree.Expression;
 import exm.stc.tclbackend.tree.LiteralInt;
 import exm.stc.tclbackend.tree.Sequence;
@@ -817,12 +819,30 @@ class Turbine
   
   /**
    * @param cmd
+   * @param stderrFilename 
+   * @param stdoutFilename 
    * @param args
    * @return Tcl code to execute external executable 
    */
-  public static Command exec(String cmd, List<Expression> args) {
-    ArrayList<Expression> args2 = new ArrayList<Expression>(args.size() + 3);
+  public static Command exec(String cmd, Expression stdinFilename,
+          Expression stdoutFilename, Expression stderrFilename,
+                             List<Expression> args) {
+    ArrayList<Expression> args2 = new ArrayList<Expression>(args.size() + 4);
     args2.add(new TclString(cmd, true));
+    
+    ArrayList<Pair<String, Expression>> keywordOpts =
+                              new ArrayList<Pair<String,Expression>>();
+    if (stdinFilename != null) {
+      keywordOpts.add(Pair.create("stdin", stdinFilename));
+    }
+    if (stdoutFilename != null) {
+      keywordOpts.add(Pair.create("stdout", stdoutFilename));
+    }
+    if (stderrFilename != null) {
+      keywordOpts.add(Pair.create("stderr", stderrFilename));
+    }
+    
+    args2.add(Dict.dictCreateSE(keywordOpts));
     args2.addAll(args);
     return new Command(EXEC_EXTERNAL, args2);
   }

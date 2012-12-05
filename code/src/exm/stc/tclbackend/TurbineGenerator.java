@@ -776,8 +776,14 @@ public class TurbineGenerator implements CompilerBackend
       tclArgs.add(argExpr);
       logMsg.add(argExpr);
     }
+    
+    Expression stdinFilename = null;
+    Expression stdoutFilename = null;
+    Expression stderrFilename = null;
+    
     pointStack.peek().add(Turbine.turbineLog(logMsg));
-    pointStack.peek().add(Turbine.exec(cmd, tclArgs));
+    pointStack.peek().add(Turbine.exec(cmd, stdinFilename,
+                stdoutFilename, stderrFilename, tclArgs));
         
     // Close outputs
     for (Var o: outFiles) {

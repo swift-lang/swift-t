@@ -103,4 +103,5 @@ public class Square extends Expression
     } 
     return new Square(newE);
   }
+
 }
