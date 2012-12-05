@@ -8,3 +8,9 @@ if [ -f 6390.txt ]; then
     exit 1
   fi
 fi
+
+# cleanup symlink
+script=6390-echostderr.sh
+if [ -h $script ]; then
+    rm $script
+fi
