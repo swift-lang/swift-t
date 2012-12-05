@@ -142,10 +142,11 @@ namespace eval turbine {
     }
 
     # return the filename of a unique temporary file
+    # TODO: Do this w/o exec
     proc mktemp {} {
-      #TODO: do something better!
-      set id [ expr int(100000000 * rand()) ]
-      return "/tmp/turbine-${id}"
+        set result [ exec mktemp --suffix=.turbine ]
+        # puts "mktemp: $result"
+        return $result
     }
 
     proc close_file { handle } {
