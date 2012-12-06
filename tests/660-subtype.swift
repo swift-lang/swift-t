@@ -7,7 +7,7 @@
 type superint int;
 
 // Convert outside of type system
-(superint o) make_superint(int i) [
+(superint o) make_superint(int i) "turbine" "0.0.1" [
     "set <<o>> <<i>>" 
 ];
 

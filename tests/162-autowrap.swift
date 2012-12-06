@@ -12,7 +12,7 @@
 
 // blob output
 @pure
-(blob o) make_blob() [
+(blob o) make_blob() "turbine" "0.0.1" [
     "set <<o>> [ adlb::blob_from_string hello ]"
 ];
 
