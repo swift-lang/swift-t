@@ -72,6 +72,7 @@ tokens {
     ANNOTATION;
     GLOBAL_CONST;
     TCL_FUN_REF;
+    TCL_PACKAGE;
     INLINE_TCL;
     TYPE_PARAMETERS;
     DEPRECATED;
@@ -234,13 +235,18 @@ builtin_function_definition:
         annotation*
         tp=type_parameters
         o=formal_argument_list f=ID i=formal_argument_list
-         tcl_fun_reference? inline_tcl? SEMICOLON ->
-        ^( DEFINE_BUILTIN_FUNCTION $f $tp $o $i tcl_fun_reference?  
+         tcl_package
+         tcl_fun_ref? inline_tcl? SEMICOLON ->
+        ^( DEFINE_BUILTIN_FUNCTION $f $tp $o $i tcl_package tcl_fun_ref?
                                    inline_tcl? annotation* )
     ;
+
+tcl_package:
+        pkg=STRING version=STRING -> ^( TCL_PACKAGE $pkg $version ) 
+    ;
     
-tcl_fun_reference:
-        pkg=STRING version=STRING symbol=STRING -> ^( TCL_FUN_REF $pkg $version $symbol ) 
+tcl_fun_ref:
+        symbol=STRING -> ^( TCL_FUN_REF $symbol ) 
     ;
 
 type_parameters:

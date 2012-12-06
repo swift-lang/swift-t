@@ -2169,4 +2169,10 @@ public class SwigcGenerator implements CompilerBackend
       // TODO Auto-generated method stub
       
     }
+
+    @Override
+    public void requirePackage(String pkg, String version) {
+      // TODO Auto-generated method stub
+      
+    }
 }

@@ -71,6 +71,7 @@ public class ICTree {
 
     private final ArrayList<Function> functions = new ArrayList<Function>();
     private final ArrayList<BuiltinFunction> builtinFuns = new ArrayList<BuiltinFunction>();
+    private final Set<Pair<String, String>> required = new HashSet<Pair<String, String>>();
   
     public void generate(Logger logger, CompilerBackend gen)
         throws UserException {
@@ -84,6 +85,12 @@ public class ICTree {
       
       logger.debug("Starting to generate program from Swift IC");
       gen.header();
+      
+      logger.debug("Generating required packages");
+      for (Pair<String, String> req: required) {
+        gen.requirePackage(req.val1, req.val2);
+      }
+      logger.debug("Done generating required packages");
   
       logger.debug("Generating builtins");
       for (BuiltinFunction f: builtinFuns) {
@@ -109,6 +116,10 @@ public class ICTree {
       }
       logger.debug("Done generating global constants");
       
+    }
+    
+    public void addRequiredPackage(String pkg, String version) {
+      required.add(Pair.create(pkg, version));
     }
   
     public void addBuiltin(BuiltinFunction fn) {
@@ -205,6 +216,10 @@ public class ICTree {
     }
   
     public void prettyPrint(StringBuilder out) {
+      for (Pair<String, String> req: required) {
+        out.append("require " + req.val1 + "::" + req.val2 + "\n");
+      }
+      
       for (Entry<String, Arg> constE: globalConsts.entrySet()) {
         Arg val = constE.getValue();
         out.append("const " +   constE.getKey() + " = ");

@@ -1143,18 +1143,22 @@ public class TurbineGenerator implements CompilerBackend
   private final Set<String> requiredPackages = new HashSet<String>();
 
   @Override
-  public void defineBuiltinFunction(String name, FunctionType type,
-            TclFunRef impl) {
-    String pv = impl.pkg + impl.version;
-    if (!impl.pkg.equals("turbine")) {
+  public void requirePackage(String pkg, String version) {
+    String pv = pkg + version;
+    if (!pkg.equals("turbine")) {
       if (!requiredPackages.contains(pv))
       {
-        PackageRequire pr = new PackageRequire(impl.pkg, impl.version);
+        PackageRequire pr = new PackageRequire(pkg, version);
         pointStack.peek().add(pr);
         requiredPackages.add(pv);
         pointStack.peek().add(new Command(""));
       }
     }
+  }
+  
+  @Override
+  public void defineBuiltinFunction(String name, FunctionType type,
+            TclFunRef impl) {
     builtinSymbols.put(name, impl);
     logger.debug("TurbineGenerator: Defined built-in " + name);
   }

@@ -1592,14 +1592,17 @@ public class ASTWalker {
   private void defineBuiltinFunction(Context context, SwiftAST tree)
   throws UserException
   {
-    final int REQUIRED_CHILDREN = 4;
+    final int REQUIRED_CHILDREN = 5;
     assert(tree.getChildCount() >= REQUIRED_CHILDREN);
     String function  = tree.child(0).getText();
     SwiftAST typeParamsT = tree.child(1);
     SwiftAST outputs = tree.child(2);
     SwiftAST inputs  = tree.child(3);
+    SwiftAST tclPackage = tree.child(4);
     assert(inputs.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
     assert(outputs.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
+    assert(tclPackage.getType() == ExMParser.TCL_PACKAGE);
+    assert(tclPackage.getChildCount() == 2);
     
     Set<String> typeParams = extractTypeParams(typeParamsT);
 
@@ -1608,19 +1611,18 @@ public class ASTWalker {
     
     FunctionType ft = fdecl.getFunctionType();
     LogHelper.debug(context, "builtin: " + function + " " + ft);
-
+    
+    String pkg = Literals.extractLiteralString(context, tclPackage.child(0)); 
+    String version = Literals.extractLiteralString(context, tclPackage.child(1));
+    backend.requirePackage(pkg, version);
     
     int pos = REQUIRED_CHILDREN;
     TclFunRef impl = null;
     if (pos < tree.getChildCount() && 
               tree.child(pos).getType() == ExMParser.TCL_FUN_REF) {
       SwiftAST tclImplRef = tree.child(pos);
-      String pkg     = Literals.extractLiteralString(context, 
-                                                     tclImplRef.child(0));
-      String version = Literals.extractLiteralString(context, 
-                                                     tclImplRef.child(1));
       String symbol  = Literals.extractLiteralString(context, 
-                                                     tclImplRef.child(2));
+                                                     tclImplRef.child(0));
       impl = new TclFunRef(pkg, symbol, version);
       pos++;
     }

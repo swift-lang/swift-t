@@ -2,7 +2,7 @@
 #include <assert.swift>
 
 @dispatch=LEAF
-(int o) double(int i) [
+(int o) double(int i) "turbine" "0.0.1" [
   "set <<o>> [ expr <<i>> * 2 ]"
 ];
 

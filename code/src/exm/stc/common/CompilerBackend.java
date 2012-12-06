@@ -21,6 +21,8 @@ public interface CompilerBackend {
 
   public abstract void turbineStartup();
 
+  public abstract void requirePackage(String pkg, String version);
+  
   /**
    * 
    * @param t

@@ -121,6 +121,12 @@ public class STCMiddleEnd implements CompilerBackend {
     // do nothing
   }
 
+
+  @Override
+  public void requirePackage(String pkg, String version) {
+    program.addRequiredPackage(pkg, version);
+  }
+  
   @Override
   public void defineBuiltinFunction(String name,
                                     FunctionType fType,
