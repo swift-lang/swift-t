@@ -177,7 +177,9 @@ namespace eval turbine {
         for { set i 0 } { $i < $n } { incr i } {
             set v [ lindex $r_value $i ]
             literal split_token string $v
-            container_insert $result $i $split_token
+            set f [ allocate_file2 "<$result>\[$i\]" $split_token ]
+            close_file $f
+            container_insert $result $i $f
         }
         # close container
         adlb::slot_drop $result
@@ -212,7 +214,6 @@ namespace eval turbine {
 	set dstpath [ get_file_path $dst ]
 	set d [ retrieve_decr_string $dstpath ]
 	set fp [ ::open $d w+ ]
-	puts $fp $str
 	close $fp
 	store_void [ get_file_status $dst ]
     }
