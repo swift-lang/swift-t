@@ -405,7 +405,7 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void arrayLookupFuture(Var oVar, Var arrayVar,
       Var indexVar, boolean isArrayRef) {
-    assert(indexVar.type().equals(Types.F_INT));
+    assert(Types.isInt(indexVar.type()));
     if (isArrayRef) {
       currBlock().addInstruction(
           TurbineOp.arrayRefLookupFuture(oVar, arrayVar, indexVar));
@@ -441,7 +441,7 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void arrayInsertFuture(Var iVar, Var arrayVar,
       Var indexVar) {
-    assert(indexVar.type().equals(Types.F_INT));
+    assert(Types.isInt(indexVar.type()));
     currBlock().addInstruction(
         TurbineOp.arrayInsertFuture(iVar, arrayVar, indexVar));
   }
@@ -449,7 +449,7 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void arrayRefInsertFuture(Var iVar,
       Var arrayVar, Var indexVar, Var outerArrayVar) {
-    assert(indexVar.type().equals(Types.F_INT));
+    assert(Types.isInt(indexVar.type()));
     assert(Types.isArrayRef(arrayVar.type()));
     currBlock().addInstruction(
         TurbineOp.arrayRefInsertFuture(iVar, arrayVar, indexVar, 
@@ -478,7 +478,7 @@ public class STCMiddleEnd implements CompilerBackend {
       Var arrayVar, Var indexVar) {
     assert(Types.isArrayRef(arrayResult.type()));
     assert(Types.isArray(arrayVar.type()));
-    assert(indexVar.type().equals(Types.F_INT));
+    assert(Types.isInt(indexVar.type()));
 
     currBlock().addInstruction(
       TurbineOp.arrayCreateNestedComputed(arrayResult,
@@ -514,7 +514,7 @@ public class STCMiddleEnd implements CompilerBackend {
       Var arrayVar, Var indexVar) {
     assert(Types.isArrayRef(arrayResult.type()));
     assert(Types.isArrayRef(arrayVar.type()));
-    assert(indexVar.type().equals(Types.F_INT));
+    assert(Types.isInt(indexVar.type()));
 
     currBlock().addInstruction(
       TurbineOp.arrayRefCreateNestedComputed(arrayResult,
@@ -531,7 +531,7 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void dereferenceInt(Var target, Var src) {
-    assert(target.type().equals(Types.F_INT));
+    assert(Types.isInt(target.type()));
     assert(src.type().equals(Types.R_INT));
     currBlock().addInstruction(
         TurbineOp.dereferenceInt(target, src));
@@ -539,7 +539,7 @@ public class STCMiddleEnd implements CompilerBackend {
   
   @Override
   public void dereferenceBool(Var target, Var src) {
-    assert(target.type().equals(Types.F_BOOL));
+    assert(Types.isBool(target.type()));
     assert(src.type().equals(Types.R_BOOL));
     currBlock().addInstruction(
         TurbineOp.dereferenceBool(target, src));
@@ -547,7 +547,7 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void dereferenceFloat(Var target, Var src) {
-    assert(target.type().equals(Types.F_FLOAT));
+    assert(Types.isFloat(target.type()));
     assert(src.type().equals(Types.R_FLOAT));
     currBlock().addInstruction(
         TurbineOp.dereferenceFloat(target, src));
@@ -555,7 +555,7 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void dereferenceString(Var target, Var src) {
-    assert(target.type().equals(Types.F_STRING));
+    assert(Types.isString(target.type()));
     assert(src.type().equals(Types.R_STRING));
     currBlock().addInstruction(
         TurbineOp.dereferenceString(target, src));
@@ -563,7 +563,7 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void dereferenceBlob(Var target, Var src) {
-    assert(target.type().equals(Types.F_BLOB));
+    assert(Types.isBlob(target.type()));
     assert(src.type().equals(Types.R_BLOB));
     currBlock().addInstruction(
         TurbineOp.dereferenceBlob(target, src));
@@ -571,7 +571,7 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void dereferenceFile(Var target, Var src) {
-    assert(target.type().equals(Types.F_FILE));
+    assert(Types.isFile(target.type()));
     assert(src.type().equals(Types.REF_FILE));
     currBlock().addInstruction(
         TurbineOp.dereferenceFile(target, src));
@@ -596,7 +596,7 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void assignInt(Var target, Arg src) {
-    assert(target.type().equals(Types.F_INT));
+    assert(Types.isInt(target.type()));
     assert(src.isImmediateInt());
     currBlock().addInstruction(
         TurbineOp.assignInt(target, src));
@@ -605,14 +605,14 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void retrieveInt(Var target, Var source) {
     assert(target.type().equals(Types.V_INT));
-    assert(source.type().equals(Types.F_INT));
+    assert(Types.isInt(source.type()));
     currBlock().addInstruction(
         TurbineOp.retrieveInt(target, source));
   }
 
   @Override
   public void assignBool(Var target, Arg src) {
-    assert(target.type().equals(Types.F_BOOL));
+    assert(Types.isBool(target.type()));
     assert(src.isImmediateBool());
     currBlock().addInstruction(
         TurbineOp.assignBool(target, src));
@@ -621,14 +621,14 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void retrieveBool(Var target, Var source) {
     assert(target.type().equals(Types.V_BOOL));
-    assert(source.type().equals(Types.F_BOOL));
+    assert(Types.isBool(source.type()));
     currBlock().addInstruction(
         TurbineOp.retrieveBool(target, source));
   }
   
   @Override
   public void assignVoid(Var target, Arg src) {
-    assert(target.type().equals(Types.F_VOID));
+    assert(Types.isVoid(target.type()));
     assert(src.getType().equals(Types.V_VOID));
     currBlock().addInstruction(TurbineOp.assignVoid(target, src));
   }
@@ -636,14 +636,14 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void retrieveVoid(Var target, Var source) {
     assert(target.type().equals(Types.V_VOID));
-    assert(source.type().equals(Types.F_VOID));
+    assert(Types.isVoid(source.type()));
     currBlock().addInstruction(
         TurbineOp.retrieveVoid(target, source));
   }
 
   @Override
   public void assignFloat(Var target, Arg src) {
-    assert(target.type().equals(Types.F_FLOAT));
+    assert(Types.isFloat(target.type()));
     assert(src.isImmediateFloat());
     currBlock().addInstruction(
         TurbineOp.assignFloat(target, src));
@@ -652,14 +652,14 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void retrieveFloat(Var target, Var source) {
     assert(target.type().equals(Types.V_FLOAT));
-    assert(source.type().equals(Types.F_FLOAT));
+    assert(Types.isFloat(source.type()));
     currBlock().addInstruction(
         TurbineOp.retrieveFloat(target, source));
   }
 
   @Override
   public void assignString(Var target, Arg src) {
-    assert(target.type().equals(Types.F_STRING));
+    assert(Types.isString(target.type()));
     assert(src.isImmediateString());
     currBlock().addInstruction(
         TurbineOp.assignString(target, src));
@@ -668,14 +668,14 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void retrieveString(Var target, Var source) {
     assert(target.type().equals(Types.V_STRING));
-    assert(source.type().equals(Types.F_STRING));
+    assert(Types.isString(source.type()));
     currBlock().addInstruction(
         TurbineOp.retrieveString(target, source));
   }
   
   @Override
   public void assignBlob(Var target, Arg src) {
-    assert(target.type().equals(Types.F_BLOB));
+    assert(Types.isBlob(target.type()));
     assert(src.isImmediateBlob());
     currBlock().addInstruction(
         TurbineOp.assignBlob(target, src));
@@ -684,14 +684,14 @@ public class STCMiddleEnd implements CompilerBackend {
   @Override
   public void retrieveBlob(Var target, Var src) {
     assert(target.type().equals(Types.V_BLOB));
-    assert(src.type().equals(Types.F_BLOB));
+    assert(Types.isBlob(src.type()));
     currBlock().addInstruction(
         TurbineOp.retrieveBlob(target, src));
   }
   
   @Override
   public void decrBlobRef(Var blob) {
-    assert(blob.type().equals(Types.F_BLOB));
+    assert(Types.isBlob(blob.type()));
     currBlock().addInstruction(TurbineOp.decrBlobRef(blob));
   }
   

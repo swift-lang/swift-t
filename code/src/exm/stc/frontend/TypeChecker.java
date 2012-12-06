@@ -491,7 +491,7 @@ public class TypeChecker {
    */
   public static boolean compatibleArgTypes(Type argType,
       Type exprType) {
-    if (exprType.equals(argType)) {
+    if (argType.assignableTo(exprType)) {
       // Obviously ok if types are exactly the same
       return true;
     } else if (Types.isRefTo(exprType, argType)) {
@@ -545,7 +545,7 @@ public class TypeChecker {
       assert(alt.getOutputs().size() == outputs.size());
       boolean match = true;
       for (int i = 0; i < outTs.size(); i++) {
-        if (!alt.getOutputs().get(i).equals(outTs.get(i))) {
+        if (!alt.getOutputs().get(i).assignableTo(outTs.get(i))) {
           match = false;
           break;
         }
@@ -814,7 +814,8 @@ public class TypeChecker {
 
   public static void checkCopy(Context context, Type srctype, Type dsttype)
       throws TypeMismatchException {
-    if (!srctype.equals(dsttype)) {
+    if (!(srctype.assignableTo(dsttype) &&
+          srctype.getImplType().equals(dsttype.getImplType()))) {
       throw new TypeMismatchException(context, "Type mismatch: copying from "
           + srctype.toString() + " to " + dsttype.toString());
     }

@@ -375,7 +375,7 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void retrieveInt(Var target, Var source) {
     assert(target.type().equals(Types.V_INT));
-    assert(source.type().equals(Types.F_INT));
+    assert(Types.isInt(source.type()));
     pointStack.peek().add(Turbine.integerGet(prefixVar(target.name()),
                                                 varToExpr(source)));
   }
@@ -397,7 +397,7 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void retrieveBool(Var target, Var source) {
     assert(target.type().equals(Types.V_BOOL));
-    assert(source.type().equals(Types.F_BOOL));
+    assert(Types.isBool(source.type()));
     pointStack.peek().add(Turbine.integerGet(prefixVar(target.name()),
         varToExpr(source)));
   }
@@ -412,7 +412,7 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void retrieveVoid(Var target, Var source) {
     assert(target.type().equals(Types.V_VOID));
-    assert(source.type().equals(Types.F_VOID));
+    assert(Types.isVoid(source.type()));
     // Don't actually need to retrieve value as it has no contents
     pointStack.peek().add(new SetVariable(prefixVar(target.name()),
                           Turbine.VOID_DUMMY_VAL));
@@ -462,7 +462,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void assignBlob(Var target, Arg src) {
-    assert(target.type().equals(Types.F_BLOB));
+    assert(Types.isBlob(target.type()));
     assert(src.isImmediateBlob());
     pointStack.peek().add(Turbine.blobSet(varToExpr(target),
                                           argToExpr(src)));
@@ -471,14 +471,14 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void retrieveBlob(Var target, Var src) {
     assert(target.type().equals(Types.V_BLOB));
-    assert(src.type().equals(Types.F_BLOB));
+    assert(Types.isBlob(src.type()));
     pointStack.peek().add(Turbine.blobGet(prefixVar(target.name()),
                                                 varToExpr(src)));
   }
 
   @Override
   public void decrBlobRef(Var blob) {
-    assert(blob.type().equals(Types.F_BLOB));
+    assert(Types.isBlob(blob.type()));
     pointStack.peek().add(Turbine.freeBlob(varToExpr(blob)));
   }
 
@@ -550,7 +550,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void dereferenceInt(Var target, Var src) {
-    assert(target.type().equals(Types.F_INT));
+    assert(Types.isInt(target.type()));
     assert(src.type().equals(Types.R_INT));
     incrementReaders(src);
     Command deref = Turbine.dereferenceInteger(varToExpr(target),
@@ -560,7 +560,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void dereferenceBool(Var target, Var src) {
-    assert(target.type().equals(Types.F_BOOL));
+    assert(Types.isBool(target.type()));
     assert(src.type().equals(Types.R_BOOL));
     incrementReaders(src);
     Command deref = Turbine.dereferenceInteger(varToExpr(target),
@@ -590,7 +590,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void dereferenceBlob(Var target, Var src) {
-    assert(target.type().equals(Types.F_BLOB));
+    assert(Types.isBlob(target.type()));
     assert(src.type().equals(Types.R_BLOB));
     incrementReaders(src);
     Command deref = Turbine.dereferenceBlob(varToExpr(target), varToExpr(src));
@@ -599,7 +599,7 @@ public class TurbineGenerator implements CompilerBackend
   
   @Override
   public void dereferenceFile(Var target, Var src) {
-    assert(target.type().equals(Types.F_FILE));
+    assert(Types.isFile(target.type()));
     assert(src.type().equals(Types.REF_FILE));
     incrementReaders(src);
     Command deref = Turbine.dereferenceFile(varToExpr(target),
@@ -873,7 +873,7 @@ public class TurbineGenerator implements CompilerBackend
   public void arrayLookupFuture(Var oVar, Var arrayVar, Var indexVar,
         boolean isArrayRef) {
     arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
-    assert(indexVar.type().equals(Types.F_INT));
+    assert(Types.isInt(indexVar.type()));
     assert(Types.isRef(oVar.type()));
     incrementReaders(arrayVar, indexVar);
     // Nested arrays - oVar should be a reference type

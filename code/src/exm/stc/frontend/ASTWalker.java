@@ -55,11 +55,13 @@ import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayInfo;
+import exm.stc.common.lang.Types.ArrayType;
 import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
+import exm.stc.common.lang.Types.SubType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
@@ -154,8 +156,13 @@ public class ASTWalker {
           defineAppFunction(context, topLevelDefn);
           break;
 
+        case ExMParser.DEFINE_NEW_STRUCT_TYPE:
+          defineNewStructType(context, topLevelDefn);
+          break;
+          
         case ExMParser.DEFINE_NEW_TYPE:
-          defineNewType(context, topLevelDefn);
+        case ExMParser.TYPEDEF:
+          defineNewType(context, topLevelDefn, type == ExMParser.TYPEDEF);
           break;
           
         case ExMParser.GLOBAL_CONST:
@@ -1061,7 +1068,7 @@ public class ASTWalker {
         backend.initUpdateable(var, Arg.createFloatLit(initVal));
       } else {
         throw new STCRuntimeError("Non-float updateables not yet" +
-                " implemented");
+                " implemented for type " + var.type());
       }
     } else {
       throw new STCRuntimeError("updateable variable " +
@@ -2357,9 +2364,40 @@ public class ASTWalker {
   }
 
 
-  private void defineNewType(Context context, SwiftAST defnTree)
+  private void defineNewType(Context context, SwiftAST defnTree,
+                             boolean aliasOnly)
+                                    throws DoubleDefineException {
+    assert (defnTree.getType() == ExMParser.DEFINE_NEW_TYPE ||
+            defnTree.getType() == ExMParser.TYPEDEF );
+    int children = defnTree.getChildCount();
+    assert(children >= 2);
+    String typeName = defnTree.child(0).getText();
+    String baseTypeName = defnTree.child(1).getText();
+    int arrayMarkers = 0;
+    for (SwiftAST arrayT: defnTree.children(2)) {
+      assert(arrayT.getType() == ExMParser.ARRAY);
+      arrayMarkers++;
+    }
+    
+    Type baseType = context.lookupType(baseTypeName);
+    for (int i = 0; i < arrayMarkers; i++) {
+      baseType = new ArrayType(baseType);
+    }
+    
+    Type newType;
+    if (aliasOnly) {
+      newType = baseType;
+    } else {
+      newType = new SubType(baseType, typeName);
+    }
+    
+    context.defineType(typeName, newType);
+  }
+
+
+  private void defineNewStructType(Context context, SwiftAST defnTree)
       throws DoubleDefineException, UndefinedTypeException {
-    assert (defnTree.getType() == ExMParser.DEFINE_NEW_TYPE);
+    assert (defnTree.getType() == ExMParser.DEFINE_NEW_STRUCT_TYPE);
     int children = defnTree.getChildCount();
     if (children < 1) {
       throw new STCRuntimeError("expected DEFINE_NEW_TYPE to have at "

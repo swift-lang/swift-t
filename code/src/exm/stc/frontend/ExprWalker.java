@@ -223,26 +223,26 @@ public class ExprWalker {
   public void copyByValue(Context context, Var src, Var dst,
       Type type) throws UserException {
     if (Types.isScalarFuture(type)) {
-      if (type.equals(Types.F_INT)) {
+      if (Types.isInt(type)) {
         backend.asyncOp(BuiltinOpcode.COPY_INT, dst, 
             Arrays.asList(Arg.createVar(src)), null);
-      } else if (type.equals(Types.F_STRING)) {
+      } else if (Types.isString(type)) {
         backend.asyncOp(BuiltinOpcode.COPY_STRING, dst, 
             Arrays.asList(Arg.createVar(src)), null);
-      } else if (type.equals(Types.F_FLOAT)) {
+      } else if (Types.isFloat(type)) {
         backend.asyncOp(BuiltinOpcode.COPY_FLOAT, dst, 
             Arrays.asList(Arg.createVar(src)), null);
-      } else if (type.equals(Types.F_BOOL)) {
+      } else if (Types.isBool(type)) {
         backend.asyncOp(BuiltinOpcode.COPY_BOOL, dst, 
             Arrays.asList(Arg.createVar(src)), null);
-      } else if (type.equals(Types.F_BLOB)) {
+      } else if (Types.isBlob(type)) {
         backend.asyncOp(BuiltinOpcode.COPY_BLOB, dst, 
             Arrays.asList(Arg.createVar(src)), null);
-      } else if (type.equals(Types.F_VOID)) {
+      } else if (Types.isVoid(type)) {
         // Sort of silly, but might be needed
         backend.asyncOp(BuiltinOpcode.COPY_VOID, dst, 
             Arrays.asList(Arg.createVar(src)), null);
-      } else if (type.equals(Types.F_FILE)) {
+      } else if (Types.isFile(type)) {
         backend.asyncOp(BuiltinOpcode.COPY_FILE, dst, 
                 Arrays.asList(Arg.createVar(src)), null);
       } else {
@@ -424,8 +424,7 @@ public class ExprWalker {
       List<Var> oList, Map<String, String> renames) throws UserException {
     FunctionCall f = FunctionCall.fromAST(context, tree, true);
     FunctionType concrete = TypeChecker.concretiseFunctionCall(context,
-                                f.function(), f.type(), f.args(), oList, false); 
-    
+                                f.function(), f.type(), f.args(), oList, false);
     try {
       // If this is an assert statement, disable it
       if (Builtins.isAssertVariant(f.function()) &&
@@ -747,7 +746,7 @@ public class ExprWalker {
       Var input = iList.get(i);
       Type inputType = input.type();
       Type expType = concrete.getInputs().get(i);
-      if (inputType.equals(expType)) {
+      if (inputType.getImplType().equals(expType)) {
         realIList.add(input);
       } else if (Types.isRefTo(inputType, expType)) {
         if (waitContext == null) {

@@ -157,7 +157,7 @@ public class Types {
               "non-type object");
       }
       Type otherT = (Type) other;
-      if (!otherT.structureType().equals(StructureType.REFERENCE)) {
+      if (!(otherT instanceof RefType)) {
         return false;
       } else {
         return otherT.memberType().equals(referencedType);
@@ -363,10 +363,10 @@ public class Types {
             + "non-type object");
       }
       Type otherT = (Type) other;
-      if (otherT.structureType() != StructureType.SCALAR_VALUE) {
-        return false;
-      } else {
+      if (otherT instanceof ScalarValueType) {
         return otherT.primType().equals(this.type);
+      } else {
+        return false;
       }
     }
 
@@ -434,7 +434,7 @@ public class Types {
             + "object");
       }
       Type otherT = (Type) other;
-      if (otherT.structureType() == StructureType.SCALAR_FUTURE) {
+      if (otherT instanceof ScalarFutureType) {
         return otherT.primType() == this.type;
       } else {
         return false;
@@ -503,10 +503,10 @@ public class Types {
             "with non-type object");
       }
       Type otherT = (Type) other;
-      if (otherT.structureType() != StructureType.SCALAR_UPDATEABLE) {
-        return false;
-      } else {
+      if (otherT instanceof ScalarUpdateableType) {
         return otherT.primType().equals(this.type);
+      } else {
+        return false;
       }
     }
 
@@ -909,6 +909,13 @@ public class Types {
      */
     public abstract boolean hasTypeVar();
 
+    /**
+     * @return the base type which is used to implement this type
+     */
+    public Type getImplType() {
+      return this;
+    }
+    
     public String typeVarName() {
       throw new STCRuntimeError("typeVarName() not supported for type "
                               + toString());
@@ -1091,6 +1098,75 @@ public class Types {
       return types.toString();
     }
   }
+  
+  public static class SubType extends Type {
+    private final Type baseType;
+    private final String name;
+    
+    public SubType(Type baseType, String name) {
+      super();
+      this.baseType = baseType;
+      this.name = name;
+    }
+    
+    public StructureType structureType() {
+      return baseType.structureType();
+    }
+    public PrimType primType() {
+      return baseType.primType();
+    }
+    public Type memberType() {
+      return baseType.memberType();
+    }
+    public boolean assignableTo(Type other) {
+      // Is assignable to anything baseType is 
+      // assignable to, plus any instance of this
+      return baseType.assignableTo(other) ||
+              this.equals(other);
+    }
+    public Type bindTypeVars(Map<String, Type> vals) {
+      return new SubType(baseType.bindTypeVars(vals), name);
+    }
+    public Map<String, Type> matchTypeVars(Type concrete) {
+      return baseType.matchTypeVars(concrete);
+    }
+    public boolean hasTypeVar() {
+      return baseType.hasTypeVar();
+    }
+
+    @Override
+    public String toString() {
+      return typeName();
+    }
+
+    @Override
+    public String typeName() {
+      return name;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof SubType)) {
+        return false;
+      }
+      SubType ot = (SubType)o;
+      return ot.name.equals(name) &&
+              baseType.equals(ot.baseType);
+    }
+    
+    @Override
+    public Type getImplType() {
+      // This has same implementation as base type
+      return baseType.getImplType();
+    }
+
+    @Override
+    public int hashCode() {
+      return baseType.hashCode() ^ name.hashCode();
+    }
+    
+  }
+  
   public static Map<String, Type> getBuiltInTypes() {
     return Collections.unmodifiableMap(nativeTypes);
   }

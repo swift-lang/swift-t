@@ -32,6 +32,7 @@ tokens {
     DEFINE_FUNCTION;
     DEFINE_BUILTIN_FUNCTION;
     DEFINE_APP_FUNCTION;
+    DEFINE_NEW_STRUCT_TYPE;
     DEFINE_NEW_TYPE;
     STRUCT_FIELD_DEF;
     VARIABLE;
@@ -166,8 +167,12 @@ function_definition:
     ;
 
 new_type_definition:
-    TYPE tname=ID LBRACE type_field* RBRACE ->
-        ^( DEFINE_NEW_TYPE $tname type_field*)
+        TYPE tname=ID LBRACE type_field* RBRACE ->
+            ^( DEFINE_NEW_STRUCT_TYPE $tname type_field*)
+    |   TYPE tname=ID baset=ID array_marker* SEMICOLON ->
+            ^( DEFINE_NEW_TYPE $tname $baset array_marker* )
+    |   TYPEDEF tname=ID baset=ID array_marker* SEMICOLON ->
+            ^( TYPEDEF $tname $baset array_marker* )
     ;
 
 type_field:
@@ -703,6 +708,7 @@ FALSE: 'false';
 GLOBAL: 'global';
 CONST: 'const';
 TYPE:  'type';
+TYPEDEF:  'typedef';
 PRIORITY: 'prio';
 
 STDIN: 'stdin';

@@ -248,7 +248,20 @@ string hw = s + "world";
 ----
 
 === Files
-TODO:
+A file is a first-class entity in Swift that in many ways can be treated
+as any other variable.  The main difference is that a file can be
+*mapped* to path in a filesystem.  Assigning to a mapped file variable
+results in a file being created in the file system at the specified path.
+File variables can also be initialized with data from a pre-existing
+file using the +input_file+ function.
+
+For example, if +/home/user/in.txt+ is a file with some data in it,
+the following Swift code will copy the file to +/home/user/out.txt+.
+----
+file x = input_file("/home/user/in.txt");
+file y <"/home/user/out.txt">; // Declare a mapped file
+y = x; // Do the copy
+----
 
 * Basic file type
 * Assigning existing file
