@@ -1783,6 +1783,10 @@ public class ICContinuations {
         return block;
       }
     }
+    
+    public void inlineInto(Block dstBlock) {
+      inlineInto(dstBlock, this.block);
+    }
 
     /**
      * @param wv

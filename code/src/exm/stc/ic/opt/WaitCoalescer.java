@@ -14,7 +14,9 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Settings;
 import exm.stc.common.CompilerBackend.WaitMode;
+import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.TaskMode;
@@ -177,6 +179,9 @@ public class WaitCoalescer {
     }
     
     boolean pushedDown = pushDownWaits(logger, fn, block, currContext);
+    
+
+    tryCompileTimePipeline(block, currContext);
     
     // Recurse on child blocks
     boolean recChanged = rearrangeWaitsRec(logger, fn, block, currContext);
@@ -777,6 +782,36 @@ public class WaitCoalescer {
           }
         }
       }
+    }
+  }
+
+  /**
+   * Try compile time pipelining
+   * 
+   * TODO: doesn't safeguard against parallelism reduction
+   * TODO: could generalize more
+   * @param block
+   * @param currContext
+   * @throws InvalidOptionException
+   */
+  private static void tryCompileTimePipeline(Block block,
+          PushDownContext currContext) {
+    try {
+      if (Settings.getBoolean(Settings.OPT_PIPELINE)) {
+        if (currContext == PushDownContext.LEAF) {
+          if (block.getContinuations().size() == 1) {
+            Continuation c = block.getContinuation(0);
+            if (c.getType() == ContinuationType.WAIT_STATEMENT) {
+              WaitStatement w = (WaitStatement)c;
+              if (w.getTarget() == TaskMode.LEAF && w.getWaitVars().isEmpty()) {
+                w.inlineInto(block);
+              }
+            }
+          }
+        }
+      }
+    } catch (InvalidOptionException e) {
+      throw new STCRuntimeError(e.getMessage());
     }
   }
 }

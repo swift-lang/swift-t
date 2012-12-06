@@ -30,6 +30,7 @@ public class Settings
   public static final String OPT_FORWARD_DATAFLOW =
                       "stc.opt.forward-dataflow-analysis";
   public static final String OPT_WAIT_COALESCE = "stc.opt.wait-coalesce";
+  public static final String OPT_PIPELINE = "stc.opt.pipeline";
   public static final String OPT_CONTROLFLOW_FUSION =
                                             "stc.opt.controlflow-fusion";
   public static final String OPT_DISABLE_ASSERTS = "stc.opt.disable-asserts";
@@ -74,6 +75,7 @@ public class Settings
     defaults.setProperty(OPT_DISABLE_ASSERTS, "false");
     defaults.setProperty(OPT_FORWARD_DATAFLOW, "true");
     defaults.setProperty(OPT_WAIT_COALESCE, "true");
+    defaults.setProperty(OPT_PIPELINE, "false");
     defaults.setProperty(OPT_CONTROLFLOW_FUSION, "true");
     defaults.setProperty(OPT_HOIST, "true");
     defaults.setProperty(OPT_NUM_PASSES, "5");
@@ -131,6 +133,7 @@ public class Settings
     getBoolean(OPT_DISABLE_ASSERTS);
     getBoolean(OPT_FORWARD_DATAFLOW);
     getBoolean(OPT_WAIT_COALESCE);
+    getBoolean(OPT_PIPELINE);
     getBoolean(OPT_CONTROLFLOW_FUSION);
     getBoolean(OPT_UNROLL_LOOPS);
     getBoolean(TURBINE_NO_STACK);

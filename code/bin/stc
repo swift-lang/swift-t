@@ -30,7 +30,7 @@ O1_OPTS=("constant-fold" "branch-predict" "dead-code-elim"
                      "controlflow-fusion" )
 O2_OPTS=("wait-coalesce" "hoisting")
 O3_OPTS=()
-EXPERIMENTAL_OPTS=()
+EXPERIMENTAL_OPTS=("pipeline")
 
 # OUTPUT_MODE= turbine or cpp
 OUTPUT_MODE=turbine
@@ -63,6 +63,9 @@ function get_compiler_opt_name() {
                     return 0
                     ;;
         wait-coalesce) echo "stc.opt.wait-coalesce"
+                    return 0
+                    ;;
+        pipeline) echo "stc.opt.pipeline"
                     return 0
                     ;;
         controlflow-fusion) echo "stc.opt.controlflow-fusion"
