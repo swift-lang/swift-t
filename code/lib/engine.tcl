@@ -114,6 +114,9 @@ namespace eval turbine {
                 set id [ lindex $msg 1 ]
                 turbine::c::close $id
             }
+            rule {
+                turbine::c::rule {*}[ lrange $msg 1 end ]
+            }
             default {
                 error "unknown control message: $msg"
             }

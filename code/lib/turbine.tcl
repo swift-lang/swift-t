@@ -231,4 +231,23 @@ namespace eval turbine {
     proc adlb_servers_future { stack output inputs } {
         store_integer $output [ adlb_servers ]
     }
+
+    # Same as rule, but can be run on worker
+    proc send_rule { name inputs action_type action } {
+        variable mode
+        global WORK_TYPE
+
+        if { $mode == {ENGINE} } {
+            rule $name $inputs $action_type $action
+        } else {
+            if { [ llength $inputs ] == 0 } {
+                release -1 $action_type $action 
+            } else {
+                # Send to engine that can process it
+                adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
+                    [ list rule $name $inputs $action_type $action ] \
+                    $turbine::priority
+            }
+        }
+    }
 }
