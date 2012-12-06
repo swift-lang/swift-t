@@ -256,17 +256,38 @@ File variables can also be initialized with data from a pre-existing
 file using the +input_file+ function.
 
 For example, if +/home/user/in.txt+ is a file with some data in it,
-the following Swift code will copy the file to +/home/user/out.txt+.
+the following Swift program will copy the file to +/home/user/out.txt+.
 ----
-file x = input_file("/home/user/in.txt");
-file y <"/home/user/out.txt">; // Declare a mapped file
-y = x; // Do the copy
+main
+{
+  file x = input_file("/home/user/in.txt");
+  file y <"/home/user/out.txt">; // Declare a mapped file
+  y = x; // Do the copy
+}
 ----
 
-* Basic file type
-* Assigning existing file
-* Mapping (output mapping)
-* Basic functions
+
+A range of functions to work with files are provided in the
++files+ library module.
+
+----
+// Initialize an array of files from a range of files on disk with glob
+file f[] = glob("directory/*.txt");
+
+// Read the contents of a file with readFile
+string filename = "in.txt";
+string contents = readFile(input_file(filename));
+trace("Contents of " + filename + ":\n" + contents);
+
+// Write directly to a file with writeFile
+file tmp = writeFile("first line\nsecond line");
+
+// Find the name of a file with filename
+trace("Temporary filename is: " + filename(tmp));
+----
+
+Temporary files are created as necessary if unmapped files are
+written to.  For example, the file +tmp+ in the above code snippet.
 
 === Blobs
 TODO
@@ -687,10 +708,43 @@ so this provides an indirect way to call C/C++ functions from Swift.
 
 Several components are required to implement a Tcl extension:
 
--  A Tcl function that supports Swift/T argument passing conventions
+-  Tcl bindings to your function.
+-  For complex types such as structures, arrays and files, you may need
+   additional logic to marshal inputs and outputs to/from the global
+   data store.
 -  The requisite files required to build a Tcl package (e.g pkgIndex.tcl)
 -  Swift declarations for the function that specify the type of the function
-    and the package/function name of the Tcl function
+    and the Tcl implementation.
+
+==== Simple Tcl Function Example
+In this first example we will implement a trivial Tcl extension function
+that doubles an integer.  Here is the Tcl code that will go in
++myextension.tcl+:
+
+----
+namespace eval myextension {
+  proc double { x } {
+    return [ expr $x * 2 ]
+  } 
+}
+----
+
+Here is the Swift function definition that will go in +myextension.swift+:
+----
+@pure
+(int o) double (int i) "myextension" "0.0.1" [
+  "set <<o>> [ myextension::double <<i>> ]"
+];
+----
+
+We tell the compiler how to call our Tcl function using inline Tcl code
+
+
+We also told the Swift compiler a little about the function so
+that it can better optimize your programs.
+For example, it has no side-effects and produces the same result each
+time for the same arguments (i.e. is deterministic), so we can flag
+it as a +@pure+ function.
 
 === App functions
 
