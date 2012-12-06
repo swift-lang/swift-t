@@ -537,7 +537,7 @@ namespace eval turbine {
     # is_file: list of booleans: whether file
     # target: where to send work
     # cmd: command to execute when closed
-    proc deeprule { rule_prefix inputs nest_levels is_file target cmd } {
+    proc deeprule { rule_prefix inputs nest_levels is_file action_type action } {
       # signals: list of variables that must be closed to signal deep closing
       # allocated_signals: signal variables that were allocated
       set signals [ list ]
@@ -568,8 +568,8 @@ namespace eval turbine {
       }
 
       # Once all signals closed, run finalizer
-      rule "${rule_prefix}-final" $signals $target \
-            [ list deeprule_finish $allocated_signals $cmd ]
+      rule "${rule_prefix}-final" $signals $action_type \
+            [ list deeprule_finish $allocated_signals $action ]
     }
 
     # Check for container contents being closed and once true,
@@ -656,5 +656,21 @@ namespace eval turbine {
         read_refcount_decr $signal
       }
       eval $cmd
+    }
+
+    proc send_deeprule { rule_prefix inputs nest_levels is_file 
+                         action_type action } {
+        variable mode
+        global WORK_TYPE
+        if { $mode == {ENGINE} } {
+            deeprule $rule_prefix $inputs $nest_levels $is_file \
+                     $action_type $action 
+        } else if { [ llength $inputs ] == 0 } {
+            release -1 $action_type $action
+        } else {
+            adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
+                    [ list deeprule $rule_prefix $inputs $nest_levels \
+                                    $is_file $action_type $action ]
+        }
     }
 }
