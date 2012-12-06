@@ -746,7 +746,7 @@ public class ExprWalker {
       Var input = iList.get(i);
       Type inputType = input.type();
       Type expType = concrete.getInputs().get(i);
-      if (inputType.getImplType().equals(expType)) {
+      if (inputType.getImplType().equals(expType.getImplType())) {
         realIList.add(input);
       } else if (Types.isRefTo(inputType, expType)) {
         if (waitContext == null) {
@@ -761,7 +761,7 @@ public class ExprWalker {
         realIList.add(snapshotUpdateable(context, input));
       } else {
         throw new STCRuntimeError(context.getFileLine() + 
-                " Shouldn't be here, don't know how to "
+                " Shouldn't be here, don't know how to"
             + " convert " + inputType.toString() + " to " + expType.toString());
       }
     }

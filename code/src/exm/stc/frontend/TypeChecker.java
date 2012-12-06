@@ -491,7 +491,7 @@ public class TypeChecker {
    */
   public static boolean compatibleArgTypes(Type argType,
       Type exprType) {
-    if (argType.assignableTo(exprType)) {
+    if (exprType.assignableTo(argType)) {
       // Obviously ok if types are exactly the same
       return true;
     } else if (Types.isRefTo(exprType, argType)) {
