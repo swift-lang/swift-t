@@ -3,7 +3,7 @@
 
 // Test the auto-wrapping functionality
 @pure 
-(void o1, int o2) void_fn(void v) [ 
+(void o1, int o2) void_fn(void v) "turbine" "0.0.1" [ 
     "set <<o2>> 1 "
 ];
 

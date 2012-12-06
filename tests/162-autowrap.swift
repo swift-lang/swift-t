@@ -6,7 +6,7 @@
 
 // blob input
 @pure 
-(int o) blob_size2(blob i) [ 
+(int o) blob_size2(blob i) "turbine" "0.0.1" [ 
     "set <<o>> [ lindex <<i>> 1 ]"
 ];
 

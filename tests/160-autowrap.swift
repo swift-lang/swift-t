@@ -3,7 +3,7 @@
 
 // Test the auto-wrapping functionality
 @pure @minmax 
-(int o) max_test (int i1, int i2) [ 
+(int o) max_test (int i1, int i2) "turbine" "0.0.1" [ 
     "set <<o>> [ expr max(<<i1>>, <<i2>>) ] "
 ];
 
