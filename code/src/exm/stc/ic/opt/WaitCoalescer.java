@@ -626,6 +626,14 @@ public class WaitCoalescer {
               canRelocate = false;
             }
           }
+          
+          if (currContext == PushDownContext.LEAF) {
+            if (inst.getMode() != TaskMode.SYNC) {
+              // Can't push down async tasks to leaf yet
+              canRelocate = false;
+            }
+          }
+          
           if (canRelocate) {
             currBlockInstructions.add(inst);
             movedI.add(ic.instruction());

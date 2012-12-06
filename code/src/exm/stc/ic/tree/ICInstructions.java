@@ -204,6 +204,13 @@ public class ICInstructions {
      */
     public abstract List<Var> getBlockingInputs();
     
+    /**
+     * Some instructions will spawn off asynchronous tasks
+     * @return SYNC if nothing spawned, otherwise the variety of task spawned
+     */
+    public abstract TaskMode getMode();
+
+
     public static interface CVMap {
       public Arg getLocation(ComputedValue val);
     }
@@ -296,6 +303,12 @@ public class ICInstructions {
     @Override
     public Instruction clone() {
       return new Comment(this.text);
+    }
+
+    @Override
+    public TaskMode getMode() {
+      // TODO: doesn't really make sense
+      return TaskMode.SYNC;
     }
   }
   
@@ -1387,6 +1400,71 @@ public class ICInstructions {
       return blocksOn;
     }
 
+
+    @Override
+    public TaskMode getMode() {
+      switch (op) {
+      case STORE_INT:
+      case STORE_BOOL:
+      case STORE_VOID:
+      case STORE_FLOAT:
+      case STORE_STRING:
+      case STORE_BLOB:
+      case LOAD_INT:
+      case LOAD_BOOL:
+      case LOAD_VOID:
+      case LOAD_FLOAT:
+      case LOAD_STRING:
+      case LOAD_BLOB:
+      case UPDATE_INCR:
+      case UPDATE_MIN:
+      case UPDATE_SCALE:
+      case UPDATE_INCR_IMM:
+      case UPDATE_MIN_IMM:
+      case UPDATE_SCALE_IMM:
+      case INIT_UPDATEABLE_FLOAT:
+      case LATEST_VALUE:
+      case ARRAY_INSERT_IMM:
+      case STRUCT_CLOSE:
+      case STRUCT_INSERT:
+      case STRUCT_LOOKUP:
+      case ARRAY_DECR_WRITERS:
+      case DECR_REF:
+      case ARRAY_CREATE_NESTED_IMM:
+      case ADDRESS_OF:
+      case LOAD_REF:
+      case DECR_BLOB_REF:
+      case FREE_BLOB:
+      case GET_FILENAME:
+      case GET_OUTPUT_FILENAME:
+      case ARRAY_LOOKUP_IMM:
+      case COPY_REF:
+        return TaskMode.SYNC;
+      
+      case ARRAY_INSERT_FUTURE:
+      case ARRAYREF_INSERT_FUTURE:
+      case ARRAYREF_INSERT_IMM:
+      case ARRAYREF_LOOKUP_FUTURE:
+      case ARRAYREF_LOOKUP_IMM:
+      case ARRAY_LOOKUP_REF_IMM:
+      case DEREF_INT:
+      case DEREF_BOOL:
+      case DEREF_FLOAT:
+      case DEREF_STRING:
+      case DEREF_BLOB:
+      case DEREF_FILE:
+      case STRUCTREF_LOOKUP:
+      case ARRAY_LOOKUP_FUTURE:
+      case ARRAY_REF_CREATE_NESTED_FUTURE:
+      case ARRAY_CREATE_NESTED_FUTURE:
+      case ARRAY_REF_CREATE_NESTED_IMM:
+        return TaskMode.CONTROL;
+      default:
+        throw new STCRuntimeError("Need to add opcode " + op.toString()
+            + " to getMode");
+      }
+    }
+    
     @Override
     public List<ComputedValue> getComputedValues(CVMap existing) {
       Arg arr = null;
@@ -1926,6 +2004,25 @@ public class ICInstructions {
       }
       return blocksOn;
     }
+    
+    @Override
+    public TaskMode getMode() {
+      if (op == Opcode.CALL_SYNC) {
+        return TaskMode.SYNC;
+      } else if (op == Opcode.CALL_LOCAL) {
+        return TaskMode.LOCAL;
+      } else if (op == Opcode.CALL_BUILTIN) {
+        TaskMode m = Builtins.getTaskMode(functionName);
+        if (m == null) {
+          return TaskMode.LOCAL;
+        } else {
+          return m;
+        }
+      } else {
+        assert(op == Opcode.CALL_CONTROL);
+        return TaskMode.CONTROL;
+      }
+    }
 
     @Override
     public Instruction clone() {
@@ -2025,6 +2122,11 @@ public class ICInstructions {
     public List<Var> getBlockingInputs() {
       // doesn't take futures as args
       return null;
+    }
+
+    @Override
+    public TaskMode getMode() {
+      return TaskMode.SYNC;
     }
     
     @Override
@@ -2138,6 +2240,11 @@ public class ICInstructions {
     public List<Var> getBlockingInputs() {
       // This instruction runs immediately: we won't block on any inputs
       return null;
+    }
+
+    @Override
+    public TaskMode getMode() {
+      return TaskMode.SYNC;
     }
 
     @Override
@@ -2295,6 +2402,12 @@ public class ICInstructions {
     public List<Var> getBlockingInputs() {
       return null;
     }
+    
+
+    @Override
+    public TaskMode getMode() {
+      return TaskMode.CONTROL;
+    }
 
     public void addUsedVar(Var variable) {
       this.loopUsedVars.add(variable);
@@ -2430,6 +2543,11 @@ public class ICInstructions {
       return null;
     }
 
+    @Override
+    public TaskMode getMode() {
+      return TaskMode.SYNC;
+    }
+    
     @Override
     public List<ComputedValue> getComputedValues(CVMap existing) {
       // nothing
@@ -2845,7 +2963,15 @@ public class ICInstructions {
         return result;
       }
     }
-
+    @Override
+    public TaskMode getMode() {
+      if (op == Opcode.ASYNC_OP) {
+        return TaskMode.CONTROL;
+      } else {
+        return TaskMode.SYNC;
+      }
+    }
+    
     @Override
     public List<ComputedValue> getComputedValues(CVMap existing) {
       if (this.hasSideEffects()) {
