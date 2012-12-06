@@ -12,6 +12,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
@@ -203,11 +204,14 @@ public class ForeachLoop {
   public Type findArrayType(Context context)
       throws UserException {
     Type arrayType = TypeChecker.findSingleExprType(context, arrayVarTree);
-    if (!Types.isArray(arrayType) && !Types.isArrayRef(arrayType)) {
-      throw new TypeMismatchException(context,
-          "Expected array type in expression for foreach loop");
+    for (Type alt: UnionType.getAlternatives(arrayType)) {
+      if (Types.isArray(alt) || Types.isArrayRef(alt)) {
+        return alt;
+      }
     }
-    return arrayType;
+    throw new TypeMismatchException(context,
+        "Expected array type in expression for foreach loop " +
+                " but got type: " + arrayType.typeName());
   }
 
   /**
