@@ -765,7 +765,34 @@ function as a leaf function, for example:
 ];
 ----
 
+==== Swift/Tcl Data Type Mapping
+If you are defining Tcl functions in the way above with inline
+Tcl code, Swift types are mapped to Tcl types in the following way:
+
+* int/float/string/bool are converted to the standard
+  Tcl representations
+* blobs are represented as a Tcl list with first element a pointer
+  to the data, and the second element the length of the data
+
+==== Writing Custom Tcl interfaces
+For Tcl functions that take complex argument types, such as arrays
+or structures, you currently need to write a Tcl wrapper function
+that is directly passed references to data in Swift's global data store.
+In this case your function must manually retrieve/store data from/to the
+global distributed data store.
+
+----
+(int o) complex (int arr[]) "pkg" "0.0.1" "complex";
+----
+
+* TODO: guide to do this.  Can look in turbine/lib for examples
+
+
 === App functions
+App functions are functions that are implemented as command-line
+programs.  These command-line programs can be brought into a Swift
+program as functions with typed inputs and outputs.
+
 * TODO: intro
 
 Join files together:
