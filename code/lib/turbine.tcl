@@ -239,7 +239,7 @@ namespace eval turbine {
 
         if { $mode == {ENGINE} } {
             rule $name $inputs $action_type $action $turbine::priority
-        } else if { [ llength $inputs ] == 0 } {
+        } elseif { [ llength $inputs ] == 0 } {
             release -1 $action_type $action 
         } else {
             # Send to engine that can process it

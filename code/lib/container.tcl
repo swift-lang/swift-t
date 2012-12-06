@@ -665,7 +665,7 @@ namespace eval turbine {
         if { $mode == {ENGINE} } {
             deeprule $rule_prefix $inputs $nest_levels $is_file \
                      $action_type $action 
-        } else if { [ llength $inputs ] == 0 } {
+        } elseif { [ llength $inputs ] == 0 } {
             release -1 $action_type $action
         } else {
             adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
