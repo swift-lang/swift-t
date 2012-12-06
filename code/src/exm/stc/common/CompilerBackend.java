@@ -219,7 +219,7 @@ public interface CompilerBackend {
                 FunctionType type, TclFunRef impl) throws UserException;
 
   public abstract void startFunction(String functionName,
-      List<Var> oList, List<Var> iList, TaskMode mode)
+      List<Var> oList, List<Var> iList)
             throws UserException;
 
   public abstract void endFunction();

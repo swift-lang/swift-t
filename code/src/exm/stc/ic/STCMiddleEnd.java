@@ -135,10 +135,10 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void startFunction(String functionName, List<Var> oList,
-      List<Var> iList, TaskMode mode) throws UserException {
+      List<Var> iList) throws UserException {
     assert(blockStack.size() == 0);
     assert(currFunction == null);
-    currFunction = new Function(functionName, iList, oList, mode);
+    currFunction = new Function(functionName, iList, oList);
     program.addFunction(currFunction);
     blockStack.add(currFunction.getMainblock());
   }

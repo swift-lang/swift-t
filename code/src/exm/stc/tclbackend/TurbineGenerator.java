@@ -111,11 +111,19 @@ public class TurbineGenerator implements CompilerBackend
      Stack for previous values of point
    */
   Deque<Sequence> pointStack = new ArrayDeque<Sequence>();
-
+  
   /**
    * Stack for name of loop functions
    */
   Deque<String> loopNameStack = new ArrayDeque<String>();
+  
+  private static enum ExecContext {
+    CONTROL, LEAF
+  }
+  /**
+   * Stack for what context we're in. 
+   */
+  Deque<ExecContext> execContextStack = new ArrayDeque<ExecContext>();
 
   String turbineVersion = Settings.get(Settings.TURBINE_VERSION);
 
@@ -138,6 +146,8 @@ public class TurbineGenerator implements CompilerBackend
     this.logger = logger;
     this.timestamp = timestamp;
     pointStack.push(tree);
+    
+    execContextStack.push(ExecContext.CONTROL);
 
     if (Settings.get("DEBUGGER") == "COMMENTS")
       debuggerComments = true;
@@ -1152,8 +1162,7 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void startFunction(String functionName,
                                      List<Var> oList,
-                                     List<Var> iList,
-                                     TaskMode mode)
+                                     List<Var> iList)
   throws UserException
   {
     List<String> outputs = prefixVars(Var.nameList(oList));
@@ -1382,6 +1391,8 @@ public class TurbineGenerator implements CompilerBackend
       incrementAllRefs(usedVariables, keepOpenVars);
 
       TclList action = buildAction(uniqueName, toPassIn);
+
+      boolean local = execContextStack.peek() == ExecContext.CONTROL;
       
       if (useDeepWait) {
         // Nesting depth of arrays (0 == not array)
@@ -1400,18 +1411,32 @@ public class TurbineGenerator implements CompilerBackend
           }
           isFile[i] = Types.isFile(baseType);
         }
-        pointStack.peek().add(
-              Turbine.deepRule(uniqueName, waitFor, depths, isFile, action, mode));
+        pointStack.peek().add(Turbine.deepRule(uniqueName, waitFor, depths,
+                                             isFile, action, mode, local));
       } else {
+        // Whether we can enqueue rules locally
         pointStack.peek().add(
-              Turbine.rule(uniqueName, waitFor, action, mode));
+              Turbine.rule(uniqueName, waitFor, action, mode, local));
       }
       pointStack.push(constructProc);
+      
+      
+      ExecContext newExecContext;
+      if (mode == TaskMode.LEAF) {
+        newExecContext = ExecContext.LEAF;
+      } else if (mode == TaskMode.CONTROL) {
+        newExecContext = ExecContext.CONTROL;
+      } else {
+        // Executes on same node
+        newExecContext = execContextStack.peek();
+      }
+      execContextStack.push(newExecContext);
     }
 
     private void endAsync(List<Var> usedVars, List<Var> keepOpenVars) {
       // decrement read or write refs as needed
       decrementAllRefs(usedVars, keepOpenVars);
+      execContextStack.pop();
       pointStack.pop();
     }
 
@@ -1906,7 +1931,7 @@ public class TurbineGenerator implements CompilerBackend
     outerRecCall.add(incVal);
 
     splitBody.add(Turbine.rule(outerProcName, new ArrayList<Value>(0),
-                    new TclList(outerRecCall), TaskMode.CONTROL));
+                    new TclList(outerRecCall), TaskMode.CONTROL, true));
 
     pointStack.push(inner);
   }

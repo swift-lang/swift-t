@@ -149,7 +149,8 @@ import exm.stc.ic.tree.ICTree.Program;
 public class WaitCoalescer {
   public static void rearrangeWaits(Logger logger, Program prog) {
     for (Function f: prog.getFunctions()) {
-      boolean changed = rearrangeWaits(logger, f, f.getMainblock());
+      boolean changed = rearrangeWaits(logger, f, f.getMainblock(),
+                                       PushDownContext.CONTROL);
       if (changed) {
         // This pass can mess up variable passing
         FixupVariables.fixupVariablePassing(logger, prog, f);
@@ -157,7 +158,8 @@ public class WaitCoalescer {
     }
   }
 
-  public static boolean rearrangeWaits(Logger logger, Function fn, Block block) {
+  public static boolean rearrangeWaits(Logger logger, Function fn, Block block,
+                                       PushDownContext currContext) {
     StringBuilder sb = new StringBuilder();
     boolean exploded = explodeFuncCalls(logger, fn, block);
 
@@ -174,19 +176,20 @@ public class WaitCoalescer {
       logger.trace("After merging " + fn.getName() +":\n" + sb.toString());
     }
     
-    boolean pushedDown = pushDownWaits(logger, fn, block);
+    boolean pushedDown = pushDownWaits(logger, fn, block, currContext);
     
     // Recurse on child blocks
-    boolean recChanged = rearrangeWaitsRec(logger, fn, block);
+    boolean recChanged = rearrangeWaitsRec(logger, fn, block, currContext);
     return exploded || merged || pushedDown || recChanged;
   }
 
   private static boolean rearrangeWaitsRec(Logger logger,
-                  Function fn, Block block) {
+                  Function fn, Block block, PushDownContext currContext) {
     boolean changed = false;
     for (Continuation c: block.getContinuations()) {
+      PushDownContext newContext = findNextContext(c, currContext);
       for (Block childB: c.getBlocks()) {
-        if (rearrangeWaits(logger, fn, childB)) {
+        if (rearrangeWaits(logger, fn, childB, newContext)) {
           changed = true;
         }
       }
@@ -209,9 +212,16 @@ public class WaitCoalescer {
       MakeImmRequest req = i.canMakeImmediate(empty, true);
       if (req != null && req.in.size() > 0) {
         List<Var> waitVars = ICUtil.filterBlockingOnly(req.in);
+        
+        WaitMode waitMode;
+        if (req.mode == TaskMode.SYNC || req.mode == TaskMode.LOCAL) {
+          waitMode = WaitMode.DATA_ONLY;
+        } else {
+          waitMode = WaitMode.TASK_DISPATCH;
+        }
         WaitStatement wait = new WaitStatement(fn.getName() + "-optinserted",
-                waitVars, req.in, new ArrayList<Var>(0), WaitMode.DATA_ONLY,
-                true, TaskMode.LOCAL);
+                waitVars, req.in, new ArrayList<Var>(0), waitMode,
+                true, req.mode);
 
         List<Instruction> instBuffer = new ArrayList<Instruction>();
         
@@ -384,7 +394,8 @@ public class WaitCoalescer {
   }
 
   private static boolean
-          pushDownWaits(Logger logger, Function fn, Block block) {
+          pushDownWaits(Logger logger, Function fn, Block block,
+                                      PushDownContext currContext) {
     MultiMap<String, InstOrCont> waitMap = buildWaiterMap(block);
     if (waitMap.isDefinitelyEmpty()) {
       // If waitMap is empty, can't push anything down, so just
@@ -401,14 +412,15 @@ public class WaitCoalescer {
         // Was moved
         continue;
       }
-      // Can push down into 
-      if (canPushDownInto(c)) {
+      PushDownContext newContext = canPushDownInto(c, currContext); 
+      if (newContext != null) {
         for (Block innerBlock: c.getBlocks()) {
           ArrayDeque<AncestorContinuation> ancestors =
                                         new ArrayDeque<AncestorContinuation>();
           ancestors.push(new AncestorContinuation(c, innerBlock));
           PushDownResult pdRes = 
-               pushDownWaitsRec(logger, fn, block, ancestors, innerBlock, waitMap);
+               pushDownWaitsRec(logger, fn, block, ancestors, innerBlock,
+                                newContext, waitMap);
            changed = changed || pdRes.anyChanges;
           /* The list of continuations might be modified as continuations are
            * pushed down - track which ones are relocated */
@@ -419,9 +431,14 @@ public class WaitCoalescer {
     return changed;
   }
   
+  private static enum PushDownContext {
+    LEAF, CONTROL,
+  }
+  
   private static PushDownResult pushDownWaitsRec(
                 Logger logger,  Function fn,
                 Block top, Deque<AncestorContinuation> ancestors, Block curr,
+                PushDownContext currContext,
                 MultiMap<String, InstOrCont> waitMap) {
     boolean changed = false;
     ArrayList<Continuation> pushedDown = new ArrayList<Continuation>();
@@ -444,7 +461,7 @@ public class WaitCoalescer {
         if (waitMap.containsKey(v.name())) {
           Pair<Boolean, Set<Continuation>> pdRes =
               relocateDependentInstructions(logger, top, ancestors, 
-                                            curr, it, waitMap, v);
+                                        curr, currContext, it,  waitMap, v);
           changed = changed || pdRes.val1;
           pushedDown.addAll(pdRes.val2);
         }
@@ -453,11 +470,12 @@ public class WaitCoalescer {
     
     // Update the stack with child continuations
     for (Continuation c: curr.getContinuations()) {
-      if (canPushDownInto(c)) {
+      PushDownContext newContext = canPushDownInto(c, currContext);
+      if (newContext != null) {
         for (Block innerBlock: c.getBlocks()) {
           ancestors.push(new AncestorContinuation(c, innerBlock));
           PushDownResult pdRes = pushDownWaitsRec(logger, fn, top, ancestors,
-                                             innerBlock, waitMap);
+                                             innerBlock, newContext, waitMap);
           pushedDown.addAll(pdRes.relocated);
           changed = changed || pdRes.anyChanges;
           ancestors.pop();
@@ -467,19 +485,55 @@ public class WaitCoalescer {
     return new PushDownResult(changed, pushedDown);
   }
 
-  private static boolean canPushDownInto(Continuation c) {
+  private static PushDownContext findNextContext(Continuation cont,
+          PushDownContext currContext) {
+    PushDownContext newContext;
+    if (cont.getType() != ContinuationType.WAIT_STATEMENT) {
+      newContext = currContext;
+    } else {
+      WaitStatement w = (WaitStatement)cont;
+      if (w.getTarget() == TaskMode.SYNC || w.getTarget() == TaskMode.LOCAL) {
+        newContext = currContext;
+      } else if (w.getTarget() == TaskMode.CONTROL) {
+        newContext = PushDownContext.CONTROL;
+      } else {
+        assert(w.getTarget() == TaskMode.LEAF);
+        newContext = PushDownContext.LEAF;
+      }
+    }
+    return newContext;
+  }
+
+  /**
+   * 
+   * @param c
+   * @param curr
+   * @return null if can't push down into
+   */
+  private static PushDownContext canPushDownInto(Continuation c,
+                                                 PushDownContext curr) {
     /* Can push down into wait statements unless they are being dispatched
      *  to worker node */
     if (c.getType() == ContinuationType.WAIT_STATEMENT) {
       WaitStatement w = (WaitStatement)c;
-      if (w.getMode() == WaitMode.TASK_DISPATCH &&
-          w.getTarget() == TaskMode.LEAF) {
-        return false;
+      if (w.getMode() == WaitMode.TASK_DISPATCH) {
+        if (w.getTarget() == TaskMode.LOCAL) {
+          if (curr == PushDownContext.LEAF) {
+            throw new STCRuntimeError("Can't have local wait in leaf"); 
+          }
+          // Context doesn't change
+          return curr;
+        } else if (w.getTarget() == TaskMode.CONTROL) {
+          return PushDownContext.CONTROL;
+        } else {
+          assert(w.getTarget() == TaskMode.LEAF);
+          return PushDownContext.LEAF;
+        }
       } else {
-        return true;
+        return curr;
       }
     }
-    return false;
+    return null;
   }
 
   /**
@@ -489,6 +543,7 @@ public class WaitCoalescer {
    * @param ancestors 
    * @param currBlock the block they are moved too (a descendant of the prior
    *              block)
+   * @param currContext 
    * @param currBlockInstructions  all changes to instructions in curr block
    *    are made through this iterator, and it is rewound to the previous position
    *    before the function exits
@@ -500,7 +555,7 @@ public class WaitCoalescer {
   private static Pair<Boolean, Set<Continuation>> relocateDependentInstructions(
       Logger logger,
       Block ancestorBlock, Deque<AncestorContinuation> ancestors,
-      Block currBlock, ListIterator<Instruction> currBlockInstructions,
+      Block currBlock, PushDownContext currContext, ListIterator<Instruction> currBlockInstructions,
       MultiMap<String, InstOrCont> waitMap, Var writtenV) {
     boolean changed = false;
     // Remove from outer block
@@ -529,6 +584,20 @@ public class WaitCoalescer {
               break;
             }
           }
+          
+          if (currContext == PushDownContext.LEAF) {
+            if (c.getType() != ContinuationType.WAIT_STATEMENT) {
+              canRelocate = false;
+            } else {
+              WaitStatement w = (WaitStatement)c;
+              // TODO: could make sense to turn local waits into CONTROL
+              //      task dispatch
+              if (w.getMode() != WaitMode.TASK_DISPATCH ) {
+                canRelocate = false;
+              }
+            }
+          }
+          
           if (canRelocate) {
             currBlock.addContinuation(c);
             movedC.add(c);

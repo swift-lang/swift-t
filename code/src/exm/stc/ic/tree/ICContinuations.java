@@ -1651,6 +1651,7 @@ public class ICContinuations {
       assert(waitVars != null);
       assert(usedVars != null);
       assert(keepOpenVars != null);
+      assert(target != null);
       this.procName = procName;
       this.block = block;
       this.waitVars = new ArrayList<Var>(waitVars);

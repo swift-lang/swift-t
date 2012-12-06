@@ -1292,8 +1292,7 @@ public class SwigcGenerator implements CompilerBackend
   @Override
   public void startFunction(String functionName,
                                      List<Var> oList,
-                                     List<Var> iList,
-                                     TaskMode mode)
+                                     List<Var> iList)
   throws UserException
   {
     List<String> outputs = prefixVars(Var.nameList(oList));

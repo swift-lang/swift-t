@@ -1666,7 +1666,7 @@ public class ASTWalker {
     
     Context context = new LocalContext(global, function);
     
-    backend.startFunction(function, outVars, inVars, TaskMode.LEAF);
+    backend.startFunction(function, outVars, inVars);
     List<Arg> inVals = new ArrayList<Arg>(inVars.size());
     List<Var> outVals = new ArrayList<Var>(outVars.size());
     
@@ -1680,10 +1680,20 @@ public class ASTWalker {
       waitVars.add(in);
     }
     
+
+    WaitMode waitMode = WaitMode.DATA_ONLY;
+    TaskMode taskMode = TaskMode.LOCAL;
+    // Check to see how task should be dispatched
+    if (Builtins.getTaskMode(function) != null) {
+      taskMode = Builtins.getTaskMode(function);
+      if (taskMode == TaskMode.LEAF || taskMode == TaskMode.CONTROL) {
+        waitMode = WaitMode.TASK_DISPATCH;
+      }
+    }
     backend.startWaitStatement(
               context.getFunctionContext().constructName("wrap:" + function),
-              waitVars, inVars, Arrays.<Var>asList(), WaitMode.DATA_ONLY,
-              false, TaskMode.LOCAL);
+              waitVars, inVars, Arrays.<Var>asList(), waitMode,
+              false, taskMode);
     
     for (Var in: inVars) {
       Var inVal = varCreator.fetchValueOf(context, in);
@@ -1919,15 +1929,8 @@ public class ASTWalker {
     functionContext.setNested(false);
     functionContext.addDeclaredVariables(iList);
     functionContext.addDeclaredVariables(oList);
-
-    TaskMode mode;
-    if (context.hasFunctionProp(function, FnProp.SYNC)) {
-      mode = TaskMode.SYNC; 
-    } else {
-      mode = TaskMode.CONTROL;
-    }
     
-    backend.startFunction(function, oList, iList, mode);
+    backend.startFunction(function, oList, iList);
     
     VariableUsageInfo vu = block.getVariableUsage();
     // Make sure output arrays get closed
@@ -2026,8 +2029,7 @@ public class ASTWalker {
     appContext.addDeclaredVariables(inArgs);
     
     
-    backend.startFunction(function, outArgs, inArgs,
-                          TaskMode.LEAF);
+    backend.startFunction(function, outArgs, inArgs);
     genAppFunctionBody(appContext, appBodyT, outArgs,
                        hasSideEffects, deterministic);
     backend.endFunction();

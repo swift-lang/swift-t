@@ -91,7 +91,9 @@ class Turbine
   private static final Token PARENT_STACK_ENTRY =
       new Token("_parent");
   private static final Token RULE = new Token("turbine::c::rule");
+  private static final Token SEND_RULE = new Token("turbine::send_rule");
   private static final Token DEEPRULE = new Token("turbine::deeprule");
+  private static final Token SEND_DEEPRULE = new Token("turbine::send_deeprule");
   private static final Token NO_STACK = new Token("no_stack");
   private static final Token DEREFERENCE_INTEGER =
       new Token("turbine::f_dereference_integer");
@@ -341,16 +343,15 @@ class Turbine
    */
   private static Command ruleHelper(String symbol, 
       List<? extends Expression> inputs,
-      TclList action, TaskMode type) {
+      TclList action, TaskMode type, boolean local) {
     Token s = new Token(symbol);
     TclList i = new TclList(inputs);
 
-    return new Command(RULE, s, i, tclRuleType(type), action);
+    return new Command(local ? RULE : SEND_RULE, s, i,
+                       tclRuleType(type), action);
   }
 
   /**
-   * Same as rule, but store the rule ID into the TCL variable named by
-   * ruleIDVarName so that it can be provided as an argument to the procedure
    * @param symbol
    * @param blockOn
    * @param action
@@ -358,13 +359,14 @@ class Turbine
    * @return
    */
   public static Command rule(String symbol,
-      List<? extends Expression> blockOn, TclList action, TaskMode mode) {
-    return ruleHelper(symbol, blockOn, action, mode);
+      List<? extends Expression> blockOn, TclList action, TaskMode mode,
+      boolean local) {
+    return ruleHelper(symbol, blockOn, action, mode, local);
   }
 
   public static Command deepRule(String symbol,
       List<? extends Expression> inputs, int[] depths, boolean[] isFile,
-      TclList action, TaskMode mode) {
+      TclList action, TaskMode mode, boolean local) {
     assert(inputs.size() == depths.length);
     assert(inputs.size() == isFile.length);
     
@@ -379,8 +381,8 @@ class Turbine
       isFileExprs.add(LiteralInt.boolValue(b));
     }
     
-    return new Command(DEEPRULE, new Token(symbol), new TclList(inputs), 
-          new TclList(depthExprs), new TclList(isFileExprs),
+    return new Command(local ? DEEPRULE : SEND_DEEPRULE, new Token(symbol),
+          new TclList(inputs), new TclList(depthExprs), new TclList(isFileExprs),
           tclRuleType(mode), action);
   }
   
@@ -392,12 +394,8 @@ class Turbine
       actionElems.add(arg);
     }
     TclList action = new TclList(actionElems);
-    return ruleHelper(symbol, blockOn, action, TaskMode.CONTROL);
+    return ruleHelper(symbol, blockOn, action, TaskMode.CONTROL, true);
   }
-
-
-  
-
 
   public static TclTree allocateStruct(String tclName) {
     Square createExpr = new Square(new Token("dict"), new Token("create"));
