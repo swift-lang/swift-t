@@ -253,7 +253,8 @@ as any other variable.  The main difference is that a file can be
 *mapped* to path in a filesystem.  Assigning to a mapped file variable
 results in a file being created in the file system at the specified path.
 File variables can also be initialized with data from a pre-existing
-file using the +input_file+ function.
+file using the +input_file+ function.  File paths are relative to the
+working directory for Turbine.
 
 For example, if +/home/user/in.txt+ is a file with some data in it,
 the following Swift program will copy the file to +/home/user/out.txt+.
@@ -288,6 +289,9 @@ trace("Temporary filename is: " + filename(tmp));
 
 Temporary files are created as necessary if unmapped files are
 written to.  For example, the file +tmp+ in the above code snippet.
+
+Currently Swift/T assumes that the file system is shared between
+all nodes.
 
 === Blobs
 TODO
@@ -855,7 +859,22 @@ App functions are functions that are implemented as command-line
 programs.  These command-line programs can be brought into a Swift
 program as functions with typed inputs and outputs.
 
-* TODO: intro
+An app function definition comprises:
+* The standard components of a Swift function declaration: input and
+    output arguments and the function name.
+* The command line, which comprises an initial string which is the
+    executable to run, and then a series of arguments which are
+    the command-line arguments to pass to the program.
+
+App arguments can be:
+* Literals such as numbers or strings.
+* File variables (passed as file paths).
+* Other variables, which are converted to string arguments.
+    Arrays (including multi-dimensional arrays) are expanded to
+    multiple arguments.
+* Arbitrary expressions surrounded by parentheses.
+
+Standard input, output and error can be redirected to files.
 
 Join files together:
 ----
