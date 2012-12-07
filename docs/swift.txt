@@ -424,7 +424,7 @@ main {
   file unsorted = input_file("input.txt");
   sorted_file sorted <"sorted.txt"> = sort(unsorted);
   file u <"unique.txt"> = unique(sorted);
-  
+
   // Can convert from sorted_file to file
   file result2 = sort(unsorted);
 
@@ -551,7 +551,7 @@ while the right-hand-side is the variable in the _previous_ loop
 iteration.  Then, the condition is checked for loop exit.  If the loop
 continues, the body is executed again, etc.
 
-*Performance Tip:* use the +foreach+ loop instead of *for$ if your
+*Performance Tip:* use the +foreach+ loop instead of +for+ if your
 loop iterations are independent and can be executed in parallel.
 
 === Scoping blocks
@@ -575,7 +575,7 @@ variables, both represented by +b+, are assigned different values.
 The following binary arithmetic operators on numbers are defined:
 
 +&#43;+ (plus), +-+ (minus), +\*+ (times), +/+ (divide),
-+%/+ (integer divide), +**+ (power)
++%/+ (integer divide), +%%+ (modulus), +**+ (power)
 
 +&&+ (boolean and), +||+ (boolean or),
 +==+ (equals), +!=+ (not equals), +>+ (greater than), +<+ (less than),
@@ -755,7 +755,16 @@ If condition is false, report +message+ and exit immediately.
 
 === Files
 
-TODO: filename, etc
++readFile(file) -> string+::   Read file as a string
++writeFile(string) -> file+::  Write string to file
++glob(string) -> file[]+:: Perform glob operation, returning files
+that match.  Available glob symbols include:
++
+* +*+: any character sequence (including the zero-length sequence)
+* +?+: any character
+* +[chars]+: any of the given characters
+* +\x+: character +x+
+* +{a,b,c,...}+ any of +a+, +b+, +c+, etc.
 
 == Defining Leaf functions
 
@@ -791,7 +800,7 @@ that doubles an integer.  Here is the Tcl code that will go in
 namespace eval myextension {
   proc double { x } {
     return [ expr $x * 2 ]
-  } 
+  }
 }
 ----
 
@@ -811,7 +820,7 @@ of the Tcl package containing the file, and the minimum version
 of that package.
 
 We tell the compiler how to call our Tcl function using inline
-Tcl code as a template with variable names surrounded by +<< >>+ 
+Tcl code as a template with variable names surrounded by +<< >>+
 indicating where variables should be substituted.
 
 We can also tell the Swift compiler a little about the function so
