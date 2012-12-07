@@ -100,7 +100,19 @@ public class ICOptimiser {
                         "IC after wait coalescing");
           }
         }
+        
+        // Can only run this pass once. Do it on penultimate pass so that
+        // results can be cleaned up by forward dataflow
+        if (Settings.getBoolean(Settings.OPT_PIPELINE) &&
+            pass == nPasses - 2) {
+          Pipeline.pipelineTasks(logger, prog);
+          if (logIC) {
+            prog.log(icOutput, "Pass " + pass + ":" +
+                        "IC after pipelining");
+          }
+        }
       }
+      
       
       // Do this at end so we don't end up keeping any unneeded constants
       if (Settings.getBoolean(Settings.OPT_SHARED_CONSTANTS)) {

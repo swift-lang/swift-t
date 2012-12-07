@@ -78,7 +78,7 @@ public class Settings
     defaults.setProperty(OPT_PIPELINE, "false");
     defaults.setProperty(OPT_CONTROLFLOW_FUSION, "true");
     defaults.setProperty(OPT_HOIST, "true");
-    defaults.setProperty(OPT_NUM_PASSES, "5");
+    defaults.setProperty(OPT_NUM_PASSES, "10");
     defaults.setProperty(ARRAY_REF_SWITCHEROO, "false");
     defaults.setProperty(EXPERIMENTAL_REFCOUNTING, "false");
     defaults.setProperty(LOG_FILE, "");
