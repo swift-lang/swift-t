@@ -1,7 +1,9 @@
 
 package exm.stc.common;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -109,6 +111,13 @@ public class Settings
     validateProperties();
   }
 
+  public static List<String> getKeys() {
+    ArrayList<String> keys;
+    keys = new ArrayList<String>(properties.stringPropertyNames());
+    Collections.sort(keys);
+    return keys;
+  }
+  
   /**
      RPATH should be a Unix-style colon-separated list of directories
      @return Possibly empty String array

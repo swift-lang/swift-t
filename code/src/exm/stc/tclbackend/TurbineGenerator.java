@@ -166,23 +166,9 @@ public class TurbineGenerator implements CompilerBackend
     tree.add(new Comment("STC home                : " + Settings.get(Settings.STC_HOME)) );
     tree.add(new Comment("Turbine home            : " + Settings.get(Settings.TURBINE_HOME)) );
     tree.add(new Comment("Compiler settings:"));
-    tree.add(new Comment("OPT_BRANCH_PREDICT      : " + Settings.get(Settings.OPT_BRANCH_PREDICT) ));    
-    tree.add(new Comment("OPT_CONSTANT_FOLD       : " + Settings.get(Settings.OPT_CONSTANT_FOLD) ));
-    tree.add(new Comment("OPT_CONTROLFLOW_FUSION  : " + Settings.get(Settings.OPT_CONTROLFLOW_FUSION) ));
-    tree.add(new Comment("OPT_DEAD_CODE_ELIM      : " + Settings.get(Settings.OPT_DEAD_CODE_ELIM) ));
-    tree.add(new Comment("OPT_DISABLE_ASSERTS     : " + Settings.get(Settings.OPT_DISABLE_ASSERTS) ));
-    tree.add(new Comment("OPT_FLATTEN_NESTED      : " + Settings.get(Settings.OPT_FLATTEN_NESTED) ));
-    tree.add(new Comment("OPT_FORWARD_DATAFLOW    : " + Settings.get(Settings.OPT_FORWARD_DATAFLOW) ));
-    tree.add(new Comment("OPT_HOIST               : " + Settings.get(Settings.OPT_HOIST) ));
-    tree.add(new Comment("OPT_NUM_PASSES          : " + Settings.get(Settings.OPT_NUM_PASSES) ));
-    tree.add(new Comment("OPT_SHARED_CONSTANTS    : " + Settings.get(Settings.OPT_SHARED_CONSTANTS) ));
-    tree.add(new Comment("OPT_UNROLL_LOOPS        : " + Settings.get(Settings.OPT_UNROLL_LOOPS) ));
-    tree.add(new Comment("OPT_WAIT_COALESCE       : " + Settings.get(Settings.OPT_WAIT_COALESCE) ));    
-    tree.add(new Comment("ARRAY_REF_SWITCHEROO    : " + Settings.get(Settings.ARRAY_REF_SWITCHEROO) ));
-    tree.add(new Comment("EXPERIMENTAL_REFCOUNTING: " + Settings.get(Settings.EXPERIMENTAL_REFCOUNTING) ));    
-    tree.add(new Comment("DEBUG_LEVEL             : " + Settings.get(Settings.DEBUG_LEVEL) ));
-    tree.add(new Text(""));    
-
+    for (String key: Settings.getKeys()) {
+      tree.add(new Comment(String.format("%-30s: %s", key, Settings.get(key))));
+    }
     tree.add(new Command("package require turbine", turbineVersion));
     tree.add(new Command("namespace import turbine::*"));
     tree.add(new Text(""));
