@@ -2,6 +2,7 @@ package exm.stc.ic.opt;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.lang.ExecContext;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;

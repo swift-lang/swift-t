@@ -19,6 +19,7 @@ import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;

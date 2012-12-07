@@ -27,6 +27,7 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Builtins;
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
@@ -116,10 +117,7 @@ public class TurbineGenerator implements CompilerBackend
    * Stack for name of loop functions
    */
   Deque<String> loopNameStack = new ArrayDeque<String>();
-  
-  private static enum ExecContext {
-    CONTROL, LEAF
-  }
+
   /**
    * Stack for what context we're in. 
    */
