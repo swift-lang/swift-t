@@ -1035,6 +1035,12 @@ Configure Turbine with:
                  --with-mpi-lib-name=funny.mpi.a
 ----
 
+==== Known systems
+
+See the
+http://www.mcs.anl.gov/exm/local/guides/turbine-sites.html[Turbine Sites Guide]
+for information about specific systems with Turbine installations.
+
 === Performance enhancements
 
 1. Disable logging/debugging via environment
