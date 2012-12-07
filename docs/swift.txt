@@ -300,7 +300,8 @@ Arrays are declared with empty square brackets:
 int A[];
 ----
 
-They are dynamically sized.  Arrays are indexed using square brackets.
+They are dynamically sized, expanding each time an item is inserted at
+a new index.  Arrays are indexed using square brackets.
 ----
 int A[];
 int B[];
@@ -308,6 +309,8 @@ B = function_returning_array();
 A[0] = B[0];
 A[1] = B[1];
 ----
+
+Each array index can only be assigned to once.
 
 A given array variable must be assigned either _in toto_ (as a whole)
 or _in partes_ (piece by piece).  In this example, +B+ is assigned in toto
@@ -370,6 +373,62 @@ p.name = "Abe";
 p.age = 90;
 ----
 
+=== Defining new types
+*Note:* The features in this section are immature, so you will have
+a higher probability of encountering compiler bugs.
+
+Swift has two ways to define new types based on existing types.
+
+The first is +typedef+, which creates a new name for the type.
+The new type and the existing type will be completely interchangeable,
+since they are simply different names for the same underlying type.
+The new type name simply serves to improve readability or documentation.
+
+----
+typedef newint int;
+
+main {
+  // We can freely convert between int and newint
+  newint x = 1;
+  int y = x;
+  newint z = y;
+}
+----
+
+The second is with +type+, which creates a new type that is a
+specialization of an existing type.  That is, it is a distinct
+type that is not interchangeable.  A specialized type can be
+converted into the original type, but the reverse transformation is
+not possible.  This means that you can write functions that are more
+strictly typechecked, for example, only accepted particular types of
+file.
+
+----
+#include <builtins.swift>
+
+typedef sorted_file file;
+app (sorted_file out) sort (file i) {
+  "/usr/bin/sort" "-o" out i
+}
+
+// uniq utility requires sorted input
+app (file o) unique (sorted_file i) {
+  "/usr/bin/uniq" i @stdout=o
+}
+
+main {
+  file unsorted = input_file("input.txt");
+  sorted_file sorted <"sorted.txt"> = sort(unsorted);
+  file u <"unique.txt"> = unique(sorted);
+  
+  // Can convert from sorted_file to file
+  file result2 = sort(unsorted);
+
+  // This would cause a type error
+  // sorted_file not_sorted = unsorted;
+}
+----
+
 == Control structures
 
 Swift provides control structures that may be placed as statements
@@ -421,9 +480,9 @@ printf("b: %i\n", b);
 
 Iteration is performed with the +foreach+ and +for+ statements.
 
-==== Foreach statement
+==== Foreach loop
 
-The +foreach+ statement allows for iteration over an array:
+The +foreach+ loop allows for parallel iteration over an array:
 
 ----
 string A[];
@@ -447,9 +506,9 @@ foreach i in [start:stop:step] {
 }
 ----
 
-==== For statement
+==== For loop
 
-The +for+ statement allows for sequential iteration.  This example
+The +for+ loop allows for sequential iteration.  This example
 implements a counter based on the return values of a function that
 accepts integers:
 
@@ -487,6 +546,9 @@ left-hand-side is the variable in the _next_ iteration of the loop,
 while the right-hand-side is the variable in the _previous_ loop
 iteration.  Then, the condition is checked for loop exit.  If the loop
 continues, the body is executed again, etc.
+
+*Performance Tip:* use the +foreach+ loop instead of *for$ if your
+loop iterations are independent and can be executed in parallel.
 
 === Scoping blocks
 
@@ -851,7 +913,7 @@ stc -O3 example.swift example.tcl
 ----
 
 Individual optimizations can be toggled on using +-T <opt name>+
-or off with "-t <opt name>", but this typically is only useful for
+or off with +-t <opt name>+, but this typically is only useful for
 debugging.
 
 [[Turbine]]
