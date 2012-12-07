@@ -864,18 +864,22 @@ global distributed data store.
 
 
 === App functions
+
 App functions are functions that are implemented as command-line
 programs.  These command-line programs can be brought into a Swift
 program as functions with typed inputs and outputs.
 
 An app function definition comprises:
+
 * The standard components of a Swift function declaration: input and
-    output arguments and the function name.
+    output arguments and the function name.  Note that the output
+    variable types are restricted to individual +file+#s#.
 * The command line, which comprises an initial string which is the
     executable to run, and then a series of arguments which are
     the command-line arguments to pass to the program.
 
 App arguments can be:
+
 * Literals such as numbers or strings.
 * File variables (passed as file paths).
 * Other variables, which are converted to string arguments.
