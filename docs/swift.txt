@@ -810,16 +810,17 @@ main {
 
 Sleep an arbitrary amount of time:
 ----
+
 app (void signal) sleep (int secs) {
   "/bin/sleep" secs
 }
 
 main {
-  int times[] = [1,2,3,4,5];
-  foreach time in times {
+  foreach time in [1:5] {
     void signal = sleep(time);
-    wait(time) {
-      trace("Slept " + time);
+    // Wait on output signal so that trace occurs after sleep
+    wait(signal) {
+      trace("Slept " + fromint(time));
     }
   }
 }
@@ -828,8 +829,30 @@ main {
 
 [[Optimizations]]
 == Optimizations
+STC performs a range of compiler optimizations that can significantly
+speed up most Swift programs.  The optimization level can be controlled
+by the +-O+ command line option.  Almost always the default optimization
+level +-O2+ is your best choice.
 
-The following optimizations are available in STC
+----
+# No optimizations at all (not recommended)
+stc -O0 example.swift example.tcl
+
+# Basic optimizations (not recommended)
+stc -O1 example.swift example.tcl
+
+# Standard optimizations (recommended)
+stc example.swift example.tcl
+# OR
+stc -O2 example.swift example.tcl
+
+# All optimizations (including ones that sometimes hurt performance)
+stc -O3 example.swift example.tcl
+----
+
+Individual optimizations can be toggled on using +-T <opt name>+
+or off with "-t <opt name>", but this typically is only useful for
+debugging.
 
 [[Turbine]]
 == Running in Turbine
