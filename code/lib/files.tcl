@@ -214,6 +214,7 @@ namespace eval turbine {
 	set dstpath [ get_file_path $dst ]
 	set d [ retrieve_decr_string $dstpath ]
 	set fp [ ::open $d w+ ]
+        puts $fp $str
 	close $fp
 	store_void [ get_file_status $dst ]
     }
