@@ -26,9 +26,11 @@ public class Flattener {
       switch (c.getType()) {
       case NESTED_BLOCK:
         assert(c.getBlocks().size() == 1);
-        Block inner = c.getBlocks().get(0);
-        flattenNestedBlocks(inner);
-        c.inlineInto(block, inner);
+        if (!c.runLast()) {
+          Block inner = c.getBlocks().get(0);
+          flattenNestedBlocks(inner);
+          c.inlineInto(block, inner);
+        }
         break;
       default:
         // Recursively flatten any blocks inside the continuation

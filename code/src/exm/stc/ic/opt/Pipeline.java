@@ -16,6 +16,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
+import exm.stc.ic.tree.ICContinuations.NestedBlock;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
@@ -85,7 +86,15 @@ public class Pipeline {
       }
     }
     
-    bestCand.inlineInto(curr);
+    if (candidates.size() == 1) {
+      bestCand.inlineInto(curr);
+    } else {
+      // Need to make sure local code runs after tasks are spawned
+      NestedBlock nested = new NestedBlock();
+      bestCand.inlineInto(nested.getBlock());
+      nested.setRunLast(true);
+      curr.addContinuation(nested);
+    }
   }
   
   

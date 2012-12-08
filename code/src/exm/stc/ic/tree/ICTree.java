@@ -582,11 +582,15 @@ public class ICTree {
         i.generate(logger, gen, info);
       }
 
-      // Can put conditional statements at end of block, as ordering
-      //    doesn't really matter for correctness
-      for (Continuation c: conds) {
-        logger.trace("generating code for continuation");
-        c.generate(logger, gen, info);
+      // Can put conditional statements at end of block, making sure
+      // Ones which are marked as runLast occur after those not
+      for (boolean runLast: new boolean[] {false, true}) {
+        for (Continuation c: conds) {
+          if (c.runLast() == runLast) {
+            logger.trace("generating code for continuation");
+            c.generate(logger, gen, info);
+          }
+        }
       }
 
       for (CleanupAction cleanup: cleanupActions) {

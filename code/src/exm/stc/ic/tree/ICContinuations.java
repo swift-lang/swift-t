@@ -271,6 +271,18 @@ public class ICContinuations {
     
     @Override
     public abstract Continuation clone();
+
+    /**
+     * If the continuation should be put after all other continuations
+     */
+    private boolean runLast = false;
+    public void setRunLast(boolean val) {
+      runLast = val;
+    }
+    public boolean runLast() {
+      // TODO Auto-generated method stub
+      return runLast;
+    }
   }
 
   public enum ContinuationType {
