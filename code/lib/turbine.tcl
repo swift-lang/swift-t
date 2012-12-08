@@ -238,7 +238,7 @@ namespace eval turbine {
         global WORK_TYPE
 
         if { $mode == {ENGINE} } {
-            rule $name $inputs $action_type $action $turbine::priority
+            rule $name $inputs $action_type $action
         } elseif { [ llength $inputs ] == 0 } {
             release -1 $action_type $action 
         } else {

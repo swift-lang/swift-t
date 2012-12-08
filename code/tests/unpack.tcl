@@ -25,7 +25,7 @@ proc test_1D { } {
   store_float $x3 3.14
   store_string $x4 "quick brown fox"
 
-  set res [ unpack_args $C 0 0 ]
+  set res [ unpack_args $C 1 0 ]
   puts "res: $res"
   if { [ llength $res ] != 4 } {
     error "length of res wrong"
@@ -65,7 +65,7 @@ proc test_1D_file { } {
   container_insert $C 8 $x3
   container_insert $C 12 $x4
 
-  set res [ unpack_args $C 0 1 ]
+  set res [ unpack_args $C 1 1 ]
   puts "res: $res"
   if { [ llength $res ] != 4 } {
     error "length of res wrong"
@@ -129,7 +129,7 @@ proc test_2D { } {
   container_insert $C4 0 $z
   container_insert $C4 1 $a
 
-  set res [ unpack_args $C 1 0 ]
+  set res [ unpack_args $C 2 0 ]
   puts "res: $res"
 
   if { [ llength $expected ] != [ llength $res ] } {
