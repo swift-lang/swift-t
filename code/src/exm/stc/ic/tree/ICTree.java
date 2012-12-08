@@ -487,7 +487,7 @@ public class ICTree {
       this.type = type;
       this.instructions = instructions;
       this.variables = variables;
-      this.conds = conds;
+      this.continuations = conds;
       this.cleanupActions = cleanupActions;
     }
 
@@ -502,7 +502,7 @@ public class ICTree {
     public Block clone(BlockType newType) {
       return new Block(newType, ICUtil.cloneInstructions(this.instructions),
           new ArrayList<Var>(this.variables),
-          ICUtil.cloneContinuations(this.conds), 
+          ICUtil.cloneContinuations(this.continuations), 
           new ArrayList<CleanupAction>(this.cleanupActions));
     }
 
@@ -517,7 +517,7 @@ public class ICTree {
     private final ArrayList<Var> variables;
 
     /** conditional statements for block */
-    private final ArrayList<Continuation> conds;
+    private final ArrayList<Continuation> continuations;
 
     public void addInstruction(Instruction e) {
       instructions.add(e);
@@ -532,19 +532,19 @@ public class ICTree {
     }
 
     public void addContinuation(Continuation c) {
-      this.conds.add(c);
+      this.continuations.add(c);
     }
 
     public List<Continuation> getContinuations() {
-      return Collections.unmodifiableList(conds);
+      return Collections.unmodifiableList(continuations);
     }
     
     public ListIterator<Continuation> getContinuationIterator() {
-      return conds.listIterator();
+      return continuations.listIterator();
     }
     
     public Continuation getContinuation(int i) {
-      return conds.get(i);
+      return continuations.get(i);
     }
 
     public List<Var> getVariables() {
@@ -565,7 +565,7 @@ public class ICTree {
     }
 
     public boolean isEmpty() {
-      return instructions.isEmpty() && conds.isEmpty();
+      return instructions.isEmpty() && continuations.isEmpty();
     }
 
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
@@ -585,7 +585,7 @@ public class ICTree {
       // Can put conditional statements at end of block, making sure
       // Ones which are marked as runLast occur after those not
       for (boolean runLast: new boolean[] {false, true}) {
-        for (Continuation c: conds) {
+        for (Continuation c: continuations) {
           if (c.runLast() == runLast) {
             logger.trace("generating code for continuation");
             c.generate(logger, gen, info);
@@ -618,8 +618,12 @@ public class ICTree {
         sb.append("\n");
       }
 
-      for (Continuation c: conds) {
-        c.prettyPrint(sb, indent);
+      for (boolean runLast: new boolean[] {false, true}) {
+        for (Continuation c: continuations) {
+          if (c.runLast() == runLast) {
+            c.prettyPrint(sb, indent);
+          }
+        }
       }
 
       for (CleanupAction a: cleanupActions) {
@@ -631,7 +635,7 @@ public class ICTree {
     }
 
     public ListIterator<Continuation> continuationIterator() {
-      return conds.listIterator();
+      return continuations.listIterator();
     }
 
     public ListIterator<Var> variableIterator() {
@@ -677,7 +681,7 @@ public class ICTree {
       }
 
       // Rename in nested blocks
-      for (Continuation c: conds) {
+      for (Continuation c: continuations) {
         c.replaceVars(renames, inputsOnly, true);
       }
       renameCleanupActions(renames, inputsOnly);
@@ -785,7 +789,7 @@ public class ICTree {
           }
         }
       }
-      for (Continuation c: conds) {
+      for (Continuation c: continuations) {
         c.removeVars(removeVars);
       }
     }
@@ -801,7 +805,7 @@ public class ICTree {
 
     public void addContinuations(List<? extends Continuation>
                                                 continuations) {
-      this.conds.addAll(continuations);
+      this.continuations.addAll(continuations);
     }
 
     public Set<String> unneededVars() {
@@ -874,7 +878,7 @@ public class ICTree {
         }
       }
 
-      for (Continuation c: conds) {
+      for (Continuation c: continuations) {
         for (Var v: c.requiredVars()) {
           stillNeeded.add(v.name());
         }
@@ -897,12 +901,12 @@ public class ICTree {
     }
 
     public void removeContinuation(Continuation c) {
-      this.conds.remove(c);
+      this.continuations.remove(c);
     }
     
     public void removeContinuations(
                     Collection<? extends Continuation> c) {
-      this.conds.removeAll(c);
+      this.continuations.removeAll(c);
     }
 
     /**
@@ -920,10 +924,10 @@ public class ICTree {
         }
       }
       if (insertAtTop) {
-        this.conds.addAll(0, b.getContinuations());
+        this.continuations.addAll(0, b.getContinuations());
         this.instructions.addAll(0, b.getInstructions());
       } else {
-        this.conds.addAll(b.getContinuations());
+        this.continuations.addAll(b.getContinuations());
         this.instructions.addAll(b.getInstructions());
       }
       this.cleanupActions.addAll(b.cleanupActions);
