@@ -331,8 +331,11 @@ CPP_INCLUDE+="-I ${TURBINE_HOME}/export"
 
 MAIN=exm.stc.ui.Main
 
+# Increase stack size
+JVM_FLAGS="-Xss8m"
+
 # Group all JVM args together
-ARGS="${DEBUG} ${FLAGS} ${COMPILER_OPTS} -cp ${CLASSPATH}"
+ARGS="${JVM_FLAGS} ${DEBUG} ${FLAGS} ${COMPILER_OPTS} -cp ${CLASSPATH}"
 
 # Assemble preprocessor command line
 # We use gcc -E because cpp is broken on Mac GCC 4.2.1
