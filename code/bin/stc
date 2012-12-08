@@ -59,7 +59,7 @@ function get_compiler_opt_name() {
         flatten-nested) echo "stc.opt.flatten-nested"
                     return 0
                     ;;
-        forward-dataflow) echo "stc.opt.forward-dataflow-analysis"
+        forward-dataflow) echo "stc.opt.forward-dataflow"
                     return 0
                     ;;
         wait-coalesce) echo "stc.opt.wait-coalesce"

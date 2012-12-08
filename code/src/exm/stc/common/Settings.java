@@ -35,8 +35,7 @@ public class Settings
   public static final String OPT_FLATTEN_NESTED = "stc.opt.flatten-nested";
   public static final String OPT_BRANCH_PREDICT = "stc.opt.branch-predict";
   public static final String OPT_DEAD_CODE_ELIM = "stc.opt.dead-code-elim";
-  public static final String OPT_FORWARD_DATAFLOW =
-                      "stc.opt.forward-dataflow-analysis";
+  public static final String OPT_FORWARD_DATAFLOW = "stc.opt.forward-dataflow";
   public static final String OPT_WAIT_COALESCE = "stc.opt.wait-coalesce";
   public static final String OPT_PIPELINE = "stc.opt.pipeline";
   public static final String OPT_CONTROLFLOW_FUSION =
