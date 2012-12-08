@@ -14,9 +14,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.common.Settings;
 import exm.stc.common.CompilerBackend.WaitMode;
-import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
@@ -150,10 +148,10 @@ import exm.stc.ic.tree.ICTree.Program;
  *
  */
 public class WaitCoalescer {
-  public static void rearrangeWaits(Logger logger, Program prog) {
+  public static void rearrangeWaits(Logger logger, Program prog, boolean doMerges) {
     for (Function f: prog.getFunctions()) {
       boolean changed = rearrangeWaits(logger, f, f.getMainblock(),
-                                       ExecContext.CONTROL);
+                                       ExecContext.CONTROL, doMerges);
       if (changed) {
         // This pass can mess up variable passing
         FixupVariables.fixupVariablePassing(logger, prog, f);
@@ -162,7 +160,7 @@ public class WaitCoalescer {
   }
 
   public static boolean rearrangeWaits(Logger logger, Function fn, Block block,
-                                       ExecContext currContext) {
+                                       ExecContext currContext, boolean doMerges) {
     StringBuilder sb = new StringBuilder();
     boolean exploded = explodeFuncCalls(logger, fn, block);
 
@@ -171,7 +169,10 @@ public class WaitCoalescer {
       logger.trace("After exploding " + fn.getName() +":\n" + sb.toString());
     }
     
-    boolean merged = mergeWaits(logger, fn, block);
+    boolean merged = false;
+    if (doMerges) { 
+      merged = mergeWaits(logger, fn, block);
+    }
     
     if (logger.isTraceEnabled()) {
       sb = new StringBuilder();
@@ -181,21 +182,20 @@ public class WaitCoalescer {
     
     boolean pushedDown = pushDownWaits(logger, fn, block, currContext);
     
-
-    tryCompileTimePipeline(block, currContext);
-    
     // Recurse on child blocks
-    boolean recChanged = rearrangeWaitsRec(logger, fn, block, currContext);
+    boolean recChanged = rearrangeWaitsRec(logger, fn, block, currContext,
+                                                                doMerges);
     return exploded || merged || pushedDown || recChanged;
   }
 
   private static boolean rearrangeWaitsRec(Logger logger,
-                  Function fn, Block block, ExecContext currContext) {
+                  Function fn, Block block, ExecContext currContext,
+                  boolean doMerges) {
     boolean changed = false;
     for (Continuation c: block.getContinuations()) {
       ExecContext newContext = findNextContext(c, currContext);
       for (Block childB: c.getBlocks()) {
-        if (rearrangeWaits(logger, fn, childB, newContext)) {
+        if (rearrangeWaits(logger, fn, childB, newContext, doMerges)) {
           changed = true;
         }
       }
@@ -425,8 +425,8 @@ public class WaitCoalescer {
                                         new ArrayDeque<AncestorContinuation>();
           ancestors.push(new AncestorContinuation(c, innerBlock));
           PushDownResult pdRes = 
-               pushDownWaitsRec(logger, fn, block, ancestors, innerBlock,
-                                newContext, waitMap);
+               pushDownWaitsRec(logger, fn, block, currContext, ancestors,
+                                innerBlock, newContext, waitMap);
            changed = changed || pdRes.anyChanges;
           /* The list of continuations might be modified as continuations are
            * pushed down - track which ones are relocated */
@@ -439,7 +439,8 @@ public class WaitCoalescer {
   
   private static PushDownResult pushDownWaitsRec(
                 Logger logger,  Function fn,
-                Block top, Deque<AncestorContinuation> ancestors, Block curr,
+                Block top, ExecContext topContext,
+                Deque<AncestorContinuation> ancestors, Block curr,
                 ExecContext currContext,
                 MultiMap<String, InstOrCont> waitMap) {
     boolean changed = false;
@@ -462,7 +463,7 @@ public class WaitCoalescer {
       for (Var v: writtenFutures) {
         if (waitMap.containsKey(v.name())) {
           Pair<Boolean, Set<Continuation>> pdRes =
-              relocateDependentInstructions(logger, top, ancestors, 
+              relocateDependentInstructions(logger, top, topContext, ancestors, 
                                         curr, currContext, it,  waitMap, v);
           changed = changed || pdRes.val1;
           pushedDown.addAll(pdRes.val2);
@@ -476,8 +477,8 @@ public class WaitCoalescer {
       if (newContext != null) {
         for (Block innerBlock: c.getBlocks()) {
           ancestors.push(new AncestorContinuation(c, innerBlock));
-          PushDownResult pdRes = pushDownWaitsRec(logger, fn, top, ancestors,
-                                             innerBlock, newContext, waitMap);
+          PushDownResult pdRes = pushDownWaitsRec(logger, fn, top, topContext,
+                ancestors, innerBlock, newContext, waitMap);
           pushedDown.addAll(pdRes.relocated);
           changed = changed || pdRes.anyChanges;
           ancestors.pop();
@@ -556,7 +557,8 @@ public class WaitCoalescer {
    */
   private static Pair<Boolean, Set<Continuation>> relocateDependentInstructions(
       Logger logger,
-      Block ancestorBlock, Deque<AncestorContinuation> ancestors,
+      Block ancestorBlock, ExecContext ancestorContext,
+      Deque<AncestorContinuation> ancestors,
       Block currBlock, ExecContext currContext, ListIterator<Instruction> currBlockInstructions,
       MultiMap<String, InstOrCont> waitMap, Var writtenV) {
     boolean changed = false;
@@ -594,7 +596,13 @@ public class WaitCoalescer {
               WaitStatement w = (WaitStatement)c;
               // TODO: could make sense to turn local waits into CONTROL
               //      task dispatch
-              if (w.getMode() != WaitMode.TASK_DISPATCH ) {
+              if (w.getTarget() == TaskMode.CONTROL ||
+                  w.getTarget() == TaskMode.LEAF) {
+                canRelocate = true;
+              } else if (w.getTarget() == TaskMode.LOCAL) {
+                w.setMode(WaitMode.TASK_DISPATCH);
+                w.setTarget(ancestorContext.toTaskMode());
+              } else {
                 canRelocate = false;
               }
             }
@@ -787,36 +795,6 @@ public class WaitCoalescer {
           }
         }
       }
-    }
-  }
-
-  /**
-   * Try compile time pipelining
-   * 
-   * TODO: doesn't safeguard against parallelism reduction
-   * TODO: delete this once more general version implemented
-   * @param block
-   * @param currContext
-   * @throws InvalidOptionException
-   */
-  private static void tryCompileTimePipeline(Block block,
-          ExecContext currContext) {
-    try {
-      if (Settings.getBoolean(Settings.OPT_PIPELINE)) {
-        if (currContext == ExecContext.LEAF) {
-          if (block.getContinuations().size() == 1) {
-            Continuation c = block.getContinuation(0);
-            if (c.getType() == ContinuationType.WAIT_STATEMENT) {
-              WaitStatement w = (WaitStatement)c;
-              if (w.getTarget() == TaskMode.LEAF && w.getWaitVars().isEmpty()) {
-                w.inlineInto(block);
-              }
-            }
-          }
-        }
-      }
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError(e.getMessage());
     }
   }
 }

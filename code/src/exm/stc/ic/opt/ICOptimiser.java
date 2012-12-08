@@ -89,18 +89,7 @@ public class ICOptimiser {
                         "IC after continuation fusion");
           }
         }
-        
-        // Do this after forward dataflow since forward dataflow will be
-        // able to do strength reduction on many operations without spinning
-        // them off into wait statements
-        if (Settings.getBoolean(Settings.OPT_WAIT_COALESCE)) {
-          WaitCoalescer.rearrangeWaits(logger, prog);
-          if (logIC) {
-            prog.log(icOutput, "Pass " + pass + ":" +
-                        "IC after wait coalescing");
-          }
-        }
-        
+
         // Can only run this pass once. Do it on penultimate pass so that
         // results can be cleaned up by forward dataflow
         if (Settings.getBoolean(Settings.OPT_PIPELINE) &&
@@ -109,6 +98,17 @@ public class ICOptimiser {
           if (logIC) {
             prog.log(icOutput, "Pass " + pass + ":" +
                         "IC after pipelining");
+          }
+        }
+        
+        // Do this after forward dataflow since forward dataflow will be
+        // able to do strength reduction on many operations without spinning
+        // them off into wait statements
+        if (Settings.getBoolean(Settings.OPT_WAIT_COALESCE)) {
+          WaitCoalescer.rearrangeWaits(logger, prog, pass == nPasses - 1);
+          if (logIC) {
+            prog.log(icOutput, "Pass " + pass + ":" +
+                        "IC after wait coalescing");
           }
         }
       }

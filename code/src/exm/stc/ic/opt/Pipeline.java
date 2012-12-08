@@ -1,8 +1,23 @@
 package exm.stc.ic.opt;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.apache.log4j.Logger;
 
+import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.StructType.StructField;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
+import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICContinuations.ContinuationType;
+import exm.stc.ic.tree.ICContinuations.WaitStatement;
+import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
@@ -19,76 +34,119 @@ import exm.stc.ic.tree.ICTree.Program;
 public class Pipeline {
 
   public static void pipelineTasks(Logger logger, Program prog) {
+    
     for (Function f: prog.getFunctions()) {
+      logger.debug("Wait pipelining pass for function " + f.getName());
       pipelineTasks(logger, f, f.getMainblock(), ExecContext.CONTROL);
     }
   }
 
   private static void pipelineTasks(Logger logger, Function f, Block curr,
       ExecContext cx) {
-    // TODO Auto-generated method stub
+    // Do a bottom-up tree walk
+    for (Continuation cont: curr.getContinuations()) {
+      ExecContext childCx = cont.childContext(cx);
+      for (Block childBlock: cont.getBlocks()) {
+        pipelineTasks(logger, f, childBlock, childCx);
+      }
+    }
+
+    // Find candidates for merging: wait statements which are not
+    // blocked on anything and which execute in same context as this
+    // block.
+    List<WaitStatement> candidates = new ArrayList<WaitStatement>();
+    for (Continuation cont: curr.getContinuations()) {
+      if (cont.getType() == ContinuationType.WAIT_STATEMENT) {
+        WaitStatement w = (WaitStatement)cont;
+        if (w.getWaitVars().isEmpty() && w.childContext(cx) == cx) {
+          candidates.add(w);
+        }
+      }
+    }
+
+    if (candidates.isEmpty()) {
+      // Nothing to merge up
+      return;
+    }
     
+    logger.trace("Found " + candidates.size() + " candidates for " +
+    		" wait pipelining");
+    WaitStatement bestCand = candidates.get(0);
+    
+    if (candidates.size() > 1) {
+      int bestCost = heuristicCost(logger, curr, bestCand);
+      for (int i = 1; i < candidates.size(); i++) {
+        WaitStatement cand = candidates.get(i);
+        int cost = heuristicCost(logger, curr, cand);
+        if (cost < bestCost) {
+          bestCost = cost;
+          bestCand = cand;
+        }
+      }
+    }
+    
+    bestCand.inlineInto(curr);
   }
-  /*
-   *
+  
+  
+  private static int heuristicCost(Logger logger, Block curr,
+                                   WaitStatement cand) {
+
+    Set<String> varsReadByChildTask = new HashSet<String>();
+    
+    // Work out what vars are read by child
+    // TODO: for thoroughness could go deeper into sync continuations
+    for (Instruction childI: cand.getBlock().getInstructions()) {
+      for (Arg in: childI.getInputs()) {
+        if (in.isVar()) {
+          varsReadByChildTask.add(in.getVar().name());
+        }
+      }
+    }
+    
+    int cost = 0;
+    for (Var passed: cand.getPassedInVars()) {
+      if (varsReadByChildTask.contains(passed.name())) {
+        cost += costOfPassing(logger, passed.type());
+      }
+    }
+    return cost;
+  }
+
+  /**
+   * Heuristic score
    * 
-   * Pseudocode:
-   * We do a bottom-up tree walk
-   * 
-   * doPipeline(Block curr, ExecContext cx):
-   *   foreach cont in curr.continuations:
-   *     newContext = childContext(cont, cx)
-   *     foreach block in cont.blocks:
-   *       doPipeline(block, newContext)
-   *   
-   *   // Find candidates for merging
-   *   candidates = [ cont in curr.continuations
-   *                  where cont is wait and cont.waitVars.isEmpty 
-   *                    and childContext(cont, cx) == cx ]
-   *   if candidates.isEmpty
-   *     return
-   *   
-   *   // Inline the candidate that will result in the biggest reduction
-   *   // in overhead of data transfer/task dispatch
-   *   bestCand = candidates[0]
-   *   bestScore = heuristicCost(candidates[0])
-   *   for cand in candidates[1:]:
-   *     score = heuristicCost(curr, cand)
-   *     if score < bestScore
-   *       bestScore = score
-   *       bestCand = cand
-   *    
-   *   bestCand.inlineInto(curr)  
-   *
-   * }
-   * 
-   * TODO: incorporate more info about reads collected from bottom-up treewalk 
-   * heuristicCost(block, wait) {
-   *   return sum([costOfPassing(var) for var in cont.usedVars if canSavePassing(block, var, wait)])
-   *   //Incorporate cost of task dispatch?
-   *   // Meaning of read?  Just read in immediate child? 
-   * }
-   * 
-   * canSavePassing(block, var, wait) {
-   *   if (var is read in wait.block)
-   *     return true;
-   *   else
-   *     return false
-   * }
-   * 
-   * costOfPassing(var) {
-   *   if var is value:
-   *     return 0
-   *   if var is blob:
-   *     return 5
-   *   if var is file:
-   *     return 20;
-   *   if var is scalar future:
-   *     return 1
-   *   if var is struct:
-   *     return sum(costOfPassing(structElements))
-   *   if var is array:
-   *     return 1
-   * }
+   * TODO: this is simplistic, since this doesn't incorporate whether the
+   * variable is written in the child, or if 
+   * @param logger
+   * @param t
+   * @return
    */
+  private static int costOfPassing(Logger logger, Type t) {
+    if (Types.isFile(t)) {
+      // Files tend to be large
+      return 20;
+    } else if (Types.isBlob(t)) {
+      // Blobs also tend to be fairly large
+      return 5;
+    } else if (Types.isScalarFuture(t) ||
+              Types.isRef(t)) {
+      // Baseline cost is scalar future: 1
+      return 1;
+    } else if (Types.isScalarValue(t)) {
+      return 0;
+    } else if (Types.isArray(t)) {
+      return 1;
+    } else if (Types.isStruct(t)) {
+      StructType st = (StructType)t.getImplType();
+      int totalCost = 0;
+      for (StructField sf: st.getFields()) {
+        totalCost += costOfPassing(logger, sf.getType());
+      }
+      return totalCost;
+    } else {
+      logger.warn("Don't know how to calculate passing cost for type: " + t);
+      return 1;
+    }
+  }
 }

@@ -18,6 +18,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
@@ -257,6 +258,17 @@ public class ICContinuations {
       return null;
     }
 
+    /**
+     * Return the execution context inside the continuation
+     * @param outerContext the context outside
+     * @return
+     */
+    public ExecContext childContext(ExecContext outerContext) {
+      // Default implementation for sync continuations
+      assert(!isAsync());
+      return outerContext;
+    }
+    
     @Override
     public abstract Continuation clone();
   }
@@ -360,6 +372,9 @@ public class ICContinuations {
       ICUtil.removeVarsInList(passedInVars, removeVars);
       ICUtil.removeVarsInList(keepOpenVars, removeVars);
     }
+    
+    @Override
+    public abstract ExecContext childContext(ExecContext outerContext);
     
   }
 
@@ -589,6 +604,15 @@ public class ICContinuations {
       o.replaceVars(renames, false, true);
       
       fuseIntoAbstract(o, insertAtTop);
+    }
+
+    @Override
+    public ExecContext childContext(ExecContext outerContext) {
+      if (splitDegree > 0) {
+        return ExecContext.CONTROL;
+      } else {
+        return outerContext;
+      }
     }
   }
 
@@ -973,6 +997,11 @@ public class ICContinuations {
 
     public Var getInitCond() {
       return this.initVals.get(0);
+    }
+
+    @Override
+    public ExecContext childContext(ExecContext outerContext) {
+      return outerContext;
     }
   }
 
@@ -1434,6 +1463,15 @@ public class ICContinuations {
      
       this.fuseIntoAbstract(o, insertAtTop);
     }
+
+    @Override
+    public ExecContext childContext(ExecContext outerContext) {
+      if (splitDegree > 0) {
+        return ExecContext.CONTROL;
+      } else {
+        return outerContext;
+      }
+    }
   }
 
   public static class SwitchStatement extends Continuation {
@@ -1628,9 +1666,9 @@ public class ICContinuations {
     /* True if this wait was compiler-generated so can be removed if needed
      * We can only remove an explicit wait if we know that the variables are
      * already closed*/
-    private final WaitMode mode;
+    private WaitMode mode;
     private final boolean recursive;
-    private final TaskMode target;
+    private TaskMode target;
 
     public WaitStatement(String procName, List<Var> waitVars,
                     List<Var> usedVars,
@@ -1721,6 +1759,14 @@ public class ICContinuations {
     @Override
     public ContinuationType getType() {
       return ContinuationType.WAIT_STATEMENT;
+    }
+
+    public void setTarget(TaskMode target) {
+      this.target = target;
+    }
+
+    public void setMode(WaitMode mode) {
+      this.mode = mode;
     }
 
     @Override
@@ -1816,6 +1862,21 @@ public class ICContinuations {
     @Override
     public List<Var> constructDefinedVars() {
       return null;
+    }
+
+    @Override
+    public ExecContext childContext(ExecContext outerContext) {
+      switch (target) {
+      case SYNC:
+      case LOCAL:
+        return outerContext;
+      case CONTROL:
+        return ExecContext.CONTROL;
+      case LEAF:
+        return ExecContext.LEAF;
+      default:
+        throw new STCRuntimeError("Unknown wait target: " + target);
+      }
     }
   }
 
