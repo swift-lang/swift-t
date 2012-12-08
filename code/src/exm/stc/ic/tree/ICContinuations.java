@@ -1004,12 +1004,7 @@ public class ICContinuations {
       return outerContext;
     }
   }
-
-  /**
-   * For now, treat nested blocks as continuations.  If we implement a
-   * proper variable renaming scheme for nested blocks we can just
-   * flatten them into the main block
-   */
+  
   public static class NestedBlock extends Continuation {
     private final Block block;
 
