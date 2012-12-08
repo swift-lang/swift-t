@@ -1,6 +1,11 @@
 
 package exm.stc.common;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -8,6 +13,7 @@ import java.util.List;
 import java.util.Properties;
 
 import exm.stc.common.exceptions.InvalidOptionException;
+import exm.stc.common.exceptions.STCRuntimeError;
 
 /**
  * General STC settings
@@ -46,6 +52,7 @@ public class Settings
   public static final String INPUT_FILENAME = "stc.input_filename";
   public static final String OUTPUT_FILENAME = "stc.output_filename";
   public static final String STC_HOME = "stc.stc_home";
+  public static final String STC_VERSION = "stc.version";
   public static final String TURBINE_HOME = "stc.turbine_home";
   
   public static final String LOG_FILE = "stc.log.file";
@@ -109,6 +116,24 @@ public class Settings
       }
     } 
     validateProperties();
+    loadVersionNumber();
+  }
+
+  private static void loadVersionNumber() {
+    String homeDir = get(STC_HOME);
+    File versionFile = new File(homeDir + File.separator + "version.txt");
+    try {
+      BufferedReader r = new BufferedReader(new FileReader(versionFile));
+      String version = r.readLine().trim();
+      r.close();
+      properties.setProperty(STC_VERSION, version);
+    } catch (FileNotFoundException e) {
+      throw new STCRuntimeError("Version file missing: " + versionFile);
+    } catch (IOException e) {
+      e.printStackTrace();
+      throw new STCRuntimeError("IOException while reading version file: "
+                              + versionFile);
+    }
   }
 
   public static List<String> getKeys() {
