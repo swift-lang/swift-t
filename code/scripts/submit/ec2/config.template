@@ -1,0 +1,4 @@
+Host *.amazonaws.com
+     User TURBINE_USER
+     IdentityFile TURBINE_EC2_KEY
+     StrictHostKeyChecking no
