@@ -121,11 +121,11 @@ AC_ARG_ENABLE(xlc,
               ])
 AC_SUBST(USE_XLC)
 
+USE_C_UTILS=0
 AC_ARG_WITH(c-utils,
   AS_HELP_STRING(
     [--with-c-utils], [location of ExM c-utils]),
   [
-    USE_C_UTILS=0
     AC_CHECK_FILE(${withval}/include/c-utils.h,
                   [USE_C_UTILS=1], [])
     if [[ ${USE_C_UTILS} == 0 ]]
