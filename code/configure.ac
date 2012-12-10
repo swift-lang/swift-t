@@ -25,8 +25,13 @@ AC_MSG_RESULT([Turbine version: ${TURBINE_VERSION}])
 AC_SUBST(TURBINE_VERSION)
 
 echo "PREFIX: ${prefix}"
-SOFTWARE=$( cd ${prefix}/.. ; /bin/pwd )
-echo "SOFTWARE: ${SOFTWARE}"
+SOFTWARE=$( cd $(dirname ${prefix}) ; /bin/pwd )
+if [[ ${?} == 0 ]]
+then
+  echo "SOFTWARE: ${SOFTWARE}"
+else
+  SOFTWARE=0
+fi
 
 if [[ ${prefix} == ${PWD} ]]
 then
@@ -104,7 +109,11 @@ AC_ARG_WITH(c-utils,
         USE_C_UTILS=${withval}
     ],
     [
-        dnl If not given, look in SOFTWARE
+        dnl If not given, look in SOFTWARE, if valid
+        if [[ ${SOFTWARE} == 0 ]]
+        then
+            AC_MSG_ERROR([Not found: ExM c-utils])
+        fi
         location=${SOFTWARE}/c-utils
         AC_CHECK_FILE(${location}/include/c-utils.h,
                       [USE_C_UTILS=1], [])
@@ -297,7 +306,11 @@ AC_ARG_WITH(adlb,
         USE_ADLB=${withval}
     ],
     [
-        dnl If not given, look in SOFTWARE
+        dnl If not given, look in SOFTWARE, if valid
+        if [[ ${SOFTWARE} == 0 ]]
+        then
+            AC_MSG_ERROR([Not found: ADLB])
+        fi
         location=${SOFTWARE}/lb
         AC_CHECK_FILE(${location}/include/adlb.h, [USE_ADLB=1], [])
         if [[ ${USE_ADLB} == 1 ]]
