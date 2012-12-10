@@ -122,6 +122,29 @@ To run:
 +turbine/scripts/submit/cray/aprun.sh+
 2. Edit and submit with +qsub+.
 
+== Cloud
+
+=== EC2
+
+==== Setup
+
+* Install http://instagram-engineering.tumblr.com/post/11399488246/simplifying-ec2-ssh-connections[+ec2-host+] on your local system
+* Launch EC2 instances.
+** Enable SSH among instances.
+** Firewall settings must allow all all TCP/IP traffic for MPICH to run.
+** If necessary, install Swift/T
+** An AMI with Swift/T installed is available
+* Use the provided script +turbine/scripts/submit/ec2/turbine-setup-ec2.zsh+.
+** See the script header for usage notes
+** This will configure SSH settings and create a hosts file for MPICH
+   and install them on the EC2 instance
+
+To run:
+----
+export TURBINE_LAUNCH_OPTS="-f $HOME/hosts.txt"
+turbine program.tcl
+----
+
 ////
 Local Variables:
 mode: doc
