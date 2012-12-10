@@ -45,7 +45,7 @@ then
 fi
 
 echo "PREFIX: ${prefix}"
-SOFTWARE=$( cd ${prefix}/.. ; /bin/pwd )
+SOFTWARE=$( cd $(dirname ${prefix}) ; /bin/pwd )
 echo "SOFTWARE: ${SOFTWARE}"
 
 # Checks for programs
