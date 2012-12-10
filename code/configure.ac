@@ -31,11 +31,11 @@ then
 fi
 AC_SUBST(USE_MAC)
 
-# Check that the user has given us a valid CC
+# Provide CC=mpicc by default
 if [[ "${CC}" == "" ]]
 then
-  echo "You must set CC!"
-  exit 1
+  echo "CC not set: setting CC=mpicc"
+  export CC=mpicc
 fi
 which ${CC} >& /dev/null
 if [[ ${?} != 0 ]]
