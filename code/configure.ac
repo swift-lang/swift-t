@@ -46,7 +46,12 @@ fi
 
 echo "PREFIX: ${prefix}"
 SOFTWARE=$( cd $(dirname ${prefix}) ; /bin/pwd )
-echo "SOFTWARE: ${SOFTWARE}"
+if [[ ${?} == 0 ]]
+then
+  echo "SOFTWARE: ${SOFTWARE}"
+else
+  SOFTWARE=0
+fi
 
 # Checks for programs
 AC_PROG_CC
@@ -138,7 +143,11 @@ AC_ARG_WITH(c-utils,
     USE_C_UTILS=${withval}
   ],
   [
-    dnl If not given, look in SOFTWARE
+    dnl If not given, look in SOFTWARE, if valid
+    if [[ ${SOFTWARE} == 0 ]]
+    then
+        AC_MSG_ERROR([Not found: ExM c-utils])
+    fi
     location=${SOFTWARE}/c-utils
     AC_CHECK_FILE(${location}/include/c-utils.h,
                   [USE_C_UTILS=1], [])
