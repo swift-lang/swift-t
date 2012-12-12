@@ -96,6 +96,9 @@ namespace eval turbine {
       log "complete_container_continue: <$A> $i/$n"
       if { $i < $n } {
           set x [ container_lookup $A $i ]
+          if { $x == 0 } {
+              error "complete_container: <$A>\[$i\]=<0>"
+          }
           rule "complete_container_continue-$A" [ list $x ] \
               $turbine::LOCAL \
               "complete_container_continue_body $A {$action} $i $n"
