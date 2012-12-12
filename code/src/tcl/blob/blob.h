@@ -9,6 +9,14 @@
 
 /**
    Simple struct for variable-length data blob
+
+   Based on this struct, SWIG will generate the following
+   Tcl functions:
+
+   new_SwiftBlob()    -> SwiftBlob*
+   delete_SwiftBlob() -> void
+   SwiftBlob_pointer_set/get
+   SwiftBlob_length_set/get
 */
 typedef struct
 {
@@ -16,24 +24,44 @@ typedef struct
   int length;
 } SwiftBlob;
 
-/*
-  Based on the SwiftBlob struct, SWIG will generate the following
-  Tcl functions:
-
-  new_SwiftBlob()    -> SwiftBlob*
-  delete_SwiftBlob() -> void
-  SwiftBlob_pointer_set/get
-  SwiftBlob_length_set/get
+/**
+   Allocate memory (not a blob) of given size
  */
+void* SwiftBlob_allocate(int bytes);
 
-SwiftBlob* SwiftBlob_make_test(void);
+/**
+   Deallocate a blob
+ */
+void SwiftBlob_free(SwiftBlob* blob);
 
+/**
+   Obtain sizeof(double) (In Swift/T, all floats are 64-bit)
+ */
 int SwiftBlob_sizeof_float(void);
 
-int SwiftBlob_pointer_as_integer(void* p);
-double* SwiftBlob_cast_to_pointer(int i);
-double SwiftBlob_double_get(SwiftBlob* data, int index);
-char SwiftBlob_char_get(SwiftBlob* data, int index);
-void* SwiftBlob_allocate(int bytes);
+/*
+   Cast functions for simple SWIG type transformation
+   Not all possible type pairs are yet implemented
+   If not given, void* is assumed
+ */
+int SwiftBlob_cast_to_int(void* p);
+
+double* SwiftBlob_cast_int_to_dbl_ptr(int i);
+double* SwiftBlob_cast_to_dbl_ptr(void* p);
+
+/**
+   Assume blob is array of double- do array lookup
+ */
+double SwiftBlob_double_get(SwiftBlob* blob, int index);
+
+/**
+   Assume blob is array of double- do array store
+ */
 void SwiftBlob_store_double(void* p, int i, double d);
-void SwiftBlob_free(SwiftBlob* blob);
+
+/**
+   Assume blob is array of char- do array lookup
+ */
+char SwiftBlob_char_get(SwiftBlob* blob, int index);
+
+SwiftBlob* SwiftBlob_make_test(void);

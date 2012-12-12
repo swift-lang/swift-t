@@ -27,16 +27,22 @@ SwiftBlob_sizeof_float(void)
 }
 
 int
-SwiftBlob_pointer_as_integer(void* p)
+SwiftBlob_cast_to_int(void* p)
 {
   int result = (long) p;
   return result;
 }
 
 double*
-SwiftBlob_cast_to_pointer(int i)
+SwiftBlob_cast_int_to_dbl_ptr(int i)
 {
   return (double*) (size_t) i;
+}
+
+double*
+SwiftBlob_cast_to_dbl_ptr(void* p)
+{
+  return (double*) p;
 }
 
 double
