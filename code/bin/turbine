@@ -99,6 +99,11 @@ OPTS+="${LINE_PREFIX} "
 OPTS+="-n ${PROCS} "
 OPTS+=${TURBINE_LAUNCH_OPTS}
 
+if (( VERBOSE ))
+then
+  which ${TURBINE_LAUNCH}
+fi
+
 # Allow user to insert valgrind
 ${TURBINE_LAUNCH} ${OPTS} ${VALGRIND} ${TCLSH} ${PROGRAM} ${ARGS}
 # Exit code returned by shell script
