@@ -314,7 +314,8 @@ DIRECTORIES = $(INSTALL_PREFIX) $(INSTALL_BIN) $(INSTALL_ETC)     \
 	      $(INSTALL_SCRIPTS)
 
 EXPORTS = $(shell ls export/*.swift )
-SCRIPTS = $(shell ls scripts/*.zsh scripts/*.sh $(SCRIPTS_SUBMIT) )
+SCRIPTS = $(shell ls bin/turbine scripts/*.zsh scripts/*.sh \
+	             $(SCRIPTS_SUBMIT) )
 
 install.txt: $(PACKAGE) $(EXPORTS) $(SCRIPTS)
 #       Note: this is re-run if anything changes
