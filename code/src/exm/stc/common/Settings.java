@@ -120,7 +120,9 @@ public class Settings
 
   private static void loadVersionNumber() {
     String homeDir = get(STC_HOME);
-    File versionFile = new File(homeDir + File.separator + "version.txt");
+    File versionFile = new File(homeDir + File.separator + 
+                                "etc" + File.separator + 
+                                "version.txt");
     try {
       BufferedReader r = new BufferedReader(new FileReader(versionFile));
       String version = r.readLine().trim();
