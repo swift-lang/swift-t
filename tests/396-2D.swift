@@ -1,5 +1,5 @@
 
-// Currently fails
+// Currently fails - #374
 
 #include <builtins.swift>
 #include <io.swift>
