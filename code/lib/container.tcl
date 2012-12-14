@@ -125,6 +125,7 @@ namespace eval turbine {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set r [ lindex $inputs 2 ]
+        debug "f_reference: <$c>\[$i\] <- <$r>"
         set ref_type [ lindex $inputs 3 ]
         # nonempty c i r
 
@@ -132,7 +133,9 @@ namespace eval turbine {
             "turbine::f_reference_body $c $i $r $ref_type"
     }
     proc f_reference_body { c i r ref_type } {
+        debug "f_reference_body: <$c>\[$i\] <- <$r>"
         set t1 [ retrieve $i ]
+        debug "f_reference_body: <$c>\[\"$t1\"\] <- <$r>"
         adlb::container_reference $c $t1 $r $ref_type
     }
 
@@ -407,7 +410,6 @@ namespace eval turbine {
                "f_container_create_nested_body $tmp_r $c $i $type"
     }
 
-
     # Create container at c[i]
     # Set r, a reference TD on c[i]
     proc f_container_create_nested_body { r c i type } {
@@ -448,7 +450,6 @@ namespace eval turbine {
         allocate tmp_r integer 0
         set v $tmp_r
 
-
         rule fcrcn "$cr $i" $turbine::LOCAL \
            "f_cref_create_nested_body $tmp_r $cr $i $type"
     }
@@ -462,7 +463,7 @@ namespace eval turbine {
 
     # When container is closed, concatenate its keys in result
     # container: The container to read
-    # result: An initialized string
+    # result: A string
     proc enumerate { stack result container } {
 
         rule "enumerate-$container" $container $turbine::LOCAL \
@@ -487,7 +488,7 @@ namespace eval turbine {
         store_integer $result $sz
     }
 
-    # When container is closed, return whether itstrue
+    # When container c is closed, return whether it contains c[i]
     # result: a turbine integer, 0 if not present, 1 if true
     proc contains { stack result inputs } {
         set c [ lindex $inputs 0 ]
@@ -622,7 +623,7 @@ namespace eval turbine {
       log "Container <$container> deep closed"
       store_void $signal
     }
-    
+
     proc container_rec_deep_wait { rule_prefix container nest_level is_file
                                    signal } {
       set inner_signals [ list ]
@@ -658,13 +659,13 @@ namespace eval turbine {
       eval $cmd
     }
 
-    proc send_deeprule { rule_prefix inputs nest_levels is_file 
+    proc send_deeprule { rule_prefix inputs nest_levels is_file
                          action_type action } {
         variable mode
         global WORK_TYPE
         if { $mode == {ENGINE} } {
             deeprule $rule_prefix $inputs $nest_levels $is_file \
-                     $action_type $action 
+                     $action_type $action
         } elseif { [ llength $inputs ] == 0 } {
             release -1 $action_type $action
         } else {
