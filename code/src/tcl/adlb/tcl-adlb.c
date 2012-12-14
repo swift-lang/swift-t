@@ -82,10 +82,6 @@ static Tcl_Obj* TclListFromArray(Tcl_Interp *interp, int *vals, int count);
 static int
 ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[], bool decr);
-static int
-ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
-                  int objc, Tcl_Obj *const objv[], bool decr);
-
 /**
    usage: adlb::init <servers> <types>
    Simplified use of ADLB_Init type_vect: just give adlb_init
@@ -960,6 +956,10 @@ record_index(char* s, int x, int n, struct record_entry* entries)
   }
 }
 
+static inline int
+ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
+                        int objc, Tcl_Obj *const objv[], bool decr);
+
 /**
    Copy a blob from the distributed store into a local blob
    in the memory of this process
@@ -975,14 +975,14 @@ ADLB_Retrieve_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 static int
 ADLB_Retrieve_Blob_Decr_Cmd(ClientData cdata, Tcl_Interp *interp,
-                       int objc, Tcl_Obj *const objv[])
+                            int objc, Tcl_Obj *const objv[])
 {
   return ADLB_Retrieve_Blob_Impl(cdata, interp, objc, objv, true);
 }
 
-static int
+static inline int
 ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
-                 int objc, Tcl_Obj *const objv[], bool decr)
+                        int objc, Tcl_Obj *const objv[], bool decr)
 {
   TCL_ARGS(2);
 
@@ -1014,7 +1014,7 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
   bool b = table_lp_add(&blob_cache, id, blob);
   ASSERT(b);
 
-  // printf("blob_cache: %p\n", blob);
+  // printf("retrieved blob: [ %p %i ]\n", blob, length);
 
   // Pack and return the blob pointer, length as Tcl list
   Tcl_Obj* list[2];
