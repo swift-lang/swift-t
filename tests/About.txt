@@ -40,6 +40,7 @@ The tests are numbered for lexical sorting by shell glob.
         780: MPE
 800::       Error outputs
 900::       Apps??? Formerly advanced constructs
+        980: RDCEP snippets
 
 == Clean
 
