@@ -1,22 +1,27 @@
 
-// Currently fails - #374
+// Related to RDCEP work
 
 #include <builtins.swift>
 #include <io.swift>
 
 (int r[]) f()
 {
-  r[0] = 2;
+  r[0] = 20;
+  r[1] = 21;
+  r[2] = 22;
 }
 
 main
 {
   int A[][];
   A[0][0] = 1;
-  int t[] = f();
-  foreach i, v in t
+  int m[] = f();
+  foreach v, i in m
   {
     printf("i: %i", i);
-    A[0][i] = t[i];
+    if (i != 0)
+    {
+      A[0][i] = m[i];
+    }
   }
 }
