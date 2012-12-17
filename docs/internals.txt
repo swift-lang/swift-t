@@ -1,5 +1,6 @@
 
 :toc:
+:numbered:
 
 Turbine Internals
 ================
@@ -13,6 +14,12 @@ This file is on the web at:
 http://www.mcs.anl.gov/exm/local/guides/turbine-internals.html
 
 ////
+
+////
+Settings:
+////
+:miscellaneous.newline: \n
+
 
 == Overview
 
@@ -522,15 +529,15 @@ contained by it.  It is used to represent associative arrays, structs,
 and stack frames.
 
 Lookups are performed on "subscripts", which are serialized, hashable
-representations of the keys.  Each container has a subscript type that represents the
-type of the keys: this allows for Swift loop variables to be
-automatically defined. The values stored are "members" which are
+representations of the keys.  Each container has a subscript type that
+represents the type of the keys: this allows for Swift loop variables
+to be automatically defined. The values stored are "members" which are
 strings- they typically represent TDs.  Thus, arbitrary data may be
 stored in a container as an optimization
 
-Rules may wait on the whole container TD just like any other TD.  TDs that are members
-of a container are not special. They are simply linked into the
-container data structure.
+Rules may wait on the whole container TD just like any other TD.  TDs
+that are members of a container are not special. They are simply
+linked into the container data structure.
 
 *tcl-adlb.c*
 
@@ -571,9 +578,126 @@ typically a TD, allowing for linked data.
 +container_lookup container td subscript -> member+::
 Lookup the member corresponding to the subscript in the given container
 
+==== Advanced container operations
+
+These are used to support the full set of possible Swift/T array
+operations.
+
+Currently, these contain these +existing name+, the *proposed name*,
+and a proposed shorthand notation *(PSN)*.
+
++(A[i])+ is used to express a reference on +A[i]+.
+
 *container.tcl*
 
-TODO: advanced container operations
++container_create_nested container subscript type+::
+
+*c_v_create (CVC)*
++
+Creates subcontainer when index is a value.
++
+Swift/T example: +(A[i])[j] = f();+
+
++f_container_create_nested container subscript type+::
+
+*c_f_create (CFC)*
++
+Creates subcontainer when index is a future.
++
+Swift/T example: +(A[i])[j] = f();+
+
++container_f_insert container subscript td+::
+
+*c_f_insert (CFI)*
++
+When +subscript+ is set, insert +td+ at +container[subscript]+.
++
+Swift/T example: +A[i] = j;+
+
++container_deref_insert container subscript reference+::
+
+*c_v_insert_r (CVIR)*
++
+Swift/T example: +A[3] = (B[j]);+
+
++container_f_deref_insert container subscript reference+::
+
+*c_f_insert_r (CFIR)*
++
+When +subscript+ and +reference+ are closed, insert the TD stored in
++reference+ into +container[subscript]+.
++
+Swift/T example: +A[i] = (B[j]);+
+
++container_f_get_integer container subscript -> td+::
+
+*c_f_retrieve_integer (CFRI)*
++
+When +container[subscript]+ is inserted, store a copy of that integer
+result in +td+.
++
+Swift/T example: +j = A[i];+
+
++f_dereference_integer/float/string/blob reference td+::
+
+When +reference+ is closed, copy its value into +td+
++
+*dereference_retrieve_integer (DRI)*
++
+*dereference_retrieve_float (DRF)*
++
+Swift/T example: +j = (A[i]);+
+
++f_reference container subscript -> reference+::
+
+*c_f_lookup (CFL)*
++
+Swift/T example: +f(A[i]);+
+
++f_cref_create_nested container_reference subscript type -> reference+::
+
+*cr_v_create (CRVC)*
++
+Swift/T example: +A[i][3] = f();+
+
++cref_create_nested container_reference subscript type -> reference+::
+
+*cr_f_create (CRFC)*
++
+Swift/T example: +(A[i])[j] = f();+
+
++f_cref_lookup_literal container_reference integer td td_type+::
+
+*cr_v_lookup (CRVL)*
++
+Swift/T example: +j = (A[i])[3];+
+
++f_cref_lookup container_reference subscript td td_type+::
+
+*cr_f_lookup (CRFL)*
++
+Swift/T example: +k = (A[i])[j];+
+
++cref_insert container_reference subscript td+::
+
+*cr_v_insert (CRVI)*
++
+Swift/T example: +(A[i])[3] = k;+
+
++f_cref_insert container_reference subscript td+::
+
+*cr_f_insert (CRFI)*
++
+Swift/T example: +(A[i])[j] = k;+
+
++cref_deref_insert container_reference subscript td_reference outer_container+::
+
+When +container_reference+ and +td_reference+ are set, insert +td+ at
++container[subscript]+.
++
+*cr_f_insert_r (CRFIR)*
++
+Swift/T example: +(A[i])[j] = (B[k])+;
 
 *functions.tcl*
 
