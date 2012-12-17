@@ -30,8 +30,8 @@ The tests are numbered for lexical sorting by shell glob.
 400::       For loops
 500::       Types
         560:: files
-        580::
-        590: blobs
+        580:: foreach
+        590:: blobs
 600::       User builtins, interesting CPP uses
 700::       STC standard library
         700: strings
