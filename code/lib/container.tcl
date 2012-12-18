@@ -1,10 +1,21 @@
+
 # Turbine builtin container operations
+
+# Rule debug token conventions:
+#  1) Use shorthand notation from Turbine Internals Guide
+#  2) Preferably, just specify output TDs.  Input TDs are reported by
+#     the WAITING TRANSFORMS list and the rule debugging lines
 
 namespace eval turbine {
     namespace export container_f_get container_f_insert
     namespace export f_reference
     namespace export f_container_create_nested
 
+    # Just like adlb::container_reference but add logging
+    proc container_reference { c i r type } {
+        log "creating reference: <$c>\[$i\] <- $r ($type)"
+        adlb::container_reference $c $i $r $type
+    }
 
     # Same as container_lookup, but fail if item does not exist
     proc container_lookup_checked { c i } {
@@ -32,7 +43,7 @@ namespace eval turbine {
         set s [ retrieve $i ]
         set t [ container_lookup $c $s ]
         if { $t == 0 } {
-            error "lookup failed: container_f_get <$c>\[\"$s\"\]"
+            error "lookup failed: container_f_get <$c>\[$s\]"
         }
         set value [ retrieve_integer $t ]
         store_integer $d $value
@@ -135,8 +146,8 @@ namespace eval turbine {
     proc f_reference_body { c i r ref_type } {
         debug "f_reference_body: <$c>\[$i\] <- <$r>"
         set t1 [ retrieve $i ]
-        debug "f_reference_body: <$c>\[\"$t1\"\] <- <$r>"
-        adlb::container_reference $c $t1 $r $ref_type
+        debug "f_reference_body: <$c>\[$t1\] <- <$r>"
+        container_reference $c $t1 $r $ref_type
     }
 
     # When reference r is closed, copy its (integer) value in v
@@ -217,6 +228,8 @@ namespace eval turbine {
         set d [ lindex $inputs 2 ]
         set d_type [ lindex $inputs 3 ]
 
+        log "creating reference: <*$cr>\[$i\] <- <*$d>"
+
         rule "f_cref_lookup_literal-$cr" "$cr" $turbine::LOCAL \
             "turbine::f_cref_lookup_literal_body $cr $i $d $d_type"
 
@@ -226,7 +239,7 @@ namespace eval turbine {
         # When this procedure is run, cr should be set and
         # i should be the literal index
         set c [ retrieve_integer $cr ]
-        adlb::container_reference $c $i $d $d_type
+        container_reference $c $i $d $d_type
     }
 
     # When reference cr is closed, store d = (*cr)[i]
@@ -251,7 +264,7 @@ namespace eval turbine {
         # When this procedure is run, cr and i should be set
         set c [ retrieve_integer $cr ]
         set t1 [ retrieve $i ]
-        adlb::container_reference $c $t1 $d $d_type
+        container_reference $c $t1 $d $d_type
     }
 
     # When reference r on c[i] is closed, store c[i][j] = d
@@ -342,7 +355,6 @@ namespace eval turbine {
     # Insert c[i][j] = d
     proc f_container_nested_insert { c i j d } {
 
-
         rule "fcni" "$i $j" $turbine::LOCAL \
             [ list f_container_nested_insert_body_1 $c $i $j $d ]
     }
@@ -370,22 +382,22 @@ namespace eval turbine {
     # Create container c[i] inside of container c
     # c[i] may already exist, if so, that's fine
     proc container_create_nested { c i type } {
-      debug "container_create_nested: $c\[\"$i\"\] $type"
+      log "creating nested container: <$c>\[$i\] ($type)"
       if [ adlb::insert_atomic $c $i ] {
-        debug "$c\[\"$i\"\] doesn't exist, creating"
+        debug "$c\[$i\] doesn't exist, creating"
         # Member did not exist: create it and get reference
         allocate_container t $type
         adlb::insert $c $i $t
         # setup rule to close when outer container closes
 
-        rule "autoclose-$c-$t" "$c" $turbine::LOCAL \
+        rule "autoclose-$t" "$c" $turbine::LOCAL \
                "adlb::slot_drop $t"
         return $t
       } else {
         # Another engine is creating it right this second, poll
         # until we get it.  Note: this should require at most one
         # or two polls to get a result
-        debug "$c\[$i\] already exists, retrieving"
+        debug "<$c>\[$i\] already exists, retrieving"
         set container_id 0
         while { $container_id == 0 } {
           set container_id [ adlb::lookup $c $i ]
