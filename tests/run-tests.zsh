@@ -103,6 +103,18 @@ print "using stc: ${STC}\n"
 
 RUN_TEST=${STC_TESTS_DIR}/run-test.zsh
 
+export TURBINE_USER_LIB=${STC_TESTS_DIR}
+
+which tclsh > /dev/null
+if [[ ${?} != 0 ]]
+then
+  print "Could not find tclsh!"
+  exit 1
+fi
+
+# Make the package for tests with builtins
+tclsh ${STC_TESTS_DIR}/make-package.tcl > ${STC_TESTS_DIR}/pkgIndex.tcl
+
 compile_test()
 # Translate test
 {
