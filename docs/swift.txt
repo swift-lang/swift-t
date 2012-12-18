@@ -201,6 +201,7 @@ x1, x2 = f(i1, i2);
 ----
 
 == Types
+
 Swift provides a similar range of primitive types to many other
 programming languages.  Files are a primitive type in Swift, unlike
 in many other languages, and have a number of special characteristics
@@ -208,6 +209,7 @@ that merit special mention.
 Two basic kinds of data structure are provided: arrays and structs.
 
 === Primitive Types
+
 Swift has the conventional types:
 
 +string+:: A complete string (not an array of characters).
@@ -248,6 +250,7 @@ string hw = s + "world";
 ----
 
 === Files
+
 A file is a first-class entity in Swift that in many ways can be treated
 as any other variable.  The main difference is that a file can be
 *mapped* to path in a filesystem.  Assigning to a mapped file variable
@@ -378,6 +381,7 @@ p.age = 90;
 ----
 
 === Defining new types
+
 *Note:* The features in this section are immature, so you will have
 a higher probability of encountering compiler bugs.
 
@@ -490,7 +494,7 @@ The +foreach+ loop allows for parallel iteration over an array:
 
 ----
 string A[];
-foreach index, value in A
+foreach value, index in A
 {
   printf("A[%i] = %s\n", index, value);
 }
@@ -755,6 +759,9 @@ If condition is false, report +message+ and exit immediately.
 
 === Files
 
++filename(file) -> string+::   Obtain the name of a file
++input_file(string) -> file+:: Obtain a +file+.  At run time, the
+filesystem is checked for the given file name
 +readFile(file) -> string+::   Read file as a string
 +writeFile(string) -> file+::  Write string to file
 +glob(string) -> file[]+:: Perform glob operation, returning files
