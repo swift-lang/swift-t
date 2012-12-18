@@ -733,7 +733,7 @@ handle_insert(int caller)
   RECV(member, ADLB_DATA_MEMBER_MAX, MPI_CHAR, caller,
        ADLB_TAG_INSERT_PAYLOAD);
 
-  DEBUG("Insert: <%li>[\"%s\"]=\"%s\"",
+  DEBUG("Insert: <%li>[%s]=%s",
         id, subscript, member);
 
   adlb_data_code dc = data_insert(id, subscript, member, drops,
@@ -794,7 +794,7 @@ handle_insert_atomic(int caller)
 
   bool result;
   adlb_data_code dc = data_insert_atomic(id, subscript, &result);
-  DEBUG("Insert_atomic: <%li>[\"%s\"] => %i",
+  DEBUG("Insert_atomic: <%li>[%s] => %i",
         id, subscript, result);
   RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   RSEND(&result, sizeof(bool), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
@@ -906,7 +906,7 @@ handle_container_reference(int caller)
             (int*)&ref_type);
   assert(n == 4);
 
-  DEBUG("Container_reference: <%li>[\"%s\"] => <%li> (%i)",
+  DEBUG("Container_reference: <%li>[%s] => <%li> (%i)",
         container_id, subscript, reference, ref_type);
 
   char *member;
