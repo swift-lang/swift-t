@@ -338,7 +338,7 @@ namespace eval turbine {
         if { [ llength $args ] == 4 } {
             set drops [ lindex $args 3 ]
         }
-        log "insert: <$id>\[\"$subscript\"\]=<$member>"
+        log "insert: <$id>\[$subscript\]=<$member>"
         adlb::insert $id $subscript $member $drops
     }
 
