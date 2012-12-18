@@ -413,14 +413,15 @@ data_container_reference(adlb_datum_id container_id,
       if (z == t)
         return ADLB_DATA_ERROR_NUMBER_FORMAT;
       *member = m;
-      return ADLB_DATA_SUCCESS;
     }
     else
     {
+      // Not found:
       *member = ADLB_DATA_ID_NULL;
-      return ADLB_DATA_SUCCESS;
     }
+    return ADLB_DATA_SUCCESS;
   }
+  // Errors:
   return rc;
 }
 
