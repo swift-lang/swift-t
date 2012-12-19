@@ -128,6 +128,7 @@ struct table_lp td_subscribed;
 static long transform_unique_id = -1;
 
 static int mpi_size = -1;
+static int mpi_rank = -1;
 
 #define turbine_condition(condition, code, format, args...) \
   { if (! (condition))                                      \
@@ -203,6 +204,7 @@ turbine_init(int amserver, int rank, int size)
     return TURBINE_SUCCESS;
 
   mpi_size = size;
+  mpi_rank = rank;
   transform_unique_id = rank+mpi_size;
   initialized = true;
 
@@ -225,14 +227,16 @@ setup_cache()
     printf("malformed integer in environment: TURBINE_CACHE_SIZE\n");
     return false;
   }
-  DEBUG_TURBINE("TURBINE_CACHE_SIZE: %i", size);
+  if (mpi_rank == 0)
+    DEBUG_TURBINE("TURBINE_CACHE_SIZE: %i", size);
   b = getenv_ulong("TURBINE_CACHE_MAX", 10*1024*1024, &max_memory);
   if (!b)
   {
     printf("malformed integer in environment: TURBINE_CACHE_MAX\n");
     return false;
   }
-  DEBUG_TURBINE("TURBINE_CACHE_MAX: %lu", max_memory);
+  if (mpi_rank == 0)
+    DEBUG_TURBINE("TURBINE_CACHE_MAX: %lu", max_memory);
 
   turbine_cache_init(size, max_memory);
 
@@ -411,8 +415,8 @@ turbine_rule(const char* name,
   return TURBINE_SUCCESS;
 }
 
-turbine_code declare_datum(turbine_datum_id id,
-                           struct list_l** result);
+static inline turbine_code declare_datum(turbine_datum_id id,
+                                         struct list_l** result);
 
 /**
    Record that this transform is blocked by its inputs
@@ -480,7 +484,7 @@ turbine_rules_push()
    Declare a new data id
    @param result If non-NULL, return the new blocked list here
  */
-turbine_code
+static inline turbine_code
 declare_datum(turbine_datum_id id, struct list_l** result)
 {
   assert(initialized);
@@ -681,7 +685,7 @@ transform_tostring(char* output, transform* t)
   {
     // Highlight the blocking variable
     if (i == t->blocker)
-      append(p, "*%li*", t->input_list[i]);
+      append(p, "/%li/", t->input_list[i]);
     else
       append(p, "%li", t->input_list[i]);
     if (i < t->inputs-1)
