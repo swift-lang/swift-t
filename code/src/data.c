@@ -538,9 +538,6 @@ data_store(adlb_datum_id id, void* buffer, int length,
       memcpy(d->data.BLOB.value, buffer, length);
       d->data.BLOB.length = length;
       break;
-    case ADLB_DATA_TYPE_FILE:
-      // closed- do nothing
-      break;
     case ADLB_DATA_TYPE_CONTAINER:
       // closed- do nothing
       break;
@@ -648,10 +645,6 @@ data_retrieve(adlb_datum_id id, adlb_data_type* type,
       CHECK_SET(id, d);
       *result = d->data.BLOB.value;
       *length = d->data.BLOB.length;
-      break;
-    case ADLB_DATA_TYPE_FILE:
-      *result = d->data.FILE.path;
-      *length = strlen(d->data.FILE.path)+1;
       break;
     case ADLB_DATA_TYPE_CONTAINER:
       printf("data_retrieve(): may not be used on containers!\n");
@@ -940,8 +933,6 @@ ADLB_Data_string_totype(const char* type_string,
     *type = ADLB_DATA_TYPE_STRING;
   else if (strcmp(type_string, "blob") == 0)
     *type = ADLB_DATA_TYPE_BLOB;
-  else if (strcmp(type_string, "file") == 0)
-    *type = ADLB_DATA_TYPE_FILE;
   else if (strcmp(type_string, "container") == 0)
     *type = ADLB_DATA_TYPE_CONTAINER;
   else
@@ -968,9 +959,6 @@ ADLB_Data_type_tostring(char* output, adlb_data_type type)
       break;
     case ADLB_DATA_TYPE_BLOB:
       result = sprintf(output, "blob");
-      break;
-    case ADLB_DATA_TYPE_FILE:
-      result = sprintf(output, "file");
       break;
     case ADLB_DATA_TYPE_CONTAINER:
       result = sprintf(output, "container");

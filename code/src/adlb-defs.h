@@ -43,8 +43,6 @@ typedef unsigned char adlb_data_status;
 #define ADLB_DATA_PERMANENT_MASK ((adlb_data_status)0x2)
 #define ADLB_DATA_PERMANENT(status) ((status & ADLB_DATA_PERMANENT_MASK) != 0)
 
-
-
 /**
    User data types
  */
@@ -55,7 +53,6 @@ typedef enum
   ADLB_DATA_TYPE_FLOAT,
   ADLB_DATA_TYPE_STRING,
   ADLB_DATA_TYPE_BLOB,
-  ADLB_DATA_TYPE_FILE,
   ADLB_DATA_TYPE_CONTAINER
 } adlb_data_type;
 

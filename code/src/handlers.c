@@ -136,7 +136,7 @@ handler_valid(adlb_tag tag)
 adlb_code
 handle(adlb_tag tag, int caller)
 {
-  CHECK_MSG(handler_valid(tag), "handle(): invalid tag: %i\n", tag);
+  CHECK_MSG(handler_valid(tag), "handle(): invalid tag: %i", tag);
   CHECK_MSG(handlers[tag] != NULL, "handle(): invalid tag: %i", tag);
   DEBUG("handle: caller=%i %s", caller, xlb_get_tag_name(tag));
 
@@ -466,26 +466,20 @@ handle_create(int caller)
   bool updateable = data.updateable;
  
   adlb_data_code dc = ADLB_DATA_SUCCESS;
-  if (id == ADLB_DATA_ID_NULL) {
+  if (id == ADLB_DATA_ID_NULL)
     // Allocate a new id
     dc = data_unique(&id);
-  }
 
-  if (dc == ADLB_DATA_SUCCESS) {
+  if (dc == ADLB_DATA_SUCCESS)
     dc = data_create(id, type, updateable);
-  }
   
   struct packed_create_response resp = { .dc = dc, .id = id };
   RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
 
-  if (dc == ADLB_DATA_SUCCESS) {
-    // Types file and container need additional information
-    if (type == ADLB_DATA_TYPE_FILE)
-    {
-      RECV(xfer, XFER_SIZE, MPI_CHAR, caller, ADLB_TAG_CREATE_PAYLOAD);
-      data_create_filename(id, xfer);
-    }
-    else if (type == ADLB_DATA_TYPE_CONTAINER)
+  if (dc == ADLB_DATA_SUCCESS)
+  {
+    // Containers need additional information
+    if (type == ADLB_DATA_TYPE_CONTAINER)
     {
       adlb_data_type container_type;
       RECV(&container_type, 1, MPI_INT, caller,

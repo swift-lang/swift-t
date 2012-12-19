@@ -252,22 +252,12 @@ ADLBP_Create_impl(adlb_datum_id id, adlb_data_type type,
     return ADLB_ERROR;
   }
 
-  if (type == ADLB_DATA_TYPE_FILE)
-  {
-    int length = strlen(filename);
-    // Remove const qualifier- MPI cannot accept it
-    char* fn = (char*) filename;
-    rc = MPI_Send(fn, length+1, MPI_CHAR, to_server_rank,
-                  ADLB_TAG_CREATE_PAYLOAD, adlb_all_comm);
-    MPI_CHECK(rc);
-  }
-  else if (type == ADLB_DATA_TYPE_CONTAINER)
+  if (type == ADLB_DATA_TYPE_CONTAINER)
   {
     TRACE("ADLB_Create(type=container, subscript_type=%i)",
           subscript_type);
-    rc = MPI_Send(&subscript_type, 1, MPI_INT, to_server_rank,
-                  ADLB_TAG_CREATE_PAYLOAD, adlb_all_comm);
-    MPI_CHECK(rc);
+    SEND(&subscript_type, 1, MPI_INT, to_server_rank,
+         ADLB_TAG_CREATE_PAYLOAD);
   }
   return ADLB_SUCCESS;
 }
@@ -315,14 +305,6 @@ ADLB_Create_blob(adlb_datum_id id, bool updateable,
 {
   return ADLBP_Create_impl(id, ADLB_DATA_TYPE_BLOB, NULL,
                    ADLB_DATA_TYPE_NULL, updateable, new_id);
-}
-
-adlb_code
-ADLB_Create_file(adlb_datum_id id, const char* filename,
-                 bool updateable, adlb_datum_id *new_id)
-{
-  return ADLBP_Create_impl(id, ADLB_DATA_TYPE_FILE, filename,
-                  ADLB_DATA_TYPE_NULL, updateable, new_id);
 }
 
 adlb_code
@@ -495,7 +477,7 @@ ADLBP_Insert(adlb_datum_id id,
             "ADLB_Insert(): member too long: <%li>[\"%s\"]\n",
             id, subscript);
 
-  DEBUG("ADLB_Insert: <%li>[\"%s\"]=\"%s\"", id, subscript, member);
+  DEBUG("ADLB_Insert: <%li>[%s]=\"%s\"", id, subscript, member);
   int length = sprintf(xfer, "%li %s %i %i",
                        id, subscript, member_length, drops);
   int to_server_rank = ADLB_Locate(id);
@@ -833,7 +815,7 @@ ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
   MPI_CHECK(rc);
   rc = MPI_Wait(&request, &status);
   MPI_CHECK(rc);
-  DEBUG("ADLB_Container_reference: <%li>[\"%s\"] => <%li> (%i)",
+  DEBUG("ADLB_Container_reference: <%li>[%s] => <%li> (%i)",
         id, subscript, reference, ref_type);
 
   if (dc != ADLB_DATA_SUCCESS)
@@ -1038,21 +1020,22 @@ print_proc_self_status()
   char input_line[1024], key[100], mag[100];
   FILE *statsfile;
 
-  statsfile = fopen("/proc/self/status","r");
+  statsfile = fopen("/proc/self/status", "r");
   if (statsfile)
   {
     printf("values from: /proc/self/status:\n");
     while (fgets(input_line,100,statsfile) != NULL)
     {
-      if (strncmp(input_line,"VmRSS:",6)  == 0  ||
-          strncmp(input_line,"VmHWM:",6)  == 0  ||
-          strncmp(input_line,"VmPeak:",7) == 0  ||
+      if (strncmp(input_line,"VmRSS:",6)  == 0 ||
+          strncmp(input_line,"VmHWM:",6)  == 0 ||
+          strncmp(input_line,"VmPeak:",7) == 0 ||
           strncmp(input_line,"VmSize:",7) == 0)
       {
         sscanf(input_line,"%s %d %s",key,&val,mag);
         printf("    %s %d %s\n",key,val,mag);
       }
     }
+    fclose(statsfile);
   }
 }
 
