@@ -24,6 +24,7 @@
   { if (!(rc)) {                                             \
       printf("CHECK FAILED: %s:%i\n", __FILE__, __LINE__);   \
       printf(args);                                          \
+      printf("\n");                                          \
       return ADLB_ERROR; }}
 
 /**
