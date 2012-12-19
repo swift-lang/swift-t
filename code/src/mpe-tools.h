@@ -19,7 +19,7 @@
 
 // Event pairs
 // Note: these names must be conventional for use with our macros
-// The convention is: xlb_mpe_[svr|wkr]?_<OP>_[start|end]
+// The convention is: xlb_mpe_[svr|dmn|wkr]?_<OP>_[start|end]
 
 #define extern_declare_pair(component, function) \
   extern int xlb_mpe_##component##_##function##_start, \
