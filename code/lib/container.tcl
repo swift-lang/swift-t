@@ -13,7 +13,7 @@ namespace eval turbine {
 
     # Just like adlb::container_reference but add logging
     proc container_reference { c i r type } {
-        log "creating reference: <$c>\[$i\] <- $r ($type)"
+        log "creating reference: <$c>\[$i\] <- <*$r> ($type)"
         adlb::container_reference $c $i $r $type
     }
 
@@ -136,7 +136,7 @@ namespace eval turbine {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set r [ lindex $inputs 2 ]
-        debug "f_reference: <$c>\[$i\] <- <$r>"
+        debug "f_reference: <$c>\[<$i>\] <- <*$r>"
         set ref_type [ lindex $inputs 3 ]
         # nonempty c i r
 
@@ -144,7 +144,7 @@ namespace eval turbine {
             "turbine::f_reference_body $c $i $r $ref_type"
     }
     proc f_reference_body { c i r ref_type } {
-        debug "f_reference_body: <$c>\[$i\] <- <$r>"
+        debug "f_reference_body: <$c>\[<$i>\] <- <*$r>"
         set t1 [ retrieve $i ]
         debug "f_reference_body: <$c>\[$t1\] <- <$r>"
         container_reference $c $t1 $r $ref_type
@@ -280,6 +280,8 @@ namespace eval turbine {
         set oc [ lindex $inputs 3 ]
         adlb::slot_create $oc
 
+        log "insert (future): <*$r>\[<$j>\]=<$d>"
+
         rule "f_cref_insert-$r-$j-$d-$oc" "$r $j" $turbine::LOCAL \
             [ list turbine::f_cref_insert_body $r $j $d $oc ]
     }
@@ -288,6 +290,7 @@ namespace eval turbine {
         set c [ retrieve_integer $r ]
         set s [ retrieve_integer $j ]
         container_insert $c $s $d
+        log "insert: (now) <$c>\[$s\]=<$d>"
         adlb::slot_drop $oc
     }
 
