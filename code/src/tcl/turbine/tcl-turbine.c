@@ -414,9 +414,6 @@ retrieve_object(Tcl_Interp *interp, Tcl_Obj *const objv[], long id,
                     "adlb::retrieve: unterminated blob: <%li>", id);
       *result = Tcl_NewStringObj(data, string_length);
       break;
-    case ADLB_DATA_TYPE_FILE:
-      *result = Tcl_NewStringObj(data, length-1);
-      break;
     case ADLB_DATA_TYPE_CONTAINER:
       *result = Tcl_NewStringObj(data, length-1);
       break;
@@ -500,9 +497,6 @@ extract_object(Tcl_Interp* interp, Tcl_Obj *const objv[],
       break;
     case TURBINE_TYPE_BLOB:
       TCL_RETURN_ERROR("cannot cache a blob!");
-      break;
-    case TURBINE_TYPE_FILE:
-      TCL_RETURN_ERROR("cannot cache a file!");
       break;
     case TURBINE_TYPE_CONTAINER:
       TCL_RETURN_ERROR("cannot cache a container!");

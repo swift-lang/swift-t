@@ -159,9 +159,8 @@ set_namespace_constants(Tcl_Interp* interp)
   tcl_set_integer(interp, "::adlb::INTEGER",   ADLB_DATA_TYPE_INTEGER);
   tcl_set_integer(interp, "::adlb::FLOAT",     ADLB_DATA_TYPE_FLOAT);
   tcl_set_integer(interp, "::adlb::STRING",    ADLB_DATA_TYPE_STRING);
-  tcl_set_integer(interp, "::adlb::FILE",      ADLB_DATA_TYPE_FILE);
   tcl_set_integer(interp, "::adlb::BLOB",      ADLB_DATA_TYPE_BLOB);
-  tcl_set_long(interp, "::adlb::NULL_ID",      ADLB_DATA_ID_NULL);
+  tcl_set_long(interp,    "::adlb::NULL_ID",   ADLB_DATA_ID_NULL);
   tcl_set_integer(interp, "::adlb::CONTAINER", ADLB_DATA_TYPE_CONTAINER);
   tcl_set_integer(interp, "::adlb::READ_REFCOUNT", ADLB_READ_REFCOUNT);
   tcl_set_integer(interp, "::adlb::WRITE_REFCOUNT", ADLB_WRITE_REFCOUNT);
@@ -405,8 +404,6 @@ adlb_data_type type_from_string(const char* type_string)
     result = ADLB_DATA_TYPE_STRING;
   else if (strcmp(type_string, "blob") == 0)
     result = ADLB_DATA_TYPE_BLOB;
-  else if (strcmp(type_string, "file") == 0)
-    result = ADLB_DATA_TYPE_FILE;
   else if (strcmp(type_string, "container") == 0)
     result = ADLB_DATA_TYPE_CONTAINER;
   else
@@ -453,12 +450,6 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
       break;
     case ADLB_DATA_TYPE_BLOB:
       rc = ADLB_Create_blob(id, updateable, &new_id);
-      break;
-    case ADLB_DATA_TYPE_FILE:
-      TCL_CONDITION(objc >= 5,
-                    "adlb::create type=file requires file name!");
-      char* filename = Tcl_GetString(objv[4]);
-      rc = ADLB_Create_file(id, filename, updateable, &new_id);
       break;
     case ADLB_DATA_TYPE_CONTAINER:
       TCL_CONDITION(objc >= 5,
@@ -582,10 +573,6 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
       TCL_CONDITION(length < ADLB_DATA_MAX,
                     "adlb::store: string too long: <%li>", id);
       break;
-    case ADLB_DATA_TYPE_FILE:
-      // Ignore objv[3]
-      break;
-
     case ADLB_DATA_TYPE_CONTAINER:
       // Ignore objv[3]
       break;
@@ -724,9 +711,6 @@ retrieve_object(Tcl_Interp *interp, Tcl_Obj *const objv[], long id,
       TCL_CONDITION(string_length < length,
                     "adlb::retrieve: unterminated blob: <%li>", id);
       *result = Tcl_NewStringObj(xfer, string_length);
-      break;
-    case ADLB_DATA_TYPE_FILE:
-      *result = Tcl_NewStringObj(xfer, length-1);
       break;
     case ADLB_DATA_TYPE_CONTAINER:
       *result = Tcl_NewStringObj(xfer, length-1);
