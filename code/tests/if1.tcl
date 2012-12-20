@@ -21,7 +21,6 @@
 package require turbine 0.0.1
 
 namespace import turbine::*
-namespace import turbine::c::rule*
 
 proc f { x r } {
     # Leaf function
