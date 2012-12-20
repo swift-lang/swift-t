@@ -13,10 +13,12 @@ source ${BUILDVARS}
 cd ${C_UTILS}
 ${DEV_DIR}/cutil_build.sh
 
-cd ${DEV_DIR}
-export DEST=${MPE_INST}
-export MPICH=${MPICH_INST}
-${REPO_ROOT}/adlb_patches/make-libmpe.so.zsh
+if [ ! -z "$ENABLE_MPE" ]; then
+  cd ${DEV_DIR}
+  export DEST=${MPE_INST}
+  export MPICH=${MPICH_INST}
+  ${REPO_ROOT}/adlb_patches/make-libmpe.so.zsh
+fi
 
 cd ${LB}
 ${DEV_DIR}/adlb_build.sh 
