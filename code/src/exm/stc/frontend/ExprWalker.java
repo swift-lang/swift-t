@@ -469,11 +469,10 @@ public class ExprWalker {
       
       backend.startWaitStatement(context.getFunctionContext().constructName("priority-wait"), 
                         Arrays.asList(priorityFuture), usedVariables, keepOpen,
-                        WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
+                        WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
       openedWait = true;
       callContext = new LocalContext(context);
       priorityVal = varCreator.fetchValueOf(callContext, priorityFuture);
-      
     }
     
     // callFunction will check that argument types match function
@@ -774,7 +773,7 @@ public class ExprWalker {
       backend.startWaitStatement(
            fc.constructName("call-" + function),
            waitVars, usedVars, new ArrayList<Var>(),
-           WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
+           WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
 
       assert(waitVars.size() == derefVars.size());
       // Generate code to fetch actual array IDs  inside

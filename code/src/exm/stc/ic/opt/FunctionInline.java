@@ -32,8 +32,8 @@ import exm.stc.ic.tree.ICTree.Program;
 public class FunctionInline implements OptimizerPass {
 
   private static boolean isFunctionCall(Instruction inst) {
-    return inst.op == Opcode.CALL_CONTROL || inst.op == Opcode.CALL_LOCAL
-                                       || inst.op == Opcode.CALL_SYNC;
+    return inst.op == Opcode.CALL_CONTROL || inst.op == Opcode.CALL_LOCAL ||
+           inst.op == Opcode.CALL_SYNC || inst.op == Opcode.CALL_LOCAL_CONTROL;
   }
 
   /**

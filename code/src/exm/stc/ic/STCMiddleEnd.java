@@ -842,8 +842,10 @@ public class STCMiddleEnd implements CompilerBackend {
 
     WaitMode waitMode;
     if (mode == TaskMode.LOCAL || mode == TaskMode.SYNC) {
+      // Cases where function can execute on any node
       waitMode = WaitMode.DATA_ONLY;
     } else {
+      // Cases where we may need to send task to another class of worker
       waitMode = WaitMode.TASK_DISPATCH;
     }
     

@@ -322,6 +322,7 @@ class Turbine
   private static Value tclRuleType (TaskMode t) {
     switch (t) {
     case LOCAL:
+    case LOCAL_CONTROL:
       return new Value("turbine::LOCAL");
     case CONTROL:
       return new Value("turbine::CONTROL");

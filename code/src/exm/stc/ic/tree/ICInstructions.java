@@ -1458,7 +1458,7 @@ public class ICInstructions {
       case ARRAY_REF_CREATE_NESTED_FUTURE:
       case ARRAY_CREATE_NESTED_FUTURE:
       case ARRAY_REF_CREATE_NESTED_IMM:
-        return TaskMode.CONTROL;
+        return TaskMode.LOCAL_CONTROL;
       default:
         throw new STCRuntimeError("Need to add opcode " + op.toString()
             + " to getMode");
@@ -1778,7 +1778,8 @@ public class ICInstructions {
         List<Var> inputs, List<Var> outputs, Arg priority) {
       super(op, functionName);
       if (op != Opcode.CALL_BUILTIN && op != Opcode.CALL_CONTROL &&
-          op != Opcode.CALL_SYNC && op != Opcode.CALL_LOCAL) {
+          op != Opcode.CALL_SYNC && op != Opcode.CALL_LOCAL &&
+          op != Opcode.CALL_LOCAL_CONTROL) {
         throw new STCRuntimeError("Tried to create function call"
             + " instruction with invalid opcode");
       }
@@ -1811,6 +1812,8 @@ public class ICInstructions {
         op = Opcode.CALL_CONTROL;
       } else if (mode == TaskMode.LOCAL) {
         op = Opcode.CALL_LOCAL;
+      } else if (mode == TaskMode.LOCAL_CONTROL) {
+        op = Opcode.CALL_LOCAL_CONTROL;
       } else {
         throw new STCRuntimeError("Task mode " + mode + " not yet supported");
       }
@@ -1853,12 +1856,15 @@ public class ICInstructions {
       case CALL_SYNC:
       case CALL_CONTROL:
       case CALL_LOCAL:
+      case CALL_LOCAL_CONTROL:
         TaskMode mode;
         if (op == Opcode.CALL_CONTROL) {
           mode = TaskMode.CONTROL;
         } else if (op == Opcode.CALL_SYNC) {
           mode = TaskMode.SYNC;
         } else if (op == Opcode.CALL_LOCAL) {
+          mode = TaskMode.LOCAL;
+        } else if (op == Opcode.CALL_LOCAL_CONTROL) {
           mode = TaskMode.LOCAL;
         } else {
           throw new STCRuntimeError("Unexpected op " + op);
@@ -2008,20 +2014,24 @@ public class ICInstructions {
     
     @Override
     public TaskMode getMode() {
-      if (op == Opcode.CALL_SYNC) {
-        return TaskMode.SYNC;
-      } else if (op == Opcode.CALL_LOCAL) {
-        return TaskMode.LOCAL;
-      } else if (op == Opcode.CALL_BUILTIN) {
-        TaskMode m = Builtins.getTaskMode(functionName);
-        if (m == null) {
+      switch (op) {
+        case CALL_SYNC:
+          return TaskMode.SYNC;
+        case CALL_LOCAL:
           return TaskMode.LOCAL;
-        } else {
-          return m;
-        }
-      } else {
-        assert(op == Opcode.CALL_CONTROL);
-        return TaskMode.CONTROL;
+        case CALL_LOCAL_CONTROL:
+          return TaskMode.LOCAL_CONTROL;
+        case CALL_BUILTIN:
+          TaskMode m = Builtins.getTaskMode(functionName);
+          if (m == null) {
+            return TaskMode.LOCAL;
+          } else {
+            return m;
+          }
+        case CALL_CONTROL:
+          return TaskMode.CONTROL;
+        default:
+          throw new STCRuntimeError("Unexpected function call opcode: " + op);
       }
     }
 
@@ -2594,6 +2604,7 @@ public class ICInstructions {
     FAKE, // Used for ComputedValue if there isn't a real opcode
     COMMENT,
     CALL_BUILTIN, CALL_BUILTIN_LOCAL, CALL_CONTROL, CALL_SYNC, CALL_LOCAL,
+    CALL_LOCAL_CONTROL,
     DEREF_INT, DEREF_STRING, DEREF_FLOAT, DEREF_BOOL, DEREF_BLOB,
     DEREF_FILE,
     STORE_INT, STORE_STRING, STORE_FLOAT, STORE_BOOL, ADDRESS_OF, 

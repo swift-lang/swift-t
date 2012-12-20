@@ -1877,6 +1877,10 @@ public class ICContinuations {
       case SYNC:
       case LOCAL:
         return outerContext;
+      case LOCAL_CONTROL:
+        // Check used validly
+        assert(outerContext == ExecContext.CONTROL);
+        return outerContext;
       case CONTROL:
         return ExecContext.CONTROL;
       case LEAF:

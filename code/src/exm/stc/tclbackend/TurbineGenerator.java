@@ -671,7 +671,8 @@ public class TurbineGenerator implements CompilerBackend
     assert(priority == null || priority.isImmediateInt());
     logger.debug("call builtin: " + function);
     TclFunRef tclf = builtinSymbols.get(function);
-
+    assert tclf != null : "Builtin " + function + "not found";
+    Builtins.getTaskMode(function).checkSpawn(execContextStack.peek());
     // Increment references so that function owns ref
     pointStack.peek().add(incrementReaders(inputs, null));
 
@@ -731,7 +732,8 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     setPriority(priority);
-    if (mode == TaskMode.CONTROL || mode == TaskMode.LOCAL) {
+    if (mode == TaskMode.CONTROL || mode == TaskMode.LOCAL ||
+        mode == TaskMode.LOCAL_CONTROL) {
       // Increment reference counts to keep open
       pointStack.peek().append(incrementReaders(outputs, null));
       pointStack.peek().append(incrementReaders(inputs, null));
@@ -1325,6 +1327,7 @@ public class TurbineGenerator implements CompilerBackend
     private void startAsync(String procName, List<Var> waitVars,
         List<Var> usedVariables, List<Var> keepOpenVars,
         boolean recursive, TaskMode mode) {
+      mode.checkSpawn(execContextStack.peek());
       ArrayList<Var> toPassIn = new ArrayList<Var>();
       HashSet<String> alreadyInSet = new HashSet<String>();
       for (Var v: usedVariables) {

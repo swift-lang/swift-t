@@ -180,7 +180,7 @@ public class WaitCoalescer implements OptimizerPass {
   public boolean rearrangeWaits(Logger logger, Function fn, Block block,
                                        ExecContext currContext) {
     StringBuilder sb = new StringBuilder();
-    boolean exploded = explodeFuncCalls(logger, fn, block);
+    boolean exploded = explodeFuncCalls(logger, fn, currContext, block);
 
     if (logger.isTraceEnabled()) {
       fn.prettyPrint(sb);
@@ -209,7 +209,7 @@ public class WaitCoalescer implements OptimizerPass {
                   Function fn, Block block, ExecContext currContext) {
     boolean changed = false;
     for (Continuation c: block.getContinuations()) {
-      ExecContext newContext = findNextContext(c, currContext);
+      ExecContext newContext = c.childContext(currContext);
       for (Block childB: c.getBlocks()) {
         if (rearrangeWaits(logger, fn, childB, newContext)) {
           changed = true;
@@ -225,7 +225,8 @@ public class WaitCoalescer implements OptimizerPass {
    * @param block
    * @return
    */
-  private static boolean explodeFuncCalls(Logger logger, Function fn, Block block) {
+  private static boolean explodeFuncCalls(Logger logger, Function fn,
+        ExecContext execCx, Block block) {
     boolean changed = false;
     Set<String> empty = Collections.emptySet();
     ListIterator<Instruction> it = block.instructionIterator();
@@ -236,7 +237,9 @@ public class WaitCoalescer implements OptimizerPass {
         List<Var> waitVars = ICUtil.filterBlockingOnly(req.in);
         
         WaitMode waitMode;
-        if (req.mode == TaskMode.SYNC || req.mode == TaskMode.LOCAL) {
+        if (req.mode == TaskMode.SYNC || req.mode == TaskMode.LOCAL ||
+              (req.mode == TaskMode.LOCAL_CONTROL &&
+                execCx == ExecContext.CONTROL)) {
           waitMode = WaitMode.DATA_ONLY;
         } else {
           waitMode = WaitMode.TASK_DISPATCH;
@@ -503,26 +506,7 @@ public class WaitCoalescer implements OptimizerPass {
     }
     return new PushDownResult(changed, pushedDown);
   }
-
-  private static ExecContext findNextContext(Continuation cont,
-          ExecContext currContext) {
-    ExecContext newContext;
-    if (cont.getType() != ContinuationType.WAIT_STATEMENT) {
-      newContext = currContext;
-    } else {
-      WaitStatement w = (WaitStatement)cont;
-      if (w.getTarget() == TaskMode.SYNC || w.getTarget() == TaskMode.LOCAL) {
-        newContext = currContext;
-      } else if (w.getTarget() == TaskMode.CONTROL) {
-        newContext = ExecContext.CONTROL;
-      } else {
-        assert(w.getTarget() == TaskMode.LEAF);
-        newContext = ExecContext.LEAF;
-      }
-    }
-    return newContext;
-  }
-
+  
   /**
    * 
    * @param c
@@ -536,9 +520,11 @@ public class WaitCoalescer implements OptimizerPass {
     if (c.getType() == ContinuationType.WAIT_STATEMENT) {
       WaitStatement w = (WaitStatement)c;
       if (w.getMode() == WaitMode.TASK_DISPATCH) {
-        if (w.getTarget() == TaskMode.LOCAL) {
-          if (curr == ExecContext.LEAF) {
-            throw new STCRuntimeError("Can't have local wait in leaf"); 
+        if (w.getTarget() == TaskMode.LOCAL_CONTROL ||
+            w.getTarget() == TaskMode.LOCAL) {
+          if (curr == ExecContext.LEAF &&
+                w.getTarget() == TaskMode.LOCAL_CONTROL) {
+            throw new STCRuntimeError("Can't have local control wait in leaf"); 
           }
           // Context doesn't change
           return curr;
@@ -593,81 +579,22 @@ public class WaitCoalescer implements OptimizerPass {
     for (InstOrCont ic: waits) {
       if (logger.isTraceEnabled())
         logger.trace("Pushing down: " + ic.toString());
+      boolean relocated;
       switch (ic.type()) {
         case CONTINUATION: {
-          Continuation c = ic.continuation();
-          boolean canRelocate = true;
-          // Check we're not relocating continuation into itself
-          for (AncestorContinuation ancestor: ancestors) {
-            if (c == ancestor.continuation) {
-              canRelocate = false;
-              break;
-            }
-          }
+          relocated = relocateContinuation(ancestors, currBlock,
+              currContext, movedC, ic.continuation());
           
-          if (currContext == ExecContext.LEAF) {
-            if (c.getType() != ContinuationType.WAIT_STATEMENT) {
-              canRelocate = false;
-            } else {
-              WaitStatement w = (WaitStatement)c;
-              // TODO: could make sense to turn local waits into CONTROL
-              //      task dispatch
-              if (w.getTarget() == TaskMode.CONTROL ||
-                  w.getTarget() == TaskMode.LEAF) {
-                canRelocate = true;
-              } else if (w.getTarget() == TaskMode.LOCAL) {
-                w.setMode(WaitMode.TASK_DISPATCH);
-                w.setTarget(ancestorContext.toTaskMode());
-              } else {
-                canRelocate = false;
-              }
-            }
-          }
-          
-          if (canRelocate) {
-            currBlock.addContinuation(c);
-            movedC.add(c);
-            // Doesn't make sense to push down synchronous continuations
-            assert(c.isAsync());
-            updateAncestorKeepOpen(ancestors, c.getKeepOpenVars());
-            changed = true;
-          }
           break;
         } 
-        case INSTRUCTION: {
-          boolean canRelocate = true;
-          Instruction inst = ic.instruction();
-          ArrayList<Var> keepOpenVars = new ArrayList<Var>();
-          for (Var out: inst.getOutputs()) {
-            if (Types.isArray(out.type())) {
-              keepOpenVars.add(out);
-            } else if (Types.isArrayRef(out.type())) {
-              // Array ref might be from nested array, don't know yet
-              // how to keep parent array open
-              canRelocate = false;
-            }
-          }
-          
-          if (currContext == ExecContext.LEAF) {
-            if (inst.getMode() != TaskMode.SYNC) {
-              // Can't push down async tasks to leaf yet
-              canRelocate = false;
-            }
-          }
-          
-          if (canRelocate) {
-            currBlockInstructions.add(inst);
-            movedI.add(ic.instruction());
-            if (!keepOpenVars.isEmpty()) {
-              updateAncestorKeepOpen(ancestors, keepOpenVars);
-            }
-            changed = true;
-          }
+        case INSTRUCTION:
+          relocated = relocateInstruction(ancestors, currContext,
+              currBlockInstructions, movedI, ic.instruction());
           break;
-        }
         default:
           throw new STCRuntimeError("how on earth did we get here...");
       }
+      changed = changed || relocated;
     }
     // Remove instructions from old block
     ancestorBlock.removeContinuations(movedC);
@@ -680,6 +607,80 @@ public class WaitCoalescer implements OptimizerPass {
     // Rebuild wait map to reflect changes
     updateWaiterMap(waitMap, movedC, movedI);
     return Pair.create(changed, movedC);
+  }
+
+  private static boolean relocateContinuation(
+      Deque<AncestorContinuation> ancestors, Block currBlock,
+      ExecContext currContext, Set<Continuation> movedC, Continuation cont) {
+    boolean canRelocate = true;
+    // Check we're not relocating continuation into itself
+    for (AncestorContinuation ancestor: ancestors) {
+      if (cont == ancestor.continuation) {
+        canRelocate = false;
+        break;
+      }
+    }
+    
+    if (currContext == ExecContext.LEAF) {
+      if (cont.getType() != ContinuationType.WAIT_STATEMENT) {
+        canRelocate = false;
+      } else {
+        WaitStatement w = (WaitStatement)cont;
+        // Make sure gets dispatched to right place
+        if (w.getTarget() == TaskMode.CONTROL ||
+            w.getTarget() == TaskMode.LEAF ||
+            w.getTarget() == TaskMode.LOCAL) {
+          canRelocate = true;
+        } else if (w.getTarget() == TaskMode.LOCAL_CONTROL) {
+          w.setMode(WaitMode.TASK_DISPATCH);
+          w.setTarget(TaskMode.CONTROL);
+        } else {
+          canRelocate = false;
+        }
+      }
+    }
+    
+    if (canRelocate) {
+      currBlock.addContinuation(cont);
+      movedC.add(cont);
+      // Doesn't make sense to push down synchronous continuations
+      assert(cont.isAsync());
+      updateAncestorKeepOpen(ancestors, cont.getKeepOpenVars());
+    }
+    return canRelocate;
+  }
+
+  private static boolean relocateInstruction(
+      Deque<AncestorContinuation> ancestors, ExecContext currContext,
+      ListIterator<Instruction> currBlockInstructions,
+      Set<Instruction> movedI, Instruction inst) {
+    boolean canRelocate = true;
+    ArrayList<Var> keepOpenVars = new ArrayList<Var>();
+    for (Var out: inst.getOutputs()) {
+      if (Types.isArray(out.type())) {
+        keepOpenVars.add(out);
+      } else if (Types.isArrayRef(out.type())) {
+        // Array ref might be from nested array, don't know yet
+        // how to keep parent array open
+        canRelocate = false;
+      }
+    }
+    
+    if (currContext == ExecContext.LEAF) {
+      if (inst.getMode() != TaskMode.SYNC) {
+        // Can't push down async tasks to leaf yet
+        canRelocate = false;
+      }
+    }
+    
+    if (canRelocate) {
+      currBlockInstructions.add(inst);
+      movedI.add(inst);
+      if (!keepOpenVars.isEmpty()) {
+        updateAncestorKeepOpen(ancestors, keepOpenVars);
+      }
+    }
+    return canRelocate;
   }
 
   private static void updateAncestorKeepOpen(

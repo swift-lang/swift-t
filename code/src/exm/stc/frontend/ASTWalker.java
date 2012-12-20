@@ -309,7 +309,7 @@ public class ASTWalker {
     backend.startWaitStatement(
           context.getFunctionContext().constructName("explicitwait"),
                       waitEvaled, usedVars, keepOpenVars,
-                      WaitMode.EXPLICIT, false, TaskMode.LOCAL);
+                      WaitMode.EXPLICIT, false, TaskMode.LOCAL_CONTROL);
     block(new LocalContext(context), wait.getBlock());
     backend.endWaitStatement(usedVars, keepOpenVars);
   }
@@ -452,7 +452,7 @@ public class ASTWalker {
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("if"), 
               Arrays.asList(conditionVar), usedVariables, keepOpenVars, 
-                WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
+                WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
 
     Context waitContext = new LocalContext(context);
     Var condVal = varCreator.fetchValueOf(waitContext, conditionVar);
@@ -593,7 +593,7 @@ public class ASTWalker {
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("switch"),
                 Arrays.asList(switchVar), usedVariables, keepOpenVars,
-                WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
+                WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
 
     Context waitContext = new LocalContext(context);
     Var switchVal = varCreator.createValueOfVar(waitContext,
@@ -665,8 +665,8 @@ public class ASTWalker {
         new ArrayList<Var>(usedVariables);
     waitUsedVariables.addAll(Arrays.asList(start, end, step));
     backend.startWaitStatement(fc.getFunctionName() + "-wait-range" + loopNum,
-               Arrays.asList(start, end, step), waitUsedVariables,
-               keepOpenVars, WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
+             Arrays.asList(start, end, step), waitUsedVariables,
+             keepOpenVars, WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
     Context waitContext = new LocalContext(context);
     Var startVal = varCreator.fetchValueOf(waitContext, start);
     Var endVal = varCreator.fetchValueOf(waitContext, end);
@@ -752,7 +752,7 @@ public class ASTWalker {
       backend.startWaitStatement(
           fc.getFunctionName() + "-foreach-refwait" + loopNum,
           Arrays.asList(arrayVar), arrRefWaitUsedVars, keepOpenVars,
-          WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
+          WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
 
       outsideLoopContext = new LocalContext(context);
       realArray = varCreator.createTmp(outsideLoopContext,
@@ -769,7 +769,7 @@ public class ASTWalker {
     backend.startWaitStatement(
         fc.getFunctionName() + "-foreach-wait" + loopNum,
         Arrays.asList(realArray), waitUsedVars, keepOpenVars,
-        WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
+        WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
     
     loop.setupLoopBodyContext(outsideLoopContext);
     Context loopBodyContext = loop.getBodyContext();

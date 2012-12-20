@@ -20,6 +20,7 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
@@ -390,8 +391,8 @@ public class ForwardDataflow implements OptimizerPass {
       do {
         logger.trace("closed variable analysis on function " + f.getName()
             + " pass " + pass);
-        changes = forwardDataflow(logger, program, f, f.getMainblock(), null,
-            null, null);
+        changes = forwardDataflow(logger, program, f, ExecContext.CONTROL,
+            f.getMainblock(), null, null, null);
         
         liftWait(logger, program, f);
         pass++;
@@ -462,6 +463,7 @@ public class ForwardDataflow implements OptimizerPass {
     nonProgressOpcodes.add(Opcode.DECR_REF);
     nonProgressOpcodes.add(Opcode.LOCAL_OP);
     nonProgressOpcodes.add(Opcode.CALL_LOCAL);
+    nonProgressOpcodes.add(Opcode.CALL_LOCAL_CONTROL);
     nonProgressOpcodes.add(Opcode.STORE_BOOL);
     nonProgressOpcodes.add(Opcode.STORE_VOID);
     nonProgressOpcodes.add(Opcode.STORE_INT);
@@ -522,6 +524,7 @@ public class ForwardDataflow implements OptimizerPass {
 
   /**
    * 
+   * @param execCx 
    * @param block
    * @param cv
    *          copy of cv from outer scope, or null if it should be initialized
@@ -532,7 +535,7 @@ public class ForwardDataflow implements OptimizerPass {
    * @throws InvalidWriteException
    */
   private static boolean forwardDataflow(Logger logger, Program program,
-      Function f, Block block, State cv,
+      Function f, ExecContext execCx, Block block, State cv,
       HierarchicalMap<String, Arg> replaceInputs,
       HierarchicalMap<String, Arg> replaceAll) throws InvalidOptionException,
       InvalidWriteException {
@@ -572,7 +575,7 @@ public class ForwardDataflow implements OptimizerPass {
       }
     }
 
-    boolean anotherPass2 =  forwardDataflow(logger, f, block, 
+    boolean anotherPass2 = forwardDataflow(logger, f, execCx, block, 
             block.instructionIterator(), cv, replaceInputs, replaceAll);
     anotherPassNeeded = anotherPassNeeded || anotherPass2;
 
@@ -641,9 +644,9 @@ public class ForwardDataflow implements OptimizerPass {
         int pass = 1;
         do {
           logger.debug("closed variable analysis on nested block pass " + pass);
-          again = forwardDataflow(logger, program, f, contBlocks.get(i),
-              contCV.makeChild(true), contReplaceInputs.makeChildMap(),
-                                     contReplaceAll.makeChildMap());
+          again = forwardDataflow(logger, program, f, cont.childContext(execCx),
+              contBlocks.get(i), contCV.makeChild(true),
+              contReplaceInputs.makeChildMap(), contReplaceAll.makeChildMap());
           // changes within nested scope don't require another pass
           // over this scope
           pass++;
@@ -656,7 +659,7 @@ public class ForwardDataflow implements OptimizerPass {
 
   
   private static boolean forwardDataflow(Logger logger,
-      Function f, Block block,
+      Function f, ExecContext execCx, Block block,
       ListIterator<Instruction> insts, State cv,
       HierarchicalMap<String, Arg> replaceInputs,
       HierarchicalMap<String, Arg> replaceAll) throws InvalidWriteException {
@@ -688,7 +691,7 @@ public class ForwardDataflow implements OptimizerPass {
       updateReplacements(logger, inst, cv, replaceInputs, replaceAll);
       
       // now try to see if we can change to the immediate version
-      if (switchToImmediateVersion(logger, f, block, cv, inst, insts)) {
+      if (switchToImmediate(logger, f, execCx, block, cv, inst, insts)) {
         // Continue pass at the start of the newly inserted sequence
         // as if it was always there
         continue;
@@ -717,8 +720,9 @@ public class ForwardDataflow implements OptimizerPass {
    * @param insts if instructions inserted, leaves iterator pointing at previous instruction
    * @return
    */
-  private static boolean switchToImmediateVersion(Logger logger,
-      Function fn, Block block, State cv, Instruction inst, ListIterator<Instruction> insts) {
+  private static boolean switchToImmediate(Logger logger,
+      Function fn, ExecContext execCx, Block block, State cv,
+      Instruction inst, ListIterator<Instruction> insts) {
     // First see if we can replace some futures with values
     MakeImmRequest req = inst.canMakeImmediate(cv.getClosed(), false);
 
@@ -729,7 +733,8 @@ public class ForwardDataflow implements OptimizerPass {
     // Create replacement sequence
     Block insertContext;
     ListIterator<Instruction> insertPoint;
-    if (req.mode == TaskMode.LOCAL) {
+    if (req.mode == TaskMode.LOCAL || req.mode == TaskMode.SYNC ||
+      (req.mode == TaskMode.LOCAL_CONTROL && execCx == ExecContext.CONTROL)) {
       insertContext = block;
       insertPoint = insts;
     } else {
