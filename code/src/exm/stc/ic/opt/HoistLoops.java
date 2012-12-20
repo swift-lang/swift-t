@@ -6,6 +6,7 @@ import java.util.ListIterator;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Settings;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
@@ -23,8 +24,20 @@ import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
-public class HoistLoops {
-  public static void hoist(Logger logger, Program prog) {
+public class HoistLoops implements OptimizerPass {
+  
+  @Override
+  public String getPassName() {
+    return "Loop hoisting";
+  }
+
+  @Override
+  public String getConfigEnabledKey() {
+    return Settings.OPT_HOIST;
+  }
+
+  @Override
+  public void optimize(Logger logger, Program prog) {
     for (Function f: prog.getFunctions()) {
       Block block = f.getMainblock();
       HierarchicalMap<String, Block> globalMap =

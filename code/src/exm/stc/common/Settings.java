@@ -43,7 +43,7 @@ public class Settings
   public static final String OPT_DISABLE_ASSERTS = "stc.opt.disable-asserts";
   public static final String OPT_UNROLL_LOOPS = "stc.opt.unroll-loops";
   public static final String OPT_HOIST = "stc.opt.hoist";
-  public static final String OPT_NUM_PASSES = "stc.opt.numpasses";
+  public static final String OPT_MAX_ITERATIONS = "stc.opt.max-iterations";
   public static final String TURBINE_NO_STACK = "stc.codegen.no-stack";
   public static final String TURBINE_NO_STACK_VARS = "stc.codegen.no-stack-vars";
 
@@ -86,7 +86,7 @@ public class Settings
     defaults.setProperty(OPT_PIPELINE, "false");
     defaults.setProperty(OPT_CONTROLFLOW_FUSION, "true");
     defaults.setProperty(OPT_HOIST, "true");
-    defaults.setProperty(OPT_NUM_PASSES, "10");
+    defaults.setProperty(OPT_MAX_ITERATIONS, "10");
     defaults.setProperty(ARRAY_REF_SWITCHEROO, "false");
     defaults.setProperty(EXPERIMENTAL_REFCOUNTING, "false");
     defaults.setProperty(LOG_FILE, "");
@@ -176,7 +176,7 @@ public class Settings
     getBoolean(ARRAY_REF_SWITCHEROO);
     getBoolean(EXPERIMENTAL_REFCOUNTING);
 
-    getLong(OPT_NUM_PASSES);
+    getLong(OPT_MAX_ITERATIONS);
 
     checkOneOf(DEBUG_LEVEL, Arrays.asList("off", "comments", "debugger"));
 

@@ -1991,7 +1991,7 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void optimise() {
+    public void optimize() {
       // do nothing
     }
 

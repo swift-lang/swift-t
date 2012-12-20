@@ -11,7 +11,6 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.TclFunRef;
-import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
@@ -26,7 +25,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
-import exm.stc.ic.opt.ICOptimiser;
+import exm.stc.ic.opt.ICOptimizer;
 import exm.stc.ic.tree.ICContinuations.ForeachLoop;
 import exm.stc.ic.tree.ICContinuations.IfStatement;
 import exm.stc.ic.tree.ICContinuations.Loop;
@@ -87,9 +86,9 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void optimise() throws InvalidWriteException {
+  public void optimize() throws UserException {
     logger.debug("Optimising Swift IC");
-    this.program = ICOptimiser.optimise(logger, icOutput, program);
+    this.program = ICOptimizer.optimize(logger, icOutput, program);
     logger.debug("Optimisation done");
   }
 

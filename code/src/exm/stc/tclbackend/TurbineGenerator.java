@@ -2083,7 +2083,7 @@ public class TurbineGenerator implements CompilerBackend
     }
     
     @Override
-    public void optimise() {
+    public void optimize() {
       // do nothing
     }
 

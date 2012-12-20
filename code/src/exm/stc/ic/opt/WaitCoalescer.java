@@ -14,6 +14,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Settings;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
@@ -147,11 +148,28 @@ import exm.stc.ic.tree.ICTree.Program;
  * Go to all subblocks and do the same
  *
  */
-public class WaitCoalescer {
-  public static void rearrangeWaits(Logger logger, Program prog, boolean doMerges) {
+public class WaitCoalescer implements OptimizerPass {
+  private boolean doMerges;
+  
+  public WaitCoalescer(boolean doMerges) {
+    this.doMerges = doMerges;
+  }
+  
+  @Override
+  public String getPassName() {
+    return "Wait coalescing";
+  }
+
+  @Override
+  public String getConfigEnabledKey() {
+    return Settings.OPT_WAIT_COALESCE;
+  }
+
+  @Override
+  public void optimize(Logger logger, Program prog) {
     for (Function f: prog.getFunctions()) {
       boolean changed = rearrangeWaits(logger, f, f.getMainblock(),
-                                       ExecContext.CONTROL, doMerges);
+                                       ExecContext.CONTROL);
       if (changed) {
         // This pass can mess up variable passing
         FixupVariables.fixupVariablePassing(logger, prog, f);
@@ -159,8 +177,8 @@ public class WaitCoalescer {
     }
   }
 
-  public static boolean rearrangeWaits(Logger logger, Function fn, Block block,
-                                       ExecContext currContext, boolean doMerges) {
+  public boolean rearrangeWaits(Logger logger, Function fn, Block block,
+                                       ExecContext currContext) {
     StringBuilder sb = new StringBuilder();
     boolean exploded = explodeFuncCalls(logger, fn, block);
 
@@ -183,19 +201,17 @@ public class WaitCoalescer {
     boolean pushedDown = pushDownWaits(logger, fn, block, currContext);
     
     // Recurse on child blocks
-    boolean recChanged = rearrangeWaitsRec(logger, fn, block, currContext,
-                                                                doMerges);
+    boolean recChanged = rearrangeWaitsRec(logger, fn, block, currContext);
     return exploded || merged || pushedDown || recChanged;
   }
 
-  private static boolean rearrangeWaitsRec(Logger logger,
-                  Function fn, Block block, ExecContext currContext,
-                  boolean doMerges) {
+  private boolean rearrangeWaitsRec(Logger logger,
+                  Function fn, Block block, ExecContext currContext) {
     boolean changed = false;
     for (Continuation c: block.getContinuations()) {
       ExecContext newContext = findNextContext(c, currContext);
       for (Block childB: c.getBlocks()) {
-        if (rearrangeWaits(logger, fn, childB, newContext, doMerges)) {
+        if (rearrangeWaits(logger, fn, childB, newContext)) {
           changed = true;
         }
       }
@@ -751,7 +767,7 @@ public class WaitCoalescer {
 
   private static ListFactory<InstOrCont> LL_FACT = 
                     new LinkedListFactory<InstOrCont>();
-  public static MultiMap<String, InstOrCont> buildWaiterMap(Block block) {
+  private static MultiMap<String, InstOrCont> buildWaiterMap(Block block) {
     // Use linked list to support more efficient removal in middle of list
     MultiMap<String, InstOrCont> waitMap =
                         new MultiMap<String, InstOrCont>(LL_FACT); 

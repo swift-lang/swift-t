@@ -5,6 +5,7 @@ import java.util.ListIterator;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.ForeachLoop;
@@ -12,7 +13,6 @@ import exm.stc.ic.tree.ICContinuations.IfStatement;
 import exm.stc.ic.tree.ICContinuations.RangeLoop;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
-import exm.stc.ic.tree.ICTree.Program;
 
 /**
  * Fuse together equivalent continuations e.g. if statements with
@@ -26,16 +26,26 @@ import exm.stc.ic.tree.ICTree.Program;
  * Doing this for loops has the potential to reduce overhead, but the biggest
  * gains might be from the optimizations that can follow on after the fusion
  */
-public class ContinuationFusion {
+public class ContinuationFusion extends FunctionOptimizerPass {
 
-  public static void fuse(Logger logger, Program prog) {
-    for (Function f: prog.getFunctions()) {
-      fuseRecursive(logger, prog, f, f.getMainblock());
-    }
+  @Override
+  public String getPassName() {
+    // TODO Auto-generated method stub
+    return null;
   }
 
-  private static void fuseRecursive(Logger logger, Program prog, 
-            Function f, Block block) {
+  @Override
+  public String getConfigEnabledKey() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public void optimize(Logger logger, Function f) {
+    fuseRecursive(logger, f, f.getMainblock());
+  }
+
+  private static void fuseRecursive(Logger logger, Function f, Block block) {
     if (block.getContinuations().size() > 1) {
       // no point trying to fuse anything if we don't have two continuations
       // to rub together
@@ -45,7 +55,7 @@ public class ContinuationFusion {
     // Recurse on child blocks
     for (Continuation c: block.getContinuations()) {
       for (Block child: c.getBlocks()) {
-        fuseRecursive(logger, prog, f, child);
+        fuseRecursive(logger, f, child);
       }
     }
   }

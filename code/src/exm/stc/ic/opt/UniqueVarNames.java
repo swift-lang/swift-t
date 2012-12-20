@@ -1,10 +1,10 @@
 package exm.stc.ic.opt;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
+
+import org.apache.log4j.Logger;
 
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
@@ -14,45 +14,28 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
-public class Flattener {
-
-    public static void flattenNestedBlocks(Block block) {
-
-
-    List<Continuation> originalContinuations =
-          new ArrayList<Continuation>(block.getContinuations());
-    // Stick any nested blocks instructions into the main thing
-    for (Continuation c: originalContinuations) {
-      switch (c.getType()) {
-      case NESTED_BLOCK:
-        assert(c.getBlocks().size() == 1);
-        if (!c.runLast()) {
-          Block inner = c.getBlocks().get(0);
-          flattenNestedBlocks(inner);
-          c.inlineInto(block, inner);
-        }
-        break;
-      default:
-        // Recursively flatten any blocks inside the continuation
-        for (Block b: c.getBlocks()) {
-          flattenNestedBlocks(b);
-        }
-      }
-
-    }
+public class UniqueVarNames implements OptimizerPass {
+  
+  @Override
+  public String getPassName() {
+    return "Uniquify variable names";
   }
-
+  
+  @Override
+  public String getConfigEnabledKey() {
+    return null;
+  }
+  
   /**
-   * Remove all nested blocks from program
-   * Precondition: all variable names in functions should be unique
+   * Make all of variable names in functions completely
+   * unique within the function
    * @param in
-   * @return
    */
-  public static Program flattenNestedBlocks(Program in) {
+  @Override
+  public void optimize(Logger logger, Program in) {
     for (Function f: in.getFunctions()) {
-      flattenNestedBlocks(f.getMainblock());
+      makeVarNamesUnique(f, in.getGlobalConsts().keySet());
     }
-    return in;
   }
 
   /**
@@ -83,10 +66,10 @@ public class Flattener {
         usedNames.add(v.name());
       }
     }
-
+  
     // Rename variables in Block (and nested blocks) according to map
     in.renameVars(renames, false);
-
+  
     // Recurse through nested blocks, making sure that all used variable
     // names are added to the usedNames
     for (Continuation c: in.getContinuations()) {
@@ -105,19 +88,7 @@ public class Flattener {
     for (Var v: in.getOutputList()) {
       usedNames.add(v.name());
     }
-
+  
     makeVarNamesUnique(in.getMainblock(), usedNames);
   }
-
-  /**
-   * Make all of variable names in functions completely
-   * unique within the function
-   * @param in
-   */
-  public static void makeVarNamesUnique(Program in) {
-    for (Function f: in.getFunctions()) {
-      makeVarNamesUnique(f, in.getGlobalConsts().keySet());
-    }
-  }
-
 }

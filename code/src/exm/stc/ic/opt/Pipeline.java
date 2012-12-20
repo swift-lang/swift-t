@@ -7,6 +7,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Settings;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Types;
@@ -14,6 +15,7 @@ import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
+import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.NestedBlock;
@@ -21,7 +23,6 @@ import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
-import exm.stc.ic.tree.ICTree.Program;
 
 /**
  * Compile-time pipelining optimization where we merge sequentially dependent
@@ -32,14 +33,20 @@ import exm.stc.ic.tree.ICTree.Program;
  * 
  * Running it multiple times can result in reduction in parallelism 
  */
-public class Pipeline {
+public class Pipeline extends FunctionOptimizerPass {
+  @Override
+  public String getPassName() {
+    return "Compile time pipelining";
+  }
 
-  public static void pipelineTasks(Logger logger, Program prog) {
-    
-    for (Function f: prog.getFunctions()) {
-      logger.debug("Wait pipelining pass for function " + f.getName());
-      pipelineTasks(logger, f, f.getMainblock(), ExecContext.CONTROL);
-    }
+  @Override
+  public String getConfigEnabledKey() {
+    return Settings.OPT_PIPELINE;
+  }
+
+  @Override
+  public void optimize(Logger logger, Function f) {
+    pipelineTasks(logger, f, f.getMainblock(), ExecContext.CONTROL);
   }
 
   private static void pipelineTasks(Logger logger, Function f, Block curr,

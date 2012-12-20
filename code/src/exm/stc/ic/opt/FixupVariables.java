@@ -19,7 +19,22 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
-public class FixupVariables {
+public class FixupVariables implements OptimizerPass {
+
+  @Override
+  public String getPassName() {
+    return "Fixup variable passing";
+  }
+
+  @Override
+  public String getConfigEnabledKey() {
+    return null;
+  }
+
+  @Override
+  public void optimize(Logger logger, Program program) {
+    fixupVariablePassing(logger, program);
+  }
 
   /**
    * 

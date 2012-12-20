@@ -311,7 +311,7 @@ public interface CompilerBackend {
    */
   public abstract String code();
 
-  public abstract void optimise() throws UserException;
+  public abstract void optimize() throws UserException;
 
   public abstract void regenerate(CompilerBackend codeGen) throws UserException;
   

@@ -18,7 +18,6 @@ import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.ic.ICUtil;
@@ -36,7 +35,17 @@ import exm.stc.ic.tree.ICTree.Program;
  * consolidate constant values in a Swift-IC function 
  *
  */
-public class ConstantFinder {
+public class ConstantFold implements OptimizerPass {
+
+  @Override
+  public String getPassName() {
+    return "Constant folding";
+  }
+
+  @Override
+  public String getConfigEnabledKey() {
+    return Settings.OPT_CONSTANT_FOLD;
+  }
 
   /**
    * Perform constant folding and propagations on the program
@@ -47,7 +56,8 @@ public class ConstantFinder {
    * @return
    * @throws InvalidOptionException
    */
-  public static Program constantFold(Logger logger, Program in) throws InvalidOptionException {
+  @Override
+  public void optimize(Logger logger, Program in) throws InvalidOptionException {
     HierarchicalMap<String, Arg> globalConsts = 
               new HierarchicalMap<String, Arg>();
     // Populate global constants
@@ -64,7 +74,6 @@ public class ConstantFinder {
       constantFold(logger, in, f, f.getMainblock(), funVars, 
                           globalConsts.makeChildMap());
     }
-    return in;
   }
 
   /**
@@ -180,7 +189,7 @@ public class ConstantFinder {
    * @param knownConstants
    * @param removeDefs if true, remove the set instructions as we go
    */
-  private static void findBlockConstants(Logger logger, Block block,
+  static void findBlockConstants(Logger logger, Block block,
       Map<String, Arg> knownConstants, boolean removeLocalConsts,
       boolean ignoreLocalValConstants) {
     Set<String> removalCandidates = null;
@@ -257,7 +266,7 @@ public class ConstantFinder {
    * @param block
    * @param knownConstants
    */
-  public static void branchPredict(Block block,
+  private static void branchPredict(Block block,
       HierarchicalMap<String, Arg> knownConstants) {
     // Use list to preserve order
     List<Predicted> predictedBranches = new ArrayList<Predicted>();
@@ -271,82 +280,5 @@ public class ConstantFinder {
     for (Predicted p: predictedBranches) {
       p.cont.inlineInto(block, p.block);
     }
-  }
-
-  /**
-   * Consolidate all futures which are initialized with a constant
-   * value into a global constants area, to avoid reinitializing them.
-   * If the same constant appears in multiple locations, we consolidate them
-   * into one
-   * @param logger
-   * @param prog
-   * @throws InvalidOptionException
-   */
-  public static void makeConstantsGlobal(Logger logger, Program prog) 
-                                      throws InvalidOptionException {
-    for (Function f: prog.getFunctions()) {
-      makeConstantsGlobal(logger, prog, f.getMainblock());
-          
-    }
-  }
-
-  /* Lift constants up to global scope to avoid reinitializing and 
-   * duplication of constants
-   */
-  private static boolean makeConstantsGlobal(Logger logger, Program prog,
-            Block block) throws InvalidOptionException {   
-    // Find the remaining constant futures and delete assignments to them
-    logger.debug("Making constant futures shared globals");
-    HashMap<String, Var> localDeclsOfGlobalVars = 
-          new HashMap<String, Var>();
-    HashMap<String, Arg> knownConstants = new HashMap<String, Arg>();
-    boolean changed = false;
-    
-    findBlockConstants(logger, block, knownConstants, true, true);
-    
-    HashMap<String, Arg> globalReplacements = 
-                            new HashMap<String, Arg>();
-                  
-    for (Entry<String, Arg> c: knownConstants.entrySet()) {
-      String oldName = c.getKey();
-      // Remove from this block's variable entries 
-      
-      Arg val = c.getValue();
-      Var glob = null;
-      String globName = prog.invLookupGlobalConst(val);
-      if (globName == null) {
-        // Add new global constant
-        globName = prog.addGlobalConst(val);
-      } else { 
-        glob = localDeclsOfGlobalVars.get(globName);
-      }
-      if (glob == null) {
-        glob = block.declareVariable(val.getType(), globName, 
-                    VarStorage.GLOBAL_CONST, DefType.GLOBAL_CONST,
-                    null);
-        localDeclsOfGlobalVars.put(globName, glob);
-        changed = true;
-      }
-      globalReplacements.put(oldName, Arg.createVar(glob));
-    }
-    block.renameVars(globalReplacements, false);
-    
-    // Do this recursively for child blocks
-    for (Continuation c: block.getContinuations()) {
-      for (Block childBlock: c.getBlocks()) {
-        // We could pass in localDeclsOfGlobalVars, but
-        // it doesn't matter if global vars are redeclared in inner scope
-        boolean recChanged = makeConstantsGlobal(logger, prog, childBlock);
-        changed = changed || recChanged;
-      }
-    }
-    
-    // Remove now redundant local constants
-    if (Settings.getBoolean(Settings.OPT_DEAD_CODE_ELIM)) {
-      if (changed) {
-        DeadCodeEliminator.eliminate(logger, block);
-      }
-    }
-    return changed;
   }
 }

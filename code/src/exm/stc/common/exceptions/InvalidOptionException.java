@@ -1,6 +1,6 @@
 package exm.stc.common.exceptions;
 
-public class InvalidOptionException extends Exception {
+public class InvalidOptionException extends UserException {
 
   private static final long serialVersionUID = 1L;
 

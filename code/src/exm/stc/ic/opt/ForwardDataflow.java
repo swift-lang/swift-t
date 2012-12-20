@@ -62,7 +62,17 @@ import exm.stc.ic.tree.ICTree.Program;
  * of dead code, which can be cleaned up in a pass of the dead code eliminator
  *
  */
-public class ForwardDataflow {
+public class ForwardDataflow implements OptimizerPass {
+  
+  @Override
+  public String getPassName() {
+    return "Forward dataflow";
+  }
+  
+  @Override
+  public String getConfigEnabledKey() {
+    return Settings.OPT_FORWARD_DATAFLOW;
+  }
   
   /**
    * State keep tracks of which variables are closed and which computed
@@ -371,7 +381,7 @@ public class ForwardDataflow {
    * @throws InvalidOptionException
    * @throws InvalidWriteException
    */
-  public static void forwardDataflow(Logger logger, Program program)
+  public void optimize(Logger logger, Program program)
       throws InvalidOptionException, InvalidWriteException {
     for (Function f : program.getFunctions()) {
       // Do repeated passes until converged

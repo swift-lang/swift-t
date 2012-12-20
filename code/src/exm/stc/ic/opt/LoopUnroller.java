@@ -2,19 +2,29 @@ package exm.stc.ic.opt;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Settings;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
-public class LoopUnroller {
-  
-  public static void unrollLoops(Logger logger, Program prog) {
+public class LoopUnroller implements OptimizerPass {
+  @Override
+  public String getPassName() {
+    return "Unroll loops";
+  }
+
+  @Override
+  public String getConfigEnabledKey() {
+    return Settings.OPT_UNROLL_LOOPS;
+  }
+
+  public void optimize(Logger logger, Program prog) {
     for (Function f: prog.getFunctions()) {
       if (unrollLoops(logger, prog, f, f.getMainblock())) {
         // Unrolling can introduce duplicate vars
-        Flattener.makeVarNamesUnique(f, prog.getGlobalConsts().keySet());
-        Flattener.flattenNestedBlocks(f.getMainblock());
+        UniqueVarNames.makeVarNamesUnique(f, prog.getGlobalConsts().keySet());
+        FlattenNested.flattenNestedBlocks(f.getMainblock());
       }
     }
   }

@@ -192,7 +192,7 @@ public class STCompiler {
        * as the frontend doesn't always provide correct information about which variables
        * need to be passed into blocks.  The optimizer will fix this problem
        */
-      intermediate.optimise();
+      intermediate.optimize();
     
       /* Generate output tcl code from intermediate representation */
       TurbineGenerator codeGen = new TurbineGenerator(logger, timestamp);
