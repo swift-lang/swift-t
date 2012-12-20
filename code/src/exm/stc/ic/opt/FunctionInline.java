@@ -12,6 +12,8 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Settings;
+import exm.stc.common.exceptions.InvalidOptionException;
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Constants;
@@ -31,6 +33,15 @@ import exm.stc.ic.tree.ICTree.Program;
 
 public class FunctionInline implements OptimizerPass {
 
+  public FunctionInline() {
+    try {
+      inlineThreshold = Settings.getLong(Settings.OPT_FUNCTION_INLINE_THRESHOLD);
+    } catch (InvalidOptionException e) {
+      e.printStackTrace();
+      throw new STCRuntimeError(e.getMessage());
+    }
+  }
+  
   private static boolean isFunctionCall(Instruction inst) {
     return inst.op == Opcode.CALL_CONTROL || inst.op == Opcode.CALL_LOCAL ||
            inst.op == Opcode.CALL_SYNC || inst.op == Opcode.CALL_LOCAL_CONTROL;
@@ -40,7 +51,8 @@ public class FunctionInline implements OptimizerPass {
    * Threshold for inlining: if function called less than or equal to
    * this number of times, then inline.
    */
-  public final int INLINE_THRESHOLD = 2;
+  public final long inlineThreshold;
+  
   @Override
   public String getPassName() {
     return "Function inlining";
@@ -73,13 +85,13 @@ public class FunctionInline implements OptimizerPass {
         if (f.getName().equals(Constants.MAIN_FUNCTION)) {
           continue;
         }
-        List<String> occurences = finder.functionUsages.get(f.getName());
-        if (occurences == null || occurences.size() <= INLINE_THRESHOLD) {
+        List<String> occurrences = finder.functionUsages.get(f.getName());
+        if (occurrences == null || occurrences.size() <= inlineThreshold) {
           changed = true;
           functionIter.remove();
           removed.put(f.getName(), f);
-          if (occurences != null) {
-            inlineLocations.addAll(occurences);
+          if (occurrences != null) {
+            inlineLocations.addAll(occurrences);
           }
         }
       }
