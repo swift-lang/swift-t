@@ -14,6 +14,7 @@ import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
@@ -69,7 +70,7 @@ public class FunctionInline implements OptimizerPass {
       ListIterator<Function> functionIter = program.functionIterator();
       while (functionIter.hasNext()) {
         Function f = functionIter.next();
-        if (f.getName().equals("main")) {
+        if (f.getName().equals(Constants.MAIN_FUNCTION)) {
           continue;
         }
         List<String> occurences = finder.functionUsages.get(f.getName());

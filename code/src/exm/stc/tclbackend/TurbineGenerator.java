@@ -27,6 +27,7 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Builtins;
+import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.Builtins.TclOpTemplate;
@@ -1158,7 +1159,7 @@ public class TurbineGenerator implements CompilerBackend
     List<String> outputs = prefixVars(Var.nameList(oList));
     List<String> inputs  = prefixVars(Var.nameList(iList));
     // System.out.println("function" + functionName);
-    boolean isMain = functionName.equals("main");
+    boolean isMain = functionName.equals(Constants.MAIN_FUNCTION);
     String prefixedFunctionName = null;
     if (isMain)
       prefixedFunctionName = MAIN_FUNCTION_NAME;

@@ -50,6 +50,7 @@ import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.Builtins.TclOpTemplate;
+import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
@@ -115,9 +116,9 @@ public class ASTWalker {
 
     backend.header();
     walkProgram(context, tree);
-    FunctionType fn = context.lookupFunction("main");
+    FunctionType fn = context.lookupFunction(Constants.MAIN_FUNCTION);
     if (fn == null || 
-          !context.hasFunctionProp("main", FnProp.COMPOSITE)) {
+        !context.hasFunctionProp(Constants.MAIN_FUNCTION, FnProp.COMPOSITE)) {
       throw new UndefinedFunctionException(context,
           "No composite main function was defined in the script");
     }
@@ -1819,8 +1820,8 @@ public class ASTWalker {
     }
     
     // Handle main as special case of regular function declaration
-    if (function.equals("main") && (ft.getInputs().size() > 0 || 
-                                    ft.getOutputs().size() > 0))
+    if (function.equals(Constants.MAIN_FUNCTION) &&
+        (ft.getInputs().size() > 0 || ft.getOutputs().size() > 0))
       throw new TypeMismatchException(context,
           "main() is not allowed to have input or output arguments");
 

@@ -28,6 +28,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.Builtins.TclOpTemplate;
+import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.Redirects;
@@ -1299,7 +1300,7 @@ public class SwigcGenerator implements CompilerBackend
     List<String> outputs = prefixVars(Var.nameList(oList));
     List<String> inputs  = prefixVars(Var.nameList(iList));
     // System.out.println("function" + functionName);
-    boolean isMain = functionName.equals("main");
+    boolean isMain = functionName.equals(Constants.MAIN_FUNCTION);
     String prefixedFunctionName = null;
     if (isMain)
       prefixedFunctionName = MAIN_FUNCTION_NAME;
