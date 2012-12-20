@@ -11,7 +11,8 @@ if [ -h 632-split.sh ]; then
 fi
 
 contents=`cat "${OUT}"`
-exp_contents='four
+exp_contents='three
+four
 five
 six'
 
