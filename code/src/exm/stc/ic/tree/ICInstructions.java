@@ -1840,6 +1840,7 @@ public class ICInstructions {
       if (priority != null) {
         result += " priority=" + priority.toString(); 
       }
+      result += " closed=" + closedInputs;
       return result;
     }
   

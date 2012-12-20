@@ -741,7 +741,7 @@ public class TurbineGenerator implements CompilerBackend
                             oList, iList, TclUtil.tclListOfVariables(blockOn)));
     } else if (mode == TaskMode.SYNC) {
       // Calling synchronously, can't guarantee anything blocks
-      assert(blocking.size() == 0);
+      assert blockOn.size() == 0 : function + ": " + blockOn;
       pointStack.peek().add(Turbine.callFunctionSync(
           TclNamer.swiftFuncName(function),
           oList, iList));
