@@ -6,10 +6,9 @@ import java.util.List;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.ic.WrapUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -34,46 +33,6 @@ public class OptUtil {
   }
   
   /**
-   * Fetch the value of a variable
-   * @param block
-   * @param instBuffer append fetch instruction to this list
-   * @param var the variable to fetch the value of
-   * @return variable holding value
-   */
-  public static Var fetchValueOf(Block block, List<Instruction> instBuffer,
-          Var var) {
-    Type value_t = Types.derefResultType(var.type());
-    if (Types.isScalarValue(value_t)) {
-      // The result will be a value
-      // Use the OPT_VALUE_VAR_PREFIX to make sure we don't clash with
-      //  something inserted by the frontend (this caused problems before)
-      Var value_v = new Var(value_t,
-          optVPrefix(var),
-          VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
-      block.addVariable(value_v);
-      instBuffer.add(ICInstructions.retrieveValueOf(value_v, var));
-      
-      // Add cleanup action if needed
-      if (value_t.equals(Types.V_BLOB)) {
-        block.addCleanup(value_v, TurbineOp.decrBlobRef(var));
-      }
-      return value_v;
-    } else if (Types.isRef(var.type())) {
-      // The result will be an alias
-      Var deref = new Var(value_t,
-          optVPrefix(var),
-          VarStorage.ALIAS, DefType.LOCAL_COMPILER, null);
-      block.addVariable(deref);
-      instBuffer.add(TurbineOp.retrieveRef(deref, var));
-      return deref;
-    } else {
-      throw new STCRuntimeError("shouldn't be possible to get here");
-    }
-  }
-
-
-
-  /**
    * Same as fetchValue of, but more times
    * @param block
    * @param instBuffer
@@ -85,13 +44,13 @@ public class OptUtil {
     List<Arg> inVals = new ArrayList<Arg>(vars.size());
 
     for (Var v: vars) {
-      Var valueV = OptUtil.fetchValueOf(block, instBuffer, v);
+      Var valueV = WrapUtil.fetchValueOf(block, instBuffer, v, optVPrefix(v));
       Arg value = Arg.createVar(valueV);
       inVals.add(value);
     }
     return inVals;
   }
-  
+
   /**
    * Do the manipulation necessary to allow an old instruction
    * output variable to be replaced with a new one. Assume that
@@ -131,15 +90,10 @@ public class OptUtil {
     outValVars = new ArrayList<Var>(localOutputs.size());
     // Need to create output value variables
     for (Var v : localOutputs) {
-      Var valOut = block.declareVariable(
-          Types.derefResultType(v.type()),
-          OptUtil.optVPrefix(v),
-          VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
-      outValVars.add(valOut);
+      outValVars.add(WrapUtil.declareLocalOutputVar(block, v, optVPrefix(v)));
     }
     return outValVars;
-  }
-  
+  }  
 
   public static void fixupImmChange(Block block, MakeImmChange change,
           List<Instruction> instBuffer, List<Var> newOutVars,
@@ -160,9 +114,6 @@ public class OptUtil {
         Var oldOut = oldOutVars.get(i);
         Var newOut = newOutVars.get(i);
         instBuffer.add(ICInstructions.futureSet(oldOut, Arg.createVar(newOut)));
-        if (newOut.type().equals(Types.V_BLOB)) {
-          block.addCleanup(newOut, TurbineOp.freeBlob(newOut));
-        }
       }
     }
   }
@@ -225,6 +176,12 @@ public class OptUtil {
           throw new STCRuntimeError("invalid tag " + _type);
       }
     }
+  }
+
+  public static Var fetchValueOf(Block block, List<Instruction> instBuffer,
+      Var var) {
+    return WrapUtil.fetchValueOf(block, instBuffer, var,
+                                 OptUtil.optVPrefix(var));
   }
 }
 

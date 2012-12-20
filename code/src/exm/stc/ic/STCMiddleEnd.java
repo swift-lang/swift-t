@@ -33,9 +33,11 @@ import exm.stc.ic.tree.ICContinuations.NestedBlock;
 import exm.stc.ic.tree.ICContinuations.RangeLoop;
 import exm.stc.ic.tree.ICContinuations.SwitchStatement;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
+import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Builtin;
 import exm.stc.ic.tree.ICInstructions.Comment;
 import exm.stc.ic.tree.ICInstructions.FunctionCall;
+import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.LocalFunctionCall;
 import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICInstructions.LoopContinue;
@@ -140,10 +142,10 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void startFunction(String functionName, List<Var> oList,
-      List<Var> iList) throws UserException {
+      List<Var> iList, TaskMode mode) throws UserException {
     assert(blockStack.size() == 0);
     assert(currFunction == null);
-    currFunction = new Function(functionName, iList, oList);
+    currFunction = new Function(functionName, iList, oList, mode);
     program.addFunction(currFunction);
     blockStack.add(currFunction.getMainblock());
   }
@@ -826,6 +828,52 @@ public class STCMiddleEnd implements CompilerBackend {
     assert(Types.isFile(file.type()));
     currBlock().addInstruction(
             TurbineOp.getFileName(filename, file, initUnmapped));
+  }
+
+  @Override
+  public void generateWrappedBuiltin(String function, FunctionType ft,
+      List<Var> outArgs, List<Var> inArgs, TaskMode mode) throws UserException {
+    Function fn = new Function(function, inArgs, outArgs, TaskMode.SYNC);
+    this.program.addFunction(fn);
+    
+    List<Var> used = new ArrayList<Var>();
+    used.addAll(inArgs);
+    used.addAll(outArgs);
+
+    WaitMode waitMode;
+    if (mode == TaskMode.LOCAL || mode == TaskMode.SYNC) {
+      waitMode = WaitMode.DATA_ONLY;
+    } else {
+      waitMode = WaitMode.TASK_DISPATCH;
+    }
+    
+    WaitStatement wait = new WaitStatement(function + "-argwait",
+                  inArgs, used, Collections.<Var>emptyList(),
+                  waitMode, true, mode);
+    
+    fn.getMainblock().addContinuation(wait);
+    Block block = wait.getBlock();
+    
+    List<Instruction> instBuffer = new ArrayList<Instruction>();
+    List<Arg> inVals = new ArrayList<Arg>();
+    for (Var inArg: inArgs) {
+      inVals.add(Arg.createVar(WrapUtil.fetchValueOf(block, instBuffer,
+              inArg, Var.LOCAL_VALUE_VAR_PREFIX + inArg.name())));
+    }
+    List<Var> outVals = new ArrayList<Var>();
+    for (Var outArg: outArgs) {
+      outVals.add(WrapUtil.declareLocalOutputVar(block, outArg,
+                  Var.LOCAL_VALUE_VAR_PREFIX + outArg.name()));
+    }
+    instBuffer.add(new LocalFunctionCall(function, inVals, outVals));
+    
+    for (int i = 0; i < outVals.size(); i++) {
+      Var outArg = outArgs.get(i);
+      Var outVal = outVals.get(i);
+      instBuffer.add(ICInstructions.futureSet(outArg, Arg.createVar(outVal)));
+    }
+    
+    block.addInstructions(instBuffer);
   }
 
 }

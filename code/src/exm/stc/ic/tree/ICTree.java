@@ -341,12 +341,12 @@ public class ICTree {
     private TaskMode mode;
 
     public Function(String name, List<Var> iList,
-        List<Var> oList) {
-      this(name, iList, oList, new Block(BlockType.MAIN_BLOCK));
+        List<Var> oList, TaskMode mode) {
+      this(name, iList, oList, mode, new Block(BlockType.MAIN_BLOCK));
     }
 
     public Function(String name, List<Var> iList,
-        List<Var> oList, Block mainBlock) {
+        List<Var> oList, TaskMode mode, Block mainBlock) {
       if (mainBlock.getType() != BlockType.MAIN_BLOCK) {
         throw new STCRuntimeError("Expected main block " +
         "for function to be tagged as such");
@@ -354,6 +354,7 @@ public class ICTree {
       this.name = name;
       this.iList = iList;
       this.oList = oList;
+      this.mode = mode;
       this.mainBlock = mainBlock;
       this.blockingInputs = new ArrayList<Var>();
     }
@@ -374,7 +375,7 @@ public class ICTree {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UserException {
       logger.debug("Generating function " + name);
-      gen.startFunction(name, oList, iList);
+      gen.startFunction(name, oList, iList, mode);
       this.mainBlock.generate(logger, gen, info);
       gen.endFunction();
       logger.debug("Done generating function " + name);

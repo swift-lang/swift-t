@@ -1653,7 +1653,8 @@ public class ASTWalker {
       }
       // generate composite functino wrapping inline tcl
       context.setFunctionProperty(function, FnProp.COMPOSITE);
-      generateWrapperFunction(context, function, ft, fdecl, inlineTcl);
+      generateWrapperFunction(context, function, ft, fdecl.getOutVars(),
+                    fdecl.getInVars(), Builtins.getTaskMode(function));
     }
   }
 
@@ -1668,80 +1669,24 @@ public class ASTWalker {
    */
   private void generateWrapperFunction(Context global,
            String function, FunctionType ft,
-           FunctionDecl fdecl, TclOpTemplate inlineTclinlineTcl)
-          throws UserException {
-    List<Var> outVars = fdecl.getOutVars();
-    List<Var> inVars = fdecl.getInVars();
-    
-    Context context = new LocalContext(global, function);
-    
-    backend.startFunction(function, outVars, inVars);
-    List<Arg> inVals = new ArrayList<Arg>(inVars.size());
-    List<Var> outVals = new ArrayList<Var>(outVars.size());
-    
-    List<Var> waitVars = new ArrayList<Var>(inVars.size());
-    for (Var in: inVars) {
+           List<Var> outArgs, List<Var> inArgs,
+           TaskMode mode) throws UserException {
+    for (Var in: inArgs) {
       if (!Types.isScalarFuture(in.type()) ||
               Types.isFile(in.type())) {
         throw new STCRuntimeError("Can't handle type of " + in.type()
                + " for function " + function);
-      } 
-      waitVars.add(in);
-    }
-    
-
-    WaitMode waitMode = WaitMode.DATA_ONLY;
-    TaskMode taskMode = TaskMode.LOCAL;
-    // Check to see how task should be dispatched
-    if (Builtins.getTaskMode(function) != null) {
-      taskMode = Builtins.getTaskMode(function);
-      if (taskMode == TaskMode.LEAF || taskMode == TaskMode.CONTROL) {
-        waitMode = WaitMode.TASK_DISPATCH;
       }
     }
-    backend.startWaitStatement(
-              context.getFunctionContext().constructName("wrap:" + function),
-              waitVars, inVars, Arrays.<Var>asList(), waitMode,
-              false, taskMode);
-    
-    for (Var in: inVars) {
-      Var inVal = varCreator.fetchValueOf(context, in);
-      inVals.add(Arg.createVar(inVal));
-    }
-    for (Var out: outVars) {
+    for (Var out: outArgs) {
       if (!Types.isScalarFuture(out.type()) ||
               Types.isFile(out.type())) {
         throw new STCRuntimeError("Can't handle type of " + out.type()
                + " for function " + function);
       } 
-      Var outVal = varCreator.createValueOfVar(context, out);
-      outVals.add(outVal);
     }
-    
-    backend.builtinLocalFunctionCall(function, inVals, outVals);
-    
-    // Assign output values and cleanup
-    for (int i = 0; i < outVars.size(); i++) {
-      Var outFuture = outVars.get(i);
-      Var outVal = outVals.get(i);
-      exprWalker.assign(outFuture, Arg.createVar(outVal));
-      
-      if (Types.isBlob(outFuture.type())) {
-        backend.freeBlob(outVal);
-      }
-    }
-    
-    // Cleanup input values
-    for (int i = 0; i < inVars.size(); i++) {
-      Var inFuture = inVars.get(i);
-      Arg inVal = inVals.get(i);
-      if (Types.isBlob(inFuture.type())) {
-        backend.decrBlobRef(inFuture);
-      }
-    }
-    backend.endWaitStatement(inVars, Arrays.<Var>asList());
-    backend.endFunction();
-  }
+    backend.generateWrappedBuiltin(function, ft, outArgs, inArgs, mode);
+;  }
 
 
   private TclOpTemplate handleInlineTcl(Context context, String function,
@@ -1939,7 +1884,9 @@ public class ASTWalker {
     functionContext.addDeclaredVariables(iList);
     functionContext.addDeclaredVariables(oList);
     
-    backend.startFunction(function, oList, iList);
+    TaskMode mode = context.hasFunctionProp(function, FnProp.SYNC) ?
+                          TaskMode.SYNC : TaskMode.CONTROL;
+    backend.startFunction(function, oList, iList, mode);
     
     VariableUsageInfo vu = block.getVariableUsage();
     // Make sure output arrays get closed
@@ -2038,7 +1985,7 @@ public class ASTWalker {
     appContext.addDeclaredVariables(inArgs);
     
     
-    backend.startFunction(function, outArgs, inArgs);
+    backend.startFunction(function, outArgs, inArgs, TaskMode.SYNC);
     genAppFunctionBody(appContext, appBodyT, outArgs,
                        hasSideEffects, deterministic);
     backend.endFunction();

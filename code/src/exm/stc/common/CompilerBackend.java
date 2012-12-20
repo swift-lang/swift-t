@@ -220,8 +220,21 @@ public interface CompilerBackend {
   public abstract void defineBuiltinFunction(String name,
                 FunctionType type, TclFunRef impl) throws UserException;
 
+  public abstract void generateWrappedBuiltin(String function, FunctionType ft,
+           List<Var> outArgs, List<Var> inArgs, TaskMode mode)
+               throws UserException;
+  
+  /**
+   * 
+   * @param functionName
+   * @param oList
+   * @param iList
+   * @param mode the context the function will run in (e.g. SYNC if
+   *        called synchronously).  This is needed for optimizer correctness.
+   * @throws UserException
+   */
   public abstract void startFunction(String functionName,
-      List<Var> oList, List<Var> iList)
+      List<Var> oList, List<Var> iList, TaskMode mode)
             throws UserException;
 
   public abstract void endFunction();

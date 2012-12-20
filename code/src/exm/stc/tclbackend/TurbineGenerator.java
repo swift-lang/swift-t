@@ -1151,7 +1151,8 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void startFunction(String functionName,
                                      List<Var> oList,
-                                     List<Var> iList)
+                                     List<Var> iList,
+                                     TaskMode mode)
   throws UserException
   {
     List<String> outputs = prefixVars(Var.nameList(oList));
@@ -2195,4 +2196,12 @@ public class TurbineGenerator implements CompilerBackend
       pointStack.pop();
       loopNameStack.pop();
     }
+
+	@Override
+	public void generateWrappedBuiltin(String function, FunctionType ft,
+			List<Var> outArgs, List<Var> inArgs, TaskMode mode)
+			    throws UserException {
+	  throw new STCRuntimeError("generateWrappedBuiltin not implemented" +
+	  		" by TurbineGenerator");
+	}
 }
