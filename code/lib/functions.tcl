@@ -24,7 +24,7 @@ namespace eval turbine {
     namespace export set1
 
     # Bring in Turbine extension features
-    namespace import c::new c::rule c::typeof
+    namespace import c::new c::typeof
     namespace import c::insert c::log
 
     proc call_composite { stack f outputs inputs blockon } {

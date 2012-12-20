@@ -673,20 +673,4 @@ namespace eval turbine {
       }
       eval $cmd
     }
-
-    proc send_deeprule { rule_prefix inputs nest_levels is_file
-                         action_type action } {
-        variable mode
-        global WORK_TYPE
-        if { $mode == {ENGINE} } {
-            deeprule $rule_prefix $inputs $nest_levels $is_file \
-                     $action_type $action
-        } elseif { [ llength $inputs ] == 0 } {
-            release -1 $action_type $action
-        } else {
-            adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
-                    [ list deeprule $rule_prefix $inputs $nest_levels \
-                                    $is_file $action_type $action ]
-        }
-    }
 }

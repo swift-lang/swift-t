@@ -6,10 +6,11 @@ package provide turbine [ turbine::c::version ]
 
 namespace eval turbine {
 
-    namespace export init finalize
+    namespace export init finalize rule
 
     # Mode is ENGINE, WORKER, or SERVER
     variable mode
+    variable is_engine
 
     # Counts of engines, servers, workers
     variable n_adlb_servers
@@ -73,12 +74,16 @@ namespace eval turbine {
         
 
         variable mode
+	variable is_engine
         if { [ adlb::rank ] < $engines } {
 	    set mode ENGINE
+	    set is_engine 1
         } elseif { [ adlb::amserver ] == 1 } {
             set mode SERVER
+	    set is_engine 0
         } else {
 	    set mode WORKER
+	    set is_engine 0
         }
 
         log "MODE: $mode"
@@ -232,13 +237,13 @@ namespace eval turbine {
         store_integer $output [ adlb_servers ]
     }
 
-    # Same as rule, but can be run on worker
-    proc send_rule { name inputs action_type action } {
-        variable mode
+    # Augment rule so that it can be run on worker
+    proc rule { name inputs action_type action } {
+        variable is_engine
         global WORK_TYPE
 
-        if { $mode == {ENGINE} } {
-            rule $name $inputs $action_type $action
+        if { $is_engine } {
+            c::rule $name $inputs $action_type $action
         } elseif { [ llength $inputs ] == 0 } {
             release -1 $action_type $action 
         } else {
