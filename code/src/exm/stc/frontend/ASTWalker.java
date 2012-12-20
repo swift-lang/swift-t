@@ -1653,6 +1653,7 @@ public class ASTWalker {
       }
       // generate composite functino wrapping inline tcl
       context.setFunctionProperty(function, FnProp.COMPOSITE);
+      context.setFunctionProperty(function, FnProp.SYNC);
       generateWrapperFunction(context, function, ft, fdecl.getOutVars(),
                     fdecl.getInVars(), Builtins.getTaskMode(function));
     }
