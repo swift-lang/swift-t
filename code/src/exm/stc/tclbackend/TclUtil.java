@@ -1,5 +1,6 @@
 package exm.stc.tclbackend;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -57,6 +58,13 @@ public class TclUtil {
     return new Value(TclNamer.prefixVar(v.name()));
   }
 
+  public static List<Expression> varsToExpr(List<Var> inputs) {
+    List<Expression> res = new ArrayList<Expression>(inputs.size());
+    for (Var in: inputs) {
+      res.add(varToExpr(in));
+    }
+    return res;
+  }
 
   public static TclList tclListOfVariables(List<Var> inputs) {
     TclList result = new TclList();

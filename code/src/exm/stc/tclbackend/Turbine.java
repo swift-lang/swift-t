@@ -797,10 +797,13 @@ class Turbine
   }
 
 
-  public static TclTree callFunctionSync(String function, TclList oList,
-      TclList iList) {
-    return new Command(new Token(function), new Value(Turbine.LOCAL_STACK_NAME),
-        oList, iList);
+  public static TclTree callFunctionSync(String function,
+      List<Expression> outVars, List<Expression> inVars) {
+    List<Expression> args = new ArrayList<Expression>();
+    args.add(new Value(Turbine.LOCAL_STACK_NAME));
+    args.addAll(outVars);
+    args.addAll(inVars);
+    return new Command(function, args);
   }
 
   public static Command makeTCLGlobal(String tclName) {

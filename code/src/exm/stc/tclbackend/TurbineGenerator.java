@@ -719,8 +719,6 @@ public class TurbineGenerator implements CompilerBackend
               List<Boolean> blocking, TaskMode mode, Arg priority)  {
     assert(priority == null || priority.isImmediateInt());
     logger.debug("call: " + function);
-    TclList iList = TclUtil.tclListOfVariables(inputs);
-    TclList oList = TclUtil.tclListOfVariables(outputs);
     ArrayList<Var> blockOn = new ArrayList<Var>();
     HashSet<String> alreadyBlocking = new HashSet<String>();
     for (int i = 0; i < inputs.size(); i++) {
@@ -734,6 +732,9 @@ public class TurbineGenerator implements CompilerBackend
     setPriority(priority);
     if (mode == TaskMode.CONTROL || mode == TaskMode.LOCAL ||
         mode == TaskMode.LOCAL_CONTROL) {
+      TclList iList = TclUtil.tclListOfVariables(inputs);
+      TclList oList = TclUtil.tclListOfVariables(outputs);
+      
       // Increment reference counts to keep open
       pointStack.peek().append(incrementReaders(outputs, null));
       pointStack.peek().append(incrementReaders(inputs, null));
@@ -745,9 +746,13 @@ public class TurbineGenerator implements CompilerBackend
     } else if (mode == TaskMode.SYNC) {
       // Calling synchronously, can't guarantee anything blocks
       assert blockOn.size() == 0 : function + ": " + blockOn;
+      
+      List<Expression> inVars = TclUtil.varsToExpr(inputs);
+      List<Expression> outVars = TclUtil.varsToExpr(outputs);
+      
       pointStack.peek().add(Turbine.callFunctionSync(
           TclNamer.swiftFuncName(function),
-          oList, iList));
+          outVars, inVars));
     } else {
       throw new STCRuntimeError("Unexpected mode: " + mode);
     }
