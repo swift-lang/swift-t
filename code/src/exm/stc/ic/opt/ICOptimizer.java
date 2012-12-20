@@ -39,7 +39,7 @@ public class ICOptimizer {
     preprocess(icOutput, logger, prog);
 
     for (long iteration = 0; iteration < nIterations; iteration++) {
-      iterate(logger, icOutput, prog, iteration, nIterations);
+      iterate(icOutput, logger, prog, iteration, nIterations);
     }
     
     postprocess(icOutput, logger, prog, nIterations);
@@ -70,14 +70,14 @@ public class ICOptimizer {
 
   /**
    * Do one iteration of the iterative optimizer passes
-   * @param logger
    * @param icOutput
+   * @param logger
    * @param prog
    * @param iteration
    * @param nIterations
    * @throws Exception
    */
-  private static void iterate(Logger logger, PrintStream icOutput,
+  private static void iterate(PrintStream icOutput, Logger logger,
       Program prog, long iteration, long nIterations) throws UserException {
     OptimizerPipeline pipe = new OptimizerPipeline(icOutput);
     pipe.addPass(new ConstantFold());
