@@ -921,7 +921,7 @@ public class ICTree {
      * @param insertAtTop whether to insert at top of block or not
      */
     public void insertInline(Block b, boolean insertAtTop) {
-      insertInline(b, insertAtTop ? b.instructionIterator() : null);
+      insertInline(b, insertAtTop ? instructionIterator() : null);
     }
     
 
