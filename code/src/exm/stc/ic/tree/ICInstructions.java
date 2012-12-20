@@ -1458,7 +1458,7 @@ public class ICInstructions {
       case ARRAY_REF_CREATE_NESTED_FUTURE:
       case ARRAY_CREATE_NESTED_FUTURE:
       case ARRAY_REF_CREATE_NESTED_IMM:
-        return TaskMode.LOCAL_CONTROL;
+        return TaskMode.LOCAL;
       default:
         throw new STCRuntimeError("Need to add opcode " + op.toString()
             + " to getMode");

@@ -90,10 +90,9 @@ class Turbine
       new Value(PARENT_STACK_NAME);
   private static final Token PARENT_STACK_ENTRY =
       new Token("_parent");
-  private static final Token RULE = new Token("turbine::c::rule");
-  private static final Token SEND_RULE = new Token("turbine::send_rule");
+  private static final Token DIRECT_RULE = new Token("turbine::c::rule");
+  private static final Token RULE = new Token("turbine::rule");
   private static final Token DEEPRULE = new Token("turbine::deeprule");
-  private static final Token SEND_DEEPRULE = new Token("turbine::send_deeprule");
   private static final Token NO_STACK = new Token("no_stack");
   private static final Token DEREFERENCE_INTEGER =
       new Token("turbine::f_dereference_integer");
@@ -348,7 +347,7 @@ class Turbine
     Token s = new Token(symbol);
     TclList i = new TclList(inputs);
 
-    return new Command(local ? RULE : SEND_RULE, s, i,
+    return new Command(local ? DIRECT_RULE : RULE, s, i,
                        tclRuleType(type), action);
   }
 
@@ -382,7 +381,7 @@ class Turbine
       isFileExprs.add(LiteralInt.boolValue(b));
     }
     
-    return new Command(local ? DEEPRULE : SEND_DEEPRULE, new Token(symbol),
+    return new Command(DEEPRULE, new Token(symbol),
           new TclList(inputs), new TclList(depthExprs), new TclList(isFileExprs),
           tclRuleType(mode), action);
   }
