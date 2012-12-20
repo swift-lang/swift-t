@@ -155,7 +155,12 @@ public class Builtins {
    * @return
    */
   public static TaskMode getTaskMode(String functionName) {
-    return taskModes.get(functionName);
+    TaskMode mode = taskModes.get(functionName);
+    if (mode != null) {
+      return mode;
+    } else {
+      return TaskMode.DEFAULT_BUILTIN_MODE;
+    }
   }
 
   public static class TemplateElem {

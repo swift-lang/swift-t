@@ -2022,12 +2022,7 @@ public class ICInstructions {
         case CALL_LOCAL_CONTROL:
           return TaskMode.LOCAL_CONTROL;
         case CALL_BUILTIN:
-          TaskMode m = Builtins.getTaskMode(functionName);
-          if (m == null) {
-            return TaskMode.LOCAL;
-          } else {
-            return m;
-          }
+          return Builtins.getTaskMode(functionName);
         case CALL_CONTROL:
           return TaskMode.CONTROL;
         default:

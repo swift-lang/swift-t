@@ -12,6 +12,8 @@ public enum TaskMode {
   CONTROL, // Load balance as control task
   LEAF,// Load balance as leaf task
   ;
+  
+  public static final TaskMode DEFAULT_BUILTIN_MODE = LOCAL;
   /**
    * Check if a task with this mode can be spawned in the given
    * execution context.
