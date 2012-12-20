@@ -80,6 +80,10 @@ public class ICOptimizer {
   private static void iterate(PrintStream icOutput, Logger logger,
       Program prog, long iteration, long nIterations) throws UserException {
     OptimizerPipeline pipe = new OptimizerPipeline(icOutput);
+    // First prune any unneeded functions
+    pipe.addPass(new FunctionInline());
+    
+    
     pipe.addPass(new ConstantFold());
     
     if (iteration == 0) {

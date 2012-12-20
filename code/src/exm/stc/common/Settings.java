@@ -40,6 +40,7 @@ public class Settings
   public static final String OPT_PIPELINE = "stc.opt.pipeline";
   public static final String OPT_CONTROLFLOW_FUSION =
                                             "stc.opt.controlflow-fusion";
+  public static final String OPT_FUNCTION_INLINE = "stc.opt.function-inline";
   public static final String OPT_DISABLE_ASSERTS = "stc.opt.disable-asserts";
   public static final String OPT_UNROLL_LOOPS = "stc.opt.unroll-loops";
   public static final String OPT_HOIST = "stc.opt.hoist";
@@ -85,6 +86,7 @@ public class Settings
     defaults.setProperty(OPT_WAIT_COALESCE, "true");
     defaults.setProperty(OPT_PIPELINE, "false");
     defaults.setProperty(OPT_CONTROLFLOW_FUSION, "true");
+    defaults.setProperty(OPT_FUNCTION_INLINE, "false");
     defaults.setProperty(OPT_HOIST, "true");
     defaults.setProperty(OPT_MAX_ITERATIONS, "10");
     defaults.setProperty(ARRAY_REF_SWITCHEROO, "false");
@@ -170,6 +172,7 @@ public class Settings
     getBoolean(OPT_WAIT_COALESCE);
     getBoolean(OPT_PIPELINE);
     getBoolean(OPT_CONTROLFLOW_FUSION);
+    getBoolean(OPT_FUNCTION_INLINE);
     getBoolean(OPT_UNROLL_LOOPS);
     getBoolean(TURBINE_NO_STACK);
     getBoolean(TURBINE_NO_STACK_VARS);

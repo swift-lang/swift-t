@@ -138,6 +138,10 @@ public class ICTree {
       return Collections.unmodifiableList(this.functions);
     }
     
+    public ListIterator<Function> functionIterator() {
+      return functions.listIterator();
+    }
+
     public void addGlobalConst(String name, Arg val) {
       if (globalConsts.put(name, val) != null) {
         throw new STCRuntimeError("Overwriting global constant "
@@ -917,6 +921,24 @@ public class ICTree {
      * @param insertAtTop whether to insert at top of block or not
      */
     public void insertInline(Block b, boolean insertAtTop) {
+      insertInline(b, insertAtTop ? b.instructionIterator() : null);
+    }
+    
+
+    public void insertInline(Block b,
+          ListIterator<Instruction> pos) {
+      insertInline(b, null, pos);
+    }
+  
+    /**
+     * Insert the instructions, variables, etc from b inline
+     * in the current block
+     * @param b
+     * @param pos
+     */
+    public void insertInline(Block b,
+          ListIterator<Continuation> contPos,
+          ListIterator<Instruction> pos) {
       Set<String> varNames = Var.nameSet(this.variables);
       for (Var newVar: b.getVariables()) {
         // Check for duplicates (may be duplicate globals)
@@ -924,12 +946,19 @@ public class ICTree {
           variables.add(newVar);
         }
       }
-      if (insertAtTop) {
-        this.continuations.addAll(0, b.getContinuations());
-        this.instructions.addAll(0, b.getInstructions());
+      if (pos != null) {
+        for (Instruction i: b.getInstructions()) {
+          pos.add(i);
+        }
+      } else {
+        this.instructions.addAll(b.getInstructions());
+      }
+      if (contPos != null) {
+        for (Continuation c: b.getContinuations()) {
+          contPos.add(c);
+        }
       } else {
         this.continuations.addAll(b.getContinuations());
-        this.instructions.addAll(b.getInstructions());
       }
       this.cleanupActions.addAll(b.cleanupActions);
     }
