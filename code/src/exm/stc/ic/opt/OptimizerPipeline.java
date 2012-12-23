@@ -33,7 +33,8 @@ public class OptimizerPipeline {
                    + pass.getPassName());
         pass.optimize(logger, program);
         if (icOutput != null) {
-          program.log(icOutput, "IC after " + pass.getPassName());
+          program.log(icOutput, "Iteration " + iteration + " IC after " +
+				pass.getPassName());
         }
       }
     }
