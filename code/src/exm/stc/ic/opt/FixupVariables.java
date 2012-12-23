@@ -56,6 +56,16 @@ public class FixupVariables implements OptimizerPass {
     /*
      * Work out which variables are needed which aren't locally declared
      */
+    
+    for (Var var: block.getVariables()) {
+      if (var.isMapped()) {
+        String n = var.mapping().name();
+        if (!availVars.contains(n)) {
+          neededVars.add(n);
+        }
+      }
+    }
+    
     for (Instruction inst : block.getInstructions()) {
       for (String n : Arg.varNameList(inst.getInputs())) {
         if (!availVars.contains(n)) {
