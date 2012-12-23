@@ -283,6 +283,8 @@ public class ICContinuations {
       // TODO Auto-generated method stub
       return runLast;
     }
+
+    public abstract boolean isLoop();
   }
 
   public enum ContinuationType {
@@ -401,6 +403,11 @@ public class ICContinuations {
 
     public Block getLoopBody() {
       return loopBody;
+    }
+    
+    @Override
+    public boolean isLoop() {
+      return true;
     }
 
     @Override
@@ -659,6 +666,11 @@ public class ICContinuations {
 
     public Block getElseBlock() {
       return elseBlock;
+    }
+
+    @Override
+    public boolean isLoop() {
+      return false;
     }
 
     @Override
@@ -1067,7 +1079,11 @@ public class ICContinuations {
     public boolean isAsync() {
       return false;
     }
-
+    
+    @Override
+    public boolean isLoop() {
+      return false;
+    }
 
     @Override
     protected void replaceConstructVars(Map<String, Arg> renames, 
@@ -1584,6 +1600,11 @@ public class ICContinuations {
     public boolean isAsync() {
       return false;
     }
+    
+    @Override
+    public boolean isLoop() {
+      return false;
+    }
 
     @Override
     public Collection<Var> requiredVars() {
@@ -1780,6 +1801,11 @@ public class ICContinuations {
     @Override
     public boolean isAsync() {
       return true;
+    }
+
+    @Override
+    public boolean isLoop() {
+      return false;
     }
 
     @Override

@@ -59,7 +59,8 @@ public class HoistLoops implements OptimizerPass {
           writeMap.put(in.name(), block);
         }
       }
-      boolean changed = hoistRec(logger, block, new ArrayList<Block>(), 0, writeMap);
+      boolean changed = hoistRec(logger, block, new ArrayList<Block>(), 0, 0,
+                                 writeMap);
       
       if (changed) {
         FixupVariables.fixupVariablePassing(logger, prog, f);
@@ -78,25 +79,29 @@ public class HoistLoops implements OptimizerPass {
    * @param curr current block
    * @param ancestors ancestors of current block
    * @param maxHoist maximum number of blocks can lift out
+   * @param maxLoopHoist max number of block can lift out without
+   *                     going through loop
    * @param writeMap map for current block filled in with anything defined 
    *                by construct or outer blocks
    * @return true if change made
    */
   private static boolean hoistRec(Logger logger, Block curr, List<Block> ancestors,
-            int maxHoist, HierarchicalMap<String, Block> writeMap) {
+            int maxHoist, int maxLoopHoist, HierarchicalMap<String, Block> writeMap) {
     boolean changed = false;
     // Update map with variables written in this block
     updateMapWithWrites(curr, writeMap);
     
     // See if we can move any instructions from this block up
     if (maxHoist > 0) {
-      changed = tryHoist(logger, curr, ancestors, maxHoist, writeMap);
+      changed = tryHoist(logger, curr, ancestors, maxHoist, maxLoopHoist,
+                         writeMap);
     }
     
     // Recurse down to child blocks
     ancestors.add(curr);
     for (Continuation c: curr.getContinuations()) {    
       int childHoist = canHoistThrough(c) ? maxHoist + 1 : 0;
+      int childLoopHoist = c.isLoop() ? 0 : maxLoopHoist + 1;
       for (Block b: c.getBlocks()) {
         HierarchicalMap<String, Block> childWriteMap = writeMap.makeChildMap();
         
@@ -119,7 +124,8 @@ public class HoistLoops implements OptimizerPass {
           }
         }
         
-        if (hoistRec(logger, b, ancestors, childHoist, childWriteMap)) {
+        if (hoistRec(logger, b, ancestors, childHoist, childLoopHoist,
+                     childWriteMap)) {
           changed = true;
         }
       }
@@ -175,7 +181,7 @@ public class HoistLoops implements OptimizerPass {
   }
 
   private static boolean tryHoist(Logger logger, Block curr,
-          List<Block> ancestors, int maxHoist,
+          List<Block> ancestors, int maxHoist, int maxLoopHoist,
           HierarchicalMap<String, Block> writeMap) {
     boolean changed = false;
     // See if we can lift any instructions out of block
@@ -204,6 +210,11 @@ public class HoistLoops implements OptimizerPass {
         }
       }
       
+      if (maybePiecewiseAssignment(inst)) {
+        // Can't hoist array assignments, etc out through loop
+        maxHoist = Math.min(maxHoist, maxLoopHoist);
+      }
+      
       if (canHoist) {
         // Max hoist for instruction determined by inputs and maxHoist
         int hoistDepth;
@@ -221,6 +232,16 @@ public class HoistLoops implements OptimizerPass {
       }
     }
     return changed;
+  }
+
+  private static boolean maybePiecewiseAssignment(Instruction inst) {
+    for (Var out: inst.getOutputs()) {
+      if (Types.isArray(out.type())) {
+        // TODO: only a problem if piecewise array assignment
+        return true;
+      }
+    }
+    return false;
   }
 
   private static void doHoist(Logger logger,
