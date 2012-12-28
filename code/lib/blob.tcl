@@ -18,6 +18,10 @@ namespace eval turbine {
     return [ lindex $blob_val 1 ]
   }
 
+  proc blob_null { stack result input } { 
+      store_blob $result 0 0 
+  }
+
   proc blob_from_string { stack result input } {
     rule "bfs-$input-$result" $input $turbine::LOCAL \
       "blob_from_string_body $input $result"
