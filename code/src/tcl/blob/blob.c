@@ -47,7 +47,7 @@ SwiftBlob_sizeof_float(void)
 void*
 SwiftBlob_cast_to_ptr(int i)
 {
-  return (void*) i;
+  return (void*) (size_t)i;
 }
 
 int
