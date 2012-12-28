@@ -3,6 +3,7 @@
   BLOB.C
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,10 +21,33 @@ SwiftBlob_make_test(void)
   return d;
 }
 
+SwiftBlob*
+SwiftBlob_create(long pointer, int length)
+{
+  SwiftBlob* result = malloc(sizeof(SwiftBlob));
+  result->pointer = (void*) pointer;
+  result->length = length;
+  return result;
+}
+
+void*
+SwiftBlob_malloc(int bytes)
+{
+  void* result = malloc(bytes);
+  assert(result);
+  return result;
+}
+
 int
 SwiftBlob_sizeof_float(void)
 {
   return sizeof(double);
+}
+
+void*
+SwiftBlob_cast_to_ptr(int i)
+{
+  return (void*) i;
 }
 
 int
@@ -46,10 +70,9 @@ SwiftBlob_cast_to_dbl_ptr(void* p)
 }
 
 double
-SwiftBlob_double_get(SwiftBlob* data, int index)
+SwiftBlob_double_get(double* pointer, int index)
 {
-  double* d = (double*) data->pointer;
-  return d[index];
+  return pointer[index];
 }
 
 char
@@ -57,13 +80,6 @@ SwiftBlob_char_get(SwiftBlob* data, int index)
 {
   char* d = (char*) data->pointer;
   return d[index];
-}
-
-void*
-SwiftBlob_allocate(int bytes)
-{
-  void* result = (double*) malloc(bytes);
-  return result;
 }
 
 /** Set p[i] = d */

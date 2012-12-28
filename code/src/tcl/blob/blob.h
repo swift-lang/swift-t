@@ -25,9 +25,14 @@ typedef struct
 } SwiftBlob;
 
 /**
+   @param pointer An int representation of a void*
+ */
+SwiftBlob* SwiftBlob_create(long pointer, int length);
+
+/**
    Allocate memory (not a blob) of given size
  */
-void* SwiftBlob_allocate(int bytes);
+void* SwiftBlob_malloc(int bytes);
 
 /**
    Deallocate a blob
@@ -44,6 +49,8 @@ int SwiftBlob_sizeof_float(void);
    Not all possible type pairs are yet implemented
    If not given, void* is assumed
  */
+void* SwiftBlob_cast_to_ptr(int i);
+
 int SwiftBlob_cast_to_int(void* p);
 
 double* SwiftBlob_cast_int_to_dbl_ptr(int i);
@@ -52,7 +59,7 @@ double* SwiftBlob_cast_to_dbl_ptr(void* p);
 /**
    Assume blob is array of double- do array lookup
  */
-double SwiftBlob_double_get(SwiftBlob* blob, int index);
+double SwiftBlob_double_get(double* pointer, int index);
 
 /**
    Assume blob is array of double- do array store

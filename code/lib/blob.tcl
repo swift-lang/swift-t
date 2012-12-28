@@ -37,22 +37,19 @@ namespace eval turbine {
   }
 
   proc floats_from_blob { stack result input } {
-      rule "ffb-$result-$input" $input $turbine::LOCAL \
+      rule "floats_from_blob-$result" $input $turbine::LOCAL \
           "floats_from_blob_body $result $input"
   }
   proc floats_from_blob_body { result input } {
       log "floats_from_blob_body: result=<$result> input=<$input>"
       set s      [ SwiftBlob_sizeof_float ]
-      set L [ adlb::retrieve_blob $input ]
-      set p      [ lindex $L 0 ]
+      set L      [ adlb::retrieve_blob $input ]
+      set p      [ SwiftBlob_cast_int_to_dbl_ptr [ lindex $L 0 ] ]
       set length [ lindex $L 1 ]
-      set blob   [ new_SwiftBlob ]
-      SwiftBlob_pointer_set $blob [ SwiftBlob_cast_to_pointer $p ]
-      SwiftBlob_length_set  $blob $length
 
       set n [ expr $length / $s ]
       for { set i 0 } { $i < $n } { incr i } {
-          set d [ SwiftBlob_double_get $blob $i ]
+          set d [ SwiftBlob_double_get $p $i ]
           literal t float $d
           container_immediate_insert $result $i $t
       }
@@ -63,14 +60,14 @@ namespace eval turbine {
 
   # Container must be indexed from 0,N-1
   proc blob_from_floats { stack result input } {
-    rule "bff-$input-$result" $input $turbine::LOCAL \
+    rule "blob_from_floats-$result" $input $turbine::LOCAL \
       "blob_from_floats_body $input $result"
   }
   proc blob_from_floats_body { container result } {
 
       set type [ container_typeof $container ]
       set N  [ adlb::container_size $container ]
-      c::log "bff_body start"
+      c::log "blob_from_floats_body start"
       complete_container $container \
           "blob_from_floats_store $result $container $N"
   }
