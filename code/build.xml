@@ -233,7 +233,7 @@
     <chmod file="${dist.dir}/bin/stc" perm="u+x"/>
   </target>
 
-  <available property="classes.exists" file="classes"/>
+  <available property="build.dir.exists" file="${build.dir}"/>
 
   <target name="clean"
           depends="clean.java">
@@ -241,7 +241,7 @@
     <!-- Delete all ANTLR-generated stuff -->
     <delete dir="${antlr.out}"/>
   </target>
-  <target name="clean.java" if="classes.exists">
+  <target name="clean.java" if="build.dir.exists">
     <delete includeemptydirs="true">
       <fileset dir="${build.dir}" includes="**/*"/>
     </delete>
