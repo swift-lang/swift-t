@@ -197,9 +197,18 @@
     </javadoc>
   </target>
 
+  <available property="source.txt.exists" file="source.txt"/>
+
+  <target name="source.txt"
+          unless="source.txt.exists">
+    <!-- Record source directory -->
+    <echo message="Source directory is: ${user.dir}${line.separator}"/>
+    <echo message="${user.dir}${line.separator}" file="source.txt"/>
+  </target>
+
   <!-- Install: User must have set dist.dir -->
   <target name="install"
-          depends="jar">
+          depends="jar,source.txt">
 
     <fail unless="dist.dir"
           message="Target install requires -Ddist.dir=..."/>
@@ -209,8 +218,6 @@
 
     <echo message="INSTALL: dist.dir=${dist.dir}"/>
 
-    <!-- Record source directory -->
-    <echo message="${user.dir}${line.separator}" file="source.txt"/>
 
     <mkdir dir="${dist.dir}/bin"/>
     <mkdir dir="${dist.dir}/etc"/>
@@ -240,6 +247,7 @@
     <delete file="${stc.jar}"/>
     <!-- Delete all ANTLR-generated stuff -->
     <delete dir="${antlr.out}"/>
+    <delete file="source.txt"/>
   </target>
   <target name="clean.java" if="build.dir.exists">
     <delete includeemptydirs="true">
