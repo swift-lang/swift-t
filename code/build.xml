@@ -217,7 +217,7 @@
     <mkdir dir="${dist.dir}/lib"/>
     <copy file="turbine-version.txt" todir="${dist.dir}"/>
     <copy file="help.txt" todir="${dist.dir}"/>
-    <copy file="version.txt" todir="${dist.dir}/etc"/>
+    <copy file="etc/version.txt" todir="${dist.dir}/etc"/>
     <copy file="source.txt" todir="${dist.dir}/etc"/>
     <copy file="bin/stc" todir="${dist.dir}/bin"/>
     <copy file="conf/stc-env.sh.template" toFile="${dist.dir}/conf/stc-env.sh"
