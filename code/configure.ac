@@ -363,9 +363,11 @@ AC_ARG_WITH(tcl,
 # Check USE_TCL: set USE_TCL_LIB_DIR
 USE_TCL_LIB_DIR=0
 AC_MSG_CHECKING([for tclConfig.sh ])
+# This location is for Tcl installation from source
 if [[ -r ${USE_TCL}/lib/tclConfig.sh ]]
 then
     USE_TCL_LIB_DIR=${USE_TCL}/lib
+# This location is for Tcl installation from the APT tcl8.5-dev package
 elif [[ -r ${USE_TCL}/lib64/tclConfig.sh ]]
 then
     USE_TCL_LIB_DIR=${USE_TCL}/lib64
