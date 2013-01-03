@@ -707,7 +707,7 @@ handle_refcount_incr(int caller)
 static adlb_code
 handle_insert(int caller)
 {
-  int rc;
+  MPE_LOG(xlb_mpe_svr_insert_start);
   MPI_Status status;
   RECV(xfer, ADLB_DATA_SUBSCRIPT_MAX+128, MPI_CHAR, caller,
        ADLB_TAG_INSERT_HEADER);
@@ -773,6 +773,7 @@ handle_insert(int caller)
     }
   }
   TRACE("INSERT DONE");
+  MPE_LOG(xlb_mpe_svr_insert_end);
   return ADLB_SUCCESS;
 }
 
@@ -804,7 +805,7 @@ handle_insert_atomic(int caller)
 static adlb_code
 handle_lookup(int caller)
 {
-  int rc;
+  MPE_LOG(xlb_mpe_svr_lookup_start);
   MPI_Status status;
   TRACE("ADLB_TAG_LOOKUP\n");
   char msg[ADLB_DATA_SUBSCRIPT_MAX+32];
@@ -835,6 +836,7 @@ handle_lookup(int caller)
   // DEBUG("LOOKUP: <%li>[\"%s\"] => <%li>\n",
   //       id, subscript, member);
   TRACE("ADLB_TAG_LOOKUP done\n");
+  MPE_LOG(xlb_mpe_svr_lookup_end);
   return ADLB_SUCCESS;
 }
 

@@ -44,6 +44,8 @@ extern_declare_pair(svr, create);
 extern_declare_pair(svr, subscribe);
 extern_declare_pair(svr, store);
 extern_declare_pair(svr, retrieve);
+extern_declare_pair(svr, insert);
+extern_declare_pair(svr, lookup);
 
 // Server daemon events (steal, shutdown):
 extern_declare_pair(dmn, steal);
