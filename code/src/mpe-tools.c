@@ -128,6 +128,7 @@ xlb_mpe_setup()
   {
     describe_pair(all, init);
     describe_pair(all, finalize);
+
     describe_pair(svr, busy);
     describe_pair(svr, get);
     describe_pair(svr, put);
@@ -135,11 +136,14 @@ xlb_mpe_setup()
     describe_pair(svr, subscribe);
     describe_pair(svr, store);
     describe_pair(svr, retrieve);
-
+    describe_pair(svr, insert);
+    describe_pair(svr, lookup);
     describe_pair(svr, steal);
     describe_pair(svr, shutdown);
+
     describe_pair(dmn, steal);
     describe_pair(dmn, shutdown);
+
     describe_pair(wkr, put);
     describe_pair(wkr, get);
     describe_pair(wkr, create);
