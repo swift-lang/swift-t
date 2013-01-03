@@ -73,8 +73,7 @@ MPE = @USE_MPE@
 MPE_FLAGS  = @MPE_FLAGS@
 ifeq ($(ENABLE_MPE),yes)
 	CFLAGS += -D ENABLE_MPE $(MPE_FLAGS)
-	LIBS += -L lib -lmpe -L $(MPE)
-	RPATH += -Wl,-rpath -Wl,$(INSTALL_LIB)
+	LIBS += -L $(MPE) -l mpe
         RPATH += -Wl,-rpath -Wl,$(MPE)
 endif
 
@@ -118,12 +117,10 @@ lib:
 
 $(ADLB_SO): $(OBJS) $(NLOBJS) lib
 	$(Q) "  LINK		$(@)"
-	$(E) $(LINKER) -shared -fPIC -g			\
-	        $(OBJS) 				\
-                $(LIBS)                                 \
-	        -L $(C_UTILS)/lib 	\
-	        -l exmcutils \
-	        $(RPATH) \
+	$(E) $(LINKER) -shared -fPIC -g	 \
+	        $(OBJS) 		 \
+                $(LIBS)                  \
+	        $(RPATH)                 \
 	        -o $(@)
 #       Touch this so re-installation has the correct source directory
 	$(E) touch source.txt
