@@ -140,6 +140,8 @@ handle(adlb_tag tag, int caller)
   CHECK_MSG(handlers[tag] != NULL, "handle(): invalid tag: %i", tag);
   DEBUG("handle: caller=%i %s", caller, xlb_get_tag_name(tag));
 
+  MPE_LOG(xlb_mpe_svr_busy_start);
+
   // Call handler:
   adlb_code result = handlers[tag](caller);
 
@@ -148,6 +150,8 @@ handle(adlb_tag tag, int caller)
       tag != ADLB_TAG_SYNC_REQUEST &&
       tag != ADLB_TAG_STEAL)
     xlb_time_last_action = MPI_Wtime();
+
+  MPE_LOG(xlb_mpe_svr_busy_end);
 
   return result;
 }
@@ -512,7 +516,7 @@ handle_exists(int caller)
 static adlb_code
 handle_store(int caller)
 {
-  // MPE_LOG_EVENT(mpe_svr_store_start);
+  MPE_LOG(xlb_mpe_svr_store_start);
   struct packed_store_hdr hdr;
   int rc;
   MPI_Status status;
@@ -545,7 +549,7 @@ handle_store(int caller)
     free(ranks);
   }
   TRACE("STORE DONE");
-  // MPE_LOG_EVENT(mpe_svr_store_end);
+  MPE_LOG(xlb_mpe_svr_store_end);
 
   return ADLB_SUCCESS;
 }
@@ -553,8 +557,9 @@ handle_store(int caller)
 static adlb_code
 handle_retrieve(int caller)
 {
-  // MPE_LOG_EVENT(mpe_svr_retrieve_start);
   // TRACE("ADLB_TAG_RETRIEVE");
+  MPE_LOG(xlb_mpe_svr_retrieve_start);
+
   struct packed_retrieve_hdr hdr;
   int rc;
   MPI_Status status;
@@ -582,6 +587,7 @@ handle_retrieve(int caller)
       free(result);
     DEBUG("Retrieve: <%li>", hdr.id);
   }
+  MPE_LOG(xlb_mpe_svr_retrieve_end);
   return ADLB_SUCCESS;
 }
 
@@ -631,11 +637,10 @@ handle_enumerate(int caller)
 static adlb_code
 handle_subscribe(int caller)
 {
-  // MPE_LOG_EVENT(mpe_svr_subscribe_start);
   TRACE("ADLB_TAG_SUBSCRIBE\n");
+  MPE_LOG(xlb_mpe_svr_subscribe_start);
 
   long id;
-  int rc;
   MPI_Status status;
   RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_SUBSCRIBE);
 
@@ -646,7 +651,7 @@ handle_subscribe(int caller)
   RSEND(&result, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
 
   TRACE("ADLB_TAG_SUBSCRIBE done\n");
-  // MPE_LOG_EVENT(mpe_svr_subscribe_end);
+  MPE_LOG(xlb_mpe_svr_subscribe_end);
   return ADLB_SUCCESS;
 }
 

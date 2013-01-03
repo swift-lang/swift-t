@@ -135,7 +135,6 @@ ADLB_Server(long max_memory)
     if (shutting_down)
       break;
 
-
     adlb_code code = xlb_serve_several();
     ADLB_CHECK(code);
 
@@ -149,34 +148,38 @@ ADLB_Server(long max_memory)
 // Track current backoff amount for adaptive backoff
 static int curr_server_backoff = 0;
 
+/**
+   Serve several requests before returning.
+   If there are pending requests in the queue, we try to serve them
+   as quickly as possible.  If there are no requests we busy-wait
+   then back off several times with sleeps so as to avoid using
+   excessive CPU.  We use an adaptive algorithm that backs off
+   more if the queue has been empty recently.
+ */
 adlb_code
-xlb_serve_several() {
-  /*
-   * Serve several requests before returning.
-   * If there are pending requests in the queue, we try to serve them
-   * as quickly as possible.  If there are no requests we busy-wait
-   * then back off several times with sleeps so as to avoid using
-   * excessive CPU.  We use an adaptive algorithm that backs off
-   * more if the queue has been empty recently.
-   */
-
+xlb_serve_several()
+{
   int reqs = 0; // count of requests served
   int total_polls = 0; // total polls
   int sleeps = 0;
   while (reqs < xlb_loop_max_requests &&
          total_polls < xlb_loop_max_polls &&
-         sleeps < xlb_loop_max_sleeps) {
+         sleeps < xlb_loop_max_sleeps)
+  {
     MPI_Status req_status;
     adlb_code code = xlb_poll(MPI_ANY_SOURCE, &req_status);
     ADLB_CHECK(code);
-    if (code == ADLB_SUCCESS) {
+    if (code == ADLB_SUCCESS)
+    {
       code = xlb_handle_pending(&req_status);
       ADLB_CHECK(code);
       reqs++;
 
       // Back off less on each successful request
       curr_server_backoff /= 2;
-    } else {
+    }
+    else
+    {
       // Backoff
       bool slept;
       bool again = xlb_backoff_server(curr_server_backoff, &slept);
@@ -199,7 +202,7 @@ xlb_poll(int source, MPI_Status *req_status)
 {
   int new_message;
   int rc = MPI_Iprobe(source, MPI_ANY_TAG, adlb_all_comm,
-                  &new_message, req_status);
+                      &new_message, req_status);
   MPI_CHECK(rc);
   return new_message ?  ADLB_SUCCESS : ADLB_NOTHING;
 }
@@ -212,8 +215,8 @@ xlb_handle_pending(MPI_Status *status)
     // Corner case: this process is trying to sync with source
     // Source is rejecting the sync request
     int response;
-    RECV2(&response, 1, MPI_INT, status->MPI_SOURCE,
-         ADLB_TAG_SYNC_RESPONSE, status);
+    RECV_STATUS(&response, 1, MPI_INT, status->MPI_SOURCE,
+                ADLB_TAG_SYNC_RESPONSE, status);
     server_sync_retry = true;
     assert(response == 0);
     TRACE_END;

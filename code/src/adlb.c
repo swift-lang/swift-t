@@ -174,9 +174,7 @@ ADLBP_Get(int type_requested, void* payload, int* length,
   struct packed_get_response g;
 
   IRECV(&g, sizeof(g), MPI_BYTE, xlb_my_server, ADLB_TAG_RESPONSE_GET);
-
   SEND(&type_requested, 1, MPI_INT, xlb_my_server, ADLB_TAG_GET);
-
   WAIT(&request, &status);
 
   mpi_recv_sanity(&status, MPI_BYTE, sizeof(g));
@@ -233,10 +231,8 @@ ADLBP_Create_impl(adlb_datum_id id, adlb_data_type type,
 
   struct packed_create_response resp;
   IRECV(&resp, sizeof(resp), MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
-
   SEND(&data, sizeof(struct packed_id_type_updateable), MPI_BYTE,
        to_server_rank, ADLB_TAG_CREATE_HEADER);
-
   WAIT(&request, &status);
 
   ADLB_DATA_CHECK(resp.dc);
@@ -326,23 +322,17 @@ ADLBP_Exists(adlb_datum_id id, bool* result)
 
   TRACE("ADLB_Exists: <%li>\n", id);
 
-  rc = MPI_Irecv(result, sizeof(bool), MPI_BYTE, to_server_rank,
-                 ADLB_TAG_RESPONSE, adlb_all_comm, &request);
-
-  MPI_CHECK(rc);
-
-  rc = MPI_Send(&id, 1, MPI_LONG, to_server_rank, ADLB_TAG_EXISTS,
-                adlb_all_comm);
-  MPI_CHECK(rc);
-
-  rc = MPI_Wait(&request, &status);
-  MPI_CHECK(rc);
+  IRECV(result, sizeof(bool), MPI_BYTE, to_server_rank,
+        ADLB_TAG_RESPONSE);
+  SEND(&id, 1, MPI_LONG, to_server_rank, ADLB_TAG_EXISTS);
+  WAIT(&request, &status);
 
   return ADLB_SUCCESS;
 }
 
-adlb_code ADLBP_Store(adlb_datum_id id, void *data, int length,
-                      bool decr_write_refcount, int** ranks, int *count)
+adlb_code
+ADLBP_Store(adlb_datum_id id, void *data, int length,
+            bool decr_write_refcount, int** ranks, int *count)
 {
   int to_server_rank;
   int rc;
@@ -362,22 +352,15 @@ adlb_code ADLBP_Store(adlb_datum_id id, void *data, int length,
     return ADLB_SUCCESS;
   }
 
-  rc = MPI_Irecv(count, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
-                  adlb_all_comm,&request);
-  MPI_CHECK(rc);
-
   struct packed_store_hdr hdr = { .id = id,
-                  .decr_write_refcount = decr_write_refcount };
-  rc = MPI_Send(&hdr, sizeof(struct packed_store_hdr), MPI_BYTE,
-                to_server_rank, ADLB_TAG_STORE_HEADER, adlb_all_comm);
-  MPI_CHECK(rc);
+      .decr_write_refcount = decr_write_refcount };
 
-  rc = MPI_Send(data, length, MPI_BYTE, to_server_rank,
-		ADLB_TAG_STORE_PAYLOAD, adlb_all_comm);
-  MPI_CHECK(rc);
-
-  rc = MPI_Wait(&request, &status);
-  MPI_CHECK(rc);
+  IRECV(count, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
+  SEND(&hdr, sizeof(struct packed_store_hdr), MPI_BYTE,
+       to_server_rank, ADLB_TAG_STORE_HEADER);
+  SEND(data, length, MPI_BYTE, to_server_rank,
+       ADLB_TAG_STORE_PAYLOAD);
+  WAIT(&request, &status);
 
   // Check to see if list of notifications will be received
   if (*count == -1)
@@ -386,9 +369,7 @@ adlb_code ADLBP_Store(adlb_datum_id id, void *data, int length,
   if (*count > 0)
   {
     *ranks = malloc(*count*sizeof(int));
-    rc = MPI_Recv(*ranks, *count, MPI_INT, to_server_rank,
-                  ADLB_TAG_RESPONSE, adlb_all_comm, &status);
-    MPI_CHECK(rc);
+    RECV(*ranks, *count, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
   }
 
   return ADLB_SUCCESS;
@@ -468,7 +449,6 @@ ADLBP_Insert(adlb_datum_id id,
              const char* subscript, const char* member,
              int member_length, int drops)
 {
-  int rc;
   adlb_data_code dc;
   MPI_Status status;
   MPI_Request request;
@@ -482,19 +462,13 @@ ADLBP_Insert(adlb_datum_id id,
                        id, subscript, member_length, drops);
   int to_server_rank = ADLB_Locate(id);
 
-  rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
-                 adlb_all_comm, &request);
-  MPI_CHECK(rc);
-  rc = MPI_Send(xfer, length+1, MPI_INT, to_server_rank,
-                ADLB_TAG_INSERT_HEADER, adlb_all_comm);
-  MPI_CHECK(rc);
+  IRECV(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
+  SEND(xfer, length+1, MPI_INT, to_server_rank,
+       ADLB_TAG_INSERT_HEADER);
+  SEND((char*) member, member_length+1, MPI_BYTE, to_server_rank,
+       ADLB_TAG_INSERT_PAYLOAD);
+  WAIT(&request, &status);
 
-  rc = MPI_Send((char*) member, member_length+1, MPI_BYTE,
-                to_server_rank, ADLB_TAG_INSERT_PAYLOAD, adlb_all_comm);
-  MPI_CHECK(rc);
-
-  rc = MPI_Wait(&request, &status);
-  MPI_CHECK(rc);
   if (dc != ADLB_DATA_SUCCESS)
     return ADLB_ERROR;
 

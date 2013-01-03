@@ -241,10 +241,14 @@ adlb_code ADLB_Insert_atomic(adlb_datum_id id, const char *subscript,
   return rc;
 }
 
-adlb_code ADLB_Lookup(adlb_datum_id id,
-                      const char *subscript, char* member, int* found)
+adlb_code
+ADLB_Lookup(adlb_datum_id id,
+            const char *subscript, char* member, int* found)
 {
-  return ADLBP_Lookup(id, subscript, member, found);
+  MPE_LOG(xlb_mpe_wkr_lookup_start);
+  int rc = ADLBP_Lookup(id, subscript, member, found);
+  MPE_LOG(xlb_mpe_wkr_lookup_end);
+  return rc;
 }
 
 adlb_code ADLB_Unique(adlb_datum_id *result)

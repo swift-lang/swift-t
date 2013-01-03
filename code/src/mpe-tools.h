@@ -17,9 +17,11 @@
 
 #include <mpe.h>
 
-// Event pairs
-// Note: these names must be conventional for use with our macros
-// The convention is: xlb_mpe_[svr|dmn|wkr]?_<OP>_[start|end]
+/**
+   Declare event pairs
+   Note: these names must be conventional for use with our macros
+   The convention is: xlb_mpe_[svr|dmn|wkr]?_<OP>_[start|end]
+*/
 
 #define extern_declare_pair(component, function) \
   extern int xlb_mpe_##component##_##function##_start, \
@@ -30,6 +32,8 @@ extern_declare_pair(all, init);
 extern_declare_pair(all, finalize);
 
 // Server handler events:
+// The server is servicing some request
+extern_declare_pair(svr, busy);
 // Task operations:
 extern_declare_pair(svr, put);
 extern_declare_pair(svr, get);
@@ -37,6 +41,9 @@ extern_declare_pair(svr, steal);
 extern_declare_pair(svr, shutdown);
 // Data module:
 extern_declare_pair(svr, create);
+extern_declare_pair(svr, subscribe);
+extern_declare_pair(svr, store);
+extern_declare_pair(svr, retrieve);
 
 // Server daemon events (steal, shutdown):
 extern_declare_pair(dmn, steal);
@@ -55,6 +62,7 @@ extern_declare_pair(wkr, retrieve);
 extern_declare_pair(wkr, subscribe);
 extern_declare_pair(wkr, close);
 extern_declare_pair(wkr, insert);
+extern_declare_pair(wkr, lookup);
 
 // Info event:
 extern int xlb_mpe_svr_info;

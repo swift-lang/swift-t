@@ -24,10 +24,15 @@
 declare_pair(all, init);
 declare_pair(all, finalize);
 
+declare_pair(svr, busy);
 declare_pair(svr, put);
 declare_pair(svr, get);
 declare_pair(svr, steal);
 declare_pair(svr, create);
+declare_pair(svr, subscribe);
+declare_pair(svr, store);
+declare_pair(svr, retrieve);
+
 declare_pair(svr, shutdown);
 
 declare_pair(dmn, steal);
@@ -42,6 +47,7 @@ declare_pair(wkr, store);
 declare_pair(wkr, retrieve);
 declare_pair(wkr, close);
 declare_pair(wkr, insert);
+declare_pair(wkr, lookup);
 
 int xlb_mpe_svr_info;
 
@@ -84,8 +90,13 @@ xlb_mpe_setup()
   make_pair(all, init);
   make_pair(all, finalize);
 
+  make_pair(svr, busy);
   make_pair(svr, put);
   make_pair(svr, get);
+  make_pair(svr, subscribe);
+  make_pair(svr, store);
+  make_pair(svr, retrieve);
+
   make_pair(svr, steal);
   make_pair(svr, shutdown);
   make_pair(svr, create);
@@ -103,6 +114,7 @@ xlb_mpe_setup()
   make_pair(wkr, close);
   make_pair(wkr, retrieve);
   make_pair(wkr, insert);
+  make_pair(wkr, lookup);
 
   make_solo(svr, info);
 
@@ -112,9 +124,14 @@ xlb_mpe_setup()
   {
     describe_pair(all, init);
     describe_pair(all, finalize);
+    describe_pair(svr, busy);
     describe_pair(svr, get);
     describe_pair(svr, put);
     describe_pair(svr, create);
+    describe_pair(svr, subscribe);
+    describe_pair(svr, store);
+    describe_pair(svr, retrieve);
+
     describe_pair(svr, steal);
     describe_pair(svr, shutdown);
     describe_pair(dmn, steal);
@@ -128,6 +145,7 @@ xlb_mpe_setup()
     describe_pair(wkr, close);
     describe_pair(wkr, unique);
     describe_pair(wkr, insert);
+    describe_pair(wkr, lookup);
     describe_solo(svr, info);
   }
 }
