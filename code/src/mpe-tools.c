@@ -27,6 +27,7 @@ declare_pair(all, finalize);
 declare_pair(svr, busy);
 declare_pair(svr, put);
 declare_pair(svr, get);
+declare_pair(svr, sync);
 declare_pair(svr, steal);
 declare_pair(svr, create);
 declare_pair(svr, subscribe);
@@ -96,15 +97,18 @@ xlb_mpe_setup()
   make_pair(svr, busy);
   make_pair(svr, put);
   make_pair(svr, get);
+
+  make_pair(svr, create);
   make_pair(svr, subscribe);
   make_pair(svr, store);
   make_pair(svr, retrieve);
   make_pair(svr, insert);
   make_pair(svr, lookup);
 
+  make_pair(svr, sync);
   make_pair(svr, steal);
   make_pair(svr, shutdown);
-  make_pair(svr, create);
+
 
   make_pair(dmn, steal);
   make_pair(dmn, sync);
@@ -140,6 +144,8 @@ xlb_mpe_setup()
     describe_pair(svr, retrieve);
     describe_pair(svr, insert);
     describe_pair(svr, lookup);
+
+    describe_pair(svr, sync);
     describe_pair(svr, steal);
     describe_pair(svr, shutdown);
 

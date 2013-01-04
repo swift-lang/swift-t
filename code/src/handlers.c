@@ -165,11 +165,12 @@ handle(adlb_tag tag, int caller)
 static adlb_code
 handle_sync(int caller)
 {
+  MPE_LOG(xlb_mpe_svr_sync_start);
   MPI_Status status;
-
   RECV_TAG(caller, ADLB_TAG_SYNC_REQUEST);
   int rc = xlb_serve_server(caller);
   ADLB_CHECK(rc);
+  MPE_LOG(xlb_mpe_svr_sync_end);
   return rc;
 }
 

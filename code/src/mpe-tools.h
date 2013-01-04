@@ -37,6 +37,7 @@ extern_declare_pair(svr, busy);
 // Task operations:
 extern_declare_pair(svr, put);
 extern_declare_pair(svr, get);
+extern_declare_pair(svr, sync);
 extern_declare_pair(svr, steal);
 extern_declare_pair(svr, shutdown);
 // Data module:
@@ -90,6 +91,7 @@ void xlb_mpe_setup(void);
 
 #endif
 
+/** Log event if MPE is enabled */
 #define MPE_LOG(e) MPE(MPE_Log_bare_event(e));
 
 #endif
