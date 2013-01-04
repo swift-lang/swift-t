@@ -64,21 +64,27 @@ bool
 xlb_backoff_server(int attempt, bool *slept)
 {
   // DEBUG("backoff()");
-  if (attempt < backoff_server_no_delay_attempts) {
+  if (attempt < backoff_server_no_delay_attempts)
+  {
     *slept = false;
     return true;
-  } else  {
+  }
+  else
+  {
     double delay;
     if (attempt < backoff_server_no_delay_attempts
-                + backoff_server_min_delay_attempts) {
+                + backoff_server_min_delay_attempts)
+    {
       // Try yielding for min time
       delay = backoff_server_max;
-    } else {
+    }
+    else
+    {
       int exponent = attempt - backoff_server_no_delay_attempts
                 - backoff_server_min_delay_attempts + 1;
       delay = pow(2, exponent) * backoff_server_max;
     }
-    time_delay(delay);
+    // time_delay(delay);
     *slept = true;
     return attempt < BACKOFF_SERVER_TOTAL_ATTEMPTS - 1;
   }
