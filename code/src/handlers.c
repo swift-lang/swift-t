@@ -282,7 +282,6 @@ handle_get(int caller)
 {
   struct packed_get p;
   MPI_Status status;
-  int rc;
 
   MPE_LOG(xlb_mpe_svr_get_start);
 
@@ -296,7 +295,7 @@ handle_get(int caller)
   if (!stealing && steal_allowed())
   {
     stealing = true;
-    rc = steal(&stole);
+    int rc = steal(&stole);
     ADLB_CHECK(rc);
     stealing = false;
     if (stole)
@@ -412,7 +411,6 @@ handle_steal(int caller)
 
   MPI_Status status;
 
-  int rc;
   int count;
   xlb_work_unit** stolen;
   // Maximum amount of memory to return- currently unused
@@ -460,7 +458,6 @@ handle_create(int caller)
   MPE_LOG(xlb_mpe_svr_create_start);
   TRACE("ADLB_TAG_CREATE\n");
   struct packed_id_type_updateable data;
-  int rc;
   MPI_Status status;
 
   RECV(&data, sizeof(struct packed_id_type_updateable), MPI_BYTE,
