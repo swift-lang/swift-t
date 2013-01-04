@@ -49,6 +49,7 @@ extern_declare_pair(svr, lookup);
 
 // Server daemon events (steal, shutdown):
 extern_declare_pair(dmn, steal);
+extern_declare_pair(dmn, sync);
 extern_declare_pair(dmn, shutdown);
 
 // Client calls:

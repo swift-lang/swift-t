@@ -14,6 +14,7 @@
 #include "common.h"
 #include "debug.h"
 #include "messaging.h"
+#include "mpe-tools.h"
 #include "server.h"
 #include "sync.h"
 
@@ -36,6 +37,8 @@ xlb_sync(int target)
   TRACE_START;
   DEBUG("\t xlb_sync() target: %i", target);
   int rc = ADLB_SUCCESS;
+
+  MPE_LOG(xlb_mpe_dmn_sync_start);
 
   MPI_Status status1, status2, status3;
   MPI_Request request1, request2;
@@ -80,6 +83,7 @@ xlb_sync(int target)
 
   xlb_server_sync_in_progress = false;
   TRACE_END;
+  MPE_LOG(xlb_mpe_dmn_sync_start);
   return rc;
 }
 

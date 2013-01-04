@@ -38,6 +38,7 @@ declare_pair(svr, lookup);
 declare_pair(svr, shutdown);
 
 declare_pair(dmn, steal);
+declare_pair(dmn, sync);
 declare_pair(dmn, shutdown);
 
 declare_pair(wkr, put);
@@ -106,6 +107,7 @@ xlb_mpe_setup()
   make_pair(svr, create);
 
   make_pair(dmn, steal);
+  make_pair(dmn, sync);
   make_pair(dmn, shutdown);
 
   make_pair(wkr, put);
@@ -142,6 +144,7 @@ xlb_mpe_setup()
     describe_pair(svr, shutdown);
 
     describe_pair(dmn, steal);
+    describe_pair(dmn, sync);
     describe_pair(dmn, shutdown);
 
     describe_pair(wkr, put);
