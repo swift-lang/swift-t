@@ -125,7 +125,9 @@ RPATHS += -Wl,-rpath -Wl,$(ADLB)/lib
 RPATHS += -Wl,-rpath -Wl,$(C_UTILS)/lib
 RPATHS += -Wl,-rpath -Wl,$(MPI_LIB_DIR)
 RPATHS += -Wl,-rpath -Wl,$(TCL_LIB_DIR)
-RPATHS += -Wl,-rpath -Wl,$(HOME)/sfw/mpe
+ifeq ($(ENABLE_MPE),1)
+	RPATHS += -Wl,-rpath -Wl,$(USE_MPE)
+endif
 
 ### INCLUDES
 
