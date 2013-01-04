@@ -83,7 +83,7 @@ xlb_sync(int target)
 
   xlb_server_sync_in_progress = false;
   TRACE_END;
-  MPE_LOG(xlb_mpe_dmn_sync_start);
+  MPE_LOG(xlb_mpe_dmn_sync_end);
   return rc;
 }
 
