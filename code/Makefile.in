@@ -37,7 +37,7 @@ endif
 
 CC  = @CC@
 # Always link with gcc, even when using XLC
-LINKER = gcc
+LINKER = @CC@
 
 AR      = @AR@
 ARFLAGS = cr
@@ -162,3 +162,4 @@ install: $(ADLB)
 clean:
 	$(Q) "  CLEAN"
 	$(E) rm -fv $(OBJS) $(ADLB) $(DEPS)
+
