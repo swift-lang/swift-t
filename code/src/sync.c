@@ -93,7 +93,6 @@ xlb_sync(int target)
 static inline adlb_code
 msg_from_target(int target, bool* done)
 {
-  int rc;
   MPI_Status status;
   TRACE_START;
   int response;
@@ -102,7 +101,6 @@ msg_from_target(int target, bool* done)
   {
     // Accepted
     DEBUG("sync accepted.");
-    rc = ADLB_SUCCESS;
     *done = true;
   }
   else
