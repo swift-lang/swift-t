@@ -23,10 +23,6 @@ TCL_SRC := $(DIR)/helpers.tcl             \
 	   $(DIR)/files.tcl               \
 	   $(DIR)/app.tcl               \
 
-ALL_SO := $(TCL_TURBINE_SO)
-
-# $(TCL_ADLB_SO) $(TCL_MPE_SO)
-
 # Builds the Turbine Tcl package
 $(PACKAGE): lib/make-package.tcl $(ALL_SO) \
             $(TCL_SRC)
