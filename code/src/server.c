@@ -208,7 +208,7 @@ xlb_poll(int source, MPI_Status *req_status)
 }
 
 static inline adlb_code
-xlb_handle_pending(MPI_Status *status)
+xlb_handle_pending(MPI_Status* status)
 {
   if (status->MPI_TAG == ADLB_TAG_SYNC_RESPONSE)
   {
