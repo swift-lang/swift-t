@@ -339,9 +339,9 @@ install.txt: $(PACKAGE) $(EXPORTS) $(SCRIPTS)
 	$(Q) "  CREATE 		$(@)"
 	$(E) echo "PREFIX: $(INSTALL_PREFIX)"    >  $(@)
 	$(E) echo "SOURCE: $(PWD)"               >> $(@)
-	$(E) date "+%m/%d/%Y %I:%M%p"            >> $(@)
+	$(E) date "DATE:   +%m/%d/%Y %I:%M%p"    >> $(@)
 #       Use true to ignore errors (if this is not an SVN checkout)
-	$(E) ( svn info | grep Revision ; true ) >> $(@)
+	$(E) ( svn info | grep Revision ; true ) >> $(@) 2>&1
 	$(E) cp $(CP_ARGS) $(@) $(INSTALL_PREFIX)
 
 ### CLEAN
