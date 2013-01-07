@@ -24,7 +24,7 @@ TCL_SRC := $(DIR)/helpers.tcl             \
 	   $(DIR)/app.tcl               \
 
 # Builds the Turbine Tcl package
-$(PACKAGE): lib/make-package.tcl $(ALL_SO) \
+$(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) \
             $(TCL_SRC)
 	$(Q) "  TCL		$(@)"
 	$(E) TURBINE_VERSION=$(TURBINE_VERSION) \
