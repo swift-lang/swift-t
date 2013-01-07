@@ -181,7 +181,7 @@ endif
 
 PROVENANCE = version.txt source.txt config.log
 
-install.txt: $(EXMCUTILS)
+$(INSTALL_PREFIX)/install.txt: $(EXMCUTILS)
 	@echo
 	$(Q) "  INSTALL: $(INSTALL_PREFIX)"
 	$(E) touch install.txt
@@ -196,10 +196,12 @@ install.txt: $(EXMCUTILS)
 	$(E) cp $(CP_ARGS) c-utils-config.h $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) src/*.h $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) $(EXMCUTILS) $(INSTALL_LIB)
+#       Finally, copy in the token install.txt file
+	$(E) cp $(CP_ARGS) install.txt $(@)
 
 # Maintaining the install.txt file is a simple way to
 # create a dependency on the installation
-install: install.txt
+install: $(INSTALL_PREFIX)/install.txt
 
 ### CLEAN
 
