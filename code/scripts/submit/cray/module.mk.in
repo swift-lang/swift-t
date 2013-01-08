@@ -1,0 +1,4 @@
+
+DIR := scripts/submit/cray
+
+SCRIPTS_SUBMIT += $(DIR)/aprun.sh

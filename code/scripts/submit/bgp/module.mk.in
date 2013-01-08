@@ -1,0 +1,4 @@
+
+DIR := scripts/submit/bgp
+
+SCRIPTS_SUBMIT += $(DIR)/turbine-cobalt.zsh

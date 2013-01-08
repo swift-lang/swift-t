@@ -1,0 +1,5 @@
+
+DIR := scripts/submit/slurm
+
+SCRIPTS_SUBMIT += $(DIR)/turbine-slurm.sh
+
