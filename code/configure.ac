@@ -456,6 +456,8 @@ AC_CONFIG_FILES(
         src/tcl/turbine/module.mk
         src/tcl/mpe/module.mk
         lib/module.mk
+        scripts/submit/module.mk
+        scripts/submit/pbs/module.mk
         scripts/turbine-config.sh
         tests/module.mk
         tests/runbin.zsh
