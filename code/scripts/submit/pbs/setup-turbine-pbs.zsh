@@ -7,9 +7,9 @@ then
   return 1
 fi
 
-set -x
-
 export TURBINE_HOME=$( cd $(dirname ${TURBINE})/.. ; /bin/pwd )
+
+declare TURBINE_HOME
 
 source ${TURBINE_HOME}/scripts/helpers.zsh
 if [[ ${?} != 0 ]] 
@@ -18,6 +18,8 @@ then
   declare TURBINE_HOME
   return 1
 fi
+
+checkvars PROGRAM
 
 TURBINE_PBS_M4=${TURBINE_HOME}/scripts/submit/pbs/turbine.pbs.m4
 TURBINE_PBS=${1:-turbine.pbs}
@@ -29,4 +31,4 @@ exitcode "Could not write to: ${TURBINE_PBS}"
 m4 < ${TURBINE_PBS_M4} > ${TURBINE_PBS}
 exitcode "Errors in M4 processing!"
 
-
+print "wrote: ${TURBINE_PBS}"

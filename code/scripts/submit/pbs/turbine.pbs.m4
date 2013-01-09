@@ -10,8 +10,8 @@ set -x
 cd $PBS_O_WORKDIR
 
 TURBINE_HOME=esyscmd(`printf $TURBINE_HOME')
+PROGRAM=esyscmd(`printf $PROGRAM')
 
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
-mpiexec ${TCLSH} ~/t.tcl
-
+mpiexec ${TCLSH} 
