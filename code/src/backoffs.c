@@ -93,11 +93,11 @@ xlb_backoff_server(int attempt, bool *slept)
 void
 xlb_backoff_sync()
 {
-  time_delay(backoff_sync);
+  // time_delay(backoff_sync);
 }
 
 void
 xlb_backoff_sync_rejected()
 {
-  time_delay(backoff_sync_rejected);
+  // time_delay(backoff_sync_rejected);
 }
