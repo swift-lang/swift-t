@@ -206,9 +206,7 @@ static adlb_code
 put(int type, int putter, int priority, int answer, int target,
     int length)
 {
-  int rc;
   MPI_Status status;
-  int next_worker = 0;
   int worker;
   if (target >= 0)
   {
@@ -249,7 +247,6 @@ static inline adlb_code
 redirect_work(int type, int putter, int priority, int answer,
               int target, int length, int worker)
 {
-  int rc;
   DEBUG("redirect: %i->%i", putter, worker);
   struct packed_get_response g;
   g.answer_rank = answer;
@@ -393,7 +390,6 @@ send_work(int worker, long wuid, int type, int answer,
   TRACE("payload_source: %i", g.payload_source);
   g.type = type;
 
-  int rc;
   SEND(&g, sizeof(g), MPI_BYTE, worker, ADLB_TAG_RESPONSE_GET);
   SEND(payload, length, MPI_BYTE, worker, ADLB_TAG_WORK);
 
@@ -502,7 +498,6 @@ handle_exists(int caller)
 {
   bool result;
   adlb_datum_id id;
-  int rc;
   MPI_Status status;
 
   RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_EXISTS);
@@ -516,7 +511,6 @@ handle_store(int caller)
 {
   MPE_LOG(xlb_mpe_svr_store_start);
   struct packed_store_hdr hdr;
-  int rc;
   MPI_Status status;
   RECV(&hdr, sizeof(struct packed_store_hdr), MPI_BYTE, caller,
        ADLB_TAG_STORE_HEADER);
@@ -559,7 +553,6 @@ handle_retrieve(int caller)
   MPE_LOG(xlb_mpe_svr_retrieve_start);
 
   struct packed_retrieve_hdr hdr;
-  int rc;
   MPI_Status status;
 
   RECV(&hdr, sizeof(hdr), MPI_BYTE, caller, ADLB_TAG_RETRIEVE);
@@ -670,7 +663,6 @@ handle_permanent(int caller)
 static adlb_code
 handle_refcount_incr(int caller)
 {
-  int rc;
   MPI_Status status;
   struct packed_incr msg;
   RECV(&msg, sizeof(msg), MPI_BYTE, caller, ADLB_TAG_REFCOUNT_INCR);
@@ -778,7 +770,6 @@ handle_insert(int caller)
 static adlb_code
 handle_insert_atomic(int caller)
 {
-  int rc;
   MPI_Status status;
 
   RECV(xfer, ADLB_DATA_SUBSCRIPT_MAX+128, MPI_CHAR, caller,
@@ -843,12 +834,11 @@ handle_unique(int caller)
 {
   // MPE_LOG_EVENT(mpe_svr_unique_start);
   int msg;
-  int rc;
   MPI_Status status;
   RECV(&msg, 1, MPI_INT, caller, ADLB_TAG_UNIQUE);
 
   long id;
-  adlb_data_code dc = data_unique(&id);
+  data_unique(&id);
 
   RSEND(&id, 1, MPI_LONG, caller, ADLB_TAG_RESPONSE);
   DEBUG("Unique: <%li>", id);
@@ -891,7 +881,6 @@ handle_container_typeof(int caller)
 static adlb_code
 handle_container_reference(int caller)
 {
-  int rc;
   MPI_Status status;
   RECV(xfer, XFER_SIZE, MPI_BYTE, caller,
        ADLB_TAG_CONTAINER_REFERENCE);
@@ -956,7 +945,6 @@ static adlb_code
 handle_lock(int caller)
 {
   long id;
-  int rc;
   MPI_Status status;
   RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_LOCK);
 
@@ -982,7 +970,6 @@ static adlb_code
 handle_unlock(int caller)
 {
   long id;
-  int rc;
   MPI_Status status;
   RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_UNLOCK);
 
@@ -1117,7 +1104,6 @@ static adlb_code
 put_targeted(int type, int putter, int priority, int answer,
              int target, void* payload, int length)
 {
-  int next_worker = 0;
   int worker;
   int rc;
 

@@ -258,7 +258,6 @@ xlb_serve_server(int source)
 {
   TRACE_START;
   DEBUG("\t serve_server: %i", source);
-  MPI_Status status;
   static int response = 1;
   SEND(&response, 1, MPI_INT, source, ADLB_TAG_SYNC_RESPONSE);
   int rc = ADLB_NOTHING;

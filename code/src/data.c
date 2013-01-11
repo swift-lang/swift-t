@@ -116,7 +116,6 @@ adlb_data_code
 data_create(adlb_datum_id id, adlb_data_type type, bool updateable)
 {
   TRACE("data_create(%li)", id);
-  adlb_data_code result;
   check_verbose(id > 0, ADLB_DATA_ERROR_INVALID,
                 "ERROR: attempt to create data: id=%li\n", id);
 
@@ -520,7 +519,6 @@ data_store(adlb_datum_id id, void* buffer, int length,
                 ADLB_DATA_ERROR_DOUBLE_WRITE,
                 "attempt to write closed var: <%li>", id);
 
-  int n;
   switch (type)
   {
     case ADLB_DATA_TYPE_STRING:
@@ -552,7 +550,8 @@ data_store(adlb_datum_id id, void* buffer, int length,
   
   d->status |= ADLB_DATA_SET_MASK;
 
-  if (decr_write_refcount) {
+  if (decr_write_refcount)
+  {
     adlb_data_code dc = data_reference_count(id, ADLB_WRITE_REFCOUNT,
                          -1, notify_ranks, notify_count);
     if (dc != ADLB_DATA_SUCCESS)
@@ -561,7 +560,6 @@ data_store(adlb_datum_id id, void* buffer, int length,
 
   return ADLB_DATA_SUCCESS;
 }
-
 
 /**
    Notify all waiters on variable that it was closed
@@ -791,7 +789,6 @@ data_insert(adlb_datum_id container_id,
                   container_id, subscript);
 
     // Ok- somebody did an Insert_atomic
-    char* s;
     void* v;
     // Reset entry
     bool b =
@@ -808,10 +805,9 @@ data_insert(adlb_datum_id container_id,
 
   *notify_count = 0; // Default: no notification needed
   // Drop writer count for this container
-  if (drops != 0) {
+  if (drops != 0)
     data_reference_count(container_id, ADLB_WRITE_REFCOUNT, -1 * drops,
                          notify_ranks, notify_count);
-  }
 
   // Find, remove, and return any listening container references
   char s[ADLB_DATA_SUBSCRIPT_MAX+32];
@@ -830,7 +826,6 @@ data_insert(adlb_datum_id container_id,
   TRACE("data_insert(): DONE");
   return ADLB_DATA_SUCCESS;
 }
-
 
 adlb_data_code
 data_insert_atomic(adlb_datum_id container_id, const char* subscript,

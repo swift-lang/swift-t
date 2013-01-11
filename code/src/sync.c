@@ -41,7 +41,7 @@ xlb_sync(int target)
   MPE_LOG(xlb_mpe_dmn_sync_start);
 
   MPI_Status status1, status2, status3;
-  MPI_Request request1, request2;
+  /// MPI_Request request1, request2;
   int flag1 = 0, flag2 = 0, flag3 = 0;
 
   assert(!xlb_server_sync_in_progress);
@@ -49,8 +49,6 @@ xlb_sync(int target)
 
   // When true, break the loop
   bool done = false;
-  // Response from other server: 0=reject, 1=accept
-  int response;
 
   // Send initial request:
   SEND_TAG(target, ADLB_TAG_SYNC_REQUEST);

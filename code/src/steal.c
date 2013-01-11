@@ -66,11 +66,15 @@ steal_payloads(int target, int count )
 }
 
 /**
+   Are there any other servers?
    Are we allowed to steal yet?
  */
 bool
 steal_allowed()
 {
+  if (xlb_servers == 1)
+    // No other servers
+    return false;
   double t = MPI_Wtime();
   if (t - xlb_steal_last < xlb_steal_backoff)
     // Too soon to try again
@@ -81,7 +85,6 @@ steal_allowed()
 adlb_code
 steal(bool* result)
 {
-  MPI_Status status;
   adlb_code rc;
   int target;
   *result = false;
@@ -91,9 +94,6 @@ steal(bool* result)
 
   // Record the time of this steal attempt
   xlb_steal_last = MPI_Wtime();
-
-  if (xlb_servers == 1)
-    goto end;
 
   get_target_server(&target);
 

@@ -62,7 +62,7 @@ endif
 
 # No logging
 LDFLAGS  = @LDFLAGS@
-CFLAGS  = @CFLAGS@ $(PIC) $(STD) $(INCLUDES) -g
+CFLAGS  = @CFLAGS@ $(PIC) $(STD) $(INCLUDES) -Wall
 
 LIBS := -L $(C_UTILS)/lib -l exmcutils
 

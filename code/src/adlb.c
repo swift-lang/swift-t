@@ -91,7 +91,8 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
     xlb_my_server = ADLB_RANK_NULL;
     MPI_Comm_split(MPI_COMM_WORLD,1, xlb_world_rank-xlb_workers,
                    &adlb_server_comm);
-    xlb_server_init();
+    adlb_code code = xlb_server_init();
+    ADLB_CHECK(code);
   }
 
   srandom(xlb_world_rank+1);
@@ -110,7 +111,6 @@ adlb_code
 ADLBP_Put(void* payload, int length, int target, int answer,
           int type, int priority)
 {
-  adlb_code code;
   MPI_Status status;
   MPI_Request request;
   /** In a redirect, we send the payload to a worker */
@@ -163,8 +163,6 @@ adlb_code
 ADLBP_Get(int type_requested, void* payload, int* length,
           int* answer, int* type_recvd)
 {
-  int rc;
-  adlb_code code;
   MPI_Status status;
   MPI_Request request;
 
@@ -172,7 +170,6 @@ ADLBP_Get(int type_requested, void* payload, int* length,
                 "ADLB_Get(): Bad work type: %i\n", type_requested);
 
   struct packed_get_response g;
-
   IRECV(&g, sizeof(g), MPI_BYTE, xlb_my_server, ADLB_TAG_RESPONSE_GET);
   SEND(&type_requested, 1, MPI_INT, xlb_my_server, ADLB_TAG_GET);
   WAIT(&request, &status);
@@ -222,7 +219,7 @@ ADLBP_Create_impl(adlb_datum_id id, adlb_data_type type,
                   adlb_data_type subscript_type, bool updateable,
                   adlb_datum_id *new_id)
 {
-  int rc, to_server_rank;
+  int to_server_rank;
   MPI_Status status;
   MPI_Request request;
 
@@ -316,7 +313,6 @@ ADLBP_Exists(adlb_datum_id id, bool* result)
 {
   int to_server_rank = ADLB_Locate(id);
 
-  int rc;
   MPI_Status status;
   MPI_Request request;
 
@@ -334,27 +330,24 @@ adlb_code
 ADLBP_Store(adlb_datum_id id, void *data, int length,
             bool decr_write_refcount, int** ranks, int *count)
 {
-  int to_server_rank;
-  int rc;
   adlb_data_code dc;
-
   MPI_Status status;
   MPI_Request request;
 
-  to_server_rank = ADLB_Locate(id);
+  int to_server_rank = ADLB_Locate(id);
 
   if (to_server_rank == xlb_world_rank)
   {
     // This is a server-to-server operation on myself
     TRACE("Store SELF");
-    dc = data_store(id, data, length, decr_write_refcount, ranks, count);
+    dc = data_store(id, data, length, decr_write_refcount,
+                    ranks, count);
     ADLB_DATA_CHECK(dc);
     return ADLB_SUCCESS;
   }
 
   struct packed_store_hdr hdr = { .id = id,
       .decr_write_refcount = decr_write_refcount };
-
   IRECV(count, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
   SEND(&hdr, sizeof(struct packed_store_hdr), MPI_BYTE,
        to_server_rank, ADLB_TAG_STORE_HEADER);
@@ -369,6 +362,7 @@ ADLBP_Store(adlb_datum_id id, void *data, int length,
   if (*count > 0)
   {
     *ranks = malloc(*count*sizeof(int));
+    valgrind_assert(*ranks);
     RECV(*ranks, *count, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
   }
 
@@ -390,23 +384,19 @@ get_next_server()
   return rank;
 }
 
-adlb_code ADLBP_Permanent(adlb_datum_id id) {
-  int rc;
+adlb_code
+ADLBP_Permanent(adlb_datum_id id)
+{
   adlb_data_code dc;
   MPI_Status status;
   MPI_Request request;
   DEBUG("ADLB_Permanent: <%li>", id);
 
   int to_server_rank = ADLB_Locate(id);
+  IRECV(&dc, 1, MPI_INT,  to_server_rank, ADLB_TAG_RESPONSE);
+  SEND(&id,  1, MPI_LONG, to_server_rank, ADLB_TAG_PERMANENT);
+  WAIT(&request, &status);
 
-  rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
-                 adlb_all_comm, &request);
-  MPI_CHECK(rc);
-  rc = MPI_Send(&id, 1, MPI_LONG, to_server_rank,
-                ADLB_TAG_PERMANENT, adlb_all_comm);
-  MPI_CHECK(rc);
-  rc = MPI_Wait(&request, &status);
-  MPI_CHECK(rc);
   if (dc != ADLB_DATA_SUCCESS)
     return ADLB_ERROR;
   return ADLB_SUCCESS;
@@ -511,7 +501,6 @@ adlb_code
 ADLBP_Retrieve(adlb_datum_id id, adlb_data_type* type,
                bool decr_read_refcount, void *data, int *length)
 {
-  int rc;
   adlb_data_code dc;
   MPI_Status status;
   MPI_Request request;
@@ -550,7 +539,6 @@ ADLBP_Enumerate(adlb_datum_id container_id,
                 char** members, int* members_length,
                 int* restrict records)
 {
-  int rc;
   adlb_data_code dc;
   MPI_Status status;
   MPI_Request request;
@@ -566,126 +554,95 @@ ADLBP_Enumerate(adlb_datum_id container_id,
   opts.count = count;
   opts.offset = offset;
 
-  rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank,
-                 ADLB_TAG_RESPONSE, adlb_all_comm, &request);
-  MPI_CHECK(rc);
-
-  rc = MPI_Send(&opts, sizeof(struct packed_enumerate), MPI_BYTE,
-                to_server_rank, ADLB_TAG_ENUMERATE, adlb_all_comm);
-  MPI_CHECK(rc);
-  rc = MPI_Wait(&request,&status);
-  MPI_CHECK(rc);
+  IRECV(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
+  SEND(&opts, sizeof(struct packed_enumerate), MPI_BYTE,
+       to_server_rank, ADLB_TAG_ENUMERATE);
+  WAIT(&request,&status);
 
   if (dc == ADLB_DATA_SUCCESS)
   {
-    rc = MPI_Recv(records, 1, MPI_INT, to_server_rank,
-                  ADLB_TAG_RESPONSE, adlb_all_comm, &status);
-    MPI_CHECK(rc);
-
+    RECV(records, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
     if (*subscripts)
     {
-      rc = MPI_Recv(xfer, ADLB_PAYLOAD_MAX, MPI_BYTE, to_server_rank,
-                    ADLB_TAG_RESPONSE, adlb_all_comm, &status);
-      MPI_CHECK(rc);
+      RECV(xfer, ADLB_PAYLOAD_MAX, MPI_BYTE, to_server_rank,
+           ADLB_TAG_RESPONSE);
       *subscripts = strdup(xfer);
       // Set length output parameter
       MPI_Get_count(&status, MPI_BYTE, subscripts_length);
     }
     if (*members)
     {
-      rc = MPI_Recv(xfer, ADLB_PAYLOAD_MAX, MPI_BYTE, to_server_rank,
-                    ADLB_TAG_RESPONSE, adlb_all_comm, &status);
-      MPI_CHECK(rc);
+      RECV(xfer, ADLB_PAYLOAD_MAX, MPI_BYTE, to_server_rank,
+           ADLB_TAG_RESPONSE);
       int c;
       MPI_Get_count(&status, MPI_BYTE, &c);
       char* A = malloc(c);
-      assert(A);
+      valgrind_assert(A);
       memcpy(A, xfer, c);
       *members = A;
       *members_length = c;
     }
-    MPI_CHECK(rc);
   }
   else
     return ADLB_ERROR;
-
   return ADLB_SUCCESS;
 }
 
 adlb_code
 ADLBP_Unique(long* result)
 {
-    int rc;
-    MPI_Status status;
-    MPI_Request request;
+  MPI_Status status;
+  MPI_Request request;
 
-    TRACE("ADLBP_Unique()...");
+  TRACE("ADLBP_Unique()...");
 
-    // This is just something to send, it is ignored by the server
-    static int msg = 0;
-    int to_server_rank = get_next_server();
-    rc = MPI_Irecv(result, 1, MPI_LONG, to_server_rank,
-                   ADLB_TAG_RESPONSE, adlb_all_comm, &request);
-    MPI_CHECK(rc);
-    rc = MPI_Send(&msg, 1, MPI_INT, to_server_rank,
-                  ADLB_TAG_UNIQUE, adlb_all_comm);
-    MPI_CHECK(rc);
-    rc = MPI_Wait(&request,&status);
-    MPI_CHECK(rc);
+  // This is just something to send, it is ignored by the server
+  static int msg = 0;
+  int to_server_rank = get_next_server();
+  IRECV(result, 1, MPI_LONG, to_server_rank, ADLB_TAG_RESPONSE);
+  SEND(&msg, 1, MPI_INT, to_server_rank, ADLB_TAG_UNIQUE);
+  WAIT(&request, &status);
 
-    if (result == ADLB_DATA_ID_NULL)
-      return ADLB_ERROR;
-    return ADLB_SUCCESS;
+  if (result == ADLB_DATA_ID_NULL)
+    return ADLB_ERROR;
+  return ADLB_SUCCESS;
 }
 
 adlb_code
 ADLBP_Typeof(adlb_datum_id id, adlb_data_type* type)
 {
-    int rc;
-    MPI_Status status;
-    MPI_Request request;
+  MPI_Status status;
+  MPI_Request request;
 
-    int to_server_rank = ADLB_Locate(id);
-    rc = MPI_Irecv(type, 1, MPI_INT, to_server_rank,
-                   ADLB_TAG_RESPONSE, adlb_all_comm, &request);
-    MPI_CHECK(rc);
-    rc = MPI_Send(&id, 1, MPI_LONG, to_server_rank,
-                  ADLB_TAG_TYPEOF, adlb_all_comm);
-    MPI_CHECK(rc);
-    rc = MPI_Wait(&request, &status);
-    MPI_CHECK(rc);
+  int to_server_rank = ADLB_Locate(id);
+  IRECV(type, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
+  SEND(&id, 1, MPI_LONG, to_server_rank, ADLB_TAG_TYPEOF);
+  WAIT(&request, &status);
 
-    DEBUG("ADLB_Typeof <%li>=>%i", id, *type);
+  DEBUG("ADLB_Typeof <%li>=>%i", id, *type);
 
-    if (*type == -1)
-      return ADLB_ERROR;
-    return ADLB_SUCCESS;
+  if (*type == -1)
+    return ADLB_ERROR;
+  return ADLB_SUCCESS;
 }
 
 adlb_code
 ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* type)
 {
-    int rc;
-    MPI_Status status;
-    MPI_Request request;
+  MPI_Status status;
+  MPI_Request request;
+  // DEBUG("ADLB_Container_typeof: %li", id);
 
-    // DEBUG("ADLB_Container_typeof: %li", id);
+  int to_server_rank = ADLB_Locate(id);
+  IRECV(type, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
+  SEND(&id, 1, MPI_LONG, to_server_rank, ADLB_TAG_CONTAINER_TYPEOF);
+  WAIT(&request, &status);
 
-    int to_server_rank = ADLB_Locate(id);
-    rc = MPI_Irecv(type, 1, MPI_INT, to_server_rank,
-                   ADLB_TAG_RESPONSE, adlb_all_comm, &request);
-    MPI_CHECK(rc);
-    rc = MPI_Send(&id, 1, MPI_LONG, to_server_rank,
-                  ADLB_TAG_CONTAINER_TYPEOF, adlb_all_comm);
-    MPI_CHECK(rc);
-    rc = MPI_Wait(&request, &status);
-    MPI_CHECK(rc);
+  DEBUG("ADLB_Container_typeof <%li>=>%i", id, *type);
 
-    DEBUG("ADLB_Container_typeof <%li>=>%i", id, *type);
-
-    if (*type == -1)
-      return ADLB_ERROR;
-    return ADLB_SUCCESS;
+  if (*type == -1)
+    return ADLB_ERROR;
+  return ADLB_SUCCESS;
 }
 
 /**
@@ -694,73 +651,66 @@ ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* type)
    On error, output member is ADLB_DATA_ID_NULL
    @param member Must be pre-allocated to ADLB_DATA_MEMBER_MAX
  */
-adlb_code ADLBP_Lookup(adlb_datum_id id,
-                 const char* subscript, char* member, int* found)
+adlb_code
+ADLBP_Lookup(adlb_datum_id id,
+             const char* subscript, char* member, int* found)
 {
-    int rc, to_server_rank;
-    MPI_Status status;
-    MPI_Request request;
+  int to_server_rank;
+  MPI_Status status;
+  MPI_Request request;
 
-    // DEBUG("lookup: %li\n", hashcode);
+  // DEBUG("lookup: %li\n", hashcode);
 
-    to_server_rank = ADLB_Locate(id);
+  to_server_rank = ADLB_Locate(id);
 
-    char msg[ADLB_DATA_SUBSCRIPT_MAX+32];
-    sprintf(msg, "%li %s", id, subscript);
-    int msg_length = strlen(msg)+1;
+  char msg[ADLB_DATA_SUBSCRIPT_MAX+32];
+  sprintf(msg, "%li %s", id, subscript);
+  int msg_length = strlen(msg)+1;
 
-    struct packed_code_length p;
-    rc = MPI_Irecv(&p, sizeof(p), MPI_BYTE, to_server_rank,
-                   ADLB_TAG_RESPONSE, adlb_all_comm,&request);
-    MPI_CHECK(rc);
-    rc = MPI_Send(msg, msg_length, MPI_CHAR, to_server_rank,
-                  ADLB_TAG_LOOKUP, adlb_all_comm);
-    MPI_CHECK(rc);
-    rc = MPI_Wait(&request,&status);
-    MPI_CHECK(rc);
+  struct packed_code_length p;
+  IRECV(&p, sizeof(p), MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
+  SEND(msg, msg_length, MPI_CHAR, to_server_rank, ADLB_TAG_LOOKUP);
+  WAIT(&request, &status);
 
-    if (p.code != ADLB_DATA_SUCCESS)
-      return ADLB_ERROR;
+  if (p.code != ADLB_DATA_SUCCESS)
+    return ADLB_ERROR;
 
-    if (p.length == 1)
-    {
-      rc = MPI_Recv(member, ADLB_DATA_MEMBER_MAX, MPI_BYTE, to_server_rank,
-                    ADLB_TAG_RESPONSE, adlb_all_comm, &status);
-      MPI_CHECK(rc);
-      *found = 1;
-    }
-    else
-      *found = -1;
+  if (p.length == 1)
+  {
+    RECV(member, ADLB_DATA_MEMBER_MAX, MPI_BYTE, to_server_rank,
+         ADLB_TAG_RESPONSE);
+    *found = 1;
+  }
+  else
+    *found = -1;
 
-    return ADLB_SUCCESS;
+  return ADLB_SUCCESS;
 }
 
 /**
    @param subscribed output: false if data is already closed
                              or ADLB_ERROR on error
  */
-adlb_code ADLBP_Subscribe(long id, int* subscribed)
+adlb_code
+ADLBP_Subscribe(long id, int* subscribed)
 {
-    int rc, to_server_rank;
-    MPI_Status status;
-    MPI_Request request;
+  int to_server_rank;
+  MPI_Status status;
+  MPI_Request request;
 
-    to_server_rank = ADLB_Locate(id);
+  to_server_rank = ADLB_Locate(id);
 
-    rc = MPI_Irecv(subscribed, 1, MPI_INT, to_server_rank,
-                   ADLB_TAG_RESPONSE, adlb_all_comm, &request);
-    MPI_CHECK(rc);
-    rc = MPI_Send(&id, 1, MPI_LONG, to_server_rank,
-                  ADLB_TAG_SUBSCRIBE, adlb_all_comm);
-    MPI_CHECK(rc);
-    rc = MPI_Wait(&request,&status);
-    MPI_CHECK(rc);
-    DEBUG("ADLB_Subscribe: <%li> => %i", id, *subscribed);
+  IRECV(subscribed, 1, MPI_INT, to_server_rank,
+        ADLB_TAG_RESPONSE);
+  SEND(&id, 1, MPI_LONG, to_server_rank, ADLB_TAG_SUBSCRIBE);
+  WAIT(&request, &status);
 
-    if (*subscribed == -1)
-      return ADLB_ERROR;
+  DEBUG("ADLB_Subscribe: <%li> => %i", id, *subscribed);
 
-    return ADLB_SUCCESS;
+  if (*subscribed == -1)
+    return ADLB_ERROR;
+
+  return ADLB_SUCCESS;
 }
 
 /**
@@ -771,7 +721,6 @@ ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
                           adlb_datum_id reference,
                           adlb_data_type ref_type)
 {
-  int rc;
   adlb_data_code dc;
   MPI_Status status;
   MPI_Request request;
@@ -781,14 +730,11 @@ ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
 
   int to_server_rank = ADLB_Locate(id);
 
-  rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
-                 adlb_all_comm, &request);
-  MPI_CHECK(rc);
-  rc = MPI_Send(xfer, length+1, MPI_CHAR, to_server_rank,
-                ADLB_TAG_CONTAINER_REFERENCE, adlb_all_comm);
-  MPI_CHECK(rc);
-  rc = MPI_Wait(&request, &status);
-  MPI_CHECK(rc);
+  IRECV(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
+  SEND(xfer, length+1, MPI_CHAR, to_server_rank,
+       ADLB_TAG_CONTAINER_REFERENCE);
+  WAIT(&request, &status);
+
   DEBUG("ADLB_Container_reference: <%li>[%s] => <%li> (%i)",
         id, subscript, reference, ref_type);
 
@@ -801,21 +747,16 @@ ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
 adlb_code
 ADLBP_Container_size(adlb_datum_id container_id, int* size)
 {
-  int rc;
-  adlb_data_code dc;
   MPI_Status status;
   MPI_Request request;
 
   int to_server_rank = ADLB_Locate(container_id);
 
-  rc = MPI_Irecv(size, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
-                 adlb_all_comm, &request);
-  MPI_CHECK(rc);
-  rc = MPI_Send(&container_id, 1, MPI_LONG, to_server_rank,
-                ADLB_TAG_CONTAINER_SIZE, adlb_all_comm);
-  MPI_CHECK(rc);
-  rc = MPI_Wait(&request, &status);
-  MPI_CHECK(rc);
+  IRECV(size, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
+  SEND(&container_id, 1, MPI_LONG, to_server_rank,
+                ADLB_TAG_CONTAINER_SIZE);
+  WAIT(&request, &status);
+
   DEBUG("ADLB_Container_size: <%li> => %i",
         container_id, *size);
 
@@ -827,9 +768,9 @@ ADLBP_Container_size(adlb_datum_id container_id, int* size)
 /**
    @return result 0->try again, 1->locked
  */
-adlb_code ADLBP_Lock(adlb_datum_id id, bool* result)
+adlb_code
+ADLBP_Lock(adlb_datum_id id, bool* result)
 {
-  int rc;
   MPI_Status status;
   MPI_Request request;
 
@@ -837,14 +778,9 @@ adlb_code ADLBP_Lock(adlb_datum_id id, bool* result)
 
   // c 0->try again, 1->locked, x->failed
   char c;
-  rc = MPI_Irecv(&c, 1, MPI_CHAR, to_server_rank,
-                 ADLB_TAG_RESPONSE, adlb_all_comm, &request);
-  MPI_CHECK(rc);
-  rc = MPI_Send(&id, 1, MPI_LONG, to_server_rank,
-                ADLB_TAG_LOCK, adlb_all_comm);
-  MPI_CHECK(rc);
-  rc = MPI_Wait(&request,&status);
-  MPI_CHECK(rc);
+  IRECV(&c, 1, MPI_CHAR, to_server_rank, ADLB_TAG_RESPONSE);
+  SEND(&id, 1, MPI_LONG, to_server_rank, ADLB_TAG_LOCK);
+  WAIT(&request, &status);
 
   if (c == 'x')
     return ADLB_ERROR;
@@ -865,7 +801,6 @@ adlb_code ADLBP_Lock(adlb_datum_id id, bool* result)
 adlb_code
 ADLBP_Unlock(adlb_datum_id id)
 {
-  int rc;
   MPI_Status status;
   MPI_Request request;
 
@@ -873,14 +808,9 @@ ADLBP_Unlock(adlb_datum_id id)
 
   // c: 1->success, x->failed
   char c;
-  rc = MPI_Irecv(&c, 1, MPI_CHAR, to_server_rank,
-                 ADLB_TAG_RESPONSE, adlb_all_comm, &request);
-  MPI_CHECK(rc);
-  rc = MPI_Send(&id, 1, MPI_LONG, to_server_rank,
-                ADLB_TAG_UNLOCK, adlb_all_comm);
-  MPI_CHECK(rc);
-  rc = MPI_Wait(&request, &status);
-  MPI_CHECK(rc);
+  IRECV(&c, 1, MPI_CHAR, to_server_rank, ADLB_TAG_RESPONSE);
+  SEND(&id, 1, MPI_LONG, to_server_rank, ADLB_TAG_UNLOCK);
+  WAIT(&request, &status);
 
   if (c == 'x')
     return ADLB_ERROR;
@@ -1037,8 +967,6 @@ get_server_rank(int server_idx)
 void
 adlb_exit_handler()
 {
-    printf("adlb_exit_handler:\n");
-    print_proc_self_status();
+  printf("adlb_exit_handler:\n");
+  print_proc_self_status();
 }
-
-
