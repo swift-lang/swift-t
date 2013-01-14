@@ -26,6 +26,7 @@ TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/adlb-data.tcl           \
                 $(DIR)/adlb-lock1.tcl          \
                 $(DIR)/adlb-lock2.tcl          \
+                $(DIR)/adlb-iget.tcl           \
                 $(DIR)/numbers.tcl             \
                 $(DIR)/strings.tcl             \
                 $(DIR)/float1.tcl              \

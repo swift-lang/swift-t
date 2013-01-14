@@ -391,6 +391,55 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
+   usage: adlb::iget <req_type> <answer_rank>
+   Returns the next work unit of req_type or
+        "ADLB_SHUTDOWN" or "ADLB_NOTHING"
+   Stores answer_rank in given output variable
+ */
+static int
+ADLB_Iget_Cmd(ClientData cdata, Tcl_Interp *interp,
+             int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(3);
+
+  int req_type;
+  int error = Tcl_GetIntFromObj(interp, objv[1], &req_type);
+  TCL_CHECK(error);
+  Tcl_Obj* tcl_answer_rank_name = objv[2];
+
+  DEBUG_ADLB("adlb::get: type=%i", req_type);
+
+  int work_type;
+
+  char* result = &xfer[0];
+  int work_len;
+  int answer_rank;
+
+  adlb_code rc = ADLB_Iget(req_type, result, &work_len,
+                           &answer_rank, &work_type);
+  if (rc == ADLB_SHUTDOWN)
+  {
+    strcpy(result, "ADLB_SHUTDOWN");
+    answer_rank = ADLB_RANK_NULL;
+  }
+  else if (rc == ADLB_NOTHING)
+  {
+    strcpy(result, "ADLB_NOTHING");
+    answer_rank = ADLB_RANK_NULL;
+  }
+
+  DEBUG_ADLB("adlb::iget: %s", result);
+
+  // Store answer_rank in caller's stack frame
+  Tcl_Obj* tcl_answer_rank = Tcl_NewIntObj(answer_rank);
+  Tcl_ObjSetVar2(interp, tcl_answer_rank_name, NULL, tcl_answer_rank,
+                 EMPTY_FLAG);
+
+  Tcl_SetObjResult(interp, Tcl_NewStringObj(result, -1));
+  return TCL_OK;
+}
+
+/**
    Convert type string to adlb_data_type
  */
 static inline
@@ -1667,6 +1716,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("barrier",   ADLB_Barrier_Cmd);
   COMMAND("put",       ADLB_Put_Cmd);
   COMMAND("get",       ADLB_Get_Cmd);
+  COMMAND("iget",      ADLB_Iget_Cmd);
   COMMAND("create",    ADLB_Create_Cmd);
   COMMAND("exists",    ADLB_Exists_Cmd);
   COMMAND("store",     ADLB_Store_Cmd);
