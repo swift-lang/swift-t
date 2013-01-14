@@ -618,9 +618,11 @@ data_retrieve(adlb_datum_id id, adlb_data_type* type,
 {
   TRACE("data_retrieve(%li)", id);
   adlb_datum* d = table_lp_search(&tds, id);
-
-  check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%li>", id);
+  if (d == NULL)
+  {
+    TRACE("data_retrieve(%li): NOT FOUND", id);
+    return ADLB_DATA_ERROR_NOT_FOUND;
+  }
 
   *type = d->type;
   switch (d->type)
