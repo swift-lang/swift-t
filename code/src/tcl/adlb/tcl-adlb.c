@@ -140,7 +140,8 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = ADLB_Init(servers, ntypes, type_vect,
                  &am_server, &worker_comm);
 #endif
-  assert(rc == ADLB_SUCCESS);
+  if (rc != ADLB_SUCCESS)
+    return TCL_ERROR;
 
   if (! am_server)
     MPI_Comm_rank(worker_comm, &adlb_rank);
