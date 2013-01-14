@@ -346,6 +346,9 @@ workers_idle(void)
 
   assert(queued+shutdown <= xlb_my_workers);
 
+  // TRACE("workers_idle(): workers queued:   %i\n", queued);
+  // TRACE("workers_idle(): workers shutdown: %i\n", shutdown);
+
   if (queued+shutdown == xlb_my_workers)
     return true;
 
