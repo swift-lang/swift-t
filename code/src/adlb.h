@@ -43,6 +43,11 @@ adlb_code ADLBP_Get(int type_requested, void* payload, int* length,
 adlb_code ADLB_Get(int type_requested, void* payload, int* length,
                    int* answer, int* type_recvd);
 
+adlb_code ADLBP_Iget(int type_requested, void* payload, int* length,
+                     int* answer, int* type_recvd);
+adlb_code ADLB_Iget(int type_requested, void* payload, int* length,
+                    int* answer, int* type_recvd);
+
 /**
    Obtain server rank responsible for data id
  */

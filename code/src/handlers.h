@@ -15,17 +15,15 @@
 
 #include "messaging.h"
 
-void handlers_init(void);
+void xlb_handlers_init(void);
 
 /**
    Just check that this is a tag known to the handlers
  */
-bool handler_valid(adlb_tag tag);
+bool xlb_handler_valid(adlb_tag tag);
 
-adlb_code handle(adlb_tag tag, int from_rank);
+adlb_code xlb_handle(adlb_tag tag, int from_rank);
 
-void requestqueue_recheck();
-
-adlb_code xlb_sync(int target);
+void xlb_requestqueue_recheck();
 
 #endif

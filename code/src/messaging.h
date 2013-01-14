@@ -26,12 +26,11 @@ void xlb_msg_init(void);
 /**
    Set a string name for debugging MPI message tags
  */
-
 void xlb_add_tag_name(int tag, char* name);
+
 /**
    Lookup string name for debugging MPI message tags
  */
-
 char* xlb_get_tag_name(int tag);
 
 #else
@@ -117,15 +116,6 @@ struct packed_put
 /**
    Simple struct for message packing
  */
-struct packed_get
-{
-  int type;
-  int target;
-};
-
-/**
-   Simple struct for message packing
- */
 struct packed_get_response
 {
   adlb_code code;
@@ -139,7 +129,7 @@ struct packed_get_response
 struct packed_create_response
 {
   adlb_data_code dc;
-  /* id of created item */
+  /** id of created item */
   long id;
 };
 
@@ -241,6 +231,7 @@ typedef enum
   // task operations
   ADLB_TAG_PUT = 1,
   ADLB_TAG_GET,
+  ADLB_TAG_IGET,
 
   // data operations
   ADLB_TAG_CREATE_HEADER,
@@ -272,8 +263,8 @@ typedef enum
 
   /// tags outgoing from server
   ADLB_TAG_RESPONSE,
-  ADLB_TAG_RESPONSE_GET,
   ADLB_TAG_RESPONSE_PUT,
+  ADLB_TAG_RESPONSE_GET,
   ADLB_TAG_RESPONSE_STEAL_COUNT,
   ADLB_TAG_RESPONSE_STEAL,
   ADLB_TAG_SYNC_RESPONSE,

@@ -76,7 +76,8 @@ static adlb_datum_id last_id;
 
 #else
 // Make this a noop if NDEBUG is set (for performance)
-#define check_verbose(condition, code, format, args...)
+#define check_verbose(condition, code, format, args...) \
+    (void) (condition);
 #endif
 
 
@@ -473,7 +474,7 @@ data_container_reference_str(adlb_datum_id container_id,
                 "Found null value in listeners table\n"
                 "for:  %li[%s]\n", container_id, subscript);
 
-  adlb_datum_id ref_entry;
+  adlb_datum_id ref_entry = ADLB_DATA_ID_NULL;
   if (ref_type == ADLB_DATA_TYPE_INTEGER)
   {
     ref_entry = reference;
@@ -793,8 +794,8 @@ data_insert(adlb_datum_id container_id,
     // Reset entry
     bool b =
         table_set(d->data.CONTAINER.members, subscript, member, &v);
-    assert(b);
-    assert(v == NULL); // Should have been NULL for unlinked
+    ASSERT(b);
+    ASSERT(v == NULL); // Should have been NULL for unlinked
   }
   else
   {

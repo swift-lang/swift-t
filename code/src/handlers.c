@@ -31,26 +31,31 @@
 #include "requestqueue.h"
 #include "server.h"
 #include "steal.h"
+#include "sync.h"
 #include "tools.h"
 #include "workqueue.h"
 
-#define MAX_HANDLERS 128
-
+/** Type definition of all handler functions */
 typedef adlb_code (*handler)(int caller);
+
+/** Maximal number of handlers that may be registered */
+#define MAX_HANDLERS XLB_MAX_TAGS
 
 /** Map from incoming message tag to handler function */
 static handler handlers[MAX_HANDLERS];
 
+/** Count how many handlers have been registered */
 static int handler_count = 0;
 
-/** Local MPI rank */
+/** Copy of this processes' MPI rank */
 static int mpi_rank;
 
-static void create_handler(adlb_tag tag, handler h);
+static void register_handler_function(adlb_tag tag, handler h);
 
 static adlb_code handle_sync(int caller);
 static adlb_code handle_put(int caller);
 static adlb_code handle_get(int caller);
+static adlb_code handle_iget(int caller);
 static adlb_code handle_steal(int caller);
 static adlb_code handle_create(int caller);
 static adlb_code handle_exists(int caller);
@@ -83,50 +88,56 @@ static adlb_code put_targeted(int type, int putter, int priority,
                               int answer, int target,
                               void* payload, int length);
 
+#define register_handler(tag, handler) \
+{ register_handler_function(tag, handler); \
+  xlb_add_tag_name(tag, #tag); }
+
 void
-handlers_init(void)
+xlb_handlers_init(void)
 {
   MPI_Comm_rank(adlb_all_comm, &mpi_rank);
 
   memset(handlers, '\0', MAX_HANDLERS*sizeof(handler));
 
-  create_handler(ADLB_TAG_SYNC_REQUEST, handle_sync);
-  create_handler(ADLB_TAG_PUT, handle_put);
-  create_handler(ADLB_TAG_GET, handle_get);
-  create_handler(ADLB_TAG_STEAL, handle_steal);
-  create_handler(ADLB_TAG_CREATE_HEADER, handle_create);
-  create_handler(ADLB_TAG_EXISTS, handle_exists);
-  create_handler(ADLB_TAG_STORE_HEADER, handle_store);
-  create_handler(ADLB_TAG_RETRIEVE, handle_retrieve);
-  create_handler(ADLB_TAG_ENUMERATE, handle_enumerate);
-  create_handler(ADLB_TAG_SUBSCRIBE, handle_subscribe);
-  create_handler(ADLB_TAG_PERMANENT, handle_permanent);
-  create_handler(ADLB_TAG_REFCOUNT_INCR, handle_refcount_incr);
-  create_handler(ADLB_TAG_INSERT_HEADER, handle_insert);
-  create_handler(ADLB_TAG_INSERT_ATOMIC, handle_insert_atomic);
-  create_handler(ADLB_TAG_LOOKUP, handle_lookup);
-  create_handler(ADLB_TAG_UNIQUE, handle_unique);
-  create_handler(ADLB_TAG_TYPEOF, handle_typeof);
-  create_handler(ADLB_TAG_CONTAINER_TYPEOF, handle_container_typeof);
-  create_handler(ADLB_TAG_CONTAINER_REFERENCE, handle_container_reference);
-  create_handler(ADLB_TAG_CONTAINER_SIZE, handle_container_size);
-  create_handler(ADLB_TAG_LOCK, handle_lock);
-  create_handler(ADLB_TAG_UNLOCK, handle_unlock);
-  create_handler(ADLB_TAG_CHECK_IDLE, handle_check_idle);
-  create_handler(ADLB_TAG_SHUTDOWN_WORKER, handle_shutdown_worker);
-  create_handler(ADLB_TAG_SHUTDOWN_SERVER, handle_shutdown_server);
-  create_handler(ADLB_TAG_FAIL, handle_fail);
+  register_handler(ADLB_TAG_SYNC_REQUEST, handle_sync);
+  register_handler(ADLB_TAG_PUT, handle_put);
+  register_handler(ADLB_TAG_GET, handle_get);
+  register_handler(ADLB_TAG_IGET, handle_iget);
+  register_handler(ADLB_TAG_STEAL, handle_steal);
+  register_handler(ADLB_TAG_CREATE_HEADER, handle_create);
+  register_handler(ADLB_TAG_EXISTS, handle_exists);
+  register_handler(ADLB_TAG_STORE_HEADER, handle_store);
+  register_handler(ADLB_TAG_RETRIEVE, handle_retrieve);
+  register_handler(ADLB_TAG_ENUMERATE, handle_enumerate);
+  register_handler(ADLB_TAG_SUBSCRIBE, handle_subscribe);
+  register_handler(ADLB_TAG_PERMANENT, handle_permanent);
+  register_handler(ADLB_TAG_REFCOUNT_INCR, handle_refcount_incr);
+  register_handler(ADLB_TAG_INSERT_HEADER, handle_insert);
+  register_handler(ADLB_TAG_INSERT_ATOMIC, handle_insert_atomic);
+  register_handler(ADLB_TAG_LOOKUP, handle_lookup);
+  register_handler(ADLB_TAG_UNIQUE, handle_unique);
+  register_handler(ADLB_TAG_TYPEOF, handle_typeof);
+  register_handler(ADLB_TAG_CONTAINER_TYPEOF, handle_container_typeof);
+  register_handler(ADLB_TAG_CONTAINER_REFERENCE, handle_container_reference);
+  register_handler(ADLB_TAG_CONTAINER_SIZE, handle_container_size);
+  register_handler(ADLB_TAG_LOCK, handle_lock);
+  register_handler(ADLB_TAG_UNLOCK, handle_unlock);
+  register_handler(ADLB_TAG_CHECK_IDLE, handle_check_idle);
+  register_handler(ADLB_TAG_SHUTDOWN_WORKER, handle_shutdown_worker);
+  register_handler(ADLB_TAG_SHUTDOWN_SERVER, handle_shutdown_server);
+  register_handler(ADLB_TAG_FAIL, handle_fail);
 }
 
 static void
-create_handler(adlb_tag tag, handler h)
+register_handler_function(adlb_tag tag, handler h)
 {
   handlers[tag] = h;
   handler_count++;
+  valgrind_assert(handler_count < MAX_HANDLERS);
 }
 
 bool
-handler_valid(adlb_tag tag)
+xlb_handler_valid(adlb_tag tag)
 {
   if (tag >= 0)
     return true;
@@ -134,9 +145,9 @@ handler_valid(adlb_tag tag)
 }
 
 adlb_code
-handle(adlb_tag tag, int caller)
+xlb_handle(adlb_tag tag, int caller)
 {
-  CHECK_MSG(handler_valid(tag), "handle(): invalid tag: %i", tag);
+  CHECK_MSG(xlb_handler_valid(tag), "handle(): invalid tag: %i", tag);
   CHECK_MSG(handlers[tag] != NULL, "handle(): invalid tag: %i", tag);
   DEBUG("handle: caller=%i %s", caller, xlb_get_tag_name(tag));
 
@@ -268,6 +279,8 @@ static inline adlb_code send_work(int worker, long wuid, int type,
                                   int answer,
                                   void* payload, int length);
 
+static inline adlb_code send_no_work(int worker);
+
 static inline bool check_workqueue(int caller, int type);
 
 /** Is this process currently stealing work? */
@@ -277,16 +290,16 @@ static int deferred_gets = 0;
 static adlb_code
 handle_get(int caller)
 {
-  struct packed_get p;
+  int type;
   MPI_Status status;
 
   MPE_LOG(xlb_mpe_svr_get_start);
 
-  RECV(&p, sizeof(p), MPI_BYTE, caller, ADLB_TAG_GET);
+  RECV(&type, 1, MPI_INT, caller, ADLB_TAG_GET);
 
   bool found_work = false;
   bool stole = false;
-  bool b = check_workqueue(caller, p.type);
+  bool b = check_workqueue(caller, type);
   if (b) goto end;
 
   if (!stealing && steal_allowed())
@@ -296,7 +309,7 @@ handle_get(int caller)
     ADLB_CHECK(rc);
     stealing = false;
     if (stole)
-      found_work = check_workqueue(caller, p.type);
+      found_work = check_workqueue(caller, type);
   }
   else
   {
@@ -307,15 +320,34 @@ handle_get(int caller)
   DEBUG("stole?: %i", stole);
 
   if (!found_work)
-    requestqueue_add(caller, p.type);
+    requestqueue_add(caller, type);
   if (stole)
   {
     DEBUG("rechecking...");
-    requestqueue_recheck();
+    xlb_requestqueue_recheck();
   }
 
   end:
   MPE_LOG(xlb_mpe_svr_get_end);
+
+  return ADLB_SUCCESS;
+}
+
+static adlb_code
+handle_iget(int caller)
+{
+  int type;
+  MPI_Status status;
+
+  // MPE_LOG(xlb_mpe_svr_iget_start);
+
+  RECV(&type, 1, MPI_INT, caller, ADLB_TAG_IGET);
+  bool b = check_workqueue(caller, type);
+
+  if (!b)
+    send_no_work(caller);
+
+  // MPE_LOG(xlb_mpe_svr_iget_end);
 
   return ADLB_SUCCESS;
 }
@@ -344,7 +376,7 @@ check_workqueue(int caller, int type)
    Called after a steal
  */
 void
-requestqueue_recheck()
+xlb_requestqueue_recheck()
 {
   TRACE_START;
 
@@ -393,7 +425,25 @@ send_work(int worker, long wuid, int type, int answer,
   SEND(&g, sizeof(g), MPI_BYTE, worker, ADLB_TAG_RESPONSE_GET);
   SEND(payload, length, MPI_BYTE, worker, ADLB_TAG_WORK);
 
-  STATS("SEND_WORK");
+  return ADLB_SUCCESS;
+}
+
+/**
+   Send no work unit to a worker
+   This is used when worker does an Iget and gets nothing
+ */
+static inline adlb_code
+send_no_work(int worker)
+{
+  DEBUG("send_no_work() to: %i ...", worker);
+  struct packed_get_response g;
+  g.code = ADLB_NOTHING;
+  g.answer_rank = -1;
+  g.length = 0;
+  g.payload_source = mpi_rank;
+  g.type = -1;
+
+  SEND(&g, sizeof(g), MPI_BYTE, worker, ADLB_TAG_RESPONSE_GET);
 
   return ADLB_SUCCESS;
 }
@@ -711,7 +761,7 @@ handle_insert(int caller)
   n = sscanf(xfer, "%li %s %i %i",
              &id, subscript, &member_length, &drops);
   // This can only fail on an internal error:
-  assert(n == 4);
+  ASSERT(n == 4);
 
   member = malloc((member_length+1) * sizeof(char));
 
@@ -732,14 +782,13 @@ handle_insert(int caller)
 
   if (dc == ADLB_DATA_SUCCESS)
   {
-    TRACE("%d references to notify after insert\n", count);
     if (references_count > 0)
     {
       long m = -1;
       bool parsed = false;
       for (int i = 0; i < references_count; i++)
       {
-        TRACE("Notifying reference li\n", references[i]);
+        TRACE("Notifying reference %li\n", references[i]);
         // Negative used to indicate string
         if (references[i] >= 0)
         {
@@ -779,7 +828,7 @@ handle_insert_atomic(int caller)
   long id;
   int n = sscanf(xfer, "%li %s", &id, subscript);
   // This can only fail on an internal error:
-  assert(n == 2);
+  ASSERT(n == 2);
 
   bool result;
   adlb_data_code dc = data_insert_atomic(id, subscript, &result);
@@ -805,7 +854,7 @@ handle_lookup(int caller)
 
   long id;
   int n = sscanf(msg, "%li %s", &id, subscript);
-  assert(n == 2);
+  ASSERT(n == 2);
 
   adlb_data_code dc = data_lookup(id, subscript, &member);
 
@@ -892,7 +941,7 @@ handle_container_reference(int caller)
   int n = sscanf(xfer, "%li %li %s %i",
             &reference, &container_id, subscript,
             (int*)&ref_type);
-  assert(n == 4);
+  ASSERT(n == 4);
 
   DEBUG("Container_reference: <%li>[%s] => <%li> (%i)",
         container_id, subscript, reference, ref_type);
@@ -907,7 +956,7 @@ handle_container_reference(int caller)
               {
                 long m;
                 int n = sscanf(member, "%li", &m);
-                assert(n == 1);
+                ASSERT(n == 1);
                 set_int_reference_and_notify(reference, m);
               }
               else if (ref_type == ADLB_DATA_TYPE_STRING)

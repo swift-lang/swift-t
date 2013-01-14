@@ -156,6 +156,17 @@ ADLB_Get(int type_requested, void* payload, int* length,
   return rc;
 }
 
+adlb_code
+ADLB_Iget(int type_requested, void* payload, int* length,
+         int* answer, int* type_recvd)
+{
+  // MPE_LOG(xlb_mpe_wkr_iget_start);
+  adlb_code rc = ADLBP_Iget(type_requested, payload, length, answer,
+                            type_recvd);
+  // MPE_LOG(xlb_mpe_wkr_iget_start);
+  return rc;
+}
+
 /**
    Applications should use the ADLB_Create_type functions in adlb.h
  */

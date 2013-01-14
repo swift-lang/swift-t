@@ -27,6 +27,7 @@
 #include "requestqueue.h"
 #include "server.h"
 #include "steal.h"
+#include "sync.h"
 #include "workqueue.h"
 
 /** Number of workers associated with this server */
@@ -75,7 +76,7 @@ xlb_server_init()
   ADLB_CHECK(code);
   // Set a default value for now:
   mm_set_max(mm_default, 10*MB);
-  handlers_init();
+  xlb_handlers_init();
   xlb_time_last_action = MPI_Wtime();
 
   // Add up xlb_my_workers:
@@ -224,7 +225,7 @@ xlb_handle_pending(MPI_Status* status)
   }
 
   // Call appropriate RPC handler:
-  adlb_code rc = handle(status->MPI_TAG, status->MPI_SOURCE);
+  adlb_code rc = xlb_handle(status->MPI_TAG, status->MPI_SOURCE);
   ADLB_CHECK(rc);
   return rc;
 }
@@ -294,7 +295,7 @@ check_steal(void)
   if (b)
   {
     TRACE("check_steal(): rechecking...");
-    requestqueue_recheck();
+    xlb_requestqueue_recheck();
   }
   TRACE_END;
   return ADLB_SUCCESS;
@@ -408,9 +409,9 @@ servers_idle()
   {
     bool idle;
     rc = xlb_sync(rank);
-    assert(rc == ADLB_SUCCESS);
+    ASSERT(rc == ADLB_SUCCESS);
     rc = ADLB_Server_idle(rank, &idle);
-    assert(rc == ADLB_SUCCESS);
+    ASSERT(rc == ADLB_SUCCESS);
     if (! idle)
       return false;
   }
@@ -427,7 +428,7 @@ shutdown_all_servers()
        rank++)
   {
     int rc = ADLB_Server_shutdown(rank);
-    assert(rc == ADLB_SUCCESS);
+    ASSERT(rc == ADLB_SUCCESS);
   }
   TRACE_END;
 

@@ -60,10 +60,10 @@
 #else
 
 // Make these noops for performance
-#define CHECK_MSG(rc, args...)
-#define MPI_CHECK(rc)
-#define ADLB_CHECK(rc)
-#define ADLB_DATA_CHECK(rc)
+#define CHECK_MSG(rc, args...) { (void) (rc); }
+#define MPI_CHECK(rc)          { (void) (rc); }
+#define ADLB_CHECK(rc)         { (void) (rc); }
+#define ADLB_DATA_CHECK(rc)    { (void) (rc); }
 #endif
 
 #endif

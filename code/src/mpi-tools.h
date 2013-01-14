@@ -16,7 +16,7 @@ void mpi_recv_sanity(MPI_Status* status, MPI_Datatype type,
                      int expected);
 #else
 // User may make this a noop
-#define mpi_recv_sanity(s,t,e) 0;
+#define mpi_recv_sanity(s,t,e) (void) 0;
 #endif
 
 #endif

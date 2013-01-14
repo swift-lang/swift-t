@@ -74,7 +74,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   xlb_master_server_rank = xlb_world_size - xlb_servers;
 
   rc = MPI_Comm_dup(MPI_COMM_WORLD, &adlb_all_comm);
-  assert(rc == MPI_SUCCESS);
+  ASSERT(rc == MPI_SUCCESS);
 
   if (xlb_world_rank < xlb_workers)
   {
@@ -190,6 +190,48 @@ ADLBP_Get(int type_requested, void* payload, int* length,
   TRACE("ADLB_Get: got: %s", (char*) payload);
 
   STATS("GOT_WORK");
+
+  *length = g.length;
+  *answer = g.answer_rank;
+  *type_recvd = g.type;
+
+  return ADLB_SUCCESS;
+}
+
+adlb_code
+ADLBP_Iget(int type_requested, void* payload, int* length,
+           int* answer, int* type_recvd)
+{
+  MPI_Status status;
+  MPI_Request request;
+
+  CHECK_MSG(xlb_type_index(type_requested) != -1,
+            "ADLB_Iget(): Bad work type: %i\n", type_requested);
+
+  struct packed_get_response g;
+  IRECV(&g, sizeof(g), MPI_BYTE, xlb_my_server, ADLB_TAG_RESPONSE_GET);
+  SEND(&type_requested, 1, MPI_INT, xlb_my_server, ADLB_TAG_IGET);
+  WAIT(&request, &status);
+
+  mpi_recv_sanity(&status, MPI_BYTE, sizeof(g));
+
+  if (g.code == ADLB_SHUTDOWN)
+  {
+    DEBUG("ADLB_Iget(): SHUTDOWN");
+    got_shutdown = true;
+    return ADLB_SHUTDOWN;
+  }
+  if (g.code == ADLB_NOTHING)
+  {
+    DEBUG("ADLB_Iget(): NOTHING");
+    return ADLB_NOTHING;
+  }
+
+  DEBUG("ADLB_Iget: payload source: %i", g.payload_source);
+  RECV(payload, g.length, MPI_BYTE, g.payload_source, ADLB_TAG_WORK);
+
+  mpi_recv_sanity(&status, MPI_BYTE, g.length);
+  TRACE("ADLB_Iget: got: %s", (char*) payload);
 
   *length = g.length;
   *answer = g.answer_rank;

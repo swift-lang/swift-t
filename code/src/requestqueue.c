@@ -65,7 +65,7 @@ requestqueue_add(int rank, int type)
   R->item = item;
   bool b = table_ip_add(&targets, rank, R);
   // Assert rank was not already entered
-  assert(b);
+  ASSERT(b);
 }
 
 /**
