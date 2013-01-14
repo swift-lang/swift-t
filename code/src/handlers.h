@@ -17,6 +17,9 @@
 
 void handlers_init(void);
 
+/**
+   Just check that this is a tag known to the handlers
+ */
 bool handler_valid(adlb_tag tag);
 
 adlb_code handle(adlb_tag tag, int from_rank);
