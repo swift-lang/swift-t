@@ -1,5 +1,6 @@
 
-# Generate the Turbine Tcl package
+# MAKE-PACKAGE.TCL
+# Generates the Turbine Tcl package
 
 set turbine_version $env(TURBINE_VERSION)
 set use_mpe         $env(USE_MPE)
@@ -13,9 +14,12 @@ if { [ string equal $use_mac "yes" ] } {
 
 set metadata [ list -name turbine -version $turbine_version ]
 
+# List of Turbine shared objects and Tcl libraries
+# Must be kept in sync with list in lib/module.mk.in
 set items [ eval list -load $libtclturbine \
                 -source turbine.tcl    \
                 -source engine.tcl     \
+                -source worker.tcl     \
                 -source data.tcl       \
                 -source assert.tcl     \
                 -source logical.tcl    \
@@ -30,10 +34,8 @@ set items [ eval list -load $libtclturbine \
                 -source io.tcl         \
                 -source string.tcl     \
                 -source updateable.tcl \
-                -source sys.tcl     \
-                -source blob.tcl    \
+                -source sys.tcl        \
+                -source blob.tcl       \
                 -source helpers.tcl ]
 
-# List of Turbine shared objects and Tcl libraries
-# Must be kept in sync with list in lib/module.mk.in
 puts [ eval ::pkg::create $metadata $items ]

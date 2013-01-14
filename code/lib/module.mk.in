@@ -6,6 +6,7 @@ DIR := lib
 TCL_SRC := $(DIR)/helpers.tcl             \
            $(DIR)/turbine.tcl             \
            $(DIR)/engine.tcl              \
+           $(DIR)/worker.tcl              \
            $(DIR)/data.tcl                \
            $(DIR)/functions.tcl           \
            $(DIR)/assert.tcl              \

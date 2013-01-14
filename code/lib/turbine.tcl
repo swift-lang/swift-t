@@ -1,12 +1,12 @@
 
-# turbine.tcl
+# TURBINE.TCL
 # Main control functions
 
 package provide turbine [ turbine::c::version ]
 
 namespace eval turbine {
 
-    namespace export init finalize rule
+    namespace export init start finalize rule
 
     # Mode is ENGINE, WORKER, or SERVER
     variable mode
@@ -71,7 +71,7 @@ namespace eval turbine {
         set n_adlb_servers $servers
         set n_engines $engines
         set n_workers [ expr [ adlb::size ] - $servers - $engines ]
-        
+
 
         variable mode
 	variable is_engine
@@ -106,6 +106,31 @@ namespace eval turbine {
                 puts "ERROR: WORKERS==0"
                 exit 1
             }
+        }
+    }
+
+    proc start { args } {
+
+        set rules [ lindex $args 0 ]
+        if { [ llength $args ] > 1 } {
+            set engine_startup [ lindex $args 1 ]
+        } else {
+            set engine_startup ""
+        }
+
+        if { [ catch { enter_mode $rules $engine_startup } e d ] } {
+            fail $e $d
+        }
+    }
+
+    proc enter_mode { rules engine_startup } {
+
+        variable mode
+        switch $mode {
+            ENGINE  { engine $rules $engine_startup }
+            SERVER  { adlb::server }
+            WORKER  { worker }
+            default { error "UNKNOWN MODE: $mode" }
         }
     }
 
@@ -245,7 +270,7 @@ namespace eval turbine {
         if { $is_engine } {
             c::rule $name $inputs $action_type $action
         } elseif { [ llength $inputs ] == 0 } {
-            release -1 $action_type $action 
+            release -1 $action_type $action
         } else {
             # Send to engine that can process it
             adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
