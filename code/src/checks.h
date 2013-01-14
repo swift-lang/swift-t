@@ -44,7 +44,8 @@
  */
 #define ADLB_CHECK(rc) { \
   if (!(rc == ADLB_SUCCESS || rc == ADLB_NOTHING)) { \
-    printf("ADLB_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
+    printf("ADLB_CHECK FAILED: %s:%s():%i\n", \
+           __FILE__, __func__, __LINE__); \
     return rc; }}
 
 /**
