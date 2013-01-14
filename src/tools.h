@@ -110,8 +110,8 @@ void valgrind_assert_failed_msg(const char *file, int line,
    If not running under valgrind, works like assert()
  */
 #ifdef NDEBUG
-#define valgrind_assert(condition)
-#define valgrind_assert_msg(condition,msg...)
+#define valgrind_assert(condition)            (void) (condition);
+#define valgrind_assert_msg(condition,msg...) (void) (condition);
 #else
 #define valgrind_assert(condition) \
     if (!(condition)) \
