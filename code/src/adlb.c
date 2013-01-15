@@ -128,7 +128,7 @@ ADLBP_Put(void* payload, int length, int target, int answer,
             "ADLB_Put(): invalid work type: %d\n", type);
 
   /** Server to contact */
-  int to_server;
+  int to_server = -1;
   if (target == ADLB_RANK_ANY)
     to_server = xlb_my_server;
   else if (target < xlb_world_size)
