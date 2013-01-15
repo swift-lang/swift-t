@@ -84,7 +84,7 @@ xlb_backoff_server(int attempt, bool *slept)
                 - backoff_server_min_delay_attempts + 1;
       delay = pow(2, exponent) * backoff_server_max;
     }
-    // time_delay(delay);
+    time_delay(delay);
     *slept = true;
     return attempt < BACKOFF_SERVER_TOTAL_ATTEMPTS - 1;
   }
@@ -93,11 +93,11 @@ xlb_backoff_server(int attempt, bool *slept)
 void
 xlb_backoff_sync()
 {
-  // time_delay(backoff_sync);
+  time_delay(backoff_sync);
 }
 
 void
 xlb_backoff_sync_rejected()
 {
-  // time_delay(backoff_sync_rejected);
+  time_delay(backoff_sync_rejected);
 }
