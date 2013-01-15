@@ -5,6 +5,7 @@ import java.util.ListIterator;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Settings;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
@@ -30,14 +31,12 @@ public class ContinuationFusion extends FunctionOptimizerPass {
 
   @Override
   public String getPassName() {
-    // TODO Auto-generated method stub
-    return null;
+    return "Continuation fusion";
   }
 
   @Override
   public String getConfigEnabledKey() {
-    // TODO Auto-generated method stub
-    return null;
+    return Settings.OPT_CONTROLFLOW_FUSION;
   }
 
   @Override
