@@ -71,9 +71,9 @@ function get_compiler_opt_name() {
         controlflow-fusion) echo "stc.opt.controlflow-fusion"
                     return 0
                     ;; 
-	function-inline) echo "stc.opt.function-inline"
-		    return 0;
-		    ;;
+        function-inline) echo "stc.opt.function-inline"
+                    return 0;
+                    ;;
         hoisting) echo "stc.opt.hoist"
                     return 0
                     ;;
