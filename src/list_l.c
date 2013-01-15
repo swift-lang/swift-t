@@ -57,7 +57,7 @@ list_l_add(struct list_l* target, long data)
    @return -1 if the list is empty.
 */
 long
-list_l_pop(struct list_l* target)
+list_l_poll(struct list_l* target)
 {
   long data;
   if (target->size == 0)
@@ -83,9 +83,6 @@ list_l_pop(struct list_l* target)
   return data;
 }
 
-/**
-   @return -1 if the list is empty.
-*/
 long
 list_l_peek(struct list_l* target)
 {
@@ -94,12 +91,8 @@ list_l_peek(struct list_l* target)
   return target->head->data;
 }
 
-/**
-   Return and remove the head.
-   @return The data or -1 if list is empty.
- */
 long
-list_l_poll(struct list_l* target)
+list_l_pop(struct list_l* target)
 {
   long data;
   if (target->size == 0)

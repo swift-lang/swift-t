@@ -30,6 +30,13 @@ struct rbtree
   struct rbtree_node* root;
 };
 
+/**
+   rbtree iterator callback
+   Returns false when iteration should stop
+ */
+typedef bool (*rbtree_callback)(struct rbtree_node* node,
+                                void* user_data);
+
 void rbtree_init(struct rbtree* target);
 
 bool rbtree_add(struct rbtree* target, long key, void* data);
@@ -53,6 +60,13 @@ bool rbtree_pop(struct rbtree* target, long* key, void** data);
 struct rbtree_node* rbtree_leftmost(struct rbtree* target);
 
 long rbtree_leftmost_key(struct rbtree* target);
+
+/**
+   Call callback on each rbtree node until the callback returns false
+   Proceeds in-order
+ */
+void rbtree_iterator(struct rbtree* target, rbtree_callback cb,
+                     void* user_data);
 
 bool rbtree_move(struct rbtree* target, long key_old, long key_new);
 

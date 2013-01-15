@@ -32,7 +32,6 @@ void list2_init(struct list2* target);
 struct list2* list2_create(void);
 
 struct list2_item* list2_add(struct list2* target, void* data);
-#define list2_push(target, data) list2_add(target, data)
 
 void* list2_pop(struct list2* target);
 

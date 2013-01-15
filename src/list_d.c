@@ -3,40 +3,40 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "list_i.h"
+#include "list_d.h"
 
 void
-list_i_init(struct list_i* target)
+list_d_init(struct list_d* target)
 {
   target->head = NULL;
   target->tail = NULL;
   target->size = 0;
 }
 
-struct list_i*
-list_i_create()
+struct list_d*
+list_d_create()
 {
-  struct list_i* new_list_i = malloc(sizeof(struct list_i));
-  if (! new_list_i)
+  struct list_d* new_list_d = malloc(sizeof(struct list_d));
+  if (! new_list_d)
     return NULL;
-  list_i_init(new_list_i);
-  return new_list_i;
+  list_d_init(new_list_d);
+  return new_list_d;
 }
 
 int
-list_i_size(struct list_i* target)
+list_d_size(struct list_d* target)
 {
   return target->size;
 }
 
 /**
-   Add to the tail of the list_i.
-   @return The new list_i_item.
+   Add to the tail of the list_d.
+   @return The new list_d_item.
 */
-struct list_i_item*
-list_i_add(struct list_i* target, int data)
+struct list_d_item*
+list_d_add(struct list_d* target, double data)
 {
-  struct list_i_item* new_item = malloc(sizeof(struct list_i_item));
+  struct list_d_item* new_item = malloc(sizeof(struct list_d_item));
   if (! new_item)
     return NULL;
 
@@ -59,28 +59,50 @@ list_i_add(struct list_i* target, int data)
   return new_item;
 }
 
+bool
+list_d_push(struct list_d* target, double data)
+{
+  struct list_d_item* new_item = malloc(sizeof(struct list_d_item));
+  if (! new_item)
+    return NULL;
+
+  new_item->data = data;
+
+  if (target->size == 0)
+  {
+    target->tail = new_item;
+    new_item->next = NULL;
+  }
+  else
+    new_item->next = target->head;
+
+  target->head = new_item;
+  target->size++;
+
+  return new_item;
+}
+
 /**
    Parse a string with integers separated by spaces.
-   Add all integers found to the returned new list_i.
+   Add all integers found to the returned new list_d.
    Leading or trailing spaces are ok.
 */
-struct list_i*
-list_i_parse(char* s)
+struct list_d*
+list_d_parse(char* s)
 {
-  struct list_i* result = list_i_create();
+  struct list_d* result = list_d_create();
   char* p = s;
 
-  int   n;
-  int   tmp;
-  bool  good = true;
+  int  n;
+  double  tmp;
+  bool good = true;
 
-  int   r;
   while (good)
   {
-    r = sscanf(p, "%i%n", &tmp, &n);
+    int r = sscanf(p, "%lf%n", &tmp, &n);
     p += n;
     if (r == 1)
-      list_i_add(result, tmp);
+      list_d_add(result, tmp);
     if (*p == ' ')
       p++;
     else
@@ -91,13 +113,13 @@ list_i_parse(char* s)
 
 /**
    Remove and return the tail data item.
-   This is expensive: singly linked list_i.
+   This is expensive: singly linked list_d.
    @return -1 if the list is empty.
 */
-int
-list_i_poll(struct list_i* target)
+double
+list_d_pop(struct list_d* target)
 {
-  int data;
+  double data;
   if (target->size == 0)
     return -1;
   if (target->size == 1)
@@ -110,7 +132,7 @@ list_i_poll(struct list_i* target)
     return data;
   }
 
-  struct list_i_item* item;
+  struct list_d_item* item;
   for (item = target->head; item->next->next;
        item = item->next);
   data = item->next->data;
@@ -125,8 +147,8 @@ list_i_poll(struct list_i* target)
    Return the head data item.
    @return -1 if the list is empty.
 */
-int
-list_i_peek(struct list_i* target)
+double
+list_d_peek(struct list_d* target)
 {
   if (target->size == 0)
     return -1;
@@ -137,12 +159,10 @@ list_i_peek(struct list_i* target)
    Return and remove the head data item.
    @return The data or -1 if list is empty.
  */
-int
-list_i_pop(struct list_i* target)
+double
+list_d_poll(struct list_d* target)
 {
-  // NOTE_F;
-
-  int data;
+  double data;
   if (target->size == 0)
     return -1;
   if (target->size == 1)
@@ -155,7 +175,7 @@ list_i_pop(struct list_i* target)
     return data;
   }
 
-  struct list_i_item* delendum = target->head;
+  struct list_d_item* delendum = target->head;
   data = target->head->data;
   target->head = target->head->next;
   free(delendum);
@@ -163,10 +183,10 @@ list_i_pop(struct list_i* target)
   return data;
 }
 
-struct list_i_item*
-list_i_ordered_insert(struct list_i* target, int data)
+struct list_d_item*
+list_d_ordered_insert(struct list_d* target, double data)
 {
-  struct list_i_item* new_item = malloc(sizeof(struct list_i_item));
+  struct list_d_item* new_item = malloc(sizeof(struct list_d_item));
   if (! new_item)
     return NULL;
   new_item->data = data;
@@ -179,7 +199,7 @@ list_i_ordered_insert(struct list_i* target, int data)
   }
   else
   {
-    struct list_i_item* item = target->head;
+    struct list_d_item* item = target->head;
     // Are we the new head?
     if (data < item->data)
     {
@@ -213,10 +233,10 @@ list_i_ordered_insert(struct list_i* target, int data)
   return new_item;
 }
 
-static inline struct list_i_item*
-create_item(int data)
+static inline struct list_d_item*
+create_item(double data)
 {
-  struct list_i_item* item = malloc(sizeof(struct list_i_item));
+  struct list_d_item* item = malloc(sizeof(struct list_d_item));
    if (! item)
      return NULL;
    item->data = data;
@@ -228,10 +248,10 @@ create_item(int data)
    Inserts into ordered list if data does not already exist
    @return The new item or NULL if data already existed
  */
-struct list_i_item*
-list_i_unique_insert(struct list_i* target, int data)
+struct list_d_item*
+list_d_unique_insert(struct list_d* target, double data)
 {
-  struct list_i_item* new_item;
+  struct list_d_item* new_item;
   if (target->size == 0)
   {
     new_item = create_item(data);
@@ -240,7 +260,7 @@ list_i_unique_insert(struct list_i* target, int data)
   }
   else
   {
-    struct list_i_item* item = target->head;
+    struct list_d_item* item = target->head;
     // Are we the new head?
     if (data < item->data)
     {
@@ -290,10 +310,10 @@ list_i_unique_insert(struct list_i* target, int data)
 /**
    Untested.
  */
-struct list_i_item*
-list_i_ordered_insertdata(struct list_i* target, int data)
+struct list_d_item*
+list_d_ordered_insertdata(struct list_d* target, double data)
 {
-  struct list_i_item* new_item = malloc(sizeof(struct list_i_item));
+  struct list_d_item* new_item = malloc(sizeof(struct list_d_item));
   if (! new_item)
     return NULL;
   new_item->data = data;
@@ -306,7 +326,7 @@ list_i_ordered_insertdata(struct list_i* target, int data)
   }
   else
   {
-    struct list_i_item* item = target->head;
+    struct list_d_item* item = target->head;
     // Are we the new head?
     if (data < item->data)
     {
@@ -345,18 +365,15 @@ list_i_ordered_insertdata(struct list_i* target, int data)
   return new_item;
 }
 
-int
-list_i_random(struct list_i* target)
+double
+list_d_random(struct list_d* target)
 {
-  int i;
-  // printf("%s %i \n", "list size: ", target->size);
-
   if (target->size == 0)
     return -1;
 
   int p = rand() % target->size;
-  struct list_i_item* item = target->head;
-  for (i = 0; i < p; i++)
+  struct list_d_item* item = target->head;
+  for (int i = 0; i < p; i++)
     item = item->next;
 
   return item->data;
@@ -365,11 +382,10 @@ list_i_random(struct list_i* target)
 /**
  */
 bool
-list_i_contains(struct list_i* target, int data)
+list_d_contains(struct list_d* target, double data)
 {
-  struct list_i_item* item;
-  for (item = target->head;
-       item; item = item->next)
+  for (struct list_d_item* item = target->head; item;
+       item = item->next)
     if (item->data == data)
       return true;
   return false;
@@ -378,11 +394,11 @@ list_i_contains(struct list_i* target, int data)
 /**
    @return An equal data int or -1 if not found.
 */
-int
-list_i_search(struct list_i* target, int data)
+double
+list_d_search(struct list_d* target, double data)
 {
-  for (struct list_i_item* item = target->head;
-       item; item = item->next)
+  for (struct list_d_item* item = target->head; item;
+      item = item->next)
     if (item->data == data)
       return data;
   return -1;
@@ -393,17 +409,15 @@ list_i_search(struct list_i* target, int data)
             and the item was freed.
 */
 bool
-list_i_remove(struct list_i* target, int data)
+list_d_remove(struct list_d* target, double data)
 {
   bool result = false;
 
-  // NOTE_FI(data);
-
-  struct list_i_item* item = target->head;
+  struct list_d_item* item = target->head;
   // Are we removing the head?
   if (data == item->data)
   {
-    struct list_i_item* next = item->next;
+    struct list_d_item* next = item->next;
     free(item);
     target->head = next;
     if (target->tail == next)
@@ -418,7 +432,7 @@ list_i_remove(struct list_i* target, int data)
     {
       if (data == item->next->data)
       {
-        struct list_i_item* nextnext = item->next->next;
+        struct list_d_item* nextnext = item->next->next;
         if (target->tail == item->next)
           target->tail = nextnext;
         free(item->next);
@@ -430,22 +444,21 @@ list_i_remove(struct list_i* target, int data)
       item = item->next;
     }
   }
-  // DONE;
   return result;
 }
 
 /**
-   Print all ints using printf.
+   Print all doubles using printf.
  */
 void
-list_i_printf(struct list_i* target)
+list_d_printf(struct list_d* target)
 {
-  struct list_i_item* item;
+  struct list_d_item* item;
 
   printf("[");
   for (item = target->head; item; item = item->next)
   {
-    printf("%i", item->data);
+    printf("%f", item->data);
     if (item->next)
       printf(",");
   }
@@ -453,19 +466,19 @@ list_i_printf(struct list_i* target)
 }
 
 /**
-   Allocate and return string containing ints in this list_i
+   Allocate and return string containing ints in this list_d
    Returns pointer to allocated output location, 12*size.
  */
 char*
-list_i_serialize(struct list_i* target)
+list_d_serialize(struct list_d* target)
 {
   char* result = malloc(12 * (target->size) * sizeof(char));
   char* p = result;
-  struct list_i_item* item;
 
-  for (item = target->head; item; item = item->next)
+  for (struct list_d_item* item = target->head; item;
+       item = item->next)
   {
-    p += sprintf(p, "%i", item->data);
+    p += sprintf(p, "%f", item->data);
     if (item->next)
       p += sprintf(p, " ");
   }
@@ -476,10 +489,10 @@ list_i_serialize(struct list_i* target)
    Empty this list
  */
 void
-list_i_clear(struct list_i* target)
+list_d_clear(struct list_d* target)
 {
-  struct list_i_item* item = target->head;
-  struct list_i_item* next_item;
+  struct list_d_item* item = target->head;
+  struct list_d_item* next_item;
   while (item)
   {
     next_item = item->next;
@@ -493,9 +506,9 @@ list_i_clear(struct list_i* target)
    Free this list.
  */
 void
-list_i_free(struct list_i* target)
+list_d_free(struct list_d* target)
 {
-  list_i_clear(target);
+  list_d_clear(target);
   free(target);
 }
 
@@ -504,7 +517,7 @@ list_i_free(struct list_i* target)
    @return true unless we could not allocate memory
  */
 bool
-list_i_toints(struct list_i* target, int** result, int* count)
+list_d_todoubles(struct list_d* target, double** result, int* count)
 {
   assert(target != NULL);
 
@@ -514,12 +527,12 @@ list_i_toints(struct list_i* target, int** result, int* count)
     return true;
   }
 
-  *result = malloc(target->size * sizeof(int));
+  *result = malloc(target->size * sizeof(double));
   if (!*result)
     return false;
 
   int i = 0;
-  for (struct list_i_item* item = target->head; item;
+  for (struct list_d_item* item = target->head; item;
        item = item->next)
     (*result)[i++] = item->data;
 
@@ -529,18 +542,18 @@ list_i_toints(struct list_i* target, int** result, int* count)
 
 /*
  *
-** Dump list_i to string a la snprintf()
+** Dump list_d to string a la snprintf()
     size must be greater than 2.
     format specifies the output format for the data items
     returns int greater than size if size limits are exceeded
             indicating result is garbage
 
-int list_i_tostring(char* str, size_t size,
-                  char* format, struct list_i* target)
+int list_d_tostring(char* str, size_t size,
+                  char* format, struct list_d* target)
 {
   int               error = size+1;
   char*             ptr   = str;
-  struct list_i_item* item;
+  struct list_d_item* item;
 
   if (size <= 2)
     return error;

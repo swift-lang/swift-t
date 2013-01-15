@@ -47,17 +47,18 @@ list_ refers to what would be list_p_
 ADT   _create()
       { allocate and initialize ADT - NULL if out of memory }
 bool  _init()
-      { initialize ADT - false if out of memory }
+      { initialize ADT in-place - false if out of memory }
 
       _parse()
 
 == Addition
 
 void  _append(target, key)
+      { to tail of list }
 bool  _add(target, key)
-      { should allow duplicates }
+      { to tail of list - should allow duplicates }
 bool  _push(target, key)
-      { should allow duplicates }
+      { to head of list - should allow duplicates }
 bool  _add_unique(target, cmp(), key)
       { false and do nothing if key found }
 bool  _add_item(target, item)
@@ -82,9 +83,10 @@ void  _move(target, key_old, key_new)
 
 == Retrieve
 
-DATA  _poll() { head }
+DATA  _pop() { head }
+DATA  _peek() { head }
 DATA  _head() { head }
-DATA  _pop() { tail }
+DATA  _poll() { tail }
 DATA  _get(i)
 
 LIST  _select(target, key)
@@ -109,7 +111,7 @@ void  _clear()   truncate ADT- do not free data
 void  _free()    clear and free the ADT- do not free data
 void  _delete()  clear the ADT and free data
 void  _destroy() _delete() + _free()
-void  _release() For tables and heaps: free the internal array- use 
+void  _release() For tables and heaps: free the internal array- use
                  when empty or after clear()
                  Illegal after _free()
 
@@ -135,10 +137,11 @@ char* _serialize_ptrs(target)         [dynamic]
 
 = Source documentation
 
-All source documentation should be in the *.c files
-Keep the headers simple.  Users can use this file for reference
+All user source documentation should be in the *.h files
+Users can use this file for reference
+Implementation notes can be in the *.c files
 
-= Third-party library
+= Third-party libraries
 
 jenkins-hash and lookup3 are third-party libraries.
 

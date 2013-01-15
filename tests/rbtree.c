@@ -35,13 +35,20 @@ pop_all(struct rbtree* T)
   assert(pops == size);
 }
 
+static bool
+test_cb(struct rbtree_node* node, void* user_data)
+{
+  printf("node: %li %s\n", node->key, (char*) node->data);
+  return true;
+}
+
 int
 main()
 {
   struct rbtree T;
   rbtree_init(&T);
 
-  // TEST 1: special case
+  // TEST 1:
 
   rbtree_add(&T, 12, "hello");
   rbtree_add(&T, 8,  "hello");
@@ -52,6 +59,9 @@ main()
   rbtree_add(&T, 14, "hello");
   rbtree_add(&T, 13, "hello");
   rbtree_print(&T);
+
+  printf("\nITERATOR...\n");
+  rbtree_iterator(&T, test_cb, NULL);
 
   printf("\nREMOVING...\n");
 

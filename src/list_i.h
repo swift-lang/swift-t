@@ -30,7 +30,6 @@ struct list_i* list_i_create(void);
 int list_i_size(struct list_i* target);
 
 struct list_i_item* list_i_add(struct list_i* target, int data);
-#define list_i_push(target, data) list_i_add(target, data)
 
 struct list_i* list_i_parse(char* s);
 

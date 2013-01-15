@@ -769,6 +769,39 @@ delete_case6(struct rbtree* target,
     valgrind_fail("X");
 }
 
+static bool iterator_loop(struct rbtree_node* node,
+                          rbtree_callback cb,
+                          void* user_data);
+
+void
+rbtree_iterator(struct rbtree* target, rbtree_callback cb,
+                void* user_data)
+{
+  struct rbtree_node* root = target->root;
+  if (root == NULL)
+    return;
+  iterator_loop(root, cb, user_data);
+}
+
+static bool
+iterator_loop(struct rbtree_node* node, rbtree_callback cb,
+              void* user_data)
+{
+  if (node->left != NULL)
+  {
+    bool b = iterator_loop(node->left, cb, user_data);
+    if (!b) return false;
+  }
+  bool b = cb(node, user_data);
+  if (!b) return false;
+  if (node->right != NULL)
+  {
+    bool b = iterator_loop(node->right, cb, user_data);
+    if (!b) return false;
+  }
+  return true;
+}
+
 bool
 rbtree_move(struct rbtree* target, long key_old, long key_new)
 {

@@ -229,7 +229,7 @@ list_ip_ordered_insert_unique(struct list_ip* target,
    This is expensive: singly linked list.
 */
 void*
-list_ip_pop(struct list_ip* target)
+list_ip_poll(struct list_ip* target)
 {
   // NOTE_F;
 
@@ -261,7 +261,7 @@ list_ip_pop(struct list_ip* target)
    Remove and return head of list.
  */
 void*
-list_ip_poll(struct list_ip* target)
+list_ip_pop(struct list_ip* target)
 {
   void* data;
   if (target->size == 0)

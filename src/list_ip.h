@@ -34,8 +34,6 @@ void list_ip_append(struct list_ip* target, int key, void* data);
 
 bool list_ip_add(struct list_ip* target, int key, void* data);
 
-#define list_ip_push(target, key, data) list_ip_add(target, key, data)
-
 //struct list_ip_item* list_ip_replace(struct list_ip* target,
 //                                 int key, void* data);
 
