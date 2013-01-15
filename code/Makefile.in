@@ -19,7 +19,7 @@ INSTALL_LIB     = $(INSTALL_PREFIX)/lib
 INSTALL_SCRIPTS = $(INSTALL_PREFIX)/scripts
 INSTALL_EXPORT  = $(INSTALL_PREFIX)/export
 # The submit scripts are loaded from their respective module.mk files
-SCRIPTS_SUBMIT  := 
+SCRIPTS_SUBMIT  :=
 
 # Shared object suffix is .so on Linux, .dylib on Mac
 # GCC shared library creation argument
@@ -182,7 +182,7 @@ endif
 # Formats to one file per line & extracts junk and extra files in *.d
 deps.txt: $(DEPS)
 	$(Q) "  DEPS.TXT "
-	$(E) $(srcdir)/collect.sh $(@) $(DEPS)
+	$(E) maint/collect.sh $(@) $(DEPS)
 
 # Check existing *.d files for files that do not exist
 # Useful when dependency file generation is failing
