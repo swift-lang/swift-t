@@ -1,3 +1,4 @@
+
 /*
  * list2.h
  *
@@ -36,5 +37,7 @@ struct list2_item* list2_add(struct list2* target, void* data);
 void* list2_pop(struct list2* target);
 
 void list2_remove_item(struct list2* target, struct list2_item* item);
+
+#define list2_size(L) (L->size)
 
 #endif

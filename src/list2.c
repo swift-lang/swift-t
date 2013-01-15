@@ -94,9 +94,3 @@ list2_remove_item(struct list2* target, struct list2_item* item)
     item->next->prev = item->prev;
   target->size--;
 }
-
-int
-list2_size(struct list2* target)
-{
-  return target->size;
-}
