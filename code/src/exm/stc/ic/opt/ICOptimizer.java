@@ -107,6 +107,7 @@ public class ICOptimizer {
     // results can be cleaned up by forward dataflow
     if (iteration == nIterations - 2) {
       pipe.addPass(new Pipeline());
+      pipe.addPass(new Validate());
     }
     
     // Do this after forward dataflow since forward dataflow will be
