@@ -125,8 +125,16 @@ void valgrind_assert_failed_msg(const char *file, int line,
    Cause valgrind assertion error behavior w/o condition
  */
 #define valgrind_fail(msg...) \
-  valgrind_assert_failed_msg(__FILE__, __LINE__, ## msg);
+  valgrind_assert_failed_msg(__FILE__, __LINE__, ## msg)
 
+/**
+   Allows for GDB/Eclipse debugging of MPI applications
+   From shell, set environment:
+     GDB_SPIN=<rank to which you want to attach>
+   Then have each process call gdb_spin(rank) with its rank
+   gdb_spin() will report the PID to which to attach
+   Attach to that PID, then set variable t=1 to continue stepping
+ */
 void gdb_spin(int target);
 
 /**
