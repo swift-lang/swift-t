@@ -773,14 +773,15 @@ static bool iterator_loop(struct rbtree_node* node,
                           rbtree_callback cb,
                           void* user_data);
 
-void
+bool
 rbtree_iterator(struct rbtree* target, rbtree_callback cb,
                 void* user_data)
 {
   struct rbtree_node* root = target->root;
   if (root == NULL)
-    return;
-  iterator_loop(root, cb, user_data);
+    return false;
+  bool b = iterator_loop(root, cb, user_data);
+  return b;
 }
 
 static bool
@@ -790,16 +791,16 @@ iterator_loop(struct rbtree_node* node, rbtree_callback cb,
   if (node->left != NULL)
   {
     bool b = iterator_loop(node->left, cb, user_data);
-    if (!b) return false;
+    if (b) return true;
   }
   bool b = cb(node, user_data);
-  if (!b) return false;
+  if (b) return true;
   if (node->right != NULL)
   {
     bool b = iterator_loop(node->right, cb, user_data);
-    if (!b) return false;
+    if (b) return true;
   }
-  return true;
+  return false;
 }
 
 bool

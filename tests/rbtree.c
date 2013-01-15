@@ -39,7 +39,7 @@ static bool
 test_cb(struct rbtree_node* node, void* user_data)
 {
   printf("node: %li %s\n", node->key, (char*) node->data);
-  return true;
+  return false;
 }
 
 int
