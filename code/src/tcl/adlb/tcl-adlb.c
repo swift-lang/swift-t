@@ -287,7 +287,7 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
   // int ADLB_Put(void *work_buf, int work_len, int reserve_rank,
   //              int answer_rank, int work_type, int work_prio)
   int rc = ADLB_Put(cmd, strlen(cmd)+1, reserve_rank, adlb_rank,
-                    work_type, priority);
+                    work_type, priority, 1);
 
   ASSERT(rc == ADLB_SUCCESS);
   return TCL_OK;
@@ -369,8 +369,9 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
 #endif
 
 #ifdef USE_XLB
+  MPI_Comm task_comm;
   rc = ADLB_Get(req_type, result, &work_len,
-                &answer_rank, &work_type);
+                &answer_rank, &work_type, &task_comm);
   if (rc == ADLB_SHUTDOWN)
   {
     result[0] = '\0';
