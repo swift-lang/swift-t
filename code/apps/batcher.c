@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
   int num_types = 1;
   int type_vect[2] = {CMDLINE};
 
-  int work_prio, work_type,  work_len,
+  int work_type,  work_len,
     answer_rank;
 
   int quiet = 1;
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
   num_servers = 1;		/* one server should be enough */
   use_debug_server = 0;		/* default: no debug server */
   rc = ADLB_Init(num_servers, 1, type_vect, &am_server, &app_comm);
-  if ( !am_server && !am_debug_server ) /* application process */
+  if ( !am_server ) /* application process */
   {
     MPI_Comm_rank( app_comm, &my_app_rank );
   }
@@ -78,8 +78,8 @@ int main(int argc, char *argv[])
 
 	if (cmdbuffer[0] != '#') {
 	  /* put command into adlb here */
-	  rc = ADLB_Put(cmdbuffer, strlen(cmdbuffer)+1, -1, -1,
-	                CMDLINE, 1);
+	  rc = ADLB_Put(cmdbuffer, strlen(cmdbuffer)+1, ADLB_RANK_ANY,
+	                -1, CMDLINE, 1, 1);
 	  printf("put cmd, rc = %d\n", rc);
 	}
       }
@@ -92,8 +92,10 @@ int main(int argc, char *argv[])
     while (!done)
     {
       printf("Getting a command\n");
+      MPI_Comm task_comm;
       rc = ADLB_Get(CMDLINE,
-                    cmdbuffer, &work_len, &answer_rank, &work_type);
+                    cmdbuffer, &work_len, &answer_rank, &work_type,
+                    &task_comm);
 
       if ( rc == ADLB_SHUTDOWN )
       {

@@ -52,6 +52,7 @@ steal_payloads(int target, int count )
   MPI_Status status;
   int length = count * sizeof(struct packed_put);
   struct packed_put* wus = malloc(length);
+  valgrind_assert(wus);
   RECV(wus, length, MPI_BYTE, target, ADLB_TAG_RESPONSE_STEAL);
 
   for (int i = 0; i < count; i++)
@@ -59,7 +60,8 @@ steal_payloads(int target, int count )
     RECV(xfer, wus[i].length, MPI_BYTE, target,
          ADLB_TAG_RESPONSE_STEAL);
     workqueue_add(wus[i].type, wus[i].putter, wus[i].priority,
-                  wus[i].answer, wus[i].target, wus[i].length, xfer);
+                  wus[i].answer, wus[i].target, wus[i].length,
+                  wus[i].parallelism, xfer);
   }
   free(wus);
   return ADLB_SUCCESS;

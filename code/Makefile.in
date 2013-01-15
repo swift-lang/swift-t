@@ -15,6 +15,7 @@ INSTALL_PREFIX  = @prefix@
 INSTALL_ETC     = $(INSTALL_PREFIX)/etc
 INSTALL_LIB     = $(INSTALL_PREFIX)/lib
 INSTALL_INCLUDE = $(INSTALL_PREFIX)/include
+INSTALL_TOKEN   = $(INSTALL_ETC)/install.txt
 
 # Verbosity control:
 ifeq ($(V),1)
@@ -79,17 +80,23 @@ endif
 
 ### INCLUDES
 
+DIR  :=
 SRCS :=
 OBJS :=
 DEPS :=
+TEST_SRCS :=
+TEST_OBJS :=
+TEST_DEPS :=
+
 include src/module.mk
+include tests/module.mk
 
 ### DEPS
 
-deps: $(DEPS)
+deps: $(DEPS) $(TEST_DEPS)
 
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
-  -include $(DEPS)
+  -include $(DEPS) $(TEST_DEPS)
 endif
 
 # default rule for generating dependency files (deps)
@@ -97,6 +104,10 @@ endif
 	$(Q) "  DEP		$(@)"
 	$(E) CC=$(CC) maint/depend.sh \
              $(dir $(<)) $(CFLAGS) $(<) > $(@)
+
+deps.txt: $(DEPS) $(TEST_DEPS)
+	$(Q) "  DEPS.TXT $(TEST_DEPS)"
+	$(E) maint/collect.sh $(@) $(DEPS) $(TEST_DEPS)
 
 ### COMPILE
 
@@ -125,16 +136,18 @@ $(ADLB_SO): $(OBJS) $(NLOBJS) lib
 #       Touch this so re-installation has the correct source directory
 	$(E) touch source.txt
 
-### APPS
+### APPS AND TESTS
 
 # This gives a false autoscan warning for token 'install'
-apps/%.x: apps/%.o install
+%.x: %.o $(INSTALL_TOKEN)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(CFLAGS) -o $(@) $(<) $(LDFLAGS) \
              -L lib -l adlb $(LIBS) \
-	     $(RPATH)
+	     $(RPATH) -Wl,-rpath -Wl,$(INSTALL_LIB)
 
 ### INSTALL
+
+INSTALLED_HEADERS = src/adlb.h src/adlb-defs.h
 
 HAVE_CP_U = @CP_U@
 ifeq ($(HAVE_CP_U),yes)
@@ -145,17 +158,21 @@ endif
 
 PROVENANCE = version.txt source.txt config.log
 
-install: $(ADLB)
+install: $(INSTALL_TOKEN)
+
+$(INSTALL_TOKEN): $(ADLB) $(INSTALLED_HEADERS)
 	$(Q)
-	$(Q) "  INSTALL		$(INSTALL_PREFIX)"
+	$(Q) "  INSTALL	$(INSTALL_PREFIX)"
 	$(E) mkdir -pv $(INSTALL_ETC)
 	$(E) mkdir -pv $(INSTALL_INCLUDE)
 	$(E) mkdir -pv $(INSTALL_LIB)
 	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
-	$(E) cp $(CP_ARGS) src/adlb.h $(INSTALL_INCLUDE)
-	$(E) cp $(CP_ARGS) src/adlb-defs.h $(INSTALL_INCLUDE)
+	$(E) cp $(CP_ARGS) $(INSTALLED_HEADERS) $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) $(ADLB) $(INSTALL_LIB)
+	$(E) touch $(INSTALL_ETC)/install.txt
 	$(Q)
+
+.PHONY: install
 
 ### CLEAN
 

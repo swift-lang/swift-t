@@ -182,6 +182,8 @@ AC_DEFINE_UNQUOTED(ENABLE_LOG_TRACE, [${ENABLE_LOG_TRACE}],
 AC_DEFINE_UNQUOTED(ENABLE_LOG_TRACE_MPI, [${ENABLE_LOG_TRACE_MPI}],
                    [Whether to trace MPI calls])
 
-AC_OUTPUT(Makefile)
-AC_OUTPUT(src/module.mk)
-AC_OUTPUT(src/adlb-version.h)
+AC_CONFIG_FILES(Makefile
+                src/module.mk
+                src/adlb-version.h
+                tests/module.mk)
+AC_OUTPUT

@@ -32,6 +32,9 @@ void adlb_exit_handler(void);
 /** True after a Get() receives a shutdown code */
 static bool got_shutdown = false;
 
+/** Cached copy of MPI world group */
+static MPI_Group world_group;
+
 static void
 check_versions()
 {
@@ -76,6 +79,8 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   rc = MPI_Comm_dup(MPI_COMM_WORLD, &adlb_all_comm);
   ASSERT(rc == MPI_SUCCESS);
 
+  MPI_Comm_group(MPI_COMM_WORLD, &world_group);
+
   if (xlb_world_rank < xlb_workers)
   {
     *am_server = 0;
@@ -109,25 +114,27 @@ ADLB_Version(version* output)
 
 adlb_code
 ADLBP_Put(void* payload, int length, int target, int answer,
-          int type, int priority)
+          int type, int priority, int parallelism)
 {
   MPI_Status status;
   MPI_Request request;
   /** In a redirect, we send the payload to a worker */
   int payload_dest;
 
-  DEBUG("ADLB_Put: target=%i %s", target, (char*) payload);
+  DEBUG("ADLB_Put: target=%i x%i %s",
+        target, parallelism, (char*) payload);
 
   CHECK_MSG(type >= 0 && xlb_type_index(type) >= 0,
             "ADLB_Put(): invalid work type: %d\n", type);
 
   /** Server to contact */
   int to_server;
-  if (target != ADLB_RANK_ANY)
-    to_server = xlb_map_to_server(target);
-    // xlb_workers + (target % xlb_servers);
-  else
+  if (target == ADLB_RANK_ANY)
     to_server = xlb_my_server;
+  else if (target < xlb_world_size)
+    to_server = xlb_map_to_server(target);
+  else
+    valgrind_fail("ADLB_Put(): invalid target rank: %i", target);
 
   struct packed_put p;
   p.type = type;
@@ -136,6 +143,7 @@ ADLBP_Put(void* payload, int length, int target, int answer,
   p.answer = answer;
   p.target = target;
   p.length = length;
+  p.parallelism = parallelism;
 
   IRECV(&payload_dest, 1, MPI_INT, to_server, ADLB_TAG_RESPONSE_PUT);
   SEND(&p, sizeof(p), MPI_BYTE, to_server, ADLB_TAG_PUT);
@@ -161,7 +169,7 @@ ADLBP_Put(void* payload, int length, int target, int answer,
 
 adlb_code
 ADLBP_Get(int type_requested, void* payload, int* length,
-          int* answer, int* type_recvd)
+          int* answer, int* type_recvd, MPI_Comm* comm)
 {
   MPI_Status status;
   MPI_Request request;
@@ -183,13 +191,23 @@ ADLBP_Get(int type_requested, void* payload, int* length,
     return ADLB_SHUTDOWN;
   }
 
-  DEBUG("ADLB_Get: payload source: %i", g.payload_source);
+  DEBUG("ADLB_Get(): payload source: %i", g.payload_source);
   RECV(payload, g.length, MPI_BYTE, g.payload_source, ADLB_TAG_WORK);
-
   mpi_recv_sanity(&status, MPI_BYTE, g.length);
-  TRACE("ADLB_Get: got: %s", (char*) payload);
+  TRACE("ADLB_Get(): got: %s", (char*) payload);
 
-  STATS("GOT_WORK");
+  if (g.parallelism > 1)
+  {
+    // Recv ranks for output comm
+    int ranks[g.parallelism];
+    RECV(ranks, g.parallelism, MPI_INT, xlb_my_server,
+         ADLB_TAG_RESPONSE_GET);
+    MPI_Group group;
+    MPI_Group_incl(world_group, g.parallelism, ranks, &group);
+    MPI_Comm_create_group(MPI_COMM_WORLD, group, 0, comm);
+  }
+  else
+    *comm = MPI_COMM_SELF;
 
   *length = g.length;
   *answer = g.answer_rank;

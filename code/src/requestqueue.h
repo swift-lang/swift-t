@@ -30,6 +30,12 @@ int requestqueue_matches_type(int type);
 int requestqueue_size(void);
 
 /**
+   Get number workers (in result) equal to parallelism
+   @return True iff work was found
+ */
+bool requestqueue_parallel_workers(int type, int parallelism, int* result);
+
+/**
    @param r Where to write output request_pairs.
             Must be preallocated to max*sizeof(request_pair)
    @param max Maximal number of request_pairs to return

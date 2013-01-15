@@ -91,12 +91,13 @@ setup_mpe_events(int num_types, int* types)
 
 adlb_code
 ADLB_Put(void *work_buf, int work_len, int reserve_rank,
-         int answer_rank, int work_type, int work_prio)
+         int answer_rank, int work_type, int work_prio,
+         int parallelism)
 {
   MPE_LOG(xlb_mpe_wkr_put_start);
 
-  int rc = ADLBP_Put(work_buf,work_len,reserve_rank,answer_rank,
-                 work_type,work_prio);
+  int rc = ADLBP_Put(work_buf, work_len, reserve_rank, answer_rank,
+                     work_type, work_prio, parallelism);
 
   MPE_LOG(xlb_mpe_wkr_put_end);
 
@@ -137,7 +138,7 @@ mpe_log_user_state(int type)
 
 adlb_code
 ADLB_Get(int type_requested, void* payload, int* length,
-         int* answer, int* type_recvd)
+         int* answer, int* type_recvd, MPI_Comm* comm)
 {
 #ifdef ENABLE_MPE
   mpe_log_user_state(-1);
@@ -145,7 +146,7 @@ ADLB_Get(int type_requested, void* payload, int* length,
 #endif
 
   int rc = ADLBP_Get(type_requested, payload, length, answer,
-                     type_recvd);
+                     type_recvd, comm);
 
 #ifdef ENABLE_MPE
   MPE_Log_bare_event(xlb_mpe_wkr_get_end);

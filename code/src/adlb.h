@@ -34,14 +34,14 @@ adlb_code ADLB_Server(long max_memory);
 adlb_code ADLB_Version(version* output);
 
 adlb_code ADLBP_Put(void* payload, int length, int target, int answer,
-                    int type, int priority);
+                    int type, int priority, int parallelism);
 adlb_code ADLB_Put(void* payload, int length, int target, int answer,
-                   int type, int priority);
+                   int type, int priority, int parallelism);
 
 adlb_code ADLBP_Get(int type_requested, void* payload, int* length,
-                    int* answer, int* type_recvd);
+                    int* answer, int* type_recvd, MPI_Comm* comm);
 adlb_code ADLB_Get(int type_requested, void* payload, int* length,
-                   int* answer, int* type_recvd);
+                   int* answer, int* type_recvd, MPI_Comm* comm);
 
 adlb_code ADLBP_Iget(int type_requested, void* payload, int* length,
                      int* answer, int* type_recvd);

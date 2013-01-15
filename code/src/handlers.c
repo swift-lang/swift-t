@@ -185,8 +185,10 @@ handle_sync(int caller)
   return rc;
 }
 
+static inline adlb_code check_parallel_tasks(void);
+
 static adlb_code put(int type, int putter, int priority, int answer,
-                     int target, int length);
+                     int target, int length, int parallelism);
 
 static adlb_code
 handle_put(int caller)
@@ -199,8 +201,12 @@ handle_put(int caller)
   RECV(&p, sizeof(p), MPI_BYTE, caller, ADLB_TAG_PUT);
   mpi_recv_sanity(&status, MPI_BYTE, sizeof(p));
 
-  int rc = put(p.type, p.putter, p.priority, p.answer, p.target,
-               p.length);
+  adlb_code rc;
+  rc = put(p.type, p.putter, p.priority, p.answer, p.target,
+               p.length, p.parallelism);
+  ADLB_CHECK(rc);
+
+  rc = check_parallel_tasks();
   ADLB_CHECK(rc);
 
   MPE_LOG(xlb_mpe_svr_put_end);
@@ -215,13 +221,24 @@ static inline adlb_code redirect_work(int type, int putter,
 
 static adlb_code
 put(int type, int putter, int priority, int answer, int target,
-    int length)
+    int length, int parallelism)
 {
   MPI_Status status;
   int worker;
-  if (target >= 0)
+  if (parallelism == 1)
   {
-    worker = requestqueue_matches_target(target, type);
+    // Attempt to redirect work unit to another worker
+    if (target >= 0)
+    {
+      worker = requestqueue_matches_target(target, type);
+      if (worker != ADLB_RANK_NULL)
+      {
+        redirect_work(type, putter, priority, answer, target,
+                      length, worker);
+        return ADLB_SUCCESS;
+      }
+    }
+    worker = requestqueue_matches_type(type);
     if (worker != ADLB_RANK_NULL)
     {
       redirect_work(type, putter, priority, answer, target,
@@ -229,24 +246,14 @@ put(int type, int putter, int priority, int answer, int target,
       return ADLB_SUCCESS;
     }
   }
-  worker = requestqueue_matches_type(type);
-  if (worker != ADLB_RANK_NULL)
-  {
-    redirect_work(type, putter, priority, answer, target,
-                  length, worker);
-    return ADLB_SUCCESS;
-  }
 
+  // Store this work unit on this server
   DEBUG("server storing work...");
-
   SEND(&mpi_rank, 1, MPI_INT, putter, ADLB_TAG_RESPONSE_PUT);
   RECV(xfer, length, MPI_BYTE, putter, ADLB_TAG_WORK);
-
-  DEBUG("work unit: %s", xfer);
-
-  // Enqueue this
+  DEBUG("work unit: x%i %s ", parallelism, xfer);
   workqueue_add(type, putter, priority, answer, target,
-                length, xfer);
+                length, parallelism, xfer);
 
   return ADLB_SUCCESS;
 }
@@ -265,9 +272,8 @@ redirect_work(int type, int putter, int priority, int answer,
   g.length = length;
   g.type = type;
   g.payload_source = putter;
-  DEBUG("redirect: worker");
+  g.parallelism = 1;
   SEND(&g, sizeof(g), MPI_BYTE, worker, ADLB_TAG_RESPONSE_GET);
-  DEBUG("redirect: putter");
   SEND(&worker, 1, MPI_INT, putter, ADLB_TAG_RESPONSE_PUT);
 
   return ADLB_SUCCESS;
@@ -277,7 +283,8 @@ static inline adlb_code send_work_unit(int worker, xlb_work_unit* wu);
 
 static inline adlb_code send_work(int worker, long wuid, int type,
                                   int answer,
-                                  void* payload, int length);
+                                  void* payload, int length,
+                                  int parallelism);
 
 static inline adlb_code send_no_work(int worker);
 
@@ -326,6 +333,9 @@ handle_get(int caller)
     DEBUG("rechecking...");
     xlb_requestqueue_recheck();
   }
+
+  adlb_code rc = check_parallel_tasks();
+  ADLB_CHECK(rc);
 
   end:
   MPE_LOG(xlb_mpe_svr_get_end);
@@ -393,6 +403,31 @@ xlb_requestqueue_recheck()
 }
 
 /**
+   Try to release a parallel task
+ */
+static inline adlb_code
+check_parallel_tasks()
+{
+  TRACE_START;
+  xlb_work_unit* wu;
+  int* ranks = NULL;
+  bool found = workqueue_pop_parallel(&wu, &ranks);
+  if (! found)
+    return ADLB_NOTHING;
+  printf("ranks: %p\n", ranks);
+  for (int i = 0; i < wu->parallelism; i++)
+  {
+    send_work_unit(ranks[i], wu);
+    SEND(ranks, wu->parallelism, MPI_INT, ranks[i],
+         ADLB_TAG_RESPONSE_GET);
+  }
+  free(ranks);
+  work_unit_free(wu);
+  TRACE_END;
+  return ADLB_SUCCESS;
+}
+
+/**
    Simple wrapper function
  */
 static inline adlb_code
@@ -400,7 +435,7 @@ send_work_unit(int worker, xlb_work_unit* wu)
 {
   int rc = send_work(worker,
                      wu->id, wu->type, wu->answer,
-                     wu->payload, wu->length);
+                     wu->payload, wu->length, wu->parallelism);
   return rc;
 }
 
@@ -410,7 +445,7 @@ send_work_unit(int worker, xlb_work_unit* wu)
  */
 static inline adlb_code
 send_work(int worker, long wuid, int type, int answer,
-          void* payload, int length)
+          void* payload, int length, int parallelism)
 {
   DEBUG("send_work() to: %i wuid: %li...", worker, wuid);
   TRACE("work_unit: %s\n", (char*) payload);
@@ -421,6 +456,7 @@ send_work(int worker, long wuid, int type, int answer,
   g.payload_source = mpi_rank;
   TRACE("payload_source: %i", g.payload_source);
   g.type = type;
+  g.parallelism = parallelism;
 
   SEND(&g, sizeof(g), MPI_BYTE, worker, ADLB_TAG_RESPONSE_GET);
   SEND(payload, length, MPI_BYTE, worker, ADLB_TAG_WORK);
@@ -1169,7 +1205,7 @@ put_targeted(int type, int putter, int priority, int answer,
       if (worker != ADLB_RANK_NULL)
       {
         int wuid = workqueue_unique();
-        rc = send_work(target, wuid, type, answer, payload, length);
+        rc = send_work(target, wuid, type, answer, payload, length, 1);
         ADLB_CHECK(rc);
         return ADLB_SUCCESS;
       }
@@ -1177,7 +1213,7 @@ put_targeted(int type, int putter, int priority, int answer,
       {
         DEBUG("put_targeted(): server storing work...");
         workqueue_add(type, putter, priority, answer, target,
-                      length, payload);
+                      length, 1, payload);
       }
     }
     else
@@ -1186,7 +1222,7 @@ put_targeted(int type, int putter, int priority, int answer,
       rc = xlb_sync(server);
       ADLB_CHECK(rc);
       rc = ADLB_Put(payload, length, target, answer,
-                        type, priority);
+                        type, priority, 1);
       ADLB_CHECK(rc);
     }
   }

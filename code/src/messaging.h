@@ -111,6 +111,7 @@ struct packed_put
   int answer;
   int target;
   int length;
+  int parallelism;
 };
 
 /**
@@ -124,6 +125,8 @@ struct packed_get_response
   int type;
   /** From whom the payload will come (may be a redirect) */
   int payload_source;
+  /** Parallelism: 1=normal single process task, >1=parallel task */
+  int parallelism;
 };
 
 struct packed_create_response

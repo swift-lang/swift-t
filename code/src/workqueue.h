@@ -33,6 +33,8 @@ typedef struct
   int target;
   /** Length of item */
   int length;
+  /** Number of processes required to run this task */
+  int parallelism;
   /** Bulk work unit data */
   void* payload;
 } xlb_work_unit;
@@ -42,7 +44,8 @@ void workqueue_init(int work_types);
 xlb_work_unit_id workqueue_unique(void);
 
 void workqueue_add(int type, int putter, int priority, int answer,
-                   int target, int length, void* work_unit);
+                   int target, int length, int parallelism,
+                   void* payload);
 
 /**
    Return work unit for rank target and given type.
@@ -52,14 +55,11 @@ void workqueue_add(int type, int putter, int priority, int answer,
 xlb_work_unit* workqueue_get(int target, int type);
 
 /**
-   Return item with highest priority that is not targeted
+   Are we able to release a parallel task?
+   If so, return true, put the work unit in wu, and the ranks in
+   ranks.  Caller must free ranks
  */
-adlb_code workqueue_pop(xlb_work_unit* w);
-
-/**
-
- */
-adlb_code workqueue_select_type(int type, xlb_work_unit* w);
+bool workqueue_pop_parallel(xlb_work_unit** wu, int** ranks);
 
 adlb_code workqueue_steal(int max_memory, int* count,
                           xlb_work_unit*** stolen);

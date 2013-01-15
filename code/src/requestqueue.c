@@ -44,7 +44,7 @@ requestqueue_init(int work_types)
 {
   rq_work_types = work_types;
 
-  table_ip_init(&targets, 8);
+  table_ip_init(&targets, 128);
 
   type_requests = malloc(sizeof(struct list2) * work_types);
   for (int i = 0; i < rq_work_types; i++)
@@ -65,7 +65,7 @@ requestqueue_add(int rank, int type)
   R->item = item;
   bool b = table_ip_add(&targets, rank, R);
   // Assert rank was not already entered
-  ASSERT(b);
+  valgrind_assert_msg(b, "requestqueue: double add: rank: %i", rank);
 }
 
 /**
@@ -112,9 +112,35 @@ requestqueue_matches_type(int type)
   return result;
 }
 
+bool
+requestqueue_parallel_workers(int type, int parallelism, int* ranks)
+{
+  TRACE_START;
+  bool result = false;
+  struct list2* L = &type_requests[type];
+  int count = list2_size(L);
+  if (count >= parallelism)
+  {
+    TRACE("requestqueue_parallel_workers(): found something!");
+    result = true;
+    for (int i = 0; i < parallelism; i++)
+    {
+      request* R = list2_pop(L);
+      ranks[i] = R->rank;
+      // Release memory:
+      request* entry = (request*) table_ip_remove(&targets, R->rank);
+      valgrind_assert(entry);
+      free(R);
+    }
+  }
+  TRACE_END;
+  return result;
+}
+
 void
 requestqueue_remove(int worker_rank)
 {
+  TRACE("requestqueue_remove(%i)", worker_rank);
   request* r = (request*) table_ip_remove(&targets, worker_rank);
   valgrind_assert(r);
   int type = r->type;

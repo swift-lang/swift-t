@@ -24,6 +24,7 @@
 #include "common.h"
 #include "debug.h"
 #include "messaging.h"
+#include "requestqueue.h"
 #include "workqueue.h"
 
 /** Uniquify work units on this server */
@@ -37,6 +38,7 @@ static xlb_work_unit_id unique = 1;
 static struct table_ip targeted_work;
 
 /**
+   typed_work
    Array of trees: one for each work type
    Does not contain targeted work
    The tree contains work_unit*
@@ -44,14 +46,30 @@ static struct table_ip targeted_work;
  */
 static struct rbtree* typed_work;
 
+/**
+   parallel_work
+   Array of trees: one for each work type
+   Does not contain targeted work
+   The tree contains work_unit*
+   Ordered by work unit priority
+ */
+static struct rbtree* parallel_work;
+
 void
 workqueue_init(int work_types)
 {
   DEBUG("workqueue_init(work_types=%i)", work_types);
-  table_ip_init(&targeted_work, 128);
+  bool b = table_ip_init(&targeted_work, 128);
+  valgrind_assert(b);
   typed_work = malloc(sizeof(struct rbtree) * work_types);
+  valgrind_assert(typed_work != NULL);
+  parallel_work = malloc(sizeof(struct rbtree) * work_types);
+  valgrind_assert(parallel_work != NULL);
   for (int i = 0; i < work_types; i++)
+  {
     rbtree_init(&typed_work[i]);
+    rbtree_init(&parallel_work[i]);
+  }
 }
 
 xlb_work_unit_id
@@ -62,7 +80,8 @@ workqueue_unique()
 
 void
 workqueue_add(int type, int putter, int priority, int answer,
-              int target_rank, int length, void* item)
+              int target_rank, int length, int parallelism,
+              void* payload)
 {
   xlb_work_unit* wu = malloc(sizeof(xlb_work_unit));
   wu->id = workqueue_unique();
@@ -72,18 +91,30 @@ workqueue_add(int type, int putter, int priority, int answer,
   wu->answer = answer;
   wu->target = target_rank;
   wu->length = length;
+  wu->parallelism = parallelism;
   wu->payload = malloc(length);
-  memcpy(wu->payload, item, length);
+  memcpy(wu->payload, payload, length);
 
-  DEBUG("workqueue_add(): %li: %s", wu->id, (char*) wu->payload);
+  DEBUG("workqueue_add(): %li: x%i %s",
+        wu->id, wu->parallelism, (char*) wu->payload);
 
-  if (target_rank < 0)
+  if (target_rank < 0 && parallelism == 1)
   {
+    // Untargeted single-process task
+    TRACE("workqueue_add(): single-process");
     struct rbtree* T = &typed_work[type];
+    rbtree_add(T, -priority, wu);
+  }
+  else if (parallelism > 1)
+  {
+    // Untargeted parallel task
+    TRACE("workqueue_add(): parallel task");
+    struct rbtree* T = &parallel_work[type];
     rbtree_add(T, -priority, wu);
   }
   else
   {
+    // Targeted task
     heap* A = table_ip_search(&targeted_work, target_rank);
     if (A == NULL)
     {
@@ -143,6 +174,75 @@ workqueue_get(int target, int type)
   DEBUG("workqueue_get(): untargeted: %li", wu->id);
   free(node);
   return wu;
+}
+
+/** Struct for user data during rbtree iterator search */
+struct pop_parallel_data
+{
+  /** Input: ADLB task type */
+  int type;
+  /** Output: work unit that can be run */
+  xlb_work_unit* wu;
+  /** Output: ranks on which to run work unit */
+  int* ranks;
+  /** Output: node in rbtree to remove */
+  struct rbtree_node* node;
+};
+
+static bool pop_parallel_cb(struct rbtree_node* node,
+                            void* user_data);
+
+bool
+workqueue_pop_parallel(xlb_work_unit** wu, int** ranks)
+{
+  TRACE_START;
+  bool result = false;
+  struct pop_parallel_data data = { -1, NULL, NULL };
+  for (int type = 0; type < xlb_types_size; type++)
+  {
+    data.type = type;
+    struct rbtree* T = &parallel_work[type];
+    TRACE("type: %i size: %i", type, rbtree_size(T));
+    bool found = rbtree_iterator(T, pop_parallel_cb, &data);
+    if (found)
+    {
+      *wu = data.wu;
+      *ranks = data.ranks;
+      result = true;
+      // Release memory:
+      rbtree_remove_node(T, data.node);
+      free(data.node);
+      goto end;
+    }
+  }
+  end:
+  TRACE_END;
+  return result;
+}
+
+static bool
+pop_parallel_cb(struct rbtree_node* node, void* user_data)
+{
+  xlb_work_unit* wu = node->data;
+  struct pop_parallel_data* data = user_data;
+
+  TRACE("pop_parallel_cb(): wu: %li x%i", wu->id, wu->parallelism);
+
+  int ranks[wu->parallelism];
+  bool found =
+      requestqueue_parallel_workers(data->type, wu->parallelism,
+                                    ranks);
+  if (found)
+  {
+    data->wu = wu;
+    data->ranks = malloc(wu->parallelism * sizeof(int));
+    data->node = node;
+    printf("data->ranks: %p\n", data->ranks);
+    valgrind_assert(data->ranks != NULL);
+    memcpy(data->ranks, ranks, wu->parallelism * sizeof(int));
+    return true;
+  }
+  return false;
 }
 
 /**
