@@ -80,18 +80,19 @@ public class FixupVariables implements OptimizerPass {
       }
     }
     for (Continuation c : block.getContinuations()) {
-      // First see what variables the continuation needs from the outer scope
-      for (Var v: c.requiredVars()) {
-        if (!availVars.contains(v.name())) {
-          neededVars.add(v.name());
-        }
-      }
-      
-      // Then see what variables the continuation defines inside itself
+      // First see what variables the continuation defines inside itself
       List<Var> constructVars = c.constructDefinedVars();
       List<String> constructVarNames = null;
       if (constructVars != null) {
         constructVarNames = Var.nameList(constructVars);
+      }
+      
+      // Next see what variables the continuation needs from the outer scope
+      // (or from its own defined vars)
+      for (Var v: c.requiredVars()) {
+        if (!availVars.contains(v.name())) {
+          neededVars.add(v.name());
+        }
       }
 
       for (Block innerBlock : c.getBlocks()) {
@@ -119,6 +120,8 @@ public class FixupVariables implements OptimizerPass {
           // Check all variables passed in are available
           // Check for redundant passing in, and any missing variables
           for (String passedIn : passedInVars) {
+            assert(visible.containsKey(passedIn)) : "passedIn var " + passedIn
+                  + " not visible.";
             if (!innerNeededVars.contains(passedIn)) {
               c.removePassedInVar(visible.get(passedIn));
             } else if (!availVars.contains(passedIn)) {

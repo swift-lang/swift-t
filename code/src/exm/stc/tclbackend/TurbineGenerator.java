@@ -2106,7 +2106,7 @@ public class TurbineGenerator implements CompilerBackend
 
     @Override
     public void startLoop(String loopName, List<Var> loopVars,
-        List<Var> initVals, List<Var> usedVariables,
+        List<Boolean> definedHere, List<Var> initVals, List<Var> usedVariables,
         List<Var> keepOpenVars, List<Boolean> blockingVars) {
 
       // call rule to start the loop, pass in initVals, usedVariables

@@ -1,9 +1,11 @@
 package exm.stc.ic.tree;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
@@ -25,10 +27,13 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICInstructions.Builtin;
+import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICInstructions.LoopContinue;
+import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.GenInfo;
@@ -47,14 +52,35 @@ public class ICContinuations {
   public static final String indent = ICUtil.indent;
 
   public static abstract class Continuation {
+    private Block parent;
+    
+    protected Continuation() {
+      this.parent = null;
+    }
+    
     public abstract ContinuationType getType();
+    
+    public Block parent() {
+      return this.parent;
+    }
 
+
+    public void setParent(Block parent) {
+      assert(parent != null);
+      this.parent = parent;
+    }
+    
     public abstract void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException;
 
     public abstract void prettyPrint(StringBuilder sb, String currentIndent);
 
-
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      prettyPrint(sb, "");
+      return sb.toString();
+    }
+    
     /** Returns all nested blocks in this continuation */
     public abstract List<Block> getBlocks();
     
@@ -77,22 +103,7 @@ public class ICContinuations {
     protected void replaceVarsInBlocks(Map<String, Arg> renames,
         boolean inputsOnly) {
       for (Block b: this.getBlocks()) {
-        HashMap<String, Arg> shadowed =
-                new HashMap<String, Arg>();
-
-        // See if any of the renamed vars are redeclared,
-        //  and if so temporarily remove them from the
-        //  rename map
-        for (Var v: b.getVariables()) {
-          String vName = v.name();
-          if (renames.containsKey(vName)) {
-            shadowed.put(vName, renames.get(vName));
-            renames.remove(vName);
-          }
-        }
         b.renameVars(renames, inputsOnly);
-
-        renames.putAll(shadowed);
       }
     }
 
@@ -271,7 +282,7 @@ public class ICContinuations {
     
     @Override
     public abstract Continuation clone();
-
+    
     /**
      * If the continuation should be put after all other continuations
      */
@@ -285,6 +296,7 @@ public class ICContinuations {
     }
 
     public abstract boolean isLoop();
+
   }
 
   public enum ContinuationType {
@@ -316,7 +328,8 @@ public class ICContinuations {
   public static abstract class AsyncContinuation extends Continuation {
     protected final List<Var> passedInVars;
     protected final List<Var> keepOpenVars;
-    public AsyncContinuation(List<Var> usedVars, List<Var> keepOpenVars) {
+    public AsyncContinuation(List<Var> usedVars,
+                            List<Var> keepOpenVars) {
       this.passedInVars = new ArrayList<Var>(usedVars);
       this.keepOpenVars = new ArrayList<Var>(keepOpenVars);
     }
@@ -336,6 +349,7 @@ public class ICContinuations {
     }
     @Override
     public void removePassedInVar(Var variable) {
+      assert(variable != null);
       ICUtil.removeVarInList(passedInVars, variable.name());
     }
     @Override
@@ -399,6 +413,7 @@ public class ICContinuations {
         List<Var> keepOpenVars) {
       super(usedVars, keepOpenVars);
       this.loopBody = block;
+      this.loopBody.setParent(this);
     }
 
     public Block getLoopBody() {
@@ -483,8 +498,7 @@ public class ICContinuations {
         Var loopVar, Var loopCounterVar, int splitDegree,
         boolean arrayClosed, List<Var> usedVariables,
         List<Var> keepOpenVars) {
-      this(loopName, 
-          new Block(BlockType.FOREACH_BODY), arrayVar, loopVar, loopCounterVar,
+      this(loopName, new Block(BlockType.FOREACH_BODY, null), arrayVar, loopVar, loopCounterVar,
           splitDegree, arrayClosed, usedVariables, keepOpenVars);
     }
 
@@ -641,18 +655,21 @@ public class ICContinuations {
     private Arg condition;
 
     public IfStatement(Arg condition) {
-      this(condition, new Block(BlockType.THEN_BLOCK),
-                          new Block(BlockType.ELSE_BLOCK));
+      this(condition, new Block(BlockType.THEN_BLOCK, null),
+                          new Block(BlockType.ELSE_BLOCK, null));
     }
 
     private IfStatement(Arg condition, Block thenBlock, Block elseBlock) {
+      super();
       assert(thenBlock != null);
       assert(elseBlock != null);
       this.condition = condition;
       this.thenBlock = thenBlock;
+      this.thenBlock.setParent(this);
       // Always have an else block to make more uniform: empty block is then
       // equivalent to no else block
       this.elseBlock = elseBlock;
+      this.elseBlock.setParent(this);
     }
 
     @Override
@@ -817,6 +834,8 @@ public class ICContinuations {
     private final String loopName;
     private final Var condVar;
     private final List<Var> loopVars;
+    // Whether loop var is defined here (instead of defined outside loop)
+    private final List<Boolean> definedHere;
     private final List<Var> initVals;
 
     /*
@@ -829,23 +848,27 @@ public class ICContinuations {
 
 
     public Loop(String loopName, List<Var> loopVars,
-            List<Var> initVals, List<Var> usedVariables,
+            List<Boolean> definedHere, List<Var> initVals, List<Var> usedVariables,
             List<Var> keepOpenVars, List<Boolean> blockingVars) {
-      this(loopName, new Block(BlockType.LOOP_BODY), loopVars, initVals,
-          usedVariables, keepOpenVars, blockingVars);
+      this(loopName, new Block(BlockType.LOOP_BODY, null), loopVars,
+          definedHere, initVals, usedVariables, keepOpenVars, blockingVars);
     }
 
     private Loop(String loopName, Block loopBody,
-        List<Var> loopVars,  List<Var> initVals,
+        List<Var> loopVars,  List<Boolean> definedHere,
+        List<Var> initVals,
         List<Var> usedVariables, List<Var> keepOpenVars,
         List<Boolean> blockingVars) {
       super(loopBody, usedVariables, keepOpenVars);
       this.loopName = loopName;
       this.condVar = loopVars.get(0);
       this.loopVars = new ArrayList<Var>(loopVars);
+      this.definedHere = new ArrayList<Boolean>(definedHere);
       this.initVals = new ArrayList<Var>(initVals);
       this.blockingVars = new ArrayList<Boolean>(blockingVars);
+      assert(loopVars.size() == definedHere.size());
       assert(loopVars.size() == initVals.size());
+      assert(loopVars.size() == blockingVars.size());
       for (int i = 0; i < loopVars.size(); i++) {
         Var loopV = loopVars.get(i);
         Var initV = initVals.get(i);
@@ -858,10 +881,55 @@ public class ICContinuations {
 
     @Override
     public Loop clone() {
+      Block body = this.loopBody.clone();
+      
       // Constructor creates copies of variable lists
-      // TODO: this needs to fix up the reference to the loopContinue/loopBreak instructions
-      return new Loop(loopName, this.loopBody.clone(), loopVars, initVals,
-          passedInVars, keepOpenVars, blockingVars);
+      Loop cloned = new Loop(loopName, body, loopVars, definedHere,
+          initVals, passedInVars, keepOpenVars, blockingVars);
+
+      // fix up the references to the loopContinue/loopBreak instructions
+      Pair<LoopBreak, LoopContinue> insts = findInstructions(body);
+      cloned.setLoopBreak(insts.val1);
+      cloned.setLoopContinue(insts.val2);
+      return cloned;
+    }
+
+    private Pair<LoopBreak, LoopContinue> findInstructions(Block body) {
+      LoopBreak breakInst = null;
+      LoopContinue continueInst = null;
+      Deque<Block> blocks = new ArrayDeque<Block>();
+      blocks.add(body);
+      while (!blocks.isEmpty()) {
+        // Find instructions
+        Block curr = blocks.pop();
+        for (Instruction inst: curr.getInstructions()) {
+          if (inst.op == Opcode.LOOP_BREAK) {
+            assert(breakInst == null): "duplicate instructions: " + breakInst
+                    + " and \n" + inst;
+            breakInst = (LoopBreak)inst;
+          } else if (inst.op == Opcode.LOOP_CONTINUE) {
+            assert(continueInst == null): "duplicate instructions: " + continueInst
+                    + " and \n" + inst;
+            continueInst = (LoopContinue)inst;
+          }
+        }
+        
+        for (Continuation cont: curr.getContinuations()) {
+          // Don't go into inner loops, as they will have their own
+          // break/continue instructions
+          if (cont.getType() != ContinuationType.LOOP) {
+            for (Block inner: cont.getBlocks()) {
+              blocks.push(inner);
+            }
+          }
+        }
+      }
+      
+      assert(loopBreak != null) : "No loop break for loop\n" + this;
+      assert(loopContinue != null) : "No loop continue for loop\n" + this;
+      
+      Pair<LoopBreak, LoopContinue> insts = Pair.create(loopBreak, loopContinue);
+      return insts;
     }
 
     @Override
@@ -885,7 +953,7 @@ public class ICContinuations {
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
-      gen.startLoop(loopName, loopVars, initVals,
+      gen.startLoop(loopName, loopVars, definedHere, initVals,
                     passedInVars, keepOpenVars, blockingVars);
       this.loopBody.generate(logger, gen, info);
       gen.endLoop();
@@ -922,6 +990,7 @@ public class ICContinuations {
         boolean inputsOnly) {
       ICUtil.replaceVarsInList(renames, initVals, false);
       if (!inputsOnly) {
+        ICUtil.replaceVarsInList(renames, loopVars, false);
         loopContinue.renameVars(renames);
         loopBreak.renameVars(renames);
       }
@@ -959,10 +1028,12 @@ public class ICContinuations {
 
     @Override
     public List<Var> constructDefinedVars() {
-      ArrayList<Var> defVars = new ArrayList<Var>(
-                                      loopVars.size() + 1);
-      defVars.addAll(this.loopVars);
-      defVars.add(this.condVar);
+      ArrayList<Var> defVars = new ArrayList<Var>();
+      for (int i = 0; i < this.loopVars.size(); i++) {
+        if (this.definedHere.get(i)) {
+          defVars.add(this.loopVars.get(i));
+        }
+      }
       return defVars;
     }
 
@@ -1033,12 +1104,14 @@ public class ICContinuations {
     private final Block block;
 
     public NestedBlock() {
-      this(new Block(BlockType.NESTED_BLOCK));
+      this(new Block(BlockType.NESTED_BLOCK, null));
     }
 
 
     private NestedBlock(Block block) {
+      super();
       this.block = block;
+      this.block.setParent(this);
     }
 
     @Override
@@ -1149,7 +1222,8 @@ public class ICContinuations {
         Arg start, Arg end, Arg increment,
         List<Var> usedVariables, List<Var> keepOpenVars,
         int desiredUnroll, int splitDegree) {
-      this(loopName, new Block(BlockType.RANGELOOP_BODY), loopVar, countVar,
+      this(loopName, new Block(BlockType.RANGELOOP_BODY, null),
+          loopVar, countVar,
           start, end, increment, usedVariables, keepOpenVars,
           desiredUnroll, splitDegree);
     }
@@ -1279,7 +1353,7 @@ public class ICContinuations {
         boolean singleIter = false;
         if (endV < startV) {
           // Doesn't run - return empty block
-          return new Block(BlockType.FOREACH_BODY);
+          return new Block(BlockType.FOREACH_BODY, this);
         } else if (endV == startV) {
           singleIter = true;
         } else if (increment.isIntVal()) {
@@ -1409,13 +1483,13 @@ public class ICContinuations {
 
         // Create a copy of the original loop body for reference
         Block orig = loopBody;
-        this.loopBody = new Block(BlockType.LOOP_BODY);
+        this.loopBody = new Block(BlockType.LOOP_BODY, this);
         Block curr = loopBody;
         Var nextIter = loopVar; // Variable with current iter number
 
         for (int i = 0; i < desiredUnroll; i++) {
           // Put everything in nested block
-          NestedBlock nb = new NestedBlock(orig.clone(BlockType.NESTED_BLOCK));
+          NestedBlock nb = new NestedBlock(orig.clone(BlockType.NESTED_BLOCK, null));
           curr.addContinuation(nb);
           if (i != 0) {
             // Replace references to the iteration counter
@@ -1446,8 +1520,7 @@ public class ICContinuations {
                   nextIterCheck, Arrays.asList(Arg.createVar(nextIter),
                                           this.end)));
               // check to see if we should run next iteration
-              IfStatement ifSt = new IfStatement(Arg.createVar(
-                                                        nextIterCheck));
+              IfStatement ifSt = new IfStatement(Arg.createVar(nextIterCheck));
               curr.addContinuation(ifSt);
 
               curr = ifSt.getThenBlock();
@@ -1505,22 +1578,24 @@ public class ICContinuations {
 
     public SwitchStatement(Arg switchVar, List<Integer> caseLabels) {
       this(switchVar, new ArrayList<Integer>(caseLabels),
-          new ArrayList<Block>(), new Block(BlockType.CASE_BLOCK));
+          new ArrayList<Block>(), new Block(BlockType.CASE_BLOCK, null));
 
       // number of non-default cases
       int caseCount = caseLabels.size();
       for (int i = 0; i < caseCount; i++) {
-        this.caseBlocks.add(new Block(BlockType.CASE_BLOCK));
+        this.caseBlocks.add(new Block(BlockType.CASE_BLOCK, this));
       }
     }
 
-    private SwitchStatement(Arg switchVar, ArrayList<Integer> caseLabels,
-        ArrayList<Block> caseBlocks, Block defaultBlock) {
+    private SwitchStatement(Arg switchVar,
+        ArrayList<Integer> caseLabels, ArrayList<Block> caseBlocks,
+        Block defaultBlock) {
       super();
       this.switchVar = switchVar;
       this.caseLabels = caseLabels;
       this.caseBlocks = caseBlocks;
       this.defaultBlock = defaultBlock;
+      this.defaultBlock.setParent(this);
     }
 
     @Override
@@ -1702,11 +1777,12 @@ public class ICContinuations {
                     List<Var> usedVars,
                     List<Var> keepOpenVars,
                     WaitMode mode, boolean recursive, TaskMode target) {
-      this(procName, new Block(BlockType.WAIT_BLOCK),
+      this(procName, new Block(BlockType.WAIT_BLOCK, null),
                         waitVars,
                         usedVars,
                         keepOpenVars,
                         mode, recursive, target);
+      assert(this.block.getParentCont() != null);
     }
 
     private WaitStatement(String procName, Block block,
@@ -1721,6 +1797,7 @@ public class ICContinuations {
       assert(mode != null);
       this.procName = procName;
       this.block = block;
+      this.block.setParent(this);
       this.waitVars = new ArrayList<Var>(waitVars);
       ICUtil.removeDuplicates(this.waitVars);
       this.mode = mode;

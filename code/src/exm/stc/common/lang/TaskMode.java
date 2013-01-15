@@ -35,7 +35,6 @@ public enum TaskMode {
   }
   /**
    * Throw runtime error if spawn not valid
-   * @param execContextStack
    */
   public void checkSpawn(ExecContext context) throws STCRuntimeError {
     if (!canSpawn(context)) {

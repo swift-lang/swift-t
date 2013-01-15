@@ -53,7 +53,6 @@ public class ConstantFold implements OptimizerPass {
    * so the makeVarNamesUnique pass should be performed first
    * @param logger
    * @param in
-   * @return
    * @throws InvalidOptionException
    */
   @Override

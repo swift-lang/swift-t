@@ -33,6 +33,7 @@ import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -290,7 +291,7 @@ public class ForwardDataflow implements OptimizerPass {
   }
 
   private static List<ComputedValue> updateReplacements(
-      Logger logger, Instruction inst,
+      Logger logger, Function function, Instruction inst,
       State av, HierarchicalMap<String, Arg> replaceInputs, 
       HierarchicalMap<String, Arg> replaceAll) {
     List<ComputedValue> icvs = inst.getComputedValues(av);
@@ -321,7 +322,8 @@ public class ForwardDataflow implements OptimizerPass {
             replaceInputs.put(prevLoc.getVar().name(), currLoc);
           } else {
             // Should be same, otherwise bug
-            assert (currLoc.equals(prevLoc));
+            assert (currLoc.equals(prevLoc)) : currCV + " = " + prevLoc +
+                    " != " + currLoc + " in " + function.getName();
           }
         } else {
           final boolean usePrev;
@@ -482,7 +484,10 @@ public class ForwardDataflow implements OptimizerPass {
   }
   /**
    * Find the set of variables required to be closed (recursively or not)
-   * to make progress in block
+   * to make progress in block.  
+   * If function inlining is enabled, exclude explicit waits since blocking
+   * inputs to a function are treated as data_only upon inlining and this
+   * can cause problems if they were previously explicit waits.
    * @param block
    * @return
    */
@@ -516,6 +521,18 @@ public class ForwardDataflow implements OptimizerPass {
       } else {
         // Keep only those variables which block all wait statements
         blockingVariables.retainAll(waitOn);
+      }
+      
+      try {
+        // Don't pass back if inlining turned on
+        if (Settings.getBoolean(Settings.OPT_FUNCTION_INLINE)) {
+          if (c.getType() == ContinuationType.WAIT_STATEMENT &&
+                  ((WaitStatement)c).getMode() == WaitMode.EXPLICIT) {
+            blockingVariables.removeAll(waitOn);
+          }
+        }
+      } catch (InvalidOptionException e) {
+        throw new STCRuntimeError(e.getMessage());
       }
       //System.err.println("Blocking so far:" + blockingVariables);
     }
@@ -688,7 +705,7 @@ public class ForwardDataflow implements OptimizerPass {
        * on this pass, but rather rely on dead code elim to later clean up
        * unneeded instructions instead
        */
-      updateReplacements(logger, inst, cv, replaceInputs, replaceAll);
+      updateReplacements(logger, f, inst, cv, replaceInputs, replaceAll);
       
       // now try to see if we can change to the immediate version
       if (switchToImmediate(logger, f, execCx, block, cv, inst, insts)) {

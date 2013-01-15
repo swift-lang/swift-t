@@ -1,9 +1,11 @@
 package exm.stc.ic.tree;
 
 import java.io.PrintStream;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -318,7 +320,7 @@ public class ICTree {
   }
 
   public static class Function {
-    private final Block mainBlock;
+    private Block mainBlock;
     private final String name;
     public String getName() {
       return name;
@@ -339,14 +341,16 @@ public class ICTree {
     private final List<Var> iList;
     private final List<Var> oList;
     
-    /** Wait until the below inputs are available before running function */
+    /** Wait until the below inputs are available before running function.
+     * Treated same as DATA_ONLY wait */
     private final List<Var> blockingInputs;
 
     private TaskMode mode;
 
     public Function(String name, List<Var> iList,
         List<Var> oList, TaskMode mode) {
-      this(name, iList, oList, mode, new Block(BlockType.MAIN_BLOCK));
+      this(name, iList, oList, mode, new Block(BlockType.MAIN_BLOCK, null));
+      this.mainBlock.setParent(this);
     }
 
     public Function(String name, List<Var> iList,
@@ -439,6 +443,30 @@ public class ICTree {
     public boolean isAsync() {
       return this.mode != TaskMode.SYNC;
     }
+    
+    public boolean varNameUsed(String name) {
+      // TODO: keep set of used var names here?
+      Deque<Block> blocks = new ArrayDeque<Block>();
+      blocks.add(this.mainBlock);
+      while (!blocks.isEmpty()) {
+        Block curr = blocks.pop();
+        for (Var v: curr.variables) {
+          if (v.name().equals(name))
+            return true;
+        }
+        for (Continuation c: curr.getContinuations()) {
+          List<Var> constructVars = c.constructDefinedVars();
+          if (constructVars != null)
+            for (Var cv: constructVars)
+              if (cv.name().equals(name))
+                return true;
+          for (Block inner: c.getBlocks()) {
+            blocks.push(inner);
+          }
+        }
+      }
+      return false;
+    }
   }
 
 
@@ -475,9 +503,20 @@ public class ICTree {
   public static class Block {
 
     private final BlockType type;
-    public Block(BlockType type) {
-      this(type, new LinkedList<Instruction>(), new ArrayList<Var>(),
-          new ArrayList<Continuation>(), new ArrayList<CleanupAction>());
+    private Continuation parentCont;
+    private Function parentFunction;
+    
+    public Block(BlockType type, Continuation parentCont) {
+      this(type, parentCont, null);
+    }
+
+    public Block(Function parentFunction) {
+      this(BlockType.MAIN_BLOCK, null, parentFunction);
+    }
+    
+    public Block(BlockType type, Continuation parentCont, Function parentFunction) {
+      this(type, parentCont, parentFunction, new LinkedList<Instruction>(),
+          new ArrayList<Var>(), new ArrayList<Continuation>(), new ArrayList<CleanupAction>());
     }
     
     /**
@@ -486,9 +525,12 @@ public class ICTree {
      * @param type
      * @param instructions
      */
-    private Block(BlockType type, LinkedList<Instruction> instructions, 
+    private Block(BlockType type,
+        Continuation parentCont, Function parentFunction,
+        LinkedList<Instruction> instructions, 
         ArrayList<Var> variables, ArrayList<Continuation> conds,
         ArrayList<CleanupAction> cleanupActions) {
+      setParent(type, parentCont, parentFunction);
       this.type = type;
       this.instructions = instructions;
       this.variables = variables;
@@ -496,16 +538,40 @@ public class ICTree {
       this.cleanupActions = cleanupActions;
     }
 
+    public void setParent(BlockType type, Continuation parentCont,
+        Function parentFunction) {
+      this.parentCont = parentCont;
+      this.parentFunction = parentFunction;
+    }
+
+    public void setParent(Continuation parent) {
+      setParent(type, parent, null);
+    }
+    
+    public void setParent(Function parent) {
+      setParent(BlockType.MAIN_BLOCK, null, parent);
+    }
+
     /**
      * Make a copy without any shared mutable state
      */
     @Override
     public Block clone() {
-      return this.clone(this.type);
+      return this.clone(this.type, this.parentCont, this.parentFunction);
     }
     
-    public Block clone(BlockType newType) {
-      return new Block(newType, ICUtil.cloneInstructions(this.instructions),
+    public Block clone(Function parentFunction) {
+      return this.clone(BlockType.MAIN_BLOCK, null, parentFunction);
+    }
+    
+    public Block clone(BlockType newType, Continuation parentCont) {
+      return this.clone(BlockType.MAIN_BLOCK, parentCont, null);
+    }
+    
+    public Block clone(BlockType newType, Continuation parentCont,
+                       Function parentFunction) {
+      return new Block(newType, parentCont, parentFunction,
+          ICUtil.cloneInstructions(this.instructions),
           new ArrayList<Var>(this.variables),
           ICUtil.cloneContinuations(this.continuations), 
           new ArrayList<CleanupAction>(this.cleanupActions));
@@ -537,6 +603,7 @@ public class ICTree {
     }
 
     public void addContinuation(Continuation c) {
+      c.setParent(this);
       this.continuations.add(c);
     }
 
@@ -662,7 +729,7 @@ public class ICTree {
     public void addCleanup(Var var, Instruction action) {
       this.cleanupActions.add(new CleanupAction(var, action));
     }
-    
+
     /**
      * Rename variables in block (and nested blocks) according to map.
      * If the map doesn't have an entry, we don't rename anything
@@ -810,7 +877,9 @@ public class ICTree {
 
     public void addContinuations(List<? extends Continuation>
                                                 continuations) {
-      this.continuations.addAll(continuations);
+      for (Continuation c: continuations) {
+        addContinuation(c);
+      }
     }
 
     public Set<String> unneededVars() {
@@ -953,12 +1022,13 @@ public class ICTree {
       } else {
         this.instructions.addAll(b.getInstructions());
       }
-      if (contPos != null) {
-        for (Continuation c: b.getContinuations()) {
+      for (Continuation c: b.getContinuations()) {
+        c.setParent(this);
+        if (contPos != null) {
           contPos.add(c);
+        } else {
+          this.continuations.add(c);
         }
-      } else {
-        this.continuations.addAll(b.getContinuations());
       }
       this.cleanupActions.addAll(b.cleanupActions);
     }
@@ -1010,6 +1080,50 @@ public class ICTree {
       StringBuilder sb = new StringBuilder();
       prettyPrint(sb, "");
       return sb.toString();
+    }
+
+    public Continuation getParentCont() {
+      return parentCont;
+    }
+    
+    public Function getParentFunction() {
+      return parentFunction;
+    }
+    
+    public Function getFunction() {
+      Block curr = this;
+      while (curr.getType() != BlockType.MAIN_BLOCK) {
+        Block next = curr.getParentCont().parent();
+        assert(next != null) : "Block of type " + curr.getType()
+            + " had no parent:\n\n" + curr;
+        curr = next;
+      }
+      return curr.getParentFunction();
+    }
+    
+    
+    public String uniqueVarName(String prefix) {
+      return uniqueVarName(prefix, Collections.<String>emptySet());
+    }
+    
+    /**
+     * choose variable name unique within the current function.
+     * NOTE: does not avoid clashes with global constants.  Avoid clashes
+     * with global constants by providing a prefix or adding global constant
+     * names to excluded
+     * @param prefix
+     * @param excluded
+     * @return
+     */
+    public String uniqueVarName(String prefix, Set<String> excluded) {
+      String name = prefix;
+      int attempt = 1;
+      Function func = getFunction();
+      while (excluded.contains(name) || func.varNameUsed(name)) {
+        name = prefix + ":" + attempt;
+        attempt++;
+      }
+      return name;
     }
   }
   

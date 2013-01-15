@@ -18,18 +18,13 @@ import exm.stc.ic.tree.ICTree.Block;
 
 public class OptUtil {
 
-  static long unique = 0;
-
-
   /**
    * Generate optimiser variable name guaranteed to be unique
    * @param v
    * @return
    */
-  public static String optVPrefix(Var v) {
-    String name = Var.OPT_VALUE_VAR_PREFIX + v.name() + "-"+ unique;
-    unique++;
-    return name;
+  public static String optVPrefix(Block b, Var v) {
+    return b.uniqueVarName(Var.OPT_VALUE_VAR_PREFIX + v.name());
   }
   
   /**
@@ -44,7 +39,8 @@ public class OptUtil {
     List<Arg> inVals = new ArrayList<Arg>(vars.size());
 
     for (Var v: vars) {
-      Var valueV = WrapUtil.fetchValueOf(block, instBuffer, v, optVPrefix(v));
+      String name = optVPrefix(block, v);
+      Var valueV = WrapUtil.fetchValueOf(block, instBuffer, v, name);
       Arg value = Arg.createVar(valueV);
       inVals.add(value);
     }
@@ -90,7 +86,8 @@ public class OptUtil {
     outValVars = new ArrayList<Var>(localOutputs.size());
     // Need to create output value variables
     for (Var v : localOutputs) {
-      outValVars.add(WrapUtil.declareLocalOutputVar(block, v, optVPrefix(v)));
+      String name = optVPrefix(block, v);
+      outValVars.add(WrapUtil.declareLocalOutputVar(block, v, name));
     }
     return outValVars;
   }  
@@ -181,7 +178,7 @@ public class OptUtil {
   public static Var fetchValueOf(Block block, List<Instruction> instBuffer,
       Var var) {
     return WrapUtil.fetchValueOf(block, instBuffer, var,
-                                 OptUtil.optVPrefix(var));
+                               OptUtil.optVPrefix(block, var));
   }
 }
 

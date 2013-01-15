@@ -1,6 +1,8 @@
 package exm.stc.ic.opt;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -20,6 +22,7 @@ import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.MultiMap;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -28,6 +31,7 @@ import exm.stc.ic.tree.ICInstructions.FunctionCall;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
@@ -113,12 +117,12 @@ public class FunctionInline implements OptimizerPass {
       Set<String> inlineLocations, Map<String, Function> toInline) {
     for (Function f: program.getFunctions()) {
       if (inlineLocations.contains(f.getName())) {
-        doInlining(logger, f.getName(), f.getMainblock(), toInline);
+        doInlining(logger, program, f.getName(), f.getMainblock(), toInline);
       }
     }
   }
 
-  private void doInlining(Logger logger, String contextFunction,
+  private void doInlining(Logger logger, Program prog, String contextFunction,
       Block block, Map<String, Function> toInline) {
     ListIterator<Instruction> it = block.instructionIterator();
     while (it.hasNext()) {
@@ -126,14 +130,14 @@ public class FunctionInline implements OptimizerPass {
       if (isFunctionCall(inst)) {
         FunctionCall fcall = (FunctionCall)inst;
         if (toInline.containsKey(fcall.getFunctionName())) {
-          inlineCall(logger, contextFunction, block, it, fcall,
+          inlineCall(logger, prog, contextFunction, block, it, fcall,
                      toInline.get(fcall.getFunctionName()));
         }
       }
     }
     for (Continuation c: block.getContinuations()) {
       for (Block cb: c.getBlocks()) {
-        doInlining(logger, contextFunction, cb, toInline);
+        doInlining(logger, prog, contextFunction, cb, toInline);
       }
     }
   }
@@ -146,13 +150,13 @@ public class FunctionInline implements OptimizerPass {
    * @param inst
    * @param function
    */
-  private void inlineCall(Logger logger, String contextFunction, Block block,
+  private void inlineCall(Logger logger, Program prog,
+      String contextFunction, Block block,
       ListIterator<Instruction> it, FunctionCall inst, Function function) {
     it.remove();
     
     // rename function arguments
-    Map<String, Arg> inputRenames = new HashMap<String, Arg>();
-    Map<String, Arg> replacements = new HashMap<String, Arg>();
+    Map<String, Arg> renames = new HashMap<String, Arg>();
     List<Var> passIn = new ArrayList<Var>();
     List<Var> outArrays = new ArrayList<Var>();
     
@@ -160,38 +164,39 @@ public class FunctionInline implements OptimizerPass {
     assert(inst.getInputs().size() == function.getInputList().size());
     for (int i = 0; i < inst.getInputs().size(); i++) {
       Arg inputVal = inst.getInput(i);
-      inputRenames.put(function.getInputList().get(i).name(), inputVal);
+      renames.put(function.getInputList().get(i).name(), inputVal);
       if (inputVal.isVar()) {
         passIn.add(inputVal.getVar());
       }
     }
     for (int i = 0; i < inst.getOutputs().size(); i++) {
       Var outVar = inst.getOutput(i);
-      replacements.put(function.getOutputList().get(i).name(),
+      renames.put(function.getOutputList().get(i).name(),
                   Arg.createVar(outVar));
       passIn.add(outVar);
       if (Types.isArray(outVar.type())) {
         outArrays.add(outVar);
       }
     }
-
-    // TODO: rename any conflicting variables
+    
     // TODO: output arrays inside structs
-    // TODO: remove cleanup opertaions for argsg 
     
     Block insertBlock;
     ListIterator<Instruction> insertPos;
     // Create copy of function code so variables can be renamed 
-    Block inlineBlock = function.getMainblock().clone();
-    inlineBlock.renameVars(inputRenames, true);
-    inlineBlock.renameVars(replacements, false);
+    Block inlineBlock = function.getMainblock().clone(BlockType.NESTED_BLOCK,
+                                                      null, null);
+    
+    // rename vars
+    chooseUniqueNames(prog, function, inlineBlock, renames);
+    
+    inlineBlock.renameVars(renames, false);
     
     if (inst.getMode() == TaskMode.SYNC) {
       insertBlock = block;
       insertPos = it;
     } else {
-      // TODO: should be data_only sometimes.  What about if
-      // function previous has had a explict wait lifted to the arg list
+      // TODO: should be data_only sometimes.
       WaitMode waitMode = WaitMode.TASK_DISPATCH;
       WaitStatement wait = new WaitStatement(
           contextFunction + "-" + function.getName() + "-call",
@@ -204,6 +209,50 @@ public class FunctionInline implements OptimizerPass {
     
     // Do the insertion
     insertBlock.insertInline(inlineBlock, insertPos);
+  }
+
+  /**
+   * Set up renames for local variables in inline block
+   * @param inlineBlock
+   * @param replacements updated with new renames
+   */
+  private void chooseUniqueNames(Program prog,
+      Function f, Block inlineBlock,
+      Map<String, Arg> replacements) {
+    Set<String> excludedNames = new HashSet<String>();
+    excludedNames.addAll(prog.getGlobalConsts().keySet());
+    Deque<Block> blocks = new ArrayDeque<Block>();
+    blocks.add(inlineBlock);
+    // Walk block to find local vars
+    while(!blocks.isEmpty()) {
+      Block block = blocks.pop();
+      for (Var v: block.getVariables()) {
+        if (v.defType() != DefType.GLOBAL_CONST) {
+          updateName(f, replacements, excludedNames, v);
+        }
+      }
+      for (Continuation c: block.getContinuations()) {
+        List<Var> constructVars = c.constructDefinedVars();
+        if (constructVars != null) {
+          for (Var cv: constructVars) {
+            updateName(f, replacements, excludedNames, cv);
+          }
+        }
+        for (Block inner: c.getBlocks()) {
+          blocks.push(inner);
+        }
+      }
+    }
+  }
+
+  private void updateName(Function f, Map<String, Arg> replacements,
+          Set<String> excludedNames, Var var) {
+    // Choose unique name (including new names for this block)
+    String newName = f.getMainblock().uniqueVarName(var.name(), excludedNames);
+    Var newVar = new Var(var.type(), newName, var.storage(), var.defType(),
+                         var.mapping());
+    replacements.put(var.name(), Arg.createVar(newVar));
+    excludedNames.add(newName);
   }
 
   private static class FuncCallFinder implements TreeWalker {

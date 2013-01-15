@@ -371,7 +371,7 @@ public interface CompilerBackend {
    * @param blockingVars
    */
   public abstract void startLoop(String loopName, List<Var> loopVars,
-      List<Var> initVals, List<Var> usedVariables,
+      List<Boolean> definedHere, List<Var> initVals, List<Var> usedVariables,
       List<Var> keepOpenVars, List<Boolean> blockingVars);
   
   public abstract void loopContinue(List<Var> newVals,

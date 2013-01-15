@@ -334,8 +334,11 @@ CPP_INCLUDE+="-I ${TURBINE_HOME}/export"
 
 MAIN=exm.stc.ui.Main
 
+JVM_FLAGS=()
 # Increase stack size
-JVM_FLAGS="-Xss8m"
+JVM_FLAGS+="-Xss8m"
+# Enable assertions
+JVM_FLAGS+="-enableassertions"
 
 # Group all JVM args together
 ARGS="${JVM_FLAGS} ${DEBUG} ${FLAGS} ${COMPILER_OPTS} -cp ${CLASSPATH}"

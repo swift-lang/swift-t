@@ -247,7 +247,8 @@ public class WaitCoalescer implements OptimizerPass {
         WaitStatement wait = new WaitStatement(fn.getName() + "-optinserted",
                 waitVars, req.in, new ArrayList<Var>(0), waitMode,
                 true, req.mode);
-
+        block.addContinuation(wait);
+        
         List<Instruction> instBuffer = new ArrayList<Instruction>();
         
         // Fetch the inputs
@@ -263,7 +264,6 @@ public class WaitCoalescer implements OptimizerPass {
         
         // Remove old instruction, add new one inside wait block
         it.remove();
-        block.addContinuation(wait);
         wait.getBlock().addInstructions(instBuffer);
         changed = true;
       }
@@ -333,6 +333,7 @@ public class WaitCoalescer implements OptimizerPass {
               wait.getMode() != WaitMode.TASK_DISPATCH) {
             newWait.getBlock().insertInline(wait.getBlock());
           } else {
+            wait.setParent(newWait.getBlock());
             newWait.getBlock().addContinuation(wait);
           }
           keepOpen.addAll(wait.getKeepOpenVars());

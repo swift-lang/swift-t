@@ -2,6 +2,7 @@ package exm.stc.ic.opt;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -50,21 +51,7 @@ public class UniqueVarNames implements OptimizerPass {
       if (v.defType() == DefType.GLOBAL_CONST) {
         continue;
       }
-      if (usedNames.contains(v.name())) {
-        int counter = 1;
-        String newName;
-        // try x_1 x_2 x_3, etc until we find something
-        do {
-          newName = v.name() + "_" + counter;
-          counter++;
-        } while(usedNames.contains(newName));
-        renames.put(v.name(),
-            Arg.createVar(new Var(v.type(), newName,
-                            v.storage(), v.defType(), v.mapping())));
-        usedNames.add(newName);
-      } else {
-        usedNames.add(v.name());
-      }
+      updateName(usedNames, renames, v);
     }
   
     // Rename variables in Block (and nested blocks) according to map
@@ -73,9 +60,49 @@ public class UniqueVarNames implements OptimizerPass {
     // Recurse through nested blocks, making sure that all used variable
     // names are added to the usedNames
     for (Continuation c: in.getContinuations()) {
-      for (Block b: c.getBlocks()) {
-        makeVarNamesUnique(b, usedNames);
+      makeVarNamesUnique(usedNames, c);
+    }
+  }
+
+  private static String chooseNewName(Set<String> usedNames, Var v) {
+    int counter = 1;
+    String newName;
+    // try x:1 x:2 x:3, etc until we find something
+    do {
+      newName = v.name() + ":" + counter;
+      counter++;
+    } while(usedNames.contains(newName));
+    return newName;
+  }
+
+  private static void makeVarNamesUnique(Set<String> usedNames,
+                                         Continuation cont) {
+    // Update any continuation-defined vars
+    List<Var> constructVars = cont.constructDefinedVars();
+    if (constructVars != null) {
+      HashMap<String, Arg> renames = new HashMap<String, Arg>();
+      for (Var v: cont.constructDefinedVars()) {
+        updateName(usedNames, renames, v);
       }
+      cont.replaceVars(renames, false, true);
+    }
+    
+    for (Block b: cont.getBlocks()) {
+      makeVarNamesUnique(b, usedNames);
+    }
+  }
+
+  private static void updateName(Set<String> usedNames,
+          HashMap<String, Arg> renames, Var var) {
+    if (usedNames.contains(var.name())) {
+      System.err.println(var.name() + " in use");
+      String newName = chooseNewName(usedNames, var);
+      renames.put(var.name(),
+          Arg.createVar(new Var(var.type(), newName,
+                          var.storage(), var.defType(), var.mapping())));
+      usedNames.add(newName);
+    } else {
+      usedNames.add(var.name());
     }
   }
 

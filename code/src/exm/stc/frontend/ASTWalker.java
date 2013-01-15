@@ -872,10 +872,14 @@ public class ASTWalker {
 
 
     /* Pack the variables into vectors with the first element the condition */
-    ArrayList<Var> loopVars = new ArrayList<Var>(
-                                              forLoop.loopVarCount() + 1);
+    ArrayList<Var> loopVars = new ArrayList<Var>(forLoop.loopVarCount() + 1);
     loopVars.add(condArg);
     loopVars.addAll(forLoop.getUnpackedLoopVars());
+    List<Boolean> definedHere = new ArrayList<Boolean>(forLoop.loopVarCount() + 1);
+    definedHere.add(true); // Condition defined in construct
+    for (LoopVar lv: forLoop.getLoopVars()) {
+      definedHere.add(!lv.declaredOutsideLoop);
+    }
     
     List<Boolean> blockingVector = new ArrayList<Boolean>(loopVars.size());
     blockingVector.add(true); // block on condition
@@ -883,7 +887,7 @@ public class ASTWalker {
     
     initVals.add(0, initCond);
     
-    backend.startLoop(loopName, loopVars, initVals, 
+    backend.startLoop(loopName, loopVars, definedHere, initVals, 
                       usedVariables, keepOpenVars,
                       blockingVector);
     
@@ -962,8 +966,8 @@ public class ASTWalker {
     
     List<Boolean> blockingVars = Arrays.asList(true, false);
     backend.startLoop(loopName, 
-        Arrays.asList(condArg, loop.getLoopVar()), Arrays.asList(falseV, zero), 
-        usedVariables, keepOpenVars, blockingVars);
+        Arrays.asList(condArg, loop.getLoopVar()), Arrays.asList(true, true),
+        Arrays.asList(falseV, zero), usedVariables, keepOpenVars, blockingVars);
     
     // get value of condVar
     Var condVal = varCreator.fetchValueOf(bodyContext, condArg); 

@@ -313,9 +313,9 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void startLoop(String loopName, List<Var> loopVars,
-      List<Var> initVals, List<Var> usedVariables,
+      List<Boolean> definedHere, List<Var> initVals, List<Var> usedVariables,
       List<Var> keepOpenVars, List<Boolean> blockingVars) {
-    Loop loop = new Loop(loopName, loopVars, initVals,
+    Loop loop = new Loop(loopName, loopVars, definedHere, initVals,
         usedVariables, keepOpenVars, blockingVars);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());

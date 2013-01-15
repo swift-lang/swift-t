@@ -65,6 +65,7 @@ public class ICOptimizer {
     // Must fix up variables as frontend doesn't get it right
     preprocess.addPass(new FixupVariables());
     preprocess.addPass(new FlattenNested());
+    preprocess.addPass(new Validate());
     preprocess.runPipeline(logger, program, 0);
   }
 
@@ -82,7 +83,6 @@ public class ICOptimizer {
     OptimizerPipeline pipe = new OptimizerPipeline(icOutput);
     // First prune any unneeded functions
     pipe.addPass(new FunctionInline());
-    
     
     pipe.addPass(new ConstantFold());
     
@@ -115,6 +115,8 @@ public class ICOptimizer {
     boolean doWaitMerges = (iteration == nIterations - 1);
     pipe.addPass(new WaitCoalescer(doWaitMerges));
     
+    pipe.addPass(new Validate());
+    
     pipe.runPipeline(logger, prog, iteration);
   }
 
@@ -122,6 +124,7 @@ public class ICOptimizer {
       Program prog, long nIterations) throws UserException {   
     OptimizerPipeline postprocess = new OptimizerPipeline(icOutput);
     postprocess.addPass(new ConstantSharing());
+    postprocess.addPass(new Validate());
     postprocess.runPipeline(logger, prog,  nIterations - 1);
   }
 

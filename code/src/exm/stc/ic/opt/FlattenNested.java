@@ -13,21 +13,18 @@ import exm.stc.ic.tree.ICTree.Function;
 public class FlattenNested extends FunctionOptimizerPass {
   @Override
   public String getPassName() {
-    // TODO Auto-generated method stub
-    return null;
+    return "Flatten nested";
   }
 
   @Override
   public String getConfigEnabledKey() {
-    // TODO Auto-generated method stub
     return null;
   }
 
   /**
    * Remove all nested blocks from program
    * Precondition: all variable names in functions should be unique
-   * @param in
-   * @return
+   * @param f
    */
   @Override
   public void optimize(Logger logger, Function f) {
