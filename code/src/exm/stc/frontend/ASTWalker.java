@@ -938,12 +938,12 @@ public class ASTWalker {
             Arrays.asList(loop.getBody().getVariableUsage()), 
             usedVariables, keepOpenVars);
 
-    Context bodyContext = loop.createBodyContext(context);
+    Context iterContext = loop.createIterContext(context);
     
     
     // Start the loop construct with some initial values
     Var condArg = 
-      bodyContext.declareVariable(Types.F_BOOL, Var.LOOP_COND_PREFIX + 
+      iterContext.declareVariable(Types.F_BOOL, Var.LOOP_COND_PREFIX + 
             loopNum, VarStorage.TEMP, DefType.INARG, null);
     
     List<Boolean> blockingVars = Arrays.asList(true, false);
@@ -952,15 +952,16 @@ public class ASTWalker {
         Arrays.asList(falseV, zero), usedVariables, keepOpenVars, blockingVars);
     
     // get value of condVar
-    Var condVal = varCreator.fetchValueOf(bodyContext, condArg); 
+    Var condVal = varCreator.fetchValueOf(iterContext, condArg); 
     
     backend.startIfStatement(Arg.createVar(condVal), true);
     backend.loopBreak(usedVariables, keepOpenVars);
     backend.startElseBlock();
+    Context bodyContext = new LocalContext(iterContext);
     block(bodyContext, loop.getBody());
     
     // Check the condition type now that all loop body vars have been declared
-    Type condType = TypeChecker.findSingleExprType(bodyContext,
+    Type condType = TypeChecker.findSingleExprType(iterContext,
         loop.getCond());
     if (!condType.assignableTo(Types.F_BOOL)) {
       throw new TypeMismatchException(bodyContext, 
@@ -982,6 +983,8 @@ public class ASTWalker {
     backend.loopContinue(Arrays.asList(nextCond, nextCounter), 
         usedVariables, keepOpenVars, blockingVars);
 
+    // TODO: refcounting of loop variables and condition
+    
     backend.endIfStatement();
     backend.endLoop();
   }

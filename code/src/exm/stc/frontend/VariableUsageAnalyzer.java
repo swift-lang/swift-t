@@ -442,7 +442,7 @@ class VariableUsageAnalyzer {
     
     VariableUsageInfo outerLoopInfo = vu.createNested();
     VariableUsageInfo bodyInfo = outerLoopInfo.createNested();
-    Context bodyContext = loop.createBodyContext(context);
+    Context bodyContext = loop.createIterContext(context);
     
     Var v = loop.getLoopVar();
     LogHelper.debug(context, "declared loop var " + v.toString());

@@ -52,7 +52,7 @@ public class IterateDescriptor {
     return loopVar;
   }
   
-  public Context createBodyContext(Context context) throws UserException {
+  public Context createIterContext(Context context) throws UserException {
     Context bodyContext = new LocalContext(context);
     Var v = loopVar;
     bodyContext.declareVariable(v.type(), v.name(), v.storage(), 
