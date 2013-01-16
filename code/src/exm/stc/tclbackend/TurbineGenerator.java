@@ -1308,11 +1308,11 @@ public class TurbineGenerator implements CompilerBackend
 
     @Override
     public void startWaitStatement(String procName, List<Var> waitVars,
-        List<Var> usedVariables, List<Var> keepOpenVars,
+        List<Var> usedVariables, List<Var> keepOpenVars, Arg priority,
         WaitMode mode, boolean recursive, TaskMode target) {
       logger.trace("startWaitStatement()...");
       startAsync(procName, waitVars, usedVariables, keepOpenVars,
-                 recursive, target);
+                 priority, recursive, target);
     }
 
     @Override
@@ -1328,13 +1328,15 @@ public class TurbineGenerator implements CompilerBackend
      * @param waitVars
      * @param usedVariables
      * @param keepOpenVars
+     * @param priority 
      * @param recursive 
      * @param shareWork if true, work will be shared with other rule engines
      *                  at the cost of higher overhead
      */
     private void startAsync(String procName, List<Var> waitVars,
         List<Var> usedVariables, List<Var> keepOpenVars,
-        boolean recursive, TaskMode mode) {
+        Arg priority, boolean recursive, TaskMode mode) {
+      assert(priority == null || priority.isImmediateInt());
       mode.checkSpawn(execContextStack.peek());
       ArrayList<Var> toPassIn = new ArrayList<Var>();
       HashSet<String> alreadyInSet = new HashSet<String>();
@@ -1391,7 +1393,10 @@ public class TurbineGenerator implements CompilerBackend
 
       // increment read or write refs as needed
       incrementAllRefs(usedVariables, keepOpenVars);
-
+      
+      // Set priority (if provided)
+      setPriority(priority);
+      
       TclList action = buildAction(uniqueName, toPassIn);
 
       boolean local = execContextStack.peek() == ExecContext.CONTROL;
@@ -1420,8 +1425,9 @@ public class TurbineGenerator implements CompilerBackend
         pointStack.peek().add(
               Turbine.rule(uniqueName, waitFor, action, mode, local));
       }
-      pointStack.push(constructProc);
+      clearPriority(priority);
       
+      pointStack.push(constructProc);
       
       ExecContext newExecContext;
       if (mode == TaskMode.LEAF) {
@@ -1671,7 +1677,7 @@ public class TurbineGenerator implements CompilerBackend
       }
       startAsync(loopName + ":arrwait", 
                   Arrays.asList(arrayVar), passIn,
-                  keepOpenVars, false, TaskMode.LOCAL);
+                  keepOpenVars, null, false, TaskMode.LOCAL);
     }
 
     boolean haveKeys = loopCountVar != null;

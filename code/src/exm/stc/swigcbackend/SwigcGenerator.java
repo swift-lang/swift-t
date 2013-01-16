@@ -1437,7 +1437,7 @@ public class SwigcGenerator implements CompilerBackend
 
     @Override
     public void startWaitStatement(String procName, List<Var> waitVars,
-        List<Var> usedVariables, List<Var> keepOpenVars,
+        List<Var> usedVariables, List<Var> keepOpenVars, Arg priority,
         WaitMode mode, boolean recursive, TaskMode target) {
       logger.trace("startWaitStatement()...");
       startAsync(procName, waitVars, usedVariables, keepOpenVars,

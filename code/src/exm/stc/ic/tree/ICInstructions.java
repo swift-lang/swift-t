@@ -19,9 +19,9 @@ import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.OpEvaluator;
 import exm.stc.common.lang.Operators;
-import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
+import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
@@ -219,6 +219,14 @@ public class ICInstructions {
     public abstract TaskMode getMode();
 
 
+    /**
+     * @return priority of task spawned, if any.  null if no spawn or
+     *      default priority
+     */
+    public Arg getPriority() {
+      return null;
+    }
+    
     public static interface CVMap {
       public Arg getLocation(ComputedValue val);
     }
@@ -1913,6 +1921,18 @@ public class ICInstructions {
       priority = ICUtil.replaceOparg(renames, priority, true);
     }
   
+    /**
+     * @return function input arguments
+     */
+    public List<Var> getFunctionInputs() {
+      return Collections.unmodifiableList(inputs);
+    }
+
+
+    public Var getFunctionInput(int i) {
+      return inputs.get(i);
+    }
+    
     @Override
     public List<Arg> getInputs() {
       List<Arg> inputVars = Arg.fromVarList(inputs);
@@ -1922,6 +1942,7 @@ public class ICInstructions {
       return inputVars;
     }
   
+    @Override
     public Arg getPriority() {
       return priority;
     }

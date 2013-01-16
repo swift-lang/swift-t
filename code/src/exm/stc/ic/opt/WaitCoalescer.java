@@ -253,7 +253,7 @@ public class WaitCoalescer implements OptimizerPass {
                 fn.getName() + "-" + i.shortOpName(),
                 waitVars, req.in,
                 outWriteRefcounted,
-                waitMode, true, req.mode);
+                i.getPriority(), waitMode, true, req.mode);
         block.addContinuation(wait);
         
         List<Instruction> instBuffer = new ArrayList<Instruction>();
@@ -320,7 +320,7 @@ public class WaitCoalescer implements OptimizerPass {
         // Create a new wait statement waiting on the intersection
         // of the above.
         WaitStatement newWait = new WaitStatement(fn.getName() + "-optmerged",
-            intersectionVs, new ArrayList<Var>(0), new ArrayList<Var>(0),
+            intersectionVs, new ArrayList<Var>(0), new ArrayList<Var>(0), null,
             explicit ? WaitMode.EXPLICIT : WaitMode.DATA_ONLY, allRecursive,
             TaskMode.LOCAL);
         

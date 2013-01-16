@@ -1769,6 +1769,8 @@ public class ICContinuations {
     private final String procName;
     private final Block block;
     private final ArrayList<Var> waitVars;
+    private Arg priority;
+    
     /* True if this wait was compiler-generated so can be removed if needed
      * We can only remove an explicit wait if we know that the variables are
      * already closed*/
@@ -1779,19 +1781,20 @@ public class ICContinuations {
     public WaitStatement(String procName, List<Var> waitVars,
                     List<Var> usedVars,
                     List<Var> keepOpenVars,
+                    Arg priority,
                     WaitMode mode, boolean recursive, TaskMode target) {
       this(procName, new Block(BlockType.WAIT_BLOCK, null),
                         waitVars,
                         usedVars,
                         keepOpenVars,
-                        mode, recursive, target);
+                        priority, mode, recursive, target);
       assert(this.block.getParentCont() != null);
     }
 
     private WaitStatement(String procName, Block block,
         List<Var> waitVars, List<Var> usedVars,
-        List<Var> keepOpenVars, WaitMode mode, boolean recursive,
-        TaskMode target) {
+        List<Var> keepOpenVars, Arg priority,
+        WaitMode mode, boolean recursive, TaskMode target) {
       super(usedVars, keepOpenVars);
       assert(waitVars != null);
       assert(usedVars != null);
@@ -1803,6 +1806,7 @@ public class ICContinuations {
       this.block.setParent(this);
       this.waitVars = new ArrayList<Var>(waitVars);
       ICUtil.removeDuplicates(this.waitVars);
+      this.priority = priority;
       this.mode = mode;
       this.recursive = recursive;
       this.target = target;
@@ -1811,7 +1815,8 @@ public class ICContinuations {
     @Override
     public WaitStatement clone() {
       return new WaitStatement(procName, this.block.clone(),
-          waitVars, passedInVars, keepOpenVars, mode, recursive, target);
+          waitVars, passedInVars, keepOpenVars, priority,
+          mode, recursive, target);
     }
 
     public Block getBlock() {
@@ -1823,7 +1828,7 @@ public class ICContinuations {
         throws UndefinedTypeException {
 
       gen.startWaitStatement(procName, waitVars, passedInVars,
-          keepOpenVars, mode, recursive, target);
+          keepOpenVars, priority, mode, recursive, target);
       this.block.generate(logger, gen, info);
       gen.endWaitStatement(passedInVars, keepOpenVars);
     }
@@ -1838,6 +1843,9 @@ public class ICContinuations {
       ICUtil.prettyPrintVarInfo(sb, passedInVars, keepOpenVars);
       sb.append(" <" + mode + ", " + target + ", " +
                 (recursive ? "RECURSIVE" : "NONRECURSIVE") + ">");
+      if (priority != null) {
+        sb.append(" @priority=" + priority);
+      }
       sb.append(" {\n");
       block.prettyPrint(sb, newIndent);
       sb.append(currentIndent + "}\n");
@@ -1852,6 +1860,7 @@ public class ICContinuations {
     public void replaceConstructVars_(Map<String, Arg> renames, 
         boolean inputsOnly) {
       ICUtil.replaceVarsInList(renames, waitVars, true);
+      priority = ICUtil.replaceOparg(renames, priority, true);
     }
     
     public WaitMode getMode() {
@@ -1895,6 +1904,9 @@ public class ICContinuations {
         for (Var v: waitVars) {
           res.add(v);
         }
+      }
+      if (priority != null && priority.isVar()) {
+        res.add(priority.getVar());
       }
       return res; // can later eliminate waitVars, etc
     }

@@ -214,11 +214,13 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void startWaitStatement(String procName, List<Var> waitVars,
-      List<Var> usedVariables, List<Var> keepOpenVars,
+      List<Var> usedVariables, List<Var> keepOpenVars, Arg priority,
       WaitMode mode, boolean recursive, TaskMode target) {
     assert(currFunction != null);
+    assert(priority == null || priority.isImmediateInt());
+    
     WaitStatement wait = new WaitStatement(procName, waitVars, usedVariables,
-                                      keepOpenVars, mode, recursive, target);
+                            keepOpenVars, priority, mode, recursive, target);
     currBlock().addContinuation(wait);
     blockStack.push(wait.getBlock());
   }
@@ -850,7 +852,7 @@ public class STCMiddleEnd implements CompilerBackend {
     }
     
     WaitStatement wait = new WaitStatement(function + "-argwait",
-                  inArgs, used, Collections.<Var>emptyList(),
+                  inArgs, used, Collections.<Var>emptyList(), null,
                   waitMode, true, mode);
     
     fn.getMainblock().addContinuation(wait);

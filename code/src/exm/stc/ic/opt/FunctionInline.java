@@ -256,10 +256,6 @@ public class FunctionInline implements OptimizerPass {
       if (isFunctionCall(inst)) {
         FunctionCall fcall = (FunctionCall)inst;
         if (toInline.containsKey(fcall.getFunctionName())) {
-          // TODO: don't have support yet for inlining prioritized calls 
-          // add support for priorities to TASK_DISPATCH waits
-          if (fcall.getPriority() != null)
-            continue;
           // Check that location is marked for inlining
           List<String> inlineCallers = inlineLocations.get(fcall.getFunctionName());
           if (inlineCallers.contains(contextFunction.getName())) {
@@ -298,16 +294,14 @@ public class FunctionInline implements OptimizerPass {
     List<Var> outArrays = new ArrayList<Var>();
     
     assert(fnCall.getOutputs().size() == toInline.getOutputList().size());
-    assert(fnCall.getInputs().size() == toInline.getInputList().size()) :
-           fnCall.getInputs() + " != " + toInline.getInputList() 
+    assert(fnCall.getFunctionInputs().size() == toInline.getInputList().size()) :
+           fnCall.getFunctionInputs() + " != " + toInline.getInputList() 
              + " for " + fnCall.getFunctionName();
-    for (int i = 0; i < fnCall.getInputs().size(); i++) {
-      Arg inputVal = fnCall.getInput(i);
+    for (int i = 0; i < fnCall.getFunctionInputs().size(); i++) {
+      Var inputVal = fnCall.getFunctionInput(i);
       Var inArg = toInline.getInputList().get(i);
-      renames.put(inArg.name(), inputVal);
-      if (inputVal.isVar()) {
-        passIn.add(inputVal.getVar());
-      }
+      renames.put(inArg.name(), Arg.createVar(inputVal));
+      passIn.add(inputVal);
       // Remove cleanup actions
       inlineBlock.removeCleanups(inArg);
     }
@@ -343,7 +337,7 @@ public class FunctionInline implements OptimizerPass {
       WaitMode waitMode = WaitMode.TASK_DISPATCH;
       WaitStatement wait = new WaitStatement(
           contextFunction.getName() + "-" + toInline.getName() + "-call",
-          toInline.getBlockingInputs(), passIn, outArrays,
+          toInline.getBlockingInputs(), passIn, outArrays, fnCall.getPriority(),
           waitMode, false, fnCall.getMode());
       block.addContinuation(wait);
       insertBlock = wait.getBlock();
