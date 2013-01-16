@@ -344,11 +344,13 @@ public class ICContinuations {
     public void addPassedInVar(Var variable) {
       assert(variable != null);
       this.passedInVars.add(variable);
+      ICUtil.removeDuplicates(this.passedInVars);
     }
     @Override
     public void addPassedInVars(Collection<Var> vars) {
       assert(vars != null);
       this.passedInVars.addAll(vars);
+      ICUtil.removeDuplicates(this.passedInVars);
     }
     @Override
     public void removePassedInVar(Var variable) {
@@ -412,10 +414,10 @@ public class ICContinuations {
   public static abstract class AbstractLoop extends AsyncContinuation {
     protected Block loopBody;
 
-    public AbstractLoop(Block block, List<Var> usedVars,
+    public AbstractLoop(Block loopBody, List<Var> usedVars,
         List<Var> keepOpenVars) {
       super(usedVars, keepOpenVars);
-      this.loopBody = block;
+      this.loopBody = loopBody;
       this.loopBody.setParent(this);
     }
 
@@ -467,7 +469,6 @@ public class ICContinuations {
       this.addKeepOpenVars(o.keepOpenVars);
       ICUtil.removeDuplicates(this.keepOpenVars);
       this.addPassedInVars(o.passedInVars);
-      ICUtil.removeDuplicates(this.passedInVars);
     }
   }
 
@@ -884,24 +885,23 @@ public class ICContinuations {
 
     @Override
     public Loop clone() {
-      Block body = this.loopBody.clone();
-      
       // Constructor creates copies of variable lists
-      Loop cloned = new Loop(loopName, body, loopVars, definedHere,
-          initVals, passedInVars, keepOpenVars, blockingVars);
+      Loop cloned = new Loop(loopName, this.loopBody.clone(),
+          loopVars, definedHere, initVals,
+          passedInVars, keepOpenVars, blockingVars);
 
       // fix up the references to the loopContinue/loopBreak instructions
-      Pair<LoopBreak, LoopContinue> insts = findInstructions(body);
+      Pair<LoopBreak, LoopContinue> insts = cloned.findInstructions();
       cloned.setLoopBreak(insts.val1);
       cloned.setLoopContinue(insts.val2);
       return cloned;
     }
 
-    private Pair<LoopBreak, LoopContinue> findInstructions(Block body) {
+    private Pair<LoopBreak, LoopContinue> findInstructions() {
       LoopBreak breakInst = null;
       LoopContinue continueInst = null;
       Deque<Block> blocks = new ArrayDeque<Block>();
-      blocks.add(body);
+      blocks.add(loopBody);
       while (!blocks.isEmpty()) {
         // Find instructions
         Block curr = blocks.pop();
@@ -909,6 +909,7 @@ public class ICContinuations {
           if (inst.op == Opcode.LOOP_BREAK) {
             assert(breakInst == null): "duplicate instructions: " + breakInst
                     + " and \n" + inst;
+            System.err.println("Break found");
             breakInst = (LoopBreak)inst;
           } else if (inst.op == Opcode.LOOP_CONTINUE) {
             assert(continueInst == null): "duplicate instructions: " + continueInst
@@ -928,10 +929,10 @@ public class ICContinuations {
         }
       }
       
-      assert(loopBreak != null) : "No loop break for loop\n" + this;
-      assert(loopContinue != null) : "No loop continue for loop\n" + this;
+      assert(breakInst != null) : "No loop break for loop\n" + this;
+      assert(continueInst != null) : "No loop continue for loop\n" + this;
       
-      Pair<LoopBreak, LoopContinue> insts = Pair.create(loopBreak, loopContinue);
+      Pair<LoopBreak, LoopContinue> insts = Pair.create(breakInst, continueInst);
       return insts;
     }
 
@@ -1073,8 +1074,8 @@ public class ICContinuations {
     public void addPassedInVars(Collection<Var> vars) {
       // special implementation to also fix up the loopContinue instruction
       super.addPassedInVars(vars);
-      this.loopContinue.removeUsedVars(vars);
-      this.loopBreak.removeUsedVars(vars);
+      this.loopContinue.addUsedVars(vars);
+      this.loopBreak.addUsedVars(vars);
     }
 
     @Override

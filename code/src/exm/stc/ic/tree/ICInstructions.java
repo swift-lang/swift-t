@@ -2456,6 +2456,13 @@ public class ICInstructions {
 
     public void addUsedVar(Var variable) {
       this.loopUsedVars.add(variable);
+      ICUtil.removeDuplicates(this.loopUsedVars);
+    }
+    
+    public void addUsedVars(Collection<Var> variables) {
+      for (Var v: variables) {
+        addUsedVar(v);
+      }
     }
 
     public void removeUsedVar(Var variable) {
@@ -2530,7 +2537,7 @@ public class ICInstructions {
       StringBuilder sb = new StringBuilder();
       sb.append(this.op.toString().toLowerCase());
 
-      sb.append("] #passin[");
+      sb.append(" #passin[");
       ICUtil.prettyPrintVarList(sb, this.loopUsedVars);
 
       sb.append("] #keepopen[");
@@ -2601,6 +2608,13 @@ public class ICInstructions {
 
     public void addUsedVar(Var variable) {
       this.loopUsedVars.add(variable);
+      ICUtil.removeDuplicates(this.loopUsedVars);
+    }
+    
+    public void addUsedVars(Collection<Var> variables) {
+      for (Var v: variables) {
+        addUsedVar(v);
+      }
     }
 
     public void removeUsedVar(Var variable) {
