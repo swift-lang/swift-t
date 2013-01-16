@@ -231,11 +231,13 @@ public class ICUtil {
   }
 
   public static ArrayList<Continuation> cloneContinuations(
-      List<Continuation> conts) {
+      List<Continuation> conts, Block parent) {
     ArrayList<Continuation> newContinuations = 
                         new ArrayList<Continuation>(conts.size());
     for (Continuation old: conts) {
-      newContinuations.add(old.clone());
+      Continuation newC = old.clone();
+      newC.setParent(parent);
+      newContinuations.add(newC);
     }
     return newContinuations;
   }

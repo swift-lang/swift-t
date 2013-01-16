@@ -236,7 +236,10 @@ public class ICContinuations {
     public void inlineInto(Block block, Block predictedBranch) {
       // Default implementation
       block.insertInline(predictedBranch);
-      parent.removeContinuation(this);
+      if (parent != null)
+        parent.removeContinuation(this);
+      else
+        System.err.println("No parent for " + this.toString());
     }
 
     /**

@@ -37,11 +37,7 @@ public class ICOptimizer {
     }
      
     preprocess(icOutput, logger, prog);
-
-    for (long iteration = 0; iteration < nIterations; iteration++) {
-      iterate(icOutput, logger, prog, iteration, nIterations);
-    }
-    
+    iterate(icOutput, logger, prog, nIterations);
     postprocess(icOutput, logger, prog, nIterations);
 
     if (logIC) {
@@ -79,46 +75,52 @@ public class ICOptimizer {
    * @throws Exception
    */
   private static void iterate(PrintStream icOutput, Logger logger,
-      Program prog, long iteration, long nIterations) throws UserException {
-    OptimizerPipeline pipe = new OptimizerPipeline(icOutput);
-    // First prune any unneeded functions
-    pipe.addPass(new FunctionInline());
+      Program prog, long nIterations) throws UserException {
     
-    pipe.addPass(new ConstantFold());
+    // FunctionInline is stateful
+    FunctionInline inliner = new FunctionInline();
     
-    if (iteration == 0) {
-      // Only unroll loops once
-      pipe.addPass(new LoopUnroller());
-    }
-    
-    // Try to hoist variables out of loops, etc
-    // Do before forward dataflow since it may open up new opportunites
-    pipe.addPass(new HoistLoops());
-    
-    // Do forward dataflow after const folding so it won't create any
-    // new constants, etc to be folded
-    pipe.addPass(new ForwardDataflow());
-    
-    // Do this after forward dataflow to improve odds of fusing things
-    // one common subexpression elimination has happened
-    pipe.addPass(new ContinuationFusion());
-
-    // Can only run this pass once. Do it on penultimate pass so that
-    // results can be cleaned up by forward dataflow
-    if (iteration == nIterations - 2) {
-      pipe.addPass(new Pipeline());
+    for (long iteration = 0; iteration < nIterations; iteration++) {
+      OptimizerPipeline pipe = new OptimizerPipeline(icOutput);
+      // First prune any unneeded functions
+      pipe.addPass(inliner);
+      
+      pipe.addPass(new ConstantFold());
+      
+      if (iteration == 0) {
+        // Only unroll loops once
+        pipe.addPass(new LoopUnroller());
+      }
+      
+      // Try to hoist variables out of loops, etc
+      // Do before forward dataflow since it may open up new opportunites
+      pipe.addPass(new HoistLoops());
+      
+      // Do forward dataflow after const folding so it won't create any
+      // new constants, etc to be folded
+      pipe.addPass(new ForwardDataflow());
+      
+      // Do this after forward dataflow to improve odds of fusing things
+      // one common subexpression elimination has happened
+      pipe.addPass(new ContinuationFusion());
+  
+      // Can only run this pass once. Do it on penultimate pass so that
+      // results can be cleaned up by forward dataflow
+      if (iteration == nIterations - 2) {
+        pipe.addPass(new Pipeline());
+        pipe.addPass(new Validate());
+      }
+      
+      // Do this after forward dataflow since forward dataflow will be
+      // able to do strength reduction on many operations without spinning
+      // them off into wait statements
+      boolean doWaitMerges = (iteration == nIterations - 1);
+      pipe.addPass(new WaitCoalescer(doWaitMerges));
+      
       pipe.addPass(new Validate());
+      
+      pipe.runPipeline(logger, prog, iteration);
     }
-    
-    // Do this after forward dataflow since forward dataflow will be
-    // able to do strength reduction on many operations without spinning
-    // them off into wait statements
-    boolean doWaitMerges = (iteration == nIterations - 1);
-    pipe.addPass(new WaitCoalescer(doWaitMerges));
-    
-    pipe.addPass(new Validate());
-    
-    pipe.runPipeline(logger, prog, iteration);
   }
 
   private static void postprocess(PrintStream icOutput, Logger logger,

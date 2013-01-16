@@ -578,11 +578,16 @@ public class ICTree {
     
     public Block clone(BlockType newType, Continuation parentCont,
                        Function parentFunction) {
-      return new Block(newType, parentCont, parentFunction,
+      Block cloned = new Block(newType, parentCont, parentFunction,
           ICUtil.cloneInstructions(this.instructions),
           new ArrayList<Var>(this.variables),
-          ICUtil.cloneContinuations(this.continuations), 
+          new ArrayList<Continuation>(), 
           new ArrayList<CleanupAction>(this.cleanupActions));
+      for (Continuation c: this.continuations) {
+        // Add in way that ensures parent link updated
+        cloned.addContinuation(c.clone());
+      }
+      return cloned;
     }
 
     public BlockType getType() {
@@ -1050,7 +1055,7 @@ public class ICTree {
         if (contPos != null) {
           contPos.add(c);
         } else {
-          this.continuations.add(c);
+          addContinuation(c);
         }
       }
       this.cleanupActions.addAll(b.cleanupActions);

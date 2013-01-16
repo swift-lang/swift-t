@@ -40,6 +40,12 @@ import exm.stc.ic.tree.ICTree.Program;
 
 public class FunctionInline implements OptimizerPass {
 
+  /**
+   * List of (caller, callee) pairs already inlined.
+   */
+  private final Set<Pair<String, String>> blacklist =
+                              new HashSet<Pair<String, String>>();
+  
   public FunctionInline() {
     try {
       inlineThreshold = Settings.getLong(Settings.OPT_FUNCTION_INLINE_THRESHOLD);
@@ -152,21 +158,24 @@ public class FunctionInline implements OptimizerPass {
       Set<String> visited, Set<String> toRemove,
       MultiMap<String, String> newCandidates, Deque<String> callStack,
       String curr) {
+    if (blacklist.contains(curr))
+      return;  // blacklisted
+    
     List<String> callers = candidates.get(curr);
     if (callers == null || callers.size() == 0) {
       // not a candidate for inlining
       return;
     }
     
-    if (visited.contains(curr)) {
-      // Don't process again
-      return;
-    }
+    if (visited.contains(curr))
+      return;  // Don't process again
     visited.add(curr);
     
     for (String caller: callers) {
       if (callStack.contains(caller) || caller.equals(curr)) {
-        // Do nothing: adding this would create cycle
+        // Adding this would create cycle, do nothing
+      } else if (blacklist.contains(Pair.create(caller, curr))) {
+        // Already inlined, don't do it again
       } else {
         // Mark for inlining
         newCandidates.put(curr, caller);
@@ -335,7 +344,10 @@ public class FunctionInline implements OptimizerPass {
     insertBlock.insertInline(inlineBlock, insertPos);
     logger.debug("Call to function " + fnCall.getFunctionName() +
           " inlined into " + contextFunction.getName());
-    new Exception().printStackTrace();
+    
+    // Prevent repeated inlinings
+    blacklist.add(Pair.create(contextFunction.getName(),
+                              fnCall.getFunctionName())); 
   }
 
   /**
