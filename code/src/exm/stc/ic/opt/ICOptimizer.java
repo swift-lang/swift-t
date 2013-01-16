@@ -84,6 +84,7 @@ public class ICOptimizer {
       OptimizerPipeline pipe = new OptimizerPipeline(icOutput);
       // First prune any unneeded functions
       pipe.addPass(inliner);
+      pipe.addPass(new Validate()); //TODO: remove once inlining stable
       
       pipe.addPass(new ConstantFold());
       
