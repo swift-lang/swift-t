@@ -40,6 +40,8 @@ import exm.stc.ic.tree.ICTree.Program;
 
 public class FunctionInline implements OptimizerPass {
 
+  private static int MAX_ITERS_PER_PASS = 10;
+  
   /**
    * List of (caller, callee) pairs already inlined.
    */
@@ -83,6 +85,7 @@ public class FunctionInline implements OptimizerPass {
     // can allow more functions to be pruned;
 
     boolean changed;
+    int i = 0;
     do {
       FuncCallFinder finder = new FuncCallFinder();
       TreeWalk.walk(logger, program, finder);
@@ -99,7 +102,8 @@ public class FunctionInline implements OptimizerPass {
       
       changed = doInlining(logger, program, inlineLocations, toRemove);
       logger.debug("changed=" + changed);
-    } while (changed);
+      i++;
+    } while (changed && i < MAX_ITERS_PER_PASS);
   }
 
   private void pruneBuiltins(Logger logger, Program program,
@@ -252,6 +256,10 @@ public class FunctionInline implements OptimizerPass {
       if (isFunctionCall(inst)) {
         FunctionCall fcall = (FunctionCall)inst;
         if (toInline.containsKey(fcall.getFunctionName())) {
+          // TODO: don't have support yet for inlining prioritized calls 
+          // add support for priorities to TASK_DISPATCH waits
+          if (fcall.getPriority() != null)
+            continue;
           // Check that location is marked for inlining
           List<String> inlineCallers = inlineLocations.get(fcall.getFunctionName());
           if (inlineCallers.contains(contextFunction.getName())) {
@@ -290,7 +298,9 @@ public class FunctionInline implements OptimizerPass {
     List<Var> outArrays = new ArrayList<Var>();
     
     assert(fnCall.getOutputs().size() == toInline.getOutputList().size());
-    assert(fnCall.getInputs().size() == toInline.getInputList().size());
+    assert(fnCall.getInputs().size() == toInline.getInputList().size()) :
+           fnCall.getInputs() + " != " + toInline.getInputList() 
+             + " for " + fnCall.getFunctionName();
     for (int i = 0; i < fnCall.getInputs().size(); i++) {
       Arg inputVal = fnCall.getInput(i);
       Var inArg = toInline.getInputList().get(i);

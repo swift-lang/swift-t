@@ -1922,6 +1922,10 @@ public class ICInstructions {
       return inputVars;
     }
   
+    public Arg getPriority() {
+      return priority;
+    }
+
     @Override
     public List<Var> getOutputs() {
       return Collections.unmodifiableList(outputs);
