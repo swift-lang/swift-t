@@ -86,7 +86,7 @@ xlb_sync(int target)
 }
 
 /**
-   @return ADLBcode
+   @return adlb_code
  */
 static inline adlb_code
 msg_from_target(int target, bool* done)

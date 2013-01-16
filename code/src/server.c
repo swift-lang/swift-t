@@ -53,9 +53,7 @@ static bool fail_code = -1;
 
 static adlb_code setup_idle_time(void);
 
-// Poll msg queue for requests
-static inline adlb_code
-xlb_poll(int source,  MPI_Status *req_status);
+static inline adlb_code xlb_poll(int source,  MPI_Status *req_status);
 
 // Service request from queue
 static inline adlb_code
@@ -198,14 +196,15 @@ xlb_serve_several()
   return reqs > 0 ? ADLB_SUCCESS : ADLB_NOTHING;
 }
 
+/**
+   Poll msg queue for requests
+ */
 static inline adlb_code
 xlb_poll(int source, MPI_Status *req_status)
 {
   int new_message;
-  int rc = MPI_Iprobe(source, MPI_ANY_TAG, adlb_all_comm,
-                      &new_message, req_status);
-  MPI_CHECK(rc);
-  return new_message ?  ADLB_SUCCESS : ADLB_NOTHING;
+  IPROBE(source, MPI_ANY_TAG, &new_message, req_status);
+  return new_message ? ADLB_SUCCESS : ADLB_NOTHING;
 }
 
 static inline adlb_code
@@ -250,10 +249,6 @@ xlb_serve_one(int source)
   return rc;
 }
 
-/**
-   This process has accepted a sync from a calling server
-   Handle the actual RPC here
- */
 adlb_code
 xlb_serve_server(int source)
 {
@@ -262,10 +257,14 @@ xlb_serve_server(int source)
   static int response = 1;
   SEND(&response, 1, MPI_INT, source, ADLB_TAG_SYNC_RESPONSE);
   int rc = ADLB_NOTHING;
-  while (rc == ADLB_NOTHING)
+  bool slept;
+  int attempts = 0;
+  while (true)
   {
     rc = xlb_serve_one(source);
     ADLB_CHECK(rc);
+    if (rc != ADLB_NOTHING) break;
+    xlb_backoff_server(attempts++, &slept);
   }
   TRACE_END;
   return rc;
@@ -275,7 +274,7 @@ double xlb_steal_last = 0.0;
 
 /**
    Steal work
-   Operates at intervals defined by steal_backoff
+   Operates at intervals defined by xlb_steal_backoff
  */
 static inline adlb_code
 check_steal(void)
