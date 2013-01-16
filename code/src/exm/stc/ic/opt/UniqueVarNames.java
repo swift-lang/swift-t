@@ -95,7 +95,6 @@ public class UniqueVarNames implements OptimizerPass {
   private static void updateName(Set<String> usedNames,
           HashMap<String, Arg> renames, Var var) {
     if (usedNames.contains(var.name())) {
-      System.err.println(var.name() + " in use");
       String newName = chooseNewName(usedNames, var);
       renames.put(var.name(),
           Arg.createVar(new Var(var.type(), newName,

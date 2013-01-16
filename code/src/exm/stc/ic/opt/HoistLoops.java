@@ -161,7 +161,7 @@ public class HoistLoops implements OptimizerPass {
     Type t = in.type();
     if (Types.isScalarFuture(t) || Types.isScalarValue(t)) {
       return true;
-    } else if (Types.isRef(t) && Types.isScalarFuture(t.memberType())) {
+    } else if (Types.isRef(t)) {
       return true;
     }
     return false;
@@ -266,7 +266,9 @@ public class HoistLoops implements OptimizerPass {
     for (Var out: inst.getOutputs()) {
       // Update map and parent maps
       writeMap.remove(out.name(), false);
-      writeMap.put(out.name(), target, hoistDepth);
+      if (trackWrites(out)) {
+        writeMap.put(out.name(), target, hoistDepth);
+      }
     }
   }
 
