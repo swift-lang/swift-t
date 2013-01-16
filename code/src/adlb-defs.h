@@ -11,7 +11,9 @@
 #include <list_l.h>
 
 /**
-   Common return codes
+   ADLB common return codes
+   The only real error condition is ADLB_ERROR
+   Cf. ADLB_IS_ERROR()
  */
 typedef enum
 {
@@ -57,7 +59,8 @@ typedef enum
 } adlb_data_type;
 
 
-typedef enum {
+typedef enum
+{
   ADLB_READ_REFCOUNT,
   ADLB_WRITE_REFCOUNT,
   ADLB_READWRITE_REFCOUNT, // Used to specify that op should affect both
