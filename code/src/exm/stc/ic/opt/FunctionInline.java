@@ -24,6 +24,7 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.MultiMap;
+import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
@@ -71,42 +72,81 @@ public class FunctionInline implements OptimizerPass {
   public void optimize(Logger logger, Program program) throws UserException {
     // Do inlining repeatedly until no changes since removing a function
     // can allow more functions to be pruned;
+
     boolean changed;
     do {
-      changed = false;
       FuncCallFinder finder = new FuncCallFinder();
       TreeWalk.walk(logger, program, finder);
       
-      // Functions removed from IC tree
-      Map<String, Function> removed = new HashMap<String, Function>();
-      // Functions where inlining must occur
-      Set<String> inlineLocations = new HashSet<String>();
-      
-      // TODO: need to find recursive loops
-      
-      // Find which functions should be inlined/removed
-      ListIterator<Function> functionIter = program.functionIterator();
-      while (functionIter.hasNext()) {
-        Function f = functionIter.next();
-        if (f.getName().equals(Constants.MAIN_FUNCTION)) {
-          continue;
-        }
-        List<String> occurrences = finder.functionUsages.get(f.getName());
-        if (occurrences == null || occurrences.size() <= inlineThreshold) {
-          changed = true;
-          functionIter.remove();
-          removed.put(f.getName(), f);
-          if (occurrences != null) {
-            inlineLocations.addAll(occurrences);
-          }
-        }
-      }
-      
-      // Now do the inlining
-      if (!inlineLocations.isEmpty()) {
-        doInlining(logger, program, inlineLocations, removed);
-      }
+      Pair<MultiMap<String, String>, Set<String>> actions =
+             selectInlineFunctions( program, finder);
+      MultiMap<String, String> inlineLocations = actions.val1;
+      Set<String> toRemove = actions.val2;
+      changed = doInlining(logger, program, inlineLocations,toRemove);
     } while (changed);
+  }
+
+  private boolean doInlining(Logger logger, Program program,
+      MultiMap<String, String> inlineLocations, Set<String> toRemove) {
+    boolean changed = false;
+    // Functions that will be inlined
+    Map<String, Function> toInline = new HashMap<String, Function>();
+    // Functions where inlining must occur
+    Set<String> callSiteFunctions = new HashSet<String>();
+    ListIterator<Function> functionIter = program.functionIterator();
+    while (functionIter.hasNext()) {
+      Function f = functionIter.next();
+
+      List<String> occurrences = inlineLocations.get(f.getName());
+      if (toRemove.contains(f.getName())) {
+        functionIter.remove();
+        assert(occurrences == null);
+      } else if (occurrences != null) {
+        changed = true;
+        functionIter.remove();
+        toInline.put(f.getName(), f);
+        if (occurrences != null) {
+          callSiteFunctions.addAll(occurrences);
+        }
+      }
+    }
+    
+    // Now do the inlining
+    if (!callSiteFunctions.isEmpty()) {
+      doInlining(logger, program, callSiteFunctions, toInline);
+    }
+    return changed;
+  }
+
+  /**
+   * Choose which functions will be removed totally (and remove them now)
+   * and calls to which function from where will be inlined.
+   * Removes cycles from inlining graph
+   * @param program
+   * @param finder
+   * @return Map of function -> caller functions determining which calls 
+   *        to inline
+   */
+  private Pair<MultiMap<String, String>, Set<String>> selectInlineFunctions(
+      Program program, FuncCallFinder finder) {
+    MultiMap<String, String> inlineCandidates = new MultiMap<String, String>();
+    Set<String> toRemove = new HashSet<String>();
+    // Narrow inline candidates by number of calls, remove unused functions
+    for (Function f: program.getFunctions()) {
+      List<String> callLocs = finder.functionUsages.get(f.getName());
+      if (f.getName().equals(Constants.MAIN_FUNCTION)) {
+        // Do nothing
+      } else if (callLocs == null) {
+        // Function not referenced - prune it!
+        toRemove.add(f.getName());
+      } else if (callLocs.size() <= inlineThreshold) {
+        inlineCandidates.putAll(f.getName(), callLocs);
+      }
+    }
+
+    // TODO: need to find recursive loops
+    
+    return Pair.create(inlineCandidates, toRemove);
   }
 
   /**
