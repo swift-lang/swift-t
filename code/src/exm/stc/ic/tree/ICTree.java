@@ -725,6 +725,10 @@ public class ICTree {
     public ListIterator<CleanupAction> cleanupIterator() {
       return cleanupActions.listIterator();
     }
+    
+    public List<CleanupAction> getCleanups() {
+      return Collections.unmodifiableList(cleanupActions);
+    }
 
     public void addCleanup(Var var, Instruction action) {
       this.cleanupActions.add(new CleanupAction(var, action));

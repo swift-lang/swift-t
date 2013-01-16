@@ -13,6 +13,7 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
+import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
@@ -56,6 +57,8 @@ public class Validate implements OptimizerPass {
       checkVarUnique(logger, program, fn, usedNames, v);
     }
     
+    checkCleanups(fn, block);
+    
     for (Continuation c: block.getContinuations()) {
       List<Var> constructDefined = c.constructDefinedVars();
       if (constructDefined != null) {
@@ -66,6 +69,31 @@ public class Validate implements OptimizerPass {
       for (Block inner: c.getBlocks()) { 
         checkUniqueVarNames(logger, program, fn, inner,
                             usedNames);
+      }
+    }
+  }
+
+  private void checkCleanups(Function fn, Block block) {
+    Set<String> blockVarNames = Var.nameSet(block.getVariables());
+    
+    if (block.getType() == BlockType.MAIN_BLOCK) {
+      // Cleanup actions for args valid in outer block of function
+      blockVarNames.addAll(Var.nameList(fn.getInputList()));
+      blockVarNames.addAll(Var.nameList(fn.getOutputList()));
+    } else {
+      // Clean actions can refer to construct defined vars
+      List<Var> constructVars = block.getParentCont().constructDefinedVars();
+      if (constructVars != null) {
+        blockVarNames.addAll(
+            Var.nameList(constructVars));
+      }
+    }
+    
+    
+    for (CleanupAction ca: block.getCleanups()) {
+      if (!blockVarNames.contains(ca.var().name())) {
+        throw new STCRuntimeError("Cleanup action for var not defined in " +
+        		"block: " + ca.var() + " in function " + fn.getName());
       }
     }
   }

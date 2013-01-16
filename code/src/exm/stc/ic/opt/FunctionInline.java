@@ -82,6 +82,8 @@ public class FunctionInline implements OptimizerPass {
       // Functions where inlining must occur
       Set<String> inlineLocations = new HashSet<String>();
       
+      // TODO: need to find recursive loops
+      
       // Find which functions should be inlined/removed
       ListIterator<Function> functionIter = program.functionIterator();
       while (functionIter.hasNext()) {
@@ -117,12 +119,12 @@ public class FunctionInline implements OptimizerPass {
       Set<String> inlineLocations, Map<String, Function> toInline) {
     for (Function f: program.getFunctions()) {
       if (inlineLocations.contains(f.getName())) {
-        doInlining(logger, program, f.getName(), f.getMainblock(), toInline);
+        doInlining(logger, program, f, f.getMainblock(), toInline);
       }
     }
   }
 
-  private void doInlining(Logger logger, Program prog, String contextFunction,
+  private void doInlining(Logger logger, Program prog, Function contextFunction,
       Block block, Map<String, Function> toInline) {
     ListIterator<Instruction> it = block.instructionIterator();
     while (it.hasNext()) {
@@ -147,12 +149,13 @@ public class FunctionInline implements OptimizerPass {
    * @param logger
    * @param block
    * @param it iterator positioned at function call instruction
-   * @param inst
-   * @param function
+   * @param fnCall
+   * @param toInline
    */
   private void inlineCall(Logger logger, Program prog,
-      String contextFunction, Block block,
-      ListIterator<Instruction> it, FunctionCall inst, Function function) {
+      Function contextFunction, Block block,
+      ListIterator<Instruction> it, FunctionCall fnCall,
+      Function toInline) {
     it.remove();
     
     // rename function arguments
@@ -160,18 +163,18 @@ public class FunctionInline implements OptimizerPass {
     List<Var> passIn = new ArrayList<Var>();
     List<Var> outArrays = new ArrayList<Var>();
     
-    assert(inst.getOutputs().size() == function.getOutputList().size());
-    assert(inst.getInputs().size() == function.getInputList().size());
-    for (int i = 0; i < inst.getInputs().size(); i++) {
-      Arg inputVal = inst.getInput(i);
-      renames.put(function.getInputList().get(i).name(), inputVal);
+    assert(fnCall.getOutputs().size() == toInline.getOutputList().size());
+    assert(fnCall.getInputs().size() == toInline.getInputList().size());
+    for (int i = 0; i < fnCall.getInputs().size(); i++) {
+      Arg inputVal = fnCall.getInput(i);
+      renames.put(toInline.getInputList().get(i).name(), inputVal);
       if (inputVal.isVar()) {
         passIn.add(inputVal.getVar());
       }
     }
-    for (int i = 0; i < inst.getOutputs().size(); i++) {
-      Var outVar = inst.getOutput(i);
-      renames.put(function.getOutputList().get(i).name(),
+    for (int i = 0; i < fnCall.getOutputs().size(); i++) {
+      Var outVar = fnCall.getOutput(i);
+      renames.put(toInline.getOutputList().get(i).name(),
                   Arg.createVar(outVar));
       passIn.add(outVar);
       if (Types.isArray(outVar.type())) {
@@ -184,24 +187,24 @@ public class FunctionInline implements OptimizerPass {
     Block insertBlock;
     ListIterator<Instruction> insertPos;
     // Create copy of function code so variables can be renamed 
-    Block inlineBlock = function.getMainblock().clone(BlockType.NESTED_BLOCK,
+    Block inlineBlock = toInline.getMainblock().clone(BlockType.NESTED_BLOCK,
                                                       null, null);
     
     // rename vars
-    chooseUniqueNames(prog, function, inlineBlock, renames);
+    chooseUniqueNames(prog, contextFunction, inlineBlock, renames);
     
     inlineBlock.renameVars(renames, false);
     
-    if (inst.getMode() == TaskMode.SYNC) {
+    if (fnCall.getMode() == TaskMode.SYNC) {
       insertBlock = block;
       insertPos = it;
     } else {
       // TODO: should be data_only sometimes.
       WaitMode waitMode = WaitMode.TASK_DISPATCH;
       WaitStatement wait = new WaitStatement(
-          contextFunction + "-" + function.getName() + "-call",
-          function.getBlockingInputs(), passIn, outArrays,
-          waitMode, false, inst.getMode());
+          contextFunction + "-" + toInline.getName() + "-call",
+          toInline.getBlockingInputs(), passIn, outArrays,
+          waitMode, false, fnCall.getMode());
       block.addContinuation(wait);
       insertBlock = wait.getBlock();
       insertPos = insertBlock.instructionIterator();
@@ -209,15 +212,20 @@ public class FunctionInline implements OptimizerPass {
     
     // Do the insertion
     insertBlock.insertInline(inlineBlock, insertPos);
+    logger.debug("Call to function " + fnCall.getFunctionName() +
+          " inlined into " + toInline.getName());
+    
   }
 
   /**
    * Set up renames for local variables in inline block
-   * @param inlineBlock
+   * @param prog program
+   * @param targetFunction function block being inlined into
+   * @param inlineBlock block to be inlined
    * @param replacements updated with new renames
    */
   private void chooseUniqueNames(Program prog,
-      Function f, Block inlineBlock,
+      Function targetFunction, Block inlineBlock,
       Map<String, Arg> replacements) {
     Set<String> excludedNames = new HashSet<String>();
     excludedNames.addAll(prog.getGlobalConsts().keySet());
@@ -228,14 +236,14 @@ public class FunctionInline implements OptimizerPass {
       Block block = blocks.pop();
       for (Var v: block.getVariables()) {
         if (v.defType() != DefType.GLOBAL_CONST) {
-          updateName(f, replacements, excludedNames, v);
+          updateName(targetFunction, replacements, excludedNames, v);
         }
       }
       for (Continuation c: block.getContinuations()) {
         List<Var> constructVars = c.constructDefinedVars();
         if (constructVars != null) {
           for (Var cv: constructVars) {
-            updateName(f, replacements, excludedNames, cv);
+            updateName(targetFunction, replacements, excludedNames, cv);
           }
         }
         for (Block inner: c.getBlocks()) {
