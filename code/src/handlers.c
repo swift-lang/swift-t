@@ -330,7 +330,7 @@ handle_get(int caller)
     requestqueue_add(caller, type);
   if (stole)
   {
-    DEBUG("rechecking...");
+    DEBUG("handle_get(): steal worked: rechecking...");
     xlb_requestqueue_recheck();
   }
 
