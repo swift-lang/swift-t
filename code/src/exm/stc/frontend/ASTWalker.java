@@ -315,6 +315,10 @@ public class ASTWalker {
   }
 
 
+  private void block(Context context, SwiftAST tree) throws UserException {
+    block(context, tree, true);
+  }
+  
   /**
    * block operates on a BLOCK node of the AST. This should be called for every
    * logical code block (e.g. function bodies, condition bodies, etc) in the
@@ -322,8 +326,11 @@ public class ASTWalker {
    *
    * @param context
    *          a new context for this block
+   * @param closeArgs whether to close input or output arguments
+   *                  declared in block
    */
-  private void block(Context context, SwiftAST tree) throws UserException {
+  private void block(Context context, SwiftAST tree, boolean closeArgs)
+                                                      throws UserException {
     LogHelper.trace(context, "block start");
 
     if (tree.getType() != ExMParser.BLOCK) {
@@ -337,7 +344,7 @@ public class ASTWalker {
       walkStatement(context, stmt, blockVu);
     }
 
-    closeBlockVariables(context);
+    closeBlockVariables(context, closeArgs);
 
     LogHelper.trace(context, "block done");
   }
@@ -346,10 +353,11 @@ public class ASTWalker {
    * Make sure all arrays in block are closed upon exiting
    *
    * @param context
+   * @param closeArgs 
    * @throws UserException
    * @throws UndefinedTypeException
    */
-  private void closeBlockVariables(Context context) 
+  private void closeBlockVariables(Context context, boolean closeArgs) 
           throws UndefinedTypeException, UserException {
     for (Var v : context.getArraysToClose()) {
       assert(v.defType() != DefType.INARG);
@@ -359,7 +367,10 @@ public class ASTWalker {
     
     for (Var v: context.getScopeVariables()) {
       if (v.storage() == VarStorage.STACK || v.storage() == VarStorage.TEMP) {
-        backend.decrRef(v);
+        if (closeArgs && !(v.defType() == DefType.INARG || 
+                           v.defType() == DefType.OUTARG)) {
+          backend.decrRef(v);
+        }
       }
     }
   }
@@ -1894,13 +1905,16 @@ public class ASTWalker {
                           TaskMode.SYNC : TaskMode.CONTROL;
     backend.startFunction(function, oList, iList, mode);
     
-    VariableUsageInfo vu = block.getVariableUsage();
-    // Make sure output arrays get closed
-    for (Var o: oList) {
-      flagDeclaredVarForClosing(functionContext, o, vu);
+    
+    if (mode != TaskMode.SYNC) {
+      VariableUsageInfo vu = block.getVariableUsage();
+      // Make sure output arrays get closed if function runs as separate task
+      for (Var o: oList) {
+        flagDeclaredVarForClosing(functionContext, o, vu);
+      }
     }
 
-    block(functionContext, block);
+    block(functionContext, block, false);
     backend.endFunction();
 
     LogHelper.debug(context, "compile function: done: " + function);
