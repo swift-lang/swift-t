@@ -197,7 +197,7 @@ workqueue_pop_parallel(xlb_work_unit** wu, int** ranks)
 {
   TRACE_START;
   bool result = false;
-  struct pop_parallel_data data = { -1, NULL, NULL };
+  struct pop_parallel_data data = { -1, NULL, NULL, NULL };
   for (int type = 0; type < xlb_types_size; type++)
   {
     data.type = type;
@@ -251,48 +251,68 @@ pop_parallel_cb(struct rbtree_node* node, void* user_data)
 adlb_code
 workqueue_steal(int max_memory, int* count, xlb_work_unit*** result)
 {
-  // struct list stolen;
-  // list_init(&stolen);
-
-
-  float fractions[xlb_types_size];
-  int total = 0;
+  // fractions: probability weighting for each work type
+  float fractions_parallel[xlb_types_size];
+  float fractions_single[xlb_types_size];
+  int total_parallel = 0;
+  int total_single = 0;
   for (int i = 0; i < xlb_types_size; i++)
-    total += (&typed_work[i])->size;
+  {
+    total_parallel += (&parallel_work[i])->size;
+    total_single   += (&typed_work[i])->size;
+  }
 
-  DEBUG("workqueue_steal(): total=%i", total);
+  DEBUG("workqueue_steal(): total=%i", total_single);
 
-  if (total == 0)
+  if (total_single + total_parallel == 0)
   {
     *count = 0;
     return ADLB_SUCCESS;
   }
 
-  for (int i = 0; i < xlb_types_size; i++)
-  {
-    float size = (float) (&typed_work[i])->size;
-    fractions[i] = size / total;
-    // TRACE("fractions[%i]=%0.5f", i, fractions[i]);
-  }
+  if (total_parallel > 0)
+    for (int i = 0; i < xlb_types_size; i++)
+      fractions_parallel[i] =
+          (&parallel_work[i])->size / total_parallel;
+  if (total_single > 0)
+    for (int i = 0; i < xlb_types_size; i++)
+      fractions_single[i] =
+          (&typed_work[i])->size / total_single;
 
-  // Number of work units we are willing to share
-  int share = total / 2 + 1;
+  // Number of work units we are willing to share (half of all work)
+  int share = (total_single + total_parallel) / 2 + 1;
   // Number of work units we actually share
   int actual = 0;
 
+  // First, steal parallel task work units
   xlb_work_unit** stolen = malloc(share * sizeof(xlb_work_unit*));
-  for (int i = 0; i < share; i++)
-  {
-    int type = random_draw(fractions, xlb_types_size);
-    struct rbtree* T = &typed_work[type];
-    struct rbtree_node* node = rbtree_random(T);
-    if (node == NULL)
-      continue;
-    rbtree_remove_node(T, node);
-    stolen[actual] = (xlb_work_unit*) node->data;
-    actual++;
-    free(node);
-  }
+  if (total_parallel > 0)
+    for (int i = 0; i < share; i++)
+    {
+      int type = random_draw(fractions_parallel, xlb_types_size);
+      struct rbtree* T = &parallel_work[type];
+      struct rbtree_node* node = rbtree_random(T);
+      if (node == NULL)
+        continue;
+      rbtree_remove_node(T, node);
+      stolen[actual] = (xlb_work_unit*) node->data;
+      actual++;
+      free(node);
+    }
+  // Second, steal single-process work units
+  if (total_single > 0)
+    for (int i = actual; i < share; i++)
+    {
+      int type = random_draw(fractions_single, xlb_types_size);
+      struct rbtree* T = &typed_work[type];
+      struct rbtree_node* node = rbtree_random(T);
+      if (node == NULL)
+        continue;
+      rbtree_remove_node(T, node);
+      stolen[actual] = (xlb_work_unit*) node->data;
+      actual++;
+      free(node);
+    }
 
   *count = actual;
   *result = stolen;
