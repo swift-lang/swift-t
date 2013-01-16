@@ -414,7 +414,6 @@ check_parallel_tasks()
   bool found = workqueue_pop_parallel(&wu, &ranks);
   if (! found)
     return ADLB_NOTHING;
-  printf("ranks: %p\n", ranks);
   for (int i = 0; i < wu->parallelism; i++)
   {
     send_work_unit(ranks[i], wu);

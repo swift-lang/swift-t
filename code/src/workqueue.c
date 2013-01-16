@@ -235,9 +235,8 @@ pop_parallel_cb(struct rbtree_node* node, void* user_data)
   if (found)
   {
     data->wu = wu;
-    data->ranks = malloc(wu->parallelism * sizeof(int));
     data->node = node;
-    printf("data->ranks: %p\n", data->ranks);
+    data->ranks = malloc(wu->parallelism * sizeof(int));
     valgrind_assert(data->ranks != NULL);
     memcpy(data->ranks, ranks, wu->parallelism * sizeof(int));
     return true;
