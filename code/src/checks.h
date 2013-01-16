@@ -14,6 +14,8 @@
 #ifndef CHECKS_H
 #define CHECKS_H
 
+#define ADLB_IS_ERROR(rc) (rc == ADLB_ERROR)
+
 #ifndef NDEBUG
 
 /**
@@ -37,13 +39,13 @@
     return ADLB_ERROR; }}
 
 /**
-   Checks that an ADLB return code is ADLB_SUCCESS
+   Checks that an ADLB return code is not ADLB_ERROR
    Note: This is disabled if NDEBUG is defined
    If used in nested functions that all return adlb_code, can
    create something like a stack trace
  */
 #define ADLB_CHECK(rc) { \
-  if (!(rc == ADLB_SUCCESS || rc == ADLB_NOTHING)) { \
+  if (ADLB_IS_ERROR(rc)) { \
     printf("ADLB_CHECK FAILED: %s:%s():%i\n", \
            __FILE__, __func__, __LINE__); \
     return rc; }}
