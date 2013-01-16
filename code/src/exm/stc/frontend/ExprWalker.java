@@ -778,7 +778,8 @@ public class ExprWalker {
       keepOpen = RefCounting.filterWriteRefcount(oList);
       backend.startWaitStatement(
            fc.constructName("call-" + function),
-           waitVars, usedVars, keepOpen, Arg.createVar(priorityVal),
+           waitVars, usedVars, keepOpen, 
+           priorityVal == null ? null : Arg.createVar(priorityVal),
            WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
 
       assert(waitVars.size() == derefVars.size());
