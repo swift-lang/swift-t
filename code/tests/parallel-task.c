@@ -7,12 +7,15 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
+
 #include <mpi.h>
 #include <adlb.h>
+
 #include <tools.h>
 #include "src/debug.h"
 
-static void task(MPI_Comm comm);
+static void task(void* data, MPI_Comm comm);
 
 int
 main()
@@ -23,7 +26,9 @@ main()
   int types[2] = {0, 1};
   int am_server;
   MPI_Comm adlb_comm;
-  ADLB_Init(1, 2, types, &am_server, &adlb_comm);
+  ADLB_Init(2, 2, types, &am_server, &adlb_comm);
+
+  int tasks_per_worker = 3;
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -35,9 +40,11 @@ main()
   else
   {
     char buffer[128];
-    sprintf(buffer, "PARALLEL STRING");
-    ADLB_Put(buffer, strlen(buffer)+1, ADLB_RANK_ANY, rank, 0, 0, 2);
-
+    for (int i = 0; i < tasks_per_worker; i++)
+    {
+      sprintf(buffer, "PARALLEL_STRING from: %i #%i", rank, i);
+      ADLB_Put(buffer, strlen(buffer)+1, ADLB_RANK_ANY, rank, 0, 0, 2);
+    }
     while (true)
     {
       int length;
@@ -55,10 +62,8 @@ main()
       else
       {
         printf("PARALLEL TASK\n");
-        task(task_comm);
+        task(buffer, task_comm);
       }
-      printf("OK\n");
-      printf("GOT: %s\n", buffer);
     }
   }
 
@@ -68,7 +73,7 @@ main()
 }
 
 static void
-task(MPI_Comm comm)
+task(void* data, MPI_Comm comm)
 {
   TRACE_START;
   int rank, size;
@@ -76,6 +81,9 @@ task(MPI_Comm comm)
   MPI_Comm_size(comm, &size);
   printf("TASK: rank: %i\n", rank);
   printf("TASK: size: %i\n", size);
+  printf("DATA: %s\n", (char*) data);
+  int delay = random_between(1,10);
+  sleep(delay);
   MPI_Barrier(comm);
   MPI_Comm_free(&comm);
   TRACE_END;
