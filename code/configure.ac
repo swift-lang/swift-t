@@ -184,6 +184,16 @@ AC_DEFINE_UNQUOTED(ENABLE_LOG_TRACE, [${ENABLE_LOG_TRACE}],
 AC_DEFINE_UNQUOTED(ENABLE_LOG_TRACE_MPI, [${ENABLE_LOG_TRACE_MPI}],
                    [Whether to trace MPI calls])
 
+ADLB_MPI_VERSION=3
+AC_ARG_ENABLE(mpi-2,
+  AS_HELP_STRING([--enable-mpi-2],
+                 [Force compatibility with MPI 2.
+                  Disables parallel tasks.
+                  If not given, MPI version 3 is enabled.]),
+  [ADLB_MPI_VERSION=2], [])
+AC_DEFINE_UNQUOTED(ADLB_MPI_VERSION, [${ADLB_MPI_VERSION}],
+                   [MPI version])
+
 AC_CONFIG_FILES(Makefile
                 src/module.mk
                 src/adlb-version.h

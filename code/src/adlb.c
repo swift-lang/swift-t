@@ -35,9 +35,13 @@ static bool got_shutdown = false;
 /** Cached copy of MPI world group */
 static MPI_Group world_group;
 
+static int mpi_version;
+
 static void
 check_versions()
 {
+  mpi_version = ADLB_MPI_VERSION;
+
   version av, cuv, rcuv;
   // required c-utils version (rcuv):
   ADLB_Version(&av);
@@ -127,6 +131,11 @@ ADLBP_Put(void* payload, int length, int target, int answer,
   CHECK_MSG(type >= 0 && xlb_type_index(type) >= 0,
             "ADLB_Put(): invalid work type: %d\n", type);
 
+  CHECK_MSG(mpi_version >= 3 || parallelism == 1,
+            "ADLB_Put(): "
+            "parallel tasks not supported for MPI version %i",
+            mpi_version);
+
   /** Server to contact */
   int to_server = -1;
   if (target == ADLB_RANK_ANY)
@@ -198,13 +207,17 @@ ADLBP_Get(int type_requested, void* payload, int* length,
 
   if (g.parallelism > 1)
   {
+    // Parallel tasks require MPI 3.  Cf. configure.ac
+    #if ADLB_MPI_VERSION >= 3
     // Recv ranks for output comm
     int ranks[g.parallelism];
     RECV(ranks, g.parallelism, MPI_INT, xlb_my_server,
          ADLB_TAG_RESPONSE_GET);
     MPI_Group group;
     MPI_Group_incl(world_group, g.parallelism, ranks, &group);
+    // This is an MPI 3 function:
     MPI_Comm_create_group(MPI_COMM_WORLD, group, 0, comm);
+    #endif
   }
   else
     *comm = MPI_COMM_SELF;
