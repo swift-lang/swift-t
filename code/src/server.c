@@ -124,6 +124,7 @@ static inline adlb_code check_steal(void);
 adlb_code
 ADLB_Server(long max_memory)
 {
+  TRACE_START;
   mm_set_max(mm_default, max_memory);
   while (true)
   {
@@ -141,6 +142,7 @@ ADLB_Server(long max_memory)
   }
   server_shutdown();
 
+  TRACE_END;
   return ADLB_SUCCESS;
 }
 
