@@ -5,8 +5,8 @@
 # Each token maps to ON or OFF to indicate debugging
 
 set INPUT {
-    TURBINE OFF
-    TCL_TURBINE OFF
-    ADLB OFF
-    CACHE OFF
+    TURBINE ON
+    TCL_TURBINE ON
+    ADLB ON
+    CACHE ON
 }
