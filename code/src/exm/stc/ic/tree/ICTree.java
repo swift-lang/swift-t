@@ -742,6 +742,17 @@ public class ICTree {
       this.cleanupActions.add(new CleanupAction(var, action));
     }
 
+    // Remove cleanup actions for variable
+    public void removeCleanups(Var var) {
+      ListIterator<CleanupAction> it = cleanupActions.listIterator();
+      while (it.hasNext()) {
+        CleanupAction ca = it.next();
+        if (ca.var().name().equals(var.name())) {
+          it.remove();
+        }
+      }
+    }
+
     /**
      * Rename variables in block (and nested blocks) according to map.
      * If the map doesn't have an entry, we don't rename anything

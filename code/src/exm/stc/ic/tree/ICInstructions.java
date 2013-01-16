@@ -1870,7 +1870,8 @@ public class ICInstructions {
           throw new STCRuntimeError("Unexpected op " + op);
         }
         List<Boolean> blocking = info.getBlockingInputVector(functionName);
-        assert(blocking != null && blocking.size() == inputs.size());
+        assert(blocking != null && blocking.size() == inputs.size()) :
+          this + "; blocking: " + blocking;
         List<Boolean> needToBlock = new ArrayList<Boolean>(inputs.size());
         for (int i = 0; i < inputs.size(); i++) {
           needToBlock.add(blocking.get(i) && (!this.closedInputs.get(i)));

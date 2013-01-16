@@ -322,12 +322,7 @@ public class BuiltinOps {
    * different namespace entirely 
    */
   public static TclFunRef getBuiltinOpImpl(BuiltinOpcode op) {
-    // first try hardcoded
-    TclFunRef impl = builtinOpImpls.get(op);
-    if (impl != null) {
-      return impl;
-    }
-    return null;
+    return builtinOpImpls.get(op);
   }
   
   /** Package in which async implementations of TCL operators live */

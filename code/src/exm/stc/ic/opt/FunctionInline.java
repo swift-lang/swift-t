@@ -18,6 +18,7 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
@@ -50,7 +51,8 @@ public class FunctionInline implements OptimizerPass {
   
   private static boolean isFunctionCall(Instruction inst) {
     return inst.op == Opcode.CALL_CONTROL || inst.op == Opcode.CALL_LOCAL ||
-           inst.op == Opcode.CALL_SYNC || inst.op == Opcode.CALL_LOCAL_CONTROL;
+           inst.op == Opcode.CALL_SYNC || inst.op == Opcode.CALL_LOCAL_CONTROL ||
+           inst.op == Opcode.CALL_BUILTIN;
   }
 
   /**
@@ -85,7 +87,12 @@ public class FunctionInline implements OptimizerPass {
              selectInlineFunctions( program, finder);
       MultiMap<String, String> inlineLocations = actions.val1;
       Set<String> toRemove = actions.val2;
-      changed = doInlining(logger, program, inlineLocations,toRemove);
+
+      logger.debug("Inline locs: " + inlineLocations.toString());
+      logger.debug("Functions to prune: " + toRemove.toString());
+      
+      changed = doInlining(logger, program, inlineLocations, toRemove);
+      logger.debug("changed=" + changed);
     } while (changed);
   }
 
@@ -95,7 +102,7 @@ public class FunctionInline implements OptimizerPass {
     while (it.hasNext()) {
       BuiltinFunction f = it.next();
       List<String> usages = finder.functionUsages.get(f.getName());
-      if (usages.size() == 0) {
+      if (usages.size() == 0 && ! Builtins.hasOpEquiv(f.getName())) {
         logger.debug("Prune builtin: " + f.getName());
         it.remove();
       }
@@ -128,9 +135,48 @@ public class FunctionInline implements OptimizerPass {
       }
     }
 
-    // TODO: need to find recursive loops
+    MultiMap<String, String> inlineCandidates2 = new MultiMap<String, String>();
+    // remove any loops in inlining
+    Set<String> visited = new HashSet<String>();
+    for (String toInline: inlineCandidates.keySet()) {
+      findCycleFree(inlineCandidates, visited, toRemove,
+                      inlineCandidates2, new ArrayDeque<String>(), toInline);
+    }
     
-    return Pair.create(inlineCandidates, toRemove);
+    return Pair.create(inlineCandidates2, toRemove);
+  }
+
+  /**
+   */
+  private void findCycleFree(MultiMap<String, String> candidates,
+      Set<String> visited, Set<String> toRemove,
+      MultiMap<String, String> newCandidates, Deque<String> callStack,
+      String curr) {
+    List<String> callers = candidates.get(curr);
+    if (callers == null || callers.size() == 0) {
+      // not a candidate for inlining
+      return;
+    }
+    
+    if (visited.contains(curr)) {
+      // Don't process again
+      return;
+    }
+    visited.add(curr);
+    
+    for (String caller: callers) {
+      if (callStack.contains(caller) || caller.equals(curr)) {
+        // Do nothing: adding this would create cycle
+      } else {
+        // Mark for inlining
+        newCandidates.put(curr, caller);
+        
+        callStack.push(curr);
+        findCycleFree(candidates, visited, toRemove, newCandidates, callStack,
+                        caller);
+        callStack.pop();
+      }
+    }
   }
 
   private boolean doInlining(Logger logger, Program program,
@@ -145,11 +191,11 @@ public class FunctionInline implements OptimizerPass {
       Function f = functionIter.next();
       List<String> occurrences = inlineLocations.get(f.getName());
       if (toRemove.contains(f.getName())) {
-        functionIter.remove();
-        assert(occurrences == null || occurrences.size() == 0);
-      } else if (occurrences != null && occurrences.size() > 0) {
         changed = true;
-        functionIter.remove();
+        functionIter.remove();      
+      } 
+      if (occurrences != null && occurrences.size() > 0) {
+        changed = true;
         toInline.put(f.getName(), f);
         if (occurrences != null) {
           callSiteFunctions.addAll(occurrences);
@@ -159,7 +205,7 @@ public class FunctionInline implements OptimizerPass {
     
     // Now do the inlining
     if (!callSiteFunctions.isEmpty()) {
-      doInlining(logger, program, callSiteFunctions, toInline);
+      doInlining(logger, program, callSiteFunctions, inlineLocations, toInline);
     }
     return changed;
   }
@@ -167,34 +213,45 @@ public class FunctionInline implements OptimizerPass {
   /**
    * 
    * @param logger
-   * @param inlineLocations Names of functions where inlining must happen
+   * @param callSiteFunctions Names of functions where inlining must happen
+   * @param inlineLocations Only inline these calls (callee -> caller map)
    * @param toInline functions to inline
    */
   private void doInlining(Logger logger, Program program,
-      Set<String> inlineLocations, Map<String, Function> toInline) {
+      Set<String> callSiteFunctions, MultiMap<String, String> inlineLocations, Map<String, Function> toInline) {
     for (Function f: program.getFunctions()) {
-      if (inlineLocations.contains(f.getName())) {
-        doInlining(logger, program, f, f.getMainblock(), toInline);
+      if (callSiteFunctions.contains(f.getName())) {
+        doInlining(logger, program, f, f.getMainblock(), inlineLocations, toInline);
       }
     }
   }
 
   private void doInlining(Logger logger, Program prog, Function contextFunction,
-      Block block, Map<String, Function> toInline) {
+      Block block, MultiMap<String, String> inlineLocations, Map<String, Function> toInline) {
+    // Recurse first to avoid visiting newly inlined continuations and doing
+    // extra inlining (required to avoid infinite loops of inlining with 
+    // recursive functions)
+    for (Continuation c: block.getContinuations()) {
+      for (Block cb: c.getBlocks()) {
+        doInlining(logger, prog, contextFunction, cb, inlineLocations, toInline);
+      }
+    }
+    
     ListIterator<Instruction> it = block.instructionIterator();
     while (it.hasNext()) {
       Instruction inst = it.next();
       if (isFunctionCall(inst)) {
         FunctionCall fcall = (FunctionCall)inst;
         if (toInline.containsKey(fcall.getFunctionName())) {
-          inlineCall(logger, prog, contextFunction, block, it, fcall,
-                     toInline.get(fcall.getFunctionName()));
+          // Check that location is marked for inlining
+          List<String> inlineCallers = inlineLocations.get(fcall.getFunctionName());
+          if (inlineCallers.contains(contextFunction.getName())) {
+            // Do the inlining.  Note that the iterator will be positioned
+            // after any newly inlined instructions.
+            inlineCall(logger, prog, contextFunction, block, it, fcall,
+                       toInline.get(fcall.getFunctionName()));
+          }
         }
-      }
-    }
-    for (Continuation c: block.getContinuations()) {
-      for (Block cb: c.getBlocks()) {
-        doInlining(logger, prog, contextFunction, cb, toInline);
       }
     }
   }
@@ -211,7 +268,12 @@ public class FunctionInline implements OptimizerPass {
       Function contextFunction, Block block,
       ListIterator<Instruction> it, FunctionCall fnCall,
       Function toInline) {
+    // Remove function call instruction
     it.remove();
+    
+    // Create copy of function code so variables can be renamed 
+    Block inlineBlock = toInline.getMainblock().clone(BlockType.NESTED_BLOCK,
+                                                      null, null);
     
     // rename function arguments
     Map<String, Arg> renames = new HashMap<String, Arg>();
@@ -222,28 +284,32 @@ public class FunctionInline implements OptimizerPass {
     assert(fnCall.getInputs().size() == toInline.getInputList().size());
     for (int i = 0; i < fnCall.getInputs().size(); i++) {
       Arg inputVal = fnCall.getInput(i);
-      renames.put(toInline.getInputList().get(i).name(), inputVal);
+      Var inArg = toInline.getInputList().get(i);
+      renames.put(inArg.name(), inputVal);
       if (inputVal.isVar()) {
         passIn.add(inputVal.getVar());
       }
+      // Remove cleanup actions
+      inlineBlock.removeCleanups(inArg);
     }
     for (int i = 0; i < fnCall.getOutputs().size(); i++) {
       Var outVar = fnCall.getOutput(i);
-      renames.put(toInline.getOutputList().get(i).name(),
+      Var outArg = toInline.getOutputList().get(i);
+      renames.put(outArg.name(),
                   Arg.createVar(outVar));
       passIn.add(outVar);
       if (Types.isArray(outVar.type())) {
         outArrays.add(outVar);
       }
+
+      // Remove cleanup actions
+      inlineBlock.removeCleanups(outArg);
     }
     
     // TODO: output arrays inside structs
     
     Block insertBlock;
     ListIterator<Instruction> insertPos;
-    // Create copy of function code so variables can be renamed 
-    Block inlineBlock = toInline.getMainblock().clone(BlockType.NESTED_BLOCK,
-                                                      null, null);
     
     // rename vars
     chooseUniqueNames(prog, contextFunction, inlineBlock, renames);
@@ -257,7 +323,7 @@ public class FunctionInline implements OptimizerPass {
       // TODO: should be data_only sometimes.
       WaitMode waitMode = WaitMode.TASK_DISPATCH;
       WaitStatement wait = new WaitStatement(
-          contextFunction + "-" + toInline.getName() + "-call",
+          contextFunction.getName() + "-" + toInline.getName() + "-call",
           toInline.getBlockingInputs(), passIn, outArrays,
           waitMode, false, fnCall.getMode());
       block.addContinuation(wait);
@@ -268,8 +334,8 @@ public class FunctionInline implements OptimizerPass {
     // Do the insertion
     insertBlock.insertInline(inlineBlock, insertPos);
     logger.debug("Call to function " + fnCall.getFunctionName() +
-          " inlined into " + toInline.getName());
-    
+          " inlined into " + contextFunction.getName());
+    new Exception().printStackTrace();
   }
 
   /**
