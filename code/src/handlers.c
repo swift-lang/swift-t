@@ -416,7 +416,8 @@ check_parallel_tasks()
     return ADLB_NOTHING;
   for (int i = 0; i < wu->parallelism; i++)
   {
-    send_work_unit(ranks[i], wu);
+    int rc = send_work_unit(ranks[i], wu);
+    ADLB_CHECK(rc);
     SEND(ranks, wu->parallelism, MPI_INT, ranks[i],
          ADLB_TAG_RESPONSE_GET);
   }
