@@ -33,6 +33,7 @@ import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
+import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayInfo;
@@ -674,7 +675,7 @@ public class TurbineGenerator implements CompilerBackend
     assert tclf != null : "Builtin " + function + "not found";
     Builtins.getTaskMode(function).checkSpawn(execContextStack.peek());
     // Increment references so that function owns ref
-    incrementAllRefs(inputs, trackWritersVars(outputs));
+    incrementAllRefs(inputs, outputs);
 
     builtinFunctionCall(function, tclf, inputs, outputs, priority);
   }
@@ -739,7 +740,7 @@ public class TurbineGenerator implements CompilerBackend
       List<Var> usedVars = new ArrayList<Var>();
       usedVars.addAll(inputs);
       usedVars.addAll(outputs);
-      incrementAllRefs(usedVars, trackWritersVars(outputs));
+      incrementAllRefs(usedVars, outputs);
       // TODO: should handle local separately - this will put local tasks
       //      into load balancer
       pointStack.peek().add(Turbine.callFunction(
@@ -1456,19 +1457,6 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     /**
-     * @param t
-     * @return true if type has refcount to be managed
-     */
-    private static boolean hasRefcount(Var v) {
-      if (Types.isScalarValue(v.type())) {
-        return false;
-      } else if (v.defType() == DefType.GLOBAL_CONST) {
-        return false;
-      }
-      return true;
-    }
-
-    /**
      * Increment refcount of all vars by one
      * @param vars
      */
@@ -1504,7 +1492,7 @@ public class TurbineGenerator implements CompilerBackend
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(vars)) {
         Var var = vc.var;
-        if (!hasRefcount(var)) {
+        if (!RefCounting.hasReadRefcount(var)) {
           continue;
         }
         Expression amount;
@@ -1536,34 +1524,12 @@ public class TurbineGenerator implements CompilerBackend
       }
       return seq;
     }
-    
-    /**
-     * Filter vars to include only variables where writers count is tracked
-     * @param outputs
-     * @return
-     */
-    private List<Var> trackWritersVars(List<Var> vars) {
-      List<Var> res = new ArrayList<Var>();
-      for (Var var: vars) {
-        if (trackWriters(var.type())) {
-          res.add(var);
-        }
-      }
-      return res;
-    }
-
-    private boolean trackWriters(Type type) {
-      if (Types.isArray(type)) {
-        return true;
-      }
-      return false;
-    }
 
     private static Sequence incrementWriters(List<Var> keepOpenVars,
           Expression incr) {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(keepOpenVars)) {
-        if (!hasRefcount(vc.var)) {
+        if (!RefCounting.hasWriteRefcount(vc.var)) {
           continue;
         }
         if (incr == null) {
@@ -1593,7 +1559,7 @@ public class TurbineGenerator implements CompilerBackend
                                              Expression decr) {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(vars)) {
-        if (!hasRefcount(vc.var)) {
+        if (!RefCounting.hasWriteRefcount(vc.var)) {
           continue;
         }
         if (decr == null) {

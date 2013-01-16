@@ -49,6 +49,7 @@ import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Builtins;
+import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
@@ -370,8 +371,9 @@ public class ASTWalker {
     
     Set<String> noRefcountNames = Var.nameSet(noRefcount); 
     for (Var v: context.getScopeVariables()) {
-      if (v.storage() == VarStorage.STACK || v.storage() == VarStorage.TEMP) {
-        if (!noRefcountNames.contains(v.name())) {
+      if (RefCounting.hasReadRefcount(v)) {
+        if (!noRefcountNames.contains(v.name()) && 
+            v.storage() != VarStorage.ALIAS) {
           backend.decrRef(v);
         }
       }

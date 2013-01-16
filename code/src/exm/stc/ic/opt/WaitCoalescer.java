@@ -19,6 +19,7 @@ import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
@@ -244,10 +245,15 @@ public class WaitCoalescer implements OptimizerPass {
         } else {
           waitMode = WaitMode.TASK_DISPATCH;
         }
+        
+        List<Var> outWriteRefcounted = RefCounting.filterWriteRefcount(
+                    req.out == null ? Collections.<Var>emptyList() : req.out);
+        
         WaitStatement wait = new WaitStatement(
                 fn.getName() + "-" + i.shortOpName(),
-                waitVars, req.in, new ArrayList<Var>(0), waitMode,
-                true, req.mode);
+                waitVars, req.in,
+                outWriteRefcounted,
+                waitMode, true, req.mode);
         block.addContinuation(wait);
         
         List<Instruction> instBuffer = new ArrayList<Instruction>();

@@ -30,6 +30,7 @@ import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.OpType;
+import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -460,13 +461,12 @@ public class ExprWalker {
     Var priorityVal = null;
     boolean openedWait = false;
     ArrayList<Var> usedVariables = null;
-    List<Var> keepOpen = null;
+    List<Var> keepOpen = RefCounting.filterWriteRefcount(oList);
     Context callContext = context;
     if (tree.getChildCount() == 3) {
       SwiftAST priorityT = tree.child(2);
       Var priorityFuture = eval(context, priorityT,
                             Types.F_INT, false, renames);
-      keepOpen = new ArrayList<Var>(0); // TODO: Do we need these?
       // used variables: any input or output args
       usedVariables = new ArrayList<Var>();
       usedVariables.addAll(argVars);
@@ -768,14 +768,16 @@ public class ExprWalker {
       }
     }
 
-    ArrayList<Var> usedVars = null;
+    List<Var> usedVars = null;
+    List<Var> keepOpen = null;
     if (waitContext != null) {
       FunctionContext fc = context.getFunctionContext();
       usedVars = new ArrayList<Var>();
       usedVars.addAll(iList); usedVars.addAll(oList);
+      keepOpen = RefCounting.filterWriteRefcount(oList);
       backend.startWaitStatement(
            fc.constructName("call-" + function),
-           waitVars, usedVars, new ArrayList<Var>(),
+           waitVars, usedVars, keepOpen,
            WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
 
       assert(waitVars.size() == derefVars.size());
@@ -796,7 +798,7 @@ public class ExprWalker {
     backendFunctionCall(context, function, oList, realIList, priorityVal);
 
     if (waitContext != null) {
-      backend.endWaitStatement(usedVars, new ArrayList<Var>());
+      backend.endWaitStatement(usedVars, keepOpen);
     }
   }
 
