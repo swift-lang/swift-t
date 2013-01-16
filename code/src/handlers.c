@@ -647,9 +647,20 @@ handle_retrieve(int caller)
   int length;
   adlb_data_type type;
   int dc = data_retrieve(hdr.id, &type, &result, &length);
+  
+  bool malloced_result = (type == ADLB_DATA_TYPE_CONTAINER);
   if (dc == ADLB_DATA_SUCCESS && hdr.decr_read_refcount) {
     int notify_count;
     int *notify_ranks;
+
+    // Need to copy result if don't own memory
+    if (!malloced_result) {
+      void* result_copy = malloc(length);
+      malloced_result = true;
+      memcpy(result_copy, result, length);
+      result = result_copy;
+    }
+
     dc = data_reference_count(hdr.id, ADLB_READ_REFCOUNT, -1,
                               &notify_ranks, &notify_count);
     assert(notify_count == 0);  // Shouldn't close anything
@@ -660,10 +671,11 @@ handle_retrieve(int caller)
   {
     SEND(&type, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
     SEND(result, length, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
-    if (type == ADLB_DATA_TYPE_CONTAINER)
+    if (malloced_result)
       free(result);
     DEBUG("Retrieve: <%li>", hdr.id);
   }
+
   MPE_LOG(xlb_mpe_svr_retrieve_end);
   return ADLB_SUCCESS;
 }
