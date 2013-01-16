@@ -2,6 +2,7 @@ package exm.stc.frontend;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
@@ -316,7 +317,7 @@ public class ASTWalker {
 
 
   private void block(Context context, SwiftAST tree) throws UserException {
-    block(context, tree, true);
+    block(context, tree, Collections.<Var>emptySet());
   }
   
   /**
@@ -326,11 +327,11 @@ public class ASTWalker {
    *
    * @param context
    *          a new context for this block
-   * @param closeArgs whether to close input or output arguments
-   *                  declared in block
+   * @param noRefCount vars that shouldn't have refcoutn decremented on
+   *                    block exit
    */
-  private void block(Context context, SwiftAST tree, boolean closeArgs)
-                                                      throws UserException {
+  private void block(Context context, SwiftAST tree,
+                     Collection<Var> noRefcount) throws UserException {
     LogHelper.trace(context, "block start");
 
     if (tree.getType() != ExMParser.BLOCK) {
@@ -344,20 +345,23 @@ public class ASTWalker {
       walkStatement(context, stmt, blockVu);
     }
 
-    closeBlockVariables(context, closeArgs);
+    cleanupBlockVars(context, noRefcount);
 
     LogHelper.trace(context, "block done");
   }
 
+  
   /**
-   * Make sure all arrays in block are closed upon exiting
+   * Do all required cleanup for block variables
    *
    * @param context
-   * @param closeArgs 
+   * @param noRefcount set of variables that should not have refcount
+   *        decremented 
    * @throws UserException
    * @throws UndefinedTypeException
    */
-  private void closeBlockVariables(Context context, boolean closeArgs) 
+  private void cleanupBlockVars(Context context,
+          Collection<Var> noRefcount) 
           throws UndefinedTypeException, UserException {
     for (Var v : context.getArraysToClose()) {
       assert(v.defType() != DefType.INARG);
@@ -365,10 +369,10 @@ public class ASTWalker {
       backend.decrWriters(v);
     }
     
+    Set<String> noRefcountNames = Var.nameSet(noRefcount); 
     for (Var v: context.getScopeVariables()) {
       if (v.storage() == VarStorage.STACK || v.storage() == VarStorage.TEMP) {
-        if (closeArgs && !(v.defType() == DefType.INARG || 
-                           v.defType() == DefType.OUTARG)) {
+        if (!noRefcountNames.contains(v.name())) {
           backend.decrRef(v);
         }
       }
@@ -806,7 +810,12 @@ public class ASTWalker {
           DefType.LOCAL_USER, null);
       backend.assignInt(loopCountVar, Arg.createVar(loop.getLoopCountVal()));
     }
-    block(loopBodyContext, loop.getBody());
+    
+    // Refcount of member var doesn't need to be decremented as wasn't
+    // incremeented
+    Set<Var> noRefcount = Collections.singleton(loop.getMemberVar());
+    
+    block(loopBodyContext, loop.getBody(), noRefcount);
     
     // Close spawn wait
     if (!loop.isSyncLoop()) {
@@ -1914,7 +1923,10 @@ public class ASTWalker {
       }
     }
 
-    block(functionContext, block, false);
+    Set<Var> allArgs = new HashSet<Var>();
+    allArgs.addAll(iList);
+    allArgs.addAll(oList);
+    block(functionContext, block, allArgs);
     backend.endFunction();
 
     LogHelper.debug(context, "compile function: done: " + function);
