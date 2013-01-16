@@ -216,6 +216,7 @@ xlb_pack_work_unit(struct packed_put* p, xlb_work_unit* wu)
   p->putter = wu->putter;
   p->target = wu->target;
   p->type = wu->type;
+  p->parallelism = wu->parallelism;
 }
 
 /** Member count of enum adlb_tag */
