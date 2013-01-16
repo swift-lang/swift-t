@@ -44,6 +44,8 @@ then
   exit 1
 fi
 
+echo "using CC=$( which ${CC} )"
+
 echo "PREFIX: ${prefix}"
 SOFTWARE=$( cd $(dirname ${prefix}) ; /bin/pwd )
 if [[ ${?} == 0 ]]
