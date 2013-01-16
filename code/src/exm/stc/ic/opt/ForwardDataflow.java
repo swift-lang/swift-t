@@ -756,7 +756,8 @@ public class ForwardDataflow implements OptimizerPass {
       insertPoint = insts;
     } else {
       List<Var> used = Var.varListUnion(req.in, req.out);
-      WaitStatement wait = new WaitStatement(fn.getName() + "-optinserted",
+      WaitStatement wait = new WaitStatement(
+          fn.getName() + "-" + inst.shortOpName(),
           Collections.<Var>emptyList(), used, Collections.<Var>emptyList(),
           WaitMode.TASK_DISPATCH, false, req.mode);
       insertContext = wait.getBlock();

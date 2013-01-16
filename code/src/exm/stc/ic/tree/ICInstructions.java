@@ -48,6 +48,14 @@ public class ICInstructions {
       this.op = op;
     }
   
+    /**
+     * @return a short name for the operation used for human-readable
+     *        diagnostics 
+     */
+    public String shortOpName() {
+      return op.toString().toLowerCase();
+    }
+    
     public void removeVars(Set<String> removeVars) {
       // default impl: do nothing
     }
@@ -1720,6 +1728,11 @@ public class ICInstructions {
       this.functionName = functionName;
     }
     
+    @Override
+    public String shortOpName() {
+      return op.toString().toLowerCase() + "-" + functionName;
+    }
+    
     private boolean isCopyFunction() {
       if (Builtins.isCopyFunction(functionName)) {
         return true;
@@ -1801,7 +1814,7 @@ public class ICInstructions {
         assert(v != null);
       }
     }
-  
+    
     public static FunctionCall createFunctionCall(
         String functionName, List<Var> inputs, List<Var> outputs,
         TaskMode mode, Arg priority) {
@@ -2650,6 +2663,12 @@ public class ICInstructions {
       this.output = output;
       this.inputs = new ArrayList<Arg>(inputs);
       this.priority = priority;
+    }
+    
+
+    @Override
+    public String shortOpName() {
+      return op.toString().toLowerCase() + "-" + subop.toString().toLowerCase();
     }
     
     public static Builtin createLocal(BuiltinOpcode subop, Var output, 

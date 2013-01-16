@@ -244,7 +244,8 @@ public class WaitCoalescer implements OptimizerPass {
         } else {
           waitMode = WaitMode.TASK_DISPATCH;
         }
-        WaitStatement wait = new WaitStatement(fn.getName() + "-optinserted",
+        WaitStatement wait = new WaitStatement(
+                fn.getName() + "-" + i.shortOpName(),
                 waitVars, req.in, new ArrayList<Var>(0), waitMode,
                 true, req.mode);
         block.addContinuation(wait);
