@@ -143,6 +143,10 @@ public class ICTree {
     public ListIterator<Function> functionIterator() {
       return functions.listIterator();
     }
+    
+    public ListIterator<BuiltinFunction> builtinIterator() {
+      return builtinFuns.listIterator();
+    }
 
     public void addGlobalConst(String name, Arg val) {
       if (globalConsts.put(name, val) != null) {
@@ -280,6 +284,10 @@ public class ICTree {
       this.fType = fType;
     }
 
+    public String getName() {
+      return name;
+    }
+    
     public void prettyPrint(StringBuilder out) {
       out.append("tcl ");
       out.append("(");

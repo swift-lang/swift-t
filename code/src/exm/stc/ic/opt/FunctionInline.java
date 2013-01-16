@@ -33,6 +33,7 @@ import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
+import exm.stc.ic.tree.ICTree.BuiltinFunction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
@@ -78,6 +79,8 @@ public class FunctionInline implements OptimizerPass {
       FuncCallFinder finder = new FuncCallFinder();
       TreeWalk.walk(logger, program, finder);
       
+      pruneBuiltins(logger, program, finder);
+      
       Pair<MultiMap<String, String>, Set<String>> actions =
              selectInlineFunctions( program, finder);
       MultiMap<String, String> inlineLocations = actions.val1;
@@ -86,36 +89,17 @@ public class FunctionInline implements OptimizerPass {
     } while (changed);
   }
 
-  private boolean doInlining(Logger logger, Program program,
-      MultiMap<String, String> inlineLocations, Set<String> toRemove) {
-    boolean changed = false;
-    // Functions that will be inlined
-    Map<String, Function> toInline = new HashMap<String, Function>();
-    // Functions where inlining must occur
-    Set<String> callSiteFunctions = new HashSet<String>();
-    ListIterator<Function> functionIter = program.functionIterator();
-    while (functionIter.hasNext()) {
-      Function f = functionIter.next();
-
-      List<String> occurrences = inlineLocations.get(f.getName());
-      if (toRemove.contains(f.getName())) {
-        functionIter.remove();
-        assert(occurrences == null);
-      } else if (occurrences != null) {
-        changed = true;
-        functionIter.remove();
-        toInline.put(f.getName(), f);
-        if (occurrences != null) {
-          callSiteFunctions.addAll(occurrences);
-        }
+  private void pruneBuiltins(Logger logger, Program program,
+      FuncCallFinder finder) {
+    ListIterator<BuiltinFunction> it = program.builtinIterator();
+    while (it.hasNext()) {
+      BuiltinFunction f = it.next();
+      List<String> usages = finder.functionUsages.get(f.getName());
+      if (usages.size() == 0) {
+        logger.debug("Prune builtin: " + f.getName());
+        it.remove();
       }
     }
-    
-    // Now do the inlining
-    if (!callSiteFunctions.isEmpty()) {
-      doInlining(logger, program, callSiteFunctions, toInline);
-    }
-    return changed;
   }
 
   /**
@@ -136,7 +120,7 @@ public class FunctionInline implements OptimizerPass {
       List<String> callLocs = finder.functionUsages.get(f.getName());
       if (f.getName().equals(Constants.MAIN_FUNCTION)) {
         // Do nothing
-      } else if (callLocs == null) {
+      } else if (callLocs == null || callLocs.size() == 0) {
         // Function not referenced - prune it!
         toRemove.add(f.getName());
       } else if (callLocs.size() <= inlineThreshold) {
@@ -147,6 +131,37 @@ public class FunctionInline implements OptimizerPass {
     // TODO: need to find recursive loops
     
     return Pair.create(inlineCandidates, toRemove);
+  }
+
+  private boolean doInlining(Logger logger, Program program,
+      MultiMap<String, String> inlineLocations, Set<String> toRemove) {
+    boolean changed = false;
+    // Functions that will be inlined
+    Map<String, Function> toInline = new HashMap<String, Function>();
+    // Functions where inlining must occur
+    Set<String> callSiteFunctions = new HashSet<String>();
+    ListIterator<Function> functionIter = program.functionIterator();
+    while (functionIter.hasNext()) {
+      Function f = functionIter.next();
+      List<String> occurrences = inlineLocations.get(f.getName());
+      if (toRemove.contains(f.getName())) {
+        functionIter.remove();
+        assert(occurrences == null || occurrences.size() == 0);
+      } else if (occurrences != null && occurrences.size() > 0) {
+        changed = true;
+        functionIter.remove();
+        toInline.put(f.getName(), f);
+        if (occurrences != null) {
+          callSiteFunctions.addAll(occurrences);
+        }
+      }
+    }
+    
+    // Now do the inlining
+    if (!callSiteFunctions.isEmpty()) {
+      doInlining(logger, program, callSiteFunctions, toInline);
+    }
+    return changed;
   }
 
   /**
