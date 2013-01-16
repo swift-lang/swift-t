@@ -57,8 +57,7 @@ public class Validate implements OptimizerPass {
       checkVarUnique(logger, program, fn, usedNames, v);
     }
     
-    // TODO: temporarily disabled due to not handling loop cleanups right
-    // checkCleanups(fn, block);
+    checkCleanups(fn, block);
     
     for (Continuation c: block.getContinuations()) {
       List<Var> constructDefined = c.constructDefinedVars();

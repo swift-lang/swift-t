@@ -393,7 +393,7 @@ class VariableUsageAnalyzer {
     }
     
     VariableUsageInfo outerLoopInfo = vu.createNested();
-    Context bodyContext = forLoop.createBodyContext(context);
+    Context bodyContext = forLoop.createIterationContext(context);
     forLoop.validateCond(bodyContext);
     
     context.syncFilePos(tree, lineMapping);

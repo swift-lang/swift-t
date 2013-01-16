@@ -870,9 +870,9 @@ public class ASTWalker {
             + "." + forLoop.getBody().getCharPositionInLine());
     
     // Create context with loop variables
-    Context loopBodyContext = forLoop.createBodyContext(context);
-    forLoop.validateCond(loopBodyContext);
-    Type condType = TypeChecker.findSingleExprType(loopBodyContext, 
+    Context loopIterContext = forLoop.createIterationContext(context);
+    forLoop.validateCond(loopIterContext);
+    Type condType = TypeChecker.findSingleExprType(loopIterContext, 
                                               forLoop.getCondition());
 
     // Evaluate the conditional expression for the first iteration outside the
@@ -886,7 +886,7 @@ public class ASTWalker {
     
     // Start the loop construct with some initial values
     Var condArg = 
-        loopBodyContext.declareVariable(condType, Var.LOOP_COND_PREFIX + 
+        loopIterContext.declareVariable(condType, Var.LOOP_COND_PREFIX + 
             loopNum, VarStorage.TEMP, DefType.INARG, null);
 
 
@@ -912,10 +912,14 @@ public class ASTWalker {
                       blockingVector);
     
     // get value of condVar
-    Var condVal = varCreator.fetchValueOf(loopBodyContext, condArg);
+    Var condVal = varCreator.fetchValueOf(loopIterContext, condArg);
     
     // branch depending on if loop should start
     backend.startIfStatement(Arg.createVar(condVal), true);
+    
+    // Create new context for loop body to execute when condition passes
+    Context loopBodyContext = new LocalContext(loopIterContext);
+    
     // If this iteration is good, run all of the stuff in the block
     block(loopBodyContext, forLoop.getBody());
     
@@ -937,9 +941,10 @@ public class ASTWalker {
     backend.startElseBlock();
     // Terminate loop, clean up open arrays and copy out final vals 
     // of loop vars
+    Context loopFinalizeContext = new LocalContext(loopIterContext);
     for (LoopVar lv: forLoop.getLoopVars()) {
       if (lv.declaredOutsideLoop) {
-        exprWalker.copyByValue(loopBodyContext, 
+        exprWalker.copyByValue(loopFinalizeContext, 
             lv.var, parentLoopVarAliases.get(lv.var.name()), 
             lv.var.type());
       }
@@ -947,6 +952,9 @@ public class ASTWalker {
     
     backend.loopBreak(usedVariables, keepOpenVars);
     backend.endIfStatement();
+    
+    // TODO: refcounting of loop variables and condition
+    
     // finish loop construct
     backend.endLoop();
   }
