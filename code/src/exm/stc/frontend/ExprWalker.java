@@ -2,6 +2,7 @@ package exm.stc.frontend;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -36,12 +37,14 @@ import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.ScalarFutureType;
 import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.util.Pair;
 import exm.stc.frontend.Context.FnProp;
+import exm.stc.frontend.VariableUsageInfo.VInfo;
 
 /**
  * This module contains logic to walk individual expression in Swift and generate code to evaluate them
@@ -203,6 +206,8 @@ public class ExprWalker {
                                                                renames);
     } else {
       Var tmp = varCreator.createTmp(context, type, storeInStack, false);
+      flagDeclaredVarForClosing(context, tmp);
+      
       ArrayList<Var> childOList = new ArrayList<Var>(1);
       childOList.add(tmp);
       evalToVars(context, tree, childOList, renames);
@@ -707,24 +712,22 @@ public class ExprWalker {
    * @throws UserException
    */
   private void arrayElems(Context context, SwiftAST tree, Var oVar,
-      Map<String, String> renames) throws UserException {
-      assert(Types.isArray(oVar.type()));
-      ArrayElems ae = ArrayElems.fromAST(context, tree);
-      Type arrType = TypeChecker.findSingleExprType(context, tree);
-      assert(Types.isArray(arrType) || Types.isUnion(arrType));
-      assert(arrType.assignableTo(oVar.type()));
-      
-      Type memType = oVar.type().memberType();
-      /** Evaluate all the members and insert into list */
-      for (int i = 0; i < ae.getMemberCount(); i++) {
-        SwiftAST mem = ae.getMember(i);
-        Var computedMember = eval(context, mem, 
-            memType, false, renames);
-        backend.arrayInsertImm(computedMember, oVar, 
-                                      Arg.createIntLit(i));
-      }
-      // Will need to close this array
-      context.flagArrayForClosing(oVar);
+    Map<String, String> renames) throws UserException {
+    assert(Types.isArray(oVar.type()));
+    ArrayElems ae = ArrayElems.fromAST(context, tree);
+    Type arrType = TypeChecker.findSingleExprType(context, tree);
+    assert(Types.isArray(arrType) || Types.isUnion(arrType));
+    assert(arrType.assignableTo(oVar.type()));
+    
+    Type memType = oVar.type().memberType();
+    /** Evaluate all the members and insert into list */
+    for (int i = 0; i < ae.getMemberCount(); i++) {
+      SwiftAST mem = ae.getMember(i);
+      Var computedMember = eval(context, mem, 
+          memType, false, renames);
+      backend.arrayInsertImm(computedMember, oVar, 
+                                    Arg.createIntLit(i));
+    }
   }
 
 
@@ -993,5 +996,63 @@ public class ExprWalker {
     copyByValue(context, rValDerefed, dst, dst.type());
     backend.endWaitStatement(usedVars, new ArrayList<Var>());
   }
+ 
+
+
+
+  void flagDeclaredVarForClosing(Context context, Var var)
+                            throws UndefinedTypeException, UserException {
+    List<Pair<Var, VInfo>> foundArrs = null;
+
+    if (Types.isArray(var.type())) {
+      foundArrs = Collections.singletonList(Pair.create(var, (VInfo)null));
+    } else if (Types.isStruct(var.type())) {
+      // Might have to dig into struct and load members to see if we 
+      // should close it
+      foundArrs = new ArrayList<Pair<Var, VInfo>>();
+      findArraysInStruct(context, var, null, foundArrs);
+    }
+    
+    if (foundArrs != null) {        
+      for (Pair<Var, VInfo> p: foundArrs) {
+        Var arr = p.val1;
+        context.flagArrayForClosing(arr);
+      }
+    }
+  }
   
+  
+  void findArraysInStruct(Context context,
+      Var root, VInfo structVInfo, List<Pair<Var, VInfo>> arrays)
+          throws UndefinedTypeException, UserException {
+    findArraysInStructToClose(context, root, root, structVInfo,
+        new Stack<String>(), arrays);
+  }
+
+  private void findArraysInStructToClose(Context context,
+      Var root, Var struct, VInfo structVInfo,
+      Stack<String> fieldPath, List<Pair<Var, VInfo>> arrays) throws UndefinedTypeException,
+                                                                      UserException {
+    StructType vtype = (StructType)struct.type();
+    for (StructField f: vtype.getFields()) {
+      fieldPath.push(f.getName());
+      if (Types.isArray(f.getType())) {
+        Var fieldVar = structLookup(context, struct, 
+            f.getName(), false, root, fieldPath);
+        VInfo fieldInfo = structVInfo != null ?
+            structVInfo.getFieldVInfo(f.getName()) : null;
+        arrays.add(Pair.create(fieldVar, fieldInfo));
+      } else if (Types.isStruct(f.getType())) {
+        VInfo nestedVInfo = structVInfo != null ?
+            structVInfo.getFieldVInfo(f.getName()) : null;
+        assert(nestedVInfo != null || structVInfo == null);
+        Var field = structLookup(context, struct, f.getName(),
+                                  false, root, fieldPath);
+
+        findArraysInStructToClose(context, root, field, nestedVInfo, fieldPath,
+            arrays);
+      }
+      fieldPath.pop();
+    }
+  }
 }

@@ -11,7 +11,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Stack;
 
 import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
@@ -379,51 +378,6 @@ public class ASTWalker {
     }
   }
 
-  private static class VarInfoPair {
-    public final Var var;
-    public final VInfo vinfo;
-    public VarInfoPair(Var var, VInfo vinfo) {
-      super();
-      this.var = var;
-      this.vinfo = vinfo;
-    }
-    
-    @Override
-    public String toString() {
-      return this.var.toString() + " pair";
-    }
-  }
-  private void findArraysInStruct(Context context,
-      Var root, VInfo structVInfo, List<VarInfoPair> arrays)
-          throws UndefinedTypeException, UserException {
-    findArraysInStructToClose(context, root, root, structVInfo,
-        new Stack<String>(), arrays);
-  }
-
-  private void findArraysInStructToClose(Context context,
-      Var root, Var struct, VInfo structVInfo,
-      Stack<String> fieldPath, List<VarInfoPair> arrays) throws UndefinedTypeException,
-                                                                      UserException {
-    StructType vtype = (StructType)struct.type();
-    for (StructField f: vtype.getFields()) {
-      fieldPath.push(f.getName());
-      if (Types.isArray(f.getType())) {
-        Var fieldVar = exprWalker.structLookup(context, struct, 
-            f.getName(), false, root, fieldPath);
-        arrays.add(new VarInfoPair(fieldVar, structVInfo.getFieldVInfo(f.getName())));
-      } else if (Types.isStruct(f.getType())) {
-        VInfo nestedVInfo = structVInfo.getFieldVInfo(f.getName());
-        assert(nestedVInfo != null);
-        Var field = exprWalker.structLookup(context, struct, f.getName(),
-              false, root, fieldPath);
-
-        findArraysInStructToClose(context, root, field, nestedVInfo, fieldPath,
-            arrays);
-      }
-      fieldPath.pop();
-    }
-  }
-
   private void ifStatement(Context context, SwiftAST tree)
       throws UserException {    
     LogHelper.trace(context, "if...");
@@ -553,17 +507,17 @@ public class ASTWalker {
         }
       } else if (Types.isStruct(v.type())) {
         // Need to find arrays inside structs
-        ArrayList<VarInfoPair> arrs = new ArrayList<VarInfoPair>();
+        ArrayList<Pair<Var, VInfo>> arrs = new ArrayList<Pair<Var, VInfo>>();
         // This procedure might add the same array multiple times,
         // so use a set to avoid duplicates
         HashSet<Var> alreadyFound = new HashSet<Var>();
         for (VariableUsageInfo bvu : branchVUs) {
           arrs.clear();
-          findArraysInStruct(context, v, bvu.lookupVariableInfo(v.name()),
-                                                                        arrs);
-          for (VarInfoPair p: arrs) {
-            if (p.vinfo.isAssigned() != Ternary.FALSE) {
-              alreadyFound.add(p.var);
+          exprWalker.findArraysInStruct(context, v,
+              bvu.lookupVariableInfo(v.name()), arrs);
+          for (Pair<Var, VInfo> p: arrs) {
+            if (p.val2.isAssigned() != Ternary.FALSE) {
+              alreadyFound.add(p.val1);
             }
           }
         }
@@ -1159,7 +1113,7 @@ public class ASTWalker {
         vDesc.getName(), VarStorage.STACK, DefType.LOCAL_USER, mappedVar);
 
     // Might need to close if array or struct containing array
-    flagDeclaredVarForClosing(context, var, blockVu);
+    exprWalker.flagDeclaredVarForClosing(context, var);
     return var;
   }
 
@@ -1924,10 +1878,9 @@ public class ASTWalker {
     
     
     if (mode != TaskMode.SYNC) {
-      VariableUsageInfo vu = block.getVariableUsage();
       // Make sure output arrays get closed if function runs as separate task
       for (Var o: oList) {
-        flagDeclaredVarForClosing(functionContext, o, vu);
+        exprWalker.flagDeclaredVarForClosing(functionContext, o);
       }
     }
 
@@ -1940,35 +1893,6 @@ public class ASTWalker {
     LogHelper.debug(context, "compile function: done: " + function);
   }
 
-
-  private void flagDeclaredVarForClosing(Context context, Var var,
-      VariableUsageInfo vu) throws UndefinedTypeException, UserException {
-    List<VarInfoPair> foundArrs = null;
-
-    // First find all of the arrays and the vinfo for them
-    VInfo vi = vu.lookupVariableInfo(var.name());
-    if (Types.isArray(var.type())) {
-      foundArrs = Collections.singletonList(new VarInfoPair(var, vi));
-    } else if (Types.isStruct(var.type())) {
-      // Might have to dig into struct and load members to see if we 
-      // should close it
-      foundArrs = new ArrayList<VarInfoPair>();
-      findArraysInStruct(context, var, vi, foundArrs);
-    }
-    
-    if (foundArrs != null) {        
-      for (VarInfoPair p: foundArrs) {
-        VInfo arrVI = p.vinfo;
-        Var arr = p.var;
-        if (arrVI.isAssigned() == Ternary.FALSE ||
-                          arrVI.getArrayAssignDepth() > 0) {
-          // should def be closed if not touched, or if assigned by index
-          context.flagArrayForClosing(arr);
-        }
-      }
-    }
-  }
-  
   private void defineAppFunction(Context context, SwiftAST tree)
       throws UserException {
     LogHelper.info(context.getLevel(), "defineAppFunction");

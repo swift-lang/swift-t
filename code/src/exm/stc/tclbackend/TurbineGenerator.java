@@ -674,7 +674,7 @@ public class TurbineGenerator implements CompilerBackend
     assert tclf != null : "Builtin " + function + "not found";
     Builtins.getTaskMode(function).checkSpawn(execContextStack.peek());
     // Increment references so that function owns ref
-    pointStack.peek().add(incrementReaders(inputs, null));
+    incrementAllRefs(inputs, trackWritersVars(outputs));
 
     builtinFunctionCall(function, tclf, inputs, outputs, priority);
   }
@@ -736,8 +736,10 @@ public class TurbineGenerator implements CompilerBackend
       TclList oList = TclUtil.tclListOfVariables(outputs);
       
       // Increment reference counts to keep open
-      pointStack.peek().append(incrementReaders(outputs, null));
-      pointStack.peek().append(incrementReaders(inputs, null));
+      List<Var> usedVars = new ArrayList<Var>();
+      usedVars.addAll(inputs);
+      usedVars.addAll(outputs);
+      incrementAllRefs(usedVars, trackWritersVars(outputs));
       // TODO: should handle local separately - this will put local tasks
       //      into load balancer
       pointStack.peek().add(Turbine.callFunction(
@@ -1535,6 +1537,28 @@ public class TurbineGenerator implements CompilerBackend
       return seq;
     }
     
+    /**
+     * Filter vars to include only variables where writers count is tracked
+     * @param outputs
+     * @return
+     */
+    private List<Var> trackWritersVars(List<Var> vars) {
+      List<Var> res = new ArrayList<Var>();
+      for (Var var: vars) {
+        if (trackWriters(var.type())) {
+          res.add(var);
+        }
+      }
+      return res;
+    }
+
+    private boolean trackWriters(Type type) {
+      if (Types.isArray(type)) {
+        return true;
+      }
+      return false;
+    }
+
     private static Sequence incrementWriters(List<Var> keepOpenVars,
           Expression incr) {
       Sequence seq = new Sequence();
