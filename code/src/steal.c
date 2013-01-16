@@ -31,46 +31,6 @@ get_target_server(int* result)
   } while (*result == xlb_world_rank);
 }
 
-static inline adlb_code
-steal_handshake(int target, int max_memory, int* count)
-{
-  MPI_Request request;
-  MPI_Status status;
-
-  IRECV(count, 1, MPI_INT, target, ADLB_TAG_RESPONSE_STEAL_COUNT);
-  SEND(&max_memory, 1, MPI_INT, target, ADLB_TAG_STEAL);
-
-  WAIT(&request, &status);
-  DEBUG("STOLE: %i", *count);
-  // MPE_INFO(xlb_mpe_svr_info, "STOLE: %i FROM: %i", *count, target);
-  return ADLB_SUCCESS;
-}
-
-static inline adlb_code
-steal_payloads(int target, int count )
-{
-  MPI_Status status;
-  int length = count * sizeof(struct packed_put);
-  struct packed_put* wus = malloc(length);
-  valgrind_assert(wus);
-  RECV(wus, length, MPI_BYTE, target, ADLB_TAG_RESPONSE_STEAL);
-
-  for (int i = 0; i < count; i++)
-  {
-    RECV(xfer, wus[i].length, MPI_BYTE, target,
-         ADLB_TAG_RESPONSE_STEAL);
-    workqueue_add(wus[i].type, wus[i].putter, wus[i].priority,
-                  wus[i].answer, wus[i].target, wus[i].length,
-                  wus[i].parallelism, xfer);
-  }
-  free(wus);
-  return ADLB_SUCCESS;
-}
-
-/**
-   Are there any other servers?
-   Are we allowed to steal yet?
- */
 bool
 steal_allowed()
 {
@@ -83,6 +43,11 @@ steal_allowed()
     return false;
   return true;
 }
+
+static inline adlb_code steal_handshake(int target, int max_memory,
+                                        int* count);
+
+static inline adlb_code steal_payloads(int target, int count);
 
 adlb_code
 steal(bool* result)
@@ -100,9 +65,9 @@ steal(bool* result)
   get_target_server(&target);
 
   rc = xlb_sync(target);
+  ADLB_CHECK(rc);
   if (rc == ADLB_SHUTDOWN)
     goto end;
-  ADLB_CHECK(rc);
 
   int count = 0;
   int max_memory = 1;
@@ -118,5 +83,41 @@ steal(bool* result)
   end:
   TRACE_END;
   MPE_LOG(xlb_mpe_dmn_steal_end);
+  return ADLB_SUCCESS;
+}
+
+static inline adlb_code
+steal_handshake(int target, int max_memory, int* count)
+{
+  MPI_Request request;
+  MPI_Status status;
+
+  IRECV(count, 1, MPI_INT, target, ADLB_TAG_RESPONSE_STEAL_COUNT);
+  SEND(&max_memory, 1, MPI_INT, target, ADLB_TAG_STEAL);
+
+  WAIT(&request, &status);
+  DEBUG("STOLE: %i", *count);
+  // MPE_INFO(xlb_mpe_svr_info, "STOLE: %i FROM: %i", *count, target);
+  return ADLB_SUCCESS;
+}
+
+static inline adlb_code
+steal_payloads(int target, int count)
+{
+  MPI_Status status;
+  int length = count * sizeof(struct packed_put);
+  struct packed_put* wus = malloc(length);
+  valgrind_assert(wus);
+  RECV(wus, length, MPI_BYTE, target, ADLB_TAG_RESPONSE_STEAL);
+
+  for (int i = 0; i < count; i++)
+  {
+    RECV(xfer, wus[i].length, MPI_BYTE, target,
+         ADLB_TAG_RESPONSE_STEAL);
+    workqueue_add(wus[i].type, wus[i].putter, wus[i].priority,
+                  wus[i].answer, wus[i].target, wus[i].length,
+                  wus[i].parallelism, xfer);
+  }
+  free(wus);
   return ADLB_SUCCESS;
 }
