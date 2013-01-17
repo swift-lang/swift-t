@@ -312,7 +312,7 @@ public class ASTWalker {
                       waitEvaled, usedVars, keepOpenVars, null,
                       WaitMode.EXPLICIT, false, TaskMode.LOCAL_CONTROL);
     block(new LocalContext(context), wait.getBlock());
-    backend.endWaitStatement(usedVars, keepOpenVars);
+    backend.endWaitStatement(waitEvaled, usedVars, keepOpenVars);
   }
 
 
@@ -435,7 +435,8 @@ public class ASTWalker {
       block(new LocalContext(waitContext), ifStmt.getElseBlock());
     }
     backend.endIfStatement();
-    backend.endWaitStatement(usedVariables, keepOpenVars);
+    backend.endWaitStatement(Arrays.asList(conditionVar),
+                             usedVariables, keepOpenVars);
   }
 
   /**
@@ -581,7 +582,8 @@ public class ASTWalker {
       backend.endCase();
     }
     backend.endSwitch();
-    backend.endWaitStatement(usedVariables, keepOpenVars);
+    backend.endWaitStatement(Arrays.asList(switchVar),
+                             usedVariables, keepOpenVars);
   }
 
   private void foreach(Context context, SwiftAST tree) throws UserException {
@@ -634,9 +636,10 @@ public class ASTWalker {
     // Need to pass in futures along with user vars
     ArrayList<Var> waitUsedVariables = 
         new ArrayList<Var>(usedVariables);
-    waitUsedVariables.addAll(Arrays.asList(start, end, step));
+    List<Var> rangeBounds = Arrays.asList(start, end, step);
+    waitUsedVariables.addAll(rangeBounds);
     backend.startWaitStatement(fc.getFunctionName() + "-wait-range" + loopNum,
-             Arrays.asList(start, end, step), waitUsedVariables, keepOpenVars,
+             rangeBounds, waitUsedVariables, keepOpenVars,
              null, WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
     Context waitContext = new LocalContext(context);
     Var startVal = varCreator.fetchValueOf(waitContext, start);
@@ -660,7 +663,7 @@ public class ASTWalker {
       waitUsedVars = new ArrayList<Var>(usedVariables);
       waitUsedVars.add(memberVal);
       backend.startWaitStatement(fc.getFunctionName() + "range-iter" + loopNum,
-          Collections.<Var>emptyList(), waitUsedVars, keepOpenVars, null,
+          Arrays.<Var>asList(), waitUsedVars, keepOpenVars, null,
           WaitMode.TASK_DISPATCH, false, TaskMode.CONTROL);
     }
     
@@ -676,10 +679,10 @@ public class ASTWalker {
     }
     block(bodyContext, loop.getBody());
     if (!loop.isSyncLoop()) {
-      backend.endWaitStatement(waitUsedVars, keepOpenVars);
+      backend.endWaitStatement(Arrays.<Var>asList(), waitUsedVars, keepOpenVars);
     }
     backend.endRangeLoop(usedVariables, keepOpenVars, loop.getSplitDegree());
-    backend.endWaitStatement(usedVariables, keepOpenVars);
+    backend.endWaitStatement(rangeBounds, usedVariables, keepOpenVars);
   }
   
   /**
@@ -756,7 +759,7 @@ public class ASTWalker {
         iterUsedVars.add(loop.getLoopCountVal());
       backend.startWaitStatement(
           fc.getFunctionName() + "-foreach-spawn" + loopNum,
-          Collections.<Var>emptyList(), iterUsedVars, keepOpenVars, null,
+          Arrays.<Var>asList(), iterUsedVars, keepOpenVars, null,
           WaitMode.TASK_DISPATCH, false, TaskMode.CONTROL);
     }
     // If the user's code expects a loop count var, need to create it here
@@ -775,16 +778,17 @@ public class ASTWalker {
     
     // Close spawn wait
     if (!loop.isSyncLoop()) {
-      backend.endWaitStatement(iterUsedVars, keepOpenVars);
+      backend.endWaitStatement(Arrays.<Var>asList(), iterUsedVars, keepOpenVars);
     }
     backend.endForeachLoop(loop.getSplitDegree(), true, usedVariables,
                            keepOpenVars);
 
     // Wait for array
-    backend.endWaitStatement(waitUsedVars, keepOpenVars);
+    backend.endWaitStatement(Arrays.asList(realArray), waitUsedVars, keepOpenVars);
     if (Types.isArrayRef(arrayVar.type())) {
       // Wait for array ref
-      backend.endWaitStatement(arrRefWaitUsedVars, keepOpenVars);
+      backend.endWaitStatement(Arrays.asList(arrayVar),
+                               arrRefWaitUsedVars, keepOpenVars);
     }
   }
 
@@ -2018,7 +2022,7 @@ public class ASTWalker {
     Redirects<Arg> localRedirects = retrieved.val2;
     backend.runExternal(appName, localArgs, outputs, localRedirects,
                         hasSideEffects, deterministic);
-    backend.endWaitStatement(passIn, Arrays.<Var>asList());
+    backend.endWaitStatement(waitVars, passIn, Arrays.<Var>asList());
   }
 
 

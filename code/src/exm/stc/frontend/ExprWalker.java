@@ -341,13 +341,14 @@ public class ExprWalker {
       String wName = context.getFunctionContext().constructName("copy-wait");
       List<Var> keepOpenVars = Arrays.asList(dst);
       List<Var> usedVars = Arrays.asList(src, dst);
-      backend.startWaitStatement(wName, Arrays.asList(src),
+      List<Var> waitVars = Arrays.asList(src);
+      backend.startWaitStatement(wName, waitVars,
               usedVars, keepOpenVars, null,
               WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
       Var derefed = varCreator.createTmpAlias(context, dst.type());
       backend.retrieveRef(derefed, src);
       copyArrayByValue(context, dst, derefed);
-      backend.endWaitStatement(usedVars, keepOpenVars);
+      backend.endWaitStatement(waitVars, usedVars, keepOpenVars);
     } else if (Types.isStruct(dst.type())) {
       dereferenceStruct(context, dst, src);
     } else {
@@ -460,7 +461,8 @@ public class ExprWalker {
     // the argument evaluation is outside the wait statement
     Var priorityVal = null;
     boolean openedWait = false;
-    ArrayList<Var> usedVariables = null;
+    List<Var> waitVars = null;
+    List<Var> usedVariables = null;
     List<Var> keepOpen = RefCounting.filterWriteRefcount(oList);
     Context callContext = context;
     if (tree.getChildCount() == 3) {
@@ -472,8 +474,9 @@ public class ExprWalker {
       usedVariables.addAll(argVars);
       usedVariables.addAll(oList);
       
+      waitVars = Arrays.asList(priorityFuture);
       backend.startWaitStatement(context.getFunctionContext().constructName("priority-wait"), 
-                        Arrays.asList(priorityFuture), usedVariables, keepOpen,
+                        waitVars, usedVariables, keepOpen,
                         null,
                         WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
       openedWait = true;
@@ -484,7 +487,7 @@ public class ExprWalker {
     // callFunction will check that argument types match function
     callFunction(context, f.function(), concrete, oList, argVars, priorityVal);
     if (openedWait) {
-      backend.endWaitStatement(usedVariables, keepOpen);
+      backend.endWaitStatement(waitVars, usedVariables, keepOpen);
     }
   
   }
@@ -800,7 +803,7 @@ public class ExprWalker {
     backendFunctionCall(context, function, oList, realIList, priorityVal);
 
     if (waitContext != null) {
-      backend.endWaitStatement(usedVars, keepOpen);
+      backend.endWaitStatement(waitVars, usedVars, keepOpen);
     }
   }
 
@@ -933,16 +936,17 @@ public class ExprWalker {
     
     List<Var> keepOpen = Arrays.asList(dst);
     List<Var> usedVars = Arrays.asList(src, dst);
+    List<Var> waitVars = Arrays.asList(src);
     backend.startWaitStatement(
         context.getFunctionContext().constructName("arrcopy-wait"),
-        Arrays.asList(src), usedVars, keepOpen, null,
+        waitVars, usedVars, keepOpen, null,
         WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
     backend.startForeachLoop(
             context.getFunctionContext().constructName("arrcopy"),
             src, member, ix, -1, true, usedVars, keepOpen);
     backend.arrayInsertImm(member, dst, Arg.createVar(ix));
     backend.endForeachLoop(-1, true, usedVars, keepOpen);
-    backend.endWaitStatement(usedVars, keepOpen);
+    backend.endWaitStatement(waitVars, usedVars, keepOpen);
   }
 
 
@@ -990,16 +994,17 @@ public class ExprWalker {
   private void dereferenceStruct(Context context, Var dst, Var src)
       throws UserException, UndefinedTypeException {
     List<Var> usedVars = Arrays.asList(src, dst);
+    List<Var> waitVars = Arrays.asList(src);
     backend.startWaitStatement( 
                     context.getFunctionContext().constructName("copystruct"), 
-                    Arrays.asList(src), usedVars, 
+                    waitVars, usedVars, 
                     new ArrayList<Var>(), null, WaitMode.DATA_ONLY,
                     false, TaskMode.LOCAL);
     Var rValDerefed = varCreator.createTmp(context, 
             src.type().memberType(), false, true);
     backend.retrieveRef(rValDerefed, src);
     copyByValue(context, rValDerefed, dst, dst.type());
-    backend.endWaitStatement(usedVars, new ArrayList<Var>());
+    backend.endWaitStatement(waitVars, usedVars, new ArrayList<Var>());
   }
  
 

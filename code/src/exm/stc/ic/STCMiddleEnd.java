@@ -226,7 +226,8 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void endWaitStatement(List<Var> usedVars, List<Var> keepOpenVars) {
+  public void endWaitStatement(List<Var> waitVars, List<Var> usedVars,
+                               List<Var> keepOpenVars) {
     assert(currBlock().getType() == BlockType.WAIT_BLOCK);
     blockStack.pop();
   }

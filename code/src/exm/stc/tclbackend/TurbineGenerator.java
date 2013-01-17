@@ -1316,9 +1316,10 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     @Override
-    public void endWaitStatement(List<Var> usedVars, List<Var> keepOpenVars) {
+    public void endWaitStatement(List<Var> waitVars, List<Var> usedVars,
+                                 List<Var> keepOpenVars) {
       logger.trace("endWaitStatement()...");
-      endAsync(usedVars, keepOpenVars);
+      endAsync(waitVars, usedVars, keepOpenVars);
     }
 
     /**
@@ -1326,7 +1327,7 @@ public class TurbineGenerator implements CompilerBackend
      * a number of variables, and then run some code
      * @param procName
      * @param waitVars
-     * @param usedVariables
+     * @param usedVars
      * @param keepOpenVars
      * @param priority 
      * @param recursive 
@@ -1334,20 +1335,23 @@ public class TurbineGenerator implements CompilerBackend
      *                  at the cost of higher overhead
      */
     private void startAsync(String procName, List<Var> waitVars,
-        List<Var> usedVariables, List<Var> keepOpenVars,
+        List<Var> usedVars, List<Var> keepOpenVars,
         Arg priority, boolean recursive, TaskMode mode) {
       assert(priority == null || priority.isImmediateInt());
       mode.checkSpawn(execContextStack.peek());
+      
+      // Need to pass in references to waitVars for reference counting
+      List<Var> allUsedVars = asyncUsedVars(usedVars, waitVars);
+      
       ArrayList<Var> toPassIn = new ArrayList<Var>();
       HashSet<String> alreadyInSet = new HashSet<String>();
-      for (Var v: usedVariables) {
+      for (Var v: allUsedVars) {
         toPassIn.add(v);
         alreadyInSet.add(v.name());
         if (v.type().equals(Types.V_BLOB)) {
           throw new STCRuntimeError("Can't directly pass blob value");
         }
       }
-      
       // Also need to pass in refs to containers
       for (Var v: keepOpenVars) {
         if (!alreadyInSet.contains(v.name())) {
@@ -1392,7 +1396,7 @@ public class TurbineGenerator implements CompilerBackend
       }
 
       // increment read or write refs as needed
-      incrementAllRefs(usedVariables, keepOpenVars);
+      incrementAllRefs(allUsedVars, keepOpenVars);
       
       // Set priority (if provided)
       setPriority(priority);
@@ -1441,11 +1445,33 @@ public class TurbineGenerator implements CompilerBackend
       execContextStack.push(newExecContext);
     }
 
-    private void endAsync(List<Var> usedVars, List<Var> keepOpenVars) {
+    private void endAsync(List<Var> waitVars, List<Var> usedVars,
+                          List<Var> keepOpenVars) {
+      List<Var> allUsedVars = asyncUsedVars(usedVars, waitVars);
       // decrement read or write refs as needed
-      decrementAllRefs(usedVars, keepOpenVars);
+      decrementAllRefs(allUsedVars, keepOpenVars);
       execContextStack.pop();
       pointStack.pop();
+    }
+
+    /**
+     * List of variables needed by async
+     * @param usedVars
+     * @param waitVars
+     * @return
+     */
+    private List<Var> asyncUsedVars(List<Var> usedVars, List<Var> waitVars) {
+      // Also need to keep vars we are waiting on open
+      List<Var> neededVars = new ArrayList<Var>(usedVars);
+      
+      // Add, avoiding duplicates
+      Set<String> existingNames = Var.nameSet(usedVars);
+      for (Var wv: waitVars) {
+        if (existingNames.contains(wv)) {
+          neededVars.add(wv);
+        }
+      }
+      return neededVars;
     }
 
     private void incrementAllRefs(List<Var> usedVars, List<Var> keepOpenVars) {

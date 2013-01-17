@@ -358,7 +358,8 @@ public interface CompilerBackend {
       List<Var> usedVars, List<Var> keepOpenVars, Arg priority,
       WaitMode mode, boolean recursive, TaskMode target);
 
-  public abstract void endWaitStatement(List<Var> usedVars, List<Var> keepOpenVars);
+  public abstract void endWaitStatement(
+      List<Var> waitVars, List<Var> usedVars, List<Var> keepOpenVars);
 
   
   /**

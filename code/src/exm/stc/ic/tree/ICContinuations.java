@@ -1831,7 +1831,7 @@ public class ICContinuations {
       gen.startWaitStatement(procName, waitVars, passedInVars,
           keepOpenVars, priority, mode, recursive, target);
       this.block.generate(logger, gen, info);
-      gen.endWaitStatement(passedInVars, keepOpenVars);
+      gen.endWaitStatement(waitVars, passedInVars, keepOpenVars);
     }
 
     @Override

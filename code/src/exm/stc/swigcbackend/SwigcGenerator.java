@@ -1445,7 +1445,8 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void endWaitStatement(List<Var> usedVars, List<Var> keepOpenVars) {
+    public void endWaitStatement(List<Var> waitVars, List<Var> usedVars,
+                                 List<Var> keepOpenVars) {
       logger.trace("endWaitStatement()...");
       endAsync(keepOpenVars);
     }
