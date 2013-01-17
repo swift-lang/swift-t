@@ -16,6 +16,7 @@ import exm.stc.common.util.HierarchicalMap;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
@@ -67,19 +68,15 @@ public class FixupVariables implements OptimizerPass {
     }
     
     for (Instruction inst : block.getInstructions()) {
-      for (String n : Arg.varNameList(inst.getInputs())) {
-        if (!availVars.contains(n)) {
-          neededVars.add(n);
-        }
-      }
-      for (Var v: inst.getOutputs()) {
-        String n = v.name();
-        if (!availVars.contains(n)) {
-          neededVars.add(n);
-        }
-      }
+      updateNeededVars(inst, availVars, neededVars);
     }
+    for (CleanupAction ca: block.getCleanups()) {
+      updateNeededVars(ca.action(), availVars, neededVars);
+    }
+    
     for (Continuation c : block.getContinuations()) {
+      updateNeededVars(c, availVars, neededVars);
+
       // First see what variables the continuation defines inside itself
       List<Var> constructVars = c.constructDefinedVars();
       List<String> constructVarNames = null;
@@ -87,14 +84,6 @@ public class FixupVariables implements OptimizerPass {
         constructVarNames = Var.nameList(constructVars);
       }
       
-      // Next see what variables the continuation needs from the outer scope
-      // (or from its own defined vars)
-      for (Var v: c.requiredVars()) {
-        if (!availVars.contains(v.name())) {
-          neededVars.add(v.name());
-        }
-      }
-
       for (Block innerBlock : c.getBlocks()) {
         HierarchicalMap<String, Var> childVisible = visible.makeChildMap();
         if (constructVars != null) {
@@ -159,6 +148,32 @@ public class FixupVariables implements OptimizerPass {
     }
     neededVars.removeAll(globals);
     return neededVars;
+  }
+
+  private static void updateNeededVars(Continuation c,
+      HashSet<String> availVars, HashSet<String> neededVars) {
+    // Next see what variables the continuation needs from the outer scope
+    // (or from its own defined vars)
+    for (Var v: c.requiredVars()) {
+      if (!availVars.contains(v.name())) {
+        neededVars.add(v.name());
+      }
+    }
+  }
+
+  private static void updateNeededVars(Instruction inst,
+      HashSet<String> availVars, HashSet<String> neededVars) {
+    for (String n : Arg.varNameList(inst.getInputs())) {
+      if (!availVars.contains(n)) {
+        neededVars.add(n);
+      }
+    }
+    for (Var v: inst.getOutputs()) {
+      String n = v.name();
+      if (!availVars.contains(n)) {
+        neededVars.add(n);
+      }
+    }
   }
 
   /**
