@@ -1467,7 +1467,7 @@ public class TurbineGenerator implements CompilerBackend
       // Add, avoiding duplicates
       Set<String> existingNames = Var.nameSet(usedVars);
       for (Var wv: waitVars) {
-        if (existingNames.contains(wv)) {
+        if (!existingNames.contains(wv.name())) {
           neededVars.add(wv);
         }
       }
