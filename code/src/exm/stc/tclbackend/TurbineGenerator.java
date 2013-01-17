@@ -1448,12 +1448,26 @@ public class TurbineGenerator implements CompilerBackend
       pointStack.pop();
     }
 
-
     private void incrementAllRefs(List<Var> usedVars, List<Var> keepOpenVars) {
       incrementAllRefs(usedVars, keepOpenVars, null);
     }
     
+    /**
+     * Increment reference counts upon calling something asynchronously.
+     * It is valid to call this function with
+     *    usedVars = <all variables from outer scope that are used in new scope>
+     *    keepOpenVars = <all variables written in new scope>
+     * 
+     * @param usedVars any variables used in the new scope.  If there
+     *              is overlap with keepOpenVars, only the write refcount is
+     *              used
+     * @param keepOpenVars any written variables for which write refcount may
+     *      need to be maintained.  Any variables without write refcount are
+     *      filtered out, so it is valid to just pass a list of all variables
+     *      written in new scope. 
+     */
     private void incrementAllRefs(List<Var> usedVars, List<Var> keepOpenVars, Expression refIncrAmount) {
+      keepOpenVars = RefCounting.filterWriteRefcount(keepOpenVars);
       List<Var> readOnlyUsedVars = Var.varListDiff(usedVars,
                                                    keepOpenVars);
       pointStack.peek().append(incrementReaders(readOnlyUsedVars,
@@ -1556,6 +1570,7 @@ public class TurbineGenerator implements CompilerBackend
     
     private void decrementAllRefs(List<Var> usedVars, List<Var> keepOpenVars,
         Expression refDecrAmount) {
+      keepOpenVars = RefCounting.filterWriteRefcount(keepOpenVars);
       List<Var> readOnlyUsedVars = Var.varListDiff(usedVars, keepOpenVars);
       pointStack.peek().append(decrementReaders(readOnlyUsedVars, refDecrAmount));
       pointStack.peek().append(decrementWriters(keepOpenVars, refDecrAmount));
