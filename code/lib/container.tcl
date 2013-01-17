@@ -15,6 +15,8 @@ namespace eval turbine {
     proc container_reference { c i r type } {
         log "creating reference: <$c>\[$i\] <- <*$r> ($type)"
         adlb::container_reference $c $i $r $type
+        # TODO: need to move refcount from container to referenced item
+        # once reference set
     }
 
     # Same as container_lookup, but fail if item does not exist
@@ -160,6 +162,7 @@ namespace eval turbine {
         # Get the TD from the reference
         set id [ retrieve_integer $r ]
         # When the TD has a value, copy the value
+        read_refcount_incr $id
         copy_integer no_stack $v $id
     }
 
@@ -173,6 +176,7 @@ namespace eval turbine {
         # Get the TD from the reference
         set id [ retrieve_integer $r ]
         # When the TD has a value, copy the value
+        read_refcount_incr $id
         copy_float no_stack $v $id
     }
 
@@ -186,6 +190,7 @@ namespace eval turbine {
         # Get the TD from the reference
         set id [ retrieve_integer $r ]
         # When the TD has a value, copy the value
+        read_refcount_incr $id
         copy_string no_stack $v $id
     }
 
@@ -199,6 +204,7 @@ namespace eval turbine {
         # Get the TD from the reference
         set handle [ retrieve_string $r ]
         # When the TD has a value, copy the value
+        file_read_refcount_incr $id
         copy_file no_stack [ list $v ] [ list $handle ]
     }
 
@@ -211,6 +217,7 @@ namespace eval turbine {
         # Get the TD from the reference
         set handle [ retrieve_integer $r ]
         # When the TD has a value, copy the value
+        read_refcount_incr $handle
         copy_blob no_stack [ list $v ] [ list $handle ]
     }
 
