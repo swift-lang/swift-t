@@ -51,7 +51,7 @@ class Turbine
   private static final Token CONTAINER_F_REFERENCE =
       new Token("turbine::f_reference");
   private static final Token CONTAINER_REFERENCE =
-      new Token("adlb::container_reference");
+      new Token("turbine::container_reference");
   private static final Token CONTAINER_IMMEDIATE_INSERT =
       new Token("turbine::container_immediate_insert");
   private static final Token CREF_F_LOOKUP =

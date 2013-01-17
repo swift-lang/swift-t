@@ -883,9 +883,8 @@ public class TurbineGenerator implements CompilerBackend
   public void arrayLookupRefImm(Var oVar, Var arrayVar, Arg arrIx,
         boolean isArrayRef) {
     assert(arrIx.isImmediateInt());
-    if (isArrayRef) {
-      incrementReaders(arrayVar);
-    }
+    incrementReaders(arrayVar);
+    
     arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
     Command getRef = Turbine.arrayLookupImmIx(
           prefixVar(oVar.name()),
