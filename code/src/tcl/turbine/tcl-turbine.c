@@ -211,7 +211,8 @@ Turbine_Push_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(1);
-  turbine_rules_push();
+  turbine_code code = turbine_rules_push();
+  TURBINE_CHECK(code, "failure while pushing rules");
   return TCL_OK;
 }
 

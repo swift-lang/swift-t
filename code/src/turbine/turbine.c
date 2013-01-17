@@ -19,6 +19,7 @@
 
 #include <c-utils.h>
 #include <list.h>
+#include <log.h>
 #include <table.h>
 #include <table_lp.h>
 #include <tools.h>
@@ -346,21 +347,28 @@ transform_free(transform* T)
 /**
  * Return true if subscribed, false if data already set
  */
-static inline bool
-subscribe(turbine_transform_id id)
+static inline turbine_code
+subscribe(turbine_transform_id id, bool *result)
 {
   if (table_lp_search(&td_subscribed, id) != NULL) {
     // Already subscribed
-    return true;
+    *result = true;
+    return TURBINE_SUCCESS;
   }
-  int result;
-  ADLB_Subscribe(id, &result);
+  int subscribed;
+  adlb_code rc = ADLB_Subscribe(id, &subscribed);
+
+  if (rc != ADLB_SUCCESS) {
+    log_printf("ADLB_Subscribe on <%ld> failed with code: %d\n", id, rc);
+    return rc; // Turbine codes are same as ADLB data codes
+  }
 
   if (result != 0) {
     // Record it was subscribed
     table_lp_add(&td_subscribed, id, (void*)1);
   }
-  return result != 0;
+  *result = subscribed != 0;
+  return TURBINE_SUCCESS;
 }
 
 static int transform_tostring(char* output,
@@ -376,7 +384,7 @@ static int transform_tostring(char* output,
 #define DEBUG_TURBINE_RULE(transform, id)
 #endif
 
-static inline bool progress(transform* T);
+static inline turbine_code progress(transform* T, bool* subscribed);
 static inline void rule_inputs(transform* T);
 
 turbine_code
@@ -399,7 +407,13 @@ turbine_rule(const char* name,
 
   rule_inputs(T);
 
-  bool subscribed = progress(T);
+  bool subscribed;
+  turbine_code tc = progress(T, &subscribed);
+  if (tc != TURBINE_SUCCESS) {
+    DEBUG_TURBINE("turbine_rule failed\n");
+    DEBUG_TURBINE_RULE(T, *id);
+    return tc;
+  }
   
   DEBUG_TURBINE_RULE(T, *id);
 
@@ -467,7 +481,12 @@ turbine_rules_push()
     {
       transform* T = item->data;
       assert(T);
-      bool subscribed = progress(T);
+      bool subscribed;
+      turbine_code tc = progress(T, &subscribed);
+      if (tc != TURBINE_SUCCESS) {
+        return tc;
+      }
+
       if (!subscribed)
       {
         DEBUG_TURBINE("not subscribed on: %li\n", T->id);
@@ -578,7 +597,11 @@ turbine_close(turbine_datum_id id)
       }
     }
 
-    bool subscribed = progress(T);
+    bool subscribed;
+    turbine_code tc = progress(T, &subscribed);
+    if (tc != TURBINE_SUCCESS)
+      return tc;
+
     if (!subscribed)
     {
       DEBUG_TURBINE("ready: {%li}", transform_id);
@@ -596,23 +619,29 @@ turbine_close(turbine_datum_id id)
  * ids that are closed.  We contact server to check
  * status of any IDs not in list.
  */
-static inline bool
-progress(transform* T)
+static inline turbine_code
+progress(transform* T, bool* subscribed)
 {
+  *subscribed = false;
   for (; T->blocker < T->inputs; T->blocker++)
   {
     if (!input_closed(T, T->blocker))
     {
       // Contact server to check if available
       turbine_datum_id td = T->input_list[T->blocker];
-      if (subscribe(td)) {
+      turbine_code tc = subscribe(td, subscribed);
+      if (tc != TURBINE_SUCCESS) {
+        return tc;
+      }
+      if (*subscribed) {
         // Need to block on this id
-        return true;
+        return TURBINE_SUCCESS;
       }
     }
   }
   // Ready to run
-  return false;
+  *subscribed = false;
+  return TURBINE_SUCCESS;
 }
 
 /**
