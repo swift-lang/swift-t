@@ -284,6 +284,8 @@ public class FunctionInline implements OptimizerPass {
     // Remove function call instruction
     it.remove();
     
+    logger.debug("inlining " + toInline.getName() + " into " + contextFunction.getName());
+    
     // Create copy of function code so variables can be renamed 
     Block inlineBlock = toInline.getMainblock().clone(BlockType.NESTED_BLOCK,
                                                       null, null);
@@ -325,7 +327,7 @@ public class FunctionInline implements OptimizerPass {
     ListIterator<Instruction> insertPos;
     
     // rename vars
-    chooseUniqueNames(prog, contextFunction, inlineBlock, renames);
+    chooseUniqueNames(logger, prog, contextFunction, inlineBlock, renames);
     
     inlineBlock.renameVars(renames, false);
     
@@ -361,7 +363,7 @@ public class FunctionInline implements OptimizerPass {
    * @param inlineBlock block to be inlined
    * @param replacements updated with new renames
    */
-  private void chooseUniqueNames(Program prog,
+  private void chooseUniqueNames(Logger logger, Program prog,
       Function targetFunction, Block inlineBlock,
       Map<String, Arg> replacements) {
     Set<String> excludedNames = new HashSet<String>();
@@ -373,14 +375,14 @@ public class FunctionInline implements OptimizerPass {
       Block block = blocks.pop();
       for (Var v: block.getVariables()) {
         if (v.defType() != DefType.GLOBAL_CONST) {
-          updateName(block, targetFunction, replacements, excludedNames, v);
+          updateName(logger, block, targetFunction, replacements, excludedNames, v);
         }
       }
       for (Continuation c: block.getContinuations()) {
         List<Var> constructVars = c.constructDefinedVars();
         if (constructVars != null) {
           for (Var cv: constructVars) {
-            updateName(block, targetFunction, replacements, excludedNames, cv);
+            updateName(logger, block, targetFunction, replacements, excludedNames, cv);
           }
         }
         for (Block inner: c.getBlocks()) {
@@ -390,16 +392,18 @@ public class FunctionInline implements OptimizerPass {
     }
   }
 
-  private void updateName(Block block,
-          Function f, Map<String, Arg> replacements,
+  private void updateName(Logger logger, Block block,
+          Function targetFunction, Map<String, Arg> replacements,
           Set<String> excludedNames, Var var) {
     // Choose unique name (including new names for this block)
-    String newName = f.getMainblock().uniqueVarName(var.name(), excludedNames);
+    String newName = targetFunction.getMainblock().uniqueVarName(var.name(), excludedNames);
     Var newVar = new Var(var.type(), newName, var.storage(), var.defType(),
                          var.mapping());
     replacements.put(var.name(), Arg.createVar(newVar));
     excludedNames.add(newName);
     UniqueVarNames.replaceCleanup(block, var, newVar);
+    logger.trace("Replace " + var + " with " + newVar
+            + " for inline into function " + targetFunction.getName());
   }
 
   private static class FuncCallFinder implements TreeWalker {

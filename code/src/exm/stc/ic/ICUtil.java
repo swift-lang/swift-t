@@ -15,6 +15,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.CleanupAction;
 
 /**
  * Miscellaneous useful utilities that are used in multiple places in the intermediate 
@@ -226,6 +227,15 @@ public class ICUtil {
     LinkedList<Instruction> output = new LinkedList<Instruction>();
     for (Instruction i : instructions) {
       output.add(i.clone());
+    }
+    return output;
+  }
+  
+  public static ArrayList<CleanupAction> cloneCleanups(
+      List<CleanupAction> actions) {
+    ArrayList<CleanupAction> output = new ArrayList<CleanupAction>();
+    for (CleanupAction a : actions) {
+      output.add(a.clone());
     }
     return output;
   }

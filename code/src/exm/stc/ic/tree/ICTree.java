@@ -506,6 +506,15 @@ public class ICTree {
     public Instruction action() {
       return action;
     }
+    
+    @Override
+    public CleanupAction clone() {
+      return new CleanupAction(var, action.clone());
+    }
+    
+    public String toString() {
+      return action.toString() + " # cleanup " + var.name();
+    }
   }
   
   public static class Block {
@@ -582,7 +591,7 @@ public class ICTree {
           ICUtil.cloneInstructions(this.instructions),
           new ArrayList<Var>(this.variables),
           new ArrayList<Continuation>(), 
-          new ArrayList<CleanupAction>(this.cleanupActions));
+          ICUtil.cloneCleanups(this.cleanupActions));
       for (Continuation c: this.continuations) {
         // Add in way that ensures parent link updated
         cloned.addContinuation(c.clone());
@@ -713,8 +722,7 @@ public class ICTree {
 
       for (CleanupAction a: cleanupActions) {
         sb.append(indent);
-        sb.append(a.action().toString());
-        sb.append(" # cleanup " + a.var.name());
+        sb.append(a.toString());
         sb.append("\n");
       }
     }
