@@ -492,7 +492,7 @@ public class ICTree {
   }
 
   public static class CleanupAction {
-    private CleanupAction(Var var, Instruction action) {
+    public CleanupAction(Var var, Instruction action) {
       super();
       this.var = var;
       this.action = action;
@@ -845,12 +845,12 @@ public class ICTree {
         if (!inputsOnly && renames.containsKey(a.var.name())) {
           Arg replacement = renames.get(a.var.name());
           if (replacement.isVar()) {
-            CleanupAction newCleanup = new CleanupAction(replacement.getVar(),
+            /*CleanupAction newCleanup = new CleanupAction(replacement.getVar(),
                   a.action);
-            it.set(newCleanup);
+            it.set(newCleanup);*/
           } else {
             // Was replaced with constant
-            it.remove();
+            //it.remove();
           }
         }
       }

@@ -3,6 +3,7 @@ package exm.stc.ic.opt;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -12,6 +13,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
@@ -42,24 +44,24 @@ public class UniqueVarNames implements OptimizerPass {
   /**
    * Make all names in block unique
    *
-   * @param in
+   * @param block
    * @param usedNames Names already used
    */
-  private static void makeVarNamesUnique(Block in, Set<String> usedNames) {
+  private static void makeVarNamesUnique(Block block, Set<String> usedNames) {
     HashMap<String, Arg> renames = new HashMap<String, Arg>();
-    for (Var v: in.getVariables()) {
+    for (Var v: block.getVariables()) {
       if (v.defType() == DefType.GLOBAL_CONST) {
         continue;
       }
-      updateName(usedNames, renames, v);
+      updateName(block, usedNames, renames, v);
     }
   
     // Rename variables in Block (and nested blocks) according to map
-    in.renameVars(renames, false);
+    block.renameVars(renames, false);
   
     // Recurse through nested blocks, making sure that all used variable
     // names are added to the usedNames
-    for (Continuation c: in.getContinuations()) {
+    for (Continuation c: block.getContinuations()) {
       makeVarNamesUnique(usedNames, c);
     }
   }
@@ -82,7 +84,9 @@ public class UniqueVarNames implements OptimizerPass {
     if (constructVars != null) {
       HashMap<String, Arg> renames = new HashMap<String, Arg>();
       for (Var v: cont.constructDefinedVars()) {
-        updateName(usedNames, renames, v);
+        assert(cont.getBlocks().size() == 1) : "Assume continuation with " +
+        		"construct defined vars has only one block";
+        updateName(cont.getBlocks().get(0), usedNames, renames, v);
       }
       cont.replaceVars(renames, false, true);
     }
@@ -92,16 +96,28 @@ public class UniqueVarNames implements OptimizerPass {
     }
   }
 
-  private static void updateName(Set<String> usedNames,
+  static void updateName(Block block, Set<String> usedNames,
           HashMap<String, Arg> renames, Var var) {
     if (usedNames.contains(var.name())) {
       String newName = chooseNewName(usedNames, var);
+      Var newVar = new Var(var.type(), newName,
+                      var.storage(), var.defType(), var.mapping());
       renames.put(var.name(),
-          Arg.createVar(new Var(var.type(), newName,
-                          var.storage(), var.defType(), var.mapping())));
+          Arg.createVar(newVar));
+      replaceCleanup(block, var, newVar);
       usedNames.add(newName);
     } else {
       usedNames.add(var.name());
+    }
+  }
+
+  static void replaceCleanup(Block block, Var var, Var newVar) {
+    ListIterator<CleanupAction> it = block.cleanupIterator();
+    while (it.hasNext()) {
+      CleanupAction ca = it.next();
+      if (ca.var().name().equals(var.name())) {
+        it.set(new CleanupAction(newVar, ca.action()));
+      }
     }
   }
 

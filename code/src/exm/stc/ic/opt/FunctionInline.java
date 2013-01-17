@@ -373,14 +373,14 @@ public class FunctionInline implements OptimizerPass {
       Block block = blocks.pop();
       for (Var v: block.getVariables()) {
         if (v.defType() != DefType.GLOBAL_CONST) {
-          updateName(targetFunction, replacements, excludedNames, v);
+          updateName(block, targetFunction, replacements, excludedNames, v);
         }
       }
       for (Continuation c: block.getContinuations()) {
         List<Var> constructVars = c.constructDefinedVars();
         if (constructVars != null) {
           for (Var cv: constructVars) {
-            updateName(targetFunction, replacements, excludedNames, cv);
+            updateName(block, targetFunction, replacements, excludedNames, cv);
           }
         }
         for (Block inner: c.getBlocks()) {
@@ -390,7 +390,8 @@ public class FunctionInline implements OptimizerPass {
     }
   }
 
-  private void updateName(Function f, Map<String, Arg> replacements,
+  private void updateName(Block block,
+          Function f, Map<String, Arg> replacements,
           Set<String> excludedNames, Var var) {
     // Choose unique name (including new names for this block)
     String newName = f.getMainblock().uniqueVarName(var.name(), excludedNames);
@@ -398,6 +399,7 @@ public class FunctionInline implements OptimizerPass {
                          var.mapping());
     replacements.put(var.name(), Arg.createVar(newVar));
     excludedNames.add(newName);
+    UniqueVarNames.replaceCleanup(block, var, newVar);
   }
 
   private static class FuncCallFinder implements TreeWalker {

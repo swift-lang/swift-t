@@ -93,7 +93,8 @@ public class Validate implements OptimizerPass {
     for (CleanupAction ca: block.getCleanups()) {
       if (!blockVarNames.contains(ca.var().name())) {
         throw new STCRuntimeError("Cleanup action for var not defined in " +
-        		"block: " + ca.var() + " in function " + fn.getName());
+        		"block: " + ca.var() + " in function " + fn.getName() + ". " +
+            " Valid variables are: " + blockVarNames + "\n\n" + block);
       }
     }
   }
