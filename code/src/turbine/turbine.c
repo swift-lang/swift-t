@@ -363,7 +363,7 @@ subscribe(turbine_transform_id id, bool *result)
     return rc; // Turbine codes are same as ADLB data codes
   }
 
-  if (result != 0) {
+  if (subscribed != 0) {
     // Record it was subscribed
     table_lp_add(&td_subscribed, id, (void*)1);
   }
@@ -399,8 +399,6 @@ turbine_rule(const char* name,
   turbine_code code = transform_create(name, inputs, input_list,
                                        action_type, action,
                                        priority, &T);
-  if (code != TURBINE_SUCCESS)
-    return code;
 
   *id = T->id;
   turbine_check(code);
