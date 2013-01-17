@@ -198,6 +198,9 @@ do
       elif [ ${OPTARG} = 3 ]; then
         ENABLED_OPTS=($O1_OPTS $O2_OPTS $O3_OPTS)
         DISABLED_OPTS=($EXPERIMENTAL_OPTS)
+      elif [ ${OPTARG} = X ]; then
+        ENABLED_OPTS=($O1_OPTS $O2_OPTS $O3_OPTS $EXPERIMENTAL_OPTS)
+        DISABLED_OPTS=()
       else
         echo "Invalid optimization level -O ${OPTARG}"
         return 1
