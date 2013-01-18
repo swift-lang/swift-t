@@ -204,7 +204,7 @@ namespace eval turbine {
         # Get the TD from the reference
         set handle [ retrieve_string $r ]
         # When the TD has a value, copy the value
-        file_read_refcount_incr $id
+        file_read_refcount_incr $handle
         copy_file no_stack [ list $v ] [ list $handle ]
     }
 
