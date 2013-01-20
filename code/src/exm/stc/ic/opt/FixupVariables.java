@@ -150,7 +150,8 @@ public class FixupVariables implements OptimizerPass {
       if (visible.containsKey(needed)) {
         Var v = visible.get(needed);
         if (v.storage() == VarStorage.GLOBAL_CONST) {
-          block.addVariable(v);
+          // Add at top in case used as mapping var
+          block.addVariable(v, true);
           globals.add(needed);
         }
       }

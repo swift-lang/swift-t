@@ -913,7 +913,15 @@ public class ICTree {
     }
 
     public void addVariable(Var variable) {
-      this.variables.add(variable);
+      addVariable(variable, false);
+    }
+    
+    public void addVariable(Var variable, boolean atTop) {
+      if (atTop) {
+        this.variables.add(0, variable);
+      } else {
+        this.variables.add(variable);
+      }
     }
 
     public void addContinuations(List<? extends Continuation>
