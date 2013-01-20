@@ -41,6 +41,8 @@ public class ConstantSharing implements OptimizerPass {
                                       throws InvalidOptionException {
     for (Function f: prog.getFunctions()) {
       makeConstantsGlobal(logger, prog, f.getMainblock());
+      // Fixup variable passing to avoid unnecessarily passing constants
+      FixupVariables.fixupVariablePassing(logger, prog, f);
     }
   }
 
