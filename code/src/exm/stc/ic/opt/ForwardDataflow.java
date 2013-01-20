@@ -448,39 +448,7 @@ public class ForwardDataflow implements OptimizerPass {
       }
     }
   }
-
   
-  /**
-   * Opcodes which we don't consider as "significant work" for 
-   * e.g. administrative opcodes or opcodes which don't require much
-   * work. 
-   */
-  static HashSet<Opcode> nonProgressOpcodes = new 
-                            HashSet<ICInstructions.Opcode>();
-  static {
-    nonProgressOpcodes.add(Opcode.ARRAY_DECR_WRITERS);
-    nonProgressOpcodes.add(Opcode.DECR_BLOB_REF);
-    nonProgressOpcodes.add(Opcode.FREE_BLOB);
-    nonProgressOpcodes.add(Opcode.DECR_REF);
-    nonProgressOpcodes.add(Opcode.LOCAL_OP);
-    nonProgressOpcodes.add(Opcode.CALL_LOCAL);
-    nonProgressOpcodes.add(Opcode.CALL_LOCAL_CONTROL);
-    nonProgressOpcodes.add(Opcode.STORE_BOOL);
-    nonProgressOpcodes.add(Opcode.STORE_VOID);
-    nonProgressOpcodes.add(Opcode.STORE_INT);
-    nonProgressOpcodes.add(Opcode.STORE_FLOAT);
-    nonProgressOpcodes.add(Opcode.STORE_STRING);
-    nonProgressOpcodes.add(Opcode.STORE_BLOB);
-    nonProgressOpcodes.add(Opcode.COPY_REF);
-    nonProgressOpcodes.add(Opcode.ADDRESS_OF);
-    nonProgressOpcodes.add(Opcode.LOAD_BOOL);
-    nonProgressOpcodes.add(Opcode.LOAD_VOID);
-    nonProgressOpcodes.add(Opcode.LOAD_FLOAT);
-    nonProgressOpcodes.add(Opcode.LOAD_INT);
-    nonProgressOpcodes.add(Opcode.LOAD_REF);
-    nonProgressOpcodes.add(Opcode.LOAD_STRING);
-    nonProgressOpcodes.add(Opcode.LOAD_BLOB);
-  }
   /**
    * Find the set of variables required to be closed (recursively or not)
    * to make progress in block.  
@@ -496,7 +464,7 @@ public class ForwardDataflow implements OptimizerPass {
      *      to explore dependencies between variables and work out 
      *      which variables are needed to make progress */
     for (Instruction inst: block.getInstructions()) {
-      if (!nonProgressOpcodes.contains(inst.op)) {
+      if (!ProgressOpcodes.isNonProgressOpcode(inst.op)) {
         return null;
       }
     }
