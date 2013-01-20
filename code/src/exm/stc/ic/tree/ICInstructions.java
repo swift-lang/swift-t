@@ -218,7 +218,10 @@ public class ICInstructions {
      */
     public abstract TaskMode getMode();
 
-
+    public boolean closesOutputs() {
+      return false; // Default
+    }
+    
     /**
      * @return priority of task spawned, if any.  null if no spawn or
      *      default priority
@@ -1551,10 +1554,9 @@ public class ICInstructions {
         }
         case GET_FILENAME: 
         case GET_OUTPUT_FILENAME: {
-
           Arg out = args.get(0);
           Arg in = args.get(1);
-          return Arrays.asList(fileNameCV(out, in));
+          return Arrays.asList(fileNameCV(out, in.getVar()));
         }
         case DEREF_BLOB:
         case DEREF_BOOL:
@@ -1778,7 +1780,7 @@ public class ICInstructions {
           if (op == Opcode.CALL_BUILTIN && 
                       this.functionName.equals(Builtins.INPUT_FILE)) {
             // Inferring filename is problematic
-            res.add(fileNameCV(Arg.createVar(getOutput(0)), getInput(0)));
+            res.add(fileNameCV(getInput(0), getOutput(0)));
           }
           return res;
         } else {
@@ -2290,6 +2292,11 @@ public class ICInstructions {
     @Override
     public TaskMode getMode() {
       return TaskMode.SYNC;
+    }
+    
+    @Override
+    public boolean closesOutputs() {
+      return true;
     }
 
     @Override
@@ -3323,9 +3330,12 @@ public class ICInstructions {
     }
   }
 
-  private static ComputedValue fileNameCV(Arg outFilename, Arg inFile) {
+  public static ComputedValue fileNameCV(Arg outFilename, Var inFile) {
+    assert(Types.isFile(inFile.type()));
+    assert(outFilename.isVar());
+    assert(Types.isString(outFilename.getVar().type()));
     return new ComputedValue(Opcode.GET_FILENAME,
-        "", Arrays.asList(inFile), outFilename, false);
+        "", Arrays.asList(Arg.createVar(inFile)), outFilename, false);
   }
 
   private static String formatFunctionCall(Opcode op, 

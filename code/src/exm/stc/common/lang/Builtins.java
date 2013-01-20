@@ -22,8 +22,6 @@ import exm.stc.frontend.Context;
  * Currently it is sufficient to have this as a static class.
  */
 public class Builtins {
-
-  public static final String FILENAME = "filename";
   public static final String INPUT_FILE = "input_file";
   
   /** Names of built-ins which don't have side effects */

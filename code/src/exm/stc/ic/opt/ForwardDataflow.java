@@ -1,7 +1,6 @@
 package exm.stc.ic.opt;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -20,7 +19,6 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
@@ -585,10 +583,8 @@ public class ForwardDataflow implements OptimizerPass {
         cv.addComputedValue(compVal, cv.isAvailable(compVal));
       }
       if (v.isMapped() && Types.isFile(v.type())) {
-        // filename will return the mapping
-        ComputedValue filenameVal = new ComputedValue(Opcode.CALL_BUILTIN,
-            Builtins.FILENAME, Arrays.asList(Arg.createVar(v)),
-            Arg.createVar(v.mapping()), false, EquivalenceType.VALUE);
+        ComputedValue filenameVal = ICInstructions.fileNameCV(
+            Arg.createVar(v.mapping()), v);
         cv.addComputedValue(filenameVal, false);
       }
     }
@@ -724,6 +720,12 @@ public class ForwardDataflow implements OptimizerPass {
           }
         }
       }
+      if (inst.closesOutputs()) {
+        for (Var out: inst.getOutputs()) {
+          cv.close(out.name(), false);
+        }
+      }
+        
     }
     return anotherPassNeeded;
   }

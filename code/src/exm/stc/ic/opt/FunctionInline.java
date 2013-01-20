@@ -335,8 +335,11 @@ public class FunctionInline implements OptimizerPass {
       insertBlock = block;
       insertPos = it;
     } else {
-      // TODO: should be data_only sometimes.
-      WaitMode waitMode = WaitMode.TASK_DISPATCH;
+      // TODO: in some cases would be beneficial to use task_dispatch
+      //       to distribute work
+      boolean littleWork = true;
+      
+      WaitMode waitMode = littleWork ? WaitMode.DATA_ONLY : WaitMode.TASK_DISPATCH;
       WaitStatement wait = new WaitStatement(
           contextFunction.getName() + "-" + toInline.getName() + "-call",
           toInline.getBlockingInputs(), passIn, outArrays, fnCall.getPriority(),
