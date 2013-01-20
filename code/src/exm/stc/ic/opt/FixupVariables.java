@@ -2,6 +2,7 @@ package exm.stc.ic.opt;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -48,9 +49,17 @@ public class FixupVariables implements OptimizerPass {
   private static HashSet<String> fixupVariablePassing(Logger logger,
       Block block, HierarchicalMap<String, Var> visible) {
     HashSet<String> availVars = new HashSet<String>();
-    for (Var v : block.getVariables()) {
-      availVars.add(v.name());
-      visible.put(v.name(), v);
+
+    ListIterator<Var> varIt = block.variableIterator();
+    while (varIt.hasNext()) {
+      Var v = varIt.next();
+      if (v.defType() == DefType.GLOBAL_CONST) {
+        // Remove global imports to be readded later if needed
+        varIt.remove();
+      } else {
+        availVars.add(v.name());
+        visible.put(v.name(), v);
+      }
     }
 
     HashSet<String> neededVars = new HashSet<String>();
@@ -147,6 +156,7 @@ public class FixupVariables implements OptimizerPass {
       }
     }
     neededVars.removeAll(globals);
+
     return neededVars;
   }
 
