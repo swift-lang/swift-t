@@ -20,6 +20,7 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
@@ -586,7 +587,7 @@ public class ForwardDataflow implements OptimizerPass {
       if (v.isMapped() && Types.isFile(v.type())) {
         // filename will return the mapping
         ComputedValue filenameVal = new ComputedValue(Opcode.CALL_BUILTIN,
-            "filename", Arrays.asList(Arg.createVar(v)),
+            Builtins.FILENAME, Arrays.asList(Arg.createVar(v)),
             Arg.createVar(v.mapping()), false, EquivalenceType.VALUE);
         cv.addComputedValue(filenameVal, false);
       }

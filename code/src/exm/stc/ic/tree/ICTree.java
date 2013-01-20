@@ -204,6 +204,11 @@ public class ICTree {
       return name;
     }
     
+    public void removeGlobalConst(String unused) {
+      Arg val = globalConsts.remove(unused);
+      globalConstsInv.remove(val);
+    }
+
     public String invLookupGlobalConst(Arg val) {
       return this.globalConstsInv.get(val);
  

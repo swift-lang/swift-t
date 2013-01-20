@@ -192,13 +192,28 @@ public class FixupVariables implements OptimizerPass {
    * optimizations if they are allowed to mess up the usedVariables
    */
   public static void fixupVariablePassing(Logger logger, Program prog) {
+    Set<String> referencedGlobals = new HashSet<String>();
     for (Function fn : prog.getFunctions()) {
-      fixupVariablePassing(logger, prog, fn);
+      fixupVariablePassing(logger, prog, fn, referencedGlobals);
+    }
+    
+    removeUnusedGlobals(prog, referencedGlobals);
+  }
+
+  private static void removeUnusedGlobals(Program prog, Set<String> referencedGlobals) {
+    Set<String> globNames = new HashSet<String>(prog.getGlobalConsts().keySet());
+    globNames.removeAll(referencedGlobals);
+    for (String unused: globNames) {
+      prog.removeGlobalConst(unused);
     }
   }
 
+  public static void fixupVariablePassing(Logger logger, Program prog, Function fn) {
+    fixupVariablePassing(logger, prog, fn, new HashSet<String>());
+  }
+  
   public static void fixupVariablePassing(Logger logger, Program prog,
-          Function fn) {
+          Function fn, Set<String> referencedGlobals) {
     HierarchicalMap<String, Var> fnargs = new HierarchicalMap<String, Var>();
     for (Var v : fn.getInputList()) {
       fnargs.put(v.name(), v);
