@@ -41,13 +41,15 @@ public class FixupVariables implements OptimizerPass {
   /**
    * 
    * @param logger
-   * @param block
-   * @param all
+   * @param block 
+   * @param visible all
    *          variables logically visible in this block. will be modified in fn
+   * @param referencedGlobals updated with names of any globals used
    * @return
    */
   private static HashSet<String> fixupVariablePassing(Logger logger,
-      Block block, HierarchicalMap<String, Var> visible) {
+      Block block, HierarchicalMap<String, Var> visible,
+      Set<String> referencedGlobals) {
     HashSet<String> availVars = new HashSet<String>();
 
     ListIterator<Var> varIt = block.variableIterator();
@@ -101,7 +103,7 @@ public class FixupVariables implements OptimizerPass {
           }
         }
         HashSet<String> innerNeededVars = fixupVariablePassing(logger,
-            innerBlock, childVisible);
+            innerBlock, childVisible, referencedGlobals);
 
         // construct will provide some vars
         if (constructVars != null) {
@@ -153,6 +155,7 @@ public class FixupVariables implements OptimizerPass {
           // Add at top in case used as mapping var
           block.addVariable(v, true);
           globals.add(needed);
+          referencedGlobals.add(needed);
         }
       }
     }
@@ -229,7 +232,7 @@ public class FixupVariables implements OptimizerPass {
       fnargs.put(e.getKey(), v);
     }
     HashSet<String> neededVars = fixupVariablePassing(logger,
-        fn.getMainblock(), fnargs);
+        fn.getMainblock(), fnargs, referencedGlobals);
     // Check that all variables referred to are available as args
     neededVars.removeAll(Var.nameList(fn.getInputList()));
     neededVars.removeAll(Var.nameList(fn.getOutputList()));
