@@ -46,13 +46,13 @@ namespace eval turbine {
         store_integer $o $o_value
     }
 
+    # Obtain random value in [lo, hi)
+    # This works b/c rand() generates a number in [0.0, 1.0)
     proc randint_impl { lo hi } {
         if { [ expr $lo >= $hi ] } {
             error "randint: empty range \[$lo, $hi)"
         }
         set range [ expr $hi - $lo ]
-        # random value in [lo, hi)
-        # this works b/c rand() generates a number in [0.0, 1.0)
         return [ expr (int(rand() * $range)) + $lo ]
     }
 }
