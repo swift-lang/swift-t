@@ -1051,7 +1051,6 @@ ADLBP_Finalize()
 static void
 free_hostmap()
 {
-  printf("free_hostmap...\n");
   for (int i = 0; i < hostmap.capacity; i++)
   {
     struct list_sp* S = hostmap.array[i];
@@ -1062,7 +1061,6 @@ free_hostmap()
       bool b = list_sp_pop(S, &name, (void*) &L);
       if (!b)
         break;
-      printf("hostmap: name: %s\n", name);
       free(name);
       list_i_free(L);
     }
