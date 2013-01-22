@@ -5,7 +5,7 @@ import exm.stc.tclbackend.tree.Token;
 /**
  * The target of a Turbine rule 
  * Becomes the target of the ADLB task
- * The target is either ADLB_ANY_RANK or an integer rank
+ * The target is either ADLB_RANK_ANY or an non-negative integer rank
  * @author wozniak
  * */
 public class Target
@@ -22,7 +22,7 @@ public class Target
   }
   
   /**
-     Targets task to any rank
+     Constructor: Targets task to any rank
    */
   static Target rankAny()
   {
@@ -30,7 +30,7 @@ public class Target
   }
   
   /**
-     Targets task to specific target rank
+     Constructor: Targets task to specific target rank
    */
   static Target rank(int targetRank)
   {
