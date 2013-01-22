@@ -909,7 +909,6 @@ public class ICContinuations {
           if (inst.op == Opcode.LOOP_BREAK) {
             assert(breakInst == null): "duplicate instructions: " + breakInst
                     + " and \n" + inst;
-            System.err.println("Break found");
             breakInst = (LoopBreak)inst;
           } else if (inst.op == Opcode.LOOP_CONTINUE) {
             assert(continueInst == null): "duplicate instructions: " + continueInst
