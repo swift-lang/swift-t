@@ -93,3 +93,10 @@ proc bytes { b } {
     set gbs [ format $fmt $gb ]
     return "$gbs GB"
 }
+
+# Pull one item out of this list at random
+proc draw { L } {
+    set n [ llength $L ]
+    set i [ turbine::randint_impl 0 $n ]
+    return [ lindex $L $i ]
+}
