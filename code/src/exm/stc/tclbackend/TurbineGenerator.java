@@ -1,7 +1,7 @@
 /**
  * This module handles the higher-level logic of generating Tcl code.
- * More mechanical aspects of code generation are handled in TclTurbineTree
- * or the classes in the exm.tcl.tree module
+ * More mechanical aspects of code generation are handled in 
+ * the classes in the exm.tclbackend.tree module
  */
 package exm.stc.tclbackend;
 
@@ -27,12 +27,12 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Builtins;
+import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
-import exm.stc.common.lang.Redirects;
-import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
+import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
