@@ -407,7 +407,7 @@ namespace eval turbine {
     # o = i.  Void has no value, so this just makes sure that they close at
     # the same time
     proc copy_void { parent o i } {
-        rule "copy-$o-$i" $i $turbine::LOCAL "copy_void_body $o $i"
+        rule "copy-$o-$i" $i $turbine::LOCAL $adlb::RANK_ANY "copy_void_body $o $i"
     }
     proc copy_void_body { o i } {
         log "copy_void $i => $o"
@@ -417,7 +417,7 @@ namespace eval turbine {
 
     # Copy string value
     proc copy_string { parent o i } {
-        rule "copystring-$o-$i" $i $turbine::LOCAL \
+        rule "copystring-$o-$i" $i $turbine::LOCAL $adlb::RANK_ANY \
             "copy_string_body $o $i"
     }
     proc copy_string_body { o i } {
@@ -428,7 +428,7 @@ namespace eval turbine {
 
     # Copy blob value
     proc copy_blob { parent o i } {
-        rule "copyblob-$o-$i" $i $turbine::LOCAL \
+        rule "copyblob-$o-$i" $i $turbine::LOCAL $adlb::RANK_ANY \
             "copy_blob_body $o $i"
     }
     proc copy_blob_body { o i } {

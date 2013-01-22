@@ -36,7 +36,7 @@ namespace eval turbine {
         set lo [ lindex $i 0 ]
         set hi [ lindex $i 1 ]
         rule "randint-$lo-$hi" "$lo $hi" \
-            $turbine::LOCAL "randint_body $o $lo $hi"
+            $turbine::LOCAL $adlb::RANK_ANY "randint_body $o $lo $hi"
     }
 
     proc randint_body { o lo hi } {

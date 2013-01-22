@@ -65,7 +65,7 @@ namespace eval turbine {
 	set instatus [ get_file_status $infile ]
         lappend waitfor $inpath $instatus
       }
-      rule $msg $waitfor $target $cmd
+      rule $msg $waitfor $target $adlb::RANK_ANY $cmd
     }
 
     proc input_file { stack out filepath } {
@@ -75,7 +75,8 @@ namespace eval turbine {
          error "file \[ $outfile \] was already mapped, cannot use input_file"
       }
       rule "input_file-$outfile-$filepath" "$filepath" \
-            $turbine::LOCAL [ list input_file_body $outfile $filepath ]
+            $turbine::LOCAL $adlb::RANK_ANY \
+            [ list input_file_body $outfile $filepath ]
     }
 
     proc input_file_body { outfile filepath } {
@@ -119,7 +120,8 @@ namespace eval turbine {
         set srcpath [ get_file_path $src ]
         set srcstatus [ get_file_status $src ]
         rule "copy_file-$dst-$src" "$dstpath $srcpath $srcstatus" \
-            $turbine::WORK [ list copy_file_body $dst $src ]
+            $turbine::WORK $adlb::RANK_ANY \
+            [ list copy_file_body $dst $src ]
       } else {
         # not mapped.  As shortcut, just make them both point to the
         # same file and update status once src file is closed
@@ -165,7 +167,7 @@ namespace eval turbine {
     }
 
     proc glob { stack result inputs } {
-        rule glob $inputs $turbine::LOCAL \
+        rule glob $inputs $turbine::LOCAL $adlb::RANK_ANY \
             "glob_body $result $inputs"
     }
 
@@ -189,7 +191,8 @@ namespace eval turbine {
 	set src [ lindex $inputs 0 ]
         rule_file_helper "read_file-$src" [ list ] \
             [ list ] [ list $src ] \
-            $turbine::WORK [ list readFile_body $result $src ]
+            $turbine::WORK \
+            [ list readFile_body $result $src ]
     }
 
     proc readFile_body { result src} {
@@ -206,7 +209,8 @@ namespace eval turbine {
 	set s_value [ retrieve_string $inputs ]
 	rule_file_helper "write_file" "$inputs" \
             [ list $dst ] [ list ] \
-	    $turbine::WORK [ list writeFile_body $outputs $s_value ]
+	    $turbine::WORK \
+            [ list writeFile_body $outputs $s_value ]
     }
 
     proc writeFile_body { outputs str } {

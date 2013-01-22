@@ -24,7 +24,7 @@ namespace eval turbine {
     # o = ! i;
     proc not { parent o i } {
         rule "not-$i" $i \
-            $turbine::LOCAL "not_body $o $i"
+            $turbine::LOCAL $adlb::RANK_ANY "not_body $o $i"
     }
     proc not_body { o i } {
         set i_value [ retrieve_decr_integer $i ]
@@ -39,7 +39,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "and-$a-$b" "$a $b" \
-            $turbine::LOCAL "and_body $c $a $b"
+            $turbine::LOCAL $adlb::RANK_ANY "and_body $c $a $b"
     }
     proc and_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
@@ -57,7 +57,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "or-$a-$b" "$a $b" \
-            $turbine::LOCAL "or_body $c $a $b"
+            $turbine::LOCAL $adlb::RANK_ANY "or_body $c $a $b"
     }
     proc or_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
@@ -73,7 +73,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "eq_integer-$a-$b" "$a $b" \
-            $turbine::LOCAL "eq_integer_body $c $a $b"
+            $turbine::LOCAL $adlb::RANK_ANY "eq_integer_body $c $a $b"
     }
     proc eq_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
@@ -93,7 +93,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "neq_integer-$a-$b" "$a $b" \
-            $turbine::LOCAL "neq_integer_body $c $a $b"
+            $turbine::LOCAL $adlb::RANK_ANY "neq_integer_body $c $a $b"
     }
     proc neq_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
@@ -113,7 +113,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "lt_integer-$a-$b" "$a $b" \
-            $turbine::LOCAL "lt_integer_body $c $a $b"
+            $turbine::LOCAL $adlb::RANK_ANY "lt_integer_body $c $a $b"
     }
     proc lt_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
@@ -133,7 +133,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "lte_integer-$a-$b" "$a $b" \
-            $turbine::LOCAL "lte_integer_body $c $a $b"
+            $turbine::LOCAL $adlb::RANK_ANY "lte_integer_body $c $a $b"
     }
     proc lte_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
@@ -153,7 +153,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "gt_integer-$a-$b" "$a $b" \
-            $turbine::LOCAL "gt_integer_body $c $a $b"
+            $turbine::LOCAL $adlb::RANK_ANY "gt_integer_body $c $a $b"
     }
     proc gt_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
@@ -173,7 +173,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "gte_integer-$a-$b" "$a $b" \
-            $turbine::LOCAL "gte_integer_body $c $a $b"
+            $turbine::LOCAL $adlb::RANK_ANY "gte_integer_body $c $a $b"
     }
     proc gte_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
@@ -193,7 +193,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "eq_float-$a-$b" "$a $b" \
-            $turbine::LOCAL "eq_float_body $c $a $b"
+            $turbine::LOCAL $adlb::RANK_ANY "eq_float_body $c $a $b"
     }
     proc eq_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
@@ -213,7 +213,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "neq_float-$a-$b" "$a $b" \
-            $turbine::LOCAL "neq_float_body $c $a $b"
+            $turbine::LOCAL $adlb::RANK_ANY "neq_float_body $c $a $b"
     }
     proc neq_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
@@ -233,7 +233,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "lt_float-$a-$b" "$a $b" \
-            $turbine::LOCAL "lt_float_body $c $a $b"
+            $turbine::LOCAL $adlb::RANK_ANY "lt_float_body $c $a $b"
     }
     proc lt_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
@@ -253,7 +253,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "lte_float-$a-$b" "$a $b" \
-            $turbine::LOCAL "lte_float_body $c $a $b"
+            $turbine::LOCAL $adlb::RANK_ANY "lte_float_body $c $a $b"
     }
     proc lte_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
@@ -273,7 +273,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "gt_float-$a-$b" "$a $b" \
-            $turbine::LOCAL "gt_float_body $c $a $b"
+            $turbine::LOCAL $adlb::RANK_ANY "gt_float_body $c $a $b"
     }
     proc gt_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
@@ -293,7 +293,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "gte_float-$a-$b" "$a $b" \
-            $turbine::LOCAL "gte_float_body $c $a $b"
+            $turbine::LOCAL $adlb::RANK_ANY "gte_float_body $c $a $b"
     }
     proc gte_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
@@ -313,7 +313,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "eq_string-$a-$b" "$a $b" \
-            $turbine::LOCAL "eq_string_body $c $a $b"
+            $turbine::LOCAL $adlb::RANK_ANY "eq_string_body $c $a $b"
     }
     proc eq_string_body { c a b } {
         set a_value [ retrieve_decr_string $a ]
@@ -333,7 +333,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "neq_string-$a-$b" "$a $b" \
-            $turbine::LOCAL "neq_string_body $c $a $b"
+            $turbine::LOCAL $adlb::RANK_ANY "neq_string_body $c $a $b"
     }
     proc neq_string_body { c a b } {
         set a_value [ retrieve_decr_string $a ]

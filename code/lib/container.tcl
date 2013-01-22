@@ -592,7 +592,8 @@ namespace eval turbine {
 
       # Once all signals closed, run finalizer
       rule "${rule_prefix}-final" $signals $action_type \
-            [ list deeprule_finish $allocated_signals $action ]
+           $adlb::RANK_ANY \
+           [ list deeprule_finish $allocated_signals $action ]
     }
 
     # Check for container contents being closed and once true,
@@ -634,9 +635,11 @@ namespace eval turbine {
             incr progress
           } else {
             # Suspend execution until next item closed
-            rule "${rule_prefix}-$signal" $td $turbine::LOCAL $adlb::RANK_ANY \
-                [ list container_deep_wait_continue $rule_prefix $container \
-                          $progress $n $nest_level $is_file $signal ]
+            rule "${rule_prefix}-$signal" $td $turbine::LOCAL \
+                $adlb::RANK_ANY \
+                [ list container_deep_wait_continue $rule_prefix \
+                       $container $progress $n $nest_level $is_file \
+                       $signal ]
             return
           }
         }

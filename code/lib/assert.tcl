@@ -8,7 +8,7 @@ namespace eval turbine {
         set cond [ lindex $inputs 0 ]
         set msg [ lindex $inputs 1 ]
         rule "assert-$cond-$msg" "$cond $msg" \
-            $turbine::LOCAL "assert_body $cond $msg"
+            $turbine::LOCAL $adlb::RANK_ANY "assert_body $cond $msg"
     }
 
     proc assert_body { cond msg } {
@@ -34,7 +34,8 @@ namespace eval turbine {
         set arg2 [ lindex $inputs 1 ]
         set msg [ lindex $inputs 2 ]
         rule "assertEqual-$arg1-$arg2-$msg" "$arg1 $arg2 $msg" \
-            $turbine::LOCAL "assertEqual_body $arg1 $arg2 $msg"
+            $turbine::LOCAL $adlb::RANK_ANY \
+            "assertEqual_body $arg1 $arg2 $msg"
     }
 
     proc assertEqual_body { arg1 arg2 msg } {
@@ -60,7 +61,8 @@ namespace eval turbine {
         set arg2 [ lindex $inputs 1 ]
         set msg [ lindex $inputs 2 ]
         rule "assertLT-$arg1-$arg2-$msg" "$arg1 $arg2 $msg" \
-            $turbine::LOCAL "assertLT_body $arg1 $arg2 $msg"
+            $turbine::LOCAL $adlb::RANK_ANY \
+            "assertLT_body $arg1 $arg2 $msg"
     }
 
     proc assertLT_body { arg1 arg2 msg } {
