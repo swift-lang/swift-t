@@ -833,7 +833,7 @@ public class Types {
     SCALAR_FUTURE,
     SCALAR_VALUE,
     ARRAY,
-    // Reference is only used internally in compiler
+    /** Reference is only used internally in compiler */
     REFERENCE,
     STRUCT,
     TYPE_VARIABLE,
@@ -1094,6 +1094,7 @@ public class Types {
       return types.size();
     }
     
+    @Override
     public String toString() {
       return types.toString();
     }
@@ -1109,27 +1110,34 @@ public class Types {
       this.name = name;
     }
     
+    @Override
     public StructureType structureType() {
       return baseType.structureType();
     }
+    @Override
     public PrimType primType() {
       return baseType.primType();
     }
+    @Override
     public Type memberType() {
       return baseType.memberType();
     }
+    @Override
     public boolean assignableTo(Type other) {
       // Is assignable to anything baseType is 
       // assignable to, plus any instance of this
       return baseType.assignableTo(other) ||
               this.equals(other);
     }
+    @Override
     public Type bindTypeVars(Map<String, Type> vals) {
       return new SubType(baseType.bindTypeVars(vals), name);
     }
+    @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
       return baseType.matchTypeVars(concrete);
     }
+    @Override
     public boolean hasTypeVar() {
       return baseType.hasTypeVar();
     }
