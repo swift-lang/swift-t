@@ -768,7 +768,7 @@ data_container_size(adlb_datum_id container_id, int* size)
  */
 adlb_data_code
 data_insert(adlb_datum_id container_id,
-            const char* subscript, const char* member, int drops,
+            char* subscript, char* member, int drops,
             adlb_datum_id** references, int* references_count,
             int **notify_ranks, int *notify_count)
 {

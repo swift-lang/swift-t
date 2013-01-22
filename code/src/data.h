@@ -69,8 +69,8 @@ adlb_data_code data_reference_count(adlb_datum_id id, adlb_refcount_type type,
                 int increment, int** notify_ranks, int* notify_count);
 
 adlb_data_code data_insert(adlb_datum_id id,
-                           const char* subscript,
-                           const char* member,
+                           char* subscript,
+                           char* member,
                            int drops,
                            adlb_datum_id** references, int* references_count,
                            int **notify_ranks, int *notify_count);

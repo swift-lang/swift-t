@@ -6,10 +6,12 @@
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/utsname.h>
 
 #include <mpi.h>
 
 #include <c-utils.h>
+#include <table.h>
 #include <tools.h>
 
 #include "adlb.h"
@@ -37,6 +39,12 @@ static MPI_Group world_group;
 
 static int mpi_version;
 
+/**
+   Maps string hostname to list of int ranks which are running on
+   that host
+ */
+struct table hostmap;
+
 static void
 check_versions()
 {
@@ -49,6 +57,9 @@ check_versions()
   c_utils_version(&cuv);
   version_require("ADLB", &av, "c-utils", &cuv, &rcuv);
 }
+
+#define HOSTNAME_MAX 128
+static bool setup_hostmap(void);
 
 adlb_code
 ADLBP_Init(int nservers, int ntypes, int type_vect[],
@@ -104,15 +115,79 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
     ADLB_CHECK(code);
   }
 
+  setup_hostmap();
+
   srandom(xlb_world_rank+1);
   TRACE_END;
   return ADLB_SUCCESS;
+}
+
+static bool
+setup_hostmap()
+{
+  struct utsname u;
+  uname(&u);
+
+  // Length of nodenames
+  int length = sizeof(u.nodename);
+
+  // This may be too big for the stack
+  char* allnames = malloc((xlb_world_size*length) * sizeof(char));
+
+  char myname[length];
+  memset(myname, 0, length);
+  strcpy(myname, u.nodename);
+
+  int rc = MPI_Allgather(myname,   length, MPI_CHAR,
+                         allnames, length, MPI_CHAR, adlb_all_comm);
+  MPI_CHECK(rc);
+  table_init(&hostmap, 1024);
+
+  char* p = allnames;
+  for (int rank = 0; rank < xlb_world_size; rank++)
+  {
+    char* name = p;
+    // printf("setup_hostmap(): %s -> %i\n", name, rank);
+
+    if (!table_contains(&hostmap, name))
+    {
+      struct list_i* L = list_i_create();
+      table_add(&hostmap, name, L);
+    }
+
+    struct list_i* L;
+    table_search(&hostmap, name, (void*) &L);
+    list_i_add(L, rank);
+
+    p += length;
+  }
+
+  free(allnames);
+  return true;
 }
 
 adlb_code
 ADLB_Version(version* output)
 {
   version_parse(output, ADLB_VERSION);
+  return ADLB_SUCCESS;
+}
+
+adlb_code
+ADLB_Hostmap(const char* name, int count, int* output, int* actual)
+{
+  struct list_i* L;
+  bool b = table_search(&hostmap, name, (void*) &L);
+  if (!b)
+    return ADLB_NOTHING;
+  int i = 0;
+  for (struct list_i_item* item = L->head; item; item = item->next)
+  {
+    output[i++] = item->data;
+    if (i == count)
+      break;
+  }
+  *actual = i;
   return ADLB_SUCCESS;
 }
 
@@ -932,6 +1007,8 @@ ADLB_Shutdown(void)
   return ADLB_SUCCESS;
 }
 
+static void free_hostmap(void);
+
 adlb_code
 ADLBP_Finalize()
 {
@@ -958,6 +1035,8 @@ ADLBP_Finalize()
     }
   }
 
+  free_hostmap();
+
   bool failed;
   int fail_code;
   xlb_server_failed(&failed, &fail_code);
@@ -967,6 +1046,29 @@ ADLBP_Finalize()
     exit(fail_code);
   }
   return ADLB_SUCCESS;
+}
+
+static void
+free_hostmap()
+{
+  printf("free_hostmap...\n");
+  for (int i = 0; i < hostmap.capacity; i++)
+  {
+    struct list_sp* S = hostmap.array[i];
+    while (true)
+    {
+      char* name;
+      struct list_i* L;
+      bool b = list_sp_pop(S, &name, (void*) &L);
+      if (!b)
+        break;
+      printf("hostmap: name: %s\n", name);
+      free(name);
+      list_i_free(L);
+    }
+    list_sp_free(S);
+  }
+  table_release(&hostmap);
 }
 
 adlb_code
