@@ -36,7 +36,7 @@ argv_accept(string... keys)
 /* Model getenv as pure because it will be deterministic within
  * the context of a program
  */
-@pure  
+@pure
 (string s) getenv(string key) "turbine" "0.0.2" "getenv"
     [ "set <<s>> turbine::getenv_impl <<key>>" ];
 
@@ -45,5 +45,10 @@ argv_accept(string... keys)
 (void v) sleep(float seconds) "turbine" "0.0.4" "sleep" [
   "if { <<seconds>> > 0 } { after [ expr round(<<seconds>> * 1000) ] }"
 ];
+
+@pure
+(int rank) hostmap_one(string name)
+"turbine" "0.0.2" "getenv"
+[ "set <<rank>> [ draw [ adlb::hostmap <<name>> ] ]" ];
 
 #endif
