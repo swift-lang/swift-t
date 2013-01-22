@@ -11,6 +11,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.CleanupAction;
@@ -92,9 +93,12 @@ public class Validate implements OptimizerPass {
     
     for (CleanupAction ca: block.getCleanups()) {
       if (!blockVarNames.contains(ca.var().name())) {
-        throw new STCRuntimeError("Cleanup action for var not defined in " +
-        		"block: " + ca.var() + " in function " + fn.getName() + ". " +
-            " Valid variables are: " + blockVarNames + "\n\n" + block);
+        if (ca.action().op != Opcode.ARRAY_DECR_WRITERS) {
+          // TODO: workaround to avoid eliminating functional code
+          throw new STCRuntimeError("Cleanup action for var not defined in " +
+              "block: " + ca.var() + " in function " + fn.getName() + ". " +
+              " Valid variables are: " + blockVarNames); 
+        }
       }
     }
   }
