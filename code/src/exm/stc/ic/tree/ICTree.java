@@ -502,7 +502,7 @@ public class ICTree {
       this.var = var;
       this.action = action;
     }
-    private final Var var;
+    private Var var;
     private final Instruction action;
     
     public Var var() {
@@ -512,6 +512,37 @@ public class ICTree {
       return action;
     }
     
+    /**
+     * @return false if only effect of instruction is to cleanup current variable
+     */
+    public boolean hasSideEffect() {
+      if (action.op == Opcode.ARRAY_DECR_WRITERS &&
+          action.writesAliasVar()) {
+        return true;
+      }
+      return false;
+    }
+    
+    public void renameVars(Map<String, Arg> renames, boolean inputsOnly) {
+      if (inputsOnly) {
+        action.renameInputs(renames);
+      } else {
+        action.renameVars(renames);
+      }
+      if (!inputsOnly && canMoveToAlias() && renames.containsKey(var.name())) {
+        Arg replacement = renames.get(var.name());
+        assert(replacement.isVar()) : replacement;
+        this.var = replacement.getVar();
+      }
+    }
+    
+    /**
+     * Can move cleanup action to alias of current var
+     * @return
+     */
+    private boolean canMoveToAlias() {
+      return action.op == Opcode.ARRAY_DECR_WRITERS;
+    }
     @Override
     public CleanupAction clone() {
       return new CleanupAction(var, action.clone());
@@ -847,25 +878,8 @@ public class ICTree {
 
     public void renameCleanupActions(Map<String, Arg> renames,
                                                 boolean inputsOnly) {
-      ListIterator<CleanupAction> it = cleanupActions.listIterator();
-      while (it.hasNext()) {
-        CleanupAction a = it.next();
-        if (inputsOnly) {
-          a.action.renameInputs(renames);
-        } else {
-          a.action.renameVars(renames);
-        }
-        if (!inputsOnly && renames.containsKey(a.var.name())) {
-          Arg replacement = renames.get(a.var.name());
-          if (replacement.isVar()) {
-            /*CleanupAction newCleanup = new CleanupAction(replacement.getVar(),
-                  a.action);
-            it.set(newCleanup);*/
-          } else {
-            // Was replaced with constant
-            //it.remove();
-          }
-        }
+      for (CleanupAction a: cleanupActions) {
+        a.renameVars(renames, inputsOnly);
       }
     }
 
@@ -984,21 +998,7 @@ public class ICTree {
         }
       }
       for (Instruction i : instructions) {
-        // check which variables are still needed
-        for (Arg oa: i.getInputs()) {
-          if (oa.isVar()) {
-            stillNeeded.add(oa.getVar().name());
-          }
-        }
-        // Can't eliminate instructions with side-effects
-        if (i.hasSideEffects()) {
-          for (Var out: i.getOutputs()) {
-            stillNeeded.add(out.name());
-          }
-        } else {
-          // Can only eliminate one var if can eliminate all
-          interdependencies.add(i.getOutputs());
-        }
+        updateEssentialVars(i, stillNeeded, interdependencies, i.hasSideEffects());
       }
 
       for (Continuation c: continuations) {
@@ -1011,15 +1011,38 @@ public class ICTree {
       }
       
       for (CleanupAction a: cleanupActions) {
-        // See if the variable might an an alias for out of scope
-        if (a.action.writesAliasVar()) {
-          stillNeeded.add(a.var.name());
+        boolean actionHasSideEffects = a.hasSideEffect();
+        updateEssentialVars(a.action(), stillNeeded, interdependencies,
+                            actionHasSideEffects);
+        if (actionHasSideEffects) {
+          stillNeeded.add(a.var().name());
         }
-        for (Arg out: a.action.getInputs()) {
-          if (out.isVar()) {
-            stillNeeded.add(out.getVar().name());
-          }
+      }
+    }
+
+    /**
+     * Update essential vars for instruction
+     * @param inst
+     * @param stillNeeded
+     * @param interdependencies
+     * @param hasSideEffects
+     */
+    private void updateEssentialVars(Instruction inst, Set<String> stillNeeded,
+        List<List<Var>> interdependencies, boolean hasSideEffects) {
+      // check which variables are still needed
+      for (Arg oa: inst.getInputs()) {
+        if (oa.isVar()) {
+          stillNeeded.add(oa.getVar().name());
         }
+      }
+      // Can't eliminate instructions with side-effects
+      if (hasSideEffects) {
+        for (Var out: inst.getOutputs()) {
+          stillNeeded.add(out.name());
+        }
+      } else {
+        // Can only eliminate one var if can eliminate all
+        interdependencies.add(inst.getOutputs());
       }
     }
 
