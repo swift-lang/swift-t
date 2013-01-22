@@ -19,7 +19,7 @@
 /* find: returns first index of substring in string, or -1 if not found */
 @pure
 (int o) find(string s, string substring, int start_index, int end_index)
-  "turbine" "0.0.1" "find" 
+  "turbine" "0.0.1" "find"
   [ "set <<o>> [ turbine::find_impl <<s>> <<substring>> <<start_index>> <<end_index>> ]" ];
 
 /* string_count: number of non-overlapping occurences of substring in string */
@@ -46,5 +46,10 @@
 (string o) replace_all (string s, string substring, string rep_string, int start_index)
   "turbine" "0.0.1" "replace_all"
   [ "set <<o>> [ turbine::replace_all_impl <<s>> <<substring>> <<rep_string>> <<start_index>> ]" ];
+
+@pure
+(string o) trim (string s)
+  "turbine" "0.0.1" "trim"
+  [ "set <<o>> [ string trim <<s>> ]" ];
 
 #endif
