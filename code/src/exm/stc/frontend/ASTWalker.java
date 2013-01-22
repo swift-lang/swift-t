@@ -16,6 +16,7 @@ import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.descriptor.ArrayRange;
+import exm.stc.ast.descriptor.Assignment;
 import exm.stc.ast.descriptor.ForLoopDescriptor;
 import exm.stc.ast.descriptor.ForLoopDescriptor.LoopVar;
 import exm.stc.ast.descriptor.ForeachLoop;
@@ -49,11 +50,11 @@ import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Builtins;
-import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Redirects;
+import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayInfo;
@@ -1035,8 +1036,10 @@ public class ASTWalker {
         initUpdateableVar(context, var, assignedExpr);
       } else {
          if (assignedExpr != null) {
-           assignMultiExpression(context, Arrays.asList(
-               new LValue(declTree, var)), Arrays.asList(assignedExpr));
+           Assignment assignment = new Assignment(
+                   Arrays.asList(new LValue(declTree, var)),
+                   Arrays.asList(assignedExpr));
+           assignMultiExpression(context, assignment);
          }
       }
     }
@@ -1130,76 +1133,54 @@ public class ASTWalker {
       throws UserException {
     LogHelper.debug(context, "assignment: ");
     LogHelper.logChildren(context.getLevel(), tree);
-
-    SwiftAST id_list = tree.child(0);
-    ArrayList<SwiftAST> rValExprs = new ArrayList<SwiftAST>(
-                            tree.getChildCount() - 1);
-    for (int i = 1; i < tree.getChildCount(); i++) {
-      SwiftAST rValExpr = tree.child(i);
-      rValExprs.add(rValExpr);
-    }
-
-    List<LValue> identifiers = LValue.extractLVals(context, id_list);
-    assignMultiExpression(context, identifiers, rValExprs);
+    
+    Assignment assign = Assignment.fromAST(context, tree);
+    assignMultiExpression(context, assign);
   }
 
-  private void assignMultiExpression(Context context, List<LValue> lVals,
-      List<SwiftAST> rValExprs) throws UserException, TypeMismatchException,
-      UndefinedTypeException, UndefinedVariableException {
-    assert(!rValExprs.isEmpty());
-
-    
-  
-    if (rValExprs.size() == 1) {
-      // Single expression on RHS.  There still might be multiple lvalues
-      // if the expression was a function with multiple return values
-      assignSingleExpr(context, lVals, rValExprs.get(0));
-    } else {
-      // Match up RVals and LVals
-      if (rValExprs.size() != lVals.size()) {
-        throw new InvalidSyntaxException(context, "number of expressions on " +
-                " right hand side of assignment (" + rValExprs.size() + ") does " +
-                    "not match the number of targets on the left hand size (" +
-                lVals.size());
-      }
-      for (int i = 0; i < lVals.size(); i++) {
-        assignSingleExpr(context, lVals.subList(i, i+1), rValExprs.get(i));
-      }
+  private void assignMultiExpression(Context context, Assignment assign)
+            throws UserException, TypeMismatchException,
+      UndefinedTypeException, UndefinedVariableException {    
+    for (Pair<List<LValue>, SwiftAST> pair: assign.getMatchedAssignments(context)) {
+      List<LValue> lVals = pair.val1;
+      SwiftAST rVal = pair.val2;
+      assignSingleExpr(context, lVals, rVal);
     }
   }
 
   private void assignSingleExpr(Context context, List<LValue> lVals,
       SwiftAST rValExpr) throws UserException, TypeMismatchException,
       UndefinedVariableException, UndefinedTypeException {
-    List<Type> lValTypes = new ArrayList<Type>(lVals.size());
-    for (LValue lval: lVals) {
-      lValTypes.add(lval.getType(context));
-    }
     
-    ExprType rValTs = TypeChecker.findExprType(context, rValExpr);
-    if (rValTs.elems() != lVals.size()) {
-      throw new TypeMismatchException(context, "Needed " + rValTs.elems()
-          + " " + "assignment targets on LHS of assignment, but "
-          + lVals.size() + " were present");
-    }
-
+    ExprType rValTs = Assignment.checkAssign(context, lVals, rValExpr);
+            
     List<Var> result = new ArrayList<Var>(lVals.size());
     Deque<Runnable> afterActions = new LinkedList<Runnable>();
     boolean skipEval = false;
     // TODO: need to handle ambiguous input types
     for (int i = 0; i < lVals.size(); i++) {
-      LValue lval = lVals.get(i);
-      Type lValType = lValTypes.get(i);
+      LValue lVal = lVals.get(i);
       Type rValType = rValTs.get(i);
-      String targetName = lval.toString();
+
+      // Declare and initialize lval if not previously declared
+      if (lVal.var == null) {
+        LValue newLVal = lVal.varDeclarationNeeded(context, rValType);
+        assert(newLVal != null && newLVal.var != null);
+        varCreator.createVariable(context, newLVal.var);
+        lVal = newLVal;
+      }
+
+      Type lValType = lVal.getType(context);
+      
+      String lValDesc = lVal.toString();
       Type rValConcrete = TypeChecker.checkAssignment(context, rValType,
-                                                            lValType, targetName);
+                                                      lValType, lValDesc);
       backend.addComment("Swift l." + context.getLine() +
-          ": assigning expression to " + targetName);
+          ": assigning expression to " + lValDesc);
 
       // the variable we will evaluate expression into
-      context.syncFilePos(lval.tree, lineMapping);
-      Var var = evalLValue(context, rValExpr, rValConcrete, lval, 
+      context.syncFilePos(lVal.tree, lineMapping);
+      Var var = evalLValue(context, rValExpr, rValConcrete, lVal, 
                                                       afterActions);
       
       if (lVals.size() == 1 && rValExpr.getType() == ExMParser.VARIABLE) {
@@ -1214,7 +1195,7 @@ public class ASTWalker {
         if (var.name().equals(rValVar)) {
           // LHS is just an alias for RHS.  This is ok if this is e.g.
           // A[i] = x; but not if it is x = x;
-          if (lval.indices.size() == 0) {
+          if (lVal.indices.size() == 0) {
             throw new UserException(context, "Assigning var " + rValVar
                 + " to itself");
           }
@@ -1234,7 +1215,6 @@ public class ASTWalker {
       action.run();
     }
   }
-
   /**
    * Process an LValue for an assignment, resulting in a variable that
    * we can assign the RValue to

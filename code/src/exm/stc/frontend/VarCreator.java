@@ -58,6 +58,11 @@ public class VarCreator {
     return v;
   }
   
+  public Var createVariable(Context context, Var newVar) throws UserException {
+    return createVariable(context, newVar.type(), newVar.name(),
+            newVar.storage(), newVar.defType(), newVar.mapping());
+  }
+
   public void initialiseVariable(Context context, Var v)
       throws UndefinedTypeException, DoubleDefineException {
     if (!Types.isStruct(v.type())) {

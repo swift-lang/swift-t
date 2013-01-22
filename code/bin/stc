@@ -99,6 +99,10 @@ function get_compiler_opt_name() {
                     echo "stc.exp.refcounting"
                     return 0
                     ;;
+        auto-declare)
+                    echo "stc.auto-declare"
+                    return 0
+                    ;;
        *)
          return 1
          ;;

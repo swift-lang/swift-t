@@ -4,15 +4,23 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
+import exm.stc.ast.antlr.ExMParser;
+import exm.stc.common.Logging;
+import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
+import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVariableException;
+import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Types.ArrayType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.UnionType;
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LogHelper;
 
@@ -141,63 +149,109 @@ public class LValue {
   *          variables are defined
   * @param tree
   * @return
-  * @throws UndefinedVariableException
   */
- public static List<LValue> extractLVals(Context context,
-     SwiftAST tree) throws UndefinedVariableException {
-   if (tree.getType() != ExMParser.IDENTIFIER_LIST) {
-     throw new STCRuntimeError("Expected token identifier_list "
-         + " but got " + tree.getText());
-   }
+  public static List<LValue> extractLVals(Context context,
+     SwiftAST tree) {
+    if (tree.getType() != ExMParser.IDENTIFIER_LIST) {
+      throw new STCRuntimeError("Expected token identifier_list "
+              + " but got " + tree.getText());
+    }
    
-   ArrayList<LValue> lvals = new ArrayList<LValue>(tree.getChildCount());
-   for (SwiftAST subtree: tree.children()) {
-     LValue lval = extractAssignmentID(context, subtree);
-     lvals.add(lval);
-   }
-   return lvals;
- }
+    ArrayList<LValue> lvals = new ArrayList<LValue>(tree.getChildCount());
+    for (SwiftAST subtree: tree.children()) {
+      LValue lval = extractAssignmentID(context, subtree);
+      lvals.add(lval);
+    }
+    return lvals;
+  }
 
- /**
-    @param context 
-  */
- private static LValue extractAssignmentID(Context context, SwiftAST subtree)
-     throws UndefinedVariableException {
-   if (subtree.getType() != ExMParser.ASSIGN_TARGET) {
-     throw new STCRuntimeError("Expected ASSIGN_TARGET ast node");
-   }
-   if (subtree.getChildCount() < 1) {
-     throw new STCRuntimeError("Expected ASSIGN_TARGET ast node "
-         + "to have at least one child");
-   }
-
-   SwiftAST varTree = subtree.child(0);
-   if (varTree.getType() != ExMParser.VARIABLE || varTree.getChildCount() != 1) {
-     throw new STCRuntimeError("Expected VARIABLE with one child "
-         + "as first child of ASSIGN_TARGET");
-   }
-
-   String varName = varTree.child(0).getText();
-
-   List<SwiftAST> path = new ArrayList<SwiftAST>();
-
-   for (int i = 1; i < subtree.getChildCount(); i++) {
-     SwiftAST pathTree = subtree.child(i);
-     if (pathTree.getType() == ExMParser.ARRAY_PATH
-         || pathTree.getType() == ExMParser.STRUCT_PATH) {
-       path.add(pathTree);
-     } else {
-       throw new STCRuntimeError("Unexpected token "
-           + LogHelper.tokName(pathTree.getType()));
-     }
-   }
-
-   Var var = context.getDeclaredVariable(varName);
-   if (var == null) {
-     throw new UndefinedVariableException(context, "Variable " + varName
-         + " is not defined");
-   }
-   return new LValue(subtree, var, path);
- }
+  /**
+     @param context 
+   */
+  private static LValue extractAssignmentID(Context context, SwiftAST subtree) {
+    if (subtree.getType() != ExMParser.ASSIGN_TARGET) {
+      throw new STCRuntimeError("Expected ASSIGN_TARGET ast node");
+    }
+    if (subtree.getChildCount() < 1) {
+      throw new STCRuntimeError("Expected ASSIGN_TARGET ast node "
+          + "to have at least one child");
+    }
+    
+    SwiftAST varTree = subtree.child(0);
+    if (varTree.getType() != ExMParser.VARIABLE || varTree.getChildCount() != 1) {
+      throw new STCRuntimeError("Expected VARIABLE with one child "
+          + "as first child of ASSIGN_TARGET");
+    }
+  
+    String varName = varTree.child(0).getText();
+  
+    List<SwiftAST> path = new ArrayList<SwiftAST>();
+  
+    for (int i = 1; i < subtree.getChildCount(); i++) {
+      SwiftAST pathTree = subtree.child(i);
+      if (pathTree.getType() == ExMParser.ARRAY_PATH
+          || pathTree.getType() == ExMParser.STRUCT_PATH) {
+        path.add(pathTree);
+      } else {
+        throw new STCRuntimeError("Unexpected token "
+             + LogHelper.tokName(pathTree.getType()));
+      }
+    }
+    
+    Var var = context.getDeclaredVariable(varName);
+    if (var != null) {
+      return new LValue(subtree, var, path);
+    } else {
+      // Return only var names
+      Logging.getSTCLogger().debug("Undeclared var " + varName);
+      return new LValue(subtree, varName, path);
+    }
+  }
+  
+  /**
+   * If lval var not declared in current context, return var that
+   * needs to be declared
+   * @param rValType
+   * @return
+   * @throws UserException 
+   */
+  public LValue varDeclarationNeeded(Context context,
+          Type rValType) throws UserException {
+    if (this.var != null) {
+      // lval var already declared
+      return null;
+    }
+    
+    if (!Settings.getBoolean(Settings.AUTO_DECLARE)) {
+      throw new UndefinedVariableException(context, "Variable " + this.varName
+               + " is not defined");
+    }
+    
+    for (SwiftAST t: this.indices) {
+      if (t.getType() != ExMParser.ARRAY_PATH) {
+        throw new UndefinedTypeException(context, "Referencing structure field" +
+                " for variable of unknown structure type: " + this);
+      }
+    }
+    // All must be array indices
+    int arrayDepth = this.indices.size();
+    
+    // Work out what type lhs var must be
+    Type declType = rValType;
+    if (Types.isUnion(declType)) {
+      declType = UnionType.getAlternatives(declType).get(0);
+    }
+    
+    if (Types.isRef(declType)) {
+      declType = declType.memberType();
+    }
+    
+    for (int i = 0; i < arrayDepth; i++) {
+      declType = new ArrayType(declType);
+    }
+    
+    Var newVar = new Var(declType, this.varName, VarStorage.STACK, DefType.LOCAL_USER, null);
+    return new LValue(this.tree, newVar, this.indices);
+  }
 }
 

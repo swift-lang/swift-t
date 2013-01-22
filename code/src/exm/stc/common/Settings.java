@@ -51,6 +51,9 @@ public class Settings
   public static final String TURBINE_NO_STACK_VARS = "stc.codegen.no-stack-vars";
 
   public static final String EXPERIMENTAL_REFCOUNTING = "stc.exp.refcounting";
+  
+  public static final String AUTO_DECLARE = "stc.auto-declare";
+  
   public static final String INPUT_FILENAME = "stc.input_filename";
   public static final String OUTPUT_FILENAME = "stc.output_filename";
   public static final String STC_HOME = "stc.stc_home";
@@ -94,6 +97,7 @@ public class Settings
     defaults.setProperty(OPT_MAX_ITERATIONS, "10");
     defaults.setProperty(ARRAY_REF_SWITCHEROO, "false");
     defaults.setProperty(EXPERIMENTAL_REFCOUNTING, "false");
+    defaults.setProperty(AUTO_DECLARE, "false");
     defaults.setProperty(LOG_FILE, "");
     defaults.setProperty(LOG_TRACE, "false");
 
@@ -182,6 +186,7 @@ public class Settings
     getBoolean(TURBINE_NO_STACK_VARS);
     getBoolean(ARRAY_REF_SWITCHEROO);
     getBoolean(EXPERIMENTAL_REFCOUNTING);
+    getBoolean(AUTO_DECLARE);
 
     getLong(OPT_MAX_ITERATIONS);
 

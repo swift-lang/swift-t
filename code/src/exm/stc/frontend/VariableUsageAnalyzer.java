@@ -1,15 +1,22 @@
 package exm.stc.frontend;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Deque;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.apache.log4j.Level;
 
-import exm.stc.ast.antlr.ExMParser;
-import exm.stc.ast.SwiftAST;
 import exm.stc.ast.FilePosition.LineMapping;
+import exm.stc.ast.SwiftAST;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.descriptor.ArrayElems;
 import exm.stc.ast.descriptor.ArrayRange;
+import exm.stc.ast.descriptor.Assignment;
 import exm.stc.ast.descriptor.ForLoopDescriptor;
+import exm.stc.ast.descriptor.ForLoopDescriptor.LoopVar;
 import exm.stc.ast.descriptor.ForeachLoop;
 import exm.stc.ast.descriptor.If;
 import exm.stc.ast.descriptor.IterateDescriptor;
@@ -19,17 +26,17 @@ import exm.stc.ast.descriptor.Update;
 import exm.stc.ast.descriptor.VariableDeclaration;
 import exm.stc.ast.descriptor.VariableDeclaration.VariableDescriptor;
 import exm.stc.ast.descriptor.Wait;
-import exm.stc.ast.descriptor.ForLoopDescriptor.LoopVar;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.util.Pair;
 import exm.stc.frontend.VariableUsageInfo.Violation;
 import exm.stc.frontend.VariableUsageInfo.ViolationType;
 /**
@@ -276,50 +283,68 @@ class VariableUsageAnalyzer {
   }
 
   private void assignExpression(Context context,
-      VariableUsageInfo vu, SwiftAST tree) throws InvalidWriteException,
-                                            UndefinedVariableException,
-                                            InvalidSyntaxException {
+      VariableUsageInfo vu, SwiftAST tree) throws UserException {
     if (tree.getChildCount() < 2)
       throw new STCRuntimeError(
                   "assign_expression: child count < 2");
     // walk LHS to see what is assigned, and to walk index expressions
-    List<LValue> targets;
-    targets = LValue.extractLVals(context, tree.child(0));
+    Assignment assignments = Assignment.fromAST(context, tree);
 
-    for (LValue target: targets) {
-      context.syncFilePos(target.tree, lineMapping);
-      if (target.indices.size() == 0) {
-        vu.assign(context, target.varName);
-      } else {
-        int arrayDepth = 0;
-        // The path must have the structure
-        // (.<struct_field>)*([<array_index>])*
-        for (SwiftAST i: target.indices) {
-          if (i.getType() == ExMParser.STRUCT_PATH) {
-            if (arrayDepth > 0) {
-              throw new InvalidWriteException(context,
-                  "Cannot assign directly to struct field inside array: "
-                  + target.toString() + ".  Must create struct and then "
-                  + "insert into array ");
-            }
-          } else if (i.getType() == ExMParser.ARRAY_PATH) {
-            arrayDepth++;
-          }
+    for (Pair<List<LValue>, SwiftAST> assign:
+                    assignments.getMatchedAssignments(context)) {
+      List<LValue> lVals = assign.val1;
+      SwiftAST rVal = assign.val2;
+      ExprType rValTs = Assignment.checkAssign(context, lVals, rVal);
+      
+      // Walk the rval expression to add in reads
+      walkExpr(context, vu, rVal);
+     
+      for (int i = 0; i < lVals.size(); i++) {
+        LValue lVal = lVals.get(i);
+        context.syncFilePos(lVal.tree, lineMapping);
+        if (lVal.var == null) {
+          // Auto-declare variable
+          lVal = lVal.varDeclarationNeeded(context, rValTs.get(i));
+          assert(lVal != null);
+          vu.declare(context, lVal.var.name(), lVal.var.type(), false);
+          context.declareVariable(lVal.var.type(), lVal.var.name(), 
+                  VarStorage.STACK, DefType.LOCAL_USER, null);
         }
-        vu.complexAssign(context, target.varName, target.structPath(),
-                                  arrayDepth);
-      }
-
-      // Indicies can also be expressions with variables in them
-      for (SwiftAST ixTree: target.indices) {
-        if (ixTree.getType() == ExMParser.ARRAY_PATH) {
-          walkExpr(context, vu, ixTree.child(0));
-        }
+        
+        singleAssignment(context, vu, lVal);
       }
     }
-    // Walk the expression to add in reads
-    for (int i = 1; i < tree.getChildCount(); i++) {
-      walkExpr(context, vu, tree.child(i));
+  }
+
+  private void singleAssignment(Context context, VariableUsageInfo vu,
+          LValue lVal) throws InvalidWriteException, InvalidSyntaxException {
+    if (lVal.indices.size() == 0) {
+      vu.assign(context, lVal.varName);
+    } else {
+      int arrayDepth = 0;
+      // The path must have the structure
+      // (.<struct_field>)*([<array_index>])*
+      for (SwiftAST i: lVal.indices) {
+        if (i.getType() == ExMParser.STRUCT_PATH) {
+          if (arrayDepth > 0) {
+            throw new InvalidWriteException(context,
+                "Cannot assign directly to struct field inside array: "
+                + lVal.toString() + ".  Must create struct and then "
+                + "insert into array ");
+          }
+        } else if (i.getType() == ExMParser.ARRAY_PATH) {
+          arrayDepth++;
+        }
+      }
+      vu.complexAssign(context, lVal.varName, lVal.structPath(),
+                                arrayDepth);
+    }
+
+    // Indicies can also be expressions with variables in them
+    for (SwiftAST ixTree: lVal.indices) {
+      if (ixTree.getType() == ExMParser.ARRAY_PATH) {
+        walkExpr(context, vu, ixTree.child(0));
+      }
     }
   }
 
