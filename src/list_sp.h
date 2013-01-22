@@ -11,8 +11,8 @@
 
 struct list_sp_item
 {
-  const char* key;
-  const void* data;
+  char* key;
+  void* data;
   struct list_sp_item* next;
 };
 
@@ -26,11 +26,23 @@ struct list_sp
 struct list_sp* list_sp_create(void);
 
 struct list_sp_item* list_sp_add(struct list_sp* target,
-                                 const char* key, const void* data);
+                                 const char* key, void* data);
 
 bool list_sp_set(struct list_sp* target, const char* key,
-                 const void* value, void** old_value);
+                 void* value, void** old_value);
 
+/**
+   Return and remove the head data item
+   Caller is now responsible to free key, data
+   @return True if key/data are set, else false (empty)
+ */
+bool list_sp_pop(struct list_sp* target, char** key, void** data);
+
+/**
+   If found, caller is responsible for old_value -
+          it was provided by the user
+   @return True if found
+ */
 bool list_sp_remove(struct list_sp* target, const char* key,
                     void** data);
 

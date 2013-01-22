@@ -94,11 +94,17 @@ table_destroy(struct table* target)
   free(target);
 }
 
+void
+table_release(struct table* target)
+{
+  free(target->array);
+}
+
 /**
    Note: duplicates internal copy of key (in list_sp_add())
  */
 bool
-table_add(struct table *target, const char* key, const void* data)
+table_add(struct table *target, const char* key, void* data)
 {
   int index = hash_string(key, target->capacity);
 
@@ -120,7 +126,7 @@ table_add(struct table *target, const char* key, const void* data)
  */
 bool
 table_set(struct table* target, const char* key,
-          const void* value, void** old_value)
+          void* value, void** old_value)
 {
   int index = hash_string(key, target->capacity);
 

@@ -27,10 +27,10 @@ bool table_init(struct table* target, int capacity);
 struct table* table_create(int capacity);
 
 bool table_add(struct table *target,
-               const char* key, const void* data);
+               const char* key, void* data);
 
 bool table_set(struct table* target, const char* key,
-               const void* value, void** old_value);
+               void* value, void** old_value);
 
 bool table_search(const struct table* target, const char* key,
                   void **value);
@@ -44,6 +44,8 @@ void table_dump(const char* format, const struct table* target);
 void table_free(struct table* target);
 
 void table_destroy(struct table* target);
+
+void table_release(struct table* target);
 
 int table_keys_string(char** result, const struct table* target);
 

@@ -23,7 +23,7 @@ list_sp_create()
    @param key Must be non-NULL
  */
 struct list_sp_item*
-list_sp_add(struct list_sp* target, const char* key, const void* data)
+list_sp_add(struct list_sp* target, const char* key, void* data)
 {
   assert(key);
 
@@ -49,14 +49,9 @@ list_sp_add(struct list_sp* target, const char* key, const void* data)
   return new_item;
 }
 
-/**
-   If found, caller is responsible for old_value -
-          it was provided by the user
-   @return True if found
- */
 bool
 list_sp_set(struct list_sp* target, const char* key,
-            const void* value, void** old_value)
+            void* value, void** old_value)
 {
   for (struct list_sp_item* item = target->head; item;
        item = item->next)
@@ -69,6 +64,31 @@ list_sp_set(struct list_sp* target, const char* key,
     }
   }
   return false;
+}
+
+bool
+list_sp_pop(struct list_sp* target, char** key, void** data)
+{
+  if (target->size == 0)
+    return false;
+
+  *key  = target->head->key;
+  *data = target->head->data;
+
+  if (target->size == 1)
+  {
+    free(target->head);
+    target->head = NULL;
+    target->tail = NULL;
+    target->size = 0;
+    return data;
+  }
+
+  struct list_sp_item* delendum = target->head;
+  target->head = target->head->next;
+  free(delendum);
+  target->size--;
+  return data;
 }
 
 /**
