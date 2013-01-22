@@ -1,6 +1,6 @@
 /**
- * This module handles the higher-level logic of generating Tcl code.
- * More mechanical aspects of code generation are handled in 
+ * This module handles the higher-level logic of generating Turbine 
+ * code. More mechanical aspects of code generation are handled in 
  * the classes in the exm.tclbackend.tree module
  */
 package exm.stc.tclbackend;
@@ -1426,7 +1426,8 @@ public class TurbineGenerator implements CompilerBackend
       } else {
         // Whether we can enqueue rules locally
         pointStack.peek().add(
-              Turbine.rule(uniqueName, waitFor, action, mode, local));
+              Turbine.rule(uniqueName, waitFor, action, mode, 
+                           Target.rankAny(), local));
       }
       clearPriority(priority);
       
@@ -1966,7 +1967,8 @@ public class TurbineGenerator implements CompilerBackend
     outerRecCall.add(incVal);
 
     splitBody.add(Turbine.rule(outerProcName, new ArrayList<Value>(0),
-                    new TclList(outerRecCall), TaskMode.CONTROL, true));
+                    new TclList(outerRecCall), TaskMode.CONTROL, 
+                    Target.rankAny(), true));
 
     pointStack.push(inner);
   }

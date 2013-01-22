@@ -90,7 +90,7 @@ class Turbine
       new Value(PARENT_STACK_NAME);
   private static final Token PARENT_STACK_ENTRY =
       new Token("_parent");
-  private static final Token DIRECT_RULE = new Token("turbine::c::rule");
+  private static final Token C_RULE = new Token("turbine::c::rule");
   private static final Token RULE = new Token("turbine::rule");
   private static final Token DEEPRULE = new Token("turbine::deeprule");
   private static final Token NO_STACK = new Token("no_stack");
@@ -343,12 +343,12 @@ class Turbine
    */
   private static Command ruleHelper(String symbol, 
       List<? extends Expression> inputs,
-      TclList action, TaskMode type, boolean local) {
+      TclList action, TaskMode type, Target target, boolean local) {
     Token s = new Token(symbol);
     TclList i = new TclList(inputs);
-
-    return new Command(local ? DIRECT_RULE : RULE, s, i,
-                       tclRuleType(type), action);
+    
+    return new Command(local ? C_RULE : RULE, s, i,
+                       tclRuleType(type), target.toTcl(), action);
   }
 
   /**
@@ -360,8 +360,9 @@ class Turbine
    */
   public static Command rule(String symbol,
       List<? extends Expression> blockOn, TclList action, TaskMode mode,
+      Target target, 
       boolean local) {
-    return ruleHelper(symbol, blockOn, action, mode, local);
+    return ruleHelper(symbol, blockOn, action, mode, target, local);
   }
 
   public static Command deepRule(String symbol,
@@ -394,7 +395,8 @@ class Turbine
       actionElems.add(arg);
     }
     TclList action = new TclList(actionElems);
-    return ruleHelper(symbol, blockOn, action, TaskMode.CONTROL, true);
+    return ruleHelper(symbol, blockOn, action, TaskMode.CONTROL, 
+                      Target.rankAny(), true);
   }
 
   public static TclTree allocateStruct(String tclName) {

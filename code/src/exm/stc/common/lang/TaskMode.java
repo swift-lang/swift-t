@@ -3,14 +3,15 @@ package exm.stc.common.lang;
 import exm.stc.common.exceptions.STCRuntimeError;
 
 /**
- * Where task should be executed.
+ * Where task should be executed: locally, on any engine, or on a 
+ * worker
  */
 public enum TaskMode {
   SYNC, // Execute synchronously
   LOCAL, // Execute asynchronously on any node locally w/o load balancing
   LOCAL_CONTROL, // Execute asynchronously on any control node w/o load bal.
   CONTROL, // Load balance as control task
-  LEAF,// Load balance as leaf task
+  LEAF,// Load balance as leaf task on a worker
   ;
   
   public static final TaskMode DEFAULT_BUILTIN_MODE = LOCAL;

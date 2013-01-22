@@ -1836,7 +1836,6 @@ public class ASTWalker {
     }
   }
 
-
   private List<String> extractFunctionAnnotations(Context context,
           SwiftAST tree, int firstChild) throws InvalidAnnotationException {
     List<String> annotations = new ArrayList<String>();

@@ -14,6 +14,11 @@ public class Token extends Expression
     this.token = token;
   }
   
+  public Token(int target)
+  {
+    this.token = String.valueOf(target);
+  }
+
   @Override
   public void appendTo(StringBuilder sb, ExprContext mode)
   {
