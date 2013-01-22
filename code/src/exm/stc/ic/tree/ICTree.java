@@ -413,6 +413,13 @@ public class ICTree {
       sb.append("}\n");
     }
     
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      prettyPrint(sb);
+      return sb.toString();
+    }
+    
     public List<Var> getBlockingInputs() {
       return blockingInputs;
     }

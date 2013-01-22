@@ -994,8 +994,6 @@ public class ICContinuations {
       ICUtil.replaceVarsInList(renames, initVals, false);
       if (!inputsOnly) {
         ICUtil.replaceVarsInList(renames, loopVars, false);
-        loopContinue.renameVars(renames);
-        loopBreak.renameVars(renames);
       }
     }
 

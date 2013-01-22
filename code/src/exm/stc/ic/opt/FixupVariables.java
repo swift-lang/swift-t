@@ -48,7 +48,7 @@ public class FixupVariables implements OptimizerPass {
    * @return
    */
   private static HashSet<String> fixupVariablePassing(Logger logger,
-      Block block, HierarchicalMap<String, Var> visible,
+      Function function, Block block, HierarchicalMap<String, Var> visible,
       Set<String> referencedGlobals) {
     HashSet<String> availVars = new HashSet<String>();
 
@@ -103,7 +103,7 @@ public class FixupVariables implements OptimizerPass {
           }
         }
         HashSet<String> innerNeededVars = fixupVariablePassing(logger,
-            innerBlock, childVisible, referencedGlobals);
+            function, innerBlock, childVisible, referencedGlobals);
 
         // construct will provide some vars
         if (constructVars != null) {
@@ -136,7 +136,8 @@ public class FixupVariables implements OptimizerPass {
               Var v = visible.get(needed);
               if (v == null) {
                 throw new STCRuntimeError("Variable " + needed
-                    + " should have been " + "visible but wasn't");
+                    + " should have been " + "visible but wasn't in "
+                    + function.getName());
 
               }
               c.addPassedInVar(v);
@@ -232,7 +233,7 @@ public class FixupVariables implements OptimizerPass {
       fnargs.put(e.getKey(), v);
     }
     HashSet<String> neededVars = fixupVariablePassing(logger,
-        fn.getMainblock(), fnargs, referencedGlobals);
+        fn, fn.getMainblock(), fnargs, referencedGlobals);
     // Check that all variables referred to are available as args
     neededVars.removeAll(Var.nameList(fn.getInputList()));
     neededVars.removeAll(Var.nameList(fn.getOutputList()));
