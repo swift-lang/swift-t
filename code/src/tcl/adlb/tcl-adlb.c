@@ -266,6 +266,37 @@ ADLB_Barrier_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int
+ADLB_Hostmap_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  // This is limited only by the number of ranks a user could
+  // conceivably put on a node- getting bigger
+  int count = 512;
+  int ranks[count];
+  int actual;
+
+  char* name = Tcl_GetString(objv[1]);
+
+  printf("ADLB_Hostmap_Cmd: %s\n", name);
+
+  adlb_code rc = ADLB_Hostmap(name, count, ranks, &actual);
+  printf("rc: %i\n", rc);
+  TCL_CONDITION(rc == ADLB_SUCCESS || rc == ADLB_NOTHING,
+                "error in hostmap!");
+
+  printf("actual: %i\n", actual);
+
+  Tcl_Obj* items[actual];
+  for (int i = 0; i < count; i++)
+    items[i] = Tcl_NewIntObj(ranks[i]);
+
+  Tcl_Obj* result = Tcl_NewListObj(actual, items);
+  Tcl_SetObjResult(interp, result);
+
+  return TCL_OK;
+}
+
 /**
    usage: adlb::put <reserve_rank> <work type> <work unit>
 */
@@ -1717,6 +1748,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("servers",   ADLB_Servers_Cmd);
   COMMAND("workers",   ADLB_Workers_Cmd);
   COMMAND("barrier",   ADLB_Barrier_Cmd);
+  COMMAND("hostmap",   ADLB_Hostmap_Cmd);
   COMMAND("put",       ADLB_Put_Cmd);
   COMMAND("get",       ADLB_Get_Cmd);
   COMMAND("iget",      ADLB_Iget_Cmd);
