@@ -18,10 +18,12 @@
 #include <assert.h>
 
 // strnlen() is a GNU extension
-#define __USE_GNU
+#define _GNU_SOURCE
 #include <string.h>
 #include <exm-string.h>
 
+#include <tcl.h>
+#include <mpi.h>
 #include <adlb.h>
 
 #include <log.h>

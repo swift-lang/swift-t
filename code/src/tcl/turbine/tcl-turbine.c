@@ -9,8 +9,10 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#define _GNU_SOURCE // for strnlen()
-#define __USE_GNU   // for strnlen() (needed on BG/P)
+// for strnlen()
+#define _GNU_SOURCE
+// for strnlen() (needed on BG/P) (may break an x86 system)
+// #define __USE_GNU
 #include <string.h>
 
 #include <tcl.h>
@@ -153,19 +155,19 @@ Turbine_Version_Cmd(ClientData cdata, Tcl_Interp *interp,
   strcpy(entry.name, subscript);
 
 /**
-   usage: rule name [ list inputs ] action_type action => id
+   usage: rule name [ list inputs ] action_type target action => id
    The name is just for debugging
  */
 static int
 Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(5);
+  TCL_ARGS(6);
 
   int inputs;
   turbine_datum_id input_list[TCL_TURBINE_MAX_INPUTS];
 
-  int error;
+  int rc;
   turbine_transform_id id;
 
   // Get the debugging name
@@ -173,35 +175,40 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
   assert(name);
 
   // Get the input list
-  error = turbine_tcl_long_array(interp, objv[2],
+  rc = turbine_tcl_long_array(interp, objv[2],
                                 TCL_TURBINE_MAX_INPUTS,
                                 input_list, &inputs);
-  TCL_CHECK_MSG(error, "could not parse inputs list as integers:\n"
+  TCL_CHECK_MSG(rc, "could not parse inputs list as integers:\n"
                 "in rule: <%li> %s inputs: \"%s\"",
                 id, name, Tcl_GetString(objv[2]));
 
   // Get the action type
   turbine_action_type action_type;
   int tmp;
-  error = Tcl_GetIntFromObj(interp, objv[3], &tmp);
-  TCL_CHECK_MSG(error, "could not parse as integer!");
+  rc = Tcl_GetIntFromObj(interp, objv[3], &tmp);
+  TCL_CHECK_MSG(rc, "could not parse as integer!");
   action_type = tmp;
 
+  // Get the target rank
+  int target;
+  rc = Tcl_GetIntFromObj(interp, objv[4], &target);
+  TCL_CHECK_MSG(rc, "could not parse target as integer!");
+
   // Get the action string
-  char* action = Tcl_GetStringFromObj(objv[4], NULL);
+  char* action = Tcl_GetStringFromObj(objv[5], NULL);
   assert(action);
 
   // Lookup current priority
   int priority = 0;
   Tcl_Obj* p = Tcl_GetVar2Ex(interp, "turbine::priority", NULL, 0);
   TCL_CONDITION(p != NULL, "could not access turbine::priority");
-  error = Tcl_GetIntFromObj(interp, p, &priority);
-  TCL_CHECK_MSG(error, "turbine::priority is not an integer!");
+  rc = Tcl_GetIntFromObj(interp, p, &priority);
+  TCL_CHECK_MSG(rc, "turbine::priority is not an integer!");
 
   // Issue the rule
   turbine_code code =
       turbine_rule(name, inputs, input_list, action_type, action,
-                   priority, &id);
+                   priority, target, &id);
   TURBINE_CHECK(code, "could not add rule: %li", id);
   return TCL_OK;
 }
@@ -256,17 +263,20 @@ Turbine_Pop_Cmd(ClientData cdata, Tcl_Interp *interp,
   turbine_action_type type;
   char action[TURBINE_ACTION_MAX];
   int priority;
+  int target;
 
-  turbine_code code = turbine_pop(id, &type, action, &priority);
+  turbine_code code = turbine_pop(id, &type, action,
+                                  &priority, &target);
   TCL_CONDITION(code == TURBINE_SUCCESS,
                  "could not pop transform id: %li", id);
 
-  Tcl_Obj* items[3];
+  Tcl_Obj* items[4];
   items[0] = Tcl_NewIntObj(type);
   items[1] = Tcl_NewStringObj(action, -1);
   items[2] = Tcl_NewIntObj(priority);
+  items[3] = Tcl_NewIntObj(target);
 
-  Tcl_Obj* result = Tcl_NewListObj(3, items);
+  Tcl_Obj* result = Tcl_NewListObj(4, items);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }

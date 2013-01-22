@@ -37,7 +37,7 @@ namespace eval turbine {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
 
-        rule "container_f_get-$c-$i" $i $turbine::LOCAL \
+        rule "container_f_get-$c-$i" $i $turbine::LOCAL $adlb::RANK_ANY \
             "turbine::container_f_get_integer_body $d $c $i"
     }
 
@@ -64,7 +64,7 @@ namespace eval turbine {
         nonempty c i d
         adlb::slot_create $c
 
-        rule "container_f_insert-$c-$i" $i $turbine::LOCAL \
+        rule "container_f_insert-$c-$i" $i $turbine::LOCAL $adlb::RANK_ANY \
             [ list turbine::container_f_insert_body $c $i $d ]
     }
 
@@ -84,7 +84,7 @@ namespace eval turbine {
         nonempty c i r
         adlb::slot_create $c
 
-        rule "container_f_deref_insert-$c-$i" "$i $r" $turbine::LOCAL \
+        rule "container_f_deref_insert-$c-$i" "$i $r" $turbine::LOCAL $adlb::RANK_ANY \
             "turbine::container_f_deref_insert_body $c $i $r"
     }
 
@@ -106,7 +106,7 @@ namespace eval turbine {
         nonempty c i r
         adlb::slot_create $c
 
-        rule "container_deref_insert-$c-$i" "$r" $turbine::LOCAL \
+        rule "container_deref_insert-$c-$i" "$r" $turbine::LOCAL $adlb::RANK_ANY \
             "turbine::container_deref_insert_body $c $i $r"
     }
 
@@ -142,7 +142,7 @@ namespace eval turbine {
         set ref_type [ lindex $inputs 3 ]
         # nonempty c i r
 
-        rule "f_reference_body-$c-$i" $i $turbine::LOCAL \
+        rule "f_reference_body-$c-$i" $i $turbine::LOCAL $adlb::RANK_ANY \
             "turbine::f_reference_body $c $i $r $ref_type"
     }
     proc f_reference_body { c i r ref_type } {
@@ -155,7 +155,7 @@ namespace eval turbine {
     # When reference r is closed, copy its (integer) value in v
     proc f_dereference_integer { parent v r } {
 
-        rule "f_dereference-$v-$r" $r $turbine::LOCAL \
+        rule "f_dereference-$v-$r" $r $turbine::LOCAL $adlb::RANK_ANY \
             "turbine::f_dereference_integer_body $v $r"
     }
     proc f_dereference_integer_body { v r } {
@@ -168,7 +168,7 @@ namespace eval turbine {
 
     # When reference r is closed, copy its (float) value into v
     proc f_dereference_float { parent v r } {
-        rule "f_dereference-$v-$r" $r $turbine::LOCAL \
+        rule "f_dereference-$v-$r" $r $turbine::LOCAL $adlb::RANK_ANY \
             "turbine::f_dereference_float_body $v $r"
     }
 
@@ -183,7 +183,7 @@ namespace eval turbine {
     # When reference r is closed, copy its (string) value into v
     proc f_dereference_string { parent v r } {
 
-        rule "f_dereference-$v-$r" $r $turbine::LOCAL \
+        rule "f_dereference-$v-$r" $r $turbine::LOCAL $adlb::RANK_ANY \
             "turbine::f_dereference_string_body $v $r"
     }
     proc f_dereference_string_body { v r } {
@@ -197,7 +197,7 @@ namespace eval turbine {
     # When reference r is closed, copy file to v
     proc f_dereference_file { parent v r } {
 
-        rule "f_dereference-$v-$r" $r $turbine::LOCAL \
+        rule "f_dereference-$v-$r" $r $turbine::LOCAL $adlb::RANK_ANY \
             [ list turbine::f_dereference_file_body $v $r ]
     }
     proc f_dereference_file_body { v r } {
@@ -210,7 +210,7 @@ namespace eval turbine {
 
     # When reference r is closed, copy blob to v
     proc f_dereference_blob { parent v r } {
-        rule "f_dereference-$v-$r" $r $turbine::LOCAL \
+        rule "f_dereference-$v-$r" $r $turbine::LOCAL $adlb::RANK_ANY \
             [ list turbine::f_dereference_blob_body $v $r ]
     }
     proc f_dereference_blob_body { v r } {
@@ -237,7 +237,7 @@ namespace eval turbine {
 
         log "creating reference: <*$cr>\[$i\] <- <*$d>"
 
-        rule "f_cref_lookup_literal-$cr" "$cr" $turbine::LOCAL \
+        rule "f_cref_lookup_literal-$cr" "$cr" $turbine::LOCAL $adlb::RANK_ANY \
             "turbine::f_cref_lookup_literal_body $cr $i $d $d_type"
 
     }
@@ -263,7 +263,7 @@ namespace eval turbine {
         set d [ lindex $inputs 2 ]
         set d_type [ lindex $inputs 3 ]
 
-        rule "f_cref_lookup-$cr" "$cr $i" $turbine::LOCAL \
+        rule "f_cref_lookup-$cr" "$cr $i" $turbine::LOCAL $adlb::RANK_ANY \
             "turbine::f_cref_lookup_body $cr $i $d $d_type"
     }
 
@@ -289,7 +289,7 @@ namespace eval turbine {
 
         log "insert (future): <*$r>\[<$j>\]=<$d>"
 
-        rule "f_cref_insert-$r-$j-$d-$oc" "$r $j" $turbine::LOCAL \
+        rule "f_cref_insert-$r-$j-$d-$oc" "$r $j" $turbine::LOCAL $adlb::RANK_ANY \
             [ list turbine::f_cref_insert_body $r $j $d $oc ]
     }
     proc f_cref_insert_body { r j d oc } {
@@ -314,7 +314,7 @@ namespace eval turbine {
         set oc [ lindex $inputs 3 ]
         adlb::slot_create $oc
 
-        rule "cref_insert-$cr-$j-$d-$oc" "$cr" $turbine::LOCAL \
+        rule "cref_insert-$cr-$j-$d-$oc" "$cr" $turbine::LOCAL $adlb::RANK_ANY \
             [ list turbine::cref_insert_body $cr $j $d $oc ]
     }
     proc cref_insert_body { cr j d oc } {
@@ -333,7 +333,7 @@ namespace eval turbine {
         set oc [ lindex $inputs 3 ]
         adlb::slot_create $oc
 
-        rule "cref_deref_insert-$cr-$j-$dr-$oc" "$cr $dr" $turbine::LOCAL \
+        rule "cref_deref_insert-$cr-$j-$dr-$oc" "$cr $dr" $turbine::LOCAL $adlb::RANK_ANY \
             "turbine::cref_deref_insert_body $cr $j $dr $oc"
     }
     proc cref_deref_insert_body { cr j dr oc } {
@@ -350,7 +350,7 @@ namespace eval turbine {
         set oc [ lindex $inputs 3 ]
         adlb::slot_create $oc
 
-        rule "cref_f_deref_insert-$cr-$j-$dr-$oc" "$cr $j $dr" $turbine::LOCAL \
+        rule "cref_f_deref_insert-$cr-$j-$dr-$oc" "$cr $j $dr" $turbine::LOCAL $adlb::RANK_ANY \
             "turbine::cref_f_deref_insert_body $cr $j $dr $oc"
     }
     proc cref_f_deref_insert_body { cr j dr oc } {
@@ -365,7 +365,7 @@ namespace eval turbine {
     # Insert c[i][j] = d
     proc f_container_nested_insert { c i j d } {
 
-        rule "fcni" "$i $j" $turbine::LOCAL \
+        rule "fcni" "$i $j" $turbine::LOCAL $adlb::RANK_ANY \
             [ list f_container_nested_insert_body_1 $c $i $j $d ]
     }
 
@@ -380,7 +380,7 @@ namespace eval turbine {
             allocate r integer 0
             container_reference $r $c $i "integer"
 
-            rule fcnib "$r" $turbine::LOCAL \
+            rule fcnib "$r" $turbine::LOCAL $adlb::RANK_ANY \
                 "container_nested_insert_body_2 $r $j $d"
         }
     }
@@ -400,7 +400,7 @@ namespace eval turbine {
         adlb::insert $c $i $t
         # setup rule to close when outer container closes
 
-        rule "autoclose-$t" "$c" $turbine::LOCAL \
+        rule "autoclose-$t" "$c" $turbine::LOCAL $adlb::RANK_ANY \
                "adlb::slot_drop $t"
         return $t
       } else {
@@ -428,7 +428,7 @@ namespace eval turbine {
         set v $tmp_r
 
 
-        rule fccn "$i" $turbine::LOCAL \
+        rule fccn "$i" $turbine::LOCAL $adlb::RANK_ANY \
                "f_container_create_nested_body $tmp_r $c $i $type"
     }
 
@@ -453,7 +453,7 @@ namespace eval turbine {
         set v $tmp_r
 
 
-        rule fcrcn "$cr" $turbine::LOCAL \
+        rule fcrcn "$cr" $turbine::LOCAL $adlb::RANK_ANY \
            "cref_create_nested_body $tmp_r $cr $i $type"
     }
 
@@ -472,7 +472,7 @@ namespace eval turbine {
         allocate tmp_r integer 0
         set v $tmp_r
 
-        rule fcrcn "$cr $i" $turbine::LOCAL \
+        rule fcrcn "$cr $i" $turbine::LOCAL $adlb::RANK_ANY \
            "f_cref_create_nested_body $tmp_r $cr $i $type"
     }
 
@@ -488,7 +488,7 @@ namespace eval turbine {
     # result: A string
     proc enumerate { stack result container } {
 
-        rule "enumerate-$container" $container $turbine::LOCAL \
+        rule "enumerate-$container" $container $turbine::LOCAL $adlb::RANK_ANY \
             "enumerate_body $result $container"
     }
 
@@ -501,7 +501,7 @@ namespace eval turbine {
     # result: a turbine integer
     proc container_size { stack result container } {
 
-        rule "container_size-$container" $container $turbine::LOCAL \
+        rule "container_size-$container" $container $turbine::LOCAL $adlb::RANK_ANY \
             "container_size_body $result $container"
     }
 
@@ -515,7 +515,7 @@ namespace eval turbine {
     proc contains { stack result inputs } {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
-        rule "contains-$c" "$c $i" $turbine::LOCAL \
+        rule "contains-$c" "$c $i" $turbine::LOCAL $adlb::RANK_ANY \
             "contains_body $result $c $i"
     }
 
@@ -534,7 +534,7 @@ namespace eval turbine {
     # future containing a serialized TCL dict, then lookup a
     # struct member
     proc struct_ref_lookup { structr field result type } {
-        rule "struct_ref_lookup-$structr" "$structr" $turbine::LOCAL \
+        rule "struct_ref_lookup-$structr" "$structr" $turbine::LOCAL $adlb::RANK_ANY \
             "struct_ref_lookup_body $structr $field $result $type"
     }
 
@@ -602,12 +602,12 @@ namespace eval turbine {
       if { $nest_level == 1 } {
         # First wait for container to be closed
         set rule_name "${rule_prefix}-$container-close"
-        rule $rule_name $container $turbine::LOCAL \
+        rule $rule_name $container $turbine::LOCAL $adlb::RANK_ANY \
             [ list container_deep_wait_continue $rule_name $container 0 -1 \
                                             $nest_level $is_file $signal ]
       } else {
         set rule_name "${rule_prefix}-$container-close"
-        rule $rule_name $container $turbine::LOCAL \
+        rule $rule_name $container $turbine::LOCAL $adlb::RANK_ANY \
             [ list container_rec_deep_wait $rule_name $container \
                                     $nest_level $is_file $signal ]
       }
@@ -634,7 +634,7 @@ namespace eval turbine {
             incr progress
           } else {
             # Suspend execution until next item closed
-            rule "${rule_prefix}-$signal" $td $turbine::LOCAL \
+            rule "${rule_prefix}-$signal" $td $turbine::LOCAL $adlb::RANK_ANY \
                 [ list container_deep_wait_continue $rule_prefix $container \
                           $progress $n $nest_level $is_file $signal ]
             return
@@ -667,7 +667,7 @@ namespace eval turbine {
           container_deep_wait $rule_prefix $inner \
                        [ expr $nest_level - 1 ] $is_file $inner_signal
         }
-        rule "$rule_prefix-final" $inner_signals $turbine::LOCAL \
+        rule "$rule_prefix-final" $inner_signals $turbine::LOCAL $adlb::RANK_ANY \
           [ list deeprule_finish $inner_signals [ list store_void $signal ] ]
       }
     }

@@ -4,7 +4,7 @@ namespace eval turbine {
 
   proc blob_size_async { stack out blob } {
     rule "blob_size-$out-$blob" "$blob" \
-        $turbine::LOCAL "blob_size_body $out $blob"
+        $turbine::LOCAL $adlb::RANK_ANY "blob_size_body $out $blob"
   }
 
   proc blob_size_body { out blob } {
@@ -18,12 +18,12 @@ namespace eval turbine {
     return [ lindex $blob_val 1 ]
   }
 
-  proc blob_null { stack result input } { 
-      store_blob $result 0 0 
+  proc blob_null { stack result input } {
+      store_blob $result 0 0
   }
 
   proc blob_from_string { stack result input } {
-    rule "bfs-$input-$result" $input $turbine::LOCAL \
+    rule "bfs-$input-$result" $input $turbine::LOCAL $adlb::RANK_ANY \
       "blob_from_string_body $input $result"
   }
   proc blob_from_string_body { input result } {
@@ -32,7 +32,7 @@ namespace eval turbine {
   }
 
   proc string_from_blob { stack result input } {
-    rule "sfb-$input-$result" $input $turbine::LOCAL \
+    rule "sfb-$input-$result" $input $turbine::LOCAL $adlb::RANK_ANY \
       "string_from_blob_body $input $result"
   }
   proc string_from_blob_body { input result } {
@@ -41,7 +41,7 @@ namespace eval turbine {
   }
 
   proc floats_from_blob { stack result input } {
-      rule "floats_from_blob-$result" $input $turbine::LOCAL \
+      rule "floats_from_blob-$result" $input $turbine::LOCAL $adlb::RANK_ANY \
           "floats_from_blob_body $result $input"
   }
   proc floats_from_blob_body { result input } {
@@ -64,7 +64,7 @@ namespace eval turbine {
 
   # Container must be indexed from 0,N-1
   proc blob_from_floats { stack result input } {
-    rule "blob_from_floats-$result" $input $turbine::LOCAL \
+    rule "blob_from_floats-$result" $input $turbine::LOCAL $adlb::RANK_ANY \
       "blob_from_floats_body $input $result"
   }
   proc blob_from_floats_body { container result } {
@@ -101,7 +101,7 @@ namespace eval turbine {
               error "complete_container: <$A>\[$i\]=<0>"
           }
           rule "complete_container_continue-$A" [ list $x ] \
-              $turbine::LOCAL \
+              $turbine::LOCAL $adlb::RANK_ANY \
               "complete_container_continue_body $A {$action} $i $n"
       } else {
           eval $action

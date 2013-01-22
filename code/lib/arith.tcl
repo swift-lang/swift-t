@@ -11,7 +11,7 @@ namespace eval turbine {
     proc plus_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        rule "plus-$a-$b" "$a $b" $turbine::LOCAL \
+        rule "plus-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
             "plus_integer_body $parent $c $a $b"
     }
 
@@ -27,7 +27,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "plus-$a-$b" "$a $b" $turbine::LOCAL \
+        rule "plus-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
             "plus_float_body $parent $c $a $b"
     }
 
@@ -46,7 +46,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "minus-$a-$b" "$a $b" $turbine::LOCAL \
+        rule "minus-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
             "minus_integer_body $c $a $b"
     }
     proc minus_integer_body {c a b } {
@@ -64,7 +64,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "minus-$a-$b" "$a $b" $turbine::LOCAL \
+        rule "minus-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
             "minus_float_body $c $a $b"
     }
     proc minus_float_body {c a b } {
@@ -81,7 +81,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "mult-$a-$b" "$a $b" $turbine::LOCAL \
+        rule "mult-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
             "multiply_integer_body $c $a $b"
     }
     proc multiply_integer_body {c a b } {
@@ -100,7 +100,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "mult-$a-$b" "$a $b" $turbine::LOCAL \
+        rule "mult-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
             "multiply_float_body $c $a $b"
     }
     proc multiply_float_body {c a b } {
@@ -119,7 +119,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "div-$a-$b" "$a $b" $turbine::LOCAL \
+        rule "div-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
             "divide_integer_body $c $a $b"
     }
     proc divide_integer_body {c a b } {
@@ -139,7 +139,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "div-$a-$b" "$a $b" $turbine::LOCAL \
+        rule "div-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
             "divide_float_body $c $a $b"
     }
     proc divide_float_body {c a b } {
@@ -157,7 +157,7 @@ namespace eval turbine {
     proc negate_integer { parent c inputs } {
         set a [ lindex $inputs 0 ]
 
-        rule "negate-$a" "$a" $turbine::LOCAL \
+        rule "negate-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
             "negate_integer_body $c $a"
     }
 
@@ -175,7 +175,7 @@ namespace eval turbine {
     proc negate_float { parent c inputs } {
         set a [ lindex $inputs 0 ]
 
-        rule "negate-$a" "$a" $turbine::LOCAL \
+        rule "negate-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
             "negate_float_body $c $a"
     }
 
@@ -193,7 +193,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "mod-$a-$b" "$a $b" $turbine::LOCAL \
+        rule "mod-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
             "mod_integer_body $parent $c $a $b"
     }
 
@@ -239,7 +239,7 @@ namespace eval turbine {
     # o = i;
     proc copy_integer { parent o i } {
 
-        rule "copy-$o-$i" $i $turbine::LOCAL \
+        rule "copy-$o-$i" $i $turbine::LOCAL $adlb::RANK_ANY \
             "copy_integer_body $o $i"
     }
     proc copy_integer_body { o i } {
@@ -251,7 +251,7 @@ namespace eval turbine {
 
     proc copy_float { parent o i } {
 
-        rule "copy-$o-$i" $i $turbine::LOCAL \
+        rule "copy-$o-$i" $i $turbine::LOCAL $adlb::RANK_ANY \
             "copy_float_body $o $i"
     }
     proc copy_float_body { o i } {
@@ -266,7 +266,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "max-$a-$b" "$a $b" $turbine::LOCAL \
+        rule "max-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
             "max_integer_body $parent $c $a $b"
     }
 
@@ -282,7 +282,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "min-$a-$b" "$a $b" $turbine::LOCAL \
+        rule "min-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
             "min_integer_body $parent $c $a $b"
     }
 
@@ -298,7 +298,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "max-$a-$b" "$a $b" $turbine::LOCAL \
+        rule "max-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
             "max_float_body $parent $c $a $b"
     }
 
@@ -314,7 +314,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "min-$a-$b" "$a $b" $turbine::LOCAL \
+        rule "min-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
             "min_float_body $parent $c $a $b"
     }
 
@@ -328,7 +328,7 @@ namespace eval turbine {
 
     proc floor { parent c a } {
 
-        rule "floor-$a" "$a" $turbine::LOCAL \
+        rule "floor-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
             "floor_body $parent $c $a"
     }
 
@@ -341,7 +341,7 @@ namespace eval turbine {
 
     proc ceil { parent c a } {
 
-        rule "ceil-$a" "$a" $turbine::LOCAL \
+        rule "ceil-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
             "ceil_body $parent $c $a"
     }
 
@@ -353,7 +353,7 @@ namespace eval turbine {
     }
 
     proc round { parent c a } {
-        rule "round-$a" "$a" $turbine::LOCAL \
+        rule "round-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
             "round_body $parent $c $a"
     }
 
@@ -365,19 +365,19 @@ namespace eval turbine {
     }
 
     proc itof { parent c a } {
-        rule "itf-$a" "$a" $turbine::LOCAL \
+        rule "itf-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
             "itof_body $parent $c $a"
     }
 
     proc itof_body { parent c a } {
         set a_value [ retrieve_decr_integer $a ]
-        # Convert to TCL float type 
+        # Convert to TCL float type
         store_float $c [ expr double($a_value) ]
     }
 
     proc log_e { parent c a } {
 
-        rule "log_e-$a" "$a" $turbine::LOCAL \
+        rule "log_e-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
             "log_e_body $parent $c $a"
     }
 
@@ -390,7 +390,7 @@ namespace eval turbine {
 
     proc exp { parent c a } {
 
-        rule "exp-$a" "$a" $turbine::LOCAL \
+        rule "exp-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
             "exp_body $parent $c $a"
     }
 
@@ -403,7 +403,7 @@ namespace eval turbine {
 
     proc sqrt { parent c a } {
 
-        rule "sqrt-$a" "$a" $turbine::LOCAL \
+        rule "sqrt-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
             "sqrt_body $parent $c $a"
     }
 
@@ -416,7 +416,7 @@ namespace eval turbine {
 
     proc abs_float { parent c a } {
 
-        rule "abs_float-$a" "$a" $turbine::LOCAL \
+        rule "abs_float-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
             "abs_float_body $parent $c $a"
     }
 
@@ -429,7 +429,7 @@ namespace eval turbine {
 
     proc abs_integer { parent c a } {
 
-        rule "abs_integer-$a" "$a" $turbine::LOCAL \
+        rule "abs_integer-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
             "abs_integer_body $parent $c $a"
     }
 
@@ -444,7 +444,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "pow-$a-$b" "$a $b" $turbine::LOCAL \
+        rule "pow-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
             "pow_integer_body $c $a $b"
     }
     proc pow_integer_body { c a b } {
@@ -469,7 +469,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "pow-$a-$b" "$a $b" $turbine::LOCAL \
+        rule "pow-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
             "pow_float_body $c $a $b"
     }
     proc pow_float_body {c a b } {
@@ -482,7 +482,7 @@ namespace eval turbine {
 
     # checks to see if float i is NaN, sets o to true or false accordingly
     proc is_nan { stack o i } {
-        rule "is_nan-$o-$i" "$i" $turbine::LOCAL \
+        rule "is_nan-$o-$i" "$i" $turbine::LOCAL $adlb::RANK_ANY \
             "is_nan_body $o $i"
     }
     proc is_nan_body { o i } {

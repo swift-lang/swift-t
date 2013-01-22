@@ -4,9 +4,14 @@
  */
 
 #include <assert.h>
+#include <fcntl.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "src/tcl/blob/blob.h"
 
@@ -95,4 +100,96 @@ SwiftBlob_free(SwiftBlob* data)
 {
   free(data->pointer);
   free(data);
+}
+
+static inline int write_all(int fd, void* buffer, int count);
+
+bool
+blobutils_writefile(const char* output, SwiftBlob* blob)
+{
+  int flags = O_WRONLY | O_CREAT | O_TRUNC;
+  mode_t mode = S_IRUSR | S_IWUSR;
+  int fd = open(output, flags, mode);
+  if (fd == -1)
+  {
+    printf("could not write to: %s\n", output);
+    return false;
+  }
+
+  bool result = write_all(fd, blob->pointer, blob->length);
+  return result;
+}
+
+static inline int read_all(int fd, void* buffer, int count);
+
+bool
+blobutils_readfile(const char* input, SwiftBlob* blob)
+{
+  int fd = open(input, O_RDONLY);
+  if (fd == -1)
+  {
+    printf("could not read from: %s\n", input);
+    return false;
+  }
+
+  struct stat s;
+  int rc = fstat(fd, &s);
+  assert(rc == 0);
+
+  blob->length = s.st_size;
+  blob->pointer = malloc(blob->length);
+  if (!blob->pointer)
+  {
+    printf("could not allocate memory for: %s\n", input);
+    return false;
+  }
+
+  bool result = read_all(fd, blob->pointer, blob->length);
+  return result;
+}
+
+/**
+   Utility function to write whole buffer to file
+*/
+static inline int
+write_all(int fd, void* buffer, int count)
+{
+  int bytes;
+  int total = 0;
+  int chunk = count;
+  printf("write_all: %i\n", count);
+  while ((bytes = write(fd, buffer, chunk)))
+  {
+    total += bytes;
+    if (total == count)
+      return true;
+
+    chunk -= bytes;
+    buffer += bytes;
+  }
+
+  // Must be some kind of error
+  return false;
+}
+
+/**
+   Utility function to read whole file into buffer
+*/
+static inline int
+read_all(int fd, void* buffer, int count)
+{
+  int bytes;
+  int total = 0;
+  int chunk = count;
+  while ((bytes = read(fd, buffer, chunk)))
+  {
+    total += bytes;
+    if (total == count)
+      return total;
+
+    chunk -= bytes;
+    buffer += bytes;
+  }
+
+  return total;
 }

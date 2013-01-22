@@ -10,7 +10,7 @@ namespace eval turbine {
     # User function
     # usage: strcat <result> <args>*
     proc strcat { stack result inputs } {
-        rule "strcat" $inputs $turbine::LOCAL \
+        rule "strcat" $inputs $turbine::LOCAL $adlb::RANK_ANY \
             "strcat_body $result $inputs"
     }
 
@@ -31,7 +31,7 @@ namespace eval turbine {
         set s [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set n [ lindex $inputs 2 ]
-        rule "substring-$s-$i-$n" $inputs $turbine::LOCAL \
+        rule "substring-$s-$i-$n" $inputs $turbine::LOCAL $adlb::RANK_ANY \
             "substring_body $result $s $i $n"
     }
 
@@ -62,12 +62,12 @@ namespace eval turbine {
         if { [ llength $inputs ] == 2 } {
             set delimiter [ lindex $inputs 1 ]
             rule "split-$result" [ list $s $delimiter ] \
-                $turbine::LOCAL \
+                $turbine::LOCAL $adlb::RANK_ANY \
                 "split_body $result $s $delimiter"
         } elseif { [ llength $inputs ] == 1 } {
             # Use default delimiter: " "
             set delimiter 0
-            rule "split-$result" $s $turbine::LOCAL \
+            rule "split-$result" $s $turbine::LOCAL $adlb::RANK_ANY \
                 "split_body $result $s 0"
         } else {
             error "split requires 1 or 2 arguments"
@@ -95,9 +95,9 @@ namespace eval turbine {
         # close container
         adlb::slot_drop $result
     }
-    
+
     proc sprintf { stack result inputs } {
-        rule sprintf $inputs $turbine::LOCAL \
+        rule sprintf $inputs $turbine::LOCAL $adlb::RANK_ANY \
             "sprintf_body $result $inputs"
     }
     proc sprintf_body { result args } {
@@ -109,13 +109,13 @@ namespace eval turbine {
         store_string $result $s
     }
 
-    proc find { stack result inputs } {	
+    proc find { stack result inputs } {
 	set str         [ lindex $inputs 0 ]
 	set subs        [ lindex $inputs 1 ]
 	set start_index [ lindex $inputs 2 ]
-	set end_index   [ lindex $inputs 3 ]	
+	set end_index   [ lindex $inputs 3 ]
 	rule "find-$str-$subs-$start_index-$end_index" $inputs  \
-	    $turbine::LOCAL "find_body $result $str $subs       \
+	    $turbine::LOCAL $adlb::RANK_ANY "find_body $result $str $subs       \
             $start_index $end_index"
     }
 
@@ -128,7 +128,7 @@ namespace eval turbine {
 	set result_value [ find_impl $str_value $subs_value \
 			       $start_index_value $end_index_value ]
 
-	store_integer $result $result_value	
+	store_integer $result $result_value
     }
 
     # Find the index of the first occurence of the substring in the
@@ -152,12 +152,12 @@ namespace eval turbine {
 	set str         [ lindex $inputs 0 ]
 	set subs        [ lindex $inputs 1 ]
 	set start_index [ lindex $inputs 2 ]
-	set end_index   [ lindex $inputs 3 ]	
+	set end_index   [ lindex $inputs 3 ]
 	rule "count-$str-$subs-$start_index-$end_index" $inputs  \
-	    $turbine::LOCAL "count_body $result $str $subs       \
-            $start_index $end_index"	
+	    $turbine::LOCAL $adlb::RANK_ANY "count_body $result $str $subs       \
+            $start_index $end_index"
     }
-    
+
     proc count_body { result str subs start_index end_index } {
 	set str_value  [ retrieve_decr_string $str ]
 	set subs_value [ retrieve_decr_string $subs ]
@@ -173,7 +173,7 @@ namespace eval turbine {
 
     # Find the number of occurences of the substring in the given
     # string. Returns 0 if no matches are present. By default
-    # start_index is set to 0 and end_index is set to -1 which 
+    # start_index is set to 0 and end_index is set to -1 which
     # implies the end of the string.
     proc count_impl {str subs {start_index 0} {end_index -1} } {
 	if { $end_index == -1 } {
@@ -183,7 +183,7 @@ namespace eval turbine {
 	set found 0
 	for {set index $start_index} { $index <= $end_index } {incr index} {
 	    set r [ find_impl $str $subs $index $end_index ];
-	    if { $r == -1} { 
+	    if { $r == -1} {
               return $found
             } else {
               # Move to end of occurrence to avoid counting overlaps
@@ -195,7 +195,7 @@ namespace eval turbine {
 
     proc isint { stack result inputs } {
 	set str [ lindex $inputs 0 ]
-	rule "isint-$str" $inputs $turbine::LOCAL "isint_body \
+	rule "isint-$str" $inputs $turbine::LOCAL $adlb::RANK_ANY "isint_body \
               $result $str"
     }
 
@@ -215,12 +215,12 @@ namespace eval turbine {
 	set str         [ lindex $inputs 0 ]
 	set substring  [ lindex $inputs 1 ]
 	set rep_string  [ lindex $inputs 2 ]
-	set start_index [ lindex $inputs 3 ]	
+	set start_index [ lindex $inputs 3 ]
 	rule "replace-$str-$substring-$rep_string-$start_index" \
-	    $inputs $turbine::LOCAL [ list replace_body $result $str \
+	    $inputs $turbine::LOCAL $adlb::RANK_ANY [ list replace_body $result $str \
                                   $substring $rep_string $start_index ]
     }
-    
+
     proc replace_body { result str substring rep_string start_index } {
 	set str_value         [ retrieve_decr_string $str ]
 	set substring_value   [ retrieve_decr_string $substring ]
@@ -236,7 +236,7 @@ namespace eval turbine {
     # string. If no matches were possible returns the original string.
     proc replace_impl {str substring rep_string {start_index 0} } {
 	set start [find_impl $str $substring $start_index]
-	#If the substring is absent the string is NOT modified 
+	#If the substring is absent the string is NOT modified
 	if { $start == -1 } { return $str };
 	set end [expr $start + [string length $substring]]
 	set part1 [string range $str 0  [expr $start-1]]
@@ -250,10 +250,10 @@ namespace eval turbine {
 	set rep_string  [ lindex $inputs 2 ]
 	set start_index  [ lindex $inputs 3 ]
 	rule "replace_all-$str-$substring-$rep_string" $inputs \
-	    $turbine::LOCAL [ list replace_all_body $result $str \
-                              $substring $rep_string $start_index ] 
+	    $turbine::LOCAL $adlb::RANK_ANY [ list replace_all_body $result $str \
+                              $substring $rep_string $start_index ]
     }
-    
+
     proc replace_all_body { result str substring rep_string start_index } {
 	set str_value         [ retrieve_decr_string $str ]
 	set substring_value   [ retrieve_decr_string $substring ]

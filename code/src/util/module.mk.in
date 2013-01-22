@@ -1,7 +1,8 @@
 
 DIR := src/util
 
-TURBINE_SRC += $(shell find $(DIR) -name *.c)
+TURBINE_SRC += src/util/debug.c
+# Not main.c: see there for details
 
 $(DIR)/debug.h: $(DIR)/debug-tokens.tcl $(DIR)/debug-auto.tcl
 	$(Q) "  TCL		$(@)"

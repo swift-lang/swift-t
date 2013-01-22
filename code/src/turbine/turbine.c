@@ -57,6 +57,8 @@ typedef struct
   turbine_action_type action_type;
   /** ADLB priority for this action */
   int priority;
+  /** ADLB target rank for this action */
+  int target;
   /** Closed inputs - bit vector */
   unsigned char *closed_inputs;
   /** Index of next subscribed input (starts at 0) */
@@ -123,7 +125,7 @@ struct table_lp td_subscribed;
   }
 
 /**
-   Globally unique transform ID for rule_new().
+   Globally unique transform ID for new rules
    Starts at mpi_rank, incremented by mpi_size, thus unique
  */
 static long transform_unique_id = -1;
@@ -285,7 +287,7 @@ static inline turbine_code
 transform_create(const char* name,
                  int inputs, const turbine_datum_id* input_list,
                  turbine_action_type action_type,
-                 const char* action, int priority,
+                 const char* action, int priority, int target,
                  transform** result)
 {
   assert(name);
@@ -306,6 +308,7 @@ transform_create(const char* name,
   T->action_type = action_type;
   T->action = strdup(action);
   T->priority = priority;
+  T->target = target;
   T->blocker = 0;
 
   if (inputs > 0)
@@ -393,12 +396,13 @@ turbine_rule(const char* name,
              turbine_action_type action_type,
              const char* action,
              int priority,
+             int target,
              turbine_transform_id* id)
 {
   transform* T = NULL;
   turbine_code code = transform_create(name, inputs, input_list,
                                        action_type, action,
-                                       priority, &T);
+                                       priority, target, &T);
 
   *id = T->id;
   turbine_check(code);
@@ -536,7 +540,7 @@ turbine_ready(int count, turbine_transform_id* output,
 
 turbine_code
 turbine_pop(turbine_transform_id id, turbine_action_type* action_type,
-            char* action, int* priority)
+            char* action, int* priority, int* target)
 {
   // Check inputs
   if (id == TURBINE_ID_NULL)
@@ -549,11 +553,13 @@ turbine_pop(turbine_transform_id id, turbine_action_type* action_type,
   DEBUG_TURBINE("pop: transform: {%li}", id);
   DEBUG_TURBINE("\t action:   {%li} %s: %s", id, T->name, T->action);
   DEBUG_TURBINE("\t priority: {%li} => %i\n", id, T->priority);
+  DEBUG_TURBINE("\t target:   {%li} => %i\n", id, T->target);
 
   // Copy outputs
   *action_type = T->action_type;
   strcpy(action, T->action);
   *priority = T->priority;
+  *target = T->target;
 
   // Clean up
   transform_free(T);

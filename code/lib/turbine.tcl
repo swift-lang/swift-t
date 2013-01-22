@@ -263,18 +263,18 @@ namespace eval turbine {
     }
 
     # Augment rule so that it can be run on worker
-    proc rule { name inputs action_type action } {
+    proc rule { name inputs action_type target action } {
         variable is_engine
         global WORK_TYPE
 
         if { $is_engine } {
-            c::rule $name $inputs $action_type $action
+            c::rule $name $inputs $action_type $target $action
         } elseif { [ llength $inputs ] == 0 } {
-            release -1 $action_type $action
+            release -1 $action_type $action $adlb::RANK_ANY
         } else {
             # Send to engine that can process it
             adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
-                [ list rule $name $inputs $action_type $action ] \
+                [ list rule $name $inputs $action_type $adlb::RANK_ANY $action ] \
                 $turbine::priority
         }
     }

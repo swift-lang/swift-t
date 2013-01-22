@@ -26,7 +26,8 @@ namespace eval turbine {
                     set type     [ lindex $L 0 ]
                     set action   [ lindex $L 1 ]
                     set_priority [ lindex $L 2 ]
-                    release $transform $type $action
+                    set target   [ lindex $L 3 ]
+                    release $transform $type $action $target
                 }
             }
 
@@ -40,7 +41,7 @@ namespace eval turbine {
     }
 
     # Release a work unit for execution here or elsewhere
-    proc release { transform action_type action } {
+    proc release { transform action_type action target } {
 
         global WORK_TYPE
 
@@ -49,10 +50,11 @@ namespace eval turbine {
         switch $action_type {
             1 { # $turbine::LOCAL
                 debug "executing local action: $transform $action"
+                # TODO: Ensure target allows this
                 eval $action
             }
             2 { # $turbine::CONTROL
-                adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
+                adlb::put $target $WORK_TYPE(CONTROL) \
                     "command priority: $turbine::priority $action" \
                     $turbine::priority
             }

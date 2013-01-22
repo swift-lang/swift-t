@@ -8,7 +8,7 @@ namespace eval turbine {
     proc printf { args } {
 
         set a [ lindex $args 2 ]
-        rule printf $a $turbine::LOCAL \
+        rule printf $a $turbine::LOCAL $adlb::RANK_ANY \
             "printf_body $a"
     }
     proc printf_body { args } {
@@ -19,7 +19,7 @@ namespace eval turbine {
         set s [ eval format $L ]
         puts $s
     }
-    
+
     proc printf_local { args } {
         set L [ list ]
         foreach a $args {

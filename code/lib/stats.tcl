@@ -10,7 +10,7 @@ namespace eval turbine {
     proc sum_integer { stack result inputs } {
         set container [ lindex $inputs 0 ]
 
-        rule "sum-$container" $container $turbine::LOCAL \
+        rule "sum-$container" $container $turbine::LOCAL $adlb::RANK_ANY \
             "sum_integer_body $stack $container $result 0 0 -1"
     }
 
@@ -38,7 +38,7 @@ namespace eval turbine {
                 # block until the next turbine id is finished,
                 #   then continue running
                 # puts "sum_integer_body $stack $container $result $accum $i $n"
-                rule "sum-$container" $turbine_id $turbine::LOCAL \
+                rule "sum-$container" $turbine_id $turbine::LOCAL $adlb::RANK_ANY \
                     "sum_integer_body $stack $container $result $accum $i $n"
                 # return immediately without setting result
                 return
@@ -57,7 +57,7 @@ namespace eval turbine {
     proc sum_float { stack result inputs } {
         set container [ lindex $inputs 0 ]
 
-        rule "sum-$container" $container $turbine::LOCAL \
+        rule "sum-$container" $container $turbine::LOCAL $adlb::RANK_ANY \
             "sum_float_body $stack $container $result 0 0 -1"
     }
 
@@ -85,7 +85,7 @@ namespace eval turbine {
                 # block until the next turbine id is finished,
                 #   then continue running
                 # puts "sum_float_body $stack $container $result $accum $i $n"
-                rule "sum-$container" $turbine_id $turbine::LOCAL \
+                rule "sum-$container" $turbine_id $turbine::LOCAL $adlb::RANK_ANY \
                     "sum_float_body $stack $container $result $accum $i $n"
                 # return immediately without setting result
                 return
@@ -127,7 +127,7 @@ namespace eval turbine {
     proc stats_impl { container n_out sum_out mean_out M2_out \
                     samp_std_out pop_std_out\
                     max_out min_out } {
-        rule "stats-body-$container" $container $turbine::LOCAL \
+        rule "stats-body-$container" $container $turbine::LOCAL $adlb::RANK_ANY \
             "stats_body $container $n_out $sum_out $mean_out $M2_out \
              $samp_std_out $pop_std_out $max_out $min_out \
              0.0 0.0 0.0 NOMIN NOMAX 0 -1"
@@ -177,7 +177,7 @@ namespace eval turbine {
             incr i
           } else {
             # block until the next turbine id is finished then continue running
-            rule "stats_body-$container" $turbine_id $turbine::LOCAL \
+            rule "stats_body-$container" $turbine_id $turbine::LOCAL $adlb::RANK_ANY \
               "stats_body $container $n_out $sum_out \
                  $mean_out $M2_out \
                  $samp_std_out $pop_std_out $max_out $min_out \
@@ -248,7 +248,7 @@ namespace eval turbine {
       set mean_out [ lindex $outputs 1 ]
       set std_out [ lindex $outputs 2 ]
       rule "stats-combine-$container" $container \
-            $turbine::LOCAL "stat_combine_body $container $n_out $mean_out $std_out \
+            $turbine::LOCAL $adlb::RANK_ANY "stat_combine_body $container $n_out $mean_out $std_out \
               0 0.0 0.0 0"
     }
 
@@ -293,7 +293,7 @@ namespace eval turbine {
           incr i
         } else {
           rule "stats-combine-$container" \
-            "$n_id $mean_id $M2_id" $turbine::LOCAL \
+            "$n_id $mean_id $M2_id" $turbine::LOCAL $adlb::RANK_ANY \
             "stat_combine_body $container $n_out $mean_out $std_out \
               $n_accum $mean_accum $M2_accum $i"
           return

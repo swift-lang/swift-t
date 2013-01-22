@@ -125,7 +125,7 @@ namespace eval turbine {
     }
 
     proc argv_contains { stack result key } {
-        rule "argv_contains-$key" $key $turbine::LOCAL \
+        rule "argv_contains-$key" $key $turbine::LOCAL $adlb::RANK_ANY \
             "argv_contains_body $result $key"
     }
 
@@ -156,7 +156,7 @@ namespace eval turbine {
             set base [ lindex $args 3 ]
         }
 
-        rule "argv_get-$key" $key $turbine::LOCAL \
+        rule "argv_get-$key" $key $turbine::LOCAL $adlb::RANK_ANY \
             "argv_get_body $result $key $base"
     }
 
@@ -217,7 +217,7 @@ namespace eval turbine {
             set base [ lindex $args 3 ]
         }
 
-        rule "argp_get-$i" $i $turbine::LOCAL \
+        rule "argp_get-$i" $i $turbine::LOCAL $adlb::RANK_ANY \
             "argp_get_body $result $i $base"
     }
 
@@ -272,7 +272,7 @@ namespace eval turbine {
     proc argv_accept { args } {
         set stack [ lindex 0 ]
         set L [ lindex $args 2 ]
-        rule argv_accept "$L" $turbine::LOCAL "argv_accept_body $L"
+        rule argv_accept "$L" $turbine::LOCAL $adlb::RANK_ANY "argv_accept_body $L"
     }
 
     proc argv_accept_body { args } {
@@ -301,7 +301,7 @@ namespace eval turbine {
     }
 
     proc getenv { stack outputs inputs } {
-        rule getenv-$inputs $inputs $turbine::LOCAL \
+        rule getenv-$inputs $inputs $turbine::LOCAL $adlb::RANK_ANY \
             "turbine::getenv_body $outputs $inputs"
     }
     proc getenv_body { result key } {

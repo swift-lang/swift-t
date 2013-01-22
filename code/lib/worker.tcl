@@ -29,7 +29,6 @@ namespace eval turbine {
         global WORK_TYPE
 
         debug "rule_id: $rule_id"
-        debug "work: $command"
         debug "eval: $command"
 
         if { [ catch { eval $command } e ] } {

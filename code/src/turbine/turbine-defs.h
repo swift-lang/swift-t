@@ -57,7 +57,11 @@ typedef enum
   TURBINE_ERROR_UNKNOWN = ADLB_DATA_ERROR_UNKNOWN,
 } turbine_code;
 
+/** The NULL TD */
 #define TURBINE_ID_NULL        ADLB_DATA_ID_NULL
+
+/** Indicates any MPI rank */
+#define TURBINE_RANK_ANY ADLB_RANK_ANY
 
 /**
    The maximal string length of a container subscript

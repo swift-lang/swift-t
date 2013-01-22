@@ -63,9 +63,9 @@ proc myfun { a b x } {
 
     # Create condition variable for "if"
     allocate c_1 integer 0
-    rule MYFUN_1 $x   $turbine::WORK    "f $x $c_1"
-    rule MYFUN_2 $c_1 $turbine::CONTROL "if_1 $stack $c_1"
-    rule MYFUN_3 $x   $turbine::WORK    "g $x $b"
+    rule MYFUN_1 $x   $turbine::WORK $adlb::RANK_ANY    "f $x $c_1"
+    rule MYFUN_2 $c_1 $turbine::CONTROL $adlb::RANK_ANY "if_1 $stack $c_1"
+    rule MYFUN_3 $x   $turbine::WORK $adlb::RANK_ANY     "g $x $b"
 }
 
 proc if_1 { stack c } {
@@ -78,9 +78,9 @@ proc if_1 { stack c } {
     set x [ container_lookup $stack "x" ]
 
     if $c_value {
-        rule IF_1_1 $x $turbine::WORK "h $x $a"
+        rule IF_1_1 $x $turbine::WORK $adlb::RANK_ANY "h $x $a"
     } else {
-        rule IF_1_2 $x $turbine::WORK "j $x $a"
+        rule IF_1_2 $x $turbine::WORK $adlb::RANK_ANY "j $x $a"
     }
     turbine::c::push
 }
@@ -91,7 +91,7 @@ proc rules { } {
     turbine::allocate b integer 0
     turbine::literal x integer 3
 
-    rule A $x $turbine::CONTROL "myfun $a $b $x"
+    rule A $x $turbine::CONTROL $adlb::RANK_ANY "myfun $a $b $x"
 
     set a_label [ literal string "a=" ]
     # Use 0 as stack frame
