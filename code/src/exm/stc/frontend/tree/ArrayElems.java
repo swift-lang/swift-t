@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
-package exm.stc.ast.descriptor;
+package exm.stc.frontend.tree;
 
 import java.util.ArrayList;
 import java.util.Collections;

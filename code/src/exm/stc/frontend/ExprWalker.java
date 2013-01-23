@@ -26,10 +26,6 @@ import java.util.Stack;
 import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
-import exm.stc.ast.descriptor.ArrayElems;
-import exm.stc.ast.descriptor.ArrayRange;
-import exm.stc.ast.descriptor.FunctionCall;
-import exm.stc.ast.descriptor.Literals;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Settings;
@@ -61,6 +57,10 @@ import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.Pair;
 import exm.stc.frontend.Context.FnProp;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
+import exm.stc.frontend.tree.ArrayElems;
+import exm.stc.frontend.tree.ArrayRange;
+import exm.stc.frontend.tree.FunctionCall;
+import exm.stc.frontend.tree.Literals;
 
 /**
  * This module contains logic to walk individual expression in Swift and generate code to evaluate them

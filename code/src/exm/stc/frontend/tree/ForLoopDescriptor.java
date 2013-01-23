@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
-package exm.stc.ast.descriptor;
+package exm.stc.frontend.tree;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,7 +24,6 @@ import java.util.Map;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
-import exm.stc.ast.descriptor.VariableDeclaration.VariableDescriptor;
 import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.InvalidWriteException;
@@ -42,6 +41,7 @@ import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
 import exm.stc.frontend.LogHelper;
 import exm.stc.frontend.TypeChecker;
+import exm.stc.frontend.tree.VariableDeclaration.VariableDescriptor;
 
 /**
  * For loops are complex, so this class takes the AST of a for loop and 

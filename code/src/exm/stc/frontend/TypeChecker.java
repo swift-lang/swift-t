@@ -27,9 +27,6 @@ import java.util.Set;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
-import exm.stc.ast.descriptor.ArrayElems;
-import exm.stc.ast.descriptor.ArrayRange;
-import exm.stc.ast.descriptor.FunctionCall;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
@@ -53,6 +50,9 @@ import exm.stc.common.lang.Types.WildcardType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.frontend.tree.ArrayElems;
+import exm.stc.frontend.tree.ArrayRange;
+import exm.stc.frontend.tree.FunctionCall;
 
 /**
  * This module handles checking the internal consistency of expressions,
