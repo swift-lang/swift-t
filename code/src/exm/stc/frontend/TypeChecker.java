@@ -307,8 +307,8 @@ public class TypeChecker {
    * @throws TypeMismatchException
    * @throws UserException
    */
-  private static List<BuiltinOpcode> getBuiltInFromOpTree(Context context, SwiftAST tree,
-          Type outType, List<Type> argTypes)
+  private static List<BuiltinOpcode> getBuiltInFromOpTree(Context context,
+          SwiftAST tree, Type outType, List<Type> argTypes)
           throws TypeMismatchException, UserException {
     assert(tree.getType() == ExMParser.OPERATOR);
     assert(tree.getChildCount() >= 1);
@@ -317,7 +317,12 @@ public class TypeChecker {
  
     List<Type> possibleAllArgTypes = findOperatorArgTypes(context,
                                         tree, opName, argTypes);
-                                                                        
+                                
+    if (possibleAllArgTypes.isEmpty()) {
+      throw new TypeMismatchException(context, "Incompatible types for "
+          + "arguments to operator " + opName + ": " + argTypes + ". "
+          + "Types for all arguments must match.");
+    }
     ArrayList<BuiltinOpcode> ops = new ArrayList<BuiltinOpcode>();
     for (Type allArgType: possibleAllArgTypes) {
       BuiltinOpcode op = Operators.getArithBuiltin(allArgType, opTok);
