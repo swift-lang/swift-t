@@ -68,7 +68,20 @@ CC=mpicc LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib"
 
 These machines are at the Argonne Leadership Computing Facility (ALCF).
 
-*To run on the login nodes (initial debugging):*
+===== Public installation
+
+* Based on trunk
+* STC: +~wozniak/Public/stc-trunk/bin/stc+
+
+To run:
+
+----
+~wozniak/Public/turbine/scripts/submit/bgp/turbine-cobalt.zsh -n 3 ~/program.tcl
+----
+
+===== Build procedure
+
+_To run on the login nodes (initial debugging):_
 
 * Install MPICH for the compute nodes
 * Configure Tcl and c-utils with gcc
@@ -81,10 +94,10 @@ These machines are at the Argonne Leadership Computing Facility (ALCF).
 +
 This makes adjustments for some Blue Gene quirks.
 
-Then, simply use the +bin/turbine+ program to run.  Be cautious in
-your use of the login nodes to avoid affecting other users.
+* Then, simply use the +bin/turbine+ program to run.  Be cautious in
+  your use of the login nodes to avoid affecting other users.
 
-*To run on the compute nodes:*
+_To run on the compute nodes:_
 
 * Configure Tcl with mpixlc
 * Configure c-utils with gcc
