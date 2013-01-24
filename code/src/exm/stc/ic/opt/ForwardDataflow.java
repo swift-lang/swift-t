@@ -387,7 +387,7 @@ public class ForwardDataflow implements OptimizerPass {
   }
 
   public static boolean cantPass(Type t) {
-    return t.equals(Types.V_BLOB);
+    return t.assignableTo(Types.V_BLOB) || t.assignableTo(Types.V_FILE);
   }
 
   /**
@@ -708,12 +708,12 @@ public class ForwardDataflow implements OptimizerPass {
           }
         }
       }
-      if (inst.closesOutputs()) {
-        for (Var out: inst.getOutputs()) {
+      List<Var> closedOutputs = inst.getClosedOutputs();
+      if (closedOutputs != null) {
+        for (Var out: closedOutputs) {
           cv.close(out.name(), false);
         }
       }
-        
     }
     return anotherPassNeeded;
   }

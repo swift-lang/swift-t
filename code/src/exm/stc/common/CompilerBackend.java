@@ -172,7 +172,8 @@ public interface CompilerBackend {
    * @param redirects 
    */
   public abstract void runExternal(String cmd, List<Arg> args,
-           List<Arg> inFiles, List<Var> outFiles, Redirects<Arg> redirects,
+           List<Arg> inFiles, List<Var> outFiles, List<Arg> outFileNames, 
+           Redirects<Arg> redirects,
            boolean hasSideEffects, boolean deterministic);
   
   /**

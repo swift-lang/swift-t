@@ -799,12 +799,14 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void runExternal(String cmd, List<Arg> args,
-          List<Arg> inFiles, List<Var> outFiles, Redirects<Arg> redirects,
+          List<Arg> inFiles, List<Var> outFiles, 
+          List<Arg> outFileNames, Redirects<Arg> redirects,
           boolean hasSideEffects, boolean deterministic) {
     for (Arg inFile: inFiles) {
       assert(inFile.isVar());
       assert(inFile.getType().assignableTo(Types.V_FILE));
     }
+    assert(outFiles.size() == outFileNames.size());
     
     List<Expression> tclArgs = new ArrayList<Expression>(args.size());
     List<Expression> logMsg = new ArrayList<Expression>();
@@ -833,9 +835,13 @@ public class TurbineGenerator implements CompilerBackend
                 stdoutFilename, stderrFilename, tclArgs));
         
     // Close outputs
-    for (Var o: outFiles) {
+    for (int i = 0; i < outFiles.size(); i++) {
+      Var o = outFiles.get(i);
       if (o.type().assignableTo(Types.V_FILE)) {
-        pointStack.peek().add(Turbine.createLocalFile(prefixVar(o)));
+        Arg outFileName = outFileNames.get(i);
+        assert(outFileName != null);
+        pointStack.peek().add(Turbine.createLocalFile(
+                prefixVar(o), argToExpr(outFileName)));
       } else if (o.type().assignableTo(Types.V_VOID)) {
         // Do nothing, void value is just a bookkeeping trick
       } else {

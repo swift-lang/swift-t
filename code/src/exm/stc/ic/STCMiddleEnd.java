@@ -406,19 +406,25 @@ public class STCMiddleEnd implements CompilerBackend {
 
   @Override
   public void runExternal(String cmd, List<Arg> args, List<Arg> inFiles,
-                          List<Var> outFiles, Redirects<Arg> redirects,
+                          List<Var> outFiles, List<Arg> outFileNames,
+                          Redirects<Arg> redirects,
                           boolean hasSideEffects, boolean deterministic) {
     for (Var o: outFiles) {
       assert(o.type().assignableTo(Types.V_FILE) 
               || o.type().assignableTo(Types.V_VOID));
     }
+    assert(outFiles.size() == outFileNames.size());
+    for (Arg o: outFileNames) {
+      assert(o == null || o.getType().assignableTo(Types.V_STRING));
+    }
     
     for (Arg i: inFiles) {
       assert(i.getType().assignableTo(Types.V_FILE));
     }
+    
 
-    currBlock().addInstruction(new RunExternal(cmd, inFiles, outFiles, args,
-                         redirects, hasSideEffects, deterministic));
+    currBlock().addInstruction(new RunExternal(cmd, inFiles, outFiles, 
+        outFileNames, args, redirects, hasSideEffects, deterministic));
   }
 
   @Override

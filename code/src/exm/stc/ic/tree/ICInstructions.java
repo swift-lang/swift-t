@@ -233,8 +233,8 @@ public class ICInstructions {
      */
     public abstract TaskMode getMode();
 
-    public boolean closesOutputs() {
-      return false; // Default
+    public List<Var> getClosedOutputs() {
+      return null; // Default - assume nothing closed
     }
     
     /**
@@ -996,8 +996,15 @@ public class ICInstructions {
       case LOAD_REF:
       case COPY_REF:
       case GET_FILENAME:
-      case GET_OUTPUT_FILENAME:
         return 1;
+        
+      case GET_OUTPUT_FILENAME:
+        if (args.get(1).getVar().isMapped()) {
+          // Treat as simple lookup
+          return 1;
+        } else {
+          return 2; // Treat filename as being modified
+        }
       case DECR_BLOB_REF:
       case FREE_BLOB:
       case DECR_LOCAL_FILE_REF:
@@ -1072,8 +1079,9 @@ public class ICInstructions {
         // Only effect is setting alias var
         return false;
       case GET_OUTPUT_FILENAME:
-        // Might initialise mapping if not already mapped
-        return !getInput(0).getVar().isMapped();
+        // Might initialise mapping on file, but in that case file
+        // is considered output
+        return false;
         
       case STRUCT_LOOKUP:
       case LOAD_REF:
@@ -1786,13 +1794,17 @@ public class ICInstructions {
     }
 
     @Override
-    public boolean closesOutputs() {
+    public List<Var> getClosedOutputs() {
       if (op == Opcode.GET_OUTPUT_FILENAME) {
-        // Will be closed for unmapped vars
-        return !getOutput(0).isMapped();
+        // Filenames is immediately closed for unmapped vars
+        if (!args.get(1).getVar().isMapped()) {
+          return Arrays.asList(args.get(0).getVar());
+        } else {
+          return null;
+        }
       }
       
-      return super.closesOutputs();
+      return super.getClosedOutputs();
     }
 
     @Override
@@ -2260,19 +2272,22 @@ public class ICInstructions {
     private final String cmd;
     private final ArrayList<Arg> inFiles;
     private final ArrayList<Var> outFiles;
-    private final ArrayList<Arg> inputs;
+    private final ArrayList<Arg> outFileNames;
+    private final ArrayList<Arg> args;
     private final Redirects<Arg> redirects;
     private final boolean hasSideEffects;
     private final boolean deterministic;
     
-    public RunExternal(String cmd, List<Arg> inFiles, List<Var> outFiles, List<Arg> inputs,
-               Redirects<Arg> redirects,
+    public RunExternal(String cmd, List<Arg> inFiles, List<Var> outFiles, 
+        List<Arg> outFileNames, 
+        List<Arg> args, Redirects<Arg> redirects,
                boolean hasSideEffects, boolean deterministic) {
       super(Opcode.RUN_EXTERNAL);
       this.cmd = cmd;
       this.inFiles = new ArrayList<Arg>(inFiles);
       this.outFiles = new ArrayList<Var>(outFiles);
-      this.inputs = new ArrayList<Arg>(inputs);
+      this.outFileNames = new ArrayList<Arg>(outFileNames);
+      this.args = new ArrayList<Arg>(args);
       this.redirects = redirects.clone();
       this.deterministic = deterministic;
       this.hasSideEffects = hasSideEffects;
@@ -2280,9 +2295,10 @@ public class ICInstructions {
 
     @Override
     public void renameVars(Map<String, Arg> renames) {
-      ICUtil.replaceOpargsInList(renames, inputs);
+      ICUtil.replaceOpargsInList(renames, args);
       ICUtil.replaceOpargsInList(renames, inFiles);
       ICUtil.replaceVarsInList(renames, outFiles, false);
+      ICUtil.replaceOpargsInList(renames, outFileNames);
       redirects.stdin = ICUtil.replaceOparg(renames, redirects.stdin, true);
       redirects.stdout = ICUtil.replaceOparg(renames, redirects.stdout, true);
       redirects.stderr = ICUtil.replaceOparg(renames, redirects.stderr, true);
@@ -2291,7 +2307,8 @@ public class ICInstructions {
     @Override
     public void renameInputs(Map<String, Arg> renames) {
       ICUtil.replaceOpargsInList(renames, inFiles);
-      ICUtil.replaceOpargsInList(renames, inputs);
+      ICUtil.replaceOpargsInList(renames, args);
+      ICUtil.replaceOpargsInList(renames, outFileNames);
       redirects.stdin = ICUtil.replaceOparg(renames, redirects.stdin, true);
       redirects.stdout = ICUtil.replaceOparg(renames, redirects.stdout, true);
       redirects.stderr = ICUtil.replaceOparg(renames, redirects.stderr, true);
@@ -2300,32 +2317,37 @@ public class ICInstructions {
     @Override
     public String toString() {
       StringBuilder res = new StringBuilder();
-      res.append(formatFunctionCall(op, cmd, outFiles, inputs));
+      res.append(formatFunctionCall(op, cmd, outFiles, args));
       String redirectString = redirects.toString();
       if (redirectString.length() > 0) {
         res.append(" " + redirectString);
       }
-      res.append(" inFiles = [");
+      res.append(" infiles=[");
       ICUtil.prettyPrintArgList(res, inFiles);
       res.append("]");
       
-      res.append(" outFiles = [");
+      res.append(" outfiles=[");
       ICUtil.prettyPrintVarList(res, outFiles);
+      res.append("]");
+      res.append(" outfilenames=[");
+      ICUtil.prettyPrintArgList(res, outFileNames);
       res.append("]");
       return res.toString();
     }
 
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.runExternal(cmd, inputs, inFiles, 
-                  outFiles, redirects, hasSideEffects, deterministic);
+      gen.runExternal(cmd, args, inFiles, 
+                  outFiles, outFileNames, 
+                  redirects, hasSideEffects, deterministic);
     }
 
     @Override
     public List<Arg> getInputs() {
       ArrayList<Arg> res = new ArrayList<Arg>();
-      res.addAll(inputs);
+      res.addAll(args);
       res.addAll(inFiles);
+      res.addAll(outFileNames);
       for (Arg redirFilename: redirects.redirections(true, true)) {
         if (redirFilename != null) {
           res.add(redirFilename);
@@ -2348,7 +2370,8 @@ public class ICInstructions {
     public Map<String, Arg> constantFold(String fnName,
         Map<String, Arg> knownConstants) {
       // Replace variables for which values are known
-      ICUtil.replaceOpargsInList(knownConstants, inputs);
+      ICUtil.replaceOpargsInList(knownConstants, args);
+      ICUtil.replaceOpargsInList(knownConstants, outFileNames);
       return null;
     }
 
@@ -2384,8 +2407,8 @@ public class ICInstructions {
     }
     
     @Override
-    public boolean closesOutputs() {
-      return true;
+    public List<Var> getClosedOutputs() {
+      return getOutputs();
     }
 
     @Override
@@ -2397,7 +2420,7 @@ public class ICInstructions {
           // Unique key for cv includes number of output
           // Output file should be closed after external program executes
           ComputedValue cv = new ComputedValue(op, cmd + "!!" + i,
-                     inputs, Arg.createVar(outFiles.get(i)), true);
+                     args, Arg.createVar(outFiles.get(i)), true);
           cvs.add(cv);
         }
         return cvs;
@@ -2408,8 +2431,8 @@ public class ICInstructions {
 
     @Override
     public Instruction clone() {
-      return new RunExternal(cmd, inFiles, outFiles, inputs, redirects,
-                             hasSideEffects, deterministic);
+      return new RunExternal(cmd, inFiles, outFiles, outFileNames,
+              args, redirects, hasSideEffects, deterministic);
     }
     
   }

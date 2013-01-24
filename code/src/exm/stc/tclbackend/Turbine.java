@@ -927,10 +927,9 @@ class Turbine
     return new Command("turbine::decr_local_file_refcount", new Token(localFileName));
   }
 
-  public static TclTree createLocalFile(String varName) {
-    // TODO: include filename
+  public static TclTree createLocalFile(String varName, Expression fileName) {
     return new SetVariable(varName, Square.fnCall("turbine::create_local_file_ref",
-                                                  new TclString("", false)));
+                                                  fileName));
   }
 
 }

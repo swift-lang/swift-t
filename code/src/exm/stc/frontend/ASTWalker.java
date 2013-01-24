@@ -2027,13 +2027,20 @@ public class ASTWalker {
     
     // Declare local dummy output vars
     List<Var> localOutputs = new ArrayList<Var>(outArgs.size());
+    List<Arg> localOutputFileNames = new ArrayList<Arg>(outArgs.size());
     for (Var output: outArgs) {
       Var localOutput = varCreator.createValueOfVar(context, output);
       localOutputs.add(localOutput);
+      Arg localOutputFileName = null;
+      if (Types.isFile(output.type())) {
+        localOutputFileName = Arg.createVar(
+            varCreator.fetchValueOf(context, fileNames.get(output.name())));
+      }
+      localOutputFileNames.add(localOutputFileName);
     }
     
     backend.runExternal(appName, localArgs, localInFiles, localOutputs,
-                localRedirects, hasSideEffects, deterministic);
+                localOutputFileNames, localRedirects, hasSideEffects, deterministic);
     
     for (int i = 0; i < outArgs.size(); i++) {
       Var output = outArgs.get(i);
