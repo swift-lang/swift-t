@@ -97,7 +97,7 @@ namespace eval turbine {
         set arg2 [ lindex $inputs 1 ]
         set msg [ lindex $inputs 2 ]
         rule "assertLTE-$arg1-$arg2-$msg" "$arg1 $arg2 $msg" \
-            $turbine::LOCAL "assertLTE_body $arg1 $arg2 $msg"
+            $turbine::LOCAL $adlb::RANK_ANY "assertLTE_body $arg1 $arg2 $msg"
     }
 
     proc assertLTE_body { arg1 arg2 msg } {
