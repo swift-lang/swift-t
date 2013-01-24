@@ -55,6 +55,11 @@ AC_CHECK_FUNCS([floor gettimeofday memchr strchr strdup strnlen])
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 
+# This is needed by header files which cannot include c-utils-config.h
+[[ ${ac_cv_func_strnlen} == "yes" ]]
+SUBST_HAVE_STRNLEN=$(( ! ${?} ))
+AC_SUBST([SUBST_HAVE_STRNLEN], ${SUBST_HAVE_STRNLEN})
+
 # We prefer to use cp -u for installation
 AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
     [AC_PATH_PROGS_FEATURE_CHECK([CP_U], [cp],

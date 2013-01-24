@@ -7,12 +7,16 @@
  *
  *  Administrative functionality for c-utils project
  *  Note that this file is filtered by config.status
+ *  Allows configure-time symbols without requiring
+ *    referring to config.h
  * */
 
 #ifndef C_UTILS_H
 #define C_UTILS_H
 
 #include <version.h>
+
+#define SUBST_HAVE_STRNLEN @SUBST_HAVE_STRNLEN@
 
 static void
 c_utils_version(version* output)

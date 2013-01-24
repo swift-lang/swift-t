@@ -41,7 +41,7 @@ char* string_dup_word(char* src);
 
 void chomp(char* s);
 
-#ifndef HAVE_STRNLEN
+#if SUBST_HAVE_STRNLEN
 
 /**
    Provide strnlen on systems that do not have it (e.g., Mac)
