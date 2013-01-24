@@ -78,7 +78,6 @@ log_time()
   return result;
 }
 
-#if DISABLE_LOG==0
 /**
    Resulting line is limited to 1024 characters
  */
@@ -99,7 +98,6 @@ log_printf(char* format, ...)
   int precision = t > 10000 ? 15 : 8;
   fprintf(output, "%*.3f %s\n", precision, t, line);
 }
-#endif
 
 void
 log_finalize()
