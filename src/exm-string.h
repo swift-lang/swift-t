@@ -24,7 +24,6 @@
 #ifndef EXM_STRING_H
 #define EXM_STRING_H
 
-#include <c-utils-config.h>
 #include <stdbool.h>
 
 /**
