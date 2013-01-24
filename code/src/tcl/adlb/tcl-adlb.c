@@ -32,7 +32,9 @@
 
 #include <assert.h>
 
-// strnlen() is a GNU extension
+// strnlen() is a GNU extension: Need _GNU_SOURCE
+// Also need __USE_GNU on the BG/P
+// #define __USE_GNU
 #define _GNU_SOURCE
 #include <string.h>
 #include <exm-string.h>
@@ -565,7 +567,7 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
       return TCL_ERROR;
       break;
   }
- 
+
   if (id == ADLB_DATA_ID_NULL) {
     // need to return new ID
     Tcl_Obj* result = Tcl_NewLongObj(new_id);

@@ -24,10 +24,10 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdlib.h>
-// for strnlen()
-#define _GNU_SOURCE
-// for strnlen() (needed on BG/P) (may break an x86 system)
+// strnlen() is a GNU extension: Need _GNU_SOURCE
+// Also need __USE_GNU on the BG/P
 // #define __USE_GNU
+#define _GNU_SOURCE
 #include <string.h>
 
 #include <tcl.h>
