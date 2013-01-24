@@ -42,7 +42,7 @@ main(int argc, char** argv)
 
   printf("mpi: %i/%i\n", mpi_rank, mpi_size);
 
-  MPI_Offset size;
+  MPI_Offset size = 100;
 
   if (mpi_rank == 0)
   {
@@ -50,8 +50,9 @@ main(int argc, char** argv)
     rc = stat(filename, &s);
     size = s.st_size;
   }
-  MPI_Bcast(&size, 1, MPI_INT, 0, MPI_COMM_WORLD);
-  printf("file size: %i\n", (int) size);
+  MPI_Bcast(&size, sizeof(MPI_Offset), MPI_BYTE, 0, MPI_COMM_WORLD);
+  int size_int = (int) size;
+  printf("file size: %i\n", size_int);
 
   int chunk_size = 4;
   MPI_Datatype chunk;
