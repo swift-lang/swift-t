@@ -23,6 +23,8 @@
 
 #include "memory.h"
 
+static bool initialized = false;
+
 long KB;
 long MB;
 long GB;
@@ -58,6 +60,10 @@ static int count = 1;
 void
 mm_init()
 {
+  if (initialized)
+    return;
+  initialized = true;
+
   mm_init_units();
 
   contexts[mm_default].name = strdup("DEFAULT");
