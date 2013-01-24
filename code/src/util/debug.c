@@ -46,6 +46,9 @@ turbine_debug_init()
     return;
   }
   initialized = true;
+
+  mm_init();
+
   char* s = getenv("TURBINE_DEBUG");
   if (s != NULL)
     if (strcmp(s, "0") == 0)
