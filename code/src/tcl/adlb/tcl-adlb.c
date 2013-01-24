@@ -30,12 +30,16 @@
 // messages are more useful.  This file only packs and unpacks
 // calls to the ADLB C layer
 
+#include "config.h"
+
 #include <assert.h>
 
 // strnlen() is a GNU extension: Need _GNU_SOURCE
-// Also need __USE_GNU on the BG/P
-// #define __USE_GNU
 #define _GNU_SOURCE
+#if ENABLE_BGP == 1
+// Also need __USE_GNU on the BG/P
+#define __USE_GNU
+#endif
 #include <string.h>
 #include <exm-string.h>
 

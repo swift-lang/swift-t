@@ -443,7 +443,14 @@ AC_ARG_ENABLE(fast,
 AC_SUBST(ENABLE_FAST)
 AC_SUBST(CFLAGS)
 
-AC_DEFINE_UNQUOTED(DISABLE_LOG,$DISABLE_LOG,[Disables logging])
+AC_DEFINE_UNQUOTED(DISABLE_LOG, $DISABLE_LOG, [Disables logging])
+
+AC_ARG_ENABLE(bgp,
+    AS_HELP_STRING([--enable-bgp],
+                   [Special handling for BG/P.]),
+    ENABLE_BGP=1)
+AC_DEFINE_UNQUOTED(ENABLE_BGP, $ENABLE_BGP,
+                   [Special handling for BG/P.])
 
 AC_CONFIG_FILES(
         src/turbine/turbine-version.h

@@ -20,14 +20,18 @@
  * @author wozniak
  * */
 
+#include "config.h"
+
 #include <assert.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdlib.h>
 // strnlen() is a GNU extension: Need _GNU_SOURCE
-// Also need __USE_GNU on the BG/P
-// #define __USE_GNU
 #define _GNU_SOURCE
+#if ENABLE_BGP == 1
+// Also need __USE_GNU on the BG/P
+#define __USE_GNU
+#endif
 #include <string.h>
 
 #include <tcl.h>
