@@ -2132,15 +2132,6 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void
-        runExternal(String cmd, List<Arg> args,
-            List<Var> outFiles, Redirects<Arg> redirects,
-            boolean hasSideEffects, boolean deterministic) {
-      // TODO Auto-generated method stub
-      
-    }
-
-    @Override
     public void getFileName(Var filename, Var file, boolean initUnmapped) {
       // TODO Auto-generated method stub
       
@@ -2199,5 +2190,31 @@ public class SwigcGenerator implements CompilerBackend
         List<Var> outArgs, List<Var> inArgs, TaskMode mode) throws UserException {
       throw new STCRuntimeError("generateWrappedBuiltin not implemented" +
           " by TurbineGenerator");
+    }
+
+    @Override
+    public void assignFile(Var target, Arg src) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public void decrLocalFileRef(Var fileVal) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public void retrieveFile(Var target, Var src) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public void runExternal(String cmd, List<Arg> args, List<Arg> inFiles,
+            List<Var> outFiles, Redirects<Arg> redirects,
+            boolean hasSideEffects, boolean deterministic) {
+      // TODO Auto-generated method stub
+      
     }
 }

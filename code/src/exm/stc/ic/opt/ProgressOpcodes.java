@@ -43,7 +43,6 @@ public class ProgressOpcodes {
   }
   
   /**
-   * @param logger
    * @param rootBlock
    * @return true if the continuation at the root of the block might do
    *          significant work.
@@ -96,6 +95,7 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.LOAD_REF);
     opcodes.add(Opcode.LOAD_STRING);
     opcodes.add(Opcode.LOAD_BLOB);
+    opcodes.add(Opcode.LOAD_FILE);
     opcodes.add(Opcode.GET_FILENAME);
     opcodes.add(Opcode.GET_OUTPUT_FILENAME);
     return opcodes;
@@ -124,13 +124,17 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.ADDRESS_OF);
     opcodes.add(Opcode.LOAD_BOOL);
     opcodes.add(Opcode.LOAD_VOID);
+    opcodes.add(Opcode.LOAD_FILE);
+    opcodes.add(Opcode.LOAD_FILE);
     opcodes.add(Opcode.LOAD_FLOAT);
     opcodes.add(Opcode.LOAD_INT);
     opcodes.add(Opcode.LOAD_REF);
     opcodes.add(Opcode.LOAD_STRING);
     opcodes.add(Opcode.LOAD_BLOB);
+    opcodes.add(Opcode.LOAD_FILE);
     opcodes.add(Opcode.GET_FILENAME);
     opcodes.add(Opcode.GET_OUTPUT_FILENAME);
     return opcodes;
   }
 }
+

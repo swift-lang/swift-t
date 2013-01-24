@@ -420,7 +420,6 @@ public class TurbineGenerator implements CompilerBackend
                           Turbine.VOID_DUMMY_VAL));
   }
 
-
   @Override
   public void assignFloat(Var target, Arg src) {
     assert(src.isImmediateFloat());
@@ -488,6 +487,27 @@ public class TurbineGenerator implements CompilerBackend
   public void freeBlob(Var blobVal) {
     assert(blobVal.type().equals(Types.V_BLOB));
     pointStack.peek().add(Turbine.freeLocalBlob(varToExpr(blobVal)));
+  }
+
+  @Override
+  public void assignFile(Var target, Arg src) {
+    assert(Types.isFile(target.type()));
+    assert(src.getVar().type().assignableTo(Types.V_FILE));
+    pointStack.peek().add(Turbine.fileSet(varToExpr(target),
+                            prefixVar(src.getVar())));
+  }
+
+  @Override
+  public void retrieveFile(Var target, Var src) {
+    assert(Types.isFile(src.type()));
+    assert(target.type().assignableTo(Types.V_FILE));
+    // Do nothing, just a dummy instruction 
+  }
+
+  @Override
+  public void decrLocalFileRef(Var localFile) {
+    assert(localFile.type().assignableTo(Types.V_FILE));
+    pointStack.peek().add(Turbine.decrLocalFileRef(prefixVar(localFile)));
   }
   
   @Override
@@ -779,8 +799,13 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void runExternal(String cmd, List<Arg> args,
-          List<Var> outFiles, Redirects<Arg> redirects,
+          List<Arg> inFiles, List<Var> outFiles, Redirects<Arg> redirects,
           boolean hasSideEffects, boolean deterministic) {
+    for (Arg inFile: inFiles) {
+      assert(inFile.isVar());
+      assert(inFile.getType().assignableTo(Types.V_FILE));
+    }
+    
     List<Expression> tclArgs = new ArrayList<Expression>(args.size());
     List<Expression> logMsg = new ArrayList<Expression>();
     logMsg.add(new Token("exec: " + cmd));
@@ -809,10 +834,10 @@ public class TurbineGenerator implements CompilerBackend
         
     // Close outputs
     for (Var o: outFiles) {
-      if (Types.isFile(o.type())) {
-        pointStack.peek().add(Turbine.closeFile(varToExpr(o)));
-      } else if (Types.isVoid(o.type())) {
-        pointStack.peek().add(Turbine.voidSet(varToExpr(o)));
+      if (o.type().assignableTo(Types.V_FILE)) {
+        pointStack.peek().add(Turbine.createLocalFile(prefixVar(o)));
+      } else if (o.type().assignableTo(Types.V_VOID)) {
+        // Do nothing, void value is just a bookkeeping trick
       } else {
         throw new STCRuntimeError("Invalid app output type: " + o);
       }
@@ -2104,160 +2129,165 @@ public class TurbineGenerator implements CompilerBackend
     return TclUtil.argToExpr(in);
   }
 
-    private static String prefixVar(String varname) {
-      return TclNamer.prefixVar(varname);
+
+  private static String prefixVar(String varname) {
+    return TclNamer.prefixVar(varname);
+  }
+  
+  private static String prefixVar(Var var) {
+    return TclNamer.prefixVar(var.name());
+  }
+
+  private static List<String> prefixVars(List<String> vlist) {
+    return TclNamer.prefixVars(vlist);
+  }
+
+
+  private boolean noStackVars() {
+    boolean no_stack_vars;
+    try {
+      no_stack_vars = Settings.getBoolean(Settings.TURBINE_NO_STACK_VARS);
+    } catch (InvalidOptionException e) {
+      e.printStackTrace();
+      throw new STCRuntimeError(e.getMessage());
+    }
+    return no_stack_vars;
+  }
+
+  private boolean noStack() {
+    boolean no_stack;
+    try {
+      no_stack = Settings.getBoolean(Settings.TURBINE_NO_STACK);
+    } catch (InvalidOptionException e) {
+      e.printStackTrace();
+      throw new STCRuntimeError(e.getMessage());
+    }
+    return no_stack;
+  }
+
+
+  /** Some types have handles which aren't simple integers:
+   * represent references to these types as strings
+   * @param t
+   * @return
+   */
+  private boolean refIsString(Type t) {
+    return Types.isStructRef(t) || Types.isFileRef(t);
+  }
+  
+  @Override
+  public void optimize() {
+    // do nothing
+  }
+
+  @Override
+  public void regenerate(CompilerBackend codeGen) {
+    throw new UnsupportedOperationException("TurbineGenerator can't "
+        + " reconstitute code");
+
+  }
+
+  @Override
+  public void startLoop(String loopName, List<Var> loopVars,
+      List<Boolean> definedHere, List<Var> initVals, List<Var> usedVariables,
+      List<Var> keepOpenVars, List<Boolean> blockingVars) {
+
+    // call rule to start the loop, pass in initVals, usedVariables
+    ArrayList<String> loopFnArgs = new ArrayList<String>();
+    ArrayList<Value> firstIterArgs = new ArrayList<Value>();
+    loopFnArgs.add(Turbine.LOCAL_STACK_NAME);
+    firstIterArgs.add(new Value(Turbine.LOCAL_STACK_NAME));
+
+    for (Var arg: loopVars) {
+      loopFnArgs.add(prefixVar(arg.name()));
+    }
+    for (Var init: initVals) {
+      firstIterArgs.add(varToExpr(init));
     }
 
-    private static List<String> prefixVars(List<String> vlist) {
-      return TclNamer.prefixVars(vlist);
+    for (Var uv: usedVariables) {
+      loopFnArgs.add(prefixVar(uv.name()));
+      firstIterArgs.add(varToExpr(uv));
     }
 
 
-    private boolean noStackVars() {
-      boolean no_stack_vars;
-      try {
-        no_stack_vars = Settings.getBoolean(Settings.TURBINE_NO_STACK_VARS);
-      } catch (InvalidOptionException e) {
-        e.printStackTrace();
-        throw new STCRuntimeError(e.getMessage());
+    // See which values the loop should block on
+    ArrayList<Value> blockingVals = new ArrayList<Value>();
+    assert(blockingVars.size() == initVals.size());
+    for (int i = 0; i < blockingVars.size(); i++) {
+      Var iv = initVals.get(i);
+      if (blockingVars.get(i)) {
+        blockingVals.add(varToExpr(iv));
       }
-      return no_stack_vars;
     }
+    // Increment references before async call
+    incrementAllRefs(usedVariables, keepOpenVars);
+    // Increment references for condition variable and loop var
+    pointStack.peek().append(incrementReaders(initVals, null));
 
-    private boolean noStack() {
-      boolean no_stack;
-      try {
-        no_stack = Settings.getBoolean(Settings.TURBINE_NO_STACK);
-      } catch (InvalidOptionException e) {
-        e.printStackTrace();
-        throw new STCRuntimeError(e.getMessage());
+
+    String uniqueLoopName = uniqueTCLFunctionName(loopName);
+
+    pointStack.peek().add(Turbine.loopRule(
+        uniqueLoopName, firstIterArgs, blockingVals));
+
+    Sequence loopBody = new Sequence();
+    Proc loopProc = new Proc(uniqueLoopName, usedTclFunctionNames,
+                                            loopFnArgs, loopBody);
+    tree.add(loopProc);
+    // add loop body to pointstack, loop to loop stack
+    pointStack.push(loopBody);
+    loopNameStack.push(uniqueLoopName);
+  }
+
+  private String uniqueTCLFunctionName(String tclFunctionName) {
+    String unique = tclFunctionName;
+    int next = 1;
+    while (usedTclFunctionNames.contains(unique)) {
+      unique = tclFunctionName + "-" + next;
+      next++;
+    }
+    return unique;
+  }
+
+  @Override
+  public void loopContinue(List<Var> newVals,
+         List<Var> usedVariables, List<Var> registeredContainers,
+         List<Boolean> blockingVars) {
+    ArrayList<Value> nextIterArgs = new ArrayList<Value>();
+    String loopName = loopNameStack.peek();
+    nextIterArgs.add(new Value(Turbine.LOCAL_STACK_NAME));
+
+    for (Var v: newVals) {
+      nextIterArgs.add(varToExpr(v));
+    }
+    for (Var v: usedVariables) {
+      nextIterArgs.add(varToExpr(v));
+    }
+    ArrayList<Value> blockingVals = new ArrayList<Value>();
+    assert(newVals.size() == blockingVars.size());
+    for (int i = 0; i < newVals.size(); i++) {
+      if (blockingVars.get(i)) {
+        blockingVals.add(varToExpr(newVals.get(i)));
       }
-      return no_stack;
     }
+    pointStack.peek().append(incrementReaders(newVals, null));
+    pointStack.peek().add(Turbine.loopRule(loopName,
+        nextIterArgs, blockingVals));
+  }
 
+  @Override
+  public void loopBreak(List<Var> loopUsedVars, List<Var> keepOpenVars) {
+    decrementAllRefs(loopUsedVars, keepOpenVars);
+  }
 
-    /** Some types have handles which aren't simple integers:
-     * represent references to these types as strings
-     * @param t
-     * @return
-     */
-    private boolean refIsString(Type t) {
-      return Types.isStructRef(t) || Types.isFileRef(t);
-    }
-    
-    @Override
-    public void optimize() {
-      // do nothing
-    }
-
-    @Override
-    public void regenerate(CompilerBackend codeGen) {
-      throw new UnsupportedOperationException("TurbineGenerator can't "
-          + " reconstitute code");
-
-    }
-
-    @Override
-    public void startLoop(String loopName, List<Var> loopVars,
-        List<Boolean> definedHere, List<Var> initVals, List<Var> usedVariables,
-        List<Var> keepOpenVars, List<Boolean> blockingVars) {
-
-      // call rule to start the loop, pass in initVals, usedVariables
-      ArrayList<String> loopFnArgs = new ArrayList<String>();
-      ArrayList<Value> firstIterArgs = new ArrayList<Value>();
-      loopFnArgs.add(Turbine.LOCAL_STACK_NAME);
-      firstIterArgs.add(new Value(Turbine.LOCAL_STACK_NAME));
-
-      for (Var arg: loopVars) {
-        loopFnArgs.add(prefixVar(arg.name()));
-      }
-      for (Var init: initVals) {
-        firstIterArgs.add(varToExpr(init));
-      }
-
-      for (Var uv: usedVariables) {
-        loopFnArgs.add(prefixVar(uv.name()));
-        firstIterArgs.add(varToExpr(uv));
-      }
-
-
-      // See which values the loop should block on
-      ArrayList<Value> blockingVals = new ArrayList<Value>();
-      assert(blockingVars.size() == initVals.size());
-      for (int i = 0; i < blockingVars.size(); i++) {
-        Var iv = initVals.get(i);
-        if (blockingVars.get(i)) {
-          blockingVals.add(varToExpr(iv));
-        }
-      }
-      // Increment references before async call
-      incrementAllRefs(usedVariables, keepOpenVars);
-      // Increment references for condition variable and loop var
-      pointStack.peek().append(incrementReaders(initVals, null));
-
-
-      String uniqueLoopName = uniqueTCLFunctionName(loopName);
-
-      pointStack.peek().add(Turbine.loopRule(
-          uniqueLoopName, firstIterArgs, blockingVals));
-
-      Sequence loopBody = new Sequence();
-      Proc loopProc = new Proc(uniqueLoopName, usedTclFunctionNames,
-                                              loopFnArgs, loopBody);
-      tree.add(loopProc);
-      // add loop body to pointstack, loop to loop stack
-      pointStack.push(loopBody);
-      loopNameStack.push(uniqueLoopName);
-    }
-
-    private String uniqueTCLFunctionName(String tclFunctionName) {
-      String unique = tclFunctionName;
-      int next = 1;
-      while (usedTclFunctionNames.contains(unique)) {
-        unique = tclFunctionName + "-" + next;
-        next++;
-      }
-      return unique;
-    }
-
-    @Override
-    public void loopContinue(List<Var> newVals,
-           List<Var> usedVariables, List<Var> registeredContainers,
-           List<Boolean> blockingVars) {
-      ArrayList<Value> nextIterArgs = new ArrayList<Value>();
-      String loopName = loopNameStack.peek();
-      nextIterArgs.add(new Value(Turbine.LOCAL_STACK_NAME));
-
-      for (Var v: newVals) {
-        nextIterArgs.add(varToExpr(v));
-      }
-      for (Var v: usedVariables) {
-        nextIterArgs.add(varToExpr(v));
-      }
-      ArrayList<Value> blockingVals = new ArrayList<Value>();
-      assert(newVals.size() == blockingVars.size());
-      for (int i = 0; i < newVals.size(); i++) {
-        if (blockingVars.get(i)) {
-          blockingVals.add(varToExpr(newVals.get(i)));
-        }
-      }
-      pointStack.peek().append(incrementReaders(newVals, null));
-      pointStack.peek().add(Turbine.loopRule(loopName,
-          nextIterArgs, blockingVals));
-    }
-
-    @Override
-    public void loopBreak(List<Var> loopUsedVars, List<Var> keepOpenVars) {
-      decrementAllRefs(loopUsedVars, keepOpenVars);
-    }
-
-    @Override
-    public void endLoop() {
-      assert(pointStack.size() >= 2);
-      assert(loopNameStack.size() > 0);
-      pointStack.pop();
-      loopNameStack.pop();
-    }
+  @Override
+  public void endLoop() {
+    assert(pointStack.size() >= 2);
+    assert(loopNameStack.size() > 0);
+    pointStack.pop();
+    loopNameStack.pop();
+  }
 
 	@Override
 	public void generateWrappedBuiltin(String function, FunctionType ft,

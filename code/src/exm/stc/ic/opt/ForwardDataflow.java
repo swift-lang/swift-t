@@ -202,7 +202,8 @@ public class ForwardDataflow implements OptimizerPass {
       }
       if (op == Opcode.LOAD_BOOL || op == Opcode.LOAD_FLOAT
           || op == Opcode.LOAD_INT || op == Opcode.LOAD_REF 
-          || op == Opcode.LOAD_STRING || op == Opcode.LOAD_VOID) {
+          || op == Opcode.LOAD_STRING || op == Opcode.LOAD_VOID
+          || op == Opcode.LOAD_FILE) {
         // If the value is available, it is effectively closed even if
         // the future isn't closed
         this.closed.add(newCV.getInput(0).getVar().name());
@@ -309,7 +310,6 @@ public class ForwardDataflow implements OptimizerPass {
       State av, HierarchicalMap<String, Arg> replaceInputs, 
       HierarchicalMap<String, Arg> replaceAll) {
     List<ComputedValue> icvs = inst.getComputedValues(av);
-    logger.trace("no icvs");
     if (icvs != null) {
       if (logger.isTraceEnabled()) {
         logger.trace("icvs: " + icvs.toString());
@@ -380,6 +380,8 @@ public class ForwardDataflow implements OptimizerPass {
           }
         }
       }
+    } else {
+      logger.trace("no icvs");
     }
     return icvs;
   }
@@ -687,6 +689,9 @@ public class ForwardDataflow implements OptimizerPass {
        */
       updateReplacements(logger, f, inst, cv, replaceInputs, replaceAll);
       
+      if (logger.isTraceEnabled()) {
+        logger.trace("Instruction after updates: " + inst);
+      }
       // now try to see if we can change to the immediate version
       if (switchToImmediate(logger, f, execCx, block, cv, inst, insts)) {
         // Continue pass at the start of the newly inserted sequence

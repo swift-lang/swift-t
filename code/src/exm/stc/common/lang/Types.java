@@ -1409,6 +1409,7 @@ public class Types {
   public static final Type V_BLOB =
       new ScalarValueType(PrimType.BLOB);   
   public static final Type F_FILE = new ScalarFutureType(PrimType.FILE);
+  public static final Type V_FILE = new ScalarValueType(PrimType.FILE);
   public static final Type REF_FILE = new RefType(F_FILE);
   
   public static final Type V_VOID = new ScalarValueType(PrimType.VOID);

@@ -405,14 +405,19 @@ public class STCMiddleEnd implements CompilerBackend {
   }
 
   @Override
-  public void runExternal(String cmd, List<Arg> args,
+  public void runExternal(String cmd, List<Arg> args, List<Arg> inFiles,
                           List<Var> outFiles, Redirects<Arg> redirects,
                           boolean hasSideEffects, boolean deterministic) {
     for (Var o: outFiles) {
-      assert(Types.isFile(o.type()) || Types.isVoid(o.type()));
+      assert(o.type().assignableTo(Types.V_FILE) 
+              || o.type().assignableTo(Types.V_VOID));
+    }
+    
+    for (Arg i: inFiles) {
+      assert(i.getType().assignableTo(Types.V_FILE));
     }
 
-    currBlock().addInstruction(new RunExternal(cmd, outFiles, args,
+    currBlock().addInstruction(new RunExternal(cmd, inFiles, outFiles, args,
                          redirects, hasSideEffects, deterministic));
   }
 
@@ -726,6 +731,29 @@ public class STCMiddleEnd implements CompilerBackend {
     currBlock().addInstruction(TurbineOp.freeBlob(blobVal));
   }
 
+
+  @Override
+  public void assignFile(Var target, Arg src) {
+    assert(Types.isFile(target.type()));
+    assert(src.isVar());
+    assert(src.getVar().type().assignableTo(Types.V_FILE));
+    currBlock().addInstruction(TurbineOp.assignFile(target, src));
+  }
+  
+
+  @Override
+  public void retrieveFile(Var target, Var src) {
+    assert(Types.isFile(src.type()));
+    assert(target.type().assignableTo(Types.V_FILE));
+    currBlock().addInstruction(TurbineOp.retrieveFile(target, src));
+  }
+  
+  @Override
+  public void decrLocalFileRef(Var fileVal) {
+    assert(fileVal.type().assignableTo(Types.V_FILE));
+    currBlock().addCleanup(fileVal, TurbineOp.decrLocalFileRef(fileVal));
+  }
+  
   @Override
   public void localOp(BuiltinOpcode op, Var out, 
                                             List<Arg> in) {

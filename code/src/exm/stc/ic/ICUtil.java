@@ -92,6 +92,24 @@ public class ICUtil {
       sb.append(v.name());
     }
   }
+  
+  /**
+   * print a comma separated list of var names to sb
+   * @param sb
+   * @param args
+   */
+  public static void prettyPrintArgList(StringBuilder sb, 
+                Collection<Arg> args) {
+    boolean first = true;
+    for (Arg a: args) {
+      if (first) {
+        first = false;
+      } else {
+        sb.append(", ");
+      }
+      sb.append(a.toString());
+    }
+  }
 
   /**
    * Replace variables by name in list

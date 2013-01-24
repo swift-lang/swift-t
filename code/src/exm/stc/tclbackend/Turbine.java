@@ -885,9 +885,9 @@ class Turbine
    */
   public static Expression getFileName(Value fileVar, boolean initUnmapped) {
     if (initUnmapped) {
-      return new Square(new Token("turbine::get_file_path"), fileVar);
-    } else {
       return new Square(new Token("turbine::get_output_file_path"), fileVar);
+    } else {
+      return new Square(new Token("turbine::get_file_path"), fileVar);
     }
   }
   
@@ -917,6 +917,20 @@ class Turbine
     assert(nestLevel >= 0);
     return Square.fnCall("turbine::unpack_args", array,
           new LiteralInt(nestLevel), LiteralInt.boolValue(isFile));
+  }
+
+  public static Command fileSet(Value fileFuture, String localFileName) {
+    return new Command("turbine::set_file", Arrays.asList(fileFuture, new Token(localFileName)));
+  }
+
+  public static Command decrLocalFileRef(String localFileName) {
+    return new Command("turbine::decr_local_file_refcount", new Token(localFileName));
+  }
+
+  public static TclTree createLocalFile(String varName) {
+    // TODO: include filename
+    return new SetVariable(varName, Square.fnCall("turbine::create_local_file_ref",
+                                                  new TclString("", false)));
   }
 
 }

@@ -23,7 +23,7 @@ import exm.stc.common.lang.Var.DefType;
 public class RefCounting {
   
   /**
-   * @param t
+   * @param v
    * @return true if type has read refcount to be managed
    */
   public static boolean hasReadRefcount(Var v) {
@@ -37,7 +37,7 @@ public class RefCounting {
   
   /**
    * Return true if writer count is tracked for type
-   * @param t
+   * @param v
    * @return
    */
   public static boolean hasWriteRefcount(Var v) {
@@ -46,7 +46,7 @@ public class RefCounting {
   
   /**
    * Filter vars to include only variables where writers count is tracked
-   * @param outputs
+   * @param vars
    * @return
    */
   public static List<Var> filterWriteRefcount(List<Var> vars) {

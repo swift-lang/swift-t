@@ -390,6 +390,9 @@ public class ICInstructions {
       case STORE_BLOB:
         gen.assignBlob(args.get(0).getVar(), args.get(1));
         break;
+      case STORE_FILE:
+        gen.assignFile(args.get(0).getVar(), args.get(1));
+        break;
       case ADDRESS_OF:
         gen.assignReference(args.get(0).getVar(), args.get(1).getVar());
         break;
@@ -522,11 +525,18 @@ public class ICInstructions {
         gen.retrieveBlob(args.get(0).getVar(),
             args.get(1).getVar());
         break;
+      case LOAD_FILE:
+        gen.retrieveFile(args.get(0).getVar(),
+            args.get(1).getVar());
+        break;
       case DECR_BLOB_REF:
         gen.decrBlobRef(args.get(0).getVar());
         break;
       case FREE_BLOB:
         gen.freeBlob(args.get(0).getVar());
+        break;
+      case DECR_LOCAL_FILE_REF:
+        gen.decrLocalFileRef(args.get(0).getVar());
         break;
       case INIT_UPDATEABLE_FLOAT:
         gen.initUpdateable(args.get(0).getVar(), args.get(1));
@@ -690,6 +700,11 @@ public class ICInstructions {
           Arrays.asList(Arg.createVar(target), src));
     }
     
+    public static Instruction assignFile(Var target, Arg src) {
+      return new TurbineOp(Opcode.STORE_FILE,
+          Arrays.asList(Arg.createVar(target), src));
+    }
+
     public static Instruction retrieveString(Var target, Var source) {
       return new TurbineOp(Opcode.LOAD_STRING,
           Arrays.asList(Arg.createVar(target), Arg.createVar(source)));
@@ -720,6 +735,11 @@ public class ICInstructions {
           Arrays.asList(Arg.createVar(target), Arg.createVar(source)));
     }
   
+    public static Instruction retrieveFile(Var target, Var source) {
+      return new TurbineOp(Opcode.LOAD_FILE,
+          Arrays.asList(Arg.createVar(target), Arg.createVar(source)));
+    }
+    
     public static Instruction decrBlobRef(Var blob) {
       return new TurbineOp(Opcode.DECR_BLOB_REF,
                             Arrays.asList(Arg.createVar(blob)));
@@ -728,6 +748,11 @@ public class ICInstructions {
     public static Instruction freeBlob(Var blobVal) {
       return new TurbineOp(Opcode.FREE_BLOB, 
               Arrays.asList(Arg.createVar(blobVal)));
+    }
+
+    public static Instruction decrLocalFileRef(Var fileVal) {
+      return new TurbineOp(Opcode.DECR_LOCAL_FILE_REF,
+              Arrays.asList(Arg.createVar(fileVal)));
     }
 
     public static Instruction structClose(Var struct) {
@@ -947,6 +972,7 @@ public class ICInstructions {
       case STORE_FLOAT:
       case STORE_STRING:
       case STORE_BLOB:
+      case STORE_FILE:
       case ARRAY_CREATE_NESTED_FUTURE:
       case ARRAY_REF_CREATE_NESTED_FUTURE:
       case ARRAY_CREATE_NESTED_IMM:
@@ -963,6 +989,7 @@ public class ICInstructions {
       case LOAD_FLOAT:
       case LOAD_STRING:
       case LOAD_BLOB:
+      case LOAD_FILE:
       case STRUCT_LOOKUP:
       case STRUCTREF_LOOKUP:
       case ADDRESS_OF:
@@ -973,7 +1000,8 @@ public class ICInstructions {
         return 1;
       case DECR_BLOB_REF:
       case FREE_BLOB:
-        // View blob as output
+      case DECR_LOCAL_FILE_REF:
+        // View refcounted var as output
         return 1;
       default:
         throw new STCRuntimeError("Need to add opcode " + op.toString()
@@ -1025,6 +1053,7 @@ public class ICInstructions {
       case LOAD_STRING:
       case LOAD_BLOB:
       case LOAD_VOID:
+      case LOAD_FILE:
       case ARRAY_LOOKUP_REF_IMM:
       case ARRAY_LOOKUP_FUTURE:
       case ARRAYREF_LOOKUP_FUTURE:
@@ -1034,13 +1063,18 @@ public class ICInstructions {
       case DEREF_FILE:
         return this.writesAliasVar() ||
                this.args.get(0).getVar().isMapped();
-          
+
+      case STORE_FILE:
+        return this.writesAliasVar() ||
+              this.args.get(0).getVar().isMapped();
+        
       case GET_FILENAME:
         // Only effect is setting alias var
         return false;
       case GET_OUTPUT_FILENAME:
-        // Might initialise mapping
-        return true;
+        // Might initialise mapping if not already mapped
+        return !getInput(0).getVar().isMapped();
+        
       case STRUCT_LOOKUP:
       case LOAD_REF:
       case ADDRESS_OF:
@@ -1063,8 +1097,11 @@ public class ICInstructions {
            */ 
         return false;
       case DECR_BLOB_REF:
-        return true;
       case FREE_BLOB:
+      case DECR_LOCAL_FILE_REF:
+        /*
+         * Reference counting ops can have sideeffect
+         */
         return true;
       default:
         throw new STCRuntimeError("Need to add opcode " + op.toString()
@@ -1413,6 +1450,11 @@ public class ICInstructions {
 
     @Override
     public List<Var> getBlockingInputs() {
+      if (getMode() == TaskMode.SYNC) {
+        return null;
+      }
+      
+      // If async, assume that all scalar input vars are blocked on
       ArrayList<Var> blocksOn = new ArrayList<Var>();
       for (Arg oa: getInputs()) {
         if (oa.kind == ArgKind.VAR) {
@@ -1444,12 +1486,14 @@ public class ICInstructions {
       case STORE_FLOAT:
       case STORE_STRING:
       case STORE_BLOB:
+      case STORE_FILE:
       case LOAD_INT:
       case LOAD_BOOL:
       case LOAD_VOID:
       case LOAD_FLOAT:
       case LOAD_STRING:
       case LOAD_BLOB:
+      case LOAD_FILE:
       case UPDATE_INCR:
       case UPDATE_MIN:
       case UPDATE_SCALE:
@@ -1469,6 +1513,7 @@ public class ICInstructions {
       case LOAD_REF:
       case DECR_BLOB_REF:
       case FREE_BLOB:
+      case DECR_LOCAL_FILE_REF:
       case GET_FILENAME:
       case GET_OUTPUT_FILENAME:
       case ARRAY_LOOKUP_IMM:
@@ -1512,7 +1557,8 @@ public class ICInstructions {
         case LOAD_REF:
         case LOAD_STRING: 
         case LOAD_BLOB: 
-        case LOAD_VOID: {
+        case LOAD_VOID: 
+        case LOAD_FILE: {
           // retrieve* is invertible
           Arg src = args.get(1);
           Arg val = args.get(0);
@@ -1544,7 +1590,8 @@ public class ICInstructions {
         case STORE_INT:
         case STORE_STRING: 
         case STORE_BLOB: 
-        case STORE_VOID: {
+        case STORE_VOID:
+        case STORE_FILE: {
           // add assign so we can avoid recreating future 
           // (true b/c this instruction closes val immediately)
           ComputedValue assign = vanillaComputedValue(true);
@@ -1736,6 +1783,16 @@ public class ICInstructions {
       throw new STCRuntimeError("Inconsistent types in IC instruction:"
           + this.toString() + " array of type " + arr.type() 
           + " with member of type " + member.type());
+    }
+
+    @Override
+    public boolean closesOutputs() {
+      if (op == Opcode.GET_OUTPUT_FILENAME) {
+        // Will be closed for unmapped vars
+        return !getOutput(0).isMapped();
+      }
+      
+      return super.closesOutputs();
     }
 
     @Override
@@ -2201,17 +2258,19 @@ public class ICInstructions {
   
   public static class RunExternal extends Instruction {
     private final String cmd;
+    private final ArrayList<Arg> inFiles;
     private final ArrayList<Var> outFiles;
     private final ArrayList<Arg> inputs;
     private final Redirects<Arg> redirects;
     private final boolean hasSideEffects;
     private final boolean deterministic;
     
-    public RunExternal(String cmd, List<Var> outFiles, List<Arg> inputs,
+    public RunExternal(String cmd, List<Arg> inFiles, List<Var> outFiles, List<Arg> inputs,
                Redirects<Arg> redirects,
                boolean hasSideEffects, boolean deterministic) {
       super(Opcode.RUN_EXTERNAL);
       this.cmd = cmd;
+      this.inFiles = new ArrayList<Arg>(inFiles);
       this.outFiles = new ArrayList<Var>(outFiles);
       this.inputs = new ArrayList<Arg>(inputs);
       this.redirects = redirects.clone();
@@ -2222,6 +2281,7 @@ public class ICInstructions {
     @Override
     public void renameVars(Map<String, Arg> renames) {
       ICUtil.replaceOpargsInList(renames, inputs);
+      ICUtil.replaceOpargsInList(renames, inFiles);
       ICUtil.replaceVarsInList(renames, outFiles, false);
       redirects.stdin = ICUtil.replaceOparg(renames, redirects.stdin, true);
       redirects.stdout = ICUtil.replaceOparg(renames, redirects.stdout, true);
@@ -2230,30 +2290,42 @@ public class ICInstructions {
 
     @Override
     public void renameInputs(Map<String, Arg> renames) {
+      ICUtil.replaceOpargsInList(renames, inFiles);
       ICUtil.replaceOpargsInList(renames, inputs);
       redirects.stdin = ICUtil.replaceOparg(renames, redirects.stdin, true);
+      redirects.stdout = ICUtil.replaceOparg(renames, redirects.stdout, true);
+      redirects.stderr = ICUtil.replaceOparg(renames, redirects.stderr, true);
     }
 
     @Override
     public String toString() {
-      String res = formatFunctionCall(op, cmd, outFiles, inputs);
+      StringBuilder res = new StringBuilder();
+      res.append(formatFunctionCall(op, cmd, outFiles, inputs));
       String redirectString = redirects.toString();
       if (redirectString.length() > 0) {
-        res += " " + redirectString;
+        res.append(" " + redirectString);
       }
-      return res;
+      res.append(" inFiles = [");
+      ICUtil.prettyPrintArgList(res, inFiles);
+      res.append("]");
+      
+      res.append(" outFiles = [");
+      ICUtil.prettyPrintVarList(res, outFiles);
+      res.append("]");
+      return res.toString();
     }
 
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.runExternal(cmd, inputs, outFiles, redirects, hasSideEffects,
-                      deterministic);
+      gen.runExternal(cmd, inputs, inFiles, 
+                  outFiles, redirects, hasSideEffects, deterministic);
     }
 
     @Override
     public List<Arg> getInputs() {
-      ArrayList<Arg> res = new ArrayList<Arg>(inputs.size() + 3);
+      ArrayList<Arg> res = new ArrayList<Arg>();
       res.addAll(inputs);
+      res.addAll(inFiles);
       for (Arg redirFilename: redirects.redirections(true, true)) {
         if (redirFilename != null) {
           res.add(redirFilename);
@@ -2300,8 +2372,10 @@ public class ICInstructions {
 
     @Override
     public List<Var> getBlockingInputs() {
-      // This instruction runs immediately: we won't block on any inputs
-      return null;
+      // This instruction runs immediately: we won't actually block on any inputs
+      
+      // However, the compiler should act as if we depend on input file vars
+      return ICUtil.extractVars(inFiles);
     }
 
     @Override
@@ -2334,7 +2408,7 @@ public class ICInstructions {
 
     @Override
     public Instruction clone() {
-      return new RunExternal(cmd, outFiles, inputs, redirects,
+      return new RunExternal(cmd, inFiles, outFiles, inputs, redirects,
                              hasSideEffects, deterministic);
     }
     
@@ -2681,6 +2755,8 @@ public class ICInstructions {
     LOAD_INT, LOAD_STRING, LOAD_FLOAT, LOAD_BOOL, LOAD_REF,
     STORE_BLOB, LOAD_BLOB, DECR_BLOB_REF, FREE_BLOB,
     STORE_VOID, LOAD_VOID, 
+    STORE_FILE, DECR_LOCAL_FILE_REF,
+    LOAD_FILE, // dummy instruction
     ARRAY_DECR_WRITERS, DECR_REF,
     
     ARRAYREF_LOOKUP_FUTURE, ARRAY_LOOKUP_FUTURE,
@@ -3247,6 +3323,9 @@ public class ICInstructions {
        case VOID:
          op = Opcode.STORE_VOID;
          break;
+       case FILE:
+         op = Opcode.STORE_FILE;
+         break;
        default:
          throw new STCRuntimeError("don't know how to assign " + dstType);
        }
@@ -3277,6 +3356,9 @@ public class ICInstructions {
         break;
       case VOID:
         op = Opcode.LOAD_VOID;
+        break;
+      case FILE:
+        op = Opcode.LOAD_FILE;
         break;
       default:
         // Can't retrieve other types

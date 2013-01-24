@@ -1953,7 +1953,7 @@ public class ASTWalker {
     
     
     backend.startFunction(function, outArgs, inArgs, TaskMode.SYNC);
-    genAppFunctionBody(appContext, appBodyT, outArgs,
+    genAppFunctionBody(appContext, appBodyT, inArgs, outArgs, 
                        hasSideEffects, deterministic);
     backend.endFunction();
   }
@@ -1962,13 +1962,13 @@ public class ASTWalker {
   /**
    * @param context local context for app function
    * @param cmd AST for app function command
-   * @param outputs output arguments for app
+   * @param outArgs output arguments for app
    * @param hasSideEffects
    * @param deterministic
    * @throws UserException
    */
   private void genAppFunctionBody(Context context, SwiftAST appBody,
-          List<Var> outputs,
+          List<Var> inArgs, List<Var> outArgs,
           boolean hasSideEffects,
           boolean deterministic) throws UserException {
     //TODO: don't yet handle situation where user is naughty and
@@ -1991,7 +1991,7 @@ public class ASTWalker {
     Redirects<Var> redirFutures = processAppRedirects(context,
                                                     appBody.children(1));
     
-    checkAppOutputs(context, appName, outputs, args, redirFutures);
+    checkAppOutputs(context, appName, outArgs, args, redirFutures);
     
     // Work out what variables must be closed before command line executes
     Pair<Map<String, Var>, List<Var>> wait =
@@ -2014,11 +2014,40 @@ public class ASTWalker {
                                           args, redirFutures, fileNames);
     List<Arg> localArgs = retrieved.val1; 
     Redirects<Arg> localRedirects = retrieved.val2;
-    backend.runExternal(appName, localArgs, outputs, localRedirects,
-                        hasSideEffects, deterministic);
+    
+    // Create dummy dependencies for input files to avoid wait
+    // being optimised out
+    List<Arg> localInFiles = new ArrayList<Arg>();
+    for (Var inArg: inArgs) {
+      if (Types.isFile(inArg.type())) {
+        Var localInputFile = varCreator.fetchValueOf(context, inArg);
+        localInFiles.add(Arg.createVar(localInputFile));
+      }
+    }
+    
+    // Declare local dummy output vars
+    List<Var> localOutputs = new ArrayList<Var>(outArgs.size());
+    for (Var output: outArgs) {
+      Var localOutput = varCreator.createValueOfVar(context, output);
+      localOutputs.add(localOutput);
+    }
+    
+    backend.runExternal(appName, localArgs, localInFiles, localOutputs,
+                localRedirects, hasSideEffects, deterministic);
+    
+    for (int i = 0; i < outArgs.size(); i++) {
+      Var output = outArgs.get(i);
+      Var localOutput = localOutputs.get(i);
+      if (Types.isFile(output.type())) {
+        backend.assignFile(output, Arg.createVar(localOutput));
+        backend.decrLocalFileRef(localOutput); // Cleanup local file if needed
+      } else {
+        assert(Types.isVoid(output.type()));
+        backend.assignVoid(output, Arg.createVar(localOutput));
+      }
+    }
     backend.endWaitStatement(waitVars, passIn, Arrays.<Var>asList());
   }
-
 
   private Redirects<Var> processAppRedirects(Context context,
                              List<SwiftAST> redirects) throws UserException {    
@@ -2259,7 +2288,7 @@ public class ASTWalker {
         // Need to wait for filename for files
         Var filenameFuture = varCreator.createFilenameAlias(context, arg);
 
-        if (arg.defType() != DefType.OUTARG) {
+        if (arg.defType() == DefType.OUTARG) {
           // If output is unmapped, need to assign file name
           backend.getFileName(filenameFuture, arg, true);
         } else {

@@ -117,6 +117,22 @@ public interface CompilerBackend {
   public abstract void retrieveBlob(Var target, Var src);
   
   /**
+   * Set file object.  Increment local file ref count
+   * @param target
+   * @param src dummy local variable
+   */
+  public abstract void assignFile(Var target, Arg src);
+
+  public abstract void retrieveFile(Var target, Var src);
+  
+
+  /**
+   * Used to cleanup local file if needed
+   * @param fileVal
+   */
+  public abstract void decrLocalFileRef(Var fileVal);
+  
+  /**
    * Decrement reference count for cached blob
    * @param blob handle to future
    */
@@ -156,8 +172,8 @@ public interface CompilerBackend {
    * @param redirects 
    */
   public abstract void runExternal(String cmd, List<Arg> args,
-                             List<Var> outFiles, Redirects<Arg> redirects,
-                             boolean hasSideEffects, boolean deterministic);
+           List<Arg> inFiles, List<Var> outFiles, Redirects<Arg> redirects,
+           boolean hasSideEffects, boolean deterministic);
   
   /**
    * lookup structVarName.structField and copy to oVarName

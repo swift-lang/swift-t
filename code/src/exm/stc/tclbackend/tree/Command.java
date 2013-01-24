@@ -33,6 +33,11 @@ public class Command extends TclTree
     tokens.addAll(args);
   }
   
+
+  public Command(String cmd, Expression args) {
+    this(cmd, Arrays.asList(args));
+  }
+  
   public Command(String... strings)
   {
     tokens = new ArrayList<TclTree>(strings.length);

@@ -35,6 +35,7 @@ import java.util.TreeMap;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.Logging;
 import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
@@ -815,11 +816,18 @@ public class ICTree {
 
     // Remove cleanup actions for variable
     public void removeCleanups(Var var) {
+      moveCleanups(var, null);
+    }
+    
+    public void moveCleanups(Var var, Block target) {
       ListIterator<CleanupAction> it = cleanupActions.listIterator();
       while (it.hasNext()) {
         CleanupAction ca = it.next();
         if (ca.var().name().equals(var.name())) {
           it.remove();
+          if (target != null) {
+            target.addCleanup(ca.var, ca.action);
+          }
         }
       }
     }
@@ -967,51 +975,33 @@ public class ICTree {
       }
     }
 
-    public Set<String> unneededVars() {
-      HashSet<String> toRemove = new HashSet<String>();
-      Pair<Set<String>, List<List<Var>>> res = findEssentialVars();
-      Set<String> stillNeeded = res.val1; 
-      
-      // Check to see if we have to retain additional
-      // variables based on interdependencies
-      for (List<Var> dependentSet: res.val2) { {
-        boolean needed = false;
-        for (Var v: dependentSet) {
-          if (stillNeeded.contains(v.name())) {
-            needed = true;
-            break;
-          }
-        }
-        if (needed) {
-          for (Var v: dependentSet) {
-            stillNeeded.add(v.name());
-          }
+    /**
+     * 
+     * @param stillNeeded  list of essential vars
+     * @param written list of vars written in block
+     * @param interdependencies list of vars which are interdependent: if one
+     *              var in list is needed, all are needed
+     */
+    public void findNeededVars(Set<String> stillNeeded,
+        Set<String> written, List<List<Var>> interdependencies) {
+      findThisBlockNeededVars(stillNeeded, written, interdependencies);
+
+      // Recurse on sub-blocks
+      for (Continuation c: continuations) {
+        for (Block b: c.getBlocks()) {
+          b.findNeededVars(stillNeeded, written, interdependencies);
         }
       }
-        
-      }
-      for (Var v: getVariables()) {
-        if (!stillNeeded.contains(v.name())) {
-          toRemove.add(v.name());
-        }
-      }
-      return toRemove;
     }
 
     /**
-     * 
-     * @return First element: list of essential vars
-     *         Second element: list of vars which are interdependent: if one var in
-     *                         list is needed, all are needed
+     * Variables that needed to be declared in this block
+     * @param stillNeeded
+     * @param written 
+     * @param interdependencies
      */
-    public Pair<Set<String>, List<List<Var>>> findEssentialVars() {
-      Set<String> stillNeeded = new HashSet<String>();
-      List<List<Var>> interdependencies = new ArrayList<List<Var>>();
-      findEssentialVars(stillNeeded, interdependencies);
-      return Pair.create(stillNeeded,  interdependencies);
-    }
-
-    private void findEssentialVars(Set<String> stillNeeded, List<List<Var>> interdependencies) {
+    public void findThisBlockNeededVars(Set<String> stillNeeded,
+            Set<String> written, List<List<Var>> interdependencies) {
       // Need to hold on to mapped variables
       for (Var v: variables) {
         if (v.isMapped()) {
@@ -1020,22 +1010,20 @@ public class ICTree {
         }
       }
       for (Instruction i : instructions) {
-        updateEssentialVars(i, stillNeeded, interdependencies, i.hasSideEffects());
+        updateEssentialVars(i, stillNeeded, written, interdependencies,
+                            i.hasSideEffects());
       }
-
+      
       for (Continuation c: continuations) {
         for (Var v: c.requiredVars()) {
           stillNeeded.add(v.name());
-        }
-        for (Block b: c.getBlocks()) {
-          b.findEssentialVars(stillNeeded, interdependencies);
         }
       }
       
       for (CleanupAction a: cleanupActions) {
         boolean actionHasSideEffects = a.hasSideEffect();
-        updateEssentialVars(a.action(), stillNeeded, interdependencies,
-                            actionHasSideEffects);
+        updateEssentialVars(a.action(), stillNeeded, written,
+            interdependencies, actionHasSideEffects);
         if (actionHasSideEffects) {
           stillNeeded.add(a.var().name());
         }
@@ -1046,17 +1034,23 @@ public class ICTree {
      * Update essential vars for instruction
      * @param inst
      * @param stillNeeded
+     * @param written 
      * @param interdependencies
      * @param hasSideEffects
      */
     private void updateEssentialVars(Instruction inst, Set<String> stillNeeded,
-        List<List<Var>> interdependencies, boolean hasSideEffects) {
+        Set<String> written, List<List<Var>> interdependencies, boolean hasSideEffects) {
       // check which variables are still needed
       for (Arg oa: inst.getInputs()) {
         if (oa.isVar()) {
           stillNeeded.add(oa.getVar().name());
         }
       }
+      
+      for (Var v: inst.getOutputs()) {
+        written.add(v.name());
+      }
+      
       // Can't eliminate instructions with side-effects
       if (hasSideEffects) {
         for (Var out: inst.getOutputs()) {
