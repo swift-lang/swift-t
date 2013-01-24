@@ -60,11 +60,60 @@ CC=mpicc LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib"
  --with-mpi-lib-name=mpi
 ----
 
+== Blue Gene
+
+=== Blue Gene/P
+
+==== Surveyor/Intrepid/Challenger
+
+These machines are at the Argonne Leadership Computing Facility (ALCF).
+
+*To run on the login nodes (initial debugging):*
+
+* Install MPICH for the compute nodes
+* Configure Tcl and c-utils with gcc
+* Configure ADLB with your MPICH
+* Configure Turbine with
++
+----
+--enable-bgp LDFLAGS=-shared-libgcc
+----
++
+This makes adjustments for some Blue Gene quirks.
+
+Then, simply use the +bin/turbine+ program to run.  Be cautious in
+your use of the login nodes to avoid affecting other users.
+
+*To run on the compute nodes:*
+
+* Configure Tcl with mpixlc
+* Configure c-utils with gcc
+* Configure ADLB with
++
+----
+--enable-xlc
+CC=/bgsys/drivers/ppcfloor/comm/bin/mpixlc
+----
+* Configure Turbine with
++
+----
+CC=/soft/apps/gcc-4.3.2/gnu-linux/bin/powerpc-bgp-linux-gcc
+--enable-custom
+--with-mpi-include=/bgsys/drivers/V1R4M2_200_2010-100508P/ppc/comm/default/include
+----
+
+To run, use +scripts/submit/bgp/turbine-cobalt.zsh+
+See the script header for usage.
+
 == Cray
 
 === Beagle
 
 Beagle is a Cray XE6 at the University of Chicago
+
+Remember that at run time, Beagle jobs can access only +/lustre+, not
+NFS (including home directories).  Thus, you must install Turbine and
+its libraries in +/lustre+.  Also, your data must be in +/lustre+.
 
 ==== Public installation
 
@@ -92,7 +141,7 @@ LDFLAGS="-L/opt/cray/mpt/default/xt/gemini/mpich2-gnu/lib -lmpich"
 * In the Turbine configure step, replace the +--with-mpi+ option with:
 +
 ----
---enable-custom --with-mpi-dir=/opt/cray/mpt/default/xt/gemini/mpich2-gnu
+--enable-custom-mpi --with-mpi=/opt/cray/mpt/default/xt/gemini/mpich2-gnu
 ----
 
 === Crow
