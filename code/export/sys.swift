@@ -64,7 +64,7 @@ argv_accept(string... keys)
 type host_id int;
 @pure
 (host_id rank) hostmap_one(string name)
-"turbine" "0.0.2" "getenv"
+"turbine" "0.0.2"
 [ "set <<rank>> [ draw [ adlb::hostmap <<name>> ] ]" ];
 
 #endif
