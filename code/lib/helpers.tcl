@@ -41,7 +41,7 @@ proc empty { args } {
         upvar 1 $x v
         if { ( ! [ info exists v ] ) ||
              [ string length $v ] > 0 } {
-            error "This must be an empty list/string: $x"
+            error "Var $x be an empty list/string.  Contents were \"$v\""
         }
     }
 }
