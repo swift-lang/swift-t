@@ -292,7 +292,7 @@ namespace eval turbine {
 
     proc check_str_int { input } {
        if { ! [ string is integer -strict $input ] } {
-          error "could not convert string '${input}' to integer"
+          error "could not convert string \"${input}\" to integer"
        }
        return $input
     }

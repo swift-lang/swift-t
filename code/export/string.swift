@@ -64,7 +64,7 @@
 
 @pure
 (string o) trim (string s)
-  "turbine" "0.0.1" "trim"
+  "turbine" "0.0.1"
   [ "set <<o>> [ string trim <<s>> ]" ];
 
 #endif
