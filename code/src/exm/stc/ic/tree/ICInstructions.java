@@ -1633,8 +1633,14 @@ public class ICInstructions {
             throw new STCRuntimeError("Need assign op for "
                 + src.getVar());
           }
+          boolean outIsClosed;
+          if (op == Opcode.LOAD_REF) {
+            outIsClosed = false;
+          } else {
+            outIsClosed = true;
+          }
           ComputedValue assign = new ComputedValue(cvop,
-                    "", Arrays.asList(val), src, true);
+                    "", Arrays.asList(val), src, outIsClosed);
           
           Opcode derefOp = derefOpCode(src.getType());
           
