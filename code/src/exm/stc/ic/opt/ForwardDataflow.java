@@ -828,10 +828,6 @@ public class ForwardDataflow implements OptimizerPass {
     // Remove existing instruction
     insts.remove();
     
-    if (logger.isTraceEnabled()) {
-      logger.trace("Replace " + inst + " with " + alt);
-    }
-    
     // Add new instructions at insert point
     for (Instruction newInst: alt) {
       insertPoint.add(newInst);
