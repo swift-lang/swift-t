@@ -48,16 +48,27 @@ public class DeadCodeEliminator {
    * @param block
    */
   public static void eliminate(Logger logger, Block block) {
+    int i = 1;
     boolean converged = false;
     // repeatedly remove code until no more can go.  running each of
     // the two steps here can lead to more unneeded code for the other step,
     // so it is easiest to just have a loop to make sure all code is eliminated
     while (!converged) {
-      converged = eliminateIter(logger, block);
+      converged = eliminateIter(logger, block, i);
+      i++;
     }
   }
 
-  private static boolean eliminateIter(Logger logger, Block block) {
+  private static boolean eliminateIter(Logger logger, Block block,
+                                                      int iteration) {
+
+    if (logger.isTraceEnabled()) {
+      logger.trace("Dead code elimination iteration " + iteration
+      		+ " on block: " 
+          + System.identityHashCode(block) + "<" + block.getType() + ">"
+          + " with vars: " + block.getVariables());
+    }
+    
     boolean converged = true;
 
     // First see if we can get rid of any continuations
@@ -174,15 +185,18 @@ public class DeadCodeEliminator {
   }
 
   public static void eliminate(Logger logger, Function f) {
-    ArrayList<Block> stack = new ArrayList<Block>();
-    stack.add(f.getMainblock());
-    while (!stack.isEmpty()) {
-      Block b = stack.remove(stack.size() - 1);
-      eliminate(logger, b);
-      for (Continuation c: b.getContinuations()) {
-        stack.addAll(c.getBlocks());
+    eliminateRec(logger, f.getMainblock());
+  }
+  
+  public static void eliminateRec(Logger logger, Block block) {
+    // Eliminate from bottom up so that references to vars in
+    // subtrees are eliminated before checking vars in parent
+    for (Continuation c: block.getContinuations()) {
+      for (Block inner: c.getBlocks()) {
+        eliminateRec(logger, inner);
       }
     }
+    eliminate(logger, block);
   }
   
   /**

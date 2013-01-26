@@ -195,12 +195,12 @@ public class WaitCoalescer implements OptimizerPass {
 
   public boolean rearrangeWaits(Logger logger, Function fn, Block block,
                                        ExecContext currContext) {
-    StringBuilder sb = new StringBuilder();
     boolean exploded = explodeFuncCalls(logger, fn, currContext, block);
 
     if (logger.isTraceEnabled()) {
-      fn.prettyPrint(sb);
-      logger.trace("After exploding " + fn.getName() +":\n" + sb.toString());
+      //StringBuilder sb = new StringBuilder();
+      //fn.prettyPrint(sb);
+      //logger.trace("After exploding " + fn.getName() +":\n" + sb.toString());
     }
     
     boolean merged = false;
@@ -209,9 +209,9 @@ public class WaitCoalescer implements OptimizerPass {
     }
     
     if (logger.isTraceEnabled()) {
-      sb = new StringBuilder();
-      fn.prettyPrint(sb);
-      logger.trace("After merging " + fn.getName() +":\n" + sb.toString());
+      //sb = new StringBuilder();
+      //fn.prettyPrint(sb);
+      //logger.trace("After merging " + fn.getName() +":\n" + sb.toString());
     }
     
     boolean pushedDown = pushDownWaits(logger, fn, block, currContext);
