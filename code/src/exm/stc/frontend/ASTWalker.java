@@ -1995,7 +1995,7 @@ public class ASTWalker {
     
     // Work out what variables must be closed before command line executes
     Pair<Map<String, Var>, List<Var>> wait =
-            selectAppWaitVars(context, args, redirFutures);
+            selectAppWaitVars(context, args, outArgs, redirFutures);
     Map<String, Var> fileNames = wait.val1; 
     List<Var> waitVars = wait.val2;
     
@@ -2277,7 +2277,8 @@ public class ASTWalker {
    * @throws UndefinedTypeException
    */
   private Pair<Map<String, Var>, List<Var>> selectAppWaitVars(
-          Context context, List<Var> args, Redirects<Var> redirFutures)
+          Context context, List<Var> args, List<Var> outArgs,
+          Redirects<Var> redirFutures)
                                                 throws UserException,
           UndefinedTypeException {
     List<Var> allArgs = new ArrayList<Var>();
@@ -2292,27 +2293,41 @@ public class ASTWalker {
         if (fileNames.containsKey(arg.name())) {
           continue;
         }
-        // Need to wait for filename for files
-        Var filenameFuture = varCreator.createFilenameAlias(context, arg);
-
-        if (arg.defType() == DefType.OUTARG) {
-          // If output is unmapped, need to assign file name
-          backend.getFileName(filenameFuture, arg, true);
-        } else {
-          backend.getFileName(filenameFuture, arg, false);
-        }
-        waitVars.add(filenameFuture);
-        fileNames.put(arg.name(), filenameFuture);
-        if (arg.defType() != DefType.OUTARG) {
-          // Don't wait for file to be closed for output arg
-          waitVars.add(arg);
-        }
+        loadAppFilename(context, fileNames, waitVars, arg);
       } else {
         waitVars.add(arg);
       }
     }
+    // Fetch missing output arguments that weren't on command line
+    for (Var outArg: outArgs) {
+      if (Types.isFile(outArg.type()) && !fileNames.containsKey(outArg.name())) {
+        loadAppFilename(context, fileNames, waitVars, outArg);
+      }
+    }
     
     return Pair.create(fileNames, waitVars);
+  }
+
+
+  private void loadAppFilename(Context context, Map<String, Var> fileNames,
+                               List<Var> waitVars, Var fileVar)
+      throws UserException, UndefinedTypeException {
+    // Need to wait for filename for files
+    Var filenameFuture = varCreator.createFilenameAlias(context, fileVar);
+
+    if (fileVar.defType() == DefType.OUTARG) {
+      // If output is unmapped, need to assign file name
+      backend.getFileName(filenameFuture, fileVar, true);
+    } else {
+      backend.getFileName(filenameFuture, fileVar, false);
+    }
+    waitVars.add(filenameFuture);
+    if (fileVar.defType() != DefType.OUTARG) {
+      // Don't wait for file to be closed for output arg
+      waitVars.add(fileVar);
+    }
+
+    fileNames.put(fileVar.name(), filenameFuture);
   }
 
 
