@@ -174,6 +174,7 @@ public class ICInstructions {
       public final Var newOut;
       public final Var oldOut;
       public final Instruction newInsts[];
+      public final Var keepOpen[];
       
       /**
        * If the output variable changed from reference to plain future
@@ -185,6 +186,12 @@ public class ICInstructions {
         this(newOut, oldOut, new Instruction[] {newInst});
       }
       
+
+      public MakeImmChange(Var newOut, Var oldOut, Instruction newInst,
+                           Var keepOpen) {
+        this(newOut, oldOut, new Instruction[] {newInst}, new Var[] {keepOpen});
+      }
+      
       /**
        * If the output variable changed from reference to plain future
        * @param newOut
@@ -192,9 +199,20 @@ public class ICInstructions {
        * @param newInsts
        */
       public MakeImmChange(Var newOut, Var oldOut, Instruction newInsts[]) {
+        this(newOut, oldOut, newInsts, null);
+      }
+      
+
+      public MakeImmChange(Instruction newInst, Var keepOpen) {
+        this(null, null, new Instruction[] {newInst}, new Var[] {keepOpen});
+      }
+      
+      public MakeImmChange(Var newOut, Var oldOut, Instruction newInsts[],
+                            Var keepOpen[]) {
         this.newOut = newOut;
         this.oldOut = oldOut;
         this.newInsts = newInsts;
+        this.keepOpen = keepOpen;
       }
       
       /**
@@ -1239,7 +1257,9 @@ public class ICInstructions {
     public MakeImmRequest canMakeImmediate(Set<String> closedVars,
                                            Set<String> unmappedVars,
                                            boolean assumeAllInputsClosed) {
-      boolean disassumeAllInputsClosed = false;
+      // TODO: disable for insert statements until we can correctly mark that 
+      //      arrays must be kept open
+      boolean insertRefAssumeAllInputsClosed = false;
       // Try to take advantage of closed variables 
       switch (op) {
       case ARRAY_LOOKUP_REF_IMM:
@@ -1250,6 +1270,7 @@ public class ICInstructions {
         //      on subsequent passes
         Var arr = args.get(1).getVar();
         if (closedVars.contains(arr.name())) {
+          System.err.println(arr.name() + "is closed!");
           // Don't need to retrieve any value, but just use this protocol
           return new MakeImmRequest(null, Arrays.<Var>asList());
         }
@@ -1279,19 +1300,19 @@ public class ICInstructions {
       case ARRAY_INSERT_FUTURE:
         Var sIndex = args.get(1).getVar();
         // TODO: disabled due to test 309
-        if (disassumeAllInputsClosed || closedVars.contains(sIndex.name())) {
+        if (assumeAllInputsClosed || closedVars.contains(sIndex.name())) {
           return new MakeImmRequest(null, Arrays.asList(sIndex));
         }
         break;
       case ARRAYREF_INSERT_IMM:
         Var arrRef3 = args.get(0).getVar();
-        if (assumeAllInputsClosed || closedVars.contains(arrRef3.name())) {
+        if (insertRefAssumeAllInputsClosed || closedVars.contains(arrRef3.name())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef3));
         }
         break;
       case ARRAYREF_INSERT_FUTURE:
         // We will take either the index or the dereferenced array
-        List<Var> req2 = mkImmVarList(assumeAllInputsClosed, closedVars,
+        List<Var> req2 = mkImmVarList(insertRefAssumeAllInputsClosed, closedVars,
                     args.get(0).getVar(), args.get(1).getVar());
         if (req2.size() > 0) {
           return new MakeImmRequest(null, req2);
@@ -1306,12 +1327,12 @@ public class ICInstructions {
         break;
       case ARRAY_REF_CREATE_NESTED_IMM:
         Var arrRef5 = args.get(1).getVar();
-        if (assumeAllInputsClosed || closedVars.contains(arrRef5.name())) {
+        if (insertRefAssumeAllInputsClosed || closedVars.contains(arrRef5.name())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef5));
         }
         break;
       case ARRAY_REF_CREATE_NESTED_FUTURE:
-        List<Var> req5 = mkImmVarList(assumeAllInputsClosed, closedVars, 
+        List<Var> req5 = mkImmVarList(insertRefAssumeAllInputsClosed, closedVars, 
             args.get(1).getVar(), args.get(2).getVar());
         if (req5.size() > 0) {
           return new MakeImmRequest(null, req5);
@@ -1395,13 +1416,14 @@ public class ICInstructions {
         assert(values.size() == 1);
         return new MakeImmChange(
                 arrayInsertImm(args.get(2).getVar(), 
-                args.get(0).getVar(), values.get(0)));
+                args.get(0).getVar(), values.get(0)),
+                args.get(0).getVar());
       case ARRAYREF_INSERT_IMM:
         assert(values.size() == 1);
         // Switch from ref to plain array
         return new MakeImmChange(arrayInsertImm(
-            args.get(2).getVar(), values.get(0).getVar(),
-                                                      args.get(1)));
+            args.get(2).getVar(), values.get(0).getVar(), args.get(1)),
+            args.get(0).getVar());
       case ARRAYREF_INSERT_FUTURE:
         assert(values.size() == 1 || values.size() == 2);
         // Could be either array ref, index, or both
@@ -1433,7 +1455,8 @@ public class ICInstructions {
                                                 VarStorage.ALIAS);
         return new MakeImmChange(newOut, oldOut,
             arrayCreateNestedImm(newOut,
-                            args.get(1).getVar(), values.get(0)));
+                            args.get(1).getVar(), values.get(0)),
+                            args.get(1).getVar());
       case ARRAY_REF_CREATE_NESTED_FUTURE:
         assert(values.size() == 1 || values.size() == 2);
         if (values.size() == 2) {
@@ -1629,17 +1652,19 @@ public class ICInstructions {
           if (Types.isScalarUpdateable(src.getVar().type())) {
             return null;
           }
-          ComputedValue retrieve = vanillaComputedValue(true);
-          Opcode cvop = assignOpcode(src.getType());
-          if (cvop == null) {
-            throw new STCRuntimeError("Need assign op for "
-                + src.getVar());
-          }
+
           boolean outIsClosed;
           if (op == Opcode.LOAD_REF) {
             outIsClosed = false;
           } else {
             outIsClosed = true;
+          }
+          
+          ComputedValue retrieve = vanillaComputedValue(outIsClosed);
+          Opcode cvop = assignOpcode(src.getType());
+          if (cvop == null) {
+            throw new STCRuntimeError("Need assign op for "
+                + src.getVar());
           }
           ComputedValue assign = new ComputedValue(cvop,
                     "", Arrays.asList(val), src, outIsClosed);

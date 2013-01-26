@@ -288,6 +288,12 @@ public class WaitCoalescer implements OptimizerPass {
         OptUtil.fixupImmChange(block, wait.getBlock(), change, instBuffer,
                                           localOutputs, req.out);
         
+        if (change.keepOpen != null) {
+          for (Var keepOpen: change.keepOpen) {
+            wait.addKeepOpenVar(keepOpen);
+          }
+        }
+        
         // Remove old instruction, add new one inside wait block
         it.remove();
         wait.getBlock().addInstructions(instBuffer);

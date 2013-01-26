@@ -189,6 +189,11 @@ public class ForwardDataflow implements OptimizerPass {
      *        replace
      */
     public void addComputedValue(ComputedValue newCV, boolean replace) {
+      if (newCV.getValLocation() != null && newCV.getValLocation().isVar()
+          && newCV.getValLocation().getVar().name().equals("__ov___t25")) {
+        System.err.println("Computed val: " + newCV);
+        System.err.println(newCV.isOutClosed());
+      }
       boolean outClosed = newCV.isOutClosed();
       if (isAvailable(newCV)) {
         if (!replace) {
@@ -204,14 +209,14 @@ public class ForwardDataflow implements OptimizerPass {
       Opcode op = newCV.getOp();
       availableVals.put(newCV, valLoc);
       if (valLoc.isVar() && outClosed) {
-        this.closed.add(valLoc.getVar().name());
+        close(valLoc.getVar().name(), false);
       }
       if (op == Opcode.LOAD_BOOL || op == Opcode.LOAD_FLOAT
           || op == Opcode.LOAD_INT || op == Opcode.LOAD_STRING
           || op == Opcode.LOAD_VOID || op == Opcode.LOAD_FILE) {
         // If the value is available, it is effectively closed even if
         // the future isn't closed
-        this.closed.add(newCV.getInput(0).getVar().name());
+        close(newCV.getInput(0).getVar().name(), true);
       }
     }
 
@@ -251,6 +256,10 @@ public class ForwardDataflow implements OptimizerPass {
      * @param varName
      */
     public void close(String varName, boolean recursive) {
+      if (varName.equals("__ov___t25")) {
+        System.err.println(varName + " is closed! ");
+        new Exception().printStackTrace();
+      }
       // Do DFS on the dependency graph to find all dependencies
       // that are now enabled
       Stack<String> work = new Stack<String>();
