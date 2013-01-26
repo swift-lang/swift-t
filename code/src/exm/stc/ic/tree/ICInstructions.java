@@ -1496,7 +1496,7 @@ public class ICInstructions {
           // Choose filename
           TurbineOp.chooseTmpFilename(filenameVal),
           // Set the filename on the file var
-          TurbineOp.getFileName(filenameFuture, fileVar, false),
+          TurbineOp.getFileName(filenameFuture, fileVar, false)
         };
         return new MakeImmChange(newInsts);
       }

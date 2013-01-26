@@ -1436,6 +1436,8 @@ public class TurbineGenerator implements CompilerBackend
           }
           if (Types.isScalarFuture(baseType)) {
             // ok
+          } else if (Types.isRef(baseType)) {
+            // TODO: might not be really recursive, but works for now
           } else {
             throw new STCRuntimeError("Recursive wait not yet supported"
                 + " for type: " + w.type().typeName());

@@ -286,6 +286,14 @@ public class ICContinuations {
       // Default: do nothing
       return null;
     }
+    
+    /**
+     * update continuation given info about which vars are used in block
+     * @param usedVars vars used within inner blocks
+     */
+    public void removeUnused(Set<String> usedVars) {
+      // Default: do nothing
+    }
 
     /**
      * Return the execution context inside the continuation
@@ -1973,6 +1981,22 @@ public class ICContinuations {
       inlineInto(dstBlock, this.block);
     }
 
+    
+    @Override
+    public void removeUnused(Set<String> usedVars) {
+      if (mode == WaitMode.EXPLICIT)
+        return;
+      
+      ListIterator<Var> waitIt = waitVars.listIterator();
+      while (waitIt.hasNext()) {
+        Var waitVar = waitIt.next();
+        // Remove variable not passed in
+        if (!usedVars.contains(waitVar.name())) {
+          waitIt.remove();
+        }
+      }
+    }
+    
     /**
      * @param wv
      * @return true if we need to recursively check closing for variable, i.e.

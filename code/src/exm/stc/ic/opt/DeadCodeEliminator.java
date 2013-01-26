@@ -95,8 +95,12 @@ public class DeadCodeEliminator {
     
     // Vars needed by subblocks
     List<Set<String>> subblockNeededVars = new ArrayList<Set<String>>();
-    for (Continuation c: block.getContinuations()) {
-      for (Block subBlock: c.getBlocks()) {
+    for (Continuation cont: block.getContinuations()) {
+      
+      // All vars used within continuation blocks
+      Set<String> contAllUsed = new HashSet<String>();
+      
+      for (Block subBlock: cont.getBlocks()) {
         Set<String> subblockNeeded = new HashSet<String>();
         Set<String> subblockWritten = new HashSet<String>();
         subBlock.findNeededVars(subblockNeeded, subblockWritten,
@@ -121,7 +125,10 @@ public class DeadCodeEliminator {
             }
           }
         }
+        
+        contAllUsed.addAll(subblockAll);
       }
+      cont.removeUnused(contAllUsed);
     }
     
     // Push down variable declarations
