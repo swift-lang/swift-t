@@ -133,6 +133,7 @@ public class ContinuationFusion extends FunctionOptimizerPass {
           //   further optimisations)
           if2.fuse(if1, true);
           it.remove();  // Remove first if statement
+          return; // was removed
         }
       }
     }
@@ -152,6 +153,7 @@ public class ContinuationFusion extends FunctionOptimizerPass {
         if (loop2.fuseable(loop1)) {
           loop2.fuseInto(loop1, true);
           it.remove();  // Remove first loop
+          return; // was removed
         }
       }
     }
@@ -169,8 +171,10 @@ public class ContinuationFusion extends FunctionOptimizerPass {
       if (c2.getType() == ContinuationType.RANGE_LOOP) {
         RangeLoop loop2 = (RangeLoop)c2;
         if (loop2.fuseable(loop1)) {
+          assert(loop2 != loop1);
           loop2.fuseInto(loop1, true);
           it.remove();  // Remove first loop
+          return; // First loop was removed from block, can't fuse again
         }
       }
     }
