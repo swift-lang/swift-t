@@ -236,6 +236,7 @@ namespace eval turbine {
 	set s [retrieve_string $srcpath]
         set fp [ ::open $s r ]
 	set file_data [ read $fp ]
+        close $fp
 	store_string $result $file_data
         file_read_refcount_decr $src
     }
