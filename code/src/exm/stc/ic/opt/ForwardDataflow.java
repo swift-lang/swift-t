@@ -812,7 +812,8 @@ public class ForwardDataflow implements OptimizerPass {
     List<Var> outValVars = OptUtil.declareLocalOpOutputVars(insertContext,
                                                             req.out);
     MakeImmChange change = inst.makeImmediate(outValVars, inVals);
-    OptUtil.fixupImmChange(insertContext, change, alt, outValVars, req.out);
+    OptUtil.fixupImmChange(block, insertContext, change, alt,
+                           outValVars, req.out);
     
 
     if (logger.isTraceEnabled()) {

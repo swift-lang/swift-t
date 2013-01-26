@@ -251,6 +251,9 @@ public class WaitCoalescer implements OptimizerPass {
       MakeImmRequest req = i.canMakeImmediate(
               empty, Collections.<String>emptySet(), true);
       if (req != null && req.in.size() > 0) {
+        if (logger.isTraceEnabled()) {
+          logger.trace("Exploding " + i + " in function " + fn.getName());
+        }
         List<Var> waitVars = ICUtil.filterBlockingOnly(req.in);
         
         WaitMode waitMode;
@@ -282,7 +285,7 @@ public class WaitCoalescer implements OptimizerPass {
         List<Var> localOutputs = OptUtil.declareLocalOpOutputVars(
                                             wait.getBlock(), req.out);
         MakeImmChange change = i.makeImmediate(localOutputs, inVals);
-        OptUtil.fixupImmChange(wait.getBlock(), change, instBuffer,
+        OptUtil.fixupImmChange(block, wait.getBlock(), change, instBuffer,
                                           localOutputs, req.out);
         
         // Remove old instruction, add new one inside wait block

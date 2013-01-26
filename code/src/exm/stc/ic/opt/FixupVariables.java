@@ -136,7 +136,7 @@ public class FixupVariables implements OptimizerPass {
           // Check for redundant passing in, and any missing variables
           for (String passedIn : passedInVars) {
             assert(visible.containsKey(passedIn)) : "passedIn var " + passedIn
-                  + " not visible.";
+                  + " not visible in " + function.getName() + ".";
             if (!innerNeededVars.contains(passedIn)) {
               c.removePassedInVar(visible.get(passedIn));
             } else if (!availVars.contains(passedIn)) {

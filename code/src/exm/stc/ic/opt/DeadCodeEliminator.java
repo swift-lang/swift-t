@@ -26,6 +26,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.lang.Var;
+import exm.stc.common.util.Pair;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
@@ -85,7 +86,8 @@ public class DeadCodeEliminator {
     // Now see if we can push down any variable declarations
     /*var => null means candidate.  var => Block means that it already appeared
      *  in a single block */
-    Map<String, Block> candidates = new HashMap<String, Block>();
+    Map<String, Pair<Continuation, Block>> candidates =
+                        new HashMap<String, Pair<Continuation, Block>>();
     for (Var v: block.getVariables()) {
       // Candidates are those not needed in this block
       if (!thisBlockNeeded.contains(v.name()) &&
@@ -118,7 +120,7 @@ public class DeadCodeEliminator {
         for (String var: subblockAll) {
           if (candidates.containsKey(var)) {
             if (candidates.get(var) == null) {
-              candidates.put(var, subBlock);
+              candidates.put(var, Pair.create(cont, subBlock));
             } else {
               // Appeared in two places
               candidates.remove(var);
@@ -152,18 +154,19 @@ public class DeadCodeEliminator {
   }
 
   private static void pushdownDeclarations(Block block,
-          Map<String, Block> candidates) {
+          Map<String, Pair<Continuation, Block>> candidates) {
     if (candidates.size() > 0) {
       ListIterator<Var> varIt = block.variableIterator();
       while (varIt.hasNext()) {
         Var var = varIt.next();
-        Block newHome = candidates.get(var.name());
+        Pair<Continuation, Block> newHome = candidates.get(var.name());
         if (newHome != null) {
           //System.err.println("pushdown " + var + ": " + " only referenced in "
           //          + newHome);
           varIt.remove();
-          newHome.addVariable(var);
-          block.moveCleanups(var, newHome);
+          newHome.val1.removePassedInVar(var);
+          newHome.val2.addVariable(var);
+          block.moveCleanups(var, newHome.val2);
         }
       }
     }

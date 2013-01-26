@@ -107,7 +107,8 @@ public class OptUtil {
     return outValVars;
   }  
 
-  public static void fixupImmChange(Block block, MakeImmChange change,
+  public static void fixupImmChange(Block srcBlock,
+          Block targetBlock, MakeImmChange change,
           List<Instruction> instBuffer, List<Var> newOutVars,
                                         List<Var> oldOutVars) {
     for (Instruction newInst: change.newInsts) {
@@ -119,7 +120,7 @@ public class OptUtil {
       Var newOut = change.newOut;
       Var oldOut = change.oldOut;
       
-      OptUtil.replaceInstructionOutputVar(block, instBuffer, newOut, oldOut);
+      OptUtil.replaceInstructionOutputVar(srcBlock, instBuffer, newOut, oldOut);
     }
 
     // Now copy back values into future
