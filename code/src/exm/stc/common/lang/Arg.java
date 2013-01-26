@@ -311,17 +311,32 @@ public class Arg implements Comparable<Arg> {
    * Put all variable names in a collection of opargs into addTo
    */
   public static void collectVarNames(Collection<String> addTo,
-      Collection<Arg> args) {
+      Collection<Arg> args, boolean nullsOk) {
     for (Arg o : args) {
-      if (o.kind == ArgKind.VAR) {
-        addTo.add(o.getVar().name());
+      if (o != null) {
+        if (o.kind == ArgKind.VAR) {
+          addTo.add(o.getVar().name());
+        }
+      } else {
+        if (!nullsOk) {
+          throw new STCRuntimeError("null in list: " + args);
+        }
       }
     }
   }
 
+  public static void collectVarNames(Collection<String> addTo,
+      Collection<Arg> args) {
+    collectVarNames(addTo, args, false);
+  }
+  
   public static List<String> varNameList(List<Arg> inputs) {
+    return varNameList(inputs, false);
+  }
+  
+  public static List<String> varNameList(List<Arg> inputs, boolean nullsOk) {
     ArrayList<String> result = new ArrayList<String>();
-    collectVarNames(result, inputs);
+    collectVarNames(result, inputs, false);
     return result;
   }
 

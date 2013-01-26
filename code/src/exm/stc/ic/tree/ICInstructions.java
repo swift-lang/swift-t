@@ -2385,7 +2385,7 @@ public class ICInstructions {
       ICUtil.replaceOpargsInList(renames, args);
       ICUtil.replaceOpargsInList(renames, inFiles);
       ICUtil.replaceVarsInList(renames, outFiles, false);
-      ICUtil.replaceOpargsInList(renames, outFileNames);
+      ICUtil.replaceOpargsInList(renames, outFileNames, true);
       redirects.stdin = ICUtil.replaceOparg(renames, redirects.stdin, true);
       redirects.stdout = ICUtil.replaceOparg(renames, redirects.stdout, true);
       redirects.stderr = ICUtil.replaceOparg(renames, redirects.stderr, true);
@@ -2395,7 +2395,7 @@ public class ICInstructions {
     public void renameInputs(Map<String, Arg> renames) {
       ICUtil.replaceOpargsInList(renames, inFiles);
       ICUtil.replaceOpargsInList(renames, args);
-      ICUtil.replaceOpargsInList(renames, outFileNames);
+      ICUtil.replaceOpargsInList(renames, outFileNames, true);
       redirects.stdin = ICUtil.replaceOparg(renames, redirects.stdin, true);
       redirects.stdout = ICUtil.replaceOparg(renames, redirects.stdout, true);
       redirects.stderr = ICUtil.replaceOparg(renames, redirects.stderr, true);
@@ -2434,7 +2434,7 @@ public class ICInstructions {
       ArrayList<Arg> res = new ArrayList<Arg>();
       res.addAll(args);
       res.addAll(inFiles);
-      res.addAll(outFileNames);
+      res.addAll(ICUtil.filterNulls(outFileNames));
       for (Arg redirFilename: redirects.redirections(true, true)) {
         if (redirFilename != null) {
           res.add(redirFilename);
@@ -2458,7 +2458,7 @@ public class ICInstructions {
         Map<String, Arg> knownConstants) {
       // Replace variables for which values are known
       ICUtil.replaceOpargsInList(knownConstants, args);
-      ICUtil.replaceOpargsInList(knownConstants, outFileNames);
+      ICUtil.replaceOpargsInList(knownConstants, outFileNames, true);
       return null;
     }
 

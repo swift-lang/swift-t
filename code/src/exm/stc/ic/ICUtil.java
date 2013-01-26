@@ -24,6 +24,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
@@ -107,7 +108,7 @@ public class ICUtil {
       } else {
         sb.append(", ");
       }
-      sb.append(a.toString());
+      sb.append(a);
     }
   }
 
@@ -174,11 +175,23 @@ public class ICUtil {
 
   public static void replaceOpargsInList(Map<String, Arg> renames,
       List<Arg> args) {
+    replaceOpargsInList(renames, args, false);
+  }
+  
+  public static void replaceOpargsInList(Map<String, Arg> renames,
+      List<Arg> args, boolean nullsOk) {
     if (renames.isEmpty()) {
       return;
     }
     for (int i = 0; i < args.size(); i++) {
       Arg oa = args.get(i);
+      if (oa == null) {
+        if (nullsOk) {
+          continue;
+        } else {
+          throw new STCRuntimeError("null arg in list: " + args);
+        }
+      }
       if (oa.isVar()) {
         String oldName = oa.getVar().name();
         Arg val = renames.get(oldName);
@@ -365,6 +378,16 @@ public class ICUtil {
           Types.isRef(var.type()) || 
           Types.isArray(var.type())) {
         res.add(var);
+      }
+    }
+    return res;
+  }
+
+  public static <T> List<T> filterNulls(Collection<T> list) {
+    List<T> res = new ArrayList<T>();
+    for (T item: list) {
+      if (item != null) {
+        res.add(item);
       }
     }
     return res;
