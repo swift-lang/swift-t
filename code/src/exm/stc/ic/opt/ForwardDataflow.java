@@ -189,11 +189,6 @@ public class ForwardDataflow implements OptimizerPass {
      *        replace
      */
     public void addComputedValue(ComputedValue newCV, boolean replace) {
-      if (newCV.getValLocation() != null && newCV.getValLocation().isVar()
-          && newCV.getValLocation().getVar().name().equals("__ov___t25")) {
-        System.err.println("Computed val: " + newCV);
-        System.err.println(newCV.isOutClosed());
-      }
       boolean outClosed = newCV.isOutClosed();
       if (isAvailable(newCV)) {
         if (!replace) {

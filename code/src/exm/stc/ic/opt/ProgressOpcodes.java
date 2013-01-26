@@ -98,6 +98,7 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.LOAD_FILE);
     opcodes.add(Opcode.GET_FILENAME);
     opcodes.add(Opcode.GET_OUTPUT_FILENAME);
+    opcodes.add(Opcode.COMMENT);
     return opcodes;
   }
   
@@ -107,11 +108,11 @@ public class ProgressOpcodes {
   private static HashSet<Opcode> cheapOpcodes = initCheap();
   private static HashSet<Opcode> initCheap() { 
     HashSet<Opcode> opcodes = new HashSet<Opcode>();
+    opcodes.add(Opcode.COMMENT);
     opcodes.add(Opcode.ARRAY_DECR_WRITERS);
     opcodes.add(Opcode.DECR_BLOB_REF);
     opcodes.add(Opcode.FREE_BLOB);
     opcodes.add(Opcode.DECR_REF);
-    opcodes.add(Opcode.LOCAL_OP);
     opcodes.add(Opcode.CALL_LOCAL);
     opcodes.add(Opcode.CALL_LOCAL_CONTROL);
     opcodes.add(Opcode.STORE_BOOL);
@@ -134,6 +135,24 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.LOAD_FILE);
     opcodes.add(Opcode.GET_FILENAME);
     opcodes.add(Opcode.GET_OUTPUT_FILENAME);
+    opcodes.add(Opcode.ARRAY_CREATE_NESTED_FUTURE);
+    opcodes.add(Opcode.ARRAY_CREATE_NESTED_IMM);
+    opcodes.add(Opcode.ARRAY_INSERT_FUTURE);
+    opcodes.add(Opcode.ARRAY_INSERT_IMM);
+    opcodes.add(Opcode.ARRAY_LOOKUP_FUTURE);
+    opcodes.add(Opcode.ARRAY_LOOKUP_IMM);
+    opcodes.add(Opcode.ARRAY_LOOKUP_REF_IMM);
+    opcodes.add(Opcode.ARRAY_REF_CREATE_NESTED_FUTURE);
+    opcodes.add(Opcode.ARRAY_REF_CREATE_NESTED_IMM);
+    opcodes.add(Opcode.ARRAYREF_INSERT_FUTURE);
+    opcodes.add(Opcode.ARRAYREF_INSERT_IMM);
+    opcodes.add(Opcode.ARRAYREF_LOOKUP_FUTURE);
+    opcodes.add(Opcode.ARRAYREF_LOOKUP_IMM);
+    opcodes.add(Opcode.COPY_REF);
+    
+    // Builtins are cheap
+    opcodes.add(Opcode.ASYNC_OP);
+    opcodes.add(Opcode.LOCAL_OP);
     return opcodes;
   }
 }
