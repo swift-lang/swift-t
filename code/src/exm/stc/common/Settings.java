@@ -107,7 +107,7 @@ public class Settings
     defaults.setProperty(OPT_PIPELINE, "false");
     defaults.setProperty(OPT_CONTROLFLOW_FUSION, "true");
     defaults.setProperty(OPT_FUNCTION_INLINE, "false");
-    defaults.setProperty(OPT_FUNCTION_INLINE_THRESHOLD, "5");
+    defaults.setProperty(OPT_FUNCTION_INLINE_THRESHOLD, "500");
     defaults.setProperty(OPT_HOIST, "true");
     defaults.setProperty(OPT_MAX_ITERATIONS, "10");
     defaults.setProperty(ARRAY_REF_SWITCHEROO, "false");

@@ -150,12 +150,14 @@ public class FunctionInline implements OptimizerPass {
     // Narrow inline candidates by number of calls, remove unused functions
     for (Function f: program.getFunctions()) {
       List<String> callLocs = finder.functionUsages.get(f.getName());
+      int functionSize = finder.getFunctionSize(f.getName());
       if (f.getName().equals(Constants.MAIN_FUNCTION)) {
         // Do nothing
       } else if (callLocs == null || callLocs.size() == 0) {
         // Function not referenced - prune it!
         toRemove.add(f.getName());
-      } else if (callLocs.size() <= inlineThreshold) {
+      } else if (callLocs.size() == 1 
+            || callLocs.size() * functionSize  <= inlineThreshold) {
         inlineCandidates.putAll(f.getName(), callLocs);
       }
     }
@@ -430,6 +432,13 @@ public class FunctionInline implements OptimizerPass {
      * Context function may occur multiple times in the list
      */
     MultiMap<String, String> functionUsages = new MultiMap<String, String>();
+    
+    
+    /**
+     * Function sizes in instructions
+     */
+    private Map<String, int[]> functionSizes = new HashMap<String, int[]>();
+    
     @Override
     public void visit(Logger logger, String functionContext,
                                       Instruction inst) {
@@ -437,6 +446,17 @@ public class FunctionInline implements OptimizerPass {
         String calledFunction = ((FunctionCall)inst).getFunctionName();
         functionUsages.put(calledFunction, functionContext);
       }
+      
+      int prev[] = functionSizes.get(functionContext);
+      if (prev == null) {
+        functionSizes.put(functionContext, new int[] {1}); 
+      } else {
+        prev[0] = prev[0] + 1;
+      }
+    }
+    
+    public int getFunctionSize(String function) {
+      return functionSizes.get(function)[0];
     }
     
   }
