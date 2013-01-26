@@ -1132,7 +1132,8 @@ public class ICInstructions {
         // is considered output
         return false;
       case CHOOSE_TMP_FILENAME:
-        return false;
+        // Non-deterministic
+        return true;
         
       case STRUCT_LOOKUP:
       case LOAD_REF:
