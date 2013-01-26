@@ -35,7 +35,6 @@ import java.util.TreeMap;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
-import exm.stc.common.Logging;
 import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
@@ -1012,8 +1011,6 @@ public class ICTree {
       for (Instruction i : instructions) {
         updateEssentialVars(i, stillNeeded, written, interdependencies,
                             i.hasSideEffects());
-        Logging.getSTCLogger().trace("After " + i + " stillNeeded: " + stillNeeded
-            + " sideeffects " + i.hasSideEffects());
       }
       
       for (Continuation c: continuations) {

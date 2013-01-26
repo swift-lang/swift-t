@@ -121,17 +121,15 @@ public class ICOptimizer {
       // one common subexpression elimination has happened
       pipe.addPass(new ContinuationFusion());
   
-      // Can only run this pass once. Do it on penultimate pass so that
+      // Can only run this pass once. Do it near end so that
       // results can be cleaned up by forward dataflow
-      if (iteration == nIterations - 2) {
+      if (iteration == nIterations - (nIterations / 4) - 3) {
         pipe.addPass(new Pipeline());
         pipe.addPass(new Validate());
       }
       
-      // Do this after forward dataflow since forward dataflow will be
-      // able to do strength reduction on many operations without spinning
-      // them off into wait statements
-      boolean doWaitMerges = (iteration == nIterations - 1);
+      // Do merges near end since it can be detrimental to other optimizations
+      boolean doWaitMerges = iteration == nIterations - (nIterations / 4) - 2;
       pipe.addPass(new WaitCoalescer(doWaitMerges));
       
       pipe.addPass(new Validate());
