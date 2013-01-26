@@ -161,10 +161,11 @@ public class DeadCodeEliminator {
         Var var = varIt.next();
         Pair<Continuation, Block> newHome = candidates.get(var.name());
         if (newHome != null) {
-          //System.err.println("pushdown " + var + ": " + " only referenced in "
-          //          + newHome);
           varIt.remove();
-          newHome.val1.removePassedInVar(var);
+          Continuation cont = newHome.val1;
+          if (cont.isAsync()) {
+            cont.removePassedInVar(var);
+          }
           newHome.val2.addVariable(var);
           block.moveCleanups(var, newHome.val2);
         }

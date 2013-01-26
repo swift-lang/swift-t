@@ -204,7 +204,6 @@ public class ForwardDataflow implements OptimizerPass {
       Opcode op = newCV.getOp();
       availableVals.put(newCV, valLoc);
       if (valLoc.isVar() && outClosed) {
-        System.err.println(valLoc + " closed ");
         this.closed.add(valLoc.getVar().name());
       }
       if (op == Opcode.LOAD_BOOL || op == Opcode.LOAD_FLOAT
@@ -212,7 +211,6 @@ public class ForwardDataflow implements OptimizerPass {
           || op == Opcode.LOAD_VOID || op == Opcode.LOAD_FILE) {
         // If the value is available, it is effectively closed even if
         // the future isn't closed
-        System.err.println(valLoc + " closed ");
         this.closed.add(newCV.getInput(0).getVar().name());
       }
     }

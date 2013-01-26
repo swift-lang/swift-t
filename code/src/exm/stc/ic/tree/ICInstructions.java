@@ -1248,7 +1248,7 @@ public class ICInstructions {
         //      but its probably just easier to do it in multiple steps
         //      on subsequent passes
         Var arr = args.get(1).getVar();
-        if (assumeAllInputsClosed || closedVars.contains(arr.name())) {
+        if (closedVars.contains(arr.name())) {
           // Don't need to retrieve any value, but just use this protocol
           return new MakeImmRequest(null, Arrays.<Var>asList());
         }

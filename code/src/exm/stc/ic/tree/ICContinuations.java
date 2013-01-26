@@ -1207,24 +1207,7 @@ public class ICContinuations {
     public boolean isNoop() {
       return block.isEmpty();
     }
-
-    @Override
-    public Collection<Var> getPassedInVars() {
-      return null;
-    }
-
-    @Override
-    public void addPassedInVar(Var variable) {
-      throw new STCRuntimeError("addPassedInVar not supported on " +
-      "nested");
-    }
-
-    @Override
-    public void removePassedInVar(Var variable) {
-      throw new STCRuntimeError("removePassedInVar not supported on " +
-          "nested block");
-    }
-
+    
     @Override
     public List<Var> constructDefinedVars() {
       return null;
