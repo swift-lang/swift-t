@@ -110,7 +110,9 @@ public class OptUtil {
   public static void fixupImmChange(Block block, MakeImmChange change,
           List<Instruction> instBuffer, List<Var> newOutVars,
                                         List<Var> oldOutVars) {
-    instBuffer.add(change.newInst);
+    for (Instruction newInst: change.newInsts) {
+      instBuffer.add(newInst);
+    }
     // System.err.println("Swapped " + inst + " for " + change.newInst);
     if (!change.isOutVarSame()) {
       // Output variable of instruction changed, need to fix up

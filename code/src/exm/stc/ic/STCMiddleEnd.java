@@ -881,6 +881,13 @@ public class STCMiddleEnd implements CompilerBackend {
     currBlock().addInstruction(
             TurbineOp.getFileName(filename, file, initUnmapped));
   }
+  
+  @Override
+  public void chooseTmpFilename(Var filenameVal) {
+    assert(filenameVal.type().assignableTo(Types.V_STRING));
+    currBlock().addInstruction(
+            TurbineOp.chooseTmpFilename(filenameVal));
+  }
 
   @Override
   public void generateWrappedBuiltin(String function, FunctionType ft,

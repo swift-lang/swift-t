@@ -150,6 +150,13 @@ public interface CompilerBackend {
    * @param initUnmapped if true, assign arbitrary filename to unmapped files
    */
   public abstract void getFileName(Var filename, Var file, boolean initUnmapped);
+  
+  /**
+   * Choose a temporary file name
+   * @param filenameVal
+   */
+  public abstract void chooseTmpFilename(Var filenameVal);
+  
   /**
    * NOTE: all built-ins should be defined before other functions
    * @param function

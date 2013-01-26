@@ -173,7 +173,7 @@ public class ICInstructions {
       /** Optional: if the output variable of op changed */
       public final Var newOut;
       public final Var oldOut;
-      public final Instruction newInst;
+      public final Instruction newInsts[];
       
       /**
        * If the output variable changed from reference to plain future
@@ -182,9 +182,19 @@ public class ICInstructions {
        * @param newInst
        */
       public MakeImmChange(Var newOut, Var oldOut, Instruction newInst) {
+        this(newOut, oldOut, new Instruction[] {newInst});
+      }
+      
+      /**
+       * If the output variable changed from reference to plain future
+       * @param newOut
+       * @param oldOut
+       * @param newInsts
+       */
+      public MakeImmChange(Var newOut, Var oldOut, Instruction newInsts[]) {
         this.newOut = newOut;
         this.oldOut = oldOut;
-        this.newInst = newInst;
+        this.newInsts = newInsts;
       }
       
       /**
@@ -193,6 +203,14 @@ public class ICInstructions {
        */
       public MakeImmChange(Instruction newInst) {
         this(null, null, newInst);
+      }
+      
+      /**
+       * If we're just changing the instructions
+       * @param newInst
+       */
+      public MakeImmChange(Instruction newInsts[]) {
+        this(null, null, newInsts);
       }
       
       /**
@@ -208,6 +226,7 @@ public class ICInstructions {
     /**
      * 
      * @param closedVars variables closed at point of current instruction
+     * @param unmappedVars mappable variables that are definitely unmapped
      * @param assumeAllClosed if true, allowed to (must don't necessarily
      *        have to) assume that all input vars are closed
      * @return null if it cannot be made immediate, if true,
@@ -215,6 +234,7 @@ public class ICInstructions {
      *            and output vars that need to be have value vars created
      */
     public abstract MakeImmRequest canMakeImmediate(Set<String> closedVars, 
+                                                  Set<String> unmappedVars,
                                                   boolean assumeAllClosed);
 
     public abstract MakeImmChange makeImmediate(List<Var> outVals,
@@ -315,7 +335,8 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmRequest canMakeImmediate(Set<String> closedVars, boolean assumeAllInputsClosed) {
+    public MakeImmRequest canMakeImmediate(Set<String> closedVars, 
+        Set<String> unmappedVars, boolean assumeAllInputsClosed) {
       return null;
     }
 
@@ -573,6 +594,9 @@ public class ICInstructions {
         break;
       case GET_OUTPUT_FILENAME:
         gen.getFileName(args.get(0).getVar(), args.get(1).getVar(), true);
+        break;
+      case CHOOSE_TMP_FILENAME:
+        gen.chooseTmpFilename(args.get(0).getVar());
         break;
       default:
         throw new STCRuntimeError("didn't expect to see op " +
@@ -911,6 +935,11 @@ public class ICInstructions {
     }
  
 
+    public static Instruction chooseTmpFilename(Var filenameVal) {
+      return new TurbineOp(Opcode.CHOOSE_TMP_FILENAME,
+                           Arrays.asList(Arg.createVar(filenameVal)));
+    }
+
     @Override
     public void renameVars(Map<String, Arg> renames) {
       ICUtil.replaceOpargsInList(renames, args);
@@ -1005,6 +1034,8 @@ public class ICInstructions {
         } else {
           return 2; // Treat filename as being modified
         }
+      case CHOOSE_TMP_FILENAME:
+        return 1;
       case DECR_BLOB_REF:
       case FREE_BLOB:
       case DECR_LOCAL_FILE_REF:
@@ -1081,6 +1112,8 @@ public class ICInstructions {
       case GET_OUTPUT_FILENAME:
         // Might initialise mapping on file, but in that case file
         // is considered output
+        return false;
+      case CHOOSE_TMP_FILENAME:
         return false;
         
       case STRUCT_LOOKUP:
@@ -1204,7 +1237,8 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-                                                boolean assumeAllInputsClosed) {
+                                           Set<String> unmappedVars,
+                                           boolean assumeAllInputsClosed) {
       // Try to take advantage of closed variables 
       switch (op) {
       case ARRAY_LOOKUP_REF_IMM:
@@ -1214,21 +1248,21 @@ public class ICInstructions {
         //      but its probably just easier to do it in multiple steps
         //      on subsequent passes
         Var arr = args.get(1).getVar();
-        if (closedVars.contains(arr.name())) {
+        if (assumeAllInputsClosed || closedVars.contains(arr.name())) {
           // Don't need to retrieve any value, but just use this protocol
-          return new MakeImmRequest(null, new ArrayList<Var>());
+          return new MakeImmRequest(null, Arrays.<Var>asList());
         }
         break;
         
       case ARRAY_LOOKUP_FUTURE:
         Var index = args.get(2).getVar();
-        if (closedVars.contains(index.name())) {
+        if (assumeAllInputsClosed || closedVars.contains(index.name())) {
           return new MakeImmRequest(null, Arrays.asList(index));
         }
         break;
       case ARRAYREF_LOOKUP_FUTURE:
         // We will take either the index or the dereferenced array
-        List<Var> req = mkImmVarList(closedVars, 
+        List<Var> req = mkImmVarList(assumeAllInputsClosed, closedVars, 
                   args.get(1).getVar(), args.get(2).getVar());
         if (req.size() > 0) {
           return new MakeImmRequest(null, req);
@@ -1237,25 +1271,25 @@ public class ICInstructions {
       case ARRAYREF_LOOKUP_IMM:
         // Could skip using reference
         Var arrRef2 = args.get(1).getVar();
-        if (closedVars.contains(arrRef2.name())) {
+        if (assumeAllInputsClosed || closedVars.contains(arrRef2.name())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef2));
         }
         break;
       case ARRAY_INSERT_FUTURE:
         Var sIndex = args.get(1).getVar();
-        if (closedVars.contains(sIndex.name())) {
+        if (assumeAllInputsClosed || closedVars.contains(sIndex.name())) {
           return new MakeImmRequest(null, Arrays.asList(sIndex));
         }
         break;
       case ARRAYREF_INSERT_IMM:
         Var arrRef3 = args.get(0).getVar();
-        if (closedVars.contains(arrRef3.name())) {
+        if (assumeAllInputsClosed || closedVars.contains(arrRef3.name())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef3));
         }
         break;
       case ARRAYREF_INSERT_FUTURE:
         // We will take either the index or the dereferenced array
-        List<Var> req2 = mkImmVarList(closedVars,
+        List<Var> req2 = mkImmVarList(assumeAllInputsClosed, closedVars,
                     args.get(0).getVar(), args.get(1).getVar());
         if (req2.size() > 0) {
           return new MakeImmRequest(null, req2);
@@ -1264,18 +1298,18 @@ public class ICInstructions {
       case ARRAY_CREATE_NESTED_FUTURE:
         // Try to get immediate index
         Var index2 = args.get(2).getVar();
-        if (closedVars.contains(index2.name())) {
+        if (assumeAllInputsClosed || closedVars.contains(index2.name())) {
           return new MakeImmRequest(null, Arrays.asList(index2));
         }
         break;
       case ARRAY_REF_CREATE_NESTED_IMM:
         Var arrRef5 = args.get(1).getVar();
-        if (closedVars.contains(arrRef5.name())) {
+        if (assumeAllInputsClosed || closedVars.contains(arrRef5.name())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef5));
         }
         break;
       case ARRAY_REF_CREATE_NESTED_FUTURE:
-        List<Var> req5 = mkImmVarList(closedVars, 
+        List<Var> req5 = mkImmVarList(assumeAllInputsClosed, closedVars, 
             args.get(1).getVar(), args.get(2).getVar());
         if (req5.size() > 0) {
           return new MakeImmRequest(null, req5);
@@ -1286,6 +1320,13 @@ public class ICInstructions {
       case UPDATE_SCALE:
         return new MakeImmRequest(null, Arrays.asList(
                   args.get(1).getVar()));
+      case GET_OUTPUT_FILENAME:
+        if (unmappedVars.contains(args.get(1).getVar().name())) {
+          return new MakeImmRequest(
+                  Arrays.asList(args.get(0).getVar()),
+                  Arrays.<Var>asList());
+        }
+        break;
       default:
         // fall through
       }
@@ -1293,11 +1334,11 @@ public class ICInstructions {
       return null;
     }
     
-    private List<Var> mkImmVarList(Set<String> closedVars, 
-                                              Var... args) {
+    private List<Var> mkImmVarList(boolean assumeAllInputsClosed,
+                                   Set<String> closedVars, Var... args) {
       ArrayList<Var> req = new ArrayList<Var>(args.length);
       for (Var v: args) {
-        if (closedVars.contains(v.name())) {
+        if (assumeAllInputsClosed || closedVars.contains(v.name())) {
           req.add(v);
         }
       }
@@ -1447,6 +1488,18 @@ public class ICInstructions {
         return new MakeImmChange(null, null, TurbineOp.updateImm(
             this.args.get(0).getVar(), mode, values.get(0)));
       }
+      case GET_OUTPUT_FILENAME: {
+        Var filenameVal = out.get(0);
+        Var filenameFuture = this.args.get(0).getVar();
+        Var fileVar = this.args.get(1).getVar();
+        Instruction newInsts[] = new Instruction[] {
+          // Choose filename
+          TurbineOp.chooseTmpFilename(filenameVal),
+          // Set the filename on the file var
+          TurbineOp.getFileName(filenameFuture, fileVar, false),
+        };
+        return new MakeImmChange(newInsts);
+      }
       default:
         // fall through
         break;
@@ -1526,6 +1579,7 @@ public class ICInstructions {
       case GET_OUTPUT_FILENAME:
       case ARRAY_LOOKUP_IMM:
       case COPY_REF:
+      case CHOOSE_TMP_FILENAME:
         return TaskMode.SYNC;
       
       case ARRAY_INSERT_FUTURE:
@@ -2056,8 +2110,8 @@ public class ICInstructions {
     }
     
     @Override
-    public MakeImmRequest canMakeImmediate(Set<String> closedVars
-                                      , boolean assumeAllInputsClosed) {
+    public MakeImmRequest canMakeImmediate(Set<String> closedVars,
+              Set<String> unmappedVars, boolean assumeAllInputsClosed) {
       // See which arguments are closed
       boolean allClosed = true;
       if (!assumeAllInputsClosed) {
@@ -2238,8 +2292,8 @@ public class ICInstructions {
     }
     
     @Override
-    public MakeImmRequest canMakeImmediate(Set<String> closedVars
-                                      , boolean assumeAllInputsClosed) {
+    public MakeImmRequest canMakeImmediate(Set<String> closedVars,
+            Set<String> unmappedVars, boolean assumeAllInputsClosed) {
       return null; // already immediate
     }
 
@@ -2382,7 +2436,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-        boolean assumeAllClosed) {
+        Set<String> unmappedVars, boolean assumeAllClosed) {
       // Don't support reducing this
       return null;
     }
@@ -2537,7 +2591,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-                                      boolean assumeAllInputsClosed) {
+        Set<String> unmappedVars, boolean assumeAllInputsClosed) {
       // See if we need to block on all inputs
       HashSet<String> alreadyDone = new HashSet<String>();
       for (int i = 0; i < this.newLoopVars.size(); i++) {
@@ -2700,7 +2754,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-                                    boolean assumeAllInputsClosed) {
+        Set<String> unmappedVars, boolean assumeAllInputsClosed) {
       return null;
     }
 
@@ -2795,7 +2849,7 @@ public class ICInstructions {
     RUN_EXTERNAL,
     INIT_UPDATEABLE_FLOAT, UPDATE_MIN, UPDATE_INCR, UPDATE_SCALE, LATEST_VALUE,
     UPDATE_MIN_IMM, UPDATE_INCR_IMM, UPDATE_SCALE_IMM,
-    GET_FILENAME, GET_OUTPUT_FILENAME
+    GET_FILENAME, GET_OUTPUT_FILENAME, CHOOSE_TMP_FILENAME
   }
 
   
@@ -3080,7 +3134,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-                                    boolean assumeAllInputsClosed) {
+        Set<String> unmappedVars, boolean assumeAllInputsClosed) {
       if (op == Opcode.LOCAL_OP) {
         // already is immediate
         return null; 

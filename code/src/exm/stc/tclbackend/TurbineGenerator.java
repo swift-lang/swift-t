@@ -521,6 +521,12 @@ public class TurbineGenerator implements CompilerBackend
                   Turbine.getFileName(varToExpr(file), initUnmapped));
     pointStack.peek().add(cmd);
   }
+  
+  @Override
+  public void chooseTmpFilename(Var filenameVal) {
+    assert(filenameVal.type().assignableTo(Types.V_STRING));
+    pointStack.peek().add(Turbine.mkTemp(prefixVar(filenameVal)));
+  }
 
   @Override
   public void localOp(BuiltinOpcode op, Var out,

@@ -108,6 +108,9 @@ public class ForwardDataflow implements OptimizerPass {
 
     /** variables which are closed at this point in program */
     private final HierarchicalSet<String> closed;
+    
+    /** mappable variables which are unmapped */
+    private final HierarchicalSet<String> unmapped;
 
     /** variables which are recursively closed at this point in program */
     private final HierarchicalSet<String> recursivelyClosed;
@@ -130,6 +133,7 @@ public class ForwardDataflow implements OptimizerPass {
       this.varsPassedFromParent = false;
       this.availableVals = new HashMap<ComputedValue, Arg>();
       this.closed = new HierarchicalSet<String>();
+      this.unmapped = new HierarchicalSet<String>();
       this.recursivelyClosed = new HierarchicalSet<String>();
       this.dependsOn = new HashMap<String, CopyOnWriteSmallSet<String>>();
     }
@@ -138,6 +142,7 @@ public class ForwardDataflow implements OptimizerPass {
         boolean varsPassedFromParent,
         HashMap<ComputedValue, Arg> availableVals,
         HierarchicalSet<String> closed,
+        HierarchicalSet<String> unmapped,
         HierarchicalSet<String> recursivelyClosed,
         HashMap<String, CopyOnWriteSmallSet<String>> dependsOn) {
       this.logger = logger;
@@ -145,6 +150,7 @@ public class ForwardDataflow implements OptimizerPass {
       this.varsPassedFromParent = varsPassedFromParent;
       this.availableVals = availableVals;
       this.closed = closed;
+      this.unmapped = unmapped;
       this.recursivelyClosed = recursivelyClosed;
       this.dependsOn = dependsOn;
     }
@@ -263,6 +269,14 @@ public class ForwardDataflow implements OptimizerPass {
         recursivelyClosed.add(varName);
       }
     }
+    
+    public void setUnmapped(String varName) {
+      unmapped.add(varName);
+    }
+    
+    public Set<String> getUnmapped() {
+      return Collections.unmodifiableSet(unmapped);
+    }
 
     /**
      * Register that variable future depends on all of the variables in the
@@ -301,7 +315,7 @@ public class ForwardDataflow implements OptimizerPass {
       }
       return new State(logger, this, varsPassedFromParent, 
           new HashMap<ComputedValue, Arg>(), closed.makeChild(),
-          recursivelyClosed.makeChild(), newDO);
+          unmapped.makeChild(), recursivelyClosed.makeChild(), newDO);
     }
   }
 
@@ -572,6 +586,11 @@ public class ForwardDataflow implements OptimizerPass {
             Arg.createVar(v.mapping()), v);
         cv.addComputedValue(filenameVal, false);
       }
+      if (Types.isMappable(v.type()) && !v.isMapped()
+                        && v.storage() != VarStorage.ALIAS) {
+        // Var is definitely unmapped
+        cv.setUnmapped(v.name());
+      }
     }
 
     boolean anotherPass2 = forwardDataflow(logger, f, execCx, block, 
@@ -732,7 +751,8 @@ public class ForwardDataflow implements OptimizerPass {
       Function fn, ExecContext execCx, Block block, State cv,
       Instruction inst, ListIterator<Instruction> insts) {
     // First see if we can replace some futures with values
-    MakeImmRequest req = inst.canMakeImmediate(cv.getClosed(), false);
+    MakeImmRequest req = inst.canMakeImmediate(
+            cv.getClosed(), cv.getUnmapped(), false);
 
     if (req == null) {
       return false;

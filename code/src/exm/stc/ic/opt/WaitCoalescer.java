@@ -248,7 +248,8 @@ public class WaitCoalescer implements OptimizerPass {
     ListIterator<Instruction> it = block.instructionIterator();
     while (it.hasNext()) {
       Instruction i = it.next();
-      MakeImmRequest req = i.canMakeImmediate(empty, true);
+      MakeImmRequest req = i.canMakeImmediate(
+              empty, Collections.<String>emptySet(), true);
       if (req != null && req.in.size() > 0) {
         List<Var> waitVars = ICUtil.filterBlockingOnly(req.in);
         
