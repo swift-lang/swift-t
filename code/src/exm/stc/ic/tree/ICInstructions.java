@@ -1239,6 +1239,7 @@ public class ICInstructions {
     public MakeImmRequest canMakeImmediate(Set<String> closedVars,
                                            Set<String> unmappedVars,
                                            boolean assumeAllInputsClosed) {
+      boolean disassumeAllInputsClosed = false;
       // Try to take advantage of closed variables 
       switch (op) {
       case ARRAY_LOOKUP_REF_IMM:
@@ -1277,7 +1278,8 @@ public class ICInstructions {
         break;
       case ARRAY_INSERT_FUTURE:
         Var sIndex = args.get(1).getVar();
-        if (assumeAllInputsClosed || closedVars.contains(sIndex.name())) {
+        // TODO: disabled due to test 309
+        if (disassumeAllInputsClosed || closedVars.contains(sIndex.name())) {
           return new MakeImmRequest(null, Arrays.asList(sIndex));
         }
         break;
