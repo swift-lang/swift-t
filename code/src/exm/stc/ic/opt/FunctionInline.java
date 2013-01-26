@@ -456,7 +456,12 @@ public class FunctionInline implements OptimizerPass {
     }
     
     public int getFunctionSize(String function) {
-      return functionSizes.get(function)[0];
+      int size[] = functionSizes.get(function);
+      if (size == null) {
+        return 0;
+      } else {
+        return size[0];
+      }
     }
     
   }
