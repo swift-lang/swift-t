@@ -21,6 +21,7 @@ import java.util.ListIterator;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.lang.Arg;
@@ -154,14 +155,19 @@ public class HoistLoops implements OptimizerPass {
     for (Instruction inst: curr.getInstructions()) {
       for (Var out: inst.getOutputs()) {
         if (trackWrites(out)) {
+          Logging.getSTCLogger().trace("inst: " + inst + " tracking " + out);
           writeMap.put(out.name(), curr);
+        } else {
+          Logging.getSTCLogger().trace("inst: " + inst + " not tracking " + out);
         }
       }
     }
     
-    // We can immediately do any array operations
+    // We can immediately do any array operations unless it is an alias,
+    // e.g. for a nested array
     for (Var declared: curr.getVariables()) {
-      if (Types.isArray(declared.type())) {
+      if (Types.isArray(declared.type()) &&
+            declared.storage() != VarStorage.ALIAS) {
         writeMap.put(declared.name(), curr);
       }
     }
