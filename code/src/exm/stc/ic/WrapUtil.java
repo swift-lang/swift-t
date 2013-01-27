@@ -44,6 +44,11 @@ public class WrapUtil {
    */
   public static Var fetchValueOf(Block block, List<Instruction> instBuffer,
           Var var, String valName) {
+    if (Types.isArray(var.type())) {
+      // Don't have value version of array
+      return var;
+    }
+    
     Type value_t = Types.derefResultType(var.type());
     if (Types.isScalarValue(value_t)) {
       // The result will be a value

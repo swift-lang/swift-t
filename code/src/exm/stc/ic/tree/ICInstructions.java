@@ -1270,9 +1270,9 @@ public class ICInstructions {
         //      but its probably just easier to do it in multiple steps
         //      on subsequent passes
         Var arr = args.get(1).getVar();
-        if (closedVars.contains(arr.name())) {
+        if (assumeAllInputsClosed || closedVars.contains(arr.name())) {
           // Don't need to retrieve any value, but just use this protocol
-          return new MakeImmRequest(null, Arrays.<Var>asList());
+          return new MakeImmRequest(null, Arrays.<Var>asList(arr));
         }
         break;
         
@@ -1372,7 +1372,9 @@ public class ICInstructions {
     public MakeImmChange makeImmediate(List<Var> out, List<Arg> values) {
       switch (op) {
       case ARRAY_LOOKUP_REF_IMM:
-        assert(values.size() == 0);
+        assert(values.size() == 1);
+        // Input should be unchanged
+        assert(values.get(0).getVar().equals(args.get(1).getVar()));
         // OUtput switched from ref to value
         Var refOut = args.get(0).getVar();
         Var valOut = Var.createDerefTmp(refOut, 
