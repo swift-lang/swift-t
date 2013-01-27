@@ -245,15 +245,15 @@ public class ICInstructions {
      * 
      * @param closedVars variables closed at point of current instruction
      * @param unmappedVars mappable variables that are definitely unmapped
-     * @param assumeAllClosed if true, allowed to (must don't necessarily
-     *        have to) assume that all input vars are closed
+     * @param waitForClose if true, allowed to (must don't necessarily
+     *        have to) request that unclosed vars be waited for
      * @return null if it cannot be made immediate, if true,
      *            a list of vars that are the variables whose values are needed
      *            and output vars that need to be have value vars created
      */
     public abstract MakeImmRequest canMakeImmediate(Set<String> closedVars, 
                                                   Set<String> unmappedVars,
-                                                  boolean assumeAllClosed);
+                                                  boolean waitForClose);
 
     public abstract MakeImmChange makeImmediate(List<Var> outVals,
                                                 List<Arg> inValues);
@@ -354,7 +354,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<String> closedVars, 
-        Set<String> unmappedVars, boolean assumeAllInputsClosed) {
+        Set<String> unmappedVars, boolean waitForClose) {
       return null;
     }
 
@@ -1259,10 +1259,10 @@ public class ICInstructions {
     @Override
     public MakeImmRequest canMakeImmediate(Set<String> closedVars,
                                            Set<String> unmappedVars,
-                                           boolean assumeAllInputsClosed) {
+                                           boolean waitForClose) {
       // TODO: disable for insert statements until we can correctly mark that 
       //      arrays must be kept open
-      boolean insertRefAssumeAllInputsClosed = false;
+      boolean insertRefWaitForClose = false;
       // Try to take advantage of closed variables 
       switch (op) {
       case ARRAY_LOOKUP_REF_IMM:
@@ -1272,21 +1272,22 @@ public class ICInstructions {
         //      but its probably just easier to do it in multiple steps
         //      on subsequent passes
         Var arr = args.get(1).getVar();
-        if (assumeAllInputsClosed || closedVars.contains(arr.name())) {
-          // Don't need to retrieve any value, but just use this protocol
+        if (closedVars.contains(arr.name())) {
+          // Don't request to wait for close - whole array doesn't need to be
+          // closed
           return new MakeImmRequest(null, Arrays.<Var>asList(arr));
         }
         break;
         
       case ARRAY_LOOKUP_FUTURE:
         Var index = args.get(2).getVar();
-        if (assumeAllInputsClosed || closedVars.contains(index.name())) {
+        if (waitForClose || closedVars.contains(index.name())) {
           return new MakeImmRequest(null, Arrays.asList(index));
         }
         break;
       case ARRAYREF_LOOKUP_FUTURE:
         // We will take either the index or the dereferenced array
-        List<Var> req = mkImmVarList(assumeAllInputsClosed, closedVars, 
+        List<Var> req = mkImmVarList(waitForClose, closedVars, 
                   args.get(1).getVar(), args.get(2).getVar());
         if (req.size() > 0) {
           return new MakeImmRequest(null, req);
@@ -1295,26 +1296,26 @@ public class ICInstructions {
       case ARRAYREF_LOOKUP_IMM:
         // Could skip using reference
         Var arrRef2 = args.get(1).getVar();
-        if (assumeAllInputsClosed || closedVars.contains(arrRef2.name())) {
+        if (waitForClose || closedVars.contains(arrRef2.name())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef2));
         }
         break;
       case ARRAY_INSERT_FUTURE:
         Var sIndex = args.get(1).getVar();
         // TODO: disabled due to test 309
-        if (assumeAllInputsClosed || closedVars.contains(sIndex.name())) {
+        if (waitForClose || closedVars.contains(sIndex.name())) {
           return new MakeImmRequest(null, Arrays.asList(sIndex));
         }
         break;
       case ARRAYREF_INSERT_IMM:
         Var arrRef3 = args.get(0).getVar();
-        if (insertRefAssumeAllInputsClosed || closedVars.contains(arrRef3.name())) {
+        if (insertRefWaitForClose || closedVars.contains(arrRef3.name())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef3));
         }
         break;
       case ARRAYREF_INSERT_FUTURE:
         // We will take either the index or the dereferenced array
-        List<Var> req2 = mkImmVarList(insertRefAssumeAllInputsClosed, closedVars,
+        List<Var> req2 = mkImmVarList(insertRefWaitForClose, closedVars,
                     args.get(0).getVar(), args.get(1).getVar());
         if (req2.size() > 0) {
           return new MakeImmRequest(null, req2);
@@ -1323,18 +1324,18 @@ public class ICInstructions {
       case ARRAY_CREATE_NESTED_FUTURE:
         // Try to get immediate index
         Var index2 = args.get(2).getVar();
-        if (assumeAllInputsClosed || closedVars.contains(index2.name())) {
+        if (waitForClose || closedVars.contains(index2.name())) {
           return new MakeImmRequest(null, Arrays.asList(index2));
         }
         break;
       case ARRAY_REF_CREATE_NESTED_IMM:
         Var arrRef5 = args.get(1).getVar();
-        if (assumeAllInputsClosed || closedVars.contains(arrRef5.name())) {
+        if (waitForClose || closedVars.contains(arrRef5.name())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef5));
         }
         break;
       case ARRAY_REF_CREATE_NESTED_FUTURE:
-        List<Var> req5 = mkImmVarList(assumeAllInputsClosed, closedVars, 
+        List<Var> req5 = mkImmVarList(waitForClose, closedVars, 
             args.get(1).getVar(), args.get(2).getVar());
         if (req5.size() > 0) {
           return new MakeImmRequest(null, req5);
@@ -1359,11 +1360,11 @@ public class ICInstructions {
       return null;
     }
     
-    private List<Var> mkImmVarList(boolean assumeAllInputsClosed,
+    private List<Var> mkImmVarList(boolean waitForClose,
                                    Set<String> closedVars, Var... args) {
       ArrayList<Var> req = new ArrayList<Var>(args.length);
       for (Var v: args) {
-        if (assumeAllInputsClosed || closedVars.contains(v.name())) {
+        if (waitForClose || closedVars.contains(v.name())) {
           req.add(v);
         }
       }
@@ -2148,10 +2149,10 @@ public class ICInstructions {
     
     @Override
     public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-              Set<String> unmappedVars, boolean assumeAllInputsClosed) {
+              Set<String> unmappedVars, boolean waitForClose) {
       // See which arguments are closed
       boolean allClosed = true;
-      if (!assumeAllInputsClosed) {
+      if (!waitForClose) {
         for (int i = 0; i < this.inputs.size(); i++) {
           Var in = this.inputs.get(i);
           if (closedVars.contains(in.name())) {
@@ -2330,7 +2331,7 @@ public class ICInstructions {
     
     @Override
     public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-            Set<String> unmappedVars, boolean assumeAllInputsClosed) {
+            Set<String> unmappedVars, boolean waitForClose) {
       return null; // already immediate
     }
 
@@ -2473,7 +2474,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-        Set<String> unmappedVars, boolean assumeAllClosed) {
+        Set<String> unmappedVars, boolean waitForClose) {
       // Don't support reducing this
       return null;
     }
@@ -2628,7 +2629,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-        Set<String> unmappedVars, boolean assumeAllInputsClosed) {
+        Set<String> unmappedVars, boolean waitForClose) {
       // See if we need to block on all inputs
       HashSet<String> alreadyDone = new HashSet<String>();
       for (int i = 0; i < this.newLoopVars.size(); i++) {
@@ -2791,7 +2792,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-        Set<String> unmappedVars, boolean assumeAllInputsClosed) {
+        Set<String> unmappedVars, boolean waitForClose) {
       return null;
     }
 
@@ -3171,7 +3172,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-        Set<String> unmappedVars, boolean assumeAllInputsClosed) {
+        Set<String> unmappedVars, boolean waitForClose) {
       if (op == Opcode.LOCAL_OP) {
         // already is immediate
         return null; 
@@ -3182,7 +3183,7 @@ public class ICInstructions {
         }
         
         // See which arguments are closed
-        if (!assumeAllInputsClosed) {
+        if (!waitForClose) {
           for (Arg inarg: this.inputs) {
             assert(inarg.isVar());
             Var in = inarg.getVar();
