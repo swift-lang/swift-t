@@ -55,7 +55,7 @@ public class HoistLoops implements OptimizerPass {
   @Override
   public void optimize(Logger logger, Program prog) {
     for (Function f: prog.getFunctions()) {
-      Block block = f.getMainblock();
+      Block mainBlock = f.getMainblock();
       HierarchicalMap<String, Block> globalMap =
                       new HierarchicalMap<String, Block>();
       // Global constants already written
@@ -69,13 +69,18 @@ public class HoistLoops implements OptimizerPass {
       
       // Set up map for top block of function
       HierarchicalMap<String, Block> writeMap = globalMap.makeChildMap();
-      // Inputs are written
+      
+      // Update with input and output declarations
+      updateMapWithDeclarations(mainBlock, writeMap, f.getInputList());
+      updateMapWithDeclarations(mainBlock, writeMap, f.getOutputList());
+      
+      // Inputs are written elsewhere
       for (Var in: f.getInputList()) {
         if (trackWrites(in)) {
-          writeMap.put(in.name(), block);
+          writeMap.put(in.name(), mainBlock);
         }
       }
-      boolean changed = hoistRec(logger, block, new ArrayList<Block>(), 0, 0,
+      boolean changed = hoistRec(logger, mainBlock, new ArrayList<Block>(), 0, 0,
                                  writeMap);
       
       if (changed) {
@@ -163,11 +168,16 @@ public class HoistLoops implements OptimizerPass {
       }
     }
     
+    updateMapWithDeclarations(curr, writeMap, curr.getVariables());
+  }
+
+  private static void updateMapWithDeclarations(Block block,
+      HierarchicalMap<String, Block> writeMap, List<Var> declarations) {
     // We can immediately do any array operations unless it is an alias,
     // e.g. for a nested array
-    for (Var declared: curr.getVariables()) {
+    for (Var declared: declarations) {
       if (Types.isArray(declared.type())) {
-        writeMap.put(declared.name(), curr);
+        writeMap.put(declared.name(), block);
       }
     }
   }

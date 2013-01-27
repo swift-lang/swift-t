@@ -1110,12 +1110,14 @@ public class ICInstructions {
       case LOAD_BLOB:
       case LOAD_VOID:
       case LOAD_FILE:
+        return this.writesAliasVar();
+        
       case ARRAY_LOOKUP_REF_IMM:
       case ARRAY_LOOKUP_FUTURE:
       case ARRAYREF_LOOKUP_FUTURE:
       case ARRAYREF_LOOKUP_IMM:
-          return this.writesAliasVar();
-
+        return false;
+        
       case DEREF_FILE:
         return this.writesAliasVar() ||
                this.args.get(0).getVar().isMapped();
