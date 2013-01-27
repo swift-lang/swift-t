@@ -166,8 +166,7 @@ public class HoistLoops implements OptimizerPass {
     // We can immediately do any array operations unless it is an alias,
     // e.g. for a nested array
     for (Var declared: curr.getVariables()) {
-      if (Types.isArray(declared.type()) &&
-            declared.storage() != VarStorage.ALIAS) {
+      if (Types.isArray(declared.type())) {
         writeMap.put(declared.name(), curr);
       }
     }
@@ -183,6 +182,8 @@ public class HoistLoops implements OptimizerPass {
     if (Types.isScalarFuture(t) || Types.isScalarValue(t)) {
       return true;
     } else if (Types.isRef(t)) {
+      return true;
+    } else if (Types.isArray(t)) {
       return true;
     }
     return false;

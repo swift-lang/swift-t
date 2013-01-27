@@ -1327,12 +1327,12 @@ public class ICInstructions {
         break;
       case ARRAY_REF_CREATE_NESTED_IMM:
         Var arrRef5 = args.get(1).getVar();
-        if (insertRefAssumeAllInputsClosed || closedVars.contains(arrRef5.name())) {
+        if (assumeAllInputsClosed || closedVars.contains(arrRef5.name())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef5));
         }
         break;
       case ARRAY_REF_CREATE_NESTED_FUTURE:
-        List<Var> req5 = mkImmVarList(insertRefAssumeAllInputsClosed, closedVars, 
+        List<Var> req5 = mkImmVarList(assumeAllInputsClosed, closedVars, 
             args.get(1).getVar(), args.get(2).getVar());
         if (req5.size() > 0) {
           return new MakeImmRequest(null, req5);
