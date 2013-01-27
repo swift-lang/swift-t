@@ -38,7 +38,7 @@ namespace eval turbine {
     # Add an arbitrary string to the MPE log as "metadata"
     # The MPE-defined string length limit is 32
     proc metadata { stack result input } {
-        turbine::rule "metadata-$input" $input $turbine::WORK \
+        turbine::rule "metadata-$input" $input $turbine::WORK $adlb::RANK_ANY \
             "turbine::metadata_body $input"
     }
 
