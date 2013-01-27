@@ -251,10 +251,6 @@ public class ForwardDataflow implements OptimizerPass {
      * @param varName
      */
     public void close(String varName, boolean recursive) {
-      if (varName.equals("__ov___t25")) {
-        System.err.println(varName + " is closed! ");
-        new Exception().printStackTrace();
-      }
       // Do DFS on the dependency graph to find all dependencies
       // that are now enabled
       Stack<String> work = new Stack<String>();

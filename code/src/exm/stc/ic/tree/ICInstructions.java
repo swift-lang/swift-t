@@ -1271,7 +1271,6 @@ public class ICInstructions {
         //      on subsequent passes
         Var arr = args.get(1).getVar();
         if (closedVars.contains(arr.name())) {
-          System.err.println(arr.name() + "is closed!");
           // Don't need to retrieve any value, but just use this protocol
           return new MakeImmRequest(null, Arrays.<Var>asList());
         }
