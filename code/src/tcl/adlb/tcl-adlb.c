@@ -309,7 +309,7 @@ ADLB_Hostmap_Cmd(ClientData cdata, Tcl_Interp *interp,
   printf("actual: %i\n", actual);
 
   Tcl_Obj* items[actual];
-  for (int i = 0; i < count; i++)
+  for (int i = 0; i < actual; i++)
     items[i] = Tcl_NewIntObj(ranks[i]);
 
   Tcl_Obj* result = Tcl_NewListObj(actual, items);
