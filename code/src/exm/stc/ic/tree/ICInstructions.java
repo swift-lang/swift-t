@@ -225,7 +225,7 @@ public class ICInstructions {
       
       /**
        * If we're just changing the instructions
-       * @param newInst
+       * @param newInsts
        */
       public MakeImmChange(Instruction newInsts[]) {
         this(null, null, newInsts);
@@ -2684,6 +2684,10 @@ public class ICInstructions {
       }
     }
 
+    public void clearUsedVars() {
+      loopUsedVars.clear();
+    }
+
     public void addKeepOpenVar(Var variable) {
       this.keepOpenVars.add(variable);
     }
@@ -2834,6 +2838,10 @@ public class ICInstructions {
       for (Var var: vars) {
         removeUsedVar(var);
       }
+    }
+
+    public void clearUsedVars() {
+      loopUsedVars.clear();
     }
 
     public void addKeepOpenVar(Var variable) {

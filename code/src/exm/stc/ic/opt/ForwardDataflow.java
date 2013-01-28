@@ -441,7 +441,7 @@ public class ForwardDataflow implements OptimizerPass {
      * what should be happening, so its easier just to fix up broken things as a
      * post-optimization step
      */
-    FixupVariables.fixupVariablePassing(logger, program);
+    FixupVariables.fixupProgram(logger, program);
   }
 
   /**

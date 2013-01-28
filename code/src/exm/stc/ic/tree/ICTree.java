@@ -993,11 +993,16 @@ public class ICTree {
       }
     }
 
+    public void findThisBlockUsedVars(Set<String> usedVars) {
+      findThisBlockNeededVars(usedVars, usedVars, null);
+    }
+    
     /**
-     * Variables that needed to be declared in this block
-     * @param stillNeeded
-     * @param written 
-     * @param interdependencies
+     * Find variables that are used within this block (but not recursively
+     *                                                     in child blocks)
+     * @param stillNeeded variables that are required in this block
+     * @param written variables that are written in block
+     * @param interdependencies interdependencies between output variables
      */
     public void findThisBlockNeededVars(Set<String> stillNeeded,
             Set<String> written, List<List<Var>> interdependencies) {
@@ -1032,32 +1037,33 @@ public class ICTree {
     /**
      * Update essential vars for instruction
      * @param inst
-     * @param stillNeeded
-     * @param written 
+     * @param essentialVars
+     * @param writtenVars 
      * @param interdependencies
      * @param hasSideEffects
      */
-    private void updateEssentialVars(Instruction inst, Set<String> stillNeeded,
-        Set<String> written, List<List<Var>> interdependencies, boolean hasSideEffects) {
+    private void updateEssentialVars(Instruction inst, Set<String> essentialVars,
+        Set<String> writtenVars, List<List<Var>> interdependencies, boolean hasSideEffects) {
       // check which variables are still needed
       for (Arg oa: inst.getInputs()) {
         if (oa.isVar()) {
-          stillNeeded.add(oa.getVar().name());
+          essentialVars.add(oa.getVar().name());
         }
       }
       
       for (Var v: inst.getOutputs()) {
-        written.add(v.name());
+        writtenVars.add(v.name());
       }
       
       // Can't eliminate instructions with side-effects
       if (hasSideEffects) {
         for (Var out: inst.getOutputs()) {
-          stillNeeded.add(out.name());
+          essentialVars.add(out.name());
         }
       } else {
         // Can only eliminate one var if can eliminate all
-        interdependencies.add(inst.getOutputs());
+        if (interdependencies != null)
+          interdependencies.add(inst.getOutputs());
       }
     }
 

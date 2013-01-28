@@ -190,6 +190,11 @@ public class ICContinuations {
       return null;
     }
     
+    public void clearPassedInVars() {
+      // Implementation for synchronous continuations
+      assert(!this.isAsync());
+    }
+    
     public void addPassedInVar(Var variable) {
       // Implementation for synchronous continuations
       assert(!this.isAsync());
@@ -380,6 +385,12 @@ public class ICContinuations {
       assert(variable != null);
       ICUtil.removeVarInList(passedInVars, variable.name());
     }
+
+    @Override
+    public void clearPassedInVars() {
+      this.passedInVars.clear();
+    }
+    
     @Override
     public void clearKeepOpenVars() {
       this.keepOpenVars.clear();
@@ -1097,7 +1108,14 @@ public class ICContinuations {
       this.loopContinue.addUsedVars(vars);
       this.loopBreak.addUsedVars(vars);
     }
-
+    
+    @Override
+    public void clearPassedInVars() {
+      super.clearPassedInVars();
+      this.loopContinue.clearUsedVars();
+      this.loopBreak.clearUsedVars();
+    }
+    
     @Override
     public void addKeepOpenVar(Var v) {
       // special implementation to also fix up the loopContinue instruction
