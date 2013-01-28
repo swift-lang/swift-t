@@ -51,12 +51,13 @@ public class ComputedValue {
   
   final Opcode op;
   final String subop;
+  final int index; // Index of output if multiple outputs (0 is default);
   final List<Arg> inputs;
   final Arg valLocation; // The constant expression or variable where it can be found
   final boolean outClosed; // true if out is known to be closed
   final EquivalenceType equivType;
   
-  public ComputedValue(Opcode op, String subop, List<Arg> inputs,
+  public ComputedValue(Opcode op, String subop, int index, List<Arg> inputs,
       Arg valLocation, boolean outClosed, EquivalenceType equivType) {
     super();
     assert(op != null);
@@ -64,6 +65,7 @@ public class ComputedValue {
     assert(inputs != null);
     this.op = op;
     this.subop = subop;
+    this.index = index;
     this.inputs = inputs;
     this.valLocation = valLocation;
     this.outClosed = outClosed;
@@ -71,22 +73,48 @@ public class ComputedValue {
   }
   
   public ComputedValue(Opcode op, String subop, List<Arg> inputs,
+      Arg valLocation, boolean outClosed, EquivalenceType equivType) {
+    this(op, subop, 0, inputs, valLocation, outClosed, equivType);
+  }
+  
+  public ComputedValue(Opcode op, String subop, List<Arg> inputs,
       Arg valLocation, boolean outClosed) {
     this(op, subop, inputs, valLocation, outClosed, EquivalenceType.VALUE);
   }
+  
+  public ComputedValue(Opcode op, List<Arg> inputs,
+      Arg valLocation, boolean outClosed) {
+    this(op, "", inputs, valLocation, outClosed);
+  }
+  
+  public ComputedValue(Opcode op, String subop, int index, List<Arg> inputs,
+      Arg valLocation, boolean outClosed) {
+    this(op, subop, index, inputs, valLocation, outClosed, EquivalenceType.VALUE);
+  }
+  
   public ComputedValue(Opcode op, String subop, Arg input,
       Arg valLocation, boolean outClosed) {
     this(op, subop, Arrays.asList(input), valLocation, outClosed);
   }
   
-  public ComputedValue(Opcode op, String subop, Arg input) {
-    this(op, subop, Arrays.asList(input));
+  public ComputedValue(Opcode op, Arg input,
+      Arg valLocation, boolean outClosed) {
+    this(op, "", input, valLocation, outClosed);
   }
   
   public ComputedValue(Opcode op, String subop, List<Arg> inputs) {
     this(op, subop, inputs, null, false);
   }
   
+  public ComputedValue(Opcode op, List<Arg> inputs) {
+    this(op, "", inputs);
+  }
+  
+  public ComputedValue(Opcode op, List<Arg> inputs, Arg valLocation,
+      boolean outClosed, EquivalenceType equivType) {
+    this(op, "", inputs, valLocation, outClosed, equivType);
+  }
+
   public Opcode getOp() {
     return op;
   }
@@ -119,6 +147,7 @@ public class ComputedValue {
     ComputedValue other = (ComputedValue) otherO;
     if (this.op == other.op && 
         this.subop.equals(other.subop) &&
+        this.index == other.index &&
         this.inputs.size() == other.inputs.size()) {
       for (int i = 0; i < inputs.size(); i++) {
         if (!this.inputs.get(i).equals(other.inputs.get(i))) {
@@ -134,6 +163,7 @@ public class ComputedValue {
   public int hashCode() {
     int result = this.op.hashCode();
     result = 37 * result + this.subop.hashCode(); 
+    result = 37 * result + ((Integer)index).hashCode();
     for (Arg o: this.inputs) {
       if (o == null) {
         throw new STCRuntimeError("Null oparg in " + this);

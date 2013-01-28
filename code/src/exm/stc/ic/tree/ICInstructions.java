@@ -1672,7 +1672,7 @@ public class ICInstructions {
                 + src.getVar());
           }
           ComputedValue assign = new ComputedValue(cvop,
-                    "", Arrays.asList(val), src, outIsClosed);
+                    Arrays.asList(val), src, outIsClosed);
           
           Opcode derefOp = derefOpCode(src.getType());
           
@@ -1680,8 +1680,7 @@ public class ICInstructions {
             return Arrays.asList(retrieve, assign);
           } else {
             return Arrays.asList(retrieve, assign, 
-                new ComputedValue(derefOp, "", Arrays.asList(src),
-                    val, false));
+                new ComputedValue(derefOp, Arrays.asList(src), val, false));
           }
         }
         case ADDRESS_OF:
@@ -1702,12 +1701,12 @@ public class ICInstructions {
           assert(cvop != null);
 
           ComputedValue retrieve = new ComputedValue(cvop,
-                    "", Arrays.asList(dst), src, false);
+                    Arrays.asList(dst), src, false);
           if (op == Opcode.ADDRESS_OF) {
             Opcode derefOp = derefOpCode(dst.getType());
             if (derefOp != null) {
               ComputedValue deref = 
-                   new ComputedValue(derefOp, "", Arrays.asList(dst),
+                   new ComputedValue(derefOp, Arrays.asList(dst),
                                                  src, false);
               return Arrays.asList(retrieve, assign, deref);
             }
@@ -1739,14 +1738,14 @@ public class ICInstructions {
         case STRUCT_INSERT: {
           // Lookup
           ComputedValue lookup = new ComputedValue(Opcode.STRUCT_LOOKUP,
-              "", Arrays.asList(args.get(0), args.get(1)), args.get(2), false,
+              Arrays.asList(args.get(0), args.get(1)), args.get(2), false,
               EquivalenceType.REFERENCE);
           return Arrays.asList(lookup); 
         }
         case STRUCT_LOOKUP: {
           // don't know if its closed
           ComputedValue lookup = new ComputedValue(Opcode.STRUCT_LOOKUP,
-              "", Arrays.asList(args.get(1), args.get(2)), args.get(0), false,
+              Arrays.asList(args.get(1), args.get(2)), args.get(0), false,
               EquivalenceType.REFERENCE);
           return Arrays.asList(lookup); 
         }
@@ -1790,13 +1789,13 @@ public class ICInstructions {
                * was previously inserted at this index, then we can 
                * short-circuit this as we know what is in the reference */
               ComputedValue retrieveCV = new ComputedValue(retrieveOpcode(
-                  lookupRes.type()), "", contents, prev, false);
+                  lookupRes.type()), contents, prev, false);
               Opcode derefOp = derefOpCode(lookupRes.type());
               if (derefOp == null) {
                 return Arrays.asList(retrieveCV, cv);
               } else {
                 ComputedValue derefCV = new ComputedValue(derefOp,
-                    "", contents, prev, false);
+                    contents, prev, false);
                 return Arrays.asList(retrieveCV, cv, derefCV);
               }
             } else {
@@ -1826,7 +1825,7 @@ public class ICInstructions {
             if (prev != null) {
               // See if we know the value of this reference already
               ComputedValue derefCV = new ComputedValue(retrieveOpcode(
-                  nestedArr.type()), "", Arrays.asList(contents),
+                  nestedArr.type()), Arrays.asList(contents),
                                                         prev, false);
               return Arrays.asList(derefCV, cv);
             } else {
@@ -1846,7 +1845,7 @@ public class ICInstructions {
      */
     private ComputedValue vanillaComputedValue(boolean closed) {
       assert(numOutputArgs() == 1);
-      return new ComputedValue(op, "", 
+      return new ComputedValue(op,
           this.args.subList(1, this.args.size()),
           this.args.get(0), closed);
     }
@@ -1938,29 +1937,28 @@ public class ICInstructions {
           return Collections.singletonList(
                 ComputedValue.makeCopyCV(getOutput(0),
                                          getInput(0)));
-        } else if (getOutputs().size() == 1) {
-          // TODO: does it matter if this writes a mapped variable? 
-          
-          boolean outputClosed = false; // safe assumption
-          String canonicalFunctionName = this.functionName;
-          List<Arg> in = new ArrayList<Arg>(getInputs());
-          if (Builtins.isCommutative(this.functionName)) {
-            // put in canonical order
-            Collections.sort(in);
-          }
-          
+        } else {
           List<ComputedValue> res = new ArrayList<ComputedValue>();
-          res.add(new ComputedValue(this.op, 
-              canonicalFunctionName, in, 
-              Arg.createVar(getOutput(0)), outputClosed));
+          for (int output = 0; output < getOutputs().size(); output++) {
+            // TODO: does it matter if this writes a mapped variable? 
+            
+            boolean outputClosed = false;// safe assumption
+            String canonicalFunctionName = this.functionName;
+            List<Arg> in = new ArrayList<Arg>(getInputs());
+            if (Builtins.isCommutative(this.functionName)) {
+              // put in canonical order
+              Collections.sort(in);
+            }
+            
+            res.add(new ComputedValue(this.op, 
+                canonicalFunctionName, output, in, 
+                Arg.createVar(getOutput(output)), outputClosed));
+          }
           if (op == Opcode.CALL_BUILTIN && 
-                      this.functionName.equals(Builtins.INPUT_FILE)) {
-            // Inferring filename is problematic
+              this.functionName.equals(Builtins.INPUT_FILE)) {
             res.add(fileNameCV(getInput(0), getOutput(0)));
           }
           return res;
-        } else {
-          // TODO: Not sure to do with multiple outputs
         }
       }
       return null;
@@ -2511,7 +2509,7 @@ public class ICInstructions {
         for (int i = 0; i < outFiles.size(); i++) {
           // Unique key for cv includes number of output
           // Output file should be closed after external program executes
-          ComputedValue cv = new ComputedValue(op, cmd + "!!" + i,
+          ComputedValue cv = new ComputedValue(op, cmd, i,
                      args, Arg.createVar(outFiles.get(i)), true);
           cvs.add(cv);
         }
@@ -3370,8 +3368,7 @@ public class ICInstructions {
     if (op == null) {
       return null;
     }
-    return new ComputedValue(op, "", 
-        Collections.singletonList(Arg.createVar(src)));
+    return new ComputedValue(op, Arrays.asList(Arg.createVar(src)));
   }
 
   public static ComputedValue assignComputedVal(Var dst, Arg val) {
@@ -3409,7 +3406,7 @@ public class ICInstructions {
     } else {
       Opcode op = assignOpcode(dstType);
       if (op != null) {
-        return new ComputedValue(op, "", Arrays.asList(val), Arg.createVar(dst)
+        return new ComputedValue(op, Arrays.asList(val), Arg.createVar(dst)
                                                                           , true);
       }
     }
@@ -3547,7 +3544,7 @@ public class ICInstructions {
     assert(outFilename.isVar());
     assert(Types.isString(outFilename.getVar().type()));
     return new ComputedValue(Opcode.GET_FILENAME,
-        "", Arrays.asList(Arg.createVar(inFile)), outFilename, false);
+        Arrays.asList(Arg.createVar(inFile)), outFilename, false);
   }
 
   private static String formatFunctionCall(Opcode op, 
