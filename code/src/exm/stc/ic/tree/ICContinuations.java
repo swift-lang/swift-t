@@ -322,7 +322,6 @@ public class ICContinuations {
       runLast = val;
     }
     public boolean runLast() {
-      // TODO Auto-generated method stub
       return runLast;
     }
 

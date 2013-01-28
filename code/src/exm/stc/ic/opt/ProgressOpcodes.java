@@ -25,8 +25,8 @@ import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 
 /**
- * TODO:
- * should divide further
+ * Helper functions and data to determine whether given instructions can
+ * be counted as doing "meaningful work".  Currently there are two categories:
  * - Opcodes that don't spawn or enable further work, so can be put off
  * - Opcodes that are not computationally intense, so don't need to run in parallel 
  * @author tim

@@ -66,8 +66,7 @@ public class CopyOnWriteSmallSet<T> implements Set<T> {
 
   @Override
   public boolean contains(Object o) {
-    // TODO Auto-generated method stub
-    return false;
+    return data.contains(o);
   }
 
   @Override

@@ -1238,7 +1238,6 @@ public class TurbineGenerator implements CompilerBackend
     // This better be the bottom
     Sequence point = pointStack.peek();
 
-    //TODO: call const init code
     Sequence s = new Sequence();
     Proc proc = new Proc(prefixedFunctionName,
                          usedTclFunctionNames, args, s);
@@ -1582,7 +1581,7 @@ public class TurbineGenerator implements CompilerBackend
 
     /**
      * Increment readers by a
-     * TODO: handle struct and file vars
+     * TODO: handle struct vars
      * @param vars
      * @param incr expression for the amount of increment/decrement.  If null, assume 1
      * @param negate if true, then negate incr

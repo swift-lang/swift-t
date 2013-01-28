@@ -380,7 +380,6 @@ public class ICInstructions {
 
     @Override
     public TaskMode getMode() {
-      // TODO: doesn't really make sense
       return TaskMode.SYNC;
     }
   }
@@ -1302,7 +1301,6 @@ public class ICInstructions {
         break;
       case ARRAY_INSERT_FUTURE:
         Var sIndex = args.get(1).getVar();
-        // TODO: disabled due to test 309
         if (waitForClose || closedVars.contains(sIndex.name())) {
           return new MakeImmRequest(null, Arrays.asList(sIndex));
         }
@@ -1356,7 +1354,6 @@ public class ICInstructions {
       default:
         // fall through
       }
-      //TODO: add in create nested instructions
       return null;
     }
     
@@ -1930,7 +1927,6 @@ public class ICInstructions {
     
     @Override
     public List<ComputedValue> getComputedValues(CVMap existing) {
-      // TODO: make order of args invariant where possible
       if (Builtins.isPure(functionName)) {
         if (!this.writesMappedVar() && isCopyFunction()) {
           // Handle copy as a special case
@@ -1940,8 +1936,6 @@ public class ICInstructions {
         } else {
           List<ComputedValue> res = new ArrayList<ComputedValue>();
           for (int output = 0; output < getOutputs().size(); output++) {
-            // TODO: does it matter if this writes a mapped variable? 
-            
             boolean outputClosed = false;// safe assumption
             String canonicalFunctionName = this.functionName;
             List<Arg> in = new ArrayList<Arg>(getInputs());
