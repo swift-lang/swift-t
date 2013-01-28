@@ -23,7 +23,11 @@
  *  Tcl extension for miscellaneous C functions
  */
 
+#include "config.h"
+
+#ifdef HAVE_MALLOC_H
 #include <malloc.h>
+#endif
 
 #include <tcl.h>
 
@@ -37,9 +41,14 @@ c_utils_heapsize_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(1);
 
-  struct mallinfo s = mallinfo();
+  long count = -1;
 
-  Tcl_Obj* result = Tcl_NewLongObj(s.uordblks);
+  #ifdef HAVE_MALLOC_H
+  struct mallinfo s = mallinfo();
+  count = s.uordblks;
+  #endif
+
+  Tcl_Obj* result = Tcl_NewLongObj(count);
 
   Tcl_SetObjResult(interp, result);
 
