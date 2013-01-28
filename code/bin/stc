@@ -135,8 +135,21 @@ function enable_opt() {
 help()
 {
   cat ${STC_HOME}/help.txt
+  echo
+  report_optimizations
   exit 0
 }
+
+report_optimizations() {
+    echo "Optimization levels:"
+    echo "===================="
+    echo "All levels include optimizations from previous."
+    echo "O1 optimizations: ${O1_OPTS}"
+    echo "O2 (default) optimizations: ${O2_OPTS}"
+    echo "O3 optimizations: ${O3_OPTS}"
+    echo "OX (experimental) optimizations: ${EXPERIMENTAL_OPTS}"
+}
+
 
 # Set this to 1 to debug this script (-V)
 VERBOSE=0
@@ -248,7 +261,7 @@ OUTPUT=$2
 
 if [[ ${INPUT} == "" ]]
 then
-  print "stc: no input file"
+  print "stc: no input file.  Use -h switch for stc help"
   return ${EXIT_ERROR_SCRIPT}
 fi
 
