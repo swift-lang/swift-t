@@ -290,11 +290,13 @@ namespace eval turbine {
       store_integer $result [ check_str_int $t ]
     }
 
+    # Must trim leading zeros - Tcl treats leading zeros as octal
     proc check_str_int { input } {
-       if { ! [ string is integer -strict $input ] } {
-          error "could not convert string \"${input}\" to integer"
-       }
-       return $input
+        if { ! [ string is integer -strict \
+                     [ string trimleft $input "0" ] ] } {
+            error "could not convert string '${input}' to integer"
+        }
+        return $input
     }
 
     proc fromint { stack result input } {
