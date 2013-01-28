@@ -56,11 +56,12 @@ AC_PROG_CC
 # We prefer to use cp -u for installation
 AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
             [AC_PATH_PROGS_FEATURE_CHECK([CP_U], [cp],
-              [[cp_u_out=`cp -u /dev/null /dev/stdout 2>&1 | cat > /dev/null`
+              [[cp_u_out=`cp -u /dev/null cp_u.token 2>&1 > /dev/null`
                 test "$?" = 0 \
                 && ac_cv_path_cp_u=yes || ac_cv_path_cp_u=no ]],
               [])])
 AC_SUBST([CP_U], [$ac_cv_path_cp_u])
+[[ -r cp_u.token ]] && rm cp_u.token
 
 # We prefer to use cp --parents for installation
 AC_CACHE_CHECK([for cp that supports --parents], [ac_cv_path_cp_parents],
@@ -445,6 +446,7 @@ AC_SUBST(CFLAGS)
 
 AC_DEFINE_UNQUOTED(DISABLE_LOG, $DISABLE_LOG, [Disables logging])
 
+ENABLE_BGP=0
 AC_ARG_ENABLE(bgp,
     AS_HELP_STRING([--enable-bgp],
                    [Special handling for BG/P.]),

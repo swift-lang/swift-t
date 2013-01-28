@@ -34,7 +34,7 @@ ifeq ($(USE_MAC),no)
 else
 # Mac
   SO_SUFFIX = dylib
-  MAC_FLAT = -flat_namespace
+  MAC_FLAT = -Wl,-flat_namespace
   MAC_NAME = -install_name $(INSTALL_LIB)/libtclturbine.dylib
   SHARED = -dynamiclib $(MAC_FLAT)
 endif
