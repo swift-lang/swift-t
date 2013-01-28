@@ -169,6 +169,11 @@ namespace eval turbine {
 
     proc store_integer { id value } {
         log "store: <$id>=$value"
+
+        # Tcl cannot convert e.g., 099 to an integer.  Trim:
+        if { ! [ string equal $value "0" ] } {
+            set value [ string trimleft $value "0" ]
+        }
         set waiters [ adlb::store $id $adlb::INTEGER $value ]
         notify_waiters $id $waiters
         c::cache store $id $adlb::INTEGER $value
