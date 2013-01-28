@@ -51,6 +51,7 @@ AC_SUBST(USE_MAC)
 
 # Checks for programs.
 AC_PROG_CC
+AC_PATH_PROG([SWIG],[swig])
 # We trust the user's install and omit AC_PROG_INSTALL
 
 # We prefer to use cp -u for installation
