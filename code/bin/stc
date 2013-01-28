@@ -132,6 +132,37 @@ function enable_opt() {
   COMPILER_OPTS+="-D${OPTNAME}=true"
 }
 
+OPTLEVEL=
+function set_opt_level() {
+  OPTLEVEL=$1
+  verbose "Optimization level ${OPTLEVEL}"
+  if [ ${OPTLEVEL} = 0 ]; then
+    ENABLED_OPTS=()
+    DISABLED_OPTS=($O1_OPTS $O2_OPTS $O3_OPTS $EXPERIMENTAL_OPTS)
+  elif [ ${OPTLEVEL} = 1 ]; then
+    ENABLED_OPTS=($O1_OPTS)
+    DISABLED_OPTS=($O2_OPTS $O3_OPTS $EXPERIMENTAL_OPTS)
+  elif [ ${OPTLEVEL} = 2 ]; then
+    ENABLED_OPTS=($O1_OPTS $O2_OPTS)
+    DISABLED_OPTS=($O3_OPTS $EXPERIMENTAL_OPTS)
+  elif [ ${OPTLEVEL} = 3 ]; then
+    ENABLED_OPTS=($O1_OPTS $O2_OPTS $O3_OPTS)
+    DISABLED_OPTS=($EXPERIMENTAL_OPTS)
+  elif [ ${OPTLEVEL} = X ]; then
+    ENABLED_OPTS=($O1_OPTS $O2_OPTS $O3_OPTS $EXPERIMENTAL_OPTS)
+    DISABLED_OPTS=()
+  else
+    echo "Invalid optimization level -O ${OPTLEVEL}"
+    return 1
+  fi
+  for opt in $DISABLED_OPTS; do
+    disable_opt ${opt}
+  done
+  for opt in $ENABLED_OPTS; do
+    enable_opt ${opt}
+  done
+}
+
 help()
 {
   cat ${STC_HOME}/help.txt
@@ -202,32 +233,8 @@ do
     T) verbose "TURNON: ${OPTARG}"
       enable_opt ${OPTARG}
       ;;
-    O) verbose "Optimization level ${OPTARG}"
-      if [ ${OPTARG} = 0 ]; then
-        ENABLED_OPTS=()
-        DISABLED_OPTS=($O1_OPTS $O2_OPTS $O3_OPTS $EXPERIMENTAL_OPTS)
-      elif [ ${OPTARG} = 1 ]; then
-        ENABLED_OPTS=($O1_OPTS)
-        DISABLED_OPTS=($O2_OPTS $O3_OPTS $EXPERIMENTAL_OPTS)
-      elif [ ${OPTARG} = 2 ]; then
-        ENABLED_OPTS=($O1_OPTS $O2_OPTS)
-        DISABLED_OPTS=($O3_OPTS $EXPERIMENTAL_OPTS)
-      elif [ ${OPTARG} = 3 ]; then
-        ENABLED_OPTS=($O1_OPTS $O2_OPTS $O3_OPTS)
-        DISABLED_OPTS=($EXPERIMENTAL_OPTS)
-      elif [ ${OPTARG} = X ]; then
-        ENABLED_OPTS=($O1_OPTS $O2_OPTS $O3_OPTS $EXPERIMENTAL_OPTS)
-        DISABLED_OPTS=()
-      else
-        echo "Invalid optimization level -O ${OPTARG}"
-        return 1
-      fi
-      for opt in $DISABLED_OPTS; do
-        disable_opt ${opt}
-      done
-      for opt in $ENABLED_OPTS; do
-        enable_opt ${opt}
-      done
+    O) 
+       set_opt_level $OPTARG
       ;;
     C) verbose "IC Output: ${OPTARG}"
        COMPILER_OPTS+="-Dstc.ic.output-file=${OPTARG}"
@@ -269,6 +276,11 @@ if [[ ! -f ${INPUT} ]]
 then
   print "stc: not readable: ${INPUT}"
   return ${EXIT_ERROR_SCRIPT}
+fi
+
+if [[ -z ${OPTLEVEL} ]]
+then
+  set_opt_level 2
 fi
 
 # Clear this in case the user has set it
