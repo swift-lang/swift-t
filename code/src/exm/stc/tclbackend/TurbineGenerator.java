@@ -525,7 +525,7 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void setFilenameVal(Var file, Arg filenameVal) {
     assert(Types.isFile(file.type()));
-    assert(filenameVal.isImmediateInt());
+    assert(filenameVal.isImmediateString());
     pointStack.peek().add(Turbine.setFilenameVal(varToExpr(file),
               argToExpr(filenameVal)));
   }

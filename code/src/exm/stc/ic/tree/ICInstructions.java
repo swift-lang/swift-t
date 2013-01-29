@@ -173,8 +173,12 @@ public class ICInstructions {
       /** Optional: if the output variable of op changed */
       public final Var newOut;
       public final Var oldOut;
+      
+      /** Whether caller should store output results */
+      public final boolean storeOutputVals;
       public final Instruction newInsts[];
       public final Var keepOpen[];
+      
       
       /**
        * If the output variable changed from reference to plain future
@@ -209,10 +213,21 @@ public class ICInstructions {
       
       public MakeImmChange(Var newOut, Var oldOut, Instruction newInsts[],
                             Var keepOpen[]) {
+        this(newOut, oldOut, newInsts, keepOpen, true);
+      }
+      
+
+      public MakeImmChange(Instruction newInsts[], boolean storeOutputVals) {
+        this(null, null, newInsts, null, storeOutputVals);
+      }
+      
+      public MakeImmChange(Var newOut, Var oldOut, Instruction newInsts[],
+          Var keepOpen[], boolean storeOutputVals) {
         this.newOut = newOut;
         this.oldOut = oldOut;
         this.newInsts = newInsts;
         this.keepOpen = keepOpen;
+        this.storeOutputVals = storeOutputVals;
       }
       
       /**
@@ -1048,6 +1063,8 @@ public class ICInstructions {
         }
       case CHOOSE_TMP_FILENAME:
         return 1;
+      case SET_FILENAME_VAL:
+        return 1;
       case DECR_BLOB_REF:
       case FREE_BLOB:
       case DECR_LOCAL_FILE_REF:
@@ -1130,6 +1147,9 @@ public class ICInstructions {
       case CHOOSE_TMP_FILENAME:
         // Non-deterministic
         return true;
+      case SET_FILENAME_VAL:
+        // Only effect is in file output var
+        return false;
         
       case STRUCT_LOOKUP:
       case LOAD_REF:
@@ -1518,9 +1538,12 @@ public class ICInstructions {
           // Choose filename
           TurbineOp.chooseTmpFilename(filenameVal),
           // Set the filename on the file var
+          TurbineOp.setFilenameVal(fileVar, Arg.createVar(filenameVal)),
+          // Get the filename again but can assume mapping initialized
           TurbineOp.getFileName(filenameFuture, fileVar, false)
         };
-        return new MakeImmChange(newInsts);
+        // Caller shouldn't set filenameFuture
+        return new MakeImmChange(newInsts, false);
       }
       default:
         // fall through
@@ -1602,6 +1625,7 @@ public class ICInstructions {
       case ARRAY_LOOKUP_IMM:
       case COPY_REF:
       case CHOOSE_TMP_FILENAME:
+      case SET_FILENAME_VAL:
         return TaskMode.SYNC;
       
       case ARRAY_INSERT_FUTURE:

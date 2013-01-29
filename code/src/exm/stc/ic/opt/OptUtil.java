@@ -124,7 +124,7 @@ public class OptUtil {
     }
 
     // Now copy back values into future
-    if (newOutVars != null) {
+    if (newOutVars != null && change.storeOutputVals) {
       for (int i = 0; i < newOutVars.size(); i++) {
         Var oldOut = oldOutVars.get(i);
         Var newOut = newOutVars.get(i);
