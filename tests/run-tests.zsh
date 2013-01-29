@@ -93,6 +93,7 @@ done
 if [[ ${STC} == "" ]]
 then
   STC=$( which stc )
+  [[ ${?} != 0 ]] && STC=""
 fi
 if [[ ${STC} == "" ]]
 then
