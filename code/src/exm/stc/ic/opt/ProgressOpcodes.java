@@ -135,6 +135,7 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.LOAD_FILE);
     opcodes.add(Opcode.GET_FILENAME);
     opcodes.add(Opcode.GET_OUTPUT_FILENAME);
+    opcodes.add(Opcode.SET_FILENAME_VAL);
     opcodes.add(Opcode.ARRAY_CREATE_NESTED_FUTURE);
     opcodes.add(Opcode.ARRAY_CREATE_NESTED_IMM);
     opcodes.add(Opcode.ARRAY_INSERT_FUTURE);

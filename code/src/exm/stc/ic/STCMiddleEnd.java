@@ -883,6 +883,14 @@ public class STCMiddleEnd implements CompilerBackend {
   }
   
   @Override
+  public void setFilenameVal(Var file, Arg filenameVal) {
+    assert(Types.isFile(file.type()));
+    assert(filenameVal.isImmediateInt());
+    currBlock().addInstruction(
+            TurbineOp.setFilenameVal(file, filenameVal));
+  }
+  
+  @Override
   public void chooseTmpFilename(Var filenameVal) {
     assert(filenameVal.type().assignableTo(Types.V_STRING));
     currBlock().addInstruction(
@@ -936,5 +944,4 @@ public class STCMiddleEnd implements CompilerBackend {
     
     block.addInstructions(instBuffer);
   }
-
 }

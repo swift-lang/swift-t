@@ -581,7 +581,7 @@ public class ForwardDataflow implements OptimizerPass {
         cv.addComputedValue(compVal, cv.isAvailable(compVal));
       }
       if (v.isMapped() && Types.isFile(v.type())) {
-        ComputedValue filenameVal = ICInstructions.fileNameCV(
+        ComputedValue filenameVal = ICInstructions.filenameCV(
             Arg.createVar(v.mapping()), v);
         cv.addComputedValue(filenameVal, false);
       }

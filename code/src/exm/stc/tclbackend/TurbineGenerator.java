@@ -523,6 +523,14 @@ public class TurbineGenerator implements CompilerBackend
   }
   
   @Override
+  public void setFilenameVal(Var file, Arg filenameVal) {
+    assert(Types.isFile(file.type()));
+    assert(filenameVal.isImmediateInt());
+    pointStack.peek().add(Turbine.setFilenameVal(varToExpr(file),
+              argToExpr(filenameVal)));
+  }
+  
+  @Override
   public void chooseTmpFilename(Var filenameVal) {
     assert(filenameVal.type().assignableTo(Types.V_STRING));
     pointStack.peek().add(Turbine.mkTemp(prefixVar(filenameVal)));

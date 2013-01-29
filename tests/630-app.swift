@@ -1,5 +1,4 @@
 #include <builtins.swift>
-// SdKIP-THIS-TEST
 
 app () f (file input, string s, int i) {
     "cat" @input;

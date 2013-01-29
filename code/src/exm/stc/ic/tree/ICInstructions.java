@@ -617,6 +617,8 @@ public class ICInstructions {
       case GET_OUTPUT_FILENAME:
         gen.getFileName(args.get(0).getVar(), args.get(1).getVar(), true);
         break;
+      case SET_FILENAME_VAL:
+        gen.setFilenameVal(args.get(0).getVar(), args.get(1));
       case CHOOSE_TMP_FILENAME:
         gen.chooseTmpFilename(args.get(0).getVar());
         break;
@@ -1704,9 +1706,27 @@ public class ICInstructions {
         }
         case GET_FILENAME: 
         case GET_OUTPUT_FILENAME: {
-          Arg out = args.get(0);
-          Arg in = args.get(1);
-          return Arrays.asList(fileNameCV(out, in.getVar()));
+          List<ComputedValue> res = new ArrayList<ComputedValue>();
+          Arg filename = args.get(0);
+          Arg file = args.get(1);
+          res.add(filenameCV(filename, file.getVar()));
+          
+          // Check to see if value of filename is in local value
+          Arg filenameVal = existing.getLocation(filenameValCV(null, file));
+          if (filenameVal != null) {
+            // We know that if we fetch from the output future of this instruction,
+            // we'll get the previously stored filename
+            res.add(new ComputedValue(Opcode.LOAD_STRING,
+                                      filename, filenameVal, true));
+          }
+          return res;
+        }
+        case SET_FILENAME_VAL: {
+          Arg file = args.get(0);
+          Arg val = args.get(1);
+          ComputedValue getCV = filenameValCV(file, val);
+          
+          return Arrays.asList(getCV);
         }
         case DEREF_BLOB:
         case DEREF_BOOL:
@@ -1826,7 +1846,6 @@ public class ICInstructions {
           return null;
       }
     }
-
     /**
      * Create the "standard" computed value
      * assume 1 ouput arg
@@ -1942,7 +1961,7 @@ public class ICInstructions {
           }
           if (op == Opcode.CALL_BUILTIN && 
               this.functionName.equals(Builtins.INPUT_FILE)) {
-            res.add(fileNameCV(getInput(0), getOutput(0)));
+            res.add(filenameCV(getInput(0), getOutput(0)));
           }
           return res;
         }
@@ -3534,12 +3553,20 @@ public class ICInstructions {
     }
   }
 
-  public static ComputedValue fileNameCV(Arg outFilename, Var inFile) {
+  public static ComputedValue filenameCV(Arg outFilename, Var inFile) {
     assert(Types.isFile(inFile.type()));
     assert(outFilename.isVar());
     assert(Types.isString(outFilename.getVar().type()));
     return new ComputedValue(Opcode.GET_FILENAME,
         Arrays.asList(Arg.createVar(inFile)), outFilename, false);
+  }
+  
+  public static ComputedValue filenameValCV(Arg file, Arg filenameVal) {
+    assert(file == null || Types.isFile(file.getType()));
+    assert(filenameVal.isImmediateString());
+    ComputedValue getCV = new ComputedValue(Opcode.GET_FILENAME_VAL,
+                                            file, filenameVal, true);
+    return getCV;
   }
 
   private static String formatFunctionCall(Opcode op, 

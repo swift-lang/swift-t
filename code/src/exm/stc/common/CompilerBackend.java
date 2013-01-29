@@ -158,6 +158,13 @@ public interface CompilerBackend {
   public abstract void chooseTmpFilename(Var filenameVal);
   
   /**
+   * Set filename of file future to a local string value
+   * @param a file future
+   * @param filenameVal a local string value
+   */
+  public abstract void setFilenameVal(Var file, Arg filenameVal);
+
+  /**
    * NOTE: all built-ins should be defined before other functions
    * @param function
    * @param inputs

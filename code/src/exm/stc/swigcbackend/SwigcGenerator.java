@@ -2224,4 +2224,10 @@ public class SwigcGenerator implements CompilerBackend
       
     }
 
+    @Override
+    public void setFilenameVal(Var file, Arg filenameVal) {
+      // TODO Auto-generated method stub
+      
+    }
+
 }

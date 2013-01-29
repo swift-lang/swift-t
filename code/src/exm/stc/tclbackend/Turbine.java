@@ -46,6 +46,8 @@ import exm.stc.tclbackend.tree.Value;
  * */
 class Turbine
 {
+  private static final Token GET_OUTPUT_FILE_PATH = new Token("turbine::get_output_file_path");
+  private static final Token GET_FILE_PATH = new Token("turbine::get_file_path");
   private static final String EXEC_EXTERNAL = "turbine::exec_external";
   /* Names of types used by Turbine */
   public static final String STRING_TYPENAME = "string";
@@ -885,9 +887,9 @@ class Turbine
    */
   public static Expression getFileName(Value fileVar, boolean initUnmapped) {
     if (initUnmapped) {
-      return new Square(new Token("turbine::get_output_file_path"), fileVar);
+      return new Square(GET_OUTPUT_FILE_PATH, fileVar);
     } else {
-      return new Square(new Token("turbine::get_file_path"), fileVar);
+      return new Square(GET_FILE_PATH, fileVar);
     }
   }
   
@@ -934,6 +936,12 @@ class Turbine
 
   public static SetVariable mkTemp(String varName) {
     return new SetVariable(varName, Square.fnCall("turbine::mktemp"));
+  }
+
+  public static Command setFilenameVal(Value fileFuture,
+                                       Expression filenameVal) {
+    return new Command("turbine::set_filename_val",
+                       Arrays.asList(fileFuture, filenameVal));
   }
 
 }
