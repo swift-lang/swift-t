@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/zsh -f
 
 # usage: run-test <OPTIONS> <PROGRAM> <OUTPUT>
 # turbine must be in your PATH or in TURBINE

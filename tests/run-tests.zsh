@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/zsh -f
 
 # STC RUN-TESTS
 
