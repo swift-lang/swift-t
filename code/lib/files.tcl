@@ -164,6 +164,11 @@ namespace eval turbine {
         return $result
     }
 
+    # set the filename to a string
+    proc set_filename_val { file_handle filename } {
+      store_string [ get_file_path $file_handle ] $filename
+    }
+
     proc close_file { handle } {
       store_void [ get_file_status $handle ]
     }
