@@ -48,9 +48,9 @@ public class Settings
   public static final String OPT_CONSTANT_FOLD = "stc.opt.constant-fold";
   public static final String OPT_SHARED_CONSTANTS = "stc.opt.shared-constants";
   public static final String OPT_FLATTEN_NESTED = "stc.opt.flatten-nested";
-  public static final String OPT_BRANCH_PREDICT = "stc.opt.branch-predict";
   public static final String OPT_DEAD_CODE_ELIM = "stc.opt.dead-code-elim";
   public static final String OPT_FORWARD_DATAFLOW = "stc.opt.forward-dataflow";
+  public static final String OPT_EXPAND_DATAFLOW_OPS = "stc.opt.expand-dataflow-ops";
   public static final String OPT_WAIT_COALESCE = "stc.opt.wait-coalesce";
   public static final String OPT_PIPELINE = "stc.opt.pipeline";
   public static final String OPT_CONTROLFLOW_FUSION =
@@ -98,11 +98,11 @@ public class Settings
     defaults.setProperty(OPT_FLATTEN_NESTED, "true");
     defaults.setProperty(OPT_CONSTANT_FOLD, "true");
     defaults.setProperty(OPT_SHARED_CONSTANTS, "true");
-    defaults.setProperty(OPT_BRANCH_PREDICT, "true");
     defaults.setProperty(OPT_DEAD_CODE_ELIM, "true");
     defaults.setProperty(OPT_UNROLL_LOOPS, "true");
     defaults.setProperty(OPT_DISABLE_ASSERTS, "false");
     defaults.setProperty(OPT_FORWARD_DATAFLOW, "true");
+    defaults.setProperty(OPT_EXPAND_DATAFLOW_OPS, "true");
     defaults.setProperty(OPT_WAIT_COALESCE, "true");
     defaults.setProperty(OPT_PIPELINE, "false");
     defaults.setProperty(OPT_CONTROLFLOW_FUSION, "true");
@@ -187,10 +187,10 @@ public class Settings
     // Check that boolean values are correct
     getBoolean(OPT_FLATTEN_NESTED);
     getBoolean(OPT_CONSTANT_FOLD);
-    getBoolean(OPT_BRANCH_PREDICT);
     getBoolean(OPT_DEAD_CODE_ELIM);
     getBoolean(OPT_DISABLE_ASSERTS);
     getBoolean(OPT_FORWARD_DATAFLOW);
+    getBoolean(OPT_EXPAND_DATAFLOW_OPS);
     getBoolean(OPT_WAIT_COALESCE);
     getBoolean(OPT_PIPELINE);
     getBoolean(OPT_CONTROLFLOW_FUSION);

@@ -24,11 +24,11 @@ fi
 
 COMPILER_OPTS=()
 
-O1_OPTS=("constant-fold" "branch-predict" "dead-code-elim"
+O1_OPTS=("constant-fold" "dead-code-elim"
                     "flatten-nested" "shared-constants"
                     "forward-dataflow" "unroll-loops"
                      "controlflow-fusion" )
-O2_OPTS=("wait-coalesce" "hoisting")
+O2_OPTS=("expand-dataflow-ops" "wait-coalesce" "hoisting")
 O3_OPTS=("pipeline" "function-inline")
 EXPERIMENTAL_OPTS=()
 
@@ -50,9 +50,6 @@ function get_compiler_opt_name() {
         shared-constants) echo "stc.opt.shared-constants"
                     return 0
                     ;;
-        branch-predict) echo "stc.opt.branch-predict"
-                    return 0
-                    ;;
         dead-code-elim) echo "stc.opt.dead-code-elim"
                     return 0
                     ;;
@@ -60,6 +57,9 @@ function get_compiler_opt_name() {
                     return 0
                     ;;
         forward-dataflow) echo "stc.opt.forward-dataflow"
+                    return 0
+                    ;;
+        expand-dataflow-ops) echo "stc.opt.expand-dataflow-ops"
                     return 0
                     ;;
         wait-coalesce) echo "stc.opt.wait-coalesce"

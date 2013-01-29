@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.Settings;
 import exm.stc.common.CompilerBackend.WaitMode;
+import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
@@ -195,7 +196,14 @@ public class WaitCoalescer implements OptimizerPass {
 
   public boolean rearrangeWaits(Logger logger, Function fn, Block block,
                                        ExecContext currContext) {
-    boolean exploded = explodeFuncCalls(logger, fn, currContext, block);
+    boolean exploded = false;
+    try {
+      if (Settings.getBoolean(Settings.OPT_EXPAND_DATAFLOW_OPS)) {
+        exploded = explodeFuncCalls(logger, fn, currContext, block);
+      }
+    } catch (InvalidOptionException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
 
     if (logger.isTraceEnabled()) {
       //StringBuilder sb = new StringBuilder();

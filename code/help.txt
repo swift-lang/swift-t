@@ -38,21 +38,36 @@ OPTIONS
 COMPILER OPTION NAMES
 ----------------------------------------
 
-(All are on by default, except assert disabling)
+Optimization passes:
+-------------------
+constant-fold: propagate constants and do compile-time evaluation of
+      expressions
+dead-code-elim: eliminate unused variables, instructions and branches
+      (this must be enabled for most other passes to be useful)
+shared-constants: lift all constants into shared global constant region
+      and share instances of same value
+flatten-nested: flatten nested blocks
+forward-dataflow: forward dataflow analysis to eliminate common
+      subexpressions, optimize array lookups, eliminate redundant
+      loads and stores, etc
+unroll-loops: unroll loops with @unroll annotation
+controlflow-fusion: fuse together loops over same range, etc
+expand-dataflow-ops: expand dataflow version of functions or operations
+      int explicit wait, loads, local calls, and stores
+wait-coalesce: rearrange task dependencies to minimise the number
+               of tasks/variable subscribes
+hoisting: hoist calculations out of loop bodies
+pipeline: compile-time pipeline where sequentially dependent worker
+        tasks are merged into a single task
+function-inline: inline calls to functions selectively depending on
+        function size and number of calls.  This allows inter-procedural
+        optimization
+disable-asserts: disable assert statements (off by default)
 
-constant-fold: whether constant folding/propagation should occur
-shared-constants: whether we should lift all constants into shared
- global constant region
-branch-predict: whether static branch prediction should occur
-dead-code-elim: whether dead code elimination should occur
-flatten-nested: whether nested blocks should be flattened
-forward-dataflow: whether we should do forward dataflow analysis
-                   to eliminate common subexpressions, etc
-wait-coalesce: whether to attempt to rearrange the task dependencies
-               to minimise the number of tasks/variable subscribes
-controlflow-fusion: whether to attempt to fuse control
-                    flow structures: loops and if statements
-disable-asserts: whether to disable assert statements
-unroll-loops: whether to unroll loops with @unroll annotation
-no-stack: whether we should disable the explicit stack
-no-stack-vars: whether we should put user variables in the stack
+Experimental/other features:
+-------------------
+refcounting: reference counting-based garbage collection (experimental)
+auto-declare: allow omission of explicit type declarations by using
+        local type inference (experimental)
+no-stack: disable the explicit distributed stack (on by default)
+no-stack-vars: disable putting user variables in the distributed stack (on by default)

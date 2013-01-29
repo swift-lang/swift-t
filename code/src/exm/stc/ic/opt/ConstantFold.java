@@ -181,14 +181,11 @@ public class ConstantFold implements OptimizerPass {
       }
     }
   
-    if (Settings.getBoolean(Settings.OPT_BRANCH_PREDICT)) {
-      branchPredict(block, knownConstants);
-    }
-  
     // Eliminate variables (only those which were declared in this block) 
     // where possible (this will catch unneeded variables created by 
     // constant folding but also some previously unneeded ones)
     if (Settings.getBoolean(Settings.OPT_DEAD_CODE_ELIM)) {
+      branchPredict(block, knownConstants);
       if (changed) {
         DeadCodeEliminator.eliminate(logger, block);
       }
