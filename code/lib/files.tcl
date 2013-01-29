@@ -206,9 +206,9 @@ namespace eval turbine {
         set new_refcount [ expr [ lindex $v 1 ] - 1 ]
         lset v 1 $new_refcount
         if { $new_refcount == 0 } {
-            # TODO: re-enable
-            puts "Delete [ lindex $v 0 ]"
-            # file delete -force [ lindex $v 0 ]    
+            set path [ lindex $v 0 ]
+            puts "delete locally used file $path"
+            file delete -force $path  
         }
     }
 
