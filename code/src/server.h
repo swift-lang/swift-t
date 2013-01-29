@@ -32,15 +32,11 @@ int xlb_map_to_server(int worker);
 // ADLB_Server prototype is in adlb.h
 
 /**
+   Allows xlb_sync() logic to serve incoming requests while syncing
    @param source MPI rank of allowable client:
                  usually MPI_ANY_SOURCE unless syncing
  */
 adlb_code xlb_serve_one(int source);
-
-/**
-   Serve several requests
- */
-adlb_code xlb_serve_several();
 
 /**
    This process has accepted a sync from a calling server

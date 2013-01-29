@@ -116,6 +116,7 @@ xlb_map_to_server(int rank)
   return w + xlb_workers;
 }
 
+static adlb_code serve_several(void);
 static inline bool master_server(void);
 static inline void check_idle(void);
 static adlb_code server_shutdown(void);
@@ -135,7 +136,7 @@ ADLB_Server(long max_memory)
     if (shutting_down)
       break;
 
-    adlb_code code = xlb_serve_several();
+    adlb_code code = serve_several();
     ADLB_CHECK(code);
 
     check_steal();
@@ -157,8 +158,8 @@ static int curr_server_backoff = 0;
    excessive CPU.  We use an adaptive algorithm that backs off
    more if the queue has been empty recently.
  */
-adlb_code
-xlb_serve_several()
+static adlb_code
+serve_several()
 {
   int reqs = 0; // count of requests served
   int total_polls = 0; // total polls
