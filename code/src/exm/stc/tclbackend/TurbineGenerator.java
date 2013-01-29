@@ -840,9 +840,11 @@ public class TurbineGenerator implements CompilerBackend
       logMsg.add(argExpr);
     }
     
+    
     Expression stdinFilename = TclUtil.argToExpr(redirects.stdin, true);
     Expression stdoutFilename = TclUtil.argToExpr(redirects.stdout, true);
     Expression stderrFilename = TclUtil.argToExpr(redirects.stderr, true);
+    logMsg.add(Turbine.execKeywordOpts(stdinFilename, stdoutFilename, stderrFilename));
     
     pointStack.peek().add(Turbine.turbineLog(logMsg));
     pointStack.peek().add(Turbine.exec(cmd, stdinFilename,

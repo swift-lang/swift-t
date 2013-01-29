@@ -619,6 +619,7 @@ public class ICInstructions {
         break;
       case SET_FILENAME_VAL:
         gen.setFilenameVal(args.get(0).getVar(), args.get(1));
+        break;
       case CHOOSE_TMP_FILENAME:
         gen.chooseTmpFilename(args.get(0).getVar());
         break;
@@ -1712,7 +1713,7 @@ public class ICInstructions {
           res.add(filenameCV(filename, file.getVar()));
           
           // Check to see if value of filename is in local value
-          Arg filenameVal = existing.getLocation(filenameValCV(null, file));
+          Arg filenameVal = existing.getLocation(filenameValCV(file, null));
           if (filenameVal != null) {
             // We know that if we fetch from the output future of this instruction,
             // we'll get the previously stored filename
@@ -3562,8 +3563,8 @@ public class ICInstructions {
   }
   
   public static ComputedValue filenameValCV(Arg file, Arg filenameVal) {
-    assert(file == null || Types.isFile(file.getType()));
-    assert(filenameVal.isImmediateString());
+    assert(Types.isFile(file.getType()));
+    assert(filenameVal == null || filenameVal.isImmediateString());
     ComputedValue getCV = new ComputedValue(Opcode.GET_FILENAME_VAL,
                                             file, filenameVal, true);
     return getCV;

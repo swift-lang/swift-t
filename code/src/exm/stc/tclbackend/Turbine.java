@@ -850,6 +850,14 @@ class Turbine
     ArrayList<Expression> args2 = new ArrayList<Expression>(args.size() + 4);
     args2.add(new TclString(cmd, true));
     
+    Dict kwOpts = execKeywordOpts(stdinFilename, stdoutFilename, stderrFilename);
+    args2.add(kwOpts);
+    args2.addAll(args);
+    return new Command(EXEC_EXTERNAL, args2);
+  }
+
+  public static Dict execKeywordOpts(Expression stdinFilename,
+      Expression stdoutFilename, Expression stderrFilename) {
     ArrayList<Pair<String, Expression>> keywordOpts =
                               new ArrayList<Pair<String,Expression>>();
     if (stdinFilename != null) {
@@ -861,10 +869,8 @@ class Turbine
     if (stderrFilename != null) {
       keywordOpts.add(Pair.create("stderr", stderrFilename));
     }
-    
-    args2.add(Dict.dictCreateSE(keywordOpts));
-    args2.addAll(args);
-    return new Command(EXEC_EXTERNAL, args2);
+    Dict kwOpts = Dict.dictCreateSE(keywordOpts);
+    return kwOpts;
   }
   
 
