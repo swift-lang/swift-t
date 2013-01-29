@@ -29,7 +29,7 @@
 // strnlen() is a GNU extension: Need _GNU_SOURCE
 #define _GNU_SOURCE
 #if ENABLE_BGP == 1
-// Also need __USE_GNU on the BG/P
+// Also need __USE_GNU on the BG/P and on older GCC (4.1, 4.3)
 #define __USE_GNU
 #endif
 #include <string.h>
