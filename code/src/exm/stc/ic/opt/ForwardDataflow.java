@@ -760,8 +760,11 @@ public class ForwardDataflow implements OptimizerPass {
     // Create replacement sequence
     Block insertContext;
     ListIterator<Instruction> insertPoint;
-    if (req.mode == TaskMode.LOCAL || req.mode == TaskMode.SYNC ||
-      (req.mode == TaskMode.LOCAL_CONTROL && execCx == ExecContext.CONTROL)) {
+    boolean noWaitRequired = req.mode == TaskMode.LOCAL ||
+                             req.mode == TaskMode.SYNC ||
+                             (req.mode == TaskMode.LOCAL_CONTROL
+                                 && execCx == ExecContext.CONTROL);
+    if (noWaitRequired) {
       insertContext = block;
       insertPoint = insts;
     } else {
@@ -791,8 +794,10 @@ public class ForwardDataflow implements OptimizerPass {
         maybeVal = cv.findRetrieveResult(v);
       }
       // Can only retrieve value of future or reference
-       
-      if (maybeVal != null) {
+      // If we inserted a wait, need to consider if local value can
+      // be passed into new scope
+      if (maybeVal != null &&
+            (noWaitRequired || !cantPass(maybeVal.getType()))) {
         /*
          * this variable might not actually be passed through continuations to
          * the current scope, so we might have temporarily made the IC

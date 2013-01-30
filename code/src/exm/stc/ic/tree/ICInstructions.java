@@ -3574,6 +3574,9 @@ public class ICInstructions {
     case VOID:
       assert(src.isVar() && src.getVar().type().equals(Types.V_VOID));
       return TurbineOp.assignVoid(dst, src);
+    case FILE:
+      assert(src.isVar() && src.getVar().type().equals(Types.V_FILE));
+      return TurbineOp.assignFile(dst, src);
     default:
       throw new STCRuntimeError("method to set " +
           dst.type().typeName() + " is not known yet");

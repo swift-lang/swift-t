@@ -86,6 +86,9 @@ public class WrapUtil {
         VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
     if (valOut.type().equals(Types.V_BLOB)) {
       block.addCleanup(valOut, TurbineOp.freeBlob(valOut));
+    } else if (valOut.type().equals(Types.V_FILE)) {
+      // Cleanup file if not copied to file future
+      block.addCleanup(valOut, TurbineOp.decrLocalFileRef(valOut));
     }
     return valOut;
   }
