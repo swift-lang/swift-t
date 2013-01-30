@@ -194,6 +194,18 @@ namespace eval turbine {
         return [ list $filepath $refcount ]
     }
 
+    proc local_file_path { local_file } {
+        return [ lindex $local_file 0 ]
+    }
+
+    # f: Turbine file handle
+    # returns: local file ref
+    proc get_file { f } {
+        set fname [ retrieve_string [ get_file_path $f ] ]
+        # two references: global file future, local one
+        return [ create_local_file_ref $fname 2 ]
+    }
+
     proc set_file { f local_f_varname } {
        upvar 1 $local_f_varname local_f
        # Increment refcount so not cleaned up locally
@@ -236,7 +248,7 @@ namespace eval turbine {
             [ list readFile_body $result $src ]
     }
 
-    proc readFile_body { result src} {
+    proc readFile_body { result src } {
 	set srcpath [ get_file_path $src ]
 	set s [retrieve_string $srcpath]
         set fp [ ::open $s r ]
@@ -244,6 +256,13 @@ namespace eval turbine {
         close $fp
 	store_string $result $file_data
         file_read_refcount_decr $src
+    }
+
+    proc read_file_local { local_file } {
+        set fp [ ::open [ local_file_path $local_file ] r ]
+	set file_data [ read $fp ]
+        close $fp
+        return $file_data
     }
 
     proc writeFile { stack outputs inputs } {
@@ -263,5 +282,14 @@ namespace eval turbine {
         puts $fp $str
 	close $fp
 	store_void [ get_file_status $dst ]
+    }
+    
+    # local_file: local file object
+    # data: data to write to file
+    # TODO: calling convention not figured out yet
+    proc write_file_local { local_file data } {
+	set fp [ ::open [ local_file_path $local_file ] w+ ]
+        puts $fp $str
+	close $fp
     }
 }

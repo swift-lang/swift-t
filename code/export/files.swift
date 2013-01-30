@@ -24,12 +24,17 @@
 "turbine" "0.0.2" "glob";
 
 @pure
+@dispatch=LEAF
 (string t) readFile(file f)
-"turbine" "0.0.2" "readFile";
+    "turbine" "0.0.2" "readFile"
+    [ "set <<t>> [ turbine::read_file_local <<f>> ]" ];
 
 @pure
 (file t) writeFile(string s)
-"turbine" "0.0.2" "writeFile";
+    "turbine" "0.0.2" "writeFile";
+
+// TODO: calling convention not figured out yet
+//    [ "set <<t>> [ turbine::write_file_local <<s>> ]" ];
 
 
 #endif // FILES_SWIFT
