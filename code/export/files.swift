@@ -33,9 +33,5 @@
 (file t) writeFile(string s)
     "turbine" "0.0.2" "writeFile";
 
-// TODO: calling convention not figured out yet
-//    [ "set <<t>> [ turbine::write_file_local <<s>> ]" ];
-
-
 #endif // FILES_SWIFT
 

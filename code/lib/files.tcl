@@ -104,6 +104,15 @@ namespace eval turbine {
       store_string [ get_file_path $outfile ] $filepath_val
       store_void [ get_file_status $outfile ]
     }
+    
+    # fname: filename as tcl string
+    # return: local file handle
+    proc input_file_local { fname } {
+      if { ! [ file exists $fname ] } {
+        error "input_file: file $fname does not exist"
+      }
+      return [ create_local_file_ref $fname ]
+    }
 
     # initialise an unmapped file to a temporary location
     # should be called if a function is writing to an unmapped file
