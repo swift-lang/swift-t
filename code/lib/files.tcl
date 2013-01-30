@@ -207,7 +207,7 @@ namespace eval turbine {
         lset v 1 $new_refcount
         if { $new_refcount == 0 } {
             set path [ lindex $v 0 ]
-            puts "delete locally used file $path"
+            log "delete locally used file $path"
             file delete -force $path  
         }
     }
