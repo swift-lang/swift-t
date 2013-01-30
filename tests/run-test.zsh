@@ -65,9 +65,9 @@ if [[ ${TURBINE} == "" ]]
 fi
 
 # TODO: allow user to override these from environment
-ENGINES=1
-SERVERS=1
-WORKERS=1
+ENGINES=${TEST_TURBINE_ENGINES:-1}
+SERVERS=${TEST_ADLB_ENGINES:-1}
+WORKERS=${TEST_ADLB_WORKERS:-1}
 
 PROCS=$(( ENGINES + SERVERS + WORKERS ))
 
