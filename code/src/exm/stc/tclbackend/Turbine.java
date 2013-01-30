@@ -931,6 +931,11 @@ class Turbine
     return new Command("turbine::set_file", Arrays.asList(fileFuture, new Token(localFileName)));
   }
 
+  public static TclTree fileGet(String prefixVar, Value varToExpr) {
+    return new SetVariable(prefixVar, 
+        Square.fnCall("turbine::get_file", varToExpr));
+  }
+  
   public static Command decrLocalFileRef(String localFileName) {
     return new Command("turbine::decr_local_file_refcount", new Token(localFileName));
   }

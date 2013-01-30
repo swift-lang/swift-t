@@ -3389,6 +3389,8 @@ public class ICInstructions {
       return TurbineOp.retrieveBlob(dst, src);
     case VOID:
       return TurbineOp.retrieveVoid(dst, src);
+    case FILE:
+      return TurbineOp.retrieveFile(dst, src);
     default:
       throw new STCRuntimeError("method to retrieve " +
             src.type().typeName() + " is not known yet");

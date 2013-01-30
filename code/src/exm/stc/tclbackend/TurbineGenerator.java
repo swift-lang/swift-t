@@ -501,7 +501,7 @@ public class TurbineGenerator implements CompilerBackend
   public void retrieveFile(Var target, Var src) {
     assert(Types.isFile(src.type()));
     assert(target.type().assignableTo(Types.V_FILE));
-    // Do nothing, just a dummy instruction 
+    pointStack.peek().add(Turbine.fileGet(prefixVar(target), varToExpr(src)));
   }
 
   @Override
