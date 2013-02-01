@@ -159,7 +159,7 @@ public interface CompilerBackend {
   
   /**
    * Set filename of file future to a local string value
-   * @param a file future
+   * @param file file future
    * @param filenameVal a local string value
    */
   public abstract void setFilenameVal(Var file, Arg filenameVal);
