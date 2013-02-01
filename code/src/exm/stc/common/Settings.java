@@ -77,9 +77,6 @@ public class Settings
   
   public static final String LOG_FILE = "stc.log.file";
   public static final String LOG_TRACE = "stc.log.trace";
-  
-  // TODO: get rid of this once no longer required
-  public static final String ARRAY_REF_SWITCHEROO = "stc.array-ref-switcheroo";
 
   private static final Properties properties;
   static {
@@ -110,7 +107,6 @@ public class Settings
     defaults.setProperty(OPT_FUNCTION_INLINE_THRESHOLD, "500");
     defaults.setProperty(OPT_HOIST, "true");
     defaults.setProperty(OPT_MAX_ITERATIONS, "10");
-    defaults.setProperty(ARRAY_REF_SWITCHEROO, "false");
     defaults.setProperty(EXPERIMENTAL_REFCOUNTING, "false");
     defaults.setProperty(AUTO_DECLARE, "false");
     defaults.setProperty(LOG_FILE, "");
@@ -199,7 +195,6 @@ public class Settings
     getBoolean(OPT_UNROLL_LOOPS);
     getBoolean(TURBINE_NO_STACK);
     getBoolean(TURBINE_NO_STACK_VARS);
-    getBoolean(ARRAY_REF_SWITCHEROO);
     getBoolean(EXPERIMENTAL_REFCOUNTING);
     getBoolean(AUTO_DECLARE);
 

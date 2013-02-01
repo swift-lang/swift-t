@@ -33,11 +33,9 @@ import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Logging;
-import exm.stc.common.Settings;
 import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
-import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
@@ -75,6 +73,7 @@ import exm.stc.frontend.VariableUsageInfo.VInfo;
 import exm.stc.frontend.tree.ArrayRange;
 import exm.stc.frontend.tree.Assignment;
 import exm.stc.frontend.tree.ForLoopDescriptor;
+import exm.stc.frontend.tree.ForLoopDescriptor.LoopVar;
 import exm.stc.frontend.tree.ForeachLoop;
 import exm.stc.frontend.tree.FunctionDecl;
 import exm.stc.frontend.tree.If;
@@ -85,9 +84,8 @@ import exm.stc.frontend.tree.Literals;
 import exm.stc.frontend.tree.Switch;
 import exm.stc.frontend.tree.Update;
 import exm.stc.frontend.tree.VariableDeclaration;
-import exm.stc.frontend.tree.Wait;
-import exm.stc.frontend.tree.ForLoopDescriptor.LoopVar;
 import exm.stc.frontend.tree.VariableDeclaration.VariableDescriptor;
+import exm.stc.frontend.tree.Wait;
 /**
  * This class walks the Swift AST.
  * It performs typechecking and dataflow analysis as it goes
@@ -229,8 +227,7 @@ public class ASTWalker {
    * @param blockVu
    * @throws UserException
    */
-  private void walkStatement(Context context, SwiftAST tree,
-                             VariableUsageInfo blockVu)
+  private void walkStatement(Context context, SwiftAST tree)
   throws UserException
   {
       int token = tree.getType();
@@ -257,7 +254,7 @@ public class ASTWalker {
           break;
 
         case ExMParser.DECLARATION:
-          declareVariables(context, tree, blockVu);
+          declareVariables(context, tree);
           break;
 
         case ExMParser.ASSIGN_EXPRESSION:
@@ -355,10 +352,8 @@ public class ASTWalker {
           + tree.getLine() + ":" + tree.getCharPositionInLine());
     }
 
-    VariableUsageInfo blockVu = tree.checkedGetVariableUsage();
-
     for (SwiftAST stmt: tree.children()) {
-      walkStatement(context, stmt, blockVu);
+      walkStatement(context, stmt);
     }
 
     cleanupBlockVars(context, noRefcount);
@@ -1032,8 +1027,8 @@ public class ASTWalker {
 
 
   
-  private void declareVariables(Context context, SwiftAST tree,
-      VariableUsageInfo blockVu) throws UserException {
+  private void declareVariables(Context context, SwiftAST tree)
+          throws UserException {
     LogHelper.trace(context, "declareVariable...");
     assert(tree.getType() == ExMParser.DECLARATION);
     int count = tree.getChildCount();
@@ -1044,7 +1039,7 @@ public class ASTWalker {
     
     for (int i = 0; i < vd.count(); i++) {
       VariableDescriptor vDesc = vd.getVar(i);
-      Var var = declareVariable(context, blockVu, vDesc);
+      Var var = declareVariable(context, vDesc);
       SwiftAST declTree = vd.getDeclTree(i);
       SwiftAST assignedExpr = vd.getVarExpr(i);
       if (Types.isScalarUpdateable(var.type())) {
@@ -1090,12 +1085,9 @@ public class ASTWalker {
     }
   }
 
-  private Var declareVariable(Context context, VariableUsageInfo blockVu,
+  private Var declareVariable(Context context,
       VariableDescriptor vDesc) throws UserException, UndefinedTypeException {
-    VInfo vi = blockVu.lookupVariableInfo(vDesc.getName());
     Type definedType = vDesc.getType();
-    // Sometimes we have to use a reference to an array instead of an array
-    Type internalType;
 
     Var mappedVar = null;
     // First evaluate the mapping expr
@@ -1114,29 +1106,8 @@ public class ASTWalker {
                     " mapped");
       }
     }
-    
-    boolean USE_ARRAY_REF_SWITCHEROO;
-    try {
-      USE_ARRAY_REF_SWITCHEROO = Settings.getBoolean(Settings.ARRAY_REF_SWITCHEROO);
-    } catch(InvalidOptionException e) {
-      throw new STCRuntimeError("Option should have been set: " +
-                                                            e.getMessage());
-    }
-    
-          
-    /* temporary kludge, because implementing
-     * an array variable as an array ref doesn't work properly yet
-     * TODO: this is actually really bad because switching the variable types
-     * means that type information is inconsistent between static analysis
-     *      and the codegen stage
-     */
-    if (USE_ARRAY_REF_SWITCHEROO && Types.isArray(definedType)
-        && vi.isAssigned() != Ternary.FALSE && vi.getArrayAssignDepth() == 0) {
-      internalType = new RefType(definedType);
-    } else {
-      internalType = definedType;
-    }
-    Var var = varCreator.createVariable(context, internalType, 
+
+    Var var = varCreator.createVariable(context, definedType, 
         vDesc.getName(), VarStorage.STACK, DefType.LOCAL_USER, mappedVar);
 
     // Might need to close if array or struct containing array
