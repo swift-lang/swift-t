@@ -407,12 +407,15 @@ namespace eval turbine {
     proc container_create_nested { c i type } {
       log "creating nested container: <$c>\[$i\] ($type)"
       if [ adlb::insert_atomic $c $i ] {
-        debug "$c\[$i\] doesn't exist, creating"
+        debug "<$c>\[$i\] doesn't exist, creating"
         # Member did not exist: create it and get reference
         allocate_container t $type
-        adlb::insert $c $i $t
-        # setup rule to close when outer container closes
+        # One reference for the returned, one for parent
+        adlb::slot_create $t
 
+        adlb::insert $c $i $t
+
+        # setup rule to close when outer container closes
         rule "autoclose-$t" "$c" $turbine::LOCAL $adlb::RANK_ANY \
                "adlb::slot_drop $t"
         return $t
@@ -425,6 +428,8 @@ namespace eval turbine {
         while { $container_id == 0 } {
           set container_id [ adlb::lookup $c $i ]
         }
+        # Reference for caller
+        adlb::slot_create $container_id
         return $container_id
       }
     }
