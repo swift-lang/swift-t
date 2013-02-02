@@ -410,9 +410,6 @@ namespace eval turbine {
         debug "<$c>\[$i\] doesn't exist, creating"
         # Member did not exist: create it and get reference
         allocate_container t $type
-        # One reference for the returned, one for parent
-        adlb::slot_create $t
-
         adlb::insert $c $i $t
 
         # setup rule to close when outer container closes
@@ -428,8 +425,6 @@ namespace eval turbine {
         while { $container_id == 0 } {
           set container_id [ adlb::lookup $c $i ]
         }
-        # Reference for caller
-        adlb::slot_create $container_id
         return $container_id
       }
     }
