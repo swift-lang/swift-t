@@ -14,13 +14,14 @@ STC_OPT_LEVELS=() #-O levels to test for STC
 DEFAULT_STC_OPT_LEVEL=1
 ADDTL_STC_ARGS=()
 LEAK_CHECK=0
+STC_TESTS_OUT_DIR=
 
 # Speed up the tests
 if [ -z ${ADLB_EXHAUST_TIME} ]; then
     export ADLB_EXHAUST_TIME=1
 fi
 
-while getopts "ck:n:p:VO:t:T:l" OPTION
+while getopts "ck:n:p:VO:t:T:alo:" OPTION
 do
   case ${OPTION}
     in
@@ -54,6 +55,13 @@ do
       ;;
     l)
       LEAK_CHECK=1
+      ;;
+    o)
+      if [ ! -d ${OPTARG} ]; then
+        echo "${OPTARG} is not a directory"
+        exit 1
+      fi
+      STC_TESTS_OUT_DIR=$(cd ${OPTARG}; pwd)
       ;;
     *)
       # ZSH already prints an error message
@@ -103,6 +111,10 @@ fi
 print "using stc: ${STC}\n"
 
 RUN_TEST=${STC_TESTS_DIR}/run-test.zsh
+
+# Output dir for tests
+export STC_TESTS_OUT_DIR=${STC_TESTS_OUT_DIR:-$STC_TESTS_DIR}
+mkdir -p ${STC_TESTS_OUT_DIR}
 
 export TURBINE_USER_LIB=${STC_TESTS_DIR}
 
@@ -253,6 +265,7 @@ do
   SWIFT_FILE=${SWIFT_FILES[i]}
   TEST_PATH=${SWIFT_FILE%.swift}
   TEST_NAME=$( basename ${TEST_PATH} )
+  TEST_OUT_PATH="${STC_TESTS_OUT_DIR}/${TEST_NAME}"
 
   if (( SKIP_COUNT ))
   then
@@ -279,11 +292,11 @@ do
   fi
 
   (( TEST_COUNT++ ))
-  TCL_FILE=${TEST_PATH}.tcl
-  STC_OUT_FILE=${TEST_PATH}.stc.out
-  STC_ERR_FILE=${TEST_PATH}.stc.err
-  STC_LOG_FILE=${TEST_PATH}.stc.log
-  STC_IC_FILE=${TEST_PATH}.ic
+  TCL_FILE=${TEST_OUT_PATH}.tcl
+  STC_OUT_FILE=${TEST_OUT_PATH}.stc.out
+  STC_ERR_FILE=${TEST_OUT_PATH}.stc.err
+  STC_LOG_FILE=${TEST_OUT_PATH}.stc.log
+  STC_IC_FILE=${TEST_OUT_PATH}.ic
 
   print "test: ${TEST_COUNT} (${i}/${SWIFT_FILE_TOTAL})"
   for OPT_LEVEL in $STC_OPT_LEVELS
