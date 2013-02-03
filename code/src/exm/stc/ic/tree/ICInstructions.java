@@ -871,6 +871,7 @@ public class ICInstructions {
   
     public static Instruction arrayCreateNestedImm(Var arrayResult,
         Var arrayVar, Arg arrIx) {
+      assert(arrIx.isImmediateInt());
       return new TurbineOp(Opcode.ARRAY_CREATE_NESTED_IMM,
           Arg.createVar(arrayResult),
               Arg.createVar(arrayVar), arrIx);
@@ -886,6 +887,7 @@ public class ICInstructions {
   
     public static Instruction arrayRefCreateNestedImmIx(Var arrayResult,
         Var arrayVar, Arg arrIx) {
+      assert(arrIx.isImmediateInt());
       return new TurbineOp(Opcode.ARRAY_REF_CREATE_NESTED_IMM,
           Arg.createVar(arrayResult), Arg.createVar(arrayVar), arrIx);
     }
@@ -1468,8 +1470,7 @@ public class ICInstructions {
         // array handle
         Var oldOut = args.get(0).getVar();
         assert(Types.isArrayRef(oldOut.type()));
-        Var newOut = Var.createDerefTmp(oldOut, 
-                                                VarStorage.ALIAS);
+        Var newOut = Var.createDerefTmp(oldOut, VarStorage.ALIAS);
         return new MakeImmChange(newOut, oldOut,
             arrayCreateNestedImm(newOut,
                             args.get(1).getVar(), values.get(0)),
@@ -1493,21 +1494,25 @@ public class ICInstructions {
                 arrayRefCreateNestedImmIx(args.get(0).getVar(),
                     args.get(1).getVar(), newA));
           } else {
+            assert(Types.isArray(newA.getType()));
             // Replacing array ref with array
             return new MakeImmChange(
-                arrayRefCreateNestedImmIx(args.get(0).getVar(),
-                    newA.getVar(), args.get(2)));
+                arrayCreateNestedComputed(args.get(0).getVar(),
+                    newA.getVar(), args.get(2).getVar()));
           }
         }
-      case ARRAY_REF_CREATE_NESTED_IMM:
+      case ARRAY_REF_CREATE_NESTED_IMM: {
         assert(values.size() == 1);
         Var oldOut3 = args.get(0).getVar();
         assert(Types.isArrayRef(oldOut3.type()));
         Var newOut3 = Var.createDerefTmp(oldOut3,
                                                 VarStorage.ALIAS);
+        Arg ix = args.get(2);
+        assert(ix.isImmediateInt());
         return new MakeImmChange(newOut3, oldOut3,
             arrayCreateNestedImm(newOut3,
-                            values.get(0).getVar(), args.get(2)));
+                            values.get(0).getVar(), ix));
+      }
       case UPDATE_INCR:
       case UPDATE_MIN:
       case UPDATE_SCALE: {
