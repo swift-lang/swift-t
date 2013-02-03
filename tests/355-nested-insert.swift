@@ -49,6 +49,23 @@ main {
             }
         }
     }
+    wait (B) {
+        trace("B closed");
+    }
+    
+    int C[][][];
+    // Test nested loops
+    foreach i in [0:3] {
+        foreach j in [0:3] {
+            foreach k in [0:3] {
+                // Delay insert to force dataflow eval
+                C[i][id_sleep(j)][id_sleep(k)] = i + j + k;
+            }
+        }
+    }
+    wait (C) {
+        trace("C closed");
+    }
 }
 
 (int o) id_sleep (int i) {
