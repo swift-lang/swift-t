@@ -5,7 +5,7 @@
 Turbine Internals
 ================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v0.1.0, November 2012
+v0.1.0, January 2013
 
 ////
 
