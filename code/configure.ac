@@ -362,25 +362,41 @@ AC_ARG_WITH(tcl,
     ]
 )
 
-# Check USE_TCL: set USE_TCL_LIB_DIR
-USE_TCL_LIB_DIR=0
+# Set USE_TCL_LIB_DIR: location of libtcl
+USE_TCL_LIB_DIR=${USE_TCL}/lib
+AC_MSG_CHECKING([for libtcl8.5.so ])
+if [[ ! -r ${USE_TCL_LIB_DIR}/libtcl8.5.so ]]
+then
+    AC_MSG_ERROR([could not find libtcl8.5.so!])
+fi
+AC_MSG_RESULT([ok])
+
+# Set USE_TCL_CFG_DIR: location of tclConfig.sh
+USE_TCL_CFG_DIR=0
 AC_MSG_CHECKING([for tclConfig.sh ])
 # This location is for Tcl installation from source
 if [[ -r ${USE_TCL}/lib/tclConfig.sh ]]
 then
-    USE_TCL_LIB_DIR=${USE_TCL}/lib
-# This location is for Tcl installation from the APT tcl8.5-dev package
+    USE_TCL_CFG_DIR=${USE_TCL}/lib
+# This is a location used by the APT tcl8.5-dev package (1)
 elif [[ -r ${USE_TCL}/lib64/tclConfig.sh ]]
 then
-    USE_TCL_LIB_DIR=${USE_TCL}/lib64
+    USE_TCL_CFG_DIR=${USE_TCL}/lib64
+# This is a location used by the APT tcl8.5-dev package (2)
+elif [[ -r ${USE_TCL}/lib/tcl8.5/tclConfig.sh ]]
+then
+    USE_TCL_CFG_DIR=${USE_TCL}/lib/tcl8.5
 fi
-if [[ ${USE_TCL_LIB_DIR} == 0 ]]
+if [[ ${USE_TCL_CFG_DIR} == 0 ]]
 then
     AC_MSG_ERROR([Could not find tclConfig.sh!])
 fi
 AC_MSG_RESULT([ok])
-source ${USE_TCL_LIB_DIR}/tclConfig.sh
-USE_TCL_LIB_DIR=${USE_TCL}/lib
+source ${USE_TCL_CFG_DIR}/tclConfig.sh
+if [[ ${?} != 0 ]]
+then
+    AC_MSG_ERROR([could not source: ${USR_TCL_CFG_DIR}/tclConfig.sh])
+fi
 
 # Find tclsh binary name (may be tclsh8.5)
 if [[ ${USE_TCLSH_LOCAL} == 0 ]]
