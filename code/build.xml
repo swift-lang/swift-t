@@ -6,8 +6,8 @@
 
        Note:
        Eclipse generates class files in build/
-       This Ant script puts them in src/
-       The ones in src/ are the ones used in the output jar file
+       This Ant script puts them in classes/
+       The ones in classes/ are the ones used in the output jar file
   -->
 
   <!-- Locations of jars and ANTLR grammar file -->
