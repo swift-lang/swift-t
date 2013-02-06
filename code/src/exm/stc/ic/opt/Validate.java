@@ -94,11 +94,8 @@ public class Validate implements OptimizerPass {
       checkCleanups(fn, block);
     
     for (Continuation c: block.getContinuations()) {
-      List<Var> constructDefined = c.constructDefinedVars();
-      if (constructDefined != null) {
-        for (Var v: constructDefined) {
-          checkVarUnique(logger, program, fn, usedNames, v);
-        }
+      for (Var v: c.constructDefinedVars()) {
+        checkVarUnique(logger, program, fn, usedNames, v);
       }
       for (Block inner: c.getBlocks()) { 
         checkUniqueVarNames(logger, program, fn, inner,
@@ -117,10 +114,7 @@ public class Validate implements OptimizerPass {
     } else {
       // Clean actions can refer to construct defined vars
       List<Var> constructVars = block.getParentCont().constructDefinedVars();
-      if (constructVars != null) {
-        blockVarNames.addAll(
-            Var.nameList(constructVars));
-      }
+      blockVarNames.addAll(Var.nameList(constructVars));
     }
     
     

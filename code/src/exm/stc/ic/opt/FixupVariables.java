@@ -153,24 +153,19 @@ public class FixupVariables implements OptimizerPass {
           Set<String> neededVars) {
     // First see what variables the continuation defines inside itself
     List<Var> constructVars = continuation.constructDefinedVars();
-    List<String> constructVarNames = null;
-    if (constructVars != null) {
-      constructVarNames = Var.nameList(constructVars);
-    }
+    List<String> constructVarNames = Var.nameList(constructVars);
     
     for (Block innerBlock : continuation.getBlocks()) {
       HierarchicalMap<String, Var> childVisible = visible.makeChildMap();
-      if (constructVars != null) {
-        for (Var v : constructVars) {
-          childVisible.put(v.name(), v);
-        }
+      for (Var v : constructVars) {
+        childVisible.put(v.name(), v);
       }
       
       HashSet<String> innerNeededVars = fixupBlockRec(logger,
           function, innerBlock, childVisible, referencedGlobals);
 
       // construct will provide some vars
-      if (constructVarNames != null) {
+      if (!constructVarNames.isEmpty()) {
         innerNeededVars.removeAll(constructVarNames);
       }
 

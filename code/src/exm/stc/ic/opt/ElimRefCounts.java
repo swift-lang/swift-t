@@ -1,7 +1,5 @@
 package exm.stc.ic.opt;
 
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -15,9 +13,10 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
-import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.Counters;
+import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -48,7 +47,7 @@ public class ElimRefCounts extends FunctionOptimizerPass {
   public void optimize(Logger logger, Function f) throws UserException {
     elimRefCountsRec(logger, f, f.getMainblock(),
                      new Counters<Var>(), new Counters<Var>(),
-                     Collections.<Var>emptySet());
+                     new HierarchicalSet<Var>());
   }
 
   /*
@@ -58,49 +57,26 @@ public class ElimRefCounts extends FunctionOptimizerPass {
    */
   private void elimRefCountsRec(Logger logger, Function f, Block block,
       Counters<Var> readIncrements, Counters<Var> writeIncrements,
-      Set<Var> parentAssignedAliasVars) {
-    
-    
+      HierarchicalSet<Var> parentAssignedAliasVars) {
     fixBlockRefCounting(logger, block, readIncrements, writeIncrements,
                         parentAssignedAliasVars);
     
-    //cancelInstructionRefcounts(block, thisBlockArrays);
-    
-    
-    //cancelContinuationRefcounts(block, thisBlockArrays);
-
-    Set<Var> assignedAliasVars = new HashSet<Var>();
+    // Add own alias vars
+    HierarchicalSet<Var> assignedAliasVars = parentAssignedAliasVars.makeChild();
     findAssignedAliasVars(block, assignedAliasVars);
-    assignedAliasVars.addAll(parentAssignedAliasVars);
     for (Continuation cont: block.getContinuations()) {
       elimRefCountsCont(logger, f, cont, assignedAliasVars);
     }
   }
 
-  /**
-   * Find aliasVars that were assigned in this block in order
-   * to track where ref increment instructions can safely be put
-   * @param block
-   * @param assignedAliasVars 
-   */
-  private void findAssignedAliasVars(Block block, Set<Var> assignedAliasVars) {
-    for (Instruction inst: block.getInstructions()) {
-      for (Var out: inst.getOutputs()) {
-        if (out.storage() == VarStorage.ALIAS) {
-          assignedAliasVars.add(out);
-        }
-      }
-    }
-  }
-
   private void elimRefCountsCont(Logger logger, Function f,
-                                 Continuation cont, Set<Var> parentAssignedAliasVars) {
+           Continuation cont, HierarchicalSet<Var> parentAssignedAliasVars) {
     for (Block block: cont.getBlocks()) {
       // Build separate copy for each block
       Counters<Var> readIncrements = new Counters<Var>();
       Counters<Var> writeIncrements = new Counters<Var>();
-      if (cont.isAsync() && cont.getType() == ContinuationType.WAIT_STATEMENT) {
-        // TODO: handle other than wait
+      if (isSingleSpawnCont(cont)) {
+        // TODO: handle foreach loops
         for (Var keepOpen: cont.getKeepOpenVars()) {
           if (RefCounting.hasWriteRefCount(keepOpen)) {
             writeIncrements.decrement(keepOpen);
@@ -112,9 +88,26 @@ public class ElimRefCounts extends FunctionOptimizerPass {
           }
         }
       }
+      HierarchicalSet<Var> contAssignedAliasVars =
+                    parentAssignedAliasVars.makeChild();
+      for (Var v: cont.constructDefinedVars()) {
+        contAssignedAliasVars.add(v);
+      }
+      
       elimRefCountsRec(logger, f, block, readIncrements, writeIncrements,
-                       parentAssignedAliasVars);
+                      contAssignedAliasVars);
     }
+  }
+
+  /**
+   * Is a continuation that spawns a single task initially
+   * @param cont
+   * @return
+   */
+  private boolean isSingleSpawnCont(Continuation cont) {
+    return cont.isAsync() && 
+            (cont.getType() == ContinuationType.WAIT_STATEMENT ||
+             cont.getType() == ContinuationType.LOOP);
   }
 
   /**
@@ -277,7 +270,8 @@ public class ElimRefCounts extends FunctionOptimizerPass {
     
     // Check that all refcounts are zero
     for (Entry<Var, Long> e: increments.entries()) {
-      assert(e.getValue() == 0) : "Refcount not 0 after pass" + e.toString();
+      assert(e.getValue() == 0) : "Refcount not 0 after pass " + e.toString() +
+                                  " in block " + block;
     }
   }
 
@@ -334,6 +328,22 @@ public class ElimRefCounts extends FunctionOptimizerPass {
       for (Var keepOpen: cont.getKeepOpenVars()) {
         if (RefCounting.hasWriteRefCount(keepOpen)) {
           writeIncrements.add(keepOpen, incr);
+        }
+      }
+    }
+  }
+
+  /**
+   * Find aliasVars that were assigned in this block in order
+   * to track where ref increment instructions can safely be put
+   * @param block
+   * @param assignedAliasVars 
+   */
+  private void findAssignedAliasVars(Block block, Set<Var> assignedAliasVars) {
+    for (Instruction inst: block.getInstructions()) {
+      for (Var out: inst.getOutputs()) {
+        if (out.storage() == VarStorage.ALIAS) {
+          assignedAliasVars.add(out);
         }
       }
     }

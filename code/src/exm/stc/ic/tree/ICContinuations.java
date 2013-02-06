@@ -171,7 +171,7 @@ public class ICContinuations {
     /**
      * Return list of variables that are defined by construct and
      * accessible inside
-     * @return
+     * @return non-null list
      */
     public abstract List<Var> constructDefinedVars();
 
@@ -841,7 +841,7 @@ public class ICContinuations {
 
     @Override
     public List<Var> constructDefinedVars() {
-      return null;
+      return Collections.emptyList();
     }
 
     /**
@@ -1227,7 +1227,7 @@ public class ICContinuations {
     
     @Override
     public List<Var> constructDefinedVars() {
-      return null;
+      return Collections.emptyList();
     }
   }
 
@@ -1784,7 +1784,7 @@ public class ICContinuations {
 
     @Override
     public List<Var> constructDefinedVars() {
-      return null;
+      return Collections.emptyList();
     }
   }
 
@@ -2032,7 +2032,7 @@ public class ICContinuations {
 
     @Override
     public List<Var> constructDefinedVars() {
-      return null;
+      return Collections.emptyList();
     }
 
     @Override

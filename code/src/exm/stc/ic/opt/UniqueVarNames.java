@@ -96,7 +96,7 @@ public class UniqueVarNames implements OptimizerPass {
                                          Continuation cont) {
     // Update any continuation-defined vars
     List<Var> constructVars = cont.constructDefinedVars();
-    if (constructVars != null) {
+    if (!constructVars.isEmpty()) {
       HashMap<String, Arg> renames = new HashMap<String, Arg>();
       for (Var v: cont.constructDefinedVars()) {
         assert(cont.getBlocks().size() == 1) : "Assume continuation with " +

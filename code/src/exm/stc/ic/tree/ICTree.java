@@ -490,11 +490,9 @@ public class ICTree {
             return true;
         }
         for (Continuation c: curr.getContinuations()) {
-          List<Var> constructVars = c.constructDefinedVars();
-          if (constructVars != null)
-            for (Var cv: constructVars)
-              if (cv.name().equals(name))
-                return true;
+          for (Var cv: c.constructDefinedVars())
+            if (cv.name().equals(name))
+              return true;
           for (Block inner: c.getBlocks()) {
             blocks.push(inner);
           }

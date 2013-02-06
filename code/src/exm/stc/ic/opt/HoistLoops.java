@@ -127,12 +127,9 @@ public class HoistLoops implements OptimizerPass {
         HierarchicalMap<String, Block> childWriteMap = writeMap.makeChildMap();
         
         // make sure loop iteration variables, etc are tracked
-        List<Var> constructVars = c.constructDefinedVars();
-        if (constructVars != null) {
-          for (Var v: constructVars) {
-            if (trackWrites(v)) {
-              childWriteMap.put(v.name(), b);
-            }
+        for (Var v: c.constructDefinedVars()) {
+          if (trackWrites(v)) {
+            childWriteMap.put(v.name(), b);
           }
         }
         

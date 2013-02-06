@@ -397,11 +397,8 @@ public class FunctionInline implements OptimizerPass {
         }
       }
       for (Continuation c: block.getContinuations()) {
-        List<Var> constructVars = c.constructDefinedVars();
-        if (constructVars != null) {
-          for (Var cv: constructVars) {
-            updateName(logger, block, targetFunction, replacements, excludedNames, cv);
-          }
+        for (Var cv: c.constructDefinedVars()) {
+          updateName(logger, block, targetFunction, replacements, excludedNames, cv);
         }
         for (Block inner: c.getBlocks()) {
           blocks.push(inner);
