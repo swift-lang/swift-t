@@ -267,7 +267,9 @@ public class HoistLoops implements OptimizerPass {
   }
 
   private static boolean trackDeclares(Var v) {
-    return Types.isArray(v.type()) || Types.isArrayRef(v.type());
+    // Track declares for variables that can be waited on
+    return (Types.isArray(v.type()) || Types.isScalarFuture(v.type()) ||
+            Types.isRef(v.type()));
   }
 
   private static boolean canHoistThrough(Continuation c) {
@@ -399,7 +401,8 @@ public class HoistLoops implements OptimizerPass {
                      + inVar);
     } else if (depth < 0 && trackDeclares(inVar)) {
       // Maybe there was a declaration of the variable that we
-      // shouldn't hoist past
+      // shouldn't hoist past.  This works for, e.g. an unwritten
+      //  future that is is assigned by a concurrent task
       int declareDepth = state.declareMap.getDepth(inVar);
       if (logger.isTraceEnabled())
         logger.trace("Hoist constrained by " + inVar + ": "
@@ -407,10 +410,9 @@ public class HoistLoops implements OptimizerPass {
       assert(declareDepth >= 0) : inVar;
       maxHoist = Math.min(maxHoist, declareDepth);
     } else if (depth < 0) {
-      // We weren't tracking anything, can't hoist
+      // Don't have any info about how far we can hoist it, do nothing
       logger.trace("Can't hoist because of " + inVar);
-      throw new STCRuntimeError("SHOULD WE BE HERE?" + inVar);
-      //return 0;
+      return 0;
     }
     return maxHoist;
   }
