@@ -1165,16 +1165,14 @@ public class ICTree {
     }
     
     public void replaceVarDeclaration(Var oldV, Var newV) {
-      ListIterator<Var> it = variables.listIterator();
-      while (it.hasNext()) {
-        Var curr = it.next();
-        if (curr.name().equals(oldV.name())) {
-          it.set(newV);
-          return;
-        }
+      if (!this.variables.contains(oldV)) {
+        throw new STCRuntimeError("Variable: " + oldV.toString() +
+            " not found in block var declarations"); 
       }
-      throw new STCRuntimeError("Variable: " + oldV.toString() + " not found" +
-      " in block var declarations");
+
+      Map<Var, Arg> replacement = 
+          Collections.singletonMap(oldV, Arg.createVar(newV));
+      this.renameVars(replacement, false);
     }
 
     /**

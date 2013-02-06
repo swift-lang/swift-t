@@ -16,7 +16,9 @@
 package exm.stc.ic.opt;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
@@ -73,18 +75,27 @@ public class OptUtil {
   public static void replaceInstructionOutputVar(Block block,
           List<Instruction> instBuffer, Var newOut, Var oldOut) {
     block.declareVariable(newOut);
-    if (Types.isRefTo(oldOut.type(),
-        newOut.type())) {
+    if (Types.isRefTo(oldOut.type(), newOut.type())) {
+      Var refVar;
       if (oldOut.storage() == VarStorage.ALIAS) {
         // Will need to initialise variable in this scope as before we
         // were relying on instruction to initialise it
         
-        Var replacement = new Var(oldOut.type(),
+        refVar = new Var(oldOut.type(),
             oldOut.name(), VarStorage.TEMP,
             oldOut.defType(), oldOut.mapping());
-        block.replaceVarDeclaration(oldOut, replacement);
+        
+        // Replace variable in block and in buffered instructions
+        block.replaceVarDeclaration(oldOut, refVar);
+        Map<Var, Arg> renames = Collections.singletonMap(
+                                oldOut, Arg.createVar(refVar));
+        for (Instruction inst: instBuffer) {
+          inst.renameVars(renames);
+        }
+      } else {
+        refVar = oldOut;
       }
-      instBuffer.add(TurbineOp.addressOf(oldOut, newOut));
+      instBuffer.add(TurbineOp.addressOf(refVar, newOut));
     } else {
       throw new STCRuntimeError("Tried to replace instruction"
           + " output var " + oldOut + " with " + newOut + ": this doesn't make sense"
