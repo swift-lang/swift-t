@@ -35,6 +35,7 @@ import java.util.TreeMap;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.Logging;
 import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
@@ -1019,10 +1020,6 @@ public class ICTree {
         }
       }
     }
-
-    public void findThisBlockUsedVars(Set<Var> usedVars) {
-      findThisBlockNeededVars(usedVars, usedVars, null);
-    }
     
     /**
      * Find variables that are used within this block (but not recursively
@@ -1040,6 +1037,7 @@ public class ICTree {
           stillNeeded.add(v.mapping());
         }
       }
+      
       for (Instruction i : instructions) {
         updateEssentialVars(i, stillNeeded, written, interdependencies,
                             i.hasSideEffects());
@@ -1092,8 +1090,12 @@ public class ICTree {
         }
       } else {
         // Can only eliminate one var if can eliminate all
-        if (interdependencies != null)
-          interdependencies.add(inst.getModifiedOutputs());
+        if (interdependencies != null) {
+          List<Var> modOut = inst.getModifiedOutputs();
+          if (modOut.size() > 1) {
+            interdependencies.add(modOut);
+          }
+        }
       }
     }
 

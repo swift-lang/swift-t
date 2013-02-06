@@ -248,7 +248,7 @@ public class ForwardDataflow implements OptimizerPass {
     /**
      * Called when we enter a construct that blocked on v
      * 
-     * @param varName
+     * @param var
      */
     public void close(Var var, boolean recursive) {
       // Do DFS on the dependency graph to find all dependencies
