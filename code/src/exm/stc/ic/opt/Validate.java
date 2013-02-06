@@ -25,6 +25,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
@@ -344,6 +345,9 @@ public class Validate implements OptimizerPass {
       for (Var init: initializedAliases) {
         assert(init.storage() == VarStorage.ALIAS) : inst + " " + init;
         ICUtil.remove(regularOutputs, init);
+        if (initVars.contains(init)) {
+          throw new STCRuntimeError("double initialized variable " + init);
+        }
         initVars.add(init);
       }
     }
@@ -351,6 +355,9 @@ public class Validate implements OptimizerPass {
     while (regOutIt.hasNext()) {
       Var out = regOutIt.next();
       if (out.storage() == VarStorage.LOCAL) {
+        if (initVars.contains(out)) {
+          throw new STCRuntimeError("double initialized variable " + out);
+        }
         initVars.add(out);
       }
     }
