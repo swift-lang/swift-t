@@ -70,23 +70,23 @@ public class ElimRefCounts extends FunctionOptimizerPass {
 
   private void elimRefCountsCont(Logger logger, Function f,
                                  Continuation cont) {
-    Counters<Var> readIncrements = new Counters<Var>();
-    Counters<Var> writeIncrements = new Counters<Var>();
-    if (cont.isAsync() && cont.getType() == ContinuationType.WAIT_STATEMENT) {
-      // TODO: handle other than wait
-      for (Var keepOpen: cont.getKeepOpenVars()) {
-        if (RefCounting.hasWriteRefCount(keepOpen)) {
-          writeIncrements.decrement(keepOpen);
-        }
-      }
-      for (Var passedIn: cont.getPassedInVars()) {
-        if (RefCounting.hasReadRefCount(passedIn)) {
-          readIncrements.decrement(passedIn);
-        }
-      }
-    }
-    
     for (Block block: cont.getBlocks()) {
+      // Build separate copy for each block
+      Counters<Var> readIncrements = new Counters<Var>();
+      Counters<Var> writeIncrements = new Counters<Var>();
+      if (cont.isAsync() && cont.getType() == ContinuationType.WAIT_STATEMENT) {
+        // TODO: handle other than wait
+        for (Var keepOpen: cont.getKeepOpenVars()) {
+          if (RefCounting.hasWriteRefCount(keepOpen)) {
+            writeIncrements.decrement(keepOpen);
+          }
+        }
+        for (Var passedIn: cont.getPassedInVars()) {
+          if (RefCounting.hasReadRefCount(passedIn)) {
+            readIncrements.decrement(passedIn);
+          }
+        }
+      }
       elimRefCountsRec(logger, f, block, readIncrements, writeIncrements);
     }
   }
