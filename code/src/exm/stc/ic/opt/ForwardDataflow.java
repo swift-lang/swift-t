@@ -350,7 +350,9 @@ public class ForwardDataflow implements OptimizerPass {
           } else {
             // Should be same, otherwise bug
             assert (currLoc.equals(prevLoc)) : currCV + " = " + prevLoc +
-                    " != " + currLoc + " in " + function.getName();
+                    " != " + currLoc + " in " + function.getName() + ".\n" +
+                    "This may have been caused by a double-write to a variable. " +
+                    "Please look at any previous warnings emitted by compiler. ";
           }
         } else {
           final boolean usePrev;

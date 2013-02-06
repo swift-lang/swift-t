@@ -27,9 +27,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.Logging;
-import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
@@ -173,13 +171,9 @@ public class DeadCodeEliminator {
       ListIterator<Var> varIt = block.variableIterator();
       while (varIt.hasNext()) {
         Var var = varIt.next();
-        if (Types.isArray(var.type()) && var.storage() != VarStorage.ALIAS) {
-          // TODO Temporary fix: can't push array declarations
-          // down into loop if assigned in loop
-          continue;
-        }
         Block newHome = candidates.get(var);
-        if (newHome != null) {
+        // Don't push declaration down into loop
+        if (newHome != null && !newHome.getParentCont().isLoop()) {
           varIt.remove();
           newHome.addVariable(var);
           block.moveCleanups(var, newHome);

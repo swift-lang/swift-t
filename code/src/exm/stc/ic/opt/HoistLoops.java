@@ -23,7 +23,6 @@ import org.apache.log4j.Logger;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
@@ -39,11 +38,8 @@ import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
 /**
- * 
- * TODO: problem with current design: need to track where
- *    arrays are declared and then make sure if we're piece-wise assigning
- *    those arrays that we don't hoist out past the original variable
- *    declarations
+ * Hoist instructions out of continuations so that can be evaluated fewer times
+ * (if hoisted out of loop), or evaluated earlier
  * CASES
  * -----
  * Regular assign to non-alias var -> hoist based on inputs
