@@ -340,7 +340,9 @@ public class WaitCoalescer implements OptimizerPass {
       }
     }
     
-
+    if (innerWait == null)
+      return;
+    
     ExecContext innerContext = innerWait.childContext(waitContext);
     // Check that locations are compatible
     if (innerContext != waitContext)

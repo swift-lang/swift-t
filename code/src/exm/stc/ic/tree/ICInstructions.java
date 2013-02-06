@@ -1860,7 +1860,7 @@ public class ICInstructions {
           int arrSize = getInputs().size();
           for (int i = 0; i < arrSize; i++) {
             res.add(makeArrayComputedValue(arr, Arg.createIntLit(i),
-                                           getInput(0).getVar()));
+                                                getInput(i).getVar()));
           }
           
           // TODO: how to propagate size info.  This isn't working yet
