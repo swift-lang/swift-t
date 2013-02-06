@@ -10,6 +10,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
@@ -383,8 +384,14 @@ public class RefcountPass extends FunctionOptimizerPass {
     
     // Check that all refcounts are zero
     for (Entry<Var, Long> e: increments.entries()) {
-      assert(e.getValue() == 0) : "Refcount not 0 after pass " + e.toString() +
-                                  " in block " + block;
+      String msg = "Refcount not 0 after pass " + e.toString() +
+          " in block " + block;
+      if (e.getKey().storage() == VarStorage.ALIAS) {
+        // This is ok but indicates var declaration is in wrong place
+        Logging.getSTCLogger().debug(msg);
+      } else {
+        assert(e.getValue() == 0) : msg;
+      }
     }
   }
 
