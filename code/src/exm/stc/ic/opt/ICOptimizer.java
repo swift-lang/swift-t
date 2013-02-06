@@ -148,9 +148,11 @@ public class ICOptimizer {
       boolean debug, Program prog, long nIterations) throws UserException {   
     OptimizerPipeline postprocess = new OptimizerPipeline(icOutput);
     postprocess.addPass(new ConstantSharing());
-    // Add in all the variable passing annotations
+    
+    // Add in all the variable passing annotations now that instructions,
+    // continuations and variables are fixed
     postprocess.addPass(new FixupVariables());
-    // Add in reference counting
+    // Add in reference counting after passing annotations
     postprocess.addPass(new RefcountPass());
     postprocess.addPass(Validate.finalValidator());
     postprocess.runPipeline(logger, prog,  nIterations - 1);
