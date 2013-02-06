@@ -833,10 +833,19 @@ public class ICTree {
      * @param renames OldName -> NewName
      */
     public void renameVars(Map<Var, Arg> renames, boolean inputsOnly) {
-      if (!inputsOnly) {
-        renameVarsInBlockVarsList(renames);
-      }
+      renameInDefs(renames, inputsOnly);
+      renameInCode(renames, inputsOnly);
+    }
+
+    private void renameInDefs(Map<Var, Arg> renames, boolean inputsOnly) {
+      renameMappingInputs(renames);
       
+      if (!inputsOnly) {
+        replaceVariableDeclarations(renames);
+      }
+    }
+
+    private void renameInCode(Map<Var, Arg> renames, boolean inputsOnly) {
       for (Instruction i: instructions) {
         if (inputsOnly) {
           i.renameInputs(renames);
@@ -852,10 +861,45 @@ public class ICTree {
       renameCleanupActions(renames, inputsOnly);
     }
 
-    private void renameVarsInBlockVarsList(Map<Var, Arg> renames) {
+    private void renameMappingInputs(Map<Var, Arg> renames) {
+      List<Var> changedMappingVars = new ArrayList<Var>();
+      ListIterator<Var> it = variableIterator();
+      while (it.hasNext()) {
+        Var v = it.next();
+        if (v.isMapped()) {
+          // Check to see if string variable for mapping is replaced
+          if (renames.containsKey(v.mapping())) {
+            Arg replacement = renames.get(v.mapping());
+            if (replacement.isVar() &&
+                !replacement.getVar().equals(v.mapping())) {
+              // Need to maintain variable ordering so that mapped vars appear
+              // after the variables containing the mapping string. Remove
+              // var declaration here and put it at end of list
+              it.remove();
+              changedMappingVars.add(new Var(v.type(), v.name(),
+                  v.storage(), v.defType(), replacement.getVar()));
+            }
+          }
+        }
+      }
+
+      this.variables.addAll(changedMappingVars);
+      
+      // Update mapped variable instances
+      Map<Var, Arg> replacements = new HashMap<Var, Arg>();
+      for (Var change: changedMappingVars) {
+        replacements.put(change, Arg.createVar(change));
+      }
+      renameInCode(replacements, false);
+    }
+    
+    /**
+     * Replace variable declarations
+     * @param renames
+     */
+    private void replaceVariableDeclarations(Map<Var, Arg> renames) {
       // Replace definition of var
       ListIterator<Var> it = variables.listIterator();
-      List<Var> changedMappingVars = new ArrayList<Var>();
       while (it.hasNext()) {
         Var v = it.next();
 
@@ -864,19 +908,6 @@ public class ICTree {
             throw new STCRuntimeError("Tried to replace mapped variable in " +
             "IC, this isn't supported so this probably indicates a " +
             "compiler bug");
-          }
-          
-          // Check to see if string variable for mapping is replaced
-          if (renames.containsKey(v.mapping())) {
-            Arg replacement = renames.get(v.mapping());
-            if (replacement.isVar()) {
-              // Need to maintain variable ordering so that mapped vars appear
-              // after the variables containing the mapping string. Remove
-              // var declaration here and put it at end of list
-              it.remove();
-              changedMappingVars.add(new Var(v.type(), v.name(),
-                  v.storage(), v.defType(), replacement.getVar()));
-            }
           }
         } else {
           // V isn't mapped
@@ -891,8 +922,6 @@ public class ICTree {
           }
         }
       }
-
-      this.variables.addAll(changedMappingVars);
     }
 
 
