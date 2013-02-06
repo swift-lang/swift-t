@@ -901,16 +901,16 @@ public class TurbineGenerator implements CompilerBackend
    * @param alias
    */
   @Override
-  public void structLookup(Var structVar, String structField,
-        Var alias) {
+  public void structLookup(Var alias, Var structVar,
+        String structField) {
     pointStack.peek().add(
         Turbine.structLookupFieldID(prefixVar(structVar.name()),
             structField, prefixVar(alias.name())));
   }
 
   @Override
-  public void structRefLookup(Var structVar, String structField,
-        Var alias) {
+  public void structRefLookup(Var alias, Var structVar,
+        String structField) {
     String refReprType; 
     if (refIsString(alias.type())) {
       refReprType = Turbine.STRING_TYPENAME;

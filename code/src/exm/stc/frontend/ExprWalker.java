@@ -309,12 +309,12 @@ public class ExprWalker {
       tmp = varCreator.createStructFieldTmp(context, 
           rootStruct, new RefType(memType),
           fieldPath, VarStorage.TEMP);
-      backend.structRefLookup(structVar, fieldName, tmp);
+      backend.structRefLookup(tmp, structVar, fieldName);
     } else {
       assert(Types.isStruct(structVar.type()));
       tmp = varCreator.createStructFieldTmp(context, 
           rootStruct, memType, fieldPath, VarStorage.ALIAS);
-      backend.structLookup(structVar, fieldName, tmp);
+      backend.structLookup(tmp, structVar, fieldName);
     }
     return tmp;
     

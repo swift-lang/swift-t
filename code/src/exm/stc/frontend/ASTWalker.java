@@ -1167,7 +1167,7 @@ public class ASTWalker {
       Var next = varCreator.createStructFieldTmp(context,
           rootVar, lval.getType(context, i+1), currPath, VarStorage.ALIAS);
 
-      backend.structLookup(curr, fieldPath.get(i), next);
+      backend.structLookup(next, curr, fieldPath.get(i));
       LogHelper.trace(context, "Lookup " + curr.name() + "." +
                                fieldPath.get(i));
       curr = next;

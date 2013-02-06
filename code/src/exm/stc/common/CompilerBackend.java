@@ -197,15 +197,15 @@ public interface CompilerBackend {
   
   /**
    * lookup structVarName.structField and copy to oVarName
+   * @param result
    * @param structVar
    * @param structField
-   * @param result
    */
-  public abstract void structLookup(Var structVar, String structField,
-      Var result);
+  public abstract void structLookup(Var result, Var structVar,
+      String structField);
   
-  public abstract void structRefLookup(Var structVar, String fieldName,
-      Var tmp);
+  public abstract void structRefLookup(Var result, Var structVar,
+      String fieldName);
 
   public abstract void structClose(Var struct);
 

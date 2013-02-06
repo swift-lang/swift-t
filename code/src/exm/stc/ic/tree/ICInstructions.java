@@ -436,222 +436,198 @@ public class ICInstructions {
       // Recreate calls that were used to generate this instruction
       switch (op) {
       case STORE_INT:
-        gen.assignInt(args.get(0).getVar(), args.get(1));
+        gen.assignInt(getOutput(0), getInput(0));
         break;
       case STORE_BOOL:
-        gen.assignBool(args.get(0).getVar(), args.get(1));
+        gen.assignBool(getOutput(0), getInput(0));
         break;
       case STORE_VOID:
-        gen.assignVoid(args.get(0).getVar(), args.get(1));
+        gen.assignVoid(getOutput(0), getInput(0));
         break;
       case STORE_FLOAT:
-        gen.assignFloat(args.get(0).getVar(), args.get(1));
+        gen.assignFloat(getOutput(0), getInput(0));
         break;
       case STORE_STRING:
-        gen.assignString(args.get(0).getVar(), args.get(1));
+        gen.assignString(getOutput(0), getInput(0));
         break;
       case STORE_BLOB:
-        gen.assignBlob(args.get(0).getVar(), args.get(1));
+        gen.assignBlob(getOutput(0), getInput(0));
         break;
       case STORE_FILE:
-        gen.assignFile(args.get(0).getVar(), args.get(1));
+        gen.assignFile(getOutput(0), getInput(0));
         break;
       case ADDRESS_OF:
-        gen.assignReference(args.get(0).getVar(), args.get(1).getVar());
+        gen.assignReference(getOutput(0), getInput(0).getVar());
         break;
       case ARRAY_LOOKUP_FUTURE:
-        gen.arrayLookupFuture(args.get(0).getVar(),
-              args.get(1).getVar(), args.get(2).getVar(), false);
+        gen.arrayLookupFuture(getOutput(0), 
+            getInput(0).getVar(), getInput(1).getVar(), false);
         break;
       case ARRAYREF_LOOKUP_FUTURE:
-        gen.arrayLookupFuture(args.get(0).getVar(),
-            args.get(1).getVar(), args.get(2).getVar(), true);
+        gen.arrayLookupFuture(getOutput(0), 
+            getInput(0).getVar(), getInput(1).getVar(), true);
         break;
       case ARRAY_LOOKUP_REF_IMM:
-        gen.arrayLookupRefImm(args.get(0).getVar(),
-            args.get(1).getVar(), args.get(2), false);
+        gen.arrayLookupRefImm(getOutput(0), getInput(0).getVar(),
+                              getInput(1), false);
         break;
       case ARRAY_LOOKUP_IMM:
-        gen.arrayLookupImm(args.get(0).getVar(),
-            args.get(1).getVar(), args.get(2));
+        gen.arrayLookupImm(getOutput(0), getInput(0).getVar(),
+                           getInput(1));
         break;
       case ARRAYREF_LOOKUP_IMM:
-        gen.arrayLookupRefImm(args.get(0).getVar(),
-            args.get(1).getVar(), args.get(2), true);
+        gen.arrayLookupRefImm(getOutput(0), getInput(0).getVar(),
+                              getInput(1), true);
         break;
       case ARRAY_INSERT_FUTURE:
-        gen.arrayInsertFuture(args.get(0).getVar(),
-            args.get(1).getVar(), args.get(2).getVar());
+        gen.arrayInsertFuture(getOutput(0), getInput(0).getVar(),
+                              getInput(1).getVar());
         break;
       case ARRAY_INSERT_IMM:
-        gen.arrayInsertImm(args.get(0).getVar(),
-            args.get(1), args.get(2).getVar());
+        gen.arrayInsertImm(getOutput(0), getInput(0), getInput(1).getVar());
         break;
       case ARRAYREF_INSERT_FUTURE:
-        gen.arrayRefInsertFuture(args.get(3).getVar(),
-            args.get(0).getVar(), args.get(1).getVar(),
-            args.get(2).getVar());
+        gen.arrayRefInsertFuture(getOutput(0),
+            getOutput(1), getInput(0).getVar(), getInput(1).getVar());
         break;
       case ARRAYREF_INSERT_IMM:
-        gen.arrayRefInsertImm(args.get(3).getVar(),
-            args.get(0).getVar(), args.get(1), args.get(2).getVar());
+        gen.arrayRefInsertImm(getOutput(0),
+            getOutput(1), getInput(0), getInput(1).getVar());
         break;
       case ARRAY_BUILD:
-        gen.arrayBuild(args.get(0).getVar(),
-            Arg.toVarList(args.subList(1, args.size())));
+        gen.arrayBuild(getOutput(0), Arg.toVarList(getInputs()));
         break;
       case DECR_WRITERS:
-        gen.decrWriters(args.get(0).getVar(), args.get(1));
+        gen.decrWriters(getOutput(0), getInput(0));
         break;
       case INCR_WRITERS:
-        gen.incrWriters(args.get(0).getVar(), args.get(1));
+        gen.incrWriters(getOutput(0), getInput(0));
         break;
       case DECR_REF:
-        gen.decrRef(args.get(0).getVar(), args.get(1));
+        gen.decrRef(getOutput(0), getInput(0));
         break;
       case INCR_REF:
-        gen.incrRef(args.get(0).getVar(), args.get(1));
+        gen.incrRef(getOutput(0), getInput(0));
         break;
       case STRUCT_LOOKUP:
-        gen.structLookup(args.get(1).getVar(), args.get(2).getStringLit(),
-                                                    args.get(0).getVar());
+        gen.structLookup(getOutput(0), getInput(0).getVar(),
+                         getInput(1).getStringLit());
         break;
       case STRUCTREF_LOOKUP:
-        gen.structRefLookup(args.get(1).getVar(), args.get(2).getStringLit(),
-                                                    args.get(0).getVar());
+        gen.structRefLookup(getOutput(0), getInput(0).getVar(),
+                             getInput(1).getStringLit());
         break;
       case STRUCT_INSERT:
-        gen.structInsert(args.get(0).getVar(), args.get(1).getStringLit(),
-            args.get(2).getVar());
+        gen.structInsert(getOutput(0), getInput(0).getStringLit(),
+                         getInput(1).getVar());
         break;
       case STRUCT_CLOSE:
-        gen.structClose(args.get(0).getVar());
+        gen.structClose(getOutput(0));
         break;
       case DEREF_INT:
-        gen.dereferenceInt(args.get(0).getVar(),
-                                args.get(1).getVar());
+        gen.dereferenceInt(getOutput(0), getInput(0).getVar());
         break;
       case DEREF_BOOL:
-        gen.dereferenceBool(args.get(0).getVar(),
-                                args.get(1).getVar());
+        gen.dereferenceBool(getOutput(0), getInput(0).getVar());
         break;
       case DEREF_FLOAT:
-        gen.dereferenceFloat(args.get(0).getVar(),
-                                args.get(1).getVar());
+        gen.dereferenceFloat(getOutput(0), getInput(0).getVar());
         break;
       case DEREF_STRING:
-        gen.dereferenceString(args.get(0).getVar(),
-                                args.get(1).getVar());
+        gen.dereferenceString(getOutput(0), getInput(0).getVar());
         break;
       case DEREF_BLOB:
-        gen.dereferenceBlob(args.get(0).getVar(),
-                                args.get(1).getVar());
+        gen.dereferenceBlob(getOutput(0), getInput(0).getVar());
         break;
       case DEREF_FILE:
-        gen.dereferenceFile(args.get(0).getVar(),
-                args.get(1).getVar());
+        gen.dereferenceFile(getOutput(0), getInput(0).getVar());
         break;
       case LOAD_REF:
-        gen.retrieveRef(args.get(0).getVar(),
-                                args.get(1).getVar());
+        gen.retrieveRef(getOutput(0), getInput(0).getVar());
         break;
       case COPY_REF:
-        gen.makeAlias(args.get(0).getVar(), args.get(1).getVar());
+        gen.makeAlias(getOutput(0), getInput(0).getVar());
         break;
       case ARRAY_CREATE_NESTED_FUTURE:
-        gen.arrayCreateNestedFuture(args.get(0).getVar(),
-            args.get(1).getVar(), args.get(2).getVar());
+        gen.arrayCreateNestedFuture(getOutput(0), getOutput(1), 
+                                    getInput(0).getVar());
         break;
       case ARRAYREF_CREATE_NESTED_FUTURE:
-        gen.arrayRefCreateNestedFuture(args.get(0).getVar(),
-            args.get(3).getVar(), args.get(1).getVar(), args.get(2).getVar());
+        gen.arrayRefCreateNestedFuture(getOutput(0), getOutput(1), getOutput(2),
+                                       getInput(0).getVar());
         break;
       case ARRAYREF_CREATE_NESTED_IMM:
-        gen.arrayRefCreateNestedImm(args.get(0).getVar(),
-            args.get(3).getVar(), args.get(1).getVar(), args.get(2));
+        gen.arrayRefCreateNestedImm(getOutput(0), getOutput(1), getOutput(2),
+                                    getInput(0));
         break;
       case ARRAY_CREATE_NESTED_IMM:
-        gen.arrayCreateNestedImm(args.get(0).getVar(),
-            args.get(1).getVar(), args.get(2));
+        gen.arrayCreateNestedImm(getOutput(0), getOutput(1), getInput(0));
         break;
       case LOAD_INT:
-        gen.retrieveInt(args.get(0).getVar(),
-                  args.get(1).getVar());
+        gen.retrieveInt(getOutput(0), getInput(0).getVar());
         break;
       case LOAD_STRING:
-        gen.retrieveString(args.get(0).getVar(),
-            args.get(1).getVar());
+        gen.retrieveString(getOutput(0), getInput(0).getVar());
         break;
       case LOAD_BOOL:
-        gen.retrieveBool(args.get(0).getVar(),
-            args.get(1).getVar());
+        gen.retrieveBool(getOutput(0), getInput(0).getVar());
         break;
       case LOAD_VOID:
-        gen.retrieveVoid(args.get(0).getVar(),
-            args.get(1).getVar());
+        gen.retrieveVoid(getOutput(0), getInput(0).getVar());
         break;
       case LOAD_FLOAT:
-        gen.retrieveFloat(args.get(0).getVar(),
-            args.get(1).getVar());
+        gen.retrieveFloat(getOutput(0), getInput(0).getVar());
         break;  
       case LOAD_BLOB:
-        gen.retrieveBlob(args.get(0).getVar(),
-            args.get(1).getVar());
+        gen.retrieveBlob(getOutput(0), getInput(0).getVar());
         break;
       case LOAD_FILE:
-        gen.retrieveFile(args.get(0).getVar(),
-            args.get(1).getVar());
+        gen.retrieveFile(getOutput(0), getInput(0).getVar());
         break;
       case DECR_BLOB_REF:
-        gen.decrBlobRef(args.get(0).getVar());
+        gen.decrBlobRef(getOutput(0));
         break;
       case FREE_BLOB:
-        gen.freeBlob(args.get(0).getVar());
+        gen.freeBlob(getOutput(0));
         break;
       case DECR_LOCAL_FILE_REF:
-        gen.decrLocalFileRef(args.get(0).getVar());
+        gen.decrLocalFileRef(getOutput(0));
         break;
       case INIT_UPDATEABLE_FLOAT:
-        gen.initUpdateable(args.get(0).getVar(), args.get(1));
+        gen.initUpdateable(getOutput(0), getInput(0));
         break;
       case LATEST_VALUE:
-        gen.latestValue(args.get(0).getVar(), args.get(1).getVar());
+        gen.latestValue(getOutput(0), getInput(0).getVar());
         break;
       case UPDATE_INCR:
-        gen.update(args.get(0).getVar(), UpdateMode.INCR, 
-            args.get(1).getVar());
+        gen.update(getOutput(0), UpdateMode.INCR, getInput(0).getVar());
         break;
       case UPDATE_MIN:
-        gen.update(args.get(0).getVar(), UpdateMode.MIN, 
-            args.get(1).getVar());
+        gen.update(getOutput(0), UpdateMode.MIN, getInput(0).getVar());
         break;
       case UPDATE_SCALE:
-        gen.update(args.get(0).getVar(), UpdateMode.SCALE, 
-            args.get(1).getVar());
+        gen.update(getOutput(0), UpdateMode.SCALE, getInput(0).getVar());
         break;
       case UPDATE_INCR_IMM:
-        gen.updateImm(args.get(0).getVar(), UpdateMode.INCR, 
-            args.get(1));
+        gen.updateImm(getOutput(0), UpdateMode.INCR, getInput(0));
         break;
       case UPDATE_MIN_IMM:
-        gen.updateImm(args.get(0).getVar(), UpdateMode.MIN, 
-            args.get(1));
+        gen.updateImm(getOutput(0), UpdateMode.MIN, getInput(0));
         break;
       case UPDATE_SCALE_IMM:
-        gen.updateImm(args.get(0).getVar(), UpdateMode.SCALE, 
-            args.get(1));
+        gen.updateImm(getOutput(0), UpdateMode.SCALE, getInput(0));
         break;
       case GET_FILENAME:
-        gen.getFileName(args.get(0).getVar(), args.get(1).getVar(), false);
+        gen.getFileName(getOutput(0), getInput(0).getVar(), false);
         break;
       case GET_OUTPUT_FILENAME:
-        gen.getFileName(args.get(0).getVar(), args.get(1).getVar(), true);
+        gen.getFileName(getOutput(0), getInput(0).getVar(), true);
         break;
       case SET_FILENAME_VAL:
-        gen.setFilenameVal(args.get(0).getVar(), args.get(1));
+        gen.setFilenameVal(getOutput(0), getInput(0));
         break;
       case CHOOSE_TMP_FILENAME:
-        gen.chooseTmpFilename(args.get(0).getVar());
+        gen.chooseTmpFilename(getOutput(0));
         break;
       default:
         throw new STCRuntimeError("didn't expect to see op " +
@@ -1244,6 +1220,17 @@ public class ICInstructions {
         res.add(a.getVar());
       }
       return res;
+    }
+    
+    @Override
+    public Arg getInput(int i) {
+      return args.get(i + numOutputArgs());
+    }
+    
+    @Override
+    public Var getOutput(int i) {
+      assert(i < numOutputArgs());
+      return args.get(i).getVar();
     }
   
     @Override

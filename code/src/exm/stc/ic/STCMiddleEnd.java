@@ -670,7 +670,7 @@ public class STCMiddleEnd {
     currBlock().addInstruction(Builtin.createAsync(op, out, in, priority));
   }
 
-  public void structLookup(Var structVar, String structField, Var result) {
+  public void structLookup(Var result, Var structVar, String structField) {
     assert(Types.isStruct(structVar.type()));
     assert(result.storage() == VarStorage.ALIAS);
     currBlock().addInstruction(
@@ -678,8 +678,8 @@ public class STCMiddleEnd {
 
   }
   
-  public void structRefLookup(Var structVar, String structField,
-      Var result) {
+  public void structRefLookup(Var result, Var structVar,
+      String structField) {
     assert(Types.isStructRef(structVar.type()));
     assert(Types.isRef(result.type()));
     assert(result.storage() != VarStorage.ALIAS);
