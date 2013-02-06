@@ -35,7 +35,6 @@ import java.util.TreeMap;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
-import exm.stc.common.Logging;
 import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
@@ -796,6 +795,9 @@ public class ICTree {
       return instructions.listIterator();
     }
     
+    public ListIterator<Instruction> instructionIterator(int i) {
+      return instructions.listIterator(i);
+    }
     
     public ListIterator<CleanupAction> cleanupIterator() {
       return cleanupActions.listIterator();
@@ -1196,6 +1198,15 @@ public class ICTree {
           it.remove();
         }
       }
+    }
+
+    /**
+     * replace old instructions with new
+     * @param newInstructions
+     */
+    public void replaceInstructions(List<Instruction> newInstructions) {
+      this.instructions.clear();
+      this.instructions.addAll(newInstructions);
     }
 
     @Override

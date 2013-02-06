@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -109,6 +110,23 @@ public class MultiMap<K, V> {
 
   public List<V> remove(K key) {
     return map.remove(key);
+  }
+
+  public boolean isEmpty() {
+    if (map.isEmpty()) {
+      return true;
+    }
+    Iterator<Entry<K, List<V>>> it = map.entrySet().iterator();
+    while (it.hasNext()) {
+      Entry<K, List<V>> e = it.next();
+      if (e.getValue().size() == 0) {
+        // Clear out empty entries
+        it.remove();
+      } else {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**

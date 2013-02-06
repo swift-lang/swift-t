@@ -29,7 +29,7 @@ O1_OPTS=("constant-fold" "dead-code-elim"
                     "forward-dataflow" "unroll-loops"
                      "controlflow-fusion" )
 O2_OPTS=("expand-dataflow-ops" "wait-coalesce" "hoisting")
-O3_OPTS=("pipeline" "function-inline")
+O3_OPTS=("pipeline" "function-inline" "reorder-insts")
 EXPERIMENTAL_OPTS=()
 
 # OUTPUT_MODE= turbine or cpp
@@ -77,6 +77,9 @@ function get_compiler_opt_name() {
         hoisting) echo "stc.opt.hoist"
                     return 0
                     ;;
+        reorder-insts) echo "stc.opt.reorder-insts"
+                    return 0
+                    ;;                 
         disable-asserts) echo "stc.opt.disable-asserts"
                     return 0
                     ;;

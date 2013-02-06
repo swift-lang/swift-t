@@ -120,6 +120,9 @@ public class ICOptimizer {
       boolean aggressive = iteration > (nIterations * 2 / 3);
       pipe.addPass(new HoistLoops(aggressive));
       
+      // Try to reorder instructions for benefit of forward dataflow
+      pipe.addPass(new ReorderInstructions());
+      
       // Do forward dataflow after const folding so it won't create any
       // new constants, etc to be folded
       pipe.addPass(new ForwardDataflow());
