@@ -101,13 +101,15 @@ public class ICContinuations {
     /** Returns all nested blocks in this continuation */
     public abstract List<Block> getBlocks();
     
-    /** 
+    /**  
      * @param renames
      * @param inputsOnly only change inputs
      * @param recursive recursively do replacement in inner blocks
      */
     public void replaceVars(Map<Var, Arg> renames, boolean inputsOnly,
                                      boolean recursive) {
+      if (renames.isEmpty())
+        return;
       if (recursive) {
         this.replaceVarsInBlocks(renames, inputsOnly);
       }
@@ -120,7 +122,7 @@ public class ICContinuations {
     protected void replaceVarsInBlocks(Map<Var, Arg> renames,
         boolean inputsOnly) {
       for (Block b: this.getBlocks()) {
-        b.renameVars(renames, inputsOnly);
+        b.renameVars(renames, inputsOnly, true);
       }
     }
 

@@ -96,7 +96,7 @@ public class ConstantSharing implements OptimizerPass {
       }
       globalReplacements.put(oldVar, Arg.createVar(glob));
     }
-    block.renameVars(globalReplacements, false);
+    block.renameVars(globalReplacements, false, true);
     
     // Do this recursively for child blocks
     for (Continuation c: block.getContinuations()) {

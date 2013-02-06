@@ -829,15 +829,17 @@ public class ICTree {
     /**
      * Rename variables in block (and nested blocks) according to map.
      * If the map doesn't have an entry, we don't rename anything
-     *
+     * @param renames OldName -> NewName
      * @param inputsOnly  if true, only change references which are reading
      *      the var.  if false, completely remove the old variable and replace 
      *      with new
-     * @param renames OldName -> NewName
+     * @param recursive if it should be done on child blocks
      */
-    public void renameVars(Map<Var, Arg> renames, boolean inputsOnly) {
+    public void renameVars(Map<Var, Arg> renames, boolean inputsOnly, boolean recursive) {
+      if (renames.isEmpty())
+        return;
       renameInDefs(renames, inputsOnly);
-      renameInCode(renames, inputsOnly);
+      renameInCode(renames, inputsOnly, recursive);
     }
 
     private void renameInDefs(Map<Var, Arg> renames, boolean inputsOnly) {
@@ -848,7 +850,8 @@ public class ICTree {
       }
     }
 
-    private void renameInCode(Map<Var, Arg> renames, boolean inputsOnly) {
+    private void renameInCode(Map<Var, Arg> renames, boolean inputsOnly,
+                              boolean recursive) {
       for (Instruction i: instructions) {
         if (inputsOnly) {
           i.renameInputs(renames);
@@ -859,7 +862,7 @@ public class ICTree {
 
       // Rename in nested blocks
       for (Continuation c: continuations) {
-        c.replaceVars(renames, inputsOnly, true);
+        c.replaceVars(renames, inputsOnly, recursive);
       }
       renameCleanupActions(renames, inputsOnly);
     }
@@ -885,15 +888,19 @@ public class ICTree {
           }
         }
       }
-
+      
+      if (changedMappingVars.isEmpty())
+        return;
+      
       this.variables.addAll(changedMappingVars);
       
-      // Update mapped variable instances
+
+      // Update mapped variable instances in child blocks
       Map<Var, Arg> replacements = new HashMap<Var, Arg>();
       for (Var change: changedMappingVars) {
-        replacements.put(change, Arg.createVar(change));
+        renames.put(change, Arg.createVar(change));
       }
-      renameInCode(replacements, false);
+      renameInCode(replacements, false, true);
     }
     
     /**
@@ -1172,7 +1179,7 @@ public class ICTree {
 
       Map<Var, Arg> replacement = 
           Collections.singletonMap(oldV, Arg.createVar(newV));
-      this.renameVars(replacement, false);
+      this.renameVars(replacement, false, true);
     }
 
     /**
