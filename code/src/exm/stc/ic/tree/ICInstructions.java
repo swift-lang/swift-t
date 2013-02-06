@@ -2116,7 +2116,7 @@ public class ICInstructions {
           if (op == Opcode.ARRAY_CREATE_NESTED_IMM) {
             readVars = Arrays.asList(arr);
           } else {
-            assert(op == Opcode.ARRAY_CREATE_NESTED_FUTURE);
+            assert(op == Opcode.ARRAYREF_CREATE_NESTED_FUTURE);
             readVars = Arrays.asList(arr, ixArg.getVar());
           }
           return Pair.create(readVars,
