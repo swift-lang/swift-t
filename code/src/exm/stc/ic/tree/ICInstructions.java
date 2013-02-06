@@ -2081,9 +2081,9 @@ public class ICInstructions {
         }
         case ARRAYREF_INSERT_IMM:
         case ARRAYREF_INSERT_FUTURE: {
-          Arg ix = getInput(0);
-          Var mem = getInput(1).getVar();
-          Var outerArr = getInput(2).getVar();
+          Arg ix = args.get(1);
+          Var mem = args.get(2).getVar();
+          Var outerArr = args.get(3).getVar();
           List<Var> readers;
           if (op == Opcode.ARRAYREF_INSERT_FUTURE) {
             readers = Arrays.asList(ix.getVar(), mem);
