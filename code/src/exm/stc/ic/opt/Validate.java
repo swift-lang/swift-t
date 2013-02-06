@@ -156,10 +156,10 @@ public class Validate implements OptimizerPass {
       Map<String, Var> declared) {
     for (Var v: block.getVariables()) {
       if (v.storage() == VarStorage.GLOBAL_CONST) {
-        checkVarReference(declared, v, v.toString());
+        checkVarReference(declared, v, v);
       }
       if (v.isMapped()) {
-        checkVarReference(declared, v.mapping(), v.toString());
+        checkVarReference(declared, v.mapping(), v);
       }
     }
     for (Instruction inst: block.getInstructions()) {
@@ -168,12 +168,12 @@ public class Validate implements OptimizerPass {
     
     for (Continuation c: block.getContinuations()) {
       for (Var v: c.requiredVars()) {
-        checkVarReference(declared, v, c.getType().toString());
+        checkVarReference(declared, v, c.getType());
       }
     }
     
     for (CleanupAction ca: block.getCleanups()) {
-      checkVarReference(declared, ca.var(), ca.toString());
+      checkVarReference(declared, ca.var(), ca);
       checkVarReferences(declared, ca.action());
     }
   }
@@ -181,20 +181,20 @@ public class Validate implements OptimizerPass {
   private void checkVarReferences(Map<String, Var> declared, Instruction inst) {
     for (Arg i: inst.getInputs()) {
       if (i.isVar()) {
-        checkVarReference(declared, i.getVar(), inst.toString());
+        checkVarReference(declared, i.getVar(), inst);
       }
     }
     for (Var o: inst.getOutputs()) {
-      checkVarReference(declared, o, inst.toString());
+      checkVarReference(declared, o, inst);
     }
   }
 
   private void checkVarReference(Map<String, Var> declared, Var referencedVar,
-                                 String context) {
+                                 Object context) {
     assert(declared.containsKey(referencedVar.name())): referencedVar;
     Var declaredVar = declared.get(referencedVar.name());
     assert(referencedVar.identical(declaredVar)) : 
-              context + " : " +
+              context.toString() + " : " +
               declaredVar + " " + referencedVar + " | " +
               declaredVar.storage() + " " + referencedVar.storage() + " | " +
               declaredVar.defType() + " " + referencedVar.defType() + " | " +
