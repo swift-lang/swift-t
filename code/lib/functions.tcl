@@ -51,24 +51,19 @@ namespace eval turbine {
     # User function
     # This name conflicts with a TCL built-in - it cannot be exported
     # TODO: Replace this with tracef()
-    proc trace { args } {
-
-        # parent stack and output arguments not read
-        set tds [ lindex $args 2 ]
-        if { ! [ string length $tds ] } {
-            error "trace: received no arguments!"
-        }
-        rule "trace" $tds $turbine::LOCAL $adlb::RANK_ANY \
-            "turbine::trace_body $tds"
+    proc trace { stack signal inputs } {
+        rule "trace" $inputs $turbine::LOCAL $adlb::RANK_ANY \
+            "turbine::trace_body $signal $inputs"
     }
 
-    proc trace_body { args } {
+    proc trace_body { signal args } {
         set valuelist [ list ]
         foreach v $args {
             set value [ retrieve_decr $v ]
             lappend valuelist $value
         }
         trace_impl2 $valuelist
+        store_void $signal
     }
     proc trace_impl { args } {
         # variadic version
@@ -91,7 +86,7 @@ namespace eval turbine {
     }
 
     # # For tests/debugging
-    proc sleep_trace { stack outputs inputs } {
+    proc sleep_trace { stack signal inputs } {
       # parent stack and output arguments not read
       if { ! [ string length $inputs ] } {
         error "trace: received no arguments!"
@@ -99,13 +94,13 @@ namespace eval turbine {
       set secs [ lindex $inputs 0 ]
       set args [ lreplace $inputs 0 0]
       rule "sleep_trace" $inputs $turbine::WORK $adlb::RANK_ANY \
-           "turbine::sleep_trace_body $secs $args"
+           "turbine::sleep_trace_body $signal $secs $args"
     }
-    proc sleep_trace_body { secs inputs } {
+    proc sleep_trace_body { signal secs inputs } {
       set secs_val [ retrieve_decr_float $secs ]
       after [ expr round($secs_val * 1000) ]
       puts "AFTER"
-      trace_body $inputs
+      trace_body $signal $inputs
     }
 
     # User function

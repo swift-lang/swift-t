@@ -68,9 +68,9 @@
 (int o) zero(void v) "turbine" "0.0.4" "zero";
 
 // I/O
-trace (int|float|string|boolean... args) "turbine" "0.0.2" "trace"
+(void o) trace (int|float|string|boolean... args) "turbine" "0.0.2" "trace"
     [ "turbine::trace_impl <<args>>" ];
-sleep_trace (float secs, int|float|string|boolean... args) "turbine" "0.0.2"
+(void o) sleep_trace (float secs, int|float|string|boolean... args) "turbine" "0.0.2"
                                                             "sleep_trace";
 
 // Container operations
