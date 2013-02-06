@@ -31,7 +31,7 @@ public class ICOptimizer {
   /**
    * If true, validate as frequently as possible
    */
-  private static final boolean SUPER_DEBUG = true;
+  private static final boolean SUPER_DEBUG = false;
   
   /**
    * Optimize the program and return a new one
@@ -131,7 +131,11 @@ public class ICOptimizer {
       pipe.addPass(new HoistLoops(aggressive));
       
       // Try to reorder instructions for benefit of forward dataflow
-      pipe.addPass(new ReorderInstructions());
+      // Don't do every iteration, instructions are first 
+      // in original order, then in a different but valid order
+      if (iteration % 2 == 1 || iteration > nIterations * 2 / 3) {
+        pipe.addPass(new ReorderInstructions());
+      }
       
       // Do forward dataflow after const folding so it won't create any
       // new constants, etc to be folded
@@ -143,7 +147,7 @@ public class ICOptimizer {
   
       // Can only run this pass once. Do it near end so that
       // results can be cleaned up by forward dataflow
-      if (iteration == nIterations - (nIterations / 4) - 3) {
+      if (iteration == nIterations - (nIterations / 4) - 1) {
         pipe.addPass(new Pipeline());
         if (debug)
           pipe.addPass(Validate.standardValidator());

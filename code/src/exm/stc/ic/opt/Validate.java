@@ -34,6 +34,7 @@ import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
@@ -51,16 +52,19 @@ import exm.stc.ic.tree.ICTree.Program;
 public class Validate implements OptimizerPass {
   private final boolean checkVarPassing;
   private final boolean checkCleanups;
+  private final boolean noNestedBlocks;
   
   private Validate(boolean checkVarPassing,
-                   boolean checkCleanups) {
+                   boolean checkCleanups,
+                   boolean noNestedBlocks) {
     super();
     this.checkVarPassing = checkVarPassing;
     this.checkCleanups = checkCleanups;
+    this.noNestedBlocks = noNestedBlocks;
   }
 
   public static Validate standardValidator() {
-    return new Validate(true, true);
+    return new Validate(true, true, false);
   }
   
   /**
@@ -69,7 +73,7 @@ public class Validate implements OptimizerPass {
    *                    variable passing check
    */
   public static Validate finalValidator() {
-    return new Validate(false, false);
+    return new Validate(false, false, false);
   }
   
   @Override
@@ -258,7 +262,7 @@ public class Validate implements OptimizerPass {
     checkParentLinks(logger, program, fn, mainBlock);
   }
   
-  private static void checkParentLinks(Logger logger, Program prog,
+  private void checkParentLinks(Logger logger, Program prog,
           Function fn, Block block) {
     Function fn2 = block.getParentFunction();
     assert(fn2 == fn) : 
@@ -266,6 +270,10 @@ public class Validate implements OptimizerPass {
       + (fn2 == null ? null : fn2.getName());
     
     for (Continuation c: block.getContinuations()) {
+      if (noNestedBlocks && c.getType() == ContinuationType.NESTED_BLOCK) {
+        throw new STCRuntimeError("Nested block present");
+      }
+      
       assert(c.parent() == block) : "Bad continuation parent for " + c 
         + "\n\n\nis " + c.parent()
         + "\n\n\nbut should be: " + block;
