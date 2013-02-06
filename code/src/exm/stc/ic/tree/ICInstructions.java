@@ -874,6 +874,9 @@ public class ICInstructions {
   
     public static Instruction arrayCreateNestedComputed(Var arrayResult,
         Var array, Var ix) {
+      assert(Types.isArrayRef(arrayResult.type()));
+      assert(Types.isArray(array.type()));
+      assert(Types.isInt(ix.type()));
       return new TurbineOp(Opcode.ARRAY_CREATE_NESTED_FUTURE,
           Arg.createVar(arrayResult), Arg.createVar(array), Arg.createVar(ix));
     }
@@ -1400,6 +1403,7 @@ public class ICInstructions {
       case ARRAY_CREATE_NESTED_FUTURE: {
         // Try to get immediate index
         Var ix = getInput(0).getVar();
+        assert(Types.isInt(ix.type())): ix;
         if (waitForClose || closedVars.contains(ix)) {
           return new MakeImmRequest(null, Arrays.asList(ix));
         }
@@ -1528,13 +1532,15 @@ public class ICInstructions {
         }
       case ARRAY_CREATE_NESTED_FUTURE: {
         assert(values.size() == 1);
+        Arg ix = values.get(0);
+        assert(ix.isImmediateInt()) : ix + ":" + ix.getType();
         // Output type of instruction changed from ref to direct
         // array handle
         Var oldOut = getOutput(0);
         assert(Types.isArrayRef(oldOut.type()));
         Var newOut = Var.createDerefTmp(oldOut, VarStorage.ALIAS);
         return new MakeImmChange(newOut, oldOut,
-            arrayCreateNestedImm(newOut, getOutput(1), values.get(0)));
+            arrayCreateNestedImm(newOut, getOutput(1), ix));
       }
       case ARRAYREF_CREATE_NESTED_FUTURE: {
         assert(values.size() == 1 || values.size() == 2);
@@ -1551,15 +1557,15 @@ public class ICInstructions {
           Arg newA = values.get(0);
           if (newA.isImmediateInt()) {
             return new MakeImmChange(
-                arrayRefCreateNestedImmIx(args.get(0).getVar(),
-                    args.get(3).getVar(), args.get(1).getVar(), newA));
+                arrayRefCreateNestedImmIx(getOutput(0), getOutput(1),
+                    getOutput(2), newA));
           } else {
             assert(Types.isArray(newA.getType()));
             // Replacing array ref with array
             assert(Types.isArray(newA.getType()));
             return new MakeImmChange(
-                arrayCreateNestedComputed(args.get(0).getVar(),
-                          newA.getVar(), args.get(2).getVar()));
+                arrayCreateNestedComputed(getOutput(0), newA.getVar(),
+                                          getInput(0).getVar()));
           }
         }
       }
