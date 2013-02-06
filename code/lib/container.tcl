@@ -85,6 +85,7 @@ namespace eval turbine {
     # i: the subscript (any type)
     # d: the data
     # outputs: ignored.  To block on this, use turbine::reference
+    # Note: assume slot kept open by other process
     proc container_f_insert { parent outputs inputs {slot_create 1}} {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
@@ -479,8 +480,7 @@ namespace eval turbine {
     # puts a reference to a nested container at c[i]
     # into reference variable r.
     # i: an integer future
-    proc f_container_create_nested { r c i type } {
-
+    proc f_container_create_nested { r c i type {slot_create 1}} {
         upvar 1 $r v
 
         # Create reference
