@@ -947,7 +947,7 @@ public class ICTree {
         // See if we can remove instruction
         int removeable = 0;
         int notRemoveable = 0;
-        for (Var out: inst.getOutputs()) {
+        for (Var out: inst.getModifiedOutputs()) {
           // Doesn't make sense to assign to anything other than
           //  variable
           if (removeVars.contains(out)) {
@@ -1070,6 +1070,9 @@ public class ICTree {
           essentialVars.add(oa.getVar());
         }
       }
+      for (Var v: inst.getReadOutputs()) {
+        essentialVars.add(v);
+      }
       
       for (Var v: inst.getOutputs()) {
         writtenVars.add(v);
@@ -1083,7 +1086,7 @@ public class ICTree {
       } else {
         // Can only eliminate one var if can eliminate all
         if (interdependencies != null)
-          interdependencies.add(inst.getOutputs());
+          interdependencies.add(inst.getModifiedOutputs());
       }
     }
 

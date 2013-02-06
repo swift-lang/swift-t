@@ -28,6 +28,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
@@ -38,6 +39,21 @@ import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
+/**
+ * 
+ * TODO: problem with current design: need to track where
+ *    arrays are declared and then make sure if we're piece-wise assigning
+ *    those arrays that we don't hoist out past the original variable
+ *    declarations
+ * CASES
+ * -----
+ * Regular assign to non-alias var -> hoist based on inputs
+ * Initialize alias var (no other outputs) -> hoist based on inputs
+ * Regular assign to alias var -> check inputs and alias init
+ * Piecewise assign -> hoist based on inputs, don't hoist past declaration of
+ *                                            output
+ *
+ */
 public class HoistLoops implements OptimizerPass {
   
   @Override
@@ -53,30 +69,26 @@ public class HoistLoops implements OptimizerPass {
   @Override
   public void optimize(Logger logger, Program prog) {
     for (Function f: prog.getFunctions()) {
-      Block mainBlock = f.getMainblock();
-      HierarchicalMap<Var, Block> globalMap =
-                      new HierarchicalMap<Var, Block>();
+      HoistTracking global = new HoistTracking();
       // Global constants already written
       for (Var gv: prog.getGlobalVars()) {
-        if (trackWrites(gv)) { 
-          globalMap.put(gv, null);
-        }
+        global.write(gv);
+        global.declare(gv);
       }
       
       // Set up map for top block of function
-      HierarchicalMap<Var, Block> writeMap = globalMap.makeChildMap();
-      
-      // Update with input and output declarations
-      updateMapWithDeclarations(mainBlock, writeMap, f.getInputList());
-      updateMapWithDeclarations(mainBlock, writeMap, f.getOutputList());
+      HoistTracking mainBlockState =
+          global.makeChild(f.getMainblock(), 0, 0);
       
       // Inputs are written elsewhere
       for (Var in: f.getInputList()) {
-        if (trackWrites(in)) {
-          writeMap.put(in, mainBlock);
-        }
+        mainBlockState.write(in);
+        mainBlockState.declare(in);
       }
-      hoistRec(logger, mainBlock, new ArrayList<Block>(), 0, 0, writeMap);
+      for (Var out: f.getOutputList()) {
+        mainBlockState.declare(out);
+      }
+      hoistRec(logger, mainBlockState);
     }
     /*
     StringBuilder sb = new StringBuilder();
@@ -90,86 +102,151 @@ public class HoistLoops implements OptimizerPass {
    * @param logger
    * @param curr current block
    * @param ancestors ancestors of current block
-   * @param maxHoist maximum number of blocks can lift out
-   * @param maxLoopHoist max number of block can lift out without
-   *                     going through loop
-   * @param writeMap map for current block filled in with anything defined 
-   *                by construct or outer blocks
+   * @param state 
    * @return true if change made
    */
-  private static boolean hoistRec(Logger logger, Block curr, List<Block> ancestors,
-            int maxHoist, int maxLoopHoist, HierarchicalMap<Var, Block> writeMap) {
-    boolean changed = false;
-    // Update map with variables written in this block
-    updateMapWithWrites(curr, writeMap);
-    
+  private static boolean hoistRec(Logger logger, HoistTracking state) {
     // See if we can move any instructions from this block up
-    if (maxHoist > 0) {
-      changed = tryHoist(logger, curr, ancestors, maxHoist, maxLoopHoist,
-                         writeMap);
-    }
+    boolean changed = hoistFromBlock(logger, state);
     
     // Recurse down to child blocks
-    ancestors.add(curr);
-    for (Continuation c: curr.getContinuations()) {    
-      int childHoist = canHoistThrough(c) ? maxHoist + 1 : 0;
-      int childLoopHoist = c.isLoop() ? 0 : maxLoopHoist + 1;
-      for (Block b: c.getBlocks()) {
-        HierarchicalMap<Var, Block> childWriteMap = writeMap.makeChildMap();
-        
-        // make sure loop iteration variables, etc are tracked
-        for (Var v: c.constructDefinedVars()) {
-          if (trackWrites(v)) {
-            childWriteMap.put(v, b);
-          }
-        }
-        
-        // If we are waiting for var, don't hoist out past that
-        if (c.getType() == ContinuationType.WAIT_STATEMENT) {
-          for (Var waitVar: ((WaitStatement)c).getWaitVars()) {
-            if (trackWrites(waitVar)) {
-              childWriteMap.put(waitVar, b);
-            }
-          }
-        }
-        
-        if (hoistRec(logger, b, ancestors, childHoist, childLoopHoist,
-                     childWriteMap)) {
+    for (Continuation c: state.block.getContinuations()) {    
+      for (Block childBlock: c.getBlocks()) {
+        HoistTracking childState = state.makeChild(c, childBlock);
+        if (hoistRec(logger, childState)) {
           changed = true;
         }
       }
     }
-    ancestors.remove(ancestors.size() - 1);
     return changed;
   }
 
-  private static void updateMapWithWrites(Block curr,
-          HierarchicalMap<Var, Block> writeMap) {
-    for (Instruction inst: curr.getInstructions()) {
-      for (Var out: inst.getOutputs()) {
-        if (trackWrites(out)) {
-          Logging.getSTCLogger().trace("inst: " + inst + " tracking " + out);
-          writeMap.put(out, curr);
-        } else {
-          Logging.getSTCLogger().trace("inst: " + inst + " not tracking " + out);
+  private static class HoistTracking {
+    
+    /**
+     * Create root for whole program
+     */
+    public HoistTracking() {
+      this(null, null, 0, 0, 
+           new HierarchicalMap<Var, Block>(),
+           new HierarchicalMap<Var, Block>(),
+           new HierarchicalMap<Var, Block>());
+    }
+    
+    /**
+     * Initialize child state for block inside continuation
+     * @param c
+     * @param childBlock
+     * @return
+     */
+    public HoistTracking makeChild(Continuation c, Block childBlock) {
+      int childHoist = canHoistThrough(c) ? maxHoist + 1 : 0;
+      int childLoopHoist = c.isLoop() ? 0 : maxLoopHoist + 1;
+      HoistTracking childState = makeChild(childBlock, childHoist,
+                                            childLoopHoist);
+      // make sure loop iteration variables, etc are tracked
+      for (Var v: c.constructDefinedVars()) {
+        childState.write(v);
+        childState.declare(v);
+      }
+      
+      // If we are waiting for var, don't hoist out past that
+      if (c.getType() == ContinuationType.WAIT_STATEMENT) {
+        for (Var waitVar: ((WaitStatement)c).getWaitVars()) {
+          childState.write(waitVar);            
         }
+      }
+      return childState;
+    }
+
+    private HoistTracking(HoistTracking parent,
+        Block block, int maxHoist, int maxLoopHoist,
+        HierarchicalMap<Var, Block> writeMap,
+        HierarchicalMap<Var, Block> declareMap,
+        HierarchicalMap<Var, Block> initializedMap) {
+      super();
+      this.parent = parent;
+      this.block = block;
+      this.maxHoist = maxHoist;
+      this.maxLoopHoist = maxLoopHoist;
+      this.writeMap = writeMap;
+      this.declareMap = declareMap;
+      this.initializedMap = initializedMap;
+    }
+
+    /** Tracking for parent block */
+    public final HoistTracking parent;
+    
+    /** Current block */
+    public final Block block;
+    
+    /**
+     * maximum number of blocks can lift out
+     */ 
+    public final int maxHoist;
+    /**
+     * max number of block can lift out without going through loop
+     */
+    public final int maxLoopHoist;
+    
+    /**
+     * Track writes (TODO: non-piecewise only?) to variables
+     */
+    public final HierarchicalMap<Var, Block> writeMap;
+    /**
+     * Track variable declarations
+     */
+    public final HierarchicalMap<Var, Block> declareMap;
+    /**
+     * Track variables that need to be initialized
+     */
+    public final HierarchicalMap<Var, Block> initializedMap;
+
+    public HoistTracking getAncestor(int links) {
+      HoistTracking curr = this;
+      for (int i = 0; i < links; i++) {
+        curr = this.parent;
+      }
+      return curr;
+    }
+    
+    public HoistTracking makeChild(Block childBlock,
+                       int maxHoist, int maxLoopHoist) {
+      return new HoistTracking(this, childBlock,
+                              maxHoist, maxLoopHoist,
+                              writeMap.makeChildMap(),
+                              declareMap.makeChildMap(),
+                              initializedMap.makeChildMap());
+    }
+    
+    public void updateState(Instruction inst) {
+      for (Var out: inst.getModifiedOutputs()) {
+        write(out);
+      }
+      for (Var initAlias: inst.getInitializedAliases()) {
+        initializeAlias(initAlias);
       }
     }
     
-    updateMapWithDeclarations(curr, writeMap, curr.getVariables());
-  }
+    public void initializeAlias(Var v) {
+      assert(v.storage() == VarStorage.ALIAS);
+      initializedMap.put(v, this.block);
+    }
+    
+    public void write(Var v) {
+      if (trackWrites(v)) {
+        writeMap.put(v, this.block);
+      }
+    }
 
-  private static void updateMapWithDeclarations(Block block,
-      HierarchicalMap<Var, Block> writeMap, List<Var> declarations) {
-    // We can immediately do any array operations unless it is an alias,
-    // e.g. for a nested array
-    for (Var declared: declarations) {
-      if (Types.isArray(declared.type())) {
-        writeMap.put(declared, block);
+    public void declare(Var v) {
+      Logging.getSTCLogger().trace("declared " + v);
+      if (trackDeclares(v)) {
+        declareMap.put(v, this.block);
       }
     }
   }
-
+  
   /**
    * True if the variable is one we should track
    * @param in
@@ -187,6 +264,10 @@ public class HoistLoops implements OptimizerPass {
     return false;
   }
 
+  private static boolean trackDeclares(Var v) {
+    return Types.isArray(v.type()) || Types.isArrayRef(v.type());
+  }
+
   private static boolean canHoistThrough(Continuation c) {
     if (c.getType() == ContinuationType.FOREACH_LOOP ||
           c.getType() == ContinuationType.RANGE_LOOP ||
@@ -200,110 +281,158 @@ public class HoistLoops implements OptimizerPass {
     return false;
   }
 
-  private static boolean tryHoist(Logger logger, Block curr,
-          List<Block> ancestors, int maxHoist, int maxLoopHoist,
-          HierarchicalMap<Var, Block> writeMap) {
+  private static boolean hoistFromBlock(Logger logger, HoistTracking state) {
     boolean changed = false;
+    Block curr = state.block;
+    
+    for (Var v: curr.getVariables()) {
+      state.declare(v);
+    }
+    
     // See if we can lift any instructions out of block
     ListIterator<Instruction> it = curr.instructionIterator();
     while (it.hasNext()) {
       Instruction inst = it.next();
-      if (inst.hasSideEffects()) {
-        // Don't try to mess with things with side-effects
-        continue;
-      }
       
-      // See where the input variables were written
-      // minDepth: how many blocks out can be hoisted
-      int minDepth = -1;
-      boolean canHoist = true;
-      for (Arg in: inst.getInputs()) {
-        if (in.isVar()) {
-          int depth = writeMap.getDepth(in.getVar());
-          if (depth < 0) {
-            // Not written
-            canHoist = false;
-            break;
-          } else if (minDepth < 0 || depth < minDepth) {
-            minDepth = depth;
-          }
-        }
-      }
-      
-      if (maybePiecewiseAssignment(inst)) {
-        // Can't hoist array assignments, etc out through loop
-        maxHoist = Math.min(maxHoist, maxLoopHoist);
-      }
-      
-      if (canHoist) {
-        // Max hoist for instruction determined by inputs and maxHoist
-        int hoistDepth;
-        if (minDepth < 0) {
-          // Case where no variables
-          hoistDepth = maxHoist;
-        } else {
-          hoistDepth = Math.min(maxHoist, minDepth);
-        }
-
-        if (hoistDepth > 0) {
-          doHoist(logger, ancestors, curr, inst, it, hoistDepth, writeMap);
+      if (state.maxHoist > 0) {
+        boolean hoisted = tryHoist(logger, inst, state);
+        if (hoisted) {
+          it.remove();
           changed = true;
         }
       }
+      
+      // Need to update state regardless of hoisting
+      state.updateState(inst);
     }
     return changed;
   }
-
-  private static boolean maybePiecewiseAssignment(Instruction inst) {
-    for (Var out: inst.getOutputs()) {
-      if (Types.isArray(out.type())) {
-        // TODO: only a problem if piecewise array assignment
-        return true;
+  
+  /**
+   * 
+   * @param logger
+   * @param curr
+   * @param inst
+   * @param ancestors
+   * @param state
+   * @return true if hoisted
+   */
+  private static boolean tryHoist(Logger logger,
+      Instruction inst, HoistTracking state) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("Try hoist " + inst + " maxHoist=" + state.maxHoist + 
+                   " maxLoopHoist=" + state.maxLoopHoist);
+    }
+    if (inst.hasSideEffects()) {
+      logger.trace("Can't hoist: side-effects");
+      // Don't try to mess with things with side-effects
+      return false;
+    }
+    
+    // See where the input variables were written
+    // Max number of blocks can be hoisted
+    int maxHoist = state.maxHoist;
+    
+    for (Arg in: inst.getInputs()) {
+      // Break out early in common case
+      if (maxHoist <= 0)
+        return false;
+      
+      if (in.isVar()) {
+        Var inVar = in.getVar();
+        maxHoist = Math.min(maxHoist, maxInputHoist(logger, state, inVar));
       }
     }
-    return false;
+    for (Var readOutput: inst.getReadOutputs()) {
+      maxHoist = Math.min(maxHoist, maxInputHoist(logger, state, readOutput));
+    }
+    
+    for (Var out: inst.getPiecewiseAssignedOutputs()) {
+      // Don't hoist past declaration
+      assert(trackDeclares(out));
+      int declareDepth = state.declareMap.getDepth(out);
+      assert(declareDepth >= 0);
+      maxHoist = Math.min(maxHoist, declareDepth);
+
+      // Don't hoist out of array - could do fewer assignments than intended
+      maxHoist = Math.min(maxHoist, state.maxLoopHoist);
+    }
+    
+    // Check that any output variables that are aliases are
+    // initialized if needed
+    for (Var out: inst.getOutputs()) {
+      if (out.storage() == VarStorage.ALIAS) {
+        if (!inst.getInitializedAliases().contains(out) &&
+            !state.initializedMap.containsKey(out)) {
+          logger.trace("can't hoist because of uninitialized alias");
+          return false;
+        }
+      }
+    }
+    
+    if (maxHoist > 0) {
+      doHoist(logger, inst, maxHoist, state);
+      return true;
+    } else {
+      return false;
+    }
   }
 
-  private static void doHoist(Logger logger,
-          List<Block> ancestors, Block curr,
-          Instruction inst, ListIterator<Instruction> currInstIt,
-          int hoistDepth, HierarchicalMap<Var, Block> writeMap) {
+  private static int maxInputHoist(Logger logger, HoistTracking state,
+                                   Var inVar) {
+    int depth = state.writeMap.getDepth(inVar);
+    int maxHoist = Integer.MAX_VALUE;
+    // If there was a write to a variable, don't hoist past that
+    if (depth >= 0) {
+      maxHoist = Math.min(maxHoist, depth);
+      if (logger.isTraceEnabled())
+        logger.trace("Depth reduced to " + maxHoist + " because of var "
+                     + inVar);
+    } else if (depth < 0 && trackDeclares(inVar)) {
+      // Maybe there was a declaration of the variable that we
+      // shouldn't hoist past
+      int declareDepth = state.declareMap.getDepth(inVar);
+      if (logger.isTraceEnabled())
+        logger.trace("Hoist constrained by " + inVar + ": "
+                                           + declareDepth);
+      assert(declareDepth >= 0) : inVar;
+      maxHoist = Math.min(maxHoist, declareDepth);
+    } else if (depth < 0 && !trackWrites(inVar)) {
+      // We weren't tracking anything, can't hoist
+      logger.trace("Can't hoist because of " + inVar);
+      return 0;
+    }
+    return maxHoist;
+  }
+
+  private static void doHoist(Logger logger, Instruction inst,
+          int hoistDepth, HoistTracking state) {
     assert(hoistDepth > 0);
-    assert(hoistDepth <= ancestors.size());
-    Block target = ancestors.get(ancestors.size() - hoistDepth);
+    
+    
+    Block target = state.getAncestor(hoistDepth).block;
     logger.trace("Hoisting instruction up " + hoistDepth + " blocks: "
                  + inst.toString());
-    assert(target != null);
-    
-    // Move the instruction
-    currInstIt.remove();
+    assert(target != null && target != state.block);
     target.addInstruction(inst);
     
     // Move variable declaration if needed to outer block.
-    relocateVarDefs(curr, target, ancestors, inst, hoistDepth);
+    relocateVarDefs(state, inst, hoistDepth);
     
     // need to update write map to reflect moved instruction
-    for (Var out: inst.getOutputs()) {
-      // Update map and parent maps
-      writeMap.remove(out, false);
-      if (trackWrites(out)) {
-        writeMap.put(out, target, hoistDepth);
-      }
-    }
+    state.getAncestor(hoistDepth).updateState(inst);
   }
 
-  private static void relocateVarDefs(Block curr, Block target,
-          List<Block> ancestors, Instruction inst, int hoistDepth) {
-    // Rely on variable passing being fixed up later
-    for (int i = 0; i < hoistDepth; i++) {
-      Block ancestor;
-      if (i == 0) {
-        ancestor = curr;
-      } else {
-        int ancestorPos = ancestors.size() - i;
-        ancestor = ancestors.get(ancestorPos);
-      } 
+  private static void relocateVarDefs(HoistTracking state,
+      Instruction inst, int hoistDepth) {
+    HoistTracking ancestor = state;
+    HoistTracking target = state.getAncestor(hoistDepth);
+    assert(target != null && state != target);
+    while (ancestor != target) {
+      assert(ancestor != null);
+      // Relocate all output variable definitions to target block 
       relocateVarDefs(ancestor, target, inst);
+      ancestor = state.parent;
     }
   }
 
@@ -313,16 +442,22 @@ public class HoistLoops implements OptimizerPass {
    * @param target
    * @param inst
    */
-  private static void relocateVarDefs(Block source, Block target,
-      Instruction inst) {
-    ListIterator<Var> varIt = source.variableIterator();
+  private static void relocateVarDefs(HoistTracking source, 
+      HoistTracking target, Instruction inst) {
+    assert(source != target);
+    ListIterator<Var> varIt = source.block.variableIterator();
     while (varIt.hasNext()) {
       Var def = varIt.next();
       for (Var out: inst.getOutputs()) {
         if (def.equals(out)) {
           varIt.remove();
-          target.addVariable(def);
-          moveVarCleanupAction(out, source, target);
+          target.block.addVariable(def);
+          moveVarCleanupAction(out, source.block, target.block);
+          // Update map
+          if (trackDeclares(out)) {
+            source.declareMap.remove(out);
+          }
+          target.declare(out);
           break;
         }
       }

@@ -25,6 +25,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;
@@ -169,6 +170,11 @@ public class DeadCodeEliminator {
       ListIterator<Var> varIt = block.variableIterator();
       while (varIt.hasNext()) {
         Var var = varIt.next();
+        if (Types.isArray(var.type())) {
+          // TODO Temporary fix: can't push array declarations
+          // down into loop if assigned in loop
+          continue;
+        }
         Block newHome = candidates.get(var);
         if (newHome != null) {
           varIt.remove();

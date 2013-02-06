@@ -266,14 +266,46 @@ public class ICInstructions {
      * @return SYNC if nothing spawned, otherwise the variety of task spawned
      */
     public abstract TaskMode getMode();
-
+    
     /**
      * @return List of outputs closed immediately after instruction returns
      */
     public List<Var> getClosedOutputs() {
       return Var.NONE; // Default - assume nothing closed
     }
+
+    /**
+     * @return List of outputs that are piecewise assigned
+     */
+    public List<Var> getPiecewiseAssignedOutputs() {
+      return Var.NONE;
+    }
     
+    /**
+     * @return list of alias vars initialized by this instruction
+     */
+    public List<Var> getInitializedAliases() {
+      return Var.NONE;
+    }
+
+    /**
+     * @return list of output variables that are actually modified
+     *      typically this is all outputs, but in some special cases
+     *      this is not true.  This is important to know for dead
+     *      code elimination as sometimes we can safely eliminate an
+     *      instruction even if all outputs can't be eliminated
+     */
+    public List<Var> getModifiedOutputs() {
+      return this.getOutputs();
+    }
+    
+    /**
+     * @return list of outputs for which previous value is read
+     */
+    public List<Var> getReadOutputs() {
+      return Var.NONE;
+    }
+
     /**
      * @return priority of task spawned, if any.  null if no spawn or
      *      default priority
@@ -315,13 +347,6 @@ public class ICInstructions {
      * @return list of vars that need write refcount increment
      */
     public List<Var> getWriteIncrVars() {
-      return Var.NONE;
-    }
-
-    /**
-     * @return list of alias vars initialized by this instruction
-     */
-    public List<Var> getInitializedAliases() {
       return Var.NONE;
     }
   }
@@ -1646,6 +1671,69 @@ public class ICInstructions {
         case GET_OUTPUT_FILENAME:
         case STRUCT_LOOKUP:
           return Collections.singletonList(getOutput(0));
+        default:
+          return Var.NONE;
+      }
+    }
+    
+
+    /**
+     * @return list of outputs for which previous value is read
+     */
+    public List<Var> getReadOutputs() {
+      switch (op) {
+      case ARRAY_CREATE_NESTED_IMM:
+      case ARRAY_CREATE_NESTED_FUTURE:
+      case ARRAYREF_CREATE_NESTED_IMM:
+      case ARRAYREF_CREATE_NESTED_FUTURE:
+        // In create_nested instructions the 
+        // second array being inserted into is needed
+        return Arrays.asList(getOutput(1));
+        default:
+          return Var.NONE;
+      }
+    }
+    
+    public List<Var> getModifiedOutputs() {
+      switch (op) {
+      case ARRAY_CREATE_NESTED_IMM:
+      case ARRAY_CREATE_NESTED_FUTURE:
+      case ARRAYREF_CREATE_NESTED_IMM:
+      case ARRAYREF_CREATE_NESTED_FUTURE:
+        // In create_nested instructions only the 
+        // first output (the created array) is needed
+        return Collections.singletonList(getOutput(0));
+
+      case ARRAYREF_INSERT_FUTURE:
+      case ARRAYREF_INSERT_IMM:
+        // In the arrayref_insert instructions, the first output
+        // is a reference to an outer array that is kept open but not
+        // modified
+        return Collections.singletonList(getOutput(1));
+        default:
+          return this.getOutputs();
+      }
+    }
+
+    /**
+     * @return List of outputs that are piecewise assigned
+     */
+    public List<Var> getPiecewiseAssignedOutputs() {
+      switch (op) {
+        case ARRAY_INSERT_FUTURE:
+        case ARRAY_INSERT_IMM:
+        case ARRAYREF_INSERT_FUTURE:
+        case ARRAYREF_INSERT_IMM:
+          // All outputs are piecewise assigned
+          return getOutputs();
+        case ARRAY_CREATE_NESTED_FUTURE:
+        case ARRAY_CREATE_NESTED_IMM:
+        case ARRAYREF_CREATE_NESTED_FUTURE:
+        case ARRAYREF_CREATE_NESTED_IMM: {
+          // All arrays except the newly created array; 
+          List<Var> outputs = getOutputs();
+          return outputs.subList(1, outputs.size());
+        }
         default:
           return Var.NONE;
       }
