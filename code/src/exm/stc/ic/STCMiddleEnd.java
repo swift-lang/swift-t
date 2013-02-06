@@ -470,14 +470,13 @@ public class STCMiddleEnd {
   }
 
   public void arrayRefCreateNestedFuture(Var arrayResult,
-      Var arrayVar, Var indexVar, Var outerArr) {
+      Var outerArr, Var array, Var ix) {
     assert(Types.isArrayRef(arrayResult.type()));
-    assert(Types.isArrayRef(arrayVar.type()));
-    assert(Types.isInt(indexVar.type()));
+    assert(Types.isArrayRef(array.type()));
+    assert(Types.isInt(ix.type()));
     assert(Types.isArray(outerArr.type()));
-    currBlock().addInstruction(
-      TurbineOp.arrayRefCreateNestedComputed(arrayResult,
-          arrayVar, indexVar, outerArr));
+    currBlock().addInstruction(TurbineOp.arrayRefCreateNestedComputed(
+                                      arrayResult, outerArr, array, ix));
 
   }
 

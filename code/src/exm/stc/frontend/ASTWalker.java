@@ -1241,8 +1241,8 @@ public class ASTWalker {
             backend.arrayCreateNestedFuture(mVar, lvalArr, indexVar);
           } else {
             assert(Types.isArrayRef(lvalArr.type()));
-            backend.arrayRefCreateNestedFuture(mVar, lvalArr, indexVar,
-                                               origLval.var);
+            backend.arrayRefCreateNestedFuture(mVar, origLval.var, lvalArr,
+                                               indexVar);
           }
         }
       } else {

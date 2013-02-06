@@ -887,18 +887,28 @@ public class ICInstructions {
     }
   
     public static Instruction arrayRefCreateNestedComputed(Var arrayResult,
-        Var arrayVar, Var indexVar, Var outerArr) {
+        Var outerArr, Var array, Var ix) {
+      assert(Types.isArrayRef(arrayResult.type())): arrayResult;
+      assert(arrayResult.storage() == VarStorage.ALIAS);
+      assert(Types.isArrayRef(array.type())): array;
+      assert(Types.isArray(outerArr.type())): outerArr;
+      assert(Types.isInt(ix.type()));
       return new TurbineOp(Opcode.ARRAYREF_CREATE_NESTED_FUTURE,
-          Arg.createVar(arrayResult), Arg.createVar(arrayVar),
-          Arg.createVar(indexVar), Arg.createVar(outerArr));
+          Arg.createVar(arrayResult), Arg.createVar(outerArr),
+          Arg.createVar(array), Arg.createVar(ix));
     }
   
   
     public static Instruction arrayRefCreateNestedImmIx(Var arrayResult,
         Var outerArray, Var array, Arg ix) {
+      assert(Types.isArrayRef(arrayResult.type())): arrayResult;
+      assert(arrayResult.storage() == VarStorage.ALIAS);
+      assert(Types.isArrayRef(array.type())): array;
+      assert(Types.isArray(outerArray.type())): outerArray;
+      assert(ix.isImmediateInt());
       return new TurbineOp(Opcode.ARRAYREF_CREATE_NESTED_IMM,
-          Arg.createVar(arrayResult), Arg.createVar(array),
-          ix, Arg.createVar(outerArray));
+          Arg.createVar(arrayResult), Arg.createVar(outerArray),
+          Arg.createVar(array), ix);
     }
   
   
@@ -987,13 +997,19 @@ public class ICInstructions {
     public void renameInputs(Map<Var, Arg> renames) {
       int firstInputArg;
       if (op == Opcode.ARRAY_CREATE_NESTED_FUTURE
-       || op == Opcode.ARRAY_CREATE_NESTED_IMM
-       || op == Opcode.ARRAYREF_CREATE_NESTED_FUTURE
-       || op == Opcode.ARRAYREF_CREATE_NESTED_IMM
-       || op == Opcode.ARRAY_INSERT_FUTURE
-       || op == Opcode.ARRAY_INSERT_IMM
-       || op == Opcode.ARRAYREF_INSERT_FUTURE
-       || op == Opcode.ARRAYREF_INSERT_IMM) {
+       || op == Opcode.ARRAY_CREATE_NESTED_IMM) {
+        // array mutated by instruction can be replaced
+        // (skip output nested)
+        firstInputArg = 1;
+      } else if (op == Opcode.ARRAYREF_CREATE_NESTED_FUTURE
+              || op == Opcode.ARRAYREF_CREATE_NESTED_IMM) {
+        // array mutated by instruction can be replaced
+        // (skip output nested and outer array)
+        firstInputArg = 2;
+      } else if (op == Opcode.ARRAY_INSERT_FUTURE
+             || op == Opcode.ARRAY_INSERT_IMM
+             || op == Opcode.ARRAYREF_INSERT_FUTURE
+             || op == Opcode.ARRAYREF_INSERT_IMM) {
          // The arrays mutated by these instructions are also basically
          // inputs
          firstInputArg = 0;
@@ -1216,7 +1232,7 @@ public class ICInstructions {
       ArrayList<Var> res = new ArrayList<Var>();
       for (int i = 0; i < nOutputs; i++) {
         Arg a = args.get(i);
-        assert(a.isVar());
+        assert(a.isVar()): this;
         res.add(a.getVar());
       }
       return res;
@@ -1556,8 +1572,8 @@ public class ICInstructions {
         Arg ix = args.get(2);
         assert(ix.isImmediateInt());
         return new MakeImmChange(newOut3, oldOut3,
-            arrayCreateNestedImm(newOut3,
-                            values.get(0).getVar(), ix));
+            arrayCreateNestedImm(newOut3, values.get(0).getVar(),
+                                 getInput(0)));
       }
       case UPDATE_INCR:
       case UPDATE_MIN:
@@ -2105,7 +2121,7 @@ public class ICInstructions {
         case ARRAYREF_CREATE_NESTED_IMM:
         case ARRAYREF_CREATE_NESTED_FUTURE: {
           Var outerArr = getOutput(1);
-          assert(Types.isArray(outerArr.type()));
+          assert(Types.isArray(outerArr.type())): outerArr + " " + this;
           assert(Types.isArray(outerArr.type().memberType()));
           Var arr = getOutput(2);
           Arg ixArg = getInput(0);
