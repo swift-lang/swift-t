@@ -469,8 +469,9 @@ namespace eval turbine {
         # add to refcount for returned container ref
         read_refcount_incr $container_id
         # drop slot on outer
-        if { $decr_slots }
+        if { $decr_slots } {
             adlb::slot_drop $c $decr_slots
+        }
         return $container_id
       }
     }
