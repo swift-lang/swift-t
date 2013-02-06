@@ -345,15 +345,16 @@ public class HoistLoops implements OptimizerPass {
       maxHoist = Math.min(maxHoist, maxInputHoist(logger, state, readOutput));
     }
     
-    for (Var out: inst.getPiecewiseAssignedOutputs()) {
-      // Don't hoist past declaration
-      assert(trackDeclares(out));
-      int declareDepth = state.declareMap.getDepth(out);
-      assert(declareDepth >= 0);
-      maxHoist = Math.min(maxHoist, declareDepth);
-
-      // Don't hoist out of array - could do fewer assignments than intended
-      maxHoist = Math.min(maxHoist, state.maxLoopHoist);
+    for (Var out: inst.getOutputs()) {
+      if (trackDeclares(out)) {
+        int declareDepth = state.declareMap.getDepth(out);
+        assert(declareDepth >= 0);
+        // Can't hoist out of loop if variable declared outside loop
+        if (declareDepth > state.maxLoopHoist) {
+          // Don't hoist out of loop - could do fewer assignments than intended
+          maxHoist = Math.min(maxHoist, state.maxLoopHoist);
+        }
+      }
     }
     
     // Check that any output variables that are aliases are
