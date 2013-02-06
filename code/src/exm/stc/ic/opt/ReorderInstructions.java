@@ -18,6 +18,7 @@ import exm.stc.common.util.MultiMap;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 
@@ -201,6 +202,14 @@ public class ReorderInstructions extends FunctionOptimizerPass {
 
   private boolean writesInputs(Logger logger, Instruction inst1,
           List<Var> inst1Inputs, Instruction inst2) {
+    if (inst2.op == Opcode.ADDRESS_OF &&
+        !inst1.getPiecewiseAssignedOutputs().isEmpty() &&
+        inst1.getPiecewiseAssignedOutputs().contains(inst2.getOutput(0))) {
+      // Special case for address_of: otherwise looks like they both write it
+      return true;
+    }
+                  
+    
     for (Var inst2Output: inst2.getModifiedOutputs()) {
       if (inst1Inputs.contains(inst2Output)) {
         if (logger.isTraceEnabled())
