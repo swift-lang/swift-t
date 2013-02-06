@@ -31,6 +31,8 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.CompilerBackend.WaitMode;
+import exm.stc.common.Settings;
+import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.lang.Arg;
@@ -1462,107 +1464,136 @@ public class ICContinuations {
     public boolean tryUnroll(Logger logger, Block outerBlock) {
       logger.trace("DesiredUnroll for " + loopName + ": " + desiredUnroll);
       if (this.desiredUnroll > 1) {
+        // Unroll explicitly marked loops
         if (this.countVar != null) {
           logger.warn("Can't unroll range loop with counter variable yet," +
                       " ignoring unroll annotation");
           return false;
         }
-        logger.debug("Unrolling range loop " + desiredUnroll + " times ");
-        Arg oldStep = this.increment;
-
-        long checkIter; // the time we need to check
-        if(increment.isIntVal() &&
-            start.isIntVal() &&
-            end.isIntVal()) {
-          long startV = start.getIntLit();
-          long endV = end.getIntLit();
-          long incV = increment.getIntLit();
-
-          long diff = (endV - startV + 1);
-          // Number of loop iterations
-          long iters = ( (diff - 1) / incV ) + 1;
-
-          // 0 if the number of iterations will go exactly into the
-          // unroll factor
-          long extra = iters % desiredUnroll;
-
-          if (extra == 0) {
-            checkIter = desiredUnroll;
-          } else {
-            checkIter = extra;
-          }
-        } else {
-          checkIter = -1;
-        }
-
-        // Update step
-        if (oldStep.isIntVal()) {
-          this.increment = Arg.createIntLit(oldStep.getIntLit() * desiredUnroll);
-        } else {
-          Var old = oldStep.getVar();
-          Var newIncrement = new Var(old.type(),
-              old.name() + "@unroll" + desiredUnroll,
-              VarStorage.LOCAL,
-              DefType.LOCAL_COMPILER, null);
-          outerBlock.declareVariable(newIncrement);
-          outerBlock.addInstruction(Builtin.createLocal(BuiltinOpcode.MULT_INT,
-              newIncrement, Arrays.asList(oldStep, Arg.createIntLit(desiredUnroll))));
-
-          this.increment = Arg.createVar(newIncrement);
-        }
-
-        // Create a copy of the original loop body for reference
-        Block orig = loopBody;
-        this.loopBody = new Block(BlockType.LOOP_BODY, this);
-        Block curr = loopBody;
-        Var nextIter = loopVar; // Variable with current iter number
-
-        for (int i = 0; i < desiredUnroll; i++) {
-          // Put everything in nested block
-          NestedBlock nb = new NestedBlock(orig.clone(BlockType.NESTED_BLOCK, null));
-          curr.addContinuation(nb);
-          if (i != 0) {
-            // Replace references to the iteration counter
-            nb.replaceVars(Collections.singletonMap(this.loopVar,
-                                 Arg.createVar(nextIter)), false, true);
-          }
-
-          if (i < desiredUnroll - 1) {
-            // Next iteration number and boolean check
-            Var lastIter = nextIter;
-            nextIter = new Var(Types.V_INT,
-                this.loopVar.name() + "@" + (i + 1), VarStorage.LOCAL,
-                DefType.LOCAL_COMPILER, null);
-
-            curr.addVariable(nextIter);
-            // Loop counter
-            curr.addInstruction(Builtin.createLocal(BuiltinOpcode.PLUS_INT,
-                nextIter, Arrays.asList(Arg.createVar(lastIter),
-                                        oldStep)));
-
-            boolean mustCheck = checkIter < 0 || i + 1 == checkIter;
-            if (mustCheck) {
-              Var nextIterCheck = new Var(Types.V_BOOL,
-                  this.loopVar.name() + "@" + (i + 1) + "_check",
-                  VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
-              curr.addVariable(nextIterCheck);
-              curr.addInstruction(Builtin.createLocal(BuiltinOpcode.LTE_INT,
-                  nextIterCheck, Arrays.asList(Arg.createVar(nextIter),
-                                          this.end)));
-              // check to see if we should run next iteration
-              IfStatement ifSt = new IfStatement(Arg.createVar(nextIterCheck));
-              curr.addContinuation(ifSt);
-
-              curr = ifSt.getThenBlock();
-            }
-          } else {
-            curr = null;
-          }
-        }
+        doUnroll(logger, outerBlock, desiredUnroll);
         this.desiredUnroll = 1;
         return true;
+      } else if (start.isIntVal() && end.isIntVal() && increment.isIntVal()) {
+        // See if the loop has a small number of iterations, could just expand
+        long iters = calcIterations(start.getIntLit(), end.getIntLit(),
+                                    increment.getIntLit());
+        try {
+          if (iters <= Settings.getLong(
+                        Settings.OPT_UNROLL_LOOP_THRESHOLD_ITERS)) {
+            long instCount = loopBody.getInstructionCount();
+            long extraInstructions = instCount * (iters - 1);
+            long extraInstructionThreshold =
+                    Settings.getLong(Settings.OPT_UNROLL_LOOP_THRESHOLD_INSTS);
+            if (extraInstructions <= extraInstructionThreshold) {
+              doUnroll(logger, outerBlock, iters);
+              return true;
+            }
+          }
+        } catch (InvalidOptionException e) {
+          throw new STCRuntimeError(e.getMessage());
+        }
       }
       return false;
+    }
+
+    private void doUnroll(Logger logger, Block outerBlock, long unrollFactor) {
+      logger.debug("Unrolling range loop " + desiredUnroll + " times ");
+      Arg oldStep = this.increment;
+
+      long checkIter; // the time we need to check
+      if(increment.isIntVal() &&
+          start.isIntVal() &&
+          end.isIntVal()) {
+        long startV = start.getIntLit();
+        long endV = end.getIntLit();
+        long incV = increment.getIntLit();
+
+        long iters = calcIterations(startV, endV, incV);
+
+        // 0 if the number of iterations will go exactly into the
+        // unroll factor
+        long extra = iters % unrollFactor;
+
+        if (extra == 0) {
+          checkIter = unrollFactor;
+        } else {
+          checkIter = extra;
+        }
+      } else {
+        checkIter = -1;
+      }
+
+      // Update step
+      if (oldStep.isIntVal()) {
+        this.increment = Arg.createIntLit(oldStep.getIntLit() * unrollFactor);
+      } else {
+        Var old = oldStep.getVar();
+        Var newIncrement = new Var(old.type(),
+            old.name() + "@unroll" + unrollFactor,
+            VarStorage.LOCAL,
+            DefType.LOCAL_COMPILER, null);
+        outerBlock.declareVariable(newIncrement);
+        outerBlock.addInstruction(Builtin.createLocal(BuiltinOpcode.MULT_INT,
+            newIncrement, Arrays.asList(oldStep, Arg.createIntLit(unrollFactor))));
+
+        this.increment = Arg.createVar(newIncrement);
+      }
+
+      // Create a copy of the original loop body for reference
+      Block orig = loopBody;
+      this.loopBody = new Block(BlockType.LOOP_BODY, this);
+      Block curr = loopBody;
+      Var nextIter = loopVar; // Variable with current iter number
+
+      for (int i = 0; i < unrollFactor; i++) {
+        // Put everything in nested block
+        NestedBlock nb = new NestedBlock(orig.clone(BlockType.NESTED_BLOCK, null));
+        curr.addContinuation(nb);
+        if (i != 0) {
+          // Replace references to the iteration counter
+          nb.replaceVars(Collections.singletonMap(this.loopVar,
+                               Arg.createVar(nextIter)), false, true);
+        }
+
+        if (i < unrollFactor - 1) {
+          // Next iteration number and boolean check
+          Var lastIter = nextIter;
+          nextIter = new Var(Types.V_INT,
+              this.loopVar.name() + "@" + (i + 1), VarStorage.LOCAL,
+              DefType.LOCAL_COMPILER, null);
+
+          curr.addVariable(nextIter);
+          // Loop counter
+          curr.addInstruction(Builtin.createLocal(BuiltinOpcode.PLUS_INT,
+              nextIter, Arrays.asList(Arg.createVar(lastIter),
+                                      oldStep)));
+
+          boolean mustCheck = checkIter < 0 || i + 1 == checkIter;
+          if (mustCheck) {
+            Var nextIterCheck = new Var(Types.V_BOOL,
+                this.loopVar.name() + "@" + (i + 1) + "_check",
+                VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+            curr.addVariable(nextIterCheck);
+            curr.addInstruction(Builtin.createLocal(BuiltinOpcode.LTE_INT,
+                nextIterCheck, Arrays.asList(Arg.createVar(nextIter),
+                                        this.end)));
+            // check to see if we should run next iteration
+            IfStatement ifSt = new IfStatement(Arg.createVar(nextIterCheck));
+            curr.addContinuation(ifSt);
+
+            curr = ifSt.getThenBlock();
+          }
+        } else {
+          curr = null;
+        }
+      }
+    }
+
+    private long calcIterations(long startV, long endV, long incV) {
+      long diff = (endV - startV + 1);
+      // Number of loop iterations
+      long iters = ( (diff - 1) / incV ) + 1;
+      return iters;
     }
     
     public boolean fuseable(RangeLoop o) {

@@ -1241,6 +1241,27 @@ public class ICTree {
       }
       return name;
     }
+
+    /**
+     * Number of instructions in block and descendents
+     * @return
+     */
+    public int getInstructionCount() {
+      Deque<Block> blocks = new ArrayDeque<Block>();
+      blocks.push(this);
+      int count = 0;
+      while (!blocks.isEmpty()) {
+        Block curr = blocks.pop();
+        count += curr.instructions.size();
+        count += curr.cleanupActions.size();
+        for (Continuation c: curr.getContinuations()) {
+          for (Block inner: c.getBlocks()) {
+            blocks.push(inner);
+          }
+        }
+      }
+      return count;
+    }
   }
   
   /** State to pass around when doing code generation from SwiftIC */

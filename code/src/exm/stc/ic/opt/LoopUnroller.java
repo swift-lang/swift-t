@@ -48,9 +48,7 @@ public class LoopUnroller implements OptimizerPass {
       Block block) {
     logger.debug("looking to unroll loops in " + f.getName());
     boolean unrolled = false;
-    for (int i = 0; i < block.getContinuations().size(); i++) {
-      Continuation c = block.getContinuation(i);
-      
+    for (Continuation c: block.getContinuations()) {
       boolean cRes = c.tryUnroll(logger, block);
       unrolled = unrolled || cRes;
 

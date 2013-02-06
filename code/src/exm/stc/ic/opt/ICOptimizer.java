@@ -107,8 +107,8 @@ public class ICOptimizer {
       
       pipe.addPass(new ConstantFold());
       
-      if (iteration == 0) {
-        // Only unroll loops once
+      if (iteration % 3 == 0) {
+        // Try occasionally to unroll loops
         pipe.addPass(new LoopUnroller());
       }
       
