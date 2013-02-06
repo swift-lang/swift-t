@@ -18,6 +18,7 @@ package exm.stc.ic.opt;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -25,6 +26,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Logging;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
@@ -210,32 +212,55 @@ public class DeadCodeEliminator {
    */
   private static Set<Var> unneededVars(Block block,
             Set<Var> stillNeeded, List<List<Var>> dependentSets) {
-    HashSet<Var> toRemove = new HashSet<Var>();
-    
-    // Check to see if we have to retain additional
-    // variables based on interdependencies
-    for (List<Var> dependentSet: dependentSets) { {
-      boolean needed = false;
-      for (Var v: dependentSet) {
-        if (stillNeeded.contains(v)) {
-          needed = true;
-          break;
-        }
-      }
-      if (needed) {
-        for (Var v: dependentSet) {
-          stillNeeded.add(v);
-        }
-      }
-    }
-      
-    }
+    HashSet<Var> removeCandidates = new HashSet<Var>();
     for (Var v: block.getVariables()) {
       if (!stillNeeded.contains(v)) {
-        toRemove.add(v);
+        removeCandidates.add(v);
       }
     }
-    return toRemove;
+    
+    Logger logger = Logging.getSTCLogger();
+    if (logger.isTraceEnabled()) {
+      logger.trace("start removeCandidates: " + removeCandidates + "\n" +
+                   "dependentSets: " + dependentSets);
+    }
+    boolean converged = false;
+    // Check to see if we have to retain additional variables based on
+    // interdependencies.  We're really just computing the transitive
+    // closure here in an iterative way.
+    while (!converged && !dependentSets.isEmpty()) {
+      Iterator<List<Var>> it = dependentSets.iterator();
+      while (it.hasNext()) {
+        List<Var> dependentSet = it.next();
+        converged = true; // assume converged until something changes
+        boolean hasRemoveCandidate = false;
+        boolean allRemoveCandidates = true;
+        for (Var v: dependentSet) {
+          if (removeCandidates.contains(v)) {
+            hasRemoveCandidate = true;
+          } else {
+            allRemoveCandidates = false;
+          }
+        }
+        if (!hasRemoveCandidate) {
+          // No longer relevant
+          it.remove();
+        } else if (!allRemoveCandidates) {
+          // Have to keep at least one remove candidate
+          for (Var v: dependentSet) {
+            removeCandidates.remove(v);
+          }
+          converged = false;
+        }
+      }
+    }
+    
+    if (logger.isTraceEnabled()) {
+      logger.trace("final removeCandidates: " + removeCandidates + "\n" +
+                   "dependentSets: " + dependentSets);
+    }
+    
+    return removeCandidates;
   }
 
 }
