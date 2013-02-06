@@ -1,6 +1,5 @@
 package exm.stc.ic.opt;
 
-import java.util.HashSet;
 import java.util.ListIterator;
 import java.util.Map.Entry;
 
@@ -12,13 +11,11 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
-import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.Counters;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
-import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.LocalFunctionCall;
 import exm.stc.ic.tree.ICInstructions.Opcode;
@@ -242,6 +239,9 @@ public class ElimRefcounts extends FunctionOptimizerPass {
         // Increment array output
         writeIncrements.increment(inst.getOutput(0));
       }
+    } else if (inst.op == Opcode.ARRAY_BUILD) {
+      Var arr = inst.getOutput(0);
+      writeIncrements.increment(arr);
     }
   }
 
@@ -263,71 +263,4 @@ public class ElimRefcounts extends FunctionOptimizerPass {
       }
     }
   }
-
-  /**
-   * Cancel reference counting operations in continuations
-   * NOTE: should only do single pass
-   * @param block
-   * @param thisBlockArrays
-   */
-  private void cancelContinuationRefcounts(Block block,
-      HashSet<String> thisBlockArrays) {
-    // TODO for now, just handle waits and write refcounts
-    // TODO later, 
-    for (Continuation c: block.getContinuations()) {
-      if (c.getType() == ContinuationType.WAIT_STATEMENT) {
-        WaitStatement w = (WaitStatement)c;
-        for (Var keepOpen: w.getKeepOpenVars()) {
-          // TODO: check if already cancelled?
-          if (removeWritersDecr(block, keepOpen)) {
-            // TODO: cancel increment
-          }
-        }
-        
-        for (Var passIn: w.getPassedInVars()) {
-          
-        }
-      }
-    }
-  }
-
-  private void cancelInstructionRefcounts(Block block,
-      HashSet<String> thisBlockArrays) {
-    for (Instruction i: block.getInstructions()) {
-      if (i.op == Opcode.ARRAY_BUILD) {
-        Var arr = i.getOutput(0);
-        boolean close = i.getInput(0).getBoolLit();
-        if (!close && thisBlockArrays.contains(arr.name())) {
-          boolean success = removeWritersDecr(block, arr);
-          assert(success): "should have array decr here";
-          // Remove refcount, decrement it here instead
-          ((TurbineOp)i).setInput(0, Arg.createBoolLit(true));
-        }
-      }
-    }
-  }
-
-  private HashSet<String> findBlockArrays(Block block) {
-    HashSet<String> thisBlockArrays = new HashSet<String>();
-    for (Var v: block.getVariables()) {
-      if (Types.isArray(v.type())) {
-        thisBlockArrays.add(v.name());
-      }
-    }
-    return thisBlockArrays;
-  }
-
-  private boolean removeWritersDecr(Block block, Var arr) {
-    ListIterator<CleanupAction> caIt = block.cleanupIterator();
-    while (caIt.hasNext()) {
-      CleanupAction ca = caIt.next();
-      if (arr.name().equals(ca.var().name()) &&
-        ca.action().op == Opcode.DECR_WRITERS) {
-        caIt.remove();
-        return true;
-      }
-    }
-    return false;
-  }
-
 }
