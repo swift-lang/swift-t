@@ -317,6 +317,13 @@ public class ICInstructions {
     public List<Var> getWriteIncrVars() {
       return Var.NONE;
     }
+
+    /**
+     * @return list of alias vars initialized by this instruction
+     */
+    public List<Var> getInitializedAliases() {
+      return Var.NONE;
+    }
   }
   
   public static class Comment extends Instruction {
@@ -1625,6 +1632,25 @@ public class ICInstructions {
       throw new STCRuntimeError("Couldn't make inst "
           + this.toString() + " immediate with vars: "
           + values.toString());
+    }
+
+    @Override
+    public List<Var> getInitializedAliases() {
+      switch (op) {
+        case LOAD_REF:
+        case COPY_REF:
+        case ARRAY_LOOKUP_IMM:
+        case ARRAY_CREATE_NESTED_IMM:
+        case ARRAY_CREATE_NESTED_FUTURE:
+        case ARRAYREF_CREATE_NESTED_IMM:
+        case ARRAYREF_CREATE_NESTED_FUTURE:
+        case GET_FILENAME:
+        case GET_OUTPUT_FILENAME:
+        case STRUCT_LOOKUP:
+          return Collections.singletonList(getOutput(0));
+        default:
+          return Var.NONE;
+      }
     }
 
     @Override

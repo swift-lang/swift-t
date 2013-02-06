@@ -15,6 +15,7 @@
  */
 package exm.stc.ic.opt;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -29,6 +30,8 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.util.HierarchicalSet;
+import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Opcode;
@@ -88,6 +91,7 @@ public class Validate implements OptimizerPass {
     for (Function fn : program.getFunctions()) {
       checkParentLinks(logger, program, fn);
       checkUniqueVarNames(logger, program, fn);
+      checkAliasVarUsage(logger, program, fn);
     }
   }
 
@@ -271,6 +275,79 @@ public class Validate implements OptimizerPass {
                            + "\n" + innerBlock 
                            + "\n\n\nis " + innerBlock.getParentCont()
                            + "\n\n\nbut should be: " + c;
+      }
+    }
+  }
+
+  /**
+   * Check alias vars are assigned correctly.  An alias var should:
+   * - Be initialized in block its declared in
+   * - Not be used before initialized
+   * TODO: could also use this to check value var assignments
+   * @param logger
+   * @param program
+   * @param fn
+   * @param block
+   */
+  private void checkAliasVarUsage(Logger logger, Program program,
+      Function fn) {
+    checkAliasVarUsageRec(logger, program, fn, fn.getMainblock(),
+                          new HierarchicalSet<Var>());
+  }
+  
+  private void checkAliasVarUsageRec(Logger logger, Program program,
+      Function fn, Block block, HierarchicalSet<Var> initAliases) {
+    for (Var v: block.getVariables()) {
+      if (v.isMapped() && v.mapping().storage() == VarStorage.ALIAS) {
+        assert (initAliases.contains(v.mapping())):
+            v + " mapped to uninitialized alias " + v.mapping();
+      }
+    }
+    
+    for (Instruction inst: block.getInstructions()) {
+      for (Arg in: inst.getInputs()) {
+        if (in.isVar() && in.getVar().storage() == VarStorage.ALIAS
+            && !initAliases.contains(in.getVar())) {
+          throw new STCRuntimeError("Var " + in + " was an uninitialized " +
+              "alias var read in instruction " + inst);
+        }
+      }
+      List<Var> regularOutputs = inst.getOutputs();
+      List<Var> initializedAliases = inst.getInitializedAliases();
+      if (initializedAliases.size() > 0) {
+        regularOutputs = new ArrayList<Var>(regularOutputs);
+        for (Var init: initializedAliases) {
+          assert(init.storage() == VarStorage.ALIAS);
+          ICUtil.remove(regularOutputs, init);
+          initAliases.add(init);
+        }
+      }
+
+      for (Var regularOut: regularOutputs) {
+        if (regularOut.storage() == VarStorage.ALIAS &&
+            !initAliases.contains(regularOut)) {
+          throw new STCRuntimeError("Uninitialized alias " +
+                        regularOut + " in inst " + inst);
+        }
+      }
+    }
+    
+    for (Continuation c: block.getContinuations()) {
+      for (Var v: c.requiredVars()) {
+        if (v.storage() == VarStorage.ALIAS &&
+            !initAliases.contains(v)) {
+          throw new STCRuntimeError("Alias var " + v + " not initialized");
+        }
+      }
+      HierarchicalSet<Var> contInit = initAliases.makeChild();
+      for (Var v: c.constructDefinedVars()) {
+        if (v.storage() == VarStorage.ALIAS) {
+          contInit.add(v);
+        }
+      }
+      for (Block inner: c.getBlocks()) {
+        checkAliasVarUsageRec(logger, program, fn, inner,
+            contInit.makeChild());
       }
     }
   }
