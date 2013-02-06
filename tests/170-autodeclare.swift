@@ -2,10 +2,6 @@
 #include <assert.swift>
 
 // Test auto-declaration of variables
-
-// SKIP-THIS-TEST
-// auto-declaring is not yet turned on by default 
-
 main {
   x = 1;
   trace(x);

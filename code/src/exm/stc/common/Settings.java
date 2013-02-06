@@ -122,7 +122,7 @@ public class Settings
     defaults.setProperty(OPT_ELIM_REFCOUNTS, "true");
     defaults.setProperty(OPT_MAX_ITERATIONS, "10");
     defaults.setProperty(EXPERIMENTAL_REFCOUNTING, "false");
-    defaults.setProperty(AUTO_DECLARE, "false");
+    defaults.setProperty(AUTO_DECLARE, "true");
     defaults.setProperty(LOG_FILE, "");
     defaults.setProperty(LOG_TRACE, "false");
 
