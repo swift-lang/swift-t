@@ -29,6 +29,11 @@ import exm.stc.ic.tree.ICTree.Program;
 public class ICOptimizer {
 
   /**
+   * If true, validate as frequently as possible
+   */
+  private static final boolean SUPER_DEBUG = true;
+  
+  /**
    * Optimize the program and return a new one
    * 
    * NOTE: the input might be modified in-place
@@ -102,6 +107,10 @@ public class ICOptimizer {
     
     for (long iteration = 0; iteration < nIterations; iteration++) {
       OptimizerPipeline pipe = new OptimizerPipeline(icOutput);
+      if (SUPER_DEBUG) {
+        pipe.setValidator(Validate.standardValidator());
+      }
+      
       // First prune any unneeded functions
       pipe.addPass(inliner);
       

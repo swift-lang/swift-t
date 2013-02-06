@@ -266,7 +266,8 @@ public class STCMiddleEnd {
       Arg start, Arg end, Arg increment, int desiredUnroll, int splitDegree) {
     RangeLoop loop = new RangeLoop(loopName, loopVar, countVar,
                     start, end, increment,
-                    Var.NONE, Var.NONE, desiredUnroll, splitDegree);
+                    Var.NONE, Var.NONE, desiredUnroll, false,
+                    splitDegree);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
   }

@@ -1252,23 +1252,24 @@ public class ICContinuations {
     private Arg start;
     private Arg end;
     private Arg increment;
-    private int desiredUnroll;
+    private final int desiredUnroll;
+    private boolean unrolled;
     private int splitDegree;
 
     public RangeLoop(String loopName, Var loopVar, Var countVar,
         Arg start, Arg end, Arg increment,
         List<Var> usedVariables, List<Var> keepOpenVars,
-        int desiredUnroll, int splitDegree) {
+        int desiredUnroll, boolean unrolled, int splitDegree) {
       this(loopName, new Block(BlockType.RANGELOOP_BODY, null),
           loopVar, countVar,
           start, end, increment, usedVariables, keepOpenVars,
-          desiredUnroll, splitDegree);
+          desiredUnroll, unrolled, splitDegree);
     }
 
     private RangeLoop(String loopName, Block block, Var loopVar, Var countVar,
         Arg start, Arg end, Arg increment,
         List<Var> usedVariables, List<Var> keepOpenVars,
-        int desiredUnroll, int splitDegree) {
+        int desiredUnroll, boolean unrolled, int splitDegree) {
       super(block, usedVariables, keepOpenVars);
       assert(start.isImmediateInt());
       assert(end.isImmediateInt());
@@ -1281,6 +1282,7 @@ public class ICContinuations {
       this.end = end;
       this.increment = increment;
       this.desiredUnroll = desiredUnroll;
+      this.unrolled = unrolled;
       this.splitDegree = splitDegree;
     }
 
@@ -1289,7 +1291,7 @@ public class ICContinuations {
       return new RangeLoop(loopName, this.loopBody.clone(), loopVar, countVar,
           start.clone(), end.clone(), increment.clone(),
           new ArrayList<Var>(passedInVars),
-          new ArrayList<Var>(keepOpenVars), desiredUnroll,
+          new ArrayList<Var>(keepOpenVars), desiredUnroll, unrolled,
           splitDegree);
     }
 
@@ -1476,7 +1478,9 @@ public class ICContinuations {
     @Override
     public boolean tryUnroll(Logger logger, Block outerBlock) {
       logger.trace("DesiredUnroll for " + loopName + ": " + desiredUnroll);
-      if (this.desiredUnroll > 1) {
+      if (this.unrolled) {
+        return false;
+      } else if (this.desiredUnroll > 1) {
         // Unroll explicitly marked loops
         if (this.countVar != null) {
           logger.warn("Can't unroll range loop with counter variable yet," +
@@ -1484,7 +1488,6 @@ public class ICContinuations {
           return false;
         }
         doUnroll(logger, outerBlock, desiredUnroll);
-        this.desiredUnroll = 1;
         return true;
       } else if (start.isIntVal() && end.isIntVal() && increment.isIntVal()) {
         // See if the loop has a small number of iterations, could just expand
@@ -1510,7 +1513,8 @@ public class ICContinuations {
     }
 
     private void doUnroll(Logger logger, Block outerBlock, long unrollFactor) {
-      logger.debug("Unrolling range loop " + desiredUnroll + " times ");
+      logger.debug("Unrolling range loop " + this.loopName 
+                        + " " + desiredUnroll + " times ");
       Arg oldStep = this.increment;
 
       long checkIter; // the time we need to check
@@ -1600,6 +1604,7 @@ public class ICContinuations {
           curr = null;
         }
       }
+      this.unrolled = true;
     }
 
     private long calcIterations(long startV, long endV, long incV) {

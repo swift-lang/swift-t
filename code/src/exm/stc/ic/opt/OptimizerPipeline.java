@@ -36,9 +36,14 @@ public class OptimizerPipeline {
 
   private final List<OptimizerPass> passes = new ArrayList<OptimizerPass>();
   private final PrintStream icOutput;
+  private Validate validator = null;
   
   public void addPass(OptimizerPass pass) {
     passes.add(pass);
+  }
+  
+  public void setValidator(Validate validator) {
+    this.validator = validator;
   }
   
   public void runPipeline(Logger logger, Program program, long iteration) throws UserException {
@@ -49,7 +54,10 @@ public class OptimizerPipeline {
         pass.optimize(logger, program);
         if (icOutput != null) {
           program.log(icOutput, "Iteration " + iteration + " IC after " +
-				pass.getPassName());
+                                 pass.getPassName());
+        }
+        if (validator != null) {
+          validator.optimize(logger, program);
         }
       }
     }
