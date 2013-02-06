@@ -637,13 +637,13 @@ an index of +-1+ passed to +end_index+ results in +end_index+ being
 treated as the length of the string +s+. +find+ returns +-1+ in case
 there is no occurence of +substring+ in +s+ in the specified range.
 
-+count(string s, string substring, int start_index, int end_index) -> int+::
++string_count(string s, string substring, int start_index, int end_index) -> int+::
 Counts the occurences of the string +substring+ within the string +s+
 between the indices +start_index+ and +end_index+. Here an index of
 +-1+ passed to +end_index+ results in +end_index+ being treated as the
 length of the string +s+
 
-+isnum(string s) -> boolean+::
++is_int(string s) -> boolean+::
 Returns true if string +s+ is a number, else false.
 
 +replace(string s, string substring, string rep_string, int start_index) -> string+::
@@ -661,6 +661,9 @@ exists in +s+, the original string +s+ is returned unmodified.
 
 +split(string s, string delimiter) -> string[]+::
 Tokenize string +s+ with given delimiter
+
++trim(string s) -> string+::
+Remove leading and trailing whitespace from +s+
 
  #include <io.swift>
 
@@ -684,6 +687,7 @@ As +sprintf()+ in C
  #include <random.swift>
 
 +random() -> float+:: Obtain random number
+
 +randint(int start, int end)+::
 Obtain random integer from +start+, inclusive, to +end+, exclusive
 
