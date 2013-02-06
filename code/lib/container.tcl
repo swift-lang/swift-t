@@ -29,13 +29,17 @@ namespace eval turbine {
     proc array_build { c elems close } {
       set n [ llength $elems ]
       log "container_build: <$c> $n elems, close $close"
-      for { set i 0 } { $i < $n } { incr i } {
-        set elem [ lindex $elems $i ]
-        set drops 0
-        if { $close && $i == [ expr $n - 1 ] } {
-          set drops 1
+      if { $n > 0 } {
+        for { set i 0 } { $i < $n } { incr i } {
+          set elem [ lindex $elems $i ]
+          set drops 0
+          if { $close && $i == [ expr $n - 1 ] } {
+            set drops 1
+          }
+          adlb::insert $c $i $elem $drops
         }
-        adlb::insert $c $i $elem $drops
+      } else {
+        adlb::slot_drop $c
       }
     }
 
