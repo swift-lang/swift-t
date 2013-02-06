@@ -35,6 +35,7 @@ import java.util.TreeMap;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.Logging;
 import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
@@ -846,10 +847,59 @@ public class ICTree {
     }
 
     private void renameInDefs(Map<Var, Arg> renames, boolean inputsOnly) {
-      renameMappingInputs(renames);
+      // Track any changes to mapped vars, list of (original, new)
+      List<Pair<Var, Var>> changedMappedVars = new ArrayList<Pair<Var, Var>>();
       
-      if (!inputsOnly) {
-        replaceVariableDeclarations(renames);
+      ListIterator<Var> it = variables.listIterator();
+      while (it.hasNext()) {
+        // The original variable and the current one
+        Var original, var;
+        var = original = it.next();
+        boolean removed = false;
+        if (!inputsOnly) {
+          if (renames.containsKey(var)) {
+            Arg replacement = renames.get(var);
+            if (replacement.isVar()) {
+              var = replacement.getVar();
+              it.set(var);
+            } else {
+              // value replaced with constant
+              it.remove();
+              removed = true;
+            }
+          }
+        }
+
+        if (!removed && var.isMapped()) {
+          // Can't have double mapping
+          assert(!var.mapping().isMapped());
+          
+          // Check to see if string variable for mapping is replaced
+          if (renames.containsKey(var.mapping())) {
+            Arg newMapping = renames.get(var.mapping());
+            if (newMapping.isVar() &&
+                !newMapping.getVar().equals(var.mapping())) {
+              // Need to maintain variable ordering so that mapped vars appear
+              // after the variables containing the mapping string. Remove
+              // var declaration here and put it at end of list
+              it.remove();
+              var = new Var(var.type(), var.name(), var.storage(),
+                            var.defType(), newMapping.getVar());
+              
+              changedMappedVars.add(Pair.create(original, var));
+            }
+          }
+        }
+      }
+
+      if (!changedMappedVars.isEmpty()) {
+        //  Update mapped variable instances in child blocks
+        for (Pair<Var, Var> change: changedMappedVars) {
+          Var oldV = change.val1;
+          Var newV = change.val2;
+          this.variables.add(newV);
+          renames.put(oldV, Arg.createVar(newV));
+        }
       }
     }
 
@@ -869,66 +919,7 @@ public class ICTree {
       }
       renameCleanupActions(renames, inputsOnly);
     }
-
-    private void renameMappingInputs(Map<Var, Arg> renames) {
-      List<Var> changedMappingVars = new ArrayList<Var>();
-      ListIterator<Var> it = variableIterator();
-      while (it.hasNext()) {
-        Var v = it.next();
-        if (v.isMapped()) {
-          // Check to see if string variable for mapping is replaced
-          if (renames.containsKey(v.mapping())) {
-            Arg replacement = renames.get(v.mapping());
-            if (replacement.isVar() &&
-                !replacement.getVar().equals(v.mapping())) {
-              // Need to maintain variable ordering so that mapped vars appear
-              // after the variables containing the mapping string. Remove
-              // var declaration here and put it at end of list
-              it.remove();
-              changedMappingVars.add(new Var(v.type(), v.name(),
-                  v.storage(), v.defType(), replacement.getVar()));
-            }
-          }
-        }
-      }
-      
-      if (changedMappingVars.isEmpty())
-        return;
-      
-      this.variables.addAll(changedMappingVars);
-      
-
-      // Update mapped variable instances in child blocks
-      Map<Var, Arg> replacements = new HashMap<Var, Arg>();
-      for (Var change: changedMappingVars) {
-        renames.put(change, Arg.createVar(change));
-      }
-      renameInCode(replacements, false, true);
-    }
     
-    /**
-     * Replace variable declarations
-     * @param renames
-     */
-    private void replaceVariableDeclarations(Map<Var, Arg> renames) {
-      // Replace definition of var
-      ListIterator<Var> it = variables.listIterator();
-      while (it.hasNext()) {
-        Var v = it.next();
-        // V isn't mapped
-        if (renames.containsKey(v)) {
-          Arg replacement = renames.get(v);
-          if (replacement.isVar()) {
-            it.set(replacement.getVar());
-          } else {
-            // value replaced with constant
-            it.remove();
-          }
-        }
-      }
-    }
-
-
     public void renameCleanupActions(Map<Var, Arg> renames,
                                                 boolean inputsOnly) {
       for (CleanupAction a: cleanupActions) {

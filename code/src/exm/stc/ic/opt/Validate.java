@@ -25,7 +25,6 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;

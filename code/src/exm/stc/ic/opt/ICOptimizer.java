@@ -111,6 +111,7 @@ public class ICOptimizer {
         // Try occasionally to unroll loops.  Don't do it on first iteration
         // so the code can be shrunk a little first
         pipe.addPass(new LoopUnroller());
+        pipe.addPass(Validate.standardValidator());
       }
       
       // Try to hoist variables out of loops, etc
