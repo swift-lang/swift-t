@@ -945,18 +945,24 @@ public class ICTree {
         Instruction inst = it.next();
         inst.removeVars(removeVars);
         // See if we can remove instruction
-        if (!inst.hasSideEffects() && inst.op != Opcode.COMMENT) {
-          boolean allRemoveable = true;
-          for (Var out: inst.getOutputs()) {
-            // Doesn't make sense to assign to anything other than
-            //  variable
-            if (!removeVars.contains(out)) {
-              allRemoveable = false; break;
-            }
+        int removeable = 0;
+        int notRemoveable = 0;
+        for (Var out: inst.getOutputs()) {
+          // Doesn't make sense to assign to anything other than
+          //  variable
+          if (removeVars.contains(out)) {
+            removeable++;
+          } else {
+            notRemoveable++;
           }
-          if (allRemoveable) {
-            it.remove();
-          }
+        }
+        if (removeable > 0 && notRemoveable == 0) {
+          // One of the remove vars is output
+          it.remove();
+        } else if (removeable > 0 && notRemoveable > 0) {
+          // Can't remove
+          throw new STCRuntimeError("Can't remove instruction " + inst +
+              " because not all outputs in remove vars set " + removeVars);
         }
       }
       for (Continuation c: continuations) {
