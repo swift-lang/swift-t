@@ -2354,6 +2354,7 @@ public class ICInstructions {
         for (int i = 0; i < inputs.size(); i++) {
           needToBlock.add(blocking.get(i) && (!this.closedInputs.get(i)));
         }
+                           
         gen.functionCall(functionName, inputs, outputs, needToBlock,
                                             mode, priority);
         break;

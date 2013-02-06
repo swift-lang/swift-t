@@ -102,6 +102,9 @@ public class ICTree {
       for (Function f: functions) {
         blockVectors.put(f.getName(), f.getBlockingInputVector());
       }
+      if (logger.isTraceEnabled())
+        logger.trace("blocking inputs: " + blockVectors);
+
       GenInfo info = new GenInfo(blockVectors);
       
       logger.debug("Starting to generate program from Swift IC");
@@ -375,7 +378,7 @@ public class ICTree {
     public List<Boolean> getBlockingInputVector() {
       ArrayList<Boolean> res = new ArrayList<Boolean>(iList.size());
       for (Var input: this.iList) {
-        boolean isBlocking = blockingInputs.contains(input.name());
+        boolean isBlocking = blockingInputs.contains(input);
         res.add(isBlocking);
       }
       return res;

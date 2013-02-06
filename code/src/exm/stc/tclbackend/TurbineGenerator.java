@@ -771,13 +771,14 @@ public class TurbineGenerator implements CompilerBackend
               List<Boolean> blocking, TaskMode mode, Arg priority)  {
     assert(priority == null || priority.isImmediateInt());
     logger.debug("call: " + function);
+    
     ArrayList<Var> blockOn = new ArrayList<Var>();
-    HashSet<String> alreadyBlocking = new HashSet<String>();
+    HashSet<Var> alreadyBlocking = new HashSet<Var>();
     for (int i = 0; i < inputs.size(); i++) {
       Var v = inputs.get(i);
-      if (blocking.get(i) && !alreadyBlocking.contains(v.name())) {
+      if (blocking.get(i) && !alreadyBlocking.contains(v)) {
         blockOn.add(v);
-        alreadyBlocking.add(v.name());
+        alreadyBlocking.add(v);
       }
     }
 
