@@ -1473,40 +1473,39 @@ public class ICInstructions {
         Var valOut = Var.createDerefTmp(refOut, 
                                       VarStorage.ALIAS);
         Instruction newI = arrayLookupImm(valOut,
-            args.get(1).getVar(), args.get(2));
+            getInput(0).getVar(), getInput(1));
         return new MakeImmChange(valOut, refOut, newI);
       case ARRAY_LOOKUP_FUTURE:
         assert(values.size() == 1);
         return new MakeImmChange(
-                arrayLookupRefImm(args.get(0).getVar(), 
-                args.get(1).getVar(), values.get(0)));
+                arrayLookupRefImm(getOutput(0), 
+                          getInput(0).getVar(), values.get(0)));
       case ARRAYREF_LOOKUP_FUTURE:
         assert(values.size() == 1 || values.size() == 2);
         // Could be either array ref, index, or both
         if (values.size() == 2) {
           return new MakeImmChange(arrayLookupRefImm(
-              args.get(0).getVar(), values.get(0).getVar(), 
+              getOutput(0), values.get(0).getVar(), 
               values.get(1)));
         } else { 
           Arg v1 = values.get(0);
           if (v1.isImmediateInt()) {
             // replace index
             return new MakeImmChange(
-                    arrayRefLookupImm(args.get(0).getVar(), 
-                    args.get(1).getVar(), v1));
+                    arrayRefLookupImm(getOutput(0), 
+                    getInput(0).getVar(), v1));
           } else {
             // replace the array ref
             return new MakeImmChange(
-                    arrayLookupFuture(args.get(0).getVar(), 
-                            v1.getVar(), args.get(2).getVar()));
+                    arrayLookupFuture(getOutput(0), 
+                            v1.getVar(), getInput(1).getVar()));
           }
         }
       case ARRAYREF_LOOKUP_IMM:
         assert(values.size() == 1);
         // Switch from ref to plain array
         return new MakeImmChange(arrayLookupRefImm(
-                args.get(0).getVar(), values.get(0).getVar(),
-                                                         args.get(2)));
+                getOutput(0), values.get(0).getVar(), getInput(1)));
       case ARRAY_INSERT_FUTURE:
         assert(values.size() == 1);
         return new MakeImmChange(
@@ -1578,11 +1577,10 @@ public class ICInstructions {
       }
       case ARRAYREF_CREATE_NESTED_IMM: {
         assert(values.size() == 1);
-        Var oldOut3 = args.get(0).getVar();
+        Var oldOut3 = getOutput(0);
         assert(Types.isArrayRef(oldOut3.type()));
-        Var newOut3 = Var.createDerefTmp(oldOut3,
-                                                VarStorage.ALIAS);
-        Arg ix = args.get(2);
+        Var newOut3 = Var.createDerefTmp(oldOut3, VarStorage.ALIAS);
+        Arg ix = getInput(0);
         assert(ix.isImmediateInt());
         return new MakeImmChange(newOut3, oldOut3,
             arrayCreateNestedImm(newOut3, values.get(0).getVar(),
