@@ -26,6 +26,7 @@ import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
@@ -85,7 +86,10 @@ public class RefcountPass extends FunctionOptimizerPass {
       // Build separate copy for each block
       Counters<Var> readIncrements = new Counters<Var>();
       Counters<Var> writeIncrements = new Counters<Var>();
-      if (isSingleSpawnCont(cont)) {
+      // Get passed in variables decremented inside block
+      // Loops don't need this as they decrement refs at loop_break instruction
+      if (isSingleSpawnCont(cont) && 
+          cont.getType() != ContinuationType.LOOP) {       
         // TODO: handle foreach loops
         for (Var keepOpen: cont.getKeepOpenVars()) {
           if (RefCounting.hasWriteRefCount(keepOpen)) {
@@ -157,7 +161,7 @@ public class RefcountPass extends FunctionOptimizerPass {
     // Move any increment instructions up to this block
     // if they can be combined with increments here
     pullUpRefIncrements(block, readIncrements, writeIncrements);
-    
+        
     // Add increments to end of block
     /*
      * TODO: move decrements to piggyback onto load instructions
@@ -421,14 +425,26 @@ public class RefcountPass extends FunctionOptimizerPass {
         writeIncrements.increment(v);
       }
     }
+    if (inst.op == Opcode.LOOP_BREAK) {
+      // Special case decr
+      LoopBreak loopBreak = (LoopBreak)inst;
+      for (Var ko: loopBreak.getKeepOpenVars()) {
+        assert(RefCounting.hasWriteRefCount(ko));
+        writeIncrements.decrement(ko);
+      }
+      for (Var pass: loopBreak.getUsedVars()) {
+        if (RefCounting.hasReadRefCount(pass)) {
+          readIncrements.decrement(pass);
+        }
+      }
+    }
   }
 
   private void updateContinuationRefCount(Continuation cont,
       Counters<Var> readIncrements, Counters<Var> writeIncrements) {
     // TODO: handle other than wait
-    if (cont.isAsync() &&
-        cont.getType() == ContinuationType.WAIT_STATEMENT) {
-      long incr = 1; // TODO: different for other continuation
+    if (cont.isAsync() && isSingleSpawnCont(cont)) {
+      long incr = 1; // TODO: different for other continuations
       for (Var passedIn: cont.getPassedInVars()) {
         if (RefCounting.hasReadRefCount(passedIn)) {
           readIncrements.add(passedIn, incr);

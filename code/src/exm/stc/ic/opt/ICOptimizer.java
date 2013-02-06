@@ -104,7 +104,6 @@ public class ICOptimizer {
       OptimizerPipeline pipe = new OptimizerPipeline(icOutput);
       // First prune any unneeded functions
       pipe.addPass(inliner);
-      pipe.addPass(new FixupVariables());
       
       pipe.addPass(new ConstantFold());
       

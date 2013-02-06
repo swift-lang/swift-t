@@ -2922,6 +2922,8 @@ public class ICInstructions {
       }
       sb.append("] #passin[");
       ICUtil.prettyPrintVarList(sb, this.loopUsedVars);
+      sb.append("] #keepopen[");
+      ICUtil.prettyPrintVarList(sb, this.keepOpenVars);
       sb.append(']');
       return sb.toString();
     }
@@ -3048,6 +3050,10 @@ public class ICInstructions {
       for (Var var: vars) {
         removeKeepOpenVar(var);
       }
+    }
+
+    public void clearKeepOpenVars() {
+      keepOpenVars.clear();
     }
 
     public LoopContinue(List<Var> newLoopVars, 
@@ -3178,6 +3184,10 @@ public class ICInstructions {
       return null;
     }
 
+    public List<Var> getUsedVars() {
+      return Collections.unmodifiableList(this.loopUsedVars);
+    }
+
     public void addUsedVar(Var variable) {
       this.loopUsedVars.add(variable);
       ICUtil.removeDuplicates(this.loopUsedVars);
@@ -3203,6 +3213,10 @@ public class ICInstructions {
       loopUsedVars.clear();
     }
 
+    public List<Var> getKeepOpenVars() {
+      return Collections.unmodifiableList(this.keepOpenVars);
+    }
+
     public void addKeepOpenVar(Var variable) {
       this.keepOpenVars.add(variable);
     }
@@ -3215,6 +3229,10 @@ public class ICInstructions {
       for (Var var: vars) {
         removeKeepOpenVar(var);
       }
+    }
+
+    public void clearKeepOpenVars() {
+      keepOpenVars.clear();
     }
 
     @Override

@@ -62,4 +62,8 @@ public class Counters<K> {
   public Set<Entry<K, Long>> entries() {
     return map.entrySet();
   }
+  
+  public String toString() {
+    return map.toString();
+  }
 }

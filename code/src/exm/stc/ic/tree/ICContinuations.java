@@ -1123,13 +1123,12 @@ public class ICContinuations {
     }
 
     @Override
-    public void addKeepOpenVars(Collection<Var> v) {
-      // special implementation to also fix up the loopContinue instruction
-      super.addKeepOpenVars(v);
-      this.loopContinue.removeKeepOpenVars(v);
-      this.loopBreak.removeKeepOpenVars(v);
+    public void clearKeepOpenVars() {
+      super.clearKeepOpenVars();
+      this.loopContinue.clearKeepOpenVars();
+      this.loopBreak.clearKeepOpenVars();
     }
-
+    
     public Var getInitCond() {
       return this.initVals.get(0);
     }

@@ -1524,10 +1524,6 @@ public class TurbineGenerator implements CompilerBackend
       }
       return neededVars;
     }
-
-    private void incrementAllRefs(List<Var> usedVars, List<Var> keepOpenVars) {
-      incrementAllRefs(usedVars, keepOpenVars, null);
-    }
     
     /**
      * Increment reference counts upon calling something asynchronously.
@@ -1626,11 +1622,7 @@ public class TurbineGenerator implements CompilerBackend
       }
       pointStack.peek().append(seq);
     }
-    
-    private void decrementAllRefs(List<Var> usedVars, List<Var> keepOpenVars) {
-      decrementAllRefs(usedVars, keepOpenVars, null);
-    }
-    
+
     private void decrementAllRefs(List<Var> usedVars, List<Var> keepOpenVars,
         Expression refDecrAmount) {
       keepOpenVars = RefCounting.filterWriteRefcount(keepOpenVars);
@@ -2195,11 +2187,6 @@ public class TurbineGenerator implements CompilerBackend
         blockingVals.add(varToExpr(iv));
       }
     }
-    // Increment references before async call
-    incrementAllRefs(usedVariables, keepOpenVars);
-    // Increment references for condition variable and loop var
-    incrementReaders(initVals, null);
-
 
     String uniqueLoopName = uniqueTCLFunctionName(loopName);
 
@@ -2252,8 +2239,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void loopBreak(List<Var> loopUsedVars, List<Var> keepOpenVars) {
-    // Close vars
-    decrementAllRefs(loopUsedVars, keepOpenVars);
+    // Note: this is no-op now
   }
 
   @Override
