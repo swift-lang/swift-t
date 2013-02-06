@@ -217,6 +217,8 @@ public class FixupVariables implements OptimizerPass {
         // Might be some variables not yet defined in this scope
         innerNeededVars.removeAll(outerBlockVars);
         neededVars.addAll(innerNeededVars);
+        innerWritten.removeAll(outerBlockVars);
+        written.addAll(innerWritten);
       } else if (updateLists) {
         // Update the passed in vars
         rebuildContinuationPassedVars(function, continuation, visible,
@@ -235,6 +237,7 @@ public class FixupVariables implements OptimizerPass {
     continuation.clearPassedInVars();
     
     for (Var needed: innerNeededVars) {
+      assert(needed.storage() != VarStorage.GLOBAL_CONST);
       if (!outerBlockVars.contains(needed)) {
         outerNeededVars.add(needed);
       }
