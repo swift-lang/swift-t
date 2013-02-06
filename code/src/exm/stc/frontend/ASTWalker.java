@@ -251,15 +251,13 @@ public class ASTWalker {
           break;
 
         case ExMParser.DECLARATION:
-          declareVariables(context, tree);
-          break;
+          return declareVariables(context, tree);
 
         case ExMParser.ASSIGN_EXPRESSION:
           return assignExpression(context, tree);
 
         case ExMParser.EXPR_STMT:
-          exprStatement(context, tree);
-          break;
+          return exprStatement(context, tree);
 
         case ExMParser.FOREACH_LOOP:
           foreach(context, tree);
@@ -315,16 +313,15 @@ public class ASTWalker {
     for (SwiftAST stmt: stmts) {
       // Evaluate statement
       stmtResults = walkStatement(context, stmt);
-      
       if (stmtResults == null || stmtResults.isEmpty()) {
+        context.syncFilePos(stmt, lineMapping);
         throw new UserException(context, "Tried to wait for result"
             + " of statement of type " + LogHelper.tokName(stmt.getType())
             + " but statement doesn't have output future to wait on");
       }
       
       String waitName = context.getFunctionContext().constructName("chain");
-      final List<Var> waitVars = stmtResults;
-      backend.startWaitStatement(waitName, waitVars, null, WaitMode.EXPLICIT,
+      backend.startWaitStatement(waitName, stmtResults, null, WaitMode.EXPLICIT,
                                  false, TaskMode.LOCAL);
     }
     
@@ -925,7 +922,7 @@ public class ASTWalker {
 
 
   
-  private void declareVariables(Context context, SwiftAST tree)
+  private List<Var> declareVariables(Context context, SwiftAST tree)
           throws UserException {
     LogHelper.trace(context, "declareVariable...");
     assert(tree.getType() == ExMParser.DECLARATION);
@@ -934,6 +931,7 @@ public class ASTWalker {
       throw new STCRuntimeError("declare_multi: child count < 2");
     VariableDeclaration vd =  VariableDeclaration.fromAST(context, 
                                                     tree);
+    List<Var> assignedVars = new ArrayList<Var>();
     
     for (int i = 0; i < vd.count(); i++) {
       VariableDescriptor vDesc = vd.getVar(i);
@@ -947,10 +945,11 @@ public class ASTWalker {
            Assignment assignment = new Assignment(
                    Arrays.asList(new LValue(declTree, var)),
                    Arrays.asList(assignedExpr));
-           assignMultiExpression(context, assignment);
+           assignedVars.addAll(assignMultiExpression(context, assignment));
          }
       }
     }
+    return assignedVars;
   }
 
 
@@ -1423,12 +1422,11 @@ public class ASTWalker {
   /**
    * Statement that evaluates an expression with no assignment E.g., trace()
    */
-  private void exprStatement(Context context, SwiftAST tree) throws UserException {
+  private List<Var> exprStatement(Context context, SwiftAST tree) throws UserException {
     assert (tree.getChildCount() == 1);
     SwiftAST expr = tree.child(0);
 
     ExprType exprType = TypeChecker.findExprType(context, expr);
-
     backend.addComment("Swift l." + context.getLine() + " evaluating "
         + " expression and throwing away " + exprType.elems() +
         " results");
@@ -1440,6 +1438,7 @@ public class ASTWalker {
     }
 
     exprWalker.evalToVars(context, expr, oList, null);
+    return oList;
   }
 
   private void updateStmt(Context context, SwiftAST tree) 

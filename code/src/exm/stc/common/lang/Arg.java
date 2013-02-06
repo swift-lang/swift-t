@@ -320,7 +320,7 @@ public class Arg implements Comparable<Arg> {
 
   /**
    * Convert list of args to vars, assuming that all args are vars
-   * @param argVars
+   * @param args
    * @return
    */
   public static List<Var> toVarList(List<Arg> args) {
