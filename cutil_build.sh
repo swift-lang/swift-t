@@ -13,6 +13,7 @@ EXTRA_ARGS=
 if [ ! -z "$EXM_OPT_BUILD" ]; then
     EXTRA_ARGS+="--enable-fast"
 fi
+rm -rf ./config.status ./autom4te.cache
 ./setup.sh
 ./configure --enable-shared --prefix=${C_UTILS_INST} ${EXTRA_ARGS}
 make -j ${MAKE_PARALLELISM}

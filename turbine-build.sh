@@ -8,6 +8,8 @@ rm -rf ${TURBINE_INST}
 if [ -f Makefile ]; then
     make clean
 fi
+
+rm -rf ./config.status ./autom4te.cache
 ./setup.sh
 
 EXTRA_ARGS=
