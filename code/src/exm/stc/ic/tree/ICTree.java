@@ -905,23 +905,14 @@ public class ICTree {
       ListIterator<Var> it = variables.listIterator();
       while (it.hasNext()) {
         Var v = it.next();
-
-        if (v.isMapped()) {
-          if (renames.containsKey(v)) {
-            throw new STCRuntimeError("Tried to replace mapped variable in " +
-            "IC, this isn't supported so this probably indicates a " +
-            "compiler bug");
-          }
-        } else {
-          // V isn't mapped
-          if (renames.containsKey(v)) {
-            Arg replacement = renames.get(v);
-            if (replacement.isVar()) {
-              it.set(replacement.getVar());
-            } else {
-              // value replaced with constant
-              it.remove();
-            }
+        // V isn't mapped
+        if (renames.containsKey(v)) {
+          Arg replacement = renames.get(v);
+          if (replacement.isVar()) {
+            it.set(replacement.getVar());
+          } else {
+            // value replaced with constant
+            it.remove();
           }
         }
       }
