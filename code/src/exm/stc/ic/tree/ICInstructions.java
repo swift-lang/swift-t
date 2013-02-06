@@ -276,7 +276,7 @@ public class ICInstructions {
                                                 List<Arg> inValues);
 
     /**
-     * @return the futures this instruction will block on
+     * @return non-null the futures this instruction will block on
      *        it is ok if it forgets variables which aren't blocked on,
      *        but all variables returned must be blocked on
      */
@@ -288,8 +288,11 @@ public class ICInstructions {
      */
     public abstract TaskMode getMode();
 
+    /**
+     * @return List of outputs closed immediately after instruction returns
+     */
     public List<Var> getClosedOutputs() {
-      return null; // Default - assume nothing closed
+      return Collections.emptyList(); // Default - assume nothing closed
     }
     
     /**
@@ -403,7 +406,7 @@ public class ICInstructions {
 
     @Override
     public List<Var> getBlockingInputs() {
-      return null;
+      return Collections.emptyList();
     }
 
     @Override
@@ -1626,7 +1629,7 @@ public class ICInstructions {
     @Override
     public List<Var> getBlockingInputs() {
       if (getMode() == TaskMode.SYNC) {
-        return null;
+        return Collections.emptyList();
       }
       
       // If async, assume that all scalar input vars are blocked on
@@ -2008,7 +2011,7 @@ public class ICInstructions {
         if (!args.get(1).getVar().isMapped()) {
           return Arrays.asList(args.get(0).getVar());
         } else {
-          return null;
+          return Collections.emptyList();
         }
       } else if (op == Opcode.ARRAY_BUILD) {
         // Output array should be closed
@@ -2499,10 +2502,10 @@ public class ICInstructions {
         }
       } else if (op == Opcode.CALL_SYNC) {
         // Can't block because we need to enter the function immediately
-        return null;
+        return Collections.emptyList();
       } else if (op == Opcode.CALL_CONTROL ) {
         //TODO: should see which arguments are blocking
-        return null;
+        return Collections.emptyList();
       }
       return blocksOn;
     }
@@ -2662,7 +2665,7 @@ public class ICInstructions {
     @Override
     public List<Var> getBlockingInputs() {
       // doesn't take futures as args
-      return null;
+      return Collections.emptyList();
     }
 
     @Override
@@ -2989,7 +2992,7 @@ public class ICInstructions {
 
     @Override
     public List<Var> getBlockingInputs() {
-      return null;
+      return Collections.emptyList();
     }
     
 
@@ -3151,7 +3154,7 @@ public class ICInstructions {
    
     @Override
     public List<Var> getBlockingInputs() {
-      return null;
+      return Collections.emptyList();
     }
 
     @Override
@@ -3578,7 +3581,7 @@ public class ICInstructions {
     public List<Var> getBlockingInputs() {
       if (op == Opcode.LOCAL_OP) {
         // doesn't take futures as args
-        return null;
+        return Collections.emptyList();
       } else {
         assert(op == Opcode.ASYNC_OP);
         // blocks on all scalar inputs

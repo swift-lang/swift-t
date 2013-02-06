@@ -726,11 +726,9 @@ public class ForwardDataflow implements OptimizerPass {
           }
         }
       }
-      List<Var> closedOutputs = inst.getClosedOutputs();
-      if (closedOutputs != null) {
-        for (Var out: closedOutputs) {
-          cv.close(out.name(), false);
-        }
+      
+      for (Var out: inst.getClosedOutputs()) {
+        cv.close(out.name(), false);
       }
     }
     return anotherPassNeeded;

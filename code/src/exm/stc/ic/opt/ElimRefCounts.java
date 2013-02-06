@@ -91,7 +91,9 @@ public class ElimRefCounts extends FunctionOptimizerPass {
       HierarchicalSet<Var> contAssignedAliasVars =
                     parentAssignedAliasVars.makeChild();
       for (Var v: cont.constructDefinedVars()) {
-        contAssignedAliasVars.add(v);
+        if (v.storage() == VarStorage.ALIAS) {
+          contAssignedAliasVars.add(v);
+        }
       }
       
       elimRefCountsRec(logger, f, block, readIncrements, writeIncrements,
