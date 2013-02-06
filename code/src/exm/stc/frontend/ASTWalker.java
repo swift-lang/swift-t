@@ -219,11 +219,12 @@ public class ASTWalker {
    *
    * @param context
    * @param tree
-   * @param vu
    * @param blockVu
+   * @return "results" of statement that are blocked on in event
+   *         of chaining
    * @throws UserException
    */
-  private void walkStatement(Context context, SwiftAST tree)
+  private List<Var> walkStatement(Context context, SwiftAST tree)
   throws UserException
   {
       int token = tree.getType();
@@ -254,8 +255,7 @@ public class ASTWalker {
           break;
 
         case ExMParser.ASSIGN_EXPRESSION:
-          assignExpression(context, tree);
-          break;
+          return assignExpression(context, tree);
 
         case ExMParser.EXPR_STMT:
           exprStatement(context, tree);
@@ -281,12 +281,62 @@ public class ASTWalker {
           updateStmt(context, tree);
           break;
           
+        case ExMParser.STATEMENT_CHAIN:
+          stmtChain(context, tree);
+          break;
+          
         default:
           throw new STCRuntimeError
           ("Unexpected token type for statement: " +
               LogHelper.tokName(token));
       }
+      // default is that statement has no output results
+      return null;
   }
+
+  private void stmtChain(Context context, SwiftAST tree) throws UserException {
+    assert(tree.getType() == ExMParser.STATEMENT_CHAIN);
+    
+    // Evaluate multiple chainings iteratively
+    
+    // list of statements being waited on 
+    List<SwiftAST> stmts = new ArrayList<SwiftAST>();
+    while (tree.getType() == ExMParser.STATEMENT_CHAIN) {
+      assert(tree.getChildCount() == 2);
+      stmts.add(tree.child(0));
+      tree = tree.child(1);
+    }
+    
+    // final statement in chain
+    SwiftAST finalStmt = tree;
+    // result futures of last statement 
+    List<Var> stmtResults = null; 
+    
+    for (SwiftAST stmt: stmts) {
+      // Evaluate statement
+      stmtResults = walkStatement(context, stmt);
+      
+      if (stmtResults == null || stmtResults.isEmpty()) {
+        throw new UserException(context, "Tried to wait for result"
+            + " of statement of type " + LogHelper.tokName(stmt.getType())
+            + " but statement doesn't have output future to wait on");
+      }
+      
+      String waitName = context.getFunctionContext().constructName("chain");
+      final List<Var> waitVars = stmtResults;
+      backend.startWaitStatement(waitName, waitVars, null, WaitMode.EXPLICIT,
+                                 false, TaskMode.LOCAL);
+    }
+    
+    // Evaluate the final statement
+    walkStatement(context, finalStmt);
+    
+    // Close all waits
+    for (int i = 0; i < stmts.size(); i++) {
+      backend.endWaitStatement();
+    }
+  }
+
 
   private void waitStmt(Context context, SwiftAST tree) 
                                   throws UserException {
@@ -960,26 +1010,29 @@ public class ASTWalker {
     return var;
   }
 
-  private void assignExpression(Context context, SwiftAST tree)
+  private List<Var> assignExpression(Context context, SwiftAST tree)
       throws UserException {
     LogHelper.debug(context, "assignment: ");
     LogHelper.logChildren(context.getLevel(), tree);
     
     Assignment assign = Assignment.fromAST(context, tree);
-    assignMultiExpression(context, assign);
+    return assignMultiExpression(context, assign);
   }
 
-  private void assignMultiExpression(Context context, Assignment assign)
+  private List<Var> assignMultiExpression(Context context, Assignment assign)
             throws UserException, TypeMismatchException,
-      UndefinedTypeException, UndefinedVariableException {    
+      UndefinedTypeException, UndefinedVariableException {
+    List<Var> multiAssignTargets = new ArrayList<Var>();
     for (Pair<List<LValue>, SwiftAST> pair: assign.getMatchedAssignments(context)) {
       List<LValue> lVals = pair.val1;
       SwiftAST rVal = pair.val2;
-      assignSingleExpr(context, lVals, rVal);
+      List<Var> assignTargets = assignSingleExpr(context, lVals, rVal);
+      multiAssignTargets.addAll(assignTargets);
     }
+    return multiAssignTargets;
   }
 
-  private void assignSingleExpr(Context context, List<LValue> lVals,
+  private List<Var> assignSingleExpr(Context context, List<LValue> lVals,
       SwiftAST rValExpr) throws UserException, TypeMismatchException,
       UndefinedVariableException, UndefinedTypeException {
     
@@ -1045,6 +1098,7 @@ public class ASTWalker {
     for (Runnable action: afterActions) {
       action.run();
     }
+    return result;
   }
   /**
    * Process an LValue for an assignment, resulting in a variable that

@@ -234,11 +234,29 @@ class VariableUsageAnalyzer {
         updateStmt(context, vu, tree);
         break;
         
+      case ExMParser.STATEMENT_CHAIN:
+        walkStmtChain(context, tree, vu);
+        break;
+        
       default:
         throw new STCRuntimeError
         ("Unexpected token type inside procedure: " +
             LogHelper.tokName(token));
     }
+  }
+
+  private void walkStmtChain(Context context, SwiftAST tree,
+      VariableUsageInfo vu) throws UserException {
+    assert(tree.getType() == ExMParser.STATEMENT_CHAIN);
+    
+    // Do iteratively to avoid large stack
+    while (tree.getType() == ExMParser.STATEMENT_CHAIN) {
+      assert(tree.getChildCount() == 2);
+      walk(context, tree.child(0), vu);
+      tree = tree.child(1);
+    }
+    // Walk non-chained final statement
+    walk(context, tree, vu);
   }
 
   private void updateStmt(Context context, VariableUsageInfo vu, SwiftAST tree)

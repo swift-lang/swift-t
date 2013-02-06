@@ -56,6 +56,7 @@ tokens {
     STRING_LITERAL;
     BOOL_LITERAL;
     OCTAL_ESCAPE;
+    STATEMENT_CHAIN;
     ASSIGN_EXPRESSION;
     ASSIGN_TARGET;
     CALL_FUNCTION;
@@ -325,10 +326,12 @@ block: LBRACE stmt* RBRACE -> ^( BLOCK stmt* )
 
 
 stmt:
-    SEMICOLON ->
-    |   (declaration_multi)
-    |   (assignment_expr)
-    |   (expr_stmt)         SEMICOLON -> expr_stmt
+        SEMICOLON ->
+    |   (real_stmt) -> real_stmt
+    ;
+
+real_stmt: 
+        (stmt_chain)
     |   (if_stmt)
     |   (switch_stmt)
     |   (block)
@@ -337,6 +340,24 @@ stmt:
     |   (iterate_loop)
     |   (wait_stmt)
     |   (update_stmt)
+    ;
+
+stmt_chain:
+        chainable_stmt
+          (  SEMICOLON
+                    -> chainable_stmt 
+          | stmt_chain_op real_stmt 
+                    ->  ^( STATEMENT_CHAIN chainable_stmt real_stmt ))
+    ;
+        
+chainable_stmt:
+        (declaration_multi)
+    |   (assignment_expr)
+    |   (expr_stmt)
+    ;
+    
+ stmt_chain_op:
+        '=' '>'
     ;
 
 if_stmt:
@@ -418,7 +439,7 @@ wait_stmt:
     ;
 
 declaration_multi:
-        type=ID declare_rest declare_rest_more* SEMICOLON
+        type=ID declare_rest declare_rest_more*
             -> ^( DECLARATION $type declare_rest
                                                 declare_rest_more* )
     ;
@@ -618,7 +639,7 @@ array_elems_more:
 
 
 assignment_expr:
-        i=assignment_list ASSIGN e=expr more_expr* SEMICOLON ->
+        i=assignment_list ASSIGN e=expr more_expr* ->
         ^( ASSIGN_EXPRESSION $i $e more_expr* )
     ;
 
