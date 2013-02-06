@@ -375,15 +375,15 @@ public class ASTWalker {
     for (Var v : context.getArraysToClose()) {
       assert(v.defType() != DefType.INARG);
       assert(Types.isArray(v.type()));
-      backend.decrWriters(v);
+      backend.decrWriters(v, Arg.createIntLit(1));
     }
     
     Set<String> noRefcountNames = Var.nameSet(noRefcount); 
     for (Var v: context.getScopeVariables()) {
-      if (RefCounting.hasReadRefcount(v)) {
+      if (RefCounting.hasReadRefCount(v)) {
         if (!noRefcountNames.contains(v.name()) && 
             v.storage() != VarStorage.ALIAS) {
-          backend.decrRef(v);
+          backend.decrRef(v, Arg.createIntLit(1));
         }
       }
     }

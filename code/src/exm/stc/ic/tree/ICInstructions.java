@@ -493,14 +493,19 @@ public class ICInstructions {
         break;
       case ARRAY_BUILD:
         gen.arrayBuild(args.get(0).getVar(),
-            Arg.toVarList(args.subList(2, args.size())),
-            args.get(1).getBoolLit());
+            Arg.toVarList(args.subList(1, args.size())));
         break;
-      case ARRAY_DECR_WRITERS:
-        gen.decrWriters(args.get(0).getVar());
+      case DECR_WRITERS:
+        gen.decrWriters(args.get(0).getVar(), args.get(1));
+        break;
+      case INCR_WRITERS:
+        gen.incrWriters(args.get(0).getVar(), args.get(1));
         break;
       case DECR_REF:
-        gen.decrRef(args.get(0).getVar());
+        gen.decrRef(args.get(0).getVar(), args.get(1));
+        break;
+      case INCR_REF:
+        gen.incrRef(args.get(0).getVar(), args.get(1));
         break;
       case STRUCT_LOOKUP:
         gen.structLookup(args.get(1).getVar(), args.get(2).getStringLit(),
@@ -710,10 +715,9 @@ public class ICInstructions {
     }
   
   
-    public static Instruction arrayBuild(Var array, List<Var> members, boolean close) {
+    public static Instruction arrayBuild(Var array, List<Var> members) {
       ArrayList<Arg> args = new ArrayList<Arg>(2 + members.size());
       args.add(Arg.createVar(array));
-      args.add(Arg.createBoolLit(close));
       for (Var mem: members) {
         args.add(Arg.createVar(mem));
       }
@@ -734,15 +738,26 @@ public class ICInstructions {
               Arg.createStringLit(fieldName));
     }
   
-    public static Instruction arrayDecrWriters(Var array) {
-      return new TurbineOp(Opcode.ARRAY_DECR_WRITERS, 
-              Arg.createVar(array));
+    public static Instruction decrWriters(Var array, Arg amount) {
+      return new TurbineOp(Opcode.DECR_WRITERS, 
+              Arg.createVar(array), amount);
+    }
+    
+    public static Instruction incrWriters(Var array, Arg amount) {
+      return new TurbineOp(Opcode.INCR_WRITERS, 
+              Arg.createVar(array), amount);
     }
 
-    public static Instruction decrRef(Var var) {
+    public static Instruction decrRef(Var var, Arg amount) {
       return new TurbineOp(Opcode.DECR_REF, 
-              Arg.createVar(var));
+              Arg.createVar(var), amount);
     }
+    
+    public static Instruction incrRef(Var var, Arg amount) {
+      return new TurbineOp(Opcode.INCR_REF, 
+                            Arg.createVar(var), amount);
+    }
+
 
     public static Instruction assignInt(Var target, Arg src) {
       return new TurbineOp(Opcode.STORE_INT, Arg.createVar(target), src);
@@ -1025,11 +1040,13 @@ public class ICInstructions {
       
       case ARRAY_INSERT_FUTURE:
       case ARRAY_INSERT_IMM:
-      case ARRAY_DECR_WRITERS:
       case ARRAY_BUILD:
       case STRUCT_CLOSE:
       case STRUCT_INSERT:
+      case DECR_WRITERS:
       case DECR_REF:
+      case INCR_WRITERS:
+      case INCR_REF:
         // We view modified var as output
         return 1;
       case ARRAYREF_INSERT_FUTURE:
@@ -1103,8 +1120,10 @@ public class ICInstructions {
       case ARRAY_INSERT_IMM:
       case STRUCT_CLOSE:
       case STRUCT_INSERT:
-      case ARRAY_DECR_WRITERS:
+      case DECR_WRITERS:
       case DECR_REF:
+      case INCR_WRITERS:
+      case INCR_REF:
       case ARRAY_BUILD:
         return this.writesAliasVar();
         
@@ -1634,8 +1653,10 @@ public class ICInstructions {
       case STRUCT_CLOSE:
       case STRUCT_INSERT:
       case STRUCT_LOOKUP:
-      case ARRAY_DECR_WRITERS:
+      case DECR_WRITERS:
       case DECR_REF:
+      case INCR_WRITERS:
+      case INCR_REF:
       case ARRAY_CREATE_NESTED_IMM:
       case ADDRESS_OF:
       case LOAD_REF:
@@ -1821,10 +1842,10 @@ public class ICInstructions {
           res.add(new ComputedValue(op, args.subList(1, args.size()),
                       arr, true));
           // For individual array elements
-          int arrSize = args.size() - 2;
+          int arrSize = args.size() - 1;
           for (int i = 0; i < arrSize; i++) {
             res.add(makeArrayComputedValue(arr, Arg.createIntLit(i),
-                                           args.get(i + 2)));
+                                           args.get(i + 1)));
           }
           
           // TODO: how to propagate size info.  This isn't working yet
@@ -3026,7 +3047,7 @@ public class ICInstructions {
     STORE_VOID, LOAD_VOID, 
     STORE_FILE, DECR_LOCAL_FILE_REF,
     LOAD_FILE, // dummy instruction
-    ARRAY_DECR_WRITERS, DECR_REF,
+    DECR_WRITERS, DECR_REF, INCR_WRITERS, INCR_REF,
     
     ARRAYREF_LOOKUP_FUTURE, ARRAY_LOOKUP_FUTURE,
     ARRAYREF_LOOKUP_IMM, ARRAY_LOOKUP_REF_IMM, ARRAY_LOOKUP_IMM,

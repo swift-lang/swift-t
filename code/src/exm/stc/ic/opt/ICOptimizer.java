@@ -76,7 +76,7 @@ public class ICOptimizer {
     // Must fix up variables as frontend doesn't get it right
     preprocess.addPass(new FixupVariables());
     preprocess.addPass(new FlattenNested());
-    preprocess.addPass(new Validate());
+    preprocess.addPass(Validate.standardValidator());
     preprocess.runPipeline(logger, program, 0);
   }
 
@@ -100,7 +100,7 @@ public class ICOptimizer {
       // First prune any unneeded functions
       pipe.addPass(inliner);
       pipe.addPass(new FixupVariables());
-      pipe.addPass(new Validate()); //TODO: remove once inlining stable
+      pipe.addPass(Validate.standardValidator()); //TODO: remove once inlining stable
       
       pipe.addPass(new ConstantFold());
       
@@ -125,14 +125,14 @@ public class ICOptimizer {
       // results can be cleaned up by forward dataflow
       if (iteration == nIterations - (nIterations / 4) - 3) {
         pipe.addPass(new Pipeline());
-        pipe.addPass(new Validate());
+        pipe.addPass(Validate.standardValidator());
       }
       
       // Do merges near end since it can be detrimental to other optimizations
       boolean doWaitMerges = iteration == nIterations - (nIterations / 4) - 2;
       pipe.addPass(new WaitCoalescer(doWaitMerges));
       
-      pipe.addPass(new Validate());
+      pipe.addPass(Validate.standardValidator());
       
       pipe.runPipeline(logger, prog, iteration);
     }
@@ -143,7 +143,7 @@ public class ICOptimizer {
     OptimizerPipeline postprocess = new OptimizerPipeline(icOutput);
     postprocess.addPass(new ConstantSharing());
     postprocess.addPass(new ElimRefcounts());
-    postprocess.addPass(new Validate());
+    postprocess.addPass(Validate.finalValidator());
     postprocess.runPipeline(logger, prog,  nIterations - 1);
   }
 

@@ -1240,7 +1240,7 @@ public class ICContinuations {
     private Arg end;
     private Arg increment;
     private int desiredUnroll;
-    private final int splitDegree;
+    private int splitDegree;
 
     public RangeLoop(String loopName, Var loopVar, Var countVar,
         Arg start, Arg end, Arg increment,
@@ -1433,7 +1433,15 @@ public class ICContinuations {
       start = newVals[0];
       end = newVals[1];
       increment = newVals[2];
-
+      
+      if (start.isIntVal() && end.isIntVal() && increment.isIntVal()) {
+        long iters = (end.getIntLit() - start.getIntLit()) /
+                      increment.getIntLit() + 1;
+        if (splitDegree > 0 && iters <= splitDegree) {
+          // Don't need to split
+          splitDegree = -1;
+        }
+      }
       assert(start != null); assert(end != null); assert(increment  != null);
       return anyChanged;
     }

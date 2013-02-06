@@ -79,10 +79,12 @@ public class ProgressOpcodes {
   
   private static HashSet<Opcode> initNonProgress() { 
     HashSet<Opcode> opcodes = new HashSet<Opcode>();
-    opcodes.add(Opcode.ARRAY_DECR_WRITERS);
+    opcodes.add(Opcode.DECR_WRITERS);
     opcodes.add(Opcode.DECR_BLOB_REF);
     opcodes.add(Opcode.FREE_BLOB);
     opcodes.add(Opcode.DECR_REF);
+    opcodes.add(Opcode.INCR_REF);
+    opcodes.add(Opcode.INCR_WRITERS);
     opcodes.add(Opcode.LOCAL_OP);
     opcodes.add(Opcode.CALL_LOCAL);
     opcodes.add(Opcode.CALL_LOCAL_CONTROL);
@@ -109,10 +111,12 @@ public class ProgressOpcodes {
   private static HashSet<Opcode> initCheap() { 
     HashSet<Opcode> opcodes = new HashSet<Opcode>();
     opcodes.add(Opcode.COMMENT);
-    opcodes.add(Opcode.ARRAY_DECR_WRITERS);
+    opcodes.add(Opcode.DECR_WRITERS);
     opcodes.add(Opcode.DECR_BLOB_REF);
     opcodes.add(Opcode.FREE_BLOB);
     opcodes.add(Opcode.DECR_REF);
+    opcodes.add(Opcode.INCR_REF);
+    opcodes.add(Opcode.INCR_WRITERS);
     opcodes.add(Opcode.CALL_LOCAL);
     opcodes.add(Opcode.CALL_LOCAL_CONTROL);
     opcodes.add(Opcode.STORE_BOOL);

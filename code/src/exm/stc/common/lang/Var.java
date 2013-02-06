@@ -115,6 +115,27 @@ public class Var {
     this.mapping = mapping;
   }
 
+  @Override
+  public int hashCode() {
+    // Assume name unique
+    return name.hashCode();
+  }
+  
+  /**
+   * Compare variables by name only (assume unique in context)
+   * @param o
+   * @return
+   */
+  @Override
+  public boolean equals(Object o) {
+    if (this == o)
+      return true;
+    if (!(o instanceof Var))
+      return false;
+    Var ov = (Var)o;
+    return name.equals(ov.name);
+  }
+  
   public String name() {
     return name;
   }

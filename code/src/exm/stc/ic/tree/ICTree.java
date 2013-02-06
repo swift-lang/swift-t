@@ -538,7 +538,7 @@ public class ICTree {
      * @return false if only effect of instruction is to cleanup current variable
      */
     public boolean hasSideEffect() {
-      if (action.op == Opcode.ARRAY_DECR_WRITERS &&
+      if (action.op == Opcode.DECR_WRITERS &&
           action.writesAliasVar()) {
         return true;
       }
@@ -563,7 +563,7 @@ public class ICTree {
      * @return
      */
     private boolean canMoveToAlias() {
-      return action.op == Opcode.ARRAY_DECR_WRITERS;
+      return action.op == Opcode.DECR_WRITERS;
     }
     @Override
     public CleanupAction clone() {

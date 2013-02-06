@@ -303,16 +303,34 @@ public class TurbineGenerator implements CompilerBackend
 
 
   @Override
-  public void decrWriters(Var arr) {
-    Type type = arr.type();
-    assert(Types.isArray(type));
+  public void decrWriters(Var arr, Arg amount) {
+    assert(RefCounting.hasWriteRefCount(arr));
     // Close array by removing the slot we created at startup
-    pointStack.peek().add(Turbine.decrArrayWriters(varToExpr(arr)));
+    pointStack.peek().add(
+        decrementWriters(Arrays.asList(arr), argToExpr(amount)));
   }
   
   @Override
-  public void decrRef(Var var) {
-    decrementReaders(var);
+  public void decrRef(Var var, Arg amount) {
+    assert(RefCounting.hasReadRefCount(var));
+    pointStack.peek().add(
+        decrementReaders(Arrays.asList(var), argToExpr(amount)));
+  }
+  
+  @Override
+  public void incrRef(Var var, Arg amount) {
+    assert(RefCounting.hasReadRefCount(var));
+    assert(amount.isImmediateInt());
+    pointStack.peek().append(
+        incrementReaders(Arrays.asList(var), argToExpr(amount)));
+  }
+  
+  @Override
+  public void incrWriters(Var var, Arg amount) {
+    assert(RefCounting.hasWriteRefCount(var));
+    assert(amount.isImmediateInt());
+    pointStack.peek().append(
+        incrementWriters(Arrays.asList(var), argToExpr(amount)));
   }
 
   String typeToString(PrimType type)
@@ -1058,7 +1076,7 @@ public class TurbineGenerator implements CompilerBackend
 
 
   @Override
-  public void arrayBuild(Var array, List<Var> members, boolean close) {
+  public void arrayBuild(Var array, List<Var> members) {
     assert(Types.isArray(array.type()));
     List<Expression> arrMemExprs = new ArrayList<Expression>(members.size());
     for (int i = 0; i < members.size(); i++) {
@@ -1067,7 +1085,7 @@ public class TurbineGenerator implements CompilerBackend
       arrMemExprs.add(varToExpr(member));
     }
     pointStack.peek().add(
-        Turbine.arrayBuild(varToExpr(array), arrMemExprs, close));
+        Turbine.arrayBuild(varToExpr(array), arrMemExprs, true));
   }
   
   @Override
@@ -1385,14 +1403,14 @@ public class TurbineGenerator implements CompilerBackend
         WaitMode mode, boolean recursive, TaskMode target) {
       logger.trace("startWaitStatement()...");
       startAsync(procName, waitVars, usedVariables, keepOpenVars,
-                 priority, recursive, target);
+                 priority, recursive, target, false);
     }
 
     @Override
     public void endWaitStatement(List<Var> waitVars, List<Var> usedVars,
                                  List<Var> keepOpenVars) {
       logger.trace("endWaitStatement()...");
-      endAsync(waitVars, usedVars, keepOpenVars);
+      endAsync(waitVars, usedVars, keepOpenVars, false);
     }
 
     /**
@@ -1404,12 +1422,13 @@ public class TurbineGenerator implements CompilerBackend
      * @param keepOpenVars
      * @param priority 
      * @param recursive 
+     * @param incrRefCounts 
      * @param shareWork if true, work will be shared with other rule engines
      *                  at the cost of higher overhead
      */
     private void startAsync(String procName, List<Var> waitVars,
         List<Var> usedVars, List<Var> keepOpenVars,
-        Arg priority, boolean recursive, TaskMode mode) {
+        Arg priority, boolean recursive, TaskMode mode, boolean incrRefCounts) {
       assert(priority == null || priority.isImmediateInt());
       mode.checkSpawn(execContextStack.peek());
       
@@ -1471,7 +1490,8 @@ public class TurbineGenerator implements CompilerBackend
       }
 
       // increment read or write refs as needed
-      incrementAllRefs(allUsedVars, keepOpenVars);
+      if (incrRefCounts)
+        incrementAllRefs(allUsedVars, keepOpenVars);
       
       // Set priority (if provided)
       setPriority(priority);
@@ -1522,10 +1542,11 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     private void endAsync(List<Var> waitVars, List<Var> usedVars,
-                          List<Var> keepOpenVars) {
+                          List<Var> keepOpenVars, boolean decrRefCounts) {
       List<Var> allUsedVars = asyncUsedVars(usedVars, waitVars);
       // decrement read or write refs as needed
-      decrementAllRefs(allUsedVars, keepOpenVars);
+      if (decrRefCounts)
+        decrementAllRefs(allUsedVars, keepOpenVars);
       execContextStack.pop();
       pointStack.pop();
     }
@@ -1586,14 +1607,6 @@ public class TurbineGenerator implements CompilerBackend
       pointStack.peek().append(incrementReaders(Arrays.asList(vars), null));
     }
 
-    /**
-     * Decrement refcount of all vars by one
-     * @param vars
-     */
-    private void decrementReaders(Var ...vars) {
-      pointStack.peek().append(decrementReaders(Arrays.asList(vars), null));
-    }
-
     private static Sequence incrementReaders(List<Var> vars, Expression incr) {
       return incrementReaders(vars, incr, false);
     }
@@ -1614,7 +1627,7 @@ public class TurbineGenerator implements CompilerBackend
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(vars)) {
         Var var = vc.var;
-        if (!RefCounting.hasReadRefcount(var)) {
+        if (!RefCounting.hasReadRefCount(var)) {
           continue;
         }
         Expression amount;
@@ -1651,7 +1664,7 @@ public class TurbineGenerator implements CompilerBackend
           Expression incr) {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(keepOpenVars)) {
-        if (!RefCounting.hasWriteRefcount(vc.var)) {
+        if (!RefCounting.hasWriteRefCount(vc.var)) {
           continue;
         }
         if (incr == null) {
@@ -1682,7 +1695,7 @@ public class TurbineGenerator implements CompilerBackend
                                              Expression decr) {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(vars)) {
-        if (!RefCounting.hasWriteRefcount(vc.var)) {
+        if (!RefCounting.hasWriteRefCount(vc.var)) {
           continue;
         }
         if (decr == null) {
@@ -1794,7 +1807,7 @@ public class TurbineGenerator implements CompilerBackend
       }
       startAsync(loopName + ":arrwait", 
                   Arrays.asList(arrayVar), passIn,
-                  keepOpenVars, null, false, TaskMode.LOCAL);
+                  keepOpenVars, null, false, TaskMode.LOCAL, true);
     }
 
     boolean haveKeys = loopCountVar != null;

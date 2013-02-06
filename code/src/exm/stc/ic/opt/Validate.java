@@ -35,6 +35,24 @@ import exm.stc.ic.tree.ICTree.Program;
 
 public class Validate implements OptimizerPass {
 
+  private final boolean checkCleanups;
+  
+  private Validate(boolean checkCleanups) {
+    super();
+    this.checkCleanups = checkCleanups;
+  }
+
+  public static Validate standardValidator() {
+    return new Validate(true);
+  }
+  
+  /**
+   * @returns validator for final form with additional refcounting
+   */
+  public static Validate finalValidator() {
+    return new Validate(false);
+  }
+  
   @Override
   public String getPassName() {
     return "Validate";
@@ -72,8 +90,8 @@ public class Validate implements OptimizerPass {
     for (Var v: block.getVariables()) {
       checkVarUnique(logger, program, fn, usedNames, v);
     }
-    
-    checkCleanups(fn, block);
+    if (checkCleanups)
+      checkCleanups(fn, block);
     
     for (Continuation c: block.getContinuations()) {
       List<Var> constructDefined = c.constructDefinedVars();
@@ -108,7 +126,7 @@ public class Validate implements OptimizerPass {
     
     for (CleanupAction ca: block.getCleanups()) {
       if (!blockVarNames.contains(ca.var().name())) {
-        if (ca.action().op != Opcode.ARRAY_DECR_WRITERS) {
+        if (ca.action().op != Opcode.DECR_WRITERS) {
           // TODO: workaround to avoid eliminating functional code
           throw new STCRuntimeError("Cleanup action for var not defined in " +
               "block: " + ca.var() + " in function " + fn.getName() + ". " +

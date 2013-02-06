@@ -555,7 +555,7 @@ public class SwigcGenerator implements CompilerBackend
 
 
   @Override
-  public void decrWriters(Var arr) {
+  public void decrWriters(Var arr, Arg amount) {
     Type type = arr.type();
     assert(Types.isArray(type));
     // Close array by removing the slot we created at startup
@@ -2162,7 +2162,7 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void decrRef(Var var) {
+    public void decrRef(Var var, Arg amount) {
       // TODO Auto-generated method stub
       
     }
@@ -2212,7 +2212,19 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void arrayBuild(Var array, List<Var> members, boolean close) {
+    public void arrayBuild(Var array, List<Var> members) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public void incrRef(Var var, Arg amount) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public void incrWriters(Var var, Arg amount) {
       // TODO Auto-generated method stub
       
     }

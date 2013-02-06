@@ -34,6 +34,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Redirects;
+import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -370,13 +371,25 @@ public class STCMiddleEnd {
         outFileNames, args, redirects, hasSideEffects, deterministic));
   }
 
-  public void decrWriters(Var arr) {
+  public void decrWriters(Var arr, Arg amount) {
     assert(Types.isArray(arr.type()));
-    currBlock().addCleanup(arr, TurbineOp.arrayDecrWriters(arr));
+    currBlock().addCleanup(arr, TurbineOp.decrWriters(arr, amount));
   }
 
-  public void decrRef(Var v) {
-    currBlock().addCleanup(v, TurbineOp.decrRef(v));
+  public void decrRef(Var v, Arg amount) {
+    currBlock().addCleanup(v, TurbineOp.decrRef(v, amount));
+  }
+  
+  public void incrRef(Var var, Arg amount) {
+    assert(RefCounting.hasReadRefCount(var));
+    assert(amount.isImmediateInt());
+    currBlock().addInstruction(TurbineOp.incrRef(var, amount));
+  }
+  
+  public void incrWriters(Var var, Arg amount) {
+    assert(RefCounting.hasWriteRefCount(var));
+    assert(amount.isImmediateInt());
+    currBlock().addInstruction(TurbineOp.incrWriters(var, amount));
   }
   
   public void arrayLookupFuture(Var oVar, Var arrayVar,
@@ -428,13 +441,13 @@ public class STCMiddleEnd {
                                               outerArrayVar));
   }
   
-  public void arrayBuild(Var array, List<Var> members, boolean close) {
+  public void arrayBuild(Var array, List<Var> members) {
     assert(Types.isArray(array.type()));
     for (Var member: members) {
       assert(member.type().assignableTo(array.type().memberType()));
     }
     currBlock().addInstruction(
-        TurbineOp.arrayBuild(array, members, close));
+        TurbineOp.arrayBuild(array, members));
   }
   
   public void arrayInsertImm(Var iVar, Var arrayVar,

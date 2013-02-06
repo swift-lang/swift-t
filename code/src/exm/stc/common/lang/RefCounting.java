@@ -18,15 +18,20 @@ package exm.stc.common.lang;
 import java.util.ArrayList;
 import java.util.List;
 
+import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Var.DefType;
 
 public class RefCounting {
+  public static enum RefCountType {
+    READERS,
+    WRITERS;
+  };
   
   /**
    * @param v
    * @return true if type has read refcount to be managed
    */
-  public static boolean hasReadRefcount(Var v) {
+  public static boolean hasReadRefCount(Var v) {
     if (Types.isScalarValue(v.type())) {
       return false;
     } else if (v.defType() == DefType.GLOBAL_CONST) {
@@ -40,10 +45,19 @@ public class RefCounting {
    * @param v
    * @return
    */
-  public static boolean hasWriteRefcount(Var v) {
+  public static boolean hasWriteRefCount(Var v) {
     return Types.isArray(v.type()) && v.defType() != DefType.GLOBAL_CONST;
   }
   
+  public static boolean hasRefCount(Var var, RefCountType type) {
+    if (type == RefCountType.READERS) {
+      return hasReadRefCount(var);
+    } else {
+      assert(type == RefCountType.WRITERS);
+      return hasWriteRefCount(var);
+    }
+  }
+
   /**
    * Filter vars to include only variables where writers count is tracked
    * @param vars
@@ -53,7 +67,7 @@ public class RefCounting {
     assert(vars != null);
     List<Var> res = new ArrayList<Var>();
     for (Var var: vars) {
-      if (hasWriteRefcount(var)) {
+      if (hasWriteRefCount(var)) {
         res.add(var);
       }
     }

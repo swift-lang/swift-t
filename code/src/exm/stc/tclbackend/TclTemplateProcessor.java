@@ -93,7 +93,7 @@ public class TclTemplateProcessor {
   private static boolean passOutByName(Type type) {
     if (Types.isArray(type)) {
       // Pass Turbine arrays by type
-      return true;
+      return false;
     }
     return true;
   }

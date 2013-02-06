@@ -51,9 +51,14 @@ public interface CompilerBackend {
       VarStorage storage, DefType defType, Var mapping) 
            throws UndefinedTypeException;
 
-  public abstract void decrRef(Var var);
+  public abstract void decrRef(Var var, Arg amount);
+
+  public abstract void incrRef(Var var, Arg amount);
   
-  public abstract void decrWriters(Var var);
+  public abstract void decrWriters(Var var, Arg amount);
+
+  public abstract void incrWriters(Var var, Arg amount);
+
 
   public abstract void localOp(BuiltinOpcode op, Var out, 
                                             List<Arg> in);
@@ -235,9 +240,8 @@ public interface CompilerBackend {
    * variables from members 
    * @param array
    * @param members
-   * @param close if array should be closed at end of build 
    */
-  public abstract void arrayBuild(Var array, List<Var> members, boolean close);
+  public abstract void arrayBuild(Var array, List<Var> members);
   
   public abstract void arrayInsertImm(Var iVar, Var arrayVar,
       Arg arrayIndex);
@@ -430,5 +434,4 @@ public interface CompilerBackend {
    */
   public abstract void loopBreak(List<Var> loopUsedVars, List<Var> keepOpenVars);
   public abstract void endLoop();
-
 }

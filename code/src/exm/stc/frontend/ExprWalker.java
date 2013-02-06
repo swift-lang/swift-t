@@ -745,7 +745,7 @@ public class ExprWalker {
           memType, false, renames);
       computedMembers.add(computedMember);
     }
-    backend.arrayBuild(oVar, computedMembers, false);
+    backend.arrayBuild(oVar, computedMembers);
   }
 
   private void callFunction(Context context, String function,
