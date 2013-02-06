@@ -1,5 +1,7 @@
 package exm.stc.ic.opt;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -21,7 +23,9 @@ import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
+import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CleanupAction;
@@ -50,23 +54,23 @@ public class ElimRefCounts extends FunctionOptimizerPass {
                      new HierarchicalSet<Var>());
   }
 
-  /*
-   * TODO: want to modify this optimization pass to add in reference decrements
-   * at end of continuations.  Neeed to walk over tree and add refcount instructions
-   * wherever there is keepOpen/passIn annotation
-   */
   private void elimRefCountsRec(Logger logger, Function f, Block block,
       Counters<Var> readIncrements, Counters<Var> writeIncrements,
       HierarchicalSet<Var> parentAssignedAliasVars) {
-    fixBlockRefCounting(logger, block, readIncrements, writeIncrements,
-                        parentAssignedAliasVars);
+    
     
     // Add own alias vars
     HierarchicalSet<Var> assignedAliasVars = parentAssignedAliasVars.makeChild();
     findAssignedAliasVars(block, assignedAliasVars);
+    
+    /* Traverse in bottom-up order so that we can access refcount info in
+     * child blocks for pulling up */
     for (Continuation cont: block.getContinuations()) {
       elimRefCountsCont(logger, f, cont, assignedAliasVars);
     }
+    
+    fixBlockRefCounting(logger, block, readIncrements, writeIncrements,
+                        parentAssignedAliasVars);
   }
 
   private void elimRefCountsCont(Logger logger, Function f,
@@ -125,6 +129,7 @@ public class ElimRefCounts extends FunctionOptimizerPass {
       Counters<Var> readIncrements, Counters<Var> writeIncrements,
       Set<Var> parentAssignedAliasVars) {
     
+    // First collect up all required reference counting ops in block
     for (Instruction inst: block.getInstructions()) {
       updateInstructionRefCount(inst, readIncrements, writeIncrements);
     }
@@ -132,6 +137,9 @@ public class ElimRefCounts extends FunctionOptimizerPass {
       updateContinuationRefCount(cont, readIncrements, writeIncrements);
     }
     
+    updateCleanupActionRefCount(block, readIncrements, writeIncrements);
+    
+    // Second put them back into IC
     updateBlockRefcounting(block, readIncrements, writeIncrements,
                            parentAssignedAliasVars);
   }
@@ -139,10 +147,18 @@ public class ElimRefCounts extends FunctionOptimizerPass {
   private void updateBlockRefcounting(Block block,
       Counters<Var> readIncrements, Counters<Var> writeIncrements,
       Set<Var> parentAssignedAliasVars) {
-    cancelDecrements(block, readIncrements, writeIncrements);
+    // Move any increment instructions up to this block
+    // if they can be combined with increments here
+    pullUpRefIncrements(block, readIncrements, writeIncrements);
     
     // Add increments to end of block
-    // TODO: move decrements to piggyback onto read/write instructions
+    /*
+     * TODO: move decrements to piggyback onto load instructions
+     * - Scan backwards from end of block.
+     * - If a load instruction  from X is found, and X has a net decrement,
+     *    then piggy-back the entire decrement amount on the load 
+     * - For writers counts, similar logic for container_insert
+     */
     addDecrements(block, readIncrements, RefCountType.READERS);
     addDecrements(block, writeIncrements, RefCountType.WRITERS);
     
@@ -153,50 +169,34 @@ public class ElimRefCounts extends FunctionOptimizerPass {
                      parentAssignedAliasVars);    
   }
 
-  private void cancelDecrements(Block block, Counters<Var> readIncrements,
-      Counters<Var> writeIncrements) {
+  private void updateCleanupActionRefCount(Block block,
+          Counters<Var> readIncrements, Counters<Var> writeIncrements) {
     ListIterator<CleanupAction> caIt = block.cleanupIterator(); 
     while (caIt.hasNext()) {
       CleanupAction ca = caIt.next();
       Instruction action = ca.action();
       switch (action.op) {
-        case DECR_REF: {
-          Var decrVar = action.getOutput(0);
-          Arg amount = action.getInput(0);
-          cancelDecrement(caIt, ca, readIncrements, decrVar, amount);
-          break;
-        }
+        case DECR_REF: 
         case DECR_WRITERS: {
           Var decrVar = action.getOutput(0);
           Arg amount = action.getInput(0);
-          cancelDecrement(caIt, ca, writeIncrements, decrVar, amount);
+          if (amount.isIntVal()) {
+            // Remove instructions where counts is integer value
+            Counters<Var> increments;
+            if (action.op == Opcode.DECR_REF) {
+              increments = readIncrements;
+            } else {
+              assert(action.op == Opcode.DECR_WRITERS);
+              increments = writeIncrements;
+            }
+            increments.decrement(decrVar, amount.getIntLit());
+            caIt.remove();
+          }
           break;
         }
         default:
           // do nothing
           break;
-      }
-    }
-  }
-
-  private void cancelDecrement(ListIterator<CleanupAction> caIt,
-      CleanupAction ca,
-      Counters<Var> increments, Var decrVar, Arg decrAmount) {
-    if (decrAmount.isIntVal()) {
-      long incr = increments.getCount(decrVar);
-      long decr = decrAmount.getIntLit();
-      
-      long diff = incr - decr;
-      if (diff >= 0) {
-        // Enough to cancel out decrement
-        caIt.remove();
-        long curr = increments.decrement(decrVar, decr);
-        assert(curr >= 0);
-      } else {
-        // Increment is cancelled out
-        increments.reset(decrVar);
-        ((TurbineOp)ca.action()).setInput(0,
-                        Arg.createIntLit(diff * -1));
       }
     }
   }
@@ -228,6 +228,68 @@ public class ElimRefCounts extends FunctionOptimizerPass {
             TurbineOp.decrWriters(var, amount));
       }
       increments.add(var, amount.getIntLit());
+    }
+  }
+
+  /**
+   * Try to bring reference increments out from inner blocks.
+   * The observation is that increments can safely be done earlier,
+   * so if a child wait increments something, then we can just do it here.
+   * @param rootBlock
+   * @param readIncrements
+   * @param writeIncrements
+   */
+  private void pullUpRefIncrements(Block rootBlock, Counters<Var> readIncrements,
+          Counters<Var> writeIncrements) {
+    Deque<Block> blockStack = new ArrayDeque<Block>();
+    blockStack.push(rootBlock);
+    
+    while (!blockStack.isEmpty()) {
+      Block block = blockStack.pop();
+      
+      accumulateIncrements(block, readIncrements, writeIncrements);
+      
+      for (Continuation cont: block.getContinuations()) {
+        // Only enter wait statements since the block is executed exactly once
+        if (cont.getType() == ContinuationType.WAIT_STATEMENT) {
+          blockStack.push(((WaitStatement)cont).getBlock());
+        }
+      }
+    }
+  }
+
+  /**
+   * Remove positive constant increment instructions from block and
+   * update counters
+   * @param block
+   * @param readIncrements
+   * @param writeIncrements
+   */
+  private void accumulateIncrements(Block block, Counters<Var> readIncrements,
+          Counters<Var> writeIncrements) {
+    ListIterator<Instruction> it = block.instructionIterator();
+    while (it.hasNext()) {
+      Instruction inst = it.next();
+      if (inst.op == Opcode.INCR_REF ||
+          inst.op == Opcode.INCR_WRITERS) {
+        Var v = inst.getOutput(0);
+        Arg amountArg = inst.getInput(0);
+        if (amountArg.isIntVal()) {
+          long amount = amountArg.getIntLit();
+          Counters<Var> increments;
+          if (inst.op == Opcode.INCR_REF) {
+            increments = readIncrements;
+          } else {
+            assert(inst.op == Opcode.INCR_WRITERS);
+            increments = writeIncrements;
+          }
+          if (increments.getCount(v) != 0) {
+            // Check already being manipulated in this block
+            increments.add(v, amount);
+            it.remove();
+          }
+        }
+      }
     }
   }
 
