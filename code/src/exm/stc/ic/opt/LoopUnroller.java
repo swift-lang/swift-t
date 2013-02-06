@@ -48,14 +48,15 @@ public class LoopUnroller implements OptimizerPass {
   private static boolean unrollLoops(Logger logger, Program prog, Function f,
       Block block) {
     boolean unrolled = false;
+    
     for (Continuation c: block.getContinuations()) {
-      boolean cRes = c.tryUnroll(logger, block);
-      unrolled = unrolled || cRes;
-
+      // Doing from bottom up gives us better estimate of inner loop size after expansion
       for (Block b: c.getBlocks()) {
         boolean res = unrollLoops(logger, prog, f, b);
         unrolled = unrolled || res;
       }
+      boolean cRes = c.tryUnroll(logger, block);
+      unrolled = unrolled || cRes;
     }
     return unrolled;
   }

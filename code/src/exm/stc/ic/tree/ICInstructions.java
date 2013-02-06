@@ -1684,11 +1684,14 @@ public class ICInstructions {
       switch (op) {
       case ARRAY_CREATE_NESTED_IMM:
       case ARRAY_CREATE_NESTED_FUTURE:
-      case ARRAYREF_CREATE_NESTED_IMM:
-      case ARRAYREF_CREATE_NESTED_FUTURE:
         // In create_nested instructions the 
         // second array being inserted into is needed
         return Arrays.asList(getOutput(1));
+      case ARRAYREF_CREATE_NESTED_IMM:
+      case ARRAYREF_CREATE_NESTED_FUTURE:
+        // In ref_create_nested instructions the 
+        // second array being inserted into is needed
+        return Arrays.asList(getOutput(2));
         default:
           return Var.NONE;
       }
