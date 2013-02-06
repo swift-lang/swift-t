@@ -18,7 +18,6 @@ package exm.stc.frontend;
 import java.util.List;
 import java.util.Stack;
 
-import exm.stc.common.CompilerBackend;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
@@ -30,6 +29,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.ic.STCMiddleEnd;
 
 /**
  * This module contains logic to create and initialise variables, in order
@@ -39,9 +39,9 @@ import exm.stc.common.lang.Var.VarStorage;
  *
  */
 public class VarCreator {
-  private CompilerBackend backend;
+  private STCMiddleEnd backend;
 
-  public VarCreator(CompilerBackend backend) {
+  public VarCreator(STCMiddleEnd backend) {
     super();
     this.backend = backend;
   }

@@ -2009,18 +2009,6 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void optimize() {
-      // do nothing
-    }
-
-    @Override
-    public void regenerate(CompilerBackend codeGen) {
-      throw new UnsupportedOperationException("TurbineGenerator can't "
-          + " reconstitute code");
-
-    }
-
-    @Override
     public void startLoop(String loopName, List<Var> loopVars,
         List<Boolean> definedHere, List<Var> initVals, List<Var> usedVariables,
         List<Var> keepOpenVars, List<Boolean> blockingVars) {
@@ -2183,13 +2171,6 @@ public class SwigcGenerator implements CompilerBackend
     public void requirePackage(String pkg, String version) {
       // TODO Auto-generated method stub
       
-    }
-
-    @Override
-    public void generateWrappedBuiltin(String function, FunctionType ft,
-        List<Var> outArgs, List<Var> inArgs, TaskMode mode) throws UserException {
-      throw new STCRuntimeError("generateWrappedBuiltin not implemented" +
-          " by TurbineGenerator");
     }
 
     @Override

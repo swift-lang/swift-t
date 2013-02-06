@@ -26,7 +26,6 @@ import java.util.Stack;
 import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
-import exm.stc.common.CompilerBackend;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
@@ -61,6 +60,7 @@ import exm.stc.frontend.tree.ArrayElems;
 import exm.stc.frontend.tree.ArrayRange;
 import exm.stc.frontend.tree.FunctionCall;
 import exm.stc.frontend.tree.Literals;
+import exm.stc.ic.STCMiddleEnd;
 
 /**
  * This module contains logic to walk individual expression in Swift and generate code to evaluate them
@@ -68,11 +68,11 @@ import exm.stc.frontend.tree.Literals;
 public class ExprWalker {
 
   private VarCreator varCreator;
-  private CompilerBackend backend;
+  private STCMiddleEnd backend;
   private LineMapping lineMapping;
   
   public ExprWalker(VarCreator creator, 
-                    CompilerBackend backend, 
+                    STCMiddleEnd backend, 
                     LineMapping lineMapping) {
     super();
     this.varCreator = creator;
@@ -363,7 +363,7 @@ public class ExprWalker {
       Var derefed = varCreator.createTmpAlias(context, dst.type());
       backend.retrieveRef(derefed, src);
       copyArrayByValue(context, dst, derefed);
-      backend.endWaitStatement(waitVars, usedVars, keepOpenVars);
+      backend.endWaitStatement();
     } else if (Types.isStruct(dst.type())) {
       dereferenceStruct(context, dst, src);
     } else {
@@ -476,8 +476,6 @@ public class ExprWalker {
     // the argument evaluation is outside the wait statement
     Var priorityVal = null;
     boolean openedWait = false;
-    List<Var> waitVars = null;
-    List<Var> usedVariables = null;
     List<Var> keepOpen = RefCounting.filterWriteRefcount(oList);
     Context callContext = context;
     if (tree.getChildCount() == 3) {
@@ -485,11 +483,11 @@ public class ExprWalker {
       Var priorityFuture = eval(context, priorityT,
                             Types.F_INT, false, renames);
       // used variables: any input or output args
-      usedVariables = new ArrayList<Var>();
+      List<Var> usedVariables = new ArrayList<Var>();
       usedVariables.addAll(argVars);
       usedVariables.addAll(oList);
       
-      waitVars = Arrays.asList(priorityFuture);
+      List<Var> waitVars = Arrays.asList(priorityFuture);
       backend.startWaitStatement(context.getFunctionContext().constructName("priority-wait"), 
                         waitVars, usedVariables, keepOpen,
                         null,
@@ -502,7 +500,7 @@ public class ExprWalker {
     // callFunction will check that argument types match function
     callFunction(context, f.function(), concrete, oList, argVars, priorityVal);
     if (openedWait) {
-      backend.endWaitStatement(waitVars, usedVariables, keepOpen);
+      backend.endWaitStatement();
     }
   
   }
@@ -749,7 +747,6 @@ public class ExprWalker {
     }
   }
 
-
   private void callFunction(Context context, String function,
       FunctionType concrete,
       List<Var> oList, List<Var> iList, Var priorityVal)
@@ -787,13 +784,11 @@ public class ExprWalker {
       }
     }
 
-    List<Var> usedVars = null;
-    List<Var> keepOpen = null;
     if (waitContext != null) {
       FunctionContext fc = context.getFunctionContext();
-      usedVars = new ArrayList<Var>();
+      List<Var> usedVars = new ArrayList<Var>();
       usedVars.addAll(iList); usedVars.addAll(oList);
-      keepOpen = RefCounting.filterWriteRefcount(oList);
+      List<Var> keepOpen = RefCounting.filterWriteRefcount(oList);
       backend.startWaitStatement(
            fc.constructName("call-" + function),
            waitVars, usedVars, keepOpen, 
@@ -818,7 +813,7 @@ public class ExprWalker {
     backendFunctionCall(context, function, oList, realIList, priorityVal);
 
     if (waitContext != null) {
-      backend.endWaitStatement(waitVars, usedVars, keepOpen);
+      backend.endWaitStatement();
     }
   }
 
@@ -960,10 +955,9 @@ public class ExprWalker {
             context.getFunctionContext().constructName("arrcopy"),
             src, member, ix, -1, true, usedVars, keepOpen);
     backend.arrayInsertImm(member, dst, Arg.createVar(ix));
-    backend.endForeachLoop(-1, true, usedVars, keepOpen);
-    backend.endWaitStatement(waitVars, usedVars, keepOpen);
+    backend.endForeachLoop();
+    backend.endWaitStatement();
   }
-
 
   private void copyStructByValue(Context context,
       Var srcRoot, Var dstRoot,
@@ -1019,7 +1013,7 @@ public class ExprWalker {
             src.type().memberType(), false, true);
     backend.retrieveRef(rValDerefed, src);
     copyByValue(context, rValDerefed, dst, dst.type());
-    backend.endWaitStatement(waitVars, usedVars, new ArrayList<Var>());
+    backend.endWaitStatement();
   }
  
 

@@ -265,10 +265,6 @@ public interface CompilerBackend {
    */
   public abstract void defineBuiltinFunction(String name,
                 FunctionType type, TclFunRef impl) throws UserException;
-
-  public abstract void generateWrappedBuiltin(String function, FunctionType ft,
-           List<Var> outArgs, List<Var> inArgs, TaskMode mode)
-               throws UserException;
   
   /**
    * 
@@ -296,8 +292,7 @@ public interface CompilerBackend {
    * @param hasElse whether there will be an else clause ie. whether startElseBlock()
    *                will be called later for this if statement
    */
-  public abstract void startIfStatement(Arg condition,
-      boolean hasElse);
+  public abstract void startIfStatement(Arg condition, boolean hasElse);
 
   public abstract void startElseBlock();
 
@@ -369,22 +364,17 @@ public interface CompilerBackend {
      Generate and return Tcl from our internal TclTree
    */
   public abstract String code();
-
-  public abstract void optimize() throws UserException;
-
-  public abstract void regenerate(CompilerBackend codeGen) throws UserException;
-  
   
   /**
    * Different kinds of wait statements that can be optimized in
    * different ways
    */
   public static enum WaitMode {
-  DATA_ONLY, /* Used to allow data load inside wait */
-  EXPLICIT, /* Explicit synchronisation on variable, 
-         can only eliminate if var closed */
-  TASK_DISPATCH; /* Used to dispatch async task to 
-  load balancer/other node */
+    DATA_ONLY, /* Used to allow data load inside wait */
+    EXPLICIT, /* Explicit synchronisation on variable, 
+           can only eliminate if var closed */
+    TASK_DISPATCH; /* Used to dispatch async task to 
+    load balancer/other node */
   }
   
   /**
