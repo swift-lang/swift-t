@@ -28,7 +28,7 @@ O1_OPTS=("constant-fold" "dead-code-elim"
                     "flatten-nested" "shared-constants"
                     "forward-dataflow" "unroll-loops"
                      "controlflow-fusion" )
-O2_OPTS=("expand-dataflow-ops" "wait-coalesce" "hoisting")
+O2_OPTS=("expand-dataflow-ops" "wait-coalesce" "hoisting" "elim-refcounts")
 O3_OPTS=("pipeline" "function-inline")
 EXPERIMENTAL_OPTS=()
 
@@ -75,6 +75,9 @@ function get_compiler_opt_name() {
                     return 0;
                     ;;
         hoisting) echo "stc.opt.hoist"
+                    return 0
+                    ;;
+        elim-refcounts) echo "stc.opt.elim-refcounts"
                     return 0
                     ;;
         disable-asserts) echo "stc.opt.disable-asserts"

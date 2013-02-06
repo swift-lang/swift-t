@@ -142,6 +142,7 @@ public class ICOptimizer {
       Program prog, long nIterations) throws UserException {   
     OptimizerPipeline postprocess = new OptimizerPipeline(icOutput);
     postprocess.addPass(new ConstantSharing());
+    postprocess.addPass(new ElimRefcounts());
     postprocess.addPass(new Validate());
     postprocess.runPipeline(logger, prog,  nIterations - 1);
   }

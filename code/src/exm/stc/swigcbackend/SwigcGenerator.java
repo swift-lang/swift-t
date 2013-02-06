@@ -2211,4 +2211,10 @@ public class SwigcGenerator implements CompilerBackend
       
     }
 
+    @Override
+    public void arrayBuild(Var array, List<Var> members, boolean close) {
+      // TODO Auto-generated method stub
+      
+    }
+
 }

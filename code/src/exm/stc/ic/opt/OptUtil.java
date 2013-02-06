@@ -101,8 +101,16 @@ public class OptUtil {
     outValVars = new ArrayList<Var>(localOutputs.size());
     // Need to create output value variables
     for (Var v : localOutputs) {
-      String name = optVPrefix(block, v);
-      outValVars.add(WrapUtil.declareLocalOutputVar(block, v, name));
+      Var outValVar;
+      if (Types.isArray(v.type())) {
+        // keep same repr
+        outValVar = v;
+      } else {
+        // Use different local representation
+        String name = optVPrefix(block, v);
+        outValVar = WrapUtil.declareLocalOutputVar(block, v, name);
+      }
+      outValVars.add(outValVar);
     }
     return outValVars;
   }  
@@ -128,7 +136,9 @@ public class OptUtil {
       for (int i = 0; i < newOutVars.size(); i++) {
         Var oldOut = oldOutVars.get(i);
         Var newOut = newOutVars.get(i);
-        instBuffer.add(ICInstructions.futureSet(oldOut, Arg.createVar(newOut)));
+        if (oldOut != newOut)
+          instBuffer.add(ICInstructions.futureSet(oldOut,
+                                  Arg.createVar(newOut)));
       }
     }
   }
@@ -193,10 +203,15 @@ public class OptUtil {
     }
   }
 
-  public static Var fetchValueOf(Block block, List<Instruction> instBuffer,
+  public static Var fetchForLocalOp(Block block, List<Instruction> instBuffer,
       Var var) {
-    return WrapUtil.fetchValueOf(block, instBuffer, var,
+    if (Types.isArray(var.type())) {
+      // don't use a different representation for arrays
+      return var;
+    } else {
+      return WrapUtil.fetchValueOf(block, instBuffer, var,
                                OptUtil.optVPrefix(block, var));
+    }
   }
 }
 

@@ -807,7 +807,7 @@ public class ForwardDataflow implements OptimizerPass {
         alreadyFetched.put(v.name(), maybeVal);
       } else {
         // Generate instruction to fetch val, append to alt
-        Var fetchedV = OptUtil.fetchValueOf(insertContext, alt, v);
+        Var fetchedV = OptUtil.fetchForLocalOp(insertContext, alt, v);
         Arg fetched = Arg.createVar(fetchedV);
         inVals.add(fetched);
         alreadyFetched.put(v.name(), fetched);

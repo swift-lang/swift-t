@@ -491,6 +491,11 @@ public class ICInstructions {
         gen.arrayRefInsertImm(args.get(2).getVar(),
             args.get(0).getVar(), args.get(1), args.get(3).getVar());
         break;
+      case ARRAY_BUILD:
+        gen.arrayBuild(args.get(0).getVar(),
+            Arg.toVarList(args.subList(2, args.size())),
+            args.get(1).getBoolLit());
+        break;
       case ARRAY_DECR_WRITERS:
         gen.decrWriters(args.get(0).getVar());
         break;
@@ -705,6 +710,16 @@ public class ICInstructions {
     }
   
   
+    public static Instruction arrayBuild(Var array, List<Var> members, boolean close) {
+      ArrayList<Arg> args = new ArrayList<Arg>(2 + members.size());
+      args.add(Arg.createVar(array));
+      args.add(Arg.createBoolLit(close));
+      for (Var mem: members) {
+        args.add(Arg.createVar(mem));
+      }
+      return new TurbineOp(Opcode.ARRAY_BUILD, args);
+    }
+
     public static Instruction structLookup(Var oVar, Var structVar,
                                                           String fieldName) {
       return new TurbineOp(Opcode.STRUCT_LOOKUP,
@@ -1010,11 +1025,12 @@ public class ICInstructions {
       
       case ARRAY_INSERT_FUTURE:
       case ARRAY_INSERT_IMM:
+      case ARRAY_DECR_WRITERS:
+      case ARRAY_BUILD:
       case STRUCT_CLOSE:
       case STRUCT_INSERT:
-      case ARRAY_DECR_WRITERS:
       case DECR_REF:
-        // We view array as output
+        // We view modified var as output
         return 1;
       case ARRAYREF_INSERT_FUTURE:
       case ARRAYREF_INSERT_IMM:
@@ -1089,6 +1105,7 @@ public class ICInstructions {
       case STRUCT_INSERT:
       case ARRAY_DECR_WRITERS:
       case DECR_REF:
+      case ARRAY_BUILD:
         return this.writesAliasVar();
         
       case ARRAYREF_INSERT_FUTURE:
@@ -1631,6 +1648,7 @@ public class ICInstructions {
       case COPY_REF:
       case CHOOSE_TMP_FILENAME:
       case SET_FILENAME_VAL:
+      case ARRAY_BUILD:
         return TaskMode.SYNC;
       
       case ARRAY_INSERT_FUTURE:
@@ -1659,10 +1677,6 @@ public class ICInstructions {
     
     @Override
     public List<ComputedValue> getComputedValues(CVMap existing) {
-      Arg arr = null;
-      Arg ix = null;
-      Arg contents = null;
-      ComputedValue cv = null;
       switch(op) {
         case LOAD_BOOL:
         case LOAD_FLOAT:
@@ -1795,10 +1809,28 @@ public class ICInstructions {
           // STORE <out array> <in index> <in var>
           // OR
           // STORE <out array> <in index> <in var> <in outer array>
-          arr = args.get(0); 
-          ix = args.get(1);
-          contents = args.get(2);
+          Arg arr = args.get(0); 
+          Arg ix = args.get(1);
+          Arg contents = args.get(2);
           return Arrays.asList(makeArrayComputedValue(arr, ix, contents));
+        }
+        case ARRAY_BUILD: {
+          Arg arr = args.get(0);
+          List<ComputedValue> res = new ArrayList<ComputedValue>();
+          // Computed value for whole array
+          res.add(new ComputedValue(op, args.subList(1, args.size()),
+                      arr, true));
+          // For individual array elements
+          int arrSize = args.size() - 2;
+          for (int i = 0; i < arrSize; i++) {
+            res.add(makeArrayComputedValue(arr, Arg.createIntLit(i),
+                                           args.get(i + 2)));
+          }
+          
+          // TODO: how to propagate size info.  This isn't working yet
+          res.add(LocalFunctionCall.makeArraySizeComputedValue(arr,
+                                        Arg.createIntLit(arrSize)));
+          return res;
         }
         case ARRAY_LOOKUP_IMM:
         case ARRAY_LOOKUP_REF_IMM:
@@ -1806,12 +1838,12 @@ public class ICInstructions {
         case ARRAYREF_LOOKUP_FUTURE:
         case ARRAYREF_LOOKUP_IMM: {
           // LOAD <out var> <in array> <in index>
-          arr = args.get(1);
-          ix = args.get(2);
-          contents = args.get(0);
+          Arg arr = args.get(1);
+          Arg ix = args.get(2);
+          Arg contents = args.get(0);
           Var lookupRes = contents.getVar();
           
-          cv = makeArrayComputedValue(arr, ix, contents);
+          ComputedValue cv = makeArrayComputedValue(arr, ix, contents);
   
           if (op == Opcode.ARRAY_LOOKUP_IMM) {
             assert(lookupRes.type().equals(
@@ -1821,8 +1853,7 @@ public class ICInstructions {
           } else {
             assert (Types.isRefTo(lookupRes.type(), 
                 Types.getArrayMemberType(arr.getType())));
-            Arg prev = existing.getLocation(new ComputedValue(Opcode.FAKE,
-                ComputedValue.ARRAY_CONTENTS, Arrays.asList(arr, ix)));
+            Arg prev = existing.getLocation(makeArrayComputedValue(arr, ix, null));
             if (prev != null) {
               /* All these array loads give back a reference, but if a value
                * was previously inserted at this index, then we can 
@@ -1847,11 +1878,11 @@ public class ICInstructions {
         case ARRAY_REF_CREATE_NESTED_FUTURE:
         case ARRAY_REF_CREATE_NESTED_IMM: {
           // CREATE_NESTED <out inner array> <in array> <in index>
-          contents = args.get(0);
+          Arg contents = args.get(0);
           Var nestedArr = contents.getVar();
-          arr = args.get(1);
-          ix = args.get(2);
-          cv = makeArrayComputedValue(arr, ix, contents);
+          Arg arr = args.get(1);
+          Arg ix = args.get(2);
+          ComputedValue cv = makeArrayComputedValue(arr, ix, contents);
           if (op == Opcode.ARRAY_CREATE_NESTED_IMM) {
             // No references involved, the instruction returns the nested
             // array directly
@@ -1888,9 +1919,9 @@ public class ICInstructions {
           this.args.get(0), closed);
     }
 
-    private ComputedValue makeArrayComputedValue(Arg arr, Arg ix, Arg contents) {
+    static ComputedValue makeArrayComputedValue(Arg arr, Arg ix, Arg contents) {
       ComputedValue cv;
-      if (isMemberReference(contents.getVar(),
+      if (contents != null && isMemberReference(contents.getVar(),
           arr.getVar())) {
         cv = new ComputedValue(Opcode.FAKE, ComputedValue.REF_TO_ARRAY_CONTENTS, 
             Arrays.asList(arr, ix), contents, false);
@@ -1909,7 +1940,7 @@ public class ICInstructions {
      * @throws STCRuntimeError if member can't be a member or ref to 
      *                                      member of array
      */
-    private boolean isMemberReference(Var member, Var arr) 
+    private static boolean isMemberReference(Var member, Var arr) 
             throws STCRuntimeError{
       Type memberType = Types.getArrayMemberType(arr.type());
       if (memberType.equals(member.type())) {
@@ -1917,9 +1948,8 @@ public class ICInstructions {
       } else if (Types.isRefTo(member.type(), memberType)) {
         return true;
       }
-      throw new STCRuntimeError("Inconsistent types in IC instruction:"
-          + this.toString() + " array of type " + arr.type() 
-          + " with member of type " + member.type());
+      throw new STCRuntimeError("Inconsistent types: array of type " 
+          + arr.type() + " with member of type " + member.type());
     }
 
     @Override
@@ -1931,6 +1961,9 @@ public class ICInstructions {
         } else {
           return null;
         }
+      } else if (op == Opcode.ARRAY_BUILD) {
+        // Output array should be closed
+        return Arrays.asList(args.get(0).getVar());
       }
       
       return super.getClosedOutputs();
@@ -1941,7 +1974,14 @@ public class ICInstructions {
       return new TurbineOp(op, Arg.cloneList(args));
     }
 
+    public void setInput(int i, Arg arg) {
+      this.args.subList(numOutputArgs(), args.size()).set(i, arg);
+    }
+
   }
+
+  // Maximum number of array element CVs to insert
+  public static final long MAX_ARRAY_ELEM_CVS = 128L;
   
   public static abstract class CommonFunctionCall extends Instruction {
     protected final String functionName;
@@ -1989,14 +2029,58 @@ public class ICInstructions {
                 canonicalFunctionName, output, in, 
                 Arg.createVar(getOutput(output)), outputClosed));
           }
-          if (op == Opcode.CALL_BUILTIN && 
-              this.functionName.equals(Builtins.INPUT_FILE)) {
-            res.add(filenameCV(getInput(0), getOutput(0)));
-          }
+          addSpecialCVs(res);
           return res;
         }
       }
       return null;
+    }
+
+    /**
+     * Add specific CVs for special operations
+     * @param res
+     */
+    private void addSpecialCVs(List<ComputedValue> cvs) {
+      if (op == Opcode.CALL_BUILTIN && 
+          this.functionName.equals(Builtins.INPUT_FILE)) {
+        cvs.add(filenameCV(getInput(0), getOutput(0)));
+      } else if (op == Opcode.CALL_BUILTIN_LOCAL &&
+          (this.functionName.equals(Builtins.RANGE) ||
+           this.functionName.equals(Builtins.RANGE_STEP))) {
+        addRangeCVs(cvs);
+      }
+      
+    }
+
+    private void addRangeCVs(List<ComputedValue> cvs) {
+      boolean allValues = true;
+      long start = 0, end = 0, step = 1; 
+      
+      if (getInput(0).isIntVal()) {
+        start = getInput(0).getIntLit();
+      } else {
+        allValues = false;
+      }
+      if (getInput(1).isIntVal()) {
+        step = getInput(1).getIntLit();
+      } else {
+        allValues = false;
+      }
+      if (this.functionName.equals(Builtins.RANGE_STEP)) {
+        if (getInput(2).isIntVal()) {
+          start = getInput(2).getIntLit();
+        } else {
+          allValues = false;
+        }
+      }
+      if (allValues) {
+        // We can work out array contents 
+        long arrSize = (end - start) / step + 1;
+        Arg arr = Arg.createVar(getOutput(0));
+        cvs.add(LocalFunctionCall.makeArraySizeComputedValue(
+            arr, Arg.createIntLit(arrSize)));
+        // TODO: somehow add array elements?
+      }
     }
   }
   
@@ -2219,8 +2303,7 @@ public class ICInstructions {
         assert(values.size() == inputs.size());
         
         if (outputs.size() == 1) {
-          assert(Types.derefResultType(outputs.get(0).type()).equals(
-              outVars.get(0).type()));
+          checkSwappedOutput(outputs.get(0), outVars.get(0));
           return new MakeImmChange(
               Builtin.createLocal(newOp, outVars.get(0), values));
         } else {
@@ -2231,12 +2314,25 @@ public class ICInstructions {
       } else {
         assert(Builtins.hasInlineVersion(functionName));
         for (int i = 0; i < outputs.size(); i++) {
-          Var out = outputs.get(i);
-          assert(Types.derefResultType(out.type()).equals(
-                 outVars.get(i).type()));
+          checkSwappedOutput(outputs.get(i), outVars.get(i));
         }
         return new MakeImmChange(
                 new LocalFunctionCall(functionName, values, outVars));
+      }
+    }
+
+    /**
+     * Check that old output type was swapped correctly for
+     * making immediate
+     * @param oldOut
+     * @param newOut
+     */
+    private void checkSwappedOutput(Var oldOut, Var newOut) {
+      if (Types.isArray(oldOut.type())) {
+        assert(Types.isArray(newOut.type()));
+      } else {
+        assert(Types.derefResultType(oldOut.type()).equals(
+                newOut.type()));
       }
     }
 
@@ -2357,6 +2453,13 @@ public class ICInstructions {
       return null;
     }
     
+    static ComputedValue makeArraySizeComputedValue(Arg arr, Arg size) {
+      assert(Types.isArray(arr.getType()));
+      assert(size.isImmediateInt());
+      return new ComputedValue(Opcode.CALL_BUILTIN_LOCAL, Builtins.ARRAY_SIZE,
+                               arr, size, true);
+    }
+    
     @Override
     public Instruction constantReplace(Map<String, Arg> knownConstants) {
       return null;
@@ -2385,6 +2488,16 @@ public class ICInstructions {
       return TaskMode.SYNC;
     }
     
+    @Override
+    public List<Var> getClosedOutputs() {
+      if (functionName.equals(Builtins.RANGE) || 
+          functionName.equals(Builtins.RANGE_STEP)) {
+        // Range closes outputs at end
+        return Arrays.asList(outputs.get(0));
+      }
+      return super.getClosedOutputs();
+    }
+
     @Override
     public Instruction clone() {
       // Variables are immutable so just need to clone lists
@@ -2918,7 +3031,7 @@ public class ICInstructions {
     ARRAYREF_LOOKUP_FUTURE, ARRAY_LOOKUP_FUTURE,
     ARRAYREF_LOOKUP_IMM, ARRAY_LOOKUP_REF_IMM, ARRAY_LOOKUP_IMM,
     ARRAY_INSERT_FUTURE, ARRAY_INSERT_IMM, ARRAYREF_INSERT_FUTURE,
-    ARRAYREF_INSERT_IMM,
+    ARRAYREF_INSERT_IMM, ARRAY_BUILD,
     STRUCT_LOOKUP, STRUCTREF_LOOKUP, STRUCT_CLOSE, STRUCT_INSERT,
     ARRAY_CREATE_NESTED_FUTURE, ARRAY_REF_CREATE_NESTED_FUTURE,
     ARRAY_CREATE_NESTED_IMM, ARRAY_REF_CREATE_NESTED_IMM,

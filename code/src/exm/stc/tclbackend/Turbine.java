@@ -955,4 +955,10 @@ class Turbine
                        Arrays.asList(fileFuture, filenameVal));
   }
 
+  
+  public static Command arrayBuild(Value array, List<Expression> arrMemExprs,
+      boolean close) {
+    return new Command("turbine::array_build", Arrays.asList(
+          array, new TclList(arrMemExprs), LiteralInt.boolValue(close)));
+  }
 }

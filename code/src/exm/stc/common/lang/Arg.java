@@ -351,4 +351,20 @@ public class Arg implements Comparable<Arg> {
   public boolean isConstant() {
     return this.kind != ArgKind.VAR;
   }
+
+  /**
+   * Convert list of args to vars, assuming that all args are vars
+   * @param argVars
+   * @return
+   */
+  public static List<Var> toVarList(List<Arg> args) {
+    ArrayList<Var> res = new ArrayList<Var>(args.size());
+    for (Arg arg: args) {
+      if (!arg.isVar()) {
+        throw new IllegalArgumentException(arg + " is not var");
+      }
+      res.add(arg.getVar());
+    }
+    return res;
+  }
 }

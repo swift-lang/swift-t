@@ -20,6 +20,8 @@ import java.util.HashMap;
 import java.util.List;
 
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Builtins.TemplateElem;
@@ -27,6 +29,7 @@ import exm.stc.common.lang.Builtins.TemplateElem.ElemKind;
 import exm.stc.tclbackend.tree.Expression;
 import exm.stc.tclbackend.tree.TclTree;
 import exm.stc.tclbackend.tree.Token;
+import exm.stc.tclbackend.tree.Value;
 
 public class TclTemplateProcessor {
   public static List<TclTree> processTemplate(TclOpTemplate template,
@@ -39,7 +42,13 @@ public class TclTemplateProcessor {
       Var out = outputs.get(i);
       String argName = outNames.get(i);
       String outName = TclNamer.prefixVar(out.name());
-      toks.put(argName, new Expression[] {new Token(outName)});
+      Expression expr;
+      if (passOutByName(out.type())) {
+        expr = new Token(outName);
+      } else {
+        expr = new Value(outName);
+      }
+      toks.put(argName, new Expression[] {expr});
     }
    
     List<String> inNames = template.getInNames();
@@ -79,5 +88,13 @@ public class TclTemplateProcessor {
       }
     }
     return result;
+  }
+
+  private static boolean passOutByName(Type type) {
+    if (Types.isArray(type)) {
+      // Pass Turbine arrays by type
+      return true;
+    }
+    return true;
   }
 }

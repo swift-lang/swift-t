@@ -428,6 +428,15 @@ public class STCMiddleEnd {
                                               outerArrayVar));
   }
   
+  public void arrayBuild(Var array, List<Var> members, boolean close) {
+    assert(Types.isArray(array.type()));
+    for (Var member: members) {
+      assert(member.type().assignableTo(array.type().memberType()));
+    }
+    currBlock().addInstruction(
+        TurbineOp.arrayBuild(array, members, close));
+  }
+  
   public void arrayInsertImm(Var iVar, Var arrayVar,
       Arg arrIx) {
     assert(arrIx.isImmediateInt());

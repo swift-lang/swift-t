@@ -737,14 +737,15 @@ public class ExprWalker {
     assert(arrType.assignableTo(oVar.type()));
     
     Type memType = oVar.type().memberType();
-    /** Evaluate all the members and insert into list */
+    /** Evaluate all the members */
+    List<Var> computedMembers = new ArrayList<Var>();
     for (int i = 0; i < ae.getMemberCount(); i++) {
       SwiftAST mem = ae.getMember(i);
       Var computedMember = eval(context, mem, 
           memType, false, renames);
-      backend.arrayInsertImm(computedMember, oVar, 
-                                    Arg.createIntLit(i));
+      computedMembers.add(computedMember);
     }
+    backend.arrayBuild(oVar, computedMembers, false);
   }
 
   private void callFunction(Context context, String function,

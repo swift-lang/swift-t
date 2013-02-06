@@ -61,6 +61,7 @@ public class Settings
   public static final String OPT_DISABLE_ASSERTS = "stc.opt.disable-asserts";
   public static final String OPT_UNROLL_LOOPS = "stc.opt.unroll-loops";
   public static final String OPT_HOIST = "stc.opt.hoist";
+  public static final String OPT_ELIM_REFCOUNTS = "stc.opt.elim-refcounts";
   public static final String OPT_MAX_ITERATIONS = "stc.opt.max-iterations";
   public static final String TURBINE_NO_STACK = "stc.codegen.no-stack";
   public static final String TURBINE_NO_STACK_VARS = "stc.codegen.no-stack-vars";
@@ -106,6 +107,7 @@ public class Settings
     defaults.setProperty(OPT_FUNCTION_INLINE, "false");
     defaults.setProperty(OPT_FUNCTION_INLINE_THRESHOLD, "500");
     defaults.setProperty(OPT_HOIST, "true");
+    defaults.setProperty(OPT_ELIM_REFCOUNTS, "true");
     defaults.setProperty(OPT_MAX_ITERATIONS, "10");
     defaults.setProperty(EXPERIMENTAL_REFCOUNTING, "false");
     defaults.setProperty(AUTO_DECLARE, "false");
@@ -191,6 +193,8 @@ public class Settings
     getBoolean(OPT_PIPELINE);
     getBoolean(OPT_CONTROLFLOW_FUSION);
     getBoolean(OPT_FUNCTION_INLINE);
+    getBoolean(OPT_ELIM_REFCOUNTS);
+    getBoolean(OPT_HOIST);
     getLong(OPT_FUNCTION_INLINE_THRESHOLD);
     getBoolean(OPT_UNROLL_LOOPS);
     getBoolean(TURBINE_NO_STACK);

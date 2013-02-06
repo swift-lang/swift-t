@@ -273,7 +273,7 @@ public abstract class Context {
   public Collection<Var> getScopeVariables() {
     return Collections.unmodifiableCollection(variables.values());
   }
-
+  
   abstract public Type lookupType(String typeName);
 
   abstract public void defineType(String typeName, Type newType)

@@ -230,6 +230,15 @@ public interface CompilerBackend {
   public abstract void arrayRefInsertFuture(Var iVar,
       Var arrayVar, Var indexVar, Var outerArrayVar);
 
+  /**
+   * Build array with indices [0..members.size() - 1] comprised of the
+   * variables from members 
+   * @param array
+   * @param members
+   * @param close if array should be closed at end of build 
+   */
+  public abstract void arrayBuild(Var array, List<Var> members, boolean close);
+  
   public abstract void arrayInsertImm(Var iVar, Var arrayVar,
       Arg arrayIndex);
   
