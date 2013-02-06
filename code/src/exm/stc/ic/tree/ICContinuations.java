@@ -1019,6 +1019,17 @@ public class ICContinuations {
 
       sb.append(")\n" + currentIndent + indent + indent);
       ICUtil.prettyPrintVarInfo(sb, passedInVars, keepOpenVars);
+      if (blockingVars.contains(true)) {
+        List<Var> blockon = new ArrayList<Var>();
+        for (int i = 0; i < loopVars.size(); i++) {
+          if (blockingVars.get(i)) {
+            blockon.add(loopVars.get(i));
+          }
+        }
+        sb.append(" #blockon[");
+        ICUtil.prettyPrintVarList(sb, blockon);
+        sb.append("]");
+      }
       sb.append(" {\n");
       loopBody.prettyPrint(sb, currentIndent + indent);
       sb.append(currentIndent + "}\n");
