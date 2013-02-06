@@ -1,8 +1,12 @@
 package exm.stc.ic.opt;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -43,7 +47,8 @@ public class ElimRefCounts extends FunctionOptimizerPass {
   @Override
   public void optimize(Logger logger, Function f) throws UserException {
     elimRefCountsRec(logger, f, f.getMainblock(),
-                     new Counters<Var>(), new Counters<Var>());
+                     new Counters<Var>(), new Counters<Var>(),
+                     Collections.<Var>emptySet());
   }
 
   /*
@@ -52,24 +57,44 @@ public class ElimRefCounts extends FunctionOptimizerPass {
    * wherever there is keepOpen/passIn annotation
    */
   private void elimRefCountsRec(Logger logger, Function f, Block block,
-      Counters<Var> readIncrements, Counters<Var> writeIncrements) {
+      Counters<Var> readIncrements, Counters<Var> writeIncrements,
+      Set<Var> parentAssignedAliasVars) {
     
     
-    fixBlockRefCounting(logger, block, readIncrements, writeIncrements);
-    
+    fixBlockRefCounting(logger, block, readIncrements, writeIncrements,
+                        parentAssignedAliasVars);
     
     //cancelInstructionRefcounts(block, thisBlockArrays);
     
     
     //cancelContinuationRefcounts(block, thisBlockArrays);
-    
+
+    Set<Var> assignedAliasVars = new HashSet<Var>();
+    findAssignedAliasVars(block, assignedAliasVars);
+    assignedAliasVars.addAll(parentAssignedAliasVars);
     for (Continuation cont: block.getContinuations()) {
-      elimRefCountsCont(logger, f, cont);
+      elimRefCountsCont(logger, f, cont, assignedAliasVars);
+    }
+  }
+
+  /**
+   * Find aliasVars that were assigned in this block in order
+   * to track where ref increment instructions can safely be put
+   * @param block
+   * @param assignedAliasVars 
+   */
+  private void findAssignedAliasVars(Block block, Set<Var> assignedAliasVars) {
+    for (Instruction inst: block.getInstructions()) {
+      for (Var out: inst.getOutputs()) {
+        if (out.storage() == VarStorage.ALIAS) {
+          assignedAliasVars.add(out);
+        }
+      }
     }
   }
 
   private void elimRefCountsCont(Logger logger, Function f,
-                                 Continuation cont) {
+                                 Continuation cont, Set<Var> parentAssignedAliasVars) {
     for (Block block: cont.getBlocks()) {
       // Build separate copy for each block
       Counters<Var> readIncrements = new Counters<Var>();
@@ -87,7 +112,8 @@ public class ElimRefCounts extends FunctionOptimizerPass {
           }
         }
       }
-      elimRefCountsRec(logger, f, block, readIncrements, writeIncrements);
+      elimRefCountsRec(logger, f, block, readIncrements, writeIncrements,
+                       parentAssignedAliasVars);
     }
   }
 
@@ -97,9 +123,13 @@ public class ElimRefCounts extends FunctionOptimizerPass {
    * @param block
    * @param readIncrements pre-existing decrements
    * @param writeIncrements -existing decrements
+   * @param parentAssignedAliasVars assign alias vars from parent blocks
+   *                that we can immediately manipulate refcount of
    */
   private void fixBlockRefCounting(Logger logger, Block block,
-      Counters<Var> readIncrements, Counters<Var> writeIncrements) {
+      Counters<Var> readIncrements, Counters<Var> writeIncrements,
+      Set<Var> parentAssignedAliasVars) {
+    
     for (Instruction inst: block.getInstructions()) {
       updateInstructionRefCount(inst, readIncrements, writeIncrements);
     }
@@ -107,20 +137,25 @@ public class ElimRefCounts extends FunctionOptimizerPass {
       updateContinuationRefCount(cont, readIncrements, writeIncrements);
     }
     
-    updateBlockRefcounting(block, readIncrements, writeIncrements);
+    updateBlockRefcounting(block, readIncrements, writeIncrements,
+                           parentAssignedAliasVars);
   }
   
   private void updateBlockRefcounting(Block block,
-      Counters<Var> readIncrements, Counters<Var> writeIncrements) {
+      Counters<Var> readIncrements, Counters<Var> writeIncrements,
+      Set<Var> parentAssignedAliasVars) {
     cancelDecrements(block, readIncrements, writeIncrements);
     
+    // Add increments to end of block
     // TODO: move decrements to piggyback onto read/write instructions
     addDecrements(block, readIncrements, RefCountType.READERS);
     addDecrements(block, writeIncrements, RefCountType.WRITERS);
     
-    addRefIncrements(block, readIncrements, RefCountType.READERS);
-    addRefIncrements(block, writeIncrements, RefCountType.WRITERS);
-    
+    // Add any remaining increments
+    addRefIncrements(block, readIncrements, RefCountType.READERS,
+                     parentAssignedAliasVars);
+    addRefIncrements(block, writeIncrements, RefCountType.WRITERS,
+                     parentAssignedAliasVars);    
   }
 
   private void cancelDecrements(Block block, Counters<Var> readIncrements,
@@ -206,33 +241,66 @@ public class ElimRefCounts extends FunctionOptimizerPass {
    * @param block
    * @param increments
    * @param type
+   * @param parentAssignedAliasVars assign alias vars from parent blocks
+   *                that we can immediately manipulate refcount of
    */
   private void addRefIncrements(Block block, Counters<Var> increments,
-                                RefCountType type) {
-    for (Entry<Var, Long> e: increments.entries()) {
+                                RefCountType type, Set<Var> parentAssignedAliasVars) {
+    Iterator<Entry<Var, Long>> it = increments.entries().iterator();
+    while (it.hasNext()) {
+      Entry<Var, Long> e = it.next();
       Var var = e.getKey();
       long count = e.getValue();
-      // TODO: need to handle placing refcount incr at correct point
-      // for alias vars
-      addRefIncrement(block, type, var, count);
+      if (var.storage() != VarStorage.ALIAS ||
+              parentAssignedAliasVars.contains(var)) {
+        // add increments that we can at top
+        addRefIncrementAtTop(block, type, var, count);
+        it.remove();
+      }
+    }
+    // Now put increments for alias vars after point when var declared
+    ListIterator<Instruction> instIt = block.instructionIterator();
+    while (instIt.hasNext()) {
+      Instruction inst = instIt.next();
+      for (Var out: inst.getOutputs()) {
+        if (out.storage() == VarStorage.ALIAS) {
+          // Alias var must be set at this point, insert refcount instruction
+          long incr = increments.getCount(out);
+          assert(incr >= 0);
+          if (incr > 0) {
+            instIt.add(buildIncrInstruction(type, out, incr));
+          }
+          increments.reset(out);
+        }
+      }
+    }
+    
+    // Check that all refcounts are zero
+    for (Entry<Var, Long> e: increments.entries()) {
+      assert(e.getValue() == 0) : "Refcount not 0 after pass" + e.toString();
     }
   }
 
-  private void addRefIncrement(Block block, RefCountType type, Var var,
+  private void addRefIncrementAtTop(Block block, RefCountType type, Var var,
       long count) {
     assert(count >= 0) : var + ":" + count;
     if (count > 0) {
       // increment before anything spawned
       // TODO: add to var declaration?
-      Instruction incrInst;
-      if (type == RefCountType.READERS) {
-        incrInst = TurbineOp.incrRef(var, Arg.createIntLit(count));
-      } else {
-        assert(type == RefCountType.WRITERS);
-        incrInst = TurbineOp.incrWriters(var, Arg.createIntLit(count));
-      }
-      block.addInstructionFront(incrInst);
+      block.addInstructionFront(buildIncrInstruction(type, var, count));
     }
+  }
+
+  private Instruction buildIncrInstruction(RefCountType type, Var var,
+          long count) {
+    Instruction incrInst;
+    if (type == RefCountType.READERS) {
+      incrInst = TurbineOp.incrRef(var, Arg.createIntLit(count));
+    } else {
+      assert(type == RefCountType.WRITERS);
+      incrInst = TurbineOp.incrWriters(var, Arg.createIntLit(count));
+    }
+    return incrInst;
   }
 
   private void updateInstructionRefCount(Instruction inst,
