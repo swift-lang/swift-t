@@ -37,11 +37,13 @@ import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.Redirects;
+import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
@@ -312,6 +314,27 @@ public class ICInstructions {
     public abstract List<ComputedValue> getComputedValues(CVMap existing);
    
     public abstract Instruction clone();
+
+    /**
+     * @return (read vars to be incremented, write vars to be incremented)
+     */
+    public Pair<List<Var>, List<Var>> getIncrVars() {
+      return Pair.create(getReadIncrVars(), getWriteIncrVars());
+    }
+
+    /**
+     * @return list of vars that need read refcount increment
+     */
+    public List<Var> getReadIncrVars() {
+      return Collections.emptyList();
+    }
+
+    /**
+     * @return list of vars that need write refcount increment
+     */
+    public List<Var> getWriteIncrVars() {
+      return Collections.emptyList();
+    }
   }
   
   public static class Comment extends Instruction {
@@ -557,13 +580,13 @@ public class ICInstructions {
         gen.arrayCreateNestedFuture(args.get(0).getVar(),
             args.get(1).getVar(), args.get(2).getVar());
         break;
-      case ARRAY_REF_CREATE_NESTED_FUTURE:
+      case ARRAYREF_CREATE_NESTED_FUTURE:
         gen.arrayRefCreateNestedFuture(args.get(0).getVar(),
-            args.get(1).getVar(), args.get(2).getVar());
+            args.get(1).getVar(), args.get(2).getVar(), args.get(3).getVar());
         break;
-      case ARRAY_REF_CREATE_NESTED_IMM:
+      case ARRAYREF_CREATE_NESTED_IMM:
         gen.arrayRefCreateNestedImm(args.get(0).getVar(),
-            args.get(1).getVar(), args.get(2));
+            args.get(1).getVar(), args.get(2), args.get(3).getVar());
         break;
       case ARRAY_CREATE_NESTED_IMM:
         gen.arrayCreateNestedImm(args.get(0).getVar(),
@@ -908,18 +931,18 @@ public class ICInstructions {
     }
   
     public static Instruction arrayRefCreateNestedComputed(Var arrayResult,
-        Var arrayVar, Var indexVar) {
-      return new TurbineOp(Opcode.ARRAY_REF_CREATE_NESTED_FUTURE,
-          Arg.createVar(arrayResult),
-              Arg.createVar(arrayVar), Arg.createVar(indexVar));
+        Var arrayVar, Var indexVar, Var outerArr) {
+      return new TurbineOp(Opcode.ARRAYREF_CREATE_NESTED_FUTURE,
+          Arg.createVar(arrayResult), Arg.createVar(arrayVar),
+          Arg.createVar(indexVar), Arg.createVar(outerArr));
     }
   
   
     public static Instruction arrayRefCreateNestedImmIx(Var arrayResult,
-        Var arrayVar, Arg arrIx) {
-      assert(arrIx.isImmediateInt());
-      return new TurbineOp(Opcode.ARRAY_REF_CREATE_NESTED_IMM,
-          Arg.createVar(arrayResult), Arg.createVar(arrayVar), arrIx);
+        Var arrayVar, Arg arrIx, Var outerArr) {
+      return new TurbineOp(Opcode.ARRAYREF_CREATE_NESTED_IMM,
+          Arg.createVar(arrayResult), Arg.createVar(arrayVar),
+          arrIx, Arg.createVar(outerArr));
     }
   
   
@@ -1010,8 +1033,8 @@ public class ICInstructions {
       int firstInputArg;
       if (op == Opcode.ARRAY_CREATE_NESTED_FUTURE
        || op == Opcode.ARRAY_CREATE_NESTED_IMM
-       || op == Opcode.ARRAY_REF_CREATE_NESTED_FUTURE
-       || op == Opcode.ARRAY_REF_CREATE_NESTED_IMM
+       || op == Opcode.ARRAYREF_CREATE_NESTED_FUTURE
+       || op == Opcode.ARRAYREF_CREATE_NESTED_IMM
        || op == Opcode.ARRAY_INSERT_FUTURE
        || op == Opcode.ARRAY_INSERT_IMM
        || op == Opcode.ARRAYREF_INSERT_FUTURE
@@ -1065,9 +1088,9 @@ public class ICInstructions {
       case STORE_BLOB:
       case STORE_FILE:
       case ARRAY_CREATE_NESTED_FUTURE:
-      case ARRAY_REF_CREATE_NESTED_FUTURE:
+      case ARRAYREF_CREATE_NESTED_FUTURE:
       case ARRAY_CREATE_NESTED_IMM:
-      case ARRAY_REF_CREATE_NESTED_IMM:
+      case ARRAYREF_CREATE_NESTED_IMM:
       case DEREF_INT:
       case DEREF_BOOL:
       case DEREF_FLOAT:
@@ -1201,9 +1224,9 @@ public class ICInstructions {
           return false;
           
       case ARRAY_CREATE_NESTED_FUTURE:
-      case ARRAY_REF_CREATE_NESTED_FUTURE:
+      case ARRAYREF_CREATE_NESTED_FUTURE:
       case ARRAY_CREATE_NESTED_IMM:
-      case ARRAY_REF_CREATE_NESTED_IMM:
+      case ARRAYREF_CREATE_NESTED_IMM:
           /* It might seem like these nested creation primitives have a 
            * side-effect, but for optimisation purposes they can be treated as 
            * side-effect free, as the side-effect is only relevant if the array 
@@ -1240,6 +1263,10 @@ public class ICInstructions {
       return args.subList(numOutputArgs(), args.size());
     }
   
+    public void setInput(int i, Arg arg) {
+      this.args.subList(numOutputArgs(), args.size()).set(i, arg);
+    }
+
     @Override
     public Map<String, Arg> constantFold(String fnName,
                         Map<String, Arg> knownConstants) {
@@ -1379,13 +1406,13 @@ public class ICInstructions {
           return new MakeImmRequest(null, Arrays.asList(index2));
         }
         break;
-      case ARRAY_REF_CREATE_NESTED_IMM:
+      case ARRAYREF_CREATE_NESTED_IMM:
         Var arrRef5 = args.get(1).getVar();
         if (waitForClose || closedVars.contains(arrRef5.name())) {
           return new MakeImmRequest(null, Arrays.asList(arrRef5));
         }
         break;
-      case ARRAY_REF_CREATE_NESTED_FUTURE:
+      case ARRAYREF_CREATE_NESTED_FUTURE:
         List<Var> req5 = mkImmVarList(waitForClose, closedVars, 
             args.get(1).getVar(), args.get(2).getVar());
         if (req5.size() > 0) {
@@ -1511,7 +1538,7 @@ public class ICInstructions {
             arrayCreateNestedImm(newOut,
                             args.get(1).getVar(), values.get(0)),
                             args.get(1).getVar());
-      case ARRAY_REF_CREATE_NESTED_FUTURE:
+      case ARRAYREF_CREATE_NESTED_FUTURE:
         assert(values.size() == 1 || values.size() == 2);
         if (values.size() == 2) {
           Var oldOut2 = args.get(0).getVar();
@@ -1528,16 +1555,17 @@ public class ICInstructions {
           if (newA.isImmediateInt()) {
             return new MakeImmChange(
                 arrayRefCreateNestedImmIx(args.get(0).getVar(),
-                    args.get(1).getVar(), newA));
+                    args.get(1).getVar(), newA, args.get(3).getVar()));
           } else {
             assert(Types.isArray(newA.getType()));
             // Replacing array ref with array
+            assert(Types.isArray(newA.getType()));
             return new MakeImmChange(
                 arrayCreateNestedComputed(args.get(0).getVar(),
-                    newA.getVar(), args.get(2).getVar()));
+                          newA.getVar(), args.get(2).getVar()));
           }
         }
-      case ARRAY_REF_CREATE_NESTED_IMM: {
+      case ARRAYREF_CREATE_NESTED_IMM: {
         assert(values.size() == 1);
         Var oldOut3 = args.get(0).getVar();
         assert(Types.isArrayRef(oldOut3.type()));
@@ -1686,9 +1714,9 @@ public class ICInstructions {
       case DEREF_FILE:
       case STRUCTREF_LOOKUP:
       case ARRAY_LOOKUP_FUTURE:
-      case ARRAY_REF_CREATE_NESTED_FUTURE:
+      case ARRAYREF_CREATE_NESTED_FUTURE:
       case ARRAY_CREATE_NESTED_FUTURE:
-      case ARRAY_REF_CREATE_NESTED_IMM:
+      case ARRAYREF_CREATE_NESTED_IMM:
         return TaskMode.LOCAL;
       default:
         throw new STCRuntimeError("Need to add opcode " + op.toString()
@@ -1896,8 +1924,8 @@ public class ICInstructions {
         }
         case ARRAY_CREATE_NESTED_FUTURE:
         case ARRAY_CREATE_NESTED_IMM:
-        case ARRAY_REF_CREATE_NESTED_FUTURE:
-        case ARRAY_REF_CREATE_NESTED_IMM: {
+        case ARRAYREF_CREATE_NESTED_FUTURE:
+        case ARRAYREF_CREATE_NESTED_IMM: {
           // CREATE_NESTED <out inner array> <in array> <in index>
           Arg contents = args.get(0);
           Var nestedArr = contents.getVar();
@@ -1995,10 +2023,110 @@ public class ICInstructions {
       return new TurbineOp(op, Arg.cloneList(args));
     }
 
-    public void setInput(int i, Arg arg) {
-      this.args.subList(numOutputArgs(), args.size()).set(i, arg);
+    @Override
+    public Pair<List<Var>, List<Var>> getIncrVars() {
+      switch (op) {
+        case ARRAY_BUILD: {
+          List<Var> readIncr = new ArrayList<Var>(getInputs().size());
+          for (Arg elem: getInputs()) {
+            // Container gets reference
+            if (RefCounting.hasReadRefCount(elem.getVar())) {
+              readIncr.add(elem.getVar());
+            }
+          }
+          Var arr = getOutput(0);
+          return Pair.create(readIncr, Arrays.asList(arr));
+        }
+        case DEREF_BLOB:
+        case DEREF_BOOL:
+        case DEREF_FILE:
+        case DEREF_FLOAT:
+        case DEREF_INT:
+        case DEREF_STRING: {
+          // Increment refcount of ref var
+          return Pair.create(Arrays.asList(getInput(0).getVar()),
+                             Collections.<Var>emptyList());
+        }
+        case ARRAYREF_LOOKUP_FUTURE:
+        case ARRAY_LOOKUP_FUTURE: {
+          // Array and index
+          return Pair.create(
+                  Arrays.asList(getInput(0).getVar(), getInput(1).getVar()),
+                  Collections.<Var>emptyList());
+        }
+        case ARRAYREF_LOOKUP_IMM:
+        case ARRAY_LOOKUP_REF_IMM: {
+          // Array only
+          return Pair.create(
+                    Arrays.asList(getInput(0).getVar()),
+                    Collections.<Var>emptyList());
+        }
+        case ARRAY_INSERT_IMM: {
+          Var mem = getInput(1).getVar();
+          Var arr = getOutput(0);
+          List<Var> writers = Collections.emptyList();
+          if (Types.isRefTo(mem.type(), arr.type().memberType())) {
+            // Dereferencing version - need to keep open for deref
+            writers = Arrays.asList(arr);
+          }
+          // Increment reference to member
+          return Pair.create(Arrays.asList(mem), writers);
+        }
+        case ARRAY_INSERT_FUTURE: {
+          // Increment reference to member/member ref and index future
+          // Increment writers count on array
+          return Pair.create(Arrays.asList(
+                  getInput(0).getVar(), getInput(1).getVar()),
+                  Arrays.asList(getOutput(0)));
+        }
+        case ARRAYREF_INSERT_IMM:
+        case ARRAYREF_INSERT_FUTURE: {
+          Arg ix = getInput(0);
+          Var mem = getInput(1).getVar();
+          Var outerArr = getInput(2).getVar();
+          List<Var> readers;
+          if (op == Opcode.ARRAYREF_INSERT_FUTURE) {
+            readers = Arrays.asList(ix.getVar(), mem);
+          } else {
+            assert(op == Opcode.ARRAYREF_INSERT_IMM);
+            readers = Collections.singletonList(mem);
+          }
+          // Maintain slots on outer array
+          return Pair.create(
+                  readers,
+                  Arrays.asList(outerArr));
+        }
+        case ARRAY_CREATE_NESTED_FUTURE: {
+          Var srcArray = getInput(0).getVar();
+          Var ix = getInput(0).getVar();
+          return Pair.create(
+                  Arrays.asList(srcArray, ix),
+                  Arrays.asList(srcArray));
+        }
+        case STRUCTREF_LOOKUP: {
+          return Pair.create(Arrays.asList(getInput(0).getVar()),
+                             Collections.<Var>emptyList());
+        }
+        case ARRAYREF_CREATE_NESTED_IMM:
+        case ARRAYREF_CREATE_NESTED_FUTURE: {
+          Var arr = getInput(0).getVar();
+          Arg ixArg = getInput(1);
+          Var outerArr = getInput(2).getVar();
+          List<Var> readVars;
+          if (op == Opcode.ARRAY_CREATE_NESTED_IMM) {
+            readVars = Arrays.asList(arr);
+          } else {
+            assert(op == Opcode.ARRAY_CREATE_NESTED_FUTURE);
+            readVars = Arrays.asList(arr, ixArg.getVar());
+          }
+          return Pair.create(readVars,
+                  Arrays.asList(outerArr));
+        }
+        default:
+          // Return default
+          return super.getIncrVars();
+      }
     }
-
   }
 
   // Maximum number of array element CVs to insert
@@ -2380,6 +2508,39 @@ public class ICInstructions {
     }
     
     @Override
+    public Pair<List<Var>, List<Var>> getIncrVars() {
+      switch (op) { 
+        case CALL_BUILTIN:
+        case CALL_CONTROL:
+        case CALL_LOCAL:
+        case CALL_LOCAL_CONTROL: {
+          List<Var> readIncr = new ArrayList<Var>();
+          List<Var> writeIncr = new ArrayList<Var>();
+          for (Var inVar: inputs) {
+            if (RefCounting.hasReadRefCount(inVar)) {
+              readIncr.add(inVar);
+            }
+          }
+          for (Var outVar: outputs) {
+            if (RefCounting.hasWriteRefCount(outVar)) {
+              writeIncr.add(outVar);
+            }
+            if (op != Opcode.CALL_BUILTIN) {
+              // keep read references to output vars
+              if (RefCounting.hasReadRefCount(outVar)) {
+                readIncr.add(outVar);
+              }
+            }
+          }
+          return Pair.create(readIncr, writeIncr);
+        }
+        default:
+          // Return default
+          return super.getIncrVars();
+      }
+    }
+      
+    @Override
     public TaskMode getMode() {
       switch (op) {
         case CALL_SYNC:
@@ -2524,6 +2685,16 @@ public class ICInstructions {
       // Variables are immutable so just need to clone lists
       return new LocalFunctionCall(functionName, 
           new ArrayList<Arg>(inputs), new ArrayList<Var>(outputs));
+    }
+
+    @Override
+    public List<Var> getReadIncrVars() {
+      if (functionName.equals(Builtins.RANGE) ||
+          functionName.equals(Builtins.RANGE_STEP)) {
+        // Array output must be incremented
+        return Arrays.asList(getOutput(0));
+      }
+      return Collections.emptyList();
     }
   }
   
@@ -2701,18 +2872,7 @@ public class ICInstructions {
     private final ArrayList<Var> loopUsedVars;
     private final ArrayList<Var> keepOpenVars;
     private final ArrayList<Boolean> blockingVars;
-  
-    public LoopContinue(List<Var> newLoopVars, 
-                        List<Var> loopUsedVars,
-                        List<Var> keepOpenVars,
-                        List<Boolean> blockingVars) {
-      super(Opcode.LOOP_CONTINUE);
-      this.newLoopVars = new ArrayList<Var>(newLoopVars);
-      this.loopUsedVars = new ArrayList<Var>(loopUsedVars);
-      this.keepOpenVars = new ArrayList<Var>(keepOpenVars);
-      this.blockingVars = new ArrayList<Boolean>(blockingVars);
-    }
-  
+
     @Override
     public void renameVars(Map<String, Arg> renames) {
       ICUtil.replaceVarsInList(renames, newLoopVars, false);
@@ -2820,6 +2980,12 @@ public class ICInstructions {
     public MakeImmChange makeImmediate(List<Var> out, List<Arg> values) {
       throw new STCRuntimeError("Not valid on loop continue!");
     }
+    
+    @Override
+    public List<Var> getReadIncrVars() {
+      // Increment variables passed to next iter
+      return Collections.unmodifiableList(newLoopVars);
+    }
 
     @Override
     public List<Var> getBlockingInputs() {
@@ -2869,6 +3035,17 @@ public class ICInstructions {
       for (Var var: vars) {
         removeKeepOpenVar(var);
       }
+    }
+
+    public LoopContinue(List<Var> newLoopVars, 
+                        List<Var> loopUsedVars,
+                        List<Var> keepOpenVars,
+                        List<Boolean> blockingVars) {
+      super(Opcode.LOOP_CONTINUE);
+      this.newLoopVars = new ArrayList<Var>(newLoopVars);
+      this.loopUsedVars = new ArrayList<Var>(loopUsedVars);
+      this.keepOpenVars = new ArrayList<Var>(keepOpenVars);
+      this.blockingVars = new ArrayList<Boolean>(blockingVars);
     }
 
     @Override
@@ -2971,7 +3148,7 @@ public class ICInstructions {
     public MakeImmChange makeImmediate(List<Var> out, List<Arg> values) {
       throw new STCRuntimeError("Not valid on loop continue!");
     }
-
+   
     @Override
     public List<Var> getBlockingInputs() {
       return null;
@@ -3054,8 +3231,8 @@ public class ICInstructions {
     ARRAY_INSERT_FUTURE, ARRAY_INSERT_IMM, ARRAYREF_INSERT_FUTURE,
     ARRAYREF_INSERT_IMM, ARRAY_BUILD,
     STRUCT_LOOKUP, STRUCTREF_LOOKUP, STRUCT_CLOSE, STRUCT_INSERT,
-    ARRAY_CREATE_NESTED_FUTURE, ARRAY_REF_CREATE_NESTED_FUTURE,
-    ARRAY_CREATE_NESTED_IMM, ARRAY_REF_CREATE_NESTED_IMM,
+    ARRAY_CREATE_NESTED_FUTURE, ARRAYREF_CREATE_NESTED_FUTURE,
+    ARRAY_CREATE_NESTED_IMM, ARRAYREF_CREATE_NESTED_IMM,
     LOOP_BREAK, LOOP_CONTINUE, 
     COPY_REF,
     LOCAL_OP, ASYNC_OP,
@@ -3472,6 +3649,21 @@ public class ICInstructions {
       }
       return null;
     }
+
+    @Override
+    public List<Var> getReadIncrVars() {
+      if (op == Opcode.ASYNC_OP) {
+        List<Var> res = new ArrayList<Var>(inputs.size());
+        for (Arg in: inputs) {
+          if (RefCounting.hasReadRefCount(in.getVar())) {
+            res.add(in.getVar());
+          }
+        }
+        return res;
+      }
+      return Collections.emptyList();
+    }
+
 
     @Override
     public Instruction clone() {

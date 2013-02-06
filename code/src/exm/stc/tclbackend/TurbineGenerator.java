@@ -321,16 +321,14 @@ public class TurbineGenerator implements CompilerBackend
   public void incrRef(Var var, Arg amount) {
     assert(RefCounting.hasReadRefCount(var));
     assert(amount.isImmediateInt());
-    pointStack.peek().append(
-        incrementReaders(Arrays.asList(var), argToExpr(amount)));
+    incrementReaders(Arrays.asList(var), argToExpr(amount));
   }
   
   @Override
   public void incrWriters(Var var, Arg amount) {
     assert(RefCounting.hasWriteRefCount(var));
     assert(amount.isImmediateInt());
-    pointStack.peek().append(
-        incrementWriters(Arrays.asList(var), argToExpr(amount)));
+    incrementWriters(Arrays.asList(var), argToExpr(amount));
   }
 
   String typeToString(PrimType type)
@@ -595,9 +593,6 @@ public class TurbineGenerator implements CompilerBackend
     List<Var> outL = (out == null) ? 
           Arrays.<Var>asList() : Arrays.asList(out);
 
-    // Increment refcount so function owns ref
-    pointStack.peek().add(incrementReaders(inputs, null));
-
     builtinFunctionCall("operator: " + op.toString(), fn, 
                         inputs, outL, priority);
   }
@@ -606,7 +601,6 @@ public class TurbineGenerator implements CompilerBackend
   public void dereferenceInt(Var target, Var src) {
     assert(Types.isInt(target.type()));
     assert(src.type().equals(Types.R_INT));
-    incrementReaders(src);
     Command deref = Turbine.dereferenceInteger(varToExpr(target),
                                                varToExpr(src));
     pointStack.peek().add(deref);
@@ -616,7 +610,6 @@ public class TurbineGenerator implements CompilerBackend
   public void dereferenceBool(Var target, Var src) {
     assert(Types.isBool(target.type()));
     assert(src.type().equals(Types.R_BOOL));
-    incrementReaders(src);
     Command deref = Turbine.dereferenceInteger(varToExpr(target),
                                                varToExpr(src));
     pointStack.peek().add(deref);
@@ -626,7 +619,6 @@ public class TurbineGenerator implements CompilerBackend
   public void dereferenceFloat(Var target, Var src) {
     assert(target.type().equals(Types.F_FLOAT));
     assert(src.type().equals(Types.R_FLOAT));
-    incrementReaders(src);
     Command deref = Turbine.dereferenceFloat(varToExpr(target),
                                              varToExpr(src));
     pointStack.peek().add(deref);
@@ -636,7 +628,6 @@ public class TurbineGenerator implements CompilerBackend
   public void dereferenceString(Var target, Var src) {
     assert(target.type().equals(Types.F_STRING));
     assert(src.type().equals(Types.R_STRING));
-    incrementReaders(src);
     Command deref = Turbine.dereferenceString(varToExpr(target), 
                                               varToExpr(src));
     pointStack.peek().add(deref);
@@ -646,7 +637,6 @@ public class TurbineGenerator implements CompilerBackend
   public void dereferenceBlob(Var target, Var src) {
     assert(Types.isBlob(target.type()));
     assert(src.type().equals(Types.R_BLOB));
-    incrementReaders(src);
     Command deref = Turbine.dereferenceBlob(varToExpr(target), varToExpr(src));
     pointStack.peek().add(deref);
   }
@@ -655,7 +645,6 @@ public class TurbineGenerator implements CompilerBackend
   public void dereferenceFile(Var target, Var src) {
     assert(Types.isFile(target.type()));
     assert(src.type().equals(Types.REF_FILE));
-    incrementReaders(src);
     Command deref = Turbine.dereferenceFile(varToExpr(target),
                                             varToExpr(src));
     pointStack.peek().add(deref);
@@ -682,7 +671,6 @@ public class TurbineGenerator implements CompilerBackend
     assert(Types.isArray(arrayVar.type()));
     assert(Types.isArrayRef(arrayResult.type()));
     assert(arrayResult.storage() == VarStorage.ALIAS);
-    incrementReaders(arrayVar, indexVar);
     TclTree t = Turbine.containerCreateNested(
         prefixVar(arrayResult.name()), prefixVar(arrayVar.name()),
         prefixVar(indexVar.name()));
@@ -691,15 +679,14 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void arrayRefCreateNestedFuture(Var arrayResult,
-      Var arrayRefVar, Var indexVar) {
+      Var arrayRefVar, Var indexVar, Var outerArr) {
     assert(Types.isArrayRef(arrayRefVar.type()));
     assert(Types.isArrayRef(arrayResult.type()));
     assert(arrayResult.storage() == VarStorage.ALIAS);
-    incrementReaders(arrayRefVar, indexVar);
 
     TclTree t = Turbine.containerRefCreateNested(
-        prefixVar(arrayResult.name()), prefixVar(arrayRefVar.name()),
-        prefixVar(indexVar.name()));
+        prefixVar(arrayResult.name()), varToExpr(arrayRefVar),
+        varToExpr(indexVar), varToExpr(outerArr));
     pointStack.peek().add(t);
   }
 
@@ -720,7 +707,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void arrayRefCreateNestedImm(Var arrayResult,
-      Var arrayVar, Arg arrIx) {
+      Var arrayVar, Arg arrIx, Var outerArr) {
     assert(Types.isArrayRef(arrayVar.type()));
     assert(Types.isArrayRef(arrayResult.type()));
     assert(arrayResult.storage() == VarStorage.ALIAS);
@@ -728,7 +715,7 @@ public class TurbineGenerator implements CompilerBackend
 
     TclTree t = Turbine.containerRefCreateNestedImmIx(
         prefixVar(arrayResult.name()), prefixVar(arrayVar.name()),
-        argToExpr(arrIx));
+        argToExpr(arrIx), varToExpr(outerArr));
     pointStack.peek().add(t);
   }
 
@@ -741,8 +728,6 @@ public class TurbineGenerator implements CompilerBackend
     TclFunRef tclf = builtinSymbols.get(function);
     assert tclf != null : "Builtin " + function + "not found";
     Builtins.getTaskMode(function).checkSpawn(execContextStack.peek());
-    // Increment references so that function owns ref
-    incrementAllRefs(inputs, outputs);
 
     builtinFunctionCall(function, tclf, inputs, outputs, priority);
   }
@@ -802,12 +787,7 @@ public class TurbineGenerator implements CompilerBackend
         mode == TaskMode.LOCAL_CONTROL) {
       TclList iList = TclUtil.tclListOfVariables(inputs);
       TclList oList = TclUtil.tclListOfVariables(outputs);
-      
-      // Increment reference counts to keep open
-      List<Var> usedVars = new ArrayList<Var>();
-      usedVars.addAll(inputs);
-      usedVars.addAll(outputs);
-      incrementAllRefs(usedVars, outputs);
+
       // TODO: should handle local separately - this will put local tasks
       //      into load balancer
       pointStack.peek().add(Turbine.callFunction(
@@ -937,7 +917,6 @@ public class TurbineGenerator implements CompilerBackend
     } else {
       refReprType = Turbine.INTEGER_TYPENAME;
     }
-    incrementReaders(structVar);
     pointStack.peek().add(
         Turbine.structRefLookupFieldID(prefixVar(structVar.name()),
             structField, prefixVar(alias.name()),
@@ -951,7 +930,6 @@ public class TurbineGenerator implements CompilerBackend
     arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
     assert(Types.isInt(indexVar.type()));
     assert(Types.isRef(oVar.type()));
-    incrementReaders(arrayVar, indexVar);
     // Nested arrays - oVar should be a reference type
     Command getRef = Turbine.arrayLookupComputed(
         prefixVar(oVar.name()), refIsString(oVar.type()),
@@ -963,7 +941,6 @@ public class TurbineGenerator implements CompilerBackend
   public void arrayLookupRefImm(Var oVar, Var arrayVar, Arg arrIx,
         boolean isArrayRef) {
     assert(arrIx.isImmediateInt());
-    incrementReaders(arrayVar);
     
     arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
     Command getRef = Turbine.arrayLookupImmIx(
@@ -1030,7 +1007,6 @@ public class TurbineGenerator implements CompilerBackend
                                                       Var indexVar) {
     assert(Types.isArray(arrayVar.type()));
     // Increment reference for var being inserted into container
-    incrementReaders(iVar, arrayVar, indexVar);
     Type memberType = arrayVar.type().memberType();
     if (Types.isRef(iVar.type())) {
       assert(iVar.type().memberType().equals(memberType));
@@ -1055,7 +1031,6 @@ public class TurbineGenerator implements CompilerBackend
     assert(Types.isArrayRef(arrayVar.type()));
     assert(Types.isArray(outerArrayVar.type()));
     assert(Types.isInt(indexVar.type()));
-    incrementReaders(iVar, arrayVar, indexVar, outerArrayVar);
     Type memberType = arrayVar.type().memberType().memberType();
     if (Types.isRef(iVar.type())) {
       assert(iVar.type().memberType().equals(memberType));
@@ -1097,10 +1072,6 @@ public class TurbineGenerator implements CompilerBackend
     }
     assert(arrIx.isImmediateInt());
 
-    // Reference for var in array.  Don't need to increment refs for other vars since
-    // they aren't held
-    incrementReaders(iVar);
-
     Type memberType = arrayVar.type().memberType();
     if (Types.isRef(iVar.type())) {
       // Check that we get the right thing when we dereference it
@@ -1130,7 +1101,6 @@ public class TurbineGenerator implements CompilerBackend
     assert(Types.isArrayRef(arrayVar.type()));
     assert(Types.isArray(outerArrayVar.type()));
     assert(arrIx.isImmediateInt());
-    incrementReaders(iVar, arrayVar, outerArrayVar);
     Type memberType = arrayVar.type().memberType().memberType();
     if (Types.isRef(iVar.type())) {
       // Check that we get the right thing when we dereference it
@@ -1403,14 +1373,14 @@ public class TurbineGenerator implements CompilerBackend
         WaitMode mode, boolean recursive, TaskMode target) {
       logger.trace("startWaitStatement()...");
       startAsync(procName, waitVars, usedVariables, keepOpenVars,
-                 priority, recursive, target, false);
+                 priority, recursive, target);
     }
 
     @Override
     public void endWaitStatement(List<Var> waitVars, List<Var> usedVars,
                                  List<Var> keepOpenVars) {
       logger.trace("endWaitStatement()...");
-      endAsync(waitVars, usedVars, keepOpenVars, false);
+      endAsync(waitVars, usedVars, keepOpenVars);
     }
 
     /**
@@ -1421,14 +1391,11 @@ public class TurbineGenerator implements CompilerBackend
      * @param usedVars
      * @param keepOpenVars
      * @param priority 
-     * @param recursive 
-     * @param incrRefCounts 
-     * @param shareWork if true, work will be shared with other rule engines
-     *                  at the cost of higher overhead
+     * @param recursive
      */
     private void startAsync(String procName, List<Var> waitVars,
         List<Var> usedVars, List<Var> keepOpenVars,
-        Arg priority, boolean recursive, TaskMode mode, boolean incrRefCounts) {
+        Arg priority, boolean recursive, TaskMode mode) {
       assert(priority == null || priority.isImmediateInt());
       mode.checkSpawn(execContextStack.peek());
       
@@ -1488,10 +1455,6 @@ public class TurbineGenerator implements CompilerBackend
         Expression waitExpr = getTurbineWaitId(w);
         waitFor.add(waitExpr);
       }
-
-      // increment read or write refs as needed
-      if (incrRefCounts)
-        incrementAllRefs(allUsedVars, keepOpenVars);
       
       // Set priority (if provided)
       setPriority(priority);
@@ -1542,11 +1505,7 @@ public class TurbineGenerator implements CompilerBackend
     }
 
     private void endAsync(List<Var> waitVars, List<Var> usedVars,
-                          List<Var> keepOpenVars, boolean decrRefCounts) {
-      List<Var> allUsedVars = asyncUsedVars(usedVars, waitVars);
-      // decrement read or write refs as needed
-      if (decrRefCounts)
-        decrementAllRefs(allUsedVars, keepOpenVars);
+                          List<Var> keepOpenVars) {
       execContextStack.pop();
       pointStack.pop();
     }
@@ -1593,22 +1552,16 @@ public class TurbineGenerator implements CompilerBackend
       keepOpenVars = RefCounting.filterWriteRefcount(keepOpenVars);
       List<Var> readOnlyUsedVars = Var.varListDiff(usedVars,
                                                    keepOpenVars);
-      pointStack.peek().append(incrementReaders(readOnlyUsedVars,
-                                   refIncrAmount));
-      pointStack.peek().append(incrementWriters(keepOpenVars,
-                                   refIncrAmount));
+      incrementReaders(readOnlyUsedVars, refIncrAmount);
+      incrementWriters(keepOpenVars, refIncrAmount);
     }
 
     /**
      * Increment refcount of all vars by one
      * @param vars
      */
-    private void incrementReaders(Var ...vars) {
-      pointStack.peek().append(incrementReaders(Arrays.asList(vars), null));
-    }
-
-    private static Sequence incrementReaders(List<Var> vars, Expression incr) {
-      return incrementReaders(vars, incr, false);
+    private void incrementReaders(List<Var> vars, Expression incr) {
+      pointStack.peek().append(incrementReaders(vars, incr, false));
     }
 
     private Sequence decrementReaders(List<Var> vars, Expression incr) {
@@ -1660,7 +1613,7 @@ public class TurbineGenerator implements CompilerBackend
       return seq;
     }
 
-    private static Sequence incrementWriters(List<Var> keepOpenVars,
+    private void incrementWriters(List<Var> keepOpenVars,
           Expression incr) {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(keepOpenVars)) {
@@ -1676,7 +1629,7 @@ public class TurbineGenerator implements CompilerBackend
               Square.arithExpr(new LiteralInt(vc.count), new Token("*"), incr)));
         }
       }
-      return seq;
+      pointStack.peek().append(seq);
     }
     
     private void decrementAllRefs(List<Var> usedVars, List<Var> keepOpenVars) {
@@ -1798,16 +1751,6 @@ public class TurbineGenerator implements CompilerBackend
               loopCountVar.type().equals(Types.V_INT));
     if (!arrayClosed) {
       throw new STCRuntimeError("Loops over open containers not yet supported");
-    }
-
-    if (!arrayClosed) {
-      ArrayList<Var> passIn = new ArrayList<Var>(usedVariables);
-      if (!passIn.contains(arrayVar)) {
-        passIn.add(arrayVar);
-      }
-      startAsync(loopName + ":arrwait", 
-                  Arrays.asList(arrayVar), passIn,
-                  keepOpenVars, null, false, TaskMode.LOCAL, true);
     }
 
     boolean haveKeys = loopCountVar != null;
@@ -2260,7 +2203,7 @@ public class TurbineGenerator implements CompilerBackend
     // Increment references before async call
     incrementAllRefs(usedVariables, keepOpenVars);
     // Increment references for condition variable and loop var
-    pointStack.peek().append(incrementReaders(initVals, null));
+    incrementReaders(initVals, null);
 
 
     String uniqueLoopName = uniqueTCLFunctionName(loopName);
@@ -2308,13 +2251,13 @@ public class TurbineGenerator implements CompilerBackend
         blockingVals.add(varToExpr(newVals.get(i)));
       }
     }
-    pointStack.peek().append(incrementReaders(newVals, null));
     pointStack.peek().add(Turbine.loopRule(loopName,
         nextIterArgs, blockingVals));
   }
 
   @Override
   public void loopBreak(List<Var> loopUsedVars, List<Var> keepOpenVars) {
+    // Close vars
     decrementAllRefs(loopUsedVars, keepOpenVars);
   }
 

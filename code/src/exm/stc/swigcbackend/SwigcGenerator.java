@@ -805,7 +805,7 @@ public class SwigcGenerator implements CompilerBackend
 
   @Override
   public void arrayRefCreateNestedFuture(Var arrayResult,
-      Var arrayRefVar, Var indexVar) {
+      Var arrayRefVar, Var indexVar, Var outerArr) {
     assert(Types.isArrayRef(arrayRefVar.type()));
     assert(Types.isArrayRef(arrayResult.type()));
     assert(arrayResult.storage() == VarStorage.ALIAS);
@@ -833,7 +833,7 @@ public class SwigcGenerator implements CompilerBackend
 
   @Override
   public void arrayRefCreateNestedImm(Var arrayResult,
-      Var arrayVar, Arg arrIx) {
+      Var arrayVar, Arg arrIx, Var outerArr) {
     assert(Types.isArrayRef(arrayVar.type()));
     assert(Types.isArrayRef(arrayResult.type()));
     assert(arrayResult.storage() == VarStorage.ALIAS);

@@ -1,5 +1,6 @@
 package exm.stc.ic.opt;
 
+import java.util.List;
 import java.util.ListIterator;
 import java.util.Map.Entry;
 
@@ -8,17 +9,16 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.Counters;
+import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.LocalFunctionCall;
-import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CleanupAction;
@@ -28,7 +28,7 @@ import exm.stc.ic.tree.ICTree.Function;
  * Eliminate, merge and otherwise reduce read/write reference
  * counting operations.  Run as a post-processing step.
  */
-public class ElimRefcounts extends FunctionOptimizerPass {
+public class ElimRefCounts extends FunctionOptimizerPass {
 
   @Override
   public String getPassName() {
@@ -42,7 +42,7 @@ public class ElimRefcounts extends FunctionOptimizerPass {
 
   @Override
   public void optimize(Logger logger, Function f) throws UserException {
-    elimRefcountsRec(logger, f, f.getMainblock(),
+    elimRefCountsRec(logger, f, f.getMainblock(),
                      new Counters<Var>(), new Counters<Var>());
   }
 
@@ -51,11 +51,11 @@ public class ElimRefcounts extends FunctionOptimizerPass {
    * at end of continuations.  Neeed to walk over tree and add refcount instructions
    * wherever there is keepOpen/passIn annotation
    */
-  private void elimRefcountsRec(Logger logger, Function f, Block block,
+  private void elimRefCountsRec(Logger logger, Function f, Block block,
       Counters<Var> readIncrements, Counters<Var> writeIncrements) {
     
     
-    fixBlockRefcounting(logger, block, readIncrements, writeIncrements);
+    fixBlockRefCounting(logger, block, readIncrements, writeIncrements);
     
     
     //cancelInstructionRefcounts(block, thisBlockArrays);
@@ -64,11 +64,11 @@ public class ElimRefcounts extends FunctionOptimizerPass {
     //cancelContinuationRefcounts(block, thisBlockArrays);
     
     for (Continuation cont: block.getContinuations()) {
-      elimRefcountsCont(logger, f, cont);
+      elimRefCountsCont(logger, f, cont);
     }
   }
 
-  private void elimRefcountsCont(Logger logger, Function f,
+  private void elimRefCountsCont(Logger logger, Function f,
                                  Continuation cont) {
     Counters<Var> readIncrements = new Counters<Var>();
     Counters<Var> writeIncrements = new Counters<Var>();
@@ -87,7 +87,7 @@ public class ElimRefcounts extends FunctionOptimizerPass {
     }
     
     for (Block block: cont.getBlocks()) {
-      elimRefcountsRec(logger, f, block, readIncrements, writeIncrements);
+      elimRefCountsRec(logger, f, block, readIncrements, writeIncrements);
     }
   }
 
@@ -98,13 +98,13 @@ public class ElimRefcounts extends FunctionOptimizerPass {
    * @param readIncrements pre-existing decrements
    * @param writeIncrements -existing decrements
    */
-  private void fixBlockRefcounting(Logger logger, Block block,
+  private void fixBlockRefCounting(Logger logger, Block block,
       Counters<Var> readIncrements, Counters<Var> writeIncrements) {
     for (Instruction inst: block.getInstructions()) {
-      updateInstructionRefcount(inst, readIncrements, writeIncrements);
+      updateInstructionRefCount(inst, readIncrements, writeIncrements);
     }
     for (Continuation cont: block.getContinuations()) {
-      updateContinuationRefcount(cont, readIncrements, writeIncrements);
+      updateContinuationRefCount(cont, readIncrements, writeIncrements);
     }
     
     updateBlockRefcounting(block, readIncrements, writeIncrements);
@@ -114,6 +114,7 @@ public class ElimRefcounts extends FunctionOptimizerPass {
       Counters<Var> readIncrements, Counters<Var> writeIncrements) {
     cancelDecrements(block, readIncrements, writeIncrements);
     
+    // TODO: move decrements to piggyback onto read/write instructions
     addDecrements(block, readIncrements, RefCountType.READERS);
     addDecrements(block, writeIncrements, RefCountType.WRITERS);
     
@@ -141,6 +142,9 @@ public class ElimRefcounts extends FunctionOptimizerPass {
           cancelDecrement(caIt, ca, writeIncrements, decrVar, amount);
           break;
         }
+        default:
+          // do nothing
+          break;
       }
     }
   }
@@ -208,6 +212,8 @@ public class ElimRefcounts extends FunctionOptimizerPass {
     for (Entry<Var, Long> e: increments.entries()) {
       Var var = e.getKey();
       long count = e.getValue();
+      // TODO: need to handle placing refcount incr at correct point
+      // for alias vars
       addRefIncrement(block, type, var, count);
     }
   }
@@ -229,23 +235,24 @@ public class ElimRefcounts extends FunctionOptimizerPass {
     }
   }
 
-  private void updateInstructionRefcount(Instruction inst,
+  private void updateInstructionRefCount(Instruction inst,
       Counters<Var> readIncrements, Counters<Var> writeIncrements) {
-    if (inst.op == Opcode.CALL_BUILTIN_LOCAL) {
-      String fnName = ((LocalFunctionCall)inst).getFunctionName();
-      // TODO: hacky, need to generalize
-      if (fnName.equals(Builtins.RANGE) ||
-          fnName.equals(Builtins.RANGE_STEP)) {
-        // Increment array output
-        writeIncrements.increment(inst.getOutput(0));
+    Pair<List<Var>, List<Var>> refIncrs = inst.getIncrVars();
+    List<Var> readIncrVars = refIncrs.val1;
+    List<Var> writeIncrVars = refIncrs.val2;
+    for (Var v: readIncrVars) {
+      if (RefCounting.hasReadRefCount(v)) {
+        readIncrements.increment(v);
       }
-    } else if (inst.op == Opcode.ARRAY_BUILD) {
-      Var arr = inst.getOutput(0);
-      writeIncrements.increment(arr);
+    }
+    for (Var v: writeIncrVars) {
+      if (RefCounting.hasWriteRefCount(v)) {
+        writeIncrements.increment(v);
+      }
     }
   }
 
-  private void updateContinuationRefcount(Continuation cont,
+  private void updateContinuationRefCount(Continuation cont,
       Counters<Var> readIncrements, Counters<Var> writeIncrements) {
     // TODO: handle other than wait
     if (cont.isAsync() &&

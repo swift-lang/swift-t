@@ -1373,7 +1373,7 @@ public class ASTWalker {
             mVar = varCreator.createTmpAlias(context, 
                                   new RefType(memberType));
             backend.arrayRefCreateNestedImm(mVar, lvalArr, 
-                Arg.createIntLit(arrIx));
+                Arg.createIntLit(arrIx), origLval.var);
           }
 
         } else {
@@ -1386,7 +1386,8 @@ public class ASTWalker {
             backend.arrayCreateNestedFuture(mVar, lvalArr, indexVar);
           } else {
             assert(Types.isArrayRef(lvalArr.type()));
-            backend.arrayRefCreateNestedFuture(mVar, lvalArr, indexVar);
+            backend.arrayRefCreateNestedFuture(mVar, lvalArr, indexVar,
+                                               origLval.var);
           }
         }
       } else {

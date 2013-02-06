@@ -256,10 +256,10 @@ public interface CompilerBackend {
       Var arrayVar, Arg arrIx);
 
   public abstract void arrayRefCreateNestedFuture(Var arrayResult,
-      Var arrayVar, Var indexVar);
+      Var arrayVar, Var indexVar, Var outerArr);
 
   public abstract void arrayRefCreateNestedImm(Var arrayResult,
-      Var arrayVar, Arg arrIx);
+      Var arrayVar, Arg arrIx, Var outerArr);
 
   public abstract void initUpdateable(Var updateable, Arg val);
   public abstract void latestValue(Var result, Var updateable);

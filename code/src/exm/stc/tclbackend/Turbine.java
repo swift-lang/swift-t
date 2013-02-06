@@ -553,7 +553,8 @@ class Turbine
     Square outputs = new TclList();
     Square inputs =  new TclList(new Value(arrayVar),
                       arrayIndex, new Value(srcRefVar));
-    return new Command(CONTAINER_DEREF_INSERT, NO_STACK, outputs, inputs);
+    return new Command(CONTAINER_DEREF_INSERT, NO_STACK, outputs, inputs,
+                       LiteralInt.FALSE);
   }
 
   public static Command arrayDerefStoreComputed(String srcRefVar, String arrayVar,
@@ -561,7 +562,8 @@ class Turbine
     Square outputs = new TclList();
     Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
                      new Value(srcRefVar));
-    return new Command(CONTAINER_F_DEREF_INSERT, NO_STACK, outputs, inputs);
+    return new Command(CONTAINER_F_DEREF_INSERT, NO_STACK, outputs, inputs,
+                       LiteralInt.FALSE);
   }
 
   public static Command arrayStoreComputed(String srcVar, String arrayVar,
@@ -569,7 +571,9 @@ class Turbine
     Square outputs = new TclList();
     Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
           new Value(srcVar));
-    return new Command(CONTAINER_F_INSERT, NO_STACK, outputs, inputs);
+    // Don't increment writers count, this is done in IC
+    return new Command(CONTAINER_F_INSERT, NO_STACK, outputs, inputs,
+                       LiteralInt.FALSE);
   }
 
   public static Command arrayRefStoreImmediate(String srcVar, String arrayVar,
@@ -577,7 +581,8 @@ class Turbine
     return new Command(new Token("turbine::cref_insert"),
                     NO_STACK, new TclList(), new TclList(
                     new Value(arrayVar), arrayIndex, new Value(srcVar),
-                    new Value(outerArray)));
+                    new Value(outerArray)),
+                    LiteralInt.FALSE);
   }
 
 
@@ -587,7 +592,8 @@ class Turbine
     Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
         new Value(srcVar), new Value(outerArray));
     return new Command(new Token("turbine::f_cref_insert"),
-                        NO_STACK, outputs, inputs);
+                        NO_STACK, outputs, inputs,
+                        LiteralInt.FALSE);
   }
 
   public static Command arrayRefDerefStore(String srcRefVar, String arrayVar,
@@ -596,7 +602,8 @@ class Turbine
     Square inputs =  new TclList(new Value(arrayVar),
         arrayIndex, new Value(srcRefVar), new Value(outerArrayVar));
     return new Command(new Token("turbine::cref_deref_insert"),
-                                              NO_STACK, outputs, inputs);
+                                  NO_STACK, outputs, inputs,
+                                  LiteralInt.FALSE);
   }
 
   public static Command arrayRefDerefStoreComputed(String srcRefVar, String arrayVar,
@@ -605,7 +612,8 @@ class Turbine
     Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
         new Value(srcRefVar), new Value(outerArrayVar));
     return new Command(new Token("turbine::cref_f_deref_insert"),
-                                    NO_STACK, outputs, inputs);
+                                    NO_STACK, outputs, inputs,
+                                    LiteralInt.FALSE);
   }
 
   public static TclTree containerCreateNested(String resultVar,
@@ -616,17 +624,17 @@ class Turbine
   }
 
   public static TclTree containerRefCreateNested(String resultVar,
-      String containerVar, String indexVar) {
+      Value containerVar, Value indexVar, Value outerArr) {
     return new Command(F_CREF_CREATE_NESTED,
-          new Token(resultVar), new Value(containerVar),
-          new Value(indexVar), new Token(INTEGER_TYPENAME));
+          new Token(resultVar), containerVar,
+          indexVar, new Token(INTEGER_TYPENAME), outerArr, LiteralInt.FALSE);
   }
 
   public static TclTree containerRefCreateNestedImmIx(String resultVar,
-      String containerVar, Expression arrIx) {
+      String containerVar, Expression arrIx, Value outerArr) {
     return new Command(F_CREF_CREATE_NESTED_STATIC,
         new Token(resultVar), new Value(containerVar),
-        arrIx, new Token(INTEGER_TYPENAME));
+        arrIx, new Token(INTEGER_TYPENAME), outerArr, LiteralInt.FALSE);
   }
 
   public static TclTree containerCreateNestedImmIx(String resultVar,

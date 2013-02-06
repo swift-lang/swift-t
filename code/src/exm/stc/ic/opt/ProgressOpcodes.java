@@ -147,8 +147,8 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.ARRAY_LOOKUP_FUTURE);
     opcodes.add(Opcode.ARRAY_LOOKUP_IMM);
     opcodes.add(Opcode.ARRAY_LOOKUP_REF_IMM);
-    opcodes.add(Opcode.ARRAY_REF_CREATE_NESTED_FUTURE);
-    opcodes.add(Opcode.ARRAY_REF_CREATE_NESTED_IMM);
+    opcodes.add(Opcode.ARRAYREF_CREATE_NESTED_FUTURE);
+    opcodes.add(Opcode.ARRAYREF_CREATE_NESTED_IMM);
     opcodes.add(Opcode.ARRAYREF_INSERT_FUTURE);
     opcodes.add(Opcode.ARRAYREF_INSERT_IMM);
     opcodes.add(Opcode.ARRAYREF_LOOKUP_FUTURE);
