@@ -317,7 +317,7 @@ public class Validate implements OptimizerPass {
       if (initializedAliases.size() > 0) {
         regularOutputs = new ArrayList<Var>(regularOutputs);
         for (Var init: initializedAliases) {
-          assert(init.storage() == VarStorage.ALIAS);
+          assert(init.storage() == VarStorage.ALIAS) : inst + " " + init;
           ICUtil.remove(regularOutputs, init);
           initAliases.add(init);
         }

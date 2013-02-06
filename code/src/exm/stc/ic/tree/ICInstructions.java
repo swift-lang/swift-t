@@ -738,6 +738,7 @@ public class ICInstructions {
 
     public static Instruction structLookup(Var oVar, Var structVar,
                                                           String fieldName) {
+      assert(oVar.storage() == VarStorage.ALIAS) : oVar;
       return new TurbineOp(Opcode.STRUCT_LOOKUP,
           Arg.createVar(oVar), Arg.createVar(structVar),
               Arg.createStringLit(fieldName));

@@ -318,11 +318,10 @@ public class ForwardDataflow implements OptimizerPass {
     }
   }
 
-  private static List<ComputedValue> updateReplacements(
+  private static void updateReplacements(
       Logger logger, Function function, Instruction inst,
-      State av, HierarchicalMap<Var, Arg> replaceInputs, 
+      State av, List<ComputedValue> icvs, HierarchicalMap<Var, Arg> replaceInputs, 
       HierarchicalMap<Var, Arg> replaceAll) {
-    List<ComputedValue> icvs = inst.getComputedValues(av);
     if (icvs != null) {
       if (logger.isTraceEnabled()) {
         logger.trace("icvs: " + icvs.toString());
@@ -400,7 +399,6 @@ public class ForwardDataflow implements OptimizerPass {
     } else {
       logger.trace("no icvs");
     }
-    return icvs;
   }
 
   public static boolean cantPass(Type t) {
@@ -694,15 +692,34 @@ public class ForwardDataflow implements OptimizerPass {
       // Immediately apply the variable renames
       inst.renameInputs(replaceInputs);
       inst.renameVars(replaceAll);
-  
+ 
 
+      List<ComputedValue> icvs = inst.getComputedValues(cv);
+      
+      /**
+       * Check to see if outputs replaced
+       */
+      List<Var> oldAliasOutputs =
+            new ArrayList<Var>(inst.getInitializedAliases());
+      
       /*
        * See if value is already computed somewhere and see if we should
        * replace variables going forward NOTE: we don't delete any instructions
        * on this pass, but rather rely on dead code elim to later clean up
        * unneeded instructions instead
        */
-      updateReplacements(logger, f, inst, cv, replaceInputs, replaceAll);
+      updateReplacements(logger, f, inst, cv, icvs, replaceInputs, replaceAll);
+      
+      if (!oldAliasOutputs.isEmpty()) {
+        // Assume for now at most one alias output
+        assert(oldAliasOutputs.size() == 1);
+        // Make sure redundant load removed
+        if (replaceAll.containsKey(oldAliasOutputs.get(0))) {
+          logger.trace("Removed");
+          insts.remove();
+          continue;
+        }
+      }
       
       if (logger.isTraceEnabled()) {
         logger.trace("Instruction after updates: " + inst);
@@ -730,7 +747,7 @@ public class ForwardDataflow implements OptimizerPass {
     }
     return anotherPassNeeded;
   }
-  
+
   /**
    * 
    * @param logger
