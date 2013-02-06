@@ -75,11 +75,14 @@ sleep_trace (float secs, int|float|string|boolean... args) "turbine" "0.0.2"
 
 // Container operations
 @pure
-(int res[]) range(int start, int end) "turbine" "0.0.2" "range";
+(int res[]) range(int start, int end) "turbine" "0.0.2" "range"
+  [ "turbine::range_work <<res>> <<start>> <<end>> 1" ];
 @pure
-(int res[]) rangestep(int start, int end, int step) "turbine" "0.0.2" "rangestep";
+(int res[]) rangestep(int start, int end, int step) "turbine" "0.0.2" "rangestep"
+  [ "turbine::range_work <<res>> <<start>> <<end>> <<step>>" ];
 @pure
-<T> (int n) size(T A[]) "turbine" "0.0.5" "container_size";
+<T> (int n) size(T A[]) "turbine" "0.0.5" "container_size"
+  [ "set <<n>> [ turbine::container_size_local <<A>> ]" ];
 @pure
 <T> (boolean o) contains(T A[], int i) "turbine" "0.0.5" "contains";
 

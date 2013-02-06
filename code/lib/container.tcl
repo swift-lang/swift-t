@@ -24,6 +24,21 @@ namespace eval turbine {
     namespace export f_reference
     namespace export f_container_create_nested
 
+    # build array by inserting items into a container starting at 0
+    # close: decrement writers count at end
+    proc array_build { c elems close } {
+      set n [ llength $elems ]
+      log "container_build: <$c> $n elems, close $close"
+      for { set i 0 } { $i < $n } { incr i } {
+        set elem [ lindex $elems $i ]
+        set drops 0
+        if { $close && $i == [ expr $n - 1 ] } {
+          set drops 1
+        }
+        adlb::insert $c $i $elem $drops
+      }
+    }
+
     # Just like adlb::container_reference but add logging
     proc container_reference { c i r type } {
         log "creating reference: <$c>\[$i\] <- <*$r> ($type)"
@@ -521,6 +536,10 @@ namespace eval turbine {
     proc container_size_body { result container } {
         set sz [ adlb::enumerate $container count all 0 ]
         store_integer $result $sz
+    }
+
+    proc container_size_local { container } {
+      return [ adlb::enumerate $container count all 0 ]
     }
 
     # When container c is closed, return whether it contains c[i]

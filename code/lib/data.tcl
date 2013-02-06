@@ -347,15 +347,7 @@ namespace eval turbine {
 
     # usage: container_insert <id> <subscript> <member> [<drops>]
     # @param drops = 0 by default
-    proc container_insert { args } {
-
-        set id        [ lindex $args 0 ]
-        set subscript [ lindex $args 1 ]
-        set member    [ lindex $args 2 ]
-        set drops 0
-        if { [ llength $args ] == 4 } {
-            set drops [ lindex $args 3 ]
-        }
+    proc container_insert { id subscript member {drops 0} } {
         log "insert: <$id>\[$subscript\]=<$member>"
         adlb::insert $id $subscript $member $drops
     }
