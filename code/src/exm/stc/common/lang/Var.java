@@ -42,6 +42,7 @@ public class Var {
   private final VarStorage storage;
   private final DefType defType;
   private final Var mapping;
+  private final int hashCode; // Cache hashcode
 
   public static final String TMP_VAR_PREFIX = "__t";
   public static final String ALIAS_VAR_PREFIX = "__alias";
@@ -97,6 +98,7 @@ public class Var {
     this.storage = VarStorage.ALIAS;
     this.defType = DefType.INARG;
     this.mapping = null;
+    this.hashCode = calcHashCode();
   }
 
   public Var(Type type, String name,
@@ -107,6 +109,7 @@ public class Var {
     this.storage = storage;
     this.defType = defType;
     this.mapping = null;
+    this.hashCode = calcHashCode();
   }
   
   public Var(Type type, String name,
@@ -117,10 +120,15 @@ public class Var {
     this.defType = defType;
     assert(mapping == null || Types.isString(mapping.type()));
     this.mapping = mapping;
+    this.hashCode = calcHashCode();
   }
 
   @Override
   public int hashCode() {
+    return hashCode;
+  }
+  
+  public int calcHashCode() {
     // Assume name unique
     return name.hashCode();
   }

@@ -57,6 +57,8 @@ public class ComputedValue {
   final boolean outClosed; // true if out is known to be closed
   final EquivalenceType equivType;
   
+  private final int hashCode; // Cache hashcode 
+  
   public ComputedValue(Opcode op, String subop, int index, List<Arg> inputs,
       Arg valLocation, boolean outClosed, EquivalenceType equivType) {
     super();
@@ -70,6 +72,7 @@ public class ComputedValue {
     this.valLocation = valLocation;
     this.outClosed = outClosed;
     this.equivType = equivType;
+    this.hashCode = calcHashCode();
   }
   
   public ComputedValue(Opcode op, String subop, List<Arg> inputs,
@@ -159,8 +162,14 @@ public class ComputedValue {
       return false;
     }
   }
+  
+  
   @Override
   public int hashCode() {
+    return hashCode;
+  }
+  
+  public int calcHashCode() {
     int result = this.op.hashCode();
     result = 37 * result + this.subop.hashCode(); 
     result = 37 * result + ((Integer)index).hashCode();
