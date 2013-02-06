@@ -3,6 +3,7 @@ package exm.stc.ic.opt;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -77,45 +78,20 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     
     for (int i = 0; i < instructionsCopy.size(); i++) {
       Instruction inst1 = instructionsCopy.get(i);
-      
-      Instruction writer = 
-              searchForInputWriter(logger, instructionsCopy, i, inst1);
-      if (writer != null) {
+      boolean move = 
+          searchForInputWriter(logger, instructionsCopy, i, inst1, after);
+      if (move) {
         // Note that we should put it later
         moved = true;
-        after.put(writer, inst1);
       } else {
         // Don't move
         newInstructions.add(inst1);
-        if (after.containsKey(inst1)) {
-          newInstructions.addAll(after.remove(inst1));
-        }
       }
     }
     
-    // Put all instructions back.  We do a topological sort to
-    // make sure they end up in correct order
-    ArrayDeque<Instruction> stack = new ArrayDeque<Instruction>();
-    while (!after.isEmpty()) {
-      for (Entry<Instruction, List<Instruction>> e: after.entrySet()) {
-        Iterator<Instruction> it = e.getValue().iterator();
-        while (it.hasNext()) {
-          Instruction inst = it.next();
-          // Find instruction with nothing dependent on it
-          if (after.get(inst).isEmpty()) {
-            stack.push(inst);
-            it.remove();
-          }
-        }
-      }
-    } 
-    
-    
+
     if (moved) {
-      while (!stack.isEmpty()) {
-        newInstructions.add(stack.pop());
-      }
-      assert(newInstructions.size() == block.getInstructions().size());
+      rebuildInstructions(block, newInstructions, after);
       block.replaceInstructions(newInstructions);
       move++;
     } else {
@@ -125,27 +101,84 @@ public class ReorderInstructions extends FunctionOptimizerPass {
       logger.trace("reorder instructions: moved " + move + "/" + (move + noMove));
   }
 
-  private Instruction searchForInputWriter(Logger logger,
+  private void rebuildInstructions(Block block,
+      ArrayList<Instruction> newInstructions,
+      MultiMap<Instruction, Instruction> after) {
+    // Put all instructions back.  We do a topological sort to
+    // make sure they end up in correct order
+    ArrayDeque<Instruction> stack = new ArrayDeque<Instruction>();
+    HashSet<Instruction> visited = new HashSet<Instruction>();
+    visited.addAll(newInstructions);
+    while (!after.isEmpty()) {
+      for (Entry<Instruction, List<Instruction>> e: after.entrySet()) {
+        Iterator<Instruction> it = e.getValue().iterator();
+        while (it.hasNext()) {
+          Instruction inst = it.next();
+          // Find instruction with nothing dependent on it
+          if (visited.contains(inst)) {
+            // Already added
+            it.remove();
+          } else if (after.get(inst).isEmpty()) {
+            stack.push(inst);
+            visited.add(inst);
+            it.remove();
+          }
+        }
+      }
+    } 
+    
+    
+    while (!stack.isEmpty()) {
+      newInstructions.add(stack.pop());
+    }
+    assert(newInstructions.size() == block.getInstructions().size());
+  }
+
+  private boolean searchForInputWriter(Logger logger,
           ArrayList<Instruction> instructionsCopy, int i,
-          Instruction inst1) {
+          Instruction inst1, MultiMap<Instruction, Instruction> after) {
     List<Var> inst1Inputs = getInputs(inst1);
 
     if (logger.isTraceEnabled())
       logger.trace("Try to move " + inst1 + " with inputs " + inst1Inputs);
     
     // Find last instruction that writes inputs of inst1
-    Instruction inputWriter = null;
+    // Build a DAG of dependences between instructions
+    boolean move = false;
+    boolean canMoveFurther = true;
     for (int j = i + 1; j < instructionsCopy.size(); j++) {
       Instruction inst2 = instructionsCopy.get(j);
       if (writesInputs(logger, inst2, getInputs(inst2), inst1)) {
-        // Bail out- can't move before
-        return inputWriter;
+        // These edges wont create cycle - forward edge
+        after.put(inst1, inst2);
+        canMoveFurther = false;
       }
-      if (writesInputs(logger, inst1, inst1Inputs, inst2)) {
-        inputWriter = inst2;
+      
+      if (canMoveFurther && writesInputs(logger, inst1, inst1Inputs, inst2)) {
+        // Check that there isn't a path from inst1 to inst2
+        if (pathExists(after, inst1, inst2)) {
+          canMoveFurther = false;
+        } else {
+          after.put(inst2, inst1);
+          move = true;
+        }
       }
     }
-    return inputWriter;
+    return move;
+  }
+
+  private boolean pathExists(MultiMap<Instruction, Instruction> after,
+      Instruction from, Instruction to) {
+    ArrayDeque<Instruction> stack = new ArrayDeque<Instruction>();
+    stack.push(from);
+    while (!stack.isEmpty()) {
+      Instruction curr = stack.pop();
+      if (curr == to) {
+        return true;
+      }
+      stack.addAll(after.get(curr));
+    }
+    return false;
   }
 
   /**
