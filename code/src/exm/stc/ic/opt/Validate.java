@@ -186,7 +186,7 @@ public class Validate implements OptimizerPass {
   }
 
   private void checkVarReference(Map<String, Var> declared, Var referencedVar) {
-    assert(declared.containsKey(referencedVar.name()));
+    assert(declared.containsKey(referencedVar.name())): referencedVar;
     Var declaredVar = declared.get(referencedVar.name());
     assert(referencedVar.identical(declaredVar)) : 
               declaredVar + " " + referencedVar + " | " +

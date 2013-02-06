@@ -1942,6 +1942,11 @@ public class ICContinuations {
       return Collections.unmodifiableList(this.waitVars);
     }
 
+    public void addWaitVars(Collection<Var> vars) {
+      this.waitVars.addAll(vars);
+      ICUtil.removeDuplicates(this.waitVars);
+    }
+
     @Override
     public void removeVars_(Set<Var> removeVars) {
       waitVars.removeAll(removeVars);

@@ -90,7 +90,8 @@ public class DeadCodeEliminator {
 
     if (logger.isTraceEnabled()) {
       logger.trace("This block needed: " + thisBlockNeeded
-              + " outputs: " + thisBlockWritten);
+              + " outputs: " + thisBlockWritten
+              + " dependencies: " + dependentSets);
     }
     
     // Now see if we can push down any variable declarations

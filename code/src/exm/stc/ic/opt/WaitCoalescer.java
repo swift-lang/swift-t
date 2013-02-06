@@ -232,6 +232,11 @@ public class WaitCoalescer implements OptimizerPass {
           changed = true;
         }
       }
+      
+      if (c.getType() == ContinuationType.WAIT_STATEMENT) {
+        WaitStatement wait = (WaitStatement)c;
+        squashWaits(logger, fn, wait, newContext);
+      }
     }
     return changed;
   }
@@ -296,6 +301,68 @@ public class WaitCoalescer implements OptimizerPass {
       }
     }
     return changed;
+  }
+
+  /**
+   * Try to squash together waits, e.g.
+   * wait (x) {
+   *   < do some minor work that doesn't help with progress >
+   *   wait (y) {
+   *    < do some real work >
+   *   }
+   * }
+   * 
+   * gets changed to
+   * wait (x, y) {
+   *  ...
+   * }
+   * @param logger
+   * @param fn
+   * @param block
+   */
+  private void squashWaits(Logger logger, Function fn, WaitStatement wait,
+      ExecContext waitContext) {
+    Block block = wait.getBlock();
+    WaitStatement innerWait = null;
+    // Can be 0..n sync continuations and 1 async wait
+    for (Continuation c: block.getContinuations()) {
+      if (c.isAsync()) {
+        if (c.getType() == ContinuationType.WAIT_STATEMENT) {
+          if (innerWait != null) {
+            // Can't have two waits
+            return;
+          } else {
+            innerWait = (WaitStatement)c;
+          }
+        } else {
+          return;
+        }
+      }
+    }
+    
+
+    ExecContext innerContext = innerWait.childContext(waitContext);
+    // Check that locations are compatible
+    if (innerContext != waitContext)
+      return;
+    
+    // Check that wait variables not defined in this block
+    for (Var waitVar: innerWait.getWaitVars()) {
+      if (block.getVariables().contains(waitVar)) {
+        return;
+      }
+    }
+    
+    if (!ProgressOpcodes.isNonProgress(block)) {
+      // Progress might be deferred by squashing
+      return;
+    }
+    // Pull inner up
+    if (logger.isTraceEnabled())
+      logger.trace("Squash wait(" + innerWait.getWaitVars() + ")" +
+                 " up into wait(" + wait.getWaitVars() + ")");
+    wait.addWaitVars(innerWait.getWaitVars());
+    innerWait.inlineInto(block);
   }
 
   private static boolean mergeWaits(Logger logger, Function fn, Block block) {

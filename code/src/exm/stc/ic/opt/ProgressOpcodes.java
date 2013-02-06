@@ -42,20 +42,45 @@ public class ProgressOpcodes {
     return cheapOpcodes.contains(op);
   }
   
+  public static enum Category {
+    CHEAP,
+    NON_PROGRESS
+  }
+  
   /**
    * @param rootBlock
    * @return true if the continuation at the root of the block might do
    *          significant work.
    */
   public static boolean isCheap(Block rootBlock) {
+    return blockProgress(rootBlock, Category.CHEAP);
+  }
+  
+  public static boolean isNonProgress(Block rootBlock) {
+    return blockProgress(rootBlock, Category.NON_PROGRESS);
+  }
+  
+  /**
+   * block
+   * @param rootBlock
+   * @return
+   */
+  public static boolean blockProgress(Block rootBlock, Category type) {
     Deque<Block> stack = new ArrayDeque<Block>();
     stack.add(rootBlock);
     while (!stack.isEmpty()) {
       Block block = stack.pop();
       
       for (Instruction i: block.getInstructions()) {
-        if (!isCheapOpcode(i.op)) {
-          return false;
+        if (type == Category.CHEAP) {
+          if (!isCheapOpcode(i.op)) {
+            return false;
+          }
+        } else {
+          assert(type == Category.NON_PROGRESS);
+          if (!isNonProgressOpcode(i.op)) {
+            return false;
+          }
         }
       }
       
@@ -86,8 +111,6 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.INCR_REF);
     opcodes.add(Opcode.INCR_WRITERS);
     opcodes.add(Opcode.LOCAL_OP);
-    opcodes.add(Opcode.CALL_LOCAL);
-    opcodes.add(Opcode.CALL_LOCAL_CONTROL);
     opcodes.add(Opcode.COPY_REF);
     opcodes.add(Opcode.ADDRESS_OF);
     opcodes.add(Opcode.LOAD_BOOL);
@@ -100,7 +123,10 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.LOAD_FILE);
     opcodes.add(Opcode.GET_FILENAME);
     opcodes.add(Opcode.GET_OUTPUT_FILENAME);
+    opcodes.add(Opcode.CHOOSE_TMP_FILENAME);
     opcodes.add(Opcode.COMMENT);
+    opcodes.add(Opcode.STRUCT_INSERT);
+    opcodes.add(Opcode.STRUCT_LOOKUP);
     return opcodes;
   }
   

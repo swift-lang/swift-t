@@ -621,7 +621,7 @@ public class ICInstructions {
         gen.getFileName(getOutput(0), getInput(0).getVar(), false);
         break;
       case GET_OUTPUT_FILENAME:
-        gen.getFileName(getOutput(0), getInput(0).getVar(), true);
+        gen.getFileName(getOutput(0), getOutput(1), true);
         break;
       case SET_FILENAME_VAL:
         gen.setFilenameVal(getOutput(0), getInput(0));
