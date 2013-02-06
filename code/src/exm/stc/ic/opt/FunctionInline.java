@@ -28,6 +28,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend.WaitMode;
+import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -62,6 +63,11 @@ public class FunctionInline implements OptimizerPass {
    */
   private final Set<Pair<String, String>> blacklist =
                               new HashSet<Pair<String, String>>();
+  
+  /**
+   * Names of functions that should be inlined everywhere
+   */
+  private final Set<String> alwaysInline = new HashSet<String>();
   
   public FunctionInline() {
     try {
@@ -145,6 +151,16 @@ public class FunctionInline implements OptimizerPass {
    */
   private Pair<MultiMap<String, String>, Set<String>> selectInlineFunctions(
       Program program, FuncCallFinder finder) {
+    
+
+    // Map from caller to callee for IC functions only
+    Map<String, String> functionCalls = new HashMap<String, String>();
+    for (Function callee: program.getFunctions()) {
+      for (String caller: finder.functionUsages.get(callee.getName())) {
+        functionCalls.put(caller, callee.getName());
+      }
+    }
+    
     MultiMap<String, String> inlineCandidates = new MultiMap<String, String>();
     Set<String> toRemove = new HashSet<String>();
     // Narrow inline candidates by number of calls, remove unused functions
@@ -156,32 +172,49 @@ public class FunctionInline implements OptimizerPass {
       } else if (callLocs == null || callLocs.size() == 0) {
         // Function not referenced - prune it!
         toRemove.add(f.getName());
-      } else if (callLocs.size() == 1 
-            || callLocs.size() * functionSize  <= inlineThreshold) {
+      } else if (callLocs.size() == 1 && !callLocs.get(0).equals(f.getName())) {
+        // Always inline functions that were only called once
+        alwaysInline.add(f.getName());
         inlineCandidates.putAll(f.getName(), callLocs);
+      } else if (callLocs.size() * functionSize  <= inlineThreshold) {
+        inlineCandidates.putAll(f.getName(), callLocs);
+        if (!functionCalls.containsKey(f.getName())) {
+          // Doesn't call other functions, safe to inline always
+          alwaysInline.add(f.getName());
+        }
       }
     }
 
+    inlineCandidates = findCycleFree(inlineCandidates, toRemove);
+    
+    return Pair.create(inlineCandidates, toRemove);
+  }
+
+  private MultiMap<String, String> findCycleFree(
+          MultiMap<String, String> inlineCandidates, Set<String> toRemove) {
     MultiMap<String, String> inlineCandidates2 = new MultiMap<String, String>();
     // remove any loops in inlining
     Set<String> visited = new HashSet<String>();
+    // Start from alwaysInline functions so that they aren't the bit we have
+    // to break in circular loop
+    for (String toInline: alwaysInline) {
+      findCycleFreeRec(inlineCandidates, visited, toRemove,
+              inlineCandidates2, new ArrayDeque<String>(), toInline);
+    }
+    // Now process remaining functions
     for (String toInline: inlineCandidates.keySet()) {
-      findCycleFree(inlineCandidates, visited, toRemove,
+      findCycleFreeRec(inlineCandidates, visited, toRemove,
                       inlineCandidates2, new ArrayDeque<String>(), toInline);
     }
-    
-    return Pair.create(inlineCandidates2, toRemove);
+    return inlineCandidates2;
   }
 
   /**
    */
-  private void findCycleFree(MultiMap<String, String> candidates,
+  private void findCycleFreeRec(MultiMap<String, String> candidates,
       Set<String> visited, Set<String> toRemove,
       MultiMap<String, String> newCandidates, Deque<String> callStack,
       String curr) {
-    if (blacklist.contains(curr))
-      return;  // blacklisted
-    
     List<String> callers = candidates.get(curr);
     if (callers == null || callers.size() == 0) {
       // not a candidate for inlining
@@ -195,6 +228,10 @@ public class FunctionInline implements OptimizerPass {
     for (String caller: callers) {
       if (callStack.contains(caller) || caller.equals(curr)) {
         // Adding this would create cycle, do nothing
+        if (alwaysInline.contains(curr)) {
+          Logging.getSTCLogger().warn("Recursive loop of functions with no "
+                  + " other callers: " + curr + " " + callStack);
+        }
       } else if (blacklist.contains(Pair.create(caller, curr))) {
         // Already inlined, don't do it again
       } else {
@@ -202,7 +239,7 @@ public class FunctionInline implements OptimizerPass {
         newCandidates.put(curr, caller);
         
         callStack.push(curr);
-        findCycleFree(candidates, visited, toRemove, newCandidates, callStack,
+        findCycleFreeRec(candidates, visited, toRemove, newCandidates, callStack,
                         caller);
         callStack.pop();
       }
@@ -272,7 +309,8 @@ public class FunctionInline implements OptimizerPass {
       Instruction inst = it.next();
       if (isFunctionCall(inst)) {
         FunctionCall fcall = (FunctionCall)inst;
-        if (toInline.containsKey(fcall.getFunctionName())) {
+        if (toInline.containsKey(fcall.getFunctionName()) ||
+                alwaysInline.contains(fcall.getFunctionName())) {
           // Check that location is marked for inlining
           List<String> inlineCallers = inlineLocations.get(fcall.getFunctionName());
           if (inlineCallers.contains(contextFunction.getName())) {
@@ -369,8 +407,10 @@ public class FunctionInline implements OptimizerPass {
           " inlined into " + contextFunction.getName());
     
     // Prevent repeated inlinings
-    blacklist.add(Pair.create(contextFunction.getName(),
+    if (!alwaysInline.contains(fnCall.getFunctionName())) {
+      blacklist.add(Pair.create(contextFunction.getName(),
                               fnCall.getFunctionName())); 
+    }
   }
 
   /**
