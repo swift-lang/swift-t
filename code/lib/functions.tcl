@@ -148,14 +148,24 @@ namespace eval turbine {
     }
 
     proc range_work { result start end step } {
-        set k 0
-        for { set i $start } { $i <= $end } { incr i $step } {
-            allocate td integer 0
-            store_integer $td $i
-            container_insert $result $k $td
-            incr k
+        if { $start <= $end } {
+            set k 0
+            set slot_drop 0
+            for { set i $start } { $i <= $end } { incr i $step } {
+                allocate td integer 0
+                store_integer $td $i
+                
+                if { [ expr $i + $step > $end ] } {
+                  # Drop on last iter
+                  set slot_drop 1
+                }
+                container_insert $result $k $td $slot_drop
+                incr k
+            }
+        } else {
+            # no contents, but have to close
+            adlb::slot_drop $result
         }
-        adlb::slot_drop $result
     }
 
     # User function
