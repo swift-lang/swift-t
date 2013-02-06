@@ -2830,7 +2830,8 @@ public class ICInstructions {
     }
 
     @Override
-    public List<Var> getReadIncrVars() {
+    public List<Var> getWriteIncrVars() {
+      // Range is special case where output array modified
       if (functionName.equals(Builtins.RANGE) ||
           functionName.equals(Builtins.RANGE_STEP)) {
         // Array output must be incremented
