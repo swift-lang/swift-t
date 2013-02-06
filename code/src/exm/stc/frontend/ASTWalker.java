@@ -213,22 +213,43 @@ public class ASTWalker {
           LogHelper.tokName(token) + " instead of PROGRAM");
     }
   }
+  
+  /**
+   * Control what statement walker should process
+   */
+  private static enum WalkMode {
+    NORMAL,
+    ONLY_DECLARATIONS, // Only process variable declarations
+    ONLY_EVALUATION, // Process everything but declarations 
+  }
 
   /**
    * Walk a tree that is a procedure statement.
    *
    * @param context
    * @param tree
+   * @param walkMode mode to evaluate statements in
    * @param blockVu
    * @return "results" of statement that are blocked on in event
    *         of chaining
    * @throws UserException
    */
-  private List<Var> walkStatement(Context context, SwiftAST tree)
+  private List<Var> walkStatement(Context context, SwiftAST tree, WalkMode walkMode)
   throws UserException
   {
       int token = tree.getType();
       context.syncFilePos(tree, lineMapping);
+      
+      
+      if (walkMode == WalkMode.ONLY_DECLARATIONS) { 
+        if (token == ExMParser.DECLARATION){
+          return declareVariables(context, tree, walkMode);
+        } else {
+          // Don't process non-variable-declaration statements
+          return null;
+        }
+      }
+      
       switch (token) {
         case ExMParser.BLOCK:
           // Create a local context (stack frame) for this nested block
@@ -251,7 +272,7 @@ public class ASTWalker {
           break;
 
         case ExMParser.DECLARATION:
-          return declareVariables(context, tree);
+          return declareVariables(context, tree, walkMode);
 
         case ExMParser.ASSIGN_EXPRESSION:
           return assignExpression(context, tree);
@@ -310,9 +331,15 @@ public class ASTWalker {
     // result futures of last statement 
     List<Var> stmtResults = null; 
     
+    // Process declarations for outer block
     for (SwiftAST stmt: stmts) {
-      // Evaluate statement
-      stmtResults = walkStatement(context, stmt);
+      walkStatement(context, stmt, WalkMode.ONLY_DECLARATIONS);
+    }
+    walkStatement(context, finalStmt, WalkMode.ONLY_DECLARATIONS);
+    
+    // Evaluate statements into nested waits
+    for (SwiftAST stmt: stmts) {
+      stmtResults = walkStatement(context, stmt, WalkMode.ONLY_EVALUATION);
       if (stmtResults == null || stmtResults.isEmpty()) {
         context.syncFilePos(stmt, lineMapping);
         throw new UserException(context, "Tried to wait for result"
@@ -326,7 +353,7 @@ public class ASTWalker {
     }
     
     // Evaluate the final statement
-    walkStatement(context, finalStmt);
+    walkStatement(context, finalStmt, WalkMode.ONLY_EVALUATION);
     
     // Close all waits
     for (int i = 0; i < stmts.size(); i++) {
@@ -385,7 +412,7 @@ public class ASTWalker {
     }
 
     for (SwiftAST stmt: tree.children()) {
-      walkStatement(context, stmt);
+      walkStatement(context, stmt, WalkMode.NORMAL);
     }
 
     LogHelper.trace(context, "block done");
@@ -922,7 +949,7 @@ public class ASTWalker {
 
 
   
-  private List<Var> declareVariables(Context context, SwiftAST tree)
+  private List<Var> declareVariables(Context context, SwiftAST tree, WalkMode walkMode)
           throws UserException {
     LogHelper.trace(context, "declareVariable...");
     assert(tree.getType() == ExMParser.DECLARATION);
@@ -935,12 +962,24 @@ public class ASTWalker {
     
     for (int i = 0; i < vd.count(); i++) {
       VariableDescriptor vDesc = vd.getVar(i);
-      Var var = declareVariable(context, vDesc);
       SwiftAST declTree = vd.getDeclTree(i);
       SwiftAST assignedExpr = vd.getVarExpr(i);
-      if (Types.isScalarUpdateable(var.type())) {
-        initUpdateableVar(context, var, assignedExpr);
+      
+      Var var;
+      if (walkMode == WalkMode.ONLY_EVALUATION) {
+        var = context.getDeclaredVariable(vDesc.getName());
+        assert(var != null);
       } else {
+        var = declareVariable(context, vDesc);
+      } 
+      if (Types.isScalarUpdateable(var.type())) {
+        if (walkMode == WalkMode.ONLY_DECLARATIONS) {
+          throw new TypeMismatchException(context, var.name() +
+                  " is an updateable and its declaration cannot be chained");  
+        }
+        // Have to init at declare time
+        initUpdateableVar(context, var, assignedExpr);
+      } else if (walkMode != WalkMode.ONLY_DECLARATIONS) {
          if (assignedExpr != null) {
            Assignment assignment = new Assignment(
                    Arrays.asList(new LValue(declTree, var)),
