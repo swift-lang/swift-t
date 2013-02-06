@@ -26,7 +26,6 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.lang.Var;
-import exm.stc.common.util.Pair;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
@@ -85,8 +84,8 @@ public class DeadCodeEliminator {
     List<List<Var>> dependentSets = new ArrayList<List<Var>>();
     
     // Vars needed in this block
-    Set<String> thisBlockNeeded = new HashSet<String>();
-    Set<String> thisBlockWritten = new HashSet<String>();
+    Set<Var> thisBlockNeeded = new HashSet<Var>();
+    Set<Var> thisBlockWritten = new HashSet<Var>();
     block.findThisBlockNeededVars(thisBlockNeeded, thisBlockWritten, dependentSets);
 
     if (logger.isTraceEnabled()) {
@@ -97,25 +96,24 @@ public class DeadCodeEliminator {
     // Now see if we can push down any variable declarations
     /*var => null means candidate.  var => Block means that it already appeared
      *  in a single block */
-    Map<String, Pair<Continuation, Block>> candidates =
-                        new HashMap<String, Pair<Continuation, Block>>();
+    Map<Var, Block> candidates = new HashMap<Var, Block>();
     for (Var v: block.getVariables()) {
       // Candidates are those not needed in this block
-      if (!thisBlockNeeded.contains(v.name()) &&
-          !thisBlockWritten.contains(v.name()))
-        candidates.put(v.name(), null);
+      if (!thisBlockNeeded.contains(v) &&
+          !thisBlockWritten.contains(v))
+        candidates.put(v, null);
     }
     
     // Vars needed by subblocks
-    List<Set<String>> subblockNeededVars = new ArrayList<Set<String>>();
+    List<Set<Var>> subblockNeededVars = new ArrayList<Set<Var>>();
     for (Continuation cont: block.getContinuations()) {
       
       // All vars used within continuation blocks
-      Set<String> contAllUsed = new HashSet<String>();
+      Set<Var> contAllUsed = new HashSet<Var>();
       
       for (Block subBlock: cont.getBlocks()) {
-        Set<String> subblockNeeded = new HashSet<String>();
-        Set<String> subblockWritten = new HashSet<String>();
+        Set<Var> subblockNeeded = new HashSet<Var>();
+        Set<Var> subblockWritten = new HashSet<Var>();
         subBlock.findNeededVars(subblockNeeded, subblockWritten,
                                 dependentSets);
         subblockNeededVars.add(subblockNeeded);
@@ -125,13 +123,13 @@ public class DeadCodeEliminator {
         }
         
         // All vars used in subblock
-        Set<String> subblockAll = new HashSet<String>();
+        Set<Var> subblockAll = new HashSet<Var>();
         subblockAll.addAll(subblockNeeded);
         subblockAll.addAll(subblockWritten);
-        for (String var: subblockAll) {
+        for (Var var: subblockAll) {
           if (candidates.containsKey(var)) {
             if (candidates.get(var) == null) {
-              candidates.put(var, Pair.create(cont, subBlock));
+              candidates.put(var, subBlock);
             } else {
               // Appeared in two places
               candidates.remove(var);
@@ -147,15 +145,15 @@ public class DeadCodeEliminator {
     // Push down variable declarations
     pushdownDeclarations(block, candidates);
 
-    Set<String> allNeeded = new HashSet<String>();
+    Set<Var> allNeeded = new HashSet<Var>();
     allNeeded.addAll(thisBlockNeeded);
-    for (Set<String> needed: subblockNeededVars) {
+    for (Set<Var> needed: subblockNeededVars) {
       allNeeded.addAll(needed);
     }
     
     // Then see if we can remove individual instructions
-    Set<String> unneeded = unneededVars(block, allNeeded, dependentSets);
-    for (String v: unneeded) {
+    Set<Var> unneeded = unneededVars(block, allNeeded, dependentSets);
+    for (Var v: unneeded) {
       logger.debug("Eliminated variable " + v +  
                         " during dead code elimination");
       converged = false;
@@ -165,20 +163,16 @@ public class DeadCodeEliminator {
   }
 
   private static void pushdownDeclarations(Block block,
-          Map<String, Pair<Continuation, Block>> candidates) {
+          Map<Var, Block> candidates) {
     if (candidates.size() > 0) {
       ListIterator<Var> varIt = block.variableIterator();
       while (varIt.hasNext()) {
         Var var = varIt.next();
-        Pair<Continuation, Block> newHome = candidates.get(var.name());
+        Block newHome = candidates.get(var);
         if (newHome != null) {
           varIt.remove();
-          Continuation cont = newHome.val1;
-          if (cont.isAsync()) {
-            cont.removePassedInVar(var);
-          }
-          newHome.val2.addVariable(var);
-          block.moveCleanups(var, newHome.val2);
+          newHome.addVariable(var);
+          block.moveCleanups(var, newHome);
         }
       }
     }
@@ -206,31 +200,31 @@ public class DeadCodeEliminator {
    * @param dependentSets
    * @return
    */
-  private static Set<String> unneededVars(Block block,
-            Set<String> stillNeeded, List<List<Var>> dependentSets) {
-    HashSet<String> toRemove = new HashSet<String>();
+  private static Set<Var> unneededVars(Block block,
+            Set<Var> stillNeeded, List<List<Var>> dependentSets) {
+    HashSet<Var> toRemove = new HashSet<Var>();
     
     // Check to see if we have to retain additional
     // variables based on interdependencies
     for (List<Var> dependentSet: dependentSets) { {
       boolean needed = false;
       for (Var v: dependentSet) {
-        if (stillNeeded.contains(v.name())) {
+        if (stillNeeded.contains(v)) {
           needed = true;
           break;
         }
       }
       if (needed) {
         for (Var v: dependentSet) {
-          stillNeeded.add(v.name());
+          stillNeeded.add(v);
         }
       }
     }
       
     }
     for (Var v: block.getVariables()) {
-      if (!stillNeeded.contains(v.name())) {
-        toRemove.add(v.name());
+      if (!stillNeeded.contains(v)) {
+        toRemove.add(v);
       }
     }
     return toRemove;

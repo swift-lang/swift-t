@@ -182,15 +182,4 @@ public class GlobalContext extends Context {
   public FunctionContext getFunctionContext() {
     return null;
   }
-
-  @Override
-  public void flagArrayForClosing(Var var) {
-    throw new UnsupportedOperationException("Not yet implemented");
-  }
-
-  @Override
-  public List<Var> getArraysToClose() {
-    throw new UnsupportedOperationException("Not yet implemented");
-  }
-
 }

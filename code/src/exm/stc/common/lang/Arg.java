@@ -16,7 +16,6 @@
 package exm.stc.common.lang;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -305,39 +304,6 @@ public class Arg implements Comparable<Arg> {
     } else {
       return typeComp;
     }
-  }
-
-  /**
-   * Put all variable names in a collection of opargs into addTo
-   */
-  public static void collectVarNames(Collection<String> addTo,
-      Collection<Arg> args, boolean nullsOk) {
-    for (Arg o : args) {
-      if (o != null) {
-        if (o.kind == ArgKind.VAR) {
-          addTo.add(o.getVar().name());
-        }
-      } else {
-        if (!nullsOk) {
-          throw new STCRuntimeError("null in list: " + args);
-        }
-      }
-    }
-  }
-
-  public static void collectVarNames(Collection<String> addTo,
-      Collection<Arg> args) {
-    collectVarNames(addTo, args, false);
-  }
-  
-  public static List<String> varNameList(List<Arg> inputs) {
-    return varNameList(inputs, false);
-  }
-  
-  public static List<String> varNameList(List<Arg> inputs, boolean nullsOk) {
-    ArrayList<String> result = new ArrayList<String>();
-    collectVarNames(result, inputs, false);
-    return result;
   }
 
   public static List<Arg> fromVarList(List<Var> vars) {

@@ -234,10 +234,11 @@ public class ForeachLoop {
    * (optionally) for the loop count
    * 
    * @param context
+   * @param rangeLoop where a range loop or container
    * @return
    * @throws UserException
    */
-  public Context setupLoopBodyContext(Context context)
+  public Context setupLoopBodyContext(Context context, boolean rangeLoop)
       throws UserException {
     // Set up the context for the loop body with loop variables
     loopBodyContext = new LocalContext(context);
@@ -249,9 +250,11 @@ public class ForeachLoop {
     }
 
     Type arrayType = findArrayType(context);
+    VarStorage memberVarStorage = rangeLoop ? VarStorage.TEMP 
+                                            : VarStorage.ALIAS;
     memberVar = loopBodyContext.declareVariable(
         Types.getArrayMemberType(arrayType), getMemberVarName(),
-        VarStorage.STACK, DefType.LOCAL_USER, null);
+        memberVarStorage, DefType.LOCAL_USER, null);
     return loopBodyContext;
   }
 }

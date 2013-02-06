@@ -308,7 +308,7 @@ public class FunctionInline implements OptimizerPass {
                                                       null, null);
     
     // rename function arguments
-    Map<String, Arg> renames = new HashMap<String, Arg>();
+    Map<Var, Arg> renames = new HashMap<Var, Arg>();
     List<Var> passIn = new ArrayList<Var>();
     List<Var> outArrays = new ArrayList<Var>();
     
@@ -319,7 +319,7 @@ public class FunctionInline implements OptimizerPass {
     for (int i = 0; i < fnCall.getFunctionInputs().size(); i++) {
       Var inputVal = fnCall.getFunctionInput(i);
       Var inArg = toInline.getInputList().get(i);
-      renames.put(inArg.name(), Arg.createVar(inputVal));
+      renames.put(inArg, Arg.createVar(inputVal));
       passIn.add(inputVal);
       // Remove cleanup actions
       inlineBlock.removeCleanups(inArg);
@@ -327,8 +327,7 @@ public class FunctionInline implements OptimizerPass {
     for (int i = 0; i < fnCall.getOutputs().size(); i++) {
       Var outVar = fnCall.getOutput(i);
       Var outArg = toInline.getOutputList().get(i);
-      renames.put(outArg.name(),
-                  Arg.createVar(outVar));
+      renames.put(outArg, Arg.createVar(outVar));
       passIn.add(outVar);
       if (Types.isArray(outVar.type())) {
         outArrays.add(outVar);
@@ -383,7 +382,7 @@ public class FunctionInline implements OptimizerPass {
    */
   private void chooseUniqueNames(Logger logger, Program prog,
       Function targetFunction, Block inlineBlock,
-      Map<String, Arg> replacements) {
+      Map<Var, Arg> replacements) {
     Set<String> excludedNames = new HashSet<String>();
     excludedNames.addAll(prog.getGlobalConsts().keySet());
     Deque<Block> blocks = new ArrayDeque<Block>();
@@ -408,14 +407,15 @@ public class FunctionInline implements OptimizerPass {
   }
 
   private void updateName(Logger logger, Block block,
-          Function targetFunction, Map<String, Arg> replacements,
+          Function targetFunction, Map<Var, Arg> replacements,
           Set<String> excludedNames, Var var) {
     // Choose unique name (including new names for this block)
-    String newName = targetFunction.getMainblock().uniqueVarName(var.name(), excludedNames);
+    String newName = targetFunction.getMainblock().uniqueVarName(
+                                        var.name(), excludedNames);
     Var newVar = new Var(var.type(), newName, var.storage(), var.defType(),
                          var.mapping());
     assert(!replacements.containsKey(newName));
-    replacements.put(var.name(), Arg.createVar(newVar));
+    replacements.put(var, Arg.createVar(newVar));
     excludedNames.add(newName);
     UniqueVarNames.replaceCleanup(block, var, newVar);
     logger.trace("Replace " + var + " with " + newVar

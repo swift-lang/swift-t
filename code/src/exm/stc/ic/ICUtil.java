@@ -22,7 +22,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.Set;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
@@ -118,42 +117,40 @@ public class ICUtil {
    * @param replacements
    * @param vars
    */
-  public static void replaceVarsInList(Map<String, Arg> replacements,
+  public static void replaceVarsInList(Map<Var, Arg> replacements,
       List<Var> vars, boolean removeDupes) {
     replaceVarsInList(replacements, vars, removeDupes, true);
   }
   
-  public static void replaceVarsInList(Map<String, Arg> replacements,
+  public static void replaceVarsInList(Map<Var, Arg> replacements,
         List<Var> vars, boolean removeDupes, boolean removeMapped) {
     // Remove new duplicates
-    ArrayList<String> alreadySeen = null;
+    ArrayList<Var> alreadySeen = null;
     if (removeDupes) {
-      alreadySeen = new ArrayList<String>(vars.size());
+      alreadySeen = new ArrayList<Var>(vars.size());
     }
     
     ListIterator<Var> it = vars.listIterator();
     while (it.hasNext()) {
       Var v = it.next();
-      String varName = v.name();
-      if (replacements.containsKey(varName)) {
-        Arg oa = replacements.get(varName);
+      if (replacements.containsKey(v)) {
+        Arg oa = replacements.get(v);
         if (oa.isVar()) {
-          if (removeDupes && 
-                  alreadySeen.contains(oa.getVar().name())) {
+          if (removeDupes &&  alreadySeen.contains(oa.getVar())) {
             it.remove();
           } else {
             it.set(oa.getVar());
             if (removeDupes) {
-              alreadySeen.add(oa.getVar().name());
+              alreadySeen.add(oa.getVar());
             }
           }
         }
       } else {
         if (removeDupes) {
-          if (alreadySeen.contains(varName)) {
+          if (alreadySeen.contains(v)) {
             it.remove();
           } else {
-            alreadySeen.add(varName);
+            alreadySeen.add(v);
           }
         }
       }
@@ -162,23 +159,23 @@ public class ICUtil {
   
   public static void removeDuplicates(List<Var> varList) {
     ListIterator<Var> it = varList.listIterator();
-    HashSet<String> alreadySeen = new HashSet<String>();
+    HashSet<Var> alreadySeen = new HashSet<Var>();
     while (it.hasNext()) {
       Var v = it.next();
-      if (alreadySeen.contains(v.name())) {
+      if (alreadySeen.contains(v)) {
         it.remove();
       } else {
-        alreadySeen.add(v.name());
+        alreadySeen.add(v);
       }
     }
   }
 
-  public static void replaceOpargsInList(Map<String, Arg> renames,
+  public static void replaceOpargsInList(Map<Var, Arg> renames,
       List<Arg> args) {
     replaceOpargsInList(renames, args, false);
   }
   
-  public static void replaceOpargsInList(Map<String, Arg> renames,
+  public static void replaceOpargsInList(Map<Var, Arg> renames,
       List<Arg> args, boolean nullsOk) {
     if (renames.isEmpty()) {
       return;
@@ -193,8 +190,7 @@ public class ICUtil {
         }
       }
       if (oa.isVar()) {
-        String oldName = oa.getVar().name();
-        Arg val = renames.get(oldName);
+        Arg val = renames.get(oa.getVar());
         if (val != null) {
           args.set(i, val);
         }
@@ -212,62 +208,19 @@ public class ICUtil {
    *      is in renames, return the replacements.  If it isn't,
    *      return the argument 
    */
-  public static Arg replaceOparg(Map<String, Arg> renames, Arg oa, boolean nullsOk) {
+  public static Arg replaceOparg(Map<Var, Arg> renames, Arg oa, boolean nullsOk) {
     assert(nullsOk || oa != null);
     if (oa != null && oa.isVar()) {
-      String name = oa.getVar().name();
-      if (renames.containsKey(name)) {
-        Arg res = renames.get(name);
+      Var var = oa.getVar();
+      if (renames.containsKey(var)) {
+        Arg res = renames.get(var);
         assert(res != null);
         return res;
       }
     }
     return oa;
   }
-  
-  public static void removeVarInList(List<Var> varList,
-        String toRemove) {
-    int n = varList.size();
-    for (int i = 0; i < n; i ++) {
-      if (varList.get(i).name().equals(toRemove)) {
-        varList.remove(i);
-        i--; n--;
-      }
-    }
-  }
-  
-  public static void removeVarsInList(List<Var> varList,
-      Set<String> removeVars) {
-      int n = varList.size();
-      
-      for (int i = 0; i < n; i++) {
-        if (removeVars.contains(varList.get(i).name())) {
-          varList.remove(i);
-          n--;
-          i--;
-        }
-      }
-   }
 
-  /**
-   * Do intersection by name
-   * @param vs1
-   * @param vs2
-   * @return
-   */
-  public static List<Var> varIntersection(List<Var> vs1, List<Var> vs2) {
-    List<Var> res = new ArrayList<Var>();
-    for (Var v1: vs1) {
-      for (Var v2: vs2) {
-        if (v1.name().equals(v2.name())) {
-          res.add(v1);
-          break;
-        }
-      }
-    }
-    return res;
-  }
-  
   public static LinkedList<Instruction> cloneInstructions(
       List<Instruction> instructions) {
     LinkedList<Instruction> output = new LinkedList<Instruction>();
@@ -331,26 +284,7 @@ public class ICUtil {
     for (int i = 0; i < n; i++) {
       it.previous();
     }
-  }
-  
-
-  /**
-   * Get variables from list if they are in set
-   * @param varNames
-   * @param varList
-   */
-  public static List<Var> getVarsByName(Set<String> varNames,
-                      Collection<Var> varList) {
-    List<Var> res = new ArrayList<Var>(varNames.size());
-    for (Var v: varList) {
-      if (varNames.contains(v.name())) {
-        res.add(v);
-      }
-    }
-    return res;
-  }
-  
-  
+  }  
 
   /**
    * Return a list of all the variables contained in the
@@ -391,5 +325,20 @@ public class ICUtil {
       }
     }
     return res;
+  }
+
+  /**
+   * Remove all occurences of e in l
+   * (Note: standard java List.remove() only removes first occurrence)
+   * @param l
+   * @param e
+   */
+  public static <T> void remove(List<T> l, T e) {
+    ListIterator<T> it = l.listIterator();
+    while (it.hasNext()) {
+      if (it.next().equals(e)) {
+        it.remove();
+      }
+    }
   }
 }

@@ -107,13 +107,13 @@ public class ForwardDataflow implements OptimizerPass {
     private final HashMap<ComputedValue, Arg> availableVals;
 
     /** variables which are closed at this point in program */
-    private final HierarchicalSet<String> closed;
+    private final HierarchicalSet<Var> closed;
     
     /** mappable variables which are unmapped */
-    private final HierarchicalSet<String> unmapped;
+    private final HierarchicalSet<Var> unmapped;
 
     /** variables which are recursively closed at this point in program */
-    private final HierarchicalSet<String> recursivelyClosed;
+    private final HierarchicalSet<Var> recursivelyClosed;
     
     /**
      * Multimap of var1 -> [ var2, var3]
@@ -125,26 +125,26 @@ public class ForwardDataflow implements OptimizerPass {
      * We maintain this data structure because it lets us infer which variables
      * will be closed if we block on a given variable
      */
-    private final HashMap<String, CopyOnWriteSmallSet<String>> dependsOn;
+    private final HashMap<Var, CopyOnWriteSmallSet<Var>> dependsOn;
 
     State(Logger logger) {
       this.logger = logger;
       this.parent = null;
       this.varsPassedFromParent = false;
       this.availableVals = new HashMap<ComputedValue, Arg>();
-      this.closed = new HierarchicalSet<String>();
-      this.unmapped = new HierarchicalSet<String>();
-      this.recursivelyClosed = new HierarchicalSet<String>();
-      this.dependsOn = new HashMap<String, CopyOnWriteSmallSet<String>>();
+      this.closed = new HierarchicalSet<Var>();
+      this.unmapped = new HierarchicalSet<Var>();
+      this.recursivelyClosed = new HierarchicalSet<Var>();
+      this.dependsOn = new HashMap<Var, CopyOnWriteSmallSet<Var>>();
     }
 
     private State(Logger logger, State parent,
         boolean varsPassedFromParent,
         HashMap<ComputedValue, Arg> availableVals,
-        HierarchicalSet<String> closed,
-        HierarchicalSet<String> unmapped,
-        HierarchicalSet<String> recursivelyClosed,
-        HashMap<String, CopyOnWriteSmallSet<String>> dependsOn) {
+        HierarchicalSet<Var> closed,
+        HierarchicalSet<Var> unmapped,
+        HierarchicalSet<Var> recursivelyClosed,
+        HashMap<Var, CopyOnWriteSmallSet<Var>> dependsOn) {
       this.logger = logger;
       this.parent = parent;
       this.varsPassedFromParent = varsPassedFromParent;
@@ -155,12 +155,12 @@ public class ForwardDataflow implements OptimizerPass {
       this.dependsOn = dependsOn;
     }
 
-    public Set<String> getClosed() {
+    public Set<Var> getClosed() {
       return Collections.unmodifiableSet(closed);
     }
 
-    public boolean isClosed(String name) {
-      return closed.contains(name) || recursivelyClosed.contains(name);
+    public boolean isClosed(Var var) {
+      return closed.contains(var) || recursivelyClosed.contains(var);
     }
 
     public boolean isAvailable(ComputedValue val) {
@@ -204,14 +204,14 @@ public class ForwardDataflow implements OptimizerPass {
       Opcode op = newCV.getOp();
       availableVals.put(newCV, valLoc);
       if (valLoc.isVar() && outClosed) {
-        close(valLoc.getVar().name(), false);
+        close(valLoc.getVar(), false);
       }
       if (op == Opcode.LOAD_BOOL || op == Opcode.LOAD_FLOAT
           || op == Opcode.LOAD_INT || op == Opcode.LOAD_STRING
           || op == Opcode.LOAD_VOID || op == Opcode.LOAD_FILE) {
         // If the value is available, it is effectively closed even if
         // the future isn't closed
-        close(newCV.getInput(0).getVar().name(), true);
+        close(newCV.getInput(0).getVar(), true);
       }
     }
 
@@ -250,30 +250,30 @@ public class ForwardDataflow implements OptimizerPass {
      * 
      * @param varName
      */
-    public void close(String varName, boolean recursive) {
+    public void close(Var var, boolean recursive) {
       // Do DFS on the dependency graph to find all dependencies
       // that are now enabled
-      Stack<String> work = new Stack<String>();
-      work.add(varName);
+      Stack<Var> work = new Stack<Var>();
+      work.add(var);
       while (!work.empty()) {
-        String v = work.pop();
+        Var v = work.pop();
         // they might already be in closed, but add anyway
         closed.add(v);
-        CopyOnWriteSmallSet<String> deps = dependsOn.remove(v);
+        CopyOnWriteSmallSet<Var> deps = dependsOn.remove(v);
         if (deps != null) {
           work.addAll(deps);
         }
       }
       if (recursive) {
-        recursivelyClosed.add(varName);
+        recursivelyClosed.add(var);
       }
     }
     
-    public void setUnmapped(String varName) {
-      unmapped.add(varName);
+    public void setUnmapped(Var var) {
+      unmapped.add(var);
     }
     
-    public Set<String> getUnmapped() {
+    public Set<Var> getUnmapped() {
       return Collections.unmodifiableSet(unmapped);
     }
 
@@ -290,14 +290,14 @@ public class ForwardDataflow implements OptimizerPass {
      */
     public void setDependencies(Var future, Collection<Var> depend) {
       assert (!Types.isScalarValue(future.type()));
-      CopyOnWriteSmallSet<String> depset = dependsOn.get(future.name());
+      CopyOnWriteSmallSet<Var> depset = dependsOn.get(future);
       if (depset == null) {
-        depset = new CopyOnWriteSmallSet<String>();
-        dependsOn.put(future.name(), depset);
+        depset = new CopyOnWriteSmallSet<Var>();
+        dependsOn.put(future, depset);
       }
-      for (Var v : depend) {
+      for (Var v: depend) {
         assert (!Types.isScalarValue(v.type()));
-        depset.add(v.name());
+        depset.add(v);
       }
     }
 
@@ -306,11 +306,11 @@ public class ForwardDataflow implements OptimizerPass {
      * copy aren't reflected in this one
      */
     State makeChild(boolean varsPassedFromParent) {
-      HashMap<String, CopyOnWriteSmallSet<String>> newDO = 
-              new HashMap<String, CopyOnWriteSmallSet<String>>();
+      HashMap<Var, CopyOnWriteSmallSet<Var>> newDO = 
+              new HashMap<Var, CopyOnWriteSmallSet<Var>>();
 
-      for (Entry<String, CopyOnWriteSmallSet<String>> e : dependsOn.entrySet()) {
-        newDO.put(e.getKey(), new CopyOnWriteSmallSet<String>(e.getValue()));
+      for (Entry<Var, CopyOnWriteSmallSet<Var>> e : dependsOn.entrySet()) {
+        newDO.put(e.getKey(), new CopyOnWriteSmallSet<Var>(e.getValue()));
       }
       return new State(logger, this, varsPassedFromParent, 
           new HashMap<ComputedValue, Arg>(), closed.makeChild(),
@@ -320,8 +320,8 @@ public class ForwardDataflow implements OptimizerPass {
 
   private static List<ComputedValue> updateReplacements(
       Logger logger, Function function, Instruction inst,
-      State av, HierarchicalMap<String, Arg> replaceInputs, 
-      HierarchicalMap<String, Arg> replaceAll) {
+      State av, HierarchicalMap<Var, Arg> replaceInputs, 
+      HierarchicalMap<Var, Arg> replaceAll) {
     List<ComputedValue> icvs = inst.getComputedValues(av);
     if (icvs != null) {
       if (logger.isTraceEnabled()) {
@@ -331,8 +331,8 @@ public class ForwardDataflow implements OptimizerPass {
         if (ComputedValue.isCopy(currCV)) {
           // Copies are easy to handle: replace output of inst with input 
           // going forward
-          replaceInputs.put(currCV.getValLocation().getVar().name(),
-                                              currCV.getInput(0));
+          replaceInputs.put(currCV.getValLocation().getVar(),
+                                          currCV.getInput(0));
           continue;
         }
         Arg currLoc = currCV.getValLocation();
@@ -346,7 +346,7 @@ public class ForwardDataflow implements OptimizerPass {
             // Constants are the best... might as well replace
             av.addComputedValue(currCV, true);
             // System.err.println("replace " + prevLoc + " with " + currLoc);
-            replaceInputs.put(prevLoc.getVar().name(), currLoc);
+            replaceInputs.put(prevLoc.getVar(), currLoc);
           } else {
             // Should be same, otherwise bug
             assert (currLoc.equals(prevLoc)) : currCV + " = " + prevLoc +
@@ -361,12 +361,12 @@ public class ForwardDataflow implements OptimizerPass {
             usePrev = true;
           } else {
             assert (prevLoc.isVar());
-            boolean currClosed = av.isClosed(currLoc.getVar().name());
-            boolean prevClosed = av.isClosed(prevLoc.getVar().name());
+            boolean currClosed = av.isClosed(currLoc.getVar());
+            boolean prevClosed = av.isClosed(prevLoc.getVar());
             if (currCV.equivType == EquivalenceType.REFERENCE) {
               // The two locations are both references to same thing, so can 
               // replace all references, including writes to currLoc
-              replaceAll.put(currLoc.getVar().name(), prevLoc);
+              replaceAll.put(currLoc.getVar(), prevLoc);
             }
             if (prevClosed || !currClosed) {
               // Use the prev value
@@ -385,11 +385,13 @@ public class ForwardDataflow implements OptimizerPass {
           // variable for the computed expression
           if (usePrev) {
             // Do it
-            replaceInputs.put(currLoc.getVar().name(), prevLoc);
-            // System.err.println("replace " + currLoc + " with " + prevLoc);
+            if (logger.isTraceEnabled())
+              logger.trace("replace " + currLoc + " with " + prevLoc);
+            replaceInputs.put(currLoc.getVar(), prevLoc);
           } else {
-            replaceInputs.put(prevLoc.getVar().name(), currLoc);
-            // System.err.println("replace " + prevLoc + " with " + currLoc);
+            if (logger.isTraceEnabled())
+              logger.trace("replace " + prevLoc + " with " + currLoc);
+            replaceInputs.put(prevLoc.getVar(), currLoc);
           }
         }
       }
@@ -435,13 +437,6 @@ public class ForwardDataflow implements OptimizerPass {
         DeadCodeEliminator.eliminate(logger, f);
       }
     }
-    /*
-     * The previous optimisation sometimes results in variables not being passed
-     * into inner blocks properly. We have enough information to reconstruct
-     * what should be happening, so its easier just to fix up broken things as a
-     * post-optimization step
-     */
-    FixupVariables.fixupProgram(logger, program);
   }
 
   /**
@@ -462,18 +457,18 @@ public class ForwardDataflow implements OptimizerPass {
       return;
     }
     Block main = f.getMainblock();
-    Set<String> blockingVariables = findBlockingVariables(main);
+    Set<Var> blockingVariables = findBlockingVariables(main);
     if (blockingVariables != null) {
-      Set<String> localNames = Var.nameSet(f.getInputList());
+      List<Var> locals = f.getInputList();
       if (logger.isTraceEnabled()) {
         logger.trace("Blocking " + f.getName() + ": " + blockingVariables);
       }
-      for (String vName: blockingVariables) {
-        boolean isConst = program.lookupGlobalConst(vName) != null;
+      for (Var v: blockingVariables) {
+        boolean isConst = program.lookupGlobalConst(v.name()) != null;
         // Global constants are already set
-        if (!isConst && localNames.contains(vName)) {
+        if (!isConst && locals.contains(v)) {
           // Check if a non-arg
-          f.addBlockingInput(vName);
+          f.addBlockingInput(v);
         }
       }
     }
@@ -488,8 +483,8 @@ public class ForwardDataflow implements OptimizerPass {
    * @param block
    * @return
    */
-  private static Set<String> findBlockingVariables(Block block) {
-    HashSet<String> blockingVariables = null;
+  private static Set<Var> findBlockingVariables(Block block) {
+    HashSet<Var> blockingVariables = null;
     /*TODO: could exploit the information we have in getBlockingInputs() 
      *      to explore dependencies between variables and work out 
      *      which variables are needed to make progress */
@@ -501,20 +496,20 @@ public class ForwardDataflow implements OptimizerPass {
     
     for (Continuation c: block.getContinuations()) {
       List<BlockingVar> waitOnVars = c.blockingVars();
-      List<String> waitOn;
+      List<Var> waitOn;
       if (waitOnVars == null) {
-        waitOn = Collections.<String>emptyList(); 
+        waitOn = Var.NONE; 
       } else {
-        waitOn = new ArrayList<String>(waitOnVars.size());
+        waitOn = new ArrayList<Var>(waitOnVars.size());
         for (BlockingVar bv: waitOnVars) {
-          waitOn.add(bv.var.name());
+          waitOn.add(bv.var);
         }
       }
 
       assert(waitOn != null);
       //System.err.println("waitOn: " + waitOn);
       if (blockingVariables == null) {
-        blockingVariables = new HashSet<String>(waitOn);
+        blockingVariables = new HashSet<Var>(waitOn);
       } else {
         // Keep only those variables which block all wait statements
         blockingVariables.retainAll(waitOn);
@@ -550,27 +545,27 @@ public class ForwardDataflow implements OptimizerPass {
    */
   private static boolean forwardDataflow(Logger logger, Program program,
       Function f, ExecContext execCx, Block block, State cv,
-      HierarchicalMap<String, Arg> replaceInputs,
-      HierarchicalMap<String, Arg> replaceAll) throws InvalidOptionException,
+      HierarchicalMap<Var, Arg> replaceInputs,
+      HierarchicalMap<Var, Arg> replaceAll) throws InvalidOptionException,
       InvalidWriteException {
     boolean anotherPassNeeded = false;
     if (cv == null) {
       cv = new State(logger);
       for (Var v: f.getBlockingInputs()) {
-        cv.close(v.name(), false);
+        cv.close(v, false);
       }
       for (Var v: f.getInputList()) {
         if (Types.isScalarUpdateable(v.type())) {
           // Updateables always have a value
-          cv.close(v.name(), false);
+          cv.close(v, false);
         }
       }
     }
     if (replaceInputs == null) {
-      replaceInputs = new HierarchicalMap<String, Arg>();
+      replaceInputs = new HierarchicalMap<Var, Arg>();
     }
     if (replaceAll == null) {
-      replaceAll = new HierarchicalMap<String, Arg>();
+      replaceAll = new HierarchicalMap<Var, Arg>();
     }
     for (Var v : block.getVariables()) {
       // First, all constants can be treated as being set
@@ -588,7 +583,7 @@ public class ForwardDataflow implements OptimizerPass {
       if (Types.isMappable(v.type()) && !v.isMapped()
                         && v.storage() != VarStorage.ALIAS) {
         // Var is definitely unmapped
-        cv.setUnmapped(v.name());
+        cv.setUnmapped(v);
       }
     }
 
@@ -639,15 +634,15 @@ public class ForwardDataflow implements OptimizerPass {
       List<BlockingVar> contClosedVars = cont.blockingVars();
       if (contClosedVars != null) {
         for (BlockingVar bv : contClosedVars) {
-          contCV.close(bv.var.name(), bv.recursive);
+          contCV.close(bv.var, bv.recursive);
         }
       }
       
       List<Block> contBlocks = cont.getBlocks();
       for (int i = 0; i < contBlocks.size(); i++) {
         // Update based on whether values available within continuation
-        HierarchicalMap<String, Arg> contReplaceInputs;
-        HierarchicalMap<String, Arg> contReplaceAll;
+        HierarchicalMap<Var, Arg> contReplaceInputs;
+        HierarchicalMap<Var, Arg> contReplaceAll;
         if (cont.inheritsParentVars()) {
           contReplaceInputs = replaceInputs;
           contReplaceAll = replaceAll;
@@ -678,8 +673,8 @@ public class ForwardDataflow implements OptimizerPass {
   private static boolean forwardDataflow(Logger logger,
       Function f, ExecContext execCx, Block block,
       ListIterator<Instruction> insts, State cv,
-      HierarchicalMap<String, Arg> replaceInputs,
-      HierarchicalMap<String, Arg> replaceAll) throws InvalidWriteException {
+      HierarchicalMap<Var, Arg> replaceInputs,
+      HierarchicalMap<Var, Arg> replaceAll) throws InvalidWriteException {
     boolean anotherPassNeeded = false;
     while(insts.hasNext()) {
       Instruction inst = insts.next();
@@ -728,7 +723,7 @@ public class ForwardDataflow implements OptimizerPass {
       }
       
       for (Var out: inst.getClosedOutputs()) {
-        cv.close(out.name(), false);
+        cv.close(out, false);
       }
     }
     return anotherPassNeeded;
@@ -769,7 +764,7 @@ public class ForwardDataflow implements OptimizerPass {
       List<Var> used = Var.varListUnion(req.in, req.out);
       WaitStatement wait = new WaitStatement(
           fn.getName() + "-" + inst.shortOpName(),
-          Collections.<Var>emptyList(), used, Collections.<Var>emptyList(),
+          Var.NONE, used, Var.NONE,
           inst.getPriority(),
           WaitMode.TASK_DISPATCH, false, req.mode);
       insertContext = wait.getBlock();
@@ -783,11 +778,11 @@ public class ForwardDataflow implements OptimizerPass {
     List<Arg> inVals = new ArrayList<Arg>(req.in.size());
     
     // same var might appear multiple times
-    HashMap<String, Arg> alreadyFetched = new HashMap<String, Arg>();  
+    HashMap<Var, Arg> alreadyFetched = new HashMap<Var, Arg>();  
     for (Var v : req.in) {
       Arg maybeVal;
-      if (alreadyFetched.containsKey(v.name())) {
-        maybeVal = alreadyFetched.get(v.name());
+      if (alreadyFetched.containsKey(v)) {
+        maybeVal = alreadyFetched.get(v);
       } else {
         maybeVal = cv.findRetrieveResult(v);
       }
@@ -802,13 +797,13 @@ public class ForwardDataflow implements OptimizerPass {
          * invalid, but we rely on fixupVariablePassing to fix this later
          */
         inVals.add(maybeVal);
-        alreadyFetched.put(v.name(), maybeVal);
+        alreadyFetched.put(v, maybeVal);
       } else {
         // Generate instruction to fetch val, append to alt
         Var fetchedV = OptUtil.fetchForLocalOp(insertContext, alt, v);
         Arg fetched = Arg.createVar(fetchedV);
         inVals.add(fetched);
-        alreadyFetched.put(v.name(), fetched);
+        alreadyFetched.put(v, fetched);
       }
     }
     List<Var> outValVars = OptUtil.declareLocalOpOutputVars(insertContext,
@@ -845,15 +840,15 @@ public class ForwardDataflow implements OptimizerPass {
    * Remove unpassable vars from map
    * @param replaceInputs
    */
-  private static void purgeUnpassableVars(HierarchicalMap<String, Arg> replacements) {
-    ArrayList<String> toPurge = new ArrayList<String>();
-    for (Entry<String, Arg> e: replacements.entrySet()) {
+  private static void purgeUnpassableVars(HierarchicalMap<Var, Arg> replacements) {
+    ArrayList<Var> toPurge = new ArrayList<Var>();
+    for (Entry<Var, Arg> e: replacements.entrySet()) {
       Arg val = e.getValue();
       if (val.isVar() && cantPass(val.getVar().type())) {
         toPurge.add(e.getKey());
       }
     }
-    for (String key: toPurge) {
+    for (Var key: toPurge) {
       replacements.remove(key);
     }
   }

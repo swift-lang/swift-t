@@ -34,7 +34,6 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Redirects;
-import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -194,13 +193,12 @@ public class STCMiddleEnd {
 
 
   public void startWaitStatement(String procName, List<Var> waitVars,
-      List<Var> usedVariables, List<Var> keepOpenVars, Arg priority,
-      WaitMode mode, boolean recursive, TaskMode target) {
+      Arg priority, WaitMode mode, boolean recursive, TaskMode target) {
     assert(currFunction != null);
     assert(priority == null || priority.isImmediateInt());
     
-    WaitStatement wait = new WaitStatement(procName, waitVars, usedVariables,
-                            keepOpenVars, priority, mode, recursive, target);
+    WaitStatement wait = new WaitStatement(procName, waitVars,
+          Var.NONE, Var.NONE, priority, mode, recursive, target);
     currBlock().addContinuation(wait);
     blockStack.push(wait.getBlock());
   }
@@ -244,8 +242,7 @@ public class STCMiddleEnd {
 
   public void startForeachLoop(String loopName,
           Var arrayVar, Var memberVar, Var loopCountVar, 
-          int splitDegree, boolean arrayClosed,
-          List<Var> usedVariables, List<Var> keepOpenVars) {
+          int splitDegree, boolean arrayClosed) {
     if(!Types.isArray(arrayVar.type())) {
       throw new STCRuntimeError("foreach loop over non-array: " + 
                 arrayVar.toString()); 
@@ -255,7 +252,7 @@ public class STCMiddleEnd {
               loopCountVar.type().equals(Types.V_INT));
     ForeachLoop loop = new ForeachLoop(loopName,
             arrayVar, memberVar, loopCountVar, splitDegree,
-            arrayClosed, usedVariables, keepOpenVars);
+            arrayClosed, Var.NONE, Var.NONE);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
   }
@@ -266,13 +263,10 @@ public class STCMiddleEnd {
   }
 
   public void startRangeLoop(String loopName, Var loopVar, Var countVar,
-      Arg start, Arg end, Arg increment,
-      List<Var> usedVariables, List<Var> keepOpenVars,
-      int desiredUnroll, int splitDegree) {
+      Arg start, Arg end, Arg increment, int desiredUnroll, int splitDegree) {
     RangeLoop loop = new RangeLoop(loopName, loopVar, countVar,
-                                start, end, increment,
-                                usedVariables, keepOpenVars,
-                                desiredUnroll, splitDegree);
+                    start, end, increment,
+                    Var.NONE, Var.NONE, desiredUnroll, splitDegree);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
   }
@@ -283,26 +277,25 @@ public class STCMiddleEnd {
   }
 
   public void startLoop(String loopName, List<Var> loopVars,
-      List<Boolean> definedHere, List<Var> initVals, List<Var> usedVariables,
-      List<Var> keepOpenVars, List<Boolean> blockingVars) {
+      List<Boolean> definedHere, List<Var> initVals,
+      List<Boolean> blockingVars) {
     Loop loop = new Loop(loopName, loopVars, definedHere, initVals,
-        usedVariables, keepOpenVars, blockingVars);
+                         Var.NONE, Var.NONE, blockingVars);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
     loopStack.push(loop);
   }
 
   public void loopContinue(List<Var> newVals, 
-        List<Var> usedVariables, List<Var> keepOpenVars,
-        List<Boolean> blockingVars) {
-    LoopContinue inst = new LoopContinue(newVals, usedVariables,
-        keepOpenVars, blockingVars);
+                           List<Boolean> blockingVars) {
+    LoopContinue inst = new LoopContinue(newVals, Var.NONE, Var.NONE,
+                                         blockingVars);
     currBlock().addInstruction(inst);
     loopStack.peek().setLoopContinue(inst);
   }
 
-  public void loopBreak(List<Var> loopUsedVars, List<Var> closeVars) {
-    LoopBreak inst = new LoopBreak(loopUsedVars, closeVars);
+  public void loopBreak() {
+    LoopBreak inst = new LoopBreak(Var.NONE, Var.NONE);
     currBlock().addInstruction(inst);
     loopStack.peek().setLoopBreak(inst);
   }
@@ -370,27 +363,6 @@ public class STCMiddleEnd {
     currBlock().addInstruction(new RunExternal(cmd, inFiles, outFiles, 
         outFileNames, args, redirects, hasSideEffects, deterministic));
   }
-
-  public void decrWriters(Var arr, Arg amount) {
-    assert(Types.isArray(arr.type()));
-    currBlock().addCleanup(arr, TurbineOp.decrWriters(arr, amount));
-  }
-
-  public void decrRef(Var v, Arg amount) {
-    currBlock().addCleanup(v, TurbineOp.decrRef(v, amount));
-  }
-  
-  public void incrRef(Var var, Arg amount) {
-    assert(RefCounting.hasReadRefCount(var));
-    assert(amount.isImmediateInt());
-    currBlock().addInstruction(TurbineOp.incrRef(var, amount));
-  }
-  
-  public void incrWriters(Var var, Arg amount) {
-    assert(RefCounting.hasWriteRefCount(var));
-    assert(amount.isImmediateInt());
-    currBlock().addInstruction(TurbineOp.incrWriters(var, amount));
-  }
   
   public void arrayLookupFuture(Var oVar, Var arrayVar,
       Var indexVar, boolean isArrayRef) {
@@ -425,20 +397,19 @@ public class STCMiddleEnd {
         TurbineOp.arrayLookupImm(oVar, arrayVar, arrIx));
   }
 
-  public void arrayInsertFuture(Var iVar, Var arrayVar,
-      Var indexVar) {
-    assert(Types.isInt(indexVar.type()));
+  public void arrayInsertFuture(Var array, Var ix,
+      Var member) {
+    assert(Types.isInt(ix.type()));
     currBlock().addInstruction(
-        TurbineOp.arrayInsertFuture(iVar, arrayVar, indexVar));
+        TurbineOp.arrayInsertFuture(array, ix, member));
   }
 
-  public void arrayRefInsertFuture(Var iVar,
-      Var arrayVar, Var indexVar, Var outerArrayVar) {
-    assert(Types.isInt(indexVar.type()));
-    assert(Types.isArrayRef(arrayVar.type()));
+  public void arrayRefInsertFuture(Var outerArray,
+      Var array, Var ix, Var member) {
+    assert(Types.isInt(ix.type()));
+    assert(Types.isArrayRef(array.type()));
     currBlock().addInstruction(
-        TurbineOp.arrayRefInsertFuture(iVar, arrayVar, indexVar, 
-                                              outerArrayVar));
+        TurbineOp.arrayRefInsertFuture(outerArray, array, ix, member));
   }
   
   public void arrayBuild(Var array, List<Var> members) {
@@ -450,30 +421,29 @@ public class STCMiddleEnd {
         TurbineOp.arrayBuild(array, members));
   }
   
-  public void arrayInsertImm(Var iVar, Var arrayVar,
-      Arg arrIx) {
-    assert(arrIx.isImmediateInt());
+  public void arrayInsertImm(Var arrayVar, Arg ix,
+      Var member) {
+    assert(ix.isImmediateInt());
     currBlock().addInstruction(
-        TurbineOp.arrayInsertImm(iVar, arrayVar, arrIx));
+        TurbineOp.arrayInsertImm(arrayVar, ix, member));
   }
   
-  public void arrayRefInsertImm(Var iVar, Var arrayVar,
-          Arg arrIx, Var outerArrayVar) {
-    assert(arrIx.isImmediateInt());
-    assert(Types.isArrayRef(arrayVar.type()));
+  public void arrayRefInsertImm(Var outerArray, Var array,
+          Arg ix, Var member) {
+    assert(ix.isImmediateInt());
+    assert(Types.isArrayRef(array.type()));
     currBlock().addInstruction(
-        TurbineOp.arrayRefInsertImm(iVar, arrayVar, arrIx, outerArrayVar));
+        TurbineOp.arrayRefInsertImm(outerArray, array, ix, member));
   }
 
   public void arrayCreateNestedFuture(Var arrayResult,
-      Var arrayVar, Var indexVar) {
+      Var array, Var ix) {
     assert(Types.isArrayRef(arrayResult.type()));
-    assert(Types.isArray(arrayVar.type()));
-    assert(Types.isInt(indexVar.type()));
+    assert(Types.isArray(array.type()));
+    assert(Types.isInt(ix.type()));
 
     currBlock().addInstruction(
-      TurbineOp.arrayCreateNestedComputed(arrayResult,
-          arrayVar, indexVar));
+      TurbineOp.arrayCreateNestedComputed(arrayResult, array, ix));
   }
 
   public void arrayCreateNestedImm(Var arrayResult,
@@ -489,15 +459,14 @@ public class STCMiddleEnd {
   }
 
   public void arrayRefCreateNestedImm(Var arrayResult,
-      Var arrayVar, Arg arrIx, Var outerArr) {
+      Var outerArray, Var array, Arg ix) {
     assert(Types.isArrayRef(arrayResult.type()));
-    assert(Types.isArrayRef(arrayVar.type()));
-    assert(Types.isArray(outerArr.type()));
-    assert(arrIx.isImmediateInt());
+    assert(Types.isArrayRef(array.type()));
+    assert(Types.isArray(outerArray.type()));
+    assert(ix.isImmediateInt());
 
     currBlock().addInstruction(
-      TurbineOp.arrayRefCreateNestedImmIx(arrayResult, arrayVar, arrIx,
-                                          outerArr));
+      TurbineOp.arrayRefCreateNestedImmIx(arrayResult, outerArray, array, ix));
   }
 
   public void arrayRefCreateNestedFuture(Var arrayResult,
@@ -818,7 +787,7 @@ public class STCMiddleEnd {
     }
     
     WaitStatement wait = new WaitStatement(function + "-argwait",
-                  inArgs, used, Collections.<Var>emptyList(), null,
+                  inArgs, used, Var.NONE, null,
                   waitMode, true, mode);
     
     fn.getMainblock().addContinuation(wait);

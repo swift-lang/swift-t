@@ -11,6 +11,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.Settings;
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.RefCounting;
@@ -28,18 +29,22 @@ import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 
 /**
  * Eliminate, merge and otherwise reduce read/write reference
  * counting operations.  Run as a post-processing step.
+ * 
+ * TODO: push down refcount decrement operations?
+ *       Are there real situations where this helps?
  */
-public class ElimRefCounts extends FunctionOptimizerPass {
+public class RefcountPass extends FunctionOptimizerPass {
 
   @Override
   public String getPassName() {
-    return "Eliminate reference counting";
+    return "Refcount adding";
   }
 
   @Override
@@ -49,6 +54,8 @@ public class ElimRefCounts extends FunctionOptimizerPass {
 
   @Override
   public void optimize(Logger logger, Function f) throws UserException {
+    // TODO: check function calling conventions pass in info accordingly 
+    // 
     elimRefCountsRec(logger, f, f.getMainblock(),
                      new Counters<Var>(), new Counters<Var>(),
                      new HierarchicalSet<Var>());
@@ -57,7 +64,6 @@ public class ElimRefCounts extends FunctionOptimizerPass {
   private void elimRefCountsRec(Logger logger, Function f, Block block,
       Counters<Var> readIncrements, Counters<Var> writeIncrements,
       HierarchicalSet<Var> parentAssignedAliasVars) {
-    
     
     // Add own alias vars
     HierarchicalSet<Var> assignedAliasVars = parentAssignedAliasVars.makeChild();
@@ -69,7 +75,7 @@ public class ElimRefCounts extends FunctionOptimizerPass {
       elimRefCountsCont(logger, f, cont, assignedAliasVars);
     }
     
-    fixBlockRefCounting(logger, block, readIncrements, writeIncrements,
+    fixBlockRefCounting(logger, f, block, readIncrements, writeIncrements,
                         parentAssignedAliasVars);
   }
 
@@ -119,13 +125,14 @@ public class ElimRefCounts extends FunctionOptimizerPass {
   /**
    * 
    * @param logger
+   * @param fn
    * @param block
    * @param readIncrements pre-existing decrements
    * @param writeIncrements -existing decrements
    * @param parentAssignedAliasVars assign alias vars from parent blocks
    *                that we can immediately manipulate refcount of
    */
-  private void fixBlockRefCounting(Logger logger, Block block,
+  private void fixBlockRefCounting(Logger logger, Function fn, Block block,
       Counters<Var> readIncrements, Counters<Var> writeIncrements,
       Set<Var> parentAssignedAliasVars) {
     
@@ -137,8 +144,8 @@ public class ElimRefCounts extends FunctionOptimizerPass {
       updateContinuationRefCount(cont, readIncrements, writeIncrements);
     }
     
-    updateCleanupActionRefCount(block, readIncrements, writeIncrements);
-    
+    updateDecrementCounts(block, fn, readIncrements, writeIncrements);
+
     // Second put them back into IC
     updateBlockRefcounting(block, readIncrements, writeIncrements,
                            parentAssignedAliasVars);
@@ -169,8 +176,45 @@ public class ElimRefCounts extends FunctionOptimizerPass {
                      parentAssignedAliasVars);    
   }
 
-  private void updateCleanupActionRefCount(Block block,
-          Counters<Var> readIncrements, Counters<Var> writeIncrements) {
+  /**
+   * Search for decrements in block
+   * @param block
+   * @param fn 
+   * @param readIncrements
+   * @param writeIncrements
+   */
+  private void updateDecrementCounts(Block block, Function fn,
+      Counters<Var> readIncrements, Counters<Var> writeIncrements) {
+    // If this is main block of function, add passed in
+    if (block.getType() == BlockType.MAIN_BLOCK) {
+      assert(block == fn.getMainblock());
+      if (fn.isAsync()) {
+        // Need to do bookkeeping if this runs in separate task
+        for (Var i: fn.getInputList()) {
+          if (RefCounting.hasReadRefCount(i)) {
+            readIncrements.decrement(i);
+          }
+        }
+        for (Var o: fn.getOutputList()) {
+          if (RefCounting.hasWriteRefCount(o)) {
+            writeIncrements.decrement(o);
+          }
+        }
+      }
+    }
+    
+    // Refcount operation for declared variables
+    for (Var var: block.getVariables()) {
+      if (RefCounting.hasReadRefCount(var) &&
+          var.storage() != VarStorage.ALIAS) {
+        readIncrements.decrement(var);
+      }
+      if (RefCounting.hasWriteRefCount(var) &&
+          var.storage() != VarStorage.ALIAS) {
+        writeIncrements.decrement(var);
+      }
+    }
+    
     ListIterator<CleanupAction> caIt = block.cleanupIterator(); 
     while (caIt.hasNext()) {
       CleanupAction ca = caIt.next();
@@ -185,6 +229,7 @@ public class ElimRefCounts extends FunctionOptimizerPass {
             Counters<Var> increments;
             if (action.op == Opcode.DECR_REF) {
               increments = readIncrements;
+              throw new STCRuntimeError("Shouldn't be here" + action);
             } else {
               assert(action.op == Opcode.DECR_WRITERS);
               increments = writeIncrements;

@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Types.Type;
 
 /**
@@ -55,6 +56,9 @@ public class Var {
   public static final String DEREF_COMPILER_VAR_PREFIX = "__dr_";
   public static final String LOOP_COND_PREFIX = "__xcond";
   public static final String OUTER_VAR_PREFIX = "__outer";
+  
+  // Convenience constant
+  public static final List<Var> NONE = Collections.emptyList();
 
   public enum VarStorage {
     /** Reference stored in global stack frame */
@@ -122,7 +126,7 @@ public class Var {
   }
   
   /**
-   * Compare variables by name only (assume unique in context)
+   * Compare variables by name (assume name unique)
    * @param o
    * @return
    */
@@ -131,9 +135,21 @@ public class Var {
     if (this == o)
       return true;
     if (!(o instanceof Var))
-      return false;
+      throw new STCRuntimeError("Compare var with type " +
+                    o.getClass().getCanonicalName() + " " + o.toString());
     Var ov = (Var)o;
     return name.equals(ov.name);
+  }
+  
+  /**
+   * True if all attributes match
+   */
+  public boolean identical(Var o) {
+    return name.equals(o.name) &&
+           type.equals(o.type) &&
+           (mapping == o.mapping || mapping.identical(o.mapping)) &&
+           storage == o.storage &&
+           defType == o.defType;
   }
   
   public String name() {
@@ -278,6 +294,26 @@ public class Var {
   }
   
   /**
+   * Do intersection by name
+   * @param vs1
+   * @param vs2
+   * @return
+   */
+  public static List<Var> varIntersection(List<Var> vs1, List<Var> vs2) {
+    List<Var> res = new ArrayList<Var>();
+    for (Var v1: vs1) {
+      for (Var v2: vs2) {
+        if (v1.name().equals(v2.name())) {
+          res.add(v1);
+          break;
+        }
+      }
+    }
+    return res;
+  }
+  
+  
+  /**
    * Create dereferenced variable given a reference
    */
   public static Var createDerefTmp(Var ref, VarStorage storage) {
@@ -294,21 +330,5 @@ public class Var {
   public String toString()
   {
     return type.toString()+':'+name;
-  }
-
-  /**
-   * Find the first variable with a matching name in the provided collection
-   * @param variables
-   * @param name
-   * @return
-   */
-  public static Var findByName(Collection<Var> variables,
-      String name) {
-    for (Var v: variables) {
-      if (v.name().equals(name)) {
-        return v;
-      }
-    }
-    return null;
   }
 }

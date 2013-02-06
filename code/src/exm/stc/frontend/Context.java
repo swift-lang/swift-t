@@ -116,20 +116,6 @@ public abstract class Context {
       DefType defType, Var mapping) throws UserException;
 
   /**
-   * Flag that an array should have its writers count decremented at
-   * end of block.  Multiple calls for same variable will result
-   * in duplicates
-   * @param var
-   */
-  public abstract void flagArrayForClosing(Var var);
-  
-  /**
-   * Get list of all arrays that were flagged
-   * @return
-   */
-  public abstract List<Var> getArraysToClose();
-
-  /**
    * Define a temporary variable with a unique name in the
    * current context
    * @param type

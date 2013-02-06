@@ -72,7 +72,7 @@ public class ICInstructions {
       return op.toString().toLowerCase();
     }
     
-    public void removeVars(Set<String> removeVars) {
+    public void removeVars(Set<Var> removeVars) {
       // default impl: do nothing
     }
   
@@ -80,7 +80,7 @@ public class ICInstructions {
      * Replace any reference to a key in the map with the value 
      * @param renames
      */
-    public abstract void renameVars(Map<String, Arg> renames);
+    public abstract void renameVars(Map<Var, Arg> renames);
   
     /**
      * Replace any input variable with a replacement, which is another
@@ -88,7 +88,7 @@ public class ICInstructions {
      * Assume that the variable being replaced will be kept around
      * @param renames
      */
-    public abstract void renameInputs(Map<String, Arg> renames);
+    public abstract void renameInputs(Map<Var, Arg> renames);
 
     @Override
     public abstract String toString();
@@ -139,9 +139,9 @@ public class ICInstructions {
      * @param knownConstants
      * @return null if we cannot replace all outputs with constants
      */
-    public abstract Map<String, Arg> constantFold(
+    public abstract Map<Var, Arg> constantFold(
                     String fnName,
-                    Map<String, Arg> knownConstants);
+                    Map<Var, Arg> knownConstants);
   
     /**
      * @param knownConstants
@@ -149,7 +149,7 @@ public class ICInstructions {
      *      using a constant value, null if it cannot be replaced
      */
     public abstract Instruction constantReplace(
-                                Map<String, Arg> knownConstants);
+                                Map<Var, Arg> knownConstants);
   
     
     public static class MakeImmRequest {
@@ -178,8 +178,6 @@ public class ICInstructions {
       /** Whether caller should store output results */
       public final boolean storeOutputVals;
       public final Instruction newInsts[];
-      public final Var keepOpen[];
-      
       
       /**
        * If the output variable changed from reference to plain future
@@ -191,12 +189,6 @@ public class ICInstructions {
         this(newOut, oldOut, new Instruction[] {newInst});
       }
       
-
-      public MakeImmChange(Var newOut, Var oldOut, Instruction newInst,
-                           Var keepOpen) {
-        this(newOut, oldOut, new Instruction[] {newInst}, new Var[] {keepOpen});
-      }
-      
       /**
        * If the output variable changed from reference to plain future
        * @param newOut
@@ -204,30 +196,14 @@ public class ICInstructions {
        * @param newInsts
        */
       public MakeImmChange(Var newOut, Var oldOut, Instruction newInsts[]) {
-        this(newOut, oldOut, newInsts, null);
-      }
-      
-
-      public MakeImmChange(Instruction newInst, Var keepOpen) {
-        this(null, null, new Instruction[] {newInst}, new Var[] {keepOpen});
+        this(newOut, oldOut, newInsts, true);
       }
       
       public MakeImmChange(Var newOut, Var oldOut, Instruction newInsts[],
-                            Var keepOpen[]) {
-        this(newOut, oldOut, newInsts, keepOpen, true);
-      }
-      
-
-      public MakeImmChange(Instruction newInsts[], boolean storeOutputVals) {
-        this(null, null, newInsts, null, storeOutputVals);
-      }
-      
-      public MakeImmChange(Var newOut, Var oldOut, Instruction newInsts[],
-          Var keepOpen[], boolean storeOutputVals) {
+          boolean storeOutputVals) {
         this.newOut = newOut;
         this.oldOut = oldOut;
         this.newInsts = newInsts;
-        this.keepOpen = keepOpen;
         this.storeOutputVals = storeOutputVals;
       }
       
@@ -247,6 +223,10 @@ public class ICInstructions {
         this(null, null, newInsts);
       }
       
+      public MakeImmChange(Instruction[] newInsts, boolean storeOutputVals) {
+        this(null, null, newInsts, storeOutputVals);
+      }
+
       /**
        * Does the new instruction have a different output to the
        * old one
@@ -267,8 +247,8 @@ public class ICInstructions {
      *            a list of vars that are the variables whose values are needed
      *            and output vars that need to be have value vars created
      */
-    public abstract MakeImmRequest canMakeImmediate(Set<String> closedVars, 
-                                                  Set<String> unmappedVars,
+    public abstract MakeImmRequest canMakeImmediate(Set<Var> closedVars, 
+                                                  Set<Var> unmappedVars,
                                                   boolean waitForClose);
 
     public abstract MakeImmChange makeImmediate(List<Var> outVals,
@@ -291,7 +271,7 @@ public class ICInstructions {
      * @return List of outputs closed immediately after instruction returns
      */
     public List<Var> getClosedOutputs() {
-      return Collections.emptyList(); // Default - assume nothing closed
+      return Var.NONE; // Default - assume nothing closed
     }
     
     /**
@@ -328,14 +308,14 @@ public class ICInstructions {
      * @return list of vars that need read refcount increment
      */
     public List<Var> getReadIncrVars() {
-      return Collections.emptyList();
+      return Var.NONE;
     }
 
     /**
      * @return list of vars that need write refcount increment
      */
     public List<Var> getWriteIncrVars() {
-      return Collections.emptyList();
+      return Var.NONE;
     }
   }
   
@@ -357,12 +337,12 @@ public class ICInstructions {
     }
   
     @Override
-    public void renameVars(Map<String, Arg> renames) {
+    public void renameVars(Map<Var, Arg> renames) {
       // Don't do anything
     }
 
     @Override
-    public void renameInputs(Map<String, Arg> replacements) {
+    public void renameInputs(Map<Var, Arg> replacements) {
       // Nothing
     }
   
@@ -382,19 +362,19 @@ public class ICInstructions {
     }
   
     @Override
-    public Map<String, Arg> constantFold(String fnName,
-                Map<String, Arg> knownConstants) {
+    public Map<Var, Arg> constantFold(String fnName,
+                Map<Var, Arg> knownConstants) {
       return null;
     }
   
     @Override
-    public Instruction constantReplace(Map<String, Arg> knownConstants) {
+    public Instruction constantReplace(Map<Var, Arg> knownConstants) {
       return null;
     }
 
     @Override
-    public MakeImmRequest canMakeImmediate(Set<String> closedVars, 
-        Set<String> unmappedVars, boolean waitForClose) {
+    public MakeImmRequest canMakeImmediate(Set<Var> closedVars, 
+        Set<Var> unmappedVars, boolean waitForClose) {
       return null;
     }
 
@@ -405,7 +385,7 @@ public class ICInstructions {
 
     @Override
     public List<Var> getBlockingInputs() {
-      return Collections.emptyList();
+      return Var.NONE;
     }
 
     @Override
@@ -500,21 +480,21 @@ public class ICInstructions {
             args.get(1).getVar(), args.get(2), true);
         break;
       case ARRAY_INSERT_FUTURE:
-        gen.arrayInsertFuture(args.get(2).getVar(),
-            args.get(0).getVar(), args.get(1).getVar());
+        gen.arrayInsertFuture(args.get(0).getVar(),
+            args.get(1).getVar(), args.get(2).getVar());
         break;
       case ARRAY_INSERT_IMM:
-        gen.arrayInsertImm(args.get(2).getVar(),
-            args.get(0).getVar(), args.get(1));
+        gen.arrayInsertImm(args.get(0).getVar(),
+            args.get(1), args.get(2).getVar());
         break;
       case ARRAYREF_INSERT_FUTURE:
-        gen.arrayRefInsertFuture(args.get(2).getVar(),
+        gen.arrayRefInsertFuture(args.get(3).getVar(),
             args.get(0).getVar(), args.get(1).getVar(),
-            args.get(3).getVar());
+            args.get(2).getVar());
         break;
       case ARRAYREF_INSERT_IMM:
-        gen.arrayRefInsertImm(args.get(2).getVar(),
-            args.get(0).getVar(), args.get(1), args.get(3).getVar());
+        gen.arrayRefInsertImm(args.get(3).getVar(),
+            args.get(0).getVar(), args.get(1), args.get(2).getVar());
         break;
       case ARRAY_BUILD:
         gen.arrayBuild(args.get(0).getVar(),
@@ -584,11 +564,11 @@ public class ICInstructions {
         break;
       case ARRAYREF_CREATE_NESTED_FUTURE:
         gen.arrayRefCreateNestedFuture(args.get(0).getVar(),
-            args.get(1).getVar(), args.get(2).getVar(), args.get(3).getVar());
+            args.get(3).getVar(), args.get(1).getVar(), args.get(2).getVar());
         break;
       case ARRAYREF_CREATE_NESTED_IMM:
         gen.arrayRefCreateNestedImm(args.get(0).getVar(),
-            args.get(1).getVar(), args.get(2), args.get(3).getVar());
+            args.get(3).getVar(), args.get(1).getVar(), args.get(2));
         break;
       case ARRAY_CREATE_NESTED_IMM:
         gen.arrayCreateNestedImm(args.get(0).getVar(),
@@ -694,20 +674,33 @@ public class ICInstructions {
           Arg.createVar(indexVar));
     }
   
-    public static Instruction arrayInsertFuture(Var iVar,
-        Var arrayVar, Var indexVar) {
+    public static Instruction arrayInsertFuture(Var array,
+        Var ix, Var member) {
       return new TurbineOp(Opcode.ARRAY_INSERT_FUTURE,
-          Arg.createVar(arrayVar), Arg.createVar(indexVar),
-              Arg.createVar(iVar));
+          Arg.createVar(array), Arg.createVar(ix),
+              Arg.createVar(member));
     }
   
-    public static Instruction arrayRefInsertFuture(Var iVar,
-        Var arrayVar, Var indexVar, Var outerArrayVar) {
+    public static Instruction arrayRefInsertFuture(Var outerArray,
+        Var array, Var ix, Var member) {
       return new TurbineOp(Opcode.ARRAYREF_INSERT_FUTURE,
-          Arg.createVar(arrayVar), Arg.createVar(indexVar),
-              Arg.createVar(iVar), Arg.createVar(outerArrayVar));
+          Arg.createVar(outerArray), Arg.createVar(array),
+          Arg.createVar(ix), Arg.createVar(member));
     }
     
+    public static Instruction arrayInsertImm(Var array,
+        Arg ix, Var member) {
+      return new TurbineOp(Opcode.ARRAY_INSERT_IMM,
+          Arg.createVar(array), ix, Arg.createVar(member));
+    }
+
+    public static Instruction arrayRefInsertImm(Var outerArray,
+        Var array, Arg ix, Var member) {
+      return new TurbineOp(Opcode.ARRAYREF_INSERT_IMM,
+          Arg.createVar(outerArray), Arg.createVar(array),
+          ix, Arg.createVar(member));
+    }
+
     public static Instruction arrayRefLookupImm(Var oVar,
         Var arrayVar, Arg arrayIndex) {
       return new TurbineOp(Opcode.ARRAYREF_LOOKUP_IMM,
@@ -725,20 +718,6 @@ public class ICInstructions {
       return new TurbineOp(Opcode.ARRAY_LOOKUP_IMM,
           Arg.createVar(oVar), Arg.createVar(arrayVar), arrayIndex);
     }
-  
-    public static Instruction arrayInsertImm(Var iVar,
-        Var arrayVar, Arg arrayIndex) {
-      return new TurbineOp(Opcode.ARRAY_INSERT_IMM,
-          Arg.createVar(arrayVar), arrayIndex, Arg.createVar(iVar));
-    }
-    
-    public static Instruction arrayRefInsertImm(Var iVar,
-        Var arrayVar, Arg arrayIndex, Var outerArray) {
-      return new TurbineOp(Opcode.ARRAYREF_INSERT_IMM,
-          Arg.createVar(arrayVar), arrayIndex, Arg.createVar(iVar),
-          Arg.createVar(outerArray));
-    }
-  
   
     public static Instruction arrayBuild(Var array, List<Var> members) {
       ArrayList<Arg> args = new ArrayList<Arg>(2 + members.size());
@@ -918,10 +897,9 @@ public class ICInstructions {
     }
   
     public static Instruction arrayCreateNestedComputed(Var arrayResult,
-        Var arrayVar, Var indexVar) {
+        Var array, Var ix) {
       return new TurbineOp(Opcode.ARRAY_CREATE_NESTED_FUTURE,
-          Arg.createVar(arrayResult), Arg.createVar(arrayVar),
-          Arg.createVar(indexVar));
+          Arg.createVar(arrayResult), Arg.createVar(array), Arg.createVar(ix));
     }
   
     public static Instruction arrayCreateNestedImm(Var arrayResult,
@@ -941,10 +919,10 @@ public class ICInstructions {
   
   
     public static Instruction arrayRefCreateNestedImmIx(Var arrayResult,
-        Var arrayVar, Arg arrIx, Var outerArr) {
+        Var outerArray, Var array, Arg ix) {
       return new TurbineOp(Opcode.ARRAYREF_CREATE_NESTED_IMM,
-          Arg.createVar(arrayResult), Arg.createVar(arrayVar),
-          arrIx, Arg.createVar(outerArr));
+          Arg.createVar(arrayResult), Arg.createVar(array),
+          ix, Arg.createVar(outerArray));
     }
   
   
@@ -1025,13 +1003,12 @@ public class ICInstructions {
     }
 
     @Override
-    public void renameVars(Map<String, Arg> renames) {
+    public void renameVars(Map<Var, Arg> renames) {
       ICUtil.replaceOpargsInList(renames, args);
     }
   
     @Override
-    public void renameInputs(Map<String, Arg> renames) {
-      
+    public void renameInputs(Map<Var, Arg> renames) {
       int firstInputArg;
       if (op == Opcode.ARRAY_CREATE_NESTED_FUTURE
        || op == Opcode.ARRAY_CREATE_NESTED_IMM
@@ -1074,9 +1051,6 @@ public class ICInstructions {
       case INCR_REF:
         // We view modified var as output
         return 1;
-      case ARRAYREF_INSERT_FUTURE:
-      case ARRAYREF_INSERT_IMM:
-        return 0;
       case ARRAYREF_LOOKUP_FUTURE:
       case ARRAYREF_LOOKUP_IMM:
       case ARRAY_LOOKUP_REF_IMM:
@@ -1089,10 +1063,6 @@ public class ICInstructions {
       case STORE_STRING:
       case STORE_BLOB:
       case STORE_FILE:
-      case ARRAY_CREATE_NESTED_FUTURE:
-      case ARRAYREF_CREATE_NESTED_FUTURE:
-      case ARRAY_CREATE_NESTED_IMM:
-      case ARRAYREF_CREATE_NESTED_IMM:
       case DEREF_INT:
       case DEREF_BOOL:
       case DEREF_FLOAT:
@@ -1113,6 +1083,22 @@ public class ICInstructions {
       case COPY_REF:
       case GET_FILENAME:
         return 1;
+
+      case ARRAYREF_INSERT_FUTURE:
+      case ARRAYREF_INSERT_IMM:
+        // Outer array and directly inserted
+        return 2;
+        
+      case ARRAY_CREATE_NESTED_FUTURE:
+      case ARRAY_CREATE_NESTED_IMM:
+        // Returns nested array and modifies outer array
+        return 2;
+
+      case ARRAYREF_CREATE_NESTED_FUTURE:
+      case ARRAYREF_CREATE_NESTED_IMM:
+        // Returns nested array, modifies outer array and
+        // reference counts outmost array
+        return 3;
         
       case GET_OUTPUT_FILENAME:
         if (args.get(1).getVar().isMapped()) {
@@ -1270,8 +1256,8 @@ public class ICInstructions {
     }
 
     @Override
-    public Map<String, Arg> constantFold(String fnName,
-                        Map<String, Arg> knownConstants) {
+    public Map<Var, Arg> constantFold(String fnName,
+                        Map<Var, Arg> knownConstants) {
       switch (op) {
       case STORE_INT:
       case STORE_STRING:
@@ -1285,9 +1271,9 @@ public class ICInstructions {
       case LOAD_STRING:
         // The input arg could be a var or a literal constant
         if (args.get(1).isVar()) {
-          Arg val = knownConstants.get(args.get(1).getVar().name());
+          Arg val = knownConstants.get(args.get(1).getVar());
           if (val != null) {
-            return Collections.singletonMap(args.get(0).getVar().name(), val);
+            return Collections.singletonMap(args.get(0).getVar(), val);
           }
         }
         break;
@@ -1299,13 +1285,13 @@ public class ICInstructions {
     }
   
     @Override
-    public Instruction constantReplace(Map<String, Arg> knownConstants) {
+    public Instruction constantReplace(Map<Var, Arg> knownConstants) {
       switch (op) {
       case ARRAY_LOOKUP_FUTURE:
       case ARRAYREF_LOOKUP_FUTURE:
         Var index = args.get(2).getVar();
-        if (knownConstants.containsKey(index.name())) {
-          Arg cIndex = knownConstants.get(index.name());
+        if (knownConstants.containsKey(index)) {
+          Arg cIndex = knownConstants.get(index);
           if (op == Opcode.ARRAY_LOOKUP_FUTURE) {
             return arrayLookupRefImm(args.get(0).getVar(),
                 args.get(1).getVar(), cIndex);
@@ -1317,15 +1303,15 @@ public class ICInstructions {
         break;
       case ARRAYREF_INSERT_FUTURE:
       case ARRAY_INSERT_FUTURE:
-        Var sIndex = args.get(1).getVar();
-        if (knownConstants.containsKey(sIndex.name())) {
-          Arg cIndex = knownConstants.get(sIndex.name());
+        Var sIndex = getInput(0).getVar();
+        if (knownConstants.containsKey(sIndex)) {
+          Arg cIndex = knownConstants.get(sIndex);
           if (op == Opcode.ARRAY_INSERT_FUTURE) {
-            return arrayInsertImm(args.get(2).getVar(),
-                      args.get(0).getVar(), cIndex);
+            return arrayInsertImm(args.get(0).getVar(),
+                      cIndex, args.get(2).getVar());
           } else {
-            return arrayRefInsertImm(args.get(2).getVar(),
-                args.get(0).getVar(), cIndex, args.get(3).getVar());
+            return arrayRefInsertImm(getOutput(0),
+                getOutput(1), cIndex, getInput(1).getVar());
           }
         }
         break;
@@ -1336,96 +1322,109 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-                                           Set<String> unmappedVars,
+    public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
+                                           Set<Var> unmappedVars,
                                            boolean waitForClose) {
       // TODO: disable for insert statements until we can correctly mark that 
       //      arrays must be kept open
       boolean insertRefWaitForClose = false;
       // Try to take advantage of closed variables 
       switch (op) {
-      case ARRAY_LOOKUP_REF_IMM:
+      case ARRAY_LOOKUP_REF_IMM: {
         // If array is closed or this index already inserted,
         // don't need to block on array.  
         // NOTE: could try to reduce other forms to this in one step,
         //      but its probably just easier to do it in multiple steps
         //      on subsequent passes
         Var arr = args.get(1).getVar();
-        if (closedVars.contains(arr.name())) {
+        if (closedVars.contains(arr)) {
           // Don't request to wait for close - whole array doesn't need to be
           // closed
           return new MakeImmRequest(null, Arrays.<Var>asList(arr));
         }
         break;
-        
-      case ARRAY_LOOKUP_FUTURE:
+      }
+      case ARRAY_LOOKUP_FUTURE: {
         Var index = args.get(2).getVar();
-        if (waitForClose || closedVars.contains(index.name())) {
+        if (waitForClose || closedVars.contains(index)) {
           return new MakeImmRequest(null, Arrays.asList(index));
         }
         break;
-      case ARRAYREF_LOOKUP_FUTURE:
+      }
+      case ARRAYREF_LOOKUP_FUTURE: {
+        Var arr = getInput(0).getVar();
+        Var ix = getInput(1).getVar();
         // We will take either the index or the dereferenced array
-        List<Var> req = mkImmVarList(waitForClose, closedVars, 
-                  args.get(1).getVar(), args.get(2).getVar());
+        List<Var> req = mkImmVarList(waitForClose, closedVars, arr, ix);
         if (req.size() > 0) {
           return new MakeImmRequest(null, req);
         }
         break;
-      case ARRAYREF_LOOKUP_IMM:
+      }
+      case ARRAYREF_LOOKUP_IMM: {
         // Could skip using reference
-        Var arrRef2 = args.get(1).getVar();
-        if (waitForClose || closedVars.contains(arrRef2.name())) {
-          return new MakeImmRequest(null, Arrays.asList(arrRef2));
+        Var arrRef = getInput(0).getVar();
+        if (waitForClose || closedVars.contains(arrRef)) {
+          return new MakeImmRequest(null, Arrays.asList(arrRef));
         }
         break;
-      case ARRAY_INSERT_FUTURE:
-        Var sIndex = args.get(1).getVar();
-        if (waitForClose || closedVars.contains(sIndex.name())) {
-          return new MakeImmRequest(null, Arrays.asList(sIndex));
+      }
+      case ARRAY_INSERT_FUTURE: {
+        Var ix = getInput(0).getVar();
+        if (waitForClose || closedVars.contains(ix)) {
+          return new MakeImmRequest(null, Arrays.asList(ix));
         }
         break;
-      case ARRAYREF_INSERT_IMM:
-        Var arrRef3 = args.get(0).getVar();
-        if (insertRefWaitForClose || closedVars.contains(arrRef3.name())) {
-          return new MakeImmRequest(null, Arrays.asList(arrRef3));
+      }
+      case ARRAYREF_INSERT_IMM: {
+        Var innerArrRef = getOutput(1);
+        if (insertRefWaitForClose || closedVars.contains(innerArrRef)) {
+          return new MakeImmRequest(null, Arrays.asList(innerArrRef));
         }
         break;
-      case ARRAYREF_INSERT_FUTURE:
+      }
+      case ARRAYREF_INSERT_FUTURE: {
+        Var innerArrRef = getOutput(1);
+        Var ix = getInput(0).getVar();
         // We will take either the index or the dereferenced array
         List<Var> req2 = mkImmVarList(insertRefWaitForClose, closedVars,
-                    args.get(0).getVar(), args.get(1).getVar());
+                                      innerArrRef, ix);
         if (req2.size() > 0) {
           return new MakeImmRequest(null, req2);
         }
         break;
-      case ARRAY_CREATE_NESTED_FUTURE:
+      }
+      case ARRAY_CREATE_NESTED_FUTURE: {
         // Try to get immediate index
-        Var index2 = args.get(2).getVar();
-        if (waitForClose || closedVars.contains(index2.name())) {
-          return new MakeImmRequest(null, Arrays.asList(index2));
+        Var ix = getInput(0).getVar();
+        if (waitForClose || closedVars.contains(ix)) {
+          return new MakeImmRequest(null, Arrays.asList(ix));
         }
         break;
-      case ARRAYREF_CREATE_NESTED_IMM:
-        Var arrRef5 = args.get(1).getVar();
-        if (waitForClose || closedVars.contains(arrRef5.name())) {
-          return new MakeImmRequest(null, Arrays.asList(arrRef5));
+      }
+      case ARRAYREF_CREATE_NESTED_IMM: {
+        Var arrRef = getOutput(2);
+        if (waitForClose || closedVars.contains(arrRef)) {
+          return new MakeImmRequest(null, Arrays.asList(arrRef));
         }
         break;
-      case ARRAYREF_CREATE_NESTED_FUTURE:
-        List<Var> req5 = mkImmVarList(waitForClose, closedVars, 
-            args.get(1).getVar(), args.get(2).getVar());
+      }
+      case ARRAYREF_CREATE_NESTED_FUTURE: {
+        Var arrRef = getOutput(2);
+        Var ix = getInput(0).getVar();
+        List<Var> req5 = mkImmVarList(waitForClose, closedVars, arrRef, ix);
         if (req5.size() > 0) {
           return new MakeImmRequest(null, req5);
         }
         break;
+      }
       case UPDATE_INCR:
       case UPDATE_MIN:
       case UPDATE_SCALE:
         return new MakeImmRequest(null, Arrays.asList(
                   args.get(1).getVar()));
       case GET_OUTPUT_FILENAME:
-        if (unmappedVars.contains(args.get(1).getVar().name())) {
+        if (unmappedVars.contains(args.get(1).getVar())) {
           return new MakeImmRequest(
                   Arrays.asList(args.get(0).getVar()),
                   Arrays.<Var>asList());
@@ -1438,10 +1437,10 @@ public class ICInstructions {
     }
     
     private List<Var> mkImmVarList(boolean waitForClose,
-                                   Set<String> closedVars, Var... args) {
+                                   Set<Var> closedVars, Var... args) {
       ArrayList<Var> req = new ArrayList<Var>(args.length);
       for (Var v: args) {
-        if (waitForClose || closedVars.contains(v.name())) {
+        if (waitForClose || closedVars.contains(v)) {
           req.add(v);
         }
       }
@@ -1497,57 +1496,52 @@ public class ICInstructions {
       case ARRAY_INSERT_FUTURE:
         assert(values.size() == 1);
         return new MakeImmChange(
-                arrayInsertImm(args.get(2).getVar(), 
-                args.get(0).getVar(), values.get(0)),
-                args.get(0).getVar());
-      case ARRAYREF_INSERT_IMM:
+            arrayInsertImm(getOutput(0), values.get(0), getInput(1).getVar()));
+      case ARRAYREF_INSERT_IMM: {
         assert(values.size() == 1);
+        Var newOut = values.get(0).getVar();
         // Switch from ref to plain array
         return new MakeImmChange(arrayInsertImm(
-            args.get(2).getVar(), values.get(0).getVar(), args.get(1)),
-            args.get(0).getVar());
+            newOut, getInput(0), getInput(1).getVar()));
+      }
       case ARRAYREF_INSERT_FUTURE:
         assert(values.size() == 1 || values.size() == 2);
         // Could be either array ref, index, or both
         if (values.size() == 2) {
           return new MakeImmChange(arrayInsertImm(
-              args.get(2).getVar(),
-              values.get(0).getVar(), values.get(1)));
+              values.get(0).getVar(),
+              values.get(1), getInput(1).getVar()));
         } else { 
           Arg v1 = values.get(0);
           if (v1.isImmediateInt()) {
             // replace index
-            return new MakeImmChange(
-                    arrayRefInsertImm(args.get(2).getVar(), 
-                    args.get(0).getVar(), v1, args.get(3).getVar()));
+            return new MakeImmChange(arrayRefInsertImm(getOutput(0), 
+                            getOutput(1), v1, getInput(1).getVar()));
           } else {
             // replace the array ref
-            return new MakeImmChange(
-                    arrayInsertFuture(args.get(2).getVar(), 
-                            v1.getVar(), args.get(1).getVar()));
+            return new MakeImmChange(arrayInsertFuture(v1.getVar(),
+                            getInput(0).getVar(), getInput(1).getVar()));
           }
         }
-      case ARRAY_CREATE_NESTED_FUTURE:
+      case ARRAY_CREATE_NESTED_FUTURE: {
         assert(values.size() == 1);
         // Output type of instruction changed from ref to direct
         // array handle
-        Var oldOut = args.get(0).getVar();
+        Var oldOut = getOutput(0);
         assert(Types.isArrayRef(oldOut.type()));
         Var newOut = Var.createDerefTmp(oldOut, VarStorage.ALIAS);
         return new MakeImmChange(newOut, oldOut,
-            arrayCreateNestedImm(newOut,
-                            args.get(1).getVar(), values.get(0)),
-                            args.get(1).getVar());
-      case ARRAYREF_CREATE_NESTED_FUTURE:
+            arrayCreateNestedImm(newOut, getOutput(1), values.get(0)));
+      }
+      case ARRAYREF_CREATE_NESTED_FUTURE: {
         assert(values.size() == 1 || values.size() == 2);
         if (values.size() == 2) {
-          Var oldOut2 = args.get(0).getVar();
-          assert(Types.isArrayRef(oldOut2.type()));
-          Var newOut2 = Var.createDerefTmp(oldOut2,
-                                          VarStorage.ALIAS);
-          return new MakeImmChange(newOut2, oldOut2,
-              arrayCreateNestedImm(newOut2, 
-                  values.get(0).getVar(), values.get(1)));
+          Var oldOut = getOutput(0);
+          assert(Types.isArrayRef(oldOut.type()));
+          Var newOut = Var.createDerefTmp(oldOut, VarStorage.ALIAS);
+          return new MakeImmChange(newOut, oldOut,
+              arrayCreateNestedImm(newOut, values.get(0).getVar(),
+                                   values.get(1)));
         } else {
           // We weren't able to switch to the version returning a plain
           // array
@@ -1555,7 +1549,7 @@ public class ICInstructions {
           if (newA.isImmediateInt()) {
             return new MakeImmChange(
                 arrayRefCreateNestedImmIx(args.get(0).getVar(),
-                    args.get(1).getVar(), newA, args.get(3).getVar()));
+                    args.get(3).getVar(), args.get(1).getVar(), newA));
           } else {
             assert(Types.isArray(newA.getType()));
             // Replacing array ref with array
@@ -1565,6 +1559,7 @@ public class ICInstructions {
                           newA.getVar(), args.get(2).getVar()));
           }
         }
+      }
       case ARRAYREF_CREATE_NESTED_IMM: {
         assert(values.size() == 1);
         Var oldOut3 = args.get(0).getVar();
@@ -1626,7 +1621,7 @@ public class ICInstructions {
     @Override
     public List<Var> getBlockingInputs() {
       if (getMode() == TaskMode.SYNC) {
-        return Collections.emptyList();
+        return Var.NONE;
       }
       
       // If async, assume that all scalar input vars are blocked on
@@ -1852,28 +1847,33 @@ public class ICInstructions {
           return Arrays.asList(lookup); 
         }
         case ARRAYREF_INSERT_FUTURE:
-        case ARRAYREF_INSERT_IMM:
+        case ARRAYREF_INSERT_IMM: 
         case ARRAY_INSERT_IMM:
         case ARRAY_INSERT_FUTURE:{
           // STORE <out array> <in index> <in var>
-          // OR
-          // STORE <out array> <in index> <in var> <in outer array>
-          Arg arr = args.get(0); 
-          Arg ix = args.get(1);
-          Arg contents = args.get(2);
+          // STORE  <in outer array> <out array> <in index> <in var>
+          Var arr;
+          if (op == Opcode.ARRAYREF_INSERT_FUTURE ||
+              op == Opcode.ARRAYREF_INSERT_IMM) {
+            arr = getOutput(1);
+          } else {
+            arr = getOutput(0);
+          }
+          Arg ix = getInput(0);
+          Var contents = getInput(1).getVar();
           return Arrays.asList(makeArrayComputedValue(arr, ix, contents));
         }
         case ARRAY_BUILD: {
-          Arg arr = args.get(0);
+          Var arr = getOutput(0);
           List<ComputedValue> res = new ArrayList<ComputedValue>();
           // Computed value for whole array
-          res.add(new ComputedValue(op, args.subList(1, args.size()),
-                      arr, true));
+          res.add(new ComputedValue(op, getInputs(),
+                      Arg.createVar(arr), true));
           // For individual array elements
-          int arrSize = args.size() - 1;
+          int arrSize = getInputs().size();
           for (int i = 0; i < arrSize; i++) {
             res.add(makeArrayComputedValue(arr, Arg.createIntLit(i),
-                                           args.get(i + 1)));
+                                           getInput(0).getVar()));
           }
           
           // TODO: how to propagate size info.  This isn't working yet
@@ -1887,34 +1887,33 @@ public class ICInstructions {
         case ARRAYREF_LOOKUP_FUTURE:
         case ARRAYREF_LOOKUP_IMM: {
           // LOAD <out var> <in array> <in index>
-          Arg arr = args.get(1);
+          Var arr = args.get(1).getVar();
           Arg ix = args.get(2);
-          Arg contents = args.get(0);
-          Var lookupRes = contents.getVar();
+          Var contents = args.get(0).getVar();
           
           ComputedValue cv = makeArrayComputedValue(arr, ix, contents);
   
           if (op == Opcode.ARRAY_LOOKUP_IMM) {
-            assert(lookupRes.type().equals(
-                Types.getArrayMemberType(arr.getType())));
+            assert(contents.type().equals(
+                Types.getArrayMemberType(arr.type())));
             // This just retrieves the item immediately
             return Arrays.asList(cv);
           } else {
-            assert (Types.isRefTo(lookupRes.type(), 
-                Types.getArrayMemberType(arr.getType())));
+            assert (Types.isRefTo(contents.type(), 
+                Types.getArrayMemberType(arr.type())));
             Arg prev = existing.getLocation(makeArrayComputedValue(arr, ix, null));
             if (prev != null) {
               /* All these array loads give back a reference, but if a value
                * was previously inserted at this index, then we can 
                * short-circuit this as we know what is in the reference */
               ComputedValue retrieveCV = new ComputedValue(retrieveOpcode(
-                  lookupRes.type()), contents, prev, false);
-              Opcode derefOp = derefOpCode(lookupRes.type());
+                  contents.type()), Arg.createVar(contents), prev, false);
+              Opcode derefOp = derefOpCode(contents.type());
               if (derefOp == null) {
                 return Arrays.asList(retrieveCV, cv);
               } else {
                 ComputedValue derefCV = new ComputedValue(derefOp,
-                    contents, prev, false);
+                            Arg.createVar(contents), prev, false);
                 return Arrays.asList(retrieveCV, cv, derefCV);
               }
             } else {
@@ -1927,25 +1926,33 @@ public class ICInstructions {
         case ARRAYREF_CREATE_NESTED_FUTURE:
         case ARRAYREF_CREATE_NESTED_IMM: {
           // CREATE_NESTED <out inner array> <in array> <in index>
-          Arg contents = args.get(0);
-          Var nestedArr = contents.getVar();
-          Arg arr = args.get(1);
-          Arg ix = args.get(2);
-          ComputedValue cv = makeArrayComputedValue(arr, ix, contents);
+          // OR
+          // CREATE_NESTED <out inner array> <outer arr> <in array> <in index>
+          Var nestedArr = getOutput(0);
+          Var arr;
+          if (op == Opcode.ARRAYREF_CREATE_NESTED_FUTURE ||
+              op == Opcode.ARRAYREF_CREATE_NESTED_IMM) {
+            arr = getOutput(2);
+          } else {
+            arr = getOutput(1);
+          }
+          Arg ix = getInput(0);
+          ComputedValue cv = makeArrayComputedValue(arr, ix, nestedArr);
           if (op == Opcode.ARRAY_CREATE_NESTED_IMM) {
             // No references involved, the instruction returns the nested
             // array directly
             return Arrays.asList(cv);
           } else {
             Arg prev = existing.getLocation(new ComputedValue(Opcode.FAKE,
-                ComputedValue.ARRAY_CONTENTS, Arrays.asList(arr, ix)));
+                ComputedValue.ARRAY_CONTENTS,
+                Arrays.asList(Arg.createVar(arr), ix)));
             assert (Types.isRefTo(nestedArr.type(), 
-                        Types.getArrayMemberType(arr.getType())));
+                        Types.getArrayMemberType(arr.type())));
             if (prev != null) {
               // See if we know the value of this reference already
-              ComputedValue derefCV = new ComputedValue(retrieveOpcode(
-                  nestedArr.type()), Arrays.asList(contents),
-                                                        prev, false);
+              ComputedValue derefCV = new ComputedValue(
+                  retrieveOpcode(nestedArr.type()),
+                  Arrays.asList(Arg.createVar(nestedArr)), prev, false);
               return Arrays.asList(derefCV, cv);
             } else {
               return Arrays.asList(cv);
@@ -1968,15 +1975,17 @@ public class ICInstructions {
           this.args.get(0), closed);
     }
 
-    static ComputedValue makeArrayComputedValue(Arg arr, Arg ix, Arg contents) {
+    static ComputedValue makeArrayComputedValue(Var arr, Arg ix, Var contents) {
       ComputedValue cv;
-      if (contents != null && isMemberReference(contents.getVar(),
-          arr.getVar())) {
+      Arg contentsArg = contents == null ? null : Arg.createVar(contents);
+      if (contents != null && isMemberReference(contents, arr)) {
         cv = new ComputedValue(Opcode.FAKE, ComputedValue.REF_TO_ARRAY_CONTENTS, 
-            Arrays.asList(arr, ix), contents, false);
+            Arrays.asList(Arg.createVar(arr), ix),
+            contentsArg, false);
       } else {
         cv = new ComputedValue(Opcode.FAKE, ComputedValue.ARRAY_CONTENTS, 
-            Arrays.asList(arr, ix), contents, false);
+            Arrays.asList(Arg.createVar(arr), ix),
+            contentsArg, false);
       }
       return cv;
     }
@@ -2008,7 +2017,7 @@ public class ICInstructions {
         if (!args.get(1).getVar().isMapped()) {
           return Arrays.asList(args.get(0).getVar());
         } else {
-          return Collections.emptyList();
+          return Var.NONE;
         }
       } else if (op == Opcode.ARRAY_BUILD) {
         // Output array should be closed
@@ -2045,26 +2054,26 @@ public class ICInstructions {
         case DEREF_STRING: {
           // Increment refcount of ref var
           return Pair.create(Arrays.asList(getInput(0).getVar()),
-                             Collections.<Var>emptyList());
+                             Var.NONE);
         }
         case ARRAYREF_LOOKUP_FUTURE:
         case ARRAY_LOOKUP_FUTURE: {
           // Array and index
           return Pair.create(
                   Arrays.asList(getInput(0).getVar(), getInput(1).getVar()),
-                  Collections.<Var>emptyList());
+                  Var.NONE);
         }
         case ARRAYREF_LOOKUP_IMM:
         case ARRAY_LOOKUP_REF_IMM: {
           // Array only
           return Pair.create(
                     Arrays.asList(getInput(0).getVar()),
-                    Collections.<Var>emptyList());
+                    Var.NONE);
         }
         case ARRAY_INSERT_IMM: {
           Var mem = getInput(1).getVar();
           Var arr = getOutput(0);
-          List<Var> writers = Collections.emptyList();
+          List<Var> writers = Var.NONE;
           if (Types.isRefTo(mem.type(), arr.type().memberType())) {
             // Dereferencing version - need to keep open for deref
             writers = Arrays.asList(arr);
@@ -2081,9 +2090,9 @@ public class ICInstructions {
         }
         case ARRAYREF_INSERT_IMM:
         case ARRAYREF_INSERT_FUTURE: {
-          Arg ix = args.get(1);
-          Var mem = args.get(2).getVar();
-          Var outerArr = args.get(3).getVar();
+          Arg ix = getInput(0);
+          Var mem = getInput(1).getVar();
+          Var outerArr = getOutput(0);
           List<Var> readers;
           if (op == Opcode.ARRAYREF_INSERT_FUTURE) {
             readers = Arrays.asList(ix.getVar(), mem);
@@ -2092,28 +2101,29 @@ public class ICInstructions {
             readers = Collections.singletonList(mem);
           }
           // Maintain slots on outer array
-          return Pair.create(
-                  readers,
+          return Pair.create(readers,
                   Arrays.asList(outerArr));
         }
         case ARRAY_CREATE_NESTED_FUTURE: {
-          Var srcArray = getInput(0).getVar();
+          Var srcArray = getOutput(1);
           Var ix = getInput(0).getVar();
           return Pair.create(
                   Arrays.asList(srcArray, ix),
-                  Arrays.asList(srcArray));
+                  Arrays.<Var>asList());
         }
         case STRUCTREF_LOOKUP: {
           return Pair.create(Arrays.asList(getInput(0).getVar()),
-                             Collections.<Var>emptyList());
+                             Var.NONE);
         }
         case ARRAYREF_CREATE_NESTED_IMM:
         case ARRAYREF_CREATE_NESTED_FUTURE: {
-          Var arr = getInput(0).getVar();
-          Arg ixArg = getInput(1);
-          Var outerArr = getInput(2).getVar();
+          Var outerArr = getOutput(1);
+          assert(Types.isArray(outerArr.type()));
+          assert(Types.isArray(outerArr.type().memberType()));
+          Var arr = getOutput(2);
+          Arg ixArg = getInput(0);
           List<Var> readVars;
-          if (op == Opcode.ARRAY_CREATE_NESTED_IMM) {
+          if (op == Opcode.ARRAYREF_CREATE_NESTED_IMM) {
             readVars = Arrays.asList(arr);
           } else {
             assert(op == Opcode.ARRAYREF_CREATE_NESTED_FUTURE);
@@ -2121,6 +2131,9 @@ public class ICInstructions {
           }
           return Pair.create(readVars,
                   Arrays.asList(outerArr));
+        }
+        case STRUCT_INSERT: {
+          return Pair.create(Arrays.asList(getInput(1).getVar()), Var.NONE);
         }
         default:
           // Return default
@@ -2225,7 +2238,7 @@ public class ICInstructions {
       if (allValues) {
         // We can work out array contents 
         long arrSize = (end - start) / step + 1;
-        Arg arr = Arg.createVar(getOutput(0));
+        Var arr = getOutput(0);
         cvs.add(LocalFunctionCall.makeArraySizeComputedValue(
             arr, Arg.createIntLit(arrSize)));
         // TODO: somehow add array elements?
@@ -2350,7 +2363,7 @@ public class ICInstructions {
     }
   
     @Override
-    public void renameVars(Map<String, Arg> renames) {
+    public void renameVars(Map<Var, Arg> renames) {
       ICUtil.replaceVarsInList(renames, outputs, false);
       ICUtil.replaceVarsInList(renames, inputs, false);
       priority = ICUtil.replaceOparg(renames, priority, true);
@@ -2360,7 +2373,7 @@ public class ICInstructions {
       return this.functionName;
     }
     @Override
-    public void renameInputs(Map<String, Arg> renames) {
+    public void renameInputs(Map<Var, Arg> renames) {
       ICUtil.replaceVarsInList(renames, inputs, false);
       priority = ICUtil.replaceOparg(renames, priority, true);
     }
@@ -2403,25 +2416,25 @@ public class ICInstructions {
     }
   
     @Override
-    public Map<String, Arg> constantFold(String enclosingFnName,
-                                  Map<String, Arg> knownConstants) {
+    public Map<Var, Arg> constantFold(String enclosingFnName,
+                                  Map<Var, Arg> knownConstants) {
       return null;
     }
     
     @Override
-    public Instruction constantReplace(Map<String, Arg> knownConstants) {
+    public Instruction constantReplace(Map<Var, Arg> knownConstants) {
       return null;
     }
     
     @Override
-    public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-              Set<String> unmappedVars, boolean waitForClose) {
+    public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
+              Set<Var> unmappedVars, boolean waitForClose) {
       // See which arguments are closed
       boolean allClosed = true;
       if (!waitForClose) {
         for (int i = 0; i < this.inputs.size(); i++) {
           Var in = this.inputs.get(i);
-          if (closedVars.contains(in.name())) {
+          if (closedVars.contains(in)) {
             this.closedInputs.set(i, true);
           } else {
             allClosed = false;
@@ -2499,10 +2512,10 @@ public class ICInstructions {
         }
       } else if (op == Opcode.CALL_SYNC) {
         // Can't block because we need to enter the function immediately
-        return Collections.emptyList();
+        return Var.NONE;
       } else if (op == Opcode.CALL_CONTROL ) {
         //TODO: should see which arguments are blocking
-        return Collections.emptyList();
+        return Var.NONE;
       }
       return blocksOn;
     }
@@ -2598,7 +2611,7 @@ public class ICInstructions {
     }
   
     @Override
-    public void renameVars(Map<String, Arg> renames) {
+    public void renameVars(Map<Var, Arg> renames) {
       ICUtil.replaceVarsInList(renames, outputs, false);
       ICUtil.replaceOpargsInList(renames, inputs);
     }
@@ -2607,7 +2620,7 @@ public class ICInstructions {
       return this.functionName;
     }
     @Override
-    public void renameInputs(Map<String, Arg> renames) {
+    public void renameInputs(Map<Var, Arg> renames) {
       ICUtil.replaceOpargsInList(renames, inputs);
     }
   
@@ -2628,28 +2641,28 @@ public class ICInstructions {
     }
   
     @Override
-    public Map<String, Arg> constantFold(String enclosingFnName,
-                                  Map<String, Arg> knownConstants) {
+    public Map<Var, Arg> constantFold(String enclosingFnName,
+                                  Map<Var, Arg> knownConstants) {
       // Replace any variables for which constant values are known
       ICUtil.replaceOpargsInList(knownConstants, inputs);
       return null;
     }
     
-    static ComputedValue makeArraySizeComputedValue(Arg arr, Arg size) {
-      assert(Types.isArray(arr.getType()));
+    static ComputedValue makeArraySizeComputedValue(Var arr, Arg size) {
+      assert(Types.isArray(arr.type()));
       assert(size.isImmediateInt());
       return new ComputedValue(Opcode.CALL_BUILTIN_LOCAL, Builtins.ARRAY_SIZE,
-                               arr, size, true);
+                               Arg.createVar(arr), size, true);
     }
     
     @Override
-    public Instruction constantReplace(Map<String, Arg> knownConstants) {
+    public Instruction constantReplace(Map<Var, Arg> knownConstants) {
       return null;
     }
     
     @Override
-    public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-            Set<String> unmappedVars, boolean waitForClose) {
+    public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
+            Set<Var> unmappedVars, boolean waitForClose) {
       return null; // already immediate
     }
 
@@ -2662,7 +2675,7 @@ public class ICInstructions {
     @Override
     public List<Var> getBlockingInputs() {
       // doesn't take futures as args
-      return Collections.emptyList();
+      return Var.NONE;
     }
 
     @Override
@@ -2694,7 +2707,7 @@ public class ICInstructions {
         // Array output must be incremented
         return Arrays.asList(getOutput(0));
       }
-      return Collections.emptyList();
+      return Var.NONE;
     }
   }
   
@@ -2724,7 +2737,7 @@ public class ICInstructions {
     }
 
     @Override
-    public void renameVars(Map<String, Arg> renames) {
+    public void renameVars(Map<Var, Arg> renames) {
       ICUtil.replaceOpargsInList(renames, args);
       ICUtil.replaceOpargsInList(renames, inFiles);
       ICUtil.replaceVarsInList(renames, outFiles, false);
@@ -2735,7 +2748,7 @@ public class ICInstructions {
     }
 
     @Override
-    public void renameInputs(Map<String, Arg> renames) {
+    public void renameInputs(Map<Var, Arg> renames) {
       ICUtil.replaceOpargsInList(renames, inFiles);
       ICUtil.replaceOpargsInList(renames, args);
       ICUtil.replaceOpargsInList(renames, outFileNames, true);
@@ -2797,8 +2810,8 @@ public class ICInstructions {
     }
 
     @Override
-    public Map<String, Arg> constantFold(String fnName,
-        Map<String, Arg> knownConstants) {
+    public Map<Var, Arg> constantFold(String fnName,
+        Map<Var, Arg> knownConstants) {
       // Replace variables for which values are known
       ICUtil.replaceOpargsInList(knownConstants, args);
       ICUtil.replaceOpargsInList(knownConstants, outFileNames, true);
@@ -2806,13 +2819,13 @@ public class ICInstructions {
     }
 
     @Override
-    public Instruction constantReplace(Map<String, Arg> knownConstants) {
+    public Instruction constantReplace(Map<Var, Arg> knownConstants) {
       return null;
     }
 
     @Override
-    public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-        Set<String> unmappedVars, boolean waitForClose) {
+    public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
+        Set<Var> unmappedVars, boolean waitForClose) {
       // Don't support reducing this
       return null;
     }
@@ -2874,23 +2887,23 @@ public class ICInstructions {
     private final ArrayList<Boolean> blockingVars;
 
     @Override
-    public void renameVars(Map<String, Arg> renames) {
+    public void renameVars(Map<Var, Arg> renames) {
       ICUtil.replaceVarsInList(renames, newLoopVars, false);
       ICUtil.replaceVarsInList(renames, loopUsedVars, true);
       ICUtil.replaceVarsInList(renames, keepOpenVars, true);
     }
     
     @Override
-    public void renameInputs(Map<String, Arg> renames) {
+    public void renameInputs(Map<Var, Arg> renames) {
       ICUtil.replaceVarsInList(renames, newLoopVars, false);
     }
 
     @Override
-    public void removeVars(Set<String> removeVars) {
-      assert(!removeVars.contains(newLoopVars.get(0).name()));
-      ICUtil.removeVarsInList(loopUsedVars, removeVars);
-      ICUtil.removeVarsInList(keepOpenVars, removeVars);
-      ICUtil.removeVarsInList(newLoopVars, removeVars);
+    public void removeVars(Set<Var> removeVars) {
+      assert(!removeVars.contains(newLoopVars.get(0)));
+      loopUsedVars.removeAll(removeVars);
+      keepOpenVars.removeAll(removeVars);
+      newLoopVars.removeAll(removeVars);
     }
 
     @Override
@@ -2942,34 +2955,34 @@ public class ICInstructions {
     }
   
     @Override
-    public Map<String, Arg> constantFold(String fnName,
-              Map<String, Arg> knownConstants) {
+    public Map<Var, Arg> constantFold(String fnName,
+              Map<Var, Arg> knownConstants) {
       // don't think I can do this?
       return null;
     }
   
     @Override
-    public Instruction constantReplace(Map<String, Arg> knownConstants) {
+    public Instruction constantReplace(Map<Var, Arg> knownConstants) {
       // don't think I can do this?
       return null;
     }
 
     @Override
-    public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-        Set<String> unmappedVars, boolean waitForClose) {
+    public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
+        Set<Var> unmappedVars, boolean waitForClose) {
       // See if we need to block on all inputs
-      HashSet<String> alreadyDone = new HashSet<String>();
+      Set<Var> alreadyDone = new HashSet<Var>();
       for (int i = 0; i < this.newLoopVars.size(); i++) {
         if (this.blockingVars.get(i)) {
           Var v = this.newLoopVars.get(i);
-          if (closedVars.contains(v.name())) {
+          if (closedVars.contains(v)) {
             // Don't need to block
             this.blockingVars.set(i, false);
-          } else if (alreadyDone.contains(v.name())) {
+          } else if (alreadyDone.contains(v)) {
             // In case of repeated elements
             this.blockingVars.set(i, false);
           } else {
-            alreadyDone.add(v.name());
+            alreadyDone.add(v);
           }
         }
       }
@@ -2989,7 +3002,7 @@ public class ICInstructions {
 
     @Override
     public List<Var> getBlockingInputs() {
-      return Collections.emptyList();
+      return Var.NONE;
     }
     
 
@@ -3010,7 +3023,7 @@ public class ICInstructions {
     }
 
     public void removeUsedVar(Var variable) {
-      ICUtil.removeVarInList(loopUsedVars, variable.name());
+      ICUtil.remove(loopUsedVars, variable);
     }
 
     public void removeUsedVars(Collection<Var> vars) {
@@ -3028,7 +3041,7 @@ public class ICInstructions {
     }
 
     public void removeKeepOpenVar(Var variable) {
-      ICUtil.removeVarInList(keepOpenVars, variable.name());
+      ICUtil.remove(keepOpenVars, variable);
     }
 
     public void removeKeepOpenVars(Collection<Var> vars) {
@@ -3081,13 +3094,13 @@ public class ICInstructions {
     }
   
     @Override
-    public void renameVars(Map<String, Arg> renames) {
+    public void renameVars(Map<Var, Arg> renames) {
       ICUtil.replaceVarsInList(renames, loopUsedVars, true);
       ICUtil.replaceVarsInList(renames, keepOpenVars, true);
     }
   
     @Override
-    public void renameInputs(Map<String, Arg> replacements) {
+    public void renameInputs(Map<Var, Arg> replacements) {
       // do nothing
     }
 
@@ -3126,21 +3139,21 @@ public class ICInstructions {
     }
   
     @Override
-    public Map<String, Arg> constantFold(String fnName,
-                Map<String, Arg> knownConstants) {
+    public Map<Var, Arg> constantFold(String fnName,
+                Map<Var, Arg> knownConstants) {
       // don't think I can do this?
       return null;
     }
   
     @Override
-    public Instruction constantReplace(Map<String, Arg> knownConstants) {
+    public Instruction constantReplace(Map<Var, Arg> knownConstants) {
       // don't think I can do this?
       return null;
     }
 
     @Override
-    public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-        Set<String> unmappedVars, boolean waitForClose) {
+    public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
+        Set<Var> unmappedVars, boolean waitForClose) {
       return null;
     }
 
@@ -3151,7 +3164,7 @@ public class ICInstructions {
    
     @Override
     public List<Var> getBlockingInputs() {
-      return Collections.emptyList();
+      return Var.NONE;
     }
 
     @Override
@@ -3177,7 +3190,7 @@ public class ICInstructions {
     }
 
     public void removeUsedVar(Var variable) {
-      ICUtil.removeVarInList(loopUsedVars, variable.name());
+      ICUtil.remove(loopUsedVars, variable);
     }
 
     public void removeUsedVars(Collection<Var> vars) {
@@ -3195,7 +3208,7 @@ public class ICInstructions {
     }
 
     public void removeKeepOpenVar(Var variable) {
-      ICUtil.removeVarInList(keepOpenVars, variable.name());
+      ICUtil.remove(keepOpenVars, variable);
     }
 
     public void removeKeepOpenVars(Collection<Var> vars) {
@@ -3299,16 +3312,16 @@ public class ICInstructions {
     }
 
     @Override
-    public void renameVars(Map<String, Arg> renames) {
-      if (output != null && renames.containsKey(this.output.name())) {
-        this.output = renames.get(this.output.name()).getVar();
+    public void renameVars(Map<Var, Arg> renames) {
+      if (output != null && renames.containsKey(this.output)) {
+        this.output = renames.get(this.output).getVar();
       }
       ICUtil.replaceOpargsInList(renames, inputs);
       priority = ICUtil.replaceOparg(renames, priority, true);
     }
 
     @Override
-    public void renameInputs(Map<String, Arg> renames) {
+    public void renameInputs(Map<Var, Arg> renames) {
       ICUtil.replaceOpargsInList(renames, inputs);
       priority = ICUtil.replaceOparg(renames, priority, true);
     }
@@ -3372,8 +3385,8 @@ public class ICInstructions {
     }
 
     @Override
-    public Map<String, Arg> constantFold(String fnName,
-                          Map<String, Arg> knownConstants) {
+    public Map<Var, Arg> constantFold(String fnName,
+                          Map<Var, Arg> knownConstants) {
       if (this.output == null) {
         return null;
       }
@@ -3389,7 +3402,7 @@ public class ICInstructions {
       for (int i = 0; i < inputs.size(); i++) {
         Arg in = inputs.get(i);
         if (in.isVar()) {
-          Arg c = knownConstants.get(in.getVar().name());
+          Arg c = knownConstants.get(in.getVar());
           constInputs.add(c);
           if (c != null && op == Opcode.LOCAL_OP) {
             // can replace local value arg with constant
@@ -3399,17 +3412,16 @@ public class ICInstructions {
           constInputs.add(in);
         }
       }
-      return Builtin.constantFold(this.subop, this.output.name(),
-          constInputs);
+      return Builtin.constantFold(this.subop, this.output, constInputs);
     }
 
     private static void compileTimeAssertCheck(BuiltinOpcode subop2,
-        List<Arg> inputs2, Map<String, Arg> knownConstants,
+        List<Arg> inputs2, Map<Var, Arg> knownConstants,
         String enclosingFnName) {
       if (subop2 == BuiltinOpcode.ASSERT) {
         Arg cond;
         if (inputs2.get(0).isVar()) {
-          cond = knownConstants.get(inputs2.get(0).getVar().name());
+          cond = knownConstants.get(inputs2.get(0).getVar());
         } else {
           cond = inputs2.get(0);
         }
@@ -3426,13 +3438,13 @@ public class ICInstructions {
         
         Arg a1;
         if (inputs2.get(0).isVar()) {
-          a1 = knownConstants.get(inputs2.get(0).getVar().name());
+          a1 = knownConstants.get(inputs2.get(0).getVar());
         } else {
           a1 = inputs2.get(0);
         }
         Arg a2;
         if (inputs2.get(1).isVar()) {
-          a2 = knownConstants.get(inputs2.get(1).getVar().name());
+          a2 = knownConstants.get(inputs2.get(1).getVar());
         } else {
           a2 = inputs2.get(0);
         } 
@@ -3449,13 +3461,12 @@ public class ICInstructions {
     }
 
     private static void compileTimeAssertWarn(String enclosingFnName,
-        String reason, Arg assertMsg, Map<String, Arg> knownConstants) {
+        String reason, Arg assertMsg, Map<Var, Arg> knownConstants) {
       String errMessage;
       if (assertMsg.isConstant()) {
         errMessage = assertMsg.getStringLit();
-      } else if (knownConstants.containsKey(assertMsg.getVar().name())) {
-        errMessage = knownConstants.get(assertMsg.getVar().name())
-                                                  .getStringLit();
+      } else if (knownConstants.containsKey(assertMsg.getVar())) {
+        errMessage = knownConstants.get(assertMsg.getVar()).getStringLit();
       } else {
         errMessage = "<RUNTIME ERROR MESSAGE>";
       }
@@ -3468,7 +3479,7 @@ public class ICInstructions {
     }
 
     @Override
-    public Instruction constantReplace(Map<String, Arg> knownConstants) {
+    public Instruction constantReplace(Map<Var, Arg> knownConstants) {
       // can replace short-circuitable operations with direct assignment
       if (Operators.isShortCircuitable(subop)) {
         return tryShortCircuit(knownConstants);
@@ -3476,14 +3487,14 @@ public class ICInstructions {
       return null;
     }
 
-    private Builtin tryShortCircuit(Map<String, Arg> knownConstants) {
+    private Builtin tryShortCircuit(Map<Var, Arg> knownConstants) {
       List<Arg> constArgs = new ArrayList<Arg>(2);
       List<Var> varArgs = new ArrayList<Var>(2);
       for (Arg in: inputs) {
         if (in.isConstant()) {
           constArgs.add(in);
         } else {
-          Arg constIn = knownConstants.get(in.getVar().name());
+          Arg constIn = knownConstants.get(in.getVar());
           if (constIn == null) {
             varArgs.add(in.getVar());
           } else {
@@ -3509,10 +3520,10 @@ public class ICInstructions {
       return null;
     }
     
-    public static Map<String, Arg> constantFold(BuiltinOpcode op, String outVarName,
+    public static Map<Var, Arg> constantFold(BuiltinOpcode op, Var outVar,
         List<Arg> constInputs) {
       Arg out = OpEvaluator.eval(op, constInputs);
-      return (out == null) ? null : Collections.singletonMap(outVarName, out);
+      return (out == null) ? null : Collections.singletonMap(outVar, out);
     }
     
     private static boolean hasLocalVersion(BuiltinOpcode op) {
@@ -3524,8 +3535,8 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmRequest canMakeImmediate(Set<String> closedVars,
-        Set<String> unmappedVars, boolean waitForClose) {
+    public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
+        Set<Var> unmappedVars, boolean waitForClose) {
       if (op == Opcode.LOCAL_OP) {
         // already is immediate
         return null; 
@@ -3540,7 +3551,7 @@ public class ICInstructions {
           for (Arg inarg: this.inputs) {
             assert(inarg.isVar());
             Var in = inarg.getVar();
-            if (!closedVars.contains(in.name())) {
+            if (!closedVars.contains(in)) {
               // Non-closed arg
               return null;
             }
@@ -3578,7 +3589,7 @@ public class ICInstructions {
     public List<Var> getBlockingInputs() {
       if (op == Opcode.LOCAL_OP) {
         // doesn't take futures as args
-        return Collections.emptyList();
+        return Var.NONE;
       } else {
         assert(op == Opcode.ASYNC_OP);
         // blocks on all scalar inputs
@@ -3661,7 +3672,7 @@ public class ICInstructions {
         }
         return res;
       }
-      return Collections.emptyList();
+      return Var.NONE;
     }
 
 

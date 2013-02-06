@@ -85,6 +85,10 @@ public class ICTree {
                                             new TreeMap<String, Arg>();
     private final HashMap<Arg, String> globalConstsInv = 
                                             new HashMap<Arg, String>();
+    /**
+     * Corresponding variable declarations
+     */
+    private final Set<Var> globalVars = new HashSet<Var>();
 
     private final ArrayList<Function> functions = new ArrayList<Function>();
     private final ArrayList<BuiltinFunction> builtinFuns = new ArrayList<BuiltinFunction>();
@@ -169,6 +173,15 @@ public class ICTree {
             + name);
       }
       globalConstsInv.put(val, name);
+      Var globalVar;
+      if (val.isVar()) {
+        globalVar = val.getVar();
+        assert(globalVar.defType() == DefType.GLOBAL_CONST);
+      } else {
+        globalVar = new Var(val.getType(), name, VarStorage.GLOBAL_CONST,
+                            DefType.GLOBAL_CONST);
+      }
+      globalVars.add(globalVar);
     }
     
     /** 
@@ -236,6 +249,10 @@ public class ICTree {
 
     public SortedMap<String, Arg> getGlobalConsts() {
       return Collections.unmodifiableSortedMap(globalConsts);
+    }
+    
+    public Collection<Var> getGlobalVars() {
+      return globalVars;
     }
     
     @Override
@@ -357,9 +374,8 @@ public class ICTree {
 
     public List<Boolean> getBlockingInputVector() {
       ArrayList<Boolean> res = new ArrayList<Boolean>(iList.size());
-      Set<String> blocks = Var.nameSet(this.blockingInputs);
       for (Var input: this.iList) {
-        boolean isBlocking = blocks.contains(input.name());
+        boolean isBlocking = blockingInputs.contains(input.name());
         res.add(isBlocking);
       }
       return res;
@@ -439,42 +455,20 @@ public class ICTree {
       return blockingInputs;
     }
     
-    public void addBlockingInput(String vName) {
-      Var v = Var.findByName(iList, vName);
-      if (v == null) {
-        throw new STCRuntimeError(vName + " is not the name of " +
+    public void addBlockingInput(Var var) {
+      if (!iList.contains(var)) {
+        throw new STCRuntimeError(var + " is not the name of " +
         " an input argument to function " + name + ":\n" + this);
       }
-      addBlockingInput(v);
+      for (Var i: blockingInputs) {
+        if (i.equals(var)) {
+          // already there
+          return;
+        }
+      }
+      blockingInputs.add(var);
     }
     
-    public void addBlockingInput(Var v) {
-      assert(v.defType() == DefType.INARG);
-      boolean oneOfArgs = false;
-      for (Var ia: iList) {
-        if (ia.name().equals(v.name())
-            && ia.type().equals(v.type())) {
-          oneOfArgs = true;
-          break;
-        }
-      }
-      if (oneOfArgs) {
-        for (Var i: blockingInputs) {
-          if (i.name().equals(v.name())) {
-            // already there
-            return;
-          }
-        }
-        blockingInputs.add(v);
-      } else {
-        StringBuilder fn = new StringBuilder();
-        prettyPrint(fn);
-        throw new STCRuntimeError("Tried to add blocking input" + v +
-        " which wasn't one of the input arguments of function: "
-            + this.iList + "\n" + fn.toString());
-      }
-    }
-
     public boolean isAsync() {
       return this.mode != TaskMode.SYNC;
     }
@@ -543,14 +537,14 @@ public class ICTree {
       return false;
     }
     
-    public void renameVars(Map<String, Arg> renames, boolean inputsOnly) {
+    public void renameVars(Map<Var, Arg> renames, boolean inputsOnly) {
       if (inputsOnly) {
         action.renameInputs(renames);
       } else {
         action.renameVars(renames);
       }
-      if (!inputsOnly && canMoveToAlias() && renames.containsKey(var.name())) {
-        Arg replacement = renames.get(var.name());
+      if (!inputsOnly && canMoveToAlias() && renames.containsKey(var)) {
+        Arg replacement = renames.get(var);
         assert(replacement.isVar()) : replacement;
         this.var = replacement.getVar();
       }
@@ -820,7 +814,7 @@ public class ICTree {
       ListIterator<CleanupAction> it = cleanupActions.listIterator();
       while (it.hasNext()) {
         CleanupAction ca = it.next();
-        if (ca.var().name().equals(var.name())) {
+        if (ca.var().equals(var)) {
           it.remove();
           if (target != null) {
             target.addCleanup(ca.var, ca.action);
@@ -838,7 +832,7 @@ public class ICTree {
      *      with new
      * @param renames OldName -> NewName
      */
-    public void renameVars(Map<String, Arg> renames, boolean inputsOnly) {
+    public void renameVars(Map<Var, Arg> renames, boolean inputsOnly) {
       if (!inputsOnly) {
         renameVarsInBlockVarsList(renames);
       }
@@ -858,7 +852,7 @@ public class ICTree {
       renameCleanupActions(renames, inputsOnly);
     }
 
-    private void renameVarsInBlockVarsList(Map<String, Arg> renames) {
+    private void renameVarsInBlockVarsList(Map<Var, Arg> renames) {
       // Replace definition of var
       ListIterator<Var> it = variables.listIterator();
       List<Var> changedMappingVars = new ArrayList<Var>();
@@ -866,15 +860,15 @@ public class ICTree {
         Var v = it.next();
 
         if (v.isMapped()) {
-          if (renames.containsKey(v.name())) {
+          if (renames.containsKey(v)) {
             throw new STCRuntimeError("Tried to replace mapped variable in " +
             "IC, this isn't supported so this probably indicates a " +
             "compiler bug");
           }
           
           // Check to see if string variable for mapping is replaced
-          if (renames.containsKey(v.mapping().name())) {
-            Arg replacement = renames.get(v.mapping().name());
+          if (renames.containsKey(v.mapping())) {
+            Arg replacement = renames.get(v.mapping());
             if (replacement.isVar()) {
               // Need to maintain variable ordering so that mapped vars appear
               // after the variables containing the mapping string. Remove
@@ -886,9 +880,8 @@ public class ICTree {
           }
         } else {
           // V isn't mapped
-          String varName = v.name();
-          if (renames.containsKey(varName)) {
-            Arg replacement = renames.get(varName);
+          if (renames.containsKey(v)) {
+            Arg replacement = renames.get(v);
             if (replacement.isVar()) {
               it.set(replacement.getVar());
             } else {
@@ -903,7 +896,7 @@ public class ICTree {
     }
 
 
-    public void renameCleanupActions(Map<String, Arg> renames,
+    public void renameCleanupActions(Map<Var, Arg> renames,
                                                 boolean inputsOnly) {
       for (CleanupAction a: cleanupActions) {
         a.renameVars(renames, inputsOnly);
@@ -917,7 +910,7 @@ public class ICTree {
      *            variable is not used as output for any instruction with a sideeffect,
      *            variable is not required for any constructs
      */
-    public void removeVars(Set<String> removeVars) {
+    public void removeVars(Set<Var> removeVars) {
       if (removeVars.isEmpty()) {
         return;
       }
@@ -934,7 +927,7 @@ public class ICTree {
           for (Var out: inst.getOutputs()) {
             // Doesn't make sense to assign to anything other than
             //  variable
-            if (! removeVars.contains(out.name())) {
+            if (!removeVars.contains(out)) {
               allRemoveable = false; break;
             }
           }
@@ -979,8 +972,8 @@ public class ICTree {
      * @param interdependencies list of vars which are interdependent: if one
      *              var in list is needed, all are needed
      */
-    public void findNeededVars(Set<String> stillNeeded,
-        Set<String> written, List<List<Var>> interdependencies) {
+    public void findNeededVars(Set<Var> stillNeeded,
+        Set<Var> written, List<List<Var>> interdependencies) {
       findThisBlockNeededVars(stillNeeded, written, interdependencies);
 
       // Recurse on sub-blocks
@@ -991,7 +984,7 @@ public class ICTree {
       }
     }
 
-    public void findThisBlockUsedVars(Set<String> usedVars) {
+    public void findThisBlockUsedVars(Set<Var> usedVars) {
       findThisBlockNeededVars(usedVars, usedVars, null);
     }
     
@@ -1002,13 +995,13 @@ public class ICTree {
      * @param written variables that are written in block
      * @param interdependencies interdependencies between output variables
      */
-    public void findThisBlockNeededVars(Set<String> stillNeeded,
-            Set<String> written, List<List<Var>> interdependencies) {
+    public void findThisBlockNeededVars(Set<Var> stillNeeded,
+            Set<Var> written, List<List<Var>> interdependencies) {
       // Need to hold on to mapped variables
       for (Var v: variables) {
         if (v.isMapped()) {
-          stillNeeded.add(v.name());
-          stillNeeded.add(v.mapping().name());
+          stillNeeded.add(v);
+          stillNeeded.add(v.mapping());
         }
       }
       for (Instruction i : instructions) {
@@ -1018,7 +1011,7 @@ public class ICTree {
       
       for (Continuation c: continuations) {
         for (Var v: c.requiredVars()) {
-          stillNeeded.add(v.name());
+          stillNeeded.add(v);
         }
       }
       
@@ -1027,7 +1020,7 @@ public class ICTree {
         updateEssentialVars(a.action(), stillNeeded, written,
             interdependencies, actionHasSideEffects);
         if (actionHasSideEffects) {
-          stillNeeded.add(a.var().name());
+          stillNeeded.add(a.var());
         }
       }
     }
@@ -1040,23 +1033,23 @@ public class ICTree {
      * @param interdependencies
      * @param hasSideEffects
      */
-    private void updateEssentialVars(Instruction inst, Set<String> essentialVars,
-        Set<String> writtenVars, List<List<Var>> interdependencies, boolean hasSideEffects) {
+    private void updateEssentialVars(Instruction inst, Set<Var> essentialVars,
+        Set<Var> writtenVars, List<List<Var>> interdependencies, boolean hasSideEffects) {
       // check which variables are still needed
       for (Arg oa: inst.getInputs()) {
         if (oa.isVar()) {
-          essentialVars.add(oa.getVar().name());
+          essentialVars.add(oa.getVar());
         }
       }
       
       for (Var v: inst.getOutputs()) {
-        writtenVars.add(v.name());
+        writtenVars.add(v);
       }
       
       // Can't eliminate instructions with side-effects
       if (hasSideEffects) {
         for (Var out: inst.getOutputs()) {
-          essentialVars.add(out.name());
+          essentialVars.add(out);
         }
       } else {
         // Can only eliminate one var if can eliminate all
@@ -1099,10 +1092,10 @@ public class ICTree {
     public void insertInline(Block b,
           ListIterator<Continuation> contPos,
           ListIterator<Instruction> pos) {
-      Set<String> varNames = Var.nameSet(this.variables);
+      Set<Var> varSet = new HashSet<Var>(this.variables);
       for (Var newVar: b.getVariables()) {
         // Check for duplicates (may be duplicate globals)
-        if (!varNames.contains(newVar.name())) {
+        if (!varSet.contains(newVar)) {
           variables.add(newVar);
         }
       }
@@ -1128,12 +1121,12 @@ public class ICTree {
       insertInline(b, false);
     }
 
-    public void removeVarDeclarations(Set<String> varNames) {
-      ICUtil.removeVarsInList(variables, varNames);
+    public void removeVarDeclarations(Set<Var> vars) {
+      variables.removeAll(vars);
       ListIterator<CleanupAction> it = cleanupActions.listIterator();
       while (it.hasNext()) {
         CleanupAction a = it.next();
-        if (varNames.contains(a.var.name())) {
+        if (vars.contains(a.var)) {
           it.remove();
         }
       }

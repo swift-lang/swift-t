@@ -37,8 +37,8 @@ public class ICOptimizer {
    * @return
    * @throws InvalidWriteException 
    */
-  public static Program optimize(Logger logger, PrintStream icOutput, 
-                          Program prog) throws UserException {
+  public static Program optimize(Logger logger, PrintStream icOutput,
+                                 Program prog) throws UserException {
     boolean logIC = icOutput != null;
     if (logIC) {
       prog.log(icOutput, "Initial IC before optimization");
@@ -51,9 +51,11 @@ public class ICOptimizer {
       throw new STCRuntimeError(ex.getMessage());
     }
      
-    preprocess(icOutput, logger, prog);
-    iterate(icOutput, logger, prog, nIterations);
-    postprocess(icOutput, logger, prog, nIterations);
+    boolean debug = Settings.getBoolean(Settings.COMPILER_DEBUG);
+    
+    preprocess(icOutput, logger, debug, prog);
+    iterate(icOutput, logger, prog, debug, nIterations);
+    postprocess(icOutput, logger, debug, prog, nIterations);
 
     if (logIC) {
       prog.log(icOutput, "Final optimized IC");
@@ -65,18 +67,20 @@ public class ICOptimizer {
    * Do preprocessing optimizer steps
    * @param icOutput
    * @param logger
+   * @param debug 
    * @param program
    * @throws Exception 
    */
   private static void preprocess(PrintStream icOutput, Logger logger,
-                                       Program program) throws UserException {
+                         boolean debug, Program program) throws UserException {
     OptimizerPipeline preprocess = new OptimizerPipeline(icOutput);
     // need variable names to be unique for rest of stages
     preprocess.addPass(new UniqueVarNames());
-    // Must fix up variables as frontend doesn't get it right
-    preprocess.addPass(new FixupVariables());
+    // Must fix up variables as frontend doesn't do it
     preprocess.addPass(new FlattenNested());
-    preprocess.addPass(Validate.standardValidator());
+    if (debug)
+      preprocess.addPass(Validate.standardValidator());
+
     preprocess.runPipeline(logger, program, 0);
   }
 
@@ -85,12 +89,13 @@ public class ICOptimizer {
    * @param icOutput
    * @param logger
    * @param prog
+   * @param debug 
    * @param iteration
    * @param nIterations
    * @throws Exception
    */
   private static void iterate(PrintStream icOutput, Logger logger,
-      Program prog, long nIterations) throws UserException {
+      Program prog, boolean debug, long nIterations) throws UserException {
     
     // FunctionInline is stateful
     FunctionInline inliner = new FunctionInline();
@@ -100,7 +105,6 @@ public class ICOptimizer {
       // First prune any unneeded functions
       pipe.addPass(inliner);
       pipe.addPass(new FixupVariables());
-      pipe.addPass(Validate.standardValidator()); //TODO: remove once inlining stable
       
       pipe.addPass(new ConstantFold());
       
@@ -125,24 +129,28 @@ public class ICOptimizer {
       // results can be cleaned up by forward dataflow
       if (iteration == nIterations - (nIterations / 4) - 3) {
         pipe.addPass(new Pipeline());
-        pipe.addPass(Validate.standardValidator());
+        if (debug)
+          pipe.addPass(Validate.standardValidator());
       }
       
       // Do merges near end since it can be detrimental to other optimizations
       boolean doWaitMerges = iteration == nIterations - (nIterations / 4) - 2;
       pipe.addPass(new WaitCoalescer(doWaitMerges));
       
-      pipe.addPass(Validate.standardValidator());
+      if (debug)
+        pipe.addPass(Validate.standardValidator());
       
       pipe.runPipeline(logger, prog, iteration);
     }
   }
 
   private static void postprocess(PrintStream icOutput, Logger logger,
-      Program prog, long nIterations) throws UserException {   
+      boolean debug, Program prog, long nIterations) throws UserException {   
     OptimizerPipeline postprocess = new OptimizerPipeline(icOutput);
+    // Add in all the variable passing annotations
+    postprocess.addPass(new FixupVariables());
     postprocess.addPass(new ConstantSharing());
-    postprocess.addPass(new ElimRefCounts());
+    postprocess.addPass(new RefcountPass());
     postprocess.addPass(Validate.finalValidator());
     postprocess.runPipeline(logger, prog,  nIterations - 1);
   }

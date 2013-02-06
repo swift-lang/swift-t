@@ -128,7 +128,6 @@ public class VarCreator {
         backend.structInsert(structToInit, f.getName(), tmp);
         path.pop();
       }
-      backend.structClose(structToInit);
     }
   }
 

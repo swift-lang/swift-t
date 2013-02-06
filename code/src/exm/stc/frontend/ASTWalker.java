@@ -17,7 +17,6 @@ package exm.stc.frontend;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
@@ -50,7 +49,6 @@ import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Redirects;
-import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayInfo;
@@ -300,11 +298,9 @@ public class ASTWalker {
       waitEvaled.add(res);
     }
     
-    ArrayList<Var> usedVars = new ArrayList<Var>();
     ArrayList<Var> keepOpenVars = new ArrayList<Var>();
     summariseBranchVariableUsage(context, 
-                    Arrays.asList(wait.getBlock().getVariableUsage()), 
-                                  usedVars, keepOpenVars);
+          Arrays.asList(wait.getBlock().getVariableUsage()), keepOpenVars);
     
     
     // Quick sanity check to see we're not directly blocking
@@ -320,15 +316,10 @@ public class ASTWalker {
     
     backend.startWaitStatement(
           context.getFunctionContext().constructName("explicitwait"),
-                      waitEvaled, usedVars, keepOpenVars, null,
+                      waitEvaled, null,
                       WaitMode.EXPLICIT, false, TaskMode.LOCAL_CONTROL);
     block(new LocalContext(context), wait.getBlock());
     backend.endWaitStatement();
-  }
-
-
-  private void block(Context context, SwiftAST tree) throws UserException {
-    block(context, tree, Collections.<Var>emptySet());
   }
   
   /**
@@ -336,13 +327,9 @@ public class ASTWalker {
    * logical code block (e.g. function bodies, condition bodies, etc) in the
    * program
    *
-   * @param context
-   *          a new context for this block
-   * @param noRefCount vars that shouldn't have refcoutn decremented on
-   *                    block exit
+   * @param context a new context for this block
    */
-  private void block(Context context, SwiftAST tree,
-                     Collection<Var> noRefcount) throws UserException {
+  private void block(Context context, SwiftAST tree) throws UserException {
     LogHelper.trace(context, "block start");
 
     if (tree.getType() != ExMParser.BLOCK) {
@@ -354,39 +341,7 @@ public class ASTWalker {
       walkStatement(context, stmt);
     }
 
-    cleanupBlockVars(context, noRefcount);
-
     LogHelper.trace(context, "block done");
-  }
-
-  
-  /**
-   * Do all required cleanup for block variables
-   *
-   * @param context
-   * @param noRefcount set of variables that should not have refcount
-   *        decremented 
-   * @throws UserException
-   * @throws UndefinedTypeException
-   */
-  private void cleanupBlockVars(Context context,
-          Collection<Var> noRefcount) 
-          throws UndefinedTypeException, UserException {
-    for (Var v : context.getArraysToClose()) {
-      assert(v.defType() != DefType.INARG);
-      assert(Types.isArray(v.type()));
-      backend.decrWriters(v, Arg.createIntLit(1));
-    }
-    
-    Set<String> noRefcountNames = Var.nameSet(noRefcount); 
-    for (Var v: context.getScopeVariables()) {
-      if (RefCounting.hasReadRefCount(v)) {
-        if (!noRefcountNames.contains(v.name()) && 
-            v.storage() != VarStorage.ALIAS) {
-          backend.decrRef(v, Arg.createIntLit(1));
-        }
-      }
-    }
   }
 
   private void ifStatement(Context context, SwiftAST tree)
@@ -400,15 +355,6 @@ public class ASTWalker {
         ifStmt.getCondition(), ifStmt.getCondType(context),
         false, null);
     assert (conditionVar != null);
-
-    // A list of variables that might be referenced in either branch
-    List<Var> usedVariables = new ArrayList<Var>();
-
-    // List of arrays that might be modified on one branch or the other
-    // IF an array is modified on a branch, then we have to make sure that
-    // it won't be prematurely closed
-    List<Var> keepOpenVars = new ArrayList<Var>();
-
     VariableUsageInfo thenVU = ifStmt.getThenBlock().checkedGetVariableUsage();
 
     List<VariableUsageInfo> branchVUs;
@@ -422,16 +368,10 @@ public class ASTWalker {
 
     // Check that condition var isn't assigned inside block - would be deadlock
     checkConditionalDeadlock(context, conditionVar, branchVUs);
-
-    summariseBranchVariableUsage(context, branchVUs, usedVariables,
-        keepOpenVars);
-
-    if (!usedVariables.contains(conditionVar))
-      usedVariables.add(conditionVar);
-
+    
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("if"), 
-              Arrays.asList(conditionVar), usedVariables, keepOpenVars, null,
+              Arrays.asList(conditionVar), null,
                 WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
 
     Context waitContext = new LocalContext(context);
@@ -483,36 +423,21 @@ public class ASTWalker {
    * @param context
    * @param branchVUs
    *          The variable usage info for all branches
-   * @param usedVariables
-   *          All variables read or written in a branch added here
-   * @param keepOpenVars
+   * @param writtenVars
    *          All vars that might be written are added here
    * @throws UserException
    * @throws UndefinedTypeException
    */
   private void summariseBranchVariableUsage(Context context,
-      List<VariableUsageInfo> branchVUs, List<Var> usedVariables,
-      List<Var> keepOpenVars) throws UndefinedTypeException, UserException {
+      List<VariableUsageInfo> branchVUs, List<Var> writtenVars)
+          throws UndefinedTypeException, UserException {
     for (Var v : context.getVisibleVariables()) {
-      Ternary isUsed = Ternary.FALSE;
-      for (VariableUsageInfo bvu : branchVUs) {
-        VInfo vi = bvu.lookupVariableInfo(v.name());
-        if (vi == null) {
-          isUsed = Ternary.or(isUsed, Ternary.FALSE);
-        } else {
-          isUsed = Ternary.or(isUsed, vi.isUsed());
-        }
-      }
-      if (isUsed != Ternary.FALSE) {
-        usedVariables.add(v);
-      }
-
-      // Secondly, see if it is an array that might be modified
+      // see if it is an array that might be modified
       if (Types.isArray(v.type())) {
         for (VariableUsageInfo bvu : branchVUs) {
           VInfo vi = bvu.lookupVariableInfo(v.name());
           if (vi != null && vi.isAssigned() != Ternary.FALSE) {
-            keepOpenVars.add(v);
+            writtenVars.add(v);
             break;
           }
         }
@@ -532,7 +457,7 @@ public class ASTWalker {
             }
           }
         }
-        keepOpenVars.addAll(alreadyFound);
+        writtenVars.addAll(alreadyFound);
       }
     }
 
@@ -547,16 +472,8 @@ public class ASTWalker {
     Switch sw = Switch.fromAST(context, tree);
     sw.typeCheck(context);
     
-    Var switchVar = exprWalker.eval(context, sw.getSwitchExpr(), Types.F_INT, true, null);
-
-    // A list of variables that might be referenced in either branch
-    List<Var> usedVariables = new ArrayList<Var>();
-
-    // List of vars that might be modified on one branch or the other and
-    // need to be kept open
-    // IF an array, e.g., is modified on a branch, then we have to make sure 
-    // that it won't be prematurely closed
-    List<Var> keepOpenVars = new ArrayList<Var>();
+    Var switchVar = exprWalker.eval(context, sw.getSwitchExpr(), Types.F_INT,
+                                    true, null);
 
     List<VariableUsageInfo> branchVUs = new ArrayList<VariableUsageInfo>();
     for (SwiftAST b : sw.getCaseBodies()) {
@@ -564,15 +481,11 @@ public class ASTWalker {
     }
 
     checkConditionalDeadlock(context, switchVar, branchVUs);
-    summariseBranchVariableUsage(context, branchVUs, usedVariables,
-        keepOpenVars);
-    if (!usedVariables.contains(switchVar))
-        usedVariables.add(switchVar);
 
     // Generate all of the code
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("switch"),
-                Arrays.asList(switchVar), usedVariables, keepOpenVars, null,
+                Arrays.asList(switchVar), null,
                 WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
 
     Context waitContext = new LocalContext(context);
@@ -628,30 +541,19 @@ public class ASTWalker {
       step = varCreator.createTmp(context, Types.F_INT);
       backend.assignInt(step, Arg.createIntLit(1));
     }
-    
-    List<Var> usedVariables = new ArrayList<Var>();
-    List<Var> keepOpenVars = new ArrayList<Var>();
-
-    // TODO: correct??
-    VariableUsageInfo bodyVU = loop.getBody().checkedGetVariableUsage();
-    summariseBranchVariableUsage(context, Arrays.asList(bodyVU),
-                                 usedVariables, keepOpenVars);
-    
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("foreach-range");
     
     // Need to pass in futures along with user vars
-    List<Var> waitUsedVariables = new ArrayList<Var>(usedVariables);
     List<Var> rangeBounds = Arrays.asList(start, end, step);
-    waitUsedVariables.addAll(rangeBounds);
     backend.startWaitStatement(fc.getFunctionName() + "-wait-range" + loopNum,
-             rangeBounds, waitUsedVariables, keepOpenVars,
-             null, WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
+             rangeBounds, null,
+             WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
     Context waitContext = new LocalContext(context);
     Var startVal = varCreator.fetchValueOf(waitContext, start);
     Var endVal = varCreator.fetchValueOf(waitContext, end);
     Var stepVal = varCreator.fetchValueOf(waitContext, step);
-    Context bodyContext = loop.setupLoopBodyContext(waitContext);
+    Context bodyContext = loop.setupLoopBodyContext(waitContext, true);
     
     // The per-iteration value of the range
     Var memberVal = varCreator.createValueOfVar(bodyContext,
@@ -661,14 +563,12 @@ public class ASTWalker {
     backend.startRangeLoop(fc.getFunctionName() + "-range" + loopNum,
             memberVal, counterVal,
             Arg.createVar(startVal), Arg.createVar(endVal), 
-            Arg.createVar(stepVal), usedVariables, keepOpenVars,
+            Arg.createVar(stepVal),
             loop.getDesiredUnroll(), loop.getSplitDegree());
     // Need to spawn off task per iteration
     if (!loop.isSyncLoop()) {
-      List<Var> waitUsedVars = new ArrayList<Var>(usedVariables);
-      waitUsedVars.add(memberVal);
       backend.startWaitStatement(fc.getFunctionName() + "range-iter" + loopNum,
-          Arrays.<Var>asList(), waitUsedVars, keepOpenVars, null,
+          Arrays.<Var>asList(), null,
           WaitMode.TASK_DISPATCH, false, TaskMode.CONTROL);
     }
     
@@ -701,17 +601,14 @@ public class ASTWalker {
       throws UserException, UndefinedTypeException {
     Var arrayVar = exprWalker.eval(context, loop.getArrayVarTree(), loop.findArrayType(context), true, null);
 
-    ArrayList<Var> usedVariables = new ArrayList<Var>();
-    ArrayList<Var> keepOpenVars = new ArrayList<Var>();
-
     VariableUsageInfo bodyVU = loop.getBody().checkedGetVariableUsage();
-    summariseBranchVariableUsage(context, Arrays.asList(bodyVU),
-        usedVariables, keepOpenVars);
+    List<Var> writtenVars = new ArrayList<Var>();
+    summariseBranchVariableUsage(context, Arrays.asList(bodyVU), writtenVars);
 
-    for (Var v: keepOpenVars) {
-      if (v.name().equals(arrayVar.name())) {
+    for (Var v: writtenVars) {
+      if (v.equals(arrayVar)) {
         throw new STCRuntimeError("Array variable "
-                  + v.name() + " is written in the foreach loop "
+                  + v + " is written in the foreach loop "
                   + " it is the loop array for - currently this " +
                   "causes a deadlock due to technical limitations");
       }
@@ -724,12 +621,10 @@ public class ASTWalker {
     Var realArray;
     Context outsideLoopContext;
     if (Types.isArrayRef(arrayVar.type())) {
-      List<Var> arrRefWaitUsedVars = new ArrayList<Var>(usedVariables);
-      arrRefWaitUsedVars.add(arrayVar);
       // If its a reference, wrap a wait() around the loop call
       backend.startWaitStatement(
           fc.getFunctionName() + "-foreach-refwait" + loopNum,
-          Arrays.asList(arrayVar), arrRefWaitUsedVars, keepOpenVars, null,
+          Arrays.asList(arrayVar), null,
           WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
 
       outsideLoopContext = new LocalContext(context);
@@ -742,27 +637,22 @@ public class ASTWalker {
     }
     
     // Block on array
-    ArrayList<Var> waitUsedVars = new ArrayList<Var>(usedVariables);
-    waitUsedVars.add(realArray);
     backend.startWaitStatement(
         fc.getFunctionName() + "-foreach-wait" + loopNum,
-        Arrays.asList(realArray), waitUsedVars, keepOpenVars, null,
+        Arrays.asList(realArray), null,
         WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
     
-    loop.setupLoopBodyContext(outsideLoopContext);
+    loop.setupLoopBodyContext(outsideLoopContext, false);
     Context loopBodyContext = loop.getBodyContext();
 
     backend.startForeachLoop(fc.getFunctionName() + "-foreach" + loopNum,
         realArray, loop.getMemberVar(), loop.getLoopCountVal(),
-        loop.getSplitDegree(), true, usedVariables, keepOpenVars);
+        loop.getSplitDegree(), true);
     // May need to spawn off each iteration as task - use wait for this
     if (!loop.isSyncLoop()) {
-      ArrayList<Var> iterUsedVars = new ArrayList<Var>(usedVariables);
-      if (loop.getLoopCountVal() != null)
-        iterUsedVars.add(loop.getLoopCountVal());
       backend.startWaitStatement(
           fc.getFunctionName() + "-foreach-spawn" + loopNum,
-          Arrays.<Var>asList(), iterUsedVars, keepOpenVars, null,
+          Arrays.<Var>asList(), null,
           WaitMode.TASK_DISPATCH, false, TaskMode.CONTROL);
     }
     // If the user's code expects a loop count var, need to create it here
@@ -773,11 +663,7 @@ public class ASTWalker {
       backend.assignInt(loopCountVar, Arg.createVar(loop.getLoopCountVal()));
     }
     
-    // Refcount of member var doesn't need to be decremented as wasn't
-    // incremeented
-    Set<Var> noRefcount = Collections.singleton(loop.getMemberVar());
-    
-    block(loopBodyContext, loop.getBody(), noRefcount);
+    block(loopBodyContext, loop.getBody());
     
     // Close spawn wait
     if (!loop.isSyncLoop()) {
@@ -799,11 +685,6 @@ public class ASTWalker {
     // Evaluate initial values of loop vars
     List<Var> initVals = evalLoopVarExprs(context, forLoop, 
                                                   forLoop.getInitExprs());
-    List<Var> usedVariables = new ArrayList<Var>();
-    List<Var> keepOpenVars = new ArrayList<Var>();
-    summariseBranchVariableUsage(context, 
-            Arrays.asList(forLoop.getBody().getVariableUsage()), 
-            usedVariables, keepOpenVars);
     
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("forloop");
@@ -821,14 +702,9 @@ public class ASTWalker {
                   lv.var.mapping());
         // Copy turbine ID
         backend.makeAlias(parentAlias, lv.var);
-        usedVariables.add(parentAlias);
         parentLoopVarAliases.put(lv.var.name(), parentAlias);
       }
     }
-    
-    LogHelper.debug(context, "usedVariables in forLoop: " + 
-            usedVariables.toString() + " at " + forLoop.getBody().getLine() 
-            + "." + forLoop.getBody().getCharPositionInLine());
     
     // Create context with loop variables
     Context loopIterContext = forLoop.createIterationContext(context);
@@ -869,7 +745,6 @@ public class ASTWalker {
     initVals.add(0, initCond);
     
     backend.startLoop(loopName, loopVars, definedHere, initVals, 
-                      usedVariables, keepOpenVars,
                       blockingVector);
     
     // get value of condVar
@@ -897,8 +772,7 @@ public class ASTWalker {
     Var nextCond = exprWalker.eval(loopBodyContext, 
               forLoop.getCondition(), condType, true, nextRenames);
     newLoopVars.add(0, nextCond);
-    backend.loopContinue(newLoopVars, usedVariables, keepOpenVars,
-                                                            blockingVector);
+    backend.loopContinue(newLoopVars, blockingVector);
     backend.startElseBlock();
     // Terminate loop, clean up open arrays and copy out final vals 
     // of loop vars
@@ -911,21 +785,15 @@ public class ASTWalker {
       }
     }
     
-    backend.loopBreak(usedVariables, keepOpenVars);
+    backend.loopBreak();
     backend.endIfStatement();
-    
-    // TODO: refcounting of loop variables and condition
     
     // finish loop construct
     backend.endLoop();
   }
-
-
   
   private void iterate(Context context, SwiftAST tree) throws UserException {
     IterateDescriptor loop = IterateDescriptor.fromAST(context, tree);
-    
-    
     
     //TODO: this is a little funny since the condition expr might be of type int,
     //    but this will work for time being
@@ -938,15 +806,8 @@ public class ASTWalker {
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("iterate");
     String loopName = fc.getFunctionName() + "-iterate-" + loopNum;
-    
-    List<Var> usedVariables = new ArrayList<Var>();
-    List<Var> keepOpenVars = new ArrayList<Var>();
-    summariseBranchVariableUsage(context, 
-            Arrays.asList(loop.getBody().getVariableUsage()), 
-            usedVariables, keepOpenVars);
 
     Context iterContext = loop.createIterContext(context);
-    
     
     // Start the loop construct with some initial values
     Var condArg = 
@@ -956,13 +817,13 @@ public class ASTWalker {
     List<Boolean> blockingVars = Arrays.asList(true, false);
     backend.startLoop(loopName, 
         Arrays.asList(condArg, loop.getLoopVar()), Arrays.asList(true, true),
-        Arrays.asList(falseV, zero), usedVariables, keepOpenVars, blockingVars);
+        Arrays.asList(falseV, zero), blockingVars);
     
     // get value of condVar
     Var condVal = varCreator.fetchValueOf(iterContext, condArg); 
     
     backend.startIfStatement(Arg.createVar(condVal), true);
-    backend.loopBreak(usedVariables, keepOpenVars);
+    backend.loopBreak();
     backend.startElseBlock();
     Context bodyContext = new LocalContext(iterContext);
     block(bodyContext, loop.getBody());
@@ -987,11 +848,8 @@ public class ASTWalker {
         Arrays.asList(Arg.createVar(loop.getLoopVar()), Arg.createVar(one)),
         null);
     
-    backend.loopContinue(Arrays.asList(nextCond, nextCounter), 
-        usedVariables, keepOpenVars, blockingVars);
+    backend.loopContinue(Arrays.asList(nextCond, nextCounter), blockingVars);
 
-    // TODO: refcounting of loop variables and condition
-    
     backend.endIfStatement();
     backend.endLoop();
   }
@@ -1099,9 +957,6 @@ public class ASTWalker {
 
     Var var = varCreator.createVariable(context, definedType, 
         vDesc.getName(), VarStorage.STACK, DefType.LOCAL_USER, mappedVar);
-
-    // Might need to close if array or struct containing array
-    exprWalker.flagDeclaredVarForClosing(context, var);
     return var;
   }
 
@@ -1372,8 +1227,8 @@ public class ASTWalker {
             assert(Types.isArrayRef(lvalArr.type()));
             mVar = varCreator.createTmpAlias(context, 
                                   new RefType(memberType));
-            backend.arrayRefCreateNestedImm(mVar, lvalArr, 
-                Arg.createIntLit(arrIx), origLval.var);
+            backend.arrayRefCreateNestedImm(mVar, origLval.var, 
+                lvalArr, Arg.createIntLit(arrIx));
           }
 
         } else {
@@ -1477,15 +1332,15 @@ public class ASTWalker {
         afterActions.addFirst(new Runnable() {
           @Override
           public void run() {
-            backend.arrayRefInsertImm(lvalVar,
-                      arr, Arg.createIntLit(arrIx), origLval.var);
+            backend.arrayRefInsertImm(origLval.var,
+                      arr, Arg.createIntLit(arrIx), lvalVar);
           }});
       } else {
         afterActions.addFirst(new Runnable() {
           @Override
           public void run() {
-            backend.arrayInsertImm(lvalVar, arr, 
-                Arg.createIntLit(arrIx));
+            backend.arrayInsertImm(arr, Arg.createIntLit(arrIx), 
+                lvalVar);
           }});
       }
     } else {
@@ -1496,14 +1351,14 @@ public class ASTWalker {
         afterActions.addFirst(new Runnable() {
           @Override
           public void run() {
-            backend.arrayRefInsertFuture(lvalVar, arr, 
-                                              indexVar, origLval.var);
+            backend.arrayRefInsertFuture(origLval.var, arr, 
+                                              indexVar, lvalVar);
           }});
       } else {
         afterActions.addFirst(new Runnable() {
           @Override
           public void run() {
-            backend.arrayInsertFuture(lvalVar, arr, indexVar);
+            backend.arrayInsertFuture(arr, indexVar, lvalVar);
           }});
       }
     }
@@ -1840,19 +1695,7 @@ public class ASTWalker {
     TaskMode mode = context.hasFunctionProp(function, FnProp.SYNC) ?
                           TaskMode.SYNC : TaskMode.CONTROL;
     backend.startFunction(function, oList, iList, mode);
-    
-    
-    if (mode != TaskMode.SYNC) {
-      // Make sure output arrays get closed if function runs as separate task
-      for (Var o: oList) {
-        exprWalker.flagDeclaredVarForClosing(functionContext, o);
-      }
-    }
-
-    Set<Var> allArgs = new HashSet<Var>();
-    allArgs.addAll(iList);
-    allArgs.addAll(oList);
-    block(functionContext, block, allArgs);
+    block(functionContext, block);
     backend.endFunction();
 
     LogHelper.debug(context, "compile function: done: " + function);
@@ -1961,16 +1804,11 @@ public class ASTWalker {
     Map<String, Var> fileNames = wait.val1; 
     List<Var> waitVars = wait.val2;
     
-    List<Var> passIn = new ArrayList<Var>();
-    passIn.addAll(fileNames.values());
-    passIn.addAll(args);
-    
     // use wait to wait for data then dispatch task to worker
     String waitName = context.getFunctionContext().constructName("app-leaf");
     // do deep wait for array args
-    backend.startWaitStatement(waitName, waitVars, passIn,
-        Collections.<Var>emptyList(), null, WaitMode.TASK_DISPATCH,
-        true, TaskMode.LEAF);
+    backend.startWaitStatement(waitName, waitVars,
+        null, WaitMode.TASK_DISPATCH, true, TaskMode.LEAF);
     // On worker, just execute the required command directly
     Pair<List<Arg>, Redirects<Arg>> retrieved = retrieveAppArgs(context,
                                           args, redirFutures, fileNames);

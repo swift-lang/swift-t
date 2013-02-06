@@ -78,6 +78,7 @@ public class Settings
   
   public static final String LOG_FILE = "stc.log.file";
   public static final String LOG_TRACE = "stc.log.trace";
+  public static final String COMPILER_DEBUG = "stc.compiler-debug";
 
   private static final Properties properties;
   static {
@@ -91,6 +92,7 @@ public class Settings
     defaults.setProperty(OUTPUT_FILENAME, "");
     defaults.setProperty(STC_HOME, "");
     defaults.setProperty(TURBINE_HOME, "");
+    defaults.setProperty(COMPILER_DEBUG, "true");
     
     // Code optimisation settings - defaults
     defaults.setProperty(OPT_FLATTEN_NESTED, "true");
@@ -201,6 +203,7 @@ public class Settings
     getBoolean(TURBINE_NO_STACK_VARS);
     getBoolean(EXPERIMENTAL_REFCOUNTING);
     getBoolean(AUTO_DECLARE);
+    getBoolean(COMPILER_DEBUG);
 
     getLong(OPT_MAX_ITERATIONS);
 

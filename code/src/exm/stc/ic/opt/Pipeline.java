@@ -123,21 +123,21 @@ public class Pipeline extends FunctionOptimizerPass {
   private static int heuristicCost(Logger logger, Block curr,
                                    WaitStatement cand) {
 
-    Set<String> varsReadByChildTask = new HashSet<String>();
+    Set<Var> varsReadByChildTask = new HashSet<Var>();
     
     // Work out what vars are read by child
     // TODO: for thoroughness could go deeper into sync continuations
     for (Instruction childI: cand.getBlock().getInstructions()) {
       for (Arg in: childI.getInputs()) {
         if (in.isVar()) {
-          varsReadByChildTask.add(in.getVar().name());
+          varsReadByChildTask.add(in.getVar());
         }
       }
     }
     
     int cost = 0;
     for (Var passed: cand.getPassedInVars()) {
-      if (varsReadByChildTask.contains(passed.name())) {
+      if (varsReadByChildTask.contains(passed)) {
         cost += costOfPassing(logger, passed.type());
       }
     }

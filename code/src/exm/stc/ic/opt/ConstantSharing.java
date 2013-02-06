@@ -56,8 +56,6 @@ public class ConstantSharing implements OptimizerPass {
                                       throws InvalidOptionException {
     for (Function f: prog.getFunctions()) {
       makeConstantsGlobal(logger, prog, f.getMainblock());
-      // Fixup variable passing to avoid unnecessarily passing constants
-      FixupVariables.fixupVariablePassing(logger, prog, f);
     }
   }
 
@@ -70,18 +68,16 @@ public class ConstantSharing implements OptimizerPass {
     logger.debug("Making constant futures shared globals");
     HashMap<String, Var> localDeclsOfGlobalVars = 
           new HashMap<String, Var>();
-    HashMap<String, Arg> knownConstants = new HashMap<String, Arg>();
+    HashMap<Var, Arg> knownConstants = new HashMap<Var, Arg>();
     boolean changed = false;
     
     ConstantFold.findBlockConstants(logger, block, knownConstants, true, true);
     
-    HashMap<String, Arg> globalReplacements = 
-                            new HashMap<String, Arg>();
+    HashMap<Var, Arg> globalReplacements = new HashMap<Var, Arg>();
                   
-    for (Entry<String, Arg> c: knownConstants.entrySet()) {
-      String oldName = c.getKey();
+    for (Entry<Var, Arg> c: knownConstants.entrySet()) {
+      Var oldVar = c.getKey();
       // Remove from this block's variable entries 
-      
       Arg val = c.getValue();
       Var glob = null;
       String globName = prog.invLookupGlobalConst(val);
@@ -98,7 +94,7 @@ public class ConstantSharing implements OptimizerPass {
         localDeclsOfGlobalVars.put(globName, glob);
         changed = true;
       }
-      globalReplacements.put(oldName, Arg.createVar(glob));
+      globalReplacements.put(oldVar, Arg.createVar(glob));
     }
     block.renameVars(globalReplacements, false);
     

@@ -792,56 +792,56 @@ public class SwigcGenerator implements CompilerBackend
 
   @Override
   public void arrayCreateNestedFuture(Var arrayResult,
-      Var arrayVar, Var indexVar) {
-    assert(Types.isArray(arrayVar.type()));
+      Var array, Var ix) {
+    assert(Types.isArray(array.type()));
     assert(Types.isArrayRef(arrayResult.type()));
     assert(arrayResult.storage() == VarStorage.ALIAS);
 
     TclTree t = Turbine.containerCreateNested(
-        prefixVar(arrayResult.name()), prefixVar(arrayVar.name()),
-        prefixVar(indexVar.name()));
+        prefixVar(arrayResult.name()), prefixVar(array.name()),
+        prefixVar(ix.name()));
     pointStack.peek().add(t);
   }
 
   @Override
   public void arrayRefCreateNestedFuture(Var arrayResult,
-      Var arrayRefVar, Var indexVar, Var outerArr) {
+      Var outerArray, Var arrayRefVar, Var ix) {
     assert(Types.isArrayRef(arrayRefVar.type()));
     assert(Types.isArrayRef(arrayResult.type()));
     assert(arrayResult.storage() == VarStorage.ALIAS);
 
     TclTree t = Turbine.containerRefCreateNested(
         prefixVar(arrayResult.name()), prefixVar(arrayRefVar.name()),
-        prefixVar(indexVar.name()));
+        prefixVar(ix.name()));
     pointStack.peek().add(t);
   }
 
 
   @Override
   public void arrayCreateNestedImm(Var arrayResult,
-      Var arrayVar, Arg arrIx) {
-    assert(Types.isArray(arrayVar.type()));
+      Var array, Arg ix) {
+    assert(Types.isArray(array.type()));
     assert(Types.isArray(arrayResult.type()));
     assert(arrayResult.storage() == VarStorage.ALIAS);
-    assert(arrIx.isImmediateInt());
+    assert(ix.isImmediateInt());
 
     TclTree t = Turbine.containerCreateNestedImmIx(
-        prefixVar(arrayResult.name()), prefixVar(arrayVar.name()),
-        opargToExpr(arrIx));
+        prefixVar(arrayResult.name()), prefixVar(array.name()),
+        opargToExpr(ix));
     pointStack.peek().add(t);
   }
 
   @Override
   public void arrayRefCreateNestedImm(Var arrayResult,
-      Var arrayVar, Arg arrIx, Var outerArr) {
-    assert(Types.isArrayRef(arrayVar.type()));
+      Var outerArray, Var array, Arg ix) {
+    assert(Types.isArrayRef(array.type()));
     assert(Types.isArrayRef(arrayResult.type()));
     assert(arrayResult.storage() == VarStorage.ALIAS);
-    assert(arrIx.isImmediateInt());
+    assert(ix.isImmediateInt());
 
     TclTree t = Turbine.containerRefCreateNestedImmIx(
-        prefixVar(arrayResult.name()), prefixVar(arrayVar.name()),
-        opargToExpr(arrIx));
+        prefixVar(arrayResult.name()), prefixVar(array.name()),
+        opargToExpr(ix));
     pointStack.peek().add(t);
   }
 
@@ -1067,46 +1067,46 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void arrayInsertFuture(Var iVar, Var arrayVar,
-                                                      Var indexVar) {
-    assert(Types.isArray(arrayVar.type()));
-    Type memberType = arrayVar.type().memberType();
-    if (Types.isRef(iVar.type())) {
-      assert(iVar.type().memberType().equals(memberType));
+  public void arrayInsertFuture(Var array, Var ix,
+                                                      Var member) {
+    assert(Types.isArray(array.type()));
+    Type memberType = array.type().memberType();
+    if (Types.isRef(member.type())) {
+      assert(member.type().memberType().equals(memberType));
       Sequence r = Turbine.arrayDerefStoreComputed(
-          prefixVar(iVar.name()), prefixVar(arrayVar.name()),
-          prefixVar(indexVar.name()));
+          prefixVar(member.name()), prefixVar(array.name()),
+          prefixVar(ix.name()));
 
       pointStack.peek().add(r);
     } else {
-      assert(iVar.type().equals(memberType));
+      assert(member.type().equals(memberType));
       Sequence r = Turbine.arrayStoreComputed(
-          prefixVar(iVar.name()), prefixVar(arrayVar.name()),
-          prefixVar(indexVar.name()));
+          prefixVar(member.name()), prefixVar(array.name()),
+          prefixVar(ix.name()));
 
       pointStack.peek().add(r);
     }
   }
 
   @Override
-  public void arrayRefInsertFuture(Var iVar, Var arrayVar,
-                                Var indexVar, Var outerArrayVar) {
-    assert(Types.isArrayRef(arrayVar.type()));
-    assert(Types.isArray(outerArrayVar.type()));
-    assert(Types.isInt(indexVar.type()));
-    Type memberType = arrayVar.type().memberType().memberType();
-    if (Types.isRef(iVar.type())) {
-      assert(iVar.type().memberType().equals(memberType));
+  public void arrayRefInsertFuture(Var outerArray, Var array,
+                                Var ix, Var member) {
+    assert(Types.isArrayRef(array.type()));
+    assert(Types.isArray(outerArray.type()));
+    assert(Types.isInt(ix.type()));
+    Type memberType = array.type().memberType().memberType();
+    if (Types.isRef(member.type())) {
+      assert(member.type().memberType().equals(memberType));
       Sequence r = Turbine.arrayRefDerefStoreComputed(
-          prefixVar(iVar.name()), prefixVar(arrayVar.name()),
-          prefixVar(indexVar.name()), prefixVar(outerArrayVar.name()));
+          prefixVar(member.name()), prefixVar(array.name()),
+          prefixVar(ix.name()), prefixVar(outerArray.name()));
 
       pointStack.peek().add(r);
     } else {
-      assert(iVar.type().equals(memberType));
+      assert(member.type().equals(memberType));
       Sequence r = Turbine.arrayRefStoreComputed(
-          prefixVar(iVar.name()), prefixVar(arrayVar.name()),
-          prefixVar(indexVar.name()), prefixVar(outerArrayVar.name()));
+          prefixVar(member.name()), prefixVar(array.name()),
+          prefixVar(ix.name()), prefixVar(outerArray.name()));
 
       pointStack.peek().add(r);
     }
@@ -1114,63 +1114,63 @@ public class SwigcGenerator implements CompilerBackend
 
 
   @Override
-  public void arrayInsertImm(Var iVar, Var arrayVar,
-        Arg arrIx) {
-    assert(Types.isArray(arrayVar.type()));
+  public void arrayInsertImm(Var array, Arg arrIx,
+        Var member) {
+    assert(Types.isArray(array.type()));
     if (!arrIx.isImmediateInt()) {
       throw new STCRuntimeError("Not immediate int: " + arrIx);
     }
     assert(arrIx.isImmediateInt());
 
-    Type memberType = arrayVar.type().memberType();
-    if (Types.isRef(iVar.type())) {
+    Type memberType = array.type().memberType();
+    if (Types.isRef(member.type())) {
       // Check that we get the right thing when we dereference it
-      if (!iVar.type().memberType().equals(memberType)) {
+      if (!member.type().memberType().equals(memberType)) {
         throw new STCRuntimeError("Type mismatch when trying to store " +
-            "from variable " + iVar.toString() + " into array " + arrayVar.toString());
+            "from variable " + member.toString() + " into array " + array.toString());
       }
       Sequence r = Turbine.arrayDerefStore(
-          prefixVar(iVar.name()), prefixVar(arrayVar.name()),
+          prefixVar(member.name()), prefixVar(array.name()),
           opargToExpr(arrIx));
       pointStack.peek().add(r);
     } else {
-      if (!iVar.type().equals(memberType)) {
+      if (!member.type().equals(memberType)) {
         throw new STCRuntimeError("Type mismatch when trying to store " +
-            "from variable " + iVar.toString() + " into array " + arrayVar.toString());
+            "from variable " + member.toString() + " into array " + array.toString());
       }
       Sequence r = Turbine.arrayStoreImmediate(
-          prefixVar(iVar.name()), prefixVar(arrayVar.name()),
+          prefixVar(member.name()), prefixVar(array.name()),
           opargToExpr(arrIx));
       pointStack.peek().add(r);
     }
   }
 
   @Override
-  public void arrayRefInsertImm(Var iVar, Var arrayVar,
-        Arg arrIx, Var outerArrayVar) {
-    assert(Types.isArrayRef(arrayVar.type()));
-    assert(Types.isArray(outerArrayVar.type()));
+  public void arrayRefInsertImm(Var outerArray, Var array,
+        Arg arrIx, Var member) {
+    assert(Types.isArrayRef(array.type()));
+    assert(Types.isArray(outerArray.type()));
     assert(arrIx.isImmediateInt());
 
-    Type memberType = arrayVar.type().memberType().memberType();
-    if (Types.isRef(iVar.type())) {
+    Type memberType = array.type().memberType().memberType();
+    if (Types.isRef(member.type())) {
       // Check that we get the right thing when we dereference it
-      if (!iVar.type().memberType().equals(memberType)) {
+      if (!member.type().memberType().equals(memberType)) {
         throw new STCRuntimeError("Type mismatch when trying to store " +
-            "from variable " + iVar.toString() + " into array " + arrayVar.toString());
+            "from variable " + member.toString() + " into array " + array.toString());
       }
       Sequence r = Turbine.arrayRefDerefStore(
-          prefixVar(iVar.name()), prefixVar(arrayVar.name()),
-          opargToExpr(arrIx), prefixVar(outerArrayVar.name()));
+          prefixVar(member.name()), prefixVar(array.name()),
+          opargToExpr(arrIx), prefixVar(outerArray.name()));
       pointStack.peek().add(r);
     } else {
-      if (!iVar.type().equals(memberType)) {
+      if (!member.type().equals(memberType)) {
         throw new STCRuntimeError("Type mismatch when trying to store " +
-            "from variable " + iVar.toString() + " into array " + arrayVar.toString());
+            "from variable " + member.toString() + " into array " + array.toString());
       }
       Sequence r = Turbine.arrayRefStoreImmediate(
-          prefixVar(iVar.name()), prefixVar(arrayVar.name()),
-          opargToExpr(arrIx), prefixVar(outerArrayVar.name()));
+          prefixVar(member.name()), prefixVar(array.name()),
+          opargToExpr(arrIx), prefixVar(outerArray.name()));
       pointStack.peek().add(r);
     }
   }

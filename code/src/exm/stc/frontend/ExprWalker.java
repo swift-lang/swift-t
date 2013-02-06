@@ -17,7 +17,6 @@ package exm.stc.frontend;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +39,6 @@ import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.OpType;
-import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -222,8 +220,7 @@ public class ExprWalker {
                                                                renames);
     } else {
       Var tmp = varCreator.createTmp(context, type, storeInStack, false);
-      flagDeclaredVarForClosing(context, tmp);
-      
+
       ArrayList<Var> childOList = new ArrayList<Var>(1);
       childOList.add(tmp);
       evalToVars(context, tree, childOList, renames);
@@ -354,12 +351,9 @@ public class ExprWalker {
       }
     } else if (Types.isArray(dst.type())) {
       String wName = context.getFunctionContext().constructName("copy-wait");
-      List<Var> keepOpenVars = Arrays.asList(dst);
-      List<Var> usedVars = Arrays.asList(src, dst);
       List<Var> waitVars = Arrays.asList(src);
       backend.startWaitStatement(wName, waitVars,
-              usedVars, keepOpenVars, null,
-              WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
+              null, WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
       Var derefed = varCreator.createTmpAlias(context, dst.type());
       backend.retrieveRef(derefed, src);
       copyArrayByValue(context, dst, derefed);
@@ -476,21 +470,15 @@ public class ExprWalker {
     // the argument evaluation is outside the wait statement
     Var priorityVal = null;
     boolean openedWait = false;
-    List<Var> keepOpen = RefCounting.filterWriteRefcount(oList);
     Context callContext = context;
     if (tree.getChildCount() == 3) {
       SwiftAST priorityT = tree.child(2);
       Var priorityFuture = eval(context, priorityT,
                             Types.F_INT, false, renames);
-      // used variables: any input or output args
-      List<Var> usedVariables = new ArrayList<Var>();
-      usedVariables.addAll(argVars);
-      usedVariables.addAll(oList);
       
       List<Var> waitVars = Arrays.asList(priorityFuture);
       backend.startWaitStatement(context.getFunctionContext().constructName("priority-wait"), 
-                        waitVars, usedVariables, keepOpen,
-                        null,
+                        waitVars, null,
                         WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
       openedWait = true;
       callContext = new LocalContext(context);
@@ -787,13 +775,9 @@ public class ExprWalker {
 
     if (waitContext != null) {
       FunctionContext fc = context.getFunctionContext();
-      List<Var> usedVars = new ArrayList<Var>();
-      usedVars.addAll(iList); usedVars.addAll(oList);
-      List<Var> keepOpen = RefCounting.filterWriteRefcount(oList);
       backend.startWaitStatement(
            fc.constructName("call-" + function),
-           waitVars, usedVars, keepOpen, 
-           priorityVal == null ? null : Arg.createVar(priorityVal),
+           waitVars, priorityVal == null ? null : Arg.createVar(priorityVal),
            WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
 
       assert(waitVars.size() == derefVars.size());
@@ -945,17 +929,14 @@ public class ExprWalker {
     Var member = copyContext.createAliasVariable(memType);
     Var ix = copyContext.createLocalValueVariable(Types.V_INT);
     
-    List<Var> keepOpen = Arrays.asList(dst);
-    List<Var> usedVars = Arrays.asList(src, dst);
     List<Var> waitVars = Arrays.asList(src);
     backend.startWaitStatement(
         context.getFunctionContext().constructName("arrcopy-wait"),
-        waitVars, usedVars, keepOpen, null,
-        WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
+        waitVars, null, WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
     backend.startForeachLoop(
             context.getFunctionContext().constructName("arrcopy"),
-            src, member, ix, -1, true, usedVars, keepOpen);
-    backend.arrayInsertImm(member, dst, Arg.createVar(ix));
+            src, member, ix, -1, true);
+    backend.arrayInsertImm(dst, Arg.createVar(ix), member);
     backend.endForeachLoop();
     backend.endWaitStatement();
   }
@@ -1003,44 +984,17 @@ public class ExprWalker {
    */
   private void dereferenceStruct(Context context, Var dst, Var src)
       throws UserException, UndefinedTypeException {
-    List<Var> usedVars = Arrays.asList(src, dst);
     List<Var> waitVars = Arrays.asList(src);
     backend.startWaitStatement( 
                     context.getFunctionContext().constructName("copystruct"), 
-                    waitVars, usedVars, 
-                    new ArrayList<Var>(), null, WaitMode.DATA_ONLY,
+                    waitVars, null, WaitMode.DATA_ONLY,
                     false, TaskMode.LOCAL);
     Var rValDerefed = varCreator.createTmp(context, 
             src.type().memberType(), false, true);
     backend.retrieveRef(rValDerefed, src);
     copyByValue(context, rValDerefed, dst, dst.type());
     backend.endWaitStatement();
-  }
- 
-
-
-
-  void flagDeclaredVarForClosing(Context context, Var var)
-                            throws UndefinedTypeException, UserException {
-    List<Pair<Var, VInfo>> foundArrs = null;
-
-    if (Types.isArray(var.type())) {
-      foundArrs = Collections.singletonList(Pair.create(var, (VInfo)null));
-    } else if (Types.isStruct(var.type())) {
-      // Might have to dig into struct and load members to see if we 
-      // should close it
-      foundArrs = new ArrayList<Pair<Var, VInfo>>();
-      findArraysInStruct(context, var, null, foundArrs);
-    }
-    
-    if (foundArrs != null) {        
-      for (Pair<Var, VInfo> p: foundArrs) {
-        Var arr = p.val1;
-        context.flagArrayForClosing(arr);
-      }
-    }
-  }
-  
+  } 
   
   void findArraysInStruct(Context context,
       Var root, VInfo structVInfo, List<Pair<Var, VInfo>> arrays)
@@ -1053,6 +1007,7 @@ public class ExprWalker {
       Var root, Var struct, VInfo structVInfo,
       Stack<String> fieldPath, List<Pair<Var, VInfo>> arrays) throws UndefinedTypeException,
                                                                       UserException {
+    assert(structVInfo != null);
     StructType vtype = (StructType)struct.type();
     for (StructField f: vtype.getFields()) {
       fieldPath.push(f.getName());
@@ -1063,9 +1018,7 @@ public class ExprWalker {
             structVInfo.getFieldVInfo(f.getName()) : null;
         arrays.add(Pair.create(fieldVar, fieldInfo));
       } else if (Types.isStruct(f.getType())) {
-        VInfo nestedVInfo = structVInfo != null ?
-            structVInfo.getFieldVInfo(f.getName()) : null;
-        assert(nestedVInfo != null || structVInfo == null);
+        VInfo nestedVInfo = structVInfo.getFieldVInfo(f.getName());
         Var field = structLookup(context, struct, f.getName(),
                                   false, root, fieldPath);
 

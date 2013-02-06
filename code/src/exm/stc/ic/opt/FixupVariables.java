@@ -16,6 +16,7 @@
 package exm.stc.ic.opt;
 
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map.Entry;
@@ -25,15 +26,21 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
-import exm.stc.common.util.HierarchicalMap;
+import exm.stc.common.util.HierarchicalSet;
+import exm.stc.common.util.Pair;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
+/**
+ * Fix up passInVars and keepOpenVars in IC.  Perform validation
+ * to make sure variables are visible.
+ */
 public class FixupVariables implements OptimizerPass {
 
   @Override
@@ -48,47 +55,59 @@ public class FixupVariables implements OptimizerPass {
 
   @Override
   public void optimize(Logger logger, Program program) {
-    fixupProgram(logger, program);
+    fixupProgram(logger, program, true);
   }
 
   /**
    * Fix up any variables missing from the usedVariables passed through
    * continuations. This is useful because it is easier to write other
    * optimizations if they are allowed to mess up the usedVariables
+   * @param updateLists modify tree and update pass and keep open lists
    */
-  public static void fixupProgram(Logger logger, Program prog) {
-    Set<String> referencedGlobals = new HashSet<String>();
+  public static void fixupProgram(Logger logger, Program prog,
+                                  boolean updateLists) {
+    Set<Var> referencedGlobals = new HashSet<Var>();
     for (Function fn : prog.getFunctions()) {
-      fixupFunction(logger, prog, fn, referencedGlobals);
+      fixupFunction(logger, prog, fn, referencedGlobals, updateLists);
     }
     
-    removeUnusedGlobals(prog, referencedGlobals);
+    if (updateLists)
+      removeUnusedGlobals(prog, referencedGlobals);
   }
 
   public static void fixupFunction(Logger logger, Program prog,
-          Function fn, Set<String> referencedGlobals) {
-    HierarchicalMap<String, Var> fnargs = new HierarchicalMap<String, Var>();
+          Function fn, Set<Var> referencedGlobals, boolean updateLists) {
+    HierarchicalSet<Var> fnargs = new HierarchicalSet<Var>();
     for (Var v : fn.getInputList()) {
-      fnargs.put(v.name(), v);
+      fnargs.add(v);
     }
     for (Var v : fn.getOutputList()) {
-      fnargs.put(v.name(), v);
+      fnargs.add(v);
     }
     for (Entry<String, Arg> e : prog.getGlobalConsts().entrySet()) {
       Arg a = e.getValue();
       Var v = new Var(a.getType(), e.getKey(),
           VarStorage.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
-      fnargs.put(e.getKey(), v);
+      fnargs.add(v);
     }
-    HashSet<String> neededVars = fixupBlockRec(logger,
-        fn, fn.getMainblock(), fnargs, referencedGlobals);
+    Pair<Set<Var>, Set<Var>> res = fixupBlockRec(logger,
+        fn, fn.getMainblock(), fnargs, referencedGlobals, updateLists);
+    
+    Set<Var> neededVars = res.val1;
     // Check that all variables referred to are available as args
-    neededVars.removeAll(Var.nameList(fn.getInputList()));
-    neededVars.removeAll(Var.nameList(fn.getOutputList()));
+    neededVars.removeAll(fn.getInputList());
+    neededVars.removeAll(fn.getOutputList());
   
     if (neededVars.size() > 0) {
       throw new STCRuntimeError("Reference in IC function "
           + fn.getName() + " to undefined variables " + neededVars.toString());
+    }
+    
+    Set<Var> written = res.val2;
+    written.removeAll(fn.getOutputList());
+    if (written.size() > 0) {
+      throw new STCRuntimeError("Unexpected write IC function "
+          + fn.getName() + " to variables " + written.toString());
     }
   }
 
@@ -99,42 +118,65 @@ public class FixupVariables implements OptimizerPass {
    * @param visible all
    *          variables logically visible in this block. will be modified in fn
    * @param referencedGlobals updated with names of any globals used
+   * @param updateLists 
    * @return
    */
-  private static HashSet<String> fixupBlockRec(Logger logger,
-      Function function, Block block, HierarchicalMap<String, Var> visible,
-      Set<String> referencedGlobals) {
+  private static Pair<Set<Var>, Set<Var>> fixupBlockRec(Logger logger,
+      Function function, Block block, HierarchicalSet<Var> visible,
+      Set<Var> referencedGlobals, boolean updateLists) {
 
-    // Remove global imports to be readded later if needed
-    removeGlobalImports(block);
+    if (updateLists)
+      // Remove global imports to be readded later if needed
+      removeGlobalImports(block);
     
-
     // blockVars: variables defined in this block
-    Set<String> blockVars = new HashSet<String>();
+    Set<Var> blockVars = new HashSet<Var>();
     
     // update block variables and visible variables
     for (Var v: block.getVariables()) {
-      blockVars.add(v.name());
-      visible.put(v.name(), v);
+      blockVars.add(v);
+      visible.add(v);
     }
 
-    // Work out which variables are needed which aren't locally declared
-    HashSet<String> neededVars = new HashSet<String>();
-    block.findThisBlockUsedVars(neededVars);
-
+    // Work out which variables are read/writte which aren't locally declared
+    Set<Var> written = new HashSet<Var>();
+    Set<Var> neededVars = new HashSet<Var>();
+    findBlockNeeded(block, written, neededVars);
     
     for (Continuation c : block.getContinuations()) {
       fixupContinuationRec(logger, function, c, visible, referencedGlobals,
-              blockVars, neededVars);
+              blockVars, neededVars, written, updateLists);
     }
 
+    // Outer scopes don't have anything to do with vars declared here
     neededVars.removeAll(blockVars);
+    written.removeAll(blockVars);
     
-    Set<String> globals = addGlobalImports(block, visible, neededVars);
+    Set<Var> globals = addGlobalImports(block, visible,
+                                          neededVars, updateLists);
 
     referencedGlobals.addAll(globals);
     neededVars.removeAll(globals);
-    return neededVars;
+    return Pair.create(neededVars, written);
+  }
+
+  /**
+   * 
+   * @param block
+   * @param written accumulate written vars with refcounts
+   * @param allNeeded accumulate all referenced vars from this block
+   */
+  private static void findBlockNeeded(Block block, Set<Var> written,
+      Set<Var> allNeeded) {
+    block.findThisBlockNeededVars(allNeeded, written, null);
+    allNeeded.addAll(written); // written are also needed
+    // Remove vars without write refcounts 
+    Iterator<Var> wrIt = written.iterator();
+    while (wrIt.hasNext()) {
+      if (!RefCounting.hasWriteRefCount(wrIt.next())) {
+        wrIt.remove();
+      }
+    }
   }
 
   /**
@@ -146,58 +188,82 @@ public class FixupVariables implements OptimizerPass {
    * @param referencedGlobals
    * @param outerBlockVars
    * @param neededVars
+   * @param updateLists 
    */
   private static void fixupContinuationRec(Logger logger, Function function,
-          Continuation continuation, HierarchicalMap<String, Var> visible,
-          Set<String> referencedGlobals, Set<String> outerBlockVars,
-          Set<String> neededVars) {
+          Continuation continuation, HierarchicalSet<Var> visible,
+          Set<Var> referencedGlobals, Set<Var> outerBlockVars,
+          Set<Var> neededVars, Set<Var> written, boolean updateLists) {
     // First see what variables the continuation defines inside itself
     List<Var> constructVars = continuation.constructDefinedVars();
-    List<String> constructVarNames = Var.nameList(constructVars);
     
     for (Block innerBlock : continuation.getBlocks()) {
-      HierarchicalMap<String, Var> childVisible = visible.makeChildMap();
+      HierarchicalSet<Var> childVisible = visible.makeChild();
       for (Var v : constructVars) {
-        childVisible.put(v.name(), v);
+        childVisible.add(v);
       }
       
-      HashSet<String> innerNeededVars = fixupBlockRec(logger,
-          function, innerBlock, childVisible, referencedGlobals);
-
+      Pair<Set<Var>, Set<Var>> inner = fixupBlockRec(logger,
+          function, innerBlock, childVisible, referencedGlobals, updateLists);
+      Set<Var> innerNeededVars = inner.val1;
+      Set<Var> innerWritten = inner.val2;
+      
       // construct will provide some vars
-      if (!constructVarNames.isEmpty()) {
-        innerNeededVars.removeAll(constructVarNames);
+      if (!constructVars.isEmpty()) {
+        innerNeededVars.removeAll(constructVars);
       }
 
       if (continuation.inheritsParentVars()) {
         // Might be some variables not yet defined in this scope
         innerNeededVars.removeAll(outerBlockVars);
         neededVars.addAll(innerNeededVars);
-      } else {
+      } else if (updateLists) {
+        // Update the passed in vars
         rebuildContinuationPassedVars(function, continuation, visible,
-                outerBlockVars, neededVars, innerNeededVars);
+              outerBlockVars, neededVars, innerNeededVars);
+        rebuildContinuationKeepOpenVars(function, continuation,
+              visible, outerBlockVars, written, innerWritten);
       }
     }
   }
 
   private static void rebuildContinuationPassedVars(Function function,
-          Continuation continuation, HierarchicalMap<String, Var> visibleVars,
-          Set<String> outerBlockVars, Set<String> outerNeededVars,
-          Set<String> innerNeededVars) {
+          Continuation continuation, HierarchicalSet<Var> visibleVars,
+          Set<Var> outerBlockVars, Set<Var> outerNeededVars,
+          Set<Var> innerNeededVars) {
     // Rebuild passed in vars
     continuation.clearPassedInVars();
     
-    for (String needed: innerNeededVars) {
+    for (Var needed: innerNeededVars) {
       if (!outerBlockVars.contains(needed)) {
         outerNeededVars.add(needed);
       }
-      Var v = visibleVars.get(needed);
-      if (v == null) {
+      if (!visibleVars.contains(needed)) {
         throw new STCRuntimeError("Variable " + needed
             + " should have been " + "visible but wasn't in "
             + function.getName());
       }
-      continuation.addPassedInVar(v);
+      continuation.addPassedInVar(needed);
+    }
+  }
+
+  private static void rebuildContinuationKeepOpenVars(Function function,
+      Continuation continuation, HierarchicalSet<Var> visible,
+      Set<Var> outerBlockVars, Set<Var> outerWritten, Set<Var> innerWritten) {
+    continuation.clearKeepOpenVars();
+    
+    for (Var v: innerWritten) {
+      // If not declared in this scope
+      if (!outerBlockVars.contains(v)) {
+        outerWritten.add(v);
+      }
+      if (!visible.contains(v)) {
+        throw new STCRuntimeError("Variable " + v
+            + " should have been " + "visible but wasn't in "
+            + function.getName());
+      }
+      assert(RefCounting.hasWriteRefCount(v));
+      continuation.addKeepOpenVar(v);
     }
   }
 
@@ -216,18 +282,19 @@ public class FixupVariables implements OptimizerPass {
    * @param block
    * @param visible
    * @param neededVars
-   * @return set of global var names
+   * @return set of global vars
    */
-  private static Set<String> addGlobalImports(Block block,
-          HierarchicalMap<String, Var> visible, Set<String> neededVars) {
+  private static Set<Var> addGlobalImports(Block block,
+          HierarchicalSet<Var> visible,
+          Set<Var> neededVars, boolean updateLists) {
     // if global constant missing, just add it
-    Set<String> globals = new HashSet<String>();
-    for (String needed: neededVars) {
-      if (visible.containsKey(needed)) {
-        Var v = visible.get(needed);
-        if (v.storage() == VarStorage.GLOBAL_CONST) {
+    Set<Var> globals = new HashSet<Var>();
+    for (Var needed: neededVars) {
+      if (visible.contains(needed)) {
+        if (needed.storage() == VarStorage.GLOBAL_CONST) {
           // Add at top in case used as mapping var
-          block.addVariable(v, true);
+          if (updateLists)
+            block.addVariable(needed, true);
           globals.add(needed);
         }
       }
@@ -235,15 +302,13 @@ public class FixupVariables implements OptimizerPass {
     return globals;
   }
 
-  private static void removeUnusedGlobals(Program prog, Set<String> referencedGlobals) {
+  private static void removeUnusedGlobals(Program prog,
+       Set<Var> referencedGlobals) {
     Set<String> globNames = new HashSet<String>(prog.getGlobalConsts().keySet());
-    globNames.removeAll(referencedGlobals);
+    Set<String> referencedGlobNames = Var.nameSet(referencedGlobals);
+    globNames.removeAll(referencedGlobNames);
     for (String unused: globNames) {
       prog.removeGlobalConst(unused);
     }
-  }
-
-  public static void fixupVariablePassing(Logger logger, Program prog, Function fn) {
-    fixupFunction(logger, prog, fn, new HashSet<String>());
   }
 }

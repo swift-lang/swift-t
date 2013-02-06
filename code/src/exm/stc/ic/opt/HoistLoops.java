@@ -21,15 +21,13 @@ import java.util.ListIterator;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
-import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
@@ -56,19 +54,17 @@ public class HoistLoops implements OptimizerPass {
   public void optimize(Logger logger, Program prog) {
     for (Function f: prog.getFunctions()) {
       Block mainBlock = f.getMainblock();
-      HierarchicalMap<String, Block> globalMap =
-                      new HierarchicalMap<String, Block>();
+      HierarchicalMap<Var, Block> globalMap =
+                      new HierarchicalMap<Var, Block>();
       // Global constants already written
-      for (String gc: prog.getGlobalConsts().keySet()) {
-        Var gcV = new Var(prog.lookupGlobalConst(gc).getType(), gc,
-                VarStorage.GLOBAL_CONST, DefType.GLOBAL_CONST);
-        if (trackWrites(gcV)) { 
-          globalMap.put(gc, null);
+      for (Var gv: prog.getGlobalVars()) {
+        if (trackWrites(gv)) { 
+          globalMap.put(gv, null);
         }
       }
       
       // Set up map for top block of function
-      HierarchicalMap<String, Block> writeMap = globalMap.makeChildMap();
+      HierarchicalMap<Var, Block> writeMap = globalMap.makeChildMap();
       
       // Update with input and output declarations
       updateMapWithDeclarations(mainBlock, writeMap, f.getInputList());
@@ -77,15 +73,10 @@ public class HoistLoops implements OptimizerPass {
       // Inputs are written elsewhere
       for (Var in: f.getInputList()) {
         if (trackWrites(in)) {
-          writeMap.put(in.name(), mainBlock);
+          writeMap.put(in, mainBlock);
         }
       }
-      boolean changed = hoistRec(logger, mainBlock, new ArrayList<Block>(), 0, 0,
-                                 writeMap);
-      
-      if (changed) {
-        FixupVariables.fixupVariablePassing(logger, prog, f);
-      }
+      hoistRec(logger, mainBlock, new ArrayList<Block>(), 0, 0, writeMap);
     }
     /*
     StringBuilder sb = new StringBuilder();
@@ -107,7 +98,7 @@ public class HoistLoops implements OptimizerPass {
    * @return true if change made
    */
   private static boolean hoistRec(Logger logger, Block curr, List<Block> ancestors,
-            int maxHoist, int maxLoopHoist, HierarchicalMap<String, Block> writeMap) {
+            int maxHoist, int maxLoopHoist, HierarchicalMap<Var, Block> writeMap) {
     boolean changed = false;
     // Update map with variables written in this block
     updateMapWithWrites(curr, writeMap);
@@ -124,12 +115,12 @@ public class HoistLoops implements OptimizerPass {
       int childHoist = canHoistThrough(c) ? maxHoist + 1 : 0;
       int childLoopHoist = c.isLoop() ? 0 : maxLoopHoist + 1;
       for (Block b: c.getBlocks()) {
-        HierarchicalMap<String, Block> childWriteMap = writeMap.makeChildMap();
+        HierarchicalMap<Var, Block> childWriteMap = writeMap.makeChildMap();
         
         // make sure loop iteration variables, etc are tracked
         for (Var v: c.constructDefinedVars()) {
           if (trackWrites(v)) {
-            childWriteMap.put(v.name(), b);
+            childWriteMap.put(v, b);
           }
         }
         
@@ -137,7 +128,7 @@ public class HoistLoops implements OptimizerPass {
         if (c.getType() == ContinuationType.WAIT_STATEMENT) {
           for (Var waitVar: ((WaitStatement)c).getWaitVars()) {
             if (trackWrites(waitVar)) {
-              childWriteMap.put(waitVar.name(), b);
+              childWriteMap.put(waitVar, b);
             }
           }
         }
@@ -153,12 +144,12 @@ public class HoistLoops implements OptimizerPass {
   }
 
   private static void updateMapWithWrites(Block curr,
-          HierarchicalMap<String, Block> writeMap) {
+          HierarchicalMap<Var, Block> writeMap) {
     for (Instruction inst: curr.getInstructions()) {
       for (Var out: inst.getOutputs()) {
         if (trackWrites(out)) {
           Logging.getSTCLogger().trace("inst: " + inst + " tracking " + out);
-          writeMap.put(out.name(), curr);
+          writeMap.put(out, curr);
         } else {
           Logging.getSTCLogger().trace("inst: " + inst + " not tracking " + out);
         }
@@ -169,12 +160,12 @@ public class HoistLoops implements OptimizerPass {
   }
 
   private static void updateMapWithDeclarations(Block block,
-      HierarchicalMap<String, Block> writeMap, List<Var> declarations) {
+      HierarchicalMap<Var, Block> writeMap, List<Var> declarations) {
     // We can immediately do any array operations unless it is an alias,
     // e.g. for a nested array
     for (Var declared: declarations) {
       if (Types.isArray(declared.type())) {
-        writeMap.put(declared.name(), block);
+        writeMap.put(declared, block);
       }
     }
   }
@@ -211,7 +202,7 @@ public class HoistLoops implements OptimizerPass {
 
   private static boolean tryHoist(Logger logger, Block curr,
           List<Block> ancestors, int maxHoist, int maxLoopHoist,
-          HierarchicalMap<String, Block> writeMap) {
+          HierarchicalMap<Var, Block> writeMap) {
     boolean changed = false;
     // See if we can lift any instructions out of block
     ListIterator<Instruction> it = curr.instructionIterator();
@@ -228,7 +219,7 @@ public class HoistLoops implements OptimizerPass {
       boolean canHoist = true;
       for (Arg in: inst.getInputs()) {
         if (in.isVar()) {
-          int depth = writeMap.getDepth(in.getVar().name());
+          int depth = writeMap.getDepth(in.getVar());
           if (depth < 0) {
             // Not written
             canHoist = false;
@@ -276,7 +267,7 @@ public class HoistLoops implements OptimizerPass {
   private static void doHoist(Logger logger,
           List<Block> ancestors, Block curr,
           Instruction inst, ListIterator<Instruction> currInstIt,
-          int hoistDepth, HierarchicalMap<String, Block> writeMap) {
+          int hoistDepth, HierarchicalMap<Var, Block> writeMap) {
     assert(hoistDepth > 0);
     assert(hoistDepth <= ancestors.size());
     Block target = ancestors.get(ancestors.size() - hoistDepth);
@@ -294,9 +285,9 @@ public class HoistLoops implements OptimizerPass {
     // need to update write map to reflect moved instruction
     for (Var out: inst.getOutputs()) {
       // Update map and parent maps
-      writeMap.remove(out.name(), false);
+      writeMap.remove(out, false);
       if (trackWrites(out)) {
-        writeMap.put(out.name(), target, hoistDepth);
+        writeMap.put(out, target, hoistDepth);
       }
     }
   }
@@ -328,7 +319,7 @@ public class HoistLoops implements OptimizerPass {
     while (varIt.hasNext()) {
       Var def = varIt.next();
       for (Var out: inst.getOutputs()) {
-        if (def.name().equals(out.name())) {
+        if (def.equals(out)) {
           varIt.remove();
           target.addVariable(def);
           moveVarCleanupAction(out, source, target);
@@ -348,7 +339,7 @@ public class HoistLoops implements OptimizerPass {
     ListIterator<CleanupAction> actIt = source.cleanupIterator();
     while (actIt.hasNext()) {
       CleanupAction ca = actIt.next();
-      if (ca.var().name().equals(var.name())) {
+      if (ca.var().equals(var)) {
         actIt.remove();
         target.addCleanup(ca.var(), ca.action());
       }

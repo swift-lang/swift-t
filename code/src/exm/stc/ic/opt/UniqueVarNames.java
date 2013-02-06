@@ -15,10 +15,12 @@
  */
 package exm.stc.ic.opt;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -52,7 +54,7 @@ public class UniqueVarNames implements OptimizerPass {
   @Override
   public void optimize(Logger logger, Program in) {
     for (Function f: in.getFunctions()) {
-      makeVarNamesUnique(f, in.getGlobalConsts().keySet());
+      makeVarNamesUnique(f, in.getGlobalVars());
     }
   }
 
@@ -60,15 +62,15 @@ public class UniqueVarNames implements OptimizerPass {
    * Make all names in block unique
    *
    * @param block
-   * @param usedNames Names already used
+   * @param existing existing variables
    */
-  private static void makeVarNamesUnique(Block block, Set<String> usedNames) {
-    HashMap<String, Arg> renames = new HashMap<String, Arg>();
+  private static void makeVarNamesUnique(Block block, Vars existing) {
+    HashMap<Var, Arg> renames = new HashMap<Var, Arg>();
     for (Var v: block.getVariables()) {
       if (v.defType() == DefType.GLOBAL_CONST) {
         continue;
       }
-      updateName(block, usedNames, renames, v);
+      updateName(block, existing, renames, v);
     }
   
     // Rename variables in Block (and nested blocks) according to map
@@ -77,7 +79,7 @@ public class UniqueVarNames implements OptimizerPass {
     // Recurse through nested blocks, making sure that all used variable
     // names are added to the usedNames
     for (Continuation c: block.getContinuations()) {
-      makeVarNamesUnique(usedNames, c);
+      makeVarNamesUnique(existing, c);
     }
   }
 
@@ -92,37 +94,36 @@ public class UniqueVarNames implements OptimizerPass {
     return newName;
   }
 
-  private static void makeVarNamesUnique(Set<String> usedNames,
+  private static void makeVarNamesUnique(Vars existing,
                                          Continuation cont) {
     // Update any continuation-defined vars
     List<Var> constructVars = cont.constructDefinedVars();
     if (!constructVars.isEmpty()) {
-      HashMap<String, Arg> renames = new HashMap<String, Arg>();
+      HashMap<Var, Arg> renames = new HashMap<Var, Arg>();
       for (Var v: cont.constructDefinedVars()) {
         assert(cont.getBlocks().size() == 1) : "Assume continuation with " +
         		"construct defined vars has only one block";
-        updateName(cont.getBlocks().get(0), usedNames, renames, v);
+        updateName(cont.getBlocks().get(0), existing, renames, v);
       }
       cont.replaceVars(renames, false, true);
     }
     
     for (Block b: cont.getBlocks()) {
-      makeVarNamesUnique(b, usedNames);
+      makeVarNamesUnique(b, existing);
     }
   }
 
-  static void updateName(Block block, Set<String> usedNames,
-          HashMap<String, Arg> renames, Var var) {
-    if (usedNames.contains(var.name())) {
-      String newName = chooseNewName(usedNames, var);
+  static void updateName(Block block, Vars existing,
+          HashMap<Var, Arg> renames, Var var) {
+    if (existing.usedNames.contains(var.name())) {
+      String newName = chooseNewName(existing.usedNames, var);
       Var newVar = new Var(var.type(), newName,
                       var.storage(), var.defType(), var.mapping());
-      renames.put(var.name(),
-          Arg.createVar(newVar));
+      renames.put(var, Arg.createVar(newVar));
       replaceCleanup(block, var, newVar);
-      usedNames.add(newName);
+      existing.addDeclaration(newVar);
     } else {
-      usedNames.add(var.name());
+      existing.addDeclaration(var);
     }
   }
 
@@ -130,22 +131,35 @@ public class UniqueVarNames implements OptimizerPass {
     ListIterator<CleanupAction> it = block.cleanupIterator();
     while (it.hasNext()) {
       CleanupAction ca = it.next();
-      if (ca.var().name().equals(var.name())) {
+      if (ca.var().equals(var)) {
         it.set(new CleanupAction(newVar, ca.action()));
       }
     }
   }
 
   public static void makeVarNamesUnique(Function in,
-            Set<String> globals) {
-    Set<String> usedNames = new HashSet<String>(globals);
+            Collection<Var> globals) {
+    Vars declarations = new Vars();
+    for (Var global: globals) {
+      declarations.addDeclaration(global);
+    }
     for (Var v: in.getInputList()) {
-      usedNames.add(v.name());
+      declarations.addDeclaration(v);
     }
     for (Var v: in.getOutputList()) {
-      usedNames.add(v.name());
+      declarations.addDeclaration(v);
     }
   
-    makeVarNamesUnique(in.getMainblock(), usedNames);
+    makeVarNamesUnique(in.getMainblock(), declarations);
+  }
+  
+  private static class Vars {
+    public final Set<String> usedNames = new HashSet<String>();
+    public final Map<String, Var> vars = new HashMap<String, Var>();
+    
+    public void addDeclaration(Var var) {
+      usedNames.add(var.name());
+      vars.put(var.name(), var);
+    }
   }
 }

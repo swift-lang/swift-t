@@ -390,7 +390,7 @@ class VariableUsageAnalyzer {
 
     // Then setup the variable usage info for the loop body,
     // taking into account the loop variables
-    Context loopContext = loop.setupLoopBodyContext(context);
+    Context loopContext = loop.setupLoopBodyContext(context, false);
 
     VariableUsageInfo initial = vu.createNested();
     

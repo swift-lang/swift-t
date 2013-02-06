@@ -18,7 +18,6 @@ package exm.stc.common.lang;
 import java.util.ArrayList;
 import java.util.List;
 
-import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Var.DefType;
 
 public class RefCounting {

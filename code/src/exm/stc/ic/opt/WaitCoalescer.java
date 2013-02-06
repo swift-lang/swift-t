@@ -17,11 +17,9 @@ package exm.stc.ic.opt;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map.Entry;
@@ -29,8 +27,8 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.common.Settings;
 import exm.stc.common.CompilerBackend.WaitMode;
+import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
@@ -185,12 +183,7 @@ public class WaitCoalescer implements OptimizerPass {
   @Override
   public void optimize(Logger logger, Program prog) {
     for (Function f: prog.getFunctions()) {
-      boolean changed = rearrangeWaits(logger, f, f.getMainblock(),
-                                       ExecContext.CONTROL);
-      if (changed) {
-        // This pass can mess up variable passing
-        FixupVariables.fixupVariablePassing(logger, prog, f);
-      }
+      rearrangeWaits(logger, f, f.getMainblock(), ExecContext.CONTROL);
     }
   }
 
@@ -252,12 +245,12 @@ public class WaitCoalescer implements OptimizerPass {
   private static boolean explodeFuncCalls(Logger logger, Function fn,
         ExecContext execCx, Block block) {
     boolean changed = false;
-    Set<String> empty = Collections.emptySet();
     ListIterator<Instruction> it = block.instructionIterator();
     while (it.hasNext()) {
       Instruction i = it.next();
       MakeImmRequest req = i.canMakeImmediate(
-              empty, Collections.<String>emptySet(), true);
+                              Collections.<Var>emptySet(),
+                              Collections.<Var>emptySet(), true);
       if (req != null && req.in.size() > 0) {
         if (logger.isTraceEnabled()) {
           logger.trace("Exploding " + i + " in function " + fn.getName());
@@ -274,7 +267,7 @@ public class WaitCoalescer implements OptimizerPass {
         }
         
         List<Var> outWriteRefcounted = RefCounting.filterWriteRefcount(
-                    req.out == null ? Collections.<Var>emptyList() : req.out);
+                    req.out == null ? Var.NONE : req.out);
         
         WaitStatement wait = new WaitStatement(
                 fn.getName() + "-" + i.shortOpName(),
@@ -296,12 +289,6 @@ public class WaitCoalescer implements OptimizerPass {
         OptUtil.fixupImmChange(block, wait.getBlock(), change, instBuffer,
                                           localOutputs, req.out);
         
-        if (change.keepOpen != null) {
-          for (Var keepOpen: change.keepOpen) {
-            wait.addKeepOpenVar(keepOpen);
-          }
-        }
-        
         // Remove old instruction, add new one inside wait block
         it.remove();
         wait.getBlock().addInstructions(instBuffer);
@@ -316,10 +303,10 @@ public class WaitCoalescer implements OptimizerPass {
     boolean fin;
     do {
       fin = true;
-      MultiMap<String, WaitStatement> waitMap = buildWaitMap(block);
+      MultiMap<Var, WaitStatement> waitMap = buildWaitMap(block);
       // Greedy approach: find most shared variable and
       //    merge wait based on that
-      String winner = mostSharedVar(waitMap);
+      Var winner = mostSharedVar(waitMap);
       if (winner != null) {
         // There is some shared variable between waits
         fin = false;
@@ -334,40 +321,33 @@ public class WaitCoalescer implements OptimizerPass {
         boolean allRecursive = true;
         
         // Find out which variables are in common with all waits
-        Set<String> intersection = null;
+        Set<Var> intersection = null;
         for (WaitStatement wait: waits) {
-          Set<String> nameSet = Var.nameSet(wait.getWaitVars());
+          Set<Var> waitVars = new HashSet<Var>(wait.getWaitVars());
           if (intersection == null) {
-            intersection = nameSet;
+            intersection = waitVars;
           } else {
-            intersection.retainAll(nameSet);
+            intersection.retainAll(waitVars);
           }
           explicit = explicit || wait.getMode() != WaitMode.DATA_ONLY;
           allRecursive = allRecursive && wait.isRecursive();
         }
         assert(intersection != null && !intersection.isEmpty());
         
-        List<Var> intersectionVs = ICUtil.getVarsByName(intersection,
-                                              waits.get(0).getWaitVars());
-        
         // Create a new wait statement waiting on the intersection
         // of the above.
         WaitStatement newWait = new WaitStatement(fn.getName() + "-optmerged",
-            intersectionVs, new ArrayList<Var>(0), new ArrayList<Var>(0), null,
+            new ArrayList<Var>(intersection), Var.NONE, Var.NONE, null,
             explicit ? WaitMode.EXPLICIT : WaitMode.DATA_ONLY, allRecursive,
             TaskMode.LOCAL);
-        
-        // List of variables that are kept open, or used
-        ArrayList<Var> usedVars = new ArrayList<Var>();
-        ArrayList<Var> keepOpen = new ArrayList<Var>();
-        
+
         // Put the old waits under the new one, remove redundant wait vars
         // Exception: don't eliminate task dispatch waits
         for (WaitStatement wait: waits) {
           if (allRecursive) {
-            wait.tryInline(Collections.<String>emptySet(), intersection);
+            wait.tryInline(Collections.<Var>emptySet(), intersection);
           } else {
-            wait.tryInline(intersection, Collections.<String>emptySet());
+            wait.tryInline(intersection, Collections.<Var>emptySet());
           }
           if (wait.getWaitVars().isEmpty() &&
               wait.getMode() != WaitMode.TASK_DISPATCH) {
@@ -376,16 +356,7 @@ public class WaitCoalescer implements OptimizerPass {
             wait.setParent(newWait.getBlock());
             newWait.getBlock().addContinuation(wait);
           }
-          keepOpen.addAll(wait.getKeepOpenVars());
-          usedVars.addAll(wait.getPassedInVars());
         }
-
-        ICUtil.removeDuplicates(keepOpen);
-        for (Var v: keepOpen) {
-          newWait.addKeepOpenVar(v);
-        }
-        ICUtil.removeDuplicates(usedVars);
-        newWait.addPassedInVars(usedVars);
         
         block.addContinuation(newWait);
         block.removeContinuations(waits);
@@ -396,18 +367,17 @@ public class WaitCoalescer implements OptimizerPass {
   }
 
   /**
-   * Build a map of <variable name> --> wait statements blocking on that value 
+   * Build a map of <variable> --> wait statements blocking on that value 
    * @param block
    * @return
    */
-  public static  MultiMap<String, WaitStatement> buildWaitMap(Block block) {
-    MultiMap<String, WaitStatement> waitMap =
-                        new MultiMap<String, WaitStatement>(); 
+  public static  MultiMap<Var, WaitStatement> buildWaitMap(Block block) {
+    MultiMap<Var, WaitStatement> waitMap = new MultiMap<Var, WaitStatement>(); 
     for (Continuation c: block.getContinuations()) {
       if (c.getType() == ContinuationType.WAIT_STATEMENT) {
         WaitStatement wait = (WaitStatement)c;
         for (Var v: wait.getWaitVars()) {
-          waitMap.put(v.name(), wait);
+          waitMap.put(v, wait);
         }
       }
     }
@@ -420,11 +390,11 @@ public class WaitCoalescer implements OptimizerPass {
    * @param waitMap
    * @return
    */
-  public static String mostSharedVar(
-          MultiMap<String, WaitStatement> waitMap) {
-    String winner = null;
+  public static Var mostSharedVar(
+          MultiMap<Var, WaitStatement> waitMap) {
+    Var winner = null;
     int winCount = 0;
-    for (Entry<String, List<WaitStatement>> e: waitMap.entrySet()) {
+    for (Entry<Var, List<WaitStatement>> e: waitMap.entrySet()) {
       List<WaitStatement> waits = e.getValue();
       if (waits.size() > 1) {
         if (winner == null || waits.size() > winCount) {
@@ -434,18 +404,6 @@ public class WaitCoalescer implements OptimizerPass {
       }
     }
     return winner;
-  }
-  
-  private static class AncestorContinuation {
-    private AncestorContinuation(Continuation continuation, Block block) {
-      super();
-      this.continuation = continuation;
-      this.block = block;
-    }
-    
-    public final Continuation continuation;
-    /** Block inside continuation */
-    public final Block block;
   }
   
   private static class PushDownResult {
@@ -462,7 +420,7 @@ public class WaitCoalescer implements OptimizerPass {
   private static boolean
           pushDownWaits(Logger logger, Function fn, Block block,
                                       ExecContext currContext) {
-    MultiMap<String, InstOrCont> waitMap = buildWaiterMap(block);
+    MultiMap<Var, InstOrCont> waitMap = buildWaiterMap(block);
     if (waitMap.isDefinitelyEmpty()) {
       // If waitMap is empty, can't push anything down, so just
       // shortcircuit
@@ -481,9 +439,9 @@ public class WaitCoalescer implements OptimizerPass {
       ExecContext newContext = canPushDownInto(c, currContext); 
       if (newContext != null) {
         for (Block innerBlock: c.getBlocks()) {
-          ArrayDeque<AncestorContinuation> ancestors =
-                                        new ArrayDeque<AncestorContinuation>();
-          ancestors.push(new AncestorContinuation(c, innerBlock));
+          ArrayDeque<Continuation> ancestors =
+                                        new ArrayDeque<Continuation>();
+          ancestors.push(c);
           PushDownResult pdRes = 
                pushDownWaitsRec(logger, fn, block, currContext, ancestors,
                                 innerBlock, newContext, waitMap);
@@ -500,9 +458,9 @@ public class WaitCoalescer implements OptimizerPass {
   private static PushDownResult pushDownWaitsRec(
                 Logger logger,  Function fn,
                 Block top, ExecContext topContext,
-                Deque<AncestorContinuation> ancestors, Block curr,
+                Deque<Continuation> ancestors, Block curr,
                 ExecContext currContext,
-                MultiMap<String, InstOrCont> waitMap) {
+                MultiMap<Var, InstOrCont> waitMap) {
     boolean changed = false;
     ArrayList<Continuation> pushedDown = new ArrayList<Continuation>();
     /* Iterate over all instructions in this descendant block */
@@ -521,7 +479,7 @@ public class WaitCoalescer implements OptimizerPass {
       
       // Relocate instructions which depend on output future of this instruction
       for (Var v: writtenFutures) {
-        if (waitMap.containsKey(v.name())) {
+        if (waitMap.containsKey(v)) {
           Pair<Boolean, Set<Continuation>> pdRes =
               relocateDependentInstructions(logger, top, topContext, ancestors, 
                                         curr, currContext, it,  waitMap, v);
@@ -536,7 +494,7 @@ public class WaitCoalescer implements OptimizerPass {
       ExecContext newContext = canPushDownInto(c, currContext);
       if (newContext != null) {
         for (Block innerBlock: c.getBlocks()) {
-          ancestors.push(new AncestorContinuation(c, innerBlock));
+          ancestors.push(c);
           PushDownResult pdRes = pushDownWaitsRec(logger, fn, top, topContext,
                 ancestors, innerBlock, newContext, waitMap);
           pushedDown.addAll(pdRes.relocated);
@@ -601,12 +559,12 @@ public class WaitCoalescer implements OptimizerPass {
   private static Pair<Boolean, Set<Continuation>> relocateDependentInstructions(
       Logger logger,
       Block ancestorBlock, ExecContext ancestorContext,
-      Deque<AncestorContinuation> ancestors,
+      Deque<Continuation> ancestors,
       Block currBlock, ExecContext currContext, ListIterator<Instruction> currBlockInstructions,
-      MultiMap<String, InstOrCont> waitMap, Var writtenV) {
+      MultiMap<Var, InstOrCont> waitMap, Var writtenV) {
     boolean changed = false;
     // Remove from outer block
-    List<InstOrCont> waits = waitMap.get(writtenV.name());
+    List<InstOrCont> waits = waitMap.get(writtenV);
     Set<Instruction> movedI = new HashSet<Instruction>();
     Set<Continuation> movedC = new HashSet<Continuation>();
     // Rely on later forward Dataflow pass to remove
@@ -651,12 +609,12 @@ public class WaitCoalescer implements OptimizerPass {
   }
 
   private static boolean relocateContinuation(
-      Deque<AncestorContinuation> ancestors, Block currBlock,
+      Deque<Continuation> ancestors, Block currBlock,
       ExecContext currContext, Set<Continuation> movedC, Continuation cont) {
     boolean canRelocate = true;
     // Check we're not relocating continuation into itself
-    for (AncestorContinuation ancestor: ancestors) {
-      if (cont == ancestor.continuation) {
+    for (Continuation ancestor: ancestors) {
+      if (cont == ancestor) {
         canRelocate = false;
         break;
       }
@@ -686,13 +644,12 @@ public class WaitCoalescer implements OptimizerPass {
       movedC.add(cont);
       // Doesn't make sense to push down synchronous continuations
       assert(cont.isAsync());
-      updateAncestorKeepOpen(ancestors, cont.getKeepOpenVars());
     }
     return canRelocate;
   }
 
   private static boolean relocateInstruction(
-      Deque<AncestorContinuation> ancestors, ExecContext currContext,
+      Deque<Continuation> ancestors, ExecContext currContext,
       ListIterator<Instruction> currBlockInstructions,
       Set<Instruction> movedI, Instruction inst) {
     boolean canRelocate = true;
@@ -717,45 +674,8 @@ public class WaitCoalescer implements OptimizerPass {
     if (canRelocate) {
       currBlockInstructions.add(inst);
       movedI.add(inst);
-      if (!keepOpenVars.isEmpty()) {
-        updateAncestorKeepOpen(ancestors, keepOpenVars);
-      }
     }
     return canRelocate;
-  }
-
-  private static void updateAncestorKeepOpen(
-      Deque<AncestorContinuation> ancestors, Collection<Var> keepOpenVars) {
-    Iterator<AncestorContinuation> it = ancestors.descendingIterator();
-    ArrayList<Var> remainingVars = new ArrayList<Var>(keepOpenVars);
-    while (it.hasNext()) {
-      AncestorContinuation ancestor = it.next();
-      
-      // if variable was defined in this scope, doesn't exist above
-      Set<String> defined = Var.nameSet(ancestor.block.getVariables());
-      ListIterator<Var> vit = remainingVars.listIterator();
-      while (vit.hasNext()) {
-        Var v = vit.next();
-        if (defined.contains(v.name())) {
-          vit.remove();
-        }
-      }
-
-      if (remainingVars.isEmpty()) {
-        return;
-      }
-      
-      // Add if missing
-      Continuation cont = ancestor.continuation;
-      if (cont.isAsync()) {
-        ArrayList<Var> newKeepOpen =
-                        new ArrayList<Var>(cont.getKeepOpenVars());
-        newKeepOpen.addAll(remainingVars);
-        ICUtil.removeDuplicates(newKeepOpen);
-        cont.clearKeepOpenVars();
-        cont.addKeepOpenVars(newKeepOpen);
-      }
-    }
   }
 
   /**
@@ -766,10 +686,10 @@ public class WaitCoalescer implements OptimizerPass {
    * @param removedI
    */
   private static void updateWaiterMap(
-          MultiMap<String, InstOrCont> waitMap, Set<Continuation> removedC,
+          MultiMap<Var, InstOrCont> waitMap, Set<Continuation> removedC,
       Set<Instruction> removedI) {
-    List<String> keysToRemove = new ArrayList<String>();
-    for (Entry<String, List<InstOrCont>> e: waitMap.entrySet()) {
+    List<Var> keysToRemove = new ArrayList<Var>();
+    for (Entry<Var, List<InstOrCont>> e: waitMap.entrySet()) {
       ListIterator<InstOrCont> it = e.getValue().listIterator();
       int count = 0;
       while (it.hasNext()) {
@@ -802,36 +722,36 @@ public class WaitCoalescer implements OptimizerPass {
     // Explicitly remove key so that we cna tell if map is empty
     // Do this outside loop to avoid concurrently modifying it while
     // we are iterating over it
-    for (String k: keysToRemove) {
+    for (Var k: keysToRemove) {
       waitMap.remove(k);
     }
   }
 
   private static ListFactory<InstOrCont> LL_FACT = 
                     new LinkedListFactory<InstOrCont>();
-  private static MultiMap<String, InstOrCont> buildWaiterMap(Block block) {
+  private static MultiMap<Var, InstOrCont> buildWaiterMap(Block block) {
     // Use linked list to support more efficient removal in middle of list
-    MultiMap<String, InstOrCont> waitMap =
-                        new MultiMap<String, InstOrCont>(LL_FACT); 
+    MultiMap<Var, InstOrCont> waitMap =
+                        new MultiMap<Var, InstOrCont>(LL_FACT); 
     findRelocatableBlockingInstructions(block, waitMap);
     findBlockingContinuations(block, waitMap);
     return waitMap;
   }
 
   private static void findBlockingContinuations(Block block,
-          MultiMap<String, InstOrCont> waitMap) {
+          MultiMap<Var, InstOrCont> waitMap) {
     for (Continuation c: block.getContinuations()) {
       List<BlockingVar> blockingVars = c.blockingVars();
       if (blockingVars != null) {
         for (BlockingVar v: blockingVars) {
-          waitMap.put(v.var.name(), new InstOrCont(c));
+          waitMap.put(v.var, new InstOrCont(c));
         }
       }
     }
   }
 
   private static void findRelocatableBlockingInstructions(Block block,
-          MultiMap<String, InstOrCont> waitMap) {
+          MultiMap<Var, InstOrCont> waitMap) {
     for (Instruction inst: block.getInstructions()) {
       // check all outputs are non-alias futures - if not can't safely reorder
       boolean canMove = true;
@@ -848,7 +768,7 @@ public class WaitCoalescer implements OptimizerPass {
         if (bi != null) {
           for (Var in: bi) {
             if (Types.isFuture(in.type())) {
-              waitMap.put(in.name(), new InstOrCont(inst));
+              waitMap.put(in, new InstOrCont(inst));
             }
           }
         }

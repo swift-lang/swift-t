@@ -104,7 +104,7 @@ public class ICContinuations {
      * @param inputsOnly only change inputs
      * @param recursive recursively do replacement in inner blocks
      */
-    public void replaceVars(Map<String, Arg> renames, boolean inputsOnly,
+    public void replaceVars(Map<Var, Arg> renames, boolean inputsOnly,
                                      boolean recursive) {
       if (recursive) {
         this.replaceVarsInBlocks(renames, inputsOnly);
@@ -112,19 +112,19 @@ public class ICContinuations {
       this.replaceConstructVars(renames, inputsOnly);
     }
     
-    protected abstract void replaceConstructVars(Map<String, Arg> renames,
+    protected abstract void replaceConstructVars(Map<Var, Arg> renames,
                                                  boolean inputsOnly);
     
-    protected void replaceVarsInBlocks(Map<String, Arg> renames,
+    protected void replaceVarsInBlocks(Map<Var, Arg> renames,
         boolean inputsOnly) {
       for (Block b: this.getBlocks()) {
         b.renameVars(renames, inputsOnly);
       }
     }
 
-    public abstract void removeVars(Set<String> removeVars);
+    public abstract void removeVars(Set<Var> removeVars);
 
-    protected void removeVarsInBlocks(Set<String> removeVars) {
+    protected void removeVarsInBlocks(Set<Var> removeVars) {
       for (Block b: this.getBlocks()) {
         b.removeVars(removeVars);
       }
@@ -141,14 +141,14 @@ public class ICContinuations {
      * @param knownConstants
      * @return a block which is the branch that will run
      */
-    public abstract Block branchPredict(Map<String, Arg> knownConstants);
+    public abstract Block branchPredict(Map<Var, Arg> knownConstants);
 
     /**
      * replace variables with constants in loop construct
      * @param knownConstants
      * @return true if anything changed
      */
-    public boolean constantReplace(Map<String, Arg> knownConstants) {
+    public boolean constantReplace(Map<Var, Arg> knownConstants) {
       // default: do nothing
       return false;
     }
@@ -287,7 +287,7 @@ public class ICContinuations {
      * @return null if it cannot be inlined, a block that is equivalent to
      *          the continuation otherwise
      */
-    public Block tryInline(Set<String> closedVars, Set<String> recClosedVars) {
+    public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars) {
       // Default: do nothing
       return null;
     }
@@ -296,7 +296,7 @@ public class ICContinuations {
      * update continuation given info about which vars are used in block
      * @param usedVars vars used within inner blocks
      */
-    public void removeUnused(Set<String> usedVars) {
+    public void removeUnused(Set<Var> usedVars) {
       // Default: do nothing
     }
 
@@ -382,7 +382,7 @@ public class ICContinuations {
     @Override
     public void removePassedInVar(Var variable) {
       assert(variable != null);
-      ICUtil.removeVarInList(passedInVars, variable.name());
+      ICUtil.remove(passedInVars, variable);
     }
 
     @Override
@@ -413,11 +413,11 @@ public class ICContinuations {
      * @param renames
      * @param inputsOnly
      */
-    public abstract void replaceConstructVars_(Map<String, Arg> renames, 
+    public abstract void replaceConstructVars_(Map<Var, Arg> renames, 
             boolean inputsOnly);
     
     @Override
-    public final void replaceConstructVars(Map<String, Arg> renames, 
+    public final void replaceConstructVars(Map<Var, Arg> renames, 
         boolean inputsOnly) {
       this.replaceConstructVars_(renames, inputsOnly);
       if (!inputsOnly) {
@@ -429,14 +429,14 @@ public class ICContinuations {
     /**
      * For overriding by child class
      */
-    public abstract void removeVars_(Set<String> removeVars);
+    public abstract void removeVars_(Set<Var> removeVars);
     
     @Override
-    public final void removeVars(Set<String> removeVars) {
+    public final void removeVars(Set<Var> removeVars) {
       removeVars_(removeVars);
       removeVarsInBlocks(removeVars);
-      ICUtil.removeVarsInList(passedInVars, removeVars);
-      ICUtil.removeVarsInList(keepOpenVars, removeVars);
+      passedInVars.removeAll(removeVars);
+      keepOpenVars.removeAll(removeVars);
     }
     
     @Override
@@ -480,13 +480,13 @@ public class ICContinuations {
       return res;
     }
 
-    protected void checkNotRemoved(Var v, Set<String> removeVars) {
-      if (removeVars.contains(v.name())) {
+    protected void checkNotRemoved(Var v, Set<Var> removeVars) {
+      if (removeVars.contains(v)) {
         throw new STCRuntimeError("bad optimization: tried to remove" +
         " required variable " + v.toString());
       }
     }
-    protected void checkNotRemoved(Arg o, Set<String> removeVars) {
+    protected void checkNotRemoved(Arg o, Set<Var> removeVars) {
       if (o.kind == ArgKind.VAR) {
         checkNotRemoved(o.getVar(), removeVars);
       }
@@ -593,19 +593,19 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceConstructVars_(Map<String, Arg> renames,
+    public void replaceConstructVars_(Map<Var, Arg> renames,
             boolean inputsOnly) {
-      if (renames.containsKey(arrayVar.name())) {
-        arrayVar = renames.get(arrayVar.name()).getVar();
+      if (renames.containsKey(arrayVar)) {
+        arrayVar = renames.get(arrayVar).getVar();
       }
       
       if (!inputsOnly) {
-        if (renames.containsKey(loopVar.name())) {
-          loopVar = renames.get(loopVar.name()).getVar();
+        if (renames.containsKey(loopVar)) {
+          loopVar = renames.get(loopVar).getVar();
         }
         if (this.loopCounterVar != null &&
-            renames.containsKey(loopCounterVar.name())) {
-          loopCounterVar = renames.get(loopCounterVar.name()).getVar();
+            renames.containsKey(loopCounterVar)) {
+          loopCounterVar = renames.get(loopCounterVar).getVar();
         }
       }
     }
@@ -618,7 +618,7 @@ public class ICContinuations {
     }
 
     @Override
-    public void removeVars_(Set<String> removeVars) {
+    public void removeVars_(Set<Var> removeVars) {
       checkNotRemoved(arrayVar, removeVars);
       checkNotRemoved(loopVar, removeVars);
       if (loopCounterVar != null) {
@@ -627,7 +627,7 @@ public class ICContinuations {
     }
 
     @Override
-    public Block branchPredict(Map<String, Arg> knownConstants) {
+    public Block branchPredict(Map<Var, Arg> knownConstants) {
       return null;
     }
 
@@ -644,9 +644,9 @@ public class ICContinuations {
     }
 
     @Override
-    public Block tryInline(Set<String> closedVars, Set<String> recClosedVars) {
-      if (closedVars.contains(arrayVar.name()) ||
-          recClosedVars.contains(arrayVar.name())) {
+    public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars) {
+      if (closedVars.contains(arrayVar) ||
+          recClosedVars.contains(arrayVar)) {
         this.arrayClosed = true;
       }
       return null;
@@ -655,18 +655,17 @@ public class ICContinuations {
     public boolean fuseable(ForeachLoop o) {
       // annotation parameters should match to respect any
       // user settings
-      return this.arrayVar.name().equals(o.arrayVar.name())
+      return this.arrayVar.equals(o.arrayVar)
           && this.splitDegree == o.splitDegree;
     }
 
     public void fuseInto(ForeachLoop o, boolean insertAtTop) {
-      Map<String, Arg> renames = new HashMap<String, Arg>();
-      renames.put(o.loopVar.name(), Arg.createVar(this.loopVar));
+      Map<Var, Arg> renames = new HashMap<Var, Arg>();
+      renames.put(o.loopVar, Arg.createVar(this.loopVar));
       // Handle optional loop counter var
       if (o.loopCounterVar != null) {
         if (this.loopCounterVar != null) {
-          renames.put(o.loopCounterVar.name(),
-                      Arg.createVar(this.loopCounterVar));    
+          renames.put(o.loopCounterVar, Arg.createVar(this.loopCounterVar));    
         } else {
           this.loopCounterVar = o.loopCounterVar;
         }
@@ -760,7 +759,7 @@ public class ICContinuations {
     }
 
     @Override
-    protected void replaceConstructVars(Map<String, Arg> renames,
+    protected void replaceConstructVars(Map<Var, Arg> renames,
           boolean inputsOnly) {
       condition = ICUtil.replaceOparg(renames, condition, false);
     }
@@ -780,23 +779,23 @@ public class ICContinuations {
       if (condition.isVar()) {
         return Arrays.asList(condition.getVar());
       } else {
-        return Collections.emptyList();
+        return Var.NONE;
       }
     }
 
     @Override
-    public void removeVars(Set<String> removeVars) {
+    public void removeVars(Set<Var> removeVars) {
       removeVarsInBlocks(removeVars);
       assert(!condition.isVar() ||
-            (!removeVars.contains(condition.getVar().name())));
+            (!removeVars.contains(condition.getVar())));
     }
 
     @Override
-    public Block branchPredict(Map<String, Arg> knownConstants) {
+    public Block branchPredict(Map<Var, Arg> knownConstants) {
       Arg val;
       
       if (condition.isVar()) {
-        val = knownConstants.get(condition.getVar().name());
+        val = knownConstants.get(condition.getVar());
         if (val == null) {
           return null;
         }
@@ -841,7 +840,7 @@ public class ICContinuations {
 
     @Override
     public List<Var> constructDefinedVars() {
-      return Collections.emptyList();
+      return Var.NONE;
     }
 
     /**
@@ -1022,7 +1021,7 @@ public class ICContinuations {
     }
     
     @Override
-    public void replaceConstructVars_(Map<String, Arg> renames,
+    public void replaceConstructVars_(Map<Var, Arg> renames,
         boolean inputsOnly) {
       ICUtil.replaceVarsInList(renames, initVals, false);
       if (!inputsOnly) {
@@ -1038,7 +1037,7 @@ public class ICContinuations {
     }
 
     @Override
-    public void removeVars_(Set<String> removeVars) {
+    public void removeVars_(Set<Var> removeVars) {
       // check it isn't removing initial values
       for (Var v: this.initVals) {
         checkNotRemoved(v, removeVars);
@@ -1049,7 +1048,7 @@ public class ICContinuations {
     }
 
     @Override
-    public Block branchPredict(Map<String, Arg> knownConstants) {
+    public Block branchPredict(Map<Var, Arg> knownConstants) {
       return null;
     }
 
@@ -1200,7 +1199,7 @@ public class ICContinuations {
     }
 
     @Override
-    protected void replaceConstructVars(Map<String, Arg> renames, 
+    protected void replaceConstructVars(Map<Var, Arg> renames, 
                   boolean inputsOnly) {
       // Do nothing
     }
@@ -1211,12 +1210,12 @@ public class ICContinuations {
     }
 
     @Override
-    public void removeVars(Set<String> removeVars) {
+    public void removeVars(Set<Var> removeVars) {
       removeVarsInBlocks(removeVars);
     }
 
     @Override
-    public Block branchPredict(Map<String, Arg> knownConstants) {
+    public Block branchPredict(Map<Var, Arg> knownConstants) {
       return null;
     }
 
@@ -1227,7 +1226,7 @@ public class ICContinuations {
     
     @Override
     public List<Var> constructDefinedVars() {
-      return Collections.emptyList();
+      return Var.NONE;
     }
   }
 
@@ -1324,25 +1323,25 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceConstructVars_(Map<String, Arg> renames, 
+    public void replaceConstructVars_(Map<Var, Arg> renames, 
                                         boolean inputsOnly) {
       start = renameRangeArg(start, renames);
       end = renameRangeArg(end, renames);
       increment = renameRangeArg(increment, renames);
       
-      if (renames.containsKey(loopVar.name())) {
-        loopVar = renames.get(loopVar.name()).getVar();
+      if (renames.containsKey(loopVar)) {
+        loopVar = renames.get(loopVar).getVar();
       }
-      if (countVar != null && renames.containsKey(countVar.name())) {
-        countVar = renames.get(countVar.name()).getVar();
+      if (countVar != null && renames.containsKey(countVar)) {
+        countVar = renames.get(countVar).getVar();
       }
     }
 
-    private Arg renameRangeArg(Arg val, Map<String, Arg> renames) {
+    private Arg renameRangeArg(Arg val, Map<Var, Arg> renames) {
       if (val.kind == ArgKind.VAR) {
-        String vName = val.getVar().name();
-        if (renames.containsKey(vName)) {
-          Arg o = renames.get(vName);
+        Var var = val.getVar();
+        if (renames.containsKey(var)) {
+          Arg o = renames.get(var);
           assert(o != null);
           return o;
         }
@@ -1362,14 +1361,14 @@ public class ICContinuations {
     }
 
     @Override
-    public void removeVars_(Set<String> removeVars) {
+    public void removeVars_(Set<Var> removeVars) {
       checkNotRemoved(start, removeVars);
       checkNotRemoved(end, removeVars);
       checkNotRemoved(increment, removeVars);
     }
 
     @Override
-    public Block branchPredict(Map<String, Arg> knownConstants) {
+    public Block branchPredict(Map<Var, Arg> knownConstants) {
       // Could inline loop if there is only one iteration...
       if (start.isIntVal() && end.isIntVal()) {
         long startV = start.getIntLit();
@@ -1411,14 +1410,14 @@ public class ICContinuations {
     }
 
     @Override
-    public boolean constantReplace(Map<String, Arg> knownConstants) {
+    public boolean constantReplace(Map<Var, Arg> knownConstants) {
       boolean anyChanged = false;
       Arg oldVals[] = new Arg[] {start, end, increment };
       Arg newVals[] = new Arg[3];
       for (int i = 0; i < oldVals.length; i++) {
         Arg old = oldVals[i];
         if (old.kind == ArgKind.VAR) {
-          Arg replacement = knownConstants.get(old.getVar().name());
+          Arg replacement = knownConstants.get(old.getVar());
           if (replacement != null) {
             assert(replacement.isIntVal());
             anyChanged = true;
@@ -1525,7 +1524,7 @@ public class ICContinuations {
           curr.addContinuation(nb);
           if (i != 0) {
             // Replace references to the iteration counter
-            nb.replaceVars(Collections.singletonMap(this.loopVar.name(),
+            nb.replaceVars(Collections.singletonMap(this.loopVar,
                                  Arg.createVar(nextIter)), false, true);
           }
 
@@ -1582,11 +1581,11 @@ public class ICContinuations {
      * Fuse the other loop into this loop
      */
     public void fuseInto(RangeLoop o, boolean insertAtTop) {
-      Map<String, Arg> renames = new HashMap<String, Arg>();
+      Map<Var, Arg> renames = new HashMap<Var, Arg>();
       // Update loop var in other loop
-      renames.put(o.loopVar.name(), Arg.createVar(this.loopVar));
+      renames.put(o.loopVar, Arg.createVar(this.loopVar));
       if (countVar != null)
-        renames.put(o.countVar.name(), Arg.createVar(this.countVar));
+        renames.put(o.countVar, Arg.createVar(this.countVar));
       o.replaceVars(renames, false, true);
      
       this.fuseIntoAbstract(o, insertAtTop);
@@ -1693,7 +1692,7 @@ public class ICContinuations {
     }
     
     @Override
-    public void replaceConstructVars(Map<String, Arg> renames, 
+    public void replaceConstructVars(Map<Var, Arg> renames, 
             boolean inputsOnly) {
       switchVar = ICUtil.replaceOparg(renames, switchVar, false);
     }
@@ -1718,14 +1717,14 @@ public class ICContinuations {
       if (switchVar.isVar()) {
         return Arrays.asList(switchVar.getVar());
       } else {
-        return Collections.emptyList();
+        return Var.NONE;
       }
     }
 
     @Override
-    public void removeVars(Set<String> removeVars) {
+    public void removeVars(Set<Var> removeVars) {
       assert(!switchVar.isVar() 
-          || !removeVars.contains(switchVar.getVar().name()));
+          || !removeVars.contains(switchVar.getVar()));
       defaultBlock.removeVars(removeVars);
       for (Block caseBlock: this.caseBlocks) {
         caseBlock.removeVars(removeVars);
@@ -1734,10 +1733,10 @@ public class ICContinuations {
     }
 
     @Override
-    public Block branchPredict(Map<String, Arg> knownConstants) {
+    public Block branchPredict(Map<Var, Arg> knownConstants) {
       long val;
       if (switchVar.isVar()) {
-        Arg switchVal = knownConstants.get(switchVar.getVar().name());
+        Arg switchVal = knownConstants.get(switchVar.getVar());
         if (switchVal == null) {
           return null;
         }
@@ -1784,7 +1783,7 @@ public class ICContinuations {
 
     @Override
     public List<Var> constructDefinedVars() {
-      return Collections.emptyList();
+      return Var.NONE;
     }
   }
 
@@ -1886,7 +1885,7 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceConstructVars_(Map<String, Arg> renames, 
+    public void replaceConstructVars_(Map<Var, Arg> renames, 
         boolean inputsOnly) {
       ICUtil.replaceVarsInList(renames, waitVars, true);
       priority = ICUtil.replaceOparg(renames, priority, true);
@@ -1945,15 +1944,15 @@ public class ICContinuations {
     }
 
     @Override
-    public void removeVars_(Set<String> removeVars) {
-      ICUtil.removeVarsInList(waitVars, removeVars);
+    public void removeVars_(Set<Var> removeVars) {
+      waitVars.removeAll(removeVars);
     }
 
     @Override
-    public Block branchPredict(Map<String, Arg> knownConstants) {
+    public Block branchPredict(Map<Var, Arg> knownConstants) {
       // We can't really do branch prediction for a wait statement, but
       // it is a useful mechanism to piggy-back on to remove the wait
-      return tryInline(Collections.<String>emptySet(), knownConstants.keySet());
+      return tryInline(Collections.<Var>emptySet(), knownConstants.keySet());
     }
 
     @Override
@@ -1962,15 +1961,15 @@ public class ICContinuations {
     }
 
     @Override
-    public Block tryInline(Set<String> closedVars, Set<String> recClosedVars) {
+    public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars) {
       boolean varsLeft = false;
       // iterate over wait vars, remove those in list
       ListIterator<Var> it = waitVars.listIterator();
       while(it.hasNext()) {
         Var wv = it.next();
         // See if we can skip waiting on var
-        if ((closedVars.contains(wv.name()) && !recursionRequired(wv))
-            || recClosedVars.contains(wv.name())) {
+        if ((closedVars.contains(wv) && !recursionRequired(wv))
+            || recClosedVars.contains(wv)) {
           it.remove();
         } else {
           varsLeft = true;
@@ -1991,7 +1990,7 @@ public class ICContinuations {
 
     
     @Override
-    public void removeUnused(Set<String> usedVars) {
+    public void removeUnused(Set<Var> usedVars) {
       if (mode == WaitMode.EXPLICIT)
         return;
       
@@ -1999,7 +1998,7 @@ public class ICContinuations {
       while (waitIt.hasNext()) {
         Var waitVar = waitIt.next();
         // Remove variable not passed in
-        if (!usedVars.contains(waitVar.name())) {
+        if (!usedVars.contains(waitVar)) {
           waitIt.remove();
         }
       }
@@ -2032,7 +2031,7 @@ public class ICContinuations {
 
     @Override
     public List<Var> constructDefinedVars() {
-      return Collections.emptyList();
+      return Var.NONE;
     }
 
     @Override

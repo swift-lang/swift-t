@@ -229,11 +229,11 @@ public interface CompilerBackend {
   public abstract void arrayLookupImm(Var oVar, Var arrayVar,
       Arg arrayIndex);
 
-  public abstract void arrayInsertFuture(Var iVar,
-      Var arrayVar, Var indexVar);
+  public abstract void arrayInsertFuture(Var array,
+      Var ix, Var member);
   
-  public abstract void arrayRefInsertFuture(Var iVar,
-      Var arrayVar, Var indexVar, Var outerArrayVar);
+  public abstract void arrayRefInsertFuture(Var outerArray,
+      Var array, Var ix, Var member);
 
   /**
    * Build array with indices [0..members.size() - 1] comprised of the
@@ -243,23 +243,22 @@ public interface CompilerBackend {
    */
   public abstract void arrayBuild(Var array, List<Var> members);
   
-  public abstract void arrayInsertImm(Var iVar, Var arrayVar,
-      Arg arrayIndex);
+  public abstract void arrayInsertImm(Var array, Arg ix, Var member);
   
-  public abstract void arrayRefInsertImm(Var iVar, 
-      Var arrayVar, Arg arrayIndex, Var outerArrayVar);
+  public abstract void arrayRefInsertImm(Var outerArray, 
+      Var array, Arg ix, Var member);
 
   public abstract void arrayCreateNestedFuture(Var arrayResult,
-      Var arrayVar, Var indexVar);
+      Var array, Var ix);
 
   public abstract void arrayCreateNestedImm(Var arrayResult,
-      Var arrayVar, Arg arrIx);
+      Var array, Arg ix);
 
   public abstract void arrayRefCreateNestedFuture(Var arrayResult,
-      Var arrayVar, Var indexVar, Var outerArr);
+      Var outerArray, Var array, Var ix);
 
   public abstract void arrayRefCreateNestedImm(Var arrayResult,
-      Var arrayVar, Arg arrIx, Var outerArr);
+      Var outerArray, Var array, Arg ix);
 
   public abstract void initUpdateable(Var updateable, Arg val);
   public abstract void latestValue(Var result, Var updateable);

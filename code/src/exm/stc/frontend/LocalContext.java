@@ -17,7 +17,6 @@
 package exm.stc.frontend;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import exm.stc.common.exceptions.DoubleDefineException;
@@ -278,19 +277,5 @@ public class LocalContext extends Context {
     } else {
       return parent.getFunctionContext();
     }
-  }
-  
-  private final ArrayList<Var> arraysToClose = 
-        new ArrayList<Var>();
-  
-  @Override
-  public void flagArrayForClosing(Var var) {
-    assert(Types.isArray(var.type()));
-    arraysToClose.add(var);
-  }
-  
-  @Override
-  public List<Var> getArraysToClose() {
-    return Collections.unmodifiableList(arraysToClose);
   }
 }

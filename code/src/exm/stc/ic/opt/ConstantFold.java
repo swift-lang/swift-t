@@ -16,7 +16,6 @@
 package exm.stc.ic.opt;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
@@ -30,16 +29,16 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators;
+import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions;
-import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Builtin;
+import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
@@ -72,21 +71,16 @@ public class ConstantFold implements OptimizerPass {
    */
   @Override
   public void optimize(Logger logger, Program in) throws InvalidOptionException {
-    HierarchicalMap<String, Arg> globalConsts = 
-              new HierarchicalMap<String, Arg>();
+    HierarchicalMap<Var, Arg> globalConsts =  new HierarchicalMap<Var, Arg>();
     // Populate global constants
-    globalConsts.putAll(in.getGlobalConsts());
+    for (Var global: in.getGlobalVars()) {
+      Arg constVal = in.lookupGlobalConst(global.name());
+      globalConsts.put(global, constVal);
+    }
     
     for (Function f: in.getFunctions()) {
-      HashMap<String, Var> funVars = new HashMap<String, Var>();
-      for (Var v: f.getInputList()) {
-        funVars.put(v.name(), v);  
-      }
-      for (Var v: f.getOutputList()) {
-        funVars.put(v.name(), v);
-      }
-      constantFold(logger, in, f, f.getMainblock(), funVars, 
-                          globalConsts.makeChildMap());
+      constantFold(logger, in, f, f.getMainblock(), 
+                   globalConsts.makeChildMap());
     }
   }
 
@@ -99,13 +93,8 @@ public class ConstantFold implements OptimizerPass {
    * @throws InvalidOptionException 
    */
   private static boolean constantFold(Logger logger, Program prog, 
-      Function fn, Block block, 
-      HashMap<String, Var> varMap,
-      HierarchicalMap<String, Arg> knownConstants) throws InvalidOptionException {
-    for (Var v: block.getVariables()) {
-      varMap.put(v.name(), v);
-    }
-    
+      Function fn, Block block,
+      HierarchicalMap<Var, Arg> knownConstants) throws InvalidOptionException {
     // Find all constants in block
     findBlockConstants(logger, block, knownConstants, false, false);
     
@@ -122,7 +111,7 @@ public class ConstantFold implements OptimizerPass {
           logger.debug("Candidate instruction for constant folding: " 
                                               + inst.toString());
         }
-        Map<String, Arg> newConsts = inst.constantFold(fn.getName(),
+        Map<Var, Arg> newConsts = inst.constantFold(fn.getName(),
                                             knownConstants);
         if (newConsts == null) {
           logger.debug("Couldn't constant fold");
@@ -143,11 +132,10 @@ public class ConstantFold implements OptimizerPass {
           ArrayList<Instruction> replacements = 
                     new ArrayList<Instruction>(newConsts.size());
           
-          for (Entry<String, Arg> newConst: newConsts.entrySet()) {              
-            String name = newConst.getKey();
-            Var var = varMap.get(name);
+          for (Entry<Var, Arg> newConst: newConsts.entrySet()) {              
+            Var var = newConst.getKey();
             Arg newVal = newConst.getValue();
-            logger.debug("New constant: " + name);
+            logger.debug("New constant: " + var);
             if (Types.isScalarFuture(var.type())) {
               replacements.add(ICInstructions.futureSet(var, newVal));
             } else {
@@ -175,7 +163,7 @@ public class ConstantFold implements OptimizerPass {
     for (Continuation c: block.getContinuations()) {
       for (Block b: c.getBlocks()) {
         // Make copy of constant map so that binds don't get mixed up
-        boolean changedRec = constantFold(logger, prog, fn, b, varMap, 
+        boolean changedRec = constantFold(logger, prog, fn, b, 
                             knownConstants.makeChildMap());
         changed = changed || changedRec;
       }
@@ -201,17 +189,17 @@ public class ConstantFold implements OptimizerPass {
    * @param removeDefs if true, remove the set instructions as we go
    */
   static void findBlockConstants(Logger logger, Block block,
-      Map<String, Arg> knownConstants, boolean removeLocalConsts,
+      Map<Var, Arg> knownConstants, boolean removeLocalConsts,
       boolean ignoreLocalValConstants) {
-    Set<String> removalCandidates = null;
+    Set<Var> removalCandidates = null;
     if (removeLocalConsts) {
-      removalCandidates = new HashSet<String>();
+      removalCandidates = new HashSet<Var>();
       // Only remove variables defined in this scope: don't know how they
       // are used in other scopes
       for (Var v: block.getVariables()) {
         // Avoid removing alias variables as writes to them have side-effects
         if (v.storage() != VarStorage.ALIAS) {
-          removalCandidates.add(v.name());
+          removalCandidates.add(v);
         }
       }
     }
@@ -221,10 +209,10 @@ public class ConstantFold implements OptimizerPass {
       Instruction inst = it.next();
       if (inst.getInputs().size() == 1) {
         if (isValueStoreInst(inst, ignoreLocalValConstants)) {
-          String varName = inst.getOutput(0).name();
-          if ((!removeLocalConsts) || removalCandidates.contains(varName)) {
-            logger.debug("Found constant " + varName);
-            knownConstants.put(varName, inst.getInput(0));
+          Var var = inst.getOutput(0);
+          if ((!removeLocalConsts) || removalCandidates.contains(var)) {
+            logger.debug("Found constant " + var);
+            knownConstants.put(var, inst.getInput(0));
             if (removeLocalConsts && !inst.hasSideEffects()) {
               logger.trace("Removing instruction " + inst.toString());
               it.remove();
@@ -278,7 +266,7 @@ public class ConstantFold implements OptimizerPass {
    * @param knownConstants
    */
   private static void branchPredict(Block block,
-      HierarchicalMap<String, Arg> knownConstants) {
+      HierarchicalMap<Var, Arg> knownConstants) {
     // Use list to preserve order
     List<Predicted> predictedBranches = new ArrayList<Predicted>();
     for (Continuation c: block.getContinuations()) {
