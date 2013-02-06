@@ -114,7 +114,10 @@ public class ICOptimizer {
       
       // Try to hoist variables out of loops, etc
       // Do before forward dataflow since it may open up new opportunites
-      pipe.addPass(new HoistLoops());
+      // switch to aggressive hoisting later on when we have probably done all
+      // the other optimizations possible
+      boolean aggressive = iteration > (nIterations * 2 / 3);
+      pipe.addPass(new HoistLoops(aggressive));
       
       // Do forward dataflow after const folding so it won't create any
       // new constants, etc to be folded

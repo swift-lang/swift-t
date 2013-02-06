@@ -1346,6 +1346,11 @@ public class Types {
     return argType.structureType() == StructureType.WILDCARD;
   }
 
+  public static boolean isPiecewiseAssigned(Type type) {
+    return Types.isArray(type) || Types.isArrayRef(type) ||
+           Types.isStruct(type);
+  }
+  
   /** 
    * More convenient way of representing array types for some analysies
    *

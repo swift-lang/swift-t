@@ -1734,6 +1734,9 @@ public class ICInstructions {
           List<Var> outputs = getOutputs();
           return outputs.subList(1, outputs.size());
         }
+        case STRUCT_INSERT:
+        case STRUCT_CLOSE:
+          return getOutputs();
         default:
           return Var.NONE;
       }

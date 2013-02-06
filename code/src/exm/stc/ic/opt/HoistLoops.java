@@ -15,7 +15,6 @@
  */
 package exm.stc.ic.opt;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 
@@ -24,9 +23,9 @@ import org.apache.log4j.Logger;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalMap;
@@ -56,6 +55,16 @@ import exm.stc.ic.tree.ICTree.Program;
  */
 public class HoistLoops implements OptimizerPass {
   
+  /**
+   * If true, hoist array reads in such a way that could prevent
+   * future dataflow optimizations
+   */
+  private final boolean aggressive;
+  
+  public HoistLoops(boolean aggressive) {
+    this.aggressive = true;
+  }
+  
   @Override
   public String getPassName() {
     return "Loop hoisting";
@@ -72,7 +81,7 @@ public class HoistLoops implements OptimizerPass {
       HoistTracking global = new HoistTracking();
       // Global constants already written
       for (Var gv: prog.getGlobalVars()) {
-        global.write(gv);
+        global.write(gv, false);
         global.declare(gv);
       }
       
@@ -82,7 +91,7 @@ public class HoistLoops implements OptimizerPass {
       
       // Inputs are written elsewhere
       for (Var in: f.getInputList()) {
-        mainBlockState.write(in);
+        mainBlockState.write(in, false);
         mainBlockState.declare(in);
       }
       for (Var out: f.getOutputList()) {
@@ -98,14 +107,11 @@ public class HoistLoops implements OptimizerPass {
   }
   
   /**
-   * 
    * @param logger
-   * @param curr current block
-   * @param ancestors ancestors of current block
    * @param state 
    * @return true if change made
    */
-  private static boolean hoistRec(Logger logger, HoistTracking state) {
+  private boolean hoistRec(Logger logger, HoistTracking state) {
     // See if we can move any instructions from this block up
     boolean changed = hoistFromBlock(logger, state);
     
@@ -127,7 +133,8 @@ public class HoistLoops implements OptimizerPass {
      * Create root for whole program
      */
     public HoistTracking() {
-      this(null, null, 0, 0, 
+      this(null, null, 0, 0,
+           new HierarchicalMap<Var, Block>(),
            new HierarchicalMap<Var, Block>(),
            new HierarchicalMap<Var, Block>(),
            new HierarchicalMap<Var, Block>());
@@ -146,14 +153,14 @@ public class HoistLoops implements OptimizerPass {
                                             childLoopHoist);
       // make sure loop iteration variables, etc are tracked
       for (Var v: c.constructDefinedVars()) {
-        childState.write(v);
+        childState.write(v, false);
         childState.declare(v);
       }
       
       // If we are waiting for var, don't hoist out past that
       if (c.getType() == ContinuationType.WAIT_STATEMENT) {
         for (Var waitVar: ((WaitStatement)c).getWaitVars()) {
-          childState.write(waitVar);            
+          childState.write(waitVar, false);            
         }
       }
       return childState;
@@ -162,6 +169,7 @@ public class HoistLoops implements OptimizerPass {
     private HoistTracking(HoistTracking parent,
         Block block, int maxHoist, int maxLoopHoist,
         HierarchicalMap<Var, Block> writeMap,
+        HierarchicalMap<Var, Block> piecewiseWriteMap,
         HierarchicalMap<Var, Block> declareMap,
         HierarchicalMap<Var, Block> initializedMap) {
       super();
@@ -170,6 +178,7 @@ public class HoistLoops implements OptimizerPass {
       this.maxHoist = maxHoist;
       this.maxLoopHoist = maxLoopHoist;
       this.writeMap = writeMap;
+      this.piecewiseWriteMap = piecewiseWriteMap;
       this.declareMap = declareMap;
       this.initializedMap = initializedMap;
     }
@@ -190,9 +199,15 @@ public class HoistLoops implements OptimizerPass {
     public final int maxLoopHoist;
     
     /**
-     * Track writes (TODO: non-piecewise only?) to variables
+     * Track writes (non-piecewise only) to variables
      */
     public final HierarchicalMap<Var, Block> writeMap;
+    
+    /**
+     * Track piecewise writes to variables
+     */
+    public final HierarchicalMap<Var, Block> piecewiseWriteMap;
+    
     /**
      * Track variable declarations
      */
@@ -215,13 +230,15 @@ public class HoistLoops implements OptimizerPass {
       return new HoistTracking(this, childBlock,
                               maxHoist, maxLoopHoist,
                               writeMap.makeChildMap(),
+                              piecewiseWriteMap.makeChildMap(),
                               declareMap.makeChildMap(),
                               initializedMap.makeChildMap());
     }
     
     public void updateState(Instruction inst) {
+      List<Var> piecewiseOutputs = inst.getPiecewiseAssignedOutputs();
       for (Var out: inst.getModifiedOutputs()) {
-        write(out);
+        write(out, piecewiseOutputs.contains(out));
       }
       for (Var initAlias: inst.getInitializedAliases()) {
         initializeAlias(initAlias);
@@ -233,8 +250,10 @@ public class HoistLoops implements OptimizerPass {
       initializedMap.put(v, this.block);
     }
     
-    public void write(Var v) {
-      if (trackWrites(v)) {
+    public void write(Var v, boolean piecewise) {
+      if (piecewise) {
+        piecewiseWriteMap.put(v, this.block);
+      } else {
         writeMap.put(v, this.block);
       }
     }
@@ -245,23 +264,6 @@ public class HoistLoops implements OptimizerPass {
         declareMap.put(v, this.block);
       }
     }
-  }
-  
-  /**
-   * True if the variable is one we should track
-   * @param in
-   * @return
-   */
-  private static boolean trackWrites(Var in) {
-    Type t = in.type();
-    if (Types.isScalarFuture(t) || Types.isScalarValue(t)) {
-      return true;
-    } else if (Types.isRef(t)) {
-      return true;
-    } else if (Types.isArray(t)) {
-      return true;
-    }
-    return false;
   }
 
   private static boolean trackDeclares(Var v) {
@@ -281,7 +283,7 @@ public class HoistLoops implements OptimizerPass {
     return false;
   }
 
-  private static boolean hoistFromBlock(Logger logger, HoistTracking state) {
+  private boolean hoistFromBlock(Logger logger, HoistTracking state) {
     boolean changed = false;
     Block curr = state.block;
     
@@ -309,15 +311,13 @@ public class HoistLoops implements OptimizerPass {
   }
   
   /**
-   * 
+   * Try to hoist this instruction
    * @param logger
-   * @param curr
    * @param inst
-   * @param ancestors
    * @param state
    * @return true if hoisted
    */
-  private static boolean tryHoist(Logger logger,
+  private boolean tryHoist(Logger logger,
       Instruction inst, HoistTracking state) {
     if (logger.isTraceEnabled()) {
       logger.trace("Try hoist " + inst + " maxHoist=" + state.maxHoist + 
@@ -378,9 +378,18 @@ public class HoistLoops implements OptimizerPass {
     }
   }
 
-  private static int maxInputHoist(Logger logger, HoistTracking state,
+  private int maxInputHoist(Logger logger, HoistTracking state,
                                    Var inVar) {
     int depth = state.writeMap.getDepth(inVar);
+    if (Types.isPiecewiseAssigned(inVar.type()) && !aggressive) {
+      // We might want to avoid moving before a piecewise write since it could
+      // hurt future optimization opportunities
+      int pwDepth = state.piecewiseWriteMap.getDepth(inVar);
+      if (pwDepth >= 0) {
+        depth = Math.min(pwDepth, depth);
+      }
+    }
+    
     int maxHoist = Integer.MAX_VALUE;
     // If there was a write to a variable, don't hoist past that
     if (depth >= 0) {
@@ -397,10 +406,11 @@ public class HoistLoops implements OptimizerPass {
                                            + declareDepth);
       assert(declareDepth >= 0) : inVar;
       maxHoist = Math.min(maxHoist, declareDepth);
-    } else if (depth < 0 && !trackWrites(inVar)) {
+    } else if (depth < 0) {
       // We weren't tracking anything, can't hoist
       logger.trace("Can't hoist because of " + inVar);
-      return 0;
+      throw new STCRuntimeError("SHOULD WE BE HERE?" + inVar);
+      //return 0;
     }
     return maxHoist;
   }
