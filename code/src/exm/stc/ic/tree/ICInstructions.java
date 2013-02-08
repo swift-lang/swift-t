@@ -2315,6 +2315,7 @@ public class ICInstructions {
               return Collections.singletonList(inVar);
             }
           }
+          break;
         }
         case ARRAY_INSERT_IMM: 
         case ARRAY_INSERT_FUTURE: {
@@ -2328,6 +2329,7 @@ public class ICInstructions {
               return Collections.singletonList(arr);
             }
           }
+          break;
         }
       }
 

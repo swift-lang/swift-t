@@ -329,7 +329,7 @@ public class RefcountPass extends FunctionOptimizerPass {
     
     for (Var immDecrVar: immDecrCandidates) {
       block.setInitRefcount(immDecrVar, type, 0);
-      increments.decrement(immDecrVar);
+      increments.increment(immDecrVar);
     }
   }
 
