@@ -148,13 +148,12 @@ namespace eval turbine {
     # if unmapped, mapping should be set to the empty string
     # if mapped, mapping should be  turbine # string that will
     # at some point be set to a value
-    proc allocate_file2 { name mapping {read_refcount 1} args } {
-        set is_mapped [ expr ! [ string equal $mapping "" ] ]
+    proc allocate_file2 { name filename {read_refcount 1} args } {
+        set is_mapped [ expr ! [ string equal $filename "" ] ]
         # use void to signal file availability
         set signal [ allocate_custom "signal:$name" void \
                               $read_refcount {*}${args} ]
         if { $is_mapped } {
-            set filename [ lindex $args 0 ]
             read_refcount_incr $filename $read_refcount
             log "file: $name=\[ <$signal> <$filename> \] mapped"
         } else {
