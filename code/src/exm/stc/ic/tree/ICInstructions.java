@@ -2705,6 +2705,7 @@ public class ICInstructions {
       switch (op) { 
         case CALL_BUILTIN:
         case CALL_CONTROL:
+        case CALL_SYNC:
         case CALL_LOCAL:
         case CALL_LOCAL_CONTROL: {
           List<Var> readIncr = new ArrayList<Var>();
