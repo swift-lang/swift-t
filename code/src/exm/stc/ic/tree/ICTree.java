@@ -40,6 +40,8 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.RefCounting;
+import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -586,7 +588,8 @@ public class ICTree {
     
     public Block(BlockType type, Continuation parentCont, Function parentFunction) {
       this(type, parentCont, parentFunction, new LinkedList<Instruction>(),
-          new ArrayList<Var>(), new ArrayList<Continuation>(), new ArrayList<CleanupAction>());
+          new ArrayList<Var>(), new HashMap<Var, Arg>(), new HashMap<Var, Arg>(),
+          new ArrayList<Continuation>(), new ArrayList<CleanupAction>());
     }
     
     /**
@@ -598,12 +601,16 @@ public class ICTree {
     private Block(BlockType type,
         Continuation parentCont, Function parentFunction,
         LinkedList<Instruction> instructions, 
-        ArrayList<Var> variables, ArrayList<Continuation> conds,
+        ArrayList<Var> variables, HashMap<Var, Arg> initReadRefcounts,
+        HashMap<Var, Arg> initWriteRefcounts,
+        ArrayList<Continuation> conds,
         ArrayList<CleanupAction> cleanupActions) {
       setParent(type, parentCont, parentFunction);
       this.type = type;
       this.instructions = instructions;
       this.variables = variables;
+      this.initReadRefcounts = initReadRefcounts;
+      this.initWriteRefcounts = initWriteRefcounts;
       this.continuations = conds;
       this.cleanupActions = cleanupActions;
     }
@@ -643,6 +650,8 @@ public class ICTree {
       Block cloned = new Block(newType, parentCont, parentFunction,
           ICUtil.cloneInstructions(this.instructions),
           new ArrayList<Var>(this.variables),
+          new HashMap<Var, Arg>(this.initReadRefcounts),
+          new HashMap<Var, Arg>(this.initWriteRefcounts),
           new ArrayList<Continuation>(), 
           ICUtil.cloneCleanups(this.cleanupActions));
       for (Continuation c: this.continuations) {
@@ -661,6 +670,10 @@ public class ICTree {
     private final ArrayList<CleanupAction> cleanupActions;
 
     private final ArrayList<Var> variables;
+    
+    /** Initial reference counts for vars defined in block */
+    private final HashMap<Var, Arg> initReadRefcounts;
+    private final HashMap<Var, Arg> initWriteRefcounts;
 
     /** conditional statements for block */
     private final ArrayList<Continuation> continuations;
@@ -722,8 +735,26 @@ public class ICTree {
       // Can push forward variable declaration to top of block
       for (Var v: variables) {
         logger.trace("generating variable decl for " + v.toString());
-        gen.declare(v.type(), v.name(), v.storage(), v.defType(),
-            v.mapping());
+        Arg initReaders = initReadRefcounts.get(v);
+        Arg initWriters = initWriteRefcounts.get(v);
+        
+        // Initialize refcounts to default value if not
+        //  explicitly overridden and check for bad refcounts
+        if (v.storage() != VarStorage.ALIAS && 
+            RefCounting.hasReadRefCount(v)) {
+          if (initReaders == null)
+            initReaders = Arg.ONE;
+        } else {
+          assert(initReaders == null);
+        }
+        if (v.storage() != VarStorage.ALIAS && 
+            RefCounting.hasWriteRefCount(v)) {
+          if (initWriters == null)
+            initWriters = Arg.ONE;
+        } else {
+          assert(initWriters == null);
+        }
+        gen.declare(v, initReaders, initWriters);
       }
       for (Instruction i: instructions) {
         i.generate(logger, gen, info);
@@ -755,6 +786,12 @@ public class ICTree {
         
         if (v.isMapped()) {
           sb.append(" @mapping=" + v.mapping().name());
+        }
+        if (initReadRefcounts.containsKey(v)) {
+          sb.append(" <readers=" + initReadRefcounts.get(v) + ">");
+        }
+        if (initWriteRefcounts.containsKey(v)) {
+          sb.append(" <writers=" + initWriteRefcounts.get(v) + ">");
         }
         sb.append("\n");
       }
@@ -1269,6 +1306,28 @@ public class ICTree {
         }
       }
       return count;
+    }
+
+    /**
+     * Set the initial reference count of a variable to something
+     * @param blockVar
+     * @param refcountType
+     * @param val
+     */
+    public void setInitRefcount(Var blockVar, RefCountType refcountType,
+                                   long val) {
+      assert(val >= 0);
+      HashMap<Var, Arg> refcountMap;
+      if (refcountType == RefCountType.READERS) {
+        refcountMap = this.initReadRefcounts;
+      } else {
+        assert(refcountType == RefCountType.WRITERS);
+        refcountMap = this.initWriteRefcounts;
+      }
+      assert(!refcountMap.containsKey(blockVar)) :
+        "Tried to reassign refcount for block var " + blockVar;
+      
+      refcountMap.put(blockVar, Arg.createIntLit(val));
     }
   }
   

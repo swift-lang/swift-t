@@ -37,11 +37,13 @@ import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RefCounting;
+import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue;
@@ -349,6 +351,18 @@ public class ICInstructions {
     public List<Var> getWriteIncrVars() {
       return Var.NONE;
     }
+
+    /**
+     * Try to piggyback increments or decrements to instruction
+     * @param increments count of increment or decrement operations per var
+     * @param type
+     * @return empty list if not successful, otherwise list of vars for which
+     *      piggyback occurred
+     *          
+     */
+    public List<Var> tryPiggyback(Counters<Var> increments, RefCountType type) {
+      return Var.NONE;
+    }
   }
   
   public static class Comment extends Instruction {
@@ -452,7 +466,7 @@ public class ICInstructions {
       this(op, Arrays.asList(args));
     }
   
-    private final List<Arg> args;
+    private List<Arg> args;
   
     @Override
     public String toString() {
@@ -575,7 +589,8 @@ public class ICInstructions {
         gen.dereferenceFile(getOutput(0), getInput(0).getVar());
         break;
       case LOAD_REF:
-        gen.retrieveRef(getOutput(0), getInput(0).getVar());
+        gen.retrieveRef(getOutput(0), getInput(0).getVar(),
+              getInputs().size() == 2 ? getInput(1) : null);
         break;
       case COPY_REF:
         gen.makeAlias(getOutput(0), getInput(0).getVar());
@@ -596,25 +611,32 @@ public class ICInstructions {
         gen.arrayCreateNestedImm(getOutput(0), getOutput(1), getInput(0));
         break;
       case LOAD_INT:
-        gen.retrieveInt(getOutput(0), getInput(0).getVar());
+        gen.retrieveInt(getOutput(0), getInput(0).getVar(),
+            getInputs().size() == 2 ? getInput(1) : null);
         break;
       case LOAD_STRING:
-        gen.retrieveString(getOutput(0), getInput(0).getVar());
+        gen.retrieveString(getOutput(0), getInput(0).getVar(),
+            getInputs().size() == 2 ? getInput(1) : null);
         break;
       case LOAD_BOOL:
-        gen.retrieveBool(getOutput(0), getInput(0).getVar());
+        gen.retrieveBool(getOutput(0), getInput(0).getVar(),
+            getInputs().size() == 2 ? getInput(1) : null);
         break;
       case LOAD_VOID:
-        gen.retrieveVoid(getOutput(0), getInput(0).getVar());
+        gen.retrieveVoid(getOutput(0), getInput(0).getVar(),
+            getInputs().size() == 2 ? getInput(1) : null);
         break;
       case LOAD_FLOAT:
-        gen.retrieveFloat(getOutput(0), getInput(0).getVar());
+        gen.retrieveFloat(getOutput(0), getInput(0).getVar(),
+            getInputs().size() == 2 ? getInput(1) : null);
         break;  
       case LOAD_BLOB:
-        gen.retrieveBlob(getOutput(0), getInput(0).getVar());
+        gen.retrieveBlob(getOutput(0), getInput(0).getVar(),
+            getInputs().size() == 2 ? getInput(1) : null);
         break;
       case LOAD_FILE:
-        gen.retrieveFile(getOutput(0), getInput(0).getVar());
+        gen.retrieveFile(getOutput(0), getInput(0).getVar(),
+            getInputs().size() == 2 ? getInput(1) : null);
         break;
       case DECR_BLOB_REF:
         gen.decrBlobRef(getOutput(0));
@@ -2267,6 +2289,35 @@ public class ICInstructions {
           // Return default
           return super.getIncrVars();
       }
+    }
+    
+    @Override
+    public List<Var> tryPiggyback(Counters<Var> increments, RefCountType type) {
+      switch (op) {
+        case LOAD_BLOB:
+        case LOAD_BOOL:
+        case LOAD_FILE:
+        case LOAD_FLOAT:
+        case LOAD_INT:
+        case LOAD_REF:
+        case LOAD_STRING:
+        case LOAD_VOID: {
+          Var inVar = getInput(0).getVar();
+          if (type == RefCountType.READERS) {
+            long amt = increments.getCount(inVar);
+            if (amt < 0) {
+              assert(getInputs().size() == 1);
+              // Add extra arg
+              this.args = Arrays.asList(args.get(0), args.get(1),
+                                        Arg.createIntLit(amt * -1));
+              return Collections.singletonList(inVar);
+            }
+          }
+        }
+      }
+
+      // Fall through to here if can do nothing
+      return Var.NONE;
     }
   }
 

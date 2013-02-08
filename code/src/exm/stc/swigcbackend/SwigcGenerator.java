@@ -53,7 +53,6 @@ import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.PrimType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.swigcbackend.tree.Command;
 import exm.stc.swigcbackend.tree.Comment;
@@ -178,13 +177,6 @@ public class SwigcGenerator implements CompilerBackend
       // TODO Auto-generated method stub
       return null;
     }
-
-    public static TclTree allocateContainer(String tclName,
-        String stringTypename) {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
     public static TclTree allocate(String tclName, String integerTypename) {
       // TODO Auto-generated method stub
       return null;
@@ -285,11 +277,6 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     public static TclTree floatGet(String prefixVar, Value varToExpr) {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    public static TclTree allocateFile(Value mapExpr, String tclName) {
       // TODO Auto-generated method stub
       return null;
     }
@@ -491,67 +478,10 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void declare(Type t, String name, VarStorage storage,
-        DefType defType, Var mapping)
+  public void declare(Var var,
+        Arg initReaders, Arg initWriters)
   throws UndefinedTypeException
-  {
-    assert(mapping == null || Types.isMappable(t));
-    String tclName = prefixVar(name);
-    Sequence point = pointStack.peek();
-
-    if (storage == VarStorage.ALIAS) {
-      point.add(new Comment("Alias " + name + " with type " + t.toString() +
-          " was defined"));
-      return;
-    }
-
-    if (storage == VarStorage.GLOBAL_CONST) {
-      // If global, it should already be in TCL global scope, just need to
-      // make sure that we've imported it
-      point.add(Turbine.makeTCLGlobal(tclName));
-      return;
-    }
-
-
-    // Initialize the TD in ADLB with a type
-    if (Types.isScalarFuture(t) || Types.isScalarUpdateable(t)) {
-      if (Types.isFile(t)) {
-        Value mapExpr = (mapping == null) ? null : varToExpr(mapping);
-        point.add(Turbine.allocateFile(mapExpr, tclName));
-      } else {
-        PrimType pt = t.primType();
-        String tprefix = typeToString(pt);
-        point.add(Turbine.allocate(tclName, tprefix));
-      }
-    } else if (Types.isArray(t)) {
-      point.add(Turbine.allocateContainer(tclName, Turbine.INTEGER_TYPENAME));
-    } else if (Types.isRef(t)) {
-      point.add(Turbine.allocate(tclName, Turbine.INTEGER_TYPENAME));
-    } else if (Types.isStruct(t)) {
-      point.add(Turbine.allocateContainer(tclName, Turbine.STRING_TYPENAME));
-    } else if (Types.isScalarValue(t)) {
-      if (storage != VarStorage.LOCAL) {
-        throw new STCRuntimeError("Expected scalar value to have "
-            + "local storage");
-      }
-      point.add(new Comment("Value " + name + " with type " + t.toString() +
-          " was defined"));
-      // don't need to do anything
-    } else {
-      throw new STCRuntimeError("Code generation only implemented" +
-          " for initialisation of scalar, reference, array and struct types");
-    }
-
-
-    // Store the name->TD in the stack
-
-      if (storage == VarStorage.STACK && !noStackVars()) {
-        Command s = Turbine.storeInStack(name, tclName);
-        // Store the name->TD in the stack
-        point.add(s);
-      }
-
-  }
+  {  }
 
 
   @Override
@@ -618,7 +548,7 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void retrieveInt(Var target, Var source) {
+  public void retrieveInt(Var target, Var source, Arg decr) {
     assert(target.type().equals(Types.V_INT));
     assert(source.type().equals(Types.F_INT));
     pointStack.peek().add(Turbine.integerGet(prefixVar(target.name()),
@@ -641,7 +571,7 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void retrieveBool(Var target, Var source) {
+  public void retrieveBool(Var target, Var source, Arg decr) {
     assert(target.type().equals(Types.V_BOOL));
     assert(source.type().equals(Types.F_BOOL));
     pointStack.peek().add(Turbine.integerGet(prefixVar(target.name()),
@@ -663,7 +593,7 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void retrieveFloat(Var target, Var source) {
+  public void retrieveFloat(Var target, Var source, Arg decr) {
     assert(target.type().equals(Types.V_FLOAT));
     assert(source.type().equals(Types.F_FLOAT)
             || source.type().equals(Types.UP_FLOAT));
@@ -684,7 +614,7 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void retrieveString(Var target, Var source) {
+  public void retrieveString(Var target, Var source, Arg decr) {
     assert(target.type().equals(Types.V_STRING));
     assert(source.type().equals(Types.F_STRING));
     pointStack.peek().add(Turbine.stringGet(prefixVar(target.name()),
@@ -782,7 +712,7 @@ public class SwigcGenerator implements CompilerBackend
   }
 
   @Override
-  public void retrieveRef(Var target, Var src) {
+  public void retrieveRef(Var target, Var src, Arg decr) {
     assert(Types.isRef(src.type()));
     assert(Types.isRefTo(src.type(), target.type()));
     TclTree deref = Turbine.integerGet(prefixVar(target.name()),
@@ -2132,7 +2062,7 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void retrieveBlob(Var target, Var src) {
+    public void retrieveBlob(Var target, Var src, Arg decr) {
       // TODO Auto-generated method stub
       
     }
@@ -2156,7 +2086,7 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void retrieveVoid(Var target, Var source) {
+    public void retrieveVoid(Var target, Var source, Arg decr) {
       // TODO Auto-generated method stub
       
     }
@@ -2186,7 +2116,7 @@ public class SwigcGenerator implements CompilerBackend
     }
 
     @Override
-    public void retrieveFile(Var target, Var src) {
+    public void retrieveFile(Var target, Var src, Arg decr) {
       // TODO Auto-generated method stub
       
     }

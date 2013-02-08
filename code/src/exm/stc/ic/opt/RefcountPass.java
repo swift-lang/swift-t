@@ -1,6 +1,7 @@
 package exm.stc.ic.opt;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
@@ -22,6 +23,9 @@ import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.Sets;
+import exm.stc.common.util.SingleArgFunction;
+import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
@@ -179,6 +183,24 @@ public class RefcountPass extends FunctionOptimizerPass {
                      parentAssignedAliasVars);
     addRefIncrements(block, writeIncrements, RefCountType.WRITERS,
                      parentAssignedAliasVars);    
+    
+    // Verify we didn't miss any
+    checkIncrementsAdded(block, readIncrements);
+    checkIncrementsAdded(block, writeIncrements);
+  }
+
+  private void checkIncrementsAdded(Block block, Counters<Var> increments) {
+    // Check that all refcounts are zero
+    for (Entry<Var, Long> e: increments.entries()) {
+      String msg = "Refcount not 0 after pass " + e.toString() +
+          " in block " + block;
+      if (e.getKey().storage() == VarStorage.ALIAS) {
+        // This is ok but indicates var declaration is in wrong place
+        Logging.getSTCLogger().debug(msg);
+      } else {
+        assert(e.getValue() == 0) : msg;
+      }
+    }
   }
 
   /**
@@ -252,6 +274,122 @@ public class RefcountPass extends FunctionOptimizerPass {
   }
 
   private void addDecrements(Block block, Counters<Var> increments,
+      RefCountType type) {
+    // First try to piggyback on variable declarations
+    piggybackDecrementsOnDeclarations(block, increments, type);
+    
+    // Then see if we can do the decrement on top of another operation
+    piggybackDecrementsOnInstructions(block, increments, type);
+    
+    
+    // Finally, the remainder are decremented as cleanup at end of block
+    addDecrementsAsCleanups(block, increments, type);
+  }
+
+  /**
+   * Try to piggyback reference decrements onto var declarations, for
+   * example if a var is never read or written
+   * @param block
+   * @param increments updated to reflect changes
+   * @param type
+   */
+  private void piggybackDecrementsOnDeclarations(Block block,
+      Counters<Var> increments, final RefCountType type) {
+    final Set<Var> immDecrCandidates = Sets.createSet(block.getVariables().size());
+    for (Var blockVar: block.getVariables()) {
+      if (blockVar.storage() != VarStorage.ALIAS) {
+        long incr = increments.getCount(blockVar);
+        // -1 may correspond to the case when the value of the var is 
+        // thrown away, or where the var is never written. The exception is
+        // if an instruction reads/writes the var without modifying the refcount,
+        // in which case we can't move the decrement to the front of the block
+        // Shouldn't be less than this when var is declared in this
+        // block.  
+        assert (incr >= -1) : blockVar + " " + incr;
+        if (incr == -1) {
+          immDecrCandidates.add(blockVar);
+        }
+      }
+    }
+    
+    // Check that the data isn't actually used in block or sync continuations
+    ICUtil.walkSyncChildren(block, true, new SingleArgFunction<Instruction>() {
+      public void call(Instruction inst) {
+        if (type == RefCountType.READERS) {
+          for (Arg in: inst.getInputs())
+            if (in.isVar())
+              immDecrCandidates.remove(in.getVar());
+          immDecrCandidates.removeAll(inst.getReadOutputs());
+        } else {
+          assert(type == RefCountType.WRITERS);
+          immDecrCandidates.removeAll(inst.getModifiedOutputs());
+        }
+      }
+    });
+    
+    for (Var immDecrVar: immDecrCandidates) {
+      block.setInitRefcount(immDecrVar, type, 0);
+      increments.decrement(immDecrVar);
+    }
+  }
+
+  private void piggybackDecrementsOnInstructions(Block block,
+      Counters<Var> increments, final RefCountType type) {
+    // Initially all increments are candidates for piggybacking
+    final Counters<Var> candidates = increments.clone();
+    
+    // Remove any candidates from synchronous children that might 
+    // read/write the variables
+    ICUtil.walkSyncChildren(block, false, new SingleArgFunction<Instruction>() {
+      public void call(Instruction inst) {
+        removeDecrCandidates(inst, type, candidates);
+      }
+    });
+    
+    // Vars where we were successful
+    List<Var> successful = new ArrayList<Var>();
+    
+    // scan up from bottom of block to see if we can piggyback
+    ListIterator<Instruction> it = block.instructionIterator(
+                                              block.getInstructions().size());
+    while (it.hasPrevious()) {
+      Instruction inst = it.previous();
+      List<Var> piggybacked = inst.tryPiggyback(candidates, type);
+      for (Var v: piggybacked) {
+        candidates.reset(v);
+        successful.add(v);
+      }
+      // Make sure we don't decrement before a use of the var by removing
+      // from candidate set
+      removeDecrCandidates(inst, type, candidates);
+    }
+    
+
+    // Update main increments map
+    for (Var v: successful) {
+      increments.reset(v);
+    }
+  }
+
+  private void removeDecrCandidates(Instruction inst, RefCountType type,
+      Counters<Var> candidates) {
+    if (type == RefCountType.READERS) {
+      for (Arg in: inst.getInputs()) {
+        if (in.isVar())
+          candidates.reset(in.getVar());
+      }
+      for (Var read: inst.getReadOutputs()) {
+        candidates.reset(read);
+      }
+    } else {
+      assert(type == RefCountType.WRITERS);
+      for (Var modified: inst.getModifiedOutputs()) {
+        candidates.reset(modified);
+      }
+    }
+  }
+
+  private void addDecrementsAsCleanups(Block block, Counters<Var> increments,
       RefCountType type) {
     Counters<Var> changes = new Counters<Var>();
     for (Entry<Var, Long> e: increments.entries()) {
@@ -353,6 +491,16 @@ public class RefcountPass extends FunctionOptimizerPass {
    */
   private void addRefIncrements(Block block, Counters<Var> increments,
                                 RefCountType type, Set<Var> parentAssignedAliasVars) {
+    // First try to piggy-back onto var declarations
+    piggybackIncrementsOnDeclarations(block, increments, type);
+    
+    // If we can't piggyback, put them at top of block before any tasks are spawned
+    addIncrementsAtTop(block, increments, type, parentAssignedAliasVars);
+  }
+
+  private void addIncrementsAtTop(Block block, Counters<Var> increments,
+      RefCountType type, Set<Var> parentAssignedAliasVars) {
+    // Next try to just put at top of block
     Iterator<Entry<Var, Long>> it = increments.entries().iterator();
     while (it.hasNext()) {
       Entry<Var, Long> e = it.next();
@@ -381,26 +529,33 @@ public class RefcountPass extends FunctionOptimizerPass {
         }
       }
     }
-    
-    // Check that all refcounts are zero
-    for (Entry<Var, Long> e: increments.entries()) {
-      String msg = "Refcount not 0 after pass " + e.toString() +
-          " in block " + block;
-      if (e.getKey().storage() == VarStorage.ALIAS) {
-        // This is ok but indicates var declaration is in wrong place
-        Logging.getSTCLogger().debug(msg);
-      } else {
-        assert(e.getValue() == 0) : msg;
+  }
+
+  private void piggybackIncrementsOnDeclarations(Block block,
+      Counters<Var> increments, RefCountType type) {
+    for (Var blockVar: block.getVariables()) {
+      if (blockVar.storage() != VarStorage.ALIAS) {
+        long incr = increments.getCount(blockVar);
+        if (incr > 0) {
+          block.setInitRefcount(blockVar, type, incr + 1);
+        }
+        increments.decrement(blockVar, incr);
       }
     }
   }
 
+  /**
+   * Add an increment instruction at top of block
+   * @param block
+   * @param type
+   * @param var
+   * @param count
+   */
   private void addRefIncrementAtTop(Block block, RefCountType type, Var var,
       long count) {
     assert(count >= 0) : var + ":" + count;
     if (count > 0) {
       // increment before anything spawned
-      // TODO: add to var declaration?
       block.addInstructionFront(buildIncrInstruction(type, var, count));
     }
   }

@@ -25,10 +25,7 @@ import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types.FunctionType;
-import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
 
 public interface CompilerBackend {
 
@@ -39,17 +36,11 @@ public interface CompilerBackend {
   public abstract void requirePackage(String pkg, String version);
   
   /**
-   * 
-   * @param t
-   * @param name
-   * @param storage
-   * @param defType
-   * @param mapping null if no mapping
+   * @param var variable object
    * @throws UndefinedTypeException
    */
-  public abstract void declare(Type t, String name,
-      VarStorage storage, DefType defType, Var mapping) 
-           throws UndefinedTypeException;
+  public abstract void declare(Var var,
+      Arg initReaders, Arg initWriters) throws UndefinedTypeException;
 
   public abstract void decrRef(Var var, Arg amount);
 
@@ -81,7 +72,7 @@ public interface CompilerBackend {
   
   public abstract void dereferenceFile(Var dst, Var src);
 
-  public abstract void retrieveRef(Var target, Var src);
+  public abstract void retrieveRef(Var target, Var src, Arg decr);
   
   /**
    * Copy the handle to a future, creating an alias
@@ -95,7 +86,7 @@ public interface CompilerBackend {
   /**assignInt, which can take a value variable or a literal int in oparg
    */
   public abstract void assignInt(Var target, Arg src);
-  public abstract void retrieveInt(Var target, Var source);
+  public abstract void retrieveInt(Var target, Var source, Arg decr);
 
   public abstract void assignVoid(Var target, Arg src);
   /**
@@ -104,22 +95,22 @@ public interface CompilerBackend {
    * @param target
    * @param source
    */
-  public abstract void retrieveVoid(Var target, Var source);
+  public abstract void retrieveVoid(Var target, Var source, Arg decr);
   
   public abstract void assignFloat(Var target, Arg src);
-  public abstract void retrieveFloat(Var target, Var source);
+  public abstract void retrieveFloat(Var target, Var source, Arg decr);
 
   /** assignString, which can take a value variable or a literal int in oparg
    */
   public abstract void assignString(Var target, Arg src);
 
-  public abstract void retrieveString(Var target, Var source);
+  public abstract void retrieveString(Var target, Var source, Arg decr);
   
   public abstract void assignBool(Var target, Arg src);
-  public abstract void retrieveBool(Var target, Var source);
+  public abstract void retrieveBool(Var target, Var source, Arg decr);
 
   public abstract void assignBlob(Var target, Arg src);
-  public abstract void retrieveBlob(Var target, Var src);
+  public abstract void retrieveBlob(Var target, Var src, Arg decr);
   
   /**
    * Set file object.  Increment local file ref count
@@ -128,7 +119,7 @@ public interface CompilerBackend {
    */
   public abstract void assignFile(Var target, Arg src);
 
-  public abstract void retrieveFile(Var target, Var src);
+  public abstract void retrieveFile(Var target, Var src, Arg decr);
   
 
   /**

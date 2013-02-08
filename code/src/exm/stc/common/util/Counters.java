@@ -11,8 +11,15 @@ import java.util.Set;
  * @param <K> must implement equals() and hashcode()
  */
 public class Counters<K> {
-  private final HashMap<K, Long> map = new HashMap<K, Long>();
+  private final HashMap<K, Long> map;
   
+  public Counters() {
+    this(new HashMap<K, Long>());
+  }
+  public Counters(HashMap<K, Long> cloned) {
+    this.map = cloned;
+  }
+
   public long increment(K key) {
     return add(key, 1);
   }
@@ -61,6 +68,12 @@ public class Counters<K> {
 
   public Set<Entry<K, Long>> entries() {
     return map.entrySet();
+  }
+  
+  @SuppressWarnings("unchecked")
+  @Override
+  public Counters<K> clone() {
+    return new Counters<K>((HashMap<K, Long>)this.map.clone());
   }
   
   public String toString() {

@@ -46,6 +46,7 @@ import exm.stc.tclbackend.tree.Value;
  * */
 class Turbine
 {
+  private static final String GET_FILE = "turbine::get_file";
   private static final Token GET_OUTPUT_FILE_PATH = new Token("turbine::get_output_file_path");
   private static final Token GET_FILE_PATH = new Token("turbine::get_file_path");
   private static final String EXEC_EXTERNAL = "turbine::exec_external";
@@ -57,10 +58,10 @@ class Turbine
   public static final String BLOB_TYPENAME = "blob";
 
   // Commonly used things:
-  private static final Token ALLOCATE_CONTAINER =
-      new Token("turbine::allocate_container");
-  private static final Token ALLOCATE_FILE = 
-          new Token("turbine::allocate_file2");
+  private static final Token ALLOCATE_CONTAINER_CUSTOM =
+      new Token("turbine::allocate_container_custom");
+  private static final Token ALLOCATE_FILE_CUSTOM = 
+          new Token("turbine::allocate_file_custom");
   private static final Token CONTAINER_INSERT =
       new Token("turbine::container_insert");
   private static final Token CONTAINER_F_INSERT =
@@ -200,7 +201,8 @@ class Turbine
       result[index++] = new SetVariable("parent", STACK);
     }
 
-    result[index++] = allocateContainer(LOCAL_STACK_NAME, STRING_TYPENAME);
+    result[index++] = allocateContainer(LOCAL_STACK_NAME,
+                        STRING_TYPENAME, LiteralInt.ONE, LiteralInt.ONE);
 
     if (type != StackFrameType.MAIN) {
       // main is the only procedure without a parent stack frame
@@ -225,6 +227,19 @@ class Turbine
   }
 
 
+  public static TclTree allocateFuture(String tclName, String typePrefix,
+      Expression initReaders) {
+    return new Command(ALLOCATE_CUSTOM, new Token(tclName),
+        new Token(typePrefix), initReaders);
+  }
+
+  public static TclTree allocateUpdateable(String tclName, String typePrefix,
+      Expression initReaders, Expression initWriters) {
+    return new Command(ALLOCATE_CUSTOM, new Token(tclName),
+            new Token(typePrefix), initReaders, initWriters);
+  }
+  
+
   public static TclTree allocate(String tclName, String typePrefix) {
     return allocate(tclName, typePrefix, LiteralInt.ONE, LiteralInt.ONE,
                     false);
@@ -246,19 +261,21 @@ class Turbine
               LiteralInt.boolValue(permanent));
   }
 
-  public static TclTree allocateContainer(String name,
-                                          String indexType) {
-    return new Command(ALLOCATE_CONTAINER,
-                       new Token(name), new Token(indexType));
+  public static TclTree allocateContainer(String name, String indexType,
+      Expression initReaders, Expression initWriters) {
+    return new Command(ALLOCATE_CONTAINER_CUSTOM,
+                       new Token(name), new Token(indexType),
+                       initReaders, initWriters);
   }
   
-  public static TclTree allocateFile(Value mapVar, String tclName) {
+  public static TclTree allocateFile(Value mapVar, String tclName,
+      Expression initReaders) {
     if (mapVar != null) {
-      return new Command(ALLOCATE_FILE,
-            new Token(tclName), mapVar);
+      return new Command(ALLOCATE_FILE_CUSTOM,
+            new Token(tclName), initReaders, mapVar);
     } else {
-      return new Command(ALLOCATE_FILE,
-              new Token(tclName));
+      return new Command(ALLOCATE_FILE_CUSTOM,
+              new Token(tclName), initReaders);
     }
   }
 
@@ -348,6 +365,31 @@ class Turbine
   public static Command blobSet(Value target, Expression src) {
     // Calling convention requires separate pointer and length args
     return new Command(STORE_BLOB, target, src);
+  }
+
+  public static SetVariable integerDecrGet(String target, Value src,
+      Expression decr) {
+    return new SetVariable(target, new Square(RETRIEVE_INTEGER, src, decr));
+  }
+
+  public static SetVariable floatDecrGet(String target, Value src,
+      Expression decr) {
+    return new SetVariable(target, new Square(RETRIEVE_FLOAT, src, decr));
+  }
+  
+  public static SetVariable stringDecrGet(String target, Value src,
+      Expression decr) {
+    return new SetVariable(target, new Square(RETRIEVE_STRING, src, decr));
+  }
+
+  public static SetVariable blobDecrGet(String target, Value src,
+      Expression decr) {
+    return new SetVariable(target, new Square(RETRIEVE_BLOB, src, decr));
+  }
+  
+  public static SetVariable fileDecrGet(String target, Value src,
+      Expression decr) {
+    return new SetVariable(target, Square.fnCall(GET_FILE, src, decr));
   }
 
   private static Value tclRuleType (TaskMode t) {
@@ -952,7 +994,7 @@ class Turbine
 
   public static TclTree fileGet(String prefixVar, Value varToExpr) {
     return new SetVariable(prefixVar, 
-        Square.fnCall("turbine::get_file", varToExpr));
+        Square.fnCall(GET_FILE, varToExpr));
   }
   
   public static Command decrLocalFileRef(String localFileName) {

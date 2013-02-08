@@ -23,6 +23,8 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.tclbackend.tree.TclString;
 
 public class Arg implements Comparable<Arg> {
+  public static final Arg ONE = Arg.createIntLit(1);
+  
   public static enum ArgKind {
     INTVAL, FLOATVAL, STRINGVAL, BOOLVAL, VAR
   }
