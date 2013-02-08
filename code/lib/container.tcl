@@ -90,7 +90,7 @@ namespace eval turbine {
     # d: the data
     # outputs: ignored.  To block on this, use turbine::reference
     # Note: assume slot kept open by other process
-    proc container_f_insert { parent outputs inputs {slot_create 1}} {
+    proc container_f_insert { parent outputs inputs {slot_drops 1} {slot_create 1}} {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set d [ lindex $inputs 2 ]
@@ -101,18 +101,18 @@ namespace eval turbine {
         }
 
         rule "container_f_insert-$c-$i" $i $turbine::LOCAL $adlb::RANK_ANY \
-            [ list turbine::container_f_insert_body $c $i $d ]
+            [ list turbine::container_f_insert_body $c $i $d $slot_drops ]
     }
 
-    proc container_f_insert_body { c i d } {
+    proc container_f_insert_body { c i d slot_drops } {
         set s [ retrieve $i ]
-        container_insert $c $s $d 1
+        container_insert $c $s $d $slot_drops
     }
 
     # When i and r are closed, set c[i] := *(r)
     # inputs: [ list c i r ]
     # r: a reference to a turbine ID
-    proc container_f_deref_insert { parent outputs inputs {slot_create 1}} {
+    proc container_f_deref_insert { parent outputs inputs {slot_drops 1} {slot_create 1}} {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set r [ lindex $inputs 2 ]
@@ -124,20 +124,20 @@ namespace eval turbine {
         }
 
         rule "container_f_deref_insert-$c-$i" "$i $r" $turbine::LOCAL $adlb::RANK_ANY \
-            "turbine::container_f_deref_insert_body $c $i $r"
+            "turbine::container_f_deref_insert_body $c $i $r $slot_drops"
     }
 
-    proc container_f_deref_insert_body { c i r } {
+    proc container_f_deref_insert_body { c i r slot_drops } {
         set t1 [ retrieve_decr_integer $i ]
         set d [ retrieve_decr $r ]
-        container_insert $c $t1 $d 1
+        container_insert $c $t1 $d $slot_drops
     }
 
     # When r is closed, set c[i] := *(r)
     # inputs: [ list c i r ]
     # i: an integer which is the index to insert into
     # r: a reference to a turbine ID
-    proc container_deref_insert { parent outputs inputs {slot_create 1}} {
+    proc container_deref_insert { parent outputs inputs {slot_drops 1} {slot_create 1}} {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set r [ lindex $inputs 2 ]
@@ -149,13 +149,13 @@ namespace eval turbine {
         }
 
         rule "container_deref_insert-$c-$i" "$r" $turbine::LOCAL $adlb::RANK_ANY \
-            "turbine::container_deref_insert_body $c $i $r"
+            "turbine::container_deref_insert_body $c $i $r $slot_drops"
     }
 
-    proc container_deref_insert_body { c i r } {
+    proc container_deref_insert_body { c i r slot_drops } {
         set d [ retrieve_decr $r ]
         # Refcount from reference passed to container
-        container_insert $c $i $d
+        container_insert $c $i $d $slot_drops
     }
 
     # Immediately insert data into container without affecting open slot count
@@ -163,9 +163,9 @@ namespace eval turbine {
     # i: the subscript
     # d: the data
     # outputs: ignored.
-    proc container_immediate_insert { c i d } {
+    proc container_immediate_insert { c i d {drops 0} } {
         # adlb::slot_create $c
-        container_insert $c $i $d 0
+        container_insert $c $i $d $drops
     }
 
     # When i is closed, get a reference on c[i] in TD r
