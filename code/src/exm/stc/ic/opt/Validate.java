@@ -133,9 +133,9 @@ public class Validate implements OptimizerPass {
         assert(declared.containsKey(v.mapping().name()));
       }
     }
-    
+ 
     checkVarReferences(logger, block, declared);
-    
+      
     if (checkCleanups)
       checkCleanups(fn, block);
     
@@ -196,7 +196,7 @@ public class Validate implements OptimizerPass {
 
   private void checkVarReference(Map<String, Var> declared, Var referencedVar,
                                  Object context) {
-    assert(declared.containsKey(referencedVar.name())): referencedVar;
+    assert(declared.containsKey(referencedVar.name())): referencedVar + " " + declared;
     Var declaredVar = declared.get(referencedVar.name());
     assert(referencedVar.identical(declaredVar)) : 
               context.toString() + " : " +

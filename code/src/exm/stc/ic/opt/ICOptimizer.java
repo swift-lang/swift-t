@@ -133,8 +133,9 @@ public class ICOptimizer {
       // Try to reorder instructions for benefit of forward dataflow
       // Don't do every iteration, instructions are first 
       // in original order, then in a different but valid order
-      if (iteration % 2 == 1 || iteration > nIterations * 2 / 3) {
-        pipe.addPass(new ReorderInstructions());
+      boolean lastThird = iteration > nIterations * 2 / 3;
+      if (iteration % 2 == 1 || lastThird) {
+        pipe.addPass(new ReorderInstructions(lastThird));
       }
       
       // Do forward dataflow after const folding so it won't create any

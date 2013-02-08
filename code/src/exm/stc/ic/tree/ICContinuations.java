@@ -1087,10 +1087,9 @@ public class ICContinuations {
     @Override
     public List<BlockingVar> blockingVars() {
       ArrayList<BlockingVar> res = new ArrayList<BlockingVar>();
-      res.add(new BlockingVar(condVar, false));
       for (int i = 0; i < loopVars.size(); i++) {
         if (blockingVars.get(i)) {
-          res.add(new BlockingVar(loopVars.get(i), false));
+          res.add(new BlockingVar(initVals.get(i), false));
         }
       }
       return res;

@@ -31,8 +31,17 @@ import exm.stc.ic.tree.ICTree.Function;
  */
 public class ReorderInstructions extends FunctionOptimizerPass {
 
+  // Track statistics about how many times we moved something
   private static int move = 0;
   private static int noMove = 0;
+  
+  // If true, try to move multiple instructions.  Requires more processing
+  // but in some cases will expose more opportunities for reduction
+  private final boolean aggressive;
+  
+  public ReorderInstructions(boolean aggressive) {
+    this.aggressive = aggressive;
+  }
   
   @Override
   public String getPassName() {
@@ -99,7 +108,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     
 
     if (moved) {
-      rebuildInstructions(block, newInstructions, after);
+      rebuildInstructions(block, instructionsCopy, newInstructions, after);
       block.replaceInstructions(newInstructions);
       move++;
     } else {
@@ -110,6 +119,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
   }
 
   private void rebuildInstructions(Block block,
+      ArrayList<Instruction> oldInstructions,
       ArrayList<Instruction> newInstructions,
       MultiMap<Instruction, Instruction> after) {
     // Put all instructions back.  We do a topological sort to
@@ -133,13 +143,21 @@ public class ReorderInstructions extends FunctionOptimizerPass {
           }
         }
       }
-    } 
+    }
     
+    // Add any instructions nothing is dependent on at top
+    if (visited.size() < oldInstructions.size()) {
+      for (Instruction inst: oldInstructions) {
+        if (!visited.contains(inst)) {
+          stack.push(inst);
+        }
+      }
+    }
     
     while (!stack.isEmpty()) {
       newInstructions.add(stack.pop());
     }
-    assert(newInstructions.size() == block.getInstructions().size());
+    assert(newInstructions.size() == oldInstructions.size());
   }
 
   private boolean searchForInputWriter(Logger logger,
@@ -153,7 +171,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     
     // Find last instruction that writes inputs of inst1
     // Build a DAG of dependences between instructions
-    boolean move = mustMove.contains(inst1);
+    boolean move = mustMove.contains(inst1) || aggressive;
     boolean canMoveFurther = true;
     for (int j = i + 1; j < instructionsCopy.size(); j++) {
       Instruction inst2 = instructionsCopy.get(j);
