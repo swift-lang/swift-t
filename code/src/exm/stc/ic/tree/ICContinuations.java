@@ -330,7 +330,6 @@ public class ICContinuations {
     }
 
     public abstract boolean isLoop();
-
   }
 
   public enum ContinuationType {
@@ -567,7 +566,7 @@ public class ICContinuations {
      */
     @Override
     public List<BlockingVar> blockingVars() {
-      return null;
+      return Collections.emptyList();
     }
 
     @Override

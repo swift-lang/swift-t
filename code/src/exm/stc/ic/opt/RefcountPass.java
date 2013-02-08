@@ -27,6 +27,7 @@ import exm.stc.common.util.Sets;
 import exm.stc.common.util.SingleArgFunction;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
+import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
@@ -104,6 +105,14 @@ public class RefcountPass extends FunctionOptimizerPass {
         for (Var passedIn: cont.getPassedInVars()) {
           if (RefCounting.hasReadRefCount(passedIn)) {
             readIncrements.decrement(passedIn);
+          }
+        }
+        
+        // Hold read reference for wait var
+        for (BlockingVar blockingVar: cont.blockingVars()) {
+          if (RefCounting.hasReadRefCount(blockingVar.var) &&
+              !cont.getPassedInVars().contains(blockingVar.var)) {
+            readIncrements.decrement(blockingVar.var);
           }
         }
       }
@@ -615,6 +624,12 @@ public class RefcountPass extends FunctionOptimizerPass {
       for (Var keepOpen: cont.getKeepOpenVars()) {
         if (RefCounting.hasWriteRefCount(keepOpen)) {
           writeIncrements.add(keepOpen, incr);
+        }
+      }
+      for (BlockingVar blockingVar: cont.blockingVars()) {
+        if (RefCounting.hasReadRefCount(blockingVar.var) &&
+            !cont.getPassedInVars().contains(blockingVar.var)) {
+          readIncrements.increment(blockingVar.var);
         }
       }
     }
