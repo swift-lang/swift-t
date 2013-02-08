@@ -147,7 +147,7 @@ namespace eval turbine {
             set k 0
             set slot_drop 0
             for { set i $start } { $i <= $end } { incr i $step } {
-                allocate td integer 0
+                allocate td integer
                 store_integer $td $i
                 
                 if { [ expr $i + $step > $end ] } {
@@ -232,7 +232,7 @@ namespace eval turbine {
 
         set i 0
         while { [ gets $fd line ] >= 0 } {
-            allocate s string 0
+            allocate s string
             store_string $s $line
             container_insert $result $i $s
             incr i
@@ -267,12 +267,12 @@ namespace eval turbine {
         if { [ llength $args ] == 2 } {
             set type   [ lindex $args 0 ]
             set value  [ lindex $args 1 ]
-            set result [ allocate $type 0 ]
+            set result [ allocate_custom "" $type 1 1 1 ]
         } elseif { [ llength $args ] == 3 } {
             set name   [ lindex $args 0 ]
             set type   [ lindex $args 1 ]
             set value  [ lindex $args 2 ]
-            set result [ allocate $name $type 0 ]
+            set result [ allocate_custom $name $type 1 1 1 ]
             upvar 1 $name n
             set n $result
         } else {

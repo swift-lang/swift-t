@@ -25,12 +25,12 @@ turbine::init $engines $servers
 if { ! [ adlb::amserver ] } {
 
     set c [ adlb::unique ]
-    adlb::create $c $adlb::CONTAINER 0 integer
+    adlb::create $c $adlb::CONTAINER integer
 
     set iterations [ expr 5 + $c ]
     for { set i [ expr $c + 1 ] } { $i < $iterations } { incr i } {
         set s [ adlb::unique ]
-        adlb::create $s $adlb::STRING 0
+        adlb::create $s $adlb::STRING
         adlb::store $s $adlb::STRING "message $i"
         adlb::insert $c $i $s
     }

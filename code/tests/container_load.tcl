@@ -36,12 +36,12 @@ proc rules { } {
     namespace import adlb::unique
 
     turbine::allocate_container c integer
-    turbine::allocate x1 integer 0
-    turbine::allocate x2 integer 0
-    turbine::allocate i1 integer 0
-    turbine::allocate i2 integer 0
-    turbine::allocate v1 integer 0
-    turbine::allocate v2 integer 0
+    turbine::allocate x1 integer
+    turbine::allocate x2 integer
+    turbine::allocate i1 integer
+    turbine::allocate i2 integer
+    turbine::allocate v1 integer
+    turbine::allocate v2 integer
 
     turbine::store_integer $x1 14
     turbine::store_integer $x2 15

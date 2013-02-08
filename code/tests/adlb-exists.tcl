@@ -23,13 +23,13 @@ if [ adlb::amserver ] {
     set z  0
     set d0 [ adlb::unique ]
     set d1 [ adlb::unique ]
-    adlb::create $d1 $adlb::INTEGER 0
+    adlb::create $d1 $adlb::INTEGER
     set d2 [ adlb::unique ]
-    adlb::create $d2 $adlb::INTEGER 0
+    adlb::create $d2 $adlb::INTEGER
     # Don't decrement writer
     adlb::store $d2 $adlb::INTEGER 25 0
     set d3 [ adlb::unique ]
-    adlb::create $d3 $adlb::INTEGER 0
+    adlb::create $d3 $adlb::INTEGER
     adlb::store $d3 $adlb::INTEGER 35
     set L [ list $z $d0 $d1 $d2 $d3 ]
     foreach d $L {

@@ -51,7 +51,7 @@ if { ! [ adlb::amserver ] } {
 
         mpe::log $event_start "start-loop-body"
         set id [ expr $rank + $i * ($workers + 1) ]
-        adlb::create $id $adlb::STRING 0
+        adlb::create $id $adlb::STRING
         adlb::store $id $adlb::STRING "message rank:$rank:$i"
 
         # turbine::c::debug "get"

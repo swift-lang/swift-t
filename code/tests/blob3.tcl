@@ -24,7 +24,7 @@ package require turbine 0.0.1
 proc rules { } {
 
     set b [ adlb::unique ]
-    turbine::create_blob $b 0
+    turbine::create_blob $b
 
     set A [ adlb::unique ]
     turbine::create_container $A integer

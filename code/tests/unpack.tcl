@@ -25,10 +25,10 @@ proc main { } {
 proc test_1D { } {
   puts "test_1D"
   allocate_container C integer
-  allocate x1 integer 0
-  allocate x2 string 0
-  allocate x3 float 0
-  allocate x4 string 0
+  allocate x1 integer
+  allocate x2 string
+  allocate x3 float
+  allocate x4 string
   container_insert $C 4 $x2
   container_insert $C 1 $x1
   container_insert $C 8 $x3
@@ -60,9 +60,9 @@ proc test_1D { } {
 proc test_1D_file { } {
   puts "test_1D_file"
   allocate_container C string
-  allocate name1 string 0
-  allocate name2 string 0
-  allocate name3 string 0
+  allocate name1 string
+  allocate name2 string
+  allocate name3 string
   
   store_string $name1 "name1.sh"
   store_string $name2 "name2.txt"
@@ -113,17 +113,17 @@ proc test_2D { } {
   container_insert $C 2 $C3
   container_insert $C 3 $C4
 
-  allocate x integer 0
+  allocate x integer
   store_integer $x 1
-  allocate y integer 0
+  allocate y integer
   store_integer $y 2
-  allocate z integer 0
+  allocate z integer
   store_integer $z 1234
-  allocate a integer 0
+  allocate a integer
   store_integer $a 321
-  allocate b integer 0
+  allocate b integer
   store_integer $b 3
-  allocate c integer 0
+  allocate c integer
   store_integer $c 4
 
   set expected [ list 1 1 1 1 2 2 2 2 1234 321 ]

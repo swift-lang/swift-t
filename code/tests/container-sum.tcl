@@ -30,13 +30,13 @@ proc rules { } {
     turbine::create_container 11 integer
     # adlb::slot_create 1
 
-    turbine::create_integer 12 0
+    turbine::create_integer 12
     turbine::store_integer 12 12345
-    turbine::create_integer 13 0
+    turbine::create_integer 13
     turbine::store_integer 13 4
-    turbine::create_integer 14 0
+    turbine::create_integer 14
     turbine::store_integer 14 -1
-    turbine::create_integer 15 0
+    turbine::create_integer 15
     turbine::store_integer 15 3
     # 12345 + 4 - 1 + 3 = 12351
 
@@ -49,7 +49,7 @@ proc rules { } {
     adlb::slot_drop 11
 
     # initialise the result
-    turbine::create_integer 16 0
+    turbine::create_integer 16
 
     turbine::sum_integer NO_STACK [ list 16 ] [ list 11 ]
 

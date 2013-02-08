@@ -22,7 +22,7 @@ turbine::enable_read_refcount
 
 if { ! [ adlb::amserver ] } {
   set x [ adlb::unique ]
-  adlb::create $x $adlb::INTEGER 0
+  adlb::create $x $adlb::INTEGER
   adlb::store $x $adlb::INTEGER 0
   if { ! [ adlb::exists $x ] } {
     puts "x does not exist after store"
@@ -37,7 +37,7 @@ if { ! [ adlb::amserver ] } {
   }
 
   set y [ adlb::unique ]
-  adlb::create $y $adlb::INTEGER 0
+  adlb::create $y $adlb::INTEGER
   adlb::refcount_incr $y $adlb::READ_REFCOUNT -1
   # Set reference count to 0, but don't write: shouldn't be destroyed yet
   adlb::store $y $adlb::INTEGER 0

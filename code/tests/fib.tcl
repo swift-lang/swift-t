@@ -42,9 +42,9 @@ proc if-0 { stack } {
         set parent $stack
         allocate_container stack string
         container_insert $stack _parent $parent
-        allocate __t0 integer 0
+        allocate __t0 integer
         container_insert $stack __t0 $__t0
-        allocate __l0 integer 0
+        allocate __l0 integer
         store_integer $__l0 1
         turbine::minus_integer $stack [ list $__t0 ] [ list $n $__l0 ]
         turbine::c::rule if-1 "$__t0" $turbine::LOCAL $adlb::RANK_ANY "if-1 $stack"
@@ -66,15 +66,15 @@ proc if-1 { stack } {
         set parent $stack
         allocate_container stack string
         container_insert $stack _parent $parent
-        allocate __l1 integer 0
-        allocate __l2 integer 0
-        allocate __l3 integer 0
+        allocate __l1 integer
+        allocate __l2 integer
+        allocate __l3 integer
         store_integer $__l3 1
         turbine::minus_integer $stack [ list $__l2 ] [ list $n $__l3 ]
         turbine::c::rule fib [ list $__l2 ] $turbine::LOCAL $adlb::RANK_ANY "fib $stack $__l1 $__l2"
-        allocate __l4 integer 0
-        allocate __l5 integer 0
-        allocate __l6 integer 0
+        allocate __l4 integer
+        allocate __l5 integer
+        allocate __l6 integer
         store_integer $__l6 2
         turbine::minus_integer $stack [ list $__l5 ] [ list $n $__l6 ]
         turbine::c::rule fib [ list $__l5 ] $turbine::LOCAL $adlb::RANK_ANY "fib $stack $__l4 $__l5"
@@ -90,8 +90,8 @@ proc if-1 { stack } {
 proc rules {  } {
     turbine::c::log function:rules
     allocate_container stack string
-    allocate __l0 integer 0
-    allocate __l1 integer 0
+    allocate __l0 integer
+    allocate __l1 integer
     global N
     puts "N: $N"
     store_integer $__l1 $N

@@ -517,7 +517,8 @@ adlb_data_type type_from_string(const char* type_string)
 }
 
 /**
-   usage: adlb::create <id> <type> <updateable> [<extra>]
+   usage: adlb::create <id> <type> [<extra for type>]
+          [ <read_refcount> [ <write_refcount> [ <permanent> ] ] ]
    if <id> is adlb::NULL_ID, returns a newly created id
    @param extra is only used for files and containers
 */
@@ -525,46 +526,71 @@ static int
 ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
-  TCL_CONDITION(objc >= 4, "adlb::create requires >= 3 args!");
-
+  TCL_CONDITION(objc >= 3, "adlb::create requires >= 2 args!");
   int rc;
   long id;
-  rc = Tcl_GetLongFromObj(interp, objv[1], &id);
+  int argpos = 1;
+  rc = Tcl_GetLongFromObj(interp, objv[argpos++], &id);
   TCL_CHECK_MSG(rc, "adlb::create could not get data id");
 
   int type;
-  rc = Tcl_GetIntFromObj(interp, objv[2], &type);
+  rc = Tcl_GetIntFromObj(interp, objv[argpos++], &type);
   TCL_CHECK_MSG(rc, "adlb::create could not get data type");
+ 
+ // Process type-specific params
+  char* subscript_type_string = NULL;
+  switch (type)
+  {
+    case ADLB_DATA_TYPE_CONTAINER:
+      TCL_CONDITION(objc > argpos,
+                    "adlb::create type=container requires "
+                    "subscript type!");
+      subscript_type_string = Tcl_GetString(objv[argpos++]);
+      break;
+  }
 
-  int updateable;
-  rc = Tcl_GetBooleanFromObj(interp, objv[3], &updateable);
-  TCL_CHECK_MSG(rc, "adlb::create could not get rewriteable argument");
+  // Process create props if present
+  adlb_create_props props = DEFAULT_CREATE_PROPS;
+ 
+  if (argpos < objc) {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &(props.read_refcount));
+    TCL_CHECK_MSG(rc, "adlb::create could not get read_refcount argument");
+  }
+
+  if (argpos < objc) {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &(props.write_refcount));
+    TCL_CHECK_MSG(rc, "adlb::create could not get write_refcount argument");
+  }
+  
+  if (argpos < objc) {
+    int permanent;
+    rc = Tcl_GetBooleanFromObj(interp, objv[argpos++], &permanent);
+    TCL_CHECK_MSG(rc, "adlb::create could not get permanent argument");
+    props.permanent = permanent != 0;
+  }
+
 
   long new_id = ADLB_DATA_ID_NULL;
 
   switch (type)
   {
     case ADLB_DATA_TYPE_INTEGER:
-      rc = ADLB_Create_integer(id, updateable, &new_id);
+      rc = ADLB_Create_integer(id, props, &new_id);
       break;
     case ADLB_DATA_TYPE_FLOAT:
-      rc = ADLB_Create_float(id, updateable, &new_id);
+      rc = ADLB_Create_float(id, props, &new_id);
       break;
     case ADLB_DATA_TYPE_STRING:
-      rc = ADLB_Create_string(id, updateable, &new_id);
+      rc = ADLB_Create_string(id, props, &new_id);
       break;
     case ADLB_DATA_TYPE_BLOB:
-      rc = ADLB_Create_blob(id, updateable, &new_id);
+      rc = ADLB_Create_blob(id, props, &new_id);
       break;
-    case ADLB_DATA_TYPE_CONTAINER:
-      TCL_CONDITION(objc >= 5,
-                    "adlb::create type=container requires "
-                    "subscript type!");
-      char* subscript_type_string = Tcl_GetString(objv[4]);
-      adlb_data_type subscript_type =
-          type_from_string(subscript_type_string);
-      rc = ADLB_Create_container(id, subscript_type, &new_id);
+    case ADLB_DATA_TYPE_CONTAINER: {
+      adlb_data_type subscript_type = type_from_string(subscript_type_string);
+      rc = ADLB_Create_container(id, subscript_type, props, &new_id);
       break;
+    }
     case ADLB_DATA_TYPE_NULL:
       Tcl_AddErrorInfo(interp,
                        "adlb::create: unknown type!");
@@ -577,7 +603,6 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
     Tcl_Obj* result = Tcl_NewLongObj(new_id);
     Tcl_SetObjResult(interp, result);
   }
-  return TCL_OK;
 
   TCL_CONDITION(rc == ADLB_SUCCESS, "adlb::create <%li> failed!", id);
   return TCL_OK;
@@ -1619,29 +1644,6 @@ ADLB_Slot_Drop_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::permanent <id>
-
-   Ensures that data is never garbage collected
-*/
-static int
-ADLB_Permanent_Cmd(ClientData cdata, Tcl_Interp *interp,
-                   int objc, Tcl_Obj *const objv[])
-{
-  TCL_CONDITION((objc == 2), "requires 2 args!");
-
-  int rc;
-  long id;
-  rc = Tcl_GetLongFromObj(interp, objv[1], &id);
-  TCL_CHECK_MSG(rc, "adlb::permanent could not get data id");
-
-  rc = ADLB_Permanent(id);
-
-  if (rc != ADLB_SUCCESS)
-    return TCL_ERROR;
-  return TCL_OK;
-}
-
-/**
    usage: adlb::refcount_incr <container_id> <refcount_type> <change>
    refcount_type in { $adlb::READ_REFCOUNT , $adlb::WRITE_REFCOUNT ,
           $adlb::READWRITE_REFCOUNT }
@@ -1788,7 +1790,6 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("blob_from_string", ADLB_Blob_From_String_Cmd);
   COMMAND("slot_create", ADLB_Slot_Create_Cmd);
   COMMAND("slot_drop", ADLB_Slot_Drop_Cmd);
-  COMMAND("permanent", ADLB_Permanent_Cmd);
   COMMAND("enable_read_refcount",  ADLB_Enable_Read_Refcount_Cmd);
   COMMAND("refcount_incr", ADLB_Refcount_Incr_Cmd);
   COMMAND("insert",    ADLB_Insert_Cmd);

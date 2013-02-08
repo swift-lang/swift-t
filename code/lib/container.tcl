@@ -430,10 +430,10 @@ namespace eval turbine {
         if [ container_insert_atomic $c $i ] {
             # c[i] does not exist
             set t [ data_new ]
-            allocate_container t integer 0
+            allocate_container t integer
             container_insert $c $i $t
         } else {
-            allocate r integer 0
+            allocate r integer
             container_reference $r $c $i "integer"
 
             rule fcnib "$r" $turbine::LOCAL $adlb::RANK_ANY \
@@ -488,7 +488,7 @@ namespace eval turbine {
         upvar 1 $r v
 
         # Create reference
-        allocate tmp_r integer 0
+        allocate tmp_r integer
         set v $tmp_r
 
 
@@ -515,7 +515,7 @@ namespace eval turbine {
         upvar 1 $r v
 
         # Create reference
-        allocate tmp_r integer 0
+        allocate tmp_r integer
         set v $tmp_r
 
         if { $slot_create } {
@@ -542,7 +542,7 @@ namespace eval turbine {
         upvar 1 $r v
 
         # Create reference
-        allocate tmp_r integer 0
+        allocate tmp_r integer
         set v $tmp_r
         
         if { $slot_create } {
@@ -665,7 +665,7 @@ namespace eval turbine {
         } else {
           # Wait for deep close of container
           # Use void variable to signal recursive container closing
-          set signal [ allocate void 0 ]
+          set signal [ allocate void ]
           lappend signals $signal
           lappend allocated_signals $signal # make sure cleaned up later
           container_deep_wait $rule_prefix $input $nest_level $isf $signal
@@ -748,7 +748,7 @@ namespace eval turbine {
                      [ expr $nest_level - 1 ] $is_file $signal
       } else {
         foreach inner $members {
-          set inner_signal [ allocate void 0 ]
+          set inner_signal [ allocate void ]
           lappend inner_signals $inner_signal
           container_deep_wait $rule_prefix $inner \
                        [ expr $nest_level - 1 ] $is_file $inner_signal

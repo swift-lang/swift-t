@@ -25,7 +25,7 @@ proc worker_fn { x } {
 }
 
 proc rules { } {
-    turbine::allocate x integer 0
+    turbine::allocate x integer
 
     turbine::rule "worker" "" $turbine::WORK $adlb::RANK_ANY "worker_fn $x"
 

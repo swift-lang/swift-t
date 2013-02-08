@@ -23,7 +23,7 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    turbine::create_blob 1 0
+    turbine::create_blob 1
 
     turbine::store_blob_string 1 "hi"
     set v1 [ turbine::retrieve_blob_string 1 ]

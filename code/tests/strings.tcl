@@ -23,8 +23,8 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    turbine::create_string 11 0
-    turbine::create_string 12 0
+    turbine::create_string 11
+    turbine::create_string 12
     # c::string 3
 
     turbine::store_string 11 "hi"

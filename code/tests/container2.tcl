@@ -27,8 +27,8 @@ package require turbine 0.0.1
 proc rules { } {
 
     turbine::create_container 1 integer
-    turbine::create_string 2 0
-    turbine::create_string 3 0
+    turbine::create_string 2
+    turbine::create_string 3
 
     turbine::store_string 2 "string2"
     turbine::store_string 3 "string3"

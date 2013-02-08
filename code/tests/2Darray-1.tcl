@@ -39,7 +39,7 @@ proc rules { } {
     turbine::literal j integer 41
     turbine::literal k integer 59
 
-    turbine::allocate r1 integer 0
+    turbine::allocate r1 integer
     turbine::f_reference no_stack "" "$A $i $r1 integer"
     turbine::container_f_insert no_stack "" "$A $i $t1"
     turbine::f_cref_insert no_stack "" "$r1 $j $t1 $A"

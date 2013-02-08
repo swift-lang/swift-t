@@ -75,7 +75,7 @@ proc myfun { a b x } {
     container_insert $stack "x" $x
 
     # Create condition variable for "if"
-    allocate c_1 integer 0
+    allocate c_1 integer
     rule MYFUN_1 $x   $turbine::WORK $adlb::RANK_ANY    "f $x $c_1"
     rule MYFUN_2 $c_1 $turbine::CONTROL $adlb::RANK_ANY "if_1 $stack $c_1"
     rule MYFUN_3 $x   $turbine::WORK $adlb::RANK_ANY     "g $x $b"
@@ -100,8 +100,8 @@ proc if_1 { stack c } {
 
 proc rules { } {
 
-    turbine::allocate a integer 0
-    turbine::allocate b integer 0
+    turbine::allocate a integer
+    turbine::allocate b integer
     turbine::literal x integer 3
 
     rule A $x $turbine::CONTROL $adlb::RANK_ANY "myfun $a $b $x"
