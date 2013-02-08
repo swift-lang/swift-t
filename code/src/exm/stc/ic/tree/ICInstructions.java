@@ -528,11 +528,11 @@ public class ICInstructions {
       case ARRAY_INSERT_FUTURE:
         gen.arrayInsertFuture(getOutput(0), getInput(0).getVar(),
                               getInput(1).getVar(),
-                              getInputs().size() == 3 ? getInput(2) : null);
+                              getInputs().size() == 3 ? getInput(2) : Arg.ONE);
         break;
       case ARRAY_INSERT_IMM:
         gen.arrayInsertImm(getOutput(0), getInput(0), getInput(1).getVar(),
-            getInputs().size() == 3 ? getInput(2) : null);
+            getInputs().size() == 3 ? getInput(2) : Arg.ZERO);
         break;
       case ARRAYREF_INSERT_FUTURE:
         gen.arrayRefInsertFuture(getOutput(0),
@@ -614,31 +614,31 @@ public class ICInstructions {
         break;
       case LOAD_INT:
         gen.retrieveInt(getOutput(0), getInput(0).getVar(),
-            getInputs().size() == 2 ? getInput(1) : null);
+            getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
         break;
       case LOAD_STRING:
         gen.retrieveString(getOutput(0), getInput(0).getVar(),
-            getInputs().size() == 2 ? getInput(1) : null);
+            getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
         break;
       case LOAD_BOOL:
         gen.retrieveBool(getOutput(0), getInput(0).getVar(),
-            getInputs().size() == 2 ? getInput(1) : null);
+            getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
         break;
       case LOAD_VOID:
         gen.retrieveVoid(getOutput(0), getInput(0).getVar(),
-            getInputs().size() == 2 ? getInput(1) : null);
+            getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
         break;
       case LOAD_FLOAT:
         gen.retrieveFloat(getOutput(0), getInput(0).getVar(),
-            getInputs().size() == 2 ? getInput(1) : null);
+            getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
         break;  
       case LOAD_BLOB:
         gen.retrieveBlob(getOutput(0), getInput(0).getVar(),
-            getInputs().size() == 2 ? getInput(1) : null);
+            getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
         break;
       case LOAD_FILE:
         gen.retrieveFile(getOutput(0), getInput(0).getVar(),
-            getInputs().size() == 2 ? getInput(1) : null);
+            getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
         break;
       case DECR_BLOB_REF:
         gen.decrBlobRef(getOutput(0));
@@ -2324,8 +2324,10 @@ public class ICInstructions {
             long amt = increments.getCount(arr);
             if (amt < 0) {
               assert(getInputs().size() == 2);
-              this.args = Arrays.asList(args.get(0), args.get(1), 
-                                args.get(2), Arg.createIntLit(amt * -1));
+              int defaultDecr = op == Opcode.ARRAY_INSERT_IMM ? 0 : 1;
+              Arg decrArg = Arg.createIntLit(amt * -1 + defaultDecr);
+              this.args = Arrays.asList(args.get(0), args.get(1),
+                                        args.get(2), decrArg);
               return Collections.singletonList(arr);
             }
           }

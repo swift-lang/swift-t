@@ -419,11 +419,11 @@ public class TurbineGenerator implements CompilerBackend
   public void retrieveInt(Var target, Var source, Arg decr) {
     assert(target.type().equals(Types.V_INT));
     assert(Types.isInt(source.type()));
-    if (decr == null) {
+    assert(decr.isImmediateInt());
+    if (decr.equals(Arg.ZERO)) {
       pointStack.peek().add(Turbine.integerGet(prefixVar(target.name()),
                                   varToExpr(source)));
     } else {
-      assert(decr.isImmediateInt());
       pointStack.peek().add(Turbine.integerDecrGet(prefixVar(target.name()),
                             varToExpr(source), argToExpr(decr)));
     }
@@ -445,11 +445,12 @@ public class TurbineGenerator implements CompilerBackend
   public void retrieveBool(Var target, Var source, Arg decr) {
     assert(target.type().equals(Types.V_BOOL));
     assert(Types.isBool(source.type()));
-    if (decr == null) {
+
+    assert(decr.isImmediateInt());
+    if (decr.equals(Arg.ZERO)) {
       pointStack.peek().add(Turbine.integerGet(prefixVar(target.name()),
           varToExpr(source)));
     } else {
-      assert(decr.isImmediateInt());
       pointStack.peek().add(Turbine.integerDecrGet(prefixVar(target.name()),
           varToExpr(source), argToExpr(decr)));
     }
@@ -466,12 +467,13 @@ public class TurbineGenerator implements CompilerBackend
   public void retrieveVoid(Var target, Var source, Arg decr) {
     assert(target.type().equals(Types.V_VOID));
     assert(Types.isVoid(source.type()));
-
+    assert(decr.isImmediateInt());
+    
     // Don't actually need to retrieve value as it has no contents
     pointStack.peek().add(new SetVariable(prefixVar(target.name()),
                           Turbine.VOID_DUMMY_VAL));
-    if (decr != null) {
-      assert(decr.isImmediateInt());
+
+    if (!decr.equals(Arg.ZERO)) {
       decrRef(source, decr);
     }
   }
@@ -494,11 +496,11 @@ public class TurbineGenerator implements CompilerBackend
     assert(source.type().equals(Types.F_FLOAT)
             || source.type().equals(Types.UP_FLOAT));
 
-    if (decr == null) {
+    assert(decr.isImmediateInt());
+    if (decr.equals(Arg.ZERO)) {
       pointStack.peek().add(Turbine.floatGet(prefixVar(target.name()),
                                                     varToExpr(source)));
     } else {
-      assert(decr.isImmediateInt());
       pointStack.peek().add(Turbine.floatDecrGet(prefixVar(target.name()),
           varToExpr(source), argToExpr(decr)));
     }
@@ -520,12 +522,11 @@ public class TurbineGenerator implements CompilerBackend
   public void retrieveString(Var target, Var source, Arg decr) {
     assert(target.type().equals(Types.V_STRING));
     assert(source.type().equals(Types.F_STRING));
-
-    if (decr == null) {
+    assert(decr.isImmediateInt());
+    if (decr.equals(Arg.ZERO)) {
       pointStack.peek().add(Turbine.stringGet(prefixVar(target.name()),
                                                       varToExpr(source)));
     } else {
-      assert(decr.isImmediateInt());
       pointStack.peek().add(Turbine.stringDecrGet(prefixVar(target.name()),
           varToExpr(source), argToExpr(decr)));
     }
@@ -543,11 +544,11 @@ public class TurbineGenerator implements CompilerBackend
   public void retrieveBlob(Var target, Var src, Arg decr) {
     assert(target.type().equals(Types.V_BLOB));
     assert(Types.isBlob(src.type()));
-    if (decr == null) {
+    assert(decr.isImmediateInt());
+    if (decr.equals(Arg.ZERO)) {
       pointStack.peek().add(Turbine.blobGet(prefixVar(target.name()),
                                                   varToExpr(src)));
     } else {
-      assert(decr.isImmediateInt());
       pointStack.peek().add(Turbine.blobDecrGet(prefixVar(target.name()),
                                       varToExpr(src), argToExpr(decr)));
     }
@@ -577,10 +578,10 @@ public class TurbineGenerator implements CompilerBackend
   public void retrieveFile(Var target, Var src, Arg decr) {
     assert(Types.isFile(src.type()));
     assert(target.type().assignableTo(Types.V_FILE));
-    if (decr == null) {
+    assert(decr.isImmediateInt());
+    if (decr.equals(Arg.ZERO)) {
       pointStack.peek().add(Turbine.fileGet(prefixVar(target), varToExpr(src)));
     } else {
-      assert(decr.isImmediateInt());
       pointStack.peek().add(Turbine.fileDecrGet(prefixVar(target.name()),
           varToExpr(src), argToExpr(decr)));
     }
@@ -1081,7 +1082,7 @@ public class TurbineGenerator implements CompilerBackend
     Type memberType = array.type().memberType();
     assert(writersDecr == null || writersDecr.isImmediateInt());
     if (writersDecr == null)
-      writersDecr = Arg.ZERO;
+      writersDecr = Arg.ONE;
     if (Types.isRef(member.type())) {
       assert(member.type().memberType().equals(memberType));
       Command r = Turbine.arrayDerefStoreComputed(
