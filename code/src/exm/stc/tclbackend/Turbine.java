@@ -60,8 +60,8 @@ class Turbine
   // Commonly used things:
   private static final Token ALLOCATE_CONTAINER_CUSTOM =
       new Token("turbine::allocate_container_custom");
-  private static final Token ALLOCATE_FILE_CUSTOM = 
-          new Token("turbine::allocate_file_custom");
+  private static final Token ALLOCATE_FILE = 
+          new Token("turbine::allocate_file2");
   private static final Token CONTAINER_INSERT =
       new Token("turbine::container_insert");
   private static final Token CONTAINER_F_INSERT =
@@ -271,11 +271,11 @@ class Turbine
   public static TclTree allocateFile(Value mapVar, String tclName,
       Expression initReaders) {
     if (mapVar != null) {
-      return new Command(ALLOCATE_FILE_CUSTOM,
-            new Token(tclName), initReaders, mapVar);
+      return new Command(ALLOCATE_FILE,
+            new Token(tclName), mapVar, initReaders);
     } else {
-      return new Command(ALLOCATE_FILE_CUSTOM,
-              new Token(tclName), initReaders);
+      return new Command(ALLOCATE_FILE,
+              new Token(tclName), TclString.EMPTY, initReaders);
     }
   }
 

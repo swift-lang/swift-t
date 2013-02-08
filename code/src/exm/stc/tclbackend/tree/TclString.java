@@ -19,6 +19,7 @@ import java.util.List;
 
 public class TclString extends Expression
 {
+  public static final TclTree EMPTY = new TclString("", false);
   private final StringBuilder sb;
 
   public TclString(String string, boolean escape)
