@@ -166,12 +166,15 @@ data_create_container(adlb_datum_id id, adlb_data_type type,
                       const adlb_create_props *props)
 {
   TRACE("data_create_container(%li)", id);
+  // Check if it would have been garbage collected
+  if (props->read_refcount <= 0 && props->write_refcount <= 0)
+    return ADLB_DATA_SUCCESS;
   adlb_datum* d = table_lp_search(&tds, id);
   // This can only fail on an internal error
   assert(d != NULL);
   d->data.CONTAINER.members = table_create(1024);
   d->data.CONTAINER.type = type;
-  return datum_init_props(id, d, props);
+  return ADLB_DATA_SUCCESS;
 }
 
 /*
