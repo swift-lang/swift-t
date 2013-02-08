@@ -221,7 +221,7 @@ public interface CompilerBackend {
       Arg arrayIndex);
 
   public abstract void arrayInsertFuture(Var array,
-      Var ix, Var member);
+      Var ix, Var member, Arg writersDecr);
   
   public abstract void arrayRefInsertFuture(Var outerArray,
       Var array, Var ix, Var member);
@@ -234,7 +234,8 @@ public interface CompilerBackend {
    */
   public abstract void arrayBuild(Var array, List<Var> members);
   
-  public abstract void arrayInsertImm(Var array, Arg ix, Var member);
+  public abstract void arrayInsertImm(Var array, Arg ix, Var member,
+      Arg writersDecr);
   
   public abstract void arrayRefInsertImm(Var outerArray, 
       Var array, Arg ix, Var member);

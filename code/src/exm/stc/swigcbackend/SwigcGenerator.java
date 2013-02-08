@@ -998,7 +998,7 @@ public class SwigcGenerator implements CompilerBackend
 
   @Override
   public void arrayInsertFuture(Var array, Var ix,
-                                                      Var member) {
+                                                      Var member, Arg writersDecr) {
     assert(Types.isArray(array.type()));
     Type memberType = array.type().memberType();
     if (Types.isRef(member.type())) {
@@ -1045,7 +1045,7 @@ public class SwigcGenerator implements CompilerBackend
 
   @Override
   public void arrayInsertImm(Var array, Arg arrIx,
-        Var member) {
+        Var member, Arg writersDecr) {
     assert(Types.isArray(array.type()));
     if (!arrIx.isImmediateInt()) {
       throw new STCRuntimeError("Not immediate int: " + arrIx);

@@ -1074,22 +1074,26 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void arrayInsertFuture(Var array, Var ix, Var member) {
+  public void arrayInsertFuture(Var array, Var ix, Var member,
+                                Arg writersDecr) {
     assert(Types.isArray(array.type()));
     // Increment reference for var being inserted into container
     Type memberType = array.type().memberType();
+    assert(writersDecr == null || writersDecr.isImmediateInt());
+    if (writersDecr == null)
+      writersDecr = Arg.ZERO;
     if (Types.isRef(member.type())) {
       assert(member.type().memberType().equals(memberType));
       Command r = Turbine.arrayDerefStoreComputed(
           prefixVar(member.name()), prefixVar(array.name()),
-          prefixVar(ix.name()));
+          prefixVar(ix.name()), argToExpr(writersDecr));
 
       pointStack.peek().add(r);
     } else {
       assert(member.type().equals(memberType));
       Command r = Turbine.arrayStoreComputed(
           prefixVar(member.name()), prefixVar(array.name()),
-          prefixVar(ix.name()));
+          prefixVar(ix.name()), argToExpr(writersDecr));
 
       pointStack.peek().add(r);
     }
@@ -1133,12 +1137,12 @@ public class TurbineGenerator implements CompilerBackend
   }
   
   @Override
-  public void arrayInsertImm(Var array, Arg arrIx, Var member) {
+  public void arrayInsertImm(Var array, Arg arrIx, Var member, Arg writersDecr) {
     assert(Types.isArray(array.type()));
-    if (!arrIx.isImmediateInt()) {
-      throw new STCRuntimeError("Not immediate int: " + arrIx);
-    }
     assert(arrIx.isImmediateInt());
+    assert(writersDecr == null || writersDecr.isImmediateInt());
+    if (writersDecr == null)
+      writersDecr = Arg.ZERO;
 
     Type memberType = array.type().memberType();
     if (Types.isRef(member.type())) {
@@ -1149,7 +1153,7 @@ public class TurbineGenerator implements CompilerBackend
       }
       Command r = Turbine.arrayDerefStore(
           prefixVar(member.name()), prefixVar(array.name()),
-          argToExpr(arrIx));
+          argToExpr(arrIx), argToExpr(writersDecr));
       pointStack.peek().add(r);
     } else {
       if (!member.type().equals(memberType)) {
@@ -1158,7 +1162,7 @@ public class TurbineGenerator implements CompilerBackend
       }
       Command r = Turbine.arrayStoreImmediate(
           prefixVar(member.name()), prefixVar(array.name()),
-          argToExpr(arrIx));
+          argToExpr(arrIx), argToExpr(writersDecr));
       pointStack.peek().add(r);
     }
   }

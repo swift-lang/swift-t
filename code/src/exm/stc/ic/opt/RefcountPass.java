@@ -383,7 +383,7 @@ public class RefcountPass extends FunctionOptimizerPass {
       }
     } else {
       assert(type == RefCountType.WRITERS);
-      for (Var modified: inst.getModifiedOutputs()) {
+      for (Var modified: inst.getOutputs()) {
         candidates.reset(modified);
       }
     }

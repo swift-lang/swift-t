@@ -527,10 +527,12 @@ public class ICInstructions {
         break;
       case ARRAY_INSERT_FUTURE:
         gen.arrayInsertFuture(getOutput(0), getInput(0).getVar(),
-                              getInput(1).getVar());
+                              getInput(1).getVar(),
+                              getInputs().size() == 3 ? getInput(2) : null);
         break;
       case ARRAY_INSERT_IMM:
-        gen.arrayInsertImm(getOutput(0), getInput(0), getInput(1).getVar());
+        gen.arrayInsertImm(getOutput(0), getInput(0), getInput(1).getVar(),
+            getInputs().size() == 3 ? getInput(2) : null);
         break;
       case ARRAYREF_INSERT_FUTURE:
         gen.arrayRefInsertFuture(getOutput(0),
@@ -2311,6 +2313,19 @@ public class ICInstructions {
               this.args = Arrays.asList(args.get(0), args.get(1),
                                         Arg.createIntLit(amt * -1));
               return Collections.singletonList(inVar);
+            }
+          }
+        }
+        case ARRAY_INSERT_IMM: 
+        case ARRAY_INSERT_FUTURE: {
+          Var arr = getOutput(0);
+          if (type == RefCountType.WRITERS) {
+            long amt = increments.getCount(arr);
+            if (amt < 0) {
+              assert(getInputs().size() == 2);
+              this.args = Arrays.asList(args.get(0), args.get(1), 
+                                args.get(2), Arg.createIntLit(amt * -1));
+              return Collections.singletonList(arr);
             }
           }
         }

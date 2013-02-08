@@ -600,37 +600,37 @@ class Turbine
    }
 
   public static Command arrayStoreImmediate(String srcVar, String arrayVar,
-                                                  Expression arrayIndex) {
+                              Expression arrayIndex, Expression writersDecr) {
     return new Command(CONTAINER_IMMEDIATE_INSERT,
-        new Value(arrayVar), arrayIndex, new Value(srcVar));
+        new Value(arrayVar), arrayIndex, new Value(srcVar), writersDecr);
   }
 
   public static Command arrayDerefStore(String srcRefVar, String arrayVar,
-      Expression arrayIndex) {
+      Expression arrayIndex, Expression writersDecr) {
     Square outputs = new TclList();
     Square inputs =  new TclList(new Value(arrayVar),
                       arrayIndex, new Value(srcRefVar));
     return new Command(CONTAINER_DEREF_INSERT, NO_STACK, outputs, inputs,
-                       LiteralInt.FALSE);
+                       writersDecr, LiteralInt.FALSE);
   }
 
   public static Command arrayDerefStoreComputed(String srcRefVar, String arrayVar,
-      String indexVar) {
+      String indexVar, Expression writersDecr) {
     Square outputs = new TclList();
     Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
                      new Value(srcRefVar));
     return new Command(CONTAINER_F_DEREF_INSERT, NO_STACK, outputs, inputs,
-                       LiteralInt.FALSE);
+                       writersDecr, LiteralInt.FALSE);
   }
 
   public static Command arrayStoreComputed(String srcVar, String arrayVar,
-                                                    String indexVar) {
+                                                    String indexVar, Expression writersDecr) {
     Square outputs = new TclList();
     Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
           new Value(srcVar));
     // Don't increment writers count, this is done in IC
     return new Command(CONTAINER_F_INSERT, NO_STACK, outputs, inputs,
-                       LiteralInt.FALSE);
+                       writersDecr, LiteralInt.FALSE);
   }
 
   public static Command arrayRefStoreImmediate(String srcVar, String arrayVar,
