@@ -28,17 +28,16 @@ import org.antlr.runtime.Token;
 import org.antlr.runtime.tree.CommonTreeAdaptor;
 import org.apache.log4j.Logger;
 
+import exm.stc.ast.FilePosition.LineMapping;
+import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMLexer;
 import exm.stc.ast.antlr.ExMParser;
-import exm.stc.ast.SwiftAST;
-import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.util.Misc;
 import exm.stc.frontend.ASTWalker;
 import exm.stc.ic.STCMiddleEnd;
 import exm.stc.tclbackend.TurbineGenerator;
-import exm.stc.swigcbackend.SwigcGenerator;
 
 /**
  * This is the main entry point to the compiler
@@ -214,15 +213,6 @@ public class STCompiler {
       intermediate.regenerate(codeGen);
       String code = codeGen.code();
       output.println(code);
-
-      boolean doILikeCrashes = false;
-      if (doILikeCrashes) {
-        SwigcGenerator swigCodeGen = new SwigcGenerator(logger, timestamp);
-        intermediate.regenerate(swigCodeGen);
-        String swigcode = swigCodeGen.code();
-        output.println(swigcode);
-      }
-
       output.close();
 
       if (icOutput != null) {
