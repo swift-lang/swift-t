@@ -25,8 +25,10 @@ import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.common.util.SingleArgFunction;
+import exm.stc.frontend.Context;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
+import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
@@ -159,17 +161,17 @@ public class RefcountPass extends FunctionOptimizerPass {
       updateInstructionRefCount(inst, readIncrements, writeIncrements);
     }
     for (Continuation cont: block.getContinuations()) {
-      updateContinuationRefCount(cont, readIncrements, writeIncrements);
+      addIncrementsForContinuation(cont, readIncrements, writeIncrements);
     }
     
     updateDecrementCounts(block, fn, readIncrements, writeIncrements);
 
     // Second put them back into IC
-    updateBlockRefcounting(block, readIncrements, writeIncrements,
+    updateBlockRefcounting(logger, fn, block, readIncrements, writeIncrements,
                            parentAssignedAliasVars);
   }
   
-  private void updateBlockRefcounting(Block block,
+  private void updateBlockRefcounting(Logger logger, Function fn, Block block,
       Counters<Var> readIncrements, Counters<Var> writeIncrements,
       Set<Var> parentAssignedAliasVars) {
     // Move any increment instructions up to this block
@@ -184,8 +186,8 @@ public class RefcountPass extends FunctionOptimizerPass {
      *    then piggy-back the entire decrement amount on the load 
      * - For writers counts, similar logic for container_insert
      */
-    addDecrements(block, readIncrements, RefCountType.READERS);
-    addDecrements(block, writeIncrements, RefCountType.WRITERS);
+    addDecrements(logger, fn, block, readIncrements, RefCountType.READERS);
+    addDecrements(logger, fn, block, writeIncrements, RefCountType.WRITERS);
     
     // Add any remaining increments
     addRefIncrements(block, readIncrements, RefCountType.READERS,
@@ -282,13 +284,13 @@ public class RefcountPass extends FunctionOptimizerPass {
     }
   }
 
-  private void addDecrements(Block block, Counters<Var> increments,
-      RefCountType type) {
+  private void addDecrements(Logger logger, Function fn, Block block,
+      Counters<Var> increments, RefCountType type) {
     // First try to piggyback on variable declarations
-    piggybackDecrementsOnDeclarations(block, increments, type);
+    piggybackDecrementsOnDeclarations(logger, fn, block, increments, type);
     
     // Then see if we can do the decrement on top of another operation
-    piggybackDecrementsOnInstructions(block, increments, type);
+    piggybackDecrementsOnInstructions(logger, fn, block, increments, type);
     
     
     // Finally, the remainder are decremented as cleanup at end of block
@@ -302,8 +304,8 @@ public class RefcountPass extends FunctionOptimizerPass {
    * @param increments updated to reflect changes
    * @param type
    */
-  private void piggybackDecrementsOnDeclarations(Block block,
-      Counters<Var> increments, final RefCountType type) {
+  private void piggybackDecrementsOnDeclarations(Logger logger, Function fn,
+      Block block, Counters<Var> increments, final RefCountType type) {
     final Set<Var> immDecrCandidates = Sets.createSet(block.getVariables().size());
     for (Var blockVar: block.getVariables()) {
       if (blockVar.storage() != VarStorage.ALIAS) {
@@ -322,8 +324,14 @@ public class RefcountPass extends FunctionOptimizerPass {
     }
     
     // Check that the data isn't actually used in block or sync continuations
-    ICUtil.walkSyncChildren(block, true, new SingleArgFunction<Instruction>() {
-      public void call(Instruction inst) {
+    TreeWalk.walkSyncChildren(logger, fn, block, true, new TreeWalker() {
+      public void visit(Logger logger, String cx, Continuation cont) {
+        if (type == RefCountType.READERS) {
+          immDecrCandidates.removeAll(cont.requiredVars());
+        }
+      }
+      
+      public void visit(Logger logger, String cx, Instruction inst) {
         if (type == RefCountType.READERS) {
           for (Arg in: inst.getInputs())
             if (in.isVar())
@@ -342,15 +350,18 @@ public class RefcountPass extends FunctionOptimizerPass {
     }
   }
 
-  private void piggybackDecrementsOnInstructions(Block block,
-      Counters<Var> increments, final RefCountType type) {
+  private void piggybackDecrementsOnInstructions(Logger logger, Function fn,
+      Block block, Counters<Var> increments, final RefCountType type) {
     // Initially all increments are candidates for piggybacking
     final Counters<Var> candidates = increments.clone();
     
     // Remove any candidates from synchronous children that might 
     // read/write the variables
-    ICUtil.walkSyncChildren(block, false, new SingleArgFunction<Instruction>() {
-      public void call(Instruction inst) {
+    TreeWalk.walkSyncChildren(logger, fn, block, false, new TreeWalker() {
+      public void visit(Continuation cont) {
+        removeDecrCandidates(cont, type, candidates);
+      }
+      public void visit(Instruction inst) {
         removeDecrCandidates(inst, type, candidates);
       }
     });
@@ -394,6 +405,14 @@ public class RefcountPass extends FunctionOptimizerPass {
       assert(type == RefCountType.WRITERS);
       for (Var modified: inst.getOutputs()) {
         candidates.reset(modified);
+      }
+    }
+  }
+  private void removeDecrCandidates(Continuation cont, RefCountType type,
+      Counters<Var> candidates) {
+    if (type == RefCountType.READERS) {
+      for (Var v: cont.requiredVars()) {
+        candidates.reset(v);
       }
     }
   }
@@ -611,7 +630,7 @@ public class RefcountPass extends FunctionOptimizerPass {
     }
   }
 
-  private void updateContinuationRefCount(Continuation cont,
+  private void addIncrementsForContinuation(Continuation cont,
       Counters<Var> readIncrements, Counters<Var> writeIncrements) {
     // TODO: handle other than wait
     if (cont.isAsync() && isSingleSpawnCont(cont)) {

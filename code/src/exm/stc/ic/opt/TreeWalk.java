@@ -15,6 +15,9 @@
  */
 package exm.stc.ic.opt;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+
 import org.apache.log4j.Logger;
 
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -48,8 +51,48 @@ public class TreeWalk {
       }
     }
   }
+  
+  public static void walkSyncChildren(
+      Logger logger, Function fn,
+      Block block, boolean includeThisBlock, TreeWalker walker) {
+    Deque<Block> stack = new ArrayDeque<Block>();
+    if (includeThisBlock) {
+      stack.push(block);
+    } else {
+      for (Continuation c: block.getContinuations()) {
+        if (!c.isAsync()) {
+          stack.addAll(c.getBlocks());
+        }
+      }
+    }
+    while (!stack.isEmpty()) {
+      Block curr = stack.pop();
+      for (Instruction i: curr.getInstructions()) {
+        walker.visit(logger, fn.getName(), i);
+      }
+      
+      for (Continuation c: curr.getContinuations()) {
+        walker.visit(logger, fn.getName(), c);
+        if (!c.isAsync()) {
+          stack.addAll(c.getBlocks());
+        }
+      }
+    }
+  }
 
-  public interface TreeWalker {
-    public void visit(Logger logger, String functionContext, Instruction inst);
+  public static abstract class TreeWalker {
+    public void visit(Logger logger, String functionContext, Continuation cont) {
+      visit(cont);
+    }
+    private void visit(Continuation cont) {
+      // Nothing
+    }
+    public void visit(Logger logger, String functionContext, Instruction inst) {
+      visit(inst);
+    }
+    private void visit(Instruction inst) {
+      // nothing
+    }
+    
   }
 }

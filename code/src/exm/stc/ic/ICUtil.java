@@ -15,10 +15,8 @@
  */
 package exm.stc.ic;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -29,7 +27,6 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.util.SingleArgFunction;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
@@ -341,32 +338,6 @@ public class ICUtil {
     while (it.hasNext()) {
       if (it.next().equals(e)) {
         it.remove();
-      }
-    }
-  }
-  
-  public static void walkSyncChildren(Block block, boolean includeThisBlock,
-      SingleArgFunction<Instruction> singleArgFunction) {
-    Deque<Block> stack = new ArrayDeque<Block>();
-    if (includeThisBlock) {
-      stack.push(block);
-    } else {
-      for (Continuation c: block.getContinuations()) {
-        if (!c.isAsync()) {
-          stack.addAll(c.getBlocks());
-        }
-      }
-    }
-    while (!stack.isEmpty()) {
-      Block curr = stack.pop();
-      for (Instruction i: curr.getInstructions()) {
-        singleArgFunction.call(i);
-      }
-      
-      for (Continuation c: curr.getContinuations()) {
-        if (!c.isAsync()) {
-          stack.addAll(c.getBlocks());
-        }
       }
     }
   }

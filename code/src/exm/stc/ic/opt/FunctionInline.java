@@ -462,7 +462,7 @@ public class FunctionInline implements OptimizerPass {
             + " for inline into function " + targetFunction.getName());
   }
 
-  private static class FuncCallFinder implements TreeWalker {
+  private static class FuncCallFinder extends TreeWalker {
 
     /**
      * Map of called function -> name of function in which call occurred.
@@ -475,7 +475,7 @@ public class FunctionInline implements OptimizerPass {
      * Function sizes in instructions
      */
     private Map<String, int[]> functionSizes = new HashMap<String, int[]>();
-    
+
     @Override
     public void visit(Logger logger, String functionContext,
                                       Instruction inst) {

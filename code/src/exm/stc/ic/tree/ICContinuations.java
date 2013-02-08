@@ -191,7 +191,7 @@ public class ICContinuations {
     public Collection<Var> getPassedInVars() {
       // Implementation for synchronous continuations
       assert(!this.isAsync());
-      return null;
+      return Var.NONE;
     }
     
     public void clearPassedInVars() {
