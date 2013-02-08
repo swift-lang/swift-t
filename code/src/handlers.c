@@ -63,7 +63,6 @@ static adlb_code handle_store(int caller);
 static adlb_code handle_retrieve(int caller);
 static adlb_code handle_enumerate(int caller);
 static adlb_code handle_subscribe(int caller);
-static adlb_code handle_permanent(int caller);
 static adlb_code handle_refcount_incr(int caller);
 static adlb_code handle_insert(int caller);
 static adlb_code handle_insert_atomic(int caller);
@@ -110,7 +109,6 @@ xlb_handlers_init(void)
   register_handler(ADLB_TAG_RETRIEVE, handle_retrieve);
   register_handler(ADLB_TAG_ENUMERATE, handle_enumerate);
   register_handler(ADLB_TAG_SUBSCRIBE, handle_subscribe);
-  register_handler(ADLB_TAG_PERMANENT, handle_permanent);
   register_handler(ADLB_TAG_REFCOUNT_INCR, handle_refcount_incr);
   register_handler(ADLB_TAG_INSERT_HEADER, handle_insert);
   register_handler(ADLB_TAG_INSERT_ATOMIC, handle_insert_atomic);
@@ -539,15 +537,14 @@ handle_create(int caller)
 {
   MPE_LOG(xlb_mpe_svr_create_start);
   TRACE("ADLB_TAG_CREATE\n");
-  struct packed_id_type_updateable data;
+  struct packed_create_request data;
   MPI_Status status;
 
-  RECV(&data, sizeof(struct packed_id_type_updateable), MPI_BYTE,
-       caller, ADLB_TAG_CREATE_HEADER);
+  RECV(&data, sizeof(data), MPI_BYTE, caller, ADLB_TAG_CREATE_HEADER);
 
   adlb_datum_id id = data.id;
   adlb_data_type type = data.type;
-  bool updateable = data.updateable;
+  adlb_create_props props =  data.props;
  
   adlb_data_code dc = ADLB_DATA_SUCCESS;
   if (id == ADLB_DATA_ID_NULL)
@@ -555,7 +552,7 @@ handle_create(int caller)
     dc = data_unique(&id);
 
   if (dc == ADLB_DATA_SUCCESS)
-    dc = data_create(id, type, updateable);
+    dc = data_create(id, type, &props);
   
   struct packed_create_response resp = { .dc = dc, .id = id };
   RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
@@ -568,7 +565,7 @@ handle_create(int caller)
       adlb_data_type container_type;
       RECV(&container_type, 1, MPI_INT, caller,
            ADLB_TAG_CREATE_PAYLOAD);
-      data_create_container(id, container_type);
+      data_create_container(id, container_type, &props);
     }
   }
 
@@ -741,20 +738,6 @@ handle_subscribe(int caller)
 
   TRACE("ADLB_TAG_SUBSCRIBE done\n");
   MPE_LOG(xlb_mpe_svr_subscribe_end);
-  return ADLB_SUCCESS;
-}
-
-static adlb_code
-handle_permanent(int caller)
-{
-  MPI_Status status;
-  long id;
-  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_PERMANENT);
-
-  DEBUG("Permanent: <%li> ", id);
-
-  adlb_data_code dc = data_permanent(id);
-  RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
 

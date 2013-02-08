@@ -60,30 +60,31 @@ int ADLB_Locate(long id);
 // should use the typed forms defined below
 adlb_code ADLBP_Create(adlb_datum_id id, adlb_data_type type,
                        const char* filename,
-                       adlb_data_type subscript_type, bool updateable,
+                       adlb_data_type subscript_type, adlb_create_props props,
                        adlb_datum_id *new_id);
 adlb_code ADLB_Create(adlb_datum_id id, adlb_data_type type,
                       const char* filename,
                       adlb_data_type subscript_type,
-                      bool updateable, adlb_datum_id *new_id);
+                      adlb_create_props props, adlb_datum_id *new_id);
 
-adlb_code ADLB_Create_integer(adlb_datum_id id, bool updateable,
+adlb_code ADLB_Create_integer(adlb_datum_id id, adlb_create_props props,
                               adlb_datum_id *new_id);
 
-adlb_code ADLB_Create_float(adlb_datum_id id, bool updateable,
+adlb_code ADLB_Create_float(adlb_datum_id id, adlb_create_props props,
                               adlb_datum_id *new_id);
 
-adlb_code ADLB_Create_string(adlb_datum_id id, bool updateable,
+adlb_code ADLB_Create_string(adlb_datum_id id, adlb_create_props props,
                               adlb_datum_id *new_id);
 
-adlb_code ADLB_Create_blob(adlb_datum_id id, bool updateable,
+adlb_code ADLB_Create_blob(adlb_datum_id id, adlb_create_props props,
                               adlb_datum_id *new_id);
 
 adlb_code ADLB_Create_file(adlb_datum_id id, const char* filename,
-                           bool updateable, adlb_datum_id *new_id);
+                           adlb_create_props props, adlb_datum_id *new_id);
 
 adlb_code ADLB_Create_container(adlb_datum_id id,
                                 adlb_data_type subscript_type,
+                                adlb_create_props props,
                                 adlb_datum_id *new_id);
 
 adlb_code ADLBP_Exists(adlb_datum_id id, bool* result);
@@ -109,9 +110,6 @@ adlb_code ADLB_Enumerate(adlb_datum_id container_id,
                    char** subscripts, int* subscripts_length,
                    char** members, int* members_length,
                    int* records);
-
-adlb_code ADLBP_Permanent(adlb_datum_id id);
-adlb_code ADLB_Permanent(adlb_datum_id id);
 
 adlb_code ADLBP_Refcount_incr(adlb_datum_id id, adlb_refcount_type type,
                               int change);

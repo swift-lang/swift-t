@@ -18,13 +18,15 @@ adlb_data_code data_container_typeof(adlb_datum_id id,
                                      adlb_data_type* type);
 
 adlb_data_code data_create(adlb_datum_id id, adlb_data_type type,
-                           bool updateable);
+                           const adlb_create_props *props);
 
 adlb_data_code data_create_filename(adlb_datum_id id,
-                                    const char* filename);
+                                    const char* filename,
+                                    const adlb_create_props *props);
 
 adlb_data_code data_create_container(adlb_datum_id id,
-                                     adlb_data_type type);
+                                     adlb_data_type type,
+                                     const adlb_create_props *props);
 
 void           data_exists(adlb_datum_id id, bool* result);
 
@@ -62,8 +64,6 @@ adlb_data_code data_enumerate(adlb_datum_id container_id,
 
 adlb_data_code data_store(adlb_datum_id id, void* buffer, int length,
           bool decr_write_refcount, int** notify_ranks, int* notify_count);
-
-adlb_data_code data_permanent(adlb_datum_id id);
 
 adlb_data_code data_reference_count(adlb_datum_id id, adlb_refcount_type type,
                 int increment, int** notify_ranks, int* notify_count);

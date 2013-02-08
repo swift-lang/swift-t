@@ -139,11 +139,11 @@ struct packed_create_response
 /**
    Simple struct for message packing
  */
-struct packed_id_type_updateable
+struct packed_create_request
 {
   adlb_datum_id id;
   adlb_data_type type;
-  bool updateable;
+  adlb_create_props props;
 };
 
 /**

@@ -174,12 +174,12 @@ ADLB_Iget(int type_requested, void* payload, int* length,
 adlb_code
 ADLB_Create(adlb_datum_id id, adlb_data_type type,
             const char* filename,
-            adlb_data_type container_type, bool updateable,
+            adlb_data_type container_type, adlb_create_props props,
             adlb_datum_id *new_id)
 {
   MPE_LOG(xlb_mpe_wkr_create_start);
   adlb_code rc = ADLBP_Create(id, type, filename, container_type,
-                              updateable, new_id);
+                              props, new_id);
   MPE_LOG(xlb_mpe_wkr_create_end);
   return rc;
 }
@@ -222,11 +222,6 @@ ADLB_Enumerate(adlb_datum_id container_id,
   return ADLBP_Enumerate(container_id, count, offset,
                          subscripts, subscripts_length,
                          members, members_length, records);
-}
-
-adlb_code
-ADLB_Permanent(adlb_datum_id id) {
-  return ADLBP_Permanent(id);
 }
 
 adlb_code

@@ -66,6 +66,15 @@ typedef enum
   ADLB_READWRITE_REFCOUNT, // Used to specify that op should affect both
 } adlb_refcount_type;
 
+typedef struct
+{
+  int read_refcount;
+  int write_refcount;
+  bool permanent;
+} adlb_create_props;
+
+extern adlb_create_props DEFAULT_CREATE_PROPS;
+
 /**
    User data
  */
