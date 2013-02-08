@@ -123,7 +123,8 @@ class Turbine
           new Token("turbine::f_dereference_file");
   private static final Token TURBINE_LOG =
       new Token("turbine::c::log");
-  private static final Token ALLOCATE = new Token("turbine::allocate");
+  private static final Token ALLOCATE_CUSTOM =
+      new Token("turbine::allocate_custom");
   private static final Token DIVIDE_INTEGER =
     new Token("turbine::divide_integer_impl");
   private static final Token MOD_INTEGER =
@@ -224,11 +225,25 @@ class Turbine
   }
 
 
-  public static TclTree allocate(String tclName, String typePrefix, 
-                                 boolean updateable) {
-    return new Command(ALLOCATE,
-                       new Token(tclName), new Token(typePrefix), 
-                       LiteralInt.boolValue(updateable));
+  public static TclTree allocate(String tclName, String typePrefix) {
+    return allocate(tclName, typePrefix, LiteralInt.ONE, LiteralInt.ONE,
+                    false);
+  }
+  
+  public static TclTree allocatePermanent(String tclName, 
+                                                  String typePrefix) {
+    return allocate(tclName, typePrefix, LiteralInt.ONE, LiteralInt.ONE,
+                     true);
+  }
+  
+  public static TclTree allocate(
+      String tclName, String typePrefix,
+      Expression initReadRefcount, Expression initWriteRefcount,
+      boolean permanent) {
+    return new Command(ALLOCATE_CUSTOM, new Token(tclName),
+              new Token(typePrefix),
+              initReadRefcount, initWriteRefcount,
+              LiteralInt.boolValue(permanent));
   }
 
   public static TclTree allocateContainer(String name,
@@ -813,7 +828,7 @@ class Turbine
   }
 
   public static TclTree declareReference(String refVarName) {
-    return allocate(refVarName, INTEGER_TYPENAME, false);
+    return allocate(refVarName, INTEGER_TYPENAME);
   }
 
   public static TclTree callFunction(String function, TclList oList,
@@ -922,10 +937,6 @@ class Turbine
 
   public static TclTree setPriority(Expression priority) {
     return new Command("turbine::set_priority", Arrays.asList(priority));
-  }
-
-  public static Command makePermanent(Value value) {
-    return new Command("adlb::permanent", Arrays.asList(value));
   }
 
   public static Expression unpackArray(Expression array, int nestLevel,

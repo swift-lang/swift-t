@@ -262,8 +262,7 @@ public class TurbineGenerator implements CompilerBackend
       } else {
         PrimType pt = t.primType();
         String tprefix = typeToString(pt);
-        point.add(Turbine.allocate(tclName, tprefix,
-                          Types.isScalarUpdateable(t)));
+        point.add(Turbine.allocate(tclName, tprefix));
       }
     } else if (Types.isArray(t)) {
       point.add(Turbine.allocateContainer(tclName, Turbine.INTEGER_TYPENAME));
@@ -271,9 +270,9 @@ public class TurbineGenerator implements CompilerBackend
       if (refIsString(t)) {
         // Represent some reference types as strings, since they have multiple
         // elements in the handle
-        point.add(Turbine.allocate(tclName, Turbine.STRING_TYPENAME, false)); 
+        point.add(Turbine.allocate(tclName, Turbine.STRING_TYPENAME)); 
       } else {
-        point.add(Turbine.allocate(tclName, Turbine.INTEGER_TYPENAME, false));
+        point.add(Turbine.allocate(tclName, Turbine.INTEGER_TYPENAME));
       }
     } else if (Types.isStruct(t)) {
       point.add(Turbine.allocateStruct(tclName));
@@ -2042,15 +2041,8 @@ public class TurbineGenerator implements CompilerBackend
       throw new STCRuntimeError("Non-constant oparg type "
           + val.getKind());
     }
-    globInit.add(Turbine.allocate(tclName, typePrefix, false));
+    globInit.add(Turbine.allocatePermanent(tclName, typePrefix));
     globInit.add(setCmd);
-    try {
-      if (Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
-        globInit.add(Turbine.makePermanent(new Value(tclName)));
-      }
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError(e.getMessage());
-    }
   }
 
   /**
