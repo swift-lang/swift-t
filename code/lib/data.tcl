@@ -144,22 +144,24 @@ namespace eval turbine {
         return $u
     }
 
-    # usage: [<name>] [<mapping>]
-    # mapping is option and should be a turbine
-    # string that will at some point be set to
-    # a value
-    proc allocate_file2 { name args } {
-        set is_mapped [ llength $args ]
+    # usage: <name> <mapping> [<create props>]
+    # if unmapped, mapping should be set to the empty string
+    # if mapped, mapping should be  turbine # string that will
+    # at some point be set to a value
+    proc allocate_file2 { name mapping {read_refcount 1} args } {
+        set is_mapped [ expr ! [ string equal $mapping "" ] ]
         # use void to signal file availability
-        set signal [ allocate "signal:$name" void ]
+        set signal [ allocate_custom "signal:$name" void \
+                              $read_refcount {*}${args} ]
         if { $is_mapped } {
             set filename [ lindex $args 0 ]
-            read_refcount_incr $filename
+            read_refcount_incr $filename $read_refcount
             log "file: $name=\[ <$signal> <$filename> \] mapped"
         } else {
             # use new string that will be set later to
             # something arbitrary
-            set filename [ allocate "filename:$name" string ]
+            set filename [ allocate_custom "filename:$name" string \
+                              $read_refcount {*}${args} ]
             log "file: $name=\[ <$signal> <$filename> \] unmapped"
 
         }
