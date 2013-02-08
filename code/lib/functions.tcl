@@ -53,7 +53,7 @@ namespace eval turbine {
     # TODO: Replace this with tracef()
     proc trace { stack signal inputs } {
         rule "trace" $inputs $turbine::LOCAL $adlb::RANK_ANY \
-            "turbine::trace_body $signal $inputs"
+            "turbine::trace_body \"$signal\" $inputs"
     }
 
     proc trace_body { signal args } {
@@ -63,7 +63,9 @@ namespace eval turbine {
             lappend valuelist $value
         }
         trace_impl2 $valuelist
-        store_void $signal
+        if { $signal != "" } {
+            store_void $signal
+        }
     }
     proc trace_impl { args } {
         # variadic version
