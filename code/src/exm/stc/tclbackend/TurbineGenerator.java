@@ -2045,8 +2045,8 @@ public class TurbineGenerator implements CompilerBackend
     // skip = max(splitFactor,  ((iters - 1) /(int) splitfactor) + 1)
     elseB.add(new SetVariable(skip, Square.arithExpr(new Token(
           String.format("max(%d, ((%s - 1) / %d ) + 1) * %s",
-                  splitDegree, new Value(TCLTMP_ITERSLEFT),
-                  leafDegree, new Value(TCLTMP_RANGE_INC))))));
+                  leafDegree, new Value(TCLTMP_ITERSLEFT),
+                  splitDegree, new Value(TCLTMP_RANGE_INC))))));
 
     ForLoop splitLoop = new ForLoop(splitStart, loVal,
             hiVal, new Value(skip), splitBody);
