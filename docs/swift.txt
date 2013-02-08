@@ -1027,9 +1027,10 @@ Swift (<<Turbine_information, Turbine information>>).
 
 +TURBINE_LOG=0+:: Disable logging
 
-+ADLB_EXHAUST_TIME+:: Time in seconds taken by ADLB task servers to
-shut down.  Default 1.  In very large runs, this may be set to 5 to
-ensure correctness.
++ADLB_EXHAUST_TIME+::
+Time in seconds taken by ADLB task servers to shut down.  May include
+a decimal point.  Default +0.1+ .  In very large runs, this may be set to
+5 to ensure correctness.
 
 +TURBINE_LAUNCH_OPTS+::
 Provide other arguments to +mpiexec+, such as a machine file, etc.
