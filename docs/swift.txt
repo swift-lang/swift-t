@@ -1034,6 +1034,21 @@ ensure correctness.
 +TURBINE_LAUNCH_OPTS+::
 Provide other arguments to +mpiexec+, such as a machine file, etc.
 
++TURBINE_SRAND+::
+If unset or empty, the random number generator seed will be set to the
+process rank for each process, giving reproducible results.  If set to
+an integer +seed+, the random number generator seed for each process
+will be set to +seed+ + +rank+.
++
+For non-reproducible random results, use the following shell commands:
++
+----
+export TURBINE_SRAND=$( date +%s )
+turbine ...
+----
++
+The seed is recorded in the log.
+
 === Configuration
 
 The following describes how to turn Swift/T programs in Turbine
