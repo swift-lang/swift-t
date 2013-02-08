@@ -44,7 +44,11 @@ Other MPI implementations are <<Build_settings, supported>> as well.
 +
 Cf. http://www.tcl.tk[Tcl web site]
 +
-3. Obtain the package
+3. Install or locate SWIG
++
+Cf. http://swig.org[SWIG web site]
++
+4. Obtain the package
 +
 ----
 wget http://www.mcs.anl.gov/exm/local/downloads/exm-0.2.0.tar.gz
@@ -53,24 +57,25 @@ wget http://www.mcs.anl.gov/exm/local/downloads/exm-0.2.0.tar.gz
 Cf. http://www.mcs.anl.gov/exm/local/downloads/downloads.html[Swift/T Downloads]
 for other packages
 +
-4. Unpack and enter package directory
+5. Unpack and enter package directory
 +
 ----
 tar xfz exm-trunk.tar.gz
 cd exm-trunk
 ----
-5. Edit the settings file: +exm-settings.sh+
++
+6. Edit the settings file: +exm-settings.sh+
 +
 This allows you to change the installation location, etc.
 +
 TIP: Save your +exm-settings.sh+ when you download a new package
 +
-6. Run the setup script
+7. Run the setup script
 +
 ----
 ./exm-setup.zsh
 ----
-7. Add Turbine and STC to your paths
+8. Add Turbine and STC to your paths
 ----
 PATH=${PATH}:/path/to/exm-install/turbine/bin
 PATH=${PATH}:/path/to/exm-install/stc/bin
