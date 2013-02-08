@@ -717,7 +717,9 @@ Consider this command line:
 The arguments to +program.tcl+ are just the tokens after +program.tcl+
 
 +args() -> string+::
+
 Obtain all arguments as single string
++
 E.g., +"-v -a=file1.txt file2.txt --exec="prog thing1 thing2" --help file4.txt"+
 
 The remaining functions are convenience functions oriented around
@@ -729,28 +731,33 @@ thing2"+, and +help+. The command has _unflagged_ arguments
 +argc()+::
 Get count of unflagged arguments
 
-+argv(string|int)+::
++argv(string)+::
+_(argument-value)_
 Given a string, returns the flagged argument with that key:
 +
- argv("a") -> file1.txt
-+
++argv("a") -> file1.txt+
+
++argp(int)+::
+_(argument-positional)_
 Given an integer, returns the unflagged argument at that index:
 +
- argv(2) → file4.txt
++argp(2) -> file4.txt+
 +
 Given 0, returns the program name,
 +
- argv(0) → /path/to/program.tcl
++argp(0) -> /path/to/program.tcl+
 
 +argv_accept(string...)+::
-If program is given command line arguments not contained in given list, abort
+
+If program is given command line arguments not contained in given list,
+abort.
 E.g., +argv_accept("x")+ would cause program failure at run time
 
 +argv_contains(string) -> boolean+::
 
 Test if the command line contains the given flagged argument:
-
- argv_contains("v") -> true
++
++argv_contains("v") -> true+
 
 ==== Debugging
 
