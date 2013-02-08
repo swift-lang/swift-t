@@ -174,7 +174,7 @@ namespace eval turbine {
     # Always stores result as Tcl string
     proc retrieve { id {decrref 0} } {
         if { $decrref } {
-          set result [ adlb::retrieve_decr $id ]
+          set result [ adlb::retrieve_decr $id $decrref ]
         } else {
           set result [ adlb::retrieve $id ]
         }
@@ -212,7 +212,7 @@ namespace eval turbine {
             }
         } else {
             if { $decrref } {
-              set result [ adlb::retrieve_decr $id $adlb::INTEGER ]
+              set result [ adlb::retrieve_decr $id $decrref $adlb::INTEGER ]
             } else {
               set result [ adlb::retrieve $id $adlb::INTEGER ]
             }
@@ -245,7 +245,7 @@ namespace eval turbine {
             }
         } else {
             if { $decrref } {
-              set result [ adlb::retrieve_decr $id $adlb::FLOAT ]
+              set result [ adlb::retrieve_decr $id $decrref $adlb::FLOAT ]
             } else {
               set result [ adlb::retrieve $id $adlb::FLOAT ]
             }
@@ -278,7 +278,7 @@ namespace eval turbine {
             }
         } else {
             if { $decrref } {
-              set result [ adlb::retrieve_decr $id $adlb::STRING ]
+              set result [ adlb::retrieve_decr $id $decrref $adlb::STRING ]
             } else {
               set result [ adlb::retrieve $id $adlb::STRING ]
             }
@@ -332,7 +332,7 @@ namespace eval turbine {
     # Retrieve and cache blob
     proc retrieve_blob { id {decrref 0} } {
       if { $decrref } {
-        set result [ adlb::retrieve_decr_blob $id ]
+        set result [ adlb::retrieve_decr_blob $id $decrref ]
       } else {
         set result [ adlb::retrieve_blob $id ]
       }
@@ -341,8 +341,8 @@ namespace eval turbine {
       return $result
     }
 
-    proc retrieve_decr_blob { id } {
-      return [ retrieve_blob $id 1 ]
+    proc retrieve_decr_blob { id {decrref 1} } {
+      return [ retrieve_blob $id $decrref ]
     }
     # release reference to cached blob
     proc free_blob { id } {
@@ -359,7 +359,7 @@ namespace eval turbine {
 
     proc retrieve_blob_string { id {decrref 0} } {
         if { $decrref } {
-          set result [ adlb::retrieve_decr $id $adlb::BLOB ]
+          set result [ adlb::retrieve_decr $id $decrref $adlb::BLOB ]
         } else {
           set result [ adlb::retrieve $id $adlb::BLOB ]
         }

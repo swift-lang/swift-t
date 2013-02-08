@@ -755,8 +755,8 @@ ADLB_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::retrieve_decr <id> [<type>]
-   same as retrieve, but also decrement read reference count by one
+   usage: adlb::retrieve_decr <id> <decr> [<type>]
+   same as retrieve, but also decrement read reference count by <decr>
 */
 static int
 ADLB_Retrieve_Decr_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -769,29 +769,46 @@ static int
 ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[], bool decr)
 {
-  TCL_CONDITION((objc == 2 || objc == 3),
-                "requires 1 or 2 args!");
+  if (decr) {
+    TCL_CONDITION((objc == 3 || objc == 4),
+                  "requires 2 or 3 args!");
+  } else {
+    TCL_CONDITION((objc == 2 || objc == 3),
+                  "requires 1 or 2 args!");
 
-  /* Only decrement if refcounting enabled */
-  decr = read_refcount_enabled && decr;
+  }
+
   int rc;
   long id;
-  rc = Tcl_GetLongFromObj(interp, objv[1], &id);
+  int argpos = 1;
+  rc = Tcl_GetLongFromObj(interp, objv[argpos++], &id);
   TCL_CHECK_MSG(rc, "requires id!");
+ 
+  
+  int decr_amount = 0;
+  if (decr) {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &decr_amount);
+    TCL_CHECK_MSG(rc, "requires decr amount!");
+    /* Only decrement if refcounting enabled */
+    if (!read_refcount_enabled) {
+      // disable if needed
+      decr_amount = 0;
+    }
+  }
 
   adlb_data_type given_type = ADLB_DATA_TYPE_NULL;
-  if (objc == 3)
+  if (argpos < objc)
   {
     int tmp;
-    rc = Tcl_GetIntFromObj(interp, objv[2], &tmp);
-    TCL_CHECK_MSG(rc, "2nd arg must be adlb:: type!");
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &tmp);
+    TCL_CHECK_MSG(rc, "arg %i must be adlb:: type!", argpos);
     given_type = tmp;
   }
 
   // Retrieve the data, actual type, and length from server
   adlb_data_type type;
   int length;
-  rc = ADLB_Retrieve(id, &type, decr, xfer, &length);
+  rc = ADLB_Retrieve(id, &type, decr_amount, xfer, &length);
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%li> failed!", id);
 
   // Type check

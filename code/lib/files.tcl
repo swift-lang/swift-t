@@ -209,8 +209,12 @@ namespace eval turbine {
 
     # f: Turbine file handle
     # returns: local file ref
-    proc get_file { f } {
-        set fname [ retrieve_string [ get_file_path $f ] ]
+    proc get_file { f {decrref 0}} {
+        set fname [ retrieve_string [ get_file_path $f ] $decrref ]
+        if { $decrref > 0 } {
+          set status [ get_file_status $f ]
+          read_refcount_decr $status $decrref
+        }
         # two references: global file future, local one
         return [ create_local_file_ref $fname 2 ]
     }
