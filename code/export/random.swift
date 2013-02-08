@@ -23,8 +23,4 @@
 (int o) randint(int start, int end) "turbine" "0.0.2" "randint"
     [ "set <<o>> [ turbine::randint_impl <<start>> <<end>> ]" ];
 
-(void v) srand(int seed)
-"turbine" "0.0.2"
-[ "expr srand(<<seed>>) ; turbine::log \"srand <<seed>>\"" ];
-
 #endif // RAND_SWIFT

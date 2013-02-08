@@ -26,11 +26,23 @@
 
 namespace eval turbine {
 
-    # Initialize this process's RNG based on MPI rank
+    # Initialize this process's RNG based on
+    #       TURBINE_SRAND and/or MPI rank
     # TODO: Upgrade Turbine to use SPRNG
     # Note: Call this after adlb::init so that rank is valid
     proc init_rng {} {
-        set seed [ adlb::rank ]
+        global env
+        set rank [ adlb::rank ]
+        if { [ info exists env(TURBINE_SRAND) ] &&
+             [ string length $env(TURBINE_SRAND) ] > 0 } {
+            if { $rank == 0 } {
+                log "TURBINE_SRAND: $env(TURBINE_SRAND)"
+            }
+            check_str_int $env(TURBINE_SRAND)
+            set seed [ expr $env(TURBINE_SRAND) + $rank ]
+        } else {
+            set seed $rank
+        }
         expr srand($seed)
     }
 
