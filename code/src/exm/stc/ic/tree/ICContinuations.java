@@ -1455,7 +1455,7 @@ public class ICContinuations {
       if (start.isIntVal() && end.isIntVal() && increment.isIntVal()) {
         long iters = (end.getIntLit() - start.getIntLit()) /
                       increment.getIntLit() + 1;
-        if (splitDegree > 0 && iters <= splitDegree) {
+        if (iters <= leafDegree) {
           // Don't need to split
           splitDegree = -1;
         }

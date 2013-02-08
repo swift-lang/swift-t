@@ -60,8 +60,6 @@ public class RefcountPass extends FunctionOptimizerPass {
 
   @Override
   public void optimize(Logger logger, Function f) throws UserException {
-    // TODO: check function calling conventions pass in info accordingly 
-    // 
     elimRefCountsRec(logger, f, f.getMainblock(),
                      new Counters<Var>(), new Counters<Var>(),
                      new HierarchicalSet<Var>());
@@ -223,6 +221,7 @@ public class RefcountPass extends FunctionOptimizerPass {
     // If this is main block of function, add passed in
     if (block.getType() == BlockType.MAIN_BLOCK) {
       assert(block == fn.getMainblock());
+      System.err.println(fn.getName() + " async: " + fn.isAsync());
       if (fn.isAsync()) {
         // Need to do bookkeeping if this runs in separate task
         for (Var i: fn.getInputList()) {
