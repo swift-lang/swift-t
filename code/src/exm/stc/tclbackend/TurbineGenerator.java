@@ -254,6 +254,17 @@ public class TurbineGenerator implements CompilerBackend
       return;
     }
     
+
+    try {
+      if (!Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
+        // Have initial* set to regular amount to avoid bugs with reference counting
+        initReaders = Arg.ONE;
+        initWriters = Arg.ONE;
+      }
+    } catch (InvalidOptionException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
+    
     // Initialize the TD in ADLB with a type
     if (Types.isScalarFuture(t)) {
       allocateFuture(var, initReaders);
