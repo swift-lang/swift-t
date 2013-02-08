@@ -201,7 +201,7 @@ struct packed_store_hdr
 struct packed_retrieve_hdr
 {
   adlb_datum_id id;
-  bool decr_read_refcount;
+  int decr_read_refcount;
 };
 
 /**

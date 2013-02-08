@@ -96,9 +96,9 @@ adlb_code ADLB_Store(adlb_datum_id id, void *data, int length,
                       bool decr_write_refcount, int** ranks, int *count);
 
 adlb_code ADLBP_Retrieve(adlb_datum_id id, adlb_data_type* type,
-      bool decr_read_refcount, void *data, int *length);
+      int decr_read_refcount, void *data, int *length);
 adlb_code ADLB_Retrieve(adlb_datum_id id, adlb_data_type* type,
-      bool decr_read_refcount, void *data, int *length);
+      int decr_read_refcount, void *data, int *length);
 
 adlb_code ADLBP_Enumerate(adlb_datum_id container_id,
                    int count, int offset,

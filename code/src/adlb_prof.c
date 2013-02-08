@@ -204,7 +204,7 @@ ADLB_Store(adlb_datum_id id, void *data, int length,
 
 adlb_code
 ADLB_Retrieve(adlb_datum_id id, adlb_data_type* type,
-      bool decr_read_refcount, void *data, int *length)
+      int decr_read_refcount, void *data, int *length)
 {
   MPE_LOG(xlb_mpe_wkr_retrieve_start);
   int rc = ADLBP_Retrieve(id, type, decr_read_refcount, data, length);

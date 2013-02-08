@@ -629,7 +629,7 @@ ADLBP_Insert_atomic(adlb_datum_id id, const char* subscript,
 
 adlb_code
 ADLBP_Retrieve(adlb_datum_id id, adlb_data_type* type,
-               bool decr_read_refcount, void *data, int *length)
+               int decr_read_refcount, void *data, int *length)
 {
   adlb_data_code dc;
   MPI_Status status;

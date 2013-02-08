@@ -87,7 +87,8 @@ adlb_create_props DEFAULT_CREATE_PROPS =
 #endif
 
 static adlb_data_code
-datum_init_props(adlb_datum *d, const adlb_create_props *props);
+datum_init_props(adlb_datum_id id, adlb_datum *d,
+                 const adlb_create_props *props);
 static adlb_data_code
 data_close(adlb_datum_id id, int** result, int* count);
 static adlb_data_code garbage_collect(adlb_datum_id id, adlb_datum* d);
@@ -130,15 +131,11 @@ data_create(adlb_datum_id id, adlb_data_type type,
 
   adlb_datum* d = malloc(sizeof(adlb_datum));
   d->type = type;
-  adlb_data_code dc = datum_init_props(d, props);
-  printf("Created <%li>, refcounts (%i, %i)\n", id,
-            d->read_refcount, d->write_refcount);
-  if (dc != ADLB_DATA_SUCCESS)
-    return dc;
   list_i_init(&d->listeners);
 
   table_lp_add(&tds, id, d);
-  return ADLB_DATA_SUCCESS;
+  
+  return datum_init_props(id, d, props);
 }
 
 /**
@@ -156,7 +153,7 @@ data_create_filename(adlb_datum_id id, const char* filename,
   assert(d != NULL);
 
   d->data.FILE.path = strdup(filename);
-  return datum_init_props(d, props);
+  return datum_init_props(id, d, props);
 }
 
 /**
@@ -174,26 +171,31 @@ data_create_container(adlb_datum_id id, adlb_data_type type,
   assert(d != NULL);
   d->data.CONTAINER.members = table_create(1024);
   d->data.CONTAINER.type = type;
-  return datum_init_props(d, props);
+  return datum_init_props(id, d, props);
 }
 
 /*
-  Initialize datum with props
+  Initialize datum with props.  This will garbage collect datum
+  if initialized with 0 refcounts so should be called after
+  the datum is otherwise set up
  */
 static adlb_data_code
-datum_init_props(adlb_datum *d, const adlb_create_props *props) {
+datum_init_props(adlb_datum_id id, adlb_datum *d,
+                 const adlb_create_props *props) {
   check_verbose(props->read_refcount >= 0, ADLB_DATA_ERROR_INVALID,
                 "read_refcount negative: %i", props->read_refcount);
   check_verbose(props->write_refcount >= 0, ADLB_DATA_ERROR_INVALID,
                 "write_refcount negative: %i", props->write_refcount);
-  check_verbose(props->read_refcount + props->write_refcount > 0,
-            ADLB_DATA_ERROR_INVALID, "initial refcount <= 0: %i + %i",
-            props->read_refcount, props->write_refcount);
   d->read_refcount = props->read_refcount;
   d->write_refcount = props->write_refcount;
   d->status = 0; // default status
   if (props->permanent) {
     d->status |= ADLB_DATA_PERMANENT_MASK;
+  }
+  
+  if (d->read_refcount <= 0 && d->write_refcount <= 0) {
+    // This wouldn't happen in good code, but is possible
+    return garbage_collect(id, d);
   }
   return ADLB_DATA_SUCCESS;
 }

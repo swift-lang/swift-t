@@ -646,7 +646,7 @@ handle_retrieve(int caller)
   int dc = data_retrieve(hdr.id, &type, &result, &length);
   
   bool malloced_result = (type == ADLB_DATA_TYPE_CONTAINER);
-  if (dc == ADLB_DATA_SUCCESS && hdr.decr_read_refcount) {
+  if (dc == ADLB_DATA_SUCCESS && hdr.decr_read_refcount > 0) {
     int notify_count;
     int *notify_ranks;
 
@@ -658,7 +658,8 @@ handle_retrieve(int caller)
       result = result_copy;
     }
 
-    dc = data_reference_count(hdr.id, ADLB_READ_REFCOUNT, -1,
+    dc = data_reference_count(hdr.id, ADLB_READ_REFCOUNT,
+                              -1 * hdr.decr_read_refcount,
                               &notify_ranks, &notify_count);
     assert(notify_count == 0);  // Shouldn't close anything
   }
