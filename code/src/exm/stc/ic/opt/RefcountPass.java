@@ -161,6 +161,10 @@ public class RefcountPass extends FunctionOptimizerPass {
     
     updateDecrementCounts(block, fn, readIncrements, writeIncrements);
 
+    /*System.err.println(block.getType() + " " + fn.getName() +
+                                  " read: " + readIncrements +
+                                  " write: " + writeIncrements);*/
+    
     // Second put them back into IC
     updateBlockRefcounting(logger, fn, block, readIncrements, writeIncrements,
                            parentAssignedAliasVars);
@@ -221,7 +225,7 @@ public class RefcountPass extends FunctionOptimizerPass {
     // If this is main block of function, add passed in
     if (block.getType() == BlockType.MAIN_BLOCK) {
       assert(block == fn.getMainblock());
-      System.err.println(fn.getName() + " async: " + fn.isAsync());
+      //System.err.println(fn.getName() + " async: " + fn.isAsync());
       if (fn.isAsync()) {
         // Need to do bookkeeping if this runs in separate task
         for (Var i: fn.getInputList()) {
@@ -232,6 +236,11 @@ public class RefcountPass extends FunctionOptimizerPass {
         for (Var o: fn.getOutputList()) {
           if (RefCounting.hasWriteRefCount(o)) {
             writeIncrements.decrement(o);
+          }
+          // TODO: increment read and write refcounts for outputs for now,
+          // since it is allowed to read output vars
+          if (RefCounting.hasReadRefCount(o)) {
+            readIncrements.decrement(o);
           }
         }
       }
