@@ -935,7 +935,7 @@ public class ExprWalker {
         waitVars, null, WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
     backend.startForeachLoop(
             context.getFunctionContext().constructName("arrcopy"),
-            src, member, ix, -1, true);
+            src, member, ix, -1, 1, true);
     backend.arrayInsertImm(dst, Arg.createVar(ix), member);
     backend.endForeachLoop();
     backend.endWaitStatement();

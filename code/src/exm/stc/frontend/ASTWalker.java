@@ -638,7 +638,8 @@ public class ASTWalker {
             memberVal, counterVal,
             Arg.createVar(startVal), Arg.createVar(endVal), 
             Arg.createVar(stepVal),
-            loop.getDesiredUnroll(), loop.getSplitDegree());
+            loop.getDesiredUnroll(), loop.getSplitDegree(),
+            loop.getLeafDegree());
     // Need to spawn off task per iteration
     if (!loop.isSyncLoop()) {
       backend.startWaitStatement(fc.getFunctionName() + "range-iter" + loopNum,
@@ -721,7 +722,7 @@ public class ASTWalker {
 
     backend.startForeachLoop(fc.getFunctionName() + "-foreach" + loopNum,
         realArray, loop.getMemberVar(), loop.getLoopCountVal(),
-        loop.getSplitDegree(), true);
+        loop.getSplitDegree(), loop.getLeafDegree(), true);
     // May need to spawn off each iteration as task - use wait for this
     if (!loop.isSyncLoop()) {
       backend.startWaitStatement(

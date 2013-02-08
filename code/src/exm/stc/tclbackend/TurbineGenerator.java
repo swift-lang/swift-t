@@ -1808,7 +1808,7 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void startForeachLoop(String loopName,
           Var arrayVar, Var memberVar,
-          Var loopCountVar, int splitDegree,
+          Var loopCountVar, int splitDegree, int leafDegree,
           boolean arrayClosed, List<Var> usedVariables, List<Var> keepOpenVars) {
     assert(Types.isArray(arrayVar.type()));
     assert(loopCountVar == null ||
@@ -1824,15 +1824,15 @@ public class TurbineGenerator implements CompilerBackend
       pointStack.peek().add(Turbine.containerContents(contentsVar,
                           varToExpr(arrayVar), haveKeys));
     } else {
-      startForeachSplit(loopName, arrayVar, contentsVar, splitDegree, haveKeys,
-          usedVariables, keepOpenVars);
+      startForeachSplit(loopName, arrayVar, contentsVar, splitDegree, 
+          leafDegree, haveKeys, usedVariables, keepOpenVars);
     }
     startForeachInner(new Value(contentsVar), memberVar, loopCountVar,
         usedVariables, keepOpenVars);
   }
 
   private void startForeachSplit(String procName, Var arrayVar,
-      String contentsVar, int splitDegree, boolean haveKeys,
+      String contentsVar, int splitDegree, int leafDegree, boolean haveKeys,
       List<Var> usedVars, List<Var> keepOpenVars) {
     // load array size
     pointStack.peek().add(Turbine.containerSize(TCLTMP_CONTAINER_SIZE,
@@ -1844,7 +1844,7 @@ public class TurbineGenerator implements CompilerBackend
     ArrayList<Var> splitUsedVars = new ArrayList<Var>(usedVars);
     splitUsedVars.add(arrayVar);
     startRangeSplit(procName, splitUsedVars, keepOpenVars,
-          splitDegree, new LiteralInt(0), lastIndex, new LiteralInt(1));
+          splitDegree, leafDegree, new LiteralInt(0), lastIndex, new LiteralInt(1));
 
     // need to find the length of this split since that is what the turbine
     //  call wants
@@ -1883,7 +1883,7 @@ public class TurbineGenerator implements CompilerBackend
 
 
   @Override
-  public void endForeachLoop(int splitDegree, boolean arrayClosed,
+  public void endForeachLoop(int splitDegree, int leafDegree, boolean arrayClosed,
                              List<Var> usedVars, List<Var> keepOpenVars) {
     assert(pointStack.size() >= 2);
     pointStack.pop(); // tclloop body
@@ -1895,7 +1895,8 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void startRangeLoop(String loopName, Var loopVar, Var countVar,
       Arg start, Arg end, Arg increment, List<Var> usedVariables,
-      List<Var> keepOpenVars, int desiredUnroll, int splitDegree) {
+      List<Var> keepOpenVars, int desiredUnroll, int splitDegree,
+      int leafDegree) {
     assert(start.isImmediateInt());
     assert(end.isImmediateInt());
     assert(increment.isImmediateInt());
@@ -1911,7 +1912,7 @@ public class TurbineGenerator implements CompilerBackend
 
     if (splitDegree > 0) {
       startRangeSplit(loopName, usedVariables,
-              keepOpenVars, splitDegree, startE, endE, incrE);
+              keepOpenVars, splitDegree, leafDegree, startE, endE, incrE);
       startRangeLoopInner(loopName, loopVar, usedVariables,
               keepOpenVars, TCLTMP_RANGE_LO_V, TCLTMP_RANGE_HI_V,
                                                       TCLTMP_RANGE_INC_V);
@@ -1923,7 +1924,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void endRangeLoop(List<Var> usedVars, List<Var> keepOpenVars,
-                        int splitDegree) {
+                        int splitDegree, int leafDegree) {
     assert(pointStack.size() >= 2);
     pointStack.pop(); // for loop body
 
@@ -1953,13 +1954,14 @@ public class TurbineGenerator implements CompilerBackend
    * @param usedVariables
    * @param keepOpenVars
    * @param splitDegree
+   * @param leafDegree 
    * @param startE start of range (inclusive)
    * @param endE end of range (inclusive)
    * @param incrE
    */
   private void startRangeSplit(String loopName,
           List<Var> usedVariables,
-          List<Var> keepOpenVars, int splitDegree,
+          List<Var> keepOpenVars, int splitDegree, int leafDegree,
           Expression startE, Expression endE, Expression incrE) {
     
     // All variables that must be passed in, including any keepopenvars
@@ -2026,7 +2028,7 @@ public class TurbineGenerator implements CompilerBackend
                              new Value(TCLTMP_RANGE_INC))));
     Expression doneSplitting = Square.arithExpr(
             new Value(TCLTMP_ITERSLEFT), new Token("<="),
-            new LiteralInt(splitDegree));
+            new LiteralInt(leafDegree));
     Sequence thenB = new Sequence();
     Sequence elseB = new Sequence();
 
@@ -2044,7 +2046,7 @@ public class TurbineGenerator implements CompilerBackend
     elseB.add(new SetVariable(skip, Square.arithExpr(new Token(
           String.format("max(%d, ((%s - 1) / %d ) + 1) * %s",
                   splitDegree, new Value(TCLTMP_ITERSLEFT),
-                  splitDegree, new Value(TCLTMP_RANGE_INC))))));
+                  leafDegree, new Value(TCLTMP_RANGE_INC))))));
 
     ForLoop splitLoop = new ForLoop(splitStart, loVal,
             hiVal, new Value(skip), splitBody);

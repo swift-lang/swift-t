@@ -322,15 +322,17 @@ public interface CompilerBackend {
    * @param memberVar
    * @param loopCountVar counter variable, can be null
    * @param splitDegree
+   * @param leafDegree 
    * @param arrayClosed if true, assume array is already closed
    * @param usedVariables
    * @param keepOpenVars
    */
   public abstract void startForeachLoop(String loopName,
       Var arrayVar, Var memberVar, Var loopCountVar, int splitDegree,
-      boolean arrayClosed, List<Var> usedVariables, List<Var> keepOpenVars);
+      int leafDegree, boolean arrayClosed,
+      List<Var> usedVariables, List<Var> keepOpenVars);
 
-  public abstract void endForeachLoop(int splitDegree, 
+  public abstract void endForeachLoop(int splitDegree, int leafDegree,
             boolean arrayClosed, List<Var> usedVars, List<Var> keepOpenVars);
 
   
@@ -354,9 +356,9 @@ public interface CompilerBackend {
    */
   public abstract void startRangeLoop(String loopName, Var loopVar,
       Var countVar, Arg start, Arg end, Arg increment, List<Var> usedVariables, 
-      List<Var> keepOpenVars, int desiredUnroll, int splitDegree);
+      List<Var> keepOpenVars, int desiredUnroll, int splitDegree, int leafDegree);
   public abstract void endRangeLoop(List<Var> usedVars,
-              List<Var> keepOpenVars, int splitDegree);
+              List<Var> keepOpenVars, int splitDegree, int leafDegree);
   /**
    * Add a global variable (currently constant literals are supported)
    * @param name

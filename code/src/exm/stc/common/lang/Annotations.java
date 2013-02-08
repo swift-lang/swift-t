@@ -32,6 +32,7 @@ public class Annotations {
 
   public static final String LOOP_UNROLL = "unroll";
   public static final String LOOP_SPLIT_DEGREE = "splitdegree";
+  public static final String LOOP_LEAF_DEGREE = "leafdegree";
   public static final String LOOP_SYNC = "sync";
   public static final String LOOP_ASYNC = "async";
   public static final Object LOOP_NOSPLIT = "nosplit";

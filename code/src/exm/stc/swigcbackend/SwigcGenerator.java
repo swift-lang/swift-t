@@ -1543,7 +1543,7 @@ public class SwigcGenerator implements CompilerBackend
   @Override
   public void startForeachLoop(String loopName,
           Var arrayVar, Var memberVar,
-                    Var loopCountVar, int splitDegree,
+                    Var loopCountVar, int splitDegree, int leafDegree,
                     boolean arrayClosed,
           List<Var> usedVariables, List<Var> keepOpenVars) {
     assert(Types.isArray(arrayVar.type()));
@@ -1634,7 +1634,7 @@ public class SwigcGenerator implements CompilerBackend
 
 
   @Override
-  public void endForeachLoop(int splitDegree,
+  public void endForeachLoop(int splitDegree, int leafDegree,
           boolean arrayClosed, List<Var> usedVars, List<Var> keepOpenVars) {
     assert(pointStack.size() >= 2);
     pointStack.pop(); // tclloop body
@@ -1649,7 +1649,7 @@ public class SwigcGenerator implements CompilerBackend
   @Override
   public void startRangeLoop(String loopName, Var loopVar, Var countVar,
       Arg start, Arg end, Arg increment, List<Var> usedVariables,
-      List<Var> keepOpenVars, int desiredUnroll, int splitDegree) {
+      List<Var> keepOpenVars, int desiredUnroll, int splitDegree,  int leafDegree) {
     assert(start.isIntVal() ||
         (start.isVar() &&
             start.getVar().type().equals(Types.V_INT)));
@@ -1678,7 +1678,7 @@ public class SwigcGenerator implements CompilerBackend
 
   @Override
   public void endRangeLoop(List<Var> usedVars, List<Var> keepOpenVars,
-                        int splitDegree) {
+                        int splitDegree, int leafDegree) {
     assert(pointStack.size() >= 2);
     pointStack.pop(); // for loop body
 

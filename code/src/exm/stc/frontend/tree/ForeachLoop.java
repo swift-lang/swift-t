@@ -37,6 +37,7 @@ import exm.stc.frontend.TypeChecker;
 
 public class ForeachLoop {
   private static final int DEFAULT_SPLIT_DEGREE = 16;
+  private static final int DEFAULT_LEAF_DEGREE = 64;
   private final SwiftAST arrayVarTree;
   private final SwiftAST loopBodyTree;
   private final String memberVarName;
@@ -48,6 +49,7 @@ public class ForeachLoop {
   private final ArrayList<String> annotations;
   private int unroll = 1;
   private int splitDegree = DEFAULT_SPLIT_DEGREE;
+  private int leafDegree = DEFAULT_LEAF_DEGREE;
 
   public int getDesiredUnroll() {
     return unroll;
@@ -55,6 +57,10 @@ public class ForeachLoop {
 
   public int getSplitDegree() {
     return splitDegree;
+  }
+  
+  public int getLeafDegree() {
+    return leafDegree;
   }
   
   public List<String> getAnnotations() {
@@ -113,6 +119,7 @@ public class ForeachLoop {
     // How many times to unroll loop (1 == don't unroll)
     int unrollFactor = 1;
     int splitDegree = DEFAULT_SPLIT_DEGREE;
+    int leafDegree = DEFAULT_LEAF_DEGREE;
 
     
     int annotationCount = 0;
@@ -122,7 +129,8 @@ public class ForeachLoop {
         if (subtree.getChildCount() == 2) {
           String key = subtree.child(0).getText();
           if (key.equals(Annotations.LOOP_UNROLL)
-              || key.equals(Annotations.LOOP_SPLIT_DEGREE)) {
+              || key.equals(Annotations.LOOP_SPLIT_DEGREE)
+              || key.equals(Annotations.LOOP_LEAF_DEGREE)) {
             boolean posint = false;
             if (subtree.child(1).getType() == ExMParser.NUMBER) {
               int val = Integer.parseInt(subtree.child(1).getText());
@@ -130,8 +138,11 @@ public class ForeachLoop {
                 posint = true;
                 if (key.equals(Annotations.LOOP_UNROLL)) {
                   unrollFactor = val;
-                } else {
+                } else if (key.equals(Annotations.LOOP_SPLIT_DEGREE)) {
                   splitDegree = val;
+                } else {
+                  assert(key.equals(Annotations.LOOP_LEAF_DEGREE));
+                  leafDegree = val;
                 }
                 annotationCount++;
               }
@@ -185,6 +196,7 @@ public class ForeachLoop {
     loop.validateAnnotations(context);
     loop.unroll = unrollFactor;
     loop.splitDegree = splitDegree;
+    loop.leafDegree = leafDegree;
     return loop;
   }
 

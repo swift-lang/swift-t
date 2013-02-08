@@ -519,10 +519,11 @@ public class ICContinuations {
     }
 
     private final int splitDegree;
+    private final int leafDegree;
 
     private ForeachLoop(String loopName,
         Block block, Var arrayVar, Var loopVar,
-        Var loopCounterVar, int splitDegree,
+        Var loopCounterVar, int splitDegree, int leafDegree,
         boolean arrayClosed,
         List<Var> usedVariables, List<Var> keepOpenVars) {
       super(block, usedVariables, keepOpenVars);
@@ -532,20 +533,22 @@ public class ICContinuations {
       this.loopCounterVar = loopCounterVar;
       this.arrayClosed = arrayClosed;
       this.splitDegree = splitDegree;
+      this.leafDegree = leafDegree;
     }
 
     public ForeachLoop(String loopName, Var arrayVar,
-        Var loopVar, Var loopCounterVar, int splitDegree,
+        Var loopVar, Var loopCounterVar, int splitDegree, int leafDegree,
         boolean arrayClosed, List<Var> usedVariables,
         List<Var> keepOpenVars) {
       this(loopName, new Block(BlockType.FOREACH_BODY, null), arrayVar, loopVar, loopCounterVar,
-          splitDegree, arrayClosed, usedVariables, keepOpenVars);
+          splitDegree, leafDegree, arrayClosed, usedVariables, keepOpenVars);
     }
 
     @Override
     public ForeachLoop clone() {
       return new ForeachLoop(loopName, this.loopBody.clone(),
-          arrayVar, loopVar, loopCounterVar, splitDegree, arrayClosed,
+          arrayVar, loopVar, loopCounterVar, splitDegree, leafDegree,
+          arrayClosed,
           new ArrayList<Var>(passedInVars),
           new ArrayList<Var>(keepOpenVars));
     }
@@ -573,9 +576,9 @@ public class ICContinuations {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
       gen.startForeachLoop(loopName, arrayVar, loopVar, loopCounterVar,
-                splitDegree, arrayClosed, passedInVars, keepOpenVars);
+                splitDegree, leafDegree, arrayClosed, passedInVars, keepOpenVars);
       this.loopBody.generate(logger, gen, info);
-      gen.endForeachLoop(splitDegree, arrayClosed, passedInVars,
+      gen.endForeachLoop(splitDegree, leafDegree, arrayClosed, passedInVars,
                                           keepOpenVars);
     }
 
@@ -1253,21 +1256,22 @@ public class ICContinuations {
     private final int desiredUnroll;
     private boolean unrolled;
     private int splitDegree;
+    private int leafDegree;
 
     public RangeLoop(String loopName, Var loopVar, Var countVar,
         Arg start, Arg end, Arg increment,
         List<Var> usedVariables, List<Var> keepOpenVars,
-        int desiredUnroll, boolean unrolled, int splitDegree) {
+        int desiredUnroll, boolean unrolled, int splitDegree, int leafDegree) {
       this(loopName, new Block(BlockType.RANGELOOP_BODY, null),
           loopVar, countVar,
           start, end, increment, usedVariables, keepOpenVars,
-          desiredUnroll, unrolled, splitDegree);
+          desiredUnroll, unrolled, splitDegree, leafDegree);
     }
 
     private RangeLoop(String loopName, Block block, Var loopVar, Var countVar,
         Arg start, Arg end, Arg increment,
         List<Var> usedVariables, List<Var> keepOpenVars,
-        int desiredUnroll, boolean unrolled, int splitDegree) {
+        int desiredUnroll, boolean unrolled, int splitDegree, int leafDegree) {
       super(block, usedVariables, keepOpenVars);
       assert(start.isImmediateInt());
       assert(end.isImmediateInt());
@@ -1282,6 +1286,7 @@ public class ICContinuations {
       this.desiredUnroll = desiredUnroll;
       this.unrolled = unrolled;
       this.splitDegree = splitDegree;
+      this.leafDegree = leafDegree;
     }
 
     @Override
@@ -1290,7 +1295,7 @@ public class ICContinuations {
           start.clone(), end.clone(), increment.clone(),
           new ArrayList<Var>(passedInVars),
           new ArrayList<Var>(keepOpenVars), desiredUnroll, unrolled,
-          splitDegree);
+          splitDegree, leafDegree);
     }
 
     @Override
@@ -1313,9 +1318,9 @@ public class ICContinuations {
         throws UndefinedTypeException {
       gen.startRangeLoop(loopName, loopVar, countVar, start, end, increment,
                          passedInVars, keepOpenVars,
-                         desiredUnroll, splitDegree);
+                         desiredUnroll, splitDegree, leafDegree);
       this.loopBody.generate(logger, gen, info);
-      gen.endRangeLoop(passedInVars, keepOpenVars, splitDegree);
+      gen.endRangeLoop(passedInVars, keepOpenVars, splitDegree, leafDegree);
     }
 
     @Override
@@ -1603,6 +1608,7 @@ public class ICContinuations {
         }
       }
       this.unrolled = true;
+      this.leafDegree /= unrollFactor;
     }
 
     private long calcIterations(long startV, long endV, long incV) {

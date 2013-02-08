@@ -242,7 +242,7 @@ public class STCMiddleEnd {
 
   public void startForeachLoop(String loopName,
           Var arrayVar, Var memberVar, Var loopCountVar, 
-          int splitDegree, boolean arrayClosed) {
+          int splitDegree, int leafDegree, boolean arrayClosed) {
     if(!Types.isArray(arrayVar.type())) {
       throw new STCRuntimeError("foreach loop over non-array: " + 
                 arrayVar.toString()); 
@@ -251,7 +251,7 @@ public class STCMiddleEnd {
     assert(loopCountVar == null || 
               loopCountVar.type().equals(Types.V_INT));
     ForeachLoop loop = new ForeachLoop(loopName,
-            arrayVar, memberVar, loopCountVar, splitDegree,
+            arrayVar, memberVar, loopCountVar, splitDegree, leafDegree,
             arrayClosed, Var.NONE, Var.NONE);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
@@ -263,11 +263,12 @@ public class STCMiddleEnd {
   }
 
   public void startRangeLoop(String loopName, Var loopVar, Var countVar,
-      Arg start, Arg end, Arg increment, int desiredUnroll, int splitDegree) {
+      Arg start, Arg end, Arg increment, int desiredUnroll, int splitDegree,
+      int leafDegree) {
     RangeLoop loop = new RangeLoop(loopName, loopVar, countVar,
                     start, end, increment,
                     Var.NONE, Var.NONE, desiredUnroll, false,
-                    splitDegree);
+                    splitDegree, leafDegree);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
   }
