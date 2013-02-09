@@ -22,6 +22,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types.FunctionType;
@@ -330,10 +331,10 @@ public interface CompilerBackend {
   public abstract void startForeachLoop(String loopName,
       Var arrayVar, Var memberVar, Var loopCountVar, int splitDegree,
       int leafDegree, boolean arrayClosed,
-      List<Var> usedVariables, List<Var> keepOpenVars);
+      List<PassedVar> usedVariables, List<Var> keepOpenVars);
 
   public abstract void endForeachLoop(int splitDegree, int leafDegree,
-            boolean arrayClosed, List<Var> usedVars, List<Var> keepOpenVars);
+            boolean arrayClosed, List<PassedVar> usedVars, List<Var> keepOpenVars);
 
   
   /**
@@ -355,9 +356,9 @@ public interface CompilerBackend {
    * @param splitDegree the desired loop split factor (negative if no splitting)
    */
   public abstract void startRangeLoop(String loopName, Var loopVar,
-      Var countVar, Arg start, Arg end, Arg increment, List<Var> usedVariables, 
+      Var countVar, Arg start, Arg end, Arg increment, List<PassedVar> usedVariables, 
       List<Var> keepOpenVars, int desiredUnroll, int splitDegree, int leafDegree);
-  public abstract void endRangeLoop(List<Var> usedVars,
+  public abstract void endRangeLoop(List<PassedVar> usedVars,
               List<Var> keepOpenVars, int splitDegree, int leafDegree);
   /**
    * Add a global variable (currently constant literals are supported)
@@ -418,7 +419,7 @@ public interface CompilerBackend {
       List<Var> keepOpenVars, List<Boolean> blockingVars);
   
   public abstract void loopContinue(List<Var> newVals,
-      List<Var> usedVariables, List<Var> keepOpenVars,
+      List<Var> usedVariables,
       List<Boolean> blockingVars);
   /**
    * @param loopUsedVars variables from outside loop referred to in loop.

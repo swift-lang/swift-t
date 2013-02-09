@@ -15,8 +15,9 @@
  */
 package exm.stc.ic.opt;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map.Entry;
@@ -26,6 +27,7 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
@@ -33,7 +35,9 @@ import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
@@ -92,18 +96,28 @@ public class FixupVariables implements OptimizerPass {
     }
     Pair<Set<Var>, Set<Var>> res = fixupBlockRec(logger,
         fn, fn.getMainblock(), fnargs, referencedGlobals, updateLists);
+
+    Set<Var> read = res.val1;
+    Set<Var> written = res.val2;
     
-    Set<Var> neededVars = res.val1;
+    if (updateLists) {
+      // Mark write-only outputs
+      for (int i = 0; i < fn.getOutputList().size(); i++) {
+        Var output = fn.getOutput(i);
+        if (!read.contains(output)) {
+          fn.makeOutputWriteOnly(i);
+        }
+      }
+    }
     // Check that all variables referred to are available as args
-    neededVars.removeAll(fn.getInputList());
-    neededVars.removeAll(fn.getOutputList());
+    read.removeAll(fn.getInputList());
+    read.removeAll(fn.getOutputList());
   
-    if (neededVars.size() > 0) {
+    if (read.size() > 0) {
       throw new STCRuntimeError("Reference in IC function "
-          + fn.getName() + " to undefined variables " + neededVars.toString());
+          + fn.getName() + " to undefined variables " + read.toString());
     }
     
-    Set<Var> written = res.val2;
     written.removeAll(fn.getOutputList());
     if (written.size() > 0) {
       throw new STCRuntimeError("Unexpected write IC function "
@@ -139,42 +153,61 @@ public class FixupVariables implements OptimizerPass {
     }
 
     // Work out which variables are read/writte which aren't locally declared
+    Set<Var> read = new HashSet<Var>();
     Set<Var> written = new HashSet<Var>();
-    Set<Var> neededVars = new HashSet<Var>();
-    findBlockNeeded(block, written, neededVars);
+    findBlockNeeded(block, read, written);
     
     for (Continuation c : block.getContinuations()) {
       fixupContinuationRec(logger, function, c, visible, referencedGlobals,
-              blockVars, neededVars, written, updateLists);
+              blockVars, read, written, updateLists);
     }
 
     // Outer scopes don't have anything to do with vars declared here
-    neededVars.removeAll(blockVars);
+    read.removeAll(blockVars);
     written.removeAll(blockVars);
     
-    Set<Var> globals = addGlobalImports(block, visible,
-                                          neededVars, updateLists);
+    Set<Var> globals = addGlobalImports(block, visible, updateLists,
+                                        Arrays.asList(read, written));
 
     referencedGlobals.addAll(globals);
-    neededVars.removeAll(globals);
-    return Pair.create(neededVars, written);
+    read.removeAll(globals);
+    written.removeAll(globals);
+    return Pair.create(read, written);
   }
 
   /**
-   * 
+   * Find all referenced vars in scope
    * @param block
-   * @param written accumulate written vars with refcounts
-   * @param allNeeded accumulate all referenced vars from this block
+   * @param written accumulate output vars
+   * @param read accumulate all input vars from this block
    */
-  private static void findBlockNeeded(Block block, Set<Var> written,
-      Set<Var> allNeeded) {
-    block.findThisBlockNeededVars(allNeeded, written, null);
-    allNeeded.addAll(written); // written are also needed
-    // Remove vars without write refcounts 
-    Iterator<Var> wrIt = written.iterator();
-    while (wrIt.hasNext()) {
-      if (!RefCounting.hasWriteRefCount(wrIt.next())) {
-        wrIt.remove();
+  private static void findBlockNeeded(Block block, Set<Var> read,
+      Set<Var> written) {
+    for (Var v: block.getVariables()) {
+      if (v.isMapped()) {
+        read.add(v.mapping());
+      }
+    }
+    
+    for (Instruction i: block.getInstructions()) {
+      for (Arg in: i.getInputs()) {
+        if (in.isVar()) {
+          read.add(in.getVar());
+        }
+      }
+      written.addAll(i.getOutputs());
+    }
+    
+    for (Continuation cont: block.getContinuations()) {
+      read.addAll(cont.requiredVars());
+    }
+    
+    for (CleanupAction cleanup: block.getCleanups()) {
+      // ignore outputs - the cleaned up vars should already be in scope
+      for (Arg in: cleanup.action().getInputs()) {
+        if (in.isVar()) {
+          read.add(in.getVar());
+        }
       }
     }
   }
@@ -193,7 +226,7 @@ public class FixupVariables implements OptimizerPass {
   private static void fixupContinuationRec(Logger logger, Function function,
           Continuation continuation, HierarchicalSet<Var> visible,
           Set<Var> referencedGlobals, Set<Var> outerBlockVars,
-          Set<Var> neededVars, Set<Var> written, boolean updateLists) {
+          Set<Var> read, Set<Var> written, boolean updateLists) {
     // First see what variables the continuation defines inside itself
     List<Var> constructVars = continuation.constructDefinedVars();
     
@@ -205,24 +238,25 @@ public class FixupVariables implements OptimizerPass {
       
       Pair<Set<Var>, Set<Var>> inner = fixupBlockRec(logger,
           function, innerBlock, childVisible, referencedGlobals, updateLists);
-      Set<Var> innerNeededVars = inner.val1;
+      Set<Var> innerRead = inner.val1;
       Set<Var> innerWritten = inner.val2;
       
       // construct will provide some vars
       if (!constructVars.isEmpty()) {
-        innerNeededVars.removeAll(constructVars);
+        innerRead.removeAll(constructVars);
+        innerWritten.removeAll(constructVars);
       }
 
       if (continuation.inheritsParentVars()) {
         // Might be some variables not yet defined in this scope
-        innerNeededVars.removeAll(outerBlockVars);
-        neededVars.addAll(innerNeededVars);
+        innerRead.removeAll(outerBlockVars);
+        read.addAll(innerRead);
         innerWritten.removeAll(outerBlockVars);
         written.addAll(innerWritten);
       } else if (updateLists) {
         // Update the passed in vars
         rebuildContinuationPassedVars(function, continuation, visible,
-              outerBlockVars, neededVars, innerNeededVars);
+              outerBlockVars, read, innerRead, written, innerWritten);
         rebuildContinuationKeepOpenVars(function, continuation,
               visible, outerBlockVars, written, innerWritten);
       }
@@ -231,30 +265,43 @@ public class FixupVariables implements OptimizerPass {
 
   private static void rebuildContinuationPassedVars(Function function,
           Continuation continuation, HierarchicalSet<Var> visibleVars,
-          Set<Var> outerBlockVars, Set<Var> outerNeededVars,
-          Set<Var> innerNeededVars) {
-    // Rebuild passed in vars
-    continuation.clearPassedInVars();
+          Set<Var> outerBlockVars, 
+          Set<Var> outerRead, Set<Var> innerRead, 
+          Set<Var> outerWritten, Set<Var> innerWritten) {
+    Set<Var> innerAllNeeded = new HashSet<Var>();
+    innerAllNeeded.addAll(innerRead);
+    innerAllNeeded.addAll(innerWritten);
     
-    for (Var needed: innerNeededVars) {
+    // Rebuild passed in vars
+    List<PassedVar> passedIn = new ArrayList<PassedVar>();
+    for (Var needed: innerAllNeeded) {
       assert(needed.storage() != VarStorage.GLOBAL_CONST);
+      boolean read = innerRead.contains(needed);
+      boolean written = innerWritten.contains(needed);
+      // Update outer in case outer will need to pass in
       if (!outerBlockVars.contains(needed)) {
-        outerNeededVars.add(needed);
+        if (read)
+          outerRead.add(needed);
+        if (written)
+          outerWritten.add(needed);
       }
       if (!visibleVars.contains(needed)) {
         throw new STCRuntimeError("Variable " + needed
             + " should have been " + "visible but wasn't in "
             + function.getName());
       }
-      continuation.addPassedInVar(needed);
+
+      assert(read || written);
+      boolean writeOnly = !read;
+      passedIn.add(new PassedVar(needed, writeOnly));
     }
+    continuation.setPassedVars(passedIn);
   }
 
   private static void rebuildContinuationKeepOpenVars(Function function,
       Continuation continuation, HierarchicalSet<Var> visible,
       Set<Var> outerBlockVars, Set<Var> outerWritten, Set<Var> innerWritten) {
-    continuation.clearKeepOpenVars();
-    
+    List<Var> keepOpen = new ArrayList<Var>();
     for (Var v: innerWritten) {
       // If not declared in this scope
       if (!outerBlockVars.contains(v)) {
@@ -265,9 +312,11 @@ public class FixupVariables implements OptimizerPass {
             + " should have been " + "visible but wasn't in "
             + function.getName());
       }
-      assert(RefCounting.hasWriteRefCount(v));
-      continuation.addKeepOpenVar(v);
+      if (RefCounting.hasWriteRefCount(v)) {
+        keepOpen.add(v);
+      }
     }
+    continuation.setKeepOpenVars(keepOpen);
   }
 
   private static void removeGlobalImports(Block block) {
@@ -284,25 +333,27 @@ public class FixupVariables implements OptimizerPass {
    * 
    * @param block
    * @param visible
-   * @param neededVars
+   * @param neededSets sets of vars needed from outside bock
    * @return set of global vars
    */
   private static Set<Var> addGlobalImports(Block block,
           HierarchicalSet<Var> visible,
-          Set<Var> neededVars, boolean updateLists) {
+          boolean updateLists, List<Set<Var>> neededSets) {
     // if global constant missing, just add it
-    Set<Var> globals = new HashSet<Var>();
-    for (Var needed: neededVars) {
-      if (visible.contains(needed)) {
-        if (needed.storage() == VarStorage.GLOBAL_CONST) {
-          // Add at top in case used as mapping var
-          if (updateLists)
-            block.addVariable(needed, true);
-          globals.add(needed);
+    Set<Var> addedGlobals = new HashSet<Var>();
+    for (Set<Var> neededSet: neededSets) {
+      for (Var var: neededSet) {
+        if (visible.contains(var)) {
+          if (var.storage() == VarStorage.GLOBAL_CONST) {
+            // Add at top in case used as mapping var
+            if (updateLists && !addedGlobals.contains(var))
+              block.addVariable(var, true);
+            addedGlobals.add(var);
+          }
         }
       }
     }
-    return globals;
+    return addedGlobals;
   }
 
   private static void removeUnusedGlobals(Program prog,

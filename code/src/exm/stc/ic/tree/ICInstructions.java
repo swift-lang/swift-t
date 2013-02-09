@@ -35,6 +35,7 @@ import exm.stc.common.lang.OpEvaluator;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
+import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
@@ -48,6 +49,7 @@ import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
+import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.GenInfo;
 /**
  * This class contains instructions used in the intermediate representation.
@@ -331,10 +333,15 @@ public class ICInstructions {
    
     public abstract Instruction clone();
 
+    
+    public Pair<List<Var>, List<Var>> getIncrVars(Map<String, Function> functions) {
+      return getIncrVars();
+    }
+
     /**
      * @return (read vars to be incremented, write vars to be incremented)
      */
-    public Pair<List<Var>, List<Var>> getIncrVars() {
+    protected Pair<List<Var>, List<Var>> getIncrVars() {
       return Pair.create(getReadIncrVars(), getWriteIncrVars());
     }
 
@@ -2720,7 +2727,7 @@ public class ICInstructions {
     }
     
     @Override
-    public Pair<List<Var>, List<Var>> getIncrVars() {
+    public Pair<List<Var>, List<Var>> getIncrVars(Map<String, Function> functions) {
       switch (op) { 
         case CALL_BUILTIN:
         case CALL_CONTROL:
@@ -2733,13 +2740,17 @@ public class ICInstructions {
               readIncr.add(inVar);
             }
           }
-          for (Var outVar: outputs) {
+          for (int i = 0; i < outputs.size(); i++) {
+            Var outVar = outputs.get(i);
             if (RefCounting.hasWriteRefCount(outVar)) {
               writeIncr.add(outVar);
             }
-            if (op != Opcode.CALL_BUILTIN) {
+            if (op != Opcode.CALL_BUILTIN) {              
+              Function f = functions.get(this.functionName);
+              boolean writeOnly = f.isOutputWriteOnly(i);
+              
               // keep read references to output vars
-              if (RefCounting.hasReadRefCount(outVar)) {
+              if (!writeOnly && RefCounting.hasReadRefCount(outVar)) {
                 readIncr.add(outVar);
               }
             }
@@ -3083,14 +3094,12 @@ public class ICInstructions {
   public static class LoopContinue extends Instruction {
     private final ArrayList<Var> newLoopVars;
     private final ArrayList<Var> loopUsedVars;
-    private final ArrayList<Var> keepOpenVars;
     private final ArrayList<Boolean> blockingVars;
 
     @Override
     public void renameVars(Map<Var, Arg> renames) {
       ICUtil.replaceVarsInList(renames, newLoopVars, false);
       ICUtil.replaceVarsInList(renames, loopUsedVars, true);
-      ICUtil.replaceVarsInList(renames, keepOpenVars, true);
     }
     
     @Override
@@ -3102,7 +3111,6 @@ public class ICInstructions {
     public void removeVars(Set<Var> removeVars) {
       assert(!removeVars.contains(newLoopVars.get(0)));
       loopUsedVars.removeAll(removeVars);
-      keepOpenVars.removeAll(removeVars);
       newLoopVars.removeAll(removeVars);
     }
 
@@ -3122,17 +3130,12 @@ public class ICInstructions {
       }
       sb.append("] #passin[");
       ICUtil.prettyPrintVarList(sb, this.loopUsedVars);
-      sb.append("] #keepopen[");
-      ICUtil.prettyPrintVarList(sb, this.keepOpenVars);
-      sb.append(']');
       return sb.toString();
     }
   
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.loopContinue(this.newLoopVars, this.loopUsedVars,
-                                      this.keepOpenVars,
-                                      this.blockingVars);
+      gen.loopContinue(this.newLoopVars, this.loopUsedVars, this.blockingVars);
     }
   
     @Override
@@ -3212,58 +3215,18 @@ public class ICInstructions {
     public TaskMode getMode() {
       return TaskMode.CONTROL;
     }
-
-    public void addUsedVar(Var variable) {
-      this.loopUsedVars.add(variable);
-      ICUtil.removeDuplicates(this.loopUsedVars);
+    
+    public void setLoopUsedVars(Collection<Var> variables) {
+      loopUsedVars.clear();
+      loopUsedVars.addAll(variables);
     }
     
-    public void addUsedVars(Collection<Var> variables) {
-      for (Var v: variables) {
-        addUsedVar(v);
-      }
-    }
-
-    public void removeUsedVar(Var variable) {
-      ICUtil.remove(loopUsedVars, variable);
-    }
-
-    public void removeUsedVars(Collection<Var> vars) {
-      for (Var var: vars) {
-        removeUsedVar(var);
-      }
-    }
-
-    public void clearUsedVars() {
-      loopUsedVars.clear();
-    }
-
-    public void addKeepOpenVar(Var variable) {
-      this.keepOpenVars.add(variable);
-    }
-
-    public void removeKeepOpenVar(Var variable) {
-      ICUtil.remove(keepOpenVars, variable);
-    }
-
-    public void removeKeepOpenVars(Collection<Var> vars) {
-      for (Var var: vars) {
-        removeKeepOpenVar(var);
-      }
-    }
-
-    public void clearKeepOpenVars() {
-      keepOpenVars.clear();
-    }
-
     public LoopContinue(List<Var> newLoopVars, 
                         List<Var> loopUsedVars,
-                        List<Var> keepOpenVars,
                         List<Boolean> blockingVars) {
       super(Opcode.LOOP_CONTINUE);
       this.newLoopVars = new ArrayList<Var>(newLoopVars);
       this.loopUsedVars = new ArrayList<Var>(loopUsedVars);
-      this.keepOpenVars = new ArrayList<Var>(keepOpenVars);
       this.blockingVars = new ArrayList<Boolean>(blockingVars);
     }
 
@@ -3277,7 +3240,6 @@ public class ICInstructions {
     public Instruction clone() {
       return new LoopContinue(new ArrayList<Var>(newLoopVars), 
           new ArrayList<Var>(loopUsedVars),
-          new ArrayList<Var>(keepOpenVars), 
           new ArrayList<Boolean>(blockingVars));
     }
   }
@@ -3286,23 +3248,21 @@ public class ICInstructions {
     /**
      * Variables where refcount should be decremented upon loop termination
      */
-    private final ArrayList<Var> loopUsedVars;
+    private final ArrayList<PassedVar> loopUsedVars;
 
     /**
      * Variables to be closed upon loop termination
      */
     private final ArrayList<Var> keepOpenVars;
   
-    public LoopBreak(List<Var> loopUsedVars, List<Var> varsToClose) {
+    public LoopBreak(List<PassedVar> loopUsedVars, List<Var> keepOpenVars) {
       super(Opcode.LOOP_BREAK);
-      this.loopUsedVars = new ArrayList<Var>(loopUsedVars);
-      this.keepOpenVars = new ArrayList<Var>(varsToClose);
+      this.loopUsedVars = new ArrayList<PassedVar>(loopUsedVars);
+      this.keepOpenVars = new ArrayList<Var>(keepOpenVars);
     }
   
     @Override
     public void renameVars(Map<Var, Arg> renames) {
-      ICUtil.replaceVarsInList(renames, loopUsedVars, true);
-      ICUtil.replaceVarsInList(renames, keepOpenVars, true);
     }
   
     @Override
@@ -3310,13 +3270,33 @@ public class ICInstructions {
       // do nothing
     }
 
+
+    public List<PassedVar> getLoopUsedVars() {
+      return Collections.unmodifiableList(loopUsedVars);
+    }
+    
+    public List<Var> getKeepOpenVars() {
+      return Collections.unmodifiableList(keepOpenVars);
+    }
+    
+    public void setLoopUsedVars(Collection<PassedVar> passedVars) {
+      this.loopUsedVars.clear();
+      this.loopUsedVars.addAll(passedVars);
+    }
+
+    public void setKeepOpenVars(Collection<Var> keepOpen) {
+      this.keepOpenVars.clear();
+      this.keepOpenVars.addAll(keepOpen);
+    }
+
+    
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
       sb.append(this.op.toString().toLowerCase());
 
       sb.append(" #passin[");
-      ICUtil.prettyPrintVarList(sb, this.loopUsedVars);
+      ICUtil.prettyPrintList(sb, this.loopUsedVars);
 
       sb.append("] #keepopen[");
       ICUtil.prettyPrintVarList(sb, this.keepOpenVars);
@@ -3326,7 +3306,7 @@ public class ICInstructions {
   
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.loopBreak(loopUsedVars, keepOpenVars);
+      gen.loopBreak(PassedVar.extractVars(loopUsedVars), keepOpenVars);
     }
   
     @Override
@@ -3384,62 +3364,10 @@ public class ICInstructions {
       return null;
     }
 
-    public List<Var> getUsedVars() {
-      return Collections.unmodifiableList(this.loopUsedVars);
-    }
-
-    public void addUsedVar(Var variable) {
-      this.loopUsedVars.add(variable);
-      ICUtil.removeDuplicates(this.loopUsedVars);
-    }
-    
-    public void addUsedVars(Collection<Var> variables) {
-      for (Var v: variables) {
-        addUsedVar(v);
-      }
-    }
-
-    public void removeUsedVar(Var variable) {
-      ICUtil.remove(loopUsedVars, variable);
-    }
-
-    public void removeUsedVars(Collection<Var> vars) {
-      for (Var var: vars) {
-        removeUsedVar(var);
-      }
-    }
-
-    public void clearUsedVars() {
-      loopUsedVars.clear();
-    }
-
-    public List<Var> getKeepOpenVars() {
-      return Collections.unmodifiableList(this.keepOpenVars);
-    }
-
-    public void addKeepOpenVar(Var variable) {
-      this.keepOpenVars.add(variable);
-    }
-
-    public void removeKeepOpenVar(Var variable) {
-      ICUtil.remove(keepOpenVars, variable);
-    }
-
-    public void removeKeepOpenVars(Collection<Var> vars) {
-      for (Var var: vars) {
-        removeKeepOpenVar(var);
-      }
-    }
-
-    public void clearKeepOpenVars() {
-      keepOpenVars.clear();
-    }
-
     @Override
     public Instruction clone() {
       return new LoopBreak(loopUsedVars, keepOpenVars);
     }
-
   }
   
   public static enum Opcode {

@@ -33,6 +33,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
@@ -198,7 +199,7 @@ public class STCMiddleEnd {
     assert(priority == null || priority.isImmediateInt());
     
     WaitStatement wait = new WaitStatement(procName, waitVars,
-          Var.NONE, Var.NONE, priority, mode, recursive, target);
+          PassedVar.NONE, Var.NONE, priority, mode, recursive, target);
     currBlock().addContinuation(wait);
     blockStack.push(wait.getBlock());
   }
@@ -252,7 +253,7 @@ public class STCMiddleEnd {
               loopCountVar.type().equals(Types.V_INT));
     ForeachLoop loop = new ForeachLoop(loopName,
             arrayVar, memberVar, loopCountVar, splitDegree, leafDegree,
-            arrayClosed, Var.NONE, Var.NONE);
+            arrayClosed, PassedVar.NONE, Var.NONE);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
   }
@@ -267,7 +268,7 @@ public class STCMiddleEnd {
       int leafDegree) {
     RangeLoop loop = new RangeLoop(loopName, loopVar, countVar,
                     start, end, increment,
-                    Var.NONE, Var.NONE, desiredUnroll, false,
+                    PassedVar.NONE, Var.NONE, desiredUnroll, false,
                     splitDegree, leafDegree);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
@@ -282,7 +283,7 @@ public class STCMiddleEnd {
       List<Boolean> definedHere, List<Var> initVals,
       List<Boolean> blockingVars) {
     Loop loop = new Loop(loopName, loopVars, definedHere, initVals,
-                         Var.NONE, Var.NONE, blockingVars);
+                         PassedVar.NONE, Var.NONE, blockingVars);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
     loopStack.push(loop);
@@ -290,14 +291,13 @@ public class STCMiddleEnd {
 
   public void loopContinue(List<Var> newVals, 
                            List<Boolean> blockingVars) {
-    LoopContinue inst = new LoopContinue(newVals, Var.NONE, Var.NONE,
-                                         blockingVars);
+    LoopContinue inst = new LoopContinue(newVals, Var.NONE, blockingVars);
     currBlock().addInstruction(inst);
     loopStack.peek().setLoopContinue(inst);
   }
 
   public void loopBreak() {
-    LoopBreak inst = new LoopBreak(Var.NONE, Var.NONE);
+    LoopBreak inst = new LoopBreak(PassedVar.NONE, Var.NONE);
     currBlock().addInstruction(inst);
     loopStack.peek().setLoopBreak(inst);
   }
@@ -774,10 +774,6 @@ public class STCMiddleEnd {
     Function fn = new Function(function, inArgs, outArgs, TaskMode.SYNC);
     this.program.addFunction(fn);
     
-    List<Var> used = new ArrayList<Var>();
-    used.addAll(inArgs);
-    used.addAll(outArgs);
-
     WaitMode waitMode;
     if (mode == TaskMode.LOCAL || mode == TaskMode.SYNC) {
       // Cases where function can execute on any node
@@ -788,7 +784,7 @@ public class STCMiddleEnd {
     }
     
     WaitStatement wait = new WaitStatement(function + "-argwait",
-                  inArgs, used, Var.NONE, null,
+                  inArgs, PassedVar.NONE, Var.NONE, null,
                   waitMode, true, mode);
     
     fn.getMainblock().addContinuation(wait);

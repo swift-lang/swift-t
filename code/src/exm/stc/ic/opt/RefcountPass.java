@@ -3,9 +3,12 @@ package exm.stc.ic.opt;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -16,6 +19,7 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Var;
@@ -24,7 +28,6 @@ import exm.stc.common.util.Counters;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
-import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -38,6 +41,7 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
+import exm.stc.ic.tree.ICTree.Program;
 
 /**
  * Eliminate, merge and otherwise reduce read/write reference
@@ -46,8 +50,14 @@ import exm.stc.ic.tree.ICTree.Function;
  * TODO: push down refcount decrement operations?
  *       Are there real situations where this helps?
  */
-public class RefcountPass extends FunctionOptimizerPass {
+public class RefcountPass implements OptimizerPass {
 
+  /**
+   * Map of names to functions, used inside pass.  msut be
+   * initialized before pass runs.
+   */
+  private Map<String, Function> functionMap = null;
+  
   @Override
   public String getPassName() {
     return "Refcount adding";
@@ -59,10 +69,22 @@ public class RefcountPass extends FunctionOptimizerPass {
   }
 
   @Override
-  public void optimize(Logger logger, Function f) throws UserException {
-    elimRefCountsRec(logger, f, f.getMainblock(),
-                     new Counters<Var>(), new Counters<Var>(),
-                     new HierarchicalSet<Var>());
+  public void optimize(Logger logger, Program program) throws UserException {
+    functionMap = buildFunctionMap(program);
+    
+    for (Function f: program.getFunctions()) {
+      elimRefCountsRec(logger, f, f.getMainblock(),
+                       new Counters<Var>(), new Counters<Var>(),
+                       new HierarchicalSet<Var>());
+    }
+  }
+
+  private static Map<String, Function> buildFunctionMap(Program program) {
+    Map<String, Function> functionMap = new HashMap<String, Function>();
+    for (Function f: program.getFunctions()) {
+      functionMap.put(f.getName(), f);
+    }
+    return functionMap;
   }
 
   private void elimRefCountsRec(Logger logger, Function f, Block block,
@@ -89,28 +111,36 @@ public class RefcountPass extends FunctionOptimizerPass {
       // Build separate copy for each block
       Counters<Var> readIncrements = new Counters<Var>();
       Counters<Var> writeIncrements = new Counters<Var>();
+      
       // Get passed in variables decremented inside block
       // Loops don't need this as they decrement refs at loop_break instruction
       if (isSingleSpawnCont(cont) && 
-          cont.getType() != ContinuationType.LOOP) {       
+          cont.getType() != ContinuationType.LOOP) {
         // TODO: handle foreach loops
+        long amount = 1;
+        
         for (Var keepOpen: cont.getKeepOpenVars()) {
           if (RefCounting.hasWriteRefCount(keepOpen)) {
-            writeIncrements.decrement(keepOpen);
+            writeIncrements.decrement(keepOpen, amount);
           }
         }
-        for (Var passedIn: cont.getPassedInVars()) {
-          if (RefCounting.hasReadRefCount(passedIn)) {
-            readIncrements.decrement(passedIn);
+        
+        Set<Var> readIncrTmp = new HashSet<Var>();
+        for (PassedVar passedIn: cont.getPassedVars()) {
+          if (!passedIn.writeOnly && RefCounting.hasReadRefCount(passedIn.var)) {
+            readIncrTmp.add(passedIn.var);
           }
         }
         
         // Hold read reference for wait var
         for (BlockingVar blockingVar: cont.blockingVars()) {
-          if (RefCounting.hasReadRefCount(blockingVar.var) &&
-              !cont.getPassedInVars().contains(blockingVar.var)) {
-            readIncrements.decrement(blockingVar.var);
+          if (RefCounting.hasReadRefCount(blockingVar.var)) {
+            readIncrTmp.add(blockingVar.var);
           }
+        }
+        
+        for (Var v: readIncrTmp) {
+          readIncrements.decrement(v, amount);
         }
       }
       HierarchicalSet<Var> contAssignedAliasVars =
@@ -233,14 +263,16 @@ public class RefcountPass extends FunctionOptimizerPass {
             readIncrements.decrement(i);
           }
         }
-        for (Var o: fn.getOutputList()) {
-          if (RefCounting.hasWriteRefCount(o)) {
-            writeIncrements.decrement(o);
+        for (PassedVar o: fn.getPassedOutputList()) {
+          if (RefCounting.hasWriteRefCount(o.var)) {
+            writeIncrements.decrement(o.var);
           }
-          // TODO: increment read and write refcounts for outputs for now,
-          // since it is allowed to read output vars
-          if (RefCounting.hasReadRefCount(o)) {
-            readIncrements.decrement(o);
+          
+          
+          // Outputs might be read in function, need to maintain that
+          // refcount
+          if (!o.writeOnly && RefCounting.hasReadRefCount(o.var)) {
+            readIncrements.decrement(o.var);
           }
         }
       }
@@ -607,7 +639,7 @@ public class RefcountPass extends FunctionOptimizerPass {
 
   private void updateInstructionRefCount(Instruction inst,
       Counters<Var> readIncrements, Counters<Var> writeIncrements) {
-    Pair<List<Var>, List<Var>> refIncrs = inst.getIncrVars();
+    Pair<List<Var>, List<Var>> refIncrs = inst.getIncrVars(functionMap);
     List<Var> readIncrVars = refIncrs.val1;
     List<Var> writeIncrVars = refIncrs.val2;
     for (Var v: readIncrVars) {
@@ -627,9 +659,9 @@ public class RefcountPass extends FunctionOptimizerPass {
         assert(RefCounting.hasWriteRefCount(ko));
         writeIncrements.decrement(ko);
       }
-      for (Var pass: loopBreak.getUsedVars()) {
-        if (RefCounting.hasReadRefCount(pass)) {
-          readIncrements.decrement(pass);
+      for (PassedVar pass: loopBreak.getLoopUsedVars()) {
+        if (!pass.writeOnly && RefCounting.hasReadRefCount(pass.var)) {
+          readIncrements.decrement(pass.var);
         }
       }
     }
@@ -640,21 +672,27 @@ public class RefcountPass extends FunctionOptimizerPass {
     // TODO: handle other than wait
     if (cont.isAsync() && isSingleSpawnCont(cont)) {
       long incr = 1; // TODO: different for other continuations
-      for (Var passedIn: cont.getPassedInVars()) {
-        if (RefCounting.hasReadRefCount(passedIn)) {
-          readIncrements.add(passedIn, incr);
-        } 
-      }
       for (Var keepOpen: cont.getKeepOpenVars()) {
         if (RefCounting.hasWriteRefCount(keepOpen)) {
           writeIncrements.add(keepOpen, incr);
         }
       }
+      
+      // Avoid duplicate read increments
+      Set<Var> readIncrTmp = new HashSet<Var>();
+      
+      for (PassedVar passedIn: cont.getPassedVars()) {
+        if (!passedIn.writeOnly && RefCounting.hasReadRefCount(passedIn.var)) {
+          readIncrTmp.add(passedIn.var);
+        } 
+      }
       for (BlockingVar blockingVar: cont.blockingVars()) {
-        if (RefCounting.hasReadRefCount(blockingVar.var) &&
-            !cont.getPassedInVars().contains(blockingVar.var)) {
-          readIncrements.increment(blockingVar.var);
+        if (RefCounting.hasReadRefCount(blockingVar.var)) {
+          readIncrTmp.add(blockingVar.var);
         }
+      }
+      for (Var v: readIncrTmp) {
+        readIncrements.add(v, incr);
       }
     }
   }

@@ -47,6 +47,7 @@ import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
+import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskMode;
@@ -1819,7 +1820,7 @@ public class TurbineGenerator implements CompilerBackend
   public void startForeachLoop(String loopName,
           Var arrayVar, Var memberVar,
           Var loopCountVar, int splitDegree, int leafDegree,
-          boolean arrayClosed, List<Var> usedVariables, List<Var> keepOpenVars) {
+          boolean arrayClosed, List<PassedVar> usedVariables, List<Var> keepOpenVars) {
     assert(Types.isArray(arrayVar.type()));
     assert(loopCountVar == null ||
               loopCountVar.type().equals(Types.V_INT));
@@ -1837,13 +1838,12 @@ public class TurbineGenerator implements CompilerBackend
       startForeachSplit(loopName, arrayVar, contentsVar, splitDegree, 
           leafDegree, haveKeys, usedVariables, keepOpenVars);
     }
-    startForeachInner(new Value(contentsVar), memberVar, loopCountVar,
-        usedVariables, keepOpenVars);
+    startForeachInner(new Value(contentsVar), memberVar, loopCountVar);
   }
 
   private void startForeachSplit(String procName, Var arrayVar,
       String contentsVar, int splitDegree, int leafDegree, boolean haveKeys,
-      List<Var> usedVars, List<Var> keepOpenVars) {
+      List<PassedVar> usedVars, List<Var> keepOpenVars) {
     // load array size
     pointStack.peek().add(Turbine.containerSize(TCLTMP_CONTAINER_SIZE,
                                       varToExpr(arrayVar)));
@@ -1851,8 +1851,8 @@ public class TurbineGenerator implements CompilerBackend
           new Token("-"), new LiteralInt(1));
 
     // recursively split the range
-    ArrayList<Var> splitUsedVars = new ArrayList<Var>(usedVars);
-    splitUsedVars.add(arrayVar);
+    ArrayList<PassedVar> splitUsedVars = new ArrayList<PassedVar>(usedVars);
+    splitUsedVars.add(new PassedVar(arrayVar, false));
     startRangeSplit(procName, splitUsedVars, keepOpenVars,
           splitDegree, leafDegree, new LiteralInt(0), lastIndex, new LiteralInt(1));
 
@@ -1870,8 +1870,7 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   private void startForeachInner(
-      Value arrayContents, Var memberVar, Var loopCountVar,
-      List<Var> usedVariables, List<Var> keepOpenVars) {
+      Value arrayContents, Var memberVar, Var loopCountVar) {
     Sequence curr = pointStack.peek();
     boolean haveKeys = loopCountVar != null;
     Sequence loopBody = new Sequence();
@@ -1894,7 +1893,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void endForeachLoop(int splitDegree, int leafDegree, boolean arrayClosed,
-                             List<Var> usedVars, List<Var> keepOpenVars) {
+                             List<PassedVar> usedVars, List<Var> keepOpenVars) {
     assert(pointStack.size() >= 2);
     pointStack.pop(); // tclloop body
     if (splitDegree > 0) {
@@ -1904,7 +1903,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void startRangeLoop(String loopName, Var loopVar, Var countVar,
-      Arg start, Arg end, Arg increment, List<Var> usedVariables,
+      Arg start, Arg end, Arg increment, List<PassedVar> usedVariables,
       List<Var> keepOpenVars, int desiredUnroll, int splitDegree,
       int leafDegree) {
     assert(start.isImmediateInt());
@@ -1923,17 +1922,15 @@ public class TurbineGenerator implements CompilerBackend
     if (splitDegree > 0) {
       startRangeSplit(loopName, usedVariables,
               keepOpenVars, splitDegree, leafDegree, startE, endE, incrE);
-      startRangeLoopInner(loopName, loopVar, usedVariables,
-              keepOpenVars, TCLTMP_RANGE_LO_V, TCLTMP_RANGE_HI_V,
-                                                      TCLTMP_RANGE_INC_V);
+      startRangeLoopInner(loopName, loopVar,
+          TCLTMP_RANGE_LO_V, TCLTMP_RANGE_HI_V, TCLTMP_RANGE_INC_V);
     } else {
-      startRangeLoopInner(loopName, loopVar, usedVariables,
-              keepOpenVars, startE, endE, incrE);
+      startRangeLoopInner(loopName, loopVar, startE, endE, incrE);
     }
   }
 
   @Override
-  public void endRangeLoop(List<Var> usedVars, List<Var> keepOpenVars,
+  public void endRangeLoop(List<PassedVar> usedVars, List<Var> keepOpenVars,
                         int splitDegree, int leafDegree) {
     assert(pointStack.size() >= 2);
     pointStack.pop(); // for loop body
@@ -1944,16 +1941,12 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   private void startRangeLoopInner(String loopName, Var loopVar,
-          List<Var> usedVariables, List<Var> keepOpenVars,
           Expression startE, Expression endE, Expression incrE) {
     Sequence loopBody = new Sequence();
     String loopVarName = prefixVar(loopVar.name());
     ForLoop tclLoop = new ForLoop(loopVarName, startE, endE, incrE, loopBody);
     pointStack.peek().add(tclLoop);
     pointStack.push(loopBody);
-
-    ArrayList<Var> loopUsedVars = new ArrayList<Var>(usedVariables);
-    loopUsedVars.add(loopVar);
   }
 
   /**
@@ -1970,12 +1963,13 @@ public class TurbineGenerator implements CompilerBackend
    * @param incrE
    */
   private void startRangeSplit(String loopName,
-          List<Var> usedVariables,
+          List<PassedVar> usedVariables,
           List<Var> keepOpenVars, int splitDegree, int leafDegree,
           Expression startE, Expression endE, Expression incrE) {
     
     // All variables that must be passed in, including any keepopenvars
-    List<Var> allUsedVars = Var.varListUnion(usedVariables, keepOpenVars);
+    List<Var> allUsedVars = Var.varListUnion(
+        PassedVar.extractVars(usedVariables), keepOpenVars);
     
     // Create two procedures that will be called: an outer procedure
     //  that recursively breaks up the foreach loop into chunks,
@@ -2024,7 +2018,8 @@ public class TurbineGenerator implements CompilerBackend
     // Increment references by # of iterations
     pointStack.peek().add(new SetVariable(TCLTMP_ITERSTOTAL,
                      rangeItersLeft(startE, endE, incrE)));
-    incrementAllRefs(usedVariables, keepOpenVars, new Value(TCLTMP_ITERSTOTAL));
+    incrementAllRefs(PassedVar.filterRead(usedVariables), keepOpenVars,
+                     new Value(TCLTMP_ITERSTOTAL));
     
     // Call outer directly
     pointStack.peek().add(new Command(outerProcName, outerCallArgs));
@@ -2087,13 +2082,15 @@ public class TurbineGenerator implements CompilerBackend
             new Token("+"), new LiteralInt(1));
   }
 
-  private void endRangeSplit(List<Var> usedVars, List<Var> keepOpenVars) {
+  private void endRangeSplit(List<PassedVar> usedVars, List<Var> keepOpenVars) {
     // Decrement # of iterations executed in inner block
     pointStack.peek().add(new SetVariable(TCLTMP_REF_DECR, 
                             rangeItersLeft(new Value(TCLTMP_RANGE_LO),
                                            new Value(TCLTMP_RANGE_HI),
                                            new Value(TCLTMP_RANGE_INC))));
-    decrementAllRefs(usedVars, keepOpenVars, new Value(TCLTMP_REF_DECR));
+    
+    decrementAllRefs(PassedVar.filterRead(usedVars), keepOpenVars,
+                     new Value(TCLTMP_REF_DECR));
     pointStack.pop(); // inner proc body
   }
 
@@ -2296,7 +2293,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void loopContinue(List<Var> newVals,
-         List<Var> usedVariables, List<Var> registeredContainers,
+         List<Var> usedVariables,
          List<Boolean> blockingVars) {
     ArrayList<Value> nextIterArgs = new ArrayList<Value>();
     String loopName = loopNameStack.peek();

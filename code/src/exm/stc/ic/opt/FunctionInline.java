@@ -36,6 +36,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.Constants;
+import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
@@ -166,7 +167,7 @@ public class FunctionInline implements OptimizerPass {
     // Narrow inline candidates by number of calls, remove unused functions
     for (Function f: program.getFunctions()) {
       List<String> callLocs = finder.functionUsages.get(f.getName());
-      int functionSize = finder.getFunctionSize(f.getName());
+      int functionSize = finder.getFunctionSize(f);
       if (f.getName().equals(Constants.MAIN_FUNCTION)) {
         // Do nothing
       } else if (callLocs == null || callLocs.size() == 0) {
@@ -394,7 +395,7 @@ public class FunctionInline implements OptimizerPass {
                           WaitMode.DATA_ONLY : WaitMode.TASK_DISPATCH;
       WaitStatement wait = new WaitStatement(
           contextFunction.getName() + "-" + toInline.getName() + "-call",
-          toInline.getBlockingInputs(), passIn, outArrays, fnCall.getPriority(),
+          toInline.getBlockingInputs(), PassedVar.NONE, Var.NONE, fnCall.getPriority(),
           waitMode, false, fnCall.getMode());
       block.addContinuation(wait);
       insertBlock = wait.getBlock();
@@ -477,23 +478,23 @@ public class FunctionInline implements OptimizerPass {
     private Map<String, int[]> functionSizes = new HashMap<String, int[]>();
 
     @Override
-    public void visit(Logger logger, String functionContext,
+    public void visit(Logger logger, Function functionContext,
                                       Instruction inst) {
       if (isFunctionCall(inst)) {
         String calledFunction = ((FunctionCall)inst).getFunctionName();
-        functionUsages.put(calledFunction, functionContext);
+        functionUsages.put(calledFunction, functionContext.getName());
       }
       
-      int prev[] = functionSizes.get(functionContext);
+      int prev[] = functionSizes.get(functionContext.getName());
       if (prev == null) {
-        functionSizes.put(functionContext, new int[] {1}); 
+        functionSizes.put(functionContext.getName(), new int[] {1}); 
       } else {
         prev[0] = prev[0] + 1;
       }
     }
     
-    public int getFunctionSize(String function) {
-      int size[] = functionSizes.get(function);
+    public int getFunctionSize(Function function) {
+      int size[] = functionSizes.get(function.getName());
       if (size == null) {
         return 0;
       } else {

@@ -55,7 +55,7 @@ public class ConstantSharing implements OptimizerPass {
   public void optimize(Logger logger, Program prog) 
                                       throws InvalidOptionException {
     for (Function f: prog.getFunctions()) {
-      makeConstantsGlobal(logger, prog, f.getMainblock());
+      makeConstantsGlobal(logger, prog, f, f.getMainblock());
     }
   }
 
@@ -63,7 +63,7 @@ public class ConstantSharing implements OptimizerPass {
    * duplication of constants
    */
   private static boolean makeConstantsGlobal(Logger logger, Program prog,
-            Block block) throws InvalidOptionException {   
+            Function fn, Block block) throws InvalidOptionException {   
     // Find the remaining constant futures and delete assignments to them
     logger.debug("Making constant futures shared globals");
     HashMap<String, Var> localDeclsOfGlobalVars = 
@@ -103,7 +103,7 @@ public class ConstantSharing implements OptimizerPass {
       for (Block childBlock: c.getBlocks()) {
         // We could pass in localDeclsOfGlobalVars, but
         // it doesn't matter if global vars are redeclared in inner scope
-        boolean recChanged = makeConstantsGlobal(logger, prog, childBlock);
+        boolean recChanged = makeConstantsGlobal(logger, prog, fn, childBlock);
         changed = changed || recChanged;
       }
     }
@@ -111,7 +111,7 @@ public class ConstantSharing implements OptimizerPass {
     // Remove now redundant local constants
     if (Settings.getBoolean(Settings.OPT_DEAD_CODE_ELIM)) {
       if (changed) {
-        DeadCodeEliminator.eliminate(logger, block);
+        DeadCodeEliminator.eliminate(logger, fn, block);
       }
     }
     return changed;

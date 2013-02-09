@@ -175,7 +175,7 @@ public class ConstantFold implements OptimizerPass {
     if (Settings.getBoolean(Settings.OPT_DEAD_CODE_ELIM)) {
       branchPredict(block, knownConstants);
       if (changed) {
-        DeadCodeEliminator.eliminate(logger, block);
+        DeadCodeEliminator.eliminate(logger, fn, block);
       }
     }
     return changed;

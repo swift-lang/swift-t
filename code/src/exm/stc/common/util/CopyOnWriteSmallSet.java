@@ -49,13 +49,21 @@ public class CopyOnWriteSmallSet<T> implements Set<T> {
   @Override
   public boolean add(T e) {
     copyOnWrite();
+    for (T x: data) {
+      if (x.equals(e)) {
+        return false;
+      }
+    }
     return data.add(e);
   }
 
   @Override
   public boolean addAll(Collection<? extends T> c) {
     copyOnWrite();
-    return data.addAll(c);
+    for (T elem: c) {
+      add(elem);
+    }
+    return true;
   }
 
   @Override

@@ -135,11 +135,12 @@ public class Pipeline extends FunctionOptimizerPass {
       }
     }
     
+    // Remove vars declared in child task
+    varsReadByChildTask.removeAll(cand.getBlock().getVariables());
+    
     int cost = 0;
-    for (Var passed: cand.getPassedInVars()) {
-      if (varsReadByChildTask.contains(passed)) {
-        cost += costOfPassing(logger, passed.type());
-      }
+    for (Var passed: varsReadByChildTask) {
+      cost += costOfPassing(logger, passed.type());
     }
     return cost;
   }

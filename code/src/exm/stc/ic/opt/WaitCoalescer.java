@@ -33,7 +33,7 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
-import exm.stc.common.lang.RefCounting;
+import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
@@ -271,13 +271,9 @@ public class WaitCoalescer implements OptimizerPass {
           waitMode = WaitMode.TASK_DISPATCH;
         }
         
-        List<Var> outWriteRefcounted = RefCounting.filterWriteRefcount(
-                    req.out == null ? Var.NONE : req.out);
-        
         WaitStatement wait = new WaitStatement(
                 fn.getName() + "-" + i.shortOpName(),
-                waitVars, req.in,
-                outWriteRefcounted,
+                waitVars, PassedVar.NONE, Var.NONE,
                 i.getPriority(), waitMode, true, req.mode);
         block.addContinuation(wait);
         
@@ -406,7 +402,7 @@ public class WaitCoalescer implements OptimizerPass {
         // Create a new wait statement waiting on the intersection
         // of the above.
         WaitStatement newWait = new WaitStatement(fn.getName() + "-optmerged",
-            new ArrayList<Var>(intersection), Var.NONE, Var.NONE, null,
+            new ArrayList<Var>(intersection), PassedVar.NONE, Var.NONE, null,
             explicit ? WaitMode.EXPLICIT : WaitMode.DATA_ONLY, allRecursive,
             TaskMode.LOCAL);
 

@@ -20,9 +20,11 @@ import java.util.Deque;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.lang.Var;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 
@@ -36,19 +38,38 @@ public class TreeWalk {
    */
   public static void walk(Logger logger, Program prog, TreeWalker walker) {
     for (Function f: prog.getFunctions()) {
-      walk(logger, f.getMainblock(), f.getName(), walker);
+      walk(logger, f.getMainblock(), f, walker, true);
     }
   }
   
-  public static void walk(Logger logger, Block block, String function,
-                          TreeWalker walker) {
+  /**
+   * Walk pre-order
+   * @param logger
+   * @param block
+   * @param function
+   * @param walker
+   * @param recursive if false, don't visit child blocks
+   */
+  public static void walk(Logger logger, Block block, Function function,
+                          TreeWalker walker, boolean recursive) {
+    for (Var declared: block.getVariables()) {
+      walker.visitDeclaration(declared);
+    }
     for (Instruction i: block.getInstructions()) {
       walker.visit(logger, function, i);
     }
+    
     for (Continuation c: block.getContinuations()) {
-      for (Block b: c.getBlocks()) {
-        walk(logger, b, function, walker);
+      walker.visit(logger, function, c);
+      if (recursive) {
+        for (Block b: c.getBlocks()) {
+          walk(logger, b, function, walker, recursive);
+        }
       }
+    }
+    
+    for (CleanupAction ca: block.getCleanups()) {
+      walker.visit(logger, function, ca);
     }
   }
   
@@ -68,11 +89,11 @@ public class TreeWalk {
     while (!stack.isEmpty()) {
       Block curr = stack.pop();
       for (Instruction i: curr.getInstructions()) {
-        walker.visit(logger, fn.getName(), i);
+        walker.visit(logger, fn, i);
       }
       
       for (Continuation c: curr.getContinuations()) {
-        walker.visit(logger, fn.getName(), c);
+        walker.visit(logger, fn, c);
         if (!c.isAsync()) {
           stack.addAll(c.getBlocks());
         }
@@ -81,18 +102,39 @@ public class TreeWalk {
   }
 
   public static abstract class TreeWalker {
-    public void visit(Logger logger, String functionContext, Continuation cont) {
+    public void visit(Logger logger, Function functionContext, Continuation cont) {
       visit(cont);
     }
-    private void visit(Continuation cont) {
+    protected void visit(Continuation cont) {
       // Nothing
     }
-    public void visit(Logger logger, String functionContext, Instruction inst) {
+    
+    public void visit(Logger logger, Function functionContext, Block block) {
+      visit(block);
+    }
+    protected void visit(Block block) {
+      // Nothing
+    }
+    
+    public void visitDeclaration(Logger logger, Function functionContext, Var declared) {
+      visitDeclaration(declared);
+    }
+    protected void visitDeclaration(Var declared) {
+      // Nothing
+    }
+    
+    public void visit(Logger logger, Function functionContext, Instruction inst) {
       visit(inst);
     }
-    private void visit(Instruction inst) {
+    protected void visit(Instruction inst) {
       // nothing
     }
     
+    public void visit(Logger logger, Function functionContext, CleanupAction cleanup) {
+      visit(cleanup);
+    }
+    protected void visit(CleanupAction cleanup) {
+      // nothing
+    }
   }
 }

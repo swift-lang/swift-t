@@ -25,6 +25,7 @@ import java.util.Map;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -57,11 +58,11 @@ public class ICUtil {
   }
 
   public static void prettyPrintVarInfo(StringBuilder sb,
-          List<Var> usedVariables, List<Var> keepOpenVars) {
+          List<PassedVar> usedVariables, List<Var> keepOpenVars) {
     boolean printed = false;
     if (usedVariables.size() > 0 ) {
       sb.append("#passin[");
-      prettyPrintVarList(sb, usedVariables);
+      prettyPrintList(sb, usedVariables);
       sb.append("]");
       printed = true;
     }
@@ -90,6 +91,24 @@ public class ICUtil {
         sb.append(", ");
       }
       sb.append(v.name());
+    }
+  }
+  
+  /**
+   * print a comma separated list of objects by calling toString()
+   * @param sb
+   * @param vars
+   */
+  public static void prettyPrintList(StringBuilder sb, 
+                Collection<? extends Object> list) {
+    boolean first = true;
+    for (Object o: list) {
+      if (first) {
+        first = false;
+      } else {
+        sb.append(", ");
+      }
+      sb.append(o.toString());
     }
   }
   

@@ -40,6 +40,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.TaskMode;
@@ -389,6 +390,8 @@ public class ICTree {
 
     private final List<Var> iList;
     private final List<Var> oList;
+    /** List of which outputs are write-only */
+    private final List<Boolean> oListWriteOnly;
     
     /** Wait until the below inputs are available before running function.
      * Treated same as DATA_ONLY wait */
@@ -411,6 +414,11 @@ public class ICTree {
       this.name = name;
       this.iList = iList;
       this.oList = oList;
+      this.oListWriteOnly = new ArrayList<Boolean>(oList.size());
+      for (int i = 0; i< oList.size(); i++) {
+        // Assume read-write by default
+        this.oListWriteOnly.add(false);
+      }
       this.mode = mode;
       this.mainBlock = mainBlock;
       this.blockingInputs = new ArrayList<Var>();
@@ -424,6 +432,33 @@ public class ICTree {
     public List<Var> getOutputList() {
       return Collections.unmodifiableList(this.oList);
     }
+
+    public Var getOutput(int i) {
+      return oList.get(i);
+    }
+
+    public boolean isOutputWriteOnly(int i) {
+      return oListWriteOnly.get(i);
+    }
+    
+    public void makeOutputWriteOnly(int i) {
+      oListWriteOnly.set(i, true);
+    }
+    
+    /**
+     * list outputs augmented with info about whether they are write-only
+     * @return
+     */
+    public List<PassedVar> getPassedOutputList() {
+      ArrayList<PassedVar> res = new ArrayList<PassedVar>();
+      assert(oList.size() == oListWriteOnly.size());
+      for (int i = 0; i < oList.size(); i++) {
+        res.add(new PassedVar(oList.get(i), oListWriteOnly.get(i)));
+      }
+      // TODO Auto-generated method stub
+      return res;
+    }
+
 
     public Block getMainblock() {
       return mainBlock;
@@ -1028,103 +1063,6 @@ public class ICTree {
                                                 continuations) {
       for (Continuation c: continuations) {
         addContinuation(c);
-      }
-    }
-
-    /**
-     * 
-     * @param stillNeeded  list of essential vars
-     * @param written list of vars written in block
-     * @param interdependencies list of vars which are interdependent: if one
-     *              var in list is needed, all are needed
-     */
-    public void findNeededVars(Set<Var> stillNeeded,
-        Set<Var> written, List<List<Var>> interdependencies) {
-      findThisBlockNeededVars(stillNeeded, written, interdependencies);
-
-      // Recurse on sub-blocks
-      for (Continuation c: continuations) {
-        for (Block b: c.getBlocks()) {
-          b.findNeededVars(stillNeeded, written, interdependencies);
-        }
-      }
-    }
-    
-    /**
-     * Find variables that are used within this block (but not recursively
-     *                                                     in child blocks)
-     * @param stillNeeded variables that are required in this block
-     * @param written variables that are written in block
-     * @param interdependencies interdependencies between output variables
-     */
-    public void findThisBlockNeededVars(Set<Var> stillNeeded,
-            Set<Var> written, List<List<Var>> interdependencies) {
-      // Need to hold on to mapped variables
-      for (Var v: variables) {
-        if (v.isMapped()) {
-          stillNeeded.add(v);
-          stillNeeded.add(v.mapping());
-        }
-      }
-      
-      for (Instruction i : instructions) {
-        updateEssentialVars(i, stillNeeded, written, interdependencies,
-                            i.hasSideEffects());
-      }
-      
-      for (Continuation c: continuations) {
-        for (Var v: c.requiredVars()) {
-          stillNeeded.add(v);
-        }
-      }
-      
-      for (CleanupAction a: cleanupActions) {
-        boolean actionHasSideEffects = a.hasSideEffect();
-        updateEssentialVars(a.action(), stillNeeded, written,
-            interdependencies, actionHasSideEffects);
-        if (actionHasSideEffects) {
-          stillNeeded.add(a.var());
-        }
-      }
-    }
-
-    /**
-     * Update essential vars for instruction
-     * @param inst
-     * @param essentialVars
-     * @param writtenVars 
-     * @param interdependencies
-     * @param hasSideEffects
-     */
-    private void updateEssentialVars(Instruction inst, Set<Var> essentialVars,
-        Set<Var> writtenVars, List<List<Var>> interdependencies, boolean hasSideEffects) {
-      // check which variables are still needed
-      for (Arg oa: inst.getInputs()) {
-        if (oa.isVar()) {
-          essentialVars.add(oa.getVar());
-        }
-      }
-      for (Var v: inst.getReadOutputs()) {
-        essentialVars.add(v);
-      }
-      
-      for (Var v: inst.getOutputs()) {
-        writtenVars.add(v);
-      }
-      
-      // Can't eliminate instructions with side-effects
-      if (hasSideEffects) {
-        for (Var out: inst.getOutputs()) {
-          essentialVars.add(out);
-        }
-      } else {
-        // Can only eliminate one var if can eliminate all
-        if (interdependencies != null) {
-          List<Var> modOut = inst.getModifiedOutputs();
-          if (modOut.size() > 1) {
-            interdependencies.add(modOut);
-          }
-        }
       }
     }
 

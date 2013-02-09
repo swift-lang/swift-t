@@ -35,6 +35,7 @@ import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
@@ -780,10 +781,9 @@ public class ForwardDataflow implements OptimizerPass {
       insertContext = block;
       insertPoint = insts;
     } else {
-      List<Var> used = Var.varListUnion(req.in, req.out);
       WaitStatement wait = new WaitStatement(
           fn.getName() + "-" + inst.shortOpName(),
-          Var.NONE, used, Var.NONE,
+          Var.NONE, PassedVar.NONE, Var.NONE,
           inst.getPriority(),
           WaitMode.TASK_DISPATCH, false, req.mode);
       insertContext = wait.getBlock();
