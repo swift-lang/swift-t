@@ -826,6 +826,11 @@ class Turbine
             CONTAINER_ENUMERATE, arr, mode, new Token("all"),
                                           new LiteralInt(0)));
   }
+  
+  public static  Expression dictSize(Value tclDict) {
+    Expression containerSize = Square.fnCall("dict",  new Token("size"), tclDict);
+    return containerSize;
+  }
 
   /**
    * Return the size of a container

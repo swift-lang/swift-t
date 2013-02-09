@@ -1765,17 +1765,24 @@ public class TurbineGenerator implements CompilerBackend
       // Load container contents and increment refcounts
       pointStack.peek().add(Turbine.containerContents(contentsVar,
                           varToExpr(arrayVar), haveKeys));
-      if (!perIterIncrs.isEmpty()) {
-        pointStack.peek().add(new SetVariable(TCLTMP_ITERS, 
-            Square.fnCall("dict", new Token("size"), new Value(contentsVar))));
-  
-        handleRefcounts(perIterIncrs, new Value(TCLTMP_ITERS), false);
-      }
+      Value tclDict = new Value(contentsVar);
+      Expression containerSize = Turbine.dictSize(tclDict);
+      handleForeachContainerRefcounts(perIterIncrs, containerSize);
     } else {
       startForeachSplit(loopName, arrayVar, contentsVar, splitDegree, 
           leafDegree, haveKeys, passedVars, perIterIncrs);
     }
     startForeachInner(new Value(contentsVar), memberVar, loopCountVar);
+  }
+
+  private void handleForeachContainerRefcounts(List<RefCount> perIterIncrs,
+      Expression containerSize) {
+    if (!perIterIncrs.isEmpty()) {
+      pointStack.peek().add(new SetVariable(TCLTMP_ITERS, 
+                                      containerSize));
+ 
+      handleRefcounts(perIterIncrs, new Value(TCLTMP_ITERS), false);
+    }
   }
 
   private void startForeachSplit(String procName, Var arrayVar,
@@ -1784,9 +1791,13 @@ public class TurbineGenerator implements CompilerBackend
     // load array size
     pointStack.peek().add(Turbine.containerSize(TCLTMP_CONTAINER_SIZE,
                                       varToExpr(arrayVar)));
-    Expression lastIndex = Square.arithExpr(new Value(TCLTMP_CONTAINER_SIZE),
+    Value containerSize = new Value(TCLTMP_CONTAINER_SIZE);
+    
+    Expression lastIndex = Square.arithExpr(containerSize,
           new Token("-"), new LiteralInt(1));
 
+    handleForeachContainerRefcounts(perIterIncrs, containerSize);
+    
     // recursively split the range
     ArrayList<PassedVar> splitUsedVars = new ArrayList<PassedVar>(usedVars);
     splitUsedVars.add(new PassedVar(arrayVar, false));
