@@ -1762,8 +1762,15 @@ public class TurbineGenerator implements CompilerBackend
     String contentsVar = TCLTMP_ARRAY_CONTENTS;
 
     if (splitDegree <= 0) {
+      // Load container contents and increment refcounts
       pointStack.peek().add(Turbine.containerContents(contentsVar,
                           varToExpr(arrayVar), haveKeys));
+      if (!perIterIncrs.isEmpty()) {
+        pointStack.peek().add(new SetVariable(TCLTMP_ITERS, 
+            Square.fnCall("dict", new Token("size"), new Value(contentsVar))));
+  
+        handleRefcounts(perIterIncrs, new Value(TCLTMP_ITERS), false);
+      }
     } else {
       startForeachSplit(loopName, arrayVar, contentsVar, splitDegree, 
           leafDegree, haveKeys, passedVars, perIterIncrs);
@@ -1848,6 +1855,16 @@ public class TurbineGenerator implements CompilerBackend
     Expression endE = argToExpr(end);
     Expression incrE = argToExpr(increment);
 
+
+    if (!perIterIncrs.isEmpty()) {
+      // Increment references by # of iterations
+      pointStack.peek().add(new SetVariable(TCLTMP_ITERSTOTAL,
+                       rangeItersLeft(startE, endE, incrE)));
+      
+      Value itersTotal = new Value(TCLTMP_ITERSTOTAL);
+      handleRefcounts(perIterIncrs, itersTotal, false);
+    }
+    
     if (splitDegree > 0) {
       startRangeSplit(loopName, passedVars, perIterIncrs,
               splitDegree, leafDegree, startE, endE, incrE);
@@ -1937,15 +1954,6 @@ public class TurbineGenerator implements CompilerBackend
     String innerProcName = uniqueTCLFunctionName(loopName + ":inner");
     tree.add(new Proc(innerProcName,
           usedTclFunctionNames, commonFormalArgs, inner));
-
-    if (splitDegree > 0) {
-      // Increment references by # of iterations
-      pointStack.peek().add(new SetVariable(TCLTMP_ITERSTOTAL,
-                       rangeItersLeft(startE, endE, incrE)));
-      
-      Value itersTotal = new Value(TCLTMP_ITERSTOTAL);
-      handleRefcounts(perIterIncrs, itersTotal, false);
-    }
     
     // Call outer directly
     pointStack.peek().add(new Command(outerProcName, outerCallArgs));
@@ -2037,9 +2045,15 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   private Square rangeItersLeft(Expression lo, Expression hi, Expression inc) {
-    return Square.arithExpr(new Token("(("), hi, new Token("-"), 
-            lo, new Token(")"), new Token("/"), inc, new Token(")"),
-            new Token("+"), new LiteralInt(1));
+    if (LiteralInt.ONE.equals(inc)) {
+      // More readable
+      return Square.arithExpr(new Token("max(0,"), hi, new Token("-"), 
+            lo, new Token("+"), new LiteralInt(1), new Token(")"));
+    } else {
+      return Square.arithExpr(new Token("max(0, ("), hi, new Token("-"), 
+            lo, new Token(")"), new Token("/"), inc,
+            new Token("+"), new LiteralInt(1), new Token(")"));
+    }
   }
 
   private void endRangeSplit(List<RefCount> perIterDecrements) {

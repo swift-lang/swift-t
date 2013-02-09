@@ -37,5 +37,13 @@ public class LiteralInt extends Expression {
   public static Expression boolValue(boolean val) {
     return val ? TRUE : FALSE;
   }
+  
+  public boolean equals(Object o) {
+    if (this == o)
+      return true;
+    if (!(o instanceof LiteralInt))
+      return false;
+    return ((LiteralInt)o).value == this.value;
+  }
 
 }

@@ -65,6 +65,15 @@ public class Counters<K> {
   public Map<K, Long> getCountMap() {
     return map;
   }
+  
+  /**
+   * Return set of counters maintained in map.  Removals from
+   * here reset the counter
+   * @return
+   */
+  public Set<K> keySet() {
+    return map.keySet();
+  }
 
   public Set<Entry<K, Long>> entries() {
     return map.entrySet();

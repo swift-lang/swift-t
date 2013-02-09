@@ -128,14 +128,17 @@ public class RefcountPass implements OptimizerPass {
                       contAssignedAliasVars);
     }
     // Do any additional work for continuation
-    if (isAsyncForeachLoop(cont)) {
+    if (isForeachLoop(cont)) {
       addIncrementsToForeachLoop(cont);
     }
   }
 
   private boolean isAsyncForeachLoop(Continuation cont) {
-    return cont.isAsync() && 
-           (cont.getType() == ContinuationType.FOREACH_LOOP ||
+    return cont.isAsync() && isForeachLoop(cont);
+  }
+  
+  private boolean isForeachLoop(Continuation cont) {
+    return (cont.getType() == ContinuationType.FOREACH_LOOP ||
            cont.getType() == ContinuationType.RANGE_LOOP);
   }
   
@@ -163,7 +166,6 @@ public class RefcountPass implements OptimizerPass {
   private void fixBlockRefCounting(Logger logger, Function fn, Block block,
       Counters<Var> readIncrements, Counters<Var> writeIncrements,
       Set<Var> parentAssignedAliasVars) {
-    
     // First collect up all required reference counting ops in block
     for (Instruction inst: block.getInstructions()) {
       updateInstructionRefCount(inst, readIncrements, writeIncrements);
@@ -310,13 +312,13 @@ public class RefcountPass implements OptimizerPass {
     }
       
     if (block.getType() != BlockType.MAIN_BLOCK &&
-        isAsyncForeachLoop(block.getParentCont())) {
-      // Add remaining decrements to foreach loop
+        isForeachLoop(block.getParentCont())) {
+      // Add remaining decrements to foreach loop where they can be batched
       addDecrementsToForeachLoop(block, increments, type);
-    } else {
-      // Add remaining decrements as cleanups at end of block
-      addDecrementsAsCleanups(block, increments, type);
     }
+    
+    // Add remaining decrements as cleanups at end of block
+    addDecrementsAsCleanups(block, increments, type);
   }
 
   /**
@@ -348,21 +350,11 @@ public class RefcountPass implements OptimizerPass {
     // Check that the data isn't actually used in block or sync continuations
     TreeWalk.walkSyncChildren(logger, fn, block, true, new TreeWalker() {
       public void visit(Continuation cont) {
-        if (type == RefCountType.READERS) {
-          immDecrCandidates.removeAll(cont.requiredVars());
-        }
+        removeDecrCandidates(cont, type, immDecrCandidates);
       }
 
       public void visit(Instruction inst) {
-        if (type == RefCountType.READERS) {
-          for (Arg in: inst.getInputs())
-            if (in.isVar())
-              immDecrCandidates.remove(in.getVar());
-          immDecrCandidates.removeAll(inst.getReadOutputs());
-        } else {
-          assert(type == RefCountType.WRITERS);
-          immDecrCandidates.removeAll(inst.getModifiedOutputs());
-        }
+        removeDecrCandidates(inst, type, immDecrCandidates);
       }
     });
     
@@ -381,17 +373,22 @@ public class RefcountPass implements OptimizerPass {
     // read/write the variables
     TreeWalk.walkSyncChildren(logger, fn, block, false, new TreeWalker() {
       public void visit(Continuation cont) {
-        removeDecrCandidates(cont, type, candidates);
+        removeDecrCandidates(cont, type, candidates.keySet());
       }
       public void visit(Instruction inst) {
-        removeDecrCandidates(inst, type, candidates);
+        removeDecrCandidates(inst, type, candidates.keySet());
       }
     });
+    
+    // Check candidates in this block don't need them
+    for (Continuation cont: block.getContinuations()) {
+      removeDecrCandidates(cont, type, candidates.keySet());
+    }
     
     // Vars where we were successful
     List<Var> successful = new ArrayList<Var>();
     
-    // scan up from bottom of block to see if we can piggyback
+    // scan up from bottom of block instructions to see if we can piggyback
     ListIterator<Instruction> it = block.instructionIterator(
                                               block.getInstructions().size());
     while (it.hasPrevious()) {
@@ -403,7 +400,7 @@ public class RefcountPass implements OptimizerPass {
       }
       // Make sure we don't decrement before a use of the var by removing
       // from candidate set
-      removeDecrCandidates(inst, type, candidates);
+      removeDecrCandidates(inst, type, candidates.keySet());
     }
     
 
@@ -413,28 +410,53 @@ public class RefcountPass implements OptimizerPass {
     }
   }
 
+  /**
+   * Remove from candidates any variables that can't have the refcount decremented
+   * before this instruction executes
+   * @param inst
+   * @param type
+   * @param candidates
+   */
   private void removeDecrCandidates(Instruction inst, RefCountType type,
-      Counters<Var> candidates) {
+      Set<Var> candidates) {
     if (type == RefCountType.READERS) {
       for (Arg in: inst.getInputs()) {
         if (in.isVar())
-          candidates.reset(in.getVar());
+          candidates.remove(in.getVar());
       }
       for (Var read: inst.getReadOutputs()) {
-        candidates.reset(read);
+        candidates.remove(read);
       }
     } else {
       assert(type == RefCountType.WRITERS);
       for (Var modified: inst.getOutputs()) {
-        candidates.reset(modified);
+        candidates.remove(modified);
       }
     }
   }
+  /**
+   * Remove from candidates any variables that can't have the refcount decremented
+   * before this continuation starts execution
+   * @param inst
+   * @param type
+   * @param candidates
+   */
   private void removeDecrCandidates(Continuation cont, RefCountType type,
-      Counters<Var> candidates) {
+      Set<Var> candidates) {
+    // Continuation will need to read, can't decrement early
     if (type == RefCountType.READERS) {
       for (Var v: cont.requiredVars()) {
-        candidates.reset(v);
+        candidates.remove(v);
+      }
+    }
+    // Foreach loops have increments attached to them,
+    // can't prematurely decrement
+    if (isForeachLoop(cont)) {
+      AbstractForeachLoop loop = (AbstractForeachLoop)cont;
+      for (RefCount rc: loop.getStartIncrements()) {
+        if (rc.type == type) {
+          candidates.remove(rc.var);
+        }
       }
     }
   }
@@ -449,15 +471,18 @@ public class RefcountPass implements OptimizerPass {
     Counters<Var> readIncrs = new Counters<Var>();
     Counters<Var> writeIncrs = new Counters<Var>();
     
-    // First increment the basic amount (one)
-    for (PassedVar v: loop.getPassedVars()) {
-      if (!v.writeOnly && RefCounting.hasReadRefCount(v.var)) {
-        readIncrs.increment(v.var);
+    if (loop.isAsync()) {
+      // If we're spawning off, increment once per iteration so that 
+      // each parallel task has a refcount to work with
+      for (PassedVar v: loop.getPassedVars()) {
+        if (!v.writeOnly && RefCounting.hasReadRefCount(v.var)) {
+          readIncrs.increment(v.var);
+        }
       }
-    }
-    for (Var v: loop.getKeepOpenVars()) {
-      if (RefCounting.hasWriteRefCount(v)) {
-        writeIncrs.increment(v);
+      for (Var v: loop.getKeepOpenVars()) {
+        if (RefCounting.hasWriteRefCount(v)) {
+          writeIncrs.increment(v);
+        }
       }
     }
     
@@ -512,7 +537,8 @@ public class RefcountPass implements OptimizerPass {
     for (Entry<Var, Long> e: increments.entries()) {
       Var var = e.getKey();
       long count = e.getValue();
-      if (count < 0) {
+      if (count < 0 && !block.getVariables().contains(var)) {
+        // Decrement vars defined outside block
         long amount = count * -1;
         loop.addEndDecrement(
             new RefCount(var, type, Arg.createIntLit(amount)));
