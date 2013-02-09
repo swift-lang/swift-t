@@ -204,7 +204,6 @@ public class DeadCodeEliminator {
      * Return read-only set of all needed vars
      * @return
      */
-    @SuppressWarnings("unchecked")
     public Set<Var> allNeeded() {
       return new UnionSet<Var>(Arrays.asList(needed, written));
     }
