@@ -259,7 +259,6 @@ public class TurbineGenerator implements CompilerBackend
       if (!Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
         // Have initial* set to regular amount to avoid bugs with reference counting
         initReaders = Arg.ONE;
-        initWriters = Arg.ONE;
       }
     } catch (InvalidOptionException e) {
       throw new STCRuntimeError(e.getMessage());
