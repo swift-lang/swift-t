@@ -595,6 +595,34 @@ public class ICContinuations {
     public boolean isAsync() { 
       return !arrayClosed || splitDegree > 0;
     }
+    
+
+    @Override
+    public void setPassedVars(Collection<PassedVar> passedVars) {
+      if (this.isAsync()) {
+        boolean found = false;
+        for (PassedVar passed: passedVars) {
+          if (passed.var.equals(arrayVar)) {
+            found = true;
+            break;
+          }
+        }
+        if (found) {
+          super.setPassedVars(passedVars);
+        } else {
+          // TODO: a little hacky but does job for now
+          // Need to pass in array
+          ArrayList<PassedVar> passedPlus = 
+              new ArrayList<PassedVar>(passedVars.size() + 1);
+          passedPlus.addAll(passedVars);
+          passedPlus.add(new PassedVar(arrayVar, false));
+          super.setPassedVars(passedPlus);
+          return;
+        }
+      } else {
+        super.setPassedVars(passedVars);
+      }
+    }
 
     /** Return list of variables that the continuations waits for
      * before executing
