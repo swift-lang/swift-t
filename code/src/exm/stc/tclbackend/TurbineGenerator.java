@@ -50,6 +50,7 @@ import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RefCounting;
+import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayInfo;
@@ -105,7 +106,7 @@ public class TurbineGenerator implements CompilerBackend
   private static final Value TCLTMP_RANGE_INC_V = new Value(TCLTMP_RANGE_INC);
   private static final String TCLTMP_ITERSLEFT = "tcltmp:itersleft";
   private static final String TCLTMP_ITERSTOTAL = "tcltmp:iterstotal";
-  private static final String TCLTMP_REF_DECR = "tcltmp:ref_decr";
+  private static final String TCLTMP_ITERS = "tcltmp:iters";
   
   private static final String MAIN_FUNCTION_NAME = "swift:main";
   private static final String CONSTINIT_FUNCTION_NAME = "swift:constants";
@@ -342,15 +343,13 @@ public class TurbineGenerator implements CompilerBackend
   public void decrWriters(Var arr, Arg amount) {
     assert(RefCounting.hasWriteRefCount(arr));
     // Close array by removing the slot we created at startup
-    pointStack.peek().add(
-        decrementWriters(Arrays.asList(arr), argToExpr(amount)));
+    decrementWriters(Arrays.asList(arr), argToExpr(amount));
   }
   
   @Override
   public void decrRef(Var var, Arg amount) {
     assert(RefCounting.hasReadRefCount(var));
-    pointStack.peek().add(
-        decrementReaders(Arrays.asList(var), argToExpr(amount)));
+    decrementReaders(Arrays.asList(var), argToExpr(amount));
   }
   
   @Override
@@ -1452,18 +1451,16 @@ public class TurbineGenerator implements CompilerBackend
 
     @Override
     public void startWaitStatement(String procName, List<Var> waitVars,
-        List<Var> usedVariables, List<Var> keepOpenVars, Arg priority,
-        WaitMode mode, boolean recursive, TaskMode target) {
+        List<Var> passIn, Arg priority, WaitMode mode,
+        boolean recursive, TaskMode target) {
       logger.trace("startWaitStatement()...");
-      startAsync(procName, waitVars, usedVariables, keepOpenVars,
-                 priority, recursive, target);
+      startAsync(procName, waitVars, passIn, priority, recursive, target);
     }
 
     @Override
-    public void endWaitStatement(List<Var> waitVars, List<Var> usedVars,
-                                 List<Var> keepOpenVars) {
+    public void endWaitStatement() {
       logger.trace("endWaitStatement()...");
-      endAsync(waitVars, usedVars, keepOpenVars);
+      endAsync();
     }
 
     /**
@@ -1471,39 +1468,24 @@ public class TurbineGenerator implements CompilerBackend
      * a number of variables, and then run some code
      * @param procName
      * @param waitVars
-     * @param usedVars
+     * @param passIn
      * @param keepOpenVars
      * @param priority 
      * @param recursive
      */
     private void startAsync(String procName, List<Var> waitVars,
-        List<Var> usedVars, List<Var> keepOpenVars,
-        Arg priority, boolean recursive, TaskMode mode) {
+        List<Var> passIn, Arg priority, boolean recursive, TaskMode mode) {
       assert(priority == null || priority.isImmediateInt());
       mode.checkSpawn(execContextStack.peek());
-      
-      // Need to pass in references to waitVars for reference counting
-      List<Var> allUsedVars = asyncUsedVars(usedVars, waitVars);
-      
-      ArrayList<Var> toPassIn = new ArrayList<Var>();
-      HashSet<String> alreadyInSet = new HashSet<String>();
-      for (Var v: allUsedVars) {
-        toPassIn.add(v);
-        alreadyInSet.add(v.name());
+      for (Var v: passIn) {
         if (v.type().equals(Types.V_BLOB)) {
           throw new STCRuntimeError("Can't directly pass blob value");
-        }
-      }
-      // Also need to pass in refs to containers
-      for (Var v: keepOpenVars) {
-        if (!alreadyInSet.contains(v.name())) {
-          toPassIn.add(v);
         }
       }
       
       List<String> args = new ArrayList<String>();
       args.add(Turbine.LOCAL_STACK_NAME);
-      for (Var v: toPassIn) {
+      for (Var v: passIn) {
         args.add(prefixVar(v.name()));
       }
 
@@ -1542,7 +1524,7 @@ public class TurbineGenerator implements CompilerBackend
       // Set priority (if provided)
       setPriority(priority);
       
-      TclList action = buildAction(uniqueName, toPassIn);
+      TclList action = buildAction(uniqueName, passIn);
 
       boolean local = execContextStack.peek() == ExecContext.CONTROL;
       
@@ -1587,52 +1569,9 @@ public class TurbineGenerator implements CompilerBackend
       execContextStack.push(newExecContext);
     }
 
-    private void endAsync(List<Var> waitVars, List<Var> usedVars,
-                          List<Var> keepOpenVars) {
+    private void endAsync() {
       execContextStack.pop();
       pointStack.pop();
-    }
-
-    /**
-     * List of variables needed by async
-     * @param usedVars
-     * @param waitVars
-     * @return
-     */
-    private List<Var> asyncUsedVars(List<Var> usedVars, List<Var> waitVars) {
-      // Also need to keep vars we are waiting on open
-      List<Var> neededVars = new ArrayList<Var>(usedVars);
-      
-      // Add, avoiding duplicates
-      Set<String> existingNames = Var.nameSet(usedVars);
-      for (Var wv: waitVars) {
-        if (!existingNames.contains(wv.name())) {
-          neededVars.add(wv);
-        }
-      }
-      return neededVars;
-    }
-    
-    /**
-     * Increment reference counts upon calling something asynchronously.
-     * It is valid to call this function with
-     *    usedVars = <all variables from outer scope that are used in new scope>
-     *    keepOpenVars = <all variables written in new scope>
-     * 
-     * @param usedVars any variables used in the new scope.  If there
-     *              is overlap with keepOpenVars, only the write refcount is
-     *              used
-     * @param keepOpenVars any written variables for which write refcount may
-     *      need to be maintained.  Any variables without write refcount are
-     *      filtered out, so it is valid to just pass a list of all variables
-     *      written in new scope. 
-     */
-    private void incrementAllRefs(List<Var> usedVars, List<Var> keepOpenVars, Expression refIncrAmount) {
-      keepOpenVars = RefCounting.filterWriteRefcount(keepOpenVars);
-      List<Var> readOnlyUsedVars = Var.varListDiff(usedVars,
-                                                   keepOpenVars);
-      incrementReaders(readOnlyUsedVars, refIncrAmount);
-      incrementWriters(keepOpenVars, refIncrAmount);
     }
 
     /**
@@ -1640,11 +1579,11 @@ public class TurbineGenerator implements CompilerBackend
      * @param vars
      */
     private void incrementReaders(List<Var> vars, Expression incr) {
-      pointStack.peek().append(incrementReaders(vars, incr, false));
+      pointStack.peek().append(buildIncReaders(vars, incr, false));
     }
 
-    private Sequence decrementReaders(List<Var> vars, Expression incr) {
-      return incrementReaders(vars, incr, true);
+    private void decrementReaders(List<Var> vars, Expression incr) {
+      incrementReaders(vars, incr);
     }
 
     /**
@@ -1655,7 +1594,7 @@ public class TurbineGenerator implements CompilerBackend
      * @param negate if true, then negate incr
      * @return
      */
-    private static Sequence incrementReaders(List<Var> vars, Expression incr, boolean negate) {
+    private static Sequence buildIncReaders(List<Var> vars, Expression incr, boolean negate) {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(vars)) {
         Var var = vc.var;
@@ -1711,15 +1650,7 @@ public class TurbineGenerator implements CompilerBackend
       pointStack.peek().append(seq);
     }
 
-    private void decrementAllRefs(List<Var> usedVars, List<Var> keepOpenVars,
-        Expression refDecrAmount) {
-      keepOpenVars = RefCounting.filterWriteRefcount(keepOpenVars);
-      List<Var> readOnlyUsedVars = Var.varListDiff(usedVars, keepOpenVars);
-      pointStack.peek().append(decrementReaders(readOnlyUsedVars, refDecrAmount));
-      pointStack.peek().append(decrementWriters(keepOpenVars, refDecrAmount));
-    }
-
-    private static Sequence decrementWriters(List<Var> vars,
+    private void decrementWriters(List<Var> vars,
                                              Expression decr) {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(vars)) {
@@ -1735,7 +1666,7 @@ public class TurbineGenerator implements CompilerBackend
               Square.arithExpr(new LiteralInt(vc.count), new Token("*"), decr)));
         }
       }
-      return seq;
+      pointStack.peek().append(seq);
     }
 
     private TclList buildAction(String procName,
@@ -1817,10 +1748,9 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void startForeachLoop(String loopName,
-          Var arrayVar, Var memberVar,
-          Var loopCountVar, int splitDegree, int leafDegree,
-          boolean arrayClosed, List<PassedVar> usedVariables, List<Var> keepOpenVars) {
+  public void startForeachLoop(String loopName, Var arrayVar, Var memberVar,
+        Var loopCountVar, int splitDegree, int leafDegree, boolean arrayClosed,
+        List<PassedVar> passedVars, List<RefCount> perIterIncrs) {
     assert(Types.isArray(arrayVar.type()));
     assert(loopCountVar == null ||
               loopCountVar.type().equals(Types.V_INT));
@@ -1836,14 +1766,14 @@ public class TurbineGenerator implements CompilerBackend
                           varToExpr(arrayVar), haveKeys));
     } else {
       startForeachSplit(loopName, arrayVar, contentsVar, splitDegree, 
-          leafDegree, haveKeys, usedVariables, keepOpenVars);
+          leafDegree, haveKeys, passedVars, perIterIncrs);
     }
     startForeachInner(new Value(contentsVar), memberVar, loopCountVar);
   }
 
   private void startForeachSplit(String procName, Var arrayVar,
       String contentsVar, int splitDegree, int leafDegree, boolean haveKeys,
-      List<PassedVar> usedVars, List<Var> keepOpenVars) {
+      List<PassedVar> usedVars, List<RefCount> perIterIncrs) {
     // load array size
     pointStack.peek().add(Turbine.containerSize(TCLTMP_CONTAINER_SIZE,
                                       varToExpr(arrayVar)));
@@ -1853,8 +1783,8 @@ public class TurbineGenerator implements CompilerBackend
     // recursively split the range
     ArrayList<PassedVar> splitUsedVars = new ArrayList<PassedVar>(usedVars);
     splitUsedVars.add(new PassedVar(arrayVar, false));
-    startRangeSplit(procName, splitUsedVars, keepOpenVars,
-          splitDegree, leafDegree, new LiteralInt(0), lastIndex, new LiteralInt(1));
+    startRangeSplit(procName, splitUsedVars, perIterIncrs, splitDegree, 
+                    leafDegree, LiteralInt.ZERO, lastIndex, LiteralInt.ONE);
 
     // need to find the length of this split since that is what the turbine
     //  call wants
@@ -1892,20 +1822,19 @@ public class TurbineGenerator implements CompilerBackend
 
 
   @Override
-  public void endForeachLoop(int splitDegree, int leafDegree, boolean arrayClosed,
-                             List<PassedVar> usedVars, List<Var> keepOpenVars) {
+  public void endForeachLoop(int splitDegree, boolean arrayClosed, 
+                  List<RefCount> perIterDecrements) {
     assert(pointStack.size() >= 2);
     pointStack.pop(); // tclloop body
     if (splitDegree > 0) {
-      endRangeSplit(usedVars, keepOpenVars);
+      endRangeSplit(perIterDecrements);
     }
   }
 
   @Override
   public void startRangeLoop(String loopName, Var loopVar, Var countVar,
-      Arg start, Arg end, Arg increment, List<PassedVar> usedVariables,
-      List<Var> keepOpenVars, int desiredUnroll, int splitDegree,
-      int leafDegree) {
+      Arg start, Arg end, Arg increment, int splitDegree, int leafDegree,
+      List<PassedVar> passedVars, List<RefCount> perIterIncrs) {
     assert(start.isImmediateInt());
     assert(end.isImmediateInt());
     assert(increment.isImmediateInt());
@@ -1920,8 +1849,8 @@ public class TurbineGenerator implements CompilerBackend
     Expression incrE = argToExpr(increment);
 
     if (splitDegree > 0) {
-      startRangeSplit(loopName, usedVariables,
-              keepOpenVars, splitDegree, leafDegree, startE, endE, incrE);
+      startRangeSplit(loopName, passedVars, perIterIncrs,
+              splitDegree, leafDegree, startE, endE, incrE);
       startRangeLoopInner(loopName, loopVar,
           TCLTMP_RANGE_LO_V, TCLTMP_RANGE_HI_V, TCLTMP_RANGE_INC_V);
     } else {
@@ -1930,13 +1859,12 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void endRangeLoop(List<PassedVar> usedVars, List<Var> keepOpenVars,
-                        int splitDegree, int leafDegree) {
+  public void endRangeLoop(int splitDegree, List<RefCount> perIterDecrements) {
     assert(pointStack.size() >= 2);
     pointStack.pop(); // for loop body
 
     if (splitDegree > 0) {
-      endRangeSplit(usedVars,keepOpenVars);
+      endRangeSplit(perIterDecrements);
     }
   }
 
@@ -1954,30 +1882,25 @@ public class TurbineGenerator implements CompilerBackend
    * will be available the bottom, top (inclusive) and increment of the split in
    * tcl values: TCLTMP_RANGE_LO TCLTMP_RANGE_HI and TCLTMP_RANGE_INC
    * @param loopName
-   * @param usedVariables
-   * @param keepOpenVars
    * @param splitDegree
    * @param leafDegree 
    * @param startE start of range (inclusive)
    * @param endE end of range (inclusive)
    * @param incrE
+   * @param usedVariables
+   * @param keepOpenVars
    */
   private void startRangeSplit(String loopName,
-          List<PassedVar> usedVariables,
-          List<Var> keepOpenVars, int splitDegree, int leafDegree,
-          Expression startE, Expression endE, Expression incrE) {
-    
-    // All variables that must be passed in, including any keepopenvars
-    List<Var> allUsedVars = Var.varListUnion(
-        PassedVar.extractVars(usedVariables), keepOpenVars);
-    
+          List<PassedVar> passedVars, List<RefCount> perIterIncrs, int splitDegree,
+          int leafDegree, Expression startE, Expression endE,
+          Expression incrE) {
     // Create two procedures that will be called: an outer procedure
     //  that recursively breaks up the foreach loop into chunks,
     //  and an inner procedure that actually runs the loop
     List<String> commonFormalArgs = new ArrayList<String>();
     commonFormalArgs.add(Turbine.LOCAL_STACK_NAME);
-    for (Var uv: allUsedVars) {
-      commonFormalArgs.add(prefixVar(uv.name()));
+    for (PassedVar pv: passedVars) {
+      commonFormalArgs.add(prefixVar(pv.var.name()));
     }
     commonFormalArgs.add(TCLTMP_RANGE_LO);
     commonFormalArgs.add(TCLTMP_RANGE_HI);
@@ -1991,8 +1914,8 @@ public class TurbineGenerator implements CompilerBackend
 
     List<Expression> commonArgs = new ArrayList<Expression>();
     commonArgs.add(new Value(Turbine.LOCAL_STACK_NAME));
-    for (Var uv: allUsedVars) {
-      commonArgs.add(varToExpr(uv));
+    for (PassedVar pv: passedVars) {
+      commonArgs.add(varToExpr(pv.var));
     }
 
     List<Expression> outerCallArgs = new ArrayList<Expression>(commonArgs);
@@ -2015,11 +1938,14 @@ public class TurbineGenerator implements CompilerBackend
     tree.add(new Proc(innerProcName,
           usedTclFunctionNames, commonFormalArgs, inner));
 
-    // Increment references by # of iterations
-    pointStack.peek().add(new SetVariable(TCLTMP_ITERSTOTAL,
-                     rangeItersLeft(startE, endE, incrE)));
-    incrementAllRefs(PassedVar.filterRead(usedVariables), keepOpenVars,
-                     new Value(TCLTMP_ITERSTOTAL));
+    if (splitDegree > 0) {
+      // Increment references by # of iterations
+      pointStack.peek().add(new SetVariable(TCLTMP_ITERSTOTAL,
+                       rangeItersLeft(startE, endE, incrE)));
+      
+      Value itersTotal = new Value(TCLTMP_ITERSTOTAL);
+      handleRefcounts(perIterIncrs, itersTotal, false);
+    }
     
     // Call outer directly
     pointStack.peek().add(new Command(outerProcName, outerCallArgs));
@@ -2076,21 +2002,56 @@ public class TurbineGenerator implements CompilerBackend
     pointStack.push(inner);
   }
 
+  /**
+   * Generate refcounting code from RefCount list
+   * @param changes
+   * @param multiplier amount to multiply all refcounts by
+   * @param decrement if true, generate decrements instead
+   */
+  private void handleRefcounts(List<RefCount> changes, Value multiplier,
+      boolean decrement) {
+    for (RefCount refCount: changes) {
+      Expression totalAmount;
+      if (refCount.amount.equals(Arg.ONE)) {
+        totalAmount = multiplier;
+      } else {
+        totalAmount = Square.arithExpr(argToExpr(refCount.amount),
+                              new Token("*"), multiplier);
+      }
+
+      if (refCount.type == RefCountType.READERS) {
+        if (decrement) {
+          decrementReaders(Arrays.asList(refCount.var), totalAmount);
+        } else {
+          incrementReaders(Arrays.asList(refCount.var), totalAmount);
+        }
+      } else {
+        assert(refCount.type == RefCountType.WRITERS);
+        if (decrement) {
+          decrementWriters(Arrays.asList(refCount.var), totalAmount);
+        } else {
+          incrementWriters(Arrays.asList(refCount.var), totalAmount);
+        }
+      }
+    }
+  }
+
   private Square rangeItersLeft(Expression lo, Expression hi, Expression inc) {
     return Square.arithExpr(new Token("(("), hi, new Token("-"), 
             lo, new Token(")"), new Token("/"), inc, new Token(")"),
             new Token("+"), new LiteralInt(1));
   }
 
-  private void endRangeSplit(List<PassedVar> usedVars, List<Var> keepOpenVars) {
-    // Decrement # of iterations executed in inner block
-    pointStack.peek().add(new SetVariable(TCLTMP_REF_DECR, 
-                            rangeItersLeft(new Value(TCLTMP_RANGE_LO),
-                                           new Value(TCLTMP_RANGE_HI),
-                                           new Value(TCLTMP_RANGE_INC))));
-    
-    decrementAllRefs(PassedVar.filterRead(usedVars), keepOpenVars,
-                     new Value(TCLTMP_REF_DECR));
+  private void endRangeSplit(List<RefCount> perIterDecrements) {
+    if (!perIterDecrements.isEmpty()) {
+      // Decrement # of iterations executed in inner block
+      pointStack.peek().add(new SetVariable(TCLTMP_ITERS, 
+                              rangeItersLeft(new Value(TCLTMP_RANGE_LO),
+                                             new Value(TCLTMP_RANGE_HI),
+                                             new Value(TCLTMP_RANGE_INC))));
+      Value iters = new Value(TCLTMP_ITERS);
+      handleRefcounts(perIterDecrements, iters, true);
+    }
     pointStack.pop(); // inner proc body
   }
 

@@ -23,7 +23,7 @@ else
 fi
 
 COMPILER_OPTS=()
-
+O0_OPTS=("cancel-refcounts" "piggyback-refcounts")
 O1_OPTS=("constant-fold" "dead-code-elim"
                     "flatten-nested" "shared-constants"
                     "forward-dataflow" "unroll-loops"
@@ -86,7 +86,12 @@ function get_compiler_opt_name() {
         unroll-loops) echo "stc.opt.unroll-loops"
                     return 0
                     ;;
-
+        cancel-refcounts) echo "stc.opt.cancel-refcounts"
+                    return 0
+                    ;;
+        piggyback-refcounts) echo "stc.opt.piggyback-refcounts"
+                    return 0
+                    ;;
         array-switcheroo) echo "stc.array-ref-switcheroo"
                     return 0
                     ;;
@@ -140,19 +145,19 @@ function set_opt_level() {
   OPTLEVEL=$1
   verbose "Optimization level ${OPTLEVEL}"
   if [ ${OPTLEVEL} = 0 ]; then
-    ENABLED_OPTS=()
+    ENABLED_OPTS=($O0_OPTS)
     DISABLED_OPTS=($O1_OPTS $O2_OPTS $O3_OPTS $EXPERIMENTAL_OPTS)
   elif [ ${OPTLEVEL} = 1 ]; then
-    ENABLED_OPTS=($O1_OPTS)
+    ENABLED_OPTS=($O0_OPTS $O1_OPTS)
     DISABLED_OPTS=($O2_OPTS $O3_OPTS $EXPERIMENTAL_OPTS)
   elif [ ${OPTLEVEL} = 2 ]; then
-    ENABLED_OPTS=($O1_OPTS $O2_OPTS)
+    ENABLED_OPTS=($O0_OPTS $O1_OPTS $O2_OPTS)
     DISABLED_OPTS=($O3_OPTS $EXPERIMENTAL_OPTS)
   elif [ ${OPTLEVEL} = 3 ]; then
-    ENABLED_OPTS=($O1_OPTS $O2_OPTS $O3_OPTS)
+    ENABLED_OPTS=($O0_OPTS $O1_OPTS $O2_OPTS $O3_OPTS)
     DISABLED_OPTS=($EXPERIMENTAL_OPTS)
   elif [ ${OPTLEVEL} = X ]; then
-    ENABLED_OPTS=($O1_OPTS $O2_OPTS $O3_OPTS $EXPERIMENTAL_OPTS)
+    ENABLED_OPTS=($O0_OPTS $O1_OPTS $O2_OPTS $O3_OPTS $EXPERIMENTAL_OPTS)
     DISABLED_OPTS=()
   else
     echo "Invalid optimization level -O ${OPTLEVEL}"
@@ -178,6 +183,7 @@ report_optimizations() {
     echo "Optimization levels:"
     echo "===================="
     echo "All levels include optimizations from previous."
+    echo "O0 optimizations: ${O0_OPTS}"
     echo "O1 optimizations: ${O1_OPTS}"
     echo "O2 (default) optimizations: ${O2_OPTS}"
     echo "O3 optimizations: ${O3_OPTS}"

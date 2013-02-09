@@ -30,6 +30,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.CompilerBackend.RefCount;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
@@ -170,7 +171,7 @@ public class ICContinuations {
     public List<BlockingVar> blockingVars() {
       // default implementation for sync continuations
       assert(!isAsync());
-      return null;
+      return Collections.emptyList();
     }
 
     /**
@@ -315,7 +316,6 @@ public class ICContinuations {
       this.var = var;
       this.recursive = recursive;
     }
-    
   }
   
   public static abstract class AsyncContinuation extends Continuation {
@@ -429,8 +429,55 @@ public class ICContinuations {
       this.loopBody.insertInline(o.loopBody, insertAtTop);
     }
   }
+  
+  public abstract static class AbstractForeachLoop extends AbstractLoop {
 
-  public static class ForeachLoop extends AbstractLoop {
+    /** Increments that should happen before loop spawn
+     * TODO: ignored for now */
+    protected final List<RefCount> startIncrements;
+    
+    /** Decrements that should happen at end of block */
+    protected final List<RefCount> endDecrements;
+    
+    public AbstractForeachLoop(Block loopBody, List<PassedVar> passedVars,
+        List<Var> keepOpenVars, List<RefCount> startIncrements,
+        List<RefCount> endDecrements) {
+      super(loopBody, passedVars, keepOpenVars);
+      this.startIncrements = new ArrayList<RefCount>(startIncrements);
+      this.endDecrements = new ArrayList<RefCount>(endDecrements);
+    }
+    
+    public List<RefCount> getStartIncrements() {
+      return Collections.unmodifiableList(startIncrements);
+    }
+    
+    public void addStartIncrement(RefCount incr) {
+      startIncrements.add(incr);
+    }
+    
+    public List<RefCount> getEndDecrements() {
+      return Collections.unmodifiableList(endDecrements);
+    }
+    
+    public void addEndDecrement(RefCount decr) {
+      endDecrements.add(decr);
+    }
+    
+    public void prettyPrintIncrs(StringBuilder sb) {
+      if (!startIncrements.isEmpty()) {
+        sb.append(" #before[");
+        ICUtil.prettyPrintList(sb, startIncrements);
+        sb.append("]");
+      }
+      if (!endDecrements.isEmpty()) {
+        sb.append(" #after[");
+        ICUtil.prettyPrintList(sb, endDecrements);
+        sb.append("]");
+      }
+    }
+  }
+
+  public static class ForeachLoop extends AbstractForeachLoop {
     private String loopName;
     private Var arrayVar;
     private boolean arrayClosed;
@@ -447,8 +494,9 @@ public class ICContinuations {
         Block block, Var arrayVar, Var loopVar,
         Var loopCounterVar, int splitDegree, int leafDegree,
         boolean arrayClosed,
-        List<PassedVar> passedVars, List<Var> keepOpenVars) {
-      super(block, passedVars, keepOpenVars);
+        List<PassedVar> passedVars, List<Var> keepOpenVars,
+        List<RefCount> startIncrements, List<RefCount> endDecrements) {
+      super(block, passedVars, keepOpenVars, startIncrements, endDecrements);
       this.loopName = loopName;
       this.arrayVar = arrayVar;
       this.loopVar = loopVar;
@@ -461,18 +509,19 @@ public class ICContinuations {
     public ForeachLoop(String loopName, Var arrayVar,
         Var loopVar, Var loopCounterVar, int splitDegree, int leafDegree,
         boolean arrayClosed, List<PassedVar> passedVars,
-        List<Var> keepOpenVars) {
-      this(loopName, new Block(BlockType.FOREACH_BODY, null), arrayVar, loopVar, loopCounterVar,
-          splitDegree, leafDegree, arrayClosed, passedVars, keepOpenVars);
+        List<Var> keepOpenVars, List<RefCount> startIncrements,
+        List<RefCount> endDecrements) {
+      this(loopName, new Block(BlockType.FOREACH_BODY, null),
+          arrayVar, loopVar, loopCounterVar,
+          splitDegree, leafDegree, arrayClosed, 
+          passedVars, keepOpenVars, startIncrements, endDecrements);
     }
 
     @Override
     public ForeachLoop clone() {
       return new ForeachLoop(loopName, this.loopBody.clone(),
-          arrayVar, loopVar, loopCounterVar, splitDegree, leafDegree,
-          arrayClosed,
-          new ArrayList<PassedVar>(passedVars),
-          new ArrayList<Var>(keepOpenVars));
+        arrayVar, loopVar, loopCounterVar, splitDegree, leafDegree,
+        arrayClosed, passedVars, keepOpenVars, startIncrements, endDecrements);
     }
 
     @Override
@@ -499,10 +548,9 @@ public class ICContinuations {
         throws UndefinedTypeException {
       gen.startForeachLoop(loopName, arrayVar, loopVar, loopCounterVar,
                 splitDegree, leafDegree, arrayClosed, 
-                passedVars, keepOpenVars);
+                passedVars, startIncrements);
       this.loopBody.generate(logger, gen, info);
-      gen.endForeachLoop(splitDegree, leafDegree, arrayClosed,
-                         passedVars, keepOpenVars);
+      gen.endForeachLoop(splitDegree, arrayClosed, endDecrements);
     }
 
     @Override
@@ -516,6 +564,7 @@ public class ICContinuations {
       }
       sb.append(" in " + arrayVar.name() + " ");
       ICUtil.prettyPrintVarInfo(sb, passedVars, keepOpenVars);
+      prettyPrintIncrs(sb);
       sb.append(" {\n");
       loopBody.prettyPrint(sb, currentIndent + indent);
       sb.append(currentIndent + "}\n");
@@ -1093,7 +1142,7 @@ public class ICContinuations {
 
     @Override
     public Collection<Var> requiredVars() {
-      return new ArrayList<Var>(0);
+      return Var.NONE;
     }
 
     @Override
@@ -1117,7 +1166,7 @@ public class ICContinuations {
     }
   }
 
-  public static class RangeLoop extends AbstractLoop {
+  public static class RangeLoop extends AbstractForeachLoop {
     // arguments can be either value variable or integer literal
     private final String loopName;
     private Var loopVar;
@@ -1133,18 +1182,21 @@ public class ICContinuations {
     public RangeLoop(String loopName, Var loopVar, Var countVar,
         Arg start, Arg end, Arg increment,
         List<PassedVar> passedVars, List<Var> keepOpenVars,
-        int desiredUnroll, boolean unrolled, int splitDegree, int leafDegree) {
+        int desiredUnroll, boolean unrolled, int splitDegree, int leafDegree,
+        List<RefCount> startIncrements, List<RefCount> endDecrements) {
       this(loopName, new Block(BlockType.RANGELOOP_BODY, null),
           loopVar, countVar,
           start, end, increment, passedVars, keepOpenVars,
-          desiredUnroll, unrolled, splitDegree, leafDegree);
+          desiredUnroll, unrolled, splitDegree, leafDegree,
+          startIncrements, endDecrements);
     }
 
     private RangeLoop(String loopName, Block block, Var loopVar, Var countVar,
         Arg start, Arg end, Arg increment,
         List<PassedVar> passedVars, List<Var> keepOpenVars,
-        int desiredUnroll, boolean unrolled, int splitDegree, int leafDegree) {
-      super(block, passedVars, keepOpenVars);
+        int desiredUnroll, boolean unrolled, int splitDegree, int leafDegree,
+        List<RefCount> startIncrements, List<RefCount> endDecrements) {
+      super(block, passedVars, keepOpenVars, startIncrements, endDecrements);
       assert(start.isImmediateInt());
       assert(end.isImmediateInt());
       assert(increment.isImmediateInt());
@@ -1165,9 +1217,8 @@ public class ICContinuations {
     public RangeLoop clone() {
       return new RangeLoop(loopName, this.loopBody.clone(), loopVar, countVar,
           start.clone(), end.clone(), increment.clone(),
-          new ArrayList<PassedVar>(passedVars),
-          new ArrayList<Var>(keepOpenVars), desiredUnroll, unrolled,
-          splitDegree, leafDegree);
+          passedVars, keepOpenVars, desiredUnroll, unrolled,
+          splitDegree, leafDegree, startIncrements, endDecrements);
     }
 
     @Override
@@ -1182,18 +1233,16 @@ public class ICContinuations {
 
     @Override
     public List<BlockingVar> blockingVars() {
-      return null;
+      return Collections.emptyList();
     }
     
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
       gen.startRangeLoop(loopName, loopVar, countVar, start, end, increment,
-                         passedVars, keepOpenVars,
-                         desiredUnroll, splitDegree, leafDegree);
+                         splitDegree, leafDegree, passedVars, startIncrements);
       this.loopBody.generate(logger, gen, info);
-      gen.endRangeLoop(passedVars, keepOpenVars,
-                       splitDegree, leafDegree);
+      gen.endRangeLoop(splitDegree, endDecrements);
     }
 
     @Override
@@ -1209,6 +1258,7 @@ public class ICContinuations {
           sb.append("incr " + increment.toString() + " ");
       }
       ICUtil.prettyPrintVarInfo(sb, passedVars, keepOpenVars);
+      prettyPrintIncrs(sb);
       sb.append(" {\n");
       loopBody.prettyPrint(sb, currentIndent + indent);
       sb.append(currentIndent + "}\n");
@@ -1765,11 +1815,9 @@ public class ICContinuations {
         throws UndefinedTypeException {
 
       gen.startWaitStatement(procName, waitVars, 
-          PassedVar.extractVars(passedVars),
-          keepOpenVars, priority, mode, recursive, target);
+          PassedVar.extractVars(passedVars), priority, mode, recursive, target);
       this.block.generate(logger, gen, info);
-      gen.endWaitStatement(waitVars, PassedVar.extractVars(passedVars),
-                           keepOpenVars);
+      gen.endWaitStatement();
     }
 
     @Override

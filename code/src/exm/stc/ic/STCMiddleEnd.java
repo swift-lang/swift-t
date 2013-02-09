@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.CompilerBackend.RefCount;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -253,7 +254,8 @@ public class STCMiddleEnd {
               loopCountVar.type().equals(Types.V_INT));
     ForeachLoop loop = new ForeachLoop(loopName,
             arrayVar, memberVar, loopCountVar, splitDegree, leafDegree,
-            arrayClosed, PassedVar.NONE, Var.NONE);
+            arrayClosed, PassedVar.NONE, Var.NONE,
+            RefCount.NONE, RefCount.NONE);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
   }
@@ -269,7 +271,7 @@ public class STCMiddleEnd {
     RangeLoop loop = new RangeLoop(loopName, loopVar, countVar,
                     start, end, increment,
                     PassedVar.NONE, Var.NONE, desiredUnroll, false,
-                    splitDegree, leafDegree);
+                    splitDegree, leafDegree, RefCount.NONE, RefCount.NONE);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
   }

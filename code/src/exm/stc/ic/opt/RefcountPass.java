@@ -14,8 +14,10 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.CompilerBackend.RefCount;
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
+import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
@@ -29,6 +31,7 @@ import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
+import exm.stc.ic.tree.ICContinuations.AbstractForeachLoop;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
@@ -65,7 +68,7 @@ public class RefcountPass implements OptimizerPass {
 
   @Override
   public String getConfigEnabledKey() {
-    return Settings.OPT_ELIM_REFCOUNTS;
+    return null;
   }
 
   @Override
@@ -73,7 +76,7 @@ public class RefcountPass implements OptimizerPass {
     functionMap = buildFunctionMap(program);
     
     for (Function f: program.getFunctions()) {
-      elimRefCountsRec(logger, f, f.getMainblock(),
+      addRefCountsRec(logger, f, f.getMainblock(),
                        new Counters<Var>(), new Counters<Var>(),
                        new HierarchicalSet<Var>());
     }
@@ -87,7 +90,7 @@ public class RefcountPass implements OptimizerPass {
     return functionMap;
   }
 
-  private void elimRefCountsRec(Logger logger, Function f, Block block,
+  private void addRefCountsRec(Logger logger, Function f, Block block,
       Counters<Var> readIncrements, Counters<Var> writeIncrements,
       HierarchicalSet<Var> parentAssignedAliasVars) {
     
@@ -98,51 +101,21 @@ public class RefcountPass implements OptimizerPass {
     /* Traverse in bottom-up order so that we can access refcount info in
      * child blocks for pulling up */
     for (Continuation cont: block.getContinuations()) {
-      elimRefCountsCont(logger, f, cont, assignedAliasVars);
+      addRefCountsCont(logger, f, cont, assignedAliasVars);
     }
     
     fixBlockRefCounting(logger, f, block, readIncrements, writeIncrements,
                         parentAssignedAliasVars);
   }
 
-  private void elimRefCountsCont(Logger logger, Function f,
+  private void addRefCountsCont(Logger logger, Function f,
            Continuation cont, HierarchicalSet<Var> parentAssignedAliasVars) {
     for (Block block: cont.getBlocks()) {
       // Build separate copy for each block
       Counters<Var> readIncrements = new Counters<Var>();
       Counters<Var> writeIncrements = new Counters<Var>();
       
-      // Get passed in variables decremented inside block
-      // Loops don't need this as they decrement refs at loop_break instruction
-      if (isSingleSpawnCont(cont) && 
-          cont.getType() != ContinuationType.LOOP) {
-        // TODO: handle foreach loops
-        long amount = 1;
-        
-        for (Var keepOpen: cont.getKeepOpenVars()) {
-          if (RefCounting.hasWriteRefCount(keepOpen)) {
-            writeIncrements.decrement(keepOpen, amount);
-          }
-        }
-        
-        Set<Var> readIncrTmp = new HashSet<Var>();
-        for (PassedVar passedIn: cont.getPassedVars()) {
-          if (!passedIn.writeOnly && RefCounting.hasReadRefCount(passedIn.var)) {
-            readIncrTmp.add(passedIn.var);
-          }
-        }
-        
-        // Hold read reference for wait var
-        for (BlockingVar blockingVar: cont.blockingVars()) {
-          if (RefCounting.hasReadRefCount(blockingVar.var)) {
-            readIncrTmp.add(blockingVar.var);
-          }
-        }
-        
-        for (Var v: readIncrTmp) {
-          readIncrements.decrement(v, amount);
-        }
-      }
+      addDecrementsForCont(cont, readIncrements, writeIncrements);
       HierarchicalSet<Var> contAssignedAliasVars =
                     parentAssignedAliasVars.makeChild();
       for (Var v: cont.constructDefinedVars()) {
@@ -151,11 +124,21 @@ public class RefcountPass implements OptimizerPass {
         }
       }
       
-      elimRefCountsRec(logger, f, block, readIncrements, writeIncrements,
+      addRefCountsRec(logger, f, block, readIncrements, writeIncrements,
                       contAssignedAliasVars);
+    }
+    // Do any additional work for continuation
+    if (isAsyncForeachLoop(cont)) {
+      addIncrementsToForeachLoop(cont);
     }
   }
 
+  private boolean isAsyncForeachLoop(Continuation cont) {
+    return cont.isAsync() && 
+           (cont.getType() == ContinuationType.FOREACH_LOOP ||
+           cont.getType() == ContinuationType.RANGE_LOOP);
+  }
+  
   /**
    * Is a continuation that spawns a single task initially
    * @param cont
@@ -186,7 +169,7 @@ public class RefcountPass implements OptimizerPass {
       updateInstructionRefCount(inst, readIncrements, writeIncrements);
     }
     for (Continuation cont: block.getContinuations()) {
-      addIncrementsForContinuation(cont, readIncrements, writeIncrements);
+      addIncrementsForCont(cont, readIncrements, writeIncrements);
     }
     
     updateDecrementCounts(block, fn, readIncrements, writeIncrements);
@@ -203,18 +186,13 @@ public class RefcountPass implements OptimizerPass {
   private void updateBlockRefcounting(Logger logger, Function fn, Block block,
       Counters<Var> readIncrements, Counters<Var> writeIncrements,
       Set<Var> parentAssignedAliasVars) {
-    // Move any increment instructions up to this block
-    // if they can be combined with increments here
-    pullUpRefIncrements(block, readIncrements, writeIncrements);
-        
-    // Add increments to end of block
-    /*
-     * TODO: move decrements to piggyback onto load instructions
-     * - Scan backwards from end of block.
-     * - If a load instruction  from X is found, and X has a net decrement,
-     *    then piggy-back the entire decrement amount on the load 
-     * - For writers counts, similar logic for container_insert
-     */
+    if (cancelEnabled()) {
+      // Move any increment instructions up to this block
+      // if they can be combined with increments here
+      pullUpRefIncrements(block, readIncrements, writeIncrements);
+    }
+    
+    // Add decrements to block
     addDecrements(logger, fn, block, readIncrements, RefCountType.READERS);
     addDecrements(logger, fn, block, writeIncrements, RefCountType.WRITERS);
     
@@ -323,15 +301,22 @@ public class RefcountPass implements OptimizerPass {
 
   private void addDecrements(Logger logger, Function fn, Block block,
       Counters<Var> increments, RefCountType type) {
-    // First try to piggyback on variable declarations
-    piggybackDecrementsOnDeclarations(logger, fn, block, increments, type);
-    
-    // Then see if we can do the decrement on top of another operation
-    piggybackDecrementsOnInstructions(logger, fn, block, increments, type);
-    
-    
-    // Finally, the remainder are decremented as cleanup at end of block
-    addDecrementsAsCleanups(block, increments, type);
+    if (piggybackEnabled()) {
+      // First try to piggyback on variable declarations
+      piggybackDecrementsOnDeclarations(logger, fn, block, increments, type);
+      
+      // Then see if we can do the decrement on top of another operation
+      piggybackDecrementsOnInstructions(logger, fn, block, increments, type);
+    }
+      
+    if (block.getType() != BlockType.MAIN_BLOCK &&
+        isAsyncForeachLoop(block.getParentCont())) {
+      // Add remaining decrements to foreach loop
+      addDecrementsToForeachLoop(block, increments, type);
+    } else {
+      // Add remaining decrements as cleanups at end of block
+      addDecrementsAsCleanups(block, increments, type);
+    }
   }
 
   /**
@@ -453,6 +438,91 @@ public class RefcountPass implements OptimizerPass {
       }
     }
   }
+  
+  /**
+   * Handle foreach loop as special case where we want to increment
+   * <# of iterations> * <needed increments inside loop> before loop
+   */
+  private void addIncrementsToForeachLoop(Continuation c) {
+    AbstractForeachLoop loop = (AbstractForeachLoop)c;
+    
+    Counters<Var> readIncrs = new Counters<Var>();
+    Counters<Var> writeIncrs = new Counters<Var>();
+    
+    // First increment the basic amount (one)
+    for (PassedVar v: loop.getPassedVars()) {
+      if (!v.writeOnly && RefCounting.hasReadRefCount(v.var)) {
+        readIncrs.increment(v.var);
+      }
+    }
+    for (Var v: loop.getKeepOpenVars()) {
+      if (RefCounting.hasWriteRefCount(v)) {
+        writeIncrs.increment(v);
+      }
+    }
+    
+    // Now see if we can pull some increments out of top of block
+    ListIterator<Instruction> it = loop.getLoopBody().instructionIterator();
+    while (it.hasNext()) {
+      Instruction inst = it.next();
+      if (inst.op == Opcode.INCR_REF ||
+          inst.op == Opcode.INCR_WRITERS) {
+        Var var = inst.getOutput(0);
+        Arg amount = inst.getInput(0);
+        if (amount.isIntVal()) {
+          // Pull up constant increments
+          if (inst.op == Opcode.INCR_REF) {
+            readIncrs.increment(var);
+          } else {
+            assert(inst.op == Opcode.INCR_WRITERS);
+            writeIncrs.increment(var);
+          }
+          it.remove();
+        }
+      } else {
+        // stop processing once we get past the initial increments
+        break;
+      }
+    }
+    
+    for (Entry<Var, Long> read: readIncrs.entries()) {
+      loop.addStartIncrement(new RefCount(read.getKey(),RefCountType.READERS,
+                                          Arg.createIntLit(read.getValue())));
+    }
+
+    for (Entry<Var, Long> write: writeIncrs.entries()) {
+      loop.addStartIncrement(new RefCount(write.getKey(),RefCountType.WRITERS,
+                                          Arg.createIntLit(write.getValue())));
+    }
+  }
+
+  /**
+   * Foreach loops have different method for handling decrements:
+   * we add them to the parent continuation
+   * @param block
+   * @param increments
+   * @param type
+   */
+  private void addDecrementsToForeachLoop(Block block,
+      Counters<Var> increments, RefCountType type) {
+    assert(block.getType() != BlockType.MAIN_BLOCK);
+    Continuation parent = block.getParentCont();
+    AbstractForeachLoop loop = (AbstractForeachLoop)parent;
+    Counters<Var> changes = new Counters<Var>();
+    for (Entry<Var, Long> e: increments.entries()) {
+      Var var = e.getKey();
+      long count = e.getValue();
+      if (count < 0) {
+        long amount = count * -1;
+        loop.addEndDecrement(
+            new RefCount(var, type, Arg.createIntLit(amount)));
+        changes.add(var, amount);
+      }
+      
+    }
+    // Build and merge to avoid concurrent modification problems
+    increments.merge(changes);
+  }
 
   private void addDecrementsAsCleanups(Block block, Counters<Var> increments,
       RefCountType type) {
@@ -556,9 +626,11 @@ public class RefcountPass implements OptimizerPass {
    */
   private void addRefIncrements(Block block, Counters<Var> increments,
                                 RefCountType type, Set<Var> parentAssignedAliasVars) {
-    // First try to piggy-back onto var declarations
-    piggybackIncrementsOnDeclarations(block, increments, type);
-    
+    if (piggybackEnabled()) {
+      // First try to piggy-back onto var declarations
+      piggybackIncrementsOnDeclarations(block, increments, type);
+    }
+      
     // If we can't piggyback, put them at top of block before any tasks are spawned
     addIncrementsAtTop(block, increments, type, parentAssignedAliasVars);
   }
@@ -667,7 +739,7 @@ public class RefcountPass implements OptimizerPass {
     }
   }
 
-  private void addIncrementsForContinuation(Continuation cont,
+  private void addIncrementsForCont(Continuation cont,
       Counters<Var> readIncrements, Counters<Var> writeIncrements) {
     // TODO: handle other than wait
     if (cont.isAsync() && isSingleSpawnCont(cont)) {
@@ -698,6 +770,48 @@ public class RefcountPass implements OptimizerPass {
   }
 
   /**
+   * Add decrements that have to happen for continuation inside
+   * block 
+   * @param cont
+   * @param readIncrements
+   * @param writeIncrements
+   */
+  private void addDecrementsForCont(Continuation cont,
+      Counters<Var> readIncrements, Counters<Var> writeIncrements) {
+    // Get passed in variables decremented inside block
+    // Loops don't need this as they decrement refs at loop_break instruction
+    if ((isSingleSpawnCont(cont) || isAsyncForeachLoop(cont)) && 
+        cont.getType() != ContinuationType.LOOP) {
+      // TODO: handle foreach loops
+      long amount = 1;
+      
+      for (Var keepOpen: cont.getKeepOpenVars()) {
+        if (RefCounting.hasWriteRefCount(keepOpen)) {
+          writeIncrements.decrement(keepOpen, amount);
+        }
+      }
+      
+      Set<Var> readIncrTmp = new HashSet<Var>();
+      for (PassedVar passedIn: cont.getPassedVars()) {
+        if (!passedIn.writeOnly && RefCounting.hasReadRefCount(passedIn.var)) {
+          readIncrTmp.add(passedIn.var);
+        }
+      }
+      
+      // Hold read reference for wait var
+      for (BlockingVar blockingVar: cont.blockingVars()) {
+        if (RefCounting.hasReadRefCount(blockingVar.var)) {
+          readIncrTmp.add(blockingVar.var);
+        }
+      }
+      
+      for (Var v: readIncrTmp) {
+        readIncrements.decrement(v, amount);
+      }
+    }
+  }
+
+  /**
    * Find aliasVars that were assigned in this block in order
    * to track where ref increment instructions can safely be put
    * @param block
@@ -710,6 +824,22 @@ public class RefcountPass implements OptimizerPass {
           assignedAliasVars.add(out);
         }
       }
+    }
+  }
+  
+  private boolean cancelEnabled() {
+    try {
+      return Settings.getBoolean(Settings.OPT_CANCEL_REFCOUNTS);
+    } catch (InvalidOptionException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
+  }
+  
+  private boolean piggybackEnabled() {
+    try {
+      return Settings.getBoolean(Settings.OPT_PIGGYBACK_REFCOUNTS);
+    } catch (InvalidOptionException e) {
+      throw new STCRuntimeError(e.getMessage());
     }
   }
 }
