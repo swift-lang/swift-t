@@ -73,6 +73,24 @@ public class TreeWalk {
     }
   }
   
+
+  /**
+   * Visits this continuation and any descendants that execute synchronously
+   * @param logger
+   * @param fn
+   * @param cont
+   * @param walker
+   */
+  public static void walkSyncChildren(Logger logger, Function fn,
+      Continuation cont, TreeWalker walker) {
+    walker.visit(cont);
+    if (!cont.isAsync()) {
+      for (Block block: cont.getBlocks()) {
+        walkSyncChildren(logger, fn, block, true, walker);
+      }
+    }
+  }
+  
   public static void walkSyncChildren(
       Logger logger, Function fn,
       Block block, boolean includeThisBlock, TreeWalker walker) {

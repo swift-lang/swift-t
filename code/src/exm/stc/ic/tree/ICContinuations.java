@@ -41,11 +41,14 @@ import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.PassedVar;
+import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.util.Counters;
+import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICInstructions.Builtin;
@@ -439,18 +442,28 @@ public class ICContinuations {
     protected int splitDegree;
     protected int leafDegree;
 
-    /** Increments that should happen before loop spawn
-     * TODO: ignored for now */
+    /** Increments that should happen before loop spawn.  Each
+     * increment is multiplied by the number of loop iterations */
     protected final List<RefCount> startIncrements;
     
-    /** Decrements that should happen at end of block */
+    /**
+     * Increments that should happen before loop spawn.
+     * Each increment is a constant amount independent of iterations.
+     * This is useful because we can piggyback ops on the normal start increments
+     */
+    protected final MultiMap<Var, RefCount> constStartIncrements;
+    
+    
+    /** Decrements that should happen at end of loop body (once per iteration) */
     protected final List<RefCount> endDecrements;
     
     public AbstractForeachLoop(Block loopBody, String loopName, Var loopVar,
         Var loopCounterVar, int splitDegree, int leafDegree, int desiredUnroll,
         boolean unrolled,
         List<PassedVar> passedVars, List<Var> keepOpenVars,
-        List<RefCount> startIncrements, List<RefCount> endDecrements) {
+        List<RefCount> startIncrements,
+        MultiMap<Var, RefCount> constStartIncrements,
+        List<RefCount> endDecrements) {
       super(loopBody, passedVars, keepOpenVars);      
       assert(loopCounterVar == null || loopCounterVar.type().equals(Types.V_INT));
       this.loopName = loopName;
@@ -461,6 +474,7 @@ public class ICContinuations {
       this.desiredUnroll = desiredUnroll;
       this.unrolled = unrolled;
       this.startIncrements = new ArrayList<RefCount>(startIncrements);
+      this.constStartIncrements = constStartIncrements.clone();
       this.endDecrements = new ArrayList<RefCount>(endDecrements);
     }
     
@@ -470,6 +484,10 @@ public class ICContinuations {
     
     public void addStartIncrement(RefCount incr) {
       startIncrements.add(incr);
+    }
+    
+    public void addConstantStartIncrement(Var v, RefCountType t, Arg amount) {
+      constStartIncrements.put(v, new RefCount(v, t, amount));
     }
     
     public List<RefCount> getEndDecrements() {
@@ -482,14 +500,45 @@ public class ICContinuations {
     
     public void prettyPrintIncrs(StringBuilder sb) {
       if (!startIncrements.isEmpty()) {
-        sb.append(" #before[");
+        sb.append(" #beforeperiter[");
         ICUtil.prettyPrintList(sb, startIncrements);
+        sb.append("]");
+      }
+
+      if (!constStartIncrements.isEmpty()) {
+        sb.append(" #beforeconst[");
+        ICUtil.prettyPrintLists(sb, constStartIncrements.values());
         sb.append("]");
       }
       if (!endDecrements.isEmpty()) {
         sb.append(" #after[");
         ICUtil.prettyPrintList(sb, endDecrements);
         sb.append("]");
+      }
+    }
+
+    /**
+     * Try to piggyback constant incrs/decrs from outside continuation.
+     * Reset counters in increments for any that are changed
+     * @param increments
+     * @param type
+     * @param if true, try to piggyback decrements, if false, increments
+     */
+    public void tryPiggyBack(Counters<Var> increments, RefCountType type,
+        boolean decrement) {
+      for (RefCount startIncr: startIncrements) {
+        // Only consider piggybacking where we already are modifying
+        // that particular count
+        // TODO: could change read and write counts in single operation
+        if (startIncr.type == type) {
+          long incr = increments.getCount(startIncr.var);
+          if ((decrement && incr < 0) ||
+              (!decrement && incr > 0)) {
+            addConstantStartIncrement(startIncr.var, type,
+                                      Arg.createIntLit(incr));
+            increments.add(startIncr.var, -1 * incr);
+          }
+        }
       }
     }
   }
@@ -506,9 +555,12 @@ public class ICContinuations {
         Var loopCounterVar, int splitDegree, int leafDegree,
         boolean arrayClosed,
         List<PassedVar> passedVars, List<Var> keepOpenVars,
-        List<RefCount> startIncrements, List<RefCount> endDecrements) {
+        List<RefCount> startIncrements, 
+        MultiMap<Var, RefCount> constStartIncrements,
+        List<RefCount> endDecrements) {
       super(block, loopName, loopVar, loopCounterVar, splitDegree, leafDegree,
-          -1, false, passedVars, keepOpenVars, startIncrements, endDecrements);
+          -1, false, passedVars, keepOpenVars, startIncrements, constStartIncrements,
+          endDecrements);
       this.arrayVar = arrayVar;
       this.arrayClosed = arrayClosed;
     }
@@ -517,18 +569,21 @@ public class ICContinuations {
         Var loopVar, Var loopCounterVar, int splitDegree, int leafDegree,
         boolean arrayClosed, List<PassedVar> passedVars,
         List<Var> keepOpenVars, List<RefCount> startIncrements,
+        MultiMap<Var, RefCount> constStartIncrements,
         List<RefCount> endDecrements) {
       this(new Block(BlockType.FOREACH_BODY, null), loopName,
           arrayVar, loopVar, loopCounterVar,
           splitDegree, leafDegree, arrayClosed, 
-          passedVars, keepOpenVars, startIncrements, endDecrements);
+          passedVars, keepOpenVars, startIncrements, 
+          constStartIncrements, endDecrements);
     }
 
     @Override
     public ForeachLoop clone() {
       return new ForeachLoop(this.loopBody.clone(), loopName,
         arrayVar, loopVar, loopCounterVar, splitDegree, leafDegree,
-        arrayClosed, passedVars, keepOpenVars, startIncrements, endDecrements);
+        arrayClosed, passedVars, keepOpenVars, startIncrements, 
+        constStartIncrements, endDecrements);
     }
 
     @Override
@@ -555,7 +610,7 @@ public class ICContinuations {
         throws UndefinedTypeException {
       gen.startForeachLoop(loopName, arrayVar, loopVar, loopCounterVar,
                 splitDegree, leafDegree, arrayClosed, 
-                passedVars, startIncrements);
+                passedVars, startIncrements, constStartIncrements);
       this.loopBody.generate(logger, gen, info);
       gen.endForeachLoop(splitDegree, arrayClosed, endDecrements);
     }
@@ -1186,12 +1241,14 @@ public class ICContinuations {
         Arg start, Arg end, Arg increment,
         List<PassedVar> passedVars, List<Var> keepOpenVars,
         int desiredUnroll, boolean unrolled, int splitDegree, int leafDegree,
-        List<RefCount> startIncrements, List<RefCount> endDecrements) {
+        List<RefCount> startIncrements,
+        MultiMap<Var, RefCount> constStartIncrements,
+        List<RefCount> endDecrements) {
       this(new Block(BlockType.RANGELOOP_BODY, null), loopName,
           loopVar, countVar,
           start, end, increment, passedVars, keepOpenVars,
           desiredUnroll, unrolled, splitDegree, leafDegree,
-          startIncrements, endDecrements);
+          startIncrements, constStartIncrements, endDecrements);
     }
 
     private RangeLoop(Block block, String loopName,
@@ -1199,10 +1256,12 @@ public class ICContinuations {
         Arg start, Arg end, Arg increment,
         List<PassedVar> passedVars, List<Var> keepOpenVars,
         int desiredUnroll, boolean unrolled, int splitDegree, int leafDegree,
-        List<RefCount> startIncrements, List<RefCount> endDecrements) {
+        List<RefCount> startIncrements, MultiMap<Var, RefCount> constStartIncrements,
+        List<RefCount> endDecrements) {
       super(block, loopName, loopVar, loopCounterVar, splitDegree, leafDegree,
           desiredUnroll, unrolled,
-          passedVars, keepOpenVars, startIncrements, endDecrements);
+          passedVars, keepOpenVars, startIncrements,
+          constStartIncrements, endDecrements);
       assert(loopVar.type().equals(Types.V_INT));
       assert(start.isImmediateInt());
       assert(end.isImmediateInt());
@@ -1218,7 +1277,8 @@ public class ICContinuations {
           loopCounterVar,
           start.clone(), end.clone(), increment.clone(),
           passedVars, keepOpenVars, desiredUnroll, unrolled,
-          splitDegree, leafDegree, startIncrements, endDecrements);
+          splitDegree, leafDegree, startIncrements, constStartIncrements,
+          endDecrements);
     }
 
     @Override
@@ -1240,7 +1300,8 @@ public class ICContinuations {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
       gen.startRangeLoop(loopName, loopVar, loopCounterVar, start, end, increment,
-                         splitDegree, leafDegree, passedVars, startIncrements);
+                         splitDegree, leafDegree, passedVars, startIncrements,
+                         constStartIncrements);
       this.loopBody.generate(logger, gen, info);
       gen.endRangeLoop(splitDegree, endDecrements);
     }

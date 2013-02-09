@@ -17,6 +17,7 @@
 package exm.stc.tclbackend.tree;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -97,7 +98,11 @@ public class Square extends Expression
   }
   
   public static Square arithExpr(Expression... contents) {
-    ArrayList<Expression> newE = new ArrayList<Expression>(contents.length+1);
+    return arithExpr(Arrays.asList(contents));
+  }
+  
+  public static Square arithExpr(List<Expression> contents) {
+    ArrayList<Expression> newE = new ArrayList<Expression>(contents.size()+1);
 
     newE.add(new Token("expr"));
     for (Expression expr: contents) {
@@ -106,7 +111,7 @@ public class Square extends Expression
     } 
     return new Square(newE.toArray(new Expression[0]));
   }
-  
+
   public static Square fnCall(String fnName, Expression... args) {
     Expression newE[] = new Expression[args.length + 1];
 

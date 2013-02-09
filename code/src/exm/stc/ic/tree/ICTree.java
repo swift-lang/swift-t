@@ -855,6 +855,10 @@ public class ICTree {
     public ListIterator<Continuation> continuationIterator() {
       return continuations.listIterator();
     }
+    
+    public ListIterator<Continuation> continuationIterator(int pos) {
+      return continuations.listIterator(pos);
+    }
 
     public ListIterator<Var> variableIterator() {
       return variables.listIterator();

@@ -29,6 +29,7 @@ import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Var;
+import exm.stc.common.util.MultiMap;
 
 public interface CompilerBackend {
 
@@ -352,12 +353,14 @@ public interface CompilerBackend {
    * @param leafDegree 
    * @param arrayClosed if true, assume array is already closed
    * @param passedVars
-   * @param keepOpenVars
+   * @param perIterIncrs per-iteration increments
+   * @param constIncrs constant increments
    */
   public void startForeachLoop(String loopName,
       Var arrayVar, Var memberVar, Var loopCountVar, int splitDegree,
       int leafDegree, boolean arrayClosed,
-      List<PassedVar> passedVars, List<RefCount> perIterIncrs);
+      List<PassedVar> passedVars, List<RefCount> perIterIncrs,
+      MultiMap<Var, RefCount> constIncrs);
 
   public void endForeachLoop(int splitDegree,
             boolean arrayClosed, List<RefCount> perIterDecrements);
@@ -376,13 +379,14 @@ public interface CompilerBackend {
    * @param end end (inclusive) of the loop: should be int or int value var
    * @param increment increment of the loop: should be int or int value var
    * @param passedVars variables used in loop body
-   * @param perIterIncrs variable reference operations
-   * @param desiredUnroll the suggested unrolling factor
    * @param splitDegree the desired loop split factor (negative if no splitting)
+   * @param perIterIncrs per-iteration increments
+   * @param constIncrs constant increments
    */
   public void startRangeLoop(String loopName, Var loopVar, Var countVar,
       Arg start, Arg end, Arg increment, int splitDegree, int leafDegree, 
-      List<PassedVar> passedVars, List<RefCount> perIterIncrs);
+      List<PassedVar> passedVars, List<RefCount> perIterIncrs,
+      MultiMap<Var, RefCount> constIncrs);
   public void endRangeLoop(int splitDegree, List<RefCount> perIterDecrs);
   /**
    * Add a global variable (currently constant literals are supported)

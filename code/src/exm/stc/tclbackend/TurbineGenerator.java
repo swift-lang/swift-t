@@ -60,6 +60,8 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.util.MultiMap;
+import exm.stc.common.util.Pair;
 import exm.stc.tclbackend.Turbine.CacheMode;
 import exm.stc.tclbackend.Turbine.StackFrameType;
 import exm.stc.tclbackend.tree.Command;
@@ -1750,7 +1752,8 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void startForeachLoop(String loopName, Var arrayVar, Var memberVar,
         Var loopCountVar, int splitDegree, int leafDegree, boolean arrayClosed,
-        List<PassedVar> passedVars, List<RefCount> perIterIncrs) {
+        List<PassedVar> passedVars, List<RefCount> perIterIncrs, 
+        MultiMap<Var, RefCount> constIncrs) {
     assert(Types.isArray(arrayVar.type()));
     assert(loopCountVar == null ||
               loopCountVar.type().equals(Types.V_INT));
@@ -1767,27 +1770,28 @@ public class TurbineGenerator implements CompilerBackend
                           varToExpr(arrayVar), haveKeys));
       Value tclDict = new Value(contentsVar);
       Expression containerSize = Turbine.dictSize(tclDict);
-      handleForeachContainerRefcounts(perIterIncrs, containerSize);
+      handleForeachContainerRefcounts(perIterIncrs, constIncrs, containerSize);
     } else {
       startForeachSplit(loopName, arrayVar, contentsVar, splitDegree, 
-          leafDegree, haveKeys, passedVars, perIterIncrs);
+          leafDegree, haveKeys, passedVars, perIterIncrs, constIncrs);
     }
     startForeachInner(new Value(contentsVar), memberVar, loopCountVar);
   }
 
   private void handleForeachContainerRefcounts(List<RefCount> perIterIncrs,
-      Expression containerSize) {
+      MultiMap<Var, RefCount> constIncrs, Expression containerSize) {
     if (!perIterIncrs.isEmpty()) {
       pointStack.peek().add(new SetVariable(TCLTMP_ITERS, 
                                       containerSize));
  
-      handleRefcounts(perIterIncrs, new Value(TCLTMP_ITERS), false);
+      handleRefcounts(constIncrs, perIterIncrs, new Value(TCLTMP_ITERS), false);
     }
   }
 
   private void startForeachSplit(String procName, Var arrayVar,
       String contentsVar, int splitDegree, int leafDegree, boolean haveKeys,
-      List<PassedVar> usedVars, List<RefCount> perIterIncrs) {
+      List<PassedVar> usedVars, List<RefCount> perIterIncrs,
+      MultiMap<Var, RefCount> constIncrs) {
     // load array size
     pointStack.peek().add(Turbine.containerSize(TCLTMP_CONTAINER_SIZE,
                                       varToExpr(arrayVar)));
@@ -1796,7 +1800,7 @@ public class TurbineGenerator implements CompilerBackend
     Expression lastIndex = Square.arithExpr(containerSize,
           new Token("-"), new LiteralInt(1));
 
-    handleForeachContainerRefcounts(perIterIncrs, containerSize);
+    handleForeachContainerRefcounts(perIterIncrs, constIncrs, containerSize);
     
     // recursively split the range
     ArrayList<PassedVar> splitUsedVars = new ArrayList<PassedVar>(usedVars);
@@ -1852,7 +1856,8 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void startRangeLoop(String loopName, Var loopVar, Var countVar,
       Arg start, Arg end, Arg increment, int splitDegree, int leafDegree,
-      List<PassedVar> passedVars, List<RefCount> perIterIncrs) {
+      List<PassedVar> passedVars, List<RefCount> perIterIncrs,
+      MultiMap<Var, RefCount> constIncrs) {
     assert(start.isImmediateInt());
     assert(end.isImmediateInt());
     assert(increment.isImmediateInt());
@@ -1873,7 +1878,7 @@ public class TurbineGenerator implements CompilerBackend
                        rangeItersLeft(startE, endE, incrE)));
       
       Value itersTotal = new Value(TCLTMP_ITERSTOTAL);
-      handleRefcounts(perIterIncrs, itersTotal, false);
+      handleRefcounts(constIncrs, perIterIncrs, itersTotal, false);
     }
     
     if (splitDegree > 0) {
@@ -2023,20 +2028,44 @@ public class TurbineGenerator implements CompilerBackend
 
   /**
    * Generate refcounting code from RefCount list
-   * @param changes
+   * @param constIncrs constant increments.  Assume that every constant incr
+   *            has a corresponding multipled one.  This can be null
+   * @param multipliedIncrs
    * @param multiplier amount to multiply all refcounts by
    * @param decrement if true, generate decrements instead
    */
-  private void handleRefcounts(List<RefCount> changes, Value multiplier,
-      boolean decrement) {
-    for (RefCount refCount: changes) {
-      Expression totalAmount;
+  private void handleRefcounts(MultiMap<Var, RefCount> constIncrs, List<RefCount> multipliedIncrs,
+                               Value multiplier, boolean decrement) {
+    // Track which were added for validation
+    Set<Pair<Var, RefCountType>> processed = new HashSet<Pair<Var, RefCountType>>();
+    
+    for (RefCount refCount: multipliedIncrs) {
+      List<Expression> refCountExpr;
       if (refCount.amount.equals(Arg.ONE)) {
-        totalAmount = multiplier;
+        refCountExpr = new ArrayList<Expression>();
+        refCountExpr.add(multiplier);
       } else {
-        totalAmount = Square.arithExpr(argToExpr(refCount.amount),
-                              new Token("*"), multiplier);
+        refCountExpr = new ArrayList<Expression>();
+        refCountExpr.addAll(Arrays.asList(
+            argToExpr(refCount.amount), new Token("*"), multiplier));
       }
+      
+      
+      if (constIncrs != null) {
+        for (RefCount constRC: constIncrs.get(refCount.var)) {
+          if (constRC.type == refCount.type) {
+            if (constRC.amount.isIntVal() && constRC.amount.getIntLit() < 0) {
+              refCountExpr.add(new Token("-"));
+              refCountExpr.add(new LiteralInt(constRC.amount.getIntLit() * -1));
+            } else {
+              refCountExpr.add(new Token("+"));
+              refCountExpr.add(argToExpr(constRC.amount));
+            }
+          }
+        }
+      }
+      
+      Expression totalAmount = Square.arithExpr(refCountExpr);
 
       if (refCount.type == RefCountType.READERS) {
         if (decrement) {
@@ -2050,6 +2079,17 @@ public class TurbineGenerator implements CompilerBackend
           decrementWriters(Arrays.asList(refCount.var), totalAmount);
         } else {
           incrementWriters(Arrays.asList(refCount.var), totalAmount);
+        }
+      }
+      processed.add(Pair.create(refCount.var, refCount.type));
+    }
+    
+    // Check that all constant increments has a corresponding multiplier 
+    if (constIncrs != null) {
+      for (List<RefCount> rcList: constIncrs.values()) {
+        for (RefCount rc: rcList) {
+          assert(processed.contains(Pair.create(rc.var, rc.type))) : 
+            rc + "\n" + constIncrs + "\n" + multipliedIncrs;
         }
       }
     }
@@ -2075,7 +2115,7 @@ public class TurbineGenerator implements CompilerBackend
                                              new Value(TCLTMP_RANGE_HI),
                                              new Value(TCLTMP_RANGE_INC))));
       Value iters = new Value(TCLTMP_ITERS);
-      handleRefcounts(perIterDecrements, iters, true);
+      handleRefcounts(null, perIterDecrements, iters, true);
     }
     pointStack.pop(); // inner proc body
   }

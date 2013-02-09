@@ -113,6 +113,27 @@ public class ICUtil {
   }
   
   /**
+   * Print multiple as one list
+   * @param sb
+   * @param values
+   */
+  @SuppressWarnings("rawtypes")
+  public static void prettyPrintLists(StringBuilder sb,
+      Collection<? extends Collection> values) {
+    boolean first = true;
+    for (Collection list: values) {
+      for (Object o: list) {
+        if (first) {
+          first = false;
+        } else {
+          sb.append(", ");
+        }
+        sb.append(o.toString());
+      }
+    }
+  }
+
+  /**
    * print a comma separated list of var names to sb
    * @param sb
    * @param args

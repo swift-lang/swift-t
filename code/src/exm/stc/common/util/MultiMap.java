@@ -141,6 +141,21 @@ public class MultiMap<K, V> {
   }
 
   @Override
+  /**
+   * Return a shallow copy that clones map structure but doesn't clone
+   * keys and values
+   */
+  public MultiMap<K, V> clone() {
+    MultiMap<K, V> clone = new MultiMap<K, V>();
+    for (Entry<K, List<V>> e: map.entrySet()) {
+      List<V> clonedList = factory.make();
+      clonedList.addAll(e.getValue());
+      clone.map.put(e.getKey(), clonedList);
+    }
+    return clone;
+  }
+  
+  @Override
   public String toString() {
     return map.toString();
   }  

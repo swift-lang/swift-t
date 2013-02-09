@@ -41,6 +41,6 @@ public class Pair<T1, T2> {
 
   @Override
   public int hashCode() {
-    return val1.hashCode() ^ val2.hashCode();
+    return (17 * val1.hashCode()) ^ val2.hashCode();
   }
 }

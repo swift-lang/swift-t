@@ -43,6 +43,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.util.MultiMap;
 import exm.stc.ic.opt.ICOptimizer;
 import exm.stc.ic.tree.ICContinuations.ForeachLoop;
 import exm.stc.ic.tree.ICContinuations.IfStatement;
@@ -255,7 +256,7 @@ public class STCMiddleEnd {
     ForeachLoop loop = new ForeachLoop(loopName,
             arrayVar, memberVar, loopCountVar, splitDegree, leafDegree,
             arrayClosed, PassedVar.NONE, Var.NONE,
-            RefCount.NONE, RefCount.NONE);
+            RefCount.NONE, new MultiMap<Var, RefCount>(), RefCount.NONE);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
   }
@@ -271,7 +272,8 @@ public class STCMiddleEnd {
     RangeLoop loop = new RangeLoop(loopName, loopVar, countVar,
                     start, end, increment,
                     PassedVar.NONE, Var.NONE, desiredUnroll, false,
-                    splitDegree, leafDegree, RefCount.NONE, RefCount.NONE);
+                    splitDegree, leafDegree, RefCount.NONE, 
+                    new MultiMap<Var, RefCount>(), RefCount.NONE);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
   }
