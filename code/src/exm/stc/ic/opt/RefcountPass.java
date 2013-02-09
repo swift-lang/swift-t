@@ -347,16 +347,13 @@ public class RefcountPass implements OptimizerPass {
     
     // Check that the data isn't actually used in block or sync continuations
     TreeWalk.walkSyncChildren(logger, fn, block, true, new TreeWalker() {
-
-      @SuppressWarnings("unused")
-      public void visit(Logger logger, String cx, Continuation cont) {
+      public void visit(Continuation cont) {
         if (type == RefCountType.READERS) {
           immDecrCandidates.removeAll(cont.requiredVars());
         }
       }
-      
-      @SuppressWarnings("unused")
-      public void visit(Logger logger, String cx, Instruction inst) {
+
+      public void visit(Instruction inst) {
         if (type == RefCountType.READERS) {
           for (Arg in: inst.getInputs())
             if (in.isVar())

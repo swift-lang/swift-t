@@ -431,6 +431,13 @@ public class ICContinuations {
   }
   
   public abstract static class AbstractForeachLoop extends AbstractLoop {
+    protected final String loopName;
+    protected Var loopVar;
+    protected Var loopCounterVar;
+    protected final int desiredUnroll;
+    protected boolean unrolled;
+    protected int splitDegree;
+    protected int leafDegree;
 
     /** Increments that should happen before loop spawn
      * TODO: ignored for now */
@@ -439,10 +446,20 @@ public class ICContinuations {
     /** Decrements that should happen at end of block */
     protected final List<RefCount> endDecrements;
     
-    public AbstractForeachLoop(Block loopBody, List<PassedVar> passedVars,
-        List<Var> keepOpenVars, List<RefCount> startIncrements,
-        List<RefCount> endDecrements) {
-      super(loopBody, passedVars, keepOpenVars);
+    public AbstractForeachLoop(Block loopBody, String loopName, Var loopVar,
+        Var loopCounterVar, int splitDegree, int leafDegree, int desiredUnroll,
+        boolean unrolled,
+        List<PassedVar> passedVars, List<Var> keepOpenVars,
+        List<RefCount> startIncrements, List<RefCount> endDecrements) {
+      super(loopBody, passedVars, keepOpenVars);      
+      assert(loopCounterVar == null || loopCounterVar.type().equals(Types.V_INT));
+      this.loopName = loopName;
+      this.loopVar = loopVar;
+      this.loopCounterVar = loopCounterVar;
+      this.splitDegree = splitDegree;
+      this.leafDegree = leafDegree;
+      this.desiredUnroll = desiredUnroll;
+      this.unrolled = unrolled;
       this.startIncrements = new ArrayList<RefCount>(startIncrements);
       this.endDecrements = new ArrayList<RefCount>(endDecrements);
     }
@@ -478,32 +495,22 @@ public class ICContinuations {
   }
 
   public static class ForeachLoop extends AbstractForeachLoop {
-    private String loopName;
     private Var arrayVar;
     private boolean arrayClosed;
-    private Var loopCounterVar;
-    private Var loopVar;
     public Var getArrayVar() {
       return arrayVar;
     }
 
-    private final int splitDegree;
-    private final int leafDegree;
-
-    private ForeachLoop(String loopName,
-        Block block, Var arrayVar, Var loopVar,
+    private ForeachLoop(Block block,
+        String loopName, Var arrayVar, Var loopVar,
         Var loopCounterVar, int splitDegree, int leafDegree,
         boolean arrayClosed,
         List<PassedVar> passedVars, List<Var> keepOpenVars,
         List<RefCount> startIncrements, List<RefCount> endDecrements) {
-      super(block, passedVars, keepOpenVars, startIncrements, endDecrements);
-      this.loopName = loopName;
+      super(block, loopName, loopVar, loopCounterVar, splitDegree, leafDegree,
+          -1, false, passedVars, keepOpenVars, startIncrements, endDecrements);
       this.arrayVar = arrayVar;
-      this.loopVar = loopVar;
-      this.loopCounterVar = loopCounterVar;
       this.arrayClosed = arrayClosed;
-      this.splitDegree = splitDegree;
-      this.leafDegree = leafDegree;
     }
 
     public ForeachLoop(String loopName, Var arrayVar,
@@ -511,7 +518,7 @@ public class ICContinuations {
         boolean arrayClosed, List<PassedVar> passedVars,
         List<Var> keepOpenVars, List<RefCount> startIncrements,
         List<RefCount> endDecrements) {
-      this(loopName, new Block(BlockType.FOREACH_BODY, null),
+      this(new Block(BlockType.FOREACH_BODY, null), loopName,
           arrayVar, loopVar, loopCounterVar,
           splitDegree, leafDegree, arrayClosed, 
           passedVars, keepOpenVars, startIncrements, endDecrements);
@@ -519,7 +526,7 @@ public class ICContinuations {
 
     @Override
     public ForeachLoop clone() {
-      return new ForeachLoop(loopName, this.loopBody.clone(),
+      return new ForeachLoop(this.loopBody.clone(), loopName,
         arrayVar, loopVar, loopCounterVar, splitDegree, leafDegree,
         arrayClosed, passedVars, keepOpenVars, startIncrements, endDecrements);
     }
@@ -555,8 +562,11 @@ public class ICContinuations {
 
     @Override
     public void prettyPrint(StringBuilder sb, String currentIndent) {
-      if (arrayClosed) {
-        sb.append(currentIndent + "@skiparrayblock\n");
+      if (!arrayClosed) {
+        sb.append(currentIndent + "@arrayblock\n");
+      }
+      if (splitDegree < 0) {
+        sb.append(currentIndent + "@nospawn\n");
       }
       sb.append(currentIndent + "foreach " + loopVar.name());
       if (loopCounterVar != null) {
@@ -1168,54 +1178,44 @@ public class ICContinuations {
 
   public static class RangeLoop extends AbstractForeachLoop {
     // arguments can be either value variable or integer literal
-    private final String loopName;
-    private Var loopVar;
-    private Var countVar;
     private Arg start;
     private Arg end;
     private Arg increment;
-    private final int desiredUnroll;
-    private boolean unrolled;
-    private int splitDegree;
-    private int leafDegree;
 
     public RangeLoop(String loopName, Var loopVar, Var countVar,
         Arg start, Arg end, Arg increment,
         List<PassedVar> passedVars, List<Var> keepOpenVars,
         int desiredUnroll, boolean unrolled, int splitDegree, int leafDegree,
         List<RefCount> startIncrements, List<RefCount> endDecrements) {
-      this(loopName, new Block(BlockType.RANGELOOP_BODY, null),
+      this(new Block(BlockType.RANGELOOP_BODY, null), loopName,
           loopVar, countVar,
           start, end, increment, passedVars, keepOpenVars,
           desiredUnroll, unrolled, splitDegree, leafDegree,
           startIncrements, endDecrements);
     }
 
-    private RangeLoop(String loopName, Block block, Var loopVar, Var countVar,
+    private RangeLoop(Block block, String loopName,
+        Var loopVar, Var loopCounterVar,
         Arg start, Arg end, Arg increment,
         List<PassedVar> passedVars, List<Var> keepOpenVars,
         int desiredUnroll, boolean unrolled, int splitDegree, int leafDegree,
         List<RefCount> startIncrements, List<RefCount> endDecrements) {
-      super(block, passedVars, keepOpenVars, startIncrements, endDecrements);
+      super(block, loopName, loopVar, loopCounterVar, splitDegree, leafDegree,
+          desiredUnroll, unrolled,
+          passedVars, keepOpenVars, startIncrements, endDecrements);
+      assert(loopVar.type().equals(Types.V_INT));
       assert(start.isImmediateInt());
       assert(end.isImmediateInt());
       assert(increment.isImmediateInt());
-      assert(loopVar.type().equals(Types.V_INT));
-      this.loopName = loopName;
-      this.loopVar = loopVar;
-      this.countVar = countVar;
       this.start = start;
       this.end = end;
       this.increment = increment;
-      this.desiredUnroll = desiredUnroll;
-      this.unrolled = unrolled;
-      this.splitDegree = splitDegree;
-      this.leafDegree = leafDegree;
     }
 
     @Override
     public RangeLoop clone() {
-      return new RangeLoop(loopName, this.loopBody.clone(), loopVar, countVar,
+      return new RangeLoop(this.loopBody.clone(), loopName, loopVar,
+          loopCounterVar,
           start.clone(), end.clone(), increment.clone(),
           passedVars, keepOpenVars, desiredUnroll, unrolled,
           splitDegree, leafDegree, startIncrements, endDecrements);
@@ -1239,7 +1239,7 @@ public class ICContinuations {
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
-      gen.startRangeLoop(loopName, loopVar, countVar, start, end, increment,
+      gen.startRangeLoop(loopName, loopVar, loopCounterVar, start, end, increment,
                          splitDegree, leafDegree, passedVars, startIncrements);
       this.loopBody.generate(logger, gen, info);
       gen.endRangeLoop(splitDegree, endDecrements);
@@ -1247,9 +1247,12 @@ public class ICContinuations {
 
     @Override
     public void prettyPrint(StringBuilder sb, String currentIndent) {
+      if (splitDegree < 0) {
+        sb.append(currentIndent + "@nospawn\n");
+      }
       sb.append(currentIndent +   "for " + loopVar.name());
-      if (countVar != null) {
-        sb.append(", " + countVar.name());
+      if (loopCounterVar != null) {
+        sb.append(", " + loopCounterVar.name());
       }
 
       sb.append(" = " + start.toString() + " to " + end.toString() + " ");
@@ -1274,8 +1277,8 @@ public class ICContinuations {
       if (renames.containsKey(loopVar)) {
         loopVar = renames.get(loopVar).getVar();
       }
-      if (countVar != null && renames.containsKey(countVar)) {
-        countVar = renames.get(countVar).getVar();
+      if (loopCounterVar != null && renames.containsKey(loopCounterVar)) {
+        loopCounterVar = renames.get(loopCounterVar).getVar();
       }
     }
 
@@ -1342,10 +1345,10 @@ public class ICContinuations {
       this.loopBody.declareVariable(loopVar);
       this.loopBody.addInstructionFront(
           Builtin.createLocal(BuiltinOpcode.COPY_INT, this.loopVar, start));
-      if (countVar != null) {
-        this.loopBody.declareVariable(countVar);
+      if (loopCounterVar != null) {
+        this.loopBody.declareVariable(loopCounterVar);
         this.loopBody.addInstructionFront(Builtin.createLocal(
-                     BuiltinOpcode.COPY_INT, countVar, Arg.createIntLit(0)));
+                     BuiltinOpcode.COPY_INT, loopCounterVar, Arg.createIntLit(0)));
       }
       block.insertInline(loopBody);
       block.removeContinuation(this);
@@ -1394,8 +1397,8 @@ public class ICContinuations {
 
     @Override
     public List<Var> constructDefinedVars() {
-      if (countVar != null) {
-        return Arrays.asList(loopVar, countVar);
+      if (loopCounterVar != null) {
+        return Arrays.asList(loopVar, loopCounterVar);
       } else {
         return Arrays.asList(loopVar);
       }
@@ -1408,7 +1411,7 @@ public class ICContinuations {
         return false;
       } else if (this.desiredUnroll > 1) {
         // Unroll explicitly marked loops
-        if (this.countVar != null) {
+        if (this.loopCounterVar != null) {
           logger.warn("Can't unroll range loop with counter variable yet," +
                       " ignoring unroll annotation");
           return false;
@@ -1549,7 +1552,7 @@ public class ICContinuations {
           && this.end.equals(o.end)
           && this.desiredUnroll == o.desiredUnroll
           && this.splitDegree == o.splitDegree
-          && (this.countVar == null) == (o.countVar == null);
+          && (this.loopCounterVar == null) == (o.loopCounterVar == null);
     }
     
     /**
@@ -1559,8 +1562,8 @@ public class ICContinuations {
       Map<Var, Arg> renames = new HashMap<Var, Arg>();
       // Update loop var in other loop
       renames.put(o.loopVar, Arg.createVar(this.loopVar));
-      if (countVar != null)
-        renames.put(o.countVar, Arg.createVar(this.countVar));
+      if (loopCounterVar != null)
+        renames.put(o.loopCounterVar, Arg.createVar(this.loopCounterVar));
       o.replaceVars(renames, false, true);
      
       this.fuseIntoAbstract(o, insertAtTop);
