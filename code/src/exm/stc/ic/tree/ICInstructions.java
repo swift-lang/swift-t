@@ -293,6 +293,13 @@ public class ICInstructions {
     }
 
     /**
+     * @return list of updateables initialized by this instruction
+     */
+    public List<Var> getInitializedUpdateables() {
+      return Var.NONE;
+    }
+
+    /**
      * @return list of output variables that are actually modified
      *      typically this is all outputs, but in some special cases
      *      this is not true.  This is important to know for dead
@@ -1702,6 +1709,16 @@ public class ICInstructions {
         case GET_FILENAME:
         case GET_OUTPUT_FILENAME:
         case STRUCT_LOOKUP:
+          return Collections.singletonList(getOutput(0));
+        default:
+          return Var.NONE;
+      }
+    }
+    
+    @Override
+    public List<Var> getInitializedUpdateables() {
+      switch (op) {
+        case INIT_UPDATEABLE_FLOAT:
           return Collections.singletonList(getOutput(0));
         default:
           return Var.NONE;

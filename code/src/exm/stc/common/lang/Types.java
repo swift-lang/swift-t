@@ -1298,7 +1298,7 @@ public class Types {
   public static boolean isRefTo(Type refType, Type valType) {
     return isRef(refType) && refType.memberType().equals(valType);
   }
-
+  
   public static boolean isUpdateableEquiv(Type up, Type future) {
     return isScalarFuture(future) && isScalarUpdateable(up) && 
                       future.primType() == up.primType();

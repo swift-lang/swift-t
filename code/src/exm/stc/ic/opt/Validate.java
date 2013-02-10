@@ -16,9 +16,9 @@
 package exm.stc.ic.opt;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +28,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
@@ -304,7 +305,8 @@ public class Validate implements OptimizerPass {
   
   private boolean varMustBeInitialized(Var v) {
     return v.storage() == VarStorage.ALIAS ||
-           v.storage() == VarStorage.LOCAL; 
+           v.storage() == VarStorage.LOCAL ||
+           Types.isScalarUpdateable(v.type()); 
   }
   
   private void checkAliasVarUsageRec(Logger logger, Program program,
@@ -347,20 +349,25 @@ public class Validate implements OptimizerPass {
     }
     List<Var> regularOutputs = inst.getOutputs();
     List<Var> initializedAliases = inst.getInitializedAliases();
-    if (initializedAliases.size() > 0) {
+    List<Var> initializedUpdateables = inst.getInitializedUpdateables();
+    
+    if (initializedAliases.size() > 0 || initializedUpdateables.size() > 0) {
       regularOutputs = new ArrayList<Var>(regularOutputs);
-      for (Var init: initializedAliases) {
-        assert(init.storage() == VarStorage.ALIAS) : inst + " " + init;
-        ICUtil.remove(regularOutputs, init);
-        if (initVars.contains(init)) {
-          throw new STCRuntimeError("double initialized variable " + init);
+      for (List<Var> initList: Arrays.asList(initializedAliases,
+                                             initializedUpdateables)) {
+        for (Var init: initList) {
+          assert(init.storage() == VarStorage.ALIAS ||
+                 Types.isScalarUpdateable(init.type())) : inst + " " + init;
+          ICUtil.remove(regularOutputs, init);
+          if (initVars.contains(init)) {
+            throw new STCRuntimeError("double initialized variable " + init);
+          }
+          initVars.add(init);
         }
-        initVars.add(init);
       }
     }
-    Iterator<Var> regOutIt = regularOutputs.iterator();
-    while (regOutIt.hasNext()) {
-      Var out = regOutIt.next();
+    
+    for (Var out: regularOutputs) {
       if (out.storage() == VarStorage.LOCAL) {
         if (initVars.contains(out)) {
           throw new STCRuntimeError("double initialized variable " + out);

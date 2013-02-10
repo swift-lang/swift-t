@@ -12,6 +12,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.MultiMap;
@@ -270,18 +271,11 @@ public class ReorderInstructions extends FunctionOptimizerPass {
       return true;
     }
     
-    // Check for alias initialization for outputs (inputs covered
-    // by other logic
-    if (!inst2.getInitializedAliases().isEmpty()) {
-      List<Var> initAliases = inst2.getInitializedAliases();
-      for (Var input: inst1.getOutputs()) {
-        if (input.storage() == VarStorage.ALIAS &&
-            initAliases.contains(input)) {
-          if (logger.isTraceEnabled())
-            logger.trace(inst2 + " writes " + inst1);
-          return true;
-        }
-      }
+    // Check for initialization of outputs (inputs covered by other logic)
+    if (initializesOutputs(inst1, inst2)) {
+      if (logger.isTraceEnabled())
+        logger.trace(inst2 + " writes " + inst1);
+      return true;
     }
                   
     
@@ -290,6 +284,31 @@ public class ReorderInstructions extends FunctionOptimizerPass {
         if (logger.isTraceEnabled())
           logger.trace(inst2 + " writes " + inst1);
         return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Check if inst2 initialized outputs of inst2
+   * @param logger
+   * @param inst1
+   * @param inst2
+   * @return
+   */
+  private boolean initializesOutputs(Instruction inst1, Instruction inst2) {
+    List<Var> initAliases = inst2.getInitializedAliases();
+    List<Var> initUpdateables = inst2.getInitializedUpdateables();
+    if (!initAliases.isEmpty() || !initUpdateables.isEmpty()) {
+      for (Var output: inst1.getOutputs()) {
+        if (output.storage() == VarStorage.ALIAS &&
+            initAliases.contains(output)) {
+          return true;
+        }
+        if (Types.isScalarUpdateable(output.type()) && 
+            initUpdateables.contains(output)) {
+          return true;
+        }
       }
     }
     return false;
