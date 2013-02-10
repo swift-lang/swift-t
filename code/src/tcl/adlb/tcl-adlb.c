@@ -1115,20 +1115,29 @@ static inline int
 ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
                         int objc, Tcl_Obj *const objv[], bool decr)
 {
-  TCL_ARGS(2);
-
-  /* Only decrement if refcounting enabled */
-  decr = read_refcount_enabled && decr;
+  if (decr) {
+    TCL_ARGS(3);
+  } else {
+    TCL_ARGS(2);
+  }
 
   int rc;
   long id;
   rc = Tcl_GetLongFromObj(interp, objv[1], &id);
   TCL_CHECK_MSG(rc, "requires id!");
 
+  int decr_amount = 0;
+  /* Only decrement if refcounting enabled */
+  if  (read_refcount_enabled && decr) {
+    decr_amount = 0;
+    rc = Tcl_GetLongFromObj(interp, objv[2], &id);
+    TCL_CHECK_MSG(rc, "requires id!");
+  }
+
   // Retrieve the blob data
   adlb_data_type type;
   int length;
-  rc = ADLB_Retrieve(id, &type, decr, xfer, &length);
+  rc = ADLB_Retrieve(id, &type, decr_amount, xfer, &length);
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%li> failed!", id);
   TCL_CONDITION(type == ADLB_DATA_TYPE_BLOB,
                 "type mismatch: expected: %i actual: %i",
