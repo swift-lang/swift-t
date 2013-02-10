@@ -43,4 +43,9 @@ public class Pair<T1, T2> {
   public int hashCode() {
     return (17 * val1.hashCode()) ^ val2.hashCode();
   }
+  
+  @Override
+  public String toString() {
+    return "(" + val1.toString() + ", " + val2.toString() + ")";
+  }
 }

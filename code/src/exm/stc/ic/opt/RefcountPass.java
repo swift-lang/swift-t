@@ -180,11 +180,7 @@ public class RefcountPass implements OptimizerPass {
 
     updateDecrementCounts(block, fn, readIncrements, writeIncrements);
 
-    /*
-     * System.err.println(block.getType() + " " + fn.getName() + " read: " +
-     * readIncrements + " write: " + writeIncrements);
-     */
-
+    
     // Second put them back into IC
     updateBlockRefcounting(logger, fn, block, readIncrements, writeIncrements,
         parentAssignedAliasVars);
@@ -519,10 +515,10 @@ public class RefcountPass implements OptimizerPass {
         if (amount.isIntVal() && definedOutsideCont(loop, loopBody, var)) {
           // Pull up constant increments
           if (inst.op == Opcode.INCR_REF) {
-            readIncrs.increment(var);
+            readIncrs.add(var, amount.getIntLit());
           } else {
             assert (inst.op == Opcode.INCR_WRITERS);
-            writeIncrs.increment(var);
+            writeIncrs.add(var, amount.getIntLit());
           }
           it.remove();
         }
