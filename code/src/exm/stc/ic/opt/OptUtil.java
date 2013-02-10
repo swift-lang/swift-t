@@ -32,6 +32,7 @@ import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.BlockType;
 
 public class OptUtil {
 
@@ -68,13 +69,30 @@ public class OptUtil {
    * Do the manipulation necessary to allow an old instruction
    * output variable to be replaced with a new one. Assume that
    * newOut is a value type of oldOut
+   * @param targetBlock 
    * @param instBuffer append any fixup instructions here
    * @param newOut
    * @param oldOut
    */
   public static void replaceInstructionOutputVar(Block block,
-          List<Instruction> instBuffer, Var newOut, Var oldOut) {
-    block.declareVariable(newOut);
+          Block targetBlock, List<Instruction> instBuffer, Var newOut, Var oldOut) {
+            replaceInstOutput(block, targetBlock, instBuffer, newOut, oldOut);
+          }
+
+  /**
+   * Do the manipulation necessary to allow an old instruction
+   * output variable to be replaced with a new one. Assume that
+   * newOut is a value type of oldOut
+   * @param srcBlock source block for instruction 
+   * @param targetBlock target block for instruction
+   * @param instBuffer append any fixup instructions here
+   * @param newOut
+   * @param oldOut
+   */
+  public static void replaceInstOutput(Block srcBlock,
+          Block targetBlock, List<Instruction> instBuffer, Var newOut, Var oldOut) {
+    targetBlock.declareVariable(newOut); // must be declared in new scope
+    
     if (Types.isRefTo(oldOut.type(), newOut.type())) {
       Var refVar;
       if (oldOut.storage() == VarStorage.ALIAS) {
@@ -86,7 +104,8 @@ public class OptUtil {
             oldOut.defType(), oldOut.mapping());
         
         // Replace variable in block and in buffered instructions
-        block.replaceVarDeclaration(oldOut, refVar);
+        replaceVarDeclaration(srcBlock, oldOut, refVar);
+        
         Map<Var, Arg> renames = Collections.singletonMap(
                                 oldOut, Arg.createVar(refVar));
         for (Instruction inst: instBuffer) {
@@ -103,6 +122,33 @@ public class OptUtil {
     }
   }
   
+  /**
+   * Replace variable declaration in block or one of parents
+   * @param block
+   * @param oldOut
+   * @param refVar
+   */
+  private static void replaceVarDeclaration(Block block, Var oldVar,
+      Var newVar) {
+    assert(oldVar.type().equals(newVar.type()));
+    assert(oldVar.name().equals(newVar.name()));
+    Block curr = block;
+    while (true) {
+      if (curr.replaceVarDeclaration(oldVar, newVar)) {
+        // Success
+        return;
+      }
+      if (curr.getType() == BlockType.MAIN_BLOCK) {
+        throw new STCRuntimeError("Could not find definition of " + oldVar);
+      } else {
+        Continuation cont = block.getParentCont();
+        assert(!cont.constructDefinedVars().contains(oldVar)) :
+            "can't replace construct defined vars";
+        curr = cont.parent();
+      }
+    }
+  }
+
   public static List<Var> declareLocalOpOutputVars(Block block,
           List<Var> localOutputs) {
     if (localOutputs == null) {
@@ -139,7 +185,8 @@ public class OptUtil {
       Var newOut = change.newOut;
       Var oldOut = change.oldOut;
       
-      OptUtil.replaceInstructionOutputVar(srcBlock, instBuffer, newOut, oldOut);
+      replaceInstOutput(srcBlock, targetBlock, instBuffer,
+                                  newOut, oldOut);
     }
 
     // Now copy back values into future
