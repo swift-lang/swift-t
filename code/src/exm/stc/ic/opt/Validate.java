@@ -327,8 +327,10 @@ public class Validate implements OptimizerPass {
       for (Var v: c.requiredVars()) {
         checkInitialized(c.getType(), initVars, v);
       }
-      for (PassedVar pv: c.getPassedVars()) {
-        checkInitialized(c.getType(), initVars, pv.var);
+      if (c.isAsync()) {
+        for (PassedVar pv: c.getPassedVars()) {
+          checkInitialized(c.getType(), initVars, pv.var);
+        }
       }
       
       HierarchicalSet<Var> contInit = initVars.makeChild();
