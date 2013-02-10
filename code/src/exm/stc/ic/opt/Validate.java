@@ -28,6 +28,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
@@ -326,6 +327,10 @@ public class Validate implements OptimizerPass {
       for (Var v: c.requiredVars()) {
         checkInitialized(c.getType(), initVars, v);
       }
+      for (PassedVar pv: c.getPassedVars()) {
+        checkInitialized(c.getType(), initVars, pv.var);
+      }
+      
       HierarchicalSet<Var> contInit = initVars.makeChild();
       for (Var v: c.constructDefinedVars()) {
         if (varMustBeInitialized(v)) {
