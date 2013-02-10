@@ -234,9 +234,9 @@ class Turbine
   }
 
   public static TclTree allocateUpdateable(String tclName, String typePrefix,
-      Expression initReaders, Expression initWriters) {
+      Expression initReaders) {
     return new Command(ALLOCATE_CUSTOM, new Token(tclName),
-            new Token(typePrefix), initReaders, initWriters);
+            new Token(typePrefix), initReaders);
   }
   
 

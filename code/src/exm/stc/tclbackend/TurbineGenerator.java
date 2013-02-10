@@ -321,8 +321,9 @@ public class TurbineGenerator implements CompilerBackend
   private void allocateUpdateable(Var var, Arg initReaders, Arg initWriters)
         throws UndefinedTypeException {
     String tprefix = typeToString(var.type().primType());
+    // TODO: writers counting not yet supported
     pointStack.peek().add(Turbine.allocateUpdateable(prefixVar(var), tprefix,
-                    argToExpr(initReaders), argToExpr(initWriters)));
+                    argToExpr(initReaders)));
   }
 
   private void allocateFuture(Var var, Arg initReaders)
