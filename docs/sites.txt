@@ -68,6 +68,70 @@ Each of the systems below follows this basic outline.
 
 == x86 clusters
 
+=== Generic clusters
+
+This is the simplest method to run Turbine.
+
+==== Build procedure
+
+The +exm-setup.zsh+ script should just work.
+
+To run, simply build a MPI hosts file and pass that to Turbine, which
+will pass it to +mpiexec+.
+
+----
+export TURBINE_LAUNCH_OPTS='-f hosts.txt'
+turbine -l -n 3 program.tcl
+----
+
+=== MCS compute servers
+
+Compute servers at MCS Division, ANL.
+Operates as a generic cluster (see above).
+
+----
+echo crush.mcs.anl.gov >  hosts.txt
+echo crank.mcs.anl.gov >> hosts.txt
+export TURBINE_LAUNCH_OPTS='-f hosts.txt'
+turbine -l -n 3 program.tcl
+----
+
+=== Breadboard
+
+Cf. link:http://wiki.mcs.anl.gov/radix/index.php/Breadboard[Breadboard Wiki]
+
+Breadboard is a cloud-ish cluster for software development in
+MCS. This is a fragile resource used by many MCS developers. Do not
+overuse.
+
+Operates as a generic cluster (see above).  No scheduler.  Once you
+have the nodes, you can use them until you release them or time
+expires (12 hours by default).
+
+. Allocate nodes with +heckle+.  See Breadboard wiki
+. Wait for nodes to boot
+. Use +heckle allocate -w+ for better interaction
+. Create MPICH hosts file:
++
+----
+heckle stat | grep $USER | cut -f 1 -d ' ' > hosts.txt
+----
+. Run:
++
+----
+export TURBINE_LAUNCH_OPTS='-f hosts.txt'
+turbine -l -n 4 program.tcl
+----
++
+. Run as many jobs as desired on the allocation
+. When done, release allocation
+----
+for h in $( cat hosts.txt )
+do
+  heckle free $h
+done
+----
+
 === Midway
 
 Midway is a mid-sized SLURM cluster at the University of Chicago
