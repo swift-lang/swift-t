@@ -29,7 +29,9 @@
 #define MEMORY_H
 
 // Must be first include:
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE // for strnlen()
+#endif
 #include <string.h>
 #include <stdbool.h>
 
