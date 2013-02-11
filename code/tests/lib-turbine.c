@@ -9,8 +9,6 @@
 int
 main()
 {
-  printf("HI\n");
-
   int mpi_argc = 0;
   char** mpi_argv = NULL;
 
@@ -27,7 +25,7 @@ main()
   int rank;
   MPI_Comm_rank(*adlb_comm, &rank);
 
-  // Store communicator in Tcl for turbine::init to find
+  // Store communicator pointer in Tcl variable for turbine::init
   Tcl_Obj* TURBINE_ADLB_COMM =
       Tcl_NewStringObj("TURBINE_ADLB_COMM", -1);
   Tcl_Obj* adlb_comm_ptr = Tcl_NewLongObj((long) adlb_comm);
@@ -42,16 +40,14 @@ main()
   Tcl_ObjSetVar2(interp, argv, NULL, empty, 0);
 
   // Slurp the user script
-  char* script = slurp("tests/noop.tcl");
-  if (rank == 0)
-    printf("script: %s\n", script);
+  char* script = slurp("tests/strings.tcl");
+  //  if (rank == 0)
+  //    printf("script: %s\n", script);
+
+  // Run the user script
   int rc = Tcl_Eval(interp, script);
 
-  char* v = getenv("TCLLIBPATH");
-  printf("TCLLIBPATH: %s\n", v);
-
-  // int rc = Tcl_Eval(interp, "puts EVAL");
-  // int rc = Tcl_Eval(interp, "error ERROR");
+  // Check for errors
   if (rc != TCL_OK)
   {
     Tcl_Obj* error_dict = Tcl_GetReturnOptions(interp, rc);
@@ -62,10 +58,10 @@ main()
     printf("Tcl error: %s\n", msg_string);
   }
 
+  // Clean up
   Tcl_DeleteInterp(interp);
   free(script);
   free(adlb_comm);
-
   MPI_Finalize();
 
   return 0;
