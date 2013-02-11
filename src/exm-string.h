@@ -26,6 +26,9 @@
 
 #include <stdbool.h>
 
+// We need this for configure-time symbols (e.g. SUBST_HAVE_STRNLEN)
+#include <c-utils.h>
+
 /**
    Copy the string
    @param dest The destination memory
@@ -40,7 +43,7 @@ char* string_dup_word(char* src);
 
 void chomp(char* s);
 
-#if SUBST_HAVE_STRNLEN
+#if ! SUBST_HAVE_STRNLEN
 
 /**
    Provide strnlen on systems that do not have it (e.g., Mac)
