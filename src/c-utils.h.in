@@ -31,6 +31,11 @@
 
 #include <version.h>
 
+// Stringification helpers:
+// Cf. http://gcc.gnu.org/onlinedocs/cpp/Stringification.html
+#define xstr(s) str(s)
+#define str(s) #s
+
 #define SUBST_HAVE_STRNLEN @SUBST_HAVE_STRNLEN@
 #define C_UTILS_VERSION @C_UTILS_VERSION@
 

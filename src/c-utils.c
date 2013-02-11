@@ -16,11 +16,6 @@
 
 #include "src/c-utils.h"
 
-// Stringification helpers:
-// Cf. http://gcc.gnu.org/onlinedocs/cpp/Stringification.html
-#define xstr(s) str(s)
-#define str(s) #s
-
 void
 c_utils_version(version* output)
 {
