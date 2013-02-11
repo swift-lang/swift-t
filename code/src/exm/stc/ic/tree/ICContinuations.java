@@ -262,10 +262,13 @@ public class ICContinuations {
      * @param closedVars variables which are closed
      * @param recClosedVars variables which are recursively closed (may
      *    overlap with closed)
+     * @param keepExplicitDependencies if true, don't remove variables
+     *        that are explicitly waited on
      * @return null if it cannot be inlined, a block that is equivalent to
      *          the continuation otherwise
      */
-    public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars) {
+    public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars,
+        boolean keepExplicitDependencies) {
       // Default: do nothing
       return null;
     }
@@ -718,7 +721,8 @@ public class ICContinuations {
     }
 
     @Override
-    public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars) {
+    public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars,
+        boolean keepExplicitDependencies) {
       if (closedVars.contains(arrayVar) ||
           recClosedVars.contains(arrayVar)) {
         this.arrayClosed = true;
@@ -2012,9 +2016,8 @@ public class ICContinuations {
 
     @Override
     public Block branchPredict(Map<Var, Arg> knownConstants) {
-      // We can't really do branch prediction for a wait statement, but
-      // it is a useful mechanism to piggy-back on to remove the wait
-      return tryInline(Collections.<Var>emptySet(), knownConstants.keySet());
+      // Do nothing
+      return null;
     }
 
     @Override
@@ -2023,7 +2026,11 @@ public class ICContinuations {
     }
 
     @Override
-    public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars) {
+    public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars,
+        boolean keepExplicitDependencies) {
+      if (keepExplicitDependencies && mode == WaitMode.EXPLICIT)
+        return null;
+      
       boolean varsLeft = false;
       // iterate over wait vars, remove those in list
       ListIterator<Var> it = waitVars.listIterator();

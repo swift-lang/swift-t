@@ -165,10 +165,14 @@ import exm.stc.ic.tree.ICTree.Program;
  *
  */
 public class WaitCoalescer implements OptimizerPass {
+  // If true, merge continuations
   private boolean doMerges;
+  // If true, retain explicit waits even if removing them is valid
+  private boolean retainExplicit;
   
-  public WaitCoalescer(boolean doMerges) {
+  public WaitCoalescer(boolean doMerges, boolean retainExplicit) {
     this.doMerges = doMerges;
+    this.retainExplicit = retainExplicit;
   }
   
   @Override
@@ -432,6 +436,10 @@ public class WaitCoalescer implements OptimizerPass {
     if (innerContext != waitContext)
       return false;
     
+    if (retainExplicit && innerWait.getMode() == WaitMode.EXPLICIT &&
+          wait.getMode() != WaitMode.EXPLICIT)
+      return false;
+    
     // Check that wait variables not defined in this block
     for (Var waitVar: innerWait.getWaitVars()) {
       if (block.getVariables().contains(waitVar)) {
@@ -499,9 +507,9 @@ public class WaitCoalescer implements OptimizerPass {
         // Exception: don't eliminate task dispatch waits
         for (WaitStatement wait: waits) {
           if (allRecursive) {
-            wait.tryInline(Collections.<Var>emptySet(), intersection);
+            wait.tryInline(Collections.<Var>emptySet(), intersection, false);
           } else {
-            wait.tryInline(intersection, Collections.<Var>emptySet());
+            wait.tryInline(intersection, Collections.<Var>emptySet(), false);
           }
           if (wait.getWaitVars().isEmpty() &&
               wait.getMode() != WaitMode.TASK_DISPATCH) {

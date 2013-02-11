@@ -81,6 +81,12 @@ import exm.stc.ic.tree.ICTree.Program;
  */
 public class ForwardDataflow implements OptimizerPass {
   
+  private boolean eliminateExplicitWaits;
+
+  public ForwardDataflow(boolean eliminateExplicitWaits) {
+    this.eliminateExplicitWaits = eliminateExplicitWaits;
+  }
+  
   @Override
   public String getPassName() {
     return "Forward dataflow";
@@ -544,7 +550,7 @@ public class ForwardDataflow implements OptimizerPass {
    * @throws InvalidOptionException
    * @throws InvalidWriteException
    */
-  private static boolean forwardDataflow(Logger logger, Program program,
+  private boolean forwardDataflow(Logger logger, Program program,
       Function f, ExecContext execCx, Block block, State cv,
       HierarchicalMap<Var, Arg> replaceInputs,
       HierarchicalMap<Var, Arg> replaceAll) throws InvalidOptionException,
@@ -606,7 +612,8 @@ public class ForwardDataflow implements OptimizerPass {
       c.replaceVars(replaceInputs, true, false);
       c.replaceVars(replaceAll, false, false);
       
-      Block toInline = c.tryInline(cv.closed, cv.recursivelyClosed);
+      Block toInline = c.tryInline(cv.closed, cv.recursivelyClosed,
+                                   eliminateExplicitWaits);
       if (toInline != null) {
         anotherPassNeeded = true;
         c.inlineInto(block, toInline);

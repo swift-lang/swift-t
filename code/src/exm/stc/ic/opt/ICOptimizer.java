@@ -104,6 +104,7 @@ public class ICOptimizer {
     
     // FunctionInline is stateful
     FunctionInline inliner = new FunctionInline();
+    boolean canReorder = true;
     
     for (long iteration = 0; iteration < nIterations; iteration++) {
       OptimizerPipeline pipe = new OptimizerPipeline(icOutput);
@@ -123,24 +124,30 @@ public class ICOptimizer {
         pipe.addPass(Validate.standardValidator());
       }
       
+      boolean lastHalf = iteration > nIterations * 2;
+      
       // Try to hoist variables out of loops, etc
       // Do before forward dataflow since it may open up new opportunites
       // switch to aggressive hoisting later on when we have probably done all
       // the other optimizations possible
-      boolean aggressive = iteration > (nIterations * 2 / 3);
-      pipe.addPass(new HoistLoops(aggressive));
+      if (canReorder) {
+        pipe.addPass(new HoistLoops(lastHalf));
+      }
       
       // Try to reorder instructions for benefit of forward dataflow
       // Don't do every iteration, instructions are first 
       // in original order, then in a different but valid order
-      boolean lastThird = iteration > nIterations * 2 / 3;
-      if (iteration % 2 == 1 || lastThird) {
-        pipe.addPass(new ReorderInstructions(lastThird));
+      if (canReorder && (iteration % 2 == 1)) {
+        pipe.addPass(new ReorderInstructions(lastHalf));
       }
       
+      if (iteration == nIterations - 2) {
+        // Towards end, inline explicit waits and disallow reordering
+        canReorder = false;
+      }
       // Do forward dataflow after const folding so it won't create any
       // new constants, etc to be folded
-      pipe.addPass(new ForwardDataflow());
+      pipe.addPass(new ForwardDataflow(!canReorder));
       
       // Do this after forward dataflow to improve odds of fusing things
       // one common subexpression elimination has happened
@@ -156,7 +163,7 @@ public class ICOptimizer {
       
       // Do merges near end since it can be detrimental to other optimizations
       boolean doWaitMerges = iteration == nIterations - (nIterations / 4) - 2;
-      pipe.addPass(new WaitCoalescer(doWaitMerges));
+      pipe.addPass(new WaitCoalescer(doWaitMerges, canReorder));
       
       if (debug)
         pipe.addPass(Validate.standardValidator());
