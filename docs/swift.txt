@@ -40,6 +40,9 @@ Ensure that MPI is compiled as a shared library
 (for MPICH use +configure --enable-shared+).
 Other MPI implementations are <<Build_settings, supported>> as well.
 +
+Swift/T attempts to use MPI 3.0 functionality by default.
+To disable this, configure ADLB and Turbine with +--enable-mpi-2+.
++
 2. Install or locate Tcl 8.5
 +
 Cf. http://www.tcl.tk[Tcl web site]
@@ -1076,6 +1079,35 @@ tries to configure and compile Swift/T.
 Swift/T is built with standard Ant (Java) and Autotools/Makefile
 (C,Tcl) techniques.  The primary control is thus the arguments to
 +ant+ or +configure+.
+
+==== Manual configuration
+
+You do not need to use +exm-setup.zsh+ to install Swift/T.  To perform
+the installation using +configure+/+make+, simply untar the
+distribution package and do:
+
+----
+cd c-utils
+./configure ...
+make install
+
+cd ../lb
+./configure ...
+make install
+
+cd ../turbine
+./configure ...
+make install
+
+cd ../stc
+ant -Ddist.dir=... -Dturbine.home=...
+----
+
+* You may use +./configure --help+ and the
+  link:turbine-sites.html[Sites Guide] for further options.
+* You can use +exm-setup.zsh+ as a guide to this process, as it is a
+  simple linear shell script that automates the +configure+/+make+
+  process.
 
 ==== Non-standard MPI locations
 
