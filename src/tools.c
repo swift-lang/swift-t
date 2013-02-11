@@ -264,7 +264,7 @@ slurp(const char* filename)
   valgrind_assert(rc == 0);
 
   off_t length = s.st_size;
-  char* result = malloc(length);
+  char* result = malloc(length+1);
   if (result == NULL)
   {
     printf("slurp(): could not allocate memory for: %s\n", filename);
@@ -280,6 +280,7 @@ slurp(const char* filename)
     free(result);
     return NULL;
   }
+  result[length] = '\0';
 
   return result;
 }
