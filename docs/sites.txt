@@ -66,6 +66,15 @@ Running Turbine on a MPI-enabled system works as follows:
 
 Each of the systems below follows this basic outline.
 
+Simple system use the +turbine+ program.  This is a small shell
+script wrapper that configures Turbine and essentially runs:
+----
+mpiexec tclsh program.tcl
+----
+
+On more complex, scheduled systems, users do not invoke +mpiexec+
+directly.  Thus, sample scripts are provided below.
+
 == x86 clusters
 
 === Generic clusters
@@ -124,7 +133,8 @@ turbine -l -n 4 program.tcl
 ----
 +
 . Run as many jobs as desired on the allocation
-. When done, release allocation
+. When done, release the allocation:
++
 ----
 for h in $( cat hosts.txt )
 do
