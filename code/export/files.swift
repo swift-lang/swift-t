@@ -24,7 +24,7 @@
 "turbine" "0.0.2" "glob";
 
 @pure
-@dispatch=LEAF
+@dispatch=WORKER
 (string t) readFile(file f)
     "turbine" "0.0.2" "readFile"
     [ "set <<t>> [ turbine::read_file_local <<f>> ]" ];
