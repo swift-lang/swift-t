@@ -210,7 +210,7 @@ public class DeadCodeEliminator {
 
     @Override
     public void visit(Continuation cont) {
-      for (Var v: cont.requiredVars()) {
+      for (Var v: cont.requiredVars(true)) {
         needed.add(v);
       }
     }

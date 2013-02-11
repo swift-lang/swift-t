@@ -463,7 +463,7 @@ public class RefcountPass implements OptimizerPass {
       Set<Var> candidates) {
     // Continuation will need to read, can't decrement early
     if (type == RefCountType.READERS) {
-      for (Var v : cont.requiredVars()) {
+      for (Var v : cont.requiredVars(false)) {
         candidates.remove(v);
       }
     }

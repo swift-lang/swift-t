@@ -140,10 +140,12 @@ public class ICContinuations {
     }
 
     /**
+     * @param forDeadCodeElim if true, only return those variables
+     * that this construct would prevent from eliminating
      * @return all variables whose values are needed to evaluate this construct
      * (e.g. branch condition).  empty list if none
      */
-    public abstract Collection<Var> requiredVars();
+    public abstract Collection<Var> requiredVars(boolean forDeadCodeElim);
 
     /**
      * See if we can predict branch and flatten this to a block
@@ -407,7 +409,7 @@ public class ICContinuations {
     }
 
     @Override
-    public Collection<Var> requiredVars() {
+    public Collection<Var> requiredVars(boolean de) {
       return Var.NONE;
     }
 
@@ -682,8 +684,9 @@ public class ICContinuations {
     }
 
     @Override
-    public Collection<Var> requiredVars() {
-      Collection<Var> res = new ArrayList<Var>(super.requiredVars());
+    public Collection<Var> requiredVars(boolean forDeadCodeElim) {
+      Collection<Var> res = new ArrayList<Var>(
+          super.requiredVars(forDeadCodeElim));
       res.add(arrayVar);
       return res;
     }
@@ -846,7 +849,7 @@ public class ICContinuations {
     }
 
     @Override
-    public Collection<Var> requiredVars() {
+    public Collection<Var> requiredVars(boolean forDeadCodeElim) {
       if (condition.isVar()) {
         return Arrays.asList(condition.getVar());
       } else {
@@ -1095,8 +1098,9 @@ public class ICContinuations {
     }
 
     @Override
-    public Collection<Var> requiredVars() {
-      Collection<Var> res = new ArrayList<Var>(super.requiredVars());
+    public Collection<Var> requiredVars(boolean forDeadCodeElim) {
+      Collection<Var> res = new ArrayList<Var>(
+          super.requiredVars(forDeadCodeElim));
       res.addAll(initVals);
       return res;
     }
@@ -1234,7 +1238,7 @@ public class ICContinuations {
     }
 
     @Override
-    public Collection<Var> requiredVars() {
+    public Collection<Var> requiredVars(boolean forDeadCodeElim) {
       return Var.NONE;
     }
 
@@ -1384,8 +1388,9 @@ public class ICContinuations {
     }
 
     @Override
-    public Collection<Var> requiredVars() {
-      Collection<Var> res = new ArrayList<Var>(super.requiredVars());
+    public Collection<Var> requiredVars(boolean forDeadCodeElim) {
+      Collection<Var> res = new ArrayList<Var>(
+          super.requiredVars(forDeadCodeElim));
       for (Arg o: Arrays.asList(start, end, increment)) {
         if (o.isVar()) {
           res.add(o.getVar());
@@ -1780,7 +1785,7 @@ public class ICContinuations {
     }
 
     @Override
-    public Collection<Var> requiredVars() {
+    public Collection<Var> requiredVars(boolean forDeadCodeElim) {
       if (switchVar.isVar()) {
         return Arrays.asList(switchVar.getVar());
       } else {
@@ -1977,9 +1982,10 @@ public class ICContinuations {
     }
 
     @Override
-    public Collection<Var> requiredVars() {
+    public Collection<Var> requiredVars(boolean forDeadCodeElim) {
       ArrayList<Var> res = new ArrayList<Var>();
-      if (mode == WaitMode.EXPLICIT || mode == WaitMode.TASK_DISPATCH) {
+      if (!forDeadCodeElim || mode == WaitMode.EXPLICIT ||
+          mode == WaitMode.TASK_DISPATCH) {
         for (Var v: waitVars) {
           res.add(v);
         }

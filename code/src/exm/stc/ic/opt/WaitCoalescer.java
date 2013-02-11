@@ -44,6 +44,7 @@ import exm.stc.common.util.MultiMap.ListFactory;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.OptUtil.InstOrCont;
+import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
@@ -240,7 +241,7 @@ public class WaitCoalescer implements OptimizerPass {
       
       if (c.getType() == ContinuationType.WAIT_STATEMENT) {
         WaitStatement wait = (WaitStatement)c;
-        if (tryReduce(currContext, newContext, wait)) {
+        if (tryReduce(logger, fn, currContext, newContext, wait)) {
           toInline.add(wait);
         }
         
@@ -263,13 +264,14 @@ public class WaitCoalescer implements OptimizerPass {
    * @param newContext
    * @param wait
    */
-  private boolean tryReduce(ExecContext currContext,
+  private boolean tryReduce(Logger logger,
+      Function fn, ExecContext currContext,
       ExecContext newContext, WaitStatement wait) {
     if ((currContext == newContext &&
         ProgressOpcodes.isCheap(wait.getBlock())) ||
         (currContext == ExecContext.WORKER && 
          newContext == ExecContext.CONTROL &&
-         ProgressOpcodes.isCheapWorker(wait.getBlock()))) {
+         canSwitchControlToWorker(logger, fn, wait))) {
       if (wait.getWaitVars().isEmpty()) {
         return true;
       } else {
@@ -288,6 +290,43 @@ public class WaitCoalescer implements OptimizerPass {
       }
     }
     return false;
+  }
+
+  /**
+   * Return true if ok to run wait contents in worker context
+   * @param wait
+   * @return
+   */
+  private boolean canSwitchControlToWorker(Logger logger,
+      Function fn, WaitStatement wait) {
+    if (!ProgressOpcodes.isCheapWorker(wait.getBlock())) {
+      return false;
+    }
+    
+    // Hack to allow inner class to modify
+    final boolean safe[] = new boolean[1];
+    safe[0] = true;
+    
+    TreeWalker walker = new TreeWalker() {
+      @Override
+      protected void visit(Continuation cont) {
+        if (!cont.isAsync())
+          return;
+        
+        switch (cont.getType()) {
+          case WAIT_STATEMENT:
+          case LOOP:
+            // Safe
+            break;
+          default:
+            // Don't want to run foreach loops, etc on worker
+            safe[0] = false;
+        }
+      }
+      
+    };
+    TreeWalk.walkSyncChildren(logger, fn, wait, walker);
+    return safe[0];
   }
 
   /**

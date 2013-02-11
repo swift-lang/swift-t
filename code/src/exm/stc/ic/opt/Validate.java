@@ -174,7 +174,7 @@ public class Validate implements OptimizerPass {
     }
     
     for (Continuation c: block.getContinuations()) {
-      for (Var v: c.requiredVars()) {
+      for (Var v: c.requiredVars(false)) {
         checkVarReference(declared, v, c.getType());
       }
     }
@@ -324,7 +324,7 @@ public class Validate implements OptimizerPass {
     }
     
     for (Continuation c: block.getContinuations()) {
-      for (Var v: c.requiredVars()) {
+      for (Var v: c.requiredVars(false)) {
         checkInitialized(c.getType(), initVars, v);
       }
       if (c.isAsync()) {
