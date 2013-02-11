@@ -259,7 +259,7 @@ $(TEST_BINS): %.x: %.o install.txt
 	$(E) $(CC) $(<) \
         $(MAC_FLAT) \
 	-L$(INSTALL_LIB) -l tclturbine \
-	$(LIBS) \
+	$(LIBS) -L $(TCL_LIB_DIR) -l tcl8.5 \
 	$(RPATHS) \
 	-o $(@)
 
