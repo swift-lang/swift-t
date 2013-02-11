@@ -174,7 +174,7 @@ if { $amserver == 0 } {
 
 if { $rank == 0 } { clock_report }
 
-adlb::finalize
+adlb::finalize 1
 # puts OK
 
 puts "tasks_run: $tasks_run"

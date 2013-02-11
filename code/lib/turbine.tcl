@@ -63,7 +63,12 @@ namespace eval turbine {
         enum WORK_TYPE { WORK CONTROL }
         global WORK_TYPE
         set types [ array size WORK_TYPE ]
-        adlb::init $servers $types
+
+        if { [ info exists ::TURBINE_ADLB_COMM ] } {
+            adlb::init $servers $types $::TURBINE_ADLB_COMM
+        } else {
+            adlb::init $servers $types
+        }
         c::init [ adlb::amserver ] [ adlb::rank ] [ adlb::size ]
 
         setup_mode $engines $servers
@@ -200,7 +205,11 @@ namespace eval turbine {
     proc finalize { } {
         log "turbine finalizing"
         turbine::c::finalize
-        adlb::finalize
+        if { [ info exists ::TURBINE_ADLB_COMM ] } {
+            adlb::finalize 0
+        } else {
+            adlb::finalize 1
+        }
     }
 
     # Set engines and servers in the caller's stack frame

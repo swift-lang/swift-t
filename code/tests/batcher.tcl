@@ -77,7 +77,7 @@ if { $amserver == 0 } {
     adlb::server
 }
 
-adlb::finalize
+adlb::finalize 1
 
 # Help Tcl free memory
 proc exit args {}

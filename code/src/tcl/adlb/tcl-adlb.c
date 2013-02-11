@@ -89,6 +89,9 @@ static int mpi_rank = -1;
 /** Communicator for ADLB workers */
 static MPI_Comm worker_comm;
 
+/** If the controlling code passed us a communicator, it is here */
+long adlb_comm_ptr = 0;
+
 static char xfer[ADLB_DATA_MAX];
 
 /**
@@ -106,15 +109,18 @@ static int
 ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[], bool decr);
 /**
-   usage: adlb::init <servers> <types>
+   usage: adlb::init <servers> <types> [<comm>]?
    Simplified use of ADLB_Init type_vect: just give adlb_init
    a number ntypes, and the valid types will be: [0..ntypes-1]
+   If comm is given, run ADLB in that communicator
+   Else, run ADLB in a dup of MPI_COMM_WORLD
  */
 static int
 ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
               int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(3);
+  TCL_CONDITION(objc == 3 || objc == 4,
+                "adlb::init requires 2 or 3 arguments!");
 
   mm_init();
   turbine_debug_init();
@@ -135,15 +141,29 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   table_lp_init(&blob_cache, 16);
 
-  int argc = 0;
-  char** argv = NULL;
-  rc = MPI_Init(&argc, &argv);
-  assert(rc == MPI_SUCCESS);
+  MPI_Comm adlb_comm;
 
-  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+  if (objc == 3)
+  {
+    // Start with MPI_Init() and MPI_COMM_WORLD
+    int argc = 0;
+    char** argv = NULL;
+    rc = MPI_Init(&argc, &argv);
+    assert(rc == MPI_SUCCESS);
+    MPI_Comm_dup(MPI_COMM_WORLD, &adlb_comm);
+  }
+  else if (objc == 4)
+  {
+    rc = Tcl_GetLongFromObj(interp, objv[3], &adlb_comm_ptr);
+    TCL_CHECK(rc);
+    memcpy(&adlb_comm, (void*) adlb_comm_ptr, sizeof(MPI_Comm));
+  }
+  else
+    assert(false);
+
+  MPI_Comm_size(adlb_comm, &mpi_size);
   workers = mpi_size - servers;
-
-  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+  MPI_Comm_rank(adlb_comm, &mpi_rank);
 
   if (mpi_rank == 0)
   {
@@ -161,7 +181,7 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 #endif
 #ifdef USE_XLB
   rc = ADLB_Init(servers, ntypes, type_vect,
-                 &am_server, &worker_comm);
+                 &am_server, adlb_comm, &worker_comm);
 #endif
   if (rc != ADLB_SUCCESS)
     return TCL_ERROR;
@@ -1748,7 +1768,8 @@ ADLB_Abort_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 
 /**
-   usage: adlb::finalize
+   usage: adlb::finalize <b>
+   If b, finalize MPI
  */
 static int
 ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -1757,7 +1778,11 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
   int rc = ADLB_Finalize();
   if (rc != ADLB_SUCCESS)
     printf("WARNING: ADLB_Finalize() failed!\n");
-  MPI_Finalize();
+  TCL_ARGS(2);
+  int b;
+  Tcl_GetBooleanFromObj(interp, objv[1], &b);
+  if (b)
+    MPI_Finalize();
   turbine_debug_finalize();
   return TCL_OK;
 }

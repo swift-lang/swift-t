@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,26 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# Test what happens if we try to get something of the wrong type
+TESTS=$( dirname $0 )
 
-package require turbine 0.0.1
-adlb::init 1 1
+set -x
 
-if [ adlb::amserver ] {
-    adlb::server
-} else {
-    set d1 [ adlb::unique ]
-    adlb::create $d1 $adlb::INTEGER
-    adlb::store  $d1 $adlb::INTEGER 25
-    set d2 [ adlb::unique ]
-    adlb::create $d2 $adlb::INTEGER
-    adlb::store  $d2 $adlb::INTEGER 26
+THIS=$0
+BIN=${THIS%.sh}.x
+OUTPUT=${THIS%.sh}.out
 
-    adlb::retrieve $d1 $adlb::INTEGER
-    adlb::retrieve $d2 $adlb::STRING
-}
+${TESTS}/run-mpi.zsh ${BIN} >& ${OUTPUT}
+[[ ${?} == 0 ]] || exit 1
 
-adlb::finalize 1
-puts OK
-
-proc exit args {}
+exit 0
