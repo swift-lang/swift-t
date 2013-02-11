@@ -26,7 +26,7 @@ public enum TaskMode {
   LOCAL, // Execute asynchronously on any node locally w/o load balancing
   LOCAL_CONTROL, // Execute asynchronously on any control node w/o load bal.
   CONTROL, // Load balance as control task
-  LEAF,// Load balance as leaf task on a worker
+  WORKER,// Load balance as task on a worker
   ;
   
   public static final TaskMode DEFAULT_BUILTIN_MODE = LOCAL;
@@ -41,7 +41,7 @@ public enum TaskMode {
     case SYNC:
     case LOCAL:
     case CONTROL:
-    case LEAF:
+    case WORKER:
       return true;
     case LOCAL_CONTROL:
       return context == ExecContext.CONTROL;

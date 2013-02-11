@@ -1639,7 +1639,13 @@ public class ASTWalker {
         addlocalEquiv(context, function, val);
       } else if (key.equals(Annotations.FN_DISPATCH)) {
         try {
-          TaskMode mode = TaskMode.valueOf(val);
+          TaskMode mode;
+          if (val.equals("LEAF")) {
+            // Renamed from LEAF to worker, keep this for compatibility
+            mode = TaskMode.WORKER;
+          } else { 
+            mode = TaskMode.valueOf(val);
+          }
           Builtins.addTaskMode(function, mode);
         } catch (IllegalArgumentException e) {
           throw new UserException(context, "Unknown dispatch mode " + val + ". "
@@ -1901,7 +1907,7 @@ public class ASTWalker {
     String waitName = context.getFunctionContext().constructName("app-leaf");
     // do deep wait for array args
     backend.startWaitStatement(waitName, waitVars,
-        null, WaitMode.TASK_DISPATCH, true, TaskMode.LEAF);
+        null, WaitMode.TASK_DISPATCH, true, TaskMode.WORKER);
     // On worker, just execute the required command directly
     Pair<List<Arg>, Redirects<Arg>> retrieved = retrieveAppArgs(context,
                                           args, redirFutures, fileNames);

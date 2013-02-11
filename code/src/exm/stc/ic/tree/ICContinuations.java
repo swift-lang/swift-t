@@ -2086,8 +2086,8 @@ public class ICContinuations {
         return outerContext;
       case CONTROL:
         return ExecContext.CONTROL;
-      case LEAF:
-        return ExecContext.LEAF;
+      case WORKER:
+        return ExecContext.WORKER;
       default:
         throw new STCRuntimeError("Unknown wait target: " + target);
       }

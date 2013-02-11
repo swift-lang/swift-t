@@ -42,8 +42,13 @@ public class ProgressOpcodes {
     return cheapOpcodes.contains(op);
   }
   
+  public static boolean isCheapWorkerOpcode(Opcode op) {
+    return cheapWorkerOpcodes.contains(op);
+  }
+  
   public static enum Category {
     CHEAP,
+    CHEAP_WORKER,
     NON_PROGRESS
   }
   
@@ -54,6 +59,10 @@ public class ProgressOpcodes {
    */
   public static boolean isCheap(Block rootBlock) {
     return blockProgress(rootBlock, Category.CHEAP);
+  }
+  
+  public static boolean isCheapWorker(Block rootBlock) {
+    return blockProgress(rootBlock, Category.CHEAP_WORKER);
   }
   
   public static boolean isNonProgress(Block rootBlock) {
@@ -74,6 +83,10 @@ public class ProgressOpcodes {
       for (Instruction i: block.getInstructions()) {
         if (type == Category.CHEAP) {
           if (!isCheapOpcode(i.op)) {
+            return false;
+          }
+        } else if (type == Category.CHEAP_WORKER) {
+          if (!isCheapWorkerOpcode(i.op)) {
             return false;
           }
         } else {
@@ -134,8 +147,16 @@ public class ProgressOpcodes {
    * Opcodes that don't use much time or CPU
    */
   private static HashSet<Opcode> cheapOpcodes = initCheap();
-  private static HashSet<Opcode> initCheap() { 
+  
+  /**
+   * Opcodes that don't use much time or CPU and can run on worker
+   */
+  private static HashSet<Opcode> cheapWorkerOpcodes = initCheapWorker();
+  
+
+  private static HashSet<Opcode> initCheapWorker() { 
     HashSet<Opcode> opcodes = new HashSet<Opcode>();
+    // Avoid opcodes that involve entering data dependencies
     opcodes.add(Opcode.COMMENT);
     opcodes.add(Opcode.DECR_WRITERS);
     opcodes.add(Opcode.DECR_BLOB_REF);
@@ -144,7 +165,6 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.INCR_REF);
     opcodes.add(Opcode.INCR_WRITERS);
     opcodes.add(Opcode.CALL_LOCAL);
-    opcodes.add(Opcode.CALL_LOCAL_CONTROL);
     opcodes.add(Opcode.STORE_BOOL);
     opcodes.add(Opcode.STORE_VOID);
     opcodes.add(Opcode.STORE_INT);
@@ -163,27 +183,34 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.LOAD_STRING);
     opcodes.add(Opcode.LOAD_BLOB);
     opcodes.add(Opcode.LOAD_FILE);
+    opcodes.add(Opcode.ARRAY_CREATE_NESTED_IMM);
+    opcodes.add(Opcode.ARRAY_INSERT_FUTURE);
+    opcodes.add(Opcode.ARRAY_LOOKUP_FUTURE);
+    opcodes.add(Opcode.ARRAY_INSERT_IMM);
+    opcodes.add(Opcode.ARRAY_LOOKUP_IMM);
+    opcodes.add(Opcode.ARRAY_LOOKUP_REF_IMM);
+    opcodes.add(Opcode.ARRAYREF_INSERT_IMM);
+    opcodes.add(Opcode.COPY_REF);
+    opcodes.add(Opcode.LOCAL_OP);
+    return opcodes;
+  }
+  
+  private static HashSet<Opcode> initCheap() { 
+    HashSet<Opcode> opcodes = initCheapWorker();
+
+    opcodes.add(Opcode.CALL_LOCAL_CONTROL);
     opcodes.add(Opcode.GET_FILENAME);
     opcodes.add(Opcode.GET_OUTPUT_FILENAME);
     opcodes.add(Opcode.SET_FILENAME_VAL);
     opcodes.add(Opcode.ARRAY_CREATE_NESTED_FUTURE);
-    opcodes.add(Opcode.ARRAY_CREATE_NESTED_IMM);
-    opcodes.add(Opcode.ARRAY_INSERT_FUTURE);
-    opcodes.add(Opcode.ARRAY_INSERT_IMM);
-    opcodes.add(Opcode.ARRAY_LOOKUP_FUTURE);
-    opcodes.add(Opcode.ARRAY_LOOKUP_IMM);
-    opcodes.add(Opcode.ARRAY_LOOKUP_REF_IMM);
-    opcodes.add(Opcode.ARRAYREF_CREATE_NESTED_FUTURE);
     opcodes.add(Opcode.ARRAYREF_CREATE_NESTED_IMM);
+    opcodes.add(Opcode.ARRAYREF_CREATE_NESTED_FUTURE);
     opcodes.add(Opcode.ARRAYREF_INSERT_FUTURE);
-    opcodes.add(Opcode.ARRAYREF_INSERT_IMM);
     opcodes.add(Opcode.ARRAYREF_LOOKUP_FUTURE);
     opcodes.add(Opcode.ARRAYREF_LOOKUP_IMM);
-    opcodes.add(Opcode.COPY_REF);
     
     // Builtins are cheap
     opcodes.add(Opcode.ASYNC_OP);
-    opcodes.add(Opcode.LOCAL_OP);
     return opcodes;
   }
 }

@@ -224,7 +224,12 @@ public class WaitCoalescer implements OptimizerPass {
 
   private boolean rearrangeWaitsRec(Logger logger,
                   Function fn, Block block, ExecContext currContext) {
+    // List of waits to inline (to avoid modifying continuations while
+    //          iterating over them)
+    List<WaitStatement> toInline = new ArrayList<WaitStatement>();
+    
     boolean changed = false;
+    
     for (Continuation c: block.getContinuations()) {
       ExecContext newContext = c.childContext(currContext);
       for (Block childB: c.getBlocks()) {
@@ -235,10 +240,54 @@ public class WaitCoalescer implements OptimizerPass {
       
       if (c.getType() == ContinuationType.WAIT_STATEMENT) {
         WaitStatement wait = (WaitStatement)c;
-        squashWaits(logger, fn, wait, newContext);
+        if (tryReduce(currContext, newContext, wait)) {
+          toInline.add(wait);
+        }
+        
+        if (squashWaits(logger, fn, wait, newContext)) {
+          changed = true;
+        }
       }
     }
+    for (WaitStatement w: toInline) {
+      w.inlineInto(block);
+      changed = true;
+    }
     return changed;
+  }
+
+  /**
+   * try to reduce to a simpler form of wait
+   * @param currContext
+   * @param toInline
+   * @param newContext
+   * @param wait
+   */
+  private boolean tryReduce(ExecContext currContext,
+      ExecContext newContext, WaitStatement wait) {
+    if ((currContext == newContext &&
+        ProgressOpcodes.isCheap(wait.getBlock())) ||
+        (currContext == ExecContext.WORKER && 
+         newContext == ExecContext.CONTROL &&
+         ProgressOpcodes.isCheapWorker(wait.getBlock()))) {
+      if (wait.getWaitVars().isEmpty()) {
+        return true;
+      } else {
+        // Still have to wait but maybe can reduce overhead
+        if (wait.getTarget() == TaskMode.CONTROL) {
+          // Don't load-balance
+          if (currContext == ExecContext.CONTROL) {
+            wait.setTarget(TaskMode.LOCAL_CONTROL);
+          } else {
+            wait.setTarget(TaskMode.LOCAL);
+          }
+        }
+        if (wait.getMode() == WaitMode.TASK_DISPATCH) {
+          wait.setMode(WaitMode.DATA_ONLY);
+        }
+      }
+    }
+    return false;
   }
 
   /**
@@ -316,7 +365,7 @@ public class WaitCoalescer implements OptimizerPass {
    * @param fn
    * @param block
    */
-  private void squashWaits(Logger logger, Function fn, WaitStatement wait,
+  private boolean squashWaits(Logger logger, Function fn, WaitStatement wait,
       ExecContext waitContext) {
     Block block = wait.getBlock();
     WaitStatement innerWait = null;
@@ -326,34 +375,34 @@ public class WaitCoalescer implements OptimizerPass {
         if (c.getType() == ContinuationType.WAIT_STATEMENT) {
           if (innerWait != null) {
             // Can't have two waits
-            return;
+            return false;
           } else {
             innerWait = (WaitStatement)c;
           }
         } else {
-          return;
+          return false;
         }
       }
     }
     
     if (innerWait == null)
-      return;
+      return false;
     
     ExecContext innerContext = innerWait.childContext(waitContext);
     // Check that locations are compatible
     if (innerContext != waitContext)
-      return;
+      return false;
     
     // Check that wait variables not defined in this block
     for (Var waitVar: innerWait.getWaitVars()) {
       if (block.getVariables().contains(waitVar)) {
-        return;
+        return false;
       }
     }
     
     if (!ProgressOpcodes.isNonProgress(block)) {
       // Progress might be deferred by squashing
-      return;
+      return false;
     }
     // Pull inner up
     if (logger.isTraceEnabled())
@@ -361,6 +410,7 @@ public class WaitCoalescer implements OptimizerPass {
                  " up into wait(" + wait.getWaitVars() + ")");
     wait.addWaitVars(innerWait.getWaitVars());
     innerWait.inlineInto(block);
+    return true;
   }
 
   private static boolean mergeWaits(Logger logger, Function fn, Block block) {
@@ -586,7 +636,7 @@ public class WaitCoalescer implements OptimizerPass {
       if (w.getMode() == WaitMode.TASK_DISPATCH) {
         if (w.getTarget() == TaskMode.LOCAL_CONTROL ||
             w.getTarget() == TaskMode.LOCAL) {
-          if (curr == ExecContext.LEAF &&
+          if (curr == ExecContext.WORKER &&
                 w.getTarget() == TaskMode.LOCAL_CONTROL) {
             throw new STCRuntimeError("Can't have local control wait in leaf"); 
           }
@@ -595,8 +645,8 @@ public class WaitCoalescer implements OptimizerPass {
         } else if (w.getTarget() == TaskMode.CONTROL) {
           return ExecContext.CONTROL;
         } else {
-          assert(w.getTarget() == TaskMode.LEAF);
-          return ExecContext.LEAF;
+          assert(w.getTarget() == TaskMode.WORKER);
+          return ExecContext.WORKER;
         }
       } else {
         return curr;
@@ -685,14 +735,14 @@ public class WaitCoalescer implements OptimizerPass {
       }
     }
     
-    if (currContext == ExecContext.LEAF) {
+    if (currContext == ExecContext.WORKER) {
       if (cont.getType() != ContinuationType.WAIT_STATEMENT) {
         canRelocate = false;
       } else {
         WaitStatement w = (WaitStatement)cont;
         // Make sure gets dispatched to right place
         if (w.getTarget() == TaskMode.CONTROL ||
-            w.getTarget() == TaskMode.LEAF ||
+            w.getTarget() == TaskMode.WORKER ||
             w.getTarget() == TaskMode.LOCAL) {
           canRelocate = true;
         } else if (w.getTarget() == TaskMode.LOCAL_CONTROL) {
@@ -729,7 +779,7 @@ public class WaitCoalescer implements OptimizerPass {
       }
     }
     
-    if (currContext == ExecContext.LEAF) {
+    if (currContext == ExecContext.WORKER) {
       if (inst.getMode() != TaskMode.SYNC) {
         // Can't push down async tasks to leaf yet
         canRelocate = false;

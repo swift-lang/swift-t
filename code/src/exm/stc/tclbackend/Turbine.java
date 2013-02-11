@@ -399,7 +399,7 @@ class Turbine
       return new Value("turbine::LOCAL");
     case CONTROL:
       return new Value("turbine::CONTROL");
-    case LEAF:
+    case WORKER:
       return new Value("turbine::WORK");
     default:
       throw new STCRuntimeError("Unexpected rule type: " + t);

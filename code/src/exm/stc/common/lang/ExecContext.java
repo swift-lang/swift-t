@@ -21,12 +21,12 @@ import exm.stc.common.exceptions.STCRuntimeError;
  * Where a bit of code will execute
  */
 public enum ExecContext {
-  LEAF, CONTROL,;
+  WORKER, CONTROL,;
 
   public TaskMode toTaskMode() {
     switch (this) {
-    case LEAF:
-      return TaskMode.LEAF;
+    case WORKER:
+      return TaskMode.WORKER;
     case CONTROL:
       return TaskMode.CONTROL;
     default:

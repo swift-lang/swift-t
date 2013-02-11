@@ -1561,8 +1561,8 @@ public class TurbineGenerator implements CompilerBackend
       pointStack.push(constructProc);
       
       ExecContext newExecContext;
-      if (mode == TaskMode.LEAF) {
-        newExecContext = ExecContext.LEAF;
+      if (mode == TaskMode.WORKER) {
+        newExecContext = ExecContext.WORKER;
       } else if (mode == TaskMode.CONTROL) {
         newExecContext = ExecContext.CONTROL;
       } else {

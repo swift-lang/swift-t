@@ -1,12 +1,12 @@
 #include <builtins.swift>
 #include <assert.swift>
 
-@dispatch=LEAF
+@dispatch=WORKER
 (int o) double(int i) "turbine" "0.0.1" [
   "set <<o>> [ expr <<i>> * 2 ]"
 ];
 
-@dispatch=LEAF
+@dispatch=WORKER
 (int o) triple(int i) "turbine" "0.0.1" [
   "set <<o>> [ expr <<i>> * 3 ]"
 ];
