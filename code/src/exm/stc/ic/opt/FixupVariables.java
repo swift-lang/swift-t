@@ -27,6 +27,7 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.Var;
@@ -95,7 +96,8 @@ public class FixupVariables implements OptimizerPass {
       fnargs.add(v);
     }
     Pair<Set<Var>, Set<Var>> res = fixupBlockRec(logger,
-        fn, fn.getMainblock(), fnargs, referencedGlobals, updateLists);
+        fn, fn.getMainblock(), ExecContext.CONTROL, 
+        fnargs, referencedGlobals, updateLists);
 
     Set<Var> read = res.val1;
     Set<Var> written = res.val2;
@@ -136,7 +138,8 @@ public class FixupVariables implements OptimizerPass {
    * @return
    */
   private static Pair<Set<Var>, Set<Var>> fixupBlockRec(Logger logger,
-      Function function, Block block, HierarchicalSet<Var> visible,
+      Function function, Block block, ExecContext execCx, 
+      HierarchicalSet<Var> visible,
       Set<Var> referencedGlobals, boolean updateLists) {
 
     if (updateLists)
@@ -158,7 +161,8 @@ public class FixupVariables implements OptimizerPass {
     findBlockNeeded(block, read, written);
     
     for (Continuation c : block.getContinuations()) {
-      fixupContinuationRec(logger, function, c, visible, referencedGlobals,
+      fixupContinuationRec(logger, function, execCx, c,
+              visible, referencedGlobals,
               blockVars, read, written, updateLists);
     }
 
@@ -166,12 +170,15 @@ public class FixupVariables implements OptimizerPass {
     read.removeAll(blockVars);
     written.removeAll(blockVars);
     
-    Set<Var> globals = addGlobalImports(block, visible, updateLists,
-                                        Arrays.asList(read, written));
-
-    referencedGlobals.addAll(globals);
-    read.removeAll(globals);
-    written.removeAll(globals);
+    if (execCx == ExecContext.CONTROL) {
+      // Global constants can be imported in control blocks only
+      Set<Var> globals = addGlobalImports(block, visible, updateLists,
+                                          Arrays.asList(read, written));
+  
+      referencedGlobals.addAll(globals);
+      read.removeAll(globals);
+      written.removeAll(globals);
+    }
     return Pair.create(read, written);
   }
 
@@ -199,7 +206,7 @@ public class FixupVariables implements OptimizerPass {
     }
     
     for (Continuation cont: block.getContinuations()) {
-      read.addAll(cont.requiredVars());
+      read.addAll(cont.requiredVars(false));
     }
     
     for (CleanupAction cleanup: block.getCleanups()) {
@@ -216,6 +223,7 @@ public class FixupVariables implements OptimizerPass {
    * Update variable passing for nested continuation
    * @param logger
    * @param function
+   * @param outerCx exec context outside of continuation
    * @param continuation
    * @param visible
    * @param referencedGlobals
@@ -224,11 +232,13 @@ public class FixupVariables implements OptimizerPass {
    * @param updateLists 
    */
   private static void fixupContinuationRec(Logger logger, Function function,
+          ExecContext outerCx,
           Continuation continuation, HierarchicalSet<Var> visible,
           Set<Var> referencedGlobals, Set<Var> outerBlockVars,
           Set<Var> read, Set<Var> written, boolean updateLists) {
     // First see what variables the continuation defines inside itself
     List<Var> constructVars = continuation.constructDefinedVars();
+    ExecContext innerCx = continuation.childContext(outerCx);
     
     for (Block innerBlock : continuation.getBlocks()) {
       HierarchicalSet<Var> childVisible = visible.makeChild();
@@ -237,7 +247,8 @@ public class FixupVariables implements OptimizerPass {
       }
       
       Pair<Set<Var>, Set<Var>> inner = fixupBlockRec(logger,
-          function, innerBlock, childVisible, referencedGlobals, updateLists);
+          function, innerBlock, innerCx,
+          childVisible, referencedGlobals, updateLists);
       Set<Var> innerRead = inner.val1;
       Set<Var> innerWritten = inner.val2;
       
@@ -275,7 +286,6 @@ public class FixupVariables implements OptimizerPass {
     // Rebuild passed in vars
     List<PassedVar> passedIn = new ArrayList<PassedVar>();
     for (Var needed: innerAllNeeded) {
-      assert(needed.storage() != VarStorage.GLOBAL_CONST);
       boolean read = innerRead.contains(needed);
       boolean written = innerWritten.contains(needed);
       // Update outer in case outer will need to pass in
