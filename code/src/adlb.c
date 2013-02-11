@@ -63,7 +63,7 @@ static bool setup_hostmap(void);
 
 adlb_code
 ADLBP_Init(int nservers, int ntypes, int type_vect[],
-           int *am_server, MPI_Comm *worker_comm)
+           int *am_server, MPI_Comm adlb_comm, MPI_Comm *worker_comm)
 {
   debug_check_environment();
   TRACE_START;
@@ -78,8 +78,11 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
 
   xlb_msg_init();
 
-  rc = MPI_Comm_size(MPI_COMM_WORLD, &xlb_world_size);
-  rc = MPI_Comm_rank(MPI_COMM_WORLD, &xlb_world_rank);
+  rc = MPI_Comm_dup(adlb_comm, &adlb_all_comm);
+  ASSERT(rc == MPI_SUCCESS);
+
+  rc = MPI_Comm_size(adlb_comm, &xlb_world_size);
+  rc = MPI_Comm_rank(adlb_comm, &xlb_world_rank);
 
   gdb_spin(xlb_world_rank);
 
@@ -91,15 +94,12 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   xlb_workers = xlb_world_size - xlb_servers;
   xlb_master_server_rank = xlb_world_size - xlb_servers;
 
-  rc = MPI_Comm_dup(MPI_COMM_WORLD, &adlb_all_comm);
-  ASSERT(rc == MPI_SUCCESS);
-
-  MPI_Comm_group(MPI_COMM_WORLD, &world_group);
+  MPI_Comm_group(adlb_all_comm, &world_group);
 
   if (xlb_world_rank < xlb_workers)
   {
     *am_server = 0;
-    MPI_Comm_split(MPI_COMM_WORLD, 0, xlb_world_rank, worker_comm);
+    MPI_Comm_split(adlb_all_comm, 0, xlb_world_rank, worker_comm);
     xlb_my_server = xlb_workers + (xlb_world_rank % xlb_servers);
     DEBUG("my_server_rank: %i\n", xlb_my_server);
     next_server = xlb_my_server;
@@ -109,7 +109,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
     *am_server = 1;
     // Don't have a server: I am one
     xlb_my_server = ADLB_RANK_NULL;
-    MPI_Comm_split(MPI_COMM_WORLD,1, xlb_world_rank-xlb_workers,
+    MPI_Comm_split(adlb_all_comm,1, xlb_world_rank-xlb_workers,
                    &adlb_server_comm);
     adlb_code code = xlb_server_init();
     ADLB_CHECK(code);
