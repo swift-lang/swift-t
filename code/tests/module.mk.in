@@ -3,6 +3,7 @@ DIR := tests
 
 TEST_SRC_C :=
 TEST_SRC_C += $(DIR)/debug.c
+TEST_SRC_C += $(DIR)/lib-turbine.c
 
 ifeq ($(USE_MPE),1)
 	TEST_SRC_C += $(DIR)/mpe-1.c \
