@@ -14,31 +14,10 @@
  * limitations under the License
  */
 
-/**
- *  C-UTILS
- *
- *  Created on: Dec 31, 2011
- *      Author: wozniak
- *
- *  Administrative functionality for c-utils project
- *  Note that this file is filtered by config.status
- *  Allows configure-time symbols without requiring
- *    referring to config.h
- * */
+#include "src/c-utils.h"
 
-#ifndef C_UTILS_H
-#define C_UTILS_H
-
-#include <version.h>
-
-// Stringification helpers:
-// Cf. http://gcc.gnu.org/onlinedocs/cpp/Stringification.html
-#define xstr(s) str(s)
-#define str(s) #s
-
-#define SUBST_HAVE_STRNLEN @SUBST_HAVE_STRNLEN@
-#define C_UTILS_VERSION @C_UTILS_VERSION@
-
-void c_utils_version(version* output);
-
-#endif
+void
+c_utils_version(version* output)
+{
+  version_parse(output, xstr(C_UTILS_VERSION));
+}
