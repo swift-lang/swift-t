@@ -20,5 +20,5 @@ adlb::init 1 1
 
 error "This is fatal"
 
-adlb::finalize
+adlb::finalize 1
 puts OK

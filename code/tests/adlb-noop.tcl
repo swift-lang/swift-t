@@ -26,5 +26,5 @@ if [ adlb::amserver ] {
     adlb::server
 } else {}
 
-adlb::finalize
+adlb::finalize 1
 puts OK

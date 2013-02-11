@@ -41,7 +41,7 @@ if [ adlb::amserver ] {
     }
 }
 
-adlb::finalize
+adlb::finalize 1
 puts OK
 
 proc exit args {}

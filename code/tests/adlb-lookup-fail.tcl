@@ -26,5 +26,5 @@ if [ adlb::amserver ] {
     puts "lookup: $result"
 }
 
-adlb::finalize
+adlb::finalize 1
 puts OK

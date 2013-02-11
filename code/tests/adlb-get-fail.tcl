@@ -31,5 +31,5 @@ if [ adlb::amserver ] {
 }
 
 puts DONE
-adlb::finalize
+adlb::finalize 1
 puts OK

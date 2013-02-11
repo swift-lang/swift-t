@@ -69,5 +69,5 @@ if { $amserver == 0 } {
 }
 
 puts "finalizing..."
-adlb::finalize
+adlb::finalize 1
 puts OK

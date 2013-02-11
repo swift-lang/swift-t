@@ -31,7 +31,7 @@ if [ adlb::amserver ] {
     adlb::retrieve $d2 $adlb::STRING
 }
 
-adlb::finalize
+adlb::finalize 1
 puts OK
 
 proc exit args {}
