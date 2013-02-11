@@ -31,6 +31,7 @@
 #define _POSIX_C_SOURCE 200809L
 #endif
 #include <time.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -246,4 +247,39 @@ print_longs(long* A, int count)
   for (i = 0; i < count-1; i++)
     printf("%li,", A[i]);
   printf("%li", A[i]);
+}
+
+char*
+slurp(const char* filename)
+{
+  FILE* file = fopen(filename, "r");
+  if (file == NULL)
+  {
+    printf("slurp(): could not read from: %s\n", filename);
+    return NULL;
+  }
+
+  struct stat s;
+  int rc = stat(filename, &s);
+  valgrind_assert(rc == 0);
+
+  off_t length = s.st_size;
+  char* result = malloc(length);
+  if (result == NULL)
+  {
+    printf("slurp(): could not allocate memory for: %s\n", filename);
+    return NULL;
+  }
+
+  char* p = result;
+  int actual = fread(p, sizeof(char), length, file);
+  if (actual != length)
+  {
+    printf("could not read all %li bytes from file: %s\n",
+           (long) length, filename);
+    free(result);
+    return NULL;
+  }
+
+  return result;
 }

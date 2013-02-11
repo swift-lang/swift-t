@@ -189,4 +189,9 @@ void shuffle(long* A, int count);
  */
 void print_longs(long* A, int count);
 
+/**
+   Read a whole file into a newly allocated string
+ */
+char* slurp(const char* filename);
+
 #endif
