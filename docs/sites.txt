@@ -22,11 +22,23 @@ for use by Turbine.
 For each machine, a *public installation* and/or a *build procedure* will
 be provided.  The user need only follow one set of directions.
 
+Public installations::
+
+These are maintained by the Swift/T team.  Because they may become out
+of date after a release, the release version and a timestamp are
+recorded below.
+
+Build procedures::
 To follow a build procedure, you may start with the +exm+ download
 package.  Simply edit the +exm-setup+ script and modify the
 configuration settings as described here.
 
-See the link:./stc.html[Swift/T Guide] for more information
+Version numbers::
+The component version numbers that correspond together to make up a
+Swift/T release may be found on the
+link:../downloads/downloads.html[Downloads] page.
+
+See the link:./stc.html[Swift/T Guide] for more information about Swift/T.
 
 == x86 clusters
 
@@ -36,13 +48,13 @@ Midway is a mid-sized SLURM cluster at the University of Chicago
 
 ==== Public installation
 
-* Based on trunk
-* STC: +~wozniak/Public/stc/bin/stc+
+* Swift/T 0.2.1 - 02/11/2013
+* STC: +~wozniak/Public/stc-0.0.3/bin/stc+
 
 To run:
 
 ----
-srun ~wozniak/Public/turbine/scripts/submit/slurm/turbine-slurm.sh -n 3 ~/program.tcl
+srun ~wozniak/Public/turbine-0.1.1/scripts/submit/slurm/turbine-slurm.sh -n 3 ~/program.tcl
 ----
 
 ==== Build procedure
@@ -52,7 +64,7 @@ srun ~wozniak/Public/turbine/scripts/submit/slurm/turbine-slurm.sh -n 3 ~/progra
 * Configure ADLB with:
 +
 ----
-CC=mpicc LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib"
+CC=mpicc LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib" --enable-mpi-2
 ----
 * Configure Turbine with:
 +
@@ -130,31 +142,35 @@ its libraries in +/lustre+.  Also, your data must be in +/lustre+.
 
 ==== Public installation
 
-* Based on trunk
-* Turbine: +/lustre/beagle/wozniak/Public/turbine/bin/turbine+
-* STC: +~wozniak/Public/stc/bin/stc+
+* Swift/T 0.2.1 - 2/11/2013
+* Turbine: +/lustre/beagle/wozniak/Public/turbine-0.1.1+
+* STC: +~wozniak/Public/stc-beagle-0.0.3/bin/stc+
 
 To run:
 
 1. Copy out the sample submit script:
-+/lustre/beagle/wozniak/Public/turbine/scripts/submit/cray/aprun.sh+
++/lustre/beagle/wozniak/Public/turbine-0.1.1/scripts/submit/cray/aprun.sh+
 2. Edit and submit with +qsub+.
 
 ==== Build procedure
+
+Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
+flags to configure the MPI library.
 
 * Configure ADLB with:
 +
 ----
 ./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
 CC=gcc
-CFLAGS=-I/opt/cray/mpt/default/xt/gemini/mpich2-gnu/include
-LDFLAGS="-L/opt/cray/mpt/default/xt/gemini/mpich2-gnu/lib -lmpich"
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/47/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
+--enable-mpi-2
 ----
 +
 * In the Turbine configure step, replace the +--with-mpi+ option with:
 +
 ----
---enable-custom-mpi --with-mpi=/opt/cray/mpt/default/xt/gemini/mpich2-gnu
+--enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47
 ----
 
 === Crow
@@ -170,6 +186,7 @@ Crow is a Cray XT at Cray
 CC=gcc
 CFLAGS=-I/opt/cray/mpt/5.3.0/xt/seastar/mpich2-gnu/include
 LDFLAGS="-L/opt/cray/mpt/5.3.0/xt/seastar/mpich2-gnu/lib -lmpich"
+--enable-mpi-2
 ----
 +
 * In the Turbine configure step, replace the +--with-mpi+ option with:
