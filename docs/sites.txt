@@ -16,8 +16,9 @@ http://www.mcs.anl.gov/exm/local/guides/turbine-sites.html
 
 == Overview
 
-This manual provides an index of sites maintained by the Swift/T team
-for use by Turbine.
+This manual provides a reference on how to run Swift/T Turbine
+programs on a variety of systems.  It also contains an index of sites
+maintained by the Swift/T team for use by Turbine.
 
 For each machine, a *public installation* and/or a *build procedure* will
 be provided.  The user need only follow one set of directions.
@@ -27,6 +28,9 @@ Public installations::
 These are maintained by the Swift/T team.  Because they may become out
 of date after a release, the release version and a timestamp are
 recorded below.
+
+To request maintenance on a public installation, simply email
+exm-user@mcs.anl.gov .
 
 Build procedures::
 To follow a build procedure, you may start with the +exm+ download
@@ -39,6 +43,28 @@ Swift/T release may be found on the
 link:../downloads/downloads.html[Downloads] page.
 
 See the link:./stc.html[Swift/T Guide] for more information about Swift/T.
+
+== Turbine as MPI program
+
+Turbine is a moderately complex MPI program.  It is essentially a Tcl
+library that glues together multiple C-based systems, including MPI,
+ADLB, and the Turbine dataflow library.
+
+Running Turbine on a MPI-enabled system works as follows:
+
+* Compilation and installation: This builds the Turbine libraries and
+  links with the system-specific MPI library.  STC must also be
+  informed of the Turbine installation to access correct built-in
+  function information
+* Run-time configuration: The startup job submission script locates
+  the Turbine installation and reads configuration information
+* Process launch: The Tcl shell, +tclsh+, is launched in parallel and
+  configuration information is passed to it so it can find the
+  libraries. The Tcl program script is the STC-generated user program
+  file.  The MPI library enables communication among the +tclsh+
+  processes.
+
+Each of the systems below follows this basic outline.
 
 == x86 clusters
 
