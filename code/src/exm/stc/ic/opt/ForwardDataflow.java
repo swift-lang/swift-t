@@ -540,7 +540,7 @@ public class ForwardDataflow implements OptimizerPass {
    *          copy of cv from outer scope, or null if it should be initialized
    * @param replaceInputs
    *          : a set of variable replaces to do from this point in IC onwards
-   * @return true if another pass might change things
+   * @return true if this should be called again
    * @throws InvalidOptionException
    * @throws InvalidWriteException
    */
@@ -549,7 +549,6 @@ public class ForwardDataflow implements OptimizerPass {
       HierarchicalMap<Var, Arg> replaceInputs,
       HierarchicalMap<Var, Arg> replaceAll) throws InvalidOptionException,
       InvalidWriteException {
-    boolean anotherPassNeeded = false;
     if (cv == null) {
       cv = new State(logger);
       for (Var v: f.getBlockingInputs()) {
@@ -588,9 +587,8 @@ public class ForwardDataflow implements OptimizerPass {
       }
     }
 
-    boolean anotherPass2 = forwardDataflow(logger, f, execCx, block, 
+    forwardDataflow(logger, f, execCx, block, 
             block.instructionIterator(), cv, replaceInputs, replaceAll);
-    anotherPassNeeded = anotherPassNeeded || anotherPass2;
 
     block.renameCleanupActions(replaceInputs, true);
     block.renameCleanupActions(replaceAll, false);
@@ -609,7 +607,6 @@ public class ForwardDataflow implements OptimizerPass {
       Block toInline = c.tryInline(cv.closed, cv.recursivelyClosed,
                                    eliminateExplicitWaits);
       if (toInline != null) {
-        anotherPassNeeded = true;
         c.inlineInto(block, toInline);
         i--; // compensate for removal of continuation
         inlined = true;
@@ -626,6 +623,9 @@ public class ForwardDataflow implements OptimizerPass {
         c.replaceVars(replaceInputs, true, false);
         c.replaceVars(replaceAll, false, false);
       }
+      
+      // Rebuild data structures for this block after inlining
+      return true;
     }
 
     // Note: assume that continuations aren't added to rule engine until after
@@ -668,7 +668,8 @@ public class ForwardDataflow implements OptimizerPass {
       }
     }
 
-    return anotherPassNeeded;
+    // Didn't inline everything, all changes should be propagated ok
+    return false;
   }
 
   
