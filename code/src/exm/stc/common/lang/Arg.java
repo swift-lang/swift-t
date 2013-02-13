@@ -33,11 +33,11 @@ public class Arg implements Comparable<Arg> {
   public final ArgKind kind;
 
   /** Storage for arg, dependent on arg type */
-  private String stringlit;
+  private final String stringlit;
   private long intlit;
   private final double floatlit;
   private final boolean boollit;
-  private Var var;
+  private final Var var;
 
   /**
    * Private constructors so that it can only be build using static builder
@@ -58,11 +58,8 @@ public class Arg implements Comparable<Arg> {
   }
 
   public static List<Arg> cloneList(List<Arg> inputs) {
-    ArrayList<Arg> res = new ArrayList<Arg>(inputs.size());
-    for (Arg i : inputs) {
-      res.add(i.clone());
-    }
-    return res;
+    // Can do shallow copy since Arg is immutable
+    return new ArrayList<Arg>(inputs);
   }
 
   public Arg clone() {
@@ -132,14 +129,6 @@ public class Arg implements Comparable<Arg> {
       return var;
     } else {
       throw new STCRuntimeError("getVariable for non-variable type");
-    }
-  }
-
-  public void replaceVariable(Var var) {
-    if (kind == ArgKind.VAR) {
-      this.var = var;
-    } else {
-      throw new STCRuntimeError("replaceVariable for non-variable type");
     }
   }
 

@@ -333,6 +333,10 @@ public class Var {
     assert(Types.isRefTo(ref.type(), res.type()));
     return res;
   }
+  
+  public Arg asArg() {
+    return Arg.createVar(this);
+  }
 
   @Override
   public String toString()
