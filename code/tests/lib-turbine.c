@@ -14,12 +14,10 @@
  * limitations under the License
  */
 
+#include <assert.h>
 #include <stdio.h>
 
 #include <mpi.h>
-#include <tcl.h>
-
-#include <tools.h>
 
 #include "src/turbine/turbine.h"
 
@@ -42,11 +40,11 @@ main()
   argv[1] = "ok";
   argv[2] = "bye";
 
+  // Run Turbine
   turbine_code rc =
       turbine_run(comm, "tests/strings.tcl", argc, argv, NULL);
   assert(rc == TURBINE_SUCCESS);
 
   MPI_Finalize();
-
   return 0;
 }
