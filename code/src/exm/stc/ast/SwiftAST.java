@@ -70,12 +70,12 @@ public class SwiftAST extends CommonTree {
     return (SwiftAST)super.getChild(i);
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   public List<SwiftAST> children() {
     if (children == null) {
       return Collections.emptyList();
     }
-    return (List<SwiftAST>)this.children;
+    return (List<SwiftAST>)(List)(this.children);
   }
   
   public List<SwiftAST> children(int start) {

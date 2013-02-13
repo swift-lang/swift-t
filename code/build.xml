@@ -12,7 +12,7 @@
 
   <!-- Locations of jars and ANTLR grammar file -->
   <property name="antlr.jar"
-            value="lib/antlr-3.4-complete-no-antlrv2.jar"/>
+            value="lib/antlr-3.5-complete-no-st3.jar"/>
   <property name="stc.jar"
             value="lib/stc.jar"/>
   <property name="log4j.jar"

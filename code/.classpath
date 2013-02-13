@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="lib" path="lib/antlr-3.4-complete-no-antlrv2.jar" sourcepath="lib/antlr-3.4/runtime/Java/src"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.16.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="lib/antlr-3.5-complete-no-st3.jar" sourcepath="lib/antlr3-antlr-3.5"/>
 	<classpathentry kind="output" path="build"/>
 </classpath>

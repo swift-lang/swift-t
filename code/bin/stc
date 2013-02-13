@@ -319,7 +319,7 @@ then
   fi
 fi
 
-ANTLR=${STC_HOME}/lib/antlr-3.4-complete-no-antlrv2.jar
+ANTLR=${STC_HOME}/lib/antlr-3.5-complete-no-st3.jar
 STC=${STC_HOME}/lib/stc.jar
 LOG4J=${STC_HOME}/lib/log4j-1.2.16.jar
 CLASSPATH=${ANTLR}:${STC}:${LOG4J}
