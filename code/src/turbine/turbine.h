@@ -24,6 +24,8 @@
 #ifndef TURBINE_H
 #define TURBINE_H
 
+#include <mpi.h>
+
 #include <version.h>
 
 #include "src/turbine/turbine-defs.h"
@@ -75,5 +77,8 @@ turbine_code turbine_pop(turbine_transform_id id,
 int turbine_code_tostring(char* output, turbine_code code);
 
 void turbine_finalize(void);
+
+turbine_code turbine_run(MPI_Comm comm, char* script_file,
+                         int argc, char** argv, char* output);
 
 #endif
