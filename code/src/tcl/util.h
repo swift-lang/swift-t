@@ -61,10 +61,26 @@
     }                                                           \
   }
 
+/**
+   Obtain array of long integers from Tcl list
+   @param interp The Tcl interpreter
+   @param list The Tcl list
+   @param max The maximal output size
+   @param output Where to write the output
+   @param count The actual output size
+*/
 turbine_code turbine_tcl_long_array(Tcl_Interp* interp,
                                     Tcl_Obj* list, int max,
                                     long* output, int* count);
 
+/**
+   Obtain array of string from Tcl list
+   @param interp The Tcl interpreter
+   @param list The Tcl list
+   @param max The maximal output size
+   @param output Where to write the output
+   @param count The actual output size
+*/
 turbine_code turbine_tcl_string_array(Tcl_Interp* interp,
                                       Tcl_Obj* list, int max,
                                       char** output, int* count);
@@ -74,12 +90,26 @@ void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
   __attribute__ ((format (printf, 3, 4)));
 
 
+/**
+   Convenience function to set name=value
+ */
 void tcl_set_integer(Tcl_Interp* interp, char* name, int value);
 
+/**
+   Convenience function to set name=value
+ */
 void tcl_set_long(Tcl_Interp* interp, char* name, long value);
 
+/**
+   Convenience function to set key=value in dict
+ */
 void tcl_dict_put(Tcl_Interp* interp, Tcl_Obj* dict,
                   char* key, Tcl_Obj* value);
+
+/**
+   Convenience function construct Tcl list of Tcl strings
+ */
+Tcl_Obj* tcl_list_new(int count, char** strings);
 
 /*
    Tcl check follow.  Note that these are disabled by NDEBUG.

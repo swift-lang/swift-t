@@ -20,14 +20,6 @@
 
 #include "src/tcl/util.h"
 
-/**
-   Obtain array of long integers from TCL list
-   @param interp The TCL interpreter
-   @param list The TCL list
-   @param max The maximal output size
-   @param output Where to write the output
-   @param count The actual output size
-*/
 turbine_code
 turbine_tcl_long_array(Tcl_Interp* interp, Tcl_Obj* list, int max,
                       long* output, int* count)
@@ -109,4 +101,15 @@ tcl_dict_put(Tcl_Interp* interp, Tcl_Obj* dict,
   Tcl_Obj* k = Tcl_NewStringObj(key, -1);
   int rc = Tcl_DictObjPut(interp, dict, k, value);
   valgrind_assert(rc == TCL_OK);
+}
+
+Tcl_Obj*
+tcl_list_new(int count, char** strings)
+{
+  Tcl_Obj* objs[count];
+  for (int i = 0; i < count; i++)
+    objs[i] = Tcl_NewStringObj(strings[i], -1);
+
+  Tcl_Obj* result = Tcl_NewListObj(count, objs);
+  return result;
 }
