@@ -17,6 +17,7 @@ package exm.stc.ast;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -109,6 +110,18 @@ public class SwiftAST extends CommonTree {
   {
     for (int i = 0; i < indent; i++)
       writer.print(' ');
+  }
+
+  public void resetAnnotations() {
+    ArrayList<SwiftAST> stack = new ArrayList<SwiftAST>();
+    stack.add(this);
+    
+    while (!stack.isEmpty()) {
+      SwiftAST tree = stack.remove(stack.size() - 1);
+      tree.exprType = null;
+      tree.variableUsage = null;
+      stack.addAll(tree.children());
+    }
   }
   
 }

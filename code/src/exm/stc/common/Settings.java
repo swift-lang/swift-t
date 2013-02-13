@@ -87,6 +87,9 @@ public class Settings
   public static final String LOG_FILE = "stc.log.file";
   public static final String LOG_TRACE = "stc.log.trace";
   public static final String COMPILER_DEBUG = "stc.compiler-debug";
+  
+  /** Run compiler repeatedly so can be profiled */
+  public static final String PROFILE_STC = "stc.profile";
 
   private static final Properties properties;
   static {
@@ -125,6 +128,7 @@ public class Settings
     defaults.setProperty(OPT_MAX_ITERATIONS, "10");
     defaults.setProperty(EXPERIMENTAL_REFCOUNTING, "false");
     defaults.setProperty(AUTO_DECLARE, "true");
+    defaults.setProperty(PROFILE_STC, "false");
     defaults.setProperty(LOG_FILE, "");
     defaults.setProperty(LOG_TRACE, "false");
 
@@ -220,6 +224,7 @@ public class Settings
     getBoolean(EXPERIMENTAL_REFCOUNTING);
     getBoolean(AUTO_DECLARE);
     getBoolean(COMPILER_DEBUG);
+    getBoolean(PROFILE_STC);
 
     getLong(OPT_MAX_ITERATIONS);
 

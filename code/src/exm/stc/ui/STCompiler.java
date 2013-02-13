@@ -32,6 +32,7 @@ import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMLexer;
 import exm.stc.ast.antlr.ExMParser;
+import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.util.Misc;
@@ -193,28 +194,35 @@ public class STCompiler {
       antlrInput.rewind(); antlrInput.reset();
       SwiftAST tree = runANTLR(antlrInput, lineMapping);
       
+      boolean profile = Settings.getBoolean(Settings.PROFILE_STC);
+      
       /* 
        * Walk AST, and build intermediate representation
        * This is where type checking and other semantic analysis happens.
        */
-      ASTWalker walker = new ASTWalker(inputFile, lineMapping);
-      STCMiddleEnd intermediate = new STCMiddleEnd(logger, icOutput);
-      walker.walk(intermediate, tree);
+      for (int i = 0; i < (profile ? 1000000 : 1); i++) {
+        if (i > 0)
+          tree.resetAnnotations();
+        ASTWalker walker = new ASTWalker(inputFile, lineMapping);
+        STCMiddleEnd intermediate = new STCMiddleEnd(logger, icOutput);
+        walker.walk(intermediate, tree);
+        
+        /* Optimise intermediate representation by repeatedly rewriting tree
+         * NOTE: currently the optimizer pass is actually required for correctness,
+         * as the frontend doesn't always provide correct information about which variables
+         * need to be passed into blocks.  The optimizer will fix this problem
+         */
+        intermediate.optimize();
       
-      /* Optimise intermediate representation by repeatedly rewriting tree
-       * NOTE: currently the optimizer pass is actually required for correctness,
-       * as the frontend doesn't always provide correct information about which variables
-       * need to be passed into blocks.  The optimizer will fix this problem
-       */
-      intermediate.optimize();
-    
-      /* Generate output tcl code from intermediate representation */
-      TurbineGenerator codeGen = new TurbineGenerator(logger, timestamp);
-      intermediate.regenerate(codeGen);
-      String code = codeGen.code();
-      output.println(code);
-      output.close();
+        /* Generate output tcl code from intermediate representation */
+        TurbineGenerator codeGen = new TurbineGenerator(logger, timestamp);
+        intermediate.regenerate(codeGen);
+        String code = codeGen.code();
 
+        output.println(code);
+        output.close();
+      }
+      
       if (icOutput != null) {
         icOutput.close();
       }
