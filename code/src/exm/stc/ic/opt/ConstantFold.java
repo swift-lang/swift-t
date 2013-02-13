@@ -174,9 +174,6 @@ public class ConstantFold implements OptimizerPass {
     // constant folding but also some previously unneeded ones)
     if (Settings.getBoolean(Settings.OPT_DEAD_CODE_ELIM)) {
       branchPredict(block, knownConstants);
-      if (changed) {
-        DeadCodeEliminator.eliminate(logger, fn, block);
-      }
     }
     return changed;
   }

@@ -15,150 +15,214 @@
  */
 package exm.stc.ic.opt;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.ArrayDeque;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.common.Logging;
+import exm.stc.common.Settings;
+import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
-import exm.stc.common.util.UnionSet;
-import exm.stc.ic.opt.TreeWalk.TreeWalker;
+import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.util.MultiMap;
+import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
-import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 
-public class DeadCodeEliminator {
+public class DeadCodeEliminator extends FunctionOptimizerPass {
+
+  @Override
+  public String getPassName() {
+    return "Dead code elimination";
+  }
+
+  @Override
+  public String getConfigEnabledKey() {
+    return Settings.OPT_DEAD_CODE_ELIM;
+  }
+  
+  
+  
+  @Override
+  public void optimize(Logger logger, Function f) throws UserException {
+    eliminate(logger, f);
+  }
 
   /**
-   * Eliminates dead code in the current block and child blocks.  Since
-   * this is a data flow language, the easiest way to do this is to 
-   * find variables which aren't needed, eliminate those and the instructions
-   * which write to them, and then do that repeatedly until we don't have anything
-   * more to eliminate.
+   * Eliminates dead code in the current block and child blocks. Since this is a
+   * data flow language, the easiest way to do this is to find variables which
+   * aren't needed, eliminate those and the instructions which write to them,
+   * and then do that repeatedly until we don't have anything more to eliminate.
    * 
    * We avoid eliminating any instructions with side-effects, and anything that
-   * contributes to the return value of a function.  We currently assume that
-   * all non-builtin functions have side effects, as well as any builtins
-   * operations that are not specifically marked as side-effect free.
+   * contributes to the return value of a function. We currently assume that all
+   * non-builtin functions have side effects, as well as any builtins operations
+   * that are not specifically marked as side-effect free.
+   * 
    * @param logger
    * @param block
    */
-  public static void eliminate(Logger logger, Function f, Block block) {
-    int i = 1;
+  public static void eliminate(Logger logger, Function f) {
     boolean converged = false;
-    // repeatedly remove code until no more can go.  running each of
-    // the two steps here can lead to more unneeded code for the other step,
-    // so it is easiest to just have a loop to make sure all code is eliminated
     while (!converged) {
-      converged = eliminateIter(logger, f, block, i);
-      i++;
+      // Dead variable elimination can allow dead code blocks to be removed,
+      // which can allow more variables to be removed.  So we should just
+      // iterate until no more changes were made
+      converged = !eliminateIter(logger, f);
     }
   }
 
-  private static boolean eliminateIter(Logger logger, Function f,
-                 Block block, int iteration) {
+  /**
+   * 
+   * @param logger
+   * @param f
+   * @return true if changes made
+   */
+  private static boolean eliminateIter(Logger logger, Function f) {
+    /* All vars defined in function blocks that could possibly be eliminated */
+    HashSet<Var> removeCandidates = new HashSet<Var>();
 
-    if (logger.isTraceEnabled()) {
-      logger.trace("Dead code elimination iteration " + iteration
-      		+ " on block: " 
-          + System.identityHashCode(block) + "<" + block.getType() + ">"
-          + " with vars: " + block.getVariables());
-    }
+    /* Set of vars that are definitely required */
+    HashSet<Var> needed = new HashSet<Var>();
+
+    /*
+     * Graph of dependencies from vars to other vars. If edge exists v1 -> v2
+     * this means that if v1 is required, then v2 is required
+     */
+    MultiMap<Var, Var> dependencyGraph = new MultiMap<Var, Var>();
+
+    walkFunction(logger, f, removeCandidates, needed, dependencyGraph);
     
-    boolean converged = true;
-
-    // First see if we can get rid of any continuations
-    ListIterator<Continuation> it = block.continuationIterator();
-    while (it.hasNext()) {
-      Continuation c = it.next();
-      if (c.isNoop()) {
-        it.remove();
-        converged = false;
+    /*
+     * Expand set of needed based on dependency graph 
+     */
+    ArrayDeque<Var> workStack = new ArrayDeque<Var>();
+    workStack.addAll(needed);
+    
+    while (!workStack.isEmpty()) {
+      Var neededVar = workStack.pop();
+      // This loop converges as dependencyGraph is taken apart
+      List<Var> deps = dependencyGraph.remove(neededVar);
+      if (deps != null) {
+        needed.addAll(deps);
+        workStack.addAll(deps);
       }
     }
     
-    // Vars needed in this block
-    BlockWalker thisBlock = new BlockWalker();
-    TreeWalk.walk(logger, block, f, thisBlock, false);
-    
+    removeCandidates.removeAll(needed);
+    if (removeCandidates.isEmpty()) {
+      return false;
+    } else {
+      f.getMainblock().removeVars(removeCandidates);
+      return true;
+    }
+  } 
 
-    // Track the union of this block and all subblocks
-    UnionSet<Var> allNeeded = new UnionSet<Var>();
-    List<List<Var>> allDependentSets = new ArrayList<List<Var>>();
-    allNeeded.addSet(thisBlock.needed);
-    allDependentSets.addAll(thisBlock.interdependencies);
+  /**
+   * Collect information for dead code elimination
+   * 
+   * @param logger
+   * @param f
+   * @param removeCandidates list of vars declared in function that
+   *                           could be removed
+   * @param needed
+   * @param dependencyGraph
+   */
+  private static void walkFunction(Logger logger, Function f,
+      HashSet<Var> removeCandidates, HashSet<Var> needed,
+      MultiMap<Var, Var> dependencyGraph) {
+    ArrayDeque<Block> workStack = new ArrayDeque<Block>();
+    workStack.push(f.getMainblock());
     
-    if (logger.isTraceEnabled()) {
-      logger.trace("This block needed: " + thisBlock.needed
-              + " outputs: " + thisBlock.written
-              + " dependencies: " + thisBlock.interdependencies);
-    }
+    needed.addAll(f.getOutputList());
     
-    // Now see if we can push down any variable declarations
-    /*var => null means candidate.  var => Block means that it already appeared
-     *  in a single block */
-    Map<Var, Block> pushdownCandidates = new HashMap<Var, Block>();
-    for (Var v: block.getVariables()) {
-      // Candidates are those not needed in this block
-      if (!thisBlock.needed.contains(v) &&
-          !thisBlock.written.contains(v))
-        pushdownCandidates.put(v, null);
-    }
-    
-    for (Continuation cont: block.getContinuations()) {
-      for (Block subBlock: cont.getBlocks()) {
-        BlockWalker subInfo = new BlockWalker();
-        TreeWalk.walk(logger, subBlock, f, subInfo, true);
-        if (logger.isTraceEnabled()) {
-          logger.trace("Subblock " + subBlock.getType() + " needed: " 
-              + subInfo.needed + " outputs: " + subInfo.written);
-        }
-        
-        allDependentSets.addAll(subInfo.interdependencies);
-        allNeeded.addSet(subInfo.needed);
-        
-        // All vars used in subblock
-        Set<Var> subblockAll = subInfo.allNeeded();
-        for (Var var: subblockAll) {
-          if (pushdownCandidates.containsKey(var)) {
-            if (pushdownCandidates.get(var) == null) {
-              pushdownCandidates.put(var, subBlock);
-            } else {
-              // Appeared in two places
-              pushdownCandidates.remove(var);
-            }
+    while (!workStack.isEmpty()) {
+      Block block = workStack.pop();
+
+      walkBlockVars(block, removeCandidates, dependencyGraph);
+      
+      walkInstructions(block, needed, dependencyGraph);
+      
+      ListIterator<Continuation> it = block.continuationIterator();
+      while (it.hasNext()) {
+        Continuation c = it.next();
+        if (c.isNoop()) {
+          it.remove();
+        } else {
+          // Add vars for continuation
+          needed.addAll(c.requiredVars(true));
+          
+          for (Block inner: c.getBlocks()) {
+            workStack.push(inner);
           }
         }
       }
     }
-    
-    // Push down variable declarations
-    pushdownDeclarations(block, pushdownCandidates);
-    
-    // Then see if we can remove individual instructions
-    Set<Var> unneeded = unneededVars(block, allNeeded, allDependentSets);
-    for (Var v: unneeded) {
-      logger.debug("Eliminated variable " + v +  
-                        " during dead code elimination");
-      converged = false;
-    }
-    block.removeVars(unneeded);
-    return converged;
   }
 
+  private static void walkInstructions(Block block, HashSet<Var> needed,
+      MultiMap<Var, Var> dependencyGraph) {
+    for (Instruction inst: block.getInstructions()) {
+      // If it has side-effects, need all inputs and outputs
+      if (inst.hasSideEffects()) {
+        needed.addAll(inst.getOutputs());
+        for (Arg input: inst.getInputs()) {
+          if (input.isVar()) {
+            needed.add(input.getVar());
+          }
+        }
+      } else {
+        // Add edges to dependency graph
+        
+        List<Var> outputs = inst.getOutputs();
+        // First, if multiple outputs, need to remove all at once
+        if (outputs.size() > 1) {
+          // Connect outputs in ring so that they are strongly connected component
+          for (int i = 0; i < outputs.size(); i++) { 
+            dependencyGraph.put(outputs.get(i), outputs.get((i + 1) % outputs.size()));
+          } 
+        }
+        if (outputs.size() > 0) {
+          // Second, output depends on all inputs.  Just use one output if multiple
+          Var out = outputs.get(0);
+          for (Arg in: inst.getInputs()) {
+            if (in.isVar()) {
+              dependencyGraph.put(out, in.getVar());
+            }
+          }
+        }
+        // Writing mapped var has side-effect
+        for (Var output: outputs) {
+          if (output.isMapped()) {
+            needed.add(output);
+          }
+        }
+      }
+    }
+  }
+  
+  private static void walkBlockVars(Block block,
+      HashSet<Var> removeCandidates, MultiMap<Var, Var> dependencyGraph) {
+    for (Var v: block.getVariables()) {
+      if (v.storage() != VarStorage.GLOBAL_CONST) {
+        removeCandidates.add(v);
+      }
+      if (v.isMapped()) {
+        // Need mapping if v is retained
+        dependencyGraph.put(v, v.mapping());
+      }
+    }
+  }
+
+  // TODO: do this somewhere else?
   private static void pushdownDeclarations(Block block,
-          Map<Var, Block> candidates) {
+      Map<Var, Block> candidates) {
     if (candidates.size() > 0) {
       ListIterator<Var> varIt = block.variableIterator();
       while (varIt.hasNext()) {
@@ -172,158 +236,6 @@ public class DeadCodeEliminator {
         }
       }
     }
-  }
-
-  public static void eliminate(Logger logger, Function f) {
-    eliminateRec(logger, f, f.getMainblock());
-  }
-  
-  public static void eliminateRec(Logger logger, Function f, Block block) {
-    // Eliminate from bottom up so that references to vars in
-    // subtrees are eliminated before checking vars in parent
-    for (Continuation c: block.getContinuations()) {
-      for (Block inner: c.getBlocks()) {
-        eliminateRec(logger, f, inner);
-      }
-    }
-    eliminate(logger, f, block);
-  }
-  
-  private static class BlockWalker extends TreeWalker {
-    /** list of essential vars that can't be eliminated */ 
-    final Set<Var> needed = new HashSet<Var>();
-   
-    /** list of vars written in block */
-    final Set<Var> written = new HashSet<Var>();
-   
-    /** list of vars which are interdependent: if one
-     *              var in list is needed, none can be eliminated */
-    final List<List<Var>> interdependencies = new ArrayList<List<Var>>();
-   
-    /**
-     * Return read-only set of all needed vars
-     * @return
-     */
-    public Set<Var> allNeeded() {
-      return new UnionSet<Var>(Arrays.asList(needed, written));
-    }
-
-    @Override
-    public void visit(Continuation cont) {
-      for (Var v: cont.requiredVars(true)) {
-        needed.add(v);
-      }
-    }
-
-    @Override
-    public void visitDeclaration(Var v) {
-      if (v.isMapped()) {
-        needed.add(v);
-        needed.add(v.mapping());
-      }
-    }
-
-    @Override
-    public void visit(Instruction inst) {
-      updateForInstruction(inst, inst.hasSideEffects());
-    }
-
-    @Override
-    public void visit(CleanupAction cleanup) {
-      boolean actionHasSideEffects = cleanup.hasSideEffect();
-      updateForInstruction(cleanup.action(), actionHasSideEffects);
-      if (actionHasSideEffects) {
-        needed.add(cleanup.var());
-      }
-    }
-      
-    private void updateForInstruction(Instruction inst, boolean hasSideEffects) {
-      for (Arg oa: inst.getInputs()) {
-        if (oa.isVar()) {
-          needed.add(oa.getVar());
-        }
-      }
-      for (Var v: inst.getReadOutputs()) {
-        needed.add(v);
-      }
-      
-      for (Var v: inst.getOutputs()) {
-        written.add(v);
-      }
-      
-      // Can't eliminate instructions with side-effects
-      if (hasSideEffects) {
-        for (Var out: inst.getOutputs()) {
-          needed.add(out);
-        }
-      } else {
-        // Can only eliminate one var if can eliminate all
-        List<Var> modOut = inst.getModifiedOutputs();
-        if (modOut.size() > 1) {
-          interdependencies.add(modOut);
-        }
-      }
-    }
-  }
-  
-  /**
-   * Find unneeded vars declared in local block
-   * @param block
-   * @param stillNeeded
-   * @param dependentSets
-   * @return
-   */
-  private static Set<Var> unneededVars(Block block,
-            Set<Var> stillNeeded, List<List<Var>> dependentSets) {
-    HashSet<Var> removeCandidates = new HashSet<Var>();
-    for (Var v: block.getVariables()) {
-      if (!stillNeeded.contains(v)) {
-        removeCandidates.add(v);
-      }
-    }
-    
-    Logger logger = Logging.getSTCLogger();
-    if (logger.isTraceEnabled()) {
-      logger.trace("start removeCandidates: " + removeCandidates + "\n" +
-                   "dependentSets: " + dependentSets);
-    }
-    boolean converged = false;
-    // Check to see if we have to retain additional variables based on
-    // interdependencies.  We're really just computing the transitive
-    // closure here in an iterative way.
-    while (!converged && !dependentSets.isEmpty()) {
-      Iterator<List<Var>> it = dependentSets.iterator();
-      while (it.hasNext()) {
-        List<Var> dependentSet = it.next();
-        converged = true; // assume converged until something changes
-        boolean hasRemoveCandidate = false;
-        boolean allRemoveCandidates = true;
-        for (Var v: dependentSet) {
-          if (removeCandidates.contains(v)) {
-            hasRemoveCandidate = true;
-          } else {
-            allRemoveCandidates = false;
-          }
-        }
-        if (!hasRemoveCandidate) {
-          // No longer relevant
-          it.remove();
-        } else if (!allRemoveCandidates) {
-          // Have to keep at least one remove candidate
-          for (Var v: dependentSet) {
-            removeCandidates.remove(v);
-          }
-          converged = false;
-        }
-      }
-    }
-    
-    if (logger.isTraceEnabled()) {
-      logger.trace("final removeCandidates: " + removeCandidates + "\n" +
-                   "dependentSets: " + dependentSets);
-    }
-    
-    return removeCandidates;
   }
 
 }

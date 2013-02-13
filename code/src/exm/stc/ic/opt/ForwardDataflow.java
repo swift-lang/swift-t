@@ -437,12 +437,6 @@ public class ForwardDataflow implements OptimizerPass {
         liftWait(logger, program, f);
         pass++;
       } while (changes);
-
-
-      // We might have created some dead code to clean up
-      if (Settings.getBoolean(Settings.OPT_DEAD_CODE_ELIM)) {
-        DeadCodeEliminator.eliminate(logger, f);
-      }
     }
   }
 

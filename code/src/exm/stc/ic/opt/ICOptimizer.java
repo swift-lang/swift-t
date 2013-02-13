@@ -149,6 +149,9 @@ public class ICOptimizer {
       // new constants, etc to be folded
       pipe.addPass(new ForwardDataflow(!canReorder));
       
+      // ForwardDataflow tends to generate most dead code
+      pipe.addPass(new DeadCodeEliminator());
+      
       // Do this after forward dataflow to improve odds of fusing things
       // one common subexpression elimination has happened
       pipe.addPass(new ContinuationFusion());
@@ -175,7 +178,13 @@ public class ICOptimizer {
   private static void postprocess(PrintStream icOutput, Logger logger,
       boolean debug, Program prog, long nIterations) throws UserException {   
     OptimizerPipeline postprocess = new OptimizerPipeline(icOutput);
+    
     postprocess.addPass(new ConstantSharing());
+    
+
+    // Final dead code elimination to clean up any remaining dead code 
+    // (from last iteration or constant sharing)
+    postprocess.addPass(new DeadCodeEliminator());
     
     // Add in all the variable passing annotations now that instructions,
     // continuations and variables are fixed

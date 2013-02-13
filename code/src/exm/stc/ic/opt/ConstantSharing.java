@@ -108,12 +108,6 @@ public class ConstantSharing implements OptimizerPass {
       }
     }
     
-    // Remove now redundant local constants
-    if (Settings.getBoolean(Settings.OPT_DEAD_CODE_ELIM)) {
-      if (changed) {
-        DeadCodeEliminator.eliminate(logger, fn, block);
-      }
-    }
     return changed;
   }
 

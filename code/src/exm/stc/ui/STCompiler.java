@@ -194,7 +194,7 @@ public class STCompiler {
       antlrInput.rewind(); antlrInput.reset();
       SwiftAST tree = runANTLR(antlrInput, lineMapping);
       
-      boolean profile = true || Settings.getBoolean(Settings.PROFILE_STC);
+      boolean profile = Settings.getBoolean(Settings.PROFILE_STC);
       
       /* 
        * Walk AST, and build intermediate representation
