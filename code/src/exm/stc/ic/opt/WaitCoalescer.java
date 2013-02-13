@@ -247,9 +247,7 @@ public class WaitCoalescer implements OptimizerPass {
         WaitStatement wait = (WaitStatement)c;
         if (tryReduce(logger, fn, currContext, newContext, wait)) {
           toInline.add(wait);
-        }
-        
-        if (squashWaits(logger, fn, wait, newContext)) {
+        } else if (squashWaits(logger, fn, wait, newContext)) {
           changed = true;
         }
       }
