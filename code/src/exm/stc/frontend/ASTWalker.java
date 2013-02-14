@@ -64,6 +64,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.StringUtil;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.Context.FnProp;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
@@ -1649,7 +1650,7 @@ public class ASTWalker {
           Builtins.addTaskMode(function, mode);
         } catch (IllegalArgumentException e) {
           throw new UserException(context, "Unknown dispatch mode " + val + ". "
-              + " Valid options are: " + TaskMode.values());
+              + " Valid options are: " + StringUtil.concat(TaskMode.values()));
         }
       } else {
         throw new UserException(context, "Invalid annotation" +
