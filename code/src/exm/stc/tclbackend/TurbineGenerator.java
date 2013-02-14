@@ -1982,31 +1982,39 @@ public class TurbineGenerator implements CompilerBackend
               rangeItersLeft(new Value(TCLTMP_RANGE_LO),
                              new Value(TCLTMP_RANGE_HI),
                              new Value(TCLTMP_RANGE_INC))));
-    Expression doneSplitting = Square.arithExpr(
-            new Value(TCLTMP_ITERSLEFT), new Token("<="),
-            new LiteralInt(leafDegree));
-    Sequence thenB = new Sequence();
-    Sequence elseB = new Sequence();
 
+    Expression done = Square.arithExpr(
+        new Value(TCLTMP_ITERSLEFT), new Token("<="),
+        LiteralInt.ZERO);
+    Sequence thenDoneB = new Sequence();
+    If finishedIf = new If(done, thenDoneB);
+    thenDoneB.add(new Command("return"));
+    outer.add(finishedIf);
+
+    Expression doneSplitting = Square.arithExpr(
+        new Value(TCLTMP_ITERSLEFT), new Token("<="),
+        new LiteralInt(leafDegree));
     // if (iters < splitFactor) then <call inner> else <split more>
-    If splitIf = new If(doneSplitting, thenB, elseB);
+    Sequence thenNoSplitB = new Sequence();
+    Sequence elseSplitB = new Sequence();
+    If splitIf = new If(doneSplitting, thenNoSplitB, elseSplitB);
     outer.add(splitIf);
 
-    thenB.add(new Command(innerProcName, innerCallArgs));
+    thenNoSplitB.add(new Command(innerProcName, innerCallArgs));
 
     Sequence splitBody = new Sequence();
     String splitStart = "tcltmp:splitstart";
     String skip = "tcltmp:skip";
     // skip = max(splitFactor,  ceil(iters /(float) splitfactor))
     // skip = max(splitFactor,  ((iters - 1) /(int) splitfactor) + 1)
-    elseB.add(new SetVariable(skip, Square.arithExpr(new Token(
+    elseSplitB.add(new SetVariable(skip, Square.arithExpr(new Token(
           String.format("max(%d, ((%s - 1) / %d ) + 1) * %s",
                   leafDegree, new Value(TCLTMP_ITERSLEFT),
                   splitDegree, new Value(TCLTMP_RANGE_INC))))));
 
     ForLoop splitLoop = new ForLoop(splitStart, loVal,
             hiVal, new Value(skip), splitBody);
-    elseB.add(splitLoop);
+    elseSplitB.add(splitLoop);
 
 
     ArrayList<Expression> outerRecCall = new ArrayList<Expression>();
