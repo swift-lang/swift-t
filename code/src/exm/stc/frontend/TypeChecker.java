@@ -711,7 +711,7 @@ public class TypeChecker {
       throw new STCRuntimeError("Unions with type var not supported yet");
     } 
     
-    if (Types.isRef(formalArgT)) {
+    if (Types.isRef(argExprT)) {
       // Will be dereferenced
       argExprT = argExprT.memberType();
     }
