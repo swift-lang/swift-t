@@ -1810,7 +1810,7 @@ public class ICInstructions {
         // is a reference to an outer array that is kept open but not
         // modified
         return Collections.singletonList(getOutput(1));
-        default:
+      default:
           return this.getOutputs();
       }
     }

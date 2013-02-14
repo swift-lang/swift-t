@@ -97,6 +97,8 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
     /* Set of vars that are definitely required */
     HashSet<Var> needed = new HashSet<Var>();
 
+    /* List of modified vars */
+    List<Var> modified = new ArrayList<Var>(); 
     /*
      * Graph of dependencies from vars to other vars. If edge exists v1 -> v2
      * this means that if v1 is required, then v2 is required
@@ -107,7 +109,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
     Map <Var, Var> componentOf = new HashMap<Var, Var>();
 
     walkFunction(logger, f, removeCandidates, needed, dependencyGraph,
-                 componentOf);
+                            modified, componentOf);
     
     if (logger.isTraceEnabled()) {
       logger.trace("Dead code elimination in function " + f.getName() + "\n" +
@@ -115,6 +117,22 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
                    "definitely needed: "+ needed + "\n" +
                    "dependencies: \n" + printDepGraph(dependencyGraph, 4) +
                    "componentOf: \n" + ICUtil.prettyPrintMap(componentOf, 4));
+    }
+    
+    /*
+     * Add in component info.
+     * Take into account that we might modify value of containing
+     * structure, e.g. array
+     */
+    for (Var written: modified) {
+      Var whole = componentOf.get(written); 
+      while (whole != null) {
+        // Need to keep written var if we keep whole
+        if (logger.isTraceEnabled())
+          logger.trace("Add transitive dep " + whole + " => " + written);
+        dependencyGraph.put(whole, written);
+        whole = componentOf.get(whole);
+      }
     }
     
     /*
@@ -155,11 +173,13 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
    *                           could be removed
    * @param needed
    * @param dependencyGraph
+   * @param modified 
    * @param componentOf
    */
   private static void walkFunction(Logger logger, Function f,
       HashSet<Var> removeCandidates, HashSet<Var> needed,
-      MultiMap<Var, Var> dependencyGraph, Map <Var, Var> componentOf) {
+      MultiMap<Var, Var> dependencyGraph, List<Var> modified,
+      Map <Var, Var> componentOf) {
     ArrayDeque<Block> workStack = new ArrayDeque<Block>();
     workStack.push(f.getMainblock());
     
@@ -170,7 +190,8 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
 
       walkBlockVars(block, removeCandidates, dependencyGraph);
       
-      walkInstructions(logger, block, needed, dependencyGraph, componentOf);
+      walkInstructions(logger, block, needed, dependencyGraph, modified,
+                       componentOf);
       
       ListIterator<Continuation> it = block.continuationIterator();
       while (it.hasNext()) {
@@ -190,8 +211,8 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
   }
 
   private static void walkInstructions(Logger logger,
-      Block block, HashSet<Var> needed,
-      MultiMap<Var, Var> dependencyGraph, Map<Var, Var> componentOf) {
+      Block block, HashSet<Var> needed, MultiMap<Var, Var> dependencyGraph,
+      List<Var> modified, Map<Var, Var> componentOf) {
     for (Instruction inst: block.getInstructions()) {
       // If it has side-effects, need all inputs and outputs
       if (inst.hasSideEffects()) {
@@ -205,6 +226,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
         // Add edges to dependency graph
         List<Var> outputs = inst.getOutputs();
         List<Var> modOutputs = inst.getModifiedOutputs();
+        modified.addAll(modOutputs);
         List<Var> readOutputs = inst.getReadOutputs();
         List<Arg> inputs = inst.getInputs();
         // First, if multiple modified outputs, need to remove all at once
@@ -258,17 +280,6 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
     if (logger.isTraceEnabled())
       logger.trace("Add dep " + out + " => " + in + " for inst " + inst);
     dependencyGraph.put(out, in);
-    // Take into account that we might modify value of containing
-    // structure, e.g. array
-    Var whole = componentOf.get(out); 
-    while (whole != null) {
-      // Need to keep output var if we keep whole
-      if (logger.isTraceEnabled())
-        logger.trace("Add transitive dep " + whole + " => " + out +
-                     " for inst " + inst);
-      dependencyGraph.put(whole, out);
-      whole = componentOf.get(whole);
-    }
   }
 
   private static void walkBlockVars(Block block,
