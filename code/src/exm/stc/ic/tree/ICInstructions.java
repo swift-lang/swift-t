@@ -1214,20 +1214,21 @@ public class ICInstructions {
       switch (op) {
       /* The direct container write functions only mutate their output 
        * argument */
-      case ARRAY_INSERT_FUTURE:
-      case ARRAY_INSERT_IMM:
       case STRUCT_CLOSE:
       case STRUCT_INSERT:
       case DECR_WRITERS:
       case DECR_REF:
       case INCR_WRITERS:
       case INCR_REF:
-      case ARRAY_BUILD:
         return this.writesAliasVar();
-        
+
+      case ARRAY_BUILD:
+      case ARRAY_INSERT_FUTURE:
+      case ARRAY_INSERT_IMM:        
       case ARRAYREF_INSERT_FUTURE:
       case ARRAYREF_INSERT_IMM:
-        return true;
+        // Effect can be tracked back to original array
+        return false;
   
       
       case UPDATE_INCR:
@@ -2055,8 +2056,9 @@ public class ICInstructions {
             arr = getOutput(0);
           }
           Arg ix = getInput(0);
-          Var contents = getInput(1).getVar();
-          return Arrays.asList(makeArrayComputedValue(arr, ix, contents));
+          Var member = getInput(1).getVar();
+          boolean insertingRef = isMemberReference(member, arr);
+          return Arrays.asList(makeArrayCV(arr, ix, member, insertingRef));
         }
         case ARRAY_BUILD: {
           Var arr = getOutput(0);
@@ -2067,8 +2069,8 @@ public class ICInstructions {
           // For individual array elements
           int arrSize = getInputs().size();
           for (int i = 0; i < arrSize; i++) {
-            res.add(makeArrayComputedValue(arr, Arg.createIntLit(i),
-                                                getInput(i).getVar()));
+            res.add(makeArrayCV(arr, Arg.createIntLit(i),
+                                                getInput(i).getVar(), false));
           }
           
           // TODO: how to propagate size info.  This isn't working yet
@@ -2086,17 +2088,15 @@ public class ICInstructions {
           Arg ix = getInput(1);
           Var contents = getOutput(0);
           
-          ComputedValue cv = makeArrayComputedValue(arr, ix, contents);
   
           if (op == Opcode.ARRAY_LOOKUP_IMM) {
-            assert(contents.type().equals(
-                Types.getArrayMemberType(arr.type())));
             // This just retrieves the item immediately
-            return Arrays.asList(cv);
+            return Arrays.asList(makeArrayCV(arr, ix, contents, false));
           } else {
             assert (Types.isRefTo(contents.type(), 
                 Types.getArrayMemberType(arr.type())));
-            Arg prev = existing.getLocation(makeArrayComputedValue(arr, ix, null));
+            ComputedValue refCV = makeArrayCV(arr, ix, contents, true);
+            Arg prev = existing.getLocation(makeArrayCV(arr, ix, null, false));
             if (prev != null) {
               /* All these array loads give back a reference, but if a value
                * was previously inserted at this index, then we can 
@@ -2105,14 +2105,14 @@ public class ICInstructions {
                   contents.type()), Arg.createVar(contents), prev, false);
               Opcode derefOp = derefOpCode(contents.type());
               if (derefOp == null) {
-                return Arrays.asList(retrieveCV, cv);
+                return Arrays.asList(retrieveCV, refCV);
               } else {
                 ComputedValue derefCV = new ComputedValue(derefOp,
                             Arg.createVar(contents), prev, false);
-                return Arrays.asList(retrieveCV, cv, derefCV);
+                return Arrays.asList(retrieveCV, refCV, derefCV);
               }
             } else {
-              return Arrays.asList(cv);
+              return Arrays.asList(refCV);
             }
           }
         }
@@ -2132,7 +2132,8 @@ public class ICInstructions {
             arr = getOutput(1);
           }
           Arg ix = getInput(0);
-          ComputedValue cv = makeArrayComputedValue(arr, ix, nestedArr);
+          boolean returnsRef =  op != Opcode.ARRAY_CREATE_NESTED_IMM;
+          ComputedValue cv = makeArrayCV(arr, ix, nestedArr, returnsRef);
           if (op == Opcode.ARRAY_CREATE_NESTED_IMM) {
             // No references involved, the instruction returns the nested
             // array directly
@@ -2168,14 +2169,26 @@ public class ICInstructions {
       return new ComputedValue(op, inputs, Arg.createVar(outputs.get(0)), closed);
     }
 
-    static ComputedValue makeArrayComputedValue(Var arr, Arg ix, Var contents) {
+    /**
+     * Make a standard computed value for array contents
+     * @param arr
+     * @param ix
+     * @param contents
+     * @param refResult if contents is ref
+     * @return
+     */
+    static ComputedValue makeArrayCV(Var arr, Arg ix, Var contents,
+          boolean refResult) {
       ComputedValue cv;
       Arg contentsArg = contents == null ? null : Arg.createVar(contents);
-      if (contents != null && isMemberReference(contents, arr)) {
+      if (refResult) {
+        assert(contents == null || isMemberReference(contents, arr));
         cv = new ComputedValue(Opcode.FAKE, ComputedValue.REF_TO_ARRAY_CONTENTS, 
             Arrays.asList(Arg.createVar(arr), ix),
             contentsArg, false);
       } else {
+        assert(contents == null || isMemberType(contents, arr)) :
+              "not member: " + contents + " " + arr;
         cv = new ComputedValue(Opcode.FAKE, ComputedValue.ARRAY_CONTENTS, 
             Arrays.asList(Arg.createVar(arr), ix),
             contentsArg, false);
@@ -2183,6 +2196,10 @@ public class ICInstructions {
       return cv;
     }
 
+    private static boolean isMemberType(Var member, Var arr) {
+      Type memberType = Types.getArrayMemberType(arr.type());
+      return (member.type().assignableTo(memberType));
+    }
     /**
      * @param member
      * @param arr
@@ -2374,6 +2391,8 @@ public class ICInstructions {
           }
           break;
         }
+        default:
+          // Do nothing
       }
 
       // Fall through to here if can do nothing

@@ -99,6 +99,13 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
 
     walkFunction(logger, f, removeCandidates, needed, dependencyGraph);
     
+    if (logger.isTraceEnabled()) {
+      logger.trace("Dead code elimination in function " + f.getName() + "\n" +
+                   "removal candidates: " + removeCandidates + "\n" +
+                   "definitely needed: "+ needed + "\n" +
+                   "dependencies: " + dependencyGraph);
+    }
+    
     /*
      * Expand set of needed based on dependency graph 
      */
