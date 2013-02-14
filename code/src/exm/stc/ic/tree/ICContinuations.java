@@ -1516,27 +1516,54 @@ public class ICContinuations {
         }
         doUnroll(logger, outerBlock, desiredUnroll);
         return true;
-      } else if (start.isIntVal() && end.isIntVal() && increment.isIntVal()) {
-        // See if the loop has a small number of iterations, could just expand
-        long iters = calcIterations(start.getIntLit(), end.getIntLit(),
-                                    increment.getIntLit());
-        try {
-          if (iters <= Settings.getLong(
-                        Settings.OPT_UNROLL_LOOP_THRESHOLD_ITERS)) {
-            long instCount = loopBody.getInstructionCount();
+      } else {
+        long instCount = loopBody.getInstructionCount();
+        if (start.isIntVal() && end.isIntVal() && increment.isIntVal()) {
+          // See if the loop has a small number of iterations, could just expand
+          long iters = calcIterations(start.getIntLit(), end.getIntLit(),
+                                      increment.getIntLit());
+          if (iters <= getUnrollMaxIters(true)) {
             long extraInstructions = instCount * (iters - 1);
-            long extraInstructionThreshold =
-                    Settings.getLong(Settings.OPT_UNROLL_LOOP_THRESHOLD_INSTS);
-            if (extraInstructions <= extraInstructionThreshold) {
+            if (extraInstructions <= getUnrollMaxExtraInsts(true)) {
               doUnroll(logger, outerBlock, iters);
               return true;
             }
           }
-        } catch (InvalidOptionException e) {
-          throw new STCRuntimeError(e.getMessage());
+        }
+        // Finally, maybe unroll a few iterations
+        long threshold = getUnrollMaxExtraInsts(false);
+        long unrollFactor = Math.min(getUnrollMaxIters(false),
+                                     (threshold / instCount) + 1);
+        if (unrollFactor > 1) {
+          doUnroll(logger, outerBlock, unrollFactor);
+          return true;
         }
       }
       return false;
+    }
+
+    private long getUnrollMaxIters(boolean fullExpand) {
+      try {
+        if (fullExpand) {
+          return Settings.getLong(Settings.OPT_EXPAND_LOOP_THRESHOLD_ITERS);
+        } else {
+          return Settings.getLong(Settings.OPT_UNROLL_LOOP_THRESHOLD_ITERS);
+        }
+      } catch (InvalidOptionException e) {
+        throw new STCRuntimeError(e.getMessage());
+      }
+    }
+    
+    private long getUnrollMaxExtraInsts(boolean fullExpand) {
+      try {
+        if (fullExpand) {
+          return Settings.getLong(Settings.OPT_EXPAND_LOOP_THRESHOLD_INSTS);
+        } else {
+          return Settings.getLong(Settings.OPT_UNROLL_LOOP_THRESHOLD_INSTS); 
+        }
+      } catch (InvalidOptionException e) {
+        throw new STCRuntimeError(e.getMessage());
+      }
     }
 
     private void doUnroll(Logger logger, Block outerBlock, long unrollFactor) {

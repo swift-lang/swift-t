@@ -61,9 +61,15 @@ public class Settings
   public static final String OPT_DISABLE_ASSERTS = "stc.opt.disable-asserts";
   public static final String OPT_UNROLL_LOOPS = "stc.opt.unroll-loops";
   // Threshold iters for fully unrolling loop with fixed bounds
+  public static final String OPT_EXPAND_LOOP_THRESHOLD_ITERS =
+                            "stc.opt.expand-loop-threshold-iters";
+  // Max number of iters to unroll by default
   public static final String OPT_UNROLL_LOOP_THRESHOLD_ITERS =
                             "stc.opt.unroll-loop-threshold-iters";
   // Threshold extra instructions for fully unrolling loop with fixed bounds
+  public static final String OPT_EXPAND_LOOP_THRESHOLD_INSTS =
+                            "stc.opt.expand-loop-threshold-insts";
+  // Threshold extra instructions for unrolling loop
   public static final String OPT_UNROLL_LOOP_THRESHOLD_INSTS =
                             "stc.opt.unroll-loop-threshold-insts";
   public static final String OPT_HOIST = "stc.opt.hoist";
@@ -111,8 +117,10 @@ public class Settings
     defaults.setProperty(OPT_SHARED_CONSTANTS, "true");
     defaults.setProperty(OPT_DEAD_CODE_ELIM, "true");
     defaults.setProperty(OPT_UNROLL_LOOPS, "true");
-    defaults.setProperty(OPT_UNROLL_LOOP_THRESHOLD_ITERS, "16");
-    defaults.setProperty(OPT_UNROLL_LOOP_THRESHOLD_INSTS, "256");
+    defaults.setProperty(OPT_EXPAND_LOOP_THRESHOLD_ITERS, "16");
+    defaults.setProperty(OPT_UNROLL_LOOP_THRESHOLD_ITERS, "8");
+    defaults.setProperty(OPT_EXPAND_LOOP_THRESHOLD_INSTS, "256");
+    defaults.setProperty(OPT_UNROLL_LOOP_THRESHOLD_INSTS, "192");
     defaults.setProperty(OPT_DISABLE_ASSERTS, "false");
     defaults.setProperty(OPT_FORWARD_DATAFLOW, "true");
     defaults.setProperty(OPT_EXPAND_DATAFLOW_OPS, "true");
@@ -217,7 +225,9 @@ public class Settings
     getBoolean(OPT_REORDER_INSTS);
     getLong(OPT_FUNCTION_INLINE_THRESHOLD);
     getBoolean(OPT_UNROLL_LOOPS);
+    getLong(OPT_EXPAND_LOOP_THRESHOLD_ITERS);
     getLong(OPT_UNROLL_LOOP_THRESHOLD_ITERS);
+    getLong(OPT_EXPAND_LOOP_THRESHOLD_INSTS);
     getLong(OPT_UNROLL_LOOP_THRESHOLD_INSTS);
     getBoolean(TURBINE_NO_STACK);
     getBoolean(TURBINE_NO_STACK_VARS);
