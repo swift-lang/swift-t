@@ -634,6 +634,9 @@ public class ForeachLoops {
     public Pair<Boolean, List<Continuation>> tryUnroll(Logger logger,
                                                        Block outerBlock) {
       logger.trace("DesiredUnroll for " + loopName + ": " + desiredUnroll);
+      boolean expandLoops = isExpandLoopsEnabled();
+      boolean fullUnroll = isFullUnrollEnabled();
+      
       if (!this.unrolled && this.desiredUnroll > 1) {
         // Unroll explicitly marked loops
         if (this.loopCounterVar != null) {
@@ -642,9 +645,9 @@ public class ForeachLoops {
           return NO_UNROLL;
         }
         return Pair.create(true, doUnroll(logger, outerBlock, desiredUnroll));
-      } else {
+      } else if (expandLoops || fullUnroll) {
         long instCount = loopBody.getInstructionCount();
-        if (start.isIntVal() && end.isIntVal() && increment.isIntVal()) {
+        if (expandLoops && start.isIntVal() && end.isIntVal() && increment.isIntVal()) {
           // See if the loop has a small number of iterations, could just expand
           long iters = calcIterations(start.getIntLit(), end.getIntLit(),
                                       increment.getIntLit());
@@ -655,6 +658,10 @@ public class ForeachLoops {
             }
           }
         } 
+        if (!fullUnroll) {
+          return NO_UNROLL;
+        }
+        
         if (this.unrolled) {
           // Don't do extra unrolling unless we're just expanding a small loop
           return NO_UNROLL;
@@ -670,6 +677,23 @@ public class ForeachLoops {
       return NO_UNROLL;
     }
 
+    private boolean isExpandLoopsEnabled() {
+      try {
+        return Settings.getBoolean(Settings.OPT_EXPAND_LOOPS);
+      } catch (InvalidOptionException e) {
+        throw new STCRuntimeError(e.getMessage());
+      }
+    }
+    
+    private boolean isFullUnrollEnabled() {
+      try {
+        return Settings.getBoolean(Settings.OPT_FULL_UNROLL);
+      } catch (InvalidOptionException e) {
+        throw new STCRuntimeError(e.getMessage());
+      }
+    }
+    
+    
     private int getUnrollMaxIters(boolean fullExpand) {
       try {
         if (fullExpand) {

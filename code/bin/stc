@@ -28,8 +28,8 @@ O1_OPTS=("constant-fold" "dead-code-elim"
                     "flatten-nested" "shared-constants"
                     "forward-dataflow" "unroll-loops"
                      "controlflow-fusion" )
-O2_OPTS=("expand-dataflow-ops" "wait-coalesce" "hoisting")
-O3_OPTS=("pipeline" "function-inline" "reorder-insts" "algebra")
+O2_OPTS=("expand-dataflow-ops" "wait-coalesce" "hoisting" "expand-loops")
+O3_OPTS=("pipeline" "function-inline" "reorder-insts" "algebra" "full-unroll")
 EXPERIMENTAL_OPTS=()
 
 # OUTPUT_MODE= turbine or cpp
@@ -87,6 +87,12 @@ function get_compiler_opt_name() {
                     return 0
                     ;;
         unroll-loops) echo "stc.opt.unroll-loops"
+                    return 0
+                    ;;
+        expand-loops) echo "stc.opt.expand-loops"
+                    return 0
+                    ;;
+        full-unroll) echo "stc.opt.full-unroll"
                     return 0
                     ;;
         cancel-refcounts) echo "stc.opt.cancel-refcounts"

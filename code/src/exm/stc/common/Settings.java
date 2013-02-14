@@ -60,7 +60,13 @@ public class Settings
   public static final String OPT_FUNCTION_INLINE_THRESHOLD =
                               "stc.opt.function-inline-threshold";
   public static final String OPT_DISABLE_ASSERTS = "stc.opt.disable-asserts";
+  /* Master switch for loop unrolling pass.  At minimum manually 
+   * annotated loops are unrolled */
   public static final String OPT_UNROLL_LOOPS = "stc.opt.unroll-loops";
+  /* Expand short loops with known bounds */
+  public static final String OPT_EXPAND_LOOPS = "stc.opt.expand-loops";
+  /* Unroll any loops */
+  public static final String OPT_FULL_UNROLL = "stc.opt.full-unroll";
   // Threshold iters for fully unrolling loop with fixed bounds
   public static final String OPT_EXPAND_LOOP_THRESHOLD_ITERS =
                             "stc.opt.expand-loop-threshold-iters";
@@ -118,6 +124,8 @@ public class Settings
     defaults.setProperty(OPT_SHARED_CONSTANTS, "true");
     defaults.setProperty(OPT_DEAD_CODE_ELIM, "true");
     defaults.setProperty(OPT_UNROLL_LOOPS, "true");
+    defaults.setProperty(OPT_EXPAND_LOOPS, "true");
+    defaults.setProperty(OPT_FULL_UNROLL, "false");
     defaults.setProperty(OPT_EXPAND_LOOP_THRESHOLD_ITERS, "16");
     defaults.setProperty(OPT_UNROLL_LOOP_THRESHOLD_ITERS, "8");
     defaults.setProperty(OPT_EXPAND_LOOP_THRESHOLD_INSTS, "256");
@@ -228,6 +236,8 @@ public class Settings
     getBoolean(OPT_REORDER_INSTS);
     getLong(OPT_FUNCTION_INLINE_THRESHOLD);
     getBoolean(OPT_UNROLL_LOOPS);
+    getBoolean(OPT_EXPAND_LOOPS);
+    getBoolean(OPT_FULL_UNROLL);
     getLong(OPT_EXPAND_LOOP_THRESHOLD_ITERS);
     getLong(OPT_UNROLL_LOOP_THRESHOLD_ITERS);
     getLong(OPT_EXPAND_LOOP_THRESHOLD_INSTS);
