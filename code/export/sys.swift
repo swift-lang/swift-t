@@ -53,7 +53,7 @@ argv_accept(string... keys)
  */
 @pure
 (string s) getenv(string key) "turbine" "0.0.2" "getenv"
-    [ "set <<s>> turbine::getenv_impl <<key>>" ];
+    [ "set <<s>> [ turbine::getenv_impl <<key>> ]" ];
 
 // Do not optimize this- it is for tests
 @dispatch=WORKER
