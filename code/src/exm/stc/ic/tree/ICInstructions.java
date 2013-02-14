@@ -1450,9 +1450,7 @@ public class ICInstructions {
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
                                            Set<Var> unmappedVars,
                                            boolean waitForClose) {
-      // TODO: disable for insert statements until we can correctly mark that 
-      //      arrays must be kept open
-      boolean insertRefWaitForClose = false;
+      boolean insertRefWaitForClose = waitForClose;
       // Try to take advantage of closed variables 
       switch (op) {
       case ARRAY_LOOKUP_REF_IMM: {
