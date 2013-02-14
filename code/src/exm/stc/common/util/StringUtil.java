@@ -51,6 +51,15 @@ public class StringUtil {
     return concat(' ', strings);
   }
 
+  public static String concat(Object[] objs)
+  {
+    String[] strings = new String[objs.length];
+    int i = 0;
+    for (Object obj : objs)
+      strings[i++] = obj.toString();
+    return concat(' ', strings);
+  }
+  
   public static String concat(String[] tokens, int start)
   {
     return concat(tokens, start, " ");
