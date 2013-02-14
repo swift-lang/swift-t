@@ -22,11 +22,11 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.Settings;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
+import exm.stc.ic.tree.Conditionals.IfStatement;
+import exm.stc.ic.tree.ForeachLoops.ForeachLoop;
+import exm.stc.ic.tree.ForeachLoops.RangeLoop;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
-import exm.stc.ic.tree.ICContinuations.ForeachLoop;
-import exm.stc.ic.tree.ICContinuations.IfStatement;
-import exm.stc.ic.tree.ICContinuations.RangeLoop;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 

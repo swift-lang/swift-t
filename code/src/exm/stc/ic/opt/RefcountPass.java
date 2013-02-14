@@ -31,7 +31,7 @@ import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
-import exm.stc.ic.tree.ICContinuations.AbstractForeachLoop;
+import exm.stc.ic.tree.ForeachLoops.AbstractForeachLoop;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
