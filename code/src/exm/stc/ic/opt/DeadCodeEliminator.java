@@ -29,6 +29,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.MultiMap;
@@ -238,8 +239,8 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
         Pair<Var, Var> componentAlias = inst.getComponentAlias();
         if (componentAlias != null) {
           Var component = componentAlias.val1;
-          assert(component.storage() == VarStorage.ALIAS) :
-                                    component + " " + inst;
+          assert(component.storage() == VarStorage.ALIAS ||
+              Types.isRef(component.type())) : component + " " + inst;
           Var whole = componentAlias.val2;
           Var prev = componentOf.put(component, whole);
           assert(prev == null); // shouldn't be component of multiple things
