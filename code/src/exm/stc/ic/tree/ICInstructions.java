@@ -27,6 +27,9 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.Logging;
+import exm.stc.common.Settings;
+import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
@@ -3938,13 +3941,37 @@ public class ICInstructions {
     }
 
     private List<ComputedValue> makeInferredComputedValues(CVMap cvs) {
+      try {
+        if (!Settings.getBoolean(Settings.OPT_ALGEBRA)) {
+          return Collections.emptyList();
+        }
+      } catch (InvalidOptionException e) {
+        throw new STCRuntimeError(e.getMessage());
+      }
       switch (subop) {
         case PLUS_INT:
         case MINUS_INT:
-        return tryAlgebra(cvs);
+        List<ComputedValue> inferred = tryAlgebra(cvs);
+        printInferredValues(inferred);
+        return inferred;
         default:
           // do nothing
           return Collections.emptyList();
+      }
+    }
+
+
+    private void printInferredValues(List<ComputedValue> inferred) {
+      Logger logger = Logging.getSTCLogger();
+      if (logger.isTraceEnabled()) {
+        StringBuilder sb = new StringBuilder();
+        if (!inferred.isEmpty()){
+          sb.append(this + " => ");
+          for (ComputedValue t: inferred) {
+            sb.append(t.getValLocation() + " == " + t + ", ");
+          }
+        }
+        logger.trace(sb.toString());
       }
     }
 
@@ -3968,7 +3995,8 @@ public class ICInstructions {
           BuiltinOpcode aop = BuiltinOpcode.valueOf(varVal.getSubop());
           if (aop == BuiltinOpcode.PLUS_INT ||
               aop == BuiltinOpcode.MINUS_INT) { 
-            Pair<Var, Long> add = convertToCanonicalAdd(aop, in1, in2);
+            Pair<Var, Long> add = convertToCanonicalAdd(aop,
+                                  varVal.getInput(0), varVal.getInput(1));
             if (add != null) {
               // Note that if this instruction computes x = y + c1
               // and y = z + c2 was computed earlier, then
