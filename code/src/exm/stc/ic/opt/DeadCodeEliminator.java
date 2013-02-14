@@ -16,6 +16,9 @@
 package exm.stc.ic.opt;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
@@ -29,6 +32,8 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.MultiMap;
+import exm.stc.common.util.Pair;
+import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -103,7 +108,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       logger.trace("Dead code elimination in function " + f.getName() + "\n" +
                    "removal candidates: " + removeCandidates + "\n" +
                    "definitely needed: "+ needed + "\n" +
-                   "dependencies: " + dependencyGraph);
+                   "dependencies: " + printDepGraph(dependencyGraph));
     }
     
     /*
@@ -123,6 +128,10 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
     }
     
     removeCandidates.removeAll(needed);
+    
+    if (logger.isTraceEnabled()) {
+      logger.trace("Final variables to be eliminated: " + removeCandidates);
+    }
     if (removeCandidates.isEmpty()) {
       return false;
     } else {
@@ -144,6 +153,9 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
   private static void walkFunction(Logger logger, Function f,
       HashSet<Var> removeCandidates, HashSet<Var> needed,
       MultiMap<Var, Var> dependencyGraph) {
+    // a -> b means that a is part of b
+    Map <Var, Var> componentOf = new HashMap<Var, Var>();
+    
     ArrayDeque<Block> workStack = new ArrayDeque<Block>();
     workStack.push(f.getMainblock());
     
@@ -154,7 +166,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
 
       walkBlockVars(block, removeCandidates, dependencyGraph);
       
-      walkInstructions(block, needed, dependencyGraph);
+      walkInstructions(logger, block, needed, dependencyGraph, componentOf);
       
       ListIterator<Continuation> it = block.continuationIterator();
       while (it.hasNext()) {
@@ -173,8 +185,9 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
     }
   }
 
-  private static void walkInstructions(Block block, HashSet<Var> needed,
-      MultiMap<Var, Var> dependencyGraph) {
+  private static void walkInstructions(Logger logger,
+      Block block, HashSet<Var> needed,
+      MultiMap<Var, Var> dependencyGraph, Map<Var, Var> componentOf) {
     for (Instruction inst: block.getInstructions()) {
       // If it has side-effects, need all inputs and outputs
       if (inst.hasSideEffects()) {
@@ -186,22 +199,33 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
         }
       } else {
         // Add edges to dependency graph
-        
         List<Var> outputs = inst.getOutputs();
-        // First, if multiple outputs, need to remove all at once
-        if (outputs.size() > 1) {
-          // Connect outputs in ring so that they are strongly connected component
-          for (int i = 0; i < outputs.size(); i++) { 
-            dependencyGraph.put(outputs.get(i), outputs.get((i + 1) % outputs.size()));
+        List<Var> modOutputs = inst.getModifiedOutputs();
+        List<Var> readOutputs = inst.getReadOutputs();
+        List<Arg> inputs = inst.getInputs();
+        // First, if multiple modified outputs, need to remove all at once
+        if (modOutputs.size() > 1) {
+          // Connect mod outputs in ring so that they are
+          // strongly connected component
+          for (int i = 0; i < modOutputs.size(); i++) { 
+            int j = (i + 1) % modOutputs.size();
+            dependencyGraph.put(modOutputs.get(i), modOutputs.get(j));
           } 
         }
-        if (outputs.size() > 0) {
-          // Second, output depends on all inputs.  Just use one output if multiple
+        if (modOutputs.size() > 0) {
+          // Second, modified output depends on all inputs and read outputs. 
+          // Just use one output if multiple
           Var out = outputs.get(0);
-          for (Arg in: inst.getInputs()) {
+          for (Arg in: inputs) {
             if (in.isVar()) {
-              dependencyGraph.put(out, in.getVar());
+              addOutputDep(logger, inst, dependencyGraph, componentOf, out,
+                           in.getVar());
             }
+          }
+          
+          for (Var readOut: readOutputs) {
+            addOutputDep(logger, inst, dependencyGraph, componentOf, out,
+                         readOut);
           }
         }
         // Writing mapped var has side-effect
@@ -210,10 +234,38 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
             needed.add(output);
           }
         }
+        // Update structural information
+        Pair<Var, Var> componentAlias = inst.getComponentAlias();
+        if (componentAlias != null) {
+          Var component = componentAlias.val1;
+          assert(component.storage() == VarStorage.ALIAS);
+          Var whole = componentAlias.val2;
+          Var prev = componentOf.put(component, whole);
+          assert(prev == null); // shouldn't be component of multiple things
+        }
       }
     }
   }
   
+  private static void addOutputDep(Logger logger,
+      Instruction inst, MultiMap<Var, Var> dependencyGraph,
+      Map<Var, Var> componentOf, Var out, Var in) {
+    if (logger.isTraceEnabled())
+      logger.trace("Add dep " + out + " => " + in + " for inst " + inst);
+    dependencyGraph.put(out, in);
+    // Take into account that we might modify value of containing
+    // structure, e.g. array
+    Var whole = componentOf.get(out); 
+    while (whole != null) {
+      // Need to keep output var if we keep whole
+      if (logger.isTraceEnabled())
+        logger.trace("Add transitive dep " + whole + " => " + out +
+                     " for inst " + inst);
+      dependencyGraph.put(whole, out);
+      whole = componentOf.get(whole);
+    }
+  }
+
   private static void walkBlockVars(Block block,
       HashSet<Var> removeCandidates, MultiMap<Var, Var> dependencyGraph) {
     for (Var v: block.getVariables()) {
@@ -243,6 +295,19 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
         }
       }
     }
+  }
+
+  private static String printDepGraph(MultiMap<Var, Var> dependencyGraph) {
+    List<Var> keys = new ArrayList<Var>(dependencyGraph.keySet());
+    Collections.sort(keys);
+    StringBuilder sb = new StringBuilder();
+    for (Var key: keys) {
+      sb.append(key.name() + " => [");
+      ICUtil.prettyPrintVarList(sb, dependencyGraph.get(key));
+      sb.append("]\n");
+    }
+    
+    return sb.toString();
   }
 
 }

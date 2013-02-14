@@ -377,6 +377,24 @@ public class ICInstructions {
     public List<Var> tryPiggyback(Counters<Var> increments, RefCountType type) {
       return Var.NONE;
     }
+
+    /**
+     * If this instruction makes an output a part of another
+     * variable such that modifying the output modifies something
+     * else
+     * @return null if nothing
+     */
+    public Pair<Var, Var> getComponentAlias() {
+      // Default is nothing, few instructions do this
+      return null;
+    }
+
+    /**
+     * @return true if side-effect or output modification is idempotent
+     */
+    public boolean isIdempotent() {
+      return false;
+    }
   }
   
   public static class Comment extends Instruction {
@@ -2397,6 +2415,35 @@ public class ICInstructions {
 
       // Fall through to here if can do nothing
       return Var.NONE;
+    }
+    
+    public Pair<Var, Var> getComponentAlias() {
+      switch (op) {
+        case ARRAY_CREATE_NESTED_IMM:
+        case ARRAY_CREATE_NESTED_FUTURE:
+          // From inner array to immediately enclosing
+          return Pair.create(getOutput(0), getOutput(1));
+        case ARRAYREF_CREATE_NESTED_IMM:
+        case ARRAYREF_CREATE_NESTED_FUTURE:
+          // From inner array to immediately enclosing
+          return Pair.create(getOutput(0), getOutput(2));
+        case LOAD_REF:
+          return Pair.create(getOutput(0), getInput(0).getVar());
+        default:
+          return null;
+      }
+    }
+
+    public boolean isIdempotent() {
+      switch (op) {
+        case ARRAY_CREATE_NESTED_FUTURE:
+        case ARRAY_CREATE_NESTED_IMM:
+        case ARRAYREF_CREATE_NESTED_FUTURE:
+        case ARRAYREF_CREATE_NESTED_IMM:
+          return true;
+        default:
+          return false;
+      }
     }
   }
 

@@ -348,11 +348,16 @@ public class HoistLoops implements OptimizerPass {
     for (Var out: inst.getOutputs()) {
       if (trackDeclares(out)) {
         int declareDepth = state.declareMap.getDepth(out);
+        if (logger.isTraceEnabled())
+          logger.trace("DeclareDepth of " + out + " is " + declareDepth);
         assert(declareDepth >= 0);
         // Can't hoist out of loop if variable declared outside loop
-        if (declareDepth > state.maxLoopHoist) {
+        if (declareDepth > state.maxLoopHoist && !inst.isIdempotent()) {
           // Don't hoist out of loop - could do fewer assignments than intended
           maxHoist = Math.min(maxHoist, state.maxLoopHoist);
+          if (logger.isTraceEnabled())
+            logger.trace("Hoist constrained by declaration to: " +
+                          state.maxLoopHoist);
         }
       }
     }
@@ -368,6 +373,9 @@ public class HoistLoops implements OptimizerPass {
         }
       }
     }
+    
+    if (logger.isTraceEnabled())
+      logger.trace("maxHoist was " + maxHoist);
     
     if (maxHoist > 0) {
       doHoist(logger, inst, maxHoist, state);
@@ -387,6 +395,9 @@ public class HoistLoops implements OptimizerPass {
       if (pwDepth >= 0) {
         depth = Math.min(pwDepth, depth);
       }
+      if (logger.isTraceEnabled())
+        logger.trace("Hoist constrained by piecewise write " + inVar + ": "
+                                           + pwDepth);
     }
     
     int maxHoist = Integer.MAX_VALUE;

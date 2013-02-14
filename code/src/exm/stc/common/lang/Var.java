@@ -36,7 +36,7 @@ import exm.stc.common.lang.Types.Type;
  * safely shared between multiple data structures
  *
  */
-public class Var {
+public class Var implements Comparable<Var> {
   private final Type type;
   private final String name;
   private final VarStorage storage;
@@ -149,6 +149,11 @@ public class Var {
     return name.equals(ov.name);
   }
   
+  @Override
+  public int compareTo(Var o) {
+    return this.name.compareTo(o.name);
+  }
+
   /**
    * True if all attributes match
    */
