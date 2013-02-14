@@ -83,10 +83,10 @@ import exm.stc.ic.tree.ICTree.RenameMode;
  */
 public class ForwardDataflow implements OptimizerPass {
   
-  private boolean eliminateExplicitWaits;
+  private boolean keepExplicitWaits;
 
-  public ForwardDataflow(boolean eliminateExplicitWaits) {
-    this.eliminateExplicitWaits = eliminateExplicitWaits;
+  public ForwardDataflow(boolean keepExplicitWaits) {
+    this.keepExplicitWaits = keepExplicitWaits;
   }
   
   @Override
@@ -644,7 +644,7 @@ public class ForwardDataflow implements OptimizerPass {
       c.replaceVars(replaceAll, RenameMode.REFERENCE, false);
       
       Block toInline = c.tryInline(cv.closed, cv.recursivelyClosed,
-                                   eliminateExplicitWaits);
+                                   keepExplicitWaits);
       if (toInline != null) {
         c.inlineInto(block, toInline);
         i--; // compensate for removal of continuation

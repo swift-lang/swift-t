@@ -577,8 +577,7 @@ public class WaitCoalescer implements OptimizerPass {
     }
   }
 
-  private static boolean
-          pushDownWaits(Logger logger, Function fn, Block block,
+  private boolean pushDownWaits(Logger logger, Function fn, Block block,
                                       ExecContext currContext) {
     MultiMap<Var, InstOrCont> waitMap = buildWaiterMap(block);
     if (waitMap.isDefinitelyEmpty()) {
@@ -615,7 +614,7 @@ public class WaitCoalescer implements OptimizerPass {
     return changed;
   }
   
-  private static PushDownResult pushDownWaitsRec(
+  private PushDownResult pushDownWaitsRec(
                 Logger logger,  Function fn,
                 Block top, ExecContext topContext,
                 Deque<Continuation> ancestors, Block curr,
@@ -716,7 +715,7 @@ public class WaitCoalescer implements OptimizerPass {
    * @param writtenV
    * @return true if change made, list of moved continuations
    */
-  private static Pair<Boolean, Set<Continuation>> relocateDependentInstructions(
+  private Pair<Boolean, Set<Continuation>> relocateDependentInstructions(
       Logger logger,
       Block ancestorBlock, ExecContext ancestorContext,
       Deque<Continuation> ancestors,
@@ -768,7 +767,7 @@ public class WaitCoalescer implements OptimizerPass {
     return Pair.create(changed, movedC);
   }
 
-  private static boolean relocateContinuation(
+  private boolean relocateContinuation(
       Deque<Continuation> ancestors, Block currBlock,
       ExecContext currContext, Set<Continuation> movedC, Continuation cont) {
     boolean canRelocate = true;
@@ -791,8 +790,12 @@ public class WaitCoalescer implements OptimizerPass {
             w.getTarget() == TaskMode.LOCAL) {
           canRelocate = true;
         } else if (w.getTarget() == TaskMode.LOCAL_CONTROL) {
-          w.setMode(WaitMode.TASK_DISPATCH);
-          w.setTarget(TaskMode.CONTROL);
+          if (w.getMode() == WaitMode.EXPLICIT && retainExplicit) {
+            canRelocate = false;
+          } else {
+            w.setMode(WaitMode.TASK_DISPATCH);
+            w.setTarget(TaskMode.CONTROL);
+          }
         } else {
           canRelocate = false;
         }

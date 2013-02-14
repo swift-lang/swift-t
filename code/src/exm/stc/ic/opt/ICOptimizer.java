@@ -31,7 +31,7 @@ public class ICOptimizer {
   /**
    * If true, validate as frequently as possible
    */
-  private static final boolean SUPER_DEBUG = true;
+  private static final boolean SUPER_DEBUG = false;
   
   /**
    * Optimize the program and return a new one
@@ -147,7 +147,7 @@ public class ICOptimizer {
       }
       // Do forward dataflow after const folding so it won't create any
       // new constants, etc to be folded
-      pipe.addPass(new ForwardDataflow(!canReorder));
+      pipe.addPass(new ForwardDataflow(canReorder));
       
       // ForwardDataflow tends to generate most dead code
       pipe.addPass(new DeadCodeEliminator());
