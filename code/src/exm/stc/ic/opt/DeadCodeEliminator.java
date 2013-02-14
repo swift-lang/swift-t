@@ -102,14 +102,19 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
      * this means that if v1 is required, then v2 is required
      */
     MultiMap<Var, Var> dependencyGraph = new MultiMap<Var, Var>();
+    
+    /* a -> b means that a is part of b */
+    Map <Var, Var> componentOf = new HashMap<Var, Var>();
 
-    walkFunction(logger, f, removeCandidates, needed, dependencyGraph);
+    walkFunction(logger, f, removeCandidates, needed, dependencyGraph,
+                 componentOf);
     
     if (logger.isTraceEnabled()) {
       logger.trace("Dead code elimination in function " + f.getName() + "\n" +
                    "removal candidates: " + removeCandidates + "\n" +
                    "definitely needed: "+ needed + "\n" +
-                   "dependencies: " + printDepGraph(dependencyGraph));
+                   "dependencies: \n" + printDepGraph(dependencyGraph, 4) +
+                   "componentOf: \n" + ICUtil.prettyPrintMap(componentOf, 4));
     }
     
     /*
@@ -150,13 +155,11 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
    *                           could be removed
    * @param needed
    * @param dependencyGraph
+   * @param componentOf
    */
   private static void walkFunction(Logger logger, Function f,
       HashSet<Var> removeCandidates, HashSet<Var> needed,
-      MultiMap<Var, Var> dependencyGraph) {
-    // a -> b means that a is part of b
-    Map <Var, Var> componentOf = new HashMap<Var, Var>();
-    
+      MultiMap<Var, Var> dependencyGraph, Map <Var, Var> componentOf) {
     ArrayDeque<Block> workStack = new ArrayDeque<Block>();
     workStack.push(f.getMainblock());
     
@@ -299,11 +302,15 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
     }
   }
 
-  private static String printDepGraph(MultiMap<Var, Var> dependencyGraph) {
+  private static String printDepGraph(MultiMap<Var, Var> dependencyGraph,
+                                      int indent) {
     List<Var> keys = new ArrayList<Var>(dependencyGraph.keySet());
     Collections.sort(keys);
     StringBuilder sb = new StringBuilder();
     for (Var key: keys) {
+      for (int i = 0; i < indent; i++) {
+        sb.append(' ');
+      }
       sb.append(key.name() + " => [");
       ICUtil.prettyPrintVarList(sb, dependencyGraph.get(key));
       sb.append("]\n");

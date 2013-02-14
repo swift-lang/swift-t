@@ -2447,6 +2447,9 @@ public class ICInstructions {
           // If reference was a part of something, modifying the
           // dereferenced object will modify the whole
           return Pair.create(getOutput(0), getInput(0).getVar());
+        case ADDRESS_OF:
+          // Sometimes a reference is filled in
+          return Pair.create(getOutput(0), getInput(0).getVar());
         case STRUCT_LOOKUP:
         case STRUCTREF_LOOKUP:
           // Output is alias for part of struct

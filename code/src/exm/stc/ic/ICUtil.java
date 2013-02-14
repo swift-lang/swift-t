@@ -17,6 +17,7 @@ package exm.stc.ic;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -148,6 +149,28 @@ public class ICUtil {
         sb.append(", ");
       }
       sb.append(a);
+    }
+  }
+
+  public static <K extends Comparable<K>, V> String 
+          prettyPrintMap(Map<K, V> map, int indent) {
+    StringBuilder sb = new StringBuilder();
+    prettyPrintMap(sb, map, indent);
+    return sb.toString();
+  }
+  
+  public static <K extends Comparable<K>, V> void 
+          prettyPrintMap(StringBuilder sb, Map<K, V> map, int indent) {
+    ArrayList<K> keys = new ArrayList<K>(map.keySet());
+    Collections.sort(keys);
+    for (K key: keys) {
+      for (int i = 0; i < indent; i++) {
+        sb.append(' ');
+      }
+      sb.append(key);
+      sb.append(" => ");
+      sb.append(map.get(key));
+      sb.append('\n');
     }
   }
 
