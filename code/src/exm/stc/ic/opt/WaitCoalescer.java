@@ -364,7 +364,7 @@ public class WaitCoalescer implements OptimizerPass {
         WaitStatement wait = new WaitStatement(
                 fn.getName() + "-" + i.shortOpName(),
                 waitVars, PassedVar.NONE, Var.NONE,
-                i.getPriority(), waitMode, true, req.mode);
+                i.getPriority(), waitMode, req.recursiveClose, req.mode);
         block.addContinuation(wait);
         
         List<Instruction> instBuffer = new ArrayList<Instruction>();

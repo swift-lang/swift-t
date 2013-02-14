@@ -154,16 +154,22 @@ public class ICInstructions {
       public final List<Var> in;
       /** Where immediate code should run.  Default is local: in the current context */
       public final TaskMode mode;
-      
+      /** If inputs should be recursively closed */
+      public final boolean recursiveClose;
       
       public MakeImmRequest(List<Var> out, List<Var> in) {
         this(out, in, TaskMode.LOCAL);
       }
       
       public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode) {
+        this(out, in, mode, false);
+      }
+      public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode,
+                            boolean recursiveClose) {
         this.out = out;
         this.in = in;
         this.mode = mode;
+        this.recursiveClose = recursiveClose;
       }
     }
     
