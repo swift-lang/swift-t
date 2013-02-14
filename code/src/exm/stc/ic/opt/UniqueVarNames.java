@@ -33,6 +33,7 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
+import exm.stc.ic.tree.ICTree.RenameMode;
 
 public class UniqueVarNames implements OptimizerPass {
   
@@ -74,7 +75,7 @@ public class UniqueVarNames implements OptimizerPass {
   
     if (!renames.isEmpty()) {
       // Rename variables in Block (and nested blocks) according to map
-      block.renameVars(renames, false, false);
+      block.renameVars(renames, RenameMode.REPLACE_VAR, false);
     }
   
     // Recurse through nested blocks, making sure that all used variable
@@ -105,7 +106,7 @@ public class UniqueVarNames implements OptimizerPass {
       updateName(cont.getBlocks().get(0), existing, contVarRenames, v);
       
       // Update construct vars as required
-      cont.replaceVars(contVarRenames, false, false);
+      cont.replaceVars(contVarRenames, RenameMode.REPLACE_VAR, false);
       renames.putAll(contVarRenames);
     }
     

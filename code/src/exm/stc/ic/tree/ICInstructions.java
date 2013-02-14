@@ -51,6 +51,7 @@ import exm.stc.ic.opt.ComputedValue;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.GenInfo;
+import exm.stc.ic.tree.ICTree.RenameMode;
 /**
  * This class contains instructions used in the intermediate representation.
  * Each instruction is responsible for making particular modifications to
@@ -81,18 +82,10 @@ public class ICInstructions {
     }
   
     /**
-     * Replace any reference to a key in the map with the value 
+     * Replace instruction variables according to mode
      * @param renames
      */
-    public abstract void renameVars(Map<Var, Arg> renames);
-  
-    /**
-     * Replace any input variable with a replacement, which is another
-     * variable in scope which should have the same value
-     * Assume that the variable being replaced will be kept around
-     * @param renames
-     */
-    public abstract void renameInputs(Map<Var, Arg> renames);
+    public abstract void renameVars(Map<Var, Arg> renames, RenameMode mode);
 
     @Override
     public abstract String toString();
@@ -415,13 +408,8 @@ public class ICInstructions {
     }
   
     @Override
-    public void renameVars(Map<Var, Arg> renames) {
+    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
       // Don't do anything
-    }
-
-    @Override
-    public void renameInputs(Map<Var, Arg> replacements) {
-      // Nothing
     }
   
     @Override
@@ -1104,12 +1092,30 @@ public class ICInstructions {
     }
 
     @Override
-    public void renameVars(Map<Var, Arg> renames) {
-      ICUtil.replaceVarsInList(renames, outputs, false);
+    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
+      if (mode == RenameMode.VALUE) {
+        renameInputs(renames);
+      } else if (mode == RenameMode.REPLACE_VAR) {
+        // Straightforward replacement
+        ICUtil.replaceVarsInList(renames, outputs, false);
+      } else {
+        assert(mode == RenameMode.REFERENCE);
+        // Don't replace initialized aliases
+        List<Var> initAliasOut = getInitializedAliases();
+        for (int i = 0; i < outputs.size(); i++) {
+          Var output = outputs.get(i);
+          if (!initAliasOut.contains(output) &&
+                renames.containsKey(output)) {
+            Arg repl = renames.get(output);
+            if (repl.isVar()) {
+              outputs.set(i, repl.getVar());
+            }
+          }
+        }
+      }
       ICUtil.replaceOpargsInList(renames, inputs);
     }
   
-    @Override
     public void renameInputs(Map<Var, Arg> renames) {
       int firstUpdateOutputArg;
       if (op == Opcode.ARRAY_CREATE_NESTED_FUTURE
@@ -2428,6 +2434,12 @@ public class ICInstructions {
           // From inner array to immediately enclosing
           return Pair.create(getOutput(0), getOutput(2));
         case LOAD_REF:
+          // If reference was a part of something, modifying the
+          // dereferenced object will modify the whole
+          return Pair.create(getOutput(0), getInput(0).getVar());
+        case STRUCT_LOOKUP:
+        case STRUCTREF_LOOKUP:
+          // Output is alias for part of struct
           return Pair.create(getOutput(0), getInput(0).getVar());
         default:
           return null;
@@ -2669,19 +2681,16 @@ public class ICInstructions {
     }
   
     @Override
-    public void renameVars(Map<Var, Arg> renames) {
-      ICUtil.replaceVarsInList(renames, outputs, false);
+    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
+      if (mode == RenameMode.REPLACE_VAR || mode == RenameMode.REFERENCE) {
+        ICUtil.replaceVarsInList(renames, outputs, false);
+      }
       ICUtil.replaceVarsInList(renames, inputs, false);
       priority = ICUtil.replaceOparg(renames, priority, true);
     }
   
     public String getFunctionName() {
       return this.functionName;
-    }
-    @Override
-    public void renameInputs(Map<Var, Arg> renames) {
-      ICUtil.replaceVarsInList(renames, inputs, false);
-      priority = ICUtil.replaceOparg(renames, priority, true);
     }
   
     /**
@@ -2921,17 +2930,15 @@ public class ICInstructions {
     }
   
     @Override
-    public void renameVars(Map<Var, Arg> renames) {
-      ICUtil.replaceVarsInList(renames, outputs, false);
+    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
+      if (mode == RenameMode.REFERENCE || mode == RenameMode.REPLACE_VAR) {
+        ICUtil.replaceVarsInList(renames, outputs, false);
+      }
       ICUtil.replaceOpargsInList(renames, inputs);
     }
   
     public String getFunctionName() {
       return this.functionName;
-    }
-    @Override
-    public void renameInputs(Map<Var, Arg> renames) {
-      ICUtil.replaceOpargsInList(renames, inputs);
     }
   
     @Override
@@ -3048,24 +3055,16 @@ public class ICInstructions {
     }
 
     @Override
-    public void renameVars(Map<Var, Arg> renames) {
+    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
       ICUtil.replaceOpargsInList(renames, args);
       ICUtil.replaceOpargsInList(renames, inFiles);
-      ICUtil.replaceVarsInList(renames, outFiles, false);
       ICUtil.replaceOpargsInList(renames, outFileNames, true);
       redirects.stdin = ICUtil.replaceOparg(renames, redirects.stdin, true);
       redirects.stdout = ICUtil.replaceOparg(renames, redirects.stdout, true);
       redirects.stderr = ICUtil.replaceOparg(renames, redirects.stderr, true);
-    }
-
-    @Override
-    public void renameInputs(Map<Var, Arg> renames) {
-      ICUtil.replaceOpargsInList(renames, inFiles);
-      ICUtil.replaceOpargsInList(renames, args);
-      ICUtil.replaceOpargsInList(renames, outFileNames, true);
-      redirects.stdin = ICUtil.replaceOparg(renames, redirects.stdin, true);
-      redirects.stdout = ICUtil.replaceOparg(renames, redirects.stdout, true);
-      redirects.stderr = ICUtil.replaceOparg(renames, redirects.stderr, true);
+      if (mode == RenameMode.REFERENCE || mode == RenameMode.REPLACE_VAR) {
+        ICUtil.replaceVarsInList(renames, outFiles, false);
+      }
     }
 
     @Override
@@ -3197,14 +3196,11 @@ public class ICInstructions {
     private final ArrayList<Boolean> blockingVars;
 
     @Override
-    public void renameVars(Map<Var, Arg> renames) {
+    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
       ICUtil.replaceVarsInList(renames, newLoopVars, false);
-      ICUtil.replaceVarsInList(renames, loopUsedVars, true);
-    }
-    
-    @Override
-    public void renameInputs(Map<Var, Arg> renames) {
-      ICUtil.replaceVarsInList(renames, newLoopVars, false);
+      if (mode == RenameMode.REFERENCE || mode == RenameMode.REPLACE_VAR) {
+        ICUtil.replaceVarsInList(renames, loopUsedVars, true);
+      }
     }
 
     @Override
@@ -3362,14 +3358,9 @@ public class ICInstructions {
     }
   
     @Override
-    public void renameVars(Map<Var, Arg> renames) {
-    }
-  
-    @Override
-    public void renameInputs(Map<Var, Arg> replacements) {
+    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
       // do nothing
     }
-
 
     public List<PassedVar> getLoopUsedVars() {
       return Collections.unmodifiableList(loopUsedVars);
@@ -3558,16 +3549,12 @@ public class ICInstructions {
     }
 
     @Override
-    public void renameVars(Map<Var, Arg> renames) {
-      if (output != null && renames.containsKey(this.output)) {
-        this.output = renames.get(this.output).getVar();
+    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
+      if (mode == RenameMode.REFERENCE || mode == RenameMode.REPLACE_VAR) {
+        if (output != null && renames.containsKey(this.output)) {
+          this.output = renames.get(this.output).getVar();
+        }
       }
-      ICUtil.replaceOpargsInList(renames, inputs);
-      priority = ICUtil.replaceOparg(renames, priority, true);
-    }
-
-    @Override
-    public void renameInputs(Map<Var, Arg> renames) {
       ICUtil.replaceOpargsInList(renames, inputs);
       priority = ICUtil.replaceOparg(renames, priority, true);
     }

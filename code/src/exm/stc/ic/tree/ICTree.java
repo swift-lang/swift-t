@@ -577,13 +577,11 @@ public class ICTree {
       return false;
     }
     
-    public void renameVars(Map<Var, Arg> renames, boolean inputsOnly) {
-      if (inputsOnly) {
-        action.renameInputs(renames);
-      } else {
-        action.renameVars(renames);
-      }
-      if (!inputsOnly && canMoveToAlias() && renames.containsKey(var)) {
+    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
+      action.renameVars(renames, mode);
+
+      if (mode != RenameMode.VALUE && 
+          canMoveToAlias() && renames.containsKey(var)) {
         Arg replacement = renames.get(var);
         assert(replacement.isVar()) : replacement;
         this.var = replacement.getVar();
@@ -914,14 +912,14 @@ public class ICTree {
      *      with new
      * @param recursive if it should be done on child blocks
      */
-    public void renameVars(Map<Var, Arg> renames, boolean inputsOnly, boolean recursive) {
+    public void renameVars(Map<Var, Arg> renames, RenameMode mode, boolean recursive) {
       if (renames.isEmpty())
         return;
-      renameInDefs(renames, inputsOnly);
-      renameInCode(renames, inputsOnly, recursive);
+      renameInDefs(renames, mode);
+      renameInCode(renames, mode, recursive);
     }
 
-    private void renameInDefs(Map<Var, Arg> renames, boolean inputsOnly) {
+    private void renameInDefs(Map<Var, Arg> renames, RenameMode mode) {
       // Track any changes to mapped vars, list of (original, new)
       List<Pair<Var, Var>> changedMappedVars = new ArrayList<Pair<Var, Var>>();
       
@@ -931,7 +929,7 @@ public class ICTree {
         Var original, var;
         var = original = it.next();
         boolean removed = false;
-        if (!inputsOnly) {
+        if (mode == RenameMode.REPLACE_VAR) {
           if (renames.containsKey(var)) {
             Arg replacement = renames.get(var);
             if (replacement.isVar()) {
@@ -945,12 +943,15 @@ public class ICTree {
           }
         }
 
-        if (!removed && var.isMapped()) {
+        // Check to see if string variable for mapping is replaced
+        if (!removed && var.isMapped() && renames.containsKey(var.mapping())) { 
           // Can't have double mapping
           assert(!var.mapping().isMapped());
-          
-          // Check to see if string variable for mapping is replaced
-          if (renames.containsKey(var.mapping())) {
+          if (mode == RenameMode.VALUE) {
+            // TODO: can't replace mapping since we rely on the rest of
+            //      the rename pass to fix up references to the old instance
+            //      of the variable
+          } else {
             Arg newMapping = renames.get(var.mapping());
             if (newMapping.isVar() &&
                 !newMapping.getVar().equals(var.mapping())) {
@@ -978,27 +979,22 @@ public class ICTree {
       }
     }
 
-    private void renameInCode(Map<Var, Arg> renames, boolean inputsOnly,
+    private void renameInCode(Map<Var, Arg> renames, RenameMode mode,
                               boolean recursive) {
       for (Instruction i: instructions) {
-        if (inputsOnly) {
-          i.renameInputs(renames);
-        } else {
-          i.renameVars(renames);
-        }
+        i.renameVars(renames, mode);
       }
 
       // Rename in nested blocks
       for (Continuation c: continuations) {
-        c.replaceVars(renames, inputsOnly, recursive);
+        c.replaceVars(renames, mode, recursive);
       }
-      renameCleanupActions(renames, inputsOnly);
+      renameCleanupActions(renames, mode);
     }
     
-    public void renameCleanupActions(Map<Var, Arg> renames,
-                                                boolean inputsOnly) {
+    public void renameCleanupActions(Map<Var, Arg> renames, RenameMode mode) {
       for (CleanupAction a: cleanupActions) {
-        a.renameVars(renames, inputsOnly);
+        a.renameVars(renames, mode);
       }
     }
 
@@ -1152,7 +1148,7 @@ public class ICTree {
       Map<Var, Arg> replacement = 
           Collections.singletonMap(oldV, Arg.createVar(newV));
       // Must replace everywhere
-      this.renameVars(replacement, false, true);
+      this.renameVars(replacement, RenameMode.REPLACE_VAR, true);
       return true;
     }
 
@@ -1287,5 +1283,11 @@ public class ICTree {
     public List<Boolean> getBlockingInputVector(String fnName) {
       return compBlockingInputs.get(fnName);
     }
+  }
+  
+  public static enum RenameMode {
+    VALUE, // Replace where same value
+    REFERENCE, // Replace where reference to same thing is appropriate
+    REPLACE_VAR, // Replace var everywhere (e.g. if renaming)
   }
 }

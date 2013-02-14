@@ -238,7 +238,8 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
         Pair<Var, Var> componentAlias = inst.getComponentAlias();
         if (componentAlias != null) {
           Var component = componentAlias.val1;
-          assert(component.storage() == VarStorage.ALIAS);
+          assert(component.storage() == VarStorage.ALIAS) :
+                                    component + " " + inst;
           Var whole = componentAlias.val2;
           Var prev = componentOf.put(component, whole);
           assert(prev == null); // shouldn't be component of multiple things

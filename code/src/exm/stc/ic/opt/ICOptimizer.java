@@ -31,7 +31,7 @@ public class ICOptimizer {
   /**
    * If true, validate as frequently as possible
    */
-  private static final boolean SUPER_DEBUG = false;
+  private static final boolean SUPER_DEBUG = true;
   
   /**
    * Optimize the program and return a new one

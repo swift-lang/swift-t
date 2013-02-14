@@ -59,6 +59,7 @@ import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
+import exm.stc.ic.tree.ICTree.RenameMode;
 
 /**
  * This optimisation pass does a range of optimizations.  The overarching idea
@@ -590,8 +591,8 @@ public class ForwardDataflow implements OptimizerPass {
     forwardDataflow(logger, f, execCx, block, 
             block.instructionIterator(), cv, replaceInputs, replaceAll);
 
-    block.renameCleanupActions(replaceInputs, true);
-    block.renameCleanupActions(replaceAll, false);
+    block.renameCleanupActions(replaceInputs, RenameMode.VALUE);
+    block.renameCleanupActions(replaceAll, RenameMode.REFERENCE);
     
     
     boolean inlined = false;
@@ -601,8 +602,8 @@ public class ForwardDataflow implements OptimizerPass {
       Continuation c = block.getContinuation(i);
       
       // Replace all variables in the continuation construct
-      c.replaceVars(replaceInputs, true, false);
-      c.replaceVars(replaceAll, false, false);
+      c.replaceVars(replaceInputs, RenameMode.VALUE, false);
+      c.replaceVars(replaceAll, RenameMode.REFERENCE, false);
       
       Block toInline = c.tryInline(cv.closed, cv.recursivelyClosed,
                                    eliminateExplicitWaits);
@@ -616,12 +617,12 @@ public class ForwardDataflow implements OptimizerPass {
     if (inlined) {
       // Redo replacements for newly inserted instructions/continuations
       for (Instruction i: block.getInstructions()) {
-        i.renameInputs(replaceInputs);
-        i.renameVars(replaceAll);
+        i.renameVars(replaceInputs, RenameMode.VALUE);
+        i.renameVars(replaceAll, RenameMode.REFERENCE);
       }
       for (Continuation c: block.getContinuations()) {
-        c.replaceVars(replaceInputs, true, false);
-        c.replaceVars(replaceAll, false, false);
+        c.replaceVars(replaceInputs, RenameMode.VALUE, false);
+        c.replaceVars(replaceAll, RenameMode.REFERENCE, false);
       }
       
       // Rebuild data structures for this block after inlining
@@ -693,17 +694,10 @@ public class ForwardDataflow implements OptimizerPass {
       }
       
       // Immediately apply the variable renames
-      inst.renameInputs(replaceInputs);
-      inst.renameVars(replaceAll);
+      inst.renameVars(replaceInputs, RenameMode.VALUE);
+      inst.renameVars(replaceAll, RenameMode.REFERENCE);
  
-
       List<ComputedValue> icvs = inst.getComputedValues(cv);
-      
-      /**
-       * Check to see if outputs replaced
-       */
-      List<Var> oldAliasOutputs =
-            new ArrayList<Var>(inst.getInitializedAliases());
       
       /*
        * See if value is already computed somewhere and see if we should
@@ -712,17 +706,6 @@ public class ForwardDataflow implements OptimizerPass {
        * unneeded instructions instead
        */
       updateReplacements(logger, f, inst, cv, icvs, replaceInputs, replaceAll);
-      
-      if (!oldAliasOutputs.isEmpty()) {
-        // Assume for now at most one alias output
-        assert(oldAliasOutputs.size() == 1);
-        // Make sure redundant load removed
-        if (replaceAll.containsKey(oldAliasOutputs.get(0))) {
-          logger.trace("Removed");
-          insts.remove();
-          continue;
-        }
-      }
       
       if (logger.isTraceEnabled()) {
         logger.trace("Instruction after updates: " + inst);

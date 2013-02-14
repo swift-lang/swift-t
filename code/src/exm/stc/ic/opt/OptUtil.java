@@ -33,6 +33,7 @@ import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
+import exm.stc.ic.tree.ICTree.RenameMode;
 
 public class OptUtil {
 
@@ -109,7 +110,7 @@ public class OptUtil {
         Map<Var, Arg> renames = Collections.singletonMap(
                                 oldOut, Arg.createVar(refVar));
         for (Instruction inst: instBuffer) {
-          inst.renameVars(renames);
+          inst.renameVars(renames, RenameMode.REPLACE_VAR);
         }
       } else {
         refVar = oldOut;

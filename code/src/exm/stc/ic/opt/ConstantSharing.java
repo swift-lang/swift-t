@@ -30,6 +30,7 @@ import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
+import exm.stc.ic.tree.ICTree.RenameMode;
 
 public class ConstantSharing implements OptimizerPass {
 
@@ -96,7 +97,7 @@ public class ConstantSharing implements OptimizerPass {
       }
       globalReplacements.put(oldVar, Arg.createVar(glob));
     }
-    block.renameVars(globalReplacements, false, true);
+    block.renameVars(globalReplacements, RenameMode.REPLACE_VAR, true);
     
     // Do this recursively for child blocks
     for (Continuation c: block.getContinuations()) {

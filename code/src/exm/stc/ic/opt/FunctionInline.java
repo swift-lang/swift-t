@@ -54,6 +54,7 @@ import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.BuiltinFunction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
+import exm.stc.ic.tree.ICTree.RenameMode;
 
 public class FunctionInline implements OptimizerPass {
 
@@ -384,7 +385,7 @@ public class FunctionInline implements OptimizerPass {
     // rename vars
     chooseUniqueNames(logger, prog, contextFunction, inlineBlock, renames);
     
-    inlineBlock.renameVars(renames, false, true);
+    inlineBlock.renameVars(renames, RenameMode.REPLACE_VAR, true);
     
     if (fnCall.getMode() == TaskMode.SYNC) {
       insertBlock = block;

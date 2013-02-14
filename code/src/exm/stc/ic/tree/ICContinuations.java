@@ -59,6 +59,7 @@ import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.GenInfo;
+import exm.stc.ic.tree.ICTree.RenameMode;
 
 /**
  * This module contains definitions of all of the continuation varieties used
@@ -108,26 +109,26 @@ public class ICContinuations {
     
     /**  
      * @param renames
-     * @param inputsOnly only change inputs
+     * @param mode what sort of renaming
      * @param recursive recursively do replacement in inner blocks
      */
-    public void replaceVars(Map<Var, Arg> renames, boolean inputsOnly,
+    public void replaceVars(Map<Var, Arg> renames, RenameMode mode,
                                      boolean recursive) {
       if (renames.isEmpty())
         return;
       if (recursive) {
-        this.replaceVarsInBlocks(renames, inputsOnly);
+        this.replaceVarsInBlocks(renames, mode);
       }
-      this.replaceConstructVars(renames, inputsOnly);
+      this.replaceConstructVars(renames, mode);
     }
     
     protected abstract void replaceConstructVars(Map<Var, Arg> renames,
-                                                 boolean inputsOnly);
+                                                 RenameMode mode);
     
     protected void replaceVarsInBlocks(Map<Var, Arg> renames,
-        boolean inputsOnly) {
+                                       RenameMode mode) {
       for (Block b: this.getBlocks()) {
-        b.renameVars(renames, inputsOnly, true);
+        b.renameVars(renames, mode, true);
       }
     }
 
@@ -363,12 +364,12 @@ public class ICContinuations {
      * @param inputsOnly
      */
     public abstract void replaceConstructVars_(Map<Var, Arg> renames, 
-            boolean inputsOnly);
+                  RenameMode mode);
     
     @Override
     public final void replaceConstructVars(Map<Var, Arg> renames, 
-        boolean inputsOnly) {
-      this.replaceConstructVars_(renames, inputsOnly);
+                                            RenameMode mode) {
+      this.replaceConstructVars_(renames, mode);
     }
     
     /**
@@ -670,12 +671,12 @@ public class ICContinuations {
 
     @Override
     public void replaceConstructVars_(Map<Var, Arg> renames,
-            boolean inputsOnly) {
+                                      RenameMode mode) {
       if (renames.containsKey(arrayVar)) {
         arrayVar = renames.get(arrayVar).getVar();
       }
       
-      if (!inputsOnly) {
+      if (mode == RenameMode.REPLACE_VAR) {
         if (renames.containsKey(loopVar)) {
           loopVar = renames.get(loopVar).getVar();
         }
@@ -748,7 +749,7 @@ public class ICContinuations {
           this.loopCounterVar = o.loopCounterVar;
         }
       }
-      o.replaceVars(renames, false, true);
+      o.replaceVars(renames, RenameMode.REPLACE_VAR, true);
       
       fuseIntoAbstract(o, insertAtTop);
     }
@@ -838,7 +839,7 @@ public class ICContinuations {
 
     @Override
     protected void replaceConstructVars(Map<Var, Arg> renames,
-          boolean inputsOnly) {
+                                       RenameMode mode) {
       condition = ICUtil.replaceOparg(renames, condition, false);
     }
 
@@ -1094,9 +1095,9 @@ public class ICContinuations {
     
     @Override
     public void replaceConstructVars_(Map<Var, Arg> renames,
-        boolean inputsOnly) {
+                                      RenameMode mode) {
       ICUtil.replaceVarsInList(renames, initVals, false);
-      if (!inputsOnly) {
+      if (mode == RenameMode.REPLACE_VAR) {
         ICUtil.replaceVarsInList(renames, loopVars, false);
       }
     }
@@ -1237,7 +1238,7 @@ public class ICContinuations {
 
     @Override
     protected void replaceConstructVars(Map<Var, Arg> renames, 
-                  boolean inputsOnly) {
+                                        RenameMode mode) {
       // Do nothing
     }
 
@@ -1366,16 +1367,18 @@ public class ICContinuations {
 
     @Override
     public void replaceConstructVars_(Map<Var, Arg> renames, 
-                                        boolean inputsOnly) {
+                                      RenameMode mode) {
       start = renameRangeArg(start, renames);
       end = renameRangeArg(end, renames);
       increment = renameRangeArg(increment, renames);
       
-      if (renames.containsKey(loopVar)) {
-        loopVar = renames.get(loopVar).getVar();
-      }
-      if (loopCounterVar != null && renames.containsKey(loopCounterVar)) {
-        loopCounterVar = renames.get(loopCounterVar).getVar();
+      if (mode == RenameMode.REPLACE_VAR) {
+        if (renames.containsKey(loopVar)) {
+          loopVar = renames.get(loopVar).getVar();
+        }
+        if (loopCounterVar != null && renames.containsKey(loopCounterVar)) {
+          loopCounterVar = renames.get(loopCounterVar).getVar();
+        }
       }
     }
 
@@ -1623,7 +1626,7 @@ public class ICContinuations {
         if (i != 0) {
           // Replace references to the iteration counter
           nb.replaceVars(Collections.singletonMap(this.loopVar,
-                               Arg.createVar(nextIter)), false, true);
+                       Arg.createVar(nextIter)), RenameMode.REPLACE_VAR, true);
         }
 
         if (i < unrollFactor - 1) {
@@ -1689,7 +1692,7 @@ public class ICContinuations {
       renames.put(o.loopVar, Arg.createVar(this.loopVar));
       if (loopCounterVar != null)
         renames.put(o.loopCounterVar, Arg.createVar(this.loopCounterVar));
-      o.replaceVars(renames, false, true);
+      o.replaceVars(renames, RenameMode.REPLACE_VAR, true);
      
       this.fuseIntoAbstract(o, insertAtTop);
     }
@@ -1796,7 +1799,7 @@ public class ICContinuations {
     
     @Override
     public void replaceConstructVars(Map<Var, Arg> renames, 
-            boolean inputsOnly) {
+                                     RenameMode mode) {
       switchVar = ICUtil.replaceOparg(renames, switchVar, false);
     }
 
@@ -1973,7 +1976,7 @@ public class ICContinuations {
 
     @Override
     public void replaceConstructVars_(Map<Var, Arg> renames, 
-        boolean inputsOnly) {
+                                      RenameMode mode) {
       ICUtil.replaceVarsInList(renames, waitVars, true);
       priority = ICUtil.replaceOparg(renames, priority, true);
     }
