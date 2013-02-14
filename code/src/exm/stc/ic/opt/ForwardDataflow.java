@@ -44,6 +44,7 @@ import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.CopyOnWriteSmallSet;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.HierarchicalSet;
+import exm.stc.common.util.MultiMap;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
@@ -113,6 +114,12 @@ public class ForwardDataflow implements OptimizerPass {
      * created and set in this scope
      */
     private final HashMap<ComputedValue, Arg> availableVals;
+    
+    /**
+     * What computedValues are stored in each value (inverse
+     * of availableVals) 
+     */
+    private final MultiMap<Var, ComputedValue> varContents;
 
     /** variables which are closed at this point in program */
     private final HierarchicalSet<Var> closed;
@@ -140,6 +147,7 @@ public class ForwardDataflow implements OptimizerPass {
       this.parent = null;
       this.varsPassedFromParent = false;
       this.availableVals = new HashMap<ComputedValue, Arg>();
+      this.varContents = new MultiMap<Var, ComputedValue>();
       this.closed = new HierarchicalSet<Var>();
       this.unmapped = new HierarchicalSet<Var>();
       this.recursivelyClosed = new HierarchicalSet<Var>();
@@ -149,6 +157,7 @@ public class ForwardDataflow implements OptimizerPass {
     private State(Logger logger, State parent,
         boolean varsPassedFromParent,
         HashMap<ComputedValue, Arg> availableVals,
+        MultiMap<Var, ComputedValue> varContents,
         HierarchicalSet<Var> closed,
         HierarchicalSet<Var> unmapped,
         HierarchicalSet<Var> recursivelyClosed,
@@ -157,6 +166,7 @@ public class ForwardDataflow implements OptimizerPass {
       this.parent = parent;
       this.varsPassedFromParent = varsPassedFromParent;
       this.availableVals = availableVals;
+      this.varContents = varContents;
       this.closed = closed;
       this.unmapped = unmapped;
       this.recursivelyClosed = recursivelyClosed;
@@ -211,6 +221,9 @@ public class ForwardDataflow implements OptimizerPass {
       Arg valLoc = newCV.getValLocation();
       Opcode op = newCV.getOp();
       availableVals.put(newCV, valLoc);
+      if (valLoc.isVar()) {
+        varContents.put(valLoc.getVar(), newCV);
+      }
       if (valLoc.isVar() && outClosed) {
         close(valLoc.getVar(), false);
       }
@@ -251,6 +264,30 @@ public class ForwardDataflow implements OptimizerPass {
       }
       
       return null;
+    }
+    
+    public List<ComputedValue> getVarContents(Var v) {
+      State curr = this;
+      List<ComputedValue> res = null;
+      boolean resModifiable = false;
+      
+      while (curr != null) {
+        List<ComputedValue> partRes = curr.varContents.get(v);
+        if (!partRes.isEmpty()) {
+          if (res == null) {
+            res = partRes;
+          } else if (resModifiable) {
+            res.addAll(partRes);
+          } else {
+            List<ComputedValue> oldRes = res;
+            res = new ArrayList<ComputedValue>();
+            res.addAll(oldRes);
+            res.addAll(partRes);
+          }
+        }
+        curr = curr.parent;
+      }
+      return res == null ? Collections.<ComputedValue>emptyList() : res;
     }
 
     /**
@@ -321,7 +358,8 @@ public class ForwardDataflow implements OptimizerPass {
         newDO.put(e.getKey(), new CopyOnWriteSmallSet<Var>(e.getValue()));
       }
       return new State(logger, this, varsPassedFromParent, 
-          new HashMap<ComputedValue, Arg>(), closed.makeChild(),
+          new HashMap<ComputedValue, Arg>(), 
+          new MultiMap<Var, ComputedValue>(), closed.makeChild(),
           unmapped.makeChild(), recursivelyClosed.makeChild(), newDO);
     }
   }

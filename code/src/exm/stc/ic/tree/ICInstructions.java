@@ -319,7 +319,17 @@ public class ICInstructions {
     }
     
     public static interface CVMap {
+      /**
+       * @param val
+       * @return the current location of a given computedValue
+       *        (either a constant value, or a variable)
+       */
       public Arg getLocation(ComputedValue val);
+      /**
+       * @param v
+       * @return all computed values stored in var
+       */
+      public List<ComputedValue> getVarContents(Var v);
     }
     
     /**
@@ -3853,19 +3863,47 @@ public class ICInstructions {
       if (this.hasSideEffects()) {
         // Two invocations of this aren't equivalent
         return null;
-      } else if (Operators.isCopy(subop)) {
+      }
+      
+      ComputedValue basic = makeBasicComputedValue();
+      
+      List<ComputedValue> inferred = makeInferredComputedValues(existing);
+      if (inferred.isEmpty()) {
+        if (basic != null) {
+          return Collections.singletonList(basic);
+        } else {
+          return Collections.emptyList();
+        }
+      } else {
+        if (basic == null) {  
+          return inferred;
+        } else {
+          List<ComputedValue> res = new ArrayList<ComputedValue>(
+                    1 + inferred.size());
+          res.add(basic);
+          res.addAll(inferred);
+          return res;
+        }
+      }
+    }
+
+
+    /**
+     * Create computed value that describes the output
+     * @return
+     */
+    private ComputedValue makeBasicComputedValue() {
+      if (Operators.isCopy(subop)) {
         if (this.output.isMapped()) {
           return null;
         }
         
         // It might be assigning a constant val
-        return Collections.singletonList(ComputedValue.makeCopyCV(
-              this.output, this.inputs.get(0)));
+        return ComputedValue.makeCopyCV(this.output, this.inputs.get(0));
       } else if (Operators.isMinMaxOp(subop)) {
         assert(this.inputs.size() == 2);
         if (this.inputs.get(0).equals(this.inputs.get(1))) {
-          return Collections.singletonList(ComputedValue.makeCopyCV(
-                  this.output, this.inputs.get(0)));
+          return ComputedValue.makeCopyCV(this.output, this.inputs.get(0));
         }
       } else if (output != null) {
         // put arguments into canonical order
@@ -3885,14 +3923,107 @@ public class ICInstructions {
         }
         
         boolean outClosed = (this.op == Opcode.LOCAL_OP);
-        
-        return Collections.singletonList(
-            new ComputedValue(this.op, 
-            cvOp.toString(), cvInputs, Arg.createVar(this.output),
-            outClosed));
+        return new ComputedValue(this.op, cvOp.name(), cvInputs,
+                                Arg.createVar(this.output), outClosed);
       }
       return null;
     }
+
+    private List<ComputedValue> makeInferredComputedValues(CVMap cvs) {
+      switch (subop) {
+        case PLUS_INT:
+        case MINUS_INT:
+        return tryAlgebra(cvs);
+        default:
+          // do nothing
+          return Collections.emptyList();
+      }
+    }
+
+
+    private List<ComputedValue> tryAlgebra(CVMap cvs) {
+      // do basic algebra, useful for adjacent array indices
+      // TODO: could be more sophisticated, e.g. build operator tree
+      //    and reduce to canonical form
+      Arg in1 = getInput(0);
+      Arg in2 = getInput(1);
+      // Don't handle constant folding here
+
+      Pair<Var, Long> args = convertToCanonicalAdd(subop, in1, in2); 
+      if (args == null) {
+        return Collections.emptyList();
+      }
+      List<ComputedValue> varVals = cvs.getVarContents(args.val1);
+      List<ComputedValue> res = new ArrayList<ComputedValue>(); 
+      for (ComputedValue varVal: varVals) {
+        if (varVal.getOp() == this.op) {
+          BuiltinOpcode aop = BuiltinOpcode.valueOf(varVal.getSubop());
+          if (aop == BuiltinOpcode.PLUS_INT ||
+              aop == BuiltinOpcode.MINUS_INT) { 
+            Pair<Var, Long> add = convertToCanonicalAdd(aop, in1, in2);
+            if (add != null) {
+              // Note that if this instruction computes x = y + c1
+              // and y = z + c2 was computed earlier, then
+              // x = z + c1 + c2
+              long c = args.val2 + add.val2;
+              if (c == 0) {
+                res.add(ComputedValue.makeCopyCV(this.output,
+                                                 add.val1.asArg()));
+              } else {
+                res.add(plusCV(op, add.val1.asArg(),
+                             Arg.createIntLit(c),
+                             this.output));
+              }
+            }
+          }
+        }
+      }
+      return res;
+    }
+
+    
+    private static Pair<Var, Long> convertToCanonicalAdd(BuiltinOpcode aop,
+                                                    Arg in1, Arg in2) {
+      Var varArg;
+      long constArg;
+      if (!(in1.isVar() ^ in2.isVar())) {
+        // Only handle one constant, one var
+        return null;
+      }
+      if (in1.isVar()) {
+        varArg = in1.getVar();
+        constArg = in2.getIntLit();
+        if (aop == BuiltinOpcode.MINUS_INT) {
+          // Convert to addition
+          constArg *= -1;
+        }
+      } else {
+        if (aop == BuiltinOpcode.MINUS_INT) {
+          // Don't handle negated variable
+          return null;
+        }
+        constArg = in1.getIntLit();
+        varArg = in2.getVar();
+      }
+      
+      return Pair.create(varArg, constArg);
+    }
+
+
+    /**
+     * Create computed value for addition
+     * @param op
+     * @param asArg
+     * @param createIntLit
+     * @param output2
+     * @return
+     */
+    private static ComputedValue plusCV(Opcode op, Arg arg1, Arg arg2,
+        Var output) {
+      return new ComputedValue(op, BuiltinOpcode.PLUS_INT.name(),
+          Arrays.asList(arg1, arg2), output.asArg(), op == Opcode.LOCAL_OP);
+    }
+
 
     @Override
     public List<Var> getReadIncrVars() {

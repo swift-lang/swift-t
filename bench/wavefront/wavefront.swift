@@ -25,8 +25,10 @@ main
   }
 
   @async
+  @unroll=2
   foreach i in [1:N-1]
   {
+    @unroll=2
     foreach j in [1:N-1]
     {
       {
