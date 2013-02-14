@@ -735,7 +735,13 @@ public class TypeChecker {
         tvConstraints.put(boundVar, UnionType.makeUnion(choices));
       }
     } else {
-      tvConstraints.putAll(formalArgT.matchTypeVars(argExprT));
+      Map<String, Type> matchedTypeVars = formalArgT.matchTypeVars(argExprT);
+      if (matchedTypeVars == null) {
+        throw new TypeMismatchException(context, "Could not match type " +
+        		"variables for formal arg type " + formalArgT + " and argument " +
+    				" expression type: " + argExprT);
+      }
+      tvConstraints.putAll(matchedTypeVars);
     }
     // Leave type var
     return formalArgT;
