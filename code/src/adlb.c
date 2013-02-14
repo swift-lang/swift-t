@@ -548,6 +548,9 @@ ADLBP_Refcount_incr(adlb_datum_id id, adlb_refcount_type type, int change)
     assert(type == ADLB_READWRITE_REFCOUNT);
     DEBUG("ADLB_Refcount_incr: <%li> READWRITE_REFCOUNT %i", id, change);
   }
+  if (change == 0) {
+    return ADLB_SUCCESS;
+  }
   int to_server_rank = ADLB_Locate(id);
 
   rc = MPI_Irecv(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE,
