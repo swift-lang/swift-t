@@ -231,18 +231,18 @@ public class ICContinuations {
     }
 
     /**
-     * Returns true if a change was made.
      *
      * It is ok if the unrolling introduced duplicate variable names in
      * nested blocks (so long as they don't shadow each other) - a
      * subsequent pass will make those names unique
      * @param logger
      * @param outerBlock
-     * @return
+     * @return true if change made, also any additional continuations to be
+     *        added by caller to outerBlock
      */
-    public boolean tryUnroll(Logger logger, Block outerBlock) {
+    public Pair<Boolean, List<Continuation>> tryUnroll(Logger logger, Block outerBlock) {
       // default: do nothing
-      return false;
+      return Pair.create(false, Collections.<Continuation>emptyList());
     }
 
     /**

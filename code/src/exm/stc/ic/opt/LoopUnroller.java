@@ -15,9 +15,13 @@
  */
 package exm.stc.ic.opt;
 
+import java.util.List;
+import java.util.ListIterator;
+
 import org.apache.log4j.Logger;
 
 import exm.stc.common.Settings;
+import exm.stc.common.util.Pair;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
@@ -49,15 +53,24 @@ public class LoopUnroller implements OptimizerPass {
       Block block) {
     boolean unrolled = false;
     
-    for (Continuation c: block.getContinuations()) {
+    ListIterator<Continuation> it = block.continuationIterator();
+    while (it.hasNext()) {
+      Continuation c = it.next();
       // Doing from bottom up gives us better estimate of inner loop size after expansion
       for (Block b: c.getBlocks()) {
         boolean res = unrollLoops(logger, prog, f, b);
         unrolled = unrolled || res;
       }
-      boolean cRes = c.tryUnroll(logger, block);
-      unrolled = unrolled || cRes;
+      Pair<Boolean, List<Continuation>> cRes = c.tryUnroll(logger, block);
+      if (cRes.val1) {
+        unrolled = true;
+        for (Continuation newC: cRes.val2) {
+          //System.err.println("Added continuation: " + newC.getType());
+          block.addContinuation(it, newC);
+        }
+      }
     }
+    //System.err.println(block);
     return unrolled;
   }
 }

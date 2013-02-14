@@ -115,14 +115,17 @@ public class ICOptimizer {
       // First prune any unneeded functions
       pipe.addPass(inliner);
       
-      pipe.addPass(new ConstantFold());
-      
       if ((iteration % 3) == 2) {
         // Try occasionally to unroll loops.  Don't do it on first iteration
         // so the code can be shrunk a little first
         pipe.addPass(new LoopUnroller());
         pipe.addPass(Validate.standardValidator());
       }
+      
+      // Constant fold after loop unrolling, since loop unrolling bounds can often
+      // be folded
+      pipe.addPass(new ConstantFold());
+      
       
       boolean lastHalf = iteration > nIterations * 2;
       

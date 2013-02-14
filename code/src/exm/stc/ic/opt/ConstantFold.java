@@ -266,7 +266,13 @@ public class ConstantFold implements OptimizerPass {
       HierarchicalMap<Var, Arg> knownConstants) {
     // Use list to preserve order
     List<Predicted> predictedBranches = new ArrayList<Predicted>();
-    for (Continuation c: block.getContinuations()) {
+    ListIterator<Continuation> it = block.continuationIterator();
+    while (it.hasNext()) {
+      Continuation c = it.next();
+      if (c.isNoop()) {
+        it.remove();
+        continue;
+      }
       // With constants, we might be able to predict branches
       Block branch = c.branchPredict(knownConstants);
       if (branch != null) {

@@ -736,6 +736,11 @@ public class ICTree {
       return continuations.listIterator();
     }
     
+    public void addContinuation(ListIterator<Continuation> it, Continuation c) {
+      it.add(c);
+      c.setParent(this);
+    }
+    
     public Continuation getContinuation(int i) {
       return continuations.get(i);
     }

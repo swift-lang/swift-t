@@ -306,6 +306,19 @@ public class Settings
       key + ": " + strVal);
     }
   }
+  
+  public static int getInt(String key) throws InvalidOptionException {
+    String strVal = properties.getProperty(key);
+    if (strVal == null) {
+      throw new InvalidOptionException("no value set for option " + key);
+    }
+    try {
+      return Integer.parseInt(strVal);
+    } catch (NumberFormatException e) {
+      throw new InvalidOptionException("Invalid integral value for option " +
+      key + ": " + strVal);
+    }
+  }
 
   public static boolean getBoolean(String key)
                   throws InvalidOptionException
