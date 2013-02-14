@@ -130,8 +130,8 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
     
     removeCandidates.removeAll(needed);
     
-    if (logger.isTraceEnabled()) {
-      logger.trace("Final variables to be eliminated: " + removeCandidates);
+    if (logger.isDebugEnabled()) {
+      logger.debug("Final variables to be eliminated: " + removeCandidates);
     }
     if (removeCandidates.isEmpty()) {
       return false;
@@ -216,7 +216,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
         if (modOutputs.size() > 0) {
           // Second, modified output depends on all inputs and read outputs. 
           // Just use one output if multiple
-          Var out = outputs.get(0);
+          Var out = modOutputs.get(0);
           for (Arg in: inputs) {
             if (in.isVar()) {
               addOutputDep(logger, inst, dependencyGraph, componentOf, out,
