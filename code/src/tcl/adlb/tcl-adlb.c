@@ -1312,6 +1312,46 @@ ADLB_Blob_store_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
+   adlb::store_blob_ints <id> [ list ints ]
+ */
+static int
+ADLB_Blob_store_ints_Cmd(ClientData cdata, Tcl_Interp *interp,
+                         int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(3);
+  int rc;
+  long id;
+  rc = Tcl_GetLongFromObj(interp, objv[1], &id);
+  TCL_CHECK_MSG(rc, "requires id!");
+
+  int length;
+  Tcl_Obj** objs;
+  rc = Tcl_ListObjGetElements(interp, objv[2], &length, &objs);
+  TCL_CHECK_MSG(rc, "requires list!");
+
+  TCL_CONDITION(length*sizeof(int) <= ADLB_DATA_MAX,
+                "list too long!");
+
+  for (int i = 0; i < length; i++)
+  {
+    int v;
+    rc = Tcl_GetIntFromObj(interp, objs[i], &v);
+    memcpy(xfer+i*sizeof(int), &v, sizeof(int));
+  }
+
+  int *notify_ranks;
+  int notify_count;
+  rc = ADLB_Store(id, xfer, length*sizeof(int), true,
+                  &notify_ranks, &notify_count);
+  TCL_CONDITION(rc == ADLB_SUCCESS,
+                "adlb::store <%li> failed!", id);
+
+  Tcl_Obj* result = TclListFromArray(interp, notify_ranks, notify_count);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+/**
    adlb::blob_from_string <string value>
  */
 static int
@@ -1838,6 +1878,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("local_blob_free",  ADLB_Local_Blob_Free_Cmd);
   COMMAND("store_blob", ADLB_Store_Blob_Cmd);
   COMMAND("store_blob_floats", ADLB_Blob_store_floats_Cmd);
+  COMMAND("store_blob_ints", ADLB_Blob_store_ints_Cmd);
   COMMAND("blob_from_string", ADLB_Blob_From_String_Cmd);
   COMMAND("slot_create", ADLB_Slot_Create_Cmd);
   COMMAND("slot_drop", ADLB_Slot_Drop_Cmd);

@@ -31,6 +31,11 @@
 @pure
 (blob o) blob_from_floats(float f[]) "turbine" "0.0.2" "blob_from_floats";
 @pure
+(blob o) blob_from_ints(int i[]) "turbine" "0.0.2" "blob_from_ints";
+@pure
 (float f[]) floats_from_blob(blob b) "turbine" "0.0.2" "floats_from_blob";
+@pure
+(float A[][]) matrix_from_blob(blob b, int m, int n)
+"turbine" "0.0.2" "matrix_from_blob";
 
 #endif // BLOB_SWIFT

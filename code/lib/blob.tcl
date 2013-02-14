@@ -75,6 +75,58 @@ namespace eval turbine {
       log "floats_from_blob_body: done"
   }
 
+  # This is just in Fortran order for now
+  # b: the blob
+  # m: number of rows
+  # n: number of columns
+  proc matrix_from_blob { stack result inputs } {
+      set b [ lindex $inputs 0 ]
+      set m [ lindex $inputs 1 ]
+      set n [ lindex $inputs 2 ]
+      rule "matrix_from_blob-$result" [ list $b $m $n ] \
+          $turbine::LOCAL $adlb::RANK_ANY \
+          "matrix_from_blob_body $result $inputs"
+  }
+  proc matrix_from_blob_body { result b m n } {
+      log "floats_from_blob_body: result=<$result> input=<$input>"
+      set s       [ SwiftBlob_sizeof_float ]
+      set L       [ adlb::retrieve_blob $input ]
+      set p       [ SwiftBlob_cast_int_to_dbl_ptr [ lindex $L 0 ] ]
+      set m_value [ adlb::retrieve_integer $m ]
+      set n_value [ adlb::retrieve_integer $n ]
+      set length  [ lindex $L 1 ]
+
+      # total = m x n
+      # i is row index:       0..m-1
+      # j is column index:    0..n-1
+      # k is index into blob: 0..total-1
+      # c[i] is row result[i]
+      set total [ expr $length / $s ]
+      if { $total != $m_value * $n_value } {
+          error "matrix_from_blob: blob size $total != $m_value x $n_value"
+      }
+      for { set i 0 } { $i < $m_value } { incr i } {
+          set c($i) [ allocate_container $adlb::INTEGER ]
+          container_immediate_insert $result $i $c($i)
+      }
+      for { set k 0 } { $k < $total } { incr k } {
+          set d [ SwiftBlob_double_get $p $k ]
+          literal t float $d
+          set i [ expr $k % $m_value ]
+          set j [ expr $k / $m_value ]
+          container_immediate_insert $c($i) $t
+      }
+      # Close rows
+      for { set i 0 } { $i < $m_value } { incr i } {
+          adlb::refcount_incr $c(i) $adlb::WRITE_REFCOUNT -1
+      }
+      # Close result
+      adlb::refcount_incr $result $adlb::WRITE_REFCOUNT -1
+      # Release cached blob
+      adlb::blob_free $input
+      log "matrix_from_blob_body: done"
+  }
+
   # Container must be indexed from 0,N-1
   proc blob_from_floats { stack result input } {
     rule "blob_from_floats-$result" $input $turbine::LOCAL $adlb::RANK_ANY \
@@ -97,6 +149,31 @@ namespace eval turbine {
       lappend A $v
     }
     set waiters [ adlb::store_blob_floats $result $A ]
+    turbine::notify_waiters $result $waiters
+  }
+
+  # Container must be indexed from 0,N-1
+  proc blob_from_ints { stack result input } {
+    rule "blob_from_ints-$result" $input $turbine::LOCAL $adlb::RANK_ANY \
+      "blob_from_ints_body $input $result"
+  }
+  proc blob_from_ints_body { container result } {
+
+      set type [ container_typeof $container ]
+      set N  [ adlb::container_size $container ]
+      c::log "blob_from_ints_body start"
+      complete_container $container \
+          "blob_from_ints_store $result $container $N"
+  }
+  # This is called when every entry in container is set
+  proc blob_from_ints_store { result container N } {
+    set A [ list ]
+    for { set i 0 } { $i < $N } { incr i } {
+      set td [ container_lookup $container $i ]
+      set v  [ retrieve_decr_integer $td ]
+      lappend A $v
+    }
+    set waiters [ adlb::store_blob_ints $result $A ]
     turbine::notify_waiters $result $waiters
   }
 
