@@ -281,8 +281,9 @@ data_reference_count(adlb_datum_id id, adlb_refcount_type type,
         return ADLB_DATA_SUCCESS;
       }
     // Should not go negative
-    assert(d->read_refcount > 0);
-    assert(d->read_refcount + increment >= 0);
+    check_verbose(d->read_refcount > 0 && d->read_refcount + increment >= 0,
+                ADLB_DATA_ERROR_SLOTS_NEGATIVE, "<%li> read_refcount: %i "
+                "incr: %i", id, d->read_refcount, increment);
     d->read_refcount += increment;
     DEBUG("read_refcount: <%li> => %i", id, d->read_refcount);
   }
@@ -290,8 +291,9 @@ data_reference_count(adlb_datum_id id, adlb_refcount_type type,
   if (type == ADLB_WRITE_REFCOUNT || type == ADLB_READWRITE_REFCOUNT) {
     // Should not go negative
     assert(type == ADLB_WRITE_REFCOUNT);
-    assert(d->write_refcount > 0);
-    assert(d->write_refcount + increment >= 0);
+    check_verbose(d->write_refcount > 0 && d->write_refcount + increment >= 0,
+                ADLB_DATA_ERROR_SLOTS_NEGATIVE, "<%li> write_refcount: %i "
+                "incr: %i", id, d->write_refcount, increment);
     d->write_refcount += increment;
     if (d->write_refcount == 0) {
       data_close(id, notify_ranks, notify_count);
