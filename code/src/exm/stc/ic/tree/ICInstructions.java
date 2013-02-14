@@ -2264,8 +2264,9 @@ public class ICInstructions {
       } else if (op == Opcode.ARRAY_BUILD) {
         // Output array should be closed
         return Collections.singletonList(getOutput(0));
+      } else if (op == Opcode.ADDRESS_OF) {
+        return Collections.singletonList(getOutput(0));
       }
-      
       return super.getClosedOutputs();
     }
 
