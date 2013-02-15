@@ -20,7 +20,6 @@
 
 #include <assert.h>
 #include <fcntl.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,10 +29,10 @@
 
 #include "src/tcl/blob/blob.h"
 
-SwiftBlob*
-SwiftBlob_make_test(void)
+turbine_blob*
+blobutils_make_test(void)
 {
-  SwiftBlob* d = (SwiftBlob*) malloc(sizeof(SwiftBlob));
+  turbine_blob* d = (turbine_blob*) malloc(sizeof(turbine_blob));
   char* t = (char*) malloc(64);
   sprintf(t, "howdy");
   d->pointer = t;
@@ -41,17 +40,23 @@ SwiftBlob_make_test(void)
   return d;
 }
 
-SwiftBlob*
-SwiftBlob_create(long pointer, int length)
+turbine_blob*
+blobutils_create(long pointer, int length)
 {
-  SwiftBlob* result = malloc(sizeof(SwiftBlob));
-  result->pointer = (void*) pointer;
+  return blobutils_create_ptr((void*) pointer, length);
+}
+
+turbine_blob*
+blobutils_create_ptr(void* pointer, int length)
+{
+  turbine_blob* result = malloc(sizeof(turbine_blob));
+  result->pointer = pointer;
   result->length = length;
   return result;
 }
 
 void*
-SwiftBlob_malloc(int bytes)
+blobutils_malloc(int bytes)
 {
   void* result = malloc(bytes);
   assert(result);
@@ -59,44 +64,44 @@ SwiftBlob_malloc(int bytes)
 }
 
 int
-SwiftBlob_sizeof_float(void)
+blobutils_sizeof_float(void)
 {
   return sizeof(double);
 }
 
 void*
-SwiftBlob_cast_to_ptr(int i)
+blobutils_cast_to_ptr(int i)
 {
   return (void*) (size_t)i;
 }
 
 int
-SwiftBlob_cast_to_int(void* p)
+blobutils_cast_to_int(void* p)
 {
   int result = (long) p;
   return result;
 }
 
 double*
-SwiftBlob_cast_int_to_dbl_ptr(int i)
+blobutils_cast_int_to_dbl_ptr(int i)
 {
   return (double*) (size_t) i;
 }
 
 double*
-SwiftBlob_cast_to_dbl_ptr(void* p)
+blobutils_cast_to_dbl_ptr(void* p)
 {
   return (double*) p;
 }
 
 double
-SwiftBlob_double_get(double* pointer, int index)
+blobutils_get_float(double* pointer, int index)
 {
   return pointer[index];
 }
 
 char
-SwiftBlob_char_get(SwiftBlob* data, int index)
+blobutils_get_char(turbine_blob* data, int index)
 {
   char* d = (char*) data->pointer;
   return d[index];
@@ -104,14 +109,14 @@ SwiftBlob_char_get(SwiftBlob* data, int index)
 
 /** Set p[i] = d */
 void
-SwiftBlob_store_double(void* p, int i, double d)
+blobutils_set_float(void* p, int i, double d)
 {
   double* A = (double*) p;
   A[i] = d;
 }
 
 void
-SwiftBlob_free(SwiftBlob* data)
+blobutils_destroy(turbine_blob* data)
 {
   free(data->pointer);
   free(data);
@@ -120,7 +125,7 @@ SwiftBlob_free(SwiftBlob* data)
 static inline int write_all(int fd, void* buffer, int count);
 
 bool
-blobutils_writefile(const char* output, SwiftBlob* blob)
+blobutils_write(const char* output, turbine_blob* blob)
 {
   int flags = O_WRONLY | O_CREAT | O_TRUNC;
   mode_t mode = S_IRUSR | S_IWUSR;
@@ -138,7 +143,7 @@ blobutils_writefile(const char* output, SwiftBlob* blob)
 static inline int read_all(int fd, void* buffer, int count);
 
 bool
-blobutils_readfile(const char* input, SwiftBlob* blob)
+blobutils_read(const char* input, turbine_blob* blob)
 {
   int fd = open(input, O_RDONLY);
   if (fd == -1)
@@ -172,7 +177,6 @@ write_all(int fd, void* buffer, int count)
   int bytes;
   int total = 0;
   int chunk = count;
-  printf("write_all: %i\n", count);
   while ((bytes = write(fd, buffer, chunk)))
   {
     total += bytes;
