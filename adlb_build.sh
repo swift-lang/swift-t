@@ -22,12 +22,19 @@ if [ ! -z "$EXM_DEBUG_BUILD" ]; then
     EXTRA_ARGS+="--enable-log-debug"
 fi
 
-if [ ! -z "$ENABLE_MPE"]; then
+if [ ! -z "$ENABLE_MPE" ]; then
     EXTRA_ARGS+="--with-mpe=${MPE_INST}"
 fi
 
-./configure  --disable-f77 \
-            --with-c-utils=${C_UTILS_INST} \
+if [ ! -z "$EXM_CRAY" ]; then
+    export CC=gcc
+    export CFLAGS="-I${MPICH_INST}/include"
+    export LDFLAGS="-L${MPICH_INST}/lib -lmpich"
+    EXTRA_ARGS+=" --enable-mpi-2"
+    echo $EXTRA_ARGS
+fi
+
+./configure --with-c-utils=${C_UTILS_INST} \
             --prefix=${LB_INST} ${EXTRA_ARGS}
 make clean
 make -j ${MAKE_PARALLELISM}

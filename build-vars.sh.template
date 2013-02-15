@@ -23,3 +23,17 @@ STC=${SFW_ROOT}/stc/trunk/code
 
 # Misc settings
 MAKE_PARALLELISM=2
+
+# Build options: uncomment to enable
+
+# Optimized build
+#EXM_OPT_BUILD=1
+
+# Debug build (extra logging)
+#EXM_DEBUG_BUILD=1
+
+# ENable MPE
+#ENABLE_MPE=1
+
+# Cray systems
+#EXM_CRAY=1

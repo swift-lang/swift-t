@@ -17,11 +17,17 @@ if [ ! -z "$EXM_OPT_BUILD" ]; then
     EXTRA_ARGS+="--enable-fast"
 fi
 
-if [ ! -z "$ENABLE_MPE"]; then
+if [ ! -z "$ENABLE_MPE" ]; then
     EXTRA_ARGS+="--with-mpe"
 fi
 
+if [ ! -z "$EXM_CRAY" ] ; then
+    export CC=gcc
+    EXTRA_ARGS="--enable-custom-mpi"
+fi
+
 ./configure --with-adlb=${LB_INST} \
+            ${CRAY_ARGS} \
             --with-mpi=${MPICH_INST} \
             --with-tcl=${TCL_INST} \
             --with-c-utils=${C_UTILS_INST} \

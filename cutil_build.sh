@@ -15,6 +15,6 @@ if [ ! -z "$EXM_OPT_BUILD" ]; then
 fi
 rm -rf ./config.status ./autom4te.cache
 ./setup.sh
-./configure --enable-shared --prefix=${C_UTILS_INST} ${EXTRA_ARGS}
+./configure --enable-shared --prefix=${C_UTILS_INST} ${EXTRA_ARGS} CC=gcc
 make -j ${MAKE_PARALLELISM}
 make install
