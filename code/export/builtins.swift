@@ -19,6 +19,10 @@
 #ifndef BUILTINS_SWIFT
 #define BUILTINS_SWIFT
 
+// External type
+type external void;
+
+
 // NYI = Not Yet Implemented at Turbine layer
 
 // Data copy
