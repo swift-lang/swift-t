@@ -9,6 +9,10 @@ set -x
 THISDIR=`dirname $0`
 source ${THISDIR}/build-vars.sh
 
+if [ ! -z "$EXM_CRAY" ]; then
+    export CC=gcc
+fi
+
 cd unix
 ./configure --prefix=${TCL_INST} 
 make -j ${MAKE_PARALLELISM}
