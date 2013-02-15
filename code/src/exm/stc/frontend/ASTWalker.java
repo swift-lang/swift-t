@@ -245,6 +245,8 @@ public class ASTWalker {
       if (walkMode == WalkMode.ONLY_DECLARATIONS) { 
         if (token == ExMParser.DECLARATION){
           return declareVariables(context, tree, walkMode);
+        } else if (token == ExMParser.ASSIGN_EXPRESSION) {
+          return assignExpression(context, tree, walkMode);
         } else {
           // Don't process non-variable-declaration statements
           return null;
@@ -276,7 +278,7 @@ public class ASTWalker {
           return declareVariables(context, tree, walkMode);
 
         case ExMParser.ASSIGN_EXPRESSION:
-          return assignExpression(context, tree);
+          return assignExpression(context, tree, walkMode);
 
         case ExMParser.EXPR_STMT:
           return exprStatement(context, tree);
@@ -986,7 +988,7 @@ public class ASTWalker {
            Assignment assignment = new Assignment(
                    Arrays.asList(new LValue(declTree, var)),
                    Arrays.asList(assignedExpr));
-           assignedVars.addAll(assignMultiExpression(context, assignment));
+           assignedVars.addAll(assignMultiExpression(context, assignment, walkMode));
          }
       }
     }
@@ -1050,34 +1052,33 @@ public class ASTWalker {
     return var;
   }
 
-  private List<Var> assignExpression(Context context, SwiftAST tree)
-      throws UserException {
+  private List<Var> assignExpression(Context context, SwiftAST tree,
+        WalkMode walkMode) throws UserException {
     LogHelper.debug(context, "assignment: ");
     LogHelper.logChildren(context.getLevel(), tree);
     
     Assignment assign = Assignment.fromAST(context, tree);
-    return assignMultiExpression(context, assign);
+    return assignMultiExpression(context, assign, walkMode);
   }
 
-  private List<Var> assignMultiExpression(Context context, Assignment assign)
-            throws UserException, TypeMismatchException,
+  private List<Var> assignMultiExpression(Context context, Assignment assign,
+      WalkMode walkMode) throws UserException, TypeMismatchException,
       UndefinedTypeException, UndefinedVariableException {
     List<Var> multiAssignTargets = new ArrayList<Var>();
     for (Pair<List<LValue>, SwiftAST> pair: assign.getMatchedAssignments(context)) {
       List<LValue> lVals = pair.val1;
       SwiftAST rVal = pair.val2;
-      List<Var> assignTargets = assignSingleExpr(context, lVals, rVal);
+      List<Var> assignTargets = assignSingleExpr(context, lVals, rVal, walkMode);
       multiAssignTargets.addAll(assignTargets);
     }
     return multiAssignTargets;
   }
 
   private List<Var> assignSingleExpr(Context context, List<LValue> lVals,
-      SwiftAST rValExpr) throws UserException, TypeMismatchException,
+      SwiftAST rValExpr, WalkMode walkMode) throws UserException, TypeMismatchException,
       UndefinedVariableException, UndefinedTypeException {
-    
     ExprType rValTs = Assignment.checkAssign(context, lVals, rValExpr);
-            
+    
     List<Var> result = new ArrayList<Var>(lVals.size());
     Deque<Runnable> afterActions = new LinkedList<Runnable>();
     boolean skipEval = false;
@@ -1088,50 +1089,54 @@ public class ASTWalker {
 
       // Declare and initialize lval if not previously declared
       if (lVal.var == null) {
+        // Should already have declared if only evaluating 
+        assert(walkMode != WalkMode.ONLY_EVALUATION) : walkMode;
         LValue newLVal = lVal.varDeclarationNeeded(context, rValType);
         assert(newLVal != null && newLVal.var != null);
         varCreator.createVariable(context, newLVal.var);
         lVal = newLVal;
       }
 
-      Type lValType = lVal.getType(context);
-      
-      String lValDesc = lVal.toString();
-      Type rValConcrete = TypeChecker.checkAssignment(context, rValType,
-                                                      lValType, lValDesc);
-      backend.addComment("Swift l." + context.getLine() +
-          ": assigning expression to " + lValDesc);
-
-      // the variable we will evaluate expression into
-      context.syncFilePos(lVal.tree, lineMapping);
-      Var var = evalLValue(context, rValExpr, rValConcrete, lVal, 
-                                                      afterActions);
-      
-      if (lVals.size() == 1 && rValExpr.getType() == ExMParser.VARIABLE) {
-        /* Special case: 
-         * A[i] = x;  
-         * we just want x to be inserted into A without any temp variables being
-         * created.  evalLvalue will do the insertion, and return the variable
-         * represented by the LValue, but this happens to be x (because A[i] is 
-         * now just an alias for x.  So we're done and can return!
-         */
-        String rValVar = rValExpr.child(0).getText();
-        if (var.name().equals(rValVar)) {
-          // LHS is just an alias for RHS.  This is ok if this is e.g.
-          // A[i] = x; but not if it is x = x;
-          if (lVal.indices.size() == 0) {
-            throw new UserException(context, "Assigning var " + rValVar
-                + " to itself");
+      if (walkMode != WalkMode.ONLY_DECLARATIONS) {
+        Type lValType = lVal.getType(context);
+        
+        String lValDesc = lVal.toString();
+        Type rValConcrete = TypeChecker.checkAssignment(context, rValType,
+                                                        lValType, lValDesc);
+        backend.addComment("Swift l." + context.getLine() +
+            ": assigning expression to " + lValDesc);
+  
+        // the variable we will evaluate expression into
+        context.syncFilePos(lVal.tree, lineMapping);
+        Var var = evalLValue(context, rValExpr, rValConcrete, lVal, 
+                                                        afterActions);
+        
+        if (lVals.size() == 1 && rValExpr.getType() == ExMParser.VARIABLE) {
+          /* Special case: 
+           * A[i] = x;  
+           * we just want x to be inserted into A without any temp variables being
+           * created.  evalLvalue will do the insertion, and return the variable
+           * represented by the LValue, but this happens to be x (because A[i] is 
+           * now just an alias for x.  So we're done and can return!
+           */
+          String rValVar = rValExpr.child(0).getText();
+          if (var.name().equals(rValVar)) {
+            // LHS is just an alias for RHS.  This is ok if this is e.g.
+            // A[i] = x; but not if it is x = x;
+            if (lVal.indices.size() == 0) {
+              throw new UserException(context, "Assigning var " + rValVar
+                  + " to itself");
+            }
+            skipEval = true; 
+            break;
           }
-          skipEval = true; 
-          break;
         }
+        result.add(var);
       }
-
-      result.add(var);
+      
     }
 
-    if (! skipEval ) {
+    if (! skipEval && walkMode != WalkMode.ONLY_DECLARATIONS) {
       exprWalker.evalToVars(context, rValExpr, result, null);
     }
     
