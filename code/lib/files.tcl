@@ -104,7 +104,7 @@ namespace eval turbine {
       store_string [ get_file_path $outfile ] $filepath_val
       store_void [ get_file_status $outfile ]
     }
-    
+
     # fname: filename as tcl string
     # return: local file handle
     proc input_file_local { fname } {
@@ -233,7 +233,7 @@ namespace eval turbine {
         if { $new_refcount == 0 } {
             set path [ lindex $v 0 ]
             log "delete locally used file $path"
-            file delete -force $path  
+            file delete -force $path
         }
     }
 
@@ -296,7 +296,7 @@ namespace eval turbine {
 	close $fp
 	store_void [ get_file_status $dst ]
     }
-    
+
     # local_file: local file object
     # data: data to write to file
     # TODO: calling convention not figured out yet
@@ -304,5 +304,27 @@ namespace eval turbine {
 	set fp [ ::open [ local_file_path $local_file ] w+ ]
         puts $fp $str
 	close $fp
+    }
+
+    proc blob_read { stack result input } {
+	set src [ lindex $input 0 ]
+        rule_file_helper "blob_read-$result-$src" [ list ] \
+            [ list ] [ list $src ] \
+            $turbine::WORK \
+            [ list blob_read_body $result $src ]
+    }
+    proc blob_read_body { result input } {
+	set input_path [ get_file_path $input ]
+	set input_name [ retrieve_string $input_path ]
+        set blob [ new_turbine_blob ]
+        puts read
+        blobutils_read $input_name $blob
+        puts store
+        set ptr [ blobutils_cast_to_int \
+                      [ turbine_blob_pointer_get $blob ] ]
+        set length [ turbine_blob_length_get  $blob ]
+	store_blob $result [ list $ptr $length ]
+        blobutils_destroy $blob
+        file_read_refcount_decr $input
     }
 }

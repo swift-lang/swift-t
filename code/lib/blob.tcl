@@ -79,21 +79,22 @@ namespace eval turbine {
   # b: the blob
   # m: number of rows
   # n: number of columns
-  proc matrix_from_blob { stack result inputs } {
+  proc matrix_from_blob_fortran { stack result inputs } {
       set b [ lindex $inputs 0 ]
       set m [ lindex $inputs 1 ]
       set n [ lindex $inputs 2 ]
       rule "matrix_from_blob-$result" [ list $b $m $n ] \
           $turbine::LOCAL $adlb::RANK_ANY \
-          "matrix_from_blob_body $result $inputs"
+          "matrix_from_blob_fortran_body $result $inputs"
   }
-  proc matrix_from_blob_body { result b m n } {
-      log "floats_from_blob_body: result=<$result> input=<$input>"
-      set s       [ SwiftBlob_sizeof_float ]
-      set L       [ adlb::retrieve_blob $input ]
-      set p       [ SwiftBlob_cast_int_to_dbl_ptr [ lindex $L 0 ] ]
-      set m_value [ adlb::retrieve_integer $m ]
-      set n_value [ adlb::retrieve_integer $n ]
+  proc matrix_from_blob_fortran_body { result b m n } {
+      log "matrix_from_blob_fortran_body: result=<$result> blob=<$b>"
+      # Retrieve inputs
+      set s       [ blobutils_sizeof_float ]
+      set L       [ retrieve_blob $b ]
+      set p       [ blobutils_cast_int_to_dbl_ptr [ lindex $L 0 ] ]
+      set m_value [ retrieve_integer $m ]
+      set n_value [ retrieve_integer $n ]
       set length  [ lindex $L 1 ]
 
       # total = m x n
@@ -110,21 +111,21 @@ namespace eval turbine {
           container_immediate_insert $result $i $c($i)
       }
       for { set k 0 } { $k < $total } { incr k } {
-          set d [ SwiftBlob_double_get $p $k ]
+          set d [ blobutils_get_float $p $k ]
           literal t float $d
           set i [ expr $k % $m_value ]
           set j [ expr $k / $m_value ]
-          container_immediate_insert $c($i) $t
+          container_immediate_insert $c($i) $j $t
       }
       # Close rows
       for { set i 0 } { $i < $m_value } { incr i } {
-          adlb::refcount_incr $c(i) $adlb::WRITE_REFCOUNT -1
+          adlb::refcount_incr $c($i) $adlb::WRITE_REFCOUNT -1
       }
       # Close result
       adlb::refcount_incr $result $adlb::WRITE_REFCOUNT -1
       # Release cached blob
-      adlb::blob_free $input
-      log "matrix_from_blob_body: done"
+      adlb::blob_free $b
+      log "matrix_from_blob_fortran_body: done"
   }
 
   # Container must be indexed from 0,N-1
