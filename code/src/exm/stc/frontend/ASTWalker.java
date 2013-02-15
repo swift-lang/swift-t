@@ -1575,8 +1575,7 @@ public class ASTWalker {
            List<Var> outArgs, List<Var> inArgs,
            TaskMode mode) throws UserException {
     for (Var in: inArgs) {
-      if (!Types.isScalarFuture(in.type()) ||
-              Types.isFile(in.type())) {
+      if (!Types.isScalarFuture(in.type())) {
         throw new STCRuntimeError("Can't handle type of " + in.type()
                + " for function " + function);
       }
