@@ -231,17 +231,21 @@ put(int type, int putter, int priority, int answer, int target,
       worker = requestqueue_matches_target(target, type);
       if (worker != ADLB_RANK_NULL)
       {
+        assert(worker == target);
         redirect_work(type, putter, priority, answer, target,
                       length, worker);
         return ADLB_SUCCESS;
       }
     }
-    worker = requestqueue_matches_type(type);
-    if (worker != ADLB_RANK_NULL)
+    else
     {
-      redirect_work(type, putter, priority, answer, target,
-                    length, worker);
-      return ADLB_SUCCESS;
+      worker = requestqueue_matches_type(type);
+      if (worker != ADLB_RANK_NULL)
+      {
+        redirect_work(type, putter, priority, answer, target,
+                      length, worker);
+        return ADLB_SUCCESS;
+      }
     }
   }
 
