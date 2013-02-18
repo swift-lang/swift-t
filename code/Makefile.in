@@ -4,9 +4,22 @@
 # Usage notes:
 # make V=1 turns on verbose output
 
+# Shared object suffix is .so on Linux, .dylib on Mac
+# GCC shared library creation argument:
+#            Linux: -shared; Mac: -dynamiclib
+ifeq ($(USE_MAC),no)
+  MAC_NAME =
+  SO_SUFFIX = so
+  SHARED = -shared
+else
+  MAC_NAME = -install_name $(INSTALL_LIB)/libadlb.dylib
+  SO_SUFFIX = dylib
+  SHARED = -dynamiclib -flat_namespace
+endif
+
 # Products:
 ADLB_A  = lib/libadlb.a
-ADLB_SO = lib/libadlb.so
+ADLB_SO = lib/libadlb.$(SO_SUFFIX)
 ADLB = $(ADLB_SO)
 
 all: $(ADLB)
@@ -128,11 +141,11 @@ lib:
 
 $(ADLB_SO): $(OBJS) $(NLOBJS) lib
 	$(Q) "  LINK		$(@)"
-	$(E) $(LINKER) -shared -fPIC -g	 \
-	        $(OBJS) 		 \
-                $(LIBS)                  \
-	        $(RPATH)                 \
-	        -o $(@)
+	$(E) $(LINKER) -shared -fPIC -g	-o $(@) \
+	        $(OBJS) 		        \
+                $(LIBS)                         \
+	        $(RPATH)                        \
+                $(MAC_NAME)
 #       Touch this so re-installation has the correct source directory
 	$(E) touch source.txt
 
