@@ -95,6 +95,12 @@ steal_handshake(int target, int max_memory, int* count)
 
   IRECV(count, 1, MPI_INT, target, ADLB_TAG_RESPONSE_STEAL_COUNT);
 
+  // Only try to steal work types for which we have outstanding requests.
+  // If we steal other work types, we may not be able to do anything with
+  // them, and in some cases they can be stolen right back by another 
+  // server in the same situation (e.g. imagine the situation where this
+  // server has requests for type A, and a surplus of type B.  We don't
+  // want to steal more of type B from another server in the same situation)
   struct packed_steal *req = malloc(PACKED_STEAL_SIZE(xlb_types_size));
   req->max_memory = max_memory;
   requestqueue_types(req->work_types, xlb_types_size, &(req->type_count));
