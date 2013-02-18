@@ -205,6 +205,19 @@ struct packed_retrieve_hdr
 };
 
 /**
+ * Request for steal
+ */
+struct packed_steal
+{
+  int max_memory;
+  int type_count;
+  int work_types[]; // Types to accept
+};
+
+#define PACKED_STEAL_SIZE(typecount) \
+  (sizeof(struct packed_steal) + sizeof(int) * typecount) 
+
+/**
    Simple data type transfer
  */
 static inline void

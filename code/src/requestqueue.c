@@ -156,6 +156,18 @@ requestqueue_size()
   return table_ip_size(&targets);
 }
 
+void requestqueue_types(int *types, int size, int *ntypes) {
+  assert(size >= rq_work_types);
+  int found = 0;
+  for (int t = 0; t < rq_work_types; t++) {
+    struct list2* L = &type_requests[t];
+    if (L->head != NULL) {
+      types[found++] = t;
+    }
+  }
+  *ntypes = found;
+}
+
 int
 requestqueue_get(xlb_request_pair* r, int max)
 {

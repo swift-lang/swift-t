@@ -61,8 +61,14 @@ xlb_work_unit* workqueue_get(int target, int type);
  */
 bool workqueue_pop_parallel(xlb_work_unit** wu, int** ranks);
 
-adlb_code workqueue_steal(int max_memory, int* count,
-                          xlb_work_unit*** stolen);
+/*
+ *
+ * count: counts of returned results (array of size nsteal_types)
+ * stolen: array of stolen tasks (array of size nsteal_types)
+ */
+adlb_code workqueue_steal(int max_memory, int nsteal_types,
+                          const int *steal_types,
+                          int* count, xlb_work_unit*** stolen);
 
 void work_unit_free(xlb_work_unit* wu);
 

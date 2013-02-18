@@ -498,10 +498,20 @@ handle_steal(int caller)
   int count;
   xlb_work_unit** stolen;
   // Maximum amount of memory to return- currently unused
-  int max_memory;
-  RECV(&max_memory, 1, MPI_INT, caller, ADLB_TAG_STEAL);
+  
+  MPI_Status req_status;
+  int new_msg;
+  int mpi_rc = MPI_Iprobe(caller, ADLB_TAG_STEAL, adlb_all_comm, &new_msg, &req_status);
+  MPI_CHECK(mpi_rc);
+  assert(new_msg); // should be message
+  int req_bytes;
+  MPI_Get_count(&req_status, MPI_BYTE, &req_bytes);
 
-  workqueue_steal(max_memory, &count, &stolen);
+  struct packed_steal *req = malloc(req_bytes);
+  RECV(req, req_bytes, MPI_BYTE, caller, ADLB_TAG_STEAL);
+
+  workqueue_steal(req->max_memory, req->type_count, req->work_types,
+                  &count, &stolen);
   STATS("LOST: %i", count);
   // MPE_INFO(xlb_mpe_svr_info, "LOST: %i TO: %i", count, caller);
 

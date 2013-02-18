@@ -29,6 +29,14 @@ int requestqueue_matches_type(int type);
 
 int requestqueue_size(void);
 
+/* present should be an array of size >= number of request types
+ * it is filled in with the types that are present
+ * types: array to be filled in
+ * size: size of the array (greater than num of work types)
+ * ntypes: returns number of elements filled in
+ */
+void requestqueue_types(int *types, int size, int *ntypes);
+
 /**
    Get number workers (in result) equal to parallelism
    @return True iff work was found

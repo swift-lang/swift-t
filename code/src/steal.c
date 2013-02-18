@@ -15,6 +15,7 @@
 #include "debug.h"
 #include "messaging.h"
 #include "mpe-tools.h"
+#include "requestqueue.h"
 #include "server.h"
 #include "sync.h"
 #include "steal.h"
@@ -93,7 +94,13 @@ steal_handshake(int target, int max_memory, int* count)
   MPI_Status status;
 
   IRECV(count, 1, MPI_INT, target, ADLB_TAG_RESPONSE_STEAL_COUNT);
-  SEND(&max_memory, 1, MPI_INT, target, ADLB_TAG_STEAL);
+
+  struct packed_steal *req = malloc(PACKED_STEAL_SIZE(xlb_types_size));
+  req->max_memory = max_memory;
+  requestqueue_types(req->work_types, xlb_types_size, &(req->type_count));
+  SEND(req, PACKED_STEAL_SIZE(req->type_count), MPI_BYTE, target,
+        ADLB_TAG_STEAL);
+  free(req);
 
   WAIT(&request, &status);
   DEBUG("STOLE: %i", *count);
