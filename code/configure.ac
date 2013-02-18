@@ -279,15 +279,16 @@ AC_SUBST(MPI_IMPL)
 # See Turbine - Build for explanation
 ENABLE_MPE=0
 USE_MPE=0
+LIBMPE=libmpe.${SO_SUFFIX}
 AC_ARG_WITH(mpe,
      AS_HELP_STRING(
                     [--with-mpe],
-                    [Enable Turbine MPE, set path to libmpe.so]),
+                    [Enable Turbine MPE, set path to ${LIBMPE}]),
      [ USE_MPE=${withval} ; ENABLE_MPE=1], [:] )
 if [[ ${USE_MPE} != 0 ]]
 then
     AC_MSG_RESULT([Enabling MPE]);
-    AC_CHECK_FILE(${USE_MPE}/libmpe.so)
+    AC_CHECK_FILE(${USE_MPE}/${LIBMPE})
     AC_DEFINE_UNQUOTED(ENABLE_MPE,ENABLE_MPE,[Enables MPE])
 fi
 AC_SUBST(USE_MPE)
@@ -364,10 +365,11 @@ AC_ARG_WITH(tcl,
 
 # Set USE_TCL_LIB_DIR: location of libtcl
 USE_TCL_LIB_DIR=${USE_TCL}/lib
-AC_MSG_CHECKING([for libtcl8.5.so ])
-if [[ ! -r ${USE_TCL_LIB_DIR}/libtcl8.5.so ]]
+LIBTCL=libtcl8.5.${SO_SUFFIX}
+AC_MSG_CHECKING([for ${LIBTCL} ])
+if [[ ! -r ${USE_TCL_LIB_DIR}/${LIBTCL} ]]
 then
-    AC_MSG_ERROR([could not find libtcl8.5.so!])
+    AC_MSG_ERROR([could not find ${LIBTCL}!])
 fi
 AC_MSG_RESULT([ok])
 
