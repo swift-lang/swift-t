@@ -21,6 +21,12 @@ source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
 
 set -x
 
+if ! sed --version | grep GNU > /dev/null
+then
+  echo "need GNU sed: skipping this test..."
+  exit 0
+fi
+
 bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || exit 1
 
