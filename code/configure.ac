@@ -77,13 +77,13 @@ AC_C_RESTRICT
 
 # We prefer to use cp -u for installation
 AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
-    [AC_PATH_PROGS_FEATURE_CHECK([CP_U], [cp],
-         [[cp_u_out=`cp -u /dev/null /dev/stdout 2>&1 | cat > /dev/null`
-           [[ ${?} == 0 ]]        \
-           && ac_cv_path_cp_u=yes \
-           || ac_cv_path_cp_u=no  ]],
-         [])])
+            [AC_PATH_PROGS_FEATURE_CHECK([CP_U], [cp],
+              [[cp_u_out=`cp -u /dev/null cp_u.token 2>&1 > /dev/null`
+                test "$?" = 0 \
+                && ac_cv_path_cp_u=yes || ac_cv_path_cp_u=no ]],
+              [])])
 AC_SUBST([CP_U], [$ac_cv_path_cp_u])
+[[ -r cp_u.token ]] && rm cp_u.token
 
 ADLB_ENABLE_MPE=no
 AC_ARG_WITH(mpe,
