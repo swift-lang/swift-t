@@ -94,7 +94,7 @@ random_draw(float* p, int length)
   {
     index++;
     weight += p[index];
-  } while (weight < target);
+  } while (weight < target && index < length - 1);
   return index;
 }
 
