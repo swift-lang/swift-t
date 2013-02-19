@@ -244,6 +244,15 @@ pop_parallel_cb(struct rbtree_node* node, void* user_data)
   return false;
 }
 
+static inline int
+rand_choose(float *weights, int length) {
+  if (length == 1) {
+    return 0;
+  } else {
+    return random_draw(weights, length);
+  }
+}
+
 /**
    If count is not 0, caller must free results
  */
@@ -251,6 +260,7 @@ adlb_code
 workqueue_steal(int max_memory, int nsteal_types, const int *steal_types,
                 int* count, xlb_work_unit*** result)
 {
+  assert(nsteal_types >= 0 && nsteal_types <= xlb_types_size);
   // fractions: probability weighting for each work type
   float fractions_parallel[nsteal_types];
   float fractions_single[nsteal_types];
@@ -259,6 +269,7 @@ workqueue_steal(int max_memory, int nsteal_types, const int *steal_types,
   for (int i = 0; i < nsteal_types; i++)
   {
     int t = steal_types[i];
+    assert(t >= 0 && t < xlb_types_size);
     total_parallel += (&parallel_work[t])->size;
     total_single   += (&typed_work[t])->size;
   }
@@ -275,14 +286,14 @@ workqueue_steal(int max_memory, int nsteal_types, const int *steal_types,
     for (int i = 0; i < nsteal_types; i++) {
       int t = steal_types[i];
       fractions_parallel[t] =
-          (&parallel_work[t])->size / total_parallel;
+          (&parallel_work[t])->size / (float) total_parallel;
     }
   }
   if (total_single > 0) {
     for (int i = 0; i < nsteal_types; i++) {
       int t = steal_types[i];
       fractions_single[t] =
-          (&typed_work[t])->size / total_single;
+          (&typed_work[t])->size / (float) total_single;
     }
   }
   // Number of work units we are willing to share (half of all work)
@@ -295,8 +306,11 @@ workqueue_steal(int max_memory, int nsteal_types, const int *steal_types,
   if (total_parallel > 0)
     for (int i = 0; i < share; i++)
     {
-      int type_ix = random_draw(fractions_parallel, nsteal_types);
+      assert(nsteal_types > 0);
+      int type_ix = rand_choose(fractions_parallel, nsteal_types);
+      assert(type_ix >= 0 && type_ix < nsteal_types);
       int type = steal_types[type_ix];
+      assert(type >= 0 && type < xlb_types_size);
       struct rbtree* T = &parallel_work[type];
       struct rbtree_node* node = rbtree_random(T);
       if (node == NULL)
@@ -310,8 +324,11 @@ workqueue_steal(int max_memory, int nsteal_types, const int *steal_types,
   if (total_single > 0)
     for (int i = actual; i < share; i++)
     {
-      int type_ix = random_draw(fractions_single, nsteal_types);
+      assert(nsteal_types > 0);
+      int type_ix = rand_choose(fractions_single, nsteal_types);
+      assert(type_ix >= 0 && type_ix < nsteal_types);
       int type = steal_types[type_ix];
+      assert(type >= 0 && type < xlb_types_size);
       struct rbtree* T = &typed_work[type];
       struct rbtree_node* node = rbtree_random(T);
       if (node == NULL)
