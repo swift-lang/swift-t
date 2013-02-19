@@ -7,6 +7,8 @@
 # Shared object suffix is .so on Linux, .dylib on Mac
 # GCC shared library creation argument:
 #            Linux: -shared; Mac: -dynamiclib
+
+USE_MAC=@USE_MAC@
 ifeq ($(USE_MAC),no)
   MAC_NAME =
   SO_SUFFIX = so
