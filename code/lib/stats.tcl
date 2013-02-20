@@ -276,9 +276,9 @@ namespace eval turbine {
         set struct [ container_lookup $container $key ]
         # puts "key: $key"
         # struct should be closed
-        set n_id [ container_lookup $struct "n" ]
-        set mean_id [ container_lookup $struct "mean" ]
-        set M2_id [ container_lookup $struct "M2" ]
+        set n_id [ dict get $struct "n" ]
+        set mean_id [ dict get $struct "mean" ]
+        set M2_id [ dict get $struct "M2" ]
         if { [ adlb::exists $n_id ] && [ adlb::exists $mean_id ] \
             && [ adlb::exists $M2_id ] } {
           set n [ retrieve_integer $n_id ]
