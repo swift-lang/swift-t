@@ -2388,6 +2388,10 @@ public class ICInstructions {
         case STRUCT_INSERT: {
           return Pair.create(Arrays.asList(getInput(1).getVar()), Var.NONE);
         }
+        case COPY_REF: {
+          return Pair.create(Arrays.asList(getInput(0).getVar()),
+                             Arrays.asList(getInput(0).getVar()));
+        }
         default:
           // Return default
           return super.getIncrVars();
@@ -2454,6 +2458,8 @@ public class ICInstructions {
         case LOAD_REF:
           // If reference was a part of something, modifying the
           // dereferenced object will modify the whole
+          return Pair.create(getOutput(0), getInput(0).getVar());
+        case COPY_REF:
           return Pair.create(getOutput(0), getInput(0).getVar());
         case ADDRESS_OF:
           // Sometimes a reference is filled in

@@ -785,6 +785,20 @@ public class RefcountPass implements OptimizerPass {
         writeIncrements.increment(v);
       }
     }
+
+    if (inst.op == Opcode.COPY_REF) {
+      // TODO: Hack to handle COPY_REF
+      // We incremenented refcounts for orig var, now need to decrement
+      // refcount on alias vars
+      Var newAlias = inst.getOutput(0);
+      if (RefCounting.hasReadRefCount(newAlias)) {
+        readIncrements.decrement(newAlias);
+      }
+      if (RefCounting.hasWriteRefCount(newAlias)) {
+        writeIncrements.decrement(newAlias);
+      }
+    }
+    
     if (inst.op == Opcode.LOOP_BREAK) {
       // Special case decr
       LoopBreak loopBreak = (LoopBreak) inst;
