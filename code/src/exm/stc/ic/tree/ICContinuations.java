@@ -113,6 +113,16 @@ public class ICContinuations {
     
     protected abstract void replaceConstructVars(Map<Var, Arg> renames,
                                                  RenameMode mode);
+
+    /**
+     * For the case where a consturct redefines a variable
+     * name from outside, replace this variable.
+     * @param redef
+     * @param var
+     */
+    public void removeRedef(Var oldV, Var newV) {
+       // Do nothing by default 
+    }
     
     protected void replaceVarsInBlocks(Map<Var, Arg> renames,
                                        RenameMode mode) {
@@ -172,9 +182,18 @@ public class ICContinuations {
     /**
      * Return list of variables that are defined by construct and
      * accessible inside
+     * @param includeRedefs.  True if we should return variables that
+     *      construct redefines
      * @return non-null list
      */
-    public abstract List<Var> constructDefinedVars();
+    public List<Var> constructDefinedVars(boolean includeRedefs) {
+      return Var.NONE;
+    }
+    
+    public List<Var> constructDefinedVars() {
+      // In most cases don't care about redefs
+      return constructDefinedVars(false);
+    }
 
     /**
      * @return true if all variables in block containing continuation are
@@ -601,6 +620,18 @@ public class ICContinuations {
         ICUtil.replaceVarsInList(renames, loopVars, false);
       }
     }
+    
+    @Override
+    public void removeRedef(Var oldV, Var newV) {
+      for (int i = 0; i < loopVars.size(); i++) {
+        Var loopVar = loopVars.get(i);
+        if (loopVar.equals(oldV)) {
+          assert(!this.definedHere.get(i));
+          this.loopVars.set(i, newV);
+          this.definedHere.set(i, true);
+        }
+      }
+    }
 
     @Override
     public Collection<Var> requiredVars(boolean forDeadCodeElim) {
@@ -634,10 +665,10 @@ public class ICContinuations {
     }
 
     @Override
-    public List<Var> constructDefinedVars() {
+    public List<Var> constructDefinedVars(boolean includeRedefs) {
       ArrayList<Var> defVars = new ArrayList<Var>();
       for (int i = 0; i < this.loopVars.size(); i++) {
-        if (this.definedHere.get(i)) {
+        if (includeRedefs || this.definedHere.get(i)) {
           defVars.add(this.loopVars.get(i));
         }
       }
@@ -760,11 +791,6 @@ public class ICContinuations {
     @Override
     public boolean isNoop() {
       return block.isEmpty();
-    }
-    
-    @Override
-    public List<Var> constructDefinedVars() {
-      return Var.NONE;
     }
   }
 
@@ -1001,11 +1027,6 @@ public class ICContinuations {
         res.add(new BlockingVar(wv, this.recursive));
       }
       return res;
-    }
-
-    @Override
-    public List<Var> constructDefinedVars() {
-      return Var.NONE;
     }
 
     @Override

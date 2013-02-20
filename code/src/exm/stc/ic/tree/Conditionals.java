@@ -161,11 +161,6 @@ public class Conditionals {
       return thenBlock.isEmpty() && elseBlock.isEmpty();
     }
   
-    @Override
-    public List<Var> constructDefinedVars() {
-      return Var.NONE;
-    }
-  
     /**
      * Can these be fused into one if statement
      * @param other
@@ -351,11 +346,6 @@ public class Conditionals {
         }
       }
       return this.defaultBlock.isEmpty();
-    }
-  
-    @Override
-    public List<Var> constructDefinedVars() {
-      return Var.NONE;
     }
   }
 

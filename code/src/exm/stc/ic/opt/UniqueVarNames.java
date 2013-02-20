@@ -18,15 +18,18 @@ package exm.stc.ic.opt;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Logging;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;
@@ -99,16 +102,41 @@ public class UniqueVarNames implements OptimizerPass {
   private static void makeVarNamesUnique(Vars existing,
                  Continuation cont, HierarchicalMap<Var, Arg> renames) {
     // Update any continuation-defined vars
-    for (Var v: cont.constructDefinedVars()) {
+    List<Var> constructNewDefinedVars = cont.constructDefinedVars(false);
+    for (Var v: constructNewDefinedVars) {
       assert(cont.getBlocks().size() == 1) : "Assume continuation with " +
       		"construct defined vars has only one block";
       HashMap<Var, Arg> contVarRenames = new HashMap<Var, Arg>();
       updateName(cont.getBlocks().get(0), existing, contVarRenames, v);
       
-      // Update construct vars as required
-      cont.replaceVars(contVarRenames, RenameMode.REPLACE_VAR, false);
-      renames.putAll(contVarRenames);
+      if (contVarRenames.size() > 0) {
+        // Update construct vars as required
+        cont.replaceVars(contVarRenames, RenameMode.REPLACE_VAR, false);
+        renames.putAll(contVarRenames);
+      }
     }
+    List<Var> constructAllDefinedVars = cont.constructDefinedVars(true);
+    if (constructAllDefinedVars.size() != constructNewDefinedVars.size()) {
+      List<Var> redefined = Var.varListDiff(constructAllDefinedVars,
+                                            constructNewDefinedVars);
+      for (Var redef: redefined) {
+        //assert(redef.storage() == VarStorage.ALIAS) :
+        //      redef + " " + redef.storage();
+        HashMap<Var, Arg> contVarRenames = new HashMap<Var, Arg>();
+        updateName(cont.getBlocks().get(0), existing, contVarRenames, redef);
+
+        if (contVarRenames.size() > 0) {
+          // Update construct vars as required
+          assert(contVarRenames.size() == 1 &&
+              contVarRenames.containsKey(redef));
+          Var repl = contVarRenames.get(redef).getVar();
+          Logging.getSTCLogger().debug("Replaced " + redef + " with " + repl);
+          cont.removeRedef(redef, repl);
+          renames.putAll(contVarRenames);
+        }
+      }
+    }
+    
     
     for (Block b: cont.getBlocks()) {
       makeVarNamesUnique(b, existing, renames.makeChildMap());

@@ -32,7 +32,6 @@ import exm.stc.common.util.Counters;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
-import exm.stc.ic.tree.Conditionals.IfStatement;
 import exm.stc.ic.tree.ICContinuations.AbstractLoop;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -326,7 +325,7 @@ public class ForeachLoops {
     }
 
     @Override
-    public List<Var> constructDefinedVars() {
+    public List<Var> constructDefinedVars(boolean includeRedefs) {
       return loopCounterVar == null ?
                 Arrays.asList(loopVar)
               : Arrays.asList(loopCounterVar, loopVar);
@@ -619,7 +618,7 @@ public class ForeachLoops {
     }
 
     @Override
-    public List<Var> constructDefinedVars() {
+    public List<Var> constructDefinedVars(boolean includeRedefs) {
       if (loopCounterVar != null) {
         return Arrays.asList(loopVar, loopCounterVar);
       } else {

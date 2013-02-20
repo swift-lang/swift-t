@@ -142,7 +142,7 @@ public class Validate implements OptimizerPass {
       checkCleanups(fn, block);
     
     for (Continuation c: block.getContinuations()) {
-      for (Var v: c.constructDefinedVars()) {
+      for (Var v: c.constructDefinedVars(true)) {
         checkVarUnique(logger, fn, declared, v);
       }
       for (Block inner: c.getBlocks()) { 
