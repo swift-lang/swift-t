@@ -16,6 +16,7 @@
 package exm.stc.ic.opt;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -88,6 +89,11 @@ public class ComputedValue {
   public ComputedValue(Opcode op, List<Arg> inputs,
       Arg valLocation, boolean outClosed) {
     this(op, "", inputs, valLocation, outClosed);
+  }
+  
+  public ComputedValue(Opcode op, Arg input,
+      Arg valLocation, boolean outClosed, EquivalenceType equivType) {
+    this(op, "", Collections.singletonList(input), valLocation, outClosed, equivType);
   }
   
   public ComputedValue(Opcode op, String subop, int index, List<Arg> inputs,
@@ -185,6 +191,10 @@ public class ComputedValue {
   public String toString() {
     return op.toString() + "." + subop + inputs.toString();
   }
+  
+  public List<ComputedValue> asList() {
+    return Collections.singletonList(this);
+  }
 
   public static ComputedValue create(Instruction inst) {
     // TODO create unique expression for RHS of any kind of instruction
@@ -221,13 +231,32 @@ public class ComputedValue {
     return cv.op == Opcode.FAKE && cv.subop.equals(COPY_OF);
   }
   
+  public static boolean isAlias(ComputedValue cv) {
+    return isCopy(cv) && cv.equivType == EquivalenceType.REFERENCE;
+  }
+  
   /* Special subop strings to use with fake opcode */
   public static final String ARRAY_CONTENTS = "array_contents";
   public static final String REF_TO_ARRAY_CONTENTS = "ref_to_array_contents";
   private static final String COPY_OF = "copy_of";
 
+  /**
+   * @param dst
+   * @param src
+   * @return Computed value indicating dst has same value as src
+   */
   public static ComputedValue makeCopyCV(Var dst, Arg src) {
     return new ComputedValue(Opcode.FAKE, COPY_OF, 
                   src, Arg.createVar(dst), false);
+  }
+  
+  /**
+   * @param dst
+   * @param src
+   * @return Computed value indicating dst is alias of src
+   */
+  public static ComputedValue makeAliasCV(Var dst, Arg src) {
+    return new ComputedValue(Opcode.FAKE, COPY_OF, src.asList(),
+              dst.asArg(), false, EquivalenceType.REFERENCE);
   }
 }

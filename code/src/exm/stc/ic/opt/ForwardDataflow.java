@@ -373,7 +373,11 @@ public class ForwardDataflow implements OptimizerPass {
         logger.trace("icvs: " + icvs.toString());
       }
       for (ComputedValue currCV : icvs) {
-        if (ComputedValue.isCopy(currCV)) {
+        if (ComputedValue.isAlias(currCV)) {
+          replaceAll.put(currCV.getValLocation().getVar(),
+                                          currCV.getInput(0));
+          continue;
+        } else if (ComputedValue.isCopy(currCV)) {
           // Copies are easy to handle: replace output of inst with input 
           // going forward
           replaceInputs.put(currCV.getValLocation().getVar(),
@@ -722,10 +726,17 @@ public class ForwardDataflow implements OptimizerPass {
       Instruction inst = insts.next();
       
       if (logger.isTraceEnabled()) {
-        logger.trace("Input renames in effect: " + replaceInputs);
-        logger.trace("Output renames in effect: " + replaceAll);
-        // TODO: no longer prints all avail vals
-        logger.trace("Available values in block: " + cv.availableVals);
+        logger.trace("Value renames in effect: " + replaceInputs);
+        logger.trace("Reference renames in effect: " + replaceAll);
+        logger.trace("Available values this block: " + cv.availableVals);
+        State ancestor = cv.parent;
+        int up = 1;
+        while (ancestor != null) {
+          logger.trace("Available ancestor " + up + ": " +
+                       ancestor.availableVals);
+          up++;
+          ancestor = ancestor.parent;
+        }
         logger.trace("Closed variables: " + cv.closed);
         logger.trace("-----------------------------");
         logger.trace("At instruction: " + inst);

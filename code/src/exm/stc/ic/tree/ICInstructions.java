@@ -2196,6 +2196,9 @@ public class ICInstructions {
             }
           }
         }
+        case COPY_REF: {
+          return ComputedValue.makeAliasCV(getOutput(0), getInput(0)).asList();
+        }
         default:
           return null;
       }

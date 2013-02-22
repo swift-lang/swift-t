@@ -16,6 +16,7 @@
 package exm.stc.common.lang;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -324,5 +325,9 @@ public class Arg implements Comparable<Arg> {
       res.add(arg.getVar());
     }
     return res;
+  }
+
+  public List<Arg> asList() {
+    return Collections.singletonList(this);
   }
 }

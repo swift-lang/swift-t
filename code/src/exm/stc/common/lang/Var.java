@@ -343,6 +343,10 @@ public class Var implements Comparable<Var> {
     return Arg.createVar(this);
   }
 
+  public List<Var> asList() {
+    return Collections.singletonList(this);
+  }
+  
   @Override
   public String toString()
   {
