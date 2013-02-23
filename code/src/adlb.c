@@ -61,6 +61,8 @@ check_versions()
 #define HOSTNAME_MAX 128
 static bool setup_hostmap(void);
 
+static inline int get_next_server();
+
 adlb_code
 ADLBP_Init(int nservers, int ntypes, int type_vect[],
            int *am_server, MPI_Comm adlb_comm, MPI_Comm *worker_comm)
@@ -371,7 +373,11 @@ ADLBP_Create_impl(adlb_datum_id id, adlb_data_type type,
   MPI_Status status;
   MPI_Request request;
 
-  to_server_rank = ADLB_Locate(id);
+  if (id != ADLB_DATA_ID_NULL) {
+    to_server_rank = ADLB_Locate(id);
+  } else {
+    to_server_rank = get_next_server();
+  }
   struct packed_create_request data = { id, type, props };
 
   struct packed_create_response resp;

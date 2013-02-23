@@ -53,6 +53,8 @@ static bool fail_code = -1;
 
 static adlb_code setup_idle_time(void);
 
+static inline int xlb_server_number(int rank);
+
 static inline adlb_code xlb_poll(int source,  MPI_Status *req_status);
 
 // Service request from queue
@@ -69,7 +71,7 @@ xlb_server_init()
   list_i_init(&workers_shutdown);
   requestqueue_init(xlb_types_size);
   workqueue_init(xlb_types_size);
-  data_init(xlb_servers, xlb_world_rank);
+  data_init(xlb_servers, xlb_server_number(xlb_world_rank));
   adlb_code code = setup_idle_time();
   ADLB_CHECK(code);
   // Set a default value for now:
@@ -99,6 +101,13 @@ xlb_is_server(int rank)
   if (rank > xlb_world_size - xlb_servers)
     return true;
   return false;
+}
+
+// return the number of the server (0 is first server)
+static inline int
+xlb_server_number(int rank)
+{
+  return rank - (xlb_world_size - xlb_servers);
 }
 
 /**

@@ -96,13 +96,15 @@ static adlb_data_code garbage_collect_members(struct table* members);
 
 /**
    @param s Number of servers
-   @param r My rank
+   @param server_num Number amongst servers
  */
 adlb_data_code
-data_init(int s, int r)
+data_init(int s, int server_num)
 {
+  assert(server_num >= 0 && server_num < s);
   servers = s;
-  unique = r;
+  unique = server_num;
+  if (unique == 0) unique += s;
 
   bool result;
   result = table_lp_init(&tds, 1024*1024);
@@ -927,6 +929,10 @@ data_lookup(adlb_datum_id id, const char* subscript,
 adlb_data_code
 data_unique(adlb_datum_id* result)
 {
+  // Tim: can we remove this loop and save table lookup?
+  // I don't think in general that we can reasonably support
+  // user code mixing up its own IDs and ADLB-assigned IDs
+  /*
   while (true)
   {
     if (unique >= last_id)
@@ -938,6 +944,11 @@ data_unique(adlb_datum_id* result)
     if (td == NULL)
       break;
     unique += servers;
+  }*/
+  if (unique >= last_id)
+  {
+    *result = ADLB_DATA_ID_NULL;
+    return ADLB_DATA_ERROR_LIMIT;
   }
   *result = unique;
   unique += servers;
