@@ -376,7 +376,7 @@ ADLBP_Create_impl(adlb_datum_id id, adlb_data_type type,
   if (id != ADLB_DATA_ID_NULL) {
     to_server_rank = ADLB_Locate(id);
   } else {
-    to_server_rank = get_next_server();
+    to_server_rank = xlb_my_server; 
   }
   struct packed_create_request data = { id, type, props };
 
