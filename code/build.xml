@@ -63,7 +63,8 @@
           debug="true"
           debuglevel="source,lines,vars"
           includeantruntime="false"
-          classpath=".:${antlr.jar}">
+          classpath=".:${antlr.jar}"
+          target="1.6">
      <compilerarg value="-Xlint"/>
      <compilerarg value="-Xlint:-cast"/>
    </javac>
