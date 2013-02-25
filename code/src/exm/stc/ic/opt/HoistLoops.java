@@ -351,6 +351,7 @@ public class HoistLoops implements OptimizerPass {
         if (logger.isTraceEnabled())
           logger.trace("DeclareDepth of " + out + " is " + declareDepth);
         assert(declareDepth >= 0);
+        
         // Can't hoist out of loop if variable declared outside loop
         if (declareDepth > state.maxLoopHoist && !inst.isIdempotent()) {
           // Don't hoist out of loop - could do fewer assignments than intended
@@ -360,6 +361,14 @@ public class HoistLoops implements OptimizerPass {
                           state.maxLoopHoist);
         }
       }
+    }
+    
+    // Don't hoist piecewise-assigned var declaration out of loop
+    for (Var out: inst.getPiecewiseAssignedOutputs()) {
+      maxHoist = Math.min(maxHoist, state.maxLoopHoist);
+      if (logger.isTraceEnabled())
+        logger.trace("Can't hoist declaration of " + out + " out of loop, "
+                + "constrained to: " + state.maxLoopHoist);
     }
     
     // Check that any output variables that are aliases are
