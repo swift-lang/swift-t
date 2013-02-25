@@ -286,18 +286,22 @@ namespace eval turbine {
           set M2 [ retrieve_float $M2_id ]
           if { $i > 0 } {
             # combine statistics
-            # weighted mean
-            # mean' := (mean1 * n1 + mean2 * n2) / ( n1 + n2)
-            set mean_accum [ expr ( $mean_accum * $n_accum + \
-                                $mean * $n) / double( $n_accum + $n ) ]
-            #  diff := mean2 - mean1
-            set diff [ expr $mean - $mean_accum ]
-            # M2' := M2_1 + M2_2 + diff^2 * ( n1*n2 / (n1 + n2))
-            set M2_accum [ expr $M2_accum + $M2 + \
-                          ($diff**2) * ($n_accum * $n / ($n_accum + $n)) ]
+            set mean2 $mean_accum
+            set n2 $n_accum
             # n' := n1 + n2
             set n_accum [ expr $n_accum + $n ]
 
+            # weighted mean
+            # mean' := (mean1 * n1 + mean2 * n2) / (n1 + n2)
+            set mean_accum [ expr ( $mean2 * $n2 + $mean * $n) / \
+                                              double( $n_accum ) ]
+
+            #  diff := mean2 - mean1
+            set diff [ expr $mean - $mean2 ]
+
+            # M2' := M2_1 + M2_2 + diff^2 * ( n1*n2 / (n1 + n2))
+            set M2_accum [ expr $M2_accum + $M2 + \
+                          (($diff**2) * ($n2 * $n / double($n_accum))) ]
           } else {
             set n_accum $n
             set mean_accum $mean
