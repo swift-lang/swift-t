@@ -139,6 +139,7 @@ xlb_mpe_setup()
     describe_pair(svr, get);
     describe_pair(svr, put);
     describe_pair(svr, create);
+    describe_pair(svr, multicreate);
     describe_pair(svr, subscribe);
     describe_pair(svr, store);
     describe_pair(svr, retrieve);

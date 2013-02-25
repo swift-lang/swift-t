@@ -45,6 +45,8 @@ static int mpi_version;
  */
 struct table hostmap;
 
+static inline int choose_data_server();
+
 static void
 check_versions()
 {
@@ -422,6 +424,30 @@ ADLBP_Create(adlb_datum_id id, adlb_data_type type,
                            props, new_id);
 }
 
+adlb_code ADLBP_Multicreate(ADLB_create_spec *specs, int count)
+{
+  MPI_Request request;
+  MPI_Status status;
+  int server = choose_data_server();
+
+  // Allocated ids (ADLB_DATA_ID_NULL if failed)
+  adlb_datum_id ids[count];
+  IRECV(ids, sizeof(ids), MPI_BYTE, server, ADLB_TAG_RESPONSE);
+
+  SEND(specs, sizeof(ADLB_create_spec) * count, MPI_BYTE,
+       server, ADLB_TAG_MULTICREATE);
+  WAIT(&request, &status);
+
+  // Check success by inspecting ids
+  for (int i = 0; i < count; i++) {
+    if (ids[i] == ADLB_DATA_ID_NULL) {
+      return ADLB_ERROR;
+    }
+    specs[i].id = ids[i];
+  }
+  return ADLB_SUCCESS;
+}
+
 adlb_code
 ADLB_Create_integer(adlb_datum_id id, adlb_create_props props,
                   adlb_datum_id *new_id)
@@ -536,6 +562,16 @@ get_next_server()
   // DEBUG("random_server => %i\n", rank);
   next_server_index = (next_server_index + 1) % xlb_servers;
   return rank;
+}
+
+/**
+  Choose server to create data on
+ */
+static inline int
+choose_data_server()
+{
+  // For now, create on own server
+  return xlb_my_server;
 }
 
 adlb_code

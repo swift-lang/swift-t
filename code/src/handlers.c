@@ -58,6 +58,7 @@ static adlb_code handle_get(int caller);
 static adlb_code handle_iget(int caller);
 static adlb_code handle_steal(int caller);
 static adlb_code handle_create(int caller);
+static adlb_code handle_multicreate(int caller);
 static adlb_code handle_exists(int caller);
 static adlb_code handle_store(int caller);
 static adlb_code handle_retrieve(int caller);
@@ -87,6 +88,8 @@ static adlb_code put_targeted(int type, int putter, int priority,
                               int answer, int target,
                               void* payload, int length);
 
+static adlb_code find_req_bytes(int *bytes, int caller, adlb_tag tag);
+
 #define register_handler(tag, handler) \
 { register_handler_function(tag, handler); \
   xlb_add_tag_name(tag, #tag); }
@@ -104,6 +107,7 @@ xlb_handlers_init(void)
   register_handler(ADLB_TAG_IGET, handle_iget);
   register_handler(ADLB_TAG_STEAL, handle_steal);
   register_handler(ADLB_TAG_CREATE_HEADER, handle_create);
+  register_handler(ADLB_TAG_MULTICREATE, handle_multicreate);
   register_handler(ADLB_TAG_EXISTS, handle_exists);
   register_handler(ADLB_TAG_STORE_HEADER, handle_store);
   register_handler(ADLB_TAG_RETRIEVE, handle_retrieve);
@@ -499,13 +503,9 @@ handle_steal(int caller)
   xlb_work_unit** stolen;
   // Maximum amount of memory to return- currently unused
   
-  MPI_Status req_status;
-  int new_msg;
-  int mpi_rc = MPI_Iprobe(caller, ADLB_TAG_STEAL, adlb_all_comm, &new_msg, &req_status);
-  MPI_CHECK(mpi_rc);
-  assert(new_msg); // should be message
   int req_bytes;
-  MPI_Get_count(&req_status, MPI_BYTE, &req_bytes);
+  adlb_code rc = find_req_bytes(&req_bytes, caller, ADLB_TAG_STEAL);
+  ADLB_CHECK(rc);
 
   struct packed_steal *req = malloc(req_bytes);
   RECV(req, req_bytes, MPI_BYTE, caller, ADLB_TAG_STEAL);
@@ -587,6 +587,59 @@ handle_create(int caller)
   TRACE("ADLB_TAG_CREATE done\n");
   MPE_LOG(xlb_mpe_svr_create_end);
 
+  return ADLB_SUCCESS;
+}
+
+static adlb_code
+handle_multicreate(int caller)
+{
+  MPE_LOG(xlb_mpe_svr_multicreate_start);
+  TRACE("ADLB_TAG_MULTICREATE\n");
+
+  MPI_Status status;
+
+  int req_bytes;
+  adlb_code rc = find_req_bytes(&req_bytes, caller, ADLB_TAG_MULTICREATE);
+  ADLB_CHECK(rc);
+
+  assert(req_bytes % sizeof(ADLB_create_spec) == 0);
+  int count = req_bytes / sizeof(ADLB_create_spec);
+  ADLB_create_spec *specs = malloc(req_bytes);
+  RECV(specs, req_bytes, MPI_BYTE, caller, ADLB_TAG_MULTICREATE);
+
+  adlb_datum_id new_ids[count];
+
+  adlb_data_code dc = ADLB_DATA_SUCCESS;
+  for (int i = 0; i < count; i++) {
+    if (specs[i].id != ADLB_DATA_ID_NULL) {
+      dc = ADLB_DATA_ERROR_INVALID;
+      DEBUG("non-null data id: %li", specs[i].id);
+      break;
+    }
+    adlb_datum_id new_id;
+    dc = data_unique(&new_id);
+    new_ids[i] = new_id;
+    if (dc != ADLB_DATA_SUCCESS)
+      break;
+    dc = data_create(new_id, specs[i].type, &(specs[i].props));
+    if (dc != ADLB_DATA_SUCCESS)
+      break;
+    if (specs[i].type == ADLB_DATA_TYPE_CONTAINER) {
+      dc = data_create_container(new_id, specs[i].subscript_type,
+                                &(specs[i].props));
+    }
+    if (dc != ADLB_DATA_SUCCESS)
+      break;
+  }
+  
+  
+  RSEND(new_ids, sizeof(new_ids), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+
+  free(specs);
+  ADLB_DATA_CHECK(dc);
+  
+  TRACE("ADLB_TAG_MULTICREATE done\n");
+  MPE_LOG(xlb_mpe_svr_multicreate_end);
   return ADLB_SUCCESS;
 }
 
@@ -1238,5 +1291,18 @@ put_targeted(int type, int putter, int priority, int answer,
   }
 
 
+  return ADLB_SUCCESS;
+}
+
+// Find the size of a pending request (that has already been detected
+// by Iprobe).
+static adlb_code find_req_bytes(int *bytes, int caller, adlb_tag tag) {
+  MPI_Status req_status;
+  int new_msg;
+  int mpi_rc = MPI_Iprobe(caller, tag, adlb_all_comm, &new_msg,
+                          &req_status);
+  MPI_CHECK(mpi_rc);
+  assert(new_msg); // should be message
+  MPI_Get_count(&req_status, MPI_BYTE, bytes);
   return ADLB_SUCCESS;
 }

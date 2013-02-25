@@ -60,6 +60,7 @@ extern_declare_pair(wkr, get);
 // Data module:
 extern_declare_pair(wkr, unique);
 extern_declare_pair(wkr, create);
+extern_declare_pair(wkr, multicreate);
 extern_declare_pair(wkr, subscribe);
 extern_declare_pair(wkr, store);
 extern_declare_pair(wkr, retrieve);

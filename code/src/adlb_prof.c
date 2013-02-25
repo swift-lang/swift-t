@@ -184,6 +184,14 @@ ADLB_Create(adlb_datum_id id, adlb_data_type type,
   return rc;
 }
 
+adlb_code ADLB_Multicreate(ADLB_create_spec *specs, int count)
+{
+  MPE_LOG(xlb_mpe_wkr_multicreate_start);
+  adlb_code rc = ADLBP_Multicreate(specs, count);
+  MPE_LOG(xlb_mpe_wkr_multicreate_end);
+  return rc;
+}
+
 adlb_code
 ADLB_Exists(adlb_datum_id id, bool* result)
 {
