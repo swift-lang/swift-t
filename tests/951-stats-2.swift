@@ -1,5 +1,6 @@
 
 #include <builtins.swift>
+#include <io.swift>
 #include <assert.swift>
 #include <math.swift>
 #include <stats.swift>
@@ -24,6 +25,11 @@ main {
     ps2.n, ps2.mean, ps2.M2 = statagg(samples2);
     ps3.n, ps3.mean, ps3.M2 = statagg(samples3);
     ps4.n, ps4.mean, ps4.M2 = statagg(samples4);
+
+    foreach ps, i in [ps1, ps2, ps3, ps4] {
+      printf("Partial %i: n=%f mean=%f M2=%f std=%f",
+                i, ps.n, ps.mean, ps.M2, sqrt(ps.M2 / itof(ps.n)));
+    }
 
     int n; float mean; float stdev;
 
