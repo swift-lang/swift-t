@@ -536,6 +536,63 @@ adlb_data_type type_from_string(const char* type_string)
   return result;
 }
 
+/*
+  Extract variable create properties
+  objv: arguments, objc: argument count, argstart: start argument
+ */
+static inline int
+extract_create_props(Tcl_Interp *interp, int argstart,
+    int objc, Tcl_Obj *const objv[], adlb_datum_id *id, adlb_data_type *type,
+    adlb_data_type *subscript_type, adlb_create_props *props)
+{
+  TCL_CONDITION(objc - argstart >= 2, "adlb::create requires >= 2 args!");
+  int rc;
+  int argpos = argstart;
+  rc = Tcl_GetLongFromObj(interp, objv[argpos++], id);
+  TCL_CHECK_MSG(rc, "adlb::create could not get data id");
+  
+  int tmp_type;
+  rc = Tcl_GetIntFromObj(interp, objv[argpos++], &tmp_type);
+  TCL_CHECK_MSG(rc, "adlb::create could not get data type");
+  *type = tmp_type;
+ 
+  // Process type-specific params
+  switch (*type)
+  {
+    case ADLB_DATA_TYPE_CONTAINER:
+      TCL_CONDITION(objc > argpos,
+                    "adlb::create type=container requires "
+                    "subscript type!");
+      char *subscript_type_string = Tcl_GetString(objv[argpos++]);
+      *subscript_type = type_from_string(subscript_type_string);
+      break;
+    default:
+      break;
+  }
+
+  // Process create props if present
+  *props = DEFAULT_CREATE_PROPS;
+ 
+  if (argpos < objc) {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &(props->read_refcount));
+    TCL_CHECK_MSG(rc, "adlb::create could not get read_refcount argument");
+  }
+
+  if (argpos < objc) {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &(props->write_refcount));
+    TCL_CHECK_MSG(rc, "adlb::create could not get write_refcount argument");
+  }
+  
+  if (argpos < objc) {
+    int permanent;
+    rc = Tcl_GetBooleanFromObj(interp, objv[argpos++], &permanent);
+    TCL_CHECK_MSG(rc, "adlb::create could not get permanent argument");
+    props->permanent = permanent != 0;
+  }
+
+  return TCL_OK;
+}
+
 /**
    usage: adlb::create <id> <type> [<extra for type>]
           [ <read_refcount> [ <write_refcount> [ <permanent> ] ] ]
@@ -546,49 +603,13 @@ static int
 ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
-  TCL_CONDITION(objc >= 3, "adlb::create requires >= 2 args!");
   int rc;
-  long id;
-  int argpos = 1;
-  rc = Tcl_GetLongFromObj(interp, objv[argpos++], &id);
-  TCL_CHECK_MSG(rc, "adlb::create could not get data id");
-
-  int type;
-  rc = Tcl_GetIntFromObj(interp, objv[argpos++], &type);
-  TCL_CHECK_MSG(rc, "adlb::create could not get data type");
- 
- // Process type-specific params
-  char* subscript_type_string = NULL;
-  switch (type)
-  {
-    case ADLB_DATA_TYPE_CONTAINER:
-      TCL_CONDITION(objc > argpos,
-                    "adlb::create type=container requires "
-                    "subscript type!");
-      subscript_type_string = Tcl_GetString(objv[argpos++]);
-      break;
-  }
-
-  // Process create props if present
-  adlb_create_props props = DEFAULT_CREATE_PROPS;
- 
-  if (argpos < objc) {
-    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &(props.read_refcount));
-    TCL_CHECK_MSG(rc, "adlb::create could not get read_refcount argument");
-  }
-
-  if (argpos < objc) {
-    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &(props.write_refcount));
-    TCL_CHECK_MSG(rc, "adlb::create could not get write_refcount argument");
-  }
-  
-  if (argpos < objc) {
-    int permanent;
-    rc = Tcl_GetBooleanFromObj(interp, objv[argpos++], &permanent);
-    TCL_CHECK_MSG(rc, "adlb::create could not get permanent argument");
-    props.permanent = permanent != 0;
-  }
-
+  adlb_datum_id id = ADLB_DATA_ID_NULL;
+  adlb_data_type type = ADLB_DATA_TYPE_NULL ;
+  adlb_data_type subscript_type = ADLB_DATA_TYPE_NULL;
+  adlb_create_props props;
+  extract_create_props(interp, 1, objc, objv,
+                       &id, &type, &subscript_type, &props);
 
   long new_id = ADLB_DATA_ID_NULL;
 
@@ -607,15 +628,16 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
       rc = ADLB_Create_blob(id, props, &new_id);
       break;
     case ADLB_DATA_TYPE_CONTAINER: {
-      adlb_data_type subscript_type = type_from_string(subscript_type_string);
       rc = ADLB_Create_container(id, subscript_type, props, &new_id);
       break;
     }
     case ADLB_DATA_TYPE_NULL:
+    default:
       Tcl_AddErrorInfo(interp,
                        "adlb::create: unknown type!");
       return TCL_ERROR;
       break;
+      
   }
 
   if (id == ADLB_DATA_ID_NULL) {
@@ -627,6 +649,46 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(rc == ADLB_SUCCESS, "adlb::create <%li> failed!", id);
   return TCL_OK;
 }
+
+
+/**
+   usage: adlb::multicreate [list of variable specs]*
+   each list contains:
+          <id> <type> [<extra for type>]
+          [ <read_refcount> [ <write_refcount> [ <permanent> ] ] ]
+   returns a list of newly created ids
+*/
+static int
+ADLB_Multicreate_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  int rc;
+  int count = objc - 1;
+  ADLB_create_spec specs[count];
+
+  for (int i = 0; i < count; i++) {
+    int n;
+    Tcl_Obj **elems;
+    rc = Tcl_ListObjGetElements(interp, objv[i + 1], &n, &elems);
+    TCL_CONDITION(rc == TCL_OK, "adlb::multicreate arg %i must be list", i);
+    ADLB_create_spec *spec = &(specs[i]);
+    rc = extract_create_props(interp, 0, n, elems, &(spec->id),
+              &(spec->type), &(spec->subscript_type), &(spec->props));
+    TCL_CHECK(rc);
+  }
+
+  rc = ADLB_Multicreate(specs, count);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "adlb::multicreate failed!");
+ 
+  // Build list to return
+  Tcl_Obj *tcl_ids[count];
+  for (int i = 0; i < count; i++) {
+    tcl_ids[i] = Tcl_NewLongObj(specs[i].id);
+  }
+  Tcl_SetObjResult(interp, Tcl_NewListObj(count, tcl_ids));
+  return TCL_OK;
+}
+
 
 /**
    usage: adlb::exists <id>
@@ -1867,6 +1929,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("get",       ADLB_Get_Cmd);
   COMMAND("iget",      ADLB_Iget_Cmd);
   COMMAND("create",    ADLB_Create_Cmd);
+  COMMAND("multicreate",ADLB_Multicreate_Cmd);
   COMMAND("exists",    ADLB_Exists_Cmd);
   COMMAND("store",     ADLB_Store_Cmd);
   COMMAND("retrieve",  ADLB_Retrieve_Cmd);
