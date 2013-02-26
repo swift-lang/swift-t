@@ -39,12 +39,23 @@ public interface CompilerBackend {
 
   public void requirePackage(String pkg, String version);
   
+  public static class VarDecl {
+    public VarDecl(Var var, Arg initReaders, Arg initWriters) {
+      this.var = var;
+      this.initReaders = initReaders;
+      this.initWriters = initWriters;
+    }
+    
+    public final Var var;
+    public final Arg initReaders;
+    public final Arg initWriters;
+  }
+  
   /**
-   * @param var variable object
+   * Declare and initialize a number of variables
    * @throws UndefinedTypeException
    */
-  public void declare(Var var,
-      Arg initReaders, Arg initWriters) throws UndefinedTypeException;
+  public void declare(List<VarDecl> decls) throws UndefinedTypeException;
 
   public void decrRef(Var var, Arg amount);
 

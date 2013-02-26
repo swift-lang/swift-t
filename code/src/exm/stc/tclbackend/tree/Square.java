@@ -42,12 +42,14 @@ public class Square extends Expression
     this.add(expression);
   }
 
+  public Square(List<Expression> tokens)
+  {
+    this.items = new ArrayList<Expression>(tokens);
+  }
+  
   public Square(Expression... tokens)
   {
-    this.items = new ArrayList<Expression>(tokens.length);
-    for (Expression e: tokens) {
-      items.add(e);
-    }
+    this(Arrays.asList(tokens));
   }
 
   public Square(String... strings)

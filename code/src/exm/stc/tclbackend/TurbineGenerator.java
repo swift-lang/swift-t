@@ -235,110 +235,147 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   @Override
-  public void declare(Var var, Arg initReaders, Arg initWriters)
-  throws UndefinedTypeException
-  {
-    Type t = var.type();
-    assert(var.mapping() == null || Types.isMappable(t));
-    if (var.storage() == VarStorage.ALIAS) {
-      assert(initReaders == null && initWriters == null);
-      pointStack.peek().add(new Comment("Alias " + var.name() + " with type " +
-                            t.toString() + " was defined"));
-      return;
-    }
-   
-    // Check that init refcounts are valid
-    assert(RefCounting.hasReadRefCount(var) ^ initReaders == null);
-    assert(RefCounting.hasWriteRefCount(var) ^ initWriters == null);
-
-    if (var.storage() == VarStorage.GLOBAL_CONST) {
-      // If global, it should already be in TCL global scope, just need to
-      // make sure that we've imported it
-      pointStack.peek().add(Turbine.makeTCLGlobal(prefixVar(var)));
-      return;
-    }
+  public void declare(List<VarDecl> decls) throws UndefinedTypeException {
+    List<VarDecl> batchedFiles = new ArrayList<VarDecl>();
+    List<TclList> batched = new ArrayList<TclList>();
+    List<String> batchedVarNames = new ArrayList<String>();
     
-
-    try {
-      if (!Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
-        // Have initial* set to regular amount to avoid bugs with reference counting
-        initReaders = Arg.ONE;
+    for (VarDecl decl: decls) {
+      Var var = decl.var;
+      Arg initReaders = decl.initReaders;
+      Arg initWriters = decl.initWriters;
+      Type t = var.type();
+      assert(var.mapping() == null || Types.isMappable(t));
+      if (var.storage() == VarStorage.ALIAS) {
+        assert(initReaders == null && initWriters == null);
+        pointStack.peek().add(new Comment("Alias " + var.name() + " with type " +
+                              t.toString() + " was defined"));
+        continue;
       }
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError(e.getMessage());
+     
+      // Check that init refcounts are valid
+      assert(RefCounting.hasReadRefCount(var) ^ initReaders == null);
+      assert(RefCounting.hasWriteRefCount(var) ^ initWriters == null);
+  
+      if (var.storage() == VarStorage.GLOBAL_CONST) {
+        // If global, it should already be in TCL global scope, just need to
+        // make sure that we've imported it
+        pointStack.peek().add(Turbine.makeTCLGlobal(prefixVar(var)));
+        continue;
+      }
+      
+  
+      try {
+        if (!Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
+          // Have initial* set to regular amount to avoid bugs with reference counting
+          initReaders = Arg.ONE;
+        }
+      } catch (InvalidOptionException e) {
+        throw new STCRuntimeError(e.getMessage());
+      }
+      
+      String tclVarName = prefixVar(var.name());
+      if (Types.isFile(t)) {
+        batchedFiles.add(decl);
+      } else if (Types.isScalarFuture(t) || Types.isScalarUpdateable(t) ||
+          Types.isArray(t) || Types.isRef(t)) {
+        List<Expression> createArgs = new ArrayList<Expression>();
+        // Data type
+        createArgs.add(representationType(t));
+        // Subscript type for containers only
+        if (Types.isArray(t)) {
+          createArgs.add(Turbine.ADLB_INT_TYPE);
+        }
+        if (initReaders != null)
+          createArgs.add(argToExpr(initReaders));
+        if (initWriters != null)
+          createArgs.add(argToExpr(initWriters));
+        batched.add(new TclList(createArgs));
+        batchedVarNames.add(tclVarName);
+      } else if (Types.isStruct(t)) {
+        // don't allocate in data store
+        pointStack.peek().add(Turbine.allocateStruct(prefixVar(var)));
+      } else if (Types.isScalarValue(t)) {
+        assert(var.storage() == VarStorage.LOCAL);
+        pointStack.peek().add(new Comment("Value " + var.name() + " with type " +
+                              var.type().toString() + " was defined"));
+        // don't need to do anything
+      } else {
+        throw new STCRuntimeError("Code generation only implemented" +
+            " for initialisation of scalar, reference, array and struct types");
+      }
     }
     
-    // Initialize the TD in ADLB with a type
-    if (Types.isScalarFuture(t)) {
-      allocateFuture(var, initReaders);
-    } else if (Types.isScalarUpdateable(t)) {
-      allocateUpdateable(var, initReaders, initWriters);
-    } else if (Types.isArray(t)) {
-      allocateArray(var, initReaders, initWriters);
-    } else if (Types.isRef(t)) {
-      allocateRef(var, initReaders);
-    } else if (Types.isStruct(t)) {
-      pointStack.peek().add(Turbine.allocateStruct(prefixVar(var)));
-    } else if (Types.isScalarValue(t)) {
-      assert(var.storage() == VarStorage.LOCAL);
-      pointStack.peek().add(new Comment("Value " + var.name() + " with type " +
-                            var.type().toString() + " was defined"));
-      // don't need to do anything
-    } else {
-      throw new STCRuntimeError("Code generation only implemented" +
-          " for initialisation of scalar, reference, array and struct types");
+    if (!batched.isEmpty()) {
+      pointStack.peek().add(Turbine.batchDeclare(batchedVarNames, batched));
+      List<Expression> logExprs = new ArrayList<Expression>();
+      logExprs.add(new Token("allocated"));
+      for (String tclVarName: batchedVarNames) {
+        logExprs.add(new Token(" " + tclVarName + "=<"));
+        logExprs.add(new Value(tclVarName));
+        logExprs.add(new Token(">"));
+      }
+
+      pointStack.peek().add(Turbine.log(new TclString(logExprs, false)));
     }
-
-
-    // Store the name->TD in the stack
-    if (var.storage() == VarStorage.STACK && !noStackVars()) {
-      Command s = Turbine.storeInStack(var.name(), prefixVar(var));
+    
+    // Allocate files after so that mapped args are visible
+    for (VarDecl file: batchedFiles) {
+      // TODO: allocate filename/signal vars in batch and build file
+      //      handle here
+      allocateFile(file.var, file.initReaders);
+    }
+    
+    for (VarDecl decl: decls) {
       // Store the name->TD in the stack
-      pointStack.peek().add(s);
+      if (decl.var.storage() == VarStorage.STACK && !noStackVars()) {
+        Command s = Turbine.storeInStack(decl.var.name(), prefixVar(decl.var));
+        // Store the name->TD in the stack
+        pointStack.peek().add(s);
+      }
     }
-
   }
 
-  private void allocateRef(Var var, Arg initReaders) {
-    String typeName;
-    if (refIsString(var.type())) {
-      // Represent some reference types as strings, since they have multiple
-      // elements in the handle
-      typeName = Turbine.STRING_TYPENAME;
+  /**
+   * @param t
+   * @return ADLB representation type
+   */
+  private Value representationType(Type t) {
+    if (Types.isScalarFuture(t) || Types.isScalarUpdateable(t)) {
+      switch (t.primType()) {
+        case INT:
+        case BOOL:
+        case VOID:
+          return Turbine.ADLB_INT_TYPE;
+        case BLOB:
+          return Turbine.ADLB_BLOB_TYPE;
+        case FLOAT:
+          return Turbine.ADLB_FLOAT_TYPE;
+        case STRING:
+          return Turbine.ADLB_STRING_TYPE;
+        default:
+          throw new STCRuntimeError("Unknown ADLB representation for "
+              + t);
+      }
+    } else if (Types.isRef(t)) {
+      if (refIsString(t)) {
+        return Turbine.ADLB_STRING_TYPE;
+      } else {
+        return Turbine.ADLB_INT_TYPE;
+      }
+    } else if (Types.isArray(t)) {
+      return Turbine.ADLB_CONTAINER_TYPE;
     } else {
-      typeName = Turbine.INTEGER_TYPENAME;
+      throw new STCRuntimeError("Unknown ADLB representation type for " + t);
     }
-    pointStack.peek().add(Turbine.allocateFuture(prefixVar(var), typeName,
-                                                 argToExpr(initReaders)));
   }
 
-  private void allocateArray(Var var, Arg initReaders, Arg initWriters) {
-    pointStack.peek().add(Turbine.allocateContainer(prefixVar(var),
-        Turbine.INTEGER_TYPENAME,
-        argToExpr(initReaders), argToExpr(initWriters)));
-  }
-
-  private void allocateUpdateable(Var var, Arg initReaders, Arg initWriters)
-        throws UndefinedTypeException {
-    String tprefix = typeToString(var.type().primType());
-    // TODO: writers counting not yet supported
-    pointStack.peek().add(Turbine.allocateUpdateable(prefixVar(var), tprefix,
-                    argToExpr(initReaders)));
-  }
-
-  private void allocateFuture(Var var, Arg initReaders)
-        throws UndefinedTypeException {
-    if (Types.isFile(var.type())) {
-      Value mapExpr = (var.mapping() == null) ? 
-                      null : varToExpr(var.mapping());
-      pointStack.peek().add(
-          Turbine.allocateFile(mapExpr, prefixVar(var),
-                               argToExpr(initReaders)));
-    } else {
-      String tprefix = typeToString(var.type().primType());
-      pointStack.peek().add(Turbine.allocateFuture(prefixVar(var),
-          tprefix, argToExpr(initReaders)));
-    }
+  private void allocateFile(Var var, Arg initReaders) {
+    Value mapExpr = (var.mapping() == null) ? 
+                    null : varToExpr(var.mapping());
+    pointStack.peek().add(
+        Turbine.allocateFile(mapExpr, prefixVar(var),
+                             argToExpr(initReaders)));
   }
 
 

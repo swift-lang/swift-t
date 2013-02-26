@@ -49,7 +49,7 @@ public class TclString extends Expression
    */
   public TclString(List<? extends Expression> exprs, boolean insertSpaces)
   {
-    this(" ", false);
+    this("", false);
     exprAppend(exprs, insertSpaces);
   }
 

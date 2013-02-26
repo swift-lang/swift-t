@@ -164,6 +164,15 @@ class Turbine
   private static final Token REFCOUNT_DECR = new Token("turbine::read_refcount_decr");
   private static final Token FILE_REFCOUNT_INCR = new Token("turbine::file_read_refcount_incr");
   private static final Token FILE_REFCOUNT_DECR = new Token("turbine::file_read_refcount_decr");
+  
+  public static final Value ADLB_NULL_ID = new Value("adlb::NULL_ID");
+  public static final Value ADLB_NULL_TYPE = new Value("adlb::NULL_TYPE");
+  public static final Value ADLB_FLOAT_TYPE = new Value("adlb::FLOAT");
+  public static final Value ADLB_INT_TYPE = new Value("adlb::INTEGER");
+  public static final Value ADLB_STRING_TYPE = new Value("adlb::STRING");
+  public static final Value ADLB_BLOB_TYPE = new Value("adlb::BLOB");
+  public static final Value ADLB_CONTAINER_TYPE =
+                                                 new Value("adlb::CONTAINER");
 
   public enum StackFrameType {
     MAIN,
@@ -1026,5 +1035,25 @@ class Turbine
       boolean close) {
     return new Command("turbine::array_build", Arrays.asList(
           array, new TclList(arrMemExprs), LiteralInt.boolValue(close)));
+  }
+
+  public static Command batchDeclare(List<String> batchedVarNames,
+      List<TclList> batched) {
+    ArrayList<Expression> exprs = new ArrayList<Expression>();
+    
+    
+    List<Expression> multiCreateCall = new ArrayList<Expression>();
+    multiCreateCall.add(new Token("adlb::multicreate"));
+    multiCreateCall.addAll(batched);
+    exprs.add(new Square(multiCreateCall));
+    
+    for (String varName: batchedVarNames) {
+      exprs.add(new Token(varName));
+    }
+    return new Command("lassign",  exprs);
+  }
+
+  public static Command log(TclString logMsg) {
+    return new Command("turbine::log", logMsg);
   }
 }

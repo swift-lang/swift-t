@@ -36,6 +36,7 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.TclFunRef;
+import exm.stc.common.CompilerBackend.VarDecl;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
@@ -770,7 +771,8 @@ public class ICTree {
         throws UndefinedTypeException {
 
       logger.trace("Generate code for block of type " + this.type.toString());
-      // Can push forward variable declaration to top of block
+      // Pass variable declarations as batch
+      List<VarDecl> declarations = new ArrayList<VarDecl>(variables.size());
       for (Var v: variables) {
         logger.trace("generating variable decl for " + v.toString());
         Arg initReaders = initReadRefcounts.get(v);
@@ -792,8 +794,10 @@ public class ICTree {
         } else {
           assert(initWriters == null);
         }
-        gen.declare(v, initReaders, initWriters);
+        declarations.add(new VarDecl(v, initReaders, initWriters));
       }
+      gen.declare(declarations);
+      
       for (Instruction i: instructions) {
         i.generate(logger, gen, info);
       }
