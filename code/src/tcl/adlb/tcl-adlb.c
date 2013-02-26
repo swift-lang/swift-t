@@ -200,6 +200,7 @@ set_namespace_constants(Tcl_Interp* interp)
 {
   tcl_set_integer(interp, "::adlb::SUCCESS",   ADLB_SUCCESS);
   tcl_set_integer(interp, "::adlb::RANK_ANY",  ADLB_RANK_ANY);
+  tcl_set_integer(interp, "::adlb::NULL_TYPE",   ADLB_DATA_TYPE_NULL);
   tcl_set_integer(interp, "::adlb::INTEGER",   ADLB_DATA_TYPE_INTEGER);
   tcl_set_integer(interp, "::adlb::FLOAT",     ADLB_DATA_TYPE_FLOAT);
   tcl_set_integer(interp, "::adlb::STRING",    ADLB_DATA_TYPE_STRING);
@@ -538,18 +539,24 @@ adlb_data_type type_from_string(const char* type_string)
 
 /*
   Extract variable create properties
+  accept_id: if true, accept id as first element
   objv: arguments, objc: argument count, argstart: start argument
  */
 static inline int
-extract_create_props(Tcl_Interp *interp, int argstart,
+extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
     int objc, Tcl_Obj *const objv[], adlb_datum_id *id, adlb_data_type *type,
     adlb_data_type *subscript_type, adlb_create_props *props)
 {
-  TCL_CONDITION(objc - argstart >= 2, "adlb::create requires >= 2 args!");
   int rc;
   int argpos = argstart;
-  rc = Tcl_GetLongFromObj(interp, objv[argpos++], id);
-  TCL_CHECK_MSG(rc, "adlb::create could not get data id");
+  if (accept_id) {
+    TCL_CONDITION(objc - argstart >= 2, "adlb::create requires >= 2 args!");
+    rc = Tcl_GetLongFromObj(interp, objv[argpos++], id);
+    TCL_CHECK_MSG(rc, "adlb::create could not get data id");
+  } else {
+    TCL_CONDITION(objc - argstart >= 1, "adlb::create requires >= 1 args!");
+    *id = ADLB_DATA_ID_NULL;
+  }
   
   int tmp_type;
   rc = Tcl_GetIntFromObj(interp, objv[argpos++], &tmp_type);
@@ -608,7 +615,7 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_data_type type = ADLB_DATA_TYPE_NULL ;
   adlb_data_type subscript_type = ADLB_DATA_TYPE_NULL;
   adlb_create_props props;
-  extract_create_props(interp, 1, objc, objv,
+  extract_create_props(interp, true, 1, objc, objv,
                        &id, &type, &subscript_type, &props);
 
   long new_id = ADLB_DATA_ID_NULL;
@@ -672,7 +679,7 @@ ADLB_Multicreate_Cmd(ClientData cdata, Tcl_Interp *interp,
     rc = Tcl_ListObjGetElements(interp, objv[i + 1], &n, &elems);
     TCL_CONDITION(rc == TCL_OK, "adlb::multicreate arg %i must be list", i);
     ADLB_create_spec *spec = &(specs[i]);
-    rc = extract_create_props(interp, 0, n, elems, &(spec->id),
+    rc = extract_create_props(interp, false, 0, n, elems, &(spec->id),
               &(spec->type), &(spec->subscript_type), &(spec->props));
     TCL_CHECK(rc);
   }
