@@ -138,7 +138,7 @@ public class ForeachLoops {
      * Reset counters in increments for any that are changed
      * @param increments
      * @param type
-     * @param if true, try to piggyback decrements, if false, increments
+     * @param decrement if true, try to piggyback decrements, if false, increments
      */
     public void tryPiggyBack(Counters<Var> increments, RefCountType type,
         boolean decrement) {
@@ -245,7 +245,7 @@ public class ForeachLoops {
      * @return
      */
     @Override
-    public List<BlockingVar> blockingVars() {
+    public List<BlockingVar> blockingVars(boolean includeConstructDefined) {
       return Collections.emptyList();
     }
 
@@ -444,7 +444,7 @@ public class ForeachLoops {
     }
 
     @Override
-    public List<BlockingVar> blockingVars() {
+    public List<BlockingVar> blockingVars(boolean includeConstructDefined) {
       return Collections.emptyList();
     }
     

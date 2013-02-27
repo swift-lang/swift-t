@@ -117,8 +117,8 @@ public class ICContinuations {
     /**
      * For the case where a consturct redefines a variable
      * name from outside, replace this variable.
-     * @param redef
-     * @param var
+     * @param oldV
+     * @param newV
      */
     public void removeRedef(Var oldV, Var newV) {
        // Do nothing by default 
@@ -171,9 +171,10 @@ public class ICContinuations {
 
     /** Return list of variables that the continuations waits for
      * before executing
+     * @param includeConstructDefined if false, only include vars defined outside
      * @return
      */
-    public List<BlockingVar> blockingVars() {
+    public List<BlockingVar> blockingVars(boolean includeConstructDefined) {
       // default implementation for sync continuations
       assert(!isAsync());
       return Collections.emptyList();
@@ -182,7 +183,7 @@ public class ICContinuations {
     /**
      * Return list of variables that are defined by construct and
      * accessible inside
-     * @param includeRedefs.  True if we should return variables that
+     * @param includeRedefs  True if we should return variables that
      *      construct redefines
      * @return non-null list
      */
@@ -369,7 +370,7 @@ public class ICContinuations {
     /**
      * For overriding by child class
      * @param renames
-     * @param inputsOnly
+     * @param mode
      */
     public abstract void replaceConstructVars_(Map<Var, Arg> renames, 
                   RenameMode mode);
@@ -676,11 +677,14 @@ public class ICContinuations {
     }
 
     @Override
-    public List<BlockingVar> blockingVars() {
+    public List<BlockingVar> blockingVars(boolean includeConstructDefined) {
       ArrayList<BlockingVar> res = new ArrayList<BlockingVar>();
       for (int i = 0; i < loopVars.size(); i++) {
         if (blockingVars.get(i)) {
           res.add(new BlockingVar(initVals.get(i), false));
+          if (includeConstructDefined) {
+            res.add(new BlockingVar(loopVars.get(i), false));
+          }
         }
       }
       return res;
@@ -1021,7 +1025,7 @@ public class ICContinuations {
     }
 
     @Override
-    public List<BlockingVar> blockingVars() {
+    public List<BlockingVar> blockingVars(boolean includeConstructDefined) {
       ArrayList<BlockingVar> res = new ArrayList<BlockingVar>(waitVars.size());
       for (Var wv: waitVars) {
         res.add(new BlockingVar(wv, this.recursive));

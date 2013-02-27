@@ -539,7 +539,7 @@ public class ForwardDataflow implements OptimizerPass {
     }
     
     for (Continuation c: block.getContinuations()) {
-      List<BlockingVar> waitOnVars = c.blockingVars();
+      List<BlockingVar> waitOnVars = c.blockingVars(false);
       List<Var> waitOn;
       if (waitOnVars == null) {
         waitOn = Var.NONE; 
@@ -676,7 +676,7 @@ public class ForwardDataflow implements OptimizerPass {
     for (Continuation cont : block.getContinuations()) {
       State contCV = cv.makeChild(cont.inheritsParentVars());
       // additional variables may be close once we're inside continuation
-      List<BlockingVar> contClosedVars = cont.blockingVars();
+      List<BlockingVar> contClosedVars = cont.blockingVars(true);
       if (contClosedVars != null) {
         for (BlockingVar bv : contClosedVars) {
           contCV.close(bv.var, bv.recursive);

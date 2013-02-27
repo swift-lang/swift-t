@@ -904,7 +904,7 @@ public class WaitCoalescer implements OptimizerPass {
   private static void findBlockingContinuations(Block block,
           MultiMap<Var, InstOrCont> waitMap) {
     for (Continuation c: block.getContinuations()) {
-      List<BlockingVar> blockingVars = c.blockingVars();
+      List<BlockingVar> blockingVars = c.blockingVars(false);
       if (blockingVars != null) {
         for (BlockingVar v: blockingVars) {
           waitMap.put(v.var, new InstOrCont(c));

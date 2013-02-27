@@ -916,9 +916,7 @@ public class ICTree {
      * Rename variables in block (and nested blocks) according to map.
      * If the map doesn't have an entry, we don't rename anything
      * @param renames OldName -> NewName
-     * @param inputsOnly  if true, only change references which are reading
-     *      the var.  if false, completely remove the old variable and replace 
-     *      with new
+     * @param mode
      * @param recursive if it should be done on child blocks
      */
     public void renameVars(Map<Var, Arg> renames, RenameMode mode, boolean recursive) {

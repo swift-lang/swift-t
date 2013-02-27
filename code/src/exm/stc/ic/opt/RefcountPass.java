@@ -833,7 +833,7 @@ public class RefcountPass implements OptimizerPass {
           readIncrTmp.add(passedIn.var);
         }
       }
-      for (BlockingVar blockingVar : cont.blockingVars()) {
+      for (BlockingVar blockingVar : cont.blockingVars(false)) {
         if (RefCounting.hasReadRefCount(blockingVar.var)) {
           readIncrTmp.add(blockingVar.var);
         }
@@ -874,7 +874,7 @@ public class RefcountPass implements OptimizerPass {
       }
 
       // Hold read reference for wait var
-      for (BlockingVar blockingVar : cont.blockingVars()) {
+      for (BlockingVar blockingVar : cont.blockingVars(false)) {
         if (RefCounting.hasReadRefCount(blockingVar.var)) {
           readIncrTmp.add(blockingVar.var);
         }
