@@ -19,8 +19,11 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashSet;
 
+import exm.stc.common.lang.Builtins;
+import exm.stc.common.lang.TaskMode;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.LocalFunctionCall;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 
@@ -46,6 +49,18 @@ public class ProgressOpcodes {
     return cheapWorkerOpcodes.contains(op);
   }
   
+  public static boolean isCheapWorkerInst(Instruction i) {
+    if (isCheapWorkerOpcode(i.op)) {
+      return true;
+    } else if (i.op == Opcode.CALL_BUILTIN_LOCAL) {
+      TaskMode fnMode = Builtins.getTaskMode(((LocalFunctionCall)i).getFunctionName());
+      if (fnMode == TaskMode.LOCAL) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   public static enum Category {
     CHEAP,
     CHEAP_WORKER,
@@ -86,7 +101,7 @@ public class ProgressOpcodes {
             return false;
           }
         } else if (type == Category.CHEAP_WORKER) {
-          if (!isCheapWorkerOpcode(i.op)) {
+          if (!isCheapWorkerInst(i)) {
             return false;
           }
         } else {
