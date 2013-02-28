@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR=$(dirname $0)
+
 subrepos="c-utils lb turbine stc"
 for subrepo in $subrepos
 do
-  git svn clone --stdlayout --tags=release \
-          --prefix="svn/" \
+  # include releases but not branches
+  git svn clone --trunk=trunk --tags=release \
+          --prefix="svn/" -A "$SCRIPT_DIR/svn-authors.txt" \
           "https://svn.mcs.anl.gov/repos/exm/sfw/$subrepo" "$subrepo" &
 
 done
