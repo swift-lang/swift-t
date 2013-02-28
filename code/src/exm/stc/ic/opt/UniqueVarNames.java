@@ -30,6 +30,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.HierarchicalMap;
+import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CleanupAction;
@@ -101,7 +102,7 @@ public class UniqueVarNames implements OptimizerPass {
   private static void makeVarNamesUnique(Vars existing,
                  Continuation cont, HierarchicalMap<Var, Arg> renames) {
     // Update any continuation-defined vars
-    List<Var> constructNewDefinedVars = cont.constructDefinedVars(false);
+    List<Var> constructNewDefinedVars = cont.constructDefinedVars(ContVarDefType.NEW_DEF);
     for (Var v: constructNewDefinedVars) {
       assert(cont.getBlocks().size() == 1) : "Assume continuation with " +
       		"construct defined vars has only one block";
@@ -114,31 +115,36 @@ public class UniqueVarNames implements OptimizerPass {
         renames.putAll(contVarRenames);
       }
     }
-    List<Var> constructAllDefinedVars = cont.constructDefinedVars(true);
-    if (constructAllDefinedVars.size() != constructNewDefinedVars.size()) {
-      List<Var> redefined = Var.varListDiff(constructAllDefinedVars,
-                                            constructNewDefinedVars);
-      for (Var redef: redefined) {
-        //assert(redef.storage() == VarStorage.ALIAS) :
-        //      redef + " " + redef.storage();
-        HashMap<Var, Arg> contVarRenames = new HashMap<Var, Arg>();
-        updateName(cont.getBlocks().get(0), existing, contVarRenames, redef);
-
-        if (contVarRenames.size() > 0) {
-          // Update construct vars as required
-          assert(contVarRenames.size() == 1 &&
-              contVarRenames.containsKey(redef));
-          Var repl = contVarRenames.get(redef).getVar();
-          Logging.getSTCLogger().debug("Replaced " + redef + " with " + repl);
-          cont.removeRedef(redef, repl);
-          renames.putAll(contVarRenames);
-        }
-      }
-    }
-    
+    fixupVarRedefines(existing, cont, renames);
     
     for (Block b: cont.getBlocks()) {
       makeVarNamesUnique(b, existing, renames.makeChildMap());
+    }
+  }
+
+  /**
+   * Handle the case where frontend generated intermediate representation
+   * where a construct redefines the value of a variable present outside
+   * 
+   * @param existing
+   * @param cont
+   * @param renames
+   */
+  private static void fixupVarRedefines(Vars existing, Continuation cont,
+          HierarchicalMap<Var, Arg> renames) {
+    for (Var redef: cont.constructDefinedVars(ContVarDefType.REDEF)) {
+      HashMap<Var, Arg> contVarRenames = new HashMap<Var, Arg>();
+      updateName(cont.getBlocks().get(0), existing, contVarRenames, redef);
+
+      if (contVarRenames.size() > 0) {
+        // Update construct vars as required
+        assert(contVarRenames.size() == 1 &&
+            contVarRenames.containsKey(redef));
+        Var repl = contVarRenames.get(redef).getVar();
+        Logging.getSTCLogger().debug("Replaced " + redef + " with " + repl);
+        cont.removeRedef(redef, repl);
+        renames.putAll(contVarRenames);
+      }
     }
   }
 

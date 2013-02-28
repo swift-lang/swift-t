@@ -183,17 +183,16 @@ public class ICContinuations {
     /**
      * Return list of variables that are defined by construct and
      * accessible inside
-     * @param includeRedefs  True if we should return variables that
-     *      construct redefines
+     * @param type type of constructs to return
      * @return non-null list
      */
-    public List<Var> constructDefinedVars(boolean includeRedefs) {
+    public List<Var> constructDefinedVars(ContVarDefType type) {
       return Var.NONE;
     }
     
     public List<Var> constructDefinedVars() {
       // In most cases don't care about redefs
-      return constructDefinedVars(false);
+      return constructDefinedVars(ContVarDefType.NEW_DEF);
     }
 
     /**
@@ -319,6 +318,23 @@ public class ICContinuations {
     RANGE_LOOP,
     LOOP,
     WAIT_STATEMENT
+  }
+
+  /**
+   * Categorization of vars defined inside continuations
+   */
+  public static enum ContVarDefType {
+    ANY, // All variables defined or redefined inside construct
+    NEW_DEF, // Doesn't shadow outer variables
+    REDEF,;  // Redefines value of variable from outer scope
+
+    public boolean includesRedefs() {
+      return this == ANY || this == REDEF;
+    }
+    
+    public boolean includesNewDefs() {
+      return this == ANY || this == NEW_DEF;
+    }
   }
   
   /**
@@ -627,7 +643,7 @@ public class ICContinuations {
       for (int i = 0; i < loopVars.size(); i++) {
         Var loopVar = loopVars.get(i);
         if (loopVar.equals(oldV)) {
-          assert(!this.definedHere.get(i));
+          assert(!this.definedHere.get(i)) : loopVar;
           this.loopVars.set(i, newV);
           this.definedHere.set(i, true);
         }
@@ -666,11 +682,15 @@ public class ICContinuations {
     }
 
     @Override
-    public List<Var> constructDefinedVars(boolean includeRedefs) {
+    public List<Var> constructDefinedVars(ContVarDefType type) {
       ArrayList<Var> defVars = new ArrayList<Var>();
       for (int i = 0; i < this.loopVars.size(); i++) {
-        if (includeRedefs || this.definedHere.get(i)) {
-          defVars.add(this.loopVars.get(i));
+        Boolean defHere = this.definedHere.get(i);
+        Var loopVar = this.loopVars.get(i);
+        if (type.includesNewDefs() && defHere) {
+          defVars.add(loopVar);
+        } else if (type.includesRedefs() && !defHere) {
+          defVars.add(loopVar);
         }
       }
       return defVars;

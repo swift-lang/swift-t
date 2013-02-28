@@ -34,6 +34,7 @@ import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.AbstractLoop;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
+import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.NestedBlock;
@@ -325,10 +326,14 @@ public class ForeachLoops {
     }
 
     @Override
-    public List<Var> constructDefinedVars(boolean includeRedefs) {
-      return loopCounterVar == null ?
+    public List<Var> constructDefinedVars(ContVarDefType type) {
+      if (type.includesNewDefs()) {
+        return loopCounterVar == null ?
                 Arrays.asList(loopVar)
               : Arrays.asList(loopCounterVar, loopVar);
+      } else {
+        return Collections.emptyList();
+      }
     }
 
     @Override
@@ -618,11 +623,15 @@ public class ForeachLoops {
     }
 
     @Override
-    public List<Var> constructDefinedVars(boolean includeRedefs) {
-      if (loopCounterVar != null) {
-        return Arrays.asList(loopVar, loopCounterVar);
+    public List<Var> constructDefinedVars(ContVarDefType type) {
+      if (type.includesNewDefs()) {
+        if (loopCounterVar != null) {
+          return Arrays.asList(loopVar, loopCounterVar);
+        } else {
+          return Arrays.asList(loopVar);
+        }
       } else {
-        return Arrays.asList(loopVar);
+        return Collections.emptyList();
       }
     }
 

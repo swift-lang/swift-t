@@ -35,6 +35,7 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.ic.ICUtil;
+import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -142,7 +143,7 @@ public class Validate implements OptimizerPass {
       checkCleanups(fn, block);
     
     for (Continuation c: block.getContinuations()) {
-      for (Var v: c.constructDefinedVars(true)) {
+      for (Var v: c.constructDefinedVars(ContVarDefType.NEW_DEF)) {
         checkVarUnique(logger, fn, declared, v);
       }
       for (Block inner: c.getBlocks()) { 

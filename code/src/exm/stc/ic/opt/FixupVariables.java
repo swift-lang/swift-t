@@ -35,6 +35,7 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
+import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
@@ -237,7 +238,7 @@ public class FixupVariables implements OptimizerPass {
           Set<Var> referencedGlobals, Set<Var> outerBlockVars,
           Set<Var> read, Set<Var> written, boolean updateLists) {
     // First see what variables the continuation defines inside itself
-    List<Var> constructVars = continuation.constructDefinedVars();
+    List<Var> constructVars = continuation.constructDefinedVars(ContVarDefType.NEW_DEF);
     ExecContext innerCx = continuation.childContext(outerCx);
     
     for (Block innerBlock : continuation.getBlocks()) {
