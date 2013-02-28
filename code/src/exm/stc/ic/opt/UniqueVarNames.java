@@ -29,7 +29,6 @@ import exm.stc.common.Logging;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;

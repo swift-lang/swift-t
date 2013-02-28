@@ -106,7 +106,6 @@ public class Vars {
      * @param fn
      * @param varName
      * @param value
-     * @return
      * @throws DoubleWriteException 
      */
     public void set(String fn, String varName, long value)

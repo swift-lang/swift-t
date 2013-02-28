@@ -15,7 +15,7 @@ public class TaskQueue {
   /**
    * TODO: allow passing in of queues so that each thread
    * can have in own local heap
-   * @param workers
+   * @param numThreads
    */
   public TaskQueue(int numThreads) {
     this.numThreads = numThreads;

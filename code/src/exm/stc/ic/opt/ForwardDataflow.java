@@ -283,6 +283,7 @@ public class ForwardDataflow implements OptimizerPass {
             res = new ArrayList<ComputedValue>();
             res.addAll(oldRes);
             res.addAll(partRes);
+            resModifiable = true;
           }
         }
         curr = curr.parent;

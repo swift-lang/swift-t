@@ -429,7 +429,6 @@ public interface CompilerBackend {
    *    tcl code can have a nice name for the block)
    * @param waitVars
    * @param usedVars any variables which are read or written inside block
-   * @param keepOpenVars any vars that need to be kept open for wait
    * @param mode what guarantees wait statement should provide
    * @param recursive if true, wait until all contents of arrays/structs
    *                   (recursively) are closed

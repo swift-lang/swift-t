@@ -73,7 +73,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
    * that are not specifically marked as side-effect free.
    * 
    * @param logger
-   * @param block
+   * @param f
    */
   public static void eliminate(Logger logger, Function f) {
     boolean converged = false;

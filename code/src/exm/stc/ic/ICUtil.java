@@ -98,7 +98,7 @@ public class ICUtil {
   /**
    * print a comma separated list of objects by calling toString()
    * @param sb
-   * @param vars
+   * @param list
    */
   public static void prettyPrintList(StringBuilder sb, 
                 Collection<? extends Object> list) {
