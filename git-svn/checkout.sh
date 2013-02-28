@@ -16,7 +16,7 @@ git svn clone "https://svn.mcs.anl.gov/repos/exm/sfw/dev" dev &
 
 wait
 
-for subrepo in $subrepos
+for subrepo in $subrepos dev
 do
   pushd $subrepo > /dev/null
   # Add remote for github repository
