@@ -26,6 +26,9 @@ MAKE_PARALLELISM=2
 
 # Build options: uncomment to enable
 
+# Skip auto-tools (use existing configure script)
+#SKIP_AUTOTOOLS=1
+
 # Optimized build
 #EXM_OPT_BUILD=1
 

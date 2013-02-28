@@ -9,8 +9,10 @@ if [ -f Makefile ]; then
     make clean
 fi
 
-rm -rf ./config.status ./autom4te.cache
-./setup.sh
+if [ -z "$SKIP_AUTOTOOLS" ]; then
+  rm -rf ./config.status ./autom4te.cache
+  ./setup.sh
+fi
 
 EXTRA_ARGS=
 if [ ! -z "$EXM_OPT_BUILD" ]; then
