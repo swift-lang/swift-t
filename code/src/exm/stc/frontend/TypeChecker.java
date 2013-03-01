@@ -221,7 +221,7 @@ public class TypeChecker {
     ExprType typeL = findExprType(context, tree);
     if (typeL.elems() != 1) {
       throw new TypeMismatchException(context, "Expected expression to have "
-          + " a single value, instead had " + typeL.elems() + " values");
+          + "a single value, instead had " + typeL.elems() + " values");
     }
     return typeL.get(0);
   }
@@ -571,15 +571,15 @@ public class TypeChecker {
         }
       }
       LogHelper.trace(context, "Call " + function + " alternative "
-          + " function type " + alt + " match: " + match);
+          + "function type " + alt + " match: " + match);
       // Choose first viable alternative
       if (match) {
         return alt;
       }
     }
-    throw new TypeMismatchException(context, "Could not find consistent" +
-            " binding for type variables.  Viable function signatures based on" +
-            " input arguments were: " + alts + " but output types were " + outTs);
+    throw new TypeMismatchException(context, "Could not find consistent " +
+            "binding for type variables.  Viable function signatures based on " +
+            "input arguments were: " + alts + " but output types were " + outTs);
   }
 
   /**
@@ -805,12 +805,12 @@ public class TypeChecker {
     if (abstractType.hasVarargs()) {
       if (numArgs < abstractInputs.size() - 1) {
         throw new TypeMismatchException(context,  "Too few arguments in "
-            + " call to function " + function + ": expected >= " 
+            + "call to function " + function + ": expected >= " 
             + (abstractInputs.size() - 1) + " but got " + numArgs);
       }
     } else if (abstractInputs.size() != numArgs) {
       throw new TypeMismatchException(context,  "Wrong number of arguments in "
-          + " call to function " + function + ": expected " 
+          + "call to function " + function + ": expected " 
           + abstractInputs.size() + " but got " + numArgs);
     }
     
