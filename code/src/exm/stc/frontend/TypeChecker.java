@@ -63,11 +63,8 @@ public class TypeChecker {
   /**
    * Determine the expected type of an expression. If the expression is valid,
    * then this will return the type of the expression. If it is invalid, 
-   * it will throw an exception, or may return a type
+   * it will throw an exception.
    * 
-   * TODO: we don't fully validate the expression type here, some is still
-   * done in SwiftScript (e.g. checking type of function arguments)
-   *
    * @param context
    *          the context in which the expression resides
    * @param tree
