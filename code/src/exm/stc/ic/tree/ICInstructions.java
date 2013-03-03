@@ -570,7 +570,7 @@ public class ICInstructions {
       case STORE_FILE:
         gen.assignFile(getOutput(0), getInput(0));
         break;
-      case ADDRESS_OF:
+      case STORE_REF:
         gen.assignReference(getOutput(0), getInput(0).getVar());
         break;
       case ARRAY_LOOKUP_FUTURE:
@@ -947,7 +947,7 @@ public class ICInstructions {
     }
   
     public static Instruction addressOf(Var target, Var src) {
-      return new TurbineOp(Opcode.ADDRESS_OF,
+      return new TurbineOp(Opcode.STORE_REF,
           Arg.createVar(target), Arg.createVar(src));
     }
   
@@ -1216,7 +1216,7 @@ public class ICInstructions {
       case LOAD_FILE:
       case STRUCT_LOOKUP:
       case STRUCTREF_LOOKUP:
-      case ADDRESS_OF:
+      case STORE_REF:
       case LOAD_REF:
       case COPY_REF:
       case GET_FILENAME:
@@ -1333,7 +1333,7 @@ public class ICInstructions {
         
       case STRUCT_LOOKUP:
       case LOAD_REF:
-      case ADDRESS_OF:
+      case STORE_REF:
       case COPY_REF:
       case STRUCTREF_LOOKUP:
       case ARRAY_LOOKUP_IMM:
@@ -1912,7 +1912,7 @@ public class ICInstructions {
       case INCR_WRITERS:
       case INCR_REF:
       case ARRAY_CREATE_NESTED_IMM:
-      case ADDRESS_OF:
+      case STORE_REF:
       case LOAD_REF:
       case DECR_BLOB_REF:
       case FREE_BLOB:
@@ -1993,7 +1993,7 @@ public class ICInstructions {
                 new ComputedValue(derefOp, Arrays.asList(src), val, false));
           }
         }
-        case ADDRESS_OF:
+        case STORE_REF:
         case STORE_BOOL:
         case STORE_FLOAT:
         case STORE_INT:
@@ -2012,7 +2012,7 @@ public class ICInstructions {
 
           ComputedValue retrieve = new ComputedValue(cvop,
                     Arrays.asList(dst), src, false);
-          if (op == Opcode.ADDRESS_OF) {
+          if (op == Opcode.STORE_REF) {
             Opcode derefOp = derefOpCode(dst.getType());
             if (derefOp != null) {
               ComputedValue deref = 
@@ -2276,7 +2276,7 @@ public class ICInstructions {
       } else if (op == Opcode.ARRAY_BUILD) {
         // Output array should be closed
         return Collections.singletonList(getOutput(0));
-      } else if (op == Opcode.ADDRESS_OF) {
+      } else if (op == Opcode.STORE_REF) {
         return Collections.singletonList(getOutput(0));
       }
       return super.getClosedOutputs();
@@ -2464,7 +2464,7 @@ public class ICInstructions {
           return Pair.create(getOutput(0), getInput(0).getVar());
         case COPY_REF:
           return Pair.create(getOutput(0), getInput(0).getVar());
-        case ADDRESS_OF:
+        case STORE_REF:
           // Sometimes a reference is filled in
           return Pair.create(getOutput(0), getInput(0).getVar());
         case STRUCT_LOOKUP:
@@ -3498,7 +3498,7 @@ public class ICInstructions {
     CALL_LOCAL_CONTROL,
     DEREF_INT, DEREF_STRING, DEREF_FLOAT, DEREF_BOOL, DEREF_BLOB,
     DEREF_FILE,
-    STORE_INT, STORE_STRING, STORE_FLOAT, STORE_BOOL, ADDRESS_OF, 
+    STORE_INT, STORE_STRING, STORE_FLOAT, STORE_BOOL, STORE_REF, 
     LOAD_INT, LOAD_STRING, LOAD_FLOAT, LOAD_BOOL, LOAD_REF,
     STORE_BLOB, LOAD_BLOB, DECR_BLOB_REF, FREE_BLOB,
     STORE_VOID, LOAD_VOID, 
@@ -4234,7 +4234,7 @@ public class ICInstructions {
          throw new STCRuntimeError("don't know how to assign " + dstType);
        }
     } else if (Types.isRef(dstType)) {
-      op = Opcode.ADDRESS_OF;
+      op = Opcode.STORE_REF;
     }
     return op;
   }

@@ -140,7 +140,7 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.INCR_WRITERS);
     opcodes.add(Opcode.LOCAL_OP);
     opcodes.add(Opcode.COPY_REF);
-    opcodes.add(Opcode.ADDRESS_OF);
+    opcodes.add(Opcode.STORE_REF);
     opcodes.add(Opcode.LOAD_BOOL);
     opcodes.add(Opcode.LOAD_VOID);
     opcodes.add(Opcode.LOAD_FLOAT);
@@ -187,7 +187,7 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.STORE_STRING);
     opcodes.add(Opcode.STORE_BLOB);
     opcodes.add(Opcode.COPY_REF);
-    opcodes.add(Opcode.ADDRESS_OF);
+    opcodes.add(Opcode.STORE_REF);
     opcodes.add(Opcode.LOAD_BOOL);
     opcodes.add(Opcode.LOAD_VOID);
     opcodes.add(Opcode.LOAD_FILE);

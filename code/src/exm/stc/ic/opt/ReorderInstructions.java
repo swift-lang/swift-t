@@ -262,7 +262,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
   private boolean writesInputs(Logger logger, 
           Instruction inst1, List<Var> inst1Inputs,
           Instruction inst2, List<Var> inst2Inputs) {
-    if (inst2.op == Opcode.ADDRESS_OF &&
+    if (inst2.op == Opcode.STORE_REF &&
         !inst1.getPiecewiseAssignedOutputs().isEmpty() &&
         inst1.getPiecewiseAssignedOutputs().contains(inst2.getOutput(0))) {
       // Special case for address_of: otherwise looks like they both write it
