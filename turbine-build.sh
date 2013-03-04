@@ -25,6 +25,7 @@ fi
 
 if [ ! -z "$EXM_CRAY" ] ; then
     export CC=gcc
+    export CFLAGS="-g -O2"
     EXTRA_ARGS="--enable-custom-mpi"
 fi
 

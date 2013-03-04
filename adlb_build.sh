@@ -29,11 +29,10 @@ if [ ! -z "$ENABLE_MPE" ]; then
 fi
 
 if [ ! -z "$EXM_CRAY" ]; then
-    export CC=gcc
-    export CFLAGS="-I${MPICH_INST}/include"
+    export CC="gcc"
+    export CFLAGS="-g -O2 -I${MPICH_INST}/include"
     export LDFLAGS="-L${MPICH_INST}/lib -lmpich"
     EXTRA_ARGS+=" --enable-mpi-2"
-    echo $EXTRA_ARGS
 fi
 
 ./configure --with-c-utils=${C_UTILS_INST} \

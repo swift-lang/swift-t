@@ -10,7 +10,8 @@ THISDIR=`dirname $0`
 source ${THISDIR}/build-vars.sh
 
 if [ ! -z "$EXM_CRAY" ]; then
-    export CC=gcc
+    export CC=cc
+    export CFLAGS="-dynamic -g -O2"
 fi
 
 cd unix

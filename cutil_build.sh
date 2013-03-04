@@ -23,6 +23,11 @@ if [ ! -z "$EXM_DEBUG_BUILD" ]; then
    export CFLAGS="-g -O0" 
 fi
 
-./configure --enable-shared --prefix=${C_UTILS_INST} ${EXTRA_ARGS} CC=gcc
+if [ ! -z "$EXM_CRAY" ] ; then
+    export CC=gcc
+    export CFLAGS="-g -O2"
+fi
+
+./configure --enable-shared --prefix=${C_UTILS_INST} ${EXTRA_ARGS}
 make -j ${MAKE_PARALLELISM}
 make install
