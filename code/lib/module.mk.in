@@ -31,4 +31,4 @@ $(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) \
 	$(E) TURBINE_VERSION=$(TURBINE_VERSION) \
              USE_MPE=@USE_MPE@ \
 	     USE_MAC=@USE_MAC@ \
-             tclsh $(<) > lib/pkgIndex.tcl
+             $(TCLSH_LOCAL) $(<) > lib/pkgIndex.tcl
