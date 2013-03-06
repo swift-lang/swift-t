@@ -674,6 +674,7 @@ assign_path_element:
 
 // only allow function calls as non-assignment statements
 expr_stmt: e=function_call -> ^( EXPR_STMT $e )
+    |      e=variable -> ^( EXPR_STMT $e )
     ;
 
 update_stmt: v=ID LT cmd=ID GT MUTATE expr SEMICOLON
