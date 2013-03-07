@@ -194,6 +194,23 @@ AC_ARG_ENABLE(mpi-2,
 AC_DEFINE_UNQUOTED(ADLB_MPI_VERSION, [${ADLB_MPI_VERSION}],
                    [MPI version])
 
+AC_MSG_CHECKING([MPI version])
+${CC} -E maint/mpi_version.cpp > mpi_version.cpp.txt
+[[ ${?} != 0 ]] && AC_MSG_ERROR([Could not preprocess maint/mpi_version.cpp])
+
+MPI_VERSION_LINE=$( grep "The MPI version is" mpi_version.cpp.txt )
+AC_MSG_RESULT([${MPI_VERSION_LINE}])
+MPI_VERSION=$( echo ${MPI_VERSION_LINE} | cut -d ' ' -f 5 )
+if [[ ${ADLB_MPI_VERSION} == 3 ]]
+then
+  [[ ${MPI_VERSION} == 3 ]] || \
+    AC_MSG_ERROR([MPI_VERSION 3 is required for parallel tasks!
+                  You must 1) re-configure with --enable-mpi-2
+                              which disables parallel tasks; or
+                           2) use an MPI 3 implementation])
+fi
+rm -f mpi_version.cpp.txt
+
 AC_CONFIG_FILES(Makefile
                 src/module.mk
                 src/adlb-version.h
