@@ -73,6 +73,7 @@ void* blobutils_cast_to_ptr(int i);
 int blobutils_cast_to_int(void* p);
 
 double* blobutils_cast_int_to_dbl_ptr(int i);
+int*    blobutils_cast_int_to_int_ptr(int i);
 double* blobutils_cast_to_dbl_ptr(void* p);
 
 /**

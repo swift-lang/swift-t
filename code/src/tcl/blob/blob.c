@@ -82,6 +82,12 @@ blobutils_cast_to_int(void* p)
   return result;
 }
 
+int*
+blobutils_cast_int_to_int_ptr(int i)
+{
+  return (int*) (size_t) i;
+}
+
 double*
 blobutils_cast_int_to_dbl_ptr(int i)
 {
