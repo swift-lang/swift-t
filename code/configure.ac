@@ -195,7 +195,7 @@ AC_DEFINE_UNQUOTED(ADLB_MPI_VERSION, [${ADLB_MPI_VERSION}],
                    [MPI version])
 
 AC_MSG_CHECKING([MPI version])
-${CC} -E maint/mpi_version.cpp > mpi_version.cpp.txt
+${CC} -E ${CFLAGS} maint/mpi_version.cpp > mpi_version.cpp.txt
 [[ ${?} != 0 ]] && AC_MSG_ERROR([Could not preprocess maint/mpi_version.cpp])
 
 MPI_VERSION_LINE=$( grep "The MPI version is" mpi_version.cpp.txt )
