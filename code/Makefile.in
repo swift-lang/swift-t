@@ -225,8 +225,8 @@ $(TCL_TURBINE_SO): $(TURBINE_OBJS)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(SHARED) $(LDFLAGS) -o $(@) \
              $(TURBINE_OBJS) \
-             $(TCL_LINK_FLAGS) \
              $(LIBS) \
+             $(TCL_LINK_FLAGS) \
              $(RPATHS) \
              $(MAC_NAME)
 
