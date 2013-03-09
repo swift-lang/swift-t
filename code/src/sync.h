@@ -37,9 +37,17 @@
    After returning from this, this calling process may issue one RPC
    on the target process
 
+   This function may add pending sync requests from other servers to
+   the xlb_pending_syncs buffer, which will need to be serviced.
+
    This is used for all server-to-server RPCs, including Put, Store,
    Close, Steal, and Shutdown
  */
 adlb_code xlb_sync(int target);
+
+// Info about pending sync requests: where sync request has been received
+// but we haven't responded yet
+extern int xlb_pending_syncs[];
+extern int xlb_pending_sync_count;
 
 #endif

@@ -56,8 +56,6 @@ struct list_i workers_shutdown;
 
 bool xlb_server_sync_in_progress = false;
 
-bool server_sync_retry = false;
-
 /** Is this server shutting down? */
 static bool shutting_down;
 
@@ -75,7 +73,18 @@ static inline adlb_code xlb_poll(int source,  MPI_Status *req_status);
 
 // Service request from queue
 static inline adlb_code
-xlb_handle_pending(MPI_Status *status);
+xlb_handle_pending(MPI_Status *status, bool *sync_rejected);
+
+// Handle pending sync requests
+static inline adlb_code
+xlb_handle_pending_syncs();
+
+/**
+   Serve a single request then return
+   @param source MPI rank of allowable client: usually MPI_ANY_SOURCE unless syncing
+   @param sync_rejected: set to true if we got a sync rejected message
+ */
+static inline adlb_code xlb_serve_one(int source, bool *sync_rejected);
 
 adlb_code
 xlb_server_init()
@@ -163,6 +172,11 @@ ADLB_Server(long max_memory)
 
     adlb_code code = serve_several();
     ADLB_CHECK(code);
+   
+    // serve_several should have handled all pending syncs, but
+    // defensively check here to avoid potential deadlock
+    code = xlb_handle_pending_syncs();
+    ADLB_CHECK(code);
 
     check_steal();
   }
@@ -198,9 +212,13 @@ serve_several()
     ADLB_CHECK(code);
     if (code == ADLB_SUCCESS)
     {
-      code = xlb_handle_pending(&req_status);
+      code = xlb_handle_pending(&req_status, NULL);
       ADLB_CHECK(code);
       reqs++;
+
+      // Previous request may have resulted in pending sync requests
+      code = xlb_handle_pending_syncs();
+      ADLB_CHECK(code);
 
       // Back off less on each successful request
       curr_server_backoff /= 2;
@@ -236,7 +254,7 @@ xlb_poll(int source, MPI_Status *req_status)
 }
 
 static inline adlb_code
-xlb_handle_pending(MPI_Status* status)
+xlb_handle_pending(MPI_Status* status, bool *sync_rejected)
 {
   if (status->MPI_TAG == ADLB_TAG_SYNC_RESPONSE)
   {
@@ -245,7 +263,8 @@ xlb_handle_pending(MPI_Status* status)
     int response;
     RECV_STATUS(&response, 1, MPI_INT, status->MPI_SOURCE,
                 ADLB_TAG_SYNC_RESPONSE, status);
-    server_sync_retry = true;
+    if (sync_rejected != NULL)
+      *sync_rejected = true;
     assert(response == 0);
     TRACE_END;
     return ADLB_NOTHING;
@@ -257,8 +276,33 @@ xlb_handle_pending(MPI_Status* status)
   return rc;
 }
 
-adlb_code
-xlb_serve_one(int source)
+static inline adlb_code
+xlb_handle_pending_syncs()
+{
+  if (xlb_pending_sync_count > 0)
+  {
+    // Handle outstanding sync requests
+    for (int i = 0; i < xlb_pending_sync_count; i++)
+    {
+      adlb_code code = xlb_serve_server(xlb_pending_syncs[i], NULL);
+      if (code != ADLB_SUCCESS)
+      {
+        // Update pending syncs to avoid corrupted state
+        if (i > 0)
+          for (int j = 0; j < xlb_pending_sync_count - i; j++) {
+            xlb_pending_syncs[j] = xlb_pending_syncs[j + i];
+          }
+        xlb_pending_sync_count -= i;
+        return code;
+      }
+    }
+    xlb_pending_sync_count = 0;
+  }
+  return ADLB_SUCCESS;
+}
+
+static inline adlb_code 
+xlb_serve_one(int source, bool *sync_rejected)
 {
   TRACE_START;
   if (source > 0)
@@ -270,7 +314,7 @@ xlb_serve_one(int source)
   if (code == ADLB_NOTHING)
     return ADLB_NOTHING;
 
-  int rc = xlb_handle_pending(&status);
+  int rc = xlb_handle_pending(&status, sync_rejected);
 
   TRACE_END;
   
@@ -278,7 +322,7 @@ xlb_serve_one(int source)
 }
 
 adlb_code
-xlb_serve_server(int source)
+xlb_serve_server(int source, bool *server_sync_retry)
 {
   TRACE_START;
   DEBUG("\t serve_server: %i", source);
@@ -289,7 +333,7 @@ xlb_serve_server(int source)
   int attempts = 0;
   while (true)
   {
-    rc = xlb_serve_one(source);
+    rc = xlb_serve_one(source, server_sync_retry);
     ADLB_CHECK(rc);
     if (rc != ADLB_NOTHING) break;
     xlb_backoff_server(attempts++, &slept);
