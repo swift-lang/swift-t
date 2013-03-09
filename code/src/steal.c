@@ -76,9 +76,6 @@ steal(bool* result)
   TRACE_START;
   MPE_LOG(xlb_mpe_dmn_steal_start);
 
-  // Record the time of this steal attempt
-  xlb_steal_last = MPI_Wtime();
-
   get_target_server(&target);
 
   rc = xlb_sync(target);
@@ -98,6 +95,9 @@ steal(bool* result)
   *result = true;
 
   end:
+  // Record the time of this steal attempt
+  xlb_steal_last = MPI_Wtime();
+
   TRACE_END;
   MPE_LOG(xlb_mpe_dmn_steal_end);
   return ADLB_SUCCESS;
