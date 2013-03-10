@@ -12,7 +12,7 @@
 main
 {
   printf("WAVEFRONT");
-  int N = toint(getenv("N"));
+  int N = toint(argv("N"));
   float A[][];
 
   metadata(sprintf("N: %i", N));
