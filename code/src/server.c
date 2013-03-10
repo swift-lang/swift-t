@@ -332,14 +332,12 @@ xlb_serve_server(int source, bool *server_sync_retry)
   static int response = 1;
   SEND(&response, 1, MPI_INT, source, ADLB_TAG_SYNC_RESPONSE);
   int rc = ADLB_NOTHING;
-  bool slept;
-  int attempts = 0;
   while (true)
   {
     rc = xlb_serve_one(source, server_sync_retry);
     ADLB_CHECK(rc);
     if (rc != ADLB_NOTHING) break;
-    xlb_backoff_server(attempts++, &slept);
+    // Don't backoff - want to unblock other server ASAP
   }
   DEBUG("\t serve_server: [%i] served %i", xlb_world_rank, source);
   TRACE_END;

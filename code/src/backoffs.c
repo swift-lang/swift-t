@@ -98,6 +98,9 @@ xlb_backoff_server(int attempt, bool *slept)
     {
       int exponent = attempt - backoff_server_no_delay_attempts
                 - backoff_server_min_delay_attempts + 1;
+      if (exponent > backoff_server_exp_delay_attempts) {
+        exponent = backoff_server_exp_delay_attempts;
+      }
       delay = pow(2, exponent) * backoff_server_max;
     }
     time_delay(delay);

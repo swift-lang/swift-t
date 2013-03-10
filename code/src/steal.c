@@ -78,6 +78,8 @@ steal(bool* result)
 
   get_target_server(&target);
 
+  DEBUG("[%i] stealing from %i", xlb_world_rank, target);
+
   rc = xlb_sync(target);
   ADLB_CHECK(rc);
   if (rc == ADLB_SHUTDOWN)
@@ -109,6 +111,7 @@ steal_handshake(int target, int max_memory, int* count)
   MPI_Request request;
   MPI_Status status;
 
+  DEBUG("[%i] synced with %i, starting steal handshake", xlb_world_rank, target);
   IRECV(count, 1, MPI_INT, target, ADLB_TAG_RESPONSE_STEAL_COUNT);
 
   // Only try to steal work types for which we have outstanding requests.
@@ -125,7 +128,7 @@ steal_handshake(int target, int max_memory, int* count)
   free(req);
 
   WAIT(&request, &status);
-  DEBUG("STOLE: %i", *count);
+  DEBUG("[%i] stole %i tasks from %i", xlb_world_rank, *count, target);
   // MPE_INFO(xlb_mpe_svr_info, "STOLE: %i FROM: %i", *count, target);
   return ADLB_SUCCESS;
 }
