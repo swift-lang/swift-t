@@ -131,13 +131,14 @@ msg_from_target(int target, bool* done)
   if (response)
   {
     // Accepted
-    DEBUG("sync accepted.");
+    DEBUG("server_sync: [%d] sync accepted by %d.", xlb_world_rank, target);
     *done = true;
   }
   else
   {
     // Rejected
-    DEBUG("sync rejected.  retrying...");
+    DEBUG("server_sync: [%d] sync rejected by %d.  retrying...",
+           xlb_world_rank, target);
     SEND_TAG(target, ADLB_TAG_SYNC_REQUEST);
   }
   TRACE_END
@@ -159,7 +160,8 @@ static inline adlb_code msg_from_other_server(int other_server, int target,
   if (other_server > xlb_world_rank)
   {
     // accept incoming sync
-    DEBUG("server_sync: interrupted by incoming sync request");
+    DEBUG("server_sync: [%d] interrupted by incoming sync request from %d",
+                        xlb_world_rank, other_server);
     bool server_sync_rejected = false;
     xlb_serve_server(other_server, &server_sync_rejected);
 
@@ -168,7 +170,8 @@ static inline adlb_code msg_from_other_server(int other_server, int target,
       // In this case, the interrupting server is our sync target
       // It detected the collision and rejected this process
       // Try again
-      DEBUG("server_sync: retrying...");
+      DEBUG("server_sync: [%d] sync rejected earlier retrying sync with %d...",
+                        xlb_world_rank, other_server);
       xlb_backoff_sync_rejected();
       SEND_TAG(target, ADLB_TAG_SYNC_REQUEST);
     }
@@ -178,12 +181,15 @@ static inline adlb_code msg_from_other_server(int other_server, int target,
     // Don't handle right away, either defer or reject
     if (*pending_sync_count < PENDING_SYNC_BUFFER_SIZE) {
       // Store sync request so we can later service it
+      DEBUG("server_sync: [%d] deferring incoming sync request from %d.  "
+            "%d deferred sync requests", xlb_world_rank, other_server, *pending_sync_count);
       pending_syncs[(*pending_sync_count)++] = other_server;
     }
     else
     {
       int response = 0;
-      DEBUG("server_sync: rejecting incoming sync request");
+      DEBUG("server_sync: [%d] rejecting incoming sync request from %d",
+                                        xlb_world_rank, other_server);
       SEND(&response, 1, MPI_INT, other_server,
            ADLB_TAG_SYNC_RESPONSE);
     }
@@ -196,7 +202,7 @@ static inline adlb_code
 msg_shutdown(bool* done)
 {
   TRACE_START;
-  DEBUG("server_sync: cancelled by shutdown!");
+  DEBUG("server_sync: [%d] cancelled by shutdown!", xlb_world_rank);
   *done = true;
   TRACE_END;
   return ADLB_SUCCESS;

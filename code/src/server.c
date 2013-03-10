@@ -263,9 +263,10 @@ xlb_handle_pending(MPI_Status* status, bool *sync_rejected)
     int response;
     RECV_STATUS(&response, 1, MPI_INT, status->MPI_SOURCE,
                 ADLB_TAG_SYNC_RESPONSE, status);
+    assert(response == 0);
     if (sync_rejected != NULL)
       *sync_rejected = true;
-    assert(response == 0);
+    DEBUG("server_sync: [%d] sync rejected", xlb_world_rank);
     TRACE_END;
     return ADLB_NOTHING;
   }
@@ -284,6 +285,8 @@ xlb_handle_pending_syncs()
     // Handle outstanding sync requests
     for (int i = 0; i < xlb_pending_sync_count; i++)
     {
+      DEBUG("server_sync: [%d] handling deferred sync %d from %d",
+            xlb_world_rank, i, xlb_pending_syncs[i]);
       adlb_code code = xlb_serve_server(xlb_pending_syncs[i], NULL);
       if (code != ADLB_SUCCESS)
       {
@@ -325,7 +328,7 @@ adlb_code
 xlb_serve_server(int source, bool *server_sync_retry)
 {
   TRACE_START;
-  DEBUG("\t serve_server: %i", source);
+  DEBUG("\t serve_server: [%i] serving %i", xlb_world_rank, source);
   static int response = 1;
   SEND(&response, 1, MPI_INT, source, ADLB_TAG_SYNC_RESPONSE);
   int rc = ADLB_NOTHING;
@@ -338,6 +341,7 @@ xlb_serve_server(int source, bool *server_sync_retry)
     if (rc != ADLB_NOTHING) break;
     xlb_backoff_server(attempts++, &slept);
   }
+  DEBUG("\t serve_server: [%i] served %i", xlb_world_rank, source);
   TRACE_END;
   return rc;
 }
