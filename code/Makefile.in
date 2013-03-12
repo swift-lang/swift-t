@@ -69,16 +69,18 @@ ifeq ($(USE_XLC),0)
         PIC = -fPIC
         STD = -std=gnu99
         SHARED = -shared
+	WARNS=-Wall
 else
 #       Using XLC
         PIC = -qpic
         STD =
         SHARED = -qmkshrobj
+	WARNS = 
 endif
 
 # No logging
 LDFLAGS  = @LDFLAGS@
-CFLAGS  = @CFLAGS@ $(PIC) $(STD) $(INCLUDES) -Wall
+CFLAGS  = @CFLAGS@ $(PIC) $(STD) $(INCLUDES) $(WARNS)
 
 LIBS := -L $(C_UTILS)/lib -l exmcutils
 
@@ -143,7 +145,7 @@ lib:
 
 $(ADLB_SO): $(OBJS) $(NLOBJS) lib
 	$(Q) "  LINK		$(@)"
-	$(E) $(LINKER) -shared -fPIC -g	-o $(@) \
+	$(E) $(LINKER) -shared $(SHARED) -g -o $(@) \
 	        $(OBJS) 		        \
                 $(LIBS)                         \
 	        $(RPATH)                        \
