@@ -3,16 +3,20 @@
 #include <sys.swift>
 
 main {
-  int bound = toint(argv("bound"));
+  int N = toint(argv("N"));
+  int M = toint(argv("M"));
+
   float sleepTime = tofloat(argv("sleeptime"));
 
   // print for debug
-  printf("The number of arguments is: %i\n", argc());
-  printf("The bound is: %i\n", bound);
-  printf("The sleeptime is: %f\n", sleepTime);
+  printf("trace: The number of arguments is: %i\n", argc());
+  printf("trace: The bounds are: %i, %i\n", N, M);
+  printf("trace: The sleeptime is: %f\n", sleepTime);
 
-  foreach i in [1:bound:1] {
-    //TODO: variable duration - randomise?
-    sleep(sleepTime);
+  foreach i in [1:N] {
+    foreach j in [1:M] {
+      //TODO: variable duration - randomise?
+      sleep(sleepTime);
+    }
   }
 }

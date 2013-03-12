@@ -1,14 +1,32 @@
 #!/usr/bin/env bash
 
-swift=$1
-shift
-
 opt=$1
 shift
 
-tcl=${swift%.swift}.tcl
-out=${swift%.swift}.out
-ic=${swift%.swift}.ic
+mode=$1
+shift
+
+if [[ $mode != TIME && $mode != OPCOUNT ]]; then
+  echo "Invalid mode $mode"
+  exit 1
+fi
+
+swift=$1
+shift
+
+TMPDIR=/var/tmp/pact-bench
+mkdir -p $TMPDIR
+
+if [ ! -d $TMPDIR ] ; then
+  echo $TMPDIR could not be created
+  exit 1
+fi
+
+tcl=$TMPDIR/${swift%.swift}.tcl
+out=$TMPDIR/${swift%.swift}.O$opt.out
+ic=$TMPDIR/${swift%.swift}.O$opt.ic
+time=${swift%.swift}.O$opt.time
+counts=${swift%.swift}.O$opt.counts
 
 STC_FLAGS=
 if [[ ! -z "$REFCOUNT" && "$REFCOUNT" -ne 0 ]]; then
@@ -21,18 +39,27 @@ if [ "$?" -ne 0 ]; then
   exit 1
 fi
 
-turbine -n8 $tcl "$@" > $out
-rc=$?
-if [ "$?" -ne 0 ]; then
-  echo "Script run failed, output in $out"
-  exit 1
-fi
-
-if grep -q 'WAITING TRANSFORMS: ' $out; then
-  echo "Script run failed, waiting transforms, output in $out"
-  exit 1
-fi
-
 scriptdir=`dirname $0`
+if [[ $MODE == OPCOUNT ]]; then
+  $out > $counts
+fi
 
-$scriptdir/opcounts.py $out
+LAUNCH=
+if [[ $mode == TIME ]]; then
+  export DEBUG=0
+  export TURBINE_LOG=0
+  export TURBINE_DEBUG=0
+  export ADLB_DEBUG=0
+  /usr/bin/time -o $time turbine -n8 $tcl "$@"
+  rc=$?
+  cat $time
+else
+  turbine -n8 $tcl "$@" | $scriptdir/opcounts.py > $counts
+  rc=$?
+  cat $counts
+fi
+
+if [ "$?" -ne 0 ]; then
+  echo "Script run failed"
+  exit 1
+fi
