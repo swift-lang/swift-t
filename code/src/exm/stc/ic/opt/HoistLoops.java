@@ -365,10 +365,12 @@ public class HoistLoops implements OptimizerPass {
     
     // Don't hoist piecewise-assigned var declaration out of loop
     for (Var out: inst.getPiecewiseAssignedOutputs()) {
-      maxHoist = Math.min(maxHoist, state.maxLoopHoist);
-      if (logger.isTraceEnabled())
-        logger.trace("Can't hoist declaration of " + out + " out of loop, "
-                + "constrained to: " + state.maxLoopHoist);
+      if (!inst.isIdempotent()) {
+        maxHoist = Math.min(maxHoist, state.maxLoopHoist);
+        if (logger.isTraceEnabled())
+          logger.trace("Can't hoist declaration of " + out + " out of loop, "
+                  + "constrained to: " + state.maxLoopHoist);
+      }
     }
     
     // Check that any output variables that are aliases are
