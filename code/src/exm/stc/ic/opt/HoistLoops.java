@@ -321,7 +321,7 @@ public class HoistLoops implements OptimizerPass {
       logger.trace("Try hoist " + inst + " maxHoist=" + state.maxHoist + 
                    " maxLoopHoist=" + state.maxLoopHoist);
     }
-    if (inst.hasSideEffects()) {
+    if (!inst.canChangeTiming()) {
       logger.trace("Can't hoist: side-effects");
       // Don't try to mess with things with side-effects
       return false;

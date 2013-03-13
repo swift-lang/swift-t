@@ -113,6 +113,15 @@ public class ICInstructions {
   
     public abstract boolean hasSideEffects();
   
+    /**
+     * @return true if it is safe to change timing relative
+     * to other tasks (e.g. if it is necessary that it should
+     * return an up to date version of something
+     */
+    public boolean canChangeTiming() {
+      return !hasSideEffects();
+    }
+
     public boolean writesAliasVar() {
       // Writes to alias variables can have non-local effects
       for (Var out: this.getOutputs()) {
@@ -1363,6 +1372,11 @@ public class ICInstructions {
         throw new STCRuntimeError("Need to add opcode " + op.toString()
             + " to hasSideEffects");
       }
+    }
+    
+
+    public boolean canChangeTiming() {
+      return !hasSideEffects() && op != Opcode.LATEST_VALUE;
     }
   
     @Override
