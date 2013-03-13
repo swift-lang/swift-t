@@ -1580,17 +1580,25 @@ public class ASTWalker {
            List<Var> outArgs, List<Var> inArgs,
            TaskMode mode) throws UserException {
     for (Var in: inArgs) {
-      if (!Types.isScalarFuture(in.type())) {
+      if (Types.isScalarFuture(in.type())) {
+        // OK
+      } else if (Types.isScalarUpdateable(in.type())) {
+        // OK
+      } else {
         throw new STCRuntimeError("Can't handle type of " + in.type()
                + " for function " + function);
       }
     }
     for (Var out: outArgs) {
-      if (!Types.isScalarFuture(out.type()) ||
-              Types.isFile(out.type())) {
+      if (Types.isArray(out.type())) {
+        // OK: will pass in standard repr
+      } else if (Types.isScalarFuture(out.type()) &&
+              !Types.isFile(out.type())) {
+        // OK
+      } else {
         throw new STCRuntimeError("Can't handle type of " + out.type()
                + " for function " + function);
-      } 
+      }
     }
     backend.generateWrappedBuiltin(function, ft, outArgs, inArgs, mode);
 ;  }
