@@ -6,7 +6,7 @@ shift
 mode=$1
 shift
 
-if [[ $mode != TIME && $mode != OPCOUNT ]]; then
+if [[ $mode != TIME && $mode != OPCOUNT && $mode != DEBUG ]]; then
   echo "Invalid mode $mode"
   exit 1
 fi
@@ -63,8 +63,12 @@ if [[ $mode == TIME ]]; then
   /usr/bin/time -o $time turbine -n8 $tcl "$@"
   rc=$?
   cat $time
-else
+elif [[ $mode == OPCOUNT ]]; then
   time turbine -n3 $tcl "$@" | $scriptdir/opcounts.py > $counts
+  rc=$?
+  cat $counts
+else
+  time turbine -n3 $tcl "$@"
   rc=$?
   cat $counts
 fi
