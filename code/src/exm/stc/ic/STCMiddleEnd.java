@@ -787,8 +787,15 @@ public class STCMiddleEnd {
       waitMode = WaitMode.TASK_DISPATCH;
     }
     
+    
+    List<Var> waitVars = new ArrayList<Var>(inArgs.size());
+    for (Var in: inArgs) {
+      if (!Types.isScalarUpdateable(in.type())) {
+        waitVars.add(in);
+      }
+    }
     WaitStatement wait = new WaitStatement(function + "-argwait",
-                  inArgs, PassedVar.NONE, Var.NONE, null,
+                  waitVars, PassedVar.NONE, Var.NONE, null,
                   waitMode, true, mode);
     
     fn.getMainblock().addContinuation(wait);
@@ -797,20 +804,38 @@ public class STCMiddleEnd {
     List<Instruction> instBuffer = new ArrayList<Instruction>();
     List<Arg> inVals = new ArrayList<Arg>();
     for (Var inArg: inArgs) {
-      inVals.add(Arg.createVar(WrapUtil.fetchValueOf(block, instBuffer,
-              inArg, Var.LOCAL_VALUE_VAR_PREFIX + inArg.name())));
+      if (Types.isArray(inArg.type())) {
+        inVals.add(inArg.asArg());
+      } else {
+        String name = Var.LOCAL_VALUE_VAR_PREFIX + inArg.name();
+        if (Types.isScalarUpdateable(inArg.type())) {
+          inVals.add(WrapUtil.fetchCurrentValueOf(block, instBuffer,
+              inArg, name).asArg());
+        } else {
+          inVals.add(WrapUtil.fetchValueOf(block, instBuffer,
+              inArg, name).asArg());
+        }
+      }
     }
     List<Var> outVals = new ArrayList<Var>();
     for (Var outArg: outArgs) {
-      outVals.add(WrapUtil.declareLocalOutputVar(block, outArg,
+      if (Types.isArray(outArg.type()) || Types.isScalarUpdateable(outArg.type())) {
+        outVals.add(outArg);
+      } else {
+        outVals.add(WrapUtil.declareLocalOutputVar(block, outArg,
                   Var.LOCAL_VALUE_VAR_PREFIX + outArg.name()));
+      }
     }
     instBuffer.add(new LocalFunctionCall(function, inVals, outVals));
     
     for (int i = 0; i < outVals.size(); i++) {
       Var outArg = outArgs.get(i);
       Var outVal = outVals.get(i);
-      instBuffer.add(ICInstructions.futureSet(outArg, Arg.createVar(outVal)));
+      if (Types.isArray(outArg.type())) {
+        // Nothing: must be modified by called function
+      } else {
+        instBuffer.add(ICInstructions.futureSet(outArg, Arg.createVar(outVal)));
+      }
     }
     
     block.addInstructions(instBuffer);

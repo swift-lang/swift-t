@@ -78,6 +78,18 @@ public class WrapUtil {
     }
   }
   
+  public static Var fetchCurrentValueOf(Block block,
+      List<Instruction> instBuffer, Var var, String valName) {
+    assert(Types.isScalarUpdateable(var.type()));
+    Type value_t = Types.derefResultType(var.type());
+    Var value_v = new Var(value_t,
+        valName, VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+
+    block.addVariable(value_v);
+    instBuffer.add(TurbineOp.latestValue(value_v, var));
+    return value_v;
+  }
+
   public static Var declareLocalOutputVar(Block block, Var var,
           String valName) {
     Var valOut = block.declareVariable(
