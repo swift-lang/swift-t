@@ -30,6 +30,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
+import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
@@ -122,6 +123,13 @@ public class FixupVariables implements OptimizerPass {
     }
     
     written.removeAll(fn.getOutputList());
+    
+    for (Var v: fn.getInputList()) {
+      // TODO: should these be passed in through output list instead?
+      if (Types.isScalarUpdateable(v.type())) {
+        written.remove(v);
+      }
+    }
     if (written.size() > 0) {
       throw new STCRuntimeError("Unexpected write IC function "
           + fn.getName() + " to variables " + written.toString());

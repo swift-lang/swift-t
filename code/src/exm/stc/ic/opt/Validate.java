@@ -301,8 +301,13 @@ public class Validate implements OptimizerPass {
    */
   private void checkVarInit(Logger logger, Program program,
       Function fn) {
-    checkAliasVarUsageRec(logger, program, fn, fn.getMainblock(),
-                          new HierarchicalSet<Var>());
+    HierarchicalSet<Var> initVars = new HierarchicalSet<Var>();
+    for (Var v: fn.getInputList()) {
+      if (varMustBeInitialized(v)) {
+        initVars.add(v);
+      }
+    }
+    checkAliasVarUsageRec(logger, program, fn, fn.getMainblock(), initVars);
   }
   
   private boolean varMustBeInitialized(Var v) {
