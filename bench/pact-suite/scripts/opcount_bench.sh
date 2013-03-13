@@ -22,15 +22,25 @@ if [ ! -d $TMPDIR ] ; then
   exit 1
 fi
 
-tcl=$TMPDIR/${swift%.swift}.tcl
-out=$TMPDIR/${swift%.swift}.O$opt.out
-ic=$TMPDIR/${swift%.swift}.O$opt.ic
-time=${swift%.swift}.O$opt.time
-counts=${swift%.swift}.O$opt.counts
+benchprefix=$(basename ${swift%.swift})
+optstring=$(echo "$@" | sed -e 's/ --/__/g' -e 's/[-= /]/_/g')
+benchname="${benchprefix}.${optstring}.O${opt}"
+echo "Benchmark name $benchname"
+
+
+tcl=$TMPDIR/$benchname.tcl
+out=$TMPDIR/$benchname.out
+ic=$TMPDIR/$benchname.ic
+time=$benchname.time
+counts=$benchname.counts
 
 STC_FLAGS=
 if [[ ! -z "$REFCOUNT" && "$REFCOUNT" -ne 0 ]]; then
   STC_FLAGS+=-Trefcounting
+fi
+if [[ $benchprefix == annealing-exm ]]; then
+  STC_FLAGS+=" -I /home/tga/ExM/scicolsim.git/src"
+  export TURBINE_USER_LIB="/home/tga/ExM/scicolsim.git/lib"
 fi
 stc -O$opt -C$ic $STC_FLAGS $swift $tcl
 rc=$?
@@ -54,7 +64,7 @@ if [[ $mode == TIME ]]; then
   rc=$?
   cat $time
 else
-  turbine -n8 $tcl "$@" | $scriptdir/opcounts.py > $counts
+  time turbine -n3 $tcl "$@" | $scriptdir/opcounts.py > $counts
   rc=$?
   cat $counts
 fi

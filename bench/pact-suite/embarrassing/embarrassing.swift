@@ -2,6 +2,11 @@
 #include <io.swift>
 #include <sys.swift>
 
+@dispatch=WORKER
+(void v) work(int i, int j, float seconds) "turbine" "0.0.4" [
+  "set <<v>> [ expr <<i>> + <<j>> ] ; if { <<seconds>> > 0 } { after [ expr round(<<seconds>> * 1000) ] }"
+];
+
 main {
   int N = toint(argv("N"));
   int M = toint(argv("M"));
@@ -16,7 +21,7 @@ main {
   foreach i in [1:N] {
     foreach j in [1:M] {
       //TODO: variable duration - randomise?
-      sleep(sleepTime);
+      work(i, j, sleepTime);
     }
   }
 }
