@@ -54,21 +54,30 @@ if [[ $MODE == OPCOUNT ]]; then
   $out > $counts
 fi
 
-LAUNCH=
+UNIQUIFIER=
+if [[ ! -z "$PACT_TRIAL" ]] ; then
+  UNIQUIFIER=.$PACT_TRIAL
+fi
+
+PROCS=4
+if [[ ! -z "$PACT_PAR" ]] ; then
+  PROCS=$PACT_PAR
+fi
+
 if [[ $mode == TIME ]]; then
   export DEBUG=0
   export TURBINE_LOG=0
   export TURBINE_DEBUG=0
   export ADLB_DEBUG=0
-  /usr/bin/time -o $time turbine -n8 $tcl "$@"
+  /usr/bin/time -o $times$UNIQUIFIER turbine -n$PROCS $tcl "$@"
   rc=$?
   cat $time
 elif [[ $mode == OPCOUNT ]]; then
-  time turbine -n3 $tcl "$@" | $scriptdir/opcounts.py > $counts
+  time turbine -n$PROCS $tcl "$@" | $scriptdir/opcounts.py > $counts$UNIQUIFIER
   rc=$?
   cat $counts
 else
-  time turbine -n3 $tcl "$@"
+  time turbine -n$PROCS $tcl "$@"
   rc=$?
   cat $counts
 fi
