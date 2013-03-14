@@ -8,7 +8,9 @@ OPTIONS
          Write intermediate representation to this file (otherwise
             does not output it)
     -d <PORT>
-       Use JDWP debugging on given PORT.
+       Use JDWP debugging on given PORT
+    -D <MACRO>
+       Define a CPP preprocessor macro
     -E
        Just preprocess
     -h
