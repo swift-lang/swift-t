@@ -55,8 +55,12 @@ print "\\\\"
 
 for level in range(len(files)):
   print level + 1,
+  tot = 0
   for cat in order:
-    print "&", '%.1f' % (float(catVals[cat][level])/1000) ,
+    val = catVals[cat][level]
+    tot +=val
+    print "&", '%.1f' % (float(val)/1000) ,
+  print "&", '%.1f' % (float(tot) / 1000)
   print "\\\\"
     #print cat,
     #for cv in catVals[cat]:
