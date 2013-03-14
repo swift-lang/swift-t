@@ -35,7 +35,7 @@ namespace eval turbine {
 
   proc update_min { x val } {
     rule "update_min-$x-$val" $val \
-        $turbine::LOCAL "update_min_body $x $val"
+        $turbine::LOCAL $adlb::RANK_ANY "update_min_body $x $val"
   }
   proc update_min_body { x val } {
     set val2 [ retrieve_decr_float $val ]
@@ -54,7 +54,7 @@ namespace eval turbine {
 
   proc update_incr { x val } {
     rule "update_incr-$x-$val" $val \
-        $turbine::LOCAL "update_incr_body $x $val"
+        $turbine::LOCAL $adlb::RANK_ANY "update_incr_body $x $val"
   }
   proc update_incr_body { x val } {
     set val2 [ retrieve_decr_float $val ]
@@ -70,7 +70,7 @@ namespace eval turbine {
 
   proc update_scale { x val } {
     rule "update_scale-$x-$val" $val \
-        $turbine::LOCAL "update_scale_body $x $val"
+        $turbine::LOCAL $adlb::RANK_ANY "update_scale_body $x $val"
   }
   proc update_scale_body { x val } {
     set val2 [ retrieve_decr_float $val ]
