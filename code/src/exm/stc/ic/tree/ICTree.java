@@ -535,29 +535,6 @@ public class ICTree {
       }
       return false;
     }
-    
-    public boolean varNameUsed(String name) {
-      // TODO: keep set of used var names here?
-      Deque<Block> blocks = new ArrayDeque<Block>();
-      blocks.add(this.mainBlock);
-      while (!blocks.isEmpty()) {
-        Block curr = blocks.pop();
-        for (Var v: curr.variables) {
-          if (v.name().equals(name))
-            return true;
-        }
-        for (Continuation c: curr.getContinuations()) {
-          List<Var> constructVars = c.constructDefinedVars();
-          if (constructVars != null && constructVars.contains(name)) {
-            return true;
-          }
-          for (Block inner: c.getBlocks()) {
-            blocks.push(inner);
-          }
-        }
-      }
-      return false;
-    }
   }
 
 
@@ -645,12 +622,8 @@ public class ICTree {
     
     public Block(BlockType type, Continuation parentCont, Function parentFunction) {
       this(type, parentCont, parentFunction, new LinkedList<Instruction>(),
-<<<<<<< HEAD
           new ArrayList<Var>(), new HashMap<Var, Arg>(), new HashMap<Var, Arg>(),
           new ArrayList<Continuation>(), new ArrayList<CleanupAction>());
-=======
-          new ArrayList<Var>(), new ArrayList<Continuation>(), new ArrayList<CleanupAction>());
->>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
     }
     
     /**
@@ -662,13 +635,9 @@ public class ICTree {
     private Block(BlockType type,
         Continuation parentCont, Function parentFunction,
         LinkedList<Instruction> instructions, 
-<<<<<<< HEAD
         ArrayList<Var> variables, HashMap<Var, Arg> initReadRefcounts,
         HashMap<Var, Arg> initWriteRefcounts,
         ArrayList<Continuation> conds,
-=======
-        ArrayList<Var> variables, ArrayList<Continuation> conds,
->>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
         ArrayList<CleanupAction> cleanupActions) {
       setParent(type, parentCont, parentFunction);
       this.type = type;
@@ -712,11 +681,7 @@ public class ICTree {
     
     public Block clone(BlockType newType, Continuation parentCont,
                        Function parentFunction) {
-<<<<<<< HEAD
       Block cloned = new Block(newType, parentCont, parentFunction,
-=======
-      return new Block(newType, parentCont, parentFunction,
->>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
           ICUtil.cloneInstructions(this.instructions),
           new ArrayList<Var>(this.variables),
           new HashMap<Var, Arg>(this.initReadRefcounts),
@@ -1092,50 +1057,12 @@ public class ICTree {
     public void addVariable(Var variable) {
       addVariable(variable, false);
     }
-<<<<<<< HEAD
     
     public void addVariable(Var variable, boolean atTop) {
       if (atTop) {
         this.variables.add(0, variable);
       } else {
         this.variables.add(variable);
-=======
-
-    public void addContinuations(List<? extends Continuation>
-                                                continuations) {
-      for (Continuation c: continuations) {
-        addContinuation(c);
-      }
-    }
-
-    public Set<String> unneededVars() {
-      HashSet<String> toRemove = new HashSet<String>();
-      Pair<Set<String>, List<List<Var>>> res = findEssentialVars();
-      Set<String> stillNeeded = res.val1; 
-      
-      // Check to see if we have to retain additional
-      // variables based on interdependencies
-      for (List<Var> dependentSet: res.val2) { {
-        boolean needed = false;
-        for (Var v: dependentSet) {
-          if (stillNeeded.contains(v.name())) {
-            needed = true;
-            break;
-          }
-        }
-        if (needed) {
-          for (Var v: dependentSet) {
-            stillNeeded.add(v.name());
-          }
-        }
-      }
-        
-      }
-      for (Var v: getVariables()) {
-        if (!stillNeeded.contains(v.name())) {
-          toRemove.add(v.name());
-        }
->>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
       }
     }
 
@@ -1199,11 +1126,7 @@ public class ICTree {
         if (contPos != null) {
           contPos.add(c);
         } else {
-<<<<<<< HEAD
           addContinuation(c);
-=======
-          this.continuations.add(c);
->>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
         }
       }
       this.cleanupActions.addAll(b.cleanupActions);
@@ -1309,7 +1232,6 @@ public class ICTree {
       }
       return name;
     }
-<<<<<<< HEAD
 
     /**
      * Number of instructions in block and descendents
@@ -1353,8 +1275,6 @@ public class ICTree {
       
       refcountMap.put(blockVar, Arg.createIntLit(val));
     }
-=======
->>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
   }
   
   /** State to pass around when doing code generation from SwiftIC */

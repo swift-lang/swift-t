@@ -159,7 +159,6 @@ public class OptUtil {
     outValVars = new ArrayList<Var>(localOutputs.size());
     // Need to create output value variables
     for (Var v : localOutputs) {
-<<<<<<< HEAD
       Var outValVar;
       if (Types.isArray(v.type())) {
         // keep same repr
@@ -170,10 +169,6 @@ public class OptUtil {
         outValVar = WrapUtil.declareLocalOutputVar(block, v, name);
       }
       outValVars.add(outValVar);
-=======
-      String name = optVPrefix(block, v);
-      outValVars.add(WrapUtil.declareLocalOutputVar(block, v, name));
->>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
     }
     return outValVars;
   }  
@@ -269,7 +264,6 @@ public class OptUtil {
 
   public static Var fetchForLocalOp(Block block, List<Instruction> instBuffer,
       Var var) {
-<<<<<<< HEAD
     if (Types.isArray(var.type())) {
       // don't use a different representation for arrays
       return var;
@@ -277,10 +271,6 @@ public class OptUtil {
       return WrapUtil.fetchValueOf(block, instBuffer, var,
                                OptUtil.optVPrefix(block, var));
     }
-=======
-    return WrapUtil.fetchValueOf(block, instBuffer, var,
-                               OptUtil.optVPrefix(block, var));
->>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
   }
 }
 

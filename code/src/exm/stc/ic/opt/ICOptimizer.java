@@ -83,13 +83,9 @@ public class ICOptimizer {
     preprocess.addPass(new UniqueVarNames());
     // Must fix up variables as frontend doesn't do it
     preprocess.addPass(new FlattenNested());
-<<<<<<< HEAD
     if (debug)
       preprocess.addPass(Validate.standardValidator());
 
-=======
-    preprocess.addPass(new Validate());
->>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
     preprocess.runPipeline(logger, program, 0);
   }
 
@@ -180,19 +176,6 @@ public class ICOptimizer {
       
       pipe.runPipeline(logger, prog, iteration);
     }
-<<<<<<< HEAD
-=======
-    
-    // Do this after forward dataflow since forward dataflow will be
-    // able to do strength reduction on many operations without spinning
-    // them off into wait statements
-    boolean doWaitMerges = (iteration == nIterations - 1);
-    pipe.addPass(new WaitCoalescer(doWaitMerges));
-    
-    pipe.addPass(new Validate());
-    
-    pipe.runPipeline(logger, prog, iteration);
->>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
   }
 
   private static void postprocess(PrintStream icOutput, Logger logger,
@@ -200,7 +183,6 @@ public class ICOptimizer {
     OptimizerPipeline postprocess = new OptimizerPipeline(icOutput);
     
     postprocess.addPass(new ConstantSharing());
-<<<<<<< HEAD
     
 
     // Final dead code elimination to clean up any remaining dead code 
@@ -213,9 +195,6 @@ public class ICOptimizer {
     // Add in reference counting after passing annotations
     postprocess.addPass(new RefcountPass());
     postprocess.addPass(Validate.finalValidator());
-=======
-    postprocess.addPass(new Validate());
->>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
     postprocess.runPipeline(logger, prog,  nIterations - 1);
   }
 
