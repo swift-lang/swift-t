@@ -308,6 +308,7 @@ public class ICContinuations {
     }
 
     public abstract boolean isLoop();
+
   }
 
   public enum ContinuationType {
@@ -355,11 +356,17 @@ public class ICContinuations {
   public static abstract class AsyncContinuation extends Continuation {
     protected final List<PassedVar> passedVars;
     protected final List<Var> keepOpenVars;
+<<<<<<< HEAD
     
     
     public AsyncContinuation(List<PassedVar> passedVars,
                             List<Var> keepOpenVars) {
       this.passedVars = new ArrayList<PassedVar>(passedVars);
+=======
+    public AsyncContinuation(List<Var> usedVars,
+                            List<Var> keepOpenVars) {
+      this.passedInVars = new ArrayList<Var>(usedVars);
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
       this.keepOpenVars = new ArrayList<Var>(keepOpenVars);
     }
     @Override
@@ -418,8 +425,13 @@ public class ICContinuations {
 
     public AbstractLoop(Block loopBody, List<PassedVar> passedVars,
         List<Var> keepOpenVars) {
+<<<<<<< HEAD
       super(passedVars, keepOpenVars);
       this.loopBody = loopBody;
+=======
+      super(usedVars, keepOpenVars);
+      this.loopBody = block;
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
       this.loopBody.setParent(this);
     }
 
@@ -488,6 +500,7 @@ public class ICContinuations {
           definedHere, initVals, passedVars, keepOpenVars, blockingVars);
     }
 
+<<<<<<< HEAD
     private Loop(String loopName, Block loopBody,
         List<Var> loopVars,  List<Boolean> definedHere,
         List<Var> initVals,
@@ -511,6 +524,14 @@ public class ICContinuations {
               + " is given init value of wrong type: " + initV.toString());
         }
       }
+=======
+    public ForeachLoop(String loopName, Var arrayVar,
+        Var loopVar, Var loopCounterVar, int splitDegree,
+        boolean arrayClosed, List<Var> usedVariables,
+        List<Var> keepOpenVars) {
+      this(loopName, new Block(BlockType.FOREACH_BODY, null), arrayVar, loopVar, loopCounterVar,
+          splitDegree, arrayClosed, usedVariables, keepOpenVars);
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
     }
 
     @Override
@@ -716,6 +737,7 @@ public class ICContinuations {
       this.loopContinue.setLoopUsedVars(PassedVar.extractVars(passedVars));
       this.loopBreak.setLoopUsedVars(passedVars);
     }
+<<<<<<< HEAD
     
     @Override
     public void setKeepOpenVars(Collection<Var> keepOpen) {
@@ -725,6 +747,31 @@ public class ICContinuations {
     
     public Var getInitCond() {
       return this.initVals.get(0);
+=======
+  }
+
+  public static class IfStatement extends Continuation {
+    private final Block thenBlock;
+    private final Block elseBlock;
+    private Arg condition;
+
+    public IfStatement(Arg condition) {
+      this(condition, new Block(BlockType.THEN_BLOCK, null),
+                          new Block(BlockType.ELSE_BLOCK, null));
+    }
+
+    private IfStatement(Arg condition, Block thenBlock, Block elseBlock) {
+      super();
+      assert(thenBlock != null);
+      assert(elseBlock != null);
+      this.condition = condition;
+      this.thenBlock = thenBlock;
+      this.thenBlock.setParent(this);
+      // Always have an else block to make more uniform: empty block is then
+      // equivalent to no else block
+      this.elseBlock = elseBlock;
+      this.elseBlock.setParent(this);
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
     }
 
     @Override
@@ -803,7 +850,346 @@ public class ICContinuations {
     }
 
     @Override
+<<<<<<< HEAD
     public void removeVars(Set<Var> removeVars) {
+=======
+    public boolean isNoop() {
+      return thenBlock.isEmpty() && elseBlock.isEmpty();
+    }
+
+    @Override
+    public Collection<Var> getPassedInVars() {
+      // doesn't apply
+      return null;
+    }
+
+    @Override
+    public void addPassedInVar(Var variable) {
+      throw new STCRuntimeError("addPassedInVar not supported on if");
+    }
+
+    @Override
+    public void removePassedInVar(Var variable) {
+      throw new STCRuntimeError("removePassedInVar not supported on " +
+      "if");
+    }
+
+    @Override
+    public List<Var> constructDefinedVars() {
+      return null;
+    }
+
+    /**
+     * Can these be fused into one if statement
+     * @param other
+     * @return
+     */
+    public boolean fuseable(IfStatement other) {
+      return this.condition.equals(other.condition);
+              
+    }
+
+    /**
+     * Fuse other if statement into this
+     * @param other
+     * @param insertAtTop if true, insert code from other about
+     *    code from this in blcoks
+     */
+    public void fuse(IfStatement other, boolean insertAtTop) {
+      thenBlock.insertInline(other.thenBlock, insertAtTop);
+      elseBlock.insertInline(other.elseBlock, insertAtTop);
+      
+    }
+  }
+
+  public static class Loop extends AbstractLoop {
+    private final String loopName;
+    private final Var condVar;
+    private final List<Var> loopVars;
+    private final List<Var> initVals;
+
+    /*
+     * Have handles to the termination instructions
+     */
+    private LoopBreak loopBreak;
+
+    private LoopContinue loopContinue;
+    private final ArrayList<Boolean> blockingVars;
+
+
+    public Loop(String loopName, List<Var> loopVars,
+            List<Var> initVals, List<Var> usedVariables,
+            List<Var> keepOpenVars, List<Boolean> blockingVars) {
+      this(loopName, new Block(BlockType.LOOP_BODY, null), loopVars,
+          initVals, usedVariables, keepOpenVars, blockingVars);
+    }
+
+    private Loop(String loopName, Block loopBody,
+        List<Var> loopVars,  List<Var> initVals,
+        List<Var> usedVariables, List<Var> keepOpenVars,
+        List<Boolean> blockingVars) {
+      super(loopBody, usedVariables, keepOpenVars);
+      this.loopName = loopName;
+      this.condVar = loopVars.get(0);
+      this.loopVars = new ArrayList<Var>(loopVars);
+      this.initVals = new ArrayList<Var>(initVals);
+      this.blockingVars = new ArrayList<Boolean>(blockingVars);
+      assert(loopVars.size() == initVals.size());
+      for (int i = 0; i < loopVars.size(); i++) {
+        Var loopV = loopVars.get(i);
+        Var initV = initVals.get(i);
+        if (!loopV.type().equals(initV.type())) {
+          throw new STCRuntimeError("loop variable " + loopV.toString()
+              + " is given init value of wrong type: " + initV.toString());
+        }
+      }
+    }
+
+    @Override
+    public Loop clone() {
+      // Constructor creates copies of variable lists
+      // TODO: this needs to fix up the reference to the loopContinue/loopBreak instructions
+      return new Loop(loopName, this.loopBody.clone(), loopVars, initVals,
+          passedInVars, keepOpenVars, blockingVars);
+    }
+
+    @Override
+    public ContinuationType getType() {
+      return ContinuationType.LOOP;
+    }
+
+    @Override
+    public boolean isAsync() {
+      return true;
+    }
+
+    public void setLoopBreak(LoopBreak loopBreak) {
+      this.loopBreak = loopBreak;
+    }
+
+    public void setLoopContinue(LoopContinue loopContinue) {
+      this.loopContinue = loopContinue;
+    }
+
+    @Override
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
+        throws UndefinedTypeException {
+      gen.startLoop(loopName, loopVars, initVals,
+                    passedInVars, keepOpenVars, blockingVars);
+      this.loopBody.generate(logger, gen, info);
+      gen.endLoop();
+    }
+
+    @Override
+    public void prettyPrint(StringBuilder sb, String currentIndent) {
+      sb.append(currentIndent + "loop /*" + loopName + "*/\n");
+      sb.append(currentIndent + indent + indent + "while (");
+      sb.append(condVar.type().typeName() + " " + condVar.name());
+      sb.append(")\n" + currentIndent + indent + indent + "loopvars (");
+      boolean first = true;
+      for (int i = 0; i < loopVars.size(); i++) {
+        Var loopV = loopVars.get(i);
+        Var initV = initVals.get(i);
+        if (first) {
+          first = false;
+        } else {
+          sb.append(", ");
+        }
+        sb.append(loopV.type().typeName() + " " + loopV.name() + "="
+            + initV.name());
+      }
+
+      sb.append(")\n" + currentIndent + indent + indent);
+      ICUtil.prettyPrintVarInfo(sb, passedInVars, keepOpenVars);
+      sb.append(" {\n");
+      loopBody.prettyPrint(sb, currentIndent + indent);
+      sb.append(currentIndent + "}\n");
+    }
+    
+    @Override
+    public void replaceConstructVars_(Map<String, Arg> renames,
+        boolean inputsOnly) {
+      ICUtil.replaceVarsInList(renames, initVals, false);
+      if (!inputsOnly) {
+        loopContinue.renameVars(renames);
+        loopBreak.renameVars(renames);
+      }
+    }
+
+    @Override
+    public Collection<Var> requiredVars() {
+      Collection<Var> res = super.requiredVars();
+      res.addAll(initVals);
+      return res;
+    }
+
+    @Override
+    public void removeVars_(Set<String> removeVars) {
+      // check it isn't removing initial values
+      for (Var v: this.initVals) {
+        checkNotRemoved(v, removeVars);
+      }
+      for (Var v: this.loopVars) {
+        checkNotRemoved(v, removeVars);
+      }
+    }
+
+    @Override
+    public Block branchPredict(Map<String, Arg> knownConstants) {
+      return null;
+    }
+
+    @Override
+    public boolean isNoop() {
+      // TODO: think about particular conditions that would render it a noop.
+      //
+      return false;
+    }
+
+    @Override
+    public List<Var> constructDefinedVars() {
+      ArrayList<Var> defVars = new ArrayList<Var>(
+                                      loopVars.size() + 1);
+      defVars.addAll(this.loopVars);
+      defVars.add(this.condVar);
+      return defVars;
+    }
+
+    @Override
+    public List<BlockingVar> blockingVars() {
+      ArrayList<BlockingVar> res = new ArrayList<BlockingVar>();
+      res.add(new BlockingVar(condVar, false));
+      for (int i = 0; i < loopVars.size(); i++) {
+        if (blockingVars.get(i)) {
+          res.add(new BlockingVar(loopVars.get(i), false));
+        }
+      }
+      return res;
+    }
+
+    @Override
+    public void addPassedInVar(Var variable) {
+      // special implementation to also fix up the loopContinue instruction
+      assert(variable != null);
+      super.addPassedInVar(variable);
+      this.loopContinue.addUsedVar(variable);
+      this.loopBreak.addUsedVar(variable);
+    }
+
+    @Override
+    public void removePassedInVar(Var variable) {
+      // special implementation to also fix up the loopContinue instruction
+      super.removePassedInVar(variable);
+      this.loopContinue.removeUsedVar(variable);
+      this.loopBreak.removeUsedVar(variable);
+    }
+
+    @Override
+    public void addPassedInVars(Collection<Var> vars) {
+      // special implementation to also fix up the loopContinue instruction
+      super.addPassedInVars(vars);
+      this.loopContinue.removeUsedVars(vars);
+      this.loopBreak.removeUsedVars(vars);
+    }
+
+    @Override
+    public void addKeepOpenVar(Var v) {
+      // special implementation to also fix up the loopContinue instruction
+      super.addKeepOpenVar(v);
+      this.loopContinue.addKeepOpenVar(v);
+      this.loopBreak.addKeepOpenVar(v);
+    }
+
+    @Override
+    public void addKeepOpenVars(Collection<Var> v) {
+      // special implementation to also fix up the loopContinue instruction
+      super.addKeepOpenVars(v);
+      this.loopContinue.removeKeepOpenVars(v);
+      this.loopBreak.removeKeepOpenVars(v);
+    }
+
+    public Var getInitCond() {
+      return this.initVals.get(0);
+    }
+
+    @Override
+    public ExecContext childContext(ExecContext outerContext) {
+      return outerContext;
+    }
+  }
+  
+  public static class NestedBlock extends Continuation {
+    private final Block block;
+
+    public NestedBlock() {
+      this(new Block(BlockType.NESTED_BLOCK, null));
+    }
+
+
+    private NestedBlock(Block block) {
+      super();
+      this.block = block;
+      this.block.setParent(this);
+    }
+
+    @Override
+    public NestedBlock clone() {
+      return new NestedBlock(this.block.clone());
+    }
+
+    @Override
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
+        throws UndefinedTypeException {
+      gen.startNestedBlock();
+      block.generate(logger, gen, info);
+      gen.endNestedBlock();
+    }
+
+    public Block getBlock() {
+      return this.block;
+    }
+
+    @Override
+    public void prettyPrint(StringBuilder sb, String currentIndent) {
+      sb.append(currentIndent + "{\n");
+      block.prettyPrint(sb, currentIndent + indent);
+      sb.append(currentIndent + "}\n");
+    }
+
+    @Override
+    public List<Block> getBlocks() {
+      return Arrays.asList(block);
+    }
+
+    @Override
+    public ContinuationType getType() {
+      return ContinuationType.NESTED_BLOCK;
+    }
+
+    @Override
+    public boolean isAsync() {
+      return false;
+    }
+    
+    @Override
+    public boolean isLoop() {
+      return false;
+    }
+
+    @Override
+    protected void replaceConstructVars(Map<String, Arg> renames, 
+                  boolean inputsOnly) {
+      // Do nothing
+    }
+
+    @Override
+    public Collection<Var> requiredVars() {
+      return new ArrayList<Var>(0);
+    }
+
+    @Override
+    public void removeVars(Set<String> removeVars) {
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
       removeVarsInBlocks(removeVars);
     }
 
@@ -816,6 +1202,580 @@ public class ICContinuations {
     public boolean isNoop() {
       return block.isEmpty();
     }
+<<<<<<< HEAD
+=======
+
+    @Override
+    public Collection<Var> getPassedInVars() {
+      return null;
+    }
+
+    @Override
+    public void addPassedInVar(Var variable) {
+      throw new STCRuntimeError("addPassedInVar not supported on " +
+      "nested");
+    }
+
+    @Override
+    public void removePassedInVar(Var variable) {
+      throw new STCRuntimeError("removePassedInVar not supported on " +
+          "nested block");
+    }
+
+    @Override
+    public List<Var> constructDefinedVars() {
+      return null;
+    }
+  }
+
+  public static class RangeLoop extends AbstractLoop {
+    // arguments can be either value variable or integer literal
+    private final String loopName;
+    private Var loopVar;
+    private Var countVar;
+    private Arg start;
+    private Arg end;
+    private Arg increment;
+    private int desiredUnroll;
+    private final int splitDegree;
+
+    public RangeLoop(String loopName, Var loopVar, Var countVar,
+        Arg start, Arg end, Arg increment,
+        List<Var> usedVariables, List<Var> keepOpenVars,
+        int desiredUnroll, int splitDegree) {
+      this(loopName, new Block(BlockType.RANGELOOP_BODY, null),
+          loopVar, countVar,
+          start, end, increment, usedVariables, keepOpenVars,
+          desiredUnroll, splitDegree);
+    }
+
+    private RangeLoop(String loopName, Block block, Var loopVar, Var countVar,
+        Arg start, Arg end, Arg increment,
+        List<Var> usedVariables, List<Var> keepOpenVars,
+        int desiredUnroll, int splitDegree) {
+      super(block, usedVariables, keepOpenVars);
+      assert(start.isImmediateInt());
+      assert(end.isImmediateInt());
+      assert(increment.isImmediateInt());
+      assert(loopVar.type().equals(Types.V_INT));
+      this.loopName = loopName;
+      this.loopVar = loopVar;
+      this.countVar = countVar;
+      this.start = start;
+      this.end = end;
+      this.increment = increment;
+      this.desiredUnroll = desiredUnroll;
+      this.splitDegree = splitDegree;
+    }
+
+    @Override
+    public RangeLoop clone() {
+      return new RangeLoop(loopName, this.loopBody.clone(), loopVar, countVar,
+          start.clone(), end.clone(), increment.clone(),
+          new ArrayList<Var>(passedInVars),
+          new ArrayList<Var>(keepOpenVars), desiredUnroll,
+          splitDegree);
+    }
+
+    @Override
+    public ContinuationType getType() {
+      return ContinuationType.RANGE_LOOP;
+    }
+
+    @Override
+    public boolean isAsync() {
+      return splitDegree > 0;
+    }
+
+    @Override
+    public List<BlockingVar> blockingVars() {
+      return null;
+    }
+    
+    @Override
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
+        throws UndefinedTypeException {
+      gen.startRangeLoop(loopName, loopVar, countVar, start, end, increment,
+                         passedInVars, keepOpenVars,
+                         desiredUnroll, splitDegree);
+      this.loopBody.generate(logger, gen, info);
+      gen.endRangeLoop(passedInVars, keepOpenVars, splitDegree);
+    }
+
+    @Override
+    public void prettyPrint(StringBuilder sb, String currentIndent) {
+      sb.append(currentIndent +   "for " + loopVar.name());
+      if (countVar != null) {
+        sb.append(", " + countVar.name());
+      }
+
+      sb.append(" = " + start.toString() + " to " + end.toString() + " ");
+
+      if (!increment.isIntVal() || increment.getIntLit() != 1) {
+          sb.append("incr " + increment.toString() + " ");
+      }
+      ICUtil.prettyPrintVarInfo(sb, passedInVars, keepOpenVars);
+      sb.append(" {\n");
+      loopBody.prettyPrint(sb, currentIndent + indent);
+      sb.append(currentIndent + "}\n");
+    }
+
+    @Override
+    public void replaceConstructVars_(Map<String, Arg> renames, 
+                                        boolean inputsOnly) {
+      start = renameRangeArg(start, renames);
+      end = renameRangeArg(end, renames);
+      increment = renameRangeArg(increment, renames);
+      
+      if (renames.containsKey(loopVar.name())) {
+        loopVar = renames.get(loopVar.name()).getVar();
+      }
+      if (countVar != null && renames.containsKey(countVar.name())) {
+        countVar = renames.get(countVar.name()).getVar();
+      }
+    }
+
+    private Arg renameRangeArg(Arg val, Map<String, Arg> renames) {
+      if (val.kind == ArgKind.VAR) {
+        String vName = val.getVar().name();
+        if (renames.containsKey(vName)) {
+          Arg o = renames.get(vName);
+          assert(o != null);
+          return o;
+        }
+      }
+      return val;
+    }
+
+    @Override
+    public Collection<Var> requiredVars() {
+      Collection<Var> res = super.requiredVars();
+      for (Arg o: Arrays.asList(start, end, increment)) {
+        if (o.isVar()) {
+          res.add(o.getVar());
+        }
+      }
+      return res;
+    }
+
+    @Override
+    public void removeVars_(Set<String> removeVars) {
+      checkNotRemoved(start, removeVars);
+      checkNotRemoved(end, removeVars);
+      checkNotRemoved(increment, removeVars);
+    }
+
+    @Override
+    public Block branchPredict(Map<String, Arg> knownConstants) {
+      // Could inline loop if there is only one iteration...
+      if (start.isIntVal() && end.isIntVal()) {
+        long startV = start.getIntLit();
+        long endV = end.getIntLit();
+        boolean singleIter = false;
+        if (endV < startV) {
+          // Doesn't run - return empty block
+          return new Block(BlockType.FOREACH_BODY, this);
+        } else if (endV == startV) {
+          singleIter = true;
+        } else if (increment.isIntVal()) {
+          long incV = increment.getIntLit();
+          if (startV + incV > endV) {
+            singleIter = true;
+          }
+        }
+
+        if (singleIter) {
+          return this.loopBody;
+        }
+      }
+      return null;
+    }
+
+    @Override
+    public void inlineInto(Block block, Block predictedBranch) {
+      assert(predictedBranch == this.loopBody);
+      // Shift loop variable to body and inline loop body
+      this.loopBody.declareVariable(loopVar);
+      this.loopBody.addInstructionFront(
+          Builtin.createLocal(BuiltinOpcode.COPY_INT, this.loopVar, start));
+      if (countVar != null) {
+        this.loopBody.declareVariable(countVar);
+        this.loopBody.addInstructionFront(Builtin.createLocal(
+                     BuiltinOpcode.COPY_INT, countVar, Arg.createIntLit(0)));
+      }
+      block.insertInline(loopBody);
+      block.removeContinuation(this);
+    }
+
+    @Override
+    public boolean constantReplace(Map<String, Arg> knownConstants) {
+      boolean anyChanged = false;
+      Arg oldVals[] = new Arg[] {start, end, increment };
+      Arg newVals[] = new Arg[3];
+      for (int i = 0; i < oldVals.length; i++) {
+        Arg old = oldVals[i];
+        if (old.kind == ArgKind.VAR) {
+          Arg replacement = knownConstants.get(old.getVar().name());
+          if (replacement != null) {
+            assert(replacement.isIntVal());
+            anyChanged = true;
+            newVals[i] = replacement;
+          } else {
+            newVals[i] = old;
+          }
+        } else {
+          newVals[i] = old;
+        }
+      }
+      start = newVals[0];
+      end = newVals[1];
+      increment = newVals[2];
+
+      assert(start != null); assert(end != null); assert(increment  != null);
+      return anyChanged;
+    }
+
+    @Override
+    public boolean isNoop() {
+      return this.loopBody.isEmpty();
+    }
+
+    @Override
+    public List<Var> constructDefinedVars() {
+      if (countVar != null) {
+        return Arrays.asList(loopVar, countVar);
+      } else {
+        return Arrays.asList(loopVar);
+      }
+    }
+
+    @Override
+    public boolean tryUnroll(Logger logger, Block outerBlock) {
+      logger.trace("DesiredUnroll for " + loopName + ": " + desiredUnroll);
+      if (this.desiredUnroll > 1) {
+        if (this.countVar != null) {
+          logger.warn("Can't unroll range loop with counter variable yet," +
+                      " ignoring unroll annotation");
+          return false;
+        }
+        logger.debug("Unrolling range loop " + desiredUnroll + " times ");
+        Arg oldStep = this.increment;
+
+        long checkIter; // the time we need to check
+        if(increment.isIntVal() &&
+            start.isIntVal() &&
+            end.isIntVal()) {
+          long startV = start.getIntLit();
+          long endV = end.getIntLit();
+          long incV = increment.getIntLit();
+
+          long diff = (endV - startV + 1);
+          // Number of loop iterations
+          long iters = ( (diff - 1) / incV ) + 1;
+
+          // 0 if the number of iterations will go exactly into the
+          // unroll factor
+          long extra = iters % desiredUnroll;
+
+          if (extra == 0) {
+            checkIter = desiredUnroll;
+          } else {
+            checkIter = extra;
+          }
+        } else {
+          checkIter = -1;
+        }
+
+        // Update step
+        if (oldStep.isIntVal()) {
+          this.increment = Arg.createIntLit(oldStep.getIntLit() * desiredUnroll);
+        } else {
+          Var old = oldStep.getVar();
+          Var newIncrement = new Var(old.type(),
+              old.name() + "@unroll" + desiredUnroll,
+              VarStorage.LOCAL,
+              DefType.LOCAL_COMPILER, null);
+          outerBlock.declareVariable(newIncrement);
+          outerBlock.addInstruction(Builtin.createLocal(BuiltinOpcode.MULT_INT,
+              newIncrement, Arrays.asList(oldStep, Arg.createIntLit(desiredUnroll))));
+
+          this.increment = Arg.createVar(newIncrement);
+        }
+
+        // Create a copy of the original loop body for reference
+        Block orig = loopBody;
+        this.loopBody = new Block(BlockType.LOOP_BODY, this);
+        Block curr = loopBody;
+        Var nextIter = loopVar; // Variable with current iter number
+
+        for (int i = 0; i < desiredUnroll; i++) {
+          // Put everything in nested block
+          NestedBlock nb = new NestedBlock(orig.clone(BlockType.NESTED_BLOCK, null));
+          curr.addContinuation(nb);
+          if (i != 0) {
+            // Replace references to the iteration counter
+            nb.replaceVars(Collections.singletonMap(this.loopVar.name(),
+                                 Arg.createVar(nextIter)), false, true);
+          }
+
+          if (i < desiredUnroll - 1) {
+            // Next iteration number and boolean check
+            Var lastIter = nextIter;
+            nextIter = new Var(Types.V_INT,
+                this.loopVar.name() + "@" + (i + 1), VarStorage.LOCAL,
+                DefType.LOCAL_COMPILER, null);
+
+            curr.addVariable(nextIter);
+            // Loop counter
+            curr.addInstruction(Builtin.createLocal(BuiltinOpcode.PLUS_INT,
+                nextIter, Arrays.asList(Arg.createVar(lastIter),
+                                        oldStep)));
+
+            boolean mustCheck = checkIter < 0 || i + 1 == checkIter;
+            if (mustCheck) {
+              Var nextIterCheck = new Var(Types.V_BOOL,
+                  this.loopVar.name() + "@" + (i + 1) + "_check",
+                  VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+              curr.addVariable(nextIterCheck);
+              curr.addInstruction(Builtin.createLocal(BuiltinOpcode.LTE_INT,
+                  nextIterCheck, Arrays.asList(Arg.createVar(nextIter),
+                                          this.end)));
+              // check to see if we should run next iteration
+              IfStatement ifSt = new IfStatement(Arg.createVar(nextIterCheck));
+              curr.addContinuation(ifSt);
+
+              curr = ifSt.getThenBlock();
+            }
+          } else {
+            curr = null;
+          }
+        }
+        this.desiredUnroll = 1;
+        return true;
+      }
+      return false;
+    }
+    
+    public boolean fuseable(RangeLoop o) {
+      // Make sure loop bounds line up, but also annotations since we
+      // want to respect any user annotations
+      return this.start.equals(o.start)
+          && this.increment.equals(o.increment)
+          && this.end.equals(o.end)
+          && this.desiredUnroll == o.desiredUnroll
+          && this.splitDegree == o.splitDegree
+          && (this.countVar == null) == (o.countVar == null);
+    }
+    
+    /**
+     * Fuse the other loop into this loop
+     */
+    public void fuseInto(RangeLoop o, boolean insertAtTop) {
+      Map<String, Arg> renames = new HashMap<String, Arg>();
+      // Update loop var in other loop
+      renames.put(o.loopVar.name(), Arg.createVar(this.loopVar));
+      if (countVar != null)
+        renames.put(o.countVar.name(), Arg.createVar(this.countVar));
+      o.replaceVars(renames, false, true);
+     
+      this.fuseIntoAbstract(o, insertAtTop);
+    }
+
+    @Override
+    public ExecContext childContext(ExecContext outerContext) {
+      if (splitDegree > 0) {
+        return ExecContext.CONTROL;
+      } else {
+        return outerContext;
+      }
+    }
+  }
+
+  public static class SwitchStatement extends Continuation {
+    private final ArrayList<Integer> caseLabels;
+    private final ArrayList<Block> caseBlocks;
+    private final Block defaultBlock;
+    private Arg switchVar;
+
+    public SwitchStatement(Arg switchVar, List<Integer> caseLabels) {
+      this(switchVar, new ArrayList<Integer>(caseLabels),
+          new ArrayList<Block>(), new Block(BlockType.CASE_BLOCK, null));
+
+      // number of non-default cases
+      int caseCount = caseLabels.size();
+      for (int i = 0; i < caseCount; i++) {
+        this.caseBlocks.add(new Block(BlockType.CASE_BLOCK, this));
+      }
+    }
+
+    private SwitchStatement(Arg switchVar,
+        ArrayList<Integer> caseLabels, ArrayList<Block> caseBlocks,
+        Block defaultBlock) {
+      super();
+      this.switchVar = switchVar;
+      this.caseLabels = caseLabels;
+      this.caseBlocks = caseBlocks;
+      this.defaultBlock = defaultBlock;
+      this.defaultBlock.setParent(this);
+    }
+
+    @Override
+    public SwitchStatement clone() {
+      return new SwitchStatement(switchVar,
+          new ArrayList<Integer>(this.caseLabels),
+          ICUtil.cloneBlocks(this.caseBlocks), this.defaultBlock.clone());
+
+    }
+
+    public List<Block> caseBlocks() {
+      return Collections.unmodifiableList(caseBlocks);
+    }
+
+    public Block getDefaultBlock() {
+      return this.defaultBlock;
+    }
+
+    @Override
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
+        throws UndefinedTypeException {
+      boolean hasDefault = !defaultBlock.isEmpty();
+      gen.startSwitch(switchVar, caseLabels, hasDefault);
+
+      for (Block b: this.caseBlocks) {
+        b.generate(logger, gen, info);
+        gen.endCase();
+      }
+
+      if (hasDefault) {
+        defaultBlock.generate(logger, gen, info);
+        gen.endCase();
+      }
+
+      gen.endSwitch();
+    }
+
+    @Override
+    public void prettyPrint(StringBuilder sb, String currentIndent) {
+      assert(this.caseBlocks.size() == this.caseLabels.size());
+      String caseIndent = currentIndent + indent;
+      String caseBlockIndent = caseIndent + indent;
+      sb.append(currentIndent + "switch (" + switchVar.toString() + ") {\n");
+      for (int i = 0; i < caseLabels.size(); i++) {
+        sb.append(caseIndent + "case " + caseLabels.get(i) + " {\n");
+        caseBlocks.get(i).prettyPrint(sb, caseBlockIndent);
+        sb.append(caseIndent + "}\n");
+      }
+      if (!defaultBlock.isEmpty()) {
+        sb.append(caseIndent + "default {\n");
+        defaultBlock.prettyPrint(sb, caseBlockIndent);
+        sb.append(caseIndent + "}\n");
+      }
+      sb.append(currentIndent + "}\n");
+    }
+
+    @Override
+    public List<Block> getBlocks() {
+      List<Block> result = new ArrayList<Block>();
+      result.addAll(this.caseBlocks);
+      result.add(defaultBlock);
+      return result;
+    }
+    
+    @Override
+    public void replaceConstructVars(Map<String, Arg> renames, 
+            boolean inputsOnly) {
+      switchVar = ICUtil.replaceOparg(renames, switchVar, false);
+    }
+
+    @Override
+    public ContinuationType getType() {
+      return ContinuationType.SWITCH_STATEMENT;
+    }
+
+    @Override
+    public boolean isAsync() {
+      return false;
+    }
+    
+    @Override
+    public boolean isLoop() {
+      return false;
+    }
+
+    @Override
+    public Collection<Var> requiredVars() {
+      if (switchVar.isVar()) {
+        return Arrays.asList(switchVar.getVar());
+      } else {
+        return Collections.emptyList();
+      }
+    }
+
+    @Override
+    public void removeVars(Set<String> removeVars) {
+      assert(!switchVar.isVar() 
+          || !removeVars.contains(switchVar.getVar().name()));
+      defaultBlock.removeVars(removeVars);
+      for (Block caseBlock: this.caseBlocks) {
+        caseBlock.removeVars(removeVars);
+      }
+
+    }
+
+    @Override
+    public Block branchPredict(Map<String, Arg> knownConstants) {
+      long val;
+      if (switchVar.isVar()) {
+        Arg switchVal = knownConstants.get(switchVar.getVar().name());
+        if (switchVal == null) {
+          return null;
+        }
+        assert(switchVal.isIntVal());
+        val = switchVal.getIntLit();
+      } else {
+        val = switchVar.getIntLit();
+      }
+      // Check cases
+      for (int i = 0; i < caseLabels.size(); i++) {
+        if (val == caseLabels.get(i)) {
+          return caseBlocks.get(i);
+        }
+      }
+      // Otherwise return (maybe empty) default block
+      return defaultBlock;
+    }
+
+    @Override
+    public boolean isNoop() {
+      for (Block b: caseBlocks) {
+        if (!b.isEmpty()) {
+          return false;
+        }
+      }
+      return this.defaultBlock.isEmpty();
+    }
+
+    @Override
+    public Collection<Var> getPassedInVars() {
+      return null;
+    }
+
+    @Override
+    public void addPassedInVar(Var variable) {
+      throw new STCRuntimeError("addPassedInVar not supported on switch");
+    }
+
+    @Override
+    public void removePassedInVar(Var variable) {
+      throw new STCRuntimeError("removePassedInVar not supported on " +
+          "switch");
+    }
+
+    @Override
+    public List<Var> constructDefinedVars() {
+      return null;
+    }
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
   }
 
   /**
@@ -846,7 +1806,11 @@ public class ICContinuations {
                         waitVars,
                         passedVars,
                         keepOpenVars,
+<<<<<<< HEAD
                         priority, mode, recursive, target);
+=======
+                        mode, recursive, target);
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
       assert(this.block.getParentCont() != null);
     }
 

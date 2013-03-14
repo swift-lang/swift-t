@@ -51,7 +51,10 @@ import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
+<<<<<<< HEAD
 import exm.stc.ic.tree.ICTree.BuiltinFunction;
+=======
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.RenameMode;
@@ -289,12 +292,18 @@ public class FunctionInline implements OptimizerPass {
   private void doInlining(Logger logger, Program program,
       Set<String> callSiteFunctions, MultiMap<String, String> inlineLocations, Map<String, Function> toInline) {
     for (Function f: program.getFunctions()) {
+<<<<<<< HEAD
       if (callSiteFunctions.contains(f.getName())) {
         doInlining(logger, program, f, f.getMainblock(), inlineLocations, toInline);
+=======
+      if (inlineLocations.contains(f.getName())) {
+        doInlining(logger, program, f.getName(), f.getMainblock(), toInline);
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
       }
     }
   }
 
+<<<<<<< HEAD
   private void doInlining(Logger logger, Program prog, Function contextFunction,
       Block block, MultiMap<String, String> inlineLocations, Map<String, Function> toInline) {
     // Recurse first to avoid visiting newly inlined continuations and doing
@@ -306,11 +315,16 @@ public class FunctionInline implements OptimizerPass {
       }
     }
     
+=======
+  private void doInlining(Logger logger, Program prog, String contextFunction,
+      Block block, Map<String, Function> toInline) {
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
     ListIterator<Instruction> it = block.instructionIterator();
     while (it.hasNext()) {
       Instruction inst = it.next();
       if (isFunctionCall(inst)) {
         FunctionCall fcall = (FunctionCall)inst;
+<<<<<<< HEAD
         if (toInline.containsKey(fcall.getFunctionName()) ||
                 alwaysInline.contains(fcall.getFunctionName())) {
           // Check that location is marked for inlining
@@ -324,6 +338,19 @@ public class FunctionInline implements OptimizerPass {
         }
       }
     }
+=======
+        if (toInline.containsKey(fcall.getFunctionName())) {
+          inlineCall(logger, prog, contextFunction, block, it, fcall,
+                     toInline.get(fcall.getFunctionName()));
+        }
+      }
+    }
+    for (Continuation c: block.getContinuations()) {
+      for (Block cb: c.getBlocks()) {
+        doInlining(logger, prog, contextFunction, cb, toInline);
+      }
+    }
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
   }
 
   /**
@@ -335,10 +362,15 @@ public class FunctionInline implements OptimizerPass {
    * @param toInline
    */
   private void inlineCall(Logger logger, Program prog,
+<<<<<<< HEAD
       Function contextFunction, Block block,
       ListIterator<Instruction> it, FunctionCall fnCall,
       Function toInline) {
     // Remove function call instruction
+=======
+      String contextFunction, Block block,
+      ListIterator<Instruction> it, FunctionCall inst, Function function) {
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
     it.remove();
     
     logger.debug("inlining " + toInline.getName() + " into " + contextFunction.getName());
@@ -381,6 +413,17 @@ public class FunctionInline implements OptimizerPass {
     
     Block insertBlock;
     ListIterator<Instruction> insertPos;
+<<<<<<< HEAD
+=======
+    // Create copy of function code so variables can be renamed 
+    Block inlineBlock = function.getMainblock().clone(BlockType.NESTED_BLOCK,
+                                                      null, null);
+    
+    chooseUniqueNames(prog, function, inlineBlock, replacements);
+    
+    inlineBlock.renameVars(inputRenames, true);
+    inlineBlock.renameVars(replacements, false);
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
     
     // rename vars
     chooseUniqueNames(logger, prog, contextFunction, inlineBlock, renames);
@@ -448,6 +491,7 @@ public class FunctionInline implements OptimizerPass {
     }
   }
 
+<<<<<<< HEAD
   private void updateName(Logger logger, Block block,
           Function targetFunction, Map<Var, Arg> replacements,
           Set<String> excludedNames, Var var) {
@@ -465,6 +509,37 @@ public class FunctionInline implements OptimizerPass {
   }
 
   private static class FuncCallFinder extends TreeWalker {
+=======
+  /**
+   * Set up renames for local variables in inline block
+   * @param inlineBlock
+   * @param replacements updated with new renames
+   */
+  private void chooseUniqueNames(Program prog,
+      Function f, Block inlineBlock,
+      Map<String, Arg> replacements) {
+    Set<String> excludedNames = new HashSet<String>();
+    excludedNames.addAll(prog.getGlobalConsts().keySet());
+    Deque<Block> blocks = new ArrayDeque<Block>();
+    blocks.add(inlineBlock);
+    // Walk block to find local vars
+    while(!blocks.isEmpty()) {
+      Block block = blocks.pop();
+      for (Var v: block.getVariables()) {
+        if (v.defType() != DefType.GLOBAL_CONST) {
+          // Choose unique name (including new names for this block)
+          String newName = f.getMainblock().uniqueVarName(v.name(), excludedNames);
+          Var newVar = new Var(v.type(), newName, v.storage(), v.defType(),
+                               v.mapping());
+          replacements.put(v.name(), Arg.createVar(newVar));
+          excludedNames.add(newName);
+        }
+      }
+    }
+  }
+
+  private static class FuncCallFinder implements TreeWalker {
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
 
     /**
      * Map of called function -> name of function in which call occurred.

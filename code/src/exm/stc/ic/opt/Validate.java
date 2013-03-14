@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /*
  * Copyright 2013 University of Chicago and Argonne National Laboratory
  *
@@ -21,12 +22,19 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+=======
+package exm.stc.ic.opt;
+
+import java.util.HashSet;
+import java.util.List;
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
+<<<<<<< HEAD
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Types;
@@ -79,6 +87,18 @@ public class Validate implements OptimizerPass {
     return new Validate(false, false, false);
   }
   
+=======
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.BlockType;
+import exm.stc.ic.tree.ICTree.Function;
+import exm.stc.ic.tree.ICTree.Program;
+
+public class Validate implements OptimizerPass {
+
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
   @Override
   public String getPassName() {
     return "Validate";
@@ -91,6 +111,7 @@ public class Validate implements OptimizerPass {
 
   @Override
   public void optimize(Logger logger, Program program) throws UserException {
+<<<<<<< HEAD
     if (checkVarPassing) {
       // Check visibility of vars without modifying IC
       FixupVariables.fixupProgram(logger, program, false);
@@ -100,17 +121,27 @@ public class Validate implements OptimizerPass {
       checkParentLinks(logger, program, fn);
       checkUniqueVarNames(logger, program, fn);
       checkVarInit(logger, program, fn);
+=======
+    for (Function fn : program.getFunctions()) {
+      checkParentLinks(logger, program, fn);
+      checkUniqueVarNames(logger, program, fn);
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
     }
   }
 
   /**
+<<<<<<< HEAD
    * Check that var names are unique within each function, and
    * that all references to variable have same attributes
+=======
+   * Check that var names are unique within each function
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
    * @param logger
    * @param program
    * @param fn
    */
   private void checkUniqueVarNames(Logger logger, Program program, Function fn) {
+<<<<<<< HEAD
     Map<String, Var> declared = new HashMap<String, Var>();
     for (Var global: program.getGlobalVars()) {
       declared.put(global.name(), global);
@@ -231,11 +262,37 @@ public class Validate implements OptimizerPass {
               "block: " + ca.var() + " in function " + fn.getName() + ". " +
               " Valid variables are: " + blockVars); 
         }
+=======
+    Set<String> usedNames = new HashSet<String>();
+    usedNames.addAll(program.getGlobalConsts().keySet());
+    usedNames.addAll(Var.nameList(fn.getInputList()));
+    usedNames.addAll(Var.nameList(fn.getOutputList()));
+    checkUniqueVarNames(logger, program, fn, fn.getMainblock(), usedNames);
+  }
+
+  private void checkUniqueVarNames(Logger logger, Program program, Function fn,
+          Block block, Set<String> usedNames) {
+    for (Var v: block.getVariables()) {
+      checkVarUnique(logger, program, fn, usedNames, v);
+    }
+    
+    for (Continuation c: block.getContinuations()) {
+      List<Var> constructDefined = c.constructDefinedVars();
+      if (constructDefined != null) {
+        for (Var v: constructDefined) {
+          checkVarUnique(logger, program, fn, usedNames, v);
+        }
+      }
+      for (Block inner: c.getBlocks()) { 
+        checkUniqueVarNames(logger, program, fn, inner,
+                            usedNames);
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
       }
     }
   }
 
   private void checkVarUnique(Logger logger, 
+<<<<<<< HEAD
           Function fn, Map<String, Var> declared, Var var) {
     if (var.defType() == DefType.GLOBAL_CONST) {
       Var declaredGlobal = declared.get(var.name());
@@ -251,6 +308,19 @@ public class Validate implements OptimizerPass {
                 + var.name() + " in function " + fn.getName());
     }
     declared.put(var.name(), var);
+=======
+          Program program, Function fn,
+          Set<String> usedNames, Var var) {
+    if (var.defType() == DefType.GLOBAL_CONST) {
+      if (program.lookupGlobalConst(var.name()) == null) 
+        throw new STCRuntimeError("Missing global constant: " + var.name());
+    } else {
+      if (usedNames.contains(var))
+        throw new STCRuntimeError("Duplicate variable name "
+                + var.name() + " in function " + fn.getName());
+    }
+    usedNames.add(var.name());
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
   }
 
   /**
@@ -265,7 +335,11 @@ public class Validate implements OptimizerPass {
     checkParentLinks(logger, program, fn, mainBlock);
   }
   
+<<<<<<< HEAD
   private void checkParentLinks(Logger logger, Program prog,
+=======
+  private static void checkParentLinks(Logger logger, Program prog,
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
           Function fn, Block block) {
     Function fn2 = block.getParentFunction();
     assert(fn2 == fn) : 
@@ -273,10 +347,13 @@ public class Validate implements OptimizerPass {
       + (fn2 == null ? null : fn2.getName());
     
     for (Continuation c: block.getContinuations()) {
+<<<<<<< HEAD
       if (noNestedBlocks && c.getType() == ContinuationType.NESTED_BLOCK) {
         throw new STCRuntimeError("Nested block present");
       }
       
+=======
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
       assert(c.parent() == block) : "Bad continuation parent for " + c 
         + "\n\n\nis " + c.parent()
         + "\n\n\nbut should be: " + block;
@@ -290,6 +367,7 @@ public class Validate implements OptimizerPass {
       }
     }
   }
+<<<<<<< HEAD
 
   /**
    * Check alias and vars are initialized before being read. 
@@ -402,4 +480,6 @@ public class Validate implements OptimizerPass {
                     var + " in " + context.toString());
     }
   }
+=======
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
 }

@@ -360,11 +360,17 @@ public class WaitCoalescer implements OptimizerPass {
         } else {
           waitMode = WaitMode.TASK_DISPATCH;
         }
+<<<<<<< HEAD
         
         WaitStatement wait = new WaitStatement(
                 fn.getName() + "-" + i.shortOpName(),
                 waitVars, PassedVar.NONE, Var.NONE,
                 i.getPriority(), waitMode, req.recursiveClose, req.mode);
+=======
+        WaitStatement wait = new WaitStatement(fn.getName() + "-optinserted",
+                waitVars, req.in, new ArrayList<Var>(0), waitMode,
+                true, req.mode);
+>>>>>>> 0a77064... Add infrastructure to choose unique var names without appending sequential number.
         block.addContinuation(wait);
         
         List<Instruction> instBuffer = new ArrayList<Instruction>();
