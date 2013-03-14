@@ -31,8 +31,6 @@ echo "Benchmark name $benchname"
 tcl=$TMPDIR/$benchname.tcl
 out=$TMPDIR/$benchname.out
 ic=$TMPDIR/$benchname.ic
-time=$benchname.time
-counts=$benchname.counts
 
 STC_FLAGS=
 if [[ ! -z "$REFCOUNT" && "$REFCOUNT" -ne 0 ]]; then
@@ -59,7 +57,10 @@ if [[ ! -z "$PACT_TRIAL" ]] ; then
   UNIQUIFIER=.$PACT_TRIAL
 fi
 
+time=$benchname.time$UNIQUIFIER
+counts=$benchname.counts$UNIQUIFIER
 PROCS=4
+
 if [[ ! -z "$PACT_PAR" ]] ; then
   PROCS=$PACT_PAR
 fi
@@ -69,17 +70,16 @@ if [[ $mode == TIME ]]; then
   export TURBINE_LOG=0
   export TURBINE_DEBUG=0
   export ADLB_DEBUG=0
-  /usr/bin/time -o $times$UNIQUIFIER turbine -n$PROCS $tcl "$@"
+  /usr/bin/time -o $time turbine -n$PROCS $tcl "$@"
   rc=$?
   cat $time
 elif [[ $mode == OPCOUNT ]]; then
-  time turbine -n$PROCS $tcl "$@" | $scriptdir/opcounts.py > $counts$UNIQUIFIER
+  time turbine -n$PROCS $tcl "$@" | $scriptdir/opcounts.py > $counts
   rc=$?
   cat $counts
 else
   time turbine -n$PROCS $tcl "$@"
   rc=$?
-  cat $counts
 fi
 
 if [ "$?" -ne 0 ]; then

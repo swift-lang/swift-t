@@ -18,7 +18,9 @@ main {
   printf("trace: The bounds are: %i, %i\n", N, M);
   printf("trace: The sleeptime is: %f\n", sleepTime);
 
+  @sync
   foreach i in [1:N] {
+    @sync
     foreach j in [1:M] {
       //TODO: variable duration - randomise?
       work(i, j, sleepTime);
