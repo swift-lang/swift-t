@@ -49,7 +49,16 @@ for file in files:
     catVals[cat] = l
 
 for cat in order:
-  print cat,
-  for cv in catVals[cat]:
-    print "&", cv,
+  print cat, "&",
+
+print "\\\\"
+
+for level in range(len(files)):
+  print level + 1,
+  for cat in order:
+    print "&", '%.1f' % (float(catVals[cat][level])/1000) ,
   print "\\\\"
+    #print cat,
+    #for cv in catVals[cat]:
+    #  print "&", cv,
+    #print "\\\\"
