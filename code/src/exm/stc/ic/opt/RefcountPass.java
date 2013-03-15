@@ -177,13 +177,13 @@ public class RefcountPass implements OptimizerPass {
       Instruction inst = instIt.next();
       updateInstructionRefCount(inst, readIncrements, writeIncrements);
       if (!cancelEnabled) {
-        dumpIncrements(instIt, readIncrements, writeIncrements);
+        dumpIncrements(inst, instIt, readIncrements, writeIncrements);
       }
     }
     for (Continuation cont : block.getContinuations()) {
       addIncrementsForCont(cont, readIncrements, writeIncrements);
       if (!cancelEnabled) {
-        dumpIncrements(instIt, readIncrements, writeIncrements);
+        dumpIncrements(null, instIt, readIncrements, writeIncrements);
       }
     }
 
@@ -205,13 +205,18 @@ public class RefcountPass implements OptimizerPass {
    * @param readIncrements
    * @param writeIncrements
    */
-  private void dumpIncrements(ListIterator<Instruction> instIt,
+  private void dumpIncrements(Instruction inst,
+      ListIterator<Instruction> instIt,
       Counters<Var> readIncrements, Counters<Var> writeIncrements) {
     for (Entry<Var, Long> e: readIncrements.entries()) {
       Var var = e.getKey();
       Long incr = e.getValue();
       if (incr > 0) {
-        insertIncrBefore(instIt, var, incr, RefCountType.READERS);
+        if (inst != null && !inst.getInitializedAliases().contains(var)) {
+          insertIncrBefore(instIt, var, incr, RefCountType.READERS);
+        } else {
+          insertIncrAfter(instIt, var, incr, RefCountType.READERS);
+        }
       } else if (incr < 0) {
         insertDecrAfter(instIt, var, incr * -1, RefCountType.READERS);
       }
@@ -221,7 +226,11 @@ public class RefcountPass implements OptimizerPass {
       Var var = e.getKey();
       Long incr = e.getValue();
       if (incr > 0) {
-        insertIncrBefore(instIt, var, incr, RefCountType.WRITERS);
+        if (inst != null && !inst.getInitializedAliases().contains(var)) {
+          insertIncrBefore(instIt, var, incr, RefCountType.WRITERS);
+        } else {
+          insertIncrAfter(instIt, var, incr, RefCountType.WRITERS);
+        }
       } else if (incr < 0) {
         insertDecrAfter(instIt, var, incr * -1, RefCountType.WRITERS);
       }
@@ -232,7 +241,16 @@ public class RefcountPass implements OptimizerPass {
 
   private void insertIncrBefore(ListIterator<Instruction> instIt, Var var,
       Long val, RefCountType type) {
-    instIt.previous();
+    insertIncr(instIt, var, val, type, true);
+  }
+  private void insertIncrAfter(ListIterator<Instruction> instIt, Var var,
+      Long val, RefCountType type) {
+    insertIncr(instIt, var, val, type, false);
+  }
+  private void insertIncr(ListIterator<Instruction> instIt, Var var,
+      Long val, RefCountType type, boolean before) {
+    if (before)
+      instIt.previous();
     Instruction inst;
     Arg amount = Arg.createIntLit(val);
     if (type == RefCountType.READERS) {
@@ -242,7 +260,8 @@ public class RefcountPass implements OptimizerPass {
       inst = TurbineOp.incrWriters(var, amount);
     }
     instIt.add(inst);
-    instIt.next();
+    if (before)
+      instIt.next();
   }
   
   private void insertDecrAfter(ListIterator<Instruction> instIt, Var var,
