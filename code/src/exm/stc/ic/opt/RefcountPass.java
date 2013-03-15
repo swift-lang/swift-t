@@ -188,7 +188,9 @@ public class RefcountPass implements OptimizerPass {
     }
 
     updateDecrementCounts(block, fn, readIncrements, writeIncrements);
-    dumpDecrements(block, readIncrements, writeIncrements);
+    if (!cancelEnabled()) {
+      dumpDecrements(block, readIncrements, writeIncrements);
+    }
     
     if (cancelEnabled()) {
       // Second put saved refcounts back into IC
@@ -268,6 +270,8 @@ public class RefcountPass implements OptimizerPass {
       Arg amount = Arg.createIntLit(e.getValue() * -1);
       block.addCleanup(var, TurbineOp.decrWriters(var, amount));
     }
+    readIncrements.resetAll();
+    writeIncrements.resetAll();
   }
 
   private void updateBlockRefcounting(Logger logger, Function fn, Block block,
