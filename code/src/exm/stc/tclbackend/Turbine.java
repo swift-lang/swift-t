@@ -99,6 +99,7 @@ class Turbine
   private static final Token RETRIEVE_STRING =
       new Token("turbine::retrieve_string");
   private static final Token RETRIEVE_BLOB = new Token("turbine::retrieve_blob");
+  private static final Token CACHED = new Token("CACHED");
   private static final Token STACK_LOOKUP =
       new Token("turbine::stack_lookup");
   static final String LOCAL_STACK_NAME = "stack";
@@ -378,17 +379,17 @@ class Turbine
 
   public static SetVariable integerDecrGet(String target, Value src,
       Expression decr) {
-    return new SetVariable(target, new Square(RETRIEVE_INTEGER, src, decr));
+    return new SetVariable(target, new Square(RETRIEVE_INTEGER, src, CACHED, decr));
   }
 
   public static SetVariable floatDecrGet(String target, Value src,
       Expression decr) {
-    return new SetVariable(target, new Square(RETRIEVE_FLOAT, src, decr));
+    return new SetVariable(target, new Square(RETRIEVE_FLOAT, src, CACHED, decr));
   }
   
   public static SetVariable stringDecrGet(String target, Value src,
       Expression decr) {
-    return new SetVariable(target, new Square(RETRIEVE_STRING, src, decr));
+    return new SetVariable(target, new Square(RETRIEVE_STRING, src, CACHED, decr));
   }
 
   public static SetVariable blobDecrGet(String target, Value src,
