@@ -1622,8 +1622,8 @@ public class TurbineGenerator implements CompilerBackend
       pointStack.peek().append(buildIncReaders(vars, incr, false));
     }
 
-    private void decrementReaders(List<Var> vars, Expression incr) {
-      incrementReaders(vars, incr);
+    private void decrementReaders(List<Var> vars, Expression decr) {
+      pointStack.peek().append(buildIncReaders(vars, decr, true));
     }
 
     /**
