@@ -342,4 +342,13 @@ namespace eval turbine {
         after [ expr round($secs_val * 1000) ]
         store_void $output
     }
+
+    # Busy wait for a number of seconds.  Up to microsecond precision
+    proc spin { time_s } {
+        set us [ expr round($time_s * 1000000) ]
+        set start [ clock microseconds ]
+        while { [ clock microseconds ] < $start + $us } {
+            # Spin
+        }
+    }
 }
