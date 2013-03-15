@@ -36,6 +36,10 @@ public class Counters<K> {
     map.remove(key);
   }
 
+  public void resetAll() {
+    map.clear();
+  }
+  
   public void merge(Counters<K> other) {
     for (Entry<K, Long> e: other.entries()) {
       add(e.getKey(), e.getValue());

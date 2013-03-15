@@ -170,20 +170,82 @@ public class RefcountPass implements OptimizerPass {
   private void fixBlockRefCounting(Logger logger, Function fn, Block block,
       Counters<Var> readIncrements, Counters<Var> writeIncrements,
       Set<Var> parentAssignedAliasVars) {
+    boolean cancelEnabled = cancelEnabled();
     // First collect up all required reference counting ops in block
-    for (Instruction inst : block.getInstructions()) {
+    ListIterator<Instruction> instIt = block.instructionIterator();
+    while (instIt.hasNext()) {
+      Instruction inst = instIt.next();
       updateInstructionRefCount(inst, readIncrements, writeIncrements);
+      if (!cancelEnabled) {
+        dumpIncrements(instIt, readIncrements, writeIncrements);
+      }
     }
     for (Continuation cont : block.getContinuations()) {
       addIncrementsForCont(cont, readIncrements, writeIncrements);
+      if (!cancelEnabled) {
+        dumpIncrements(instIt, readIncrements, writeIncrements);
+      }
     }
 
     updateDecrementCounts(block, fn, readIncrements, writeIncrements);
-
+    dumpDecrements(block, readIncrements, writeIncrements);
     
-    // Second put them back into IC
-    updateBlockRefcounting(logger, fn, block, readIncrements, writeIncrements,
+    if (cancelEnabled()) {
+      // Second put saved refcounts back into IC
+      updateBlockRefcounting(logger, fn, block, readIncrements, writeIncrements,
         parentAssignedAliasVars);
+    }
+  }
+
+  /**
+   * Insert reference increments in place
+   * @param instIt
+   * @param readIncrements
+   * @param writeIncrements
+   */
+  private void dumpIncrements(ListIterator<Instruction> instIt,
+      Counters<Var> readIncrements, Counters<Var> writeIncrements) {
+    for (Entry<Var, Long> e: readIncrements.entries()) {
+      Var var = e.getKey();
+      Arg amount = Arg.createIntLit(e.getValue());
+      insertIncrBefore(instIt, var, amount, RefCountType.READERS);
+    }
+    
+    for (Entry<Var, Long> e: writeIncrements.entries()) {
+      Var var = e.getKey();
+      Arg amount = Arg.createIntLit(e.getValue());
+      insertIncrBefore(instIt, var, amount, RefCountType.WRITERS);
+    }
+    readIncrements.resetAll();
+    writeIncrements.resetAll();
+  }
+
+  private void insertIncrBefore(ListIterator<Instruction> instIt, Var var,
+      Arg amount, RefCountType type) {
+    instIt.previous();
+    Instruction inst;
+    if (type == RefCountType.READERS) {
+      inst = TurbineOp.incrRef(var, amount);
+    } else {
+      assert(type == RefCountType.WRITERS);
+      inst = TurbineOp.incrWriters(var, amount);
+    }
+    instIt.add(inst);
+    instIt.next();
+  }
+
+  private void dumpDecrements(Block block,
+      Counters<Var> readIncrements, Counters<Var> writeIncrements) {
+    for (Entry<Var, Long> e: readIncrements.entries()) {
+      Var var = e.getKey();
+      Arg amount = Arg.createIntLit(e.getValue() * -1);
+      block.addCleanup(var, TurbineOp.decrRef(var, amount));
+    }
+    for (Entry<Var, Long> e: writeIncrements.entries()) {
+      Var var = e.getKey();
+      Arg amount = Arg.createIntLit(e.getValue() * -1);
+      block.addCleanup(var, TurbineOp.decrWriters(var, amount));
+    }
   }
 
   private void updateBlockRefcounting(Logger logger, Function fn, Block block,
