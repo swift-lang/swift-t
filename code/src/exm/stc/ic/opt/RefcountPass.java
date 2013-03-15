@@ -207,23 +207,32 @@ public class RefcountPass implements OptimizerPass {
       Counters<Var> readIncrements, Counters<Var> writeIncrements) {
     for (Entry<Var, Long> e: readIncrements.entries()) {
       Var var = e.getKey();
-      Arg amount = Arg.createIntLit(e.getValue());
-      insertIncrBefore(instIt, var, amount, RefCountType.READERS);
+      Long incr = e.getValue();
+      if (incr > 0) {
+        insertIncrBefore(instIt, var, incr, RefCountType.READERS);
+      } else if (incr < 0) {
+        insertDecrAfter(instIt, var, incr * -1, RefCountType.READERS);
+      }
     }
     
     for (Entry<Var, Long> e: writeIncrements.entries()) {
       Var var = e.getKey();
-      Arg amount = Arg.createIntLit(e.getValue());
-      insertIncrBefore(instIt, var, amount, RefCountType.WRITERS);
+      Long incr = e.getValue();
+      if (incr > 0) {
+        insertIncrBefore(instIt, var, incr, RefCountType.WRITERS);
+      } else if (incr < 0) {
+        insertDecrAfter(instIt, var, incr * -1, RefCountType.WRITERS);
+      }
     }
     readIncrements.resetAll();
     writeIncrements.resetAll();
   }
 
   private void insertIncrBefore(ListIterator<Instruction> instIt, Var var,
-      Arg amount, RefCountType type) {
+      Long val, RefCountType type) {
     instIt.previous();
     Instruction inst;
+    Arg amount = Arg.createIntLit(val);
     if (type == RefCountType.READERS) {
       inst = TurbineOp.incrRef(var, amount);
     } else {
@@ -232,6 +241,19 @@ public class RefcountPass implements OptimizerPass {
     }
     instIt.add(inst);
     instIt.next();
+  }
+  
+  private void insertDecrAfter(ListIterator<Instruction> instIt, Var var,
+      Long val, RefCountType type) {
+    Instruction inst;
+    Arg amount = Arg.createIntLit(val);
+    if (type == RefCountType.READERS) {
+      inst = TurbineOp.decrRef(var, amount);
+    } else {
+      assert(type == RefCountType.WRITERS);
+      inst = TurbineOp.decrWriters(var, amount);
+    }
+    instIt.add(inst);
   }
 
   private void dumpDecrements(Block block,
