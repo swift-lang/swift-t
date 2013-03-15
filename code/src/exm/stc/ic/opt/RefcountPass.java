@@ -177,13 +177,14 @@ public class RefcountPass implements OptimizerPass {
       Instruction inst = instIt.next();
       updateInstructionRefCount(inst, readIncrements, writeIncrements);
       if (!cancelEnabled) {
-        dumpIncrements(inst, instIt, readIncrements, writeIncrements);
+        dumpIncrements(inst, block, instIt, readIncrements, writeIncrements);
       }
     }
     for (Continuation cont : block.getContinuations()) {
       addIncrementsForCont(cont, readIncrements, writeIncrements);
       if (!cancelEnabled) {
-        dumpIncrements(null, instIt, readIncrements, writeIncrements);
+        dumpIncrements(null, block, block.instructionEndIterator(), readIncrements,
+                             writeIncrements);
       }
     }
 
@@ -206,7 +207,7 @@ public class RefcountPass implements OptimizerPass {
    * @param writeIncrements
    */
   private void dumpIncrements(Instruction inst,
-      ListIterator<Instruction> instIt,
+      Block block, ListIterator<Instruction> instIt,
       Counters<Var> readIncrements, Counters<Var> writeIncrements) {
     for (Entry<Var, Long> e: readIncrements.entries()) {
       Var var = e.getKey();
@@ -218,7 +219,7 @@ public class RefcountPass implements OptimizerPass {
           insertIncrAfter(instIt, var, incr, RefCountType.READERS);
         }
       } else if (incr < 0) {
-        insertDecrAfter(instIt, var, incr * -1, RefCountType.READERS);
+        insertDecrAfter(block, instIt, var, incr * -1, RefCountType.READERS);
       }
     }
     
@@ -232,7 +233,7 @@ public class RefcountPass implements OptimizerPass {
           insertIncrAfter(instIt, var, incr, RefCountType.WRITERS);
         }
       } else if (incr < 0) {
-        insertDecrAfter(instIt, var, incr * -1, RefCountType.WRITERS);
+        insertDecrAfter(block, instIt, var, incr * -1, RefCountType.WRITERS);
       }
     }
     readIncrements.resetAll();
@@ -264,7 +265,8 @@ public class RefcountPass implements OptimizerPass {
       instIt.next();
   }
   
-  private void insertDecrAfter(ListIterator<Instruction> instIt, Var var,
+  private void insertDecrAfter(
+      Block block, ListIterator<Instruction> instIt, Var var,
       Long val, RefCountType type) {
     Instruction inst;
     Arg amount = Arg.createIntLit(val);
@@ -274,7 +276,7 @@ public class RefcountPass implements OptimizerPass {
       assert(type == RefCountType.WRITERS);
       inst = TurbineOp.decrWriters(var, amount);
     }
-    instIt.add(inst);
+    block.addCleanup(var, inst);
   }
 
   private void dumpDecrements(Block block,
@@ -377,33 +379,35 @@ public class RefcountPass implements OptimizerPass {
       }
     }
 
-    ListIterator<CleanupAction> caIt = block.cleanupIterator();
-    while (caIt.hasNext()) {
-      CleanupAction ca = caIt.next();
-      Instruction action = ca.action();
-      switch (action.op) {
-      case DECR_REF:
-      case DECR_WRITERS: {
-        Var decrVar = action.getOutput(0);
-        Arg amount = action.getInput(0);
-        if (amount.isIntVal()) {
-          // Remove instructions where counts is integer value
-          Counters<Var> increments;
-          if (action.op == Opcode.DECR_REF) {
-            increments = readIncrements;
-            throw new STCRuntimeError("Shouldn't be here" + action);
-          } else {
-            assert (action.op == Opcode.DECR_WRITERS);
-            increments = writeIncrements;
+    if (cancelEnabled()) {
+      ListIterator<CleanupAction> caIt = block.cleanupIterator();
+      while (caIt.hasNext()) {
+        CleanupAction ca = caIt.next();
+        Instruction action = ca.action();
+        switch (action.op) {
+        case DECR_REF:
+        case DECR_WRITERS: {
+          Var decrVar = action.getOutput(0);
+          Arg amount = action.getInput(0);
+          if (amount.isIntVal()) {
+            // Remove instructions where counts is integer value
+            Counters<Var> increments;
+            if (action.op == Opcode.DECR_REF) {
+              increments = readIncrements;
+              throw new STCRuntimeError("Shouldn't be here " + action);
+            } else {
+              assert (action.op == Opcode.DECR_WRITERS);
+              increments = writeIncrements;
+            }
+            increments.decrement(decrVar, amount.getIntLit());
+            caIt.remove();
           }
-          increments.decrement(decrVar, amount.getIntLit());
-          caIt.remove();
+          break;
         }
-        break;
-      }
-      default:
-        // do nothing
-        break;
+        default:
+          // do nothing
+          break;
+        }
       }
     }
   }

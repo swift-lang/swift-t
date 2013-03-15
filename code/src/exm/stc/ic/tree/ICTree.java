@@ -881,6 +881,10 @@ public class ICTree {
     public ListIterator<Instruction> instructionIterator(int i) {
       return instructions.listIterator(i);
     }
+
+    public ListIterator<Instruction> instructionEndIterator() {
+      return instructions.listIterator(instructions.size());
+    }
     
     public ListIterator<CleanupAction> cleanupIterator() {
       return cleanupActions.listIterator();
