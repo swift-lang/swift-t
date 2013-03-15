@@ -40,6 +40,15 @@ public class PassedVar {
     return res;
   }
   
+  public static boolean contains(Collection<PassedVar> vars, Var v) {
+    for (PassedVar pv: vars) {
+      if (pv.var.equals(v)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
   @Override
   public String toString() {
     String res = var.name() + "<";

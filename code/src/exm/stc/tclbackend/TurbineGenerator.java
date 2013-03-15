@@ -1842,7 +1842,9 @@ public class TurbineGenerator implements CompilerBackend
     
     // recursively split the range
     ArrayList<PassedVar> splitUsedVars = new ArrayList<PassedVar>(usedVars);
-    splitUsedVars.add(new PassedVar(arrayVar, false));
+    if (!PassedVar.contains(splitUsedVars, arrayVar)) {
+      splitUsedVars.add(new PassedVar(arrayVar, false));
+    }
     startRangeSplit(procName, splitUsedVars, perIterIncrs, splitDegree, 
                     leafDegree, LiteralInt.ZERO, lastIndex, LiteralInt.ONE);
 
