@@ -1219,7 +1219,7 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
   /* Only decrement if refcounting enabled */
   if  (read_refcount_enabled && decr) {
     decr_amount = 0;
-    rc = Tcl_GetLongFromObj(interp, objv[2], &id);
+    rc = Tcl_GetLongFromObj(interp, objv[2], &decr_amount);
     TCL_CHECK_MSG(rc, "requires id!");
   }
 
