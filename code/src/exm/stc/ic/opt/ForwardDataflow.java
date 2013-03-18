@@ -871,10 +871,8 @@ public class ForwardDataflow implements OptimizerPass {
     }
     
     // Rewind argument iterator to instruction before replaced one
-    if (inst == insertPoint) {
+    if (insts == insertPoint) {
       ICUtil.rewindIterator(insts, alt.size());
-    } else {
-      insts.previous();
     }
     return true;
   }
