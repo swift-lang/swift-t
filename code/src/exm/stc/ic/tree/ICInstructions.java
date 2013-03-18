@@ -512,7 +512,7 @@ public class ICInstructions {
     }
     
     private TurbineOp(Opcode op, Var output, Arg ...inputs) {
-      this(op, Collections.singletonList(output), Arrays.asList(inputs));
+      this(op, Arrays.asList(output), Arrays.asList(inputs));
     }
     
     /**
