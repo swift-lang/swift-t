@@ -886,6 +886,15 @@ public class ICContinuations {
       return waitVars2;
     }
     
+    public static WaitVar find(List<WaitVar> waitVars,
+        Var var) {
+      for (WaitVar wv: waitVars) {
+        if (var.equals(wv.var))
+          return wv;
+      }
+      return null;
+    }
+
     /**
      * For pretty printing
      */

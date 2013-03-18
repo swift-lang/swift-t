@@ -56,7 +56,7 @@ public class ContinuationFusion extends FunctionOptimizerPass {
 
   @Override
   public void optimize(Logger logger, Function f) {
-    fuseRecursive(logger, f, f.getMainblock());
+    fuseRecursive(logger, f, f.mainBlock());
   }
 
   private static void fuseRecursive(Logger logger, Function f, Block block) {

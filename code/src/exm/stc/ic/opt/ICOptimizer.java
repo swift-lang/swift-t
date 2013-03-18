@@ -155,6 +155,9 @@ public class ICOptimizer {
       // ForwardDataflow tends to generate most dead code
       pipe.addPass(new DeadCodeEliminator());
       
+      // ForwardDataflow adds blocking vars to function
+      pipe.addPass(new FunctionSignature());
+      
       // Do this after forward dataflow to improve odds of fusing things
       // one common subexpression elimination has happened
       pipe.addPass(new ContinuationFusion());

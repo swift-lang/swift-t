@@ -43,7 +43,7 @@ public class FlattenNested extends FunctionOptimizerPass {
    */
   @Override
   public void optimize(Logger logger, Function f) {
-    flattenNestedBlocks(f.getMainblock());
+    flattenNestedBlocks(f.mainBlock());
   }
   
   public static void flattenNestedBlocks(Block block) {

@@ -54,9 +54,7 @@ public class WrapUtil {
       // The result will be a value
       // Use the OPT_VALUE_VAR_PREFIX to make sure we don't clash with
       //  something inserted by the frontend (this caused problems before)
-      Var value_v = new Var(value_t,
-          valName,
-          VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+      Var value_v = createValueVar(valName, value_t);
       block.addVariable(value_v);
       instBuffer.add(ICInstructions.retrieveValueOf(value_v, var));
       
@@ -77,13 +75,19 @@ public class WrapUtil {
       throw new STCRuntimeError("shouldn't be possible to get here");
     }
   }
+
+  public static Var createValueVar(String name, Type type) {
+    Var value_v = new Var(type,
+        name,
+        VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+    return value_v;
+  }
   
   public static Var fetchCurrentValueOf(Block block,
       List<Instruction> instBuffer, Var var, String valName) {
     assert(Types.isScalarUpdateable(var.type()));
     Type value_t = Types.derefResultType(var.type());
-    Var value_v = new Var(value_t,
-        valName, VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+    Var value_v = createValueVar(valName, value_t);
 
     block.addVariable(value_v);
     instBuffer.add(TurbineOp.latestValue(value_v, var));

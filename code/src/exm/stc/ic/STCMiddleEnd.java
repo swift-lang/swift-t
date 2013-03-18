@@ -138,7 +138,7 @@ public class STCMiddleEnd {
     assert(currFunction == null);
     currFunction = new Function(functionName, iList, oList, mode);
     program.addFunction(currFunction);
-    blockStack.add(currFunction.getMainblock());
+    blockStack.add(currFunction.mainBlock());
   }
 
   public void endFunction() {
@@ -328,7 +328,7 @@ public class STCMiddleEnd {
     assert(priority == null || priority.isImmediateInt());
     currBlock().addInstruction(
         FunctionCall.createBuiltinCall(
-            function, inputs, outputs, priority));
+            function, Var.asArgList(inputs), outputs, priority));
   }
   
   public void builtinLocalFunctionCall(String functionName,
@@ -347,7 +347,7 @@ public class STCMiddleEnd {
     }
     currBlock().addInstruction(
           FunctionCall.createFunctionCall(
-              function, inputs, outputs, mode, priority));
+              function, Var.asArgList(inputs), outputs, mode, priority));
   }
 
   public void runExternal(String cmd, List<Arg> args, List<Arg> inFiles,
@@ -800,7 +800,7 @@ public class STCMiddleEnd {
                   waitVars, PassedVar.NONE, Var.NONE, null,
                   waitMode, true, mode);
     
-    fn.getMainblock().addContinuation(wait);
+    fn.mainBlock().addContinuation(wait);
     Block block = wait.getBlock();
     
     List<Instruction> instBuffer = new ArrayList<Instruction>();

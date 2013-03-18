@@ -28,7 +28,8 @@ O1_OPTS=("constant-fold" "dead-code-elim"
                     "flatten-nested" "shared-constants"
                     "forward-dataflow" "unroll-loops"
                      "controlflow-fusion" )
-O2_OPTS=("expand-dataflow-ops" "wait-coalesce" "hoisting" "expand-loops")
+O2_OPTS=("expand-dataflow-ops" "wait-coalesce" "hoisting" "expand-loops"
+         "function-signature")
 O3_OPTS=("pipeline" "function-inline" "reorder-insts" "algebra" "full-unroll")
 EXPERIMENTAL_OPTS=()
 
@@ -75,6 +76,9 @@ function get_compiler_opt_name() {
                     return 0
                     ;;
         function-inline) echo "stc.opt.function-inline"
+                    return 0;
+                    ;;
+        function-signature) echo "stc.opt.function-signature"
                     return 0;
                     ;;
         hoisting) echo "stc.opt.hoist"

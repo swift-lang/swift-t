@@ -188,7 +188,7 @@ public class UniqueVarNames implements OptimizerPass {
       declarations.addDeclaration(v);
     }
   
-    makeVarNamesUnique(in.getMainblock(), declarations, new HierarchicalMap<Var, Arg>());
+    makeVarNamesUnique(in.mainBlock(), declarations, new HierarchicalMap<Var, Arg>());
   }
   
   private static class Vars {

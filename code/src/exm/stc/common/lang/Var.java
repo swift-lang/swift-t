@@ -343,6 +343,15 @@ public class Var implements Comparable<Var> {
     return Arg.createVar(this);
   }
 
+  public static List<Arg> asArgList(List<Var> inputs) {
+    ArrayList<Arg> res = new ArrayList<Arg>(inputs.size());
+    for (Var v: inputs) {
+      res.add(v.asArg());
+    }
+    return res;
+    
+  }
+
   public List<Var> asList() {
     return Collections.singletonList(this);
   }

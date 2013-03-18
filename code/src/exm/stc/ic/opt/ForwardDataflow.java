@@ -38,7 +38,6 @@ import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.CopyOnWriteSmallSet;
@@ -252,7 +251,7 @@ public class ForwardDataflow implements OptimizerPass {
           // Found a value, now see if it is actually visible
           if (!passRequired) {
             return loc;
-          } else if (cantPass(loc.type())) {
+          } else if (!Semantics.canPassToChildTask(loc.type())) {
             return null;
           } else {
             return loc;
@@ -452,9 +451,6 @@ public class ForwardDataflow implements OptimizerPass {
     }
   }
 
-  public static boolean cantPass(Type t) {
-    return t.assignableTo(Types.V_BLOB) || t.assignableTo(Types.V_FILE);
-  }
 
   /**
    * Do a kind of dataflow analysis where we try to identify which futures are
@@ -476,7 +472,7 @@ public class ForwardDataflow implements OptimizerPass {
         logger.trace("closed variable analysis on function " + f.getName()
             + " pass " + pass);
         changes = forwardDataflow(logger, program, f, ExecContext.CONTROL,
-            f.getMainblock(), null, null, null);
+            f.mainBlock(), null, null, null);
         
         liftWait(logger, program, f);
         pass++;
@@ -501,7 +497,7 @@ public class ForwardDataflow implements OptimizerPass {
       // Can only do this optimization if the function runs asynchronously
       return;
     }
-    Block main = f.getMainblock();
+    Block main = f.mainBlock();
     List<WaitVar> blockingVariables = findBlockingVariables(main);
     if (blockingVariables != null) {
       List<Var> locals = f.getInputList();
@@ -588,7 +584,7 @@ public class ForwardDataflow implements OptimizerPass {
       InvalidWriteException {
     if (cv == null) {
       cv = new State(logger);
-      for (WaitVar wv: f.getBlockingInputs()) {
+      for (WaitVar wv: f.blockingInputs()) {
         cv.close(wv.var, false);
       }
       for (Var v: f.getInputList()) {
@@ -837,7 +833,7 @@ public class ForwardDataflow implements OptimizerPass {
       // If we inserted a wait, need to consider if local value can
       // be passed into new scope
       if (maybeVal != null &&
-            (noWaitRequired || !cantPass(maybeVal.type()))) {
+            (noWaitRequired || Semantics.canPassToChildTask(maybeVal.type()))) {
         /*
          * this variable might not actually be passed through continuations to
          * the current scope, so we might have temporarily made the IC
@@ -891,7 +887,7 @@ public class ForwardDataflow implements OptimizerPass {
     ArrayList<Var> toPurge = new ArrayList<Var>();
     for (Entry<Var, Arg> e: replacements.entrySet()) {
       Arg val = e.getValue();
-      if (val.isVar() && cantPass(val.getVar().type())) {
+      if (val.isVar() && !Semantics.canPassToChildTask(val.getVar().type())) {
         toPurge.add(e.getKey());
       }
     }

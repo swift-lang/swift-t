@@ -167,6 +167,14 @@ public class ICTree {
       return Collections.unmodifiableList(this.functions);
     }
     
+    public Set<String> getFunctionNames() {
+      Set<String> res = new HashSet<String>();
+      for (Function f: functions) {
+        res.add(f.getName());
+      }
+      return res;
+    }
+
     public ListIterator<Function> functionIterator() {
       return functions.listIterator();
     }
@@ -402,19 +410,20 @@ public class ICTree {
 
     public Function(String name, List<Var> iList,
         List<Var> oList, TaskMode mode) {
-      this(name, iList, oList, mode, new Block(BlockType.MAIN_BLOCK, null));
-      this.mainBlock.setParent(this);
+      this(name, iList, Collections.<WaitVar>emptyList(), oList,
+           mode, new Block(BlockType.MAIN_BLOCK, null));
     }
 
     public Function(String name, List<Var> iList,
+        List<WaitVar> blockingInputs,
         List<Var> oList, TaskMode mode, Block mainBlock) {
       if (mainBlock.getType() != BlockType.MAIN_BLOCK) {
         throw new STCRuntimeError("Expected main block " +
         "for function to be tagged as such");
       }
       this.name = name;
-      this.iList = iList;
-      this.oList = oList;
+      this.iList = new ArrayList<Var>(iList);
+      this.oList = new ArrayList<Var>(oList);
       this.oListWriteOnly = new ArrayList<Boolean>(oList.size());
       for (int i = 0; i< oList.size(); i++) {
         // Assume read-write by default
@@ -422,7 +431,8 @@ public class ICTree {
       }
       this.mode = mode;
       this.mainBlock = mainBlock;
-      this.blockingInputs = new ArrayList<WaitVar>();
+      this.mainBlock.setParent(this);
+      this.blockingInputs = new ArrayList<WaitVar>(blockingInputs);
     }
 
 
@@ -461,9 +471,16 @@ public class ICTree {
     }
 
 
-    public Block getMainblock() {
+    public Block mainBlock() {
       return mainBlock;
     }
+
+    public Block swapBlock(Block newBlock) {
+      Block old = this.mainBlock;
+      this.mainBlock = newBlock;
+      return old;
+    }
+
 
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UserException {
@@ -492,7 +509,7 @@ public class ICTree {
       return sb.toString();
     }
     
-    public List<WaitVar> getBlockingInputs() {
+    public List<WaitVar> blockingInputs() {
       return blockingInputs;
     }
     
@@ -514,6 +531,10 @@ public class ICTree {
         }
       }
       blockingInputs.add(newWaitVar);
+    }
+    
+    public TaskMode mode() {
+      return this.mode;
     }
     
     public boolean isAsync() {

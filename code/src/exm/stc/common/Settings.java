@@ -59,6 +59,8 @@ public class Settings
   public static final String OPT_FUNCTION_INLINE = "stc.opt.function-inline";
   public static final String OPT_FUNCTION_INLINE_THRESHOLD =
                               "stc.opt.function-inline-threshold";
+  public static final String OPT_FUNCTION_SIGNATURE = 
+                              "stc.opt.function-signature";
   public static final String OPT_DISABLE_ASSERTS = "stc.opt.disable-asserts";
   /* Master switch for loop unrolling pass.  At minimum manually 
    * annotated loops are unrolled */

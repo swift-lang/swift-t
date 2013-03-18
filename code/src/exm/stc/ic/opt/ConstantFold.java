@@ -79,7 +79,7 @@ public class ConstantFold implements OptimizerPass {
     }
     
     for (Function f: in.getFunctions()) {
-      constantFold(logger, in, f, f.getMainblock(), 
+      constantFold(logger, in, f, f.mainBlock(), 
                    globalConsts.makeChildMap());
     }
   }

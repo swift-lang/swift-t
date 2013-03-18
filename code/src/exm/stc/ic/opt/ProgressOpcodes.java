@@ -224,8 +224,12 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.ARRAYREF_LOOKUP_FUTURE);
     opcodes.add(Opcode.ARRAYREF_LOOKUP_IMM);
     
-    // Builtins are cheap
+    // Spawning tasks is cheap
     opcodes.add(Opcode.ASYNC_OP);
+    opcodes.add(Opcode.CALL_CONTROL);
+    opcodes.add(Opcode.CALL_LOCAL);
+    opcodes.add(Opcode.CALL_LOCAL_CONTROL);
+    opcodes.add(Opcode.CALL_BUILTIN);
     return opcodes;
   }
 }

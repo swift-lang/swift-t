@@ -2609,12 +2609,12 @@ public class ICInstructions {
   
   public static class FunctionCall extends CommonFunctionCall {
     private final List<Var> outputs;
-    private final List<Var> inputs;
+    private final List<Arg> inputs;
     private final List<Boolean> closedInputs; // which inputs are closed
     private Arg priority;
   
     private FunctionCall(Opcode op, String functionName,
-        List<Var> inputs, List<Var> outputs, Arg priority) {
+        List<Arg> inputs, List<Var> outputs, Arg priority) {
       super(op, functionName);
       if (op != Opcode.CALL_BUILTIN && op != Opcode.CALL_CONTROL &&
           op != Opcode.CALL_SYNC && op != Opcode.CALL_LOCAL &&
@@ -2625,7 +2625,7 @@ public class ICInstructions {
       this.priority = priority;
       this.outputs = new ArrayList<Var>();
       this.outputs.addAll(outputs);
-      this.inputs = new ArrayList<Var>();
+      this.inputs = new ArrayList<Arg>();
       this.inputs.addAll(inputs);
       this.closedInputs = new ArrayList<Boolean>(inputs.size());
       for (int i = 0; i < inputs.size(); i++) {
@@ -2636,13 +2636,13 @@ public class ICInstructions {
         assert(v != null);
       }
       
-      for(Var v: inputs) {
+      for(Arg v: inputs) {
         assert(v != null);
       }
     }
     
     public static FunctionCall createFunctionCall(
-        String functionName, List<Var> inputs, List<Var> outputs,
+        String functionName, List<Arg> inputs, List<Var> outputs,
         TaskMode mode, Arg priority) {
       Opcode op;
       if (mode == TaskMode.SYNC) {
@@ -2661,7 +2661,7 @@ public class ICInstructions {
     }
   
     public static FunctionCall createBuiltinCall(
-        String functionName, List<Var> inputs, List<Var> outputs,
+        String functionName, List<Arg> inputs, List<Var> outputs,
         Arg priority) {
       return new FunctionCall(Opcode.CALL_BUILTIN, functionName,
           inputs, outputs, priority);
@@ -2675,8 +2675,8 @@ public class ICInstructions {
         result += " " + v.name();
       }
       result += " ] [";
-      for (Var v: inputs) {
-        result += " " + v.name();
+      for (Arg v: inputs) {
+        result += " " + v.toString();
       }
       result += " ]";
       if (priority != null) {
@@ -2729,7 +2729,7 @@ public class ICInstructions {
       if (mode == RenameMode.REPLACE_VAR || mode == RenameMode.REFERENCE) {
         ICUtil.replaceVarsInList(renames, outputs, false);
       }
-      ICUtil.replaceVarsInList(renames, inputs, false);
+      ICUtil.replaceArgsInList(renames, inputs, false);
       priority = ICUtil.replaceArg(renames, priority, true);
     }
   
@@ -2740,24 +2740,34 @@ public class ICInstructions {
     /**
      * @return function input arguments
      */
-    public List<Var> getFunctionInputs() {
+    public List<Arg> getFunctionInputs() {
       return Collections.unmodifiableList(inputs);
     }
 
 
-    public Var getFunctionInput(int i) {
+    public Arg getFunctionInput(int i) {
       return inputs.get(i);
     }
     
     @Override
     public List<Arg> getInputs() {
-      List<Arg> inputVars = Arg.fromVarList(inputs);
+      List<Arg> inputVars = new ArrayList<Arg>(inputs);
       if (priority != null) {
         inputVars.add(priority);
       }
       return inputVars;
     }
   
+    private List<Var> varInputs() {
+      List<Var> varInputs = new ArrayList<Var>();
+      for (Arg input: inputs) {
+        if (input.isVar()) {
+          varInputs.add(input.getVar());
+        }
+      }
+      return varInputs;
+    }
+
     @Override
     public Arg getPriority() {
       return priority;
@@ -2792,11 +2802,13 @@ public class ICInstructions {
       boolean allClosed = true;
       if (!waitForClose) {
         for (int i = 0; i < this.inputs.size(); i++) {
-          Var in = this.inputs.get(i);
-          if (closedVars.contains(in)) {
-            this.closedInputs.set(i, true);
-          } else {
-            allClosed = false;
+          Arg in = this.inputs.get(i);
+          if (in.isVar()) {
+            if (closedVars.contains(in.getVar())) {
+              this.closedInputs.set(i, true);
+            } else {
+              allClosed = false;
+            }
           }
         }
       }
@@ -2809,7 +2821,7 @@ public class ICInstructions {
         // All args are closed!
         return new MakeImmRequest(
             Collections.unmodifiableList(this.outputs),
-            Collections.unmodifiableList(this.inputs), mode);
+            Collections.unmodifiableList(this.varInputs()), mode);
 
       }
       return null;
@@ -2861,12 +2873,15 @@ public class ICInstructions {
     public List<Var> getBlockingInputs() {
       List<Var> blocksOn = new ArrayList<Var>();
       if (op == Opcode.CALL_BUILTIN) {
-        for (Var v: inputs) {
-          if (Types.isScalarFuture(v.type())
-              || Types.isRef(v.type())) {
-            // TODO: this is a conservative idea of which ones
-            // are set
-            blocksOn.add(v);
+        for (Arg in: inputs) {
+          if (in.isVar()) {
+            Var v = in.getVar();
+            if (Types.isScalarFuture(v.type())
+                || Types.isRef(v.type())) {
+              // TODO: this is a conservative idea of which ones
+              // are set
+              blocksOn.add(v);
+            }
           }
         }
       } else if (op == Opcode.CALL_SYNC) {
@@ -2888,9 +2903,11 @@ public class ICInstructions {
         case CALL_LOCAL_CONTROL: {
           List<Var> readIncr = new ArrayList<Var>();
           List<Var> writeIncr = new ArrayList<Var>();
-          for (Var inVar: inputs) {
-            if (RefCounting.hasReadRefCount(inVar)) {
-              readIncr.add(inVar);
+          for (Arg inArg: inputs) {
+            if (inArg.isVar()) {
+              if (RefCounting.hasReadRefCount(inArg.getVar())) {
+                readIncr.add(inArg.getVar());
+              }
             }
           }
           for (int i = 0; i < outputs.size(); i++) {
@@ -2938,7 +2955,7 @@ public class ICInstructions {
     public Instruction clone() {
       // Variables are immutable so just need to clone lists
       return new FunctionCall(op, functionName, 
-          new ArrayList<Var>(inputs), new ArrayList<Var>(outputs),
+          new ArrayList<Arg>(inputs), new ArrayList<Var>(outputs),
           priority);
     }
   }

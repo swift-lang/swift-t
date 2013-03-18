@@ -32,7 +32,16 @@ public class TclUtil {
 
   public static Expression argToExpr(Arg in) {
     return argToExpr(in, false);
+  }
+  
+  public static List<Expression> argsToExpr(List<Arg> in) {
+    List<Expression> res = new ArrayList<Expression>(in.size());
+    for (Arg a: in) {
+      res.add(argToExpr(a));
+    }
+    return res;
   } 
+  
   public static Expression argToExpr(Arg in, boolean passThroughNull) {
     if (in == null) {
       if (passThroughNull) {
@@ -83,8 +92,15 @@ public class TclUtil {
 
   public static TclList tclListOfVariables(List<Var> inputs) {
     TclList result = new TclList();
-    for (Var v : inputs)
+    for (Var v: inputs)
       result.add(varToExpr(v));
+    return result;
+  }
+  
+  public static TclList tclListOfArgs(List<Arg> inputs) {
+    TclList result = new TclList();
+    for (Arg a: inputs)
+      result.add(argToExpr(a));
     return result;
   }
 }

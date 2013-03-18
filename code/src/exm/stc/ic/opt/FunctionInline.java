@@ -17,6 +17,7 @@ package exm.stc.ic.opt;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -46,6 +47,7 @@ import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
+import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions.FunctionCall;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Opcode;
@@ -104,9 +106,12 @@ public class FunctionInline implements OptimizerPass {
 
   @Override
   public void optimize(Logger logger, Program program) throws UserException {
+    inlineFunctions(logger, program);
+  }
+
+  private void inlineFunctions(Logger logger, Program program) {
     // Do inlining repeatedly until no changes since removing a function
     // can allow more functions to be pruned;
-
     boolean changed;
     int i = 0;
     do {
@@ -290,19 +295,46 @@ public class FunctionInline implements OptimizerPass {
       Set<String> callSiteFunctions, MultiMap<String, String> inlineLocations, Map<String, Function> toInline) {
     for (Function f: program.getFunctions()) {
       if (callSiteFunctions.contains(f.getName())) {
-        doInlining(logger, program, f, f.getMainblock(), inlineLocations, toInline);
+        doInlining(logger, program, f, f.mainBlock(), inlineLocations,
+                   toInline, alwaysInline, blacklist);
       }
     }
   }
+  
+  public static void inlineAllOccurrences(Logger logger, Program prog,
+                                    Map<String, Function> toInline) {
+    for (Function f: prog.getFunctions()) {
+      inlineAllOccurrences(logger, prog, f, toInline);
+    }
+  }
 
-  private void doInlining(Logger logger, Program prog, Function contextFunction,
-      Block block, MultiMap<String, String> inlineLocations, Map<String, Function> toInline) {
+  private static void inlineAllOccurrences(Logger logger, Program prog,
+                Function fn, Map<String, Function> toInline) {
+    doInlining(logger, prog, fn, fn.mainBlock(), null, toInline, toInline.keySet(),
+                Collections.<Pair<String, String>>emptySet());
+  }
+
+  /**
+   * 
+   * @param logger
+   * @param prog
+   * @param contextFunction
+   * @param block
+   * @param inlineLocations which function to inline where, if null,
+   *                        inline in all locations
+   * @param alwaysInline functions to always inline
+   * @param toInline
+   */
+  private static void doInlining(Logger logger, Program prog, Function contextFunction,
+      Block block, MultiMap<String, String> inlineLocations, Map<String, Function> toInline,
+      Set<String> alwaysInline, Set<Pair<String, String>> blacklist) {
     // Recurse first to avoid visiting newly inlined continuations and doing
     // extra inlining (required to avoid infinite loops of inlining with 
     // recursive functions)
     for (Continuation c: block.getContinuations()) {
       for (Block cb: c.getBlocks()) {
-        doInlining(logger, prog, contextFunction, cb, inlineLocations, toInline);
+        doInlining(logger, prog, contextFunction, cb, inlineLocations,
+                   toInline, alwaysInline, blacklist);
       }
     }
     
@@ -313,13 +345,20 @@ public class FunctionInline implements OptimizerPass {
         FunctionCall fcall = (FunctionCall)inst;
         if (toInline.containsKey(fcall.getFunctionName()) ||
                 alwaysInline.contains(fcall.getFunctionName())) {
-          // Check that location is marked for inlining
-          List<String> inlineCallers = inlineLocations.get(fcall.getFunctionName());
-          if (inlineCallers.contains(contextFunction.getName())) {
+          boolean canInlineHere;
+          if (inlineLocations == null) {
+            canInlineHere = true;
+          } else {
+            // Check that location is marked for inlining
+            List<String> inlineCallers = inlineLocations.get(fcall.getFunctionName());
+            canInlineHere = inlineCallers.contains(contextFunction.getName());
+          }
+          if (canInlineHere) {
             // Do the inlining.  Note that the iterator will be positioned
             // after any newly inlined instructions.
             inlineCall(logger, prog, contextFunction, block, it, fcall,
-                       toInline.get(fcall.getFunctionName()));
+                       toInline.get(fcall.getFunctionName()),
+                       alwaysInline, blacklist);
           }
         }
       }
@@ -334,17 +373,18 @@ public class FunctionInline implements OptimizerPass {
    * @param fnCall
    * @param toInline
    */
-  private void inlineCall(Logger logger, Program prog,
+  private static void inlineCall(Logger logger, Program prog,
       Function contextFunction, Block block,
       ListIterator<Instruction> it, FunctionCall fnCall,
-      Function toInline) {
+      Function toInline,
+      Set<String> alwaysInline, Set<Pair<String, String>> blacklist) {
     // Remove function call instruction
     it.remove();
     
     logger.debug("inlining " + toInline.getName() + " into " + contextFunction.getName());
     
     // Create copy of function code so variables can be renamed 
-    Block inlineBlock = toInline.getMainblock().clone(BlockType.NESTED_BLOCK,
+    Block inlineBlock = toInline.mainBlock().clone(BlockType.NESTED_BLOCK,
                                                       null, null);
     
     // rename function arguments
@@ -357,10 +397,12 @@ public class FunctionInline implements OptimizerPass {
            fnCall.getFunctionInputs() + " != " + toInline.getInputList() 
              + " for " + fnCall.getFunctionName();
     for (int i = 0; i < fnCall.getFunctionInputs().size(); i++) {
-      Var inputVal = fnCall.getFunctionInput(i);
+      Arg inputVal = fnCall.getFunctionInput(i);
       Var inArg = toInline.getInputList().get(i);
-      renames.put(inArg, Arg.createVar(inputVal));
-      passIn.add(inputVal);
+      renames.put(inArg, inputVal);
+      if (inputVal.isVar()) {
+        passIn.add(inputVal.getVar());
+      }
       // Remove cleanup actions
       inlineBlock.removeCleanups(inArg);
     }
@@ -385,6 +427,7 @@ public class FunctionInline implements OptimizerPass {
     // rename vars
     chooseUniqueNames(logger, prog, contextFunction, inlineBlock, renames);
     
+    System.err.println("renames: " + renames);
     inlineBlock.renameVars(renames, RenameMode.REPLACE_VAR, true);
     
     if (fnCall.getMode() == TaskMode.SYNC) {
@@ -394,9 +437,25 @@ public class FunctionInline implements OptimizerPass {
       // In some cases its beneficial to use TASK_DISPATCH to distribute work
       WaitMode waitMode = ProgressOpcodes.isCheap(inlineBlock) ?
                           WaitMode.WAIT_ONLY : WaitMode.TASK_DISPATCH;
+
+      // Find which args are blocking in caller
+      List<WaitVar> blockingInputs = new ArrayList<WaitVar>();
+      List<WaitVar> blockingFormalArgs = toInline.blockingInputs();
+      for (int i = 0; i < toInline.getInputList().size(); i++) {
+        Var formalArg = toInline.getInputList().get(i);
+        WaitVar blockingFormalArg = WaitVar.find(blockingFormalArgs, formalArg);
+        if (blockingFormalArg != null) {
+          Arg input = fnCall.getFunctionInputs().get(i);
+          if (input.isVar()) {
+            blockingInputs.add(new WaitVar(input.getVar(),
+                                blockingFormalArg.explicit));
+          }
+        }
+      }
+      
       WaitStatement wait = new WaitStatement(
           contextFunction.getName() + "-" + toInline.getName() + "-call",
-          toInline.getBlockingInputs(), PassedVar.NONE, Var.NONE, fnCall.getPriority(),
+          blockingInputs, PassedVar.NONE, Var.NONE, fnCall.getPriority(),
           waitMode, false, fnCall.getMode());
       block.addContinuation(wait);
       insertBlock = wait.getBlock();
@@ -422,7 +481,7 @@ public class FunctionInline implements OptimizerPass {
    * @param inlineBlock block to be inlined
    * @param replacements updated with new renames
    */
-  private void chooseUniqueNames(Logger logger, Program prog,
+  private static void chooseUniqueNames(Logger logger, Program prog,
       Function targetFunction, Block inlineBlock,
       Map<Var, Arg> replacements) {
     Set<String> excludedNames = new HashSet<String>();
@@ -448,11 +507,11 @@ public class FunctionInline implements OptimizerPass {
     }
   }
 
-  private void updateName(Logger logger, Block block,
+  private static void updateName(Logger logger, Block block,
           Function targetFunction, Map<Var, Arg> replacements,
           Set<String> excludedNames, Var var) {
     // Choose unique name (including new names for this block)
-    String newName = targetFunction.getMainblock().uniqueVarName(
+    String newName = targetFunction.mainBlock().uniqueVarName(
                                         var.name(), excludedNames);
     Var newVar = new Var(var.type(), newName, var.storage(), var.defType(),
                          var.mapping());

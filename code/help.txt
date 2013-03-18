@@ -66,6 +66,8 @@ pipeline: compile-time pipeline where sequentially dependent worker
 function-inline: inline calls to functions selectively depending on
         function size and number of calls.  This allows inter-procedural
         optimization
+function-signature: modify function signature e.g. pass value instead
+        of future
 disable-asserts: disable assert statements (off by default)
 
 Experimental/other features:

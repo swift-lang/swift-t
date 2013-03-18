@@ -124,7 +124,7 @@ public class Validate implements OptimizerPass {
       declared.put(out.name(), out);
     }
     
-    checkUniqueVarNames(logger, program, fn, fn.getMainblock(), declared);
+    checkUniqueVarNames(logger, program, fn, fn.mainBlock(), declared);
   }
 
   private void checkUniqueVarNames(Logger logger, Program program, Function fn,
@@ -260,7 +260,7 @@ public class Validate implements OptimizerPass {
    * @param fn
    */
   private void checkParentLinks(Logger logger, Program program, Function fn) {
-    Block mainBlock = fn.getMainblock();
+    Block mainBlock = fn.mainBlock();
     assert(mainBlock.getType() == BlockType.MAIN_BLOCK);
     checkParentLinks(logger, program, fn, mainBlock);
   }
@@ -307,7 +307,7 @@ public class Validate implements OptimizerPass {
         initVars.add(v);
       }
     }
-    checkAliasVarUsageRec(logger, program, fn, fn.getMainblock(), initVars);
+    checkAliasVarUsageRec(logger, program, fn, fn.mainBlock(), initVars);
   }
   
   private boolean varMustBeInitialized(Var v) {

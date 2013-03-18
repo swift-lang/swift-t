@@ -66,6 +66,13 @@ public class OptUtil {
     return inVals;
   }
 
+  public static List<Arg> fetchValuesOf(Block block, List<Var> vars) {
+    List<Instruction> instBuffer = new ArrayList<Instruction>();
+    List<Arg> vals = fetchValuesOf(block, instBuffer, vars);
+    block.addInstructions(instBuffer);
+    return vals;
+  }
+
   /**
    * Do the manipulation necessary to allow an old instruction
    * output variable to be replaced with a new one. Assume that

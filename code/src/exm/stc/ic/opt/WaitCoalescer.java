@@ -189,7 +189,7 @@ public class WaitCoalescer implements OptimizerPass {
   @Override
   public void optimize(Logger logger, Program prog) {
     for (Function f: prog.getFunctions()) {
-      rearrangeWaits(logger, f, f.getMainblock(), ExecContext.CONTROL);
+      rearrangeWaits(logger, f, f.mainBlock(), ExecContext.CONTROL);
     }
   }
 

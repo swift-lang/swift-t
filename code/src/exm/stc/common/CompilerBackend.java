@@ -183,10 +183,10 @@ public interface CompilerBackend {
    * @param priority 
    */
   public void builtinFunctionCall(String function,
-      List<Var> inputs, List<Var> outputs, Arg priority);
+      List<Arg> inputs, List<Var> outputs, Arg priority);
 
   public void functionCall(String function,
-      List<Var> inputs, List<Var> outputs, List<Boolean> blockOn, 
+      List<Arg> inputs, List<Var> outputs, List<Boolean> blockOn, 
       TaskMode mode, Arg priority);
 
   public void builtinLocalFunctionCall(String functionName,

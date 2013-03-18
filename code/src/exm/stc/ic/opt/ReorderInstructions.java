@@ -56,7 +56,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
 
   @Override
   public void optimize(Logger logger, Function f) throws UserException {
-    optimizeRec(logger, f, f.getMainblock());
+    optimizeRec(logger, f, f.mainBlock());
   }
 
   private void optimizeRec(Logger logger, Function f, Block block) {

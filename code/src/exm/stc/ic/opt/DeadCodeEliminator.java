@@ -167,7 +167,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
     if (removeCandidates.isEmpty()) {
       return false;
     } else {
-      f.getMainblock().removeVars(removeCandidates);
+      f.mainBlock().removeVars(removeCandidates);
       return true;
     }
   } 
@@ -189,7 +189,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       MultiMap<Var, Var> dependencyGraph, List<Var> modifiedComponents,
       Map <Var, Var> componentOf) {
     ArrayDeque<Block> workStack = new ArrayDeque<Block>();
-    workStack.push(f.getMainblock());
+    workStack.push(f.mainBlock());
     
     needed.addAll(f.getOutputList());
     

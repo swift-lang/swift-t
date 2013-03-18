@@ -38,7 +38,7 @@ public class TreeWalk {
    */
   public static void walk(Logger logger, Program prog, TreeWalker walker) {
     for (Function f: prog.getFunctions()) {
-      walk(logger, f.getMainblock(), f, walker, true);
+      walk(logger, f.mainBlock(), f, walker, true);
     }
   }
   

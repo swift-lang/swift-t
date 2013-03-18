@@ -61,7 +61,7 @@ public class Pipeline extends FunctionOptimizerPass {
 
   @Override
   public void optimize(Logger logger, Function f) {
-    pipelineTasks(logger, f, f.getMainblock(), ExecContext.CONTROL);
+    pipelineTasks(logger, f, f.mainBlock(), ExecContext.CONTROL);
   }
 
   private static void pipelineTasks(Logger logger, Function f, Block curr,

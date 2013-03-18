@@ -76,7 +76,7 @@ public class RefcountPass implements OptimizerPass {
     functionMap = buildFunctionMap(program);
 
     for (Function f : program.getFunctions()) {
-      addRefCountsRec(logger, f, f.getMainblock(), new Counters<Var>(),
+      addRefCountsRec(logger, f, f.mainBlock(), new Counters<Var>(),
           new Counters<Var>(), new HierarchicalSet<Var>());
     }
   }
@@ -345,7 +345,7 @@ public class RefcountPass implements OptimizerPass {
       Counters<Var> readIncrements, Counters<Var> writeIncrements) {
     // If this is main block of function, add passed in
     if (block.getType() == BlockType.MAIN_BLOCK) {
-      assert (block == fn.getMainblock());
+      assert (block == fn.mainBlock());
       // System.err.println(fn.getName() + " async: " + fn.isAsync());
       if (fn.isAsync()) {
         // Need to do bookkeeping if this runs in separate task

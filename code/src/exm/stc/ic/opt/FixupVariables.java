@@ -98,7 +98,7 @@ public class FixupVariables implements OptimizerPass {
       fnargs.add(v);
     }
     Pair<Set<Var>, Set<Var>> res = fixupBlockRec(logger,
-        fn, fn.getMainblock(), ExecContext.CONTROL, 
+        fn, fn.mainBlock(), ExecContext.CONTROL, 
         fnargs, referencedGlobals, updateLists);
 
     Set<Var> read = res.val1;

@@ -700,18 +700,11 @@ public class TurbineGenerator implements CompilerBackend
       fn = builtinSymbols.get(impls.get(0));
     }
     
-    ArrayList<Var> inputs = new ArrayList<Var>();
-    for (Arg a: in) {
-      // Arguments to async ops need to be vars
-      assert(a.isVar());
-      inputs.add(a.getVar());
-    }
-    
     List<Var> outL = (out == null) ? 
           Arrays.<Var>asList() : Arrays.asList(out);
 
     builtinFunctionCall("operator: " + op.toString(), fn, 
-                        inputs, outL, priority);
+                        in, outL, priority);
   }
 
   @Override
@@ -842,8 +835,7 @@ public class TurbineGenerator implements CompilerBackend
 
   @Override
   public void builtinFunctionCall(String function,
-          List<Var> inputs, List<Var> outputs, Arg priority)
-  {
+          List<Arg> inputs, List<Var> outputs, Arg priority) {
     assert(priority == null || priority.isImmediateInt());
     logger.debug("call builtin: " + function);
     TclFunRef tclf = builtinSymbols.get(function);
@@ -854,8 +846,8 @@ public class TurbineGenerator implements CompilerBackend
   }
 
   private void builtinFunctionCall(String function, TclFunRef tclf,
-      List<Var> inputs, List<Var> outputs, Arg priority) {
-    TclList iList = TclUtil.tclListOfVariables(inputs);
+      List<Arg> inputs, List<Var> outputs, Arg priority) {
+    TclList iList = TclUtil.tclListOfArgs(inputs);
     TclList oList = TclUtil.tclListOfVariables(outputs);
     
     if (tclf == null) {
@@ -889,7 +881,7 @@ public class TurbineGenerator implements CompilerBackend
   
   @Override
   public void functionCall(String function,
-              List<Var> inputs, List<Var> outputs,
+              List<Arg> inputs, List<Var> outputs,
               List<Boolean> blocking, TaskMode mode, Arg priority)  {
     assert(priority == null || priority.isImmediateInt());
     logger.debug("call: " + function);
@@ -897,17 +889,20 @@ public class TurbineGenerator implements CompilerBackend
     ArrayList<Var> blockOn = new ArrayList<Var>();
     HashSet<Var> alreadyBlocking = new HashSet<Var>();
     for (int i = 0; i < inputs.size(); i++) {
-      Var v = inputs.get(i);
-      if (blocking.get(i) && !alreadyBlocking.contains(v)) {
-        blockOn.add(v);
-        alreadyBlocking.add(v);
+      Arg arg = inputs.get(i);
+      if (arg.isVar()) {
+        Var v = arg.getVar();
+        if (blocking.get(i) && !alreadyBlocking.contains(v)) {
+          blockOn.add(v);
+          alreadyBlocking.add(v);
+        }
       }
     }
 
     setPriority(priority);
     if (mode == TaskMode.CONTROL || mode == TaskMode.LOCAL ||
         mode == TaskMode.LOCAL_CONTROL) {
-      TclList iList = TclUtil.tclListOfVariables(inputs);
+      TclList iList = TclUtil.tclListOfArgs(inputs);
       TclList oList = TclUtil.tclListOfVariables(outputs);
 
       // TODO: should handle local separately - this will put local tasks
@@ -919,7 +914,7 @@ public class TurbineGenerator implements CompilerBackend
       // Calling synchronously, can't guarantee anything blocks
       assert blockOn.size() == 0 : function + ": " + blockOn;
       
-      List<Expression> inVars = TclUtil.varsToExpr(inputs);
+      List<Expression> inVars = TclUtil.argsToExpr(inputs);
       List<Expression> outVars = TclUtil.varsToExpr(outputs);
       
       pointStack.peek().add(Turbine.callFunctionSync(
