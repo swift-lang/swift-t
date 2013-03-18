@@ -31,6 +31,7 @@ import exm.stc.common.util.HierarchicalMap;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
+import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CleanupAction;
@@ -155,8 +156,8 @@ public class HoistLoops implements OptimizerPass {
       
       // If we are waiting for var, don't hoist out past that
       if (c.getType() == ContinuationType.WAIT_STATEMENT) {
-        for (Var waitVar: ((WaitStatement)c).getWaitVars()) {
-          childState.write(waitVar, false);            
+        for (WaitVar waitVar: ((WaitStatement)c).getWaitVars()) {
+          childState.write(waitVar.var, false);            
         }
       }
       return childState;
@@ -275,7 +276,7 @@ public class HoistLoops implements OptimizerPass {
           c.getType() == ContinuationType.NESTED_BLOCK) {
       return true;
     } else if (c.getType() == ContinuationType.WAIT_STATEMENT &&
-            ((WaitStatement)c).getMode() == WaitMode.DATA_ONLY) {
+            ((WaitStatement)c).getMode() == WaitMode.WAIT_ONLY) {
       return true;
     }
     return false;

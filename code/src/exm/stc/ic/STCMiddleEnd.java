@@ -52,6 +52,7 @@ import exm.stc.ic.tree.ForeachLoops.RangeLoop;
 import exm.stc.ic.tree.ICContinuations.Loop;
 import exm.stc.ic.tree.ICContinuations.NestedBlock;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
+import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Builtin;
 import exm.stc.ic.tree.ICInstructions.Comment;
@@ -196,11 +197,12 @@ public class STCMiddleEnd {
 
 
   public void startWaitStatement(String procName, List<Var> waitVars,
-      Arg priority, WaitMode mode, boolean recursive, TaskMode target) {
+      Arg priority, WaitMode mode, boolean explicit, boolean recursive, TaskMode target) {
     assert(currFunction != null);
     assert(priority == null || priority.isImmediateInt());
     
-    WaitStatement wait = new WaitStatement(procName, waitVars,
+    List<WaitVar> waitVars2 = WaitVar.makeList(waitVars, explicit);
+    WaitStatement wait = new WaitStatement(procName, waitVars2,
           PassedVar.NONE, Var.NONE, priority, mode, recursive, target);
     currBlock().addContinuation(wait);
     blockStack.push(wait.getBlock());
@@ -781,17 +783,17 @@ public class STCMiddleEnd {
     WaitMode waitMode;
     if (mode == TaskMode.LOCAL || mode == TaskMode.SYNC) {
       // Cases where function can execute on any node
-      waitMode = WaitMode.DATA_ONLY;
+      waitMode = WaitMode.WAIT_ONLY;
     } else {
       // Cases where we may need to send task to another class of worker
       waitMode = WaitMode.TASK_DISPATCH;
     }
     
     
-    List<Var> waitVars = new ArrayList<Var>(inArgs.size());
+    List<WaitVar> waitVars = new ArrayList<WaitVar>(inArgs.size());
     for (Var in: inArgs) {
       if (!Types.isScalarUpdateable(in.type())) {
-        waitVars.add(in);
+        waitVars.add(new WaitVar(in, false));
       }
     }
     WaitStatement wait = new WaitStatement(function + "-argwait",

@@ -393,7 +393,7 @@ public class FunctionInline implements OptimizerPass {
     } else {
       // In some cases its beneficial to use TASK_DISPATCH to distribute work
       WaitMode waitMode = ProgressOpcodes.isCheap(inlineBlock) ?
-                          WaitMode.DATA_ONLY : WaitMode.TASK_DISPATCH;
+                          WaitMode.WAIT_ONLY : WaitMode.TASK_DISPATCH;
       WaitStatement wait = new WaitStatement(
           contextFunction.getName() + "-" + toInline.getName() + "-call",
           toInline.getBlockingInputs(), PassedVar.NONE, Var.NONE, fnCall.getPriority(),

@@ -353,7 +353,7 @@ public class ExprWalker {
       String wName = context.getFunctionContext().constructName("copy-wait");
       List<Var> waitVars = Arrays.asList(src);
       backend.startWaitStatement(wName, waitVars,
-              null, WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
+              null, WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
       Var derefed = varCreator.createTmpAlias(context, dst.type());
       backend.retrieveRef(derefed, src);
       copyArrayByValue(context, dst, derefed);
@@ -479,7 +479,7 @@ public class ExprWalker {
       List<Var> waitVars = Arrays.asList(priorityFuture);
       backend.startWaitStatement(context.getFunctionContext().constructName("priority-wait"), 
                         waitVars, null,
-                        WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
+                        WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
       openedWait = true;
       callContext = new LocalContext(context);
       priorityVal = varCreator.fetchValueOf(callContext, priorityFuture);
@@ -778,7 +778,7 @@ public class ExprWalker {
       backend.startWaitStatement(
            fc.constructName("call-" + function),
            waitVars, priorityVal == null ? null : Arg.createVar(priorityVal),
-           WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
+           WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
 
       assert(waitVars.size() == derefVars.size());
       // Generate code to fetch actual array IDs  inside
@@ -932,7 +932,7 @@ public class ExprWalker {
     List<Var> waitVars = Arrays.asList(src);
     backend.startWaitStatement(
         context.getFunctionContext().constructName("arrcopy-wait"),
-        waitVars, null, WaitMode.DATA_ONLY, false, TaskMode.LOCAL);
+        waitVars, null, WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
     backend.startForeachLoop(
             context.getFunctionContext().constructName("arrcopy"),
             src, member, ix, -1, 1, true);
@@ -987,8 +987,8 @@ public class ExprWalker {
     List<Var> waitVars = Arrays.asList(src);
     backend.startWaitStatement( 
                     context.getFunctionContext().constructName("copystruct"), 
-                    waitVars, null, WaitMode.DATA_ONLY,
-                    false, TaskMode.LOCAL);
+                    waitVars, null, WaitMode.WAIT_ONLY,
+                    false, false, TaskMode.LOCAL);
     Var rValDerefed = varCreator.createTmp(context, 
             src.type().memberType(), false, true);
     backend.retrieveRef(rValDerefed, src);

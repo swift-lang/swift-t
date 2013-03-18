@@ -35,8 +35,8 @@ import java.util.TreeMap;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
-import exm.stc.common.TclFunRef;
 import exm.stc.common.CompilerBackend.VarDecl;
+import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
@@ -54,6 +54,7 @@ import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 
@@ -394,9 +395,8 @@ public class ICTree {
     /** List of which outputs are write-only */
     private final List<Boolean> oListWriteOnly;
     
-    /** Wait until the below inputs are available before running function.
-     * Treated same as DATA_ONLY wait */
-    private final List<Var> blockingInputs;
+    /** Wait until the below inputs are available before running function. */
+    private final List<WaitVar> blockingInputs;
 
     private TaskMode mode;
 
@@ -422,7 +422,7 @@ public class ICTree {
       }
       this.mode = mode;
       this.mainBlock = mainBlock;
-      this.blockingInputs = new ArrayList<Var>();
+      this.blockingInputs = new ArrayList<WaitVar>();
     }
 
 
@@ -479,7 +479,7 @@ public class ICTree {
       sb.append(" @" + name + " ");
       ICUtil.prettyPrintFormalArgs(sb, this.iList);
       sb.append("#waiton[");
-      ICUtil.prettyPrintVarList(sb, this.blockingInputs);
+      ICUtil.prettyPrintList(sb, this.blockingInputs);
       sb.append("] {\n");
       mainBlock.prettyPrint(sb, indent);
       sb.append("}\n");
@@ -492,22 +492,28 @@ public class ICTree {
       return sb.toString();
     }
     
-    public List<Var> getBlockingInputs() {
+    public List<WaitVar> getBlockingInputs() {
       return blockingInputs;
     }
     
-    public void addBlockingInput(Var var) {
-      if (!iList.contains(var)) {
-        throw new STCRuntimeError(var + " is not the name of " +
+    public void addBlockingInput(WaitVar newWaitVar) {
+      if (!iList.contains(newWaitVar.var)) {
+        throw new STCRuntimeError(newWaitVar.var + " is not the name of " +
         " an input argument to function " + name + ":\n" + this);
       }
-      for (Var i: blockingInputs) {
-        if (i.equals(var)) {
+      // Check to see if already present
+      ListIterator<WaitVar> it = blockingInputs.listIterator();
+      while (it.hasNext()) {
+        WaitVar i = it.next();
+        if (i.var.equals(newWaitVar.var)) {
           // already there
+          if (newWaitVar.explicit && !i.explicit) {
+            it.set(newWaitVar);
+          }
           return;
         }
       }
-      blockingInputs.add(var);
+      blockingInputs.add(newWaitVar);
     }
     
     public boolean isAsync() {

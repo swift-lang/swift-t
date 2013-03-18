@@ -49,8 +49,8 @@ import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
-import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
+import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.CVMap;
@@ -502,18 +502,18 @@ public class ForwardDataflow implements OptimizerPass {
       return;
     }
     Block main = f.getMainblock();
-    Set<Var> blockingVariables = findBlockingVariables(main);
+    List<WaitVar> blockingVariables = findBlockingVariables(main);
     if (blockingVariables != null) {
       List<Var> locals = f.getInputList();
       if (logger.isTraceEnabled()) {
         logger.trace("Blocking " + f.getName() + ": " + blockingVariables);
       }
-      for (Var v: blockingVariables) {
-        boolean isConst = program.lookupGlobalConst(v.name()) != null;
+      for (WaitVar wv: blockingVariables) {
+        boolean isConst = program.lookupGlobalConst(wv.var.name()) != null;
         // Global constants are already set
-        if (!isConst && locals.contains(v)) {
+        if (!isConst && locals.contains(wv)) {
           // Check if a non-arg
-          f.addBlockingInput(v);
+          f.addBlockingInput(wv);
         }
       }
     }
@@ -521,15 +521,14 @@ public class ForwardDataflow implements OptimizerPass {
   
   /**
    * Find the set of variables required to be closed (recursively or not)
-   * to make progress in block.  
-   * If function inlining is enabled, exclude explicit waits since blocking
-   * inputs to a function are treated as data_only upon inlining and this
-   * can cause problems if they were previously explicit waits.
+   * to make progress in block.
    * @param block
    * @return
    */
-  private static Set<Var> findBlockingVariables(Block block) {
-    HashSet<Var> blockingVariables = null;
+  private static List<WaitVar> findBlockingVariables(Block block) {
+    // Set of blocking variables.  May contain duplicates for explicit/not explicit -
+    // we eliminate these at end
+    HashSet<WaitVar> blockingVariables = null;
     /*TODO: could exploit the information we have in getBlockingInputs() 
      *      to explore dependencies between variables and work out 
      *      which variables are needed to make progress */
@@ -541,39 +540,33 @@ public class ForwardDataflow implements OptimizerPass {
     
     for (Continuation c: block.getContinuations()) {
       List<BlockingVar> waitOnVars = c.blockingVars(false);
-      List<Var> waitOn;
+      List<WaitVar> waitOn;
       if (waitOnVars == null) {
-        waitOn = Var.NONE; 
+        waitOn = WaitVar.NONE; 
       } else {
-        waitOn = new ArrayList<Var>(waitOnVars.size());
+        waitOn = new ArrayList<WaitVar>(waitOnVars.size());
         for (BlockingVar bv: waitOnVars) {
-          waitOn.add(bv.var);
+          waitOn.add(new WaitVar(bv.var, bv.explicit));
         }
       }
 
       assert(waitOn != null);
       //System.err.println("waitOn: " + waitOn);
       if (blockingVariables == null) {
-        blockingVariables = new HashSet<Var>(waitOn);
+        blockingVariables = new HashSet<WaitVar>(waitOn);
       } else {
         // Keep only those variables which block all wait statements
         blockingVariables.retainAll(waitOn);
       }
-      
-      try {
-        // Don't pass back if inlining turned on
-        if (Settings.getBoolean(Settings.OPT_FUNCTION_INLINE)) {
-          if (c.getType() == ContinuationType.WAIT_STATEMENT &&
-                  ((WaitStatement)c).getMode() == WaitMode.EXPLICIT) {
-            blockingVariables.removeAll(waitOn);
-          }
-        }
-      } catch (InvalidOptionException e) {
-        throw new STCRuntimeError(e.getMessage());
-      }
       //System.err.println("Blocking so far:" + blockingVariables);
     }
-    return blockingVariables;
+    if (blockingVariables == null) {
+      return null;
+    } else {
+      ArrayList<WaitVar> res = new ArrayList<WaitVar>(blockingVariables);
+      WaitVar.removeDuplicates(res);
+      return res;
+    }
   }
 
   /**
@@ -595,8 +588,8 @@ public class ForwardDataflow implements OptimizerPass {
       InvalidWriteException {
     if (cv == null) {
       cv = new State(logger);
-      for (Var v: f.getBlockingInputs()) {
-        cv.close(v, false);
+      for (WaitVar wv: f.getBlockingInputs()) {
+        cv.close(wv.var, false);
       }
       for (Var v: f.getInputList()) {
         if (Types.isScalarUpdateable(v.type())) {
@@ -818,7 +811,7 @@ public class ForwardDataflow implements OptimizerPass {
     } else {
       WaitStatement wait = new WaitStatement(
           fn.getName() + "-" + inst.shortOpName(),
-          Var.NONE, PassedVar.NONE, Var.NONE,
+          WaitVar.NONE, PassedVar.NONE, Var.NONE,
           inst.getPriority(),
           WaitMode.TASK_DISPATCH, false, req.mode);
       insertContext = wait.getBlock();

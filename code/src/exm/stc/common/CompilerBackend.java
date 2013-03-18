@@ -416,9 +416,7 @@ public interface CompilerBackend {
    * different ways
    */
   public static enum WaitMode {
-    DATA_ONLY, /* Used to allow data load inside wait */
-    EXPLICIT, /* Explicit synchronisation on variable, 
-           can only eliminate if var closed */
+    WAIT_ONLY, /* Used to defer execution of block until data closed */
     TASK_DISPATCH; /* Used to dispatch async task to 
     load balancer/other node */
   }

@@ -49,6 +49,7 @@ import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
+import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
@@ -195,8 +196,10 @@ public class WaitCoalescer implements OptimizerPass {
   public boolean rearrangeWaits(Logger logger, Function fn, Block block,
                                        ExecContext currContext) {
     boolean exploded = false;
+    logger.trace("Entering function " + fn.getName());
     try {
       if (Settings.getBoolean(Settings.OPT_EXPAND_DATAFLOW_OPS)) {
+        logger.trace("Exploding Function Calls...");
         exploded = explodeFuncCalls(logger, fn, currContext, block);
       }
     } catch (InvalidOptionException e) {
@@ -210,7 +213,8 @@ public class WaitCoalescer implements OptimizerPass {
     }
     
     boolean merged = false;
-    if (doMerges) { 
+    if (doMerges) {
+      logger.trace("Merging Waits...");
       merged = mergeWaits(logger, fn, block);
     }
     
@@ -220,6 +224,7 @@ public class WaitCoalescer implements OptimizerPass {
       //logger.trace("After merging " + fn.getName() +":\n" + sb.toString());
     }
     
+    logger.trace("Pushing down waits...");
     boolean pushedDown = pushDownWaits(logger, fn, block, currContext);
     
     // Recurse on child blocks
@@ -238,7 +243,7 @@ public class WaitCoalescer implements OptimizerPass {
     for (Continuation c: block.getContinuations()) {
       ExecContext newContext = c.childContext(currContext);
       for (Block childB: c.getBlocks()) {
-        if (rearrangeWaits(logger, fn, childB, newContext)) {
+        if (rearrangeWaitsRec(logger, fn, childB, newContext)) {
           changed = true;
         }
       }
@@ -287,7 +292,7 @@ public class WaitCoalescer implements OptimizerPass {
           }
         }
         if (wait.getMode() == WaitMode.TASK_DISPATCH) {
-          wait.setMode(WaitMode.DATA_ONLY);
+          wait.setMode(WaitMode.WAIT_ONLY);
         }
       }
     }
@@ -356,14 +361,14 @@ public class WaitCoalescer implements OptimizerPass {
         if (req.mode == TaskMode.SYNC || req.mode == TaskMode.LOCAL ||
               (req.mode == TaskMode.LOCAL_CONTROL &&
                 execCx == ExecContext.CONTROL)) {
-          waitMode = WaitMode.DATA_ONLY;
+          waitMode = WaitMode.WAIT_ONLY;
         } else {
           waitMode = WaitMode.TASK_DISPATCH;
         }
         
         WaitStatement wait = new WaitStatement(
                 fn.getName() + "-" + i.shortOpName(),
-                waitVars, PassedVar.NONE, Var.NONE,
+                WaitVar.makeList(waitVars, false), PassedVar.NONE, Var.NONE,
                 i.getPriority(), waitMode, req.recursiveClose, req.mode);
         block.addContinuation(wait);
         
@@ -434,13 +439,9 @@ public class WaitCoalescer implements OptimizerPass {
     if (innerContext != waitContext)
       return false;
     
-    if (retainExplicit && innerWait.getMode() == WaitMode.EXPLICIT &&
-          wait.getMode() != WaitMode.EXPLICIT)
-      return false;
-    
     // Check that wait variables not defined in this block
-    for (Var waitVar: innerWait.getWaitVars()) {
-      if (block.getVariables().contains(waitVar)) {
+    for (WaitVar waitVar: innerWait.getWaitVars()) {
+      if (block.getVariables().contains(waitVar.var)) {
         return false;
       }
     }
@@ -473,6 +474,7 @@ public class WaitCoalescer implements OptimizerPass {
         changed = true;
         List<WaitStatement> waits = waitMap.get(winner);
         assert(waits != null && waits.size() >= 2);
+        logger.trace("Merging " + waits.size() + " Waits...");
         
         // If one of the waits is explicit, new one must be also
         boolean explicit = false; 
@@ -483,13 +485,16 @@ public class WaitCoalescer implements OptimizerPass {
         // Find out which variables are in common with all waits
         Set<Var> intersection = null;
         for (WaitStatement wait: waits) {
-          Set<Var> waitVars = new HashSet<Var>(wait.getWaitVars());
+          Set<Var> waitVars = new HashSet<Var>();
+          for (WaitVar wv: wait.getWaitVars()) {
+            waitVars.add(wv.var);
+          }
           if (intersection == null) {
             intersection = waitVars;
           } else {
             intersection.retainAll(waitVars);
           }
-          explicit = explicit || wait.getMode() != WaitMode.DATA_ONLY;
+          explicit = explicit || wait.getMode() != WaitMode.WAIT_ONLY;
           allRecursive = allRecursive && wait.isRecursive();
         }
         assert(intersection != null && !intersection.isEmpty());
@@ -497,9 +502,8 @@ public class WaitCoalescer implements OptimizerPass {
         // Create a new wait statement waiting on the intersection
         // of the above.
         WaitStatement newWait = new WaitStatement(fn.getName() + "-optmerged",
-            new ArrayList<Var>(intersection), PassedVar.NONE, Var.NONE, null,
-            explicit ? WaitMode.EXPLICIT : WaitMode.DATA_ONLY, allRecursive,
-            TaskMode.LOCAL);
+            WaitVar.makeList(intersection, false), PassedVar.NONE, Var.NONE, null,
+            WaitMode.WAIT_ONLY, allRecursive, TaskMode.LOCAL);
 
         // Put the old waits under the new one, remove redundant wait vars
         // Exception: don't eliminate task dispatch waits
@@ -536,8 +540,12 @@ public class WaitCoalescer implements OptimizerPass {
     for (Continuation c: block.getContinuations()) {
       if (c.getType() == ContinuationType.WAIT_STATEMENT) {
         WaitStatement wait = (WaitStatement)c;
-        for (Var v: wait.getWaitVars()) {
-          waitMap.put(v, wait);
+        
+        // Defensively check for duplicates since duplicates cause issues here
+        List<WaitVar> waitVars = new ArrayList<WaitVar>(wait.getWaitVars());
+        WaitVar.removeDuplicates(waitVars);
+        for (WaitVar wv: waitVars) {
+          waitMap.put(wv.var, wait);
         }
       }
     }
@@ -740,12 +748,16 @@ public class WaitCoalescer implements OptimizerPass {
       boolean relocated;
       switch (ic.type()) {
         case CONTINUATION: {
+          if (logger.isTraceEnabled())
+            logger.trace("Relocating " + ic.continuation().getType());
           relocated = relocateContinuation(ancestors, currBlock,
               currContext, movedC, ic.continuation());
           
           break;
         } 
         case INSTRUCTION:
+          if (logger.isTraceEnabled())
+            logger.trace("Relocating " + ic.instruction());
           relocated = relocateInstruction(ancestors, currContext,
               currBlockInstructions, movedI, ic.instruction());
           break;
@@ -790,7 +802,7 @@ public class WaitCoalescer implements OptimizerPass {
             w.getTarget() == TaskMode.LOCAL) {
           canRelocate = true;
         } else if (w.getTarget() == TaskMode.LOCAL_CONTROL) {
-          if (w.getMode() == WaitMode.EXPLICIT && retainExplicit) {
+          if (w.hasExplicit() && retainExplicit) {
             canRelocate = false;
           } else {
             w.setMode(WaitMode.TASK_DISPATCH);

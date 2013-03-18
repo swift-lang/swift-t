@@ -344,11 +344,13 @@ public class ICContinuations {
     public final Var var;
     /** Whether variable must be recursively closed */
     public final boolean recursive;
+    public final boolean explicit;
     
-    public BlockingVar(Var var, boolean recursive) {
+    public BlockingVar(Var var, boolean recursive, boolean explicit) {
       super();
       this.var = var;
       this.recursive = recursive;
+      this.explicit = explicit;
     }
   }
   
@@ -701,9 +703,9 @@ public class ICContinuations {
       ArrayList<BlockingVar> res = new ArrayList<BlockingVar>();
       for (int i = 0; i < loopVars.size(); i++) {
         if (blockingVars.get(i)) {
-          res.add(new BlockingVar(initVals.get(i), false));
+          res.add(new BlockingVar(initVals.get(i), false, false));
           if (includeConstructDefined) {
-            res.add(new BlockingVar(loopVars.get(i), false));
+            res.add(new BlockingVar(loopVars.get(i), false, true));
           }
         }
       }
@@ -817,6 +819,96 @@ public class ICContinuations {
       return block.isEmpty();
     }
   }
+  
+  /**
+   * TODO: add recursive?
+   *
+   */
+  public static class WaitVar implements Comparable<WaitVar> {
+    public final Var var;
+    public final boolean explicit;
+    public WaitVar(Var var, boolean explicit) {
+      this.var = var;
+      this.explicit = explicit;
+    }
+    
+    /**
+     * Remove duplicate entries.  If one is explicit, retained one
+     * must be explicit
+     * @param list
+     */
+    public static final void removeDuplicates(List<WaitVar> list) {
+      Collections.sort(list);
+      ListIterator<WaitVar> it = list.listIterator();
+      if (!it.hasNext())
+        return;
+      
+      WaitVar last = it.next();
+      while (it.hasNext()) {
+        WaitVar curr = it.next();
+        if (curr.var.equals(last.var)) {
+          // Remove any duplicates.  Due to ordering, explicit version will be retained
+          it.remove();
+        } else {
+          last = curr;
+        }
+      }
+    }
+
+    /**
+     * Make comparable so can sort to find duplicates
+     */
+    @Override
+    public int compareTo(WaitVar o) {
+      int res = var.name().compareTo(o.var.name());
+      if (res != 0) {
+        return res;
+      }
+      if (explicit == o.explicit)
+        return 0;
+      // explicit should be before not explicit
+      return explicit ? -1 : 1;
+    }
+
+    public static List<Var> asVarList(List<WaitVar> waitVars) {
+      ArrayList<Var> res = new ArrayList<Var>();
+      for (WaitVar wv: waitVars) {
+        res.add(wv.var);
+      }
+      return res;
+    }
+
+    public static List<WaitVar> makeList(Collection<Var> waitVars, boolean explicit) {
+      List<WaitVar> waitVars2 = new ArrayList<WaitVar>(waitVars.size());
+      for (Var v: waitVars) {
+        waitVars2.add(new WaitVar(v, explicit));
+      }
+      return waitVars2;
+    }
+    
+    /**
+     * For pretty printing
+     */
+    public String toString() {
+      return var.name() + (explicit ? ":EXPLICIT" : "");
+    }
+    
+    @Override
+    public boolean equals(Object other) {
+      if (!(other instanceof WaitVar))
+          return false;
+      WaitVar owv = (WaitVar)other;
+      return owv.explicit == explicit &&
+             owv.var.equals(this.var);
+    }
+
+    @Override
+    public int hashCode() {
+      return Integer.rotateLeft(var.hashCode(), 1) & (explicit ? 0 : 1);
+    }
+    
+    public static final List<WaitVar> NONE = Collections.emptyList();
+  }
 
   /**
    * A new construct that blocks on a list of variables (blockVars),
@@ -827,7 +919,7 @@ public class ICContinuations {
     /** Label name to use in final generated code */
     private final String procName;
     private final Block block;
-    private final ArrayList<Var> waitVars;
+    private final List<WaitVar> waitVars;
     private Arg priority;
     
     /* True if this wait was compiler-generated so can be removed if needed
@@ -837,7 +929,7 @@ public class ICContinuations {
     private final boolean recursive;
     private TaskMode target;
 
-    public WaitStatement(String procName, List<Var> waitVars,
+    public WaitStatement(String procName, List<WaitVar> waitVars,
                     List<PassedVar> passedVars,
                     List<Var> keepOpenVars,
                     Arg priority,
@@ -851,7 +943,7 @@ public class ICContinuations {
     }
 
     private WaitStatement(String procName, Block block,
-        List<Var> waitVars, List<PassedVar> passedVars,
+        List<WaitVar> waitVars, List<PassedVar> passedVars,
         List<Var> keepOpenVars, Arg priority,
         WaitMode mode, boolean recursive, TaskMode target) {
       super(passedVars, keepOpenVars);
@@ -863,8 +955,8 @@ public class ICContinuations {
       this.procName = procName;
       this.block = block;
       this.block.setParent(this);
-      this.waitVars = new ArrayList<Var>(waitVars);
-      ICUtil.removeDuplicates(this.waitVars);
+      this.waitVars = new ArrayList<WaitVar>(waitVars);
+      WaitVar.removeDuplicates(this.waitVars);
       this.priority = priority;
       this.mode = mode;
       this.recursive = recursive;
@@ -885,8 +977,7 @@ public class ICContinuations {
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UndefinedTypeException {
-
-      gen.startWaitStatement(procName, waitVars, 
+      gen.startWaitStatement(procName, WaitVar.asVarList(waitVars), 
           PassedVar.extractVars(passedVars), priority, mode, recursive, target);
       this.block.generate(logger, gen, info);
       gen.endWaitStatement();
@@ -896,7 +987,7 @@ public class ICContinuations {
     public void prettyPrint(StringBuilder sb, String currentIndent) {
       String newIndent = currentIndent + indent;
       sb.append(currentIndent + "wait (");
-      ICUtil.prettyPrintVarList(sb, waitVars);
+      ICUtil.prettyPrintList(sb, waitVars);
       sb.append(") ");
       sb.append("/*" + procName + "*/ " );
       ICUtil.prettyPrintVarInfo(sb, passedVars, keepOpenVars);
@@ -918,7 +1009,20 @@ public class ICContinuations {
     @Override
     public void replaceConstructVars_(Map<Var, Arg> renames, 
                                       RenameMode mode) {
-      ICUtil.replaceVarsInList(renames, waitVars, true);
+      boolean replaced = false;
+      ListIterator<WaitVar> it = waitVars.listIterator();
+      while (it.hasNext()) {
+        WaitVar wv = it.next();
+        Arg replacement = renames.get(wv.var);
+        if (replacement != null && replacement.isVar()) {
+          it.set(new WaitVar(replacement.getVar(), wv.explicit));
+          replaced = true;
+        }
+      }
+      if (replaced) {
+        WaitVar.removeDuplicates(waitVars);
+      }
+      
       priority = ICUtil.replaceOparg(renames, priority, true);
     }
     
@@ -959,10 +1063,10 @@ public class ICContinuations {
     @Override
     public Collection<Var> requiredVars(boolean forDeadCodeElim) {
       ArrayList<Var> res = new ArrayList<Var>();
-      if (!forDeadCodeElim || mode == WaitMode.EXPLICIT ||
-          mode == WaitMode.TASK_DISPATCH) {
-        for (Var v: waitVars) {
-          res.add(v);
+      for (WaitVar wv: waitVars) {
+        // Explicit variables cannot be eliminated
+        if (!forDeadCodeElim || wv.explicit) { 
+          res.add(wv.var);
         }
       }
       if (priority != null && priority.isVar()) {
@@ -971,18 +1075,24 @@ public class ICContinuations {
       return res; // can later eliminate waitVars, etc
     }
 
-    public List<Var> getWaitVars() {
+    public List<WaitVar> getWaitVars() {
       return Collections.unmodifiableList(this.waitVars);
     }
 
-    public void addWaitVars(Collection<Var> vars) {
+    public void addWaitVars(Collection<WaitVar> vars) {
       this.waitVars.addAll(vars);
-      ICUtil.removeDuplicates(this.waitVars);
+      WaitVar.removeDuplicates(this.waitVars);
     }
 
     @Override
     public void removeVars_(Set<Var> removeVars) {
-      waitVars.removeAll(removeVars);
+      ListIterator<WaitVar> it = waitVars.listIterator();
+      while (it.hasNext()) {
+        WaitVar wv = it.next();
+        if (removeVars.contains(wv.var)) {
+          it.remove();
+        }
+      }
     }
 
     @Override
@@ -999,16 +1109,15 @@ public class ICContinuations {
     @Override
     public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars,
         boolean keepExplicitDependencies) {
-      if (keepExplicitDependencies && mode == WaitMode.EXPLICIT)
-        return null;
-      
       boolean varsLeft = false;
       // iterate over wait vars, remove those in list
-      ListIterator<Var> it = waitVars.listIterator();
+      ListIterator<WaitVar> it = waitVars.listIterator();
       while(it.hasNext()) {
-        Var wv = it.next();
+        WaitVar wv = it.next();
         // See if we can skip waiting on var
-        if ((closedVars.contains(wv) && !recursionRequired(wv))
+        if (keepExplicitDependencies && wv.explicit) {
+          varsLeft = true;
+        } else if ((closedVars.contains(wv) && !recursionRequired(wv.var))
             || recClosedVars.contains(wv)) {
           it.remove();
         } else {
@@ -1047,10 +1156,24 @@ public class ICContinuations {
     @Override
     public List<BlockingVar> blockingVars(boolean includeConstructDefined) {
       ArrayList<BlockingVar> res = new ArrayList<BlockingVar>(waitVars.size());
-      for (Var wv: waitVars) {
-        res.add(new BlockingVar(wv, this.recursive));
+      for (WaitVar wv: waitVars) {
+        res.add(new BlockingVar(wv.var, this.recursive, wv.explicit));
       }
       return res;
+    }
+
+    /**
+     * True if any wait vars are explicit
+     * @return
+     */
+    public boolean hasExplicit() {
+      for (WaitVar wv: waitVars) {
+        if (wv.explicit) {
+          return true;
+        }
+      }
+      
+      return false;
     }
 
     @Override

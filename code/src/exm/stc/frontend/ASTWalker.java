@@ -351,8 +351,8 @@ public class ASTWalker {
       }
       
       String waitName = context.getFunctionContext().constructName("chain");
-      backend.startWaitStatement(waitName, stmtResults, null, WaitMode.EXPLICIT,
-                                 false, TaskMode.LOCAL);
+      backend.startWaitStatement(waitName, stmtResults, null, WaitMode.WAIT_ONLY,
+                                 true, false, TaskMode.LOCAL);
     }
     
     // Evaluate the final statement
@@ -394,7 +394,7 @@ public class ASTWalker {
     backend.startWaitStatement(
           context.getFunctionContext().constructName("explicitwait"),
                       waitEvaled, null,
-                      WaitMode.EXPLICIT, false, TaskMode.LOCAL_CONTROL);
+                      WaitMode.WAIT_ONLY, true, false, TaskMode.LOCAL_CONTROL);
     block(new LocalContext(context), wait.getBlock());
     backend.endWaitStatement();
   }
@@ -449,7 +449,7 @@ public class ASTWalker {
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("if"), 
               Arrays.asList(conditionVar), null,
-                WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
+                WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
 
     Context waitContext = new LocalContext(context);
     Var condVal = varCreator.fetchValueOf(waitContext, conditionVar);
@@ -563,7 +563,7 @@ public class ASTWalker {
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("switch"),
                 Arrays.asList(switchVar), null,
-                WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
+                WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
 
     Context waitContext = new LocalContext(context);
     Var switchVal = varCreator.createValueOfVar(waitContext,
@@ -625,7 +625,7 @@ public class ASTWalker {
     List<Var> rangeBounds = Arrays.asList(start, end, step);
     backend.startWaitStatement(fc.getFunctionName() + "-wait-range" + loopNum,
              rangeBounds, null,
-             WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
+             WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
     Context waitContext = new LocalContext(context);
     Var startVal = varCreator.fetchValueOf(waitContext, start);
     Var endVal = varCreator.fetchValueOf(waitContext, end);
@@ -647,7 +647,7 @@ public class ASTWalker {
     if (!loop.isSyncLoop()) {
       backend.startWaitStatement(fc.getFunctionName() + "range-iter" + loopNum,
           Arrays.<Var>asList(), null,
-          WaitMode.TASK_DISPATCH, false, TaskMode.CONTROL);
+          WaitMode.TASK_DISPATCH, false, false, TaskMode.CONTROL);
     }
     
     // We have the current value, but need to put it in a future in case user
@@ -703,7 +703,7 @@ public class ASTWalker {
       backend.startWaitStatement(
           fc.getFunctionName() + "-foreach-refwait" + loopNum,
           Arrays.asList(arrayVar), null,
-          WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
+          WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
 
       outsideLoopContext = new LocalContext(context);
       realArray = varCreator.createTmp(outsideLoopContext,
@@ -718,7 +718,7 @@ public class ASTWalker {
     backend.startWaitStatement(
         fc.getFunctionName() + "-foreach-wait" + loopNum,
         Arrays.asList(realArray), null,
-        WaitMode.DATA_ONLY, false, TaskMode.LOCAL_CONTROL);
+        WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
     
     loop.setupLoopBodyContext(outsideLoopContext, false);
     Context loopBodyContext = loop.getBodyContext();
@@ -731,7 +731,7 @@ public class ASTWalker {
       backend.startWaitStatement(
           fc.getFunctionName() + "-foreach-spawn" + loopNum,
           Arrays.<Var>asList(), null,
-          WaitMode.TASK_DISPATCH, false, TaskMode.CONTROL);
+          WaitMode.TASK_DISPATCH, false, false, TaskMode.CONTROL);
     }
     // If the user's code expects a loop count var, need to create it here
     if (loop.getCountVarName() != null) {
@@ -1920,7 +1920,7 @@ public class ASTWalker {
     String waitName = context.getFunctionContext().constructName("app-leaf");
     // do deep wait for array args
     backend.startWaitStatement(waitName, waitVars,
-        null, WaitMode.TASK_DISPATCH, true, TaskMode.WORKER);
+        null, WaitMode.TASK_DISPATCH, false, true, TaskMode.WORKER);
     // On worker, just execute the required command directly
     Pair<List<Arg>, Redirects<Arg>> retrieved = retrieveAppArgs(context,
                                           args, redirFutures, fileNames);
