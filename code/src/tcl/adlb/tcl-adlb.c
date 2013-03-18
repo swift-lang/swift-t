@@ -1219,7 +1219,7 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
   /* Only decrement if refcounting enabled */
   if  (read_refcount_enabled && decr) {
     decr_amount = 0;
-    rc = Tcl_GetLongFromObj(interp, objv[2], &decr_amount);
+    rc = Tcl_GetIntFromObj(interp, objv[2], &decr_amount);
     TCL_CHECK_MSG(rc, "requires id!");
   }
 
@@ -1245,14 +1245,23 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
 
   // printf("retrieved blob: [ %p %i ]\n", blob, length);
 
-  // Pack and return the blob pointer, length as Tcl list
-  Tcl_Obj* list[2];
+  // Pack and return the blob pointer, length, turbine ID as Tcl list
+  Tcl_Obj* list[3];
   long pointer = (long) blob;
   list[0] = Tcl_NewLongObj(pointer);
   list[1] = Tcl_NewIntObj(length);
-  Tcl_Obj* result = Tcl_NewListObj(2, list);
+  list[2] = Tcl_NewLongObj(id);
+  Tcl_Obj* result = Tcl_NewListObj(3, list);
 
   Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+static int uncache_blob(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
+                        long id) {
+  void* blob = table_lp_remove(&blob_cache, id);
+  TCL_CONDITION(blob != NULL, "blob not cached: <%li>", id);
+  free(blob);
   return TCL_OK;
 }
 
@@ -1270,16 +1279,17 @@ ADLB_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
   long id;
   rc = Tcl_GetLongFromObj(interp, objv[1], &id);
   TCL_CHECK_MSG(rc, "requires id!");
-
-  void* blob = table_lp_remove(&blob_cache, id);
-  TCL_CONDITION(blob != NULL, "blob not cached: <%li>", id);
-  free(blob);
-  return TCL_OK;
+  return uncache_blob(interp, objc, objv, id);
 }
 
 /**
-   Free a local blob with provided pointer
-   usage: adlb::local_blob_free <ptr>
+   Free a local blob object.  This handles two cases:
+    -> A three element list representing a blob retrieved from the
+       data store, in which case we must remove it from the cache
+       by its data store ID
+    -> A two element list representing a locally allocated blob
+       where we just call free on the pointer
+   usage: adlb::local_blob_free <struct>
  */
 static int
 ADLB_Local_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -1289,14 +1299,27 @@ ADLB_Local_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   int rc;
 
-  long ptrVal;
-  void *ptr;
-  rc = Tcl_GetLongFromObj(interp, objv[1], &ptrVal);
-  TCL_CHECK_MSG(rc, "requires ptr!");
-
-  ptr = (void *)ptrVal;
-  free(ptr);
-  return TCL_OK;
+  int length;
+  Tcl_Obj** objs;
+  rc = Tcl_ListObjGetElements(interp, objv[1], &length, &objs);
+  TCL_CHECK_MSG(rc, "requires list!");
+  fprintf(stderr, "LENGTH %d\n", length);
+  if (length == 2) {
+    long ptrVal;
+    rc = Tcl_GetLongFromObj(interp, objs[0], &ptrVal);
+    TCL_CHECK_MSG(rc, "requires integer id!");
+    fprintf(stderr, "FREE %lx\n", (unsigned long)ptrVal);
+    free((void *)ptrVal);
+    return TCL_OK;
+  } else if (length == 3) {
+    long id;
+    rc = Tcl_GetLongFromObj(interp, objs[2], &id);
+    TCL_CHECK_MSG(rc, "requires id!");
+    fprintf(stderr, "FREE %ld\n", id);
+    return uncache_blob(interp, objc, objv, id);
+  } else {
+    TCL_RETURN_ERROR("%d element list, must be 2 or 3", length);
+  }
 }
 
 /**

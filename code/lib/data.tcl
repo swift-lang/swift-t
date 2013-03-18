@@ -353,9 +353,15 @@ namespace eval turbine {
 
     # Free local blob
     proc free_local_blob { blob } {
-      debug [ format "free_local_blob: \[%x %d\]" \
+      if { [ llength $blob ] == 3 } {
+        debug [ format "free_local_blob: \[%x %d %d\]" \
+                    [ lindex $blob 0 ] [ lindex $blob 1 ] \
+                    [ lindex $blob 2 ] ]
+      } else {
+        debug [ format "free_local_blob: \[%x %d\]" \
                     [ lindex $blob 0 ] [ lindex $blob 1 ] ]
-      adlb::local_blob_free [ lindex $blob 0 ]
+      }
+      adlb::local_blob_free $blob
     }
 
     proc retrieve_blob_string { id {decrref 0} } {
