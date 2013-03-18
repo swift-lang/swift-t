@@ -187,8 +187,10 @@ public class HierarchicalMap<K, V> implements Map<K, V> {
     StringBuilder sb = new StringBuilder();
     sb.append("{");
     int written = writeContents(sb, true);
-    if (parent != null) {
-      parent.writeContents(sb, written == 0);
+    HierarchicalMap<K, V> ancestor = parent;
+    while (ancestor != null) {
+      ancestor.writeContents(sb, written == 0);
+      ancestor = ancestor.parent;
     }
     sb.append("}");
     return sb.toString();

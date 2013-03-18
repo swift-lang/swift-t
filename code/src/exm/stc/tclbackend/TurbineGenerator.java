@@ -88,8 +88,7 @@ import exm.stc.tclbackend.tree.Token;
 import exm.stc.tclbackend.tree.Value;
 import exm.stc.ui.ExitCode;
 
-public class TurbineGenerator implements CompilerBackend
-{
+public class TurbineGenerator implements CompilerBackend {
 
   /** 
      This prevents duplicate "lappend auto_path" statements
@@ -602,12 +601,6 @@ public class TurbineGenerator implements CompilerBackend
       pointStack.peek().add(Turbine.blobDecrGet(prefixVar(target.name()),
                                       varToExpr(src), argToExpr(decr)));
     }
-  }
-
-  @Override
-  public void decrBlobRef(Var blob) {
-    assert(Types.isBlob(blob.type()));
-    pointStack.peek().add(Turbine.freeBlob(varToExpr(blob)));
   }
 
   @Override

@@ -60,7 +60,7 @@ public class WrapUtil {
       
       // Add cleanup action if needed
       if (value_t.equals(Types.V_BLOB)) {
-        block.addCleanup(value_v, TurbineOp.decrBlobRef(var));
+        block.addCleanup(value_v, TurbineOp.freeBlob(value_v));
       }
       return value_v;
     } else if (Types.isRef(var.type())) {

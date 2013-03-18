@@ -717,9 +717,6 @@ public class ICInstructions {
         gen.retrieveFile(getOutput(0), getInput(0).getVar(),
             getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
         break;
-      case DECR_BLOB_REF:
-        gen.decrBlobRef(getOutput(0));
-        break;
       case FREE_BLOB:
         gen.freeBlob(getOutput(0));
         break;
@@ -929,10 +926,6 @@ public class ICInstructions {
   
     public static Instruction retrieveFile(Var target, Var source) {
       return new TurbineOp(Opcode.LOAD_FILE, target, source.asArg());
-    }
-    
-    public static Instruction decrBlobRef(Var blob) {
-      return new TurbineOp(Opcode.DECR_BLOB_REF, Arg.createVar(blob));
     }
     
     public static Instruction freeBlob(Var blobVal) {
@@ -1250,7 +1243,6 @@ public class ICInstructions {
         return 1;
       case SET_FILENAME_VAL:
         return 1;
-      case DECR_BLOB_REF:
       case FREE_BLOB:
       case DECR_LOCAL_FILE_REF:
         // View refcounted var as output
@@ -1361,7 +1353,6 @@ public class ICInstructions {
            * created is subsequently used in a store operation
            */ 
         return false;
-      case DECR_BLOB_REF:
       case FREE_BLOB:
       case DECR_LOCAL_FILE_REF:
         /*
@@ -1928,7 +1919,6 @@ public class ICInstructions {
       case ARRAY_CREATE_NESTED_IMM:
       case STORE_REF:
       case LOAD_REF:
-      case DECR_BLOB_REF:
       case FREE_BLOB:
       case DECR_LOCAL_FILE_REF:
       case GET_FILENAME:
@@ -3531,7 +3521,7 @@ public class ICInstructions {
     DEREF_FILE,
     STORE_INT, STORE_STRING, STORE_FLOAT, STORE_BOOL, STORE_REF, 
     LOAD_INT, LOAD_STRING, LOAD_FLOAT, LOAD_BOOL, LOAD_REF,
-    STORE_BLOB, LOAD_BLOB, DECR_BLOB_REF, FREE_BLOB,
+    STORE_BLOB, LOAD_BLOB, FREE_BLOB,
     STORE_VOID, LOAD_VOID, 
     STORE_FILE, DECR_LOCAL_FILE_REF,
     LOAD_FILE, // dummy instruction

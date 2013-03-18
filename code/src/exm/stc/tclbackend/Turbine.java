@@ -156,9 +156,8 @@ class Turbine
       new Token("turbine::call_composite");
 
   private static final Token UNCACHED_MODE = new Token("UNCACHED");
-  private static final Token FREE_BLOB = new Token("turbine::free_blob");
   private static final Token FREE_LOCAL_BLOB = 
-      new Token("turbine::free_local_blob");
+                          new Token("turbine::free_local_blob");
   
   public static final LiteralInt VOID_DUMMY_VAL = new LiteralInt(12345);
   private static final Token REFCOUNT_INCR = new Token("turbine::read_refcount_incr");
@@ -362,10 +361,6 @@ class Turbine
 
   public static SetVariable blobGet(String target, Value var) {
     return new SetVariable(target, new Square(RETRIEVE_BLOB, var));
-  }
-
-  public static Command freeBlob(Value var) {
-    return new Command(FREE_BLOB, var);
   }
   
   public static Command freeLocalBlob(Value var) {

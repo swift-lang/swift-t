@@ -133,7 +133,6 @@ public class ProgressOpcodes {
   private static HashSet<Opcode> initNonProgress() { 
     HashSet<Opcode> opcodes = new HashSet<Opcode>();
     opcodes.add(Opcode.DECR_WRITERS);
-    opcodes.add(Opcode.DECR_BLOB_REF);
     opcodes.add(Opcode.FREE_BLOB);
     opcodes.add(Opcode.DECR_REF);
     opcodes.add(Opcode.INCR_REF);
@@ -174,7 +173,6 @@ public class ProgressOpcodes {
     // Avoid opcodes that involve entering data dependencies
     opcodes.add(Opcode.COMMENT);
     opcodes.add(Opcode.DECR_WRITERS);
-    opcodes.add(Opcode.DECR_BLOB_REF);
     opcodes.add(Opcode.FREE_BLOB);
     opcodes.add(Opcode.DECR_REF);
     opcodes.add(Opcode.INCR_REF);

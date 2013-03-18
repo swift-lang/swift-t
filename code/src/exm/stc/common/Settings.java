@@ -140,6 +140,7 @@ public class Settings
     defaults.setProperty(OPT_PIPELINE, "false");
     defaults.setProperty(OPT_CONTROLFLOW_FUSION, "true");
     defaults.setProperty(OPT_FUNCTION_INLINE, "false");
+    defaults.setProperty(OPT_FUNCTION_SIGNATURE, "true");
     defaults.setProperty(OPT_FUNCTION_INLINE_THRESHOLD, "500");
     defaults.setProperty(OPT_HOIST, "true");
     defaults.setProperty(OPT_REORDER_INSTS, "false");
@@ -232,6 +233,7 @@ public class Settings
     getBoolean(OPT_PIPELINE);
     getBoolean(OPT_CONTROLFLOW_FUSION);
     getBoolean(OPT_FUNCTION_INLINE);
+    getBoolean(OPT_FUNCTION_SIGNATURE);
     getBoolean(OPT_CANCEL_REFCOUNTS);
     getBoolean(OPT_PIGGYBACK_REFCOUNTS);
     getBoolean(OPT_HOIST);

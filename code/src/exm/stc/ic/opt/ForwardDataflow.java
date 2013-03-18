@@ -29,6 +29,7 @@ import java.util.Stack;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend.WaitMode;
+import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.InvalidWriteException;
@@ -694,6 +695,7 @@ public class ForwardDataflow implements OptimizerPass {
           again = forwardDataflow(logger, program, f, cont.childContext(execCx),
               contBlocks.get(i), contCV.makeChild(true),
               contReplaceInputs.makeChildMap(), contReplaceAll.makeChildMap());
+          
           // changes within nested scope don't require another pass
           // over this scope
           pass++;

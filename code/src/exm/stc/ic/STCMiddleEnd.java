@@ -634,11 +634,6 @@ public class STCMiddleEnd {
         TurbineOp.retrieveBlob(target, src));
   }
   
-  public void decrBlobRef(Var blob) {
-    assert(Types.isBlob(blob.type()));
-    currBlock().addInstruction(TurbineOp.decrBlobRef(blob));
-  }
-  
   public void freeBlob(Var blobVal) {
     assert(blobVal.type().equals(Types.V_BLOB));
     currBlock().addInstruction(TurbineOp.freeBlob(blobVal));

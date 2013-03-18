@@ -427,7 +427,8 @@ public class FunctionInline implements OptimizerPass {
     // rename vars
     chooseUniqueNames(logger, prog, contextFunction, inlineBlock, renames);
     
-    System.err.println("renames: " + renames);
+    if (logger.isTraceEnabled())
+        logger.trace("inlining renames: " + renames);
     inlineBlock.renameVars(renames, RenameMode.REPLACE_VAR, true);
     
     if (fnCall.getMode() == TaskMode.SYNC) {

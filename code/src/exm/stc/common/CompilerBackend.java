@@ -142,13 +142,6 @@ public interface CompilerBackend {
    * @param fileVal
    */
   public void decrLocalFileRef(Var fileVal);
-  
-  /**
-   * Decrement reference count for cached blob
-   * @param blob handle to future
-   */
-  public void decrBlobRef(Var blob);
-  
 
   /**
    * Free local blob value
