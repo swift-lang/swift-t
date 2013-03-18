@@ -1023,7 +1023,7 @@ public class ICContinuations {
         WaitVar.removeDuplicates(waitVars);
       }
       
-      priority = ICUtil.replaceOparg(renames, priority, true);
+      priority = ICUtil.replaceArg(renames, priority, true);
     }
     
     public WaitMode getMode() {

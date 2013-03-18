@@ -252,7 +252,7 @@ public class ForwardDataflow implements OptimizerPass {
           // Found a value, now see if it is actually visible
           if (!passRequired) {
             return loc;
-          } else if (cantPass(loc.getType())) {
+          } else if (cantPass(loc.type())) {
             return null;
           } else {
             return loc;
@@ -837,7 +837,7 @@ public class ForwardDataflow implements OptimizerPass {
       // If we inserted a wait, need to consider if local value can
       // be passed into new scope
       if (maybeVal != null &&
-            (noWaitRequired || !cantPass(maybeVal.getType()))) {
+            (noWaitRequired || !cantPass(maybeVal.type()))) {
         /*
          * this variable might not actually be passed through continuations to
          * the current scope, so we might have temporarily made the IC

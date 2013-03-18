@@ -307,10 +307,10 @@ public class BuiltinOps {
       throw new STCRuntimeError("Unexpected op: " + op);
     }
     if (inArg.isVar()) {
-      assert(expType.equals(inArg.getType()));
+      assert(expType.equals(inArg.type()));
     } else {
       // getType returns futures for constant vals
-      assert(expType.primType() == inArg.getType().primType());
+      assert(expType.primType() == inArg.type().primType());
     }
     assert(expType.equals(out.type()));
   }

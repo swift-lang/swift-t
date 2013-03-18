@@ -93,7 +93,7 @@ public class FixupVariables implements OptimizerPass {
     }
     for (Entry<String, Arg> e : prog.getGlobalConsts().entrySet()) {
       Arg a = e.getValue();
-      Var v = new Var(a.getType(), e.getKey(),
+      Var v = new Var(a.type(), e.getKey(),
           VarStorage.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
       fnargs.add(v);
     }

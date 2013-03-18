@@ -101,7 +101,7 @@ public class Conditionals {
     @Override
     protected void replaceConstructVars(Map<Var, Arg> renames,
                                        RenameMode mode) {
-      condition = ICUtil.replaceOparg(renames, condition, false);
+      condition = ICUtil.replaceArg(renames, condition, false);
     }
   
     @Override
@@ -277,7 +277,7 @@ public class Conditionals {
     @Override
     public void replaceConstructVars(Map<Var, Arg> renames, 
                                      RenameMode mode) {
-      switchVar = ICUtil.replaceOparg(renames, switchVar, false);
+      switchVar = ICUtil.replaceArg(renames, switchVar, false);
     }
   
     @Override

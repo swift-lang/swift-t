@@ -1141,7 +1141,7 @@ public class ICInstructions {
           }
         }
       }
-      ICUtil.replaceOpargsInList(renames, inputs);
+      ICUtil.replaceArgsInList(renames, inputs);
     }
   
     public void renameInputs(Map<Var, Arg> renames) {
@@ -1172,7 +1172,7 @@ public class ICInstructions {
              outputs.subList(firstUpdateOutputArg, outputs.size()), false);
        }
       
-       ICUtil.replaceOpargsInList(renames, inputs);
+       ICUtil.replaceArgsInList(renames, inputs);
     }
 
     private static int numOutputArgs(Opcode op) {
@@ -1672,7 +1672,7 @@ public class ICInstructions {
       case ARRAY_CREATE_NESTED_FUTURE: {
         assert(values.size() == 1);
         Arg ix = values.get(0);
-        assert(ix.isImmediateInt()) : ix + ":" + ix.getType();
+        assert(ix.isImmediateInt()) : ix + ":" + ix.type();
         // Output type of instruction changed from ref to direct
         // array handle
         Var oldOut = getOutput(0);
@@ -1699,9 +1699,9 @@ public class ICInstructions {
                 arrayRefCreateNestedImmIx(getOutput(0), getOutput(1),
                     getOutput(2), newA));
           } else {
-            assert(Types.isArray(newA.getType()));
+            assert(Types.isArray(newA.type()));
             // Replacing array ref with array
-            assert(Types.isArray(newA.getType()));
+            assert(Types.isArray(newA.type()));
             return new MakeImmChange(
                 arrayCreateNestedComputed(getOutput(0), newA.getVar(),
                                           getInput(0).getVar()));
@@ -1990,7 +1990,7 @@ public class ICInstructions {
           }
           
           ComputedValue retrieve = vanillaComputedValue(outIsClosed);
-          Opcode cvop = assignOpcode(src.getType());
+          Opcode cvop = assignOpcode(src.type());
           if (cvop == null) {
             throw new STCRuntimeError("Need assign op for "
                 + src.getVar());
@@ -1998,7 +1998,7 @@ public class ICInstructions {
           ComputedValue assign = new ComputedValue(cvop,
                     Arrays.asList(val), src, outIsClosed);
           
-          Opcode derefOp = derefOpCode(src.getType());
+          Opcode derefOp = derefOpCode(src.type());
           
           if (derefOp == null) {
             return Arrays.asList(retrieve, assign);
@@ -2021,13 +2021,13 @@ public class ICInstructions {
           // add retrieve so we can avoid retrieving later
           Arg dst = Arg.createVar(getOutput(0));
           Arg src = getInput(0);
-          Opcode cvop = retrieveOpcode(dst.getType());
+          Opcode cvop = retrieveOpcode(dst.type());
           assert(cvop != null);
 
           ComputedValue retrieve = new ComputedValue(cvop,
                     Arrays.asList(dst), src, false);
           if (op == Opcode.STORE_REF) {
-            Opcode derefOp = derefOpCode(dst.getType());
+            Opcode derefOp = derefOpCode(dst.type());
             if (derefOp != null) {
               ComputedValue deref = 
                    new ComputedValue(derefOp, Arrays.asList(dst),
@@ -2730,7 +2730,7 @@ public class ICInstructions {
         ICUtil.replaceVarsInList(renames, outputs, false);
       }
       ICUtil.replaceVarsInList(renames, inputs, false);
-      priority = ICUtil.replaceOparg(renames, priority, true);
+      priority = ICUtil.replaceArg(renames, priority, true);
     }
   
     public String getFunctionName() {
@@ -2978,7 +2978,7 @@ public class ICInstructions {
       if (mode == RenameMode.REFERENCE || mode == RenameMode.REPLACE_VAR) {
         ICUtil.replaceVarsInList(renames, outputs, false);
       }
-      ICUtil.replaceOpargsInList(renames, inputs);
+      ICUtil.replaceArgsInList(renames, inputs);
     }
   
     public String getFunctionName() {
@@ -3005,7 +3005,7 @@ public class ICInstructions {
     public Map<Var, Arg> constantFold(String enclosingFnName,
                                   Map<Var, Arg> knownConstants) {
       // Replace any variables for which constant values are known
-      ICUtil.replaceOpargsInList(knownConstants, inputs);
+      ICUtil.replaceArgsInList(knownConstants, inputs);
       return null;
     }
     
@@ -3100,12 +3100,12 @@ public class ICInstructions {
 
     @Override
     public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
-      ICUtil.replaceOpargsInList(renames, args);
-      ICUtil.replaceOpargsInList(renames, inFiles);
-      ICUtil.replaceOpargsInList(renames, outFileNames, true);
-      redirects.stdin = ICUtil.replaceOparg(renames, redirects.stdin, true);
-      redirects.stdout = ICUtil.replaceOparg(renames, redirects.stdout, true);
-      redirects.stderr = ICUtil.replaceOparg(renames, redirects.stderr, true);
+      ICUtil.replaceArgsInList(renames, args);
+      ICUtil.replaceArgsInList(renames, inFiles);
+      ICUtil.replaceArgsInList(renames, outFileNames, true);
+      redirects.stdin = ICUtil.replaceArg(renames, redirects.stdin, true);
+      redirects.stdout = ICUtil.replaceArg(renames, redirects.stdout, true);
+      redirects.stderr = ICUtil.replaceArg(renames, redirects.stderr, true);
       if (mode == RenameMode.REFERENCE || mode == RenameMode.REPLACE_VAR) {
         ICUtil.replaceVarsInList(renames, outFiles, false);
       }
@@ -3167,8 +3167,8 @@ public class ICInstructions {
     public Map<Var, Arg> constantFold(String fnName,
         Map<Var, Arg> knownConstants) {
       // Replace variables for which values are known
-      ICUtil.replaceOpargsInList(knownConstants, args);
-      ICUtil.replaceOpargsInList(knownConstants, outFileNames, true);
+      ICUtil.replaceArgsInList(knownConstants, args);
+      ICUtil.replaceArgsInList(knownConstants, outFileNames, true);
       return null;
     }
 
@@ -3599,8 +3599,8 @@ public class ICInstructions {
           this.output = renames.get(this.output).getVar();
         }
       }
-      ICUtil.replaceOpargsInList(renames, inputs);
-      priority = ICUtil.replaceOparg(renames, priority, true);
+      ICUtil.replaceArgsInList(renames, inputs);
+      priority = ICUtil.replaceArg(renames, priority, true);
     }
 
     @Override
@@ -4357,7 +4357,7 @@ public class ICInstructions {
   }
   
   public static ComputedValue filenameValCV(Arg file, Arg filenameVal) {
-    assert(Types.isFile(file.getType()));
+    assert(Types.isFile(file.type()));
     assert(filenameVal == null || filenameVal.isImmediateString());
     ComputedValue getCV = new ComputedValue(Opcode.GET_FILENAME_VAL,
                                             file, filenameVal, true);

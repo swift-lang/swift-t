@@ -366,9 +366,9 @@ public class ExprWalker {
   }
 
   public void assign(Var dst, Arg src) {
-    assert(Types.isScalarValue(src.getType()));
+    assert(Types.isScalarValue(src.type()));
     assert(Types.isScalarFuture(dst.type()));
-    switch (src.getType().primType()) {
+    switch (src.type().primType()) {
       case INT:
         backend.assignInt(dst, src);
         break;
@@ -388,7 +388,7 @@ public class ExprWalker {
         backend.assignVoid(dst, src);
         break;
       default:
-        throw new STCRuntimeError("assigning from type " + src.getType()
+        throw new STCRuntimeError("assigning from type " + src.type()
                 + " not supported internally");
     }
   }

@@ -167,8 +167,8 @@ public class STCMiddleEnd {
 
   public void startIfStatement(Arg condition, boolean hasElse) {
     assert(currFunction != null);
-    assert(condition.getType().equals(Types.V_INT)
-          || condition.getType().equals(Types.V_BOOL));
+    assert(condition.type().equals(Types.V_INT)
+          || condition.type().equals(Types.V_BOOL));
 
     IfStatement stmt = new IfStatement(condition);
     currBlock().addContinuation(stmt);
@@ -360,11 +360,11 @@ public class STCMiddleEnd {
     }
     assert(outFiles.size() == outFileNames.size());
     for (Arg o: outFileNames) {
-      assert(o == null || o.getType().assignableTo(Types.V_STRING));
+      assert(o == null || o.type().assignableTo(Types.V_STRING));
     }
     
     for (Arg i: inFiles) {
-      assert(i.getType().assignableTo(Types.V_FILE));
+      assert(i.type().assignableTo(Types.V_FILE));
     }
     
 
@@ -581,7 +581,7 @@ public class STCMiddleEnd {
   
   public void assignVoid(Var target, Arg src) {
     assert(Types.isVoid(target.type()));
-    assert(src.getType().equals(Types.V_VOID));
+    assert(src.type().equals(Types.V_VOID));
     currBlock().addInstruction(TurbineOp.assignVoid(target, src));
   }
 

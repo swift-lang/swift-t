@@ -509,7 +509,7 @@ public class TurbineGenerator implements CompilerBackend
   @Override
   public void assignVoid(Var target, Arg src) {
     assert(Types.isVoid(target.type()));
-    assert(src.getType().equals(Types.V_VOID));
+    assert(src.type().equals(Types.V_VOID));
     pointStack.peek().add(Turbine.voidSet(varToExpr(target)));
   }
 
@@ -938,7 +938,7 @@ public class TurbineGenerator implements CompilerBackend
           boolean hasSideEffects, boolean deterministic) {
     for (Arg inFile: inFiles) {
       assert(inFile.isVar());
-      assert(inFile.getType().assignableTo(Types.V_FILE));
+      assert(inFile.type().assignableTo(Types.V_FILE));
     }
     assert(outFiles.size() == outFileNames.size());
     
@@ -948,9 +948,9 @@ public class TurbineGenerator implements CompilerBackend
     
     for (Arg arg: args) {
       Expression argExpr;
-      if (Types.isArray(arg.getType())) {
+      if (Types.isArray(arg.type())) {
         // Special case: expand arrays to list
-        ArrayInfo ai = new ArrayInfo(arg.getType());
+        ArrayInfo ai = new ArrayInfo(arg.type());
         argExpr = new Expand(Turbine.unpackArray(argToExpr(arg),
                         ai.nesting, Types.isFile(ai.baseType)));
       } else {

@@ -133,7 +133,7 @@ public class Arg implements Comparable<Arg> {
     }
   }
 
-  public Type getType() {
+  public Type type() {
     switch (kind) {
     case INTVAL:
       return Types.F_INT;

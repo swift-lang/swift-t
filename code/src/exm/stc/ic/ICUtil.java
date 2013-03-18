@@ -233,12 +233,12 @@ public class ICUtil {
     }
   }
 
-  public static void replaceOpargsInList(Map<Var, Arg> renames,
+  public static void replaceArgsInList(Map<Var, Arg> renames,
       List<Arg> args) {
-    replaceOpargsInList(renames, args, false);
+    replaceArgsInList(renames, args, false);
   }
   
-  public static void replaceOpargsInList(Map<Var, Arg> renames,
+  public static void replaceArgsInList(Map<Var, Arg> renames,
       List<Arg> args, boolean nullsOk) {
     if (renames.isEmpty()) {
       return;
@@ -271,7 +271,7 @@ public class ICUtil {
    *      is in renames, return the replacements.  If it isn't,
    *      return the argument 
    */
-  public static Arg replaceOparg(Map<Var, Arg> renames, Arg oa, boolean nullsOk) {
+  public static Arg replaceArg(Map<Var, Arg> renames, Arg oa, boolean nullsOk) {
     assert(nullsOk || oa != null);
     if (oa != null && oa.isVar()) {
       Var var = oa.getVar();
