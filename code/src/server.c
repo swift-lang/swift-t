@@ -46,6 +46,9 @@
 #include "sync.h"
 #include "workqueue.h"
 
+// Check for sync requests this often so that can be handled in preference
+#define XLB_SERVER_SYNC_CHECK_FREQ 16
+
 /** Number of workers associated with this server */
 static int xlb_my_workers;
 
@@ -69,7 +72,7 @@ static adlb_code setup_idle_time(void);
 
 static inline int xlb_server_number(int rank);
 
-static inline adlb_code xlb_poll(int source,  MPI_Status *req_status);
+static inline adlb_code xlb_poll(int source, bool prefer_sync, MPI_Status *req_status);
 
 // Service request from queue
 static inline adlb_code
@@ -208,7 +211,10 @@ serve_several()
          sleeps < xlb_loop_max_sleeps)
   {
     MPI_Status req_status;
-    adlb_code code = xlb_poll(MPI_ANY_SOURCE, &req_status);
+    adlb_code code;
+    // Prioritize server-to-server syncs to avoid blocking other servers
+    bool prefer_sync = (reqs % XLB_SERVER_SYNC_CHECK_FREQ == 0);
+    code = xlb_poll(MPI_ANY_SOURCE, prefer_sync, &req_status);
     ADLB_CHECK(code);
     if (code == ADLB_SUCCESS)
     {
@@ -244,11 +250,19 @@ serve_several()
 
 /**
    Poll msg queue for requests
+
+   prefer_sync: if true, check for server-server syncs first
  */
 static inline adlb_code
-xlb_poll(int source, MPI_Status *req_status)
+xlb_poll(int source, bool prefer_sync, MPI_Status *req_status)
 {
   int new_message;
+  if (prefer_sync)
+  {
+    IPROBE(source, ADLB_TAG_SYNC_REQUEST, &new_message, req_status);
+    if (new_message)
+      return ADLB_SUCCESS;
+  }
   IPROBE(source, MPI_ANY_TAG, &new_message, req_status);
   return new_message ? ADLB_SUCCESS : ADLB_NOTHING;
 }
@@ -316,7 +330,7 @@ xlb_serve_one(int source, bool *sync_rejected)
   if (source > 0)
     TRACE("\t source: %i", source);
   MPI_Status status;
-  adlb_code code = xlb_poll(source, &status);
+  adlb_code code = xlb_poll(source, false, &status);
   ADLB_CHECK(code);
 
   if (code == ADLB_NOTHING)
