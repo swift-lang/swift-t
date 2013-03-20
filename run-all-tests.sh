@@ -14,7 +14,7 @@ cd ${TURBINE}
 echo
 echo "Testing Turbine"
 echo "================"
-if make test_results
+if make -k test_results
 then
     echo "All Turbine tests passed"
 else
@@ -26,5 +26,5 @@ echo
 echo "Testing STC"
 echo "================"
 # Test at multiple optimization levels
-../tests/run-tests.zsh -c -O0 -O1 -O2
+../tests/run-tests.zsh -c -O0 -O1 -O2 -O3
 
