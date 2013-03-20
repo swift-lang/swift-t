@@ -521,7 +521,7 @@ public class ForwardDataflow implements OptimizerPass {
       for (WaitVar wv: blockingVariables) {
         boolean isConst = program.lookupGlobalConst(wv.var.name()) != null;
         // Global constants are already set
-        if (!isConst && locals.contains(wv)) {
+        if (!isConst && locals.contains(wv.var)) {
           // Check if a non-arg
           f.addBlockingInput(wv);
         }
