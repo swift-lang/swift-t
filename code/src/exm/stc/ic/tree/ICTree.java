@@ -36,7 +36,6 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.CompilerBackend.VarDecl;
-import exm.stc.common.Logging;
 import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
@@ -792,7 +791,14 @@ public class ICTree {
     }
 
     public boolean isEmpty() {
-      return instructions.isEmpty() && continuations.isEmpty();
+      if (!continuations.isEmpty())
+        return false;
+      for (Instruction i: instructions) {
+        if (i.op != Opcode.COMMENT) {
+          return false;
+        }
+      }
+      return true;
     }
 
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
