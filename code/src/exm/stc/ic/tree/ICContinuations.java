@@ -41,6 +41,7 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
+import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICInstructions.LoopContinue;
@@ -1142,6 +1143,24 @@ public class ICContinuations {
       }
     }
     
+    public void removeWaitVars(List<WaitVar> toRemove,
+        boolean allRecursive, boolean retainExplicit) {
+      ListIterator<WaitVar> it = waitVars.listIterator();
+      while (it.hasNext()) {
+        WaitVar wv = it.next();
+        for (WaitVar r: toRemove) {
+          if (r.var.equals(wv.var)) {
+            if (this.recursive && !allRecursive  &&recursionRequired(wv.var)) {
+              // Do nothing
+            } else if (!retainExplicit || r.explicit || !wv.explicit) {
+              // Sufficiently explicit
+              it.remove();
+            }
+          }
+        }
+      }
+    }
+
     public void inlineInto(Block dstBlock) {
       inlineInto(dstBlock, this.block);
     }

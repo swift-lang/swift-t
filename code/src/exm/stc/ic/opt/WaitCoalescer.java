@@ -243,7 +243,7 @@ public class WaitCoalescer implements OptimizerPass {
     for (Continuation c: block.getContinuations()) {
       ExecContext newContext = c.childContext(currContext);
       for (Block childB: c.getBlocks()) {
-        if (rearrangeWaitsRec(logger, fn, childB, newContext)) {
+        if (rearrangeWaits(logger, fn, childB, newContext)) {
           changed = true;
         }
       }
@@ -459,7 +459,7 @@ public class WaitCoalescer implements OptimizerPass {
     return true;
   }
 
-  private static boolean mergeWaits(Logger logger, Function fn, Block block) {
+  private boolean mergeWaits(Logger logger, Function fn, Block block) {
     boolean changed = false;
     boolean fin;
     do {
@@ -483,11 +483,18 @@ public class WaitCoalescer implements OptimizerPass {
         boolean allRecursive = true;
         
         // Find out which variables are in common with all waits
+        Set<Var> explicitVars = new HashSet<Var>();
+        Set<Var> notExplicitVars = new HashSet<Var>();
         Set<Var> intersection = null;
         for (WaitStatement wait: waits) {
           Set<Var> waitVars = new HashSet<Var>();
           for (WaitVar wv: wait.getWaitVars()) {
             waitVars.add(wv.var);
+            if (wv.explicit) {
+              explicitVars.add(wv.var);
+            } else {
+              notExplicitVars.add(wv.var);
+            }
           }
           if (intersection == null) {
             intersection = waitVars;
@@ -499,20 +506,24 @@ public class WaitCoalescer implements OptimizerPass {
         }
         assert(intersection != null && !intersection.isEmpty());
         
+        List<WaitVar> mergedWaitVars = new ArrayList<WaitVar>();
+        for (Var v: intersection) {
+          // Only should be explicit if both are, to avoid adding
+          // extra ordering dependencies
+          boolean mergedExplicit = explicitVars.contains(v) &&
+                                   !notExplicitVars.contains(v);
+          mergedWaitVars.add(new WaitVar(v, mergedExplicit));
+        }
         // Create a new wait statement waiting on the intersection
         // of the above.
         WaitStatement newWait = new WaitStatement(fn.getName() + "-optmerged",
-            WaitVar.makeList(intersection, false), PassedVar.NONE, Var.NONE, null,
+            mergedWaitVars, PassedVar.NONE, Var.NONE, null,
             WaitMode.WAIT_ONLY, allRecursive, TaskMode.LOCAL);
 
         // Put the old waits under the new one, remove redundant wait vars
         // Exception: don't eliminate task dispatch waits
         for (WaitStatement wait: waits) {
-          if (allRecursive) {
-            wait.tryInline(Collections.<Var>emptySet(), intersection, false);
-          } else {
-            wait.tryInline(intersection, Collections.<Var>emptySet(), false);
-          }
+          wait.removeWaitVars(mergedWaitVars, allRecursive, retainExplicit);
           if (wait.getWaitVars().isEmpty() &&
               wait.getMode() != WaitMode.TASK_DISPATCH) {
             newWait.getBlock().insertInline(wait.getBlock());
