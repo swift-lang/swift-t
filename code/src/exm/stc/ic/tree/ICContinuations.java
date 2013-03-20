@@ -41,7 +41,6 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
-import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICInstructions.LoopContinue;
@@ -906,7 +905,8 @@ public class ICContinuations {
     @Override
     public boolean equals(Object other) {
       if (!(other instanceof WaitVar))
-          return false;
+          throw new STCRuntimeError("Comparing WaitVar with: " + other + 
+                                    " of class " + other.getClass());
       WaitVar owv = (WaitVar)other;
       return owv.explicit == explicit &&
              owv.var.equals(this.var);
@@ -1127,8 +1127,8 @@ public class ICContinuations {
         // See if we can skip waiting on var
         if (keepExplicitDependencies && wv.explicit) {
           varsLeft = true;
-        } else if ((closedVars.contains(wv) && !recursionRequired(wv.var))
-            || recClosedVars.contains(wv)) {
+        } else if ((closedVars.contains(wv.var) && !recursionRequired(wv.var))
+            || recClosedVars.contains(wv.var)) {
           it.remove();
         } else {
           varsLeft = true;

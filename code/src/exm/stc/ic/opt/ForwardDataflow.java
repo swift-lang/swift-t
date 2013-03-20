@@ -29,7 +29,6 @@ import java.util.Stack;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend.WaitMode;
-import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.InvalidWriteException;
@@ -58,6 +57,7 @@ import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.RenameMode;
@@ -223,9 +223,9 @@ public class ForwardDataflow implements OptimizerPass {
       availableVals.put(newCV, valLoc);
       if (valLoc.isVar()) {
         varContents.put(valLoc.getVar(), newCV);
-      }
-      if (valLoc.isVar() && outClosed) {
-        close(valLoc.getVar(), false);
+        if (outClosed) {
+          close(valLoc.getVar(), false);
+        }
       }
       if (op == Opcode.LOAD_BOOL || op == Opcode.LOAD_FLOAT
           || op == Opcode.LOAD_INT || op == Opcode.LOAD_STRING
@@ -465,6 +465,17 @@ public class ForwardDataflow implements OptimizerPass {
    */
   public void optimize(Logger logger, Program program)
       throws InvalidOptionException, InvalidWriteException {
+    State globalState = new State(logger);
+    
+    for (Var v: program.getGlobalVars()) {
+      // First, all constants can be treated as being set
+      if (v.storage() == VarStorage.GLOBAL_CONST) {
+        Arg val = program.lookupGlobalConst(v.name());
+        assert (val != null): v.name();
+        ComputedValue compVal = ICInstructions.assignComputedVal(v, val);
+        globalState.addComputedValue(compVal, globalState.isAvailable(compVal));
+      }
+    }
     for (Function f : program.getFunctions()) {
       // Do repeated passes until converged
       boolean changes;
@@ -473,8 +484,8 @@ public class ForwardDataflow implements OptimizerPass {
         logger.trace("closed variable analysis on function " + f.getName()
             + " pass " + pass);
         changes = forwardDataflow(logger, program, f, ExecContext.CONTROL,
-            f.mainBlock(), null, null, null);
-        
+            f.mainBlock(), globalState.makeChild(false), new HierarchicalMap<Var, Arg>(),
+            new HierarchicalMap<Var, Arg>());
         liftWait(logger, program, f);
         pass++;
       } while (changes);
@@ -498,8 +509,10 @@ public class ForwardDataflow implements OptimizerPass {
       // Can only do this optimization if the function runs asynchronously
       return;
     }
+    
     Block main = f.mainBlock();
     List<WaitVar> blockingVariables = findBlockingVariables(main);
+    
     if (blockingVariables != null) {
       List<Var> locals = f.getInputList();
       if (logger.isTraceEnabled()) {
@@ -583,8 +596,7 @@ public class ForwardDataflow implements OptimizerPass {
       HierarchicalMap<Var, Arg> replaceInputs,
       HierarchicalMap<Var, Arg> replaceAll) throws InvalidOptionException,
       InvalidWriteException {
-    if (cv == null) {
-      cv = new State(logger);
+    if (block.getType() == BlockType.MAIN_BLOCK) {
       for (WaitVar wv: f.blockingInputs()) {
         cv.close(wv.var, false);
       }
@@ -595,20 +607,7 @@ public class ForwardDataflow implements OptimizerPass {
         }
       }
     }
-    if (replaceInputs == null) {
-      replaceInputs = new HierarchicalMap<Var, Arg>();
-    }
-    if (replaceAll == null) {
-      replaceAll = new HierarchicalMap<Var, Arg>();
-    }
     for (Var v : block.getVariables()) {
-      // First, all constants can be treated as being set
-      if (v.storage() == VarStorage.GLOBAL_CONST) {
-        Arg val = program.lookupGlobalConst(v.name());
-        assert (val != null): v.name();
-        ComputedValue compVal = ICInstructions.assignComputedVal(v, val);
-        cv.addComputedValue(compVal, cv.isAvailable(compVal));
-      }
       if (v.isMapped() && Types.isFile(v.type())) {
         ComputedValue filenameVal = ICInstructions.filenameCV(
             Arg.createVar(v.mapping()), v);
