@@ -61,8 +61,7 @@ steal_allowed()
   return true;
 }
 
-static inline adlb_code steal_handshake(int target, int max_memory,
-                                        int* count);
+static inline adlb_code steal_sync(int target, int max_memory);
 
 static inline adlb_code steal_payloads(int target, int count);
 
@@ -80,57 +79,69 @@ steal(bool* result)
 
   DEBUG("[%i] stealing from %i", xlb_world_rank, target);
 
-  rc = xlb_sync(target);
-  ADLB_CHECK(rc);
+
+  struct packed_steal_resp hdr = {
+        .count = 0, .last = false };
+  MPI_Request request;
+  MPI_Status status;
+
+  IRECV(&hdr, sizeof(hdr), MPI_BYTE, target,
+        ADLB_TAG_RESPONSE_STEAL_COUNT);
+
+  int max_memory = 1;
+  int total = 0;
+  rc = steal_sync(target, max_memory);
   if (rc == ADLB_SHUTDOWN)
     goto end;
 
-  int count = 0;
-  int max_memory = 1;
-  rc = steal_handshake(target, max_memory, &count);
   ADLB_CHECK(rc);
-  if (count == 0)
-    goto end;
 
-  rc = steal_payloads(target, count);
-  ADLB_CHECK(rc);
-  *result = true;
+  // Sender will stream work in groups, each with
+  //  header.
+  while (!hdr.last) {
+    WAIT(&request, &status);
+    if (hdr.count > 0) {
+      rc = steal_payloads(target, hdr.count);
+      ADLB_CHECK(rc);
+      total += hdr.count;
+    }
+    if (!hdr.last) {
+      IRECV(&hdr, sizeof(hdr), MPI_BYTE, target,
+            ADLB_TAG_RESPONSE_STEAL_COUNT);
+    }
+  }
+  
+  DEBUG("[%i] stole %i tasks from %i", xlb_world_rank, total, target);
+  // MPE_INFO(xlb_mpe_svr_info, "STOLE: %i FROM: %i", total, target);
+  *result = total > 0;
 
-  end:
   // Record the time of this steal attempt
   xlb_steal_last = MPI_Wtime();
 
+  end:
   TRACE_END;
   MPE_LOG(xlb_mpe_dmn_steal_end);
   return ADLB_SUCCESS;
 }
 
+/*
+  Send steal request and sync with server
+ */
 static inline adlb_code
-steal_handshake(int target, int max_memory, int* count)
+steal_sync(int target, int max_memory)
 {
-  MPI_Request request;
-  MPI_Status status;
+  // Need to give server information about which work types we have:
+  // we only want to steal work types where the other server has more
+  // of them than us.
+  struct packed_sync *req = malloc(PACKED_SYNC_SIZE);
+  req->mode = ADLB_SYNC_STEAL;
+  req->steal.max_memory = max_memory;
+  workqueue_type_counts(req->steal.work_type_counts, xlb_types_size);
 
-  DEBUG("[%i] synced with %i, starting steal handshake", xlb_world_rank, target);
-  IRECV(count, 1, MPI_INT, target, ADLB_TAG_RESPONSE_STEAL_COUNT);
-
-  // Only try to steal work types for which we have outstanding requests.
-  // If we steal other work types, we may not be able to do anything with
-  // them, and in some cases they can be stolen right back by another 
-  // server in the same situation (e.g. imagine the situation where this
-  // server has requests for type A, and a surplus of type B.  We don't
-  // want to steal more of type B from another server in the same situation)
-  struct packed_steal *req = malloc(PACKED_STEAL_SIZE(xlb_types_size));
-  req->max_memory = max_memory;
-  requestqueue_types(req->work_types, xlb_types_size, &(req->type_count));
-  SEND(req, PACKED_STEAL_SIZE(req->type_count), MPI_BYTE, target,
-        ADLB_TAG_STEAL);
+  adlb_code code = xlb_sync2(target, req);
   free(req);
-
-  WAIT(&request, &status);
-  DEBUG("[%i] stole %i tasks from %i", xlb_world_rank, *count, target);
-  // MPE_INFO(xlb_mpe_svr_info, "STOLE: %i FROM: %i", *count, target);
-  return ADLB_SUCCESS;
+  DEBUG("[%i] synced with %i, receiving steal response", xlb_world_rank, target);
+  return code; 
 }
 
 static inline adlb_code
@@ -151,5 +162,112 @@ steal_payloads(int target, int count)
                   wus[i].parallelism, xfer);
   }
   free(wus);
+  DEBUG("[%i] received batch size %i", xlb_world_rank, count);
   return ADLB_SUCCESS;
 }
+
+typedef struct {
+  int stealer_rank;
+  struct packed_put *puts;
+  void **payloads;
+  int size;
+  int max_size;
+  int stole_count;
+} steal_cb_state;
+
+
+/*
+   Send a batch of work until to a stealer
+   batch: info about the batch.  This function will free memory
+   finish: true if we should notify target that this is last to send
+ */
+static adlb_code
+send_steal_batch(steal_cb_state *batch, bool finish)
+{
+  int count = batch->size;
+  struct packed_steal_resp hdr = { .count = count, .last = finish };
+  RSEND(&hdr, sizeof(hdr), MPI_BYTE, batch->stealer_rank,
+       ADLB_TAG_RESPONSE_STEAL_COUNT);
+
+  if (count == 0)
+    return ADLB_SUCCESS;
+  
+  DEBUG("[%i] sending batch size %i", xlb_world_rank, batch->size);
+  SEND(batch->puts, sizeof(*batch->puts) * count, MPI_BYTE,
+       batch->stealer_rank, ADLB_TAG_RESPONSE_STEAL);
+
+  for (int i = 0; i < count; i++)
+  {
+    DEBUG("stolen payload: %s", (char*) batch->payloads[i]);
+    SEND(batch->payloads[i], batch->puts[i].length, MPI_BYTE,
+         batch->stealer_rank, ADLB_TAG_RESPONSE_STEAL);
+    free(batch->payloads[i]);
+  }
+  batch->size = 0;
+  return ADLB_SUCCESS;
+}
+
+/*
+   Sends 
+ */
+static adlb_code
+handle_steal_callback(void *cb_data, xlb_work_unit *work)
+{
+  steal_cb_state *state = (steal_cb_state*)cb_data;
+  assert(state->size < state->max_size);
+  xlb_pack_work_unit(&(state->puts[state->size]), work);
+  state->payloads[state->size] = work->payload;
+  state->size++;
+  state->stole_count++;
+  
+  free(work); // No longer need
+
+  if (state->size == state->max_size) {
+    adlb_code code = send_steal_batch(state, false);
+    ADLB_CHECK(code);
+  }
+  return ADLB_SUCCESS;
+}
+
+adlb_code
+handle_steal(int caller, const struct packed_steal *req)
+{
+  TRACE_START;
+  MPE_LOG(xlb_mpe_svr_steal_start);
+  DEBUG("\t caller: %i", caller);
+
+  adlb_code code;
+
+  /* setup callback */
+  steal_cb_state state;
+  state.stealer_rank = caller;
+  state.max_size = XLB_STEAL_CHUNK_SIZE;
+  state.puts = malloc(sizeof(*state.puts) * state.max_size);
+  state.payloads = malloc(sizeof(*state.payloads) * state.max_size);
+  state.size = 0;
+  state.stole_count = 0;
+  workqueue_steal_callback cb;
+  cb.f = handle_steal_callback;
+  cb.data = &state;
+
+  // Maximum amount of memory to return- currently unused
+  // Call steal.  This function will call back to send messages
+  code = workqueue_steal(req->max_memory, req->work_type_counts, cb);
+  ADLB_CHECK(code);
+ 
+  // send any remaining.  If nothing left (or nothing was stolen)
+  //    this will notify stealer we're done
+  code = send_steal_batch(&state, true);
+  ADLB_CHECK(code);
+
+  free(state.puts);
+  free(state.payloads);
+
+  STATS("LOST: %i", state.stole_count);
+  // MPE_INFO(xlb_mpe_svr_info, "LOST: %i TO: %i", state.stole_count, caller);
+
+  MPE_LOG(xlb_mpe_svr_steal_end);
+  TRACE_END;
+  return ADLB_SUCCESS;
+}
+

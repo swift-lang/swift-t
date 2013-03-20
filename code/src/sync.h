@@ -26,6 +26,7 @@
 #define SYNC_H
 
 #include "adlb-defs.h"
+#include "messaging.h"
 
 /**
    Avoids server-to-server deadlocks by synchronizing with target
@@ -45,9 +46,21 @@
  */
 adlb_code xlb_sync(int target);
 
+
+// Allow special varieties of sync
+adlb_code xlb_sync2(int target, const struct packed_sync *hdr);
+
+typedef struct {
+  int rank;
+  struct packed_sync *hdr;
+} pending_sync;
+
 // Info about pending sync requests: where sync request has been received
 // but we haven't responded yet
-extern int xlb_pending_syncs[];
+extern pending_sync xlb_pending_syncs[];
 extern int xlb_pending_sync_count;
+
+adlb_code handle_accepted_sync(int rank, const struct packed_sync *hdr,
+                               bool *server_sync_rejected);
 
 #endif

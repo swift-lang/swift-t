@@ -226,12 +226,33 @@ struct packed_retrieve_hdr
 struct packed_steal
 {
   int max_memory;
-  int type_count;
-  int work_types[]; // Types to accept
+  int work_type_counts[]; // Sender's count of each work type
 };
 
-#define PACKED_STEAL_SIZE(typecount) \
-  (sizeof(struct packed_steal) + sizeof(int) * typecount) 
+#define WORK_TYPES_SIZE (sizeof(int) * xlb_types_size) 
+
+struct packed_steal_resp
+{
+  int count; // number of work units
+  bool last; // whether last set of stolen work
+};
+
+typedef enum
+{
+  ADLB_SYNC_REQUEST, // Sync for a regular request
+  ADLB_SYNC_STEAL, // Trying to steal work
+} adlb_sync_mode;
+
+struct packed_sync
+{
+  adlb_sync_mode mode;
+  union
+  {
+    struct packed_steal steal; // if steal
+  };
+};
+
+#define PACKED_SYNC_SIZE (sizeof(struct packed_sync) + WORK_TYPES_SIZE)
 
 /**
    Simple data type transfer
@@ -290,7 +311,6 @@ typedef enum
   ADLB_TAG_LOCK,
   ADLB_TAG_UNLOCK,
   ADLB_TAG_SYNC_REQUEST,
-  ADLB_TAG_STEAL,
   ADLB_TAG_CHECK_IDLE,
   ADLB_TAG_SHUTDOWN_WORKER,
   ADLB_TAG_SHUTDOWN_SERVER,

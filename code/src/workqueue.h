@@ -77,14 +77,26 @@ xlb_work_unit* workqueue_get(int target, int type);
  */
 bool workqueue_pop_parallel(xlb_work_unit** wu, int** ranks);
 
+typedef struct {
+  adlb_code (*f)(void*, xlb_work_unit*);
+  void *data;
+} workqueue_steal_callback;
+
 /*
- *
- * count: counts of returned results (array of size nsteal_types)
- * stolen: array of stolen tasks (array of size nsteal_types)
+ * steal_type_counts: counts that stealer has of each type
+ * callback: called for every stolen unit.  The callback
+            function is responsible for freeing work unit
  */
-adlb_code workqueue_steal(int max_memory, int nsteal_types,
-                          const int *steal_types,
-                          int* count, xlb_work_unit*** stolen);
+adlb_code workqueue_steal(int max_memory, const int *steal_type_counts,
+                      workqueue_steal_callback cb);
+
+/* present should be an array of size >= number of request types
+ * it is filled in with the counts of types
+ * types: array to be filled in
+ * size: size of the array (greater than num of work types)
+ * ntypes: returns number of elements filled in
+ */
+void workqueue_type_counts(int *types, int size);
 
 void work_unit_free(xlb_work_unit* wu);
 

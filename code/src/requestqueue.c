@@ -172,16 +172,12 @@ requestqueue_size()
   return table_ip_size(&targets);
 }
 
-void requestqueue_types(int *types, int size, int *ntypes) {
+void requestqueue_type_counts(int *types, int size) {
   assert(size >= rq_work_types);
-  int found = 0;
   for (int t = 0; t < rq_work_types; t++) {
     struct list2* L = &type_requests[t];
-    if (L->head != NULL) {
-      types[found++] = t;
-    }
+    types[t] = L->size;
   }
-  *ntypes = found;
 }
 
 int

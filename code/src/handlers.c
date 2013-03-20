@@ -72,7 +72,6 @@ static adlb_code handle_sync(int caller);
 static adlb_code handle_put(int caller);
 static adlb_code handle_get(int caller);
 static adlb_code handle_iget(int caller);
-static adlb_code handle_steal(int caller);
 static adlb_code handle_create(int caller);
 static adlb_code handle_multicreate(int caller);
 static adlb_code handle_exists(int caller);
@@ -121,7 +120,6 @@ xlb_handlers_init(void)
   register_handler(ADLB_TAG_PUT, handle_put);
   register_handler(ADLB_TAG_GET, handle_get);
   register_handler(ADLB_TAG_IGET, handle_iget);
-  register_handler(ADLB_TAG_STEAL, handle_steal);
   register_handler(ADLB_TAG_CREATE_HEADER, handle_create);
   register_handler(ADLB_TAG_MULTICREATE, handle_multicreate);
   register_handler(ADLB_TAG_EXISTS, handle_exists);
@@ -176,8 +174,7 @@ xlb_handle(adlb_tag tag, int caller)
 
   // Update timestamp:
   if (tag != ADLB_TAG_CHECK_IDLE &&
-      tag != ADLB_TAG_SYNC_REQUEST &&
-      tag != ADLB_TAG_STEAL)
+      tag != ADLB_TAG_SYNC_REQUEST)
     xlb_time_last_action = MPI_Wtime();
 
   MPE_LOG(xlb_mpe_svr_busy_end);
@@ -196,8 +193,11 @@ handle_sync(int caller)
 {
   MPE_LOG(xlb_mpe_svr_sync_start);
   MPI_Status status;
-  RECV_TAG(caller, ADLB_TAG_SYNC_REQUEST);
-  int rc = xlb_serve_server(caller, NULL);
+  struct packed_sync *hdr = malloc(PACKED_SYNC_SIZE);
+  RECV(hdr, PACKED_SYNC_SIZE, MPI_BYTE, caller, ADLB_TAG_SYNC_REQUEST);
+
+  adlb_code rc = handle_accepted_sync(caller, hdr, NULL);
+  free(hdr);
   ADLB_CHECK(rc);
   MPE_LOG(xlb_mpe_svr_sync_end);
   return rc;
@@ -503,62 +503,6 @@ send_no_work(int worker)
 
   SEND(&g, sizeof(g), MPI_BYTE, worker, ADLB_TAG_RESPONSE_GET);
 
-  return ADLB_SUCCESS;
-}
-
-static adlb_code
-handle_steal(int caller)
-{
-  TRACE_START;
-  MPE_LOG(xlb_mpe_svr_steal_start);
-  DEBUG("\t caller: %i", caller);
-
-  MPI_Status status;
-
-  int count;
-  xlb_work_unit** stolen;
-  // Maximum amount of memory to return- currently unused
-  
-  int req_bytes;
-  adlb_code rc = find_req_bytes(&req_bytes, caller, ADLB_TAG_STEAL);
-  ADLB_CHECK(rc);
-
-  struct packed_steal *req = malloc(req_bytes);
-  RECV(req, req_bytes, MPI_BYTE, caller, ADLB_TAG_STEAL);
-
-  workqueue_steal(req->max_memory, req->type_count, req->work_types,
-                  &count, &stolen);
-  STATS("LOST: %i", count);
-  // MPE_INFO(xlb_mpe_svr_info, "LOST: %i TO: %i", count, caller);
-
-  RSEND(&count, 1, MPI_INT, caller, ADLB_TAG_RESPONSE_STEAL_COUNT);
-
-  if (count == 0)
-    goto end;
-
-  int p_length = count*sizeof(struct packed_put);
-  struct packed_put* p = alloca(count*sizeof(struct packed_put));
-  for (int i = 0; i < count; i++)
-    xlb_pack_work_unit(&p[i], stolen[i]);
-  SEND(p, p_length, MPI_BYTE, caller, ADLB_TAG_RESPONSE_STEAL);
-
-  for (int i = 0; i < count; i++)
-  {
-    DEBUG("stolen payload: %s", (char*) stolen[i]->payload);
-    SEND(stolen[i]->payload, stolen[i]->length, MPI_BYTE, caller,
-         ADLB_TAG_RESPONSE_STEAL);
-  }
-
-  for (int i = 0; i < count; i++)
-  {
-    free(stolen[i]->payload);
-    free(stolen[i]);
-  }
-  free(stolen);
-
-  end:
-  MPE_LOG(xlb_mpe_svr_steal_end);
-  TRACE_END;
   return ADLB_SUCCESS;
 }
 

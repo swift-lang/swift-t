@@ -27,6 +27,9 @@
 
 #include <stdbool.h>
 
+// The number of work units to send at a time
+#define XLB_STEAL_CHUNK_SIZE 64
+
 /**
    Are there any other servers?
    Are we allowed to steal yet?
@@ -38,5 +41,10 @@ bool steal_allowed(void);
    @return result true if stole something, else false
  */
 adlb_code steal(bool* result);
+
+/**
+   Handle an accepted steal request
+  */
+adlb_code handle_steal(int caller, const struct packed_steal *req);
 
 #endif

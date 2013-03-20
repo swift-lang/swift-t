@@ -32,19 +32,34 @@
 #include "messaging.h"
 #include "mpe-tools.h"
 #include "server.h"
+#include "steal.h"
 #include "sync.h"
 
-static inline adlb_code msg_from_target(int target, bool* done);
-static inline adlb_code msg_from_other_server(int other_server, int target,
-                  int *pending_syncs, int *pending_sync_count);
+static inline adlb_code send_sync(int target, const struct packed_sync *hdr);
+static inline adlb_code msg_from_target(int target,
+                                  const struct packed_sync *hdr, bool* done);
+static inline adlb_code msg_from_other_server(int other_server, 
+                  int target, const struct packed_sync *my_hdr,
+                  pending_sync *pending_syncs, int *pending_sync_count);
 static inline adlb_code msg_shutdown(bool* done);
 
 // Number of pending sync requests to store before rejecting
 #define PENDING_SYNC_BUFFER_SIZE 1024
 
 // IDs of servers with pending sync requests
-int xlb_pending_syncs[PENDING_SYNC_BUFFER_SIZE];
+pending_sync xlb_pending_syncs[PENDING_SYNC_BUFFER_SIZE];
 int xlb_pending_sync_count = 0;
+
+adlb_code
+xlb_sync(int target)
+{
+  struct packed_sync *hdr = malloc(PACKED_SYNC_SIZE);
+  memset(hdr, 0, PACKED_SYNC_SIZE);
+  hdr->mode = ADLB_SYNC_REQUEST;
+  adlb_code code = xlb_sync2(target, hdr);
+  free(hdr);
+  return code;
+}
 
 /*
    While attempting a sync, one of three things may happen:
@@ -57,7 +72,7 @@ int xlb_pending_sync_count = 0;
    These numbers correspond to the variables in the function
  */
 adlb_code
-xlb_sync(int target)
+xlb_sync2(int target, const struct packed_sync *hdr)
 {
   TRACE_START;
   DEBUG("\t xlb_sync() target: %i", target);
@@ -76,7 +91,7 @@ xlb_sync(int target)
   bool done = false;
 
   // Send initial request:
-  SEND_TAG(target, ADLB_TAG_SYNC_REQUEST);
+  send_sync(target, hdr);
 
   while (!done)
   {
@@ -85,14 +100,14 @@ xlb_sync(int target)
     IPROBE(target, ADLB_TAG_SYNC_RESPONSE, &flag1, &status1);
     if (flag1)
     {
-      msg_from_target(target, &done);
+      msg_from_target(target, hdr, &done);
       if (done) break;
     }
 
     IPROBE(MPI_ANY_SOURCE, ADLB_TAG_SYNC_REQUEST, &flag2, &status2);
     if (flag2)
-      msg_from_other_server(status2.MPI_SOURCE, target, xlb_pending_syncs,
-                            &xlb_pending_sync_count);
+      msg_from_other_server(status2.MPI_SOURCE, target, hdr,
+                            xlb_pending_syncs, &xlb_pending_sync_count);
 
     IPROBE(MPI_ANY_SOURCE, ADLB_TAG_SHUTDOWN_SERVER, &flag3,
            &status3);
@@ -117,12 +132,18 @@ xlb_sync(int target)
   return rc;
 }
 
+static inline adlb_code
+send_sync(int target, const struct packed_sync *hdr)
+{
+  SEND(hdr, PACKED_SYNC_SIZE, MPI_BYTE, target, ADLB_TAG_SYNC_REQUEST);
+  return ADLB_SUCCESS;
+}
 
 /**
    @return adlb_code
  */
 static inline adlb_code
-msg_from_target(int target, bool* done)
+msg_from_target(int target, const struct packed_sync *hdr, bool* done)
 {
   MPI_Status status;
   TRACE_START;
@@ -139,18 +160,21 @@ msg_from_target(int target, bool* done)
     // Rejected
     DEBUG("server_sync: [%d] sync rejected by %d.  retrying...",
            xlb_world_rank, target);
-    SEND_TAG(target, ADLB_TAG_SYNC_REQUEST);
+    send_sync(target, hdr);
   }
   TRACE_END
   return ADLB_SUCCESS;
 }
 
 static inline adlb_code msg_from_other_server(int other_server, int target,
-                  int *pending_syncs, int *pending_sync_count)
+                  const struct packed_sync *my_hdr,
+                  pending_sync *pending_syncs, int *pending_sync_count)
 {
   TRACE_START;
   MPI_Status status;
-  RECV_TAG(other_server, ADLB_TAG_SYNC_REQUEST);
+
+  struct packed_sync *other_hdr = malloc(PACKED_SYNC_SIZE);
+  RECV(other_hdr, PACKED_SYNC_SIZE, MPI_BYTE, other_server, ADLB_TAG_SYNC_REQUEST);
 
   /* Serve another server
    * We need to avoid the case of circular deadlock, e.g. where A is waiting
@@ -163,7 +187,8 @@ static inline adlb_code msg_from_other_server(int other_server, int target,
     DEBUG("server_sync: [%d] interrupted by incoming sync request from %d",
                         xlb_world_rank, other_server);
     bool server_sync_rejected = false;
-    xlb_serve_server(other_server, &server_sync_rejected);
+    
+    handle_accepted_sync(other_server, other_hdr, &server_sync_rejected);
 
     if (other_server == target && server_sync_rejected)
     {
@@ -173,7 +198,7 @@ static inline adlb_code msg_from_other_server(int other_server, int target,
       DEBUG("server_sync: [%d] sync rejected earlier retrying sync with %d...",
                         xlb_world_rank, other_server);
       xlb_backoff_sync_rejected();
-      SEND_TAG(target, ADLB_TAG_SYNC_REQUEST);
+      send_sync(target, my_hdr);
     }
   }
   else
@@ -183,7 +208,10 @@ static inline adlb_code msg_from_other_server(int other_server, int target,
       // Store sync request so we can later service it
       DEBUG("server_sync: [%d] deferring incoming sync request from %d.  "
             "%d deferred sync requests", xlb_world_rank, other_server, *pending_sync_count);
-      pending_syncs[(*pending_sync_count)++] = other_server;
+      pending_syncs[*pending_sync_count].rank = other_server;
+      pending_syncs[*pending_sync_count].hdr = other_hdr;
+      other_hdr = NULL; // Lose reference
+      (*pending_sync_count)++;
     }
     else
     {
@@ -194,8 +222,38 @@ static inline adlb_code msg_from_other_server(int other_server, int target,
            ADLB_TAG_SYNC_RESPONSE);
     }
   }
+  if (other_hdr != NULL)
+    free(other_hdr);
   TRACE_END;
   return ADLB_SUCCESS;
+}
+
+/*
+  One we have accepted sync, do whatever processing needed to service
+ */
+adlb_code handle_accepted_sync(int rank, const struct packed_sync *hdr,
+                               bool *server_sync_rejected)
+{
+  static int response = 1;
+  SEND(&response, 1, MPI_INT, rank, ADLB_TAG_SYNC_RESPONSE);
+
+  int mode = hdr->mode;
+  adlb_code code = ADLB_ERROR;
+  if (mode == ADLB_SYNC_REQUEST)
+  {
+    code = xlb_serve_server(rank, server_sync_rejected);
+  }
+  else if (mode == ADLB_SYNC_STEAL)
+  {
+    // Respond to steal
+    code = handle_steal(rank, &hdr->steal);
+  }
+  else
+  {
+    printf("Invalid sync mode: %d\n", mode);
+    return ADLB_ERROR;
+  }
+  return code;
 }
 
 static inline adlb_code

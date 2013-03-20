@@ -43,6 +43,11 @@
 #include "requestqueue.h"
 #include "workqueue.h"
 
+
+// minimum percentage imbalance to trigger steal if stealers queue not empty
+#define XLB_STEAL_IMBALANCE 0.1
+
+
 /** Uniquify work units on this server */
 static xlb_work_unit_id unique = 1;
 
@@ -269,95 +274,83 @@ rand_choose(float *weights, int length) {
   }
 }
 
-/**
-   If count is not 0, caller must free results
- */
-adlb_code
-workqueue_steal(int max_memory, int nsteal_types, const int *steal_types,
-                int* count, xlb_work_unit*** result)
+static inline adlb_code
+workqueue_steal_type(struct rbtree *q, int num,
+                      workqueue_steal_callback cb)
 {
-  assert(nsteal_types >= 0 && nsteal_types <= xlb_types_size);
-  // fractions: probability weighting for each work type
-  float fractions_parallel[nsteal_types];
-  float fractions_single[nsteal_types];
-  int total_parallel = 0;
-  int total_single = 0;
-  for (int i = 0; i < nsteal_types; i++)
+  assert(q->size >= num);
+  for (int i = 0; i < num; i++)
   {
-    int t = steal_types[i];
-    assert(t >= 0 && t < xlb_types_size);
-    total_parallel += (&parallel_work[t])->size;
-    total_single   += (&typed_work[t])->size;
+    struct rbtree_node* node = rbtree_random(q);
+    assert(node != NULL);
+    rbtree_remove_node(q, node);
+    adlb_code code = cb.f(cb.data, (xlb_work_unit*) node->data);
+    free(node);
+    ADLB_CHECK(code);
   }
-
-  DEBUG("workqueue_steal(): total=%i", total_single);
-
-  if (total_single + total_parallel == 0)
-  {
-    *count = 0;
-    return ADLB_SUCCESS;
-  }
-
-  if (total_parallel > 0) {
-    for (int i = 0; i < nsteal_types; i++) {
-      int t = steal_types[i];
-      fractions_parallel[t] =
-          (&parallel_work[t])->size / (float) total_parallel;
-    }
-  }
-  if (total_single > 0) {
-    for (int i = 0; i < nsteal_types; i++) {
-      int t = steal_types[i];
-      fractions_single[t] =
-          (&typed_work[t])->size / (float) total_single;
-    }
-  }
-  // Number of work units we are willing to share (half of all work)
-  int share = (total_single + total_parallel) / 2 + 1;
-  // Number of work units we actually share
-  int actual = 0;
-
-  // First, steal parallel task work units
-  xlb_work_unit** stolen = malloc(share * sizeof(xlb_work_unit*));
-  if (total_parallel > 0)
-    for (int i = 0; i < share; i++)
-    {
-      assert(nsteal_types > 0);
-      int type_ix = rand_choose(fractions_parallel, nsteal_types);
-      assert(type_ix >= 0 && type_ix < nsteal_types);
-      int type = steal_types[type_ix];
-      assert(type >= 0 && type < xlb_types_size);
-      struct rbtree* T = &parallel_work[type];
-      struct rbtree_node* node = rbtree_random(T);
-      if (node == NULL)
-        continue;
-      rbtree_remove_node(T, node);
-      stolen[actual] = (xlb_work_unit*) node->data;
-      actual++;
-      free(node);
-    }
-  // Second, steal single-process work units
-  if (total_single > 0)
-    for (int i = actual; i < share; i++)
-    {
-      assert(nsteal_types > 0);
-      int type_ix = rand_choose(fractions_single, nsteal_types);
-      assert(type_ix >= 0 && type_ix < nsteal_types);
-      int type = steal_types[type_ix];
-      assert(type >= 0 && type < xlb_types_size);
-      struct rbtree* T = &typed_work[type];
-      struct rbtree_node* node = rbtree_random(T);
-      if (node == NULL)
-        continue;
-      rbtree_remove_node(T, node);
-      stolen[actual] = (xlb_work_unit*) node->data;
-      actual++;
-      free(node);
-    }
-
-  *count = actual;
-  *result = stolen;
   return ADLB_SUCCESS;
+}
+
+
+adlb_code
+workqueue_steal(int max_memory, const int *steal_type_counts,
+                          workqueue_steal_callback cb)
+{
+  // for each type:
+  //    select # to send to stealer
+  //    randomly choose until meet quota
+  for (int t = 0; t < xlb_types_size; t++)
+  {
+    int stealer_count = steal_type_counts[t];
+    int single_count = typed_work[t].size;
+    int par_count = parallel_work[t].size;
+    int tot_count = single_count + par_count;
+    // TODO: handle ser and par separately? 
+    //  What if server A has single idle workers and parallel work,
+    //    while server B has single work?
+    
+    // Only send if stealer has significantly fewer
+    if (tot_count > 0) {
+      bool send = false;
+      if (stealer_count == 0) {
+        send = true;
+      }
+      else
+      {
+        double imbalance = (tot_count - stealer_count) / (double) stealer_count;
+        send = imbalance > XLB_STEAL_IMBALANCE;
+      }
+      if (send) {
+        int to_send = (tot_count - stealer_count) / 2;
+        if (to_send == 0)
+          to_send = 1;
+        double single_pc = single_count / (double) tot_count;
+        int single_to_send = (int)(single_pc * to_send);
+        int par_to_send = to_send - single_to_send;
+        TRACE("workqueue_steal(): stealing type=%i single=%i/%i par=%i/%i"
+              " This server count: %i versus %i",
+                        t, single_to_send, single_count, par_to_send, par_count,
+                        tot_count, stealer_count);
+        adlb_code code;
+        code = workqueue_steal_type(&(typed_work[t]), single_to_send, cb);
+        ADLB_CHECK(code);
+        code = workqueue_steal_type(&(parallel_work[t]), par_to_send, cb);
+        ADLB_CHECK(code);
+      }
+    }
+  }
+  return ADLB_SUCCESS;
+}
+
+void workqueue_type_counts(int *types, int size)
+{
+  assert(size >= xlb_types_size);
+  for (int t = 0; t < xlb_types_size; t++)
+  {
+    assert(typed_work[t].size >= 0);
+    assert(parallel_work[t].size >= 0);
+    types[t] = typed_work[t].size + parallel_work[t].size;
+  }
 }
 
 void

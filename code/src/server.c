@@ -285,10 +285,15 @@ xlb_handle_pending_syncs()
     // Handle outstanding sync requests
     for (int i = 0; i < xlb_pending_sync_count; i++)
     {
+      int rank = xlb_pending_syncs[i].rank;
       DEBUG("server_sync: [%d] handling deferred sync %d from %d",
-            xlb_world_rank, i, xlb_pending_syncs[i]);
-      adlb_code code = xlb_serve_server(xlb_pending_syncs[i], NULL);
-      if (code != ADLB_SUCCESS)
+          xlb_world_rank, i, rank);
+      adlb_code code = handle_accepted_sync(rank, xlb_pending_syncs[i].hdr, NULL);
+      if (code == ADLB_SUCCESS)
+      {
+        free(xlb_pending_syncs[i].hdr);
+      }
+      else
       {
         // Update pending syncs to avoid corrupted state
         if (i > 0)
@@ -329,8 +334,6 @@ xlb_serve_server(int source, bool *server_sync_retry)
 {
   TRACE_START;
   DEBUG("\t serve_server: [%i] serving %i", xlb_world_rank, source);
-  static int response = 1;
-  SEND(&response, 1, MPI_INT, source, ADLB_TAG_SYNC_RESPONSE);
   int rc = ADLB_NOTHING;
   while (true)
   {
