@@ -391,7 +391,8 @@ public class ICTree {
     public List<Boolean> getBlockingInputVector() {
       ArrayList<Boolean> res = new ArrayList<Boolean>(iList.size());
       for (Var input: this.iList) {
-        boolean isBlocking = blockingInputs.contains(input);
+        
+        boolean isBlocking = WaitVar.find(blockingInputs, input) != null;
         res.add(isBlocking);
       }
       return res;
@@ -543,18 +544,22 @@ public class ICTree {
     
     public boolean varNameUsed(String name) {
       // TODO: keep set of used var names here?
+      
+      if (Var.findByName(iList, name) != null ||
+          Var.findByName(oList, name) != null) {
+        return true;
+      }
       Deque<Block> blocks = new ArrayDeque<Block>();
       blocks.add(this.mainBlock);
       while (!blocks.isEmpty()) {
         Block curr = blocks.pop();
-        for (Var v: curr.variables) {
-          if (v.name().equals(name))
-            return true;
+        if (Var.findByName(curr.variables, name) != null) {
+          return true;
         }
         for (Continuation c: curr.getContinuations()) {
-          for (Var cv: c.constructDefinedVars())
-            if (cv.name().equals(name))
-              return true;
+          if (Var.findByName(c.constructDefinedVars(), name) != null) {
+            return true;
+          }
           for (Block inner: c.getBlocks()) {
             blocks.push(inner);
           }

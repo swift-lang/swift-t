@@ -361,4 +361,13 @@ public class Var implements Comparable<Var> {
   {
     return type.toString()+':'+name;
   }
+
+  public static Var findByName(List<Var> vars, String name) {
+    for (Var v: vars) {
+      if (v.name().equals(name)) {
+        return v;
+      }
+    }
+    return null;
+  }
 }
