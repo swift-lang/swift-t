@@ -166,12 +166,16 @@ import exm.stc.ic.tree.ICTree.Program;
  *
  */
 public class WaitCoalescer implements OptimizerPass {
+  // If true, explode dataflow ops
+  private final boolean doExplode;
   // If true, merge continuations
-  private boolean doMerges;
+  private final boolean doMerges;
   // If true, retain explicit waits even if removing them is valid
-  private boolean retainExplicit;
+  private final boolean retainExplicit;
   
-  public WaitCoalescer(boolean doMerges, boolean retainExplicit) {
+  public WaitCoalescer(boolean doExplode, boolean doMerges,
+                       boolean retainExplicit) {
+    this.doExplode = doExplode;
     this.doMerges = doMerges;
     this.retainExplicit = retainExplicit;
   }
@@ -198,7 +202,7 @@ public class WaitCoalescer implements OptimizerPass {
     boolean exploded = false;
     logger.trace("Entering function " + fn.getName());
     try {
-      if (Settings.getBoolean(Settings.OPT_EXPAND_DATAFLOW_OPS)) {
+      if (doExplode && Settings.getBoolean(Settings.OPT_EXPAND_DATAFLOW_OPS)) {
         logger.trace("Exploding Function Calls...");
         exploded = explodeFuncCalls(logger, fn, currContext, block);
       }

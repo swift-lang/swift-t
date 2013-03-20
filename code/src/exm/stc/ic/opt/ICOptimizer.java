@@ -172,7 +172,8 @@ public class ICOptimizer {
       
       // Do merges near end since it can be detrimental to other optimizations
       boolean doWaitMerges = iteration == nIterations - (nIterations / 4) - 2;
-      pipe.addPass(new WaitCoalescer(doWaitMerges, canReorder));
+      boolean doExplode = iteration == nIterations / 2;
+      pipe.addPass(new WaitCoalescer(doExplode, doWaitMerges, canReorder));
       
       if (debug)
         pipe.addPass(Validate.standardValidator());
