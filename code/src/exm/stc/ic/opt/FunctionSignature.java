@@ -124,7 +124,7 @@ public class FunctionSignature implements OptimizerPass {
     
     List<WaitVar> newBlocking = new ArrayList<WaitVar>();
     for (WaitVar wv: fn.blockingInputs()) {
-      if (!switchVars.contains(wv)) {
+      if (!switchVars.contains(wv.var)) {
         newBlocking.add(wv);
       }
     }
