@@ -55,7 +55,6 @@ import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.CVMap;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
-import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.Function;
@@ -219,20 +218,12 @@ public class ForwardDataflow implements OptimizerPass {
       }
 
       Arg valLoc = newCV.getValLocation();
-      Opcode op = newCV.getOp();
       availableVals.put(newCV, valLoc);
       if (valLoc.isVar()) {
         varContents.put(valLoc.getVar(), newCV);
         if (outClosed) {
           close(valLoc.getVar(), false);
         }
-      }
-      if (op == Opcode.LOAD_BOOL || op == Opcode.LOAD_FLOAT
-          || op == Opcode.LOAD_INT || op == Opcode.LOAD_STRING
-          || op == Opcode.LOAD_VOID || op == Opcode.LOAD_FILE) {
-        // If the value is available, it is effectively closed even if
-        // the future isn't closed
-        close(newCV.getInput(0).getVar(), true);
       }
     }
 
