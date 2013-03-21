@@ -98,17 +98,18 @@ steal(bool* result)
 
   // Sender will stream work in groups, each with
   //  header.
-  while (!hdr.last) {
+  while (true) {
     WAIT(&request, &status);
     if (hdr.count > 0) {
       rc = steal_payloads(target, hdr.count);
       ADLB_CHECK(rc);
       total += hdr.count;
     }
-    if (!hdr.last) {
-      IRECV(&hdr, sizeof(hdr), MPI_BYTE, target,
-            ADLB_TAG_RESPONSE_STEAL_COUNT);
-    }
+    if (hdr.last)
+      break;
+    
+    IRECV(&hdr, sizeof(hdr), MPI_BYTE, target,
+          ADLB_TAG_RESPONSE_STEAL_COUNT);
   }
   
   DEBUG("[%i] stole %i tasks from %i", xlb_world_rank, total, target);
