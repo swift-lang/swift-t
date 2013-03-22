@@ -57,7 +57,8 @@ int main(int argc, char *argv[])
   aprintf_flag = 0;		/* no output from adlb itself */
   num_servers = 1;		/* one server should be enough */
   use_debug_server = 0;		/* default: no debug server */
-  rc = ADLB_Init(num_servers, 1, type_vect, &am_server, &app_comm);
+  rc = ADLB_Init(num_servers, 1, type_vect, &am_server, 
+                  MPI_COMM_WORLD, &app_comm);
   if ( !am_server ) /* application process */
   {
     MPI_Comm_rank( app_comm, &my_app_rank );
