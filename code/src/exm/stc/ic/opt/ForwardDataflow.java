@@ -201,26 +201,26 @@ public class ForwardDataflow implements OptimizerPass {
 
     /**
      * 
-     * @param newCV
+     * @param res
      * @param replace for debugging purposes, set to true if we intend to 
      *        replace
      */
-    public void addComputedValue(ComputedValue newCV, boolean replace) {
-      boolean outClosed = newCV.isOutClosed();
-      if (isAvailable(newCV)) {
+    public void addComputedValue(ResultVal res, boolean replace) {
+      boolean outClosed = res.outClosed();
+      if (isAvailable(res.value())) {
         if (!replace) {
           throw new STCRuntimeError("Unintended overwrite of "
-              + getLocation(newCV) + " with " + newCV);
+              + getLocation(res.value()) + " with " + res);
         }
       } else if (replace) {
         throw new STCRuntimeError("Expected overwrite of " + " with "
-            + newCV + " but no existing value");
+            + res + " but no existing value");
       }
 
-      Arg valLoc = newCV.getValLocation();
-      availableVals.put(newCV, valLoc);
+      Arg valLoc = res.location();
+      availableVals.put(res.value(), valLoc);
       if (valLoc.isVar()) {
-        varContents.put(valLoc.getVar(), newCV);
+        varContents.put(valLoc.getVar(), res.value());
         if (outClosed) {
           close(valLoc.getVar(), false);
         }
@@ -358,39 +358,39 @@ public class ForwardDataflow implements OptimizerPass {
 
   private static void updateReplacements(
       Logger logger, Function function, Instruction inst,
-      State av, List<ComputedValue> icvs, HierarchicalMap<Var, Arg> replaceInputs, 
+      State av, List<ResultVal> irs, HierarchicalMap<Var, Arg> replaceInputs, 
       HierarchicalMap<Var, Arg> replaceAll) {
-    if (icvs != null) {
+    if (irs != null) {
       if (logger.isTraceEnabled()) {
-        logger.trace("icvs: " + icvs.toString());
+        logger.trace("irs: " + irs.toString());
       }
-      for (ComputedValue currCV : icvs) {
-        if (ComputedValue.isAlias(currCV)) {
-          replaceAll.put(currCV.getValLocation().getVar(),
-                                          currCV.getInput(0));
+      for (ResultVal resVal : irs) {
+        if (ComputedValue.isAlias(resVal)) {
+          replaceAll.put(resVal.location().getVar(),
+                                          resVal.value().getInput(0));
           continue;
-        } else if (ComputedValue.isCopy(currCV)) {
+        } else if (resVal.value().isCopy()) {
           // Copies are easy to handle: replace output of inst with input 
           // going forward
-          replaceInputs.put(currCV.getValLocation().getVar(),
-                                          currCV.getInput(0));
+          replaceInputs.put(resVal.location().getVar(),
+                                          resVal.value().getInput(0));
           continue;
         }
-        Arg currLoc = currCV.getValLocation();
-        if (!av.isAvailable(currCV)) {
+        Arg currLoc = resVal.location();
+        if (!av.isAvailable(resVal.value())) {
           // Can't replace, track this value
-          av.addComputedValue(currCV, false);
+          av.addComputedValue(resVal, false);
         } else if (currLoc.isConstant()) {
-          Arg prevLoc = av.getLocation(currCV);
+          Arg prevLoc = av.getLocation(resVal.value());
           if (prevLoc.isVar()) {
             assert (Types.isScalarValue(prevLoc.getVar().type()));
             // Constants are the best... might as well replace
-            av.addComputedValue(currCV, true);
+            av.addComputedValue(resVal, true);
             // System.err.println("replace " + prevLoc + " with " + currLoc);
             replaceInputs.put(prevLoc.getVar(), currLoc);
           } else {
             // Should be same, otherwise bug
-            assert (currLoc.equals(prevLoc)) : currCV + " = " + prevLoc +
+            assert (currLoc.equals(prevLoc)) : resVal + " = " + prevLoc +
                     " != " + currLoc + " in " + function.getName() + ".\n" +
                     "This may have been caused by a double-write to a variable. " +
                     "Please look at any previous warnings emitted by compiler. ";
@@ -399,14 +399,14 @@ public class ForwardDataflow implements OptimizerPass {
           final boolean usePrev;
           assert (currLoc.isVar());
           // See if we should replace
-          Arg prevLoc = av.getLocation(currCV);
+          Arg prevLoc = av.getLocation(resVal.value());
           if (prevLoc.isConstant()) {
             usePrev = true;
           } else {
             assert (prevLoc.isVar());
             boolean currClosed = av.isClosed(currLoc.getVar());
             boolean prevClosed = av.isClosed(prevLoc.getVar());
-            if (currCV.equivType == EquivalenceType.REFERENCE) {
+            if (resVal.equivType() == EquivalenceType.REFERENCE) {
               // The two locations are both references to same thing, so can 
               // replace all references, including writes to currLoc
               replaceAll.put(currLoc.getVar(), prevLoc);
@@ -426,7 +426,7 @@ public class ForwardDataflow implements OptimizerPass {
 
           // Now we've decided whether to use the current or previous
           // variable for the computed expression
-          if (usePrev) {
+          if (usePrev && resVal.isSubstitutable()) {
             // Do it
             if (logger.isTraceEnabled())
               logger.trace("replace " + currLoc + " with " + prevLoc);
@@ -463,8 +463,9 @@ public class ForwardDataflow implements OptimizerPass {
       if (v.storage() == VarStorage.GLOBAL_CONST) {
         Arg val = program.lookupGlobalConst(v.name());
         assert (val != null): v.name();
-        ComputedValue compVal = ICInstructions.assignComputedVal(v, val);
-        globalState.addComputedValue(compVal, globalState.isAvailable(compVal));
+        ResultVal compVal = ICInstructions.assignComputedVal(v, val);
+        globalState.addComputedValue(compVal,
+              globalState.isAvailable(compVal.value()));
       }
     }
     for (Function f : program.getFunctions()) {
@@ -600,7 +601,7 @@ public class ForwardDataflow implements OptimizerPass {
     }
     for (Var v : block.getVariables()) {
       if (v.isMapped() && Types.isFile(v.type())) {
-        ComputedValue filenameVal = ICInstructions.filenameCV(
+        ResultVal filenameVal = ICInstructions.filenameCV(
             Arg.createVar(v.mapping()), v);
         cv.addComputedValue(filenameVal, false);
       }
@@ -728,7 +729,7 @@ public class ForwardDataflow implements OptimizerPass {
       inst.renameVars(replaceInputs, RenameMode.VALUE);
       inst.renameVars(replaceAll, RenameMode.REFERENCE);
  
-      List<ComputedValue> icvs = inst.getComputedValues(cv);
+      List<ResultVal> icvs = inst.getResults(cv);
       
       /*
        * See if value is already computed somewhere and see if we should

@@ -1227,6 +1227,32 @@ public class Types {
     }
   }
 
+  public static boolean isMemberType(Var member, Var arr) {
+    Type memberType = Types.getArrayMemberType(arr.type());
+    return (member.type().assignableTo(memberType));
+  }
+  
+  /**
+   * @param member
+   * @param arr
+   * @return true if member is a reference to the member type of arr,
+   *          false if it is the same as member type of arr
+   * @throws STCRuntimeError if member can't be a member or ref to 
+   *                                      member of array
+   */
+  public static boolean isMemberReference(Var member, Var arr) 
+          throws STCRuntimeError{
+    Type memberType = Types.getArrayMemberType(arr.type());
+    if (memberType.equals(member.type())) {
+      return false;
+    } else if (Types.isRefTo(member.type(), memberType)) {
+      return true;
+    }
+    throw new STCRuntimeError("Inconsistent types: array of type " 
+        + arr.type() + " with member of type " + member.type());
+  }
+
+
   
   public static boolean isFuture(Type t) {
     return isScalarFuture(t) || isRef(t);

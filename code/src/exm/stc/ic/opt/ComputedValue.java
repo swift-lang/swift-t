@@ -54,14 +54,10 @@ public class ComputedValue {
   final String subop;
   final int index; // Index of output if multiple outputs (0 is default);
   final List<Arg> inputs;
-  final Arg valLocation; // The constant expression or variable where it can be found
-  final boolean outClosed; // true if out is known to be closed
-  final EquivalenceType equivType;
   
   private final int hashCode; // Cache hashcode 
   
-  public ComputedValue(Opcode op, String subop, int index, List<Arg> inputs,
-      Arg valLocation, boolean outClosed, EquivalenceType equivType) {
+  public ComputedValue(Opcode op, String subop, int index, List<Arg> inputs) {
     super();
     assert(op != null);
     assert(subop != null);
@@ -70,65 +66,23 @@ public class ComputedValue {
     this.subop = subop;
     this.index = index;
     this.inputs = inputs;
-    this.valLocation = valLocation;
-    this.outClosed = outClosed;
-    this.equivType = equivType;
     this.hashCode = calcHashCode();
   }
   
-  public ComputedValue(Opcode op, String subop, List<Arg> inputs,
-      Arg valLocation, boolean outClosed, EquivalenceType equivType) {
-    this(op, subop, 0, inputs, valLocation, outClosed, equivType);
-  }
-  
-  public ComputedValue(Opcode op, String subop, List<Arg> inputs,
-      Arg valLocation, boolean outClosed) {
-    this(op, subop, inputs, valLocation, outClosed, EquivalenceType.VALUE);
-  }
-  
-  public ComputedValue(Opcode op, List<Arg> inputs,
-      Arg valLocation, boolean outClosed) {
-    this(op, "", inputs, valLocation, outClosed);
-  }
-  
-  public ComputedValue(Opcode op, Arg input,
-      Arg valLocation, boolean outClosed, EquivalenceType equivType) {
-    this(op, "", Collections.singletonList(input), valLocation, outClosed, equivType);
-  }
-  
-  public ComputedValue(Opcode op, String subop, int index, List<Arg> inputs,
-      Arg valLocation, boolean outClosed) {
-    this(op, subop, index, inputs, valLocation, outClosed, EquivalenceType.VALUE);
-  }
-  
-  public ComputedValue(Opcode op, String subop, Arg input,
-      Arg valLocation, boolean outClosed) {
-    this(op, subop, Arrays.asList(input), valLocation, outClosed);
-  }
-  
-  public ComputedValue(Opcode op, Arg input,
-      Arg valLocation, boolean outClosed) {
-    this(op, "", input, valLocation, outClosed);
-  }
-  
   public ComputedValue(Opcode op, String subop, List<Arg> inputs) {
-    this(op, subop, inputs, null, false);
+    this(op, subop, 0, inputs);
   }
   
   public ComputedValue(Opcode op, List<Arg> inputs) {
     this(op, "", inputs);
   }
-  
-  public ComputedValue(Opcode op, List<Arg> inputs, Arg valLocation,
-      boolean outClosed, EquivalenceType equivType) {
-    this(op, "", inputs, valLocation, outClosed, equivType);
-  }
 
-  public Opcode getOp() {
+
+  public Opcode op() {
     return op;
   }
 
-  public String getSubop() {
+  public String subop() {
     return subop;
   }
 
@@ -138,14 +92,6 @@ public class ComputedValue {
   
   public Arg getInput(int i) {
     return inputs.get(i);
-  }
-
-  public Arg getValLocation() {
-    return valLocation;
-  }
-
-  public boolean isOutClosed() {
-    return outClosed;
   }
 
   /**
@@ -227,36 +173,43 @@ public class ComputedValue {
     
     return null;
   }   
-  public static boolean isCopy(ComputedValue cv) {
-    return cv.op == Opcode.FAKE && cv.subop.equals(COPY_OF);
+  
+  public static ComputedValue makeCopy(Arg src) {
+    return new ComputedValue(Opcode.FAKE, ComputedValue.COPY_OF, src.asList());
   }
   
-  public static boolean isAlias(ComputedValue cv) {
-    return isCopy(cv) && cv.equivType == EquivalenceType.REFERENCE;
+  public boolean isCopy() {
+    return this.op == Opcode.FAKE && this.subop.equals(COPY_OF);
+  }
+  
+  public static boolean isAlias(ResultVal r) {
+    return r.value().isCopy() && r.equivType() == EquivalenceType.REFERENCE;
   }
   
   /* Special subop strings to use with fake opcode */
   public static final String ARRAY_CONTENTS = "array_contents";
   public static final String REF_TO_ARRAY_CONTENTS = "ref_to_array_contents";
-  private static final String COPY_OF = "copy_of";
+  public static final String ARRAY_NESTED = "autocreated_nested";
+  public static final String REF_TO_ARRAY_NESTED = "ref_to_autocreated_nested";
+  public static final String COPY_OF = "copy_of";
 
-  /**
-   * @param dst
-   * @param src
-   * @return Computed value indicating dst has same value as src
-   */
-  public static ComputedValue makeCopyCV(Var dst, Arg src) {
-    return new ComputedValue(Opcode.FAKE, COPY_OF, 
-                  src, Arg.createVar(dst), false);
+  public static ComputedValue arrayCV(Var arr, Arg ix) {
+    return new ComputedValue(Opcode.FAKE, ComputedValue.ARRAY_CONTENTS,
+                              Arrays.asList(arr.asArg(), ix));
   }
   
-  /**
-   * @param dst
-   * @param src
-   * @return Computed value indicating dst is alias of src
-   */
-  public static ComputedValue makeAliasCV(Var dst, Arg src) {
-    return new ComputedValue(Opcode.FAKE, COPY_OF, src.asList(),
-              dst.asArg(), false, EquivalenceType.REFERENCE);
+  public static ComputedValue arrayRefCV(Var arr, Arg ix) {
+    return new ComputedValue(Opcode.FAKE, ComputedValue.REF_TO_ARRAY_CONTENTS,
+                              Arrays.asList(arr.asArg(), ix));
+  }
+  
+  public static ComputedValue arrayRefNestedCV(Var arr, Arg ix) {
+    return new ComputedValue(Opcode.FAKE, ComputedValue.REF_TO_ARRAY_NESTED,
+        Arrays.asList(arr.asArg(), ix));
+  }
+  
+  public static ComputedValue arrayNestedCV(Var arr, Arg ix) {
+    return new ComputedValue(Opcode.FAKE, ComputedValue.ARRAY_NESTED,
+        Arrays.asList(arr.asArg(), ix));
   }
 }

@@ -52,6 +52,7 @@ import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
+import exm.stc.ic.opt.ResultVal;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.GenInfo;
 import exm.stc.ic.tree.ICTree.RenameMode;
@@ -357,7 +358,7 @@ public class ICInstructions {
      *        returned should have the out field set so we know where to find 
      *        it 
      */
-    public abstract List<ComputedValue> getComputedValues(CVMap existing);
+    public abstract List<ResultVal> getResults(CVMap existing);
    
     public abstract Instruction clone();
 
@@ -483,7 +484,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ComputedValue> getComputedValues(CVMap existing) {
+    public List<ResultVal> getResults(CVMap existing) {
       return null;
     }
 
@@ -1137,34 +1138,7 @@ public class ICInstructions {
       ICUtil.replaceArgsInList(renames, inputs);
     }
   
-    public void renameInputs(Map<Var, Arg> renames) {
-      int firstUpdateOutputArg;
-      if (op == Opcode.ARRAY_CREATE_NESTED_FUTURE
-       || op == Opcode.ARRAY_CREATE_NESTED_IMM) {
-        // array mutated by instruction can be replaced
-        // (skip output nested)
-        firstUpdateOutputArg = 1;
-      } else if (op == Opcode.ARRAYREF_CREATE_NESTED_FUTURE
-              || op == Opcode.ARRAYREF_CREATE_NESTED_IMM) {
-        // array mutated by instruction can be replaced
-        // (skip output nested and outer array)
-        firstUpdateOutputArg = 2;
-      } else if (op == Opcode.ARRAY_INSERT_FUTURE
-             || op == Opcode.ARRAY_INSERT_IMM
-             || op == Opcode.ARRAYREF_INSERT_FUTURE
-             || op == Opcode.ARRAYREF_INSERT_IMM) {
-         // The arrays mutated by these instructions are also basically
-         // inputs
-         firstUpdateOutputArg = 0;
-       } else {
-         firstUpdateOutputArg = outputs.size();
-       }
-      
-       if (firstUpdateOutputArg < outputs.size()) {
-         ICUtil.replaceVarsInList(renames, 
-             outputs.subList(firstUpdateOutputArg, outputs.size()), false);
-       }
-      
+    public void renameInputs(Map<Var, Arg> renames) {     
        ICUtil.replaceArgsInList(renames, inputs);
     }
 
@@ -1953,9 +1927,9 @@ public class ICInstructions {
             + " to getMode");
       }
     }
-    
+
     @Override
-    public List<ComputedValue> getComputedValues(CVMap existing) {
+    public List<ResultVal> getResults(CVMap existing) {
       switch(op) {
         case LOAD_BOOL:
         case LOAD_FLOAT:
@@ -1967,7 +1941,7 @@ public class ICInstructions {
         case LOAD_FILE: {
           // retrieve* is invertible
           Arg src = getInput(0);
-          Arg val = Arg.createVar(getOutput(0));
+          Var dst = getOutput(0);
           if (Types.isScalarUpdateable(src.getVar().type())) {
             return null;
           }
@@ -1979,23 +1953,32 @@ public class ICInstructions {
             outIsClosed = true;
           }
           
-          ComputedValue retrieve = vanillaComputedValue(outIsClosed);
+          List<ResultVal> result = new ArrayList<ResultVal>();
+          
+          ResultVal retrieve = vanillaResult(outIsClosed);
+          result.add(retrieve);
+          
           Opcode cvop = assignOpcode(src.type());
           if (cvop == null) {
             throw new STCRuntimeError("Need assign op for "
                 + src.getVar());
           }
-          ComputedValue assign = new ComputedValue(cvop,
-                    Arrays.asList(val), src, outIsClosed);
+          ResultVal assign = ResultVal.buildResult(cvop,
+                    Arrays.asList(dst.asArg()), src, outIsClosed);
+          result.add(assign);
+          
           
           Opcode derefOp = derefOpCode(src.type());
-          
-          if (derefOp == null) {
-            return Arrays.asList(retrieve, assign);
-          } else {
-            return Arrays.asList(retrieve, assign, 
-                new ComputedValue(derefOp, Arrays.asList(src), val, false));
+          if (derefOp != null) {
+            ResultVal deref = ResultVal.buildResult(derefOp, 
+                                      Arrays.asList(src), dst.asArg(), false);
+            result.add(deref);
+            // Add any new cvs that result from dereferencing the variable
+            for (ComputedValue refCV: existing.getVarContents(src.getVar())) {
+              result.addAll(ResultVal.createDereferencedCVs(refCV, dst));
+            }
           }
+          return result;
         }
         case STORE_REF:
         case STORE_BOOL:
@@ -2007,20 +1990,20 @@ public class ICInstructions {
         case STORE_FILE: {
           // add assign so we can avoid recreating future 
           // (true b/c this instruction closes val immediately)
-          ComputedValue assign = vanillaComputedValue(true);
+          ResultVal assign = vanillaResult(true);
           // add retrieve so we can avoid retrieving later
           Arg dst = Arg.createVar(getOutput(0));
           Arg src = getInput(0);
           Opcode cvop = retrieveOpcode(dst.type());
           assert(cvop != null);
 
-          ComputedValue retrieve = new ComputedValue(cvop,
+          ResultVal retrieve = ResultVal.buildResult(cvop,
                     Arrays.asList(dst), src, false);
           if (op == Opcode.STORE_REF) {
             Opcode derefOp = derefOpCode(dst.type());
             if (derefOp != null) {
-              ComputedValue deref = 
-                   new ComputedValue(derefOp, Arrays.asList(dst),
+              ResultVal deref = 
+                   ResultVal.buildResult(derefOp, Arrays.asList(dst),
                                                  src, false);
               return Arrays.asList(retrieve, assign, deref);
             }
@@ -2029,7 +2012,7 @@ public class ICInstructions {
         }
         case GET_FILENAME: 
         case GET_OUTPUT_FILENAME: {
-          List<ComputedValue> res = new ArrayList<ComputedValue>();
+          List<ResultVal> res = new ArrayList<ResultVal>();
           Arg filename = Arg.createVar(getOutput(0));
           Arg file;
           if (op == Opcode.GET_FILENAME) {
@@ -2041,11 +2024,11 @@ public class ICInstructions {
           res.add(filenameCV(filename, file.getVar()));
           
           // Check to see if value of filename is in local value
-          Arg filenameVal = existing.getLocation(filenameValCV(file, null));
+          Arg filenameVal = existing.getLocation(filenameValCV(file, null).value());
           if (filenameVal != null) {
             // We know that if we fetch from the output future of this instruction,
             // we'll get the previously stored filename
-            res.add(new ComputedValue(Opcode.LOAD_STRING,
+            res.add(ResultVal.buildResult(Opcode.LOAD_STRING,
                                       filename, filenameVal, true));
           }
           return res;
@@ -2053,39 +2036,37 @@ public class ICInstructions {
         case SET_FILENAME_VAL: {
           Arg file = Arg.createVar(getOutput(0));
           Arg val = getInput(0);
-          ComputedValue getCV = filenameValCV(file, val);
-          
-          return Arrays.asList(getCV);
+          return filenameValCV(file, val).asList();
         }
         case DEREF_BLOB:
         case DEREF_BOOL:
         case DEREF_FLOAT:
         case DEREF_INT:
         case DEREF_STRING: {
-          return Arrays.asList(vanillaComputedValue(false));
+          return vanillaResult(false).asList();
         }
         case DEREF_FILE: {
           if (getOutput(0).isMapped()) {
             // Can't use interchangably
             return null;
           } else {
-            return Arrays.asList(vanillaComputedValue(false));
+            return vanillaResult(false).asList();
           }
         }
         
         case STRUCT_INSERT: {
           // Lookup
-          ComputedValue lookup = new ComputedValue(Opcode.STRUCT_LOOKUP,
+          ResultVal lookup = ResultVal.buildResult(Opcode.STRUCT_LOOKUP,
               Arrays.asList(Arg.createVar(getOutput(0)), getInput(0)),
               getInput(1), false, EquivalenceType.REFERENCE);
-          return Arrays.asList(lookup); 
+          return lookup.asList(); 
         }
         case STRUCT_LOOKUP: {
           // don't know if its closed
-          ComputedValue lookup = new ComputedValue(Opcode.STRUCT_LOOKUP,
+          ResultVal lookup = ResultVal.buildResult(Opcode.STRUCT_LOOKUP,
               Arrays.asList(getInput(0), getInput(1)), Arg.createVar(getOutput(0)),
               false, EquivalenceType.REFERENCE);
-          return Arrays.asList(lookup); 
+          return lookup.asList(); 
         }
         case ARRAYREF_INSERT_FUTURE:
         case ARRAYREF_INSERT_IMM: 
@@ -2102,14 +2083,14 @@ public class ICInstructions {
           }
           Arg ix = getInput(0);
           Var member = getInput(1).getVar();
-          boolean insertingRef = isMemberReference(member, arr);
+          boolean insertingRef = Types.isMemberReference(member, arr);
           return Arrays.asList(makeArrayCV(arr, ix, member, insertingRef));
         }
         case ARRAY_BUILD: {
           Var arr = getOutput(0);
-          List<ComputedValue> res = new ArrayList<ComputedValue>();
+          List<ResultVal> res = new ArrayList<ResultVal>();
           // Computed value for whole array
-          res.add(new ComputedValue(op, getInputs(),
+          res.add(ResultVal.buildResult(op, getInputs(),
                       Arg.createVar(arr), true));
           // For individual array elements
           int arrSize = getInputs().size();
@@ -2140,19 +2121,19 @@ public class ICInstructions {
           } else {
             assert (Types.isRefTo(contents.type(), 
                 Types.getArrayMemberType(arr.type())));
-            ComputedValue refCV = makeArrayCV(arr, ix, contents, true);
-            Arg prev = existing.getLocation(makeArrayCV(arr, ix, null, false));
+            ResultVal refCV = makeArrayCV(arr, ix, contents, true);
+            Arg prev = existing.getLocation(ComputedValue.arrayCV(arr, ix));
             if (prev != null) {
               /* All these array loads give back a reference, but if a value
                * was previously inserted at this index, then we can 
                * short-circuit this as we know what is in the reference */
-              ComputedValue retrieveCV = new ComputedValue(retrieveOpcode(
+              ResultVal retrieveCV = ResultVal.buildResult(retrieveOpcode(
                   contents.type()), Arg.createVar(contents), prev, false);
               Opcode derefOp = derefOpCode(contents.type());
               if (derefOp == null) {
                 return Arrays.asList(retrieveCV, refCV);
               } else {
-                ComputedValue derefCV = new ComputedValue(derefOp,
+                ResultVal derefCV = ResultVal.buildResult(derefOp,
                             Arg.createVar(contents), prev, false);
                 return Arrays.asList(retrieveCV, refCV, derefCV);
               }
@@ -2177,95 +2158,54 @@ public class ICInstructions {
             arr = getOutput(1);
           }
           Arg ix = getInput(0);
+          List<ResultVal> res = new ArrayList<ResultVal>();
+          
           boolean returnsRef =  op != Opcode.ARRAY_CREATE_NESTED_IMM;
-          ComputedValue cv = makeArrayCV(arr, ix, nestedArr, returnsRef);
+          // Mark as not substitutable since this op may have
+          // side-effect of creating array
+          res.add(ResultVal.makeArrayResult(arr, ix, nestedArr,
+                                                returnsRef));
+          res.add(ResultVal.makeCreateNestedResult(arr, ix, nestedArr,
+              returnsRef));
+          
           if (op == Opcode.ARRAY_CREATE_NESTED_IMM) {
             // No references involved, the instruction returns the nested
             // array directly
-            return Arrays.asList(cv);
           } else {
-            Arg prev = existing.getLocation(new ComputedValue(Opcode.FAKE,
-                ComputedValue.ARRAY_CONTENTS,
-                Arrays.asList(Arg.createVar(arr), ix)));
+            Arg prev = existing.getLocation(ComputedValue.arrayCV(arr, ix));
             assert (Types.isRefTo(nestedArr.type(), 
                         Types.getArrayMemberType(arr.type())));
             if (prev != null) {
               // See if we know the value of this reference already
-              ComputedValue derefCV = new ComputedValue(
+              ResultVal derefCV = ResultVal.buildResult(
                   retrieveOpcode(nestedArr.type()),
                   Arrays.asList(Arg.createVar(nestedArr)), prev, false);
-              return Arrays.asList(derefCV, cv);
-            } else {
-              return Arrays.asList(cv);
+              res.add(derefCV);
             }
           }
+          return res;
         }
         case COPY_REF: {
-          return ComputedValue.makeAliasCV(getOutput(0), getInput(0)).asList();
+          return ResultVal.makeAlias(getOutput(0), getInput(0)).asList();
         }
         default:
           return null;
       }
     }
+    
+    private static ResultVal makeArrayCV(Var arr, Arg ix, Var member,
+        boolean insertingRef) {
+      return ResultVal.makeArrayResult(arr, ix, member, insertingRef, true);
+    }
+
     /**
      * Create the "standard" computed value
      * assume 1 ouput arg
      * @return
      */
-    private ComputedValue vanillaComputedValue(boolean closed) {
+    private ResultVal vanillaResult(boolean closed) {
       assert(outputs.size() == 1);
-      return new ComputedValue(op, inputs, Arg.createVar(outputs.get(0)), closed);
-    }
-
-    /**
-     * Make a standard computed value for array contents
-     * @param arr
-     * @param ix
-     * @param contents
-     * @param refResult if contents is ref
-     * @return
-     */
-    static ComputedValue makeArrayCV(Var arr, Arg ix, Var contents,
-          boolean refResult) {
-      ComputedValue cv;
-      Arg contentsArg = contents == null ? null : Arg.createVar(contents);
-      if (refResult) {
-        assert(contents == null || isMemberReference(contents, arr));
-        cv = new ComputedValue(Opcode.FAKE, ComputedValue.REF_TO_ARRAY_CONTENTS, 
-            Arrays.asList(Arg.createVar(arr), ix),
-            contentsArg, false);
-      } else {
-        assert(contents == null || isMemberType(contents, arr)) :
-              "not member: " + contents + " " + arr;
-        cv = new ComputedValue(Opcode.FAKE, ComputedValue.ARRAY_CONTENTS, 
-            Arrays.asList(Arg.createVar(arr), ix),
-            contentsArg, false);
-      }
-      return cv;
-    }
-
-    private static boolean isMemberType(Var member, Var arr) {
-      Type memberType = Types.getArrayMemberType(arr.type());
-      return (member.type().assignableTo(memberType));
-    }
-    /**
-     * @param member
-     * @param arr
-     * @return true if member is a reference to the member type of arr,
-     *          false if it is the same as member type of arr
-     * @throws STCRuntimeError if member can't be a member or ref to 
-     *                                      member of array
-     */
-    private static boolean isMemberReference(Var member, Var arr) 
-            throws STCRuntimeError{
-      Type memberType = Types.getArrayMemberType(arr.type());
-      if (memberType.equals(member.type())) {
-        return false;
-      } else if (Types.isRefTo(member.type(), memberType)) {
-        return true;
-      }
-      throw new STCRuntimeError("Inconsistent types: array of type " 
-          + arr.type() + " with member of type " + member.type());
+      return ResultVal.buildResult(op, inputs, Arg.createVar(outputs.get(0)), closed);
     }
 
     @Override
@@ -2520,15 +2460,14 @@ public class ICInstructions {
     }
     
     @Override
-    public List<ComputedValue> getComputedValues(CVMap existing) {
+    public List<ResultVal> getResults(CVMap existing) {
       if (Builtins.isPure(functionName)) {
         if (!this.writesMappedVar() && isCopyFunction()) {
           // Handle copy as a special case
-          return Collections.singletonList(
-                ComputedValue.makeCopyCV(getOutput(0),
-                                         getInput(0)));
+          return ResultVal.makeCopy(getOutput(0),
+                                         getInput(0)).asList();
         } else {
-          List<ComputedValue> res = new ArrayList<ComputedValue>();
+          List<ResultVal> res = new ArrayList<ResultVal>();
           for (int output = 0; output < getOutputs().size(); output++) {
             boolean outputClosed = false;// safe assumption
             String canonicalFunctionName = this.functionName;
@@ -2538,7 +2477,7 @@ public class ICInstructions {
               Collections.sort(in);
             }
             
-            res.add(new ComputedValue(this.op, 
+            res.add(ResultVal.buildResult(this.op, 
                 canonicalFunctionName, output, in, 
                 Arg.createVar(getOutput(output)), outputClosed));
           }
@@ -2553,7 +2492,7 @@ public class ICInstructions {
      * Add specific CVs for special operations
      * @param res
      */
-    private void addSpecialCVs(List<ComputedValue> cvs) {
+    private void addSpecialCVs(List<ResultVal> cvs) {
       if (op == Opcode.CALL_BUILTIN && 
           this.functionName.equals(Builtins.INPUT_FILE)) {
         cvs.add(filenameCV(getInput(0), getOutput(0)));
@@ -2565,7 +2504,7 @@ public class ICInstructions {
       
     }
 
-    private void addRangeCVs(List<ComputedValue> cvs) {
+    private void addRangeCVs(List<ResultVal> cvs) {
       boolean allValues = true;
       long start = 0, end = 0, step = 1; 
       
@@ -3016,10 +2955,10 @@ public class ICInstructions {
       return null;
     }
     
-    static ComputedValue makeArraySizeComputedValue(Var arr, Arg size) {
+    static ResultVal makeArraySizeComputedValue(Var arr, Arg size) {
       assert(Types.isArray(arr.type()));
       assert(size.isImmediateInt());
-      return new ComputedValue(Opcode.CALL_BUILTIN_LOCAL, Builtins.ARRAY_SIZE,
+      return ResultVal.buildResult(Opcode.CALL_BUILTIN_LOCAL, Builtins.ARRAY_SIZE,
                                Arg.createVar(arr), size, true);
     }
     
@@ -3216,14 +3155,14 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ComputedValue> getComputedValues(CVMap existing) {
+    public List<ResultVal> getResults(CVMap existing) {
       if (deterministic) {
-        ArrayList<ComputedValue> cvs = new ArrayList<ComputedValue>(
+        List<ResultVal> cvs = new ArrayList<ResultVal>(
                                                         outFiles.size());
         for (int i = 0; i < outFiles.size(); i++) {
           // Unique key for cv includes number of output
           // Output file should be closed after external program executes
-          ComputedValue cv = new ComputedValue(op, cmd, i,
+          ResultVal cv = ResultVal.buildResult(op, cmd, i,
                      args, Arg.createVar(outFiles.get(i)), true);
           cvs.add(cv);
         }
@@ -3378,7 +3317,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ComputedValue> getComputedValues(CVMap existing) {
+    public List<ResultVal> getResults(CVMap existing) {
       // Nothing
       return null;
     }
@@ -3499,9 +3438,9 @@ public class ICInstructions {
     public TaskMode getMode() {
       return TaskMode.SYNC;
     }
-    
+   
     @Override
-    public List<ComputedValue> getComputedValues(CVMap existing) {
+    public List<ResultVal> getResults(CVMap existing) {
       // nothing
       return null;
     }
@@ -3900,15 +3839,15 @@ public class ICInstructions {
     }
     
     @Override
-    public List<ComputedValue> getComputedValues(CVMap existing) {
+    public List<ResultVal> getResults(CVMap existing) {
       if (this.hasSideEffects()) {
         // Two invocations of this aren't equivalent
         return null;
       }
       
-      ComputedValue basic = makeBasicComputedValue();
+      ResultVal basic = makeBasicComputedValue();
       
-      List<ComputedValue> inferred = makeInferredComputedValues(existing);
+      List<ResultVal> inferred = makeInferredComputedValues(existing);
       if (inferred.isEmpty()) {
         if (basic != null) {
           return Collections.singletonList(basic);
@@ -3919,8 +3858,8 @@ public class ICInstructions {
         if (basic == null) {  
           return inferred;
         } else {
-          List<ComputedValue> res = new ArrayList<ComputedValue>(
-                    1 + inferred.size());
+          List<ResultVal> res = new ArrayList<ResultVal>(
+                                                    1 + inferred.size());
           res.add(basic);
           res.addAll(inferred);
           return res;
@@ -3933,18 +3872,18 @@ public class ICInstructions {
      * Create computed value that describes the output
      * @return
      */
-    private ComputedValue makeBasicComputedValue() {
+    private ResultVal makeBasicComputedValue() {
       if (Operators.isCopy(subop)) {
         if (this.output.isMapped()) {
           return null;
         }
         
         // It might be assigning a constant val
-        return ComputedValue.makeCopyCV(this.output, this.inputs.get(0));
+        return ResultVal.makeCopy(this.output, this.inputs.get(0));
       } else if (Operators.isMinMaxOp(subop)) {
         assert(this.inputs.size() == 2);
         if (this.inputs.get(0).equals(this.inputs.get(1))) {
-          return ComputedValue.makeCopyCV(this.output, this.inputs.get(0));
+          return ResultVal.makeCopy(this.output, this.inputs.get(0));
         }
       } else if (output != null) {
         // put arguments into canonical order
@@ -3964,13 +3903,13 @@ public class ICInstructions {
         }
         
         boolean outClosed = (this.op == Opcode.LOCAL_OP);
-        return new ComputedValue(this.op, cvOp.name(), cvInputs,
+        return ResultVal.buildResult(this.op, cvOp.name(), cvInputs,
                                 Arg.createVar(this.output), outClosed);
       }
       return null;
     }
 
-    private List<ComputedValue> makeInferredComputedValues(CVMap cvs) {
+    private List<ResultVal> makeInferredComputedValues(CVMap cvs) {
       try {
         if (!Settings.getBoolean(Settings.OPT_ALGEBRA)) {
           return Collections.emptyList();
@@ -3981,7 +3920,7 @@ public class ICInstructions {
       switch (subop) {
         case PLUS_INT:
         case MINUS_INT:
-        List<ComputedValue> inferred = tryAlgebra(cvs);
+        List<ResultVal> inferred = tryAlgebra(cvs);
         printInferredValues(inferred);
         return inferred;
         default:
@@ -3991,14 +3930,14 @@ public class ICInstructions {
     }
 
 
-    private void printInferredValues(List<ComputedValue> inferred) {
+    private void printInferredValues(List<ResultVal> inferred) {
       Logger logger = Logging.getSTCLogger();
       if (logger.isTraceEnabled()) {
         StringBuilder sb = new StringBuilder();
         if (!inferred.isEmpty()){
           sb.append(this + " => ");
-          for (ComputedValue t: inferred) {
-            sb.append(t.getValLocation() + " == " + t + ", ");
+          for (ResultVal t: inferred) {
+            sb.append(t.location() + " == " + t + ", ");
           }
         }
         logger.trace(sb.toString());
@@ -4006,7 +3945,7 @@ public class ICInstructions {
     }
 
 
-    private List<ComputedValue> tryAlgebra(CVMap cvs) {
+    private List<ResultVal> tryAlgebra(CVMap cvs) {
       // do basic algebra, useful for adjacent array indices
       // TODO: could be more sophisticated, e.g. build operator tree
       //    and reduce to canonical form
@@ -4019,10 +3958,10 @@ public class ICInstructions {
         return Collections.emptyList();
       }
       List<ComputedValue> varVals = cvs.getVarContents(args.val1);
-      List<ComputedValue> res = new ArrayList<ComputedValue>(); 
+      List<ResultVal> res = new ArrayList<ResultVal>(); 
       for (ComputedValue varVal: varVals) {
-        if (varVal.getOp() == this.op) {
-          BuiltinOpcode aop = BuiltinOpcode.valueOf(varVal.getSubop());
+        if (varVal.op() == this.op) {
+          BuiltinOpcode aop = BuiltinOpcode.valueOf(varVal.subop());
           if (aop == BuiltinOpcode.PLUS_INT ||
               aop == BuiltinOpcode.MINUS_INT) { 
             Pair<Var, Long> add = convertToCanonicalAdd(aop,
@@ -4033,7 +3972,7 @@ public class ICInstructions {
               // x = z + c1 + c2
               long c = args.val2 + add.val2;
               if (c == 0) {
-                res.add(ComputedValue.makeCopyCV(this.output,
+                res.add(ResultVal.makeCopy(this.output,
                                                  add.val1.asArg()));
               } else {
                 res.add(plusCV(op, add.val1.asArg(),
@@ -4084,9 +4023,9 @@ public class ICInstructions {
      * @param output2
      * @return
      */
-    private static ComputedValue plusCV(Opcode op, Arg arg1, Arg arg2,
+    private static ResultVal plusCV(Opcode op, Arg arg1, Arg arg2,
         Var output) {
-      return new ComputedValue(op, BuiltinOpcode.PLUS_INT.name(),
+      return ResultVal.buildResult(op, BuiltinOpcode.PLUS_INT.name(),
           Arrays.asList(arg1, arg2), output.asArg(), op == Opcode.LOCAL_OP);
     }
 
@@ -4184,7 +4123,7 @@ public class ICInstructions {
     return new ComputedValue(op, Arrays.asList(Arg.createVar(src)));
   }
 
-  public static ComputedValue assignComputedVal(Var dst, Arg val) {
+  public static ResultVal assignComputedVal(Var dst, Arg val) {
     Type dstType = dst.type();
     if (Types.isScalarValue(dstType)) {
         BuiltinOpcode op;
@@ -4214,12 +4153,12 @@ public class ICInstructions {
           throw new STCRuntimeError("Unhandled type: "
               + dstType);
         }
-        return new ComputedValue(Opcode.LOCAL_OP, 
+        return ResultVal.buildResult(Opcode.LOCAL_OP, 
             op.toString(), Arrays.asList(val), Arg.createVar(dst), false);
     } else {
       Opcode op = assignOpcode(dstType);
       if (op != null) {
-        return new ComputedValue(op, Arrays.asList(val), Arg.createVar(dst)
+        return ResultVal.buildResult(op, Arrays.asList(val), Arg.createVar(dst)
                                                                           , true);
       }
     }
@@ -4355,20 +4294,19 @@ public class ICInstructions {
     }
   }
 
-  public static ComputedValue filenameCV(Arg outFilename, Var inFile) {
+  public static ResultVal filenameCV(Arg outFilename, Var inFile) {
     assert(Types.isFile(inFile.type()));
     assert(outFilename.isVar());
     assert(Types.isString(outFilename.getVar().type()));
-    return new ComputedValue(Opcode.GET_FILENAME,
+    return ResultVal.buildResult(Opcode.GET_FILENAME,
         Arrays.asList(Arg.createVar(inFile)), outFilename, false);
   }
   
-  public static ComputedValue filenameValCV(Arg file, Arg filenameVal) {
+  public static ResultVal filenameValCV(Arg file, Arg filenameVal) {
     assert(Types.isFile(file.type()));
     assert(filenameVal == null || filenameVal.isImmediateString());
-    ComputedValue getCV = new ComputedValue(Opcode.GET_FILENAME_VAL,
+    return ResultVal.buildResult(Opcode.GET_FILENAME_VAL,
                                             file, filenameVal, true);
-    return getCV;
   }
 
   private static String formatFunctionCall(Opcode op, 
