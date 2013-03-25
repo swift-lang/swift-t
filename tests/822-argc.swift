@@ -2,8 +2,7 @@
 #include <builtins.swift>
 #include <sys.swift>
 
-// SKIP-THIS-TEST : Issue #451
-
+// THIS-TEST-SHOULD-NOT-COMPILE
 main {
   int x = argc + 1;
 }

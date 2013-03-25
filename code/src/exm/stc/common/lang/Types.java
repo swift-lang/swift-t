@@ -1061,6 +1061,9 @@ public class Types {
     }
     @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
+      if (!isFunction(concrete)) {
+        return null;
+      }      
       throw new STCRuntimeError("Not yet implemented: matching typevars for"
           + " function types");
     }
