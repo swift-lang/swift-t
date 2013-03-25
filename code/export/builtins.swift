@@ -22,9 +22,6 @@
 // External type
 type external void;
 
-
-// NYI = Not Yet Implemented at Turbine layer
-
 // Data copy
 @pure @copy
 (void o) copy_void (void i) "turbine" "0.0.2" "copy_void";
@@ -110,5 +107,10 @@ type external void;
 (string n) filename(file x) "turbine" "0.0.2" "filename2";
 @pure
 (file f) input_file(string filename) "turbine" "0.0.2" "input_file";
+
+// Substitute for C ternary operator:
+@pure
+(int o) ternary(boolean b, int i1, int i2) "turbine" "0.0.2"
+[ "if { <<b>> } { set <<o>> <<i1>> } else { set <<o>> <<i2>> }" ];
 
 #endif
