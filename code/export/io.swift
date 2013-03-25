@@ -19,8 +19,9 @@
 #ifndef IO_SWIFT
 #define IO_SWIFT
 
+(void z)
 printf(string fmt, int|float|string|boolean... args)
     "turbine" "0.0.2" "printf"
-    [ "turbine::printf_local <<fmt>> <<args>>" ];
+    [ "set <<z>> [ turbine::printf_local <<fmt>> <<args>> ]" ];
 
 #endif // IO_SWIFT

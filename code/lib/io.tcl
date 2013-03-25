@@ -40,5 +40,6 @@ namespace eval turbine {
         }
         set s [ eval format $L ]
         puts $s
+        return 0
     }
 }
