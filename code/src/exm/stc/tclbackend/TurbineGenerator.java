@@ -78,8 +78,8 @@ import exm.stc.tclbackend.tree.PackageRequire;
 import exm.stc.tclbackend.tree.Proc;
 import exm.stc.tclbackend.tree.Sequence;
 import exm.stc.tclbackend.tree.SetVariable;
-import exm.stc.tclbackend.tree.Square;
 import exm.stc.tclbackend.tree.Switch;
+import exm.stc.tclbackend.tree.TclExpr;
 import exm.stc.tclbackend.tree.TclList;
 import exm.stc.tclbackend.tree.TclString;
 import exm.stc.tclbackend.tree.TclTree;
@@ -1637,7 +1637,7 @@ public class TurbineGenerator implements CompilerBackend {
         } else if (vc.count == 1 && incr != null) {
           amount = incr;
         } else {
-          amount = Square.arithExpr(new LiteralInt(vc.count), new Token("*"), incr);
+          amount = TclExpr.mult(new LiteralInt(vc.count), incr);
         }
         if (Types.isFile(var.type())) {
           // Need to use different function to handle file reference
@@ -1672,7 +1672,7 @@ public class TurbineGenerator implements CompilerBackend {
           seq.add(Turbine.containerSlotCreate(varToExpr(vc.var), incr));
         } else {
           seq.add(Turbine.containerSlotCreate(varToExpr(vc.var),
-              Square.arithExpr(new LiteralInt(vc.count), new Token("*"), incr)));
+              TclExpr.mult(new LiteralInt(vc.count), incr)));
         }
       }
       pointStack.peek().append(seq);
@@ -1691,7 +1691,7 @@ public class TurbineGenerator implements CompilerBackend {
           seq.add(Turbine.containerSlotDrop(varToExpr(vc.var), decr));
         } else {
           seq.add(Turbine.containerSlotDrop(varToExpr(vc.var),
-              Square.arithExpr(new LiteralInt(vc.count), new Token("*"), decr)));
+              TclExpr.mult(new LiteralInt(vc.count), decr)));
         }
       }
       pointStack.peek().append(seq);
@@ -1823,8 +1823,7 @@ public class TurbineGenerator implements CompilerBackend {
                                       varToExpr(arrayVar)));
     Value containerSize = new Value(TCLTMP_CONTAINER_SIZE);
     
-    Expression lastIndex = Square.arithExpr(containerSize,
-          new Token("-"), new LiteralInt(1));
+    Expression lastIndex = TclExpr.minus(containerSize, LiteralInt.ONE);
 
     handleForeachContainerRefcounts(perIterIncrs, constIncrs, containerSize);
     
@@ -1839,10 +1838,10 @@ public class TurbineGenerator implements CompilerBackend {
     // need to find the length of this split since that is what the turbine
     //  call wants
     pointStack.peek().add(new SetVariable(TCLTMP_SPLITLEN,
-            Square.arithExpr(new Token(
-            String.format("${%s} - ${%s} + 1", TCLTMP_RANGE_HI,
-                                               TCLTMP_RANGE_LO)))));
-
+            new TclExpr(new Value(TCLTMP_RANGE_HI), TclExpr.MINUS,
+                        new Value(TCLTMP_RANGE_LO), TclExpr.PLUS,
+                        LiteralInt.ONE)));
+    
     // load the subcontainer
     pointStack.peek().add(Turbine.containerContents(contentsVar,
         varToExpr(arrayVar), haveKeys, new Value(TCLTMP_SPLITLEN),
@@ -2010,17 +2009,15 @@ public class TurbineGenerator implements CompilerBackend {
                              new Value(TCLTMP_RANGE_HI),
                              new Value(TCLTMP_RANGE_INC))));
 
-    Expression done = Square.arithExpr(
-        new Value(TCLTMP_ITERSLEFT), new Token("<="),
-        LiteralInt.ZERO);
+    Expression done = new TclExpr(new Value(TCLTMP_ITERSLEFT),
+                                  TclExpr.LTE, LiteralInt.ZERO);
     Sequence thenDoneB = new Sequence();
     If finishedIf = new If(done, thenDoneB);
     thenDoneB.add(new Command("return"));
     outer.add(finishedIf);
 
-    Expression doneSplitting = Square.arithExpr(
-        new Value(TCLTMP_ITERSLEFT), new Token("<="),
-        new LiteralInt(leafDegree));
+    Expression doneSplitting = new TclExpr(new Value(TCLTMP_ITERSLEFT),
+                        TclExpr.LTE, new LiteralInt(leafDegree));
     // if (iters < splitFactor) then <call inner> else <split more>
     Sequence thenNoSplitB = new Sequence();
     Sequence elseSplitB = new Sequence();
@@ -2034,10 +2031,20 @@ public class TurbineGenerator implements CompilerBackend {
     String skip = "tcltmp:skip";
     // skip = max(splitFactor,  ceil(iters /(float) splitfactor))
     // skip = max(splitFactor,  ((iters - 1) /(int) splitfactor) + 1)
-    elseSplitB.add(new SetVariable(skip, Square.arithExpr(new Token(
-          String.format("max(%d, ((%s - 1) / %d ) + 1) * %s",
-                  leafDegree, new Value(TCLTMP_ITERSLEFT),
-                  splitDegree, new Value(TCLTMP_RANGE_INC))))));
+    elseSplitB.add(new SetVariable(skip, 
+        TclExpr.mult(new Value(TCLTMP_RANGE_INC),
+          TclExpr.max(new LiteralInt(leafDegree),
+            TclExpr.group(
+                TclExpr.paren(
+                    TclExpr.paren(new Value(TCLTMP_ITERSLEFT), TclExpr.MINUS,
+                        LiteralInt.ONE),
+                     TclExpr.DIV,  new LiteralInt(splitDegree)),
+                TclExpr.PLUS, LiteralInt.ONE)))));
+        
+        /*new Token(
+          String.format("(%s - 1) / %d ) + 1",
+                  ,
+                  splitDegree, */
 
     ForLoop splitLoop = new ForLoop(splitStart, loVal,
             hiVal, new Value(skip), splitBody);
@@ -2049,9 +2056,9 @@ public class TurbineGenerator implements CompilerBackend {
     outerRecCall.addAll(commonArgs);
     outerRecCall.add(new Value(splitStart));
     // splitEnd = min(hi, start + skip - 1)
-    Square splitEnd = Square.arithExpr(new Token(String.format(
-            "min(${%s}, ${%s} + ${%s} - 1)", TCLTMP_RANGE_HI,
-            splitStart, skip)));
+    TclExpr splitEnd = new TclExpr(TclExpr.min(new Value(TCLTMP_RANGE_HI),
+        TclExpr.group(new Value(splitStart), TclExpr.PLUS,
+                      new Value(skip), TclExpr.MINUS, LiteralInt.ONE)));
     outerRecCall.add(splitEnd);
     outerRecCall.add(incVal);
 
@@ -2083,7 +2090,7 @@ public class TurbineGenerator implements CompilerBackend {
       } else {
         refCountExpr = new ArrayList<Expression>();
         refCountExpr.addAll(Arrays.asList(
-            argToExpr(refCount.amount), new Token("*"), multiplier));
+            argToExpr(refCount.amount), TclExpr.TIMES, multiplier));
       }
       
       
@@ -2091,17 +2098,17 @@ public class TurbineGenerator implements CompilerBackend {
         for (RefCount constRC: constIncrs.get(refCount.var)) {
           if (constRC.type == refCount.type) {
             if (constRC.amount.isIntVal() && constRC.amount.getIntLit() < 0) {
-              refCountExpr.add(new Token("-"));
+              refCountExpr.add(TclExpr.MINUS);
               refCountExpr.add(new LiteralInt(constRC.amount.getIntLit() * -1));
             } else {
-              refCountExpr.add(new Token("+"));
+              refCountExpr.add(TclExpr.PLUS);
               refCountExpr.add(argToExpr(constRC.amount));
             }
           }
         }
       }
       
-      Expression totalAmount = Square.arithExpr(refCountExpr);
+      Expression totalAmount = new TclExpr(refCountExpr);
 
       if (refCount.type == RefCountType.READERS) {
         if (decrement) {
@@ -2131,16 +2138,18 @@ public class TurbineGenerator implements CompilerBackend {
     }
   }
 
-  private Square rangeItersLeft(Expression lo, Expression hi, Expression inc) {
+  private TclExpr rangeItersLeft(Expression lo, Expression hi, Expression inc) {
+    Expression calcLeft; // Expression to calculate how many left (may be neg.) 
     if (LiteralInt.ONE.equals(inc)) {
       // More readable
-      return Square.arithExpr(new Token("max(0,"), hi, new Token("-"), 
-            lo, new Token("+"), new LiteralInt(1), new Token(")"));
+      calcLeft = TclExpr.group(hi, TclExpr.MINUS, lo, TclExpr.PLUS,
+                            LiteralInt.ONE);
     } else {
-      return Square.arithExpr(new Token("max(0, ("), hi, new Token("-"), 
-            lo, new Token(")"), new Token("/"), inc,
-            new Token("+"), new LiteralInt(1), new Token(")"));
+      calcLeft = TclExpr.group(
+            TclExpr.paren(hi, TclExpr.MINUS, lo), TclExpr.DIV,
+            inc, TclExpr.PLUS, LiteralInt.ONE);
     }
+    return new TclExpr(TclExpr.max(LiteralInt.ZERO, calcLeft));
   }
 
   private void endRangeSplit(List<RefCount> perIterDecrements) {

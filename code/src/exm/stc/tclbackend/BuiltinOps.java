@@ -31,6 +31,7 @@ import exm.stc.tclbackend.tree.Command;
 import exm.stc.tclbackend.tree.Expression;
 import exm.stc.tclbackend.tree.SetVariable;
 import exm.stc.tclbackend.tree.Square;
+import exm.stc.tclbackend.tree.TclExpr;
 import exm.stc.tclbackend.tree.TclList;
 import exm.stc.tclbackend.tree.TclString;
 import exm.stc.tclbackend.tree.TclTree;
@@ -77,7 +78,7 @@ public class BuiltinOps {
               argExpr.get(0), argExpr.get(1));
           if (op == BuiltinOpcode.NEQ_STRING) {
             // Negate previous result
-            rhs = Square.arithExpr(new Token("!"), rhs);
+            rhs = new TclExpr(false, TclExpr.NOT, rhs);
           }
         } else if (op == BuiltinOpcode.COPY_BLOB ||
             op ==  BuiltinOpcode.COPY_BOOL ||
@@ -119,7 +120,7 @@ public class BuiltinOps {
           // Case for operations that are implemented directly with
           // TCL's expr
           Expression exp[] = arithOpExpr(op, argExpr);
-          rhs = Square.arithExpr(exp);
+          rhs = new TclExpr(exp);
         }
         return new SetVariable(TclNamer.prefixVar(out.name()), rhs); 
       }
@@ -157,7 +158,6 @@ public class BuiltinOps {
     case NEQ_STRING:
     case AND:
     case OR:
-
       assert (argExpr.size() == 2);
       return new Expression[] { argExpr.get(0), arithOpTok(op), argExpr.get(1) };
     case NOT:
@@ -169,21 +169,20 @@ public class BuiltinOps {
       return new Expression[] { arithOpTok(op), argExpr.get(0) };
     case IS_NAN:
       assert (argExpr.size() == 1);
-      return new Expression[] { argExpr.get(0), new Token("!="), argExpr.get(0) };
+      return new Expression[] { argExpr.get(0), TclExpr.NEQ, argExpr.get(0) };
     case LOG:
     case EXP:
     case SQRT:
     case ABS_FLOAT:
     case ABS_INT:
       // Single argument to expr function
-      return new Expression[] { arithOpTok(op), new Token("("), argExpr.get(0),
-          new Token(")") };
+      return new Expression[] { TclExpr.exprFn(arithOpFn(op), argExpr.get(0))};
     case INTTOFLOAT:
       assert (argExpr.size() == 1);
       // Need to explicitly convert to floating point number, other
       // TCL will do e.g. integer division
-      return new Expression[] { new Token("double("), argExpr.get(0),
-          new Token(")") };
+      return new Expression[] { 
+          TclExpr.exprFn(TclExpr.DOUBLE_CONV, argExpr.get(0))};
     case CEIL:
     case FLOOR:
     case ROUND: {
@@ -191,21 +190,22 @@ public class BuiltinOps {
       assert (argExpr.size() == 1);
       switch (op) {
       case CEIL:
-        fname = "ceil";
+        fname = TclExpr.CEIL;
         break;
       case FLOOR:
-        fname = "floor";
+        fname = TclExpr.FLOOR;
         break;
       case ROUND:
-        fname = "round";
+        fname = TclExpr.ROUND;
         break;
       default:
         throw new STCRuntimeError("impossible");
       }
       // Need to apply int( conversion, as the rounding function still return
       // a floating point (albeit one with no fractional part)
-      return new Expression[] { new Token("int(" + fname + "("),
-          argExpr.get(0), new Token("))") };
+      return new Expression[] { 
+          TclExpr.exprFn(TclExpr.INT_CONV,
+              TclExpr.exprFn(fname, argExpr.get(0)))};
     }
     case MAX_FLOAT:
     case MAX_INT:
@@ -213,12 +213,12 @@ public class BuiltinOps {
     case MIN_INT:
       String fnName;
       if (op == BuiltinOpcode.MAX_FLOAT || op == BuiltinOpcode.MAX_INT) {
-        fnName = "max";
+        fnName = TclExpr.MAX;
       } else {
-        fnName = "min";
+        fnName = TclExpr.MIN;
       }
-      return new Expression[] { new Token(fnName), new Token("("),
-          argExpr.get(0), new Token(","), argExpr.get(1), new Token(")") };
+      return new Expression[] { 
+          TclExpr.exprFn(fnName, argExpr.get(0), argExpr.get(1))};
     default:
       throw new STCRuntimeError("Haven't implement code gen for "
           + "local arithmetic op " + op.toString());
@@ -230,58 +230,66 @@ public class BuiltinOps {
     case EQ_INT:
     case EQ_FLOAT:
     case EQ_BOOL:
-      return new Token("==");
+      return TclExpr.EQ;
     case NEQ_INT:
     case NEQ_FLOAT:
     case NEQ_BOOL:
-      return new Token("!=");
+      return TclExpr.NEQ;
     case PLUS_INT:
     case PLUS_FLOAT:
-      return new Token("+");
+      return TclExpr.PLUS;
     case MINUS_INT:
     case MINUS_FLOAT:
     case NEGATE_INT:
     case NEGATE_FLOAT:
-      return new Token("-");
+      return TclExpr.MINUS;
     case MULT_FLOAT:
     case MULT_INT:
-      return new Token("*");
+      return TclExpr.TIMES;
     case POW_FLOAT:
-      return new Token("**");
+      return TclExpr.POW;
     case LT_INT:
     case LT_FLOAT:
-      return new Token("<");
+      return TclExpr.LT;
     case LTE_INT:
     case LTE_FLOAT:
-      return new Token("<=");
+      return TclExpr.LTE;
     case GT_INT:
     case GT_FLOAT:
-      return new Token(">");
+      return TclExpr.GT;
     case GTE_INT:
     case GTE_FLOAT:
-      return new Token(">=");
+      return TclExpr.GTE;
     case OR:
-      return new Token("||");
+      return TclExpr.OR;
     case AND:
-      return new Token("&&");
+      return TclExpr.AND;
     case NOT:
-      return new Token("!");
-    case EXP:
-      return new Token("exp");
-    case LOG:
-      return new Token("log");
-    case SQRT:
-      return new Token("sqrt");
-    case ABS_FLOAT:
-    case ABS_INT:
-      return new Token("abs");
+      return TclExpr.NOT;
     case DIV_FLOAT:
-      return new Token("/");
+      return TclExpr.DIV;
     default:
       throw new STCRuntimeError("need to add op " + op.toString());
     }
   }
   
+  private static String arithOpFn(BuiltinOpcode op) {
+    switch (op) {
+    case EXP:
+      return TclExpr.EXP;
+    case LOG:
+      return TclExpr.LOG;
+    case SQRT:
+      return TclExpr.SQRT;
+    case ABS_FLOAT:
+    case ABS_INT:
+      return TclExpr.ABS;
+    default:
+      throw new STCRuntimeError("need to add op " + op.toString());
+    }
+  }
+
+
   private static void checkCopy(BuiltinOpcode op, Var out, Arg inArg) {
     Type expType = null;
     switch (op) {

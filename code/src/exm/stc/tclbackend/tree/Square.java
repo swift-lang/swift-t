@@ -98,21 +98,6 @@ public class Square extends Expression
       sb.append(" ]");
     }
   }
-  
-  public static Square arithExpr(Expression... contents) {
-    return arithExpr(Arrays.asList(contents));
-  }
-  
-  public static Square arithExpr(List<Expression> contents) {
-    ArrayList<Expression> newE = new ArrayList<Expression>(contents.size()+1);
-
-    newE.add(new Token("expr"));
-    for (Expression expr: contents) {
-      assert(expr != null);
-      newE.add(expr);
-    } 
-    return new Square(newE.toArray(new Expression[0]));
-  }
 
   public static Square fnCall(String fnName, Expression... args) {
     Expression newE[] = new Expression[args.length + 1];

@@ -77,12 +77,12 @@ public class TypeChecker {
     // Memoize this function to avoid recalculating type
     ExprType cached = tree.getExprType();
     if (cached != null) {
-      LogHelper.trace(context, "Expr has cached type " + cached.toString());
+      LogHelper.trace(context, "TclExpr has cached type " + cached.toString());
       return cached;
     } else {
       ExprType calcedType = uncachedFindExprType(context, tree);
       tree.setType(calcedType);
-      LogHelper.trace(context, "Expr found type " + calcedType.toString());
+      LogHelper.trace(context, "TclExpr found type " + calcedType.toString());
       return calcedType;
     }
   }
