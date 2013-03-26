@@ -151,7 +151,7 @@ namespace eval turbine {
             for { set i $start } { $i <= $end } { incr i $step } {
                 allocate td integer
                 store_integer $td $i
-                
+
                 if { [ expr $i + $step > $end ] } {
                   # Drop on last iter
                   set slot_drop 1
@@ -299,7 +299,7 @@ namespace eval turbine {
 
     # Must trim leading zeros - Tcl treats leading zeros as octal
     proc check_str_int { input } {
-        if { [ string equal $input "0" ] } {
+        if { [ regexp "^0*$" $input  ] } {
             return 0
         }
         if { ! [ string is integer -strict \
