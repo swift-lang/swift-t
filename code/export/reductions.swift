@@ -24,4 +24,7 @@
 (int result[]) reduce_sum_integer(int A[][])
 "turbine" "0.0.6" "reduce_sum_integer";
 
+(string result[]) reduce_splice_string(string S[][])
+"turbine" "0.0.6" "reduce_splice_string";
+
 #endif

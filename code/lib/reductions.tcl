@@ -19,7 +19,7 @@ namespace eval turbine {
     namespace export reduce_sum_integer
 
     proc reduce_sum_integer { stack result A } {
-        deeprule "reduce_sum" $A 2 [ list false false ] \
+        deeprule "reduce_sum_integer" $A 2 [ list false false ] \
             $turbine::CONTROL "reduce_sum_integer_body $result $A"
     }
     proc reduce_sum_integer_body { result A } {
@@ -38,6 +38,37 @@ namespace eval turbine {
         dict for { h s_value } $R {
             # puts "reduce_sum: h: $h s: $s_value"
             literal s integer $s_value
+            container_insert $result $h $s
+        }
+        adlb::slot_drop $result
+    }
+
+    proc reduce_splice_string { stack result S } {
+        deeprule "reduce_splice_string" $S 2 [ list false false ] \
+            $turbine::CONTROL "reduce_splice_string_body $result $S"
+    }
+    proc reduce_splice_string_body { result S } {
+        set R [ dict create ]
+        set D [ adlb::enumerate $S dict all 0 ]
+        dict for { i td_h } $D {
+            set L [ adlb::enumerate $td_h dict all 0 ]
+            dict for { h td_x } $L {
+                # puts "  dict: $h $td_x"
+                set x_value [ retrieve_string $td_x ]
+                if { [ dict exists $R $h ] } {
+                    set t [ dict get $R $h ]
+                    check [ string equal $t $x_value ] \
+                        [ join "reduce_splice_string: for index $h: " \
+                               "$t != $x_value" ]
+                } else {
+                    dict set R $h $x_value
+                }
+            }
+        }
+
+        dict for { h s_value } $R {
+            # puts "reduce_splice: h: $h s: $s_value"
+            literal s string $s_value
             container_insert $result $h $s
         }
         adlb::slot_drop $result
