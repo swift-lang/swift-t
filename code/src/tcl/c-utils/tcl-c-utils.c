@@ -25,11 +25,16 @@
 
 #include "config.h"
 
+#include <limits.h>
+
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
 
 #include <tcl.h>
+
+// The c-utils hashtable
+#include <table.h>
 
 #include "src/tcl/util.h"
 
@@ -49,9 +54,22 @@ c_utils_heapsize_Cmd(ClientData cdata, Tcl_Interp *interp,
   #endif
 
   Tcl_Obj* result = Tcl_NewLongObj(count);
-
   Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
 
+static int
+c_utils_hash_Cmd(ClientData cdata, Tcl_Interp *interp,
+                     int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  char* s = Tcl_GetString(objv[1]);
+
+  int hash = hash_string(s, INT_MAX);
+
+  Tcl_Obj* result = Tcl_NewLongObj(hash);
+  Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
 
@@ -80,4 +98,5 @@ void
 tcl_c_utils_init(Tcl_Interp* interp)
 {
   COMMAND("heapsize", c_utils_heapsize_Cmd);
+  COMMAND("hash",     c_utils_hash_Cmd);
 }

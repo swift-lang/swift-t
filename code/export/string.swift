@@ -67,4 +67,9 @@
   "turbine" "0.0.1"
   [ "set <<o>> [ string trim <<s>> ]" ];
 
+@pure
+(int h) hash (string s)
+  "turbine" "0.0.1"
+  [ "set <<h>> [ c_utils::hash <<s>> ]" ];
+
 #endif
