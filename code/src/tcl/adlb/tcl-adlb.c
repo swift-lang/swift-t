@@ -1796,7 +1796,7 @@ ADLB_Slot_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::slot_drop <container_id>
+   usage: adlb::slot_drop <container_id> <decrement>
 */
 static int
 ADLB_Slot_Drop_Cmd(ClientData cdata, Tcl_Interp *interp,
