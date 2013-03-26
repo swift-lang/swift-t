@@ -12,11 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# Shutdown TCL if condition does not hold
+# Shutdown Tcl if condition does not hold
 proc assert { condition msg } {
     if [ expr ! $condition ] {
         puts $msg
         exit 1
+    }
+}
+
+proc check { condition msg } {
+    if [ expr ! $condition ] {
+        error $msg
     }
 }
 
