@@ -43,6 +43,7 @@ set items [ eval list -load $libtclturbine \
                 -source app.tcl        \
                 -source mpe.tcl        \
                 -source rand.tcl       \
+                -source reductions.tcl \
                 -source stats.tcl      \
                 -source io.tcl         \
                 -source string.tcl     \

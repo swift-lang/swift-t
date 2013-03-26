@@ -15,6 +15,7 @@ TCL_SRC := $(DIR)/helpers.tcl             \
            $(DIR)/string.tcl              \
            $(DIR)/container.tcl           \
            $(DIR)/rand.tcl                \
+           $(DIR)/reductions.tcl          \
            $(DIR)/stats.tcl               \
            $(DIR)/io.tcl                  \
            $(DIR)/updateable.tcl          \
@@ -22,7 +23,7 @@ TCL_SRC := $(DIR)/helpers.tcl             \
            $(DIR)/blob.tcl                \
            $(DIR)/mpe.tcl		  \
 	   $(DIR)/files.tcl               \
-	   $(DIR)/app.tcl               \
+	   $(DIR)/app.tcl
 
 # Builds the Turbine Tcl package
 $(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) \
