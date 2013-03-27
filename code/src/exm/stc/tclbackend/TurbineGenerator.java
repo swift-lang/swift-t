@@ -234,7 +234,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void declare(List<VarDecl> decls) throws UndefinedTypeException {
+  public void declare(List<VarDecl> decls) {
     List<VarDecl> batchedFiles = new ArrayList<VarDecl>();
     List<TclList> batched = new ArrayList<TclList>();
     List<String> batchedVarNames = new ArrayList<String>();

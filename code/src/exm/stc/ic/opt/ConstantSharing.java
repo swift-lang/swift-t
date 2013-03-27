@@ -100,7 +100,7 @@ public class ConstantSharing implements OptimizerPass {
     block.renameVars(globalReplacements, RenameMode.REPLACE_VAR, true);
     
     // Do this recursively for child blocks
-    for (Continuation c: block.getContinuations()) {
+    for (Continuation c: block.allComplexStatements()) {
       for (Block childBlock: c.getBlocks()) {
         // We could pass in localDeclsOfGlobalVars, but
         // it doesn't matter if global vars are redeclared in inner scope

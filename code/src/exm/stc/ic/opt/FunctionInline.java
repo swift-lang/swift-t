@@ -45,6 +45,7 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
+import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
@@ -57,6 +58,7 @@ import exm.stc.ic.tree.ICTree.BuiltinFunction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.RenameMode;
+import exm.stc.ic.tree.ICTree.Statement;
 
 public class FunctionInline implements OptimizerPass {
 
@@ -331,6 +333,7 @@ public class FunctionInline implements OptimizerPass {
     // Recurse first to avoid visiting newly inlined continuations and doing
     // extra inlining (required to avoid infinite loops of inlining with 
     // recursive functions)
+    // TODO: does this work?
     for (Continuation c: block.getContinuations()) {
       for (Block cb: c.getBlocks()) {
         doInlining(logger, prog, contextFunction, cb, inlineLocations,
@@ -338,29 +341,55 @@ public class FunctionInline implements OptimizerPass {
       }
     }
     
-    ListIterator<Instruction> it = block.instructionIterator();
+    ListIterator<Statement> it = block.statementIterator();
     while (it.hasNext()) {
-      Instruction inst = it.next();
-      if (isFunctionCall(inst)) {
-        FunctionCall fcall = (FunctionCall)inst;
-        if (toInline.containsKey(fcall.getFunctionName()) ||
-                alwaysInline.contains(fcall.getFunctionName())) {
-          boolean canInlineHere;
-          if (inlineLocations == null) {
-            canInlineHere = true;
-          } else {
-            // Check that location is marked for inlining
-            List<String> inlineCallers = inlineLocations.get(fcall.getFunctionName());
-            canInlineHere = inlineCallers.contains(contextFunction.getName());
+      Statement stmt = it.next();
+      switch (stmt.type()) {
+        case INSTRUCTION: {
+          Instruction inst = stmt.instruction();;
+          if (isFunctionCall(inst)) {
+            FunctionCall fcall = (FunctionCall)inst;
+            tryInline(logger, prog, contextFunction, block, inlineLocations,
+                      toInline, alwaysInline, blacklist, it, fcall);
           }
-          if (canInlineHere) {
-            // Do the inlining.  Note that the iterator will be positioned
-            // after any newly inlined instructions.
-            inlineCall(logger, prog, contextFunction, block, it, fcall,
-                       toInline.get(fcall.getFunctionName()),
-                       alwaysInline, blacklist);
-          }
+          break;
         }
+        case CONDITIONAL: {
+          // TODO: is it possible here to have inlining loop?
+          Conditional cnd = stmt.conditional();
+          for (Block cb: cnd.getBlocks()) {
+            doInlining(logger, prog, contextFunction, cb, inlineLocations,
+                       toInline, alwaysInline, blacklist);
+          }
+          break;
+        }
+        default:
+          throw new STCRuntimeError("Unknown Statemen type " + stmt);
+      }
+    }
+  }
+
+  private static void tryInline(Logger logger, Program prog,
+      Function contextFunction, Block block,
+      MultiMap<String, String> inlineLocations, Map<String, Function> toInline,
+      Set<String> alwaysInline, Set<Pair<String, String>> blacklist,
+      ListIterator<Statement> it, FunctionCall fcall) {
+    if (toInline.containsKey(fcall.getFunctionName()) ||
+            alwaysInline.contains(fcall.getFunctionName())) {
+      boolean canInlineHere;
+      if (inlineLocations == null) {
+        canInlineHere = true;
+      } else {
+        // Check that location is marked for inlining
+        List<String> inlineCallers = inlineLocations.get(fcall.getFunctionName());
+        canInlineHere = inlineCallers.contains(contextFunction.getName());
+      }
+      if (canInlineHere) {
+        // Do the inlining.  Note that the iterator will be positioned
+        // after any newly inlined instructions.
+        inlineCall(logger, prog, contextFunction, block, it, fcall,
+                   toInline.get(fcall.getFunctionName()),
+                   alwaysInline, blacklist);
       }
     }
   }
@@ -375,7 +404,7 @@ public class FunctionInline implements OptimizerPass {
    */
   private static void inlineCall(Logger logger, Program prog,
       Function contextFunction, Block block,
-      ListIterator<Instruction> it, FunctionCall fnCall,
+      ListIterator<Statement> it, FunctionCall fnCall,
       Function toInline,
       Set<String> alwaysInline, Set<Pair<String, String>> blacklist) {
     // Remove function call instruction
@@ -422,7 +451,7 @@ public class FunctionInline implements OptimizerPass {
     // TODO: output arrays inside structs
     
     Block insertBlock;
-    ListIterator<Instruction> insertPos;
+    ListIterator<Statement> insertPos;
     
     // rename vars
     chooseUniqueNames(logger, prog, contextFunction, inlineBlock, renames);
@@ -460,7 +489,7 @@ public class FunctionInline implements OptimizerPass {
           waitMode, false, fnCall.getMode());
       block.addContinuation(wait);
       insertBlock = wait.getBlock();
-      insertPos = insertBlock.instructionIterator();
+      insertPos = insertBlock.statementIterator();
     }
     
     // Do the insertion
@@ -497,7 +526,7 @@ public class FunctionInline implements OptimizerPass {
           updateName(logger, block, targetFunction, replacements, excludedNames, v);
         }
       }
-      for (Continuation c: block.getContinuations()) {
+      for (Continuation c: block.allComplexStatements()) {
         for (Var cv: c.constructDefinedVars()) {
           updateName(logger, block, targetFunction, replacements, excludedNames, cv);
         }

@@ -67,7 +67,7 @@ public class ContinuationFusion extends FunctionOptimizerPass {
     }
     
     // Recurse on child blocks
-    for (Continuation c: block.getContinuations()) {
+    for (Continuation c: block.allComplexStatements()) {
       for (Block child: c.getBlocks()) {
         fuseRecursive(logger, f, child);
       }
@@ -99,6 +99,7 @@ public class ContinuationFusion extends FunctionOptimizerPass {
       // Check continuations [i..n) to see if they can be fused with this
       switch(c.getType()) {
         case IF_STATEMENT:
+          // TODO: doesn't work now since we have inline conditionals
           fuseIfStatement(it, mergeCands, (IfStatement)c);
           break;
         case FOREACH_LOOP:

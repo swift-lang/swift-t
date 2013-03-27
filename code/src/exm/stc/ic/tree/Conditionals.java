@@ -11,21 +11,69 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
-import exm.stc.common.exceptions.UndefinedTypeException;
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
+import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.GenInfo;
 import exm.stc.ic.tree.ICTree.RenameMode;
+import exm.stc.ic.tree.ICTree.Statement;
+import exm.stc.ic.tree.ICTree.StatementType;
 
 public class Conditionals {
   public static final String indent = ICUtil.indent;
   
-  public static class IfStatement extends Continuation {
+  public static abstract class Conditional extends Continuation
+      implements Statement {
+    public StatementType type() {
+      return StatementType.CONDITIONAL;
+    }
+    public Conditional conditional() {
+      return this;
+    }
+    public Instruction instruction() {
+      throw new STCRuntimeError("Not an instruction");
+    }
+    
+    @Override
+    public boolean isAsync() {
+      return false;
+    }
+    @Override
+    public boolean isLoop() {
+      return false;
+    }
+    
+    @Override
+    public boolean isExhaustiveSyncConditional() {
+      return true;
+    }
+    
+    @Override
+    public boolean isNoop() {
+      for (Block b: getBlocks()) {
+        if (!b.isEmpty()) {
+          return false;
+        }
+      }
+      return true;
+    }
+    
+    @Override
+    public Statement cloneStatement() {
+      return clone();
+    }
+    
+    @Override
+    public abstract Conditional clone();
+  }
+  
+  public static class IfStatement extends Conditional {
     private final Block thenBlock;
     private final Block elseBlock;
     private Arg condition;
@@ -62,13 +110,7 @@ public class Conditionals {
     }
   
     @Override
-    public boolean isLoop() {
-      return false;
-    }
-  
-    @Override
-    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
-        throws UndefinedTypeException {
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       boolean hasElse = !(elseBlock.isEmpty());
       gen.startIfStatement(condition, hasElse);
       this.thenBlock.generate(logger, gen, info);
@@ -107,11 +149,6 @@ public class Conditionals {
     @Override
     public ContinuationType getType() {
       return ContinuationType.IF_STATEMENT;
-    }
-  
-    @Override
-    public boolean isAsync() {
-      return false;
     }
   
     @Override
@@ -156,11 +193,6 @@ public class Conditionals {
       }
     }
   
-    @Override
-    public boolean isNoop() {
-      return thenBlock.isEmpty() && elseBlock.isEmpty();
-    }
-  
     /**
      * Can these be fused into one if statement
      * @param other
@@ -184,7 +216,7 @@ public class Conditionals {
     }
   }
 
-  public static class SwitchStatement extends Continuation {
+  public static class SwitchStatement extends Conditional {
     private final ArrayList<Integer> caseLabels;
     private final ArrayList<Block> caseBlocks;
     private final Block defaultBlock;
@@ -208,6 +240,9 @@ public class Conditionals {
       this.switchVar = switchVar;
       this.caseLabels = caseLabels;
       this.caseBlocks = caseBlocks;
+      for (Block caseBlock: caseBlocks) {
+        caseBlock.setParent(this);
+      }
       this.defaultBlock = defaultBlock;
       this.defaultBlock.setParent(this);
     }
@@ -229,8 +264,7 @@ public class Conditionals {
     }
   
     @Override
-    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
-        throws UndefinedTypeException {
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       boolean hasDefault = !defaultBlock.isEmpty();
       gen.startSwitch(switchVar, caseLabels, hasDefault);
   
@@ -286,16 +320,6 @@ public class Conditionals {
     }
   
     @Override
-    public boolean isAsync() {
-      return false;
-    }
-    
-    @Override
-    public boolean isLoop() {
-      return false;
-    }
-  
-    @Override
     public Collection<Var> requiredVars(boolean forDeadCodeElim) {
       if (switchVar.isVar()) {
         return Arrays.asList(switchVar.getVar());
@@ -317,17 +341,10 @@ public class Conditionals {
   
     @Override
     public Block branchPredict(Map<Var, Arg> knownConstants) {
-      long val;
-      if (switchVar.isVar()) {
-        Arg switchVal = knownConstants.get(switchVar.getVar());
-        if (switchVal == null) {
-          return null;
-        }
-        assert(switchVal.isIntVal());
-        val = switchVal.getIntLit();
-      } else {
-        val = switchVar.getIntLit();
-      }
+      if (switchVar.isVar() && knownConstants.containsKey(switchVar.getVar())) {
+        this.switchVar = knownConstants.get(switchVar.getVar());
+      } 
+      long val = switchVar.getIntLit();
       // Check cases
       for (int i = 0; i < caseLabels.size(); i++) {
         if (val == caseLabels.get(i)) {
@@ -336,16 +353,6 @@ public class Conditionals {
       }
       // Otherwise return (maybe empty) default block
       return defaultBlock;
-    }
-  
-    @Override
-    public boolean isNoop() {
-      for (Block b: caseBlocks) {
-        if (!b.isEmpty()) {
-          return false;
-        }
-      }
-      return this.defaultBlock.isEmpty();
     }
   }
 

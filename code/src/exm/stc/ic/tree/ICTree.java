@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -38,7 +39,6 @@ import exm.stc.common.CompilerBackend;
 import exm.stc.common.CompilerBackend.VarDecl;
 import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.PassedVar;
@@ -53,6 +53,7 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
+import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -556,7 +557,7 @@ public class ICTree {
         if (Var.findByName(curr.variables, name) != null) {
           return true;
         }
-        for (Continuation c: curr.getContinuations()) {
+        for (Continuation c: curr.allComplexStatements()) {
           if (Var.findByName(c.constructDefinedVars(), name) != null) {
             return true;
           }
@@ -653,7 +654,7 @@ public class ICTree {
     }
     
     public Block(BlockType type, Continuation parentCont, Function parentFunction) {
-      this(type, parentCont, parentFunction, new LinkedList<Instruction>(),
+      this(type, parentCont, parentFunction, new LinkedList<Statement>(),
           new ArrayList<Var>(), new HashMap<Var, Arg>(), new HashMap<Var, Arg>(),
           new ArrayList<Continuation>(), new ArrayList<CleanupAction>());
     }
@@ -666,14 +667,14 @@ public class ICTree {
      */
     private Block(BlockType type,
         Continuation parentCont, Function parentFunction,
-        LinkedList<Instruction> instructions, 
+        LinkedList<Statement> instructions, 
         ArrayList<Var> variables, HashMap<Var, Arg> initReadRefcounts,
         HashMap<Var, Arg> initWriteRefcounts,
         ArrayList<Continuation> conds,
         ArrayList<CleanupAction> cleanupActions) {
       setParent(type, parentCont, parentFunction);
       this.type = type;
-      this.instructions = instructions;
+      this.statements = instructions;
       this.variables = variables;
       this.initReadRefcounts = initReadRefcounts;
       this.initWriteRefcounts = initWriteRefcounts;
@@ -683,6 +684,9 @@ public class ICTree {
 
     public void setParent(BlockType type, Continuation parentCont,
         Function parentFunction) {
+      if (type == BlockType.CASE_BLOCK) {
+        new Exception().printStackTrace();
+      }
       this.parentCont = parentCont;
       this.parentFunction = parentFunction;
     }
@@ -714,7 +718,7 @@ public class ICTree {
     public Block clone(BlockType newType, Continuation parentCont,
                        Function parentFunction) {
       Block cloned = new Block(newType, parentCont, parentFunction,
-          ICUtil.cloneInstructions(this.instructions),
+          ICUtil.cloneStatements(this.statements),
           new ArrayList<Var>(this.variables),
           new HashMap<Var, Arg>(this.initReadRefcounts),
           new HashMap<Var, Arg>(this.initWriteRefcounts),
@@ -724,14 +728,24 @@ public class ICTree {
         // Add in way that ensures parent link updated
         cloned.addContinuation(c.clone());
       }
+      cloned.fixupStatementParentLinks();
       return cloned;
+    }
+    
+    /**
+     * Fixup parent links of statements in block
+     */
+    private void fixupStatementParentLinks() {
+      for (Statement stmt: statements) {
+        stmt.setParent(this);
+      }
     }
 
     public BlockType getType() {
       return type;
     }
 
-    private final LinkedList<Instruction> instructions;
+    private final LinkedList<Statement> statements;
     
     private final ArrayList<CleanupAction> cleanupActions;
 
@@ -744,16 +758,28 @@ public class ICTree {
     /** conditional statements for block */
     private final ArrayList<Continuation> continuations;
 
+    public void addStatement(Statement st) {
+      st.setParent(this);
+      statements.add(st);
+    }
+
     public void addInstruction(Instruction e) {
-      instructions.add(e);
+      addStatement(e);
     }
 
     public void addInstructionFront(Instruction e) {
-      instructions.addFirst(e);
+      statements.addFirst(e);
     }
     
     public void addInstructions(List<Instruction> instructions) {
-      this.instructions.addAll(instructions);
+      addStatements(instructions);
+    }
+    
+    public void addStatements(List<? extends Statement> stmts) {
+      for (Statement stmt: stmts) {
+        stmt.setParent(this);
+      }
+      this.statements.addAll(stmts);
     }
 
     public void addContinuation(Continuation c) {
@@ -798,16 +824,16 @@ public class ICTree {
     public boolean isEmpty() {
       if (!continuations.isEmpty())
         return false;
-      for (Instruction i: instructions) {
-        if (i.op != Opcode.COMMENT) {
+      for (Statement stmt: statements) {
+        if (stmt.type() != StatementType.INSTRUCTION ||
+            stmt.instruction().op != Opcode.COMMENT) {
           return false;
         }
       }
       return true;
     }
 
-    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
-        throws UndefinedTypeException {
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
 
       logger.trace("Generate code for block of type " + this.type.toString());
       // Pass variable declarations as batch
@@ -837,8 +863,8 @@ public class ICTree {
       }
       gen.declare(declarations);
       
-      for (Instruction i: instructions) {
-        i.generate(logger, gen, info);
+      for (Statement stmt: statements) {
+        stmt.generate(logger, gen, info);
       }
 
       // Can put conditional statements at end of block, making sure
@@ -877,10 +903,8 @@ public class ICTree {
         sb.append("\n");
       }
 
-      for (Instruction i: instructions) {
-        sb.append(indent);
-        sb.append(i.toString());
-        sb.append("\n");
+      for (Statement stmt: statements) {
+        stmt.prettyPrint(sb, indent);
       }
 
       for (boolean runLast: new boolean[] {false, true}) {
@@ -905,24 +929,97 @@ public class ICTree {
     public ListIterator<Continuation> continuationIterator(int pos) {
       return continuations.listIterator(pos);
     }
+    
+    public class AllContIt implements Iterator<Continuation>, 
+                              Iterable<Continuation>{
+      Continuation next = null;
+      /**
+       * null if exhausted
+       */
+      Iterator<Statement> stmtIt = statementIterator();
+      Iterator<Continuation> contIt = null;
+          
+      @Override
+      public Iterator<Continuation> iterator() {
+        return this;
+      }
+
+      private boolean checkMoreStatements() {
+        if (next != null)
+          return true;
+        
+        if (stmtIt != null) { 
+          // Check for continuation
+          while (stmtIt.hasNext()) {
+            Statement stmt = stmtIt.next();
+            if (stmt.type() == StatementType.CONDITIONAL) {
+              next = stmt.conditional();
+              return true;
+            }
+          }
+        }
+        if (contIt == null) {
+          stmtIt = null;
+          contIt = continuationIterator();
+        }
+        return false;
+      }
+      
+      @Override
+      public boolean hasNext() {
+        if (checkMoreStatements()) {
+          return true;
+        }
+        return contIt.hasNext();
+      }
+
+      @Override
+      public Continuation next() {
+        if (checkMoreStatements()) {
+          Continuation res = next;
+          next = null;
+          return res;
+        } else {
+          return contIt.next();
+        }
+      }
+
+      @Override
+      public void remove() {
+        if (stmtIt != null) {
+          assert(contIt == null);
+          stmtIt.remove();
+        } else {
+          assert(contIt != null);
+          contIt.remove();
+        }
+      }      
+    }
+    
+    /**
+     * @return iterable for all continuations, including statements
+     */
+    public Iterable<Continuation> allComplexStatements() {
+      return new AllContIt();
+    }
 
     public ListIterator<Var> variableIterator() {
       return variables.listIterator();
     }
-    public List<Instruction> getInstructions() {
-      return Collections.unmodifiableList(instructions);
-    }
-
-    public ListIterator<Instruction> instructionIterator() {
-      return instructions.listIterator();
+    public List<Statement> getStatements() {
+      return Collections.unmodifiableList(statements);
+    } 
+    
+    public ListIterator<Statement> statementIterator() {
+      return statements.listIterator();
     }
     
-    public ListIterator<Instruction> instructionIterator(int i) {
-      return instructions.listIterator(i);
+    public ListIterator<Statement> statementIterator(int i) {
+      return statements.listIterator(i);
     }
 
-    public ListIterator<Instruction> instructionEndIterator() {
-      return instructions.listIterator(instructions.size());
+    public ListIterator<Statement> statementEndIterator() {
+      return statements.listIterator(statements.size());
     }
     
     public ListIterator<CleanupAction> cleanupIterator() {
@@ -1031,13 +1128,18 @@ public class ICTree {
 
     private void renameInCode(Map<Var, Arg> renames, RenameMode mode,
                               boolean recursive) {
-      for (Instruction i: instructions) {
-        i.renameVars(renames, mode);
+      for (Statement stmt: statements) {
+        if (stmt.type() == StatementType.INSTRUCTION) {
+          stmt.instruction().renameVars(renames, mode);
+        } else {
+          assert(stmt.type() == StatementType.CONDITIONAL);
+          stmt.conditional().renameVars(renames, mode, recursive);
+        }
       }
 
       // Rename in nested blocks
       for (Continuation c: continuations) {
-        c.replaceVars(renames, mode, recursive);
+        c.renameVars(renames, mode, recursive);
       }
       renameCleanupActions(renames, mode);
     }
@@ -1062,29 +1164,35 @@ public class ICTree {
       
       removeVarDeclarations(removeVars);
 
-      ListIterator<Instruction> it = instructionIterator();
+      ListIterator<Statement> it = statementIterator();
       while (it.hasNext()) {
-        Instruction inst = it.next();
-        inst.removeVars(removeVars);
-        // See if we can remove instruction
-        int removeable = 0;
-        int notRemoveable = 0;
-        for (Var out: inst.getModifiedOutputs()) {
-          // Doesn't make sense to assign to anything other than
-          //  variable
-          if (removeVars.contains(out)) {
-            removeable++;
-          } else {
-            notRemoveable++;
+        Statement stmt = it.next();
+        if (stmt.type() == StatementType.INSTRUCTION) { 
+          Instruction inst = stmt.instruction();
+          inst.removeVars(removeVars);
+          // See if we can remove instruction
+          int removeable = 0;
+          int notRemoveable = 0;
+          for (Var out: inst.getModifiedOutputs()) {
+            // Doesn't make sense to assign to anything other than
+            //  variable
+            if (removeVars.contains(out)) {
+              removeable++;
+            } else {
+              notRemoveable++;
+            }
           }
-        }
-        if (removeable > 0 && notRemoveable == 0) {
-          // One of the remove vars is output
-          it.remove();
-        } else if (removeable > 0 && notRemoveable > 0) {
-          // Can't remove
-          throw new STCRuntimeError("Can't remove instruction " + inst +
-              " because not all outputs in remove vars set " + removeVars);
+          if (removeable > 0 && notRemoveable == 0) {
+            // One of the remove vars is output
+            it.remove();
+          } else if (removeable > 0 && notRemoveable > 0) {
+            // Can't remove
+            throw new STCRuntimeError("Can't remove instruction " + inst +
+                " because not all outputs in remove vars set " + removeVars);
+          }
+        } else {
+          assert(stmt.type() == StatementType.CONDITIONAL);
+          stmt.conditional().removeVars(removeVars);
         }
       }
       for (Continuation c: continuations) {
@@ -1132,12 +1240,12 @@ public class ICTree {
      * @param insertAtTop whether to insert at top of block or not
      */
     public void insertInline(Block b, boolean insertAtTop) {
-      insertInline(b, insertAtTop ? instructionIterator() : null);
+      insertInline(b, insertAtTop ? statementIterator() : null);
     }
     
 
     public void insertInline(Block b,
-          ListIterator<Instruction> pos) {
+          ListIterator<Statement> pos) {
       insertInline(b, null, pos);
     }
   
@@ -1149,7 +1257,7 @@ public class ICTree {
      */
     public void insertInline(Block b,
           ListIterator<Continuation> contPos,
-          ListIterator<Instruction> pos) {
+          ListIterator<Statement> pos) {
       Set<Var> varSet = new HashSet<Var>(this.variables);
       for (Var newVar: b.getVariables()) {
         // Check for duplicates (may be duplicate globals)
@@ -1157,12 +1265,14 @@ public class ICTree {
           variables.add(newVar);
         }
       }
+      
       if (pos != null) {
-        for (Instruction i: b.getInstructions()) {
-          pos.add(i);
+        for (Statement stmt: b.getStatements()) {
+          stmt.setParent(this);
+          pos.add(stmt);
         }
       } else {
-        this.instructions.addAll(b.getInstructions());
+        addStatements(b.getStatements());
       }
       for (Continuation c: b.getContinuations()) {
         c.setParent(this);
@@ -1203,14 +1313,14 @@ public class ICTree {
     }
 
     /**
-     * Remove instructions by object identity
-     * @param insts
+     * Remove statements by object identity
+     * @param stmts
      */
-    public void removeInstructions(Set<Instruction> insts) {
-      ListIterator<Instruction> it = this.instructionIterator();
+    public void removeStatements(Set<? extends Statement> stmts) {
+      ListIterator<Statement> it = this.statementIterator();
       while (it.hasNext()) {
-        Instruction i = it.next();
-        if (insts.contains(i)) {
+        Statement stmt = it.next();
+        if (stmts.contains(stmt)) {
           it.remove();
         }
       }
@@ -1218,11 +1328,11 @@ public class ICTree {
 
     /**
      * replace old instructions with new
-     * @param newInstructions
+     * @param newStatements
      */
-    public void replaceInstructions(List<Instruction> newInstructions) {
-      this.instructions.clear();
-      this.instructions.addAll(newInstructions);
+    public void replaceStatements(List<Statement> newStatements) {
+      this.statements.clear();
+      this.statements.addAll(newStatements);
     }
 
     @Override
@@ -1286,9 +1396,9 @@ public class ICTree {
       int count = 0;
       while (!blocks.isEmpty()) {
         Block curr = blocks.pop();
-        count += curr.instructions.size();
+        count += curr.statements.size();
         count += curr.cleanupActions.size();
-        for (Continuation c: curr.getContinuations()) {
+        for (Continuation c: curr.allComplexStatements()) {
           for (Block inner: c.getBlocks()) {
             blocks.push(inner);
           }
@@ -1318,6 +1428,33 @@ public class ICTree {
       
       refcountMap.put(blockVar, Arg.createIntLit(val));
     }
+  }
+  
+  public static enum StatementType {
+    INSTRUCTION,
+    CONDITIONAL,
+  }
+  
+  public static interface Statement {
+    public StatementType type();
+    public Conditional conditional();
+    public Instruction instruction();
+    public void setParent(Block block);
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info);
+    public void prettyPrint(StringBuilder sb, String indent);
+    /**
+     * Note: don't call clone() because of Java 6 limitations in dealing with
+     * supertypes when class inheriting from interface and class
+     * @return
+     */
+    public Statement cloneStatement();
+    /**
+     * Rename vars throughout statement
+     * @param replaceInputs
+     * @param value
+     */
+    public void renameVars(Map<Var, Arg> replaceInputs,
+                           RenameMode value);
   }
   
   /** State to pass around when doing code generation from SwiftIC */

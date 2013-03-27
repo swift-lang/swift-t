@@ -17,7 +17,6 @@ import exm.stc.common.CompilerBackend.RefCount;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.ExecContext;
@@ -251,8 +250,7 @@ public class ForeachLoops {
     }
 
     @Override
-    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
-        throws UndefinedTypeException {
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       gen.startForeachLoop(loopName, arrayVar, loopVar, loopCounterVar,
                 splitDegree, leafDegree, arrayClosed, 
                 passedVars, startIncrements, constStartIncrements);
@@ -364,7 +362,7 @@ public class ForeachLoops {
           this.loopCounterVar = o.loopCounterVar;
         }
       }
-      o.replaceVars(renames, RenameMode.REPLACE_VAR, true);
+      o.renameVars(renames, RenameMode.REPLACE_VAR, true);
       
       fuseIntoAbstract(o, insertAtTop);
     }
@@ -454,8 +452,7 @@ public class ForeachLoops {
     }
     
     @Override
-    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
-        throws UndefinedTypeException {
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       gen.startRangeLoop(loopName, loopVar, loopCounterVar, start, end, increment,
                          splitDegree, leafDegree, passedVars, startIncrements,
                          constStartIncrements);
@@ -827,7 +824,7 @@ public class ForeachLoops {
           unrolledBody.addInstruction(Builtin.createLocal(BuiltinOpcode.PLUS_INT,
               currIterLoopVar, Arrays.asList(Arg.createVar(lastIterLoopVar), oldIncr)));
           // Replace references to the iteration counter in nested block
-          nb.replaceVars(Collections.singletonMap(unrolled.loopVar,
+          nb.renameVars(Collections.singletonMap(unrolled.loopVar,
                        Arg.createVar(currIterLoopVar)), RenameMode.REPLACE_VAR, true);
         }
         lastIterLoopVar = currIterLoopVar;
@@ -863,7 +860,7 @@ public class ForeachLoops {
       renames.put(o.loopVar, Arg.createVar(this.loopVar));
       if (loopCounterVar != null)
         renames.put(o.loopCounterVar, Arg.createVar(this.loopCounterVar));
-      o.replaceVars(renames, RenameMode.REPLACE_VAR, true);
+      o.renameVars(renames, RenameMode.REPLACE_VAR, true);
      
       this.fuseIntoAbstract(o, insertAtTop);
     }

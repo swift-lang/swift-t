@@ -46,6 +46,8 @@ import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.MultiMap;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
+import exm.stc.ic.opt.ProgressOpcodes.Category;
+import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
@@ -60,6 +62,8 @@ import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.RenameMode;
+import exm.stc.ic.tree.ICTree.Statement;
+import exm.stc.ic.tree.ICTree.StatementType;
 
 /**
  * This optimisation pass does a range of optimizations.  The overarching idea
@@ -176,8 +180,16 @@ public class ForwardDataflow implements OptimizerPass {
       return Collections.unmodifiableSet(closed);
     }
 
+    public Set<Var> getRecursivelyClosed() {
+      return Collections.unmodifiableSet(recursivelyClosed);
+    }
+
     public boolean isClosed(Var var) {
       return closed.contains(var) || recursivelyClosed.contains(var);
+    }
+    
+    public boolean isRecursivelyClosed(Var var) {
+      return recursivelyClosed.contains(var);
     }
 
     public boolean isAvailable(ComputedValue val) {
@@ -280,6 +292,15 @@ public class ForwardDataflow implements OptimizerPass {
         curr = curr.parent;
       }
       return res == null ? Collections.<ComputedValue>emptyList() : res;
+    }
+
+    public void addClosed(UnifiedState closed) {
+      for (Var v: closed.closed) {
+        close(v, false);
+      }
+      for (Var v: closed.recursivelyClosed) {
+        close(v, true);
+      }
     }
 
     /**
@@ -503,7 +524,7 @@ public class ForwardDataflow implements OptimizerPass {
     }
     
     Block main = f.mainBlock();
-    List<WaitVar> blockingVariables = findBlockingVariables(main);
+    List<WaitVar> blockingVariables = findBlockingVariables(logger, f, main);
     
     if (blockingVariables != null) {
       List<Var> locals = f.getInputList();
@@ -527,31 +548,64 @@ public class ForwardDataflow implements OptimizerPass {
    * @param block
    * @return
    */
-  private static List<WaitVar> findBlockingVariables(Block block) {
-    // Set of blocking variables.  May contain duplicates for explicit/not explicit -
-    // we eliminate these at end
-    HashSet<WaitVar> blockingVariables = null;
+  private static List<WaitVar> findBlockingVariables(Logger logger,
+        Function fn, Block block) {
     /*TODO: could exploit the information we have in getBlockingInputs() 
      *      to explore dependencies between variables and work out 
      *      which variables are needed to make progress */
-    for (Instruction inst: block.getInstructions()) {
-      if (!ProgressOpcodes.isNonProgressOpcode(inst.op)) {
-        return null;
-      }
+    
+    if (ProgressOpcodes.blockProgress(block, Category.NON_PROGRESS)) {
+      // An instruction in block may make progress without any waits
+      return null;
     }
     
-    for (Continuation c: block.getContinuations()) {
-      List<BlockingVar> waitOnVars = c.blockingVars(false);
-      List<WaitVar> waitOn;
-      if (waitOnVars == null) {
-        waitOn = WaitVar.NONE; 
-      } else {
-        waitOn = new ArrayList<WaitVar>(waitOnVars.size());
-        for (BlockingVar bv: waitOnVars) {
-          waitOn.add(new WaitVar(bv.var, bv.explicit));
-        }
-      }
+    // Find blocking variables in instructions and continuations
+    BlockingVarFinder walker = new BlockingVarFinder();
+    TreeWalk.walkSyncChildren(logger, fn, block, true, walker);
+    
+    if (walker.blockingVariables == null) {
+      return null;
+    } else {
+      ArrayList<WaitVar> res = 
+          new ArrayList<WaitVar>(walker.blockingVariables);
+      WaitVar.removeDuplicates(res);
+      return res;
+    }
+  }
 
+  private static final class BlockingVarFinder extends TreeWalker {
+    // Set of blocking variables.  May contain duplicates for explicit/not explicit -
+    // we eliminate these at end
+    HashSet<WaitVar> blockingVariables = null;
+
+    @Override
+    protected void visit(Continuation cont) {
+      if (cont.isAsync()) {
+        List<BlockingVar> waitOnVars = cont.blockingVars(false);
+        List<WaitVar> waitOn;
+        if (waitOnVars == null) {
+          waitOn = WaitVar.NONE; 
+        } else {
+          waitOn = new ArrayList<WaitVar>(waitOnVars.size());
+          for (BlockingVar bv: waitOnVars) {
+            waitOn.add(new WaitVar(bv.var, bv.explicit));
+          }
+        }
+  
+        updateBlockingSet(waitOn);
+        //System.err.println("Blocking so far:" + blockingVariables);
+      }
+    }
+
+    @Override
+    public void visit(Instruction inst) {
+      List<WaitVar> waitVars = 
+          WaitVar.asWaitVarList(inst.getBlockingInputs(), false);
+      updateBlockingSet(waitVars);
+    }
+
+
+    private void updateBlockingSet(List<WaitVar> waitOn) {
       assert(waitOn != null);
       //System.err.println("waitOn: " + waitOn);
       if (blockingVariables == null) {
@@ -560,14 +614,6 @@ public class ForwardDataflow implements OptimizerPass {
         // Keep only those variables which block all wait statements
         blockingVariables.retainAll(waitOn);
       }
-      //System.err.println("Blocking so far:" + blockingVariables);
-    }
-    if (blockingVariables == null) {
-      return null;
-    } else {
-      ArrayList<WaitVar> res = new ArrayList<WaitVar>(blockingVariables);
-      WaitVar.removeDuplicates(res);
-      return res;
     }
   }
 
@@ -612,24 +658,29 @@ public class ForwardDataflow implements OptimizerPass {
       }
     }
 
-    forwardDataflow(logger, f, execCx, block, 
-            block.instructionIterator(), cv, replaceInputs, replaceAll);
+    boolean inlined = handleStatements(logger, program, f, execCx, block, 
+            block.statementIterator(), cv, replaceInputs, replaceAll);
 
+    if (inlined) {
+      cleanupAfterInline(block, replaceInputs, replaceAll);
+      
+      // Rebuild data structures for this block after inlining
+      return true;
+    }
+    
     block.renameCleanupActions(replaceInputs, RenameMode.VALUE);
     block.renameCleanupActions(replaceAll, RenameMode.REFERENCE);
-    
-    
-    boolean inlined = false;
+
     // might be able to eliminate wait statements or reduce the number
     // of vars they are blocking on
     for (int i = 0; i < block.getContinuations().size(); i++) {
       Continuation c = block.getContinuation(i);
       
       // Replace all variables in the continuation construct
-      c.replaceVars(replaceInputs, RenameMode.VALUE, false);
-      c.replaceVars(replaceAll, RenameMode.REFERENCE, false);
+      c.renameVars(replaceInputs, RenameMode.VALUE, false);
+      c.renameVars(replaceAll, RenameMode.REFERENCE, false);
       
-      Block toInline = c.tryInline(cv.closed, cv.recursivelyClosed,
+      Block toInline = c.tryInline(cv.getClosed(), cv.getRecursivelyClosed(),
                                    keepExplicitWaits);
       if (toInline != null) {
         c.inlineInto(block, toInline);
@@ -639,15 +690,7 @@ public class ForwardDataflow implements OptimizerPass {
     }
     
     if (inlined) {
-      // Redo replacements for newly inserted instructions/continuations
-      for (Instruction i: block.getInstructions()) {
-        i.renameVars(replaceInputs, RenameMode.VALUE);
-        i.renameVars(replaceAll, RenameMode.REFERENCE);
-      }
-      for (Continuation c: block.getContinuations()) {
-        c.replaceVars(replaceInputs, RenameMode.VALUE, false);
-        c.replaceVars(replaceAll, RenameMode.REFERENCE, false);
-      }
+      cleanupAfterInline(block, replaceInputs, replaceAll);
       
       // Rebuild data structures for this block after inlining
       return true;
@@ -656,114 +699,256 @@ public class ForwardDataflow implements OptimizerPass {
     // Note: assume that continuations aren't added to rule engine until after
     // all code in block has run
     for (Continuation cont : block.getContinuations()) {
-      State contCV = cv.makeChild(cont.inheritsParentVars());
-      // additional variables may be close once we're inside continuation
-      List<BlockingVar> contClosedVars = cont.blockingVars(true);
-      if (contClosedVars != null) {
-        for (BlockingVar bv : contClosedVars) {
-          contCV.close(bv.var, bv.recursive);
-        }
-      }
-      
-      List<Block> contBlocks = cont.getBlocks();
-      for (int i = 0; i < contBlocks.size(); i++) {
-        // Update based on whether values available within continuation
-        HierarchicalMap<Var, Arg> contReplaceInputs;
-        HierarchicalMap<Var, Arg> contReplaceAll;
-        if (cont.inheritsParentVars()) {
-          contReplaceInputs = replaceInputs;
-          contReplaceAll = replaceAll;
-        } else {
-          contReplaceInputs = replaceInputs.makeChildMap();
-          contReplaceAll = replaceAll.makeChildMap();
-          purgeUnpassableVars(contReplaceInputs);
-          purgeUnpassableVars(contReplaceAll);
-        }
-        boolean again;
-        int pass = 1;
-        do {
-          logger.debug("closed variable analysis on nested block pass " + pass);
-          again = forwardDataflow(logger, program, f, cont.childContext(execCx),
-              contBlocks.get(i), contCV.makeChild(true),
-              contReplaceInputs.makeChildMap(), contReplaceAll.makeChildMap());
-          
-          // changes within nested scope don't require another pass
-          // over this scope
-          pass++;
-        } while (again);
-      }
+      recurseOnContinuation(logger, program, f, execCx, cont, cv,
+          replaceInputs, replaceAll);
     }
 
     // Didn't inline everything, all changes should be propagated ok
     return false;
   }
 
-  
-  private static boolean forwardDataflow(Logger logger,
-      Function f, ExecContext execCx, Block block,
-      ListIterator<Instruction> insts, State cv,
+  /**
+   * 
+   * @param logger
+   * @param program
+   * @param fn
+   * @param execCx
+   * @param cont
+   * @param cv
+   * @param replaceInputs
+   * @param replaceAll
+   * @return any variables that are guaranteed to be closed in current
+   *        context after continuation is evaluated
+   * @throws InvalidOptionException
+   * @throws InvalidWriteException
+   */
+  private UnifiedState recurseOnContinuation(Logger logger, Program program,
+      Function fn, ExecContext execCx, Continuation cont, State cv,
       HierarchicalMap<Var, Arg> replaceInputs,
-      HierarchicalMap<Var, Arg> replaceAll) throws InvalidWriteException {
-    boolean anotherPassNeeded = false;
-    while(insts.hasNext()) {
-      Instruction inst = insts.next();
-      
-      if (logger.isTraceEnabled()) {
-        logger.trace("Value renames in effect: " + replaceInputs);
-        logger.trace("Reference renames in effect: " + replaceAll);
-        logger.trace("Available values this block: " + cv.availableVals);
-        State ancestor = cv.parent;
-        int up = 1;
-        while (ancestor != null) {
-          logger.trace("Available ancestor " + up + ": " +
-                       ancestor.availableVals);
-          up++;
-          ancestor = ancestor.parent;
-        }
-        logger.trace("Closed variables: " + cv.closed);
-        logger.trace("-----------------------------");
-        logger.trace("At instruction: " + inst);
-      }
-      
-      // Immediately apply the variable renames
-      inst.renameVars(replaceInputs, RenameMode.VALUE);
-      inst.renameVars(replaceAll, RenameMode.REFERENCE);
- 
-      List<ResultVal> icvs = inst.getResults(cv);
-      
-      /*
-       * See if value is already computed somewhere and see if we should
-       * replace variables going forward NOTE: we don't delete any instructions
-       * on this pass, but rather rely on dead code elim to later clean up
-       * unneeded instructions instead
-       */
-      updateReplacements(logger, f, inst, cv, icvs, replaceInputs, replaceAll);
-      
-      if (logger.isTraceEnabled()) {
-        logger.trace("Instruction after updates: " + inst);
-      }
-      // now try to see if we can change to the immediate version
-      if (switchToImmediate(logger, f, execCx, block, cv, inst, insts)) {
-        // Continue pass at the start of the newly inserted sequence
-        // as if it was always there
-        continue;
-      }
-  
-      // Add dependencies
-      List<Var> in = inst.getBlockingInputs();
-      if (in != null) {
-        for (Var ov: inst.getOutputs()) {
-          if (!Types.isScalarValue(ov.type())) {
-            cv.setDependencies(ov, in);
-          }
-        }
-      }
-      
-      for (Var out: inst.getClosedOutputs()) {
-        cv.close(out, false);
+      HierarchicalMap<Var, Arg> replaceAll) throws InvalidOptionException,
+      InvalidWriteException {
+    State contCV = cv.makeChild(cont.inheritsParentVars());
+    // additional variables may be close once we're inside continuation
+    List<BlockingVar> contClosedVars = cont.blockingVars(true);
+    if (contClosedVars != null) {
+      for (BlockingVar bv : contClosedVars) {
+        contCV.close(bv.var, bv.recursive);
       }
     }
-    return anotherPassNeeded;
+    
+    // For conditionals, find variables closed on all branches
+    boolean unifyBranches = cont.isExhaustiveSyncConditional();
+    List<State> branchStates = unifyBranches ? new ArrayList<State>() : null;
+    
+    List<Block> contBlocks = cont.getBlocks();
+    for (int i = 0; i < contBlocks.size(); i++) {
+      // Update based on whether values available within continuation
+      HierarchicalMap<Var, Arg> contReplaceInputs;
+      HierarchicalMap<Var, Arg> contReplaceAll;
+      if (cont.inheritsParentVars()) {
+        contReplaceInputs = replaceInputs;
+        contReplaceAll = replaceAll;
+      } else {
+        contReplaceInputs = replaceInputs.makeChildMap();
+        contReplaceAll = replaceAll.makeChildMap();
+        purgeUnpassableVars(contReplaceInputs);
+        purgeUnpassableVars(contReplaceAll);
+      }
+      
+      State blockCV; 
+          
+      boolean again;
+      int pass = 1;
+      do {
+        logger.debug("closed variable analysis on nested block pass " + pass);
+        blockCV = contCV.makeChild(true);
+        again = forwardDataflow(logger, program, fn, cont.childContext(execCx),
+            contBlocks.get(i), blockCV,
+            contReplaceInputs.makeChildMap(), contReplaceAll.makeChildMap());
+        
+        // changes within nested scope don't require another pass
+        // over this scope
+        pass++;
+      } while (again);
+      
+      if (unifyBranches) {
+        branchStates.add(blockCV);
+      }
+    }
+    
+    if (unifyBranches) {
+      return UnifiedState.unify(cv, branchStates);
+    } else {
+      return UnifiedState.EMPTY;
+    }
+  }
+  
+  
+  private static class UnifiedState {
+    private UnifiedState(Set<Var> closed, Set<Var> recursivelyClosed) {
+      super();
+      this.closed = closed;
+      this.recursivelyClosed = recursivelyClosed;
+    }
+    
+    static final UnifiedState EMPTY = new UnifiedState(
+                  Collections.<Var>emptySet(), Collections.<Var>emptySet());
+    
+    /**
+     * Assuming that branches are exhaustive, work out the set of
+     * variables closed after the conditional has executed.
+     * TODO: unify available values?
+     * @param parentState
+     * @param branchStates
+     * @return
+     */
+    static UnifiedState unify(State parentState,
+                                   List<State> branchStates) {
+      if (branchStates.isEmpty()) {
+        return EMPTY;
+      } else {
+        State firstState = branchStates.get(0);
+        Set<Var> closed = new HashSet<Var>();
+        Set<Var> recClosed = new HashSet<Var>();
+        // Start off with variables closed in first branch that aren't
+        // closed in parent
+        for (Var v: firstState.getClosed()) {
+          if (!parentState.isClosed(v)) {
+            closed.add(v);
+          }
+        }
+        for (Var v: firstState.getRecursivelyClosed()) {
+          if (!parentState.isRecursivelyClosed(v)) {
+            recClosed.add(v);
+          }
+        }
+        
+        for (int i = 1; i < branchStates.size(); i++) {
+          closed.retainAll(branchStates.get(i).getClosed());
+          recClosed.retainAll(branchStates.get(i).getRecursivelyClosed());
+        }
+
+        return new UnifiedState(closed, recClosed);
+      }
+    }
+    
+    final Set<Var> closed;
+    final Set<Var> recursivelyClosed;
+  }
+
+  private static void cleanupAfterInline(Block block,
+      HierarchicalMap<Var, Arg> replaceInputs,
+      HierarchicalMap<Var, Arg> replaceAll) {
+    // Redo replacements for newly inserted instructions/continuations
+    for (Statement stmt: block.getStatements()) {
+      stmt.renameVars(replaceInputs, RenameMode.VALUE);
+      stmt.renameVars(replaceAll, RenameMode.REFERENCE);
+    }
+    for (Continuation c: block.getContinuations()) {
+      c.renameVars(replaceInputs, RenameMode.VALUE, false);
+      c.renameVars(replaceAll, RenameMode.REFERENCE, false);
+    }
+  }
+
+  
+  /**
+   * 
+   * @param logger
+   * @param f
+   * @param execCx
+   * @param block
+   * @param stmts
+   * @param cv
+   * @param replaceInputs
+   * @param replaceAll
+   * @return true if inlined.  Returns immediately if inlining happens
+   * @throws InvalidWriteException
+   * @throws InvalidOptionException 
+   */
+  private boolean handleStatements(Logger logger,
+      Program program, Function f, ExecContext execCx, Block block,
+      ListIterator<Statement> stmts, State cv,
+      HierarchicalMap<Var, Arg> replaceInputs,
+      HierarchicalMap<Var, Arg> replaceAll) throws InvalidWriteException,
+                                                   InvalidOptionException {
+    while(stmts.hasNext()) {
+      Statement stmt = stmts.next();
+      
+      if (stmt.type() == StatementType.INSTRUCTION) {
+        handleInstruction(logger, f, execCx, block, stmts, stmt.instruction(),
+                          cv, replaceInputs, replaceAll);
+      } else {
+        assert(stmt.type() == StatementType.CONDITIONAL);
+        // TODO: handle situation when:
+        //        all branches assign future X a local values v1,v2,v3,etc.
+        //        in this case should try to create another local value outside of
+        //        conditional z which has the value from all branches stored
+        UnifiedState condClosed = recurseOnContinuation(logger, program, f, execCx, 
+                                          stmt.conditional(), cv, replaceInputs, replaceAll);
+        cv.addClosed(condClosed);
+      }
+    }
+    return false;
+  }
+
+  private static void handleInstruction(Logger logger, Function f,
+      ExecContext execCx, Block block, ListIterator<Statement> stmts,
+      Instruction inst, State cv, HierarchicalMap<Var, Arg> replaceInputs,
+      HierarchicalMap<Var, Arg> replaceAll) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("Value renames in effect: " + replaceInputs);
+      logger.trace("Reference renames in effect: " + replaceAll);
+      logger.trace("Available values this block: " + cv.availableVals);
+      State ancestor = cv.parent;
+      int up = 1;
+      while (ancestor != null) {
+        logger.trace("Available ancestor " + up + ": " +
+                     ancestor.availableVals);
+        up++;
+        ancestor = ancestor.parent;
+      }
+      logger.trace("Closed variables: " + cv.closed);
+      logger.trace("-----------------------------");
+      logger.trace("At instruction: " + inst);
+    }
+    
+    // Immediately apply the variable renames
+    inst.renameVars(replaceInputs, RenameMode.VALUE);
+    inst.renameVars(replaceAll, RenameMode.REFERENCE);
+  
+    List<ResultVal> icvs = inst.getResults(cv);
+    
+    /*
+     * See if value is already computed somewhere and see if we should
+     * replace variables going forward NOTE: we don't delete any instructions
+     * on this pass, but rather rely on dead code elim to later clean up
+     * unneeded instructions instead
+     */
+    updateReplacements(logger, f, inst, cv, icvs, replaceInputs, replaceAll);
+    
+    if (logger.isTraceEnabled()) {
+      logger.trace("Instruction after updates: " + inst);
+    }
+    // now try to see if we can change to the immediate version
+    if (switchToImmediate(logger, f, execCx, block, cv, inst, stmts)) {
+      // Continue pass at the start of the newly inserted sequence
+      // as if it was always there
+      return;
+    }
+  
+    // Add dependencies
+    List<Var> in = inst.getBlockingInputs();
+    if (in != null) {
+      for (Var ov: inst.getOutputs()) {
+        if (!Types.isScalarValue(ov.type())) {
+          cv.setDependencies(ov, in);
+        }
+      }
+    }
+    
+    for (Var out: inst.getClosedOutputs()) {
+      cv.close(out, false);
+    }
   }
 
   /**
@@ -778,7 +963,7 @@ public class ForwardDataflow implements OptimizerPass {
    */
   private static boolean switchToImmediate(Logger logger,
       Function fn, ExecContext execCx, Block block, State cv,
-      Instruction inst, ListIterator<Instruction> insts) {
+      Instruction inst, ListIterator<Statement> stmts) {
     // First see if we can replace some futures with values
     MakeImmRequest req = inst.canMakeImmediate(
             cv.getClosed(), cv.getUnmapped(), false);
@@ -789,14 +974,14 @@ public class ForwardDataflow implements OptimizerPass {
     
     // Create replacement sequence
     Block insertContext;
-    ListIterator<Instruction> insertPoint;
+    ListIterator<Statement> insertPoint;
     boolean noWaitRequired = req.mode == TaskMode.LOCAL ||
                              req.mode == TaskMode.SYNC ||
                              (req.mode == TaskMode.LOCAL_CONTROL
                                  && execCx == ExecContext.CONTROL);
     if (noWaitRequired) {
       insertContext = block;
-      insertPoint = insts;
+      insertPoint = stmts;
     } else {
       WaitStatement wait = new WaitStatement(
           fn.getName() + "-" + inst.shortOpName(),
@@ -806,7 +991,7 @@ public class ForwardDataflow implements OptimizerPass {
       insertContext = wait.getBlock();
       block.addContinuation(wait);
       // Insert at start of block
-      insertPoint = insertContext.instructionIterator();
+      insertPoint = insertContext.statementIterator();
     }
     
     // Now load the values
@@ -856,7 +1041,7 @@ public class ForwardDataflow implements OptimizerPass {
     
 
     // Remove existing instruction
-    insts.remove();
+    stmts.remove();
     
     // Add new instructions at insert point
     for (Instruction newInst: alt) {
@@ -864,8 +1049,8 @@ public class ForwardDataflow implements OptimizerPass {
     }
     
     // Rewind argument iterator to instruction before replaced one
-    if (insts == insertPoint) {
-      ICUtil.rewindIterator(insts, alt.size());
+    if (stmts == insertPoint) {
+      ICUtil.rewindIterator(stmts, alt.size());
     }
     return true;
   }

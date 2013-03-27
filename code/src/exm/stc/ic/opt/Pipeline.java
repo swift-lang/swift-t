@@ -31,6 +31,7 @@ import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
+import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.NestedBlock;
@@ -67,7 +68,7 @@ public class Pipeline extends FunctionOptimizerPass {
   private static void pipelineTasks(Logger logger, Function f, Block curr,
       ExecContext cx) {
     // Do a bottom-up tree walk
-    for (Continuation cont: curr.getContinuations()) {
+    for (Continuation cont: curr.allComplexStatements()) {
       ExecContext childCx = cont.childContext(cx);
       for (Block childBlock: cont.getBlocks()) {
         pipelineTasks(logger, f, childBlock, childCx);
@@ -97,10 +98,10 @@ public class Pipeline extends FunctionOptimizerPass {
     WaitStatement bestCand = candidates.get(0);
     
     if (candidates.size() > 1) {
-      int bestCost = heuristicCost(logger, curr, bestCand);
+      int bestCost = heuristicCost(logger, f, curr, bestCand);
       for (int i = 1; i < candidates.size(); i++) {
         WaitStatement cand = candidates.get(i);
-        int cost = heuristicCost(logger, curr, cand);
+        int cost = heuristicCost(logger, f, curr, cand);
         if (cost < bestCost) {
           bestCost = cost;
           bestCand = cand;
@@ -120,23 +121,31 @@ public class Pipeline extends FunctionOptimizerPass {
   }
   
   
-  private static int heuristicCost(Logger logger, Block curr,
-                                   WaitStatement cand) {
+  private static int heuristicCost(Logger logger, Function f,
+                      Block curr, WaitStatement cand) {
 
-    Set<Var> varsReadByChildTask = new HashSet<Var>();
+    final Set<Var> varsReadByChildTask = new HashSet<Var>();
+    final Set<Var> varsDeclaredWithinChildTask = new HashSet<Var>();
+    TreeWalker walker = new TreeWalker() {
+            @Override
+            protected void visit(Instruction inst) {
+              for (Arg in: inst.getInputs()) {
+                if (in.isVar()) {
+                  varsReadByChildTask.add(in.getVar());
+                }
+              }
+            }
+
+            @Override
+            protected void visit(Block block) {
+              varsDeclaredWithinChildTask.addAll(block.getVariables());
+            }};
+            
+    // Find variables used in child task
+    TreeWalk.walkSyncChildren(logger, f, cand.getBlock(), true, walker);
     
-    // Work out what vars are read by child
-    // TODO: for thoroughness could go deeper into sync continuations
-    for (Instruction childI: cand.getBlock().getInstructions()) {
-      for (Arg in: childI.getInputs()) {
-        if (in.isVar()) {
-          varsReadByChildTask.add(in.getVar());
-        }
-      }
-    }
-    
-    // Remove vars declared in child task
-    varsReadByChildTask.removeAll(cand.getBlock().getVariables());
+    // Only count variables that were passed in
+    varsReadByChildTask.removeAll(varsDeclaredWithinChildTask);
     
     int cost = 0;
     for (Var passed: varsReadByChildTask) {

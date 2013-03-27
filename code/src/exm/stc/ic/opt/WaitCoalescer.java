@@ -56,6 +56,8 @@ import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
+import exm.stc.ic.tree.ICTree.Statement;
+import exm.stc.ic.tree.ICTree.StatementType;
 
 /**
  * This optimization pass aims to rearrange task dependencies to:
@@ -244,7 +246,7 @@ public class WaitCoalescer implements OptimizerPass {
     
     boolean changed = false;
     
-    for (Continuation c: block.getContinuations()) {
+    for (Continuation c: block.allComplexStatements()) {
       ExecContext newContext = c.childContext(currContext);
       for (Block childB: c.getBlocks()) {
         if (rearrangeWaits(logger, fn, childB, newContext)) {
@@ -349,53 +351,76 @@ public class WaitCoalescer implements OptimizerPass {
   private static boolean explodeFuncCalls(Logger logger, Function fn,
         ExecContext execCx, Block block) {
     boolean changed = false;
-    ListIterator<Instruction> it = block.instructionIterator();
+    ListIterator<Statement> it = block.statementIterator();
     while (it.hasNext()) {
-      Instruction i = it.next();
-      MakeImmRequest req = i.canMakeImmediate(
-                              Collections.<Var>emptySet(),
-                              Collections.<Var>emptySet(), true);
-      if (req != null && req.in.size() > 0) {
-        if (logger.isTraceEnabled()) {
-          logger.trace("Exploding " + i + " in function " + fn.getName());
-        }
-        List<Var> waitVars = ICUtil.filterBlockingOnly(req.in);
-        
-        WaitMode waitMode;
-        if (req.mode == TaskMode.SYNC || req.mode == TaskMode.LOCAL ||
-              (req.mode == TaskMode.LOCAL_CONTROL &&
-                execCx == ExecContext.CONTROL)) {
-          waitMode = WaitMode.WAIT_ONLY;
-        } else {
-          waitMode = WaitMode.TASK_DISPATCH;
-        }
-        
-        WaitStatement wait = new WaitStatement(
-                fn.getName() + "-" + i.shortOpName(),
-                WaitVar.makeList(waitVars, false), PassedVar.NONE, Var.NONE,
-                i.getPriority(), waitMode, req.recursiveClose, req.mode);
-        block.addContinuation(wait);
-        
-        List<Instruction> instBuffer = new ArrayList<Instruction>();
-        
-        // Fetch the inputs
-        List<Arg> inVals = OptUtil.fetchValuesOf(wait.getBlock(),
-                                              instBuffer, req.in);
-        
-        // Create local instruction, copy out outputs
-        List<Var> localOutputs = OptUtil.declareLocalOpOutputVars(
-                                            wait.getBlock(), req.out);
-        MakeImmChange change = i.makeImmediate(localOutputs, inVals);
-        OptUtil.fixupImmChange(block, wait.getBlock(), change, instBuffer,
-                                          localOutputs, req.out);
-        
-        // Remove old instruction, add new one inside wait block
-        it.remove();
-        wait.getBlock().addInstructions(instBuffer);
-        changed = true;
+      Statement stmt = it.next();
+      // Only handle instructions: don't recurse here
+      if (stmt.type() == StatementType.INSTRUCTION) {
+        if (tryExplode(logger, fn, execCx, block, it, stmt.instruction())) {
+          changed = true;
+        } 
       }
     }
     return changed;
+  }
+  
+  /**
+   * Attempt to explode individual instruction
+   * @param logger
+   * @param fn
+   * @param execCx
+   * @param block
+   * @param it
+   * @param inst
+   * @return true if exploded
+   */
+  private static boolean tryExplode(Logger logger, Function fn,
+        ExecContext execCx, Block block, ListIterator<Statement> it,
+        Instruction inst) {
+    
+    MakeImmRequest req = inst.canMakeImmediate(
+                            Collections.<Var>emptySet(),
+                            Collections.<Var>emptySet(), true);
+    if (req != null && req.in.size() > 0) {
+      if (logger.isTraceEnabled()) {
+        logger.trace("Exploding " + inst + " in function " + fn.getName());
+      }
+      List<Var> waitVars = ICUtil.filterBlockingOnly(req.in);
+      
+      WaitMode waitMode;
+      if (req.mode == TaskMode.SYNC || req.mode == TaskMode.LOCAL ||
+            (req.mode == TaskMode.LOCAL_CONTROL &&
+              execCx == ExecContext.CONTROL)) {
+        waitMode = WaitMode.WAIT_ONLY;
+      } else {
+        waitMode = WaitMode.TASK_DISPATCH;
+      }
+      
+      WaitStatement wait = new WaitStatement(
+              fn.getName() + "-" + inst.shortOpName(),
+              WaitVar.makeList(waitVars, false), PassedVar.NONE, Var.NONE,
+              inst.getPriority(), waitMode, req.recursiveClose, req.mode);
+      block.addContinuation(wait);
+      
+      List<Instruction> instBuffer = new ArrayList<Instruction>();
+      
+      // Fetch the inputs
+      List<Arg> inVals = OptUtil.fetchValuesOf(wait.getBlock(),
+                                            instBuffer, req.in);
+      
+      // Create local instruction, copy out outputs
+      List<Var> localOutputs = OptUtil.declareLocalOpOutputVars(
+                                          wait.getBlock(), req.out);
+      MakeImmChange change = inst.makeImmediate(localOutputs, inVals);
+      OptUtil.fixupImmChange(block, wait.getBlock(), change, instBuffer,
+                                        localOutputs, req.out);
+      
+      // Remove old instruction, add new one inside wait block
+      it.remove();
+      wait.getBlock().addInstructions(instBuffer);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -646,29 +671,25 @@ public class WaitCoalescer implements OptimizerPass {
     boolean changed = false;
     ArrayList<Continuation> pushedDown = new ArrayList<Continuation>();
     /* Iterate over all instructions in this descendant block */
-    ListIterator<Instruction> it = curr.instructionIterator();
+    ListIterator<Statement> it = curr.statementIterator();
     while (it.hasNext()) {
-      Instruction i = it.next();
-      if (logger.isTraceEnabled()) {
-        logger.trace("Pushdown at: " + i.toString());
-      }
-      List<Var> writtenFutures = new ArrayList<Var>();
-      for (Var outv: i.getOutputs()) {
-        if (Types.isFuture(outv.type())) {
-          writtenFutures.add(outv);
+      Statement stmt = it.next();
+      switch (stmt.type()) {
+        case INSTRUCTION: {
+          boolean success = tryPushdown(logger, top, topContext, ancestors,
+              curr, currContext, waitMap, pushedDown, it, stmt.instruction());
+          changed = changed || success;
+          break;
         }
+        case CONDITIONAL: {
+          // Can't push down into conditional
+          // TODO: maybe reasonable in some cases?
+          break;
+        }
+        default:
+          throw new STCRuntimeError("unknown statement type " + stmt.type());
       }
       
-      // Relocate instructions which depend on output future of this instruction
-      for (Var v: writtenFutures) {
-        if (waitMap.containsKey(v)) {
-          Pair<Boolean, Set<Continuation>> pdRes =
-              relocateDependentInstructions(logger, top, topContext, ancestors, 
-                                        curr, currContext, it,  waitMap, v);
-          changed = changed || pdRes.val1;
-          pushedDown.addAll(pdRes.val2);
-        }
-      }
     }
     
     // Update the stack with child continuations
@@ -686,6 +707,50 @@ public class WaitCoalescer implements OptimizerPass {
       }
     }
     return new PushDownResult(changed, pushedDown);
+  }
+
+  /**
+   * Try to push down instructions to instruction i
+   * @param logger
+   * @param top
+   * @param topContext
+   * @param ancestors
+   * @param curr
+   * @param currContext
+   * @param waitMap
+   * @param changed
+   * @param pushedDown add any pushed down continuations here 
+   * @param it
+   * @param pushdownPoint
+   * @return
+   */
+  private boolean tryPushdown(Logger logger, Block top, ExecContext topContext,
+      Deque<Continuation> ancestors, Block curr, ExecContext currContext,
+      MultiMap<Var, InstOrCont> waitMap,
+      ArrayList<Continuation> pushedDown, ListIterator<Statement> it,
+      Instruction pushdownPoint) {
+    boolean changed = false;
+    if (logger.isTraceEnabled()) {
+      logger.trace("Pushdown at: " + pushdownPoint.toString());
+    }
+    List<Var> writtenFutures = new ArrayList<Var>();
+    for (Var outv: pushdownPoint.getOutputs()) {
+      if (Types.isFuture(outv.type())) {
+        writtenFutures.add(outv);
+      }
+    }
+    
+    // Relocate instructions which depend on output future of this instruction
+    for (Var v: writtenFutures) {
+      if (waitMap.containsKey(v)) {
+        Pair<Boolean, Set<Continuation>> pdRes =
+            relocateDependentInstructions(logger, top, topContext, ancestors, 
+                                      curr, currContext, it,  waitMap, v);
+        changed = changed || pdRes.val1;
+        pushedDown.addAll(pdRes.val2);
+      }
+    }
+    return changed;
   }
   
   /**
@@ -730,7 +795,7 @@ public class WaitCoalescer implements OptimizerPass {
    * @param currBlock the block they are moved too (a descendant of the prior
    *              block)
    * @param currContext 
-   * @param currBlockInstructions  all changes to instructions in curr block
+   * @param currBlockIt  all changes to instructions in curr block
    *    are made through this iterator, and it is rewound to the previous position
    *    before the function exits
    * @param waitMap map of variable names to instructions/continuations they block
@@ -742,7 +807,7 @@ public class WaitCoalescer implements OptimizerPass {
       Logger logger,
       Block ancestorBlock, ExecContext ancestorContext,
       Deque<Continuation> ancestors,
-      Block currBlock, ExecContext currContext, ListIterator<Instruction> currBlockInstructions,
+      Block currBlock, ExecContext currContext, ListIterator<Statement> currBlockIt,
       MultiMap<Var, InstOrCont> waitMap, Var writtenV) {
     boolean changed = false;
     // Remove from outer block
@@ -774,7 +839,7 @@ public class WaitCoalescer implements OptimizerPass {
           if (logger.isTraceEnabled())
             logger.trace("Relocating " + ic.instruction());
           relocated = relocateInstruction(ancestors, currContext,
-              currBlockInstructions, movedI, ic.instruction());
+              currBlock, currBlockIt, movedI, ic.instruction());
           break;
         default:
           throw new STCRuntimeError("how on earth did we get here...");
@@ -783,11 +848,11 @@ public class WaitCoalescer implements OptimizerPass {
     }
     // Remove instructions from old block
     ancestorBlock.removeContinuations(movedC);
-    ancestorBlock.removeInstructions(movedI);
+    ancestorBlock.removeStatements(movedI);
     
     // Rewind iterator so that next instruction returned
     // will be the first one added
-    ICUtil.rewindIterator(currBlockInstructions, movedI.size());
+    ICUtil.rewindIterator(currBlockIt, movedI.size());
     
     // Rebuild wait map to reflect changes
     updateWaiterMap(waitMap, movedC, movedI);
@@ -840,7 +905,8 @@ public class WaitCoalescer implements OptimizerPass {
 
   private static boolean relocateInstruction(
       Deque<Continuation> ancestors, ExecContext currContext,
-      ListIterator<Instruction> currBlockInstructions,
+      Block currBlock,
+      ListIterator<Statement> currBlockIt,
       Set<Instruction> movedI, Instruction inst) {
     boolean canRelocate = true;
     ArrayList<Var> keepOpenVars = new ArrayList<Var>();
@@ -862,7 +928,8 @@ public class WaitCoalescer implements OptimizerPass {
     }
     
     if (canRelocate) {
-      currBlockInstructions.add(inst);
+      inst.setParent(currBlock);
+      currBlockIt.add(inst);
       movedI.add(inst);
     }
     return canRelocate;
@@ -942,7 +1009,12 @@ public class WaitCoalescer implements OptimizerPass {
 
   private static void findRelocatableBlockingInstructions(Block block,
           MultiMap<Var, InstOrCont> waitMap) {
-    for (Instruction inst: block.getInstructions()) {
+    for (Statement stmt: block.getStatements()) {
+      if (stmt.type() != StatementType.INSTRUCTION) {
+        continue; // Only interested in instructions
+      }
+      
+      Instruction inst = stmt.instruction();
       // check all outputs are non-alias futures - if not can't safely reorder
       boolean canMove = true;
       for (Var out: inst.getOutputs()) {

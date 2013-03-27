@@ -43,6 +43,7 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
+import exm.stc.ic.tree.ICTree.Statement;
 
 /**
  * Fix up passInVars and keepOpenVars in IC.  Perform validation
@@ -169,7 +170,7 @@ public class FixupVariables implements OptimizerPass {
     Set<Var> written = new HashSet<Var>();
     findBlockNeeded(block, read, written);
     
-    for (Continuation c : block.getContinuations()) {
+    for (Continuation c : block.allComplexStatements()) {
       fixupContinuationRec(logger, function, execCx, c,
               visible, referencedGlobals,
               blockVars, read, written, updateLists);
@@ -205,13 +206,25 @@ public class FixupVariables implements OptimizerPass {
       }
     }
     
-    for (Instruction i: block.getInstructions()) {
-      for (Arg in: i.getInputs()) {
-        if (in.isVar()) {
-          read.add(in.getVar());
+    for (Statement stmt: block.getStatements()) {
+      switch (stmt.type()) {
+        case INSTRUCTION: {
+          Instruction i = stmt.instruction();
+          for (Arg in: i.getInputs()) {
+            if (in.isVar()) {
+              read.add(in.getVar());
+            }
+          }
+          written.addAll(i.getOutputs());
+          break;
         }
+        case CONDITIONAL: {
+          read.addAll(stmt.conditional().requiredVars(false));
+          break;
+        }
+        default:
+          throw new STCRuntimeError("Unknown statement type " + stmt.type());
       }
-      written.addAll(i.getOutputs());
     }
     
     for (Continuation cont: block.getContinuations()) {

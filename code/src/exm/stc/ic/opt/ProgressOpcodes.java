@@ -26,6 +26,8 @@ import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.LocalFunctionCall;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.Statement;
+import exm.stc.ic.tree.ICTree.StatementType;
 
 /**
  * Helper functions and data to determine whether given instructions can
@@ -95,24 +97,27 @@ public class ProgressOpcodes {
     while (!stack.isEmpty()) {
       Block block = stack.pop();
       
-      for (Instruction i: block.getInstructions()) {
-        if (type == Category.CHEAP) {
-          if (!isCheapOpcode(i.op)) {
-            return false;
-          }
-        } else if (type == Category.CHEAP_WORKER) {
-          if (!isCheapWorkerInst(i)) {
-            return false;
-          }
-        } else {
-          assert(type == Category.NON_PROGRESS);
-          if (!isNonProgressOpcode(i.op)) {
-            return false;
+      for (Statement stmt: block.getStatements()) {
+        if (stmt.type() == StatementType.INSTRUCTION) {
+          Instruction i = stmt.instruction();
+          if (type == Category.CHEAP) {
+            if (!isCheapOpcode(i.op)) {
+              return false;
+            }
+          } else if (type == Category.CHEAP_WORKER) {
+            if (!isCheapWorkerInst(i)) {
+              return false;
+            }
+          } else {
+            assert(type == Category.NON_PROGRESS);
+            if (!isNonProgressOpcode(i.op)) {
+              return false;
+            }
           }
         }
       }
       
-      for (Continuation c: block.getContinuations()) {
+      for (Continuation c: block.allComplexStatements()) {
         if (!c.isAsync()) {
           for (Block inner: c.getBlocks()) {
             stack.push(inner);

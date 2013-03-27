@@ -83,7 +83,7 @@ public class UniqueVarNames implements OptimizerPass {
   
     // Recurse through nested blocks, making sure that all used variable
     // names are added to the usedNames
-    for (Continuation c: block.getContinuations()) {
+    for (Continuation c: block.allComplexStatements()) {
       makeVarNamesUnique(existing, c, renames.makeChildMap());
     }
   }
@@ -111,7 +111,7 @@ public class UniqueVarNames implements OptimizerPass {
       
       if (contVarRenames.size() > 0) {
         // Update construct vars as required
-        cont.replaceVars(contVarRenames, RenameMode.REPLACE_VAR, false);
+        cont.renameVars(contVarRenames, RenameMode.REPLACE_VAR, false);
         renames.putAll(contVarRenames);
       }
     }

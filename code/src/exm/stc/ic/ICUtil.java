@@ -30,9 +30,9 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.tree.ICContinuations.Continuation;
-import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CleanupAction;
+import exm.stc.ic.tree.ICTree.Statement;
 
 /**
  * Miscellaneous useful utilities that are used in multiple places in the intermediate 
@@ -284,11 +284,11 @@ public class ICUtil {
     return oa;
   }
 
-  public static LinkedList<Instruction> cloneInstructions(
-      List<Instruction> instructions) {
-    LinkedList<Instruction> output = new LinkedList<Instruction>();
-    for (Instruction i : instructions) {
-      output.add(i.clone());
+  public static LinkedList<Statement> cloneStatements(
+      List<Statement> stmts) {
+    LinkedList<Statement> output = new LinkedList<Statement>();
+    for (Statement stmt: stmts) {
+      output.add(stmt.cloneStatement());
     }
     return output;
   }
@@ -327,17 +327,22 @@ public class ICUtil {
    * After this is done, next() will return the instruction after
    * the inserted sequence
    */
-  public static void replaceInsts(ListIterator<Instruction> it, 
-              List<Instruction> replacements) {
-
+  public static void replaceInsts(
+              Block block,
+              ListIterator<Statement> it, 
+              List<? extends Statement> replacements) {
+    for (Statement stmt: replacements) {
+      stmt.setParent(block);
+    }
     if (replacements.size() == 1) {
       it.set(replacements.get(0));
     } else if (replacements.size() == 0) {
       it.remove();
     } else {
       it.set(replacements.get(0));
-      List<Instruction> rest = replacements.subList(1, replacements.size());
-      for (Instruction newInst: rest) {
+      List<? extends Statement> rest =
+            replacements.subList(1, replacements.size());
+      for (Statement newInst: rest) {
         it.add(newInst);
       }
     }

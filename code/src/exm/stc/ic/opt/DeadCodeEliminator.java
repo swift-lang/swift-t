@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -41,6 +42,8 @@ import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
+import exm.stc.ic.tree.ICTree.Statement;
+import exm.stc.ic.tree.ICTree.StatementType;
 
 public class DeadCodeEliminator extends FunctionOptimizerPass {
 
@@ -201,7 +204,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       walkInstructions(logger, block, needed, dependencyGraph, modifiedComponents,
                        componentOf);
       
-      ListIterator<Continuation> it = block.continuationIterator();
+      Iterator<Continuation> it = block.allComplexStatements().iterator();
       while (it.hasNext()) {
         Continuation c = it.next();
         if (c.isNoop()) {
@@ -221,74 +224,84 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
   private static void walkInstructions(Logger logger,
       Block block, HashSet<Var> needed, MultiMap<Var, Var> dependencyGraph,
       List<Var> modifiedComponents, Map<Var, Var> componentOf) {
-    for (Instruction inst: block.getInstructions()) {
-      // If it has side-effects, need all inputs and outputs
-      if (inst.hasSideEffects()) {
-        needed.addAll(inst.getOutputs());
-        for (Arg input: inst.getInputs()) {
-          if (input.isVar()) {
-            needed.add(input.getVar());
-          }
+    for (Statement stmt: block.getStatements()) {
+      if (stmt.type() == StatementType.INSTRUCTION) {
+        walkInstruction(logger, stmt.instruction(), needed, dependencyGraph,
+                        modifiedComponents, componentOf);
+      }
+    }
+  }
+
+  private static void walkInstruction(Logger logger, Instruction inst,
+      HashSet<Var> needed, MultiMap<Var, Var> dependencyGraph,
+      List<Var> modifiedComponents, Map<Var, Var> componentOf) {
+    // If it has side-effects, need all inputs and outputs
+    if (inst.hasSideEffects()) {
+      needed.addAll(inst.getOutputs());
+      for (Arg input: inst.getInputs()) {
+        if (input.isVar()) {
+          needed.add(input.getVar());
         }
-      } else {
-        // Add edges to dependency graph
-        List<Var> outputs = inst.getOutputs();
-        List<Var> modOutputs = inst.getModifiedOutputs();
-        List<Var> readOutputs = inst.getReadOutputs();
-        List<Arg> inputs = inst.getInputs();
-        
-        // First, if multiple modified outputs, need to remove all at once
-        if (modOutputs.size() > 1) {
-          // Connect mod outputs in ring so that they are
-          // strongly connected component
-          for (int i = 0; i < modOutputs.size(); i++) { 
-            int j = (i + 1) % modOutputs.size();
-            dependencyGraph.put(modOutputs.get(i), modOutputs.get(j));
-          } 
-        }
-        if (modOutputs.size() > 0) {
-          // Second, modified output depends on all inputs and read outputs. 
-          // Just use one output if multiple
-          Var out = modOutputs.get(0);
-          for (Arg in: inputs) {
-            if (in.isVar()) {
-              addOutputDep(logger, inst, dependencyGraph, componentOf, out,
-                           in.getVar());
-            }
-          }
-          
-          for (Var readOut: readOutputs) {
+      }
+    } else {
+      // Add edges to dependency graph
+      List<Var> outputs = inst.getOutputs();
+      List<Var> modOutputs = inst.getModifiedOutputs();
+      List<Var> readOutputs = inst.getReadOutputs();
+      List<Arg> inputs = inst.getInputs();
+      
+      // First, if multiple modified outputs, need to remove all at once
+      if (modOutputs.size() > 1) {
+        // Connect mod outputs in ring so that they are
+        // strongly connected component
+        for (int i = 0; i < modOutputs.size(); i++) { 
+          int j = (i + 1) % modOutputs.size();
+          dependencyGraph.put(modOutputs.get(i), modOutputs.get(j));
+        } 
+      }
+      if (modOutputs.size() > 0) {
+        // Second, modified output depends on all inputs and read outputs. 
+        // Just use one output if multiple
+        Var out = modOutputs.get(0);
+        for (Arg in: inputs) {
+          if (in.isVar()) {
             addOutputDep(logger, inst, dependencyGraph, componentOf, out,
-                         readOut);
-          }
-        }
-        // Writing mapped var has side-effect
-        for (Var output: outputs) {
-          if (output.isMapped()) {
-            needed.add(output);
+                         in.getVar());
           }
         }
         
-        // Update written vars list
-        for (Var mod: modOutputs) {
-          if (Types.isArray(mod.type()) || Types.isRef(mod.type())) {
-            if (!inst.getInitializedAliases().contains(mod) &&
-                inst.op != Opcode.STORE_REF) {
-              modifiedComponents.add(mod);
-            }
+        for (Var readOut: readOutputs) {
+          addOutputDep(logger, inst, dependencyGraph, componentOf, out,
+                       readOut);
+        }
+      }
+      // Writing mapped var has side-effect
+      for (Var output: outputs) {
+        if (output.isMapped()) {
+          needed.add(output);
+        }
+      }
+      
+      // Update written vars list
+      for (Var mod: modOutputs) {
+        if (Types.isArray(mod.type()) || Types.isRef(mod.type())) {
+          if (!inst.getInitializedAliases().contains(mod) &&
+              inst.op != Opcode.STORE_REF) {
+            modifiedComponents.add(mod);
           }
         }
-        
-        // Update structural information
-        Pair<Var, Var> componentAlias = inst.getComponentAlias();
-        if (componentAlias != null) {
-          Var component = componentAlias.val1;
-          assert(component.storage() == VarStorage.ALIAS ||
-              Types.isRef(component.type())) : component + " " + inst;
-          Var whole = componentAlias.val2;
-          Var prev = componentOf.put(component, whole);
-          assert(prev == null); // shouldn't be component of multiple things
-        }
+      }
+      
+      // Update structural information
+      Pair<Var, Var> componentAlias = inst.getComponentAlias();
+      if (componentAlias != null) {
+        Var component = componentAlias.val1;
+        assert(component.storage() == VarStorage.ALIAS ||
+            Types.isRef(component.type())) : component + " " + inst;
+        Var whole = componentAlias.val2;
+        Var prev = componentOf.put(component, whole);
+        // shouldn't be component of multiple things
+        assert(prev == null) : prev;
       }
     }
   }

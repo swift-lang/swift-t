@@ -45,6 +45,7 @@ import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
+import exm.stc.ic.tree.ICTree.Statement;
 
 /**
  * Perform some sanity checks on intermediate code:
@@ -170,23 +171,40 @@ public class Validate implements OptimizerPass {
         checkVarReference(declared, v.mapping(), v);
       }
     }
-    for (Instruction inst: block.getInstructions()) {
-      checkVarReferences(declared, inst);
+    for (Statement stmt: block.getStatements()) {
+      checkVarReferences(declared, stmt);
     }
     
     for (Continuation c: block.getContinuations()) {
-      for (Var v: c.requiredVars(false)) {
-        checkVarReference(declared, v, c.getType());
-      }
+      checkVarReferencesCont(declared, c);
     }
     
     for (CleanupAction ca: block.getCleanups()) {
       checkVarReference(declared, ca.var(), ca);
-      checkVarReferences(declared, ca.action());
+      checkVarReferencesInstruction(declared, ca.action());
     }
   }
 
-  private void checkVarReferences(Map<String, Var> declared, Instruction inst) {
+  private void checkVarReferences(Map<String, Var> declared, Statement stmt) {
+    switch (stmt.type()) {
+      case INSTRUCTION:
+        checkVarReferencesInstruction(declared, stmt.instruction());
+        break;
+      case CONDITIONAL:
+        checkVarReferencesCont(declared, stmt.conditional());
+        break;
+      default:
+        throw new STCRuntimeError("Unknown statement type " + stmt.type());
+    }
+  }
+
+  private void checkVarReferencesCont(Map<String, Var> declared, Continuation c) {
+    for (Var v: c.requiredVars(false)) {
+      checkVarReference(declared, v, c.getType());
+    }
+  }
+
+  private void checkVarReferencesInstruction(Map<String, Var> declared, Instruction inst) {
     for (Arg i: inst.getInputs()) {
       if (i.isVar()) {
         checkVarReference(declared, i.getVar(), inst);
@@ -272,7 +290,7 @@ public class Validate implements OptimizerPass {
       "Parent function should be " + fn.getName() + " but was "
       + (fn2 == null ? null : fn2.getName());
     
-    for (Continuation c: block.getContinuations()) {
+    for (Continuation c: block.allComplexStatements()) {
       if (noNestedBlocks && c.getType() == ContinuationType.NESTED_BLOCK) {
         throw new STCRuntimeError("Nested block present");
       }
@@ -325,33 +343,54 @@ public class Validate implements OptimizerPass {
       }
     }
     
-    for (Instruction inst: block.getInstructions()) {
-      updateInitVars(inst, initVars);
+    for (Statement stmt: block.getStatements()) {
+      updateInitVars(logger, program, fn, stmt, initVars);
     }
     
     for (Continuation c: block.getContinuations()) {
-      for (Var v: c.requiredVars(false)) {
-        checkInitialized(c.getType(), initVars, v);
-      }
-      if (c.isAsync()) {
-        for (PassedVar pv: c.getPassedVars()) {
-          checkInitialized(c.getType(), initVars, pv.var);
-        }
-      }
-      
-      HierarchicalSet<Var> contInit = initVars.makeChild();
-      for (Var v: c.constructDefinedVars()) {
-        if (varMustBeInitialized(v)) {
-          contInit.add(v);
-        }
-      }
-      for (Block inner: c.getBlocks()) {
-        checkAliasVarUsageRec(logger, program, fn, inner,
-            contInit.makeChild());
-      }
+      checkAliasVarUsageRec(logger, program, fn, initVars, c);
     }
   }
 
+  private void checkAliasVarUsageRec(Logger logger, Program program,
+      Function fn, HierarchicalSet<Var> initVars, Continuation c) {
+    for (Var v: c.requiredVars(false)) {
+      checkInitialized(c.getType(), initVars, v);
+    }
+    if (c.isAsync()) {
+      for (PassedVar pv: c.getPassedVars()) {
+        checkInitialized(c.getType(), initVars, pv.var);
+      }
+    }
+    
+    HierarchicalSet<Var> contInit = initVars.makeChild();
+    for (Var v: c.constructDefinedVars()) {
+      if (varMustBeInitialized(v)) {
+        contInit.add(v);
+      }
+    }
+    for (Block inner: c.getBlocks()) {
+      checkAliasVarUsageRec(logger, program, fn, inner,
+          contInit.makeChild());
+    }
+  }
+
+  private void updateInitVars(Logger logger, Program program, Function fn, 
+                            Statement stmt, HierarchicalSet<Var> initVars) {
+    switch (stmt.type()) {
+      case INSTRUCTION:
+        updateInitVars(stmt.instruction(), initVars);
+        break;
+      case CONDITIONAL:
+        // TODO: need to analyse branches to check if var initialised
+        // on both branches
+        checkAliasVarUsageRec(logger, program, fn, initVars, stmt.conditional());
+        break;
+      default:
+        throw new STCRuntimeError("Unknown statement type" + stmt.type());
+    }
+  }
+  
   private void updateInitVars(Instruction inst, HierarchicalSet<Var> initVars) {
     for (Arg in: inst.getInputs()) {
       if (in.isVar() && varMustBeInitialized(in.getVar())

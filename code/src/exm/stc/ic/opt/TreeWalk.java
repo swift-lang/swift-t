@@ -20,6 +20,7 @@ import java.util.Deque;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -27,6 +28,7 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
+import exm.stc.ic.tree.ICTree.Statement;
 
 public class TreeWalk {
 
@@ -55,21 +57,35 @@ public class TreeWalk {
     for (Var declared: block.getVariables()) {
       walker.visitDeclaration(declared);
     }
-    for (Instruction i: block.getInstructions()) {
-      walker.visit(logger, function, i);
+    for (Statement stmt: block.getStatements()) {
+      switch (stmt.type()) {
+        case INSTRUCTION:
+          walker.visit(logger, function, stmt.instruction());
+          break;
+        case CONDITIONAL:
+          walk(logger, function, stmt.conditional(), recursive, walker);
+          break;
+        default:
+          throw new STCRuntimeError("Unknown statement type" + stmt.type());
+      }
     }
     
     for (Continuation c: block.getContinuations()) {
-      walker.visit(logger, function, c);
-      if (recursive) {
-        for (Block b: c.getBlocks()) {
-          walk(logger, b, function, walker, recursive);
-        }
-      }
+      walk(logger, function, c, recursive, walker);
     }
     
     for (CleanupAction ca: block.getCleanups()) {
       walker.visit(logger, function, ca);
+    }
+  }
+
+  public static void walk(Logger logger, Function function, Continuation cont,
+      boolean recursive, TreeWalker walker) {
+    walker.visit(logger, function, cont);
+    if (recursive) {
+      for (Block b: cont.getBlocks()) {
+        walk(logger, b, function, walker, recursive);
+      }
     }
   }
   
@@ -106,16 +122,31 @@ public class TreeWalk {
     }
     while (!stack.isEmpty()) {
       Block curr = stack.pop();
-      for (Instruction i: curr.getInstructions()) {
-        walker.visit(logger, fn, i);
+      for (Statement stmt: curr.getStatements()) {
+        switch (stmt.type()) {
+          case INSTRUCTION:
+            walker.visit(logger, fn, stmt.instruction());
+            break;
+          case CONDITIONAL:
+            assert(!stmt.conditional().isAsync());
+            walkSyncChildren(logger, fn, walker, stack, stmt.conditional());
+            break;
+          default:
+            throw new STCRuntimeError("Unknown statement type " + stmt.type());
+        }
       }
       
       for (Continuation c: curr.getContinuations()) {
-        walker.visit(logger, fn, c);
-        if (!c.isAsync()) {
-          stack.addAll(c.getBlocks());
-        }
+        walkSyncChildren(logger, fn, walker, stack, c);
       }
+    }
+  }
+
+  private static void walkSyncChildren(Logger logger, Function fn,
+      TreeWalker walker, Deque<Block> stack, Continuation cont) {
+    walker.visit(logger, fn, cont);
+    if (!cont.isAsync()) {
+      stack.addAll(cont.getBlocks());
     }
   }
 

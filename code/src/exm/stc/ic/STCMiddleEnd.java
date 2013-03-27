@@ -171,7 +171,7 @@ public class STCMiddleEnd {
           || condition.type().equals(Types.V_BOOL));
 
     IfStatement stmt = new IfStatement(condition);
-    currBlock().addContinuation(stmt);
+    currBlock().addStatement(stmt);
 
     if (hasElse) {
       blockStack.push(stmt.getElseBlock());
@@ -218,7 +218,7 @@ public class STCMiddleEnd {
 
     logger.trace("startSwitch() stack size:" + blockStack.size());
     SwitchStatement sw = new SwitchStatement(switchVar, caseLabels);
-    currBlock().addContinuation(sw);
+    currBlock().addStatement(sw);
     // Add blocks to stack in reverse order
     if (hasDefault) {
       blockStack.push(sw.getDefaultBlock());

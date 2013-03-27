@@ -55,7 +55,7 @@ public interface CompilerBackend {
    * Declare and initialize a number of variables
    * @throws UndefinedTypeException
    */
-  public void declare(List<VarDecl> decls) throws UndefinedTypeException;
+  public void declare(List<VarDecl> decls);
 
   public void decrRef(Var var, Arg amount);
 

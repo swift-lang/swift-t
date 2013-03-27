@@ -23,6 +23,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
@@ -37,6 +38,7 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
+import exm.stc.ic.tree.ICTree.Statement;
 
 /**
  * Hoist instructions out of continuations so that can be evaluated fewer times
@@ -110,18 +112,66 @@ public class HoistLoops implements OptimizerPass {
    */
   private boolean hoistRec(Logger logger, HoistTracking state) {
     // See if we can move any instructions from this block up
-    boolean changed = hoistFromBlock(logger, state);
+    boolean changed = false;
+    Block curr = state.block;
+    
+    for (Var v: curr.getVariables()) {
+      state.declare(v);
+    }
+    
+    // See if we can lift any instructions out of block
+    ListIterator<Statement> it = curr.statementIterator();
+    while (it.hasNext()) {
+      Statement stmt = it.next();
+      switch (stmt.type()) {
+        case INSTRUCTION: { 
+          Instruction inst = stmt.instruction();
+          
+          if (state.maxHoist > 0) {
+            boolean hoisted = tryHoist(logger, inst, state);
+            if (hoisted) {
+              it.remove();
+              changed = true;
+            }
+          }
+    
+          // Need to update state regardless of hoisting
+          state.updateState(inst);
+          break;
+        }
+        case CONDITIONAL: {
+          it.previous(); // Insert any hoisted instruction before conditional
+          boolean changed2 = hoistRecCont(logger, state, it, stmt.conditional());
+          changed = changed || changed2;
+          // Return to position after conditional.  Note that this is guaranteed to
+          // return to correct position after [0..n] calls to it.add(...)
+          it.next();
+          break;
+        }
+        default:
+          throw new STCRuntimeError("Unknown statement type " + stmt.type());
+      }
+    }
     
     // Recurse down to child blocks
     for (Continuation c: state.block.getContinuations()) {    
-      for (Block childBlock: c.getBlocks()) {
-        HoistTracking childState = state.makeChild(c, childBlock);
-        if (hoistRec(logger, childState)) {
-          changed = true;
-        }
-      }
+      boolean changed2 = hoistRecCont(logger, state, it, c);
+      changed = changed || changed2;
     }
     return changed;
+  }
+
+  private boolean hoistRecCont(Logger logger, HoistTracking state,
+                              ListIterator<Statement> insertPos, Continuation cont) {
+    state.currPos = insertPos;
+    for (Block childBlock: cont.getBlocks()) {
+      HoistTracking childState = state.makeChild(cont, childBlock);
+      if (hoistRec(logger, childState)) {
+        return true;
+      }
+    }
+    state.currPos = null; // Now invalid
+    return false;
   }
 
   private static class HoistTracking {
@@ -185,6 +235,9 @@ public class HoistLoops implements OptimizerPass {
     
     /** Current block */
     public final Block block;
+    
+    /** Track where instruction should be inserted by child */
+    public ListIterator<Statement> currPos = null;
     
     /**
      * maximum number of blocks can lift out
@@ -261,6 +314,15 @@ public class HoistLoops implements OptimizerPass {
         declareMap.put(v, this.block);
       }
     }
+
+    /**
+     * Add instruction at insert point
+     * @param inst
+     */
+    public void addInstruction(Instruction inst) {
+      inst.setParent(block);
+      currPos.add(inst);
+    }
   }
 
   private static boolean trackDeclares(Var v) {
@@ -282,33 +344,6 @@ public class HoistLoops implements OptimizerPass {
     return false;
   }
 
-  private boolean hoistFromBlock(Logger logger, HoistTracking state) {
-    boolean changed = false;
-    Block curr = state.block;
-    
-    for (Var v: curr.getVariables()) {
-      state.declare(v);
-    }
-    
-    // See if we can lift any instructions out of block
-    ListIterator<Instruction> it = curr.instructionIterator();
-    while (it.hasNext()) {
-      Instruction inst = it.next();
-      
-      if (state.maxHoist > 0) {
-        boolean hoisted = tryHoist(logger, inst, state);
-        if (hoisted) {
-          it.remove();
-          changed = true;
-        }
-      }
-      
-      // Need to update state regardless of hoisting
-      state.updateState(inst);
-    }
-    return changed;
-  }
-  
   /**
    * Try to hoist this instruction
    * @param logger
@@ -445,11 +480,10 @@ public class HoistLoops implements OptimizerPass {
     assert(hoistDepth > 0);
     
     
-    Block target = state.getAncestor(hoistDepth).block;
     logger.trace("Hoisting instruction up " + hoistDepth + " blocks: "
                  + inst.toString());
-    assert(target != null && target != state.block);
-    target.addInstruction(inst);
+    
+    state.getAncestor(hoistDepth).addInstruction(inst);
     
     // Move variable declaration if needed to outer block.
     relocateVarDefs(state, inst, hoistDepth);

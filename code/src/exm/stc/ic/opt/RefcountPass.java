@@ -45,6 +45,8 @@ import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
+import exm.stc.ic.tree.ICTree.Statement;
+import exm.stc.ic.tree.ICTree.StatementType;
 
 /**
  * Eliminate, merge and otherwise reduce read/write reference counting
@@ -93,21 +95,39 @@ public class RefcountPass implements OptimizerPass {
       Counters<Var> readIncrements, Counters<Var> writeIncrements,
       HierarchicalSet<Var> parentAssignedAliasVars) {
 
-    // Add own alias vars
-    HierarchicalSet<Var> assignedAliasVars = parentAssignedAliasVars
-        .makeChild();
-    findAssignedAliasVars(block, assignedAliasVars);
 
     /*
      * Traverse in bottom-up order so that we can access refcount info in child
      * blocks for pulling up
      */
+    HierarchicalSet<Var> assignedAliasVars =
+                            parentAssignedAliasVars.makeChild();
+    for (Statement stmt: block.getStatements()) {
+      switch (stmt.type()) {
+        case INSTRUCTION: {
+          // Track which alias vars are assigned
+          for (Var out : stmt.instruction().getInitializedAliases()) {
+            assert(out.storage() == VarStorage.ALIAS);
+            assignedAliasVars.add(out);
+          }
+          break;
+        }
+        case CONDITIONAL: {
+          // Recurse on conditionals
+          addRefCountsCont(logger, f, stmt.conditional(), assignedAliasVars);
+          break;
+        }
+        default: 
+          throw new STCRuntimeError("Unknown type " + stmt.type());
+      }
+    }
+    
     for (Continuation cont : block.getContinuations()) {
       addRefCountsCont(logger, f, cont, assignedAliasVars);
     }
 
     fixBlockRefCounting(logger, f, block, readIncrements, writeIncrements,
-        parentAssignedAliasVars);
+                        parentAssignedAliasVars);
   }
 
   private void addRefCountsCont(Logger logger, Function f, Continuation cont,
@@ -172,19 +192,31 @@ public class RefcountPass implements OptimizerPass {
       Set<Var> parentAssignedAliasVars) {
     boolean cancelEnabled = cancelEnabled();
     // First collect up all required reference counting ops in block
-    ListIterator<Instruction> instIt = block.instructionIterator();
-    while (instIt.hasNext()) {
-      Instruction inst = instIt.next();
-      updateInstructionRefCount(inst, readIncrements, writeIncrements);
+    ListIterator<Statement> stmtIt = block.statementIterator();
+    while (stmtIt.hasNext()) {
+      Statement stmt = stmtIt.next();
+      Instruction inst;
+      switch (stmt.type()) {
+        case INSTRUCTION:
+          inst = stmt.instruction();
+          updateInstructionRefCount(inst, readIncrements, writeIncrements);
+          break;
+        case CONDITIONAL:
+          inst = null;
+          addIncrementsForCont(stmt.conditional(), readIncrements, writeIncrements);
+          break;
+        default:
+          throw new STCRuntimeError("Unknown statement type " + stmt.type());
+      }
       if (!cancelEnabled) {
-        dumpIncrements(inst, block, instIt, readIncrements, writeIncrements);
+        dumpIncrements(inst, block, stmtIt, readIncrements, writeIncrements);
       }
     }
     for (Continuation cont : block.getContinuations()) {
       addIncrementsForCont(cont, readIncrements, writeIncrements);
       if (!cancelEnabled) {
-        dumpIncrements(null, block, block.instructionEndIterator(), readIncrements,
-                             writeIncrements);
+        dumpIncrements(null, block, block.statementEndIterator(),
+            readIncrements, writeIncrements);
       }
     }
 
@@ -192,101 +224,105 @@ public class RefcountPass implements OptimizerPass {
     if (!cancelEnabled()) {
       dumpDecrements(block, readIncrements, writeIncrements);
     }
-    
+
     if (cancelEnabled()) {
       // Second put saved refcounts back into IC
-      updateBlockRefcounting(logger, fn, block, readIncrements, writeIncrements,
-        parentAssignedAliasVars);
+      updateBlockRefcounting(logger, fn, block, readIncrements,
+          writeIncrements, parentAssignedAliasVars);
     }
   }
 
   /**
    * Insert reference increments in place
-   * @param instIt
+   * 
+   * @param stmtIt
    * @param readIncrements
    * @param writeIncrements
    */
-  private void dumpIncrements(Instruction inst,
-      Block block, ListIterator<Instruction> instIt,
-      Counters<Var> readIncrements, Counters<Var> writeIncrements) {
-    for (Entry<Var, Long> e: readIncrements.entries()) {
+  private void dumpIncrements(Instruction inst, Block block,
+      ListIterator<Statement> stmtIt, Counters<Var> readIncrements,
+      Counters<Var> writeIncrements) {
+    for (Entry<Var, Long> e : readIncrements.entries()) {
       Var var = e.getKey();
       Long incr = e.getValue();
       if (incr > 0) {
         if (inst != null && !inst.getInitializedAliases().contains(var)) {
-          insertIncrBefore(instIt, var, incr, RefCountType.READERS);
+          insertIncrBefore(block, stmtIt, var, incr, RefCountType.READERS);
         } else {
-          insertIncrAfter(instIt, var, incr, RefCountType.READERS);
+          insertIncrAfter(block, stmtIt, var, incr, RefCountType.READERS);
         }
       } else if (incr < 0) {
-        insertDecrAfter(block, instIt, var, incr * -1, RefCountType.READERS);
+        insertDecrAfter(block, stmtIt, var, incr * -1, RefCountType.READERS);
       }
     }
-    
-    for (Entry<Var, Long> e: writeIncrements.entries()) {
+
+    for (Entry<Var, Long> e : writeIncrements.entries()) {
       Var var = e.getKey();
       Long incr = e.getValue();
       if (incr > 0) {
         if (inst != null && !inst.getInitializedAliases().contains(var)) {
-          insertIncrBefore(instIt, var, incr, RefCountType.WRITERS);
+          insertIncrBefore(block, stmtIt, var, incr, RefCountType.WRITERS);
         } else {
-          insertIncrAfter(instIt, var, incr, RefCountType.WRITERS);
+          insertIncrAfter(block, stmtIt, var, incr, RefCountType.WRITERS);
         }
       } else if (incr < 0) {
-        insertDecrAfter(block, instIt, var, incr * -1, RefCountType.WRITERS);
+        insertDecrAfter(block, stmtIt, var, incr * -1, RefCountType.WRITERS);
       }
     }
     readIncrements.resetAll();
     writeIncrements.resetAll();
   }
 
-  private void insertIncrBefore(ListIterator<Instruction> instIt, Var var,
-      Long val, RefCountType type) {
-    insertIncr(instIt, var, val, type, true);
+  private void insertIncrBefore(Block block, ListIterator<Statement> stmtIt,
+      Var var, Long val, RefCountType type) {
+    insertIncr(block, stmtIt, var, val, type, true);
   }
-  private void insertIncrAfter(ListIterator<Instruction> instIt, Var var,
-      Long val, RefCountType type) {
-    insertIncr(instIt, var, val, type, false);
+
+  private void insertIncrAfter(Block block, ListIterator<Statement> stmtIt,
+      Var var, Long val, RefCountType type) {
+    insertIncr(block, stmtIt, var, val, type, false);
   }
-  private void insertIncr(ListIterator<Instruction> instIt, Var var,
-      Long val, RefCountType type, boolean before) {
+
+  private void insertIncr(Block block,
+      ListIterator<Statement> stmtIt, Var var, Long val,
+      RefCountType type, boolean before) {
     if (before)
-      instIt.previous();
+      stmtIt.previous();
     Instruction inst;
     Arg amount = Arg.createIntLit(val);
     if (type == RefCountType.READERS) {
       inst = TurbineOp.incrRef(var, amount);
     } else {
-      assert(type == RefCountType.WRITERS);
+      assert (type == RefCountType.WRITERS);
       inst = TurbineOp.incrWriters(var, amount);
     }
-    instIt.add(inst);
+    inst.setParent(block);
+    stmtIt.add(inst);
     if (before)
-      instIt.next();
+      stmtIt.next();
   }
-  
-  private void insertDecrAfter(
-      Block block, ListIterator<Instruction> instIt, Var var,
-      Long val, RefCountType type) {
+
+  private void insertDecrAfter(Block block, ListIterator<Statement> stmtIt,
+      Var var, Long val, RefCountType type) {
     Instruction inst;
     Arg amount = Arg.createIntLit(val);
     if (type == RefCountType.READERS) {
       inst = TurbineOp.decrRef(var, amount);
     } else {
-      assert(type == RefCountType.WRITERS);
+      assert (type == RefCountType.WRITERS);
       inst = TurbineOp.decrWriters(var, amount);
     }
     block.addCleanup(var, inst);
   }
 
-  private void dumpDecrements(Block block,
-      Counters<Var> readIncrements, Counters<Var> writeIncrements) {
-    for (Entry<Var, Long> e: readIncrements.entries()) {
+  private void dumpDecrements(Block block, Counters<Var> readIncrements,
+      Counters<Var> writeIncrements) {
+    for (Entry<Var, Long> e : readIncrements.entries()) {
       Var var = e.getKey();
       Arg amount = Arg.createIntLit(e.getValue() * -1);
       block.addCleanup(var, TurbineOp.decrRef(var, amount));
     }
-    for (Entry<Var, Long> e: writeIncrements.entries()) {
+    for (Entry<Var, Long> e : writeIncrements.entries()) {
       Var var = e.getKey();
       Arg amount = Arg.createIntLit(e.getValue() * -1);
       block.addCleanup(var, TurbineOp.decrWriters(var, amount));
@@ -465,7 +501,7 @@ public class RefcountPass implements OptimizerPass {
     // Check that the data isn't actually used in block or sync continuations
     TreeWalk.walkSyncChildren(logger, fn, block, true, new TreeWalker() {
       public void visit(Continuation cont) {
-        removeDecrCandidates(cont, type, immDecrCandidates);
+        removeDecrCandidatesNonRec(cont, type, immDecrCandidates);
       }
 
       public void visit(Instruction inst) {
@@ -483,55 +519,65 @@ public class RefcountPass implements OptimizerPass {
       Block block, Counters<Var> increments, final RefCountType type) {
     // Initially all increments are candidates for piggybacking
     final Counters<Var> candidates = increments.clone();
-    
-    // Remove any candidates from synchronous children that might 
+
+    // Remove any candidates from synchronous children that might
     // read/write the variables
     TreeWalker subblockWalker = new TreeWalker() {
       public void visit(Continuation cont) {
-        removeDecrCandidates(cont, type, candidates.keySet());
+        removeDecrCandidatesNonRec(cont, type, candidates.keySet());
       }
+
       public void visit(Instruction inst) {
         removeDecrCandidates(inst, type, candidates.keySet());
       }
     };
-    
+
     // Try to piggyback on continuations, starting at bottom up
-    ListIterator<Continuation> cit = block.continuationIterator(
-                                  block.getContinuations().size());
+    ListIterator<Continuation> cit = block.continuationIterator(block
+        .getContinuations().size());
     while (cit.hasPrevious()) {
       Continuation cont = cit.previous();
-      
+
       if (isAsyncForeachLoop(cont)) {
-        AbstractForeachLoop loop = (AbstractForeachLoop)cont;
+        AbstractForeachLoop loop = (AbstractForeachLoop) cont;
         loop.tryPiggyBack(increments, type, true);
       }
-      
-      // Walk continuation to remove anything 
+
+      // Walk continuation to remove anything
       TreeWalk.walkSyncChildren(logger, fn, cont, subblockWalker);
     }
-   
-    
+
     // Vars where we were successful
     List<Var> successful = new ArrayList<Var>();
-    
+
     // scan up from bottom of block instructions to see if we can piggyback
-    ListIterator<Instruction> it = block.instructionIterator(
-                                              block.getInstructions().size());
+    ListIterator<Statement> it = block.statementEndIterator();
     while (it.hasPrevious()) {
-      Instruction inst = it.previous();
-      List<Var> piggybacked = inst.tryPiggyback(candidates, type);
-      for (Var v: piggybacked) {
-        candidates.reset(v);
-        successful.add(v);
+      Statement stmt = it.previous();
+      switch (stmt.type()) {
+        case INSTRUCTION: {
+          Instruction inst = stmt.instruction();
+          List<Var> piggybacked = inst.tryPiggyback(candidates, type);
+          for (Var v : piggybacked) {
+            candidates.reset(v);
+            successful.add(v);
+          }
+          // Make sure we don't decrement before a use of the var by removing
+          // from candidate set
+          removeDecrCandidates(inst, type, candidates.keySet());
+          break;
+        }
+        case CONDITIONAL:
+          removeDecrCandidatesRec(logger, fn, stmt.conditional(), type,
+                               candidates.keySet());
+          break;
+        default:
+          throw new STCRuntimeError("Unknown statement type " + stmt.type());
       }
-      // Make sure we don't decrement before a use of the var by removing
-      // from candidate set
-      removeDecrCandidates(inst, type, candidates.keySet());
     }
-    
 
     // Update main increments map
-    for (Var v: successful) {
+    for (Var v : successful) {
       increments.reset(v);
     }
   }
@@ -570,8 +616,8 @@ public class RefcountPass implements OptimizerPass {
    * @param type
    * @param candidates
    */
-  private void removeDecrCandidates(Continuation cont, RefCountType type,
-      Set<Var> candidates) {
+  private void removeDecrCandidatesNonRec(Continuation cont,
+      RefCountType type, Set<Var> candidates) {
     // Continuation will need to read, can't decrement early
     if (type == RefCountType.READERS) {
       for (Var v : cont.requiredVars(false)) {
@@ -589,7 +635,22 @@ public class RefcountPass implements OptimizerPass {
       }
     }
   }
+  
+  private void removeDecrCandidatesRec(final Logger logger, final Function fn,
+      Continuation cont, final RefCountType type,
+      final Set<Var> candidates) {
+    // Check that the data isn't actually used in block or sync continuations
+    TreeWalk.walk(logger, fn, cont, true, new TreeWalker() {
+      public void visit(Continuation cont) {
+        removeDecrCandidatesNonRec(cont, type, candidates);
+      }
 
+      public void visit(Instruction inst) {
+        removeDecrCandidates(inst, type, candidates);
+      }
+    });
+  }
+  
   /**
    * Handle foreach loop as special case where we want to increment <# of
    * iterations> * <needed increments inside loop> before loop
@@ -617,10 +678,19 @@ public class RefcountPass implements OptimizerPass {
 
     // Now see if we can pull some increments out of top of block
     Block loopBody = loop.getLoopBody();
-    ListIterator<Instruction> it = loopBody.instructionIterator();
+    ListIterator<Statement> it = loopBody.statementIterator();
+
     while (it.hasNext()) {
-      Instruction inst = it.next();
-      if (inst.op == Opcode.INCR_REF || inst.op == Opcode.INCR_WRITERS) {
+      Statement stmt = it.next();
+      // stop processing once we get past the initial increments
+      if (stmt.type() != StatementType.INSTRUCTION) {
+        break;
+      }
+      
+      Instruction inst = stmt.instruction();
+      if (inst.op != Opcode.INCR_REF && inst.op != Opcode.INCR_WRITERS) {
+        break;
+      } else {
         Var var = inst.getOutput(0);
         Arg amount = inst.getInput(0);
         if (amount.isIntVal() && definedOutsideCont(loop, loopBody, var)) {
@@ -633,9 +703,6 @@ public class RefcountPass implements OptimizerPass {
           }
           it.remove();
         }
-      } else {
-        // stop processing once we get past the initial increments
-        break;
       }
     }
 
@@ -683,14 +750,14 @@ public class RefcountPass implements OptimizerPass {
    * 
    * @param cont
    * @param block
-   * @param var a var that is in scope within block
+   * @param var
+   *          a var that is in scope within block
    * @return true if var is accessible outside continuation
    */
-  private boolean definedOutsideCont(Continuation cont, Block block,
-      Var var) {
-    assert(block.getParentCont() == cont);
-    return !block.getVariables().contains(var) && 
-          !cont.constructDefinedVars().contains(var);
+  private boolean definedOutsideCont(Continuation cont, Block block, Var var) {
+    assert (block.getParentCont() == cont);
+    return !block.getVariables().contains(var)
+        && !cont.constructDefinedVars().contains(var);
   }
 
   private void addDecrementsAsCleanups(Block block, Counters<Var> increments,
@@ -759,27 +826,39 @@ public class RefcountPass implements OptimizerPass {
    */
   private void accumulateIncrements(Block block, Counters<Var> readIncrements,
       Counters<Var> writeIncrements) {
-    ListIterator<Instruction> it = block.instructionIterator();
+    ListIterator<Statement> it = block.statementIterator();
     while (it.hasNext()) {
-      Instruction inst = it.next();
-      if (inst.op == Opcode.INCR_REF || inst.op == Opcode.INCR_WRITERS) {
-        Var v = inst.getOutput(0);
-        Arg amountArg = inst.getInput(0);
-        if (amountArg.isIntVal()) {
-          long amount = amountArg.getIntLit();
-          Counters<Var> increments;
-          if (inst.op == Opcode.INCR_REF) {
-            increments = readIncrements;
-          } else {
-            assert (inst.op == Opcode.INCR_WRITERS);
-            increments = writeIncrements;
+      Statement stmt = it.next();
+      switch (stmt.type()) {
+        case INSTRUCTION: {
+          Instruction inst = stmt.instruction();
+          if (inst.op == Opcode.INCR_REF || inst.op == Opcode.INCR_WRITERS) {
+            Var v = inst.getOutput(0);
+            Arg amountArg = inst.getInput(0);
+            if (amountArg.isIntVal()) {
+              long amount = amountArg.getIntLit();
+              Counters<Var> increments;
+              if (inst.op == Opcode.INCR_REF) {
+                increments = readIncrements;
+              } else {
+                assert (inst.op == Opcode.INCR_WRITERS);
+                increments = writeIncrements;
+              }
+              if (increments.getCount(v) != 0) {
+                // Check already being manipulated in this block
+                increments.add(v, amount);
+                it.remove();
+              }
+            }
           }
-          if (increments.getCount(v) != 0) {
-            // Check already being manipulated in this block
-            increments.add(v, amount);
-            it.remove();
-          }
+          break;
         }
+        case CONDITIONAL:
+          // Don't try to aggregate these increments.
+          // TODO: later could try to find increments occurring on all branches
+          break;
+        default:
+          throw new STCRuntimeError("Unknown statement type " + stmt.type());
       }
     }
   }
@@ -817,25 +896,47 @@ public class RefcountPass implements OptimizerPass {
       if (var.storage() != VarStorage.ALIAS
           || parentAssignedAliasVars.contains(var)) {
         // add increments that we can at top
+        if (var.name().equals("__alias0")) {
+          System.err.println("ADDING AT TOP storage " + var.storage() + "\n" +
+                                                parentAssignedAliasVars);
+        }
         addRefIncrementAtTop(block, type, var, count);
         it.remove();
       }
     }
     // Now put increments for alias vars after point when var declared
-    ListIterator<Instruction> instIt = block.instructionIterator();
-    while (instIt.hasNext()) {
-      Instruction inst = instIt.next();
-      for (Var out : inst.getOutputs()) {
-        if (out.storage() == VarStorage.ALIAS) {
-          // Alias var must be set at this point, insert refcount instruction
-          long incr = increments.getCount(out);
-          assert (incr >= 0);
-          if (incr > 0) {
-            instIt.add(buildIncrInstruction(type, out, incr));
+    ListIterator<Statement> stmtIt = block.statementIterator();
+    while (stmtIt.hasNext()) {
+      Statement stmt = stmtIt.next();
+      switch (stmt.type()) {
+        case INSTRUCTION: {
+          for (Var out : stmt.instruction().getOutputs()) {
+            if (out.storage() == VarStorage.ALIAS) {
+              // Alias var must be set at this point, insert refcount instruction
+              long incr = increments.getCount(out);
+              assert (incr >= 0);
+              if (incr > 0) {
+                if (out.name().equals("__alias0"))
+                  System.err.println("ADDING AFTER " + stmt);
+                Instruction incrInst = buildIncrInstruction(type, out, incr);
+                incrInst.setParent(block);
+                stmtIt.add(incrInst);
+              }
+              increments.reset(out);
+            }
           }
-          increments.reset(out);
+          break;
         }
+        case CONDITIONAL: {
+          // TODO: handle if initialised within conditional
+          //    currently we don't generate IR trees where we depend on
+          //    aliases being initialised inside conditionals
+          break;
+        }
+        default: 
+          throw new STCRuntimeError("Unknown statement type " + stmt.type());
       }
+      
     }
   }
 
@@ -909,7 +1010,7 @@ public class RefcountPass implements OptimizerPass {
         writeIncrements.decrement(newAlias);
       }
     }
-    
+
     if (inst.op == Opcode.LOOP_BREAK) {
       // Special case decr
       LoopBreak loopBreak = (LoopBreak) inst;
@@ -993,23 +1094,6 @@ public class RefcountPass implements OptimizerPass {
 
       for (Var v : readIncrTmp) {
         readIncrements.decrement(v, amount);
-      }
-    }
-  }
-
-  /**
-   * Find aliasVars that were assigned in this block in order to track where ref
-   * increment instructions can safely be put
-   * 
-   * @param block
-   * @param assignedAliasVars
-   */
-  private void findAssignedAliasVars(Block block, Set<Var> assignedAliasVars) {
-    for (Instruction inst : block.getInstructions()) {
-      for (Var out : inst.getOutputs()) {
-        if (out.storage() == VarStorage.ALIAS) {
-          assignedAliasVars.add(out);
-        }
       }
     }
   }

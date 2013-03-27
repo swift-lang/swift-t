@@ -53,9 +53,13 @@ import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.opt.ResultVal;
+import exm.stc.ic.tree.Conditionals.Conditional;
+import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.GenInfo;
 import exm.stc.ic.tree.ICTree.RenameMode;
+import exm.stc.ic.tree.ICTree.Statement;
+import exm.stc.ic.tree.ICTree.StatementType;
 /**
  * This class contains instructions used in the intermediate representation.
  * Each instruction is responsible for making particular modifications to
@@ -65,12 +69,23 @@ import exm.stc.ic.tree.ICTree.RenameMode;
  *
  */
 public class ICInstructions {
-  public static abstract class Instruction {
+  public static abstract class Instruction implements Statement {
     public final Opcode op;
   
     public Instruction(Opcode op) {
       super();
       this.op = op;
+    }
+    
+
+    public StatementType type() {
+      return StatementType.INSTRUCTION;
+    }
+    public Conditional conditional() {
+      throw new STCRuntimeError("Not a conditional");
+    }
+    public Instruction instruction() {
+      return this;
     }
   
     /**
@@ -81,6 +96,11 @@ public class ICInstructions {
       return op.toString().toLowerCase();
     }
     
+    @Override
+    public void setParent(Block parent) {
+      // Do nothing
+    }
+   
     public void removeVars(Set<Var> removeVars) {
       // default impl: do nothing
     }
@@ -93,6 +113,12 @@ public class ICInstructions {
 
     @Override
     public abstract String toString();
+    
+    public void prettyPrint(StringBuilder sb, String indent) {
+      sb.append(indent);
+      sb.append(this.toString());
+      sb.append("\n");
+    }
   
     public abstract void generate(Logger logger, CompilerBackend gen,
             GenInfo info);
@@ -359,7 +385,12 @@ public class ICInstructions {
      *        it 
      */
     public abstract List<ResultVal> getResults(CVMap existing);
-   
+    
+    @Override
+    public Statement cloneStatement() {
+      return clone();
+    }
+    
     public abstract Instruction clone();
 
     

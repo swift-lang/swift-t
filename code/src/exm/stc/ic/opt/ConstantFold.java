@@ -43,6 +43,8 @@ import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
+import exm.stc.ic.tree.ICTree.Statement;
+import exm.stc.ic.tree.ICTree.StatementType;
 
 /**
  * This module contains a set of optimisations that either seek out or
@@ -104,9 +106,13 @@ public class ConstantFold implements OptimizerPass {
       converged = true; // assume no changes
       // iterate over instructions in this block, find instructions which 
       //      take only constants as inputs 
-      ListIterator<Instruction> it = block.instructionIterator();
+      ListIterator<Statement> it = block.statementIterator();
       while (it.hasNext()) {
-        Instruction inst = it.next();
+        Statement stmt = it.next();
+        if (stmt.type() != StatementType.INSTRUCTION)
+          continue;
+        
+        Instruction inst = stmt.instruction();
         if (logger.isDebugEnabled()) {
           logger.debug("Candidate instruction for constant folding: " 
                                               + inst.toString());
@@ -118,6 +124,7 @@ public class ConstantFold implements OptimizerPass {
           
           Instruction newInst = inst.constantReplace(knownConstants);
           if (newInst != null) {
+            newInst.setParent(block);
             it.set(newInst);
           }
         } else {
@@ -143,10 +150,12 @@ public class ConstantFold implements OptimizerPass {
               replacements.add(ICInstructions.valueSet(var, newVal));
             }
           }
-          ICUtil.replaceInsts(it, replacements);
+          ICUtil.replaceInsts(block, it, replacements);
         }
       }
-      for (Continuation c: block.getContinuations()) {
+      
+      
+      for (Continuation c: block.allComplexStatements()) {
         boolean updated = c.constantReplace(knownConstants);
         converged = converged && !updated;
         changed = changed || updated;
@@ -160,7 +169,7 @@ public class ConstantFold implements OptimizerPass {
     // Do it recursively on all child blocks.  We do this after doing the outer
     // block because more constants will have been propagated into inner block, 
     // enabled more folding
-    for (Continuation c: block.getContinuations()) {
+    for (Continuation c: block.allComplexStatements()) {
       for (Block b: c.getBlocks()) {
         // Make copy of constant map so that binds don't get mixed up
         boolean changedRec = constantFold(logger, prog, fn, b, 
@@ -201,11 +210,13 @@ public class ConstantFold implements OptimizerPass {
       }
     }
       
-    ListIterator<Instruction> it = block.instructionIterator();
+    ListIterator<Statement> it = block.statementIterator();
     while (it.hasNext()) {
-      Instruction inst = it.next();
-      if (inst.getInputs().size() == 1) {
-        if (isValueStoreInst(inst, ignoreLocalValConstants)) {
+      Statement stmt = it.next();
+      if (stmt.type() == StatementType.INSTRUCTION) {
+        Instruction inst = stmt.instruction();
+        if (inst.getInputs().size() == 1 &&
+              isValueStoreInst(inst, ignoreLocalValConstants)) {
           Var var = inst.getOutput(0);
           if ((!removeLocalConsts) || removalCandidates.contains(var)) {
             logger.debug("Found constant " + var);

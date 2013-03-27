@@ -31,7 +31,6 @@ import org.apache.log4j.Logger;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.ExecContext;
@@ -49,6 +48,8 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.GenInfo;
 import exm.stc.ic.tree.ICTree.RenameMode;
+import exm.stc.ic.tree.ICTree.Statement;
+import exm.stc.ic.tree.ICTree.StatementType;
 
 /**
  * This module contains definitions of all of the continuation varieties used
@@ -82,8 +83,7 @@ public class ICContinuations {
       this.parent = parent;
     }
     
-    public abstract void generate(Logger logger, CompilerBackend gen, GenInfo info)
-        throws UndefinedTypeException;
+    public abstract void generate(Logger logger, CompilerBackend gen, GenInfo info);
 
     public abstract void prettyPrint(StringBuilder sb, String currentIndent);
 
@@ -96,12 +96,12 @@ public class ICContinuations {
     /** Returns all nested blocks in this continuation */
     public abstract List<Block> getBlocks();
     
-    /**  
+    /**
      * @param renames
      * @param mode what sort of renaming
      * @param recursive recursively do replacement in inner blocks
      */
-    public void replaceVars(Map<Var, Arg> renames, RenameMode mode,
+    public void renameVars(Map<Var, Arg> renames, RenameMode mode,
                                      boolean recursive) {
       if (renames.isEmpty())
         return;
@@ -109,6 +109,15 @@ public class ICContinuations {
         this.replaceVarsInBlocks(renames, mode);
       }
       this.replaceConstructVars(renames, mode);
+    }
+    
+    /**
+     * Rename recursively
+     * @param renames
+     * @param mode
+     */
+    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
+      renameVars(renames, mode, true);
     }
     
     protected abstract void replaceConstructVars(Map<Var, Arg> renames,
@@ -308,6 +317,15 @@ public class ICContinuations {
     }
 
     public abstract boolean isLoop();
+
+    /**
+     * @return true if this is a conditional that executes synchronously, with
+     *          the blocks representing the exhaustive set of possible paths
+     */
+    public boolean isExhaustiveSyncConditional() {
+      // default
+      return false;
+    }
   }
 
   public enum ContinuationType {
@@ -537,19 +555,22 @@ public class ICContinuations {
       while (!blocks.isEmpty()) {
         // Find instructions
         Block curr = blocks.pop();
-        for (Instruction inst: curr.getInstructions()) {
-          if (inst.op == Opcode.LOOP_BREAK) {
-            assert(breakInst == null): "duplicate instructions: " + breakInst
-                    + " and \n" + inst;
-            breakInst = (LoopBreak)inst;
-          } else if (inst.op == Opcode.LOOP_CONTINUE) {
-            assert(continueInst == null): "duplicate instructions: " + continueInst
-                    + " and \n" + inst;
-            continueInst = (LoopContinue)inst;
+        for (Statement stmt: curr.getStatements()) {
+          if (stmt.type() == StatementType.INSTRUCTION) {
+            Instruction inst = stmt.instruction();
+            if (inst.op == Opcode.LOOP_BREAK) {
+              assert(breakInst == null): "duplicate instructions: " + breakInst
+                      + " and \n" + inst;
+              breakInst = (LoopBreak)inst;
+            } else if (inst.op == Opcode.LOOP_CONTINUE) {
+              assert(continueInst == null): "duplicate instructions: " + continueInst
+                      + " and \n" + inst;
+              continueInst = (LoopContinue)inst;
+            }
           }
         }
         
-        for (Continuation cont: curr.getContinuations()) {
+        for (Continuation cont: curr.allComplexStatements()) {
           // Don't go into inner loops, as they will have their own
           // break/continue instructions
           if (cont.getType() != ContinuationType.LOOP) {
@@ -586,8 +607,7 @@ public class ICContinuations {
     }
 
     @Override
-    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
-        throws UndefinedTypeException {
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       gen.startLoop(loopName, loopVars, definedHere, initVals,
                     PassedVar.extractVars(passedVars), keepOpenVars, blockingVars);
       this.loopBody.generate(logger, gen, info);
@@ -755,8 +775,7 @@ public class ICContinuations {
     }
 
     @Override
-    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
-        throws UndefinedTypeException {
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       gen.startNestedBlock();
       block.generate(logger, gen, info);
       gen.endNestedBlock();
@@ -878,6 +897,14 @@ public class ICContinuations {
       return res;
     }
 
+    public static List<WaitVar> asWaitVarList(List<Var> vars, boolean explicit) {
+      ArrayList<WaitVar> res = new ArrayList<WaitVar>(vars.size());
+      for (Var v: vars) {
+        res.add(new WaitVar(v, explicit));
+      }
+      return res;
+    }
+
     public static List<WaitVar> makeList(Collection<Var> waitVars, boolean explicit) {
       List<WaitVar> waitVars2 = new ArrayList<WaitVar>(waitVars.size());
       for (Var v: waitVars) {
@@ -985,8 +1012,7 @@ public class ICContinuations {
     }
 
     @Override
-    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
-        throws UndefinedTypeException {
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       gen.startWaitStatement(procName, WaitVar.asVarList(waitVars), 
           PassedVar.extractVars(passedVars), priority, mode, recursive, target);
       this.block.generate(logger, gen, info);
