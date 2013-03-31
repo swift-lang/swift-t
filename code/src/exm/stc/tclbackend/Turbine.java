@@ -110,8 +110,8 @@ class Turbine
       new Value(PARENT_STACK_NAME);
   private static final Token PARENT_STACK_ENTRY =
       new Token("_parent");
-  private static final Token C_RULE = new Token("turbine::c::rule");
   private static final Token RULE = new Token("turbine::rule");
+  private static final Token SPAWN_RULE = new Token("turbine::spawn_rule");
   private static final Token DEEPRULE = new Token("turbine::deeprule");
   private static final Token NO_STACK = new Token("no_stack");
   private static final Token DEREFERENCE_INTEGER =
@@ -153,9 +153,6 @@ class Turbine
   private static final Token CONTAINER_F_DEREF_INSERT =
       new Token("turbine::container_f_deref_insert");
   
-  private static final Token CALL_FUNCTION =
-      new Token("turbine::call_composite");
-
   private static final Token UNCACHED_MODE = new Token("UNCACHED");
   private static final Token FREE_LOCAL_BLOB = 
                           new Token("turbine::free_local_blob");
@@ -426,52 +423,59 @@ class Turbine
       Expression action, TaskMode type, Target target,
       Expression priority, ExecContext execCx) {
 
+
+    Sequence res = new Sequence();
     if (inputs.isEmpty()) {
-      return spawnTask(action, type, target, priority, execCx);
+      if (type != TaskMode.LOCAL && type != TaskMode.LOCAL_CONTROL) {
+        res.add(spawnTask(action, type, target, priority, execCx));
+        return res;
+      }
     }
     
-    Sequence res = new Sequence();
     if (priority != null)
        res.add(setPriority(priority));
-    
-
-    res.add(new Command(execCx == ExecContext.CONTROL ? C_RULE : RULE, 
-                       new Token(symbol), new TclList(inputs),
-                       tclRuleType(type), target.toTcl(), action));
+    // Use different command on worker
+    Token ruleCmd = execCx == ExecContext.CONTROL ? RULE : SPAWN_RULE;
+    res.add(new Command(ruleCmd,  new Token(symbol), new TclList(inputs),
+                        tclRuleType(type), target.toTcl(), action));
 
     if (priority != null)
        res.add(resetPriority());
     return res;
   }
 
-  private static Sequence spawnTask(Expression action, TaskMode type, Target target,
+  private static Command spawnTask(Expression action, TaskMode type, Target target,
       Expression priority, ExecContext execCx) {
     Token ADLB_PUT = new Token("adlb::put");
     LiteralInt TURBINE_NULL_RULE = new LiteralInt(-1);
-    Sequence res = new Sequence();
-    if ((type == TaskMode.LOCAL || type == TaskMode.LOCAL_CONTROL)
-        && execCx == ExecContext.CONTROL) {
-      // TODO: add directly to local control work queue
-      throw new STCRuntimeError("Not implemented");
-    } else {
-      assert(type == TaskMode.CONTROL || type == TaskMode.WORKER);
-      // TODO: add to shared work queue
-      res.add(new Command(ADLB_PUT, target.toTcl(), adlbWorkType(type),
-                  new TclString(Arrays.asList(TURBINE_NULL_RULE, action)),
-                  priority));
+    
+    if (priority == null) {
+      priority = currentPriority();
     }
-    return res;
+    
+    assert(type == TaskMode.CONTROL || type == TaskMode.WORKER);
+    // add to shared work queue
+    return new Command(ADLB_PUT, target.toTcl(), adlbWorkType(type),
+                new TclString(Arrays.asList(TURBINE_NULL_RULE, action)),
+                priority);
   }
 
   private static TclTree adlbWorkType(TaskMode type) {
-    // TODO Auto-generated method stub
-    throw new STCRuntimeError("Not implemented");
+    switch (type) {
+      case CONTROL:
+        return new Token("$turbine::WORK_TYPE(CONTROL)");
+      case WORKER:
+        return new Token("$turbine::WORK_TYPE(WORK)");
+      default:
+        throw new STCRuntimeError("Can't create task of type " + type);
+    }
   }
   
 
-  private static Expression defaultPriority() {
-    // TODO Auto-generated method stub
-    throw new STCRuntimeError("Not implemented");
+  private static Expression currentPriority() {
+    // TODO: is this the most sensible?
+    // get the current turbine priority
+    return new Square("turbine::priority");
   }
 
 
@@ -529,7 +533,7 @@ class Turbine
     }
     TclList action = new TclList(actionElems);
     return ruleHelper(symbol, blockOn, action, TaskMode.CONTROL, 
-                      Target.rankAny(), defaultPriority(), execCx);
+                      Target.rankAny(), null, execCx);
   }
 
   public static TclTree allocateStruct(String tclName) {
@@ -936,14 +940,6 @@ class Turbine
   public static TclTree declareReference(String refVarName) {
     return allocate(refVarName, INTEGER_TYPENAME);
   }
-
-  public static TclTree callFunction(String function, TclList oList,
-                                      TclList iList, TclList blockOn) {
-    return new Command(CALL_FUNCTION,
-        new Value(Turbine.LOCAL_STACK_NAME), new Token(function),
-                  oList, iList, blockOn);
-  }
-
 
   public static TclTree callFunctionSync(String function,
       List<Expression> outVars, List<Expression> inVars) {
