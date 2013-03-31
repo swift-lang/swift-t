@@ -64,7 +64,7 @@ namespace eval turbine {
       set p      [ SwiftBlob_cast_int_to_dbl_ptr [ lindex $L 0 ] ]
       set length [ lindex $L 1 ]
 
-      set n [ expr {$length / $s} ]
+      set n [ expr $length / $s ]
       for { set i 0 } { $i < $n } { incr i } {
           set d [ SwiftBlob_double_get $p $i ]
           literal t float $d
@@ -102,7 +102,7 @@ namespace eval turbine {
       # j is column index:    0..n-1
       # k is index into blob: 0..total-1
       # c[i] is row result[i]
-      set total [ expr {$length / $s} ]
+      set total [ expr $length / $s ]
       if { $total != $m_value * $n_value } {
           error "matrix_from_blob: blob size $total != $m_value x $n_value"
       }
@@ -113,8 +113,8 @@ namespace eval turbine {
       for { set k 0 } { $k < $total } { incr k } {
           set d [ blobutils_get_float $p $k ]
           literal t float $d
-          set i [ expr {$k % $m_value} ]
-          set j [ expr {$k / $m_value} ]
+          set i [ expr $k % $m_value ]
+          set j [ expr $k / $m_value ]
           container_immediate_insert $c($i) $j $t
       }
       # Close rows

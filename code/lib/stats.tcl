@@ -36,7 +36,7 @@ namespace eval turbine {
         }
         set i $next_index
         while { $i < $n } {
-          set this_chunk_size [ expr {min( $CHUNK_SIZE, $n - $i )} ]
+          set this_chunk_size [ expr min( $CHUNK_SIZE, $n - $i ) ]
           set members [ adlb::enumerate $container members $this_chunk_size $i ]
           # puts "members of $container $i $this_chunk_size : $members"
           foreach turbine_id $members {
@@ -45,7 +45,7 @@ namespace eval turbine {
                 # add to the sum
                 set val [ retrieve_integer $turbine_id ]
                 #puts "C\[$i\] = $val"
-                set accum [ expr {$accum + $val} ]
+                set accum [ expr $accum + $val ]
                 incr i
             } else {
                 # block until the next turbine id is finished,
@@ -83,7 +83,7 @@ namespace eval turbine {
         }
         set i $next_index
         while { $i < $n } {
-          set this_chunk_size [ expr {min( $CHUNK_SIZE, $n - $i )} ]
+          set this_chunk_size [ expr min( $CHUNK_SIZE, $n - $i ) ]
           set members [ adlb::enumerate $container members $this_chunk_size $i ]
           # puts "members of $container $i $this_chunk_size : $members"
           foreach turbine_id $members {
@@ -92,7 +92,7 @@ namespace eval turbine {
                 # add to the sum
                 set val [ retrieve_float $turbine_id ]
                 #puts "C\[$i\] = $val"
-                set accum [ expr {$accum + $val} ]
+                set accum [ expr $accum + $val ]
                 incr i
             } else {
                 # block until the next turbine id is finished,
@@ -158,7 +158,7 @@ namespace eval turbine {
       }
       set i $next_index
       while { $i < $n } {
-        set this_chunk_size [ expr {min( $CHUNK_SIZE, $n - $i )} ]
+        set this_chunk_size [ expr min( $CHUNK_SIZE, $n - $i ) ]
         set members [ adlb::enumerate $container members $this_chunk_size $i ]
         foreach turbine_id $members {
           #puts "turbine_id: $turbine_id"
@@ -166,27 +166,27 @@ namespace eval turbine {
             # retrieve value and make sure it's floating point
             # so we don't get surprised by integer division
             set x [ retrieve $turbine_id ]
-            set x [ expr {double($x)} ]
+            set x [ expr double($x) ]
             puts "c\[$i\] = $x"
             if { $sum_out != 0 } {
               # avoid potential of overflow
-              set sum_accum [ expr {$sum_accum $x} ]
+              set sum_accum [ expr $sum_accum $x ]
             }
             if { $min_accum == {NOMIN} } {
               set min_accum $x
             } else {
-              set min_accum [ expr {min($min_accum, $x)} ]
+              set min_accum [ expr min($min_accum, $x) ]
             }
             if { $max_accum == {NOMAX} } {
               set max_accum $x
             } else {
-              set max_accum [ expr {max($max_accum, $x)} ]
+              set max_accum [ expr max($max_accum, $x) ]
             }
             # Note: use knuth's online algorithm for mean and std
-            set delta [ expr {$x - $mean_accum} ]
-            set mean_accum [ expr {$mean_accum + ( $delta / ($i + 1) )} ]
+            set delta [ expr $x - $mean_accum ]
+            set mean_accum [ expr $mean_accum + ( $delta / ($i + 1) ) ]
             puts "mean_accum = $mean_accum"
-            set M2_accum [ expr {$M2_accum + $delta*($x - $mean_accum)} ]
+            set M2_accum [ expr $M2_accum + $delta*($x - $mean_accum)]
             incr i
           } else {
             # block until the next turbine id is finished then continue running
@@ -240,14 +240,14 @@ namespace eval turbine {
         if { $n == 0 } {
           error "calculating stddev of empty array <$container>"
         }
-        store_float $samp_std_out [ expr {sqrt($M2_accum / ($n - 1))} ]
+        store_float $samp_std_out [ expr sqrt($M2_accum / ($n - 1)) ]
       }
 
       if { $pop_std_out != 0 } {
         if { $n == 0 } {
           error "calculating stddev of empty array <$container>"
         }
-        store_float $pop_std_out [ expr {sqrt($M2_accum / $n)} ]
+        store_float $pop_std_out [ expr sqrt($M2_accum / $n) ]
       }
       read_refcount_decr $container
     }
@@ -289,7 +289,7 @@ namespace eval turbine {
             set mean2 $mean_accum
             set n2 $n_accum
             # n' := n1 + n2
-            set n_accum [ expr {$n_accum + $n} ]
+            set n_accum [ expr $n_accum + $n ]
 
             # weighted mean
             # mean' := (mean1 * n1 + mean2 * n2) / (n1 + n2)
@@ -297,7 +297,7 @@ namespace eval turbine {
                                               double( $n_accum ) ]
 
             #  diff := mean2 - mean1
-            set diff [ expr {$mean - $mean2} ]
+            set diff [ expr $mean - $mean2 ]
 
             # M2' := M2_1 + M2_2 + diff^2 * ( n1*n2 / (n1 + n2))
             set M2_accum [ expr $M2_accum + $M2 + \
@@ -321,7 +321,7 @@ namespace eval turbine {
       }
       store_integer $n_out $n_accum
       store_float $mean_out $mean_accum
-      store_float $std_out [ expr {sqrt($M2_accum / (double($n_accum)))} ]
+      store_float $std_out [ expr sqrt($M2_accum / (double($n_accum))) ]
       read_refcount_decr $container
     }
 }

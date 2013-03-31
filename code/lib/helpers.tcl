@@ -14,14 +14,14 @@
 
 # Shutdown Tcl if condition does not hold
 proc assert { condition msg } {
-    if [ expr {! $condition} ] {
+    if [ expr ! $condition ] {
         puts $msg
         exit 1
     }
 }
 
 proc check { condition msg } {
-    if [ expr {! $condition} ] {
+    if [ expr ! $condition ] {
         error $msg
     }
 }
@@ -86,8 +86,8 @@ proc show { v } {
 }
 
 set KB 1024
-set MB [ expr {$KB * $KB} ]
-set GB [ expr {$MB * $KB} ]
+set MB [ expr $KB * $KB ]
+set GB [ expr $MB * $KB ]
 
 # Human readable byte messages
 proc bytes { b } {
@@ -99,16 +99,16 @@ proc bytes { b } {
     if { $b < $KB } {
         return "$b B"
     } elseif { $b < $MB } {
-        set kb [ expr {double($b) / $KB} ]
+        set kb [ expr double($b) / $KB ]
         set kbs [ format $fmt $kb ]
         return "$kbs KB"
     } elseif { $b < $GB } {
-        set mb [ expr {double($b) / $MB} ]
+        set mb [ expr double($b) / $MB ]
         set mbs [ format $fmt $mb ]
         return "$mbs MB"
     }
 
-    set gb [ expr {double($b) / $GB} ]
+    set gb [ expr double($b) / $GB ]
     set gbs [ format $fmt $gb ]
     return "$gbs GB"
 }

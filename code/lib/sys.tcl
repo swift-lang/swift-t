@@ -104,7 +104,7 @@ namespace eval turbine {
                 set j4 [ string first "\"" $t ]
                 if { $j4 == -1 } continue
                 set matched 1
-                set j5 [ expr {$j4 - 1} ]
+                set j5 [ expr $j4 - 1 ]
                 set t [ string replace $t $j4 $j4 "" ]
                 set i $j5
                 break
@@ -339,13 +339,13 @@ namespace eval turbine {
     }
     proc sleep_body { output secs } {
         set secs_val [ retrieve_decr_float $secs ]
-        after [ expr {round($secs_val * 1000)} ]
+        after [ expr round($secs_val * 1000) ]
         store_void $output
     }
 
     # Busy wait for a number of seconds.  Up to microsecond precision
     proc spin { time_s } {
-        set us { expr round($time_s * 1000000) }
+        set us [ expr round($time_s * 1000000) ]
         set start [ clock microseconds ]
         while { [ clock microseconds ] < $start + $us } {
             # Spin

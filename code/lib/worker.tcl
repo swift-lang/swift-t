@@ -16,8 +16,6 @@
 # Code executed on worker processes
 
 namespace eval turbine {
-    # Import adlb commands 
-    namespace import ::adlb::get
 
     # Main worker loop
     proc worker { } {
@@ -25,13 +23,10 @@ namespace eval turbine {
         global WORK_TYPE
 
         while { true } {
-            set msg [ get $WORK_TYPE(WORK) answer_rank ]
+            set msg [ adlb::get $WORK_TYPE(WORK) answer_rank ]
 
             set rule_id [ lreplace $msg 1 end ]
             set command [ lreplace $msg 0 0 ]
-            #TODO: did work of tokenizing command here, maybe can eval
-            #      more efficiently
-
             if { ! [ string length $command ] } {
                 # puts "empty"
                 break

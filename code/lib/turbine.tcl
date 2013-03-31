@@ -18,21 +18,8 @@
 package provide turbine [ turbine::c::version ]
 
 namespace eval turbine {
-    namespace import c::rule
+
     namespace export init start finalize rule
-
-    namespace import c::get_priority c::reset_priority c::set_priority
-    namespace export get_priority reset_priority set_priority
-
-    # Import adlb commands 
-    namespace import ::adlb::put ::adlb::get ::RANK_ANY
-    # Re-export adlb commands
-    namespace export put get RANK_ANY
-
-    # Export work types accessible
-    variable WORK_TASK
-    variable CONTROL_TASK
-    namespace export WORK_TASK CONTROL_TASK
 
     # Mode is ENGINE, WORKER, or SERVER
     variable mode
@@ -42,6 +29,10 @@ namespace eval turbine {
     variable n_adlb_servers
     variable n_engines
     variable n_workers
+
+    # ADLB task priority
+    variable priority
+    variable default_priority
 
     # How to display string values in the log
     variable log_string_mode
@@ -63,18 +54,15 @@ namespace eval turbine {
         variable error_code
         set error_code 10
 
+        variable priority
+        variable default_priority
+        set default_priority 0
         reset_priority
 
         # Set up work types
         enum WORK_TYPE { WORK CONTROL }
         global WORK_TYPE
         set types [ array size WORK_TYPE ]
-
-        # Set up variables
-        variable WORK_TASK
-        variable CONTROL_TASK
-        set WORK_TASK $WORK_TYPE(WORK)
-        set CONTROL_TASK $WORK_TYPE(CONTROL)
 
         if { [ info exists ::TURBINE_ADLB_COMM ] } {
             adlb::init $servers $types $::TURBINE_ADLB_COMM
@@ -100,7 +88,7 @@ namespace eval turbine {
         variable n_workers
         set n_adlb_servers $servers
         set n_engines $engines
-        set n_workers [ expr {[ adlb::size ] - $servers - $engines} ]
+        set n_workers [ expr [ adlb::size ] - $servers - $engines ]
 
 
         variable mode
@@ -195,6 +183,17 @@ namespace eval turbine {
                        "TURBINE_LOG_STRING_MODE=$log_string_mode" ] ]
     }
 
+    proc reset_priority { } {
+        variable priority
+        variable default_priority
+        set priority $default_priority
+    }
+
+    proc set_priority { p } {
+        variable priority
+        set priority $p
+    }
+
     proc enable_read_refcount {} {
       adlb::enable_read_refcount
     }
@@ -285,20 +284,20 @@ namespace eval turbine {
         store_integer $output [ adlb_servers ]
     }
 
-    # Send rule to control process to handle 
-    proc spawn_rule { name inputs action_type target action } {
+    # Augment rule so that it can be run on worker
+    proc rule { name inputs action_type target action } {
         variable is_engine
         global WORK_TYPE
 
         if { $is_engine } {
-            rule $name $inputs $action_type $target $action
+            c::rule $name $inputs $action_type $target $action
         } elseif { [ llength $inputs ] == 0 } {
-            release -1 $action_type $action $RANK_ANY
+            release -1 $action_type $action $adlb::RANK_ANY
         } else {
             # Send to engine that can process it
-            put $RANK_ANY $WORK_TYPE(CONTROL) \
-                [ list rule $name $inputs $action_type $RANK_ANY $action ] \
-                [ get_priority ]
+            adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
+                [ list rule $name $inputs $action_type $adlb::RANK_ANY $action ] \
+                $turbine::priority
         }
     }
 }

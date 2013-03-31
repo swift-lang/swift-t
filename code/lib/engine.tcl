@@ -16,12 +16,6 @@
 # Code executed on engine processes
 
 namespace eval turbine {
-    
-    # Import adlb commands 
-    namespace import ::adlb::put ::adlb::get ::adlb::RANK_ANY
-
-    # Import turbine c command
-    namespace import c::ready c::pop
 
     proc engine { rules startup } {
 
@@ -38,17 +32,20 @@ namespace eval turbine {
         while {true} {
             while {true} {
                 # Do local work until we have none
-                set ready_transforms [ ready ]
-                if { [ llength $ready_transforms ] == 0 } break
-                foreach {transform} $ready_transforms {
-                    pop $transform type action priority target
-                    set_priority $priority
+                set ready [ turbine::c::ready ]
+                if { [ llength $ready ] == 0 } break
+                foreach {transform} $ready {
+                    set L [ turbine::c::pop $transform ]
+                    set type     [ lindex $L 0 ]
+                    set action   [ lindex $L 1 ]
+                    set_priority [ lindex $L 2 ]
+                    set target   [ lindex $L 3 ]
                     release $transform $type $action $target
                 }
             }
 
             reset_priority
-            set msg [ get $WORK_TYPE(CONTROL) answer_rank ]
+            set msg [ adlb::get $WORK_TYPE(CONTROL) answer_rank ]
             if { [ string length $msg ] } {
                 control $msg $answer_rank
             } else break
@@ -70,15 +67,13 @@ namespace eval turbine {
                 eval $action
             }
             2 { # $turbine::CONTROL
-                set prio [ get_priority ]
-                put $target $WORK_TYPE(CONTROL) \
-                    "command priority: $prio $action" \
-                    $prio
+                adlb::put $target $WORK_TYPE(CONTROL) \
+                    "command priority: $turbine::priority $action" \
+                    $turbine::priority
             }
             3 { # $turbine::WORK
-                set prio [ get_priority ]
-                put $RANK_ANY $WORK_TYPE(WORK) \
-                    "$transform $action" $prio
+                adlb::put $adlb::RANK_ANY $WORK_TYPE(WORK) \
+                    "$transform $action" $turbine::priority
             }
             default {
                 error "unknown action type!"

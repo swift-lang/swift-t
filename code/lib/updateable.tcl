@@ -64,7 +64,7 @@ namespace eval turbine {
   proc update_incr_impl { x val } {
     lock_loop $x
     set old [ adlb::retrieve $x $adlb::FLOAT ]
-    adlb::store $x $adlb::FLOAT [ expr {$val + $old} ] 0
+    adlb::store $x $adlb::FLOAT [ expr $val + $old ] 0
     adlb::unlock $x
   }
 
@@ -80,7 +80,7 @@ namespace eval turbine {
   proc update_scale_impl { x val } {
     lock_loop $x
     set old [ adlb::retrieve $x $adlb::FLOAT ]
-    adlb::store $x $adlb::FLOAT [ expr {$val * $old} ] 0
+    adlb::store $x $adlb::FLOAT [ expr $val * $old ] 0
     adlb::unlock $x
   }
 }

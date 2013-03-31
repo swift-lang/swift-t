@@ -40,6 +40,14 @@ namespace eval turbine {
     namespace import c::new c::typeof
     namespace import c::insert c::log
 
+    proc call_composite { stack f outputs inputs blockon } {
+
+        set rule_id [ turbine::c::rule $f "$blockon"        \
+                          $turbine::CONTROL $adlb::RANK_ANY \
+                          "$f $stack $outputs $inputs" ]
+        return $rule_id
+    }
+
     # User function
     # This name conflicts with a TCL built-in - it cannot be exported
     # TODO: Replace this with tracef()
@@ -92,7 +100,7 @@ namespace eval turbine {
     }
     proc sleep_trace_body { signal secs inputs } {
       set secs_val [ retrieve_decr_float $secs ]
-      after [ expr {round($secs_val * 1000)} ]
+      after [ expr round($secs_val * 1000) ]
       puts "AFTER"
       trace_body $signal $inputs
     }
@@ -144,7 +152,7 @@ namespace eval turbine {
                 allocate td integer
                 store_integer $td $i
 
-                if { [ expr {$i + $step > $end} ] } {
+                if { [ expr $i + $step > $end ] } {
                   # Drop on last iter
                   set slot_drop 1
                 }
@@ -170,8 +178,8 @@ namespace eval turbine {
         set start_value [ retrieve_decr $start ]
         set end_value   [ retrieve_decr $end ]
         set parts_value [ retrieve_decr $parts ]
-        set size        [ expr {$end_value - $start_value + 1} ]
-        set step        [ expr {$size / $parts_value} ]
+        set size        [ expr $end_value - $start_value + 1]
+        set step        [ expr $size / $parts_value ]
 
         global WORK_TYPE
         for { set i 0 } { $i < $parts_value } { incr i } {
@@ -179,13 +187,12 @@ namespace eval turbine {
             allocate_container c integer
             container_insert $result $i $c
             # start
-            set s [ expr {$i *  $step} ]
+            set s [ expr $i *  $step ]
             # end
-            set e [ expr {$s + $step - 1} ]
-            set prio [ get_priority ]
+            set e [ expr $s + $step - 1 ]
             adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
-                "command priority: $prio range_work $c $s $e 1" \
-                $prio
+                "command priority: $turbine::priority range_work $c $s $e 1" \
+                $turbine::priority
         }
         # close container
         adlb::slot_drop $result
