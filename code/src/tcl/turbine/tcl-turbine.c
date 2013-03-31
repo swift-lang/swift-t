@@ -51,6 +51,11 @@
 #include "src/tcl/adlb/tcl-adlb.h"
 #include "src/tcl/mpe/tcl-mpe.h"
 
+#define DEFAULT_PRIORITY 0
+
+/* current priority for rule */
+static int curr_priority = DEFAULT_PRIORITY;
+
 /**
    @see TURBINE_CHECK
 */
@@ -174,6 +179,33 @@ Turbine_Version_Cmd(ClientData cdata, Tcl_Interp *interp,
   strcpy(entry.name, subscript);
 
 /**
+   usage: reset_priority
+ */
+static int
+Turbine_Reset_Priority_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  curr_priority = DEFAULT_PRIORITY;
+  return TCL_OK;
+}
+
+/**
+   usage: set_priority
+ */
+static int
+Turbine_Set_Priority_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  int rc, new_prio;
+  rc = Tcl_GetIntFromObj(interp, objv[1], &new_prio);
+  TCL_CHECK_MSG(rc, "Priority must be integer");
+  curr_priority = new_prio;
+  return TCL_OK;
+}
+
+/**
    usage: rule name [ list inputs ] action_type target action => id
    The name is just for debugging
  */
@@ -217,17 +249,10 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
   char* action = Tcl_GetStringFromObj(objv[5], NULL);
   assert(action);
 
-  // Lookup current priority
-  int priority = 0;
-  Tcl_Obj* p = Tcl_GetVar2Ex(interp, "::turbine::priority", NULL, 0);
-  TCL_CONDITION(p != NULL, "could not access turbine::priority");
-  rc = Tcl_GetIntFromObj(interp, p, &priority);
-  TCL_CHECK_MSG(rc, "turbine::priority is not an integer!");
-
   // Issue the rule
   turbine_code code =
       turbine_rule(name, inputs, input_list, action_type, action,
-                   priority, target, &id);
+                    curr_priority, target, &id);
   TURBINE_CHECK(code, "could not add rule: %li", id);
   return TCL_OK;
 }
@@ -601,6 +626,8 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("init",        Turbine_Init_Cmd);
   COMMAND("engine_init", Turbine_Engine_Init_Cmd);
   COMMAND("version",     Turbine_Version_Cmd);
+  COMMAND("reset_priority", Turbine_Reset_Priority_Cmd);
+  COMMAND("set_priority",   Turbine_Set_Priority_Cmd);
   COMMAND("rule",        Turbine_Rule_Cmd);
   COMMAND("push",        Turbine_Push_Cmd);
   COMMAND("ready",       Turbine_Ready_Cmd);

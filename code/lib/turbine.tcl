@@ -21,6 +21,9 @@ namespace eval turbine {
 
     namespace export init start finalize rule
 
+    namespace import c::reset_priority c::set_priority
+    namespace export reset_priority set_priority
+
     # Mode is ENGINE, WORKER, or SERVER
     variable mode
     variable is_engine
@@ -29,10 +32,6 @@ namespace eval turbine {
     variable n_adlb_servers
     variable n_engines
     variable n_workers
-
-    # ADLB task priority
-    variable priority
-    variable default_priority
 
     # How to display string values in the log
     variable log_string_mode
@@ -54,9 +53,6 @@ namespace eval turbine {
         variable error_code
         set error_code 10
 
-        variable priority
-        variable default_priority
-        set default_priority 0
         reset_priority
 
         # Set up work types
@@ -181,17 +177,6 @@ namespace eval turbine {
         # Invalid- fall through to error
         error [ join [ "Requires integer or ON or OFF:"
                        "TURBINE_LOG_STRING_MODE=$log_string_mode" ] ]
-    }
-
-    proc reset_priority { } {
-        variable priority
-        variable default_priority
-        set priority $default_priority
-    }
-
-    proc set_priority { p } {
-        variable priority
-        set priority $p
     }
 
     proc enable_read_refcount {} {
