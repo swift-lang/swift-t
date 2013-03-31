@@ -324,11 +324,11 @@ Turbine_Pop_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK(error);
 
   turbine_action_type type;
-  char action[TURBINE_ACTION_MAX];
+  char *action;
   int priority;
   int target;
 
-  turbine_code code = turbine_pop(id, &type, action,
+  turbine_code code = turbine_pop(id, &type, &action,
                                   &priority, &target);
   TCL_CONDITION(code == TURBINE_SUCCESS,
                  "could not pop transform id: %li", id);
@@ -336,6 +336,7 @@ Turbine_Pop_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_Obj* items[4];
   items[0] = Tcl_NewIntObj(type);
   items[1] = Tcl_NewStringObj(action, -1);
+  free(action);
   items[2] = Tcl_NewIntObj(priority);
   items[3] = Tcl_NewIntObj(target);
 

@@ -356,7 +356,8 @@ static inline void
 transform_free(transform* T)
 {
   free(T->name);
-  free(T->action);
+  if (T->action)
+    free(T->action);
   if (T->input_list)
     free(T->input_list);
   free(T);
@@ -555,7 +556,7 @@ turbine_ready(int count, turbine_transform_id* output,
 
 turbine_code
 turbine_pop(turbine_transform_id id, turbine_action_type* action_type,
-            char* action, int* priority, int* target)
+            char** action, int* priority, int* target)
 {
   // Check inputs
   if (id == TURBINE_ID_NULL)
@@ -572,7 +573,8 @@ turbine_pop(turbine_transform_id id, turbine_action_type* action_type,
 
   // Copy outputs
   *action_type = T->action_type;
-  strcpy(action, T->action);
+  *action = T->action;
+  T->action = NULL;
   *priority = T->priority;
   *target = T->target;
 
