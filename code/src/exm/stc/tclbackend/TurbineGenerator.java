@@ -896,9 +896,10 @@ public class TurbineGenerator implements CompilerBackend {
     String swiftFuncName = TclNamer.swiftFuncName(function);
     if (mode == TaskMode.CONTROL || mode == TaskMode.LOCAL ||
         mode == TaskMode.LOCAL_CONTROL) {
-      Expression iList = TclUtil.tclStringAsList(TclUtil.argsToExpr(inputs));
-      Expression oList = TclUtil.tclStringAsList(TclUtil.argsToExpr(inputs));
-      List<Expression> action = buildAction(swiftFuncName, Arrays.asList(oList, iList));
+      List<Expression> args = new ArrayList<Expression>();
+      args.addAll(TclUtil.varsToExpr(outputs));
+      args.addAll(TclUtil.argsToExpr(inputs));
+      List<Expression> action = buildAction(swiftFuncName, args);
       
       Expression priorityExpr = TclUtil.argToExpr(priority, true);
       Sequence rule = Turbine.rule(function, blockOn, action, mode,
