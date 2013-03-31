@@ -27,6 +27,9 @@ namespace eval turbine {
 
             set rule_id [ lreplace $msg 1 end ]
             set command [ lreplace $msg 0 0 ]
+            #TODO: did work of tokenizing command here, maybe can eval
+            #      more efficiently
+
             if { ! [ string length $command ] } {
                 # puts "empty"
                 break
