@@ -40,14 +40,6 @@ namespace eval turbine {
     namespace import c::new c::typeof
     namespace import c::insert c::log
 
-    proc call_composite { stack f outputs inputs blockon } {
-
-        set rule_id [ turbine::c::rule $f "$blockon"        \
-                          $turbine::CONTROL $adlb::RANK_ANY \
-                          "$f $stack $outputs $inputs" ]
-        return $rule_id
-    }
-
     # User function
     # This name conflicts with a TCL built-in - it cannot be exported
     # TODO: Replace this with tracef()

@@ -16,6 +16,12 @@
 # Code executed on engine processes
 
 namespace eval turbine {
+    
+    # Import adlb commands 
+    namespace import ::adlb::put ::adlb::get ::adlb::RANK_ANY
+
+    # Import turbine c command
+    namespace import c::ready c::pop
 
     proc engine { rules startup } {
 
@@ -32,10 +38,10 @@ namespace eval turbine {
         while {true} {
             while {true} {
                 # Do local work until we have none
-                set ready [ turbine::c::ready ]
-                if { [ llength $ready ] == 0 } break
-                foreach {transform} $ready {
-                    lassign [ turbine::c::pop $transform ] \
+                set ready_transforms [ ready ]
+                if { [ llength $ready_transforms ] == 0 } break
+                foreach {transform} $ready_transforms {
+                    lassign [ pop $transform ] \
                             type action priority target
                     set_priority $priority
                     release $transform $type $action $target
@@ -43,7 +49,7 @@ namespace eval turbine {
             }
 
             reset_priority
-            set msg [ adlb::get $WORK_TYPE(CONTROL) answer_rank ]
+            set msg [ get $WORK_TYPE(CONTROL) answer_rank ]
             if { [ string length $msg ] } {
                 control $msg $answer_rank
             } else break
@@ -66,13 +72,13 @@ namespace eval turbine {
             }
             2 { # $turbine::CONTROL
                 set prio [ get_priority ]
-                adlb::put $target $WORK_TYPE(CONTROL) \
+                put $target $WORK_TYPE(CONTROL) \
                     "command priority: $prio $action" \
                     $prio
             }
             3 { # $turbine::WORK
                 set prio [ get_priority ]
-                adlb::put $adlb::RANK_ANY $WORK_TYPE(WORK) \
+                put $RANK_ANY $WORK_TYPE(WORK) \
                     "$transform $action" $prio
             }
             default {

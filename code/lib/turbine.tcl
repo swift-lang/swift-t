@@ -18,11 +18,14 @@
 package provide turbine [ turbine::c::version ]
 
 namespace eval turbine {
-
+    namespace import c::rule
     namespace export init start finalize rule
 
     namespace import c::get_priority c::reset_priority c::set_priority
     namespace export get_priority reset_priority set_priority
+
+    # Import adlb commands 
+    namespace import ::adlb::put ::adlb::get
 
     # Mode is ENGINE, WORKER, or SERVER
     variable mode
@@ -269,18 +272,18 @@ namespace eval turbine {
         store_integer $output [ adlb_servers ]
     }
 
-    # Augment rule so that it can be run on worker
-    proc rule { name inputs action_type target action } {
+    # Send rule to control process to handle 
+    proc spawn_rule { name inputs action_type target action } {
         variable is_engine
         global WORK_TYPE
 
         if { $is_engine } {
-            c::rule $name $inputs $action_type $target $action
+            rule $name $inputs $action_type $target $action
         } elseif { [ llength $inputs ] == 0 } {
             release -1 $action_type $action $adlb::RANK_ANY
         } else {
             # Send to engine that can process it
-            adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
+            put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
                 [ list rule $name $inputs $action_type $adlb::RANK_ANY $action ] \
                 [ get_priority ]
         }
