@@ -67,13 +67,15 @@ namespace eval turbine {
                 eval $action
             }
             2 { # $turbine::CONTROL
+                set prio [ get_priority ]
                 adlb::put $target $WORK_TYPE(CONTROL) \
-                    "command priority: $turbine::priority $action" \
-                    $turbine::priority
+                    "command priority: $prio $action" \
+                    $prio
             }
             3 { # $turbine::WORK
+                set prio [ get_priority ]
                 adlb::put $adlb::RANK_ANY $WORK_TYPE(WORK) \
-                    "$transform $action" $turbine::priority
+                    "$transform $action" $prio
             }
             default {
                 error "unknown action type!"

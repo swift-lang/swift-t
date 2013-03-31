@@ -282,7 +282,7 @@ namespace eval turbine {
             # Send to engine that can process it
             adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
                 [ list rule $name $inputs $action_type $adlb::RANK_ANY $action ] \
-                $turbine::priority
+                [ get_priority ]
         }
     }
 }

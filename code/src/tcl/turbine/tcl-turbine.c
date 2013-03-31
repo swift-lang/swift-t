@@ -55,6 +55,7 @@
 
 /* current priority for rule */
 static int curr_priority = DEFAULT_PRIORITY;
+static Tcl_Obj *curr_priority_obj = NULL;
 
 /**
    @see TURBINE_CHECK
@@ -125,6 +126,7 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   else
     log_normalize();
 
+  curr_priority_obj = Tcl_NewIntObj(curr_priority);
   return TCL_OK;
 }
 
@@ -177,6 +179,21 @@ Turbine_Version_Cmd(ClientData cdata, Tcl_Interp *interp,
   else                                                          \
     TCL_RETURN_ERROR("unknown turbine entry type: %s", type);   \
   strcpy(entry.name, subscript);
+
+/**
+   usage: reset_priority
+ */
+static int
+Turbine_Get_Priority_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  // Return a tcl int
+  Tcl_SetIntObj(curr_priority_obj, curr_priority);
+  Tcl_IncrRefCount(curr_priority_obj);
+  Tcl_SetObjResult(interp, curr_priority_obj);
+  return TCL_OK;
+}
 
 /**
    usage: reset_priority
@@ -626,6 +643,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("init",        Turbine_Init_Cmd);
   COMMAND("engine_init", Turbine_Engine_Init_Cmd);
   COMMAND("version",     Turbine_Version_Cmd);
+  COMMAND("get_priority",   Turbine_Get_Priority_Cmd);
   COMMAND("reset_priority", Turbine_Reset_Priority_Cmd);
   COMMAND("set_priority",   Turbine_Set_Priority_Cmd);
   COMMAND("rule",        Turbine_Rule_Cmd);
