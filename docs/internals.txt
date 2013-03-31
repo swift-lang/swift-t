@@ -832,9 +832,10 @@ be disabled by setting environment variable +TURBINE_LOG=0+.
 === MPE
 
 MPE is the primary way to obtain profiling and debugging information
-from Turbine/ADLB.  MPE log entries are automatically created by ADLB
-if enabled at configure time.  One additional MPE function is
-available from Turbine:
+from Turbine/ADLB.  CPU profiling information can also be obtained
+without recompilation as described in the CPU profiling section below.
+MPE log entries are automatically created by ADLB if enabled at configure
+time.  One additional MPE function is available from Turbine:
 
 +metadata+::
 Simply insert the given string into the log.
@@ -859,3 +860,32 @@ Local Variables:
 mode: doc
 End:
 ////
+
+
+== CPU Profiling
+It is possible to obtain information about CPU usage in Turbine by using
+the Google perftools CPU profiler.  This profiler is non-intrusive: it
+doesn't require recompilation, only that the application is compiled with
+debugging symbols (the default).  The profiler is a sampling profiler,
+which means that it periodically snapshots the program's stack.  This is
+good for finding out where your program spends its time, but will not
+provide information on the number of times a function is called, or the
+duration of an individual function call.  The tools are available at
+http://code.google.com/p/gperftools/, and may be available as an operation
+system package (e.g. gperftools in Ubuntu).  Once installed, you can
+enable the profiler with the CPUPROFILE and LD_PRELOAD environment
+variables.  E.g. if using Mpich, which automatically passes environment
+variables to MPI processes, the following is sufficient:
+
+    export LD_PRELOAD=/usr/lib/libprofiler.so
+    export CPUPROFILE=./turbine.prof
+    turbine -n8 program.tcl
+
+This will output profiling information files with the ./turbine.prof prefix
+and the process ID appended.  Once you have the profiles, you can view the
+information in various formats, including text and graphical.
+
+    pprof --text `which tclsh8.5` turbine.prof_12345 > turbine.prof_12345.txt
+    pprof --pdf `which tclsh8.5` turbine.prof_12345 > turbine.prof_12345.pdf
+
+Note: on Ubuntu, pprof is renamed to google-pprof.
