@@ -35,11 +35,9 @@ namespace eval turbine {
                 set ready [ turbine::c::ready ]
                 if { [ llength $ready ] == 0 } break
                 foreach {transform} $ready {
-                    set L [ turbine::c::pop $transform ]
-                    set type     [ lindex $L 0 ]
-                    set action   [ lindex $L 1 ]
-                    set_priority [ lindex $L 2 ]
-                    set target   [ lindex $L 3 ]
+                    lassign [ turbine::c::pop $transform ] \
+                            type action priority target
+                    set_priority $priority
                     release $transform $type $action $target
                 }
             }
