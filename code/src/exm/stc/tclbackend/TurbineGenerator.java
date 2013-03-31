@@ -1549,13 +1549,10 @@ public class TurbineGenerator implements CompilerBackend {
         waitFor.add(waitExpr);
       }
       
-      // Set priority (if provided)
-      setPriority(priority);
       
       Expression action = buildAction(uniqueName, passIn);
 
-      boolean local = execContextStack.peek() == ExecContext.CONTROL;
-      
+      Expression priorityExpr = priority == null ? null : argToExpr(priority);
       if (useDeepWait) {
         // Nesting depth of arrays (0 == not array)
         int depths[] = new int[waitVars.size()];
@@ -1573,15 +1570,16 @@ public class TurbineGenerator implements CompilerBackend {
           }
           isFile[i] = Types.isFile(baseType);
         }
-        pointStack.peek().add(Turbine.deepRule(uniqueName, waitFor, depths,
-                                             isFile, action, mode, local));
+
+        pointStack.peek().append(Turbine.deepRule(uniqueName, waitFor, depths,
+                                 isFile, action, mode, priorityExpr, execContextStack.peek()));
+
       } else {
         // Whether we can enqueue rules locally
-        pointStack.peek().add(
+        pointStack.peek().append(
               Turbine.rule(uniqueName, waitFor, action, mode, 
-                           Target.rankAny(), local));
+                           Target.rankAny(), priorityExpr, execContextStack.peek()));
       }
-      clearPriority(priority);
       
       pointStack.push(constructProc);
       
@@ -2067,7 +2065,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     splitBody.add(Turbine.rule(outerProcName, new ArrayList<Value>(0),
                     new TclList(outerRecCall), TaskMode.CONTROL, 
-                    Target.rankAny(), true));
+                    Target.rankAny(), null, execContextStack.peek()));
 
     pointStack.push(inner);
   }
@@ -2344,7 +2342,7 @@ public class TurbineGenerator implements CompilerBackend {
     String uniqueLoopName = uniqueTCLFunctionName(loopName);
 
     pointStack.peek().add(Turbine.loopRule(
-        uniqueLoopName, firstIterArgs, blockingVals));
+        uniqueLoopName, firstIterArgs, blockingVals, execContextStack.peek()));
 
     Sequence loopBody = new Sequence();
     Proc loopProc = new Proc(uniqueLoopName, usedTclFunctionNames,
@@ -2387,7 +2385,7 @@ public class TurbineGenerator implements CompilerBackend {
       }
     }
     pointStack.peek().add(Turbine.loopRule(loopName,
-        nextIterArgs, blockingVals));
+        nextIterArgs, blockingVals, execContextStack.peek()));
   }
 
   @Override

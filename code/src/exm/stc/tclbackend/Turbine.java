@@ -23,6 +23,7 @@ import java.util.List;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.util.Pair;
 import exm.stc.tclbackend.tree.Command;
@@ -420,15 +421,59 @@ class Turbine
    * @param type
    * @return
    */
-  private static Command ruleHelper(String symbol, 
+  private static Sequence ruleHelper(String symbol, 
       List<? extends Expression> inputs,
-      Expression action, TaskMode type, Target target, boolean local) {
-    Token s = new Token(symbol);
-    TclList i = new TclList(inputs);
+      Expression action, TaskMode type, Target target,
+      Expression priority, ExecContext execCx) {
+
+    if (inputs.isEmpty()) {
+      return spawnTask(action, type, target, priority, execCx);
+    }
     
-    return new Command(local ? C_RULE : RULE, s, i,
-                       tclRuleType(type), target.toTcl(), action);
+    Sequence res = new Sequence();
+    if (priority != null)
+       res.add(setPriority(priority));
+    
+
+    res.add(new Command(execCx == ExecContext.CONTROL ? C_RULE : RULE, 
+                       new Token(symbol), new TclList(inputs),
+                       tclRuleType(type), target.toTcl(), action));
+
+    if (priority != null)
+       res.add(resetPriority());
+    return res;
   }
+
+  private static Sequence spawnTask(Expression action, TaskMode type, Target target,
+      Expression priority, ExecContext execCx) {
+    Token ADLB_PUT = new Token("adlb::put");
+    LiteralInt TURBINE_NULL_RULE = new LiteralInt(-1);
+    Sequence res = new Sequence();
+    if ((type == TaskMode.LOCAL || type == TaskMode.LOCAL_CONTROL)
+        && execCx == ExecContext.CONTROL) {
+      // TODO: add directly to local control work queue
+      throw new STCRuntimeError("Not implemented");
+    } else {
+      assert(type == TaskMode.CONTROL || type == TaskMode.WORKER);
+      // TODO: add to shared work queue
+      res.add(new Command(ADLB_PUT, target.toTcl(), adlbWorkType(type),
+                  new TclString(Arrays.asList(TURBINE_NULL_RULE, action)),
+                  priority));
+    }
+    return res;
+  }
+
+  private static TclTree adlbWorkType(TaskMode type) {
+    // TODO Auto-generated method stub
+    throw new STCRuntimeError("Not implemented");
+  }
+  
+
+  private static Expression defaultPriority() {
+    // TODO Auto-generated method stub
+    throw new STCRuntimeError("Not implemented");
+  }
+
 
   /**
    * @param symbol
@@ -437,16 +482,15 @@ class Turbine
    * @param mode
    * @return
    */
-  public static Command rule(String symbol,
+  public static Sequence rule(String symbol,
       List<? extends Expression> blockOn, Expression action, TaskMode mode,
-      Target target, 
-      boolean local) {
-    return ruleHelper(symbol, blockOn, action, mode, target, local);
+      Target target, Expression priority, ExecContext execCx) {
+    return ruleHelper(symbol, blockOn, action, mode, target, priority, execCx);
   }
 
-  public static Command deepRule(String symbol,
+  public static Sequence deepRule(String symbol,
       List<? extends Expression> inputs, int[] depths, boolean[] isFile,
-      Expression action, TaskMode mode, boolean local) {
+      Expression action, TaskMode mode, Expression priority, ExecContext execCx) {
     assert(inputs.size() == depths.length);
     assert(inputs.size() == isFile.length);
     
@@ -461,13 +505,23 @@ class Turbine
       isFileExprs.add(LiteralInt.boolValue(b));
     }
     
-    return new Command(DEEPRULE, new Token(symbol),
+    Sequence res = new Sequence();
+    if (priority != null)
+       res.add(setPriority(priority));
+    res.add(new Command(DEEPRULE, new Token(symbol),
           new TclList(inputs), new TclList(depthExprs), new TclList(isFileExprs),
-          tclRuleType(mode), action);
+          tclRuleType(mode), action));
+    if (priority != null)
+      res.add(resetPriority());
+    return res;
   }
   
-  public static Command loopRule(String symbol,
-      List<Value> args, List<? extends Expression> blockOn) {
+  public static Sequence loopRule(String symbol,
+      List<Value> args, List<? extends Expression> blockOn,
+      ExecContext execCx) {
+    // Assume executes on control for now
+    assert (execCx == ExecContext.CONTROL);
+    
     List<Expression> actionElems = new ArrayList<Expression>();
     actionElems.add(new Token(symbol));
     for (Value arg: args) {
@@ -475,7 +529,7 @@ class Turbine
     }
     TclList action = new TclList(actionElems);
     return ruleHelper(symbol, blockOn, action, TaskMode.CONTROL, 
-                      Target.rankAny(), true);
+                      Target.rankAny(), defaultPriority(), execCx);
   }
 
   public static TclTree allocateStruct(String tclName) {
