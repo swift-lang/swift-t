@@ -189,7 +189,9 @@ Turbine_Get_Priority_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(1);
   // Return a tcl int
-  Tcl_SetIntObj(curr_priority_obj, curr_priority);
+  // Tcl_SetIntObj doesn't like shared values, but it should be
+  // safe in our use case to modify in-place
+  curr_priority_obj->internalRep.longValue = curr_priority;
   Tcl_IncrRefCount(curr_priority_obj);
   Tcl_SetObjResult(interp, curr_priority_obj);
   return TCL_OK;
