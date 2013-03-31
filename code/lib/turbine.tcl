@@ -21,8 +21,8 @@ namespace eval turbine {
 
     namespace export init start finalize rule
 
-    namespace import c::reset_priority c::set_priority
-    namespace export reset_priority set_priority
+    namespace import c::get_priority c::reset_priority c::set_priority
+    namespace export get_priority reset_priority set_priority
 
     # Mode is ENGINE, WORKER, or SERVER
     variable mode
