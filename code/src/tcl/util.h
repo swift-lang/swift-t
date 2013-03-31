@@ -111,6 +111,15 @@ void tcl_dict_put(Tcl_Interp* interp, Tcl_Obj* dict,
  */
 Tcl_Obj* tcl_list_new(int count, char** strings);
 
+/**
+   Print error message and return a Tcl error
+ */
+#define TCL_RETURN_ERROR(format, args...)                        \
+  {                                                              \
+    tcl_condition_failed(interp, objv[0], format, ## args);      \
+    return TCL_ERROR;                                            \
+  }
+
 /*
    Tcl checks follow.  Note that these are disabled by NDEBUG.
    Thus, they should never do anything in a correct Turbine program.
@@ -119,15 +128,6 @@ Tcl_Obj* tcl_list_new(int count, char** strings);
 
 #define TCL_CHECK(rc) { if (rc != TCL_OK) { return TCL_ERROR; }}
 
-/**
-   Print error message and return a Tcl error
-   Disabled by NDEBUG
- */
-#define TCL_RETURN_ERROR(format, args...)                        \
-  {                                                              \
-    tcl_condition_failed(interp, objv[0], format, ## args);      \
-    return TCL_ERROR;                                            \
-  }
 
 /**
    If rc is not TCL_OK, return a Tcl error
@@ -150,7 +150,6 @@ Tcl_Obj* tcl_list_new(int count, char** strings);
 #else
 
 #define TCL_CHECK(rc) ((void)(rc))
-#define TCL_RETURN_ERROR(format, args...)
 #define TCL_CHECK_MSG(rc, format, args...) ((void)(rc))
 #define TCL_CONDITION(condition, format, args...) ((void)(condition))
 
