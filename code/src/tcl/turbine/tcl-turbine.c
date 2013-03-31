@@ -96,11 +96,11 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   int rc;
   rc = Tcl_GetIntFromObj(interp, objv[1], &amserver);
-  assert(rc == TCL_OK);
+  TCL_CHECK(rc);
   rc = Tcl_GetIntFromObj(interp, objv[2], &rank);
-  assert(rc == TCL_OK);
+  TCL_CHECK(rc);
   rc = Tcl_GetIntFromObj(interp, objv[3], &size);
-  assert(rc == TCL_OK);
+  TCL_CHECK(rc);
 
   turbine_code code = turbine_init(amserver, rank, size);
   if (code != TURBINE_SUCCESS)
