@@ -52,7 +52,25 @@
 /** Number of workers associated with this server */
 static int xlb_my_workers;
 
+/** Track time of last action */
 double xlb_time_last_action;
+
+/** Cached recent timestamp */
+static double xlb_time_approx_now;
+
+static inline void update_time_last_action(adlb_tag tag)
+{
+  // Update timestamp:
+  if (tag != ADLB_TAG_CHECK_IDLE &&
+      tag != ADLB_TAG_SYNC_REQUEST)
+    xlb_time_last_action = xlb_time_approx_now;
+}
+
+static inline void update_cached_time()
+{
+  xlb_time_approx_now = MPI_Wtime();
+}
+
 
 /** Workers that have called ADLB_Shutdown() */
 struct list_i workers_shutdown;
@@ -164,6 +182,8 @@ ADLB_Server(long max_memory)
 {
   TRACE_START;
   mm_set_max(mm_default, max_memory);
+  
+  update_cached_time(); // Initial timestamp
   while (true)
   {
     if (shutting_down)
@@ -172,7 +192,9 @@ ADLB_Server(long max_memory)
       check_idle();
     if (shutting_down)
       break;
-
+    
+    update_cached_time(); // Periodically refresh timestamp
+  
     adlb_code code = serve_several();
     ADLB_CHECK(code);
    
@@ -287,6 +309,9 @@ xlb_handle_pending(MPI_Status* status, bool *sync_rejected)
 
   // Call appropriate RPC handler:
   adlb_code rc = xlb_handle(status->MPI_TAG, status->MPI_SOURCE);
+
+  // Track for idle time
+  update_time_last_action(status->MPI_TAG);
   ADLB_CHECK(rc);
   return rc;
 }

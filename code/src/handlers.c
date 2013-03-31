@@ -172,11 +172,6 @@ xlb_handle(adlb_tag tag, int caller)
   // Call handler:
   adlb_code result = handlers[tag](caller);
 
-  // Update timestamp:
-  if (tag != ADLB_TAG_CHECK_IDLE &&
-      tag != ADLB_TAG_SYNC_REQUEST)
-    xlb_time_last_action = MPI_Wtime();
-
   MPE_LOG(xlb_mpe_svr_busy_end);
 
   return result;
