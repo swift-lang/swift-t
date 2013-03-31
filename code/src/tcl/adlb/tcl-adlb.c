@@ -463,7 +463,7 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_ObjSetVar2(interp, tcl_answer_rank_name, NULL, tcl_answer_rank,
                  EMPTY_FLAG);
 
-  Tcl_SetObjResult(interp, Tcl_NewStringObj(result, -1));
+  Tcl_SetObjResult(interp, Tcl_NewStringObj(result, work_len - 1));
   return TCL_OK;
 }
 

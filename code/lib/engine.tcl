@@ -41,8 +41,7 @@ namespace eval turbine {
                 set ready_transforms [ ready ]
                 if { [ llength $ready_transforms ] == 0 } break
                 foreach {transform} $ready_transforms {
-                    lassign [ pop $transform ] \
-                            type action priority target
+                    pop $transform type action priority target
                     set_priority $priority
                     release $transform $type $action $target
                 }

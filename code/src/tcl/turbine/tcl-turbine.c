@@ -317,7 +317,7 @@ static int
 Turbine_Pop_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(2);
+  TCL_ARGS(6); // ID, plus type, action, priority and target vars to set
 
   turbine_transform_id id;
   int error = Tcl_GetLongFromObj(interp, objv[1], &id);
@@ -333,15 +333,13 @@ Turbine_Pop_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(code == TURBINE_SUCCESS,
                  "could not pop transform id: %li", id);
 
-  Tcl_Obj* items[4];
-  items[0] = Tcl_NewIntObj(type);
-  items[1] = Tcl_NewStringObj(action, -1);
+  Tcl_ObjSetVar2(interp, objv[2], NULL, Tcl_NewIntObj(type),
+                 EMPTY_FLAG);
+  Tcl_ObjSetVar2(interp, objv[3], NULL, Tcl_NewStringObj(action, -1),
+                 EMPTY_FLAG);
   free(action);
-  items[2] = Tcl_NewIntObj(priority);
-  items[3] = Tcl_NewIntObj(target);
-
-  Tcl_Obj* result = Tcl_NewListObj(4, items);
-  Tcl_SetObjResult(interp, result);
+  Tcl_ObjSetVar2(interp, objv[4], NULL, Tcl_NewIntObj(priority), EMPTY_FLAG);
+  Tcl_ObjSetVar2(interp, objv[5], NULL, Tcl_NewIntObj(target), EMPTY_FLAG);
   return TCL_OK;
 }
 
