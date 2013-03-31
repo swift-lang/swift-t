@@ -182,9 +182,10 @@ namespace eval turbine {
             set s [ expr {$i *  $step} ]
             # end
             set e [ expr {$s + $step - 1} ]
+            set prio [ get_priority ]
             adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
-                "command priority: $turbine::priority range_work $c $s $e 1" \
-                $turbine::priority
+                "command priority: $prio range_work $c $s $e 1" \
+                $prio
         }
         # close container
         adlb::slot_drop $result
