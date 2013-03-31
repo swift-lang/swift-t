@@ -78,7 +78,7 @@ public class BuiltinOps {
               argExpr.get(0), argExpr.get(1));
           if (op == BuiltinOpcode.NEQ_STRING) {
             // Negate previous result
-            rhs = new TclExpr(false, TclExpr.NOT, rhs);
+            rhs = new TclExpr(true, TclExpr.NOT, rhs);
           }
         } else if (op == BuiltinOpcode.COPY_BLOB ||
             op ==  BuiltinOpcode.COPY_BOOL ||

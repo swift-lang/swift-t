@@ -110,5 +110,11 @@ public class Square extends Expression
     } 
     return new Square(newE);
   }
+  
+
+  @Override
+  public boolean supportsStringList() {
+    return true;
+  }
 
 }

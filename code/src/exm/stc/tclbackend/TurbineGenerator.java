@@ -1552,7 +1552,7 @@ public class TurbineGenerator implements CompilerBackend {
       // Set priority (if provided)
       setPriority(priority);
       
-      TclList action = buildAction(uniqueName, passIn);
+      Expression action = buildAction(uniqueName, passIn);
 
       boolean local = execContextStack.peek() == ExecContext.CONTROL;
       
@@ -1697,9 +1697,8 @@ public class TurbineGenerator implements CompilerBackend {
       pointStack.peek().append(seq);
     }
 
-    private TclList buildAction(String procName,
+    private Expression buildAction(String procName,
         List<Var> usedVariables) {
-
       ArrayList<Expression> ruleTokens = new ArrayList<Expression>();
       ruleTokens.add(new Token(procName));
       ruleTokens.add(new Value(Turbine.LOCAL_STACK_NAME));
@@ -1726,8 +1725,12 @@ public class TurbineGenerator implements CompilerBackend {
               + v);
         }
       }
-      return new TclList(ruleTokens);
+
+      // Try to build as string as we need to convert to string anyway
+      return TclUtil.tclStringAsList(ruleTokens);
     }
+
+
 
     @Override
     public void startSwitch(Arg switchVar, List<Integer> caseLabels,

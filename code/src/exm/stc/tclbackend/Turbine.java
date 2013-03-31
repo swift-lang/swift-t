@@ -422,7 +422,7 @@ class Turbine
    */
   private static Command ruleHelper(String symbol, 
       List<? extends Expression> inputs,
-      TclList action, TaskMode type, Target target, boolean local) {
+      Expression action, TaskMode type, Target target, boolean local) {
     Token s = new Token(symbol);
     TclList i = new TclList(inputs);
     
@@ -438,7 +438,7 @@ class Turbine
    * @return
    */
   public static Command rule(String symbol,
-      List<? extends Expression> blockOn, TclList action, TaskMode mode,
+      List<? extends Expression> blockOn, Expression action, TaskMode mode,
       Target target, 
       boolean local) {
     return ruleHelper(symbol, blockOn, action, mode, target, local);
@@ -446,7 +446,7 @@ class Turbine
 
   public static Command deepRule(String symbol,
       List<? extends Expression> inputs, int[] depths, boolean[] isFile,
-      TclList action, TaskMode mode, boolean local) {
+      Expression action, TaskMode mode, boolean local) {
     assert(inputs.size() == depths.length);
     assert(inputs.size() == isFile.length);
     

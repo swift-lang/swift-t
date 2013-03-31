@@ -34,4 +34,9 @@ public abstract class Expression extends TclTree
    * @param mode how to escape expression  
    */
   public abstract void appendTo(StringBuilder sb, ExprContext mode);
+
+  /**
+   * @return true if we can include in a string that is valid tcl list
+   */
+  public abstract boolean supportsStringList();
 }

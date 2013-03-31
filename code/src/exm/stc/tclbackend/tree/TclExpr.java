@@ -32,6 +32,10 @@ public class TclExpr extends Square {
       sb.append(")");
     }
 
+    @Override
+    public boolean supportsStringList() {
+      return false;
+    }
   }
   
   public static class TclExprParen extends Expression {
@@ -61,6 +65,10 @@ public class TclExpr extends Square {
         sb.append(")");
     }
 
+    @Override
+    public boolean supportsStringList() {
+      return false;
+    }
   }
 
   private static final Token EXPR = new Token("expr");

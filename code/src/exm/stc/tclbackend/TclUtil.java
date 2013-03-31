@@ -103,4 +103,27 @@ public class TclUtil {
       result.add(argToExpr(a));
     return result;
   }
+  
+  /**
+   * Try to pack list of expressions into a string that is a valid
+   * tcl list
+   * Fallback to list if we don't know how to do escaping correctly
+   * @param ruleTokens
+   * @return
+   */
+  public static Expression tclStringAsList(List<Expression> ruleTokens) {
+    boolean canUseString = true;
+    for (Expression tok: ruleTokens) {
+      if (!tok.supportsStringList()) {
+        canUseString = false;
+        break;
+      }
+    }
+    
+    if (canUseString) {
+      return new TclString(ruleTokens, true);
+    } else {
+      return new TclList(ruleTokens);
+    }
+  }
 }
