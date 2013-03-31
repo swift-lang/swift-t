@@ -219,7 +219,7 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   // Lookup current priority
   int priority = 0;
-  Tcl_Obj* p = Tcl_GetVar2Ex(interp, "turbine::priority", NULL, 0);
+  Tcl_Obj* p = Tcl_GetVar2Ex(interp, "::turbine::priority", NULL, 0);
   TCL_CONDITION(p != NULL, "could not access turbine::priority");
   rc = Tcl_GetIntFromObj(interp, p, &priority);
   TCL_CHECK_MSG(rc, "turbine::priority is not an integer!");
