@@ -475,7 +475,7 @@ class Turbine
   private static Expression currentPriority() {
     // TODO: is this the most sensible?
     // get the current turbine priority
-    return new Square("turbine::priority");
+    return new Square("turbine::get_priority");
   }
 
 
