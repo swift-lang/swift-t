@@ -17,7 +17,6 @@ public class TclExpr extends Square {
     
     @Override
     public void appendTo(StringBuilder sb, ExprContext mode) {
-      assert(mode != ExprContext.VALUE_STRING);
       sb.append(fn);
       sb.append("(");
       boolean first = true;
@@ -49,7 +48,6 @@ public class TclExpr extends Square {
     
     @Override
     public void appendTo(StringBuilder sb, ExprContext mode) {
-      assert(mode != ExprContext.VALUE_STRING);
       if (parenthesise)
         sb.append("(");
       boolean first = true;
