@@ -71,11 +71,19 @@ void workqueue_add(int type, int putter, int priority, int answer,
 xlb_work_unit* workqueue_get(int target, int type);
 
 /**
-   Are we able to release a parallel task?
+   Are we able to release a parallel task of type?
    If so, return true, put the work unit in wu, and the ranks in
    ranks.  Caller must free ranks
  */
-bool workqueue_pop_parallel(xlb_work_unit** wu, int** ranks);
+bool workqueue_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type);
+
+extern long workqueue_parallel_task_count;
+
+static inline int workqueue_parallel_tasks()
+{
+  return workqueue_parallel_task_count;
+}
+
 
 typedef struct {
   adlb_code (*f)(void*, xlb_work_unit*);

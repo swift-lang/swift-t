@@ -76,6 +76,9 @@ static struct rbtree* typed_work;
  */
 static struct rbtree* parallel_work;
 
+// Track number of parallel tasks
+long workqueue_parallel_task_count;
+
 void
 workqueue_init(int work_types)
 {
@@ -85,6 +88,7 @@ workqueue_init(int work_types)
   typed_work = malloc(sizeof(struct rbtree) * work_types);
   valgrind_assert(typed_work != NULL);
   parallel_work = malloc(sizeof(struct rbtree) * work_types);
+  workqueue_parallel_task_count = 0;
   valgrind_assert(parallel_work != NULL);
   for (int i = 0; i < work_types; i++)
   {
@@ -132,6 +136,7 @@ workqueue_add(int type, int putter, int priority, int answer,
     TRACE("workqueue_add(): parallel task");
     struct rbtree* T = &parallel_work[type];
     rbtree_add(T, -priority, wu);
+    workqueue_parallel_task_count++;
   }
   else
   {
@@ -214,16 +219,17 @@ static bool pop_parallel_cb(struct rbtree_node* node,
                             void* user_data);
 
 bool
-workqueue_pop_parallel(xlb_work_unit** wu, int** ranks)
+workqueue_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
 {
   TRACE_START;
   bool result = false;
-  struct pop_parallel_data data = { -1, NULL, NULL, NULL };
-  for (int type = 0; type < xlb_types_size; type++)
+  struct rbtree* T = &parallel_work[work_type];
+  TRACE("type: %i size: %i", type, rbtree_size(T));
+  // Common case is empty: want to exit asap
+  if (rbtree_size(T) == 0)
   {
-    data.type = type;
-    struct rbtree* T = &parallel_work[type];
-    TRACE("type: %i size: %i", type, rbtree_size(T));
+    struct pop_parallel_data data = { -1, NULL, NULL, NULL };
+    data.type = work_type;
     bool found = rbtree_iterator(T, pop_parallel_cb, &data);
     if (found)
     {
@@ -233,10 +239,9 @@ workqueue_pop_parallel(xlb_work_unit** wu, int** ranks)
       // Release memory:
       rbtree_remove_node(T, data.node);
       free(data.node);
-      goto end;
+      workqueue_parallel_task_count--;
     }
   }
-  end:
   TRACE_END;
   return result;
 }
@@ -335,6 +340,7 @@ workqueue_steal(int max_memory, const int *steal_type_counts,
         code = workqueue_steal_type(&(typed_work[t]), single_to_send, cb);
         ADLB_CHECK(code);
         code = workqueue_steal_type(&(parallel_work[t]), par_to_send, cb);
+        workqueue_parallel_task_count -= par_to_send;
         ADLB_CHECK(code);
       }
     }

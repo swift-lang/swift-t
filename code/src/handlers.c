@@ -198,7 +198,7 @@ handle_sync(int caller)
   return rc;
 }
 
-static inline adlb_code check_parallel_tasks(void);
+static inline adlb_code check_parallel_tasks(int work_type);
 
 static adlb_code put(int type, int putter, int priority, int answer,
                      int target, int length, int parallelism);
@@ -219,7 +219,7 @@ handle_put(int caller)
                p.length, p.parallelism);
   ADLB_CHECK(rc);
 
-  rc = check_parallel_tasks();
+  rc = check_parallel_tasks(p.type);
   ADLB_CHECK(rc);
 
   MPE_LOG(xlb_mpe_svr_put_end);
@@ -351,7 +351,7 @@ handle_get(int caller)
     xlb_requestqueue_recheck();
   }
 
-  adlb_code rc = check_parallel_tasks();
+  adlb_code rc = check_parallel_tasks(type);
   ADLB_CHECK(rc);
 
   end:
@@ -420,15 +420,20 @@ xlb_requestqueue_recheck()
 }
 
 /**
-   Try to release a parallel task
+   Try to release a parallel task of type
  */
 static inline adlb_code
-check_parallel_tasks()
+check_parallel_tasks(int type)
 {
   TRACE_START;
   xlb_work_unit* wu;
   int* ranks = NULL;
-  bool found = workqueue_pop_parallel(&wu, &ranks);
+
+  // Fast path for no parallel task case
+  if (workqueue_parallel_tasks() == 0)
+    return ADLB_NOTHING;
+
+  bool found = workqueue_pop_parallel(&wu, &ranks, type);
   if (! found)
     return ADLB_NOTHING;
   for (int i = 0; i < wu->parallelism; i++)
