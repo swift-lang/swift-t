@@ -97,6 +97,7 @@ public class TurbineGenerator implements CompilerBackend {
   private final List<String> autoPaths = new ArrayList<String>();
   
   private static final String TCLTMP_SPLITLEN = "tcltmp:splitlen";
+  private static final String TCLTMP_SPLITEND = "tcltmp:splitend";
   private static final String TCLTMP_CONTAINER_SIZE = "tcltmp:container_sz";
   private static final String TCLTMP_ARRAY_CONTENTS = "tcltmp:contents";
   private static final String TCLTMP_RANGE_LO = "tcltmp:lo";
@@ -897,7 +898,7 @@ public class TurbineGenerator implements CompilerBackend {
         mode == TaskMode.LOCAL_CONTROL) {
       Expression iList = TclUtil.tclStringAsList(TclUtil.argsToExpr(inputs));
       Expression oList = TclUtil.tclStringAsList(TclUtil.argsToExpr(inputs));
-      Expression action = buildAction(swiftFuncName, Arrays.asList(oList, iList));
+      List<Expression> action = buildAction(swiftFuncName, Arrays.asList(oList, iList));
       
       Expression priorityExpr = TclUtil.argToExpr(priority, true);
       Sequence rule = Turbine.rule(function, blockOn, action, mode,
@@ -1550,7 +1551,7 @@ public class TurbineGenerator implements CompilerBackend {
       }
       
       
-      Expression action = buildActionFromVars(uniqueName, passIn);
+      List<Expression> action = buildActionFromVars(uniqueName, passIn);
 
       Expression priorityExpr = TclUtil.argToExpr(priority, true);
       if (useDeepWait) {
@@ -1695,17 +1696,16 @@ public class TurbineGenerator implements CompilerBackend {
       pointStack.peek().append(seq);
     }
 
-    private Expression buildAction(String procName, List<Expression> args) {
+    private List<Expression> buildAction(String procName, List<Expression> args) {
       ArrayList<Expression> ruleTokens = new ArrayList<Expression>();
       ruleTokens.add(new Token(procName));
       ruleTokens.add(new Value(Turbine.LOCAL_STACK_NAME));
       ruleTokens.addAll(args);
 
-      // Try to build as string as we need to convert to string anyway
-      return TclUtil.tclStringAsList(ruleTokens); 
+      return ruleTokens; 
     }
     
-    private Expression buildActionFromVars(String procName, List<Var> usedVariables) {
+    private List<Expression> buildActionFromVars(String procName, List<Var> usedVariables) {
       List<Expression> exprs = new ArrayList<Expression>();
       // Pass in variable ids directly in rule string
       for (Var v: usedVariables) {
@@ -2062,14 +2062,17 @@ public class TurbineGenerator implements CompilerBackend {
     outerRecCall.addAll(commonArgs);
     outerRecCall.add(new Value(splitStart));
     // splitEnd = min(hi, start + skip - 1)
-    TclExpr splitEnd = new TclExpr(TclExpr.min(new Value(TCLTMP_RANGE_HI),
+    
+    TclExpr splitEndExpr = new TclExpr(TclExpr.min(new Value(TCLTMP_RANGE_HI),
         TclExpr.group(new Value(splitStart), TclExpr.PLUS,
                       new Value(skip), TclExpr.MINUS, LiteralInt.ONE)));
-    outerRecCall.add(splitEnd);
+    splitBody.add(new SetVariable(TCLTMP_SPLITEND, splitEndExpr));
+    
+    outerRecCall.add(new Value(TCLTMP_SPLITEND));
     outerRecCall.add(incVal);
 
     splitBody.add(Turbine.rule(outerProcName, new ArrayList<Value>(0),
-                    new TclList(outerRecCall), TaskMode.CONTROL, 
+                    outerRecCall, TaskMode.CONTROL, 
                     Target.rankAny(), null, execContextStack.peek()));
 
     pointStack.push(inner);
