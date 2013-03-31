@@ -42,11 +42,5 @@ public class LiteralFloat extends Expression {
     }
     sb.append(tclLiteral);
   }
-  
-
-  @Override
-  public boolean supportsStringList() {
-    return true;
-  }
 
 }

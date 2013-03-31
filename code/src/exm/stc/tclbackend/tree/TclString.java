@@ -94,11 +94,6 @@ public class TclString extends Expression
     expr.appendTo(sb, mode);
   }
   
-  @Override
-  public boolean supportsStringList() {
-    return false;
-  }
-  
   /**
    * See http://tmml.sourceforge.net/doc/tcl/Tcl.html
    * for information about tcl escape sequences

@@ -46,8 +46,4 @@ public class LiteralInt extends Expression {
     return ((LiteralInt)o).value == this.value;
   }
 
-  @Override
-  public boolean supportsStringList() {
-    return true;
-  }
 }

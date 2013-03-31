@@ -79,8 +79,11 @@ public class Square extends Expression
   @Override
   public void appendTo(StringBuilder sb, ExprContext mode)
   {
-
-    sb.append("[ ");
+    if (mode == ExprContext.VALUE_STRING) {
+      sb.append("\\[ ");
+    } else {
+      sb.append("[ ");
+    }
     Iterator<Expression> it = items.iterator();
     while (it.hasNext())
     {
@@ -89,7 +92,11 @@ public class Square extends Expression
       if (it.hasNext())
         sb.append(' ');
     }
-    sb.append(" ]");
+    if (mode == ExprContext.VALUE_STRING) {
+      sb.append(" \\]");
+    } else {
+      sb.append(" ]");
+    }
   }
 
   public static Square fnCall(String fnName, Expression... args) {
@@ -102,12 +109,6 @@ public class Square extends Expression
       i++;
     } 
     return new Square(newE);
-  }
-  
-
-  @Override
-  public boolean supportsStringList() {
-    return true;
   }
 
 }

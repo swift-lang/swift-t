@@ -29,9 +29,4 @@ public class Not extends Expression {
     expr.appendTo(sb, mode);
   }
 
-  @Override
-  public boolean supportsStringList() {
-    return true;
-  }
-
 }

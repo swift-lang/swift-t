@@ -38,9 +38,4 @@ public class Expand extends Expression {
     expr.appendTo(sb, mode);
   }
 
-  @Override
-  public boolean supportsStringList() {
-    return false;
-  }
-
 }

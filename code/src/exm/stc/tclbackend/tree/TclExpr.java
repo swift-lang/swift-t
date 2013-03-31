@@ -17,6 +17,7 @@ public class TclExpr extends Square {
     
     @Override
     public void appendTo(StringBuilder sb, ExprContext mode) {
+      assert(mode != ExprContext.VALUE_STRING);
       sb.append(fn);
       sb.append("(");
       boolean first = true;
@@ -31,10 +32,6 @@ public class TclExpr extends Square {
       sb.append(")");
     }
 
-    @Override
-    public boolean supportsStringList() {
-      return false;
-    }
   }
   
   public static class TclExprParen extends Expression {
@@ -48,6 +45,7 @@ public class TclExpr extends Square {
     
     @Override
     public void appendTo(StringBuilder sb, ExprContext mode) {
+      assert(mode != ExprContext.VALUE_STRING);
       if (parenthesise)
         sb.append("(");
       boolean first = true;
@@ -63,10 +61,6 @@ public class TclExpr extends Square {
         sb.append(")");
     }
 
-    @Override
-    public boolean supportsStringList() {
-      return false;
-    }
   }
 
   private static final Token EXPR = new Token("expr");

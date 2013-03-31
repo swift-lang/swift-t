@@ -39,10 +39,4 @@ public class Token extends Expression
   {
     sb.append(token);
   }
-  
-
-  @Override
-  public boolean supportsStringList() {
-    return true;
-  }
 }
