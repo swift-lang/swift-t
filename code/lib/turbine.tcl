@@ -25,7 +25,9 @@ namespace eval turbine {
     namespace export get_priority reset_priority set_priority
 
     # Import adlb commands 
-    namespace import ::adlb::put ::adlb::get
+    namespace import ::adlb::put ::adlb::get ::RANK_ANY
+    # Re-export adlb commands
+    namespace export put get RANK_ANY
 
     # Mode is ENGINE, WORKER, or SERVER
     variable mode
@@ -280,11 +282,11 @@ namespace eval turbine {
         if { $is_engine } {
             rule $name $inputs $action_type $target $action
         } elseif { [ llength $inputs ] == 0 } {
-            release -1 $action_type $action $adlb::RANK_ANY
+            release -1 $action_type $action $RANK_ANY
         } else {
             # Send to engine that can process it
-            put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
-                [ list rule $name $inputs $action_type $adlb::RANK_ANY $action ] \
+            put $RANK_ANY $WORK_TYPE(CONTROL) \
+                [ list rule $name $inputs $action_type $RANK_ANY $action ] \
                 [ get_priority ]
         }
     }
