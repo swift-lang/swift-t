@@ -30,9 +30,9 @@ namespace eval turbine {
     namespace export put get RANK_ANY
 
     # Export work types accessible
-    variable WORK
-    variable CONTROL
-    namespace export WORK CONTROL
+    variable WORK_TASK
+    variable CONTROL_TASK
+    namespace export WORK_TASK CONTROL_TASK
 
     # Mode is ENGINE, WORKER, or SERVER
     variable mode
@@ -71,10 +71,10 @@ namespace eval turbine {
         set types [ array size WORK_TYPE ]
 
         # Set up variables
-        variable WORK
-        variable CONTROL
-        set WORK $WORK_TYPE(WORK)
-        set CONTROL $WORK_TYPE(CONTROL)
+        variable WORK_TASK
+        variable CONTROL_TASK
+        set WORK_TASK $WORK_TYPE(WORK)
+        set CONTROL_TASK $WORK_TYPE(CONTROL)
 
         if { [ info exists ::TURBINE_ADLB_COMM ] } {
             adlb::init $servers $types $::TURBINE_ADLB_COMM
