@@ -463,9 +463,9 @@ class Turbine
   private static TclTree adlbWorkType(TaskMode type) {
     switch (type) {
       case CONTROL:
-        return new Token("$turbine::WORK_TYPE(CONTROL)");
+        return new Token("$WORK_TYPE(CONTROL)");
       case WORKER:
-        return new Token("$turbine::WORK_TYPE(WORK)");
+        return new Token("$WORK_TYPE(WORK)");
       default:
         throw new STCRuntimeError("Can't create task of type " + type);
     }
