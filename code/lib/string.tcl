@@ -58,7 +58,7 @@ namespace eval turbine {
     }
 
     proc substring_impl { s i n } {
-        set last [ expr $i + $n - 1 ]
+        set last [ expr {$i + $n - 1} ]
         return [ string range $s $i $n ]
     }
 
@@ -153,7 +153,7 @@ namespace eval turbine {
 	}
 	set ret [string first $subs $str $start_index]
 	set len [string length $subs]
-	set subs_end [expr $ret+$len]
+	set subs_end [expr {$ret + $len} ]
 	if { $subs_end <= $end_index } {
 	    return $ret
 	} else {
@@ -200,7 +200,7 @@ namespace eval turbine {
               return $found
             } else {
               # Move to end of occurrence to avoid counting overlaps
-	      set index [ expr $r  + $subs_len - 1 ]
+	      set index [ expr {$r  + $subs_len - 1} ]
             }
 	    incr found
 	}
@@ -251,8 +251,8 @@ namespace eval turbine {
 	set start [find_impl $str $substring $start_index]
 	#If the substring is absent the string is NOT modified
 	if { $start == -1 } { return $str };
-	set end [expr $start + [string length $substring]]
-	set part1 [string range $str 0  [expr $start-1]]
+	set end [expr {$start + [string length $substring]} ]
+	set part1 [string range $str 0  [expr {$start-1]} ]
 	set part2  [string range $str $end end]
         return "$part1$rep_string$part2"
     }
@@ -283,7 +283,7 @@ namespace eval turbine {
     proc replace_all_impl {str substring rep_string start_index } {
 	set end_index [string length $str ]
         set substring_len [ string length $substring ]
-        set result [ string range $str 0 [ expr $start_index - 1] ]
+        set result [ string range $str 0 [ expr {$start_index - 1]} ]
 
 	for {set index $start_index} { $index <= $end_index } {incr index} {
 	    set r [ find_impl $str $substring $index $end_index ];
@@ -292,10 +292,10 @@ namespace eval turbine {
               return $result
             }
             # append skipped part
-            append result [ string range $str $index [ expr $r - 1 ] ]
+            append result [ string range $str $index [ expr {$r - 1 ]} ]
             # append the replacement and skip over rest of substring
             append result $rep_string
-	    set index [ expr $r + $substring_len - 1 ]
+	    set index [ expr {$r + $substring_len - 1} ]
 	}
         return $result
     }

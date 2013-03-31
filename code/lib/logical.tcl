@@ -41,7 +41,7 @@ namespace eval turbine {
     }
     proc not_body { o i } {
         set i_value [ retrieve_decr_integer $i ]
-        set o_value [ expr ! $i_value ]
+        set o_value [ expr {! $i_value} ]
         log "not $i_value => $o_value"
         store_integer $o $o_value
     }
@@ -57,7 +57,7 @@ namespace eval turbine {
     proc and_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
-        set c_value [ expr $a_value && $b_value ]
+        set c_value [ expr {$a_value && $b_value} ]
         # Emulate some computation time
         log "and: $a_value && $b_value => $c_value"
         # exec sleep $c_value
@@ -75,7 +75,7 @@ namespace eval turbine {
     proc or_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
-        set c_value [ expr $a_value || $b_value ]
+        set c_value [ expr {$a_value || $b_value} ]
         # Emulate some computation time
         log "or: $a_value || $b_value => $c_value"
         # exec sleep $c_value
@@ -91,7 +91,7 @@ namespace eval turbine {
     proc eq_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
-        if { [ expr $a_value == $b_value ] } {
+        if { [ expr {$a_value == $b_value} ] } {
             set c_value 1
         } else {
             set c_value 0
@@ -111,7 +111,7 @@ namespace eval turbine {
     proc neq_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
-        if { [ expr $a_value != $b_value ] } {
+        if { [ expr {$a_value != $b_value} ] } {
             set c_value 1
         } else {
             set c_value 0
@@ -131,7 +131,7 @@ namespace eval turbine {
     proc lt_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
-        if { [ expr $a_value < $b_value ] } {
+        if { [ expr {$a_value < $b_value} ] } {
             set c_value 1
         } else {
             set c_value 0
@@ -151,7 +151,7 @@ namespace eval turbine {
     proc lte_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
-        if { [ expr $a_value <= $b_value ] } {
+        if { [ expr {$a_value <= $b_value} ] } {
             set c_value 1
         } else {
             set c_value 0
@@ -171,7 +171,7 @@ namespace eval turbine {
     proc gt_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
-        if { [ expr $a_value > $b_value ] } {
+        if { [ expr {$a_value > $b_value} ] } {
             set c_value 1
         } else {
             set c_value 0
@@ -191,7 +191,7 @@ namespace eval turbine {
     proc gte_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
-        if { [ expr $a_value >= $b_value ] } {
+        if { [ expr {$a_value >= $b_value} ] } {
             set c_value 1
         } else {
             set c_value 0
@@ -211,7 +211,7 @@ namespace eval turbine {
     proc eq_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
-        if { [ expr $a_value == $b_value ] } {
+        if { [ expr {$a_value == $b_value} ] } {
             set c_value 1
         } else {
             set c_value 0
@@ -231,7 +231,7 @@ namespace eval turbine {
     proc neq_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
-        if { [ expr $a_value != $b_value ] } {
+        if { [ expr {$a_value != $b_value} ] } {
             set c_value 1
         } else {
             set c_value 0
@@ -251,7 +251,7 @@ namespace eval turbine {
     proc lt_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
-        if { [ expr $a_value < $b_value ] } {
+        if { [ expr {$a_value < $b_value} ] } {
             set c_value 1
         } else {
             set c_value 0
@@ -271,7 +271,7 @@ namespace eval turbine {
     proc lte_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
-        if { [ expr $a_value <= $b_value ] } {
+        if { [ expr {$a_value <= $b_value} ] } {
             set c_value 1
         } else {
             set c_value 0
@@ -291,7 +291,7 @@ namespace eval turbine {
     proc gt_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
-        if { [ expr $a_value > $b_value ] } {
+        if { [ expr {$a_value > $b_value} ] } {
             set c_value 1
         } else {
             set c_value 0
@@ -311,7 +311,7 @@ namespace eval turbine {
     proc gte_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
-        if { [ expr $a_value >= $b_value ] } {
+        if { [ expr {$a_value >= $b_value} ] } {
             set c_value 1
         } else {
             set c_value 0

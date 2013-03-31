@@ -88,7 +88,7 @@ namespace eval turbine {
         variable n_workers
         set n_adlb_servers $servers
         set n_engines $engines
-        set n_workers [ expr [ adlb::size ] - $servers - $engines ]
+        set n_workers [ expr {[ adlb::size ] - $servers - $engines} ]
 
 
         variable mode

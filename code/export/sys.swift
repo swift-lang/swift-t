@@ -58,7 +58,7 @@ argv_accept(string... keys)
 // Do not optimize this- it is for tests
 @dispatch=WORKER
 (void v) sleep(float seconds) "turbine" "0.0.4" "sleep" [
-  "if { <<seconds>> > 0 } { after [ expr round(<<seconds>> * 1000) ] }"
+  "if { <<seconds>> > 0 } { after [ expr {round(<<seconds>> * 1000)} ] }"
 ];
 
 type host_id int;

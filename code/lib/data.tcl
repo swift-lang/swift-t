@@ -149,7 +149,7 @@ namespace eval turbine {
     # if mapped, mapping should be  turbine # string that will
     # at some point be set to a value
     proc allocate_file2 { name filename {read_refcount 1} args } {
-        set is_mapped [ expr ! [ string equal $filename "" ] ]
+        set is_mapped [ expr {! [ string equal $filename "" ]} ]
         # use void to signal file availability
         set signal [ allocate_custom "signal:$name" void \
                               $read_refcount {*}${args} ]
@@ -420,7 +420,7 @@ namespace eval turbine {
         debug "filename($id)"
         set s [ adlb::retrieve $id ]
         set i [ string first : $s ]
-        set i [ expr $i + 1 ]
+        set i [ expr {$i + 1} ]
         set result [ string range $s $i end ]
         return $result
     }
@@ -435,7 +435,7 @@ namespace eval turbine {
     }
 
     proc read_refcount_decr { id { amount 1 } } {
-      read_refcount_incr $id [ expr -1 * $amount ]
+      read_refcount_incr $id [ expr {-1 * $amount} ]
     }
 
     proc read_refcount_incr { id {amount 1} } {

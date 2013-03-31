@@ -31,7 +31,7 @@ namespace eval turbine {
     proc plus_integer_body { parent c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
-        set c_value [ expr $a_value + $b_value ]
+        set c_value [ expr {$a_value + $b_value} ]
         log "plus: $a_value + $b_value => $c_value"
         store_integer $c $c_value
     }
@@ -47,7 +47,7 @@ namespace eval turbine {
     proc plus_float_body { parent c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
-        set c_value [ expr $a_value + $b_value ]
+        set c_value [ expr {$a_value + $b_value} ]
         log "plus: $a_value + $b_value => $c_value"
         store_float $c $c_value
     }
@@ -65,7 +65,7 @@ namespace eval turbine {
     proc minus_integer_body {c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
-        set c_value [ expr $a_value - $b_value ]
+        set c_value [ expr {$a_value - $b_value} ]
         log "minus: $a_value - $b_value => $c_value"
         store_integer $c $c_value
     }
@@ -83,7 +83,7 @@ namespace eval turbine {
     proc minus_float_body {c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
-        set c_value [ expr $a_value - $b_value ]
+        set c_value [ expr {$a_value - $b_value} ]
         log "minus: $a_value - $b_value => $c_value"
         store_float $c $c_value
     }
@@ -100,7 +100,7 @@ namespace eval turbine {
     proc multiply_integer_body {c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
-        set c_value [ expr $a_value * $b_value ]
+        set c_value [ expr {$a_value * $b_value} ]
         log "multiply: $a_value * $b_value => $c_value"
         # Emulate some computation time
         # exec sleep $c_value
@@ -119,7 +119,7 @@ namespace eval turbine {
     proc multiply_float_body {c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
-        set c_value [ expr $a_value * $b_value ]
+        set c_value [ expr {$a_value * $b_value} ]
         log "multiply: $a_value * $b_value => $c_value"
         # Emulate some computation time
         # exec sleep $c_value
@@ -158,7 +158,7 @@ namespace eval turbine {
     proc divide_float_body {c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
-        set c_value [ expr $a_value / $b_value ]
+        set c_value [ expr {$a_value / $b_value} ]
         log "divide: $a_value / $b_value => $c_value"
         # Emulate some computation time
         # exec sleep $c_value
@@ -176,7 +176,7 @@ namespace eval turbine {
 
     proc negate_integer_body { c a } {
         set a_value [ retrieve_decr_integer $a ]
-        set c_value [ expr 0 - $a_value ]
+        set c_value [ expr {0 - $a_value} ]
         log "negate: -1 * $a_value => $c_value"
         # Emulate some computation time
         # exec sleep $c_value
@@ -194,7 +194,7 @@ namespace eval turbine {
 
     proc negate_float_body { c a } {
         set a_value [ retrieve_decr_float $a ]
-        set c_value [ expr 0 - $a_value ]
+        set c_value [ expr {0 - $a_value} ]
         log "negate: -1 * $a_value => $c_value"
         # Emulate some computation time
         # exec sleep $c_value
@@ -228,24 +228,24 @@ namespace eval turbine {
         # java's integer division obeys the rule:
         # a / b == sign(a) * sign(b) * ( abs(a) / abs(b) )
         set sign 1
-        if { [ expr $a < 0 ] } {
-            set sign [ expr $sign * -1 ]
+        if { [ expr {$a < 0} ] } {
+            set sign [ expr {$sign * -1} ]
         }
-        if { [ expr $b < 0 ] } {
-            set sign [ expr $sign * -1 ]
+        if { [ expr {$b < 0} ] } {
+            set sign [ expr {$sign * -1} ]
         }
-        return [ expr $sign * ( abs($a) / abs($b) ) ]
+        return [ expr {$sign * ( abs($a) / abs($b) )} ]
     }
 
     proc mod_integer_impl { a b } {
         # in Java's truncated integer division,
         # a % b == sign(a) * ( abs(a) % abs(b) )
-        if { [ expr $a >= 0 ] } {
+        if { [ expr {$a >= 0} ] } {
             set sign 1
         } else {
             set sign -1
         }
-        return [ expr $sign * ( abs($a) % abs($b) ) ]
+        return [ expr {$sign * ( abs($a) % abs($b) )} ]
     }
 
     # This is a Swift-2 function, thus it only applies to integers
@@ -286,7 +286,7 @@ namespace eval turbine {
     proc max_integer_body { parent c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
-        set c_value [ expr max ($a_value, $b_value) ]
+        set c_value [ expr {max ($a_value, $b_value)} ]
         log "max: $a_value $b_value => $c_value"
         store_integer $c $c_value
     }
@@ -302,7 +302,7 @@ namespace eval turbine {
     proc min_integer_body { parent c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
-        set c_value [ expr min ($a_value, $b_value) ]
+        set c_value [ expr {min ($a_value, $b_value)} ]
         log "min: $a_value $b_value => $c_value"
         store_integer $c $c_value
     }
@@ -318,7 +318,7 @@ namespace eval turbine {
     proc max_float_body { parent c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
-        set c_value [ expr max ($a_value, $b_value) ]
+        set c_value [ expr {max ($a_value, $b_value)} ]
         log "max: $a_value $b_value => $c_value"
         store_float $c $c_value
     }
@@ -334,7 +334,7 @@ namespace eval turbine {
     proc min_float_body { parent c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
-        set c_value [ expr min ($a_value, $b_value) ]
+        set c_value [ expr {min ($a_value, $b_value)} ]
         log "min: $a_value $b_value => $c_value"
         store_float $c $c_value
     }
@@ -347,7 +347,7 @@ namespace eval turbine {
 
     proc floor_body { parent c a } {
         set a_value [ retrieve_decr_float $a ]
-        set c_value [ expr int(floor($a_value)) ]
+        set c_value [ expr {int(floor($a_value))} ]
         log "floor: $a_value => $c_value"
         store_integer $c $c_value
     }
@@ -360,7 +360,7 @@ namespace eval turbine {
 
     proc ceil_body { parent c a } {
         set a_value [ retrieve_decr_float $a ]
-        set c_value [ expr int(ceil($a_value)) ]
+        set c_value [ expr {int(ceil($a_value))} ]
         log "ceil: $a_value => $c_value"
         store_integer $c $c_value
     }
@@ -372,7 +372,7 @@ namespace eval turbine {
 
     proc round_body { parent c a } {
         set a_value [ retrieve_decr_float $a ]
-        set c_value [ expr int(round($a_value)) ]
+        set c_value [ expr {int(round($a_value))} ]
         log "round: $a_value => $c_value"
         store_integer $c $c_value
     }
@@ -385,7 +385,7 @@ namespace eval turbine {
     proc itof_body { parent c a } {
         set a_value [ retrieve_decr_integer $a ]
         # Convert to TCL float type
-        store_float $c [ expr double($a_value) ]
+        store_float $c [ expr {double($a_value)} ]
     }
 
     proc log_e { parent c a } {
@@ -396,7 +396,7 @@ namespace eval turbine {
 
     proc log_e_body { parent c a } {
         set a_value [ retrieve_decr_float $a ]
-        set c_value [ expr log($a_value) ]
+        set c_value [ expr {log($a_value)} ]
         log "log_e: $a_value => $c_value"
         store_float $c $c_value
     }
@@ -409,7 +409,7 @@ namespace eval turbine {
 
     proc exp_body { parent c a } {
         set a_value [ retrieve_decr_float $a ]
-        set c_value [ expr exp($a_value) ]
+        set c_value [ expr {exp($a_value)} ]
         log "exp: $a_value => $c_value"
         store_float $c $c_value
     }
@@ -422,7 +422,7 @@ namespace eval turbine {
 
     proc sqrt_body { parent c a } {
         set a_value [ retrieve_decr_float $a ]
-        set c_value [ expr sqrt($a_value) ]
+        set c_value [ expr {sqrt($a_value)} ]
         log "sqrt: $a_value => $c_value"
         store_float $c $c_value
     }
@@ -435,7 +435,7 @@ namespace eval turbine {
 
     proc abs_float_body { parent c a } {
         set a_value [ retrieve_decr_float $a ]
-        set c_value [ expr abs($a_value) ]
+        set c_value [ expr {abs($a_value)} ]
         log "abs_float: $a_value => $c_value"
         store_float $c $c_value
     }
@@ -448,7 +448,7 @@ namespace eval turbine {
 
     proc abs_integer_body { parent c a } {
         set a_value [ retrieve_decr_integer $a ]
-        set c_value [ expr abs($a_value) ]
+        set c_value [ expr {abs($a_value)} ]
         log "abs_integer: $a_value => $c_value"
         store_integer $c $c_value
     }
@@ -472,10 +472,10 @@ namespace eval turbine {
 
     proc pow_integer_impl { a b } {
         if { $b < 0 } {
-            set a [ expr double($a) ]
-            set b [ expr double($b) ]
+            set a [ expr {double($a)} ]
+            set b [ expr {double($b)} ]
         }
-        return [ expr $a ** $b ]
+        return [ expr {$a ** $b} ]
     }
 
     proc pow_float { parent c inputs } {
@@ -488,7 +488,7 @@ namespace eval turbine {
     proc pow_float_body {c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
-        set c_value [ expr $a_value ** $b_value ]
+        set c_value [ expr {$a_value ** $b_value} ]
         log "pow_float: $a_value ** $b_value => $c_value"
         store_float $c $c_value
     }
@@ -501,6 +501,6 @@ namespace eval turbine {
     proc is_nan_body { o i } {
       set i_value [ retrieve_decr_float $i ]
       # NaN is the only floating point value not equal to itself
-      store_integer $o [ expr $i_value != $i_value ]
+      store_integer $o [ expr {$i_value != $i_value} ]
     }
 }

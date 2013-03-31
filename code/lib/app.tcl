@@ -67,7 +67,7 @@ namespace eval turbine {
       set sorted_keys [ lsort -integer [ dict keys $contents ] ]
       foreach key $sorted_keys {
         set inner [ dict get $contents $key ]
-        unpack_args_rec $inner [ expr $nest_level - 1 ] $is_file res
+        unpack_args_rec $inner [ expr {$nest_level - 1} ] $is_file res
       }
     }
   }
