@@ -20,6 +20,8 @@
 
 #include "debug.h"
 
+// NOTE: DEBUG and TRACE are disabled by default by macros:
+//       Cf. debug.h
 bool xlb_debug_enabled = true;
 bool xlb_trace_enabled = true;
 
