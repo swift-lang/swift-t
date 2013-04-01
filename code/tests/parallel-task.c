@@ -41,10 +41,11 @@ main()
   MPI_Init(&mpi_argc, &mpi_argv);
   int types[2] = {0, 1};
   int am_server;
-  MPI_Comm adlb_comm;
-  ADLB_Init(2, 2, types, &am_server, &adlb_comm);
+  MPI_Comm adlb_comm = MPI_COMM_WORLD;
+  MPI_Comm worker_comm;
+  ADLB_Init(2, 2, types, &am_server, adlb_comm, &worker_comm);
 
-  int tasks_per_worker = 3;
+  int tasks_per_worker = 1;
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);

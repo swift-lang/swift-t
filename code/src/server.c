@@ -117,7 +117,7 @@ xlb_server_init()
   list_i_init(&workers_shutdown);
   requestqueue_init(xlb_types_size);
   workqueue_init(xlb_types_size);
-  data_init(xlb_servers, xlb_server_number(xlb_world_rank));
+  data_init(xlb_servers, xlb_server_number(xlb_comm_rank));
   adlb_code code = setup_idle_time();
   ADLB_CHECK(code);
   // Set a default value for now:
@@ -130,7 +130,7 @@ xlb_server_init()
   xlb_my_workers = 0;
   for (int i = 0; i < xlb_workers; i++)
   {
-    if (xlb_map_to_server(i) == xlb_world_rank)
+    if (xlb_map_to_server(i) == xlb_comm_rank)
     {
       xlb_my_workers++;
       // printf("%i ", i);
@@ -144,7 +144,7 @@ xlb_server_init()
 static inline bool
 xlb_is_server(int rank)
 {
-  if (rank > xlb_world_size - xlb_servers)
+  if (rank > xlb_comm_size - xlb_servers)
     return true;
   return false;
 }
@@ -153,7 +153,7 @@ xlb_is_server(int rank)
 static inline int
 xlb_server_number(int rank)
 {
-  return rank - (xlb_world_size - xlb_servers);
+  return rank - (xlb_comm_size - xlb_servers);
 }
 
 /**
@@ -166,7 +166,7 @@ xlb_map_to_server(int rank)
   if (xlb_is_server(rank))
     return rank;
   valgrind_assert(rank >= 0);
-  valgrind_assert(rank < xlb_world_size);
+  valgrind_assert(rank < xlb_comm_size);
   int w = rank % xlb_servers;
   return w + xlb_workers;
 }
@@ -302,7 +302,7 @@ xlb_handle_pending(MPI_Status* status, bool *sync_rejected)
     assert(response == 0);
     if (sync_rejected != NULL)
       *sync_rejected = true;
-    DEBUG("server_sync: [%d] sync rejected", xlb_world_rank);
+    DEBUG("server_sync: [%d] sync rejected", xlb_comm_rank);
     TRACE_END;
     return ADLB_NOTHING;
   }
@@ -326,7 +326,7 @@ xlb_handle_pending_syncs()
     {
       int rank = xlb_pending_syncs[i].rank;
       DEBUG("server_sync: [%d] handling deferred sync %d from %d",
-          xlb_world_rank, i, rank);
+          xlb_comm_rank, i, rank);
       adlb_code code = handle_accepted_sync(rank, xlb_pending_syncs[i].hdr, NULL);
       if (code == ADLB_SUCCESS)
       {
@@ -372,7 +372,7 @@ adlb_code
 xlb_serve_server(int source, bool *server_sync_retry)
 {
   TRACE_START;
-  DEBUG("\t serve_server: [%i] serving %i", xlb_world_rank, source);
+  DEBUG("\t serve_server: [%i] serving %i", xlb_comm_rank, source);
   int rc = ADLB_NOTHING;
   while (true)
   {
@@ -381,7 +381,7 @@ xlb_serve_server(int source, bool *server_sync_retry)
     if (rc != ADLB_NOTHING) break;
     // Don't backoff - want to unblock other server ASAP
   }
-  DEBUG("\t serve_server: [%i] served %i", xlb_world_rank, source);
+  DEBUG("\t serve_server: [%i] served %i", xlb_comm_rank, source);
   TRACE_END;
   return rc;
 }
@@ -451,7 +451,7 @@ xlb_shutdown_worker(int worker)
 static inline bool
 master_server()
 {
-  return (xlb_world_rank == xlb_workers);
+  return (xlb_comm_rank == xlb_workers);
 }
 
 static inline bool
@@ -519,7 +519,7 @@ static bool
 servers_idle()
 {
   int rc;
-  for (int rank = xlb_master_server_rank+1; rank < xlb_world_size;
+  for (int rank = xlb_master_server_rank+1; rank < xlb_comm_size;
        rank++)
   {
     bool idle;
@@ -539,7 +539,7 @@ shutdown_all_servers()
   TRACE_START;
   MPE_LOG(xlb_mpe_dmn_shutdown_start)
   shutting_down = true;
-  for (int rank = xlb_master_server_rank+1; rank < xlb_world_size;
+  for (int rank = xlb_master_server_rank+1; rank < xlb_comm_size;
        rank++)
   {
     int rc = ADLB_Server_shutdown(rank);
@@ -553,7 +553,7 @@ shutdown_all_servers()
 adlb_code
 xlb_server_fail(int code)
 {
-  valgrind_assert(xlb_world_rank == xlb_master_server_rank);
+  valgrind_assert(xlb_comm_rank == xlb_master_server_rank);
   xlb_server_shutdown();
   failed = true;
   fail_code = code;

@@ -57,7 +57,7 @@ char* xlb_get_tag_name(int tag);
 /*
    All of these client/handler functions (adlb.c,handlers.c,etc.)
    use messaging the same way:
-   - They use communicator adlb_all_comm
+   - They use communicator adlb_comm
    - They use the stack-allocated status or request object
    - They check the return code rc with MPI_CHECK() to return errors.
    Thus, we use these macros to ease reading the message protocols
@@ -68,17 +68,17 @@ char* xlb_get_tag_name(int tag);
 
 #define SEND(data,length,type,rank,tag) { \
   TRACE_MPI("SEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int rc = MPI_Send(data,length,type,rank,tag,adlb_all_comm); \
+  int rc = MPI_Send(data,length,type,rank,tag,adlb_comm); \
   MPI_CHECK(rc); }
 
 #define RSEND(data,length,type,rank,tag) { \
   TRACE_MPI("RSEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int rc = MPI_Rsend(data,length,type,rank,tag,adlb_all_comm); \
+  int rc = MPI_Rsend(data,length,type,rank,tag,adlb_comm); \
   MPI_CHECK(rc); }
 
 #define SSEND(data,length,type,rank,tag) { \
   TRACE_MPI("SSEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int rc = MPI_Ssend(data,length,type,rank,tag,adlb_all_comm); \
+  int rc = MPI_Ssend(data,length,type,rank,tag,adlb_comm); \
   TRACE_MPI("SSENT"); \
   MPI_CHECK(rc); }
 
@@ -88,19 +88,19 @@ char* xlb_get_tag_name(int tag);
 #define RECV_STATUS(data,length,type,rank,tag,status_ptr) { \
   TRACE_MPI("RECV(from=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
   int rc = MPI_Recv(data,length,type,rank,tag, \
-                    adlb_all_comm,status_ptr); \
+                    adlb_comm,status_ptr); \
   TRACE_MPI("RECVD"); \
   MPI_CHECK(rc); }
 
 #define IRECV(data,length,type,rank,tag) { \
   TRACE_MPI("IRECV(from=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
   int rc = MPI_Irecv(data,length,type,rank,tag, \
-                     adlb_all_comm,&request); \
+                     adlb_comm,&request); \
   MPI_CHECK(rc); }
 
 // We don't TRACE this
 #define IPROBE(target,tag,flag,status) { \
-    int rc = MPI_Iprobe(target,tag,adlb_all_comm,flag,status); \
+    int rc = MPI_Iprobe(target,tag,adlb_comm,flag,status); \
     MPI_CHECK(rc); }
 
 #define WAIT(r,s) { \

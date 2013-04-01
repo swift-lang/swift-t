@@ -224,9 +224,9 @@ workqueue_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
   TRACE_START;
   bool result = false;
   struct rbtree* T = &parallel_work[work_type];
-  TRACE("type: %i size: %i", type, rbtree_size(T));
+  TRACE("type: %i size: %i", work_type, rbtree_size(T));
   // Common case is empty: want to exit asap
-  if (rbtree_size(T) == 0)
+  if (rbtree_size(T) != 0)
   {
     struct pop_parallel_data data = { -1, NULL, NULL, NULL };
     data.type = work_type;
@@ -391,5 +391,13 @@ workqueue_finalize()
       printf("WARNING: server contains %i work units of type: %i\n",
              count, i);
   }
+  for (int i = 0; i < xlb_types_size; i++)
+  {
+    if (parallel_work[i].size > 0)
+      printf("WARNING: server contains %i "
+             "parallel work units of type %i:\n",
+             parallel_work[i].size, i);
+  }
+
   TRACE_END;
 }

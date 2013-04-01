@@ -32,8 +32,8 @@
 
 char xfer[XFER_SIZE];
 
-int xlb_world_size;
-int xlb_world_rank;
+int xlb_comm_size;
+int xlb_comm_rank;
 int xlb_servers;
 int xlb_workers;
 int xlb_my_server;
@@ -42,14 +42,14 @@ int xlb_types_size;
 int* xlb_types;
 double xlb_start_time;
 
-MPI_Comm adlb_all_comm;
+MPI_Comm adlb_comm;
 
 MPI_Comm adlb_server_comm;
 
 int
 random_server()
 {
-  int result = random_between(xlb_master_server_rank, xlb_world_size);
+  int result = random_between(xlb_master_server_rank, xlb_comm_size);
   return result;
 }
 

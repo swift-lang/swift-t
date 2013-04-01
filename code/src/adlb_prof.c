@@ -202,9 +202,9 @@ ADLB_Create(adlb_datum_id id, adlb_data_type type,
 
 adlb_code ADLB_Multicreate(ADLB_create_spec *specs, int count)
 {
-  MPE_LOG(xlb_mpe_wkr_multicreate_start);
+//   MPE_LOG(xlb_mpe_wkr_multicreate_start);
   adlb_code rc = ADLBP_Multicreate(specs, count);
-  MPE_LOG(xlb_mpe_wkr_multicreate_end);
+//   MPE_LOG(xlb_mpe_wkr_multicreate_end);
   return rc;
 }
 

@@ -45,7 +45,7 @@ get_target_server(int* result)
   do
   {
     *result = random_server();
-  } while (*result == xlb_world_rank);
+  } while (*result == xlb_comm_rank);
 }
 
 bool
@@ -77,7 +77,7 @@ steal(bool* result)
 
   get_target_server(&target);
 
-  DEBUG("[%i] stealing from %i", xlb_world_rank, target);
+  DEBUG("[%i] stealing from %i", xlb_comm_rank, target);
 
 
   struct packed_steal_resp hdr = {
@@ -112,7 +112,7 @@ steal(bool* result)
           ADLB_TAG_RESPONSE_STEAL_COUNT);
   }
   
-  DEBUG("[%i] stole %i tasks from %i", xlb_world_rank, total, target);
+  DEBUG("[%i] stole %i tasks from %i", xlb_comm_rank, total, target);
   // MPE_INFO(xlb_mpe_svr_info, "STOLE: %i FROM: %i", total, target);
   *result = total > 0;
 
@@ -141,7 +141,7 @@ steal_sync(int target, int max_memory)
 
   adlb_code code = xlb_sync2(target, req);
   free(req);
-  DEBUG("[%i] synced with %i, receiving steal response", xlb_world_rank, target);
+  DEBUG("[%i] synced with %i, receiving steal response", xlb_comm_rank, target);
   return code; 
 }
 
@@ -163,7 +163,7 @@ steal_payloads(int target, int count)
                   wus[i].parallelism, xfer);
   }
   free(wus);
-  DEBUG("[%i] received batch size %i", xlb_world_rank, count);
+  DEBUG("[%i] received batch size %i", xlb_comm_rank, count);
   return ADLB_SUCCESS;
 }
 
@@ -193,7 +193,7 @@ send_steal_batch(steal_cb_state *batch, bool finish)
   if (count == 0)
     return ADLB_SUCCESS;
   
-  DEBUG("[%i] sending batch size %i", xlb_world_rank, batch->size);
+  DEBUG("[%i] sending batch size %i", xlb_comm_rank, batch->size);
   SEND(batch->puts, sizeof(*batch->puts) * count, MPI_BYTE,
        batch->stealer_rank, ADLB_TAG_RESPONSE_STEAL);
 

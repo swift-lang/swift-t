@@ -30,10 +30,10 @@
 #include "adlb-defs.h"
 
 /** Number of processes in total */
-extern int xlb_world_size;
+extern int xlb_comm_size;
 
 /** My rank in MPI_COMM_WORLD */
-extern int xlb_world_rank;
+extern int xlb_comm_rank;
 
 /** Number of servers in total */
 extern int xlb_servers;
@@ -55,7 +55,7 @@ extern int* xlb_types;
 
 extern double max_malloc;
 
-extern MPI_Comm adlb_all_comm, adlb_server_comm;
+extern MPI_Comm adlb_comm, adlb_server_comm;
 
 /**
    Start time from MPI_Wtime()

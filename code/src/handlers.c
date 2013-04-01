@@ -112,7 +112,7 @@ static adlb_code find_req_bytes(int *bytes, int caller, adlb_tag tag);
 void
 xlb_handlers_init(void)
 {
-  MPI_Comm_rank(adlb_all_comm, &mpi_rank);
+  MPI_Comm_rank(adlb_comm, &mpi_rank);
 
   memset(handlers, '\0', MAX_HANDLERS*sizeof(handler));
 
@@ -351,6 +351,7 @@ handle_get(int caller)
     xlb_requestqueue_recheck();
   }
 
+  printf("howdy\n");
   adlb_code rc = check_parallel_tasks(type);
   ADLB_CHECK(rc);
 
@@ -553,7 +554,7 @@ handle_create(int caller)
 static adlb_code
 handle_multicreate(int caller)
 {
-  MPE_LOG(xlb_mpe_svr_multicreate_start);
+  // MPE_LOG(xlb_mpe_svr_multicreate_start);
   TRACE("ADLB_TAG_MULTICREATE\n");
 
   MPI_Status status;
@@ -599,7 +600,7 @@ handle_multicreate(int caller)
   ADLB_DATA_CHECK(dc);
   
   TRACE("ADLB_TAG_MULTICREATE done\n");
-  MPE_LOG(xlb_mpe_svr_multicreate_end);
+  // MPE_LOG(xlb_mpe_svr_multicreate_end);
   return ADLB_SUCCESS;
 }
 
@@ -730,7 +731,7 @@ handle_enumerate(int caller)
   if (dc == ADLB_DATA_SUCCESS)
   {
     rc = MPI_Send(&actual, 1, MPI_INT, caller,
-                  ADLB_TAG_RESPONSE, adlb_all_comm);
+                  ADLB_TAG_RESPONSE, adlb_comm);
     MPI_CHECK(rc);
     if (opts.request_subscripts)
     {
@@ -1044,7 +1045,7 @@ handle_container_size(int caller)
   if (dc != ADLB_DATA_SUCCESS)
     size = -1;
   rc = MPI_Rsend(&size, 1, MPI_INT, caller,
-                 ADLB_TAG_RESPONSE, adlb_all_comm);
+                 ADLB_TAG_RESPONSE, adlb_comm);
   MPI_CHECK(rc);
   return ADLB_SUCCESS;
 }
@@ -1172,7 +1173,7 @@ set_int_reference_and_notify(long id, long value)
 
   adlb_code rc = ADLB_SUCCESS;
   int server = ADLB_Locate(id);
-  if (server != xlb_world_rank)
+  if (server != xlb_comm_rank)
     rc = xlb_sync(server);
   ADLB_CHECK(rc);
   rc = ADLB_Store(id, &value, sizeof(long), true, &ranks, &count);
@@ -1196,7 +1197,7 @@ set_str_reference_and_notify(long id, char *value)
 
   int rc = ADLB_SUCCESS;
   int server = ADLB_Locate(id);
-  if (server != xlb_world_rank)
+  if (server != xlb_comm_rank)
     rc = xlb_sync(server);
   ADLB_CHECK(rc);
   rc = ADLB_Store(id, value, (strlen(value)+1) * sizeof(char), true,
@@ -1220,7 +1221,7 @@ put_targeted(int type, int putter, int priority, int answer,
   if (target >= 0)
   {
     int server = xlb_map_to_server(target);
-    if (server == xlb_world_rank)
+    if (server == xlb_comm_rank)
     {
       // Work unit is for this server
       // Is the target already waiting?
@@ -1259,7 +1260,7 @@ put_targeted(int type, int putter, int priority, int answer,
 static adlb_code find_req_bytes(int *bytes, int caller, adlb_tag tag) {
   MPI_Status req_status;
   int new_msg;
-  int mpi_rc = MPI_Iprobe(caller, tag, adlb_all_comm, &new_msg,
+  int mpi_rc = MPI_Iprobe(caller, tag, adlb_comm, &new_msg,
                           &req_status);
   MPI_CHECK(mpi_rc);
   assert(new_msg); // should be message
