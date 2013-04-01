@@ -25,6 +25,7 @@
 #define TURBINE_H
 
 #include <mpi.h>
+#include <tcl.h>
 
 #include <version.h>
 
@@ -42,6 +43,12 @@ typedef enum
 
 typedef long turbine_transform_id;
 
+/**
+   If the user parallel task is being released, this
+   will be set to the communicator to use
+*/
+extern MPI_Comm turbine_task_comm;
+
 turbine_code turbine_init(int amserver, int rank, int size);
 
 turbine_code turbine_engine_init(void);
@@ -55,6 +62,7 @@ turbine_code turbine_rule(const char* name,
                           const char* action,
                           int priority,
                           int target,
+                          int parallelism,
                           turbine_transform_id* id);
 
 turbine_code turbine_rules_push(void);
@@ -72,7 +80,8 @@ turbine_code turbine_close(turbine_datum_id id);
 
 turbine_code turbine_pop(turbine_transform_id id,
                          turbine_action_type* action_type,
-                         char* action, int* priority, int* target);
+                         char* action, int* priority, int* target,
+                         int* parallelism);
 
 int turbine_code_tostring(char* output, turbine_code code);
 
@@ -80,5 +89,9 @@ void turbine_finalize(void);
 
 turbine_code turbine_run(MPI_Comm comm, char* script_file,
                          int argc, char** argv, char* output);
+
+turbine_code turbine_run_interp(MPI_Comm comm, char* script_file,
+                                int argc, char** argv, char* output,
+                                Tcl_Interp* interp);
 
 #endif

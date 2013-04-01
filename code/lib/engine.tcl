@@ -36,11 +36,12 @@ namespace eval turbine {
                 if { [ llength $ready ] == 0 } break
                 foreach {transform} $ready {
                     set L [ turbine::c::pop $transform ]
-                    set type     [ lindex $L 0 ]
-                    set action   [ lindex $L 1 ]
-                    set_priority [ lindex $L 2 ]
-                    set target   [ lindex $L 3 ]
-                    release $transform $type $action $target
+                    set type        [ lindex $L 0 ]
+                    set action      [ lindex $L 1 ]
+                    set_priority    [ lindex $L 2 ]
+                    set target      [ lindex $L 3 ]
+                    set parallelism [ lindex $L 4 ]
+                    release $transform $type $action $target $parallelism
                 }
             }
 
@@ -54,26 +55,27 @@ namespace eval turbine {
     }
 
     # Release a work unit for execution here or elsewhere
-    proc release { transform action_type action target } {
+    proc release { transform action_type action target parallelism } {
 
         global WORK_TYPE
 
-        debug "release: $transform"
+        debug "release: \{$transform\}"
 
         switch $action_type {
             1 { # $turbine::LOCAL
-                debug "executing local action: $transform $action"
+                debug "executing local action: \{$transform\} $action"
                 # TODO: Ensure target allows this
                 eval $action
             }
             2 { # $turbine::CONTROL
                 adlb::put $target $WORK_TYPE(CONTROL) \
                     "command priority: $turbine::priority $action" \
-                    $turbine::priority
+                    $turbine::priority 1
             }
             3 { # $turbine::WORK
                 adlb::put $adlb::RANK_ANY $WORK_TYPE(WORK) \
-                    "$transform $action" $turbine::priority
+                    "$transform $action" \
+                    $turbine::priority $parallelism
             }
             default {
                 error "unknown action type!"

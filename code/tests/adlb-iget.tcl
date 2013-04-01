@@ -41,7 +41,7 @@ if { $amserver == 0 } {
     if { $rank == 0 } {
         puts "clock: [ clock seconds ]"
         for { set i 0 } { $i < $put_count } { incr i } {
-            adlb::put $adlb::RANK_ANY $WORK_TYPE(T) "hello_$i" 0
+            adlb::put $adlb::RANK_ANY $WORK_TYPE(T) "hello_$i" 0 1
         }
         puts "clock: [ clock seconds ]"
     }

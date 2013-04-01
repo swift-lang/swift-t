@@ -34,7 +34,7 @@ proc rules { } {
     turbine::store_string  14 "howdy"
     turbine::store_float   15 3.1415
 
-    turbine::printf no_stack "" [ list 13 11 12 14 15 ]
+    turbine::printf "" [ list 13 11 12 14 15 ]
 }
 
 turbine::defaults

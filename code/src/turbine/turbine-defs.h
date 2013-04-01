@@ -84,6 +84,11 @@ typedef enum
 #define TURBINE_SUBSCRIPT_MAX  ADLB_DATA_SUBSCRIPT_MAX
 
 /**
+   The maximal length of a Turbine rule name string
+ */
+#define TURBINE_NAME_MAX 128
+
+/**
    The maximal length of a datum (string, blob, etc.)
  */
 #define TURBINE_DATA_MAX       ADLB_DATA_MAX

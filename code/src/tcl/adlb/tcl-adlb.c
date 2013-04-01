@@ -340,21 +340,24 @@ ADLB_Hostmap_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::put <reserve_rank> <work type> <work unit>
+   usage: adlb::put <reserve_rank> <work type> <work unit> <priority>
+                                                        <parallelism>
 */
 static int
 ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
              int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(5);
+  TCL_ARGS(6);
 
   int reserve_rank;
   int work_type;
   int priority;
+  int parallelism;
   Tcl_GetIntFromObj(interp, objv[1], &reserve_rank);
   Tcl_GetIntFromObj(interp, objv[2], &work_type);
   char* cmd = Tcl_GetString(objv[3]);
   Tcl_GetIntFromObj(interp, objv[4], &priority);
+  Tcl_GetIntFromObj(interp, objv[5], &parallelism);
 
   DEBUG_ADLB("adlb::put: reserve_rank: %i type: %i \"%s\" %i",
              reserve_rank, work_type, cmd, priority);
@@ -362,7 +365,7 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
   // int ADLB_Put(void *work_buf, int work_len, int reserve_rank,
   //              int answer_rank, int work_type, int work_prio)
   int rc = ADLB_Put(cmd, strlen(cmd)+1, reserve_rank, adlb_rank,
-                    work_type, priority, 1);
+                    work_type, priority, parallelism);
 
   ASSERT(rc == ADLB_SUCCESS);
   return TCL_OK;
@@ -384,7 +387,6 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   int error = Tcl_GetIntFromObj(interp, objv[1], &req_type);
   TCL_CHECK(error);
   Tcl_Obj* tcl_answer_rank_name = objv[2];
-
   DEBUG_ADLB("adlb::get: type=%i", req_type);
 
   int work_type;
@@ -452,6 +454,7 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
     result[0] = '\0';
     answer_rank = ADLB_RANK_NULL;
   }
+  turbine_task_comm = task_comm;
 #endif
 
   if (found_work)
@@ -557,12 +560,12 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
     TCL_CONDITION(objc - argstart >= 1, "adlb::create requires >= 1 args!");
     *id = ADLB_DATA_ID_NULL;
   }
-  
+
   int tmp_type;
   rc = Tcl_GetIntFromObj(interp, objv[argpos++], &tmp_type);
   TCL_CHECK_MSG(rc, "adlb::create could not get data type");
   *type = tmp_type;
- 
+
   // Process type-specific params
   switch (*type)
   {
@@ -579,7 +582,7 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
 
   // Process create props if present
   *props = DEFAULT_CREATE_PROPS;
- 
+
   if (argpos < objc) {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++], &(props->read_refcount));
     TCL_CHECK_MSG(rc, "adlb::create could not get read_refcount argument");
@@ -589,7 +592,7 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
     rc = Tcl_GetIntFromObj(interp, objv[argpos++], &(props->write_refcount));
     TCL_CHECK_MSG(rc, "adlb::create could not get write_refcount argument");
   }
-  
+
   if (argpos < objc) {
     int permanent;
     rc = Tcl_GetBooleanFromObj(interp, objv[argpos++], &permanent);
@@ -644,7 +647,7 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
                        "adlb::create: unknown type!");
       return TCL_ERROR;
       break;
-      
+
   }
 
   if (id == ADLB_DATA_ID_NULL) {
@@ -686,7 +689,7 @@ ADLB_Multicreate_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   rc = ADLB_Multicreate(specs, count);
   TCL_CONDITION(rc == ADLB_SUCCESS, "adlb::multicreate failed!");
- 
+
   // Build list to return
   Tcl_Obj *tcl_ids[count];
   for (int i = 0; i < count; i++) {
@@ -872,8 +875,8 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
   int argpos = 1;
   rc = Tcl_GetLongFromObj(interp, objv[argpos++], &id);
   TCL_CHECK_MSG(rc, "requires id!");
- 
-  
+
+
   int decr_amount = 0;
   if (decr) {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++], &decr_amount);

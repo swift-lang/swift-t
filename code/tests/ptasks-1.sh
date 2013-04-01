@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,35 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# Test string split function
+TESTS=$( dirname $0 )
 
-# Requires TURBINE_LOG=1
+set -x
 
-package require turbine 0.0.1
+THIS=$0
+BIN=${THIS%.sh}.x
+OUTPUT=${THIS%.sh}.out
 
-proc rules { } {
+${TESTS}/run-mpi.zsh ${BIN} >& ${OUTPUT}
+[[ ${?} == 0 ]] || exit 1
 
-    turbine::create_string 11
-    turbine::create_string 12
-    turbine::create_string 13
-
-    turbine::store_string 11 "hi how are you"
-
-    turbine::create_container 18 integer
-    turbine::split 18 11
-
-    turbine::create_container 19 integer
-    turbine::store_string 12 "/bin:/usr/evil name/p:/usr/bin"
-    turbine::store_string 13 ":"
-    turbine::split 19 { 12 13 }
-}
-
-turbine::defaults
-turbine::init $engines $servers
-turbine::start rules
-turbine::finalize
-
-puts OK
-
-# Help Tcl free memory
-proc exit args {}
+exit 0

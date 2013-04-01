@@ -51,10 +51,10 @@ proc rules { } {
     # initialise the result
     turbine::create_integer 16
 
-    turbine::sum_integer NO_STACK [ list 16 ] [ list 11 ]
+    turbine::sum_integer [ list 16 ] [ list 11 ]
 
     # trace the result
-    turbine::trace NO_STACK [ list ] [ list 16 ]
+    turbine::trace [ list ] [ list 16 ]
 }
 
 turbine::defaults

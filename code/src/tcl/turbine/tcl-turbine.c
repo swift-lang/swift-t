@@ -173,62 +173,244 @@ Turbine_Version_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_RETURN_ERROR("unknown turbine entry type: %s", type);   \
   strcpy(entry.name, subscript);
 
+static inline void rule_set_name_default(char* name, int size,
+                                         const char* action);
+
+struct rule_opts
+{
+  char* name;
+  turbine_action_type type;
+  int target;
+  int parallelism;
+};
+
+static inline void rule_set_opts_default(struct rule_opts* opts,
+                                         const char* action,
+                                         char* buffer, int buffer_size);
+
+static inline int
+rule_opts_from_list(Tcl_Interp* interp, Tcl_Obj *const objv[],
+                    struct rule_opts* opts,
+                    Tcl_Obj *const objs[], int count,
+                    char *name_buffer, int name_buffer_size,
+                    const char *action);
+
+static inline int rule_priority(Tcl_Interp* interp, int* priority,
+                                Tcl_Obj* const objv[]);
+
 /**
-   usage: rule name [ list inputs ] action_type target action => id
+   usage:
+   OLD rule name [ list inputs ] action_type target parallelism action => id
+   NEW rule [ list inputs ] action [ dict name,action_type,target,parallelism ]
+            dict is optional
+   DEFAULTS: name=<first token of action plus output list>
+             type=TURBINE_ACTION_WORK
+             target=TURBINE_RANK_ANY
+             parallelism=1
    The name is just for debugging
  */
 static int
-Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp *interp,
+Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
                  int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(6);
-
-  int inputs;
-  turbine_datum_id input_list[TCL_TURBINE_MAX_INPUTS];
+  const int BASIC_ARGS = 3;
+  TCL_CONDITION(objc >= BASIC_ARGS,
+                "turbine::c::rule requires at least %i args!",
+                BASIC_ARGS);
 
   int rc;
   turbine_transform_id id;
-
-  // Get the debugging name
-  char* name = Tcl_GetStringFromObj(objv[1], NULL);
-  assert(name);
-
-  // Get the input list
-  rc = turbine_tcl_long_array(interp, objv[2],
-                                TCL_TURBINE_MAX_INPUTS,
-                                input_list, &inputs);
-  TCL_CHECK_MSG(rc, "could not parse inputs list as integers:\n"
-                "in rule: <%li> %s inputs: \"%s\"",
-                id, name, Tcl_GetString(objv[2]));
-
-  // Get the action type
-  turbine_action_type action_type;
-  int tmp;
-  rc = Tcl_GetIntFromObj(interp, objv[3], &tmp);
-  TCL_CHECK_MSG(rc, "could not parse as integer!");
-  action_type = tmp;
-
-  // Get the target rank
-  int target;
-  rc = Tcl_GetIntFromObj(interp, objv[4], &target);
-  TCL_CHECK_MSG(rc, "could not parse target as integer!");
+  int inputs;
+  turbine_datum_id input_list[TCL_TURBINE_MAX_INPUTS];
+  char name_buffer[TURBINE_NAME_MAX];
 
   // Get the action string
-  char* action = Tcl_GetStringFromObj(objv[5], NULL);
+  char* action = Tcl_GetStringFromObj(objv[2], NULL);
   assert(action);
+
+  struct rule_opts opts = {NULL, 0, 0, 0};
+
+  if (objc > BASIC_ARGS)
+  {
+    // User gave us a list of optional args
+    rc = rule_opts_from_list(interp, objv, &opts, objv + BASIC_ARGS,
+                             objc - BASIC_ARGS,
+                             name_buffer, TURBINE_NAME_MAX, action);
+    TCL_CHECK(rc);
+  }
+  else
+  {
+    rule_set_opts_default(&opts, action, name_buffer,
+                          TURBINE_NAME_MAX);
+  }
+
+  // Get the input list - done last so we can report name on error
+  rc = turbine_tcl_long_array(interp, objv[1],
+                              TCL_TURBINE_MAX_INPUTS,
+                              input_list, &inputs);
+  TCL_CHECK_MSG(rc, "could not parse inputs list as integers:\n"
+                "in rule: <%li> %s inputs: \"%s\"",
+                id, opts.name, Tcl_GetString(objv[1]));
 
   // Lookup current priority
   int priority = 0;
-  Tcl_Obj* p = Tcl_GetVar2Ex(interp, "turbine::priority", NULL, 0);
-  TCL_CONDITION(p != NULL, "could not access turbine::priority");
-  rc = Tcl_GetIntFromObj(interp, p, &priority);
-  TCL_CHECK_MSG(rc, "turbine::priority is not an integer!");
+  rc = rule_priority(interp, &priority, objv);
+  TCL_CHECK(rc);
 
   // Issue the rule
   turbine_code code =
-      turbine_rule(name, inputs, input_list, action_type, action,
-                   priority, target, &id);
+      turbine_rule(opts.name, inputs, input_list, opts.type, action,
+                   priority, opts.target, opts.parallelism, &id);
   TURBINE_CHECK(code, "could not add rule: %li", id);
+  return TCL_OK;
+}
+
+static inline void
+rule_set_opts_default(struct rule_opts* opts,
+                      const char* action, char* buffer,
+                      int buffer_size)
+{
+  opts->name = buffer;
+  if (action != NULL) {
+    assert(opts->name != NULL);
+    rule_set_name_default(opts->name, buffer_size, action);
+  }
+  opts->type = TURBINE_ACTION_LOCAL;
+  opts->target = TURBINE_RANK_ANY;
+  opts->parallelism = 1;
+}
+
+static inline void
+rule_set_name_default(char* name, int size, const char* action)
+{
+  char* q = strchr(action, ' ');
+  int n = q-action+1;
+  strncpy(name, action, n);
+  name[n] = '\0';
+}
+
+static int
+Turbine_RuleOpts_Cmd(ClientData cdata, Tcl_Interp* interp,
+                     int objc, Tcl_Obj *const objv[])
+{
+  int name_buf_size = 128;
+  char t[name_buf_size];
+  struct rule_opts opts;
+  opts.name = NULL;
+
+  const char *action = "dummy action";
+  // User gave us a list of optional args
+  rule_opts_from_list(interp, objv, &opts, objv + 1, objc - 1,
+                      t, name_buf_size, action);
+  return TCL_OK;
+}
+
+static inline int
+rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
+            struct rule_opts* opts, Tcl_Obj* key, Tcl_Obj* val);
+
+/**
+  Fill in struct from list
+  
+  Note that strings may be filled in with pointers to
+  other Tcl data structures.  If these pointers are going to
+  escape from the caller into arbitrary Tcl code, the caller
+  must make a copy.
+   @param interp : just here for error cases
+   @param objv : just here for error messages
+   @return Tcl error code
+ */
+static inline int
+rule_opts_from_list(Tcl_Interp* interp, Tcl_Obj *const objv[],
+                    struct rule_opts* opts,
+                    Tcl_Obj *const objs[], int count,
+                    char *name_buffer, int name_buffer_size,
+                    const char *action)
+{
+  TCL_CONDITION(count % 2 == 0,
+                "Must have matching key-value args, but "
+                "found odd number: %i", count);
+
+  rule_set_opts_default(opts, NULL, NULL, 0);
+  
+  for (int keypos = 0; keypos < count; keypos+=2)
+  {
+    int valpos = keypos + 1; 
+    int rc = rule_opt_from_kv(interp, objv, opts,
+                              objs[keypos], objs[valpos]);
+    TCL_CHECK(rc);
+  }
+  if (opts->name == NULL) {
+    rule_set_name_default(name_buffer, name_buffer_size, action);
+    opts->name = name_buffer;
+  }
+  return TCL_OK;
+}
+
+/**
+   Translate one key value pair into an opts entry.
+   Note that caller is responsible for copying any strings.
+ */
+static inline int
+rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
+                 struct rule_opts* opts, Tcl_Obj* key, Tcl_Obj* val)
+{
+  char* k = Tcl_GetString(key);
+  int rc;
+
+  switch (k[0])
+  {
+    case 'n':
+      if (strcmp(k, "name") == 0)
+      {
+        opts->name = Tcl_GetString(val);
+        return TCL_OK;
+        // printf("name: %s\n", opts->name);
+      }
+      break;
+    case 'p':
+      if (strcmp(k, "parallelism") == 0)
+      {
+        int t;
+        rc = Tcl_GetIntFromObj(interp, val, &t);
+        TCL_CHECK_MSG(rc, "parallelism argument must be integer");
+        opts->parallelism = t;
+        return TCL_OK;
+      }
+      break;
+    case 't':
+      if (strcmp(k, "target") == 0)
+      {
+        int t;
+        rc = Tcl_GetIntFromObj(interp, val, &t);
+        TCL_CHECK_MSG(rc, "target argument must be integer");
+        opts->target = t;
+        // printf("target: %i\n", opts->target);
+        return TCL_OK;
+      }
+      else if (strcmp(k, "type") == 0)
+      {
+        int t;
+        rc = Tcl_GetIntFromObj(interp, val, &t);
+        TCL_CHECK_MSG(rc, "type argument must be integer");
+        opts->type = t;
+        return TCL_OK;
+      }
+      break;
+  }
+
+  TCL_RETURN_ERROR("rule options: unknown key: %s", k);
+  return TCL_ERROR; // unreachable
+}
+
+static inline int
+rule_priority(Tcl_Interp* interp, int* priority,
+              Tcl_Obj* const objv[])
+{
+  Tcl_Obj* p = Tcl_GetVar2Ex(interp, "turbine::priority", NULL, 0);
+  TCL_CONDITION(p != NULL, "could not access turbine::priority");
+  int rc = Tcl_GetIntFromObj(interp, p, priority);
+  TCL_CHECK_MSG(rc, "turbine::priority is not an integer!");
   return TCL_OK;
 }
 
@@ -283,19 +465,21 @@ Turbine_Pop_Cmd(ClientData cdata, Tcl_Interp *interp,
   char action[TURBINE_ACTION_MAX];
   int priority;
   int target;
+  int parallelism;
 
   turbine_code code = turbine_pop(id, &type, action,
-                                  &priority, &target);
+                                  &priority, &target, &parallelism);
   TCL_CONDITION(code == TURBINE_SUCCESS,
                  "could not pop transform id: %li", id);
 
-  Tcl_Obj* items[4];
+  Tcl_Obj* items[5];
   items[0] = Tcl_NewIntObj(type);
   items[1] = Tcl_NewStringObj(action, -1);
   items[2] = Tcl_NewIntObj(priority);
   items[3] = Tcl_NewIntObj(target);
+  items[4] = Tcl_NewIntObj(parallelism);
 
-  Tcl_Obj* result = Tcl_NewListObj(4, items);
+  Tcl_Obj* result = Tcl_NewListObj(5, items);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
@@ -602,6 +786,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("engine_init", Turbine_Engine_Init_Cmd);
   COMMAND("version",     Turbine_Version_Cmd);
   COMMAND("rule",        Turbine_Rule_Cmd);
+  COMMAND("ruleopts",    Turbine_RuleOpts_Cmd);
   COMMAND("push",        Turbine_Push_Cmd);
   COMMAND("ready",       Turbine_Ready_Cmd);
   COMMAND("pop",         Turbine_Pop_Cmd);

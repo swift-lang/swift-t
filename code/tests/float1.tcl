@@ -34,8 +34,8 @@ proc rules { } {
     turbine::store_float $t2 5
 
     # Use 0 as stack frame
-    turbine::plus_float 0 [ list $x ] [ list $t1 $t2 ]
-    turbine::trace 0 "" $x
+    turbine::plus_float [ list $x ] [ list $t1 $t2 ]
+    turbine::trace "" $x
 }
 
 turbine::defaults

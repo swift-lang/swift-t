@@ -115,7 +115,7 @@ namespace eval turbine {
         return $result
     }
 
-    proc argc_get { stack result inputs } {
+    proc argc_get { result inputs } {
         # ignore inputs
         variable turbine_argc
         store_integer $result $turbine_argc
@@ -126,7 +126,7 @@ namespace eval turbine {
         return $turbine_argc
     }
 
-    proc args_get { stack result inputs } {
+    proc args_get { result inputs } {
         # ignore inputs
         variable turbine_args
         store_string $result $turbine_args
@@ -137,9 +137,9 @@ namespace eval turbine {
         return $turbine_args
     }
 
-    proc argv_contains { stack result key } {
-        rule "argv_contains-$key" $key $turbine::LOCAL $adlb::RANK_ANY \
-            "argv_contains_body $result $key"
+    proc argv_contains { result key } {
+        rule $key "argv_contains_body $result $key" \
+            name "argv_contains-$key" 
     }
 
     proc argv_contains_body { result key } {
@@ -161,21 +161,19 @@ namespace eval turbine {
     # "default" is a Tcl keyword so we call it "base"
     proc argv_get { args } {
 
-        set stack  [ lindex $args 0 ]
-        set result [ lindex $args 1 ]
-        set key    [ lindex $args 2 ]
+        set result [ lindex $args 0 ]
+        set key    [ lindex $args 1 ]
         set base ""
-        if { [ llength $args ] == 4 }  {
-            set base [ lindex $args 3 ]
+        if { [ llength $args ] == 3 }  {
+            set base [ lindex $args 2 ]
         }
 
-        rule "argv_get-$key" $key $turbine::LOCAL $adlb::RANK_ANY \
-            "argv_get_body $result $key $base"
+        rule $key "argv_get_body $result $key $base" \
+            name "argv_get-$key" 
     }
 
     # usage: argv_get <result> <key> <optional:base>
     proc argv_get_body { args } {
-
 
         set c [ llength $args ]
         if { $c != 2 && $c != 3 } {
@@ -222,16 +220,15 @@ namespace eval turbine {
     # If index >= argc, the base (default value) is used
     # "default" is a Tcl keyword so we call it "base"
     proc argp_get { args } {
-        set stack  [ lindex $args 0 ]
-        set result [ lindex $args 1 ]
-        set i    [ lindex $args 2 ]
+        set result [ lindex $args 0 ]
+        set i    [ lindex $args 1 ]
         set base ""
-        if { [ llength $args ] == 4 }  {
-            set base [ lindex $args 3 ]
+        if { [ llength $args ] == 3 }  {
+            set base [ lindex $args 2 ]
         }
 
-        rule "argp_get-$i" $i $turbine::LOCAL $adlb::RANK_ANY \
-            "argp_get_body $result $i $base"
+        rule $i "argp_get_body $result $i $base" \
+            name "argp_get-$i" 
     }
 
     # usage: argp_get <result> <index> <optional:base>
@@ -283,9 +280,8 @@ namespace eval turbine {
     }
 
     proc argv_accept { args } {
-        set stack [ lindex 0 ]
-        set L [ lindex $args 2 ]
-        rule argv_accept "$L" $turbine::LOCAL $adlb::RANK_ANY "argv_accept_body $L"
+        set L [ lindex $args 1 ]
+        rule $L "argv_accept_body $L"
     }
 
     proc argv_accept_body { args } {
@@ -313,15 +309,14 @@ namespace eval turbine {
         }
     }
 
-    proc getenv { stack outputs inputs } {
-        rule getenv-$inputs $inputs $turbine::LOCAL $adlb::RANK_ANY \
-            "turbine::getenv_body $outputs $inputs"
+    proc getenv { outputs inputs } {
+        rule  $inputs "turbine::getenv_body $outputs $inputs" \
+            name getenv-$outputs 
     }
     proc getenv_body { result key } {
         set key_value [ retrieve_decr_string $key ]
         store_string $result [ getenv_impl $key_value ]
     }
-
     proc getenv_impl { key } {
         global env
         if [ info exists env($key) ] {
@@ -332,10 +327,9 @@ namespace eval turbine {
     }
 
     # Sleep for given time in seconds.  Return void
-    proc sleep { stack outputs inputs } {
-        rule "sleep-$outputs-$inputs" $inputs $turbine::WORK \
-            $adlb::RANK_ANY \
-            "turbine::sleep_body $outputs $inputs"
+    proc sleep { outputs inputs } {
+        rule $inputs "turbine::sleep_body $outputs $inputs" \
+            name "sleep-$outputs-$inputs" 
     }
     proc sleep_body { output secs } {
         set secs_val [ retrieve_decr_float $secs ]

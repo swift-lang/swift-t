@@ -107,6 +107,13 @@ void tcl_dict_put(Tcl_Interp* interp, Tcl_Obj* dict,
                   char* key, Tcl_Obj* value);
 
 /**
+   Convenience function to get key=value from dict
+ */
+void
+tcl_dict_get(Tcl_Interp* interp, Tcl_Obj* dict,
+             char* key, Tcl_Obj** value);
+
+/**
    Convenience function to construct Tcl list of Tcl strings
  */
 Tcl_Obj* tcl_list_new(int count, char** strings);

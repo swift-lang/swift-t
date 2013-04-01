@@ -28,8 +28,8 @@ proc rules { } {
     turbine::literal r integer $i
     turbine::allocate v integer
 
-    turbine::f_dereference_integer no_stack $v $r
-    turbine::trace no_stack "" $v
+    turbine::dereference_integer $v $r
+    turbine::trace "" $v
 }
 
 turbine::defaults

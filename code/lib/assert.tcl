@@ -17,11 +17,11 @@ namespace eval turbine {
 
     # assert(cond, msg)
     # If cond is 0, then terminate program, printing msg
-    proc assert { stack noresult inputs } {
+    proc assert { noresult inputs } {
         set cond [ lindex $inputs 0 ]
         set msg [ lindex $inputs 1 ]
-        rule "assert-$cond-$msg" "$cond $msg" \
-            $turbine::LOCAL $adlb::RANK_ANY "assert_body $cond $msg"
+        rule "$cond $msg" "assert_body $cond $msg" \
+            name "assert-$cond-$msg" 
     }
 
     proc assert_body { cond msg } {
@@ -39,16 +39,15 @@ namespace eval turbine {
     }
 
     # assert(arg1, arg2, msg)
-    # if arg1 != arg2 according to TCL's comparison rules
+    # if arg1 != arg2 according to Tcl's comparison rules
     #  (e.g. "1" == 1 and 1 == 1)
     # then crash, printing the two values and the provided msg
     proc assertEqual { stack noresult inputs } {
         set arg1 [ lindex $inputs 0 ]
         set arg2 [ lindex $inputs 1 ]
         set msg [ lindex $inputs 2 ]
-        rule "assertEqual-$arg1-$arg2-$msg" "$arg1 $arg2 $msg" \
-            $turbine::LOCAL $adlb::RANK_ANY \
-            "assertEqual_body $arg1 $arg2 $msg"
+        rule "$arg1 $arg2 $msg" "assertEqual_body $arg1 $arg2 $msg" \
+            name "assertEqual-$arg1-$arg2-$msg" 
     }
 
     proc assertEqual_body { arg1 arg2 msg } {
@@ -73,9 +72,8 @@ namespace eval turbine {
         set arg1 [ lindex $inputs 0 ]
         set arg2 [ lindex $inputs 1 ]
         set msg [ lindex $inputs 2 ]
-        rule "assertLT-$arg1-$arg2-$msg" "$arg1 $arg2 $msg" \
-            $turbine::LOCAL $adlb::RANK_ANY \
-            "assertLT_body $arg1 $arg2 $msg"
+        rule "$arg1 $arg2 $msg" "assertLT_body $arg1 $arg2 $msg" \
+            name "assertLT-$arg1-$arg2-$msg" 
     }
 
     proc assertLT_body { arg1 arg2 msg } {
@@ -96,8 +94,8 @@ namespace eval turbine {
         set arg1 [ lindex $inputs 0 ]
         set arg2 [ lindex $inputs 1 ]
         set msg [ lindex $inputs 2 ]
-        rule "assertLTE-$arg1-$arg2-$msg" "$arg1 $arg2 $msg" \
-            $turbine::LOCAL $adlb::RANK_ANY "assertLTE_body $arg1 $arg2 $msg"
+        rule "$arg1 $arg2 $msg" "assertLTE_body $arg1 $arg2 $msg" \
+            name "assertLTE-$arg1-$arg2-$msg" 
     }
 
     proc assertLTE_body { arg1 arg2 msg } {

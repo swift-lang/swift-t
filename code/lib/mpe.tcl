@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# MPE FEATURES
+# Turbine MPE.TCL
 
-# Note that if MPE is not enabled, the Tcl MPE extensions are noops
+# MPE features
+
+# Note that if MPE is not enabled, the MPE Tcl extensions are noops
 
 namespace eval turbine {
 
@@ -38,8 +40,8 @@ namespace eval turbine {
     # Add an arbitrary string to the MPE log as "metadata"
     # The MPE-defined string length limit is 32
     proc metadata { stack result input } {
-        turbine::rule "metadata-$input" $input $turbine::WORK $adlb::RANK_ANY \
-            "turbine::metadata_body $input"
+        turbine::rule $input "turbine::metadata_body $input" \
+             name "metadata-$input" type $turbine::WORK
     }
 
     proc metadata_body { message } {

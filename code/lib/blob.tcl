@@ -15,47 +15,47 @@
 
 namespace eval turbine {
 
-  proc blob_size_async { stack out blob } {
-    rule "blob_size-$out-$blob" "$blob" \
-        $turbine::LOCAL $adlb::RANK_ANY "blob_size_body $out $blob"
+  proc blob_size { out blob } {
+    rule "$blob" "blob_size_body $out $blob" \
+        name "blob_size-$out-$blob" 
   }
 
   proc blob_size_body { out blob } {
     set blob_val [ retrieve_decr_blob $blob ]
-    set sz [ blob_size $blob_val ]
+    set sz [ blob_size_impl $blob_val ]
     store_integer $out $sz
     adlb::blob_free $blob
   }
 
-  proc blob_size { blob_val } {
+  proc blob_size_impl { blob_val } {
     return [ lindex $blob_val 1 ]
   }
 
-  proc blob_null { stack result input } {
+  proc blob_null { result input } {
       store_blob $result 0 0
   }
 
-  proc blob_from_string { stack result input } {
-    rule "bfs-$input-$result" $input $turbine::LOCAL $adlb::RANK_ANY \
-      "blob_from_string_body $input $result"
+  proc blob_from_string { result input } {
+    rule $input "blob_from_string_body $input $result" \
+        name "bfs-$input-$result" 
   }
   proc blob_from_string_body { input result } {
     set t [ retrieve_decr $input ]
     store_blob_string $result $t
   }
 
-  proc string_from_blob { stack result input } {
-    rule "sfb-$input-$result" $input $turbine::LOCAL $adlb::RANK_ANY \
-      "string_from_blob_body $input $result"
+  proc string_from_blob { result input } {
+    rule $input "string_from_blob_body $input $result" \
+        name "sfb-$input-$result" 
   }
   proc string_from_blob_body { input result } {
     set s [ retrieve_decr_blob_string $input ]
     store_string $result $s
   }
 
-  proc floats_from_blob { stack result input } {
-      rule "floats_from_blob-$result" $input $turbine::LOCAL $adlb::RANK_ANY \
-          "floats_from_blob_body $result $input"
+  proc floats_from_blob { result input } {
+      rule $input "floats_from_blob_body $result $input" \
+          name "floats_from_blob-$result" 
   }
   proc floats_from_blob_body { result input } {
       log "floats_from_blob_body: result=<$result> input=<$input>"
@@ -79,13 +79,13 @@ namespace eval turbine {
   # b: the blob
   # m: number of rows
   # n: number of columns
-  proc matrix_from_blob_fortran { stack result inputs } {
+  proc matrix_from_blob_fortran { result inputs } {
       set b [ lindex $inputs 0 ]
       set m [ lindex $inputs 1 ]
       set n [ lindex $inputs 2 ]
-      rule "matrix_from_blob-$result" [ list $b $m $n ] \
-          $turbine::LOCAL $adlb::RANK_ANY \
-          "matrix_from_blob_fortran_body $result $inputs"
+      rule [ list $b $m $n ] \
+          "matrix_from_blob_fortran_body $result $inputs" \
+          name "matrix_from_blob-$result" 
   }
   proc matrix_from_blob_fortran_body { result b m n } {
       log "matrix_from_blob_fortran_body: result=<$result> blob=<$b>"
@@ -129,9 +129,9 @@ namespace eval turbine {
   }
 
   # Container must be indexed from 0,N-1
-  proc blob_from_floats { stack result input } {
-    rule "blob_from_floats-$result" $input $turbine::LOCAL $adlb::RANK_ANY \
-      "blob_from_floats_body $input $result"
+  proc blob_from_floats { result input } {
+    rule $input  "blob_from_floats_body $input $result" \
+        name "blob_from_floats-$result" 
   }
   proc blob_from_floats_body { container result } {
 
@@ -154,9 +154,9 @@ namespace eval turbine {
   }
 
   # Container must be indexed from 0,N-1
-  proc blob_from_ints { stack result input } {
-    rule "blob_from_ints-$result" $input $turbine::LOCAL $adlb::RANK_ANY \
-      "blob_from_ints_body $input $result"
+  proc blob_from_ints { result input } {
+    rule $input "blob_from_ints_body $input $result" \
+        name "blob_from_ints-$result" 
   }
   proc blob_from_ints_body { container result } {
 
@@ -191,9 +191,9 @@ namespace eval turbine {
           if { $x == 0 } {
               error "complete_container: <$A>\[$i\]=<0>"
           }
-          rule "complete_container_continue-$A" [ list $x ] \
-              $turbine::LOCAL $adlb::RANK_ANY \
-              "complete_container_continue_body $A {$action} $i $n"
+          rule [ list $x ] \
+              "complete_container_continue_body $A {$action} $i $n" \
+              name "complete_container_continue-$A" 
       } else {
           eval $action
       }

@@ -22,9 +22,9 @@ namespace eval turbine {
 
     # User function
     # usage: strcat <result> <args>*
-    proc strcat { stack result inputs } {
-        rule "strcat" $inputs $turbine::LOCAL $adlb::RANK_ANY \
-            "strcat_body $result $inputs"
+    proc strcat { result inputs } {
+        rule $inputs "strcat_body $result $inputs" \
+            name "strcat-$result" 
     }
 
     # usage: strcat_body <result> <args>*
@@ -39,13 +39,13 @@ namespace eval turbine {
     }
 
     # Substring of s starting at i of length n
-    proc substring { stack result inputs  } {
+    proc substring { result inputs  } {
 
         set s [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         set n [ lindex $inputs 2 ]
-        rule "substring-$s-$i-$n" $inputs $turbine::LOCAL $adlb::RANK_ANY \
-            "substring_body $result $s $i $n"
+        rule $inputs "substring_body $result $s $i $n" \
+            name "substring-$s-$i-$n" 
     }
 
     proc substring_body { result s i n } {
@@ -65,23 +65,25 @@ namespace eval turbine {
     # This accepts an optional delimiter
     # (STC does not yet support optional arguments)
     proc split { args } {
-        set result [ lindex $args 1 ]
-        set inputs [ lreplace $args 0 1 ]
+        set result [ lindex $args 0 ]
+        set inputs [ lreplace $args 0 0 ]
 
         # Unpack inputs
         set inputs [ lindex $inputs 0 ]
 
+        show result
+        show inputs
+
         set s [ lindex $inputs 0 ]
         if { [ llength $inputs ] == 2 } {
             set delimiter [ lindex $inputs 1 ]
-            rule "split-$result" [ list $s $delimiter ] \
-                $turbine::LOCAL $adlb::RANK_ANY \
-                "split_body $result $s $delimiter"
+            rule [ list $s $delimiter ] \
+                "split_body $result $s $delimiter" \
+                name "split-$result" 
         } elseif { [ llength $inputs ] == 1 } {
             # Use default delimiter: " "
             set delimiter 0
-            rule "split-$result" $s $turbine::LOCAL $adlb::RANK_ANY \
-                "split_body $result $s 0"
+            rule $s "split_body $result $s 0" name "split-$result" 
         } else {
             error "split requires 1 or 2 arguments"
         }
@@ -109,9 +111,9 @@ namespace eval turbine {
         adlb::slot_drop $result
     }
 
-    proc sprintf { stack result inputs } {
-        rule sprintf $inputs $turbine::LOCAL $adlb::RANK_ANY \
-            "sprintf_body $result $inputs"
+    proc sprintf { result inputs } {
+        rule $inputs "sprintf_body $result $inputs" \
+            name "sprintf-$result" 
     }
     proc sprintf_body { result args } {
         set L [ list ]
@@ -122,14 +124,14 @@ namespace eval turbine {
         store_string $result $s
     }
 
-    proc find { stack result inputs } {
+    proc find { result inputs } {
 	set str         [ lindex $inputs 0 ]
 	set subs        [ lindex $inputs 1 ]
 	set start_index [ lindex $inputs 2 ]
 	set end_index   [ lindex $inputs 3 ]
-	rule "find-$str-$subs-$start_index-$end_index" $inputs  \
-	    $turbine::LOCAL $adlb::RANK_ANY "find_body $result $str $subs       \
-            $start_index $end_index"
+	rule $inputs \
+	    "find_body $result $str $subs $start_index $end_index" \
+            name "find-$result" 
     }
 
     proc find_body { result str subs start_index end_index } {
@@ -161,14 +163,14 @@ namespace eval turbine {
 	}
     }
 
-    proc count { stack result inputs } {
+    proc count { result inputs } {
 	set str         [ lindex $inputs 0 ]
 	set subs        [ lindex $inputs 1 ]
 	set start_index [ lindex $inputs 2 ]
 	set end_index   [ lindex $inputs 3 ]
-	rule "count-$str-$subs-$start_index-$end_index" $inputs  \
-	    $turbine::LOCAL $adlb::RANK_ANY "count_body $result $str $subs       \
-            $start_index $end_index"
+	rule $inputs \
+            "count_body $result $str $subs $start_index $end_index" \
+            name "count-$str-$subs-$start_index-$end_index" 
     }
 
     proc count_body { result str subs start_index end_index } {
@@ -179,7 +181,7 @@ namespace eval turbine {
 
 	set result_value [ count_impl $str_value $subs_value \
 			  $start_index_value $end_index_value ]
-        puts "count_impl $str_value $subs_value $start_index_value $end_index_value = $result_value"
+        # puts "count_impl $str_value $subs_value $start_index_value $end_index_value = $result_value"
 
 	store_integer $result $result_value
     }
@@ -206,10 +208,10 @@ namespace eval turbine {
 	}
     }
 
-    proc isint { stack result inputs } {
+    proc isint { result inputs } {
 	set str [ lindex $inputs 0 ]
-	rule "isint-$str" $inputs $turbine::LOCAL $adlb::RANK_ANY "isint_body \
-              $result $str"
+	rule $inputs "isint_body $result $str" \
+            name "isint-$result" 
     }
 
     proc isint_body { result str } {
@@ -223,15 +225,15 @@ namespace eval turbine {
 	return [ string is wideinteger -strict $str ];
     }
 
-
-    proc replace { stack result inputs } {
+    proc replace { result inputs } {
 	set str         [ lindex $inputs 0 ]
 	set substring  [ lindex $inputs 1 ]
 	set rep_string  [ lindex $inputs 2 ]
 	set start_index [ lindex $inputs 3 ]
-	rule "replace-$str-$substring-$rep_string-$start_index" \
-	    $inputs $turbine::LOCAL $adlb::RANK_ANY [ list replace_body $result $str \
-                                  $substring $rep_string $start_index ]
+	rule $inputs \
+            [ list replace_body $result $str \
+                  $substring $rep_string $start_index ] \
+            name "replace-$str-$substring-$rep_string-$start_index" 
     }
 
     proc replace_body { result str substring rep_string start_index } {
@@ -257,14 +259,15 @@ namespace eval turbine {
         return "$part1$rep_string$part2"
     }
 
-    proc replace_all { stack result inputs } {
+    proc replace_all { result inputs } {
 	set str         [ lindex $inputs 0 ]
 	set substring  [ lindex $inputs 1 ]
 	set rep_string  [ lindex $inputs 2 ]
 	set start_index  [ lindex $inputs 3 ]
-	rule "replace_all-$str-$substring-$rep_string" $inputs \
-	    $turbine::LOCAL $adlb::RANK_ANY [ list replace_all_body $result $str \
-                              $substring $rep_string $start_index ]
+	rule $inputs \
+            [ list replace_all_body $result $str \
+                  $substring $rep_string $start_index ] \
+            name "replace_all-$str-$substring-$rep_string" 
     }
 
     proc replace_all_body { result str substring rep_string start_index } {

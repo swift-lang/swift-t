@@ -74,12 +74,16 @@ typedef struct
   int priority;
   /** ADLB target rank for this action */
   int target;
+  /** ADLB task parallelism */
+  int parallelism;
   /** Closed inputs - bit vector */
   unsigned char *closed_inputs;
   /** Index of next subscribed input (starts at 0) */
   int blocker;
   transform_status status;
 } transform;
+
+MPI_Comm turbine_task_comm = MPI_COMM_NULL;
 
 static int bitfield_size(int inputs);
 
@@ -276,7 +280,7 @@ turbine_engine_init()
   result = table_lp_init(&td_blockers, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
-  
+
   result = table_lp_init(&td_subscribed, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
@@ -302,7 +306,8 @@ static inline turbine_code
 transform_create(const char* name,
                  int inputs, const turbine_datum_id* input_list,
                  turbine_action_type action_type,
-                 const char* action, int priority, int target,
+                 const char* action,
+                 int priority, int target, int parallelism,
                  transform** result)
 {
   assert(name);
@@ -324,6 +329,7 @@ transform_create(const char* name,
   T->action = strdup(action);
   T->priority = priority;
   T->target = target;
+  T->parallelism = parallelism;
   T->blocker = 0;
 
   if (inputs > 0)
@@ -412,12 +418,14 @@ turbine_rule(const char* name,
              const char* action,
              int priority,
              int target,
+             int parallelism,
              turbine_transform_id* id)
 {
   transform* T = NULL;
   turbine_code code = transform_create(name, inputs, input_list,
                                        action_type, action,
-                                       priority, target, &T);
+                                       priority, target, parallelism,
+                                       &T);
 
   *id = T->id;
   turbine_check(code);
@@ -426,12 +434,13 @@ turbine_rule(const char* name,
 
   bool subscribed;
   turbine_code tc = progress(T, &subscribed);
-  if (tc != TURBINE_SUCCESS) {
-    DEBUG_TURBINE("turbine_rule failed\n");
+  if (tc != TURBINE_SUCCESS)
+  {
+    DEBUG_TURBINE("turbine_rule failed:\n");
     DEBUG_TURBINE_RULE(T, *id);
     return tc;
   }
-  
+
   DEBUG_TURBINE_RULE(T, *id);
 
   if (subscribed)
@@ -555,7 +564,7 @@ turbine_ready(int count, turbine_transform_id* output,
 
 turbine_code
 turbine_pop(turbine_transform_id id, turbine_action_type* action_type,
-            char* action, int* priority, int* target)
+            char* action, int* priority, int* target, int* parallelism)
 {
   // Check inputs
   if (id == TURBINE_ID_NULL)
@@ -566,15 +575,18 @@ turbine_pop(turbine_transform_id id, turbine_action_type* action_type,
 
   // Debugging
   DEBUG_TURBINE("pop: transform: {%li}", id);
-  DEBUG_TURBINE("\t action:   {%li} %s: %s", id, T->name, T->action);
-  DEBUG_TURBINE("\t priority: {%li} => %i\n", id, T->priority);
-  DEBUG_TURBINE("\t target:   {%li} => %i\n", id, T->target);
+  DEBUG_TURBINE("\t action:      {%li} %s: %s", id, T->name,
+                                                    T->action);
+  DEBUG_TURBINE("\t priority:    {%li} => %i",  id, T->priority);
+  DEBUG_TURBINE("\t target:      {%li} => %i",  id, T->target);
+  DEBUG_TURBINE("\t parallelism: {%li} => %i",  id, T->parallelism);
 
   // Copy outputs
   *action_type = T->action_type;
   strcpy(action, T->action);
   *priority = T->priority;
   *target = T->target;
+  *parallelism = T->parallelism;
 
   // Clean up
   transform_free(T);

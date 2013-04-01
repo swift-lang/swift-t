@@ -20,14 +20,15 @@ namespace eval turbine {
     # inputs: [ list c r ]
     # c: the container
     # r: the turbine id to store the sum into
-    proc sum_integer { stack result inputs } {
+    proc sum_integer { result inputs } {
         set container [ lindex $inputs 0 ]
 
-        rule "sum-$container" $container $turbine::LOCAL $adlb::RANK_ANY \
-            "sum_integer_body $stack $container $result 0 0 -1"
+        rule $container \
+            "sum_integer_body $container $result 0 0 -1" \
+            name "sum-$result-$container" 
     }
 
-    proc sum_integer_body { stack container result accum next_index n } {
+    proc sum_integer_body { container result accum next_index n } {
         debug "sum_integer $container => $result"
         set CHUNK_SIZE 1024
         # TODO: could divide and conquer instead of doing linear search
@@ -51,8 +52,9 @@ namespace eval turbine {
                 # block until the next turbine id is finished,
                 #   then continue running
                 # puts "sum_integer_body $stack $container $result $accum $i $n"
-                rule "sum-$container" $turbine_id $turbine::LOCAL $adlb::RANK_ANY \
-                    "sum_integer_body $stack $container $result $accum $i $n"
+                rule $turbine_id \
+                    "sum_integer_body $stack $container $result $accum $i $n" \
+                    name "sum-$container" 
                 # return immediately without setting result
                 return
             }
@@ -70,8 +72,9 @@ namespace eval turbine {
     proc sum_float { stack result inputs } {
         set container [ lindex $inputs 0 ]
 
-        rule "sum-$container" $container $turbine::LOCAL $adlb::RANK_ANY \
-            "sum_float_body $stack $container $result 0 0 -1"
+        rule $container \
+            "sum_float_body $stack $container $result 0 0 -1" \
+            name "sum-$container" 
     }
 
     proc sum_float_body { stack container result accum next_index n } {
@@ -98,8 +101,9 @@ namespace eval turbine {
                 # block until the next turbine id is finished,
                 #   then continue running
                 # puts "sum_float_body $stack $container $result $accum $i $n"
-                rule "sum-$container" $turbine_id $turbine::LOCAL $adlb::RANK_ANY \
-                    "sum_float_body $stack $container $result $accum $i $n"
+                rule $turbine_id \
+                    "sum_float_body $stack $container $result $accum $i $n" \
+                    name "sum-$container" 
                 # return immediately without setting result
                 return
             }
@@ -111,25 +115,25 @@ namespace eval turbine {
     }
 
     # calculate mean of an array of floats or ints
-    proc avg { parent result container } {
+    proc avg { result container } {
         set NULL 0
         stats_impl $container $NULL $NULL $result $NULL $NULL $NULL $NULL $NULL
     }
 
     # calculate mean of an array of floats or ints
-    proc std { parent result container } {
+    proc std { result container } {
         set NULL 0
         stats_impl $container $NULL $NULL $NULL $NULL $NULL $result $NULL $NULL
     }
 
-    proc stats { parent outputs container } {
+    proc stats { outputs container } {
         set NULL 0
         set mean [ lindex $outputs 0 ]
         set std [ lindex $outputs 1 ]
         stats_impl $container $NULL $NULL $mean $NULL $NULL $std $NULL $NULL
     }
 
-    proc statagg { parent outputs container } {
+    proc statagg { outputs container } {
         set NULL 0
         set n [ lindex $outputs 0 ]
         set mean [ lindex $outputs 1 ]
@@ -140,10 +144,11 @@ namespace eval turbine {
     proc stats_impl { container n_out sum_out mean_out M2_out \
                     samp_std_out pop_std_out\
                     max_out min_out } {
-        rule "stats-body-$container" $container $turbine::LOCAL $adlb::RANK_ANY \
+        rule $container \
             "stats_body $container $n_out $sum_out $mean_out $M2_out \
              $samp_std_out $pop_std_out $max_out $min_out \
-             0.0 0.0 0.0 NOMIN NOMAX 0 -1"
+             0.0 0.0 0.0 NOMIN NOMAX 0 -1" \
+            name "stats-body-$container" 
     }
 
     # Calculate mean, standard deviation, max, min for array of float or int
@@ -190,12 +195,13 @@ namespace eval turbine {
             incr i
           } else {
             # block until the next turbine id is finished then continue running
-            rule "stats_body-$container" $turbine_id $turbine::LOCAL $adlb::RANK_ANY \
+            rule $turbine_id \
               "stats_body $container $n_out $sum_out \
                  $mean_out $M2_out \
                  $samp_std_out $pop_std_out $max_out $min_out \
                  $sum_accum $mean_accum $M2_accum \
-                 $min_accum $max_accum $i $n"
+                 $min_accum $max_accum $i $n" \
+                name "stats_body-$container" 
             # return immediately without setting result
             return
           }
@@ -256,13 +262,13 @@ namespace eval turbine {
     # take a container of PartialStats and summarize them
     # outputs are mean, stddev
     # note: we return population std dev
-    proc stat_combine { parent outputs container } {
+    proc stat_combine { outputs container } {
       set n_out [ lindex $outputs 0 ]
       set mean_out [ lindex $outputs 1 ]
       set std_out [ lindex $outputs 2 ]
-      rule "stats-combine-$container" $container \
-            $turbine::LOCAL $adlb::RANK_ANY "stat_combine_body $container $n_out $mean_out $std_out \
-              0 0.0 0.0 0"
+      rule $container \
+          "stat_combine_body $container $n_out $mean_out $std_out 0 0.0 0.0 0" \
+          name "stats-combine-$container" 
     }
 
     proc stat_combine_body { container n_out mean_out std_out \
@@ -309,10 +315,10 @@ namespace eval turbine {
           }
           incr i
         } else {
-          rule "stats-combine-$container" \
-            "$n_id $mean_id $M2_id" $turbine::LOCAL $adlb::RANK_ANY \
+          rule "$n_id $mean_id $M2_id" \
             "stat_combine_body $container $n_out $mean_out $std_out \
-              $n_accum $mean_accum $M2_accum $i"
+              $n_accum $mean_accum $M2_accum $i" \
+            name "stats-combine-$container" 
           return
         }
       }

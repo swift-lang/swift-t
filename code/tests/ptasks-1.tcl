@@ -12,27 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# Test string split function
+# Test trace and basic string functionality
 
-# Requires TURBINE_LOG=1
+# SwiftScript
+# string s1 = "hi";
+# string s2 = "bye";
+# trace(s1,s2);
 
 package require turbine 0.0.1
 
 proc rules { } {
 
     turbine::create_string 11
-    turbine::create_string 12
-    turbine::create_string 13
 
-    turbine::store_string 11 "hi how are you"
+    turbine::store_string 11 "hi"
 
-    turbine::create_container 18 integer
-    turbine::split 18 11
+    ptasks_1 "" [ list 11 ]
+}
 
-    turbine::create_container 19 integer
-    turbine::store_string 12 "/bin:/usr/evil name/p:/usr/bin"
-    turbine::store_string 13 ":"
-    turbine::split 19 { 12 13 }
+proc ptasks_1 { result inputs } {
+    turbine::rule $inputs "ptasks_1_c $result $inputs" \
+        type $turbine::WORK parallelism 2
 }
 
 turbine::defaults

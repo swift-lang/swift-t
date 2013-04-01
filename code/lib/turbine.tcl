@@ -284,20 +284,71 @@ namespace eval turbine {
         store_integer $output [ adlb_servers ]
     }
 
+    # Get option from rule opts: if not found, return default
+    proc opt_get { opts key } {
+        switch $key {
+            parallelism {
+                if [ dict exists $opts parallelism ] {
+                    return [ dict get $opts parallelism ]
+                } else {
+                    return 1
+                }
+            }
+            target {
+                if [ dict exists $opts target ] {
+                    return [ dict get $opts target ]
+                } else {
+                    return $adlb::RANK_ANY
+                }
+            }
+            type {
+                if [ dict exists $opts type ] {
+                    return [ dict get $opts type ]
+                } else {
+                    return $turbine::LOCAL
+                }
+            }
+            default {
+                error "rule_opt_get: unknown key: $key"
+            }
+        }
+    }
+
     # Augment rule so that it can be run on worker
-    proc rule { name inputs action_type target action } {
+    # args: inputs action opts
+    # opts: optional: dict of options: see tcl-turbine.c:Turbine_Rule_Cmd()
+    # default: action type: $turbine::LOCAL
+    proc rule { args } {
         variable is_engine
         global WORK_TYPE
 
-        if { $is_engine } {
-            c::rule $name $inputs $action_type $target $action
-        } elseif { [ llength $inputs ] == 0 } {
-            release -1 $action_type $action $adlb::RANK_ANY
+        debug "turbine::rule..."
+
+        set argc [ llength $args ]
+        puts "argc: $argc"
+        if { $argc < 2 } {
+            error "turbine::rule: requires at least 2 args!"
+        }
+
+        set inputs [ lindex $args 0 ]
+        set action [ lindex $args 1 ]
+        if { $argc > 2 } {
+            set opts [ lreplace $args 0 1 ]
         } else {
-            # Send to engine that can process it
+            set opts {}
+        }
+
+        if { $is_engine } {
+            c::rule $inputs $action {*}$opts
+        } elseif { [ llength $inputs ] == 0 } {
+            release -1 \
+                [ opt_get $opts type   ] $action                     \
+                [ opt_get $opts target ] [ opt_get $opts parallelism ]
+        } else {
             adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
-                [ list rule $name $inputs $action_type $adlb::RANK_ANY $action ] \
-                $turbine::priority
+                [ list rule $inputs $action {*}$opts ] \
+                $turbine::priority [ opt_get $opts parallelism ]
+
         }
     }
 }

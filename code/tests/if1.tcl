@@ -68,32 +68,28 @@ proc j { x r } {
 
 proc myfun { a b x } {
 
-    # Create stack frame
-    allocate_container stack string
-    container_insert $stack "a" $a
-    container_insert $stack "b" $b
-    container_insert $stack "x" $x
-
     # Create condition variable for "if"
     allocate c_1 integer
-    rule MYFUN_1 $x   $turbine::WORK $adlb::RANK_ANY    "f $x $c_1"
-    rule MYFUN_2 $c_1 $turbine::CONTROL $adlb::RANK_ANY "if_1 $stack $c_1"
-    rule MYFUN_3 $x   $turbine::WORK $adlb::RANK_ANY     "g $x $b"
+    rule $x   "f $x $c_1" [ dict create name MYFUN_1 type $turbine::WORK ]
+    rule $c_1 "if_1 $c_1" [ name MYFUN_2 ]
+    rule $x   "g $x $b"   [ dict create name MYFUN_3 type $turbine::WORK ]
 }
 
-proc if_1 { stack c } {
+proc if_1 { c } {
 
     # c is the condition variable
     set c_value [ retrieve_integer $c ]
 
     # Locate stack variables
-    set a [ container_lookup $stack "a" ]
-    set x [ container_lookup $stack "x" ]
+    set a [ container_lookup "a" ]
+    set x [ container_lookup "x" ]
 
     if $c_value {
-        rule IF_1_1 $x $turbine::WORK $adlb::RANK_ANY "h $x $a"
+        rule $x "h $x $a" \
+            [ dict create name IF_1_1 type $turbine::WORK ]
     } else {
-        rule IF_1_2 $x $turbine::WORK $adlb::RANK_ANY "j $x $a"
+        rule $x "j $x $a" \
+            [ dict create name IF_1_2 type $turbine::WORK ]
     }
     turbine::c::push
 }
@@ -104,11 +100,10 @@ proc rules { } {
     turbine::allocate b integer
     turbine::literal x integer 3
 
-    rule A $x $turbine::CONTROL $adlb::RANK_ANY "myfun $a $b $x"
+    rule $x "myfun $a $b $x"
 
     set a_label [ literal string "a=" ]
-    # Use 0 as stack frame
-    turbine::trace 0 "" [ list $a_label $a ]
+    turbine::trace "" [ list $a_label $a ]
 }
 
 turbine::defaults

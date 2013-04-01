@@ -38,7 +38,7 @@ namespace eval turbine {
     # get the filename from the file handle
     proc filename2 { stack out in } {
       set file_handle [ lindex $in 0 ]
-      copy_string NOSTACK $out [ get_file_path $file_handle ]
+      copy_string $out [ get_file_path $file_handle ]
       read_refcount_decr [ get_file_status $file_handle ]
     }
 
@@ -78,18 +78,17 @@ namespace eval turbine {
 	set instatus [ get_file_status $infile ]
         lappend waitfor $inpath $instatus
       }
-      rule $msg $waitfor $target $adlb::RANK_ANY $cmd
+        rule $waitfor $cmd  name $msg target $target 
     }
 
     proc input_file { stack out filepath } {
       set outfile [ lindex $out 0 ]
       set mapped [ is_file_mapped $outfile ]
       if { $mapped } {
-         error "file \[ $outfile \] was already mapped, cannot use input_file"
+          error "file \[ $outfile \] was already mapped, cannot use input_file"
       }
-      rule "input_file-$outfile-$filepath" "$filepath" \
-            $turbine::LOCAL $adlb::RANK_ANY \
-            [ list input_file_body $outfile $filepath ]
+      rule "$filepath" [ list input_file_body $outfile $filepath ] \
+        [ name "input_file-$outfile-$filepath" ]
     }
 
     proc input_file_body { outfile filepath } {
@@ -141,14 +140,14 @@ namespace eval turbine {
         set dstpath [ get_file_path $dst ]
         set srcpath [ get_file_path $src ]
         set srcstatus [ get_file_status $src ]
-        rule "copy_file-$dst-$src" "$dstpath $srcpath $srcstatus" \
-            $turbine::WORK $adlb::RANK_ANY \
-            [ list copy_file_body $dst $src ]
+        rule "$dstpath $srcpath $srcstatus" \
+            [ list copy_file_body $dst $src ] \
+            [ name "copy_file-$dst-$src" type $turbine::WORK ]
       } else {
         # not mapped.  As shortcut, just make them both point to the
         # same file and update status once src file is closed
-        copy_void NO_STACK [ get_file_status $dst ] [ get_file_status $src ]
-        copy_string NO_STACK [ get_file_path $dst ] [ get_file_path $src ]
+        copy_void [ get_file_status $dst ] [ get_file_status $src ]
+        copy_string [ get_file_path $dst ] [ get_file_path $src ]
       }
     }
 
@@ -193,9 +192,24 @@ namespace eval turbine {
       file_read_refcount_incr $handle [ expr $amount * -1 ]
     }
 
-    proc glob { stack result inputs } {
-        rule glob $inputs $turbine::LOCAL $adlb::RANK_ANY \
-            "glob_body $result $inputs"
+    proc glob { result inputs } {
+        rule $inputs "glob_body $result $inputs" \
+             name "glob-$result" type $turbine::WORK 
+    }
+    proc glob_body { result s } {
+        set s_value [ retrieve_decr_string $s ]
+        set r_value [ ::glob $s_value ]
+        set n [ llength $r_value ]
+        log "glob: $s_value tokens: $n"
+        for { set i 0 } { $i < $n } { incr i } {
+            set v [ lindex $r_value $i ]
+            literal split_token string $v
+            set f [ allocate_file2 "<$result>\[$i\]" $split_token ]
+            close_file $f
+            container_insert $result $i $f
+        }
+        # close container
+        adlb::slot_drop $result
     }
 
     # Create a reference to track local file
@@ -235,22 +249,6 @@ namespace eval turbine {
             log "delete locally used file $path"
             file delete -force $path
         }
-    }
-
-    proc glob_body { result s } {
-        set s_value [ retrieve_decr_string $s ]
-        set r_value [ ::glob $s_value ]
-        set n [ llength $r_value ]
-        log "glob: $s_value tokens: $n"
-        for { set i 0 } { $i < $n } { incr i } {
-            set v [ lindex $r_value $i ]
-            literal split_token string $v
-            set f [ allocate_file2 "<$result>\[$i\]" $split_token ]
-            close_file $f
-            container_insert $result $i $f
-        }
-        # close container
-        adlb::slot_drop $result
     }
 
     proc readFile { stack result inputs } {

@@ -24,17 +24,17 @@ if { [ info exists env(TURBINE_TEST_PARAM_1) ] } {
     set N 7
 }
 
-proc fib { stack o n } {
+proc fib { o n } {
     turbine::c::log function:fib
     set parent $stack
     allocate_container stack string
     container_insert $stack _parent $parent
     container_insert $stack n $n
     container_insert $stack o $o
-    turbine::c::rule if-0 "$n" $turbine::LOCAL $adlb::RANK_ANY "if-0 $stack"
+    turbine::c::rule "$n" "if-0 $stack" [ name "fib-$o-$n" ]
 }
 
-proc if-0 { stack } {
+proc if-0 { } {
     set n [ stack_lookup $stack n ]
     set o [ stack_lookup $stack o ]
     set n_value [ retrieve_integer $n ]
@@ -47,7 +47,7 @@ proc if-0 { stack } {
         allocate __l0 integer
         store_integer $__l0 1
         turbine::minus_integer $stack [ list $__t0 ] [ list $n $__l0 ]
-        turbine::c::rule if-1 "$__t0" $turbine::LOCAL $adlb::RANK_ANY "if-1 $stack"
+        turbine::c::rule if-1 "$__t0" $turbine::LOCAL $adlb::RANK_ANY 1 "if-1 $stack"
     } else {
         set parent $stack
         allocate_container stack string
@@ -71,13 +71,13 @@ proc if-1 { stack } {
         allocate __l3 integer
         store_integer $__l3 1
         turbine::minus_integer $stack [ list $__l2 ] [ list $n $__l3 ]
-        turbine::c::rule fib [ list $__l2 ] $turbine::LOCAL $adlb::RANK_ANY "fib $stack $__l1 $__l2"
+        turbine::c::rule fib [ list $__l2 ] $turbine::LOCAL $adlb::RANK_ANY 1 "fib $stack $__l1 $__l2"
         allocate __l4 integer
         allocate __l5 integer
         allocate __l6 integer
         store_integer $__l6 2
         turbine::minus_integer $stack [ list $__l5 ] [ list $n $__l6 ]
-        turbine::c::rule fib [ list $__l5 ] $turbine::LOCAL $adlb::RANK_ANY "fib $stack $__l4 $__l5"
+        turbine::c::rule fib [ list $__l5 ] $turbine::LOCAL $adlb::RANK_ANY 1 "fib $stack $__l4 $__l5"
         turbine::plus_integer $stack [ list $o ] [ list $__l1 $__l4 ]
     } else {
         set parent $stack
@@ -95,7 +95,7 @@ proc rules {  } {
     global N
     puts "N: $N"
     store_integer $__l1 $N
-    turbine::c::rule fib [ list $__l1 ] $turbine::LOCAL $adlb::RANK_ANY "fib $stack $__l0 $__l1"
+    turbine::c::rule fib [ list $__l1 ] $turbine::LOCAL $adlb::RANK_ANY 1 "fib $stack $__l0 $__l1"
     turbine::trace $stack [ list ] [ list $__l0 ]
 }
 

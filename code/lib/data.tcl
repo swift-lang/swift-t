@@ -78,7 +78,7 @@ namespace eval turbine {
         }
         return $id
     }
-   
+
     # usage: allocate_custom <name> <type> [ args to pass to create ]
     proc allocate_custom { name type args } {
         set id [ create_$type $adlb::NULL_ID {*}${args} ]
@@ -430,7 +430,7 @@ namespace eval turbine {
         foreach rank $ranks {
             debug "notify: $rank"
             adlb::put $rank $WORK_TYPE(CONTROL) "close $id" \
-                      $turbine::priority
+                      $turbine::priority 1
         }
     }
 

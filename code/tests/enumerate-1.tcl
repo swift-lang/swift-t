@@ -35,13 +35,13 @@ proc rules { } {
     set j1 [ turbine::literal integer 98 ]
     set j2 [ turbine::literal integer 72 ]
 
-    turbine::container_f_insert no_stack "" "$c $i1 $j1"
-    turbine::container_f_insert no_stack "" "$c $i2 $j2"
+    turbine::c_f_insert "" "$c $i1 $j1"
+    turbine::c_f_insert "" "$c $i2 $j2"
     adlb::slot_drop $c
 
     turbine::allocate s string
-    turbine::enumerate no_stack $s $c
-    turbine::trace no_stack "" $s
+    turbine::enumerate $s $c
+    turbine::trace "" $s
 }
 
 turbine::defaults

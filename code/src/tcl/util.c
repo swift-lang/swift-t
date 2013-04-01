@@ -103,6 +103,15 @@ tcl_dict_put(Tcl_Interp* interp, Tcl_Obj* dict,
   valgrind_assert(rc == TCL_OK);
 }
 
+void
+tcl_dict_get(Tcl_Interp* interp, Tcl_Obj* dict,
+             char* key, Tcl_Obj** value)
+{
+  Tcl_Obj* k = Tcl_NewStringObj(key, -1);
+  int rc = Tcl_DictObjGet(interp, dict, k, value);
+  valgrind_assert(rc == TCL_OK);
+}
+
 Tcl_Obj*
 tcl_list_new(int count, char** strings)
 {

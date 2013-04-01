@@ -60,8 +60,8 @@ namespace eval turbine {
         nonempty o i
         set lo [ lindex $i 0 ]
         set hi [ lindex $i 1 ]
-        rule "randint-$lo-$hi" "$lo $hi" \
-            $turbine::LOCAL $adlb::RANK_ANY "randint_body $o $lo $hi"
+        rule "$lo $hi" "randint_body $o $lo $hi" \
+            name "randint-$lo-$hi" 
     }
 
     proc randint_body { o lo hi } {

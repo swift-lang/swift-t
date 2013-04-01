@@ -22,13 +22,6 @@
 // External type
 type external void;
 
-// Data copy
-@pure @copy
-(void o) copy_void (void i) "turbine" "0.0.2" "copy_void";
-@pure @copy
-(blob o) copy_blob (blob i) "turbine" "0.0.2" "copy_blob";
-@pure @copy
-(file o) copy_file (file i) "turbine" "0.0.2" "copy_file";
 @pure
 (void o) make_void () "turbine" "0.0.2" "make_void";
 

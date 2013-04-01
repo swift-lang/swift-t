@@ -44,16 +44,16 @@ proc rules { } {
     turbine::allocate t1 integer
     turbine::allocate t2 integer
 
-    turbine::call_composite no_stack f $t1 $i1 $t1
-    turbine::call_composite no_stack f $t2 $i2 $t1
+    turbine::call_composite f $t1 $i1 $t1
+    turbine::call_composite f $t2 $i2 $t1
 
-    turbine::container_f_insert no_stack "" "$c $i1 $t1"
-    turbine::container_f_insert no_stack "" "$c $i2 $t2"
+    turbine::c_f_insert "" "$c $i1 $t1"
+    turbine::c_f_insert "" "$c $i2 $t2"
     adlb::slot_drop $c
 
     turbine::allocate s string
-    turbine::enumerate no_stack $s $c
-    turbine::trace no_stack "" $s
+    turbine::enumerate $s $c
+    turbine::trace "" $s
 }
 
 turbine::defaults

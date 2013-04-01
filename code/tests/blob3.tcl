@@ -37,7 +37,7 @@ proc rules { } {
     # close container
     adlb::slot_drop $A
 
-    turbine::blob_from_floats no_stack $b $A
+    turbine::blob_from_floats $b $A
     puts DONE
 }
 

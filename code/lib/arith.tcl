@@ -21,14 +21,14 @@
 
 namespace eval turbine {
 
-    proc plus_integer { parent c inputs } {
+    proc plus_integer { c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        rule "plus-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
-            "plus_integer_body $parent $c $a $b"
+        rule "$a $b" "plus_integer_body $c $a $b" \
+            name "plus-$a-$b" 
     }
 
-    proc plus_integer_body { parent c a b } {
+    proc plus_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
         set c_value [ expr $a_value + $b_value ]
@@ -36,15 +36,15 @@ namespace eval turbine {
         store_integer $c $c_value
     }
 
-    proc plus_float { parent c inputs } {
+    proc plus_float { c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "plus-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
-            "plus_float_body $parent $c $a $b"
+        rule "$a $b" "plus_float_body $c $a $b" \
+            name "plus-$a-$b" 
     }
 
-    proc plus_float_body { parent c a b } {
+    proc plus_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
         set c_value [ expr $a_value + $b_value ]
@@ -55,14 +55,14 @@ namespace eval turbine {
     # This is a Swift-2 function
     # c = a-b;
     # and sleeps for c seconds
-    proc minus_integer { parent c inputs } {
+    proc minus_integer { c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "minus-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
-            "minus_integer_body $c $a $b"
+        rule  "$a $b" "minus_integer_body $c $a $b" \
+            name "minus-$a-$b" 
     }
-    proc minus_integer_body {c a b } {
+    proc minus_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
         set c_value [ expr $a_value - $b_value ]
@@ -70,15 +70,13 @@ namespace eval turbine {
         store_integer $c $c_value
     }
 
-    # This is a Swift-5 function
     # c = a-b;
-    # and sleeps for c seconds
-    proc minus_float { parent c inputs } {
+    proc minus_float { c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "minus-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
-            "minus_float_body $c $a $b"
+        rule "$a $b" "minus_float_body $c $a $b" \
+            name "minus-$a-$b" 
     }
     proc minus_float_body {c a b } {
         set a_value [ retrieve_decr_float $a ]
@@ -89,128 +87,103 @@ namespace eval turbine {
     }
 
     # c = a*b;
-    # and sleeps for c seconds
-    proc multiply_integer { parent c inputs } {
+    proc multiply_integer { c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-
-        rule "mult-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
-            "multiply_integer_body $c $a $b"
+        rule  "$a $b" "multiply_integer_body $c $a $b" \
+            name "mult-$a-$b" 
     }
-    proc multiply_integer_body {c a b } {
+    proc multiply_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
         set c_value [ expr $a_value * $b_value ]
         log "multiply: $a_value * $b_value => $c_value"
-        # Emulate some computation time
-        # exec sleep $c_value
         store_integer $c $c_value
     }
 
     # c = a*b;
-    # and sleeps for c seconds
-    proc multiply_float { parent c inputs } {
+    proc multiply_float { c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "mult-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
-            "multiply_float_body $c $a $b"
+        rule "$a $b" "multiply_float_body $c $a $b" \
+            name "mult-$a-$b" 
     }
-    proc multiply_float_body {c a b } {
+    proc multiply_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
         set c_value [ expr $a_value * $b_value ]
         log "multiply: $a_value * $b_value => $c_value"
-        # Emulate some computation time
-        # exec sleep $c_value
         store_float $c $c_value
     }
 
     # c = a/b; with integer division
-    # and sleeps for c seconds
-    proc divide_integer { parent c inputs } {
+    proc divide_integer { c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "div-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
-            "divide_integer_body $c $a $b"
+        rule "$a $b" "divide_integer_body $c $a $b" \
+            name "div-$a-$b" 
     }
-    proc divide_integer_body {c a b } {
+    proc divide_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
 
         set c_value [ divide_integer_impl $a_value $b_value ]
         log "divide: $a_value / $b_value => $c_value"
-        # Emulate some computation time
-        # exec sleep $c_value
         store_integer $c $c_value
     }
 
     # c = a/b; with float division
     # and sleeps for c seconds
-    proc divide_float { parent c inputs } {
+    proc divide_float { c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "div-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
-            "divide_float_body $c $a $b"
+        rule "$a $b"  "divide_float_body $c $a $b" \
+            name "div-$a-$b" 
     }
-    proc divide_float_body {c a b } {
+    proc divide_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
         set c_value [ expr $a_value / $b_value ]
         log "divide: $a_value / $b_value => $c_value"
-        # Emulate some computation time
-        # exec sleep $c_value
         store_float $c $c_value
     }
 
-    # This is a Swift-2 function
-    # c = -b;
-    proc negate_integer { parent c inputs } {
-        set a [ lindex $inputs 0 ]
-
-        rule "negate-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
-            "negate_integer_body $c $a"
+    # c = -a;
+    proc negate_integer { c a } {
+        rule $a "negate_integer_body $c $a" name "negate-$a" 
     }
 
     proc negate_integer_body { c a } {
         set a_value [ retrieve_decr_integer $a ]
         set c_value [ expr 0 - $a_value ]
         log "negate: -1 * $a_value => $c_value"
-        # Emulate some computation time
-        # exec sleep $c_value
         store_integer $c $c_value
     }
 
-    # This is a Swift-5 function
-    # c = -b;
-    proc negate_float { parent c inputs } {
-        set a [ lindex $inputs 0 ]
-
-        rule "negate-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
-            "negate_float_body $c $a"
+    # c = -a;
+    proc negate_float { c a } {
+        rule $a "negate_float_body $c $a" name "negate-$a" 
     }
 
     proc negate_float_body { c a } {
         set a_value [ retrieve_decr_float $a ]
         set c_value [ expr 0 - $a_value ]
         log "negate: -1 * $a_value => $c_value"
-        # Emulate some computation time
-        # exec sleep $c_value
         store_float $c $c_value
     }
 
 
-    proc mod_integer { parent c inputs } {
+    proc mod_integer { c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "mod-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
-            "mod_integer_body $parent $c $a $b"
+        rule "$a $b" "mod_integer_body $c $a $b" name "mod-$a-$b" 
     }
 
-    proc mod_integer_body { parent c a b } {
+    proc mod_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
         set c_value [ mod_integer_impl $a_value $b_value ]
@@ -248,12 +221,9 @@ namespace eval turbine {
         return [ expr $sign * ( abs($a) % abs($b) ) ]
     }
 
-    # This is a Swift-2 function, thus it only applies to integers
     # o = i;
-    proc copy_integer { parent o i } {
-
-        rule "copy-$o-$i" $i $turbine::LOCAL $adlb::RANK_ANY \
-            "copy_integer_body $o $i"
+    proc copy_integer { o i } {
+        rule $i "copy_integer_body $o $i" name "copy-$o-$i" 
     }
     proc copy_integer_body { o i } {
         set i_value [ retrieve_decr_integer $i ]
@@ -262,10 +232,9 @@ namespace eval turbine {
         store_integer $o $o_value
     }
 
-    proc copy_float { parent o i } {
-
-        rule "copy-$o-$i" $i $turbine::LOCAL $adlb::RANK_ANY \
-            "copy_float_body $o $i"
+    # o = i;
+    proc copy_float { o i } {
+        rule $i "copy_float_body $o $i" name "copy-$o-$i" 
     }
     proc copy_float_body { o i } {
         set i_value [ retrieve_decr_float $i ]
@@ -274,16 +243,14 @@ namespace eval turbine {
         store_float $o $o_value
     }
 
-
-    proc max_integer { parent c inputs } {
+    proc max_integer { c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "max-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
-            "max_integer_body $parent $c $a $b"
+        rule "$a $b" "max_integer_body $c $a $b" name "max-$a-$b" 
     }
 
-    proc max_integer_body { parent c a b } {
+    proc max_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
         set c_value [ expr max ($a_value, $b_value) ]
@@ -291,15 +258,14 @@ namespace eval turbine {
         store_integer $c $c_value
     }
 
-    proc min_integer { parent c inputs } {
+    proc min_integer { c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "min-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
-            "min_integer_body $parent $c $a $b"
+        rule "$a $b" "min_integer_body $c $a $b" name "min-$a-$b" 
     }
 
-    proc min_integer_body { parent c a b } {
+    proc min_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
         set b_value [ retrieve_decr_integer $b ]
         set c_value [ expr min ($a_value, $b_value) ]
@@ -307,15 +273,14 @@ namespace eval turbine {
         store_integer $c $c_value
     }
 
-    proc max_float { parent c inputs } {
+    proc max_float { c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "max-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
-            "max_float_body $parent $c $a $b"
+        rule "$a $b" "max_float_body $c $a $b" name "max-$a-$b" 
     }
 
-    proc max_float_body { parent c a b } {
+    proc max_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
         set c_value [ expr max ($a_value, $b_value) ]
@@ -323,15 +288,14 @@ namespace eval turbine {
         store_float $c $c_value
     }
 
-    proc min_float { parent c inputs } {
+    proc min_float { c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "min-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
-            "min_float_body $parent $c $a $b"
+        rule "$a $b" "min_float_body $c $a $b" name "min-$a-$b" 
     }
 
-    proc min_float_body { parent c a b } {
+    proc min_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
         set c_value [ expr min ($a_value, $b_value) ]
@@ -339,126 +303,110 @@ namespace eval turbine {
         store_float $c $c_value
     }
 
-    proc floor { parent c a } {
-
-        rule "floor-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
-            "floor_body $parent $c $a"
+    proc floor { c a } {
+        rule "floor-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY 1 \
+            "floor_body $c $a"
     }
 
-    proc floor_body { parent c a } {
+    proc floor_body { c a } {
         set a_value [ retrieve_decr_float $a ]
         set c_value [ expr int(floor($a_value)) ]
         log "floor: $a_value => $c_value"
         store_integer $c $c_value
     }
 
-    proc ceil { parent c a } {
-
-        rule "ceil-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
-            "ceil_body $parent $c $a"
+    proc ceil { c a } {
+        rule $a "ceil_body $c $a" name "round-$a" 
     }
 
-    proc ceil_body { parent c a } {
+    proc ceil_body { c a } {
         set a_value [ retrieve_decr_float $a ]
         set c_value [ expr int(ceil($a_value)) ]
         log "ceil: $a_value => $c_value"
         store_integer $c $c_value
     }
 
-    proc round { parent c a } {
-        rule "round-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
-            "round_body $parent $c $a"
+    proc round { c a } {
+        rule $a "round_body $c $a" name "round-$a" 
     }
 
-    proc round_body { parent c a } {
+    proc round_body { c a } {
         set a_value [ retrieve_decr_float $a ]
         set c_value [ expr int(round($a_value)) ]
         log "round: $a_value => $c_value"
         store_integer $c $c_value
     }
 
-    proc itof { parent c a } {
-        rule "itf-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
-            "itof_body $parent $c $a"
+    proc itof { c a } {
+        rule $a "itof_body $c $a" name "itf-$a" 
     }
 
-    proc itof_body { parent c a } {
+    proc itof_body { c a } {
         set a_value [ retrieve_decr_integer $a ]
         # Convert to TCL float type
         store_float $c [ expr double($a_value) ]
     }
 
-    proc log_e { parent c a } {
-
-        rule "log_e-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
-            "log_e_body $parent $c $a"
+    proc log_e { c a } {
+        rule $a "log_e_body $c $a"
     }
 
-    proc log_e_body { parent c a } {
+    proc log_e_body { c a } {
         set a_value [ retrieve_decr_float $a ]
         set c_value [ expr log($a_value) ]
         log "log_e: $a_value => $c_value"
         store_float $c $c_value
     }
 
-    proc exp { parent c a } {
-
-        rule "exp-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
-            "exp_body $parent $c $a"
+    proc exp { c a } {
+        rule $a "exp_body $c $a" name "exp-$a" 
     }
 
-    proc exp_body { parent c a } {
+    proc exp_body { c a } {
         set a_value [ retrieve_decr_float $a ]
         set c_value [ expr exp($a_value) ]
         log "exp: $a_value => $c_value"
         store_float $c $c_value
     }
 
-    proc sqrt { parent c a } {
-
-        rule "sqrt-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
-            "sqrt_body $parent $c $a"
+    proc sqrt { c a } {
+        rule $a "sqrt_body $c $a" name "sqrt-$a" 
     }
 
-    proc sqrt_body { parent c a } {
+    proc sqrt_body { c a } {
         set a_value [ retrieve_decr_float $a ]
         set c_value [ expr sqrt($a_value) ]
         log "sqrt: $a_value => $c_value"
         store_float $c $c_value
     }
 
-    proc abs_float { parent c a } {
-
-        rule "abs_float-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
-            "abs_float_body $parent $c $a"
+    proc abs_float { c a } {
+        rule $a "abs_float_body $c $a" name "abs_float-$a" 
     }
 
-    proc abs_float_body { parent c a } {
+    proc abs_float_body { c a } {
         set a_value [ retrieve_decr_float $a ]
         set c_value [ expr abs($a_value) ]
         log "abs_float: $a_value => $c_value"
         store_float $c $c_value
     }
 
-    proc abs_integer { parent c a } {
-
-        rule "abs_integer-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY \
-            "abs_integer_body $parent $c $a"
+    proc abs_integer { c a } {
+        rule $a "abs_integer_body $c $a" name "abs_integer-$a" 
     }
 
-    proc abs_integer_body { parent c a } {
+    proc abs_integer_body { c a } {
         set a_value [ retrieve_decr_integer $a ]
         set c_value [ expr abs($a_value) ]
         log "abs_integer: $a_value => $c_value"
         store_integer $c $c_value
     }
 
-    proc pow_integer { parent c inputs } {
+    proc pow_integer { c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-
-        rule "pow-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
-            "pow_integer_body $c $a $b"
+        rule "$a $b" "pow_integer_body $c $a $b" \
+            name "pow-$a-$b" 
     }
     proc pow_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
@@ -478,14 +426,13 @@ namespace eval turbine {
         return [ expr $a ** $b ]
     }
 
-    proc pow_float { parent c inputs } {
+    proc pow_float { c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "pow-$a-$b" "$a $b" $turbine::LOCAL $adlb::RANK_ANY \
-            "pow_float_body $c $a $b"
+        rule "$a $b" "pow_float_body $c $a $b" name "pow-$a-$b" 
     }
-    proc pow_float_body {c a b } {
+    proc pow_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
         set b_value [ retrieve_decr_float $b ]
         set c_value [ expr $a_value ** $b_value ]
@@ -494,9 +441,8 @@ namespace eval turbine {
     }
 
     # checks to see if float i is NaN, sets o to true or false accordingly
-    proc is_nan { stack o i } {
-        rule "is_nan-$o-$i" "$i" $turbine::LOCAL $adlb::RANK_ANY \
-            "is_nan_body $o $i"
+    proc is_nan { o i } {
+        rule $i "is_nan_body $o $i" name "is_nan-$o-$i" 
     }
     proc is_nan_body { o i } {
       set i_value [ retrieve_decr_float $i ]

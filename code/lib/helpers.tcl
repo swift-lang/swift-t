@@ -82,7 +82,7 @@ proc readfile { filename } {
 # Debugging helper
 proc show { v } {
     upvar $v t
-    turbine::debug "$v: $t"
+    puts "$v: $t"
 }
 
 set KB 1024

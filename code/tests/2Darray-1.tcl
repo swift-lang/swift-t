@@ -40,10 +40,9 @@ proc rules { } {
     turbine::literal k integer 59
 
     turbine::allocate r1 integer
-    turbine::f_reference no_stack "" "$A $i $r1 integer"
-    turbine::container_f_insert no_stack "" "$A $i $t1"
-    turbine::f_cref_insert no_stack "" "$r1 $j $t1 $A"
-    # turbine::container_f_insert no_stack "" "$t1 $j $k"
+    turbine::c_f_lookup "" "$A $i $r1 integer"
+    turbine::c_f_insert "" "$A $i $t1"
+    turbine::cr_v_insert "" "$r1 $j $t1 $A"
 }
 
 turbine::defaults

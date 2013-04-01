@@ -41,7 +41,15 @@ turbine_run(MPI_Comm comm, char* script_file,
   // Create Tcl interpreter:
   Tcl_Interp* interp = Tcl_CreateInterp();
   Tcl_Init(interp);
+  return turbine_run_interp(comm, script_file, argc, argv, output,
+                            interp);
+}
 
+turbine_code
+turbine_run_interp(MPI_Comm comm, char* script_file,
+                   int argc, char** argv, char* output,
+                   Tcl_Interp* interp)
+{
   // Store communicator pointer in Tcl variable for turbine::init
   MPI_Comm* comm_ptr = &comm;
   Tcl_Obj* TURBINE_ADLB_COMM =

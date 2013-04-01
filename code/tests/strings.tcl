@@ -35,7 +35,7 @@ proc rules { } {
 
     puts -nonewline "result: "
     # Use 0 as stack frame
-    turbine::trace 0 "" [ list 11 12 ]
+    turbine::trace "" [ list 11 12 ]
 }
 
 turbine::defaults

@@ -12,17 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# I/O library routines
+# Turbine IO.TCL
+
+# Turbine I/O library routines
 
 namespace eval turbine {
 
     # namespace export printf
 
-    proc printf { args } {
+    proc printf { outputs inputs  } {
 
-        set a [ lindex $args 2 ]
-        rule printf $a $turbine::LOCAL $adlb::RANK_ANY \
-            "printf_body $a"
+        rule $inputs "printf_body $inputs" name "printf"
     }
     proc printf_body { args } {
         set L [ list ]

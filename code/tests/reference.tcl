@@ -43,18 +43,18 @@ proc rules { } {
     set j [ turbine::literal integer 41 ]
     turbine::allocate r1 integer
     turbine::allocate v1 integer
-    turbine::f_reference no_stack "" "$c $i $r1 integer"
-    turbine::f_dereference_integer no_stack $v1 $r1
-    turbine::trace no_stack "" $v1
-    turbine::container_f_insert no_stack "" "$c $i $j"
+    turbine::c_f_lookup "" "$c $i $r1 integer"
+    turbine::dereference_integer $v1 $r1
+    turbine::trace "" $v1
+    turbine::c_f_insert "" "$c $i $j"
 
     set k [ turbine::literal integer 72 ]
-    turbine::container_f_insert no_stack "" "$c $j $k"
+    turbine::c_f_insert "" "$c $j $k"
     turbine::allocate r2 integer
     turbine::allocate v2 integer
-    turbine::f_reference no_stack "" "$c $j $r2 integer"
-    turbine::f_dereference_integer no_stack $v2 $r2
-    turbine::trace no_stack "" $v2
+    turbine::c_f_lookup "" "$c $j $r2 integer"
+    turbine::dereference_integer $v2 $r2
+    turbine::trace "" $v2
 }
 
 turbine::defaults

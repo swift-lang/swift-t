@@ -15,45 +15,35 @@
 # Turbine builtin functions
 
 # All builtins will have signature:
-#   f <STACK> <OUTPUT LIST> <INPUT LIST>
+#   f <OUTPUT LIST> <INPUT LIST>
 # where the lists are Tcl lists of TDs
 # even if some of the arguments are not used
-# The uniformity allows the stp code generator to simply write all
+# The uniformity allows the STC code generator to simply write all
 # calls to builtins the same way
-# (Not all functions conform to this but they will. -Justin)
 
 namespace eval turbine {
 
     # User functions
-    namespace export enumerate literal shell
+    namespace export enumerate literal shell call_composite
 
-    # Memory functions (will be in turbine::f namespace)
-    namespace export f_dereference
-
-    # System functions
-    namespace export stack_lookup
-
-    # These are Swift-2 functions
+    # Debugging/performance-testing functions
     namespace export set1
 
     # Bring in Turbine extension features
     namespace import c::new c::typeof
     namespace import c::insert c::log
 
-    proc call_composite { stack f outputs inputs blockon } {
-
-        set rule_id [ turbine::c::rule $f "$blockon"        \
-                          $turbine::CONTROL $adlb::RANK_ANY \
-                          "$f $stack $outputs $inputs" ]
+    proc call_composite { f outputs inputs blockon } {
+        set rule_id \
+            [ turbine::c::rule "$blockon" "$f $outputs $inputs" ]
         return $rule_id
     }
 
     # User function
-    # This name conflicts with a TCL built-in - it cannot be exported
-    # TODO: Replace this with tracef()
-    proc trace { stack signal inputs } {
-        rule "trace" $inputs $turbine::LOCAL $adlb::RANK_ANY \
-            "turbine::trace_body \"$signal\" $inputs"
+    # This name conflicts with a Tcl built-in - it cannot be exported
+    proc trace { signal inputs } {
+        rule $inputs "turbine::trace_body \"$signal\" $inputs" \
+            name "trace"
     }
 
     proc trace_body { signal args } {
@@ -95,7 +85,7 @@ namespace eval turbine {
       }
       set secs [ lindex $inputs 0 ]
       set args [ lreplace $inputs 0 0]
-      rule "sleep_trace" $inputs $turbine::WORK $adlb::RANK_ANY \
+      rule "sleep_trace" $inputs $turbine::WORK $adlb::RANK_ANY 1 \
            "turbine::sleep_trace_body $signal $secs $args"
     }
     proc sleep_trace_body { signal secs inputs } {
@@ -112,7 +102,7 @@ namespace eval turbine {
         #   conventions which don't close assigned arrays)
         set start [ lindex $inputs 0 ]
         set end [ lindex $inputs 1 ]
-        rule "range-$result" "$start $end" $turbine::CONTROL $adlb::RANK_ANY \
+        rule "range-$result" "$start $end" $turbine::CONTROL $adlb::RANK_ANY 1 \
             "range_body $result $start $end"
     }
 
@@ -131,7 +121,7 @@ namespace eval turbine {
         set end [ lindex $inputs 1 ]
         set step [ lindex $inputs 2 ]
         rule "rangestep-$result" [ list $start $end $step ] \
-            $turbine::CONTROL $adlb::RANK_ANY\
+            $turbine::CONTROL $adlb::RANK_ANY 1\
             "rangestep_body $result $start $end $step"
     }
 
@@ -169,7 +159,7 @@ namespace eval turbine {
     # Construct a distributed container of sequential integers
     proc drange { result start end parts } {
 
-        rule "drange-$result" "$start $end" $turbine::CONTROL $adlb::RANK_ANY \
+        rule "drange-$result" "$start $end" $turbine::CONTROL $adlb::RANK_ANY 1 \
             "drange_body $result $start $end $parts"
     }
 
@@ -190,7 +180,7 @@ namespace eval turbine {
             set s [ expr $i *  $step ]
             # end
             set e [ expr $s + $step - 1 ]
-            adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
+            adlb::put $adlb::RANK_ANY 1 $WORK_TYPE(CONTROL) \
                 "command priority: $turbine::priority range_work $c $s $e 1" \
                 $turbine::priority
         }
@@ -203,7 +193,7 @@ namespace eval turbine {
     proc dloop { loop_body stack container } {
 
         c::log "log_dloop:"
-        rule "dloop-$container" $container $turbine::CONTROL $adlb::RANK_ANY \
+        rule "dloop-$container" $container $turbine::CONTROL $adlb::RANK_ANY 1 \
             "dloop_body $loop_body $stack $container"
     }
 
@@ -221,7 +211,7 @@ namespace eval turbine {
 
     proc readdata { result filename } {
 
-        rule "read_data-$filename" $filename $turbine::CONTROL $adlb::RANK_ANY \
+        rule "read_data-$filename" $filename $turbine::CONTROL $adlb::RANK_ANY 1 \
             "readdata_body $result $filename"
     }
 
@@ -244,7 +234,7 @@ namespace eval turbine {
 
     # User function
     proc loop { stmts stack container } {
-        rule "loop-$container" $container $turbine::CONTROL $adlb::RANK_ANY \
+        rule "loop-$container" $container $turbine::CONTROL $adlb::RANK_ANY 1 \
             "loop_body $stmts $stack $container"
     }
 
@@ -287,9 +277,9 @@ namespace eval turbine {
     }
 
     # User function
-    proc toint { stack result input } {
-        rule "toint-$input" $input $turbine::LOCAL $adlb::RANK_ANY \
-            "toint_body $input $result"
+    proc toint { result input } {
+        rule $input "toint_body $input $result" \
+            name "toint-$input" 
     }
 
     proc toint_body { input result } {
@@ -309,9 +299,9 @@ namespace eval turbine {
         return $input
     }
 
-    proc fromint { stack result input } {
-      rule "fromint-$input-$result" $input $turbine::LOCAL $adlb::RANK_ANY \
-            "fromint_body $input $result"
+    proc fromint { result input } {
+        rule $input "fromint_body $input $result" \
+            name "fromint-$input-$result" 
     }
 
     proc fromint_body { input result } {
@@ -320,9 +310,9 @@ namespace eval turbine {
         store_string $result $t
     }
 
-    proc tofloat { stack result input } {
-        rule "tofloat-$input" $input $turbine::LOCAL $adlb::RANK_ANY \
-            "tofloat_body $input $result"
+    proc tofloat { result input } {
+        rule $input "tofloat_body $input $result" \
+            name "tofloat-$input" 
     }
 
     proc tofloat_body { input result } {
@@ -339,8 +329,8 @@ namespace eval turbine {
       return $input
     }
 
-    proc fromfloat { stack result input } {
-        rule "fromfloat-$input-$result" $input $turbine::LOCAL $adlb::RANK_ANY \
+    proc fromfloat { result input } {
+        rule "fromfloat-$input-$result" $input $turbine::LOCAL $adlb::RANK_ANY 1 \
             "fromfloat_body $input $result"
     }
 
@@ -351,12 +341,13 @@ namespace eval turbine {
     }
 
     # Good for performance testing
-    # c = 1;
+    # c = 0;
     # and sleeps
-    proc set0 { parent c } {
-        rule "set0-$" "" $turbine::WORK $adlb::RANK_ANY "set0_body $parent $c"
+    proc set0 { c } {
+        rule {} "set0_body $c" \
+             name "set0-$" type $turbine::WORK 
     }
-    proc set0_body { parent c } {
+    proc set0_body { c } {
         log "set0"
 
         variable stats
@@ -370,11 +361,11 @@ namespace eval turbine {
     # Good for performance testing
     # c = 1;
     # and sleeps
-    proc set1 { parent c } {
-
-        rule "set1-$" "" $turbine::WORK $adlb::RANK_ANY "set1_body $parent $c"
+    proc set1 { c } {
+        rule {} "set1_body $parent $c" \
+             name "set1-$" type $turbine::WORK 
     }
-    proc set1_body { parent c } {
+    proc set1_body { c } {
         log "set1"
 
         variable stats
@@ -385,12 +376,12 @@ namespace eval turbine {
         store_integer $c 1
     }
 
-    # Execute shell command
+    # Execute shell command DEPRECATED
     proc shell { args } {
         puts "turbine::shell $args"
         set command [ lindex $args 0 ]
         set inputs [ lreplace $args 0 0 ]
-        rule "shell-$command" $inputs $turbine::WORK $adlb::RANK_ANY \
+        rule "shell-$command" $inputs $turbine::WORK $adlb::RANK_ANY 1 \
             "shell_body $command \"$inputs\""
     }
 
@@ -406,33 +397,10 @@ namespace eval turbine {
         exec $command $values
     }
 
-    # Look in all enclosing stack frames for the TD for the given symbol
-    # If not found, abort
-    proc stack_lookup { stack symbol } {
-
-        set result ""
-        while true {
-            set result [ container_lookup $stack $symbol ]
-            if { [ string equal $result "0" ] } {
-                # Not found in local stack frame: check enclosing frame
-                set enclosure [ container_lookup $stack _enclosure ]
-                if { ! [ string equal $enclosure "0" ] } {
-                    set stack $enclosure
-                } else {
-                    # We have no more frames to check
-                    break
-                }
-            } else {
-                return $result
-            }
-        }
-        abort "stack_lookup failure: stack: <$stack> symbol: $symbol"
-    }
-
-    # o = i.  Void has no value, so this just makes sure that they close at
-    # the same time
+    # o = i.  Void has no value, so this just makes sure that
+    #         they close sequentially
     proc copy_void { parent o i } {
-        rule "copy-$o-$i" $i $turbine::LOCAL $adlb::RANK_ANY "copy_void_body $o $i"
+        rule $i "copy_void_body $o $i" name "copy-$o-$i" 
     }
     proc copy_void_body { o i } {
         log "copy_void $i => $o"
@@ -442,8 +410,7 @@ namespace eval turbine {
 
     # Copy string value
     proc copy_string { parent o i } {
-        rule "copystring-$o-$i" $i $turbine::LOCAL $adlb::RANK_ANY \
-            "copy_string_body $o $i"
+        rule $i "copy_string_body $o $i" name "copystring-$o-$i" 
     }
     proc copy_string_body { o i } {
         set i_value [ retrieve_decr_string $i ]
@@ -453,8 +420,7 @@ namespace eval turbine {
 
     # Copy blob value
     proc copy_blob { parent o i } {
-        rule "copyblob-$o-$i" $i $turbine::LOCAL $adlb::RANK_ANY \
-            "copy_blob_body $o $i"
+        rule $i "copy_blob_body $o $i" name "copyblob-$o-$i" 
     }
     proc copy_blob_body { o i } {
         set i_value [ retrieve_decr_blob $i ]
@@ -470,8 +436,8 @@ namespace eval turbine {
     }
 
     proc zero { stack outputs inputs } {
-        rule "zero-$outputs-$inputs" $inputs $turbine::WORK $adlb::RANK_ANY \
-            "turbine::zero_body $outputs $inputs"
+        rule $inputs "turbine::zero_body $outputs $inputs" \
+            name "zero-$outputs-$inputs" 
     }
     proc zero_body { output input } {
         store_integer $output 0
