@@ -309,8 +309,6 @@ ADLBP_Get(int type_requested, void* payload, int* length,
     int ranks[g.parallelism];
     RECV(ranks, g.parallelism, MPI_INT, xlb_my_server,
          ADLB_TAG_RESPONSE_GET);
-    printf("gp: %i\n", g.parallelism);
-    printf("ranks: %i %i\n", ranks[0], ranks[1]);
     MPI_Group group;
     int rc = MPI_Group_incl(adlb_group, g.parallelism, ranks, &group);
     assert(rc == MPI_SUCCESS);

@@ -351,7 +351,6 @@ handle_get(int caller)
     xlb_requestqueue_recheck();
   }
 
-  printf("howdy\n");
   adlb_code rc = check_parallel_tasks(type);
   ADLB_CHECK(rc);
 
