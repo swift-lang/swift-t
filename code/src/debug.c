@@ -33,8 +33,6 @@ debug_check_environment()
   {
     if (strcmp(v, "0") == 0)
       xlb_trace_enabled = false;
-    else
-      xlb_trace_enabled = true;
   }
 
   v = getenv("ADLB_DEBUG");
@@ -45,7 +43,5 @@ debug_check_environment()
       xlb_debug_enabled = false;
       xlb_trace_enabled = false;
     }
-    else
-      xlb_debug_enabled = true;
   }
 }
