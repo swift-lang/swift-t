@@ -68,7 +68,7 @@ static adlb_datum_id last_id;
 /**
    default variable creation props
  */
-adlb_create_props DEFAULT_CREATE_PROPS = 
+adlb_create_props DEFAULT_CREATE_PROPS =
     { .read_refcount = 1, .write_refcount = 1, .permanent = false };
 
 #ifndef NDEBUG
@@ -152,7 +152,7 @@ data_create(adlb_datum_id id, adlb_data_type type,
   list_i_init(&d->listeners);
 
   table_lp_add(&tds, id, d);
-  
+
   return datum_init_props(id, d, props);
 }
 
@@ -213,7 +213,7 @@ datum_init_props(adlb_datum_id id, adlb_datum *d,
   if (props->permanent) {
     d->status |= ADLB_DATA_PERMANENT_MASK;
   }
-  
+
   if (d->read_refcount <= 0 && d->write_refcount <= 0) {
     // This wouldn't happen in good code, but is possible
     return garbage_collect(id, d);
@@ -497,7 +497,7 @@ data_container_reference_str(adlb_datum_id container_id,
   // Is the container closed?
   check_verbose(d->write_refcount > 0, ADLB_DATA_ERROR_INVALID,
                 "Attempting to subscribe to non-existent subscript\n"
-                "on a closed container:  %li[%s]\n",
+                "on a closed container:  <%li>[%s]\n",
                 container_id, subscript);
 
   char* pair;
@@ -594,7 +594,7 @@ data_store(adlb_datum_id id, void* buffer, int length,
 
   // Default: not closed
   *notify_count = 0;
-  
+
   d->status |= ADLB_DATA_SET_MASK;
 
   if (decr_write_refcount)
