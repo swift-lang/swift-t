@@ -77,7 +77,7 @@ namespace eval turbine {
       if { ! [ llength $inputs ] } {
         error "trace: received no arguments!"
       }
-      rule $inputs "sleep_trace_body $signal $secs $inputs" type $turbine::WORK
+      rule $inputs "sleep_trace_body $signal $inputs" type $turbine::WORK
     }
     proc sleep_trace_body { signal secs args } {
       set secs_val [ retrieve_decr_float $secs ]
@@ -289,11 +289,11 @@ namespace eval turbine {
     }
 
     proc fromint { result input } {
-        rule $input "fromint_body $input $result" \
+        rule $input "fromint_body $result $input" \
             name "fromint-$input-$result" 
     }
 
-    proc fromint_body { input result } {
+    proc fromint_body { result input } {
         set t [ retrieve_decr_integer $input ]
         # Tcl performs the conversion naturally
         store_string $result $t
