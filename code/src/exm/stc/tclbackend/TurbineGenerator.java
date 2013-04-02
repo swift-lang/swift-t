@@ -852,7 +852,7 @@ public class TurbineGenerator implements CompilerBackend {
           + function);
     }
     Token f = new Token(tclf.pkg + "::" + tclf.symbol);
-    Command c = new Command(f, Turbine.LOCAL_STACK_VAL, oList, iList);
+    Command c = new Command(f, oList, iList);
 
     setPriority(priority);
     pointStack.peek().add(c);
