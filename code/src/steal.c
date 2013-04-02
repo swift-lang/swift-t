@@ -54,7 +54,7 @@ steal_allowed()
   if (xlb_servers == 1)
     // No other servers
     return false;
-  double t = MPI_Wtime();
+  double t = xlb_approx_time();
   if (t - xlb_steal_last < xlb_steal_backoff)
     // Too soon to try again
     return false;

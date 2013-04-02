@@ -69,4 +69,7 @@ adlb_code xlb_server_fail(int code);
  */
 adlb_code xlb_server_failed(bool* aborted, int* code);
 
+// Get approximate time, updated frequently by server loop
+double xlb_approx_time(void);
+
 #endif

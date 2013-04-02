@@ -58,6 +58,11 @@ double xlb_time_last_action;
 /** Cached recent timestamp */
 static double xlb_time_approx_now;
 
+double xlb_approx_time(void)
+{
+  return xlb_time_approx_now;
+}
+
 static inline void update_time_last_action(adlb_tag tag)
 {
   // Update timestamp:
@@ -194,7 +199,7 @@ ADLB_Server(long max_memory)
       break;
     
     update_cached_time(); // Periodically refresh timestamp
-  
+    
     adlb_code code = serve_several();
     ADLB_CHECK(code);
    
@@ -203,6 +208,8 @@ ADLB_Server(long max_memory)
     code = xlb_handle_pending_syncs();
     ADLB_CHECK(code);
 
+    update_cached_time(); // Periodically refresh timestamp
+  
     check_steal();
   }
   server_shutdown();
