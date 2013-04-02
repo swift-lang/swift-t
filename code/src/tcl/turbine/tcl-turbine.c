@@ -36,6 +36,8 @@
 
 #include <tcl.h>
 
+#include <adlb.h>
+
 #include <log.h>
 #include <tools.h>
 
@@ -704,6 +706,61 @@ extract_object(Tcl_Interp* interp, Tcl_Obj *const objv[],
   return TCL_OK;
 }
 
+/* usage: worker_loop <work type>
+   Repeatedly run units of work from ADLB of provided type
+ */
+static int
+Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
+                        int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  
+  int work_type;
+  int rc;
+  rc = Tcl_GetIntFromObj(interp, objv[1], &work_type);
+  TCL_CHECK(rc);
+
+  adlb_code code;
+  int buffer_size;
+  char *buffer = tcl_adlb_xfer_buffer(&buffer_size);
+  while (true) {
+    MPI_Comm task_comm;
+    int work_len, answer_rank, type_recved;
+    code = ADLB_Get(work_type, buffer, &work_len,
+                    &answer_rank, &type_recved, &task_comm);
+    if (code == ADLB_SHUTDOWN)
+      break;
+    TCL_CONDITION(code == ADLB_SUCCESS, "Get failed with code %i\n", code);
+    assert(work_len <= buffer_size);
+    assert(type_recved == work_type);
+
+    // Work unit is prepended with rule ID, followed by space.
+    char *rule_id_end = strchr(buffer, ' ');
+
+    assert(rule_id_end != NULL);
+    char *work = rule_id_end + 1; // start of Tcl work unit
+    
+    DEBUG_TURBINE("rule_id: %li", atol(buffer));
+    DEBUG_TURBINE("eval: %s", work);
+
+    // Work out length | null byte | prefix
+    int cmd_len = work_len - 1 - (work - buffer);
+    rc = Tcl_EvalEx(interp, work, cmd_len, 0);
+    if (rc != TCL_OK) {
+      TCL_CONDITION(rc == TCL_ERROR, "Unexpected return code from evaled "
+                    "command: %d", rc);
+      // Pass error to calling script
+      const char *prefix = "Worker failed while running task: ";
+      char *msg = malloc(sizeof(char) * (strlen(prefix) + work_len));
+      sprintf(msg, "%s%s", prefix, buffer);
+      Tcl_AddErrorInfo(interp, msg);
+      free(msg);
+      return rc;
+    }
+  }
+  return TCL_OK;
+}
+
 static int
 Turbine_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
@@ -773,6 +830,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("close",       Turbine_Close_Cmd);
   COMMAND("log",         Turbine_Log_Cmd);
   COMMAND("normalize",   Turbine_Normalize_Cmd);
+  COMMAND("worker_loop", Turbine_Worker_Loop_Cmd);
   COMMAND("cache",       Turbine_Cache_Cmd);
   COMMAND("finalize",    Turbine_Finalize_Cmd);
   COMMAND("debug",       Turbine_Debug_Cmd);

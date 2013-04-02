@@ -23,4 +23,7 @@ void tcl_adlb_init(Tcl_Interp* interp);
 
 extern int ADLB_curr_priority;
 
+/* Return a pointer to a shared buffer */
+char *tcl_adlb_xfer_buffer(int *buf_size);
+
 #endif

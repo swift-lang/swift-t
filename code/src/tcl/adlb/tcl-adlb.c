@@ -94,6 +94,11 @@ long adlb_comm_ptr = 0;
 
 static char xfer[ADLB_DATA_MAX];
 
+/* Return a pointer to a shared transfer buffer */
+char *tcl_adlb_xfer_buffer(int *buf_size) {
+  *buf_size = ADLB_DATA_MAX;
+  return xfer;
+}
 /**
    Map from TD to local blob pointers.
    This is not an LRU cache: the user must use blob_free to
