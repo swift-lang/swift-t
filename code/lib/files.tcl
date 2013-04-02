@@ -130,7 +130,7 @@ namespace eval turbine {
 
     # Copy one file to another.  If the destination is unmapped,
     # then shortcut by just making sure they point to the same place
-    proc copy_file { parent outputs inputs } {
+    proc copy_file { outputs inputs } {
       set dst [ lindex $outputs 0 ]
       set src [ lindex $inputs 0 ]
       #  puts "dst: $dst"

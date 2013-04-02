@@ -47,7 +47,7 @@ namespace eval turbine {
     }
 
     # called with 0 args, returns a random float in [0.0, 1.0)
-    proc random { parent o i } {
+    proc random { o i } {
         nonempty o
         # no input args
         empty i
@@ -56,7 +56,7 @@ namespace eval turbine {
     }
 
     # called with 2 args: inclusive minimum and exclusive maximum of range
-    proc randint { parent o i } {
+    proc randint { o i } {
         nonempty o i
         set lo [ lindex $i 0 ]
         set hi [ lindex $i 1 ]
