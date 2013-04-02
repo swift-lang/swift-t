@@ -341,8 +341,13 @@ public class Conditionals {
   
     @Override
     public Block branchPredict(Map<Var, Arg> knownConstants) {
-      if (switchVar.isVar() && knownConstants.containsKey(switchVar.getVar())) {
-        this.switchVar = knownConstants.get(switchVar.getVar());
+      if (switchVar.isVar()) {
+        if (knownConstants.containsKey(switchVar.getVar())) {
+          this.switchVar = knownConstants.get(switchVar.getVar());
+        } else {
+          // Variable condition
+          return null;
+        }
       } 
       long val = switchVar.getIntLit();
       // Check cases
