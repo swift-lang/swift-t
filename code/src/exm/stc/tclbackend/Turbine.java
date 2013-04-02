@@ -447,17 +447,16 @@ class Turbine
 
   private static Sequence spawnTask(List<Expression> action, TaskMode type, Target target,
       Expression priority, ExecContext execCx) {
-    
-    Sequence res =new Sequence();
-    Token ADLB_PUT = new Token("adlb::put");
+    Sequence res = new Sequence();
+    Token ADLB_SPAWN = new Token("adlb::spawn");
     LiteralInt TURBINE_NULL_RULE = new LiteralInt(-1);
-    if (priority == null) {
-      priority = currentPriority();
-    }
     
     // Store in var for readability
-    Value priorityVar = new Value(TCLTMP_PRIO);
-    res.add(new SetVariable(TCLTMP_PRIO, priority));
+    Value priorityVar = null;
+    if (priority != null) {
+      priorityVar =  new Value(TCLTMP_PRIO);
+      res.add(new SetVariable(TCLTMP_PRIO, priority));
+    }
     
     List<Expression> taskTokens = new ArrayList<Expression>();
     // Different task formats for work types
@@ -467,13 +466,19 @@ class Turbine
     } else {
       assert(type == TaskMode.CONTROL);
       taskTokens.add(new Token("command"));
-      taskTokens.add(new Token("priority:"));
-      taskTokens.add(priorityVar);
+      if (priority != null) {
+        taskTokens.add(new Token("priority:"));
+        taskTokens.add(priorityVar);
+      }
       taskTokens.addAll(action);
     }
     // add to shared work queue
-    res.add(new Command(ADLB_PUT, target.toTcl(), adlbWorkType(type),
-                TclUtil.tclStringAsList(taskTokens), priorityVar));
+    if (priority != null)
+      res.add(setPriority(priorityVar));
+    res.add(new Command(ADLB_SPAWN, adlbWorkType(type),
+                          TclUtil.tclStringAsList(taskTokens)));
+    if (priority != null)
+      res.add(resetPriority());
     return res;
   }
 
@@ -489,8 +494,7 @@ class Turbine
   }
   
 
-  private static Expression currentPriority() {
-    // TODO: is this the most sensible?
+  public static Expression currentPriority() {
     // get the current turbine priority
     return new Square("turbine::get_priority");
   }
