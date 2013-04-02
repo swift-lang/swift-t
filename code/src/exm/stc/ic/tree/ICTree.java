@@ -684,9 +684,6 @@ public class ICTree {
 
     public void setParent(BlockType type, Continuation parentCont,
         Function parentFunction) {
-      if (type == BlockType.CASE_BLOCK) {
-        new Exception().printStackTrace();
-      }
       this.parentCont = parentCont;
       this.parentFunction = parentFunction;
     }
