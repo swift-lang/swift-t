@@ -29,6 +29,7 @@ public class TclList extends Square
     super();
 
     add(new Token("list"));
+    setTreatAsList(true);
   }
 
   public TclList(Expression... listItems) {
@@ -47,5 +48,12 @@ public class TclList extends Square
     this();
     for (String s : strings)
       add(new Token(s));
+  }
+
+  @Override
+  public boolean supportsStringList() {
+    // Won't be correctly quoted
+    // TODO: can just add braces
+    return false;
   }
 }

@@ -86,6 +86,7 @@ import exm.stc.tclbackend.tree.TclTree;
 import exm.stc.tclbackend.tree.Text;
 import exm.stc.tclbackend.tree.Token;
 import exm.stc.tclbackend.tree.Value;
+import exm.stc.tclbackend.tree.Expression.ExprContext;
 import exm.stc.ui.ExitCode;
 
 public class TurbineGenerator implements CompilerBackend {
@@ -316,7 +317,8 @@ public class TurbineGenerator implements CompilerBackend {
         logExprs.add(new Token(">"));
       }
 
-      pointStack.peek().add(Turbine.log(new TclString(logExprs, false)));
+      TclString msg = new TclString(logExprs, ExprContext.VALUE_STRING);
+      pointStack.peek().add(Turbine.log(msg));
     }
     
     // Allocate files after so that mapped args are visible
@@ -850,8 +852,7 @@ public class TurbineGenerator implements CompilerBackend {
           + function);
     }
     Token f = new Token(tclf.pkg + "::" + tclf.symbol);
-    Value s = new Value(Turbine.LOCAL_STACK_NAME);
-    Command c = new Command(f, s, oList, iList);
+    Command c = new Command(f, Turbine.LOCAL_STACK_VAL, oList, iList);
 
     setPriority(priority);
     pointStack.peek().add(c);
@@ -1700,7 +1701,7 @@ public class TurbineGenerator implements CompilerBackend {
     private List<Expression> buildAction(String procName, List<Expression> args) {
       ArrayList<Expression> ruleTokens = new ArrayList<Expression>();
       ruleTokens.add(new Token(procName));
-      ruleTokens.add(new Value(Turbine.LOCAL_STACK_NAME));
+      ruleTokens.add(Turbine.LOCAL_STACK_VAL);
       ruleTokens.addAll(args);
 
       return ruleTokens; 
@@ -1980,7 +1981,7 @@ public class TurbineGenerator implements CompilerBackend {
     Value incVal = new Value(TCLTMP_RANGE_INC);
 
     List<Expression> commonArgs = new ArrayList<Expression>();
-    commonArgs.add(new Value(Turbine.LOCAL_STACK_NAME));
+    commonArgs.add(Turbine.LOCAL_STACK_VAL);
     for (PassedVar pv: passedVars) {
       commonArgs.add(varToExpr(pv.var));
     }
@@ -2323,7 +2324,7 @@ public class TurbineGenerator implements CompilerBackend {
     ArrayList<String> loopFnArgs = new ArrayList<String>();
     ArrayList<Value> firstIterArgs = new ArrayList<Value>();
     loopFnArgs.add(Turbine.LOCAL_STACK_NAME);
-    firstIterArgs.add(new Value(Turbine.LOCAL_STACK_NAME));
+    firstIterArgs.add(Turbine.LOCAL_STACK_VAL);
 
     for (Var arg: loopVars) {
       loopFnArgs.add(prefixVar(arg.name()));
@@ -2378,7 +2379,7 @@ public class TurbineGenerator implements CompilerBackend {
          List<Boolean> blockingVars) {
     ArrayList<Value> nextIterArgs = new ArrayList<Value>();
     String loopName = loopNameStack.peek();
-    nextIterArgs.add(new Value(Turbine.LOCAL_STACK_NAME));
+    nextIterArgs.add(Turbine.LOCAL_STACK_VAL);
 
     for (Var v: newVals) {
       nextIterArgs.add(varToExpr(v));

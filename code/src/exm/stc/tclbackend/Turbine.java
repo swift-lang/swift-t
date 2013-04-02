@@ -104,10 +104,12 @@ class Turbine
   private static final Token STACK_LOOKUP =
       new Token("turbine::stack_lookup");
   static final String LOCAL_STACK_NAME = "stack";
+  
+  static final Value LOCAL_STACK_VAL = new Value(LOCAL_STACK_NAME, false, true);
   static final String PARENT_STACK_NAME = "stack";
   private static final Value STACK = new Value(LOCAL_STACK_NAME);
   private static final Value PARENT_STACK =
-      new Value(PARENT_STACK_NAME);
+      new Value(PARENT_STACK_NAME, false, true);
   private static final Token PARENT_STACK_ENTRY =
       new Token("_parent");
   private static final Token RULE = new Token("turbine::rule");
@@ -964,7 +966,7 @@ class Turbine
   public static TclTree callFunctionSync(String function,
       List<Expression> outVars, List<Expression> inVars) {
     List<Expression> args = new ArrayList<Expression>();
-    args.add(new Value(Turbine.LOCAL_STACK_NAME));
+    args.add(LOCAL_STACK_VAL);
     args.addAll(outVars);
     args.addAll(inVars);
     return new Command(function, args);

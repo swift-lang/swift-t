@@ -17,6 +17,8 @@ package exm.stc.tclbackend.tree;
 
 import java.util.List;
 
+import exm.stc.common.exceptions.STCRuntimeError;
+
 public class TclString extends Expression
 {
   public static final TclTree EMPTY = new TclString("", false);
@@ -33,36 +35,29 @@ public class TclString extends Expression
   }
 
   /**
-   * Create a string from the expressions each expression
-   * separated by a space
+   * Create a string from the expressions, with two modes:
+   *  LIST_STRING: spaces are inserted between expressions and expressions
+   *      are escaped as necessary for the string to be a valid Tcl list
+   *  VALUE_STRING: string representations of values are concatenated
    * @param exprs
+   * @param mode
    */
-  public TclString(List<? extends Expression> exprs) {
-    this(exprs, true);
-  }
-  
-  /**
-   * This constructor lets you control if spaces are added between
-   * items
-   * @param exprs
-   * @param insertSpaces
-   */
-  public TclString(List<? extends Expression> exprs, boolean insertSpaces)
+  public TclString(List<? extends Expression> exprs, ExprContext mode)
   {
     this("", false);
-    exprAppend(exprs, insertSpaces);
-  }
-
-  public void exprAppend(List<? extends Expression> exprs,
-                                              boolean insertSpaces) {
+    assert(mode == ExprContext.LIST_STRING ||
+           mode == ExprContext.VALUE_STRING);
     boolean first = true;
     for (Expression e: exprs) {
       if (first) {
         first = false;
-      } else if (insertSpaces) {
+      } else if (mode == ExprContext.LIST_STRING) {
         sb.append(' ');
       }
-      add(e);
+      if (mode == ExprContext.LIST_STRING) {
+        assert(e.supportsStringList()) : e;
+      }
+      e.appendTo(sb, mode);
     }
   }
 
@@ -73,25 +68,13 @@ public class TclString extends Expression
       outSb.append('\"');
       outSb.append(this.sb);
       outSb.append('\"');
+    } else if (mode == ExprContext.LIST_STRING) {
+      throw new STCRuntimeError("Don't support string escaping for inclusion " +
+      		                      "within string");
     } else {
       assert(mode == ExprContext.VALUE_STRING);
       outSb.append(this.sb);
     }
-  }
-  
-  public void stringAppend(String s, boolean escape) {
-    if (escape) {
-      s = tclEscapeString(s);
-    }
-    this.sb.append(s);
-  }
-  
-  public void add(Expression expr) {
-    expr.appendTo(sb, ExprContext.VALUE_STRING);
-  }
-  
-  public void add(Expression expr, ExprContext mode) {
-    expr.appendTo(sb, mode);
   }
   
   @Override

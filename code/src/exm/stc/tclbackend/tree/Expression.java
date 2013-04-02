@@ -25,7 +25,8 @@ public abstract class Expression extends TclTree
   
   public static enum ExprContext {
     TCL_CODE,
-    VALUE_STRING
+    VALUE_STRING,
+    LIST_STRING,
   }
   
   /**

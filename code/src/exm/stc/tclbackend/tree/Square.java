@@ -30,6 +30,10 @@ public class Square extends Expression
 
   private final List<Expression> items;
   
+
+  /** if true, add braces as appropriate for context */
+  private boolean treatAsList = false;
+  
   public Square()
   {
     super();
@@ -79,7 +83,11 @@ public class Square extends Expression
   @Override
   public void appendTo(StringBuilder sb, ExprContext mode)
   {
-
+    boolean brace = treatAsList && mode == ExprContext.LIST_STRING;
+    
+    if (brace)
+        sb.append("{");
+    
     sb.append("[ ");
     Iterator<Expression> it = items.iterator();
     while (it.hasNext())
@@ -90,6 +98,9 @@ public class Square extends Expression
         sb.append(' ');
     }
     sb.append(" ]");
+    
+    if (brace)
+      sb.append("}");
   }
 
   public static Square fnCall(String fnName, Expression... args) {
@@ -108,6 +119,10 @@ public class Square extends Expression
   @Override
   public boolean supportsStringList() {
     return true;
+  }
+  
+  public void setTreatAsList(boolean val) {
+    this.treatAsList = val;
   }
 
 }

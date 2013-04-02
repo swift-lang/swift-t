@@ -31,8 +31,8 @@ public class Expand extends Expression {
   
   @Override
   public void appendTo(StringBuilder sb, ExprContext mode) {
-    if (mode == ExprContext.VALUE_STRING) {
-      throw new STCRuntimeError("Expand can't be used in string");
+    if (mode != ExprContext.TCL_CODE) {
+      throw new STCRuntimeError("Expand can't be used in " + mode);
     }
     sb.append("{*}");
     expr.appendTo(sb, mode);

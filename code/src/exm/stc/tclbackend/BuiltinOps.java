@@ -29,6 +29,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.tclbackend.tree.Command;
 import exm.stc.tclbackend.tree.Expression;
+import exm.stc.tclbackend.tree.Expression.ExprContext;
 import exm.stc.tclbackend.tree.SetVariable;
 import exm.stc.tclbackend.tree.Square;
 import exm.stc.tclbackend.tree.TclExpr;
@@ -324,11 +325,7 @@ public class BuiltinOps {
   }
 
   private static Expression localStrCat(List<Arg> in, ArrayList<Expression> argExpr) {
-    TclString rhs = new TclString("", false);
-    for (Expression e: argExpr) {
-      rhs.add(e);
-    }
-    return rhs;
+    return new TclString(argExpr, ExprContext.VALUE_STRING);
   }
 
   private static Map<BuiltinOpcode, TclFunRef> builtinOpImpls

@@ -17,31 +17,62 @@
 package exm.stc.tclbackend.tree;
 
 /**
- * Simply deference variable as $variable
+ * Simply dereference variable as $variable
  * @author wozniak
  * */
 public class Value extends Expression
 {
-  String variable;
+  private String variable;
+  
+  /** if true, add braces as appropriate for context */
+  private boolean treatAsList = false;
+  
+  /** if false, can't include in string list */
+  private boolean supportsStringList = false;
 
-  public Value(String variable)
+  public Value(String variable, boolean treatAsList, boolean supportsStringList)
   {
     this.variable = variable;
+    this.treatAsList = treatAsList;
+    this.supportsStringList = supportsStringList;
+  }
+  
+  public Value(String variable)
+  {
+    this(variable, false, false);
+  }
+  
+  public void setTreatAsList(boolean val) {
+    this.treatAsList = val;
+  }
+  
+  public void setSupportsStringList(boolean val) {
+    this.supportsStringList = val;
   }
 
   @Override
-  public void appendTo(StringBuilder sb, ExprContext mode)
-  {
+  public void appendTo(StringBuilder sb, ExprContext mode) {
+    boolean brace = mode == ExprContext.LIST_STRING && treatAsList;
+    
+    if (mode == ExprContext.LIST_STRING) {
+      // Check that we can safely include in list
+      assert(supportsStringList) : this;
+    }
+    
+    if (brace)
+        sb.append("{");
     // enclose in {} to allow a wider range of characters to be used in 
     // var names, such as :
     sb.append("${");
     sb.append(variable);
     sb.append("}");
+    if (brace)
+      sb.append("}");
   }
   
 
   @Override
   public boolean supportsStringList() {
-    return true;
+    return supportsStringList;
   }
 }

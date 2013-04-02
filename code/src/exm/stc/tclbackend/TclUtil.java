@@ -21,8 +21,11 @@ import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.tclbackend.tree.Expression;
+import exm.stc.tclbackend.tree.Expression.ExprContext;
 import exm.stc.tclbackend.tree.LiteralFloat;
 import exm.stc.tclbackend.tree.LiteralInt;
 import exm.stc.tclbackend.tree.TclList;
@@ -59,7 +62,7 @@ public class TclUtil {
     case STRINGVAL:
       return new TclString(in.getStringLit(), true);
     case VAR:
-      return new Value(TclNamer.prefixVar(in.getVar().name()));
+      return varToExpr(in.getVar());
     case FLOATVAL:
       return new LiteralFloat(in.getFloatLit());
     default:
@@ -80,7 +83,38 @@ public class TclUtil {
         throw new STCRuntimeError("Unexpected null variable in varToExpr");
       }
     }
-    return new Value(TclNamer.prefixVar(v.name()));
+    
+    Value val = new Value(TclNamer.prefixVar(v.name()));
+    if (representationIsTclList(v.type())) {
+      System.err.println("HERE: " + v);
+      val.setTreatAsList(true);
+    }
+    val.setSupportsStringList(supportsStringList(v.type()));
+    return val;
+  }
+
+  /**
+   * Whether we can include value of this time in string list, e.g.
+   * "${x} ${y}"
+   * @param type
+   * @return
+   */
+  public static boolean supportsStringList(Type type) {
+    // Can't escape these types correctly
+    List<Type> badTypes = Arrays.asList(Types.V_STRING, Types.V_BLOB);
+    for (Type t: badTypes) {
+      if (type.assignableTo(t)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public static boolean representationIsTclList(Type type) {
+    if (Types.isFile(type) || Types.isStruct(type)) {
+      return true;
+    }
+    return false;
   }
 
   public static List<Expression> varsToExpr(List<Var> inputs) {
@@ -104,11 +138,7 @@ public class TclUtil {
       result.add(argToExpr(a));
     return result;
   }
-  
-  public static Expression tclStringAsList(Expression ...toks) {
-    return tclStringAsList(Arrays.asList(toks));
-  }
-  
+
   /**
    * Try to pack list of expressions into a string that is a valid
    * tcl list
@@ -126,7 +156,7 @@ public class TclUtil {
     }
     
     if (canUseString) {
-      return new TclString(ruleTokens, true);
+      return new TclString(ruleTokens, ExprContext.LIST_STRING);
     } else {
       return new TclList(ruleTokens);
     }
