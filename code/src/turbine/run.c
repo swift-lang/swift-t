@@ -62,7 +62,11 @@ turbine_run_interp(MPI_Comm comm, char* script_file,
   Tcl_Obj* argc_val_obj = Tcl_NewIntObj(argc);
   Tcl_ObjSetVar2(interp, argc_obj, NULL, argc_val_obj, 0);
   Tcl_Obj* argv_obj     = Tcl_NewStringObj("argv", -1);
-  Tcl_Obj* argv_val_obj = tcl_list_new(argc, argv);
+  Tcl_Obj* argv_val_obj;
+  if (argc > 0)
+    argv_val_obj = tcl_list_new(argc, argv);
+  else
+    argv_val_obj = Tcl_NewStringObj("", 0);
   Tcl_ObjSetVar2(interp, argv_obj, NULL, argv_val_obj, 0);
 
   // Read the user script
