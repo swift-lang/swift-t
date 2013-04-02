@@ -879,30 +879,33 @@ public class TurbineGenerator implements CompilerBackend {
     assert(priority == null || priority.isImmediateInt());
     logger.debug("call: " + function);
     
-    ArrayList<Var> blockOn = new ArrayList<Var>();
-    HashSet<Var> alreadyBlocking = new HashSet<Var>();
+    List<Value> blockOn = new ArrayList<Value>();
+    Set<Var> alreadyBlocking = new HashSet<Var>();
     for (int i = 0; i < inputs.size(); i++) {
       Arg arg = inputs.get(i);
       if (arg.isVar()) {
         Var v = arg.getVar();
         if (blocking.get(i) && !alreadyBlocking.contains(v)) {
-          blockOn.add(v);
+          blockOn.add(varToExpr(v));
           alreadyBlocking.add(v);
         }
       }
     }
 
-    setPriority(priority);
+    String swiftFuncName = TclNamer.swiftFuncName(function);
     if (mode == TaskMode.CONTROL || mode == TaskMode.LOCAL ||
         mode == TaskMode.LOCAL_CONTROL) {
-      TclList iList = TclUtil.tclListOfArgs(inputs);
-      TclList oList = TclUtil.tclListOfVariables(outputs);
-
-      // TODO: should handle local separately - this will put local tasks
-      //      into load balancer
-      pointStack.peek().add(Turbine.callFunction(
-                            TclNamer.swiftFuncName(function),
-                            oList, iList, TclUtil.tclListOfVariables(blockOn)));
+      List<Expression> args = new ArrayList<Expression>();
+      args.addAll(TclUtil.varsToExpr(outputs));
+      args.addAll(TclUtil.argsToExpr(inputs));
+      List<Expression> action = buildAction(swiftFuncName, args);
+      
+      Expression priorityExpr = TclUtil.argToExpr(priority, true);
+      Sequence rule = Turbine.rule(function, blockOn, action, mode,
+                                   Target.rankAny(), priorityExpr,
+                                   execContextStack.peek());
+      pointStack.peek().append(rule);
+      
     } else if (mode == TaskMode.SYNC) {
       // Calling synchronously, can't guarantee anything blocks
       assert blockOn.size() == 0 : function + ": " + blockOn;
@@ -911,12 +914,10 @@ public class TurbineGenerator implements CompilerBackend {
       List<Expression> outVars = TclUtil.varsToExpr(outputs);
       
       pointStack.peek().add(Turbine.callFunctionSync(
-          TclNamer.swiftFuncName(function),
-          outVars, inVars));
+          swiftFuncName, outVars, inVars));
     } else {
       throw new STCRuntimeError("Unexpected mode: " + mode);
     }
-    clearPriority(priority);
   }
 
   @Override
@@ -1549,13 +1550,10 @@ public class TurbineGenerator implements CompilerBackend {
         waitFor.add(waitExpr);
       }
       
-      // Set priority (if provided)
-      setPriority(priority);
       
-      TclList action = buildAction(uniqueName, passIn);
+      Expression action = buildActionFromVars(uniqueName, passIn);
 
-      boolean local = execContextStack.peek() == ExecContext.CONTROL;
-      
+      Expression priorityExpr = TclUtil.argToExpr(priority, true);
       if (useDeepWait) {
         // Nesting depth of arrays (0 == not array)
         int depths[] = new int[waitVars.size()];
@@ -1573,15 +1571,16 @@ public class TurbineGenerator implements CompilerBackend {
           }
           isFile[i] = Types.isFile(baseType);
         }
-        pointStack.peek().add(Turbine.deepRule(uniqueName, waitFor, depths,
-                                             isFile, action, mode, local));
+
+        pointStack.peek().append(Turbine.deepRule(uniqueName, waitFor, depths,
+                                 isFile, action, mode, priorityExpr, execContextStack.peek()));
+
       } else {
         // Whether we can enqueue rules locally
-        pointStack.peek().add(
+        pointStack.peek().append(
               Turbine.rule(uniqueName, waitFor, action, mode, 
-                           Target.rankAny(), local));
+                           Target.rankAny(), priorityExpr, execContextStack.peek()));
       }
-      clearPriority(priority);
       
       pointStack.push(constructProc);
       
@@ -1697,12 +1696,18 @@ public class TurbineGenerator implements CompilerBackend {
       pointStack.peek().append(seq);
     }
 
-    private TclList buildAction(String procName,
-        List<Var> usedVariables) {
-
+    private Expression buildAction(String procName, List<Expression> args) {
       ArrayList<Expression> ruleTokens = new ArrayList<Expression>();
       ruleTokens.add(new Token(procName));
       ruleTokens.add(new Value(Turbine.LOCAL_STACK_NAME));
+      ruleTokens.addAll(args);
+
+      // Try to build as string as we need to convert to string anyway
+      return TclUtil.tclStringAsList(ruleTokens); 
+    }
+    
+    private Expression buildActionFromVars(String procName, List<Var> usedVariables) {
+      List<Expression> exprs = new ArrayList<Expression>();
       // Pass in variable ids directly in rule string
       for (Var v: usedVariables) {
         Type t = v.type();
@@ -1710,13 +1715,13 @@ public class TurbineGenerator implements CompilerBackend {
             Types.isArray(t) || Types.isStruct(t) ||
             Types.isScalarUpdateable(t)) {
           // Just passing turbine id
-          ruleTokens.add(varToExpr(v));
+          exprs.add(varToExpr(v));
         } else if (Types.isScalarValue(t)) {
           PrimType pt = t.primType();
           if (pt == PrimType.INT || pt == PrimType.BOOL
               || pt == PrimType.FLOAT || pt == PrimType.STRING) {
             // Serialize
-            ruleTokens.add(varToExpr(v));
+            exprs.add(varToExpr(v));
           } else {
             throw new STCRuntimeError("Don't know how to pass" +
                   " var with type " + v);
@@ -1726,8 +1731,10 @@ public class TurbineGenerator implements CompilerBackend {
               + v);
         }
       }
-      return new TclList(ruleTokens);
+      return buildAction(procName, exprs);
     }
+
+
 
     @Override
     public void startSwitch(Arg switchVar, List<Integer> caseLabels,
@@ -2064,7 +2071,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     splitBody.add(Turbine.rule(outerProcName, new ArrayList<Value>(0),
                     new TclList(outerRecCall), TaskMode.CONTROL, 
-                    Target.rankAny(), true));
+                    Target.rankAny(), null, execContextStack.peek()));
 
     pointStack.push(inner);
   }
@@ -2341,7 +2348,7 @@ public class TurbineGenerator implements CompilerBackend {
     String uniqueLoopName = uniqueTCLFunctionName(loopName);
 
     pointStack.peek().add(Turbine.loopRule(
-        uniqueLoopName, firstIterArgs, blockingVals));
+        uniqueLoopName, firstIterArgs, blockingVals, execContextStack.peek()));
 
     Sequence loopBody = new Sequence();
     Proc loopProc = new Proc(uniqueLoopName, usedTclFunctionNames,
@@ -2384,7 +2391,7 @@ public class TurbineGenerator implements CompilerBackend {
       }
     }
     pointStack.peek().add(Turbine.loopRule(loopName,
-        nextIterArgs, blockingVals));
+        nextIterArgs, blockingVals, execContextStack.peek()));
   }
 
   @Override

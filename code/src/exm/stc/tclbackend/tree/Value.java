@@ -38,4 +38,10 @@ public class Value extends Expression
     sb.append(variable);
     sb.append("}");
   }
+  
+
+  @Override
+  public boolean supportsStringList() {
+    return true;
+  }
 }

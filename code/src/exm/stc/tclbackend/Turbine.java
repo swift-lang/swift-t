@@ -23,6 +23,7 @@ import java.util.List;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.util.Pair;
 import exm.stc.tclbackend.tree.Command;
@@ -109,8 +110,8 @@ class Turbine
       new Value(PARENT_STACK_NAME);
   private static final Token PARENT_STACK_ENTRY =
       new Token("_parent");
-  private static final Token C_RULE = new Token("turbine::c::rule");
   private static final Token RULE = new Token("turbine::rule");
+  private static final Token SPAWN_RULE = new Token("turbine::spawn_rule");
   private static final Token DEEPRULE = new Token("turbine::deeprule");
   private static final Token NO_STACK = new Token("no_stack");
   private static final Token DEREFERENCE_INTEGER =
@@ -152,9 +153,6 @@ class Turbine
   private static final Token CONTAINER_F_DEREF_INSERT =
       new Token("turbine::container_f_deref_insert");
   
-  private static final Token CALL_FUNCTION =
-      new Token("turbine::call_composite");
-
   private static final Token UNCACHED_MODE = new Token("UNCACHED");
   private static final Token FREE_LOCAL_BLOB = 
                           new Token("turbine::free_local_blob");
@@ -420,15 +418,66 @@ class Turbine
    * @param type
    * @return
    */
-  private static Command ruleHelper(String symbol, 
+  private static Sequence ruleHelper(String symbol, 
       List<? extends Expression> inputs,
-      TclList action, TaskMode type, Target target, boolean local) {
-    Token s = new Token(symbol);
-    TclList i = new TclList(inputs);
+      Expression action, TaskMode type, Target target,
+      Expression priority, ExecContext execCx) {
+
+
+    Sequence res = new Sequence();
+    if (inputs.isEmpty()) {
+      if (type != TaskMode.LOCAL && type != TaskMode.LOCAL_CONTROL) {
+        res.add(spawnTask(action, type, target, priority, execCx));
+        return res;
+      }
+    }
     
-    return new Command(local ? C_RULE : RULE, s, i,
-                       tclRuleType(type), target.toTcl(), action);
+    if (priority != null)
+       res.add(setPriority(priority));
+    // Use different command on worker
+    Token ruleCmd = execCx == ExecContext.CONTROL ? RULE : SPAWN_RULE;
+    res.add(new Command(ruleCmd,  new Token(symbol), new TclList(inputs),
+                        tclRuleType(type), target.toTcl(), action));
+
+    if (priority != null)
+       res.add(resetPriority());
+    return res;
   }
+
+  private static Command spawnTask(Expression action, TaskMode type, Target target,
+      Expression priority, ExecContext execCx) {
+    Token ADLB_PUT = new Token("adlb::put");
+    LiteralInt TURBINE_NULL_RULE = new LiteralInt(-1);
+    
+    if (priority == null) {
+      priority = currentPriority();
+    }
+    
+    assert(type == TaskMode.CONTROL || type == TaskMode.WORKER);
+    // add to shared work queue
+    return new Command(ADLB_PUT, target.toTcl(), adlbWorkType(type),
+                new TclString(Arrays.asList(TURBINE_NULL_RULE, action)),
+                priority);
+  }
+
+  private static TclTree adlbWorkType(TaskMode type) {
+    switch (type) {
+      case CONTROL:
+        return new Token("$turbine::WORK_TYPE(CONTROL)");
+      case WORKER:
+        return new Token("$turbine::WORK_TYPE(WORK)");
+      default:
+        throw new STCRuntimeError("Can't create task of type " + type);
+    }
+  }
+  
+
+  private static Expression currentPriority() {
+    // TODO: is this the most sensible?
+    // get the current turbine priority
+    return new Square("turbine::priority");
+  }
+
 
   /**
    * @param symbol
@@ -437,16 +486,15 @@ class Turbine
    * @param mode
    * @return
    */
-  public static Command rule(String symbol,
-      List<? extends Expression> blockOn, TclList action, TaskMode mode,
-      Target target, 
-      boolean local) {
-    return ruleHelper(symbol, blockOn, action, mode, target, local);
+  public static Sequence rule(String symbol,
+      List<? extends Expression> blockOn, Expression action, TaskMode mode,
+      Target target, Expression priority, ExecContext execCx) {
+    return ruleHelper(symbol, blockOn, action, mode, target, priority, execCx);
   }
 
-  public static Command deepRule(String symbol,
+  public static Sequence deepRule(String symbol,
       List<? extends Expression> inputs, int[] depths, boolean[] isFile,
-      TclList action, TaskMode mode, boolean local) {
+      Expression action, TaskMode mode, Expression priority, ExecContext execCx) {
     assert(inputs.size() == depths.length);
     assert(inputs.size() == isFile.length);
     
@@ -461,13 +509,23 @@ class Turbine
       isFileExprs.add(LiteralInt.boolValue(b));
     }
     
-    return new Command(DEEPRULE, new Token(symbol),
+    Sequence res = new Sequence();
+    if (priority != null)
+       res.add(setPriority(priority));
+    res.add(new Command(DEEPRULE, new Token(symbol),
           new TclList(inputs), new TclList(depthExprs), new TclList(isFileExprs),
-          tclRuleType(mode), action);
+          tclRuleType(mode), action));
+    if (priority != null)
+      res.add(resetPriority());
+    return res;
   }
   
-  public static Command loopRule(String symbol,
-      List<Value> args, List<? extends Expression> blockOn) {
+  public static Sequence loopRule(String symbol,
+      List<Value> args, List<? extends Expression> blockOn,
+      ExecContext execCx) {
+    // Assume executes on control for now
+    assert (execCx == ExecContext.CONTROL);
+    
     List<Expression> actionElems = new ArrayList<Expression>();
     actionElems.add(new Token(symbol));
     for (Value arg: args) {
@@ -475,7 +533,7 @@ class Turbine
     }
     TclList action = new TclList(actionElems);
     return ruleHelper(symbol, blockOn, action, TaskMode.CONTROL, 
-                      Target.rankAny(), true);
+                      Target.rankAny(), null, execCx);
   }
 
   public static TclTree allocateStruct(String tclName) {
@@ -882,14 +940,6 @@ class Turbine
   public static TclTree declareReference(String refVarName) {
     return allocate(refVarName, INTEGER_TYPENAME);
   }
-
-  public static TclTree callFunction(String function, TclList oList,
-                                      TclList iList, TclList blockOn) {
-    return new Command(CALL_FUNCTION,
-        new Value(Turbine.LOCAL_STACK_NAME), new Token(function),
-                  oList, iList, blockOn);
-  }
-
 
   public static TclTree callFunctionSync(String function,
       List<Expression> outVars, List<Expression> inVars) {
