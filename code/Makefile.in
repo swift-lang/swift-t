@@ -363,6 +363,11 @@ clean::
 clean-failed:
 	@rm -fv `grep -L "exit 0" **/*.result`
 
+distclean:: clean
+	@rm -fv Makefile **/*.mk
+	@rm -fv src/turbine/turbine-version.h
+	@rm -fv scripts/turbine-config.sh
+
 .PHONY: clean install package test_results
 
 ### DEBUG BUILD SYSTEM
