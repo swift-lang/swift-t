@@ -54,9 +54,9 @@ proc rules { } {
     set L [ turbine::container_list $c ]
     puts "enumeration: $L"
 
-    turbine::c_f_retrieve_integer $v1 "$c $i1"
+    turbine::c_f_retrieve_integer $v1 $c $i1
     turbine::trace "" $v1
-    turbine::c_f_retrieve_integer $v2 "$c $i2"
+    turbine::c_f_retrieve_integer $v2 $c $i2
     turbine::trace "" $v2
 
     turbine::store_integer $i1 34

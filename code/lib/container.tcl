@@ -21,8 +21,7 @@
 
 namespace eval turbine {
     namespace export container_f_get container_f_insert
-    namespace export f_reference
-    namespace export f_container_create_nested
+    namespace export c_f_lookup
 
     # build array by inserting items into a container starting at 0
     # close: decrement writers count at end
@@ -63,13 +62,10 @@ namespace eval turbine {
     # CFRI
     # When i is closed, set d := c[i] (by value copy)
     # d: the destination, an integer
-    # inputs: [ list c i ]
+    # inputs:
     # c: the container
     # i: the subscript (any type)
-    proc c_f_retrieve_integer { d inputs } {
-        set c [ lindex $inputs 0 ]
-        set i [ lindex $inputs 1 ]
-
+    proc c_f_retrieve_integer { d c i } {
         rule $i "turbine::c_f_retrieve_integer_body $d $c $i" \
             name "CFRI-$c-$i" 
     }
@@ -86,16 +82,13 @@ namespace eval turbine {
 
     # CFI
     # When i is closed, set c[i] := d (by insertion)
-    # inputs: [ list c i d ]
+    # inputs:
     # c: the container
     # i: the subscript (any type)
     # d: the data
     # outputs: ignored.  To block on this, use turbine::reference
     # Note: assume slot kept open by other process
-    proc c_f_insert { outputs inputs {slot_drops 1} {slot_create 1}} {
-        set c [ lindex $inputs 0 ]
-        set i [ lindex $inputs 1 ]
-        set d [ lindex $inputs 2 ]
+    proc c_f_insert { c i d {slot_drops 1} {slot_create 1}} {
         nonempty c i d
 
         if { $slot_create } {
@@ -113,13 +106,9 @@ namespace eval turbine {
 
     # CFIR
     # When i and r are closed, set c[i] := *(r)
-    # inputs: [ list c i r ]
+    # inputs: c i r
     # r: a reference to a turbine ID
-    proc c_f_insert_r { outputs inputs {slot_drops 1} {slot_create 1}} {
-        set c [ lindex $inputs 0 ]
-        set i [ lindex $inputs 1 ]
-        set r [ lindex $inputs 2 ]
-
+    proc c_f_insert_r { c i r {slot_drops 1} {slot_create 1}} {
         nonempty c i r
 
         if { $slot_create } {
@@ -139,14 +128,10 @@ namespace eval turbine {
 
     # CVIR
     # When r is closed, set c[i] := *(r)
-    # inputs: [ list c i r ]
+    # inputs: c i r
     # i: an integer which is the index to insert into
     # r: a reference to a turbine ID
-    proc c_v_insert_r { outputs inputs {slot_drops 1} {slot_create 1}} {
-        set c [ lindex $inputs 0 ]
-        set i [ lindex $inputs 1 ]
-        set r [ lindex $inputs 2 ]
-
+    proc c_v_insert_r { c i r {slot_drops 1} {slot_create 1}} {
         nonempty c i r
 
         if { $slot_create } {
@@ -177,19 +162,14 @@ namespace eval turbine {
     # When i is closed, get a reference on c[i] in TD r
     # Thus, you can block on r and be notified when c[i] exists
     # r is an integer.  The value of r is the TD of c[i]
-    # inputs: [ list c i r adlb_type ]
+    # inputs: c i r adlb_type
     # outputs: None.  You can block on d with turbine::dereference
     # c: the container
     # i: the subscript (any type)
     # r: the reference TD
     # ref_type: internal representation type for reference
-    proc c_f_lookup { outputs inputs } {
-        set c [ lindex $inputs 0 ]
-        set i [ lindex $inputs 1 ]
-        set r [ lindex $inputs 2 ]
+    proc c_f_lookup { c i r ref_type } {
         debug "CFL: <$c>\[<$i>\] <- <*$r>"
-        set ref_type [ lindex $inputs 3 ]
-        # nonempty c i r
 
         rule $i "turbine::c_f_lookup_body $c $i $r $ref_type" \
             name "CFL-$c-$i" 
@@ -261,18 +241,13 @@ namespace eval turbine {
     # CRVL
     # When reference cr is closed, store d = (*cr)[i]
     # Blocks on cr
-    # inputs: [ list cr i d d_type]
+    # inputs: cr i d d_type
     #       cr is a reference to a container
     #       i is a literal int
     #       d is the destination ref
     #       d_type is the turbine type name for representation of d
     # outputs: ignored
-    proc cr_v_lookup { outputs inputs } {
-        set cr [ lindex $inputs 0 ]
-        set i [ lindex $inputs 1 ]
-        set d [ lindex $inputs 2 ]
-        set d_type [ lindex $inputs 3 ]
-
+    proc cr_v_lookup { cr i d d_type } {
         log "creating reference: <*$cr>\[$i\] <- <*$d>"
 
         rule $cr "turbine::cr_v_lookup_body $cr $i $d $d_type" \
@@ -289,20 +264,14 @@ namespace eval turbine {
     # CRFL
     # When reference cr is closed, store d = (*cr)[i]
     # Blocks on cr and i
-    # inputs: [ list cr i d ]
+    # inputs:
     #       cr: reference to container
     #       i:  subscript (any type)
     #       d is the destination ref
     #       d_type is the turbine type name for representation of d
     # outputs: ignored
-    proc cr_f_lookup { outputs inputs } {
-        set cr [ lindex $inputs 0 ]
-        set i [ lindex $inputs 1 ]
-        set d [ lindex $inputs 2 ]
-        set d_type [ lindex $inputs 3 ]
-
-        rule "$cr $i" \
-            "turbine::cr_f_lookup_body $cr $i $d $d_type" \
+    proc cr_f_lookup { cr i d d_type } {
+        rule "$cr $i" "turbine::cr_f_lookup_body $cr $i $d $d_type" \
             name "CRFL-$cr" 
     }
 
@@ -317,15 +286,9 @@ namespace eval turbine {
     # When reference r on c[i] is closed, store c[i][j] = d
     # Blocks on r and j
     # oc is outer container
-    # inputs: [ list r j d oc ]
+    # inputs: r j d oc
     # outputs: ignored
-    proc cr_f_insert { outputs inputs {slot_create 1}} {
-        set r [ lindex $inputs 0 ]
-        # set c [ lindex $inputs 1 ]
-        set j [ lindex $inputs 1 ]
-        set d [ lindex $inputs 2 ]
-        set oc [ lindex $inputs 3 ]
-
+    proc cr_f_insert { r j d oc {slot_create 1}} {
         log "insert (future): <*$r>\[<$j>\]=<$d>"
 
         if { $slot_create } {
@@ -350,14 +313,9 @@ namespace eval turbine {
     # Blocks on cr, j must be a tcl integer
     # oc is a direct handle to the top-level container
     #       which cr will be inside
-    # inputs: [ list r j d oc ]
+    # inputs: r j d oc
     # outputs: ignored
-    proc cr_v_insert { outputs inputs {slot_create 1} } {
-        set cr [ lindex $inputs 0 ]
-        set j [ lindex $inputs 1 ]
-        set d [ lindex $inputs 2 ]
-        set oc [ lindex $inputs 3 ]
-
+    proc cr_v_insert { cr j d oc {slot_create 1} } {
         if { $slot_create } {
             adlb::slot_create $oc
         }
@@ -376,21 +334,16 @@ namespace eval turbine {
     # CRFIR
     # j: tcl integer index
     # oc: direct handle to outer container
-    proc cr_f_insert_r { outputs inputs {slot_create 1}} {
-        set cr [ lindex $inputs 0 ]
-        set j [ lindex $inputs 1 ]
-        set dr [ lindex $inputs 2 ]
-        set oc [ lindex $inputs 3 ]
-
+    proc cr_v_insert_r { cr j dr oc {slot_create 1}} {
         if { $slot_create } {
             adlb::slot_create $oc
         }
 
-        rule "$cr $dr" \
-            "turbine::cr_f_insert_r_body $cr $j $dr $oc" \
-            [ name "CRFIR-$cr-$j-$dr-$oc"
+        rule [ list $cr $dr ] \
+            "turbine::cr_v_insert_r_body $cr $j $dr $oc" \
+            [ name "CRVIR"
     }
-    proc cr_f_insert_body { cr j dr oc } {
+    proc cr_v_insert_body { cr j dr oc } {
         set c [ retrieve_decr_integer $cr ]
         set d [ retrieve_decr $dr ]
         #TODO: how to handle refcounting for referenced var
@@ -398,21 +351,16 @@ namespace eval turbine {
         adlb::slot_drop $oc
     }
 
-    proc cref_f_deref_insert { outputs inputs {slot_create 1}} {
-        set cr [ lindex $inputs 0 ]
-        set j [ lindex $inputs 1 ]
-        set dr [ lindex $inputs 2 ]
-        set oc [ lindex $inputs 3 ]
-
+    proc cr_f_insert_r { cr j dr oc {slot_create 1}} {
         if { $slot_create } {
             adlb::slot_create $oc
         }
 
-        rule "$cr $j $dr" \
-            "turbine::cref_f_deref_insert_body $cr $j $dr $oc" \
-            name "cref_f_deref_insert-$cr-$j-$dr-$oc" 
+        rule [ list $cr $j $dr ] \
+            "turbine::cr_f_insert_r_body $cr $j $dr $oc" \
+            name "CRFIR" 
     }
-    proc cref_f_deref_insert_body { cr j dr oc } {
+    proc cr_f_insert_r_body { cr j dr oc } {
         set c [ retrieve_decr_integer $cr ]
         set d [ retrieve_decr $dr ]
         set jval [ retrieve_decr_integer $j ]
@@ -505,7 +453,7 @@ namespace eval turbine {
     # Set r, a reference TD on c[i]
     proc c_f_create_body { r c i type } {
 
-        debug "f_container_create_nested: $r $c\[$i\] $type"
+        debug "c_f_create: $r $c\[$i\] $type"
 
         set s [ retrieve $i ]
         set res [ c_v_create $c $s $type ]
@@ -516,7 +464,7 @@ namespace eval turbine {
     # Set r, a reference TD on (cr*)[i]
     # oa: outer array
     # slot_create: if false, caller has created slot on oa
-    proc cref_create_nested { r cr i type oa {slot_create 1}} {
+    proc cr_v_create { r cr i type oa {slot_create 1}} {
         upvar 1 $r v
 
         # Create reference
@@ -528,13 +476,13 @@ namespace eval turbine {
             adlb::slot_create $oa
         }
 
-        rule "$cr" "cref_create_nested_body $tmp_r $cr $i $type $oa" \
-           name fcrcn 
+        rule "$cr" "cr_v_create_body $tmp_r $cr $i $type $oa" \
+           name crvc
     }
 
-    proc cref_create_nested_body { r cr i type oa } {
+    proc cr_v_create_body { r cr i type oa } {
         set c [ retrieve_decr_integer $cr ]
-        set res [ container_create_nested $c $i $type ]
+        set res [ c_v_create $c $i $type ]
         store_integer $r $res
         adlb::slot_drop $oa
     }
@@ -543,7 +491,7 @@ namespace eval turbine {
     # Set r, a reference TD on (cr*)[i]
     # oa: outer array of nested
     # slot_create: if false, caller has created slot on oa
-    proc f_cref_create_nested { r cr i type oa {slot_create 1}} {
+    proc cr_f_create { r cr i type oa {slot_create 1}} {
         upvar 1 $r v
 
         # Create reference
@@ -555,14 +503,14 @@ namespace eval turbine {
             adlb::slot_create $oa
         }
 
-        rule "$cr $i" "f_cref_create_nested_body $tmp_r $cr $i $type $oa" \
-           name fcrcn 
+        rule "$cr $i" "cr_f_create_body $tmp_r $cr $i $type $oa" \
+           name crfc
     }
 
-    proc f_cref_create_nested_body { r cr i type oa } {
+    proc cr_f_create_body { r cr i type oa } {
         set c [ retrieve_decr_integer $cr ]
         set s [ retrieve_decr $i ]
-        set res [ container_create_nested $c $s $type ]
+        set res [ c_v_create $c $s $type ]
         store_integer $r $res
         adlb::slot_drop $oa
     }
@@ -642,14 +590,13 @@ namespace eval turbine {
 
     # Wait, recursively for container contents
     # Supports plain futures and files
-    # rule_prefix: prefix for rule names
     # inputs: list of tds to wait on
     # nest_levels: list corresponding to inputs with nesting level
     #             of containers
     # is_file: list of booleans: whether file
-    # target: where to send work
-    # cmd: command to execute when closed
-    proc deeprule { rule_prefix inputs nest_levels is_file action_type action } {
+    # action: command to execute when closed
+    # args: additional keyword args (same as rule)
+    proc deeprule { inputs nest_levels is_file action args } {
       # signals: list of variables that must be closed to signal deep closing
       # allocated_signals: signal variables that were allocated
       set signals [ list ]
@@ -674,38 +621,30 @@ namespace eval turbine {
           set signal [ allocate void ]
           lappend signals $signal
           lappend allocated_signals $signal # make sure cleaned up later
-          container_deep_wait $rule_prefix $input $nest_level $isf $signal
+          container_deep_wait $input $nest_level $isf $signal
         }
         incr i
       }
 
       # Once all signals closed, run finalizer
-      rule $signals \
-          [ list deeprule_finish $allocated_signals $action ] \
-           name "${rule_prefix}-final" type $action_type 
+      rule $signals "deeprule_finish $allocated_signals; $action" {*}args
     }
 
     # Check for container contents being closed and once true,
     # set signal
     # Called after container itself is closed
-    proc container_deep_wait { rule_prefix container nest_level is_file signal } {
+    proc container_deep_wait { container nest_level is_file signal } {
       if { $nest_level == 1 } {
         # First wait for container to be closed
-        set rule_name "${rule_prefix}-$container-close"
-        rule $container \
-            [ list container_deep_wait_continue $rule_name $container 0 -1 \
-                                            $nest_level $is_file $signal ] \
-            name $rule_name 
+        rule $container [ list container_deep_wait_continue $container \
+                                0 -1 $nest_level $is_file $signal ]
       } else {
-        set rule_name "${rule_prefix}-$container-close"
-        rule $container \
-            [ list container_rec_deep_wait $rule_name $container \
-                                    $nest_level $is_file $signal ] \
-            name $rule_name 
+        rule $container [ list container_rec_deep_wait $container \
+                                    $nest_level $is_file $signal ]
       }
     }
 
-    proc container_deep_wait_continue { rule_prefix container progress n
+    proc container_deep_wait_continue { container progress n
                                         nest_level is_file signal } {
       set MAX_CHUNK_SIZE 64
       # TODO: could divide and conquer instead of doing linear search
@@ -726,11 +665,8 @@ namespace eval turbine {
             incr progress
           } else {
             # Suspend execution until next item closed
-            rule $td \
-                [ list container_deep_wait_continue $rule_prefix \
-                       $container $progress $n $nest_level $is_file \
-                       $signal ] \
-                name "${rule_prefix}-$signal" 
+            rule $td [ list container_deep_wait_continue $container \
+                          $progress $n $nest_level $is_file $signal ]
             return
           }
         }
@@ -740,8 +676,7 @@ namespace eval turbine {
       store_void $signal
     }
 
-    proc container_rec_deep_wait { rule_prefix container nest_level is_file
-                                   signal } {
+    proc container_rec_deep_wait { container nest_level is_file signal } {
       set inner_signals [ list ]
 
       set members [ adlb::enumerate $container members all 0 ]
@@ -752,25 +687,24 @@ namespace eval turbine {
       } elseif { [ llength $members ] == 1 } {
         # skip allocating new signal
         set inner [ lindex $members 0 ]
-        container_deep_wait "$rule_prefix-$inner-close" $inner \
-                     [ expr {$nest_level - 1} ] $is_file $signal
+        container_deep_wait $inner [ expr {$nest_level - 1} ] $is_file \
+                            $signal
       } else {
         foreach inner $members {
           set inner_signal [ allocate void ]
           lappend inner_signals $inner_signal
-          container_deep_wait $rule_prefix $inner \
-                       [ expr {$nest_level - 1} ] $is_file $inner_signal
+          container_deep_wait $inner \ [ expr {$nest_level - 1} ] $is_file \
+                            $inner_signal
         }
-        rule $inner_signals \
-          [ list deeprule_finish $inner_signals [ list store_void $signal ] ] \
-            name "$rule_prefix-final" 
+        rule $inner_signals 
+          [ list deeprule_finish $inner_signals [ list store_void $signal ] ]
       }
     }
 
     # Cleanup allocated things for
     # Decrement references for signals
-    proc deeprule_finish { allocated_signals cmd } {
-      foreach signal $allocated_signals {
+    proc deeprule_finish { args } {
+      foreach signal $args {
         read_refcount_decr $signal
       }
       eval $cmd

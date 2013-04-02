@@ -47,8 +47,8 @@ proc rules { } {
     turbine::rule "$i1" "f $t1 $i1" type $turbine::CONTROL
     turbine::rule "$i1" "f $t2 $i2" type $turbine::CONTROL
 
-    turbine::c_f_insert "" "$c $i1 $t1"
-    turbine::c_f_insert "" "$c $i2 $t2"
+    turbine::c_f_insert $c $i1 $t1
+    turbine::c_f_insert $c $i2 $t2
     adlb::slot_drop $c
 
     turbine::allocate s string

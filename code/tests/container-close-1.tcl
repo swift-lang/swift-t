@@ -35,8 +35,8 @@ proc rules { } {
     set j1 [ turbine::literal integer 98 ]
     set j2 [ turbine::literal integer 72 ]
 
-    turbine::c_f_insert "" "$c $i1 $j1"
-    turbine::c_f_insert "" "$c $i2 $j2"
+    turbine::c_f_insert $c $i1 $j1
+    turbine::c_f_insert $c $i2 $j2
     adlb::slot_drop $c
 
     turbine::allocate s string
