@@ -904,7 +904,7 @@ public class TurbineGenerator implements CompilerBackend {
       
       Expression priorityExpr = TclUtil.argToExpr(priority, true);
       Sequence rule = Turbine.rule(function, blockOn, action, mode,
-                                   Target.rankAny(), priorityExpr,
+                                   Target.RANK_ANY, priorityExpr,
                                    execContextStack.peek());
       pointStack.peek().append(rule);
       
@@ -1581,7 +1581,7 @@ public class TurbineGenerator implements CompilerBackend {
         // Whether we can enqueue rules locally
         pointStack.peek().append(
               Turbine.rule(uniqueName, waitFor, action, mode, 
-                           Target.rankAny(), priorityExpr, execContextStack.peek()));
+                           Target.RANK_ANY, priorityExpr, execContextStack.peek()));
       }
       
       pointStack.push(constructProc);
@@ -2075,7 +2075,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     splitBody.add(Turbine.rule(outerProcName, new ArrayList<Value>(0),
                     outerRecCall, TaskMode.CONTROL, 
-                    Target.rankAny(), null, execContextStack.peek()));
+                    Target.RANK_ANY, null, execContextStack.peek()));
 
     pointStack.push(inner);
   }

@@ -425,6 +425,7 @@ class Turbine
   private static Sequence ruleHelper(String symbol, 
       List<? extends Expression> inputs,
       List<Expression> action, TaskMode type, Target target,
+      Expression parallelism,
       Expression priority, ExecContext execCx) {
 
     if (inputs.isEmpty()) {
@@ -438,8 +439,24 @@ class Turbine
        res.add(setPriority(priority));
     // Use different command on worker
     Token ruleCmd = execCx == ExecContext.CONTROL ? RULE : SPAWN_RULE;
-    res.add(new Command(ruleCmd,  new Token(symbol), new TclList(inputs),
-                        tclRuleType(type), target.toTcl(),
+    
+    List<Expression> kwArgs = new ArrayList<Expression>();
+    if (!target.rankAny) {
+      kwArgs.add(new Token("target"));
+      kwArgs.add(target.toTcl());
+    }
+    
+    if (type != TaskMode.LOCAL && type != TaskMode.CONTROL) {
+      kwArgs.add(new Token("type"));
+      kwArgs.add(tclRuleType(type));
+    }
+    
+    if (parallelism != null && !LiteralInt.ONE.equals(parallelism)) {
+      kwArgs.add(new Token("parallelism"));
+      kwArgs.add(parallelism);
+    }
+    
+    res.add(new Command(ruleCmd,  new TclList(inputs),
                         TclUtil.tclStringAsList(action)));
 
     if (priority != null)
@@ -512,7 +529,8 @@ class Turbine
   public static Sequence rule(String symbol,
       List<? extends Expression> blockOn, List<Expression> action, TaskMode mode,
       Target target, Expression priority, ExecContext execCx) {
-    return ruleHelper(symbol, blockOn, action, mode, target, priority, execCx);
+    return ruleHelper(symbol, blockOn, action, mode, target, null,
+                      priority, execCx);
   }
 
   public static Sequence deepRule(String symbol,
@@ -555,7 +573,7 @@ class Turbine
       action.add(arg);
     }
     return ruleHelper(symbol, blockOn, action, TaskMode.CONTROL, 
-                      Target.rankAny(), null, execCx);
+                      Target.RANK_ANY, null, null, execCx);
   }
 
   public static TclTree allocateStruct(String tclName) {
