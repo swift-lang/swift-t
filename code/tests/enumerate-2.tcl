@@ -26,9 +26,9 @@
 
 package require turbine 0.0.1
 
-proc f { stack o i } {
+proc f { o i } {
     puts "f: $i"
-    set t [ turbine::get $i ]
+    set t [ turbine::retrieve $i ]
     if { $i == 0 } {
         turbine::store_integer $o 98
     } else {
@@ -44,8 +44,8 @@ proc rules { } {
     turbine::allocate t1 integer
     turbine::allocate t2 integer
 
-    turbine::call_composite f $t1 $i1 $t1
-    turbine::call_composite f $t2 $i2 $t1
+    turbine::rule "$i1" "f $t1 $i1" type $turbine::CONTROL
+    turbine::rule "$i1" "f $t2 $i2" type $turbine::CONTROL
 
     turbine::c_f_insert "" "$c $i1 $t1"
     turbine::c_f_insert "" "$c $i2 $t2"
