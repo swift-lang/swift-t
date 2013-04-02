@@ -27,6 +27,8 @@ namespace eval turbine {
 
         global WORK_TYPE
 
+        set debug_enabled [ turbine::c::debug_on ]
+
         turbine::c::engine_init
         ::eval $startup
         if { [ adlb::rank ] == 0 } {
@@ -52,7 +54,10 @@ namespace eval turbine {
             if { [ string length $msg ] } {
                 control $msg $answer_rank
             } else break
-            debug "heap size: [ bytes [ c_utils::heapsize ] ]"
+
+            if { $debug_enabled } {
+              debug "heap size: [ bytes [ c_utils::heapsize ] ]"
+            }
         }
     }
 

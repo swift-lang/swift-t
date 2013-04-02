@@ -769,6 +769,21 @@ Turbine_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int
+Turbine_Debug_On_Cmd(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  bool enabled;
+#ifdef ENABLE_DEBUG_TCL_TURBINE
+  enabled = 1;
+#else
+  enabled = 0;
+#endif
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(enabled));
+  return TCL_OK;
+}
+
 #ifdef ENABLE_DEBUG_TCL_TURBINE
 static int
 Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -833,10 +848,11 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("worker_loop", Turbine_Worker_Loop_Cmd);
   COMMAND("cache",       Turbine_Cache_Cmd);
   COMMAND("finalize",    Turbine_Finalize_Cmd);
+  COMMAND("debug_on",    Turbine_Debug_On_Cmd);
   COMMAND("debug",       Turbine_Debug_Cmd);
 
   Tcl_Namespace* turbine =
-    Tcl_FindNamespace(interp, "turbine::c", NULL, 0);
+    Tcl_FindNamespace(interp, "::turbine::c", NULL, 0);
   Tcl_Export(interp, turbine, "*", 0);
 
   return TCL_OK;
