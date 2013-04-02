@@ -45,12 +45,7 @@ import exm.stc.tclbackend.tree.Value;
  *
  * This class is package-private: only TurbineGenerator uses it
  * */
-class Turbine
-{
-  private static final String GET_FILE = "turbine::get_file";
-  private static final Token GET_OUTPUT_FILE_PATH = new Token("turbine::get_output_file_path");
-  private static final Token GET_FILE_PATH = new Token("turbine::get_file_path");
-  private static final String EXEC_EXTERNAL = "turbine::exec_external";
+class Turbine {
   /* Names of types used by Turbine */
   public static final String STRING_TYPENAME = "string";
   public static final String INTEGER_TYPENAME = "integer";
@@ -58,130 +53,47 @@ class Turbine
   public static final String FLOAT_TYPENAME = "float";
   public static final String BLOB_TYPENAME = "blob";
 
-  // Commonly used things:
   private static final Token ALLOCATE_CONTAINER_CUSTOM =
-      new Token("turbine::allocate_container_custom");
-  private static final Token ALLOCATE_FILE = 
-          new Token("turbine::allocate_file2");
-  private static final Token CONTAINER_INSERT =
-      new Token("turbine::container_insert");
-  private static final Token CONTAINER_F_INSERT =
-      new Token("turbine::container_f_insert");
-  private static final Token CONTAINER_F_REFERENCE =
-      new Token("turbine::f_reference");
-  private static final Token CONTAINER_REFERENCE =
-      new Token("turbine::container_reference");
-  private static final Token CONTAINER_IMMEDIATE_INSERT =
-      new Token("turbine::container_immediate_insert");
-  private static final Token CREF_F_LOOKUP =
-      new Token("turbine::f_cref_lookup");
-  private static final TclTree CREF_LOOKUP_LITERAL =
-      new Token("turbine::f_cref_lookup_literal");
-  private static final Token F_CONTAINER_CREATE_NESTED =
-      new Token("turbine::f_container_create_nested");
-  private static final Token F_CREF_CREATE_NESTED =
-      new Token("turbine::f_cref_create_nested");
-  private static final Token F_CONTAINER_CREATE_NESTED_STATIC =
-      new Token("turbine::container_create_nested");
-  private static final Token F_CREF_CREATE_NESTED_STATIC =
-      new Token("turbine::cref_create_nested");
-  private static final Token CONTAINER_SLOT_DROP =
-      new Token("adlb::slot_drop");
-  private static final Token CONTAINER_SLOT_CREATE =
-      new Token("adlb::slot_create");
-  private static final Token CONTAINER_ENUMERATE =
-      new Token("adlb::enumerate");
-  private static final Token RETRIEVE_UNTYPED =
-      new Token("turbine::retrieve");
-  private static final Token RETRIEVE_INTEGER =
-      new Token("turbine::retrieve_integer");
-  private static final Token RETRIEVE_FLOAT =
-      new Token("turbine::retrieve_float");
-  private static final Token RETRIEVE_STRING =
-      new Token("turbine::retrieve_string");
-  private static final Token RETRIEVE_BLOB = new Token("turbine::retrieve_blob");
+      turbFn("allocate_container_custom");
+  private static final Token ALLOCATE_FILE =  turbFn("allocate_file2");
+  private static final Token ALLOCATE_CUSTOM = turbFn("allocate_custom");
+  private static final Token MULTICREATE = adlbFn("multicreate");
+  
+  // Container insert
+  private static final Token C_INSERT = turbFn("c_v_insert");
+  private static final Token C_F_INSERT = turbFn("c_f_insert");
+  private static final Token C_IMM_INSERT = turbFn("c_imm_insert");
+  private static final Token C_DEREF_INSERT = turbFn("c_v_deref_insert");
+  private static final Token C_F_DEREF_INSERT = turbFn("c_f_deref_insert");
+  private static final Token ARRAY_BUILD = turbFn("array_build");
+  
+  // Container nested creation
+  private static final Token C_CREATE_NESTED = turbFn("c_v_create");
+  private static final Token C_F_CREATE_NESTED = turbFn("c_f_create");
+  private static final Token CR_CREATE_NESTED = turbFn("cr_v_create");
+  private static final Token CR_F_CREATE_NESTED = turbFn("cr_f_create");
+  
+  // Container lookup
+  private static final Token C_LOOKUP_CHECKED = turbFn("c_lookup_checked");
+  private static final Token C_REFERENCE = turbFn("c_reference");
+  private static final Token C_F_REFERENCE = turbFn("c_f_reference");
+  private static final TclTree CR_LOOKUP = turbFn("cr_v_lookup");
+  private static final Token CR_F_LOOKUP = turbFn("cr_f_lookup");
+  private static final Token CONTAINER_ENUMERATE = adlbFn("enumerate");
+
+  // Container reference counting
+  private static final Token C_SLOT_CREATE = adlbFn("slot_create");
+  private static final Token C_SLOT_DROP = adlbFn("slot_drop");
+  
+  // Retrieve functions
+  private static final Token RETRIEVE_UNTYPED = turbFn("retrieve");
+  private static final Token RETRIEVE_INTEGER = turbFn("retrieve_integer");
+  private static final Token RETRIEVE_FLOAT = turbFn("retrieve_float");
+  private static final Token RETRIEVE_STRING = turbFn("retrieve_string");
+  private static final Token RETRIEVE_BLOB = turbFn("retrieve_blob");
   private static final Token CACHED = new Token("CACHED");
-  private static final Token STACK_LOOKUP =
-      new Token("turbine::stack_lookup");
-  static final String LOCAL_STACK_NAME = "stack";
-  
-  static final Value LOCAL_STACK_VAL = new Value(LOCAL_STACK_NAME, false, true);
-  static final String PARENT_STACK_NAME = "stack";
-  private static final Value STACK = new Value(LOCAL_STACK_NAME);
-  private static final Value PARENT_STACK =
-      new Value(PARENT_STACK_NAME, false, true);
-  private static final Token PARENT_STACK_ENTRY =
-      new Token("_parent");
-  private static final Token RULE = new Token("turbine::rule");
-  private static final Token SPAWN_RULE = new Token("turbine::spawn_rule");
-  private static final Token DEEPRULE = new Token("turbine::deeprule");
-  private static final Token NO_STACK = new Token("no_stack");
-  private static final Token DEREFERENCE_INTEGER =
-      new Token("turbine::f_dereference_integer");
-  private static final Token DEREFERENCE_FLOAT =
-      new Token("turbine::f_dereference_float");
-  private static final Token DEREFERENCE_STRING =
-      new Token("turbine::f_dereference_string");
-  private static final Token DEREFERENCE_BLOB =
-          new Token("turbine::f_dereference_blob");
-  private static final Token DEREFERENCE_FILE =
-          new Token("turbine::f_dereference_file");
-  private static final Token TURBINE_LOG =
-      new Token("turbine::c::log");
-  private static final Token ALLOCATE_CUSTOM =
-      new Token("turbine::allocate_custom");
-  private static final Token DIVIDE_INTEGER =
-    new Token("turbine::divide_integer_impl");
-  private static final Token MOD_INTEGER =
-      new Token("turbine::mod_integer_impl");
-  
-  static final Token CONTAINER_LOOKUP =
-      new Token("turbine::container_lookup");
-  static final Token CONTAINER_LOOKUP_CHECKED =
-      new Token("turbine::container_lookup_checked");
-  private static final Token STORE_INTEGER =
-      new Token("turbine::store_integer");
-  private static final Token STORE_VOID =
-          new Token("turbine::store_void");
-  private static final Token STORE_FLOAT =
-      new Token("turbine::store_float");
-  private static final Token STORE_STRING =
-      new Token("turbine::store_string");
-  private static final Token STORE_BLOB = new Token("turbine::store_blob");
-  private static final Token INIT_UPD_FLOAT =
-      new Token("turbine::init_updateable_float");
-  private static final Token CONTAINER_DEREF_INSERT =
-      new Token("turbine::container_deref_insert");
-  private static final Token CONTAINER_F_DEREF_INSERT =
-      new Token("turbine::container_f_deref_insert");
-  
   private static final Token UNCACHED_MODE = new Token("UNCACHED");
-  private static final Token FREE_LOCAL_BLOB = 
-                          new Token("turbine::free_local_blob");
   
-  public static final LiteralInt VOID_DUMMY_VAL = new LiteralInt(12345);
-  private static final Token REFCOUNT_INCR = new Token("turbine::read_refcount_incr");
-  private static final Token REFCOUNT_DECR = new Token("turbine::read_refcount_decr");
-  private static final Token FILE_REFCOUNT_INCR = new Token("turbine::file_read_refcount_incr");
-  private static final Token FILE_REFCOUNT_DECR = new Token("turbine::file_read_refcount_decr");
-  
-  public static final Value ADLB_NULL_ID = new Value("adlb::NULL_ID");
-  public static final Value ADLB_NULL_TYPE = new Value("adlb::NULL_TYPE");
-  public static final Value ADLB_FLOAT_TYPE = new Value("adlb::FLOAT");
-  public static final Value ADLB_INT_TYPE = new Value("adlb::INTEGER");
-  public static final Value ADLB_STRING_TYPE = new Value("adlb::STRING");
-  public static final Value ADLB_BLOB_TYPE = new Value("adlb::BLOB");
-  public static final Value ADLB_CONTAINER_TYPE =
-                                                 new Value("adlb::CONTAINER");
-
-  private static final String TCLTMP_PRIO = "tcltmp:prio";
-  
-  public enum StackFrameType {
-    MAIN,
-    FUNCTION,
-    NESTED
-  }
-
   /**
    * Used to specify what caching is allowed for retrieve
    * @author tga
@@ -191,9 +103,108 @@ class Turbine
     UNCACHED
   }
   
-  public Turbine()
-  {}
+  // Store functions
+  private static final Token STORE_INTEGER = turbFn("store_integer");
+  private static final Token STORE_VOID = turbFn("store_void");
+  private static final Token STORE_FLOAT = turbFn("store_float");
+  private static final Token STORE_STRING = turbFn("store_string");
+  private static final Token STORE_BLOB = turbFn("store_blob");
+  private static final Token INIT_UPD_FLOAT = turbFn("init_updateable_float");
 
+  // Rule functions
+  private static final Token SPAWN_RULE = turbFn("spawn_rule");
+  private static final Token RULE = turbFn("rule");
+  private static final Token DEEPRULE = turbFn("deeprule");
+  private static final Token ADLB_SPAWN = adlbFn("spawn");
+  private static final LiteralInt TURBINE_NULL_RULE = new LiteralInt(-1);
+  
+  // Dereference functions
+  private static final Token DEREFERENCE_INTEGER = turbFn("f_dereference_integer");
+  private static final Token DEREFERENCE_FLOAT = turbFn("f_dereference_float");
+  private static final Token DEREFERENCE_STRING = turbFn("f_dereference_string");
+  private static final Token DEREFERENCE_BLOB = turbFn("f_dereference_blob");
+  private static final Token DEREFERENCE_FILE = turbFn("f_dereference_file");
+  
+  // Callstack functions
+  private static final Token STACK_LOOKUP = turbFn("stack_lookup");
+  static final String LOCAL_STACK_NAME = "stack";
+  static final Value LOCAL_STACK_VAL = new Value(LOCAL_STACK_NAME, false, true);
+  static final String PARENT_STACK_NAME = "stack";
+  private static final Value STACK = new Value(LOCAL_STACK_NAME);
+  private static final Value PARENT_STACK = new Value(PARENT_STACK_NAME);
+  private static final Token PARENT_STACK_ENTRY = new Token("_parent");
+  private static final Token NO_STACK = new Token("no_stack");
+   
+  public enum StackFrameType {
+    MAIN,
+    FUNCTION,
+    NESTED
+  }
+
+  // Types
+  public static final Value ADLB_NULL_TYPE = adlbConst("NULL_TYPE");
+  public static final Value ADLB_FLOAT_TYPE = adlbConst("FLOAT");
+  public static final Value ADLB_INT_TYPE = adlbConst("INTEGER");
+  public static final Value ADLB_STRING_TYPE = adlbConst("STRING");
+  public static final Value ADLB_BLOB_TYPE = adlbConst("BLOB");
+  public static final Value ADLB_CONTAINER_TYPE = adlbConst("CONTAINER");
+
+  // Custom implementations of operators
+  private static final Token DIVIDE_INTEGER = turbFn("divide_integer_impl");
+  private static final Token MOD_INTEGER = turbFn("mod_integer_impl");
+  
+  // Refcounting
+  private static final Token ENABLE_READ_REFCOUNT = turbFn("enable_read_refcount");
+  private static final Token REFCOUNT_INCR = turbFn("read_refcount_incr");
+  private static final Token REFCOUNT_DECR = turbFn("read_refcount_decr");
+  private static final Token FILE_REFCOUNT_INCR = turbFn("file_read_refcount_incr");
+  private static final Token FILE_REFCOUNT_DECR = turbFn("file_read_refcount_decr");
+  private static final Token FREE_LOCAL_BLOB = turbFn("free_local_blob");
+  
+  // Files
+  private static final Token GET_FILE = turbFn("get_file");
+  private static final Token SET_FILE = turbFn("set_file");
+  private static final Token GET_OUTPUT_FILE_PATH = turbFn("get_output_file_path");
+  private static final Token GET_FILE_PATH = turbFn("get_file_path");
+  private static final Token CREATE_LOCAL_FILE_REF = turbFn("create_local_file_ref");
+  private static final Token DECR_LOCAL_FILE_REFCOUNT = turbFn("decr_local_file_refcount");
+  private static final Token MKTEMP = turbFn("mktemp");
+  private static final Token SET_FILENAME_VAL = turbFn("set_filename_val");
+
+  // External apps
+  private static final Token UNPACK_ARGS = turbFn("unpack_args");
+  private static final Token EXEC_EXTERNAL = turbFn("exec_external");
+
+  // Task priorities
+  private static final Token SET_PRIORITY = turbFn("set_priority");
+  private static final Token RESET_PRIORITY = turbFn("reset_priority");
+  private static final String TCLTMP_PRIO = "tcltmp:prio";
+  private static final Value TCLTMP_PRIO_VAL = new Value(TCLTMP_PRIO, false, true);
+  
+  // Special values
+  public static final LiteralInt VOID_DUMMY_VAL = new LiteralInt(12345);
+  public static final Value ADLB_NULL_ID = adlbConst("NULL_ID");
+
+  // Misc
+  private static final Token TURBINE_LOG = turbFn("c::log");
+  
+  private static Token turbFn(String functionName) {
+    return new Token("turbine::" + functionName);
+  }
+  
+  private static Token adlbFn(String functionName) {
+    return new Token("adlb::" + functionName);
+  }  
+
+  private static Value turbConst(String name) {
+    return new Value("turbine::" + name);
+  }
+  
+  private static Value adlbConst(String name) {
+    return new Value("adlb::" + name);
+  }
+  
+  
   public static TclTree[] createStackFrame(StackFrameType type)
   {
     TclTree[] result;
@@ -217,7 +228,7 @@ class Turbine
 
     if (type != StackFrameType.MAIN) {
       // main is the only procedure without a parent stack frame
-      result[index++] = new Command(CONTAINER_INSERT, STACK,
+      result[index++] = new Command(C_INSERT, STACK,
                                     PARENT_STACK_ENTRY, PARENT_STACK);
     }
     return result;
@@ -233,7 +244,7 @@ class Turbine
     Token name = new Token(stackVarName);
     Value value = new Value(tclVarName);
     Command result =
-      new Command(CONTAINER_INSERT, STACK, name, value);
+      new Command(C_INSERT, STACK, name, value);
     return result;
   }
 
@@ -396,18 +407,18 @@ class Turbine
   
   public static SetVariable fileDecrGet(String target, Value src,
       Expression decr) {
-    return new SetVariable(target, Square.fnCall(GET_FILE, src, decr));
+    return new SetVariable(target, new Square(GET_FILE, src, decr));
   }
 
   private static Value tclRuleType (TaskMode t) {
     switch (t) {
     case LOCAL:
     case LOCAL_CONTROL:
-      return new Value("turbine::LOCAL");
+      return turbConst("LOCAL");
     case CONTROL:
-      return new Value("turbine::CONTROL");
+      return turbConst("CONTROL");
     case WORKER:
-      return new Value("turbine::WORK");
+      return turbConst("WORK");
     default:
       throw new STCRuntimeError("Unexpected rule type: " + t);
     }
@@ -467,13 +478,11 @@ class Turbine
   private static Sequence spawnTask(List<Expression> action, TaskMode type, Target target,
       Expression priority, ExecContext execCx) {
     Sequence res = new Sequence();
-    Token ADLB_SPAWN = new Token("adlb::spawn");
-    LiteralInt TURBINE_NULL_RULE = new LiteralInt(-1);
     
     // Store in var for readability
     Value priorityVar = null;
     if (priority != null) {
-      priorityVar =  new Value(TCLTMP_PRIO);
+      priorityVar = TCLTMP_PRIO_VAL;
       res.add(new SetVariable(TCLTMP_PRIO, priority));
     }
     
@@ -614,7 +623,7 @@ class Turbine
 
   public static Command structRefLookupFieldID(String structName, String structField,
       String resultVar, String resultTypeName) { 
-    Command lookup = new Command(new Token("turbine::struct_ref_lookup"),
+    Command lookup = new Command(turbFn("struct_ref_lookup"),
             new Value(structName), new TclString(structField, true),
             new Value(resultVar), new TclString(resultTypeName, true));
 
@@ -637,11 +646,11 @@ class Turbine
     
     // set up reference to point to array data
     if (isArrayRef) {
-      return new Command(CREF_LOOKUP_LITERAL, NO_STACK,
+      return new Command(CR_LOOKUP, NO_STACK,
           new TclList(),  new TclList(new Value(arrayVar),
           arrayIndex, new Value(refVar), refType));
     } else {
-      return new Command(CONTAINER_REFERENCE, new Value(arrayVar),
+      return new Command(C_REFERENCE, new Value(arrayVar),
         arrayIndex, new Value(refVar), refType);
     }
   }
@@ -653,7 +662,7 @@ class Turbine
   public static SetVariable arrayLookupImm(String dst, String arrayVar,
       Expression arrayIndex) {
     return new SetVariable(dst,
-        new Square(CONTAINER_LOOKUP_CHECKED, new Value(arrayVar), arrayIndex));
+        new Square(C_LOOKUP_CHECKED, new Value(arrayVar), arrayIndex));
   }
 
   /**
@@ -671,11 +680,11 @@ class Turbine
     Token refType = refIsString ?  new Token(STRING_TYPENAME) 
                                 : new Token(INTEGER_TYPENAME); 
     if (isArrayRef) {
-      return new Command(CREF_F_LOOKUP, NO_STACK,
+      return new Command(CR_F_LOOKUP, NO_STACK,
           new TclList(), new TclList(new Value(arrayVar), new Value(indexVar),
               new Value(refVar), refType));
     } else {
-      return new Command(CONTAINER_F_REFERENCE, NO_STACK,
+      return new Command(C_F_REFERENCE, NO_STACK,
          new TclList(), new TclList(new Value(arrayVar), new Value(indexVar),
              new Value(refVar), refType));
     }
@@ -704,7 +713,7 @@ class Turbine
 
   public static Command arrayStoreImmediate(String srcVar, String arrayVar,
                               Expression arrayIndex, Expression writersDecr) {
-    return new Command(CONTAINER_IMMEDIATE_INSERT,
+    return new Command(C_IMM_INSERT,
         new Value(arrayVar), arrayIndex, new Value(srcVar), writersDecr);
   }
 
@@ -713,7 +722,7 @@ class Turbine
     Square outputs = new TclList();
     Square inputs =  new TclList(new Value(arrayVar),
                       arrayIndex, new Value(srcRefVar));
-    return new Command(CONTAINER_DEREF_INSERT, NO_STACK, outputs, inputs,
+    return new Command(C_DEREF_INSERT, NO_STACK, outputs, inputs,
                        writersDecr, LiteralInt.FALSE);
   }
 
@@ -722,7 +731,7 @@ class Turbine
     Square outputs = new TclList();
     Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
                      new Value(srcRefVar));
-    return new Command(CONTAINER_F_DEREF_INSERT, NO_STACK, outputs, inputs,
+    return new Command(C_F_DEREF_INSERT, NO_STACK, outputs, inputs,
                        writersDecr, LiteralInt.FALSE);
   }
 
@@ -732,13 +741,13 @@ class Turbine
     Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
           new Value(srcVar));
     // Don't increment writers count, this is done in IC
-    return new Command(CONTAINER_F_INSERT, NO_STACK, outputs, inputs,
+    return new Command(C_F_INSERT, NO_STACK, outputs, inputs,
                        writersDecr, LiteralInt.FALSE);
   }
 
   public static Command arrayRefStoreImmediate(String srcVar, String arrayVar,
       Expression arrayIndex, String outerArray) {
-    return new Command(new Token("turbine::cref_insert"),
+    return new Command(turbFn("cref_insert"),
                     NO_STACK, new TclList(), new TclList(
                     new Value(arrayVar), arrayIndex, new Value(srcVar),
                     new Value(outerArray)),
@@ -751,7 +760,7 @@ class Turbine
     Square outputs = new TclList();
     Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
         new Value(srcVar), new Value(outerArray));
-    return new Command(new Token("turbine::f_cref_insert"),
+    return new Command(turbFn("f_cref_insert"),
                         NO_STACK, outputs, inputs,
                         LiteralInt.FALSE);
   }
@@ -761,7 +770,7 @@ class Turbine
     Square outputs = new TclList();
     Square inputs =  new TclList(new Value(arrayVar),
         arrayIndex, new Value(srcRefVar), new Value(outerArrayVar));
-    return new Command(new Token("turbine::cref_deref_insert"),
+    return new Command(turbFn("cref_deref_insert"),
                                   NO_STACK, outputs, inputs,
                                   LiteralInt.FALSE);
   }
@@ -771,28 +780,28 @@ class Turbine
     Square outputs = new TclList();
     Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
         new Value(srcRefVar), new Value(outerArrayVar));
-    return new Command(new Token("turbine::cref_f_deref_insert"),
+    return new Command(turbFn("cref_f_deref_insert"),
                                     NO_STACK, outputs, inputs,
                                     LiteralInt.FALSE);
   }
 
   public static TclTree containerCreateNested(String resultVar,
         String containerVar, String indexVar) {
-    return new Command(F_CONTAINER_CREATE_NESTED,
+    return new Command(C_F_CREATE_NESTED,
             new Token(resultVar), new Value(containerVar),
             new Value(indexVar), new Token(INTEGER_TYPENAME));
   }
 
   public static TclTree containerRefCreateNested(String resultVar,
       Value containerVar, Value indexVar, Value outerArr) {
-    return new Command(F_CREF_CREATE_NESTED,
+    return new Command(CR_F_CREATE_NESTED,
           new Token(resultVar), containerVar,
           indexVar, new Token(INTEGER_TYPENAME), outerArr, LiteralInt.FALSE);
   }
 
   public static TclTree containerRefCreateNestedImmIx(String resultVar,
       String containerVar, Expression arrIx, Value outerArr) {
-    return new Command(F_CREF_CREATE_NESTED_STATIC,
+    return new Command(CR_CREATE_NESTED,
         new Token(resultVar), new Value(containerVar),
         arrIx, new Token(INTEGER_TYPENAME), outerArr, LiteralInt.FALSE);
   }
@@ -800,28 +809,28 @@ class Turbine
   public static TclTree containerCreateNestedImmIx(String resultVar,
       String containerVar, Expression arrIx) {
     return new SetVariable(resultVar,
-        new Square(F_CONTAINER_CREATE_NESTED_STATIC,
+        new Square(C_CREATE_NESTED,
             new Value(containerVar), arrIx, new Token(INTEGER_TYPENAME)));
   }
 
   public static TclTree containerSlotCreate(Value arr) {
-    return new Command(CONTAINER_SLOT_CREATE, arr);
+    return new Command(C_SLOT_CREATE, arr);
   }
   
   public static TclTree containerSlotCreate(Value arr, Expression incr) {
-    return new Command(CONTAINER_SLOT_CREATE, arr, incr);
+    return new Command(C_SLOT_CREATE, arr, incr);
   }
 
   public static TclTree decrArrayWriters(Value arr) {
-    return new Command(CONTAINER_SLOT_DROP, arr);
+    return new Command(C_SLOT_DROP, arr);
   }
   
   public static TclTree containerSlotDrop(Value arr, Expression decr) {
-    return new Command(CONTAINER_SLOT_DROP, arr, decr);
+    return new Command(C_SLOT_DROP, arr, decr);
   }
   
   public static Command enableReferenceCounting() {
-    return new Command("turbine::enable_read_refcount");
+    return new Command(ENABLE_READ_REFCOUNT);
   }
 
   /**
@@ -1046,7 +1055,7 @@ class Turbine
    * @return
    */
   public static Expression getFileStatus(Value fileVar) {
-    return new Square(new Token("turbine::get_file_status"), fileVar);
+    return new Square(turbFn("get_file_status"), fileVar);
   }
   
   /**
@@ -1063,73 +1072,60 @@ class Turbine
       return new Square(GET_FILE_PATH, fileVar);
     }
   }
-  
-  /**
-   * Command to clsoe a file
-   * @param fileVar
-   * @return
-   */
-  public static Command closeFile(Value fileVar) {
-    return new Command(new Token("turbine::close_file"), fileVar);
-  }
 
   public static TclTree resetPriority() {
-    return new Command("turbine::reset_priority");
+    return new Command(RESET_PRIORITY);
   }
 
   public static TclTree setPriority(Expression priority) {
-    return new Command("turbine::set_priority", Arrays.asList(priority));
+    return new Command(SET_PRIORITY, Arrays.asList(priority));
   }
 
   public static Expression unpackArray(Expression array, int nestLevel,
                                        boolean isFile) {
     assert(nestLevel >= 0);
-    return Square.fnCall("turbine::unpack_args", array,
+    return new Square(UNPACK_ARGS, array,
           new LiteralInt(nestLevel), LiteralInt.boolValue(isFile));
   }
 
   public static Command fileSet(Value fileFuture, String localFileName) {
-    return new Command("turbine::set_file", Arrays.asList(fileFuture, new Token(localFileName)));
+    return new Command(SET_FILE, fileFuture, new Token(localFileName));
   }
 
   public static TclTree fileGet(String prefixVar, Value varToExpr) {
-    return new SetVariable(prefixVar, 
-        Square.fnCall(GET_FILE, varToExpr));
+    return new SetVariable(prefixVar,  new Square(GET_FILE, varToExpr));
   }
   
   public static Command decrLocalFileRef(String localFileName) {
-    return new Command("turbine::decr_local_file_refcount", new Token(localFileName));
+    return new Command(DECR_LOCAL_FILE_REFCOUNT, new Token(localFileName));
   }
 
   public static SetVariable createLocalFile(String varName, Expression fileName) {
-    return new SetVariable(varName, Square.fnCall("turbine::create_local_file_ref",
-                                                  fileName));
+    return new SetVariable(varName, 
+            new Square(CREATE_LOCAL_FILE_REF, fileName));
   }
-
   public static SetVariable mkTemp(String varName) {
-    return new SetVariable(varName, Square.fnCall("turbine::mktemp"));
+    return new SetVariable(varName, new Square(MKTEMP));
   }
 
   public static Command setFilenameVal(Value fileFuture,
                                        Expression filenameVal) {
-    return new Command("turbine::set_filename_val",
-                       Arrays.asList(fileFuture, filenameVal));
+    return new Command(SET_FILENAME_VAL, fileFuture, filenameVal);
   }
-
   
   public static Command arrayBuild(Value array, List<Expression> arrMemExprs,
       boolean close) {
-    return new Command("turbine::array_build", Arrays.asList(
-          array, new TclList(arrMemExprs), LiteralInt.boolValue(close)));
+    return new Command(ARRAY_BUILD, array, new TclList(arrMemExprs),
+                       LiteralInt.boolValue(close));
   }
-
+  
   public static Command batchDeclare(List<String> batchedVarNames,
       List<TclList> batched) {
     ArrayList<Expression> exprs = new ArrayList<Expression>();
     
     
     List<Expression> multiCreateCall = new ArrayList<Expression>();
-    multiCreateCall.add(new Token("adlb::multicreate"));
+    multiCreateCall.add(MULTICREATE);
     multiCreateCall.addAll(batched);
     exprs.add(new Square(multiCreateCall));
     
@@ -1138,8 +1134,8 @@ class Turbine
     }
     return new Command("lassign",  exprs);
   }
-
+  
   public static Command log(TclString logMsg) {
-    return new Command("turbine::log", logMsg);
+    return new Command(TURBINE_LOG, logMsg);
   }
 }

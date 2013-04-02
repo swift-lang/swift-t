@@ -28,8 +28,12 @@ public class Command extends TclTree
   }
 
   public Command(String cmd, List<? extends Expression> args) {
+    this(new Token(cmd), args);
+  }
+  
+  public Command(Token cmd, List<? extends Expression> args) {
     tokens = new ArrayList<TclTree>(args.size() + 1);
-    tokens.add(new Token(cmd));
+    tokens.add(cmd);
     tokens.addAll(args);
   }
   
