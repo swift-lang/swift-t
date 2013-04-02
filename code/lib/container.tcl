@@ -66,7 +66,7 @@ namespace eval turbine {
     # c: the container
     # i: the subscript (any type)
     proc c_f_retrieve_integer { d c i } {
-        rule $i "turbine::c_f_retrieve_integer_body $d $c $i" \
+        rule $i "c_f_retrieve_integer_body $d $c $i" \
             name "CFRI-$c-$i" 
     }
 
@@ -116,7 +116,7 @@ namespace eval turbine {
         }
 
         rule "$i $r" \
-            "turbine::c_f_insert_r_body $c $i $r $slot_drops" \
+            "c_f_insert_r_body $c $i $r $slot_drops" \
             name "CFIR-$c-$i" 
     }
 
@@ -138,7 +138,7 @@ namespace eval turbine {
             adlb::slot_create $c
         }
 
-        rule $r "turbine::c_v_insert_r_body $c $i $r $slot_drops" \
+        rule $r "c_v_insert_r_body $c $i $r $slot_drops" \
             name "container_deref_insert-$c-$i" 
     }
 
@@ -171,7 +171,7 @@ namespace eval turbine {
     proc c_f_lookup { c i r ref_type } {
         debug "CFL: <$c>\[<$i>\] <- <*$r>"
 
-        rule $i "turbine::c_f_lookup_body $c $i $r $ref_type" \
+        rule $i "c_f_lookup_body $c $i $r $ref_type" \
             name "CFL-$c-$i" 
     }
     proc c_f_lookup_body { c i r ref_type } {
@@ -184,7 +184,7 @@ namespace eval turbine {
     # DRI
     # When reference r is closed, copy its (integer) value in v
     proc dereference_integer { v r } {
-        rule $r "turbine::dereference_integer_body $v $r" \
+        rule $r "dereference_integer_body $v $r" \
             name "DRI-$v-$r" 
     }
     proc dereference_integer_body { v r } {
@@ -198,7 +198,7 @@ namespace eval turbine {
     # DRF
     # When reference r is closed, copy its (float) value into v
     proc dereference_float { v r } {
-        rule $r "turbine::dereference_float_body $v $r" \
+        rule $r "dereference_float_body $v $r" \
             name "DRF-$v-$r" 
     }
 
@@ -213,7 +213,7 @@ namespace eval turbine {
     # DRS
     # When reference r is closed, copy its (string) value into v
     proc dereference_string { v r } {
-        rule $r "turbine::dereference_string_body $v $r" \
+        rule $r "dereference_string_body $v $r" \
             name "DRS-$v-$r" 
     }
     proc dereference_string_body { v r } {
@@ -227,7 +227,7 @@ namespace eval turbine {
     # DRB
     # When reference r is closed, copy blob to v
     proc dereference_blob { v r } {
-        rule $r [ list turbine::dereference_blob_body $v $r ] \
+        rule $r "dereference_blob_body $v $r" \
             name "DRB-$v-$r" 
     }
     proc dereference_blob_body { v r } {
@@ -236,6 +236,18 @@ namespace eval turbine {
         # When the TD has a value, copy the value
         read_refcount_incr $handle
         copy_blob [ list $v ] [ list $handle ]
+    }
+
+    proc dereference_file { v r } {
+        rule $r "dereference_file_body {$v} $r" \
+            name "dereference_file" 
+    }
+    proc dereference_file_body { v r } {
+        # Get the TD from the reference
+        set handle [ retrieve_string $r ]
+        # When the TD has a value, copy the value
+        file_read_refcount_incr $handle
+        copy_file [ list $v ] [ list $handle ]
     }
 
     # CRVL
@@ -250,7 +262,7 @@ namespace eval turbine {
     proc cr_v_lookup { cr i d d_type } {
         log "creating reference: <*$cr>\[$i\] <- <*$d>"
 
-        rule $cr "turbine::cr_v_lookup_body $cr $i $d $d_type" \
+        rule $cr "cr_v_lookup_body $cr $i $d $d_type" \
             name "CRVL-$cr" 
     }
 
@@ -271,7 +283,7 @@ namespace eval turbine {
     #       d_type is the turbine type name for representation of d
     # outputs: ignored
     proc cr_f_lookup { cr i d d_type } {
-        rule "$cr $i" "turbine::cr_f_lookup_body $cr $i $d $d_type" \
+        rule "$cr $i" "cr_f_lookup_body $cr $i $d $d_type" \
             name "CRFL-$cr" 
     }
 
@@ -295,8 +307,7 @@ namespace eval turbine {
             adlb::slot_create $oc
         }
 
-        rule "$r $j" \
-            [ list turbine::cr_f_insert_body $r $j $d $oc ] \
+        rule "$r $j" "cr_f_insert_body $r $j $d $oc" \
             name "CRFI-$r" 
     }
     proc cr_f_insert_body { r j d oc } {

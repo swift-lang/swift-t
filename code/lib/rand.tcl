@@ -15,7 +15,7 @@
 # Turbine builtin functions for random number generation
 
 # All have signature:
-#   f <STACK> <OUTPUT LIST> <INPUT LIST>
+#   f <OUTPUT LIST> <INPUT LIST>
 # where the lists are Tcl lists of TDs
 # even if some of the arguments are not used
 #

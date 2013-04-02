@@ -16,7 +16,7 @@
 
 # For two types: integer and float
 # All have the same signature
-#   f <STACK> <OUTPUT LIST> <INPUT LIST>
+#   f <OUTPUT LIST> <INPUT LIST>
 # where the lists are Tcl lists of TDs
 
 namespace eval turbine {
