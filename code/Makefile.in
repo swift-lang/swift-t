@@ -75,7 +75,7 @@ else
         PIC = -qpic
         STD =
         SHARED = -qmkshrobj
-	WARNS = 
+	WARNS =
 endif
 
 # No logging
@@ -197,3 +197,6 @@ clean:
 	$(Q) "  CLEAN"
 	$(E) rm -fv $(OBJS) $(ADLB) $(DEPS)
 
+distclean: clean
+	@rm -fv Makefile **/*.mk
+	@rm -fv src/adlb-version.h
