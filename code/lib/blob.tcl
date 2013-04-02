@@ -15,19 +15,19 @@
 
 namespace eval turbine {
 
-  proc blob_size { out blob } {
+  proc blob_size_async { out blob } {
     rule "$blob" "blob_size_body $out $blob" \
         name "blob_size-$out-$blob" 
   }
 
   proc blob_size_body { out blob } {
     set blob_val [ retrieve_decr_blob $blob ]
-    set sz [ blob_size_impl $blob_val ]
+    set sz [ blob_size $blob_val ]
     store_integer $out $sz
     adlb::blob_free $blob
   }
 
-  proc blob_size_impl { blob_val } {
+  proc blob_size { blob_val } {
     return [ lindex $blob_val 1 ]
   }
 
