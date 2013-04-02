@@ -608,6 +608,7 @@ class Turbine {
     args.add(new TclList(inputs));
     args.add(new TclList(depthExprs));
     args.add(new TclList(isFileExprs));
+    args.add(TclUtil.tclStringAsList(action));
     ruleAddKeywordArgs(mode, target, parallelism, args);
     res.add(new Command(DEEPRULE, args));
     
