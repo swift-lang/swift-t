@@ -78,9 +78,12 @@ turbine_code turbine_ready(int count, turbine_transform_id* output,
 
 turbine_code turbine_close(turbine_datum_id id);
 
+/*
+  action: the string action.  Caller is responsible for freeing
+ */
 turbine_code turbine_pop(turbine_transform_id id,
                          turbine_action_type* action_type,
-                         char* action, int* priority, int* target,
+                         char** action, int* priority, int* target,
                          int* parallelism);
 
 int turbine_code_tostring(char* output, turbine_code code);
