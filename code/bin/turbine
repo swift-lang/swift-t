@@ -27,12 +27,17 @@ PROCS=3
 # Use MPI rank line prefixing?
 LINE_PREFIX_ENABLED=0
 LINE_PREFIX=
+# MPI machine file
+MACHINE_FILE=0
 REPORT_VERSION=0
 VERBOSE=0
 
-while getopts "hln:vV" opt
+while getopts "f:hln:vV" opt
 do
   case $opt in
+    f)
+      MACHINE_FILE=${OPTARG}
+      ;;
     h)
       PRINT_HELP=1
       ;;
@@ -93,6 +98,11 @@ then
   echo
   print_help
   exit 0
+fi
+
+if [[ ${MACHINE_FILE} != 0 ]]
+then
+  TURBINE_LAUNCH_OPTS="-f ${MACHINE_FILE}"
 fi
 
 shift $(( OPTIND-1 ))

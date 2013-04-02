@@ -4,20 +4,43 @@ USAGE
 
 OPTIONS
 
-  -h: help
-  -l: enable MPI line numbering
-  -n: set number of processes
-  -v: report version number
-  -V: make this script verbose
+  -f <file>
+     provide a machine file
+
+  -h
+      help
+
+  -l
+      enable MPI line numbering
+
+  -n <procs>
+      set number of processes
+
+  -v
+      report version number
+
+  -V
+      make this script verbose
 
 ENVIRONMENT
 
-   TURBINE_ENGINES       number of Turbine engines
-   ADLB_SERVERS          number of ADLB servers
-   TURBINE_LOG=0         disable log
-   TURBINE_DEBUG=0       disable Turbine debugging (if enabled)
-   ADLB_DEBUG=0          disable ADLB debugging (if enabled)
-   TURBINE_LAUNCH_OPTS   provide additional arguments to mpiexec
+   TURBINE_ENGINES
+                         number of Turbine engines
+
+   ADLB_SERVERS
+                         number of ADLB servers
+
+   TURBINE_LOG=0
+                         disable log
+
+   TURBINE_DEBUG=0
+                         disable Turbine debugging (if enabled)
+
+   ADLB_DEBUG=0
+                         disable ADLB debugging (if enabled)
+
+   TURBINE_LAUNCH_OPTS
+                         provide additional arguments to mpiexec
 
 SEE ALSO
 
