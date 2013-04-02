@@ -62,7 +62,7 @@ class Turbine {
   // Container insert
   private static final Token C_INSERT = turbFn("c_v_insert");
   private static final Token C_F_INSERT = turbFn("c_f_insert");
-  private static final Token C_IMM_INSERT = turbFn("c_imm_insert");
+  private static final Token C_IMM_INSERT = turbFn("container_insert");
   private static final Token C_DEREF_INSERT = turbFn("c_v_deref_insert");
   private static final Token C_F_DEREF_INSERT = turbFn("c_f_deref_insert");
   private static final Token ARRAY_BUILD = turbFn("array_build");
@@ -74,8 +74,8 @@ class Turbine {
   private static final Token CR_F_CREATE_NESTED = turbFn("cr_f_create");
   
   // Container lookup
-  private static final Token C_LOOKUP_CHECKED = turbFn("c_lookup_checked");
-  private static final Token C_REFERENCE = turbFn("c_reference");
+  private static final Token C_LOOKUP_CHECKED = turbFn("container_lookup_checked");
+  private static final Token C_REFERENCE = turbFn("container_reference");
   private static final Token C_F_REFERENCE = turbFn("c_f_reference");
   private static final TclTree CR_LOOKUP = turbFn("cr_v_lookup");
   private static final Token CR_F_LOOKUP = turbFn("cr_f_lookup");
