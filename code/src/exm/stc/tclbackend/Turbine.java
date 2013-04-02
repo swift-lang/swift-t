@@ -60,24 +60,27 @@ class Turbine {
   private static final Token MULTICREATE = adlbFn("multicreate");
   
   // Container insert
-  private static final Token C_INSERT = turbFn("c_v_insert");
+  private static final Token C_V_INSERT = turbFn("container_insert");
   private static final Token C_F_INSERT = turbFn("c_f_insert");
-  private static final Token C_IMM_INSERT = turbFn("container_insert");
-  private static final Token C_DEREF_INSERT = turbFn("c_v_deref_insert");
-  private static final Token C_F_DEREF_INSERT = turbFn("c_f_deref_insert");
+  private static final Token CR_V_INSERT = turbFn("cr_v_insert");
+  private static final Token CR_F_INSERT = turbFn("cr_f_insert");
+  private static final Token C_V_DEREF_INSERT = turbFn("c_v_insert_r");
+  private static final Token C_F_DEREF_INSERT = turbFn("c_f_insert_r");
+  private static final Token CR_V_DEREF_INSERT = turbFn("cr_v_insert_r");
+  private static final Token CR_F_DEREF_INSERT = turbFn("cr_f_insert_r");
   private static final Token ARRAY_BUILD = turbFn("array_build");
   
   // Container nested creation
-  private static final Token C_CREATE_NESTED = turbFn("c_v_create");
+  private static final Token C_V_CREATE_NESTED = turbFn("c_v_create");
   private static final Token C_F_CREATE_NESTED = turbFn("c_f_create");
-  private static final Token CR_CREATE_NESTED = turbFn("cr_v_create");
+  private static final Token CR_V_CREATE_NESTED = turbFn("cr_v_create");
   private static final Token CR_F_CREATE_NESTED = turbFn("cr_f_create");
   
   // Container lookup
   private static final Token C_LOOKUP_CHECKED = turbFn("container_lookup_checked");
   private static final Token C_REFERENCE = turbFn("container_reference");
-  private static final Token C_F_REFERENCE = turbFn("c_f_reference");
-  private static final TclTree CR_LOOKUP = turbFn("cr_v_lookup");
+  private static final Token C_F_LOOKUP = turbFn("c_f_lookup");
+  private static final TclTree CR_V_LOOKUP = turbFn("cr_v_lookup");
   private static final Token CR_F_LOOKUP = turbFn("cr_f_lookup");
   private static final Token CONTAINER_ENUMERATE = adlbFn("enumerate");
 
@@ -119,11 +122,11 @@ class Turbine {
   private static final LiteralInt TURBINE_NULL_RULE = new LiteralInt(-1);
   
   // Dereference functions
-  private static final Token DEREFERENCE_INTEGER = turbFn("f_dereference_integer");
-  private static final Token DEREFERENCE_FLOAT = turbFn("f_dereference_float");
-  private static final Token DEREFERENCE_STRING = turbFn("f_dereference_string");
-  private static final Token DEREFERENCE_BLOB = turbFn("f_dereference_blob");
-  private static final Token DEREFERENCE_FILE = turbFn("f_dereference_file");
+  private static final Token DEREFERENCE_INTEGER = turbFn("dereference_integer");
+  private static final Token DEREFERENCE_FLOAT = turbFn("dereference_float");
+  private static final Token DEREFERENCE_STRING = turbFn("dereference_string");
+  private static final Token DEREFERENCE_BLOB = turbFn("dereference_blob");
+  private static final Token DEREFERENCE_FILE = turbFn("dereference_file");
   
   // Callstack functions
   private static final Token STACK_LOOKUP = turbFn("stack_lookup");
@@ -133,7 +136,6 @@ class Turbine {
   private static final Value STACK = new Value(LOCAL_STACK_NAME);
   private static final Value PARENT_STACK = new Value(PARENT_STACK_NAME);
   private static final Token PARENT_STACK_ENTRY = new Token("_parent");
-  private static final Token NO_STACK = new Token("no_stack");
    
   public enum StackFrameType {
     MAIN,
@@ -228,7 +230,7 @@ class Turbine {
 
     if (type != StackFrameType.MAIN) {
       // main is the only procedure without a parent stack frame
-      result[index++] = new Command(C_INSERT, STACK,
+      result[index++] = new Command(C_V_INSERT, STACK,
                                     PARENT_STACK_ENTRY, PARENT_STACK);
     }
     return result;
@@ -244,7 +246,7 @@ class Turbine {
     Token name = new Token(stackVarName);
     Value value = new Value(tclVarName);
     Command result =
-      new Command(C_INSERT, STACK, name, value);
+      new Command(C_V_INSERT, STACK, name, value);
     return result;
   }
 
@@ -451,28 +453,35 @@ class Turbine {
     // Use different command on worker
     Token ruleCmd = execCx == ExecContext.CONTROL ? RULE : SPAWN_RULE;
     
-    List<Expression> kwArgs = new ArrayList<Expression>();
-    if (!target.rankAny) {
-      kwArgs.add(new Token("target"));
-      kwArgs.add(target.toTcl());
-    }
+    List<Expression> args = new ArrayList<Expression>();
     
-    if (type != TaskMode.LOCAL && type != TaskMode.CONTROL) {
-      kwArgs.add(new Token("type"));
-      kwArgs.add(tclRuleType(type));
-    }
+    args.add(new TclList(inputs)); // vars to block in
+    args.add(TclUtil.tclStringAsList(action)); // Tcl string to execute
+    ruleAddKeywordArgs(type, target, parallelism, args);
     
-    if (parallelism != null && !LiteralInt.ONE.equals(parallelism)) {
-      kwArgs.add(new Token("parallelism"));
-      kwArgs.add(parallelism);
-    }
-    
-    res.add(new Command(ruleCmd,  new TclList(inputs),
-                        TclUtil.tclStringAsList(action)));
+    res.add(new Command(ruleCmd, args));
 
     if (priority != null)
        res.add(resetPriority());
     return res;
+  }
+
+  private static void ruleAddKeywordArgs(TaskMode type, Target target,
+      Expression parallelism, List<Expression> args) {
+    if (!target.rankAny) {
+      args.add(new Token("target"));
+      args.add(target.toTcl());
+    }
+    
+    if (type != TaskMode.LOCAL && type != TaskMode.CONTROL) {
+      args.add(new Token("type"));
+      args.add(tclRuleType(type));
+    }
+    
+    if (parallelism != null && !LiteralInt.ONE.equals(parallelism)) {
+      args.add(new Token("parallelism"));
+      args.add(parallelism);
+    }
   }
 
   private static Sequence spawnTask(List<Expression> action, TaskMode type, Target target,
@@ -544,7 +553,9 @@ class Turbine {
 
   public static Sequence deepRule(String symbol,
       List<? extends Expression> inputs, int[] depths, boolean[] isFile,
-      List<Expression> action, TaskMode mode, Expression priority, ExecContext execCx) {
+      List<Expression> action, TaskMode mode, Target target,
+      Expression parallelism,
+      Expression priority, ExecContext execCx) {
     assert(inputs.size() == depths.length);
     assert(inputs.size() == isFile.length);
     
@@ -562,9 +573,14 @@ class Turbine {
     Sequence res = new Sequence();
     if (priority != null)
        res.add(setPriority(priority));
-    res.add(new Command(DEEPRULE, new Token(symbol),
-          new TclList(inputs), new TclList(depthExprs), new TclList(isFileExprs),
-          tclRuleType(mode), TclUtil.tclStringAsList(action)));
+    
+    List<Expression> args = new ArrayList<Expression>();
+    args.add(new TclList(inputs));
+    args.add(new TclList(depthExprs));
+    args.add(new TclList(isFileExprs));
+    ruleAddKeywordArgs(mode, target, parallelism, args);
+    res.add(new Command(DEEPRULE, args));
+    
     if (priority != null)
       res.add(resetPriority());
     return res;
@@ -646,9 +662,8 @@ class Turbine {
     
     // set up reference to point to array data
     if (isArrayRef) {
-      return new Command(CR_LOOKUP, NO_STACK,
-          new TclList(),  new TclList(new Value(arrayVar),
-          arrayIndex, new Value(refVar), refType));
+      return new Command(CR_V_LOOKUP, new Value(arrayVar),
+          arrayIndex, new Value(refVar), refType);
     } else {
       return new Command(C_REFERENCE, new Value(arrayVar),
         arrayIndex, new Value(refVar), refType);
@@ -680,108 +695,85 @@ class Turbine {
     Token refType = refIsString ?  new Token(STRING_TYPENAME) 
                                 : new Token(INTEGER_TYPENAME); 
     if (isArrayRef) {
-      return new Command(CR_F_LOOKUP, NO_STACK,
-          new TclList(), new TclList(new Value(arrayVar), new Value(indexVar),
-              new Value(refVar), refType));
+      return new Command(CR_F_LOOKUP, new Value(arrayVar), new Value(indexVar),
+              new Value(refVar), refType);
     } else {
-      return new Command(C_F_REFERENCE, NO_STACK,
-         new TclList(), new TclList(new Value(arrayVar), new Value(indexVar),
-             new Value(refVar), refType));
+      return new Command(C_F_LOOKUP, new Value(arrayVar), new Value(indexVar),
+             new Value(refVar), refType);
     }
    }
 
    public static Command dereferenceInteger(Value dstVar, Value refVar) {
-     return new Command(DEREFERENCE_INTEGER, NO_STACK, dstVar, refVar);
+     return new Command(DEREFERENCE_INTEGER, dstVar, refVar);
    }
 
    public static Command dereferenceFloat(Value dstVar, Value refVar) {
-     return new Command(DEREFERENCE_FLOAT, NO_STACK, dstVar, refVar);
+     return new Command(DEREFERENCE_FLOAT, dstVar, refVar);
    }
 
    public static Command dereferenceString(Value dstVar, Value refVar) {
-     return new Command(DEREFERENCE_STRING, NO_STACK,
-         dstVar, refVar);
+     return new Command(DEREFERENCE_STRING, dstVar, refVar);
    }
    
    public static Command dereferenceBlob(Value dstVar, Value refVar) {
-     return new Command(DEREFERENCE_BLOB, NO_STACK, dstVar, refVar);
+     return new Command(DEREFERENCE_BLOB, dstVar, refVar);
    }
    
    public static Command dereferenceFile(Value dstVar, Value refVar) {
-     return new Command(DEREFERENCE_FILE, NO_STACK, dstVar, refVar);
+     return new Command(DEREFERENCE_FILE, dstVar, refVar);
    }
 
   public static Command arrayStoreImmediate(String srcVar, String arrayVar,
                               Expression arrayIndex, Expression writersDecr) {
-    return new Command(C_IMM_INSERT,
+    return new Command(C_V_INSERT,
         new Value(arrayVar), arrayIndex, new Value(srcVar), writersDecr);
   }
 
   public static Command arrayDerefStore(String srcRefVar, String arrayVar,
       Expression arrayIndex, Expression writersDecr) {
-    Square outputs = new TclList();
-    Square inputs =  new TclList(new Value(arrayVar),
-                      arrayIndex, new Value(srcRefVar));
-    return new Command(C_DEREF_INSERT, NO_STACK, outputs, inputs,
+    return new Command(C_V_DEREF_INSERT, new Value(arrayVar),
+                      arrayIndex, new Value(srcRefVar),
                        writersDecr, LiteralInt.FALSE);
   }
 
   public static Command arrayDerefStoreComputed(String srcRefVar, String arrayVar,
       String indexVar, Expression writersDecr) {
-    Square outputs = new TclList();
-    Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
-                     new Value(srcRefVar));
-    return new Command(C_F_DEREF_INSERT, NO_STACK, outputs, inputs,
-                       writersDecr, LiteralInt.FALSE);
+    return new Command(C_F_DEREF_INSERT, new Value(arrayVar),
+        new Value(indexVar), new Value(srcRefVar), writersDecr, LiteralInt.FALSE);
   }
 
   public static Command arrayStoreComputed(String srcVar, String arrayVar,
                                                     String indexVar, Expression writersDecr) {
-    Square outputs = new TclList();
-    Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
-          new Value(srcVar));
     // Don't increment writers count, this is done in IC
-    return new Command(C_F_INSERT, NO_STACK, outputs, inputs,
-                       writersDecr, LiteralInt.FALSE);
+    return new Command(C_F_INSERT, new Value(arrayVar), new Value(indexVar),
+        new Value(srcVar), writersDecr, LiteralInt.FALSE);
   }
 
   public static Command arrayRefStoreImmediate(String srcVar, String arrayVar,
       Expression arrayIndex, String outerArray) {
-    return new Command(turbFn("cref_insert"),
-                    NO_STACK, new TclList(), new TclList(
+    return new Command(CR_V_INSERT,
                     new Value(arrayVar), arrayIndex, new Value(srcVar),
-                    new Value(outerArray)),
+                    new Value(outerArray),
                     LiteralInt.FALSE);
   }
 
 
   public static Command arrayRefStoreComputed(String srcVar, String arrayVar,
       String indexVar, String outerArray) {
-    Square outputs = new TclList();
-    Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
-        new Value(srcVar), new Value(outerArray));
-    return new Command(turbFn("f_cref_insert"),
-                        NO_STACK, outputs, inputs,
-                        LiteralInt.FALSE);
+    return new Command(CR_F_INSERT,new Value(arrayVar), new Value(indexVar),
+        new Value(srcVar), new Value(outerArray), LiteralInt.FALSE);
   }
 
   public static Command arrayRefDerefStore(String srcRefVar, String arrayVar,
       Expression arrayIndex, String outerArrayVar) {
-    Square outputs = new TclList();
-    Square inputs =  new TclList(new Value(arrayVar),
-        arrayIndex, new Value(srcRefVar), new Value(outerArrayVar));
-    return new Command(turbFn("cref_deref_insert"),
-                                  NO_STACK, outputs, inputs,
-                                  LiteralInt.FALSE);
+    return new Command(CR_V_DEREF_INSERT, new Value(arrayVar),
+        arrayIndex, new Value(srcRefVar), new Value(outerArrayVar), LiteralInt.FALSE);
   }
 
   public static Command arrayRefDerefStoreComputed(String srcRefVar, String arrayVar,
       String indexVar, String outerArrayVar) {
-    Square outputs = new TclList();
-    Square inputs =  new TclList(new Value(arrayVar), new Value(indexVar),
-        new Value(srcRefVar), new Value(outerArrayVar));
-    return new Command(turbFn("cref_f_deref_insert"),
-                                    NO_STACK, outputs, inputs,
+    return new Command(CR_F_DEREF_INSERT, new Value(arrayVar),
+        new Value(indexVar), new Value(srcRefVar), new Value(outerArrayVar),
                                     LiteralInt.FALSE);
   }
 
@@ -801,7 +793,7 @@ class Turbine {
 
   public static TclTree containerRefCreateNestedImmIx(String resultVar,
       String containerVar, Expression arrIx, Value outerArr) {
-    return new Command(CR_CREATE_NESTED,
+    return new Command(CR_V_CREATE_NESTED,
         new Token(resultVar), new Value(containerVar),
         arrIx, new Token(INTEGER_TYPENAME), outerArr, LiteralInt.FALSE);
   }
@@ -809,7 +801,7 @@ class Turbine {
   public static TclTree containerCreateNestedImmIx(String resultVar,
       String containerVar, Expression arrIx) {
     return new SetVariable(resultVar,
-        new Square(C_CREATE_NESTED,
+        new Square(C_V_CREATE_NESTED,
             new Value(containerVar), arrIx, new Token(INTEGER_TYPENAME)));
   }
 

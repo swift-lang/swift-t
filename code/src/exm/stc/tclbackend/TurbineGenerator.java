@@ -1574,8 +1574,12 @@ public class TurbineGenerator implements CompilerBackend {
           isFile[i] = Types.isFile(baseType);
         }
 
-        pointStack.peek().append(Turbine.deepRule(uniqueName, waitFor, depths,
-                                 isFile, action, mode, priorityExpr, execContextStack.peek()));
+        Target target = Target.RANK_ANY;
+        Expression parallelism = null;
+        Sequence rule = Turbine.deepRule(uniqueName, waitFor, depths,
+              isFile, action, mode, target, parallelism,  priorityExpr,
+              execContextStack.peek());
+        pointStack.peek().append(rule);
 
       } else {
         // Whether we can enqueue rules locally
