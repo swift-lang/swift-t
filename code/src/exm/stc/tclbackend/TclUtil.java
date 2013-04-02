@@ -16,6 +16,7 @@
 package exm.stc.tclbackend;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -102,6 +103,10 @@ public class TclUtil {
     for (Arg a: inputs)
       result.add(argToExpr(a));
     return result;
+  }
+  
+  public static Expression tclStringAsList(Expression ...toks) {
+    return tclStringAsList(Arrays.asList(toks));
   }
   
   /**

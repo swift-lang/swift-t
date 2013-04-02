@@ -172,6 +172,8 @@ class Turbine
   public static final Value ADLB_CONTAINER_TYPE =
                                                  new Value("adlb::CONTAINER");
 
+  private static final String TCLTMP_PRIO = "tcltmp:prio";
+  
   public enum StackFrameType {
     MAIN,
     FUNCTION,
@@ -414,58 +416,73 @@ class Turbine
    * Generate code for a rule
    * @param symbol
    * @param inputs
-   * @param action the action, using a tcl list to ensure proper escaping
+   * @param action tokens making up the action
    * @param type
    * @return
    */
   private static Sequence ruleHelper(String symbol, 
       List<? extends Expression> inputs,
-      Expression action, TaskMode type, Target target,
+      List<Expression> action, TaskMode type, Target target,
       Expression priority, ExecContext execCx) {
 
-
-    Sequence res = new Sequence();
     if (inputs.isEmpty()) {
       if (type != TaskMode.LOCAL && type != TaskMode.LOCAL_CONTROL) {
-        res.add(spawnTask(action, type, target, priority, execCx));
-        return res;
+        return spawnTask(action, type, target, priority, execCx);
       }
     }
     
+    Sequence res = new Sequence();    
     if (priority != null)
        res.add(setPriority(priority));
     // Use different command on worker
     Token ruleCmd = execCx == ExecContext.CONTROL ? RULE : SPAWN_RULE;
     res.add(new Command(ruleCmd,  new Token(symbol), new TclList(inputs),
-                        tclRuleType(type), target.toTcl(), action));
+                        tclRuleType(type), target.toTcl(),
+                        TclUtil.tclStringAsList(action)));
 
     if (priority != null)
        res.add(resetPriority());
     return res;
   }
 
-  private static Command spawnTask(Expression action, TaskMode type, Target target,
+  private static Sequence spawnTask(List<Expression> action, TaskMode type, Target target,
       Expression priority, ExecContext execCx) {
+    
+    Sequence res =new Sequence();
     Token ADLB_PUT = new Token("adlb::put");
     LiteralInt TURBINE_NULL_RULE = new LiteralInt(-1);
-    
     if (priority == null) {
       priority = currentPriority();
     }
     
-    assert(type == TaskMode.CONTROL || type == TaskMode.WORKER);
+    // Store in var for readability
+    Value priorityVar = new Value(TCLTMP_PRIO);
+    res.add(new SetVariable(TCLTMP_PRIO, priority));
+    
+    List<Expression> taskTokens = new ArrayList<Expression>();
+    // Different task formats for work types
+    if (type == TaskMode.WORKER) {
+      taskTokens.add(TURBINE_NULL_RULE);
+      taskTokens.addAll(action);
+    } else {
+      assert(type == TaskMode.CONTROL);
+      taskTokens.add(new Token("command"));
+      taskTokens.add(new Token("priority:"));
+      taskTokens.add(priorityVar);
+      taskTokens.addAll(action);
+    }
     // add to shared work queue
-    return new Command(ADLB_PUT, target.toTcl(), adlbWorkType(type),
-                new TclString(Arrays.asList(TURBINE_NULL_RULE, action)),
-                priority);
+    res.add(new Command(ADLB_PUT, target.toTcl(), adlbWorkType(type),
+                TclUtil.tclStringAsList(taskTokens), priorityVar));
+    return res;
   }
 
   private static TclTree adlbWorkType(TaskMode type) {
     switch (type) {
       case CONTROL:
-        return new Token("$turbine::WORK_TYPE(CONTROL)");
+        return new Value("turbine::CONTROL_TASK");
       case WORKER:
-        return new Token("$turbine::WORK_TYPE(WORK)");
+        return new Value("turbine::WORK_TASK");
       default:
         throw new STCRuntimeError("Can't create task of type " + type);
     }
@@ -475,7 +492,7 @@ class Turbine
   private static Expression currentPriority() {
     // TODO: is this the most sensible?
     // get the current turbine priority
-    return new Square("turbine::priority");
+    return new Square("turbine::get_priority");
   }
 
 
@@ -487,14 +504,14 @@ class Turbine
    * @return
    */
   public static Sequence rule(String symbol,
-      List<? extends Expression> blockOn, Expression action, TaskMode mode,
+      List<? extends Expression> blockOn, List<Expression> action, TaskMode mode,
       Target target, Expression priority, ExecContext execCx) {
     return ruleHelper(symbol, blockOn, action, mode, target, priority, execCx);
   }
 
   public static Sequence deepRule(String symbol,
       List<? extends Expression> inputs, int[] depths, boolean[] isFile,
-      Expression action, TaskMode mode, Expression priority, ExecContext execCx) {
+      List<Expression> action, TaskMode mode, Expression priority, ExecContext execCx) {
     assert(inputs.size() == depths.length);
     assert(inputs.size() == isFile.length);
     
@@ -514,7 +531,7 @@ class Turbine
        res.add(setPriority(priority));
     res.add(new Command(DEEPRULE, new Token(symbol),
           new TclList(inputs), new TclList(depthExprs), new TclList(isFileExprs),
-          tclRuleType(mode), action));
+          tclRuleType(mode), TclUtil.tclStringAsList(action)));
     if (priority != null)
       res.add(resetPriority());
     return res;
@@ -526,12 +543,11 @@ class Turbine
     // Assume executes on control for now
     assert (execCx == ExecContext.CONTROL);
     
-    List<Expression> actionElems = new ArrayList<Expression>();
-    actionElems.add(new Token(symbol));
+    List<Expression> action = new ArrayList<Expression>();
+    action.add(new Token(symbol));
     for (Value arg: args) {
-      actionElems.add(arg);
+      action.add(arg);
     }
-    TclList action = new TclList(actionElems);
     return ruleHelper(symbol, blockOn, action, TaskMode.CONTROL, 
                       Target.rankAny(), null, execCx);
   }
