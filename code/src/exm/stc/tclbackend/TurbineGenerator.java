@@ -1825,7 +1825,7 @@ public class TurbineGenerator implements CompilerBackend {
       pointStack.peek().add(new SetVariable(TCLTMP_ITERS, 
                                       containerSize));
  
-      handleRefcounts(constIncrs, perIterIncrs, new Value(TCLTMP_ITERS), false);
+      handleRefcounts(constIncrs, perIterIncrs, Value.numericValue(TCLTMP_ITERS), false);
     }
   }
 
@@ -1836,7 +1836,7 @@ public class TurbineGenerator implements CompilerBackend {
     // load array size
     pointStack.peek().add(Turbine.containerSize(TCLTMP_CONTAINER_SIZE,
                                       varToExpr(arrayVar)));
-    Value containerSize = new Value(TCLTMP_CONTAINER_SIZE);
+    Value containerSize = Value.numericValue(TCLTMP_CONTAINER_SIZE);
     
     Expression lastIndex = TclExpr.minus(containerSize, LiteralInt.ONE);
 
@@ -1853,13 +1853,13 @@ public class TurbineGenerator implements CompilerBackend {
     // need to find the length of this split since that is what the turbine
     //  call wants
     pointStack.peek().add(new SetVariable(TCLTMP_SPLITLEN,
-            new TclExpr(new Value(TCLTMP_RANGE_HI), TclExpr.MINUS,
-                        new Value(TCLTMP_RANGE_LO), TclExpr.PLUS,
+            new TclExpr(Value.numericValue(TCLTMP_RANGE_HI), TclExpr.MINUS,
+                        Value.numericValue(TCLTMP_RANGE_LO), TclExpr.PLUS,
                         LiteralInt.ONE)));
     
     // load the subcontainer
     pointStack.peek().add(Turbine.containerContents(contentsVar,
-        varToExpr(arrayVar), haveKeys, new Value(TCLTMP_SPLITLEN),
+        varToExpr(arrayVar), haveKeys, Value.numericValue(TCLTMP_SPLITLEN),
         TCLTMP_RANGE_LO_V));
   }
 
@@ -1919,7 +1919,7 @@ public class TurbineGenerator implements CompilerBackend {
       pointStack.peek().add(new SetVariable(TCLTMP_ITERSTOTAL,
                        rangeItersLeft(startE, endE, incrE)));
       
-      Value itersTotal = new Value(TCLTMP_ITERSTOTAL);
+      Value itersTotal = Value.numericValue(TCLTMP_ITERSTOTAL);
       handleRefcounts(constIncrs, perIterIncrs, itersTotal, false);
     }
     
@@ -1983,9 +1983,9 @@ public class TurbineGenerator implements CompilerBackend {
     List<String> outerFormalArgs = new ArrayList<String>(commonFormalArgs);
     
 
-    Value loVal = new Value(TCLTMP_RANGE_LO);
-    Value hiVal = new Value(TCLTMP_RANGE_HI);
-    Value incVal = new Value(TCLTMP_RANGE_INC);
+    Value loVal = Value.numericValue(TCLTMP_RANGE_LO);
+    Value hiVal = Value.numericValue(TCLTMP_RANGE_HI);
+    Value incVal = Value.numericValue(TCLTMP_RANGE_INC);
 
     List<Expression> commonArgs = new ArrayList<Expression>();
     commonArgs.add(Turbine.LOCAL_STACK_VAL);
@@ -2020,18 +2020,19 @@ public class TurbineGenerator implements CompilerBackend {
     // itersLeft = ceil( (hi - lo + 1) /(double) inc))
     // ==> itersLeft = ( (hi - lo) / inc ) + 1
     outer.add(new SetVariable(TCLTMP_ITERSLEFT,
-              rangeItersLeft(new Value(TCLTMP_RANGE_LO),
-                             new Value(TCLTMP_RANGE_HI),
-                             new Value(TCLTMP_RANGE_INC))));
+              rangeItersLeft(Value.numericValue(TCLTMP_RANGE_LO),
+                             Value.numericValue(TCLTMP_RANGE_HI),
+                             Value.numericValue(TCLTMP_RANGE_INC))));
 
-    Expression done = new TclExpr(new Value(TCLTMP_ITERSLEFT),
+    Value itersLeft = Value.numericValue(TCLTMP_ITERSLEFT);
+    Expression done = new TclExpr(itersLeft,
                                   TclExpr.LTE, LiteralInt.ZERO);
     Sequence thenDoneB = new Sequence();
     If finishedIf = new If(done, thenDoneB);
     thenDoneB.add(new Command("return"));
     outer.add(finishedIf);
 
-    Expression doneSplitting = new TclExpr(new Value(TCLTMP_ITERSLEFT),
+    Expression doneSplitting = new TclExpr(itersLeft,
                         TclExpr.LTE, new LiteralInt(leafDegree));
     // if (iters < splitFactor) then <call inner> else <split more>
     Sequence thenNoSplitB = new Sequence();
@@ -2047,11 +2048,11 @@ public class TurbineGenerator implements CompilerBackend {
     // skip = max(splitFactor,  ceil(iters /(float) splitfactor))
     // skip = max(splitFactor,  ((iters - 1) /(int) splitfactor) + 1)
     elseSplitB.add(new SetVariable(skip, 
-        TclExpr.mult(new Value(TCLTMP_RANGE_INC),
+        TclExpr.mult(Value.numericValue(TCLTMP_RANGE_INC),
           TclExpr.max(new LiteralInt(leafDegree),
             TclExpr.group(
                 TclExpr.paren(
-                    TclExpr.paren(new Value(TCLTMP_ITERSLEFT), TclExpr.MINUS,
+                    TclExpr.paren(itersLeft, TclExpr.MINUS,
                         LiteralInt.ONE),
                      TclExpr.DIV,  new LiteralInt(splitDegree)),
                 TclExpr.PLUS, LiteralInt.ONE)))));
@@ -2062,22 +2063,24 @@ public class TurbineGenerator implements CompilerBackend {
                   splitDegree, */
 
     ForLoop splitLoop = new ForLoop(splitStart, loVal,
-            hiVal, new Value(skip), splitBody);
+            hiVal, Value.numericValue(skip), splitBody);
     elseSplitB.add(splitLoop);
 
 
     ArrayList<Expression> outerRecCall = new ArrayList<Expression>();
     outerRecCall.add(new Token(outerProcName));
     outerRecCall.addAll(commonArgs);
-    outerRecCall.add(new Value(splitStart));
+    outerRecCall.add(Value.numericValue(splitStart));
     // splitEnd = min(hi, start + skip - 1)
     
-    TclExpr splitEndExpr = new TclExpr(TclExpr.min(new Value(TCLTMP_RANGE_HI),
-        TclExpr.group(new Value(splitStart), TclExpr.PLUS,
-                      new Value(skip), TclExpr.MINUS, LiteralInt.ONE)));
+    TclExpr splitEndExpr = new TclExpr(
+        TclExpr.min(Value.numericValue(TCLTMP_RANGE_HI),
+          TclExpr.group(Value.numericValue(splitStart), TclExpr.PLUS,
+                        Value.numericValue(skip), TclExpr.MINUS,
+                        LiteralInt.ONE)));
     splitBody.add(new SetVariable(TCLTMP_SPLITEND, splitEndExpr));
     
-    outerRecCall.add(new Value(TCLTMP_SPLITEND));
+    outerRecCall.add(Value.numericValue(TCLTMP_SPLITEND));
     outerRecCall.add(incVal);
 
     splitBody.add(Turbine.rule(outerProcName, new ArrayList<Value>(0),
@@ -2174,10 +2177,10 @@ public class TurbineGenerator implements CompilerBackend {
     if (!perIterDecrements.isEmpty()) {
       // Decrement # of iterations executed in inner block
       pointStack.peek().add(new SetVariable(TCLTMP_ITERS, 
-                              rangeItersLeft(new Value(TCLTMP_RANGE_LO),
-                                             new Value(TCLTMP_RANGE_HI),
-                                             new Value(TCLTMP_RANGE_INC))));
-      Value iters = new Value(TCLTMP_ITERS);
+                   rangeItersLeft(Value.numericValue(TCLTMP_RANGE_LO),
+                                  Value.numericValue(TCLTMP_RANGE_HI),
+                                  Value.numericValue(TCLTMP_RANGE_INC))));
+      Value iters = Value.numericValue(TCLTMP_ITERS);
       handleRefcounts(null, perIterDecrements, iters, true);
     }
     pointStack.pop(); // inner proc body

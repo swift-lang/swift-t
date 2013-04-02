@@ -42,6 +42,10 @@ public class Value extends Expression
     this(variable, false, false);
   }
   
+  public static Value numericValue(String variable) {
+    return new Value(variable, false, true);
+  }
+  
   public void setTreatAsList(boolean val) {
     this.treatAsList = val;
   }
