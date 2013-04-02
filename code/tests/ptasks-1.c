@@ -48,9 +48,7 @@ main()
   Tcl_Interp* interp = Tcl_CreateInterp();
   Tcl_Init(interp);
 
-  Tcl_CreateObjCommand(interp,                       \
-                       "ptasks_1_c",                            \
-                       ptasks_1,                              \
+  Tcl_CreateObjCommand(interp, "ptasks_1_c", ptasks_1,
                        NULL, NULL);
 
   // Run Turbine
