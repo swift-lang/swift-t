@@ -105,6 +105,12 @@ static void set_namespace_constants(Tcl_Interp* interp);
 
 static Tcl_Obj* TclListFromArray(Tcl_Interp *interp, int *vals, int count);
 
+#define DEFAULT_PRIORITY 0
+
+/* current priority for rule */
+int ADLB_curr_priority = DEFAULT_PRIORITY;
+
+
 static int
 ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[], bool decr);
@@ -369,6 +375,73 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
                     work_type, priority, parallelism);
 
   ASSERT(rc == ADLB_SUCCESS);
+  return TCL_OK;
+}
+
+/**
+   Special-case put that takes no special arguments
+   usage: adlb::spawn <work type> <work unit>
+*/
+static int
+ADLB_Spawn_Cmd(ClientData cdata, Tcl_Interp *interp,
+             int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(3);
+
+  int work_type;
+  Tcl_GetIntFromObj(interp, objv[1], &work_type);
+  int cmd_len;
+  char* cmd = Tcl_GetStringFromObj(objv[2], &cmd_len);
+  int priority = ADLB_curr_priority;
+
+  DEBUG_ADLB("adlb::spawn: type: %i \"%s\" %i", work_type, cmd, priority);
+
+  int rc = ADLB_Put(cmd, cmd_len+1, ADLB_RANK_ANY, adlb_rank,
+                    work_type, priority, 1);
+
+  ASSERT(rc == ADLB_SUCCESS);
+  return TCL_OK;
+}
+
+/**
+   usage: get_priority
+ */
+static int
+ADLB_Get_Priority_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  // Return a tcl int
+  // Tcl_SetIntObj doesn't like shared values, but it should be
+  // safe in our use case to modify in-place
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(ADLB_curr_priority));
+  return TCL_OK;
+}
+
+/**
+   usage: reset_priority
+ */
+static int
+ADLB_Reset_Priority_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  ADLB_curr_priority = DEFAULT_PRIORITY;
+  return TCL_OK;
+}
+
+/**
+   usage: set_priority
+ */
+static int
+ADLB_Set_Priority_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  int rc, new_prio;
+  rc = Tcl_GetIntFromObj(interp, objv[1], &new_prio);
+  TCL_CHECK_MSG(rc, "Priority must be integer");
+  ADLB_curr_priority = new_prio;
   return TCL_OK;
 }
 
@@ -1961,7 +2034,11 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("workers",   ADLB_Workers_Cmd);
   COMMAND("barrier",   ADLB_Barrier_Cmd);
   COMMAND("hostmap",   ADLB_Hostmap_Cmd);
+  COMMAND("get_priority",   ADLB_Get_Priority_Cmd);
+  COMMAND("reset_priority", ADLB_Reset_Priority_Cmd);
+  COMMAND("set_priority",   ADLB_Set_Priority_Cmd);
   COMMAND("put",       ADLB_Put_Cmd);
+  COMMAND("spawn",     ADLB_Spawn_Cmd);
   COMMAND("get",       ADLB_Get_Cmd);
   COMMAND("iget",      ADLB_Iget_Cmd);
   COMMAND("create",    ADLB_Create_Cmd);

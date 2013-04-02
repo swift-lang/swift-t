@@ -21,13 +21,13 @@ namespace eval turbine {
     namespace import c::rule
     namespace export init start finalize rule spawn_rule
 
-    namespace import c::get_priority c::reset_priority c::set_priority
-    namespace export get_priority reset_priority set_priority
 
     # Import adlb commands 
-    namespace import ::adlb::put ::adlb::get ::RANK_ANY
+    namespace import ::adlb::put ::adlb::get ::adlb::RANK_ANY \
+            ::adlb::get_priority ::adlb::reset_priority ::adlb::set_priority
     # Re-export adlb commands
-    namespace export put get RANK_ANY
+    namespace export put get RANK_ANY \
+                     get_priority reset_priority set_priority
 
     # Export work types accessible
     variable WORK_TASK

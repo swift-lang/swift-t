@@ -21,4 +21,6 @@
 
 void tcl_adlb_init(Tcl_Interp* interp);
 
+extern int ADLB_curr_priority;
+
 #endif
