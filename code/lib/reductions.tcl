@@ -18,7 +18,7 @@ namespace eval turbine {
 
     namespace export reduce_sum_integer
 
-    proc reduce_sum_integer { stack result A } {
+    proc reduce_sum_integer { result A } {
         deeprule "reduce_sum_integer" $A 2 [ list false false ] \
             $turbine::CONTROL "reduce_sum_integer_body $result $A"
     }
@@ -43,7 +43,7 @@ namespace eval turbine {
         adlb::slot_drop $result
     }
 
-    proc reduce_splice_string { stack result S } {
+    proc reduce_splice_string { result S } {
         deeprule "reduce_splice_string" $S 2 [ list false false ] \
             $turbine::CONTROL "reduce_splice_string_body $result $S"
     }

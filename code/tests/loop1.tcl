@@ -52,10 +52,10 @@ proc loop1_body { parent container key } {
     namespace import turbine::*
 
     puts "body: $parent $container $key"
-    turbine::trace $parent "" $key
+    turbine::trace "" $key
     set t [ retrieve $key ]
     set value [ container_lookup $container $t ]
-    turbine::trace $parent "" $value
+    turbine::trace "" $value
 }
 
 turbine::defaults

@@ -21,6 +21,9 @@ namespace eval turbine {
 
     namespace export init start finalize rule
 
+    namespace import c::get_priority c::reset_priority c::set_priority
+    namespace export get_priority reset_priority set_priority
+
     # Mode is ENGINE, WORKER, or SERVER
     variable mode
     variable is_engine
@@ -29,10 +32,6 @@ namespace eval turbine {
     variable n_adlb_servers
     variable n_engines
     variable n_workers
-
-    # ADLB task priority
-    variable priority
-    variable default_priority
 
     # How to display string values in the log
     variable log_string_mode
@@ -54,9 +53,6 @@ namespace eval turbine {
         variable error_code
         set error_code 10
 
-        variable priority
-        variable default_priority
-        set default_priority 0
         reset_priority
 
         # Set up work types
@@ -183,17 +179,6 @@ namespace eval turbine {
                        "TURBINE_LOG_STRING_MODE=$log_string_mode" ] ]
     }
 
-    proc reset_priority { } {
-        variable priority
-        variable default_priority
-        set priority $default_priority
-    }
-
-    proc set_priority { p } {
-        variable priority
-        set priority $p
-    }
-
     proc enable_read_refcount {} {
       adlb::enable_read_refcount
     }
@@ -262,7 +247,7 @@ namespace eval turbine {
         return $n_workers
     }
 
-    proc turbine_workers_future { stack output inputs } {
+    proc turbine_workers_future { output inputs } {
         store_integer $output [ turbine_workers ]
     }
 
@@ -271,7 +256,7 @@ namespace eval turbine {
         return $n_engines
     }
 
-    proc turbine_engines_future { stack output inputs } {
+    proc turbine_engines_future { output inputs } {
         store_integer $output [ turbine_engines ]
     }
 
@@ -280,7 +265,7 @@ namespace eval turbine {
         return $n_adlb_servers
     }
 
-    proc adlb_servers_future { stack output inputs } {
+    proc adlb_servers_future { output inputs } {
         store_integer $output [ adlb_servers ]
     }
 
@@ -318,36 +303,21 @@ namespace eval turbine {
     # args: inputs action opts
     # opts: optional: dict of options: see tcl-turbine.c:Turbine_Rule_Cmd()
     # default: action type: $turbine::LOCAL
-    proc rule { args } {
+    proc rule { inputs action args } {
         variable is_engine
         global WORK_TYPE
 
         debug "turbine::rule..."
-
-        set argc [ llength $args ]
-        if { $argc < 2 } {
-            error "turbine::rule: requires at least 2 args!"
-        }
-
-        set inputs [ lindex $args 0 ]
-        set action [ lindex $args 1 ]
-        if { $argc > 2 } {
-            set opts [ lreplace $args 0 1 ]
-        } else {
-            set opts {}
-        }
-
         if { $is_engine } {
-            c::rule $inputs $action {*}$opts
+            c::rule $inputs $action {*}$args
         } elseif { [ llength $inputs ] == 0 } {
             release -1 \
-                [ opt_get $opts type   ] $action                     \
-                [ opt_get $opts target ] [ opt_get $opts parallelism ]
+                [ opt_get $args type   ] $action                     \
+                [ opt_get $args target ] [ opt_get $args parallelism ]
         } else {
             adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
-                [ list rule $inputs $action {*}$opts ] \
-                $turbine::priority [ opt_get $opts parallelism ]
-
+                [ list rule $inputs $action {*}$args ] \
+                [ get_priority ] 1
         }
     }
 }

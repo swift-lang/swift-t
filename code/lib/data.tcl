@@ -430,7 +430,7 @@ namespace eval turbine {
         foreach rank $ranks {
             debug "notify: $rank"
             adlb::put $rank $WORK_TYPE(CONTROL) "close $id" \
-                      $turbine::priority 1
+                        [ get_priority ] 1
         }
     }
 

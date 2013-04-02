@@ -42,7 +42,7 @@ namespace eval turbine {
     # if arg1 != arg2 according to Tcl's comparison rules
     #  (e.g. "1" == 1 and 1 == 1)
     # then crash, printing the two values and the provided msg
-    proc assertEqual { stack noresult inputs } {
+    proc assertEqual { noresult inputs } {
         set arg1 [ lindex $inputs 0 ]
         set arg2 [ lindex $inputs 1 ]
         set msg [ lindex $inputs 2 ]
@@ -68,7 +68,7 @@ namespace eval turbine {
     # assertLT(arg1, arg2, msg)
     # if arg1 >= arg2 according to TCL's comparison rules
     # then crash, printing the two values and the provided msg
-    proc assertLT { stack noresult inputs } {
+    proc assertLT { noresult inputs } {
         set arg1 [ lindex $inputs 0 ]
         set arg2 [ lindex $inputs 1 ]
         set msg [ lindex $inputs 2 ]
@@ -90,7 +90,7 @@ namespace eval turbine {
     # assertLTE(arg1, arg2, msg)
     # if arg1 >= arg2 according to TCL's comparison rules
     # then crash, printing the two values and the provided msg
-    proc assertLTE { stack noresult inputs } {
+    proc assertLTE { noresult inputs } {
         set arg1 [ lindex $inputs 0 ]
         set arg2 [ lindex $inputs 1 ]
         set msg [ lindex $inputs 2 ]

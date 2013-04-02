@@ -51,10 +51,10 @@ proc rules { } {
     # initialise the result
     turbine::integer_init 6
 
-    turbine::sum NO_STACK [ list 6 ] [ list $c ]
+    turbine::sum [ list 6 ] [ list $c ]
 
     # trace the result
-    turbine::trace NO_STACK [ list ] [ list 6 ]
+    turbine::trace [ list ] [ list 6 ]
     
     # only finalise the container later make sure
     # sum handles non-finished array correctly

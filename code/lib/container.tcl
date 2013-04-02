@@ -425,8 +425,8 @@ namespace eval turbine {
         # Insert c[i][j] = d
     proc f_container_nested_insert { c i j d } {
 
-        rule "fcni" "$i $j" $turbine::LOCAL $adlb::RANK_ANY 1 \
-            [ list f_container_nested_insert_body_1 $c $i $j $d ]
+        rule "$i $j" [ list f_container_nested_insert_body_1 $c $i $j $d ] \
+            name "fcni" 
     }
 
     proc f_container_nested_insert_body_1 { c i j d } {
@@ -440,8 +440,8 @@ namespace eval turbine {
             allocate r integer
             container_reference $r $c $i "integer"
 
-            rule fcnib "$r" $turbine::LOCAL $adlb::RANK_ANY 1 \
-                "container_nested_insert_body_2 $r $j $d"
+            rule "$r" \
+                "container_nested_insert_body_2 $r $j $d" name fcnib 
         }
     }
 
@@ -528,8 +528,8 @@ namespace eval turbine {
             adlb::slot_create $oa
         }
 
-        rule fcrcn "$cr" $turbine::LOCAL $adlb::RANK_ANY 1 \
-           "cref_create_nested_body $tmp_r $cr $i $type $oa"
+        rule "$cr" "cref_create_nested_body $tmp_r $cr $i $type $oa" \
+           name fcrcn 
     }
 
     proc cref_create_nested_body { r cr i type oa } {
@@ -555,8 +555,8 @@ namespace eval turbine {
             adlb::slot_create $oa
         }
 
-        rule fcrcn "$cr $i" $turbine::LOCAL $adlb::RANK_ANY 1 \
-           "f_cref_create_nested_body $tmp_r $cr $i $type $oa"
+        rule "$cr $i" "f_cref_create_nested_body $tmp_r $cr $i $type $oa" \
+           name fcrcn 
     }
 
     proc f_cref_create_nested_body { r cr i type oa } {
@@ -583,7 +583,7 @@ namespace eval turbine {
 
     # When container is closed, count the members
     # result: a turbine integer
-    proc container_size { stack result container } {
+    proc container_size { result container } {
 
         rule "container_size-$container" $container $turbine::LOCAL $adlb::RANK_ANY 1 \
             "container_size_body $result $container"

@@ -24,19 +24,19 @@ if { [ info exists env(TURBINE_TEST_PARAM_1) ] } {
     set N 7
 }
 
-proc fib { o n } {
+proc fib { stack o n } {
     turbine::c::log function:fib
     set parent $stack
     allocate_container stack string
     container_insert $stack _parent $parent
     container_insert $stack n $n
     container_insert $stack o $o
-    turbine::c::rule "$n" "if-0 $stack" [ name "fib-$o-$n" ]
+    turbine::c::rule "$n" "if-0 $stack" name "fib-$o-$n"
 }
 
-proc if-0 { } {
-    set n [ stack_lookup $stack n ]
-    set o [ stack_lookup $stack o ]
+proc if-0 { stack } {
+    set n [ container_lookup $stack n ]
+    set o [ container_lookup $stack o ]
     set n_value [ retrieve_integer $n ]
     if { $n_value } {
         set parent $stack
@@ -46,21 +46,21 @@ proc if-0 { } {
         container_insert $stack __t0 $__t0
         allocate __l0 integer
         store_integer $__l0 1
-        turbine::minus_integer $stack [ list $__t0 ] [ list $n $__l0 ]
-        turbine::c::rule if-1 "$__t0" $turbine::LOCAL $adlb::RANK_ANY 1 "if-1 $stack"
+        turbine::minus_integer [ list $__t0 ] [ list $n $__l0 ]
+        turbine::c::rule "$__t0" "if-1 $stack" name if-1 
     } else {
         set parent $stack
         allocate_container stack string
         container_insert $stack _parent $parent
-        turbine::set0 no_stack $o
+        turbine::set0 $o
     }
 }
 
 proc if-1 { stack } {
-    set __t0 [ stack_lookup $stack __t0 ]
-    set __pscope1 [ stack_lookup $stack _parent ]
-    set n [ stack_lookup $__pscope1 n ]
-    set o [ stack_lookup $__pscope1 o ]
+    set __t0 [ container_lookup $stack __t0 ]
+    set __pscope1 [ container_lookup $stack _parent ]
+    set n [ container_lookup $__pscope1 n ]
+    set o [ container_lookup $__pscope1 o ]
     set __t0_value [ retrieve_integer $__t0 ]
     if { $__t0_value } {
         set parent $stack
@@ -70,20 +70,20 @@ proc if-1 { stack } {
         allocate __l2 integer
         allocate __l3 integer
         store_integer $__l3 1
-        turbine::minus_integer $stack [ list $__l2 ] [ list $n $__l3 ]
-        turbine::c::rule fib [ list $__l2 ] $turbine::LOCAL $adlb::RANK_ANY 1 "fib $stack $__l1 $__l2"
+        turbine::minus_integer [ list $__l2 ] [ list $n $__l3 ]
+        turbine::c::rule [ list $__l2 ] "fib $stack $__l1 $__l2" name fib 
         allocate __l4 integer
         allocate __l5 integer
         allocate __l6 integer
         store_integer $__l6 2
-        turbine::minus_integer $stack [ list $__l5 ] [ list $n $__l6 ]
-        turbine::c::rule fib [ list $__l5 ] $turbine::LOCAL $adlb::RANK_ANY 1 "fib $stack $__l4 $__l5"
-        turbine::plus_integer $stack [ list $o ] [ list $__l1 $__l4 ]
+        turbine::minus_integer [ list $__l5 ] [ list $n $__l6 ]
+        turbine::c::rule [ list $__l5 ] "fib $stack $__l4 $__l5" name fib
+        turbine::plus_integer [ list $o ] [ list $__l1 $__l4 ]
     } else {
         set parent $stack
         allocate_container stack string
         container_insert $stack _parent $parent
-	turbine::set1 no_stack $o
+	turbine::set1 $o
     }
 }
 
@@ -95,8 +95,8 @@ proc rules {  } {
     global N
     puts "N: $N"
     store_integer $__l1 $N
-    turbine::c::rule fib [ list $__l1 ] $turbine::LOCAL $adlb::RANK_ANY 1 "fib $stack $__l0 $__l1"
-    turbine::trace $stack [ list ] [ list $__l0 ]
+    turbine::c::rule [ list $__l1 ] "fib $stack $__l0 $__l1" name fib
+    turbine::trace [ list ] [ list $__l0 ]
 }
 
 turbine::defaults

@@ -51,9 +51,9 @@ namespace eval turbine {
             } else {
                 # block until the next turbine id is finished,
                 #   then continue running
-                # puts "sum_integer_body $stack $container $result $accum $i $n"
+                # puts "sum_integer_body $container $result $accum $i $n"
                 rule $turbine_id \
-                    "sum_integer_body $stack $container $result $accum $i $n" \
+                    "sum_integer_body $container $result $accum $i $n" \
                     name "sum-$container" 
                 # return immediately without setting result
                 return
@@ -69,15 +69,15 @@ namespace eval turbine {
     # inputs: [ list c r ]
     # c: the container
     # r: the turbine id to store the sum into
-    proc sum_float { stack result inputs } {
+    proc sum_float { result inputs } {
         set container [ lindex $inputs 0 ]
 
         rule $container \
-            "sum_float_body $stack $container $result 0 0 -1" \
+            "sum_float_body $container $result 0 0 -1" \
             name "sum-$container" 
     }
 
-    proc sum_float_body { stack container result accum next_index n } {
+    proc sum_float_body { container result accum next_index n } {
         debug "sum_float $container => $result"
         set CHUNK_SIZE 1024
         # TODO: could divide and conquer instead of doing linear search
@@ -100,9 +100,9 @@ namespace eval turbine {
             } else {
                 # block until the next turbine id is finished,
                 #   then continue running
-                # puts "sum_float_body $stack $container $result $accum $i $n"
+                # puts "sum_float_body $container $result $accum $i $n"
                 rule $turbine_id \
-                    "sum_float_body $stack $container $result $accum $i $n" \
+                    "sum_float_body $container $result $accum $i $n" \
                     name "sum-$container" 
                 # return immediately without setting result
                 return

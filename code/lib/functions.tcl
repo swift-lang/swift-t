@@ -78,7 +78,7 @@ namespace eval turbine {
     }
 
     # # For tests/debugging
-    proc sleep_trace { stack signal inputs } {
+    proc sleep_trace { signal inputs } {
       # parent stack and output arguments not read
       if { ! [ string length $inputs ] } {
         error "trace: received no arguments!"
@@ -96,14 +96,14 @@ namespace eval turbine {
     }
 
     # User function
-    proc range { stack result inputs } {
+    proc range { result inputs } {
         # Assume that there was a container slot opened
         # that can be owned by range (this works with stc's calling
         #   conventions which don't close assigned arrays)
         set start [ lindex $inputs 0 ]
         set end [ lindex $inputs 1 ]
-        rule "range-$result" "$start $end" $turbine::CONTROL $adlb::RANK_ANY 1 \
-            "range_body $result $start $end"
+        rule [ list $start $end ] "range_body $result $start $end" \
+              type $turbine::CONTROL name "range-$result" 
     }
 
     proc range_body { result start end } {
@@ -114,7 +114,7 @@ namespace eval turbine {
         range_work $result $start_value $end_value 1
     }
 
-    proc rangestep { stack result inputs } {
+    proc rangestep { result inputs } {
         # Assume that there was a container slot opened
         # that can be owned by range
         set start [ lindex $inputs 0 ]
@@ -158,9 +158,8 @@ namespace eval turbine {
     # User function
     # Construct a distributed container of sequential integers
     proc drange { result start end parts } {
-
-        rule "drange-$result" "$start $end" $turbine::CONTROL $adlb::RANK_ANY 1 \
-            "drange_body $result $start $end $parts"
+        rule "$start $end" "drange_body $result $start $end $parts" \
+            type $turbine::CONTROL name "drange-$result"
     }
 
     proc drange_body { result start end parts } {
@@ -180,9 +179,11 @@ namespace eval turbine {
             set s [ expr {$i *  $step} ]
             # end
             set e [ expr {$s + $step - 1} ]
-            adlb::put $adlb::RANK_ANY 1 $WORK_TYPE(CONTROL) \
-                "command priority: $turbine::priority range_work $c $s $e 1" \
-                $turbine::priority
+
+            set prio [ get_priority ]
+            adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
+                "command priority: $prio range_work $c $s $e 1" \
+                $prio 1
         }
         # close container
         adlb::slot_drop $result
@@ -234,8 +235,8 @@ namespace eval turbine {
 
     # User function
     proc loop { stmts stack container } {
-        rule "loop-$container" $container $turbine::CONTROL $adlb::RANK_ANY 1 \
-            "loop_body $stmts $stack $container"
+        rule $container "loop_body $stmts $stack $container" \
+              type $turbine::CONTROL name "loop-$container" 
     }
 
     proc loop_body { stmts stack container } {
@@ -362,7 +363,7 @@ namespace eval turbine {
     # c = 1;
     # and sleeps
     proc set1 { c } {
-        rule {} "set1_body $parent $c" \
+        rule {} "set1_body $c" \
              name "set1-$" type $turbine::WORK 
     }
     proc set1_body { c } {
@@ -399,7 +400,7 @@ namespace eval turbine {
 
     # o = i.  Void has no value, so this just makes sure that
     #         they close sequentially
-    proc copy_void { parent o i } {
+    proc copy_void { o i } {
         rule $i "copy_void_body $o $i" name "copy-$o-$i" 
     }
     proc copy_void_body { o i } {
@@ -409,7 +410,7 @@ namespace eval turbine {
     }
 
     # Copy string value
-    proc copy_string { parent o i } {
+    proc copy_string { o i } {
         rule $i "copy_string_body $o $i" name "copystring-$o-$i" 
     }
     proc copy_string_body { o i } {
@@ -419,7 +420,7 @@ namespace eval turbine {
     }
 
     # Copy blob value
-    proc copy_blob { parent o i } {
+    proc copy_blob { o i } {
         rule $i "copy_blob_body $o $i" name "copyblob-$o-$i" 
     }
     proc copy_blob_body { o i } {
@@ -430,12 +431,12 @@ namespace eval turbine {
     }
 
     # create a void type (i.e. just set it)
-    proc make_void { parent o i } {
+    proc make_void { o i } {
         empty i
         store_void $o
     }
 
-    proc zero { stack outputs inputs } {
+    proc zero { outputs inputs } {
         rule $inputs "turbine::zero_body $outputs $inputs" \
             name "zero-$outputs-$inputs" 
     }

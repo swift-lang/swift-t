@@ -36,7 +36,7 @@ namespace eval turbine {
     }
 
     # get the filename from the file handle
-    proc filename2 { stack out in } {
+    proc filename2 { out in } {
       set file_handle [ lindex $in 0 ]
       copy_string $out [ get_file_path $file_handle ]
       read_refcount_decr [ get_file_status $file_handle ]
@@ -81,14 +81,14 @@ namespace eval turbine {
         rule $waitfor $cmd  name $msg target $target 
     }
 
-    proc input_file { stack out filepath } {
+    proc input_file { out filepath } {
       set outfile [ lindex $out 0 ]
       set mapped [ is_file_mapped $outfile ]
       if { $mapped } {
           error "file \[ $outfile \] was already mapped, cannot use input_file"
       }
       rule "$filepath" [ list input_file_body $outfile $filepath ] \
-        [ name "input_file-$outfile-$filepath" ]
+        name "input_file-$outfile-$filepath"
     }
 
     proc input_file_body { outfile filepath } {
@@ -142,7 +142,7 @@ namespace eval turbine {
         set srcstatus [ get_file_status $src ]
         rule "$dstpath $srcpath $srcstatus" \
             [ list copy_file_body $dst $src ] \
-            [ name "copy_file-$dst-$src" type $turbine::WORK ]
+            name "copy_file-$dst-$src" type $turbine::WORK
       } else {
         # not mapped.  As shortcut, just make them both point to the
         # same file and update status once src file is closed
@@ -251,7 +251,7 @@ namespace eval turbine {
         }
     }
 
-    proc readFile { stack result inputs } {
+    proc readFile { result inputs } {
 	set src [ lindex $inputs 0 ]
         rule_file_helper "read_file-$src" [ list ] \
             [ list ] [ list $src ] \
@@ -276,7 +276,7 @@ namespace eval turbine {
         return $file_data
     }
 
-    proc writeFile { stack outputs inputs } {
+    proc writeFile { outputs inputs } {
 	set dst [ lindex $outputs 0 ]
 	set s_value [ retrieve_string $inputs ]
 	rule_file_helper "write_file" "$inputs" \
@@ -304,7 +304,7 @@ namespace eval turbine {
 	close $fp
     }
 
-    proc blob_read { stack result input } {
+    proc blob_read { result input } {
 	set src [ lindex $input 0 ]
         rule_file_helper "blob_read-$result-$src" [ list ] \
             [ list ] [ list $src ] \

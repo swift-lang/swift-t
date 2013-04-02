@@ -31,7 +31,7 @@ proc rules { } {
     turbine::store_integer $i 1
     turbine::store_integer $j 4
 
-    turbine::range NO_STACK $c [ list $i $j ]
+    turbine::range $c [ list $i $j ]
     turbine::loop loop1_body none $c
 }
 
@@ -40,7 +40,7 @@ proc loop1_body { parent container key } {
     set t [ turbine::retrieve $key ]
     set member [ turbine::container_lookup $container $t ]
     # set value [ turbine::retrieve_integer $member ]
-    turbine::trace $parent "" [ list $key $member ]
+    turbine::trace "" [ list $key $member ]
 }
 
 turbine::defaults

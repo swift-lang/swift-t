@@ -51,6 +51,12 @@
 #include "src/tcl/adlb/tcl-adlb.h"
 #include "src/tcl/mpe/tcl-mpe.h"
 
+#define DEFAULT_PRIORITY 0
+
+/* current priority for rule */
+static int curr_priority = DEFAULT_PRIORITY;
+static Tcl_Obj *curr_priority_obj = NULL;
+
 /**
    @see TURBINE_CHECK
 */
@@ -120,6 +126,7 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   else
     log_normalize();
 
+  curr_priority_obj = Tcl_NewIntObj(curr_priority);
   return TCL_OK;
 }
 
@@ -195,8 +202,49 @@ rule_opts_from_list(Tcl_Interp* interp, Tcl_Obj *const objv[],
                     char *name_buffer, int name_buffer_size,
                     const char *action);
 
-static inline int rule_priority(Tcl_Interp* interp, int* priority,
-                                Tcl_Obj* const objv[]);
+/**
+   usage: reset_priority
+ */
+static int
+Turbine_Get_Priority_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  // Return a tcl int
+  // Tcl_SetIntObj doesn't like shared values, but it should be
+  // safe in our use case to modify in-place
+  curr_priority_obj->internalRep.longValue = curr_priority;
+  Tcl_IncrRefCount(curr_priority_obj);
+  Tcl_SetObjResult(interp, curr_priority_obj);
+  return TCL_OK;
+}
+
+/**
+   usage: reset_priority
+ */
+static int
+Turbine_Reset_Priority_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  curr_priority = DEFAULT_PRIORITY;
+  return TCL_OK;
+}
+
+/**
+   usage: set_priority
+ */
+static int
+Turbine_Set_Priority_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  int rc, new_prio;
+  rc = Tcl_GetIntFromObj(interp, objv[1], &new_prio);
+  TCL_CHECK_MSG(rc, "Priority must be integer");
+  curr_priority = new_prio;
+  return TCL_OK;
+}
 
 /**
    usage:
@@ -252,15 +300,9 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
                 "in rule: <%li> %s inputs: \"%s\"",
                 id, opts.name, Tcl_GetString(objv[1]));
 
-  // Lookup current priority
-  int priority = 0;
-  rc = rule_priority(interp, &priority, objv);
-  TCL_CHECK(rc);
-
-  // Issue the rule
   turbine_code code =
       turbine_rule(opts.name, inputs, input_list, opts.type, action,
-                   priority, opts.target, opts.parallelism, &id);
+                   curr_priority, opts.target, opts.parallelism, &id);
   TURBINE_CHECK(code, "could not add rule: %li", id);
   return TCL_OK;
 }
@@ -401,17 +443,6 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
 
   TCL_RETURN_ERROR("rule options: unknown key: %s", k);
   return TCL_ERROR; // unreachable
-}
-
-static inline int
-rule_priority(Tcl_Interp* interp, int* priority,
-              Tcl_Obj* const objv[])
-{
-  Tcl_Obj* p = Tcl_GetVar2Ex(interp, "::turbine::priority", NULL, 0);
-  TCL_CONDITION(p != NULL, "could not access turbine::priority");
-  int rc = Tcl_GetIntFromObj(interp, p, priority);
-  TCL_CHECK_MSG(rc, "turbine::priority is not an integer!");
-  return TCL_OK;
 }
 
 static int
@@ -785,6 +816,9 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("init",        Turbine_Init_Cmd);
   COMMAND("engine_init", Turbine_Engine_Init_Cmd);
   COMMAND("version",     Turbine_Version_Cmd);
+  COMMAND("get_priority",   Turbine_Get_Priority_Cmd);
+  COMMAND("reset_priority", Turbine_Reset_Priority_Cmd);
+  COMMAND("set_priority",   Turbine_Set_Priority_Cmd);
   COMMAND("rule",        Turbine_Rule_Cmd);
   COMMAND("ruleopts",    Turbine_RuleOpts_Cmd);
   COMMAND("push",        Turbine_Push_Cmd);

@@ -34,7 +34,6 @@ proc rules { } {
     set v2 [ turbine::retrieve_string 12 ]
 
     puts -nonewline "result: "
-    # Use 0 as stack frame
     turbine::trace "" [ list 11 12 ]
 }
 

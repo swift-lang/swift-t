@@ -70,26 +70,22 @@ proc myfun { a b x } {
 
     # Create condition variable for "if"
     allocate c_1 integer
-    rule $x   "f $x $c_1" [ dict create name MYFUN_1 type $turbine::WORK ]
-    rule $c_1 "if_1 $c_1" [ name MYFUN_2 ]
-    rule $x   "g $x $b"   [ dict create name MYFUN_3 type $turbine::WORK ]
+    rule $x   "f $x $c_1" name MYFUN_1 type $turbine::WORK
+    rule $c_1 "if_1 $c_1 $a $x" name MYFUN_2
+    rule $x   "g $x $b"   name MYFUN_3 type $turbine::WORK
 }
 
-proc if_1 { c } {
+proc if_1 { c a x } {
 
     # c is the condition variable
     set c_value [ retrieve_integer $c ]
 
-    # Locate stack variables
-    set a [ container_lookup "a" ]
-    set x [ container_lookup "x" ]
-
     if $c_value {
         rule $x "h $x $a" \
-            [ dict create name IF_1_1 type $turbine::WORK ]
+            name IF_1_1 type $turbine::WORK
     } else {
         rule $x "j $x $a" \
-            [ dict create name IF_1_2 type $turbine::WORK ]
+            name IF_1_2 type $turbine::WORK
     }
     turbine::c::push
 }
