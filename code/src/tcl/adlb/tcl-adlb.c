@@ -453,6 +453,7 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   if (rc == ADLB_SHUTDOWN)
   {
     result[0] = '\0';
+    work_len = 1;
     answer_rank = ADLB_RANK_NULL;
   }
   turbine_task_comm = task_comm;
@@ -465,8 +466,8 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_Obj* tcl_answer_rank = Tcl_NewIntObj(answer_rank);
   Tcl_ObjSetVar2(interp, tcl_answer_rank_name, NULL, tcl_answer_rank,
                  EMPTY_FLAG);
-
-  Tcl_SetObjResult(interp, Tcl_NewStringObj(result, -1));
+  
+  Tcl_SetObjResult(interp, Tcl_NewStringObj(result, work_len - 1));
   return TCL_OK;
 }
 
