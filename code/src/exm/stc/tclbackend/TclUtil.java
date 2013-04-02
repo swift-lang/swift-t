@@ -150,6 +150,7 @@ public class TclUtil {
     boolean canUseString = true;
     for (Expression tok: ruleTokens) {
       if (!tok.supportsStringList()) {
+        System.err.println("bad token: " + tok);
         canUseString = false;
         break;
       }

@@ -151,6 +151,9 @@ class Turbine {
   public static final Value ADLB_BLOB_TYPE = adlbConst("BLOB");
   public static final Value ADLB_CONTAINER_TYPE = adlbConst("CONTAINER");
 
+  private static final LiteralInt TURBINE_WORKER_WORK_ID = new LiteralInt(0);
+  private static final LiteralInt TURBINE_CONTROL_WORK_ID = new LiteralInt(1);
+
   // Custom implementations of operators
   private static final Token DIVIDE_INTEGER = turbFn("divide_integer_impl");
   private static final Token MOD_INTEGER = turbFn("mod_integer_impl");
@@ -185,7 +188,6 @@ class Turbine {
   
   // Special values
   public static final LiteralInt VOID_DUMMY_VAL = new LiteralInt(12345);
-  public static final Value ADLB_NULL_ID = adlbConst("NULL_ID");
 
   // Misc
   private static final Token TURBINE_LOG = turbFn("c::log");
@@ -199,11 +201,11 @@ class Turbine {
   }  
 
   private static Value turbConst(String name) {
-    return new Value("turbine::" + name);
+    return new Value("::turbine::" + name);
   }
   
   private static Value adlbConst(String name) {
-    return new Value("adlb::" + name);
+    return new Value("::adlb::" + name);
   }
   
   
@@ -512,14 +514,14 @@ class Turbine {
     // add to shared work queue
     if (priority != null)
       res.add(setPriority(priorityVar));
-    res.add(new Command(ADLB_SPAWN, adlbWorkType(type),
+    res.add(new Command(ADLB_SPAWN, adlbWorkTypeVal(type),
                           TclUtil.tclStringAsList(taskTokens)));
     if (priority != null)
       res.add(resetPriority());
     return res;
   }
 
-  private static TclTree adlbWorkType(TaskMode type) {
+  public static Expression adlbWorkType(TaskMode type) {
     switch (type) {
       case CONTROL:
         return new Value("turbine::CONTROL_TASK");
@@ -530,6 +532,34 @@ class Turbine {
     }
   }
   
+  /**
+   * Tcl is inefficient at looking up namespace vars.
+   * Have option of hardcoding work ids
+   */
+  public static Expression adlbWorkTypeVal(TaskMode type) {
+    switch (type) {
+      case CONTROL:
+        return TURBINE_CONTROL_WORK_ID;
+      case WORKER:
+        return TURBINE_WORKER_WORK_ID;
+      default:
+        throw new STCRuntimeError("Can't create task of type " + type);
+    }
+  }
+  
+  /**
+   * Generate code to check compatibility of STC with Turbine, so
+   * we don't mistakenly hardcode wrong constants
+   */
+  public static Command checkConstants() {
+    List<Expression> args = new ArrayList<Expression>();
+    for (TaskMode taskMode: Arrays.asList(TaskMode.WORKER, TaskMode.CONTROL)) {
+      args.add(new TclString(taskMode.toString(), true));
+      args.add(adlbWorkType(taskMode));
+      args.add(adlbWorkTypeVal(taskMode));
+    }
+    return new Command(turbFn("check_constants"), args);
+  }
 
   public static Expression currentPriority() {
     // get the current turbine priority

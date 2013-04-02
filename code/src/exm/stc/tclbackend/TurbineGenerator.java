@@ -224,11 +224,14 @@ public class TurbineGenerator implements CompilerBackend {
     tree.add(new Command("turbine::init $engines $servers"));
     try {
       if (Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
-        pointStack.peek().add(Turbine.enableReferenceCounting());
+        tree.add(Turbine.enableReferenceCounting());
       }
     } catch (InvalidOptionException e) {
       throw new STCRuntimeError(e.getMessage());
     }
+    
+    // Insert code to check versions
+    tree.add(Turbine.checkConstants());
 
     tree.add(new Command("turbine::start " + MAIN_FUNCTION_NAME +
                                         " " + CONSTINIT_FUNCTION_NAME));
