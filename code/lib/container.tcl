@@ -320,8 +320,7 @@ namespace eval turbine {
             adlb::slot_create $oc
         }
 
-        rule "$cr" \
-            [ list turbine::cr_v_insert_body $cr $j $d $oc ] \
+        rule "$cr" "cr_v_insert_body $cr $j $d $oc" \
             name "CRVI-$cr-$j-$d-$oc" 
     }
     proc cr_v_insert_body { cr j d oc } {
@@ -331,7 +330,7 @@ namespace eval turbine {
         adlb::slot_drop $oc
     }
 
-    # CRFIR
+    # CRVIR
     # j: tcl integer index
     # oc: direct handle to outer container
     proc cr_v_insert_r { cr j dr oc {slot_create 1}} {
@@ -340,10 +339,10 @@ namespace eval turbine {
         }
 
         rule [ list $cr $dr ] \
-            "turbine::cr_v_insert_r_body $cr $j $dr $oc" \
-            [ name "CRVIR"
+            "cr_v_insert_r_body $cr $j $dr $oc" \
+            name "CRVIR"
     }
-    proc cr_v_insert_body { cr j dr oc } {
+    proc cr_v_insert_r_body { cr j dr oc } {
         set c [ retrieve_decr_integer $cr ]
         set d [ retrieve_decr $dr ]
         #TODO: how to handle refcounting for referenced var
@@ -357,7 +356,7 @@ namespace eval turbine {
         }
 
         rule [ list $cr $j $dr ] \
-            "turbine::cr_f_insert_r_body $cr $j $dr $oc" \
+            "cr_f_insert_r_body $cr $j $dr $oc" \
             name "CRFIR" 
     }
     proc cr_f_insert_r_body { cr j dr oc } {
@@ -366,35 +365,6 @@ namespace eval turbine {
         set jval [ retrieve_decr_integer $j ]
         container_insert $c $jval $d
         adlb::slot_drop $oc
-    }
-
-
-        # UNUSED?
-        # Insert c[i][j] = d
-    proc f_container_nested_insert { c i j d } {
-
-        rule "$i $j" [ list f_container_nested_insert_body_1 $c $i $j $d ] \
-            name "fcni" 
-    }
-
-    proc f_container_nested_insert_body_1 { c i j d } {
-
-        if [ container_insert_atomic $c $i ] {
-            # c[i] does not exist
-            set t [ data_new ]
-            allocate_container t integer
-            container_insert $c $i $t
-        } else {
-            allocate r integer
-            container_reference $r $c $i "integer"
-
-            rule "$r" \
-                "container_nested_insert_body_2 $r $j $d" name fcnib 
-        }
-    }
-
-    proc f_container_nested_insert_body_2 { r j d } {
-        container_insert $r $j $d
     }
 
     # CVC
