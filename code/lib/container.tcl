@@ -216,7 +216,7 @@ namespace eval turbine {
         rule $r "turbine::dereference_string_body $v $r" \
             name "DRS-$v-$r" 
     }
-    proc f_dereference_string_body { v r } {
+    proc dereference_string_body { v r } {
         # Get the TD from the reference
         set id [ retrieve_integer $r ]
         # When the TD has a value, copy the value
