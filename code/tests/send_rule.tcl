@@ -15,17 +15,18 @@
 # Test rule on worker and control
 
 package require turbine 0.0.1
+namespace import turbine::*
 
 proc worker_fn { x } {
     # Send to worker
     puts "worker_fn..."
-    turbine::rule [ list ] "puts \"RAN RULE ON WORKER\"" \
+    spawn_rule [ list ] "puts \"RAN RULE ON WORKER\"" \
          name "worker" type $turbine::WORK 
-    turbine::rule [ list $x ] "puts \"RAN RULE AFTER X\"" \
+    spawn_rule [ list $x ] "puts \"RAN RULE AFTER X\"" \
          name "after-x" type $turbine::WORK 
-    turbine::rule [ list ] "puts \"RAN RULE LOCAL\"" \
+    spawn_rule [ list ] "puts \"RAN RULE LOCAL\"" \
          name "local" type $turbine::LOCAL 
-    turbine::rule [ list ] "puts \"RAN RULE ON ENGINE\"" \
+    spawn_rule [ list ] "puts \"RAN RULE ON ENGINE\"" \
          name "engine" type $turbine::CONTROL 
 }
 

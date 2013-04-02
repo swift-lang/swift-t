@@ -33,12 +33,6 @@ namespace eval turbine {
     namespace import c::new c::typeof
     namespace import c::insert c::log
 
-    proc call_composite { f outputs inputs blockon } {
-        set rule_id \
-            [ turbine::c::rule "$blockon" "$f $outputs $inputs" ]
-        return $rule_id
-    }
-
     # User function
     # This name conflicts with a Tcl built-in - it cannot be exported
     proc trace { signal inputs } {

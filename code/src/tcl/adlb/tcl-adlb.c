@@ -355,7 +355,8 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
   int parallelism;
   Tcl_GetIntFromObj(interp, objv[1], &reserve_rank);
   Tcl_GetIntFromObj(interp, objv[2], &work_type);
-  char* cmd = Tcl_GetString(objv[3]);
+  int cmd_len;
+  char* cmd = Tcl_GetStringFromObj(objv[3], &cmd_len);
   Tcl_GetIntFromObj(interp, objv[4], &priority);
   Tcl_GetIntFromObj(interp, objv[5], &parallelism);
 
@@ -364,7 +365,7 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   // int ADLB_Put(void *work_buf, int work_len, int reserve_rank,
   //              int answer_rank, int work_type, int work_prio)
-  int rc = ADLB_Put(cmd, strlen(cmd)+1, reserve_rank, adlb_rank,
+  int rc = ADLB_Put(cmd, cmd_len+1, reserve_rank, adlb_rank,
                     work_type, priority, parallelism);
 
   ASSERT(rc == ADLB_SUCCESS);
@@ -782,7 +783,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
       data = Tcl_GetStringFromObj(objv[3], &length);
       TCL_CONDITION(data != NULL,
                     "adlb::store string <%li> failed!", id);
-      length = strlen(data)+1;
+      length++; // Account for null byte
       TCL_CONDITION(length < ADLB_DATA_MAX,
           "adlb::store: string too long: <%li>", id);
       break;
@@ -791,7 +792,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
       data = Tcl_GetStringFromObj(objv[3], &length);
       TCL_CONDITION(data != NULL,
                     "adlb::store blob <%li> failed!", id);
-      length = strlen(data)+1;
+      length++; // Account for null byte
       TCL_CONDITION(length < ADLB_DATA_MAX,
                     "adlb::store: string too long: <%li>", id);
       break;
@@ -1459,7 +1460,7 @@ ADLB_Blob_From_String_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   TCL_CONDITION(data != NULL,
                 "adlb::blob_from_string failed!");
-  int length2 = strlen(data)+1; // TODO: remote
+  int length2 = length+1; // TODO: remote
   printf("length1: %i length2: %i\n", length, length2);
 
   void *blob = malloc(length2 * sizeof(char));
@@ -1925,8 +1926,9 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
 /**
    Shorten object creation lines.  "adlb::" namespace is prepended
  */
+#define ADLB_NAMESPACE "adlb::"
 #define COMMAND(tcl_function, c_function) \
-    Tcl_CreateObjCommand(interp, "adlb::" tcl_function, c_function, \
+    Tcl_CreateObjCommand(interp, ADLB_NAMESPACE tcl_function, c_function, \
                          NULL, NULL);
 
 /**
@@ -1993,4 +1995,9 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("fail",      ADLB_Fail_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
+  
+  // Export all commands
+  Tcl_Namespace *ns = Tcl_FindNamespace(interp,
+          ADLB_NAMESPACE, NULL, TCL_GLOBAL_ONLY);
+  Tcl_Export(interp, ns, "*", true);
 }

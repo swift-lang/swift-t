@@ -18,11 +18,16 @@
 package provide turbine [ turbine::c::version ]
 
 namespace eval turbine {
-
-    namespace export init start finalize rule
+    namespace import c::rule
+    namespace export init start finalize rule spawn_rule
 
     namespace import c::get_priority c::reset_priority c::set_priority
     namespace export get_priority reset_priority set_priority
+
+    # Import adlb commands 
+    namespace import ::adlb::put ::adlb::get ::RANK_ANY
+    # Re-export adlb commands
+    namespace export put get RANK_ANY
 
     # Mode is ENGINE, WORKER, or SERVER
     variable mode
@@ -303,7 +308,7 @@ namespace eval turbine {
     # args: inputs action opts
     # opts: optional: dict of options: see tcl-turbine.c:Turbine_Rule_Cmd()
     # default: action type: $turbine::LOCAL
-    proc rule { inputs action args } {
+    proc spawn_rule { inputs action args } {
         variable is_engine
         global WORK_TYPE
 
