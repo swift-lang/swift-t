@@ -532,9 +532,7 @@ namespace eval turbine {
     # When container is closed, count the members
     # result: a turbine integer
     proc container_size { result container } {
-
-        rule "container_size-$container" $container $turbine::LOCAL $adlb::RANK_ANY 1 \
-            "container_size_body $result $container"
+        rule $container "container_size_body $result $container"
     }
 
     proc container_size_body { result container } {

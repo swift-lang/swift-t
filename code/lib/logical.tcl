@@ -183,7 +183,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "$a $b" "gte_integer_body $c $a $b" \
-        name "gte_integer-$c-$a-$b" 
+          name "gte_integer-$c-$a-$b" 
     }
     proc gte_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
@@ -282,8 +282,7 @@ namespace eval turbine {
     proc gt_float { c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
-        rule "gt_float-$a-$b" "$a $b" \
-             "gt_float_body $c $a $b"
+        rule "$a $b" "gt_float_body $c $a $b" name "gt_float-$a-$b" 
     }
     proc gt_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
