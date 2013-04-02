@@ -856,22 +856,51 @@ rbtree_random(struct rbtree* target)
   return result;
 }
 
+#define INT_BITS (sizeof(int) * 8)
+
 static inline struct rbtree_node*
 rbtree_random_loop(struct rbtree_node* p)
 {
-  if (p->left == NULL && p->right == NULL)
-    // Leaf
-    return p;
-
-  if (p->left == NULL)
-    return rbtree_random_loop(p->right);
-  else if (p->right == NULL)
-    return rbtree_random_loop(p->left);
-
-  bool b = random_bool();
-  if (b)
-    return rbtree_random_loop(p->right);
-  return rbtree_random_loop(p->left);
+  int random_bits_left = 0;
+  int randval = 0;
+  while (true) {
+    if (p->left != NULL)
+    {
+      if (p->right != NULL)
+      {
+        // Both not null
+        if (random_bits_left == 0) {
+          randval = rand(); 
+          random_bits_left = INT_BITS;
+        }
+        // Consume a random bit
+        bool choice = randval & 0x1;
+        randval = randval >> 1;
+        random_bits_left--;
+        if (choice)
+          p = p->right;
+        else 
+          p = p->left;
+      }
+      else
+      {
+        p = p->left;
+      }
+    }
+    else
+    {
+      // p->left NULL
+      if (p->right != NULL)
+      {
+        p = p->right;
+      }
+      else
+      {
+        // Leaf
+        return p;
+      }
+    }
+  }
 }
 
 static void rbtree_print_loop(struct rbtree_node* node, int level);
