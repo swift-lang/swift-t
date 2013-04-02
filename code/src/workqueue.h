@@ -51,8 +51,9 @@ typedef struct
   int length;
   /** Number of processes required to run this task */
   int parallelism;
-  /** Bulk work unit data */
-  void* payload;
+  /** Bulk work unit data 
+      Payload kept contiguous with data to save memory allocation */
+  unsigned char payload[]; 
 } xlb_work_unit;
 
 void workqueue_init(int work_types);

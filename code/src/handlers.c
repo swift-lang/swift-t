@@ -1234,9 +1234,11 @@ put_targeted(int type, int putter, int priority, int answer,
       }
       else
       {
+        xlb_work_unit *work = work_unit_alloc(length);
+        memcpy(work->payload, payload, length);
         DEBUG("put_targeted(): server storing work...");
         workqueue_add(type, putter, priority, answer, target,
-                      length, 1, payload);
+                      length, 1, work);
       }
     }
     else

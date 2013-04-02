@@ -169,8 +169,7 @@ steal_payloads(int target, int count)
 
 typedef struct {
   int stealer_rank;
-  struct packed_put *puts;
-  void **payloads;
+  xlb_work_unit **work_units;
   int size;
   int max_size;
   int stole_count;
@@ -192,17 +191,24 @@ send_steal_batch(steal_cb_state *batch, bool finish)
 
   if (count == 0)
     return ADLB_SUCCESS;
+
+  struct packed_put puts[count];
+  for (int i = 0; i < count; i++)
+  {
+    xlb_pack_work_unit(&(puts[i]), batch->work_units[i]);
+  }
   
   DEBUG("[%i] sending batch size %i", xlb_comm_rank, batch->size);
-  SEND(batch->puts, sizeof(*batch->puts) * count, MPI_BYTE,
+  SEND(puts, sizeof(puts[0]) * count, MPI_BYTE,
        batch->stealer_rank, ADLB_TAG_RESPONSE_STEAL);
 
   for (int i = 0; i < count; i++)
   {
-    DEBUG("stolen payload: %s", (char*) batch->payloads[i]);
-    SEND(batch->payloads[i], batch->puts[i].length, MPI_BYTE,
+    DEBUG("stolen payload: %s", (char*) batch->work_units[i]->payload);
+    xlb_work_unit *unit = batch->work_units[i];
+    SEND(unit->payload, unit->length, MPI_BYTE,
          batch->stealer_rank, ADLB_TAG_RESPONSE_STEAL);
-    free(batch->payloads[i]);
+    work_unit_free(unit);
   }
   batch->size = 0;
   return ADLB_SUCCESS;
@@ -216,12 +222,9 @@ handle_steal_callback(void *cb_data, xlb_work_unit *work)
 {
   steal_cb_state *state = (steal_cb_state*)cb_data;
   assert(state->size < state->max_size);
-  xlb_pack_work_unit(&(state->puts[state->size]), work);
-  state->payloads[state->size] = work->payload;
+  state->work_units[state->size] = work;
   state->size++;
   state->stole_count++;
-  
-  free(work); // No longer need
 
   if (state->size == state->max_size) {
     adlb_code code = send_steal_batch(state, false);
@@ -243,8 +246,7 @@ handle_steal(int caller, const struct packed_steal *req)
   steal_cb_state state;
   state.stealer_rank = caller;
   state.max_size = XLB_STEAL_CHUNK_SIZE;
-  state.puts = malloc(sizeof(*state.puts) * state.max_size);
-  state.payloads = malloc(sizeof(*state.payloads) * state.max_size);
+  state.work_units = malloc(sizeof(*state.work_units) * state.max_size);
   state.size = 0;
   state.stole_count = 0;
   workqueue_steal_callback cb;
@@ -261,8 +263,7 @@ handle_steal(int caller, const struct packed_steal *req)
   code = send_steal_batch(&state, true);
   ADLB_CHECK(code);
 
-  free(state.puts);
-  free(state.payloads);
+  free(state.work_units);
 
   STATS("LOST: %i", state.stole_count);
   // MPE_INFO(xlb_mpe_svr_info, "LOST: %i TO: %i", state.stole_count, caller);

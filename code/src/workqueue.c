@@ -79,6 +79,9 @@ static struct rbtree* parallel_work;
 // Track number of parallel tasks
 long workqueue_parallel_task_count;
 
+/** Create new work unit for given payload size */
+static inline xlb_work_unit *work_unit_alloc(size_t payload_length);
+
 void
 workqueue_init(int work_types)
 {
@@ -103,12 +106,18 @@ workqueue_unique()
   return unique++;
 }
 
+static inline xlb_work_unit *work_unit_alloc(size_t payload_length)
+{
+  // Allocate header struct plus following array
+  return malloc(sizeof(xlb_work_unit) + payload_length);
+}
+
 void
 workqueue_add(int type, int putter, int priority, int answer,
               int target_rank, int length, int parallelism,
               void* payload)
 {
-  xlb_work_unit* wu = malloc(sizeof(xlb_work_unit));
+  xlb_work_unit* wu = work_unit_alloc(length);
   wu->id = workqueue_unique();
   wu->type = type;
   wu->putter = putter;
@@ -117,7 +126,6 @@ workqueue_add(int type, int putter, int priority, int answer,
   wu->target = target_rank;
   wu->length = length;
   wu->parallelism = parallelism;
-  wu->payload = malloc(length);
   memcpy(wu->payload, payload, length);
 
   DEBUG("workqueue_add(): %li: x%i %s",
@@ -362,7 +370,6 @@ void workqueue_type_counts(int *types, int size)
 void
 work_unit_free(xlb_work_unit* wu)
 {
-  free(wu->payload);
   free(wu);
 }
 
