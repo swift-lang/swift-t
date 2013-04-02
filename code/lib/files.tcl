@@ -189,7 +189,7 @@ namespace eval turbine {
     }
 
     proc file_read_refcount_decr { handle { amount 1 } } {
-      file_read_refcount_incr $handle [ expr $amount * -1 ]
+      file_read_refcount_incr $handle [ expr {$amount * -1} ]
     }
 
     proc glob { result inputs } {
@@ -236,13 +236,13 @@ namespace eval turbine {
     proc set_file { f local_f_varname } {
        upvar 1 $local_f_varname local_f
        # Increment refcount so not cleaned up locally
-       lset local_f 1 [ expr [ lindex $local_f 1 ] + 1 ]
+       lset local_f 1 [ expr {[ lindex $local_f 1 ] + 1} ]
        store_void [ get_file_status $f ]
     }
 
     proc decr_local_file_refcount { varname } {
         upvar 1 $varname v
-        set new_refcount [ expr [ lindex $v 1 ] - 1 ]
+        set new_refcount [ expr {[ lindex $v 1 ] - 1} ]
         lset v 1 $new_refcount
         if { $new_refcount == 0 } {
             set path [ lindex $v 0 ]

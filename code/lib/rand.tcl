@@ -39,7 +39,7 @@ namespace eval turbine {
                 log "TURBINE_SRAND: $env(TURBINE_SRAND)"
             }
             check_str_int $env(TURBINE_SRAND)
-            set seed [ expr $env(TURBINE_SRAND) + $rank ]
+            set seed [ expr {$env(TURBINE_SRAND) + $rank} ]
         } else {
             set seed $rank
         }
@@ -51,7 +51,7 @@ namespace eval turbine {
         nonempty o
         # no input args
         empty i
-        set o_val [ expr rand() ]
+        set o_val [ expr {rand()} ]
         store_float $o $o_val
     }
 
@@ -74,10 +74,10 @@ namespace eval turbine {
     # Obtain random value in [lo, hi)
     # This works b/c rand() generates a number in [0.0, 1.0)
     proc randint_impl { lo hi } {
-        if { [ expr $lo >= $hi ] } {
+        if { [ expr {$lo >= $hi} ] } {
             error "randint: empty range \[$lo, $hi)"
         }
-        set range [ expr $hi - $lo ]
-        return [ expr (int(rand() * $range)) + $lo ]
+        set range [ expr {$hi - $lo} ]
+        return [ expr {(int(rand() * $range)) + $lo} ]
     }
 }

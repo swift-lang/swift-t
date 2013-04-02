@@ -33,7 +33,7 @@ namespace eval turbine {
         for { set i 0 } { $i < $n } { incr i } {
           set elem [ lindex $elems $i ]
           set drops 0
-          if { $close && $i == [ expr $n - 1 ] } {
+          if { [ expr {$close && $i == $n - 1 } ] } {
             set drops 1
           }
           adlb::insert $c $i $elem $drops
@@ -713,7 +713,7 @@ namespace eval turbine {
         set n [ adlb::enumerate $container count all 0 ]
       }
       while { $progress < $n } {
-        set chunk_size [ expr min($MAX_CHUNK_SIZE, $n - $progress) ]
+        set chunk_size [ expr {min($MAX_CHUNK_SIZE, $n - $progress)} ]
         set members [ adlb::enumerate $container members \
                                       $chunk_size $progress ]
         foreach member $members {
@@ -753,13 +753,13 @@ namespace eval turbine {
         # skip allocating new signal
         set inner [ lindex $members 0 ]
         container_deep_wait "$rule_prefix-$inner-close" $inner \
-                     [ expr $nest_level - 1 ] $is_file $signal
+                     [ expr {$nest_level - 1} ] $is_file $signal
       } else {
         foreach inner $members {
           set inner_signal [ allocate void ]
           lappend inner_signals $inner_signal
           container_deep_wait $rule_prefix $inner \
-                       [ expr $nest_level - 1 ] $is_file $inner_signal
+                       [ expr {$nest_level - 1} ] $is_file $inner_signal
         }
         rule $inner_signals \
           [ list deeprule_finish $inner_signals [ list store_void $signal ] ] \
