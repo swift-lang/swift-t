@@ -142,7 +142,7 @@ namespace eval turbine {
         set srcstatus [ get_file_status $src ]
         rule "$dstpath $srcpath $srcstatus" \
             [ list copy_file_body $dst $src ] \
-            name "copy_file-$dst-$src" type $turbine::WORK
+            name "copy_file-$dst-$src" type $::turbine::WORK
       } else {
         # not mapped.  As shortcut, just make them both point to the
         # same file and update status once src file is closed
@@ -194,7 +194,7 @@ namespace eval turbine {
 
     proc glob { result inputs } {
         rule $inputs "glob_body $result $inputs" \
-             name "glob-$result" type $turbine::WORK 
+             name "glob-$result" type $::turbine::WORK 
     }
     proc glob_body { result s } {
         set s_value [ retrieve_decr_string $s ]
@@ -255,7 +255,7 @@ namespace eval turbine {
 	set src [ lindex $inputs 0 ]
         rule_file_helper "read_file-$src" [ list ] \
             [ list ] [ list $src ] \
-            $turbine::WORK \
+            $::turbine::WORK \
             [ list readFile_body $result $src ]
     }
 
@@ -281,7 +281,7 @@ namespace eval turbine {
 	set s_value [ retrieve_string $inputs ]
 	rule_file_helper "write_file" "$inputs" \
             [ list $dst ] [ list ] \
-	    $turbine::WORK \
+	    $::turbine::WORK \
             [ list writeFile_body $outputs $s_value ]
     }
 
@@ -308,7 +308,7 @@ namespace eval turbine {
 	set src [ lindex $input 0 ]
         rule_file_helper "blob_read-$result-$src" [ list ] \
             [ list ] [ list $src ] \
-            $turbine::WORK \
+            $::turbine::WORK \
             [ list blob_read_body $result $src ]
     }
     proc blob_read_body { result input } {

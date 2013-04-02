@@ -77,7 +77,7 @@ namespace eval turbine {
       if { ! [ llength $inputs ] } {
         error "trace: received no arguments!"
       }
-      rule $inputs "sleep_trace_body $signal $inputs" type $turbine::WORK
+      rule $inputs "sleep_trace_body $signal $inputs" type $::turbine::WORK
     }
     proc sleep_trace_body { signal secs args } {
       set secs_val [ retrieve_decr_float $secs ]
@@ -171,7 +171,7 @@ namespace eval turbine {
             set e [ expr {$s + $step - 1} ]
 
             set prio [ get_priority ]
-            adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
+            adlb::put $::adlb::RANK_ANY $WORK_TYPE(CONTROL) \
                 "command priority: $prio range_work $c $s $e 1" \
                 $prio 1
         }
@@ -333,7 +333,7 @@ namespace eval turbine {
     # and sleeps
     proc set0 { c } {
         rule {} "set0_body $c" \
-             name "set0-$" type $turbine::WORK 
+             name "set0-$" type $::turbine::WORK 
     }
     proc set0_body { c } {
         log "set0"
@@ -351,7 +351,7 @@ namespace eval turbine {
     # and sleeps
     proc set1 { c } {
         rule {} "set1_body $c" \
-             name "set1-$" type $turbine::WORK 
+             name "set1-$" type $::turbine::WORK 
     }
     proc set1_body { c } {
         log "set1"
@@ -369,7 +369,7 @@ namespace eval turbine {
         puts "turbine::shell $args"
         set command [ lindex $args 0 ]
         set inputs [ lreplace $args 0 0 ]
-        rule $inputs "shell_body $command \"$inputs\"" type $turbine::WORK
+        rule $inputs "shell_body $command \"$inputs\"" type $::turbine::WORK
     }
 
     proc shell_body { args } {

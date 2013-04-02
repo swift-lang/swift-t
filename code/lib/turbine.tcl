@@ -285,6 +285,22 @@ namespace eval turbine {
         store_integer $output [ adlb_servers ]
     }
 
+    proc check_constants { args } {
+      set n [ llength $args ]
+      if [ expr { $n % 3 != 0} ] {
+        error "Must have multiple of three args to check_constants"
+      }
+      for { set i 0 } { $i < $n } { incr i 3 } {
+        set name [ lindex $args $i ]
+        set turbine [ lindex $args [ expr $i + 1 ] ]
+        set compiler [ lindex $args [ expr $i + 2 ] ]
+        if { $turbine != $compiler } {
+          error "Constants emitted by compiler for $name don't match.  \
+                 Expected $turbine but emitted $compiler"
+        }
+      }
+    }
+
     # Get option from rule opts: if not found, return default
     proc opt_get { opts key } {
         switch $key {
@@ -299,14 +315,14 @@ namespace eval turbine {
                 if [ dict exists $opts target ] {
                     return [ dict get $opts target ]
                 } else {
-                    return $adlb::RANK_ANY
+                    return $::adlb::RANK_ANY
                 }
             }
             type {
                 if [ dict exists $opts type ] {
                     return [ dict get $opts type ]
                 } else {
-                    return $turbine::LOCAL
+                    return $::turbine::LOCAL
                 }
             }
             default {
@@ -331,7 +347,7 @@ namespace eval turbine {
                 [ opt_get $args type   ] $action                     \
                 [ opt_get $args target ] [ opt_get $args parallelism ]
         } else {
-            adlb::put $adlb::RANK_ANY $WORK_TYPE(CONTROL) \
+            adlb::put $::adlb::RANK_ANY $WORK_TYPE(CONTROL) \
                 [ list rule $inputs $action {*}$args ] \
                 [ get_priority ] 1
         }

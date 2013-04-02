@@ -41,7 +41,7 @@ namespace eval turbine {
     # The MPE-defined string length limit is 32
     proc metadata { result input } {
         turbine::rule $input "turbine::metadata_body $input" \
-             name "metadata-$input" type $turbine::WORK
+             name "metadata-$input" type $::turbine::WORK
     }
 
     proc metadata_body { message } {

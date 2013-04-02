@@ -68,7 +68,7 @@ namespace eval turbine {
             error "allocate: requires 1 or 2 args!"
         }
 
-        set id [ create_$type $adlb::NULL_ID ]
+        set id [ create_$type $::adlb::NULL_ID ]
         if { $name == "" } {
             log "allocated $type: <$id>"
         } else {
@@ -81,7 +81,7 @@ namespace eval turbine {
 
     # usage: allocate_custom <name> <type> [ args to pass to create ]
     proc allocate_custom { name type args } {
-        set id [ create_$type $adlb::NULL_ID {*}${args} ]
+        set id [ create_$type $::adlb::NULL_ID {*}${args} ]
 
         if { $name == "" } {
             log "allocated $type: <$id>"
@@ -105,7 +105,7 @@ namespace eval turbine {
         } else {
             error "allocate_container: requires 1 or 2 args!"
         }
-        set id [ create_container $adlb::NULL_ID $subscript_type ]
+        set id [ create_container $::adlb::NULL_ID $subscript_type ]
         log "container: $name\[$subscript_type\]=<$id>"
         if { $name != "" } {
             upvar 1 $name v
@@ -116,7 +116,7 @@ namespace eval turbine {
 
     # usage: <name> <subscript_type> [ args for create ]
     proc allocate_container_custom { name subscript_type args } {
-        set id [ create_container $adlb::NULL_ID $subscript_type {*}${args} ]
+        set id [ create_container $::adlb::NULL_ID $subscript_type {*}${args} ]
         log "container: $name\[$subscript_type\]=<$id>"
         if { $name != "" } {
             upvar 1 $name v
@@ -189,7 +189,7 @@ namespace eval turbine {
 
     proc create_integer { id {read_refcount 1} {write_refcount 1} \
                              {permanent 0} } {
-        return [ adlb::create $id $adlb::INTEGER $read_refcount \
+        return [ adlb::create $id $::adlb::INTEGER $read_refcount \
                               $write_refcount $permanent ]
     }
 
@@ -200,9 +200,9 @@ namespace eval turbine {
         if { ! [ string equal $value "0" ] } {
             set value [ string trimleft $value "0" ]
         }
-        set waiters [ adlb::store $id $adlb::INTEGER $value ]
+        set waiters [ adlb::store $id $::adlb::INTEGER $value ]
         notify_waiters $id $waiters
-        c::cache store $id $adlb::INTEGER $value
+        c::cache store $id $::adlb::INTEGER $value
     }
 
     proc retrieve_integer { id {cachemode CACHED} {decrref 0} } {
@@ -213,9 +213,9 @@ namespace eval turbine {
             }
         } else {
             if { $decrref } {
-              set result [ adlb::retrieve_decr $id $decrref $adlb::INTEGER ]
+              set result [ adlb::retrieve_decr $id $decrref $::adlb::INTEGER ]
             } else {
-              set result [ adlb::retrieve $id $adlb::INTEGER ]
+              set result [ adlb::retrieve $id $::adlb::INTEGER ]
             }
         }
         debug "retrieve: <$id>=$result"
@@ -228,13 +228,13 @@ namespace eval turbine {
 
     proc create_float { id {read_refcount 1} {write_refcount 1} \
                            {permanent 0} } {
-        return [ adlb::create $id $adlb::FLOAT $read_refcount \
+        return [ adlb::create $id $::adlb::FLOAT $read_refcount \
                               $write_refcount $permanent ]
     }
 
     proc store_float { id value } {
         log "store: <$id>=$value"
-        set waiters [ adlb::store $id $adlb::FLOAT $value ]
+        set waiters [ adlb::store $id $::adlb::FLOAT $value ]
         notify_waiters $id $waiters
     }
 
@@ -246,9 +246,9 @@ namespace eval turbine {
             }
         } else {
             if { $decrref } {
-              set result [ adlb::retrieve_decr $id $decrref $adlb::FLOAT ]
+              set result [ adlb::retrieve_decr $id $decrref $::adlb::FLOAT ]
             } else {
-              set result [ adlb::retrieve $id $adlb::FLOAT ]
+              set result [ adlb::retrieve $id $::adlb::FLOAT ]
             }
         }
         debug "retrieve: <$id>=$result"
@@ -261,13 +261,13 @@ namespace eval turbine {
 
     proc create_string { id {read_refcount 1} {write_refcount 1} \
                             {permanent 0} } {
-        return [ adlb::create $id $adlb::STRING $read_refcount \
+        return [ adlb::create $id $::adlb::STRING $read_refcount \
                               $write_refcount $permanent ]
     }
 
     proc store_string { id value } {
         log "store: <$id>=[ log_string $value ]"
-        set waiters [ adlb::store $id $adlb::STRING $value ]
+        set waiters [ adlb::store $id $::adlb::STRING $value ]
         notify_waiters $id $waiters
     }
 
@@ -279,9 +279,9 @@ namespace eval turbine {
             }
         } else {
             if { $decrref } {
-              set result [ adlb::retrieve_decr $id $decrref $adlb::STRING ]
+              set result [ adlb::retrieve_decr $id $decrref $::adlb::STRING ]
             } else {
-              set result [ adlb::retrieve $id $adlb::STRING ]
+              set result [ adlb::retrieve $id $::adlb::STRING ]
             }
         }
         debug "retrieve: <$id>=[ log_string $result ]"
@@ -295,14 +295,14 @@ namespace eval turbine {
     proc create_void { id {read_refcount 1} {write_refcount 1} \
                           {permanent 0} } {
         # emulating void with integer
-        return [ adlb::create $id $adlb::INTEGER $read_refcount \
+        return [ adlb::create $id $::adlb::INTEGER $read_refcount \
                               $write_refcount $permanent ]
     }
 
     proc store_void { id } {
         log "store: <$id>=void"
         # emulating void with integer
-        set waiters [ adlb::store $id $adlb::INTEGER 12345 ]
+        set waiters [ adlb::store $id $::adlb::INTEGER 12345 ]
         notify_waiters $id $waiters
     }
 
@@ -311,7 +311,7 @@ namespace eval turbine {
     # Create blob
     proc create_blob { id {read_refcount 1} {write_refcount 1} \
                           {permanent 0} } {
-        return [ adlb::create $id $adlb::BLOB $read_refcount \
+        return [ adlb::create $id $::adlb::BLOB $read_refcount \
                               $write_refcount $permanent ]
     }
 
@@ -326,7 +326,7 @@ namespace eval turbine {
 
     proc store_blob_string { id value } {
         log "store_blob_string: <$id>=[ log_string $value ]"
-        set waiters [ adlb::store $id $adlb::BLOB $value ]
+        set waiters [ adlb::store $id $::adlb::BLOB $value ]
         notify_waiters $id $waiters
     }
 
@@ -366,9 +366,9 @@ namespace eval turbine {
 
     proc retrieve_blob_string { id {decrref 0} } {
         if { $decrref } {
-          set result [ adlb::retrieve_decr $id $decrref $adlb::BLOB ]
+          set result [ adlb::retrieve_decr $id $decrref $::adlb::BLOB ]
         } else {
-          set result [ adlb::retrieve $id $adlb::BLOB ]
+          set result [ adlb::retrieve $id $::adlb::BLOB ]
         }
         debug "retrieve_string: <$id>=[ log_string $result ]"
         return $result
@@ -380,7 +380,7 @@ namespace eval turbine {
 
     proc create_container { id subscript_type {read_refcount 1} \
                           {write_refcount 1} {permanent 0}} {
-        return [ adlb::create $id $adlb::CONTAINER $subscript_type \
+        return [ adlb::create $id $::adlb::CONTAINER $subscript_type \
                             $read_refcount $write_refcount $permanent]
     }
 
@@ -408,11 +408,11 @@ namespace eval turbine {
     }
 
     proc create_file { id path } {
-        return [ adlb::create $id $adlb::FILE $path ]
+        return [ adlb::create $id $::adlb::FILE $path ]
     }
 
     proc store_file { id } {
-        set waiters [ adlb::store $id $adlb::FILE "" ]
+        set waiters [ adlb::store $id $::adlb::FILE "" ]
         notify_waiters $id $waiters
     }
 
@@ -439,6 +439,6 @@ namespace eval turbine {
     }
 
     proc read_refcount_incr { id {amount 1} } {
-      adlb::refcount_incr $id $adlb::READ_REFCOUNT $amount
+      adlb::refcount_incr $id $::adlb::READ_REFCOUNT $amount
     }
 }

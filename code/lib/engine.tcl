@@ -96,7 +96,6 @@ namespace eval turbine {
 
         log "control: $msg"
 
-        variable complete_rank
         set complete_rank $answer_rank
 
         set header [ lindex $msg 0 ]

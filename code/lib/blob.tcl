@@ -70,7 +70,7 @@ namespace eval turbine {
           literal t float $d
           container_immediate_insert $result $i $t
       }
-      adlb::refcount_incr $result $adlb::WRITE_REFCOUNT -1
+      adlb::refcount_incr $result $::adlb::WRITE_REFCOUNT -1
       adlb::blob_free $input
       log "floats_from_blob_body: done"
   }
@@ -107,7 +107,7 @@ namespace eval turbine {
           error "matrix_from_blob: blob size $total != $m_value x $n_value"
       }
       for { set i 0 } { $i < $m_value } { incr i } {
-          set c($i) [ allocate_container $adlb::INTEGER ]
+          set c($i) [ allocate_container $::adlb::INTEGER ]
           container_immediate_insert $result $i $c($i)
       }
       for { set k 0 } { $k < $total } { incr k } {
@@ -119,10 +119,10 @@ namespace eval turbine {
       }
       # Close rows
       for { set i 0 } { $i < $m_value } { incr i } {
-          adlb::refcount_incr $c($i) $adlb::WRITE_REFCOUNT -1
+          adlb::refcount_incr $c($i) $::adlb::WRITE_REFCOUNT -1
       }
       # Close result
-      adlb::refcount_incr $result $adlb::WRITE_REFCOUNT -1
+      adlb::refcount_incr $result $::adlb::WRITE_REFCOUNT -1
       # Release cached blob
       adlb::blob_free $b
       log "matrix_from_blob_fortran_body: done"
