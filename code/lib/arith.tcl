@@ -304,8 +304,7 @@ namespace eval turbine {
     }
 
     proc floor { c a } {
-        rule "floor-$a" "$a" $turbine::LOCAL $adlb::RANK_ANY 1 \
-            "floor_body $c $a"
+        rule "$a" "floor_body $c $a"
     }
 
     proc floor_body { c a } {

@@ -36,7 +36,7 @@ namespace eval turbine {
     # User function
     # This name conflicts with a Tcl built-in - it cannot be exported
     proc trace { signal inputs } {
-        rule $inputs "turbine::trace_body \"$signal\" $inputs" \
+        rule $inputs "trace_body \"$signal\" $inputs" \
             name "trace"
     }
 
@@ -74,19 +74,16 @@ namespace eval turbine {
     # # For tests/debugging
     proc sleep_trace { signal inputs } {
       # parent stack and output arguments not read
-      if { ! [ string length $inputs ] } {
+      if { ! [ llength $inputs ] } {
         error "trace: received no arguments!"
       }
-      set secs [ lindex $inputs 0 ]
-      set args [ lreplace $inputs 0 0]
-      rule "sleep_trace" $inputs $turbine::WORK $adlb::RANK_ANY 1 \
-           "turbine::sleep_trace_body $signal $secs $args"
+      rule $inputs "sleep_trace_body $signal $secs $inputs" type $turbine::WORK
     }
-    proc sleep_trace_body { signal secs inputs } {
+    proc sleep_trace_body { signal secs args } {
       set secs_val [ retrieve_decr_float $secs ]
       after [ expr {round($secs_val * 1000)} ]
       puts "AFTER"
-      trace_body $signal $inputs
+      trace_body $signal $args
     }
 
     # User function
@@ -114,9 +111,8 @@ namespace eval turbine {
         set start [ lindex $inputs 0 ]
         set end [ lindex $inputs 1 ]
         set step [ lindex $inputs 2 ]
-        rule "rangestep-$result" [ list $start $end $step ] \
-            $turbine::CONTROL $adlb::RANK_ANY 1\
-            "rangestep_body $result $start $end $step"
+        rule [ list $start $end $step ] \
+            "rangestep_body $result $start $end $step" type $turbine::CONTROL 
     }
 
     proc rangestep_body { result start end step } {
@@ -186,10 +182,9 @@ namespace eval turbine {
     # User function
     # Loop over a distributed container
     proc dloop { loop_body stack container } {
-
         c::log "log_dloop:"
-        rule "dloop-$container" $container $turbine::CONTROL $adlb::RANK_ANY 1 \
-            "dloop_body $loop_body $stack $container"
+        rule $container "dloop_body $loop_body $stack $container" \
+                         name $turbine::CONTROL 
     }
 
     proc dloop_body { loop_body stack container } {
@@ -205,9 +200,8 @@ namespace eval turbine {
     }
 
     proc readdata { result filename } {
-
-        rule "read_data-$filename" $filename $turbine::CONTROL $adlb::RANK_ANY 1 \
-            "readdata_body $result $filename"
+        rule $filename "readdata_body $result $filename" \
+              type $turbine::CONTROL
     }
 
     proc readdata_body { result filename } {
@@ -325,8 +319,7 @@ namespace eval turbine {
     }
 
     proc fromfloat { result input } {
-        rule "fromfloat-$input-$result" $input $turbine::LOCAL $adlb::RANK_ANY 1 \
-            "fromfloat_body $input $result"
+        rule $input "fromfloat_body $input $result"
     }
 
     proc fromfloat_body { input result } {
@@ -376,8 +369,7 @@ namespace eval turbine {
         puts "turbine::shell $args"
         set command [ lindex $args 0 ]
         set inputs [ lreplace $args 0 0 ]
-        rule "shell-$command" $inputs $turbine::WORK $adlb::RANK_ANY 1 \
-            "shell_body $command \"$inputs\""
+        rule $inputs "shell_body $command \"$inputs\"" type $turbine::WORK
     }
 
     proc shell_body { args } {
@@ -431,7 +423,7 @@ namespace eval turbine {
     }
 
     proc zero { outputs inputs } {
-        rule $inputs "turbine::zero_body $outputs $inputs" \
+        rule $inputs "zero_body $outputs $inputs" \
             name "zero-$outputs-$inputs" 
     }
     proc zero_body { output input } {
