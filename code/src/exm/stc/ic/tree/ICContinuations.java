@@ -249,13 +249,17 @@ public class ICContinuations {
      * @param block the parent block of continuation
      * @param predictedBranch the branch in continuation that will be executed
      */
-    public void inlineInto(Block block, Block predictedBranch) {
+    public void inlineInto(Block block, Block predictedBranch, ListIterator<Statement> it) {
       // Default implementation
-      block.insertInline(predictedBranch);
+      block.insertInline(predictedBranch, it);
       if (parent != null)
         parent.removeContinuation(this);
       else
         System.err.println("No parent for " + this.toString());
+    }
+    
+    public void inlineInto(Block block, Block predictedBranch) {
+      inlineInto(block, predictedBranch, null);
     }
 
     /**

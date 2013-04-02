@@ -34,7 +34,9 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalMap;
+import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
+import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Builtin;
@@ -109,48 +111,21 @@ public class ConstantFold implements OptimizerPass {
       ListIterator<Statement> it = block.statementIterator();
       while (it.hasNext()) {
         Statement stmt = it.next();
-        if (stmt.type() != StatementType.INSTRUCTION)
-          continue;
-        
-        Instruction inst = stmt.instruction();
-        if (logger.isDebugEnabled()) {
-          logger.debug("Candidate instruction for constant folding: " 
-                                              + inst.toString());
-        }
-        Map<Var, Arg> newConsts = inst.constantFold(fn.getName(),
-                                            knownConstants);
-        if (newConsts == null) {
-          logger.debug("Couldn't constant fold");
-          
-          Instruction newInst = inst.constantReplace(knownConstants);
-          if (newInst != null) {
-            newInst.setParent(block);
-            it.set(newInst);
+        if (stmt.type() == StatementType.CONDITIONAL) {
+          Conditional cond = stmt.conditional();
+          Block predicted = cond.branchPredict(knownConstants);
+          if (predicted != null) {
+            it.remove();
+            cond.inlineInto(block, predicted, it);
           }
         } else {
-          if (logger.isDebugEnabled()) {
-            logger.debug("Can replace instruction " + inst.toString() + 
-                                                  " with constant");
-          }
-          converged = false;
-          changed = true;
-          knownConstants.putAll(newConsts);
-          // replace with multiple set instructions
-          ArrayList<Instruction> replacements = 
-                    new ArrayList<Instruction>(newConsts.size());
+          assert(stmt.type() == StatementType.INSTRUCTION);
           
-          for (Entry<Var, Arg> newConst: newConsts.entrySet()) {              
-            Var var = newConst.getKey();
-            Arg newVal = newConst.getValue();
-            logger.debug("New constant: " + var);
-            if (Types.isScalarFuture(var.type())) {
-              replacements.add(ICInstructions.futureSet(var, newVal));
-            } else {
-              assert(Types.isScalarValue(var.type()));
-              replacements.add(ICInstructions.valueSet(var, newVal));
-            }
-          }
-          ICUtil.replaceInsts(block, it, replacements);
+          Pair<Boolean, Boolean> res = foldInstruction(logger, fn,
+                        block, knownConstants, it, stmt.instruction());
+          
+          changed = changed || res.val1;
+          converged = converged && res.val2;
         }
       }
       
@@ -185,6 +160,55 @@ public class ConstantFold implements OptimizerPass {
       branchPredict(block, knownConstants);
     }
     return changed;
+  }
+
+  private static Pair<Boolean, Boolean> foldInstruction(Logger logger,
+      Function fn, Block block, HierarchicalMap<Var, Arg> knownConstants,
+      ListIterator<Statement> it, Instruction inst) {
+    boolean converged = true, changed = false;
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("Candidate instruction for constant folding: " 
+                                          + inst.toString());
+    }
+    Map<Var, Arg> newConsts = inst.constantFold(fn.getName(),
+                                        knownConstants);
+    
+    if (newConsts == null) {
+      logger.debug("Couldn't constant fold");
+      
+      Instruction newInst = inst.constantReplace(knownConstants);
+      if (newInst != null) {
+        newInst.setParent(block);
+        it.set(newInst);
+        changed = true;
+      }
+    } else {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Can replace instruction " + inst.toString() + 
+                                              " with constant");
+      }
+      converged = false;
+      changed = true;
+      knownConstants.putAll(newConsts);
+      // replace with multiple set instructions
+      ArrayList<Instruction> replacements = 
+                new ArrayList<Instruction>(newConsts.size());
+      
+      for (Entry<Var, Arg> newConst: newConsts.entrySet()) {              
+        Var var = newConst.getKey();
+        Arg newVal = newConst.getValue();
+        logger.debug("New constant: " + var);
+        if (Types.isScalarFuture(var.type())) {
+          replacements.add(ICInstructions.futureSet(var, newVal));
+        } else {
+          assert(Types.isScalarValue(var.type()));
+          replacements.add(ICInstructions.valueSet(var, newVal));
+        }
+      }
+      ICUtil.replaceInsts(block, it, replacements);
+    }
+    return Pair.create(changed, converged);
   }
 
   /**

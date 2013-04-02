@@ -177,7 +177,7 @@ public class Conditionals {
           return null;
         }
       } else {
-       val = condition; 
+        val = condition; 
       }
       
       assert(val.isIntVal()

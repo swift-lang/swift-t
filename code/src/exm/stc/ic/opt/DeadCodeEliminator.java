@@ -224,10 +224,16 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
   private static void walkInstructions(Logger logger,
       Block block, HashSet<Var> needed, MultiMap<Var, Var> dependencyGraph,
       List<Var> modifiedComponents, Map<Var, Var> componentOf) {
-    for (Statement stmt: block.getStatements()) {
+    ListIterator<Statement> it = block.statementIterator();
+    while (it.hasNext()) {
+      Statement stmt = it.next();
       if (stmt.type() == StatementType.INSTRUCTION) {
         walkInstruction(logger, stmt.instruction(), needed, dependencyGraph,
                         modifiedComponents, componentOf);
+      } else if (stmt.type() == StatementType.CONDITIONAL) {
+        if (stmt.conditional().isNoop()) {
+          it.remove();
+        }
       }
     }
   }
