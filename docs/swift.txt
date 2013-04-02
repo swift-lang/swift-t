@@ -1027,8 +1027,12 @@ The program arguments are available to Swift (<<argv>>).
 
 Turbine accepts the following arguments:
 
++-f <file>+:: Provide a machine file to +mpiexec+
++-h+:: Print a help message
 +-l+:: Enable +mpiexec -l+ ranked output formatting
-+-n+:: The total number of Turbine MPI processes
++-n <procs>+:: The total number of Turbine MPI processes
++-v+:: Report the Turbine version number
++-V+:: Make the Turbine launch script verbose
 
 The user controls the Turbine run time configuration through
 environment variables:
