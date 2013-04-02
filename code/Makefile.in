@@ -337,6 +337,7 @@ install.txt: $(PACKAGE) $(EXPORTS) $(SCRIPTS)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS) $(INSTALL_PREFIX)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_PREFIX)
 	$(E) cp $(CP_ARGS) src/tcl/blob/blob.h   $(INSTALL_INCLUDE)
+	$(E) cp $(CP_ARGS) etc/help.txt          $(INSTALL_ETC)
 	@echo
 	$(Q) "  CREATE 		$(@)"
 	$(E) echo  "PREFIX: $(INSTALL_PREFIX)"   >  $(@)

@@ -17,8 +17,7 @@
 
 # Sets Turbine location, obtains configuration, launches
 
-# Usage:
-# turbine [-l] -n <processes> <program.tcl>
+# For usage: turbine -h
 
 # Set TURBINE_LAUNCH_OPTS to pass additional arguments to mpiexec
 
@@ -31,9 +30,12 @@ LINE_PREFIX=
 REPORT_VERSION=0
 VERBOSE=0
 
-while getopts ":ln:vV" opt
+while getopts "hln:vV" opt
 do
   case $opt in
+    h)
+      PRINT_HELP=1
+      ;;
     l)
       LINE_PREFIX_ENABLED=1
       ;;
@@ -67,10 +69,29 @@ fi
 # Load Turbine configuration settings
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
-if (( ${REPORT_VERSION} ))
-then
+report_version()
+{
   echo "Turbine ${TURBINE_VERSION}"
   echo " in: ${TURBINE_HOME}"
+}
+
+if (( REPORT_VERSION ))
+then
+  report_version
+  exit 0
+fi
+
+print_help()
+{
+  cat ${TURBINE_HOME}/etc/help.txt
+}
+
+if (( PRINT_HELP ))
+then
+  echo
+  report_version
+  echo
+  print_help
   exit 0
 fi
 
