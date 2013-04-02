@@ -325,7 +325,6 @@ namespace eval turbine {
         debug "turbine::rule..."
 
         set argc [ llength $args ]
-        puts "argc: $argc"
         if { $argc < 2 } {
             error "turbine::rule: requires at least 2 args!"
         }
