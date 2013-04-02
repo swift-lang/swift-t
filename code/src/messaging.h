@@ -82,6 +82,12 @@ char* xlb_get_tag_name(int tag);
   TRACE_MPI("SSENT"); \
   MPI_CHECK(rc); }
 
+#define ISEND(data,length,type,rank,tag,req) { \
+  TRACE_MPI("ISEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
+  int rc = MPI_Isend(data,length,type,rank,tag,adlb_comm,req); \
+  MPI_CHECK(rc); }
+
+
 #define RECV(data,length,type,rank,tag) \
         RECV_STATUS(data,length,type,rank,tag,&status)
 

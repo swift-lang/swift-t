@@ -198,19 +198,31 @@ send_steal_batch(steal_cb_state *batch, bool finish)
   {
     xlb_pack_work_unit(&(puts[i]), batch->work_units[i]);
   }
-  
+ 
+  // Store requests for wait
+  MPI_Request reqs[count + 1];
+
   DEBUG("[%i] sending batch size %i", xlb_comm_rank, batch->size);
-  SEND(puts, sizeof(puts[0]) * count, MPI_BYTE,
-       batch->stealer_rank, ADLB_TAG_RESPONSE_STEAL);
+  ISEND(puts, sizeof(puts[0]) * count, MPI_BYTE,
+       batch->stealer_rank, ADLB_TAG_RESPONSE_STEAL, &reqs[0]);
 
   for (int i = 0; i < count; i++)
   {
     DEBUG("stolen payload: %s", (char*) batch->work_units[i]->payload);
     xlb_work_unit *unit = batch->work_units[i];
-    SEND(unit->payload, unit->length, MPI_BYTE,
-         batch->stealer_rank, ADLB_TAG_RESPONSE_STEAL);
-    work_unit_free(unit);
+    ISEND(unit->payload, unit->length, MPI_BYTE,
+         batch->stealer_rank, ADLB_TAG_RESPONSE_STEAL, &reqs[i+1]);
   }
+
+  // Wait until MPI confirms sends have completed
+  int rc = MPI_Waitall(count + 1, reqs, MPI_STATUSES_IGNORE);
+  MPI_CHECK(rc);
+
+  for (int i = 0; i < count; i++)
+  {
+    work_unit_free(batch->work_units[i]);
+  }
+
   batch->size = 0;
   return ADLB_SUCCESS;
 }

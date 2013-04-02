@@ -28,7 +28,7 @@
 #include <stdbool.h>
 
 // The number of work units to send at a time
-#define XLB_STEAL_CHUNK_SIZE 64
+#define XLB_STEAL_CHUNK_SIZE 16
 
 /**
    Are there any other servers?
