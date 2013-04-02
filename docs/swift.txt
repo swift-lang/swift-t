@@ -146,6 +146,12 @@ main
 
 The newline is supplied by +printf()+.
 
+Swift programs eventually call _leaf_ functions, which are the primary
+way to do work.  From the perspective of the Swift script, they are
+atomic operations that wait for input variables and set output
+variables.  They may be implemented as native code functions or
+external application programs.
+
 == Comments
 
 Swift supports C/C++ comments:
@@ -247,7 +253,6 @@ Literals for these types use conventional syntax:
 ** \r
 ** \v
 ** hexadecimal escape codes, e.g. \xf2
-
 
 The literals +true+ and +false+ may be used for boolean.
 
@@ -800,30 +805,62 @@ that match.  Available glob symbols include:
 
 == Defining Leaf functions
 
-In typical Swift applications, the computationally intensive parts of the
-application are not written in the Swift language.  Rather,
-the work is done by _leaf functions_ that are _composed_ together with
+In typical Swift applications, the computationally intensive parts of
+the application are not written in the Swift language.  Rather, the
+work is done by _leaf functions_ that are _composed_ together with
 Swift code.  Leaf functions may be extension or app functions.
-The builtin functions mentioned above are implemented as extension
-functions in Tcl.
+
+The Swift runtime, Turbine, is built on Tcl, a language which intends
+to makes it easy to call C/C\+\+/Fortran functions.  The builtin
+functions mentioned above are implemented as extension functions in
+Tcl, which may wrap C/C++/Fortran functions.
 
 === Swift extension functions
 
-Currently we support Tcl extension functions, where a function is implemented
-as a Tcl function.  Tcl has good support for wrapping native C/C\++ functions,
-so this provides an indirect way to call C/C++ functions from Swift.
+Currently we support Tcl extension functions, where a function is
+implemented as a Tcl function.  Tcl has good support for wrapping
+native C/C\++ functions, so this provides an indirect way to call
+C/C++ functions from Swift.
 
-Several components are required to implement a Tcl extension:
+Several components are required to implement a Swift native code function:
 
 -  Tcl bindings to your function.
 -  For complex types such as structures, arrays and files, you may need
    additional logic to marshal inputs and outputs to/from the global
    data store.
--  The requisite files required to build a Tcl package (e.g pkgIndex.tcl)
--  Swift declarations for the function that specify the type of the function
-    and the Tcl implementation.
+-  The requisite files required to build a Tcl package
+   (e.g +pkgIndex.tcl+)
+-  Swift declarations for the function that specify the type of the
+   function and the Tcl implementation.
 
-==== Simple Tcl Function Example
+==== Simple Tcl fragment example
+
+In this example, the Swift program will simply use Tcl to output a
+string:
+
+----
+() my_output (string s) "turbine" "0.0" [
+  "puts <<s>>"
+];
+
+main {
+  my_output("HELLO");
+}
+----
+
++puts+ is the Tcl builtin for screen output, like +puts()+ in C.
+
+The above definition has, from left to right, the output arguments
+(none), the name of the new Swift function, input arguments, the name
+of the Tcl package containing the file (here, none, so we use
++turbine+), and the minimum version of that package (here, 0.0).
+
+We tell the compiler how to call our Tcl function using inline
+Tcl code as a template with variable names surrounded by +<< >>+
+indicating where variables should be substituted.
+
+==== Simple Tcl package example
+
 In this first example we will implement a trivial Tcl extension function
 that doubles an integer.  Here is the Tcl code that will go in
 +myextension.tcl+:
@@ -836,8 +873,6 @@ namespace eval myextension {
 }
 ----
 
-* TODO: info on how to create Tcl package, e.g. pkgIndex.tcl
-
 Here is the Swift function definition that will go in +myextension.swift+:
 ----
 @pure
@@ -846,24 +881,15 @@ Here is the Swift function definition that will go in +myextension.swift+:
 ];
 ----
 
-The above definition has, from left to right, the output arguments,
-the name of the new Swift function, input arguments, the name
-of the Tcl package containing the file, and the minimum version
-of that package.
-
-We tell the compiler how to call our Tcl function using inline
-Tcl code as a template with variable names surrounded by +<< >>+
-indicating where variables should be substituted.
-
 We can also tell the Swift compiler a little about the function so
-that it can better optimize your programs.
-For example, +double+ has no side-effects and produces the same result each
-time for the same arguments (i.e. is deterministic), so we can flag
-it as a +@pure+ function.
+that it can better optimize your programs.  For example, +double+ has
+no side-effects and produces the same result each time for the same
+arguments (i.e. is deterministic), so we can annotate it as a +@pure+
+function.
 
-If your function has a long running time and should be dispatched
-to a worker process for execution, then you need to label the
-function as a leaf function, for example:
+If your function has a long running time and should be dispatched to a
+worker process for execution, then you need to label the function as a
+leaf function, for example:
 
 ----
 @dispatch=LEAF
@@ -872,24 +898,56 @@ function as a leaf function, for example:
 ];
 ----
 
-==== Swift/Tcl Data Type Mapping
+Tcl code is conventionally placed into _packages_.  In this example,
++myextension.tcl+ would be part of the package.
+
+More information about building Tcl packages may be found
+http://www.tcl.tk/man/tcl8.5/TclCmd/pkgMkIndex.htm[here].  Ultimately,
+you produce a +pkgIndex.tcl+ file that contains necessary information
+about the package.
+
+To ensure that Swift can find your package, use
+----
+stc -r <package directory> ...
+----
+or set +TURBINE_USER_LIB+ at run time.
+
+==== Swift/Tcl data type mapping
+
 If you are defining Tcl functions in the way above with inline
 Tcl code, Swift types are mapped to Tcl types in the following way:
 
-* int/float/string/bool are converted to the standard
+* +int+/+float+/+string+/+bool+ are converted to the standard
   Tcl representations
 * blobs are represented as a Tcl list with first element a pointer
   to the data, and the second element the length of the data
 
-==== Writing Custom Tcl interfaces
-For Tcl functions that take complex argument types, such as arrays
-or structures, you currently need to write a Tcl wrapper function
-that is directly passed references to data in Swift's global data store.
-In this case your function must manually retrieve/store data from/to the
-global distributed data store.
+==== Calling native libraries from Swift
 
+The first step is to test that you can successfully call your
+C/C++/Fortran function from a test Tcl script.  If so, you will then
+be able to use the Swift->Tcl techniques to call it from Swift.
+
+A popular tool to automate Tcl->C bindings is
+http://www.swig.org[SWIG], which will wrap your C/C++ functions and
+help you produce a Tcl package suitable for use by Swift.
+
+To call Fortran functions, first wrap your code with
+http://fortwrap.sourceforge.net[FortWrap].  Then, use SWIG to produce
+Tcl bindings.
+
+==== Writing custom Tcl interfaces
+
+For Tcl functions that take complex argument types, such as arrays or
+structures, you may need to write a Tcl wrapper function that is
+directly passed references to data in Swift's global data store.  In
+this case your function must manually retrieve/store data from/to the
+global distributed data store.  In this case, you do not use the STC
+Tcl argument substitution syntax (+<<++i++>>+).
+
+Consider this custom Swift->Tcl binding:
 ----
-(int o) complex (int arr[]) "pkg" "0.0.1" "complex";
+(int o) complex_function (int arr[]) "pkg" "0.0.1" "complex";
 ----
 
 * TODO: guide to do this.  Can look in turbine/lib for examples
