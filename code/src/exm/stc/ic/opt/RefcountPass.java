@@ -896,10 +896,6 @@ public class RefcountPass implements OptimizerPass {
       if (var.storage() != VarStorage.ALIAS
           || parentAssignedAliasVars.contains(var)) {
         // add increments that we can at top
-        if (var.name().equals("__alias0")) {
-          System.err.println("ADDING AT TOP storage " + var.storage() + "\n" +
-                                                parentAssignedAliasVars);
-        }
         addRefIncrementAtTop(block, type, var, count);
         it.remove();
       }
@@ -916,8 +912,6 @@ public class RefcountPass implements OptimizerPass {
               long incr = increments.getCount(out);
               assert (incr >= 0);
               if (incr > 0) {
-                if (out.name().equals("__alias0"))
-                  System.err.println("ADDING AFTER " + stmt);
                 Instruction incrInst = buildIncrInstruction(type, out, incr);
                 incrInst.setParent(block);
                 stmtIt.add(incrInst);
