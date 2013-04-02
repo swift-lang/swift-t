@@ -750,7 +750,7 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
       TCL_CONDITION(rc == TCL_ERROR, "Unexpected return code from evaled "
                     "command: %d", rc);
       // Pass error to calling script
-      const char *prefix = "Worker failed while running task: ";
+      const char *prefix = "\nWorker executing task: ";
       char *msg = malloc(sizeof(char) * (strlen(prefix) + work_len));
       sprintf(msg, "%s%s", prefix, buffer);
       Tcl_AddErrorInfo(interp, msg);

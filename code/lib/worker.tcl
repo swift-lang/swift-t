@@ -25,7 +25,8 @@ namespace eval turbine {
         global WORK_TYPE
 
         if { [ catch { c::worker_loop $WORK_TYPE(WORK) } e ] } {
-            error "worker error: $e"
+            global errorInfo
+            error "worker error: $e\n$errorInfo"
         }
     }
 }
