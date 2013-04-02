@@ -156,11 +156,12 @@ steal_payloads(int target, int count)
 
   for (int i = 0; i < count; i++)
   {
-    RECV(xfer, wus[i].length, MPI_BYTE, target,
+    xlb_work_unit *work = work_unit_alloc(wus[i].length);
+    RECV(work->payload, wus[i].length, MPI_BYTE, target,
          ADLB_TAG_RESPONSE_STEAL);
     workqueue_add(wus[i].type, wus[i].putter, wus[i].priority,
                   wus[i].answer, wus[i].target, wus[i].length,
-                  wus[i].parallelism, xfer);
+                  wus[i].parallelism, work);
   }
   free(wus);
   DEBUG("[%i] received batch size %i", xlb_comm_rank, count);

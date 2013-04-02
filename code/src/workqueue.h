@@ -60,9 +60,19 @@ void workqueue_init(int work_types);
 
 xlb_work_unit_id workqueue_unique(void);
 
+/** Allocate work unit with space for payload */
+static inline xlb_work_unit *work_unit_alloc(size_t payload_length)
+{
+  // Allocate header struct plus following array
+  return malloc(sizeof(xlb_work_unit) + payload_length);
+}
+
+/*
+ * Initialize work unit fields and add to queue
+ */
 void workqueue_add(int type, int putter, int priority, int answer,
                    int target, int length, int parallelism,
-                   void* payload);
+                   xlb_work_unit *wu);
 
 /**
    Return work unit for rank target and given type.

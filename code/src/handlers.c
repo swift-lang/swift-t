@@ -267,10 +267,12 @@ put(int type, int putter, int priority, int answer, int target,
   // Store this work unit on this server
   DEBUG("server storing work...");
   SEND(&mpi_rank, 1, MPI_INT, putter, ADLB_TAG_RESPONSE_PUT);
-  RECV(xfer, length, MPI_BYTE, putter, ADLB_TAG_WORK);
+
+  xlb_work_unit *work = work_unit_alloc(length);
+  RECV(work->payload, length, MPI_BYTE, putter, ADLB_TAG_WORK);
   DEBUG("work unit: x%i %s ", parallelism, xfer);
   workqueue_add(type, putter, priority, answer, target,
-                length, parallelism, xfer);
+                length, parallelism, work);
 
   return ADLB_SUCCESS;
 }
