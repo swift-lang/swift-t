@@ -1904,28 +1904,18 @@ ADLB_Slot_Drop_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-/**
-   usage: adlb::refcount_incr <container_id> <refcount_type> <change>
-   refcount_type in { $adlb::READ_REFCOUNT , $adlb::WRITE_REFCOUNT ,
-          $adlb::READWRITE_REFCOUNT }
-*/
+/*
+  Implement multiple reference count commands.
+  amount: if null, assume 1
+  bool: negate the reference count
+ */
 static int
-ADLB_Refcount_Incr_Cmd(ClientData cdata, Tcl_Interp *interp,
-                   int objc, Tcl_Obj *const objv[])
+ADLB_Refcount_Incr_Impl(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[],
+                   adlb_refcount_type type,
+                   Tcl_Obj *var, Tcl_Obj *amount,
+                   bool negate)
 {
-  TCL_CONDITION((objc == 4), "requires 4 args!");
-
-  long container_id;
-  Tcl_GetLongFromObj(interp, objv[1], &container_id);
-
-  adlb_refcount_type type;
-  int t;
-  Tcl_GetIntFromObj(interp, objv[2], &t);
-  type = t;
-
-  int change = 1;
-  Tcl_GetIntFromObj(interp, objv[3], &change);
-
   if (!read_refcount_enabled) {
     // Intercept any read refcount operations
     if (type == ADLB_READ_REFCOUNT)
@@ -1938,12 +1928,72 @@ ADLB_Refcount_Incr_Cmd(ClientData cdata, Tcl_Interp *interp,
     }
   }
 
+  int rc;
+
+  long container_id;
+  rc = Tcl_GetLongFromObj(interp, var, &container_id);
+  TCL_CHECK(rc);
+  
+  int change = 1; // Default
+  if (amount != NULL)
+  {
+    rc = Tcl_GetIntFromObj(interp, amount, &change);
+    TCL_CHECK(rc);
+  }
+
+  if (negate)
+  {
+    change = -change;
+  }
   // DEBUG_ADLB("adlb::refcount_incr: <%li>", container_id);
-  int rc = ADLB_Refcount_incr(container_id, type, change);
+  rc = ADLB_Refcount_incr(container_id, type, change);
 
   if (rc != ADLB_SUCCESS)
     return TCL_ERROR;
   return TCL_OK;
+}
+
+/**
+   usage: adlb::refcount_incr <container_id> <refcount_type> <change>
+   refcount_type in { $adlb::READ_REFCOUNT , $adlb::WRITE_REFCOUNT ,
+          $adlb::READWRITE_REFCOUNT }
+*/
+static int
+ADLB_Refcount_Incr_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_CONDITION((objc == 4), "requires 4 args!");
+
+  adlb_refcount_type type;
+  int t;
+  int rc = Tcl_GetIntFromObj(interp, objv[2], &t);
+  TCL_CHECK(rc);
+  type = t;
+
+  return ADLB_Refcount_Incr_Impl(cdata, interp, objc, objv, type,
+                          objv[1], objv[3], false);
+}
+
+static int
+ADLB_Read_Refcount_Incr_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_CONDITION((objc == 2 || objc == 3), "requires 2-3 args!");
+  Tcl_Obj *amount = (objc == 3) ? objv[2] : NULL;
+
+  return ADLB_Refcount_Incr_Impl(cdata, interp, objc, objv,
+              ADLB_READ_REFCOUNT, objv[1], amount, false);
+}
+
+static int
+ADLB_Read_Refcount_Decr_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_CONDITION((objc == 2 || objc == 3), "requires 2-3 args!");
+  Tcl_Obj *amount = (objc == 3) ? objv[2] : NULL;
+
+  return ADLB_Refcount_Incr_Impl(cdata, interp, objc, objv,
+              ADLB_READ_REFCOUNT, objv[1], amount, true);
 }
 
 
@@ -2065,6 +2115,8 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("slot_drop", ADLB_Slot_Drop_Cmd);
   COMMAND("enable_read_refcount",  ADLB_Enable_Read_Refcount_Cmd);
   COMMAND("refcount_incr", ADLB_Refcount_Incr_Cmd);
+  COMMAND("read_refcount_incr", ADLB_Read_Refcount_Incr_Cmd);
+  COMMAND("read_refcount_decr", ADLB_Read_Refcount_Decr_Cmd);
   COMMAND("insert",    ADLB_Insert_Cmd);
   COMMAND("insert_atomic", ADLB_Insert_Atomic_Cmd);
   COMMAND("lookup",    ADLB_Lookup_Cmd);

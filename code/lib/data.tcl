@@ -16,6 +16,7 @@
 
 namespace eval turbine {
 
+    namespace import ::adlb::read_refcount_*
     namespace export                                  \
         allocate retrieve                             \
         create_string  store_string                   \
@@ -432,13 +433,5 @@ namespace eval turbine {
             adlb::put $rank $WORK_TYPE(CONTROL) "close $id" \
                         [ get_priority ] 1
         }
-    }
-
-    proc read_refcount_decr { id { amount 1 } } {
-      read_refcount_incr $id [ expr {-1 * $amount} ]
-    }
-
-    proc read_refcount_incr { id {amount 1} } {
-      adlb::refcount_incr $id $::adlb::READ_REFCOUNT $amount
     }
 }
