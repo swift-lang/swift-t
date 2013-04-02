@@ -212,6 +212,10 @@ clean:
 	$(E) rm -fv $(EXMCUTILS)
 	$(E) rm -fv $(TESTS) $(TEST_DEPS) $(TEST_OBJS)
 
+distclean: clean
+	@rm -fv Makefile **/*.mk
+	@rm -fv src/c-utils.h
+
 .PHONY: clean install
 
 ### MAKEFILE DEBUGGING
