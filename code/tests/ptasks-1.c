@@ -71,7 +71,7 @@ ptasks_1(ClientData cdata, Tcl_Interp *interp,
 {
   int id;
   int rc;
-  rc = Tcl_GetIntFromObj(interp, objv[1], &id);
+  rc = Tcl_GetIntFromObj(interp, objv[2], &id);
   assert(rc == TCL_OK);
   adlb_data_type type;
   int length;
@@ -85,6 +85,7 @@ int
 ptasks_1_impl(MPI_Comm comm, char* arg1)
 {
   int size;
+  // printf("ptasks_1_impl(): comm: %i\n", comm);
   MPI_Comm_size(comm, &size);
   printf("size: %i\n", size);
   MPI_Barrier(comm);

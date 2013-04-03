@@ -27,11 +27,11 @@ proc rules { } {
 
     turbine::store_string 11 "hi"
 
-    ptasks_1 "" [ list 11 ]
+    ptasks_1 " " [ list 11 ]
 }
 
 proc ptasks_1 { result inputs } {
-    turbine::rule $inputs "ptasks_1_c $result $inputs" \
+    turbine::rule $inputs "ptasks_1_c \"$result\" $inputs" \
         type $turbine::WORK parallelism 2
 }
 
