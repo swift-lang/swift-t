@@ -24,4 +24,6 @@ OUTPUT=${THIS%.sh}.out
 ${TESTS}/run-mpi.zsh ${BIN} >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
+grep WARNING ${OUTPUT} && exit 1
+
 exit 0
