@@ -68,7 +68,7 @@ CC = @CC@
 CFLAGS := @CFLAGS@
 
 # Set includes
-CFLAGS += -I .
+CFLAGS += -I . -I src/turbine
 # CFLAGS += additional system includes here
 
 C_UTILS = @USE_C_UTILS@
@@ -317,6 +317,10 @@ DIRECTORIES = $(INSTALL_PREFIX) $(INSTALL_BIN) $(INSTALL_ETC)     \
               $(INSTALL_EXPORT) $(INSTALL_INCLUDE) $(INSTALL_LIB) \
 	      $(INSTALL_SCRIPTS)
 
+TURBINE_HEADERS = src/turbine/turbine.h      \
+                  src/turbine/turbine-defs.h \
+                  src/tcl/blob/blob.h
+
 EXPORTS = $(shell ls export/*.swift )
 SCRIPTS = $(shell ls bin/turbine scripts/*.zsh scripts/*.sh \
 	             $(SCRIPTS_SUBMIT) )
@@ -336,7 +340,7 @@ install.txt: $(PACKAGE) $(EXPORTS) $(SCRIPTS)
 	$(E) cp $(CP_ARGS) lib/*.$(SO_SUFFIX)    $(INSTALL_LIB)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS) $(INSTALL_PREFIX)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_PREFIX)
-	$(E) cp $(CP_ARGS) src/tcl/blob/blob.h   $(INSTALL_INCLUDE)
+	$(E) cp $(CP_ARGS) $(TURBINE_HEADERS)    $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) etc/help.txt          $(INSTALL_ETC)
 	@echo
 	$(Q) "  CREATE 		$(@)"
