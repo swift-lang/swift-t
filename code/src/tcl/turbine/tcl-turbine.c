@@ -728,6 +728,7 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
     int work_len, answer_rank, type_recved;
     code = ADLB_Get(work_type, buffer, &work_len,
                     &answer_rank, &type_recved, &task_comm);
+    turbine_task_comm = task_comm;
     if (code == ADLB_SHUTDOWN)
       break;
     TCL_CONDITION(code == ADLB_SUCCESS, "Get failed with code %i\n", code);
