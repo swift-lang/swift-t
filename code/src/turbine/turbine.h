@@ -28,8 +28,7 @@
 #include <tcl.h>
 
 #include <version.h>
-
-#include "src/turbine/turbine-defs.h"
+#include <turbine-defs.h>
 
 typedef enum
 {
