@@ -303,6 +303,7 @@ ADLBP_Get(int type_requested, void* payload, int* length,
 
   if (g.parallelism > 1)
   {
+    DEBUG("ADLB_Get(): parallelism=%i", g.parallelism);
     // Parallel tasks require MPI 3.  Cf. configure.ac
     #if ADLB_MPI_VERSION >= 3
     // Recv ranks for output comm
@@ -313,7 +314,8 @@ ADLBP_Get(int type_requested, void* payload, int* length,
     int rc = MPI_Group_incl(adlb_group, g.parallelism, ranks, &group);
     assert(rc == MPI_SUCCESS);
     // This is an MPI 3 function:
-    MPI_Comm_create_group(adlb_comm, group, 0, comm);
+    rc = MPI_Comm_create_group(adlb_comm, group, 0, comm);
+    assert(rc == MPI_SUCCESS);
     #endif
   }
   else
