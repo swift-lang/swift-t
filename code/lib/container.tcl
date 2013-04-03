@@ -606,7 +606,7 @@ namespace eval turbine {
       }
 
       # Once all signals closed, run finalizer
-      rule $signals "deeprule_finish $allocated_signals; $action" {*}args
+      rule $signals "deeprule_finish $allocated_signals; $action" {*}$args
     }
 
     # Check for container contents being closed and once true,
@@ -675,7 +675,7 @@ namespace eval turbine {
           container_deep_wait $inner \ [ expr {$nest_level - 1} ] $is_file \
                             $inner_signal
         }
-        rule $inner_signals 
+        rule $inner_signals \
           [ list deeprule_finish $inner_signals [ list store_void $signal ] ]
       }
     }
@@ -686,6 +686,5 @@ namespace eval turbine {
       foreach signal $args {
         read_refcount_decr $signal
       }
-      eval $cmd
     }
 }
