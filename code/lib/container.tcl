@@ -672,11 +672,11 @@ namespace eval turbine {
         foreach inner $members {
           set inner_signal [ allocate void ]
           lappend inner_signals $inner_signal
-          container_deep_wait $inner \ [ expr {$nest_level - 1} ] $is_file \
+          container_deep_wait $inner [ expr {$nest_level - 1} ] $is_file \
                             $inner_signal
         }
         rule $inner_signals \
-          [ list deeprule_finish $inner_signals [ list store_void $signal ] ]
+          "deeprule_finish \"$inner_signals\"; store_void $signal"
       }
     }
 
