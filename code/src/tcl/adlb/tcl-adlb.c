@@ -1403,6 +1403,7 @@ ADLB_Local_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
   } else {
     TCL_RETURN_ERROR("%d element list, must be 2 or 3", length);
   }
+  return TCL_OK; // unreachable
 }
 
 /**
