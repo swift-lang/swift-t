@@ -728,10 +728,10 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
     int work_len, answer_rank, type_recved;
     code = ADLB_Get(work_type, buffer, &work_len,
                     &answer_rank, &type_recved, &task_comm);
-    turbine_task_comm = task_comm;
-    MPI_Comm_rank(turbine_task_comm, &turbine_task_rank);
     if (code == ADLB_SHUTDOWN)
       break;
+    turbine_task_comm = task_comm;
+    MPI_Comm_rank(turbine_task_comm, &turbine_task_rank);
     TCL_CONDITION(code == ADLB_SUCCESS, "Get failed with code %i\n", code);
     assert(work_len <= buffer_size);
     assert(type_recved == work_type);
