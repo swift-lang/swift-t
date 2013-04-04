@@ -57,6 +57,7 @@ public class Command extends TclTree
     while (it.hasNext())
     {
       TclTree tree = it.next();
+      assert (tree != null): this.tokens;
       tree.appendTo(sb);
       if (it.hasNext())
         sb.append(' ');

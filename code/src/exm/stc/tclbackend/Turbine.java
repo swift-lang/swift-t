@@ -448,6 +448,10 @@ class Turbine {
       List<? extends Expression> inputs,
       List<Expression> action, TaskMode type,  ExecContext execCx,
       RuleProps props) {
+    assert(action != null);
+    for (Expression e: action) {
+      assert(e != null): action;
+    }
     
     assert(props.target != null);
 
@@ -526,6 +530,7 @@ class Turbine {
       assert(type == TaskMode.CONTROL);
       taskTokens.add(new Token("command"));
       if (props.priority != null) {
+        assert(priorityVar != null);
         taskTokens.add(new Token("priority:"));
         taskTokens.add(priorityVar);
       }
@@ -534,14 +539,19 @@ class Turbine {
     
     Expression task = TclUtil.tclStringAsList(taskTokens);
 
-    if (props.target.rankAny && props.parallelism == null) {
+    Expression par = props.parallelism;
+    if (props.target.rankAny && par == null) {
       // Use simple spawn
       res.append(spawnTask(type, priorityVar, task));
       return res;
     } else {
+      if (par == null) {
+        par = LiteralInt.ONE;
+      }
+      
       // Use put, which takes more arguments
       res.add(new Command(ADLB_PUT, props.target.toTcl(), adlbWorkTypeVal(type),
-                            task, priorityVar, props.parallelism));
+                            task, priorityVar, par));
       return res;
     }
   }

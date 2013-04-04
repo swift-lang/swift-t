@@ -147,21 +147,7 @@ public class Arg implements Comparable<Arg> {
    * @return
    */
   public Type type() {
-    switch (kind) {
-    case INTVAL:
-      return Types.F_INT;
-    case STRINGVAL:
-      // use same escaping as TCL
-      return Types.F_STRING;
-    case FLOATVAL:
-      return Types.F_FLOAT;
-    case BOOLVAL:
-      return Types.F_BOOL;
-    case VAR:
-      return this.var.type();
-    default:
-      throw new STCRuntimeError("Unknown oparg type " + this.kind.toString());
-    }
+    return typeInternal(false);
   }
 
   /**
