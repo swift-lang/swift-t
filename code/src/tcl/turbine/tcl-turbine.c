@@ -729,6 +729,7 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
     code = ADLB_Get(work_type, buffer, &work_len,
                     &answer_rank, &type_recved, &task_comm);
     turbine_task_comm = task_comm;
+    MPI_Comm_rank(turbine_task_comm, &turbine_task_rank);
     if (code == ADLB_SHUTDOWN)
       break;
     TCL_CONDITION(code == ADLB_SUCCESS, "Get failed with code %i\n", code);
@@ -759,6 +760,24 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
       return rc;
     }
   }
+  return TCL_OK;
+}
+
+static int
+Turbine_TaskComm_Cmd(ClientData cdata, Tcl_Interp *interp,
+                     int objc, Tcl_Obj *const objv[])
+{
+  Tcl_Obj* result = Tcl_NewLongObj(turbine_task_comm);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+static int
+Turbine_TaskRank_Cmd(ClientData cdata, Tcl_Interp *interp,
+                     int objc, Tcl_Obj *const objv[])
+{
+  Tcl_Obj* result = Tcl_NewIntObj(turbine_task_rank);
+  Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
 
@@ -848,6 +867,8 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("normalize",   Turbine_Normalize_Cmd);
   COMMAND("worker_loop", Turbine_Worker_Loop_Cmd);
   COMMAND("cache",       Turbine_Cache_Cmd);
+  COMMAND("task_comm",   Turbine_TaskComm_Cmd);
+  COMMAND("task_rank",   Turbine_TaskRank_Cmd);
   COMMAND("finalize",    Turbine_Finalize_Cmd);
   COMMAND("debug_on",    Turbine_Debug_On_Cmd);
   COMMAND("debug",       Turbine_Debug_Cmd);

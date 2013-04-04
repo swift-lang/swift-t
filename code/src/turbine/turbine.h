@@ -44,9 +44,15 @@ typedef long turbine_transform_id;
 
 /**
    If the user parallel task is being released, this
-   will be set to the communicator to use
+   will be set to the communicator to use.
+   If task is not parallel, this is MPI_COMM_SELF
 */
 extern MPI_Comm turbine_task_comm;
+
+/**
+   For parallel tasks, this is the rank in turbine_task_comm
+ */
+extern int turbine_task_rank;
 
 turbine_code turbine_init(int amserver, int rank, int size);
 
