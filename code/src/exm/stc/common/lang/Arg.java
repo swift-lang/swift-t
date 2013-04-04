@@ -133,6 +133,19 @@ public class Arg implements Comparable<Arg> {
     }
   }
 
+  
+  /**
+   * Return the type if used as a future
+   * @return
+   */
+  public Type futureType() {
+    return typeInternal(true);
+  }
+  
+  /**
+   * Return the type if used as a value;
+   * @return
+   */
   public Type type() {
     switch (kind) {
     case INTVAL:
@@ -144,6 +157,46 @@ public class Arg implements Comparable<Arg> {
       return Types.F_FLOAT;
     case BOOLVAL:
       return Types.F_BOOL;
+    case VAR:
+      return this.var.type();
+    default:
+      throw new STCRuntimeError("Unknown oparg type " + this.kind.toString());
+    }
+  }
+
+  /**
+   * Work out type of arg, dealing with fact that constants
+   * can be interpreted as futures or values
+   * @param futureContext
+   * @return
+   */
+  public Type typeInternal(boolean futureContext) {
+  switch (kind) {
+    case INTVAL:
+      if (futureContext) {
+        return Types.F_INT;
+      } else {
+        return Types.V_INT;
+      }
+    case STRINGVAL:
+      // use same escaping as TCL
+      if (futureContext) {
+        return Types.F_STRING;
+      } else {
+        return Types.V_STRING;
+      }
+    case FLOATVAL:
+      if (futureContext) {
+        return Types.F_FLOAT;
+      } else {
+        return Types.V_FLOAT;
+      }
+    case BOOLVAL:
+      if (futureContext) {
+        return Types.F_BOOL;
+      } else {
+        return Types.V_BOOL;
+      }
     case VAR:
       return this.var.type();
     default:

@@ -195,7 +195,7 @@ public class ICTree {
         globalVar = val.getVar();
         assert(globalVar.defType() == DefType.GLOBAL_CONST);
       } else {
-        globalVar = new Var(val.type(), name, VarStorage.GLOBAL_CONST,
+        globalVar = new Var(val.futureType(), name, VarStorage.GLOBAL_CONST,
                             DefType.GLOBAL_CONST);
       }
       globalVars.add(globalVar);
@@ -288,7 +288,7 @@ public class ICTree {
         Arg val = constE.getValue();
         out.append("const " +   constE.getKey() + " = ");
         out.append(val.toString());
-        out.append(" as " + val.type().typeName());
+        out.append(" as " + val.futureType().typeName());
         out.append("\n");
       }
       

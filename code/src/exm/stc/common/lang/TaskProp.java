@@ -21,7 +21,8 @@ public class TaskProp {
      */
     public void assertInternalTypesValid() {
       for (TaskPropKey key: this.keySet()) {
-        Type act = this.get(key).type();
+        Arg val = this.get(key);
+        Type act = val.type();
         Type expected = internalTypeMap.get(key);
         if(!act.assignableTo(expected)) {
           throw new STCRuntimeError("Expected type " + expected + " for "

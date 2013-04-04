@@ -89,7 +89,7 @@ public class ConstantSharing implements OptimizerPass {
         glob = localDeclsOfGlobalVars.get(globName);
       }
       if (glob == null) {
-        glob = block.declareVariable(val.type(), globName, 
+        glob = block.declareVariable(val.futureType(), globName, 
                     VarStorage.GLOBAL_CONST, DefType.GLOBAL_CONST,
                     null);
         localDeclsOfGlobalVars.put(globName, glob);

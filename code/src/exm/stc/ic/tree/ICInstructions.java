@@ -1992,7 +1992,7 @@ public class ICInstructions {
           ResultVal retrieve = vanillaResult(outIsClosed);
           result.add(retrieve);
           
-          Opcode cvop = assignOpcode(src.type());
+          Opcode cvop = assignOpcode(src.futureType());
           if (cvop == null) {
             throw new STCRuntimeError("Need assign op for "
                 + src.getVar());
@@ -2002,7 +2002,7 @@ public class ICInstructions {
           result.add(assign);
           
           
-          Opcode derefOp = derefOpCode(src.type());
+          Opcode derefOp = derefOpCode(src.futureType());
           if (derefOp != null) {
             ResultVal deref = ResultVal.buildResult(derefOp, 
                                       Arrays.asList(src), dst.asArg(), false);
@@ -2028,13 +2028,13 @@ public class ICInstructions {
           // add retrieve so we can avoid retrieving later
           Arg dst = Arg.createVar(getOutput(0));
           Arg src = getInput(0);
-          Opcode cvop = retrieveOpcode(dst.type());
+          Opcode cvop = retrieveOpcode(dst.futureType());
           assert(cvop != null);
 
           ResultVal retrieve = ResultVal.buildResult(cvop,
                     Arrays.asList(dst), src, false);
           if (op == Opcode.STORE_REF) {
-            Opcode derefOp = derefOpCode(dst.type());
+            Opcode derefOp = derefOpCode(dst.futureType());
             if (derefOp != null) {
               ResultVal deref = 
                    ResultVal.buildResult(derefOp, Arrays.asList(dst),
