@@ -61,9 +61,8 @@ argv_accept(string... keys)
   "if { <<seconds>> > 0 } { after [ expr {round(<<seconds>> * 1000)} ] }"
 ];
 
-type host_id int;
 @pure
-(host_id rank) hostmap_one(string name)
+(location rank) hostmap_one(string name)
 "turbine" "0.0.2"
 [ "set <<rank>> [ draw [ adlb::hostmap <<name>> ] ]" ];
 
