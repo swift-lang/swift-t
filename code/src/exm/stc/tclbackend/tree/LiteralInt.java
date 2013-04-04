@@ -23,7 +23,7 @@ public class LiteralInt extends Expression {
   public static final Expression ZERO = new LiteralInt(0);
   public static final Expression ONE = new LiteralInt(1);
   
-  private long value;
+  private final long value;
 
   public LiteralInt(long value) {
     this.value = value;

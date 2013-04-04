@@ -15,8 +15,9 @@
  */
 package exm.stc.tclbackend;
 
+import exm.stc.common.lang.Arg;
 import exm.stc.tclbackend.tree.Expression;
-import exm.stc.tclbackend.tree.Token;
+import exm.stc.tclbackend.tree.LiteralInt;
 import exm.stc.tclbackend.tree.Value;
 
 /**
@@ -26,14 +27,14 @@ import exm.stc.tclbackend.tree.Value;
  * @author wozniak
  * */
 public class Target {
-  static final Target RANK_ANY = new Target(true, -1);
+  public static final Target RANK_ANY = new Target(true, new LiteralInt(-1));
   
-  final boolean rankAny;
-  final int targetRank;
+  public final boolean rankAny;
+  public final Expression targetRank;
   
-  static final Value ADLB_RANK_ANY = new Value("adlb::RANK_ANY");
+  public static final Value ADLB_RANK_ANY = new Value("adlb::RANK_ANY");
   
-  Target(boolean rankAny, int targetRank) {
+  public Target(boolean rankAny, Expression targetRank) {
     this.rankAny = rankAny;
     this.targetRank = targetRank;
   }
@@ -41,14 +42,23 @@ public class Target {
   /**
      Constructor: Targets task to specific target rank
    */
-  static Target rank(int targetRank) {
+  public static Target rank(Expression targetRank) {
     return new Target(false, targetRank);
   }
   
-  Expression toTcl() {
-    if (rankAny)
+  public Expression toTcl() {
+    if (rankAny) {
       return ADLB_RANK_ANY;
-    else
-      return new Token(targetRank);
+    } else {
+      return targetRank;
+    }
+  }
+
+  public static Target fromArg(Arg arg) {
+    if (arg == null) {
+      return RANK_ANY;
+    } else {
+      return Target.rank(TclUtil.argToExpr(arg));
+    }
   }
 }

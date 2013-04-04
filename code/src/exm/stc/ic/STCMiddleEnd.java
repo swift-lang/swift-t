@@ -37,6 +37,7 @@ import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
@@ -323,12 +324,23 @@ public class STCMiddleEnd {
   }
 
 
+  /**
+   * Call with default properties
+   * @param function
+   * @param inputs
+   * @param outputs
+   */
   public void builtinFunctionCall(String function, List<Var> inputs,
-      List<Var> outputs, Arg priority) {
-    assert(priority == null || priority.isImmediateInt());
+      List<Var> outputs) {
+    builtinFunctionCall(function, inputs, outputs, new TaskProps());
+  }
+  
+  public void builtinFunctionCall(String function, List<Var> inputs,
+      List<Var> outputs, TaskProps props) {
+    props.assertInternalTypesValid();
     currBlock().addInstruction(
         FunctionCall.createBuiltinCall(
-            function, Var.asArgList(inputs), outputs, priority));
+            function, Var.asArgList(inputs), outputs, props));
   }
   
   public void builtinLocalFunctionCall(String functionName,
@@ -339,15 +351,15 @@ public class STCMiddleEnd {
   
   public void functionCall(String function, List<Var> inputs,
       List<Var> outputs, List<Boolean> blockOn, TaskMode mode, 
-      Arg priority) {
-    assert(priority == null || priority.isImmediateInt());
+      TaskProps props) {
+    props.assertInternalTypesValid();
     if (blockOn != null) {
       throw new STCRuntimeError("Swift IC generator doesn't support " +
       " blocking on function inputs");
     }
     currBlock().addInstruction(
           FunctionCall.createFunctionCall(
-              function, Var.asArgList(inputs), outputs, mode, priority));
+              function, Var.asArgList(inputs), outputs, mode, props));
   }
 
   public void runExternal(String cmd, List<Arg> args, List<Arg> inFiles,
@@ -664,12 +676,25 @@ public class STCMiddleEnd {
     currBlock().addInstruction(Builtin.createLocal(op, out, in));
   }
   
+  /**
+   * All default task properties
+   * @param op
+   * @param out
+   * @param in
+   */
+  public void asyncOp(BuiltinOpcode op, Var out, List<Arg> in) {
+    asyncOp(op, out, in, new TaskProps());
+  }
+  
   public void asyncOp(BuiltinOpcode op, Var out, 
-                                    List<Arg> in, Arg priority) {
+                                    List<Arg> in, TaskProps props) {
+    assert(props != null);
+    props.assertInternalTypesValid();
+    
     if (out != null) {
       assert(Types.isScalarFuture(out.type()));
     }
-    currBlock().addInstruction(Builtin.createAsync(op, out, in, priority));
+    currBlock().addInstruction(Builtin.createAsync(op, out, in, props));
   }
 
   public void structLookup(Var result, Var structVar, String structField) {

@@ -40,6 +40,9 @@ import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.OpType;
 import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.TaskProp;
+import exm.stc.common.lang.TaskProp.TaskPropKey;
+import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
@@ -243,26 +246,26 @@ public class ExprWalker {
     if (Types.isScalarFuture(type)) {
       if (Types.isInt(type)) {
         backend.asyncOp(BuiltinOpcode.COPY_INT, dst, 
-            Arrays.asList(Arg.createVar(src)), null);
+            Arrays.asList(Arg.createVar(src)));
       } else if (Types.isString(type)) {
         backend.asyncOp(BuiltinOpcode.COPY_STRING, dst, 
-            Arrays.asList(Arg.createVar(src)), null);
+            Arrays.asList(Arg.createVar(src)));
       } else if (Types.isFloat(type)) {
         backend.asyncOp(BuiltinOpcode.COPY_FLOAT, dst, 
-            Arrays.asList(Arg.createVar(src)), null);
+            Arrays.asList(Arg.createVar(src)));
       } else if (Types.isBool(type)) {
         backend.asyncOp(BuiltinOpcode.COPY_BOOL, dst, 
-            Arrays.asList(Arg.createVar(src)), null);
+            Arrays.asList(Arg.createVar(src)));
       } else if (Types.isBlob(type)) {
         backend.asyncOp(BuiltinOpcode.COPY_BLOB, dst, 
-            Arrays.asList(Arg.createVar(src)), null);
+            Arrays.asList(Arg.createVar(src)));
       } else if (Types.isVoid(type)) {
         // Sort of silly, but might be needed
         backend.asyncOp(BuiltinOpcode.COPY_VOID, dst, 
-            Arrays.asList(Arg.createVar(src)), null);
+            Arrays.asList(Arg.createVar(src)));
       } else if (Types.isFile(type)) {
         backend.asyncOp(BuiltinOpcode.COPY_FILE, dst, 
-                Arrays.asList(Arg.createVar(src)), null);
+                Arrays.asList(Arg.createVar(src)));
       } else {
         throw new STCRuntimeError(context.getFileLine() +
             "Haven't implemented copy for scalar type " +
@@ -421,7 +424,7 @@ public class ExprWalker {
       Var arg = eval(context, tree.child(i + 1), type, false, renames);
       iList.add(Arg.createVar(arg));
     }
-    backend.asyncOp(opcode, out, iList, null);
+    backend.asyncOp(opcode, out, iList);
   }
   
 
@@ -438,6 +441,8 @@ public class ExprWalker {
    */
   private void callFunctionExpression(Context context, SwiftAST tree,
       List<Var> oList, Map<String, String> renames) throws UserException {
+    assert(tree.getType() == ExMParser.CALL_FUNCTION);
+    
     FunctionCall f = FunctionCall.fromAST(context, tree, true);
     FunctionType concrete = TypeChecker.concretiseFunctionCall(context,
                                 f.function(), f.type(), f.args(), oList, false);
@@ -468,25 +473,36 @@ public class ExprWalker {
     
     // Process priority after arguments have been evaluated, so that
     // the argument evaluation is outside the wait statement
-    Var priorityVal = null;
+    TaskProps propVals = new TaskProps();
     boolean openedWait = false;
     Context callContext = context;
-    if (tree.getChildCount() == 3) {
-      SwiftAST priorityT = tree.child(2);
-      Var priorityFuture = eval(context, priorityT,
-                            Types.F_INT, false, renames);
+    if (!f.annotations().isEmpty()) {
+      List<Pair<TaskPropKey, Var>> propFutures = 
+            new ArrayList<Pair<TaskPropKey, Var>>();
+      List<Var> waitVars = new ArrayList<Var>();
+      for (TaskPropKey ann: f.annotations().keySet()) {
+        SwiftAST expr = f.annotations().get(ann);
+        Type exprType = TypeChecker.findSingleExprType(callContext, expr);
+        Type concreteType = TaskProp.checkFrontendType(callContext, ann, exprType);
+        Var future = eval(context, expr, concreteType, false, renames);
+        waitVars.add(future);
+        propFutures.add(Pair.create(ann, future));
+      }
       
-      List<Var> waitVars = Arrays.asList(priorityFuture);
-      backend.startWaitStatement(context.getFunctionContext().constructName("priority-wait"), 
+      backend.startWaitStatement(context.getFunctionContext().constructName("ann-wait"), 
                         waitVars, null,
                         WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
       openedWait = true;
       callContext = new LocalContext(context);
-      priorityVal = varCreator.fetchValueOf(callContext, priorityFuture);
+      for (Pair<TaskPropKey,Var> x: propFutures) {
+        Var value = varCreator.fetchValueOf(callContext,
+                                            x.val2);
+        propVals.put(x.val1, value.asArg());
+      }
     }
     
     // callFunction will check that argument types match function
-    callFunction(context, f.function(), concrete, oList, argVars, priorityVal);
+    callFunction(context, f.function(), concrete, oList, argVars, propVals);
     if (openedWait) {
       backend.endWaitStatement();
     }
@@ -700,10 +716,10 @@ public class ExprWalker {
       Var stepV = eval(context, ar.getStep(), Types.F_INT, 
           false, null);
       backend.builtinFunctionCall("rangestep", Arrays.asList(startV, endV, stepV), 
-          Arrays.asList(oVar), null);
+          Arrays.asList(oVar));
     } else {
       backend.builtinFunctionCall("range", Arrays.asList(startV, endV), 
-          Arrays.asList(oVar), null);
+          Arrays.asList(oVar));
     }
   }
 
@@ -738,7 +754,7 @@ public class ExprWalker {
 
   private void callFunction(Context context, String function,
       FunctionType concrete,
-      List<Var> oList, List<Var> iList, Var priorityVal)
+      List<Var> oList, List<Var> iList, TaskProps props)
       throws UndefinedTypeException, UserException {
 
     // The expected types might not be same as current input types, work out
@@ -775,9 +791,10 @@ public class ExprWalker {
 
     if (waitContext != null) {
       FunctionContext fc = context.getFunctionContext();
+      Arg priority = props.get(TaskPropKey.PRIORITY); // Can be null
       backend.startWaitStatement(
            fc.constructName("call-" + function),
-           waitVars, priorityVal == null ? null : Arg.createVar(priorityVal),
+           waitVars, priority,
            WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
 
       assert(waitVars.size() == derefVars.size());
@@ -795,7 +812,7 @@ public class ExprWalker {
       }
     }
 
-    backendFunctionCall(context, function, oList, realIList, priorityVal);
+    backendFunctionCall(context, function, oList, realIList, props);
 
     if (waitContext != null) {
       backend.endWaitStatement();
@@ -811,10 +828,8 @@ public class ExprWalker {
    * @param priorityVal optional priority value (can be null)
    */
   private void backendFunctionCall(Context context, String function,
-      List<Var> oList, ArrayList<Var> iList, Var priorityVal) {
-    assert(priorityVal == null ||
-           priorityVal.type().equals(Types.V_INT)); 
-    Arg priority = priorityVal != null ? Arg.createVar(priorityVal) : null;
+      List<Var> oList, ArrayList<Var> iList, TaskProps props) {
+    props.assertInternalTypesValid();
     FunctionType def = context.lookupFunction(function);
     if (def == null) {
       throw new STCRuntimeError("Couldn't locate function definition for " +
@@ -824,10 +839,11 @@ public class ExprWalker {
       if (Builtins.hasOpEquiv(function)) {
         assert(oList.size() <= 1);
         Var out = oList.size() == 0 ? null : oList.get(0);
+
         backend.asyncOp(Builtins.getOpEquiv(function), out, 
-                        Arg.fromVarList(iList), priority);
+                        Arg.fromVarList(iList), props);
       } else {
-        backend.builtinFunctionCall(function, iList, oList, priority);
+        backend.builtinFunctionCall(function, iList, oList, props);
       }
     } else if (context.hasFunctionProp(function, FnProp.COMPOSITE)) {
       TaskMode mode;
@@ -837,13 +853,13 @@ public class ExprWalker {
         mode = TaskMode.CONTROL;
       }
       backend.functionCall(function, iList, oList, null, 
-          mode, priority);
+          mode, props);
     } else {
       assert(context.hasFunctionProp(function, FnProp.APP));
       // Execute app function wrapper locally (real work will
       //   be dispatched to worker by wrapper)
       backend.functionCall(function, iList, oList, null,
-              TaskMode.LOCAL, priority);
+              TaskMode.LOCAL, props);
     }
   }
 

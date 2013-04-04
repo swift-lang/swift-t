@@ -23,6 +23,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
@@ -283,6 +284,17 @@ public class ICUtil {
     }
     return oa;
   }
+  
+  public static <K> void replaceArgValsInMap(Map<Var, Arg> renames, Map<K, Arg> map) {
+    for (Entry<K, Arg> e: map.entrySet()) {
+      Arg val = e.getValue();
+      if (val.isVar() && renames.containsKey(val.getVar())) {
+        Arg newVal = renames.get(val.getVar());
+        assert(newVal != null);
+        e.setValue(newVal);
+      }
+    }
+  }
 
   public static LinkedList<Statement> cloneStatements(
       List<Statement> stmts) {
@@ -360,7 +372,7 @@ public class ICUtil {
    * @param args
    * @return
    */
-  public static List<Var> extractVars(List<Arg> args) {
+  public static List<Var> extractVars(Collection<Arg> args) {
     ArrayList<Var> res = new ArrayList<Var>();
     for (Arg a: args) {
       if (a.isVar()) {

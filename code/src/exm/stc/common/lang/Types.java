@@ -1450,20 +1450,42 @@ public class Types {
   public static final Type F_VOID = new ScalarFutureType(PrimType.VOID);
   public static final Type REF_VOID = new RefType(F_VOID);
   
+  /**
+   * Represents location of execution 
+   */
+  public static final Type F_LOCATION = new SubType(Types.F_INT, "location");
+  public static final Type V_LOCATION = V_INT; // Internally is int
+
+  
   private static final String VALUE_SIGIL = "$";
 
-  private static final Map<String, Type> nativeTypes;
+  private static final Map<String, Type> nativeTypes 
+                                    = new HashMap<String, Type>();
 
   static {
-    nativeTypes = new HashMap<String, Type>();
-    nativeTypes.put("int", Types.F_INT);
-    nativeTypes.put("string", Types.F_STRING);
-    nativeTypes.put("float", Types.F_FLOAT);
-    nativeTypes.put("boolean", Types.F_BOOL);
-    nativeTypes.put("void", Types.F_VOID);
-    nativeTypes.put("blob", Types.F_BLOB);
-    nativeTypes.put("file", Types.F_FILE);
-    nativeTypes.put("updateable_float", Types.UP_FLOAT);
+    registerPrimitiveTypes();
+  }
+
+  /**
+   * Register primitive types that can be referred to in Swift
+   * code by name.
+   */
+  private static void registerPrimitiveTypes() {
+    registerPrimitiveType(F_INT);
+    registerPrimitiveType(F_STRING);
+    registerPrimitiveType(F_FLOAT);
+    registerPrimitiveType(F_BOOL);
+    registerPrimitiveType(F_VOID);
+    registerPrimitiveType(F_BLOB);
+    registerPrimitiveType(F_FILE);
+    registerPrimitiveType(UP_FLOAT);
+    registerPrimitiveType(F_LOCATION);
+  }
+  
+  public static void registerPrimitiveType(Type type) {
+    String name = type.typeName();
+    assert(!nativeTypes.containsKey(name)): name;
+    nativeTypes.put(name, type);
   }
 
 }

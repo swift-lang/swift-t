@@ -18,11 +18,13 @@ package exm.stc.common.exceptions;
 import exm.stc.frontend.Context;
 
 public class TypeMismatchException
-extends UserException
-{
-  public TypeMismatchException(Context context, String message)
-  {
+                extends UserException {
+  public TypeMismatchException(Context context, String message) {
     super(context, message);
+  }
+
+  public TypeMismatchException(String message) {
+    super(message);
   }
 
   private static final long serialVersionUID = 1L;

@@ -1018,7 +1018,7 @@ public class ICContinuations {
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       gen.startWaitStatement(procName, WaitVar.asVarList(waitVars), 
-          PassedVar.extractVars(passedVars), priority, mode, recursive, target);
+          PassedVar.extractVars(passedVars), priority, recursive, target);
       this.block.generate(logger, gen, info);
       gen.endWaitStatement();
     }

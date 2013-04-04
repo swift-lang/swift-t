@@ -118,8 +118,14 @@ class Turbine {
   private static final Token SPAWN_RULE = turbFn("spawn_rule");
   private static final Token RULE = turbFn("rule");
   private static final Token DEEPRULE = turbFn("deeprule");
+  private static final Token ADLB_PUT = adlbFn("put");
   private static final Token ADLB_SPAWN = adlbFn("spawn");
   private static final LiteralInt TURBINE_NULL_RULE = new LiteralInt(-1);
+  
+  // Keyword arg names for rule
+  private static final Token RULE_KEYWORD_PAR = new Token("parallelism");
+  private static final Token RULE_KEYWORD_TYPE = new Token("type");
+  private static final Token RULE_KEYWORD_TARGET = new Token("target");
   
   // Dereference functions
   private static final Token DEREFERENCE_INTEGER = turbFn("dereference_integer");
@@ -183,6 +189,7 @@ class Turbine {
   // Task priorities
   private static final Token SET_PRIORITY = turbFn("set_priority");
   private static final Token RESET_PRIORITY = turbFn("reset_priority");
+  private static final Token GET_PRIORITY = turbFn("get_priority");
   private static final String TCLTMP_PRIO = "tcltmp:prio";
   private static final Value TCLTMP_PRIO_VAL = new Value(TCLTMP_PRIO, false, true);
   
@@ -439,19 +446,20 @@ class Turbine {
    */
   private static Sequence ruleHelper(String symbol, 
       List<? extends Expression> inputs,
-      List<Expression> action, TaskMode type, Target target,
-      Expression parallelism,
-      Expression priority, ExecContext execCx) {
+      List<Expression> action, TaskMode type,  ExecContext execCx,
+      RuleProps props) {
+    
+    assert(props.target != null);
 
     if (inputs.isEmpty()) {
       if (type != TaskMode.LOCAL && type != TaskMode.LOCAL_CONTROL) {
-        return spawnTask(action, type, target, priority, execCx);
+        return spawnTask(action, type, execCx, props);
       }
     }
     
     Sequence res = new Sequence();    
-    if (priority != null)
-       res.add(setPriority(priority));
+    if (props.priority != null)
+       res.add(setPriority(props.priority));
     // Use different command on worker
     Token ruleCmd = execCx == ExecContext.CONTROL ? RULE : SPAWN_RULE;
     
@@ -459,42 +467,54 @@ class Turbine {
     
     args.add(new TclList(inputs)); // vars to block in
     args.add(TclUtil.tclStringAsList(action)); // Tcl string to execute
-    ruleAddKeywordArgs(type, target, parallelism, args);
+    ruleAddKeywordArgs(type, props.target, props.parallelism, args);
     
     res.add(new Command(ruleCmd, args));
 
-    if (priority != null)
+    if (props.priority != null)
        res.add(resetPriority());
     return res;
   }
 
+  public static List<Expression> ruleKeywordArgs(Target target,
+      Expression parallelism) {
+    return ruleKeywordArgs(null, target, parallelism);
+  }
+  
+  public static List<Expression> ruleKeywordArgs(
+      TaskMode type, Target target, Expression parallelism) {
+    ArrayList<Expression> res = new ArrayList<Expression>();
+    ruleAddKeywordArgs(type, target, parallelism, res);
+    return res;
+  }
+  
   private static void ruleAddKeywordArgs(TaskMode type, Target target,
       Expression parallelism, List<Expression> args) {
     if (!target.rankAny) {
-      args.add(new Token("target"));
+      args.add(RULE_KEYWORD_TARGET);
       args.add(target.toTcl());
     }
     
-    if (type != TaskMode.LOCAL && type != TaskMode.CONTROL) {
-      args.add(new Token("type"));
+    if (type != null && type != TaskMode.LOCAL && type != TaskMode.CONTROL) {
+      args.add(RULE_KEYWORD_TYPE);
       args.add(tclRuleType(type));
     }
     
     if (parallelism != null && !LiteralInt.ONE.equals(parallelism)) {
-      args.add(new Token("parallelism"));
+      args.add(RULE_KEYWORD_PAR);
       args.add(parallelism);
     }
   }
 
-  private static Sequence spawnTask(List<Expression> action, TaskMode type, Target target,
-      Expression priority, ExecContext execCx) {
+  private static Sequence spawnTask(List<Expression> action, TaskMode type, 
+        ExecContext execCx, RuleProps props) {
     Sequence res = new Sequence();
     
     // Store in var for readability
     Value priorityVar = null;
-    if (priority != null) {
+    if (props.priority != null) {
       priorityVar = TCLTMP_PRIO_VAL;
-      res.add(new SetVariable(TCLTMP_PRIO, priority));
+      res.add(new SetVariable(TCLTMP_PRIO, props.priority));
     }
     
     List<Expression> taskTokens = new ArrayList<Expression>();
@@ -505,17 +525,33 @@ class Turbine {
     } else {
       assert(type == TaskMode.CONTROL);
       taskTokens.add(new Token("command"));
-      if (priority != null) {
+      if (props.priority != null) {
         taskTokens.add(new Token("priority:"));
         taskTokens.add(priorityVar);
       }
       taskTokens.addAll(action);
     }
-    // add to shared work queue
+    
+    Expression task = TclUtil.tclStringAsList(taskTokens);
+
+    if (props.target.rankAny && props.parallelism == null) {
+      // Use simple spawn
+      res.append(spawnTask(type, priorityVar, task));
+      return res;
+    } else {
+      // Use put, which takes more arguments
+      res.add(new Command(ADLB_PUT, props.target.toTcl(), adlbWorkTypeVal(type),
+                            task, priorityVar, props.parallelism));
+      return res;
+    }
+  }
+
+  private static Sequence spawnTask(TaskMode type, Value priority, Expression task) {
+    Sequence res = new Sequence();
     if (priority != null)
-      res.add(setPriority(priorityVar));
+      res.add(setPriority(priority));
     res.add(new Command(ADLB_SPAWN, adlbWorkTypeVal(type),
-                          TclUtil.tclStringAsList(taskTokens)));
+                          task));
     if (priority != null)
       res.add(resetPriority());
     return res;
@@ -563,10 +599,24 @@ class Turbine {
 
   public static Expression currentPriority() {
     // get the current turbine priority
-    return new Square("turbine::get_priority");
+    return new Square(GET_PRIORITY);
   }
 
+  public static class RuleProps {
+    public static final RuleProps DEFAULT =
+          new RuleProps(Target.RANK_ANY, null, null);
+    
+    public final Target target;
+    public final Expression parallelism; // can be null
+    public final Expression priority; // can be null
 
+    public RuleProps(Target target, Expression parallelism, Expression priority) {
+      assert(target != null);
+      this.target = target;
+      this.parallelism = parallelism;
+      this.priority = priority;
+    }
+  }
   /**
    * @param symbol
    * @param blockOn
@@ -576,16 +626,14 @@ class Turbine {
    */
   public static Sequence rule(String symbol,
       List<? extends Expression> blockOn, List<Expression> action, TaskMode mode,
-      Target target, Expression priority, ExecContext execCx) {
-    return ruleHelper(symbol, blockOn, action, mode, target, null,
-                      priority, execCx);
+      ExecContext execCx, RuleProps props) {
+    return ruleHelper(symbol, blockOn, action, mode, execCx, props);
   }
 
   public static Sequence deepRule(String symbol,
       List<? extends Expression> inputs, int[] depths, boolean[] isFile,
-      List<Expression> action, TaskMode mode, Target target,
-      Expression parallelism,
-      Expression priority, ExecContext execCx) {
+      List<Expression> action, TaskMode mode, ExecContext execCx,
+      RuleProps props) {
     assert(inputs.size() == depths.length);
     assert(inputs.size() == isFile.length);
     
@@ -601,18 +649,18 @@ class Turbine {
     }
     
     Sequence res = new Sequence();
-    if (priority != null)
-       res.add(setPriority(priority));
+    if (props.priority != null)
+       res.add(setPriority(props.priority));
     
     List<Expression> args = new ArrayList<Expression>();
     args.add(new TclList(inputs));
     args.add(new TclList(depthExprs));
     args.add(new TclList(isFileExprs));
     args.add(TclUtil.tclStringAsList(action));
-    ruleAddKeywordArgs(mode, target, parallelism, args);
+    ruleAddKeywordArgs(mode, props.target, props.parallelism, args);
     res.add(new Command(DEEPRULE, args));
     
-    if (priority != null)
+    if (props.priority != null)
       res.add(resetPriority());
     return res;
   }
@@ -629,7 +677,7 @@ class Turbine {
       action.add(arg);
     }
     return ruleHelper(symbol, blockOn, action, TaskMode.CONTROL, 
-                      Target.RANK_ANY, null, null, execCx);
+                      execCx, RuleProps.DEFAULT);
   }
 
   public static TclTree allocateStruct(String tclName) {

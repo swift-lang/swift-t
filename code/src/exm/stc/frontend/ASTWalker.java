@@ -923,8 +923,7 @@ public class ASTWalker {
 
     backend.assignInt(one, Arg.createIntLit(1));
     backend.asyncOp(BuiltinOpcode.PLUS_INT, nextCounter, 
-        Arrays.asList(Arg.createVar(loop.getLoopVar()), Arg.createVar(one)),
-        null);
+        Arrays.asList(Arg.createVar(loop.getLoopVar()), Arg.createVar(one)));
     
     backend.loopContinue(Arrays.asList(nextCond, nextCounter), blockingVars);
 

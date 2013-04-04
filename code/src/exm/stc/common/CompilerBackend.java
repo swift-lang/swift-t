@@ -27,6 +27,7 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.RefCounting.RefCountType;
+import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
@@ -70,7 +71,7 @@ public interface CompilerBackend {
                                             List<Arg> in);
   
   public void asyncOp(BuiltinOpcode op, Var out, 
-                               List<Arg> in, Arg priority);  
+                               List<Arg> in, TaskProps props);  
   
   /**
    * Set target=addressof(src)
@@ -173,14 +174,14 @@ public interface CompilerBackend {
    * @param function
    * @param inputs
    * @param outputs
-   * @param priority 
+   * @param props 
    */
   public void builtinFunctionCall(String function,
-      List<Arg> inputs, List<Var> outputs, Arg priority);
+      List<Arg> inputs, List<Var> outputs, TaskProps props);
 
   public void functionCall(String function,
       List<Arg> inputs, List<Var> outputs, List<Boolean> blockOn, 
-      TaskMode mode, Arg priority);
+      TaskMode mode, TaskProps props);
 
   public void builtinLocalFunctionCall(String functionName,
           List<Arg> inputs, List<Var> outputs);
@@ -428,7 +429,7 @@ public interface CompilerBackend {
   public void startWaitStatement(String procName,
       List<Var> waitVars,
       List<Var> usedVars, Arg priority,
-      WaitMode mode, boolean recursive, TaskMode target);
+      boolean recursive, TaskMode target);
 
   public void endWaitStatement();
 

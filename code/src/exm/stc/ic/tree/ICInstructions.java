@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -43,6 +44,8 @@ import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.TaskProp.TaskPropKey;
+import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
@@ -2571,10 +2574,10 @@ public class ICInstructions {
     private final List<Var> outputs;
     private final List<Arg> inputs;
     private final List<Boolean> closedInputs; // which inputs are closed
-    private Arg priority;
+    private final TaskProps props;
   
     private FunctionCall(Opcode op, String functionName,
-        List<Arg> inputs, List<Var> outputs, Arg priority) {
+        List<Arg> inputs, List<Var> outputs, TaskProps props) {
       super(op, functionName);
       if (op != Opcode.CALL_BUILTIN && op != Opcode.CALL_CONTROL &&
           op != Opcode.CALL_SYNC && op != Opcode.CALL_LOCAL &&
@@ -2582,11 +2585,9 @@ public class ICInstructions {
         throw new STCRuntimeError("Tried to create function call"
             + " instruction with invalid opcode");
       }
-      this.priority = priority;
-      this.outputs = new ArrayList<Var>();
-      this.outputs.addAll(outputs);
-      this.inputs = new ArrayList<Arg>();
-      this.inputs.addAll(inputs);
+      this.props = props;
+      this.outputs = new ArrayList<Var>(outputs);
+      this.inputs = new ArrayList<Arg>(inputs);
       this.closedInputs = new ArrayList<Boolean>(inputs.size());
       for (int i = 0; i < inputs.size(); i++) {
         this.closedInputs.add(false);
@@ -2603,7 +2604,7 @@ public class ICInstructions {
     
     public static FunctionCall createFunctionCall(
         String functionName, List<Arg> inputs, List<Var> outputs,
-        TaskMode mode, Arg priority) {
+        TaskMode mode, TaskProps props) {
       Opcode op;
       if (mode == TaskMode.SYNC) {
         op = Opcode.CALL_SYNC;
@@ -2616,15 +2617,14 @@ public class ICInstructions {
       } else {
         throw new STCRuntimeError("Task mode " + mode + " not yet supported");
       }
-      return new FunctionCall(op, functionName,
-          inputs, outputs, priority);
+      return new FunctionCall(op, functionName, inputs, outputs, props);
     }
   
     public static FunctionCall createBuiltinCall(
         String functionName, List<Arg> inputs, List<Var> outputs,
-        Arg priority) {
+        TaskProps props) {
       return new FunctionCall(Opcode.CALL_BUILTIN, functionName,
-          inputs, outputs, priority);
+          inputs, outputs, props);
     }
   
     @Override
@@ -2639,9 +2639,9 @@ public class ICInstructions {
         result += " " + v.toString();
       }
       result += " ]";
-      if (priority != null) {
-        result += " priority=" + priority.toString(); 
-      }
+      
+      result += prettyPrintProps(props);
+      
       result += " closed=" + closedInputs;
       return result;
     }
@@ -2650,7 +2650,7 @@ public class ICInstructions {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       switch(this.op) {
       case CALL_BUILTIN:
-        gen.builtinFunctionCall(functionName, inputs, outputs, priority);
+        gen.builtinFunctionCall(functionName, inputs, outputs, props);
         break;
       case CALL_SYNC:
       case CALL_CONTROL:
@@ -2677,7 +2677,7 @@ public class ICInstructions {
         }
                            
         gen.functionCall(functionName, inputs, outputs, needToBlock,
-                                            mode, priority);
+                                            mode, props);
         break;
       default:
         throw new STCRuntimeError("Huh?");
@@ -2690,7 +2690,7 @@ public class ICInstructions {
         ICUtil.replaceVarsInList(renames, outputs, false);
       }
       ICUtil.replaceArgsInList(renames, inputs, false);
-      priority = ICUtil.replaceArg(renames, priority, true);
+      ICUtil.replaceArgValsInMap(renames, props);
     }
   
     public String getFunctionName() {
@@ -2712,9 +2712,7 @@ public class ICInstructions {
     @Override
     public List<Arg> getInputs() {
       List<Arg> inputVars = new ArrayList<Arg>(inputs);
-      if (priority != null) {
-        inputVars.add(priority);
-      }
+      inputVars.addAll(props.values());
       return inputVars;
     }
   
@@ -2730,7 +2728,8 @@ public class ICInstructions {
 
     @Override
     public Arg getPriority() {
-      return priority;
+      // Return null if not found
+      return props.get(TaskPropKey.PRIORITY);
     }
 
     @Override
@@ -2916,7 +2915,7 @@ public class ICInstructions {
       // Variables are immutable so just need to clone lists
       return new FunctionCall(op, functionName, 
           new ArrayList<Arg>(inputs), new ArrayList<Var>(outputs),
-          priority);
+          props.clone());
     }
   }
   
@@ -3526,19 +3525,21 @@ public class ICInstructions {
     
     private Var output; // null if no output
     private List<Arg> inputs;
-    private Arg priority; // priority of op if async.  null for default prio
+    private final TaskProps props; // only defined for async
 
     private Builtin(Opcode op, BuiltinOpcode subop, Var output, 
-          List<Arg> inputs, Arg priority) {
+          List<Arg> inputs, TaskProps props) {
       super(op);
-      assert(op == Opcode.LOCAL_OP || op == Opcode.ASYNC_OP);
       if (op == Opcode.LOCAL_OP) {
-        assert(priority == null);
+        assert(props == null);
+      } else {
+        assert(op == Opcode.ASYNC_OP);
+        assert(props != null);
       }
       this.subop = subop;
       this.output = output;
       this.inputs = new ArrayList<Arg>(inputs);
-      this.priority = priority;
+      this.props = props;
     }
     
 
@@ -3559,15 +3560,15 @@ public class ICInstructions {
     }
     
     public static Builtin createAsync(BuiltinOpcode subop, Var output, 
-        Arg input, Arg priority) {
-      return new Builtin(Opcode.ASYNC_OP, subop, output, Arrays.asList(input),
-                  priority);
+        List<Arg> inputs, TaskProps props) {
+      return new Builtin(Opcode.ASYNC_OP, subop, output, inputs, props);
     }
-    
+
     public static Builtin createAsync(BuiltinOpcode subop, Var output, 
-        List<Arg> inputs, Arg priority) {
-      return new Builtin(Opcode.ASYNC_OP, subop, output, inputs, priority);
+        List<Arg> inputs) {
+      return createAsync(subop, output, inputs, new TaskProps());
     }
+
 
     @Override
     public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
@@ -3577,7 +3578,9 @@ public class ICInstructions {
         }
       }
       ICUtil.replaceArgsInList(renames, inputs);
-      priority = ICUtil.replaceArg(renames, priority, true);
+      if (props != null) {
+        ICUtil.replaceArgValsInMap(renames, props);
+      }
     }
 
     @Override
@@ -3590,8 +3593,8 @@ public class ICInstructions {
       for (Arg input: inputs) {
         res += " " + input.toString();
       }
-      if (priority != null) {
-        res += " priority=" + priority.toString();
+      if (props != null) {
+        res += prettyPrintProps(props);
       }
       return res;
     }
@@ -3599,22 +3602,23 @@ public class ICInstructions {
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       if (op == Opcode.LOCAL_OP) {
+        assert(props == null);
         gen.localOp(subop, output, inputs);
       } else {
         assert (op == Opcode.ASYNC_OP);
-        gen.asyncOp(subop, output, inputs, priority);
+        gen.asyncOp(subop, output, inputs, props);
       }
     }
 
     @Override
     public List<Arg> getInputs() {
-      if (priority == null) {
+      if (props == null) {
         return Collections.unmodifiableList(inputs);
       } else {
         // Need to add priority so that e.g. it doesn't get optimised out
         ArrayList<Arg> res = new ArrayList<Arg>(inputs.size() + 1);
         res.addAll(inputs);
-        res.add(priority);
+        res.addAll(props.values());
         return res;
       }
     }
@@ -3763,8 +3767,7 @@ public class ICInstructions {
             (subop == BuiltinOpcode.AND && arg1)) {
           if (op == Opcode.ASYNC_OP) { 
             return Builtin.createAsync(BuiltinOpcode.COPY_BOOL, 
-                output, Arg.createVar(varArgs.get(0)),
-                priority);
+                output, Arg.createVar(varArgs.get(0)).asList());
           } else {
             return Builtin.createLocal(BuiltinOpcode.COPY_BOOL, 
                 output, Arg.createVar(varArgs.get(0)));
@@ -4078,7 +4081,8 @@ public class ICInstructions {
 
     @Override
     public Instruction clone() {
-      return new Builtin(op, subop, output, Arg.cloneList(inputs), priority);
+      TaskProps propsClone = props == null ? null : props.clone();
+      return new Builtin(op, subop, output, Arg.cloneList(inputs), propsClone);
     }
   }
 
@@ -4353,6 +4357,17 @@ public class ICInstructions {
     }
     result += " ]";
     return result;
+  }
+  
+
+
+  private static String prettyPrintProps(TaskProps props) {
+    StringBuilder result = new StringBuilder();
+    for (Entry<TaskPropKey, Arg> e: props.entrySet()) {
+      result.append(" " + e.getKey().toString().toLowerCase() +
+                "=" + e.getValue().toString());
+    }
+    return result.toString();
   }
 }
 

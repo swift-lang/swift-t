@@ -52,7 +52,9 @@ import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types.ArrayInfo;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.PrimType;
@@ -63,6 +65,7 @@ import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.tclbackend.Turbine.CacheMode;
+import exm.stc.tclbackend.Turbine.RuleProps;
 import exm.stc.tclbackend.Turbine.StackFrameType;
 import exm.stc.tclbackend.tree.Command;
 import exm.stc.tclbackend.tree.Comment;
@@ -681,7 +684,10 @@ public class TurbineGenerator implements CompilerBackend {
   
   @Override
   public void asyncOp(BuiltinOpcode op, Var out, List<Arg> in,
-      Arg priority) {
+                      TaskProps props) {
+    assert(props != null);
+    props.assertInternalTypesValid();
+    
     //TODO: for time being, share code with built-in function generation
     TclFunRef fn = BuiltinOps.getBuiltinOpImpl(op);
     if (fn == null) {
@@ -703,7 +709,7 @@ public class TurbineGenerator implements CompilerBackend {
           Arrays.<Var>asList() : Arrays.asList(out);
 
     builtinFunctionCall("operator: " + op.toString(), fn, 
-                        in, outL, priority);
+                        in, outL, props);
   }
 
   @Override
@@ -834,18 +840,22 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void builtinFunctionCall(String function,
-          List<Arg> inputs, List<Var> outputs, Arg priority) {
-    assert(priority == null || priority.isImmediateInt());
+          List<Arg> inputs, List<Var> outputs, TaskProps props) {
+    assert(props != null);
+    props.assertInternalTypesValid();
     logger.debug("call builtin: " + function);
     TclFunRef tclf = builtinSymbols.get(function);
     assert tclf != null : "Builtin " + function + "not found";
     Builtins.getTaskMode(function).checkSpawn(execContextStack.peek());
 
-    builtinFunctionCall(function, tclf, inputs, outputs, priority);
+    builtinFunctionCall(function, tclf, inputs, outputs, props);
   }
 
   private void builtinFunctionCall(String function, TclFunRef tclf,
-      List<Arg> inputs, List<Var> outputs, Arg priority) {
+      List<Arg> inputs, List<Var> outputs, TaskProps props) {
+    assert(props != null);
+    props.assertInternalTypesValid();
+    
     TclList iList = TclUtil.tclListOfArgs(inputs);
     TclList oList = TclUtil.tclListOfVariables(outputs);
     
@@ -854,11 +864,23 @@ public class TurbineGenerator implements CompilerBackend {
       throw new STCRuntimeError("call to undefined builtin function "
           + function);
     }
-    Token f = new Token(tclf.pkg + "::" + tclf.symbol);
-    Command c = new Command(f, oList, iList);
+
+    // Properties can be null
+    Arg priority = props.get(TaskPropKey.PRIORITY);
+    Target target = Target.fromArg(props.get(TaskPropKey.TARGET));
+    Expression parExpr = TclUtil.argToExpr(props.get(TaskPropKey.PARALLELISM),
+                                           true);
 
     setPriority(priority);
+    
+    Token tclFunction = new Token(tclf.pkg + "::" + tclf.symbol);
+    List<Expression> funcArgs = new ArrayList<Expression>();
+    funcArgs.add(oList);
+    funcArgs.add(iList);
+    funcArgs.addAll(Turbine.ruleKeywordArgs(target, parExpr));
+    Command c = new Command(tclFunction, funcArgs);
     pointStack.peek().add(c);
+    
     clearPriority(priority);
   }
 
@@ -880,9 +902,8 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void functionCall(String function,
               List<Arg> inputs, List<Var> outputs,
-              List<Boolean> blocking, TaskMode mode, Arg priority)  {
-    assert(priority == null || priority.isImmediateInt());
-    logger.debug("call: " + function);
+              List<Boolean> blocking, TaskMode mode, TaskProps props)  {
+    props.assertInternalTypesValid();
     
     List<Value> blockOn = new ArrayList<Value>();
     Set<Var> alreadyBlocking = new HashSet<Var>();
@@ -905,10 +926,8 @@ public class TurbineGenerator implements CompilerBackend {
       args.addAll(TclUtil.argsToExpr(inputs));
       List<Expression> action = buildAction(swiftFuncName, args);
       
-      Expression priorityExpr = TclUtil.argToExpr(priority, true);
       Sequence rule = Turbine.rule(function, blockOn, action, mode,
-                                   Target.RANK_ANY, priorityExpr,
-                                   execContextStack.peek());
+                       execContextStack.peek(), buildRuleProps(props));
       pointStack.peek().append(rule);
       
     } else if (mode == TaskMode.SYNC) {
@@ -923,6 +942,16 @@ public class TurbineGenerator implements CompilerBackend {
     } else {
       throw new STCRuntimeError("Unexpected mode: " + mode);
     }
+  }
+
+  private RuleProps buildRuleProps(TaskProps props) {
+    Expression priority = TclUtil.argToExpr(
+                    props.get(TaskPropKey.PRIORITY), true);
+    Target target = Target.fromArg(props.get(TaskPropKey.PRIORITY));
+    Expression parallelism = TclUtil.argToExpr(
+                      props.get(TaskPropKey.PARALLELISM), true);
+    RuleProps ruleProps = new RuleProps(target, parallelism, priority);
+    return ruleProps;
   }
 
   @Override
@@ -1485,10 +1514,14 @@ public class TurbineGenerator implements CompilerBackend {
 
     @Override
     public void startWaitStatement(String procName, List<Var> waitVars,
-        List<Var> passIn, Arg priority, WaitMode mode,
+        List<Var> passIn, Arg priority,
         boolean recursive, TaskMode target) {
       logger.trace("startWaitStatement()...");
-      startAsync(procName, waitVars, passIn, priority, recursive, target);
+      TaskProps props = new TaskProps();
+      if (priority != null) {
+        props.put(TaskPropKey.PRIORITY, priority);
+      }
+      startAsync(procName, waitVars, passIn, recursive, target, props);
     }
 
     @Override
@@ -1508,8 +1541,8 @@ public class TurbineGenerator implements CompilerBackend {
      * @param recursive
      */
     private void startAsync(String procName, List<Var> waitVars,
-        List<Var> passIn, Arg priority, boolean recursive, TaskMode mode) {
-      assert(priority == null || priority.isImmediateInt());
+        List<Var> passIn, boolean recursive, TaskMode mode, TaskProps props) {
+      props.assertInternalTypesValid();
       mode.checkSpawn(execContextStack.peek());
       for (Var v: passIn) {
         if (v.type().equals(Types.V_BLOB)) {
@@ -1558,7 +1591,7 @@ public class TurbineGenerator implements CompilerBackend {
       
       List<Expression> action = buildActionFromVars(uniqueName, passIn);
 
-      Expression priorityExpr = TclUtil.argToExpr(priority, true);
+      RuleProps ruleProps = buildRuleProps(props);      
       if (useDeepWait) {
         // Nesting depth of arrays (0 == not array)
         int depths[] = new int[waitVars.size()];
@@ -1577,18 +1610,14 @@ public class TurbineGenerator implements CompilerBackend {
           isFile[i] = Types.isFile(baseType);
         }
 
-        Target target = Target.RANK_ANY;
-        Expression parallelism = null;
         Sequence rule = Turbine.deepRule(uniqueName, waitFor, depths,
-              isFile, action, mode, target, parallelism,  priorityExpr,
-              execContextStack.peek());
+              isFile, action, mode, execContextStack.peek(), ruleProps);
         pointStack.peek().append(rule);
 
       } else {
         // Whether we can enqueue rules locally
-        pointStack.peek().append(
-              Turbine.rule(uniqueName, waitFor, action, mode, 
-                           Target.RANK_ANY, priorityExpr, execContextStack.peek()));
+        pointStack.peek().append(Turbine.rule(uniqueName,
+            waitFor, action, mode, execContextStack.peek(), ruleProps));
       }
       
       pointStack.push(constructProc);
@@ -2085,7 +2114,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     splitBody.add(Turbine.rule(outerProcName, new ArrayList<Value>(0),
                     outerRecCall, TaskMode.CONTROL, 
-                    Target.RANK_ANY, null, execContextStack.peek()));
+                    execContextStack.peek(), RuleProps.DEFAULT));
 
     pointStack.push(inner);
   }

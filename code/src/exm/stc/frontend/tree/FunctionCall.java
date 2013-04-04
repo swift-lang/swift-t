@@ -15,11 +15,16 @@
  */
 package exm.stc.frontend.tree;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedFunctionException;
+import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LogHelper;
@@ -28,13 +33,15 @@ public class FunctionCall {
   private final String function;
   private final List<SwiftAST> args;
   private final FunctionType type;
+  private final Map<TaskPropKey, SwiftAST> annotationExprs;
   
   private FunctionCall(String function, List<SwiftAST> args,
-                       FunctionType type) {
+                       FunctionType type, Map<TaskPropKey, SwiftAST> annotationExprs) {
     super();
     this.function = function;
     this.args = args;
     this.type = type;
+    this.annotationExprs = annotationExprs;
   }
 
   public String function() {
@@ -48,10 +55,33 @@ public class FunctionCall {
   public FunctionType type() {
     return type;
   }
+  
+  public Map<TaskPropKey, SwiftAST> annotations() {
+    return Collections.unmodifiableMap(annotationExprs);
+  }
+
+  private static TaskPropKey getPropKey(SwiftAST tag) {
+    TaskPropKey propKey;
+    switch (tag.getType()) {
+      case ExMParser.PAR:
+        propKey = TaskPropKey.PARALLELISM;
+        break;
+      case ExMParser.PRIORITY:
+        propKey = TaskPropKey.PRIORITY;
+        break;
+      case ExMParser.TARGET:
+        propKey = TaskPropKey.TARGET;
+        break;
+      default:
+        throw new STCRuntimeError("Unknown tag: " + 
+                              LogHelper.tokName(tag.getType()));
+    }
+    return propKey;
+  }
 
   public static FunctionCall fromAST(Context context, SwiftAST tree,
           boolean doWarn) throws UndefinedFunctionException {
-    assert(tree.getChildCount() >= 2 && tree.getChildCount() <= 3);
+    assert(tree.getChildCount() >= 2);
     SwiftAST fTree = tree.child(0);
     String f;
     if (fTree.getType() == ExMParser.DEPRECATED) {
@@ -74,7 +104,17 @@ public class FunctionCall {
       throw UndefinedFunctionException.unknownFunction(context, f);
     }
     
-    return new FunctionCall(f, arglist.children(), ftype);
+    Map<TaskPropKey, SwiftAST> annotations = new TreeMap<TaskPropKey, SwiftAST>();
+    for (SwiftAST annTree: tree.children(2)) {
+      assert(annTree.getType() == ExMParser.CALL_ANNOTATION);
+      assert(annTree.getChildCount() == 2);
+      SwiftAST tag = annTree.child(0);
+      SwiftAST expr = annTree.child(1);
+      TaskPropKey propKey = getPropKey(tag);
+      annotations.put(propKey, expr);
+    }
+    
+    return new FunctionCall(f, arglist.children(), ftype, annotations);
   }
 
 }

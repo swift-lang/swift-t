@@ -19,6 +19,6 @@ main
   file tmp<"tmp.txt"> = hostname();
   string name = trim(readFile(tmp));
   printf("name: %s", name);
-  host_id rank = hostmap_one(name);
+  location rank = hostmap_one(name);
   printf("rank: %i", rank);
 }

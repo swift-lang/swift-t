@@ -94,6 +94,7 @@ tokens {
     APP_BODY;
     APP_FILENAME;
     APP_REDIRECTION;
+    CALL_ANNOTATION;
 }
 
 @parser::header {
@@ -592,7 +593,7 @@ bool_lit: TRUE | FALSE
     ;
 
 function_call:
-         priority? f=function_call_name a=expr_argument_list -> ^( CALL_FUNCTION $f $a priority?)
+         call_annotation* f=function_call_name a=expr_argument_list -> ^( CALL_FUNCTION $f $a call_annotation*)
     ;
 
 function_call_name:
@@ -600,9 +601,10 @@ function_call_name:
     |    ATSIGN ID -> ^( DEPRECATED ID )
     ;
 
-priority:
-         ATSIGN PRIORITY ASSIGN expr -> expr
-    ;
+call_annotation:
+		ATSIGN ann=(PRIORITY | PAR | TARGET) ASSIGN e=expr 
+			-> ^( CALL_ANNOTATION $ann $e )
+	;
 
 expr_argument_list:
         LPAREN expr_arguments? RPAREN -> ^( ARGUMENT_LIST expr_arguments? )
@@ -752,6 +754,8 @@ CONST: 'const';
 TYPE:  'type';
 TYPEDEF:  'typedef';
 PRIORITY: 'prio';
+PAR: 'par';
+TARGET: 'target';
 
 STDIN: 'stdin';
 STDOUT: 'stdout';
