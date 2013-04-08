@@ -235,11 +235,14 @@ ADLBP_Put(void* payload, int length, int target, int answer,
   /** Server to contact */
   int to_server = -1;
   if (target == ADLB_RANK_ANY)
+  {
     to_server = xlb_my_server;
-  else if (target < xlb_comm_size)
-    to_server = xlb_map_to_server(target);
+  }
   else
-    valgrind_fail("ADLB_Put(): invalid target rank: %i", target);
+  { 
+    CHECK_MSG(target >= 0 && target < xlb_comm_size,
+        "ADLB_Put(): invalid target rank: %i", target);
+  }
 
   struct packed_put p;
   p.type = type;

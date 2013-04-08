@@ -243,6 +243,7 @@ put(int type, int putter, int priority, int answer, int target,
     // Attempt to redirect work unit to another worker
     if (target >= 0)
     {
+      CHECK_MSG(target < xlb_comm_size, "Invalid target: %i", target);
       worker = requestqueue_matches_target(target, type);
       if (worker != ADLB_RANK_NULL)
       {
