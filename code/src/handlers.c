@@ -1000,10 +1000,12 @@ handle_container_reference(int caller)
   char subscript[ADLB_DATA_SUBSCRIPT_MAX];
   long reference;
   adlb_data_type ref_type;
+  int ref_type_int;
   int n = sscanf(xfer, "%li %li %s %i",
             &reference, &container_id, subscript,
-            (int*)&ref_type);
+            &ref_type_int);
   ASSERT(n == 4);
+  ref_type = ref_type_int;
 
   DEBUG("Container_reference: <%li>[%s] => <%li> (%i)",
         container_id, subscript, reference, ref_type);
