@@ -81,12 +81,12 @@ then
 fi
 
 SCRIPT=$1
+checkvars QUEUE SCRIPT
+
 shift
 ARGS=${*}
 
 START=$( date +%s )
-
-checkvars QUEUE SCRIPT
 
 [[ ${PROCS} != 0 ]]
 exitcode "PROCS==0"
