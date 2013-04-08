@@ -948,7 +948,7 @@ public class TurbineGenerator implements CompilerBackend {
   private RuleProps buildRuleProps(TaskProps props) {
     Expression priority = TclUtil.argToExpr(
                     props.get(TaskPropKey.PRIORITY), true);
-    TclTarget target = TclTarget.fromArg(props.get(TaskPropKey.PRIORITY));
+    TclTarget target = TclTarget.fromArg(props.get(TaskPropKey.TARGET));
     Expression parallelism = TclUtil.argToExpr(
                       props.get(TaskPropKey.PARALLELISM), true);
     RuleProps ruleProps = new RuleProps(target, parallelism, priority);
