@@ -20,7 +20,6 @@ import java.util.ListIterator;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -338,7 +337,7 @@ public class HoistLoops implements OptimizerPass {
           c.getType() == ContinuationType.NESTED_BLOCK) {
       return true;
     } else if (c.getType() == ContinuationType.WAIT_STATEMENT &&
-            ((WaitStatement)c).getMode() == WaitMode.WAIT_ONLY) {
+            !((WaitStatement)c).hasExplicit()) {
       return true;
     }
     return false;

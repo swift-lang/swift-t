@@ -351,8 +351,8 @@ public class ASTWalker {
       }
       
       String waitName = context.getFunctionContext().constructName("chain");
-      backend.startWaitStatement(waitName, stmtResults, null, WaitMode.WAIT_ONLY,
-                                 true, false, TaskMode.LOCAL);
+      backend.startWaitStatement(waitName, stmtResults, WaitMode.WAIT_ONLY,
+             true, false, TaskMode.LOCAL);
     }
     
     // Evaluate the final statement
@@ -393,7 +393,7 @@ public class ASTWalker {
     
     backend.startWaitStatement(
           context.getFunctionContext().constructName("explicitwait"),
-                      waitEvaled, null,
+                      waitEvaled,
                       WaitMode.WAIT_ONLY, true, false, TaskMode.LOCAL_CONTROL);
     block(new LocalContext(context), wait.getBlock());
     backend.endWaitStatement();
@@ -448,7 +448,7 @@ public class ASTWalker {
     
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("if"), 
-              Arrays.asList(conditionVar), null,
+              Arrays.asList(conditionVar),
                 WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
 
     Context waitContext = new LocalContext(context);
@@ -562,7 +562,7 @@ public class ASTWalker {
     // Generate all of the code
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("switch"),
-                Arrays.asList(switchVar), null,
+                Arrays.asList(switchVar),
                 WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
 
     Context waitContext = new LocalContext(context);
@@ -624,8 +624,8 @@ public class ASTWalker {
     // Need to pass in futures along with user vars
     List<Var> rangeBounds = Arrays.asList(start, end, step);
     backend.startWaitStatement(fc.getFunctionName() + "-wait-range" + loopNum,
-             rangeBounds, null,
-             WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
+             rangeBounds, WaitMode.WAIT_ONLY, false, false,
+             TaskMode.LOCAL_CONTROL);
     Context waitContext = new LocalContext(context);
     Var startVal = varCreator.fetchValueOf(waitContext, start);
     Var endVal = varCreator.fetchValueOf(waitContext, end);
@@ -646,7 +646,7 @@ public class ASTWalker {
     // Need to spawn off task per iteration
     if (!loop.isSyncLoop()) {
       backend.startWaitStatement(fc.getFunctionName() + "range-iter" + loopNum,
-          Arrays.<Var>asList(), null,
+          Arrays.<Var>asList(),
           WaitMode.TASK_DISPATCH, false, false, TaskMode.CONTROL);
     }
     
@@ -702,7 +702,7 @@ public class ASTWalker {
       // If its a reference, wrap a wait() around the loop call
       backend.startWaitStatement(
           fc.getFunctionName() + "-foreach-refwait" + loopNum,
-          Arrays.asList(arrayVar), null,
+          Arrays.asList(arrayVar),
           WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
 
       outsideLoopContext = new LocalContext(context);
@@ -717,7 +717,7 @@ public class ASTWalker {
     // Block on array
     backend.startWaitStatement(
         fc.getFunctionName() + "-foreach-wait" + loopNum,
-        Arrays.asList(realArray), null,
+        Arrays.asList(realArray),
         WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
     
     loop.setupLoopBodyContext(outsideLoopContext, false);
@@ -730,7 +730,7 @@ public class ASTWalker {
     if (!loop.isSyncLoop()) {
       backend.startWaitStatement(
           fc.getFunctionName() + "-foreach-spawn" + loopNum,
-          Arrays.<Var>asList(), null,
+          Arrays.<Var>asList(),
           WaitMode.TASK_DISPATCH, false, false, TaskMode.CONTROL);
     }
     // If the user's code expects a loop count var, need to create it here
@@ -1496,8 +1496,7 @@ public class ASTWalker {
 
 
   private void defineBuiltinFunction(Context context, SwiftAST tree)
-  throws UserException
-  {
+  throws UserException {
     final int REQUIRED_CHILDREN = 5;
     assert(tree.getChildCount() >= REQUIRED_CHILDREN);
     String function  = tree.child(0).getText();
@@ -1548,6 +1547,12 @@ public class ASTWalker {
                                 inlineTcl != null);
     }
     
+    // TODO: assume for now that all builtins are targetable
+    boolean isTargetable = true;
+    context.setFunctionProperty(function, FnProp.TARGETABLE);
+
+    TaskMode taskMode = Builtins.getTaskMode(function);
+    
     context.defineFunction(function, ft);
     if (impl != null) {
       context.setFunctionProperty(function, FnProp.BUILTIN);
@@ -1558,10 +1563,15 @@ public class ASTWalker {
         		"inline TCL for function " + function);
       }
       // generate composite functino wrapping inline tcl
-      context.setFunctionProperty(function, FnProp.COMPOSITE);
+      context.setFunctionProperty(function, FnProp.WRAPPED_BUILTIN);
       context.setFunctionProperty(function, FnProp.SYNC);
+      boolean isParallel = context.hasFunctionProp(function, FnProp.PARALLEL);
+      if (isParallel && taskMode != TaskMode.WORKER) {
+        throw new UserException(context,
+                        "Parallel tasks must execute on workers");
+      }
       generateWrapperFunction(context, function, ft, fdecl.getOutVars(),
-                    fdecl.getInVars(), Builtins.getTaskMode(function));
+                    fdecl.getInVars(), taskMode, isParallel, isTargetable);
     }
   }
 
@@ -1577,7 +1587,12 @@ public class ASTWalker {
   private void generateWrapperFunction(Context global,
            String function, FunctionType ft,
            List<Var> outArgs, List<Var> inArgs,
-           TaskMode mode) throws UserException {
+           TaskMode mode, boolean isParallel, boolean isTargetable) throws UserException {
+    if (isParallel) {
+      //TODO: figure out what output types are valid
+      throw new STCRuntimeError("Don't support wrapping parallel functions yet");
+    }
+    
     for (Var in: inArgs) {
       if (Types.isScalarFuture(in.type())) {
         // OK
@@ -1599,8 +1614,9 @@ public class ASTWalker {
                + " for function " + function);
       }
     }
-    backend.generateWrappedBuiltin(function, ft, outArgs, inArgs, mode);
-;  }
+    backend.generateWrappedBuiltin(function, ft, outArgs, inArgs, mode,
+                                   isParallel, isTargetable);
+  }
 
 
   private TclOpTemplate handleInlineTcl(Context context, String function,
@@ -1702,6 +1718,8 @@ public class ASTWalker {
       Builtins.addCopy(function);
     } else if (annotation.equals(Annotations.FN_MINMAX)) {
       Builtins.addMinMax(function);
+    } else if (annotation.equals(Annotations.FN_PAR)) {
+      context.setFunctionProperty(function, FnProp.PARALLEL);
     } else {
       throw new UserException(context, "Undefined annotation for functions: "
           + annotation + " for function " + function);
@@ -1919,7 +1937,7 @@ public class ASTWalker {
     String waitName = context.getFunctionContext().constructName("app-leaf");
     // do deep wait for array args
     backend.startWaitStatement(waitName, waitVars,
-        null, WaitMode.TASK_DISPATCH, false, true, TaskMode.WORKER);
+        WaitMode.TASK_DISPATCH, false, true, TaskMode.WORKER);
     // On worker, just execute the required command directly
     Pair<List<Arg>, Redirects<Arg>> retrieved = retrieveAppArgs(context,
                                           args, redirFutures, fileNames);

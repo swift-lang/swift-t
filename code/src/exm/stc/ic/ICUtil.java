@@ -30,6 +30,8 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
+import exm.stc.common.lang.TaskProp.TaskPropKey;
+import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CleanupAction;
@@ -172,6 +174,19 @@ public class ICUtil {
       sb.append(" => ");
       sb.append(map.get(key));
       sb.append('\n');
+    }
+  }
+
+  public static String prettyPrintProps(TaskProps props) {
+    StringBuilder result = new StringBuilder();
+    prettyPrintProps(result, props);
+    return result.toString();
+  }
+  
+  public static void prettyPrintProps(StringBuilder sb, TaskProps props) {
+    for (Entry<TaskPropKey, Arg> e: props.entrySet()) {
+      sb.append(" " + e.getKey().toString().toLowerCase() +
+                "=" + e.getValue().toString());
     }
   }
 

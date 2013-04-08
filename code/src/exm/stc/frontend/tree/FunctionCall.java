@@ -24,6 +24,7 @@ import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedFunctionException;
+import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.frontend.Context;
@@ -61,22 +62,18 @@ public class FunctionCall {
   }
 
   private static TaskPropKey getPropKey(SwiftAST tag) {
-    TaskPropKey propKey;
-    switch (tag.getType()) {
-      case ExMParser.PAR:
-        propKey = TaskPropKey.PARALLELISM;
-        break;
-      case ExMParser.PRIORITY:
-        propKey = TaskPropKey.PRIORITY;
-        break;
-      case ExMParser.TARGET:
-        propKey = TaskPropKey.TARGET;
-        break;
-      default:
-        throw new STCRuntimeError("Unknown tag: " + 
-                              LogHelper.tokName(tag.getType()));
+    assert(tag.getType() == ExMParser.ID);
+    String annotName = tag.getText();
+    if (annotName.equals(Annotations.FNCALL_PAR)) {
+      return  TaskPropKey.PARALLELISM;
+    } else if (annotName.equals(Annotations.FNCALL_PRIO)) {
+      return  TaskPropKey.PRIORITY;
+    } else if (annotName.equals(Annotations.FNCALL_TARGET)) {
+      return TaskPropKey.TARGET;
+    } else {
+      throw new STCRuntimeError("Invalid annotation for function call: " + 
+                              annotName);
     }
-    return propKey;
   }
 
   public static FunctionCall fromAST(Context context, SwiftAST tree,

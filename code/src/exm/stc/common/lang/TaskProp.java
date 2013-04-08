@@ -35,6 +35,42 @@ public class TaskProp {
     public TaskProps clone() {
       return (TaskProps)super.clone();
     }
+
+    /**
+     * Get value.  If key not present or null, return default
+     * @param target
+     * @return
+     */
+    public Arg getWithDefault(TaskPropKey key) {
+      Arg val = this.get(key);
+      if (val != null) {
+        return val;
+      }
+      
+      // Return default
+      switch (key) {
+        case TARGET:
+          return Location.ANY_LOCATION;
+        default:
+          throw new STCRuntimeError("Unknown default value for "
+              + key);
+      }
+    }
+
+    /**
+     * Make copy with only specified keys
+     * @param priority
+     * @return
+     */
+    public TaskProps filter(TaskPropKey... keys) {
+      TaskProps res = new TaskProps();
+      for (TaskPropKey key: keys) {
+        if (this.containsKey(key)) {
+          res.put(key, this.get(key));
+        }
+      }
+      return res;
+    }
   }
   
   /**

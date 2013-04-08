@@ -312,7 +312,11 @@ public abstract class Context {
   abstract public Var createFilenameAliasVariable(String name);
   
   public static enum FnProp {
-    APP, COMPOSITE, BUILTIN, SYNC;
+    APP, COMPOSITE,
+    BUILTIN, SYNC,
+    WRAPPED_BUILTIN,
+    PARALLEL, /** if this is a parallel task */
+    TARGETABLE /** if this is targetable */;
   }
   
   /**

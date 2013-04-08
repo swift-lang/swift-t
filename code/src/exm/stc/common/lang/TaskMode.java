@@ -57,5 +57,8 @@ public enum TaskMode {
       throw new STCRuntimeError("Cannot spawn task with mode " + this +
           " from context " + context);
     }
+  }
+  public boolean isLocal() {
+    return this == LOCAL || this == SYNC || this == LOCAL_CONTROL;
   } 
 }

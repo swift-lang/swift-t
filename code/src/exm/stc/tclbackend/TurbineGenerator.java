@@ -82,6 +82,7 @@ import exm.stc.tclbackend.tree.Proc;
 import exm.stc.tclbackend.tree.Sequence;
 import exm.stc.tclbackend.tree.SetVariable;
 import exm.stc.tclbackend.tree.Switch;
+import exm.stc.tclbackend.tree.TclTarget;
 import exm.stc.tclbackend.tree.TclExpr;
 import exm.stc.tclbackend.tree.TclList;
 import exm.stc.tclbackend.tree.TclString;
@@ -867,7 +868,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     // Properties can be null
     Arg priority = props.get(TaskPropKey.PRIORITY);
-    Target target = Target.fromArg(props.get(TaskPropKey.TARGET));
+    TclTarget target = TclTarget.fromArg(props.get(TaskPropKey.TARGET));
     Expression parExpr = TclUtil.argToExpr(props.get(TaskPropKey.PARALLELISM),
                                            true);
 
@@ -947,7 +948,7 @@ public class TurbineGenerator implements CompilerBackend {
   private RuleProps buildRuleProps(TaskProps props) {
     Expression priority = TclUtil.argToExpr(
                     props.get(TaskPropKey.PRIORITY), true);
-    Target target = Target.fromArg(props.get(TaskPropKey.PRIORITY));
+    TclTarget target = TclTarget.fromArg(props.get(TaskPropKey.PRIORITY));
     Expression parallelism = TclUtil.argToExpr(
                       props.get(TaskPropKey.PARALLELISM), true);
     RuleProps ruleProps = new RuleProps(target, parallelism, priority);
@@ -1514,13 +1515,9 @@ public class TurbineGenerator implements CompilerBackend {
 
     @Override
     public void startWaitStatement(String procName, List<Var> waitVars,
-        List<Var> passIn, Arg priority,
-        boolean recursive, TaskMode target) {
+        List<Var> passIn, boolean recursive, TaskMode target,
+        TaskProps props) {
       logger.trace("startWaitStatement()...");
-      TaskProps props = new TaskProps();
-      if (priority != null) {
-        props.put(TaskPropKey.PRIORITY, priority);
-      }
       startAsync(procName, waitVars, passIn, recursive, target, props);
     }
 

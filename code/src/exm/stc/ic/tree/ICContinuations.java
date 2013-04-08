@@ -36,6 +36,8 @@ import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.TaskProp.TaskPropKey;
+import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.Pair;
@@ -177,6 +179,13 @@ public class ICContinuations {
     public abstract boolean isNoop();
 
     public abstract boolean isAsync();
+    
+    /** @return true if continuation is async and a single task is spawned from
+     *    current context */
+    public boolean spawnsSingleTask() {
+      assert(!isAsync());
+      return false;
+    }
 
     /** Return list of variables that the continuations waits for
      * before executing
@@ -601,6 +610,13 @@ public class ICContinuations {
     public boolean isAsync() {
       return true;
     }
+    
+    @Override
+    public boolean spawnsSingleTask() {
+      // Only one task is spawned right away.  That tasks spawns further
+      // for subsequent iterations
+      return true;
+    }
 
     public void setLoopBreak(LoopBreak loopBreak) {
       this.loopBreak = loopBreak;
@@ -961,7 +977,6 @@ public class ICContinuations {
     private final String procName;
     private final Block block;
     private final List<WaitVar> waitVars;
-    private Arg priority;
     
     /* True if this wait was compiler-generated so can be removed if needed
      * We can only remove an explicit wait if we know that the variables are
@@ -969,24 +984,27 @@ public class ICContinuations {
     private WaitMode mode;
     private final boolean recursive;
     private TaskMode target;
+    
+    private final TaskProps props;
 
     public WaitStatement(String procName, List<WaitVar> waitVars,
                     List<PassedVar> passedVars,
                     List<Var> keepOpenVars,
-                    Arg priority,
-                    WaitMode mode, boolean recursive, TaskMode target) {
+                    WaitMode mode, boolean recursive, TaskMode target,
+                    TaskProps props) {
       this(procName, new Block(BlockType.WAIT_BLOCK, null),
                         waitVars,
                         passedVars,
                         keepOpenVars,
-                        priority, mode, recursive, target);
+                         mode, recursive, target, props);
       assert(this.block.getParentCont() != null);
     }
 
     private WaitStatement(String procName, Block block,
         List<WaitVar> waitVars, List<PassedVar> passedVars,
-        List<Var> keepOpenVars, Arg priority,
-        WaitMode mode, boolean recursive, TaskMode target) {
+        List<Var> keepOpenVars,
+        WaitMode mode, boolean recursive, TaskMode target,
+        TaskProps props) {
       super(passedVars, keepOpenVars);
       assert(waitVars != null);
       assert(passedVars != null);
@@ -998,17 +1016,17 @@ public class ICContinuations {
       this.block.setParent(this);
       this.waitVars = new ArrayList<WaitVar>(waitVars);
       WaitVar.removeDuplicates(this.waitVars);
-      this.priority = priority;
       this.mode = mode;
       this.recursive = recursive;
       this.target = target;
+      this.props = props.clone();
     }
 
     @Override
     public WaitStatement clone() {
       return new WaitStatement(procName, this.block.clone(),
-          waitVars, passedVars, keepOpenVars, priority,
-          mode, recursive, target);
+          waitVars, passedVars, keepOpenVars,
+          mode, recursive, target, props.clone());
     }
 
     public Block getBlock() {
@@ -1018,7 +1036,7 @@ public class ICContinuations {
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       gen.startWaitStatement(procName, WaitVar.asVarList(waitVars), 
-          PassedVar.extractVars(passedVars), priority, recursive, target);
+          PassedVar.extractVars(passedVars), recursive, target, props);
       this.block.generate(logger, gen, info);
       gen.endWaitStatement();
     }
@@ -1033,9 +1051,7 @@ public class ICContinuations {
       ICUtil.prettyPrintVarInfo(sb, passedVars, keepOpenVars);
       sb.append(" <" + mode + ", " + target + ", " +
                 (recursive ? "RECURSIVE" : "NONRECURSIVE") + ">");
-      if (priority != null) {
-        sb.append(" @priority=" + priority);
-      }
+      ICUtil.prettyPrintProps(sb, props);
       sb.append(" {\n");
       block.prettyPrint(sb, newIndent);
       sb.append(currentIndent + "}\n");
@@ -1063,7 +1079,7 @@ public class ICContinuations {
         WaitVar.removeDuplicates(waitVars);
       }
       
-      priority = ICUtil.replaceArg(renames, priority, true);
+      ICUtil.replaceArgValsInMap(renames, props);
     }
     
     public WaitMode getMode() {
@@ -1094,10 +1110,23 @@ public class ICContinuations {
     public boolean isAsync() {
       return true;
     }
-
+    
+    @Override
+    public boolean spawnsSingleTask() {
+      return !isParallel();
+    }
+    
+    public boolean isParallel() {
+      Arg parallelism = props.get(TaskPropKey.PARALLELISM);
+      return parallelism != null && !(parallelism.isIntVal() &&
+                                      parallelism.getIntLit() > 1);
+    }
+    
     @Override
     public boolean isLoop() {
-      return false;
+      // The parallel annotation means that the contents of block can execute
+      // multiple times => basically a loop
+      return isParallel();
     }
 
     @Override
@@ -1109,8 +1138,11 @@ public class ICContinuations {
           res.add(wv.var);
         }
       }
-      if (priority != null && priority.isVar()) {
-        res.add(priority.getVar());
+      for (Arg arg: props.values()) {
+        assert(arg != null);
+        if (arg.isVar()) {
+          res.add(arg.getVar());
+        }
       }
       return res; // can later eliminate waitVars, etc
     }

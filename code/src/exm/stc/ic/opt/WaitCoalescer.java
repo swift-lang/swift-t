@@ -35,6 +35,8 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.TaskProp.TaskPropKey;
+import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
@@ -396,10 +398,15 @@ public class WaitCoalescer implements OptimizerPass {
         waitMode = WaitMode.TASK_DISPATCH;
       }
       
+      TaskProps props = inst.getTaskProps();
+      if (props == null) {
+        props = new TaskProps();
+      }
+      
       WaitStatement wait = new WaitStatement(
               fn.getName() + "-" + inst.shortOpName(),
               WaitVar.makeList(waitVars, false), PassedVar.NONE, Var.NONE,
-              inst.getPriority(), waitMode, req.recursiveClose, req.mode);
+              waitMode, req.recursiveClose, req.mode, props);
       block.addContinuation(wait);
       
       List<Instruction> instBuffer = new ArrayList<Instruction>();
@@ -408,6 +415,11 @@ public class WaitCoalescer implements OptimizerPass {
       List<Arg> inVals = OptUtil.fetchValuesOf(wait.getBlock(),
                                             instBuffer, req.in);
       
+      if (props.containsKey(TaskPropKey.PARALLELISM)) {
+        //TODO: different output var conventions
+        throw new STCRuntimeError("Don't know how to explode parallel " +
+        		"instruction yet: " + inst);
+      }
       // Create local instruction, copy out outputs
       List<Var> localOutputs = OptUtil.declareLocalOpOutputVars(
                                           wait.getBlock(), req.out);
@@ -546,15 +558,17 @@ public class WaitCoalescer implements OptimizerPass {
         // Create a new wait statement waiting on the intersection
         // of the above.
         WaitStatement newWait = new WaitStatement(fn.getName() + "-optmerged",
-            mergedWaitVars, PassedVar.NONE, Var.NONE, null,
-            WaitMode.WAIT_ONLY, allRecursive, TaskMode.LOCAL);
+            mergedWaitVars, PassedVar.NONE, Var.NONE,
+            WaitMode.WAIT_ONLY, allRecursive, TaskMode.LOCAL,
+            new TaskProps());
 
         // Put the old waits under the new one, remove redundant wait vars
         // Exception: don't eliminate task dispatch waits
         for (WaitStatement wait: waits) {
           wait.removeWaitVars(mergedWaitVars, allRecursive, retainExplicit);
           if (wait.getWaitVars().isEmpty() &&
-              wait.getMode() != WaitMode.TASK_DISPATCH) {
+              wait.getMode() != WaitMode.TASK_DISPATCH &&
+              !wait.isParallel()) {
             newWait.getBlock().insertInline(wait.getBlock());
           } else {
             wait.setParent(newWait.getBlock());
@@ -761,10 +775,13 @@ public class WaitCoalescer implements OptimizerPass {
    */
   private static ExecContext canPushDownInto(Continuation c,
                                                  ExecContext curr) {
-    /* Can push down into wait statements unless they are being dispatched
-     *  to worker node */
+    /* Can push down into wait statements unless they have wrong
+     * execution context or are parallel */
     if (c.getType() == ContinuationType.WAIT_STATEMENT) {
       WaitStatement w = (WaitStatement)c;
+      if (w.isParallel()) {
+        return null;
+      }
       if (w.getMode() == WaitMode.TASK_DISPATCH) {
         if (w.getTarget() == TaskMode.LOCAL_CONTROL ||
             w.getTarget() == TaskMode.LOCAL) {

@@ -55,6 +55,7 @@ public class Var implements Comparable<Var> {
   public static final String LOOP_INDEX_VAR_PREFIX = "__i";
   public static final String GLOBAL_CONST_VAR_PREFIX = "__c";
   public static final String DEREF_COMPILER_VAR_PREFIX = "__dr_";
+  public static final String COMPILER_ARG_PREFIX = "__ca_";
   public static final String LOOP_COND_PREFIX = "__xcond";
   public static final String OUTER_VAR_PREFIX = "__outer";
   

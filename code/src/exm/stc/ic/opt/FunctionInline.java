@@ -485,8 +485,8 @@ public class FunctionInline implements OptimizerPass {
       
       WaitStatement wait = new WaitStatement(
           contextFunction.getName() + "-" + toInline.getName() + "-call",
-          blockingInputs, PassedVar.NONE, Var.NONE, fnCall.getPriority(),
-          waitMode, false, fnCall.getMode());
+          blockingInputs, PassedVar.NONE, Var.NONE,
+          waitMode, false, fnCall.getMode(), fnCall.getTaskProps());
       block.addContinuation(wait);
       insertBlock = wait.getBlock();
       insertPos = insertBlock.statementIterator();

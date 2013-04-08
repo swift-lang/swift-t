@@ -986,8 +986,8 @@ public class ForwardDataflow implements OptimizerPass {
       WaitStatement wait = new WaitStatement(
           fn.getName() + "-" + inst.shortOpName(),
           WaitVar.NONE, PassedVar.NONE, Var.NONE,
-          inst.getPriority(),
-          WaitMode.TASK_DISPATCH, false, req.mode);
+          WaitMode.TASK_DISPATCH, false, req.mode,
+          inst.getTaskProps());
       insertContext = wait.getBlock();
       block.addContinuation(wait);
       // Insert at start of block

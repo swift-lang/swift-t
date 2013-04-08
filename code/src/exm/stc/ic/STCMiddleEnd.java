@@ -37,6 +37,7 @@ import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -196,15 +197,30 @@ public class STCMiddleEnd {
     blockStack.pop();
   }
 
+  /**
+   * With default task props
+   * @param procName
+   * @param waitVars
+   * @param mode
+   * @param explicit
+   * @param recursive
+   * @param target
+   */
+  public void startWaitStatement(String procName, List<Var> waitVars,
+      WaitMode mode, boolean explicit, boolean recursive, TaskMode target) {
+    startWaitStatement(procName, waitVars, mode, explicit, recursive, target, 
+                        new TaskProps());
+  }
 
   public void startWaitStatement(String procName, List<Var> waitVars,
-      Arg priority, WaitMode mode, boolean explicit, boolean recursive, TaskMode target) {
+      WaitMode mode, boolean explicit, boolean recursive, TaskMode target,
+      TaskProps props) {
     assert(currFunction != null);
-    assert(priority == null || priority.isImmediateInt());
+    props.assertInternalTypesValid();
     
     List<WaitVar> waitVars2 = WaitVar.makeList(waitVars, explicit);
     WaitStatement wait = new WaitStatement(procName, waitVars2,
-          PassedVar.NONE, Var.NONE, priority, mode, recursive, target);
+          PassedVar.NONE, Var.NONE, mode, recursive, target, props);
     currBlock().addContinuation(wait);
     blockStack.push(wait.getBlock());
   }
@@ -349,17 +365,12 @@ public class STCMiddleEnd {
             inputs, outputs));
   }
   
-  public void functionCall(String function, List<Var> inputs,
-      List<Var> outputs, List<Boolean> blockOn, TaskMode mode, 
-      TaskProps props) {
+  public void functionCall(String function, List<Arg> inputs,
+      List<Var> outputs, TaskMode mode, TaskProps props) {
     props.assertInternalTypesValid();
-    if (blockOn != null) {
-      throw new STCRuntimeError("Swift IC generator doesn't support " +
-      " blocking on function inputs");
-    }
     currBlock().addInstruction(
           FunctionCall.createFunctionCall(
-              function, Var.asArgList(inputs), outputs, mode, props));
+              function, inputs, outputs, mode, props));
   }
 
   public void runExternal(String cmd, List<Arg> args, List<Arg> inFiles,
@@ -796,12 +807,44 @@ public class STCMiddleEnd {
   }
 
   public void generateWrappedBuiltin(String function, FunctionType ft,
-      List<Var> outArgs, List<Var> inArgs, TaskMode mode) throws UserException {
-    Function fn = new Function(function, inArgs, outArgs, TaskMode.SYNC);
+      List<Var> outArgs, List<Var> userInArgs, TaskMode mode,
+      boolean isParallel, boolean isTargetable)
+          throws UserException {
+    
+    // TODO: add arg for parallelism and target
+    // Need to pass in additional args for e.g. parallelism
+    List<Var> realInArgs = new ArrayList<Var>();
+    realInArgs.addAll(userInArgs);
+    
+
+    TaskProps props = new TaskProps();
+    if (isParallel) {
+      // declare compiler arg for parallelism
+      Var par = new Var(Types.V_INT, Var.DEREF_COMPILER_VAR_PREFIX + "par",
+                        VarStorage.LOCAL, DefType.INARG);
+      realInArgs.add(par);
+      props.put(TaskPropKey.PARALLELISM, par.asArg());
+
+      // TODO: handle passing in parallelism
+      // TODO: handle different output var setting convention
+      throw new STCRuntimeError("Don't support generating wrappers " +
+          "for parallel functions yet");
+    }
+    
+    if (isTargetable) {
+      // declare compiler arg for target
+      Var target = new Var(Types.V_INT, Var.DEREF_COMPILER_VAR_PREFIX + "target",
+          VarStorage.LOCAL, DefType.INARG);
+      realInArgs.add(target);
+      props.put(TaskPropKey.TARGET, target.asArg());
+    }
+    
+    Function fn = new Function(function, realInArgs, outArgs, TaskMode.SYNC);
     this.program.addFunction(fn);
     
     WaitMode waitMode;
-    if (mode == TaskMode.LOCAL || mode == TaskMode.SYNC) {
+    if ((mode == TaskMode.LOCAL || mode == TaskMode.SYNC) &&
+        !isParallel) {
       // Cases where function can execute on any node
       waitMode = WaitMode.WAIT_ONLY;
     } else {
@@ -810,22 +853,23 @@ public class STCMiddleEnd {
     }
     
     
-    List<WaitVar> waitVars = new ArrayList<WaitVar>(inArgs.size());
-    for (Var in: inArgs) {
+    List<WaitVar> waitVars = new ArrayList<WaitVar>(userInArgs.size());
+    for (Var in: userInArgs) {
       if (!Types.isScalarUpdateable(in.type())) {
         waitVars.add(new WaitVar(in, false));
       }
     }
+    
     WaitStatement wait = new WaitStatement(function + "-argwait",
-                  waitVars, PassedVar.NONE, Var.NONE, null,
-                  waitMode, true, mode);
+                  waitVars, PassedVar.NONE, Var.NONE,
+                  waitMode, true, mode, props);
     
     fn.mainBlock().addContinuation(wait);
     Block block = wait.getBlock();
     
     List<Instruction> instBuffer = new ArrayList<Instruction>();
     List<Arg> inVals = new ArrayList<Arg>();
-    for (Var inArg: inArgs) {
+    for (Var inArg: userInArgs) {
       if (Types.isArray(inArg.type())) {
         inVals.add(inArg.asArg());
       } else {

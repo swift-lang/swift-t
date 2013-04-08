@@ -212,6 +212,10 @@ public class ForeachLoops {
       return !arrayClosed || splitDegree > 0;
     }
     
+    @Override
+    public boolean spawnsSingleTask() {
+      return false;
+    }
 
     @Override
     public void setPassedVars(Collection<PassedVar> passedVars) {
@@ -444,6 +448,11 @@ public class ForeachLoops {
     @Override
     public boolean isAsync() {
       return splitDegree > 0;
+    }
+    
+    @Override
+    public boolean spawnsSingleTask() {
+      return false;
     }
 
     @Override

@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -44,7 +43,6 @@ import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.TaskMode;
-import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
@@ -362,7 +360,7 @@ public class ICInstructions {
      * @return priority of task spawned, if any.  null if no spawn or
      *      default priority
      */
-    public Arg getPriority() {
+    public TaskProps getTaskProps() {
       return null;
     }
     
@@ -2640,7 +2638,7 @@ public class ICInstructions {
       }
       result += " ]";
       
-      result += prettyPrintProps(props);
+      result += ICUtil.prettyPrintProps(props);
       
       result += " closed=" + closedInputs;
       return result;
@@ -2727,9 +2725,9 @@ public class ICInstructions {
     }
 
     @Override
-    public Arg getPriority() {
+    public TaskProps getTaskProps() {
       // Return null if not found
-      return props.get(TaskPropKey.PRIORITY);
+      return props;
     }
 
     @Override
@@ -3594,7 +3592,7 @@ public class ICInstructions {
         res += " " + input.toString();
       }
       if (props != null) {
-        res += prettyPrintProps(props);
+        res += ICUtil.prettyPrintProps(props);
       }
       return res;
     }
@@ -4359,16 +4357,6 @@ public class ICInstructions {
     return result;
   }
   
-
-
-  private static String prettyPrintProps(TaskProps props) {
-    StringBuilder result = new StringBuilder();
-    for (Entry<TaskPropKey, Arg> e: props.entrySet()) {
-      result.append(" " + e.getKey().toString().toLowerCase() +
-                "=" + e.getValue().toString());
-    }
-    return result.toString();
-  }
 }
 
 

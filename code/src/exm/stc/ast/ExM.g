@@ -602,7 +602,7 @@ function_call_name:
     ;
 
 call_annotation:
-		ATSIGN ann=(PRIORITY | PAR | TARGET) ASSIGN e=expr 
+		ATSIGN ann=ID ASSIGN e=expr 
 			-> ^( CALL_ANNOTATION $ann $e )
 	;
 
@@ -753,9 +753,6 @@ GLOBAL: 'global';
 CONST: 'const';
 TYPE:  'type';
 TYPEDEF:  'typedef';
-PRIORITY: 'prio';
-PAR: 'par';
-TARGET: 'target';
 
 STDIN: 'stdin';
 STDOUT: 'stdout';

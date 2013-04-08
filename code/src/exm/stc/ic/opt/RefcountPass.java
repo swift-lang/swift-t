@@ -164,17 +164,6 @@ public class RefcountPass implements OptimizerPass {
   }
 
   /**
-   * Is a continuation that spawns a single task initially
-   * 
-   * @param cont
-   * @return
-   */
-  private boolean isSingleSpawnCont(Continuation cont) {
-    return cont.isAsync()
-        && (cont.getType() == ContinuationType.WAIT_STATEMENT || cont.getType() == ContinuationType.LOOP);
-  }
-
-  /**
    * 
    * @param logger
    * @param fn
@@ -1023,7 +1012,7 @@ public class RefcountPass implements OptimizerPass {
   private void addIncrementsForCont(Continuation cont,
       Counters<Var> readIncrements, Counters<Var> writeIncrements) {
     // TODO: handle other than wait
-    if (cont.isAsync() && isSingleSpawnCont(cont)) {
+    if (cont.spawnsSingleTask()) {
       long incr = 1; // TODO: different for other continuations
       for (Var keepOpen : cont.getKeepOpenVars()) {
         if (RefCounting.hasWriteRefCount(keepOpen)) {
@@ -1061,7 +1050,7 @@ public class RefcountPass implements OptimizerPass {
       Counters<Var> readIncrements, Counters<Var> writeIncrements) {
     // Get passed in variables decremented inside block
     // Loops don't need this as they decrement refs at loop_break instruction
-    if ((isSingleSpawnCont(cont) || isAsyncForeachLoop(cont))
+    if ((cont.spawnsSingleTask() || isAsyncForeachLoop(cont))
         && cont.getType() != ContinuationType.LOOP) {
       // TODO: handle foreach loops
       long amount = 1;

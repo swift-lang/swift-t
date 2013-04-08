@@ -33,6 +33,7 @@ import exm.stc.tclbackend.tree.LiteralInt;
 import exm.stc.tclbackend.tree.Sequence;
 import exm.stc.tclbackend.tree.SetVariable;
 import exm.stc.tclbackend.tree.Square;
+import exm.stc.tclbackend.tree.TclTarget;
 import exm.stc.tclbackend.tree.TclList;
 import exm.stc.tclbackend.tree.TclString;
 import exm.stc.tclbackend.tree.TclTree;
@@ -456,7 +457,7 @@ class Turbine {
     assert(props.target != null);
 
     if (inputs.isEmpty()) {
-      if (type != TaskMode.LOCAL && type != TaskMode.LOCAL_CONTROL) {
+      if (!type.isLocal()) {
         return spawnTask(action, type, execCx, props);
       }
     }
@@ -480,19 +481,19 @@ class Turbine {
     return res;
   }
 
-  public static List<Expression> ruleKeywordArgs(Target target,
+  public static List<Expression> ruleKeywordArgs(TclTarget target,
       Expression parallelism) {
     return ruleKeywordArgs(null, target, parallelism);
   }
   
   public static List<Expression> ruleKeywordArgs(
-      TaskMode type, Target target, Expression parallelism) {
+      TaskMode type, TclTarget target, Expression parallelism) {
     ArrayList<Expression> res = new ArrayList<Expression>();
     ruleAddKeywordArgs(type, target, parallelism, res);
     return res;
   }
   
-  private static void ruleAddKeywordArgs(TaskMode type, Target target,
+  private static void ruleAddKeywordArgs(TaskMode type, TclTarget target,
       Expression parallelism, List<Expression> args) {
     if (!target.rankAny) {
       args.add(RULE_KEYWORD_TARGET);
@@ -614,13 +615,13 @@ class Turbine {
 
   public static class RuleProps {
     public static final RuleProps DEFAULT =
-          new RuleProps(Target.RANK_ANY, null, null);
+          new RuleProps(TclTarget.RANK_ANY, null, null);
     
-    public final Target target;
+    public final TclTarget target;
     public final Expression parallelism; // can be null
     public final Expression priority; // can be null
 
-    public RuleProps(Target target, Expression parallelism, Expression priority) {
+    public RuleProps(TclTarget target, Expression parallelism, Expression priority) {
       assert(target != null);
       this.target = target;
       this.parallelism = parallelism;

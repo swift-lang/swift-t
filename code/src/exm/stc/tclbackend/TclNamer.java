@@ -37,6 +37,7 @@ public class TclNamer {
   private static final String TCL_LOOP_INDEX_VAR_PREFIX = "lv:";
   private static final String TCL_OUTER_VAR_PREFIX = "outer:";
   private static final String TCL_FILENAME_OF_PREFIX = "filename:";
+  private static final String TCL_COMPILER_ARG_PREFIX = "ca:";
   
   public static String prefixVar(String varname) {
     // Replace the internal names of temporary variables with
@@ -73,6 +74,9 @@ public class TclNamer {
     } else if (varname.startsWith(Var.FILENAME_OF_PREFIX)) {
       return TCL_FILENAME_OF_PREFIX + 
           varname.substring(Var.FILENAME_OF_PREFIX.length());
+    } else if (varname.startsWith(Var.COMPILER_ARG_PREFIX)){
+      return TCL_COMPILER_ARG_PREFIX + 
+          varname.substring(Var.COMPILER_ARG_PREFIX.length());
     } else {
       return TCL_USER_VAR_PREFIX + varname;
     }

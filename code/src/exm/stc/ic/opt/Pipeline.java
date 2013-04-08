@@ -82,7 +82,16 @@ public class Pipeline extends FunctionOptimizerPass {
     for (Continuation cont: curr.getContinuations()) {
       if (cont.getType() == ContinuationType.WAIT_STATEMENT) {
         WaitStatement w = (WaitStatement)cont;
-        if (w.getWaitVars().isEmpty() && w.childContext(cx) == cx) {
+        boolean compatible = true;
+        if (!w.getWaitVars().isEmpty()) {
+          compatible = false;
+        } else if (w.childContext(cx) != cx) {
+          compatible = false;
+        } else if (w.isParallel()) {
+          compatible = false;
+        }
+        
+        if (compatible) {
           candidates.add(w);
         }
       }

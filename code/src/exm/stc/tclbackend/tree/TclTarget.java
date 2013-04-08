@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
-package exm.stc.tclbackend;
+package exm.stc.tclbackend.tree;
 
 import exm.stc.common.lang.Arg;
-import exm.stc.tclbackend.tree.Expression;
-import exm.stc.tclbackend.tree.LiteralInt;
-import exm.stc.tclbackend.tree.Value;
+import exm.stc.common.lang.Location;
+import exm.stc.tclbackend.TclUtil;
 
 /**
  * The target of a Turbine rule 
@@ -26,15 +25,15 @@ import exm.stc.tclbackend.tree.Value;
  * The target is either ADLB_RANK_ANY or an non-negative integer rank
  * @author wozniak
  * */
-public class Target {
-  public static final Target RANK_ANY = new Target(true, new LiteralInt(-1));
+public class TclTarget {
+  public static final TclTarget RANK_ANY = new TclTarget(true, new LiteralInt(-1));
   
   public final boolean rankAny;
   public final Expression targetRank;
   
   public static final Value ADLB_RANK_ANY = new Value("adlb::RANK_ANY");
   
-  public Target(boolean rankAny, Expression targetRank) {
+  public TclTarget(boolean rankAny, Expression targetRank) {
     this.rankAny = rankAny;
     this.targetRank = targetRank;
   }
@@ -42,8 +41,8 @@ public class Target {
   /**
      Constructor: Targets task to specific target rank
    */
-  public static Target rank(Expression targetRank) {
-    return new Target(false, targetRank);
+  public static TclTarget rank(Expression targetRank) {
+    return new TclTarget(false, targetRank);
   }
   
   public Expression toTcl() {
@@ -54,11 +53,13 @@ public class Target {
     }
   }
 
-  public static Target fromArg(Arg arg) {
+  public static TclTarget fromArg(Arg arg) {
     if (arg == null) {
       return RANK_ANY;
+    } else if (arg.equals(Location.ANY_LOCATION)) {
+      return RANK_ANY;
     } else {
-      return Target.rank(TclUtil.argToExpr(arg));
+      return TclTarget.rank(TclUtil.argToExpr(arg));
     }
   }
 }
