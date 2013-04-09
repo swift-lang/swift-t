@@ -20,8 +20,9 @@
 # Variables that may be set in the environment:
 # PROJECT, QUEUE, TURBINE_OUTPUT_ROOT, TURBINE_MACHINE, TURBINE_PPN
 
-# On the BG/P, usually set TURBINE_PPN=4  (default 4)
-# On the BG/Q, usually set TURBINE_PPN=16 (default 4)
+# On the BG/P: usually set TURBINE_PPN=4  (default 4)
+# On the BG/Q: usually set TURBINE_PPN=16 (default 4)
+# On Eureka:   usually set TURBINE_PPN=8  (default 4)
 
 # Runs job in TURBINE_OUTPUT
 # Pipes output and error to TURBINE_OUTPUT/output.txt
@@ -36,7 +37,7 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 source ${TURBINE_HOME}/scripts/helpers.zsh
 
 # Defaults:
-PROCS=0
+export PROCS=0
 WALLTIME=${WALLTIME:-00:15:00}
 TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
 VERBOSE=0
@@ -149,13 +150,18 @@ then
 fi
 
 declare SCRIPT_NAME
+declare MODE
 
-# Default: works on BG/P
-MODE="--mode vn"
-if [[ ${TURBINE_BG} == "Q" ]]
+if [[ ${MODE} == "cluster" ]]
+then
+  MODE_ARG=""
+elif [[ ${MODE} == "BGP" ]]
+  then
+  MODE_ARG="--mode vn"
+elif [[ ${TURBINE_BG} == "Q" ]]
 then
   # On the BG/Q, we need TURBINE_PPN: default 1
-  MODE="--proccount ${PROCS} --mode c${TURBINE_PPN}"
+  MODE_ARG="--proccount ${PROCS} --mode c${TURBINE_PPN}"
 fi
 
 # Round NODES up for extra processes
@@ -163,18 +169,36 @@ NODES=$(( PROCS/TURBINE_PPN ))
 (( PROCS % TURBINE_PPN )) && (( NODES++ ))
 declare NODES
 
-set -x
-
 # Launch it
-qsub -n ${NODES}             \
-     -t ${WALLTIME}          \
-     -q ${QUEUE}             \
-     --cwd ${TURBINE_OUTPUT} \
-     --env "${ENV}"          \
-     ${=MODE}                 \
-     -o ${TURBINE_OUTPUT}/output.txt \
-     -e ${TURBINE_OUTPUT}/output.txt \
-      ${TCLSH} ${SCRIPT_NAME} ${ARGS} | read JOB_ID
+if [[ ${MODE} == "cluster" ]]
+then
+  export COMMAND="${SCRIPT_NAME} ${ARGS}"
+  export PPN=${TURBINE_PPN}
+  m4 < ${TURBINE_HOME}/scripts/submit/cobalt/turbine-cobalt.sh.m4 > \
+       ${TURBINE_OUTPUT}/turbine-cobalt.sh
+  exitcode
+  chmod u+x ${TURBINE_OUTPUT}/turbine-cobalt.sh
+  exitcode
+  qsub -n ${NODES}             \
+       -t ${WALLTIME}          \
+       -q ${QUEUE}             \
+       --cwd ${TURBINE_OUTPUT} \
+       --env "${ENV}"          \
+       ${=MODE_ARG}            \
+       -o ${TURBINE_OUTPUT}/output.txt \
+       -e ${TURBINE_OUTPUT}/output.txt \
+       ${TURBINE_OUTPUT}/turbine-cobalt.sh | read JOB_ID
+else
+  qsub -n ${NODES}             \
+       -t ${WALLTIME}          \
+       -q ${QUEUE}             \
+       --cwd ${TURBINE_OUTPUT} \
+       --env "${ENV}"          \
+       ${=MODE_ARG}            \
+       -o ${TURBINE_OUTPUT}/output.txt \
+       -e ${TURBINE_OUTPUT}/output.txt \
+        ${TCLSH} ${SCRIPT_NAME} ${ARGS} | read JOB_ID
+fi
 
 if [[ ${JOB_ID} == "" ]]
 then
