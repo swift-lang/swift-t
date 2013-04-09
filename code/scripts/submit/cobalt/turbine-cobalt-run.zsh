@@ -82,7 +82,7 @@ then
 fi
 
 SCRIPT=$1
-checkvars QUEUE SCRIPT
+checkvars QUEUE SCRIPT MODE
 
 shift
 ARGS=${*}

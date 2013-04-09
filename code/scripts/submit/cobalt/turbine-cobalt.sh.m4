@@ -49,5 +49,5 @@ echo "TCLLIBPATH:   ${TCLLIBPATH}"
 # Hack for Eureka
 MPI=${HOME}/sfw/mpich-3.0.3-x86_64-mx
 
-${MPI}/bin/mpiexec -n ${PROCS} -ppn ${PPN} ${TCLSH} ${COMMAND}
+${MPI}/bin/mpiexec -l -n ${PROCS} -ppn ${PPN} ${TCLSH} ${COMMAND}
 # Return exit code from mpirun
