@@ -53,8 +53,8 @@ import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
-import exm.stc.common.lang.Types;
 import exm.stc.common.lang.TaskProp.TaskProps;
+import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayInfo;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.PrimType;
@@ -72,6 +72,7 @@ import exm.stc.tclbackend.tree.Comment;
 import exm.stc.tclbackend.tree.DictFor;
 import exm.stc.tclbackend.tree.Expand;
 import exm.stc.tclbackend.tree.Expression;
+import exm.stc.tclbackend.tree.Expression.ExprContext;
 import exm.stc.tclbackend.tree.ForEach;
 import exm.stc.tclbackend.tree.ForLoop;
 import exm.stc.tclbackend.tree.If;
@@ -82,15 +83,14 @@ import exm.stc.tclbackend.tree.Proc;
 import exm.stc.tclbackend.tree.Sequence;
 import exm.stc.tclbackend.tree.SetVariable;
 import exm.stc.tclbackend.tree.Switch;
-import exm.stc.tclbackend.tree.TclTarget;
 import exm.stc.tclbackend.tree.TclExpr;
 import exm.stc.tclbackend.tree.TclList;
 import exm.stc.tclbackend.tree.TclString;
+import exm.stc.tclbackend.tree.TclTarget;
 import exm.stc.tclbackend.tree.TclTree;
 import exm.stc.tclbackend.tree.Text;
 import exm.stc.tclbackend.tree.Token;
 import exm.stc.tclbackend.tree.Value;
-import exm.stc.tclbackend.tree.Expression.ExprContext;
 import exm.stc.ui.ExitCode;
 
 public class TurbineGenerator implements CompilerBackend {
@@ -195,11 +195,12 @@ public class TurbineGenerator implements CompilerBackend {
       tree.add(new Comment(String.format("%-30s: %s", key, Settings.get(key))));
     }
     tree.add(new Text(""));
+
+    addAutoPaths();
+    
     tree.add(new Command("package require turbine", turbineVersion));
     tree.add(new Command("namespace import turbine::*"));
     tree.add(new Text(""));
-
-    addAutoPaths();
     
     Proc globInitProc = new Proc(CONSTINIT_FUNCTION_NAME, usedTclFunctionNames,
                               new ArrayList<String>(), globInit);
