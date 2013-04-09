@@ -126,6 +126,7 @@ TURBINE_LOG=${TURBINE_LOG:-1}
 TURBINE_DEBUG=${TURBINE_DEBUG:-1}
 ADLB_DEBUG=${ADLB_DEBUG:-1}
 TURBINE_PPN=${TURBINE_PPN:-4}
+N=${N:-0}
 
 env+=( TCLLIBPATH="${TCLLIBPATH}"
        TURBINE_ENGINES=${TURBINE_ENGINES}
@@ -137,6 +138,7 @@ env+=( TCLLIBPATH="${TCLLIBPATH}"
        ADLB_DEBUG=${ADLB_DEBUG}
        MPIRUN_LABEL=1
        TURBINE_CACHE_SIZE=0
+       N=${N}
      )
 
 if [[ ${TURBINE_BG} == "Q" ]]
@@ -160,6 +162,8 @@ fi
 NODES=$(( PROCS/TURBINE_PPN ))
 (( PROCS % TURBINE_PPN )) && (( NODES++ ))
 declare NODES
+
+set -x
 
 # Launch it
 qsub -n ${NODES}             \
