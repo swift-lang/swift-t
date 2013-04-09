@@ -85,8 +85,6 @@ typedef struct
 
 MPI_Comm turbine_task_comm = MPI_COMM_NULL;
 
-int turbine_task_rank = -1;
-
 static int bitfield_size(int inputs);
 
 // Check if input closed

@@ -731,7 +731,6 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
     if (code == ADLB_SHUTDOWN)
       break;
     turbine_task_comm = task_comm;
-    MPI_Comm_rank(turbine_task_comm, &turbine_task_rank);
     TCL_CONDITION(code == ADLB_SUCCESS, "Get failed with code %i\n", code);
     assert(work_len <= buffer_size);
     assert(type_recved == work_type);
@@ -776,7 +775,20 @@ static int
 Turbine_TaskRank_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
-  Tcl_Obj* result = Tcl_NewIntObj(turbine_task_rank);
+  int rank;
+  MPI_Comm_rank(turbine_task_comm, &rank);
+  Tcl_Obj* result = Tcl_NewIntObj(rank);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+static int
+Turbine_TaskSize_Cmd(ClientData cdata, Tcl_Interp *interp,
+                     int objc, Tcl_Obj *const objv[])
+{
+  int size;
+  MPI_Comm_size(turbine_task_comm, &size);
+  Tcl_Obj* result = Tcl_NewIntObj(size);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
@@ -869,6 +881,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("cache",       Turbine_Cache_Cmd);
   COMMAND("task_comm",   Turbine_TaskComm_Cmd);
   COMMAND("task_rank",   Turbine_TaskRank_Cmd);
+  COMMAND("task_size",   Turbine_TaskSize_Cmd);
   COMMAND("finalize",    Turbine_Finalize_Cmd);
   COMMAND("debug_on",    Turbine_Debug_On_Cmd);
   COMMAND("debug",       Turbine_Debug_Cmd);

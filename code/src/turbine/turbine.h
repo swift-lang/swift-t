@@ -49,11 +49,6 @@ typedef long turbine_transform_id;
 */
 extern MPI_Comm turbine_task_comm;
 
-/**
-   For parallel tasks, this is the rank in turbine_task_comm
- */
-extern int turbine_task_rank;
-
 turbine_code turbine_init(int amserver, int rank, int size);
 
 turbine_code turbine_engine_init(void);
