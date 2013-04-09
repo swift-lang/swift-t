@@ -1,7 +1,7 @@
 
 SCRIPTS_SUBMIT_DIR := scripts/submit
 
-include $(SCRIPTS_SUBMIT_DIR)/bgp/module.mk
+include $(SCRIPTS_SUBMIT_DIR)/cobalt/module.mk
 include $(SCRIPTS_SUBMIT_DIR)/cray/module.mk
 include $(SCRIPTS_SUBMIT_DIR)/ec2/module.mk
 include $(SCRIPTS_SUBMIT_DIR)/pbs/module.mk
