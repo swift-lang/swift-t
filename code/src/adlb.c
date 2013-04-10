@@ -235,14 +235,12 @@ ADLBP_Put(void* payload, int length, int target, int answer,
   /** Server to contact */
   int to_server = -1;
   if (target == ADLB_RANK_ANY)
-  {
     to_server = xlb_my_server;
-  }
+  else if (target < xlb_comm_size)
+    to_server = xlb_map_to_server(target);
   else
-  { 
     CHECK_MSG(target >= 0 && target < xlb_comm_size,
         "ADLB_Put(): invalid target rank: %i", target);
-  }
 
   struct packed_put p;
   p.type = type;
@@ -255,12 +253,10 @@ ADLBP_Put(void* payload, int length, int target, int answer,
 
   IRECV(&payload_dest, 1, MPI_INT, to_server, ADLB_TAG_RESPONSE_PUT);
   SEND(&p, sizeof(p), MPI_BYTE, to_server, ADLB_TAG_PUT);
-
   WAIT(&request, &status);
   if (payload_dest == ADLB_REJECTED)
   {
-    printf("ADLB_Put(): REJECTED\n");
-//    to_server_rank = next_server++;
+ //    to_server_rank = next_server++;
 //    if (next_server >= (master_server_rank+num_servers))
 //      next_server = master_server_rank;
     return payload_dest;
