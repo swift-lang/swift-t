@@ -281,7 +281,7 @@ adlb_data_code data_permanent(adlb_datum_id id) {
                   will probably want to decrement each of them.
                   Else, NULL.
 
-   Allocates fresh memory in result unless notify_count==0
+   Allocates fresh memory in notify_ranks unless notify_count==0
    Caller must free result
  */
 adlb_data_code
@@ -546,7 +546,7 @@ data_container_reference_str(adlb_datum_id container_id,
 }
 
 /**
-   Allocates fresh memory in result unless notify_count==0
+   Allocates fresh memory in notify_ranks unless notify_count==0
    Caller must free result
  */
 adlb_data_code

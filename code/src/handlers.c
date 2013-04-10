@@ -66,7 +66,7 @@ static int handler_count = 0;
 /** Copy of this processes' MPI rank */
 static int mpi_rank;
 
-static void register_handler_function(adlb_tag tag, handler h);
+static void register_handler(adlb_tag tag, handler h);
 
 static adlb_code handle_sync(int caller);
 static adlb_code handle_put(int caller);
@@ -105,10 +105,6 @@ static adlb_code put_targeted(int type, int putter, int priority,
 
 static adlb_code find_req_bytes(int *bytes, int caller, adlb_tag tag);
 
-#define register_handler(tag, handler) \
-{ register_handler_function(tag, handler); \
-  xlb_add_tag_name(tag, #tag); }
-
 void
 xlb_handlers_init(void)
 {
@@ -145,7 +141,7 @@ xlb_handlers_init(void)
 }
 
 static void
-register_handler_function(adlb_tag tag, handler h)
+register_handler(adlb_tag tag, handler h)
 {
   handlers[tag] = h;
   handler_count++;
