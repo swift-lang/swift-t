@@ -61,8 +61,6 @@ argv_accept(string... keys)
   "if { <<seconds>> > 0 } { after [ expr {round(<<seconds>> * 1000)} ] }"
 ];
 
-type location int;
-
 @pure
 (location rank) hostmap_one(string name)
 "turbine" "0.0.2"
