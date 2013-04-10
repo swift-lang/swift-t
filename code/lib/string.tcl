@@ -24,7 +24,7 @@ namespace eval turbine {
     # usage: strcat <result> <args>*
     proc strcat { result inputs } {
         rule $inputs "strcat_body $result $inputs" \
-            name "strcat-$result" 
+            name "strcat-$result"
     }
 
     # usage: strcat_body <result> <args>*
@@ -45,7 +45,7 @@ namespace eval turbine {
         set i [ lindex $inputs 1 ]
         set n [ lindex $inputs 2 ]
         rule $inputs "substring_body $result $s $i $n" \
-            name "substring-$s-$i-$n" 
+            name "substring-$s-$i-$n"
     }
 
     proc substring_body { result s i n } {
@@ -71,19 +71,16 @@ namespace eval turbine {
         # Unpack inputs
         set inputs [ lindex $inputs 0 ]
 
-        show result
-        show inputs
-
         set s [ lindex $inputs 0 ]
         if { [ llength $inputs ] == 2 } {
             set delimiter [ lindex $inputs 1 ]
             rule [ list $s $delimiter ] \
                 "split_body $result $s $delimiter" \
-                name "split-$result" 
+                name "split-$result"
         } elseif { [ llength $inputs ] == 1 } {
             # Use default delimiter: " "
             set delimiter 0
-            rule $s "split_body $result $s 0" name "split-$result" 
+            rule $s "split_body $result $s 0" name "split-$result"
         } else {
             error "split requires 1 or 2 arguments"
         }
@@ -113,7 +110,7 @@ namespace eval turbine {
 
     proc sprintf { result inputs } {
         rule $inputs "sprintf_body $result $inputs" \
-            name "sprintf-$result" 
+            name "sprintf-$result"
     }
     proc sprintf_body { result args } {
         set L [ list ]
@@ -131,7 +128,7 @@ namespace eval turbine {
 	set end_index   [ lindex $inputs 3 ]
 	rule $inputs \
 	    "find_body $result $str $subs $start_index $end_index" \
-            name "find-$result" 
+            name "find-$result"
     }
 
     proc find_body { result str subs start_index end_index } {
@@ -170,7 +167,7 @@ namespace eval turbine {
 	set end_index   [ lindex $inputs 3 ]
 	rule $inputs \
             "count_body $result $str $subs $start_index $end_index" \
-            name "count-$str-$subs-$start_index-$end_index" 
+            name "count-$str-$subs-$start_index-$end_index"
     }
 
     proc count_body { result str subs start_index end_index } {
@@ -211,7 +208,7 @@ namespace eval turbine {
     proc isint { result inputs } {
 	set str [ lindex $inputs 0 ]
 	rule $inputs "isint_body $result $str" \
-            name "isint-$result" 
+            name "isint-$result"
     }
 
     proc isint_body { result str } {
@@ -233,7 +230,7 @@ namespace eval turbine {
 	rule $inputs \
             [ list replace_body $result $str \
                   $substring $rep_string $start_index ] \
-            name "replace-$str-$substring-$rep_string-$start_index" 
+            name "replace-$str-$substring-$rep_string-$start_index"
     }
 
     proc replace_body { result str substring rep_string start_index } {
@@ -267,7 +264,7 @@ namespace eval turbine {
 	rule $inputs \
             [ list replace_all_body $result $str \
                   $substring $rep_string $start_index ] \
-            name "replace_all-$str-$substring-$rep_string" 
+            name "replace_all-$str-$substring-$rep_string"
     }
 
     proc replace_all_body { result str substring rep_string start_index } {
