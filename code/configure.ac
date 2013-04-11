@@ -102,7 +102,12 @@ AC_MSG_RESULT([using MPE: ${ADLB_ENABLE_MPE}])
 #    LDFLAGS='-mpilog -L /dir' where dir contains libmpe.so
 if [[ "${ADLB_ENABLE_MPE}" == "yes" ]]
 then
-    AC_CHECK_FILE(${withval}/libmpe.so)
+    FOUND=0
+    AC_CHECK_FILE(${withval}/lib/libmpe.so, [FOUND=1])
+    if [[ ${FOUND} == 0 ]]
+    then
+        AC_MSG_ERROR([Could not find MPE library!])
+    fi
 fi
 
 AC_SUBST(ADLB_ENABLE_MPE)
