@@ -46,6 +46,7 @@ declare_pair(svr, get);
 declare_pair(svr, sync);
 declare_pair(svr, steal);
 declare_pair(svr, create);
+declare_pair(svr, multicreate);
 declare_pair(svr, subscribe);
 declare_pair(svr, store);
 declare_pair(svr, retrieve);
@@ -115,6 +116,7 @@ xlb_mpe_setup()
   make_pair(svr, get);
 
   make_pair(svr, create);
+  make_pair(svr, multicreate);
   make_pair(svr, subscribe);
   make_pair(svr, store);
   make_pair(svr, retrieve);

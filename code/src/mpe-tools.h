@@ -58,6 +58,7 @@ extern_declare_pair(svr, steal);
 extern_declare_pair(svr, shutdown);
 // Data module:
 extern_declare_pair(svr, create);
+extern_declare_pair(svr, multicreate);
 extern_declare_pair(svr, subscribe);
 extern_declare_pair(svr, store);
 extern_declare_pair(svr, retrieve);
