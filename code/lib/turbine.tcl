@@ -341,7 +341,7 @@ namespace eval turbine {
 
         debug "turbine::rule..."
         if { $is_engine } {
-            c::rule $inputs $action {*}$args
+            rule $inputs $action {*}$args
         } elseif { [ llength $inputs ] == 0 } {
             release -1 \
                 [ opt_get $args type   ] $action                     \

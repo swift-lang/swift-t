@@ -97,6 +97,9 @@ static inline void mark_input_closed(transform *T, int i);
 */
 static bool initialized = false;
 
+/** Has turbine_engine_init() been called? */
+static bool engine_initialized = false;
+
 /**
    Waiting transforms
    Map from transform id to transform
@@ -268,6 +271,9 @@ setup_cache()
 turbine_code
 turbine_engine_init()
 {
+  if (!initialized)
+    return TURBINE_ERROR_UNINITIALIZED;
+  
   bool result;
   result = table_lp_init(&transforms_waiting, 1024*1024);
   if (!result)
@@ -284,7 +290,8 @@ turbine_engine_init()
   result = table_lp_init(&td_subscribed, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
-
+    
+  engine_initialized = true;
   return TURBINE_SUCCESS;
 }
 
@@ -422,6 +429,8 @@ turbine_rule(const char* name,
              int parallelism,
              turbine_transform_id* id)
 {
+  if (!engine_initialized)
+    return TURBINE_ERROR_UNINITIALIZED;
   transform* T = NULL;
   turbine_code code = transform_create(name, inputs, input_list,
                                        action_type, action,
@@ -721,8 +730,14 @@ turbine_code_tostring(char* output, turbine_code code)
     case TURBINE_ERROR_TYPE:
       result = sprintf(output, "TURBINE_ERROR_TYPE");
       break;
+    case TURBINE_ERROR_STORAGE:
+      result = sprintf(output, "TURBINE_ERROR_STORAGE");
+      break;
+    case TURBINE_ERROR_UNINITIALIZED:
+      result = sprintf(output, "TURBINE_ERROR_UNINITIALIZED");
+      break;
     default:
-      sprintf(output, "<could not convert code to string>");
+      sprintf(output, "<could not convert code %d to string>", code);
       break;
   }
   return result;

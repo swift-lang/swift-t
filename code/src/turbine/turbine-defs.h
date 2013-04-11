@@ -68,6 +68,8 @@ typedef enum
   TURBINE_ERROR_TYPE = ADLB_DATA_ERROR_TYPE,
   /** Turbine function given insufficient output storage */
   TURBINE_ERROR_STORAGE,
+  /** Called function when Turbine uninitialized */
+  TURBINE_ERROR_UNINITIALIZED,
   /** Unknown error */
   TURBINE_ERROR_UNKNOWN = ADLB_DATA_ERROR_UNKNOWN,
 } turbine_code;
