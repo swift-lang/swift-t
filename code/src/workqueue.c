@@ -79,9 +79,6 @@ static struct rbtree* parallel_work;
 // Track number of parallel tasks
 long workqueue_parallel_task_count;
 
-/** Create new work unit for given payload size */
-static inline xlb_work_unit *work_unit_alloc(size_t payload_length);
-
 void
 workqueue_init(int work_types)
 {
@@ -224,7 +221,7 @@ workqueue_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
   TRACE_START;
   bool result = false;
   struct rbtree* T = &parallel_work[work_type];
-  TRACE("type: %i size: %i", work_type, rbtree_size(T));
+  TRACE("type: %i tree_size: %i", work_type, rbtree_size(T));
   // Common case is empty: want to exit asap
   if (rbtree_size(T) != 0)
   {

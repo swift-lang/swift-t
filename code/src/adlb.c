@@ -278,6 +278,8 @@ ADLBP_Get(int type_requested, void* payload, int* length,
   MPI_Status status;
   MPI_Request request;
 
+  TRACE_START;
+
   CHECK_MSG(xlb_type_index(type_requested) != -1,
                 "ADLB_Get(): Bad work type: %i\n", type_requested);
 

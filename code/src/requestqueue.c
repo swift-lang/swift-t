@@ -131,13 +131,16 @@ requestqueue_matches_type(int type)
 bool
 requestqueue_parallel_workers(int type, int parallelism, int* ranks)
 {
-  TRACE_START;
   bool result = false;
   struct list2* L = &type_requests[type];
   int count = list2_size(L);
+
+  TRACE("requestqueue_parallel_workers(type=%i x%i) count=%i ...",
+        type, parallelism, count);
+
   if (count >= parallelism)
   {
-    TRACE("requestqueue_parallel_workers(): found something!");
+    TRACE("\t found: count: %i needed: %i", count, parallelism);
     result = true;
     for (int i = 0; i < parallelism; i++)
     {
