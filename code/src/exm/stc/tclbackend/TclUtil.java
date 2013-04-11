@@ -86,7 +86,6 @@ public class TclUtil {
     
     Value val = new Value(TclNamer.prefixVar(v.name()));
     if (representationIsTclList(v.type())) {
-      System.err.println("HERE: " + v);
       val.setTreatAsList(true);
     }
     val.setSupportsStringList(supportsStringList(v.type()));
