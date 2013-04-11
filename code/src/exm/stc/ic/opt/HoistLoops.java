@@ -381,7 +381,14 @@ public class HoistLoops implements OptimizerPass {
       
       if (in.isVar()) {
         Var inVar = in.getVar();
+        // Check where input is assigned
         maxHoist = Math.min(maxHoist, maxInputHoist(logger, state, inVar));
+        
+        // Check if we can pass input between tasks, if not conservatively
+        // don't hoist
+        if (!Semantics.canPassToChildTask(inVar.type())) {
+          return false;
+        }
       }
     }
     for (Var readOutput: inst.getReadOutputs()) {
@@ -389,6 +396,12 @@ public class HoistLoops implements OptimizerPass {
     }
     
     for (Var out: inst.getOutputs()) {
+      /* Check if we can pass vars between tasks, if not conservatively
+       * don't hoist, because hoisting may put producer and consumer of data
+      // in different tasks */
+      if (!Semantics.canPassToChildTask(out.type())) {
+        return false;
+      }
       if (trackDeclares(out)) {
         int declareDepth = state.declareMap.getDepth(out);
         if (logger.isTraceEnabled())
