@@ -24,6 +24,7 @@ import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
@@ -85,7 +86,8 @@ public class HoistLoops implements OptimizerPass {
       
       // Set up map for top block of function
       HoistTracking mainBlockState =
-          global.makeChild(f.mainBlock(), 0, 0);
+          global.makeChild(f.mainBlock(), ExecContext.CONTROL,
+                           0, 0);
       
       // Inputs are written elsewhere
       for (Var in: f.getInputList()) {
@@ -179,7 +181,7 @@ public class HoistLoops implements OptimizerPass {
      * Create root for whole program
      */
     public HoistTracking() {
-      this(null, null, 0, 0,
+      this(null, null, ExecContext.CONTROL, 0, 0,
            new HierarchicalMap<Var, Block>(),
            new HierarchicalMap<Var, Block>(),
            new HierarchicalMap<Var, Block>(),
@@ -195,8 +197,8 @@ public class HoistLoops implements OptimizerPass {
     public HoistTracking makeChild(Continuation c, Block childBlock) {
       int childHoist = canHoistThrough(c) ? maxHoist + 1 : 0;
       int childLoopHoist = c.isLoop() ? 0 : maxLoopHoist + 1;
-      HoistTracking childState = makeChild(childBlock, childHoist,
-                                            childLoopHoist);
+      HoistTracking childState = makeChild(childBlock,
+          c.childContext(execCx), childHoist, childLoopHoist);
       // make sure loop iteration variables, etc are tracked
       for (Var v: c.constructDefinedVars()) {
         childState.write(v, false);
@@ -213,7 +215,8 @@ public class HoistLoops implements OptimizerPass {
     }
 
     private HoistTracking(HoistTracking parent,
-        Block block, int maxHoist, int maxLoopHoist,
+        Block block, ExecContext execCx, 
+        int maxHoist, int maxLoopHoist,
         HierarchicalMap<Var, Block> writeMap,
         HierarchicalMap<Var, Block> piecewiseWriteMap,
         HierarchicalMap<Var, Block> declareMap,
@@ -221,6 +224,7 @@ public class HoistLoops implements OptimizerPass {
       super();
       this.parent = parent;
       this.block = block;
+      this.execCx = execCx;
       this.maxHoist = maxHoist;
       this.maxLoopHoist = maxLoopHoist;
       this.writeMap = writeMap;
@@ -234,6 +238,9 @@ public class HoistLoops implements OptimizerPass {
     
     /** Current block */
     public final Block block;
+    
+    /** Execution context */
+    public final ExecContext execCx;
     
     /** Track where instruction should be inserted by child */
     public ListIterator<Statement> currPos = null;
@@ -275,8 +282,9 @@ public class HoistLoops implements OptimizerPass {
     }
     
     public HoistTracking makeChild(Block childBlock,
+                       ExecContext newExecCx,
                        int maxHoist, int maxLoopHoist) {
-      return new HoistTracking(this, childBlock,
+      return new HoistTracking(this, childBlock, execCx,
                               maxHoist, maxLoopHoist,
                               writeMap.makeChildMap(),
                               piecewiseWriteMap.makeChildMap(),
