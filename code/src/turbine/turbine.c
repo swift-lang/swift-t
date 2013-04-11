@@ -98,7 +98,7 @@ static inline void mark_input_closed(transform *T, int i);
 static bool initialized = false;
 
 /** Has turbine_engine_init() been called? */
-static bool engine_initialized = false;
+bool engine_initialized = false;
 
 /**
    Waiting transforms

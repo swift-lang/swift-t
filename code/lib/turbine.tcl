@@ -18,7 +18,9 @@
 package provide turbine [ turbine::c::version ]
 
 namespace eval turbine {
-    namespace export init start finalize rule spawn_rule
+    namespace import ::turbine::c::rule
+
+    namespace export init start finalize spawn_rule rule
 
 
     # Import adlb commands 
@@ -116,16 +118,6 @@ namespace eval turbine {
 	    set is_engine 0
         }
    
-        # Use different implementations of rule depending on context
-        if { $is_engine } {
-            # on engine, can add rule directly
-            namespace import ::turbine::c::rule
-        } else {
-            # on others, may need to send rule to engine:
-            # add alias to spawn_rule
-            interp alias {} rule {} spawn_rule
-        }
-
         log "MODE: $mode"
         if { [ adlb::rank ] == 0 } {
             log "ENGINES: $n_engines"

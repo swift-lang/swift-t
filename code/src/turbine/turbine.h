@@ -53,6 +53,11 @@ turbine_code turbine_init(int amserver, int rank, int size);
 
 turbine_code turbine_engine_init(void);
 
+extern bool engine_initialized;
+static inline bool turbine_is_engine(void) {
+  return engine_initialized;
+}
+
 void turbine_version(version* output);
 
 turbine_code turbine_rule(const char* name,

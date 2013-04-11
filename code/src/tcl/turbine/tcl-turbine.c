@@ -92,6 +92,8 @@ turbine_check_failed(Tcl_Interp* interp, turbine_code code,
 
 static void set_namespace_constants(Tcl_Interp* interp);
 
+static Tcl_Obj *SPAWN_RULE_CMD;
+
 static int
 Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
@@ -115,6 +117,9 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
 
   set_namespace_constants(interp);
+
+  // Name of Tcl command
+  SPAWN_RULE_CMD = Tcl_NewStringObj("::turbine::spawn_rule", -1);
 
   log_init();
 
@@ -220,6 +225,18 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
   TCL_CONDITION(objc >= BASIC_ARGS,
                 "turbine::c::rule requires at least %i args!",
                 BASIC_ARGS);
+
+  /* Intercept calls to rule not on engine and send to engine.
+     Need to call back into turbine::spawn_rule with same arguments,
+     which is defined in Tcl
+   */
+  if (!turbine_is_engine())
+  {
+    Tcl_Obj *newObjv[objc];
+    memcpy(newObjv, objv, sizeof(newObjv));
+    newObjv[0] = SPAWN_RULE_CMD;
+    return Tcl_EvalObjv(interp, objc, newObjv, 0);
+  }
 
   int rc;
   turbine_transform_id id;
