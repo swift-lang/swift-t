@@ -18,7 +18,6 @@
 package provide turbine [ turbine::c::version ]
 
 namespace eval turbine {
-    namespace import c::rule
     namespace export init start finalize rule spawn_rule
 
 
@@ -108,12 +107,23 @@ namespace eval turbine {
         if { [ adlb::rank ] < $engines } {
 	    set mode ENGINE
 	    set is_engine 1
+
         } elseif { [ adlb::amserver ] == 1 } {
             set mode SERVER
 	    set is_engine 0
         } else {
 	    set mode WORKER
 	    set is_engine 0
+        }
+   
+        # Use different implementations of rule depending on context
+        if { $is_engine } {
+            # on engine, can add rule directly
+            namespace import ::turbine::c::rule
+        } else {
+            # on others, may need to send rule to engine:
+            # add alias to spawn_rule
+            interp alias {} rule {} spawn_rule
         }
 
         log "MODE: $mode"
@@ -138,7 +148,7 @@ namespace eval turbine {
             }
         }
     }
-
+    
     proc start { args } {
 
         set rules [ lindex $args 0 ]
@@ -352,4 +362,5 @@ namespace eval turbine {
                 [ get_priority ] 1
         }
     }
+
 }
