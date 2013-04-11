@@ -86,10 +86,14 @@ import exm.stc.ic.tree.ICTree.StatementType;
  */
 public class ForwardDataflow implements OptimizerPass {
   
-  private boolean keepExplicitWaits;
+  /** 
+   * True if this pass is allowed to reorder instructions.
+   * If false, guarantees that future passes won't try reordering.
+   */
+  private boolean reorderingAllowed;
 
-  public ForwardDataflow(boolean keepExplicitWaits) {
-    this.keepExplicitWaits = keepExplicitWaits;
+  public ForwardDataflow(boolean reorderingAllowed) {
+    this.reorderingAllowed = reorderingAllowed;
   }
   
   @Override
@@ -106,7 +110,7 @@ public class ForwardDataflow implements OptimizerPass {
    * State keep tracks of which variables are closed and which computed
    * expressions are available at different points in the IC
    */
-  private static class State implements CVMap {
+  private class State implements CVMap {
     private final Logger logger;
     
     private final State parent; 
@@ -234,6 +238,9 @@ public class ForwardDataflow implements OptimizerPass {
       if (valLoc.isVar()) {
         varContents.put(valLoc.getVar(), res.value());
         if (outClosed) {
+          if (logger.isTraceEnabled()) {
+            logger.trace("Output " + valLoc + " was closed");
+          }
           close(valLoc.getVar(), false);
         }
       }
@@ -309,6 +316,8 @@ public class ForwardDataflow implements OptimizerPass {
      * @param var
      */
     public void close(Var var, boolean recursive) {
+      if (logger.isTraceEnabled())
+        logger.trace(var + " is closed");
       // Do DFS on the dependency graph to find all dependencies
       // that are now enabled
       Stack<Var> work = new Stack<Var>();
@@ -319,6 +328,10 @@ public class ForwardDataflow implements OptimizerPass {
         closed.add(v);
         CopyOnWriteSmallSet<Var> deps = dependsOn.remove(v);
         if (deps != null) {
+          assert(!reorderingAllowed) : "Tracking transitive dependencies " +
+            		                       "unsafe until reordering disabled";
+          if (logger.isTraceEnabled())
+            logger.trace(deps + " are closed because of " + v);
           work.addAll(deps);
         }
       }
@@ -681,7 +694,7 @@ public class ForwardDataflow implements OptimizerPass {
       c.renameVars(replaceAll, RenameMode.REFERENCE, false);
       
       Block toInline = c.tryInline(cv.getClosed(), cv.getRecursivelyClosed(),
-                                   keepExplicitWaits);
+                                   reorderingAllowed);
       if (toInline != null) {
         c.inlineInto(block, toInline);
         i--; // compensate for removal of continuation
@@ -727,6 +740,8 @@ public class ForwardDataflow implements OptimizerPass {
       HierarchicalMap<Var, Arg> replaceInputs,
       HierarchicalMap<Var, Arg> replaceAll) throws InvalidOptionException,
       InvalidWriteException {
+    logger.trace("Recursing on continuation " + cont.getType());
+    
     State contCV = cv.makeChild(cont.inheritsParentVars());
     // additional variables may be close once we're inside continuation
     List<BlockingVar> contClosedVars = cont.blockingVars(true);
@@ -891,7 +906,7 @@ public class ForwardDataflow implements OptimizerPass {
     return false;
   }
 
-  private static void handleInstruction(Logger logger, Function f,
+  private void handleInstruction(Logger logger, Function f,
       ExecContext execCx, Block block, ListIterator<Statement> stmts,
       Instruction inst, State cv, HierarchicalMap<Var, Arg> replaceInputs,
       HierarchicalMap<Var, Arg> replaceAll) {
@@ -936,17 +951,24 @@ public class ForwardDataflow implements OptimizerPass {
       return;
     }
   
-    // Add dependencies
-    List<Var> in = inst.getBlockingInputs();
-    if (in != null) {
-      for (Var ov: inst.getOutputs()) {
-        if (!Types.isScalarValue(ov.type())) {
-          cv.setDependencies(ov, in);
+    /* Track transitive dependencies of variables.  Future passes depend
+     * on explicit dependencies and may not correctly handling transitive
+     * deps. This is only safe once future reordering is disallowed. */ 
+    if (!reorderingAllowed) {
+      List<Var> in = inst.getBlockingInputs();
+      if (in != null) {
+        for (Var ov: inst.getOutputs()) {
+          if (!Types.isScalarValue(ov.type())) {
+            cv.setDependencies(ov, in);
+          }
         }
       }
     }
     
     for (Var out: inst.getClosedOutputs()) {
+      if (logger.isTraceEnabled()) {
+        logger.trace("Output " + out.name() + " is closed");
+      }
       cv.close(out, false);
     }
   }

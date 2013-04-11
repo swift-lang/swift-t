@@ -123,4 +123,9 @@ public class CopyOnWriteSmallSet<T> implements Set<T> {
   public <S> S[] toArray(S[] a) {
     return data.toArray(a);
   }
+  
+  @Override
+  public String toString() {
+    return data.toString();
+  }
 }
