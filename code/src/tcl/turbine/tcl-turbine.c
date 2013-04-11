@@ -23,8 +23,11 @@
 #include "config.h"
 
 #include <assert.h>
+#include <ctype.h>
+#include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 // strnlen() is a GNU extension: Need _GNU_SOURCE
 #define _GNU_SOURCE
@@ -836,6 +839,71 @@ Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 #endif
 
+/*
+  Convert decimal string to int
+ */
+static int
+Turbine_StrInt_Cmd(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  int len;
+  const char *str = Tcl_GetStringFromObj(objv[1], &len);
+  
+  errno = 0; // Reset so we can detect errors
+  char *end_str;
+
+  Tcl_WideInt val;
+
+#ifdef TCL_WIDE_INT_IS_LONG
+  val = strtol(str, &end_str, 10);
+#else
+  val = strtoll(str, &end_str, 10);
+#endif
+
+  // Check for errors
+  if (errno != 0)
+  {
+    int my_errno = errno;
+    errno = 0; // reset errno
+    if (my_errno == ERANGE)
+    {
+      TCL_RETURN_ERROR("Integer representation of '%s' is out of range of "
+          "%u bit integers", str, sizeof(Tcl_WideInt) * 8);
+    }
+    else if (my_errno == EINVAL)
+    {
+      TCL_RETURN_ERROR("'%s' cannot be interpreted as an integer ", str);
+    }
+    else
+    {
+      TCL_RETURN_ERROR("Internal error: unexpected my_errno %d when "
+                       "converting '%s' to integer", my_errno, str);
+    }
+  }
+  int consumed = end_str - str;
+  if (consumed == 0)
+  {
+    // Handle case where no input consumed
+    TCL_RETURN_ERROR("'%s' cannot be interpreted as an integer ", str);
+  }
+
+  if (consumed < len)
+  {
+    // Didn't consume all string.  Make sure only whitespace at end
+    for (int i = consumed; i < len; i++)
+    {
+      if (!isspace(str[i]))
+      {
+        TCL_RETURN_ERROR("Invalid trailing characters in '%s'", str);
+      }
+    }
+  }
+
+  Tcl_SetObjResult(interp, Tcl_NewWideIntObj(val));
+  return TCL_OK;
+}
+
 /**
    Shorten command creation lines.
    The "turbine::c::" namespace is prepended
@@ -885,6 +953,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("finalize",    Turbine_Finalize_Cmd);
   COMMAND("debug_on",    Turbine_Debug_On_Cmd);
   COMMAND("debug",       Turbine_Debug_Cmd);
+  COMMAND("check_str_int", Turbine_StrInt_Cmd);
 
   Tcl_Namespace* turbine =
     Tcl_FindNamespace(interp, "::turbine::c", NULL, 0);

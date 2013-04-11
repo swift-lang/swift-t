@@ -33,6 +33,9 @@ namespace eval turbine {
     namespace import c::new c::typeof
     namespace import c::insert c::log
 
+    # Use C version of check_str_int
+    namespace import c::check_str_int
+
     # User function
     # This name conflicts with a Tcl built-in - it cannot be exported
     proc trace { signal inputs } {
@@ -274,18 +277,6 @@ namespace eval turbine {
     proc toint_body { input result } {
       set t [ retrieve_decr $input ]
       store_integer $result [ check_str_int $t ]
-    }
-
-    # Must trim leading zeros - Tcl treats leading zeros as octal
-    proc check_str_int { input } {
-        if { [ regexp "^0*$" $input  ] } {
-            return 0
-        }
-        if { ! [ string is integer -strict \
-                     [ string trimleft $input "0" ] ] } {
-            error "could not convert string '${input}' to integer"
-        }
-        return $input
     }
 
     proc fromint { result input } {
