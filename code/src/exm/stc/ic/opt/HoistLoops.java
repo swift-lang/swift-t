@@ -447,12 +447,46 @@ public class HoistLoops implements OptimizerPass {
     if (logger.isTraceEnabled())
       logger.trace("maxHoist was " + maxHoist);
     
-    if (maxHoist > 0) {
-      doHoist(logger, inst, maxHoist, state);
-      return true;
-    } else {
+    if (maxHoist <= 0) {
       return false;
     }
+    
+    int maxCorrectContext = maxHoistContext(logger, state, maxHoist);
+    
+    maxHoist = Math.max(maxHoist, maxCorrectContext);
+    
+    if (maxHoist <= 0) {
+      return false;
+    }
+
+    doHoist(logger, inst, maxHoist, state);
+    return true;
+  }
+
+  /**
+   * Find maximum hoist with same execution context as state
+   * TODO: could be less conservative if we know which instructions can
+   * run in which context
+   * @param logger
+   * @param state
+   * @param maxHoist
+   * @return
+   */
+  public int maxHoistContext(Logger logger, HoistTracking state, int maxHoist) {
+    int maxCorrectContext = 0;
+    HoistTracking curr = state;
+    for (int hoist = 1; hoist <= maxHoist; hoist++) {
+      curr = state.parent;
+      if (curr.execCx == state.execCx) {
+        maxCorrectContext = hoist;
+      }
+    }
+    
+    if (logger.isTraceEnabled()) {
+      logger.trace("Hoist limited to " + maxCorrectContext + " by exec context "
+          + state.execCx);
+    }
+    return maxCorrectContext;
   }
 
   private int maxInputHoist(Logger logger, HoistTracking state,
