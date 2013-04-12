@@ -132,7 +132,7 @@ workqueue_add(int type, int putter, int priority, int answer,
     // Untargeted parallel task
     TRACE("workqueue_add(): parallel task: %p", wu);
     struct rbtree* T = &parallel_work[type];
-    TRACE("rbtree_add: wu: %p key: %li\n", -priority);
+    TRACE("rbtree_add: wu: %p key: %i\n", wu, -priority);
     rbtree_add(T, -priority, wu);
     workqueue_parallel_task_count++;
   }
@@ -238,7 +238,7 @@ workqueue_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
       result = true;
       // Release memory:
       rbtree_remove_node(T, data.node);
-      TRACE("rbtree_remove: wu: %p node: %p...", wu);
+      TRACE("rbtree_remove: wu: %p node: %p...", wu, data.node);
       free(data.node);
       workqueue_parallel_task_count--;
     }
