@@ -437,12 +437,16 @@ check_parallel_tasks(int type)
   TRACE_START;
   xlb_work_unit* wu;
   int* ranks = NULL;
+  adlb_code result = ADLB_SUCCESS;
 
   TRACE("\t tasks: %i\n", workqueue_parallel_tasks());
 
   // Fast path for no parallel task case
   if (workqueue_parallel_tasks() == 0)
-    return ADLB_NOTHING;
+  {
+    result = ADLB_NOTHING;
+    goto end;
+  }
 
   bool found = workqueue_pop_parallel(&wu, &ranks, type);
   if (! found)
@@ -456,8 +460,9 @@ check_parallel_tasks(int type)
   }
   free(ranks);
   work_unit_free(wu);
+  end:
   TRACE_END;
-  return ADLB_SUCCESS;
+  return result;
 }
 
 /**
