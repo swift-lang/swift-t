@@ -57,6 +57,29 @@ test_cb(struct rbtree_node* node, void* user_data)
   return false;
 }
 
+static bool
+empty_cb(struct rbtree_node* node, void* user_data)
+{
+  printf("node: %li %s\n", node->key, (char*) node->data);
+  return true;
+}
+
+static bool
+test_empty_iterator()
+{
+
+  struct rbtree T;
+  rbtree_init(&T);
+  bool found = rbtree_iterator(&T, empty_cb, NULL);
+  if (found)
+  {
+    fprintf(stderr, "Found something in empty tree\n");
+    exit(1);
+  }
+  fprintf(stderr, "Empty iterator did nothing\n");
+  return true;
+}
+
 int
 main()
 {
@@ -187,6 +210,8 @@ main()
   rbtree_clear(&T);
 
   printf("SIZE: %i\n", T.size);
+
+  test_empty_iterator();
   printf("DONE\n");
   return 0;
 }
