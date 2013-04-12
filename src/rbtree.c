@@ -273,6 +273,7 @@ rbtree_add(struct rbtree* target, long key, void* data)
 {
   struct rbtree_node* node = create_node(key, data);
   if (node == NULL) return false;
+  DEBUG_RBTREE("rbtree_add: node: %p\n");
 
   rbtree_add_node_impl(target, node);
 
