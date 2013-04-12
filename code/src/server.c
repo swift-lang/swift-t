@@ -213,7 +213,7 @@ ADLB_Server(long max_memory)
 
     code = check_parallel_tasks(0);
     ADLB_CHECK(code);
-    code = check_parallel_tasks(1);
+    // code = check_parallel_tasks(1);
     ADLB_CHECK(code);
 
     check_steal();
