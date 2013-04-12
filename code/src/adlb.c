@@ -300,7 +300,7 @@ ADLBP_Get(int type_requested, void* payload, int* length,
   DEBUG("ADLB_Get(): payload source: %i", g.payload_source);
   RECV(payload, g.length, MPI_BYTE, g.payload_source, ADLB_TAG_WORK);
   mpi_recv_sanity(&status, MPI_BYTE, g.length);
-  TRACE("ADLB_Get(): got: %s", (char*) payload);
+  // TRACE("ADLB_Get(): got: %s", (char*) payload);
 
   if (g.parallelism > 1)
   {
@@ -399,7 +399,7 @@ ADLBP_Create_impl(adlb_datum_id id, adlb_data_type type,
   if (id != ADLB_DATA_ID_NULL) {
     to_server_rank = ADLB_Locate(id);
   } else {
-    to_server_rank = xlb_my_server; 
+    to_server_rank = xlb_my_server;
   }
   struct packed_create_request data = { id, type, props };
 

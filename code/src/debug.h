@@ -70,7 +70,7 @@ void debug_check_environment(void);
 #if ENABLE_LOG_DEBUG && !defined(NDEBUG)
 #define DEBUG(format, args...)              \
   { if (xlb_debug_enabled) {                            \
-         printf("%5.0f ADLB: " format "\n", xlb_wtime(), ## args); \
+         printf("%5.4f ADLB: " format "\n", xlb_wtime(), ## args); \
          fflush(stdout);                    \
        } }
 #else
@@ -80,7 +80,7 @@ void debug_check_environment(void);
 #if ENABLE_LOG_TRACE && !defined(NDEBUG)
 #define TRACE(format, args...)                    \
   { if (xlb_trace_enabled && xlb_debug_enabled) { \
-  printf("ADLB_TRACE: " format "\n", ## args);    \
+      printf("%5.4f ADLB_TRACE: " format "\n", xlb_wtime(), ## args);  \
   fflush(stdout);                                 \
   } }
 #else

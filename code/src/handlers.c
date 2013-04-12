@@ -194,7 +194,7 @@ handle_sync(int caller)
   return rc;
 }
 
-static inline adlb_code check_parallel_tasks(int work_type);
+
 
 static adlb_code put(int type, int putter, int priority, int answer,
                      int target, int length, int parallelism);
@@ -215,8 +215,13 @@ handle_put(int caller)
                p.length, p.parallelism);
   ADLB_CHECK(rc);
 
-  rc = check_parallel_tasks(p.type);
-  ADLB_CHECK(rc);
+  while (true)
+  {
+    rc = check_parallel_tasks(p.type);
+    ADLB_CHECK(rc);
+    if (rc == ADLB_NOTHING)
+      break;
+  }
 
   MPE_LOG(xlb_mpe_svr_put_end);
 
@@ -350,8 +355,13 @@ handle_get(int caller)
     xlb_requestqueue_recheck();
   }
 
-  adlb_code rc = check_parallel_tasks(type);
-  ADLB_CHECK(rc);
+  while (true)
+  {
+    adlb_code rc = check_parallel_tasks(type);
+    ADLB_CHECK(rc);
+    if (rc == ADLB_NOTHING)
+      break;
+  }
 
   end:
   MPE_LOG(xlb_mpe_svr_get_end);
@@ -421,12 +431,14 @@ xlb_requestqueue_recheck()
 /**
    Try to release a parallel task of type
  */
-static inline adlb_code
+adlb_code
 check_parallel_tasks(int type)
 {
   TRACE_START;
   xlb_work_unit* wu;
   int* ranks = NULL;
+
+  TRACE("\t tasks: %i\n", workqueue_parallel_tasks());
 
   // Fast path for no parallel task case
   if (workqueue_parallel_tasks() == 0)
@@ -518,7 +530,7 @@ handle_create(int caller)
   adlb_datum_id id = data.id;
   adlb_data_type type = data.type;
   adlb_create_props props =  data.props;
- 
+
   adlb_data_code dc = ADLB_DATA_SUCCESS;
   if (id == ADLB_DATA_ID_NULL)
     // Allocate a new id
@@ -526,7 +538,7 @@ handle_create(int caller)
 
   if (dc == ADLB_DATA_SUCCESS)
     dc = data_create(id, type, &props);
-  
+
   struct packed_create_response resp = { .dc = dc, .id = id };
   RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
 
@@ -590,13 +602,13 @@ handle_multicreate(int caller)
     if (dc != ADLB_DATA_SUCCESS)
       break;
   }
-  
-  
+
+
   RSEND(new_ids, sizeof(new_ids), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
 
   free(specs);
   ADLB_DATA_CHECK(dc);
-  
+
   TRACE("ADLB_TAG_MULTICREATE done\n");
   // MPE_LOG(xlb_mpe_svr_multicreate_end);
   return ADLB_SUCCESS;
@@ -670,7 +682,7 @@ handle_retrieve(int caller)
   int length;
   adlb_data_type type;
   int dc = data_retrieve(hdr.id, &type, &result, &length);
-  
+
   bool malloced_result = (type == ADLB_DATA_TYPE_CONTAINER);
   if (dc == ADLB_DATA_SUCCESS && hdr.decr_read_refcount > 0) {
     int notify_count;

@@ -130,7 +130,7 @@ workqueue_add(int type, int putter, int priority, int answer,
   else if (parallelism > 1)
   {
     // Untargeted parallel task
-    TRACE("workqueue_add(): parallel task");
+    TRACE("workqueue_add(): parallel task: %p", wu);
     struct rbtree* T = &parallel_work[type];
     rbtree_add(T, -priority, wu);
     workqueue_parallel_task_count++;
@@ -227,14 +227,17 @@ workqueue_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
   {
     struct pop_parallel_data data = { -1, NULL, NULL, NULL };
     data.type = work_type;
+    TRACE("iterator...");
     bool found = rbtree_iterator(T, pop_parallel_cb, &data);
     if (found)
     {
+      TRACE("found...");
       *wu = data.wu;
       *ranks = data.ranks;
       result = true;
       // Release memory:
       rbtree_remove_node(T, data.node);
+      TRACE("remove: %p...", wu);
       free(data.node);
       workqueue_parallel_task_count--;
     }
@@ -249,7 +252,8 @@ pop_parallel_cb(struct rbtree_node* node, void* user_data)
   xlb_work_unit* wu = node->data;
   struct pop_parallel_data* data = user_data;
 
-  TRACE("pop_parallel_cb(): wu: %li x%i", wu->id, wu->parallelism);
+  TRACE("pop_parallel_cb(): wu: %p %li x%i",
+        wu, wu->id, wu->parallelism);
 
   int ranks[wu->parallelism];
   bool found =
@@ -307,10 +311,10 @@ workqueue_steal(int max_memory, const int *steal_type_counts,
     int single_count = typed_work[t].size;
     int par_count = parallel_work[t].size;
     int tot_count = single_count + par_count;
-    // TODO: handle ser and par separately? 
+    // TODO: handle ser and par separately?
     //  What if server A has single idle workers and parallel work,
     //    while server B has single work?
-    
+
     // Only send if stealer has significantly fewer
     if (tot_count > 0) {
       bool send = false;

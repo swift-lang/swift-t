@@ -187,7 +187,7 @@ ADLB_Server(long max_memory)
 {
   TRACE_START;
   mm_set_max(mm_default, max_memory);
-  
+
   update_cached_time(); // Initial timestamp
   while (true)
   {
@@ -197,19 +197,25 @@ ADLB_Server(long max_memory)
       check_idle();
     if (shutting_down)
       break;
-    
+
     update_cached_time(); // Periodically refresh timestamp
-    
-    adlb_code code = serve_several();
+
+    adlb_code code;
+    code = serve_several();
     ADLB_CHECK(code);
-   
+
     // serve_several should have handled all pending syncs, but
     // defensively check here to avoid potential deadlock
     code = xlb_handle_pending_syncs();
     ADLB_CHECK(code);
 
     update_cached_time(); // Periodically refresh timestamp
-  
+
+    code = check_parallel_tasks(0);
+    ADLB_CHECK(code);
+    code = check_parallel_tasks(1);
+    ADLB_CHECK(code);
+
     check_steal();
   }
   server_shutdown();
@@ -355,7 +361,7 @@ xlb_handle_pending_syncs()
   return ADLB_SUCCESS;
 }
 
-static inline adlb_code 
+static inline adlb_code
 xlb_serve_one(int source, bool *sync_rejected)
 {
   TRACE_START;
@@ -371,7 +377,7 @@ xlb_serve_one(int source, bool *sync_rejected)
   int rc = xlb_handle_pending(&status, sync_rejected);
 
   TRACE_END;
-  
+
   return rc;
 }
 

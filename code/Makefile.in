@@ -145,7 +145,7 @@ lib:
 
 $(ADLB_SO): $(OBJS) $(NLOBJS) lib
 	$(Q) "  LINK		$(@)"
-	$(E) $(LINKER) -shared $(SHARED) -g -o $(@) \
+	$(E) $(LINKER) -shared $(SHARED) -mpilog -g -o $(@) \
 	        $(OBJS) 		        \
                 $(LIBS)                         \
 	        $(RPATH)                        \

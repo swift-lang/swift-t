@@ -42,4 +42,6 @@ adlb_code xlb_handle(adlb_tag tag, int from_rank);
 
 void xlb_requestqueue_recheck();
 
+adlb_code check_parallel_tasks(int work_type);
+
 #endif
