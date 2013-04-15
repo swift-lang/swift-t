@@ -21,7 +21,7 @@ namespace eval turbine {
         set cond [ lindex $inputs 0 ]
         set msg [ lindex $inputs 1 ]
         rule "$cond $msg" "assert_body $cond $msg" \
-            name "assert-$cond-$msg" 
+            name "assert-$cond-$msg"
     }
 
     proc assert_body { cond msg } {
@@ -34,7 +34,7 @@ namespace eval turbine {
         if { $cond == 0 } {
             error "Assertion failed!: $msg"
         } else {
-            log "assert passed: $msg"
+            log "assert passed: ($msg)"
         }
     }
 
@@ -47,7 +47,7 @@ namespace eval turbine {
         set arg2 [ lindex $inputs 1 ]
         set msg [ lindex $inputs 2 ]
         rule "$arg1 $arg2 $msg" "assertEqual_body $arg1 $arg2 $msg" \
-            name "assertEqual-$arg1-$arg2-$msg" 
+            name "assertEqual-$arg1-$arg2-$msg"
     }
 
     proc assertEqual_body { arg1 arg2 msg } {
@@ -73,7 +73,7 @@ namespace eval turbine {
         set arg2 [ lindex $inputs 1 ]
         set msg [ lindex $inputs 2 ]
         rule "$arg1 $arg2 $msg" "assertLT_body $arg1 $arg2 $msg" \
-            name "assertLT-$arg1-$arg2-$msg" 
+            name "assertLT-$arg1-$arg2-$msg"
     }
 
     proc assertLT_body { arg1 arg2 msg } {
@@ -95,7 +95,7 @@ namespace eval turbine {
         set arg2 [ lindex $inputs 1 ]
         set msg [ lindex $inputs 2 ]
         rule "$arg1 $arg2 $msg" "assertLTE_body $arg1 $arg2 $msg" \
-            name "assertLTE-$arg1-$arg2-$msg" 
+            name "assertLTE-$arg1-$arg2-$msg"
     }
 
     proc assertLTE_body { arg1 arg2 msg } {
