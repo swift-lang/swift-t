@@ -24,6 +24,11 @@ TURBINE_VERSION=turbine_version()
 AC_MSG_RESULT([Turbine version: ${TURBINE_VERSION}])
 AC_SUBST(TURBINE_VERSION)
 
+if [[ ${prefix} == "NONE" ]]
+then
+  AC_MSG_ERROR("You must provide --prefix")
+fi
+
 echo "PREFIX: ${prefix}"
 SOFTWARE=$( cd $(dirname ${prefix}) ; /bin/pwd )
 if [[ ${?} == 0 ]]
@@ -260,7 +265,7 @@ if [[ ${USE_MPI_INCLUDE} != 0 ]]
 then
    MPI_H=${USE_MPI_INCLUDE}/mpi.h
 else
-   MPI_H=${USE_MPI}/include/mpi.h
+   MPI_H=${USE_MPI_DIR}/include/mpi.h
 fi
 AC_MSG_CHECKING([MPI implementation in ${MPI_H} ])
 if grep -q OMPI_MPI_H ${MPI_H} > /dev/null 2>&1
