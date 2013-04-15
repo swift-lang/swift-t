@@ -33,6 +33,17 @@ proc rules { } {
     turbine::store_string 12 "/bin:/usr/evil name/p:/usr/bin"
     turbine::store_string 13 ":"
     turbine::split 19 { 12 13 }
+
+    turbine::rule 19 "check 19"
+}
+
+proc check { container } {
+    set td [ turbine::container_lookup $container 1 ]
+    set s1 [ turbine::retrieve_string $td ]
+    puts "s1: $s1"
+    set td [ turbine::container_lookup $container 2 ]
+    set s2 [ turbine::retrieve_string $td ]
+    puts "s2: $s2"
 }
 
 turbine::defaults
