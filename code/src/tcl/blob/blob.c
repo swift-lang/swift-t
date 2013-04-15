@@ -88,10 +88,22 @@ blobutils_cast_int_to_int_ptr(int i)
   return (int*) (size_t) i;
 }
 
+const int*
+blobutils_cast_int_to_const_int_ptr(int i)
+{
+  return (const int*) (size_t) i;
+}
+
 double*
 blobutils_cast_int_to_dbl_ptr(int i)
 {
   return (double*) (size_t) i;
+}
+
+const double*
+blobutils_cast_int_to_const_dbl_ptr(int i)
+{
+  return (const double*) (size_t) i;
 }
 
 double*
