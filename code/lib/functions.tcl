@@ -36,7 +36,6 @@ namespace eval turbine {
     # Use C version of check_str_int
     namespace import c::check_str_int
 
-    # User function
     # This name conflicts with a Tcl built-in - it cannot be exported
     proc trace { signal inputs } {
         rule $inputs "trace_body \"$signal\" $inputs" \
@@ -97,7 +96,7 @@ namespace eval turbine {
         set start [ lindex $inputs 0 ]
         set end [ lindex $inputs 1 ]
         rule [ list $start $end ] "range_body $result $start $end" \
-              type $turbine::CONTROL name "range-$result" 
+              type $turbine::CONTROL name "range-$result"
     }
 
     proc range_body { result start end } {
@@ -115,7 +114,7 @@ namespace eval turbine {
         set end [ lindex $inputs 1 ]
         set step [ lindex $inputs 2 ]
         rule [ list $start $end $step ] \
-            "rangestep_body $result $start $end $step" type $turbine::CONTROL 
+            "rangestep_body $result $start $end $step" type $turbine::CONTROL
     }
 
     proc rangestep_body { result start end step } {
@@ -187,7 +186,7 @@ namespace eval turbine {
     proc dloop { loop_body stack container } {
         c::log "log_dloop:"
         rule $container "dloop_body $loop_body $stack $container" \
-                         name $turbine::CONTROL 
+                         name $turbine::CONTROL
     }
 
     proc dloop_body { loop_body stack container } {
@@ -227,7 +226,7 @@ namespace eval turbine {
     # User function
     proc loop { stmts stack container } {
         rule $container "loop_body $stmts $stack $container" \
-              type $turbine::CONTROL name "loop-$container" 
+              type $turbine::CONTROL name "loop-$container"
     }
 
     proc loop_body { stmts stack container } {
@@ -271,17 +270,17 @@ namespace eval turbine {
     # User function
     proc toint { result input } {
         rule $input "toint_body $input $result" \
-            name "toint-$input" 
+            name "toint-$input"
     }
 
     proc toint_body { input result } {
-      set t [ retrieve_decr $input ]
-      store_integer $result [ check_str_int $t ]
+        set t [ retrieve_decr $input ]
+        store_integer $result [ check_str_int $t ]
     }
 
     proc fromint { result input } {
         rule $input "fromint_body $result $input" \
-            name "fromint-$input-$result" 
+            name "fromint-$input-$result"
     }
 
     proc fromint_body { result input } {
@@ -292,7 +291,7 @@ namespace eval turbine {
 
     proc tofloat { result input } {
         rule $input "tofloat_body $input $result" \
-            name "tofloat-$input" 
+            name "tofloat-$input"
     }
 
     proc tofloat_body { input result } {
@@ -324,7 +323,7 @@ namespace eval turbine {
     # and sleeps
     proc set0 { c } {
         rule {} "set0_body $c" \
-             name "set0-$" type $::turbine::WORK 
+             name "set0-$" type $::turbine::WORK
     }
     proc set0_body { c } {
         log "set0"
@@ -342,7 +341,7 @@ namespace eval turbine {
     # and sleeps
     proc set1 { c } {
         rule {} "set1_body $c" \
-             name "set1-$" type $::turbine::WORK 
+             name "set1-$" type $::turbine::WORK
     }
     proc set1_body { c } {
         log "set1"
@@ -378,7 +377,7 @@ namespace eval turbine {
     # o = i.  Void has no value, so this just makes sure that
     #         they close sequentially
     proc copy_void { o i } {
-        rule $i "copy_void_body $o $i" name "copy-$o-$i" 
+        rule $i "copy_void_body $o $i" name "copy-$o-$i"
     }
     proc copy_void_body { o i } {
         log "copy_void $i => $o"
@@ -388,7 +387,7 @@ namespace eval turbine {
 
     # Copy string value
     proc copy_string { o i } {
-        rule $i "copy_string_body $o $i" name "copystring-$o-$i" 
+        rule $i "copy_string_body $o $i" name "copystring-$o-$i"
     }
     proc copy_string_body { o i } {
         set i_value [ retrieve_decr_string $i ]
@@ -398,7 +397,7 @@ namespace eval turbine {
 
     # Copy blob value
     proc copy_blob { o i } {
-        rule $i "copy_blob_body $o $i" name "copyblob-$o-$i" 
+        rule $i "copy_blob_body $o $i" name "copyblob-$o-$i"
     }
     proc copy_blob_body { o i } {
         set i_value [ retrieve_decr_blob $i ]
@@ -415,7 +414,7 @@ namespace eval turbine {
 
     proc zero { outputs inputs } {
         rule $inputs "zero_body $outputs $inputs" \
-            name "zero-$outputs-$inputs" 
+            name "zero-$outputs-$inputs"
     }
     proc zero_body { output input } {
         store_integer $output 0
