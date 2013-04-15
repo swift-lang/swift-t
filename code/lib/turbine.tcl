@@ -23,7 +23,7 @@ namespace eval turbine {
     namespace export init start finalize spawn_rule rule
 
 
-    # Import adlb commands 
+    # Import adlb commands
     namespace import ::adlb::put ::adlb::get ::adlb::RANK_ANY \
             ::adlb::get_priority ::adlb::reset_priority ::adlb::set_priority
     # Re-export adlb commands
@@ -117,7 +117,7 @@ namespace eval turbine {
 	    set mode WORKER
 	    set is_engine 0
         }
-   
+
         log "MODE: $mode"
         if { [ adlb::rank ] == 0 } {
             log "ENGINES: $n_engines"
@@ -140,7 +140,7 @@ namespace eval turbine {
             }
         }
     }
-    
+
     proc start { args } {
 
         set rules [ lindex $args 0 ]
@@ -243,13 +243,13 @@ namespace eval turbine {
     }
 
     # Error handling
-    # e: A Tcl error message
-    # d: A Tcl error dict
-    proc fail { e d } {
+    # msg: A Tcl error message
+    # e: A Tcl error dict
+    proc fail { msg d } {
         variable error_code
         set code [ dict get $d -code ]
         if { $code == $error_code } {
-            puts "ERROR: $e"
+            puts "ERROR: $msg"
             puts "CALLING adlb::fail"
             adlb::fail
         } else {
