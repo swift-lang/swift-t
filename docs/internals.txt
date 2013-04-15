@@ -1,0 +1,33 @@
+Magical Function Annotations
+============================
+
+These function annotations give the compiler information
+about functions so that it can do amazing things like optimize
+code.  Without annotations it is forced to assume that the
+function can do whatever it feels like, such as returning
+non-deterministic values, doing I/O, or other nasty things
+that make it difficult to optimize code.  If you're not sure
+whether you should add an annotation to your function, then
+the safe thing is not to do it.
+
++@pure+: this tells the compiler that the function is deterministic
+    and side-effect free.
+
++@dispatch={WORKER|CONTROL|LOCAL}+: the function should be
+    executed on a worker process/control process/the local process.
+    This has no effect if we're calling a user-provided wrapper
+    function.
+
++@assertion+: the function should be treated
+    as an assertion.  It will be lexically removed when the
+    disable-asserts option is enabled
+
++@builtin_op=OP_ENUM_VALUE+: this is a special hook that tells the
+    compiler that the function corresponds to a special operation
+    that it knows about.  It can then do wondrous things like evaluate
+    the function at compile time.  Unless you are working on compiler
+    internals, you have no need to use this.
+
++@commutative+: arguments can be reordered without affecting result
+
++@minmax+: function evaluates minimum or maximum
