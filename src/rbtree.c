@@ -36,7 +36,7 @@
 #include "tree-common.h"
 
 #if 0
-#define DEBUG_RBTREE(args...) printf(args)
+#define DEBUG_RBTREE(args...) fprintf(stderr, args)
 #else
 #define DEBUG_RBTREE(args...)
 #endif
