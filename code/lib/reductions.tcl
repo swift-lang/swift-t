@@ -19,8 +19,9 @@ namespace eval turbine {
     namespace export reduce_sum_integer
 
     proc reduce_sum_integer { result A } {
-        deeprule "reduce_sum_integer" $A 2 [ list false false ] \
-            $::turbine::CONTROL "reduce_sum_integer_body $result $A"
+        deeprule $A 2 [ list false false ] \
+            "reduce_sum_integer_body $result $A" \
+            name "reduce_sum_integer" type $::turbine::CONTROL
     }
     proc reduce_sum_integer_body { result A } {
         set R [ dict create ]
@@ -44,10 +45,12 @@ namespace eval turbine {
     }
 
     proc reduce_splice_string { result S } {
-        deeprule "reduce_splice_string" $S 2 [ list false false ] \
-            $::turbine::CONTROL "reduce_splice_string_body $result $S"
+        deeprule $S 2 [ list false false ] \
+            "reduce_splice_string_body $result $S" \
+            name "reduce_splice_string" type $::turbine::CONTROL
     }
     proc reduce_splice_string_body { result S } {
+        log "reduce_splice_string_body: $result <- $S"
         set R [ dict create ]
         set D [ adlb::enumerate $S dict all 0 ]
         dict for { i td_h } $D {
@@ -67,7 +70,7 @@ namespace eval turbine {
         }
 
         dict for { h s_value } $R {
-            # puts "reduce_splice: h: $h s: $s_value"
+            puts "reduce_splice: h: $h s: $s_value"
             literal s string $s_value
             container_insert $result $h $s
         }
