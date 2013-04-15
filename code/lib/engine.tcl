@@ -16,8 +16,8 @@
 # Code executed on engine processes
 
 namespace eval turbine {
-    
-    # Import adlb commands 
+
+    # Import adlb commands
     namespace import ::adlb::put ::adlb::get ::adlb::RANK_ANY
 
     # Import turbine c command
@@ -108,6 +108,7 @@ namespace eval turbine {
                     set_priority [ lindex $command 1 ]
                     set command [ lrange $command 2 end ]
                 }
+                debug "engine eval: $command"
                 eval $command
             }
             close {
