@@ -67,7 +67,7 @@ namespace eval turbine {
     # i: the subscript (any type)
     proc c_f_retrieve_integer { d c i } {
         rule $i "c_f_retrieve_integer_body $d $c $i" \
-            name "CFRI-$c-$i" 
+            name "CFRI-$c-$i"
     }
 
     proc c_f_retrieve_integer_body { d c i } {
@@ -96,7 +96,7 @@ namespace eval turbine {
         }
 
         rule $i [ list turbine::container_f_insert_body $c $i $d $slot_drops ] \
-            name "CFI-$c-$i" 
+            name "CFI-$c-$i"
     }
 
     proc container_f_insert_body { c i d slot_drops } {
@@ -117,7 +117,7 @@ namespace eval turbine {
 
         rule "$i $r" \
             "c_f_insert_r_body $c $i $r $slot_drops" \
-            name "CFIR-$c-$i" 
+            name "CFIR-$c-$i"
     }
 
     proc c_f_insert_r_body { c i r slot_drops } {
@@ -139,7 +139,7 @@ namespace eval turbine {
         }
 
         rule $r "c_v_insert_r_body $c $i $r $slot_drops" \
-            name "container_deref_insert-$c-$i" 
+            name "container_deref_insert-$c-$i"
     }
 
     proc c_v_insert_r_body { c i r slot_drops } {
@@ -172,7 +172,7 @@ namespace eval turbine {
         debug "CFL: <$c>\[<$i>\] <- <*$r>"
 
         rule $i "c_f_lookup_body $c $i $r $ref_type" \
-            name "CFL-$c-$i" 
+            name "CFL-$c-$i"
     }
     proc c_f_lookup_body { c i r ref_type } {
         debug "f_reference_body: <$c>\[<$i>\] <- <*$r>"
@@ -185,7 +185,7 @@ namespace eval turbine {
     # When reference r is closed, copy its (integer) value in v
     proc dereference_integer { v r } {
         rule $r "dereference_integer_body $v $r" \
-            name "DRI-$v-$r" 
+            name "DRI-$v-$r"
     }
     proc dereference_integer_body { v r } {
         # Get the TD from the reference
@@ -199,7 +199,7 @@ namespace eval turbine {
     # When reference r is closed, copy its (float) value into v
     proc dereference_float { v r } {
         rule $r "dereference_float_body $v $r" \
-            name "DRF-$v-$r" 
+            name "DRF-$v-$r"
     }
 
     proc dereference_float_body { v r } {
@@ -214,7 +214,7 @@ namespace eval turbine {
     # When reference r is closed, copy its (string) value into v
     proc dereference_string { v r } {
         rule $r "dereference_string_body $v $r" \
-            name "DRS-$v-$r" 
+            name "DRS-$v-$r"
     }
     proc dereference_string_body { v r } {
         # Get the TD from the reference
@@ -228,7 +228,7 @@ namespace eval turbine {
     # When reference r is closed, copy blob to v
     proc dereference_blob { v r } {
         rule $r "dereference_blob_body $v $r" \
-            name "DRB-$v-$r" 
+            name "DRB-$v-$r"
     }
     proc dereference_blob_body { v r } {
         # Get the TD from the reference
@@ -240,7 +240,7 @@ namespace eval turbine {
 
     proc dereference_file { v r } {
         rule $r "dereference_file_body {$v} $r" \
-            name "dereference_file" 
+            name "dereference_file"
     }
     proc dereference_file_body { v r } {
         # Get the TD from the reference
@@ -263,7 +263,7 @@ namespace eval turbine {
         log "creating reference: <*$cr>\[$i\] <- <*$d>"
 
         rule $cr "cr_v_lookup_body $cr $i $d $d_type" \
-            name "CRVL-$cr" 
+            name "CRVL-$cr"
     }
 
     proc cr_v_lookup_body { cr i d d_type } {
@@ -284,7 +284,7 @@ namespace eval turbine {
     # outputs: ignored
     proc cr_f_lookup { cr i d d_type } {
         rule "$cr $i" "cr_f_lookup_body $cr $i $d $d_type" \
-            name "CRFL-$cr" 
+            name "CRFL-$cr"
     }
 
     proc cr_f_lookup_body { cr i d d_type } {
@@ -308,7 +308,7 @@ namespace eval turbine {
         }
 
         rule "$r $j" "cr_f_insert_body $r $j $d $oc" \
-            name "CRFI-$r" 
+            name "CRFI-$r"
     }
     proc cr_f_insert_body { r j d oc } {
         # s: The subscripted container
@@ -332,7 +332,7 @@ namespace eval turbine {
         }
 
         rule "$cr" "cr_v_insert_body $cr $j $d $oc" \
-            name "CRVI-$cr-$j-$d-$oc" 
+            name "CRVI-$cr-$j-$d-$oc"
     }
     proc cr_v_insert_body { cr j d oc } {
         set c [ retrieve_decr_integer $cr ]
@@ -368,7 +368,7 @@ namespace eval turbine {
 
         rule [ list $cr $j $dr ] \
             "cr_f_insert_r_body $cr $j $dr $oc" \
-            name "CRFIR" 
+            name "CRFIR"
     }
     proc cr_f_insert_r_body { cr j dr oc } {
         set c [ retrieve_decr_integer $cr ]
@@ -393,7 +393,7 @@ namespace eval turbine {
         adlb::insert $c $i $t $decr_slots
 
         # setup rule to close when outer container closes
-        rule $c "adlb::slot_drop $t" name "autoclose-$t" 
+        rule $c "adlb::slot_drop $t" name "autoclose-$t"
         return $t
       } else {
         # Another engine is creating it right this second, poll
@@ -427,7 +427,7 @@ namespace eval turbine {
 
 
         rule $i "c_f_create_body $tmp_r $c $i $type" \
-            name "CFC-$r" 
+            name "CFC-$r"
     }
 
     # Create container at c[i]
@@ -502,7 +502,7 @@ namespace eval turbine {
     proc enumerate { result container } {
         rule $container \
             "enumerate_body $result $container" \
-            name "enumerate-$result-$container" 
+            name "enumerate-$result-$container"
     }
 
     proc enumerate_body { result container } {
@@ -532,7 +532,7 @@ namespace eval turbine {
         set c [ lindex $inputs 0 ]
         set i [ lindex $inputs 1 ]
         rule "$c $i" "contains_body $result $c $i" \
-            name "contains-$result-$c-$i" 
+            name "contains-$result-$c-$i"
     }
 
     proc contains_body { result c i } {
@@ -551,7 +551,7 @@ namespace eval turbine {
     # struct member
     proc struct_ref_lookup { structr field result type } {
         rule  "$structr" "struct_ref_lookup_body $structr $field $result $type" \
-            name "struct_ref_lookup-$structr" 
+            name "struct_ref_lookup-$structr"
     }
 
     proc struct_ref_lookup_body { structr field result type } {
@@ -599,28 +599,38 @@ namespace eval turbine {
           # Use void variable to signal recursive container closing
           set signal [ allocate void ]
           lappend signals $signal
-          lappend allocated_signals $signal # make sure cleaned up later
+          # make sure cleaned up later
+          lappend allocated_signals $signal
           container_deep_wait $input $nest_level $isf $signal
         }
         incr i
       }
 
       # Once all signals closed, run finalizer
-      rule $signals "deeprule_finish $allocated_signals; $action" {*}$args
+      rule $signals \
+          "deeprule_action \"$allocated_signals\" \"$action\"" \
+          {*}$args
+    }
+
+    proc deeprule_action { allocated_signals action } {
+        deeprule_finish $allocated_signals
+        eval $action
     }
 
     # Check for container contents being closed and once true,
     # set signal
     # Called after container itself is closed
     proc container_deep_wait { container nest_level is_file signal } {
-      if { $nest_level == 1 } {
-        # First wait for container to be closed
-        rule $container [ list container_deep_wait_continue $container \
-                                0 -1 $nest_level $is_file $signal ]
-      } else {
-        rule $container [ list container_rec_deep_wait $container \
-                                    $nest_level $is_file $signal ]
-      }
+
+        debug "container_deep_wait: $container $nest_level"
+        if { $nest_level == 1 } {
+            # First wait for container to be closed
+            rule $container [ list container_deep_wait_continue $container \
+                                  0 -1 $nest_level $is_file $signal ]
+        } else {
+            rule $container [ list container_rec_deep_wait $container \
+                                  $nest_level $is_file $signal ]
+        }
     }
 
     proc container_deep_wait_continue { container progress n
@@ -676,15 +686,27 @@ namespace eval turbine {
                             $inner_signal
         }
         rule $inner_signals \
-          "deeprule_finish \"$inner_signals\"; store_void $signal"
+            "deeprule_fire_signal \"$inner_signals\" $signal"
       }
+    }
+
+    proc deeprule_fire_signal { inner_signals signal } {
+        debug "deeprule_fire_signal: $inner_signals $signal"
+        deeprule_finish $inner_signals
+        store_void $signal
     }
 
     # Cleanup allocated things for
     # Decrement references for signals
     proc deeprule_finish { args } {
-      foreach signal $args {
-        read_refcount_decr $signal
-      }
+        log "deeprule_finish: $args"
+        foreach signal $args {
+            read_refcount_decr $signal
+        }
     }
 }
+
+# Local Variables:
+# mode: tcl
+# tcl-indent-level: 4
+# End:
