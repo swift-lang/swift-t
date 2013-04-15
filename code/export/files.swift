@@ -33,5 +33,10 @@
 (file t) writeFile(string s)
     "turbine" "0.0.2" "writeFile";
 
+@pure
+(string t) file_type(file f)
+"turbine" "0.0.2"
+[ "set <<t>> [ file type [ lindex <<f>> 0 ] ]" ];
+
 #endif // FILES_SWIFT
 
