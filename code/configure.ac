@@ -56,7 +56,8 @@ AC_SUBST(USE_MAC)
 
 # Checks for programs.
 AC_PROG_CC
-AC_PATH_PROG([SWIG],[swig])
+AC_PATH_PROG([SWIG],[swig],[0])
+[[ ${SWIG} == 0 ]] && AC_MSG_ERROR([Could not find SWIG!])
 # We trust the user's install and omit AC_PROG_INSTALL
 
 # We prefer to use cp -u for installation
