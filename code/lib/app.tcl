@@ -16,16 +16,16 @@
 # Functions for launching external apps
 namespace eval turbine {
   namespace export unpack_args exec_external
-  
+
   # Run external appplication
   # cmd: executable to run
   # kwopts: keyword options.  Valid are:
   #         stdout=file stderr=file
   # args: command line args as strings
   proc exec_external { cmd kwopts args } {
-    #FIXME: strange behaviour can happen if user args have e.g "<" 
+    #FIXME: strange behaviour can happen if user args have e.g "<"
     # or ">" or "|" at start
-    
+
     # Default to sending stdout/stderr to process stdout/stderr
     set stdout_dst ">@stdout"
     set stderr_dst "2>@stderr"
@@ -35,13 +35,39 @@ namespace eval turbine {
       set stdin_src "<[ dict get $kwopts stdin ]"
     }
     if { [ dict exists $kwopts stdout ] } {
-      set stdout_dst ">[ dict get $kwopts stdout ]"
+        set dst [ dict get $kwopts stdout ]
+        ensure_directory_exists $dst
+        set stdout_dst ">$dst"
     }
     if { [ dict exists $kwopts stderr ] } {
-      set stderr_dst "2>[ dict get $kwopts stderr ]"
+        set dst [ dict get $kwopts stderr ]
+        ensure_directory_exists $dst
+        set stderr_dst "2>$dst"
     }
+    log "shell: $cmd $args $stdin_src $stdout_dst $stderr_dst"
     exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst
   }
+
+    # For file f = "/d1/d2/f", ensure /d1/d2 exists
+    proc ensure_directory_exists { f } {
+        set c [ string range $f 0 0 ]
+        if { [ string equal $c "/" ] } {
+            set root 1
+        } else {
+            set root 0
+        }
+        set A [ file split $f ]
+        set d [ lreplace $A end end ]
+        set p [ join $d "/" ]
+        if { $root } {
+            set p "/$p"
+        }
+        log "checking directory: $p"
+        if { ! [ file isdirectory $p ] } {
+            file mkdir $p
+        }
+    }
+
 
   # Unpack arguments from closed container of any nesting into flat list
   # Container must be deep closed (i.e. all contents closed)
