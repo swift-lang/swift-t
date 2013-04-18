@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/zsh -f
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,11 +51,6 @@ TURBINE_APRUN_M4=${TURBINE_HOME}/scripts/submit/cray/turbine-aprun.sh.m4
 TURBINE_APRUN=${1:-turbine-aprun.sh}
 export WALLTIME=${WALLTIME:-00:15:00}
 export PPN=${PPN:-1}
-
-# Cut PROGRAM name down for qsub -N argument:
-A=( ${=PROGRAM} )
-SCRIPT=${A[1]}
-export SCRIPT_NAME=$( basename ${SCRIPT} )
 
 touch ${TURBINE_APRUN}
 exitcode "Could not write to: ${TURBINE_APRUN}"

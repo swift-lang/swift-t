@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/zsh -f
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
@@ -24,7 +24,9 @@
 # NODES: Number of nodes to use
 # PPN:   Processes-per-node
 
-export PROGRAM=${*}
+export PROGRAM=$1
+shift
+export ARGS=${*}
 
 TURBINE=$( which turbine )
 if [[ ${?} != 0 ]]
@@ -43,8 +45,16 @@ then
   return 1
 fi
 
+# Set SCRIPT_NAME, make PROGRAM an absolute path
+export SCRIPT_NAME=$( basename ${PROGRAM} )
+pushd $( dirname ${PROGRAM} ) >& /dev/null
+exitcode "Could not find: ${PROGRAM}"
+PROGRAM_DIR=$( /bin/pwd )
+popd >& /dev/null
+PROGRAM=${PROGRAM_DIR}/${SCRIPT_NAME}
+
 checkvars PROGRAM NODES PPN TURBINE_OUTPUT
-declare   PROGRAM NODES PPN TURBINE_OUTPUT
+declare   PROGRAM NODES PPN TURBINE_OUTPUT SCRIPT_NAME
 
 export PROCS=$(( NODES*PPN ))
 

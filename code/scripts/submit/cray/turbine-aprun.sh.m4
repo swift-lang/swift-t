@@ -20,7 +20,7 @@ changecom(`dnl')#!/bin/bash
 # Created: esyscmd(`date')
 
 # Define a convenience macro
-define(`getenv', `esyscmd(printf "$`$1' ")')
+define(`getenv', `esyscmd(printf -- "$`$1' ")')
 
 #PBS -N getenv(SCRIPT_NAME)
 #PBS -l walltime=getenv(WALLTIME)
@@ -35,14 +35,19 @@ define(`getenv', `esyscmd(printf "$`$1' ")')
 
 # Receive some parameters
 PROGRAM=getenv(`PROGRAM')
-TURBINE_HOME=getenv(`TURBINE_HOME')
+ARGS=getenv(`ARGS')
 NODES=getenv(`NODES')
 WALLTIME=getenv(`WALLTIME')
 TURBINE_OUTPUT=getenv(TURBINE_OUTPUT)
+export TURBINE_HOME=getenv(`TURBINE_HOME')
+export PATH=getenv(PATH)
 
 # Set configuration of Turbine processes
 export TURBINE_ENGINES=getenv(TURBINE_ENGINES)
 export ADLB_SERVERS=getenv(ADLB_SERVERS)
+# Default to 1
+TURBINE_ENGINES=${TURBINE_ENGINES:-1}
+ADLB_SERVERS=${ADLB_SERVERS:-1}
 
 # Output header
 echo "Turbine: turbine-aprun.sh"
@@ -51,14 +56,14 @@ echo
 
 # Log the parameters
 echo "TURBINE_HOME: ${TURBINE_HOME}"
-echo "PROGRAM:      ${PROGRAM}"
+echo "PROGRAM:      ${PROGRAM} ${ARGS}"
 echo "NODES:        ${NODES}"
 echo "WALLTIME:     ${WALLTIME}"
 echo
 echo "TURBINE_ENGINES: ${TURBINE_ENGINES}"
 echo "ADLB_SERVERS:    ${ADLB_SERVERS}"
 echo
-echo "OUTPUT:"
+echo "JOB OUTPUT:"
 echo
 
 # Be sure we are in an accessible directory
@@ -72,6 +77,6 @@ then
 fi
 
 # Send environment variables to PBS job:
-#PBS -v TURBINE_ENGINES ADLB_SERVERS TURBINE_HOME
+#PBS -v PATH TURBINE_ENGINES ADLB_SERVERS TURBINE_HOME
 # USER: Set aprun parameters to agree with PBS -l settings
-aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${TCLSH} ${PROGRAM}
+aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${TCLSH} ${PROGRAM} ${ARGS}
