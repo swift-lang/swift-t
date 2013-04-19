@@ -30,6 +30,12 @@ namespace eval turbine {
     # Simple string containing all arguments
     variable turbine_args
 
+    # Return true if we maintain argv structures
+    proc has_argv { } {
+        variable mode
+        return [ expr {! [ string equal $mode SERVER ]} ]
+    }
+
     # Called by turbine::init to setup Turbine's argv
     proc argv_init { } {
 
@@ -40,9 +46,8 @@ namespace eval turbine {
         variable turbine_argv
         variable turbine_argp
         variable turbine_args
-        variable mode
 
-        if { ! [ string equal $mode ENGINE ] } return
+        if { ! [ has_argv ] } return 
 
         set turbine_program [ info script ]
         set turbine_argc 0
@@ -79,12 +84,15 @@ namespace eval turbine {
     # where we want to "compile in" some argument values
     proc argv_add_constant { args } {
       variable turbine_argv
+
+      if { ! [ has_argv ] } return 
+
       dict for {key value} $args {
         if [ dict exists $turbine_argv $key ] {
           error "Named command-line argument $key was provided at both\
                  compile time and run time"
         }
-        dict set $key $value
+        dict set turbine_argv $key $value
       }
     }
 
