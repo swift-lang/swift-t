@@ -61,12 +61,10 @@ import exm.stc.frontend.tree.VariableDeclaration.VariableDescriptor;
  * It uses some type information, but doesn't attempt to perform full type checking
  */
 class VariableUsageAnalyzer {
-  private final LineMapping lineMapping;
 
-  public VariableUsageAnalyzer(LineMapping lineMapping) {
-    this.lineMapping = lineMapping;
-  }
-
+  /** Store line mapping as attribute to avoid passing everywhere */
+  private LineMapping lineMapping;
+  
   /**
    * Analyse the variables that are present in the block and add
    * VariableUsageInfo object to the BLOCK AST nodes
@@ -76,11 +74,12 @@ class VariableUsageAnalyzer {
    * @param block
    * @throws UserException
    */
-  public void analyzeVariableUsage(Context context,
+  public void analyzeVariableUsage(Context context, 
+          LineMapping lineMapping,
           String function, List<Var> iList, List<Var> oList, SwiftAST block)
         throws UserException {
     LogHelper.debug(context, "analyzer: starting: " + function);
-    
+    this.lineMapping = lineMapping;
     
     VariableUsageInfo globVui = new VariableUsageInfo(); 
     // Add global constants

@@ -17,10 +17,8 @@
 package exm.stc.ui;
 
 import java.io.BufferedOutputStream;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintStream;
 
 import org.apache.log4j.ConsoleAppender;
@@ -59,12 +57,11 @@ public class Main
       System.exit(1);
     }
 
-    InputStream input = setupInput(stcArgs.inputFilename);
     PrintStream output = setupOutput(stcArgs.outputFilename);
     PrintStream icOutput = setupICOutput();
     
     STCompiler stc = new STCompiler(logger);
-    stc.compile(stcArgs.inputFilename, input, output, icOutput);
+    stc.compile(stcArgs.inputFilename, output, icOutput);
   }
 
 
@@ -137,22 +134,6 @@ public class Main
   {
     System.out.println("requires arguments: <input> <output>");
     System.out.println("see wrapper script for usage");
-  }
-
-  static FileInputStream setupInput(String inputFilename)
-  {
-    FileInputStream input = null;
-    try
-    {
-      input = new FileInputStream(inputFilename);
-    }
-    catch (IOException e)
-    {
-      System.out.println("Error opening input Swift file: " +
-                                            e.getMessage());
-      System.exit(ExitCode.ERROR_IO.code());
-    }
-    return input;
   }
 
   static PrintStream setupOutput(String outputFileName)
