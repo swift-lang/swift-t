@@ -16,6 +16,9 @@
 
 // Swift/Turbine builtins defined here
 
+// HACK: have preprocessor ignore this: now automatically included
+#define BUILTINS_SWIFT
+
 #ifndef BUILTINS_SWIFT
 #define BUILTINS_SWIFT
 
