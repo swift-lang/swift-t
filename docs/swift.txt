@@ -620,6 +620,48 @@ continues, the body is executed again, etc.
 *Performance Tip:* use the +foreach+ loop instead of +for+ if your
 loop iterations are independent and can be executed in parallel.
 
+=== Explicit data-dependent execution
+
+In general, execution ordering in Swift/T is implicit and driven by
+data dependencies.  In some cases it is useful to add explicit
+data dependencies, for example if you want to print a message to
+indicate that variable was assigned.  It is possible for the programmer to express
+additional execution ordering using two constructs: the +wait+
+statement and the +\=>+ chaining operator.
+
+In a wait statement, a block of code is executed after
+one or more variables are closed.
+----
+x = f();
+y = g();
+wait (x) {
+  trace("x is closed!");
+}
+wait(x, y) {
+  trace("x and y are closed!");
+}
+----
+
+The chaining operator chains statements together so that a 
+statement only executes after the previous statement's output
+value is closed.  This is meant to be
+a more concise way to express dependencies than the +wait+ statement.
+----
+sleep(1) =>
+  x = f() =>
+  int y = g() =>
+  trace("DONE!");
+----
+
+In order for this to work we define a notion of the *output values*
+of a statement.  In the simple case of a function call +f() \=> ...+,
+the output values are the output values of the function.  In the
+case of and assignment +x = f() \=> ...+ or a declaration,
++int y = g() \=> ...+, then the next statement is dependent on
+the assigned values, or the declared values.  Some functions such
+as +sleep+ have +void+ output values so that they can be used
+in this fashion.
+
 === Scoping blocks
 
 Arbitrary scoping blocks may be used.  In this example, two different
@@ -1093,7 +1135,12 @@ stc -O3 example.swift example.tcl
 
 Individual optimizations can be toggled on using +-T <opt name>+
 or off with +-t <opt name>+, but this typically is only useful for
-debugging.
+debugging.  You can find an up-to-date list of optimizations in
+the stc command-line help:
+
+----
+stc -h
+----
 
 [[Turbine]]
 == Running in Turbine
