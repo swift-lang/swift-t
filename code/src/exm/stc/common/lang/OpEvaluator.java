@@ -124,8 +124,26 @@ public class OpEvaluator {
         return Arg.createStringLit(sb.toString());
     } else if (constInputs.size() == 1) {
       String arg1 = constInputs.get(0).getStringLit();
-      if (op == BuiltinOpcode.COPY_STRING) {
-        return Arg.createStringLit(arg1);
+      switch (op) {
+        case COPY_STRING:
+          return Arg.createStringLit(arg1);
+        case STRTOINT:
+          try {
+            long val = Long.parseLong(arg1);
+            return Arg.createIntLit(val);
+          } catch (NumberFormatException ex) {
+            // Handle at runtime
+          }
+          break;
+        case STRTOFLOAT:
+          try {
+            // TODO: does this match Tcl implementation?
+            double val = Double.valueOf(arg1);
+            return Arg.createFloatLit(val);
+          } catch (NumberFormatException ex) {
+            // Handle at runtime
+          }
+          break;
       }
     } else if (constInputs.size() == 2) {
       String arg1 = constInputs.get(0).getStringLit();

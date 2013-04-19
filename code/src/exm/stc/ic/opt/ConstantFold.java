@@ -186,7 +186,7 @@ public class ConstantFold implements OptimizerPass {
     } else {
       if (logger.isDebugEnabled()) {
         logger.debug("Can replace instruction " + inst.toString() + 
-                                              " with constant");
+                                              " with constant: " + newConsts);
       }
       converged = false;
       changed = true;
