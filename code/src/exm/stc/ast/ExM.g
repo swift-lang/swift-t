@@ -82,7 +82,6 @@ tokens {
     STRUCT_LOAD;
     ARRAY_PATH;
     STRUCT_PATH;
-    IMPORT_PATH;
     ARRAY_RANGE;
     ARRAY_ELEMS;
     ANNOTATION;
@@ -169,14 +168,13 @@ import exm.stc.ast.FilePosition.LineMapping;
 }
 
 program:
-        top_level_statement* EOF -> ^( PROGRAM top_level_statement* EOF )
+        f=definitions EOF -> ^( PROGRAM $f EOF )
     ;
 
-top_level_statement:
+definitions:
         (function_definition |
             new_type_definition |
-            global_const_definition |
-            import_statement)
+            global_const_definition)*
     ;
 
 function_definition:
@@ -194,21 +192,9 @@ new_type_definition:
             ^( TYPEDEF $tname $baset array_marker* )
     ;
 
-// Import can a string or a dotted list of identifiers
-import_statement:
-        IMPORT ( 
-            import_path -> ^( IMPORT import_path ) |
-            STRING -> ^( IMPORT STRING ) )
-    ;   
-
-// Identifier path: separated by full stops
-import_path:
-        ID id_subscript* -> ^( IMPORT_PATH ID id_subscript* )
-    ;
-
 type_field:
-        type=ID name=ID  array_marker* SEMICOLON ->
-            ^( STRUCT_FIELD_DEF $type $name array_marker* )
+    type=ID name=ID  array_marker* SEMICOLON ->
+        ^( STRUCT_FIELD_DEF $type $name array_marker* )
     ;
 app_function_definition:
         annotation*
@@ -570,7 +556,7 @@ uexpr_op: NOT
 pfexpr:
         (base_expr->base_expr)
         (   array_index -> ^(ARRAY_LOAD $pfexpr array_index )
-          | id_subscript -> ^(STRUCT_LOAD $pfexpr id_subscript )
+          | struct_subscript -> ^(STRUCT_LOAD $pfexpr struct_subscript )
         )*
     ;
 
@@ -578,7 +564,7 @@ array_index:
         LSQUARE expr RSQUARE -> expr
     ;
 
-id_subscript:
+struct_subscript:
         '.' ID -> ID
     ;
 
@@ -684,7 +670,7 @@ assign_target:
     ;
 
 assign_path_element:
-        id_subscript -> ^( STRUCT_PATH id_subscript)
+        struct_subscript -> ^( STRUCT_PATH struct_subscript)
     |   array_index   -> ^( ARRAY_PATH  array_index)
     ;
 
@@ -767,7 +753,6 @@ GLOBAL: 'global';
 CONST: 'const';
 TYPE:  'type';
 TYPEDEF:  'typedef';
-IMPORT: 'import';
 
 STDIN: 'stdin';
 STDOUT: 'stdout';

@@ -15,8 +15,6 @@
  */
 package exm.stc.frontend;
 
-import java.io.IOException;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -37,7 +35,6 @@ import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.InvalidSyntaxException;
-import exm.stc.common.exceptions.ModuleLoadException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
@@ -70,7 +67,6 @@ import exm.stc.common.util.Pair;
 import exm.stc.common.util.StringUtil;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.Context.FnProp;
-import exm.stc.frontend.SwiftFile.ParsedFile;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
 import exm.stc.frontend.tree.ArrayRange;
 import exm.stc.frontend.tree.Assignment;
@@ -96,66 +92,43 @@ import exm.stc.ic.STCMiddleEnd;
  */
 public class ASTWalker {
 
+  private String inputFile;
+  private VariableUsageAnalyzer varAnalyzer;
   private STCMiddleEnd backend;
+  private LineMapping lineMapping;
   private VarCreator varCreator = null;
   private ExprWalker exprWalker = null;
-  private VariableUsageAnalyzer varAnalyzer = null;
 
-  /** Map of canonical name to input file for all already loaded */
-  private Map<String, ParsedFile> loadedInputFiles = 
-                        new HashMap<String, ParsedFile>();
-  
-  /** 
-   * Set of input files that have been compiled (or are in process of being
-   * compiled.
-   */
-  private Set<String> compiledInputFiles = new HashSet<String>();
-  
-  /** Stack of input files.  Top of stack is one currently processed */
-  private Deque<ParsedFile> inputFiles = new ArrayDeque<ParsedFile>();
-  
-  /** Line mapping for current input file */
-  private LineMapping lineMapping;
-
-  private static enum FrontendPass {
-    DEFINITIONS, // Process top level defs
-    COMPILE,     // Compile functions
-  }
-  
-  
-  public ASTWalker() {
+  public ASTWalker(String inputFile,
+      LineMapping lineMapping) {
+    this.inputFile = inputFile;
+    this.varAnalyzer = new VariableUsageAnalyzer(lineMapping);
+    this.lineMapping = lineMapping;
   }
 
 
   /**
-   * Walk the AST and make calls to backend to generate lower level code.
-   * This function is called to start the walk at the top level file
+   * Walk the AST and make calls to backend to generate lower level code
    * @param backend
    * @param tree
    * @throws UserException
    */
-  public void walk(STCMiddleEnd backend, ParsedFile parsed) 
+  public void walk(STCMiddleEnd backend, SwiftAST tree) 
           throws UserException {
     this.backend = backend;
     this.varCreator = new VarCreator(backend);
-    this.exprWalker = new ExprWalker(varCreator, backend, parsed.lineMapping);
-    this.varAnalyzer = new VariableUsageAnalyzer();
-    GlobalContext context = new GlobalContext(parsed.inputFilePath,
-                                              Logging.getSTCLogger());
-    SwiftAST ast = parsed.ast;
+    this.exprWalker = new ExprWalker(varCreator, backend, lineMapping);
+    GlobalContext context = new GlobalContext(inputFile, Logging.getSTCLogger());
+
     // Dump ANTLR's view of the SwiftAST (unsightly):
     // if (logger.isDebugEnabled())
     // logger.debug("tree: \n" + tree.toStringTree());
 
     // Use our custom printTree
     if (LogHelper.isDebugEnabled())
-      LogHelper.debug(context, ast.printTree());
+      LogHelper.debug(context, tree.printTree());
 
-    
-    // Two passes: first to find 
-    walkFile(context, parsed, FrontendPass.DEFINITIONS);
-    walkFile(context, parsed, FrontendPass.COMPILE);
-    
+    walkProgram(context, tree);
     FunctionType fn = context.lookupFunction(Constants.MAIN_FUNCTION);
     if (fn == null || 
         !context.hasFunctionProp(Constants.MAIN_FUNCTION, FnProp.COMPOSITE)) {
@@ -164,200 +137,84 @@ public class ASTWalker {
     }
   }
 
-
-  /**
-   * Called to walk an input file
-   * @param context
-   * @param ast
-   * @throws UserException
-   */
-  private void walkFile(GlobalContext context, ParsedFile parsed,
-        FrontendPass pass)
+  private void walkProgram(Context context, SwiftAST programTree)
       throws UserException {
-    loadedInputFiles.put(parsed.canonicalName, parsed);
-    filePush(parsed);
-    walkTopLevel(context, parsed.ast, pass);
-    filePop();
-  }
-
-  /**
-   * Called when starting to process new input file
-   * @param parsed
-   */
-  private void filePush(ParsedFile parsed) {
-    inputFiles.push(parsed);
-    updateCurrentFile();
-  }
-
-  /**
-   * Called when finished processing input file
-   */
-  private void filePop() {
-    inputFiles.pop();
-    updateCurrentFile();
-  }
-  
-  private void updateCurrentFile() {
-    if (inputFiles.isEmpty()) {
-      lineMapping = null;
-    } else {
-      lineMapping = inputFiles.peek().lineMapping;
-    }
-  }
-
-
-  private void walkTopLevel(GlobalContext context, SwiftAST fileTree,
-      FrontendPass pass) throws UserException {
-    if (pass == FrontendPass.DEFINITIONS) {
-      walkTopLevelDefs(context, fileTree);
-    } else {
-      assert(pass == FrontendPass.COMPILE);
-      walkTopLevelCompile(context, fileTree);
-    }
-  }
-
-  /**
-   * First pass:
-   *  - Register (but don't compile) all functions and other definitions
-   * @param context
-   * @param fileTree
-   * @throws UserException
-   * @throws DoubleDefineException
-   * @throws UndefinedTypeException
-   */
-  private void walkTopLevelDefs(GlobalContext context, SwiftAST fileTree)
-      throws UserException, DoubleDefineException, UndefinedTypeException {
-    assert(fileTree.getType() == ExMParser.PROGRAM);
-    context.syncFilePos(fileTree, lineMapping);
+    /*
+     * Do two passes over the program
+     * First pass:
+     *  - Register (but don't compile) all functions
+     * Second pass:
+     *  - Compile composite and app functions, now that all function names are known
+     */
+    int token = programTree.getType();
     
-    for (SwiftAST topLevelDefn: fileTree.children()) {
-      int type = topLevelDefn.getType();
-      context.syncFilePos(topLevelDefn, lineMapping);
-      switch (type) {
-      case ExMParser.IMPORT:
-        importModule(context, topLevelDefn, FrontendPass.DEFINITIONS);
-        break;
+
+    context.syncFilePos(programTree, lineMapping);
+
+    if (token == ExMParser.PROGRAM) {
+      for (SwiftAST topLevelDefn: programTree.children()) {
+        int type = topLevelDefn.getType();
+        context.syncFilePos(topLevelDefn, lineMapping);
+        switch (type) {
+
+        case ExMParser.DEFINE_BUILTIN_FUNCTION:
+          defineBuiltinFunction(context, topLevelDefn);
+          break;
+
+        case ExMParser.DEFINE_FUNCTION:
+          defineFunction(context, topLevelDefn);
+          break;
+
+        case ExMParser.DEFINE_APP_FUNCTION:
+          defineAppFunction(context, topLevelDefn);
+          break;
+
+        case ExMParser.DEFINE_NEW_STRUCT_TYPE:
+          defineNewStructType(context, topLevelDefn);
+          break;
+          
+        case ExMParser.DEFINE_NEW_TYPE:
+        case ExMParser.TYPEDEF:
+          defineNewType(context, topLevelDefn, type == ExMParser.TYPEDEF);
+          break;
+          
+        case ExMParser.GLOBAL_CONST:
+          globalConst(context, topLevelDefn);
+          break;
         
-      case ExMParser.DEFINE_BUILTIN_FUNCTION:
-        defineBuiltinFunction(context, topLevelDefn);
-        break;
-  
-      case ExMParser.DEFINE_FUNCTION:
-        defineFunction(context, topLevelDefn);
-        break;
-  
-      case ExMParser.DEFINE_APP_FUNCTION:
-        defineAppFunction(context, topLevelDefn);
-        break;
-  
-      case ExMParser.DEFINE_NEW_STRUCT_TYPE:
-        defineNewStructType(context, topLevelDefn);
-        break;
-        
-      case ExMParser.DEFINE_NEW_TYPE:
-      case ExMParser.TYPEDEF:
-        defineNewType(context, topLevelDefn, type == ExMParser.TYPEDEF);
-        break;
-        
-      case ExMParser.GLOBAL_CONST:
-        globalConst(context, topLevelDefn);
-        break;
+        case ExMParser.EOF:
+          endOfFile(context, topLevelDefn);
+          break;
+
+        default:
+          String name = LogHelper.tokName(type);
+          throw new STCRuntimeError("Unexpected token: " + name
+              + " at program top level");
+        }
+      }
       
-      case ExMParser.EOF:
-        endOfFile(context, topLevelDefn);
-        break;
+      context.syncFilePos(programTree, lineMapping);
+      // Second pass to compile functions
+      for (int i = 0; i < programTree.getChildCount(); i++) {
+        SwiftAST topLevelDefn = programTree.child(i);
+        context.syncFilePos(topLevelDefn, lineMapping);
+        int type = topLevelDefn.getType();
+        switch (type) {
+        case ExMParser.DEFINE_FUNCTION:
+          compileFunction(context, topLevelDefn);
+          break;
+
+        case ExMParser.DEFINE_APP_FUNCTION:
+          compileAppFunction(context, topLevelDefn);
+          break;
+        }
+      }
+    } else {
+      throw new STCRuntimeError("Unexpected token: " +
+          LogHelper.tokName(token) + " instead of PROGRAM");
+    }
+  }
   
-      default:
-        String name = LogHelper.tokName(type);
-        throw new STCRuntimeError("Unexpected token: " + name
-            + " at program top level");
-      }
-    }
-  }
-
-
-  /**
-   * Second pass:
-   *  - Compile composite and app functions, now that all function names are known
-   * @param context
-   * @param fileTree
-   * @throws UserException
-   */
-  private void walkTopLevelCompile(GlobalContext context, SwiftAST fileTree)
-      throws UserException {
-    assert(fileTree.getType() == ExMParser.PROGRAM);
-    context.syncFilePos(fileTree, lineMapping);
-    // Second pass to compile functions
-    for (int i = 0; i < fileTree.getChildCount(); i++) {
-      SwiftAST topLevelDefn = fileTree.child(i);
-      context.syncFilePos(topLevelDefn, lineMapping);
-      int type = topLevelDefn.getType();
-      switch (type) {
-      case ExMParser.IMPORT:
-        importModule(context, topLevelDefn, FrontendPass.COMPILE);
-        break;
-        
-      case ExMParser.DEFINE_FUNCTION:
-        compileFunction(context, topLevelDefn);
-        break;
-
-      case ExMParser.DEFINE_APP_FUNCTION:
-        compileAppFunction(context, topLevelDefn);
-        break;
-      }
-    }
-  }
-
-
-  private void importModule(GlobalContext context, SwiftAST tree,
-      FrontendPass pass) throws UserException {
-    assert(tree.getType() == ExMParser.IMPORT);
-    assert(tree.getChildCount() == 1);
-    SwiftAST moduleID = tree.child(0);
-    String importPath = "";
-    String canonicalName = "";
-    if (moduleID.getType() == ExMParser.STRING) {
-      // TODO
-    } else {
-      assert(moduleID.getType() == ExMParser.IMPORT_PATH);
-      // TODO
-    }
-    
-    ParsedFile parsed;
-    boolean alreadyLoaded;
-    if (loadedInputFiles.containsKey(canonicalName)) {
-      alreadyLoaded = true;
-      parsed = loadedInputFiles.get(canonicalName);
-    } else {
-      alreadyLoaded = false;
-      // Load the file
-      SwiftFile input = new SwiftFile(importPath);
-      try {
-        parsed = input.parse();
-      } catch (IOException e) {
-        throw new ModuleLoadException(context, importPath, e);
-      }
-      loadedInputFiles.put(canonicalName, parsed);
-    }
-    
-    // Now file is parsed, we decide how to handle import
-    if (pass == FrontendPass.DEFINITIONS) {
-      // Don't reload definitions
-      if (!alreadyLoaded) {
-        walkFile(context, parsed, pass);
-      }
-    } else {
-      assert(pass == FrontendPass.COMPILE);
-      // Should have been loaded at defs stage
-      assert(alreadyLoaded);
-      // Check if already being compiled
-      if (!compiledInputFiles.contains(canonicalName)) {
-        walkFile(context, parsed, pass);
-      }
-    }
-  }
-
-
   /**
    * Control what statement walker should process
    */
@@ -1957,8 +1814,7 @@ public class ASTWalker {
     
     // Analyse variable usage inside function and annotate AST
     context.syncFilePos(tree, lineMapping);
-    varAnalyzer.analyzeVariableUsage(context, lineMapping, function,
-                                     iList, oList, block);
+    varAnalyzer.analyzeVariableUsage(context, function, iList, oList, block);
 
     LocalContext functionContext = new LocalContext(context, function);
     functionContext.setNested(false);
