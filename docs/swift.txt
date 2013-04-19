@@ -110,9 +110,12 @@ running the program.
 
 STC accepts the following arguments:
 
++-A+:: Specify a compile-time argument
++-D+:: Define preprocessor macro
 +-E+:: Just run the preprocessor
-+-I+:: Add a preprocessor include path
++-I+:: Add a directory to the import search path
 +-O+:: Set optimization level: 0, 1, 2, or 3.  See <<Optimizations>>
++-p+:: Disable preprocessor
 +-T+:: Enable optimization
 +-t+:: Disable optimization
 +-u+:: Only compile if output file is not up-to-date
@@ -125,19 +128,16 @@ share syntax with C-like languages.  The program starts in +main()+.
 The following is a complete Swift program:
 
 ----
-#include <builtins.swift>
 main
 {}
 ----
 
 As shown, STC input is preprocessed by +cpp+, the C preprocessor.
-Including +builtins.swift+ is required.
 
 Hello world is thus:
 
 ----
-#include <builtins.swift>
-#include <io.swift>
+import io;
 main
 {
   printf("Hello world");
@@ -154,7 +154,7 @@ external application programs.
 
 == Comments
 
-Swift supports C/C++ comments:
+Swift supports C/C++-style comments:
 
 ----
 // This is a comment
@@ -162,6 +162,56 @@ Swift supports C/C++ comments:
 comment */
 /** Also a
 comment */
+----
+
+Additionally, if the preprocessor is disabled, single-line comments
+starting with # are supported:
+----
+# This will work if source file is not preprocessed
+----
+
+== Modules
+
+Swift has a module system that allows you to import function and variable
+definitions into your source file.
+----
+import io;
+import mypackage.mymodule;
+----
+
+The mechanisms for locating source files is as follows:
+
+* STC searches a list of directories in order to find a Swift source
+  file in the correct directory with the correct name.
+* The standard library is always first on the search path,
+    and the current working directory is last.
+* Additional directories can be added with the +-I+ option to STC.
+* Swift source files must have a +.swift+ suffix.  E.g. +import io;+
+  looks for a file called +io.swift+.
+* In the case of a multi-part import name, E.g. +import mypackage.mymodule+,
+  then, we look for +mymodule.swift+ in subdirectory +mypackage+. 
+
+Currently Swift has no notion of namespaces or selective import, so
+including a module will import all function and variable definitions
+into your current file.
+
+There are two additional ways to include files.
+
+This syntax is completely equivalent, but is also supported for
+compatibility:
+----
+import "mypackage/mymodule";
+----
+
+The +#include+ syntax uses a different mechanism to import the file: it
+uses the C preprocessor to textually include an entire file into the
+current one.  Note that +#include+ will only work if the preprocessor
+is enabled on the current file.
+In contrast to +import+, +#include+ will run the C preprocessor on
+any included modules.  +import+ is recommended over +#include+ unless
+the imported module requires preprocessing.
+----
+#include <mypackage/mymodule.swift>
 ----
 
 == Dataflow Evaluation
@@ -425,7 +475,6 @@ strictly typechecked, for example, only accepted particular types of
 file.
 
 ----
-#include <builtins.swift>
 
 typedef sorted_file file;
 app (sorted_file out) sort (file i) {
@@ -607,7 +656,7 @@ String concatenation is also performed with +&#43;+ (plus).
 
 == Standard Library
 
-Each category of function is shown with the required include
+Each category of function is shown with the required import
 statement, if necessary.
 
 Functions that accept an input of any type are denoted +anything+.
@@ -628,7 +677,7 @@ A function that accepts more than one type is denoted as +f(int|string)+.
 
 +trace(anything, anything, ...)+:: Report the value of any variable
 
- #include <io.swift>
+ import io;
 
 +printf(string format, int|float|string|boolean...)+::
 As +printf()+ in C
@@ -637,7 +686,7 @@ As +printf()+ in C
 
 +strcat(string,string)+: Concatenation
 
- #include <string.swift>
+ import string;
 
 +substring(string s, int start, int length) -> string+::
 Obtain substring of given string +s+ starting at character +start+ and of
@@ -684,14 +733,14 @@ Obtain the length of the given string
 +hash(string) -> int+::
 Hash the string to a 32-bit integer
 
- #include <io.swift>
+ import io;
 
 +sprintf(string format, int|float|string|boolean...)+::
 As +sprintf()+ in C
 
 === Math
 
- #include <math.swift>
+ import math;
 
 +floor(float i) -> int+:: Round down
 +ceil(float i) -> int+:: Round up
@@ -703,21 +752,21 @@ As +sprintf()+ in C
 +abs_integer(int) -> int+:: Absolute value
 +abs_float(float) -> float+:: Absolute value
 
- #include <random.swift>
+ import random;
 
 +random() -> float+:: Obtain random number
 
 +randint(int start, int end)+::
 Obtain random integer from +start+, inclusive, to +end+, exclusive
 
- #include <stats.swift>
+ import stats;
 
 +sum_integer(int[]) -> int+:: Sum
 +avg(int|float[]) -> float+:: Average
 
 === System
 
- #include <sys.swift>
+ import sys;
 
 +getenv(string) -> string+:: Obtain an environment variable
 
@@ -741,6 +790,14 @@ Swift conventions.  Under these conventions, the example command above
 has _flagged_ arguments +v+, +a=file.txt+, +exec="prog thing1
 thing2"+, and +help+. The command has _unflagged_ arguments
 +file2.txt+ and +file4.txt+
+
+In addition to regular run-time arguments, a special feature called
+*compile-time arguments* allows keyword arguments to be provided at
+compile time.  This allows a specialized, optimized version of code to be
+compiled for a particular set of arguments.  Keyword arguments, accessible
+through the +argv+ function, can be specified at compile time with the
++-A name=val+ argument to STC. Note that if the argument is re-specified
+at run-time, an error will occur.
 
 +argc()+::
 Get count of unflagged arguments
@@ -775,7 +832,7 @@ Test if the command line contains the given flagged argument:
 
 ==== Debugging
 
- #include <assert.swift>
+ import assert;
 
 +assert(boolean condition, string message)+::
 If condition is false, report +message+ and exit immediately.
@@ -981,7 +1038,7 @@ Standard input, output and error can be redirected to files.
 
 Join files together:
 ----
-#include <files.swift>
+import files;
 
 app (file out) cat (file inputs[]) {
   "/bin/cat" inputs @stdout=out
