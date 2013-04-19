@@ -1,4 +1,3 @@
-#include "builtins.swift"
 type bob {
     int a;
     int b;

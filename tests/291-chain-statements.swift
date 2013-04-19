@@ -1,5 +1,4 @@
-#include <builtins.swift>
-#include <sys.swift>
+import sys;
 
 
 main {

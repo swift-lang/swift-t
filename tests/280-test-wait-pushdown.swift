@@ -1,5 +1,4 @@
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 
 @dispatch=WORKER
 (int o) double(int i) "turbine" "0.0.1" [

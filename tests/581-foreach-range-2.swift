@@ -1,8 +1,7 @@
 
 // Check that range can support calculated vals
 
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 
 main {
     foreach x in [1:f()] {

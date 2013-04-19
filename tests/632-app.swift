@@ -1,4 +1,3 @@
-#include <builtins.swift>
 
 /* Split file into head and tail */
 app (file out1, file out2) split (file input, int lines) {

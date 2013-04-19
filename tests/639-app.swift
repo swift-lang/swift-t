@@ -1,6 +1,5 @@
 // Test app array expansion with multi-d arrays
 
-#include <builtins.swift>
 
 main {
   void done = echo([["one", "two"], ["three"], [], ["four", "five"]]);

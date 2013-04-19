@@ -1,7 +1,6 @@
 
-#include <builtins.swift>
-#include <string.swift>
-#include <io.swift>
+import string;
+import io;
 
 main
 {

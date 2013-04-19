@@ -1,8 +1,7 @@
 
 // Recursive multiplication based on addition, subtraction
 
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 
 // mult(i,0,s) = s
 // mult(i,j,s) = mult(i,j-1,s+i)

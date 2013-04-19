@@ -1,7 +1,6 @@
 
 // Regression test for octal escape code bug
 
-#include <builtins.swift>
 
 main {
     // Output hello world in red

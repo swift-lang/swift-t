@@ -1,4 +1,3 @@
-#include "builtins.swift"
 // Test for nested array insertion with computed indices
 () f () {
     int A[][];

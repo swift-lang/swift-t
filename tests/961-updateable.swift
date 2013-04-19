@@ -1,7 +1,6 @@
 
-#include <builtins.swift>
-#include <assert.swift>
-#include <sys.swift>
+import assert;
+import sys;
 
 main {
     updateable_float x = 123;

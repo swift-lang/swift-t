@@ -1,8 +1,7 @@
 
 // Test relational operators on strings
 
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 
 (string r) f () {
     r = "my amazing string";

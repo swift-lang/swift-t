@@ -1,4 +1,4 @@
-#include <assert.swift>
+import assert;
 
 
 // THIS-TEST-SHOULD-NOT-COMPILE

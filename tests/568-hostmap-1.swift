@@ -1,9 +1,8 @@
 
-#include <builtins.swift>
-#include <files.swift>
-#include <io.swift>
-#include <string.swift>
-#include <sys.swift>
+import files;
+import io;
+import string;
+import sys;
 
 /**
    Run as TURBINE_SRAND=<seed> turbine ... 568.tcl

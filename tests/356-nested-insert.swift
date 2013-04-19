@@ -1,4 +1,3 @@
-#include <builtins.swift>
 
 // Regression test for compiler bug with
 // lvalue/rvalue nested array lookups

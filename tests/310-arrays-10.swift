@@ -1,4 +1,3 @@
-#include <builtins.swift>
 // Test array copying by value
 main {
 

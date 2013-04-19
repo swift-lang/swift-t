@@ -1,8 +1,7 @@
 
 // Check that it compiles to good code with arrays
 
-#include <builtins.swift>
-#include <stats.swift>
+import stats;
 
 main {
     int A[][];

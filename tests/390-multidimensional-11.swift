@@ -1,4 +1,3 @@
-#include "builtins.swift"
 // Minimal test for nested array insertion
 () f () {
     int A[][];

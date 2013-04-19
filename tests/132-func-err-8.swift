@@ -1,4 +1,3 @@
-#include <builtins.swift>
 // THIS-TEST-SHOULD-NOT-COMPILE
 
 // Check can't define conflicting function

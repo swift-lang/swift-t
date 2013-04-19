@@ -1,8 +1,7 @@
 
 // Check that string operations work ok in for loop
 
-#include <builtins.swift>
-#include <string.swift>
+import string;
 
 main {
   for (string s = "", int i = 0; i < 10;

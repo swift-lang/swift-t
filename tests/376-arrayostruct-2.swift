@@ -1,4 +1,3 @@
-#include "builtins.swift"
 // Test insertion of structs into arrays alone without reading
 
 type mystruct {

@@ -1,7 +1,6 @@
 
-#include <builtins.swift>
-#include <assert.swift>
-#include <stats.swift>
+import assert;
+import stats;
 
 main {
     float a[];

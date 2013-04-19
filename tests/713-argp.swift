@@ -1,5 +1,4 @@
-#include <builtins.swift>
-#include <sys.swift>
+import sys;
 // THIS-TEST-SHOULD-NOT-RUN
 main {
     string arg1 = argp(0);

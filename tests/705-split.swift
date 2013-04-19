@@ -1,8 +1,7 @@
 
 // Test string split()
 
-#include <builtins.swift>
-#include <string.swift>
+import string;
 
 main {
     string x = "hello world";

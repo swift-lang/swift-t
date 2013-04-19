@@ -1,5 +1,4 @@
 
-#include <builtins.swift>
 
 (int M[]) f () {
     M[-1] = 13;

@@ -1,4 +1,3 @@
-#include <builtins.swift>
 // Check forward refs work
 main {
 

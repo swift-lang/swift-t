@@ -1,4 +1,3 @@
-#include <builtins.swift>
 
 @pure
 (int x, int y) doubleresult() {

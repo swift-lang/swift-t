@@ -1,4 +1,3 @@
-#include "builtins.swift"
 // Basic test to make sure that returning multidimensional arrays works
 
 (int r[]) M1 () {

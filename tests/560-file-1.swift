@@ -1,5 +1,4 @@
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 
 main {
     file infile = input_file("alice.txt");

@@ -1,8 +1,7 @@
 
-#include <builtins.swift>
-#include <io.swift>
-#include <files.swift>
-#include <sys.swift>
+import io;
+import files;
+import sys;
 
 //usage: stc 563-glob.swift -S=/home/zzhang/*.swift
 main

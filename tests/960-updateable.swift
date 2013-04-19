@@ -1,6 +1,5 @@
 
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 
 main {
     updateable_float x = inf;

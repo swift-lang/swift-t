@@ -1,6 +1,5 @@
 
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 
 main {
     // Unroll a small loop and check that the whole thing gets inlined ok

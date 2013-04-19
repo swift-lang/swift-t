@@ -1,5 +1,4 @@
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 
 (int o) f (int i) {
   o = i;

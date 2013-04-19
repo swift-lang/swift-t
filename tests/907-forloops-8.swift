@@ -1,4 +1,3 @@
-#include <builtins.swift>
 
 main {
   // Check that int->float promotion works ok in for loop

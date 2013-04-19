@@ -1,4 +1,3 @@
-#include "builtins.swift"
 // Test the @sync loop modifier
 main {
     int A[];

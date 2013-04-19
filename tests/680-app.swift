@@ -1,7 +1,6 @@
-#include <builtins.swift>
-#include <files.swift>
-#include <assert.swift>
-#include <string.swift>
+import files;
+import assert;
+import string;
 
 
 // Test pipelines of app calls

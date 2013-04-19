@@ -1,8 +1,7 @@
 
-#include <builtins.swift>
-#include <assert.swift>
-#include <math.swift>
-#include <stats.swift>
+import assert;
+import math;
+import stats;
 
 main {
     testStatAgg();

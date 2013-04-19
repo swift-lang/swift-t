@@ -1,4 +1,3 @@
-#include "builtins.swift"
 // Check that the type definitions are processed ok
 
 type bob {

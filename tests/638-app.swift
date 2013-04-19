@@ -1,6 +1,5 @@
 // Test app with arrays expanding to command-line args
 
-#include <builtins.swift>
 
 main {
   void done = echo("the", ["quick", "brown", "fox"], [input_file("jumped"),

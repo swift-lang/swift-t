@@ -1,7 +1,6 @@
 
 // Test relational operators on floats
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 
 (float r) f () {
     r = 1.0;

@@ -1,4 +1,3 @@
-#include "builtins.swift"
 
 (int result[]) f (int x) {
     result[0] = x + 0;

@@ -1,8 +1,7 @@
 
 // Related to RDCEP work
 
-#include <builtins.swift>
-#include <io.swift>
+import io;
 
 (int r[]) f()
 {

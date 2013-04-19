@@ -1,4 +1,3 @@
-#include "builtins.swift"
 // SKIP-THIS-TEST
 // this example will only pass once we can overlap array creation and insertion
 

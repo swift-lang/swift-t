@@ -6,10 +6,9 @@
    with setting TURBINE_ENGINES > 1
 */
 
-#include <builtins.swift>
-#include <io.swift>
-#include <string.swift>
-#include <sys.swift>
+import io;
+import string;
+import sys;
 
 main
 {

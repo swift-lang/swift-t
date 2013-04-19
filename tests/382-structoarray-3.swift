@@ -1,4 +1,3 @@
-#include "builtins.swift"
 // This fails because the arrays inside the struct are never closed
 
 type soa {

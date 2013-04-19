@@ -1,8 +1,7 @@
 
-#include <builtins.swift>
-#include <io.swift>
-#include <files.swift>
-#include <sys.swift>
+import io;
+import files;
+import sys;
 
 
 main

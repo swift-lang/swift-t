@@ -1,4 +1,3 @@
-#include "builtins.swift"
 // Basic test to make sure that multidimensional arrays work
 
 main {

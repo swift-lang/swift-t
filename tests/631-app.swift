@@ -1,4 +1,3 @@
-#include <builtins.swift>
 
 app (file out) f (file input, string s, int i) {
     "./631-app-cat.sh" @input @out ("hello " + s) i;

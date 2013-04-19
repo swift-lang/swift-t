@@ -1,4 +1,3 @@
-#include <builtins.swift>
 
 // Check that promotion of function args works
 () printfloat (float x) {

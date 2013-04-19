@@ -1,6 +1,5 @@
-#include <builtins.swift>
-#include <files.swift>
-#include <assert.swift>
+import files;
+import assert;
 
 // Test redirection
 

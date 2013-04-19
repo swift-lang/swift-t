@@ -1,5 +1,4 @@
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 // Regression test for sync optimization error
 
 (int o) f( int i) {

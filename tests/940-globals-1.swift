@@ -1,4 +1,3 @@
-#include <builtins.swift>
 
 
 global const int MY_INT = 2;

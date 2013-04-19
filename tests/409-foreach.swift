@@ -1,6 +1,5 @@
-#include <builtins.swift>
-#include <sys.swift>
-#include <assert.swift>
+import sys;
+import assert;
 
 
 // Regression test for loop hoisting bug

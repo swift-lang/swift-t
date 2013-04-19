@@ -1,8 +1,7 @@
 
 // Test that assert works ok when they pass
 
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 
 main {
     assert(true, "true");

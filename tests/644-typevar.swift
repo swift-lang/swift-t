@@ -1,5 +1,4 @@
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 
 main {
   float A[] = [1, 2.0, 3];

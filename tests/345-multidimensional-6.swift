@@ -1,4 +1,3 @@
-#include "builtins.swift"
 // Test to check more complex array assignments
 
 main {

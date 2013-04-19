@@ -1,5 +1,4 @@
 
-#include <builtins.swift>
 
 main {
     @nosplit

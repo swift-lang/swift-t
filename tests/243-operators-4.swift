@@ -1,6 +1,5 @@
 
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 
 main {
     assertEqual(7 %% 3, 1, "7 %% 3 = 1");

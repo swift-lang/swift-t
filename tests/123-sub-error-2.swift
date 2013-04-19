@@ -1,5 +1,4 @@
 // THIS-TEST-SHOULD-NOT-COMPILE
-#include <builtins.swift>
 (int x, int y) f () {
     x = 1;
     y = 2;

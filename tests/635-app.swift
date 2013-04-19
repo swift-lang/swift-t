@@ -1,4 +1,3 @@
-#include <builtins.swift>
 
 @sideeffectfree @deterministic
 app (file dst) cp (file src) {

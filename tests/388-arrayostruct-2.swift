@@ -1,4 +1,3 @@
-#include <builtins.swift>
 
 type X {
     int x;

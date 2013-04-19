@@ -1,7 +1,6 @@
 
-#include <builtins.swift>
-#include <assert.swift>
-#include <string.swift>
+import assert;
+import string;
 
 (int r) id (int x) {
     r = x;

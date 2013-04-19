@@ -1,4 +1,3 @@
-#include <builtins.swift>
 
 // Regression test for compiler bug
 // The output of this test can be inspected to make sure optimizer

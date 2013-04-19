@@ -1,4 +1,3 @@
-#include "builtins.swift"
 // Test to make sure passing multidimensional arrays as arguments works
 
 () trace_my_array(int M[][]) {

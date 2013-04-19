@@ -1,6 +1,5 @@
-#include <builtins.swift>
-#include <blob.swift>
-#include <assert.swift>
+import blob;
+import assert;
 
 main {
     string s = "12345";

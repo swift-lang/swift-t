@@ -1,4 +1,3 @@
-#include <builtins.swift>
 
 main {
     // Simple regression test for inserting into array

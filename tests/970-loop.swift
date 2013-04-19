@@ -6,12 +6,11 @@
  * Number of loops is N x C
  */
 
-#include <builtins.swift>
-#include <io.swift>
-#include <stats.swift>
-#include <sys.swift>
-#include <string.swift>
-#include <mpe.swift>
+import io;
+import stats;
+import sys;
+import string;
+import mpe;
 
 (float result[]) calc_cutoffs(float step)
 {

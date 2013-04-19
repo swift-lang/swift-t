@@ -1,6 +1,5 @@
 
 
-#include <builtins.swift>
 // THIS-TEST-SHOULD-NOT-RUN
 // SKIP-THIS-TEST
 main {

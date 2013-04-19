@@ -1,4 +1,3 @@
-#include "builtins.swift"
 
 (int r) f (string x) {
     r = 1;

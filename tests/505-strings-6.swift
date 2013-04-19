@@ -1,8 +1,7 @@
 
 // Check relationship operators on strings
 
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 
 main {
     assert("hello" == "hello", "hello != hello");

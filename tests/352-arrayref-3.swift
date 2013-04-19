@@ -1,4 +1,3 @@
-#include "builtins.swift"
 
 (int res[][]) g () {
     int a[];

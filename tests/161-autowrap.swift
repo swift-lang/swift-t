@@ -1,5 +1,4 @@
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 
 // Test the auto-wrapping functionality
 @pure 

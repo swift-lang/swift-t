@@ -1,4 +1,3 @@
-#include <builtins.swift>
 // COMPILE-ONLY-TEST
 // Check that external type passes typechecking, etc.
 

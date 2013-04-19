@@ -1,4 +1,3 @@
-#include "builtins.swift"
 
 (int output) func_a(int a, int b)
 {

@@ -1,8 +1,7 @@
 
-#include <builtins.swift>
-#include <assert.swift>
-#include <stats.swift>
-#include <random.swift>
+import assert;
+import stats;
+import random;
 
 main {
     int A[] = [1,2,3];

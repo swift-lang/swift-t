@@ -1,6 +1,5 @@
 
-#include <builtins.swift>
-#include <sys.swift>
+import sys;
 
 // THIS-TEST-SHOULD-NOT-COMPILE
 main {

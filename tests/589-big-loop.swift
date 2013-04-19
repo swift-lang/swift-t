@@ -4,9 +4,8 @@
   Cannot reproduce problem. -Justin
 */
 
-#include <builtins.swift>
-#include <io.swift>
-#include <sys.swift>
+import io;
+import sys;
 
 main
 {

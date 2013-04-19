@@ -1,6 +1,5 @@
 
-#include <builtins.swift>
-#include <blob.swift>
+import blob;
 
 main {
   float A[];

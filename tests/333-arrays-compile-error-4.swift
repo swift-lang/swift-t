@@ -1,4 +1,3 @@
-#include "builtins.swift"
 //THIS-TEST-SHOULD-NOT-COMPILE
 // because we're mixing use of an array ref with an allocated array
 

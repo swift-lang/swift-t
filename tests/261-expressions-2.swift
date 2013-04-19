@@ -1,4 +1,3 @@
-#include "builtins.swift"
 // Check that combined declaration/assignment works
 
 (int r) f (int x) {

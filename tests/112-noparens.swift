@@ -1,4 +1,3 @@
-#include "builtins.swift"
 (int a, int b) f(int i, int j)
 {
     a = 2;

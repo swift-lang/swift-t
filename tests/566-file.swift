@@ -1,5 +1,4 @@
-#include <builtins.swift>
-#include <files.swift>
+import files;
 
 main {
   foreach i in [1:3] {

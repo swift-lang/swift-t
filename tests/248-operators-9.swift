@@ -1,6 +1,5 @@
-#include <builtins.swift>
-#include <assert.swift>
-#include <math.swift>
+import assert;
+import math;
 
 
 (int r) i(int x) {

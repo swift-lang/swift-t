@@ -1,6 +1,5 @@
-#include <builtins.swift>
-#include <blob.swift>
-#include <assert.swift>
+import blob;
+import assert;
 
 (int o) f (int i) {
   o = i;

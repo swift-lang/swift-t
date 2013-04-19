@@ -1,5 +1,4 @@
-#include <builtins.swift>
-#include <io.swift>
+import io;
 // THIS-TEST-SHOULD-NOT-COMPILE
 main {
   // Check that can't define conflicting variable

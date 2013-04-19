@@ -1,4 +1,3 @@
-#include "builtins.swift"
 
 // SKIP-THIS-TEST
 

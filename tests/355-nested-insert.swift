@@ -1,6 +1,5 @@
-#include <builtins.swift>
-#include <assert.swift>
-#include <sys.swift>
+import assert;
+import sys;
 
 main {
     // Regression test for nested arrays to check

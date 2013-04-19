@@ -1,6 +1,5 @@
-#include <builtins.swift>
-#include <assert.swift>
-#include <blob.swift>
+import assert;
+import blob;
 
 // Test the auto-wrapping functionality with blobs
 

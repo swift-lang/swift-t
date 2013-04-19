@@ -1,4 +1,3 @@
-#include "builtins.swift"
 // Test passing in array
 (int r) getFirst(int A[]) {
     r = A[0];

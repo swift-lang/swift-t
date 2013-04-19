@@ -1,5 +1,4 @@
-#include <builtins.swift>
-#include <io.swift>
+import io;
 
 /*
  * Regression test to check for bug where optimizer inserted

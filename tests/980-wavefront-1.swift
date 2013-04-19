@@ -3,10 +3,9 @@
    Wavefront pattern
 */
 
-#include <builtins.swift>
-#include <io.swift>
-#include <string.swift>
-#include <sys.swift>
+import io;
+import string;
+import sys;
 
 main
 {

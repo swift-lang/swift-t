@@ -1,4 +1,3 @@
-#include <builtins.swift>
 // test out void type
 main {
     void x;

@@ -4,10 +4,9 @@
   Does not work- array index depth issue
 */
 
-#include <builtins.swift>
-#include <io.swift>
-#include <string.swift>
-#include <stats.swift>
+import io;
+import string;
+import stats;
 
 (int x) g(int A) "funcs" "0.0"
 [ "set <<x>> [ f_983 <<A>> ]" ];

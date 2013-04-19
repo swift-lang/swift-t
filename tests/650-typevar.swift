@@ -1,4 +1,3 @@
-#include <builtins.swift>
 
 // THIS-TEST-SHOULD-CAUSE-WARNING
 // COMPILE-ONLY-TEST

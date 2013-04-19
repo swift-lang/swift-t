@@ -1,7 +1,6 @@
-#include <builtins.swift>
-#include <sys.swift>
-#include <stats.swift>
-#include <assert.swift>
+import sys;
+import stats;
+import assert;
 
 
 main {

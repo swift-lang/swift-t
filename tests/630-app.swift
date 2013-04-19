@@ -1,4 +1,3 @@
-#include <builtins.swift>
 
 app () f (file input, string s, int i) {
     "cat" @input;

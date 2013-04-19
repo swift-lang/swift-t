@@ -1,4 +1,3 @@
-#include "builtins.swift"
 (int A[]) constructArray() {
     A[0] = 9;
     A[1] = 8;

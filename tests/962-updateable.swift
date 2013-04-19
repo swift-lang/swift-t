@@ -1,4 +1,3 @@
-#include <builtins.swift>
 
 //COMPILE-ONLY-TEST
 // Regression test for bug passing updateablefloats

@@ -1,6 +1,5 @@
 
-#include <builtins.swift>
-#include <io.swift>
+import io;
 
 (string output)
 echo_filename(file input) "funcs" "0.0"

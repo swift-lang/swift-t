@@ -1,8 +1,7 @@
 
-#include <builtins.swift>
-#include <io.swift>
-#include <string.swift>
-#include <stats.swift>
+import io;
+import string;
+import stats;
 
 (int x) f(int A[])
 {

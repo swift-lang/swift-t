@@ -1,4 +1,3 @@
-#include "builtins.swift"
 type soa {
     int A[];
     int B[];

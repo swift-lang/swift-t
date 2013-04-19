@@ -1,4 +1,3 @@
-#include "builtins.swift"
 // Make sure that the flattening optimisation works
 main
 {

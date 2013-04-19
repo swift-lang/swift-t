@@ -1,6 +1,5 @@
 
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 
 (int r) is_even (int x) {
     if (x == 0) {

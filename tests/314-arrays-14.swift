@@ -1,5 +1,4 @@
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 /// Check that empty array constructors work right.
 main {
   int B[][] = [[]];

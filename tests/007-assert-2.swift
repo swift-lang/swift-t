@@ -2,8 +2,7 @@
 // THIS-TEST-SHOULD-NOT-RUN
 // check that asserts fail as expected
 
-#include <builtins.swift>
-#include <assert.swift>
+import assert;
 
 main {
     assert(false, "false"); // should fail

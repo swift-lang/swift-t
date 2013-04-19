@@ -1,7 +1,6 @@
-#include <builtins.swift>
-#include <io.swift>
-#include <assert.swift>
-#include <sys.swift>
+import io;
+import assert;
+import sys;
 
 main {
   check_leading_zeroes();

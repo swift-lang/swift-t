@@ -3,9 +3,8 @@
  * Test the waiton and waitonall annotations for for loops
  */
 
-#include <builtins.swift>
-#include <assert.swift>
-#include <math.swift>
+import assert;
+import math;
 
 main {
     int n = 20;

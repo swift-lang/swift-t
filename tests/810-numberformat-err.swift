@@ -2,9 +2,8 @@
 // Test that toint(empty string) results in error
 // THIS-TEST-SHOULD-NOT-RUN
 
-#include <builtins.swift>
-#include <io.swift>
-#include <sys.swift>
+import io;
+import sys;
 
 main {
   int N = toint("");

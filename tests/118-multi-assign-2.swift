@@ -1,4 +1,3 @@
-#include <builtins.swift>
 
 // Regression test for hoisting
 main {

@@ -1,4 +1,3 @@
-#include "builtins.swift"
 // dummy function
 (int r) array_lookup(int A[], int i) {
     r = A[i];
