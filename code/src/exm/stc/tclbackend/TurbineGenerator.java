@@ -28,6 +28,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -48,6 +49,7 @@ import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
+import exm.stc.common.lang.CompileTimeArgs;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RefCounting;
@@ -245,10 +247,25 @@ public class TurbineGenerator implements CompilerBackend {
     
     // Insert code to check versions
     tree.add(Turbine.checkConstants());
+    
+    tree.append(compileTimeArgs());
 
     tree.add(new Command("turbine::start " + MAIN_FUNCTION_NAME +
                                         " " + CONSTINIT_FUNCTION_NAME));
     tree.add(new Command("turbine::finalize"));
+  }
+
+  private Sequence compileTimeArgs() {
+    Map<String, String> args = CompileTimeArgs.getCompileTimeArgs();
+    Sequence seq = new Sequence();
+    if (!args.isEmpty()) {
+      for (String key: args.keySet()) {
+        TclString argName = new TclString(key, true);
+        TclString argVal = new TclString(args.get(key), true);
+        seq.add(Turbine.addConstantArg(argName, argVal));
+      }
+    }
+    return seq;
   }
 
   @Override

@@ -41,6 +41,7 @@ public class Builtins {
   public static final String ARRAY_SIZE = "size";
   public static final String RANGE = "range";
   public static final String RANGE_STEP = "rangestep";
+  public static final Object ARGV = "argv";
   
   /** Names of built-ins which don't have side effects */
   private static HashSet<String> pure = new HashSet<String>();
@@ -138,7 +139,7 @@ public class Builtins {
   /** Keep track of assert variants so they can be disabled as an optimization */
   private static final HashSet<String> assertVariants = new
                 HashSet<String>();
-
+  
   /**
    * @param fnName true if the named builtin is some kind of assert statemetn
    * @return

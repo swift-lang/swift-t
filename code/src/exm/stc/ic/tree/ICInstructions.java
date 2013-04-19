@@ -34,6 +34,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.Builtins;
+import exm.stc.common.lang.CompileTimeArgs;
 import exm.stc.common.lang.OpEvaluator;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
@@ -2744,6 +2745,18 @@ public class ICInstructions {
     @Override
     public Map<Var, Arg> constantFold(String enclosingFnName,
                                   Map<Var, Arg> knownConstants) {
+      
+      if (this.functionName.equals(Builtins.ARGV)) {
+        // See if argument name is constant
+        Arg argName = knownConstants.get(inputs.get(0).getVar());
+        if (argName != null) {
+          String val = CompileTimeArgs.lookup(argName.getStringLit());
+          if (val != null) {
+            return Collections.singletonMap(outputs.get(0),
+                                             Arg.createStringLit(val));
+          }
+        }
+      }
       return null;
     }
     
@@ -2980,6 +2993,17 @@ public class ICInstructions {
                                   Map<Var, Arg> knownConstants) {
       // Replace any variables for which constant values are known
       ICUtil.replaceArgsInList(knownConstants, inputs);
+      
+      if (this.functionName.equals(Builtins.ARGV)) {
+        Arg argName = this.inputs.get(0);
+        if (argName.isStringVal()) {
+          String val = CompileTimeArgs.lookup(argName.getStringLit());
+          if (val != null) {
+            return Collections.singletonMap(outputs.get(0),
+                                             Arg.createStringLit(val));
+          }
+        }
+      }
       return null;
     }
     

@@ -47,6 +47,7 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCFatal;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.CompileTimeArgs;
 
 /**
  * Command line interface to STC compiler.  Some compiler options
@@ -143,10 +144,6 @@ public class Main {
     }
 
     Properties swiftProgramArgs = cmd.getOptionProperties(SWIFT_PROG_ARG_FLAG);
-    if (swiftProgramArgs.size() > 0) {
-      System.out.println("-" + SWIFT_PROG_ARG_FLAG + " not yet implemented");
-      System.exit(1);
-    }
     
     String preprocMacros[]; 
     if (cmd.hasOption(PREPROC_MACRO_FLAG)) {
@@ -214,8 +211,9 @@ public class Main {
     
     for (Object key: args.swiftProgramArgs.keySet()) {
       String keyS = (String) key;
-      Settings.addMetadata("Arg " + keyS,
-          args.swiftProgramArgs.getProperty(keyS));
+      String val = args.swiftProgramArgs.getProperty(keyS);
+      Settings.addMetadata("Arg " + keyS, val);
+      CompileTimeArgs.addCompileTimeArg(keyS, val);
     }
   }
 

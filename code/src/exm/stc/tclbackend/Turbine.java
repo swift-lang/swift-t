@@ -199,6 +199,7 @@ class Turbine {
 
   // Misc
   private static final Token TURBINE_LOG = turbFn("c::log");
+  private static final Token ARGV_ADD_CONSTANT = turbFn("argv_add_constant");
   
   private static Token turbFn(String functionName) {
     return new Token("turbine::" + functionName);
@@ -216,6 +217,9 @@ class Turbine {
     return new Value("::adlb::" + name);
   }
   
+  public static Command addConstantArg(Expression argName, Expression argVal) {
+    return new Command(ARGV_ADD_CONSTANT, argName, argVal);
+  }
   
   public static TclTree[] createStackFrame(StackFrameType type)
   {
