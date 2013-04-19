@@ -74,6 +74,20 @@ namespace eval turbine {
         }
     }
 
+    # Add keyword arguments to argv.  Fail if this overwrites any
+    # previous arguments.  This is useful for compile-time arguments,
+    # where we want to "compile in" some argument values
+    proc argv_add_constant { args } {
+      variable turbine_argv
+      dict for {key value} $args {
+        if [ dict exists $turbine_argv $key ] {
+          error "Named command-line argument $key was provided at both\
+                 compile time and run time"
+        }
+        dict set $key $value
+      }
+    }
+
     # Replace shell quoted spaced arguments with Tcl list
     proc argv_helper { s } {
         set result [ list ]
