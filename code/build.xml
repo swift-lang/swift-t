@@ -17,10 +17,17 @@
             value="lib/stc.jar"/>
   <property name="log4j.jar"
             value="lib/log4j-1.2.16.jar"/>
+  <property name="commons-cli.jar"
+            value="lib/commons-cli-1.2.jar"/>
+  <property name="commons-io.jar"
+            value="lib/commons-io-2.4.jar"/>
+  <property name="commons-lang.jar"
+            value="lib/commons-lang3-3.1.jar"/>
+            
   <property name="grammar"
             value="src/exm/stc/ast/ExM.g"/>
   <property name="classpath"
-            value=".:${antlr.jar}:${log4j.jar}"/>
+            value="${antlr.jar}:${log4j.jar}:${commons-cli.jar}:${commons-io.jar}:${commons-lang.jar}"/>
   <property name="build.dir"
             value="classes"/>
 

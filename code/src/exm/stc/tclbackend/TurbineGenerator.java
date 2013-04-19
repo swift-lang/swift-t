@@ -37,6 +37,7 @@ import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.InvalidOptionException;
+import exm.stc.common.exceptions.STCFatal;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
@@ -194,6 +195,13 @@ public class TurbineGenerator implements CompilerBackend {
     for (String key: Settings.getKeys()) {
       tree.add(new Comment(String.format("%-30s: %s", key, Settings.get(key))));
     }
+    tree.add(new Text(""));
+    
+    tree.add(new Comment("Metadata:"));
+    for (Pair<String, String> kv: Settings.getMetadata()) {
+      tree.add(new Comment(String.format("%-30s: %s", kv.val1, kv.val2)));
+    }
+    
     tree.add(new Text(""));
 
     addAutoPaths();
@@ -2269,7 +2277,7 @@ public class TurbineGenerator implements CompilerBackend {
       System.out.println("code generated before error:");
       System.out.println(sb);
       System.out.println("exiting");
-      System.exit(ExitCode.ERROR_INTERNAL.code());
+      throw new STCFatal(ExitCode.ERROR_INTERNAL.code());
     }
     return sb.toString();
   }

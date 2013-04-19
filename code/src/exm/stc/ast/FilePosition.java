@@ -46,6 +46,13 @@ public class FilePosition {
     private final TreeMap<Integer, FilePosition> fileMap
           = new TreeMap<Integer, FilePosition>();
     
+    public static LineMapping makeSimple(String path) {
+      LineMapping map = new LineMapping();
+      // 1:1 mapping
+      map.addPreprocInfo(1, path, 1);
+      return map;
+    }
+
     /**
      * 
      * @param preprocOutLine line of preprocessor output

@@ -39,8 +39,14 @@ OUTPUT_MODE=turbine
 # UPDATE= If 1, only compile if target not up-to-date
 UPDATE=0
 
+# Is preprocessor enabled?
+PREPROCESS=true
+
 typeset -T RPATH rpath
 rpath=()
+
+# Keyword args to pass to compiler
+STC_ARGS=()
 
 function get_compiler_opt_name() {
     case $1
@@ -224,23 +230,28 @@ report_version()
   exit 0
 }
 
-while getopts "d:D:EhI:l:L:t:T:O:C:r:uvVx" OPTION
+while getopts "A:d:D:EhI:l:L:pt:T:O:C:r:uvVx" OPTION
 do
   case ${OPTION}
     in
+    A)  
+      STC_ARGS+="-A${OPTARG}"
+      ;;
     d) DEBUG_PORT=${OPTARG}
       verbose "DEBUG_PORT: ${DEBUG_PORT}"
       ;;
-    D) MACROS="${MACROS} ${OPTARG}"
+    D) 
+      STC_ARGS+="-D${OPTARG}"
       verbose "MACRO: ${OPTARG}"
       ;;
     E) OUTPUT_MODE=cpp
+      COMPILER_OPTS+="-Dstc.preprocess_only=true"
       ;;
     h)
       verbose "HELP:"
       help
       ;;
-    I) CPP_INCLUDE+="-I ${OPTARG} "
+    I) STC_ARGS+="-I${OPTARG}"
       ;;
     l) LOGFILE=${OPTARG}
       verbose "LOGFILE: ${LOGFILE}"
@@ -248,6 +259,8 @@ do
     L) LOGFILE=${OPTARG}
       verbose "LOGFILE: ${LOGFILE} trace enabled"
       LOGTRACE=true
+      ;;
+    p) PREPROCESS=false
       ;;
     r)
       add_rpath ${OPTARG}
@@ -291,18 +304,6 @@ INPUT=$1
 # This is optional (defaults to stdout)
 OUTPUT=$2
 
-if [[ ${INPUT} == "" ]]
-then
-  print "stc: no input file.  Use -h switch for stc help"
-  return ${EXIT_ERROR_SCRIPT}
-fi
-
-if [[ ! -f ${INPUT} ]]
-then
-  print "stc: not readable: ${INPUT}"
-  return ${EXIT_ERROR_SCRIPT}
-fi
-
 if [[ -z ${OPTLEVEL} ]]
 then
   set_opt_level 2
@@ -315,14 +316,8 @@ then
   export DEBUG=-agentlib:jdwp=transport=dt_socket,server=y,address=${DEBUG_PORT}
 fi
 
-STDOUT=/dev/stdout
-if [[ ${OUTPUT} == "" ]]
-then
-  OUTPUT=${STDOUT}
-fi
-
 # Check timestamps (-u)
-if [[ ${UPDATE} == 1 && ${OUTPUT} != ${STDOUT} ]]
+if [[ ${UPDATE} == 1 && ! -z "${OUTPUT}" ]]
 then
   if [[ -f ${OUTPUT} ]]
   then
@@ -335,11 +330,15 @@ then
   fi
 fi
 
-ANTLR=${STC_HOME}/lib/antlr-3.5-complete-no-st3.jar
-STC=${STC_HOME}/lib/stc.jar
-LOG4J=${STC_HOME}/lib/log4j-1.2.16.jar
-CLASSPATH=${ANTLR}:${STC}:${LOG4J}
 
+STC=${STC_HOME}/lib/stc.jar
+CLASSPATH="${STC}"
+for lib in stc antlr-3.5-complete-no-st3 log4j-1.2.16 \
+           commons-cli-1.2 commons-io-2.4 commons-lang3-3.1
+do
+  CLASSPATH+=":${STC_HOME}/lib/$lib.jar"
+done
+        
 TURBINE_VERSION=$( < ${STC_HOME}/turbine-version.txt )
 
 FLAGS=( -ea -Dstc.turbine.version=${TURBINE_VERSION} )
@@ -380,14 +379,9 @@ then
 fi
 
 # Extra info flags
-FLAGS+="-Dstc.input_filename=${INPUT}";
-FLAGS+="-Dstc.output_filename=${OUTPUT}";
 FLAGS+="-Dstc.stc_home=${STC_HOME}";
 FLAGS+="-Dstc.turbine_home=${TURBINE_HOME}";
-
-# Add last resort include paths
-CPP_INCLUDE+="-I ${PWD} "
-CPP_INCLUDE+="-I ${TURBINE_HOME}/export"
+FLAGS+="-Dstc.c_preprocess=${PREPROCESS}";
 
 MAIN=exm.stc.ui.Main
 
@@ -400,37 +394,8 @@ JVM_FLAGS+="-enableassertions"
 # Group all JVM args together
 ARGS="${JVM_FLAGS} ${DEBUG} ${FLAGS} ${COMPILER_OPTS} -cp ${CLASSPATH}"
 
-# Assemble preprocessor command line
-CPP_FLAGS=""
-for M in ${MACROS}; do
-  CPP_FLAGS="${CPP_FLAGS} -D ${M}"
-done
-
-# We use gcc -E because cpp is broken on Mac GCC 4.2.1
-#    Cf. http://stackoverflow.com/questions/4137923
-CPP="gcc -E -x c ${CPP_INCLUDE} ${CPP_FLAGS}"
-verbose "CPP COMMAND: ${CPP}"
-
-if [[ ${OUTPUT_MODE} == "cpp" ]]
-then
-  # Just preprocess
-  ${=CPP} ${INPUT} > ${OUTPUT}
-  return ${?}
-fi
-
-# We use ZSH to make a special file for the pre-processed script
-java ${=ARGS} ${MAIN} <( ${=CPP} ${INPUT} ) ${OUTPUT}
-
-EXITCODE=${?}
-
-if (( EXITCODE ))
-then
-  # Compile did not succeed: remove output
-  if [[ ${OUTPUT} != /dev* && -f ${OUTPUT} ]]
-  then
-    rm ${OUTPUT}
-  fi
-fi
+java ${=ARGS} ${MAIN} ${STC_ARGS} ${INPUT} ${OUTPUT}
 
 # Return the exit code from the java process
+EXITCODE=${?}
 return ${EXITCODE}

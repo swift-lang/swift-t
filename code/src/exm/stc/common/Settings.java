@@ -29,6 +29,7 @@ import java.util.Properties;
 
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.util.Pair;
 
 /**
  * General STC settings
@@ -106,7 +107,17 @@ public class Settings
   /** Run compiler repeatedly so can be profiled */
   public static final String PROFILE_STC = "stc.profile";
 
+  public static final String USE_C_PREPROCESSOR = "stc.c_preprocess";
+  public static final String PREPROCESS_ONLY = "stc.preprocess_only";
+  
   private static final Properties properties;
+  
+  private static final List<String> modulePath = new ArrayList<String>();
+  
+  /** Additional metadata */
+  private static final List<Pair<String, String>> metadata = 
+            new ArrayList<Pair<String, String>>();
+  
   static {
     Properties defaults = new Properties();
     // Set defaults here
@@ -119,6 +130,8 @@ public class Settings
     defaults.setProperty(STC_HOME, "");
     defaults.setProperty(TURBINE_HOME, "");
     defaults.setProperty(COMPILER_DEBUG, "true");
+    defaults.setProperty(USE_C_PREPROCESSOR, "false");
+    defaults.setProperty(PREPROCESS_ONLY, "false");
     
     // Code optimisation settings - defaults
     defaults.setProperty(OPT_FLATTEN_NESTED, "true");
@@ -177,6 +190,40 @@ public class Settings
     } 
     validateProperties();
     loadVersionNumber();
+    initModulePath();
+  }
+
+  public static void set(String key, String value) {
+    properties.setProperty(key, value);
+  }
+
+  private static void initModulePath() {
+    // Search Turbine directory first
+    modulePath.add(0, Settings.get(Settings.TURBINE_HOME) + "/export");
+    // Search current directory last
+    modulePath.add(".");
+  }
+  
+  public static void addModulePath(String dir) {
+    modulePath.add(dir);
+  }
+
+  /**
+   * @return list of directory paths to search, from first to last
+   */
+  public static List<String> getModulePath() {
+    return Collections.unmodifiableList(modulePath);
+  }
+  
+  public static void addMetadata(String key, String val) {
+    metadata.add(Pair.create(key, val));
+  }
+
+  /**
+   * @return list of directory paths to search, from first to last
+   */
+  public static List<Pair<String, String>> getMetadata() {
+    return Collections.unmodifiableList(metadata);
   }
 
   private static void loadVersionNumber() {
@@ -252,6 +299,8 @@ public class Settings
     getBoolean(AUTO_DECLARE);
     getBoolean(COMPILER_DEBUG);
     getBoolean(PROFILE_STC);
+    getBoolean(USE_C_PREPROCESSOR);
+    getBoolean(PREPROCESS_ONLY);
 
     getLong(OPT_MAX_ITERATIONS);
 
@@ -335,9 +384,7 @@ public class Settings
   }
 
   public static boolean getBoolean(String key)
-                  throws InvalidOptionException
-
-  {
+                  throws InvalidOptionException {
     String strVal = properties.getProperty(key);
     if (strVal == null) {
       throw new InvalidOptionException("no value set for option " + key);

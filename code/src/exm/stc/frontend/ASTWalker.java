@@ -15,6 +15,9 @@
  */
 package exm.stc.frontend;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -31,10 +34,12 @@ import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Logging;
+import exm.stc.common.Settings;
 import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.InvalidSyntaxException;
+import exm.stc.common.exceptions.ModuleLoadException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
@@ -92,43 +97,75 @@ import exm.stc.ic.STCMiddleEnd;
  */
 public class ASTWalker {
 
-  private String inputFile;
-  private VariableUsageAnalyzer varAnalyzer;
   private STCMiddleEnd backend;
-  private LineMapping lineMapping;
   private VarCreator varCreator = null;
   private ExprWalker exprWalker = null;
+  private VariableUsageAnalyzer varAnalyzer = null;
 
-  public ASTWalker(String inputFile,
-      LineMapping lineMapping) {
-    this.inputFile = inputFile;
-    this.varAnalyzer = new VariableUsageAnalyzer(lineMapping);
-    this.lineMapping = lineMapping;
+  /** Map of canonical name to input file for all already loaded */
+  private Map<String, SwiftModule> loadedModuleMap = 
+                        new HashMap<String, SwiftModule>();
+  
+  /** List of modules in order of inclusion */
+  private List<ModuleInfo> loadedModules = new ArrayList<ModuleInfo>();
+  
+  /** 
+   * Set of input files that have been compiled (or are in process of being
+   * compiled.
+   */
+  private Set<String> compiledInputFiles = new HashSet<String>();
+  
+  /** Stack of input files.  Top of stack is one currently processed */
+  private Deque<SwiftModule> inputFiles = new ArrayDeque<SwiftModule>();
+  
+  /** Line mapping for current input file */
+  private LineMapping lineMapping;
+
+  private static enum FrontendPass {
+    DEFINITIONS, // Process top level defs
+    COMPILE,     // Compile functions
+  }
+  
+  
+  public ASTWalker() {
   }
 
 
   /**
-   * Walk the AST and make calls to backend to generate lower level code
+   * Walk the AST and make calls to backend to generate lower level code.
+   * This function is called to start the walk at the top level file
    * @param backend
    * @param tree
    * @throws UserException
    */
-  public void walk(STCMiddleEnd backend, SwiftAST tree) 
+  public void walk(STCMiddleEnd backend, SwiftModule mainModule) 
           throws UserException {
     this.backend = backend;
     this.varCreator = new VarCreator(backend);
-    this.exprWalker = new ExprWalker(varCreator, backend, lineMapping);
-    GlobalContext context = new GlobalContext(inputFile, Logging.getSTCLogger());
-
+    this.exprWalker = new ExprWalker(varCreator, backend, mainModule.lineMapping);
+    this.varAnalyzer = new VariableUsageAnalyzer();
+    GlobalContext context = new GlobalContext(mainModule.inputFilePath,
+                                              Logging.getSTCLogger());
+    SwiftAST ast = mainModule.ast;
     // Dump ANTLR's view of the SwiftAST (unsightly):
     // if (logger.isDebugEnabled())
     // logger.debug("tree: \n" + tree.toStringTree());
 
     // Use our custom printTree
     if (LogHelper.isDebugEnabled())
-      LogHelper.debug(context, tree.printTree());
+      LogHelper.debug(context, ast.printTree());
 
-    walkProgram(context, tree);
+    // Assume root module for now (TODO)
+    ModuleInfo mainInfo = new ModuleInfo(mainModule.inputFilePath, "");
+    ModuleInfo builtins = createModuleInfo(context, Arrays.asList("builtins"));
+    
+    // Two passes: first to find definitions, second to compile functions
+    loadModule(context, FrontendPass.DEFINITIONS, builtins);
+    walkFile(context, mainInfo, mainModule, FrontendPass.DEFINITIONS);
+    for (ModuleInfo loadedModule: loadedModules) {
+      loadModule(context, FrontendPass.COMPILE, loadedModule);
+    }
+    
     FunctionType fn = context.lookupFunction(Constants.MAIN_FUNCTION);
     if (fn == null || 
         !context.hasFunctionProp(Constants.MAIN_FUNCTION, FnProp.COMPOSITE)) {
@@ -137,84 +174,291 @@ public class ASTWalker {
     }
   }
 
-  private void walkProgram(Context context, SwiftAST programTree)
+
+  /**
+   * Called to walk an input file
+   * @param context
+   * @param ast
+   * @throws UserException
+   */
+  private void walkFile(GlobalContext context, 
+        ModuleInfo module, SwiftModule parsed,
+        FrontendPass pass)
       throws UserException {
-    /*
-     * Do two passes over the program
-     * First pass:
-     *  - Register (but don't compile) all functions
-     * Second pass:
-     *  - Compile composite and app functions, now that all function names are known
-     */
-    int token = programTree.getType();
-    
-
-    context.syncFilePos(programTree, lineMapping);
-
-    if (token == ExMParser.PROGRAM) {
-      for (SwiftAST topLevelDefn: programTree.children()) {
-        int type = topLevelDefn.getType();
-        context.syncFilePos(topLevelDefn, lineMapping);
-        switch (type) {
-
-        case ExMParser.DEFINE_BUILTIN_FUNCTION:
-          defineBuiltinFunction(context, topLevelDefn);
-          break;
-
-        case ExMParser.DEFINE_FUNCTION:
-          defineFunction(context, topLevelDefn);
-          break;
-
-        case ExMParser.DEFINE_APP_FUNCTION:
-          defineAppFunction(context, topLevelDefn);
-          break;
-
-        case ExMParser.DEFINE_NEW_STRUCT_TYPE:
-          defineNewStructType(context, topLevelDefn);
-          break;
-          
-        case ExMParser.DEFINE_NEW_TYPE:
-        case ExMParser.TYPEDEF:
-          defineNewType(context, topLevelDefn, type == ExMParser.TYPEDEF);
-          break;
-          
-        case ExMParser.GLOBAL_CONST:
-          globalConst(context, topLevelDefn);
-          break;
-        
-        case ExMParser.EOF:
-          endOfFile(context, topLevelDefn);
-          break;
-
-        default:
-          String name = LogHelper.tokName(type);
-          throw new STCRuntimeError("Unexpected token: " + name
-              + " at program top level");
-        }
-      }
-      
-      context.syncFilePos(programTree, lineMapping);
-      // Second pass to compile functions
-      for (int i = 0; i < programTree.getChildCount(); i++) {
-        SwiftAST topLevelDefn = programTree.child(i);
-        context.syncFilePos(topLevelDefn, lineMapping);
-        int type = topLevelDefn.getType();
-        switch (type) {
-        case ExMParser.DEFINE_FUNCTION:
-          compileFunction(context, topLevelDefn);
-          break;
-
-        case ExMParser.DEFINE_APP_FUNCTION:
-          compileAppFunction(context, topLevelDefn);
-          break;
-        }
-      }
-    } else {
-      throw new STCRuntimeError("Unexpected token: " +
-          LogHelper.tokName(token) + " instead of PROGRAM");
+    if (pass == FrontendPass.DEFINITIONS) {
+      assert(!loadedModuleMap.containsKey(module.canonicalName));
+      loadedModuleMap.put(module.canonicalName, parsed);
+      loadedModules.add(module);
     }
+    
+    LogHelper.debug(context, "Entered module " + module.canonicalName
+               + " on pass " + pass);
+    filePush(parsed);
+    walkTopLevel(context, parsed.ast, pass);
+    filePop();
+    LogHelper.debug(context, "Finishing module" + module.canonicalName
+               + " for pass " + pass);
+  }
+
+  /**
+   * Called when starting to process new input file
+   * @param parsed
+   */
+  private void filePush(SwiftModule parsed) {
+    inputFiles.push(parsed);
+    updateCurrentFile();
+  }
+
+  /**
+   * Called when finished processing input file
+   */
+  private void filePop() {
+    inputFiles.pop();
+    updateCurrentFile();
   }
   
+  private void updateCurrentFile() {
+    if (inputFiles.isEmpty()) {
+      lineMapping = null;
+    } else {
+      lineMapping = inputFiles.peek().lineMapping;
+    }
+  }
+
+
+  private void walkTopLevel(GlobalContext context, SwiftAST fileTree,
+      FrontendPass pass) throws UserException {
+    if (pass == FrontendPass.DEFINITIONS) {
+      walkTopLevelDefs(context, fileTree);
+    } else {
+      assert(pass == FrontendPass.COMPILE);
+      walkTopLevelCompile(context, fileTree);
+    }
+  }
+
+  /**
+   * First pass:
+   *  - Register (but don't compile) all functions and other definitions
+   * @param context
+   * @param fileTree
+   * @throws UserException
+   * @throws DoubleDefineException
+   * @throws UndefinedTypeException
+   */
+  private void walkTopLevelDefs(GlobalContext context, SwiftAST fileTree)
+      throws UserException, DoubleDefineException, UndefinedTypeException {
+    assert(fileTree.getType() == ExMParser.PROGRAM);
+    context.syncFilePos(fileTree, lineMapping);
+    
+    for (SwiftAST topLevelDefn: fileTree.children()) {
+      int type = topLevelDefn.getType();
+      context.syncFilePos(topLevelDefn, lineMapping);
+      switch (type) {
+      case ExMParser.IMPORT:
+        importModule(context, topLevelDefn, FrontendPass.DEFINITIONS);
+        break;
+        
+      case ExMParser.DEFINE_BUILTIN_FUNCTION:
+        defineBuiltinFunction(context, topLevelDefn);
+        break;
+  
+      case ExMParser.DEFINE_FUNCTION:
+        defineFunction(context, topLevelDefn);
+        break;
+  
+      case ExMParser.DEFINE_APP_FUNCTION:
+        defineAppFunction(context, topLevelDefn);
+        break;
+  
+      case ExMParser.DEFINE_NEW_STRUCT_TYPE:
+        defineNewStructType(context, topLevelDefn);
+        break;
+        
+      case ExMParser.DEFINE_NEW_TYPE:
+      case ExMParser.TYPEDEF:
+        defineNewType(context, topLevelDefn, type == ExMParser.TYPEDEF);
+        break;
+        
+      case ExMParser.GLOBAL_CONST:
+        globalConst(context, topLevelDefn);
+        break;
+      
+      case ExMParser.EOF:
+        endOfFile(context, topLevelDefn);
+        break;
+  
+      default:
+        String name = LogHelper.tokName(type);
+        throw new STCRuntimeError("Unexpected token: " + name
+            + " at program top level");
+      }
+    }
+  }
+
+
+  /**
+   * Second pass:
+   *  - Compile composite and app functions, now that all function names are known
+   * @param context
+   * @param fileTree
+   * @throws UserException
+   */
+  private void walkTopLevelCompile(GlobalContext context, SwiftAST fileTree)
+      throws UserException {
+    assert(fileTree.getType() == ExMParser.PROGRAM);
+    context.syncFilePos(fileTree, lineMapping);
+    // Second pass to compile functions
+    for (int i = 0; i < fileTree.getChildCount(); i++) {
+      SwiftAST topLevelDefn = fileTree.child(i);
+      context.syncFilePos(topLevelDefn, lineMapping);
+      int type = topLevelDefn.getType();
+      switch (type) {
+      case ExMParser.IMPORT:
+        // Don't recurse: we invoke compilation of modules elsewher
+        break;
+        
+      case ExMParser.DEFINE_FUNCTION:
+        compileFunction(context, topLevelDefn);
+        break;
+
+      case ExMParser.DEFINE_APP_FUNCTION:
+        compileAppFunction(context, topLevelDefn);
+        break;
+      }
+    }
+  }
+
+  private static class ModuleInfo {
+    public final String filePath;
+    public final String canonicalName;
+    
+    public ModuleInfo(String filePath, String canonicalName) {
+      super();
+      this.filePath = filePath;
+      this.canonicalName = canonicalName;
+    }
+  }
+
+  private void importModule(GlobalContext context, SwiftAST tree,
+      FrontendPass pass) throws UserException {
+    assert(tree.getType() == ExMParser.IMPORT);
+    assert(tree.getChildCount() == 1);
+    SwiftAST moduleID = tree.child(0);
+    
+    ModuleInfo module = parseModuleName(context, moduleID);
+    
+    loadModule(context, pass, module);
+  }
+
+
+  private void loadModule(GlobalContext context, FrontendPass pass,
+      ModuleInfo module) throws ModuleLoadException, UserException {
+    SwiftModule parsed;
+    boolean alreadyLoaded;
+    if (loadedModuleMap.containsKey(module.canonicalName)) {
+      alreadyLoaded = true;
+      parsed = loadedModuleMap.get(module.canonicalName);
+    } else {
+      alreadyLoaded = false;
+      // Load the file
+      try {
+        parsed = SwiftModule.parse(module.filePath, false);
+      } catch (IOException e) {
+        throw new ModuleLoadException(context, module.filePath, e);
+      }
+    }
+    
+    // Now file is parsed, we decide how to handle import
+    if (pass == FrontendPass.DEFINITIONS) {
+      // Don't reload definitions
+      if (!alreadyLoaded) {
+        walkFile(context, module, parsed, pass);
+      }
+    } else {
+      assert(pass == FrontendPass.COMPILE);
+      // Should have been loaded at defs stage
+      assert(alreadyLoaded);
+      // Check if already being compiled
+      if (!compiledInputFiles.contains(module.canonicalName)) {
+        walkFile(context, module, parsed, pass);
+      }
+    }
+  }
+
+  private ModuleInfo parseModuleName(Context context, SwiftAST moduleID)
+      throws InvalidSyntaxException, ModuleLoadException {
+    List<String> modulePath;
+    if (moduleID.getType() == ExMParser.STRING) {
+      // Forms:  
+      //   module      => ./module.swift
+      //   pkg/module  => pkg/module.swift
+      // Implicit .swift extension added.  Relative to module search path
+      String path = Literals.extractLiteralString(context, moduleID);
+      modulePath = new ArrayList<String>();
+      for (String elem: path.split("/+")) {
+        modulePath.add(elem);
+      }
+    } else {
+      assert(moduleID.getType() == ExMParser.IMPORT_PATH);
+      // Forms:
+      // pkg        => ./module.swift
+      // pkg.module => pkg/module.swift
+      modulePath = new ArrayList<String>();
+      for (SwiftAST idT: moduleID.children()) {
+        assert(idT.getType() == ExMParser.ID);
+        modulePath.add(idT.getText());
+      }
+    }
+    return createModuleInfo(context, modulePath);
+  }
+
+
+  private static String moduleCanonicalName(List<String> modulePath) {
+    String canonicalName = "";
+    boolean first = true;
+    for (String component: modulePath) {
+      if (first) {
+        first = false;
+      } else {
+        canonicalName += ".";
+      }
+      canonicalName += component;
+    }
+    return canonicalName;
+  }
+
+  private ModuleInfo createModuleInfo(Context context, List<String> modulePath)
+      throws ModuleLoadException {
+    String canonicalName = moduleCanonicalName(modulePath);
+    String filePath = locateModule(context, canonicalName, modulePath);
+    return new ModuleInfo(filePath, canonicalName);
+  }
+
+
+  private String locateModule(Context context, String moduleName,
+                              List<String> modulePath) throws ModuleLoadException {
+    for (String searchDir: Settings.getModulePath()) {
+      if (searchDir.length() == 0) {
+        continue;
+      }
+      String currDir = searchDir;
+      // Find right subdirectory
+      for (String subDir: modulePath.subList(0, modulePath.size() - 1)) {
+        currDir = currDir + File.separator + subDir;
+      }
+      String fileName = modulePath.get(modulePath.size() - 1) + ".swift";
+      String filePath = currDir + File.separator + fileName;
+      
+      if (new File(filePath).isFile()) {
+        LogHelper.debug(context, "Resolved " + moduleName + " to " + filePath);
+        return filePath;
+      }
+    }
+    
+    throw new ModuleLoadException(context, "Could not find module " + moduleName + 
+                  " in search path: " + Settings.getModulePath().toString());
+  }
+
   /**
    * Control what statement walker should process
    */
@@ -1814,7 +2058,8 @@ public class ASTWalker {
     
     // Analyse variable usage inside function and annotate AST
     context.syncFilePos(tree, lineMapping);
-    varAnalyzer.analyzeVariableUsage(context, function, iList, oList, block);
+    varAnalyzer.analyzeVariableUsage(context, lineMapping, function,
+                                     iList, oList, block);
 
     LocalContext functionContext = new LocalContext(context, function);
     functionContext.setNested(false);
