@@ -36,36 +36,46 @@ namespace eval turbine {
     }
     if { [ dict exists $kwopts stdout ] } {
         set dst [ dict get $kwopts stdout ]
-        ensure_directory_exists $dst
+        ensure_directory_exists2 $dst
         set stdout_dst ">$dst"
     }
     if { [ dict exists $kwopts stderr ] } {
         set dst [ dict get $kwopts stderr ]
-        ensure_directory_exists $dst
+        ensure_directory_exists2 $dst
         set stderr_dst "2>$dst"
     }
     log "shell: $cmd $args $stdin_src $stdout_dst $stderr_dst"
     exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst
   }
 
-    # For file f = "/d1/d2/f", ensure /d1/d2 exists
-    proc ensure_directory_exists { f } {
-        log "ensure_directory_exists: $f"
-        set c [ string range $f 0 0 ]
-        set A [ file split $f ]
-        debug "path components: $A"
-        set d [ lreplace $A end end ]
-        set p [ join $d "/" ]
-        if { [ string equal [ string range $p 0 1 ] "//" ] } {
-            # This was an absolute path
-            set p [ string replace $p 0 1 "/" ]
-        }
-        log "checking directory: $p"
-        if { ! [ file isdirectory $p ] } {
-            log "making directory: $p"
-            file mkdir $p
-        }
+  # Alternative implementation
+  proc ensure_directory_exists2 { f } {
+    set dirname [ file dirname $f ]
+    if { $dirname == "." } {
+      return
     }
+    # recursively create
+    file mkdir $dirname
+  }
+
+  # For file f = "/d1/d2/f", ensure /d1/d2 exists
+  proc ensure_directory_exists { f } {
+      log "ensure_directory_exists: $f"
+      set c [ string range $f 0 0 ]
+      set A [ file split $f ]
+      debug "path components: $A"
+      set d [ lreplace $A end end ]
+      set p [ join $d "/" ]
+      if { [ string equal [ string range $p 0 1 ] "//" ] } {
+          # This was an absolute path
+          set p [ string replace $p 0 1 "/" ]
+      }
+      log "checking directory: $p"
+      if { ! [ file isdirectory $p ] } {
+          log "making directory: $p"
+          file mkdir $p
+      }
+  }
 
   # Unpack arguments from closed container of any nesting into flat list
   # Container must be deep closed (i.e. all contents closed)
