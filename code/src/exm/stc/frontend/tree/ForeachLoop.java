@@ -132,7 +132,7 @@ public class ForeachLoop {
               || key.equals(Annotations.LOOP_SPLIT_DEGREE)
               || key.equals(Annotations.LOOP_LEAF_DEGREE)) {
             boolean posint = false;
-            if (subtree.child(1).getType() == ExMParser.NUMBER) {
+            if (subtree.child(1).getType() == ExMParser.INTEGER) {
               int val = Integer.parseInt(subtree.child(1).getText());
               if (val > 0) {
                 posint = true;

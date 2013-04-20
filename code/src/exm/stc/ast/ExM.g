@@ -391,8 +391,8 @@ switch_stmt:
     ;
 
 switch_case:
-        CASE NUMBER COLON stmt*
-        -> ^( CASE NUMBER ^( BLOCK stmt* ) )
+        CASE INTEGER COLON stmt*
+        -> ^( CASE INTEGER ^( BLOCK stmt* ) )
     |   DEFAULT COLON stmt*
         -> ^( DEFAULT ^( BLOCK stmt* ) )
     ;
@@ -592,13 +592,13 @@ base_expr:
     ;
 
 literal:
-        n=NUMBER -> ^( INT_LITERAL $n )
-            |   d=DECIMAL -> ^( FLOAT_LITERAL $d)
-            |   d=INFINITY -> ^( FLOAT_LITERAL $d)
-            |   d=NOTANUMBER -> ^( FLOAT_LITERAL $d)
+        n=INTEGER -> ^( INT_LITERAL $n )
+            |   d=(DECIMAL | SCI_DECIMAL | INFINITY | NOTANUMBER)
+                 -> ^( FLOAT_LITERAL $d)
             |   s=STRING -> ^( STRING_LITERAL $s)
             |   b=bool_lit -> ^( BOOL_LITERAL $b)
     ;
+    
 
 variable:
         ID -> ^( VARIABLE ID )
@@ -704,31 +704,14 @@ annotation:
             -> ^( ANNOTATION $a annotation_val )
     ;
 
-annotation_val: ID | NUMBER
+annotation_val: ID | INTEGER
     ;
-
-// CPP linemarker:
-// http://gcc.gnu.org/onlinedocs/cpp
-// We ignore CPP linemarker flags
-//cpp_line:
-//        HASH n=NUMBER s=STRING f=cpp_flags -> ^( CPP_LINEMARKER $n $s )
-///    ;
 
 // Handle C preprocessor lines in lexer as they can be inserted
 // at random lines in Swift source
 CPP_LINE: HASH (~('\n'))* (('\n'))
             { $channel = CPP; }
         ;
-// CPP linemarker flags may or may not be present
-cpp_flags:
-    NUMBER | // nothing
-  ;
-
-// // Single-line comments, shell style
-// SINGLE_LINE_COMMENT_SH
-//     :    HASH (~('\n'))* (('\n'))
-//         { $channel = HIDDEN; }
-//     ;
 
 // Single-line comments, C/C++ style
 SINGLE_LINE_COMMENT_C
@@ -773,8 +756,18 @@ STDIN: 'stdin';
 STDOUT: 'stdout';
 STDERR: 'stderr';
 
-NUMBER: (DIGIT)+ ;
-DECIMAL: (DIGIT)+ '.' (DIGIT)+;
+
+// Numeric building blocks
+fragment
+NUM_FRAG: (DIGIT)+ ;
+
+fragment
+DEC_FRAG: NUM_FRAG '.' NUM_FRAG;
+
+// Number tokens
+INTEGER: NUM_FRAG;
+DECIMAL: DEC_FRAG;
+SCI_DECIMAL: NUM_FRAG ('.' NUM_FRAG)? ('e'|'E') '-'? NUM_FRAG;
 NOTANUMBER: 'NaN';
 INFINITY: 'inf';
 

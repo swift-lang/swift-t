@@ -73,8 +73,12 @@ public class Literals {
       num = Double.NaN;
     } else if (litTree.getType() == ExMParser.INFINITY) {
       num = Double.POSITIVE_INFINITY;
+    } else if (litTree.getType() == ExMParser.SCI_DECIMAL) {
+      num = Double.parseDouble(litTree.getText());
     } else {
       assert(litTree.getType() == ExMParser.DECIMAL);
+      // TODO: this will interpret literals with leading 0 as
+      //      octal.  Is this what we want?
       num = Double.parseDouble(litTree.getText());
     }
     return negate ? -1.0 * num : num;
