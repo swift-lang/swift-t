@@ -1,0 +1,123 @@
+
+////
+Swift/T guide, asciidoc format
+http://www.mcs.anl.gov/exm/local/guides/stc.html
+////
+
+:toc:
+:numbered:
+
+////
+Settings:
+////
+:miscellaneous.newline: \n
+
+= Swift/T Leaf Function Guide
+
+This page documents the methods available to connect Swift/T to
+leaf tasks that may be C, C++, or Fortran functions (native code).
+
+Links:
+
+* link::swift.html[General documentation for Swift/T]
+* http://www.tcl.tk[Tcl documentation]
+* http://www.swig.or[SWIG]
+
+== Overview
+
+Two methods are available for connecting a leaf function: simple mode
+and advanced mode.  Both call to Tcl.  It is easy to call from Tcl to
+native code, as presented in this guide.  We tap into
+http://www.swig.or[SWIG] which allows us to use a standard
+language-language tool to help automate this process.  (SWIG
+is a nice skill to have in general, so the techniques here are usable
+outside Swift as well!)
+
+The modes have separate syntax:
+
+Simple:
+----
+(int o) f(int i) "my_pkg" "version"
+[ "set <<o>> [ f <<i>> ]" ];
+----
+
+Thus, in the simple mode the user specifies the exact Tcl line to
+execute.  Data dependencies are handled by Swift.  Thus, that
+Tcl line runs _after_ +i+ has a value and +o+ is a writable variable.
+
+More complex Tcl programming can be done on that line.  However,
+it is probably best to pack any additional logic into the Tcl
+function +f+.
+
+Advanced:
+----
+(int o) f(int i) "my_pkg" "version" "f";
+----
+
+In the advanced mode, +f+ is issued _before_ +i+ has a value.  The
+user must use the Turbine API to set up execution dependent on +i+.
+This guide will demonstrate how to do that.
+
+== Simple mode: Tcl packaging
+
+Calling Tcl from Swift in simple mode is easy.  However, the user
+does have to have a basic understanding of Tcl.  In typical cases, the
+user will want to make a Tcl package so that multiple complex Tcl
+functions can be called, which may link to native code.
+
+=== Complete example 1: Pure Tcl function
+
+Consider the Tcl source file +f.tcl+:
+----
+include::examples/1/f.tcl[]
+----
+
+This simply defines a function +f+ that adds two numbers together.
+Tcl command +puts+ prints the result (as +puts()+ in C).  Thus,
+writing a Tcl function for Swift involves 1) creating a namespace
+(which will be used to group functions into a package) and 2) defining
+Tcl functions to call.
+
+It may be tested with this test (+test-f-1.tcl+):
+----
+include::examples/1/test-f-1.tcl[]
+----
+
+Calling this from the shell looks like this:
+----
+include::examples/1/test-f-1.sh[]
+----
+(on your system, the Tcl shell +tclsh+ may be called +tcl8.5+.
+
+Thus, to load this into Swift, we need to be able to 1) load +f.tcl+
+and 2) invoke it.  To make it easy to load +f.tcl+, we create a Tcl
+package for it.  This is done with a simple Tcl line that groups
+together a package name.  Conventionally this is put in
++make-package.tcl+:
+----
+include::examples/1/make-package.tcl[]
+----
+
+This simply includes the name, version, and Tcl source files to put in
+the package.  Multiple +-source+ arguments may be used.
+
+The Tcl package is represented in a file that must be called
++pkgIndex.tcl+.  This directory containing this file is found by Tcl
+via the +TCLLIBPATH+ variable.  (This is similar to +LD_LIBRARY_PATH+,
+Java's +CLASSPATH+, Python's +PYTHONPATH+, etc.)  Note that
++TCLLIBPATH+ is space-separated (which makes for easier Tcl
+processing).
+
+We create +pkgIndex.tcl+ from the shell:
+----
+include::examples/1/make-package.sh[]
+----
+
+Now, we can test our function +f+ by accessing through the package
+(instead of a simple +source+ command).  First the Tcl to load and run
+the package (+test-f-2.tcl+):
+----
+include::examples/1/test-f-2.tcl[]
+----
+
+Now, invoke this test from the shell (:

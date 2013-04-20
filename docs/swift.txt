@@ -189,7 +189,7 @@ The mechanisms for locating source files is as follows:
 * Swift source files must have a +.swift+ suffix.  E.g. +import io;+
   looks for a file called +io.swift+.
 * In the case of a multi-part import name, E.g. +import mypackage.mymodule+,
-  then, we look for +mymodule.swift+ in subdirectory +mypackage+. 
+  then, we look for +mymodule.swift+ in subdirectory +mypackage+.
 
 Currently Swift has no notion of namespaces or selective import, so
 including a module will import all function and variable definitions
@@ -642,7 +642,7 @@ wait(x, y) {
 }
 ----
 
-The chaining operator chains statements together so that a 
+The chaining operator chains statements together so that a
 statement only executes after the previous statement's output
 value is closed.  This is meant to be
 a more concise way to express dependencies than the +wait+ statement.
@@ -1049,15 +1049,17 @@ Consider this custom Swift->Tcl binding:
 (int o) complex_function (int arr[]) "pkg" "0.0.1" "complex";
 ----
 
-* TODO: guide to do this.  Can look in turbine/lib for examples
+This function jumps into Tcl function +complex+, which must
+perform its own data dependency management.
 
+See the link::leaf.html[Swift/T Leaf Function Guide] for more
+information about this process.
 
 === App functions
 
 App functions are functions that are implemented as command-line
 programs.  These command-line programs can be brought into a Swift
 program as functions with typed inputs and outputs.
-
 An app function definition comprises:
 
 * The standard components of a Swift function declaration: input and
