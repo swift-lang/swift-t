@@ -28,21 +28,31 @@ public class Literals {
    *
    * @param context
    * @param tree
-   * @return null if tree isn't a literal, the string otherwise e.g. "2312" or
-   *         "-1"
+   * @return null if tree isn't a literal, the value otherwise
    */
-  public static String extractIntLit(Context context, SwiftAST tree) {
+  public static Long extractIntLit(Context context, SwiftAST tree) {
     // Literals are either represented as a plain non-negative literal,
     // or the unary negation operator applied to a literal
     if (tree.getType() == ExMParser.INT_LITERAL) {
-      return tree.child(0).getText();
+      return parseIntToken(tree.child(0));
     } else if (tree.getType() == ExMParser.OPERATOR
         && tree.getChildCount() == 2
         && tree.child(1).getType() == ExMParser.INT_LITERAL) {
-      return "-" + tree.child(1).child(0).getText();
+      long posValue = parseIntToken(tree.child(1).child(0));
+      return -posValue;
     } else {
       return null;
     }
+  }
+  
+  /**
+   * Parse token with correct radix, etc
+   * @param tree
+   * @return
+   */
+  public static long parseIntToken(SwiftAST tree) {
+    assert(tree.getType() == ExMParser.INT_LITERAL);
+    return Long.parseLong(tree.getText(), 10);
   }
 
   public static String extractBoolLit(Context context, SwiftAST tree) {
@@ -74,11 +84,11 @@ public class Literals {
     } else if (litTree.getType() == ExMParser.INFINITY) {
       num = Double.POSITIVE_INFINITY;
     } else if (litTree.getType() == ExMParser.SCI_DECIMAL) {
+      // Parse as decimal scientific notation.  Rules match
       num = Double.parseDouble(litTree.getText());
     } else {
       assert(litTree.getType() == ExMParser.DECIMAL);
-      // TODO: this will interpret literals with leading 0 as
-      //      octal.  Is this what we want?
+      // Parse as decimal
       num = Double.parseDouble(litTree.getText());
     }
     return negate ? -1.0 * num : num;
@@ -102,8 +112,7 @@ public class Literals {
    * @param value an integer literal string
    * @return
    */
-  public static double interpretIntAsFloat(Context context, String value) {
-    long longval = Long.parseLong(value);
+  public static double interpretIntAsFloat(Context context, long longval) {
      // Casts from long to double can lost precision
      double floatval = (double)longval;
      if (longval !=  (long)(floatval)) {

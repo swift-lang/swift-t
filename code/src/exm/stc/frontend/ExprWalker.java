@@ -148,7 +148,7 @@ public class ExprWalker {
 
       case ExMParser.OPERATOR:
         // Handle unary negation as special case
-        String intLit = Literals.extractIntLit(context, tree);
+        Long intLit = Literals.extractIntLit(context, tree);
         Double floatLit = Literals.extractFloatLit(context, tree);
         if (intLit != null) {
           assignIntLit(context, tree, oVar, intLit);
@@ -602,17 +602,10 @@ public class ExprWalker {
       doDereference = false;
     }
 
-    String arrayIndexStr = Literals.extractIntLit(context, 
+    Long arrayIndex = Literals.extractIntLit(context, 
                                           arrayIndexTree);
-    if (arrayIndexStr != null) {
+    if (arrayIndex != null) {
       // Handle the special case where the index is a constant.
-      long arrayIndex;
-      try {
-        arrayIndex = Long.parseLong(arrayIndexStr);
-      } catch (NumberFormatException e) {
-        throw new STCRuntimeError(
-            "Invalid non-numeric array index token " + arrayIndexStr);
-      }
       backend.arrayLookupRefImm(lookupIntoVar, arrayVar, 
           Arg.createIntLit(arrayIndex), Types.isArrayRef(arrType));
     } else {
@@ -918,11 +911,11 @@ public class ExprWalker {
 
 
   private void assignIntLit(Context context, SwiftAST tree,
-                            Var oVar, String value)
+                            Var oVar, Long value)
  throws UserException {
    LogHelper.trace(context, oVar.toString()+"="+value);
    if(Types.isInt(oVar.type())) {
-     backend.assignInt(oVar, Arg.createIntLit(Long.parseLong(value)));
+     backend.assignInt(oVar, Arg.createIntLit(value));
    } else if (Types.isFloat(oVar.type())) {
      double floatval = Literals.interpretIntAsFloat(context, value);
      backend.assignFloat(oVar, Arg.createFloatLit(floatval));

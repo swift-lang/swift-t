@@ -1248,7 +1248,7 @@ public class ASTWalker {
       if (var.type().equals(Types.UP_FLOAT)) {
         Double initVal = Literals.extractFloatLit(context, initExpr);
         if (initVal == null) {
-          String intLit = Literals.extractIntLit(context, initExpr);
+          Long intLit = Literals.extractIntLit(context, initExpr);
           if (intLit != null) {
             initVal = Literals.interpretIntAsFloat(context, intLit);
           }
@@ -1557,9 +1557,9 @@ public class ASTWalker {
       Var mVar; // Variable for member we're looking up
       if (Types.isArray(memberType)) {
 
-        String literal = Literals.extractIntLit(context, indexExpr.child(0));
+        Long literal = Literals.extractIntLit(context, indexExpr.child(0));
         if (literal != null) {
-          long arrIx = Long.parseLong(literal);
+          long arrIx = literal;
           // Add this variable to array
           if (Types.isArray(lvalArr.type())) {
             mVar = varCreator.createTmpAlias(context, memberType);
@@ -1659,7 +1659,7 @@ public class ASTWalker {
     assert (indexTree.getChildCount() == 1);
     SwiftAST indexExpr = indexTree.child(0);
 
-    String literal = Literals.extractIntLit(context, indexExpr);
+    Long literal = Literals.extractIntLit(context, indexExpr);
     /*
      * use afterActions to insert the variable into array only 
      * after the RHS has been evaluated.  This means the resulting
@@ -1667,7 +1667,7 @@ public class ASTWalker {
      * optimiser to work with
      */
     if (literal != null) {
-      final long arrIx = Long.parseLong(literal);
+      final long arrIx = literal;
       // Add this variable to array
       if (isRef) {
         // This should only be run when assigning to nested array
@@ -2627,17 +2627,16 @@ public class ASTWalker {
                                   Boolean.parseBoolean(bval)));
       break;
     case INT:
-      String ival = Literals.extractIntLit(context, val);
+      Long ival = Literals.extractIntLit(context, val);
       if (ival == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(v.name(), Arg.createIntLit(
-                                      Long.parseLong(ival)));
+      backend.addGlobal(v.name(), Arg.createIntLit(ival));
       break;
     case FLOAT:
       Double fval = Literals.extractFloatLit(context, val);
       if (fval == null) {
-        String sfval = Literals.extractIntLit(context, val); 
+        Long sfval = Literals.extractIntLit(context, val); 
         if (sfval == null) {
           throw new UserException(context, msg);
         } else {
