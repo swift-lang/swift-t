@@ -38,5 +38,12 @@
 "turbine" "0.0.2"
 [ "set <<t>> [ file type [ lindex <<f>> 0 ] ]" ];
 
-#endif // FILES_SWIFT
+(int o) file_exists(string f)
+"turbine" "0.1"
+[ "set <<o>> [ file exists <<f>> ]" ];
 
+(int o) file_mtime(string f)
+"turbine" "0.1"
+[ "set <<o>> [ file mtime <<f>> ]" ];
+
+#endif // FILES_SWIFT
