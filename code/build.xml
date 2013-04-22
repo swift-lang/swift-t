@@ -119,7 +119,7 @@
           depends="compile.common,compile.antlr,compile.ast">
     <javac srcdir="src"
            destdir="${build.dir}"
-           includes="exm/stc/frontend/*.java,exm/frontend/**/*.java"
+           includes="exm/stc/frontend/*.java,exm/stc/frontend/**/*.java"
            listfiles="${lf}"
            debug="true"
            debuglevel="source,lines,vars"
