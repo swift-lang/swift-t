@@ -52,23 +52,18 @@ static struct list2* type_requests;
  */
 static struct table_ip targets;
 
-/** Local copy of work_types */
-static int rq_work_types;
-
 void
-requestqueue_init(int work_types)
+xlb_requestqueue_init()
 {
-  rq_work_types = work_types;
-
   table_ip_init(&targets, 128);
 
-  type_requests = malloc(sizeof(struct list2) * work_types);
-  for (int i = 0; i < rq_work_types; i++)
+  type_requests = malloc(sizeof(struct list2) * xlb_types_size);
+  for (int i = 0; i < xlb_types_size; i++)
     list2_init(&type_requests[i]);
 }
 
 void
-requestqueue_add(int rank, int type)
+xlb_requestqueue_add(int rank, int type)
 {
   DEBUG("requestqueue_add(rank=%i,type=%i)", rank, type);
   request* R = malloc(sizeof(request));
@@ -89,7 +84,7 @@ requestqueue_add(int rank, int type)
    given type, pop and return that rank.  Else return ADLB_RANK_NULL.
  */
 int
-requestqueue_matches_target(int target_rank, int type)
+xlb_requestqueue_matches_target(int target_rank, int type)
 {
   DEBUG("requestqueue_matches_target(rank=%i, type=%i)",
         target_rank, type);
@@ -114,7 +109,7 @@ requestqueue_matches_target(int target_rank, int type)
 }
 
 int
-requestqueue_matches_type(int type)
+xlb_requestqueue_matches_type(int type)
 {
   DEBUG("requestqueue_matches_type(%i)...", type);
   struct list2* L = &type_requests[type];
@@ -157,7 +152,7 @@ requestqueue_parallel_workers(int type, int parallelism, int* ranks)
 }
 
 void
-requestqueue_remove(int worker_rank)
+xlb_requestqueue_remove(int worker_rank)
 {
   TRACE("requestqueue_remove(%i)", worker_rank);
   request* r = (request*) table_ip_remove(&targets, worker_rank);
@@ -170,24 +165,26 @@ requestqueue_remove(int worker_rank)
 }
 
 int
-requestqueue_size()
+xlb_requestqueue_size()
 {
   return table_ip_size(&targets);
 }
 
-void requestqueue_type_counts(int *types, int size) {
-  assert(size >= rq_work_types);
-  for (int t = 0; t < rq_work_types; t++) {
+/*
+void requestqueue_type_counts(int* types, int size) {
+  assert(size >= xlb_types_size);
+  for (int t = 0; t < xlb_types_size; t++) {
     struct list2* L = &type_requests[t];
     types[t] = L->size;
   }
 }
+*/
 
 int
-requestqueue_get(xlb_request_pair* r, int max)
+xlb_requestqueue_get(xlb_request_pair* r, int max)
 {
   int index = 0;
-  for (int t = 0; t < rq_work_types; t++)
+  for (int t = 0; t < xlb_types_size; t++)
   {
     struct list2* L = &type_requests[t];
     assert(L != NULL);
@@ -213,10 +210,10 @@ static adlb_code shutdown_rank(int rank);
    Notify all workers in the request queue
  */
 void
-requestqueue_shutdown()
+xlb_requestqueue_shutdown()
 {
   TRACE_START;
-  for (int i = 0; i < rq_work_types; i++)
+  for (int i = 0; i < xlb_types_size; i++)
     while (true)
     {
       request* r = (request*) list2_pop(&type_requests[i]);
@@ -251,6 +248,4 @@ shutdown_rank(int rank)
  */
 void
 requestqueue_finalize()
-{
-
-}
+{}

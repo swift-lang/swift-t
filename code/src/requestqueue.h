@@ -35,29 +35,29 @@ typedef struct
   int type;
 } xlb_request_pair;
 
-void requestqueue_init(int work_types);
+void xlb_requestqueue_init(void);
 
-void requestqueue_add(int rank, int type);
+void xlb_requestqueue_add(int rank, int type);
 
-int requestqueue_matches_target(int target_rank, int type);
+int xlb_requestqueue_matches_target(int target_rank, int type);
 
-int requestqueue_matches_type(int type);
+int xlb_requestqueue_matches_type(int type);
 
-int requestqueue_size(void);
-
-/* present should be an array of size >= number of request types
- * it is filled in with the counts of types
- * types: array to be filled in
- * size: size of the array (greater than num of work types)
- * ntypes: returns number of elements filled in
- */
-void requestqueue_type_counts(int *types, int size);
+int xlb_requestqueue_size(void);
 
 /**
-   Get number workers (in result) equal to parallelism
-   @return True iff work was found
+   @return Count of each types
+   @param types array to be filled in with result
+   @param size size of the array (greater than xlb_types_size)
  */
-bool requestqueue_parallel_workers(int type, int parallelism, int* result);
+// void requestqueue_type_counts(int *types, int size);
+
+/**
+   Get number of workers (in result) equal to parallelism
+   @return True iff enough workers were found
+ */
+bool requestqueue_parallel_workers(int type, int parallelism,
+                                   int* result);
 
 /**
    @param r Where to write output request_pairs.
@@ -65,10 +65,10 @@ bool requestqueue_parallel_workers(int type, int parallelism, int* result);
    @param max Maximal number of request_pairs to return
    @return Actual number of request_pairs returned
  */
-int requestqueue_get(xlb_request_pair* r, int max);
+int xlb_requestqueue_get(xlb_request_pair* r, int max);
 
-void requestqueue_remove(int worker_rank);
+void xlb_requestqueue_remove(int worker_rank);
 
-void requestqueue_shutdown(void);
+void xlb_requestqueue_shutdown(void);
 
 #endif

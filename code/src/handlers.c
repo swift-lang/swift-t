@@ -217,7 +217,7 @@ handle_put(int caller)
 
   while (true)
   {
-    rc = check_parallel_tasks(p.type);
+    rc = xlb_check_parallel_tasks(p.type);
     ADLB_CHECK(rc);
     if (rc == ADLB_NOTHING)
       break;
@@ -245,7 +245,7 @@ put(int type, int putter, int priority, int answer, int target,
     if (target >= 0)
     {
       CHECK_MSG(target < xlb_comm_size, "Invalid target: %i", target);
-      worker = requestqueue_matches_target(target, type);
+      worker = xlb_requestqueue_matches_target(target, type);
       if (worker != ADLB_RANK_NULL)
       {
         assert(worker == target);
@@ -256,7 +256,7 @@ put(int type, int putter, int priority, int answer, int target,
     }
     else
     {
-      worker = requestqueue_matches_type(type);
+      worker = xlb_requestqueue_matches_type(type);
       if (worker != ADLB_RANK_NULL)
       {
         redirect_work(type, putter, priority, answer, target,
@@ -348,16 +348,16 @@ handle_get(int caller)
   DEBUG("stole?: %i", stole);
 
   if (!found_work)
-    requestqueue_add(caller, type);
+    xlb_requestqueue_add(caller, type);
   if (stole)
   {
     DEBUG("handle_get(): steal worked: rechecking...");
-    xlb_requestqueue_recheck();
+    xlb_recheck_queues();
   }
 
   while (true)
   {
-    adlb_code rc = check_parallel_tasks(type);
+    adlb_code rc = xlb_check_parallel_tasks(type);
     ADLB_CHECK(rc);
     if (rc == ADLB_NOTHING)
       break;
@@ -412,17 +412,17 @@ check_workqueue(int caller, int type)
    Called after a steal
  */
 void
-xlb_requestqueue_recheck()
+xlb_recheck_queues()
 {
   TRACE_START;
 
-  int N = requestqueue_size();
+  int N = xlb_requestqueue_size();
   xlb_request_pair* r = malloc(N*sizeof(xlb_request_pair));
-  N = requestqueue_get(r, N);
+  N = xlb_requestqueue_get(r, N);
 
   for (int i = 0; i < N; i++)
     if (check_workqueue(r[i].rank, r[i].type))
-      requestqueue_remove(r[i].rank);
+      xlb_requestqueue_remove(r[i].rank);
 
   free(r);
   TRACE_END;
@@ -432,7 +432,7 @@ xlb_requestqueue_recheck()
    Try to release a parallel task of type
  */
 adlb_code
-check_parallel_tasks(int type)
+xlb_check_parallel_tasks(int type)
 {
   TRACE_START;
   xlb_work_unit* wu;
@@ -460,6 +460,7 @@ check_parallel_tasks(int type)
   }
   free(ranks);
   work_unit_free(wu);
+
   end:
   TRACE_END;
   return result;
@@ -1242,7 +1243,7 @@ put_targeted(int type, int putter, int priority, int answer,
     {
       // Work unit is for this server
       // Is the target already waiting?
-      worker = requestqueue_matches_target(target, type);
+      worker = xlb_requestqueue_matches_target(target, type);
       if (worker != ADLB_RANK_NULL)
       {
         int wuid = workqueue_unique();

@@ -238,7 +238,7 @@ workqueue_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
       result = true;
       // Release memory:
       rbtree_remove_node(T, data.node);
-      TRACE("rbtree_remove: wu: %p node: %p...", wu, data.node);
+      TRACE("rbtree_removed: wu: %p node: %p...", wu, data.node);
       free(data.node);
       workqueue_parallel_task_count--;
     }

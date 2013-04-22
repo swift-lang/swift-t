@@ -40,8 +40,8 @@ bool xlb_handler_valid(adlb_tag tag);
 
 adlb_code xlb_handle(adlb_tag tag, int from_rank);
 
-void xlb_requestqueue_recheck();
+void xlb_recheck_queues();
 
-adlb_code check_parallel_tasks(int work_type);
+adlb_code xlb_check_parallel_tasks(int work_type);
 
 #endif

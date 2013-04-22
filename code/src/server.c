@@ -120,7 +120,7 @@ xlb_server_init()
   shutting_down = false;
 
   list_i_init(&workers_shutdown);
-  requestqueue_init(xlb_types_size);
+  xlb_requestqueue_init();
   workqueue_init(xlb_types_size);
   data_init(xlb_servers, xlb_server_number(xlb_comm_rank));
   adlb_code code = setup_idle_time();
@@ -211,10 +211,10 @@ ADLB_Server(long max_memory)
 
     update_cached_time(); // Periodically refresh timestamp
 
-    code = check_parallel_tasks(0);
+    code = xlb_check_parallel_tasks(0);
     ADLB_CHECK(code);
     // code = check_parallel_tasks(1);
-    ADLB_CHECK(code);
+    // ADLB_CHECK(code);
 
     check_steal();
   }
@@ -411,7 +411,7 @@ check_steal(void)
   if (! steal_allowed())
     // Too soon to try again
     return ADLB_SUCCESS;
-  if (requestqueue_size() == 0)
+  if (xlb_requestqueue_size() == 0)
     // Our workers are busy
     return ADLB_SUCCESS;
 
@@ -423,7 +423,7 @@ check_steal(void)
   if (b)
   {
     TRACE("check_steal(): rechecking...");
-    xlb_requestqueue_recheck();
+    xlb_recheck_queues();
   }
   TRACE_END;
   return ADLB_SUCCESS;
@@ -470,7 +470,7 @@ master_server()
 static inline bool
 workers_idle(void)
 {
-  int queued = requestqueue_size();
+  int queued = xlb_requestqueue_size();
   int shutdown = list_i_size(&workers_shutdown);
 
   assert(queued+shutdown <= xlb_my_workers);
@@ -606,7 +606,7 @@ static adlb_code
 server_shutdown()
 {
   DEBUG("server down.");
-  requestqueue_shutdown();
+  xlb_requestqueue_shutdown();
   workqueue_finalize();
   return ADLB_SUCCESS;
 }
