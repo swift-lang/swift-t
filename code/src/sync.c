@@ -40,14 +40,14 @@ static inline adlb_code msg_from_target(int target,
                                   const struct packed_sync *hdr, bool* done);
 static inline adlb_code msg_from_other_server(int other_server, 
                   int target, const struct packed_sync *my_hdr,
-                  pending_sync *pending_syncs, int *pending_sync_count);
+                  xlb_pending_sync *pending_syncs, int *pending_sync_count);
 static inline adlb_code msg_shutdown(bool* done);
 
 // Number of pending sync requests to store before rejecting
 #define PENDING_SYNC_BUFFER_SIZE 1024
 
 // IDs of servers with pending sync requests
-pending_sync xlb_pending_syncs[PENDING_SYNC_BUFFER_SIZE];
+xlb_pending_sync xlb_pending_syncs[PENDING_SYNC_BUFFER_SIZE];
 int xlb_pending_sync_count = 0;
 
 adlb_code
@@ -168,7 +168,7 @@ msg_from_target(int target, const struct packed_sync *hdr, bool* done)
 
 static inline adlb_code msg_from_other_server(int other_server, int target,
                   const struct packed_sync *my_hdr,
-                  pending_sync *pending_syncs, int *pending_sync_count)
+                  xlb_pending_sync *pending_syncs, int *pending_sync_count)
 {
   TRACE_START;
   MPI_Status status;
