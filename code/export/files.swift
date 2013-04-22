@@ -38,7 +38,7 @@
 "turbine" "0.0.2"
 [ "set <<t>> [ file type [ lindex <<f>> 0 ] ]" ];
 
-(int o) file_exists(string f)
+(boolean o) file_exists(string f)
 "turbine" "0.1"
 [ "set <<o>> [ file exists <<f>> ]" ];
 
