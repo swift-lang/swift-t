@@ -51,7 +51,8 @@ public class Literals {
    * @return
    */
   public static long parseIntToken(SwiftAST tree) {
-    assert(tree.getType() == ExMParser.INTEGER) : "Token:" + LogHelper.tokName(tree.getType());
+    assert(tree.getType() == ExMParser.INTEGER) :
+        "Bad Token:" + LogHelper.tokName(tree.getType());
     return Long.parseLong(tree.getText(), 10);
   }
 
