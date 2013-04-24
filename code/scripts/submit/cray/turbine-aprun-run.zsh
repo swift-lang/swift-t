@@ -62,5 +62,8 @@ ${TURBINE_HOME}/scripts/submit/cray/setup-turbine-aprun.zsh \
   ${TURBINE_OUTPUT}/turbine-aprun.sh
 exitcode "setup-turbine-aprun failed!"
 
-qsub ${TURBINE_OUTPUT}/turbine-aprun.sh
+QUEUE_ARG=""
+[[ ${QUEUE} != "" ]] && QUEUE_ARG="-q ${QUEUE}"
+
+qsub ${=QUEUE_ARG} ${TURBINE_OUTPUT}/turbine-aprun.sh
 # Return exit code from qsub
