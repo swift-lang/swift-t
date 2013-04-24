@@ -26,10 +26,19 @@ ADLB = $(ADLB_SO)
 
 all: $(ADLB)
 
-INSTALL_PREFIX  = @prefix@
-INSTALL_ETC     = $(INSTALL_PREFIX)/etc
-INSTALL_LIB     = $(INSTALL_PREFIX)/lib
-INSTALL_INCLUDE = $(INSTALL_PREFIX)/include
+# Support GNU DESTDIR for Debian, etc.
+# Cf. http://www.gnu.org/prep/standards/html_node/DESTDIR.html
+ifeq ($(DESTDIR),)
+  INSTALL_PREFIX  = @prefix@
+  INSTALL_ETC     = $(INSTALL_PREFIX)/etc
+  INSTALL_INCLUDE = $(INSTALL_PREFIX)/include
+  INSTALL_LIB     = $(INSTALL_PREFIX)/lib
+else
+  INSTALL_PREFIX  = $(DESTDIR)
+  INSTALL_ETC     = $(DESTDIR)/etc$(SUBDIR)
+  INSTALL_INCLUDE = $(DESTDIR)/include$(SUBDIR)
+  INSTALL_LIB     = $(DESTDIR)/lib$(SUBDIR)
+endif
 INSTALL_TOKEN   = $(INSTALL_ETC)/install.txt
 
 # Verbosity control:
