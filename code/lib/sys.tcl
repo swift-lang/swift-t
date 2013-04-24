@@ -161,7 +161,7 @@ namespace eval turbine {
 
     proc argv_contains { result key } {
         rule $key "argv_contains_body $result $key" \
-            name "argv_contains-$key" 
+            name "argv_contains-$key"
     }
 
     proc argv_contains_body { result key } {
@@ -172,10 +172,12 @@ namespace eval turbine {
     proc argv_contains_impl { key } {
         variable turbine_argv
         if { [ catch { set val [ dict get $turbine_argv $key ] } ] } {
-            return 0
+            set result 0
         } else {
-            return 1
+            set result 1
         }
+        log "argv_contains($key) => $result"
+        return $result
     }
 
     # usage: argv_get <result> <key> <optional:base>
@@ -191,7 +193,7 @@ namespace eval turbine {
         }
 
         rule $key "argv_get_body $result $key $base" \
-            name "argv_get-$key" 
+            name "argv_get-$key"
     }
 
     # usage: argv_get <result> <key> <optional:base>
@@ -229,13 +231,14 @@ namespace eval turbine {
         } else {
            error "argv_get_body: args: $c"
         }
-        if { [ catch { set val [ dict get $turbine_argv $key ] } ] } {
+        if { [ catch { set result [ dict get $turbine_argv $key ] } ] } {
             if { ! $base_defined } {
                 return -code $error_code "Could not find argv($key)"
             }
-            return $base
+            set result $base
         }
-        return $val
+        log "argv($key) => $result"
+        return $result
     }
 
     # usage: argv_get <result> <index> <optional:base>
@@ -250,7 +253,7 @@ namespace eval turbine {
         }
 
         rule $i "argp_get_body $result $i $base" \
-            name "argp_get-$i" 
+            name "argp_get-$i"
     }
 
     # usage: argp_get <result> <index> <optional:base>
@@ -295,10 +298,12 @@ namespace eval turbine {
             if { ! $base_defined } {
                 return -code $error_code "argp: index $i > argc $turbine_argc"
             }
-            return $base
+            set result $base
         } else {
-            return [ lindex $turbine_argp $i ]
+            set result [ lindex $turbine_argp $i ]
         }
+        log "argp($i) => $result"
+        return $result
     }
 
     proc argv_accept { args } {
@@ -333,7 +338,7 @@ namespace eval turbine {
 
     proc getenv { outputs inputs } {
         rule  $inputs "turbine::getenv_body $outputs $inputs" \
-            name getenv-$outputs 
+            name getenv-$outputs
     }
     proc getenv_body { result key } {
         set key_value [ retrieve_decr_string $key ]
@@ -351,7 +356,7 @@ namespace eval turbine {
     # Sleep for given time in seconds.  Return void
     proc sleep { outputs inputs } {
         rule $inputs "turbine::sleep_body $outputs $inputs" \
-            name "sleep-$outputs-$inputs" 
+            name "sleep-$outputs-$inputs"
     }
     proc sleep_body { output secs } {
         set secs_val [ retrieve_decr_float $secs ]
