@@ -9,6 +9,4 @@ Package: c-utils
 Architecture: any
 Depends:
 Description: Misc. C utilities for ExM software
-
  Misc. C utilities for ExM software
-
