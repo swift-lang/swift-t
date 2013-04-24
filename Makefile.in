@@ -38,15 +38,15 @@ exmcutils: $(EXMCUTILS)
 
 srcdir = @srcdir@
 
-INSTALL_PREFIX  = @prefix@
-
 # Support GNU DESTDIR for Debian, etc.
 # Cf. http://www.gnu.org/prep/standards/html_node/DESTDIR.html
 ifeq ($(DESTDIR),)
+  INSTALL_PREFIX  = @prefix@
   INSTALL_ETC     = $(INSTALL_PREFIX)/etc
   INSTALL_INCLUDE = $(INSTALL_PREFIX)/include
   INSTALL_LIB     = $(INSTALL_PREFIX)/lib
 else
+  INSTALL_PREFIX  = $(DESTDIR)
   INSTALL_ETC     = $(DESTDIR)/etc
   INSTALL_INCLUDE = $(DESTDIR)/include
   INSTALL_LIB     = $(DESTDIR)/lib
