@@ -1,0 +1,14 @@
+Source: ADLB
+Section: main/utils
+Priority: optional
+Maintainer: Justin Wozniak <wozniak@mcs.anl.gov>
+Build-Depends: debhelper (>= 8.0.0), autotools-dev, c-utils, mpich2 (>= 1.4.1)
+Standards-Version: 3.9.2
+Homepage: http://sites.google.com/site/exmcomputing
+
+Package: adlb
+Architecture: any
+Depends:
+Description: Asynchronous Dynamic Load Balancer
+ Load balancer based on MPI
+
