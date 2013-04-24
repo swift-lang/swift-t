@@ -288,6 +288,12 @@ public class Main {
     File result;
     try {
       if (preprocess) {
+        File input = new File(args.inputFilename);
+        if (!input.isFile() || !input.canRead()) {
+          System.out.println("Input file \"" + input + "\" is not readable");
+          System.exit(1);
+        }
+        
         result = File.createTempFile("stc-preproc", ".swift");
         temporaries.add(result);
         runPreprocessor(args.inputFilename, result.getPath(), args.preprocessorMacros);
