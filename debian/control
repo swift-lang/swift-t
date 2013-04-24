@@ -1,0 +1,14 @@
+Source: c-utils
+Section: main/utils
+Priority: optional
+Maintainer: Justin Wozniak <wozniak@mcs.anl.gov>
+Build-Depends: debhelper (>= 8.0.0), autotools-dev
+Standards-Version: 3.9.2
+Homepage: http://sites.google.com/site/exmcomputing
+Package: c-utils
+Architecture: any
+Depends:
+Description: Misc. C utilities for ExM software
+
+ Misc. C utilities for ExM software
+
