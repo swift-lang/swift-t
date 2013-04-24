@@ -4,7 +4,7 @@
 Turbine Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v0.1.1, February 2013
+v0.1.1, April 2013
 
 ////
 
@@ -28,19 +28,28 @@ Public installations::
 These are maintained by the Swift/T team.  Because they may become out
 of date after a release, the release version and a timestamp are
 recorded below.
-
++
 To request maintenance on a public installation, simply email
 exm-user@mcs.anl.gov .
 
 Build procedures::
+
 To follow a build procedure, you may start with the +exm+ download
 package.  Simply edit the +exm-setup+ script and modify the
 configuration settings as described here.
 
 Version numbers::
+
 The component version numbers that correspond together to make up a
 Swift/T release may be found on the
 link:../downloads/downloads.html[Downloads] page.
+
+Freshness::
+
+These instructions may become stale for various reasons.  For example,
+system administrators may update directory locations, breaking these
+instructions.  Thus, we mark *As of:* dates on the instructions for
+each system.
 
 See the link:./stc.html[Swift/T Guide] for more information about Swift/T.
 
@@ -273,9 +282,9 @@ LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
 --enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47
 ----
 
-=== Crow
+=== Raven
 
-Crow is a Cray XT at Cray
+Raven is a Cray XE6/XK7 at Cray.
 
 ==== Build procedure
 
@@ -284,22 +293,47 @@ Crow is a Cray XT at Cray
 ----
 ./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
 CC=gcc
-CFLAGS=-I/opt/cray/mpt/5.3.0/xt/seastar/mpich2-gnu/include
-LDFLAGS="-L/opt/cray/mpt/5.3.0/xt/seastar/mpich2-gnu/lib -lmpich"
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/46/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/46/lib -lmpich"
 --enable-mpi-2
 ----
 +
-* In the Turbine configure step, replace the +--with-mpi+ option with:
+* In the Turbine configure step, use:
 +
 ----
---enable-custom --with-mpi-dir=/opt/cray/mpt/5.3.0/xt/seastar/mpich2-gnu
+--with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/46
 ----
 
 To run:
 
-1. Copy out the sample submit script:
-+turbine/scripts/submit/cray/aprun.sh+
-2. Edit and submit with +qsub+.
+1. Set environment variables.  The normal Turbine environment
+variables are honored, plus:
++
++NODES+:: Number of nodes to use
++PPN+:: Number of processes per node
++TURBINE_OUTPUT+:: Directory in which to place Turbine output
++QUEUE+:: Name of queue in which to run (may leave unset)
+2. Run submit script (in +turbine/scripts/submit/cray+):
++
+----
+turbine-aprun-run.zsh script.tcl --arg1=value1 ...
+----
+
+==== Advanced usage:
+
+Turbine uses a PBS template file called
++turbine/scripts/submit/cray/turbine-aprun.sh.m4+.  This file is
+simply filtered and submitted via +qsub+.  You can edit this file to
+add additional settings as necessary.
+
+==== Module:
+
+You may load Swift/T with:
+
+----
+MODULEPATH=$MODULEPATH:/home/users/p01577/Public/modules
+module load swift-t
+----
 
 == Cloud
 
