@@ -331,7 +331,7 @@ add additional settings as necessary.
 You may load Swift/T with:
 
 ----
-MODULEPATH=$MODULEPATH:/home/users/p01577/Public/modules
+module use /home/users/p01577/Public/modules
 module load swift-t
 ----
 
