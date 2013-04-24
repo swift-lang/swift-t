@@ -1,4 +1,4 @@
-Source: ADLB
+Source: adlb
 Section: main/utils
 Priority: optional
 Maintainer: Justin Wozniak <wozniak@mcs.anl.gov>
