@@ -836,7 +836,7 @@ public class STCMiddleEnd {
       Var target = new Var(Types.V_INT, Var.DEREF_COMPILER_VAR_PREFIX + "target",
           VarStorage.LOCAL, DefType.INARG);
       realInArgs.add(target);
-      props.put(TaskPropKey.TARGET, target.asArg());
+      props.put(TaskPropKey.LOCATION, target.asArg());
     }
     
     Function fn = new Function(function, realInArgs, outArgs, TaskMode.SYNC);

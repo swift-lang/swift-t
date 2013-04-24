@@ -27,13 +27,13 @@ public class Annotations {
   public static final String FN_MINMAX = "minmax";
   public static final String FN_COMMUTATIVE = "commutative";
   public static final String FN_SYNC = "sync";
-  public static final Object FN_BUILTIN_OP = "builtin_op";
-  public static final Object FN_DISPATCH = "dispatch";
-  public static final Object FN_PAR = "par";
+  public static final String FN_BUILTIN_OP = "builtin_op";
+  public static final String FN_DISPATCH = "dispatch";
+  public static final String FN_PAR = "par";
 
-  public static final Object FNCALL_PAR = "par";
-  public static final Object FNCALL_TARGET = "target";
-  public static final Object FNCALL_PRIO = "prio";
+  public static final String FNCALL_PAR = "par";
+  public static final String FNCALL_LOCATION = "location";
+  public static final String FNCALL_PRIO = "prio";
   
   public static final String LOOP_UNROLL = "unroll";
   public static final String LOOP_SPLIT_DEGREE = "splitdegree";

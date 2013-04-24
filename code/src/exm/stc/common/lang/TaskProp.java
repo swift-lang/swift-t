@@ -49,7 +49,7 @@ public class TaskProp {
       
       // Return default
       switch (key) {
-        case TARGET:
+        case LOCATION:
           return Location.ANY_LOCATION;
         default:
           throw new STCRuntimeError("Unknown default value for "
@@ -79,7 +79,7 @@ public class TaskProp {
   public static enum TaskPropKey {
     PRIORITY,
     PARALLELISM,
-    TARGET,
+    LOCATION,
   }
   
   /** Required types for properties at language level */
@@ -92,7 +92,7 @@ public class TaskProp {
     Map<TaskPropKey, Type> res = new HashMap<TaskPropKey, Type>();
     res.put(TaskPropKey.PRIORITY, Types.F_INT);
     res.put(TaskPropKey.PARALLELISM, Types.F_INT);
-    res.put(TaskPropKey.TARGET, Types.F_LOCATION);
+    res.put(TaskPropKey.LOCATION, Types.F_LOCATION);
     return res;
   }
   
@@ -100,7 +100,7 @@ public class TaskProp {
     Map<TaskPropKey, Type> res = new HashMap<TaskPropKey, Type>();
     res.put(TaskPropKey.PRIORITY, Types.V_INT);
     res.put(TaskPropKey.PARALLELISM, Types.V_INT);
-    res.put(TaskPropKey.TARGET, Types.V_LOCATION);
+    res.put(TaskPropKey.LOCATION, Types.V_LOCATION);
     return res;
   }
 

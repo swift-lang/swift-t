@@ -520,7 +520,7 @@ public class ExprWalker {
             + " Maybe you meant to annotate the function definition with "
             + "@" + Annotations.FN_PAR);
       }
-    } else if (ann == TaskPropKey.TARGET) {
+    } else if (ann == TaskPropKey.LOCATION) {
       if (!context.hasFunctionProp(f.function(), FnProp.TARGETABLE)) {
         throw new UserException(context, "Tried to call non-targetable"
             + " function " + f.function() + " with target");
@@ -888,7 +888,7 @@ public class ExprWalker {
       }
       if (context.hasFunctionProp(function, FnProp.TARGETABLE)) {
         // Target is optional but we have to pass something in
-        Arg target = props.getWithDefault(TaskPropKey.TARGET);
+        Arg target = props.getWithDefault(TaskPropKey.LOCATION);
         realInputs.add(target);
       }
       

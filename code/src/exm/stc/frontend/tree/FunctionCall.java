@@ -68,8 +68,8 @@ public class FunctionCall {
       return  TaskPropKey.PARALLELISM;
     } else if (annotName.equals(Annotations.FNCALL_PRIO)) {
       return  TaskPropKey.PRIORITY;
-    } else if (annotName.equals(Annotations.FNCALL_TARGET)) {
-      return TaskPropKey.TARGET;
+    } else if (annotName.equals(Annotations.FNCALL_LOCATION)) {
+      return TaskPropKey.LOCATION;
     } else {
       throw new STCRuntimeError("Invalid annotation for function call: " + 
                               annotName);
