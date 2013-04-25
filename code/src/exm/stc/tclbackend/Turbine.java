@@ -24,6 +24,7 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.Location;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.util.Pair;
 import exm.stc.tclbackend.tree.Command;
@@ -608,11 +609,18 @@ class Turbine {
    */
   public static Command checkConstants() {
     List<Expression> args = new ArrayList<Expression>();
+    // Check work types
     for (TaskMode taskMode: Arrays.asList(TaskMode.WORKER, TaskMode.CONTROL)) {
       args.add(new TclString(taskMode.toString(), true));
       args.add(adlbWorkType(taskMode));
       args.add(adlbWorkTypeVal(taskMode));
     }
+    
+    // Check ADLB_RANK_ANY value
+    args.add(new TclString("ADLB_RANK_ANY", true));
+    args.add(TclTarget.ADLB_RANK_ANY);
+    args.add(new LiteralInt(Location.ANY_LOCATION_VAL));
+    
     return new Command(turbFn("check_constants"), args);
   }
 
