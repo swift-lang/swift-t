@@ -6,6 +6,11 @@ SWIG_C_FILE = $(DIR)/SwiftBlob_wrap.c
 
 TCL_BLOB_SRC := $(SWIG_C_FILE) $(DIR)/blob.c
 
+TCL_BLOB_O := $(TCL_BLOB_SRC:.c=.o)
+
+# Disable conversion warnings for Swift-generated code
+$(TCL_BLOB_O): CFLAGS+=-Wno-conversion
+
 $(SWIG_C_FILE): $(DIR)/SwiftBlob.i $(DIR)/blob.h
 	$(Q) "  SWIG 		$(<)"
 	$(E) swig -includeall -ignoremissing -module SwiftBlob -outdir $(DIR) $(<)

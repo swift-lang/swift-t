@@ -36,7 +36,7 @@ blobutils_make_test(void)
   char* t = (char*) malloc(64);
   sprintf(t, "howdy");
   d->pointer = t;
-  d->length = strlen(t)+1;
+  d->length = (int)strlen(t)+1;
   return d;
 }
 
@@ -56,7 +56,7 @@ blobutils_create_ptr(void* pointer, int length)
 }
 
 void*
-blobutils_malloc(int bytes)
+blobutils_malloc(size_t bytes)
 {
   void* result = malloc(bytes);
   assert(result);
@@ -175,7 +175,7 @@ blobutils_read(const char* input, turbine_blob* blob)
   assert(rc == 0);
 
   blob->length = s.st_size;
-  blob->pointer = malloc(blob->length);
+  blob->pointer = malloc((size_t)blob->length);
   if (!blob->pointer)
   {
     printf("could not allocate memory for: %s\n", input);
@@ -195,7 +195,7 @@ write_all(int fd, void* buffer, int count)
   int bytes;
   int total = 0;
   int chunk = count;
-  while ((bytes = write(fd, buffer, chunk)))
+  while ((bytes = write(fd, buffer, (size_t)chunk)))
   {
     total += bytes;
     if (total == count)
@@ -218,7 +218,7 @@ read_all(int fd, void* buffer, int count)
   int bytes;
   int total = 0;
   int chunk = count;
-  while ((bytes = read(fd, buffer, chunk)))
+  while ((bytes = read(fd, buffer, (size_t)chunk)))
   {
     total += bytes;
     if (total == count)

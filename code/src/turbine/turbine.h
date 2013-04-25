@@ -40,7 +40,7 @@ typedef enum
   TURBINE_ACTION_WORK = 3
 } turbine_action_type;
 
-typedef long turbine_transform_id;
+typedef long long turbine_transform_id;
 
 /**
    If the user parallel task is being released, this

@@ -51,7 +51,7 @@ turbine_blob* blobutils_create_ptr(void* pointer, int length);
 /**
    Allocate memory (not a blob) of given size
  */
-void* blobutils_malloc(int bytes);
+void* blobutils_malloc(size_t bytes);
 
 /**
    Deallocate a blob - frees the data pointer

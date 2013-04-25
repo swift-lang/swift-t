@@ -71,7 +71,7 @@
 */
 turbine_code turbine_tcl_long_array(Tcl_Interp* interp,
                                     Tcl_Obj* list, int max,
-                                    long* output, int* count);
+                                    long long* output, int* count);
 
 /**
    Obtain array of string from Tcl list
@@ -161,5 +161,45 @@ Tcl_Obj* tcl_list_new(int count, char** strings);
 #define TCL_CONDITION(condition, format, args...) ((void)(condition))
 
 #endif
+
+/* Helper functions for specific int types */
+static inline Tcl_Obj *Tcl_NewADLBInt(adlb_int_t val)
+{
+  return Tcl_NewWideIntObj(val);
+}
+
+static inline Tcl_Obj *Tcl_NewADLB_ID(adlb_datum_id val)
+{
+  return Tcl_NewWideIntObj(val);
+}
+
+static inline Tcl_Obj *Tcl_NewPtr(void *ptr)
+{
+  return Tcl_NewLongObj((long)ptr);
+}
+
+
+static inline int Tcl_GetADLBInt(Tcl_Interp *interp, Tcl_Obj *objPtr,
+                                 adlb_int_t *intPtr)
+{
+  return Tcl_GetWideIntFromObj(interp, objPtr, intPtr);
+}
+
+static inline int Tcl_GetADLB_ID(Tcl_Interp *interp, Tcl_Obj *objPtr,
+                                 adlb_datum_id *intPtr)
+{
+  return Tcl_GetWideIntFromObj(interp, objPtr, intPtr);
+}
+
+static inline int Tcl_GetPtr(Tcl_Interp *interp, Tcl_Obj *objPtr,
+                                 void **ptr)
+{
+  long ptrVal;
+  int rc = Tcl_GetLongFromObj(interp, objPtr, &ptrVal);
+  TCL_CHECK(rc);
+  *ptr = (void *) ptrVal;
+  return TCL_OK;
+}
+
 
 #endif

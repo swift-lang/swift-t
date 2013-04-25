@@ -85,7 +85,7 @@ typedef struct
 
 MPI_Comm turbine_task_comm = MPI_COMM_NULL;
 
-static int bitfield_size(int inputs);
+static size_t bitfield_size(int inputs);
 
 // Check if input closed
 static inline bool input_closed(transform *T, int i);
@@ -319,6 +319,7 @@ transform_create(const char* name,
 {
   assert(name);
   assert(action);
+  assert(inputs >= 0);
 
   if (strlen(action) > TURBINE_ACTION_MAX)
   {
@@ -341,7 +342,7 @@ transform_create(const char* name,
 
   if (inputs > 0)
   {
-    T->input_list = malloc(inputs*sizeof(turbine_datum_id));
+    T->input_list = malloc((size_t)inputs*sizeof(turbine_datum_id));
     T->closed_inputs = malloc(bitfield_size(inputs)*sizeof(unsigned char));
     if (! T->input_list || ! T->closed_inputs)
       return TURBINE_ERROR_OOM;
@@ -762,39 +763,41 @@ transform_tostring(char* output, transform* t)
   {
     // Highlight the blocking variable
     if (i == t->blocker)
-      append(p, "/%li/", t->input_list[i]);
+      append(p, "/%lli/", t->input_list[i]);
     else
-      append(p, "%li", t->input_list[i]);
+      append(p, "%lli", t->input_list[i]);
     if (i < t->inputs-1)
       append(p, " ");
   }
   append(p, ")");
 
-  result = p - output;
+  result = (int)(p - output);
   return result;
 }
 
 static inline bool
 input_closed(transform *T, int i)
 {
-  unsigned char field = T->closed_inputs[i / 8];
-  return (field >> (i % 8)) & 0x1;
+  assert(i >= 0);
+  unsigned char field = T->closed_inputs[(unsigned int)i / 8];
+  return (field >> ((unsigned int)i % 8)) & 0x1;
 }
 
 // Extract bit from closed_inputs
 static inline void
 mark_input_closed(transform *T, int i)
 {
-  unsigned char mask = 0x1 << (i % 8);
+  assert(i >= 0);
+  unsigned char mask = (unsigned char) (0x1 << ((unsigned int)i % 8));
   T->closed_inputs[i / 8] |= mask;
 }
 
-static int
+static size_t
 bitfield_size(int inputs) {
   if (inputs <= 0)
     return 0;
   // Round up to nearest multiple of 8
-  return (inputs - 1) / 8 + 1;
+  return (size_t)(inputs - 1) / 8 + 1;
 }
 
 /**
@@ -835,7 +838,7 @@ info_waiting()
     {
       transform* t = item->data;
       char id_string[24];
-      sprintf(id_string, "{%li}", t->id);
+      sprintf(id_string, "{%lli}", t->id);
       int c = sprintf(buffer, "%10s ", id_string);
       transform_tostring(buffer+c, t);
       printf("TRANSFORM: %s\n", buffer);

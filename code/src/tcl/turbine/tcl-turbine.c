@@ -27,7 +27,6 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdlib.h>
 // strnlen() is a GNU extension: Need _GNU_SOURCE
 #define _GNU_SOURCE
@@ -269,13 +268,13 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
                               TCL_TURBINE_MAX_INPUTS,
                               input_list, &inputs);
   TCL_CHECK_MSG(rc, "could not parse inputs list as integers:\n"
-                "in rule: <%li> %s inputs: \"%s\"",
+                "in rule: <%lli> %s inputs: \"%s\"",
                 id, opts.name, Tcl_GetString(objv[1]));
 
   turbine_code code =
       turbine_rule(opts.name, inputs, input_list, opts.type, action,
                    ADLB_curr_priority, opts.target, opts.parallelism, &id);
-  TURBINE_CHECK(code, "could not add rule: %li", id);
+  TURBINE_CHECK(code, "could not add rule: %lli", id);
   return TCL_OK;
 }
 
@@ -298,8 +297,8 @@ static inline void
 rule_set_name_default(char* name, int size, const char* action)
 {
   char* q = strchr(action, ' ');
-  int n = q-action+1;
-  strncpy(name, action, n);
+  long n = q-action+1;
+  strncpy(name, action, (size_t)n);
   name[n] = '\0';
 }
 
@@ -445,7 +444,7 @@ Turbine_Ready_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   for (int i = 0; i < actual; i++)
   {
-    Tcl_Obj* sid = Tcl_NewLongObj(transforms[i]);
+    Tcl_Obj* sid = Tcl_NewWideIntObj(transforms[i]);
     Tcl_ListObjAppendElement(interp, result, sid);
   }
 
@@ -461,7 +460,7 @@ Turbine_Pop_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(7); // ID, plus type, action, priority, target, par vars to set
 
   turbine_transform_id id;
-  int error = Tcl_GetLongFromObj(interp, objv[1], &id);
+  int error = Tcl_GetADLB_ID(interp, objv[1], &id);
   TCL_CHECK(error);
 
   turbine_action_type type;
@@ -473,7 +472,7 @@ Turbine_Pop_Cmd(ClientData cdata, Tcl_Interp *interp,
   turbine_code code = turbine_pop(id, &type, &action,
                                   &priority, &target, &parallelism);
   TCL_CONDITION(code == TURBINE_SUCCESS,
-                 "could not pop transform id: %li", id);
+                 "could not pop transform id: %lli", id);
 
   Tcl_ObjSetVar2(interp, objv[2], NULL, Tcl_NewIntObj(type),
                  EMPTY_FLAG);
@@ -493,12 +492,12 @@ Turbine_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(2);
 
   turbine_datum_id id;
-  int error = Tcl_GetLongFromObj(interp, objv[1], &id);
+  int error = Tcl_GetADLB_ID(interp, objv[1], &id);
   TCL_CHECK(error);
 
   turbine_code code = turbine_close(id);
   TCL_CONDITION(code == TURBINE_SUCCESS,
-                "could not close datum id: %li", id);
+                "could not close datum id: %lli", id);
 
   return TCL_OK;
 }
@@ -562,7 +561,7 @@ cache_check_cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS_SUB(cache, 2);
   turbine_datum_id td;
-  int error = Tcl_GetLongFromObj(interp, objv[1], &td);
+  int error = Tcl_GetADLB_ID(interp, objv[1], &td);
   TCL_CHECK(error);
 
   bool found = turbine_cache_check(td);
@@ -573,7 +572,7 @@ cache_check_cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static inline int retrieve_object(Tcl_Interp *interp,
-                                  Tcl_Obj *const objv[], long td,
+                                  Tcl_Obj *const objv[], adlb_datum_id td,
                                   turbine_type type,
                                   void* data, int length,
                                   Tcl_Obj** result);
@@ -584,14 +583,14 @@ cache_retrieve_cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS_SUB(retrieve, 2);
   turbine_datum_id td;
-  int error = Tcl_GetLongFromObj(interp, objv[1], &td);
+  int error = Tcl_GetADLB_ID(interp, objv[1], &td);
   TCL_CHECK(error);
 
   turbine_type type;
   void* data;
   int length;
   turbine_code rc = turbine_cache_retrieve(td, &type, &data, &length);
-  TURBINE_CHECK(rc, "cache retrieve failed: %li", td);
+  TURBINE_CHECK(rc, "cache retrieve failed: %lli", td);
 
   Tcl_Obj* result = NULL;
   retrieve_object(interp, objv, td, type, data, length, &result);
@@ -603,7 +602,7 @@ cache_retrieve_cmd(ClientData cdata, Tcl_Interp *interp,
    interp, objv, id, and length: just for error checking and messages
  */
 static inline int
-retrieve_object(Tcl_Interp *interp, Tcl_Obj *const objv[], long id,
+retrieve_object(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id,
                 turbine_type type, void* data, int length,
                 Tcl_Obj** result)
 {
@@ -625,9 +624,9 @@ retrieve_object(Tcl_Interp *interp, Tcl_Obj *const objv[], long id,
       *result = Tcl_NewStringObj(data, length-1);
       break;
     case ADLB_DATA_TYPE_BLOB:
-      string_length = strnlen(data, length);
+      string_length = (int)strnlen(data, (size_t)length);
       TCL_CONDITION(string_length < length,
-                    "adlb::retrieve: unterminated blob: <%li>", id);
+                    "adlb::retrieve: unterminated blob: <%lli>", id);
       *result = Tcl_NewStringObj(data, string_length);
       break;
     case ADLB_DATA_TYPE_CONTAINER:
@@ -659,7 +658,7 @@ cache_store_cmd(ClientData cdata, Tcl_Interp* interp,
   int length;
 
   int error;
-  error = Tcl_GetLongFromObj(interp, objv[1], &td);
+  error = Tcl_GetADLB_ID(interp, objv[1], &td);
   TCL_CHECK(error);
   int t;
   error = Tcl_GetIntFromObj(interp, objv[2], &t);
@@ -667,10 +666,10 @@ cache_store_cmd(ClientData cdata, Tcl_Interp* interp,
   TCL_CHECK(error);
   error = extract_object(interp, objv, td, type, objv[3],
                          &data, &length);
-  TCL_CHECK_MSG(error, "object extraction failed: <%li>", td);
+  TCL_CHECK_MSG(error, "object extraction failed: <%lli>", td);
 
   turbine_code rc = turbine_cache_store(td, type, data, length);
-  TURBINE_CHECK(rc, "cache store failed: %li", td);
+  TURBINE_CHECK(rc, "cache store failed: %lli", td);
 
   return TCL_OK;
 }
@@ -691,25 +690,25 @@ extract_object(Tcl_Interp* interp, Tcl_Obj *const objv[],
   {
     case TURBINE_TYPE_INTEGER:
       rc = Tcl_GetLongFromObj(interp, obj, &tmp_long);
-      TCL_CHECK_MSG(rc, "cache store failed: <%li>", td);
-      *length = sizeof(long);
-      data = malloc(*length);
-      memcpy(data, &tmp_long, *length);
+      TCL_CHECK_MSG(rc, "cache store failed: <%lli>", td);
+      *length = (int)sizeof(long);
+      data = malloc((size_t)*length);
+      memcpy(data, &tmp_long, (size_t)*length);
       break;
     case TURBINE_TYPE_FLOAT:
       rc = Tcl_GetDoubleFromObj(interp, obj, &tmp_double);
-      TCL_CHECK_MSG(rc, "cache store failed: <%li>", td);
-      *length = sizeof(double);
-      data = malloc(*length);
-      memcpy(data, &tmp_double, *length);
+      TCL_CHECK_MSG(rc, "cache store failed: <%lli>", td);
+      *length = (int)sizeof(double);
+      data = malloc((size_t)*length);
+      memcpy(data, &tmp_double, (size_t)*length);
       break;
     case TURBINE_TYPE_STRING:
       data = Tcl_GetStringFromObj(objv[3], length);
       TCL_CONDITION(data != NULL,
-                    "cache store failed: <%li>", td);
-      *length = strlen(data)+1;
+                    "cache store failed: <%lli>", td);
+      *length = (int)strlen(data)+1;
       TCL_CONDITION(*length < ADLB_DATA_MAX,
-                    "cache store: string too long: <%li>", td);
+                    "cache store: string too long: <%lli>", td);
       break;
     case TURBINE_TYPE_BLOB:
       TCL_RETURN_ERROR("cannot cache a blob!");
@@ -761,18 +760,18 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
     assert(rule_id_end != NULL);
     char *work = rule_id_end + 1; // start of Tcl work unit
     
-    DEBUG_TURBINE("rule_id: %li", atol(buffer));
+    DEBUG_TURBINE("rule_id: %lli", atol(buffer));
     DEBUG_TURBINE("eval: %s", work);
 
     // Work out length | null byte | prefix
-    int cmd_len = work_len - 1 - (work - buffer);
+    int cmd_len = work_len - 1 - (int)(work - buffer);
     rc = Tcl_EvalEx(interp, work, cmd_len, 0);
     if (rc != TCL_OK) {
       TCL_CONDITION(rc == TCL_ERROR, "Unexpected return code from evaled "
                     "command: %d", rc);
       // Pass error to calling script
       const char *prefix = "\nWorker executing task: ";
-      char *msg = malloc(sizeof(char) * (strlen(prefix) + work_len));
+      char *msg = malloc(sizeof(char) * (strlen(prefix) + (size_t)work_len));
       sprintf(msg, "%s%s", prefix, buffer);
       Tcl_AddErrorInfo(interp, msg);
       free(msg);
@@ -886,7 +885,7 @@ Turbine_StrInt_Cmd(ClientData cdata, Tcl_Interp *interp,
     if (my_errno == ERANGE)
     {
       TCL_RETURN_ERROR("Integer representation of '%s' is out of range of "
-          "%u bit integers", str, sizeof(Tcl_WideInt) * 8);
+          "%zi bit integers", str, sizeof(Tcl_WideInt) * 8);
     }
     else if (my_errno == EINVAL)
     {
@@ -898,7 +897,7 @@ Turbine_StrInt_Cmd(ClientData cdata, Tcl_Interp *interp,
                        "converting '%s' to integer", my_errno, str);
     }
   }
-  int consumed = end_str - str;
+  long consumed = end_str - str;
   if (consumed == 0)
   {
     // Handle case where no input consumed
@@ -908,7 +907,7 @@ Turbine_StrInt_Cmd(ClientData cdata, Tcl_Interp *interp,
   if (consumed < len)
   {
     // Didn't consume all string.  Make sure only whitespace at end
-    for (int i = consumed; i < len; i++)
+    for (long i = consumed; i < len; i++)
     {
       if (!isspace(str[i]))
       {

@@ -170,16 +170,17 @@ static inline void cache_shrink(void);
 
 /**
    Add a cache entry- no eviction necessary unless out of memory
- */
+*/
 static inline void
 cache_add(turbine_datum_id td, turbine_type type,
           void* data, int length)
 {
+  assert(length >= 0);
   struct entry* e = entry_create(td, type, data, length, counter);
   table_lp_add(&entries, td, e);
   rbtree_add(&lru, counter, e);
   counter++;
-  memory -= length;
+  memory -= (unsigned long)length;
   cache_shrink();
 }
 
@@ -198,14 +199,15 @@ cache_replace(turbine_datum_id td, turbine_type type,
   // Remove the victim from cache data structures
   rbtree_remove_node(&lru, node);
   table_lp_remove(&entries, e->td);
-  memory += e->length;
+  assert(e->length >= 0);
+  memory += (unsigned long)e->length;
   free(e->data);
   // Replace the entry with the new data
   entry_init(e, td, type, data, length, counter);
   node->key = counter;
   rbtree_add_node(&lru, node);
   table_lp_add(&entries, td, e);
-  memory -= length;
+  memory -= (unsigned long)length;
   counter++;
   cache_shrink();
 }
@@ -219,12 +221,12 @@ cache_shrink(void)
 {
   while (memory < 0)
   {
-    long stamp;
+    long long stamp;
     void* v;
     rbtree_pop(&lru, &stamp, &v);
     struct entry* e = (struct entry*) v;
     DEBUG_CACHE("cache_shrink(): LRU victim: <%li>", e->td);
-    memory += e->length;
+    memory += (unsigned long)e->length;
     free(e->data);
     free(e);
   }

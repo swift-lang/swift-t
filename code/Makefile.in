@@ -102,7 +102,7 @@ USE_MPE = @USE_MPE@
 
 CFLAGS += -std=gnu99
 CFLAGS += -g
-CFLAGS += -Wall
+CFLAGS += -Wall -Wconversion
 CFLAGS += -I $(C_UTILS)/include
 CFLAGS += @TCL_INCLUDE_SPEC@
 CFLAGS += -fPIC

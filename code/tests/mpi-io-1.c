@@ -60,7 +60,7 @@ main(int argc, char** argv)
   MPI_ASSERT(rc);
   MPI_Type_commit(&chunk);
 
-  int chunks = size/chunk_size + 1;
+  int chunks = (int)size/chunk_size + 1;
   MPI_Datatype strides;
   //  rc = MPI_Type_vector(chunks, chunk_size, mpi_size*chunk_size,
   //		       MPI_BYTE, &strides);

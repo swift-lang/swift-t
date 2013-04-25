@@ -35,7 +35,7 @@
 static bool  initialized = false;
 static bool  enabled = true;
 static char* buffer = NULL;
-static int buffer_size;
+static size_t buffer_size;
 
 void
 turbine_debug_init()
@@ -56,7 +56,7 @@ turbine_debug_init()
       enabled = false;
       return;
     }
-  buffer_size = 32*KB;
+  buffer_size = (size_t)(32*KB);
   buffer = malloc(buffer_size);
 }
 
@@ -66,7 +66,7 @@ turbine_debug_init()
 #define BUFFER_SIZE_CHECK(count)                     \
   if (count >= buffer_size) {                        \
     printf("turbine_debug: "                         \
-           "message exceeded buffer_size (%i/%i)\n", \
+           "message exceeded buffer_size (%zi/%zi)\n", \
            count, buffer_size);               \
     buffer[buffer_size-1] = '\0';                    \
     printf("buffer: %s\n", buffer);  \
@@ -89,11 +89,11 @@ turbine_debug(const char* token, const char* format, ...)
 
   va_list va;
   va_start(va, format);
-  int count = 0;
-  count += sprintf(buffer, "%s: ", token);
-  count += vsnprintf(buffer+count, buffer_size-count, format, va);
+  size_t count = 0;
+  count += (size_t)sprintf(buffer, "%s: ", token);
+  count += (size_t)vsnprintf(buffer+count, buffer_size-count, format, va);
   BUFFER_SIZE_CHECK(count);
-  count += snprintf(buffer+count, buffer_size-count, "\n");
+  count += (size_t)snprintf(buffer+count, buffer_size-count, "\n");
   BUFFER_SIZE_CHECK(count);
   printf("%s", buffer);
   fflush(stdout);

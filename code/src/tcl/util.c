@@ -22,7 +22,7 @@
 
 turbine_code
 turbine_tcl_long_array(Tcl_Interp* interp, Tcl_Obj* list, int max,
-                      long* output, int* count)
+                      long long* output, int* count)
 {
   Tcl_Obj** entry;
   int code = Tcl_ListObjGetElements(interp, list, count, &entry);
@@ -30,7 +30,7 @@ turbine_tcl_long_array(Tcl_Interp* interp, Tcl_Obj* list, int max,
   assert(*count < max);
   for (int i = 0; i < *count; i++)
   {
-    code = Tcl_GetLongFromObj(interp, entry[i], &output[i]);
+    code = Tcl_GetWideIntFromObj(interp, entry[i], &output[i]);
     if (code != TCL_OK)
       return TURBINE_ERROR_NUMBER_FORMAT;
   }
