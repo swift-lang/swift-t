@@ -23,6 +23,7 @@ TCL_SRC := $(DIR)/helpers.tcl             \
            $(DIR)/blob.tcl                \
            $(DIR)/mpe.tcl		  \
 	   $(DIR)/files.tcl               \
+	   $(DIR)/location.tcl            \
 	   $(DIR)/app.tcl
 
 # Builds the Turbine Tcl package

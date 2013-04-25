@@ -61,11 +61,6 @@ argv_accept(string... keys)
   "if { <<seconds>> > 0 } { after [ expr {round(<<seconds>> * 1000)} ] }"
 ];
 
-@pure
-(location rank) hostmap_one(string name)
-"turbine" "0.0.2"
-[ "set <<rank>> [ draw [ adlb::hostmap <<name>> ] ]" ];
-
 (int t) clock_seconds()
 "turbine" "0.1"
 [ "set <<t>> [ clock seconds ]" ];
