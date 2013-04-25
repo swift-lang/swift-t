@@ -2,7 +2,7 @@
 import files;
 import io;
 import string;
-import sys;
+import location;
 
 /**
    Run as TURBINE_SRAND=<seed> turbine ... 568.tcl
@@ -20,4 +20,7 @@ main
   printf("name: %s", name);
   location rank = hostmap_one(name);
   printf("rank: %i", rank);
+  
+  location worker_rank = hostmap_one_worker(name);
+  printf("worker_rank: %i", rank);
 }
