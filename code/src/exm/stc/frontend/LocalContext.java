@@ -191,6 +191,11 @@ public class LocalContext extends Context {
   public boolean hasFunctionProp(String name, FnProp prop) {
     return parent.hasFunctionProp(name, prop);
   }
+  
+  @Override
+  public List<FnProp> getFunctionProps(String function) {
+    return parent.getFunctionProps(function);
+  }
 
   @Override
   public GlobalContext getGlobals()

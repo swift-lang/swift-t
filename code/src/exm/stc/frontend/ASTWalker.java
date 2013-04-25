@@ -55,6 +55,8 @@ import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.TaskProp.TaskPropKey;
+import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayInfo;
 import exm.stc.common.lang.Types.ArrayType;
@@ -1806,7 +1808,7 @@ public class ASTWalker {
         throw new UserException(context, "Must provide TCL implementation or " +
         		"inline TCL for function " + function);
       }
-      // generate composite functino wrapping inline tcl
+      // generate composite function wrapping inline tcl
       context.setFunctionProperty(function, FnProp.WRAPPED_BUILTIN);
       context.setFunctionProperty(function, FnProp.SYNC);
       boolean isParallel = context.hasFunctionProp(function, FnProp.PARALLEL);
@@ -2089,6 +2091,8 @@ public class ASTWalker {
                         outArgsT,   Collections.<String>emptySet());
     context.defineFunction(function, decl.getFunctionType());
     context.setFunctionProperty(function, FnProp.APP);
+    context.setFunctionProperty(function, FnProp.SYNC);
+    context.setFunctionProperty(function, FnProp.TARGETABLE);
   }
 
   private void compileAppFunction(Context context, SwiftAST tree)
@@ -2106,6 +2110,18 @@ public class ASTWalker {
                         outArgsT,   Collections.<String>emptySet());
     List<Var> outArgs = decl.getOutVars();
     List<Var> inArgs = decl.getInVars();
+    
+    /* Pass in e.g. location */
+    List<Var> realInArgs = new ArrayList<Var>();
+    realInArgs.addAll(inArgs);
+    TaskProps props = new TaskProps();
+    // Need to pass location arg into task dispatch wait statement
+    // Priority is passed implicitly
+    Var loc = new Var(Types.V_INT, Var.DEREF_COMPILER_VAR_PREFIX + "location",
+        VarStorage.LOCAL, DefType.INARG);
+    realInArgs.add(loc);
+    props.put(TaskPropKey.LOCATION, loc.asArg());
+    
     
     context.syncFilePos(tree, lineMapping);
     List<String> annotations = extractFunctionAnnotations(context, tree, 4);
@@ -2131,9 +2147,9 @@ public class ASTWalker {
     appContext.addDeclaredVariables(inArgs);
     
     
-    backend.startFunction(function, outArgs, inArgs, TaskMode.SYNC);
+    backend.startFunction(function, outArgs, realInArgs, TaskMode.SYNC);
     genAppFunctionBody(appContext, appBodyT, inArgs, outArgs, 
-                       hasSideEffects, deterministic);
+                       hasSideEffects, deterministic, props);
     backend.endFunction();
   }
 
@@ -2144,12 +2160,13 @@ public class ASTWalker {
    * @param outArgs output arguments for app
    * @param hasSideEffects
    * @param deterministic
+   * @param props 
    * @throws UserException
    */
   private void genAppFunctionBody(Context context, SwiftAST appBody,
           List<Var> inArgs, List<Var> outArgs,
           boolean hasSideEffects,
-          boolean deterministic) throws UserException {
+          boolean deterministic, TaskProps props) throws UserException {
     //TODO: don't yet handle situation where user is naughty and
     //    uses output variable in expression context
     assert(appBody.getType() == ExMParser.APP_BODY);
@@ -2182,7 +2199,7 @@ public class ASTWalker {
     String waitName = context.getFunctionContext().constructName("app-leaf");
     // do deep wait for array args
     backend.startWaitStatement(waitName, waitVars,
-        WaitMode.TASK_DISPATCH, false, true, TaskMode.WORKER);
+        WaitMode.TASK_DISPATCH, false, true, TaskMode.WORKER, props);
     // On worker, just execute the required command directly
     Pair<List<Arg>, Redirects<Arg>> retrieved = retrieveAppArgs(context,
                                           args, redirFutures, fileNames);

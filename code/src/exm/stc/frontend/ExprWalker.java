@@ -845,6 +845,7 @@ public class ExprWalker {
       List<Var> oList, ArrayList<Var> iList, TaskProps props) throws UserException {
     props.assertInternalTypesValid();
     FunctionType def = context.lookupFunction(function);
+    
     if (def == null) {
       throw new STCRuntimeError("Couldn't locate function definition for " +
           "previously defined function " + function);
@@ -860,7 +861,7 @@ public class ExprWalker {
         backend.builtinFunctionCall(function, iList, oList, props);
       }
     } else if (context.hasFunctionProp(function, FnProp.COMPOSITE)) {
-
+      System.err.println(function +  " composite");
       TaskMode mode;
       if (context.hasFunctionProp(function, FnProp.SYNC)) {
         mode = TaskMode.SYNC;
@@ -868,7 +869,10 @@ public class ExprWalker {
         mode = TaskMode.CONTROL;
       }
       backend.functionCall(function, Var.asArgList(iList), oList, mode, props);
-    } else if (context.hasFunctionProp(function, FnProp.WRAPPED_BUILTIN)) {
+    } else {
+      // Call wrapper function for app or wrapped builtin
+      assert(context.hasFunctionProp(function, FnProp.WRAPPED_BUILTIN) ||
+             context.hasFunctionProp(function, FnProp.APP));
       List<Arg> realInputs = new ArrayList<Arg>();
       for (Var in: iList) {
         realInputs.add(in.asArg());
@@ -900,12 +904,6 @@ public class ExprWalker {
       TaskMode mode = TaskMode.SYNC;
       
       backend.functionCall(function, realInputs, oList, mode, taskProps);
-    } else {
-      assert(context.hasFunctionProp(function, FnProp.APP));
-      // Execute app function wrapper locally (real work will
-      //   be dispatched to worker by wrapper)
-      backend.functionCall(function, Var.asArgList(iList), oList,
-              TaskMode.LOCAL, props);
     }
   }
 

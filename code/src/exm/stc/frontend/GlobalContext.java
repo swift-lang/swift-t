@@ -98,6 +98,17 @@ public class GlobalContext extends Context {
     return functionProps.contains(new Pair<String, FnProp>(name, prop));
   }
   
+  @Override
+  public List<FnProp> getFunctionProps(String function) {
+    List<FnProp> props = new ArrayList<FnProp>();
+    for (Pair<String, FnProp> pair: functionProps) {
+      if (pair.val1.equals(function)) {
+        props.add(pair.val2);
+      }
+    }
+    return props;
+  }
+  
   /**
      Declare a global variable
    * @throws DoubleDefineException 

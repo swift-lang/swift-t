@@ -833,10 +833,10 @@ public class STCMiddleEnd {
     
     if (isTargetable) {
       // declare compiler arg for target
-      Var target = new Var(Types.V_INT, Var.DEREF_COMPILER_VAR_PREFIX + "target",
+      Var location = new Var(Types.V_INT, Var.DEREF_COMPILER_VAR_PREFIX + "location",
           VarStorage.LOCAL, DefType.INARG);
-      realInArgs.add(target);
-      props.put(TaskPropKey.LOCATION, target.asArg());
+      realInArgs.add(location);
+      props.put(TaskPropKey.LOCATION, location.asArg());
     }
     
     Function fn = new Function(function, realInArgs, outArgs, TaskMode.SYNC);

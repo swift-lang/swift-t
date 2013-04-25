@@ -159,6 +159,8 @@ public abstract class Context {
   
   public abstract void setFunctionProperty(String name, FnProp prop);
   
+  public abstract List<FnProp> getFunctionProps(String function);
+  
   public abstract boolean hasFunctionProp(String name, FnProp prop);
   
   /**

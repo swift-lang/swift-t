@@ -520,11 +520,15 @@ class Turbine {
     Sequence res = new Sequence();
     
     // Store in var for readability
-    Value priorityVar = null;
+
+    Expression prio;
     if (props.priority != null) {
-      priorityVar = TCLTMP_PRIO_VAL;
-      res.add(new SetVariable(TCLTMP_PRIO, props.priority));
+      prio = props.priority;
+    } else {
+      prio = currentPriority();
     }
+    Value priorityVar = TCLTMP_PRIO_VAL;
+    res.add(new SetVariable(TCLTMP_PRIO, prio));
     
     List<Expression> taskTokens = new ArrayList<Expression>();
     // Different task formats for work types
