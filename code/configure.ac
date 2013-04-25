@@ -55,6 +55,9 @@ else
   SOFTWARE=0
 fi
 
+# Report location of CC
+echo "using CC=$( which ${CC} )"
+
 # Checks for programs
 AC_PROG_CC
 AC_CHECK_PROG(AR, ar)
