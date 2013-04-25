@@ -15,7 +15,7 @@ app (file o) hostname() {
 }
 
 main {
-  foreach i in [1:100] {
+  foreach i in [1:10] {
     string host1 = extract_hostname(hostname());
     // Run on same host
     string host2 = extract_hostname(@location=hostmap_one(host1) hostname());
