@@ -455,6 +455,9 @@ public class ICTree {
     }
     
     public void makeOutputWriteOnly(int i) {
+      assert(i >= 0 && i < oList.size());
+      // Files are complicated and can't be simply treated as write-only
+      assert(!Types.isFile(oList.get(i).type()));
       oListWriteOnly.set(i, true);
     }
     
@@ -497,9 +500,19 @@ public class ICTree {
       ICUtil.prettyPrintFormalArgs(sb, this.oList);
       sb.append(" @" + name + " ");
       ICUtil.prettyPrintFormalArgs(sb, this.iList);
-      sb.append("#waiton[");
-      ICUtil.prettyPrintList(sb, this.blockingInputs);
-      sb.append("] {\n");
+      
+      if (!this.blockingInputs.isEmpty()) {
+        sb.append(" #waiton[");
+        ICUtil.prettyPrintList(sb, this.blockingInputs);
+        sb.append("]");
+      }
+      
+      if (!this.oListWriteOnly.isEmpty()) {
+        sb.append(" #writeonly[");
+        ICUtil.prettyPrintList(sb, this.oListWriteOnly);
+        sb.append("]");
+      }
+      sb.append(" {\n");
       mainBlock.prettyPrint(sb, indent);
       sb.append("}\n");
     }

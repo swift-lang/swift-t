@@ -1380,6 +1380,16 @@ public class Types {
            Types.isStruct(type);
   }
 
+  /**
+   * @param type
+   * @return true if there is a side-channel of information in the variable
+   *            that needs to be read
+   */
+  public static boolean hasReadableSideChannel(Type type) {
+    // Currently only file is in this category
+    return isFile(type);
+  }
+
   /** 
    * More convenient way of representing array types for some analysies
    *
