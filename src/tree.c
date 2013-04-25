@@ -42,7 +42,7 @@ static inline void tree_add_loop(struct tree_node* node,
                                  struct tree_node* p);
 
 void
-tree_add(struct tree* target, long key, void* data)
+tree_add(struct tree* target, tree_key_t key, void* data)
 {
   struct tree_node* node = malloc(sizeof(struct tree_node));
   assert(node);
@@ -100,7 +100,7 @@ tree_add_loop(struct tree_node* node, struct tree_node* p)
 }
 
 bool
-tree_pop(struct tree* target, long* key, void** data)
+tree_pop(struct tree* target, tree_key_t* key, void** data)
 {
   struct tree_node* node = tree_leftmost(target);
   if (node == NULL)
@@ -125,14 +125,14 @@ tree_leftmost(struct tree* target)
   return result;
 }
 
-long
+tree_key_t
 tree_leftmost_key(struct tree* target)
 {
   if (target->size == 0)
     return 0;
 
   struct tree_node* node = tree_leftmost_loop(target->root);
-  long result = node->key;
+  tree_key_t result = node->key;
   return result;
 }
 
@@ -153,10 +153,10 @@ tree_leftmost_loop(struct tree_node* p)
 }
 
 struct tree_node* tree_search_node_loop(struct tree_node* p,
-                                        long key);
+                                        tree_key_t key);
 
 struct tree_node*
-tree_search_node(struct tree* target, long key)
+tree_search_node(struct tree* target, tree_key_t key)
 {
   if (target->size == 0)
     return NULL;
@@ -165,7 +165,7 @@ tree_search_node(struct tree* target, long key)
 }
 
 struct tree_node*
-tree_search_node_loop(struct tree_node* p, long key)
+tree_search_node_loop(struct tree_node* p, tree_key_t key)
 {
   while (key != p->key)
   {
@@ -184,7 +184,7 @@ tree_search_node_loop(struct tree_node* p, long key)
 }
 
 bool
-tree_move(struct tree* target, long key_old, long key_new)
+tree_move(struct tree* target, tree_key_t key_old, tree_key_t key_new)
 {
   struct tree_node* p = tree_search_node(target, key_old);
   if (p == NULL)
@@ -333,7 +333,7 @@ tree_print_loop(struct tree_node* node, int level)
   int i;
   for (i = 0; i < level; i++)
     buffer[i] = ' ';
-  sprintf(&buffer[i], "%li", node->key);
+  sprintf(&buffer[i], "%lli", node->key);
   printf("%s\n", buffer);
 
   if (node->left == NULL && node->right == NULL)

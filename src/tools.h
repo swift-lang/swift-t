@@ -57,7 +57,7 @@ static inline int max_integer(int i1, int i2)
 static inline int
 random_between(int low, int high)
 {
-  return (low + random() / ((RAND_MAX / (high - low)) + 1));
+  return (low + rand() / ((RAND_MAX / (high - low)) + 1));
 }
 
 /**
@@ -66,7 +66,7 @@ random_between(int low, int high)
 static inline double
 random_between_double(double low, double high)
 {
-  double r = random();
+  double r = (double) random();
   double p = r / (double) RAND_MAX;
   double d = low + p * (high - low);
   return d;

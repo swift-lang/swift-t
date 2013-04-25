@@ -72,9 +72,9 @@ reader_read(char* path)
   int error = stat(path, &stats);
   if (error)
     return -1;
-  int length = stats.st_size;
+  int length = (int)stats.st_size;
 
-  char* data = malloc(length);
+  char* data = malloc((size_t)length);
 
   int total = 0;
 
@@ -85,7 +85,7 @@ reader_read(char* path)
   while (total < length)
   {
     int chunk  = length-total;
-    int actual = fread(data+total, 1, chunk, file);
+    int actual = (int)fread(data+total, 1, (size_t)chunk, file);
     total += actual;
   }
 
@@ -133,7 +133,7 @@ reader_next(long id)
       q++;
     q++;
     e->position = q;
-    memcpy(e->line, e->data+p, q-p-1);
+    memcpy(e->line, e->data+p, (size_t)(q-p-1));
     e->line[q-p-1] = '\0';
 
     // Cut off everything after a comment character
@@ -142,7 +142,7 @@ reader_next(long id)
       *comment = '\0';
 
     // Delete trailing whitespace
-    int length = strlen(e->line);
+    int length = (int)strlen(e->line);
     for (int i = length-1; i >= 0; i--)
       if (e->line[i] == ' ')
         e->line[i] = '\0';

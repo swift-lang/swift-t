@@ -124,7 +124,7 @@ static inline heap_val_t heap_root_val(heap *heap) {
  * i, which may be greater than its children, then
  * sift down the entry at i.
  */
-static inline void heap_sift_down(heap *heap, int i) {
+static inline void heap_sift_down(heap *heap, heap_ix_t i) {
   assert(heap->size > i);
   heap_entry_t entry = heap->array[i];
   heap_key_t key = entry.key;
@@ -188,7 +188,7 @@ static inline void heap_increase_key(heap *heap, heap_ix_t i, heap_key_t newkey)
  * heap property, except A[i] might have key < its parent.
  * Sift up A[i] until it is a heap again
  */
-static inline void heap_sift_up(heap *heap, int i) {
+static inline void heap_sift_up(heap *heap, heap_ix_t i) {
   assert(heap->size > i);
   heap_entry_t entry, parent;
   entry = heap->array[i];

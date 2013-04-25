@@ -70,7 +70,7 @@ replace(struct rbtree_node* P,
   else if (s == RIGHT)
     P->right = R;
   else
-    valgrind_fail("replace: P-!>N %li->%li\n", P->key, N->key);
+    valgrind_fail("replace: P-!>N %lli->%lli\n", P->key, N->key);
 }
 
 static inline struct rbtree_node*
@@ -102,7 +102,7 @@ rbtree_init(struct rbtree* target)
 }
 
 static inline struct rbtree_node*
-create_node(long key, void* data)
+create_node(rbtree_key_t key, void* data)
 {
   struct rbtree_node* node = malloc(sizeof(struct rbtree_node));
   if (node == NULL) return NULL;
@@ -269,7 +269,7 @@ static inline void rbtree_add_node_impl(struct rbtree* target,
                                         struct rbtree_node* N);
 
 bool
-rbtree_add(struct rbtree* target, long key, void* data)
+rbtree_add(struct rbtree* target, rbtree_key_t key, void* data)
 {
   struct rbtree_node* node = create_node(key, data);
   if (node == NULL) return false;
@@ -291,7 +291,7 @@ static inline void
 rbtree_add_node_impl(struct rbtree* target,
                      struct rbtree_node* N)
 {
-  DEBUG_RBTREE("rbtree_add_node_impl: %li\n", N->key);
+  DEBUG_RBTREE("rbtree_add_node_impl: %lli\n", N->key);
   DEBUG_RBTREE("before:\n");
   // rbtree_print(target);
   N->color = RED;
@@ -345,10 +345,10 @@ rbtree_add_loop(struct rbtree* target,
 }
 
 static inline struct rbtree_node*
-search_node_loop(struct rbtree_node* p, long key);
+search_node_loop(struct rbtree_node* p, rbtree_key_t key);
 
 struct rbtree_node*
-rbtree_search_node(struct rbtree* target, long key)
+rbtree_search_node(struct rbtree* target, rbtree_key_t key)
 {
   if (target->size == 0)
     return NULL;
@@ -357,7 +357,7 @@ rbtree_search_node(struct rbtree* target, long key)
 }
 
 static inline struct rbtree_node*
-search_node_loop(struct rbtree_node* p, long key)
+search_node_loop(struct rbtree_node* p, rbtree_key_t key)
 {
   while (key != p->key)
   {
@@ -379,7 +379,7 @@ static inline void delete_one_child(struct rbtree* target,
                                     struct rbtree_node* N);
 
 bool
-rbtree_remove(struct rbtree* target, long key, void** data)
+rbtree_remove(struct rbtree* target, rbtree_key_t key, void** data)
 {
   struct rbtree_node* N = search_node_loop(target->root, key);
   if (N == NULL)
@@ -415,7 +415,7 @@ color(struct rbtree_node* N)
  */
 #define show_node(t) { \
   if (t == NULL) DEBUG_RBTREE("%s: NULL\n", #t); \
-  else DEBUG_RBTREE("%s: %c%li\n", #t, color(t), t->key); \
+  else DEBUG_RBTREE("%s: %c%lli\n", #t, color(t), t->key); \
 }
 
 static inline void swap_nodes(struct rbtree* target,
@@ -424,7 +424,7 @@ static inline void swap_nodes(struct rbtree* target,
 void
 rbtree_remove_node(struct rbtree* target, struct rbtree_node* N)
 {
-  DEBUG_RBTREE("rbtree_remove_node: %li\n", N->key);
+  DEBUG_RBTREE("rbtree_remove_node: %lli\n", N->key);
   valgrind_assert(target->size >= 1);
 
   DEBUG_RBTREE("before:\n");
@@ -535,7 +535,7 @@ swap_nodes(struct rbtree* target,
 }
 
 bool
-rbtree_pop(struct rbtree* target, long* key, void** data)
+rbtree_pop(struct rbtree* target, rbtree_key_t* key, void** data)
 {
   if (target->size == 0)
     return false;
@@ -557,18 +557,18 @@ rbtree_leftmost(struct rbtree* target)
     return NULL;
 
   struct rbtree_node* result = rbtree_leftmost_loop(target->root);
-  DEBUG_RBTREE("rbtree_leftmost: %li\n", result->key);
+  DEBUG_RBTREE("rbtree_leftmost: %lli\n", result->key);
   return result;
 }
 
-long
+rbtree_key_t
 rbtree_leftmost_key(struct rbtree* target)
 {
   if (target->size == 0)
     return 0;
 
   struct rbtree_node* node = rbtree_leftmost_loop(target->root);
-  long result = node->key;
+  rbtree_key_t result = node->key;
   return result;
 }
 
@@ -820,9 +820,10 @@ iterator_loop(struct rbtree_node* node, rbtree_callback cb,
 }
 
 bool
-rbtree_move(struct rbtree* target, long key_old, long key_new)
+rbtree_move(struct rbtree* target, rbtree_key_t key_old,
+            rbtree_key_t key_new)
 {
-  DEBUG_RBTREE("rbtree_move: %li -> %li\n", key_old, key_new);
+  DEBUG_RBTREE("rbtree_move: %lli -> %lli\n", key_old, key_new);
   struct rbtree_node* p = rbtree_search_node(target, key_old);
   if (p == NULL)
     return false;
@@ -924,7 +925,7 @@ rbtree_print_loop(struct rbtree_node* node, int level)
   append(p, "+ ");
   for (int i = 0; i < level; i++)
     append(p, " ");
-  append(p, "%c%li", color(node), node->key);
+  append(p, "%c%lli", color(node), node->key);
   printf("%s\n", buffer);
 
   if (node->left == NULL && node->right == NULL)
@@ -934,7 +935,7 @@ rbtree_print_loop(struct rbtree_node* node, int level)
   if (node->left != NULL)
   {
     valgrind_assert_msg(node->left->parent == node,
-                        "node: %c%li->left is not linked back",
+                        "node: %c%lli->left is not linked back",
                         color(node), node->key);
     rbtree_print_loop(node->left, level+1);
   }
@@ -945,7 +946,7 @@ rbtree_print_loop(struct rbtree_node* node, int level)
   if (node->right != NULL)
   {
     valgrind_assert_msg(node->right->parent == node,
-                        "node: %c%li->right is not linked back",
+                        "node: %c%lli->right is not linked back",
                         color(node), node->key);
     rbtree_print_loop(node->right, level+1);
   }

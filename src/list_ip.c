@@ -524,7 +524,7 @@ list_ip_xdumpkeys(struct list_ip* target)
 char*
 list_ip_serialize_ptrs(struct list_ip* target)
 {
-  char* result = malloc(30*target->size);
+  char* result = malloc(30*(size_t)target->size);
   struct list_ip_item* item;
   char* p = result;
   p += sprintf(p, "PTRS: [");
@@ -576,10 +576,10 @@ list_ip_dump(char* (*f)(void*), struct list_ip* target)
     returns int greater than size if size limits are exceeded
             indicating result is garbage
  */
-int list_ip_snprintf(char* str, size_t size,
+size_t list_ip_snprintf(char* str, size_t size,
                      const char* format, const struct list_ip* target)
 {
-  int               error = size+1;
+  size_t            error = size+1;
   char*             ptr   = str;
   struct list_ip_item* item;
 
@@ -605,7 +605,7 @@ int list_ip_snprintf(char* str, size_t size,
   ptr += sprintf(ptr, "]");
 
   free(s);
-  return (ptr-str);
+  return (size_t)(ptr-str);
 }
 
 /** Dump list_ip to string a la snprintf()
@@ -614,10 +614,10 @@ int list_ip_snprintf(char* str, size_t size,
     returns int greater than size if size limits are exceeded
             indicating result is garbage
  */
-int list_ip_marshal(char* str, size_t size,
+size_t list_ip_marshal(char* str, size_t size,
                   char* (f)(void*), struct list_ip* target)
 {
-  int               error = size+1;
+  size_t            error = size+1;
   char*             ptr   = str;
   struct list_ip_item* item;
 
@@ -640,7 +640,7 @@ int list_ip_marshal(char* str, size_t size,
   }
   ptr += sprintf(ptr, "]");
 
-  return (ptr-str);
+  return (size_t)(ptr-str);
 }
 
 #ifdef DEBUG_list_ip

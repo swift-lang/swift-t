@@ -46,7 +46,7 @@ list_lp_create()
 }
 
 struct list_lp_item*
-list_lp_add(struct list_lp* target, long key, void* data)
+list_lp_add(struct list_lp* target, cutil_long key, void* data)
 {
   struct list_lp_item* item = malloc(sizeof(struct list_lp_item));
   if (! item)
@@ -79,7 +79,7 @@ list_lp_add_item(struct list_lp* target, struct list_lp_item* item)
    to largest at tail.
 */
 struct list_lp_item*
-list_lp_ordered_insert(struct list_lp* target, long key, void* data)
+list_lp_ordered_insert(struct list_lp* target, cutil_long key, void* data)
 {
   struct list_lp_item* new_item = malloc(sizeof(struct list_lp_item));
   if (! new_item)
@@ -136,7 +136,7 @@ list_lp_ordered_insert(struct list_lp* target, long key, void* data)
 */
 struct list_lp_item*
 list_lp_ordered_insertdata(struct list_lp* target,
-                         long key, void* data,
+                         cutil_long key, void* data,
                          bool (*cmp)(void*,void*))
 {
   struct list_lp_item* new_item = malloc(sizeof(struct list_lp_item));
@@ -272,7 +272,7 @@ list_lp_get(struct list_lp* target, int i)
 }
 
 void*
-list_lp_search(struct list_lp* target, long key)
+list_lp_search(struct list_lp* target, cutil_long key)
 {
   for (struct list_lp_item* item = target->head; item;
        item = item->next)
@@ -287,7 +287,7 @@ list_lp_search(struct list_lp* target, long key)
    @return The removed item or NULL if not found.
 */
 void*
-list_lp_remove(struct list_lp* target, long key)
+list_lp_remove(struct list_lp* target, cutil_long key)
 {
   struct list_lp_item* item = list_lp_remove_item(target, key);
   if (item == NULL)
@@ -298,7 +298,7 @@ list_lp_remove(struct list_lp* target, long key)
 }
 
 struct list_lp_item*
-list_lp_remove_item(struct list_lp* target, long key)
+list_lp_remove_item(struct list_lp* target, cutil_long key)
 {
   struct list_lp_item* result;
   if (target->size == 0)
@@ -390,10 +390,10 @@ list_lp_dump(char* format, struct list_lp* target)
   for (item = target->head;
        item; item = item->next)
   {
-    printf("(%li,", item->key);
+    printf("(%lli,", item->key);
     if (strcmp(format, "%s") == 0)
       printf(format, item->data);
-    else if (strcmp(format, "%li") == 0)
+    else if (strcmp(format, "%lli") == 0)
       printf(format, *((long*) (item->data)));
     printf(")");
     if (item->next)
@@ -402,7 +402,7 @@ list_lp_dump(char* format, struct list_lp* target)
   printf("]\n");
 }
 
-/** Just dump the long keys.
+/** Just dump the keys.
  */
 void
 list_lp_dumpkeys(struct list_lp* target)
@@ -412,14 +412,14 @@ list_lp_dumpkeys(struct list_lp* target)
   for (item = target->head;
        item; item = item->next)
   {
-    printf("(%li)", item->key);
+    printf("(%lli)", item->key);
     if (item->next)
       printf(",");
   }
   printf("]\n");
 }
 
-/** Dump the long keys in hex.
+/** Dump the keys in hex.
  */
 void
 list_lp_xdumpkeys(struct list_lp* target)
@@ -429,7 +429,7 @@ list_lp_xdumpkeys(struct list_lp* target)
   for (item = target->head;
        item; item = item->next)
   {
-    printf("(%lx)", item->key);
+    printf("(%llx)", item->key);
     if (item->next)
       printf(",");
   }
@@ -440,7 +440,7 @@ list_lp_xdumpkeys(struct list_lp* target)
 static char*
 append_pair(char* ptr, struct list_lp_item* item, char* s)
 {
-  ptr += sprintf(ptr, "(%li,", item->key);
+  ptr += sprintf(ptr, "(%lli,", item->key);
   ptr += sprintf(ptr, "%s)", s);
 
   if (item->next)
@@ -458,7 +458,7 @@ void list_lp_output(char* (*f)(void*), struct list_lp* target)
   for (item = target->head;
        item; item = item->next)
   {
-    printf("(%li,", item->key);
+    printf("(%lli,", item->key);
     printf("%s", f(item->data));
     printf(")");
     if (item->next)
@@ -473,10 +473,10 @@ void list_lp_output(char* (*f)(void*), struct list_lp* target)
     returns int greater than size if size limits are exceeded
             indicating result is garbage
  */
-int list_lp_tostring(char* str, size_t size,
+size_t list_lp_tostring(char* str, size_t size,
                      char* format, struct list_lp* target)
 {
-  int   error = size+1;
+  size_t error = size+1;
   char* ptr   = str;
 
   if (size <= 2)
@@ -497,7 +497,7 @@ int list_lp_tostring(char* str, size_t size,
   }
   ptr += sprintf(ptr, "]");
 
-  return (ptr-str);
+  return (size_t)(ptr-str);
 }
 
 #ifdef DEBUG_LLIST

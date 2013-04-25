@@ -42,7 +42,7 @@ list_l_create()
    @return The new list_l_item.
 */
 struct list_l_item*
-list_l_add(struct list_l* target, long data)
+list_l_add(struct list_l* target, cutil_long data)
 {
   struct list_l_item* new_item = malloc(sizeof(struct list_l_item));
   if (! new_item)
@@ -71,10 +71,10 @@ list_l_add(struct list_l* target, long data)
    This is expensive: singly linked list_l.
    @return -1 if the list is empty.
 */
-long
+cutil_long
 list_l_poll(struct list_l* target)
 {
-  long data;
+  cutil_long data;
   if (target->size == 0)
     return -1;
   if (target->size == 1)
@@ -98,7 +98,7 @@ list_l_poll(struct list_l* target)
   return data;
 }
 
-long
+cutil_long
 list_l_peek(struct list_l* target)
 {
   if (target->size == 0)
@@ -106,10 +106,10 @@ list_l_peek(struct list_l* target)
   return target->head->data;
 }
 
-long
+cutil_long
 list_l_pop(struct list_l* target)
 {
-  long data;
+  cutil_long data;
   if (target->size == 0)
     return -1;
   if (target->size == 1)
@@ -131,7 +131,7 @@ list_l_pop(struct list_l* target)
 }
 
 struct list_l_item*
-list_l_ordered_insert(struct list_l* target, long data)
+list_l_ordered_insert(struct list_l* target, cutil_long data)
 {
   struct list_l_item* new_item = malloc(sizeof(struct list_l_item));
   if (! new_item)
@@ -181,7 +181,7 @@ list_l_ordered_insert(struct list_l* target, long data)
 }
 
 struct list_l_item*
-list_l_unique_insert(struct list_l* target, long data)
+list_l_unique_insert(struct list_l* target, cutil_long data)
 {
   struct list_l_item* new_item = malloc(sizeof(struct list_l_item));
   if (! new_item)
@@ -236,7 +236,7 @@ list_l_unique_insert(struct list_l* target, long data)
    Untested.
  */
 struct list_l_item*
-list_l_ordered_insertdata(struct list_l* target, long data)
+list_l_ordered_insertdata(struct list_l* target, cutil_long data)
 {
   struct list_l_item* new_item = malloc(sizeof(struct list_l_item));
   if (! new_item)
@@ -293,7 +293,7 @@ list_l_ordered_insertdata(struct list_l* target, long data)
 /**
  */
 bool
-list_l_contains(struct list_l* target, long data)
+list_l_contains(struct list_l* target, cutil_long data)
 {
   struct list_l_item* item;
   for (item = target->head;
@@ -306,8 +306,8 @@ list_l_contains(struct list_l* target, long data)
 /**
    @return An equal data int or -1 if not found.
 */
-long
-list_l_search(struct list_l* target, long data)
+cutil_long
+list_l_search(struct list_l* target, cutil_long data)
 {
   struct list_l_item* item;
   for (item = target->head;
@@ -322,7 +322,7 @@ list_l_search(struct list_l* target, long data)
             and the item was freed.
 */
 bool
-list_l_remove(struct list_l* target, long data)
+list_l_remove(struct list_l* target, cutil_long data)
 {
   struct list_l_item* item = target->head;
   // Are we removing the head?
@@ -358,7 +358,7 @@ list_l_remove(struct list_l* target, long data)
    @return true unless we could not allocate memory
  */
 bool
-list_l_tolongs(const struct list_l* target, long** result, int* count)
+list_l_tolongs(const struct list_l* target, cutil_long** result, int* count)
 {
   if (target->size == 0)
   {
@@ -366,7 +366,7 @@ list_l_tolongs(const struct list_l* target, long** result, int* count)
     return true;
   }
 
-  *result = malloc(target->size * sizeof(long));
+  *result = malloc((size_t)target->size * sizeof(cutil_long));
   if (!*result)
     return false;
 
@@ -391,7 +391,7 @@ list_l_dump(struct list_l* target)
   printf("[");
   for (item = target->head; item; item = item->next)
   {
-    printf("%li", item->data);
+    printf("%lli", item->data);
     if (item->next)
       printf(",");
   }

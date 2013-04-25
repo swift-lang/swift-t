@@ -23,7 +23,7 @@
 bool
 string_copy(char* dest, int d_space, const char* src)
 {
-  int length = strlen(src);
+  size_t length = strlen(src);
   if (d_space <= length)
     return false;
   memcpy(dest, src, length+1);
@@ -35,7 +35,7 @@ string_dup_word(char* src)
 {
   char* q = strchr(src, ' ');
   if (!q) return NULL;
-  int length = q-src;
+  size_t length = (size_t)(q-src);
   char* result = malloc((length+1)*sizeof(char));
   memcpy(result, src, length);
   result[length] = '\0';
@@ -45,7 +45,7 @@ string_dup_word(char* src)
 void
 chomp(char* s)
 {
-  int length = strlen(s) - 1;
+  size_t length = strlen(s) - 1;
   if (length >= 0 && s[length] == '\n')
     s[length] = '\0';
 }

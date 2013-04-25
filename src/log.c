@@ -53,8 +53,8 @@ log_time_absolute()
 {
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  double result = tv.tv_sec;
-  result += tv.tv_usec * 0.000001;
+  double result = (double)tv.tv_sec;
+  result += (double)tv.tv_usec * 0.000001;
   return result;
 }
 
@@ -72,8 +72,8 @@ log_time()
 {
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  double result = tv.tv_sec;
-  result += tv.tv_usec * 0.000001;
+  double result = (double)tv.tv_sec;
+  result += (double)tv.tv_usec * 0.000001;
   result -= log_start;
   return result;
 }

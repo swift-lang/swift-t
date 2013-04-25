@@ -62,15 +62,15 @@ void table_destroy(struct table* target);
 
 void table_release(struct table* target);
 
-int table_keys_string(char** result, const struct table* target);
+size_t table_keys_string(char** result, const struct table* target);
 
-int table_keys_string_slice(char** result,
+size_t table_keys_string_slice(char** result,
                             const struct table* target,
                             int count, int offset);
 
-int table_keys_tostring(char* result, const struct table* target);
+size_t table_keys_tostring(char* result, const struct table* target);
 
-int table_keys_tostring_slice(char* result,
+size_t table_keys_tostring_slice(char* result,
                               const struct table* target,
                               int count, int offset);
 

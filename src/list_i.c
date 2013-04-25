@@ -474,7 +474,7 @@ list_i_printf(struct list_i* target)
 char*
 list_i_serialize(struct list_i* target)
 {
-  char* result = malloc(12 * (target->size) * sizeof(char));
+  char* result = malloc(12 * (size_t)(target->size) * sizeof(char));
   char* p = result;
   struct list_i_item* item;
 
@@ -529,7 +529,7 @@ list_i_toints(struct list_i* target, int** result, int* count)
     return true;
   }
 
-  *result = malloc(target->size * sizeof(int));
+  *result = malloc((size_t)target->size * sizeof(int));
   if (!*result)
     return false;
 

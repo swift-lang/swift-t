@@ -69,11 +69,11 @@ void list_sp_dump(const char* format, const struct list_sp* target);
 
 void list_sp_dumpkeys(const struct list_sp* target);
 
-int list_sp_keys_string_length(const struct list_sp* target);
+size_t list_sp_keys_string_length(const struct list_sp* target);
 
-int list_sp_keys_tostring(char* result, const struct list_sp* target);
+size_t list_sp_keys_tostring(char* result, const struct list_sp* target);
 
-int list_sp_tostring(char* str, size_t size,
+size_t list_sp_tostring(char* str, size_t size,
                      const char* format,
                      const struct list_sp* target);
 

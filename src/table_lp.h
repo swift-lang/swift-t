@@ -20,7 +20,7 @@
  *  Created on: May 4, 2011
  *      Author: wozniak
  *
- * Table mapping long to void pointer
+ * Table mapping 64-bit int to void pointer
  */
 
 #ifndef TABLE_LP_H
@@ -28,6 +28,7 @@
 
 #include <stdbool.h>
 
+#include "c-utils-types.h"
 #include "list_lp.h"
 
 struct table_lp
@@ -41,16 +42,16 @@ bool table_lp_init(struct table_lp *table, int capacity);
 
 struct table_lp* table_lp_create(int capacity);
 
-bool table_lp_add(struct table_lp *table, long key, void* data);
+bool table_lp_add(struct table_lp *table, cutil_long key, void* data);
 
-void* table_lp_search(struct table_lp* table, long key);
+void* table_lp_search(struct table_lp* table, cutil_long key);
 
-bool table_lp_contains(struct table_lp* table, long key);
+bool table_lp_contains(struct table_lp* table, cutil_long key);
 
 bool table_lp_move(struct table_lp* table,
-                   long key_old, long key_new);
+                   cutil_long key_old, cutil_long key_new);
 
-void* table_lp_remove(struct table_lp* table, long key);
+void* table_lp_remove(struct table_lp* table, cutil_long key);
 
 void table_lp_destroy(struct table_lp* target);
 
@@ -62,7 +63,7 @@ void table_lp_release(struct table_lp* target);
 
 void table_lp_dump(char* format, struct table_lp* target);
 
-int table_lp_tostring(char* str, size_t size,
+size_t table_lp_tostring(char* str, size_t size,
                     char* format, struct table_lp* target);
 
 void table_lp_dumpkeys(struct table_lp* target);

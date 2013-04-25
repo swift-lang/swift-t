@@ -22,7 +22,6 @@
 #define TABLE_IP_H
 
 #include <stdlib.h>
-#include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 
@@ -55,7 +54,7 @@ void table_ip_destroy(struct table_ip* target);
 
 void  table_ip_dump(const char* format, const struct table_ip* target);
 
-int table_ip_tostring(char* str, size_t size,
+size_t table_ip_tostring(char* str, size_t size,
                       const char* format,
                       const struct table_ip* target);
 

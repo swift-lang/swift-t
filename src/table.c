@@ -14,11 +14,13 @@
  * limitations under the License
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "table.h"
+#include "c-utils-types.h"
 #include "jenkins-hash.h"
 
 int
@@ -26,21 +28,21 @@ hash_string(const char* data, int table_size)
 {
   uint32_t p = 0;
   uint32_t q = 0;
-  int length = strlen(data);
+  size_t length = strlen(data);
   bj_hashlittle2(data, length, &p, &q);
 
-  int index = p % table_size;
+  int index = (int) (p % (uint32_t)table_size);
   return index;
 }
 
-long
+cutil_long
 hash_string_long(const char* data)
 {
   uint32_t p, q;
-  int length = strlen(data);
+  size_t length = strlen(data);
   bj_hashlittle2(data, length, &p, &q);
 
-  long result = 0;
+  cutil_long result = 0;
 
   result += p;
 
@@ -55,10 +57,11 @@ hash_string_long(const char* data)
 bool
 table_init(struct table* target, int capacity)
 {
+  assert(capacity >= 1);
   target->size     = 0;
   target->capacity = capacity;
 
-  target->array = malloc(sizeof(struct list_sp*) * capacity);
+  target->array = malloc(sizeof(struct list_sp*) * (size_t)capacity);
   if (!target->array)
   {
     free(target);
@@ -186,7 +189,9 @@ bool
 table_remove(struct table* table, const char* key, void** data)
 {
   int index = hash_string(key, table->capacity);
-  bool result = list_sp_remove(table->array[index], key, data);
+  struct list_sp* list = table->array[index];
+  assert(list != NULL);
+  bool result = list_sp_remove(list, key, data);
   if (result)
     table->size--;
   return result;
@@ -222,49 +227,49 @@ table_dumpkeys(const struct table* target)
   printf("}\n");
 }
 
-int
+size_t
 table_keys_string_length(const struct table* target)
 {
-  int result = 0;
+  size_t result = 0;
   for (int i = 0; i < target->capacity; i++)
     result += list_sp_keys_string_length(target->array[i]);
   return result;
 }
 
-int
+size_t
 table_keys_string(char** result, const struct table* target)
 {
-  int length = table_keys_string_length(target);
+  size_t length = table_keys_string_length(target);
   // Allocate size for each key and a space after each one
-  *result = malloc(length + target->size+1);
+  *result = malloc(length + (size_t)(target->size+1));
   // Update length with actual usage
   length = table_keys_tostring(*result, target);
   return length;
 }
 
-int
+size_t
 table_keys_string_slice(char** result,
                         const struct table* target,
                         int count, int offset)
 {
-  int length = table_keys_string_length(target);
+  size_t length = table_keys_string_length(target);
   // Allocate size for each key and a space after each one
-  *result = malloc(length + target->size+1);
+  *result = malloc(length + (size_t)(target->size+1));
   // Update length with actual usage
   length = table_keys_tostring_slice(*result, target, count, offset);
   return length;
 }
 
-int
+size_t
 table_keys_tostring(char* result, const struct table* target)
 {
   char* p = result;
   for (int i = 0; i < target->capacity; i++)
     p += list_sp_keys_tostring(p, target->array[i]);
-  return p-result;
+  return (size_t)(p-result);
 }
 
-int
+size_t
 table_keys_tostring_slice(char* result, const struct table* target,
                           int count, int offset)
 {
@@ -287,7 +292,7 @@ table_keys_tostring_slice(char* result, const struct table* target,
       c++;
     }
   }
-  return p-result;
+  return (size_t)(p-result);
 }
 
 /** Dump list_sp to string as in snprintf()
@@ -297,11 +302,11 @@ table_keys_tostring_slice(char* result, const struct table* target,
     returns int greater than size if size limits are exceeded
             indicating result is garbage
 */
-int
+size_t
 table_tostring(char* output, size_t size,
                char* format, const struct table* target)
 {
-  int   error = size+1;
+  size_t   error = size+1;
   char* ptr   = output;
   int i;
   ptr += sprintf(output, "{\n");
@@ -310,8 +315,8 @@ table_tostring(char* output, size_t size,
 
   for (i = 0; i < target->capacity; i++)
   {
-    int r = list_sp_tostring(s, size, format, target->array[i]);
-    if ((ptr-output) + r + 2 < size)
+    size_t r = list_sp_tostring(s, size, format, target->array[i]);
+    if (((size_t)(ptr-output)) + r + 2 < size)
       ptr += sprintf(ptr, "%s\n", s);
     else
       return error;
@@ -319,5 +324,5 @@ table_tostring(char* output, size_t size,
   sprintf(ptr, "}\n");
 
   free(s);
-  return (ptr-output);
+  return (size_t)(ptr-output);
 }

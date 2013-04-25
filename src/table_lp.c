@@ -21,6 +21,7 @@
  *      Author: wozniak
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,18 +29,19 @@
 #include "table_lp.h"
 
 static int
-hash_long(long key, int N)
+hash_long(cutil_long key, int N)
 {
-  return (key % N);
+  return (int)(key % N);
 }
 
 bool
 table_lp_init(struct table_lp* table, int capacity)
 {
+  assert(capacity > 0);
   table->size     = 0;
   table->capacity = capacity;
 
-  table->array = malloc(sizeof(struct list_lp) * capacity);
+  table->array = malloc(sizeof(struct list_lp) * (size_t)capacity);
   if (!table->array)
   {
     free(table);
@@ -100,7 +102,7 @@ table_lp_release(struct table_lp* target)
    @return true on success, false on failure (memory)
  */
 bool
-table_lp_add(struct table_lp *table, long key, void* data)
+table_lp_add(struct table_lp *table, cutil_long key, void* data)
 {
   int index = hash_long(key, table->capacity);
 
@@ -116,21 +118,21 @@ table_lp_add(struct table_lp *table, long key, void* data)
 }
 
 void*
-table_lp_search(struct table_lp* table, long key)
+table_lp_search(struct table_lp* table, cutil_long key)
 {
   int index = hash_long(key, table->capacity);
   return list_lp_search(&table->array[index], key);
 }
 
 bool
-table_lp_contains(struct table_lp* table, long key)
+table_lp_contains(struct table_lp* table, cutil_long key)
 {
   void* tmp = table_lp_search(table, key);
   return (tmp != NULL);
 }
 
 bool
-table_lp_move(struct table_lp* table, long key_old, long key_new)
+table_lp_move(struct table_lp* table, cutil_long key_old, cutil_long key_new)
 {
   int index_old = hash_long(key_old, table->capacity);
   int index_new = hash_long(key_new, table->capacity);
@@ -144,7 +146,7 @@ table_lp_move(struct table_lp* table, long key_old, long key_new)
 }
 
 void*
-table_lp_remove(struct table_lp* table, long key)
+table_lp_remove(struct table_lp* table, cutil_long key)
 {
   int index = hash_long(key, table->capacity);
   void* result = list_lp_remove(&table->array[index], key);
@@ -193,10 +195,10 @@ table_lp_dumpkeys(struct table_lp* target)
         returns int greater than size if size limits are exceeded
                 indicating result is garbage
  */
-int table_lp_tostring(char* str, size_t size,
+size_t table_lp_tostring(char* str, size_t size,
                     char* format, struct table_lp* target)
 {
-  int   error = size+1;
+  size_t error = size+1;
   char* ptr   = str;
   int i;
   ptr += sprintf(str, "{\n");
@@ -205,16 +207,22 @@ int table_lp_tostring(char* str, size_t size,
 
   for (i = 0; i < target->size; i++)
   {
-    int r = list_lp_tostring(s, size, format, &target->array[i]);
-    if ((ptr-str) + r + 2 < size)
-      ptr += sprintf(ptr, "%s\n", s);
+    size_t r = list_lp_tostring(s, size, format, &target->array[i]);
+    if ((size_t)(ptr-str) + r + 2 < size)
+    {
+      int len = sprintf(ptr, "%s\n", s);
+      assert(len > 0);
+      ptr += (size_t)len;
+    }
     else
+    {
       return error;
+    }
   }
   sprintf(ptr, "}\n");
 
   free(s);
-  return (ptr-str);
+  return (size_t)(ptr-str);
 }
 
 #ifdef DEBUG_LTABLE

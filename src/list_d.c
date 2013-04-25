@@ -487,7 +487,7 @@ list_d_printf(struct list_d* target)
 char*
 list_d_serialize(struct list_d* target)
 {
-  char* result = malloc(12 * (target->size) * sizeof(char));
+  char* result = malloc(12 * (size_t)(target->size) * sizeof(char));
   char* p = result;
 
   for (struct list_d_item* item = target->head; item;
@@ -542,7 +542,7 @@ list_d_todoubles(struct list_d* target, double** result, int* count)
     return true;
   }
 
-  *result = malloc(target->size * sizeof(double));
+  *result = malloc((size_t)target->size * sizeof(double));
   if (!*result)
     return false;
 

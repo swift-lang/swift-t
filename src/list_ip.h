@@ -87,10 +87,10 @@ void list_ip_dumpkeys(struct list_ip* target);
 void list_ip_xdumpkeys(struct list_ip* target);
 void list_ip_fdumpkeys(FILE* file, struct list_ip* target);
 void list_ip_output(char* (*f)(void*), struct list_ip* target);
-int  list_ip_snprintf(char* str, size_t size,
+size_t list_ip_snprintf(char* str, size_t size,
                       const char* format,
                       const struct list_ip* target);
-int list_ip_marshal(char* str, size_t size,
+size_t list_ip_marshal(char* str, size_t size,
                     char* (f)(void*), struct list_ip* target);
 char* list_ip_serialize_ptrs(struct list_ip* target);
 

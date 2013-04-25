@@ -73,8 +73,8 @@ void mm_init(void);
 
 typedef struct
 {
-  int max;
-  int available;
+  long max;
+  long available;
 } mm_info;
 
 /**

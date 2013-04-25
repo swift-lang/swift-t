@@ -44,9 +44,10 @@ static int count = -1;
 void
 profile_init(int s)
 {
+  assert(s >= 0);
   count = 0;
   size = s;
-  entries = malloc(size*sizeof(entry));
+  entries = malloc((size_t)size*sizeof(entry));
   for (int i = 0; i < size; i++)
     entries[i].timestamp = -1;
 }

@@ -205,17 +205,17 @@ list_sp_dumpkeys(const struct list_sp* target)
   printf("]\n");
 }
 
-int
+size_t
 list_sp_keys_string_length(const struct list_sp* target)
 {
-  int result = 0;
+  size_t result = 0;
   for (struct list_sp_item* item = target->head; item;
        item = item->next)
     result += strlen(item->key);
   return result;
 }
 
-int
+size_t
 list_sp_keys_tostring(char* result,
                       const struct list_sp* target)
 {
@@ -223,7 +223,7 @@ list_sp_keys_tostring(char* result,
   for (struct list_sp_item* item = target->head; item;
        item = item->next)
     p += sprintf(p, "%s ", item->key);
-  return p - result;
+  return (size_t)(p - result);
 }
 
 void list_sp_free(struct list_sp* target)
@@ -256,11 +256,11 @@ append_pair(char* ptr, struct list_sp_item* item,
     returns int greater than size if size limits are exceeded
             indicating result is garbage
  */
-int list_sp_tostring(char* str, size_t size,
+size_t list_sp_tostring(char* str, size_t size,
                      const char* format, const struct list_sp* target)
 {
-  int               error = size+1;
-  char*             ptr   = str;
+  size_t error = size+1;
+  char* ptr = str;
 
   if (size <= 2)
     return error;
@@ -273,5 +273,5 @@ int list_sp_tostring(char* str, size_t size,
     ptr = append_pair(ptr, item, format, item->data);
   sprintf(ptr, "]");
 
-  return (ptr-str);
+  return (size_t)(ptr-str);
 }

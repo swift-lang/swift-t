@@ -1,4 +1,5 @@
-/*
+
+            /*
  * Copyright 2013 University of Chicago and Argonne National Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,17 +25,21 @@
 #ifndef RBTREE_H
 #define RBTREE_H
 
+#include "c-utils-types.h"
+
 typedef enum
 {
   RED, BLACK
 } rbtree_color;
+
+typedef cutil_long rbtree_key_t;
 
 struct rbtree_node
 {
   struct rbtree_node* parent;
   struct rbtree_node* left;
   struct rbtree_node* right;
-  long key;
+  rbtree_key_t key;
   void* data;
   rbtree_color color;
 };
@@ -57,18 +62,18 @@ void rbtree_init(struct rbtree* target);
 /**
    @return false iff failed to allocate memory
  */
-bool rbtree_add(struct rbtree* target, long key, void* data);
+bool rbtree_add(struct rbtree* target, rbtree_key_t key, void* data);
 
 void rbtree_add_node(struct rbtree* target, struct rbtree_node* node);
 
 struct rbtree_node* rbtree_search_node(struct rbtree* target,
-                                       long key);
+                                       rbtree_key_t key);
 
 /**
    Remove key from tree
    @param data If non-NULL, store data here
  */
-bool rbtree_remove(struct rbtree* target, long key, void** data);
+bool rbtree_remove(struct rbtree* target, rbtree_key_t key, void** data);
 
 /**
    Removes the node from the tree.  Does not free the node
@@ -76,11 +81,11 @@ bool rbtree_remove(struct rbtree* target, long key, void** data);
 void rbtree_remove_node(struct rbtree* target,
                         struct rbtree_node* node);
 
-bool rbtree_pop(struct rbtree* target, long* key, void** data);
+bool rbtree_pop(struct rbtree* target, rbtree_key_t* key, void** data);
 
 struct rbtree_node* rbtree_leftmost(struct rbtree* target);
 
-long rbtree_leftmost_key(struct rbtree* target);
+rbtree_key_t rbtree_leftmost_key(struct rbtree* target);
 
 /**
    Call callback on each rbtree node until the callback returns false
@@ -90,7 +95,8 @@ long rbtree_leftmost_key(struct rbtree* target);
 bool rbtree_iterator(struct rbtree* target, rbtree_callback cb,
                      void* user_data);
 
-bool rbtree_move(struct rbtree* target, long key_old, long key_new);
+bool rbtree_move(struct rbtree* target, rbtree_key_t key_old,
+                 rbtree_key_t key_new);
 
 struct rbtree_node* rbtree_random(struct rbtree* target);
 

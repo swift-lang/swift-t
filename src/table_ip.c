@@ -14,6 +14,7 @@
  * limitations under the License
  */
 
+#include <assert.h>
 #include "tools.h"
 
 #include "table_ip.h"
@@ -28,13 +29,14 @@ hash_int(int key, int N)
 bool
 table_ip_init(struct table_ip* target, int capacity)
 {
+  assert(capacity >= 0);
   if (! target)
     return false;
 
   target->size     = 0;
   target->capacity = capacity;
 
-  target->array = malloc(sizeof(struct list_ip) * capacity);
+  target->array = malloc(sizeof(struct list_ip) * (size_t)capacity);
   if (!target->array)
     return false;
 
@@ -145,20 +147,20 @@ table_ip_dump(const char* format, const struct table_ip* target)
     returns int greater than size if size limits are exceeded
             indicating result is garbage
 */
-int table_ip_tostring(char* str, size_t size,
+size_t table_ip_tostring(char* str, size_t size,
                       const char* format,
                       const struct table_ip* target)
 {
-  int   error = size+1;
-  char* ptr   = str;
+  size_t error = size + 1;
+  char* ptr = str;
   ptr += sprintf(str, "{\n");
 
   char* s = (char*) malloc(sizeof(char) * size);
 
   for (int i = 0; i < target->size; i++)
   {
-    int r = list_ip_snprintf(s, size, format, &target->array[i]);
-    if ((ptr-str) + r + 2 < size)
+    size_t r = list_ip_snprintf(s, size, format, &target->array[i]);
+    if ((size_t)(ptr-str) + r + 2 < size)
       ptr += sprintf(ptr, "%s\n", s);
     else
       return error;
@@ -166,7 +168,7 @@ int table_ip_tostring(char* str, size_t size,
   sprintf(ptr, "}\n");
 
   free(s);
-  return (ptr-str);
+  return (size_t)(ptr-str);
 }
 
 #ifdef DEBUG_TABLE_IP

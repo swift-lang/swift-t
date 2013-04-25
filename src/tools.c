@@ -67,7 +67,7 @@ check_msg_impl(const char* format, ...)
   va_list ap;
   va_start(ap, format);
   count += sprintf(p, "error: ");
-  count += vsnprintf(buffer+count, buffer_size-count, format, ap);
+  count += vsnprintf(buffer+count, (size_t)(buffer_size-count), format, ap);
   va_end(ap);
   printf("%s\n", buffer);
   fflush(NULL);
@@ -111,7 +111,7 @@ valgrind_assert_failed_msg(const char* file, int line,
   va_list ap;
   va_start(ap, format);
   count += sprintf(p, "valgrind_assert(): ");
-  count += vsnprintf(buffer+count, buffer_size-count, format, ap);
+  count += vsnprintf(buffer+count, (size_t)(buffer_size-count), format, ap);
   va_end(ap);
   printf("%s\n", buffer);
   fflush(NULL);
@@ -165,7 +165,7 @@ time_micros()
 {
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  double result = tv.tv_sec + 0.000001 * tv.tv_usec;
+  double result = (double)tv.tv_sec + 0.000001 * (double)tv.tv_usec;
   return result;
 }
 
@@ -176,10 +176,10 @@ void
 time_delay(double delay)
 {
   struct timespec ts;
-  time_t i = floor(delay);
-  double d = delay - i;
+  time_t i = (time_t)floor(delay);
+  double d = delay - (double)i;
   ts.tv_sec = i;
-  ts.tv_nsec = d / POW_10_9;
+  ts.tv_nsec = (long) (d / POW_10_9);
   nanosleep(&ts, NULL);
 }
 
@@ -220,6 +220,7 @@ getenv_ulong(const char* name, unsigned long dflt,
 void
 shuffle(long* A, int count)
 {
+  assert(count >= 0);
   // Shuffled working space: initially empty
   long buffer[count];
   // Index into buffer
@@ -232,12 +233,12 @@ shuffle(long* A, int count)
     int r = random_between(0, inputs);
     buffer[index++] = A[r];
     // Shift remaining inputs into bottom of A (no gaps)
-    memmove(&A[r], &A[r+1], (inputs-r-1)*sizeof(long));
+    memmove(&A[r], &A[r+1], (size_t)(inputs-r-1)*sizeof(long));
     inputs--;
   }
 
   // Store result
-  memcpy(A, buffer, count*sizeof(long));
+  memcpy(A, buffer, (size_t)count*sizeof(long));
 }
 
 void
@@ -264,7 +265,7 @@ slurp(const char* filename)
   valgrind_assert(rc == 0);
 
   off_t length = s.st_size;
-  char* result = malloc(length+1);
+  char* result = malloc((size_t)length+1);
   if (result == NULL)
   {
     printf("slurp(): could not allocate memory for: %s\n", filename);
@@ -272,7 +273,7 @@ slurp(const char* filename)
   }
 
   char* p = result;
-  int actual = fread(p, sizeof(char), length, file);
+  int actual = (int)fread(p, sizeof(char), (size_t)length, file);
   if (actual != length)
   {
     printf("could not read all %li bytes from file: %s\n",

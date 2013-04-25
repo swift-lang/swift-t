@@ -80,7 +80,7 @@ list_add(struct list* target, void* data)
    Add this data if list_inspect does not find it.
 */
 struct list_item*
-list_add_one(struct list* target, void* data, int n)
+list_add_one(struct list* target, void* data, size_t n)
 {
   if (! list_inspect(target, data, n))
     return list_add(target, data);
@@ -127,8 +127,8 @@ list_parse(char* s)
       q++;
 
     // Insert word into list...
-    char* data = malloc(q-p+2);
-    strncpy(data, p, q-p);
+    char* data = malloc((size_t)(q-p+2));
+    strncpy(data, p, (size_t)(q-p));
     data[q-p] = '\0';
     list_add(result, data);
 
