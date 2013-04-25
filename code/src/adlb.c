@@ -772,11 +772,18 @@ ADLBP_Enumerate(adlb_datum_id container_id,
            ADLB_TAG_RESPONSE);
       int c;
       MPI_Get_count(&status, MPI_BYTE, &c);
-      assert(c > 0);
-      char* A = malloc((size_t)c);
-      valgrind_assert(A);
-      memcpy(A, xfer, (size_t)c);
-      *members = A;
+      assert(c >= 0);
+      if (c > 0)
+      {
+        char* A = malloc((size_t)c);
+        valgrind_assert(A);
+        memcpy(A, xfer, (size_t)c);
+        *members = A;
+      }
+      else
+      {
+        *members = NULL;
+      }
       *members_length = c;
     }
   }
