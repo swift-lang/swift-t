@@ -135,7 +135,7 @@ xlb_sync2(int target, const struct packed_sync *hdr)
 static inline adlb_code
 send_sync(int target, const struct packed_sync *hdr)
 {
-  SEND(hdr, PACKED_SYNC_SIZE, MPI_BYTE, target, ADLB_TAG_SYNC_REQUEST);
+  SEND(hdr, (int)PACKED_SYNC_SIZE, MPI_BYTE, target, ADLB_TAG_SYNC_REQUEST);
   return ADLB_SUCCESS;
 }
 
@@ -174,7 +174,7 @@ static inline adlb_code msg_from_other_server(int other_server, int target,
   MPI_Status status;
 
   struct packed_sync *other_hdr = malloc(PACKED_SYNC_SIZE);
-  RECV(other_hdr, PACKED_SYNC_SIZE, MPI_BYTE, other_server, ADLB_TAG_SYNC_REQUEST);
+  RECV(other_hdr, (int)PACKED_SYNC_SIZE, MPI_BYTE, other_server, ADLB_TAG_SYNC_REQUEST);
 
   /* Serve another server
    * We need to avoid the case of circular deadlock, e.g. where A is waiting

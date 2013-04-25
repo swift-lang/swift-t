@@ -148,15 +148,16 @@ steal_sync(int target, int max_memory)
 static inline adlb_code
 steal_payloads(int target, int count)
 {
+  assert(count > 0);
   MPI_Status status;
-  int length = count * sizeof(struct packed_put);
-  struct packed_put* wus = malloc(length);
+  int length = count * (int)sizeof(struct packed_put);
+  struct packed_put* wus = malloc((size_t)length);
   valgrind_assert(wus);
   RECV(wus, length, MPI_BYTE, target, ADLB_TAG_RESPONSE_STEAL);
 
   for (int i = 0; i < count; i++)
   {
-    xlb_work_unit *work = work_unit_alloc(wus[i].length);
+    xlb_work_unit *work = work_unit_alloc((size_t)wus[i].length);
     RECV(work->payload, wus[i].length, MPI_BYTE, target,
          ADLB_TAG_RESPONSE_STEAL);
     workqueue_add(wus[i].type, wus[i].putter, wus[i].priority,
@@ -171,8 +172,8 @@ steal_payloads(int target, int count)
 typedef struct {
   int stealer_rank;
   xlb_work_unit **work_units;
-  int size;
-  int max_size;
+  size_t size;
+  size_t max_size;
   int stole_count;
 } steal_cb_state;
 
@@ -185,7 +186,7 @@ typedef struct {
 static adlb_code
 send_steal_batch(steal_cb_state *batch, bool finish)
 {
-  int count = batch->size;
+  int count = (int)batch->size;
   struct packed_steal_resp hdr = { .count = count, .last = finish };
   RSEND(&hdr, sizeof(hdr), MPI_BYTE, batch->stealer_rank,
        ADLB_TAG_RESPONSE_STEAL_COUNT);
@@ -202,8 +203,8 @@ send_steal_batch(steal_cb_state *batch, bool finish)
   // Store requests for wait
   MPI_Request reqs[count + 1];
 
-  DEBUG("[%i] sending batch size %i", xlb_comm_rank, batch->size);
-  ISEND(puts, sizeof(puts[0]) * count, MPI_BYTE,
+  DEBUG("[%i] sending batch size %zu", xlb_comm_rank, batch->size);
+  ISEND(puts, (int)sizeof(puts[0]) * count, MPI_BYTE,
        batch->stealer_rank, ADLB_TAG_RESPONSE_STEAL, &reqs[0]);
 
   for (int i = 0; i < count; i++)

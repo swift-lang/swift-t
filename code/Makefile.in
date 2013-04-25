@@ -78,7 +78,7 @@ ifeq ($(USE_XLC),0)
         PIC = -fPIC
         STD = -std=gnu99
         SHARED = -shared
-	WARNS=-Wall
+	WARNS=-Wall -Wconversion
 else
 #       Using XLC
         PIC = -qpic

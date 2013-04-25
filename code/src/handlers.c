@@ -95,9 +95,10 @@ static adlb_code handle_shutdown_worker(int caller);
 static adlb_code handle_shutdown_server(int caller);
 static adlb_code handle_fail(int caller);
 
-static adlb_code close_notification(long id, int* ranks, int count);
-static adlb_code set_int_reference_and_notify(long id, long value);
-static adlb_code set_str_reference_and_notify(long id, char* value);
+static adlb_code close_notification(adlb_datum_id id, int* ranks, int count);
+static adlb_code set_int_reference_and_notify(adlb_datum_id id,
+                                              adlb_int_t value);
+static adlb_code set_str_reference_and_notify(adlb_datum_id id, char* value);
 
 static adlb_code put_targeted(int type, int putter, int priority,
                               int answer, int target,
@@ -185,7 +186,7 @@ handle_sync(int caller)
   MPE_LOG(xlb_mpe_svr_sync_start);
   MPI_Status status;
   struct packed_sync *hdr = malloc(PACKED_SYNC_SIZE);
-  RECV(hdr, PACKED_SYNC_SIZE, MPI_BYTE, caller, ADLB_TAG_SYNC_REQUEST);
+  RECV(hdr, (int)PACKED_SYNC_SIZE, MPI_BYTE, caller, ADLB_TAG_SYNC_REQUEST);
 
   adlb_code rc = handle_accepted_sync(caller, hdr, NULL);
   free(hdr);
@@ -239,6 +240,7 @@ put(int type, int putter, int priority, int answer, int target,
 {
   MPI_Status status;
   int worker;
+  assert(length >= 0);
   if (parallelism == 1)
   {
     // Attempt to redirect work unit to another worker
@@ -270,7 +272,7 @@ put(int type, int putter, int priority, int answer, int target,
   DEBUG("server storing work...");
   SEND(&mpi_rank, 1, MPI_INT, putter, ADLB_TAG_RESPONSE_PUT);
 
-  xlb_work_unit *work = work_unit_alloc(length);
+  xlb_work_unit *work = work_unit_alloc((size_t)length);
   RECV(work->payload, length, MPI_BYTE, putter, ADLB_TAG_WORK);
   DEBUG("work unit: x%i %s ", parallelism, xfer);
   workqueue_add(type, putter, priority, answer, target,
@@ -302,7 +304,7 @@ redirect_work(int type, int putter, int priority, int answer,
 
 static inline adlb_code send_work_unit(int worker, xlb_work_unit* wu);
 
-static inline adlb_code send_work(int worker, long wuid, int type,
+static inline adlb_code send_work(int worker, xlb_work_unit_id wuid, int type,
                                   int answer,
                                   void* payload, int length,
                                   int parallelism);
@@ -417,7 +419,7 @@ xlb_recheck_queues()
   TRACE_START;
 
   int N = xlb_requestqueue_size();
-  xlb_request_pair* r = malloc(N*sizeof(xlb_request_pair));
+  xlb_request_pair* r = malloc((size_t)N*sizeof(xlb_request_pair));
   N = xlb_requestqueue_get(r, N);
 
   for (int i = 0; i < N; i++)
@@ -483,10 +485,10 @@ send_work_unit(int worker, xlb_work_unit* wu)
    Workers are blocked on the recv for this
  */
 static inline adlb_code
-send_work(int worker, long wuid, int type, int answer,
+send_work(int worker, xlb_work_unit_id wuid, int type, int answer,
           void* payload, int length, int parallelism)
 {
-  DEBUG("send_work() to: %i wuid: %li...", worker, wuid);
+  DEBUG("send_work() to: %i wuid: %lli...", worker, wuid);
   TRACE("work_unit: %s\n", (char*) payload);
   struct packed_get_response g;
   g.answer_rank = answer;
@@ -560,7 +562,7 @@ handle_create(int caller)
     }
   }
 
-  // DEBUG("CREATE: <%li> %s\n", id, (char*) work_buf);
+  // DEBUG("CREATE: <%lli> %s\n", id, (char*) work_buf);
   TRACE("ADLB_TAG_CREATE done\n");
   MPE_LOG(xlb_mpe_svr_create_end);
 
@@ -579,9 +581,9 @@ handle_multicreate(int caller)
   adlb_code rc = find_req_bytes(&req_bytes, caller, ADLB_TAG_MULTICREATE);
   ADLB_CHECK(rc);
 
-  assert(req_bytes % sizeof(ADLB_create_spec) == 0);
-  int count = req_bytes / sizeof(ADLB_create_spec);
-  ADLB_create_spec *specs = malloc(req_bytes);
+  assert(req_bytes % (int)sizeof(ADLB_create_spec) == 0);
+  int count = req_bytes / (int)sizeof(ADLB_create_spec);
+  ADLB_create_spec *specs = malloc((size_t)req_bytes);
   RECV(specs, req_bytes, MPI_BYTE, caller, ADLB_TAG_MULTICREATE);
 
   adlb_datum_id new_ids[count];
@@ -590,7 +592,7 @@ handle_multicreate(int caller)
   for (int i = 0; i < count; i++) {
     if (specs[i].id != ADLB_DATA_ID_NULL) {
       dc = ADLB_DATA_ERROR_INVALID;
-      DEBUG("non-null data id: %li", specs[i].id);
+      DEBUG("non-null data id: %lli", specs[i].id);
       break;
     }
     adlb_datum_id new_id;
@@ -610,7 +612,7 @@ handle_multicreate(int caller)
   }
 
 
-  RSEND(new_ids, sizeof(new_ids), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+  RSEND(new_ids, (int)sizeof(new_ids), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
 
   free(specs);
   ADLB_DATA_CHECK(dc);
@@ -627,7 +629,7 @@ handle_exists(int caller)
   adlb_datum_id id;
   MPI_Status status;
 
-  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_EXISTS);
+  RECV(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_EXISTS);
   data_exists(id, &result);
   RSEND(&result, sizeof(bool), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
@@ -646,7 +648,7 @@ handle_store(int caller)
   // struct mallinfo s = mallinfo();
   // DEBUG("Store: heap size: %i", s.uordblks);
   // #endif
-  DEBUG("Store: <%li>", hdr.id);
+  DEBUG("Store: <%lli>", hdr.id);
 
   RECV(xfer, XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_STORE_PAYLOAD);
 
@@ -688,6 +690,7 @@ handle_retrieve(int caller)
   int length;
   adlb_data_type type;
   int dc = data_retrieve(hdr.id, &type, &result, &length);
+  assert(length >= 0);
 
   bool malloced_result = (type == ADLB_DATA_TYPE_CONTAINER);
   if (dc == ADLB_DATA_SUCCESS && hdr.decr_read_refcount > 0) {
@@ -696,9 +699,9 @@ handle_retrieve(int caller)
 
     // Need to copy result if don't own memory
     if (!malloced_result) {
-      void* result_copy = malloc(length);
+      void* result_copy = malloc((size_t)length);
       malloced_result = true;
-      memcpy(result_copy, result, length);
+      memcpy(result_copy, result, (size_t)length);
       result = result_copy;
     }
 
@@ -715,7 +718,7 @@ handle_retrieve(int caller)
     SEND(result, length, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
     if (malloced_result)
       free(result);
-    DEBUG("Retrieve: <%li>", hdr.id);
+    DEBUG("Retrieve: <%lli>", hdr.id);
   }
 
   MPE_LOG(xlb_mpe_svr_retrieve_end);
@@ -771,9 +774,9 @@ handle_subscribe(int caller)
   TRACE("ADLB_TAG_SUBSCRIBE\n");
   MPE_LOG(xlb_mpe_svr_subscribe_start);
 
-  long id;
+  adlb_datum_id id;
   MPI_Status status;
-  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_SUBSCRIBE);
+  RECV(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_SUBSCRIBE);
 
   int result;
   adlb_data_code dc = data_subscribe(id, caller, &result);
@@ -794,12 +797,12 @@ handle_refcount_incr(int caller)
   RECV(&msg, sizeof(msg), MPI_BYTE, caller, ADLB_TAG_REFCOUNT_INCR);
 
   if (msg.type == ADLB_READ_REFCOUNT) {
-    DEBUG("Refcount_incr: <%li> READ_REFCOUNT %i", msg.id, msg.incr);
+    DEBUG("Refcount_incr: <%lli> READ_REFCOUNT %i", msg.id, msg.incr);
   } else if (msg.type == ADLB_WRITE_REFCOUNT) {
-    DEBUG("Refcount_incr: <%li> WRITE_REFCOUNT %i", msg.id, msg.incr);
+    DEBUG("Refcount_incr: <%lli> WRITE_REFCOUNT %i", msg.id, msg.incr);
   } else {
     assert(msg.type == ADLB_READWRITE_REFCOUNT);
-    DEBUG("Refcount_incr: <%li> READWRITE_REFCOUNT %i", msg.id, msg.incr);
+    DEBUG("Refcount_incr: <%lli> READWRITE_REFCOUNT %i", msg.id, msg.incr);
   }
 
   int notify_count;
@@ -829,26 +832,27 @@ handle_insert(int caller)
        ADLB_TAG_INSERT_HEADER);
 
   char subscript[ADLB_DATA_SUBSCRIPT_MAX];
-  long id;
+  adlb_datum_id id;
   char* member;
   int  member_length;
   int  drops;
   int n;
-  n = sscanf(xfer, "%li %s %i %i",
+  n = sscanf(xfer, "%lli %s %i %i",
              &id, subscript, &member_length, &drops);
   // This can only fail on an internal error:
   ASSERT(n == 4);
+  assert(member_length >= 0);
 
-  member = malloc((member_length+1) * sizeof(char));
+  member = malloc((size_t)(member_length+1) * sizeof(char));
 
   int references_count, notify_count;
-  long* references;
+  adlb_datum_id* references;
   int *notify_ranks;
 
   RECV(member, ADLB_DATA_MEMBER_MAX, MPI_CHAR, caller,
        ADLB_TAG_INSERT_PAYLOAD);
 
-  DEBUG("Insert: <%li>[%s]=%s",
+  DEBUG("Insert: <%lli>[%s]=%s",
         id, subscript, member);
 
   adlb_data_code dc = data_insert(id, subscript, member, drops,
@@ -860,17 +864,17 @@ handle_insert(int caller)
   {
     if (references_count > 0)
     {
-      long m = -1;
+      adlb_datum_id m = -1;
       bool parsed = false;
       for (int i = 0; i < references_count; i++)
       {
-        TRACE("Notifying reference %li\n", references[i]);
+        TRACE("Notifying reference %lli\n", references[i]);
         // Negative used to indicate string
         if (references[i] >= 0)
         {
           if (!parsed) {
             parsed = true;
-            n = sscanf(member, "%li", &m);
+            n = sscanf(member, "%lli", &m);
             assert(n == 1);
           }
           set_int_reference_and_notify(references[i], m);
@@ -901,14 +905,14 @@ handle_insert_atomic(int caller)
        ADLB_TAG_INSERT_ATOMIC);
 
   char subscript[ADLB_DATA_SUBSCRIPT_MAX];
-  long id;
-  int n = sscanf(xfer, "%li %s", &id, subscript);
+  adlb_datum_id id;
+  int n = sscanf(xfer, "%lli %s", &id, subscript);
   // This can only fail on an internal error:
   ASSERT(n == 2);
 
   bool result;
   adlb_data_code dc = data_insert_atomic(id, subscript, &result);
-  DEBUG("Insert_atomic: <%li>[%s] => %i",
+  DEBUG("Insert_atomic: <%lli>[%s] => %i",
         id, subscript, result);
   RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   RSEND(&result, sizeof(bool), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
@@ -928,8 +932,8 @@ handle_lookup(int caller)
   RECV(msg, ADLB_DATA_SUBSCRIPT_MAX+32, MPI_BYTE, caller,
        ADLB_TAG_LOOKUP);
 
-  long id;
-  int n = sscanf(msg, "%li %s", &id, subscript);
+  adlb_datum_id id;
+  int n = sscanf(msg, "%lli %s", &id, subscript);
   ASSERT(n == 2);
 
   adlb_data_code dc = data_lookup(id, subscript, &member);
@@ -944,10 +948,10 @@ handle_lookup(int caller)
 
   if (dc == ADLB_DATA_SUCCESS && found)
   {
-    SEND(member, strlen(member)+1, MPI_CHAR, caller,
+    SEND(member, (int)strlen(member)+1, MPI_CHAR, caller,
          ADLB_TAG_RESPONSE);
   }
-  // DEBUG("LOOKUP: <%li>[\"%s\"] => <%li>\n",
+  // DEBUG("LOOKUP: <%lli>[\"%s\"] => <%lli>\n",
   //       id, subscript, member);
   TRACE("ADLB_TAG_LOOKUP done\n");
   MPE_LOG(xlb_mpe_svr_lookup_end);
@@ -962,11 +966,11 @@ handle_unique(int caller)
   MPI_Status status;
   RECV(&msg, 1, MPI_INT, caller, ADLB_TAG_UNIQUE);
 
-  long id;
+  adlb_datum_id id;
   data_unique(&id);
 
-  RSEND(&id, 1, MPI_LONG, caller, ADLB_TAG_RESPONSE);
-  DEBUG("Unique: <%li>", id);
+  RSEND(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_RESPONSE);
+  DEBUG("Unique: <%lli>", id);
   // MPE_LOG_EVENT(mpe_svr_unique_end);
   return ADLB_SUCCESS;
 }
@@ -976,7 +980,7 @@ handle_typeof(int caller)
 {
   adlb_datum_id id;
   MPI_Status status;
-  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_TYPEOF);
+  RECV(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_TYPEOF);
 
   adlb_data_type type;
   adlb_data_code dc = data_typeof(id, &type);
@@ -992,7 +996,7 @@ handle_container_typeof(int caller)
 {
   adlb_datum_id id;
   MPI_Status status;
-  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_CONTAINER_TYPEOF);
+  RECV(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_CONTAINER_TYPEOF);
 
   adlb_data_type type;
   adlb_data_code dc = data_container_typeof(id, &type);
@@ -1010,18 +1014,18 @@ handle_container_reference(int caller)
   RECV(xfer, XFER_SIZE, MPI_BYTE, caller,
        ADLB_TAG_CONTAINER_REFERENCE);
 
-  long container_id;
+  adlb_datum_id container_id;
   char subscript[ADLB_DATA_SUBSCRIPT_MAX];
-  long reference;
+  adlb_datum_id reference;
   adlb_data_type ref_type;
   int ref_type_int;
-  int n = sscanf(xfer, "%li %li %s %i",
+  int n = sscanf(xfer, "%lli %lli %s %i",
             &reference, &container_id, subscript,
             &ref_type_int);
   ASSERT(n == 4);
   ref_type = ref_type_int;
 
-  DEBUG("Container_reference: <%li>[%s] => <%li> (%i)",
+  DEBUG("Container_reference: <%lli>[%s] => <%lli> (%i)",
         container_id, subscript, reference, ref_type);
 
   char *member;
@@ -1032,8 +1036,8 @@ handle_container_reference(int caller)
             {
               if (ref_type == ADLB_DATA_TYPE_INTEGER)
               {
-                long m;
-                int n = sscanf(member, "%li", &m);
+                adlb_datum_id m;
+                int n = sscanf(member, "%lli", &m);
                 ASSERT(n == 1);
                 set_int_reference_and_notify(reference, m);
               }
@@ -1050,14 +1054,14 @@ handle_container_reference(int caller)
 static adlb_code
 handle_container_size(int caller)
 {
-  long container_id;
+  adlb_datum_id container_id;
   int rc;
   MPI_Status status;
-  RECV(&container_id, 1, MPI_LONG, caller, ADLB_TAG_CONTAINER_SIZE);
+  RECV(&container_id, 1, MPI_ADLB_ID, caller, ADLB_TAG_CONTAINER_SIZE);
 
   int size;
   adlb_data_code dc = data_container_size(container_id, &size);
-  DEBUG("CONTAINER_SIZE: <%li> => <%i>",
+  DEBUG("CONTAINER_SIZE: <%lli> => <%i>",
         container_id, size);
 
   if (dc != ADLB_DATA_SUCCESS)
@@ -1071,11 +1075,11 @@ handle_container_size(int caller)
 static adlb_code
 handle_lock(int caller)
 {
-  long id;
+  adlb_datum_id id;
   MPI_Status status;
-  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_LOCK);
+  RECV(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_LOCK);
 
-  DEBUG("Lock: <%li> by rank: %i", id, caller);
+  DEBUG("Lock: <%lli> by rank: %i", id, caller);
 
   bool result;
   adlb_data_code dc = data_lock(id, caller, &result);
@@ -1096,11 +1100,11 @@ handle_lock(int caller)
 static adlb_code
 handle_unlock(int caller)
 {
-  long id;
+  adlb_datum_id id;
   MPI_Status status;
-  RECV(&id, 1, MPI_LONG, caller, ADLB_TAG_UNLOCK);
+  RECV(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_UNLOCK);
 
-  DEBUG("Unlock: <%li> by rank: %i ", id, caller);
+  DEBUG("Unlock: <%lli> by rank: %i ", id, caller);
 
   adlb_data_code dc = data_unlock(id);
 
@@ -1162,12 +1166,12 @@ put_targeted(int type, int putter, int priority, int answer,
              int target, void* payload, int length);
 
 static adlb_code
-close_notification(long id, int* ranks, int count)
+close_notification(adlb_datum_id id, int* ranks, int count)
 {
   for (int i = 0; i < count; i++)
   {
     char t[32];
-    int length = sprintf(t, "close %li", id);
+    int length = sprintf(t, "close %lli", id);
 
     put_targeted(1,        // work_type CONTROL
                  mpi_rank, // putter
@@ -1182,10 +1186,10 @@ close_notification(long id, int* ranks, int count)
 }
 
 static adlb_code
-set_int_reference_and_notify(long id, long value)
+set_int_reference_and_notify(adlb_datum_id id, adlb_int_t value)
 {
-  DEBUG("set_reference: <%li>=%li", id, value);
-  DEBUG("set_int_reference: <%li>=%li", id, value);
+  DEBUG("set_reference: <%lli>=%lli", id, value);
+  DEBUG("set_int_reference: <%lli>=%lli", id, value);
   int* ranks;
   int count;
 
@@ -1207,9 +1211,9 @@ set_int_reference_and_notify(long id, long value)
 }
 
 static adlb_code
-set_str_reference_and_notify(long id, char *value)
+set_str_reference_and_notify(adlb_datum_id id, char *value)
 {
-  DEBUG("set_str_reference: <%li>=%s", id, value);
+  DEBUG("set_str_reference: <%lli>=%s", id, value);
   int* ranks;
   int count;
 
@@ -1218,7 +1222,7 @@ set_str_reference_and_notify(long id, char *value)
   if (server != xlb_comm_rank)
     rc = xlb_sync(server);
   ADLB_CHECK(rc);
-  rc = ADLB_Store(id, value, (strlen(value)+1) * sizeof(char), true,
+  rc = ADLB_Store(id, value, (int)((strlen(value)+1) * sizeof(char)), true,
                   &ranks, &count);
   ADLB_CHECK(rc);
   rc = close_notification(id, ranks, count);
@@ -1235,6 +1239,7 @@ put_targeted(int type, int putter, int priority, int answer,
   int rc;
 
   DEBUG("put_targeted: to: %i payload: %s", target, (char*) payload);
+  assert(length >= 0);
 
   if (target >= 0)
   {
@@ -1246,15 +1251,15 @@ put_targeted(int type, int putter, int priority, int answer,
       worker = xlb_requestqueue_matches_target(target, type);
       if (worker != ADLB_RANK_NULL)
       {
-        int wuid = workqueue_unique();
+        xlb_work_unit_id wuid = workqueue_unique();
         rc = send_work(target, wuid, type, answer, payload, length, 1);
         ADLB_CHECK(rc);
         return ADLB_SUCCESS;
       }
       else
       {
-        xlb_work_unit *work = work_unit_alloc(length);
-        memcpy(work->payload, payload, length);
+        xlb_work_unit *work = work_unit_alloc((size_t)length);
+        memcpy(work->payload, payload, (size_t)length);
         DEBUG("put_targeted(): server storing work...");
         workqueue_add(type, putter, priority, answer, target,
                       length, 1, work);

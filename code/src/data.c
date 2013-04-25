@@ -143,9 +143,9 @@ adlb_data_code
 data_create(adlb_datum_id id, adlb_data_type type,
             const adlb_create_props *props)
 {
-  TRACE("data_create(%li)", id);
+  TRACE("data_create(%lli)", id);
   check_verbose(id > 0, ADLB_DATA_ERROR_INVALID,
-                "ERROR: attempt to create data: id=%li\n", id);
+                "ERROR: attempt to create data: id=%lli\n", id);
 
   adlb_datum* d = malloc(sizeof(adlb_datum));
   d->type = type;
@@ -164,7 +164,7 @@ adlb_data_code
 data_create_filename(adlb_datum_id id, const char* filename,
                      const adlb_create_props *props)
 {
-  DEBUG("data_create_filename(%li, %s)", id, filename);
+  DEBUG("data_create_filename(%lli, %s)", id, filename);
   adlb_datum* d = table_lp_search(&tds, id);
 
   // This can only fail on an internal error
@@ -240,10 +240,10 @@ data_typeof(adlb_datum_id id, adlb_data_type* type)
 
   adlb_datum* d = table_lp_search(&tds, id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%li>", id);
+                "not found: <%lli>", id);
 
   *type = d->type;
-  DEBUG("typeof: <%li> => %i", id, *type);
+  DEBUG("typeof: <%lli> => %i", id, *type);
   return ADLB_DATA_SUCCESS;
 }
 
@@ -256,20 +256,20 @@ data_container_typeof(adlb_datum_id id, adlb_data_type* type)
 {
   adlb_datum* d = table_lp_search(&tds, id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%li>", id);
+                "not found: <%lli>", id);
 
   adlb_data_type t = d->type;
   check_verbose(t == ADLB_DATA_TYPE_CONTAINER, ADLB_DATA_ERROR_TYPE,
-                "not a container: <%li>", id);
+                "not a container: <%lli>", id);
   *type = d->data.CONTAINER.type;
-  DEBUG("container_type: <%li> => %i", id, *type);
+  DEBUG("container_type: <%lli> => %i", id, *type);
   return ADLB_DATA_SUCCESS;
 }
 
 adlb_data_code data_permanent(adlb_datum_id id) {
   adlb_datum* d = table_lp_search(&tds, id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%li>", id);
+                "not found: <%lli>", id);
   d->status |= ADLB_DATA_PERMANENT_MASK;
   return ADLB_DATA_SUCCESS;
 }
@@ -290,7 +290,7 @@ data_reference_count(adlb_datum_id id, adlb_refcount_type type,
 {
   adlb_datum* d = table_lp_search(&tds, id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%li>", id);
+                "not found: <%lli>", id);
 
   *notify_count = 0; // default: no notification needed
   if (type == ADLB_READ_REFCOUNT || type == ADLB_READWRITE_REFCOUNT) {
@@ -301,10 +301,10 @@ data_reference_count(adlb_datum_id id, adlb_refcount_type type,
     // Should not go negative
     check_verbose((d->read_refcount > 0 || increment == 0) &&
                    d->read_refcount + increment >= 0,
-                ADLB_DATA_ERROR_SLOTS_NEGATIVE, "<%li> read_refcount: %i "
+                ADLB_DATA_ERROR_SLOTS_NEGATIVE, "<%lli> read_refcount: %i "
                 "incr: %i", id, d->read_refcount, increment);
     d->read_refcount += increment;
-    DEBUG("read_refcount: <%li> => %i", id, d->read_refcount);
+    DEBUG("read_refcount: <%lli> => %i", id, d->read_refcount);
   }
 
   if (type == ADLB_WRITE_REFCOUNT || type == ADLB_READWRITE_REFCOUNT) {
@@ -312,13 +312,13 @@ data_reference_count(adlb_datum_id id, adlb_refcount_type type,
     assert(type == ADLB_WRITE_REFCOUNT);
     check_verbose((d->write_refcount > 0 || increment == 0) &&
                    d->write_refcount + increment >= 0,
-                ADLB_DATA_ERROR_SLOTS_NEGATIVE, "<%li> write_refcount: %i "
+                ADLB_DATA_ERROR_SLOTS_NEGATIVE, "<%lli> write_refcount: %i "
                 "incr: %i", id, d->write_refcount, increment);
     d->write_refcount += increment;
     if (d->write_refcount == 0) {
       data_close(id, notify_ranks, notify_count);
     }
-    DEBUG("write_refcount: <%li> => %i", id, d->write_refcount);
+    DEBUG("write_refcount: <%lli> => %i", id, d->write_refcount);
   }
 
   if (d->read_refcount <= 0 && d->write_refcount <= 0) {
@@ -335,7 +335,7 @@ extract_members(struct table* members, int count, int offset,
 static adlb_data_code
 garbage_collect(adlb_datum_id id, adlb_datum* d)
 {
-  DEBUG("garbage_collect: <%ld>", id);
+  DEBUG("garbage_collect: <%lli>", id);
   check_verbose(!ADLB_DATA_PERMANENT(d->status), ADLB_DATA_ERROR_UNKNOWN,
           "Garbage collecting permanent data");
   switch (d->type)
@@ -364,13 +364,13 @@ garbage_collect(adlb_datum_id id, adlb_datum* d)
       break;
     default:
       check_verbose(false, ADLB_DATA_ERROR_TYPE,
-                    "garbage_collect(): unknown type %u of <%li>",
+                    "garbage_collect(): unknown type %u of <%lli>",
                     d->type, id);
       break;
   }
   // This list should be empty since data being destroyed
   check_verbose(d->listeners.size == 0, ADLB_DATA_ERROR_TYPE,
-                "%i listeners for garbage collected td <%li>",
+                "%i listeners for garbage collected td <%lli>",
                 d->listeners.size, id);
   table_lp_remove(&tds, id);
   free(d);
@@ -388,7 +388,7 @@ data_lock(adlb_datum_id id, int rank, bool* result)
 {
   adlb_datum* d = table_lp_search(&tds, id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%li>", id);
+                "not found: <%lli>", id);
 
   if (table_lp_search(&locked, id))
   {
@@ -411,7 +411,7 @@ data_unlock(adlb_datum_id id)
 {
   int* r = table_lp_remove(&locked, id);
   check_verbose(r != NULL, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%li>", id);
+                "not found: <%lli>", id);
   free(r);
   return ADLB_DATA_SUCCESS;
 }
@@ -425,7 +425,7 @@ data_subscribe(adlb_datum_id id, int rank, int* result)
 {
   adlb_datum* d = table_lp_search(&tds, id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%li>", id);
+                "not found: <%lli>", id);
 
   if (d->write_refcount == 0)
   {
@@ -455,7 +455,7 @@ data_container_reference(adlb_datum_id container_id,
     if (t != NULL)
     {
       char* z;
-      long m = strtol(t, &z, 10);
+      adlb_datum_id m = strtoll(t, &z, 10);
       if (z == t)
         return ADLB_DATA_ERROR_NUMBER_FORMAT;
       *member = m;
@@ -482,7 +482,7 @@ data_container_reference_str(adlb_datum_id container_id,
   // Check that container_id is an initialized container
   adlb_datum* d = table_lp_search(&tds, container_id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%li>", container_id);
+                "not found: <%lli>", container_id);
 
   // Is the subscript already pointing to a data identifier?
   void* t;
@@ -497,12 +497,12 @@ data_container_reference_str(adlb_datum_id container_id,
   // Is the container closed?
   check_verbose(d->write_refcount > 0, ADLB_DATA_ERROR_INVALID,
                 "Attempting to subscribe to non-existent subscript\n"
-                "on a closed container:  <%li>[%s]\n",
+                "on a closed container:  <%lli>[%s]\n",
                 container_id, subscript);
 
   char* pair;
   // encode container, index and ref type into string
-  int length = asprintf(&pair, "%li[%s]", container_id, subscript);
+  int length = asprintf(&pair, "%lli[%s]", container_id, subscript);
   check_verbose(length > 0, ADLB_DATA_ERROR_OOM,
                 "OUT OF MEMORY");
 
@@ -518,7 +518,7 @@ data_container_reference_str(adlb_datum_id container_id,
 
   check_verbose(listeners != NULL, ADLB_DATA_ERROR_NULL,
                 "Found null value in listeners table\n"
-                "for:  %li[%s]\n", container_id, subscript);
+                "for:  %lli[%s]\n", container_id, subscript);
 
   adlb_datum_id ref_entry = ADLB_DATA_ID_NULL;
   if (ref_type == ADLB_DATA_TYPE_INTEGER)
@@ -554,17 +554,18 @@ data_store(adlb_datum_id id, void* buffer, int length,
          bool decr_write_refcount, int** notify_ranks, int* notify_count)
 {
   TRACE("data_store(%li)\n", id);
+  assert(length >= 0);
 
   adlb_datum* d = table_lp_search(&tds, id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%li>", id);
+                "not found: <%lli>", id);
 
   adlb_data_type type = d->type;
 
   // Make sure we are allowed to write this data
   check_verbose(d->write_refcount > 0,
                 ADLB_DATA_ERROR_DOUBLE_WRITE,
-                "attempt to write closed var: <%li>", id);
+                "attempt to write closed var: <%lli>", id);
 
   switch (type)
   {
@@ -573,14 +574,14 @@ data_store(adlb_datum_id id, void* buffer, int length,
       d->data.STRING.length = length;
       break;
     case ADLB_DATA_TYPE_INTEGER:
-      d->data.INTEGER.value = *(long*) buffer;
+      d->data.INTEGER.value = *(adlb_int_t*) buffer;
       break;
     case ADLB_DATA_TYPE_FLOAT:
       memcpy(&d->data.FLOAT.value, buffer, sizeof(double));
       break;
     case ADLB_DATA_TYPE_BLOB:
-      d->data.BLOB.value = malloc(length);
-      memcpy(d->data.BLOB.value, buffer, length);
+      d->data.BLOB.value = malloc((size_t)length);
+      memcpy(d->data.BLOB.value, buffer, (size_t)length);
       d->data.BLOB.length = length;
       break;
     case ADLB_DATA_TYPE_CONTAINER:
@@ -619,17 +620,17 @@ data_close(adlb_datum_id id, int** result, int* count)
 {
   TRACE("%li", id);
   check_verbose(id != ADLB_DATA_ID_NULL,
-                ADLB_DATA_ERROR_NULL, "NULL: <%li>", id);
+                ADLB_DATA_ERROR_NULL, "NULL: <%lli>", id);
 
   adlb_datum* d = table_lp_search(&tds, id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%li>", id);
+                "not found: <%lli>", id);
 
   // For containers, mark that it has a complete value
   d->status |= ADLB_DATA_SET_MASK;
 
   list_i_toints(&d->listeners, result, count);
-  DEBUG("data_close: <%li> listeners: %i", id, *count);
+  DEBUG("data_close: <%lli> listeners: %i", id, *count);
   list_i_clear(&d->listeners);
   TRACE_END;
   return ADLB_DATA_SUCCESS;
@@ -640,7 +641,7 @@ data_close(adlb_datum_id id, int** result, int* count)
 */
 #define CHECK_SET(id, d)                              \
   if (!ADLB_DATA_SET(d->status)) {                 \
-    printf("not set: %li\n", id);    \
+    printf("not set: %lli\n", id);    \
     return ADLB_DATA_ERROR_UNSET;                     \
   }
 
@@ -676,12 +677,12 @@ data_retrieve(adlb_datum_id id, adlb_data_type* type,
     case ADLB_DATA_TYPE_INTEGER:
       CHECK_SET(id, d);
       *result = &d->data.INTEGER.value;
-      *length = sizeof(long);
+      *length = (int)sizeof(adlb_int_t);
       break;
     case ADLB_DATA_TYPE_FLOAT:
       CHECK_SET(id, d);
       *result = &d->data.FLOAT.value;
-      *length = sizeof(double);
+      *length = (int)sizeof(double);
       break;
     case ADLB_DATA_TYPE_STRING:
       CHECK_SET(id, d);
@@ -714,7 +715,7 @@ extract_members(struct table* members, int count, int offset,
   char* p;
   int c = 0;
   int size = members->size;
-  char* A = malloc(size*ADLB_DATA_MEMBER_MAX*sizeof(char));
+  char* A = malloc((size_t)(size*ADLB_DATA_MEMBER_MAX)*sizeof(char));
   p = A;
   for (int i = 0; i < members->capacity; i++)
   {
@@ -737,7 +738,9 @@ extract_members(struct table* members, int count, int offset,
     }
   }
   *output = A;
-  *output_length = p - A;
+  long output_length_l = p - A;
+  assert(output_length_l >= 0 && output_length_l <= INT_MAX);
+  *output_length = (int)output_length_l;
   TRACE("extract_members: output_length: %i\n",
         *output_length);
 }
@@ -763,10 +766,10 @@ data_enumerate(adlb_datum_id container_id, int count, int offset,
   adlb_datum* c = table_lp_search(&tds, container_id);
 
   check_verbose(c != NULL, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%li>", container_id);
+                "not found: <%lli>", container_id);
   check_verbose(c->type == ADLB_DATA_TYPE_CONTAINER,
                 ADLB_DATA_ERROR_TYPE,
-                "not a container: <%li>", container_id);
+                "not a container: <%lli>", container_id);
 
 
   int slice_size = c->data.CONTAINER.members->size - offset;
@@ -782,7 +785,7 @@ data_enumerate(adlb_datum_id container_id, int count, int offset,
   *actual = slice_size;
 
   if (*subscripts)
-    *subscripts_length = table_keys_string_slice(subscripts,
+    *subscripts_length = (int)table_keys_string_slice(subscripts,
                                       c->data.CONTAINER.members,
                                       count, offset);
   if (*members)
@@ -798,10 +801,10 @@ data_container_size(adlb_datum_id container_id, int* size)
   adlb_datum* c = table_lp_search(&tds, container_id);
 
   check_verbose(c != NULL, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%li>", container_id);
+                "not found: <%lli>", container_id);
   check_verbose(c->type == ADLB_DATA_TYPE_CONTAINER,
                 ADLB_DATA_ERROR_TYPE,
-                "not a container: <%li>", container_id);
+                "not a container: <%lli>", container_id);
 
   *size = c->data.CONTAINER.members->size;
   return ADLB_DATA_SUCCESS;
@@ -820,10 +823,10 @@ data_insert(adlb_datum_id container_id,
 {
   adlb_datum* d = table_lp_search(&tds, container_id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
-                "container not found: <%li>", container_id);
+                "container not found: <%lli>", container_id);
   check_verbose(d->type == ADLB_DATA_TYPE_CONTAINER,
                 ADLB_DATA_ERROR_TYPE,
-                "not a container: <%li>",
+                "not a container: <%lli>",
                 container_id);
 
   // Does the link already exist?
@@ -834,7 +837,7 @@ data_insert(adlb_datum_id container_id,
     // Assert that this is an UNLINKED entry:
     check_verbose(t == NULL,
                   ADLB_DATA_ERROR_DOUBLE_WRITE,
-                  "already exists: <%li>[%s]",
+                  "already exists: <%lli>[%s]",
                   container_id, subscript);
 
     // Ok- somebody did an Insert_atomic
@@ -860,7 +863,8 @@ data_insert(adlb_datum_id container_id,
 
   // Find, remove, and return any listening container references
   char s[ADLB_DATA_SUBSCRIPT_MAX+32];
-  sprintf(s, "%li[%s]", container_id, subscript);
+  sprintf(s, "%lli[%s]", container_id, subscript);
+
   void* data;
   bool result = table_remove(&container_listeners, s, &data);
   struct list_l* listeners = data;
@@ -882,10 +886,10 @@ data_insert_atomic(adlb_datum_id container_id, const char* subscript,
 {
   adlb_datum* d = table_lp_search(&tds, container_id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
-                "container not found: <%li>", container_id);
+                "container not found: <%lli>", container_id);
   check_verbose(d->type == ADLB_DATA_TYPE_CONTAINER,
                 ADLB_DATA_ERROR_TYPE,
-                "not a container: <%li>", container_id);
+                "not a container: <%lli>", container_id);
 
   // Does the link already exist?
   if (table_contains(d->data.CONTAINER.members, subscript))
@@ -914,10 +918,10 @@ data_lookup(adlb_datum_id id, const char* subscript,
 {
   adlb_datum* d = table_lp_search(&tds, id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
-                "container not found: <%li>\n", id);
+                "container not found: <%lli>\n", id);
   check_verbose(d->type == ADLB_DATA_TYPE_CONTAINER,
                 ADLB_DATA_ERROR_TYPE,
-                "not a container: <%li>", id);
+                "not a container: <%lli>", id);
 
   void* t;
   bool found = table_search(d->data.CONTAINER.members, subscript, &t);
@@ -1045,7 +1049,7 @@ report_leaks()
     {
       adlb_datum *d = item->data;
       if (d == NULL || !ADLB_DATA_PERMANENT(d->status)) {
-        DEBUG("LEAK: %li", item->key);
+        DEBUG("LEAK: %lli", item->key);
       }
     }
   }

@@ -46,7 +46,7 @@ typedef enum
 /**
    Identifier for all ADLB data module user data
  */
-typedef long adlb_datum_id;
+typedef long long adlb_datum_id;
 
 /**
    Status vector for Turbine variables
@@ -91,6 +91,8 @@ typedef struct
 
 extern adlb_create_props DEFAULT_CREATE_PROPS;
 
+typedef long long adlb_int_t;
+
 /**
    User data
  */
@@ -104,7 +106,7 @@ typedef struct
   {
     struct
     {
-      long value;
+      adlb_int_t value;
     } INTEGER;
     struct
     {

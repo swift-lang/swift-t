@@ -29,7 +29,7 @@
 
 #include "adlb-defs.h"
 
-typedef long xlb_work_unit_id;
+typedef long long xlb_work_unit_id;
 
 typedef struct
 {
@@ -88,9 +88,9 @@ xlb_work_unit* workqueue_get(int target, int type);
  */
 bool workqueue_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type);
 
-extern long workqueue_parallel_task_count;
+extern int64_t workqueue_parallel_task_count;
 
-static inline int workqueue_parallel_tasks()
+static inline int64_t workqueue_parallel_tasks()
 {
   TRACE("workqueue_parallel_tasks: %li",
         workqueue_parallel_task_count);

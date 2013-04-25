@@ -121,6 +121,9 @@ char* xlb_get_tag_name(int tag);
 /** Simplify cases when only a tag is recvd */
 #define RECV_TAG(rank,tag) RECV(NULL,0,MPI_BYTE,rank,tag)
 
+/** MPI data type tags */
+// 64-bit int
+#define MPI_ADLB_ID MPI_LONG_LONG
 
 /**
    Simple struct for message packing
@@ -155,7 +158,7 @@ struct packed_create_response
 {
   adlb_data_code dc;
   /** id of created item */
-  long id;
+  adlb_datum_id id;
 };
 
 /**
@@ -235,7 +238,7 @@ struct packed_steal
   int work_type_counts[]; // Sender's count of each work type
 };
 
-#define WORK_TYPES_SIZE (sizeof(int) * xlb_types_size) 
+#define WORK_TYPES_SIZE (sizeof(int) * (size_t)xlb_types_size) 
 
 struct packed_steal_resp
 {

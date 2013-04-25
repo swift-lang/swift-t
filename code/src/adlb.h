@@ -72,7 +72,7 @@ adlb_code ADLB_Iget(int type_requested, void* payload, int* length,
 /**
    Obtain server rank responsible for data id
  */
-int ADLB_Locate(long id);
+int ADLB_Locate(adlb_datum_id id);
 
 // Applications should not call these directly but
 // should use the typed forms defined below

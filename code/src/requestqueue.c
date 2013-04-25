@@ -57,7 +57,7 @@ xlb_requestqueue_init()
 {
   table_ip_init(&targets, 128);
 
-  type_requests = malloc(sizeof(struct list2) * xlb_types_size);
+  type_requests = malloc(sizeof(struct list2) * (size_t)xlb_types_size);
   for (int i = 0; i < xlb_types_size; i++)
     list2_init(&type_requests[i]);
 }

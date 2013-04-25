@@ -35,7 +35,7 @@
 static char* tag_names[XLB_MAX_TAGS];
 
 static char* tag_prefix;
-static int tag_prefix_length;
+static size_t tag_prefix_length;
 
 static void add_tags(void);
 
