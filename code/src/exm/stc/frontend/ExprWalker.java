@@ -896,14 +896,14 @@ public class ExprWalker {
         realInputs.add(target);
       }
       
-      // Only priority is applied directly
-      TaskProps taskProps = props.filter(TaskPropKey.PRIORITY);
-      
       // Other code always creates sync wrapper
       assert(context.hasFunctionProp(function, FnProp.SYNC));
       TaskMode mode = TaskMode.SYNC;
       
-      backend.functionCall(function, realInputs, oList, mode, taskProps);
+      // Only priority property is used directly in sync instruction,
+      // but other properties are useful to have here so that the optimizer
+      // can replace instruction with local version and correct props
+      backend.functionCall(function, realInputs, oList, mode, props);
     }
   }
 

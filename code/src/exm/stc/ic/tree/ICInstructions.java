@@ -2715,11 +2715,13 @@ public class ICInstructions {
       return inputVars;
     }
   
-    private List<Var> varInputs() {
+    private List<Var> varInputs(boolean noValues) {
       List<Var> varInputs = new ArrayList<Var>();
       for (Arg input: inputs) {
         if (input.isVar()) {
-          varInputs.add(input.getVar());
+          if (!noValues || !Types.isScalarValue(input.type())) {
+            varInputs.add(input.getVar());
+          }
         }
       }
       return varInputs;
@@ -2791,7 +2793,7 @@ public class ICInstructions {
         // All args are closed!
         return new MakeImmRequest(
             Collections.unmodifiableList(this.outputs),
-            Collections.unmodifiableList(this.varInputs()), mode);
+            Collections.unmodifiableList(this.varInputs(true)), mode);
 
       }
       return null;
@@ -2800,10 +2802,14 @@ public class ICInstructions {
     @Override
     public MakeImmChange makeImmediate(List<Var> outVars, 
                                         List<Arg> values) {
+      // Discard non-future inputs.  These are things like priorities or
+      // targets which do not need to be retained for the local version
+      List<Var> retainedInputs = varInputs(true);
+      assert(values.size() == retainedInputs.size());
+      
       if (Builtins.hasOpEquiv(functionName)) {
         BuiltinOpcode newOp = Builtins.getOpEquiv(functionName);
         assert(newOp != null);
-        assert(values.size() == inputs.size());
         
         if (outputs.size() == 1) {
           checkSwappedOutput(outputs.get(0), outVars.get(0));

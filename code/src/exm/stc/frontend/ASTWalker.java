@@ -1792,12 +1792,16 @@ public class ASTWalker {
       handleFunctionAnnotation(context, function, tree.child(pos),
                                 inlineTcl != null);
     }
-    
-    // TODO: assume for now that all builtins are targetable
-    boolean isTargetable = true;
-    context.setFunctionProperty(function, FnProp.TARGETABLE);
 
     TaskMode taskMode = Builtins.getTaskMode(function);
+    
+    // TODO: assume for now that all non-local builtins are targetable
+    // This is still not quite right (See issue #230)
+    boolean isTargetable = false;
+    if (!taskMode.isLocal()) {
+      isTargetable = true;
+      context.setFunctionProperty(function, FnProp.TARGETABLE);
+    }
     
     context.defineFunction(function, ft);
     if (impl != null) {
