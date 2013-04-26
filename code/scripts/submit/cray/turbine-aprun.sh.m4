@@ -22,7 +22,7 @@ changecom(`dnl')#!/bin/bash
 # Define a convenience macro
 define(`getenv', `esyscmd(printf -- "$`$1' ")')
 
-#PBS -N getenv(SCRIPT_NAME)
+#PBS -N TURBINE
 #PBS -l walltime=getenv(WALLTIME)
 #PBS -l mppwidth=getenv(PROCS)
 #PBS -l mppnppn=getenv(PPN)
