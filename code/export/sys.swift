@@ -61,8 +61,12 @@ argv_accept(string... keys)
   "if { <<seconds>> > 0 } { after [ expr {round(<<seconds>> * 1000)} ] }"
 ];
 
-(int t) clock_seconds()
-"turbine" "0.1"
-[ "set <<t>> [ clock seconds ]" ];
+(int t) clock_seconds() "turbine" "0.1" 
+  [ "set <<t>> [ clock seconds ]" ];
+
+// Millisecond-precision floating point time
+(float t) clock() "turbine" "0.1.1"
+  [ "set <<t>> [ expr {[ clock clicks -milliseconds ] / 1000.0 } ]" ];
+
 
 #endif
