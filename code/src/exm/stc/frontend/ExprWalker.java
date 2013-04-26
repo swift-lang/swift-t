@@ -349,6 +349,8 @@ public class ExprWalker {
         backend.dereferenceBool(dst, src);
       } else if (dstType.equals(Types.F_FILE)) {
         backend.dereferenceFile(dst, src);
+      } else if (dstType.equals(Types.F_BLOB)) {
+        backend.dereferenceBlob(dst, src);
       } else {
         throw new STCRuntimeError("Don't know how to dereference "
             + " type " + src.type().toString());
