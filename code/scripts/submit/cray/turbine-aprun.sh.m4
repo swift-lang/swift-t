@@ -35,7 +35,7 @@ define(`getenv', `esyscmd(printf -- "$`$1' ")')
 
 # Receive some parameters
 PROGRAM=getenv(`PROGRAM')
-ARGS=getenv(`ARGS')
+ARGS="getenv(`ARGS')"
 NODES=getenv(`NODES')
 WALLTIME=getenv(`WALLTIME')
 TURBINE_OUTPUT=getenv(TURBINE_OUTPUT)
@@ -49,6 +49,8 @@ export ADLB_SERVERS=getenv(ADLB_SERVERS)
 # Default to 1
 TURBINE_ENGINES=${TURBINE_ENGINES:-1}
 ADLB_SERVERS=${ADLB_SERVERS:-1}
+
+export ADLB_PRINT_TIME=getenv(ADLB_PRINT_TIME)
 
 # Output header
 echo "Turbine: turbine-aprun.sh"

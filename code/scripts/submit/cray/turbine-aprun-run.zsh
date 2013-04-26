@@ -26,7 +26,7 @@
 
 export PROGRAM=$1
 shift
-export ARGS=${*}
+export ARGS="${*}"
 
 TURBINE=$( which turbine )
 if [[ ${?} != 0 ]]
