@@ -181,6 +181,7 @@ static inline bool master_server(void);
 static inline void check_idle(void);
 static adlb_code server_shutdown(void);
 static inline adlb_code check_steal(void);
+static inline void print_final_stats();
 
 adlb_code
 ADLB_Server(long max_memory)
@@ -219,6 +220,7 @@ ADLB_Server(long max_memory)
     check_steal();
   }
   server_shutdown();
+  print_final_stats();
 
   TRACE_END;
   return ADLB_SUCCESS;
@@ -609,5 +611,17 @@ server_shutdown()
   xlb_requestqueue_shutdown();
   workqueue_finalize();
   return ADLB_SUCCESS;
+}
+
+/* Print out any final statistics, if enabled */
+static inline void print_final_stats()
+{
+  const char *print_time_opt = getenv("ADLB_PRINT_TIME");
+  if (print_time_opt != NULL)
+  {
+    double xlb_end_time = MPI_Wtime();
+    double xlb_elapsed_time = xlb_end_time - xlb_start_time;
+    printf("ADLB Total Elapsed Time: %.3lf\n", xlb_elapsed_time);
+  }
 }
 
