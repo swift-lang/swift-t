@@ -1385,19 +1385,17 @@ ADLB_Local_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_Obj** objs;
   rc = Tcl_ListObjGetElements(interp, objv[1], &length, &objs);
   TCL_CHECK_MSG(rc, "requires list!");
-  fprintf(stderr, "LENGTH %d\n", length);
   if (length == 2) {
+
     void *ptr;
     rc = Tcl_GetPtr(interp, objs[0], &ptr);
     TCL_CHECK_MSG(rc, "requires integer pointer val!");
-    fprintf(stderr, "FREE %lx\n", (unsigned long)ptr);
     free(ptr);
     return TCL_OK;
   } else if (length == 3) {
     adlb_datum_id id;
     rc = Tcl_GetADLB_ID(interp, objs[2], &id);
     TCL_CHECK_MSG(rc, "requires id!");
-    fprintf(stderr, "FREE %lli\n", id);
     return uncache_blob(interp, objc, objv, id);
   } else {
     TCL_RETURN_ERROR("%d element list, must be 2 or 3", length);
