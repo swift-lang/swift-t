@@ -1330,7 +1330,8 @@ public class ICInstructions {
         return false;
       case GET_OUTPUT_FILENAME:
         // Might initialise mapping on file, but in that case file
-        // is considered output
+        // is considered output, so we don't need to worry about actual
+        // side-effect.
         return false;
       case CHOOSE_TMP_FILENAME:
         // Non-deterministic
@@ -1856,6 +1857,9 @@ public class ICInstructions {
         case STRUCT_INSERT:
         case STRUCT_CLOSE:
           return getOutputs();
+        case GET_OUTPUT_FILENAME:
+          // File's filename might be modified
+          return Collections.singletonList(getOutput(1));
         default:
           return Var.NONE;
       }

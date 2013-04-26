@@ -861,7 +861,6 @@ public class ExprWalker {
         backend.builtinFunctionCall(function, iList, oList, props);
       }
     } else if (context.hasFunctionProp(function, FnProp.COMPOSITE)) {
-      System.err.println(function +  " composite");
       TaskMode mode;
       if (context.hasFunctionProp(function, FnProp.SYNC)) {
         mode = TaskMode.SYNC;

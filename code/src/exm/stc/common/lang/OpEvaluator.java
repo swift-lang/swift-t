@@ -144,6 +144,8 @@ public class OpEvaluator {
             // Handle at runtime
           }
           break;
+        default:
+          // Fall through
       }
     } else if (constInputs.size() == 2) {
       String arg1 = constInputs.get(0).getStringLit();
