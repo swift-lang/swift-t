@@ -345,7 +345,12 @@ public class HoistLoops implements OptimizerPass {
           c.getType() == ContinuationType.NESTED_BLOCK) {
       return true;
     } else if (c.getType() == ContinuationType.WAIT_STATEMENT &&
-            !((WaitStatement)c).hasExplicit()) {
+            !((WaitStatement)c).hasExplicit() &&
+            ((WaitStatement)c).targetLocation() != null) {
+      // Don't hoist through wait statements that have explicit
+      // ordering constraints or locations.
+      // TODO: Could relax this assumption for target locations for basic operations
+      //      like variable lookups
       return true;
     }
     return false;

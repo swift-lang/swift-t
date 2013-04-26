@@ -1117,9 +1117,17 @@ public class ICContinuations {
     }
     
     public boolean isParallel() {
-      Arg parallelism = props.get(TaskPropKey.PARALLELISM);
+      Arg parallelism = parallelism();
       return parallelism != null && !(parallelism.isIntVal() &&
                                       parallelism.getIntLit() > 1);
+    }
+    
+    public Arg parallelism() {
+      return props.get(TaskPropKey.PARALLELISM);
+    }
+    
+    public Arg targetLocation() {
+      return props.get(TaskPropKey.LOCATION);
     }
     
     @Override
@@ -1197,7 +1205,8 @@ public class ICContinuations {
         }
       }
       // Can't eliminate if purpose of wait is to dispatch task
-      if (varsLeft || mode == WaitMode.TASK_DISPATCH) {
+      if (varsLeft || mode == WaitMode.TASK_DISPATCH || 
+          isParallel() || targetLocation() != null) {
         return null;
       } else {
         // if at end we have nothing left, return the inner block for inlining

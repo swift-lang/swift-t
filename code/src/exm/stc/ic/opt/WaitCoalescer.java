@@ -223,7 +223,7 @@ public class WaitCoalescer implements OptimizerPass {
     boolean merged = false;
     if (doMerges) {
       logger.trace("Merging Waits...");
-      merged = mergeWaits(logger, fn, block);
+      merged = mergeWaits(logger, fn, block, currContext);
     }
     
     if (logger.isTraceEnabled()) {
@@ -344,6 +344,43 @@ public class WaitCoalescer implements OptimizerPass {
     return safe[0];
   }
 
+  /**
+   * Check to see if two separate waits can be merged together, i.e.
+   * if their context is compatible
+   * @param c1
+   * @param c2
+   * @param location1
+   * @param location2
+   * @param par1
+   * @param par2
+   * @return
+   */
+  private boolean compatibleContexts(ExecContext c1, ExecContext c2,
+                        Arg location1, Arg location2, Arg par1, Arg par2) {
+    if (!c1.equals(c2)) {
+      return false;
+    }
+    
+    if (location1 != null && location2 != null) {
+      if (!location1.equals(location2)) {
+        return false;
+      }
+    }
+    
+    if (par1 != null || par2 != null) {
+      if (!par1.equals(par2)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  
+  private boolean compatibleContexts(WaitStatement w1, ExecContext c1,
+                                     WaitStatement w2, ExecContext c2) {
+    return compatibleContexts(c1, c2, w1.targetLocation(), w2.targetLocation(),
+                              w1.parallelism(), w2.parallelism());
+  }
+  
   /**
    * Convert dataflow f() to local f_l() with wait around it
    * @param logger
@@ -477,8 +514,9 @@ public class WaitCoalescer implements OptimizerPass {
     
     ExecContext innerContext = innerWait.childContext(waitContext);
     // Check that locations are compatible
-    if (innerContext != waitContext)
+    if (!compatibleContexts(wait, waitContext, innerWait, innerContext)) {
       return false;
+    }
     
     // Check that wait variables not defined in this block
     for (WaitVar waitVar: innerWait.getWaitVars()) {
@@ -500,7 +538,8 @@ public class WaitCoalescer implements OptimizerPass {
     return true;
   }
 
-  private boolean mergeWaits(Logger logger, Function fn, Block block) {
+  private boolean mergeWaits(Logger logger, Function fn, Block block,
+      ExecContext execCx) {
     boolean changed = false;
     boolean fin;
     do {
@@ -566,9 +605,13 @@ public class WaitCoalescer implements OptimizerPass {
         // Exception: don't eliminate task dispatch waits
         for (WaitStatement wait: waits) {
           wait.removeWaitVars(mergedWaitVars, allRecursive, retainExplicit);
-          if (wait.getWaitVars().isEmpty() &&
-              wait.getMode() != WaitMode.TASK_DISPATCH &&
-              !wait.isParallel()) {
+          
+          boolean compatible = compatibleContexts(execCx,
+              wait.childContext(execCx), null, wait.targetLocation(),
+              null, wait.parallelism());
+          if (compatible &&
+              wait.getWaitVars().isEmpty() &&
+              wait.getMode() != WaitMode.TASK_DISPATCH) {
             newWait.getBlock().insertInline(wait.getBlock());
           } else {
             wait.setParent(newWait.getBlock());
