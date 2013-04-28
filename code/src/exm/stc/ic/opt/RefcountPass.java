@@ -58,7 +58,7 @@ import exm.stc.ic.tree.ICTree.StatementType;
 public class RefcountPass implements OptimizerPass {
 
   /**
-   * Map of names to functions, used inside pass. msut be initialized before
+   * Map of names to functions, used inside pass. Must be initialized before
    * pass runs.
    */
   private Map<String, Function> functionMap = null;
@@ -586,7 +586,7 @@ public class RefcountPass implements OptimizerPass {
         if (in.isVar())
           candidates.remove(in.getVar());
       }
-      for (Var read : inst.getReadOutputs()) {
+      for (Var read : inst.getReadOutputs(functionMap)) {
         candidates.remove(read);
       }
     } else {

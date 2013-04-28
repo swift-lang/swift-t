@@ -351,10 +351,15 @@ public class ICInstructions {
     }
     
     /**
+     * @param fns map of functions (can optionally be null)
      * @return list of outputs for which previous value is read
      */
-    public List<Var> getReadOutputs() {
+    public List<Var> getReadOutputs(Map<String, Function> fns) {
       return Var.NONE;
+    }
+    
+    public final List<Var> getReadOutputs() {
+      return getReadOutputs(null);
     }
 
     /**
@@ -1797,7 +1802,7 @@ public class ICInstructions {
     /**
      * @return list of outputs for which previous value is read
      */
-    public List<Var> getReadOutputs() {
+    public List<Var> getReadOutputs(Map<String, Function> fns) {
       switch (op) {
       case ARRAY_CREATE_NESTED_IMM:
       case ARRAY_CREATE_NESTED_FUTURE:
@@ -2742,6 +2747,41 @@ public class ICInstructions {
       return Collections.unmodifiableList(outputs);
     }
 
+    @Override
+    public List<Var> getReadOutputs(Map<String, Function> fns) {
+      switch (op) {
+        case CALL_BUILTIN: {
+          List<Var> res = new ArrayList<Var>();
+          // Only some output types might be read
+          for (Var o: outputs) {
+            if (Types.hasReadableSideChannel(o.type())) {
+              res.add(o);
+            }
+          }
+          return res;
+        }
+        case CALL_LOCAL:
+        case CALL_LOCAL_CONTROL:
+        case CALL_SYNC:
+        case CALL_CONTROL: {
+          List<Var> res = new ArrayList<Var>();
+          Function f = fns == null ? null : fns.get(this.functionName);
+          for (int i = 0; i < outputs.size(); i++) {
+            Var o = outputs.get(i);
+
+            // Check to see if function might read the output
+            if (Types.hasReadableSideChannel(o.type()) &&
+                (f == null || !f.isOutputWriteOnly(i))) {
+              res.add(o);
+            }
+          }
+          return res;
+        }
+        default:
+          throw new STCRuntimeError("unexpected op: " + op);
+      }
+    }
+    
     @Override
     public boolean hasSideEffects() {
       return (!Builtins.isPure(functionName)) ||

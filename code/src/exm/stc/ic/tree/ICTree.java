@@ -403,7 +403,7 @@ public class ICTree {
     private final List<Var> iList;
     private final List<Var> oList;
     /** List of which outputs are write-only */
-    private final List<Boolean> oListWriteOnly;
+    private final List<Var> oListWriteOnly;
     
     /** Wait until the below inputs are available before running function. */
     private final List<WaitVar> blockingInputs;
@@ -426,11 +426,7 @@ public class ICTree {
       this.name = name;
       this.iList = new ArrayList<Var>(iList);
       this.oList = new ArrayList<Var>(oList);
-      this.oListWriteOnly = new ArrayList<Boolean>(oList.size());
-      for (int i = 0; i< oList.size(); i++) {
-        // Assume read-write by default
-        this.oListWriteOnly.add(false);
-      }
+      this.oListWriteOnly = new ArrayList<Var>();
       this.mode = mode;
       this.mainBlock = mainBlock;
       this.mainBlock.setParent(this);
@@ -451,14 +447,17 @@ public class ICTree {
     }
 
     public boolean isOutputWriteOnly(int i) {
-      return oListWriteOnly.get(i);
+      return oListWriteOnly.contains(oList.get(i));
     }
     
     public void makeOutputWriteOnly(int i) {
       assert(i >= 0 && i < oList.size());
       // Files are complicated and can't be simply treated as write-only
       assert(!Types.isFile(oList.get(i).type()));
-      oListWriteOnly.set(i, true);
+      Var output = oList.get(i);
+      if (!oListWriteOnly.contains(output)) {
+        oListWriteOnly.add(output);
+      }
     }
     
     /**
@@ -467,11 +466,10 @@ public class ICTree {
      */
     public List<PassedVar> getPassedOutputList() {
       ArrayList<PassedVar> res = new ArrayList<PassedVar>();
-      assert(oList.size() == oListWriteOnly.size());
       for (int i = 0; i < oList.size(); i++) {
-        res.add(new PassedVar(oList.get(i), oListWriteOnly.get(i)));
+        Var out = oList.get(i);
+        res.add(new PassedVar(out, oListWriteOnly.contains(out)));
       }
-      // TODO Auto-generated method stub
       return res;
     }
 
@@ -509,7 +507,7 @@ public class ICTree {
       
       if (!this.oListWriteOnly.isEmpty()) {
         sb.append(" #writeonly[");
-        ICUtil.prettyPrintList(sb, this.oListWriteOnly);
+        ICUtil.prettyPrintVarList(sb, this.oListWriteOnly);
         sb.append("]");
       }
       sb.append(" {\n");
