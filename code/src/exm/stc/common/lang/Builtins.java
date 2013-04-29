@@ -38,6 +38,7 @@ import exm.stc.frontend.Context;
  */
 public class Builtins {
   public static final String INPUT_FILE = "input_file";
+  public static final String UNCACHED_INPUT_FILE = "uncached_input_file";
   public static final String ARRAY_SIZE = "size";
   public static final String RANGE = "range";
   public static final String RANGE_STEP = "rangestep";
