@@ -19,6 +19,9 @@
 #ifndef FILES_SWIFT
 #define FILES_SWIFT
 
+// Same as input file, but pretend is impure so it won't be cached
+(file f) unsafe_uncached_input_file(string filename) "turbine" "0.0.2" "input_file";
+
 @pure
 (file t[]) glob(string s)
 "turbine" "0.0.2" "glob";
