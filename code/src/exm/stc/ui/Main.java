@@ -57,7 +57,7 @@ import exm.stc.common.lang.CompileTimeArgs;
 public class Main {
   private static final String SWIFT_PROG_ARG_FLAG = "A";
   private static final String PREPROC_MACRO_FLAG = "D";
-  private static final String INCLUDE_FLAG = "M";
+  private static final String INCLUDE_FLAG = "I";
   private static final List<File> temporaries = new ArrayList<File>();
   
   
