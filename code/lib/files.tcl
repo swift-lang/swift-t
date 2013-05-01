@@ -98,7 +98,7 @@ namespace eval turbine {
 
     proc input_file_impl { outfile filepath_val } {
       if { ! [ file exists $filepath_val ] } {
-        error "input_file: file $filepath_val does not exist"
+        error "input_file: file '$filepath_val' does not exist"
       }
       store_string [ get_file_path $outfile ] $filepath_val
       store_void [ get_file_status $outfile ]
