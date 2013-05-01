@@ -18,16 +18,16 @@
 namespace eval turbine {
 
   proc random_worker { } {
-    # Engines are allocated to first ranks 
+    # Engines are allocated to first ranks
     set eng [ turbine_engines ]
     return [ randint_impl $eng [ expr {$eng + [ turbine_workers ]} ] ]
   }
 
   proc random_engine { } {
-    # Engines are allocated to first ranks 
+    # Engines are allocated to first ranks
     return [ randint_impl 0 [ turbine_engines ] ]
   }
-  
+
   proc check_rank { rank } {
     if { $rank < 0 || $rank >= [ adlb::size ] } {
       error "Rank out of range: ${rank}"
@@ -51,7 +51,7 @@ namespace eval turbine {
           }
         }
       }
-      ENGINE {
+      SERVER {
         foreach rank $ranklist {
           if [ rank_is_server $rank ] {
             lappend filtered $rank
