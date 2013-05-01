@@ -225,7 +225,7 @@
     <property name="turbine.home"
               value=""/>
 
-    <echo message="INSTALL: dist.dir=${dist.dir}"/>
+    <echo message="INSTALL: dist.dir=${dist.dir} turbine.home=${turbine.home}"/>
 
 
     <mkdir dir="${dist.dir}/bin"/>
