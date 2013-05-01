@@ -78,7 +78,7 @@ namespace eval turbine {
 	set instatus [ get_file_status $infile ]
         lappend waitfor $inpath $instatus
       }
-        rule $waitfor $cmd  name $msg target $target 
+        rule $waitfor $cmd  name $msg target $target
     }
 
     proc input_file { out filepath } {
@@ -194,7 +194,7 @@ namespace eval turbine {
 
     proc glob { result inputs } {
         rule $inputs "glob_body $result $inputs" \
-             name "glob-$result" type $::turbine::WORK 
+             name "glob-$result" type $::turbine::WORK
     }
     proc glob_body { result s } {
         set s_value [ retrieve_decr_string $s ]
@@ -324,5 +324,31 @@ namespace eval turbine {
 	store_blob $result [ list $ptr $length ]
         blobutils_destroy $blob
         file_read_refcount_decr $input
+    }
+
+    proc file_lines { result input } {
+        	set src [ lindex $input 0 ]
+        rule_file_helper "file_lines-$result-$src" [ list ] \
+            [ list ] [ list $src ] \
+            $::turbine::WORK \
+            [ list file_lines_body $result $src ]
+    }
+    proc file_lines_body { result input } {
+	set input_path [ get_file_path $input ]
+	set input_name [ retrieve_string $input_path ]
+        set fp [ ::open $input_name r ]
+        set line_number 0
+
+        while { [ gets $fp line ] >= 0 } {
+            regsub "#.*" $line "" line
+            set line [ string trim $line ]
+            if { [ string length $line ] > 0 } {
+                literal td string $line
+                container_insert $result $line_number $td 0
+            }
+            incr line_number
+        }
+        close $fp
+        adlb::slot_drop $result
     }
 }

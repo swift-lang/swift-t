@@ -49,4 +49,8 @@
 "turbine" "0.1"
 [ "set <<o>> [ file mtime <<f>> ]" ];
 
+@pure
+(string s[]) file_lines(file f)
+    "turbine" "0.1" "file_lines";
+
 #endif // FILES_SWIFT
