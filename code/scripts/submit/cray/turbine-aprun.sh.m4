@@ -41,6 +41,8 @@ WALLTIME=getenv(`WALLTIME')
 TURBINE_OUTPUT=getenv(TURBINE_OUTPUT)
 export TURBINE_HOME=getenv(`TURBINE_HOME')
 export TURBINE_LOG=getenv(`TURBINE_LOG')
+export TURBINE_DEBUG=getenv(`TURBINE_DEBUG')
+export ADLB_DEBUG=getenv(`ADLB_DEBUG')
 export PATH=getenv(PATH)
 
 # Set configuration of Turbine processes
