@@ -124,7 +124,7 @@ main()
 
   // TEST 3: random insertion / in-order deletion
 
-  int n = 20;
+  int n = 100;
   long A[n];
   for (int i = 0; i < n; i++)
     A[i] = i;
@@ -140,7 +140,10 @@ main()
 
   // TEST 4: random insertion / random deletion
 
+  printf("\nRANDOM INSERTION - RANDOM DELETION\n\n");
   shuffle(A, n);
+  print_longs(A, n);
+  printf("\n");
   for (int i = 0; i < n; i++)
     rbtree_add(&T, A[i], NULL);
   shuffle(A, n);
@@ -149,6 +152,7 @@ main()
     printf("removing: %li\n", A[i]);
     bool b = rbtree_remove(&T, A[i], NULL);
     assert(b);
+    rbtree_print(&T);
   }
 
   // TEST 5: moves

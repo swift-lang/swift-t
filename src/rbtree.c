@@ -36,7 +36,7 @@
 #include "tree-common.h"
 
 #if 0
-#define DEBUG_RBTREE(args...) fprintf(stderr, args)
+#define DEBUG_RBTREE(args...) {printf(args); fflush(stdout);}
 #else
 #define DEBUG_RBTREE(args...)
 #endif
@@ -273,7 +273,7 @@ rbtree_add(struct rbtree* target, rbtree_key_t key, void* data)
 {
   struct rbtree_node* node = create_node(key, data);
   if (node == NULL) return false;
-  DEBUG_RBTREE("rbtree_add: node: %p\n");
+  DEBUG_RBTREE("rbtree_add: node: %p\n", node);
 
   rbtree_add_node_impl(target, node);
 
@@ -796,6 +796,8 @@ rbtree_iterator(struct rbtree* target, rbtree_callback cb,
   struct rbtree_node* root = target->root;
   if (root == NULL)
     return false;
+  DEBUG_RBTREE("rbtree_iterator: %i\n", target->size);
+  // rbtree_print(target);
   bool b = iterator_loop(root, cb, user_data);
   return b;
 }
@@ -804,15 +806,19 @@ static bool
 iterator_loop(struct rbtree_node* node, rbtree_callback cb,
               void* user_data)
 {
+  DEBUG_RBTREE("rbtree_iterator loop...\n");
   if (node->left != NULL)
   {
+    DEBUG_RBTREE("rbtree_iterator loop left...\n");
     bool b = iterator_loop(node->left, cb, user_data);
     if (b) return true;
   }
+  DEBUG_RBTREE("rbtree_iterator loop cb()...\n");
   bool b = cb(node, user_data);
   if (b) return true;
   if (node->right != NULL)
   {
+    DEBUG_RBTREE("rbtree_iterator loop right...\n");
     bool b = iterator_loop(node->right, cb, user_data);
     if (b) return true;
   }
@@ -872,7 +878,7 @@ rbtree_random_loop(struct rbtree_node* p)
       {
         // Both not null
         if (random_bits_left == 0) {
-          randval = rand(); 
+          randval = rand();
           random_bits_left = INT_BITS;
         }
         // Consume a random bit
@@ -881,7 +887,7 @@ rbtree_random_loop(struct rbtree_node* p)
         random_bits_left--;
         if (choice)
           p = p->right;
-        else 
+        else
           p = p->left;
       }
       else
@@ -913,7 +919,10 @@ rbtree_print(struct rbtree* target)
   if (target->size == 0)
     printf("TREE EMPTY\n");
   else
+  {
+    // printf("rbtree_print: %p\n", target);
     rbtree_print_loop(target->root, 0);
+  }
 }
 
 static void
