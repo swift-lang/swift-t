@@ -82,7 +82,7 @@ namespace eval turbine {
             }
             3 { # $turbine::WORK
                 set prio [ get_priority ]
-                put $::adlb::RANK_ANY $WORK_TYPE(WORK) \
+                put $target $WORK_TYPE(WORK) \
                     "$transform $action" $prio $parallelism
             }
             default {
