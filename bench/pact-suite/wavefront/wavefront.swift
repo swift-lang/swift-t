@@ -11,11 +11,10 @@
 
 main
 {
-  printf("WAVEFRONT");
   int N = toint(argv("N"));
+  float sleeptime = tofloat(argv("sleeptime"));
+  printf("WAVEFRONT N=%d sleeptime=%f", N, sleeptime);
   float A[][];
-
-  metadata(sprintf("N: %i", N));
 
   A[0][0] = 0;
   foreach i in [1:N-1]
@@ -29,7 +28,7 @@ main
     foreach j in [1:N-1]
     {
       {
-        A[i][j] = f(A[i-1][j-1],A[i-1][j],A[i][j-1]);
+        A[i][j] = f(A[i-1][j-1],A[i-1][j],A[i][j-1], sleeptime);
       }
     }
   }
@@ -37,8 +36,14 @@ main
 
 }
 
+/*
 (float r) f(float a, float b, float c)
 {
   // TODO: work function?
   r = a + b + c;
-}
+} */
+
+@dispatch=WORKER
+(float v) f(float i, float j, float k, float seconds) "turbine" "0.0.4" [
+  "set <<v>> [ expr <<i>> + <<j>> + <<k>> ] ; if { <<seconds>> > 0 } { turbine::spin <<seconds>> }"
+];

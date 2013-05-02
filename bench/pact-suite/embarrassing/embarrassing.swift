@@ -4,7 +4,7 @@
 
 @dispatch=WORKER
 (void v) work(int i, int j, float seconds) "turbine" "0.0.4" [
-  "set <<v>> [ expr <<i>> + <<j>> ] ; if { <<seconds>> > 0 } { after [ expr round(<<seconds>> * 1000) ] }"
+  "set <<v>> [ expr <<i>> + <<j>> ] ; if { <<seconds>> > 0 } { turbine::spin <<seconds>> }"
 ];
 
 main {
@@ -18,9 +18,7 @@ main {
   printf("trace: The bounds are: %i, %i\n", N, M);
   printf("trace: The sleeptime is: %f\n", sleepTime);
 
-  @sync
   foreach i in [1:N] {
-    @sync
     foreach j in [1:M] {
       //TODO: variable duration - randomise?
       work(i, j, sleepTime);

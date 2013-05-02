@@ -122,10 +122,14 @@ int main(int argc, char *argv[])
 
   aprintf_flag = 0;		/* no output from adlb itself */
   num_servers = 1;		/* one server should be enough */
+  if (getenv("ADLB_SERVERS") != NULL) {
+    num_servers = atoi(getenv("ADLB_SERVERS"));
+  }
   use_debug_server = 0;		/* default: no debug server */
   rc = ADLB_Init(num_servers, num_types, type_vect, &am_server, MPI_COMM_WORLD, &app_comm);
   if ( !am_server ) /* application process */
   {
+    printf("[%i] I AM SERVER!\n", my_world_rank);
     MPI_Comm_rank( app_comm, &my_app_rank );
   }
 
@@ -140,12 +144,17 @@ int main(int argc, char *argv[])
   {
     map<long, fib_blocked*> waitmap;
     adlb_datum_id result = ADLB_DATA_ID_NULL;
-    if (argc != 2) {
-      printf("usage: %s <N> n", argv[0]);
+    if (argc != 2 && argc != 3) {
+      printf("usage: %s <n> <sleep>", argv[0]);
       ADLB_Fail(-1);
     }
 
     int N = atoi(argv[1]);
+    double sleep = 0.0;
+    if (argc == 3) {
+        sleep=atof(argv[2]);
+        printf("Sleep for %lf\n", sleep);
+    }
 
     if ( my_app_rank == 0 ) {
       result = spawnfib(N);
@@ -194,6 +203,9 @@ int main(int argc, char *argv[])
           if (entry->got1 && entry->got2) {
             long val1 = getnum(entry->fn1);
             long val2 = getnum(entry->fn2);
+            if (sleep > 0.0) {
+                usleep((long)(sleep * 1000000));
+            }
             mystore(entry->fn, val1 + val2);
             //printf("Subscribed right away: %ld + %ld = %ld\n", val1, val2, val1 + val2);
             free(entry);
@@ -222,6 +234,9 @@ int main(int argc, char *argv[])
           if (entry->got1 && entry->got2) {
             long val1 = getnum(entry->fn1);
             long val2 = getnum(entry->fn2);
+            if (sleep > 0.0) {
+                usleep((long)(sleep * 1000000));
+            }
             mystore(entry->fn, val1 + val2);
             //printf("Later: %ld + %ld = %ld\n", val1, val2, val1 + val2);
             waitmap.erase(id);
