@@ -84,5 +84,15 @@ fi
 
 # Send environment variables to PBS job:
 #PBS -v PATH TURBINE_ENGINES ADLB_SERVERS TURBINE_HOME
-# USER: Set aprun parameters to agree with PBS -l settings
-aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${TCLSH} ${PROGRAM} ${ARGS}
+
+OUTPUT_FILE=getenv(OUTPUT_FILE)
+if [ -z "$OUTPUT_FILE" ]
+then
+    # USER: Set aprun parameters to agree with PBS -l settings
+    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${TCLSH} ${PROGRAM} ${ARGS}
+else
+    # USER: Set aprun parameters to agree with PBS -l settings
+    # Stream output to file
+    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${TCLSH} ${PROGRAM} ${ARGS} \
+            2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.out"
+fi
