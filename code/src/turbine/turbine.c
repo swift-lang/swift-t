@@ -273,7 +273,7 @@ turbine_engine_init()
 {
   if (!initialized)
     return TURBINE_ERROR_UNINITIALIZED;
-  
+
   bool result;
   result = table_lp_init(&transforms_waiting, 1024*1024);
   if (!result)
@@ -290,7 +290,7 @@ turbine_engine_init()
   result = table_lp_init(&td_subscribed, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
-    
+
   engine_initialized = true;
   return TURBINE_SUCCESS;
 }
@@ -411,7 +411,7 @@ static int transform_tostring(char* output,
 #define DEBUG_TURBINE_RULE(transform, id) {         \
     char tmp[1024];                                     \
     transform_tostring(tmp, transform);                 \
-    DEBUG_TURBINE("rule: %s {%li}", tmp, id);     \
+    DEBUG_TURBINE("rule: %s {%lli}", tmp, lli(id));     \
   }
 #else
 #define DEBUG_TURBINE_RULE(transform, id)
@@ -526,7 +526,7 @@ turbine_rules_push()
 
       if (!subscribed)
       {
-        DEBUG_TURBINE("not subscribed on: %li\n", T->id);
+        DEBUG_TURBINE("not subscribed on: %lli\n", lli(T->id));
         list_add(&tmp, T);
       }
     }
@@ -566,7 +566,7 @@ turbine_ready(int count, turbine_transform_id* output,
     transform* T = (transform*) v;
     table_lp_add(&transforms_returned, T->id, T);
     output[i] = T->id;
-    DEBUG_TURBINE("\t %li", output[i]);
+    DEBUG_TURBINE("\t %lli", lli(output[i]));
     i++;
   }
   *result = i;
@@ -585,12 +585,12 @@ turbine_pop(turbine_transform_id id, turbine_action_type* action_type,
     return TURBINE_ERROR_NOT_FOUND;
 
   // Debugging
-  DEBUG_TURBINE("pop: transform:   {%li}", id);
-  DEBUG_TURBINE("     action:      {%li} %s: %s", id, T->name,
-                                                      T->action);
-  DEBUG_TURBINE("     priority:    {%li} => %i",  id, T->priority);
-  DEBUG_TURBINE("     target:      {%li} => %i",  id, T->target);
-  DEBUG_TURBINE("     parallelism: {%li} => %i",  id, T->parallelism);
+  DEBUG_TURBINE("pop: transform:   {%lli}", id);
+  DEBUG_TURBINE("     action:      {%lli} %s: %s", lli(id), T->name,
+                                                            T->action);
+  DEBUG_TURBINE("     priority:    {%lli} => %i",  lli(id), T->priority);
+  DEBUG_TURBINE("     target:      {%lli} => %i",  lli(id), T->target);
+  DEBUG_TURBINE("     parallelism: {%lli} => %i",  lli(id), T->parallelism);
 
   // Copy outputs
   *action_type = T->action_type;
@@ -647,7 +647,7 @@ turbine_close(turbine_datum_id id)
 
     if (!subscribed)
     {
-      DEBUG_TURBINE("ready: {%li}", transform_id);
+      DEBUG_TURBINE("ready: {%lli}", lli(transform_id));
       list_add(&tmp, T);
     }
   }
@@ -763,9 +763,9 @@ transform_tostring(char* output, transform* t)
   {
     // Highlight the blocking variable
     if (i == t->blocker)
-      append(p, "/%lli/", t->input_list[i]);
+      append(p, "/%lli/", lli(t->input_list[i]));
     else
-      append(p, "%lli", t->input_list[i]);
+      append(p, "%lli", lli(t->input_list[i]));
     if (i < t->inputs-1)
       append(p, " ");
   }
