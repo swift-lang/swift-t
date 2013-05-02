@@ -2537,7 +2537,7 @@ public class ICInstructions {
     private void addSpecialCVs(List<ResultVal> cvs) {
       if (op == Opcode.CALL_BUILTIN && (
           this.functionName.equals(Builtins.INPUT_FILE) ||
-          this.functionName.equals(Builtins.INPUT_FILE))) {
+          this.functionName.equals(Builtins.UNCACHED_INPUT_FILE))) {
         cvs.add(filenameCV(getInput(0), getOutput(0)));
       } else if (op == Opcode.CALL_BUILTIN_LOCAL &&
           (this.functionName.equals(Builtins.RANGE) ||
