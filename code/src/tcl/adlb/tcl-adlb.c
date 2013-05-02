@@ -330,14 +330,11 @@ ADLB_Hostmap_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   char* name = Tcl_GetString(objv[1]);
 
-  printf("ADLB_Hostmap_Cmd: %s\n", name);
-
   adlb_code rc = ADLB_Hostmap(name, count, ranks, &actual);
-  printf("rc: %i\n", rc);
   TCL_CONDITION(rc == ADLB_SUCCESS || rc == ADLB_NOTHING,
                 "error in hostmap!");
-
-  printf("actual: %i\n", actual);
+  if (rc == ADLB_NOTHING)
+    TCL_RETURN_ERROR("host not found: %s", name);
 
   Tcl_Obj* items[actual];
   for (int i = 0; i < actual; i++)
@@ -543,7 +540,7 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_Obj* tcl_answer_rank = Tcl_NewIntObj(answer_rank);
   Tcl_ObjSetVar2(interp, tcl_answer_rank_name, NULL, tcl_answer_rank,
                  EMPTY_FLAG);
-  
+
   Tcl_SetObjResult(interp, Tcl_NewStringObj(result, work_len - 1));
   return TCL_OK;
 }
@@ -1931,7 +1928,7 @@ ADLB_Refcount_Incr_Impl(ClientData cdata, Tcl_Interp *interp,
   adlb_datum_id container_id;
   rc = Tcl_GetADLB_ID(interp, var, &container_id);
   TCL_CHECK(rc);
-  
+
   int change = 1; // Default
   if (amount != NULL)
   {
@@ -2128,7 +2125,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("fail",      ADLB_Fail_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
-  
+
   // Export all commands
   Tcl_Namespace *ns = Tcl_FindNamespace(interp,
           ADLB_NAMESPACE, NULL, TCL_GLOBAL_ONLY);
