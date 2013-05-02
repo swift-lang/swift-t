@@ -246,7 +246,7 @@
     <copy todir="${dist.dir}/lib">
       <fileset dir="lib" includes="*.jar"/>
     </copy>
-    <chmod file="${dist.dir}/bin/stc" perm="u+x"/>
+    <chmod file="${dist.dir}/bin/stc" perm="ugo+x"/>
   </target>
 
   <available property="build.dir.exists" file="${build.dir}"/>
