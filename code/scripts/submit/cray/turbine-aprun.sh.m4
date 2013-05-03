@@ -73,6 +73,7 @@ echo "JOB OUTPUT:"
 echo
 
 # Be sure we are in an accessible directory
+mkdir -p ${TURBINE_OUTPUT}
 cd ${TURBINE_OUTPUT}
 
 source ${TURBINE_HOME}/scripts/turbine-config.sh
