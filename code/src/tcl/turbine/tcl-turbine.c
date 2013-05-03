@@ -76,7 +76,7 @@ turbine_check_failed(Tcl_Interp* interp, turbine_code code,
 }
 
 /**
-   If code is not SUCCESS, return a TCL error that includes the
+   If code is not SUCCESS, return a Tcl error that includes the
    string representation of code
    @note Assumes @code Tcl_Interp* interp @endcode is in scope
    @param code A turbine_code
@@ -269,7 +269,7 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
                               input_list, &inputs);
   TCL_CHECK_MSG(rc, "could not parse inputs list as integers:\n"
                 "in rule: <%lli> %s inputs: \"%s\"",
-                id, opts.name, Tcl_GetString(objv[1]));
+                lli(id), opts.name, Tcl_GetString(objv[1]));
 
   turbine_code code =
       turbine_rule(opts.name, inputs, input_list, opts.type, action,
@@ -760,7 +760,7 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
     assert(rule_id_end != NULL);
     char *work = rule_id_end + 1; // start of Tcl work unit
     
-    DEBUG_TURBINE("rule_id: %lli", atol(buffer));
+    DEBUG_TURBINE("rule_id: %lli", lli(atol(buffer)));
     DEBUG_TURBINE("eval: %s", work);
 
     // Work out length | null byte | prefix
