@@ -169,10 +169,12 @@ run_test()
     read ARGS < ${ARGS_FILE}
   fi
 
-  # Run the test
+  # Run the test from within the test directory
   print "running:   $( basename ${TCL_FILE} )"
+  pushd $STC_TESTS_DIR
   ${RUN_TEST} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS}
   EXIT_CODE=${?}
+  popd
 
   if grep -q "THIS-TEST-SHOULD-NOT-RUN" ${SWIFT_FILE}
   then
