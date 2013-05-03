@@ -356,23 +356,23 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(6);
 
-  int reserve_rank;
+  int target_rank;
   int work_type;
   int priority;
   int parallelism;
-  Tcl_GetIntFromObj(interp, objv[1], &reserve_rank);
+  Tcl_GetIntFromObj(interp, objv[1], &target_rank);
   Tcl_GetIntFromObj(interp, objv[2], &work_type);
   int cmd_len;
   char* cmd = Tcl_GetStringFromObj(objv[3], &cmd_len);
   Tcl_GetIntFromObj(interp, objv[4], &priority);
   Tcl_GetIntFromObj(interp, objv[5], &parallelism);
 
-  DEBUG_ADLB("adlb::put: reserve_rank: %i type: %i \"%s\" %i",
-             reserve_rank, work_type, cmd, priority);
+  DEBUG_ADLB("adlb::put: target_rank: %i type: %i \"%s\" %i",
+             target_rank, work_type, cmd, priority);
 
   // int ADLB_Put(void *work_buf, int work_len, int reserve_rank,
   //              int answer_rank, int work_type, int work_prio)
-  int rc = ADLB_Put(cmd, cmd_len+1, reserve_rank, adlb_rank,
+  int rc = ADLB_Put(cmd, cmd_len+1, target_rank, adlb_rank,
                     work_type, priority, parallelism);
 
   ASSERT(rc == ADLB_SUCCESS);
