@@ -690,7 +690,7 @@ handle_retrieve(int caller)
   int length;
   adlb_data_type type;
   int dc = data_retrieve(hdr.id, &type, &result, &length);
-  assert(length >= 0);
+  assert(dc != ADLB_DATA_SUCCESS || length >= 0);
 
   bool malloced_result = (type == ADLB_DATA_TYPE_CONTAINER);
   if (dc == ADLB_DATA_SUCCESS && hdr.decr_read_refcount > 0) {
