@@ -32,11 +32,17 @@ proc default { env_var d } {
     return $result
 }
 
+# set h [ exec hostname ]
+# puts "host: $h"
+
+# set t [ array names env ]
+# puts $t
+
 # Initial puts to bootstrap
-set task_count_initial 3
+set task_count_initial 2000000
 
 # Maximal task length (seconds)
-set task_length_max 1
+set task_length_max 0
 
 # Probability of releasing new work
 set task_chance 0
@@ -145,12 +151,16 @@ if { $rank == 0 && [ mpe::enabled ] } {
 
 if { $amserver == 0 } {
 
-    if { $rank == 0 } { clock_report }
+    # if { $rank == 0 } { clock_report }
+    if { $rank == 0 } {
+        puts "JOB_ID: $env(PBS_JOBID)"
+        puts "ADLB_SIZE: [ adlb::size ]"
+    }
 
     if { $rank == 0 } {
         for { set i 0 } { $i < $task_count_initial } { incr i } {
             # clock_report
-            adlb::put $adlb::RANK_ANY $WORK_TYPE(T) [random_task] 0
+            adlb::put $adlb::RANK_ANY $WORK_TYPE(T) [random_task] 0 1
         }
     }
     # after 1000
@@ -163,20 +173,21 @@ if { $amserver == 0 } {
         # log "answer_rank: $answer_rank"
         # Emulate work time
         # log "work unit start"
-        after [ expr $msg * 1000 ]
+        # after [ expr $msg * 1000 ]
         # log "work unit stop"
         put_found_work
         incr tasks_run
     }
 } else {
     adlb::server
+    puts "time: [ clock_wt ]"
 }
 
-if { $rank == 0 } { clock_report }
+# if { $rank == 0 } { clock_report }
 
 adlb::finalize 1
 # puts OK
 
-puts "tasks_run: $tasks_run"
+puts "tasks_run\[$rank\]: $tasks_run"
 
 proc exit args {}
