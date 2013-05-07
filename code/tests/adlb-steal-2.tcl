@@ -39,10 +39,10 @@ proc default { env_var d } {
 # puts $t
 
 # Initial puts to bootstrap
-set task_count_initial 2000000
+set task_count_initial 10
 
 # Maximal task length (seconds)
-set task_length_max 0
+set task_length_max 1
 
 # Probability of releasing new work
 set task_chance 0
@@ -153,7 +153,9 @@ if { $amserver == 0 } {
 
     # if { $rank == 0 } { clock_report }
     if { $rank == 0 } {
-        puts "JOB_ID: $env(PBS_JOBID)"
+        if [ info exists env(JOB_ID) ] {
+            puts "JOB_ID: $env(PBS_JOBID)"
+        }
         puts "ADLB_SIZE: [ adlb::size ]"
     }
 
