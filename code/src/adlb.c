@@ -96,13 +96,13 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
 
   xlb_start_time = MPI_Wtime();
 
-  xlb_msg_init();
-
   rc = MPI_Comm_dup(comm, &adlb_comm);
   ASSERT(rc == MPI_SUCCESS);
 
   rc = MPI_Comm_size(comm, &xlb_comm_size);
   rc = MPI_Comm_rank(comm, &xlb_comm_rank);
+
+  xlb_msg_init();
 
   gdb_spin(xlb_comm_rank);
 

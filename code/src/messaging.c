@@ -27,6 +27,8 @@
 
 #include "tools.h"
 
+#include "common.h"
+#include "debug.h"
 #include "messaging.h"
 
 #ifndef NDEBUG
@@ -61,6 +63,7 @@ void
 add_tags()
 {
   add_tag(ADLB_TAG_SYNC_REQUEST);
+  add_tag(ADLB_TAG_RESPONSE_STEAL_COUNT);
   add_tag(ADLB_TAG_PUT);
   add_tag(ADLB_TAG_RESPONSE_PUT);
   add_tag(ADLB_TAG_WORK);
@@ -96,13 +99,22 @@ add_tags()
 void
 xlb_add_tag_name(int tag, char* name)
 {
+  assert(tag < XLB_MAX_TAGS);
   // Chop off ADLB_TAG_ :
   if (! strncmp(name, tag_prefix, tag_prefix_length))
     name += tag_prefix_length;
   char* t;
   int count = asprintf(&t, "%s(%i)", name, tag);
   ASSERT(count != -1);
-  tag_names[tag] = t; // strdup(name);
+  if (tag_names[tag] != 0)
+  {
+    printf("attempting to overwrite tag name: %i with %s\n",
+           tag, name);
+    exit(1);
+  }
+  tag_names[tag] = t;
+  if (xlb_comm_rank == 0)
+    DEBUG("TAG: %i => %s", tag, name);
 }
 
 char*

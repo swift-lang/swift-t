@@ -33,7 +33,7 @@
 char xfer[XFER_SIZE];
 
 int xlb_comm_size;
-int xlb_comm_rank;
+int xlb_comm_rank = -1;
 int xlb_servers;
 int xlb_workers;
 int xlb_my_server;
