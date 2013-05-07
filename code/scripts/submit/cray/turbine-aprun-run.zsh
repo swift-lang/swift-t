@@ -65,5 +65,5 @@ exitcode "setup-turbine-aprun failed!"
 QUEUE_ARG=""
 [[ ${QUEUE} != "" ]] && QUEUE_ARG="-q ${QUEUE}"
 
-qsub ${=QUEUE_ARG} ${TURBINE_OUTPUT}/turbine-aprun.sh
+qsub ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-aprun.sh
 # Return exit code from qsub
