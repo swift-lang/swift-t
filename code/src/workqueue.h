@@ -92,8 +92,8 @@ extern int64_t workqueue_parallel_task_count;
 
 static inline int64_t workqueue_parallel_tasks()
 {
-  TRACE("workqueue_parallel_tasks: %li",
-        workqueue_parallel_task_count);
+  TRACE("workqueue_parallel_tasks: %lli",
+        lli(workqueue_parallel_task_count));
   return workqueue_parallel_task_count;
 }
 
