@@ -2252,14 +2252,7 @@ public class ICInstructions {
 
     @Override
     public List<Var> getClosedOutputs() {
-      if (op == Opcode.GET_OUTPUT_FILENAME) {
-        // Filenames is immediately closed for unmapped vars
-        if (!getOutput(1).isMapped()) {
-          return Collections.singletonList(getOutput(0));
-        } else {
-          return Var.NONE;
-        }
-      } else if (op == Opcode.ARRAY_BUILD) {
+      if (op == Opcode.ARRAY_BUILD) {
         // Output array should be closed
         return Collections.singletonList(getOutput(0));
       } else if (op == Opcode.STORE_REF) {
