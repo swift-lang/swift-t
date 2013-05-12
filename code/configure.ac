@@ -210,6 +210,15 @@ then
    fi
 fi
 
+# Look for mpi.h at its APT location
+if [[ ! -f ${MPI_INCLUDE}/mpi.h ]]
+then
+    if [[ -f ${MPI_INCLUDE}/mpi/mpi.h ]]
+    then
+        MPI_INCLUDE=${MPI_INCLUDE}/mpi
+    fi
+fi
+
 AC_ARG_WITH(mpi-include,
     AS_HELP_STRING([--with-mpi-include],
                    [directory containing MPI header (mpi.h)]),
