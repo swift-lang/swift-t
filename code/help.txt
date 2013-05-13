@@ -3,7 +3,10 @@ STC HELP
 
 OPTIONS
 ----------------------------------------
-
+    -A <argname>=<value>
+         Bind command-line argument at compile-time, allowing
+         creation of a compiled version of code specialized
+         for given setting
     -C <output file>
          Write intermediate representation to this file (otherwise
             does not output it)
@@ -17,7 +20,7 @@ OPTIONS
        Show all options
     -I <DIRECTORY>
        Add an include path
-       TURBINE_HOME/export is always included to get builtins.swift
+       TURBINE_HOME/export is always included to get standard library
     -l <LOG>
        Log stc progress to given LOG.
     -O <Optimization level>
