@@ -188,7 +188,7 @@ send_steal_batch(steal_cb_state *batch, bool finish)
 {
   int count = (int)batch->size;
   struct packed_steal_resp hdr = { .count = count, .last = finish };
-  RSEND(&hdr, sizeof(hdr), MPI_BYTE, batch->stealer_rank,
+  SEND(&hdr, sizeof(hdr), MPI_BYTE, batch->stealer_rank,
        ADLB_TAG_RESPONSE_STEAL_COUNT);
 
   if (count == 0)
