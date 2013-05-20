@@ -121,7 +121,7 @@ STC accepts the following arguments:
 +-u+:: Only compile if output file is not up-to-date
 +-v+:: Output version number and exit
 
-== Program Structure
+== Program structure
 
 Swift programs are composed of _composite_ functions.  These
 share syntax with C-like languages.  The program starts in +main()+.
@@ -214,7 +214,7 @@ the imported module requires preprocessing.
 #include <mypackage/mymodule.swift>
 ----
 
-== Dataflow Evaluation
+== Dataflow evaluation
 
 Swift expressions are evaluated in _dataflow_ order:
 
@@ -272,7 +272,7 @@ in many other languages, and have a number of special characteristics
 that merit special mention.
 Two basic kinds of data structure are provided: arrays and structs.
 
-=== Primitive Types
+=== Primitive types
 
 Swift has the conventional types:
 
@@ -629,10 +629,10 @@ loop iterations are independent and can be executed in parallel.
 === Explicit data-dependent execution
 
 In general, execution ordering in Swift/T is implicit and driven by
-data dependencies.  In some cases it is useful to add explicit
-data dependencies, for example if you want to print a message to
-indicate that variable was assigned.  It is possible for the programmer to express
-additional execution ordering using two constructs: the +wait+
+data dependencies.  In some cases it is useful to add explicit data
+dependencies, for example if you want to print a message to indicate
+that variable was assigned.  It is possible for the programmer to
+express additional execution ordering using two constructs: the +wait+
 statement and the +\=>+ chaining operator.
 
 In a wait statement, a block of code is executed after
@@ -702,7 +702,7 @@ The following unary operators are defined:
 String concatenation is also performed with +&#43;+ (plus).
 +==+ and +!=+ may also be used on strings.
 
-== Standard Library
+== Standard library
 
 Each category of function is shown with the required import
 statement, if necessary.
@@ -712,6 +712,9 @@ Functions that accept variable numbers of arguments are denoted with
 ellipsis +...+.
 
 A function that accepts more than one type is denoted as +f(int|string)+.
+
+If a function is described below an *Import:* label, be sure to
++import+ that package.
 
 === Type conversion
 
@@ -734,7 +737,7 @@ As +printf()+ in C
 
 +strcat(string,string)+: Concatenation
 
- import string;
+*Import:* +string+
 
 +substring(string s, int start, int length) -> string+::
 Obtain substring of given string +s+ starting at character +start+ and of
@@ -788,7 +791,7 @@ As +sprintf()+ in C
 
 === Math
 
- import math;
+*Import:* +math+
 
 +floor(float i) -> int+:: Round down
 +ceil(float i) -> int+:: Round up
@@ -800,7 +803,7 @@ As +sprintf()+ in C
 +abs_integer(int) -> int+:: Absolute value
 +abs_float(float) -> float+:: Absolute value
 
- import random;
+*Import:* +random+
 
 +random() -> float+:: Obtain random number
 
@@ -814,7 +817,7 @@ Obtain random integer from +start+, inclusive, to +end+, exclusive
 
 === System
 
- import sys;
+*Import:* +sys+
 
 +getenv(string) -> string+:: Obtain an environment variable
 
@@ -880,7 +883,7 @@ Test if the command line contains the given flagged argument:
 
 ==== Debugging
 
- import assert;
+*Import:* +assert+
 
 +assert(boolean condition, string message)+::
 If condition is false, report +message+ and exit immediately.
@@ -907,6 +910,35 @@ that match.  Available glob symbols include:
 * +[chars]+: any of the given characters
 * +\x+: character +x+
 * +{a,b,c,...}+ any of +a+, +b+, +c+, etc.
+
+=== Blobs
+
+*Import:* +blob+
+
++blob_size(blob) -> int+:: Obtain the size of a blob in bytes.
+
++blob_null() -> blob+:: Obtain an empty blob of size 0.
+
++blob_from_string(string) -> blob+:: Convert a string into a blob.
+
++string_from_blob(blob) -> string+:: Convert a blob into a string.  If
+the blob is not NULL-terminated, this function appends the
+NULL-terminator.
+
++blob_from_floats(float[]) -> blob+:: Convert an array of Swift floats
+(implemented as doubles) to blob containing the C-formatted array of
++double+s.
+
++blob_from_floats(blob) -> float[]+:: Convert blob containing the
+C-formatted array of +double+s to an array of Swift floats
+(implemented as doubles).
+
++blob_from_ints(int i[]) -> blob+:: Convert blob containing the
+C-formatted array of +int+s to an array of Swift +int+s (implemented
+as 64-bit integers).
+
++blob_from_file(file) -> blob+:: Reads whole file, returning it as a
+blob.
 
 == Defining Leaf functions
 
@@ -1058,7 +1090,7 @@ Consider this custom Swift->Tcl binding:
 This function jumps into Tcl function +complex+, which must
 perform its own data dependency management.
 
-See the link::leaf.html[Swift/T Leaf Function Guide] for more
+See the link:leaf.html[Swift/T Leaf Function Guide] for more
 information about this process.
 
 === App functions
