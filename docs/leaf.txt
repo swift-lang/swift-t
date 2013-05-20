@@ -1,7 +1,9 @@
 
 ////
-Swift/T guide, asciidoc format
+
+Swift/T leaf function guide, asciidoc format
 http://www.mcs.anl.gov/exm/local/guides/stc.html
+
 ////
 
 :toc:
@@ -35,7 +37,7 @@ outside Swift as well!)
 
 The modes have separate syntax:
 
-Simple:
+*Simple:*
 ----
 (int o) f(int i) "my_pkg" "version"
 [ "set <<o>> [ f <<i>> ]" ];
@@ -49,7 +51,7 @@ More complex Tcl programming can be done on that line.  However,
 it is probably best to pack any additional logic into the Tcl
 function +f+.
 
-Advanced:
+*Advanced:*
 ----
 (int o) f(int i) "my_pkg" "version" "f";
 ----
@@ -87,7 +89,7 @@ Calling this from the shell looks like this:
 ----
 include::examples/1/test-f-1.sh[]
 ----
-(on your system, the Tcl shell +tclsh+ may be called +tcl8.5+.
+(On your system, the Tcl shell +tclsh+ may be called +tcl8.5+)
 
 Thus, to load this into Swift, we need to be able to 1) load +f.tcl+
 and 2) invoke it.  To make it easy to load +f.tcl+, we create a Tcl
@@ -120,4 +122,32 @@ the package (+test-f-2.tcl+):
 include::examples/1/test-f-2.tcl[]
 ----
 
-Now, invoke this test from the shell (:
+Now, invoke this test from the shell (+test-f-2.sh+):
+----
+include::examples/1/test-f-2.sh[]
+----
+
+The next step is to call this from Swift.  First, define the typed
+Swift call to the external Tcl function +f+ (+f.swift+):
+----
+include::examples/1/f.swift[]
+----
+
+Then, build a simple Swift test script to try it (+test-f.swift+):
+----
+include::examples/1/test-f.swift[]
+----
+
+Now, run it:
+----
+include::examples/1/test-f.sh[]
+----
+
+*Conclusion:* Now you can make many concurrent calls to a simple Tcl
+function using Swift.
+
+////
+Local Variables:
+mode: doc
+End:
+////
