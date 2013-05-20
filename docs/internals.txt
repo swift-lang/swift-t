@@ -20,9 +20,7 @@ Settings:
 ////
 :miscellaneous.newline: \n
 
-
 == Overview
-
 
 This manual provides an index of important concepts internal to
 Turbine.
@@ -140,11 +138,12 @@ open (unset) or closed (set).  TD IDs are represented in the log as
 Rules::
 
 Turbine makes progress by evaluating Turbine rules.
-* A rule has a token (for debugging), an input TD list, a rule type,
-  and an action.  Rule types are:
+* A rule has a a input TD list, a rule type,
+  and an action, and optional arguments.
 * The action is a simple Tcl string that is +eval+'d by a possibly
   different Tcl process.  This allows actions to be load balanced by
   ADLB.
+* Rule types are:
 ** +LOCAL+: evaluate this action on the local engine
 ** +CONTROL+: put the action into ADLB for evaluation elsewhere
 ** +WORK+: put the action into ADLB for evaluation by a worker
@@ -374,20 +373,29 @@ Data-dependent progress is controlled by Turbine rules.
 
 A Turbine rule statement contains:
 
-*turbine.c*
-
 ----
-rule debug input_list action_type action
+rule input_list action options...
 ----
 
-+debug+:: An arbitrary string name used for debugging and logging
-+input_list+:: A space-separated list (Tcl list) of TDs
-+action_type+:: +LOCAL+, +CONTROL+, or +WORK+
-+action+:: An arbitrary Tcl string for execution once all inputs are
++input_list+:: A space-separated list (Tcl list) of TDs.  When these
+are are closed, the action is +eval+'d.
++action+:: A string of Tcl code for execution once all inputs are
 closed. Essentially, when all the inputs are closed, Turbine will make
-the action ready for execution, based on the +action_type+.  The
-execution string can be any Tcl expression - it is typically used to
-jump into a Tcl function that represents a Swift function.
+the action ready for execution, based on the +action_type+.
+
+==== Options
+
+All options are optional
+
+----
+rule input_list action name "myfunction" type $turbine::WORK location 4 parallelism 2
+----
+
++name+:: An arbitrary string name used for debugging and logging.
+Turbine will make up a default name
++action_type+:: +LOCAL+, +CONTROL+, or +WORK+.  Default is +CONTROL+
++parallelism+:: Number of processes to use for an MPI parallel task.  Default is 1.
++location+:: Send action to this MPI rank.  Default is any available process based on +type+ (+$adlb::RANK_ANY+)
 
 ==== Semantics
 
@@ -749,6 +757,10 @@ Free the blob from the local cache.
 
 +store_blob td pointer length+::
 Store blob in ADLB
+
+*blob.c*
+
+
 
 ===== Usage
 

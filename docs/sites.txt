@@ -98,8 +98,7 @@ To run, simply build a MPI hosts file and pass that to Turbine, which
 will pass it to +mpiexec+.
 
 ----
-export TURBINE_LAUNCH_OPTS='-f hosts.txt'
-turbine -l -n 3 program.tcl
+turbine -l -n 3 -f hosts.txt program.tcl
 ----
 
 === MCS compute servers
@@ -110,8 +109,7 @@ Operates as a generic cluster (see above).
 ----
 echo crush.mcs.anl.gov >  hosts.txt
 echo crank.mcs.anl.gov >> hosts.txt
-export TURBINE_LAUNCH_OPTS='-f hosts.txt'
-turbine -l -n 3 program.tcl
+turbine -l -n 3 -f hosts.txt program.tcl
 ----
 
 === Breadboard
@@ -181,6 +179,22 @@ CC=mpicc LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib" --enable-
  --with-mpi-lib-name=mpi
 ----
 
+=== Eureka
+
+Eureka is a 100-node x86 cluster at the Argonne Leadership Computing
+Facility (ALCF).  It uses the Cobalt scheduler.
+
+==== Build procedure
+
+* Configure Tcl and c-utils with gcc
+* Configure ADLB with mpicc
+
+To run:
+----
+export MODE=cluster
+submit/cobalt/turbine-cobalt-run.zsh -n 3 ~/program.tcl
+----
+
 == Blue Gene
 
 === Blue Gene/P
@@ -197,14 +211,14 @@ These machines are at the Argonne Leadership Computing Facility (ALCF).
 To run:
 
 ----
-~wozniak/Public/turbine/scripts/submit/bgp/turbine-cobalt.zsh -n 3 ~/program.tcl
+~wozniak/Public/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh -n 3 ~/program.tcl
 ----
 
 ===== Build procedure
 
 _To run on the login nodes (initial debugging):_
 
-* Install MPICH for the compute nodes
+* Install MPICH for the login nodes
 * Configure Tcl and c-utils with gcc
 * Configure ADLB with your MPICH
 * Configure Turbine with
@@ -218,15 +232,38 @@ This makes adjustments for some Blue Gene quirks.
 * Then, simply use the +bin/turbine+ program to run.  Be cautious in
   your use of the login nodes to avoid affecting other users.
 
-_To run on the compute nodes:_
+_To run on the compute nodes under IBM CNK:_
+
+In this mode, you cannot use +app+ functions to launch external
+programs because CNK does not support this.  See ZeptoOS below.
 
 * Configure Tcl with mpixlc
 * Configure c-utils with gcc
-* Configure ADLB with
+* Configure ADLB with:
 +
 ----
 --enable-xlc
 CC=/bgsys/drivers/ppcfloor/comm/bin/mpixlc
+----
+* Configure Turbine with:
++
+----
+CC=/soft/apps/gcc-4.3.2/gnu-linux/bin/powerpc-bgp-linux-gcc
+--enable-custom
+--with-mpi-include=/bgsys/drivers/V1R4M2_200_2010-100508P/ppc/comm/default/include
+----
+
+To run, use +scripts/submit/bgp/turbine-cobalt.zsh+
+See the script header for usage.
+
+_To run on the compute nodes under ZeptoOS:_
+
+* Configure Tcl with zmpicc
+* Configure c-utils with gcc
+* Configure ADLB with
++
+----
+CC=zmpicc --enable-mpi-2
 ----
 * Configure Turbine with
 +
@@ -256,10 +293,14 @@ its libraries in +/lustre+.  Also, your data must be in +/lustre+.
 * STC: +~wozniak/Public/stc-beagle-0.0.3/bin/stc+
 
 To run:
-
-1. Copy out the sample submit script:
-+/lustre/beagle/wozniak/Public/turbine-0.1.1/scripts/submit/cray/aprun.sh+
-2. Edit and submit with +qsub+.
+1. Set environment variables.  The normal Turbine environment
+variables are honored, plus the <<variables,Turbine scheduler
+variables>>.
+2. Run submit script (in +turbine/scripts/submit/cray+):
++
+----
+turbine-aprun-run.zsh script.tcl --arg1=value1 ...
+----
 
 ==== Build procedure
 
@@ -307,12 +348,8 @@ LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/46/lib -lmpich"
 To run:
 
 1. Set environment variables.  The normal Turbine environment
-variables are honored, plus:
-+
-+NODES+:: Number of nodes to use
-+PPN+:: Number of processes per node
-+TURBINE_OUTPUT+:: Directory in which to place Turbine output
-+QUEUE+:: Name of queue in which to run (may leave unset)
+variables are honored, plus the <<variables,Turbine scheduler
+variables>>.
 2. Run submit script (in +turbine/scripts/submit/cray+):
 +
 ----
@@ -357,6 +394,17 @@ To run:
 export TURBINE_LAUNCH_OPTS="-f $HOME/hosts.txt"
 turbine program.tcl
 ----
+
+[[variables]]
+== Turbine scheduler variables
+
+For scheduled systems, Turbine accepts a common set of environment
+variables.
+
++NODES+:: Number of nodes to use
++PPN+:: Number of processes per node
++TURBINE_OUTPUT+:: Directory in which to place Turbine output
++QUEUE+:: Name of queue in which to run (may leave unset)
 
 ////
 Local Variables:
