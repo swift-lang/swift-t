@@ -30,10 +30,12 @@
    Based on this struct, SWIG will generate the following
    Tcl functions:
 
-   new_SwiftBlob()    -> SwiftBlob*
-   delete_SwiftBlob() -> void
-   SwiftBlob_pointer_set/get
-   SwiftBlob_length_set/get
+   new_tubrine_blob()    -> turbine_blob*
+   delete_turbine_blob(turbine_blob*) -> void
+   turbine_blob_pointer_set(turbine_blob*, void*) -> void
+   turbine_blob_pointer_get(turbine_blob*) -> void*
+   turbine_blob_length_set(turbine_blob*, int) -> void
+   turbine_blob_length_get(turbine_blob*) -> int
 */
 typedef struct
 {
