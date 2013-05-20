@@ -360,7 +360,13 @@ Currently Swift/T assumes that the file system is shared between
 all nodes.
 
 === Blobs
-TODO
+
+Blobs represent native byte data.  They are primarily used to pass
+data to and from native code libraries callable from Swift.  They are
+like Swift strings but may contain arbitrary data.
+
+Swift provides multiple builtin functions to create blobs, convert
+blobs to and from Swift types, and pass blobs to leaf functions.
 
 === Arrays
 
