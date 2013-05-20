@@ -943,7 +943,6 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
   } else {
     TCL_CONDITION((objc == 2 || objc == 3),
                   "requires 1 or 2 args!");
-
   }
 
   int rc;
@@ -999,6 +998,7 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
 
 /**
    interp, objv, id, and length: just for error checking and messages
+   If object is a blob, this converts it to a string
  */
 static inline int
 retrieve_object(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id,
@@ -1006,7 +1006,6 @@ retrieve_object(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id,
 {
   adlb_int_t tmp_long;
   double tmp_double;
-  int string_length;
   assert(length >= 0);
 
   switch (type)
@@ -1023,9 +1022,9 @@ retrieve_object(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id,
       *result = Tcl_NewStringObj(xfer, length-1);
       break;
     case ADLB_DATA_TYPE_BLOB:
-      string_length = (int)strnlen(xfer, (size_t)length);
-      TCL_CONDITION(string_length < length,
-                    "adlb::retrieve: unterminated blob: <%lli>", id);
+      assert(length < ADLB_DATA_MAX);
+      xfer[length] = '\0';
+      size_t string_length = strlen(xfer);
       *result = Tcl_NewStringObj(xfer, string_length);
       break;
     case ADLB_DATA_TYPE_CONTAINER:
