@@ -17,7 +17,7 @@ namespace eval turbine {
 
   proc blob_size_async { out blob } {
     rule "$blob" "blob_size_body $out $blob" \
-        name "blob_size-$out-$blob" 
+        name "blob_size-$out-$blob"
   }
 
   proc blob_size_body { out blob } {
@@ -37,7 +37,7 @@ namespace eval turbine {
 
   proc blob_from_string { result input } {
     rule $input "blob_from_string_body $input $result" \
-        name "bfs-$input-$result" 
+        name "bfs-$input-$result"
   }
   proc blob_from_string_body { input result } {
     set t [ retrieve_decr $input ]
@@ -46,7 +46,7 @@ namespace eval turbine {
 
   proc string_from_blob { result input } {
     rule $input "string_from_blob_body $input $result" \
-        name "sfb-$input-$result" 
+        name "sfb-$input-$result"
   }
   proc string_from_blob_body { input result } {
     set s [ retrieve_decr_blob_string $input ]
@@ -55,18 +55,18 @@ namespace eval turbine {
 
   proc floats_from_blob { result input } {
       rule $input "floats_from_blob_body $result $input" \
-          name "floats_from_blob-$result" 
+          name "floats_from_blob-$result"
   }
   proc floats_from_blob_body { result input } {
       log "floats_from_blob_body: result=<$result> input=<$input>"
-      set s      [ SwiftBlob_sizeof_float ]
+      set s      [ blobutils_sizeof_float ]
       set L      [ adlb::retrieve_blob $input ]
-      set p      [ SwiftBlob_cast_int_to_dbl_ptr [ lindex $L 0 ] ]
+      set p      [ blobutils_cast_int_to_dbl_ptr [ lindex $L 0 ] ]
       set length [ lindex $L 1 ]
 
       set n [ expr {$length / $s} ]
       for { set i 0 } { $i < $n } { incr i } {
-          set d [ SwiftBlob_double_get $p $i ]
+          set d [ blobutils_get_float $p $i ]
           literal t float $d
           container_immediate_insert $result $i $t
       }
@@ -85,7 +85,7 @@ namespace eval turbine {
       set n [ lindex $inputs 2 ]
       rule [ list $b $m $n ] \
           "matrix_from_blob_fortran_body $result $inputs" \
-          name "matrix_from_blob-$result" 
+          name "matrix_from_blob-$result"
   }
   proc matrix_from_blob_fortran_body { result b m n } {
       log "matrix_from_blob_fortran_body: result=<$result> blob=<$b>"
@@ -131,7 +131,7 @@ namespace eval turbine {
   # Container must be indexed from 0,N-1
   proc blob_from_floats { result input } {
     rule $input  "blob_from_floats_body $input $result" \
-        name "blob_from_floats-$result" 
+        name "blob_from_floats-$result"
   }
   proc blob_from_floats_body { container result } {
 
@@ -156,7 +156,7 @@ namespace eval turbine {
   # Container must be indexed from 0,N-1
   proc blob_from_ints { result input } {
     rule $input "blob_from_ints_body $input $result" \
-        name "blob_from_ints-$result" 
+        name "blob_from_ints-$result"
   }
   proc blob_from_ints_body { container result } {
 
@@ -193,7 +193,7 @@ namespace eval turbine {
           }
           rule [ list $x ] \
               "complete_container_continue_body $A {$action} $i $n" \
-              name "complete_container_continue-$A" 
+              name "complete_container_continue-$A"
       } else {
           eval $action
       }
