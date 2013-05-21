@@ -315,12 +315,12 @@ namespace eval turbine {
 	set input_path [ get_file_path $input ]
 	set input_name [ retrieve_string $input_path ]
         set blob [ new_turbine_blob ]
-        puts read
+        log "blob_read: $input_name"
         blobutils_read $input_name $blob
-        puts store
         set ptr [ blobutils_cast_to_int \
                       [ turbine_blob_pointer_get $blob ] ]
         set length [ turbine_blob_length_get  $blob ]
+        log "blob_read: length: $length"
 	store_blob $result [ list $ptr $length ]
         blobutils_destroy $blob
         file_read_refcount_decr $input
