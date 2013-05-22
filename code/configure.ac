@@ -341,6 +341,21 @@ AC_ARG_WITH(adlb,
 )
 AC_SUBST(USE_ADLB)
 
+# Python is optional
+HAVE_PYTHON=0
+AC_ARG_ENABLE(python,
+    AS_HELP_STRING([--enable-python],
+                   [Enable calling python]),
+    [
+      HAVE_PYTHON=1
+      echo "Python enabled"
+    ],
+    [
+      echo "Python disabled"
+    ])
+AC_DEFINE_UNQUOTED([HAVE_PYTHON],$HAVE_PYTHON,[Enables Python])
+AC_SUBST(HAVE_PYTHON)
+
 # tclsh is used in the build process (cf. debug-auto.tcl)
 # Allow user to specify a native tclsh for use when cross-compiling
 # The user has not yet provided tclsh-local (default to USE_TCLSH):
@@ -493,11 +508,12 @@ AC_CONFIG_FILES(
         src/turbine/module.mk
         src/util/module.mk
         src/tcl/module.mk
-        src/tcl/c-utils/module.mk
         src/tcl/adlb/module.mk
         src/tcl/blob/module.mk
-        src/tcl/turbine/module.mk
+        src/tcl/c-utils/module.mk
         src/tcl/mpe/module.mk
+        src/tcl/python/module.mk
+        src/tcl/turbine/module.mk
         lib/module.mk
         scripts/submit/module.mk
         scripts/submit/cobalt/module.mk

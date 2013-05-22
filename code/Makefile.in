@@ -100,6 +100,8 @@ endif
 ENABLE_MPE = @ENABLE_MPE@
 USE_MPE = @USE_MPE@
 
+HAVE_PYTHON = @HAVE_PYTHON@
+
 CFLAGS += -std=gnu99
 CFLAGS += -g
 CFLAGS += -Wall -Wconversion
@@ -117,6 +119,9 @@ ifeq ($(ENABLE_MPE),1)
 	LIBS += -L$(USE_MPE) -l mpe
 endif
 LIBS += $(MPI_LIB)
+ifeq ($(HAVE_PYTHON),1)
+	LIBS += -lpython2.7
+endif
 
 dirname = $(patsubst %/,%,$(dir $(1)))
 
@@ -141,16 +146,18 @@ include src/tcl/module.mk
 include src/tcl/c-utils/module.mk
 include src/tcl/adlb/module.mk
 include src/tcl/blob/module.mk
-include src/tcl/turbine/module.mk
 include src/tcl/mpe/module.mk
+include src/tcl/python/module.mk
+include src/tcl/turbine/module.mk
 include lib/module.mk
 include scripts/submit/module.mk
 
-TURBINE_SRC += $(TCL_C_UTILS_SRC)
 TURBINE_SRC += $(TCL_ADLB_SRC)
+TURBINE_SRC += $(TCL_C_UTILS_SRC)
 TURBINE_SRC += $(TCL_BLOB_SRC)
-TURBINE_SRC += $(TCL_TURBINE_SRC)
 TURBINE_SRC += $(TCL_MPE_SRC)
+TURBINE_SRC += $(TCL_PYTHON_SRC)
+TURBINE_SRC += $(TCL_TURBINE_SRC)
 TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
 
 ### DEPENDENCIES

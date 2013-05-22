@@ -1,0 +1,6 @@
+
+# MODULE TCL-PYTHON
+
+DIR := src/tcl/python
+
+TCL_PYTHON_SRC := $(DIR)/tcl-python.c

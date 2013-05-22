@@ -398,7 +398,6 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
         rc = Tcl_GetIntFromObj(interp, val, &t);
         TCL_CHECK_MSG(rc, "target argument must be integer");
         opts->target = t;
-        // printf("target: %i\n", opts->target);
         return TCL_OK;
       }
       else if (strcmp(k, "type") == 0)
@@ -948,6 +947,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   tcl_c_utils_init(interp);
   tcl_adlb_init(interp);
   tcl_mpe_init(interp);
+  tcl_python_init(interp);
   Swiftblob_Init(interp);
 
   COMMAND("init",        Turbine_Init_Cmd);
