@@ -1726,13 +1726,19 @@ public class TurbineGenerator implements CompilerBackend {
         if (!RefCounting.hasWriteRefCount(vc.var)) {
           continue;
         }
-        if (incr == null) {
-          seq.add(Turbine.containerSlotCreate(varToExpr(vc.var), new LiteralInt(vc.count)));
-        } else if (vc.count == 1) {
-          seq.add(Turbine.containerSlotCreate(varToExpr(vc.var), incr));
+        
+        if (Types.isStruct(vc.var.type())) {
+          // TODO how to increment writers for struct
+          throw new STCRuntimeError("TODO: don't know how to increment struct writers");
         } else {
-          seq.add(Turbine.containerSlotCreate(varToExpr(vc.var),
-              TclExpr.mult(new LiteralInt(vc.count), incr)));
+          if (incr == null) {
+            seq.add(Turbine.containerSlotCreate(varToExpr(vc.var), new LiteralInt(vc.count)));
+          } else if (vc.count == 1) {
+            seq.add(Turbine.containerSlotCreate(varToExpr(vc.var), incr));
+          } else {
+            seq.add(Turbine.containerSlotCreate(varToExpr(vc.var),
+                TclExpr.mult(new LiteralInt(vc.count), incr)));
+          }
         }
       }
       pointStack.peek().append(seq);

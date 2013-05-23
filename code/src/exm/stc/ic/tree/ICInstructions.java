@@ -2368,7 +2368,9 @@ public class ICInstructions {
                   Arrays.asList(outerArr));
         }
         case STRUCT_INSERT: {
-          return Pair.create(Arrays.asList(getInput(1).getVar()), Var.NONE);
+          // Structure member can be read and written
+          return Pair.create(Arrays.asList(getInput(1).getVar()), 
+                             Arrays.asList(getInput(1).getVar()));
         }
         case COPY_REF: {
           return Pair.create(Arrays.asList(getInput(0).getVar()),
