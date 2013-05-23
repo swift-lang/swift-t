@@ -110,7 +110,7 @@ list_append(struct list* target, struct list_item* item)
    Parse words separated by space or tab, insert each into list.
  */
 struct list*
-list_parse(char* s)
+list_split_words(char* s)
 {
   struct list* result = list_create();
   char* p = s;
@@ -127,6 +127,36 @@ list_parse(char* s)
       q++;
 
     // Insert word into list...
+    char* data = malloc((size_t)(q-p+2));
+    strncpy(data, p, (size_t)(q-p));
+    data[q-p] = '\0';
+    list_add(result, data);
+
+    // Step forward:
+    p = q;
+  }
+
+  return result;
+}
+
+struct list*
+list_split_lines(const char* s)
+{
+  struct list* result = list_create();
+  char* p = s;
+  char* q;
+  while (*p)
+  {
+    // Set p to start of word, q to end of word...
+    while (*p == '\n')
+      p++;
+    if (!*p)
+      break;
+    q = p+1;
+    while (! (*q == '\n' || *q == '\0'))
+      q++;
+
+    // Insert line into list...
     char* data = malloc((size_t)(q-p+2));
     strncpy(data, p, (size_t)(q-p));
     data[q-p] = '\0';

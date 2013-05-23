@@ -51,7 +51,9 @@ struct list* list_create(void);
 struct list_item* list_add(struct list* target, void* data);
 #define list_push(target, data) list_add(target, data)
 
-struct list* list_parse(char* s);
+struct list* list_split_words(char* s);
+
+struct list* list_split_lines(const char* s);
 
 /**
    Add this data if list_inspect does not find it.
