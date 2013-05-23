@@ -1024,7 +1024,7 @@ retrieve_object(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id,
     case ADLB_DATA_TYPE_BLOB:
       assert(length < ADLB_DATA_MAX);
       xfer[length] = '\0';
-      size_t string_length = strlen(xfer);
+      int string_length = (int)strlen(xfer);
       *result = Tcl_NewStringObj(xfer, string_length);
       break;
     case ADLB_DATA_TYPE_CONTAINER:
