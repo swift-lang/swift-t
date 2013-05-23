@@ -40,3 +40,6 @@ MAKE_PARALLELISM=2
 
 # Cray systems
 #EXM_CRAY=1
+
+# Enable python
+ENABLE_PYTHON=1
