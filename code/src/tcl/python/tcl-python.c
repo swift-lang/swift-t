@@ -25,6 +25,9 @@
 
 #include "config.h"
 
+#define _GNU_SOURCE // for asprintf()
+#include <stdio.h>
+
 #include <tcl.h>
 
 #if HAVE_PYTHON==1
@@ -36,39 +39,83 @@
 #include "tcl-python.h"
 
 #if HAVE_PYTHON==1
+
+static int
+handle_python_exception()
+{
+  printf("PYTHON EXCEPTION:\n");
+  PyErr_Print();
+  return TCL_ERROR;
+}
+
+/**
+   @param result: Store result pointer here
+   @return Tcl error code
+ */
+static int
+python_eval(const char* code, Tcl_Obj** result)
+{
+  char* s = "NOTHING";
+  Py_Initialize();
+  int rc;
+
+  PyObject* main_module  = PyImport_AddModule("__main__");
+  if (main_module == NULL) return handle_python_exception();
+  PyObject* main_dict  = PyModule_GetDict(main_module);
+  if (main_dict == NULL) return handle_python_exception();
+
+  struct list* lines = list_split_lines(code);
+  char* expression = NULL;
+  for (struct list_item* item = lines->head; item; item = item->next)
+  {
+    if (item->next == NULL)
+    {
+      // This is the expression that returns the string
+      expression = item->data;
+      break;
+    }
+    char* command = item->data;
+    rc = PyRun_SimpleString(command);
+    if (rc != 0)
+      return handle_python_exception();
+  }
+
+  PyObject* o = PyRun_String(expression, Py_eval_input,
+                             main_dict, main_dict);
+  if (o == NULL) return handle_python_exception();
+  rc = PyArg_Parse(o, "s", &s);
+  assert(s != NULL);
+  *result = Tcl_NewStringObj(s, -1);
+
+  list_destroy(lines);
+
+  return TCL_OK;
+}
+
+#else // Python disabled
+
 static Tcl_Obj*
 python_eval(char* code)
 {
-  char* s;
-  Py_Initialize();
-  PyObject *globals = Py_BuildValue("{}");
-  PyObject *locals = Py_BuildValue("{}");
-  PyObject* o = PyRun_String(code, Py_eval_input, globals, locals);
-  PyArg_Parse(o, "s", &s);
-  Tcl_Obj* result = Tcl_NewStringObj(s, -1);
-  return result;
+  TCL_RETURN_ERROR("Turbine not compiled with Python support");
 }
+
+#endif
+
 
 static int
 Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
-           int objc, Tcl_Obj *const objv[])
+                int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
   char* code = Tcl_GetString(objv[1]);
-  Tcl_Obj* result = python_eval(code);
+  Tcl_Obj* result;
+  int rc = python_eval(code, &result);
+  TCL_CHECK(rc);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
 
-#else
-
-static int
-Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
-           int objc, Tcl_Obj *const objv[])
-{
-  TCL_RETURN_ERROR("Turbine not compiled with Python support");
-}
-#endif
 /**
    Shorten object creation lines.  python:: namespace is prepended
  */
@@ -93,5 +140,5 @@ Tclpython_Init(Tcl_Interp *interp)
 void
 tcl_python_init(Tcl_Interp* interp)
 {
-  COMMAND("python", Python_Eval_Cmd);
+  COMMAND("eval", Python_Eval_Cmd);
 }

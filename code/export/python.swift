@@ -14,6 +14,12 @@
  * limitations under the License
  */
 
+/**
+   To use Python compiled packages, you may have to modify Tcl
+   to use dlopen(..., RTLD_NOW | RTLD_GLOBAL)
+   Cf. http://stackoverflow.com/questions/8302810/undefined-symbol-in-c-when-loading-a-python-shared-library
+*/
+
 (string output) python(string code) "turbine" "0.1.0" "python"
-    [ "set <<output>> [ python::python <<code>> ]" ];
+    [ "set <<output>> [ python::eval <<code>> ]" ];
 
