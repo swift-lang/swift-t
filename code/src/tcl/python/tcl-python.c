@@ -27,7 +27,9 @@
 
 #include <tcl.h>
 
+#if HAVE_PYTHON==1
 #include <python2.7/Python.h>
+#endif
 
 #include "src/tcl/util.h"
 
@@ -46,13 +48,6 @@ python_eval(char* code)
   Tcl_Obj* result = Tcl_NewStringObj(s, -1);
   return result;
 }
-#else
-static Tcl_Obj*
-python_eval(char* code)
-{
-  TCL_RETURN_ERROR("Turbine not compiled with Python support");
-}
-#endif
 
 static int
 Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -65,6 +60,15 @@ Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+#else
+
+static int
+Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
+           int objc, Tcl_Obj *const objv[])
+{
+  TCL_RETURN_ERROR("Turbine not compiled with Python support");
+}
+#endif
 /**
    Shorten object creation lines.  python:: namespace is prepended
  */
