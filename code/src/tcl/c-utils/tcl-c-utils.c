@@ -74,7 +74,7 @@ c_utils_hash_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   Shorten object creation lines.  mpe:: namespace is prepended
+   Shorten object creation lines.  c_utils:: namespace is prepended
  */
 #define COMMAND(tcl_function, c_function) \
     Tcl_CreateObjCommand(interp, "c_utils::" tcl_function, c_function, \
