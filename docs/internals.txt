@@ -335,13 +335,15 @@ retrieve Turbine TDs as Tcl values.
 
 *data.tcl*
 
-+store_integer td value+::
-+retrieve_integer td -> value+::
-+store_string td value+::
-+retrieve_string td -> value+::
-+store_float td+::
-+retrieve_float td -> value+::
-+store_void+::
+* +store_integer td value+
+* +retrieve_integer td -> value+
+* +store_string td value+
+* +retrieve_string td -> value+
+* +store_float td+
+* +retrieve_float td -> value+
+* +store_void td+
+* +store_blob td [ list pointer length]+
+* +retrieve_blob td -> [ list pointer length ]+
 
 Once you have the values in Tcl, you can perform arbitrary operations
 and store results back into Turbine.
@@ -350,8 +352,20 @@ You can think of Turbine as a load/store architecture, where the
 Turbine data store is main memory and the local Tcl operations
 and values are the CPU and its registers.
 
-void type variables may be used to represent pure dataflow- e.g.,
++void+ type variables may be used to represent pure dataflow- e.g.,
 Swift external variables. Internally, these are just an integer.
+
++blob+ values in Turbine/Tcl are a +[ list pointer length ]+, where
+the pointer is stored as a Tcl integer and the length is the byte
+length.
+
+* Note that to pass these pointers to SWIG interfaces you have
+to cast them to +void*+, +double*+, etc.  Tools are provided by the
+Turbine +blobutils+ package to do this.
+* The pointer points to a locally allocated copy of the blob data.
+This must be freed with +adlb::blob_free+.  Auto-wrapped STC functions
+will automatically insert this instruction.
+
 
 ==== Literals
 
