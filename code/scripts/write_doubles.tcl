@@ -3,7 +3,7 @@
 
 # Writes a file of doubles from command line arguments
 
-# Usage: turbine -n 1 read_doubles.tcl <output> <doubles...>
+# Usage: turbine -n 1 write_doubles.tcl <output> <doubles...>
 
 package require turbine 0.1.1
 
