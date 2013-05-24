@@ -30,7 +30,7 @@
    Based on this struct, SWIG will generate the following
    Tcl functions:
 
-   new_tubrine_blob()    -> turbine_blob*
+   new_turbine_blob()    -> turbine_blob*
    delete_turbine_blob(turbine_blob*) -> void
    turbine_blob_pointer_set(turbine_blob*, void*) -> void
    turbine_blob_pointer_get(turbine_blob*) -> void*
