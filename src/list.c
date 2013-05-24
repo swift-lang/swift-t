@@ -143,8 +143,8 @@ struct list*
 list_split_lines(const char* s)
 {
   struct list* result = list_create();
-  char* p = s;
-  char* q;
+  const char* p = s;
+  const char* q;
   while (*p)
   {
     // Set p to start of word, q to end of word...
