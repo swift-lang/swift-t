@@ -120,6 +120,7 @@ Tcl_Obj* tcl_list_new(int count, char** strings);
 
 /**
    Print error message and return a Tcl error
+   Requires Tcl_Interp interp and Tcl_Obj* objv in scope
  */
 #define TCL_RETURN_ERROR(format, args...)                        \
   {                                                              \
@@ -148,6 +149,7 @@ Tcl_Obj* tcl_list_new(int count, char** strings);
 /**
    If condition is false, return a Tcl error
    Disabled by NDEBUG
+   Requires Tcl_Interp interp and Tcl_Obj* objv in scope
  */
 #define TCL_CONDITION(condition, format, args...)                \
   if (!(condition)) {                                            \
