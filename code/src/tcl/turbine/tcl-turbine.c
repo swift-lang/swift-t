@@ -54,6 +54,7 @@
 #include "src/tcl/c-utils/tcl-c-utils.h"
 #include "src/tcl/adlb/tcl-adlb.h"
 #include "src/tcl/mpe/tcl-mpe.h"
+#include "src/tcl/python/tcl-python.h"
 
 /**
    @see TURBINE_CHECK
