@@ -3,7 +3,11 @@ for subrepo in c-utils lb turbine stc dev
 do
   echo Pushing $subrepo        
   pushd $subrepo > /dev/null
-  git push --tags github master:master
+  git checkout -b __tmp_master master
+  git pull --rebase github master
+  git push --tags github __tmp_master:master
+  git checkout master
+  git branch -D __tmp_master
   popd > /dev/null
   echo DONE
 done
