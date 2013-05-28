@@ -222,6 +222,7 @@ run_test()
   # Check the output for expected lines
   if [ -f ${EXP_OUTPUT} ]
   then
+    print "checking expected: $( basename ${EXP_OUTPUT} )"
     local LINE_MISSING=false
     while read line
     do
