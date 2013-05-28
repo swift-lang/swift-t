@@ -226,7 +226,7 @@ run_test()
     local LINE_MISSING=false
     while read line
     do
-      grep -F -q "${line}" "${TURBINE_OUTPUT}"
+      grep -q "${line}" "${TURBINE_OUTPUT}"
       if  (( $? != 0 ))
       then
         print "'${line}' wasn't present in output"
