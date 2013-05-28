@@ -143,9 +143,11 @@ compile_test()
 
 run_test()
 # Run test under Turbine/MPI
-{
-  SETUP_SCRIPT=${TEST_PATH}.setup.sh
-  CHECK_SCRIPT=${TEST_PATH}.check.sh
+{ 
+  # Run program, check and setup scripts with test directory as
+  # working directory
+  SETUP_SCRIPT=./${TEST_NAME}.setup.sh
+  CHECK_SCRIPT=./${TEST_NAME}.check.sh
 
   SETUP_OUTPUT=${SETUP_SCRIPT%.sh}.out
   CHECK_OUTPUT=${CHECK_SCRIPT%.sh}.out
@@ -160,7 +162,9 @@ run_test()
   if [ -x ${SETUP_SCRIPT} ]
   then
     print "executing: $( basename ${SETUP_SCRIPT} )"
+    pushd $STC_TESTS_DIR
     ${SETUP_SCRIPT} >& ${SETUP_OUTPUT} || return 1
+    popd
   fi
 
   # Get test command-line arguments
@@ -210,7 +214,9 @@ run_test()
   if [ -x ${CHECK_SCRIPT} ]
   then
     print "executing: $( basename ${CHECK_SCRIPT} )"
+    pushd $STC_TESTS_DIR
     ${CHECK_SCRIPT} >& ${CHECK_OUTPUT} || return 1
+    popd
   fi
 
   # Check the output for expected lines
