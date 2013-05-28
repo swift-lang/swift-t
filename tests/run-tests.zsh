@@ -341,7 +341,7 @@ do
     if grep -F -q "SKIP-O${OPT_LEVEL}-TEST" ${SWIFT_FILE}
     then
       echo "skip: ${SWIFT_FILE} at O${OPT_LEVEL}"
-      DISABLED_TESTS+="${TEST_NAME}-O${OPT_LEVEL}"
+      DISABLED_TESTS+="${TEST_NAME}@O${OPT_LEVEL}"
       continue
     fi
 
