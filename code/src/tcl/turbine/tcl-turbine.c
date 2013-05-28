@@ -949,6 +949,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   tcl_adlb_init(interp);
   tcl_mpe_init(interp);
   tcl_python_init(interp);
+  tcl_r_init(interp);
   Swiftblob_Init(interp);
 
   COMMAND("init",        Turbine_Init_Cmd);

@@ -356,6 +356,21 @@ AC_ARG_ENABLE(python,
 AC_DEFINE_UNQUOTED([HAVE_PYTHON],$HAVE_PYTHON,[Enables Python])
 AC_SUBST(HAVE_PYTHON)
 
+# R is optional
+HAVE_R=0
+AC_ARG_ENABLE(r,
+    AS_HELP_STRING([--enable-r],
+                   [Enable calling R language]),
+    [
+      HAVE_R=1
+      echo "R enabled"
+    ],
+    [
+      echo "R disabled"
+    ])
+AC_DEFINE_UNQUOTED([HAVE_R],$HAVE_R,[Enables R])
+AC_SUBST(HAVE_R)
+
 # tclsh is used in the build process (cf. debug-auto.tcl)
 # Allow user to specify a native tclsh for use when cross-compiling
 # The user has not yet provided tclsh-local (default to USE_TCLSH):
@@ -513,6 +528,7 @@ AC_CONFIG_FILES(
         src/tcl/c-utils/module.mk
         src/tcl/mpe/module.mk
         src/tcl/python/module.mk
+        src/tcl/r/module.mk
         src/tcl/turbine/module.mk
         lib/module.mk
         scripts/submit/module.mk

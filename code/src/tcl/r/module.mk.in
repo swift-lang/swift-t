@@ -1,0 +1,6 @@
+
+# MODULE TCL-R
+
+DIR := src/tcl/r
+
+TCL_R_SRC := $(DIR)/tcl-r.c

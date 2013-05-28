@@ -101,15 +101,19 @@ ENABLE_MPE = @ENABLE_MPE@
 USE_MPE = @USE_MPE@
 
 HAVE_PYTHON = @HAVE_PYTHON@
+HAVE_R      = @HAVE_R@
 
 CFLAGS += -std=gnu99
 CFLAGS += -g
 CFLAGS += -Wall -Wconversion
-CFLAGS += -I $(C_UTILS)/include
-CFLAGS += @TCL_INCLUDE_SPEC@
 CFLAGS += -fPIC
 # This is referenced in lookup3.c - may want to drop this for speed
 CFLAGS += -D VALGRIND
+CFLAGS += -I $(C_UTILS)/include
+CFLAGS += @TCL_INCLUDE_SPEC@
+ifeq ($(HAVE_R),1)
+	CFLAGS += -I /usr/share/R/include
+endif
 
 # LIBS: links to ADLB, c-utils, MPE, and MPI
 LIBS :=
@@ -122,6 +126,10 @@ LIBS += $(MPI_LIB)
 ifeq ($(HAVE_PYTHON),1)
 	LIBS += -lpython2.7
 endif
+ifeq ($(HAVE_R),1)
+	R_LIB = /usr/lib/R/lib
+	LIBS += -L$(R_LIB) -lR
+endif
 
 dirname = $(patsubst %/,%,$(dir $(1)))
 
@@ -133,6 +141,9 @@ RPATHS += -Wl,-rpath -Wl,$(MPI_LIB_DIR)
 RPATHS += -Wl,-rpath -Wl,$(TCL_LIB_DIR)
 ifeq ($(ENABLE_MPE),1)
 	RPATHS += -Wl,-rpath -Wl,$(USE_MPE)
+endif
+ifeq ($(HAVE_R),1)
+	RPATHS += -Wl,-rpath -Wl,$(R_LIB)
 endif
 
 ### INCLUDES
@@ -148,6 +159,7 @@ include src/tcl/adlb/module.mk
 include src/tcl/blob/module.mk
 include src/tcl/mpe/module.mk
 include src/tcl/python/module.mk
+include src/tcl/r/module.mk
 include src/tcl/turbine/module.mk
 include lib/module.mk
 include scripts/submit/module.mk
@@ -157,6 +169,7 @@ TURBINE_SRC += $(TCL_C_UTILS_SRC)
 TURBINE_SRC += $(TCL_BLOB_SRC)
 TURBINE_SRC += $(TCL_MPE_SRC)
 TURBINE_SRC += $(TCL_PYTHON_SRC)
+TURBINE_SRC += $(TCL_R_SRC)
 TURBINE_SRC += $(TCL_TURBINE_SRC)
 TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
 
