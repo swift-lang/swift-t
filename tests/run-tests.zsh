@@ -146,8 +146,8 @@ run_test()
 { 
   # Run program, check and setup scripts with test directory as
   # working directory
-  SETUP_SCRIPT=./${TEST_NAME}.setup.sh
-  CHECK_SCRIPT=./${TEST_NAME}.check.sh
+  SETUP_SCRIPT=${TEST_NAME}.setup.sh
+  CHECK_SCRIPT=${TEST_NAME}.check.sh
 
   SETUP_OUTPUT=${SETUP_SCRIPT%.sh}.out
   CHECK_OUTPUT=${CHECK_SCRIPT%.sh}.out
@@ -159,11 +159,11 @@ run_test()
   ARGS_FILE=${TEST_PATH}.args
 
   # Set up the test
-  if [ -x ${SETUP_SCRIPT} ]
+  if [ -x ${STC_TESTS_DIR}/${SETUP_SCRIPT} ]
   then
-    print "executing: $( basename ${SETUP_SCRIPT} )"
     pushd $STC_TESTS_DIR
-    ${SETUP_SCRIPT} >& ${SETUP_OUTPUT} || return 1
+    print "executing: $( basename ${SETUP_SCRIPT} )"
+    ./${SETUP_SCRIPT} >& ${SETUP_OUTPUT} || return 1
     popd
   fi
 
@@ -211,11 +211,11 @@ run_test()
   (( EXIT_CODE )) && return ${EXIT_CODE}
 
   # Check the test output with the test-specific check script
-  if [ -x ${CHECK_SCRIPT} ]
+  if [ -x ${STC_TESTS_DIR}/${CHECK_SCRIPT} ]
   then
     print "executing: $( basename ${CHECK_SCRIPT} )"
     pushd $STC_TESTS_DIR
-    ${CHECK_SCRIPT} >& ${CHECK_OUTPUT} || return 1
+    ./${CHECK_SCRIPT} >& ${CHECK_OUTPUT} || return 1
     popd
   fi
 
