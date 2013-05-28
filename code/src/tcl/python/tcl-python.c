@@ -92,17 +92,6 @@ python_eval(const char* code, Tcl_Obj** result)
   return TCL_OK;
 }
 
-#else // Python disabled
-
-static Tcl_Obj*
-python_eval(char* code)
-{
-  TCL_RETURN_ERROR("Turbine not compiled with Python support");
-}
-
-#endif
-
-
 static int
 Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
@@ -115,6 +104,18 @@ Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
+
+#else // Python disabled
+
+static int
+Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  TCL_RETURN_ERROR("Turbine not compiled with Python support");
+}
+
+#endif
 
 /**
    Shorten object creation lines.  python:: namespace is prepended
