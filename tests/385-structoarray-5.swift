@@ -1,5 +1,7 @@
 
 import assert;
+// SKIP-O0-TEST
+// See issue #476
 
 // will need to support whole-array copying
 

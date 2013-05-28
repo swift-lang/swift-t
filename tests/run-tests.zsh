@@ -180,13 +180,13 @@ run_test()
   EXIT_CODE=${?}
   popd
 
-  if grep -q "THIS-TEST-SHOULD-NOT-RUN" ${SWIFT_FILE}
+  if grep -F -q "THIS-TEST-SHOULD-NOT-RUN" ${SWIFT_FILE}
   then
     # This test was intended to fail at run time
     EXIT_CODE=$(( ! EXIT_CODE ))
   else
     # Check for unexecuted transforms
-    grep -q "WAITING TRANSFORMS" ${TURBINE_OUTPUT}
+    grep -F -q "WAITING TRANSFORMS" ${TURBINE_OUTPUT}
     # This is 0 if nothing was found
     WAITING_TRANSFORMS=$(( ! ${?} ))
     if (( WAITING_TRANSFORMS ))
@@ -198,7 +198,7 @@ run_test()
     if (( LEAK_CHECK ))
     then
       # Check for leaks
-      grep -q "ADLB: LEAK:" ${TURBINE_OUTPUT}
+      grep -F -q "ADLB: LEAK:" ${TURBINE_OUTPUT}
       # This is 0 if nothing was found
       LEAKS=$(( ! ${?} ))
       if (( LEAKS ))
@@ -225,7 +225,7 @@ run_test()
     local LINE_MISSING=false
     while read line
     do
-      grep -q "${line}" "${TURBINE_OUTPUT}"
+      grep -F -q "${line}" "${TURBINE_OUTPUT}"
       if  (( $? != 0 ))
       then
         print "'${line}' wasn't present in output"
@@ -281,7 +281,7 @@ do
     continue
   fi
 
-  if grep -q "SKIP-THIS-TEST" ${SWIFT_FILE}
+  if grep -F -q "SKIP-THIS-TEST" ${SWIFT_FILE}
   then
     continue
   fi
@@ -309,14 +309,21 @@ do
   print "test: ${TEST_COUNT} (${i}/${SWIFT_FILE_TOTAL})"
   for OPT_LEVEL in $STC_OPT_LEVELS
   do
+    # Skip specific optimization levels
+    if grep -F -q "SKIP-O${OPT_LEVEL}-TEST" ${SWIFT_FILE}
+    then
+      echo "skip: ${SWIFT_FILE} at O${OPT_LEVEL}"
+      continue
+    fi
+
     compile_test ${OPT_LEVEL}
 
     COMPILE_CODE=${EXIT_CODE}
 
     # Reverse exit code if the case was intended to fail to compile
-    if grep -q "THIS-TEST-SHOULD-NOT-COMPILE" ${SWIFT_FILE}
+    if grep -F -q "THIS-TEST-SHOULD-NOT-COMPILE" ${SWIFT_FILE}
     then
-      if grep -q "STC INTERNAL ERROR" ${STC_ERR_FILE}
+      if grep -F -q "STC INTERNAL ERROR" ${STC_ERR_FILE}
       then
           :
       else
@@ -333,7 +340,7 @@ do
 
     if (( ! COMPILE_CODE ))
     then
-      if grep -q "COMPILE-ONLY-TEST" ${SWIFT_FILE}
+      if grep -F -q "COMPILE-ONLY-TEST" ${SWIFT_FILE}
       then
           EXIT_CODE=0
       else
@@ -342,7 +349,7 @@ do
       fi
     fi
 
-    if grep -q "THIS-TEST-SHOULD-CAUSE-WARNING" ${SWIFT_FILE}
+    if grep -F -q "THIS-TEST-SHOULD-CAUSE-WARNING" ${SWIFT_FILE}
     then
       if grep -q "^WARN" ${STC_ERR_FILE}
       then

@@ -1,6 +1,10 @@
 
 import assert;
 
+
+// SKIP-O0-TEST
+// See issue #476
+
 main {
     int M[][][];
 

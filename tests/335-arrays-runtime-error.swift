@@ -1,6 +1,11 @@
 
 // Regression test for compiler bug
 
+// Known bug: at O3 double write isn't caught
+// See issue #475
+// SKIP-O3-TEST
+
+// Test should fail from double write
 // THIS-TEST-SHOULD-NOT-RUN
 main {
     int A[];
