@@ -265,10 +265,37 @@ report_result()
   fi
 }
 
-TEST_COUNT=0
+report_stats_and_exit()
+{
+  local EXIT_CODE=$1
+
+  print ""
+  print -- "--"
+  if (( EXIT_CODE !=0 ))
+  then
+    print "Caught signal: terminating early"
+  fi
+
+  print "tests run: ${TESTS_RUN}"
+  if [ "${FAILED_TESTS}" != "" ]; then
+      print "failed tests: ${#FAILED_TESTS} (${FAILED_TESTS})"
+  fi
+  
+  if [ "${DISABLED_TESTS}" != "" ]; then
+      print "disabled tests: ${#DISABLED_TESTS} (${DISABLED_TESTS})"
+  fi
+  exit ${EXIT_CODE}
+}
+
+TESTS_RUN=0
 SWIFT_FILES=( ${STC_TESTS_DIR}/*.swift )
 SWIFT_FILE_TOTAL=${#SWIFT_FILES}
 FAILED_TESTS=()
+DISABLED_TESTS=()
+
+# Setup signal handler for early termination
+trap "report_stats_and_exit 1" SIGHUP SIGINT SIGTERM
+
 for (( i=1 ; i<=SWIFT_FILE_TOTAL ; i++ ))
 do
   SWIFT_FILE=${SWIFT_FILES[i]}
@@ -282,14 +309,15 @@ do
     continue
   fi
 
-  if grep -F -q "SKIP-THIS-TEST" ${SWIFT_FILE}
-  then
-    continue
-  fi
-
-  if (( MAX_TESTS >= 0 && TEST_COUNT >= MAX_TESTS ))
+  if (( MAX_TESTS >= 0 && TESTS_RUN >= MAX_TESTS ))
   then
     break
+  fi
+
+  if grep -F -q "SKIP-THIS-TEST" ${SWIFT_FILE}
+  then
+    DISABLED_TESTS+=${TEST_NAME}
+    continue
   fi
 
   if [[ ${PATTERN} != "" ]]
@@ -300,20 +328,20 @@ do
     fi
   fi
 
-  (( TEST_COUNT++ ))
   TCL_FILE=${TEST_OUT_PATH}.tcl
   STC_OUT_FILE=${TEST_OUT_PATH}.stc.out
   STC_ERR_FILE=${TEST_OUT_PATH}.stc.err
   STC_LOG_FILE=${TEST_OUT_PATH}.stc.log
   STC_IC_FILE=${TEST_OUT_PATH}.ic
 
-  print "test: ${TEST_COUNT} (${i}/${SWIFT_FILE_TOTAL})"
+  print "test: ${TESTS_RUN} (${i}/${SWIFT_FILE_TOTAL})"
   for OPT_LEVEL in $STC_OPT_LEVELS
   do
     # Skip specific optimization levels
     if grep -F -q "SKIP-O${OPT_LEVEL}-TEST" ${SWIFT_FILE}
     then
       echo "skip: ${SWIFT_FILE} at O${OPT_LEVEL}"
+      DISABLED_TESTS+="${TEST_NAME}-O${OPT_LEVEL}"
       continue
     fi
 
@@ -360,13 +388,9 @@ do
           printf "No warning in stc output\n"
       fi
     fi
+    (( TESTS_RUN++ ))
     report_result ${TEST_NAME} ${OPT_LEVEL} ${EXIT_CODE}
   done
 done
 
-print -- "--"
-print "tests: ${TEST_COUNT}"
-if [ "${FAILED_TESTS}" != "" ]; then
-    print "failed tests: ${#FAILED_TESTS} (${FAILED_TESTS})"
-fi
-exit 0
+report_stats_and_exit 0
