@@ -133,12 +133,14 @@ compile_test()
 {
   local STC_OPT_LEVEL=$1
   print "compiling: $( basename ${SWIFT_FILE} ) at O${STC_OPT_LEVEL}"
-
+  
+  pushd $STC_TESTS_DIR
   ${STC} -l ${STC_LOG_FILE} -O ${STC_OPT_LEVEL} -C ${STC_IC_FILE} \
             ${ADDTL_STC_ARGS} \
             ${SWIFT_FILE} ${TCL_FILE} \
             > ${STC_OUT_FILE} 2> ${STC_ERR_FILE}
   EXIT_CODE=${?}
+  popd
 }
 
 run_test()
