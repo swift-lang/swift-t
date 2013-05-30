@@ -250,10 +250,6 @@ redirect_type:
         (STDIN|STDOUT|STDERR)
     ;
  
-include_statement:
-        INCLUDE file=STRING SEMICOLON -> ^( INCLUDE $file )
-    ;
-
 composite_function_definition:
         annotation*
         o=formal_argument_list f=ID i=formal_argument_list
@@ -730,7 +726,6 @@ MULTI_LINE_COMMENT
 
 // Tokens that are actually in the SwiftScript
 // (reserved words)
-INCLUDE: 'include' ;
 APP:  'app'  ;
 BUILTIN:  'builtin'  ;
 IF:   'if';
