@@ -390,9 +390,9 @@ do
           printf "No warning in stc output\n"
       fi
     fi
-    (( TESTS_RUN++ ))
     report_result ${TEST_NAME} ${OPT_LEVEL} ${EXIT_CODE}
   done
+  (( TESTS_RUN++ ))
 done
 
 report_stats_and_exit 0
