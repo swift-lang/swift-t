@@ -3744,42 +3744,41 @@ public class ICInstructions {
     private static void compileTimeAssertCheck(BuiltinOpcode subop2,
         List<Arg> inputs2, Map<Var, Arg> knownConstants,
         String enclosingFnName) {
-      if (subop2 == BuiltinOpcode.ASSERT) {
-        Arg cond;
-        if (inputs2.get(0).isVar()) {
-          cond = knownConstants.get(inputs2.get(0).getVar());
+      
+      List<Arg> inputVals = new ArrayList<Arg>(inputs2.size());
+      // Check that all inputs are available
+      for (Arg input: inputs2) {
+        if (input.isConstant()) {
+          inputVals.add(input);
+        } else if (knownConstants.containsKey(input.getVar())) {
+          inputVals.add(input);
         } else {
-          cond = inputs2.get(0);
+          // Can't check
+          return;
         }
-        if (cond != null) {
-          assert(cond.isBoolVal());
-          if(!cond.getBoolLit()) {
-            compileTimeAssertWarn(enclosingFnName, 
-                "constant condition evaluated to false",
-                inputs2.get(1), knownConstants);
-          }
+      }
+      
+      
+      if (subop2 == BuiltinOpcode.ASSERT) {
+        Arg cond = inputVals.get(0);
+        
+        assert(cond.isBoolVal());
+        if(!cond.getBoolLit()) {
+          compileTimeAssertWarn(enclosingFnName, 
+              "constant condition evaluated to false",
+              inputs2.get(1), knownConstants);
         }
       } else {
         assert(subop2 == BuiltinOpcode.ASSERT_EQ);
         
-        Arg a1;
-        if (inputs2.get(0).isVar()) {
-          a1 = knownConstants.get(inputs2.get(0).getVar());
-        } else {
-          a1 = inputs2.get(0);
-        }
-        Arg a2;
-        if (inputs2.get(1).isVar()) {
-          a2 = knownConstants.get(inputs2.get(1).getVar());
-        } else {
-          a2 = inputs2.get(0);
-        } 
+        Arg a1 = inputVals.get(0);
+        Arg a2 = inputVals.get(1);
         assert(a1.isConstant());
         assert(a2.isConstant());
         if (a1 != null && a2 != null) {
           if(!a1.equals(a2)) {
             String reason = a1.toString() + " != " + a2.toString();
-            Arg msg = inputs2.get(1);
+            Arg msg = inputVals.get(2);
             compileTimeAssertWarn(enclosingFnName, reason, msg, knownConstants);
           }
         }
