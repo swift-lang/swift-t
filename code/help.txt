@@ -64,6 +64,7 @@ expand-dataflow-ops: expand dataflow version of functions or operations
 wait-coalesce: rearrange task dependencies to minimise the number
                of tasks/variable subscribes
 hoisting: hoist calculations out of loop bodies
+reorder-insts: try reordering instructions within block in dependency order
 pipeline: compile-time pipeline where sequentially dependent worker
         tasks are merged into a single task
 function-inline: inline calls to functions selectively depending on
