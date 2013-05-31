@@ -9,6 +9,8 @@ EXIT_ON_FAIL=1
 MAX_TESTS=-1 # by default, unlimited
 PATTERN=""
 SKIP_COUNT=0
+
+RUN_DISABLED=0
 VERBOSE=0
 STC_OPT_LEVELS=() #-O levels to test for STC
 DEFAULT_STC_OPT_LEVEL=2
@@ -21,13 +23,17 @@ if [ -z ${ADLB_EXHAUST_TIME} ]; then
     export ADLB_EXHAUST_TIME=1
 fi
 
-while getopts "ck:n:p:VO:t:T:alo:" OPTION
+while getopts "cDk:n:p:VO:t:T:alo:" OPTION
 do
   case ${OPTION}
     in
     c)
       # continue after failure
       EXIT_ON_FAIL=0
+      ;;
+    D)
+      #Run disabled tests
+      RUN_DISABLED=1
       ;;
     k)
       # skip some tests
@@ -316,7 +322,10 @@ do
     break
   fi
 
-  if grep -F -q "SKIP-THIS-TEST" ${SWIFT_FILE}
+  if (( RUN_DISABLED == 1 ))
+  then
+    :
+  elif grep -F -q "SKIP-THIS-TEST" ${SWIFT_FILE}
   then
     DISABLED_TESTS+=${TEST_NAME}
     continue
@@ -340,7 +349,10 @@ do
   for OPT_LEVEL in $STC_OPT_LEVELS
   do
     # Skip specific optimization levels
-    if grep -F -q "SKIP-O${OPT_LEVEL}-TEST" ${SWIFT_FILE}
+    if (( RUN_DISABLED == 1 ))
+    then
+      :
+    elif grep -F -q "SKIP-O${OPT_LEVEL}-TEST" ${SWIFT_FILE}
     then
       echo "skip: ${SWIFT_FILE} at O${OPT_LEVEL}"
       DISABLED_TESTS+="${TEST_NAME}@O${OPT_LEVEL}"
