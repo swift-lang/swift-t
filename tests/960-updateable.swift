@@ -3,7 +3,6 @@ import assert;
 
 // Fails at these optimization levels (need to investigate):
 // SKIP-O0-TEST
-// SKIP-O3-TEST
 
 main {
     updateable_float x = inf;
