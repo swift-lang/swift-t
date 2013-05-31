@@ -45,7 +45,8 @@ public class BuiltinOps {
       ArrayList<Expression> argExpr) {
 
     if (op == BuiltinOpcode.ASSERT || op == BuiltinOpcode.ASSERT_EQ) {
-      assert(out == null);
+      // Should have void output
+      assert(out != null && out.type().assignableTo(Types.V_VOID));
       String tclFn;
       switch (op) {
       case ASSERT:
@@ -55,7 +56,7 @@ public class BuiltinOps {
         tclFn = "turbine::assertEqual_impl";
         break;
       default:
-        throw new STCRuntimeError("Cn't handle local op: "
+        throw new STCRuntimeError("Can't handle local op: "
             + op.toString());
       }
       return new Command(tclFn, argExpr);

@@ -3713,13 +3713,13 @@ public class ICInstructions {
     @Override
     public Map<Var, Arg> constantFold(String fnName,
                           Map<Var, Arg> knownConstants) {
-      if (this.output == null) {
-        return null;
-      }
-      
       if (this.subop == BuiltinOpcode.ASSERT || 
           this.subop == BuiltinOpcode.ASSERT_EQ) {
         compileTimeAssertCheck(subop, this.inputs, knownConstants, fnName);
+      }
+      
+      if (this.output == null) {
+        return null;
       }
       
       // List of constant values for inputs, null if input not const
