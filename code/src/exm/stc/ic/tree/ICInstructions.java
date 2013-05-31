@@ -3751,7 +3751,7 @@ public class ICInstructions {
         if (input.isConstant()) {
           inputVals.add(input);
         } else if (knownConstants.containsKey(input.getVar())) {
-          inputVals.add(input);
+          inputVals.add(knownConstants.get(input.getVar()));
         } else {
           // Can't check
           return;
@@ -3773,8 +3773,8 @@ public class ICInstructions {
         
         Arg a1 = inputVals.get(0);
         Arg a2 = inputVals.get(1);
-        assert(a1.isConstant());
-        assert(a2.isConstant());
+        assert(a1.isConstant()) : a1 + " " + a1.getKind();
+        assert(a2.isConstant()) : a2 + " " + a2.getKind();
         if (a1 != null && a2 != null) {
           if(!a1.equals(a2)) {
             String reason = a1.toString() + " != " + a2.toString();
