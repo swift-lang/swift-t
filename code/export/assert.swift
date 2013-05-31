@@ -20,15 +20,15 @@
 #define ASSERT_SWIFT
 
 @assertion @builtin_op=ASSERT
-assert(boolean condition, string msg) "turbine" "0.0.2" "assert";
+(void o) assert(boolean condition, string msg) "turbine" "0.0.2" "assert";
 @assertion @builtin_op=ASSERT_EQ
-assertEqual(string|int|float|boolean v1, string|int|float|boolean v2,
+(void o) assertEqual(string|int|float|boolean v1, string|int|float|boolean v2,
                string msg) "turbine" "0.0.2" "assertEqual";
 @assertion
-assertLT(string|int|float|boolean v1, string|int|float|boolean v2,
+(void o) assertLT(string|int|float|boolean v1, string|int|float|boolean v2,
                string msg) "turbine" "0.0.2" "assertLT";
 @assertion
-assertLTE(string|int|float|boolean v1, string|int|float|boolean v2,
+(void o) assertLTE(string|int|float|boolean v1, string|int|float|boolean v2,
                string msg) "turbine" "0.0.2" "assertLTE";
 
 #endif
