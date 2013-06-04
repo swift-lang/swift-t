@@ -23,6 +23,8 @@ OPTIONS
        TURBINE_HOME/export is always included to get standard library
     -l <LOG>
        Log stc progress to given LOG.
+    -L <LOG>
+       Log stc progress to given LOG with trace-level logging.
     -O <Optimization level>
        Set compiler optimization level:
          0 - no optimizations
