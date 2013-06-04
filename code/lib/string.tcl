@@ -20,7 +20,6 @@
 
 namespace eval turbine {
 
-    # User function
     # usage: strcat <result> <args>*
     proc strcat { result inputs } {
         rule $inputs "strcat_body $result $inputs" \
@@ -35,6 +34,23 @@ namespace eval turbine {
             lappend output $t
         }
         set total [ join $output "" ]
+        store_string $result $total
+    }
+
+    # usage: dircat <result> <args>* => arg1/arg2/arg3
+    proc dircat { result inputs } {
+        rule $inputs "dircat_body $result $inputs" \
+            name "dircat-$result"
+    }
+
+    # usage: dircat_body <result> <args>*
+    proc dircat_body { result args } {
+        set output [ list ]
+        foreach input $args {
+            set t [ retrieve_decr_string $input ]
+            lappend output $t
+        }
+        set total [ join $output "/" ]
         store_string $result $total
     }
 

@@ -39,6 +39,9 @@ type external void;
 // This is used by the string+ concatenation operator
 @pure @builtin_op=STRCAT
 (string o) strcat(string... args) "turbine" "0.0.2" "strcat";
+// This is used by the string/ directory catenation operator
+@pure
+(string o) dircat(string... args) "turbine" "0.0.2" "dircat";
 
 @pure @commutative @builtin_op=XOR
 (boolean o) xor (boolean i1, boolean i2) "turbine" "0.0.2" "neq_integer";
