@@ -16,6 +16,7 @@
 package exm.stc.tclbackend;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,6 +74,8 @@ public class BuiltinOps {
         // First handle special cases, then typical case
         if (op == BuiltinOpcode.STRCAT) {
           rhs = localStrCat(in, argExpr);
+        } else if (op == BuiltinOpcode.DIRCAT) {
+          rhs = localDirCat(in, argExpr);
         } else if (op == BuiltinOpcode.EQ_STRING
                   || op == BuiltinOpcode.NEQ_STRING) {
           assert(argExpr.size() == 2);
@@ -322,6 +325,15 @@ public class BuiltinOps {
 
   private static Expression localStrCat(List<Arg> in, ArrayList<Expression> argExpr) {
     return new TclString(argExpr, ExprContext.VALUE_STRING);
+  }
+  
+  private static Expression localDirCat(List<Arg> in, ArrayList<Expression> argExpr) {
+    assert(argExpr.size() == 2);
+    Expression e1 = argExpr.get(0);
+    Expression e2 = argExpr.get(1);
+    Expression op = new TclString("/");
+    List<Expression> args = Arrays.asList(e1, op, e2);
+    return new TclString(args, ExprContext.VALUE_STRING); 
   }
 
   private static Map<BuiltinOpcode, TclFunRef> builtinOpImpls

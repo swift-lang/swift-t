@@ -36,7 +36,10 @@ public class Operators {
    */
   public static enum BuiltinOpcode {
     PLUS_INT, MINUS_INT, MULT_INT, DIV_INT, MOD_INT, PLUS_FLOAT, MINUS_FLOAT, 
-    MULT_FLOAT, DIV_FLOAT, NEGATE_INT, NEGATE_FLOAT, POW_INT, POW_FLOAT, 
+    MULT_FLOAT, DIV_FLOAT, 
+    /** Directory catenation (/): */ 
+    DIRCAT, 
+    NEGATE_INT, NEGATE_FLOAT, POW_INT, POW_FLOAT, 
     MAX_INT, MAX_FLOAT, MIN_INT, MIN_FLOAT, ABS_INT, ABS_FLOAT, 
     EQ_INT, NEQ_INT, GT_INT, LT_INT, GTE_INT, LTE_INT, 
     EQ_FLOAT, NEQ_FLOAT, GT_FLOAT, LT_FLOAT, GTE_FLOAT, LTE_FLOAT, 
@@ -86,6 +89,8 @@ public class Operators {
       if (numType == PrimType.STRING) {
         opMapping.put(ExMParser.PLUS, BuiltinOpcode.STRCAT);
         optypes.put(BuiltinOpcode.STRCAT, closedOpType);
+        opMapping.put(ExMParser.DIV, BuiltinOpcode.DIRCAT);
+        optypes.put(BuiltinOpcode.DIRCAT, closedOpType);
       }
 
       if (numType == PrimType.INT) {

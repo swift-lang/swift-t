@@ -23,7 +23,7 @@ public class TclString extends Expression
 {
   public static final TclTree EMPTY = new TclString("", false);
   private final StringBuilder sb;
-
+  
   public TclString(String string, boolean escape)
   {
     this.sb = new StringBuilder();
@@ -34,6 +34,14 @@ public class TclString extends Expression
     }
   }
 
+  /** 
+     Convenience constructor: unescaped Tcl string 
+   */
+  public TclString(String string)
+  {
+    this(string, false);
+  }
+  
   /**
    * Create a string from the expressions, with two modes:
    *  LIST_STRING: spaces are inserted between expressions and expressions
@@ -84,7 +92,7 @@ public class TclString extends Expression
   
   /**
    * See http://tmml.sourceforge.net/doc/tcl/Tcl.html
-   * for information about tcl escape sequences
+   * for information about Tcl escape sequences
    * @param unescaped
    * @return
    */
