@@ -157,8 +157,8 @@ run_test()
   SETUP_SCRIPT=${TEST_NAME}.setup.sh
   CHECK_SCRIPT=${TEST_NAME}.check.sh
 
-  SETUP_OUTPUT=${SETUP_SCRIPT%.sh}.out
-  CHECK_OUTPUT=${CHECK_SCRIPT%.sh}.out
+  SETUP_OUTPUT=${TCL_FILE%.tcl}.setup.out
+  CHECK_OUTPUT=${TCL_FILE%.tcl}.check.out
   EXP_OUTPUT=${TEST_PATH}.exp
   TURBINE_OUTPUT=${TCL_FILE%.tcl}.out
   export TURBINE_OUTPUT
