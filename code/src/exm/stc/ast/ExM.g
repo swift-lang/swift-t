@@ -196,10 +196,10 @@ new_type_definition:
 
 // Import can a string or a dotted list of identifiers
 import_statement:
-        IMPORT ( 
+        IMPORT (
             import_path -> ^( IMPORT import_path ) |
             STRING -> ^( IMPORT STRING ) ) SEMICOLON
-    ;   
+    ;
 
 // Identifier path: separated by full stops
 import_path:
@@ -216,9 +216,9 @@ app_function_definition:
         LBRACE app_body SEMICOLON? RBRACE ->
         ^( DEFINE_APP_FUNCTION $f $o $i app_body annotation* )
     ;
-    
+
 app_body:
-    command app_redirection* 
+    command app_redirection*
         -> ^( APP_BODY command app_redirection* );
 
 // The app function command line
@@ -229,27 +229,27 @@ command:
 command_args:
         command_arg command_args_more
     ;
-    
+
 command_args_more:
         command_args |
     ;
-    
+
 command_arg:
         variable
     |   literal
     |   LPAREN expr RPAREN -> expr
-    |   ATSIGN ID -> ^( APP_FILENAME ID )   
+    |   ATSIGN ID -> ^( APP_FILENAME ID )
     ;
- 
+
 app_redirection:
       ATSIGN redirect_type ASSIGN expr ->
-        ^( APP_REDIRECTION redirect_type expr )        
-    ;   
-    
-redirect_type: 
+        ^( APP_REDIRECTION redirect_type expr )
+    ;
+
+redirect_type:
         (STDIN|STDOUT|STDERR)
     ;
- 
+
 composite_function_definition:
         annotation*
         o=formal_argument_list f=ID i=formal_argument_list
@@ -268,18 +268,18 @@ builtin_function_definition:
     ;
 
 tcl_package:
-        pkg=STRING version=STRING -> ^( TCL_PACKAGE $pkg $version ) 
+        pkg=STRING version=STRING -> ^( TCL_PACKAGE $pkg $version )
     ;
-    
+
 tcl_fun_ref:
-        symbol=STRING -> ^( TCL_FUN_REF $symbol ) 
+        symbol=STRING -> ^( TCL_FUN_REF $symbol )
     ;
 
 type_parameters:
-        /* empty */ -> ^( TYPE_PARAMETERS )   
+        /* empty */ -> ^( TYPE_PARAMETERS )
     |   LT id_list GT -> ^( TYPE_PARAMETERS id_list )
     ;
-    
+
 id_list:
         ID id_list_more
     ;
@@ -288,7 +288,8 @@ id_list_more:
     |   COMMA id_list -> id_list
     ;
 inline_tcl:
-    LSQUARE tcl=STRING RSQUARE -> ^( INLINE_TCL $tcl );
+    LSQUARE tcl=(STRING|STRING_MULTI_LINE_1|STRING_MULTI_LINE_2) RSQUARE
+          -> ^( INLINE_TCL $tcl );
 
 global_const_definition:
         GLOBAL CONST v=declare_assign_single SEMICOLON
@@ -341,7 +342,7 @@ stmt:
     |   (real_stmt) -> real_stmt
     ;
 
-real_stmt: 
+real_stmt:
         (stmt_chain)
     |   (if_stmt)
     |   (switch_stmt)
@@ -356,17 +357,17 @@ real_stmt:
 stmt_chain:
         chainable_stmt
           (  SEMICOLON
-                    -> chainable_stmt 
-          | stmt_chain_op real_stmt 
+                    -> chainable_stmt
+          | stmt_chain_op real_stmt
                     ->  ^( STATEMENT_CHAIN chainable_stmt real_stmt ))
     ;
-        
+
 chainable_stmt:
         (declaration_multi)
     |   (assignment_expr)
     |   (expr_stmt)
     ;
-    
+
  stmt_chain_op:
         '=' '>'
     ;
@@ -592,9 +593,11 @@ literal:
             |   d=(DECIMAL | SCI_DECIMAL | INFINITY | NOTANUMBER)
                  -> ^( FLOAT_LITERAL $d)
             |   s=STRING -> ^( STRING_LITERAL $s)
+            |   s=STRING_MULTI_LINE_1 -> ^( STRING_LITERAL $s)
+            |   s=STRING_MULTI_LINE_2 -> ^( STRING_LITERAL $s)
             |   b=bool_lit -> ^( BOOL_LITERAL $b)
     ;
-    
+
 
 variable:
         ID -> ^( VARIABLE ID )
@@ -607,12 +610,12 @@ function_call:
     ;
 
 function_call_name:
-         ID 
+         ID
     |    ATSIGN ID -> ^( DEPRECATED ID )
     ;
 
 call_annotation:
-		ATSIGN ann=ID ASSIGN e=expr 
+		ATSIGN ann=ID ASSIGN e=expr
 			-> ^( CALL_ANNOTATION $ann $e )
 	;
 
@@ -788,7 +791,7 @@ WHITESPACE :
         { $channel = HIDDEN; }
     ;
 
-fragment DIGIT    : '0'..'9';
+fragment DIGIT  : '0'..'9';
 fragment ALPHA  : 'a'..'z' | 'A'..'Z';
 fragment UNDER  : '_';
 
@@ -805,3 +808,13 @@ ESCAPE_CODE:
 
 // String literal with c-style escape sequences
 STRING: '"' CHAR* '"';
+
+// Asciidoc-style multi-line string
+STRING_MULTI_LINE_1
+    :   '----\n' ( options {greedy=false;} : . )* '----'
+    ;
+
+// Python-style multi-line string
+STRING_MULTI_LINE_2
+    :   '"""\n' ( options {greedy=false;} : . )* '"""'
+    ;

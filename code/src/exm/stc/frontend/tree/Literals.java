@@ -15,8 +15,8 @@
  */
 package exm.stc.frontend.tree;
 
-import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.frontend.Context;
@@ -99,6 +99,7 @@ public class Literals {
     assert(tree.getType() == ExMParser.STRING_LITERAL);
     assert(tree.getChildCount() == 1);
     // E.g. "hello world\n" with plain escape codes and quotes
+   
     String result = extractLiteralString(context, tree.child(0));
     LogHelper.trace(context, "Unescaped string '" + tree.child(0).getText() + 
               "', resulting in '" + result + "'");
@@ -128,16 +129,34 @@ public class Literals {
   public static String extractLiteralString(Context context, 
                                               SwiftAST stringLiteral) 
                                           throws InvalidSyntaxException {
-    assert(stringLiteral.getType() == ExMParser.STRING);
-    return unescapeString(context, unquote(stringLiteral.getText()));
+    System.out.println(stringLiteral.getText());
+    System.out.println(stringLiteral.getType());
+    int type = stringLiteral.getType();
+    assert(type == ExMParser.STRING || 
+           type == ExMParser.STRING_MULTI_LINE_1 || 
+           type == ExMParser.STRING_MULTI_LINE_2);
+    
+    return unescapeString(context, 
+                          unquote(stringLiteral.getText(), type));
   }
 
-  public static String unquote(String s)
+  public static String unquote(String s, int type)
   {
-    if (s.charAt(0) != '"' ||
-        s.charAt(s.length()-1) != '"')
-      throw new STCRuntimeError("String not quoted: " + s);
-    return s.substring(1, s.length()-1);
+    if (type == ExMParser.STRING) {
+      // Regular string literal
+      if (s.charAt(0) == '"' ||
+          s.charAt(s.length()-1) == '"')
+        return s.substring(1, s.length()-1);
+    } else if (type == ExMParser.STRING_MULTI_LINE_1) {
+      // Multi-line string literal 1
+      if (s.startsWith("----") && s.endsWith("----"))
+        return s.substring(4, s.length()-4);
+    } else if (type == ExMParser.STRING_MULTI_LINE_2) {
+      if (s.startsWith("\"\"\"") && s.endsWith("\"\"\""))
+        // Multi-line string literal 2
+        return s.substring(3, s.length()-3);
+    }
+    throw new STCRuntimeError("String not quoted: " + s);
   }
   
   /** 
