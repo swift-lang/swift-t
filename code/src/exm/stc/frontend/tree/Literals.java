@@ -129,8 +129,6 @@ public class Literals {
   public static String extractLiteralString(Context context, 
                                               SwiftAST stringLiteral) 
                                           throws InvalidSyntaxException {
-    System.out.println(stringLiteral.getText());
-    System.out.println(stringLiteral.getType());
     int type = stringLiteral.getType();
     assert(type == ExMParser.STRING || 
            type == ExMParser.STRING_MULTI_LINE_1 || 
