@@ -25,6 +25,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.lang.Arg;
@@ -32,7 +33,6 @@ import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
@@ -83,7 +83,9 @@ public class ConstantFold implements OptimizerPass {
     }
     
     for (Function f: in.getFunctions()) {
-      constantFold(logger, in, f, f.mainBlock(), 
+      // Set of variables that should not be replaced
+      Set<Var> blacklist = new HashSet<Var>();
+      constantFold(logger, in, f, f.mainBlock(), blacklist, 
                    globalConsts.makeChildMap());
     }
   }
@@ -97,12 +99,13 @@ public class ConstantFold implements OptimizerPass {
    * @throws InvalidOptionException 
    */
   private static boolean constantFold(Logger logger, Program prog, 
-      Function fn, Block block,
+      Function fn, Block block, Set<Var> blacklist,
       HierarchicalMap<Var, Arg> knownConstants) throws InvalidOptionException {
     // Find all constants in block
-    findBlockConstants(logger, block, knownConstants, false, false);
+    findBlockConstants(logger, fn, block, blacklist, knownConstants,
+                       false, false);
     
-    boolean changed = false; 
+    boolean changed = false;
     boolean converged = false;
     while (!converged) {
       converged = true; // assume no changes
@@ -147,8 +150,8 @@ public class ConstantFold implements OptimizerPass {
     for (Continuation c: block.allComplexStatements()) {
       for (Block b: c.getBlocks()) {
         // Make copy of constant map so that binds don't get mixed up
-        boolean changedRec = constantFold(logger, prog, fn, b, 
-                            knownConstants.makeChildMap());
+        boolean changedRec = constantFold(logger, prog, fn, b,
+                      blacklist, knownConstants.makeChildMap());
         changed = changed || changedRec;
       }
     }
@@ -215,46 +218,57 @@ public class ConstantFold implements OptimizerPass {
    * Find all the directly assigned constants in the block
    * @param logger
    * @param block
+   * @param blacklist variables that should not be replaced (e.g. if double-assigned)
    * @param knownConstants
-   * @param removeDefs if true, remove the set instructions as we go
+   * @param onlyDefinedInBlock if true, only include constants defined
+   *                           in this block
    */
-  static void findBlockConstants(Logger logger, Block block,
-      Map<Var, Arg> knownConstants, boolean removeLocalConsts,
-      boolean ignoreLocalValConstants) {
-    Set<Var> removalCandidates = null;
-    if (removeLocalConsts) {
-      removalCandidates = new HashSet<Var>();
-      // Only remove variables defined in this scope: don't know how they
-      // are used in other scopes
-      for (Var v: block.getVariables()) {
-        // Avoid removing alias variables as writes to them have side-effects
-        if (v.storage() != VarStorage.ALIAS) {
-          removalCandidates.add(v);
-        }
-      }
+  static void findBlockConstants(Logger logger, 
+      Function fn, Block block,
+      Set<Var> blacklist,
+      Map<Var, Arg> knownConstants,
+      boolean ignoreLocalValConstants,
+      boolean onlyDefinedInBlock) {
+    Set<Var> defs = null;
+    if (onlyDefinedInBlock) {
+      defs = new HashSet<Var>(block.getVariables());
     }
-      
+    
     ListIterator<Statement> it = block.statementIterator();
     while (it.hasNext()) {
       Statement stmt = it.next();
       if (stmt.type() == StatementType.INSTRUCTION) {
         Instruction inst = stmt.instruction();
-        if (inst.getInputs().size() == 1 &&
-              isValueStoreInst(inst, ignoreLocalValConstants)) {
+        if (isValueStoreInst(inst, ignoreLocalValConstants)) {
           Var var = inst.getOutput(0);
-          if ((!removeLocalConsts) || removalCandidates.contains(var)) {
-            logger.debug("Found constant " + var);
-            knownConstants.put(var, inst.getInput(0));
-            if (removeLocalConsts && !inst.hasSideEffects()) {
-              logger.trace("Removing instruction " + inst.toString());
-              it.remove();
+          if (!blacklist.contains(var) && 
+              (!onlyDefinedInBlock || defs.contains(var))) {
+            Arg value = inst.getInput(0);
+            logger.debug("Found constant " + var + " = " + value);
+            Arg oldValue = knownConstants.get(var);
+            if (oldValue != null && !value.equals(oldValue)) {
+              // TODO: cut down on number of duplicate warning messages
+              Logging.uniqueWarn("Invalid code detected during optimization. "
+                  + "Conflicting values for " + var + " = " + value +
+                    " != " + oldValue + " in " + fn.getName() + ".\n" +
+                    "This may have been caused by a double-write to a variable. " +
+                    "Please look at any previous warnings emitted by compiler. " +
+                    "Otherwise this could indicate a stc bug");
+              blacklist.add(var);
+              // TODO: hack
+              if (knownConstants instanceof HierarchicalMap) {
+                ((HierarchicalMap<Var, Arg>)knownConstants).remove(var, false);
+              } else {
+                knownConstants.remove(var);
+              }
+              // blacklist variable to avoid being replaced
+              blacklist.add(var);
+            } else {
+              knownConstants.put(var, value);
             }
           }
         }
       }
-    }
-    if (removeLocalConsts) {
-      block.removeVarDeclarations(knownConstants.keySet());
     }
   }
 
@@ -265,8 +279,12 @@ public class ConstantFold implements OptimizerPass {
    * @param ignoreLocalValConstants
    * @return
    */
-  private static boolean isValueStoreInst(Instruction inst,
+  public static boolean isValueStoreInst(Instruction inst,
       boolean ignoreLocalValConstants) {
+    if (inst.getInputs().size() == 0) {
+      return false;
+    }
+    
     Arg input = inst.getInput(0);
     if (input.isConstant()) {
       if (inst.op == Opcode.STORE_INT || inst.op == Opcode.STORE_BOOL            

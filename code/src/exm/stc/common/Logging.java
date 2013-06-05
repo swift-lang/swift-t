@@ -15,12 +15,38 @@
  */
 package exm.stc.common;
 
+import java.util.HashSet;
+
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+
+import exm.stc.common.util.Pair;
 
 public class Logging {
   private static final String STC_LOGGER_NAME = "exm.stc";
 
+  /**
+   * Messages already emitted.
+   */
+  private static final HashSet<Pair<org.apache.log4j.Level, String>> emitted =
+          new HashSet<Pair<org.apache.log4j.Level, String>>(); 
+  
   public static Logger getSTCLogger() {
     return Logger.getLogger(STC_LOGGER_NAME);
+  }
+  
+  /**
+   * @param level
+   * @param msg
+   * @return true if not already emitted
+   */
+  public static boolean addEmitted(org.apache.log4j.Level level, String msg) {
+    return emitted.add(Pair.create(level, msg));
+  }
+
+  public static void uniqueWarn(String msg) {
+    if (Logging.addEmitted(Level.WARN, msg)) {
+      Logging.getSTCLogger().warn(msg); 
+    }
   }
 }
