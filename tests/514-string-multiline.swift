@@ -21,6 +21,12 @@ xyzz
 4321
 """;
 
-  printf("OUTPUT: %s %s", t1, t2);
+// Should produce AA
+string t3 =
+----
+A\101
+----;
+
+printf("OUTPUT: %s %s %s", t1, t2, t3);
   f();
 }
