@@ -341,13 +341,13 @@ A range of functions to work with files are provided in the
 // Initialize an array of files from a range of files on disk with glob
 file f[] = glob("directory/*.txt");
 
-// Read the contents of a file with readFile
+// Read the contents of a file with read
 string filename = "in.txt";
-string contents = readFile(input_file(filename));
+string contents = read(input_file(filename));
 trace("Contents of " + filename + ":\n" + contents);
 
-// Write directly to a file with writeFile
-file tmp = writeFile("first line\nsecond line");
+// Write directly to a file with write
+file tmp = write("first line\nsecond line");
 
 // Find the name of a file with filename
 trace("Temporary filename is: " + filename(tmp));
@@ -900,8 +900,8 @@ If condition is false, report +message+ and exit immediately.
 +filename(file) -> string+::   Obtain the name of a file
 +input_file(string) -> file+:: Obtain a +file+.  At run time, the
 filesystem is checked for the given file name
-+readFile(file) -> string+::   Read file as a string
-+writeFile(string) -> file+::  Write string to file
++read(file) -> string+::   Read file as a string
++write(string) -> file+::  Write string to file
 +glob(string) -> file[]+:: Perform glob operation, returning files
 that match.  Available glob symbols include:
 +
@@ -940,7 +940,7 @@ as 64-bit integers).
 +blob_from_file(file) -> blob+:: Reads whole file, returning it as a
 blob.
 
-== Defining Leaf functions
+== Defining leaf functions
 
 In typical Swift applications, the computationally intensive parts of
 the application are not written in the Swift language.  Rather, the
