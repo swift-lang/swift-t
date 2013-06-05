@@ -146,7 +146,7 @@ include::examples/1/test-f.sh[]
 *Conclusion:* Now you can make many concurrent calls to a simple Tcl
 function using Swift.
 
-=== Complete example 2: C function
+=== Complete example 2: Simple C function
 
 This section describes how to call C functions concurrently from Swift.
 
@@ -181,7 +181,8 @@ First, we run SWIG on the header:
 ----
 include::examples/2/swig-g.sh[]
 ----
-SWIG produces +g_wrap.c+.  Compile this and create a Tcl package:
+SWIG produces +g_wrap.c+.  Compile this and create a Tcl package
+(+test-swig-g.sh+):
 ----
 include::examples/2/test-swig-g.sh[]
 ----
@@ -220,6 +221,73 @@ include::examples/2/test-g-n.sh[]
 Thus, providing 1 worker for each loop iteration yields perfect
 speedup.  Note that we had to provide 8 MPI processes: one for each of
 the 6 loop iterations, one Turbine engine, and one ADLB server.
+
+=== Complete example 3: C function with binary data
+
+In this case, we pass binary data in a byte array between Swift and C.
+
+The application in this case consumes a binary file containing
+double precision integers.  It manipulates the data in Swift and passes
+it to a C library.  The C library returns the sum of the numbers
+as an array of double precision numbers of length 1.
+
+==== Create the data set
+
+First, we create our binary file using the provided
++turbine-write-doubles+/+turbine-read-doubles+ tools
+(+create-data.sh+):
+----
+include::examples/3/create-data.sh[]
+----
+Simple manipulation can be performed in Swift as (+test-b-simple.swift+):
+----
+include::examples/3/test-b-simple.swift[]
+----
++test-b-simple.sh+:
+----
+include::examples/3/test-b-simple.sh[]
+----
+
+==== Define the C function
+
+Our C function is (+b.c+):
+----
+include::examples/3/b.c[]
+----
+It may be tested from C with (+test-b.c+):
+----
+include::examples/3/test-b.c[]
+----
++test-b.sh+:
+----
+include::examples/3/test-b.sh[]
+----
+
+==== Create the Tcl package
+
+Build the Tcl package with (+swig-b.sh+):
+----
+include::examples/3/swig-b.sh[]
+----
+
+Since the blob pointer is of type +void*+, we need to wrap the C
+function in some helper Tcl code to transmit blob data to the typed C
+function.  This is performed in +b.tcl+:
+----
+include::examples/3/b.tcl[]
+----
+Thus, Swift calls the Tcl wrapper, which calls the C function.
+
+Note that we return blob containing a pointer to freshly allocated
+memory to Swift.  The system will release this memory.
+
+==== Call from Swift
+
+The Swift code to pass the blob to +b()+ is as follows
+(+test-b.swift+):
+----
+include::examples/3/test-b.swift[]
+----
 
 ////
 Local Variables:
