@@ -11,7 +11,7 @@ app (file o) hostname() {
 }
 
 (string o) extract_hostname(file f) {
-  o = trim(readFile(f));
+  o = trim(read(f));
 }
 
 main {

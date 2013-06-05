@@ -5,11 +5,11 @@ import assert;
 
 // Loop string through file
 (string o) id (string i) {
-  o = readFile(cat(writeFile(i)));
+  o = read(cat(write(i)));
 }
 
 app (file out) cat (file input) {
-  "/bin/cat" @stdin=input @stdout=out; 
+  "/bin/cat" @stdin=input @stdout=out;
 }
 
 main () {

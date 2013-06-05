@@ -17,9 +17,9 @@ main {
 
     file z = cp(y);
     wait (x,y,z) {
-        assertEqual(readFile(x), "test\n", "x");
-        assertEqual(readFile(y), "test\n", "z");
-        assertEqual(readFile(z), "test\n", "z");
+        assertEqual(read(x), "test\n", "x");
+        assertEqual(read(y), "test\n", "z");
+        assertEqual(read(z), "test\n", "z");
     }
 }
 

@@ -35,11 +35,11 @@ main () {
   wait (args) {
     // make file containing lines from array
     file all = sed("s/ /\\n/g", echo(args));
-    trace("original", readFile(all));
+    trace("original", read(all));
     file top10 = cat(head(sort(all), 10));
 
     // Concatenate 
-    string top10list = replace_all(readFile(top10), "\n", ",", 0);
+    string top10list = replace_all(read(top10), "\n", ",", 0);
     assertEqual(top10list, "1,2,3,4,5,6,7,8,9,10,", "top10list");
     trace("top10", top10list);
 
