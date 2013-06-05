@@ -146,6 +146,81 @@ include::examples/1/test-f.sh[]
 *Conclusion:* Now you can make many concurrent calls to a simple Tcl
 function using Swift.
 
+=== Complete example 2: C function
+
+This section describes how to call C functions concurrently from Swift.
+
+==== Establish the C library
+
+Consider the following target C library header (+g.h+):
+----
+include::examples/2/g.h[]
+----
+implemented with (+g.c+):
+----
+include::examples/2/g.c[]
+----
+This function is normally called as (+test-g.c+):
+----
+include::examples/2/test-g.c[]
+----
+It may be compiled and run with (+test-g.sh+):
+----
+include::examples/2/test-g.sh[]
+----
+----
+include::examples/2/run-g.sh[]
+----
+
+==== Export the C library as a Tcl package
+
+Now, we would like to call many concurrent instances of +g()+.  First,
+we need to make the Tcl package.
+
+First, we run SWIG on the header:
+----
+include::examples/2/swig-g.sh[]
+----
+SWIG produces +g_wrap.c+.  Compile this and create a Tcl package:
+----
+include::examples/2/test-swig-g.sh[]
+----
+This produces +libg.so+ and the Tcl package file +pkgIndex.tcl+.
+We test this from Tcl (+test-g.tcl+):
+----
+include::examples/2/test-g.tcl[]
+----
+This is run from the shell as (+test-g-tcl.sh+):
+----
+include::examples/2/test-g-tcl.sh[]
+----
+
+==== Call the Tcl package from Swift (one-shot)
+
+Then, we bring the Tcl package into Swift (+test-g-1.swift+):
+----
+include::examples/2/test-g-1.swift[]
+----
+Compile and run (+test-g-1.sh+):
+----
+include::examples/2/test-g-1.sh[]
+----
+
+==== Call the Tcl package from Swift concurrently
+
+Write a foreach loop around the call to +g+ (+test-g-n.swift+):
+----
+include::examples/2/test-g-n.swift[]
+----
+Compile and run (+test-g-n.swift+):
+----
+include::examples/2/test-g-n.sh[]
+----
+
+Thus, providing 1 worker for each loop iteration yields perfect
+speedup.  Note that we had to provide 8 MPI processes: one for each of
+the 6 loop iterations, one Turbine engine, and one ADLB server.
+
 ////
 Local Variables:
 mode: doc
