@@ -29,7 +29,7 @@
 @pure
 @dispatch=WORKER
 (string t) read(file f)
-    "turbine" "0.0.2" "file_read_local"
+    "turbine" "0.0.2" "file_read"
     [ "set <<t>> [ turbine::file_read_local <<f>> ]" ];
 
 @pure
