@@ -1,9 +1,10 @@
+#/usr/bin/env turbine -n 1
 
-# READ_DOUBLES
+# TURBINE-READ-DOUBLES
 
 # Reads a file of doubles
 
-# Usage: turbine -n 1 read_doubles.tcl <input>
+# Usage: turbine-read-doubles.tcl <input>
 
 package require turbine 0.1.1
 

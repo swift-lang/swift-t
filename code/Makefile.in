@@ -341,11 +341,14 @@ TURBINE_HEADERS = src/turbine/turbine.h      \
                   src/turbine/turbine-defs.h \
                   src/tcl/blob/blob.h
 
+BINS    = $(shell ls bin/turbine \
+                     bin/turbine-write-doubles \
+                     bin/turbine-read-doubles )
 EXPORTS = $(shell ls export/*.swift )
-SCRIPTS = $(shell ls bin/turbine scripts/*.zsh scripts/*.sh \
+SCRIPTS = $(shell ls scripts/*.zsh scripts/*.sh scripts/*.tcl \
 	             $(SCRIPTS_SUBMIT) )
 
-install.txt: $(PACKAGE) $(EXPORTS) $(SCRIPTS)
+install.txt: $(PACKAGE) $(BINS) $(EXPORTS) $(SCRIPTS)
 #       Note: this is re-run if anything changes
 	@echo
 	$(Q) "  INSTALL		$(INSTALL_PREFIX)"
@@ -355,7 +358,7 @@ install.txt: $(PACKAGE) $(EXPORTS) $(SCRIPTS)
 #       Copy in build provenance files
 	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
 #       Copy Turbine items
-	$(E) cp $(CP_ARGS) bin/turbine           $(INSTALL_BIN)
+	$(E) cp $(CP_ARGS) $(BINS)               $(INSTALL_BIN)
 	$(E) cp $(CP_ARGS) lib/*.tcl             $(INSTALL_LIB)
 	$(E) cp $(CP_ARGS) lib/*.$(SO_SUFFIX)    $(INSTALL_LIB)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS) $(INSTALL_PREFIX)
@@ -376,7 +379,7 @@ install.txt: $(PACKAGE) $(EXPORTS) $(SCRIPTS)
 clean::
 	@echo
 	@echo "  CLEAN"
-	@rm -fv  $(PACKAGE)
+	@rm -fv  $(PACKAGE) install.txt
 	@rm -fv  $(TURBINE_A) $(TCL_TURBINE_SO)
 	@rm -fv  $(DEPS) $(TEST_DEPS) deps.txt deps_contents.txt TAGS
 	@rm -fv  $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT)
