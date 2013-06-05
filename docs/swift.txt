@@ -132,9 +132,9 @@ main
 {}
 ----
 
-As shown, STC input is preprocessed by +cpp+, the C preprocessor.
+STC input is preprocessed by +cpp+, the C preprocessor.
 
-Hello world is thus:
+Hello world is written as:
 
 ----
 import io;
@@ -241,7 +241,8 @@ will lead to a stall in progress.
 
 == Composite functions
 
-Swift code is written in composite functions.
+Swift code is written in composite functions.  The composite function
++main+ is required.
 
 Composite functions have the form:
 
@@ -288,29 +289,38 @@ Literals for these types use conventional syntax:
 * +int+ literals are written as decimal numbers, e.g. +-1234+
 * +float+ literals are written as decimal numbers with a decimal point,
     e.g +5493.352+ or +1.0+.
+    Scientific notation may be used,
+    as in +2.3e-2+ which is equivalent to +0.023+.
     The literals +NaN+ and +inf+ may be used.  In some contexts +int+
     literals are promoted automatically to +float+.
-* +boolean+ literals
+* +boolean+ literals +true+ and +false+ may be used.
 * +string+ literals are enclosed in double quotes, with a range of escape
     sequences supported:
-** \\ for a single backslash
-** \" for a quote
-** \n for newline
-** \t for tab
-** \a
-** \b
-** \f
-** \r
-** \v
-** hexadecimal escape codes, e.g. \xf2
-
-The literals +true+ and +false+ may be used for boolean.
-
+** +\\+ for a single backslash
+** +\"+ for a quote
+** +\n+ for newline
+** +\t+ for tab
+** +\a+ (alarm)
+** +\b+ (backspace)
+** +\f+ (form feed)
+** +\r+ (carriage return)
+** +\v+ (vertical tab)
+** octal escape codes, e.g. +\001+
+** hexadecimal escape codes, e.g. +\xf2+
+* _In release 0.4.0:_ Multi-line strings may be used in two syntaxes:
+** Python-style:
++
 ----
-int four = 2+2;
-string s = "hello ";
-string hw = s + "world";
+string s =
+"""
+line data 1
+line data 2
+""";
 ----
++
+** Asciidoc-style: like Python-style but use 4 dashes instead of 3 quotes.
+
+For more information: http://en.wikipedia.org/wiki/US-ASCII#ASCII_control_code_chart[ASCII control codes].
 
 === Files
 
@@ -356,7 +366,7 @@ trace("Temporary filename is: " + filename(tmp));
 Temporary files are created as necessary if unmapped files are
 written to.  For example, the file +tmp+ in the above code snippet.
 
-Currently Swift/T assumes that the file system is shared between
+Currently Swift/T assumes that the file system is shared among
 all nodes.
 
 === Blobs
