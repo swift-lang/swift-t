@@ -774,8 +774,6 @@ Store blob in ADLB
 
 *blob.c*
 
-
-
 ===== Usage
 
 This illustrates what can go in a typical Swift/T leaf function
@@ -796,7 +794,7 @@ set pointer2 [ lindex 0 $L2 ]
 set length2  [ lindex 1 $L2 ]
 
 # Store C function result
-turbine::store_blob $id2 $pointer2 $length2
+turbine::store_blob $id2 [ list $pointer2 $length2 ]
 
 # Free from local cache
 adlb::blob_free $id1
@@ -881,13 +879,6 @@ for a sense of the purpose of these features.
 
 TODO
 
-////
-Local Variables:
-mode: doc
-End:
-////
-
-
 == CPU Profiling
 It is possible to obtain information about CPU usage in Turbine by using
 the Google perftools CPU profiler.  This profiler is non-intrusive: it
@@ -915,3 +906,9 @@ information in various formats, including text and graphical.
     pprof --pdf `which tclsh8.5` turbine.prof_12345 > turbine.prof_12345.pdf
 
 Note: on Ubuntu, pprof is renamed to google-pprof.
+
+////
+Local Variables:
+mode: doc
+End:
+////
