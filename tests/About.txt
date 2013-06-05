@@ -29,9 +29,9 @@ The tests are numbered for lexical sorting by shell glob.
 300::       Arrays, structs
 400::       For loops
 500::       Types
-        560:: files
-        580:: foreach
-        590:: blobs
+        560: files
+        580: foreach
+        590: blobs
 600::       User builtins, interesting CPP uses
 700::       STC standard library
         700: strings
@@ -40,6 +40,12 @@ The tests are numbered for lexical sorting by shell glob.
         780: MPE
 800::       Error outputs
 900::       Apps??? Formerly advanced constructs
+        900: More for loops- move to 400?
+        910: iterate - move to 400?
+        920: wait() {}
+        940: Globals
+        950: Stats
+        970: PIPS snippets
         980: RDCEP snippets
 
 == Clean
