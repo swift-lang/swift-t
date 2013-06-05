@@ -28,13 +28,14 @@
 
 @pure
 @dispatch=WORKER
-(string t) readFile(file f)
-    "turbine" "0.0.2" "readFile"
-    [ "set <<t>> [ turbine::read_file_local <<f>> ]" ];
+(string t) read(file f)
+    "turbine" "0.0.2" "file_read_local"
+    [ "set <<t>> [ turbine::file_read_local <<f>> ]" ];
 
 @pure
-(file t) writeFile(string s)
-    "turbine" "0.0.2" "writeFile";
+@dispatch=WORKER
+(file t) write(string s)
+    "turbine" "0.0.2" "file_write";
 
 @pure
 (string t) file_type(file f)

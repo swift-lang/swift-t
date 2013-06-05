@@ -19,7 +19,7 @@
 
 namespace eval turbine {
     namespace export get_file_status get_file_path is_file_mapped \
-                     filename2 copy_file close_file writeFile readFile
+                     filename2 copy_file close_file file_read file_write
     # Extract file status future from handle
     proc get_file_status { file_handle } {
       return [ lindex $file_handle 0 ]
@@ -251,15 +251,15 @@ namespace eval turbine {
         }
     }
 
-    proc readFile { result inputs } {
+    proc file_read { result inputs } {
 	set src [ lindex $inputs 0 ]
         rule_file_helper "read_file-$src" [ list ] \
             [ list ] [ list $src ] \
             $::turbine::WORK \
-            [ list readFile_body $result $src ]
+            [ list file_read_body $result $src ]
     }
 
-    proc readFile_body { result src } {
+    proc file_read_body { result src } {
 	set srcpath [ get_file_path $src ]
 	set s [retrieve_string $srcpath]
         set fp [ ::open $s r ]
@@ -269,23 +269,23 @@ namespace eval turbine {
         file_read_refcount_decr $src
     }
 
-    proc read_file_local { local_file } {
+    proc file_read_local { local_file } {
         set fp [ ::open [ local_file_path $local_file ] r ]
 	set file_data [ read $fp ]
         close $fp
         return $file_data
     }
 
-    proc writeFile { outputs inputs } {
+    proc file_write { outputs inputs } {
 	set dst [ lindex $outputs 0 ]
 	set s_value [ retrieve_string $inputs ]
 	rule_file_helper "write_file" "$inputs" \
             [ list $dst ] [ list ] \
 	    $::turbine::WORK \
-            [ list writeFile_body $outputs $s_value ]
+            [ list file_write_body $outputs $s_value ]
     }
 
-    proc writeFile_body { outputs str } {
+    proc file_write_body { outputs str } {
 	set dst [ lindex $outputs 0 ]
 	set dstpath [ get_file_path $dst ]
 	set d [ retrieve_decr_string $dstpath ]
@@ -298,7 +298,7 @@ namespace eval turbine {
     # local_file: local file object
     # data: data to write to file
     # TODO: calling convention not figured out yet
-    proc write_file_local { local_file data } {
+    proc file_write_local { local_file data } {
 	set fp [ ::open [ local_file_path $local_file ] w+ ]
         puts $fp $str
 	close $fp
