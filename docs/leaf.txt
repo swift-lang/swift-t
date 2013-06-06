@@ -282,6 +282,8 @@ may be found in the link:internals.html[Turbine Internals Guide];
 the +blobutils+ tools are described in the
 link:internals.html#_blob_manipulation[blobs section].
 
+// TODO: complete the blobs section
+
 Note that we return blob containing a pointer to freshly allocated
 memory to Swift.  The system will release this memory.
 
@@ -297,7 +299,11 @@ include::examples/3/test-b.swift[]
 include::examples/3/test-b-swift.sh[]
 ----
 
+// TODO: === Complete example 4: Calling a Fortran function
 
+// TODO: === Complete example 5: Calling an MPI function
+
+// TODO: === Complete example 6: Calling Swift/T from C
 
 ////
 Local Variables:
