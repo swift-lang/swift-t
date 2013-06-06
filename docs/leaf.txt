@@ -277,6 +277,10 @@ function.  This is performed in +b.tcl+:
 include::examples/3/b.tcl[]
 ----
 Thus, Swift calls the Tcl wrapper, which calls the C function.
+Additional documentation for writing Tcl wrappers that use the Turbine API
+may be found in the link:internals.html[Turbine Internals Guide];
+the +blobutils+ tools are described in the
+link:internals.html#_blob_manipulation[blobs section].
 
 Note that we return blob containing a pointer to freshly allocated
 memory to Swift.  The system will release this memory.
@@ -288,6 +292,12 @@ The Swift code to pass the blob to +b()+ is as follows
 ----
 include::examples/3/test-b.swift[]
 ----
++test-b-swift.sh+:
+----
+include::examples/3/test-b-swift.sh[]
+----
+
+
 
 ////
 Local Variables:
