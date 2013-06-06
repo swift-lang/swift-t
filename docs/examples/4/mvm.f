@@ -9,18 +9,8 @@
 
       double precision :: alpha, beta
 
-      print *, "n"
-      print *, n
-      print *, "A"
-      print *, A
-      print *, "x"
-      print *, x
-
       alpha = 1.0D0
       beta  = 0.0D0
       call dgemv('N', n, n, alpha, A, n, x, 1, beta, y, 1)
-
-      print *, "y"
-      print *, x
 
       end subroutine

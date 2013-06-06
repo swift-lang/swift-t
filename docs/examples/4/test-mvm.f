@@ -18,7 +18,7 @@
       close (1)
 
       do i = 1,n
-         y(i) = 0
+         y(i) = 0.0D0
       end do
 
       call MVM(A, x, y, n)
