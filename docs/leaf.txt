@@ -138,7 +138,7 @@ Then, build a simple Swift test script to try it (+test-f.swift+):
 include::examples/1/test-f.swift[]
 ----
 
-Now, run it:
+Now, make the package available to Turbine and run it:
 ----
 include::examples/1/test-f.sh[]
 ----
@@ -332,9 +332,10 @@ It is built and run with (+test-mvm.sh+):
 ----
 include::examples/4/test-mvm.sh[]
 ----
-FortWrap produces the C++ files +FortFuncs.h+ and +FortFuncs.cpp+,
-which we wrap with SWIG to produce a Tcl function called
-+FortFuncs_MVM+.  We can call this from Swift.
+
+FortWrap will scan +mvm.f+ and produce the C++ files +FortFuncs.h+ and
++FortFuncs.cpp+, which we wrap with SWIG to produce a Tcl function
+called +FortFuncs_MVM+.  We can call this from Swift.
 
 ==== Write the Swift code and Tcl wrapper
 
