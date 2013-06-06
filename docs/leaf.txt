@@ -89,7 +89,7 @@ Calling this from the shell looks like this:
 ----
 include::examples/1/test-f-1.sh[]
 ----
-(On your system, the Tcl shell +tclsh+ may be called +tcl8.5+)
+(On your system, the Tcl shell +tclsh+ may be called +tclsh8.5+)
 
 Thus, to load this into Swift, we need to be able to 1) load +f.tcl+
 and 2) invoke it.  To make it easy to load +f.tcl+, we create a Tcl
