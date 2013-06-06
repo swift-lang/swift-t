@@ -299,7 +299,70 @@ include::examples/3/test-b.swift[]
 include::examples/3/test-b-swift.sh[]
 ----
 
-// TODO: === Complete example 4: Calling a Fortran function
+=== Complete example 4: Calling a Fortran function
+
+In this example, we call Fortran from Swift.  We do this by wrapping
+the Fortran function in a C++ wrapper by using
+http://fortwrap.sourceforge.net[FortWrap].  Then, we wrap for Swift by
+using SWIG.
+
+This example will demonstrate multiplying +y=A*x+ using Swift to call
+a user Fortran library, which in turn calls the BLAS function
++dgemv+.  This demonstrates the generality of our model.
+
+[latex]
+\begin{equation*}
+Ax=y \Longleftrightarrow
+\begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}
+\begin{bmatrix}   5   \\   6   \end{bmatrix} =
+\begin{bmatrix}   17  \\  39   \end{bmatrix}
+\end{equation*}
+
+==== Establish the Fortran function
+
+Consider the Fortran function (+mvm.f+):
+----
+include::examples/4/mvm.f[]
+----
+A test program to run this is (+test-mvm.f+):
+----
+include::examples/4/test-mvm.f[]
+----
+It is built and run with (+test-mvm.sh+):
+----
+include::examples/4/test-mvm.sh[]
+----
+FortWrap produces the C++ files +FortFuncs.h+ and +FortFuncs.cpp+,
+which we wrap with SWIG to produce a Tcl function called
++FortFuncs_MVM+.  We can call this from Swift.
+
+==== Write the Swift code and Tcl wrapper
+
+Our goal is to rewrite +test-mvm.f+ in Swift so we can call +MVM+
+concurrently on many processors.  Our Swift replacement is
+(+test-mvm.swift+):
+----
+include::examples/4/test-mvm.swift[]
+----
+
+Our Tcl wrapper converts the Tcl call to +mvm+ on blob arguments
+to the Tcl call to +FortFuncs_MVM+ on pointers.  This is performed
+similarly to the C example above (+mvm.tcl+).
+
+==== Build and run
+
+Now, we build everything (+build.sh+):
+----
+include::examples/4/build.sh[]
+----
+We run it in Swift with (+test-mvm-swift.sh+):
+----
+include::examples/4/test-mvm-swift.sh[]
+----
+This produces:
+----
+include::examples/4/test-mvm-swift.out[]
+----
 
 // TODO: === Complete example 5: Calling an MPI function
 
@@ -308,5 +371,6 @@ include::examples/3/test-b-swift.sh[]
 ////
 Local Variables:
 mode: doc
+eval: (auto-fill-mode 1)
 End:
 ////
