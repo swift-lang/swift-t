@@ -365,7 +365,14 @@ This produces:
 include::examples/4/test-mvm-swift.out[]
 ----
 
-// TODO: === Complete example 5: Calling an MPI function
+=== Complete example 5: Calling an MPI library
+
+Calling an existing MPI library is similar to calling any other C
+code.  In this example, we will show how to obtain the new
+communicator from Swift/T.  This functionality only works when using
+Swift/T on an MPI-3 implementation such as MPICH 3.0.
+
+
 
 // TODO: === Complete example 6: Calling Swift/T from C
 
