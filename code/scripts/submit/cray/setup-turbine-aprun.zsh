@@ -47,15 +47,3 @@ fi
 checkvars PROGRAM
 declare PROGRAM
 
-TURBINE_APRUN_M4=${TURBINE_HOME}/scripts/submit/cray/turbine-aprun.sh.m4
-TURBINE_APRUN=${1:-turbine-aprun.sh}
-export WALLTIME=${WALLTIME:-00:15:00}
-export PPN=${PPN:-1}
-
-touch ${TURBINE_APRUN}
-exitcode "Could not write to: ${TURBINE_APRUN}"
-
-m4 ${TURBINE_APRUN_M4} > ${TURBINE_APRUN}
-exitcode "Errors in M4 processing!"
-
-print "wrote: ${TURBINE_APRUN}"

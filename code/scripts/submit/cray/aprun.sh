@@ -49,7 +49,7 @@ cd $PBS_O_WORKDIR
 
 set -x
 # USER: Set Turbine installation path
-export TURBINE_HOME=${USER_WORK}/sfw/turbine-0.0.2
+export TURBINE_HOME=${USER_WORK}/Public/turbine
 # USER: Select program name
 PROGRAM=${USER_WORK}/adlb-data.tcl
 

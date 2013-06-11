@@ -24,19 +24,31 @@
 # NODES: Number of nodes to use
 # PPN:   Processes-per-node
 
-export PROGRAM=$1
-shift
-export ARGS="${*}"
+# NOTE: See the sourced helpers.zsh script for definitions of some
+#       shell functions used here.
 
-TURBINE=$( which turbine )
-if [[ ${?} != 0 ]]
+export PROGRAM=$1
+
+if [[ ${PROGRAM} == "" ]]
 then
-  print "Could not find Turbine in PATH!"
+  print "No PROGRAM!"
+  print "See the header of this script or the Swift/T Guide!"
   return 1
 fi
 
-export TURBINE_HOME=$( cd $(dirname ${TURBINE})/.. ; /bin/pwd )
+shift
+export ARGS="${*}"
+
+print $0
+
+export TURBINE_HOME=$( cd $(dirname $0)/../../.. && /bin/pwd )
+if [[ ${?} != 0 ]]
+then
+  print "Could not find Turbine installation!"
+  return 1
+fi
 declare TURBINE_HOME
+
 source ${TURBINE_HOME}/scripts/helpers.zsh
 if [[ ${?} != 0 ]]
 then
@@ -53,14 +65,27 @@ PROGRAM_DIR=$( /bin/pwd )
 popd >& /dev/null
 PROGRAM=${PROGRAM_DIR}/${SCRIPT_NAME}
 
-checkvars PROGRAM NODES PPN TURBINE_OUTPUT
-declare   PROGRAM NODES PPN TURBINE_OUTPUT SCRIPT_NAME
+export WALLTIME=${WALLTIME:-00:15:00}
+export PPN=${PPN:-1}
+
+checkvars PROGRAM NODES PPN TURBINE_OUTPUT WALLTIME
+declare   PROGRAM NODES PPN TURBINE_OUTPUT WALLTIME
 
 export PROCS=$(( NODES*PPN ))
 
-${TURBINE_HOME}/scripts/submit/cray/setup-turbine-aprun.zsh \
-  ${TURBINE_OUTPUT}/turbine-aprun.sh
-exitcode "setup-turbine-aprun failed!"
+# Filter the template to create the PBS submit script
+TURBINE_APRUN_M4=${TURBINE_HOME}/scripts/submit/cray/turbine-aprun.sh.m4
+TURBINE_APRUN=${TURBINE_OUTPUT}/turbine-aprun.sh
+
+mkdir -pv ${TURBINE_OUTPUT}
+exitcode "Could not create TURBINE_OUTPUT directory!"
+touch ${TURBINE_APRUN}
+exitcode "Could not write to: ${TURBINE_APRUN}"
+
+m4 ${TURBINE_APRUN_M4} > ${TURBINE_APRUN}
+exitcode "Errors in M4 processing!"
+
+print "wrote: ${TURBINE_APRUN}"
 
 QUEUE_ARG=""
 [[ ${QUEUE} != "" ]] && QUEUE_ARG="-q ${QUEUE}"

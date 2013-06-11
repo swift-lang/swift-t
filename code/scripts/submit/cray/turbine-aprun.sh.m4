@@ -27,6 +27,8 @@ define(`getenv', `esyscmd(printf -- "$`$1' ")')
 #PBS -l mppwidth=getenv(PROCS)
 #PBS -l mppnppn=getenv(PPN)
 #PBS -o getenv(TURBINE_OUTPUT)
+# Pass all environment variables to the job
+#PBS -V
 
 # Merge stdout/stderr
 #PBS -j oe
@@ -69,8 +71,6 @@ echo
 echo "TURBINE_ENGINES: ${TURBINE_ENGINES}"
 echo "ADLB_SERVERS:    ${ADLB_SERVERS}"
 echo
-echo "JOB OUTPUT:"
-echo
 
 # Be sure we are in an accessible directory
 mkdir -p ${TURBINE_OUTPUT}
@@ -83,14 +83,17 @@ then
   exit 1
 fi
 
-# Send environment variables to PBS job:
-#PBS -v PATH TURBINE_ENGINES ADLB_SERVERS TURBINE_HOME
+echo "TCLSH:        ${TCLSH}"
+echo
+
+echo "JOB OUTPUT:"
+echo
 
 OUTPUT_FILE=getenv(OUTPUT_FILE)
 if [ -z "$OUTPUT_FILE" ]
 then
     # USER: Set aprun parameters to agree with PBS -l settings
-    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${TCLSH} ${PROGRAM} ${ARGS}
+    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 valgrind ${TCLSH} ${PROGRAM} ${ARGS}
 else
     # USER: Set aprun parameters to agree with PBS -l settings
     # Stream output to file
