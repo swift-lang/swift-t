@@ -344,6 +344,7 @@ LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/46/lib -lmpich"
 ----
 --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/46
 ----
+* Use this Java when compiling/running STC: +/opt/java/jdk1.7.0_07/bin/java+
 
 To run:
 
