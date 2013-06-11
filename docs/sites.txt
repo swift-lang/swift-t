@@ -302,8 +302,11 @@ its libraries in +/lustre+.  Also, your data must be in +/lustre+.
 
 ===== Login nodes
 
-This installation is for use on the login nodes- it does not go
-through the scheduler
+This installation is for use on the <<login_node,login node>>.
+
+* Swift/T trunk - 6/11/2013
+* Turbine: +~wozniak/Public/turbine-trunk-beagle-login+
+* STC: +~wozniak/Public/stc-trunk-beagle-login+
 
 ===== Compute nodes
 
