@@ -30,13 +30,12 @@ then
 fi
 
 echo "PREFIX: ${prefix}"
-SOFTWARE=$( cd $(dirname ${prefix}) ; /bin/pwd )
-if [[ ${?} == 0 ]]
+SOFTWARE=$( cd $(dirname ${prefix}) && /bin/pwd )
+if [[ ${?} != 0 ]]
 then
-  echo "SOFTWARE: ${SOFTWARE}"
-else
   SOFTWARE=0
 fi
+echo "SOFTWARE: ${SOFTWARE}"
 
 if [[ ${prefix} == ${PWD} ]]
 then
