@@ -4,7 +4,7 @@
 Turbine Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v0.1.1, April 2013
+v0.3.0, June 2013
 
 ////
 
@@ -23,35 +23,47 @@ maintained by the Swift/T team for use by Turbine.
 For each machine, a *public installation* and/or a *build procedure* will
 be provided.  The user need only follow one set of directions.
 
-Public installations::
+[[login_node]]
+A *login node installation* may be available on certain systems.  This
+will run Swift/T on the login node of that system.  This only acceptable for
+short debugging runs of 1 minute or less.  It will affect other users
+so please be cautious when using this mode for debugging.
+
+=== Public installations
 
 These are maintained by the Swift/T team.  Because they may become out
 of date after a release, the release version and a timestamp are
 recorded below.
-+
+
 To request maintenance on a public installation, simply email
 exm-user@mcs.anl.gov .
 
-Build procedures::
+=== Build procedures
 
 To follow a build procedure, you may start with the +exm+ download
 package.  Simply edit the +exm-setup+ script and modify the
 configuration settings as described here.
 
-Version numbers::
+=== Version numbers
 
 The component version numbers that correspond together to make up a
 Swift/T release may be found on the
 link:../downloads/downloads.html[Downloads] page.
 
-Freshness::
+=== Freshness
 
 These instructions may become stale for various reasons.  For example,
 system administrators may update directory locations, breaking these
 instructions.  Thus, we mark *As of:* dates on the instructions for
 each system.
 
-See the link:./stc.html[Swift/T Guide] for more information about Swift/T.
+To report a problem, simply email exm-user@mcs.anl.gov .
+
+
+=== For more information
+
+* See the link:./stc.html[Swift/T Guide] for more information about Swift/T.
+* Join the ExM (Swift/T project) http://lists.mcs.anl.gov/mailman/listinfo/exm-user[user mailing list].
 
 == Turbine as MPI program
 
@@ -216,7 +228,7 @@ To run:
 
 ===== Build procedure
 
-_To run on the login nodes (initial debugging):_
+To run on the <<login_node,login node>>:
 
 * Install MPICH for the login nodes
 * Configure Tcl and c-utils with gcc
@@ -288,11 +300,19 @@ its libraries in +/lustre+.  Also, your data must be in +/lustre+.
 
 ==== Public installation
 
+===== Login nodes
+
+This installation is for use on the login nodes- it does not go
+through the scheduler
+
+===== Compute nodes
+
 * Swift/T 0.2.1 - 2/11/2013
 * Turbine: +/lustre/beagle/wozniak/Public/turbine-0.1.1+
 * STC: +~wozniak/Public/stc-beagle-0.0.3/bin/stc+
 
 To run:
+
 1. Set environment variables.  The normal Turbine environment
 variables are honored, plus the <<variables,Turbine scheduler
 variables>>.
@@ -410,5 +430,6 @@ variables.
 ////
 Local Variables:
 mode: doc
+eval: (auto-fill-mode 1)
 End:
 ////
