@@ -310,9 +310,9 @@ This installation is for use on the <<login_node,login node>>.
 
 ===== Compute nodes
 
-* Swift/T 0.2.1 - 2/11/2013
-* Turbine: +/lustre/beagle/wozniak/Public/turbine-0.1.1+
-* STC: +~wozniak/Public/stc-beagle-0.0.3/bin/stc+
+* Swift/T trunk - 6/11/2013
+* Turbine: +/lustre/beagle/wozniak/Public/turbine+
+* STC: +/lustre/beagle/wozniak/Public/stc+
 
 To run:
 
