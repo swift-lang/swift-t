@@ -145,13 +145,13 @@ deps.txt: $(DEPS) $(TEST_DEPS)
 
 ### LINK
 
+lib:
+	$(E) mkdir -pv lib
+
 $(ADLB_A): $(OBJS)
 	$(Q) "  AR		$(@)"
 	$(E) $(AR) $(ARFLAGS) $(@) $(OBJS)
 	$(E) $(RANLIB) $(@)
-
-lib:
-	$(E) mkdir -pv lib
 
 $(ADLB_SO): $(OBJS) $(NLOBJS) lib
 	$(Q) "  LINK		$(@)"
