@@ -308,7 +308,7 @@ fi
 AC_SUBST(USE_MPE)
 AC_SUBST(ENABLE_MPE)
 
-USE_ADLB=1
+USE_ADLB=0
 AC_ARG_WITH(adlb,
     AS_HELP_STRING(
         [--with-adlb],
@@ -329,11 +329,10 @@ AC_ARG_WITH(adlb,
             AC_MSG_ERROR([Not found: ADLB])
         fi
         location=${SOFTWARE}/lb
-        AC_CHECK_FILE(${location}/include/adlb.h, [USE_ADLB=1], [])
-        if [[ ${USE_ADLB} == 1 ]]
+        AC_CHECK_FILE(${location}/include/adlb.h,
+                      [USE_ADLB=${location}], [])
+        if [[ ${USE_ADLB} == 0 ]]
         then
-            USE_ADLB=${location}
-        else
             AC_MSG_ERROR([Not found: ADLB])
         fi
     ]
