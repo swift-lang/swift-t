@@ -346,6 +346,31 @@ LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
 --enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47
 ----
 
+==== Build procedure with MPE
+
+Configure MPE 1.3.0 with:
+----
+export CFLAGS=-fPIC
+export MPI_CFLAGS="-I/opt/cray/mpt/default/gni/mpich2-gnu/47/include -fPIC"
+export LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
+export F77=gfortran
+export MPI_F77=$F77
+export MPI_FFLAGS=$MPI_CFLAGS
+CC="gcc -fPIC" ./configure --prefix=... --disable-graphics
+----
+
+Configure ADLB with:
+----
+export CFLAGS=-mpilog
+export LDFLAGS="-L/path/to/mpe/lib -lmpe -Wl,-rpath -Wl,/path/to/mpe/lib"
+./configure --prefix=... CC=mpecc --with-c-utils=/path/to/c-utils --with-mpe=/path/to/mpe --enable-mpi-2
+----
+
+Configure Turbine with:
+----
+./configure --enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47 --with-mpe=/path/to/mpe
+----
+
 === Raven
 
 Raven is a Cray XE6/XK7 at Cray.
