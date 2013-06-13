@@ -34,7 +34,13 @@ public class SwiftModule {
   public final SwiftAST ast;
   public final LineMapping lineMapping;
     
-  
+  /**
+   * Parse the specified file and create a SwiftModule object
+   * @param path
+   * @param preprocessed
+   * @return
+   * @throws IOException
+   */
   public static SwiftModule parse(String path, boolean preprocessed)
                                                 throws IOException {
     FileInputStream inputStream = setupInput(path);
@@ -42,8 +48,9 @@ public class SwiftModule {
     ANTLRInputStream antlrInput = new ANTLRInputStream(inputStream);
     LineMapping lineMapping;
     if (preprocessed) {
+      int startMark = antlrInput.mark();
       lineMapping = parsePreprocOutput(antlrInput);
-      antlrInput.rewind(); antlrInput.reset();
+      antlrInput.rewind(startMark);
     } else {
       // Treat # lines as comments.  All input from same file
       lineMapping = LineMapping.makeSimple(path);
