@@ -29,6 +29,8 @@ OPTIONS
        Set compiler optimization level:
          0 - no optimizations
          1,2,3 - standard optimizations (DEFAULT) (this will change later)
+    -p 
+       Disable preprocessing via CPP
     -r
        Add an RPATH for a Swift/T extension
     -T <option name>
