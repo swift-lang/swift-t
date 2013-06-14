@@ -47,6 +47,7 @@ import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.OptUtil.InstOrCont;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
+import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
@@ -682,9 +683,18 @@ public class WaitCoalescer implements OptimizerPass {
     }
   }
 
+  /**
+   * Try to push down waits from current block into child blocks
+   * @param logger
+   * @param fn
+   * @param block
+   * @param currContext
+   * @return
+   */
   private boolean pushDownWaits(Logger logger, Function fn, Block block,
                                       ExecContext currContext) {
     MultiMap<Var, InstOrCont> waitMap = buildWaiterMap(block);
+    
     if (waitMap.isDefinitelyEmpty()) {
       // If waitMap is empty, can't push anything down, so just
       // shortcircuit
@@ -733,14 +743,38 @@ public class WaitCoalescer implements OptimizerPass {
       Statement stmt = it.next();
       switch (stmt.type()) {
         case INSTRUCTION: {
-          boolean success = tryPushdown(logger, top, topContext, ancestors,
-              curr, currContext, waitMap, pushedDown, it, stmt.instruction());
-          changed = changed || success;
+          Instruction pushdownPoint = stmt.instruction();
+          if (logger.isTraceEnabled()) {
+            logger.trace("Pushdown at: " + pushdownPoint.toString());
+          }
+          List<Var> writtenFutures = new ArrayList<Var>();
+          for (Var outv: pushdownPoint.getOutputs()) {
+            if (Types.isFuture(outv.type())) {
+              writtenFutures.add(outv);
+            }
+          }
+          
+          // Relocate instructions which depend on output future of this instruction
+          for (Var writtenFuture: writtenFutures) {
+            boolean success = tryPushdownClosedVar(logger, top, topContext, ancestors, curr,
+                currContext, waitMap, pushedDown, it, writtenFuture);
+            changed = changed || success;
+          }
           break;
         }
         case CONDITIONAL: {
           // Can't push down into conditional
-          // TODO: maybe reasonable in some cases?
+          // TODO: maybe could push down to both branches in some cases?
+          
+          // Find futures assigned on all branches
+          Set<Var> writtenFutures = findConditionalAssignedFutures(logger, stmt.conditional());
+
+          for (Var writtenFuture: writtenFutures) {
+            assert(Types.isFuture(writtenFuture.type()));
+            boolean success = tryPushdownClosedVar(logger, top, topContext, ancestors, curr,
+                currContext, waitMap, pushedDown, it, writtenFuture);
+            changed = changed || success;
+          }
           break;
         }
         default:
@@ -767,45 +801,80 @@ public class WaitCoalescer implements OptimizerPass {
   }
 
   /**
-   * Try to push down instructions to instruction i
    * @param logger
-   * @param top
-   * @param topContext
-   * @param ancestors
-   * @param curr
-   * @param currContext
-   * @param waitMap
-   * @param changed
-   * @param pushedDown add any pushed down continuations here 
-   * @param it
-   * @param pushdownPoint
-   * @return
+   * @param conditional
+   * @return Any variables that are closed after the conditional finishes executing
    */
-  private boolean tryPushdown(Logger logger, Block top, ExecContext topContext,
-      Deque<Continuation> ancestors, Block curr, ExecContext currContext,
-      MultiMap<Var, InstOrCont> waitMap,
-      ArrayList<Continuation> pushedDown, ListIterator<Statement> it,
-      Instruction pushdownPoint) {
-    boolean changed = false;
-    if (logger.isTraceEnabled()) {
-      logger.trace("Pushdown at: " + pushdownPoint.toString());
-    }
-    List<Var> writtenFutures = new ArrayList<Var>();
-    for (Var outv: pushdownPoint.getOutputs()) {
-      if (Types.isFuture(outv.type())) {
-        writtenFutures.add(outv);
-      }
+  private Set<Var> findConditionalAssignedFutures(Logger logger,
+      Conditional conditional) {
+    if (!conditional.isExhaustiveSyncConditional()) {
+      return Collections.emptySet();
     }
     
-    // Relocate instructions which depend on output future of this instruction
-    for (Var v: writtenFutures) {
-      if (waitMap.containsKey(v)) {
-        Pair<Boolean, Set<Continuation>> pdRes =
-            relocateDependentInstructions(logger, top, topContext, ancestors, 
-                                      curr, currContext, it,  waitMap, v);
-        changed = changed || pdRes.val1;
-        pushedDown.addAll(pdRes.val2);
+    Set<Var> initState = new HashSet<Var>();
+    findConditionalAssignedFutures(logger, conditional, initState);
+    return initState;
+  }
+
+  private void findConditionalAssignedFutures(Logger logger,
+      Conditional conditional, Set<Var> initState) {
+    assert(conditional.isExhaustiveSyncConditional());
+    
+    List<Set<Var>> branchStates = new ArrayList<Set<Var>>();
+    int i = 0;
+    for (Block b: conditional.getBlocks()) {
+      Set<Var> branchState = new HashSet<Var>();
+      addWrittenFuturesFromBlock(logger, b, branchState);
+      branchStates.add(branchState);
+      i++;
+    }
+    
+    // unify states from different branches
+    for (Var closedFirstBranch: branchStates.get(0)) {
+      boolean allBranches = true;
+      for (Set<Var> otherBranch: branchStates.subList(1, branchStates.size())) {
+        if (!otherBranch.contains(closedFirstBranch)) {
+          allBranches = false;
+          break;
+        }
       }
+      if (allBranches) {
+        initState.add(closedFirstBranch);
+      }
+    }
+  }
+
+  public void addWrittenFuturesFromBlock(Logger logger, Block b, Set<Var> branchState) {
+    for (Statement stmt: b.getStatements()) {
+      if (stmt.type() == StatementType.INSTRUCTION) {
+        for (Var out: stmt.instruction().getOutputs()) {
+          if (Types.isFuture(out.type())) {
+            branchState.add(out);
+          }
+        }
+      } else {
+        assert(stmt.type() == StatementType.CONDITIONAL);
+        Conditional cond = stmt.conditional();
+        if (cond.isExhaustiveSyncConditional()) {
+          // Recurse to update state with closed vars from conditional
+          findConditionalAssignedFutures(logger, cond, branchState);
+        }
+      }
+    }
+  }
+
+  public boolean tryPushdownClosedVar(Logger logger, Block top,
+      ExecContext topContext, Deque<Continuation> ancestors, Block curr,
+      ExecContext currContext, MultiMap<Var, InstOrCont> waitMap,
+      ArrayList<Continuation> pushedDown, ListIterator<Statement> it,
+      Var v) {
+    boolean changed = false;
+    if (waitMap.containsKey(v)) {
+      Pair<Boolean, Set<Continuation>> pdRes =
+          relocateDependentInstructions(logger, top, topContext, ancestors, 
+                                    curr, currContext, it,  waitMap, v);
+      changed = pdRes.val1;
+      pushedDown.addAll(pdRes.val2);
     }
     return changed;
   }

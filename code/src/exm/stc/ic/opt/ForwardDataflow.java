@@ -16,15 +16,11 @@
 package exm.stc.ic.opt;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
@@ -33,7 +29,6 @@ import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.InvalidWriteException;
-import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.PassedVar;
@@ -41,21 +36,18 @@ import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
-import exm.stc.common.util.CopyOnWriteSmallSet;
 import exm.stc.common.util.HierarchicalMap;
-import exm.stc.common.util.HierarchicalSet;
-import exm.stc.common.util.MultiMap;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.opt.ProgressOpcodes.Category;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
+import exm.stc.ic.opt.ValueTracker.UnifiedState;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Instruction.CVMap;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
 import exm.stc.ic.tree.ICTree.Block;
@@ -105,314 +97,12 @@ public class ForwardDataflow implements OptimizerPass {
     return Settings.OPT_FORWARD_DATAFLOW;
   }
 
-  /**
-   * State keep tracks of which variables are closed and which computed
-   * expressions are available at different points in the IC
-   */
-  private class State implements CVMap {
-    private final Logger logger;
-
-    private final State parent;
-    private final boolean varsPassedFromParent;
-
-    /**
-     * Map of variable names to value variables or literals which have been
-     * created and set in this scope
-     */
-    private final HashMap<ComputedValue, Arg> availableVals;
-    
-    /**
-     * Blacklist of values that should not be used for substitution.
-     * Shared globally within function.
-     */
-    private final HashSet<ComputedValue> blackList;
-
-    /**
-     * What computedValues are stored in each value (inverse of availableVals)
-     */
-    private final MultiMap<Var, ComputedValue> varContents;
-
-    /** variables which are closed at this point in program */
-    private final HierarchicalSet<Var> closed;
-
-    /** mappable variables which are unmapped */
-    private final HierarchicalSet<Var> unmapped;
-
-    /** variables which are recursively closed at this point in program */
-    private final HierarchicalSet<Var> recursivelyClosed;
-
-    /**
-     * Multimap of var1 -> [ var2, var3]
-     * 
-     * There should only be an entry in here if var1 is not closed An entry here
-     * means that var1 will be closed only after var2 and var3 are closed (e.g.
-     * if var1 = var2 + var3)
-     * 
-     * We maintain this data structure because it lets us infer which variables
-     * will be closed if we block on a given variable
-     */
-    private final HashMap<Var, CopyOnWriteSmallSet<Var>> dependsOn;
-
-    State(Logger logger) {
-      this.logger = logger;
-      this.parent = null;
-      this.varsPassedFromParent = false;
-      this.availableVals = new HashMap<ComputedValue, Arg>();
-      this.blackList = new HashSet<ComputedValue>();
-      this.varContents = new MultiMap<Var, ComputedValue>();
-      this.closed = new HierarchicalSet<Var>();
-      this.unmapped = new HierarchicalSet<Var>();
-      this.recursivelyClosed = new HierarchicalSet<Var>();
-      this.dependsOn = new HashMap<Var, CopyOnWriteSmallSet<Var>>();
-    }
-
-    private State(Logger logger, State parent, boolean varsPassedFromParent,
-        HashMap<ComputedValue, Arg> availableVals,
-        HashSet<ComputedValue> blackList,
-        MultiMap<Var, ComputedValue> varContents, HierarchicalSet<Var> closed,
-        HierarchicalSet<Var> unmapped, HierarchicalSet<Var> recursivelyClosed,
-        HashMap<Var, CopyOnWriteSmallSet<Var>> dependsOn) {
-      this.logger = logger;
-      this.parent = parent;
-      this.varsPassedFromParent = varsPassedFromParent;
-      this.availableVals = availableVals;
-      this.blackList = blackList;
-      this.varContents = varContents;
-      this.closed = closed;
-      this.unmapped = unmapped;
-      this.recursivelyClosed = recursivelyClosed;
-      this.dependsOn = dependsOn;
-    }
-
-    public Set<Var> getClosed() {
-      return Collections.unmodifiableSet(closed);
-    }
-
-    public Set<Var> getRecursivelyClosed() {
-      return Collections.unmodifiableSet(recursivelyClosed);
-    }
-
-    public boolean isClosed(Var var) {
-      return closed.contains(var) || recursivelyClosed.contains(var);
-    }
-
-    public boolean isRecursivelyClosed(Var var) {
-      return recursivelyClosed.contains(var);
-    }
-
-    public boolean isAvailable(ComputedValue val) {
-      return getLocation(val) != null;
-    }
-
-    /**
-     * See if the result of a value retrieval is already in scope
-     * 
-     * @param v
-     * @return
-     */
-    public Arg findRetrieveResult(Var v) {
-      ComputedValue cvRetrieve = ICInstructions.retrieveCompVal(v);
-      if (cvRetrieve == null) {
-        return null;
-      } else {
-        return getLocation(cvRetrieve);
-      }
-    }
-
-    /**
-     * 
-     * @param res
-     * @param replace
-     *          for debugging purposes, set to true if we intend to replace
-     */
-    public void addComputedValue(ResultVal res, boolean replace) {
-      boolean outClosed = res.outClosed();
-      if (isAvailable(res.value())) {
-        if (!replace) {
-          throw new STCRuntimeError("Unintended overwrite of "
-              + getLocation(res.value()) + " with " + res);
-        }
-      } else if (replace) {
-        throw new STCRuntimeError("Expected overwrite of " + " with " + res
-            + " but no existing value");
-      }
-
-      Arg valLoc = res.location();
-      availableVals.put(res.value(), valLoc);
-      if (valLoc.isVar()) {
-        varContents.put(valLoc.getVar(), res.value());
-        if (outClosed) {
-          if (logger.isTraceEnabled()) {
-            logger.trace("Output " + valLoc + " was closed");
-          }
-          close(valLoc.getVar(), false);
-        }
-      }
-    }
-    
-    /**
-     * Invalidate all entries for computed value and ignore
-     * future additions.
-     * @param cv
-     */
-    public void invalidateComputedValue(ComputedValue cv) {
-      blackList.add(cv);
-    }
-
-    /**
-     * Return an oparg with the variable or constant for the computed value
-     * 
-     * @param val
-     * @return
-     */
-    public Arg getLocation(ComputedValue val) {
-      
-      if (blackList.contains(val)) {
-        // Should not be available
-        return null;
-      }
-      
-      boolean passRequired = false;
-      State curr = this;
-
-      while (curr != null) {
-        Arg loc = curr.availableVals.get(val);
-        if (loc != null) {
-          // Found a value, now see if it is actually visible
-          if (!passRequired) {
-            return loc;
-          } else if (!Semantics.canPassToChildTask(loc.type())) {
-            return null;
-          } else {
-            return loc;
-          }
-        }
-
-        passRequired = passRequired || (!curr.varsPassedFromParent);
-        curr = curr.parent;
-      }
-
-      return null;
-    }
-
-    public List<ComputedValue> getVarContents(Var v) {
-      State curr = this;
-      List<ComputedValue> res = null;
-      boolean resModifiable = false;
-
-      while (curr != null) {
-        List<ComputedValue> partRes = curr.varContents.get(v);
-        if (!partRes.isEmpty()) {
-          if (res == null) {
-            res = partRes;
-          } else if (resModifiable) {
-            res.addAll(partRes);
-          } else {
-            List<ComputedValue> oldRes = res;
-            res = new ArrayList<ComputedValue>();
-            res.addAll(oldRes);
-            res.addAll(partRes);
-            resModifiable = true;
-          }
-        }
-        curr = curr.parent;
-      }
-      return res == null ? Collections.<ComputedValue> emptyList() : res;
-    }
-
-    public void addClosed(UnifiedState closed) {
-      for (Var v : closed.closed) {
-        close(v, false);
-      }
-      for (Var v : closed.recursivelyClosed) {
-        close(v, true);
-      }
-    }
-
-    /**
-     * Called when we enter a construct that blocked on v
-     * 
-     * @param var
-     */
-    public void close(Var var, boolean recursive) {
-      if (logger.isTraceEnabled())
-        logger.trace(var + " is closed");
-      // Do DFS on the dependency graph to find all dependencies
-      // that are now enabled
-      Stack<Var> work = new Stack<Var>();
-      work.add(var);
-      while (!work.empty()) {
-        Var v = work.pop();
-        // they might already be in closed, but add anyway
-        closed.add(v);
-        CopyOnWriteSmallSet<Var> deps = dependsOn.remove(v);
-        if (deps != null) {
-          assert (!reorderingAllowed) : "Tracking transitive dependencies "
-              + "unsafe until reordering disabled";
-          if (logger.isTraceEnabled())
-            logger.trace(deps + " are closed because of " + v);
-          work.addAll(deps);
-        }
-      }
-      if (recursive) {
-        recursivelyClosed.add(var);
-      }
-    }
-
-    public void setUnmapped(Var var) {
-      unmapped.add(var);
-    }
-
-    public Set<Var> getUnmapped() {
-      return Collections.unmodifiableSet(unmapped);
-    }
-
-    /**
-     * Register that variable future depends on all of the variables in the
-     * collection, so that if future is closed, then the other variables must be
-     * closed TODO: later could allow specification that something is
-     * recursively closed
-     * 
-     * @param future
-     *          a scalar future
-     * @param depend
-     *          more scalar futures
-     */
-    public void setDependencies(Var future, Collection<Var> depend) {
-      assert (!Types.isScalarValue(future.type()));
-      CopyOnWriteSmallSet<Var> depset = dependsOn.get(future);
-      if (depset == null) {
-        depset = new CopyOnWriteSmallSet<Var>();
-        dependsOn.put(future, depset);
-      }
-      for (Var v : depend) {
-        assert (!Types.isScalarValue(v.type()));
-        depset.add(v);
-      }
-    }
-
-    /**
-     * Make an exact copy for a nested scope, such that any changes to the new
-     * copy aren't reflected in this one
-     */
-    State makeChild(boolean varsPassedFromParent) {
-      HashMap<Var, CopyOnWriteSmallSet<Var>> newDO = new HashMap<Var, CopyOnWriteSmallSet<Var>>();
-
-      for (Entry<Var, CopyOnWriteSmallSet<Var>> e : dependsOn.entrySet()) {
-        newDO.put(e.getKey(), new CopyOnWriteSmallSet<Var>(e.getValue()));
-      }
-      return new State(logger, this, varsPassedFromParent,
-          new HashMap<ComputedValue, Arg>(),
-          blackList, // blacklist shared globally
-          new MultiMap<Var, ComputedValue>(), closed.makeChild(),
-          unmapped.makeChild(), recursivelyClosed.makeChild(), newDO);
-    }
-  }
-
   private static void updateReplacements(Logger logger, Function function,
-      Instruction inst, State av, List<ResultVal> irs,
+      Instruction inst, ValueTracker av,
       HierarchicalMap<Var, Arg> replaceInputs,
       HierarchicalMap<Var, Arg> replaceAll) {
+    List<ResultVal> irs = inst.getResults(av);
+    
     if (irs != null) {
       if (logger.isTraceEnabled()) {
         logger.trace("irs: " + irs.toString());
@@ -505,7 +195,7 @@ public class ForwardDataflow implements OptimizerPass {
     }
   }
 
-  private static void purgeValues(Logger logger, State state, List<ResultVal> rvs) {
+  private static void purgeValues(Logger logger, ValueTracker state, List<ResultVal> rvs) {
     for (ResultVal rv: rvs) {
       Logging.getSTCLogger().debug("Invalidating " + rv);
       state.invalidateComputedValue(rv.value());
@@ -524,7 +214,7 @@ public class ForwardDataflow implements OptimizerPass {
    */
   public void optimize(Logger logger, Program program)
       throws InvalidOptionException, InvalidWriteException {
-    State globalState = new State(logger);
+    ValueTracker globalState = new ValueTracker(logger, reorderingAllowed);
 
     for (Var v : program.getGlobalVars()) {
       // First, all constants can be treated as being set
@@ -677,7 +367,7 @@ public class ForwardDataflow implements OptimizerPass {
    * @throws InvalidWriteException
    */
   private boolean forwardDataflow(Logger logger, Program program, Function f,
-      ExecContext execCx, Block block, State cv,
+      ExecContext execCx, Block block, ValueTracker cv,
       HierarchicalMap<Var, Arg> replaceInputs,
       HierarchicalMap<Var, Arg> replaceAll) throws InvalidOptionException,
       InvalidWriteException {
@@ -770,13 +460,13 @@ public class ForwardDataflow implements OptimizerPass {
    * @throws InvalidWriteException
    */
   private UnifiedState recurseOnContinuation(Logger logger, Program program,
-      Function fn, ExecContext execCx, Continuation cont, State cv,
+      Function fn, ExecContext execCx, Continuation cont, ValueTracker cv,
       HierarchicalMap<Var, Arg> replaceInputs,
       HierarchicalMap<Var, Arg> replaceAll) throws InvalidOptionException,
       InvalidWriteException {
     logger.trace("Recursing on continuation " + cont.getType());
 
-    State contCV = cv.makeChild(cont.inheritsParentVars());
+    ValueTracker contCV = cv.makeChild(cont.inheritsParentVars());
     // additional variables may be close once we're inside continuation
     List<BlockingVar> contClosedVars = cont.blockingVars(true);
     if (contClosedVars != null) {
@@ -787,7 +477,7 @@ public class ForwardDataflow implements OptimizerPass {
 
     // For conditionals, find variables closed on all branches
     boolean unifyBranches = cont.isExhaustiveSyncConditional();
-    List<State> branchStates = unifyBranches ? new ArrayList<State>() : null;
+    List<ValueTracker> branchStates = unifyBranches ? new ArrayList<ValueTracker>() : null;
 
     List<Block> contBlocks = cont.getBlocks();
     for (int i = 0; i < contBlocks.size(); i++) {
@@ -804,7 +494,7 @@ public class ForwardDataflow implements OptimizerPass {
         purgeUnpassableVars(contReplaceAll);
       }
 
-      State blockCV;
+      ValueTracker blockCV;
 
       boolean again;
       int pass = 1;
@@ -830,57 +520,6 @@ public class ForwardDataflow implements OptimizerPass {
     } else {
       return UnifiedState.EMPTY;
     }
-  }
-
-  private static class UnifiedState {
-    private UnifiedState(Set<Var> closed, Set<Var> recursivelyClosed) {
-      super();
-      this.closed = closed;
-      this.recursivelyClosed = recursivelyClosed;
-    }
-
-    static final UnifiedState EMPTY = new UnifiedState(
-        Collections.<Var> emptySet(), Collections.<Var> emptySet());
-
-    /**
-     * Assuming that branches are exhaustive, work out the set of variables
-     * closed after the conditional has executed. TODO: unify available values?
-     * 
-     * @param parentState
-     * @param branchStates
-     * @return
-     */
-    static UnifiedState unify(State parentState, List<State> branchStates) {
-      if (branchStates.isEmpty()) {
-        return EMPTY;
-      } else {
-        State firstState = branchStates.get(0);
-        Set<Var> closed = new HashSet<Var>();
-        Set<Var> recClosed = new HashSet<Var>();
-        // Start off with variables closed in first branch that aren't
-        // closed in parent
-        for (Var v : firstState.getClosed()) {
-          if (!parentState.isClosed(v)) {
-            closed.add(v);
-          }
-        }
-        for (Var v : firstState.getRecursivelyClosed()) {
-          if (!parentState.isRecursivelyClosed(v)) {
-            recClosed.add(v);
-          }
-        }
-
-        for (int i = 1; i < branchStates.size(); i++) {
-          closed.retainAll(branchStates.get(i).getClosed());
-          recClosed.retainAll(branchStates.get(i).getRecursivelyClosed());
-        }
-
-        return new UnifiedState(closed, recClosed);
-      }
-    }
-
-    final Set<Var> closed;
-    final Set<Var> recursivelyClosed;
   }
 
   private static void cleanupAfterInline(Block block,
@@ -912,7 +551,7 @@ public class ForwardDataflow implements OptimizerPass {
    * @throws InvalidOptionException
    */
   private boolean handleStatements(Logger logger, Program program, Function f,
-      ExecContext execCx, Block block, ListIterator<Statement> stmts, State cv,
+      ExecContext execCx, Block block, ListIterator<Statement> stmts, ValueTracker cv,
       HierarchicalMap<Var, Arg> replaceInputs,
       HierarchicalMap<Var, Arg> replaceAll) throws InvalidWriteException,
       InvalidOptionException {
@@ -937,7 +576,7 @@ public class ForwardDataflow implements OptimizerPass {
   }
 
   private void handleInstruction(Logger logger, Function f, ExecContext execCx,
-      Block block, ListIterator<Statement> stmts, Instruction inst, State cv,
+      Block block, ListIterator<Statement> stmts, Instruction inst, ValueTracker cv,
       HierarchicalMap<Var, Arg> replaceInputs,
       HierarchicalMap<Var, Arg> replaceAll) {
     if (logger.isTraceEnabled()) {
@@ -945,7 +584,7 @@ public class ForwardDataflow implements OptimizerPass {
       logger.trace("Reference renames in effect: " + replaceAll);
       logger.trace("Available values this block: " + cv.availableVals);
       logger.trace("Blacklist values this block: " + cv.blackList);
-      State ancestor = cv.parent;
+      ValueTracker ancestor = cv.parent;
       int up = 1;
       while (ancestor != null) {
         logger
@@ -962,7 +601,6 @@ public class ForwardDataflow implements OptimizerPass {
     inst.renameVars(replaceInputs, RenameMode.VALUE);
     inst.renameVars(replaceAll, RenameMode.REFERENCE);
 
-    List<ResultVal> icvs = inst.getResults(cv);
 
     /*
      * See if value is already computed somewhere and see if we should replace
@@ -970,7 +608,7 @@ public class ForwardDataflow implements OptimizerPass {
      * pass, but rather rely on dead code elim to later clean up unneeded
      * instructions instead
      */
-    updateReplacements(logger, f, inst, cv, icvs, replaceInputs, replaceAll);
+    updateReplacements(logger, f, inst, cv, replaceInputs, replaceAll);
 
     if (logger.isTraceEnabled()) {
       logger.trace("Instruction after updates: " + inst);
@@ -1019,7 +657,7 @@ public class ForwardDataflow implements OptimizerPass {
    * @return
    */
   private static boolean switchToImmediate(Logger logger, Function fn,
-      ExecContext execCx, Block block, State cv, Instruction inst,
+      ExecContext execCx, Block block, ValueTracker cv, Instruction inst,
       ListIterator<Statement> stmts) {
     // First see if we can replace some futures with values
     MakeImmRequest req = inst.canMakeImmediate(cv.getClosed(),
