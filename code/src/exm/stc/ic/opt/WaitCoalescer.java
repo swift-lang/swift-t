@@ -44,6 +44,7 @@ import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.MultiMap.LinkedListFactory;
 import exm.stc.common.util.MultiMap.ListFactory;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.Sets;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.OptUtil.InstOrCont;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
@@ -821,26 +822,15 @@ public class WaitCoalescer implements OptimizerPass {
     assert(conditional.isExhaustiveSyncConditional());
     
     List<Set<Var>> branchStates = new ArrayList<Set<Var>>();
-    int i = 0;
     for (Block b: conditional.getBlocks()) {
       Set<Var> branchState = new HashSet<Var>();
       addWrittenFuturesFromBlock(logger, b, branchState);
       branchStates.add(branchState);
-      i++;
     }
     
     // unify states from different branches
-    for (Var closedFirstBranch: branchStates.get(0)) {
-      boolean allBranches = true;
-      for (Set<Var> otherBranch: branchStates.subList(1, branchStates.size())) {
-        if (!otherBranch.contains(closedFirstBranch)) {
-          allBranches = false;
-          break;
-        }
-      }
-      if (allBranches) {
-        initState.add(closedFirstBranch);
-      }
+    for (Var closedFirstBranch: Sets.intersection(branchStates)) {
+      initState.add(closedFirstBranch);
     }
   }
 

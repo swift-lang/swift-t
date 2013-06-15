@@ -34,6 +34,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalSet;
+import exm.stc.common.util.Sets;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -352,16 +353,30 @@ public class Validate implements OptimizerPass {
     }
   }
 
+  /**
+   * Check variable initialization recursively on continuation
+   * @param logger
+   * @param program
+   * @param fn
+   * @param initVars Initialized vars.  Updated if we discover that more vars
+   *      are initialized after continuation
+   * @param c
+   */
   private void checkAliasVarUsageRec(Logger logger, Program program,
       Function fn, HierarchicalSet<Var> initVars, Continuation c) {
     for (Var v: c.requiredVars(false)) {
       checkInitialized(c.getType(), initVars, v);
     }
     if (c.isAsync()) {
+      // If alias var passed to async continuation, must be initialized
       for (PassedVar pv: c.getPassedVars()) {
         checkInitialized(c.getType(), initVars, pv.var);
       }
     }
+    
+    boolean unifyBranches = c.isExhaustiveSyncConditional();
+    List<Set<Var>> branchInitVars = unifyBranches ? 
+        new ArrayList<Set<Var>>() : null;
     
     HierarchicalSet<Var> contInit = initVars.makeChild();
     for (Var v: c.constructDefinedVars()) {
@@ -370,8 +385,18 @@ public class Validate implements OptimizerPass {
       }
     }
     for (Block inner: c.getBlocks()) {
-      checkAliasVarUsageRec(logger, program, fn, inner,
-          contInit.makeChild());
+      HierarchicalSet<Var> blockInitVars = contInit.makeChild();
+      checkAliasVarUsageRec(logger, program, fn, inner, blockInitVars);
+      if (unifyBranches) {
+        branchInitVars.add(blockInitVars);
+      }
+    }
+    
+    // Unify information from branches into parent
+    if (unifyBranches) {
+      for (Var initOnAll: Sets.intersection(branchInitVars)) {
+        initVars.add(initOnAll);
+      }
     }
   }
 
@@ -382,8 +407,8 @@ public class Validate implements OptimizerPass {
         updateInitVars(stmt.instruction(), initVars);
         break;
       case CONDITIONAL:
-        // TODO: need to analyse branches to check if var initialised
-        // on both branches
+        // Recurse on the conditional.
+        // This will also fill in information about which variables are closed on the branch
         checkAliasVarUsageRec(logger, program, fn, initVars, stmt.conditional());
         break;
       default:

@@ -1,7 +1,12 @@
 package exm.stc.common.util;
 
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
+
+import exm.stc.common.exceptions.STCRuntimeError;
 
 public class Sets {
 
@@ -21,4 +26,83 @@ public class Sets {
       return new HashSet<T>();
     }
   }
+  
+  public static class IntersectionIterator<T> implements Iterable<T>,
+                                                         Iterator<T> {
+    private final List<Set<T>> sets;
+    
+    Iterator<T> firstIterator = null;
+    T next = null;
+    
+    
+    public IntersectionIterator(List<Set<T>> sets) {
+      this.sets = sets;
+    }
+
+    @Override
+    public Iterator<T> iterator() {
+      if (firstIterator != null) {
+        throw new STCRuntimeError(
+            "Can't use IntersectionIterator multiple times");
+      }
+      
+      if (sets.isEmpty()) {
+        // Intersection is null
+        firstIterator = Collections.<T>emptySet().iterator();
+      } else {
+        firstIterator = sets.get(0).iterator();
+      }
+      
+      return this;
+    }
+
+    @Override
+    public boolean hasNext() {
+      fillNext();
+      return next != null;
+    }
+    
+    
+    /**
+     * Fill in the next field if not present
+     */
+    private void fillNext() {
+      if (next != null)
+        return;
+      
+      while (firstIterator.hasNext()) {
+        T candidate = firstIterator.next();
+        boolean presentInAll = true;
+        for (Set<T> otherSet: sets.subList(1, sets.size())) {
+          if (!otherSet.contains(candidate)) {
+            presentInAll = false;
+            break;
+          }
+        }
+        if (presentInAll) {
+          next = candidate;
+          return;
+        }
+      }
+    }
+
+    @Override
+    public T next() {
+      fillNext();
+      T res = next;
+      next = null;
+      return res;
+    }
+
+    @Override
+    public void remove() {
+      throw new UnsupportedOperationException("Remove not supported");
+    }
+  
+  }
+
+  public static <T> Iterable<T> intersection(List<Set<T>> sets) {
+    return new IntersectionIterator<T>(sets);
+  }
 }
+ 
