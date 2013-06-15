@@ -43,7 +43,11 @@ public class OptUtil {
    * @return
    */
   public static String optVPrefix(Block b, Var v) {
-    return b.uniqueVarName(Var.OPT_VALUE_VAR_PREFIX + v.name());
+     return optVPrefix(b, v.name());
+  }
+  
+  public static String optVPrefix(Block b, String name) {
+    return b.uniqueVarName(Var.OPT_VALUE_VAR_PREFIX + name);
   }
   
   /**

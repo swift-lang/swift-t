@@ -101,8 +101,31 @@ public class Sets {
   
   }
 
-  public static <T> Iterable<T> intersection(List<Set<T>> sets) {
+  public static <T> Iterable<T> intersectionIter(List<Set<T>> sets) {
     return new IntersectionIterator<T>(sets);
+  }
+  
+  public static <T> Set<T> intersection(List<Set<T>> sets) {
+    if (sets.isEmpty()) {
+      return Collections.emptySet();
+    }
+    
+    HashSet<T> result = new HashSet<T>();
+    
+    for (T elemFromFirst: sets.get(0)) {
+      boolean presentInAll = true;
+      for (Set<T> other: sets.subList(1, sets.size())) {
+        if (!other.contains(elemFromFirst)) {
+          presentInAll = false;
+          break;
+        }
+      }
+      if (presentInAll) {
+        result.add(elemFromFirst);
+      }
+    }
+    
+    return result;
   }
 }
  

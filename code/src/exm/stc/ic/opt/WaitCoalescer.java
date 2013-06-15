@@ -829,7 +829,7 @@ public class WaitCoalescer implements OptimizerPass {
     }
     
     // unify states from different branches
-    for (Var closedFirstBranch: Sets.intersection(branchStates)) {
+    for (Var closedFirstBranch: Sets.intersectionIter(branchStates)) {
       initState.add(closedFirstBranch);
     }
   }

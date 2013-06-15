@@ -4171,6 +4171,12 @@ public class ICInstructions {
       case BLOB:
         assert(value.isImmediateBlob());
         return Builtin.createLocal(BuiltinOpcode.COPY_BLOB, dst, value);
+      case FILE:
+        assert(value.type().assignableTo(Types.V_FILE));
+        return Builtin.createLocal(BuiltinOpcode.COPY_FILE, dst, value);
+      case VOID:
+        assert(value.type().assignableTo(Types.V_VOID));
+        return Builtin.createLocal(BuiltinOpcode.COPY_VOID, dst, value);
       default:
         // fall through
         break;

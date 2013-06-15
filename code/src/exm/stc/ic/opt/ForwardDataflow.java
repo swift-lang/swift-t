@@ -516,7 +516,7 @@ public class ForwardDataflow implements OptimizerPass {
     }
 
     if (unifyBranches) {
-      return UnifiedState.unify(cv, branchStates);
+      return UnifiedState.unify(cv, cont.parent(), branchStates, contBlocks);
     } else {
       return UnifiedState.EMPTY;
     }
@@ -570,6 +570,7 @@ public class ForwardDataflow implements OptimizerPass {
         UnifiedState condClosed = recurseOnContinuation(logger, program, f,
             execCx, stmt.conditional(), cv, replaceInputs, replaceAll);
         cv.addClosed(condClosed);
+        cv.addComputedValues(condClosed.availableVals, false);
       }
     }
     return false;

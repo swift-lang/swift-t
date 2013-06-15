@@ -6,9 +6,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Stack;
-import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
 
@@ -16,11 +16,16 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.CopyOnWriteSmallSet;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.MultiMap;
+import exm.stc.common.util.Sets;
+import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction.CVMap;
+import exm.stc.ic.tree.ICTree.Block;
 
 /**
  * ValueTracker keep tracks of which variables are closed and which computed
@@ -169,6 +174,12 @@ class ValueTracker implements CVMap {
         }
         close(valLoc.getVar(), false);
       }
+    }
+  }
+  
+  public void addComputedValues(List<ResultVal> vals, boolean replace) {
+    for (ResultVal val: vals) {
+      addComputedValue(val, replace);
     }
   }
   
@@ -333,14 +344,17 @@ class ValueTracker implements CVMap {
   }
   
   static class UnifiedState {
-    private UnifiedState(Set<Var> closed, Set<Var> recursivelyClosed) {
+    private UnifiedState(Set<Var> closed, Set<Var> recursivelyClosed,
+        List<ResultVal> availableVals) {
       super();
       this.closed = closed;
       this.recursivelyClosed = recursivelyClosed;
+      this.availableVals = availableVals;
     }
 
     static final UnifiedState EMPTY = new UnifiedState(
-        Collections.<Var> emptySet(), Collections.<Var> emptySet());
+        Collections.<Var> emptySet(), Collections.<Var> emptySet(),
+        Collections.<ResultVal>emptyList());
 
     /**
      * Assuming that branches are exhaustive, work out the set of variables
@@ -350,36 +364,118 @@ class ValueTracker implements CVMap {
      * @param branchStates
      * @return
      */
-    static UnifiedState unify(ValueTracker parentState, List<ValueTracker> branchStates) {
+    static UnifiedState unify(ValueTracker parentState, Block parent,
+                               List<ValueTracker> branchStates, List<Block> branchBlocks) {
       if (branchStates.isEmpty()) {
         return EMPTY;
       } else {
-        ValueTracker firstState = branchStates.get(0);
         Set<Var> closed = new HashSet<Var>();
         Set<Var> recClosed = new HashSet<Var>();
-        // Start off with variables closed in first branch that aren't
-        // closed in parent
-        for (Var v : firstState.getClosed()) {
-          if (!parentState.isClosed(v)) {
-            closed.add(v);
+        unifyClosed(parentState, branchStates, closed, recClosed);
+        List<ComputedValue> allBranchCVs = findAllBranchCVs(parentState,
+            branchStates);
+
+        List<ResultVal> availVals = new ArrayList<ResultVal>();
+        for (ComputedValue cv: allBranchCVs) {
+          List<Arg> locs = new ArrayList<Arg>(branchStates.size());
+          boolean allVals = true;
+          boolean allSame = true;
+              
+          Arg firstLoc = branchStates.get(0).getLocation(cv);
+          for (ValueTracker bs: branchStates) {
+            Arg loc = bs.getLocation(cv);
+            assert(loc != null);
+            
+            if (loc != firstLoc && !loc.equals(firstLoc)) {
+              allSame = false;
+            }
+            
+            if (!Types.isScalarValue(loc.type())) {
+              allVals = false;
+            }
+            locs.add(loc);
           }
-        }
-        for (Var v : firstState.getRecursivelyClosed()) {
-          if (!parentState.isRecursivelyClosed(v)) {
-            recClosed.add(v);
+          
+          if (allSame) {
+            // TODO: could maybe be more specific with parameters
+            availVals.add(new ResultVal(cv, firstLoc, false, 
+                                        EquivalenceType.VALUE, false));
+          } else if (allVals) {
+            // declare new temporary value in outer block
+            Var unifiedLoc = parent.declareVariable(firstLoc.type(), 
+                OptUtil.optVPrefix(parent, "unified"), VarStorage.LOCAL,
+                DefType.LOCAL_COMPILER, null);
+            for (int i = 0; i < branchStates.size(); i++) {
+              Arg loc = locs.get(i);
+              Block branchBlock = branchBlocks.get(i);
+              branchBlock.addInstruction(ICInstructions.valueSet(unifiedLoc, loc));
+            }
+            availVals.add(new ResultVal(cv, unifiedLoc.asArg(), false,
+                                        EquivalenceType.VALUE, false));
           }
         }
 
-        for (int i = 1; i < branchStates.size(); i++) {
-          closed.retainAll(branchStates.get(i).getClosed());
-          recClosed.retainAll(branchStates.get(i).getRecursivelyClosed());
-        }
-
-        return new UnifiedState(closed, recClosed);
+        return new UnifiedState(closed, recClosed, availVals);
       }
     }
+    
+    
+    /**
+     * Find computed values that appear in all branches but not parent
+     * @param parentState
+     * @param branchStates
+     * @return
+     */
+    public static List<ComputedValue> findAllBranchCVs(ValueTracker parentState,
+        List<ValueTracker> branchStates) {
+      List<ComputedValue> allBranchCVs = new ArrayList<ComputedValue>();
+      ValueTracker firstState = branchStates.get(0);
+      for (ComputedValue val: firstState.availableVals.keySet()) {
+        if (!parentState.isAvailable(val)) {
+          int nBranches = branchStates.size();
+          boolean presentInAll = true;
+          for (ValueTracker otherState: branchStates.subList(1, nBranches)) {
+            if (!otherState.isAvailable(val)) {
+              presentInAll = false;
+              break;
+            }
+          }
+          if (presentInAll) {
+            allBranchCVs.add(val);
+          }
+        }
+      }
+      return allBranchCVs;
+    }
+    public static void unifyClosed(ValueTracker parentState,
+        List<ValueTracker> branchStates,
+        Set<Var> closed, Set<Var> recClosed) {
+      List<Set<Var>> branchClosed = new ArrayList<Set<Var>>();
+      List<Set<Var>> branchRecClosed = new ArrayList<Set<Var>>();
+      for (ValueTracker branchState: branchStates) {
+        branchClosed.add(branchState.closed);
+        branchRecClosed.add(branchState.recursivelyClosed);
+      }
+      
+
+      // Add variables closed in first branch that aren't closed in parent
+      // to output sets
+      for (Var closedVar: Sets.intersectionIter(branchClosed)) {
+        if (!parentState.isClosed(closedVar)) {
+          closed.add(closedVar);
+        }
+      }
+      
+      for (Var recClosedVar: Sets.intersectionIter(branchRecClosed)) {
+        if (!parentState.isRecursivelyClosed(recClosedVar)) {
+          recClosed.add(recClosedVar);
+        }
+      }
+    }
+    
 
     final Set<Var> closed;
     final Set<Var> recursivelyClosed;
+    final List<ResultVal> availableVals;
   }
 }
