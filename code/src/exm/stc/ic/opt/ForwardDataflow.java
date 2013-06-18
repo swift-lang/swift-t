@@ -37,6 +37,7 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalMap;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.opt.ProgressOpcodes.Category;
@@ -122,13 +123,13 @@ public class ForwardDataflow implements OptimizerPass {
         Arg currLoc = resVal.location();
         if (!av.isAvailable(resVal.value())) {
           // Can't replace, track this value
-          av.addComputedValue(resVal, false);
+          av.addComputedValue(resVal, Ternary.FALSE);
         } else if (currLoc.isConstant()) {
           Arg prevLoc = av.getLocation(resVal.value());
           if (prevLoc.isVar()) {
             assert (Types.isScalarValue(prevLoc.getVar().type()));
             // Constants are the best... might as well replace
-            av.addComputedValue(resVal, true);
+            av.addComputedValue(resVal, Ternary.TRUE);
             // System.err.println("replace " + prevLoc + " with " + currLoc);
             replaceInputs.put(prevLoc.getVar(), currLoc);
           } else {
@@ -223,7 +224,7 @@ public class ForwardDataflow implements OptimizerPass {
         assert (val != null) : v.name();
         ResultVal compVal = ICInstructions.assignComputedVal(v, val);
         globalState.addComputedValue(compVal,
-            globalState.isAvailable(compVal.value()));
+            Ternary.fromBool(globalState.isAvailable(compVal.value())));
       }
     }
     for (Function f : program.getFunctions()) {
@@ -386,7 +387,7 @@ public class ForwardDataflow implements OptimizerPass {
       if (v.isMapped() && Types.isFile(v.type())) {
         ResultVal filenameVal = ICInstructions.filenameCV(
             Arg.createVar(v.mapping()), v);
-        cv.addComputedValue(filenameVal, false);
+        cv.addComputedValue(filenameVal, Ternary.FALSE);
       }
       if (Types.isMappable(v.type()) && !v.isMapped()
           && v.storage() != VarStorage.ALIAS) {
@@ -516,7 +517,8 @@ public class ForwardDataflow implements OptimizerPass {
     }
 
     if (unifyBranches) {
-      return UnifiedState.unify(cv, cont.parent(), branchStates, contBlocks);
+      return UnifiedState.unify(reorderingAllowed, cv, cont.parent(),
+                                branchStates, contBlocks);
     } else {
       return UnifiedState.EMPTY;
     }
@@ -570,7 +572,7 @@ public class ForwardDataflow implements OptimizerPass {
         UnifiedState condClosed = recurseOnContinuation(logger, program, f,
             execCx, stmt.conditional(), cv, replaceInputs, replaceAll);
         cv.addClosed(condClosed);
-        cv.addComputedValues(condClosed.availableVals, false);
+        cv.addComputedValues(condClosed.availableVals, Ternary.FALSE);
       }
     }
     return false;

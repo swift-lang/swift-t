@@ -15,6 +15,7 @@
  */
 package exm.stc.common.util;
 
+
 /**
  * Implement simple 3-valued logic: {TRUE, FALSE, MAYBE}
  */
@@ -61,6 +62,14 @@ public class TernaryLogic {
         return a;
       } else {
         return Ternary.MAYBE;
+      }
+    }
+
+    public static Ternary fromBool(boolean val) {
+      if (val) {
+        return TRUE;
+      } else {
+        return FALSE;
       }
     }
   }

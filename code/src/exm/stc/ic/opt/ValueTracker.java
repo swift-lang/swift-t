@@ -24,6 +24,7 @@ import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.CVMap;
@@ -34,7 +35,7 @@ import exm.stc.ic.tree.ICTree.Block;
  * ValueTracker keep tracks of which variables are closed and which computed
  * expressions are available at different points in the IC
  */
-class ValueTracker implements CVMap {
+public class ValueTracker implements CVMap {
   private final boolean reorderingAllowed;
   
   private final Logger logger;
@@ -164,15 +165,15 @@ class ValueTracker implements CVMap {
    * @param replace
    *          for debugging purposes, set to true if we intend to replace
    */
-  public void addComputedValue(ResultVal res, boolean replace) {
+  public void addComputedValue(ResultVal res, Ternary replace) {
     boolean outClosed = res.outClosed();
     ComputedValue val = res.value();
     if (isAvailable(val)) {
-      if (!replace) {
+      if (replace == Ternary.FALSE) {
         throw new STCRuntimeError("Unintended overwrite of "
             + getLocation(val) + " with " + res);
       }
-    } else if (replace) {
+    } else if (replace == Ternary.TRUE) {
       throw new STCRuntimeError("Expected overwrite of " + " with " + res
           + " but no existing value");
     }
@@ -195,7 +196,7 @@ class ValueTracker implements CVMap {
     }
   }
   
-  public void addComputedValues(List<ResultVal> vals, boolean replace) {
+  public void addComputedValues(List<ResultVal> vals, Ternary replace) {
     for (ResultVal val: vals) {
       addComputedValue(val, replace);
     }
@@ -370,8 +371,59 @@ class ValueTracker implements CVMap {
         closed.makeChild(), unmapped.makeChild(), recursivelyClosed.makeChild(), newDO);
   }
   
+  /**
+   * Copy over computed values from src to dst
+   * @param varContents
+   * @return
+   */
+  public static List<ResultVal> makeCopiedRVs(CVMap existing, Var dst, Arg src) {
+    if (!src.isVar()) {
+      return Collections.emptyList();
+    }
+    
+    List<ResultVal> res = new ArrayList<ResultVal>();
+    Var srcVar = src.getVar();
+    boolean closed = existing.isClosed(srcVar);
+    List<ComputedValue> cvs = existing.getVarContents(srcVar);
+    if (Logging.getSTCLogger().isTraceEnabled()) {
+      Logging.getSTCLogger().trace("Copy " + src + " => " + dst + " cvs: " +
+                                  cvs);
+    }
+    for (ComputedValue cv: cvs) {
+      // create new result value with conservative parameters
+      res.add(new ResultVal(cv, dst.asArg(), closed,
+                            EquivalenceType.VALUE, false));
+    }
+    
+    List<Pair<Arg, ComputedValue>> inputCVs = existing.getReferencedCVs(srcVar);
+    if (Logging.getSTCLogger().isTraceEnabled()) {
+      Logging.getSTCLogger().trace("Copy " + src + " => " + dst + " inputCvs: " +
+                          inputCVs);
+    }
+    for (Pair<Arg, ComputedValue> pair: inputCVs) {
+      ComputedValue origCV = pair.val2;
+      List<Arg> newInputs = new ArrayList<Arg>(origCV.getInputs().size());
+      for (Arg input: origCV.getInputs()) {
+        if (input.isVar() && input.getVar().equals(srcVar)) {
+          newInputs.add(dst.asArg());
+        } else {
+          newInputs.add(input);
+        }
+      }
+      
+      // create new result value with conservative parameters
+      res.add(new ResultVal(origCV.substituteInputs(newInputs), pair.val1,
+                            closed, EquivalenceType.VALUE, false));
+    }
+    
+    return res;
+  }
+
+  
   static class UnifiedState {
-    private UnifiedState(Set<Var> closed, Set<Var> recursivelyClosed,
+
+    private UnifiedState(
+        Set<Var> closed, Set<Var> recursivelyClosed,
         List<ResultVal> availableVals) {
       super();
       this.closed = closed;
@@ -391,7 +443,8 @@ class ValueTracker implements CVMap {
      * @param branchStates
      * @return
      */
-    static UnifiedState unify(ValueTracker parentState, Block parent,
+    static UnifiedState unify(boolean reorderingAllowed,
+                               ValueTracker parentState, Block parent,
                                List<ValueTracker> branchStates, List<Block> branchBlocks) {
       if (branchStates.isEmpty()) {
         return EMPTY;
@@ -399,74 +452,116 @@ class ValueTracker implements CVMap {
         Set<Var> closed = new HashSet<Var>();
         Set<Var> recClosed = new HashSet<Var>();
         unifyClosed(parentState, branchStates, closed, recClosed);
-        List<ComputedValue> allBranchCVs = findAllBranchCVs(parentState,
-            branchStates);
-
+        
         List<ResultVal> availVals = new ArrayList<ResultVal>();
-        for (ComputedValue cv: allBranchCVs) {
-          List<Arg> locs = new ArrayList<Arg>(branchStates.size());
-          boolean allVals = true;
-          boolean allSame = true;
-              
-          int br = 0;
-          Arg firstLoc = branchStates.get(0).getLocation(cv);
-          for (ValueTracker bs: branchStates) {
-            Arg loc = bs.getLocation(cv);
-            assert(loc != null);
-            
-            if (loc != firstLoc && !loc.equals(firstLoc)) {
-              allSame = false;
-            }
-            
-            if (!Types.isScalarValue(loc.type())) {
-              allVals = false;
-            }
-            locs.add(loc);
-            
-            Logger logger = Logging.getSTCLogger();
-            if (logger.isTraceEnabled()) {
-              logger.trace("Branch " + br + ": " + bs.availableVals);
-            }
-            br++;
-          }
-          
-          if (allSame) {
-            // TODO: could maybe be more specific with parameters
-            availVals.add(new ResultVal(cv, firstLoc, false, 
-                                        EquivalenceType.VALUE, false));
-            // TODO: copy values
-          } else {
-            // declare new temporary value in outer block
-            Var unifiedLoc;
-            if (allVals) {
-              unifiedLoc = parent.declareVariable(firstLoc.type(), 
-                  OptUtil.optVPrefix(parent, "unified"), VarStorage.LOCAL,
-                  DefType.LOCAL_COMPILER, null);
-            } else {
-              unifiedLoc = parent.declareVariable(firstLoc.type(), 
-                  OptUtil.optVPrefix(parent, "unified"), VarStorage.ALIAS,
-                  DefType.LOCAL_COMPILER, null);
-            }
-            for (int i = 0; i < branchStates.size(); i++) {
-              Arg loc = locs.get(i);
-              Block branchBlock = branchBlocks.get(i);
-              if (allVals) {
-                branchBlock.addInstruction(ICInstructions.valueSet(unifiedLoc, loc));
-              } else {
-                assert (loc.isVar()) : loc + " " + loc.getKind();
-                branchBlock.addInstruction(TurbineOp.copyRef(unifiedLoc, loc.getVar()));
-              }
-            }
-            
-            // Signal that value is stored in new var
-            availVals.add(new ResultVal(cv, unifiedLoc.asArg(), false,
-                                      EquivalenceType.VALUE, false));
-            // TODO: copy valuesl
-          }
-        }
+        List<ComputedValue> allUnifiedCVs = new ArrayList<ComputedValue>();
+        boolean newCVs;
+        do {
+          List<ComputedValue> newAllBranchCVs = findAllBranchCVs(
+              parentState, branchStates, allUnifiedCVs);
+          Pair<List<ResultVal>, Boolean> result = unifyCVs(reorderingAllowed,
+                                      parent, branchStates,
+                                      branchBlocks, newAllBranchCVs);
+          availVals.addAll(result.val1);
+          newCVs = result.val2;
+          allUnifiedCVs.addAll(newAllBranchCVs);
+        } while (newCVs);
 
         return new UnifiedState(closed, recClosed, availVals);
       }
+    }
+
+
+    /**
+     * Merge computed values from different conditional branches
+     * @param parent
+     * @param branchStates
+     * @param branchBlocks
+     * @param allBranchCVs
+     * @return
+     */
+    public static Pair<List<ResultVal>, Boolean> unifyCVs(boolean
+        reorderingAllowed, Block parent,
+        List<ValueTracker> branchStates, List<Block> branchBlocks,
+        List<ComputedValue> allBranchCVs) {
+      List<ResultVal> availVals = new ArrayList<ResultVal>();
+      
+      boolean createdNewBranchCVs = false;
+      
+      for (ComputedValue cv: allBranchCVs) {
+        List<Arg> locs = new ArrayList<Arg>(branchStates.size());
+        boolean allVals = true;
+        boolean allSame = true;
+            
+        int br = 0;
+        Arg firstLoc = branchStates.get(0).getLocation(cv);
+        for (ValueTracker bs: branchStates) {
+          Arg loc = bs.getLocation(cv);
+          assert(loc != null);
+          
+          if (loc != firstLoc && !loc.equals(firstLoc)) {
+            allSame = false;
+          }
+          
+          if (!Types.isScalarValue(loc.type())) {
+            allVals = false;
+          }
+          locs.add(loc);
+          
+          Logger logger = Logging.getSTCLogger();
+          if (logger.isTraceEnabled()) {
+            logger.trace("Branch " + br + ": " + bs.availableVals);
+          }
+          br++;
+        }
+        
+
+        if (Logging.getSTCLogger().isTraceEnabled()) {
+          Logging.getSTCLogger().trace(cv + " appears on all branches " +
+                      "allSame: " + allSame + " allVals: " + allVals);
+        }
+        
+        if (allSame) {
+          // TODO: could maybe be more specific with parameters
+          availVals.add(new ResultVal(cv, firstLoc, false, 
+                                      EquivalenceType.VALUE, false));
+        } else {
+          // declare new temporary value in outer block
+          Var unifiedLoc;
+          if (allVals) {
+            unifiedLoc = parent.declareVariable(firstLoc.type(), 
+                OptUtil.optVPrefix(parent, "unified"), VarStorage.LOCAL,
+                DefType.LOCAL_COMPILER, null);
+          } else {
+            unifiedLoc = parent.declareVariable(firstLoc.type(), 
+                OptUtil.optVPrefix(parent, "unified"), VarStorage.ALIAS,
+                DefType.LOCAL_COMPILER, null);
+          }
+          
+          for (int i = 0; i < branchStates.size(); i++) {
+            Arg loc = locs.get(i);
+            Block branchBlock = branchBlocks.get(i);
+            if (allVals) {
+              branchBlock.addInstruction(ICInstructions.valueSet(unifiedLoc, loc));
+            } else {
+              assert (loc.isVar()) : loc + " " + loc.getKind();
+              branchBlock.addInstruction(TurbineOp.copyRef(unifiedLoc, loc.getVar()));
+            }
+            
+            // Add in additional computed values resulting from copy
+            ValueTracker branchState = branchStates.get(i);
+            branchState.addComputedValues(
+                makeCopiedRVs(branchState, unifiedLoc, loc), Ternary.MAYBE);
+            createdNewBranchCVs = true;
+          }
+          
+          // Signal that value is stored in new var
+          availVals.add(new ResultVal(cv, unifiedLoc.asArg(), false,
+                                    EquivalenceType.VALUE, false));
+        }
+      }
+      
+      return Pair.create(availVals, createdNewBranchCVs);
     }
     
     
@@ -474,14 +569,15 @@ class ValueTracker implements CVMap {
      * Find computed values that appear in all branches but not parent
      * @param parentState
      * @param branchStates
+     * @param alreadyAdded ignore these
      * @return
      */
     public static List<ComputedValue> findAllBranchCVs(ValueTracker parentState,
-        List<ValueTracker> branchStates) {
+        List<ValueTracker> branchStates, List<ComputedValue> alreadyAdded) {
       List<ComputedValue> allBranchCVs = new ArrayList<ComputedValue>();
       ValueTracker firstState = branchStates.get(0);
       for (ComputedValue val: firstState.availableVals.keySet()) {
-        if (!parentState.isAvailable(val)) {
+        if (!alreadyAdded.contains(val) && !parentState.isAvailable(val)) {
           int nBranches = branchStates.size();
           boolean presentInAll = true;
           for (ValueTracker otherState: branchStates.subList(1, nBranches)) {
@@ -523,7 +619,6 @@ class ValueTracker implements CVMap {
       }
     }
     
-
     final Set<Var> closed;
     final Set<Var> recursivelyClosed;
     final List<ResultVal> availableVals;

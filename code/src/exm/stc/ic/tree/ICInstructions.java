@@ -55,6 +55,7 @@ import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.opt.ResultVal;
+import exm.stc.ic.opt.ValueTracker;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
@@ -2240,7 +2241,7 @@ public class ICInstructions {
         case COPY_REF: {
           List<ResultVal> res = new ArrayList<ResultVal>();
           res.add(ResultVal.makeAlias(getOutput(0), getInput(0)));
-          res.addAll(makeCopiedRVs(existing, getOutput(0), getInput(0)));
+          res.addAll(ValueTracker.makeCopiedRVs(existing, getOutput(0), getInput(0)));
           return res;
         }
         default:
@@ -3965,7 +3966,7 @@ public class ICInstructions {
         // Add transitively valid computed values if a copy
         List<ResultVal> res = new ArrayList<ResultVal>();
         res.add(basic);
-        res.addAll(makeCopiedRVs(existing, getOutput(0), getInput(0)));
+        res.addAll(ValueTracker.makeCopiedRVs(existing, getOutput(0), getInput(0)));
         return res;
       }
       
@@ -4212,54 +4213,7 @@ public class ICInstructions {
         + " assign " + value.toString() + " to " + dst.toString());
   }
 
-  /**
-   * Copy over computed values from src to dst
-   * @param varContents
-   * @return
-   */
-  public static List<ResultVal> makeCopiedRVs(CVMap existing, Var dst, Arg src) {
-    if (!src.isVar()) {
-      return Collections.emptyList();
-    }
-    
-    List<ResultVal> res = new ArrayList<ResultVal>();
-    Var srcVar = src.getVar();
-    boolean closed = existing.isClosed(srcVar);
-    List<ComputedValue> cvs = existing.getVarContents(srcVar);
-    if (Logging.getSTCLogger().isTraceEnabled()) {
-      Logging.getSTCLogger().trace("Copy " + src + " => " + dst + " cvs: " +
-                                  cvs);
-    }
-    for (ComputedValue cv: cvs) {
-      // create new result value with conservative parameters
-      res.add(new ResultVal(cv, dst.asArg(), closed,
-                            EquivalenceType.VALUE, false));
-    }
-    
-    List<Pair<Arg, ComputedValue>> inputCVs = existing.getReferencedCVs(srcVar);
-    if (Logging.getSTCLogger().isTraceEnabled()) {
-      Logging.getSTCLogger().trace("Copy " + src + " => " + dst + " inputCvs: " +
-                          inputCVs);
-    }
-    for (Pair<Arg, ComputedValue> pair: inputCVs) {
-      ComputedValue origCV = pair.val2;
-      List<Arg> newInputs = new ArrayList<Arg>(origCV.getInputs().size());
-      for (Arg input: origCV.getInputs()) {
-        if (input.isVar() && input.getVar().equals(srcVar)) {
-          newInputs.add(dst.asArg());
-        } else {
-          newInputs.add(input);
-        }
-      }
-      
-      // create new result value with conservative parameters
-      res.add(new ResultVal(origCV.substituteInputs(newInputs), pair.val1,
-                            closed, EquivalenceType.VALUE, false));
-    }
-    
-    return res;
-  }
-
+ 
   public static Instruction retrieveValueOf(Var dst, Var src) {
     assert(Types.isScalarValue(dst.type()));
     assert(Types.isScalarFuture(src.type())
