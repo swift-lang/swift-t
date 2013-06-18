@@ -327,7 +327,7 @@ public class Main {
     if (useGCCProcessor()) {
       // We use gcc -E because cpp is broken on Mac GCC 4.2.1
       //    Cf. http://stackoverflow.com/questions/4137923
-      cmd.addAll(Arrays.asList("gcc", "-E", "-x", "c", input, output));
+      cmd.addAll(Arrays.asList("gcc", "-E", "-x", "c", input, "-o", output));
     } else {
       cmd.addAll(Arrays.asList("cpp", input, output));
     }
