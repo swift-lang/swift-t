@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -34,6 +35,8 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.FileAppender;
@@ -338,9 +341,10 @@ public class Main {
       cmd.add("-D");
       cmd.add(macro);
     }
-    
+
+    String cmdString = StringUtils.join(cmd, ' ');
     try {
-      logger.debug("Running cpp: " + cmd);
+      logger.debug("Running cpp: " + cmdString);
       Process cpp = Runtime.getRuntime().exec(cmd.toArray(new String[]{}));
       int cppExitCode = -1;
       boolean done = false;
@@ -353,14 +357,23 @@ public class Main {
         }
       } while (!done);
       
+      StringWriter sw = new StringWriter();
+      IOUtils.copy(cpp.getErrorStream(), sw, "UTF-8");
+      String cppStderr = sw.toString();
+      
+      logger.debug("Preprocessor exit code: " + cppExitCode);
+      logger.debug("Preprocessor stderr: " + cppStderr);
+      
       if (cppExitCode != 0) {
-        System.out.println("Previous failure in cpp preprocessor invoked as: " +
-        		cmd + ".  Exit code was " + cppExitCode + ". Aborting.");
+        // Print stderr message first, then clarify that failure was in preprocessor
+        System.out.println(cppStderr);
+        System.out.println("Aborting due to failure in cpp preprocessor invoked as: " +
+            cmdString + ". " + ("Exit code was " + cppExitCode + ". "));
         System.exit(1);
       }
     } catch (IOException e) {
-      System.out.println("Error while launching preprocessor with command line:" +
-                      cmd + ": " + e.getMessage());
+      System.out.println("I/O error while launching preprocessor with command line:" +
+                          cmdString + ": " + e.getMessage());
       System.exit(1);
     }
   }
