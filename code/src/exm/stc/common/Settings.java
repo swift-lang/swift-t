@@ -109,6 +109,8 @@ public class Settings
 
   public static final String USE_C_PREPROCESSOR = "stc.c_preprocess";
   public static final String PREPROCESS_ONLY = "stc.preprocess_only";
+  public static final String PREPROCESSOR_FORCE_GCC = "stc.preproc.force-gcc";
+  public static final String PREPROCESSOR_FORCE_CPP = "stc.preproc.force-cpp";
   
   private static final Properties properties;
   
@@ -132,6 +134,8 @@ public class Settings
     defaults.setProperty(COMPILER_DEBUG, "true");
     defaults.setProperty(USE_C_PREPROCESSOR, "false");
     defaults.setProperty(PREPROCESS_ONLY, "false");
+    defaults.setProperty(PREPROCESSOR_FORCE_CPP, "false");
+    defaults.setProperty(PREPROCESSOR_FORCE_GCC, "false");
     
     // Code optimisation settings - defaults
     defaults.setProperty(OPT_FLATTEN_NESTED, "true");
@@ -301,6 +305,8 @@ public class Settings
     getBoolean(PROFILE_STC);
     getBoolean(USE_C_PREPROCESSOR);
     getBoolean(PREPROCESS_ONLY);
+    getBoolean(PREPROCESSOR_FORCE_CPP);
+    getBoolean(PREPROCESSOR_FORCE_GCC);
 
     getLong(OPT_MAX_ITERATIONS);
 

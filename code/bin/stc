@@ -130,6 +130,14 @@ function get_compiler_opt_name() {
                     echo "stc.auto-declare"
                     return 0
                     ;;
+        preproc-force-gcc)
+                    echo "stc.preproc.force-gcc"
+                    return 0
+                    ;;
+        preproc-force-cpp)
+                    echo "stc.preproc.force-cpp"
+                    return 0
+                    ;;
        *)
          return 1
          ;;

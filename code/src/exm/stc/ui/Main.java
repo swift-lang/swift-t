@@ -81,7 +81,7 @@ public class Main {
 
 
     boolean preprocess = preprocessEnabled();
-    File inputFile = setupInputFile(preprocess, stcArgs);
+    File inputFile = setupInputFile(logger, preprocess, stcArgs);
     PrintStream icOutput = setupICOutput();
     PrintStream output = setupOutput(stcArgs);
 
@@ -280,11 +280,12 @@ public class Main {
 
   /**
    * Setup input file.  If necessary, run through CPP
+   * @param logger 
    * @param preprocess 
    * @param args
    * @return
    */
-  private static File setupInputFile(boolean preprocess, Args args) {
+  private static File setupInputFile(Logger logger, boolean preprocess, Args args) {
     File result;
     try {
       if (preprocess) {
@@ -296,7 +297,8 @@ public class Main {
         
         result = File.createTempFile("stc-preproc", ".swift");
         temporaries.add(result);
-        runPreprocessor(args.inputFilename, result.getPath(), args.preprocessorMacros);
+        runPreprocessor(logger, args.inputFilename, result.getPath(),
+                        args.preprocessorMacros);
       } else {
         result = new File(args.inputFilename);
       }
@@ -316,10 +318,10 @@ public class Main {
     return null;
   }
   
-  private static void runPreprocessor(String input, String output,
+  private static void runPreprocessor(Logger logger, String input, String output,
                                       List<String> preprocArgs) {
     List<String> cmd = new ArrayList<String>();
-    if (SystemUtils.IS_OS_MAC_OSX) {
+    if (useGCCProcessor()) {
       // We use gcc -E because cpp is broken on Mac GCC 4.2.1
       //    Cf. http://stackoverflow.com/questions/4137923
       cmd.addAll(Arrays.asList("gcc", "-E", "-x", "c", input, output));
@@ -338,7 +340,7 @@ public class Main {
     }
     
     try {
-      Logging.getSTCLogger().debug("Running cpp: " + cmd);
+      logger.debug("Running cpp: " + cmd);
       Process cpp = Runtime.getRuntime().exec(cmd.toArray(new String[]{}));
       int cppExitCode = -1;
       boolean done = false;
@@ -360,6 +362,24 @@ public class Main {
       System.out.println("Error while launching preprocessor with command line:" +
                       cmd + ": " + e.getMessage());
       System.exit(1);
+    }
+  }
+
+
+  public static boolean useGCCProcessor() {
+    try {
+      if ((SystemUtils.IS_OS_MAC_OSX && 
+          !Settings.getBoolean(Settings.PREPROCESSOR_FORCE_CPP))) {
+        return true;
+      } else if (Settings.getBoolean(Settings.PREPROCESSOR_FORCE_GCC)) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (InvalidOptionException e) {
+      System.out.println("Internal error with settings: " + e.getMessage());
+      System.exit(ExitCode.ERROR_INTERNAL.code());
+      return false;
     }
   }
 
