@@ -142,6 +142,15 @@ public class ComputedValue {
     return Collections.singletonList(this);
   }
 
+  /**
+   * Make a copy with a different list of inputs
+   * @param newInputs
+   * @return
+   */
+  public ComputedValue substituteInputs(List<Arg> newInputs) {
+    return new ComputedValue(op, subop, index, newInputs);
+  }
+
   public static ComputedValue create(Instruction inst) {
     // TODO create unique expression for RHS of any kind of instruction
     // that we want to be able to eliminate

@@ -12,6 +12,7 @@ import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
@@ -21,10 +22,12 @@ import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.CopyOnWriteSmallSet;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.MultiMap;
+import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.tree.ICInstructions;
-import exm.stc.ic.tree.ICInstructions.Instruction.CVMap;
+import exm.stc.ic.tree.ICInstructions.CVMap;
+import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
 
 /**
@@ -55,6 +58,11 @@ class ValueTracker implements CVMap {
    * What computedValues are stored in each value (inverse of availableVals)
    */
   private final MultiMap<Var, ComputedValue> varContents;
+  
+  /**
+   * What computedValues references this variable
+   */
+  private final MultiMap<Var, Pair<Arg, ComputedValue>> varReferences;
 
   /** variables which are closed at this point in program */
   final HierarchicalSet<Var> closed;
@@ -85,6 +93,7 @@ class ValueTracker implements CVMap {
     this.availableVals = new HashMap<ComputedValue, Arg>();
     this.blackList = new HashSet<ComputedValue>();
     this.varContents = new MultiMap<Var, ComputedValue>();
+    this.varReferences = new MultiMap<Var, Pair<Arg,ComputedValue>>();
     this.closed = new HierarchicalSet<Var>();
     this.unmapped = new HierarchicalSet<Var>();
     this.recursivelyClosed = new HierarchicalSet<Var>();
@@ -95,7 +104,9 @@ class ValueTracker implements CVMap {
       ValueTracker parent, boolean varsPassedFromParent,
       HashMap<ComputedValue, Arg> availableVals,
       HashSet<ComputedValue> blackList,
-      MultiMap<Var, ComputedValue> varContents, HierarchicalSet<Var> closed,
+      MultiMap<Var, ComputedValue> varContents,
+      MultiMap<Var, Pair<Arg, ComputedValue>> varReferences,
+      HierarchicalSet<Var> closed,
       HierarchicalSet<Var> unmapped, HierarchicalSet<Var> recursivelyClosed,
       HashMap<Var, CopyOnWriteSmallSet<Var>> dependsOn) {
     this.logger = logger;
@@ -105,6 +116,7 @@ class ValueTracker implements CVMap {
     this.availableVals = availableVals;
     this.blackList = blackList;
     this.varContents = varContents;
+    this.varReferences = varReferences;
     this.closed = closed;
     this.unmapped = unmapped;
     this.recursivelyClosed = recursivelyClosed;
@@ -154,10 +166,11 @@ class ValueTracker implements CVMap {
    */
   public void addComputedValue(ResultVal res, boolean replace) {
     boolean outClosed = res.outClosed();
-    if (isAvailable(res.value())) {
+    ComputedValue val = res.value();
+    if (isAvailable(val)) {
       if (!replace) {
         throw new STCRuntimeError("Unintended overwrite of "
-            + getLocation(res.value()) + " with " + res);
+            + getLocation(val) + " with " + res);
       }
     } else if (replace) {
       throw new STCRuntimeError("Expected overwrite of " + " with " + res
@@ -165,14 +178,19 @@ class ValueTracker implements CVMap {
     }
 
     Arg valLoc = res.location();
-    availableVals.put(res.value(), valLoc);
+    availableVals.put(val, valLoc);
     if (valLoc.isVar()) {
-      varContents.put(valLoc.getVar(), res.value());
+      varContents.put(valLoc.getVar(), val);
       if (outClosed) {
         if (logger.isTraceEnabled()) {
           logger.trace("Output " + valLoc + " was closed");
         }
         close(valLoc.getVar(), false);
+      }
+    }
+    for (Arg input: val.getInputs()) {
+      if (input.isVar()) {
+        varReferences.put(input.getVar(), Pair.create(valLoc, val));
       }
     }
   }
@@ -230,22 +248,12 @@ class ValueTracker implements CVMap {
 
   public List<ComputedValue> getVarContents(Var v) {
     ValueTracker curr = this;
-    List<ComputedValue> res = null;
-    boolean resModifiable = false;
+    List<ComputedValue> res = new ArrayList<ComputedValue>();
 
     while (curr != null) {
-      List<ComputedValue> partRes = curr.varContents.get(v);
-      if (!partRes.isEmpty()) {
-        if (res == null) {
-          res = partRes;
-        } else if (resModifiable) {
-          res.addAll(partRes);
-        } else {
-          List<ComputedValue> oldRes = res;
-          res = new ArrayList<ComputedValue>();
-          res.addAll(oldRes);
-          res.addAll(partRes);
-          resModifiable = true;
+      for (ComputedValue cv: curr.varContents.get(v)) {
+        if (!blackList.contains(cv)) {
+          res.add(cv);
         }
       }
       curr = curr.parent;
@@ -253,6 +261,24 @@ class ValueTracker implements CVMap {
     return res == null ? Collections.<ComputedValue> emptyList() : res;
   }
 
+  /**
+   * Get computed values in which this variable is in input
+   */
+  public List<Pair<Arg, ComputedValue>> getReferencedCVs(Var input) {
+    List<Pair<Arg, ComputedValue>> res = 
+        new ArrayList<Pair<Arg,ComputedValue>>();
+    ValueTracker curr = this;
+    while (curr != null) {
+      for (Pair<Arg, ComputedValue> x: curr.varReferences.get(input)) {
+        if (!blackList.contains(x.val2)) {
+          res.add(x);
+        }
+      }
+      curr = curr.parent;
+    }
+    return res;
+  }
+  
   public void addClosed(UnifiedState closed) {
     for (Var v : closed.closed) {
       close(v, false);
@@ -339,8 +365,9 @@ class ValueTracker implements CVMap {
     return new ValueTracker(logger, reorderingAllowed, this, varsPassedFromParent,
         new HashMap<ComputedValue, Arg>(),
         blackList, // blacklist shared globally
-        new MultiMap<Var, ComputedValue>(), closed.makeChild(),
-        unmapped.makeChild(), recursivelyClosed.makeChild(), newDO);
+        new MultiMap<Var, ComputedValue>(),
+        new MultiMap<Var, Pair<Arg, ComputedValue>>(),
+        closed.makeChild(), unmapped.makeChild(), recursivelyClosed.makeChild(), newDO);
   }
   
   static class UnifiedState {
@@ -381,6 +408,7 @@ class ValueTracker implements CVMap {
           boolean allVals = true;
           boolean allSame = true;
               
+          int br = 0;
           Arg firstLoc = branchStates.get(0).getLocation(cv);
           for (ValueTracker bs: branchStates) {
             Arg loc = bs.getLocation(cv);
@@ -394,24 +422,46 @@ class ValueTracker implements CVMap {
               allVals = false;
             }
             locs.add(loc);
+            
+            Logger logger = Logging.getSTCLogger();
+            if (logger.isTraceEnabled()) {
+              logger.trace("Branch " + br + ": " + bs.availableVals);
+            }
+            br++;
           }
           
           if (allSame) {
             // TODO: could maybe be more specific with parameters
             availVals.add(new ResultVal(cv, firstLoc, false, 
                                         EquivalenceType.VALUE, false));
-          } else if (allVals) {
+            // TODO: copy values
+          } else {
             // declare new temporary value in outer block
-            Var unifiedLoc = parent.declareVariable(firstLoc.type(), 
-                OptUtil.optVPrefix(parent, "unified"), VarStorage.LOCAL,
-                DefType.LOCAL_COMPILER, null);
+            Var unifiedLoc;
+            if (allVals) {
+              unifiedLoc = parent.declareVariable(firstLoc.type(), 
+                  OptUtil.optVPrefix(parent, "unified"), VarStorage.LOCAL,
+                  DefType.LOCAL_COMPILER, null);
+            } else {
+              unifiedLoc = parent.declareVariable(firstLoc.type(), 
+                  OptUtil.optVPrefix(parent, "unified"), VarStorage.ALIAS,
+                  DefType.LOCAL_COMPILER, null);
+            }
             for (int i = 0; i < branchStates.size(); i++) {
               Arg loc = locs.get(i);
               Block branchBlock = branchBlocks.get(i);
-              branchBlock.addInstruction(ICInstructions.valueSet(unifiedLoc, loc));
+              if (allVals) {
+                branchBlock.addInstruction(ICInstructions.valueSet(unifiedLoc, loc));
+              } else {
+                assert (loc.isVar()) : loc + " " + loc.getKind();
+                branchBlock.addInstruction(TurbineOp.copyRef(unifiedLoc, loc.getVar()));
+              }
             }
+            
+            // Signal that value is stored in new var
             availVals.add(new ResultVal(cv, unifiedLoc.asArg(), false,
-                                        EquivalenceType.VALUE, false));
+                                      EquivalenceType.VALUE, false));
+            // TODO: copy valuesl
           }
         }
 

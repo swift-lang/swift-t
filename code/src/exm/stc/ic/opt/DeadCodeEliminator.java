@@ -307,7 +307,9 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
         Var whole = componentAlias.val2;
         Var prev = componentOf.put(component, whole);
         // shouldn't be component of multiple things
-        assert(prev == null) : prev;
+        if (prev != null && logger.isTraceEnabled()) {
+          logger.trace(component + " part of (" + prev + ", " + whole + ")");
+        }
       }
     }
   }

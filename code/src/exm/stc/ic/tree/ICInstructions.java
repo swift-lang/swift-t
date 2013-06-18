@@ -370,20 +370,6 @@ public class ICInstructions {
       return null;
     }
     
-    public static interface CVMap {
-      /**
-       * @param val
-       * @return the current location of a given computedValue
-       *        (either a constant value, or a variable)
-       */
-      public Arg getLocation(ComputedValue val);
-      /**
-       * @param v
-       * @return all computed values stored in var
-       */
-      public List<ComputedValue> getVarContents(Var v);
-    }
-    
     /**
      * @param existing already known values (sometimes needed to 
      *              work out which vales are created by an instruction)
@@ -457,6 +443,30 @@ public class ICInstructions {
     }
   }
   
+  public static interface CVMap {
+    
+    public boolean isClosed(Var v);
+    
+    /**
+     * @param val
+     * @return the current location of a given computedValue
+     *        (either a constant value, or a variable)
+     */
+    public Arg getLocation(ComputedValue val);
+    /**
+     * @param v
+     * @return all computed values stored in var
+     */
+    public List<ComputedValue> getVarContents(Var v);
+    
+    /**
+     * Get computed values in which this variable is in input
+     * @param input
+     * @return
+     */
+    public List<Pair<Arg, ComputedValue>> getReferencedCVs(Var input);
+  }
+
   public static class Comment extends Instruction {
     private final String text;
     public Comment(String text) {
@@ -2228,7 +2238,10 @@ public class ICInstructions {
           return res;
         }
         case COPY_REF: {
-          return ResultVal.makeAlias(getOutput(0), getInput(0)).asList();
+          List<ResultVal> res = new ArrayList<ResultVal>();
+          res.add(ResultVal.makeAlias(getOutput(0), getInput(0)));
+          res.addAll(makeCopiedRVs(existing, getOutput(0), getInput(0)));
+          return res;
         }
         default:
           return null;
@@ -3948,6 +3961,14 @@ public class ICInstructions {
       
       ResultVal basic = makeBasicComputedValue();
       
+      if (Operators.isCopy(subop)) {
+        // Add transitively valid computed values if a copy
+        List<ResultVal> res = new ArrayList<ResultVal>();
+        res.add(basic);
+        res.addAll(makeCopiedRVs(existing, getOutput(0), getInput(0)));
+        return res;
+      }
+      
       List<ResultVal> inferred = makeInferredComputedValues(existing);
       if (inferred.isEmpty()) {
         if (basic != null) {
@@ -4189,6 +4210,54 @@ public class ICInstructions {
 
     throw new STCRuntimeError("Unhandled case in valueSet: "
         + " assign " + value.toString() + " to " + dst.toString());
+  }
+
+  /**
+   * Copy over computed values from src to dst
+   * @param varContents
+   * @return
+   */
+  public static List<ResultVal> makeCopiedRVs(CVMap existing, Var dst, Arg src) {
+    if (!src.isVar()) {
+      return Collections.emptyList();
+    }
+    
+    List<ResultVal> res = new ArrayList<ResultVal>();
+    Var srcVar = src.getVar();
+    boolean closed = existing.isClosed(srcVar);
+    List<ComputedValue> cvs = existing.getVarContents(srcVar);
+    if (Logging.getSTCLogger().isTraceEnabled()) {
+      Logging.getSTCLogger().trace("Copy " + src + " => " + dst + " cvs: " +
+                                  cvs);
+    }
+    for (ComputedValue cv: cvs) {
+      // create new result value with conservative parameters
+      res.add(new ResultVal(cv, dst.asArg(), closed,
+                            EquivalenceType.VALUE, false));
+    }
+    
+    List<Pair<Arg, ComputedValue>> inputCVs = existing.getReferencedCVs(srcVar);
+    if (Logging.getSTCLogger().isTraceEnabled()) {
+      Logging.getSTCLogger().trace("Copy " + src + " => " + dst + " inputCvs: " +
+                          inputCVs);
+    }
+    for (Pair<Arg, ComputedValue> pair: inputCVs) {
+      ComputedValue origCV = pair.val2;
+      List<Arg> newInputs = new ArrayList<Arg>(origCV.getInputs().size());
+      for (Arg input: origCV.getInputs()) {
+        if (input.isVar() && input.getVar().equals(srcVar)) {
+          newInputs.add(dst.asArg());
+        } else {
+          newInputs.add(input);
+        }
+      }
+      
+      // create new result value with conservative parameters
+      res.add(new ResultVal(origCV.substituteInputs(newInputs), pair.val1,
+                            closed, EquivalenceType.VALUE, false));
+    }
+    
+    return res;
   }
 
   public static Instruction retrieveValueOf(Var dst, Var src) {
