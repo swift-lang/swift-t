@@ -396,19 +396,13 @@ public class ForwardDataflow implements OptimizerPass {
       }
     }
 
-    boolean inlined = handleStatements(logger, program, f, execCx, block,
+    handleStatements(logger, program, f, execCx, block,
         block.statementIterator(), cv, replaceInputs, replaceAll);
-
-    if (inlined) {
-      cleanupAfterInline(block, replaceInputs, replaceAll);
-
-      // Rebuild data structures for this block after inlining
-      return true;
-    }
 
     block.renameCleanupActions(replaceInputs, RenameMode.VALUE);
     block.renameCleanupActions(replaceAll, RenameMode.REFERENCE);
 
+    boolean inlined = false;
     // might be able to eliminate wait statements or reduce the number
     // of vars they are blocking on
     for (int i = 0; i < block.getContinuations().size(); i++) {
@@ -420,7 +414,12 @@ public class ForwardDataflow implements OptimizerPass {
 
       Block toInline = c.tryInline(cv.getClosed(), cv.getRecursivelyClosed(),
           reorderingAllowed);
+      if (logger.isTraceEnabled()) {
+        logger.trace("Inlining continuation " + c.getType());
+      }
       if (toInline != null) {
+
+        prepareForInline(toInline, replaceInputs, replaceAll);
         c.inlineInto(block, toInline);
         i--; // compensate for removal of continuation
         inlined = true;
@@ -428,8 +427,6 @@ public class ForwardDataflow implements OptimizerPass {
     }
 
     if (inlined) {
-      cleanupAfterInline(block, replaceInputs, replaceAll);
-
       // Rebuild data structures for this block after inlining
       return true;
     }
@@ -523,16 +520,23 @@ public class ForwardDataflow implements OptimizerPass {
       return UnifiedState.EMPTY;
     }
   }
-
-  private static void cleanupAfterInline(Block block,
+  
+  /**
+   * Need to apply pending updates to everything in block to be
+   * inline aside from contents of nested continuations.
+   * @param blockToInline
+   * @param replaceInputs
+   * @param replaceAll
+   */
+  private static void prepareForInline(Block blockToInline,
       HierarchicalMap<Var, Arg> replaceInputs,
       HierarchicalMap<Var, Arg> replaceAll) {
     // Redo replacements for newly inserted instructions/continuations
-    for (Statement stmt : block.getStatements()) {
+    for (Statement stmt : blockToInline.getStatements()) {
       stmt.renameVars(replaceInputs, RenameMode.VALUE);
       stmt.renameVars(replaceAll, RenameMode.REFERENCE);
     }
-    for (Continuation c : block.getContinuations()) {
+    for (Continuation c : blockToInline.getContinuations()) {
       c.renameVars(replaceInputs, RenameMode.VALUE, false);
       c.renameVars(replaceAll, RenameMode.REFERENCE, false);
     }
@@ -548,15 +552,21 @@ public class ForwardDataflow implements OptimizerPass {
    * @param cv
    * @param replaceInputs
    * @param replaceAll
-   * @return true if inlined. Returns immediately if inlining happens
    * @throws InvalidWriteException
    * @throws InvalidOptionException
    */
-  private boolean handleStatements(Logger logger, Program program, Function f,
+  private void handleStatements(Logger logger, Program program, Function f,
       ExecContext execCx, Block block, ListIterator<Statement> stmts, ValueTracker cv,
       HierarchicalMap<Var, Arg> replaceInputs,
       HierarchicalMap<Var, Arg> replaceAll) throws InvalidWriteException,
       InvalidOptionException {
+    logger.trace("STATEMENTS AT START:");
+    StringBuilder sb = new StringBuilder();
+    for (Statement stmt: block.getStatements()) {
+      stmt.prettyPrint(sb, "    ");
+    }
+    logger.trace(sb);
+    
     while (stmts.hasNext()) {
       Statement stmt = stmts.next();
 
@@ -565,7 +575,7 @@ public class ForwardDataflow implements OptimizerPass {
             cv, replaceInputs, replaceAll);
       } else {
         assert (stmt.type() == StatementType.CONDITIONAL);
-        // TODO: handle situation when:
+        // handle situations like:
         // all branches assign future X a local values v1,v2,v3,etc.
         // in this case should try to create another local value outside of
         // conditional z which has the value from all branches stored
@@ -575,7 +585,12 @@ public class ForwardDataflow implements OptimizerPass {
         cv.addComputedValues(condClosed.availableVals, Ternary.FALSE);
       }
     }
-    return false;
+    logger.trace("STATEMENTS AT END: ");
+    sb = new StringBuilder();
+    for (Statement stmt: block.getStatements()) {
+      stmt.prettyPrint(sb, "    ");
+    }
+    logger.trace(sb);
   }
 
   private void handleInstruction(Logger logger, Function f, ExecContext execCx,

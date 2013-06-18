@@ -189,7 +189,7 @@ public class HierarchicalMap<K, V> implements Map<K, V> {
     int written = writeContents(sb, true);
     HierarchicalMap<K, V> ancestor = parent;
     while (ancestor != null) {
-      ancestor.writeContents(sb, written == 0);
+      written += ancestor.writeContents(sb, written == 0);
       ancestor = ancestor.parent;
     }
     sb.append("}");
