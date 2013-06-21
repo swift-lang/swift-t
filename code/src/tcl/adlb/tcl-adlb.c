@@ -1045,7 +1045,7 @@ report_type_mismatch(adlb_data_type expected,
   char a_string[16];
   ADLB_Data_type_tostring(e_string, expected);
   ADLB_Data_type_tostring(a_string, actual);
-  printf("type mismatch: expected: %s actual: %s\n",
+  printf("type mismatch: expected: %s - received: %s\n",
          e_string, a_string);
 }
 
