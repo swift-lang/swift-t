@@ -28,7 +28,7 @@ namespace eval turbine {
         create_file    store_file                     \
         create_blob    store_blob                     \
         retrieve_blob retrieve_decr_blob              \
-        retrieve_blob retrieve_decr_blob_string       \
+        retrieve_decr_blob_string                     \
         allocate_container                            \
         container_lookup container_list               \
         container_insert notify_waiter                \
