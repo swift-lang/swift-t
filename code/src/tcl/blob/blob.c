@@ -63,6 +63,24 @@ blobutils_malloc(size_t bytes)
   return result;
 }
 
+void*
+blobutils_ptr_add(void* p, int offset)
+{
+  return p + offset;
+}
+
+int
+blobutils_sizeof_int(void)
+{
+  return sizeof(int);
+}
+
+int
+blobutils_sizeof_int32(void)
+{
+  return sizeof(int32_t);
+}
+
 int
 blobutils_sizeof_float(void)
 {
@@ -106,11 +124,37 @@ blobutils_cast_int_to_const_dbl_ptr(int i)
   return (const double*) (size_t) i;
 }
 
+int*
+blobutils_cast_to_int_ptr(void* p)
+{
+  return (int*) p;
+}
+
+int32_t*
+blobutils_cast_to_int32_ptr(void* p)
+{
+  return (int32_t*) p;
+}
+
+int64_t*
+blobutils_cast_to_int64_ptr(void* p)
+{
+  return (int64_t*) p;
+}
+
 double*
 blobutils_cast_to_dbl_ptr(void* p)
 {
   return (double*) p;
 }
+
+void
+blobutils_zeroes_float(double* p, int n)
+{
+  for (int i = 0; i < n; i++)
+    p[i] = 0.0;
+}
+
 
 double
 blobutils_get_float(double* pointer, int index)
@@ -118,19 +162,38 @@ blobutils_get_float(double* pointer, int index)
   return pointer[index];
 }
 
+void
+blobutils_set_float(double* p, int i, double d)
+{
+  p[i] = d;
+}
+
+int
+blobutils_get_int(int* pointer, int index)
+{
+  return pointer[index];
+}
+
+int32_t
+blobutils_get_int32(int32_t* pointer, int index)
+{
+  return pointer[index];
+}
+
+/**
+   Assume blob is array of int- do array lookup
+ */
+void
+blobutils_set_int(int* pointer, int index, int i)
+{
+  pointer[index] = i;
+}
+
 char
 blobutils_get_char(turbine_blob* data, int index)
 {
   char* d = (char*) data->pointer;
   return d[index];
-}
-
-/** Set p[i] = d */
-void
-blobutils_set_float(void* p, int i, double d)
-{
-  double* A = (double*) p;
-  A[i] = d;
 }
 
 void

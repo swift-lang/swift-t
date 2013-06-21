@@ -178,6 +178,16 @@ namespace eval turbine {
     turbine::notify_waiters $result $waiters
   }
 
+  proc blob_zeroes_float { N } {
+
+      set length [ expr $N * [blobutils_sizeof_float] ]
+      set p [ blobutils_malloc $length ]
+
+      blobutils_zeroes_float [ blobutils_cast_to_dbl_ptr $p ] $N
+
+      return [ list [ blobutils_cast_to_int $p ] $length ]
+  }
+
   # Assumes A is closed
   proc complete_container { A action } {
       set n [ adlb::container_size $A ]

@@ -36,6 +36,13 @@
 (float f[]) floats_from_blob(blob b) "turbine" "0.0.2" "floats_from_blob";
 @pure
 (blob o) blob_read(file f) "turbine" "0.0.2" "blob_read";
-
+@pure
+(blob o) blob_zeroes_float(int n)
+"turbine" "0.2.0"
+[ "set <<o>> [ blob_zeroes_float <<n>> ]" ];
+// Not Yet Implemented:
+@pure
+(blob o[]) blob_pack_rows_float(float A[][])
+"turbine" "0.1.0" "blob_pack_rows_float";
 
 #endif // BLOB_SWIFT

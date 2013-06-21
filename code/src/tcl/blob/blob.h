@@ -60,6 +60,15 @@ void* blobutils_malloc(size_t bytes);
  */
 void blobutils_destroy(turbine_blob* blob);
 
+void* blobutils_ptr_add(void* p, int offset);
+
+/**
+   Obtain sizeof(int)
+ */
+int blobutils_sizeof_int(void);
+
+int blobutils_sizeof_int32(void);
+
 /**
    Obtain sizeof(double) (In Swift/T, all floats are 64-bit)
  */
@@ -79,7 +88,15 @@ const int*    blobutils_cast_int_to_const_int_ptr(int i);
       double* blobutils_cast_int_to_dbl_ptr      (int i);
 const double* blobutils_cast_int_to_const_dbl_ptr(int i);
 
-double* blobutils_cast_to_dbl_ptr(void* p);
+int* blobutils_cast_to_int_ptr(void* p);
+int64_t* blobutils_cast_to_int64_ptr(void* p);
+int32_t* blobutils_cast_to_int32_ptr(void* p);
+double*  blobutils_cast_to_dbl_ptr(void* p);
+
+/**
+   Set all entries to 0.0
+ */
+void blobutils_zeroes_float(double* p, int n);
 
 /**
    Assume blob is array of double- do array lookup
@@ -89,7 +106,22 @@ double blobutils_get_float(double* pointer, int index);
 /**
    Assume blob is array of double- do array store
  */
-void blobutils_set_float(void* p, int i, double d);
+void blobutils_set_float(double* p, int i, double d);
+
+/**
+   Assume blob is array of int- do array lookup
+ */
+int blobutils_get_int(int* pointer, int index);
+
+/**
+   Assume blob is array of int32- do array lookup
+ */
+int32_t blobutils_get_int32(int32_t* pointer, int index);
+
+/**
+   Assume blob is array of int- do array lookup
+ */
+void blobutils_set_int(int* pointer, int index, int i);
 
 /**
    Assume blob is array of char- do array lookup
