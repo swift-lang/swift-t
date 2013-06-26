@@ -36,9 +36,6 @@ EXPERIMENTAL_OPTS=()
 # OUTPUT_MODE= turbine or cpp
 OUTPUT_MODE=turbine
 
-# UPDATE= If 1, only compile if target not up-to-date
-UPDATE=0
-
 # Is preprocessor enabled?
 PREPROCESS=true
 
@@ -285,7 +282,7 @@ do
     C) verbose "IC Output: ${OPTARG}"
        COMPILER_OPTS+="-Dstc.ic.output-file=${OPTARG}"
        ;;
-    u) UPDATE=1
+    u) STC_ARGS+="-u"
       ;;
     v)
       report_version
@@ -323,21 +320,6 @@ if [[ ${DEBUG_PORT} != "" ]]
 then
   export DEBUG=-agentlib:jdwp=transport=dt_socket,server=y,address=${DEBUG_PORT}
 fi
-
-# Check timestamps (-u)
-if [[ ${UPDATE} == 1 && ! -z "${OUTPUT}" ]]
-then
-  if [[ -f ${OUTPUT} ]]
-  then
-    if [[ ${OUTPUT} -nt ${INPUT} ]]
-    then
-      # Output is up-to-date: done
-      verbose "output is up-to-date."
-      return 0
-    fi
-  fi
-fi
-
 
 STC=${STC_HOME}/lib/stc.jar
 CLASSPATH="${STC}"

@@ -61,6 +61,7 @@ public class Main {
   private static final String SWIFT_PROG_ARG_FLAG = "A";
   private static final String PREPROC_MACRO_FLAG = "D";
   private static final String INCLUDE_FLAG = "I";
+  private static final String UPDATE_FLAG = "u";
   private static final List<File> temporaries = new ArrayList<File>();
   
   
@@ -121,6 +122,8 @@ public class Main {
     Option preprocArg = new Option(PREPROC_MACRO_FLAG, true,
                                     "Preprocessor definition");
     opts.addOption(preprocArg);
+    
+    opts.addOption(UPDATE_FLAG, false, "Update output only if out of date");
     return opts;
   }
 
@@ -139,6 +142,8 @@ public class Main {
       System.exit(1);
       return null; 
     }
+    
+    boolean updateOutput = cmd.hasOption(UPDATE_FLAG);
     
     if (cmd.hasOption(INCLUDE_FLAG)) {
       for (String dir: cmd.getOptionValues(INCLUDE_FLAG)) {
@@ -168,8 +173,8 @@ public class Main {
     if (remainingArgs.length == 2) {
       output = remainingArgs[1];
     }
-    Args result = new Args(input, output, swiftProgramArgs,
-                           Arrays.asList(preprocMacros));
+    Args result = new Args(input, output, updateOutput,
+            swiftProgramArgs, Arrays.asList(preprocMacros));
     recordArgValues(result);
     return result;
   }
@@ -410,14 +415,30 @@ public class Main {
 
 
   private static PrintStream setupOutput(Args args) {
-    if (args.outputFilename == null) {
-      return System.out;
+    String infile = args.inputFilename;
+    String outfile;
+    if (args.outputFilename != null) {
+      outfile = args.outputFilename;
+    } else {
+      String prefix;
+      String ext = ".swift";
+      if (infile.endsWith(ext)) {
+        prefix = infile.substring(0, infile.length() - ext.length());
+      } else {
+        prefix = infile;
+      }
+      outfile = prefix + ".tcl";
     }
     
+    Logging.getSTCLogger().debug("Writing output to " + outfile);
     PrintStream output = null;
     try {
-      Logging.getSTCLogger().debug("Writing output to " + args.outputFilename);
-      FileOutputStream stream = new FileOutputStream(args.outputFilename);
+      if (args.updateOutput && !olderThan(outfile, infile)) {
+        Logging.getSTCLogger().debug("Output up to date. Done.");
+        System.exit(ExitCode.SUCCESS.code());
+      }
+      
+      FileOutputStream stream = new FileOutputStream(outfile);
       BufferedOutputStream buffer = new BufferedOutputStream(stream);
       output = new PrintStream(buffer);
     } catch (IOException e) {
@@ -425,6 +446,12 @@ public class Main {
       System.exit(ExitCode.ERROR_IO.code());
     }
     return output;
+  }
+
+  private static boolean olderThan(String file1, String file2) {
+    long modTime1 = new File(file1).lastModified();
+    long modTime2 = new File(file2).lastModified();
+    return modTime1 < modTime2;
   }
 
   private static PrintStream setupICOutput() {
@@ -465,14 +492,17 @@ public class Main {
   private static class Args {
     public final String inputFilename;
     public final String outputFilename;
+    public final boolean updateOutput;
     public final Properties swiftProgramArgs;
     public final List<String> preprocessorMacros;
     
     public Args(String inputFilename, String outputFilename,
+                boolean updateOutput,
                 Properties swiftProgramArgs, List<String> preprocessorArgs) {
       super();
       this.inputFilename = inputFilename;
       this.outputFilename = outputFilename;
+      this.updateOutput = updateOutput;
       this.swiftProgramArgs = swiftProgramArgs;
       this.preprocessorMacros = preprocessorArgs;
     }
