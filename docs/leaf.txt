@@ -381,8 +381,44 @@ Tcl function:
 This function is called _before_ +i+ is set.  Thus, +f+ must issue a
 Turbine +rule+ statement to schedule real leaf work when +i+ is set.
 
+Consider the following Tcl code (+f.tcl+):
+----
+include::examples/5/f.tcl[]
+----
+In this case, Tcl function +f_impl+ is the _implementation_: the
+actual code the user desires to call.  This may be an existing Tcl
+routine or linkage to native code as described above.  It consumes two
+Tcl integers and returns their sum as a Tcl integer.
 
+Two function, +f+ and +f_body+, are required to connect this to
+Swift/T.  +f+ is the _interface_: it is called by Swift/T when the
+call is issued but +x+ and +y+ may not yet have values.  The Tcl
+variables +x+ and +y+ are the Turbine Datum (TD) identifiers, not the
+values, of Swift variables +x+ and +y+.  The outputs are packed in Tcl
+list +outputs+ and the inputs are in Tcl list +inputs+.
 
+When +x+ and +y+ are stored elsewhere, the Swift/T runtime evaluates the
+action item in the rule: +"my_pkg::f_body $z $x $y"+.  Thus, +f_body+
+receives the TDs for +z+, +x+, and +y+.  It retrieves the values of
++x+ and +y+, calls +f_impl+ to compute the value for +z+, and stores
+it.  Now, any Swift/T statements (rules) dependendent on +z+ will be
+executed, and so on.
+
+This Tcl code is called by the following simple Swift/T test
+(+test-f.swift+):
+----
+include::examples/5/test-f.swift[]
+----
+
+For more information about the APIs used to store/retrieve Swift/T
+data and issue rules, see link:turbine-internals.html[Turbine
+Internals].
+
+The interface/body/implementation pattern is used by much of the
+Swift/T library.  The source of this library is found in the Turbine
+installation directory.  The Swift headers are in +turbine/export+ and
+their Tcl implementations are in +turbine/lib+.  This is a good way to
+find out what else may be done.
 
 ////
 
