@@ -60,7 +60,7 @@ In the advanced mode, +f+ is issued _before_ +i+ has a value.  The
 user must use the Turbine API to set up execution dependent on +i+.
 This guide will demonstrate how to do that.
 
-== Simple mode: Tcl packaging
+== Simple mode
 
 Calling Tcl from Swift in simple mode is easy.  However, the user
 does have to have a basic understanding of Tcl.  In typical cases, the
@@ -365,14 +365,40 @@ This produces:
 include::examples/4/test-mvm-swift.out[]
 ----
 
-=== Complete example 5: Calling an MPI library
+== Advanced mode
+
+In this mode, the user provides the Swift/T runtime with dataflow
+information so that more complex operations may be performed.
+
+=== Complete example 5: Leaf task with dataflow
+
+When using the advanced syntax, the final argument is the name of a
+Tcl function:
+----
+(int o) f(int i) "my_pkg" "version" "f";
+----
+
+This function is called _before_ +i+ is set.  Thus, +f+ must issue a
+Turbine +rule+ statement to schedule real leaf work when +i+ is set.
+
+
+
+
+////
+
+=== Complete example 6: Calling an MPI library
 
 Calling an existing MPI library is similar to calling any other C
 code.  In this example, we will show how to obtain the new
 communicator from Swift/T.  This functionality only works when using
 Swift/T on an MPI-3 implementation such as MPICH 3.0.
 
+==== Identify the function
 
+Consider the following MPI library function:
+
+
+////
 
 // TODO: === Complete example 6: Calling Swift/T from C
 
