@@ -572,7 +572,7 @@ type
 Get the subscript type of the container as a Tcl string.
 Use +typeof+ to get the type of a member.
 
-+enumerate subscripts|members|dict|count count|all offset+::
++adlb::enumerate td subscripts|members|dict|count count|all offset+::
 * +subscripts+:: Return list of subscript strings
 * +members+::    Return list of member TDs
 * +dict+::       Return Tcl dict mapping subscripts to TDs
