@@ -23,6 +23,7 @@
 */
 
 #include <stdbool.h>
+#include <stdint.h>
 
 /**
    Simple struct for variable-length data blob
