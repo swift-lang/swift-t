@@ -338,7 +338,7 @@ namespace eval turbine {
       } else {
         set result [ adlb::retrieve_blob $id ]
       }
-      debug [ format "retrieve_blob: <%d>=\[%x %d\]" $id \
+      log [ format "retrieve_blob: <%d>=\[%x %d\]" $id \
                     [ lindex $result 0 ] [ lindex $result 1 ] ]
       return $result
     }
