@@ -395,7 +395,7 @@ rule input_list action options...
 are are closed, the action is +eval+'d.
 +action+:: A string of Tcl code for execution once all inputs are
 closed. Essentially, when all the inputs are closed, Turbine will make
-the action ready for execution, based on the +action_type+.
+the action ready for execution, based on the +type+.
 
 ==== Options
 
@@ -407,7 +407,7 @@ rule input_list action name "myfunction" type $turbine::WORK location 4 parallel
 
 +name+:: An arbitrary string name used for debugging and logging.
 Turbine will make up a default name
-+action_type+:: +LOCAL+, +CONTROL+, or +WORK+.  Default is +CONTROL+
++type+:: +LOCAL+, +CONTROL+, or +WORK+.  Default is +CONTROL+
 +parallelism+:: Number of processes to use for an MPI parallel task.  Default is 1.
 +location+:: Send action to this MPI rank.  Default is any available process based on +type+ (+$adlb::RANK_ANY+)
 
