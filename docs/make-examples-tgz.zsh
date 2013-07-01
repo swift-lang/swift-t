@@ -14,8 +14,12 @@ print cleaning...
 examples/clean.sh
 print
 
+TGZ=examples.tar.gz
+
 find examples -name "*.sh"     -o \
               -name "*.[chfi]" -o \
               -name "*.tcl"    -o \
               -name "*.swift" | \
-     xargs tar cfz examples.tar.gz
+     xargs tar cfz ${TGZ}
+
+du -h ${TGZ}
