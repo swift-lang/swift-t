@@ -83,12 +83,12 @@ report_version()
 {
   echo "Turbine ${TURBINE_VERSION}"
   echo " in: ${TURBINE_HOME}"
-  echo " using Tcl: ${TCLSH}"
   SOURCE_TXT=${TURBINE_HOME}/etc/source.txt
   if [[ -f ${SOURCE_TXT} ]]
   then
     echo " installed from: $( cat ${SOURCE_TXT} )"
   fi
+  echo " using Tcl: ${TCLSH}"
 }
 
 if (( REPORT_VERSION ))
