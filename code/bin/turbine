@@ -102,7 +102,7 @@ fi
 
 if [[ ${MACHINE_FILE} != 0 ]]
 then
-  TURBINE_LAUNCH_OPTS="-f ${MACHINE_FILE}"
+  TURBINE_LAUNCH_OPTS="${TURBINE_LAUNCH_OPTS} -f ${MACHINE_FILE}"
 fi
 
 shift $(( OPTIND-1 ))
