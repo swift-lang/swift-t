@@ -54,7 +54,7 @@ do
       VERBOSE=1
       ;;
     \?)
-      echo "turbine: unknown option: ${OPTARG}"
+      # Bash already reported an error
       exit 1
       ;;
   esac
