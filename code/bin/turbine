@@ -132,12 +132,6 @@ then
   exit 1
 fi
 
-if [[ ${?} != 0 ]]
-then
-  echo "turbine: configuration error!"
-  exit 1
-fi
-
 if (( ${LINE_PREFIX_ENABLED} ))
 then
   if [[ ${MPI_IMPL} == "MPICH2" ]]
