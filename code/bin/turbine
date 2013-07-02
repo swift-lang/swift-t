@@ -73,6 +73,11 @@ fi
 
 # Load Turbine configuration settings
 source ${TURBINE_HOME}/scripts/turbine-config.sh
+if [[ ${?} != 0 ]]
+then
+  echo "Turbine installation is broken!"
+  exit 1
+fi
 
 report_version()
 {
