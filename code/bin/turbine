@@ -32,9 +32,9 @@ MACHINE_FILE=0
 REPORT_VERSION=0
 VERBOSE=0
 
-while getopts "f:hln:vV" opt
+while getopts "f:hln:vV" OPTION
 do
-  case $opt in
+  case ${OPTION} in
     f)
       MACHINE_FILE=${OPTARG}
       ;;
@@ -149,10 +149,10 @@ then
   fi
 fi
 
-OPTS=
-OPTS+="${LINE_PREFIX} "
-OPTS+="-n ${PROCS} "
-OPTS+=${TURBINE_LAUNCH_OPTS}
+OPTIONS=
+OPTIONS+="${LINE_PREFIX} "
+OPTIONS+="-n ${PROCS} "
+OPTIONS+=${TURBINE_LAUNCH_OPTIONS}
 
 if (( VERBOSE ))
 then
@@ -160,5 +160,5 @@ then
 fi
 
 # Allow user to insert valgrind
-${TURBINE_LAUNCH} ${OPTS} ${VALGRIND} ${TCLSH} ${PROGRAM} ${ARGS}
+${TURBINE_LAUNCH} ${OPTIONS} ${VALGRIND} ${TCLSH} ${PROGRAM} ${ARGS}
 # Exit code returned by shell script
