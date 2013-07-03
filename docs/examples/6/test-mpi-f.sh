@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/sh -ex
 
-stc -r $PWD test-mpi-f.swift test-mpi-f.tcl
+./build.sh
 
 turbine test-mpi-f.tcl
 
