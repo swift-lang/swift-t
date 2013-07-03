@@ -388,6 +388,18 @@ AC_ARG_WITH(tclsh-local,
     ],
     [])
 
+# Set default Tcl version:
+export TCL_VERSION=8.5
+
+AC_ARG_WITH(tcl-version,
+    AS_HELP_STRING([--with-tcl-version], [Tcl version. Default is 8.5]),
+    [
+        TCL_VERSION=${withval}
+    ]
+)
+echo "using Tcl version: ${TCL_VERSION}"
+AC_SUBST(TCL_VERSION)
+
 USE_TCL=0
 # Set USE_TCL
 AC_ARG_WITH(tcl,
@@ -396,7 +408,7 @@ AC_ARG_WITH(tcl,
         USE_TCL=${withval}
     ],
     [
-        program=$( which tclsh8.5 )
+        program=$( which tclsh${TCL_VERSION} )
         if [[ ${?} != 0 ]]
         then
             AC_MSG_ERROR([Could not find tclsh8.5!])
@@ -408,7 +420,7 @@ AC_ARG_WITH(tcl,
 
 # Set USE_TCL_LIB_DIR: location of libtcl
 USE_TCL_LIB_DIR=${USE_TCL}/lib
-LIBTCL=libtcl8.5.${SO_SUFFIX}
+LIBTCL=libtcl${TCL_VERSION}.${SO_SUFFIX}
 AC_MSG_CHECKING([for ${LIBTCL} ])
 if [[ ! -r ${USE_TCL_LIB_DIR}/${LIBTCL} ]]
 then
@@ -428,9 +440,9 @@ elif [[ -r ${USE_TCL}/lib64/tclConfig.sh ]]
 then
     USE_TCL_CFG_DIR=${USE_TCL}/lib64
 # This is a location used by the APT tcl8.5-dev package (2)
-elif [[ -r ${USE_TCL}/lib/tcl8.5/tclConfig.sh ]]
+elif [[ -r ${USE_TCL}/lib/tcl${TCL_VERSION}/tclConfig.sh ]]
 then
-    USE_TCL_CFG_DIR=${USE_TCL}/lib/tcl8.5
+    USE_TCL_CFG_DIR=${USE_TCL}/lib/tcl${TCL_VERSION}
 fi
 if [[ ${USE_TCL_CFG_DIR} == 0 ]]
 then
@@ -449,7 +461,7 @@ then
     USE_TCLSH=$( maint/find-tcl.zsh ${USE_TCL} )
     if [[ ${?} != 0 ]]
     then
-        AC_MSG_ERROR([Could not find Tcl 8.5 binary!])
+        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} binary!])
     fi
     USE_TCLSH_LOCAL=${USE_TCLSH}
 else
@@ -457,7 +469,7 @@ else
     USE_TCLSH=$( maint/find-tcl.zsh ${USE_TCL} )
     if [[ ${?} != 0 ]]
     then
-        AC_MSG_ERROR([Could not find Tcl 8.5 binary!])
+        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} binary!])
     fi
 fi
 AC_MSG_RESULT([using Turbine Tcl executable: ${USE_TCLSH}])

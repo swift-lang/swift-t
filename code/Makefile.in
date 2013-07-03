@@ -74,9 +74,12 @@ CFLAGS += -I . -I src/turbine
 C_UTILS = @USE_C_UTILS@
 
 TCL := @USE_TCL@
+TCL_VERSION := @TCL_VERSION@
 TCLSH := @USE_TCLSH@
 TCL_LIB_DIR := @USE_TCL_LIB_DIR@
+TCL_LIB_NAME := tcl$(TCL_VERSION)
 TCLSH_LOCAL := @USE_TCLSH_LOCAL@
+
 
 MACHINE = @USE_MACHINE@
 
@@ -282,7 +285,7 @@ $(TEST_BINS): %.x: %.o install.txt
 	$(E) $(CC) $(<) \
         $(MAC_FLAT) \
 	-L$(INSTALL_LIB) -l tclturbine \
-	$(LIBS) -L $(TCL_LIB_DIR) -l tcl8.5 \
+	$(LIBS) -L $(TCL_LIB_DIR) -l $(TCL_LIB_NAME) \
 	$(RPATHS) \
 	-o $(@)
 
@@ -325,7 +328,7 @@ else
 	CP_PARENTS = maint/cp-parents.sh
 endif
 
-TCL_SO       = libtcl8.5.$(SO_SUFFIX)
+TCL_SO       = lib$(TCL_LIB_NAME).$(SO_SUFFIX)
 EXMCUTILS_SO = libexmcutils.$(SO_SUFFIX)
 ADLB_SO      = libadlb.$(SO_SUFFIX)
 

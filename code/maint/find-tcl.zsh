@@ -1,6 +1,7 @@
 #!/usr/bin/env zsh
 
-# Find working Tcl 8.5
+# Find working Tcl
+# Refers to TCL_VERSION in the environment
 # Currently used by configure
 
 DIR=$1
@@ -18,27 +19,32 @@ exitcode "\n Not given: Tcl directory" > /dev/stderr
 [[ -d ${DIR} ]]
 exitcode "\n Could not find Tcl directory: ${DIR}" > /dev/stderr
 
-FILES=( ${DIR}/bin/tclsh8.5 ${DIR}/bin/tclsh )
+# Loop over F: the tclsh executable file
+FILES=( ${DIR}/bin/tclsh${TCL_VERSION} ${DIR}/bin/tclsh )
 for F in ${FILES}
 do
   if [[ -x ${F} ]]
   then
+    # Get V: the version reported by tclsh
     if [[ ${NO_RUN} == 1 ]]
     then
       # Skip trying to run: we are cross-compiling
-      VERSION=8.5
+      V=${TCL_VERSION}
     else
       # Run and get Tcl version
-      VERSION=$( print 'puts $tcl_version' | ${F} )
+      V=$( print 'puts $tcl_version' | ${F} )
       exitcode "\n Could not run: ${F}"
     fi
-    if [[ ${VERSION} == "8.5" ]]
-      then
+    if [[ ${V} == ${TCL_VERSION} ]]
+    then
+      # This works: return success
       print ${F}
       return 0
     fi
   fi
 done
 
-print "Could not find Tcl 8.5 binary in: ${DIR}" > /dev/stderr
+# If we get here, we did not find an executable
+print "Could not find Tcl ${TCL_VERSION} binary in: ${DIR}" \
+      > /dev/stderr
 return 1
