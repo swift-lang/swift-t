@@ -60,6 +60,14 @@ In the advanced mode, +f+ is issued _before_ +i+ has a value.  The
 user must use the Turbine API to set up execution dependent on +i+.
 This guide will demonstrate how to do that.
 
+== Examples
+
+Complete code samples for each example are found in this tar file:
+
+* link:examples.tar.gz (8 KB)
+
+Note: In the scripts, we use shell options +set -ex+.
+
 == Simple mode
 
 Calling Tcl from Swift in simple mode is easy.  However, the user
