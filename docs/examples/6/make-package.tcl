@@ -1,4 +1,4 @@
 puts [ ::pkg::create -name f \
                      -version 0.0 \
-                     -load libmpi-f.so \
-                     -source mpi-f.tcl ]
+                     -load libf.so \
+                     -source f.tcl ]

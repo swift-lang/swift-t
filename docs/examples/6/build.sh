@@ -5,13 +5,12 @@ MPI=$( dirname $( dirname ${MPICC} ) )
 
 TCL_INCLUDE=${HOME}/sfw/tcl-8.6.0/include
 
-swig -I${MPI}/include mpi-f.i
+swig -I${MPI}/include f.i
 
-mpicc -c -fPIC -I . mpi-f.c
-mpicc -c -fPIC -I ${TCL_INCLUDE} mpi-f_wrap.c
-mpicc -shared -o libmpi-f.so mpi-f_wrap.o mpi-f.o
+${MPICC} -c -fPIC -I . f.c
+${MPICC} -c -fPIC -I ${TCL_INCLUDE} f_wrap.c
+${MPICC} -shared -o libf.so f_wrap.o f.o
 tclsh make-package.tcl > pkgIndex.tcl
-sed -i 's/list load/list load -global/' pkgIndex.tcl
 
-stc -r ${PWD} test-mpi-f.swift test-mpi-f.tcl
+stc -r ${PWD} test-f.swift test-f.tcl
 
