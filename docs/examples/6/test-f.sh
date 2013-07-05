@@ -2,5 +2,5 @@
 
 ./build.sh
 
-turbine test-mpi-f.tcl
+turbine -n 4 test-f.tcl
 
