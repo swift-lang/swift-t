@@ -64,9 +64,9 @@ This guide will demonstrate how to do that.
 
 Complete code samples for each example are found in this tar file:
 
-* link:examples.tar.gz (8 KB)
+* link:examples.tar.gz[] (8 KB)
 
-Note: In the scripts, we use shell options +set -ex+.
+Note: In many scripts, we use shell options +set -ex+.
 
 == Simple mode
 
@@ -428,8 +428,6 @@ installation directory.  The Swift headers are in +turbine/export+ and
 their Tcl implementations are in +turbine/lib+.  This is a good way to
 find out what else may be done.
 
-////
-
 === Complete example 6: Calling an MPI library
 
 Calling an existing MPI library is similar to calling any other C
@@ -439,10 +437,47 @@ Swift/T on an MPI-3 implementation such as MPICH 3.0.
 
 ==== Identify the function
 
-Consider the following MPI library function:
+Consider the  following MPI library function (+f.c+):
+----
+include::examples/6/f-snip-1.c[]
+----
 
+This function accepts an MPI communicator +comm+ freshly created for
+the task.  It also accepts user data +k+ and must return a +double+.
+Rank 0 in the task communicator returns the real value- the other
+ranks may cooperate in the computation but do not interact with the
+data store.
 
-////
+Communication on +comm+ is isolated from Swift/T implementation
+communication.  Point-to-point messaging and collectives (such as
++MPI_Barrier()+, as shown) are allowed.
+
+We desire to call this from Swift as (+test-f.swift+):
+----
+include::examples/6/test-f.swift[]
+----
+
+In the declaration, +@par+ allows us to call the function as a
+parallel function.  At call time, we use +@par=2+.
+
+We wrap this function with SWIG and a Swift/T interface/body:
+----
+include::examples/6/f.tcl[]
+----
+
+This differs from the single-process task (example 5) in that it
+passes the additional parallelism information in variable +args+ into
+the +rule+ statement so that Swift/T will allocate 2 workers for the
+task.
+
+By convention, only rank 0 contacts the data store to store result
++z+.  If multiple processes write to +z+, a run-time error will
+result.
+
+At run time, ensure Turbine has enough workers to run the user task:
+----
+include::examples/6/run-f.sh[]
+----
 
 // TODO: === Complete example 6: Calling Swift/T from C
 
