@@ -1,2 +1,2 @@
 
-int f(MPI_Comm comm, int k);
+double f(MPI_Comm comm, int k);
