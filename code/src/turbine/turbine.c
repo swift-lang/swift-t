@@ -374,6 +374,8 @@ transform_free(transform* T)
     free(T->action);
   if (T->input_list)
     free(T->input_list);
+  if (T->closed_inputs)
+    free(T->closed_inputs);
   free(T);
 }
 
