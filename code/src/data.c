@@ -850,8 +850,6 @@ data_insert(adlb_datum_id container_id,
   }
   else
   {
-    // Copy key/value onto the heap so we can store them
-    subscript = strdup(subscript);
     table_add(d->data.CONTAINER.members, subscript, member);
   }
 
@@ -898,8 +896,6 @@ data_insert_atomic(adlb_datum_id container_id, const char* subscript,
     return ADLB_DATA_SUCCESS;
   }
 
-  // Copy key/value onto the heap so we can store them
-  subscript = strdup(subscript);
   // Use NULL pointer value to represent unlinked
   char* member = NULL;
   table_add(d->data.CONTAINER.members, subscript, member);
