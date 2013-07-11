@@ -61,7 +61,7 @@ blobutils_malloc(size_t bytes)
 {
   void* result = malloc(bytes);
   assert(result);
-  fprintf(stderr, "malloc: %p\n", result);
+  // fprintf(stderr, "malloc: %p\n", result);
   return result;
 }
 
