@@ -82,7 +82,8 @@ int blobutils_sizeof_float(void);
  */
 void* blobutils_cast_to_ptr(int i);
 
-int blobutils_cast_to_int(void* p);
+int  blobutils_cast_to_int(void* p);
+long blobutils_cast_to_long(void* p);
 
       int*    blobutils_cast_int_to_int_ptr      (int i);
 const int*    blobutils_cast_int_to_const_int_ptr(int i);

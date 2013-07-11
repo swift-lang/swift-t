@@ -27,6 +27,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <tools.h>
 #include "src/tcl/blob/blob.h"
 
 turbine_blob*
@@ -60,6 +61,7 @@ blobutils_malloc(size_t bytes)
 {
   void* result = malloc(bytes);
   assert(result);
+  fprintf(stderr, "malloc: %p\n", result);
   return result;
 }
 
@@ -96,9 +98,22 @@ blobutils_cast_to_ptr(int i)
 int
 blobutils_cast_to_int(void* p)
 {
-  int result = (long) p;
+  long i_long = (long) p;
+  int result = i_long;
+  // fprintf(stderr, "blobutils_cast_to_int: %p -> %li %i\n",
+  //         p, i_long, result);
+  valgrind_assert_msg(i_long == result,
+                      "pointer is too long for int!");
   return result;
 }
+
+long
+blobutils_cast_to_long(void* p)
+{
+  long result = (long) p;
+  return result;
+}
+
 
 int*
 blobutils_cast_int_to_int_ptr(int i)
