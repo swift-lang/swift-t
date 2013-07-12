@@ -932,7 +932,7 @@ Turbine_StrInt_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 // We assume SWIG correctly generates this function
 // See the tcl/blob module
-int Swiftblob_Init(Tcl_Interp* interp);
+int Blob_Init(Tcl_Interp* interp);
 
 /**
    Called when Tcl loads this extension
@@ -951,7 +951,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   tcl_mpe_init(interp);
   tcl_python_init(interp);
   tcl_r_init(interp);
-  Swiftblob_Init(interp);
+  Blob_Init(interp);
 
   COMMAND("init",        Turbine_Init_Cmd);
   COMMAND("engine_init", Turbine_Engine_Init_Cmd);
