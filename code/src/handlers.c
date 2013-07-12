@@ -36,6 +36,7 @@
 
 #include <mpi.h>
 
+#include "adlb-defs.h"
 #include "checks.h"
 #include "common.h"
 #include "data.h"
