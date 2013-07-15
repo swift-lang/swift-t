@@ -53,7 +53,7 @@ then
 fi
 AC_SUBST(USE_MAC)
 
-# Checks for programs.
+# Checks for programs
 AC_PROG_CC
 AC_PATH_PROG([SWIG],[swig],[0])
 [[ ${SWIG} == 0 ]] && AC_MSG_ERROR([Could not find SWIG!])
@@ -81,13 +81,17 @@ AC_CACHE_CHECK([for cp that supports --parents], [ac_cv_path_cp_parents],
 AC_SUBST([CP_PARENTS], [$ac_cv_path_cp_parents])
 
 # Checks for headers
-AC_CHECK_HEADERS([malloc.h stddef.h sys/param.h sys/time.h])
+AC_CHECK_HEADERS([fcntl.h limits.h malloc.h stddef.h sys/param.h])
+AC_CHECK_HEADERS([sys/time.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
 AC_HEADER_STDBOOL
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
+AC_TYPE_INT32_T
+AC_TYPE_INT64_T
+AC_TYPE_MODE_T
 AC_TYPE_UINT8_T
 AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
@@ -95,7 +99,8 @@ AC_TYPE_UINT32_T
 # Checks for library functions.
 # Although autoscan 2.68 warns for AC_FUNC_STRNLEN, we do not use it
 # because of known autoconf issues.  We do check for strnlen here:
-AC_CHECK_FUNCS([gettimeofday memset strchr strdup strlen strnlen])
+AC_CHECK_FUNCS([gettimeofday memset setenv strchr strdup strlen])
+AC_CHECK_FUNCS([strnlen strstr strtol strtoul])
 AC_FUNC_MALLOC
 
 # Define templates
