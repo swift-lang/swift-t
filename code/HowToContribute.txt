@@ -45,6 +45,10 @@ Also, for background, see the Support section here:
 
 http://www.mcs.anl.gov/exm/local/guides/swift.html#_support
 
+GitHub site:
+
+https://github.com/timarmstrong
+
 Personal Contacts:
 =======
 Tim Armstrong: tga@uchicago.edu
