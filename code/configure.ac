@@ -63,8 +63,10 @@ AC_PROG_CC
 AC_CHECK_PROG(AR, ar)
 AC_PROG_RANLIB
 
+AC_TYPE_INT64_T
+
 # Checks for functions
-AC_CHECK_FUNCS([memset stpcpy strdup strtol])
+AC_CHECK_FUNCS([memset pow stpcpy strdup strtol uname])
 AC_FUNC_ALLOCA
 AC_FUNC_MALLOC
 
