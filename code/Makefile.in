@@ -166,7 +166,6 @@ $(ADLB_SO): $(OBJS) $(NLOBJS) lib
 
 ### APPS AND TESTS
 
-# This gives a false autoscan warning for token 'install'
 %.x: %.o $(INSTALL_TOKEN)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(CFLAGS) -o $(@) $(<) $(LDFLAGS) \
@@ -200,6 +199,7 @@ $(INSTALL_TOKEN): $(ADLB) $(INSTALLED_HEADERS)
 	$(E) touch $(INSTALL_ETC)/install.txt
 	$(Q)
 
+# This gives a false autoscan warning for token 'install'
 .PHONY: install
 
 ### CLEAN
