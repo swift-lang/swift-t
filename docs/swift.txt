@@ -1160,6 +1160,46 @@ main {
 }
 ----
 
+=== External scripting support
+
+==== Calling R
+
+Consider the following Swift script:
+----
+import io;
+import string;
+import R;
+
+global const string template =
+"""
+  x <- %i
+  a <- x+100
+  cat("the answer is: ", a, "\\n")
+  a
+""";
+
+main
+{
+  code = sprintf(template, 4);
+  s = R(code);
+  printf("the answer was: %i", s);
+}
+----
+
+An http://www.r-project.org[R language] script template is placed in a
+Swift string.  The template is filled in with the value 4 by the Swift
+call to +sprintf()+.  Then, the code is passed to R for evaluation.
+The result output is:
+
+----
+the answer is:  104
+the answer was: 104
+----
+
+As coded here, both R and Swift report the value of +a+.
+
+*Note:* To use this, Turbine must be configured with +--enable-R+
+ before compiling.
 
 [[Optimizations]]
 == Optimizations
