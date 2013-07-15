@@ -21,6 +21,7 @@ NODES=0
 PROGRAM=""
 WALLTIME="0:05:00"
 
+# This line produces a false autoscan message on token "ln"
 while getopts "ln:t:" OPT
 do
   case ${OPT} in
