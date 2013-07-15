@@ -17,15 +17,19 @@ fi
 
 EXTRA_ARGS=
 if [ ! -z "$EXM_OPT_BUILD" ]; then
-    EXTRA_ARGS+="--enable-fast"
+    EXTRA_ARGS+="--enable-fast "
 fi
 
 if [ ! -z "$EXM_DEBUG_BUILD" ]; then
-    EXTRA_ARGS+="--enable-log-debug"
+    EXTRA_ARGS+="--enable-log-debug "
+fi
+
+if [ ! -z "$EXM_TRACE_BUILD" ]; then
+    EXTRA_ARGS+="--enable-log-trace "
 fi
 
 if [ ! -z "$ENABLE_MPE" ]; then
-    EXTRA_ARGS+="--with-mpe=${MPE_INST}"
+    EXTRA_ARGS+="--with-mpe=${MPE_INST} "
 fi
 
 if [ ! -z "$EXM_CRAY" ]; then
