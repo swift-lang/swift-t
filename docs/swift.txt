@@ -44,7 +44,7 @@ Other MPI implementations are <<Build_settings, supported>> as well.
 Swift/T attempts to use MPI 3.0 functionality by default.
 To disable this, configure ADLB and Turbine with +--enable-mpi-2+.
 +
-2. Install or locate Tcl 8.5
+2. Install or locate Tcl 8.5 or 8.6
 +
 Cf. http://www.tcl.tk[Tcl web site]
 +
@@ -55,7 +55,7 @@ Cf. http://swig.org[SWIG web site]
 4. Obtain the package
 +
 ----
-wget http://www.mcs.anl.gov/exm/local/downloads/exm-0.2.0.tar.gz
+wget http://www.mcs.anl.gov/exm/local/downloads/exm-0.4.0.tar.gz
 ----
 +
 Cf. http://www.mcs.anl.gov/exm/local/downloads/downloads.html[Swift/T Downloads]
@@ -308,7 +308,7 @@ Literals for these types use conventional syntax:
 ** +\v+ (vertical tab)
 ** octal escape codes, e.g. +\001+
 ** hexadecimal escape codes, e.g. +\xf2+
-* _In release 0.4.0:_ Multi-line strings may be used in two syntaxes:
+* Multi-line strings may be used in two syntaxes:
 ** Python-style:
 +
 ----
