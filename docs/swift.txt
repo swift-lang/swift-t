@@ -1189,7 +1189,7 @@ main
 An http://www.r-project.org[R language] script template is placed in a
 Swift string.  The template is filled in with the value 4 by the Swift
 call to +sprintf()+.  Then, the code is passed to R for evaluation.
-The result output is:
+The output is:
 
 ----
 the answer is:  104
@@ -1199,7 +1199,8 @@ the answer was: 104
 As coded here, both R and Swift report the value of +a+.
 
 *Note:* To use this, Turbine must be configured with +--enable-R+
- before compiling.
+ before compiling.  This feature is implemented by linking to R as a
+ shared library.
 
 [[Optimizations]]
 == Optimizations
