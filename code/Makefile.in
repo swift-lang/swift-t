@@ -104,6 +104,9 @@ ENABLE_MPE = @ENABLE_MPE@
 USE_MPE = @USE_MPE@
 
 HAVE_PYTHON = @HAVE_PYTHON@
+USE_PYTHON_LIB = @USE_PYTHON_LIB@
+USE_PYTHON_NAME = @USE_PYTHON_NAME@
+
 HAVE_R      = @HAVE_R@
 
 CFLAGS += -std=gnu99
@@ -130,7 +133,10 @@ ifeq ($(ENABLE_MPE),1)
 endif
 LIBS += $(MPI_LIB)
 ifeq ($(HAVE_PYTHON),1)
-	LIBS += -lpython2.7
+	ifneq ($(USE_PYTHON_LIB),0)
+		LIBS += -L$(USE_PYTHON_LIB)
+	endif
+	LIBS += -l$(USE_PYTHON_NAME)
 endif
 ifeq ($(HAVE_R),1)
 	R_LIB = /usr/lib/R/lib
@@ -147,6 +153,11 @@ RPATHS += -Wl,-rpath -Wl,$(MPI_LIB_DIR)
 RPATHS += -Wl,-rpath -Wl,$(TCL_LIB_DIR)
 ifeq ($(ENABLE_MPE),1)
 	RPATHS += -Wl,-rpath -Wl,$(USE_MPE)/lib
+endif
+ifeq ($(HAVE_PYTHON),1)
+	ifneq ($(USE_PYTHON_LIB),0)
+		RPATHS += -Wl,-rpath -Wl,$(USE_PYTHON_LIB)
+	endif
 endif
 ifeq ($(HAVE_R),1)
 	RPATHS += -Wl,-rpath -Wl,$(R_LIB)
