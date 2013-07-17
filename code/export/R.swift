@@ -14,10 +14,6 @@
  * limitations under the License
  */
 
-/**
-
-*/
-
+@dispatch=WORKER
 (string output) R(string code) "turbine" "0.1.0" "r"
     [ "set <<output>> [ r::eval <<code>> ]" ];
-

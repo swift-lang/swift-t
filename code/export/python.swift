@@ -20,6 +20,6 @@
    Cf. http://stackoverflow.com/questions/8302810/undefined-symbol-in-c-when-loading-a-python-shared-library
 */
 
+@dispatch=WORKER
 (string output) python(string code) "turbine" "0.1.0" "python"
     [ "set <<output>> [ python::eval <<code>> ]" ];
-
