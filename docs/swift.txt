@@ -704,14 +704,15 @@ The following binary arithmetic operators on numbers are defined:
 
 +&&+ (boolean and), +||+ (boolean or),
 +==+ (equals), +!=+ (not equals), +>+ (greater than), +<+ (less than),
-+>=+ (greater than or equal to), +<=+ (less than or equal to)
++>=+ (greater than or equal to), +&lt;=+ (less than or equal to)
 
 The following unary operators are defined:
 
 +-+ (negate), +!+ (boolean not)
 
-String concatenation is also performed with +&#43;+ (plus).
-+==+ and +!=+ may also be used on strings.
+String concatenation is also performed with +&#43;+ (plus).  +==+ and
++!=+ may also be used on strings.  Operator +s1/s2+ is equivalent to
++s1&#43;"/"&#43;s2+.
 
 == Standard library
 
