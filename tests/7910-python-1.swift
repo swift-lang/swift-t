@@ -7,6 +7,6 @@ import python;
 
 main
 {
-  i = python("print(\"python works\")\n2+2");
+  i = python("print(\"python works\")\n'{0}'.format(2+2)");
   printf("i: %s", i);
 }
