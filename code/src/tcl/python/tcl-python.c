@@ -25,15 +25,17 @@
 
 #include "config.h"
 
-#define _GNU_SOURCE // for asprintf()
-#include <stdio.h>
-
-#include <tcl.h>
-
 #if HAVE_PYTHON==1
 #include <python2.7/Python.h>
 #endif
 
+// #define _GNU_SOURCE // for asprintf()
+#include <stdio.h>
+
+#include <tcl.h>
+
+#include <list.h>
+#include "src/util/debug.h"
 #include "src/tcl/util.h"
 
 #include "tcl-python.h"
@@ -56,7 +58,8 @@ static int
 python_eval(const char* code, Tcl_Obj** result)
 {
   char* s = "NOTHING";
-  Py_Initialize();
+
+  Py_InitializeEx(1);
   int rc;
 
   PyObject* main_module  = PyImport_AddModule("__main__");
@@ -65,6 +68,8 @@ python_eval(const char* code, Tcl_Obj** result)
   if (main_dict == NULL) return handle_python_exception();
 
   struct list* lines = list_split_lines(code);
+
+  // Handle setup lines:
   char* expression = NULL;
   for (struct list_item* item = lines->head; item; item = item->next)
   {
@@ -75,17 +80,25 @@ python_eval(const char* code, Tcl_Obj** result)
       break;
     }
     char* command = item->data;
+    DEBUG_TCL_TURBINE("python: command: %s", command);
     rc = PyRun_SimpleString(command);
     if (rc != 0)
       return handle_python_exception();
+    DEBUG_TCL_TURBINE("python: command done.");
   }
 
-  PyObject* o = PyRun_String(expression, Py_eval_input,
-                             main_dict, main_dict);
-  if (o == NULL) return handle_python_exception();
-  rc = PyArg_Parse(o, "s", &s);
-  assert(s != NULL);
-  *result = Tcl_NewStringObj(s, -1);
+  // Handle value expression:
+  if (expression != NULL)
+  {
+    DEBUG_TCL_TURBINE("python: expression: %s", expression);
+    PyObject* o = PyRun_String(expression, Py_eval_input,
+                               main_dict, main_dict);
+    if (o == NULL) return handle_python_exception();
+    rc = PyArg_Parse(o, "s", &s);
+    assert(s != NULL);
+    printf("python: result: %s\n", s);
+    *result = Tcl_NewStringObj(s, -1);
+  }
 
   list_destroy(lines);
 
@@ -134,6 +147,20 @@ Tclpython_Init(Tcl_Interp *interp)
 
   if (Tcl_PkgProvide(interp, "python", "0.1") == TCL_ERROR)
     return TCL_ERROR;
+
+  return TCL_OK;
+}
+
+//// Just for testing:
+int P_Init(Tcl_Interp *interp)
+{
+  if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
+    return TCL_ERROR;
+
+  if (Tcl_PkgProvide(interp, "python", "0.1") == TCL_ERROR)
+    return TCL_ERROR;
+
+  tcl_python_init(interp);
 
   return TCL_OK;
 }
