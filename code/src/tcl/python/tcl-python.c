@@ -96,7 +96,7 @@ python_eval(const char* code, Tcl_Obj** result)
     if (o == NULL) return handle_python_exception();
     rc = PyArg_Parse(o, "s", &s);
     assert(s != NULL);
-    printf("python: result: %s\n", s);
+    DEBUG_TCL_TURBINE("python: result: %s\n", s);
     *result = Tcl_NewStringObj(s, -1);
   }
 
