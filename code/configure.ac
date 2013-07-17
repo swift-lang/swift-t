@@ -356,8 +356,40 @@ AC_ARG_ENABLE(python,
     [
       echo "Python disabled"
     ])
+
+# By default, use default location
+USE_PYTHON=0
+USE_PYTHON_LIB=0
+USE_PYTHON_NAME=python2.7
+AC_ARG_WITH(python,
+    AS_HELP_STRING([--with-python],
+                   [Use this python directory library -
+                    provide fully qualified path]),
+    [
+      USE_PYTHON=${withval}
+      AC_CHECK_FILE(${USE_PYTHON}, [], [USE_PYTHON=NOT_FOUND])
+      if [[ ${USE_PYTHON} == NOT_FOUND ]]
+      then
+          AC_MSG_ERROR([Could not find python!])
+      fi
+    ],
+    [])
+
+if [[ ${USE_PYTHON} != 0 ]]
+then
+    USE_PYTHON_LIB=$( dirname ${USE_PYTHON} )
+    USE_PYTHON_NAME=$( basename ${USE_PYTHON} )
+    USE_PYTHON_NAME=${USE_PYTHON_NAME#lib}
+    USE_PYTHON_NAME=${USE_PYTHON_NAME%.so}
+    echo "Using Python lib directory: ${USE_PYTHON_LIB}"
+    echo "Using Python lib name:      ${USE_PYTHON_NAME}"
+fi
+
 AC_DEFINE_UNQUOTED([HAVE_PYTHON],$HAVE_PYTHON,[Enables Python])
 AC_SUBST(HAVE_PYTHON)
+
+AC_SUBST(USE_PYTHON_LIB)
+AC_SUBST(USE_PYTHON_NAME)
 
 # R is optional
 HAVE_R=0
