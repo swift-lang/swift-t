@@ -1,4 +1,5 @@
 #!/bin/zsh -f
+
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,8 +18,15 @@
 #  turbine-cobalt -n <PROCS> [-e <ENV>]* [-o <OUTPUT>] -t <WALLTIME>
 #                 <SCRIPT> [<ARG>]*
 
+# Variables that must be set in the environment:
+# MODE: Either "cluster", "BGP", or "BGQ"
+# QUEUE: The queue name to use
+
 # Variables that may be set in the environment:
-# PROJECT, QUEUE, TURBINE_OUTPUT_ROOT, TURBINE_MACHINE, TURBINE_PPN
+# PROJECT: The project name to use
+# TURBINE_OUTPUT_ROOT: Where to put Turbine output-
+#          a subdirectory will be created, reported, and used
+# TURBINE_PPN: Processes-per-node: see below
 
 # On the BG/P: usually set TURBINE_PPN=4  (default 4)
 # On the BG/Q: usually set TURBINE_PPN=16 (default 4)
@@ -30,6 +38,7 @@
 
 # Convention note: This script uses -n <processes>
 #                  Cobalt qsub uses -n <nodes>
+# (We follow the mpiexec convention.)
 
 TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 declare TURBINE_HOME
@@ -142,13 +151,6 @@ env+=( TCLLIBPATH="${TCLLIBPATH}"
        N=${N}
      )
 
-if [[ ${TURBINE_BG} == "Q" ]]
-then
-  env+=( BG_SHAREDMEMSIZE=32MB
-         PAMID_VERBOSE=1
-       )
-fi
-
 declare SCRIPT_NAME
 declare MODE
 
@@ -158,10 +160,17 @@ then
 elif [[ ${MODE} == "BGP" ]]
   then
   MODE_ARG="--mode vn"
-elif [[ ${TURBINE_BG} == "Q" ]]
+elif [[ ${MODE} == "BGQ" ]]
 then
   # On the BG/Q, we need TURBINE_PPN: default 1
   MODE_ARG="--proccount ${PROCS} --mode c${TURBINE_PPN}"
+fi
+
+if [[ ${MODE} == "BGQ" ]]
+then
+  env+=( BG_SHAREDMEMSIZE=32MB
+         PAMID_VERBOSE=1
+       )
 fi
 
 # Round NODES up for extra processes
