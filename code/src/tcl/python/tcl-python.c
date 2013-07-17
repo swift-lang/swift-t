@@ -111,7 +111,7 @@ Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2);
   char* code = Tcl_GetString(objv[1]);
-  Tcl_Obj* result;
+  Tcl_Obj* result = NULL;
   int rc = python_eval(code, &result);
   TCL_CHECK(rc);
   Tcl_SetObjResult(interp, result);
