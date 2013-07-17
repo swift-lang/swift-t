@@ -1104,6 +1104,7 @@ perform its own data dependency management.
 See the link:leaf.html[Swift/T Leaf Function Guide] for more
 information about this process.
 
+[[app_functions]]
 === App functions
 
 App functions are functions that are implemented as command-line
@@ -1162,6 +1163,94 @@ main {
 
 === External scripting support
 
+==== Calling Python
+
+You can evaluate arbitrary Python code from within Swift/T.  For
+example, you can perform processing with a Python library.
+Once you have that working, you can use Swift/T to coordinate
+concurrent calls to that library.
+
+Consider the following Swift script:
+
+----
+import io;
+import python;
+
+main {
+  i = python("print(\"python works\")\n2+2");
+  printf("i: %s", i);
+}
+----
+
+This simply evaluates the Python code line by line. The last line must
+return a Python string to Swift, in this case, the Python string
++&#39;4&#39;+.  The expected output is shown below:
+
+----
+python works
+i: 4
+----
+
+Swift multi-line strings may be used to enter more complex Python code
+without the explicit use of +\n+.
+
+Additionally, you can call Python libraries such as
+http://www.numpy.org[Numpy] if available on your system.  The
+following code adds matrices _I_~3~ + _I_~3~ using Numpy arrays.
+
+----
+import io;
+import python;
+import string;
+
+global const string numpy = "from numpy import *\n\n";
+
+typedef matrix string;
+
+(matrix A) eye(int n)
+{
+  string command = sprintf("repr(eye(%i))", n);
+  string code = numpy+command;
+  matrix t = python(code);
+  A = replace_all(t, "\n", "", 0);
+}
+
+(matrix R) add(matrix A1, matrix A2)
+{
+  string command = sprintf("repr(%s+%s)", A1, A2);
+  string code = numpy+command;
+  matrix t = python(code);
+  R = replace_all(t, "\n", "", 0);
+}
+
+main
+{
+  matrix A1 = eye(3);
+  matrix A2 = eye(3);
+  matrix sum = add(A1, A2);
+  printf("2*eye(3)=%s", sum);
+}
+----
+
+An Python script template is created that imports Numpy and performs
+some simple calculations.  This code is represented in a Swift string.
+The template is filled in by the Swift call to +sprintf()+.  Then, the
+code is passed to Python for evaluation.  The output is:
+
+----
+2*eye(3)=array([[ 2.,  0.,  0.],
+                [ 0.,  2.,  0.],
+                [ 0.,  0.,  2.]])
+----
+
+NOTE: To use this, Turbine must be configured with +--enable-python+
+ before compiling.  This feature is implemented by linking to Python
+ as a shared library, enabling better performance than calling the
+ +python+ program (which may be done by using a normal Swift
+ <<app_functions,app function>>).  Error messages for minor coding
+ mistakes may be badly mangled and refer to missing Python symbols-
+ refer to the first error in the Python stack trace.
+
 ==== Calling R
 
 Consider the following Swift script:
@@ -1188,8 +1277,8 @@ main
 
 An http://www.r-project.org[R language] script template is placed in a
 Swift string.  The template is filled in with the value 4 by the Swift
-call to +sprintf()+.  Then, the code is passed to R for evaluation.
-The output is:
+call to +sprintf()+ (note the +%i+ conversion specifier).  Then, the
+code is passed to R for evaluation.  The output is:
 
 ----
 the answer is:  104
@@ -1198,9 +1287,11 @@ the answer was: 104
 
 As coded here, both R and Swift report the value of +a+.
 
-*Note:* To use this, Turbine must be configured with +--enable-R+
- before compiling.  This feature is implemented by linking to R as a
- shared library.
+NOTE: To use this, Turbine must be configured with +--enable-R+ before
+ compiling.  This feature is implemented by linking to R as a shared
+ library, enabling better performance than calling the +R+ program
+ (which may be done by using a normal Swift
+ <<app_functions,app function>>).
 
 [[Optimizations]]
 == Optimizations
