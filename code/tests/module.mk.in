@@ -53,27 +53,6 @@ TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/unpack.tcl              \
                 $(DIR)/send_rule.tcl           \
 
-
-# Need new version of if test
-#               $(DIR)/if1.tcl                 \
-
-# Need new version of fib:
-#               $(DIR)/fib.tcl                 \
-
-# Deprecated:
-               # $(DIR)/loop1.tcl               \
-               #  $(DIR)/range.tcl               \
-               #  $(DIR)/drange.tcl              \
-
-
-#                 $(DIR)/linear-10.tcl           \
-#                 $(DIR)/diamond2.tcl            \
-#                 $(DIR)/container3.tcl          \
-#                 $(DIR)/readdata.tcl            \
-
-
-
-
 ifeq ($(USE_MPE),1)
 	TEST_SRC_TCL += $(DIR)/mpe-3.tcl
 endif
