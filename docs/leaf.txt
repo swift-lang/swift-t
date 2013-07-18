@@ -528,6 +528,9 @@ producing:
 include::examples/7/output.txt[]
 ----
 
+Note that only rank 0 in the Swift/T communicator has access to the
++output+ data.
+
 ////
 Local Variables:
 mode: doc
