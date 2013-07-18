@@ -3,7 +3,9 @@
 MPICC=$( which mpicc )
 MPI=$( dirname $( dirname ${MPICC} ) )
 
-TCL_INCLUDE=${HOME}/sfw/tcl-8.6.0/include
+TCLSH=$( which tclsh )
+TCL_HOME=$( dirname $( dirname ${TCLSH} ) )
+TCL_INCLUDE=${TCL_HOME}/include
 
 swig -I${MPI}/include f.i
 
