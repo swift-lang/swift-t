@@ -1,10 +1,8 @@
-#!/bin/bash
+#!/bin/bash -e
 
 cd $( dirname $0 )
 
-set -e
-
-for D in {1..6}
+for D in {1..7}
 do
   cd ${D}
   echo "clean: ${PWD}"
