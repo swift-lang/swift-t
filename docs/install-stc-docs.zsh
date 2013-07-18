@@ -1,10 +1,9 @@
-#!/bin/zsh
+#!/bin/zsh -e
 
-set -e
+STC_DOCS=$( dirname $0 )
+cd ${STC_DOCS}
 
-examples/snippet.pl -n=1 < examples/6/f.c > examples/6/f-snip-1.c
-
-asciidoc leaf.txt
+./make-stc-docs.zsh
 
 DEST=wozniak@login.mcs.anl.gov:/mcs/web/research/projects/exm/local/guides
 
