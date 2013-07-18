@@ -1534,7 +1534,6 @@ ADLB_Blob_From_String_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(data != NULL,
                 "adlb::blob_from_string failed!");
   int length2 = length+1; // TODO: remote
-  printf("length1: %i length2: %i\n", length, length2);
 
   void *blob = malloc((size_t)length2 * sizeof(char));
   memcpy(blob, data, (size_t)length2);
