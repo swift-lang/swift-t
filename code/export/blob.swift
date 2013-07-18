@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
+
 #ifndef BLOB_SWIFT
 #define BLOB_SWIFT
 
@@ -40,6 +41,10 @@
 (blob o) blob_zeroes_float(int n)
 "turbine" "0.2.0"
 [ "set <<o>> [ blob_zeroes_float <<n>> ]" ];
+
+turbine_run_output_blob(blob b)
+"turbine" "0.4.0" "turbine_run_output_blob";
+
 // Not Yet Implemented:
 @pure
 (blob o[]) blob_pack_rows_float(float A[][])

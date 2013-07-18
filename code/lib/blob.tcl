@@ -188,6 +188,27 @@ namespace eval turbine {
       return [ list [ blobutils_cast_to_int $p ] $length ]
   }
 
+  proc turbine_run_output_blob { outputs b } {
+
+      rule [ list $b ] "turbine_run_output_blob_body $b" \
+          target 0 type $turbine::CONTROL
+  }
+  proc turbine_run_output_blob_body { b } {
+
+      global turbine_run_output
+
+      if { ! [ info exists turbine_run_output ] } {
+          error "Not running under turbine_run()!"
+      }
+
+      set b_value [ retrieve_blob $b ]
+      set ptr     [ lindex $b_value 0 ]
+      set length  [ lindex $b_value 1 ]
+      blobutils_turbine_run_output_blob $turbine_run_output \
+                                        $ptr $length
+      free_blob $b
+  }
+
   # Assumes A is closed
   proc complete_container { A action } {
       set n [ adlb::container_size $A ]
