@@ -60,6 +60,8 @@ In the advanced mode, +f+ is issued _before_ +i+ has a value.  The
 user must use the Turbine API to set up execution dependent on +i+.
 This guide will demonstrate how to do that.
 
+Additionally, you may call Swift/T from native code.
+
 == Examples
 
 Complete code samples for each example are found in this tar file:
@@ -479,7 +481,52 @@ At run time, ensure Turbine has enough workers to run the user task:
 include::examples/6/run-f.sh[]
 ----
 
-// TODO: === Complete example 6: Calling Swift/T from C
+== Calling Swift/T from native code
+
+=== Complete example 7: Calling Swift/T from C
+
+Swift/T itself may be called from native code as a library.
+
+==== Compilation
+
+The Turbine installation directory contains the +turbine.h+ header and
+the +libtclturbine.so+ shared object.  See +build.sh+ for the example
+compiler commands.
+
+==== Call
+
+The call to Swift/T requires the MPI communicator in which to run, the
+compiled Swift/T program to run, a C-formatted +argc+/+argv+, and an
+output pointer.
+
+The C call to Swift/T is written as (+controller.c+):
+
+----
+turbine_code rc = turbine_run(comm, "test-f.tcl", argc, argv, output);
+----
+
+where +argc+/+argv+ are C-style arguments, and +output+ is the buffer
+to hold the output.
+
+The Swift script is a normal Swift script except for the call to
++turbine_run_output_blob()+, which returns data to the controller
+(+test-f.swift+):
+
+----
+include::examples/7/test-f.swift[]
+----
+
+The controller MPI program is run as: (+run.sh+):
+
+----
+include::examples/7/run.sh[]
+----
+
+producing:
+
+----
+include::examples/7/output.txt[]
+----
 
 ////
 Local Variables:
