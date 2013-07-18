@@ -308,3 +308,10 @@ read_all(int fd, void* buffer, int count)
 
   return total;
 }
+
+void
+blobutils_turbine_run_output_blob(ptrdiff_t output,
+                                  ptrdiff_t p, int length)
+{
+  memcpy((void*) output, (void*) p, length);
+}
