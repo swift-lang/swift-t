@@ -79,6 +79,14 @@ void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
 }
 
 void
+tcl_set_string(Tcl_Interp* interp, char* name, char* value)
+{
+  Tcl_Obj* p = Tcl_ObjSetVar2(interp, Tcl_NewStringObj(name, -1),
+                              NULL, Tcl_NewStringObj(value, -1), 0);
+  valgrind_assert(p != NULL);
+}
+
+void
 tcl_set_integer(Tcl_Interp* interp, char* name, int value)
 {
   Tcl_Obj* p = Tcl_ObjSetVar2(interp, Tcl_NewStringObj(name, -1),
@@ -93,6 +101,15 @@ tcl_set_long(Tcl_Interp* interp, char* name, long value)
                               NULL, Tcl_NewLongObj(value), 0);
   valgrind_assert(p != NULL);
 }
+
+void
+tcl_set_wideint(Tcl_Interp* interp, char* name, int64_t value)
+{
+  Tcl_Obj* p = Tcl_ObjSetVar2(interp, Tcl_NewStringObj(name, -1),
+                              NULL, Tcl_NewWideIntObj(value), 0);
+  valgrind_assert(p != NULL);
+}
+
 
 void
 tcl_dict_put(Tcl_Interp* interp, Tcl_Obj* dict,

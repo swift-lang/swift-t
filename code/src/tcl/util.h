@@ -89,6 +89,10 @@ void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
                           const char* format, ...)
   __attribute__ ((format (printf, 3, 4)));
 
+/**
+   Convenience function to set name=value
+ */
+void tcl_set_string(Tcl_Interp* interp, char* name, char* value);
 
 /**
    Convenience function to set name=value
@@ -99,6 +103,11 @@ void tcl_set_integer(Tcl_Interp* interp, char* name, int value);
    Convenience function to set name=value
  */
 void tcl_set_long(Tcl_Interp* interp, char* name, long value);
+
+/**
+   Convenience function to set name=value
+ */
+void tcl_set_wideint(Tcl_Interp* interp, char* name, int64_t value);
 
 /**
    Convenience function to set key=value in dict
