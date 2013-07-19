@@ -35,9 +35,8 @@ These have been packaged for convenient download and installation.
 
 1. Install or locate MPI implementation (MPICH, OpenMPI, etc.)
 +
-Cf. http://www.mcs.anl.gov/research/projects/mpich2/documentation/index.php?s=docs[MPICH Guides]
-+
-Ensure that MPI is compiled as a shared library
+Cf. http://www.mcs.anl.gov/research/projects/mpich2/documentation/index.php?s=docs[MPICH Guidesk
+nsure that MPI is compled as a shared library
 (for MPICH use +configure --enable-shared+).
 Other MPI implementations are <<Build_settings, supported>> as well.
 +
@@ -329,6 +328,9 @@ A file is a first-class entity in Swift that in many ways can be treated
 as any other variable.  The main difference is that a file can be
 *mapped* to path in a filesystem.  Assigning to a mapped file variable
 results in a file being created in the file system at the specified path.
+File paths can be arbitrary Swift expressions of type +string+.  Absolute
+paths or relative paths are specified, with relative paths interpreted
+relative to the path in which turbine was run.
 File variables can also be initialized with data from a pre-existing
 file using the +input_file+ function.  File paths are relative to the
 working directory for Turbine.
