@@ -758,7 +758,8 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
     assert(work_len <= buffer_size);
     assert(type_recved == work_type);
 
-    // Copy work string out of buffer: work unit may overwrite buffer
+    // Copy work string out of buffer
+    // Work unit may overwrite buffer on data retrieval
     assert(strnlen(buffer, MAX_WORK_STRING) < MAX_WORK_STRING);
     strcpy(work_string, buffer);
 
