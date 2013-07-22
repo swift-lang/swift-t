@@ -726,6 +726,9 @@ extract_object(Tcl_Interp* interp, Tcl_Obj *const objv[],
   return TCL_OK;
 }
 
+#define MAX_WORK_STRING 10240
+static char work_string[MAX_WORK_STRING];
+
 /* usage: worker_loop <work type>
    Repeatedly run units of work from ADLB of provided type
  */
@@ -755,13 +758,17 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
     assert(work_len <= buffer_size);
     assert(type_recved == work_type);
 
+    // Copy work string out of buffer: work unit may overwrite buffer
+    assert(strnlen(buffer, MAX_WORK_STRING) < MAX_WORK_STRING);
+    strcpy(work_string, buffer);
+
     // Work unit is prepended with rule ID, followed by space.
-    char *rule_id_end = strchr(buffer, ' ');
+    char *rule_id_end = strchr(work_string, ' ');
 
     assert(rule_id_end != NULL);
     char *work = rule_id_end + 1; // start of Tcl work unit
     
-    DEBUG_TURBINE("rule_id: %lli", lli(atol(buffer)));
+    DEBUG_TURBINE("rule_id: %lli", lli(atol(work_string)));
     DEBUG_TURBINE("eval: %s", work);
 
     // Work out length | null byte | prefix
@@ -773,7 +780,7 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
       // Pass error to calling script
       const char *prefix = "\nWorker executing task: ";
       char *msg = malloc(sizeof(char) * (strlen(prefix) + (size_t)work_len));
-      sprintf(msg, "%s%s", prefix, buffer);
+      sprintf(msg, "%s%s", prefix, work);
       Tcl_AddErrorInfo(interp, msg);
       free(msg);
       return rc;
