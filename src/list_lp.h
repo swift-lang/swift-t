@@ -80,7 +80,13 @@ struct list_lp_item* list_lp_remove_item(struct list_lp* target,
 
 void list_lp_destroy(struct list_lp* target);
 
+void list_lp_free_callback(struct list_lp* target,
+                           void (*callback)(cutil_long, void*));
+
 void list_lp_clear(struct list_lp* target);
+
+void list_lp_clear_callback(struct list_lp* target,
+                            void (*callback)(cutil_long, void*));
 
 void list_lp_delete(struct list_lp* target);
 

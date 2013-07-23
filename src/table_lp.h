@@ -55,6 +55,9 @@ void* table_lp_remove(struct table_lp* table, cutil_long key);
 
 void table_lp_destroy(struct table_lp* target);
 
+void table_lp_free_callback(struct table_lp* target, bool free_root,
+                            void (*callback)(cutil_long, void*));
+
 void table_lp_clear(struct table_lp* target);
 
 void table_lp_delete(struct table_lp* target);

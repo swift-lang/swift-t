@@ -349,13 +349,29 @@ list_lp_destroy(struct list_lp* target)
   free(target);
 }
 
+void list_lp_free_callback(struct list_lp* target,
+                           void (*callback)(cutil_long, void*))
+{
+  list_lp_clear_callback(target, callback);
+  free(target);
+}
+
 void
 list_lp_clear(struct list_lp* target)
+{
+  list_lp_clear_callback(target, NULL);
+}
+
+void
+list_lp_clear_callback(struct list_lp* target,
+                       void (*callback)(cutil_long, void*))
 {
   struct list_lp_item* item = target->head;
   while (item)
   {
     struct list_lp_item* next = item->next;
+    if (callback != NULL)
+      callback(item->key, item->data);
     free(item);
     item = next;
   }

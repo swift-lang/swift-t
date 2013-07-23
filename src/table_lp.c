@@ -87,9 +87,18 @@ table_lp_delete(struct table_lp* target)
 void
 table_lp_destroy(struct table_lp* target)
 {
-  table_lp_clear(target);
+  table_lp_free_callback(target, true, NULL);
+}
+
+void table_lp_free_callback(struct table_lp* target, bool free_root,
+                            void (*callback)(cutil_long, void*))
+{
+  for (int i = 0; i < target->capacity; i++)
+    list_lp_clear_callback(&target->array[i], callback);
   free(target->array);
-  free(target);
+  target->array = NULL;
+  if (free_root)
+    free(target);
 }
 
 void

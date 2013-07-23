@@ -56,6 +56,12 @@ bool table_remove(struct table* table, const char* key, void** data);
 
 void table_dump(const char* format, const struct table* target);
 
+/*
+  Free data structure, and callback function with key and value
+ */
+void table_free_callback(struct table* target, bool free_root,
+                         void (*callback)(char*, void*));
+
 void table_free(struct table* target);
 
 void table_destroy(struct table* target);

@@ -63,6 +63,12 @@ bool list_sp_remove(struct list_sp* target, const char* key,
 
 void list_sp_free(struct list_sp* target);
 
+/*
+  Free data structure, and callback function with key and value
+ */
+void list_sp_free_callback(struct list_sp* target,
+                           void (*callback)(char*, void*));
+
 void list_sp_destroy(struct list_sp* target);
 
 void list_sp_dump(const char* format, const struct list_sp* target);

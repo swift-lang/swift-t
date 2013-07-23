@@ -228,9 +228,18 @@ list_sp_keys_tostring(char* result,
 
 void list_sp_free(struct list_sp* target)
 {
+  list_sp_free_callback(target, NULL);
+}
+
+void list_sp_free_callback(struct list_sp* target,
+                           void (*callback)(char*, void*))
+{
   struct list_sp_item* item = target->head;
   while (item)
   {
+    if (callback != NULL)
+      callback(item->key, item->data);
+
     struct list_sp_item* next = item->next;
     free(item);
     item = next;

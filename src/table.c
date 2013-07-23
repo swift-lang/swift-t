@@ -95,11 +95,20 @@ table_create(int capacity)
 void
 table_free(struct table* target)
 {
+  table_free_callback(target, true, NULL);
+}
+
+void table_free_callback(struct table* target, bool free_root,
+                         void (*callback)(char*, void*))
+{
   for (int i = 0; i < target->capacity; i++)
-    list_sp_free(target->array[i]);
+    list_sp_free_callback(target->array[i], callback);
 
   free(target->array);
-  free(target);
+  target->array = NULL;
+
+  if (free_root)
+    free(target);
 }
 
 void
