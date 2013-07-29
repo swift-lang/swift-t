@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 
 if ! readlink swift.css > /dev/null
 then
