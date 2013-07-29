@@ -329,12 +329,16 @@ public class Main {
   private static void runPreprocessor(Logger logger, String input, String output,
                                       List<String> preprocArgs) {
     List<String> cmd = new ArrayList<String>();
+    /*
+      -undef flag is provided to disable non-standard macros
+     */
     if (useGCCProcessor()) {
       // We use gcc -E because cpp is broken on Mac GCC 4.2.1
       //    Cf. http://stackoverflow.com/questions/4137923
-      cmd.addAll(Arrays.asList("gcc", "-E", "-x", "c", input, "-o", output));
+      cmd.addAll(Arrays.asList("gcc", "-E", "-undef", "-x", "c", input,
+                               "-o", output));
     } else {
-      cmd.addAll(Arrays.asList("cpp", input, output));
+      cmd.addAll(Arrays.asList("cpp", "-undef", input, output));
     }
    
     for (String dir: Settings.getModulePath()) {
@@ -406,6 +410,7 @@ public class Main {
     // Copy to output
     try {
       FileUtils.copyFile(inputFile, output);
+      output.close();
     } catch (IOException e) {
       System.out.println("Error copying " + inputFile);
       e.printStackTrace();
