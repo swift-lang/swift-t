@@ -38,6 +38,9 @@ struct table_lp
   int size;
 };
 
+/**
+   @param capacity: Number of entries.  Must not be 0
+ */
 bool table_lp_init(struct table_lp *table, int capacity);
 
 struct table_lp* table_lp_create(int capacity);
