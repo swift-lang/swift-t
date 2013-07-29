@@ -328,6 +328,12 @@ transform_create(const char* name,
     *result = NULL;
     return TURBINE_ERROR_INVALID;
   }
+  if (parallelism <= 0)
+  {
+    printf("error: turbine rule parallelism must be >0 \n");
+    *result = NULL;
+    return TURBINE_ERROR_INVALID;
+  }
 
   transform* T = malloc(sizeof(transform));
 
@@ -347,18 +353,17 @@ transform_create(const char* name,
     if (! T->input_list || ! T->closed_inputs)
       return TURBINE_ERROR_OOM;
   }
-  else {
+  else
+  {
     T->input_list = NULL;
     T->closed_inputs = NULL;
   }
 
   T->inputs = inputs;
-  for (int i = 0; i < inputs; i++) {
+  for (int i = 0; i < inputs; i++)
     T->input_list[i] = input_list[i];
-  }
-  for (int i =0; i < bitfield_size(inputs); i++) {
+  for (int i = 0; i < bitfield_size(inputs); i++)
     T->closed_inputs[i] = 0;
-  }
 
   T->status = TRANSFORM_WAITING;
 
@@ -440,8 +445,8 @@ turbine_rule(const char* name,
                                        priority, target, parallelism,
                                        &T);
 
-  *id = T->id;
   turbine_check(code);
+  *id = T->id;
 
   rule_inputs(T);
 
@@ -457,13 +462,9 @@ turbine_rule(const char* name,
   DEBUG_TURBINE_RULE(T, *id);
 
   if (subscribed)
-  {
     table_lp_add(&transforms_waiting, *id, T);
-  }
   else
-  {
     list_add(&transforms_ready, T);
-  }
 
   return TURBINE_SUCCESS;
 }
