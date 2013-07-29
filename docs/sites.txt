@@ -4,7 +4,7 @@
 Turbine Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v0.3.0, June 2013
+v0.4.0, July 2013
 
 ////
 
@@ -59,7 +59,6 @@ each system.
 
 To report a problem, simply email exm-user@mcs.anl.gov .
 
-
 === For more information
 
 * See the link:./stc.html[Swift/T Guide] for more information about Swift/T.
@@ -95,6 +94,18 @@ mpiexec tclsh program.tcl
 
 On more complex, scheduled systems, users do not invoke +mpiexec+
 directly.  Thus, sample scripts are provided below.
+
+[[scheduled_systems]]
+== Scheduled systems
+
+On scheduled systems (PBS, SLURM, Cobalt, etc.), Turbine is launched
+with a customized script (+turbine-<name>-run+) that launches Turbine
+on that system.  This produces a batch script if necessary and submits
+it with the job submission program (e.g., +qsub+).  The working
+directory (+PWD+) for the job is called +TURBINE_OUTPUT+; the user may
+select this or Turbine will pick one based on the date and report it.
+The user program will be copied to +TURBINE_OUTPUT+ before submission.
+Standard output and error goes to +TURBINE_OUTPUT/output.txt+.
 
 == x86 clusters
 
@@ -167,7 +178,8 @@ Midway is a mid-sized SLURM cluster at the University of Chicago
 
 ==== Public installation
 
-* Swift/T 0.2.1 - 02/11/2013
+*As of:* 0.2.1 - 02/11/2013
+
 * STC: +~wozniak/Public/stc-0.0.3/bin/stc+
 
 To run:
@@ -207,7 +219,17 @@ export MODE=cluster
 submit/cobalt/turbine-cobalt-run.zsh -n 3 ~/program.tcl
 ----
 
+The normal Turbine environment variables are honored, plus the
+<<variables,Turbine scheduler variables>>.
+
 == Blue Gene
+
+The Blue Gene systems at ANL are <<scheduled_systems,scheduled
+systems>> that use Cobalt.
+
+* The job ID is placed in +TURBINE_OUTPUT/jobid.txt+
+* Job metadata is placed in +TURBINE_OUTPUT/turbine-cobalt.log+
+* The Cobalt log is placed in +TURBINE_OUTPUT+
 
 === Blue Gene/P
 
@@ -287,6 +309,36 @@ CC=/soft/apps/gcc-4.3.2/gnu-linux/bin/powerpc-bgp-linux-gcc
 
 To run, use +scripts/submit/bgp/turbine-cobalt.zsh+
 See the script header for usage.
+
+=== Blue Gene/Q
+
+*As of:* 0.4.0 - 07/29/2013
+
+==== Quirks
+
+The GCC installation does not support shared libraries.  Thus, you
+must compile Tcl with +bgxlc+.
+
+==== Public installation
+
+* STC: +~wozniak/Public/stc-bgq/bin/stc+
+* Turbine: +~wozniak/Public/turbine-bgq/scrips/submit/cobalt/turbine-cobalt-run.zsh+
+* Run as:
++
+----
+export MODE=BGQ
+export QUEUE=<queue_name>
+turbine-cobalt-run.zsh -n 3 program.tcl
+----
+
+The normal Turbine environment variables are honored, plus the
+<<variables,Turbine scheduler variables>>.
+
+==== Build procedure
+
+* Compile c-utils with gcc
+* Configure ADLB with mpixlc and +--enable-xlc --enable-mpi-2+
+* Configure Turbine with bgxlc and +--enable-xlc+
 
 == Cray
 
@@ -452,6 +504,7 @@ variables.
 
 +NODES+:: Number of nodes to use
 +PPN+:: Number of processes per node
++PROJECT+:: The project name to use with the system scheduler
 +TURBINE_OUTPUT+:: Directory in which to place Turbine output
 +QUEUE+:: Name of queue in which to run (may leave unset)
 
