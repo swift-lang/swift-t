@@ -276,7 +276,7 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
   turbine_code code =
       turbine_rule(opts.name, inputs, input_list, opts.type, action,
                    ADLB_curr_priority, opts.target, opts.parallelism, &id);
-  TURBINE_CHECK(code, "could not add rule: %lli", id);
+  TURBINE_CHECK(code, "could not process rule!");
   return TCL_OK;
 }
 

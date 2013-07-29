@@ -60,6 +60,11 @@ static inline bool turbine_is_engine(void) {
 
 void turbine_version(version* output);
 
+/**
+   @param id Output: the ID of the new rule
+   @return TURBINE_SUCCESS/TURBINE_ERROR_*
+           On error, id is undefined
+ */
 turbine_code turbine_rule(const char* name,
                           int inputs,
                           const turbine_datum_id* input_list,
