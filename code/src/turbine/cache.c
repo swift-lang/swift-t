@@ -32,6 +32,10 @@
 
 #include "cache.h"
 
+/**
+   Maximal number of cache entries.
+   If this is 0, the cache is disabled
+ */
 static int max_entries;
 
 static bool initialized = false;
@@ -72,10 +76,13 @@ turbine_cache_init(int size, unsigned long max_memory)
   DEBUG_CACHE("cache_init");
   assert(!initialized);
   initialized = true;
-  table_lp_init(&entries, size);
-  rbtree_init(&lru);
   max_entries = size;
   memory = max_memory;
+  if (max_entries == 0)
+    return;
+  table_lp_init(&entries, size);
+  rbtree_init(&lru);
+
 }
 
 bool
@@ -94,6 +101,9 @@ turbine_code
 turbine_cache_retrieve(turbine_datum_id td,
                        turbine_type* type, void** result, int* length)
 {
+  // We do not need to check max_entries here: if max_entries==0,
+  // then turbine_cache_check() will miss
+
   DEBUG_CACHE("retrieve: <%li>", td);
   struct entry* e = table_lp_search(&entries, td);
   if (e == NULL)

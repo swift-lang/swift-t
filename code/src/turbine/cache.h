@@ -29,6 +29,9 @@
 
 #include "turbine-defs.h"
 
+/**
+   If size==0, the cache is disabled
+ */
 void turbine_cache_init(int size, unsigned long max_memory);
 
 bool turbine_cache_check(turbine_datum_id td);
