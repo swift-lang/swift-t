@@ -233,7 +233,7 @@ https://www.alcf.anl.gov/user-guides/tukey[Tukey] is a 96-node x86
 cluster at the Argonne Leadership Computing Facility (ALCF).  It uses
 the Cobalt scheduler.
 
-*As of:* Trunk, 07/30/2013
+*As of:* Trunk, 7/30/2013
 
 ==== Public installation
 
