@@ -19,18 +19,14 @@ changecom(`dnl')#!/bin/bash
 
 # Created: esyscmd(`date')
 
-COMMAND=esyscmd(`printf $COMMAND')
-PPN=esyscmd(`printf $PPN')
-PROCS=esyscmd(`printf $PROCS')
+# Define a convenience macro
+define(`getenv', `esyscmd(printf -- "$`$1' ")')
 
-TURBINE=$( which turbine )
-if [[ ${?} != 0 ]]
-then
-  echo "Could not find Turbine in PATH!"
-  exit 1
-fi
+COMMAND=getenv(COMMAND)
+PPN=getenv(PPN)
+PROCS=getenv(PROCS)
 
-export TURBINE_HOME=$( cd $(dirname ${TURBINE})/.. ; /bin/pwd )
+TURBINE_HOME=getenv(TURBINE_HOME)
 
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 if [[ ${?} != 0 ]]
@@ -47,7 +43,10 @@ echo "PPN:          ${PPN}"
 echo "TCLLIBPATH:   ${TCLLIBPATH}"
 
 # Hack for Eureka
-MPI=${HOME}/sfw/mpich-3.0.3-x86_64-mx
+# MPI=${HOME}/sfw/mpich-3.0.3-x86_64-mx
+
+# Hack for Tukey
+MPI=/soft/libraries/mpi/mvapich2/gcc
 
 ${MPI}/bin/mpiexec -l -n ${PROCS} -ppn ${PPN} ${TCLSH} ${COMMAND}
 # Return exit code from mpirun

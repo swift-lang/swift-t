@@ -40,7 +40,7 @@
 #                  Cobalt qsub uses -n <nodes>
 # (We follow the mpiexec convention.)
 
-TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
+export TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 declare TURBINE_HOME
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 source ${TURBINE_HOME}/scripts/helpers.zsh
