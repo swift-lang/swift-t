@@ -35,18 +35,19 @@ then
   exit 1
 fi
 
+LAUNCHER=getenv(TURBINE_LAUNCHER)
+export TURBINE_LOG=getenv(TURBINE_LOG)
+
+echo "TURBINE SETTINGS"
 echo "DATE:         $(date)"
 echo "TURBINE_HOME: ${TURBINE_HOME}"
 echo "COMMAND:      ${COMMAND}"
 echo "PROCS:        ${PROCS}"
 echo "PPN:          ${PPN}"
 echo "TCLLIBPATH:   ${TCLLIBPATH}"
+echo "LAUNCHER:     ${LAUNCHER}"
 
-# Hack for Eureka
-# MPI=${HOME}/sfw/mpich-3.0.3-x86_64-mx
+echo
 
-# Hack for Tukey
-MPI=/soft/libraries/mpi/mvapich2/gcc
-
-${MPI}/bin/mpiexec -l -n ${PROCS} -ppn ${PPN} ${TCLSH} ${COMMAND}
-# Return exit code from mpirun
+${LAUNCHER} -l -n ${PROCS} -ppn ${PPN} ${TCLSH} ${COMMAND}
+# Return exit code from launcher (mpiexec)

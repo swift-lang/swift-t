@@ -141,7 +141,10 @@ AC_SUBST(USE_C_UTILS)
 
 # MPI defaults (may be overridden on special systems)
 USE_MACHINE=normal
-USE_LAUNCHER=mpiexec
+# The "launcher" is used by job submission systems to launch jobs
+# Usually a path to mpiexec, srun, or aprun
+# Full path to launcher (optional):
+USE_LAUNCHER=0
 USE_MPI_DIR=0
 USE_MPI_INCLUDE=0
 USE_MPI_LIB_DIR=0
@@ -193,6 +196,16 @@ AC_ARG_ENABLE(sicortex,
         USE_MPI_LIB_NAME=scmpi
     ],
     [])
+
+AC_ARG_WITH(launcher,
+    AS_HELP_STRING([--with-launcher],
+                   [name in PATH or full path to job launcher
+                       (mpiexec, etc.)]),
+    [
+        USE_LAUNCHER=${withval}
+        AC_CHECK_FILE(${USE_LAUNCHER}, [],
+                      AC_MSG_ERROR("Launcher not found!"))
+    ])
 
 # Set MPI_DIR with respect to an mpicc in PATH
 if [[ ${USE_MPI_DIR} == 0 ]]

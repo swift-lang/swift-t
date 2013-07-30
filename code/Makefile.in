@@ -93,7 +93,7 @@ CFLAGS += -I $(MPI_INCLUDE)
 MPI_LIB	:= -L$(MPI_LIB_DIR) -l $(MPI_LIB_NAME)
            # -l mpl # Needed for older MPICH
 
-LAUNCH = @USE_LAUNCHER@
+LAUNCHER = @USE_LAUNCHER@
 
 ADLB = @USE_ADLB@
 ifneq ($(ADLB),0)
@@ -317,7 +317,7 @@ $(TEST_BINS): %.x: %.o install.txt
 #       Remove old result if present
 	$(E) rm -f $(@)
 #       Run test script: %.sh
-	$(E) LAUNCH=$(LAUNCH) $(<) > $(*).tmp 2>&1
+	$(E) LAUNCH=$(LAUNCHER) $(<) > $(*).tmp 2>&1
 #       Check for valgrind errors
 	$(E) ! grep -q "==[0-9]+==" $(*).out
 #       Success: create result file

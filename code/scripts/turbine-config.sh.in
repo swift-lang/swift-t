@@ -12,6 +12,7 @@ export MPI_IMPL=@MPI_IMPL@
 # Only one of the following is used
 export MPI=@USE_MPI@
 export MPI_LIB=@USE_MPI_LIB_DIR@
+export TURBINE_LAUNCHER=@USE_LAUNCHER@
 
 TCLLIBPATH=
 if [[ -n ${TURBINE_USER_LIB} ]] ; then
@@ -26,7 +27,6 @@ then
   return 1
 fi
 
-export TURBINE_LAUNCH=@USE_LAUNCHER@
 export TURBINE_MACHINE=@USE_MACHINE@
 
 if [[ ${TURBINE_MACHINE} == "sicortex" ]]
