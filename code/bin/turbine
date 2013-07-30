@@ -150,9 +150,9 @@ OPTIONS+=${TURBINE_LAUNCH_OPTIONS}
 
 if (( VERBOSE ))
 then
-  which ${TURBINE_LAUNCH}
+  which ${TURBINE_LAUNCHER}
 fi
 
 # Allow user to insert valgrind
-${TURBINE_LAUNCH} ${OPTIONS} ${VALGRIND} ${TCLSH} ${PROGRAM} ${ARGS}
+${TURBINE_LAUNCHER} ${OPTIONS} ${VALGRIND} ${TCLSH} ${PROGRAM} ${ARGS}
 # Exit code returned by shell script
