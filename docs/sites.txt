@@ -227,6 +227,33 @@ submit/cobalt/turbine-cobalt-run.zsh -n 3 ~/program.tcl
 The normal Turbine environment variables are honored, plus the
 <<variables,Turbine scheduler variables>>.
 
+=== Tukey
+
+https://www.alcf.anl.gov/user-guides/tukey[Tukey] is a 96-node x86
+cluster at the Argonne Leadership Computing Facility (ALCF).  It uses
+the Cobalt scheduler.
+
+*As of:* Trunk, 07/30/2013
+
+==== Public installation
+
+* STC: +~wozniak/Public/stc-tukey/bin/stc+
+
+To run:
+----
+export MODE=cluster
+export QUEUE=pubnet
+export PROJECT=...
+~wozniak/Public/turbine-tukey/scripts/submit/cobalt/turbine-cobalt-run.zsh -n 3 program.tcl
+----
+
+==== Build procedure
+
+* Check that the system-provided MVAPICH +mpicc+ is in your +PATH+
+* Configure c-utils with +gcc+
+* Configure ADLB with +CC=mpicc --enable-mpi-2+
+* Configure Turbine with +--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bin/mpiexec+
+
 == Blue Gene
 
 The Blue Gene systems at ANL are <<scheduled_systems,scheduled
