@@ -67,6 +67,11 @@ void blobutils_destroy(turbine_blob* blob);
 void* blobutils_ptr_add(void* p, int offset);
 
 /**
+   Obtain sizeof(void*)
+ */
+int blobutils_sizeof_ptr(void);
+
+/**
    Obtain sizeof(int)
  */
 int blobutils_sizeof_int(void);
@@ -85,6 +90,11 @@ int blobutils_sizeof_float(void);
  */
 void* blobutils_cast_to_ptr(int i);
 
+void** blobutils_cast_ptr_to_ptrptr(void* p);
+char** blobutils_cast_ptr_to_char_ptrptr(void* p);
+
+void* blobutils_cast_string_to_ptr(char* s);
+
 int  blobutils_cast_to_int(void* p);
 long blobutils_cast_to_long(void* p);
 
@@ -102,6 +112,16 @@ double*  blobutils_cast_to_dbl_ptr(void* p);
    Set all entries to 0.0
  */
 void blobutils_zeroes_float(double* p, int n);
+
+/**
+   Assume blob is array of void*- do array lookup
+ */
+void* blobutils_get_ptr(void** pointer, int index);
+
+/**
+   Assume blob is array of void*- do array store
+ */
+void blobutils_set_ptr(void** pointer, int index, void* p);
 
 /**
    Assume blob is array of double- do array lookup

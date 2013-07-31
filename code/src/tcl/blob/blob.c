@@ -72,6 +72,12 @@ blobutils_ptr_add(void* p, int offset)
 }
 
 int
+blobutils_sizeof_ptr(void)
+{
+  return sizeof(void*);
+}
+
+int
 blobutils_sizeof_int(void)
 {
   return sizeof(int);
@@ -93,6 +99,24 @@ void*
 blobutils_cast_to_ptr(int i)
 {
   return (void*) (size_t)i;
+}
+
+void**
+blobutils_cast_ptr_to_ptrptr(void* p)
+{
+  return (void**) p;
+}
+
+char**
+blobutils_cast_ptr_to_char_ptrptr(void* p)
+{
+  return (char**) p;
+}
+
+void*
+blobutils_cast_string_to_ptr(char* s)
+{
+  return (void*) s;
 }
 
 int
@@ -170,6 +194,17 @@ blobutils_zeroes_float(double* p, int n)
     p[i] = 0.0;
 }
 
+void*
+blobutils_get_ptr(void** pointer, int index)
+{
+  return pointer[index];
+}
+
+void
+blobutils_set_ptr(void** pointer, int index, void* p)
+{
+  pointer[index] = p;
+}
 
 double
 blobutils_get_float(double* pointer, int index)

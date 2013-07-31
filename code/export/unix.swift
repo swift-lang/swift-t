@@ -16,7 +16,12 @@
 
 // UNIX.SWIFT
 
+#ifndef UNIX_SWIFT
+#define UNIX_SWIFT
+
 app (file o) sed(file i, string command)
 {
   "sed" command i @stdout=o;
 }
+
+#endif
