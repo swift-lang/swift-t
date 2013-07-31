@@ -18,14 +18,16 @@
 #  turbine-cobalt -n <PROCS> [-e <ENV>]* [-o <OUTPUT>] -t <WALLTIME>
 #                 <SCRIPT> [<ARG>]*
 
-# Variables that must be set in the environment:
+# Environment variables that must be set:
 # MODE: Either "cluster", "BGP", or "BGQ"
 # QUEUE: The queue name to use
 
-# Variables that may be set in the environment:
-# PROJECT: The project name to use
+# Environment variables that may be set:
+# PROJECT: The project name to use (default none)
 # TURBINE_OUTPUT_ROOT: Where to put Turbine output-
-#          a subdirectory will be created, reported, and used
+#          a subdirectory based on the current time
+#          will be created, reported, and used
+#          (default ~/turbine-output)
 # TURBINE_PPN: Processes-per-node: see below
 
 # On the BG/P: usually set TURBINE_PPN=4  (default 4)
@@ -41,12 +43,13 @@
 # (We follow the mpiexec convention.)
 
 export TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
-declare TURBINE_HOME
+# declare TURBINE_HOME
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 source ${TURBINE_HOME}/scripts/helpers.zsh
 
 # Defaults:
 export PROCS=0
+SETTINGS=0
 WALLTIME=${WALLTIME:-00:15:00}
 TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
 VERBOSE=0
@@ -59,29 +62,31 @@ typeset -T ENV env
 env=()
 
 # Get options
-while getopts "d:e:n:o:t:v" OPTION
+while getopts "d:e:n:o:s:t:v" OPTION
  do
   case ${OPTION}
    in
-   d)
-     OUTPUT_TOKEN_FILE=${OPTARG}
-     ;;
-   e) env+=${OPTARG}
-     ;;
-   n) PROCS=${OPTARG}
-     ;;
-   o) TURBINE_OUTPUT_ROOT=${OPTARG}
-     ;;
-   t) WALLTIME=${OPTARG}
-     ;;
-   v)
-     VERBOSE=1
-     ;;
-   *)
-     print "abort"
-     exit 1
-     ;;
- esac
+    d)
+      OUTPUT_TOKEN_FILE=${OPTARG}
+      ;;
+    e) env+=${OPTARG}
+      ;;
+    n) PROCS=${OPTARG}
+      ;;
+    o) TURBINE_OUTPUT_ROOT=${OPTARG}
+      ;;
+    s) SETTINGS=${OPTARG}
+      ;;
+    t) WALLTIME=${OPTARG}
+      ;;
+    v)
+      VERBOSE=1
+      ;;
+    *)
+      print "abort"
+      exit 1
+      ;;
+  esac
 done
 shift $(( OPTIND-1 ))
 
@@ -91,6 +96,14 @@ then
 fi
 
 SCRIPT=$1
+
+if [[ ${SETTINGS} != 0 ]]
+then
+  declare SETTINGS
+  source ${SETTINGS}
+  exitcode "error in settings: ${SETTINGS}"
+fi
+
 checkvars QUEUE SCRIPT MODE
 
 shift
@@ -152,7 +165,7 @@ env+=( TCLLIBPATH="${TCLLIBPATH}"
      )
 
 declare SCRIPT_NAME
-declare MODE
+# declare MODE
 
 if [[ ${MODE} == "cluster" ]]
 then
@@ -164,6 +177,9 @@ elif [[ ${MODE} == "BGQ" ]]
 then
   # On the BG/Q, we need TURBINE_PPN: default 1
   MODE_ARG="--proccount ${PROCS} --mode c${TURBINE_PPN}"
+else
+  print "Unknown mode: ${MODE}"
+  exit 1
 fi
 
 if [[ ${MODE} == "BGQ" ]]
