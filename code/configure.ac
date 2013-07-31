@@ -107,10 +107,10 @@ AC_FUNC_MALLOC
 AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
 AC_DEFINE([HAVE_SYS_PARAM_H], [], [Do we have sys/param.h?])
 
+USE_C_UTILS=0
 AC_ARG_WITH(c-utils,
     AS_HELP_STRING([--with-c-utils], [location of ExM c-utils]),
     [
-        USE_C_UTILS=0
         AC_MSG_CHECKING([${withval}/include/c-utils.h])
         [[ -r ${withval}/include/c-utils.h ]] && USE_C_UTILS=1
         if [[ ${USE_C_UTILS} == 0 ]]
@@ -567,6 +567,16 @@ AC_ARG_ENABLE(fast,
     CFLAGS="${CFLAGS} -O3 -DNDEBUG")
 AC_SUBST(ENABLE_FAST)
 AC_SUBST(CFLAGS)
+
+USE_XLC=0
+AC_ARG_ENABLE(xlc,
+              AS_HELP_STRING(
+                    [--enable-xlc],
+                    [Support IBM XLC on BG/P]),
+              [
+                USE_XLC=1
+              ])
+AC_SUBST(USE_XLC)
 
 AC_DEFINE_UNQUOTED(DISABLE_LOG, $DISABLE_LOG, [Disables logging])
 

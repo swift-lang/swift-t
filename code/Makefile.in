@@ -26,17 +26,30 @@ SCRIPTS_SUBMIT  :=
 # Linux: -shared; Mac: -dynamiclib
 # Use -flat_namespace on the Mac
 ifeq ($(USE_MAC),no)
-# Linux
-  SO_SUFFIX = so
-  SHARED = -shared
-  MAC_FLAT =
-  MAC_NAME =
+	USE_XLC = @USE_XLC@
+	ifeq ($(USE_XLC),0)
+#       	Not XLC: GCC/Linux
+		PIC = -fPIC
+		STD = -std=gnu99
+		SHARED = -shared
+		WARNS = -Wall -Wconversion
+	else
+#       	Using XLC
+		PIC = -qpic
+		STD =
+		SHARED = -qmkshrobj -qnostaticlink -qnostaticlink=libgcc
+		WARNS =
+	endif
+
+	SO_SUFFIX = so
+	MAC_FLAT =
+	MAC_NAME =
 else
-# Mac
-  SO_SUFFIX = dylib
-  MAC_FLAT = -Wl,-flat_namespace
-  MAC_NAME = -install_name $(INSTALL_LIB)/libtclturbine.dylib
-  SHARED = -dynamiclib $(MAC_FLAT)
+# 	Mac
+	SO_SUFFIX = dylib
+	MAC_FLAT = -Wl,-flat_namespace
+	MAC_NAME = -install_name $(INSTALL_LIB)/libtclturbine.dylib
+	SHARED = -dynamiclib $(MAC_FLAT)
 endif
 
 TCL_TURBINE_SO = lib/libtclturbine.$(SO_SUFFIX)
@@ -80,7 +93,6 @@ TCL_LIB_DIR := @USE_TCL_LIB_DIR@
 TCL_LIB_NAME := tcl$(TCL_VERSION)
 TCLSH_LOCAL := @USE_TCLSH_LOCAL@
 
-
 MACHINE = @USE_MACHINE@
 
 # On some systems, the user will use mpicc,
@@ -109,10 +121,10 @@ USE_PYTHON_NAME = @USE_PYTHON_NAME@
 
 HAVE_R      = @HAVE_R@
 
-CFLAGS += -std=gnu99
+CFLAGS += $(STD)
 CFLAGS += -g
-CFLAGS += -Wall -Wconversion
-CFLAGS += -fPIC
+CFLAGS += $(WARNS)
+CFLAGS += $(PIC)
 # This is referenced in lookup3.c - may want to drop this for speed
 CFLAGS += -D VALGRIND
 CFLAGS += -I $(C_UTILS)/include
@@ -263,7 +275,7 @@ $(TCL_TURBINE_SO): $(TURBINE_OBJS)
 	$(E) $(CC) $(SHARED) $(LDFLAGS) -o $(@) \
              $(TURBINE_OBJS) \
              $(LIBS) \
-             $(TCL_LINK_FLAGS) \
+             -L/home/wozniak/Public/tcl-8.5.12-bgq/lib -ltcl8.5 \
              $(RPATHS) \
              $(MAC_NAME)
 
