@@ -90,6 +90,7 @@ checkvars()
 {
   local VARS
   VARS=( ${*} )
+  local V
   for V in ${VARS}
    do
    checkvar ${V}
