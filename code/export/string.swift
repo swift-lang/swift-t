@@ -77,4 +77,8 @@
   "turbine" "0.0.1"
   [ "set <<h>> [ c_utils::hash <<s>> ]" ];
 
+@pure
+(string s) string_from_floats(float f[])
+"turbine" "0.4.0" "string_from_floats";
+
 #endif

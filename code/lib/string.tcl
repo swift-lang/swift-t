@@ -316,4 +316,27 @@ namespace eval turbine {
         return $result
     }
 
+    proc string_from_floats { result input } {
+        rule $input  "string_from_floats_body $input $result" \
+            name "string_from_floats-$result"
+    }
+    proc string_from_floats_body { container result } {
+
+        set type [ container_typeof $container ]
+        set N  [ adlb::container_size $container ]
+        c::log "string_from_floats_body start"
+        deeprule $container 1 [ list false false ] \
+            "string_from_floats_store $result $container $N"
+    }
+    # This is called when every entry in container is set
+    proc string_from_floats_store { result container N } {
+        set A [ list ]
+        foreach i [ container_list $container ] {
+            set td [ container_lookup $container $i ]
+            set v  [ retrieve_decr_float $td ]
+            lappend A $v
+        }
+        set s [ join $A ]
+        store_string $result $s
+    }
 }
