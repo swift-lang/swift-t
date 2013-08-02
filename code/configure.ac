@@ -144,7 +144,7 @@ USE_MACHINE=normal
 # The "launcher" is used by job submission systems to launch jobs
 # Usually a path to mpiexec, srun, or aprun
 # Full path to launcher (optional):
-USE_LAUNCHER=0
+USE_LAUNCHER=mpiexec
 USE_MPI_DIR=0
 USE_MPI_INCLUDE=0
 USE_MPI_LIB_DIR=0
