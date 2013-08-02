@@ -62,7 +62,7 @@ init_r(void)
   int rc = 1;
   if (! r_initialized)
   {
-    setenv("R_HOME", "/usr/lib/R", 1);
+    // setenv("R_HOME", "/usr/lib/R", 1);
     char* Rargs[] = { "R", "--no-save", "--silent" };
     rc = Rf_initEmbeddedR(3, Rargs);
     r_initialized = true;
@@ -74,7 +74,6 @@ static int
 eval_r_line(Tcl_Interp* interp, Tcl_Obj* const objv[],
             const char* cmd, SEXP* result)
 {
-  // printf("eval_r: %s\n", cmd);
   ParseStatus status;
   SEXP expr = Rf_mkString(cmd);
   TCL_CONDITION(expr != NULL, "Bad R code[type 1]: %s", cmd);
@@ -100,6 +99,11 @@ finalize_r(void)
 {
   // Rf_endEmbeddedR(0);
 }
+
+/**
+   See note in R's printutils.c
+*/
+const char *Rf_EncodeElement(SEXP x, int indx, int quote, char dec);
 
 /**
    @param result: Store result pointer here
@@ -132,7 +136,7 @@ r_eval(Tcl_Interp* interp, Tcl_Obj* const objv[],
   }
 
   // The string from R:
-  char* s;
+  const char* s;
   rc = eval_r_line(interp, objv, expression, &x);
   TCL_CHECK(rc);
   // This line gives a warning because it is not in any R header:
