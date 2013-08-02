@@ -96,8 +96,10 @@ Swift code is conventionally written in +\*.swift+ files.  Turbine
 code is stored in Tcl files +*.tcl+.  After writing the Swift program
 +program.swift+, run:
 ----
-stc program.swift program.tcl
+stc program.swift
 ----
+
+This will compile the program to +program.tcl+
 
 Then, to run the program, use Turbine:
 
@@ -110,16 +112,23 @@ running the program.
 
 STC accepts the following arguments:
 
-+-A+:: Specify a compile-time argument
-+-D+:: Define preprocessor macro
-+-E+:: Just run the preprocessor
++-A+:: Set a command-line argument at compile-time
++-D+:: Define C preprocessor macro
++-E+:: Just run the C preprocessor: do not compile the program
 +-I+:: Add a directory to the import search path
 +-O+:: Set optimization level: 0, 1, 2, or 3.  See <<Optimizations>>
-+-p+:: Disable preprocessor
-+-T+:: Enable optimization
-+-t+:: Disable optimization
++-p+:: Disable C preprocessor
 +-u+:: Only compile if output file is not up-to-date
 +-v+:: Output version number and exit
++-V+:: Verbose output
+
+Additional arguments for advanced users/developers:
+
++-C+:: Specify an output file for STC internal representation
++-l+:: Specify log file for STC debug log
++-L+:: Specify log file for more verbose STC debug log
++-T+:: Enable a specific optimization.  See <<Optimizations>>
++-t+:: Disable a specific compiler optimization.  See <<Optimizations>>
 
 == Program structure
 
@@ -200,7 +209,7 @@ There are two additional ways to include files.
 This syntax is completely equivalent, but is also supported for
 compatibility:
 ----
-import "mypackage/mymodule";
+import mypackage.mymodule;
 ----
 
 The +#include+ syntax uses a different mechanism to import the file: it
@@ -1071,7 +1080,11 @@ Tcl code, Swift types are mapped to Tcl types in the following way:
 * +int+/+float+/+string+/+bool+ are converted to the standard
   Tcl representations
 * blobs are represented as a Tcl list with first element a pointer
-  to the data, and the second element the length of the data
+  to the data, the second element the length of the data, and if
+  the blob was loaded from the ADLB data store, a third element
+  which is the ADLB ID of the blob
+* files are represented as a list, with the first element the
+  file path, and the second element a reference count
 
 ==== Calling native libraries from Swift
 
