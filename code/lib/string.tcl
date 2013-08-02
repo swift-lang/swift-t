@@ -336,7 +336,7 @@ namespace eval turbine {
             set v  [ retrieve_decr_float $td ]
             lappend A $v
         }
-        set s [ join $A ]
+        set s [ join $A "," ]
         store_string $result $s
     }
 }
