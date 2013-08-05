@@ -72,8 +72,9 @@ vint_bytes(cutil_long val)
   Returns number of bytes written
  */
 static inline int
-encode_vint(cutil_long val, unsigned char *buffer)
+encode_vint(cutil_long val, void *buffer)
 {
+  unsigned char *buffer2 = buffer;
   unsigned char b; // Current byte being encoded
   bool more; // If more bytes are needed
   bool negative = val < 0;
@@ -91,7 +92,7 @@ encode_vint(cutil_long val, unsigned char *buffer)
   if (more)
     b |= VINT_MORE_MASK;
 
-  buffer[0] = b;
+  buffer2[0] = b;
   int pos = 1;
   while (more)
   {
@@ -100,7 +101,7 @@ encode_vint(cutil_long val, unsigned char *buffer)
     more = val != 0;
     if (more)
       b |= VINT_MORE_MASK;
-    buffer[pos++] = b;
+    buffer2[pos++] = b;
   }
   return pos;
 }
@@ -109,11 +110,12 @@ encode_vint(cutil_long val, unsigned char *buffer)
   Decode a vint.  Returns number of bytes read, or negative on an error
  */
 static inline int
-decode_vint(unsigned char *buffer, int len, cutil_long *val)
+decode_vint(void *buffer, int len, cutil_long *val)
 {
+  unsigned char *buffer2 = buffer;
   if (len < 1)
     return -1;
-  unsigned char b = buffer[0]; // current byte
+  unsigned char b = buffer2[0]; // current byte
   cutil_long sign; // 1 for +ive, -1 for -ive
 
   sign = ((b & VINT_SIGN_MASK) != 0) ? -1 : 1;
@@ -129,7 +131,7 @@ decode_vint(unsigned char *buffer, int len, cutil_long *val)
       // Too long
       return -1;
     }
-    b = buffer[pos++];
+    b = buffer2[pos++];
     cutil_long add = (cutil_long)(b & VINT_7BIT_MASK);
     // TODO: check for overflow
     accum += (add << shift);
