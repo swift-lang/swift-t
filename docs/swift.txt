@@ -35,8 +35,8 @@ These have been packaged for convenient download and installation.
 
 1. Install or locate MPI implementation (MPICH, OpenMPI, etc.)
 +
-Cf. http://www.mcs.anl.gov/research/projects/mpich2/documentation/index.php?s=docs[MPICH Guidesk
-nsure that MPI is compled as a shared library
+Cf. http://www.mpich.org[MPICH Guides].
+Ensure that MPI is compiled as a shared library
 (for MPICH use +configure --enable-shared+).
 Other MPI implementations are <<Build_settings, supported>> as well.
 +
@@ -107,7 +107,7 @@ Then, to run the program, use Turbine:
 turbine -n 4 program.tcl
 ----
 
-See the Turbine section <<Turbine>> for more information about
+See the <<Turbine,Turbine section>> for more information about
 running the program.
 
 STC accepts the following arguments:
@@ -1267,6 +1267,8 @@ NOTE: To use this, Turbine must be configured with +--enable-python+
  mistakes may be badly mangled and refer to missing Python symbols-
  refer to the first error in the Python stack trace.
 
+
+
 ==== Calling R
 
 Consider the following Swift script:
@@ -1358,7 +1360,7 @@ Engines:: Evaluate the Swift logic.  Produces tasks
 Workers:: Performs tasks
 Servers:: Distributes tasks
 
-Typical Swift programs perform compute-intensive work in extension
+Typical Swift programs perform compute-intensive work in leaf
 functions.  These always execute on workers.
 
 Engines split up the control logic work among themselves.  This
