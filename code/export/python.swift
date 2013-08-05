@@ -21,5 +21,5 @@
 */
 
 @dispatch=WORKER
-(string output) python(string code) "turbine" "0.1.0" "python"
+(string output) python(string code) "turbine" "0.1.0"
     [ "set <<output>> [ python::eval <<code>> ]" ];

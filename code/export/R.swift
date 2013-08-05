@@ -15,5 +15,5 @@
  */
 
 @dispatch=WORKER
-(string output) R(string code) "turbine" "0.1.0" "r"
+(string output) R(string code) "turbine" "0.1.0"
     [ "set <<output>> [ r::eval <<code>> ]" ];
