@@ -364,60 +364,93 @@ AC_ARG_ENABLE(python,
                    [Enable calling python]),
     [
       HAVE_PYTHON=1
-      echo "Python enabled"
-    ],
-    [
-      echo "Python disabled"
     ])
 
 # By default, use default location
 USE_PYTHON=0
+USE_PYTHON_INCLUDE=0
 USE_PYTHON_LIB=0
 USE_PYTHON_NAME=python2.7
+
 AC_ARG_WITH(python,
-    AS_HELP_STRING([--with-python],
+   AS_HELP_STRING([--with-python],
+                   [Use this python directory]),
+  [
+      HAVE_PYTHON=1
+      USE_PYTHON=${withval}
+      AC_CHECK_FILE(${USE_PYTHON}/include/python2.7/Python.h, [],
+                    [AC_MSG_ERROR([Could not find python header!])])
+      USE_PYTHON_INCLUDE=${USE_PYTHON}/include
+      USE_PYTHON_LIBDIR=${USE_PYTHON}/lib
+      USE_PYTHON_NAME=libpython2.7.so
+  ])
+
+AC_ARG_WITH(python-lib,
+    AS_HELP_STRING([--with-python-lib],
                    [Use this python directory library -
                     provide fully qualified path]),
     [
-      USE_PYTHON=${withval}
-      AC_CHECK_FILE(${USE_PYTHON}, [], [USE_PYTHON=NOT_FOUND])
-      if [[ ${USE_PYTHON} == NOT_FOUND ]]
-      then
-          AC_MSG_ERROR([Could not find python!])
-      fi
-    ],
-    [])
+      HAVE_PYTHON=1
+      USE_PYTHON=1
+      USE_PYTHON_LIB=${withval}
+      AC_CHECK_FILE(${USE_PYTHON_LIB}, [],
+                    [AC_MSG_ERROR([Could not find python!])])
+      USE_PYTHON_LIBDIR=$( dirname ${USE_PYTHON} )
+      USE_PYTHON_NAME=$( basename ${USE_PYTHON} )
+    ])
 
 if [[ ${USE_PYTHON} != 0 ]]
 then
-    USE_PYTHON_LIB=$( dirname ${USE_PYTHON} )
-    USE_PYTHON_NAME=$( basename ${USE_PYTHON} )
     USE_PYTHON_NAME=${USE_PYTHON_NAME#lib}
     USE_PYTHON_NAME=${USE_PYTHON_NAME%.so}
-    echo "Using Python lib directory: ${USE_PYTHON_LIB}"
+    echo "Using Python lib directory: ${USE_PYTHON_LIBDIR}"
     echo "Using Python lib name:      ${USE_PYTHON_NAME}"
 fi
 
 AC_DEFINE_UNQUOTED([HAVE_PYTHON],$HAVE_PYTHON,[Enables Python])
 AC_SUBST(HAVE_PYTHON)
-
-AC_SUBST(USE_PYTHON_LIB)
+AC_SUBST(USE_PYTHON_INCLUDE)
+AC_SUBST(USE_PYTHON_LIBDIR)
 AC_SUBST(USE_PYTHON_NAME)
+
+if (( HAVE_PYTHON ))
+then
+    echo "Python enabled"
+else
+    echo "Python disabled"
+fi
 
 # R is optional
 HAVE_R=0
+USE_R=0
 AC_ARG_ENABLE(r,
     AS_HELP_STRING([--enable-r],
                    [Enable calling R language]),
     [
       HAVE_R=1
-      echo "R enabled"
-    ],
-    [
-      echo "R disabled"
+      USE_R=/usr/share/R
     ])
+
+AC_ARG_WITH(r,
+   AS_HELP_STRING([--with-r],
+                   [Use this R directory]),
+  [
+      HAVE_R=1
+      USE_R=${withval}
+      AC_CHECK_FILE(${USE_R}/include/R.h, [],
+                    [AC_MSG_ERROR([Could not find R header!])])
+  ])
+
 AC_DEFINE_UNQUOTED([HAVE_R],$HAVE_R,[Enables R])
 AC_SUBST(HAVE_R)
+AC_SUBST(USE_R)
+
+if (( HAVE_R ))
+then
+    echo "R enabled"
+else
+    echo "R disabled"
+fi
 
 # tclsh is used in the build process (cf. debug-auto.tcl)
 # Allow user to specify a native tclsh for use when cross-compiling
