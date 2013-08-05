@@ -7,4 +7,4 @@ cd ${STC_DOCS}
 
 DEST=wozniak@login.mcs.anl.gov:/mcs/web/research/projects/exm/local/guides
 
-rsync leaf.html examples.tar.gz *.png ${DEST}
+rsync *.html examples.tar.gz *.png ${DEST}
