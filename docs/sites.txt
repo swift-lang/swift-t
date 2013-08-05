@@ -47,7 +47,8 @@ exm-user@mcs.anl.gov .
 
 To follow a build procedure, you may start with the +exm+ download
 package.  Simply edit the +exm-setup+ script and modify the
-configuration settings as described here.
+configuration settings as described here.  Typically, the only
+required changes will be to the +configure+ command lines.
 
 === Version numbers
 
@@ -104,13 +105,61 @@ directly.  Thus, sample scripts are provided below.
 == Scheduled systems
 
 On scheduled systems (PBS, SLURM, Cobalt, etc.), Turbine is launched
-with a customized script (+turbine-<name>-run+) that launches Turbine
+with a customized _run script_ (+turbine-<name>-run+) that launches Turbine
 on that system.  This produces a batch script if necessary and submits
 it with the job submission program (e.g., +qsub+).  The working
 directory (+PWD+) for the job is called +TURBINE_OUTPUT+; the user may
 select this or Turbine will pick one based on the date and report it.
 The user program will be copied to +TURBINE_OUTPUT+ before submission.
 Standard output and error goes to +TURBINE_OUTPUT/output.txt+.
+
+=== Turbine run scripts
+
+Cobalt:: +turbine-cobalt-run.zsh+
+Cray/APRUN:: +turbine-aprun.zsh+ (PBS with Cray's +aprun+)
+PBS:: +setup-turbine-pbs.zsh+
+SLURM:: +turbine-slurm-run.zsh+
+
+Each script accepts input via environment variables and command-line options.
+
+[[variables]]
+=== Turbine scheduler variables
+
+For scheduled systems, Turbine accepts a common set of environment
+variables.
+
++NODES+:: Number of nodes to use
++PPN+:: Number of processes per node
++PROJECT+:: The project name to use with the system scheduler
++TURBINE_OUTPUT+:: Directory in which to place Turbine output
++QUEUE+:: Name of queue in which to run (may leave unset)
+
+=== Turbine run script options
+
+For scheduled systems, Turbine accepts a common set of command line options.
+
++-d <directory>+:: Set the Turbine output directory (optional, a
+default is provided based on the date).
+
++-e <key>=<value>+:: Set an environment variable in the job
+environment.  This may be used multiple times
+
++-n <procs>+:: Number of processes.
+
++-o <directory>+:: Set the Turbine output directory root, in which
+default Turbine output directories are automatically created based on
+the date.
+
++-s <file>+:: Source this file for environment variables.  These
+variables override any other <<variables,Turbine scheduler
+variables>>.  You may place arbitrary shell code in this script.
+
++-t <time>+:: Set scheduler walltime.  The argument format is passed
+through to the scheduler
+
++-V+:: Make script verbose.  This typically just applies +set -x+,
+allowing you to inspect variables and arguments as passed to the
+system scheduler.
 
 == x86 clusters
 
@@ -348,11 +397,6 @@ See the script header for usage.
 
 ==== Vesta
 
-===== Quirks
-
-The GCC installation does not support shared libraries.  Thus, you
-must compile Tcl with bgxlc.
-
 ===== Public installation
 
 * STC: +~wozniak/Public/stc-bgq/bin/stc+
@@ -373,6 +417,15 @@ The normal Turbine environment variables are honored, plus the
 * Compile c-utils with gcc
 * Configure ADLB with mpixlc and +--enable-xlc --enable-mpi-2+
 * Configure Turbine with bgxlc and +--enable-xlc+
+
+*Quirks:*
+
+The GCC installation does not support shared libraries.  Thus, you
+must compile Tcl with bgxlc.
+
+You may get errors that say +wrong digit+.  This is apparently a bgxlc
+bug when applied to Tcl's +StrToD.c+.  Compiling this file with +-O3+ fixes
+the problem.
 
 == Cray
 
@@ -529,18 +582,6 @@ To run:
 export TURBINE_LAUNCH_OPTS="-f $HOME/hosts.txt"
 turbine program.tcl
 ----
-
-[[variables]]
-== Turbine scheduler variables
-
-For scheduled systems, Turbine accepts a common set of environment
-variables.
-
-+NODES+:: Number of nodes to use
-+PPN+:: Number of processes per node
-+PROJECT+:: The project name to use with the system scheduler
-+TURBINE_OUTPUT+:: Directory in which to place Turbine output
-+QUEUE+:: Name of queue in which to run (may leave unset)
 
 ////
 Local Variables:
