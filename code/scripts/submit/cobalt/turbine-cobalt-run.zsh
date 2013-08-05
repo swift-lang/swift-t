@@ -62,7 +62,7 @@ typeset -T ENV env
 env=()
 
 # Get options
-while getopts "d:e:n:o:s:t:v" OPTION
+while getopts "d:e:n:o:s:t:V" OPTION
  do
   case ${OPTION}
    in
@@ -79,7 +79,7 @@ while getopts "d:e:n:o:s:t:v" OPTION
       ;;
     t) WALLTIME=${OPTARG}
       ;;
-    v)
+    V)
       VERBOSE=1
       ;;
     *)
@@ -96,6 +96,8 @@ then
 fi
 
 SCRIPT=$1
+shift
+ARGS=${*}
 
 if [[ ${SETTINGS} != 0 ]]
 then
@@ -105,9 +107,6 @@ then
 fi
 
 checkvars QUEUE SCRIPT MODE
-
-shift
-ARGS=${*}
 
 START=$( date +%s )
 
