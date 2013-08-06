@@ -44,14 +44,32 @@
 // One bit overhead per byte
 #define VINT_MAX_BYTES (sizeof(cutil_long) + (sizeof(cutil_long) - 1) / 8 + 1)
 
+/*
+  Return encoded length of a vint
+ */
+static inline int vint_bytes(cutil_long val);
+
+/*
+  Encode a vint.  Must have at least VINT_MAX_BYTES or vint_bytes(val)
+  space in buffer, whichever is less.
+  Returns number of bytes written
+ */
+static inline int vint_encode(cutil_long val, void *buffer);
+
+/*
+  Decode a vint.  Returns number of bytes read, or negative on an error
+ */
+static inline int vint_decode(void *buffer, int len, cutil_long *val);
+
+
+
+
+
 #define VINT_MORE_MASK (0x80)
 #define VINT_SIGN_MASK (0x40)
 #define VINT_6BIT_MASK (0x3f)
 #define VINT_7BIT_MASK (0x7f)
 
-/*
-  Return encoded length of a vint
- */
 static inline int
 vint_bytes(cutil_long val)
 {
@@ -66,13 +84,8 @@ vint_bytes(cutil_long val)
   return len;
 }
 
-/*
-  Encode a vint.  Must have at least VINT_MAX_BYTES or vint_bytes(val)
-  space in buffer, whichever is less.
-  Returns number of bytes written
- */
 static inline int
-encode_vint(cutil_long val, void *buffer)
+vint_encode(cutil_long val, void *buffer)
 {
   unsigned char *buffer2 = buffer;
   unsigned char b; // Current byte being encoded
@@ -106,11 +119,8 @@ encode_vint(cutil_long val, void *buffer)
   return pos;
 }
 
-/*
-  Decode a vint.  Returns number of bytes read, or negative on an error
- */
 static inline int
-decode_vint(void *buffer, int len, cutil_long *val)
+vint_decode(void *buffer, int len, cutil_long *val)
 {
   unsigned char *buffer2 = buffer;
   if (len < 1)
