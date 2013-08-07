@@ -1,7 +1,9 @@
+
+#define _GNU_SOURCE // for asprintf()
+
 #include "adlb_types.h"
 
-#include <assert.h>
-#include <string.h>
+#include <stdio.h>
 
 #include "adlb.h"
 #include "data_cleanup.h"
