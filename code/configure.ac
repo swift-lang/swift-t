@@ -99,8 +99,8 @@ AC_TYPE_UINT32_T
 # Checks for library functions.
 # Although autoscan 2.68 warns for AC_FUNC_STRNLEN, we do not use it
 # because of known autoconf issues.  We do check for strnlen here:
-AC_CHECK_FUNCS([gettimeofday memset setenv strchr strdup strlen])
-AC_CHECK_FUNCS([strnlen strstr strtol strtoul])
+AC_CHECK_FUNCS([gettimeofday memset pow setenv strchr strdup strlen])
+AC_CHECK_FUNCS([strnlen strstr strtol strtoul uname])
 AC_FUNC_MALLOC
 
 # Define templates
