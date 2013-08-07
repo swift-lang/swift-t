@@ -48,12 +48,34 @@ import exm.stc.tclbackend.tree.Value;
  * This class is package-private: only TurbineGenerator uses it
  * */
 class Turbine {
+  public static class TypeName extends Token {
+    public TypeName(String token) {
+      super(token);
+    }
+  }
+  
   /* Names of types used by Turbine */
-  public static final String STRING_TYPENAME = "string";
   public static final String INTEGER_TYPENAME = "integer";
-  public static final String VOID_TYPENAME = "void";
+  public static final TypeName ADLB_INT_TYPE = new TypeName(INTEGER_TYPENAME);
   public static final String FLOAT_TYPENAME = "float";
+  public static final TypeName ADLB_FLOAT_TYPE = new TypeName(FLOAT_TYPENAME);
+  public static final String STRING_TYPENAME = "string";
+  public static final TypeName ADLB_STRING_TYPE = 
+                                          new TypeName(STRING_TYPENAME);
   public static final String BLOB_TYPENAME = "blob";
+  public static final TypeName ADLB_BLOB_TYPE = new TypeName(BLOB_TYPENAME);
+  public static final String CONTAINER_TYPENAME = "container";
+  public static final TypeName ADLB_CONTAINER_TYPE = 
+                                          new TypeName(CONTAINER_TYPENAME);
+  public static final String REF_TYPENAME = "ref";
+  public static final TypeName ADLB_REF_TYPE = new TypeName(REF_TYPENAME);
+  public static final String FILE_REF_TYPENAME = "file_ref";
+  public static final TypeName ADLB_FILE_REF_TYPE = 
+                                          new TypeName(FILE_REF_TYPENAME);
+  public static final String STRUCT_REF_TYPENAME = "struct";
+  public static final TypeName ADLB_STRUCT_REF_TYPE = 
+                                          new TypeName(STRUCT_REF_TYPENAME);
+
 
   private static final Token ALLOCATE_CONTAINER_CUSTOM =
       turbFn("allocate_container_custom");
@@ -73,7 +95,7 @@ class Turbine {
   private static final Token ARRAY_BUILD = turbFn("array_build");
   
   // Container nested creation
-  private static final Token C_V_CREATE_NESTED = turbFn("c_v_create");
+  private static final Token C_V_CREATE_NESTED = turbFn("create_nested");
   private static final Token C_F_CREATE_NESTED = turbFn("c_f_create");
   private static final Token CR_V_CREATE_NESTED = turbFn("cr_v_create");
   private static final Token CR_F_CREATE_NESTED = turbFn("cr_f_create");
@@ -85,17 +107,15 @@ class Turbine {
   private static final TclTree CR_V_LOOKUP = turbFn("cr_v_lookup");
   private static final Token CR_F_LOOKUP = turbFn("cr_f_lookup");
   private static final Token CONTAINER_ENUMERATE = adlbFn("enumerate");
-
-  // Container reference counting
-  private static final Token C_SLOT_CREATE = adlbFn("slot_create");
-  private static final Token C_SLOT_DROP = adlbFn("slot_drop");
   
   // Retrieve functions
-  private static final Token RETRIEVE_UNTYPED = turbFn("retrieve");
   private static final Token RETRIEVE_INTEGER = turbFn("retrieve_integer");
   private static final Token RETRIEVE_FLOAT = turbFn("retrieve_float");
   private static final Token RETRIEVE_STRING = turbFn("retrieve_string");
   private static final Token RETRIEVE_BLOB = turbFn("retrieve_blob");
+  private static final Token ACQUIRE_REF = turbFn("acquire_ref");
+  private static final Token ACQUIRE_FILE_REF = turbFn("acquire_file_ref");
+  private static final Token ACQUIRE_STRUCT_REF = turbFn("acquire_struct");
   private static final Token CACHED = new Token("CACHED");
   private static final Token UNCACHED_MODE = new Token("UNCACHED");
   
@@ -114,6 +134,9 @@ class Turbine {
   private static final Token STORE_FLOAT = turbFn("store_float");
   private static final Token STORE_STRING = turbFn("store_string");
   private static final Token STORE_BLOB = turbFn("store_blob");
+  private static final Token STORE_REF = turbFn("store_ref");
+  private static final Token STORE_FILE_REF = turbFn("store_file_ref");
+  private static final Token STORE_STRUCT_REF = turbFn("store_struct_ref");
   private static final Token INIT_UPD_FLOAT = turbFn("init_updateable_float");
 
   // Rule functions
@@ -151,14 +174,6 @@ class Turbine {
     NESTED
   }
 
-  // Types
-  public static final Value ADLB_NULL_TYPE = adlbConst("NULL_TYPE");
-  public static final Value ADLB_FLOAT_TYPE = adlbConst("FLOAT");
-  public static final Value ADLB_INT_TYPE = adlbConst("INTEGER");
-  public static final Value ADLB_STRING_TYPE = adlbConst("STRING");
-  public static final Value ADLB_BLOB_TYPE = adlbConst("BLOB");
-  public static final Value ADLB_CONTAINER_TYPE = adlbConst("CONTAINER");
-
   private static final LiteralInt TURBINE_WORKER_WORK_ID = new LiteralInt(0);
   private static final LiteralInt TURBINE_CONTROL_WORK_ID = new LiteralInt(1);
 
@@ -172,6 +187,8 @@ class Turbine {
   private static final Token REFCOUNT_DECR = turbFn("read_refcount_decr");
   private static final Token FILE_REFCOUNT_INCR = turbFn("file_read_refcount_incr");
   private static final Token FILE_REFCOUNT_DECR = turbFn("file_read_refcount_decr");
+  private static final Token WRITE_REFCOUNT_INCR = adlbFn("write_refcount_incr");
+  private static final Token WRITE_REFCOUNT_DECR = adlbFn("write_refcount_decr");
   private static final Token FREE_LOCAL_BLOB = turbFn("free_local_blob");
   
   // Files
@@ -214,8 +231,16 @@ class Turbine {
     return new Value("::turbine::" + name);
   }
   
-  private static Value adlbConst(String name) {
-    return new Value("::adlb::" + name);
+
+  public static Command declareStructType(Expression typeId,
+      Expression typeName, TclList fieldList) {
+    return new Command("adlb::declare_struct_type",
+                       Arrays.asList(typeId, typeName, fieldList));
+  }
+  
+  public static TypeName structTypeName(int structType) {
+    // Form full type name by concatenation
+    return new TypeName(STRUCT_REF_TYPENAME + structType);
   }
   
   public static Command addConstantArg(Expression argName, Expression argVal) {
@@ -241,7 +266,8 @@ class Turbine {
     }
 
     result[index++] = allocateContainer(LOCAL_STACK_NAME,
-                        STRING_TYPENAME, LiteralInt.ONE, LiteralInt.ONE);
+                        ADLB_STRING_TYPE, ADLB_REF_TYPE,
+                        LiteralInt.ONE, LiteralInt.ONE);
 
     if (type != StackFrameType.MAIN) {
       // main is the only procedure without a parent stack frame
@@ -265,45 +291,31 @@ class Turbine {
     return result;
   }
 
-
-  public static TclTree allocateFuture(String tclName, String typePrefix,
-      Expression initReaders) {
-    return new Command(ALLOCATE_CUSTOM, new Token(tclName),
-        new Token(typePrefix), initReaders);
-  }
-
-  public static TclTree allocateUpdateable(String tclName, String typePrefix,
-      Expression initReaders) {
-    return new Command(ALLOCATE_CUSTOM, new Token(tclName),
-            new Token(typePrefix), initReaders);
-  }
-  
-
-  public static TclTree allocate(String tclName, String typePrefix) {
+  public static TclTree allocate(String tclName, TypeName typePrefix) {
     return allocate(tclName, typePrefix, LiteralInt.ONE, LiteralInt.ONE,
                     false);
   }
   
   public static TclTree allocatePermanent(String tclName, 
-                                                  String typePrefix) {
+                                                  TypeName typePrefix) {
     return allocate(tclName, typePrefix, LiteralInt.ONE, LiteralInt.ONE,
                      true);
   }
   
   public static TclTree allocate(
-      String tclName, String typePrefix,
+      String tclName, TypeName typePrefix,
       Expression initReadRefcount, Expression initWriteRefcount,
       boolean permanent) {
     return new Command(ALLOCATE_CUSTOM, new Token(tclName),
-              new Token(typePrefix),
+              typePrefix,
               initReadRefcount, initWriteRefcount,
               LiteralInt.boolValue(permanent));
   }
 
-  public static TclTree allocateContainer(String name, String indexType,
-      Expression initReaders, Expression initWriters) {
+  public static TclTree allocateContainer(String name, TypeName indexType,
+      TypeName valType, Expression initReaders, Expression initWriters) {
     return new Command(ALLOCATE_CONTAINER_CUSTOM,
-                       new Token(name), new Token(indexType),
+                       new Token(name), indexType, valType,
                        initReaders, initWriters);
   }
   
@@ -343,16 +355,25 @@ class Turbine {
     return new SetVariable(target, new Square(RETRIEVE_INTEGER, variable));
   }
 
-  public static SetVariable refGet(String target, Value variable) {
-   return new SetVariable(target, new Square(RETRIEVE_UNTYPED, variable));
-  }
-
   public static Command stringSet(Value turbineDstVar, Expression src) {
     return new Command(STORE_STRING, turbineDstVar, src);
   }
 
   public static Command integerSet(Value turbineDstVar, Expression src) {
     return new Command(STORE_INTEGER, turbineDstVar, src);
+  }
+  
+  public static Command refSet(Value turbineDstVar, Expression src) {
+    return new Command(STORE_REF, turbineDstVar, src);
+  }
+  
+  public static Command fileRefSet(Value turbineDstVar, Expression src) {
+    return new Command(STORE_FILE_REF, turbineDstVar, src);
+  }
+  
+  public static Command structRefSet(Value dst, Expression src,
+                            Expression structType) {
+    return new Command(STORE_STRUCT_REF, dst, src, structType);
   }
   
   public static TclTree voidSet(Value voidVar) {
@@ -400,6 +421,36 @@ class Turbine {
   public static Command blobSet(Value target, Expression src) {
     // Calling convention requires separate pointer and length args
     return new Command(STORE_BLOB, target, src);
+  }
+
+  public static SetVariable refGet(String target, Value variable) {
+   return refDecrGet(target, variable, LiteralInt.ZERO);
+  }
+  
+  public static SetVariable refDecrGet(String target, Value variable,
+                                       Expression decr) {
+    return new SetVariable(target, new Square(ACQUIRE_REF, variable,
+                                               LiteralInt.ONE, decr));
+   }
+  
+  public static SetVariable fileRefGet(String target, Value variable) {
+    return fileRefDecrGet(target, variable, LiteralInt.ZERO);
+   }
+   
+   public static SetVariable fileRefDecrGet(String target, Value variable,
+                                        Expression decr) {
+     return new SetVariable(target, new Square(ACQUIRE_FILE_REF, variable,
+                                                LiteralInt.ONE, decr));
+  }
+   
+  public static SetVariable structRefGet(String target, Value variable) {
+    return fileRefDecrGet(target, variable, LiteralInt.ZERO);
+  }
+    
+  public static SetVariable structRefDecrGet(String target, Value variable,
+                                         Expression decr) {
+    return new SetVariable(target, new Square(ACQUIRE_STRUCT_REF, variable,
+                                                 LiteralInt.ONE, decr));
   }
 
   public static SetVariable integerDecrGet(String target, Value src,
@@ -719,23 +770,23 @@ class Turbine {
    * @param src
    */
   public static Sequence structInsert(String container, String field,
-                    String src) {
+                    Value src) {
     Sequence result = new Sequence();
     Command storeCmd = new Command(
         new Token("dict"), new Token("set"), 
-        new Token(container), new TclString(field, true), new Value(src));
+        new Token(container), new TclString(field, true), src);
   
     result.add(storeCmd);
     return result;
   
   }
 
-  public static Sequence structLookupFieldID(String structName, String structField,
+  public static Sequence structLookupFieldID(Value struct, String structField,
       String resultVar) {
     Sequence result = new Sequence();
 
     Square containerGet = new Square(new Token("dict"), new Token("get"),
-        new Value(structName), new TclString(structField, true));
+        struct, new TclString(structField, true));
 
     SetVariable loadCmd = new SetVariable(resultVar, containerGet);
     result.add(loadCmd);
@@ -743,13 +794,10 @@ class Turbine {
   }
 
 
-  public static Command structRefLookupFieldID(String structName, String structField,
-      String resultVar, String resultTypeName) { 
-    Command lookup = new Command(turbFn("struct_ref_lookup"),
-            new Value(structName), new TclString(structField, true),
-            new Value(resultVar), new TclString(resultTypeName, true));
-
-    return lookup;
+  public static Command structRefLookupFieldID(Value struct, int structFieldIx,
+      Value resultVar, TypeName refType) { 
+    return new Command(turbFn("struct_ref_lookup"),
+            struct, new LiteralInt(structFieldIx), resultVar, refType);
   }
 
 
@@ -760,19 +808,13 @@ class Turbine {
    * @param isArrayRef
    * @return
    */
-  public static Command arrayLookupImmIx(String refVar, 
-      boolean refIsString, String arrayVar,
-      Expression arrayIndex, boolean isArrayRef) {
-    Token refType = refIsString ?  new Token(STRING_TYPENAME) 
-                                : new Token(INTEGER_TYPENAME); 
-    
+  public static Command arrayLookupImmIx(Value refVar, TypeName refType,
+      Value arrayVar, Expression arrayIndex, boolean isArrayRef) {    
     // set up reference to point to array data
     if (isArrayRef) {
-      return new Command(CR_V_LOOKUP, new Value(arrayVar),
-          arrayIndex, new Value(refVar), refType);
+      return new Command(CR_V_LOOKUP, arrayVar, arrayIndex, refVar, refType);
     } else {
-      return new Command(C_REFERENCE, new Value(arrayVar),
-        arrayIndex, new Value(refVar), refType);
+      return new Command(C_REFERENCE, arrayVar, arrayIndex, refVar, refType);
     }
   }
 
@@ -780,10 +822,10 @@ class Turbine {
    * Lookup arrayVar[arrayIndex] right away, regardless of whether
    * it is closed
    */
-  public static SetVariable arrayLookupImm(String dst, String arrayVar,
+  public static SetVariable arrayLookupImm(String dst, Value arrayVar,
       Expression arrayIndex) {
     return new SetVariable(dst,
-        new Square(C_LOOKUP_CHECKED, new Value(arrayVar), arrayIndex));
+        new Square(C_LOOKUP_CHECKED, arrayVar, arrayIndex));
   }
 
   /**
@@ -794,18 +836,14 @@ class Turbine {
    * @param isArrayRef
    * @return
    */
-  public static Command arrayLookupComputed(String refVar,
-                          boolean refIsString,
-                          String arrayVar,
-                          String indexVar, boolean isArrayRef) {
-    Token refType = refIsString ?  new Token(STRING_TYPENAME) 
-                                : new Token(INTEGER_TYPENAME); 
+  public static Command arrayLookupComputed(Value refVar,
+                          TypeName refType,
+                          Value arrayVar,
+                          Value indexVar, boolean isArrayRef) { 
     if (isArrayRef) {
-      return new Command(CR_F_LOOKUP, new Value(arrayVar), new Value(indexVar),
-              new Value(refVar), refType);
+      return new Command(CR_F_LOOKUP, arrayVar, indexVar, refVar, refType);
     } else {
-      return new Command(C_F_LOOKUP, new Value(arrayVar), new Value(indexVar),
-             new Value(refVar), refType);
+      return new Command(C_F_LOOKUP, arrayVar, indexVar,refVar, refType);
     }
    }
 
@@ -829,102 +867,95 @@ class Turbine {
      return new Command(DEREFERENCE_FILE, dstVar, refVar);
    }
 
-  public static Command arrayStoreImmediate(String srcVar, String arrayVar,
-                              Expression arrayIndex, Expression writersDecr) {
-    return new Command(C_V_INSERT,
-        new Value(arrayVar), arrayIndex, new Value(srcVar), writersDecr);
+  public static Command arrayStoreImmediate(Value srcVar, Value arrayVar,
+                              Expression arrayIndex, Expression writersDecr,
+                              TypeName valType) {
+    return new Command(C_V_INSERT, arrayVar, arrayIndex, srcVar,
+                                    valType, writersDecr);
   }
 
-  public static Command arrayDerefStore(String srcRefVar, String arrayVar,
-      Expression arrayIndex, Expression writersDecr) {
-    return new Command(C_V_DEREF_INSERT, new Value(arrayVar),
-                      arrayIndex, new Value(srcRefVar),
-                       writersDecr, LiteralInt.FALSE);
+  public static Command arrayDerefStore(Value srcRefVar, Value arrayVar,
+      Expression arrayIndex, Expression writersDecr,
+      TypeName valType) {
+    return new Command(C_V_DEREF_INSERT, arrayVar, arrayIndex, srcRefVar,
+                       valType, writersDecr, LiteralInt.FALSE);
   }
 
-  public static Command arrayDerefStoreComputed(String srcRefVar, String arrayVar,
-      String indexVar, Expression writersDecr) {
-    return new Command(C_F_DEREF_INSERT, new Value(arrayVar),
-        new Value(indexVar), new Value(srcRefVar), writersDecr, LiteralInt.FALSE);
+  public static Command arrayDerefStoreComputed(Value srcRefVar,
+      Value arrayVar, Value indexVar, Expression writersDecr, TypeName valType) {
+    return new Command(C_F_DEREF_INSERT, arrayVar, indexVar, srcRefVar,
+        valType, writersDecr, LiteralInt.FALSE);
   }
 
-  public static Command arrayStoreComputed(String srcVar, String arrayVar,
-                                                    String indexVar, Expression writersDecr) {
+  public static Command arrayStoreComputed(Value srcVar, Value arrayVar,
+      Value indexVar, Expression writersDecr,
+                                  TypeName valType) {
     // Don't increment writers count, this is done in IC
-    return new Command(C_F_INSERT, new Value(arrayVar), new Value(indexVar),
-        new Value(srcVar), writersDecr, LiteralInt.FALSE);
+    return new Command(C_F_INSERT, arrayVar, indexVar, srcVar, valType,
+                                    writersDecr, LiteralInt.FALSE);
   }
 
-  public static Command arrayRefStoreImmediate(String srcVar, String arrayVar,
-      Expression arrayIndex, String outerArray) {
-    return new Command(CR_V_INSERT,
-                    new Value(arrayVar), arrayIndex, new Value(srcVar),
-                    new Value(outerArray),
-                    LiteralInt.FALSE);
+  public static Command arrayRefStoreImmediate(Value srcVar, Value arrayVar,
+      Expression arrayIndex, Value outerArray,
+      TypeName valType) {
+    return new Command(CR_V_INSERT, arrayVar, arrayIndex, srcVar,
+                    valType,  outerArray, LiteralInt.FALSE);
   }
 
 
-  public static Command arrayRefStoreComputed(String srcVar, String arrayVar,
-      String indexVar, String outerArray) {
-    return new Command(CR_F_INSERT,new Value(arrayVar), new Value(indexVar),
-        new Value(srcVar), new Value(outerArray), LiteralInt.FALSE);
+  public static Command arrayRefStoreComputed(Value srcVar, Value arrayVar,
+      Value indexVar, Value outerArray, TypeName valType) {
+    return new Command(CR_F_INSERT, arrayVar, indexVar, srcVar,
+        valType, outerArray, LiteralInt.FALSE);
   }
 
-  public static Command arrayRefDerefStore(String srcRefVar, String arrayVar,
-      Expression arrayIndex, String outerArrayVar) {
-    return new Command(CR_V_DEREF_INSERT, new Value(arrayVar),
-        arrayIndex, new Value(srcRefVar), new Value(outerArrayVar), LiteralInt.FALSE);
+  public static Command arrayRefDerefStore(Value srcRefVar, Value arrayVar,
+      Expression arrayIndex, Value outerArrayVar, TypeName valType) {
+    return new Command(CR_V_DEREF_INSERT, arrayVar, arrayIndex, 
+        srcRefVar, valType, outerArrayVar, LiteralInt.FALSE);
   }
 
-  public static Command arrayRefDerefStoreComputed(String srcRefVar, String arrayVar,
-      String indexVar, String outerArrayVar) {
-    return new Command(CR_F_DEREF_INSERT, new Value(arrayVar),
-        new Value(indexVar), new Value(srcRefVar), new Value(outerArrayVar),
-                                    LiteralInt.FALSE);
+  public static Command arrayRefDerefStoreComputed(Value srcRefVar,
+      Value arrayVar, Value indexVar, Value outerArrayVar, TypeName valType) {
+    return new Command(CR_F_DEREF_INSERT, arrayVar, indexVar, srcRefVar,
+        valType, outerArrayVar, LiteralInt.FALSE);
   }
 
-  public static TclTree containerCreateNested(String resultVar,
-        String containerVar, String indexVar) {
-    return new Command(C_F_CREATE_NESTED,
-            new Token(resultVar), new Value(containerVar),
-            new Value(indexVar), new Token(INTEGER_TYPENAME));
+  public static TclTree containerCreateNested(Value resultVar,
+      Value containerVar, Value indexVar, TypeName valType) {
+    return new Command(C_F_CREATE_NESTED, resultVar,
+            containerVar, indexVar, ADLB_INT_TYPE, valType);
   }
 
-  public static TclTree containerRefCreateNested(String resultVar,
-      Value containerVar, Value indexVar, Value outerArr) {
+  public static TclTree containerRefCreateNested(Value resultVar,
+      Value containerVar, Value indexVar, Value outerArr, TypeName valType) {
     return new Command(CR_F_CREATE_NESTED,
-          new Token(resultVar), containerVar,
-          indexVar, new Token(INTEGER_TYPENAME), outerArr, LiteralInt.FALSE);
+          resultVar, containerVar,
+          indexVar, ADLB_INT_TYPE, valType, outerArr, LiteralInt.FALSE);
   }
 
-  public static TclTree containerRefCreateNestedImmIx(String resultVar,
-      String containerVar, Expression arrIx, Value outerArr) {
-    return new Command(CR_V_CREATE_NESTED,
-        new Token(resultVar), new Value(containerVar),
-        arrIx, new Token(INTEGER_TYPENAME), outerArr, LiteralInt.FALSE);
+  public static TclTree containerRefCreateNestedImmIx(Value resultVar,
+      Value containerVar, Expression arrIx, Value outerArr,
+      TypeName valType) {
+    return new Command(CR_V_CREATE_NESTED, resultVar, containerVar,
+        arrIx, ADLB_INT_TYPE, valType, outerArr, LiteralInt.FALSE);
   }
 
   public static TclTree containerCreateNestedImmIx(String resultVar,
-      String containerVar, Expression arrIx) {
+      Value containerVar, Expression arrIx, TypeName valType,
+      Expression callerReadRefs, Expression callerWriteRefs) {
     return new SetVariable(resultVar,
         new Square(C_V_CREATE_NESTED,
-            new Value(containerVar), arrIx, new Token(INTEGER_TYPENAME)));
+            containerVar, arrIx, ADLB_INT_TYPE, valType,
+            callerReadRefs, callerWriteRefs));
   }
 
-  public static TclTree containerSlotCreate(Value arr) {
-    return new Command(C_SLOT_CREATE, arr);
+  public static TclTree incrWriters(Value arr, Expression incr) {
+    return new Command(WRITE_REFCOUNT_INCR, arr, incr);
   }
   
-  public static TclTree containerSlotCreate(Value arr, Expression incr) {
-    return new Command(C_SLOT_CREATE, arr, incr);
-  }
-
-  public static TclTree decrArrayWriters(Value arr) {
-    return new Command(C_SLOT_DROP, arr);
-  }
-  
-  public static TclTree containerSlotDrop(Value arr, Expression decr) {
-    return new Command(C_SLOT_DROP, arr, decr);
+  public static TclTree decrWriters(Value arr, Expression decr) {
+    return new Command(WRITE_REFCOUNT_DECR, arr, decr);
   }
   
   public static Command enableReferenceCounting() {
@@ -1085,7 +1116,7 @@ class Turbine {
   }
 
   public static TclTree declareReference(String refVarName) {
-    return allocate(refVarName, INTEGER_TYPENAME);
+    return allocate(refVarName, ADLB_INT_TYPE);
   }
 
   public static TclTree callFunctionSync(String function,
@@ -1212,9 +1243,9 @@ class Turbine {
   }
   
   public static Command arrayBuild(Value array, List<Expression> arrMemExprs,
-      boolean close) {
+      boolean close, TypeName valType) {
     return new Command(ARRAY_BUILD, array, new TclList(arrMemExprs),
-                       LiteralInt.boolValue(close));
+                       LiteralInt.boolValue(close), valType);
   }
   
   public static Command batchDeclare(List<String> batchedVarNames,
@@ -1236,4 +1267,10 @@ class Turbine {
   public static Command log(TclString logMsg) {
     return new Command(TURBINE_LOG, logMsg);
   }
+
+  public static TclTree structRefSet(Value varToExpr, Value varToExpr2, int i) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
 }

@@ -1,5 +1,6 @@
 package exm.stc.common.util;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -36,6 +37,12 @@ public class Counters<K> {
     map.remove(key);
   }
 
+  public void resetAll(Collection<K> keys) {
+    for (K key: keys) {
+      reset(key);
+    }
+  }
+  
   public void resetAll() {
     map.clear();
   }

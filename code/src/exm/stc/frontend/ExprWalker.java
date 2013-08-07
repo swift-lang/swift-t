@@ -26,6 +26,7 @@ import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.CompilerBackend.WaitMode;
+import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -220,11 +221,12 @@ public class ExprWalker {
     if (tree.getType() == ExMParser.STRUCT_LOAD
           && Types.isStruct(
                 TypeChecker.findSingleExprType(context, tree.child(0)))) {
-      return lookupStructField(context, tree, type, storeInStack, null, 
+      return lookupStructField(context, tree, type, storeInStack, null,
                                                                renames);
-    } else {
+    } else { 
       Var tmp = varCreator.createTmp(context, type, storeInStack, false);
-
+      LogHelper.debug(context, "Create tmp " + tmp + " to eval expr " +
+                      LogHelper.tokName(tree.getType()));
       ArrayList<Var> childOList = new ArrayList<Var>(1);
       childOList.add(tmp);
       evalToVars(context, tree, childOList, renames);
@@ -277,13 +279,14 @@ public class ExprWalker {
                 src, dst, type);
     } else if (Types.isArray(type)) {
       copyArrayByValue(context, dst, src);
+    } else if (Types.isRef(type)) {
+      copyRefByValue(context, src, dst, type);
     } else {
       throw new STCRuntimeError(context.getFileLine() +
           " copying type " + type + " by value not yet "
           + " supported by compiler");
     }
   }
-
 
   /**
    * 
@@ -301,29 +304,46 @@ public class ExprWalker {
    */
   public Var structLookup(Context context, Var structVar,
       String fieldName, boolean storeInStack, Var rootStruct,
-      List<String> fieldPath) throws UserException,
+      List<String> fieldPath, Var outVar) throws UserException,
       UndefinedTypeException {
     assert(rootStruct != null);
     assert(fieldPath != null);
     assert(fieldPath.size() > 0);
     Type memType = TypeChecker.findStructFieldType(context, fieldName,
                                                     structVar.type());
-    Var tmp;
+    Var result;
     if (Types.isStructRef(structVar.type())) {
-      tmp = varCreator.createStructFieldTmp(context, 
-          rootStruct, new RefType(memType),
-          fieldPath, VarStorage.TEMP);
-      backend.structRefLookup(tmp, structVar, fieldName);
+      RefType resultType = new RefType(memType);
+      if (outVar == null || !resultType.assignableTo(outVar.type())) {
+        result = varCreator.createStructFieldTmp(context, 
+            rootStruct, resultType,
+            fieldPath, VarStorage.TEMP); 
+      } else {
+        result = outVar;
+      }
+      backend.structRefLookup(result, structVar, fieldName);
     } else {
       assert(Types.isStruct(structVar.type()));
-      tmp = varCreator.createStructFieldTmp(context, 
+      result = varCreator.createStructFieldTmp(context, 
           rootStruct, memType, fieldPath, VarStorage.ALIAS);
-      backend.structLookup(tmp, structVar, fieldName);
+      backend.structLookup(result, structVar, fieldName);
     }
-    return tmp;
-    
+
+    // If necessary, copy result to outVar
+    if (result == outVar) {
+      return outVar;
+    } else {
+      return derefOrCopyResult(context, result, outVar);
+    }
   }
 
+  public Var structLookup(Context context, Var structVar,
+      String fieldName, boolean storeInStack, Var rootStruct,
+      List<String> fieldPath) throws UserException, UndefinedTypeException {
+    return structLookup(context, structVar, fieldName, storeInStack,
+                        rootStruct, fieldPath, null);
+  }
+  
   /**
    * Dereference src into dst
    * ie. dst = *src
@@ -564,7 +584,7 @@ public class ExprWalker {
     for (Type altType: UnionType.getAlternatives(arrExprType)) {
       assert(Types.isArray(altType) || Types.isArrayRef(altType));
       Type lookupRes = TypeChecker.dereferenceResultType(
-                                Types.getArrayMemberType(altType));
+                                Types.arrayMemberType(altType));
       if (lookupRes.equals(oVar.type())) {
         arrType = altType;
         break;
@@ -579,7 +599,7 @@ public class ExprWalker {
     Var arrayVar = eval(context, arrayTree, arrType,
                                       false, renames);
 
-    Type memberType = Types.getArrayMemberType(arrType);
+    Type memberType = Types.arrayMemberType(arrType);
 
     // Any integer expression can index into array
     SwiftAST arrayIndexTree = tree.child(1);
@@ -644,7 +664,8 @@ public class ExprWalker {
       Type type, boolean storeInStack, Var outVar, 
       Map<String, String> renames) throws UndefinedTypeException,
       UserException {
-
+    LogHelper.debug(context, "Eval struct lookup into " + outVar);
+    
     if (storeInStack) {
       throw new STCRuntimeError("Dont know how to store results of "
           + " struct lookup in stack");
@@ -694,22 +715,28 @@ public class ExprWalker {
       rootStruct = parent;
       pathFromRoot = Arrays.asList(fieldName);
     }
-    Var tmp = structLookup(context, parent, fieldName,
-        storeInStack, rootStruct, pathFromRoot);
-    return derefOrCopyResult(context, tmp, outVar);
+
+    return structLookup(context, parent, fieldName,
+        storeInStack, rootStruct, pathFromRoot, outVar);
   }
 
   
   private Var derefOrCopyResult(Context context, Var lookupResult,
       Var outVar) throws UndefinedTypeException, UserException {
-    if (outVar == null) {
-      return lookupResult;
-    } else if (Types.isRefTo(lookupResult.type(), outVar.type())) {
-      dereference(context, outVar, lookupResult);
-      return outVar;
-    } else {
-      copyByValue(context, lookupResult, outVar, outVar.type());
-      return outVar;
+    try {
+      if (outVar == null) {
+        return lookupResult;
+      } else if (Types.isRefTo(lookupResult.type(), outVar.type())) {
+        dereference(context, outVar, lookupResult);
+        return outVar;
+      } else {
+        copyByValue(context, lookupResult, outVar, outVar.type());
+        return outVar;
+      }
+    } catch (RuntimeException e) {
+      Logging.getSTCLogger().debug("Failure while trying to get " +
+                                    lookupResult + " into " + outVar);
+      throw e;
     }
   }
 
@@ -986,7 +1013,7 @@ public class ExprWalker {
     assert(Types.isArray(src.type()));
     LocalContext copyContext = new LocalContext(context);
     Type t = src.type();
-    Type memType = Types.getArrayMemberType(t);
+    Type memType = Types.arrayMemberType(t);
     Var member = copyContext.createAliasVariable(memType);
     Var ix = copyContext.createLocalValueVariable(Types.V_INT);
     
@@ -1031,6 +1058,18 @@ public class ExprWalker {
       }
       srcPath.pop(); dstPath.pop();
     }
+  }
+  
+
+  private void copyRefByValue(Context context, Var src, Var dst, Type type)
+      throws UserException, UndefinedTypeException {
+    backend.startWaitStatement(
+        context.getFunctionContext().constructName("copy-ref-wait"),
+        src.asList(), WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
+    Var srcVal = varCreator.createTmpAlias(context, type.memberType());
+    backend.retrieveRef(srcVal, src);
+    backend.assignReference(dst, srcVal);
+    backend.endWaitStatement();
   }
 
   /**

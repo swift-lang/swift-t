@@ -526,12 +526,12 @@ public class Types {
     }
 
     public static ScalarFutureType asScalarFuture(Type upType) {
-      assert(Types.isScalarUpdateable(upType));
+      assert(isScalarUpdateable(upType));
       return new ScalarFutureType(upType.primType());
     }
     
     public static ScalarValueType asScalarValue(Type valType) {
-      assert(Types.isScalarUpdateable(valType));
+      assert(isScalarUpdateable(valType));
       return new ScalarValueType(valType.primType());
     }
 
@@ -572,7 +572,7 @@ public class Types {
     }
     
     public static List<Type> getAlternatives(Type type) {
-      if (Types.isUnion(type)) {
+      if (isUnion(type)) {
         return ((UnionType)type).getAlternatives();
       } else {
         return Collections.singletonList(type);
@@ -669,7 +669,7 @@ public class Types {
 
     @Override
     public boolean assignableTo(Type other) {
-      if (Types.isUnion(other)) { 
+      if (isUnion(other)) { 
         UnionType otherUnion = (UnionType)other;
         // Check if subset
         for (Type alt: this.alts) {
@@ -862,7 +862,17 @@ public class Types {
    * constructed out of scalar types, arrays, and structures.
    *
    */
-  public abstract static class Type {
+  public abstract static class Type implements Typed {
+    
+    /**
+     * For Typed interface
+     * @return
+     */
+    @Override
+    public Type type() {
+      return this;
+    }
+    
     public abstract StructureType structureType();
 
     /**
@@ -1193,6 +1203,14 @@ public class Types {
     
   }
   
+  /**
+   * Interface for something that can be typechecked.  This is mainly
+   * for convenience, allowing utility functions to accept different types 
+   */
+  public static interface Typed {
+    public Type type();
+  }
+  
   public static Map<String, Type> getBuiltInTypes() {
     return Collections.unmodifiableMap(nativeTypes);
   }
@@ -1202,8 +1220,8 @@ public class Types {
    * @param t
    * @return
    */
-  public static boolean isArray(Type t) {
-    return t.structureType() == StructureType.ARRAY;
+  public static boolean isArray(Typed t) {
+    return t.type().structureType() == StructureType.ARRAY;
   }
 
   /**
@@ -1211,27 +1229,26 @@ public class Types {
    * @param t
    * @return
    */
-  public static boolean isArrayRef(Type t) {
-    return t.structureType() == StructureType.REFERENCE &&
-        t.memberType().structureType() == StructureType.ARRAY;
+  public static boolean isArrayRef(Typed t) {
+    return isRef(t) && Types.isArray(t.type().memberType());
   }
 
   /**
    * Convenience function to get member type of array or array ref
    */
-  public static Type getArrayMemberType(Type arrayT) {
+  public static Type arrayMemberType(Typed arrayT) {
     if (isArray(arrayT)) {
-      return arrayT.memberType();
+      return arrayT.type().memberType();
     } else if (isArrayRef(arrayT)) {
-      return arrayT.memberType().memberType();
+      return arrayT.type().memberType().memberType();
     } else {
-      throw new STCRuntimeError("called getArrayMemberType on non-array"
+      throw new STCRuntimeError("called arrayMemberType on non-array"
           + " type " + arrayT.toString());
     }
   }
 
-  public static boolean isMemberType(Var member, Var arr) {
-    Type memberType = Types.getArrayMemberType(arr.type());
+  public static boolean isMemberType(Typed member, Typed arr) {
+    Type memberType = arrayMemberType(arr.type());
     return (member.type().assignableTo(memberType));
   }
   
@@ -1243,12 +1260,13 @@ public class Types {
    * @throws STCRuntimeError if member can't be a member or ref to 
    *                                      member of array
    */
-  public static boolean isMemberReference(Var member, Var arr) 
+  public static boolean isMemberReference(Typed member,
+                                          Typed arr) 
           throws STCRuntimeError{
-    Type memberType = Types.getArrayMemberType(arr.type());
+    Type memberType = arrayMemberType(arr);
     if (memberType.equals(member.type())) {
       return false;
-    } else if (Types.isRefTo(member.type(), memberType)) {
+    } else if (isRefTo(member, memberType)) {
       return true;
     }
     throw new STCRuntimeError("Inconsistent types: array of type " 
@@ -1257,7 +1275,7 @@ public class Types {
 
 
   
-  public static boolean isFuture(Type t) {
+  public static boolean isFuture(Typed t) {
     return isScalarFuture(t) || isRef(t);
   }
   
@@ -1266,118 +1284,114 @@ public class Types {
    * @param t
    * @return
    */
-  public static boolean isScalarFuture(Type t) {
-    return t.structureType() == StructureType.SCALAR_FUTURE;
+  public static boolean isScalarFuture(Typed t) {
+    return t.type().structureType() == StructureType.SCALAR_FUTURE;
   }
 
-  public static boolean isScalarValue(Type t) {
-    return t.structureType() == StructureType.SCALAR_VALUE;
+  public static boolean isScalarValue(Typed t) {
+    return t.type().structureType() == StructureType.SCALAR_VALUE;
   }
   
-  public static boolean isScalarUpdateable(Type t) {
-    return t.structureType() == StructureType.SCALAR_UPDATEABLE;
+  public static boolean isScalarUpdateable(Typed t) {
+    return t.type().structureType() == StructureType.SCALAR_UPDATEABLE;
   }
 
-  public static boolean isRef(Type t) {
-    return t.structureType() == StructureType.REFERENCE;
+  public static boolean isRef(Typed t) {
+    return t.type().structureType() == StructureType.REFERENCE;
   }
 
-  public static boolean isStruct(Type t) {
-    return t.structureType() == StructureType.STRUCT;
+  public static boolean isStruct(Typed t) {
+    return t.type().structureType() == StructureType.STRUCT;
   }
   
-  public static boolean isStructRef(Type t) {
-    return t.structureType() == StructureType.REFERENCE 
-                            && Types.isStruct(t.memberType());
+  public static boolean isStructRef(Typed t) {
+    return isRef(t) && isStruct(t.type().memberType());
   }
   
-  public static boolean isFileRef(Type t) {
-    return t.structureType() == StructureType.REFERENCE
-        && Types.isFile(t.memberType());
+  public static boolean isFileRef(Typed t) {
+    return isRef(t) && isFile(t.type().memberType());
   }
 
-  public static boolean isBool(Type t) {
-    return isScalarFuture(t) && t.primType() == PrimType.BOOL;
+  public static boolean isBool(Typed t) {
+    return isScalarFuture(t) && t.type().primType() == PrimType.BOOL;
   }
   
-  public static boolean isInt(Type t) {
-    return isScalarFuture(t) && t.primType() == PrimType.INT;
+  public static boolean isInt(Typed t) {
+    return isScalarFuture(t) && t.type().primType() == PrimType.INT;
   }
 
-  public static boolean isFloat(Type t) {
-    return isScalarFuture(t) && t.primType() == PrimType.FLOAT;
+  public static boolean isFloat(Typed t) {
+    return isScalarFuture(t) && t.type().primType() == PrimType.FLOAT;
   }
 
-  public static boolean isString(Type t) {
-    return isScalarFuture(t) && t.primType() == PrimType.STRING;
+  public static boolean isString(Typed t) {
+    return isScalarFuture(t) && t.type().primType() == PrimType.STRING;
   }
   
-  public static boolean isVoid(Type t) {
-    return isScalarFuture(t) && t.primType() == PrimType.VOID;
+  public static boolean isVoid(Typed t) {
+    return isScalarFuture(t) && t.type().primType() == PrimType.VOID;
   }
 
-  public static boolean isFile(Type t) {
-    return isScalarFuture(t) && t.primType() == PrimType.FILE;
+  public static boolean isFile(Typed t) {
+    return isScalarFuture(t) && t.type().primType() == PrimType.FILE;
   }
   
-  public static boolean isBlob(Type t) {
-    return isScalarFuture(t) && t.primType() == PrimType.BLOB;
+  public static boolean isBlob(Typed t) {
+    return isScalarFuture(t) && t.type().primType() == PrimType.BLOB;
   }
 
-  public static boolean isRefTo(Type refType, Type valType) {
-    return isRef(refType) && refType.memberType().equals(valType);
+  public static boolean isRefTo(Typed refType,
+                                Typed valType) {
+    return isRef(refType) && 
+           refType.type().memberType().equals(valType.type());
   }
   
-  public static boolean isUpdateableEquiv(Type up, Type future) {
+  public static boolean isUpdateableEquiv(Typed up,
+                                          Typed future) {
     return isScalarFuture(future) && isScalarUpdateable(up) && 
-                      future.primType() == up.primType();
+              future.type().primType() == up.type().primType();
   }
   
-  public static Type derefResultType(Type future) {
-    if (future.structureType() == StructureType.SCALAR_FUTURE
-          || future.structureType() == StructureType.SCALAR_UPDATEABLE) {
-      return new ScalarValueType(future.primType());
-    } else if (future.structureType() == StructureType.REFERENCE) {
-      return future.memberType();
+  public static Type derefResultType(Typed t) {
+    if (isScalarFuture(t) || isScalarUpdateable(t))  {
+      return new ScalarValueType(t.type().primType());
+    } else if (isRef(t)) {
+      return t.type().memberType();
     } else {
-      throw new STCRuntimeError(future.toString() + " can't "
-          + " be dereferenced");
+      throw new STCRuntimeError(t.type() + " can't be dereferenced");
     }
-    
   }
   
   /**
    * Is it a type we can map to a file?
    */
-  public static boolean isMappable(Type t) {
+  public static boolean isMappable(Typed t) {
     // We can only map files right now..
-    return t.equals(F_FILE);
+    return t.type().assignableTo(F_FILE);
   }
 
-  public static boolean isUnion(Type type) {
-    return type.structureType() == StructureType.TYPE_UNION;
+  public static boolean isUnion(Typed type) {
+    return type.type().structureType() == StructureType.TYPE_UNION;
   }
   
-  public static boolean isTypeVar(Type type) {
-    return type.structureType() == StructureType.TYPE_VARIABLE;
+  public static boolean isTypeVar(Typed type) {
+    return type.type().structureType() == StructureType.TYPE_VARIABLE;
   }
 
-  public static boolean isPolymorphic(Type type) {
-    return type.structureType() == StructureType.TYPE_UNION ||
-        type.structureType() == StructureType.TYPE_VARIABLE;
+  public static boolean isPolymorphic(Typed type) {
+    return isUnion(type) || isTypeVar(type);
   }
   
-  public static boolean isFunction(Type type) {
-    return type.structureType() == StructureType.FUNCTION;
+  public static boolean isFunction(Typed type) {
+    return type.type().structureType() == StructureType.FUNCTION;
   }
 
-  public static boolean isWildcard(Type argType) {
-    return argType.structureType() == StructureType.WILDCARD;
+  public static boolean isWildcard(Typed argType) {
+    return argType.type().structureType() == StructureType.WILDCARD;
   }
 
-  public static boolean isPiecewiseAssigned(Type type) {
-    return Types.isArray(type) || Types.isArrayRef(type) ||
-           Types.isStruct(type);
+  public static boolean isPiecewiseAssigned(Typed type) {
+    return isArray(type) || isArrayRef(type) || isStruct(type);
   }
 
   /**
@@ -1385,7 +1399,7 @@ public class Types {
    * @return true if there is a side-channel of information in the variable
    *            that needs to be read
    */
-  public static boolean hasReadableSideChannel(Type type) {
+  public static boolean hasReadableSideChannel(Typed type) {
     // Currently only file is in this category
     return isFile(type);
   }
@@ -1419,12 +1433,13 @@ public class Types {
     public final int nesting;
   }
   
-  public static boolean listsEqual(List<Type> a, List<Type> b) {
+  public static boolean listsEqual(List<? extends Typed> a,
+                                   List<? extends Typed> b) {
     if (a.size() != b.size()) {
       return false;
     }
     for (int i = 0; i < a.size(); i++) {
-      if (!a.get(i).equals(b.get(i))) {
+      if (!a.get(i).type().equals(b.get(i).type())) {
         return false;
       }
     }
@@ -1463,7 +1478,7 @@ public class Types {
   /**
    * Represents location of execution 
    */
-  public static final Type F_LOCATION = new SubType(Types.F_INT, "location");
+  public static final Type F_LOCATION = new SubType(F_INT, "location");
   public static final Type V_LOCATION = V_INT; // Internally is int
 
   

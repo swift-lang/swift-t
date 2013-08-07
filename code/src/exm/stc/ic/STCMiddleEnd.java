@@ -41,6 +41,7 @@ import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
@@ -121,6 +122,12 @@ public class STCMiddleEnd {
 
   public void requirePackage(String pkg, String version) {
     program.addRequiredPackage(pkg, version);
+  }
+  
+
+
+  public void defineStructType(StructType newType) {
+    program.addStructType(newType);
   }
   
   public void defineBuiltinFunction(String name,
@@ -430,17 +437,37 @@ public class STCMiddleEnd {
 
   public void arrayInsertFuture(Var array, Var ix,
       Var member) {
+    assert(Types.isArray(array.type()));
     assert(Types.isInt(ix.type()));
+    assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
     currBlock().addInstruction(
         TurbineOp.arrayInsertFuture(array, ix, member));
+  }
+  
+  public void arrayDerefInsertFuture(Var array, Var ix,
+      Var member) {
+    assert(Types.isRefTo(member.type(), Types.arrayMemberType(array.type())));
+    assert(Types.isInt(ix.type()));
+    currBlock().addInstruction(
+        TurbineOp.arrayDerefInsertFuture(array, ix, member));
   }
 
   public void arrayRefInsertFuture(Var outerArray,
       Var array, Var ix, Var member) {
     assert(Types.isInt(ix.type()));
     assert(Types.isArrayRef(array.type()));
+    assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
     currBlock().addInstruction(
         TurbineOp.arrayRefInsertFuture(outerArray, array, ix, member));
+  }
+  
+  public void arrayRefDerefInsertFuture(Var outerArray,
+      Var array, Var ix, Var member) {
+    assert(Types.isInt(ix.type()));
+    assert(Types.isArrayRef(array.type()));
+    assert(Types.isRefTo(member.type(), Types.arrayMemberType(array.type())));
+    currBlock().addInstruction(
+        TurbineOp.arrayRefDerefInsertFuture(outerArray, array, ix, member));
   }
   
   public void arrayBuild(Var array, List<Var> members) {
@@ -452,19 +479,38 @@ public class STCMiddleEnd {
         TurbineOp.arrayBuild(array, members));
   }
   
-  public void arrayInsertImm(Var arrayVar, Arg ix,
-      Var member) {
+  public void arrayInsertImm(Var array, Arg ix, Var member) {
+    assert(Types.isArray(array.type()));
     assert(ix.isImmediateInt());
+    assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
     currBlock().addInstruction(
-        TurbineOp.arrayInsertImm(arrayVar, ix, member));
+        TurbineOp.arrayInsertImm(array, ix, member));
+  }
+  
+  public void arrayDerefInsertImm(Var array, Arg ix, Var member) {
+    assert(Types.isArray(array.type()));
+    assert(ix.isImmediateInt());
+    assert(Types.isRefTo(member.type(), Types.arrayMemberType(array.type())));
+    currBlock().addInstruction(
+        TurbineOp.arrayDerefInsertImm(array, ix, member));
   }
   
   public void arrayRefInsertImm(Var outerArray, Var array,
           Arg ix, Var member) {
     assert(ix.isImmediateInt());
     assert(Types.isArrayRef(array.type()));
+    assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
     currBlock().addInstruction(
         TurbineOp.arrayRefInsertImm(outerArray, array, ix, member));
+  }
+  
+  public void arrayRefDerefInsertImm(Var outerArray, Var array,
+      Arg ix, Var member) {
+    assert(ix.isImmediateInt());
+    assert(Types.isArrayRef(array.type()));
+    assert(Types.isRefTo(member.type(), Types.arrayMemberType(array.type())));
+    currBlock().addInstruction(
+        TurbineOp.arrayRefDerefInsertImm(outerArray, array, ix, member));
   }
 
   public void arrayCreateNestedFuture(Var arrayResult,
@@ -723,10 +769,6 @@ public class STCMiddleEnd {
     assert(result.storage() != VarStorage.ALIAS);
     currBlock().addInstruction(
         TurbineOp.structRefLookup(result, structVar, structField));
-  }
-
-  public void structClose(Var struct) {
-    currBlock().addInstruction(TurbineOp.structClose(struct));
   }
 
   public void structInsert(Var structVar, String fieldName,

@@ -30,6 +30,8 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.CompilerBackend.WaitMode;
+import exm.stc.common.Settings;
+import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
@@ -232,6 +234,15 @@ public class ICContinuations {
     }
     
     /**
+     * Only applies to async continuations
+     * @return List of all variables that are used within continuation,
+     *    including those that aren't directly referred to
+     */
+    public Collection<PassedVar> getAllPassedVars() {
+      throw new STCRuntimeError("not implemented");
+    }
+    
+    /**
      * Only applies to async continuations 
      * @return List of variables kept open in this scope.
      *        empty list means none 
@@ -339,6 +350,14 @@ public class ICContinuations {
       // default
       return false;
     }
+
+    /**
+     * @return any variables that must be passed in even if they don't appear
+     *        in any blocks within in the continuation
+     */
+    public List<PassedVar> getMustPassVars() {
+      return PassedVar.NONE;
+    }
   }
 
   public enum ContinuationType {
@@ -399,6 +418,12 @@ public class ICContinuations {
     public Collection<PassedVar> getPassedVars() {
       return Collections.unmodifiableList(this.passedVars);
     }
+    
+    public Collection<PassedVar> getAllPassedVars() {
+      // By default, no extras
+      return getPassedVars();
+    }
+    
     @Override
     public void setPassedVars(Collection<PassedVar> passedVars) {
       this.passedVars.clear();
@@ -738,6 +763,14 @@ public class ICContinuations {
       return defVars;
     }
 
+    /**
+     * Return all per-iteration vars defined within continuation
+     * @return
+     */
+    public List<Var> getLoopVars() {
+      return Collections.unmodifiableList(this.loopVars);
+    }
+
     @Override
     public List<BlockingVar> blockingVars(boolean includeConstructDefined) {
       ArrayList<BlockingVar> res = new ArrayList<BlockingVar>();
@@ -765,14 +798,26 @@ public class ICContinuations {
       this.loopBreak.setKeepOpenVars(keepOpen);
     }
     
+    public Collection<PassedVar> getAllPassedVars() {
+      // Initial vals of loop vars are also passed in
+      List<PassedVar> result = new ArrayList<PassedVar>();
+      result.addAll(passedVars);
+      for (Var initVal: initVals) {
+        result.add(new PassedVar(initVal, false));
+      }
+      return result;
+    }
+    
+    
     public Var getInitCond() {
       return this.initVals.get(0);
     }
-
+    
     @Override
     public ExecContext childContext(ExecContext outerContext) {
       return outerContext;
     }
+
   }
   
   public static class NestedBlock extends Continuation {
@@ -1153,6 +1198,22 @@ public class ICContinuations {
         }
       }
       return res; // can later eliminate waitVars, etc
+    }
+    
+    public List<PassedVar> getMustPassVars() {
+      try {
+        if (Settings.getBoolean(Settings.MUST_PASS_WAIT_VARS)) {
+          List<PassedVar> res = new ArrayList<PassedVar>();
+          for (WaitVar wv: waitVars) {
+            res.add(new PassedVar(wv.var, false));
+          }
+          return res;
+        } else {
+          return PassedVar.NONE;
+        }
+      } catch (InvalidOptionException e) {
+        throw new STCRuntimeError(e.getMessage());
+      }
     }
 
     public List<WaitVar> getWaitVars() {

@@ -203,11 +203,16 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.LOAD_FILE);
     opcodes.add(Opcode.ARRAY_CREATE_NESTED_IMM);
     opcodes.add(Opcode.ARRAY_INSERT_FUTURE);
+    opcodes.add(Opcode.ARRAY_DEREF_INSERT_FUTURE);
     opcodes.add(Opcode.ARRAY_LOOKUP_FUTURE);
     opcodes.add(Opcode.ARRAY_INSERT_IMM);
+    opcodes.add(Opcode.ARRAY_DEREF_INSERT_IMM);
     opcodes.add(Opcode.ARRAY_LOOKUP_IMM);
     opcodes.add(Opcode.ARRAY_LOOKUP_REF_IMM);
     opcodes.add(Opcode.ARRAYREF_INSERT_IMM);
+    opcodes.add(Opcode.ARRAYREF_DEREF_INSERT_IMM);
+    opcodes.add(Opcode.ARRAYREF_INSERT_FUTURE);
+    opcodes.add(Opcode.ARRAYREF_DEREF_INSERT_FUTURE);
     opcodes.add(Opcode.COPY_REF);
     opcodes.add(Opcode.LOCAL_OP);
     return opcodes;

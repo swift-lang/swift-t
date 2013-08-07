@@ -47,6 +47,7 @@ import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
@@ -84,6 +85,7 @@ public class ICTree {
   public static final String indent = ICUtil.indent;
   
   public static class Program {
+
     /**
      * Use treemap to keep them in alpha order
      */
@@ -99,10 +101,9 @@ public class ICTree {
     private final ArrayList<Function> functions = new ArrayList<Function>();
     private final ArrayList<BuiltinFunction> builtinFuns = new ArrayList<BuiltinFunction>();
     private final Set<Pair<String, String>> required = new HashSet<Pair<String, String>>();
-  
+    private final List<StructType> structTypes = new ArrayList<StructType>();
     public void generate(Logger logger, CompilerBackend gen)
         throws UserException {
-      
       Map<String, List<Boolean>> blockVectors = new 
               HashMap<String, List<Boolean>> (functions.size());
       for (Function f: functions) {
@@ -121,6 +122,12 @@ public class ICTree {
         gen.requirePackage(req.val1, req.val2);
       }
       logger.debug("Done generating required packages");
+      
+      logger.debug("generating struct types");
+      for (StructType st: structTypes) {
+        gen.declareStructType(st);
+      }
+      logger.debug("Done generating struct types");
   
       logger.debug("Generating builtins");
       for (BuiltinFunction f: builtinFuns) {
@@ -152,6 +159,10 @@ public class ICTree {
       required.add(Pair.create(pkg, version));
     }
   
+    public void addStructType(StructType newType) {
+      structTypes.add(newType);
+    }
+
     public void addBuiltin(BuiltinFunction fn) {
       this.builtinFuns.add(fn);
     }
@@ -282,6 +293,10 @@ public class ICTree {
     public void prettyPrint(StringBuilder out) {
       for (Pair<String, String> req: required) {
         out.append("require " + req.val1 + "::" + req.val2 + "\n");
+      }
+      
+      for (StructType st: structTypes) {
+        out.append(st.toString() + "\n");
       }
       
       for (Entry<String, Arg> constE: globalConsts.entrySet()) {
@@ -858,7 +873,7 @@ public class ICTree {
           if (initReaders == null)
             initReaders = Arg.ONE;
         } else {
-          assert(initReaders == null);
+          assert(initReaders == null) : v + " " +   initReaders;
         }
         if (v.storage() != VarStorage.ALIAS && 
             RefCounting.hasWriteRefCount(v)) {

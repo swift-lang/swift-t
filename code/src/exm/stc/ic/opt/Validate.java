@@ -40,7 +40,7 @@ import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Opcode;
+import exm.stc.ic.tree.ICInstructions.RefCountOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.CleanupAction;
@@ -218,7 +218,8 @@ public class Validate implements OptimizerPass {
 
   private void checkVarReference(Map<String, Var> declared, Var referencedVar,
                                  Object context) {
-    assert(declared.containsKey(referencedVar.name())): referencedVar + " " + declared;
+    assert(declared.containsKey(referencedVar.name())): referencedVar +
+                              " not among declared vars in scope: " + declared;
     Var declaredVar = declared.get(referencedVar.name());
     assert(referencedVar.identical(declaredVar)) : 
               context.toString() + " : " +
@@ -243,13 +244,15 @@ public class Validate implements OptimizerPass {
     
     
     for (CleanupAction ca: block.getCleanups()) {
+      // Don't expect these operations to appear yet
+      if (RefCountOp.isRefcountOp(ca.action().op)) {
+        throw new STCRuntimeError("Didn't expect to see reference " +
+        		                        "counting operations yet: " + ca);
+      }
       if (!blockVars.contains(ca.var())) {
-        if (ca.action().op != Opcode.DECR_WRITERS) {
-          // TODO: workaround to avoid eliminating functional code
-          throw new STCRuntimeError("Cleanup action for var not defined in " +
-              "block: " + ca.var() + " in function " + fn.getName() + ". " +
-              " Valid variables are: " + blockVars); 
-        }
+        throw new STCRuntimeError("Cleanup action for var not defined in " +
+            "block: " + ca.var() + " in function " + fn.getName() + ". " +
+            " Valid variables are: " + blockVars); 
       }
     }
   }

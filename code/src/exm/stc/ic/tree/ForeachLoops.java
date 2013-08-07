@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -102,7 +103,21 @@ public class ForeachLoops {
       startIncrements.add(incr);
     }
     
-    public void addConstantStartIncrement(Var v, RefCountType t, Arg amount) {
+    public void addConstantStartIncrement(Var v, RefCountType t, Arg amount) {    
+      // Check to see if already present
+      List<RefCount> prev = constStartIncrements.get(v);
+      ListIterator<RefCount> it = prev.listIterator();
+      while (it.hasNext()) {
+        RefCount rc = it.next();
+        if (rc.var.equals(v) && rc.type == t && rc.amount.isIntVal()
+                                             && amount.isIntVal()) {
+          Arg newAmount = Arg.createIntLit(rc.amount.getIntLit() + amount.getIntLit());
+          it.set(new RefCount(v, t, newAmount));
+          return;
+        }
+      }
+      
+      // If we didn't have it already
       constStartIncrements.put(v, new RefCount(v, t, amount));
     }
     
@@ -135,13 +150,15 @@ public class ForeachLoops {
 
     /**
      * Try to piggyback constant incrs/decrs from outside continuation.
-     * Reset counters in increments for any that are changed
+     * 
      * @param increments
      * @param type
      * @param decrement if true, try to piggyback decrements, if false, increments
+     * @return list of vars for which increments were piggybacked
      */
-    public void tryPiggyBack(Counters<Var> increments, RefCountType type,
+    public List<Var> tryPiggyBack(Counters<Var> increments, RefCountType type,
         boolean decrement) {
+      List<Var> result = new ArrayList<Var>();
       for (RefCount startIncr: startIncrements) {
         // Only consider piggybacking where we already are modifying
         // that particular count
@@ -150,12 +167,12 @@ public class ForeachLoops {
           long incr = increments.getCount(startIncr.var);
           if ((decrement && incr < 0) ||
               (!decrement && incr > 0)) {
-            addConstantStartIncrement(startIncr.var, type,
-                                      Arg.createIntLit(incr));
-            increments.add(startIncr.var, -1 * incr);
+            addConstantStartIncrement(startIncr.var, type, Arg.createIntLit(incr));
+            result.add(startIncr.var);
           }
         }
       }
+      return result;
     }
   }
 

@@ -1569,7 +1569,7 @@ public class ASTWalker {
                         Arg.createIntLit(arrIx));
           } else {
             assert(Types.isArrayRef(lvalArr.type()));
-            mVar = varCreator.createTmpAlias(context, 
+            mVar = varCreator.createTmp(context, 
                                   new RefType(memberType));
             backend.arrayRefCreateNestedImm(mVar, origLval.var, 
                 lvalArr, Arg.createIntLit(arrIx));
@@ -1577,8 +1577,7 @@ public class ASTWalker {
 
         } else {
           // Handle the general case where the index must be computed
-          mVar = varCreator.createTmpAlias(context, 
-                                        new RefType(memberType));
+          mVar = varCreator.createTmp(context, new RefType(memberType));
           Var indexVar = exprWalker.eval(context, indexExpr.child(0), Types.F_INT, false, null);
           
           if (Types.isArray(lvalArr.type())) {
@@ -1620,13 +1619,15 @@ public class ASTWalker {
       throw new TypeMismatchException(context, "Variable " + arr.name()
           + "is not an array, cannot index\n.");
     }
-    boolean isRef = Types.isArrayRef(arrType);
+    final boolean isArrayRef = Types.isArrayRef(arrType);
 
     LogHelper.debug(context, 
             "Token type: " + LogHelper.tokName(rvalExpr.getType()));
     // Find or create variable to store expression result
 
-    if (!Types.isRef(rvalType)) {
+    final boolean rvalIsRef = Types.isRef(rvalType);
+    
+    if (!rvalIsRef) {
       if (rvalExpr.getType() == ExMParser.VARIABLE) {
         // Get a handle to the variable, so we can just insert the variable
         //  directly into the array
@@ -1661,6 +1662,8 @@ public class ASTWalker {
     assert (indexTree.getChildCount() == 1);
     SwiftAST indexExpr = indexTree.child(0);
 
+
+    final Var outermostArray = origLval.var;
     Long literal = Literals.extractIntLit(context, indexExpr);
     /*
      * use afterActions to insert the variable into array only 
@@ -1671,44 +1674,58 @@ public class ASTWalker {
     if (literal != null) {
       final long arrIx = literal;
       // Add this variable to array
-      if (isRef) {
-        // This should only be run when assigning to nested array
-        afterActions.addFirst(new Runnable() {
-          @Override
-          public void run() {
-            backend.arrayRefInsertImm(origLval.var,
-                      arr, Arg.createIntLit(arrIx), lvalVar);
-          }});
-      } else {
-        afterActions.addFirst(new Runnable() {
-          @Override
-          public void run() {
-            backend.arrayInsertImm(arr, Arg.createIntLit(arrIx), 
-                lvalVar);
-          }});
-      }
+      afterActions.addFirst(new Runnable() {
+        @Override
+        public void run() {
+          backendArrayInsert(arr, arrIx, lvalVar, isArrayRef, rvalIsRef,
+              outermostArray);
+        }});
     } else {
       // Handle the general case where the index must be computed
       final Var indexVar = exprWalker.eval(context, indexExpr, Types.F_INT, false, null);
-
-      if (isRef) {
-        afterActions.addFirst(new Runnable() {
-          @Override
-          public void run() {
-            backend.arrayRefInsertFuture(origLval.var, arr, 
-                                              indexVar, lvalVar);
-          }});
-      } else {
-        afterActions.addFirst(new Runnable() {
-          @Override
-          public void run() {
-            backend.arrayInsertFuture(arr, indexVar, lvalVar);
-          }});
-      }
+      afterActions.addFirst(new Runnable() {
+        @Override
+        public void run() {
+          backendArrayInsert(arr, indexVar, lvalVar, isArrayRef,
+              rvalIsRef, outermostArray);
+        }});
     }
     return lvalVar;
   }
 
+  private void backendArrayInsert(final Var arr, long ix, Var member,
+              boolean isArrayRef, boolean rvalIsRef, Var outermostArray) {
+    if (isArrayRef && rvalIsRef) {
+      // This should only be run when assigning to nested array
+      backend.arrayRefDerefInsertImm(outermostArray, arr,
+                         Arg.createIntLit(ix), member);
+    } else if (isArrayRef && !rvalIsRef) {
+      // This should only be run when assigning to nested array
+      backend.arrayRefInsertImm(outermostArray, arr, Arg.createIntLit(ix),
+                                member);
+    } else if (!isArrayRef && rvalIsRef) {
+      backend.arrayDerefInsertImm(arr, Arg.createIntLit(ix),  member);
+    } else {
+      assert(!isArrayRef && !rvalIsRef);
+      backend.arrayInsertImm(arr, Arg.createIntLit(ix),  member);
+    }
+  }
+  
+  public void backendArrayInsert(Var arr, Var ix, Var member,
+      boolean isArrayRef, boolean rvalIsRef, Var outermostArray) {
+    if (isArrayRef && rvalIsRef) {
+      backend.arrayRefDerefInsertFuture(outermostArray, arr, 
+                                        ix, member);
+    } else if (isArrayRef && !rvalIsRef) {
+      backend.arrayRefInsertFuture(outermostArray, arr, 
+                                        ix, member);
+    } else if (!isArrayRef && rvalIsRef) {
+      backend.arrayDerefInsertFuture(arr, ix, member);
+    } else {
+      assert(!isArrayRef && !rvalIsRef);
+      backend.arrayInsertFuture(arr, ix, member);
+    }
+  }
 
   /**
    * Statement that evaluates an expression with no assignment E.g., trace()
@@ -2599,6 +2616,7 @@ public class ASTWalker {
 
     StructType newType = new StructType(typeName, fields);
     context.defineType(typeName, newType);
+    backend.defineStructType(newType);
     LogHelper.debug(context, "Defined new type called " + typeName + ": "
         + newType.toString());
   }

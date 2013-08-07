@@ -29,6 +29,7 @@ import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 
@@ -39,6 +40,8 @@ public interface CompilerBackend {
   public void turbineStartup();
 
   public void requirePackage(String pkg, String version);
+  
+  public void declareStructType(StructType st);
   
   public static class VarDecl {
     public VarDecl(Var var, Arg initReaders, Arg initWriters) {
@@ -207,8 +210,6 @@ public interface CompilerBackend {
   public void structRefLookup(Var result, Var structVar,
       String fieldName);
 
-  public void structClose(Var struct);
-
   public void structInsert(Var structVar, String fieldName,
                                           Var fieldContents);
 
@@ -232,8 +233,28 @@ public interface CompilerBackend {
   public void arrayInsertFuture(Var array,
       Var ix, Var member, Arg writersDecr);
   
+
+  public void arrayDerefInsertFuture(Var array,
+      Var ix, Var member, Arg writersDecr);
+  
   public void arrayRefInsertFuture(Var outerArray,
       Var array, Var ix, Var member);
+  
+  public void arrayRefDerefInsertFuture(Var outerArray,
+      Var array, Var ix, Var member);
+
+  public void arrayInsertImm(Var array, Arg ix, Var member,
+      Arg writersDecr);
+
+  public void arrayDerefInsertImm(Var array, Arg ix, Var member,
+      Arg writersDecr);
+  
+  public void arrayRefInsertImm(Var outerArray, 
+      Var array, Arg ix, Var member);
+  
+  public void arrayRefDerefInsertImm(Var outerArray, 
+      Var array, Arg ix, Var member);
+
 
   /**
    * Build array with indices [0..members.size() - 1] comprised of the
@@ -242,18 +263,20 @@ public interface CompilerBackend {
    * @param members
    */
   public void arrayBuild(Var array, List<Var> members);
-  
-  public void arrayInsertImm(Var array, Arg ix, Var member,
-      Arg writersDecr);
-  
-  public void arrayRefInsertImm(Var outerArray, 
-      Var array, Arg ix, Var member);
 
   public void arrayCreateNestedFuture(Var arrayResult,
       Var array, Var ix);
 
+  /**
+   * Create a nested array inside an array
+   * @param arrayResult
+   * @param array
+   * @param ix
+   * @param callerReadRefs number of refcounts to give back to caller
+   * @param callerWriteRefs number of refcounts to give back to caller
+   */
   public void arrayCreateNestedImm(Var arrayResult,
-      Var array, Arg ix);
+      Var array, Arg ix, Arg callerReadRefs, Arg callerWriteRefs);
 
   public void arrayRefCreateNestedFuture(Var arrayResult,
       Var outerArray, Var array, Var ix);

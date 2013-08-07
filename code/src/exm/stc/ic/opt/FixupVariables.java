@@ -327,6 +327,28 @@ public class FixupVariables implements OptimizerPass {
       boolean writeOnly = !read;
       passedIn.add(new PassedVar(needed, writeOnly));
     }
+    
+    // Handle any additional variables that need to be passed in,
+    // for example if a variable is waited on but not otherwise passed
+    for (PassedVar addtl: continuation.getMustPassVars()) {
+      // Check
+      boolean mustAdd = true;
+      ListIterator<PassedVar> it = passedIn.listIterator();
+      while (it.hasNext()) {
+        PassedVar existing = it.next();
+        if (existing.var.equals(addtl.var)) {
+          mustAdd = false;
+          if (existing.writeOnly && !addtl.writeOnly) {
+            // Must be readable too
+            it.set(addtl);
+          }
+        }
+      }
+      if (mustAdd) {
+        passedIn.add(addtl);
+      }
+    }
+    
     continuation.setPassedVars(passedIn);
   }
 

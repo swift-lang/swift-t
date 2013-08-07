@@ -18,6 +18,7 @@ package exm.stc.common.lang;
 import java.util.ArrayList;
 import java.util.List;
 
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var.DefType;
 
 public class RefCounting {
@@ -25,13 +26,42 @@ public class RefCounting {
     READERS,
     WRITERS;
   };
-  
+
+  /**
+   * Returns true if type can carry a refcount.  Some particular
+   * storage modes of the type might not have a refcount
+   * @param type
+   * @param rcType
+   * @return
+   */
+  public static boolean mayHaveRefcount(Type type, RefCountType rcType) {
+    if (rcType == RefCountType.READERS) {
+      return mayHaveReadRefcount(type);
+    } else {
+      assert(rcType == RefCountType.WRITERS);
+      return mayHaveWriteRefcount(type);
+    }
+  }
+
+  public static boolean mayHaveReadRefcount(Type type) {
+    if (Types.isScalarValue(type)) {
+      return false;
+    }
+    return true;
+  }
+
+  public static boolean mayHaveWriteRefcount(Type type) {
+    // Struct members may have write refcount 
+    return Types.isArray(type) || Types.isScalarUpdateable(type) ||
+           Types.isStruct(type);
+  }
+
   /**
    * @param v
-   * @return true if type has read refcount to be managed
+   * @return true if var has read refcount to be managed
    */
   public static boolean hasReadRefCount(Var v) {
-    if (Types.isScalarValue(v.type())) {
+    if (!mayHaveReadRefcount(v.type())) {
       return false;
     } else if (v.defType() == DefType.GLOBAL_CONST) {
       return false;
@@ -45,7 +75,12 @@ public class RefCounting {
    * @return
    */
   public static boolean hasWriteRefCount(Var v) {
-    return Types.isArray(v.type()) && v.defType() != DefType.GLOBAL_CONST;
+    if (!mayHaveWriteRefcount(v.type())) {
+      return false;
+    } else if (v.defType() == DefType.GLOBAL_CONST) {
+      return false;
+    }
+    return true;
   }
   
   public static boolean hasRefCount(Var var, RefCountType type) {

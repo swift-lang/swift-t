@@ -149,7 +149,7 @@ public class TypeChecker {
       List<Type> resultAlts = new ArrayList<Type>();
       for (Type arrAlt: UnionType.getAlternatives(arrType)) {
         if (Types.isArray(arrAlt) || Types.isArrayRef(arrAlt)) {
-          Type memberType = Types.getArrayMemberType(arrAlt);
+          Type memberType = Types.arrayMemberType(arrAlt);
 
           // Depending on the member type of the array, the result type might be
           // the actual member type, or a reference to the member type

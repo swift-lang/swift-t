@@ -24,6 +24,7 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.ic.refcount.RefcountPass;
 import exm.stc.ic.tree.ICTree.Program;
 
 public class ICOptimizer {
@@ -198,6 +199,10 @@ public class ICOptimizer {
     postprocess.addPass(new FixupVariables());
     // Add in reference counting after passing annotations
     postprocess.addPass(new RefcountPass());
+    // Refcount pass sometimes adds instructions, do another fixup as a
+    // workaround to make sure that passing annotations are still correct  
+    postprocess.addPass(new FixupVariables());
+    
     postprocess.addPass(Validate.finalValidator());
     postprocess.runPipeline(logger, prog,  nIterations - 1);
   }

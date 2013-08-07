@@ -265,7 +265,7 @@ public class ForeachLoop {
     VarStorage memberVarStorage = rangeLoop ? VarStorage.TEMP 
                                             : VarStorage.ALIAS;
     memberVar = loopBodyContext.declareVariable(
-        Types.getArrayMemberType(arrayType), getMemberVarName(),
+        Types.arrayMemberType(arrayType), getMemberVarName(),
         memberVarStorage, DefType.LOCAL_USER, null);
     return loopBodyContext;
   }

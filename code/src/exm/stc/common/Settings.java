@@ -112,6 +112,10 @@ public class Settings
   public static final String PREPROCESSOR_FORCE_GCC = "stc.preproc.force-gcc";
   public static final String PREPROCESSOR_FORCE_CPP = "stc.preproc.force-cpp";
   
+
+  /** Record assumption that we need to pass waited-on vars into block */
+  public static final String MUST_PASS_WAIT_VARS = "stc.must_pass_wait_vars";
+  
   private static final Properties properties;
   
   private static final List<String> modulePath = new ArrayList<String>();
@@ -164,12 +168,17 @@ public class Settings
     defaults.setProperty(OPT_CANCEL_REFCOUNTS, "true");
     defaults.setProperty(OPT_PIGGYBACK_REFCOUNTS, "true");
     defaults.setProperty(OPT_MAX_ITERATIONS, "10");
-    defaults.setProperty(EXPERIMENTAL_REFCOUNTING, "false");
+    defaults.setProperty(EXPERIMENTAL_REFCOUNTING, "true");
     defaults.setProperty(AUTO_DECLARE, "true");
     defaults.setProperty(PROFILE_STC, "false");
     defaults.setProperty(LOG_FILE, "");
     defaults.setProperty(LOG_TRACE, "false");
 
+    
+
+    // True for all current targets
+    defaults.setProperty(MUST_PASS_WAIT_VARS, "true");
+    
     // Turbine code generation
     // Turbine version
     defaults.setProperty(TURBINE_VERSION, "unknown");
@@ -307,6 +316,7 @@ public class Settings
     getBoolean(PREPROCESS_ONLY);
     getBoolean(PREPROCESSOR_FORCE_CPP);
     getBoolean(PREPROCESSOR_FORCE_GCC);
+    getBoolean(MUST_PASS_WAIT_VARS);
 
     getLong(OPT_MAX_ITERATIONS);
 
