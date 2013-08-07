@@ -494,7 +494,7 @@ AC_ARG_WITH(tcl,
         program=$( which tclsh${TCL_VERSION} )
         if [[ ${?} != 0 ]]
         then
-            AC_MSG_ERROR([Could not find tclsh8.5!])
+            AC_MSG_ERROR([Could not find tclsh${TCL_VERSION}!])
         fi
         AC_MSG_RESULT([PATH contains: ${program}])
         USE_TCL=$( cd $(dirname ${program})/.. ; /bin/pwd )
