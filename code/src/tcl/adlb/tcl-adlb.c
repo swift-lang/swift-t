@@ -46,6 +46,7 @@
 #include <tcl.h>
 #include <mpi.h>
 #include <adlb.h>
+#include <adlb-defs.h>
 #include <adlb_types.h>
 
 #include <log.h>
@@ -131,8 +132,6 @@ static struct {
                 "Struct type %i not registered with Tcl ADLB module", st);
 
 static void set_namespace_constants(Tcl_Interp* interp);
-
-static Tcl_Obj* TclListFromArray(Tcl_Interp *interp, int *vals, int count);
 
 static int refcount_mode(Tcl_Interp *interp, Tcl_Obj *const objv[],
                           Tcl_Obj* obj, adlb_refcount_type *mode);
@@ -1113,24 +1112,6 @@ ADLB_Exists_Sub_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
- * Create a tcl list from an array.
- * Free vals if count > 0
- */
-static Tcl_Obj* TclListFromArray(Tcl_Interp *interp, int *vals, int count) {
-  Tcl_Obj* result = Tcl_NewListObj(0, NULL);
-  if (count > 0)
-  {
-    for (int i = 0; i < count; i++)
-    {
-      Tcl_Obj* o = Tcl_NewIntObj(vals[i]);
-      Tcl_ListObjAppendElement(interp, result, o);
-    }
-    free(vals);
-  }
-  return result;
-}
-
-/*
   Take a Tcl object and an ADLB type and extract the binary representation
   type: adlb data type code
   caller_buffer: optional static buffer to use
@@ -2323,9 +2304,8 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK_MSG(rc, "adlb::insert <%lli>[%s] failed, could not extract data!",
                     id, subscript);
 
-  
   DEBUG_ADLB("adlb::insert <%lli>[\"%s\"]=<%s>",
-               id, subscript, Tcl_GetStringFromObj(member_obj));
+               id, subscript, Tcl_GetStringFromObj(member_obj, NULL));
 
   adlb_refcounts decr = ADLB_NO_RC;
   if (argpos < objc)
@@ -2445,7 +2425,7 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
   Tcl_Obj* result = NULL;
   adlb_data_to_tcl_obj(interp, objv, id, type, NULL, xfer, len, &result);
   DEBUG_ADLB("adlb::lookup <%lli>[\"%s\"]=<%s>",
-             id, subscript, Tcl_GetStringFromObj(result));
+             id, subscript, Tcl_GetStringFromObj(result, NULL));
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }

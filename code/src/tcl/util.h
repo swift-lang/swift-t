@@ -124,9 +124,15 @@ tcl_dict_get(Tcl_Interp* interp, Tcl_Obj* dict,
              char* key, Tcl_Obj** value);
 
 /**
-   Convenience function to construct Tcl list of Tcl strings
+   Convenience function to construct Tcl list of strings
  */
 Tcl_Obj* tcl_list_new(int count, char** strings);
+
+/**
+   Convenience function to construct Tcl list of integers
+ */
+Tcl_Obj* tcl_list_from_array_ints(Tcl_Interp *interp,
+                                  int* vals, int count);
 
 /**
    Print error message and return a Tcl error
