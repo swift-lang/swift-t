@@ -44,14 +44,29 @@ static void add_tags(void);
 #endif
 
 void
-xlb_msg_init()
+xlb_msg_init(void)
 {
   // This is all just debugging
 #ifndef NDEBUG
   tag_prefix = "ADLB_TAG_";
   tag_prefix_length = strlen(tag_prefix);
-  memset(tag_names, '\0', XLB_MAX_TAGS*sizeof(char*));
+  memset(tag_names, '\0', sizeof(tag_names));
   add_tags();
+#endif
+}
+
+void
+xlb_msg_finalize(void)
+{
+#ifndef NDEBUG
+  for (int i = 0; i < XLB_MAX_TAGS; i++)
+  {
+    if (tag_names[i] != NULL)
+    {
+      free(tag_names[i]);
+      tag_names[i] = NULL;
+    }
+  }
 #endif
 }
 
@@ -74,14 +89,13 @@ add_tags()
   add_tag(ADLB_TAG_MULTICREATE);
   add_tag(ADLB_TAG_EXISTS);
   add_tag(ADLB_TAG_STORE_HEADER);
+  add_tag(ADLB_TAG_STORE_SUBSCRIPT);
   add_tag(ADLB_TAG_STORE_PAYLOAD);
   add_tag(ADLB_TAG_RETRIEVE);
   add_tag(ADLB_TAG_ENUMERATE);
   add_tag(ADLB_TAG_SUBSCRIBE);
   add_tag(ADLB_TAG_REFCOUNT_INCR);
-  add_tag(ADLB_TAG_INSERT_HEADER);
   add_tag(ADLB_TAG_INSERT_ATOMIC);
-  add_tag(ADLB_TAG_LOOKUP);
   add_tag(ADLB_TAG_UNIQUE);
   add_tag(ADLB_TAG_TYPEOF);
   add_tag(ADLB_TAG_CONTAINER_TYPEOF);
@@ -121,6 +135,71 @@ char*
 xlb_get_tag_name(int tag)
 {
   return tag_names[tag];
+}
+
+
+/*
+ Pack into buffer of size at least PACKED_SUBSCRIPT_MAX
+
+ len: output variable for bytes stored in buffer
+ returns the number of bytes used in buffer
+
+ */
+int
+pack_id_subscript(void *buffer, adlb_datum_id id, const char *subscript)
+{
+  assert(buffer != NULL);
+  void *pos = buffer;
+
+  MSG_PACK_BIN(pos, id);
+
+  bool has_subscript = subscript != NULL;
+  int sub_packed_size = has_subscript ? 
+                        (int)strlen(subscript) + 1: -1;
+  
+  MSG_PACK_BIN(pos, sub_packed_size);
+
+  if (has_subscript)
+  {
+    memcpy(pos, subscript, (size_t)sub_packed_size); 
+    pos += sub_packed_size;
+  }
+  assert(pos - buffer <= INT_MAX);
+  return (int)(pos - buffer);
+}
+
+
+/*
+  Extract id and subscript from buffer
+  NOTE: returned subscript is pointer into buffer
+  return the number of bytes consumed from buffer
+ */
+int
+unpack_id_subscript(const void *buffer, adlb_datum_id *id,
+                    const char **subscript, int *sub_strlen)
+{
+  assert(buffer != NULL);
+
+  const void *pos = buffer;
+  MSG_UNPACK_BIN(pos, id);
+
+  int subscript_packed_len;
+  MSG_UNPACK_BIN(pos, &subscript_packed_len);
+
+  bool has_subscript = subscript_packed_len > 0;
+  if (has_subscript)
+  {
+    *sub_strlen = subscript_packed_len - 1;
+    *subscript = pos;
+    pos += subscript_packed_len;
+  }
+  else
+  {
+    *subscript = NULL;
+  }
+  long length = (pos - buffer);
+  assert(length <= INT_MAX);
+  return (int)length;
 }
 
 #endif

@@ -187,6 +187,13 @@ adlb_code
 ADLB_Server(long max_memory)
 {
   TRACE_START;
+
+  if (!xlb_am_server)
+  {
+    printf("ADLB_Server invoked for non-server\n");
+    return ADLB_ERROR;
+  }
+
   mm_set_max(mm_default, max_memory);
 
   update_cached_time(); // Initial timestamp

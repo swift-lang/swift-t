@@ -49,19 +49,6 @@ typedef enum
 typedef long long adlb_datum_id;
 
 /**
-   Status vector for Turbine variables
- */
-typedef unsigned char adlb_data_status;
-
-/** SET: Whether a value has been stored in future */
-#define ADLB_DATA_SET_MASK ((adlb_data_status)0x1)
-#define ADLB_DATA_SET(status) ((status & ADLB_DATA_SET_MASK) != 0)
-
-/** PERMANENT: Whether garbage collection is disabled for data item */
-#define ADLB_DATA_PERMANENT_MASK ((adlb_data_status)0x2)
-#define ADLB_DATA_PERMANENT(status) ((status & ADLB_DATA_PERMANENT_MASK) != 0)
-
-/**
    User data types
  */
 typedef enum
@@ -71,9 +58,36 @@ typedef enum
   ADLB_DATA_TYPE_FLOAT,
   ADLB_DATA_TYPE_STRING,
   ADLB_DATA_TYPE_BLOB,
-  ADLB_DATA_TYPE_CONTAINER
+  ADLB_DATA_TYPE_CONTAINER,
+  ADLB_DATA_TYPE_MULTISET,
+  ADLB_DATA_TYPE_STRUCT,
+  ADLB_DATA_TYPE_REF,
+  ADLB_DATA_TYPE_FILE_REF,
 } adlb_data_type;
 
+// More compact representation for data type
+typedef short adlb_data_type_short;
+
+// Identifier for sub-types of ADLB struct
+typedef int adlb_struct_type;
+
+// Additional type info for particular types
+typedef union {
+  struct {
+    adlb_data_type_short key_type;
+    adlb_data_type_short val_type;
+  } CONTAINER;
+  struct {
+    adlb_data_type_short val_type;
+  } MULTISET;
+  struct {
+    // Note: struct type isn't specified at creation
+    adlb_struct_type struct_type; 
+  } STRUCT;
+  void *NONE;
+} adlb_type_extra;
+
+#define ADLB_TYPE_EXTRA_NULL ((adlb_type_extra) NULL)
 
 typedef enum
 {
@@ -82,6 +96,47 @@ typedef enum
   ADLB_READWRITE_REFCOUNT, // Used to specify that op should affect both
 } adlb_refcount_type;
 
+
+// Struct used to hold refcount info
+typedef struct {
+  int read_refcount;
+  int write_refcount;
+} adlb_refcounts;
+
+const static adlb_refcounts ADLB_NO_RC =
+  { .read_refcount = 0, .write_refcount = 0 };
+
+const static adlb_refcounts ADLB_READ_RC =
+  { .read_refcount = 1, .write_refcount = 0 };
+
+const static adlb_refcounts ADLB_WRITE_RC =
+  { .read_refcount = 0, .write_refcount = 1 };
+
+const static adlb_refcounts ADLB_READWRITE_RC =
+  { .read_refcount = 1, .write_refcount = 1 };
+
+#define ADLB_RC_IS_NULL(rc) \
+    ((rc).read_refcount == 0 && (rc).write_refcount == 0)
+
+#define ADLB_RC_POSITIVE(rc) \
+    ((rc).read_refcount > 0 && (rc).write_refcount > 0)
+
+#define ADLB_RC_NONNEGATIVE(rc) \
+    ((rc).read_refcount >= 0 && (rc).write_refcount >= 0)
+
+#define ADLB_RC_NEGATIVE(rc) \
+    ((rc).read_refcount < 0 && (rc).write_refcount < 0)
+
+#define ADLB_RC_NONPOSITIVE(rc) \
+    ((rc).read_refcount <= 0 && (rc).write_refcount <= 0)
+
+static inline adlb_refcounts adlb_rc_negate(adlb_refcounts rc)
+{
+  adlb_refcounts result = { .read_refcount = -rc.read_refcount,
+                            .write_refcount = -rc.write_refcount };
+  return result;
+}
+
 typedef struct
 {
   int read_refcount;
@@ -89,53 +144,25 @@ typedef struct
   bool permanent;
 } adlb_create_props;
 
-extern adlb_create_props DEFAULT_CREATE_PROPS;
+// Default settings for new variables
+#define DEFAULT_CREATE_PROPS \
+    { .read_refcount = 1, .write_refcount = 1, .permanent = false }
 
-typedef long long adlb_int_t;
-
-/**
-   User data
+/* 
+   Describe how refcounts should be changed
  */
 typedef struct
 {
-  adlb_data_type type;
-  adlb_data_status status;
-  int read_refcount; // Number of open read refs
-  int write_refcount; // Number of open write refs
-  union
-  {
-    struct
-    {
-      adlb_int_t value;
-    } INTEGER;
-    struct
-    {
-      double value;
-    } FLOAT;
-    struct
-    {
-      char* value;
-      int length;
-    } STRING;
-    struct
-    {
-      void* value;
-      int length;
-    } BLOB;
-    struct
-    {
-      char* path;
-    } FILE;
-    struct
-    {
-      /** type of container keys */
-      adlb_data_type type;
-      /** Map from subscript to member TD */
-      struct table* members;
-    } CONTAINER;
-  } data;
-  struct list_i listeners;
-} adlb_datum;
+  // decrease reference count of this datum
+  adlb_refcounts decr_self;
+  // increase reference count of anything referenced by this datum
+  adlb_refcounts incr_referand;
+} adlb_retrieve_rc;
+
+const static adlb_retrieve_rc ADLB_RETRIEVE_NO_RC =
+    { .decr_self.read_refcount = 0, .decr_self.write_refcount = 0,
+      .incr_referand.read_refcount = 0, .incr_referand.write_refcount = 0 };
+
 
 /**
    Common return codes
@@ -153,6 +180,8 @@ typedef enum
   ADLB_DATA_ERROR_UNSET,
   /** Data set not found */
   ADLB_DATA_ERROR_NOT_FOUND,
+  /** Subscript not present */
+  ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
   /** Parse error in number scanning */
   ADLB_DATA_ERROR_NUMBER_FORMAT,
   /** Invalid input */
@@ -165,6 +194,8 @@ typedef enum
   ADLB_DATA_ERROR_SLOTS_NEGATIVE,
   /** Exceeded some implementation-defined limit */
   ADLB_DATA_ERROR_LIMIT,
+  /** Caller-provided buffer too small */
+  ADLB_DATA_BUFFER_TOO_SMALL,
   /** Unknown error */
   ADLB_DATA_ERROR_UNKNOWN,
 } adlb_data_code;
@@ -181,19 +212,10 @@ typedef enum
 /** The maximal string length of a container subscript */
 #define ADLB_DATA_SUBSCRIPT_MAX 1024
 
-/** The maximal string length of a container member string value */
-#define ADLB_DATA_MEMBER_MAX 1024
-
 /** The maximal length of an ADLB datum (string, blob, etc.) */
 #define ADLB_DATA_MAX (20*1024*1024)
 
 /** Maximum size for a given ADLB transaction */
 #define ADLB_PAYLOAD_MAX ADLB_DATA_MAX
-
-/**
-   The ASCII control character Record Separator
-   Used to glue strings together in a big buffer
- */
-#define RS 30
 
 #endif

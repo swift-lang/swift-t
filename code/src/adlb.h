@@ -54,9 +54,9 @@ adlb_code ADLB_Version(version* output);
 adlb_code ADLB_Hostmap(const char* name, int count,
                        int* output, int* actual);
 
-adlb_code ADLBP_Put(void* payload, int length, int target, int answer,
+adlb_code ADLBP_Put(const void* payload, int length, int target, int answer,
                     int type, int priority, int parallelism);
-adlb_code ADLB_Put(void* payload, int length, int target, int answer,
+adlb_code ADLB_Put(const void* payload, int length, int target, int answer,
                    int type, int priority, int parallelism);
 
 adlb_code ADLBP_Get(int type_requested, void* payload, int* length,
@@ -77,19 +77,18 @@ int ADLB_Locate(adlb_datum_id id);
 // Applications should not call these directly but
 // should use the typed forms defined below
 adlb_code ADLBP_Create(adlb_datum_id id, adlb_data_type type,
-                       const char* filename,
-                       adlb_data_type subscript_type, adlb_create_props props,
+                       adlb_type_extra type_extra,
+                       adlb_create_props props,
                        adlb_datum_id *new_id);
 adlb_code ADLB_Create(adlb_datum_id id, adlb_data_type type,
-                      const char* filename,
-                      adlb_data_type subscript_type,
+                      adlb_type_extra type_extra,
                       adlb_create_props props, adlb_datum_id *new_id);
 
 // Information for new variable creation
 typedef struct {
   adlb_datum_id id;
   adlb_data_type type;
-  adlb_data_type subscript_type; // if required
+  adlb_type_extra type_extra;
   adlb_create_props props;
 } ADLB_create_spec;
 
@@ -112,58 +111,105 @@ adlb_code ADLB_Create_string(adlb_datum_id id, adlb_create_props props,
 adlb_code ADLB_Create_blob(adlb_datum_id id, adlb_create_props props,
                               adlb_datum_id *new_id);
 
-adlb_code ADLB_Create_file(adlb_datum_id id, const char* filename,
-                           adlb_create_props props, adlb_datum_id *new_id);
+adlb_code ADLB_Create_ref(adlb_datum_id id, adlb_create_props props,
+                              adlb_datum_id *new_id);
+
+adlb_code ADLB_Create_file_ref(adlb_datum_id id, adlb_create_props props,
+                              adlb_datum_id *new_id);
+
+adlb_code ADLB_Create_struct(adlb_datum_id id, adlb_create_props props,
+                              adlb_datum_id *new_id);
 
 adlb_code ADLB_Create_container(adlb_datum_id id,
-                                adlb_data_type subscript_type,
+                                adlb_data_type key_type, 
+                                adlb_data_type val_type, 
                                 adlb_create_props props,
                                 adlb_datum_id *new_id);
 
-adlb_code ADLBP_Exists(adlb_datum_id id, bool* result);
-adlb_code ADLB_Exists(adlb_datum_id id, bool* result);
+adlb_code ADLBP_Exists(adlb_datum_id id, const char *subscript, bool* result,
+                       adlb_refcounts decr);
+adlb_code ADLB_Exists(adlb_datum_id id, const char *subscript, bool* result,
+                       adlb_refcounts decr);
 
-adlb_code ADLBP_Store(adlb_datum_id id, void *data, int length,
-                      bool decr_write_refcount, int** ranks, int *count);
-adlb_code ADLB_Store(adlb_datum_id id, void *data, int length,
-                      bool decr_write_refcount, int** ranks, int *count);
+/*
+  Store value into datum
+  data: binary representation
+  length: length of binary representation
+ */
+adlb_code ADLBP_Store(adlb_datum_id id, const char *subscript,
+                      adlb_data_type type,
+                      const void *data, int length, adlb_refcounts refcount_decr);
+adlb_code ADLB_Store(adlb_datum_id id, const char *subscript,
+                      adlb_data_type type,
+                      const void *data, int length, adlb_refcounts refcount_decr);
 
-adlb_code ADLBP_Retrieve(adlb_datum_id id, adlb_data_type* type,
-      int decr_read_refcount, void *data, int *length);
-adlb_code ADLB_Retrieve(adlb_datum_id id, adlb_data_type* type,
-      int decr_read_refcount, void *data, int *length);
+/*
+   Retrieve contents of datum.
+    
+   refcounts: specify how reference counts should be changed
+      read_refcount: decrease read refcount of this datum
+      incr_read_referand: increase read refcount of referands,
+                to ensure they aren't cleaned up prematurely
+   type: output arg for the type of the datum
+   data: a buffer of at least size ADLB_DATA_MAX
+   length: output arg for data size in bytes
+ */
+adlb_code ADLBP_Retrieve(adlb_datum_id id, const char *subscript,
+      adlb_retrieve_rc refcounts,
+      adlb_data_type *type, void *data, int *length);
+adlb_code ADLB_Retrieve(adlb_datum_id id, const char *subscript,
+      adlb_retrieve_rc refcounts, adlb_data_type *type, 
+      void *data, int *length);
 
+/*
+   List contents of container
+   
+   data: binary encoded keys and values (if requested), with each member
+          encoded as follows:
+        - key length encoded with vint_encode()
+        - key data without null terminator
+        - value length encoded with vint_encode()
+        - value data encoded with ADLB_Pack
+   length: number of bytes of data
+   records: number of elements returned
+ */
 adlb_code ADLBP_Enumerate(adlb_datum_id container_id,
-                   int count, int offset,
-                   char** subscripts, int* subscripts_length,
-                   char** members, int* members_length,
-                   int* records);
+                   int count, int offset, adlb_refcounts decr,
+                   bool include_keys, bool include_vals,
+                   void** data, int* length, int* records,
+                   adlb_type_extra *kv_type);
 adlb_code ADLB_Enumerate(adlb_datum_id container_id,
-                   int count, int offset,
-                   char** subscripts, int* subscripts_length,
-                   char** members, int* members_length,
-                   int* records);
+                   int count, int offset, adlb_refcounts decr,
+                   bool include_keys, bool include_vals,
+                   void** data, int* length, int* records,
+                   adlb_type_extra *kv_type);
 
-adlb_code ADLBP_Refcount_incr(adlb_datum_id id, adlb_refcount_type type,
-                              int change);
-adlb_code ADLB_Refcount_incr(adlb_datum_id id, adlb_refcount_type type,
-                              int change);
+// Switch on read refcounting and memory management, which is off by default
+adlb_code ADLBP_Read_refcount_enable(void);
+adlb_code ADLB_Read_refcount_enable(void);
 
-adlb_code ADLBP_Insert(adlb_datum_id id, const char *subscript,
-                 const char* member, int member_length, int drops);
-adlb_code ADLB_Insert(adlb_datum_id id, const char *subscript,
-                const char* member, int member_length, int drops);
+adlb_code ADLBP_Refcount_incr(adlb_datum_id id, adlb_refcounts change);
+adlb_code ADLB_Refcount_incr(adlb_datum_id id, adlb_refcounts change);
 
+/*
+  Try to reserve an insert position in container
+  result: true if could be created, false if already present
+  data: optionally, if this is not NULL, return the existing value in
+        this buffer of at least size ADLB_DATA_MAX
+  length: length of existing value, -1 if value not yet present
+  type: type of existing value
+ */
 adlb_code ADLBP_Insert_atomic(adlb_datum_id id, const char *subscript,
-                        bool* result);
+                        bool* result, void *data, int *length,
+                        adlb_data_type *type);
 adlb_code ADLB_Insert_atomic(adlb_datum_id id, const char *subscript,
-                       bool* result);
+                       bool* result, void *data, int *length,
+                       adlb_data_type *type);
 
-adlb_code ADLBP_Lookup(adlb_datum_id id, const char *subscript, char* member, int* found);
-adlb_code ADLB_Lookup(adlb_datum_id id, const char *subscript, char* member, int* found);
-
-adlb_code ADLBP_Subscribe(adlb_datum_id id, int* subscribed);
-adlb_code ADLB_Subscribe(adlb_datum_id id, int* subscribed);
+adlb_code ADLBP_Subscribe(adlb_datum_id id, const char *subscript,
+                          int* subscribed);
+adlb_code ADLB_Subscribe(adlb_datum_id id, const char *subscript,
+                          int* subscribed);
 
 adlb_code ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
                               adlb_datum_id reference,
@@ -178,11 +224,15 @@ adlb_code ADLB_Unique(adlb_datum_id *result);
 adlb_code ADLBP_Typeof(adlb_datum_id id, adlb_data_type* type);
 adlb_code ADLB_Typeof(adlb_datum_id id, adlb_data_type* type);
 
-adlb_code ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* type);
-adlb_code ADLB_Container_typeof(adlb_datum_id id, adlb_data_type* type);
+adlb_code ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* key_type,
+                                 adlb_data_type* val_type);
+adlb_code ADLB_Container_typeof(adlb_datum_id id, adlb_data_type* key_type,
+                                 adlb_data_type* val_type);
 
-adlb_code ADLBP_Container_size(adlb_datum_id container_id, int* size);
-adlb_code ADLB_Container_size(adlb_datum_id container_id, int* size);
+adlb_code ADLBP_Container_size(adlb_datum_id container_id, int* size,
+                               adlb_refcounts decr);
+adlb_code ADLB_Container_size(adlb_datum_id container_id, int* size,
+                              adlb_refcounts decr);
 
 adlb_code ADLBP_Lock(adlb_datum_id id, bool* result);
 adlb_code ADLB_Lock(adlb_datum_id id, bool* result);
@@ -190,10 +240,11 @@ adlb_code ADLB_Lock(adlb_datum_id id, bool* result);
 adlb_code ADLBP_Unlock(adlb_datum_id id);
 adlb_code ADLB_Unlock(adlb_datum_id id);
 
-void ADLB_Data_string_totype(const char* type_string,
-                             adlb_data_type* type);
+adlb_code ADLB_Data_string_totype(const char* type_string,
+                                  adlb_data_type* type, bool *has_extra,
+                                  adlb_type_extra *extra);
 
-int ADLB_Data_type_tostring(char* output, adlb_data_type type);
+const char *ADLB_Data_type_tostring(adlb_data_type type);
 
 adlb_code ADLB_Server_idle(int rank, bool* result);
 adlb_code ADLB_Server_shutdown(int rank);

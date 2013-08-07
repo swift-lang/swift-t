@@ -25,25 +25,21 @@
 bool xlb_debug_enabled = true;
 bool xlb_trace_enabled = true;
 
-void
+adlb_code
 debug_check_environment()
 {
-  char* v;
+  adlb_code code;
+    
+  // Get from environment.  Use above values if not specified by
+  // environment variable
+  code = xlb_env_boolean("ADLB_TRACE", &xlb_trace_enabled);
+  if (code != ADLB_SUCCESS)
+    return code;
 
-  v = getenv("ADLB_TRACE");
-  if (v != NULL)
-  {
-    if (strcmp(v, "0") == 0)
-      xlb_trace_enabled = false;
-  }
+  code = xlb_env_boolean("ADLB_DEBUG", &xlb_debug_enabled);
 
-  v = getenv("ADLB_DEBUG");
-  if (v != NULL)
-  {
-    if (strcmp(v, "0") == 0)
-    {
-      xlb_debug_enabled = false;
-      xlb_trace_enabled = false;
-    }
-  }
+  if (code != ADLB_SUCCESS)
+    return code;
+  
+  return ADLB_SUCCESS;
 }

@@ -28,6 +28,7 @@
 #include <mpi.h>
 
 #include "adlb-defs.h"
+#include "adlb_types.h"
 
 /** Number of processes in total */
 extern int xlb_comm_size;
@@ -44,6 +45,9 @@ extern int xlb_workers;
 /** Server with which this worker is associated */
 extern int xlb_my_server;
 
+/** True if this rank is a server */
+extern bool xlb_am_server;
+
 /** Lowest-ranked server */
 extern int xlb_master_server_rank;
 
@@ -53,9 +57,12 @@ extern int xlb_types_size;
 /** Array of allowed work unit types */
 extern int* xlb_types;
 
+/** Whether read refcounting and memory freeing is enabled */
+extern bool xlb_read_refcount_enabled;
+
 extern double max_malloc;
 
-extern MPI_Comm adlb_comm, adlb_server_comm;
+extern MPI_Comm adlb_comm, adlb_server_comm, adlb_worker_comm;
 
 /**
    Start time from MPI_Wtime()
@@ -68,6 +75,7 @@ extern double xlb_start_time;
 #define XFER_SIZE (ADLB_PAYLOAD_MAX)
 /** Reusable transfer buffer */
 extern char xfer[];
+const static adlb_buffer xfer_buf = { .data = xfer, .length = XFER_SIZE };
 
 int random_server(void);
 
@@ -81,5 +89,15 @@ double xlb_wtime(void);
    Given a work_type, obtain its index in xlb_types
  */
 int xlb_type_index(int work_type);
+
+/**
+   Receive a true/false setting by env var, which is
+   false if "0", or false (case-insensitive),
+   and true for a non-zero number or true (case-insensitive)
+   if empty or zero-length string, val is unmodified
+
+   found: this indicates whether the environment variable was found
+ */
+adlb_code xlb_env_boolean(const char *env_var, bool *val);
 
 #endif

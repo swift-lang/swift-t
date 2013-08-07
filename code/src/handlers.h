@@ -44,4 +44,11 @@ void xlb_recheck_queues();
 
 adlb_code xlb_check_parallel_tasks(int work_type);
 
+/** 
+   Targeted put for local target
+*/
+adlb_code put_targeted_local(int type, int putter, int priority, int answer,
+             int target, const void* payload, int length);
+
+
 #endif

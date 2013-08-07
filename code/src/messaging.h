@@ -37,6 +37,11 @@
  */
 void xlb_msg_init(void);
 
+/**
+   Finalize the messaging functionality
+ */
+void xlb_msg_finalize(void);
+
 #ifndef NDEBUG
 
 /**
@@ -125,6 +130,21 @@ char* xlb_get_tag_name(int tag);
 // 64-bit int
 #define MPI_ADLB_ID MPI_LONG_LONG
 
+// Macros to help with packing and unpacking variables
+// TODO: error handling in case buffer too small
+
+#define MSG_PACK_BIN(buf_pos, var)        \
+  {                                       \
+    memcpy(buf_pos, &var, sizeof(var));   \
+    buf_pos += sizeof(var);               \
+  }
+
+#define MSG_UNPACK_BIN(buf_pos, var)      \
+  {                                       \
+    memcpy(var, buf_pos, sizeof(*var));   \
+    buf_pos += sizeof(*var);               \
+  }
+
 /**
    Simple struct for message packing
  */
@@ -164,16 +184,6 @@ struct packed_create_response
 /**
    Simple struct for message packing
  */
-struct packed_create_request
-{
-  adlb_datum_id id;
-  adlb_data_type type;
-  adlb_create_props props;
-};
-
-/**
-   Simple struct for message packing
- */
 struct packed_code_id
 {
   adlb_data_code code;
@@ -183,9 +193,10 @@ struct packed_code_id
 /**
    Simple struct for message packing
  */
-struct packed_code_length
+struct retrieve_response_hdr
 {
   adlb_data_code code;
+  adlb_data_type type;
   int length;
 };
 
@@ -199,6 +210,23 @@ struct packed_enumerate
   char request_members;
   int count;
   int offset;
+  adlb_refcounts decr;
+};
+
+struct packed_enumerate_result
+{
+  adlb_data_code dc;
+  int records; // Count of elements returned
+  int length; // length of data in bytes
+  adlb_data_type key_type;
+  adlb_data_type val_type;
+};
+
+struct packed_notif_counts
+{
+  int notify_closed_count;
+  int notify_insert_count;
+  int reference_count;
 };
 
 /**
@@ -207,8 +235,16 @@ struct packed_enumerate
 struct packed_incr
 {
   adlb_datum_id id;
-  adlb_refcount_type type;
-  int incr;
+  adlb_refcounts change;
+};
+
+/**
+   Response to reference count operation
+ */
+struct packed_refcount_resp
+{
+  bool success;
+  struct packed_notif_counts notifs;
 };
 
 /**
@@ -217,7 +253,19 @@ struct packed_incr
 struct packed_store_hdr
 {
   adlb_datum_id id;
-  bool decr_write_refcount;
+  adlb_data_type type; // Type of data
+  adlb_refcounts refcount_decr;
+  int subscript_len; // including null byte, 0 if no subscript
+};
+
+
+/**
+ * Response for store 
+ */
+struct packed_store_resp
+{
+  bool success;
+  struct packed_notif_counts notifs;
 };
 
 /**
@@ -226,8 +274,42 @@ struct packed_store_hdr
 struct packed_retrieve_hdr
 {
   adlb_datum_id id;
-  int decr_read_refcount;
+  adlb_retrieve_rc refcounts;
+  int subscript_len; // including null byte, 0 if no subscript
+  char subscript[];
 };
+
+#define PACKED_SUBSCRIPT_MAX (ADLB_DATA_SUBSCRIPT_MAX + \
+          sizeof(adlb_datum_id) + sizeof(int))
+struct packed_insert_atomic_resp
+{
+  adlb_data_code dc;
+  bool created;
+  int value_len; // Value length, negative if not present
+  adlb_data_type value_type;
+};
+
+struct packed_size_req
+{
+  adlb_datum_id id;
+  adlb_refcounts decr;
+};
+
+/*
+  Generic boolean response for data op
+ */
+struct packed_bool_resp
+{
+  adlb_data_code dc;
+  bool result;
+};
+
+int
+pack_id_subscript(void *buffer, adlb_datum_id id, const char *subscript);
+
+int
+unpack_id_subscript(const void *buffer, adlb_datum_id *id,
+                    const char **subscript, int *sub_strlen);
 
 /**
  * Request for steal
@@ -302,16 +384,14 @@ typedef enum
   ADLB_TAG_CREATE_PAYLOAD,
   ADLB_TAG_EXISTS,
   ADLB_TAG_STORE_HEADER,
+  ADLB_TAG_STORE_SUBSCRIPT,
   ADLB_TAG_STORE_PAYLOAD,
   ADLB_TAG_RETRIEVE,
   ADLB_TAG_ENUMERATE,
   ADLB_TAG_SUBSCRIBE,
   ADLB_TAG_PERMANENT,
   ADLB_TAG_REFCOUNT_INCR,
-  ADLB_TAG_INSERT_HEADER,
-  ADLB_TAG_INSERT_PAYLOAD,
   ADLB_TAG_INSERT_ATOMIC,
-  ADLB_TAG_LOOKUP,
   ADLB_TAG_UNIQUE,
   ADLB_TAG_TYPEOF,
   ADLB_TAG_CONTAINER_TYPEOF,

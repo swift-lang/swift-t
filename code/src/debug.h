@@ -30,6 +30,7 @@
 #define DEBUG_H
 
 #include <stdbool.h>
+#define _GNU_SOURCE
 #include <stdio.h>
 
 #include <tools.h>
@@ -45,7 +46,7 @@ extern bool xlb_trace_enabled;
 /**
    Check environment to see if user disabled ADLB_DEBUG, ADLB_TRACE
  */
-void debug_check_environment(void);
+adlb_code debug_check_environment(void);
 
 /**
    Most warnings will result in fatal errors at some point,

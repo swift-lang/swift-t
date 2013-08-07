@@ -174,7 +174,7 @@ $(ADLB_SO): $(OBJS) $(NLOBJS) lib
 
 ### INSTALL
 
-INSTALLED_HEADERS = src/adlb.h src/adlb-defs.h
+INSTALLED_HEADERS = src/adlb.h src/adlb-defs.h src/adlb_types.h
 
 HAVE_CP_U = @CP_U@
 ifeq ($(HAVE_CP_U),yes)

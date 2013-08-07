@@ -50,8 +50,6 @@ declare_pair(svr, multicreate);
 declare_pair(svr, subscribe);
 declare_pair(svr, store);
 declare_pair(svr, retrieve);
-declare_pair(svr, insert);
-declare_pair(svr, lookup);
 
 declare_pair(svr, shutdown);
 
@@ -67,8 +65,6 @@ declare_pair(wkr, subscribe);
 declare_pair(wkr, store);
 declare_pair(wkr, retrieve);
 declare_pair(wkr, close);
-declare_pair(wkr, insert);
-declare_pair(wkr, lookup);
 
 int xlb_mpe_svr_info;
 
@@ -120,8 +116,6 @@ xlb_mpe_setup()
   make_pair(svr, subscribe);
   make_pair(svr, store);
   make_pair(svr, retrieve);
-  make_pair(svr, insert);
-  make_pair(svr, lookup);
 
   make_pair(svr, sync);
   make_pair(svr, steal);
@@ -141,8 +135,6 @@ xlb_mpe_setup()
   make_pair(wkr, store);
   make_pair(wkr, close);
   make_pair(wkr, retrieve);
-  make_pair(wkr, insert);
-  make_pair(wkr, lookup);
 
   make_solo(svr, info);
 
@@ -161,8 +153,6 @@ xlb_mpe_setup()
     describe_pair(svr, subscribe);
     describe_pair(svr, store);
     describe_pair(svr, retrieve);
-    describe_pair(svr, insert);
-    describe_pair(svr, lookup);
 
     describe_pair(svr, sync);
     describe_pair(svr, steal);
@@ -180,8 +170,6 @@ xlb_mpe_setup()
     describe_pair(wkr, subscribe);
     describe_pair(wkr, close);
     describe_pair(wkr, unique);
-    describe_pair(wkr, insert);
-    describe_pair(wkr, lookup);
     describe_solo(svr, info);
   }
 }
