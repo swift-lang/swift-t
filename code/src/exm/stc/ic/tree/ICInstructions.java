@@ -2238,7 +2238,7 @@ public class ICInstructions {
             // This just retrieves the item immediately
             return Arrays.asList(makeArrayCV(arr, ix, contents, false));
           } else {
-            assert (Types.isRefTo(contents.type(), 
+            assert (Types.isAssignableRefTo(contents.type(), 
                 Types.arrayMemberType(arr.type())));
             ResultVal refCV = makeArrayCV(arr, ix, contents, true);
             Arg prev = existing.getLocation(ComputedValue.arrayCV(arr, ix));

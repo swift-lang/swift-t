@@ -492,8 +492,9 @@ public class TypeChecker {
     for (Type argExprAlt: UnionType.getAlternatives(argExprT)) {
       // Handle if argument type is union.
       for (Type formalArgAlt: UnionType.getAlternatives(formalArgT)) {
-        if (compatibleArgTypes(formalArgAlt, argExprAlt)) {
-          return Pair.create(formalArgAlt, argExprAlt);
+        Type concreteArgType = compatibleArgTypes(formalArgAlt, argExprAlt);
+        if (concreteArgType != null) {
+          return Pair.create(formalArgAlt, concreteArgType);
         }
       }
     }
@@ -504,18 +505,18 @@ public class TypeChecker {
    * Check if an expression type can be used for function argument
    * @param argType non-polymorphic function argument type
    * @param exprType type of argument expression
-   * @return true if compatible
+   * @return concretized argType if compatible, null if incompatible
    */
-  public static boolean compatibleArgTypes(Type argType,
+  public static Type compatibleArgTypes(Type argType,
       Type exprType) {
     if (exprType.assignableTo(argType)) {
       // Obviously ok if types are exactly the same
-      return true;
-    } else if (Types.isRefTo(exprType, argType)) {
+      return exprType.concretize(argType);
+    } else if (Types.isAssignableRefTo(exprType, argType)) {
       // We can block on reference, so we can transform type here
-      return true;
+      return exprType.concretize(new RefType(argType));
     } else {
-      return false;
+      return null;
     }
   }
   

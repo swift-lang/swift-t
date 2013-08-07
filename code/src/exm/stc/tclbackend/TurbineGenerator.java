@@ -850,7 +850,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void retrieveRef(Var target, Var src, Arg decr) {
     assert(Types.isRef(src.type()));
-    assert(Types.isRefTo(src.type(), target.type()));
+    assert(Types.isAssignableRefTo(src.type(), target.type()));
     assert(decr.isImmediateInt());
     TclTree deref;
     if (Types.isStructRef(src.type())) {
@@ -1255,7 +1255,8 @@ public class TurbineGenerator implements CompilerBackend {
                                 Arg writersDecr) {
     assert(Types.isArray(array.type()));
     assert(writersDecr.isImmediateInt());
-    assert(Types.isRefTo(member.type(), Types.arrayMemberType(array.type())));
+    assert(Types.isAssignableRefTo(member.type(),
+                                   Types.arrayMemberType(array.type())));
     
     Command r = Turbine.arrayDerefStoreComputed(
         varToExpr(member), varToExpr(array),
@@ -1285,7 +1286,8 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArray(outerArray.type()));
     assert(Types.isInt(ix.type()));
-    assert(Types.isRefTo(member.type(), Types.arrayMemberType(array.type())));
+    assert(Types.isAssignableRefTo(member.type(),
+                                   Types.arrayMemberType(array.type())));
     
     Command r = Turbine.arrayRefDerefStoreComputed(
         varToExpr(member), varToExpr(array),
@@ -1330,7 +1332,8 @@ public class TurbineGenerator implements CompilerBackend {
     assert(arrIx.isImmediateInt());
     assert(writersDecr.isImmediateInt());
     // Check that we get the right thing when we dereference it
-    assert(Types.isRefTo(member.type(), Types.arrayMemberType(array.type())));
+    assert(Types.isAssignableRefTo(member.type(),
+                                   Types.arrayMemberType(array.type())));
     Command r = Turbine.arrayDerefStore(
         varToExpr(member), varToExpr(array),
         argToExpr(arrIx), argToExpr(writersDecr),
@@ -1360,7 +1363,8 @@ public class TurbineGenerator implements CompilerBackend {
     assert(arrIx.isImmediateInt());
     Type memberType = array.type().memberType().memberType();
     // Check that we get the right thing when we dereference it
-    assert(Types.isRefTo(member.type(), Types.arrayMemberType(array.type())));
+    assert(Types.isAssignableRefTo(member.type(),
+                                   Types.arrayMemberType(array.type())));
     if (!member.type().memberType().equals(memberType)) {
       throw new STCRuntimeError("Type mismatch when trying to store " +
           "from variable " + member.toString() + " into array " + array.toString());

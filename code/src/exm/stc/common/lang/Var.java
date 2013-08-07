@@ -328,7 +328,7 @@ public class Var implements Comparable<Var>, Typed {
         DEREF_COMPILER_VAR_PREFIX + ref.name(),
         storage, DefType.LOCAL_COMPILER, 
         null);
-    assert(Types.isRefTo(ref.type(), res.type()));
+    assert(Types.isAssignableRefTo(ref.type(), res.type()));
     return res;
   }
   

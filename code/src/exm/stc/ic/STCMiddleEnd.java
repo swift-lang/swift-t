@@ -446,7 +446,8 @@ public class STCMiddleEnd {
   
   public void arrayDerefInsertFuture(Var array, Var ix,
       Var member) {
-    assert(Types.isRefTo(member.type(), Types.arrayMemberType(array.type())));
+    assert(Types.isAssignableRefTo(member.type(),
+                                   Types.arrayMemberType(array.type())));
     assert(Types.isInt(ix.type()));
     currBlock().addInstruction(
         TurbineOp.arrayDerefInsertFuture(array, ix, member));
@@ -465,7 +466,8 @@ public class STCMiddleEnd {
       Var array, Var ix, Var member) {
     assert(Types.isInt(ix.type()));
     assert(Types.isArrayRef(array.type()));
-    assert(Types.isRefTo(member.type(), Types.arrayMemberType(array.type())));
+    assert(Types.isAssignableRefTo(member.type(),
+                                   Types.arrayMemberType(array.type())));
     currBlock().addInstruction(
         TurbineOp.arrayRefDerefInsertFuture(outerArray, array, ix, member));
   }
@@ -490,7 +492,8 @@ public class STCMiddleEnd {
   public void arrayDerefInsertImm(Var array, Arg ix, Var member) {
     assert(Types.isArray(array.type()));
     assert(ix.isImmediateInt());
-    assert(Types.isRefTo(member.type(), Types.arrayMemberType(array.type())));
+    assert(Types.isAssignableRefTo(member.type(),
+                                   Types.arrayMemberType(array.type())));
     currBlock().addInstruction(
         TurbineOp.arrayDerefInsertImm(array, ix, member));
   }
@@ -508,7 +511,8 @@ public class STCMiddleEnd {
       Arg ix, Var member) {
     assert(ix.isImmediateInt());
     assert(Types.isArrayRef(array.type()));
-    assert(Types.isRefTo(member.type(), Types.arrayMemberType(array.type())));
+    assert(Types.isAssignableRefTo(member.type(),
+                 Types.arrayMemberType(array.type())));
     currBlock().addInstruction(
         TurbineOp.arrayRefDerefInsertImm(outerArray, array, ix, member));
   }
@@ -607,7 +611,7 @@ public class STCMiddleEnd {
   
   public void retrieveRef(Var target, Var src) {
     assert(Types.isRef(src.type()));
-    assert(Types.isRefTo(src.type(), target.type()));
+    assert(Types.isAssignableRefTo(src.type(), target.type()));
     currBlock().addInstruction(
         TurbineOp.retrieveRef(target, src));
 

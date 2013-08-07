@@ -355,7 +355,7 @@ public class ExprWalker {
   public void dereference(Context context, Var dst, Var src) 
       throws UndefinedTypeException, UserException {
     assert(Types.isRef(src.type()));
-    assert(Types.isRefTo(src.type(), dst.type()));
+    assert(Types.isAssignableRefTo(src.type(), dst.type()));
   
     if (Types.isScalarFuture(dst.type())) {
       Type dstType = dst.type();
@@ -491,7 +491,6 @@ public class ExprWalker {
       Type exprType = TypeChecker.findSingleExprType(context, argtree);
       Type argType = TypeChecker.checkFunArg(context, f.function(), i,
                                               expType, exprType).val2;
-      assert(argType.isConcrete()) : "Non-concrete arg type: " + argType;
       argVars.add(eval(context, argtree, argType, false, renames));
     }
     
@@ -620,7 +619,7 @@ public class ExprWalker {
               new RefType(memberType));
       doDereference = true;
     } else {
-      assert(Types.isRefTo(oVar.type(), memberType));
+      assert(Types.isAssignableRefTo(oVar.type(), memberType));
       lookupIntoVar = oVar;
       doDereference = false;
     }
@@ -727,7 +726,7 @@ public class ExprWalker {
     try {
       if (outVar == null) {
         return lookupResult;
-      } else if (Types.isRefTo(lookupResult.type(), outVar.type())) {
+      } else if (Types.isAssignableRefTo(lookupResult.type(), outVar.type())) {
         dereference(context, outVar, lookupResult);
         return outVar;
       } else {
@@ -813,7 +812,7 @@ public class ExprWalker {
       Type expType = concrete.getInputs().get(i);
       if (inputType.getImplType().assignableTo(expType.getImplType())) {
         realIList.add(input);
-      } else if (Types.isRefTo(inputType, expType)) {
+      } else if (Types.isAssignableRefTo(inputType, expType)) {
         if (waitContext == null) {
           waitContext = new LocalContext(context);
         }

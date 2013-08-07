@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.Types.RefType;
+import exm.stc.common.lang.Types.Type;
 
 /**
  * This module provides the type definitions used for Swift,
@@ -95,6 +97,15 @@ public class Types {
         return memberType.matchTypeVars(((ArrayType)concrete).memberType);
       }
       return null;
+    }
+    
+    @Override
+    public Type concretize(Type concrete) {
+      assert(isArray(concrete));
+      Type cMember = memberType.concretize(concrete.memberType());
+      if (cMember == this.memberType)
+        return this;
+      return new ArrayType(cMember);
     }
 
     @Override
@@ -207,12 +218,20 @@ public class Types {
       }
       return null;
     }
+    
+    @Override
+    public Type concretize(Type concrete) {
+      assert(isArray(concrete));
+      Type cMember = referencedType.concretize(concrete.memberType());
+      if (cMember == this.referencedType)
+        return this;
+      return new ArrayType(cMember);
+    }
 
     @Override
     public boolean hasTypeVar() {
       return referencedType.hasTypeVar();
     }
-    
     
     @Override
     public Type getImplType() {
@@ -355,6 +374,12 @@ public class Types {
     }
 
     @Override
+    public Type concretize(Type concrete) {
+      assert(this.assignableTo(concrete));
+      return this;
+    }
+    
+    @Override
     public boolean hasTypeVar() {
       for (StructField field: fields) {
         if (field.type.hasTypeVar()) {
@@ -433,6 +458,12 @@ public class Types {
     }
 
     @Override
+    public Type concretize(Type concrete) {
+      assert(this.assignableTo(concrete));
+      return this;
+    }
+    
+    @Override
     public boolean hasTypeVar() {
       return false;
     }
@@ -508,6 +539,12 @@ public class Types {
       }
     }
 
+    @Override
+    public Type concretize(Type concrete) {
+      assert(this.assignableTo(concrete));
+      return this;
+    }
+    
     @Override
     public boolean hasTypeVar() {
       return false;
@@ -590,6 +627,12 @@ public class Types {
       } else {
         return null;
       }
+    }
+    
+    @Override
+    public Type concretize(Type concrete) {
+      assert(this.assignableTo(concrete));
+      return this;
     }
 
     @Override
@@ -754,6 +797,17 @@ public class Types {
     }
 
     @Override
+    public Type concretize(Type concrete) {
+      for (Type alt: alts) {
+        if (alt.assignableTo(concrete)) {
+          return alt;
+        }
+      }
+      throw new STCRuntimeError("None of alt types: " + alts +
+                                " matches concrete: " + concrete);
+    }
+    
+    @Override
     public boolean hasTypeVar() {
       for (Type alt: alts) {
         if (alt.hasTypeVar()) {
@@ -834,10 +888,14 @@ public class Types {
     }
 
     @Override
+    public Type concretize(Type concrete) {
+      throw new STCRuntimeError("Unbound type var when concretizing");
+    }
+    
+    @Override
     public boolean hasTypeVar() {
       return true;
     }
-    
     
     @Override
     public Type getImplType() {
@@ -886,6 +944,12 @@ public class Types {
       return Collections.emptyMap();
     }
 
+    @Override
+    public Type concretize(Type concrete) {
+      // Fill in wildcard
+      return concrete;
+    }
+    
     @Override
     public boolean assignableTo(Type other) {
       return true;
@@ -1007,6 +1071,15 @@ public class Types {
     public boolean isConcrete() {
       return getImplType() != null;
     }
+
+    /**
+     * Convert to a concrete type that is assignable to the argument.
+     * This will throw a runtime error if the type isn't assignable
+     * to concrete
+     * @param concrete
+     * @return
+     */
+    public abstract Type concretize(Type concrete);
 
     public String typeVarName() {
       throw new STCRuntimeError("typeVarName() not supported for type "
@@ -1136,6 +1209,7 @@ public class Types {
       
       return new FunctionType(boundInputs, boundOutputs, varargs);
     }
+    
     @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
       if (!isFunction(concrete)) {
@@ -1144,6 +1218,36 @@ public class Types {
       throw new STCRuntimeError("Not yet implemented: matching typevars for"
           + " function types");
     }
+    
+    @Override
+    public Type concretize(Type concrete) {
+      assert(Types.isFunction(concrete));
+      FunctionType concreteF = (FunctionType)concrete;
+      
+      List<Type> concreteIn = new ArrayList<Type>(inputs.size());
+      List<Type> concreteOut = new ArrayList<Type>(outputs.size());
+      
+      for (int i = 0; i < inputs.size(); i++) {
+        Type in = this.inputs.get(i);
+        Type cIn = concreteF.inputs.get(i);
+        // To use a function of this type type in a place where a 
+        // function of the concrete type is expected, must be able
+        // to accept any args the concrete would
+        assert(cIn.assignableTo(in));
+        // TODO: this isn't quite right
+        concreteIn.add(in.concretize(cIn));
+      }
+      
+      for (int i = 0; i < outputs.size(); i++) {
+        Type out = this.outputs.get(i);
+        Type cOut = concreteF.outputs.get(i);
+        assert(out.assignableTo(cOut));
+        concreteOut.add(out.concretize(cOut));
+      }
+      // TODO: how to handle varargs?
+      return new FunctionType(concreteIn, concreteOut, varargs);
+    }
+    
     @Override
     public boolean hasTypeVar() {
       for (Type input: inputs) {
@@ -1231,14 +1335,17 @@ public class Types {
     public StructureType structureType() {
       return baseType.structureType();
     }
+    
     @Override
     public PrimType primType() {
       return baseType.primType();
     }
+    
     @Override
     public Type memberType() {
       return baseType.memberType();
     }
+    
     @Override
     public boolean assignableTo(Type other) {
       // Is assignable to anything baseType is 
@@ -1246,14 +1353,24 @@ public class Types {
       return baseType.assignableTo(other) ||
               this.equals(other);
     }
+    
     @Override
     public Type bindTypeVars(Map<String, Type> vals) {
       return new SubType(baseType.bindTypeVars(vals), name);
     }
+    
     @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
       return baseType.matchTypeVars(concrete);
     }
+    
+    @Override
+    public Type concretize(Type concrete) {
+      // Should match already
+      assert(this.assignableTo(concrete));
+      return this;
+    }
+    
     @Override
     public boolean hasTypeVar() {
       return baseType.hasTypeVar();
@@ -1429,10 +1546,14 @@ public class Types {
     return isScalarFuture(t) && t.type().primType() == PrimType.BLOB;
   }
 
-  public static boolean isRefTo(Typed refType,
-                                Typed valType) {
+  public static boolean isRefTo(Typed refType, Typed valType) {
     return isRef(refType) && 
            refType.type().memberType().equals(valType.type());
+  }
+  
+  public static boolean isAssignableRefTo(Typed refType, Typed valType) {
+    return isRef(refType) && 
+        refType.type().memberType().assignableTo(valType.type());
   }
   
   public static boolean isUpdateableEquiv(Typed up,

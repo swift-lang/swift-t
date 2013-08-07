@@ -1,11 +1,17 @@
-// SKIP-THIS-TEST
-// COMPILE-ONLY-TEST
+
 // Exercises a bug in inferring type of [];
+// Also tests the dircat operator
+
 import io;
 
-app (file destination) scp(string args[], file source)
+app (file dir) mkdir ()
 {
-  "scp" args source destination;
+  "mkdir" "-p" dir
+}
+
+app (file destination) cp(string args[], file source)
+{
+  "cp" args source destination;
 }
 
 app (file output) untar(file tarball)
@@ -15,10 +21,11 @@ app (file output) untar(file tarball)
 
 main
 {
-  host = "vesta.alcf.anl.gov:";
+  dirname = "dir_675";
+  tgz = "test_675.tgz";
+  data_tgz = input_file(tgz);
 
-  tgz = "lmprun.tar.gz";
-  file data_tgz = input_file(tgz);
-  file remote_tgz<host/tgz> = scp([], data_tgz);
+  file dir<dirname> = mkdir() =>
+  file copy_tgz<dirname/tgz> = cp([], data_tgz);
 }
 
