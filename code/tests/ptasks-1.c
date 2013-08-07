@@ -75,7 +75,8 @@ ptasks_1(ClientData cdata, Tcl_Interp *interp,
   assert(rc == TCL_OK);
   adlb_data_type type;
   int length;
-  adlb_code code = ADLB_Retrieve(id, &type, 0, buffer, &length);
+  adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
+  adlb_code code = ADLB_Retrieve(id, NULL, refcounts, &type, buffer, &length);
   assert(code == ADLB_SUCCESS);
   rc = ptasks_1_impl(turbine_task_comm, buffer);
   return rc;

@@ -65,10 +65,17 @@ typedef struct
   char* name;
   /** Tcl string to evaluate when inputs are ready */
   char* action;
-  /** Number of inputs */
-  int inputs;
+
+  /** Number of input tds */
+  int input_tds;
   /** Array of input TDs */
-  turbine_datum_id* input_list;
+  turbine_datum_id* input_td_list;
+  
+  /** Number of input TD/subscript pairs */
+  int input_td_subs;
+  /** Array of input TD/subscript pairs */
+  td_sub_pair* input_td_sub_list;
+
   turbine_action_type action_type;
   /** ADLB priority for this action */
   int priority;
@@ -76,9 +83,10 @@ typedef struct
   int target;
   /** ADLB task parallelism */
   int parallelism;
-  /** Closed inputs - bit vector */
+  /** Closed inputs - bit vector for both tds and td/sub pairs */
   unsigned char *closed_inputs;
-  /** Index of next subscribed input (starts at 0) */
+  /** Index of next subscribed input (starts at 0 in input_td list,
+      continues into input_td_sub_list) */
   int blocker;
   transform_status status;
 } transform;
@@ -88,9 +96,10 @@ MPI_Comm turbine_task_comm = MPI_COMM_NULL;
 static size_t bitfield_size(int inputs);
 
 // Check if input closed
-static inline bool input_closed(transform *T, int i);
-
-static inline void mark_input_closed(transform *T, int i);
+static inline bool input_td_closed(transform *T, int i);
+static inline void mark_input_td_closed(transform *T, int i);
+static inline bool input_td_sub_closed(transform *T, int i);
+static inline void mark_input_td_sub_closed(transform *T, int i);
 
 /**
    Has turbine_init() been called successfully?
@@ -129,6 +138,21 @@ struct table_lp td_blockers;
   subscribing multiple times
  */
 struct table_lp td_subscribed;
+
+/**
+  TD/subscript pairs to which engine is subscribed.  Key is created using
+   write_id_sub_key function
+ */
+struct table td_sub_subscribed;
+
+// Maximum length of buffer required for key
+#define ID_SUB_KEY_MAX (ADLB_DATA_SUBSCRIPT_MAX + 30)
+static inline int
+write_id_sub_key(char *buf, turbine_datum_id id, const char *subscript)
+{
+  assert(subscript != NULL);
+  return sprintf(buf, "%lli %s", id, subscript);
+}
 
 #define turbine_check(code) if (code != TURBINE_SUCCESS) return code;
 
@@ -290,6 +314,10 @@ turbine_engine_init()
   result = table_lp_init(&td_subscribed, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
+  
+  result = table_init(&td_sub_subscribed, 1024*1024);
+  if (!result)
+    return TURBINE_ERROR_OOM;
 
   engine_initialized = true;
   return TURBINE_SUCCESS;
@@ -311,15 +339,19 @@ make_unique_id()
 
 static inline turbine_code
 transform_create(const char* name,
-                 int inputs, const turbine_datum_id* input_list,
-                 turbine_action_type action_type,
-                 const char* action,
-                 int priority, int target, int parallelism,
-                 transform** result)
+             int input_tds, const turbine_datum_id* input_td_list,
+             int input_td_subs, const td_sub_pair* input_td_sub_list,
+             turbine_action_type action_type,
+             const char* action,
+             int priority, int target, int parallelism,
+             transform** result)
 {
   assert(name);
   assert(action);
-  assert(inputs >= 0);
+  assert(input_tds >= 0);
+  assert(input_tds == 0 || input_td_list != NULL);
+  assert(input_td_subs >= 0);
+  assert(input_td_subs == 0 || input_td_sub_list != NULL);
 
   if (strlen(action) > TURBINE_ACTION_MAX)
   {
@@ -345,25 +377,55 @@ transform_create(const char* name,
   T->target = target;
   T->parallelism = parallelism;
   T->blocker = 0;
+  T->input_tds = input_tds;
+  T->input_td_subs = input_td_subs;
 
-  if (inputs > 0)
+  if (input_tds > 0)
   {
-    T->input_list = malloc((size_t)inputs*sizeof(turbine_datum_id));
-    T->closed_inputs = malloc(bitfield_size(inputs)*sizeof(unsigned char));
-    if (! T->input_list || ! T->closed_inputs)
+    size_t sz = (size_t)input_tds*sizeof(turbine_datum_id);
+    T->input_td_list = malloc(sz);
+
+    if (! T->input_td_list)
       return TURBINE_ERROR_OOM;
+
+    memcpy(T->input_td_list, input_td_list, sz);
+  }
+  else 
+  {
+    T->input_td_list = NULL;
+  }
+  
+  if (input_td_subs > 0)
+  {
+    size_t sz = (size_t)input_td_subs* sizeof(td_sub_pair);
+    T->input_td_sub_list = malloc(sz);
+
+    if (! T->input_td_sub_list)
+      return TURBINE_ERROR_OOM;
+
+    memcpy(T->input_td_sub_list, input_td_sub_list, sz);
+  }
+  else 
+  {
+    T->input_td_sub_list = NULL;
+  }
+
+  int total_inputs = input_tds + input_td_subs;
+  if (total_inputs > 0)
+  {
+    size_t sz = bitfield_size(total_inputs)* sizeof(unsigned char);
+    T->closed_inputs = malloc(sz);
+
+    if (! T->closed_inputs)
+      return TURBINE_ERROR_OOM;
+    
+    memset(T->closed_inputs, 0, sz);
   }
   else
   {
-    T->input_list = NULL;
     T->closed_inputs = NULL;
   }
 
-  T->inputs = inputs;
-  for (int i = 0; i < inputs; i++)
-    T->input_list[i] = input_list[i];
-  for (int i = 0; i < bitfield_size(inputs); i++)
-    T->closed_inputs[i] = 0;
 
   T->status = TRANSFORM_WAITING;
 
@@ -377,35 +439,70 @@ transform_free(transform* T)
   free(T->name);
   if (T->action)
     free(T->action);
-  if (T->input_list)
-    free(T->input_list);
+  if (T->input_td_list)
+    free(T->input_td_list);
+  if (T->input_td_sub_list)
+  {
+    for (int i = 0; i < T->input_td_subs; i++)
+    { 
+      // free subscript strings
+      free(T->input_td_sub_list[i].subscript);
+    }
+    free(T->input_td_sub_list);
+  }
   if (T->closed_inputs)
     free(T->closed_inputs);
   free(T);
 }
 
+
 /**
  * Return true if subscribed, false if data already set
  */
 static inline turbine_code
-subscribe(turbine_transform_id id, bool *result)
+subscribe(adlb_datum_id id, const char *subscript, bool *result)
 {
-  if (table_lp_search(&td_subscribed, id) != NULL) {
-    // Already subscribed
-    *result = true;
-    return TURBINE_SUCCESS;
+  char id_subscript_key[ID_SUB_KEY_MAX]; // if subscript provided, string key
+  if (subscript != NULL)
+  {
+    write_id_sub_key(id_subscript_key, id, subscript);
+    void *tmp;
+    if (table_search(&td_sub_subscribed, id_subscript_key, &tmp))
+    {
+      *result = true;
+      return TURBINE_SUCCESS;
+    }
+  }
+  else
+  {
+    if (table_lp_search(&td_subscribed, id) != NULL) {
+      // Already subscribed
+      *result = true;
+      return TURBINE_SUCCESS;
+    }
   }
   int subscribed;
-  adlb_code rc = ADLB_Subscribe(id, &subscribed);
+  adlb_code rc = ADLB_Subscribe(id, subscript, &subscribed);
 
   if (rc != ADLB_SUCCESS) {
-    log_printf("ADLB_Subscribe on <%ld> failed with code: %d\n", id, rc);
+    if (subscript != NULL)
+    {
+      log_printf("ADLB_Subscribe on <%ld>[\"%s\"] failed with code: %d\n",
+                 id, subscript, rc);
+    }
+    else
+    {
+      log_printf("ADLB_Subscribe on <%ld> failed with code: %d\n", id, rc);
+    }
     return rc; // Turbine codes are same as ADLB data codes
   }
 
   if (subscribed != 0) {
     // Record it was subscribed
-    table_lp_add(&td_subscribed, id, (void*)1);
+    if (subscript != NULL)
+      table_add(&td_sub_subscribed, id_subscript_key, (void*)1);
+    else
+      table_lp_add(&td_subscribed, id, (void*)1);
   }
   *result = subscribed != 0;
   return TURBINE_SUCCESS;
@@ -429,7 +526,8 @@ static inline void rule_inputs(transform* T);
 
 turbine_code
 turbine_rule(const char* name,
-             int inputs, const turbine_datum_id* input_list,
+             int input_tds, const turbine_datum_id* input_td_list,
+             int input_td_subs, const td_sub_pair* input_td_sub_list,
              turbine_action_type action_type,
              const char* action,
              int priority,
@@ -440,7 +538,8 @@ turbine_rule(const char* name,
   if (!engine_initialized)
     return TURBINE_ERROR_UNINITIALIZED;
   transform* T = NULL;
-  turbine_code code = transform_create(name, inputs, input_list,
+  turbine_code code = transform_create(name, input_tds, input_td_list,
+                                       input_td_subs, input_td_sub_list,
                                        action_type, action,
                                        priority, target, parallelism,
                                        &T);
@@ -462,9 +561,13 @@ turbine_rule(const char* name,
   DEBUG_TURBINE_RULE(T, *id);
 
   if (subscribed)
+  {
     table_lp_add(&transforms_waiting, *id, T);
+  }
   else
+  {
     list_add(&transforms_ready, T);
+  }
 
   return TURBINE_SUCCESS;
 }
@@ -478,14 +581,15 @@ static inline turbine_code declare_datum(turbine_datum_id id,
 static inline void
 rule_inputs(transform* T)
 {
-  for (int i = 0; i < T->inputs; i++)
+  for (int i = 0; i < T->input_tds; i++)
   {
-    turbine_datum_id id = T->input_list[i];
+    turbine_datum_id id = T->input_td_list[i];
     struct list_l* L = table_lp_search(&td_blockers, id);
     if (L == NULL)
       declare_datum(id, &L);
     list_l_add(L, T->id);
   }
+  // TODO: do same for pairs
 }
 
 /**
@@ -609,17 +713,15 @@ turbine_pop(turbine_transform_id id, turbine_action_type* action_type,
   return TURBINE_SUCCESS;
 }
 
-/**
-   TODO: This does not remove tds from td_blockers!
- */
 turbine_code
 turbine_close(turbine_datum_id id)
 {
   // Record no longer subscribed
   table_lp_remove(&td_subscribed, id);
 
-  // Look up transforms that this td was blocking
-  struct list_l* L = table_lp_search(&td_blockers, id);
+  // Remove from table transforms that this td was blocking
+  // Will need to free list later
+  struct list_l* L = table_lp_remove(&td_blockers, id);
   if (L == NULL)
     // We don't have any rules that block on this td
     return TURBINE_SUCCESS;
@@ -637,9 +739,9 @@ turbine_close(turbine_datum_id id)
       continue;
 
     // update closed vector
-    for (int i = T->blocker; i < T->inputs; i++) {
-      if (T->input_list[i] == id) {
-        mark_input_closed(T, i);
+    for (int i = T->blocker; i < T->input_tds; i++) {
+      if (T->input_td_list[i] == id) {
+        mark_input_td_closed(T, i);
       }
     }
 
@@ -655,7 +757,17 @@ turbine_close(turbine_datum_id id)
     }
   }
 
+  
+  list_l_free(L); // No longer need list
+
   add_to_ready(&tmp);
+
+  return TURBINE_SUCCESS;
+}
+
+turbine_code turbine_sub_close(turbine_datum_id id, const char *subscript)
+{
+  // TODO: handle close notification
 
   return TURBINE_SUCCESS;
 }
@@ -669,13 +781,15 @@ static inline turbine_code
 progress(transform* T, bool* subscribed)
 {
   *subscribed = false;
-  for (; T->blocker < T->inputs; T->blocker++)
+  
+  // first check TDs to see if all are ready
+  for (; T->blocker < T->input_tds; T->blocker++)
   {
-    if (!input_closed(T, T->blocker))
+    if (!input_td_closed(T, T->blocker))
     {
       // Contact server to check if available
-      turbine_datum_id td = T->input_list[T->blocker];
-      turbine_code tc = subscribe(td, subscribed);
+      turbine_datum_id td = T->input_td_list[T->blocker];
+      turbine_code tc = subscribe(td, NULL, subscribed);
       if (tc != TURBINE_SUCCESS) {
         return tc;
       }
@@ -685,6 +799,27 @@ progress(transform* T, bool* subscribed)
       }
     }
   }
+
+  // now, make progress on any ID/subscript pairs
+  int total_inputs = T->input_tds  + T->input_td_subs;
+  for (; T->blocker < total_inputs; T->blocker++)
+  {
+    int td_sub_ix = T->blocker - T->input_tds;
+    if (!input_td_sub_closed(T, td_sub_ix))
+    {
+      // Contact server to check if available
+      td_sub_pair ts = T->input_td_sub_list[td_sub_ix];
+      turbine_code tc = subscribe(ts.td, ts.subscript, subscribed);
+      if (tc != TURBINE_SUCCESS) {
+        return tc;
+      }
+      if (*subscribed) {
+        // Need to block on this id
+        return TURBINE_SUCCESS;
+      }
+    }
+  }
+
   // Ready to run
   *subscribed = false;
   return TURBINE_SUCCESS;
@@ -762,15 +897,40 @@ transform_tostring(char* output, transform* t)
   append(p, "%s ", t->name);
   append(p, "%s ", action_type_string);
   append(p, "(");
-  for (int i = 0; i < t->inputs; i++)
+  bool first = true;
+  for (int i = 0; i < t->input_tds; i++)
   {
-    // Highlight the blocking variable
-    if (i == t->blocker)
-      append(p, "/%lli/", lli(t->input_list[i]));
+    if (first)
+    {
+      first = false;
+    }
     else
-      append(p, "%lli", lli(t->input_list[i]));
-    if (i < t->inputs-1)
+    {
       append(p, " ");
+    }
+    // Highlight the blocking variable
+    bool blocking = (i == t->blocker);
+    if (blocking)
+      append(p, "/");
+    append(p, "%lli", lli(t->input_td_list[i]));
+    if (blocking)
+      append(p, "/");
+  }
+  for (int i = 0; i < t->input_td_subs; i++)
+  {
+    if (first)
+      first = false;
+    else
+      append(p, " ");
+
+    // Highlight the blocking variable
+    bool blocking = (i + t->input_tds == t->blocker);
+    td_sub_pair ts = t->input_td_sub_list[i];
+    if (blocking)
+      append(p, "/");
+    append(p, "%lli[\"%s\"]", lli(ts.td), ts.subscript);
+    if (blocking)
+      append(p, "/");
   }
   append(p, ")");
 
@@ -779,20 +939,33 @@ transform_tostring(char* output, transform* t)
 }
 
 static inline bool
-input_closed(transform *T, int i)
+input_td_closed(transform *T, int i)
 {
   assert(i >= 0);
   unsigned char field = T->closed_inputs[(unsigned int)i / 8];
   return (field >> ((unsigned int)i % 8)) & 0x1;
 }
 
+static inline bool
+input_td_sub_closed(transform *T, int i)
+{
+  // closed_inputs had pairs come after tds
+  return input_td_closed(T, i + T->input_tds);
+}
+
 // Extract bit from closed_inputs
 static inline void
-mark_input_closed(transform *T, int i)
+mark_input_td_closed(transform *T, int i)
 {
   assert(i >= 0);
   unsigned char mask = (unsigned char) (0x1 << ((unsigned int)i % 8));
   T->closed_inputs[i / 8] |= mask;
+}
+
+static inline void
+mark_input_td_sub_closed(transform *T, int i)
+{
+  mark_input_td_closed(T, i + T->input_tds);
 }
 
 static size_t

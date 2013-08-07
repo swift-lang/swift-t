@@ -12,18 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# Test low-level container close functionality
+# Test mid-level container close functionality
+# Illustrates how to get container call backs
 
 # SwiftScript
 # int c[];
-# int i1=0, i2=1;
-# int j1=98, j2=72;
+# int i1=0,  i2=1,  i3=2;
+# int j1=98, j2=72, j3=88;
 # c[i1] = j1;
-# c[i2] = j2;
+# if (i3==0) { c[i2]=j2; }
+# else       { c[i3]=j3; }
 # string s = enumerate(c)
 # trace(s);
 
 package require turbine 0.0.1
+
+# This is like an if block
+proc f { stack c i j2 j3 } {
+    puts "f: $i"
+    if { $i == 0 } {
+        turbine::c_f_insert $c "$i" "$c $i $j2" string
+    } else {
+        turbine::c_f_insert $c "$i" "$c $i $j3" string
+    }
+    adlb::write_refcount_decr $c
+}
 
 proc rules { } {
 
@@ -31,16 +44,20 @@ proc rules { } {
 
     set i1 [ turbine::literal integer 0 ]
     set i2 [ turbine::literal integer 1 ]
+    set i3 [ turbine::literal integer 2 ]
 
     set j1 [ turbine::literal integer 98 ]
     set j2 [ turbine::literal integer 72 ]
+    set j3 [ turbine::literal integer 88 ]
 
-    turbine::c_f_insert $c $i1 $j1 string
-    turbine::c_f_insert $c $i2 $j2 string
-    adlb::write_refcount_decr $c
+    turbine::c_f_insert $c $i1 "$c $i1 $j1" string
 
     turbine::allocate s string
 
+    adlb::write_refcount_incr $c
+    turbine::rule $i3 "f no_stack $c $i2 $j2 $j3" name RULE_F 
+
+    adlb::write_refcount_decr $c
     turbine::enumerate $s $c
     turbine::trace "" $s
 }

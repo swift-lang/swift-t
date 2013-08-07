@@ -30,15 +30,15 @@ proc rules { } {
     set s1 [ adlb::unique ]
     set s2 [ adlb::unique ]
 
-    turbine::create_container $c integer
+    turbine::create_container $c integer string
     turbine::create_string $s1 0
     turbine::store_string $s1 "hello"
     turbine::create_string $s2 0
     turbine::store_string $s2 "howdy"
 
-    # insert <container> <subscript> <member>
-    turbine::container_insert $c "0" $s1
-    turbine::container_insert $c "1" $s2
+    # insert <container> <subscript> <type> <member>
+    turbine::container_insert $c "0" $s1 string
+    turbine::container_insert $c "1" $s2 string
 
     # Output member TDs for check script:
     puts "member1: $s1"

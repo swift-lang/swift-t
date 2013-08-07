@@ -21,14 +21,14 @@ if [ adlb::amserver ] {
     adlb::server
 } else {
     set d1 [ adlb::unique ]
-    adlb::create $d1 $adlb::INTEGER
-    adlb::store  $d1 $adlb::INTEGER 25
+    adlb::create $d1 integer
+    adlb::store  $d1 integer 25
     set d2 [ adlb::unique ]
-    adlb::create $d2 $adlb::INTEGER
-    adlb::store  $d2 $adlb::INTEGER 26
+    adlb::create $d2 integer
+    adlb::store  $d2 integer 26
 
-    adlb::retrieve $d1 $adlb::INTEGER
-    adlb::retrieve $d2 $adlb::STRING
+    adlb::retrieve $d1 integer
+    adlb::retrieve $d2 string
 }
 
 adlb::finalize 1

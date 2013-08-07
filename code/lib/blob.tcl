@@ -40,7 +40,7 @@ namespace eval turbine {
         name "bfs-$input-$result"
   }
   proc blob_from_string_body { input result } {
-    set t [ retrieve_decr $input ]
+    set t [ retrieve_decr_string $input ]
     store_blob_string $result $t
   }
 
@@ -68,9 +68,9 @@ namespace eval turbine {
       for { set i 0 } { $i < $n } { incr i } {
           set d [ blobutils_get_float $p $i ]
           literal t float $d
-          container_immediate_insert $result $i $t
+          container_immediate_insert $result $i $t ref
       }
-      adlb::refcount_incr $result $::adlb::WRITE_REFCOUNT -1
+      adlb::refcount_incr $result w -1
       adlb::blob_free $input
       log "floats_from_blob_body: done"
   }
@@ -107,8 +107,8 @@ namespace eval turbine {
           error "matrix_from_blob: blob size $total != $m_value x $n_value"
       }
       for { set i 0 } { $i < $m_value } { incr i } {
-          set c($i) [ allocate_container $::adlb::INTEGER ]
-          container_immediate_insert $result $i $c($i)
+          set c($i) [ allocate_container integer ref ]
+          container_immediate_insert $result $i $c($i) ref
       }
       for { set k 0 } { $k < $total } { incr k } {
           set d [ blobutils_get_float $p $k ]
@@ -119,10 +119,10 @@ namespace eval turbine {
       }
       # Close rows
       for { set i 0 } { $i < $m_value } { incr i } {
-          adlb::refcount_incr $c($i) $::adlb::WRITE_REFCOUNT -1
+          adlb::refcount_incr $c($i) w -1
       }
       # Close result
-      adlb::refcount_incr $result $::adlb::WRITE_REFCOUNT -1
+      adlb::refcount_incr $result w -1
       # Release cached blob
       adlb::blob_free $b
       log "matrix_from_blob_fortran_body: done"
@@ -135,7 +135,6 @@ namespace eval turbine {
   }
   proc blob_from_floats_body { container result } {
 
-      set type [ container_typeof $container ]
       set N  [ adlb::container_size $container ]
       c::log "blob_from_floats_body start"
       complete_container $container \
@@ -146,11 +145,11 @@ namespace eval turbine {
     set A [ list ]
     for { set i 0 } { $i < $N } { incr i } {
       set td [ container_lookup $container $i ]
-      set v  [ retrieve_decr_float $td ]
+      set v  [ retrieve_float $td ]
       lappend A $v
     }
-    set waiters [ adlb::store_blob_floats $result $A ]
-    turbine::notify_waiters $result $waiters
+    adlb::store_blob_floats $result $A
+    read_refcount_decr $container
   }
 
   # Container must be indexed from 0,N-1
@@ -160,7 +159,6 @@ namespace eval turbine {
   }
   proc blob_from_ints_body { container result } {
 
-      set type [ container_typeof $container ]
       set N  [ adlb::container_size $container ]
       c::log "blob_from_ints_body start"
       complete_container $container \
@@ -171,11 +169,11 @@ namespace eval turbine {
     set A [ list ]
     for { set i 0 } { $i < $N } { incr i } {
       set td [ container_lookup $container $i ]
-      set v  [ retrieve_decr_integer $td ]
+      set v  [ retrieve_integer $td ]
       lappend A $v
     }
-    set waiters [ adlb::store_blob_ints $result $A ]
-    turbine::notify_waiters $result $waiters
+    adlb::store_blob_ints $result $A
+    read_refcount_decr $container
   }
 
   proc blob_zeroes_float { N } {

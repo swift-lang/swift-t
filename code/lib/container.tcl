@@ -22,12 +22,15 @@
 namespace eval turbine {
     namespace export container_f_get container_f_insert
     namespace export c_f_lookup
+    
+    namespace import ::turbine::c::create_nested
 
     # build array by inserting items into a container starting at 0
     # close: decrement writers count at end
-    proc array_build { c elems close } {
+    # val_type: type of array values
+    proc array_build { c elems close val_type } {
       set n [ llength $elems ]
-      log "container_build: <$c> $n elems, close $close"
+      log "array_build: <$c> $n elems, close $close"
       if { $n > 0 } {
         for { set i 0 } { $i < $n } { incr i } {
           set elem [ lindex $elems $i ]
@@ -35,19 +38,18 @@ namespace eval turbine {
           if { [ expr {$close && $i == $n - 1 } ] } {
             set drops 1
           }
-          adlb::insert $c $i $elem $drops
+          adlb::insert $c $i $elem $val_type $drops
         }
       } else {
-        adlb::slot_drop $c
+        adlb::write_refcount_decr $c
       }
     }
 
     # Just like adlb::container_reference but add logging
+    # Note that container_reference always consumes a read reference count
     proc container_reference { c i r type } {
         log "creating reference: <$c>\[$i\] <- <*$r> ($type)"
         adlb::container_reference $c $i $r $type
-        # TODO: need to move refcount from container to referenced item
-        # once reference set
     }
 
     # Same as container_lookup, but fail if item does not exist
@@ -71,7 +73,7 @@ namespace eval turbine {
     }
 
     proc c_f_retrieve_integer_body { d c i } {
-        set s [ retrieve $i ]
+        set s [ retrieve_decr $i ]
         set t [ container_lookup $c $s ]
         if { $t == 0 } {
             error "lookup failed: c_f_retrieve <$c>\[$s\]"
@@ -88,64 +90,64 @@ namespace eval turbine {
     # d: the data
     # outputs: ignored.  To block on this, use turbine::reference
     # Note: assume slot kept open by other process
-    proc c_f_insert { c i d {slot_drops 1} {slot_create 1}} {
-        nonempty c i d
+    proc c_f_insert { c i d t {write_refcount_decrs 1} {write_refcount_incr 1}} {
+        nonempty c i t d
 
-        if { $slot_create } {
-            adlb::slot_create $c
+        if { $write_refcount_incr } {
+            adlb::write_refcount_incr $c
         }
 
-        rule $i [ list turbine::container_f_insert_body $c $i $d $slot_drops ] \
+        rule $i [ list turbine::container_f_insert_body $c $i $d $t $write_refcount_decrs ] \
             name "CFI-$c-$i"
     }
 
-    proc container_f_insert_body { c i d slot_drops } {
-        set s [ retrieve $i ]
-        container_insert $c $s $d $slot_drops
+    proc container_f_insert_body { c i d t write_refcount_decrs } {
+        set s [ retrieve_decr $i ]
+        container_insert $c $s $d $t $write_refcount_decrs
     }
 
     # CFIR
     # When i and r are closed, set c[i] := *(r)
-    # inputs: c i r
+    # inputs: c i r t
     # r: a reference to a turbine ID
-    proc c_f_insert_r { c i r {slot_drops 1} {slot_create 1}} {
-        nonempty c i r
+    proc c_f_insert_r { c i r t {write_refcount_decrs 1} {write_refcount_incr 1}} {
+        nonempty c i r t
 
-        if { $slot_create } {
-            adlb::slot_create $c
+        if { $write_refcount_incr } {
+            adlb::write_refcount_incr $c
         }
 
         rule "$i $r" \
-            "c_f_insert_r_body $c $i $r $slot_drops" \
+            "c_f_insert_r_body $c $i $r $t $write_refcount_decrs" \
             name "CFIR-$c-$i"
     }
 
-    proc c_f_insert_r_body { c i r slot_drops } {
+    proc c_f_insert_r_body { c i r t write_refcount_decrs } {
         set t1 [ retrieve_decr_integer $i ]
-        set d [ retrieve_decr $r ]
-        container_insert $c $t1 $d $slot_drops
+        set d [ adlb::acquire_ref $r $t 1 1 ]
+        container_insert $c $t1 $d $t $write_refcount_decrs
     }
 
     # CVIR
     # When r is closed, set c[i] := *(r)
-    # inputs: c i r
+    # inputs: c i r t
     # i: an integer which is the index to insert into
     # r: a reference to a turbine ID
-    proc c_v_insert_r { c i r {slot_drops 1} {slot_create 1}} {
-        nonempty c i r
+    proc c_v_insert_r { c i r t {write_refcount_decrs 1} {write_refcount_incr 1}} {
+        nonempty c i r t
 
-        if { $slot_create } {
-            adlb::slot_create $c
+        if { $write_refcount_incr } {
+            adlb::write_refcount_incr $c
         }
 
-        rule $r "c_v_insert_r_body $c $i $r $slot_drops" \
+        rule $r "c_v_insert_r_body $c $i $r $t $write_refcount_decrs" \
             name "container_deref_insert-$c-$i"
     }
 
-    proc c_v_insert_r_body { c i r slot_drops } {
-        set d [ retrieve_decr $r ]
+    proc c_v_insert_r_body { c i r t write_refcount_decrs } {
+        set d [ adlb::acquire_ref $r $t 1 1 ]
         # Refcount from reference passed to container
-        container_insert $c $i $d $slot_drops
+        container_insert $c $i $d $t $write_refcount_decrs
     }
 
     # Immediately insert data into container without affecting open slot count
@@ -153,9 +155,9 @@ namespace eval turbine {
     # i: the subscript
     # d: the data
     # outputs: ignored.
-    proc container_immediate_insert { c i d {drops 0} } {
-        # adlb::slot_create $c
-        container_insert $c $i $d $drops
+    proc container_immediate_insert { c i d t {drops 0} } {
+        # adlb::write_refcount_incr $c
+        container_insert $c $i $d $t $drops
     }
 
     # CFL
@@ -176,7 +178,7 @@ namespace eval turbine {
     }
     proc c_f_lookup_body { c i r ref_type } {
         debug "f_reference_body: <$c>\[<$i>\] <- <*$r>"
-        set t1 [ retrieve $i ]
+        set t1 [ retrieve_decr $i ]
         debug "f_reference_body: <$c>\[$t1\] <- <$r>"
         container_reference $c $t1 $r $ref_type
     }
@@ -189,9 +191,7 @@ namespace eval turbine {
     }
     proc dereference_integer_body { v r } {
         # Get the TD from the reference
-        set id [ retrieve_integer $r ]
-        # When the TD has a value, copy the value
-        read_refcount_incr $id
+        set id [ acquire_ref $r 1 1 ]
         copy_integer $v $id
     }
 
@@ -204,9 +204,7 @@ namespace eval turbine {
 
     proc dereference_float_body { v r } {
         # Get the TD from the reference
-        set id [ retrieve_integer $r ]
-        # When the TD has a value, copy the value
-        read_refcount_incr $id
+        set id [ acquire_ref $r 1 1 ]
         copy_float $v $id
     }
 
@@ -217,10 +215,7 @@ namespace eval turbine {
             name "DRS-$v-$r"
     }
     proc dereference_string_body { v r } {
-        # Get the TD from the reference
-        set id [ retrieve_integer $r ]
-        # When the TD has a value, copy the value
-        read_refcount_incr $id
+        set id [ acquire_ref $r 1 1 ]
         copy_string $v $id
     }
 
@@ -231,11 +226,8 @@ namespace eval turbine {
             name "DRB-$v-$r"
     }
     proc dereference_blob_body { v r } {
-        # Get the TD from the reference
-        set handle [ retrieve_integer $r ]
-        # When the TD has a value, copy the value
-        read_refcount_incr $handle
-        copy_blob [ list $v ] [ list $handle ]
+        set id [ acquire_ref $r 1 1 ]
+        copy_blob [ list $v ] [ list $id ]
     }
 
     proc dereference_file { v r } {
@@ -244,9 +236,7 @@ namespace eval turbine {
     }
     proc dereference_file_body { v r } {
         # Get the TD from the reference
-        set handle [ retrieve_string $r ]
-        # When the TD has a value, copy the value
-        file_read_refcount_incr $handle
+        set handle [ acquire_file_ref $r 1 1 ]
         copy_file [ list $v ] [ list $handle ]
     }
 
@@ -269,7 +259,7 @@ namespace eval turbine {
     proc cr_v_lookup_body { cr i d d_type } {
         # When this procedure is run, cr should be set and
         # i should be the literal index
-        set c [ retrieve_integer $cr ]
+        set c [ acquire_ref $cr 1 1 ]
         container_reference $c $i $d $d_type
     }
 
@@ -289,8 +279,8 @@ namespace eval turbine {
 
     proc cr_f_lookup_body { cr i d d_type } {
         # When this procedure is run, cr and i should be set
-        set c [ retrieve_integer $cr ]
-        set t1 [ retrieve $i ]
+        set c [ acquire_ref $cr 1 1 ]
+        set t1 [ retrieve_decr $i ]
         container_reference $c $t1 $d $d_type
     }
 
@@ -300,23 +290,24 @@ namespace eval turbine {
     # oc is outer container
     # inputs: r j d oc
     # outputs: ignored
-    proc cr_f_insert { r j d oc {slot_create 1}} {
-        log "insert (future): <*$r>\[<$j>\]=<$d>"
+    proc cr_f_insert {cr j d t oc {write_refcount_incr 1}} {
+        log "insert (future): <*$cr>\[<$j>\]=<$d>"
 
-        if { $slot_create } {
-            adlb::slot_create $oc
+        if { $write_refcount_incr } {
+            adlb::write_refcount_incr $oc
         }
 
-        rule "$r $j" "cr_f_insert_body $r $j $d $oc" \
-            name "CRFI-$r"
+        rule "$cr $j" "cr_f_insert_body $cr $j $d $t $oc" \
+            name "CRFI-$cr"
     }
-    proc cr_f_insert_body { r j d oc } {
+    proc cr_f_insert_body { cr j d t oc } {
         # s: The subscripted container
-        set c [ retrieve_decr_integer $r ]
+        # don't need read reference
+        set c [ acquire_ref $cr 0 1 ]
         set s [ retrieve_decr_integer $j ]
-        container_insert $c $s $d
+        container_insert $c $s $d $t 
         log "insert: (now) <$c>\[$s\]=<$d>"
-        adlb::slot_drop $oc
+        adlb::write_refcount_decr $oc
     }
 
     # CRVI
@@ -326,174 +317,134 @@ namespace eval turbine {
     #       which cr will be inside
     # inputs: r j d oc
     # outputs: ignored
-    proc cr_v_insert { cr j d oc {slot_create 1} } {
-        if { $slot_create } {
-            adlb::slot_create $oc
+    proc cr_v_insert { cr j d t oc {write_refcount_incr 1} } {
+        if { $write_refcount_incr } {
+            adlb::write_refcount_incr $oc
         }
 
-        rule "$cr" "cr_v_insert_body $cr $j $d $oc" \
+        rule "$cr" "cr_v_insert_body $cr $j $d $t $oc" \
             name "CRVI-$cr-$j-$d-$oc"
     }
-    proc cr_v_insert_body { cr j d oc } {
-        set c [ retrieve_decr_integer $cr ]
+    proc cr_v_insert_body { cr j d t oc } {
+        # don't need read reference
+        set c [ acquire_ref $cr 0 1 ]
         # insert and drop slot
-        container_insert $c $j $d
-        adlb::slot_drop $oc
+        container_insert $c $j $d $t
+        adlb::write_refcount_decr $oc
     }
 
     # CRVIR
     # j: tcl integer index
     # oc: direct handle to outer container
-    proc cr_v_insert_r { cr j dr oc {slot_create 1}} {
-        if { $slot_create } {
-            adlb::slot_create $oc
+    proc cr_v_insert_r { cr j dr t oc {write_refcount_incr 1}} {
+        if { $write_refcount_incr } {
+            adlb::write_refcount_incr $oc
         }
 
         rule [ list $cr $dr ] \
-            "cr_v_insert_r_body $cr $j $dr $oc" \
+            "cr_v_insert_r_body $cr $j $dr $t $oc" \
             name "CRVIR"
     }
-    proc cr_v_insert_r_body { cr j dr oc } {
-        set c [ retrieve_decr_integer $cr ]
-        set d [ retrieve_decr $dr ]
-        #TODO: how to handle refcounting for referenced var
-        container_insert $c $j $d
-        adlb::slot_drop $oc
+    proc cr_v_insert_r_body { cr j dr t oc } {
+        set c [ acquire_ref $cr 0 1 ]
+        set d [ adlb::acquire_ref $dr $t 1 1 ]
+        container_insert $c $j $d $t 
+        adlb::write_refcount_decr $oc
     }
 
-    proc cr_f_insert_r { cr j dr oc {slot_create 1}} {
-        if { $slot_create } {
-            adlb::slot_create $oc
+    proc cr_f_insert_r { cr j dr t oc {write_refcount_incr 1}} {
+        if { $write_refcount_incr } {
+            adlb::write_refcount_incr $oc
         }
 
         rule [ list $cr $j $dr ] \
-            "cr_f_insert_r_body $cr $j $dr $oc" \
+            "cr_f_insert_r_body $cr $j $dr $t $oc" \
             name "CRFIR"
     }
-    proc cr_f_insert_r_body { cr j dr oc } {
-        set c [ retrieve_decr_integer $cr ]
-        set d [ retrieve_decr $dr ]
+    proc cr_f_insert_r_body { cr j dr t oc } {
+        set c [ acquire_ref $cr 1 1 ]
+        set d [ adlb::acquire_ref $dr $t 1 1 ]
         set jval [ retrieve_decr_integer $j ]
-        container_insert $c $jval $d
-        adlb::slot_drop $oc
+        container_insert $c $jval $d $t
+        adlb::write_refcount_decr $oc
     }
 
     # CVC
     # Create container c[i] inside of container c
     # c[i] may already exist, if so, that's fine
-    proc c_v_create { c i type {decr_slots 0}} {
-      log "creating nested container: <$c>\[$i\] ($type)"
-      if [ adlb::insert_atomic $c $i ] {
-        debug "<$c>\[$i\] doesn't exist, creating"
-        # Member did not exist: create it and get reference
-        allocate_container t $type
-
-        # Add refcount - 1 for container, 1 for returned ref
-        read_refcount_incr $t
-        adlb::insert $c $i $t $decr_slots
-
-        # setup rule to close when outer container closes
-        rule $c "adlb::slot_drop $t" name "autoclose-$t"
-        return $t
-      } else {
-        # Another engine is creating it right this second, poll
-        # until we get it.  Note: this should require at most one
-        # or two polls to get a result
-        debug "<$c>\[$i\] already exists, retrieving"
-        set container_id 0
-        while { $container_id == 0 } {
-          set container_id [ adlb::lookup $c $i ]
-        }
-        # add to refcount for returned container ref
-        read_refcount_incr $container_id
-        # drop slot on outer
-        if { $decr_slots } {
-            adlb::slot_drop $c $decr_slots
-        }
-        return $container_id
-      }
+    proc c_v_create { c i key_type val_type {caller_read_ref 0} \
+                {caller_write_ref 0} {decr_write 0} {decr_read 0}} {
+      return [ create_nested $c $i $key_type $val_type \
+                        $caller_read_ref $caller_write_ref \
+                        $decr_write $decr_read ]
     }
 
     # CFC
     # puts a reference to a nested container at c[i]
     # into reference variable r.
     # i: an integer future
-    proc c_f_create { r c i type {slot_create 1}} {
-        upvar 1 $r v
-
-        # Create reference
-        allocate tmp_r integer
-        set v $tmp_r
-
-
-        rule $i "c_f_create_body $tmp_r $c $i $type" \
+    proc c_f_create { r c i key_type val_type {decr_write 1} {decr_read 0}} {
+        rule $i "c_f_create_body $r $c $i $key_type $val_type $decr_write $decr_read" \
             name "CFC-$r"
     }
 
     # Create container at c[i]
     # Set r, a reference TD on c[i]
-    proc c_f_create_body { r c i type } {
+    proc c_f_create_body { r c i key_type val_type decr_write decr_read } {
 
-        debug "c_f_create: $r $c\[$i\] $type"
+        debug "c_f_create: $r $c\[$i\] $key_type $val_type"
 
-        set s [ retrieve $i ]
-        set res [ c_v_create $c $s $type ]
-        store_integer $r $res
+        set s [ retrieve_decr $i ]
+        # Acquire 1 read refcount for container
+        set res [ create_nested $c $s $key_type $val_type 1 0 $decr_write $decr_read ]
+        store_ref $r $res
     }
 
     # Create container at c[i]
     # Set r, a reference TD on (cr*)[i]
     # oa: outer array
-    # slot_create: if false, caller has created slot on oa
-    proc cr_v_create { r cr i type oa {slot_create 1}} {
-        upvar 1 $r v
-
-        # Create reference
-        allocate tmp_r integer
-        set v $tmp_r
-
-        if { $slot_create } {
+    # write_refcount_incr: if false, caller has created slot on oa
+    proc cr_v_create { r cr i key_type val_type oa {write_refcount_incr 1}} {
+        if { $write_refcount_incr } {
             # create slot on outer array
-            adlb::slot_create $oa
+            adlb::write_refcount_incr $oa
         }
 
-        rule "$cr" "cr_v_create_body $tmp_r $cr $i $type $oa" \
+        rule "$cr" \
+          "cr_v_create_body $r $cr $i $key_type $val_type $oa" \
            name crvc
     }
 
-    proc cr_v_create_body { r cr i type oa } {
-        set c [ retrieve_decr_integer $cr ]
-        set res [ c_v_create $c $i $type ]
-        store_integer $r $res
-        adlb::slot_drop $oa
+    proc cr_v_create_body { r cr i key_type val_type oa } {
+        set c [ acquire_ref $cr 1 1 ]
+        # Acquire 1 read refcount for container
+        set res [ create_nested $c $i $key_type $val_type 1 0 0 1 ]
+        # Pass read refcount into ref
+        store_ref $r $res
+        adlb::write_refcount_decr $oa
     }
 
     # Create container at c[i]
     # Set r, a reference TD on (cr*)[i]
     # oa: outer array of nested
-    # slot_create: if false, caller has created slot on oa
-    proc cr_f_create { r cr i type oa {slot_create 1}} {
-        upvar 1 $r v
-
-        # Create reference
-        allocate tmp_r integer
-        set v $tmp_r
-
-        if { $slot_create } {
+    # write_refcount_incr: if false, caller has created slot on oa
+    proc cr_f_create { r cr i key_type val_type oa {write_refcount_incr 1}} {
+        if { $write_refcount_incr } {
             # create slot on outer array
-            adlb::slot_create $oa
+            adlb::write_refcount_incr $oa
         }
 
-        rule "$cr $i" "cr_f_create_body $tmp_r $cr $i $type $oa" \
+        rule "$cr $i" "cr_f_create_body $r $cr $i $key_type $val_type $oa" \
            name crfc
     }
 
-    proc cr_f_create_body { r cr i type oa } {
-        set c [ retrieve_decr_integer $cr ]
+    proc cr_f_create_body { r cr i key_type val_type oa } {
+        set c [ acquire_ref $cr 1 1 ]
         set s [ retrieve_decr $i ]
-        set res [ c_v_create $c $s $type ]
-        store_integer $r $res
-        adlb::slot_drop $oa
+        # Acquire 1 read refcount for container
+        set res [ create_nested $c $s $key_type $val_type 1 0 0 1 ]
+        store_ref $r $res
+        adlb::write_refcount_decr $oa
     }
 
     # When container is closed, concatenate its keys in result
@@ -517,12 +468,12 @@ namespace eval turbine {
     }
 
     proc container_size_body { result container } {
-        set sz [ adlb::enumerate $container count all 0 ]
+        set sz [ adlb::container_size $container 1 ]
         store_integer $result $sz
     }
 
     proc container_size_local { container } {
-      return [ adlb::enumerate $container count all 0 ]
+      return [ adlb::container_size $container ]
     }
 
     # When container c and integer i are closed,
@@ -536,35 +487,23 @@ namespace eval turbine {
     }
 
     proc contains_body { result c i } {
-        set i_val [ turbine::retrieve_integer $i ]
-        set res [ container_lookup $c $i_val ]
-        if { $res == 0 } {
-            set exists 0
-        } else {
-            set exists 1
-        }
-        store_integer $result $exists
+        set i_val [ turbine::retrieve_decr_integer $i ]
+        store_integer $result [ adlb::exists_sub $c $i_val 1 ]
     }
 
     # If a reference to a struct is represented as a Turbine string
     # future containing a serialized TCL dict, then lookup a
     # struct member
-    proc struct_ref_lookup { structr field result type } {
-        rule  "$structr" "struct_ref_lookup_body $structr $field $result $type" \
-            name "struct_ref_lookup-$structr"
+    proc struct_ref_lookup { structr field_id result type } {
+        rule  "$structr" \
+            "struct_ref_lookup_body $structr $field_id $result $type" \
+            name "struct_ref_lookup-$structr-$field_id"
     }
 
-    proc struct_ref_lookup_body { structr field result type } {
-        set struct_val [ retrieve_string $structr ]
-        debug "<${result}> <= \{ ${struct_val} \}.${field}"
-        set result_val [ dict get $struct_val $field ]
-        if { $type == "integer" } {
-            store_integer $result $result_val
-        } elseif { $type == "string" } {
-            store_string $result $result_val
-        } else {
-            error "Unknown reference representation type $type"
-        }
+    proc struct_ref_lookup_body { structr field_id result type } {
+        set result_val [ acquire_subscript $structr $field_id $type 1 1 ]
+        debug "<${result}> <= ${result_val}"
+        adlb::store $result $type $result_val
     }
 
     # Wait, recursively for container contents
@@ -613,7 +552,7 @@ namespace eval turbine {
     }
 
     proc deeprule_action { allocated_signals action } {
-        deeprule_finish $allocated_signals
+        deeprule_finish {*}$allocated_signals
         eval $action
     }
 
@@ -638,7 +577,7 @@ namespace eval turbine {
       set MAX_CHUNK_SIZE 64
       # TODO: could divide and conquer instead of doing linear search
       if { $n == -1 } {
-        set n [ adlb::enumerate $container count all 0 ]
+        set n [ adlb::container_size $container ]
       }
       while { $progress < $n } {
         set chunk_size [ expr {min($MAX_CHUNK_SIZE, $n - $progress)} ]
@@ -692,7 +631,7 @@ namespace eval turbine {
 
     proc deeprule_fire_signal { inner_signals signal } {
         debug "deeprule_fire_signal: $inner_signals $signal"
-        deeprule_finish $inner_signals
+        deeprule_finish {*}$inner_signals
         store_void $signal
     }
 

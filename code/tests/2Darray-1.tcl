@@ -32,17 +32,17 @@ proc rules { } {
     # in this scope: an anonymous container t1
     # By analysis, we determine that t1 has one insertion in this
     # scope
-    turbine::allocate_container A integer
-    turbine::allocate_container t1 integer
+    turbine::allocate_container A integer ref
+    turbine::allocate_container t1 integer ref
 
     turbine::literal i integer 37
     turbine::literal j integer 41
     turbine::literal k integer 59
 
-    turbine::allocate r1 integer
-    turbine::c_f_lookup $A $i $r1 integer
-    turbine::c_f_insert $A $i $t1
-    turbine::cr_f_insert $r1 $j $t1 $A
+    turbine::allocate r1 ref
+    turbine::c_f_lookup $A $i $r1 ref
+    turbine::c_f_insert $A $i $t1 ref
+    turbine::cr_f_insert $r1 $j $t1 ref $A
 }
 
 turbine::defaults

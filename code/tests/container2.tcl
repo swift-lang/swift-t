@@ -26,7 +26,7 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    turbine::create_container 1 integer
+    turbine::create_container 1 integer string
     turbine::create_string 2
     turbine::create_string 3
 
@@ -34,8 +34,8 @@ proc rules { } {
     turbine::store_string 3 "string3"
 
     # set <container> <subscript> <member>
-    turbine::container_insert 1 "0" 2
-    turbine::container_insert 1 "1" 3
+    turbine::container_insert 1 "0" 2 string
+    turbine::container_insert 1 "1" 3 string
 
     set L [ adlb::enumerate 1 subscripts all 0 ]
     puts "enumeration: $L"

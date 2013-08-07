@@ -39,9 +39,9 @@ namespace eval turbine {
         dict for { h s_value } $R {
             # puts "reduce_sum: h: $h s: $s_value"
             literal s integer $s_value
-            container_insert $result $h $s
+            container_insert $result $h $s ref
         }
-        adlb::slot_drop $result
+        adlb::write_refcount_decr $result
     }
 
     proc reduce_splice_string { result S } {
@@ -72,8 +72,8 @@ namespace eval turbine {
         dict for { h s_value } $R {
             debug "reduce_splice: h: $h s: $s_value"
             literal s string $s_value
-            container_insert $result $h $s
+            container_insert $result $h $s ref
         }
-        adlb::slot_drop $result
+        adlb::write_refcount_decr $result
     }
 }

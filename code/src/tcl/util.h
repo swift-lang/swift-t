@@ -34,7 +34,8 @@
    objc should be equal to count.  If not, fail.
    Note that in Tcl, the command name counts as an argument
 */
-#define TCL_ARGS(count) {                                       \
+#define TCL_ARGS(count_expr) {                                  \
+    int count = count_expr;                                     \
     if (objc != count) {                                        \
       char* tmp = Tcl_GetStringFromObj(objv[0], NULL);          \
       printf("command %s requires %i arguments, received %i\n", \
@@ -172,6 +173,9 @@ Tcl_Obj* tcl_list_new(int count, char** strings);
 #define TCL_CONDITION(condition, format, args...) ((void)(condition))
 
 #endif
+
+#define TCL_MALLOC_CHECK(ptr) \
+  TCL_CONDITION(ptr != NULL, "Allocating memory failed")
 
 /* Helper functions for specific int types */
 static inline Tcl_Obj *Tcl_NewADLBInt(adlb_int_t val)

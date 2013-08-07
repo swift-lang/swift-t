@@ -39,8 +39,8 @@ if { ! [ adlb::amserver ] } {
     set id 1001
 
     if { $rank == 0 } {
-        adlb::create $id $adlb::STRING
-        adlb::store $id $adlb::STRING "test-message"
+        adlb::create $id string
+        adlb::store $id string "test-message"
     } else {
         puts "waiting..."
         after 100

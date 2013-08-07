@@ -13,17 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-set -x
-
 THIS=$0
 SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
 
-bin/turbine -l -n 3 ${SCRIPT} >& ${OUTPUT}
+source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
+
+set -x
+
+bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || exit 1
 
-
-LINES=$( grep -c ' OK$' ${OUTPUT} )
-[[ ${LINES} == 3 ]] || exit 1
+grep -q "trace: 0 1" ${OUTPUT} || exit 1
 
 exit 0

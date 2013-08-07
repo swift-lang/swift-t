@@ -23,18 +23,18 @@ turbine::enable_read_refcount
 proc test_insert_then_decr_ref {} {
   puts test_insert_then_decr_ref
   set C [ adlb::unique ]
-  adlb::create $C $adlb::CONTAINER integer
+  adlb::create $C container integer integer
 
   set i1 [ adlb::unique ]
-  adlb::create $i1 $adlb::INTEGER
-  adlb::store $i1 $adlb::INTEGER 0
-  adlb::insert $C 0 $i1
+  adlb::create $i1 integer
+  adlb::store $i1 integer 0
+  adlb::insert $C 0 $i1 integer
 
   set i2 [ adlb::unique ]
-  adlb::create $i2 $adlb::INTEGER
-  adlb::store $i2 $adlb::INTEGER 0
+  adlb::create $i2 integer
+  adlb::store $i2 integer 0
   # Insert and close
-  adlb::insert $C 1 $i2 1
+  adlb::insert $C 1 $i2 integer 1
 
   set res [ adlb::lookup $C 0 ]
   if { $res != $i1 } {
@@ -47,7 +47,7 @@ proc test_insert_then_decr_ref {} {
     exit 1
   }
 
-  adlb::refcount_incr $C $adlb::READ_REFCOUNT -1
+  adlb::refcount_incr $C r -1
   
   if { [ adlb::exists $C ] } {
     puts "<$C> should be destroyed"
@@ -59,22 +59,22 @@ proc test_insert_then_decr_ref {} {
 proc test_decr_ref_then_insert {} {
   puts test_decr_ref_then_insert 
   set C [ adlb::unique ]
-  adlb::create $C $adlb::CONTAINER integer
+  adlb::create $C container integer integer
 
   set i1 [ adlb::unique ]
-  adlb::create $i1 $adlb::INTEGER
-  adlb::store $i1 $adlb::INTEGER 0
-  adlb::insert $C 0 $i1
+  adlb::create $i1 integer
+  adlb::store $i1 integer 0
+  adlb::insert $C 0 $i1 integer
 
   # Take read refcount to 0
-  adlb::refcount_incr $C $adlb::READ_REFCOUNT -1
+  adlb::refcount_incr $C r -1
 
   # Should still be able to insert since container write ref still > 0 
   set i2 [ adlb::unique ]
-  adlb::create $i2 $adlb::INTEGER
-  adlb::store $i2 $adlb::INTEGER 0
+  adlb::create $i2 integer
+  adlb::store $i2 integer 0
   # Insert 
-  adlb::insert $C 1 $i2 1
+  adlb::insert $C 1 $i2 integer 1
   
   if { [ adlb::exists $C ] } {
     puts "<$C> should be destroyed"

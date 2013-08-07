@@ -26,7 +26,7 @@ bin/turbine -l -n 4 ${SCRIPT} >& ${OUTPUT}
 
 grep -q "msg: hello"     ${OUTPUT} || exit 1
 
-LINES=$( grep -c OK ${OUTPUT} )
+LINES=$( grep -c ' OK$' ${OUTPUT} )
 [[ ${LINES} == 4 ]] || exit 1
 
 exit 0

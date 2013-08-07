@@ -38,7 +38,7 @@ proc f { o i } {
 
 proc rules { } {
 
-    turbine::allocate_container c integer
+    turbine::allocate_container c integer ref
     set i1 [ turbine::literal integer 0 ]
     set i2 [ turbine::literal integer 1 ]
     turbine::allocate t1 integer
@@ -47,9 +47,9 @@ proc rules { } {
     turbine::rule "$i1" "f $t1 $i1" type $turbine::CONTROL
     turbine::rule "$i1" "f $t2 $i2" type $turbine::CONTROL
 
-    turbine::c_f_insert $c $i1 $t1
-    turbine::c_f_insert $c $i2 $t2
-    adlb::slot_drop $c
+    turbine::c_f_insert $c $i1 $t1 ref
+    turbine::c_f_insert $c $i2 $t2 ref
+    adlb::write_refcount_decr $c
 
     turbine::allocate s string
     turbine::enumerate $s $c

@@ -38,7 +38,9 @@ TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/container_load.tcl      \
                 $(DIR)/container-enumerate.tcl \
                 $(DIR)/container-close-1.tcl   \
+                $(DIR)/container-close-2.tcl   \
                 $(DIR)/container-sum.tcl       \
+                $(DIR)/container-sum2.tcl      \
                 $(DIR)/string_split.tcl        \
                 $(DIR)/enumerate-1.tcl         \
                 $(DIR)/enumerate-2.tcl         \
@@ -46,8 +48,9 @@ TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/reference.tcl           \
                 $(DIR)/2Darray-1.tcl           \
                 $(DIR)/2Darray-2.tcl           \
-                 $(DIR)/printf.tcl              \
+                $(DIR)/printf.tcl              \
                 $(DIR)/blob1.tcl               \
+                $(DIR)/blob2.tcl               \
                 $(DIR)/blob3.tcl               \
                 $(DIR)/argv.tcl                \
                 $(DIR)/unpack.tcl              \

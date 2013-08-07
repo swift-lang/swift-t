@@ -27,8 +27,8 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    turbine::create_container 11 integer
-    # adlb::slot_create 1
+    turbine::create_container 11 integer string
+    # adlb::write_refcount_incr 1
 
     turbine::create_integer 12
     turbine::store_integer 12 12345
@@ -40,13 +40,13 @@ proc rules { } {
     turbine::store_integer 15 3
     # 12345 + 4 - 1 + 3 = 12351
 
-    # set <container> <subscript> <member>
-    turbine::container_immediate_insert 11 "0" 12
-    turbine::container_immediate_insert 11 "1" 13
-    turbine::container_immediate_insert 11 "2" 14
-    turbine::container_immediate_insert 11 "3" 15
+    # set <container> <subscript> <member> <type>
+    turbine::container_immediate_insert 11 "0" 12 string
+    turbine::container_immediate_insert 11 "1" 13 string
+    turbine::container_immediate_insert 11 "2" 14 string
+    turbine::container_immediate_insert 11 "3" 15 string
     # close the container
-    adlb::slot_drop 11
+    adlb::write_refcount_decr 11
 
     # initialise the result
     turbine::create_integer 16

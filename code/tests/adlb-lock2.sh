@@ -23,7 +23,7 @@ export TURBINE_TEST_PARAM_1=4
 bin/turbine -l -n 4 ${SCRIPT} >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
-OKS=$( grep -c OK ${OUTPUT} )
+OKS=$( grep -c ' OK$' ${OUTPUT} )
 (( OKS == 4 )) || exit 1
 
 exit 0

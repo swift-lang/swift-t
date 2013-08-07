@@ -26,10 +26,10 @@ proc rules { } {
 
     turbine::store_string 11 "hi how are you"
 
-    turbine::create_container 18 integer
+    turbine::create_container 18 integer ref
     turbine::split 18 11
 
-    turbine::create_container 19 integer
+    turbine::create_container 19 integer ref
     turbine::store_string 12 "/bin:/usr/evil name/p:/usr/bin"
     turbine::store_string 13 ":"
     turbine::split 19 { 12 13 }

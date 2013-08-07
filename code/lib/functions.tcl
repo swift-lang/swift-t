@@ -129,21 +129,21 @@ namespace eval turbine {
     proc range_work { result start end step } {
         if { $start <= $end } {
             set k 0
-            set slot_drop 0
+            set write_refcount_decr 0
             for { set i $start } { $i <= $end } { incr i $step } {
                 allocate td integer
                 store_integer $td $i
 
                 if { [ expr {$i + $step > $end} ] } {
                   # Drop on last iter
-                  set slot_drop 1
+                  set write_refcount_decr 1
                 }
-                container_insert $result $k $td $slot_drop
+                container_insert $result $k $td ref $write_refcount_decr
                 incr k
             }
         } else {
             # no contents, but have to close
-            adlb::slot_drop $result
+            adlb::write_refcount_decr $result
         }
     }
 
@@ -165,8 +165,8 @@ namespace eval turbine {
         global WORK_TYPE
         for { set i 0 } { $i < $parts_value } { incr i } {
             # top-level container
-            allocate_container c integer
-            container_insert $result $i $c
+            allocate_container c integer ref
+            container_insert $result $i $c ref
             # start
             set s [ expr {$i *  $step} ]
             # end
@@ -178,7 +178,7 @@ namespace eval turbine {
                 $prio 1
         }
         # close container
-        adlb::slot_drop $result
+        adlb::write_refcount_decr $result
     }
 
     # User function
@@ -217,10 +217,10 @@ namespace eval turbine {
         while { [ gets $fd line ] >= 0 } {
             allocate s string
             store_string $s $line
-            container_insert $result $i $s
+            container_insert $result $i $s ref
             incr i
         }
-        adlb::slot_drop $result
+        adlb::write_refcount_decr $result
     }
 
     # User function
@@ -230,11 +230,11 @@ namespace eval turbine {
     }
 
     proc loop_body { stmts stack container } {
-        set type [ container_typeof $container ]
+        lassign [ container_typeof $container ] key_type val_type
         set L    [ container_list $container ]
         c::log "loop_body start"
         foreach subscript $L {
-            set td_key [ literal $type $subscript ]
+            set td_key [ literal $key_type $subscript ]
             # Call user body with subscript as TD
             # TODO: shouldn't this be an adlb::put ? -Justin
             $stmts $stack $container $td_key
@@ -417,6 +417,7 @@ namespace eval turbine {
             name "zero-$outputs-$inputs"
     }
     proc zero_body { output input } {
+        read_refcount_decr $input
         store_integer $output 0
     }
 }

@@ -42,6 +42,11 @@ typedef enum
 
 typedef long long turbine_transform_id;
 
+typedef struct {
+  turbine_datum_id td;
+  char *subscript;
+} td_sub_pair;
+
 /**
    If the user parallel task is being released, this
    will be set to the communicator to use.
@@ -66,8 +71,10 @@ void turbine_version(version* output);
            On error, id is undefined
  */
 turbine_code turbine_rule(const char* name,
-                          int inputs,
-                          const turbine_datum_id* input_list,
+                          int input_tds,
+                          const turbine_datum_id* input_td_list,
+                          int input_td_subs,
+                          const td_sub_pair* input_td_sub_list,
                           turbine_action_type action_type,
                           const char* action,
                           int priority,
@@ -86,7 +93,16 @@ turbine_code turbine_rules_push(void);
 turbine_code turbine_ready(int count, turbine_transform_id* output,
                            int *result);
 
+/*
+  Should be called when turbine engine is notified that an id is closed
+ */
 turbine_code turbine_close(turbine_datum_id id);
+
+/*
+  Should be called when turbine engine is notified that an id/subscript
+  is closed
+ */
+turbine_code turbine_sub_close(turbine_datum_id id, const char *subscript);
 
 /*
   action: the string action.  Caller is responsible for freeing

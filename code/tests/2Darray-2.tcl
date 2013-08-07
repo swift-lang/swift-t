@@ -36,28 +36,36 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    turbine::allocate_container A integer
+    turbine::allocate_container A integer ref
 
     turbine::literal i1 integer 31
     turbine::literal j1 integer 41
     turbine::literal k1 integer 51
 
-    turbine::c_f_create r1 $A $i1 integer
-    turbine::cr_f_insert $r1 $j1 $k1 $A
+
+    turbine::allocate r1 ref
+    adlb::write_refcount_incr $A 2
+    turbine::c_f_create $r1 $A $i1 integer string
+    turbine::cr_f_insert $r1 $j1 $k1 string $A
 
     turbine::literal i2 integer 32
     turbine::literal j2 integer 42
     turbine::literal k2 integer 52
 
-    turbine::c_f_create r2 $A $i2 integer
-    turbine::cr_f_insert $r2 $j2 $k2 $A
+    turbine::allocate r2 ref
+    adlb::write_refcount_incr $A 2
+    turbine::c_f_create $r2 $A $i2 integer string
+    turbine::cr_f_insert $r2 $j2 $k2 string $A
 
     turbine::literal i3 integer 31
     turbine::literal j3 integer 43
     turbine::literal k3 integer 53
 
-    turbine::c_f_create r3 $A $i3 integer
-    turbine::cr_f_insert $r3 $j3 $k3 $A
+    turbine::allocate r3 ref
+    adlb::write_refcount_incr $A 2
+    turbine::c_f_create $r3 $A $i3 integer string
+    turbine::cr_f_insert $r3 $j3 $k3 string $A
+    adlb::write_refcount_decr $A 1
 }
 
 turbine::defaults

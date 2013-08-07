@@ -81,8 +81,8 @@ namespace eval turbine {
     proc assertLT_body { result arg1 arg2 msg } {
         set arg1_value [ retrieve_decr $arg1 ]
         set arg2_value [ retrieve_decr $arg2 ]
+        set msg_value [ retrieve_decr_string $msg ]
         if { $arg1_value >= $arg2_value } {
-            set msg_value [ retrieve_decr $msg ]
             error "Assertion failed $arg1_value >= $arg2_value: $msg_value"
         } else {
             log "assertLT: $arg1_value $arg2_value"
@@ -104,8 +104,8 @@ namespace eval turbine {
     proc assertLTE_body { result arg1 arg2 msg } {
         set arg1_value [ retrieve_decr $arg1 ]
         set arg2_value [ retrieve_decr $arg2 ]
+        set msg_value [ retrieve_decr_string $msg ]
         if { $arg1_value > $arg2_value } {
-            set msg_value [ retrieve_decr $msg ]
             error "Assertion failed $arg1_value > $arg2_value: $msg_value"
         } else {
             log "assertLTE: $arg1_value $arg2_value"

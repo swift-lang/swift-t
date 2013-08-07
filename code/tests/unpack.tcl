@@ -24,15 +24,15 @@ proc main { } {
 
 proc test_1D { } {
   puts "test_1D"
-  allocate_container C integer
+  allocate_container C integer string
   allocate x1 integer
   allocate x2 string
   allocate x3 float
   allocate x4 string
-  container_insert $C 4 $x2
-  container_insert $C 1 $x1
-  container_insert $C 8 $x3
-  container_insert $C 12 $x4
+  container_insert $C 4 $x2 string
+  container_insert $C 1 $x1 string
+  container_insert $C 8 $x3 string
+  container_insert $C 12 $x4 string
   store_integer $x1 1234
   store_string $x2 "word"
   store_float $x3 3.14
@@ -59,7 +59,7 @@ proc test_1D { } {
 
 proc test_1D_file { } {
   puts "test_1D_file"
-  allocate_container C string
+  allocate_container C string string
   allocate name1 string
   allocate name2 string
   allocate name3 string
@@ -73,10 +73,10 @@ proc test_1D_file { } {
   allocate_file2 x3 $name1
   allocate_file2 x4 $name3
 
-  container_insert $C 1 $x1
-  container_insert $C 4 $x2
-  container_insert $C 8 $x3
-  container_insert $C 12 $x4
+  container_insert $C 1 $x1 string
+  container_insert $C 4 $x2 string
+  container_insert $C 8 $x3 string
+  container_insert $C 12 $x4 string
 
   set res [ unpack_args $C 1 1 ]
   puts "res: $res"
@@ -100,18 +100,18 @@ proc test_1D_file { } {
 proc test_2D { } {
   puts "test_2D"
   # Outer
-  allocate_container C integer
+  allocate_container C integer ref
   
   # inner container
-  allocate_container C1 integer
-  allocate_container C2 integer
-  allocate_container C3 integer
-  allocate_container C4 integer
+  allocate_container C1 integer string
+  allocate_container C2 integer string
+  allocate_container C3 integer string
+  allocate_container C4 integer string
 
-  container_insert $C 0 $C1
-  container_insert $C 1 $C2
-  container_insert $C 2 $C3
-  container_insert $C 3 $C4
+  container_insert $C 0 $C1 ref
+  container_insert $C 1 $C2 ref
+  container_insert $C 2 $C3 ref
+  container_insert $C 3 $C4 ref
 
   allocate x integer
   store_integer $x 1
@@ -127,20 +127,20 @@ proc test_2D { } {
   store_integer $c 4
 
   set expected [ list 1 1 1 1 2 2 2 2 1234 321 ]
-  container_insert $C1 0 $x
-  container_insert $C1 1 $x
-  container_insert $C1 2 $x
-  container_insert $C1 3 $x
+  container_insert $C1 0 $x string
+  container_insert $C1 1 $x string
+  container_insert $C1 2 $x string
+  container_insert $C1 3 $x string
   
-  container_insert $C2 0 $y
-  container_insert $C2 1 $y
-  container_insert $C2 2 $y
-  container_insert $C2 3 $y
+  container_insert $C2 0 $y string
+  container_insert $C2 1 $y string
+  container_insert $C2 2 $y string
+  container_insert $C2 3 $y string
 
   # Leave C3 empty
   
-  container_insert $C4 0 $z
-  container_insert $C4 1 $a
+  container_insert $C4 0 $z string
+  container_insert $C4 1 $a string
 
   set res [ unpack_args $C 2 0 ]
   puts "res: $res"

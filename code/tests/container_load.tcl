@@ -35,7 +35,7 @@ proc rules { } {
 
     namespace import adlb::unique
 
-    turbine::allocate_container c integer
+    turbine::allocate_container c integer string
     turbine::allocate x1 integer
     turbine::allocate x2 integer
     turbine::allocate i1 integer
@@ -47,9 +47,9 @@ proc rules { } {
     turbine::store_integer $x2 15
 
     # We pretend that we know the indices here
-    # insert <container> <subscript> <member>
-    turbine::container_insert $c 34 $x1
-    turbine::container_insert $c 35 $x2
+    # insert <container> <subscript> <type> <member>
+    turbine::container_insert $c 34 $x1 string
+    turbine::container_insert $c 35 $x2 string
 
     set L [ turbine::container_list $c ]
     puts "enumeration: $L"

@@ -25,7 +25,7 @@ package require turbine 0.0.1
 proc rules { } {
 
     turbine::literal i integer 3
-    turbine::literal r integer $i
+    turbine::literal r ref $i
     turbine::allocate v integer
 
     turbine::dereference_integer $v $r

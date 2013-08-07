@@ -30,14 +30,14 @@ if { ! [ adlb::amserver ] } {
     puts "workers:    $workers"
 
     for { set i 1 } { $i <= $iterations } { incr i } {
-        lassign [ adlb::multicreate [ list $adlb::NULL_ID $adlb::INTEGER ] \
-                                    [ list $adlb::NULL_ID $adlb::STRING ] ] \
+        lassign [ adlb::multicreate [ list $adlb::NULL_ID integer ] \
+                                    [ list $adlb::NULL_ID string ] ] \
                                     a b
         set msg "message rank:$rank:$i" 
-        adlb::store $b $adlb::STRING $msg
+        adlb::store $b string $msg
         set msg2 [ adlb::retrieve $b ]
         
-        adlb::store $a $adlb::INTEGER $i
+        adlb::store $a integer $i
         set res [ adlb::retrieve $a ]
         if { $i != $res } {
           puts "Expected $i got $res"

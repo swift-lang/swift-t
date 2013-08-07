@@ -18,7 +18,7 @@ namespace eval turbine {
   # initialise updateable variable o with provided float value
   # must be initialized before other operations can proceed
   proc init_updateable_float { id val } {
-    adlb::store $id $::adlb::FLOAT $val 0
+    adlb::store $id float $val 0
   }
 
   proc lock_loop { id } {
@@ -45,9 +45,9 @@ namespace eval turbine {
   proc update_min_impl { x val } {
 
       lock_loop $x
-      set old [ adlb::retrieve $x $::adlb::FLOAT ]
+      set old [ adlb::retrieve $x float ]
       if { $old > $val } {
-          adlb::store $x $::adlb::FLOAT $val 0
+          adlb::store $x float $val 0
       }
       adlb::unlock $x
   }
@@ -63,8 +63,8 @@ namespace eval turbine {
 
   proc update_incr_impl { x val } {
     lock_loop $x
-    set old [ adlb::retrieve $x $::adlb::FLOAT ]
-    adlb::store $x $::adlb::FLOAT [ expr {$val + $old} ] 0
+    set old [ adlb::retrieve $x float ]
+    adlb::store $x float [ expr {$val + $old} ] 0
     adlb::unlock $x
   }
 
@@ -79,8 +79,8 @@ namespace eval turbine {
 
   proc update_scale_impl { x val } {
     lock_loop $x
-    set old [ adlb::retrieve $x $::adlb::FLOAT ]
-    adlb::store $x $::adlb::FLOAT [ expr {$val * $old} ] 0
+    set old [ adlb::retrieve $x float ]
+    adlb::store $x float [ expr {$val * $old} ] 0
     adlb::unlock $x
   }
 }

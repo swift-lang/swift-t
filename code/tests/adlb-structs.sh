@@ -19,11 +19,20 @@ THIS=$0
 SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
 
-bin/turbine -l -n 3 ${SCRIPT} >& ${OUTPUT}
+export ADLB_REPORT_LEAKS=true
+
+PROCS=4
+
+bin/turbine -l -n $PROCS ${SCRIPT} >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
+OKS=$( grep -c ' OK$' ${OUTPUT} )
+(( OKS == $PROCS )) || exit 1
 
-LINES=$( grep -c ' OK$' ${OUTPUT} )
-[[ ${LINES} == 3 ]] || exit 1
+if grep "LEAK DETECTED" ${OUTPUT}
+then
+  echo "LEAKS FOUND"
+  exit 1
+fi
 
 exit 0

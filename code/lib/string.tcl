@@ -118,10 +118,10 @@ namespace eval turbine {
         for { set i 0 } { $i < $n } { incr i } {
             set v [ lindex $r_value $i ]
             literal split_token string $v
-            container_insert $result $i $split_token
+            container_insert $result $i $split_token ref
         }
         # close container
-        adlb::slot_drop $result
+        adlb::write_refcount_decr $result
     }
 
     proc sprintf { result inputs } {

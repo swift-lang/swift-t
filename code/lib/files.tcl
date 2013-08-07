@@ -199,17 +199,20 @@ namespace eval turbine {
     proc glob_body { result s } {
         set s_value [ retrieve_decr_string $s ]
         set r_value [ ::glob $s_value ]
-        set n [ llength $r_value ]
-        log "glob: $s_value tokens: $n"
-        for { set i 0 } { $i < $n } { incr i } {
-            set v [ lindex $r_value $i ]
-            literal split_token string $v
-            set f [ allocate_file2 "<$result>\[$i\]" $split_token ]
-            close_file $f
-            container_insert $result $i $f
+        log "glob: $s_value"
+
+        set i 0
+        foreach v $r_value {
+            # allocate filename with read refcount 2
+            allocate_custom split_token string 2
+            store_string $split_token $v
+            # Allocate file with given filename that is already closed
+            set f [ allocate_file2 "<$result>\[$i\]" $split_token 1 0 ]
+            container_insert $result $i $f file_ref
+            incr i
         }
         # close container
-        adlb::slot_drop $result
+        adlb::write_refcount_decr $result
     }
 
     # Create a reference to track local file
@@ -224,7 +227,7 @@ namespace eval turbine {
     # f: Turbine file handle
     # returns: local file ref
     proc get_file { f {decrref 0}} {
-        set fname [ retrieve_string [ get_file_path $f ] $decrref ]
+        set fname [ retrieve_string [ get_file_path $f ] CACHED $decrref ]
         if { $decrref > 0 } {
           set status [ get_file_status $f ]
           read_refcount_decr $status $decrref
@@ -251,22 +254,20 @@ namespace eval turbine {
         }
     }
 
-    proc file_read { result inputs } {
-	set src [ lindex $inputs 0 ]
-        rule_file_helper "read_file-$src" [ list ] \
-            [ list ] [ list $src ] \
+    proc file_read { outputs inputs } {
+        rule_file_helper "read_file-$inputs" [ list ] \
+            [ list ] $inputs \
             $::turbine::WORK \
-            [ list file_read_body $result $src ]
+            "file_read_body $outputs $inputs "
     }
 
     proc file_read_body { result src } {
-	set srcpath [ get_file_path $src ]
-	set s [retrieve_string $srcpath]
+	set s [retrieve_decr_string [ get_file_path $src ] ]
+        read_refcount_decr [ get_file_status $src ]
         set fp [ ::open $s r ]
 	set file_data [ read $fp ]
         close $fp
 	store_string $result $file_data
-        file_read_refcount_decr $src
     }
 
     proc file_read_local { local_file } {
@@ -277,20 +278,18 @@ namespace eval turbine {
     }
 
     proc file_write { outputs inputs } {
-	set dst [ lindex $outputs 0 ]
-	set s_value [ retrieve_string $inputs ]
-	rule_file_helper "write_file" "$inputs" \
-            [ list $dst ] [ list ] \
+	rule_file_helper "write_file" $inputs \
+            $outputs [ list ] \
 	    $::turbine::WORK \
-            [ list file_write_body $outputs $s_value ]
+            "file_write_body $outputs $inputs"
     }
 
-    proc file_write_body { outputs str } {
-	set dst [ lindex $outputs 0 ]
+    proc file_write_body { dst str } {
+        set str_val [ retrieve_decr_string $str ]
 	set dstpath [ get_file_path $dst ]
-	set d [ retrieve_decr_string $dstpath ]
+	set d [ retrieve_string $dstpath ]
 	set fp [ ::open $d w+ ]
-        puts $fp $str
+        puts $fp $str_val
 	close $fp
 	store_void [ get_file_status $dst ]
     }
@@ -312,8 +311,8 @@ namespace eval turbine {
             [ list blob_read_body $result $src ]
     }
     proc blob_read_body { result input } {
-	set input_path [ get_file_path $input ]
-	set input_name [ retrieve_string $input_path ]
+	set input_name [ retrieve_decr_string [ get_file_path $input ] ]
+        read_refcount_decr [ get_file_status $input ]
         set blob [ new_turbine_blob ]
         log "blob_read: $input_name"
         blobutils_read $input_name $blob
@@ -323,7 +322,6 @@ namespace eval turbine {
         log "blob_read: length: $length"
 	store_blob $result [ list $ptr $length ]
         blobutils_destroy $blob
-        file_read_refcount_decr $input
     }
 
     proc file_lines { result input } {
@@ -334,8 +332,8 @@ namespace eval turbine {
             [ list file_lines_body $result $src ]
     }
     proc file_lines_body { result input } {
-	set input_path [ get_file_path $input ]
-	set input_name [ retrieve_string $input_path ]
+	set input_name [ retrieve_decr_string [ get_file_path $input ] ]
+        read_refcount_decr [ get_file_status $input ]
         set fp [ ::open $input_name r ]
         set line_number 0
 
@@ -344,11 +342,11 @@ namespace eval turbine {
             set line [ string trim $line ]
             if { [ string length $line ] > 0 } {
                 literal td string $line
-                container_insert $result $line_number $td 0
+                container_insert $result $line_number $td ref 0
             }
             incr line_number
         }
         close $fp
-        adlb::slot_drop $result
+        adlb::write_refcount_decr $result
     }
 }
