@@ -1947,8 +1947,8 @@ public class ASTWalker {
               + " Valid options are: " + StringUtil.concat(TaskMode.values()));
         }
       } else {
-        throw new UserException(context, "Invalid annotation" +
-          " for TCL function: " + key + ":" + val);
+        throw new InvalidAnnotationException(context, "Tcl function",
+                                             key, true);
       }
     }
   }
@@ -1988,8 +1988,7 @@ public class ASTWalker {
     } else if (annotation.equals(Annotations.FN_PAR)) {
       context.setFunctionProperty(function, FnProp.PARALLEL);
     } else {
-      throw new UserException(context, "Undefined annotation for functions: "
-          + annotation + " for function " + function);
+      throw new InvalidAnnotationException(context, "function", annotation, false);
     }
     
   }
@@ -2051,11 +2050,11 @@ public class ASTWalker {
       context.syncFilePos(subtree, lineMapping);
       assert(subtree.getType() == ExMParser.ANNOTATION);
       assert(subtree.getChildCount() == 1 || subtree.getChildCount() == 2);
-      if (subtree.getChildCount() == 2) {
-        throw new InvalidAnnotationException(context,
-                      "no key-value annotations for function defs");
-      }
       String annotation = subtree.child(0).getText();
+      if (subtree.getChildCount() == 2) {
+        throw new InvalidAnnotationException(context, "Function defn",
+                                             annotation, true);
+      }
       annotations.add(annotation);
     }
     return annotations;
@@ -2157,8 +2156,8 @@ public class ASTWalker {
       } else if (annotation.equals(Annotations.FN_DETERMINISTIC)) {
         deterministic = true;
       } else {
-        throw new InvalidAnnotationException(context, "Unsupported annotation "
-                + "@" + annotation + " on app function: " + function);
+        throw new InvalidAnnotationException(context, "app function",
+                                             annotation, false);
       }
     }
     

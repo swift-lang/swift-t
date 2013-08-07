@@ -21,8 +21,33 @@ public class InvalidAnnotationException extends UserException {
 
   private static final long serialVersionUID = 1;
 
-  public InvalidAnnotationException(Context context, String message) {
-    super(context, message);
+  public InvalidAnnotationException(Context context, String msg) {
+    super(context, msg);
+  }
+  
+  public InvalidAnnotationException(Context context, String partOfCode,
+                                    String annotation, boolean keyValue) {
+    super(context, makeMessage(partOfCode, annotation, keyValue, null));
+  }
+  
+  public InvalidAnnotationException(Context context, String partOfCode,
+      String annotation, boolean keyValue, String validAnnotations) {
+    super(context, makeMessage(partOfCode, annotation, keyValue, validAnnotations));
+  }
+
+  private static String makeMessage(String partOfCode, String annotation,
+      boolean keyValue, String validAnnotations) {
+    String msg; 
+    if (keyValue) {
+      msg = "Invalid key-value annotation @" + annotation + "=...";
+    } else { 
+      msg = "Invalid annotation @" + annotation;
+    }
+    msg += " attached to " + partOfCode;
+    if (validAnnotations != null) {
+      msg += ".  Valid annotations are: " + validAnnotations;
+    }
+    return msg;
   }
 
 }

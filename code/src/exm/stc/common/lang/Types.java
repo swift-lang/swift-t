@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.Map;
 
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.lang.Types.RefType;
-import exm.stc.common.lang.Types.Type;
 
 /**
  * This module provides the type definitions used for Swift,

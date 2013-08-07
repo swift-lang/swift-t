@@ -22,7 +22,7 @@ import java.util.TreeMap;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
-import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
@@ -61,7 +61,8 @@ public class FunctionCall {
     return Collections.unmodifiableMap(annotationExprs);
   }
 
-  private static TaskPropKey getPropKey(SwiftAST tag) {
+  private static TaskPropKey getPropKey(Context context, SwiftAST tag)
+        throws InvalidAnnotationException {
     assert(tag.getType() == ExMParser.ID);
     String annotName = tag.getText();
     if (annotName.equals(Annotations.FNCALL_PAR)) {
@@ -71,13 +72,13 @@ public class FunctionCall {
     } else if (annotName.equals(Annotations.FNCALL_LOCATION)) {
       return TaskPropKey.LOCATION;
     } else {
-      throw new STCRuntimeError("Invalid annotation for function call: " + 
-                              annotName);
+      throw new InvalidAnnotationException(context, "function call",
+                                           annotName, false);
     }
   }
 
   public static FunctionCall fromAST(Context context, SwiftAST tree,
-          boolean doWarn) throws UndefinedFunctionException {
+          boolean doWarn) throws UndefinedFunctionException, InvalidAnnotationException {
     assert(tree.getChildCount() >= 2);
     SwiftAST fTree = tree.child(0);
     String f;
@@ -107,7 +108,7 @@ public class FunctionCall {
       assert(annTree.getChildCount() == 2);
       SwiftAST tag = annTree.child(0);
       SwiftAST expr = annTree.child(1);
-      TaskPropKey propKey = getPropKey(tag);
+      TaskPropKey propKey = getPropKey(context, tag);
       annotations.put(propKey, expr);
     }
     

@@ -152,9 +152,8 @@ public class ForeachLoop {
                   + "of " + key + " to be a positive integer");
             }
           } else {
-            throw new InvalidAnnotationException(context, key
-                + " is not the name of a key-value annotation for "
-                + " foreach loops");
+            throw new InvalidAnnotationException(context, "foreach loop",
+                                                 key, true);
           }
         } else {
           assert (subtree.getChildCount() == 1);
@@ -206,14 +205,15 @@ public class ForeachLoop {
       if (!annotation.equals(Annotations.LOOP_SYNC) &&
           !annotation.equals(Annotations.LOOP_ASYNC) &&
           !annotation.equals(Annotations.LOOP_NOSPLIT)) {
-        throw new InvalidAnnotationException(context, "Invalid loop"
-                + "annotation @" + annotation);
+        throw new InvalidAnnotationException(context, "foreach loop",
+                                             annotation, false);
       }
     }
     if (annotations.contains(Annotations.LOOP_SYNC) &&
         annotations.contains(Annotations.LOOP_ASYNC)) {
-      throw new InvalidAnnotationException(context, "Contradictory "
-        + " loop annotations");
+      throw new InvalidAnnotationException(context, "Contradictory" +
+                              " loop annotations @" + Annotations.LOOP_SYNC +
+                              " and @" + Annotations.LOOP_ASYNC);
     }
   }
 

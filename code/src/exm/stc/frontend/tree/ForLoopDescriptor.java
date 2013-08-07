@@ -49,8 +49,8 @@ import exm.stc.frontend.tree.VariableDeclaration.VariableDescriptor;
  */
 public class ForLoopDescriptor {
   private static final String WAITON_ANNOTATION = "waiton";
-  private static final String VALID_ANN_TEXT = " waitonall and waiton=<loop var name>";
   private static final String WAITONALL_ANNOTATION = "waitonall";
+  private static final String VALID_ANN_TEXT = "waitonall and waiton=<loop var name>";
 
 
   public static class LoopVar {
@@ -132,10 +132,10 @@ public class ForLoopDescriptor {
   }
   
   public void makeLoopVarBlocking(Context context, String loopVarName) 
-                                        throws InvalidAnnotationException {
+                                        throws UserException {
     assert(loopVarName != null);
     if (!initExprs.containsKey(loopVarName)) {
-      throw new InvalidAnnotationException(context, loopVarName 
+      throw new UserException(context, loopVarName 
           + " specified to block on is not a loop variable, should be one of: "
           + Var.nameList(this.getUnpackedLoopVars()).toString());
     }
@@ -317,8 +317,8 @@ public class ForLoopDescriptor {
             forLoop.makeLoopVarBlocking(context, v.var.name());
           }
         } else {
-          throw new InvalidAnnotationException(context, "Unknown annotation " +
-                  annText + " on for loop, only " + VALID_ANN_TEXT + " supported ");
+          throw new InvalidAnnotationException(context, "for loop",
+                  annText, false, VALID_ANN_TEXT);
         }
       } else {
         String annName = ann.child(0).getText();
@@ -329,11 +329,11 @@ public class ForLoopDescriptor {
           } else {
             throw new InvalidAnnotationException(context, "Expected value" +
                     "for " + WAITON_ANNOTATION + " to be a variable name, but was"
-            + annVal);
+                      + annVal);
           }
         } else {
-          throw new InvalidAnnotationException(context, "Unknown annotation " +
-              annName + " on for loop, only " + VALID_ANN_TEXT + " supported ");
+          throw new InvalidAnnotationException(context, "for loop",
+                                    annName, false, VALID_ANN_TEXT);
         }
       }
     }
