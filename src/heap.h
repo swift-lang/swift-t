@@ -57,7 +57,7 @@ typedef struct {
 #define HEAP_ASSERT(x) // noop
 #endif
 
-static void
+static inline void
 heap_init(heap *heap, size_t init_capacity)
 {
   assert(init_capacity > 0);
@@ -69,6 +69,27 @@ heap_init(heap *heap, size_t init_capacity)
 
   heap->size = 0;
   heap->malloced_size = init_capacity;
+}
+
+static inline void
+heap_clear_callback(heap *heap, void (*cb)(heap_key_t, heap_val_t))
+{
+  if (cb != NULL)
+  {
+    for (int i = 0; i < heap->size; i++)
+    {
+      cb(heap->array[i].key, heap->array[i].val);
+    }
+  }
+  free(heap->array);
+  heap->array = NULL;
+  heap->size = heap->malloced_size = 0;
+}
+
+static inline void
+heap_clear(heap *heap)
+{
+  heap_clear_callback(heap, NULL);
 }
 
 heap* heap_create(size_t init_capacity) {

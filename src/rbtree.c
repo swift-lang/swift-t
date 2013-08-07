@@ -963,25 +963,33 @@ rbtree_print_loop(struct rbtree_node* node, int level)
     print_x(level+1);
 }
 
-static void rbtree_free_subtree(struct rbtree_node* node);
+static void rbtree_free_subtree(struct rbtree_node* node, rbtree_callback cb);
 
 void
 rbtree_clear(struct rbtree* target)
 {
+  rbtree_clear_callback(target, NULL);
+}
+
+void
+rbtree_clear_callback(struct rbtree* target, rbtree_callback cb)
+{
   if (target->size != 0)
   {
-    rbtree_free_subtree(target->root);
+    rbtree_free_subtree(target->root, cb);
     target->size = 0;
   }
 }
 
 static void
-rbtree_free_subtree(struct rbtree_node* node)
+rbtree_free_subtree(struct rbtree_node* node, rbtree_callback cb)
 {
   if (node->left != NULL)
-    rbtree_free_subtree(node->left);
+    rbtree_free_subtree(node->left, cb);
   if (node->right != NULL)
-    rbtree_free_subtree(node->right);
+    rbtree_free_subtree(node->right, cb);
+  if (cb != NULL)
+    cb(node, node->data);
   free(node);
 }
 

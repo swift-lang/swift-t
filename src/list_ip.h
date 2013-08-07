@@ -74,6 +74,9 @@ void* list_ip_search(struct list_ip* target, int key);
 
 void list_ip_free(struct list_ip* target);
 
+void list_ip_free_callback(struct list_ip* target, bool free_root,
+                           void (*callback)(int, void*));
+
 void list_ip_destroy(struct list_ip* target);
 
 void* list_ip_remove(struct list_ip* target, int key);

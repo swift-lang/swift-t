@@ -368,14 +368,30 @@ list_ip_remove(struct list_ip* target, int key)
 void
 list_ip_free(struct list_ip* target)
 {
+  list_ip_free_callback(target, true, NULL);
+}
+
+void list_ip_free_callback(struct list_ip* target, bool free_root,
+                           void (*callback)(int, void*))
+{
   struct list_ip_item* item = target->head;
   while (item)
   {
     struct list_ip_item* next = item->next;
+    if (callback != NULL)
+      callback(item->key, item->data);
     free(item);
     item = next;
   }
-  free(target);
+  if (free_root)
+  {
+    free(target);
+  }
+  else
+  {
+    target->head = target->tail = NULL;
+    target->size = 0;
+  }
 }
 
 /**

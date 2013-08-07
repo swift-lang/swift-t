@@ -50,6 +50,9 @@ void* table_ip_remove(struct table_ip* target, int key);
 
 void  table_ip_free(struct table_ip* target);
 
+void  table_ip_free_callback(struct table_ip* target, bool free_root,
+                    void (*callback)(int, void*));
+
 void table_ip_destroy(struct table_ip* target);
 
 void  table_ip_dump(const char* format, const struct table_ip* target);

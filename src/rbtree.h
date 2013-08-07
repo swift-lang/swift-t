@@ -104,6 +104,12 @@ void rbtree_print(struct rbtree* target);
 
 void rbtree_clear(struct rbtree* target);
 
+/*
+  Clear all entires, calling callback function once per element.
+  Return value of callback is ignored.
+ */
+void rbtree_clear_callback(struct rbtree* target, rbtree_callback cb);
+
 void rbtree_free(struct rbtree* target);
 
 #define rbtree_size(T) (T->size)
