@@ -144,13 +144,10 @@ Tcl_Obj*
 tcl_list_from_array_ints(Tcl_Interp *interp, int* vals, int count)
 {
   Tcl_Obj* result = Tcl_NewListObj(0, NULL);
-  if (count > 0)
+  for (int i = 0; i < count; i++)
   {
-    for (int i = 0; i < count; i++)
-    {
-      Tcl_Obj* o = Tcl_NewIntObj(vals[i]);
-      Tcl_ListObjAppendElement(interp, result, o);
-    }
+    Tcl_Obj* o = Tcl_NewIntObj(vals[i]);
+    Tcl_ListObjAppendElement(interp, result, o);
   }
   return result;
 }
