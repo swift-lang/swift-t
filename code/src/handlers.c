@@ -917,7 +917,7 @@ handle_refcount_incr(int caller)
       .notifs.notify_insert_count = 0,
       .notifs.reference_count = 0};
 
-  if (ADLB_CLIENT_NOTIFIES)
+  if (dc == ADLB_DATA_SUCCESS && ADLB_CLIENT_NOTIFIES)
   {
     // Remove any notifications that can be handled locally
     process_local_notifications(msg.id, NULL, &notify_ranks);
@@ -926,7 +926,7 @@ handle_refcount_incr(int caller)
 
   RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
 
-  if (notify_ranks.count > 0)
+  if (dc == ADLB_DATA_SUCCESS && notify_ranks.count > 0)
   {
     if (ADLB_CLIENT_NOTIFIES)
     {
