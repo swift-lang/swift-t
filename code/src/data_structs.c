@@ -1,3 +1,6 @@
+
+#define _GNU_SOURCE // for asprintf()
+
 #include "data_structs.h"
 
 #include <assert.h>
