@@ -316,6 +316,30 @@ namespace eval turbine {
         return $result
     }
 
+    proc string_join { result inputs } {
+        rule $inputs "string_join_body $result $inputs" \
+            name "string_join-$result"
+    }
+    proc string_join_body { result container separator } {
+
+        set type [ container_typeof $container ]
+        c::log "string_join_body start"
+        deeprule $container 1 [ list false false ] \
+            "string_join_store $result $container $separator"
+    }
+    # This is called when every entry in container is set
+    proc string_join_store { result container separator } {
+        set separator_value [ retrieve $separator ]
+        set A [ list ]
+        foreach i [ container_list $container ] {
+            set td [ container_lookup $container $i ]
+            set v  [ retrieve_decr_string $td ]
+            lappend A $v
+        }
+        set s [ join $A $separator_value ]
+        store_string $result $s
+    }
+
     proc string_from_floats { result input } {
         rule $input  "string_from_floats_body $input $result" \
             name "string_from_floats-$result"
@@ -326,10 +350,10 @@ namespace eval turbine {
         set N  [ adlb::container_size $container ]
         c::log "string_from_floats_body start"
         deeprule $container 1 [ list false false ] \
-            "string_from_floats_store $result $container $N"
+            "string_from_floats_store $result $container"
     }
     # This is called when every entry in container is set
-    proc string_from_floats_store { result container N } {
+    proc string_from_floats_store { result container } {
         set A [ list ]
         foreach i [ container_list $container ] {
             set td [ container_lookup $container $i ]

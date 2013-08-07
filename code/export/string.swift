@@ -81,4 +81,7 @@
 (string s) string_from_floats(float f[])
 "turbine" "0.4.0" "string_from_floats";
 
+@pure (string s) string_join(string A[], string separator)
+"turbine" "0.4.0" "string_join";
+
 #endif
