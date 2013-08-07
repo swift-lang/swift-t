@@ -1202,6 +1202,9 @@ ADLBP_Finalize()
     MPI_Comm_free(&adlb_server_comm);
   else
     MPI_Comm_free(&adlb_worker_comm);
+
+  free(xlb_types);
+  xlb_types = NULL;
   return ADLB_SUCCESS;
 }
 
