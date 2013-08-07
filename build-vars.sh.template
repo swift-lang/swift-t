@@ -43,3 +43,6 @@ MAKE_PARALLELISM=2
 
 # Enable python
 ENABLE_PYTHON=1
+
+# TCL Version
+TCL_VERSION=8.6

@@ -33,6 +33,10 @@ if [ ! -z "$ENABLE_PYTHON" ] ; then
   EXTRA_ARGS+="--enable-python"
 fi
 
+if [ ! -z "$TCL_VERSION" ] ; then
+  EXTRA_ARGS+="--with-tcl-version=$TCL_VERSION"
+fi
+
 ./configure --with-adlb=${LB_INST} \
             ${CRAY_ARGS} \
             --with-mpi=${MPICH_INST} \
