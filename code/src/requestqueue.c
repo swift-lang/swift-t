@@ -214,6 +214,7 @@ xlb_requestqueue_shutdown()
 {
   TRACE_START;
   for (int i = 0; i < xlb_types_size; i++)
+  {
     while (true)
     {
       request* r = (request*) list2_pop(&type_requests[i]);
@@ -226,6 +227,12 @@ xlb_requestqueue_shutdown()
       table_ip_remove(&targets, rank);
       free(r);
     }
+  }
+  // Free now-empty structures
+  free(type_requests);
+  
+  assert(table_ip_size(&targets) == 0);
+  table_ip_free_callback(&targets, false, NULL);
 }
 
 static adlb_code

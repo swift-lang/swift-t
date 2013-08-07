@@ -370,38 +370,71 @@ work_unit_free(xlb_work_unit* wu)
   free(wu);
 }
 
+static bool
+wu_rbtree_clear_callback(struct rbtree_node *node, void *data)
+{
+  // Just free the work unit
+  work_unit_free((xlb_work_unit*)data);
+  return true;
+}
+
+static void
+wu_heap_clear_callback(heap_key_t k, heap_val_t v)
+{
+  // Just free the work unit
+  work_unit_free((xlb_work_unit*)v);
+}
+
+static void
+wu_targeted_clear_callback(int key, void *val)
+{
+  heap* A = val;
+
+  for (int i = 0; i < xlb_types_size; i++)
+  {
+    heap* H = &A[i];
+    if (H->size > 0)
+      printf("WARNING: server contains targeted work!\n");
+    
+    // free the work unit
+    heap_clear_callback(H, wu_heap_clear_callback);
+  }
+
+  // Free the array of heaps
+  free(A);
+}
+
 void
 workqueue_finalize()
 {
   TRACE_START;
-  for (int i = 0; i < targeted_work.capacity; i++)
-  {
-    for (struct list_ip_item* item = targeted_work.array->head;
-        item; item = item->next)
-    {
-      heap* A = item->data;
-      for (int i = 0; i < xlb_types_size; i++)
-      {
-        heap* H = &A[i];
-        if (H->size > 0)
-          printf("WARNING: server contains targeted work!\n");
-      }
-    }
-  }
+
+  // Clear up targeted_work
+  table_ip_free_callback(&targeted_work, false, wu_targeted_clear_callback);
+
+  // Clear up typed_work
   for (int i = 0; i < xlb_types_size; i++)
   {
     int count = (&typed_work[i])->size;
     if (count > 0)
       printf("WARNING: server contains %i work units of type: %i\n",
              count, i);
+    rbtree_clear_callback(&typed_work[i], wu_rbtree_clear_callback);
   }
+  free(typed_work);
+  typed_work = NULL;
+
+  // Clear up parallel_work
   for (int i = 0; i < xlb_types_size; i++)
   {
     if (parallel_work[i].size > 0)
       printf("WARNING: server contains %i "
              "parallel work units of type %i:\n",
              parallel_work[i].size, i);
+    rbtree_clear_callback(&parallel_work[i], wu_rbtree_clear_callback);
   }
+  free(parallel_work);
+  parallel_work = NULL;
 
   TRACE_END;
 }
