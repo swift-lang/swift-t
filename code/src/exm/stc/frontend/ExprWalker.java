@@ -489,9 +489,10 @@ public class ExprWalker {
       Type expType = concrete.getInputs().get(i);
 
       Type exprType = TypeChecker.findSingleExprType(context, argtree);
-      Type argtype = TypeChecker.checkFunArg(context, f.function(), i,
-                                                    expType, exprType).val2;
-      argVars.add(eval(context, argtree, argtype, false, renames));
+      Type argType = TypeChecker.checkFunArg(context, f.function(), i,
+                                              expType, exprType).val2;
+      assert(argType.isConcrete()) : "Non-concrete arg type: " + argType;
+      argVars.add(eval(context, argtree, argType, false, renames));
     }
     
     // Process priority after arguments have been evaluated, so that
@@ -810,7 +811,7 @@ public class ExprWalker {
       Var input = iList.get(i);
       Type inputType = input.type();
       Type expType = concrete.getInputs().get(i);
-      if (inputType.getImplType().equals(expType.getImplType())) {
+      if (inputType.getImplType().assignableTo(expType.getImplType())) {
         realIList.add(input);
       } else if (Types.isRefTo(inputType, expType)) {
         if (waitContext == null) {

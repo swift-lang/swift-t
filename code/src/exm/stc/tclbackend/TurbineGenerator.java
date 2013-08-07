@@ -777,8 +777,8 @@ public class TurbineGenerator implements CompilerBackend {
       
       // It should be impossible for there to be no implementation for a function
       // like this
-      assert(impls != null);
-      assert(impls.size() > 0);
+      assert(impls != null) : op;
+      assert(impls.size() > 0) : op;
       
       if (impls.size() > 1) {
         Logging.getSTCLogger().warn("Multiple implementations for operation " +

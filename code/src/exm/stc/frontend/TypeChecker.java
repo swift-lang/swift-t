@@ -683,6 +683,9 @@ public class TypeChecker {
       throw argumentTypeException(context, argNum, formalArgT, argExprT, 
                                              " in call to function " + function);
     }
+
+    assert(res.val1.isConcrete()) : "Non-concrete arg type: " + res.val1;
+    assert(res.val2.isConcrete()) : "Non-concrete arg type: " + res.val2;
     return res;
   }
 

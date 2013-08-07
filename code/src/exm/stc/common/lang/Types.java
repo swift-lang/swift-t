@@ -108,6 +108,16 @@ public class Types {
       return memberType.hasTypeVar();
     }
 
+    @Override
+    public Type getImplType() {
+      Type implMember = memberType.getImplType();
+      if (implMember == memberType)
+        return this;
+      else if (implMember == null)
+        return null;
+      else
+        return new ArrayType(implMember);
+    }
   }
 
   public enum PrimType
@@ -201,6 +211,18 @@ public class Types {
     @Override
     public boolean hasTypeVar() {
       return referencedType.hasTypeVar();
+    }
+    
+    
+    @Override
+    public Type getImplType() {
+      Type implMember = referencedType.getImplType();
+      if (implMember == referencedType)
+        return this;
+      else if (implMember == null)
+        return null;
+      else
+        return new ArrayType(implMember);
     }
   }
 
@@ -341,6 +363,12 @@ public class Types {
       }
       return false;
     }
+    
+    
+    @Override
+    public Type getImplType() {
+      return this;
+    }
   }
 
   public static class ScalarValueType extends Type {
@@ -407,6 +435,11 @@ public class Types {
     @Override
     public boolean hasTypeVar() {
       return false;
+    }
+    
+    @Override
+    public Type getImplType() {
+      return this;
     }
   }
 
@@ -478,6 +511,11 @@ public class Types {
     @Override
     public boolean hasTypeVar() {
       return false;
+    }
+    
+    @Override
+    public Type getImplType() {
+      return this;
     }
   }
 
@@ -558,12 +596,19 @@ public class Types {
     public boolean hasTypeVar() {
       return false;
     }
+    
+    @Override
+    public Type getImplType() {
+      return this;
+    }
   }
   
   public static class UnionType extends Type {
     private final List<Type> alts;
     
     private UnionType(ArrayList<Type> alts) {
+      // Shouldn't have single-element union type
+      assert(alts.size() != 1);
       this.alts = Collections.unmodifiableList(alts);
     }
 
@@ -717,6 +762,11 @@ public class Types {
       }
       return false;
     }
+    
+    @Override
+    public Type getImplType() {
+      return null;
+    }
   }
   
   /**
@@ -787,6 +837,12 @@ public class Types {
     public boolean hasTypeVar() {
       return true;
     }
+    
+    
+    @Override
+    public Type getImplType() {
+      return null;
+    }
   }
   
   public static class WildcardType extends Type {
@@ -838,6 +894,11 @@ public class Types {
     @Override
     public boolean hasTypeVar() {
       return false;
+    }
+    
+    @Override
+    public Type getImplType() {
+      return null;
     }
     
   }
@@ -935,12 +996,18 @@ public class Types {
     public abstract boolean hasTypeVar();
 
     /**
-     * @return the base type which is used to implement this type
+     * @return the base type which is used to implement this type.
+     *          Null if not concrete type
      */
-    public Type getImplType() {
-      return this;
-    }
+    public abstract Type getImplType();
     
+    /**
+     * @return true if the type is something we can actually instantiate
+     */
+    public boolean isConcrete() {
+      return getImplType() != null;
+    }
+
     public String typeVarName() {
       throw new STCRuntimeError("typeVarName() not supported for type "
                               + toString());
@@ -1090,6 +1157,28 @@ public class Types {
         }
       }
       return false;
+    }
+    
+    
+    @Override
+    public Type getImplType() {
+      List<Type> ins = new ArrayList<Type>(inputs.size());
+      List<Type> outs = new ArrayList<Type>(outputs.size());
+      for (Type in: inputs) {
+        Type implType = in.getImplType();
+        if (implType == null)
+          return null;
+        ins.add(implType);
+      }
+      
+      for (Type out: outputs) {
+        Type implType = out.getImplType();
+        if (implType == null)
+          return null;
+        outs.add(implType);
+      }
+      
+      return new FunctionType(ins, outs, varargs);
     }
   }
 
