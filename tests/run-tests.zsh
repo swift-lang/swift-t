@@ -10,6 +10,7 @@ MAX_TESTS=-1 # by default, unlimited
 PATTERN=""
 SKIP_COUNT=0
 
+COMPILE_ONLY=0
 RUN_DISABLED=0
 VERBOSE=0
 STC_OPT_LEVELS=() #-O levels to test for STC
@@ -23,13 +24,17 @@ if [ -z ${ADLB_EXHAUST_TIME} ]; then
     export ADLB_EXHAUST_TIME=1
 fi
 
-while getopts "cDk:n:p:VO:t:T:alo:" OPTION
+while getopts "cCDk:n:p:VO:t:T:alo:" OPTION
 do
   case ${OPTION}
     in
     c)
       # continue after failure
       EXIT_ON_FAIL=0
+      ;;
+    C)
+      # compile only
+      COMPILE_ONLY=1
       ;;
     D)
       #Run disabled tests
@@ -383,7 +388,10 @@ do
 
     if (( ! COMPILE_CODE ))
     then
-      if grep -F -q "COMPILE-ONLY-TEST" ${SWIFT_FILE}
+      if (( COMPILE_ONLY ))
+      then
+          EXIT_CODE=0
+      elif grep -F -q "COMPILE-ONLY-TEST" ${SWIFT_FILE}
       then
           EXIT_CODE=0
       else
