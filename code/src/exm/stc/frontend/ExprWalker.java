@@ -389,6 +389,8 @@ public class ExprWalker {
   public void assign(Var dst, Arg src) {
     assert(Types.isScalarValue(src.type()));
     assert(Types.isScalarFuture(dst.type()));
+    assert(src.type().assignableTo(Types.derefResultType(dst.type()))) :
+                      dst + " = " + src;
     switch (src.type().primType()) {
       case INT:
         backend.assignInt(dst, src);
@@ -400,7 +402,7 @@ public class ExprWalker {
         backend.assignFloat(dst, src);
         break;
       case STRING:
-        backend.assignInt(dst, src);
+        backend.assignString(dst, src);
         break;
       case BLOB:
         backend.assignBlob(dst, src);
@@ -591,18 +593,18 @@ public class ExprWalker {
     }
 
     // Evaluate the array
-    Var arrayVar = eval(context, arrayTree, arrType,
-                                      false, renames);
+    Var arrayVar = eval(context, arrayTree, arrType, false, renames);
 
     Type memberType = Types.arrayMemberType(arrType);
 
     // Any integer expression can index into array
     SwiftAST arrayIndexTree = tree.child(1);
     Type indexType = TypeChecker.findSingleExprType(context, arrayIndexTree);
-    if (!indexType.assignableTo(Types.F_INT)) {
+    if (!Types.isArrayKeyFuture(arrayVar, indexType)) {
       throw new TypeMismatchException(context,
-          "array index expression does not have integer type.  Type of " +
-          "index expression was " + indexType.typeName());
+            "array index expression does not have appropriate key type "
+          + "for key of array type " + arrayVar.type() + ".  Type of index "
+          + "expression was " + indexType.typeName());
     }
 
     // The direct result of the array lookup
@@ -628,7 +630,7 @@ public class ExprWalker {
     } else {
       // Handle the general case where the index must be computed
       Var indexVar = eval(context, arrayIndexTree,
-          Types.F_INT, false, renames);
+                          Types.arrayKeyType(arrayVar), false, renames);
       backend.arrayLookupFuture(lookupIntoVar, arrayVar, indexVar,
                                 Types.isArrayRef(arrType));
     }

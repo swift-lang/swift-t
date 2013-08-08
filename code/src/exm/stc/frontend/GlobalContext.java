@@ -168,7 +168,7 @@ public class GlobalContext extends Context {
   }
 
   @Override
-  public Type lookupType(String typeName) {
+  public Type lookupTypeUnsafe(String typeName) {
     return types.get(typeName);
   }
 

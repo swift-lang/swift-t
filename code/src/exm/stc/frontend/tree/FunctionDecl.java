@@ -152,10 +152,8 @@ public class FunctionDecl {
       SwiftAST typeAlt = baseTypes.child(i);
       assert(typeAlt.getType() == ExMParser.ID);
       String typeName = typeAlt.getText();
-      Type baseType = context.lookupType(typeName);
-      if (baseType == null) {
-        throw new UndefinedTypeException(context, typeName);
-      }
+      Type baseType = context.lookupTypeUser(typeName);
+      
       Var v = fromFormalArgTree(context, baseType, 
                                                     restDecl, DefType.INARG);
       varname = v.name();
@@ -191,8 +189,8 @@ public class FunctionDecl {
       Type varType = baseType;
       for (SwiftAST subtree: tree.children(1)) {
         if (subtree.getType() == ExMParser.ARRAY) {
-          // TODO: handle non-int key
-          varType = new Types.ArrayType(Types.F_INT, varType);
+          Type keyType = VariableDeclaration.getArrayKeyType(context, subtree);
+          varType = new Types.ArrayType(keyType, varType);
         } else if (subtree.getType() == ExMParser.MAPPING) {
           throw new InvalidSyntaxException(context, "Cannot map function argument");
         } else {

@@ -253,15 +253,16 @@ public class ForeachLoop {
   public Context setupLoopBodyContext(Context context, boolean rangeLoop)
       throws UserException {
     // Set up the context for the loop body with loop variables
+    Type arrayType = findArrayType(context);
     loopBodyContext = new LocalContext(context);
     if (loopCountVarName != null) {
-      loopCountVal = context.createLocalValueVariable(Types.V_INT,
-          loopCountVarName);
+      Type keyValType = Types.derefResultType(Types.arrayKeyType(arrayType));
+      loopCountVal = context.createLocalValueVariable(keyValType,
+                                                loopCountVarName);
     } else {
       loopCountVal = null;
     }
 
-    Type arrayType = findArrayType(context);
     VarStorage memberVarStorage = rangeLoop ? VarStorage.TEMP 
                                             : VarStorage.ALIAS;
     memberVar = loopBodyContext.declareVariable(

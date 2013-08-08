@@ -982,9 +982,9 @@ public class ASTWalker {
     // If the user's code expects a loop count var, need to create it here
     if (loop.getCountVarName() != null) {
       Var loopCountVar = varCreator.createVariable(loop.getBodyContext(),
-          Types.F_INT, loop.getCountVarName(), VarStorage.STACK,
+          Types.arrayKeyType(arrayVar.type()), loop.getCountVarName(), VarStorage.STACK,
           DefType.LOCAL_USER, null);
-      backend.assignInt(loopCountVar, Arg.createVar(loop.getLoopCountVal()));
+      exprWalker.assign(loopCountVar, Arg.createVar(loop.getLoopCountVal()));
     }
     
     block(loopBodyContext, loop.getBody());
@@ -1536,7 +1536,7 @@ public class ASTWalker {
     // Typecheck index expression
     Type indexType = TypeChecker.findSingleExprType(context, 
                                              indexExpr.child(0));
-    if (!indexType.assignableTo(Types.F_INT)) {
+    if (!Types.isArrayKeyFuture(lval.var, indexType)) {
       throw new TypeMismatchException(context, 
           "Indexing array using non-integer expression in lval.  Type " +
           "of expression was " + indexType.typeName());
@@ -1658,14 +1658,11 @@ public class ASTWalker {
 
 
     final Var outermostArray = origLval.var;
+    Type indexType = ((ArrayType)outermostArray.type()).keyType();
+    
     Long literal = Literals.extractIntLit(context, indexExpr);
-    /*
-     * use afterActions to insert the variable into array only 
-     * after the RHS has been evaluated.  This means the resulting
-     * code is in a more logical order and is easier for the
-     * optimiser to work with
-     */
-    if (literal != null) {
+
+    if (Types.isInt(indexType) && literal != null) {
       final long arrIx = literal;
       // Add this variable to array
       afterActions.addFirst(new Runnable() {
@@ -1676,7 +1673,7 @@ public class ASTWalker {
         }});
     } else {
       // Handle the general case where the index must be computed
-      final Var indexVar = exprWalker.eval(context, indexExpr, Types.F_INT, false, null);
+      final Var indexVar = exprWalker.eval(context, indexExpr, indexType, false, null);
       afterActions.addFirst(new Runnable() {
         @Override
         public void run() {
@@ -2538,23 +2535,21 @@ public class ASTWalker {
 
   private void defineNewType(Context context, SwiftAST defnTree,
                              boolean aliasOnly)
-                                    throws DoubleDefineException {
+                throws DoubleDefineException, UndefinedTypeException {
     assert (defnTree.getType() == ExMParser.DEFINE_NEW_TYPE ||
             defnTree.getType() == ExMParser.TYPEDEF );
     int children = defnTree.getChildCount();
     assert(children >= 2);
     String typeName = defnTree.child(0).getText();
     String baseTypeName = defnTree.child(1).getText();
-    int arrayMarkers = 0;
-    for (SwiftAST arrayT: defnTree.children(2)) {
-      assert(arrayT.getType() == ExMParser.ARRAY);
-      arrayMarkers++;
-    }
     
-    Type baseType = context.lookupType(baseTypeName);
-    for (int i = 0; i < arrayMarkers; i++) {
-      // TODO: key types
-      baseType = new ArrayType(Types.F_INT, baseType);
+    Type baseType = context.lookupTypeUser(baseTypeName);
+    
+    for (int i = defnTree.getChildCount() - 1; i >= 2; i--) {
+      SwiftAST arrayT = defnTree.child(i);
+      assert(arrayT.getType() == ExMParser.ARRAY);
+      Type keyType = VariableDeclaration.getArrayKeyType(context, arrayT);
+      baseType = new ArrayType(keyType, baseType);
     }
     
     Type newType;
@@ -2589,7 +2584,7 @@ public class ASTWalker {
       assert(fieldTree.child(0).getType() == ExMParser.ID);
       assert(fieldTree.child(1).getType() == ExMParser.ID);
       String baseTypeName = fieldTree.child(0).getText();
-      Type fieldType = context.lookupType(baseTypeName);
+      Type fieldType = context.lookupTypeUnsafe(baseTypeName);
       if (fieldType == null) {
         throw new UndefinedTypeException(context, baseTypeName);
       }
@@ -2597,9 +2592,11 @@ public class ASTWalker {
 
       // Account for any [] 
       for (int j = 2; j < fieldTree.getChildCount(); j++) {
-        assert(fieldTree.child(j).getType() == ExMParser.ARRAY);
-        // TODO: key types
-        fieldType = new Types.ArrayType(Types.F_INT, fieldType);
+        SwiftAST arrayT = fieldTree.child(j);
+        assert(arrayT.getType() == ExMParser.ARRAY);
+        // Work out the key type
+        Type keyType = VariableDeclaration.getArrayKeyType(context, arrayT);
+        fieldType = new Types.ArrayType(keyType, fieldType);
       }
       if (usedFieldNames.contains(name)) {
         throw new DoubleDefineException(context, "Field " + name

@@ -26,6 +26,7 @@ import exm.stc.ast.SwiftAST;
 import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
@@ -82,7 +83,7 @@ public abstract class Context {
    * @return
    */
   public DefKind lookupDef(String name) {
-    if (lookupType(name) != null) {
+    if (lookupTypeUnsafe(name) != null) {
       return DefKind.TYPE;
     }
     Var v = lookupVarUnsafe(name);
@@ -300,7 +301,26 @@ public abstract class Context {
     return Collections.unmodifiableCollection(variables.values());
   }
   
-  abstract public Type lookupType(String typeName);
+  /**
+   * @param typeName
+   * @return type corresponding to name, or otherwise null
+   */
+  abstract public Type lookupTypeUnsafe(String typeName);
+  
+  /**
+   * @param typeName
+   * @return type corresponding to name
+   * @throws UndefinedTypeException 
+   * @throw UndefinedTypeException if type is not defined
+   */
+  public Type lookupTypeUser(String typeName) throws UndefinedTypeException {
+    Type t = lookupTypeUnsafe(typeName);
+    if (t == null) {
+      throw new UndefinedTypeException(this, typeName);
+    } else {
+      return t;
+    }
+  }
 
   abstract public void defineType(String typeName, Type newType)
     throws DoubleDefineException;

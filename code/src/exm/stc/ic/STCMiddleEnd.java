@@ -278,7 +278,7 @@ public class STCMiddleEnd {
     }
     assert(arrayVar.type().memberType().equals(memberVar.type()));
     assert(loopCountVar == null || 
-              loopCountVar.type().equals(Types.V_INT));
+          Types.isArrayKeyVal(arrayVar, loopCountVar.asArg()));
     ForeachLoop loop = new ForeachLoop(loopName,
             arrayVar, memberVar, loopCountVar, splitDegree, leafDegree,
             arrayClosed, PassedVar.NONE, Var.NONE,
@@ -625,8 +625,8 @@ public class STCMiddleEnd {
   }
 
   public void assignInt(Var target, Arg src) {
-    assert(Types.isInt(target.type()));
-    assert(src.isImmediateInt());
+    assert(Types.isInt(target.type())): target;
+    assert(src.isImmediateInt()): src;
     currBlock().addInstruction(
         TurbineOp.assignInt(target, src));
   }

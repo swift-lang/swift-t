@@ -51,6 +51,7 @@ tokens {
     STRUCT_FIELD_DEF;
     VARIABLE;
     MULTI_TYPE;
+    STANDALONE_TYPE;
     INT_LITERAL;
     FLOAT_LITERAL;
     STRING_LITERAL;
@@ -328,10 +329,12 @@ another_type:
         PIPE ID -> ID
     ;
 
-    /*|   type=ID VARARGS =ID
-            -> ^( VARARGS $type $v )
-    |   VARARGS ID? -> ^( VARARGS ID? )
-    ;*/
+// Type that stands alone outside of variable declaration
+standalone_type:
+		// TODO: should support array markers here later
+		//type=ID array_marker* -> ^( STANDALONE_TYPE $type array_marker* )  
+		type=ID -> ^( STANDALONE_TYPE $type )
+	;
 
 block: LBRACE stmt* RBRACE -> ^( BLOCK stmt* )
     ;
@@ -479,7 +482,7 @@ declare_rest:
     ;
 
 array_marker:
-        LSQUARE RSQUARE -> ARRAY
+        LSQUARE standalone_type? RSQUARE -> ^( ARRAY standalone_type? ) 
     ;
 
 mapping:

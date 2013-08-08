@@ -83,10 +83,7 @@ public class VariableDeclaration {
     assert(tree.child(0).getType() == ExMParser.ID);
     
     String typeName = tree.child(0).getText();
-    Type baseType = context.lookupType(typeName);
-    if (baseType == null) {
-      throw new UndefinedTypeException(context, typeName);
-    }
+    Type baseType = context.lookupTypeUser(typeName);
     
     for (SwiftAST declTree: tree.children(1)) {
       SwiftAST expr;
@@ -120,8 +117,8 @@ public class VariableDeclaration {
     Type varType = baseType;
     for (SwiftAST subtree: tree.children(1)) {
       if (subtree.getType() == ExMParser.ARRAY) {
-        // TODO: different key types
-        varType = new Types.ArrayType(Types.F_INT, varType);
+        Type keyType = getArrayKeyType(context, subtree);
+        varType = new Types.ArrayType(keyType, varType);
       } else if (subtree.getType() == ExMParser.MAPPING) {
         assert(mappingExpr == null);
         assert(subtree.getChildCount() == 1);
@@ -132,6 +129,40 @@ public class VariableDeclaration {
       }
     }
     return new VariableDescriptor(varType, varName, mappingExpr);
+  }
+
+  /**
+   * Given an ARRAY tree, corresponding to an array type specification,
+   * e.g. [] or [string], then decide on the key type of the array 
+   * @param context
+   * @param subtree
+   * @return
+   * @throws UndefinedTypeException
+   */
+  public static Type getArrayKeyType(Context context, SwiftAST subtree)
+      throws UndefinedTypeException {
+    assert(subtree.getType() == ExMParser.ARRAY);
+    Type keyType;
+    if (subtree.getChildCount() == 0) {
+      // Default to int key type if not specified.
+      keyType = Types.F_INT;
+    } else {
+      assert(subtree.getChildCount() == 1);
+      SwiftAST standaloneTypeT = subtree.child(0);
+      keyType = extractStandaloneType(context, standaloneTypeT);
+    }
+    return keyType;
+  }
+
+  public static Type extractStandaloneType(Context context,
+      SwiftAST standaloneTypeT) throws UndefinedTypeException {
+    Type keyType;
+    assert(standaloneTypeT.getType() == ExMParser.STANDALONE_TYPE);
+    assert(standaloneTypeT.getChildCount() == 1);
+    // TODO: later we might want to have compound types in standalone type
+    String keyTypeName = standaloneTypeT.child(0).getText(); 
+    keyType = context.lookupTypeUser(keyTypeName);
+    return keyType;
   }
   
   public static class VariableDescriptor {

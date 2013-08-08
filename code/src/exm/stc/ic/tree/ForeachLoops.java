@@ -82,7 +82,6 @@ public class ForeachLoops {
         MultiMap<Var, RefCount> constStartIncrements,
         List<RefCount> endDecrements) {
       super(loopBody, passedVars, keepOpenVars);      
-      assert(loopCounterVar == null || loopCounterVar.type().equals(Types.V_INT));
       this.loopName = loopName;
       this.loopVar = loopVar;
       this.loopCounterVar = loopCounterVar;

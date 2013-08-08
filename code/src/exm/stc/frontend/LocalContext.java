@@ -238,12 +238,12 @@ public class LocalContext extends Context {
   }
 
   @Override
-  public Type lookupType(String typeName) {
+  public Type lookupTypeUnsafe(String typeName) {
     Type t = types.get(typeName);
     if (t != null) {
       return t;
     } else {
-      return parent.lookupType(typeName);
+      return parent.lookupTypeUnsafe(typeName);
     }
   }
 

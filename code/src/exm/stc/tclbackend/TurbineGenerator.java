@@ -1930,8 +1930,9 @@ public class TurbineGenerator implements CompilerBackend {
         List<PassedVar> passedVars, List<RefCount> perIterIncrs, 
         MultiMap<Var, RefCount> constIncrs) {
     assert(Types.isArray(arrayVar.type()));
-    assert(loopCountVar == null ||
-              loopCountVar.type().equals(Types.V_INT));
+    assert(loopCountVar == null || 
+          Types.isArrayKeyVal(arrayVar, loopCountVar.asArg()));
+
     if (!arrayClosed) {
       throw new STCRuntimeError("Loops over open containers not yet supported");
     }
