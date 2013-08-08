@@ -123,7 +123,7 @@ namespace eval turbine {
     }
 
     proc c_f_insert_r_body { c i r t write_refcount_decrs } {
-        set t1 [ retrieve_decr_integer $i ]
+        set t1 [ retrieve_decr $i ]
         set d [ adlb::acquire_ref $r $t 1 1 ]
         container_insert $c $t1 $d $t $write_refcount_decrs
     }
@@ -304,7 +304,7 @@ namespace eval turbine {
         # s: The subscripted container
         # don't need read reference
         set c [ acquire_ref $cr 0 1 ]
-        set s [ retrieve_decr_integer $j ]
+        set s [ retrieve_decr $j ]
         container_insert $c $s $d $t 
         log "insert: (now) <$c>\[$s\]=<$d>"
         adlb::write_refcount_decr $oc
@@ -364,7 +364,7 @@ namespace eval turbine {
     proc cr_f_insert_r_body { cr j dr t oc } {
         set c [ acquire_ref $cr 1 1 ]
         set d [ adlb::acquire_ref $dr $t 1 1 ]
-        set jval [ retrieve_decr_integer $j ]
+        set jval [ retrieve_decr $j ]
         container_insert $c $jval $d $t
         adlb::write_refcount_decr $oc
     }
@@ -487,7 +487,7 @@ namespace eval turbine {
     }
 
     proc contains_body { result c i } {
-        set i_val [ turbine::retrieve_decr_integer $i ]
+        set i_val [ turbine::retrieve_decr $i ]
         store_integer $result [ adlb::exists_sub $c $i_val 1 ]
     }
 
