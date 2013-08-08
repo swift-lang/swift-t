@@ -219,7 +219,7 @@ public class Types {
     
     @Override
     public Type concretize(Type concrete) {
-      assert(isArray(concrete));
+      assert(isRef(concrete));
       Type cMember = referencedType.concretize(concrete.memberType());
       if (cMember == this.referencedType)
         return this;

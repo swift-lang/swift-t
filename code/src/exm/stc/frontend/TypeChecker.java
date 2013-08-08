@@ -31,7 +31,6 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UndefinedOperatorException;
-import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;

@@ -176,7 +176,7 @@ public class ForLoopDescriptor {
     //each loop var should have an update rule, with the correct type
     for (LoopVar lv: loopVars) {
       Var v = lv.var;
-      Var outerV = context.lookupVarUser(v.name());
+      Var outerV = context.lookupVarUnsafe(v.name());
       if (lv.declaredOutsideLoop) {
         if (outerV == null) {
           throw UndefinedVarError.fromName(context, v.name(), 
