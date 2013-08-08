@@ -23,6 +23,7 @@ import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayType;
 import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.Type;
@@ -70,14 +71,14 @@ public class ArrayElems {
     // Check to see all arguments have compatible types
     List<SwiftAST> members = getMembers();
     if (members.size() == 0) {
-      return new ExprType(new ArrayType(new WildcardType()));
+      return new ExprType(new ArrayType(Types.F_INT, new WildcardType()));
     }
     List<Type> memberTypes = new ArrayList<Type>(members.size());
     for (SwiftAST elem: members) {
       memberTypes.add(TypeChecker.findSingleExprType(context, elem));
     }
     
-    List<Type> possibleTypes = TypeChecker.typeIntersection(memberTypes);
+    List<Type> possibleTypes = Types.typeIntersection(memberTypes);
     if (possibleTypes.size() == 0) {
       throw new TypeMismatchException(context, "Elements in array" +
           " constructor have incompatible types: " + memberTypes.toString());
@@ -85,7 +86,7 @@ public class ArrayElems {
     
     List<Type> possibleArrayTypes = new ArrayList<Type>();
     for (Type alt: possibleTypes) {
-      possibleArrayTypes.add(new ArrayType(alt));
+      possibleArrayTypes.add(new ArrayType(Types.F_INT, alt));
     }
     return new ExprType(UnionType.makeUnion(possibleArrayTypes));
   }

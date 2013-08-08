@@ -16,12 +16,15 @@
 package exm.stc.common.lang;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 
@@ -37,10 +40,12 @@ import exm.stc.common.exceptions.STCRuntimeError;
 public class Types {
 
   public static class ArrayType extends Type {
+    private final Type keyType;
     private final Type memberType;
 
-    public ArrayType(Type memberType) {
+    public ArrayType(Type keyType, Type memberType) {
       super();
+      this.keyType = keyType;
       this.memberType = memberType;
     }
 
@@ -49,6 +54,10 @@ public class Types {
       return StructureType.ARRAY;
     }
 
+    public Type keyType() {
+      return keyType;
+    }
+    
     @Override
     public Type memberType() {
       return memberType;
@@ -57,12 +66,12 @@ public class Types {
 
     @Override
     public String toString() {
-      return memberType.toString() + "[]";
+      return memberType.toString() + "[" + keyType + "]";
     }
 
     @Override
     public String typeName() {
-      return memberType.typeName() + "[]";
+      return memberType.typeName() + "["  + keyType + "]";
     }
 
     @Override
@@ -71,12 +80,12 @@ public class Types {
         throw new STCRuntimeError("Comparing ArrayType with non-type " +
                 "object");
       }
-      Type otherT = (Type) other;
-      if (!otherT.structureType().equals(StructureType.ARRAY)) {
+      if (!(other instanceof ArrayType)) {
         return false;
-      } else {
-        return otherT.memberType().equals(memberType);
       }
+      ArrayType otherT = (ArrayType) other;
+      return otherT.memberType.equals(memberType) &&
+              otherT.keyType.equals(keyType);
     }
 
     @Override
@@ -86,13 +95,27 @@ public class Types {
 
     @Override
     public Type bindTypeVars(Map<String, Type> vals) {
-      return new ArrayType(memberType.bindTypeVars(vals));
+      return new ArrayType(keyType.bindTypeVars(vals),
+                           memberType.bindTypeVars(vals));
     }
 
     @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
       if (concrete instanceof ArrayType) {
-        return memberType.matchTypeVars(((ArrayType)concrete).memberType);
+        Map<String, Type> m1, m2;
+        m1 = memberType.matchTypeVars(((ArrayType)concrete).memberType);
+        m2 = keyType.matchTypeVars(((ArrayType)concrete).keyType);
+        if (m1 == null || m2 == null) {
+          return null;
+        } else if (m1.isEmpty()) {
+          // Common case
+          return m2;
+        } else if (m2.isEmpty()) {
+          // Common case
+          return m1;
+        } else {
+          return TypeVariable.unifyBindings(m1, m2);
+        }
       }
       return null;
     }
@@ -101,15 +124,24 @@ public class Types {
     public Type concretize(Type concrete) {
       assert(isArray(concrete));
       Type cMember = memberType.concretize(concrete.memberType());
-      if (cMember == this.memberType)
+      Type cKey = keyType.concretize(((ArrayType)concrete).keyType);
+      if (cMember == this.memberType && cKey == this.keyType)
         return this;
-      return new ArrayType(cMember);
+      return new ArrayType(cKey, cMember);
     }
 
     @Override
     public boolean assignableTo(Type other) {
-      return other.structureType() == StructureType.ARRAY &&
-            memberType.assignableTo(other.memberType());
+      if (!isArray(other)) {
+        return false;
+      }
+      ArrayType otherA = (ArrayType)other;
+      // Types must exactly match, due to contra/co-variance issues
+      // with type parameters. Need to check to see if member types
+      // can be converted to other member types
+      
+      return keyType.matchTypeVars(otherA.keyType) != null &&
+             memberType.matchTypeVars(otherA.memberType) != null;
     }
 
     @Override
@@ -119,13 +151,14 @@ public class Types {
 
     @Override
     public Type getImplType() {
+      Type implKey = keyType.getImplType();
       Type implMember = memberType.getImplType();
-      if (implMember == memberType)
+      if (implMember == memberType && implKey == keyType)
         return this;
-      else if (implMember == null)
+      else if (implMember == null || implKey == null)
         return null;
       else
-        return new ArrayType(implMember);
+        return new ArrayType(implKey, implMember);
     }
   }
 
@@ -223,7 +256,7 @@ public class Types {
       Type cMember = referencedType.concretize(concrete.memberType());
       if (cMember == this.referencedType)
         return this;
-      return new ArrayType(cMember);
+      return new RefType(cMember);
     }
 
     @Override
@@ -239,7 +272,7 @@ public class Types {
       else if (implMember == null)
         return null;
       else
-        return new ArrayType(implMember);
+        return new RefType(implMember);
     }
   }
 
@@ -830,6 +863,37 @@ public class Types {
     public TypeVariable(String typeVarName) {
       super();
       this.typeVarName = typeVarName;
+    }
+
+    /**
+     * Check two sets of bindings are compatible with each other
+     * @param m1
+     * @param m2
+     */
+    public static Map<String, Type> unifyBindings(Map<String, Type> m1,
+                                                  Map<String, Type> m2) {
+
+      Set<String> intersection = new HashSet<String>(m1.keySet());
+      intersection.retainAll(m2.keySet());
+      
+      // All non-overlapping ones should be retained
+      Map<String, Type> res = new HashMap<String, Type>();
+      res.putAll(m1);
+      res.putAll(m2);
+      for (String overlapping: intersection) {
+        res.remove(overlapping);
+      }
+      
+      for (String match: intersection) {
+        Type t1 = m1.get(match);
+        Type t2 = m2.get(match);
+        List<Type> compatible = typeIntersection(Arrays.asList(t1, t2));
+        if (compatible.isEmpty()) {
+          return null;
+        }
+        res.put(match, UnionType.makeUnion(compatible));
+      }
+      return res;
     }
 
     @Override
@@ -1477,7 +1541,26 @@ public class Types {
         + arr.type() + " with member of type " + member.type());
   }
 
-
+  public static Type arrayKeyType(Typed arr) {
+    if (Types.isArray(arr)) {
+      return ((ArrayType)arr.type()).keyType;
+    } else {
+      assert(Types.isArrayRef(arr)) : arr.type();
+      return ((ArrayType)arr.type().memberType()).keyType;
+    }
+  }
+  
+  public static boolean isArrayKeyVal(Typed arr, Arg key) {
+    // Interpret arg type as a value
+    Type actual = key.typeInternal(false);
+    // Get the value type of the array key
+    Type expected = derefResultType(arrayKeyType(arr));
+    return actual.assignableTo(expected);
+  }
+  
+  public static boolean isArrayKeyFuture(Typed arr, Typed key) {
+    return key.type().assignableTo(arrayKeyType(arr));
+  }
   
   public static boolean isFuture(Typed t) {
     return isScalarFuture(t) || isRef(t);
@@ -1652,6 +1735,71 @@ public class Types {
       }
     }
     return true;
+  }
+
+  /**
+   * Find the intersection of a list of types where each element
+   * is either a UnionType or a different non-union type
+   * @param types
+   * @return a list of types in intersection, in order of appearance in
+   *         first type
+   */
+  public static List<Type> typeIntersection(List<Type> types) {
+    if(types.size() == 0) {
+      return Collections.<Type>singletonList(new WildcardType());
+    }
+    // Shortcircuit common cases
+    if (types.size() == 1 ||
+        (types.size() == 2 && types.get(0).equals(types.get(1)))) {
+      return UnionType.getAlternatives(types.get(0));
+    }
+    
+    boolean sawWildcard = true;
+    Set<Type> intersection = null;
+    for (Type argType: types) {
+      if (Types.isWildcard(argType)) {
+        // do nothing
+        sawWildcard = true;
+      } else if (intersection == null) {
+        intersection = new HashSet<Type>();
+        intersection.addAll(UnionType.getAlternatives(argType));
+      } else {
+        Iterator<Type> it = intersection.iterator();
+        while (it.hasNext()) {
+          Type t1 = it.next();
+          boolean compatible = false;
+          for (Type t2: UnionType.getAlternatives(argType)) {
+            // Check to see if types are compatible
+            Map<String, Type> requiredMappings = t2.matchTypeVars(t1);
+            if (requiredMappings != null && requiredMappings.size() == 0) {
+              compatible = true;
+            }
+            requiredMappings = t1.matchTypeVars(t2);
+            if (requiredMappings != null && requiredMappings.size() == 0) {
+              compatible = true;
+            }
+          } 
+          
+          if (!compatible) {
+            it.remove();
+          }
+        }
+      }
+    }
+    
+    if (intersection == null) {
+      assert(sawWildcard);
+      return Collections.<Type>singletonList(new WildcardType());
+    }
+    
+    // Make sure alternatives in original order
+    ArrayList<Type> result = new ArrayList<Type>();
+    for (Type alt: UnionType.getAlternatives(types.get(0))) {
+      if (intersection.contains(alt)) {
+        result.add(alt);
+      }
+    }
+    return result;
   }
 
   public static final Type F_INT = new ScalarFutureType(PrimType.INT);

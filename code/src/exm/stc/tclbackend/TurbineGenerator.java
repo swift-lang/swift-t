@@ -883,6 +883,7 @@ public class TurbineGenerator implements CompilerBackend {
       Var array, Var ix) {
     assert(Types.isArray(array.type()));
     assert(Types.isArrayRef(arrayResult.type()));
+    assert(Types.isArrayKeyFuture(array, ix));
     assert(arrayResult.storage() != VarStorage.ALIAS);
     TclTree t = Turbine.containerCreateNested(
         varToExpr(arrayResult), varToExpr(array),
@@ -896,6 +897,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArrayRef(arrayRefVar.type()));
     assert(Types.isArrayRef(arrayResult.type()));
     assert(arrayResult.storage() != VarStorage.ALIAS);
+    assert(Types.isArrayKeyFuture(arrayRefVar, ix));
 
     TclTree t = Turbine.containerRefCreateNested(
         varToExpr(arrayResult), varToExpr(arrayRefVar),
@@ -911,7 +913,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArray(array.type()));
     assert(Types.isArray(arrayResult.type()));
     assert(arrayResult.storage() == VarStorage.ALIAS);
-    assert(ix.isImmediateInt());
+    assert(Types.isArrayKeyVal(array, ix));
     assert(callerReadRefs.isImmediateInt());
     assert(callerWriteRefs.isImmediateInt());
     
@@ -928,7 +930,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArrayRef(arrayResult.type()));
     assert(arrayResult.storage() != VarStorage.ALIAS);
-    assert(ix.isImmediateInt());
+    assert(Types.isArrayKeyVal(array, ix));
 
     TclTree t = Turbine.containerRefCreateNestedImmIx(
         varToExpr(arrayResult), varToExpr(array),
@@ -1163,7 +1165,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void arrayLookupFuture(Var oVar, Var arrayVar, Var indexVar,
         boolean isArrayRef) {
     arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
-    assert(Types.isInt(indexVar.type()));
+    assert(Types.isArrayKeyFuture(arrayVar, indexVar));
     assert(Types.isRef(oVar.type()));
     // Nested arrays - oVar should be a reference type
     Command getRef = Turbine.arrayLookupComputed(varToExpr(oVar), 
@@ -1175,7 +1177,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void arrayLookupRefImm(Var oVar, Var arrayVar, Arg arrIx,
         boolean isArrayRef) {
-    assert(arrIx.isImmediateInt());
+    assert(Types.isArrayKeyVal(arrayVar, arrIx));
     
     arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
     Command getRef = Turbine.arrayLookupImmIx(
@@ -1189,7 +1191,7 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void arrayLookupImm(Var oVar, Var arrayVar, Arg arrIx) {
-    assert(arrIx.isImmediateInt());
+    assert(Types.isArrayKeyVal(arrayVar, arrIx));
     assert(oVar.type().equals(Types.arrayMemberType(arrayVar.type())));
      pointStack.peek().add(Turbine.arrayLookupImm(
          prefixVar(oVar),
@@ -1241,6 +1243,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArray(array.type()));
     assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
     assert(writersDecr.isImmediateInt());
+    assert(Types.isArrayKeyFuture(array, ix));
 
     Command r = Turbine.arrayStoreComputed(
         varToExpr(member), varToExpr(array),
@@ -1254,6 +1257,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void arrayDerefInsertFuture(Var array, Var ix, Var member,
                                 Arg writersDecr) {
     assert(Types.isArray(array.type()));
+    assert(Types.isArrayKeyFuture(array, ix));
     assert(writersDecr.isImmediateInt());
     assert(Types.isAssignableRefTo(member.type(),
                                    Types.arrayMemberType(array.type())));
@@ -1270,7 +1274,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void arrayRefInsertFuture(Var outerArray, Var array, Var ix, Var member) {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArray(outerArray.type()));
-    assert(Types.isInt(ix.type()));
+    assert(Types.isArrayKeyFuture(array, ix));
     assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
     Command r = Turbine.arrayRefStoreComputed(
         varToExpr(member), varToExpr(array),
@@ -1285,7 +1289,7 @@ public class TurbineGenerator implements CompilerBackend {
                                         Var member) {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArray(outerArray.type()));
-    assert(Types.isInt(ix.type()));
+    assert(Types.isArrayKeyFuture(array, ix));
     assert(Types.isAssignableRefTo(member.type(),
                                    Types.arrayMemberType(array.type())));
     
@@ -1314,7 +1318,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void arrayInsertImm(Var array, Arg arrIx, Var member, Arg writersDecr) {
     assert(Types.isArray(array.type()));
-    assert(arrIx.isImmediateInt());
+    assert(Types.isArrayKeyVal(array, arrIx));
     assert(writersDecr.isImmediateInt());
     assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
     
@@ -1329,7 +1333,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void arrayDerefInsertImm(Var array, Arg arrIx, Var member, Arg writersDecr) {
     assert(Types.isArray(array.type()));
-    assert(arrIx.isImmediateInt());
+    assert(Types.isArrayKeyVal(array, arrIx));
     assert(writersDecr.isImmediateInt());
     // Check that we get the right thing when we dereference it
     assert(Types.isAssignableRefTo(member.type(),
@@ -1346,7 +1350,7 @@ public class TurbineGenerator implements CompilerBackend {
                                 Var member) {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArray(outerArray.type()));
-    assert(arrIx.isImmediateInt());
+    assert(Types.isArrayKeyVal(array, arrIx));
     assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
     Command r = Turbine.arrayRefStoreImmediate(
         varToExpr(member), varToExpr(array),
@@ -1360,7 +1364,7 @@ public class TurbineGenerator implements CompilerBackend {
                                      Var member) {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArray(outerArray.type()));
-    assert(arrIx.isImmediateInt());
+    assert(Types.isArrayKeyVal(array, arrIx));
     Type memberType = array.type().memberType().memberType();
     // Check that we get the right thing when we dereference it
     assert(Types.isAssignableRefTo(member.type(),

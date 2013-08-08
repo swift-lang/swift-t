@@ -18,12 +18,9 @@ package exm.stc.frontend;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.Set;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
@@ -45,7 +42,6 @@ import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
-import exm.stc.common.lang.Types.WildcardType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
@@ -162,7 +158,7 @@ public class TypeChecker {
       ArrayRange ar = ArrayRange.fromAST(context, tree);
       ar.typeCheck(context);
       // Type is always the same: an array of integers
-      return new ExprType(new ArrayType(Types.F_INT));
+      return new ExprType(new ArrayType(Types.F_INT, Types.F_INT));
     }
     case ExMParser.ARRAY_ELEMS: {
       return ArrayElems.fromAST(context, tree).getType(context);
@@ -374,74 +370,8 @@ public class TypeChecker {
     }
 
     // We assume that all arguments to operator should have same type.
-    return typeIntersection(argTypes);
+    return Types.typeIntersection(argTypes);
   }
-
-  /**
-   * Find the intersection of a list of types where each element
-   * is either a UnionType or a different non-union type
-   * @param types
-   * @return a list of types in intersection, in order of appearance in
-   *         first type
-   */
-  public static List<Type> typeIntersection(List<Type> types) {
-    if(types.size() == 0) {
-      return Collections.<Type>singletonList(new WildcardType());
-    }
-    // Shortcircuit common cases
-    if (types.size() == 1 ||
-        (types.size() == 2 && types.get(0).equals(types.get(1)))) {
-      return UnionType.getAlternatives(types.get(0));
-    }
-    
-    boolean sawWildcard = true;
-    Set<Type> intersection = null;
-    for (Type argType: types) {
-      if (Types.isWildcard(argType)) {
-        // do nothing
-        sawWildcard = true;
-      } else if (intersection == null) {
-        intersection = new HashSet<Type>();
-        intersection.addAll(UnionType.getAlternatives(argType));
-      } else {
-        Iterator<Type> it = intersection.iterator();
-        while (it.hasNext()) {
-          Type t1 = it.next();
-          boolean compatible = false;
-          for (Type t2: UnionType.getAlternatives(argType)) {
-            // Check to see if types are compatible
-            Map<String, Type> requiredMappings = t2.matchTypeVars(t1);
-            if (requiredMappings != null && requiredMappings.size() == 0) {
-              compatible = true;
-            }
-            requiredMappings = t1.matchTypeVars(t2);
-            if (requiredMappings != null && requiredMappings.size() == 0) {
-              compatible = true;
-            }
-          } 
-          
-          if (!compatible) {
-            it.remove();
-          }
-        }
-      }
-    }
-    
-    if (intersection == null) {
-      assert(sawWildcard);
-      return Collections.<Type>singletonList(new WildcardType());
-    }
-    
-    // Make sure alternatives in original order
-    ArrayList<Type> result = new ArrayList<Type>();
-    for (Type alt: UnionType.getAlternatives(types.get(0))) {
-      if (intersection.contains(alt)) {
-        result.add(alt);
-      }
-    }
-    return result;
-  }
-
 
   /**
    * The type of the internal variable that will be created from an array
@@ -899,7 +829,7 @@ public class TypeChecker {
                 "function " + function + " was unbound");
         }
       } else {
-        List<Type> intersection = typeIntersection(cands);
+        List<Type> intersection = Types.typeIntersection(cands);
         if (intersection.size() == 0) {
           throw new TypeMismatchException(context, 
               "Type variable " + typeVar + " for call to function " +

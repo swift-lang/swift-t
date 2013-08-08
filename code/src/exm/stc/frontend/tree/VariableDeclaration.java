@@ -120,7 +120,8 @@ public class VariableDeclaration {
     Type varType = baseType;
     for (SwiftAST subtree: tree.children(1)) {
       if (subtree.getType() == ExMParser.ARRAY) {
-        varType = new Types.ArrayType(varType);
+        // TODO: different key types
+        varType = new Types.ArrayType(Types.F_INT, varType);
       } else if (subtree.getType() == ExMParser.MAPPING) {
         assert(mappingExpr == null);
         assert(subtree.getChildCount() == 1);

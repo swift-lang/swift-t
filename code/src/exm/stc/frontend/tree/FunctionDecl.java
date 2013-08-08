@@ -191,7 +191,8 @@ public class FunctionDecl {
       Type varType = baseType;
       for (SwiftAST subtree: tree.children(1)) {
         if (subtree.getType() == ExMParser.ARRAY) {
-          varType = new Types.ArrayType(varType);
+          // TODO: handle non-int key
+          varType = new Types.ArrayType(Types.F_INT, varType);
         } else if (subtree.getType() == ExMParser.MAPPING) {
           throw new InvalidSyntaxException(context, "Cannot map function argument");
         } else {

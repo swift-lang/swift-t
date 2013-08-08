@@ -404,7 +404,7 @@ public class STCMiddleEnd {
   
   public void arrayLookupFuture(Var oVar, Var arrayVar,
       Var indexVar, boolean isArrayRef) {
-    assert(Types.isInt(indexVar.type()));
+    assert(Types.isArrayKeyFuture(arrayVar, indexVar));
     if (isArrayRef) {
       currBlock().addInstruction(
           TurbineOp.arrayRefLookupFuture(oVar, arrayVar, indexVar));
@@ -416,7 +416,7 @@ public class STCMiddleEnd {
 
   public void arrayLookupRefImm(Var oVar, Var arrayVar,
       Arg arrIx, boolean isArrayRef) {
-    assert(arrIx.isImmediateInt());
+    assert(Types.isArrayKeyVal(arrayVar, arrIx));
     if (isArrayRef) {
       currBlock().addInstruction(
           TurbineOp.arrayRefLookupImm(oVar, arrayVar, arrIx));
@@ -430,7 +430,7 @@ public class STCMiddleEnd {
       Arg arrIx) {
     assert(oVar.storage() == VarStorage.ALIAS);
     assert(Types.isArray(arrayVar.type())); // Can't be reference to array
-    assert(arrIx.isImmediateInt());
+    assert(Types.isArrayKeyVal(arrayVar, arrIx));
     currBlock().addInstruction(
         TurbineOp.arrayLookupImm(oVar, arrayVar, arrIx));
   }
@@ -438,7 +438,7 @@ public class STCMiddleEnd {
   public void arrayInsertFuture(Var array, Var ix,
       Var member) {
     assert(Types.isArray(array.type()));
-    assert(Types.isInt(ix.type()));
+    assert(Types.isArrayKeyFuture(array, ix));
     assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
     currBlock().addInstruction(
         TurbineOp.arrayInsertFuture(array, ix, member));
@@ -448,14 +448,14 @@ public class STCMiddleEnd {
       Var member) {
     assert(Types.isAssignableRefTo(member.type(),
                                    Types.arrayMemberType(array.type())));
-    assert(Types.isInt(ix.type()));
+    assert(Types.isArrayKeyFuture(array, ix));
     currBlock().addInstruction(
         TurbineOp.arrayDerefInsertFuture(array, ix, member));
   }
 
   public void arrayRefInsertFuture(Var outerArray,
       Var array, Var ix, Var member) {
-    assert(Types.isInt(ix.type()));
+    assert(Types.isArrayKeyFuture(array, ix));
     assert(Types.isArrayRef(array.type()));
     assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
     currBlock().addInstruction(
@@ -464,7 +464,7 @@ public class STCMiddleEnd {
   
   public void arrayRefDerefInsertFuture(Var outerArray,
       Var array, Var ix, Var member) {
-    assert(Types.isInt(ix.type()));
+    assert(Types.isArrayKeyFuture(array, ix));
     assert(Types.isArrayRef(array.type()));
     assert(Types.isAssignableRefTo(member.type(),
                                    Types.arrayMemberType(array.type())));
@@ -483,7 +483,7 @@ public class STCMiddleEnd {
   
   public void arrayInsertImm(Var array, Arg ix, Var member) {
     assert(Types.isArray(array.type()));
-    assert(ix.isImmediateInt());
+    assert(Types.isArrayKeyVal(array, ix));
     assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
     currBlock().addInstruction(
         TurbineOp.arrayInsertImm(array, ix, member));
@@ -491,7 +491,7 @@ public class STCMiddleEnd {
   
   public void arrayDerefInsertImm(Var array, Arg ix, Var member) {
     assert(Types.isArray(array.type()));
-    assert(ix.isImmediateInt());
+    assert(Types.isArrayKeyVal(array, ix));
     assert(Types.isAssignableRefTo(member.type(),
                                    Types.arrayMemberType(array.type())));
     currBlock().addInstruction(
@@ -500,7 +500,7 @@ public class STCMiddleEnd {
   
   public void arrayRefInsertImm(Var outerArray, Var array,
           Arg ix, Var member) {
-    assert(ix.isImmediateInt());
+    assert(Types.isArrayKeyVal(array, ix));
     assert(Types.isArrayRef(array.type()));
     assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
     currBlock().addInstruction(
@@ -509,7 +509,7 @@ public class STCMiddleEnd {
   
   public void arrayRefDerefInsertImm(Var outerArray, Var array,
       Arg ix, Var member) {
-    assert(ix.isImmediateInt());
+    assert(Types.isArrayKeyVal(array, ix));
     assert(Types.isArrayRef(array.type()));
     assert(Types.isAssignableRefTo(member.type(),
                  Types.arrayMemberType(array.type())));
@@ -521,7 +521,7 @@ public class STCMiddleEnd {
       Var array, Var ix) {
     assert(Types.isArrayRef(arrayResult.type()));
     assert(Types.isArray(array.type()));
-    assert(Types.isInt(ix.type()));
+    assert(Types.isArrayKeyFuture(array, ix));
 
     currBlock().addInstruction(
       TurbineOp.arrayCreateNestedComputed(arrayResult, array, ix));
@@ -532,7 +532,7 @@ public class STCMiddleEnd {
     assert(Types.isArray(arrayResult.type()));
     assert(Types.isArray(arrayVar.type()));
     assert(arrayResult.storage() == VarStorage.ALIAS);
-    assert(arrIx.isImmediateInt());
+    assert(Types.isArrayKeyVal(arrayVar, arrIx));
 
     currBlock().addInstruction(
       TurbineOp.arrayCreateNestedImm(arrayResult,
@@ -544,7 +544,7 @@ public class STCMiddleEnd {
     assert(Types.isArrayRef(arrayResult.type()));
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArray(outerArray.type()));
-    assert(ix.isImmediateInt());
+    assert(Types.isArrayKeyVal(array, ix));
 
     currBlock().addInstruction(
       TurbineOp.arrayRefCreateNestedImmIx(arrayResult, outerArray, array, ix));
@@ -554,7 +554,7 @@ public class STCMiddleEnd {
       Var outerArr, Var array, Var ix) {
     assert(Types.isArrayRef(arrayResult.type()));
     assert(Types.isArrayRef(array.type()));
-    assert(Types.isInt(ix.type()));
+    assert(Types.isArrayKeyFuture(array, ix));
     assert(Types.isArray(outerArr.type()));
     currBlock().addInstruction(TurbineOp.arrayRefCreateNestedComputed(
                                       arrayResult, outerArr, array, ix));

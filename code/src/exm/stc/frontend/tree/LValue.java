@@ -38,6 +38,7 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LogHelper;
+import exm.stc.frontend.TypeChecker;
 
 public class LValue {
   public final Var var;
@@ -263,7 +264,12 @@ public class LValue {
     }
     
     for (int i = 0; i < arrayDepth; i++) {
-      declType = new ArrayType(declType);
+      SwiftAST keyExpr = indices.get(i).child(0);
+      Type keyType = TypeChecker.findSingleExprType(context, keyExpr);
+      if (Types.isUnion(keyType)) {
+        keyType = UnionType.getAlternatives(keyType).get(0);
+      }
+      declType = new ArrayType(keyType, declType);
     }
     
     Var newVar = new Var(declType, this.varName, VarStorage.STACK, DefType.LOCAL_USER, null);

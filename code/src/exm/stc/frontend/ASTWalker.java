@@ -2553,7 +2553,8 @@ public class ASTWalker {
     
     Type baseType = context.lookupType(baseTypeName);
     for (int i = 0; i < arrayMarkers; i++) {
-      baseType = new ArrayType(baseType);
+      // TODO: key types
+      baseType = new ArrayType(Types.F_INT, baseType);
     }
     
     Type newType;
@@ -2597,7 +2598,8 @@ public class ASTWalker {
       // Account for any [] 
       for (int j = 2; j < fieldTree.getChildCount(); j++) {
         assert(fieldTree.child(j).getType() == ExMParser.ARRAY);
-        fieldType = new Types.ArrayType(fieldType);
+        // TODO: key types
+        fieldType = new Types.ArrayType(Types.F_INT, fieldType);
       }
       if (usedFieldNames.contains(name)) {
         throw new DoubleDefineException(context, "Field " + name
