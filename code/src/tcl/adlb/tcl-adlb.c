@@ -141,6 +141,7 @@ static Tcl_Obj *build_tcl_blob(void *data, int length, adlb_datum_id id);
 static int extract_tcl_blob(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          Tcl_Obj *obj, adlb_blob_t *blob, adlb_datum_id *id);
 
+static int blob_cache_finalize(void);
 
 // Functions for managing struct formats
 static void struct_format_init(void);
@@ -2890,6 +2891,21 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = struct_format_finalize();
   TCL_CHECK(rc);
 
+  rc = blob_cache_finalize();
+  TCL_CHECK(rc);
+
+  return TCL_OK;
+}
+
+static void blob_free_callback(cutil_long key, void *blob)
+{
+  free(blob);
+}
+
+static int blob_cache_finalize(void)
+{
+  // Free table structure and any contained blobs
+  table_lp_free_callback(&blob_cache, false, blob_free_callback);
   return TCL_OK;
 }
 
