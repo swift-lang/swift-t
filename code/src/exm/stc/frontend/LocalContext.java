@@ -58,13 +58,13 @@ public class LocalContext extends Context {
   }
   
   @Override
-  public Var getDeclaredVariable(String name)
+  public Var lookupVarUnsafe(String name)
   {
     Var result;
     result = variables.get(name);
     if (result != null)
       return result;
-    return parent.getDeclaredVariable(name);
+    return parent.lookupVarUnsafe(name);
   }
 
   @Override

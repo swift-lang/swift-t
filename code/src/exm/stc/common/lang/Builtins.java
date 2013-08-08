@@ -23,7 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.UndefinedVariableException;
+import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Builtins.TemplateElem.ElemKind;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
@@ -319,8 +319,7 @@ public class Builtins {
         }
       }
       if (badNames.size() > 0) {
-        throw new UndefinedVariableException(context, "Variables " + badNames +
-            " undefined in TCL template");
+        throw UndefinedVarError.fromNames(context, badNames);
       }
     }
   }

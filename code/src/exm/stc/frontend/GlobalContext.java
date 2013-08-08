@@ -157,7 +157,7 @@ public class GlobalContext extends Context {
   }
 
   @Override
-  public Var getDeclaredVariable(String variable)
+  public Var lookupVarUnsafe(String variable)
   {
     return variables.get(variable);
   }

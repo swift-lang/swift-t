@@ -25,6 +25,8 @@ import exm.stc.ast.FilePosition;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.common.exceptions.DoubleDefineException;
+import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
@@ -83,7 +85,7 @@ public abstract class Context {
     if (lookupType(name) != null) {
       return DefKind.TYPE;
     }
-    Var v = getDeclaredVariable(name);
+    Var v = lookupVarUnsafe(name);
     if (v == null) {
       return null;
     } else if (Types.isFunction(v.type())) {
@@ -137,12 +139,48 @@ public abstract class Context {
   throws UserException;
 
   /**
-   * Lookup variable based on name
+   * Lookup variable based on name.  This version will
+   * return null if variable undeclared, leaving handling
+   * to caller.
    * @param name
-   * @return
+   * @return variable if declared, null if not declared
    */
-  public abstract Var getDeclaredVariable(String name);
+  public abstract Var lookupVarUnsafe(String name);
 
+  /**
+   * Lookup variable based on name that is referred to
+   * in user code
+   * @param name
+   * @return the variable
+   * @throws UndefinedVarError if not found
+   */
+  public Var lookupVarUser(String name)
+    throws UndefinedVarError {
+    Var result = lookupVarUnsafe(name);
+    if (result == null) {
+      throw UndefinedVarError.fromName(this, name);
+    }
+    return result;
+  }
+  
+  /**
+   * Lookup variable based on name.  This version should be used in contexts
+   * where the compiler has already checked the variable is declared, so if
+   * the variable can't be found the problem is a bug
+   * @param name
+   * @return the variable
+   * @throws STCRuntimeError if not found
+   */
+  public Var lookupVarInternal(String name)
+    throws STCRuntimeError {
+    Var result = lookupVarUnsafe(name);
+    if (result == null) {
+      throw new STCRuntimeError("Expected var " + name +
+            " to already be declared at " + getLocation());
+    }
+    return result;
+  }
+  
   /**
    * Returns a list of all variables that are stored in the current stack
    * or an ancestor stack frame.
@@ -169,7 +207,7 @@ public abstract class Context {
    * @return
    */
   public FunctionType lookupFunction(String name) {
-    Var var = getDeclaredVariable(name);
+    Var var = lookupVarUnsafe(name);
     if (var == null || !Types.isFunction(var.type())) {
       return null;
     }

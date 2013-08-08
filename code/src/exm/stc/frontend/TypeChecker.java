@@ -31,7 +31,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UndefinedOperatorException;
-import exm.stc.common.exceptions.UndefinedVariableException;
+import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
@@ -95,11 +95,8 @@ public class TypeChecker {
       return callFunction(context, tree, true);
     }
     case ExMParser.VARIABLE: {
-      Var var = context.getDeclaredVariable(tree.child(0).getText());
-      if (var == null) {
-        throw new UndefinedVariableException(context, "Variable "
-            + tree.child(0).getText() + " is not defined");
-      }
+      Var var = context.lookupVarUser(tree.child(0).getText());
+
       Type exprType = var.type();
       if (Types.isScalarUpdateable(exprType)) {
         // Can coerce to future

@@ -44,7 +44,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UndefinedTypeException;
-import exm.stc.common.exceptions.UndefinedVariableException;
+import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Annotations;
@@ -1216,8 +1216,7 @@ public class ASTWalker {
       
       Var var;
       if (walkMode == WalkMode.ONLY_EVALUATION) {
-        var = context.getDeclaredVariable(vDesc.getName());
-        assert(var != null);
+        var = context.lookupVarInternal(vDesc.getName());
       } else {
         var = declareVariable(context, vDesc);
       } 
@@ -1308,7 +1307,7 @@ public class ASTWalker {
 
   private List<Var> assignMultiExpression(Context context, Assignment assign,
       WalkMode walkMode) throws UserException, TypeMismatchException,
-      UndefinedTypeException, UndefinedVariableException {
+      UndefinedTypeException, UndefinedVarError {
     List<Var> multiAssignTargets = new ArrayList<Var>();
     for (Pair<List<LValue>, SwiftAST> pair: assign.getMatchedAssignments(context)) {
       List<LValue> lVals = pair.val1;
@@ -1321,7 +1320,7 @@ public class ASTWalker {
 
   private List<Var> assignSingleExpr(Context context, List<LValue> lVals,
       SwiftAST rValExpr, WalkMode walkMode) throws UserException, TypeMismatchException,
-      UndefinedVariableException, UndefinedTypeException {
+      UndefinedVarError, UndefinedTypeException {
     ExprType rValTs = Assignment.checkAssign(context, lVals, rValExpr);
     
     List<Var> result = new ArrayList<Var>(lVals.size());
@@ -1405,7 +1404,7 @@ public class ASTWalker {
    */
   private Var evalLValue(Context context, SwiftAST rValExpr,
       Type rValType, LValue lval, Deque<Runnable> afterActions)
-      throws UndefinedVariableException, UserException, UndefinedTypeException,
+      throws UndefinedVarError, UserException, UndefinedTypeException,
       TypeMismatchException {
     LValue arrayBaseLval = null; // Keep track of the root of the array
     LogHelper.trace(context, ("Evaluating lval " + lval.toString() + " with type " +
@@ -1429,11 +1428,7 @@ public class ASTWalker {
     }
 
     String varName = lval.varName;
-    Var lValVar = context.getDeclaredVariable(varName);
-    if (lValVar == null) {
-      throw new UndefinedVariableException(context, "variable " + varName
-          + " is not defined");
-    }
+    Var lValVar = context.lookupVarUser(varName);
 
     // Now if there is some mismatch between reference/value, rectify it
     return fixupRefValMismatch(context, rValType, lValVar);
@@ -1491,7 +1486,7 @@ public class ASTWalker {
       LValue lval) throws UserException, UndefinedTypeException,
       TypeMismatchException {
     // The variable at root of the current struct path
-    Var rootVar = context.getDeclaredVariable(lval.varName);
+    Var rootVar = context.lookupVarUser(lval.varName);
 
     ArrayList<String> fieldPath = new ArrayList<String>();
 
@@ -1552,9 +1547,8 @@ public class ASTWalker {
                                                       rValType, afterActions);
       return new LValue(lval.tree, lookedup, new ArrayList<SwiftAST>());
     } else {
-      //TODO: multi-dimensional array handling goes here: need to
-      //    dynamically create subarray
-      Var lvalArr = context.getDeclaredVariable(lval.varName);
+      // multi-dimensional array handling: need to dynamically create subarray
+      Var lvalArr = context.lookupVarUser(lval.varName);
       Type memberType = lval.getType(context, 1);
       Var mVar; // Variable for member we're looking up
       if (Types.isArray(memberType)) {
@@ -1634,7 +1628,7 @@ public class ASTWalker {
         // This is a bit of a hack.  We return the rval as the lval and rely
         //  on the rest of the compiler frontend to treat the self-assignment
         //  as a no-op
-        lvalVar = context.getDeclaredVariable(rvalExpr.child(0).getText());
+        lvalVar = context.lookupVarUser(rvalExpr.child(0).getText());
       } else {
         // In other cases we need an intermediate variable
         Type arrMemberType;
@@ -2443,7 +2437,7 @@ public class ASTWalker {
       if (cmdArg.getType() == ExMParser.APP_FILENAME) {
         assert(cmdArg.getChildCount() == 1);
         String fileVarName = cmdArg.child(0).getText();
-        Var file = context.getDeclaredVariable(fileVarName);
+        Var file = context.lookupVarUser(fileVarName);
         if (!Types.isFile(file.type())) {
           throw new TypeMismatchException(context, "Variable " + file.name()
                   + " is not a file, cannot use @ prefix for app");

@@ -18,7 +18,6 @@ package exm.stc.frontend.tree;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.TypeMismatchException;
-import exm.stc.common.exceptions.UndefinedVariableException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Types;
@@ -88,11 +87,7 @@ public class Update {
     Operators.UpdateMode mode = Operators.UpdateMode.fromString(context, cmd.getText());
     assert(mode != null);
     
-    Var v = context.getDeclaredVariable(var.getText());
-    if (v == null) {
-      throw new UndefinedVariableException(context, "variable "
-          + var.getType() + " is not defined");
-    }
+    Var v = context.lookupVarUser(var.getText());
     
     if (!Types.isScalarUpdateable(v.type())) {
       throw new TypeMismatchException(context, "can only update" +

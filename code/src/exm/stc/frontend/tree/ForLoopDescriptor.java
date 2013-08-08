@@ -30,7 +30,7 @@ import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedTypeException;
-import exm.stc.common.exceptions.UndefinedVariableException;
+import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
@@ -176,11 +176,12 @@ public class ForLoopDescriptor {
     //each loop var should have an update rule, with the correct type
     for (LoopVar lv: loopVars) {
       Var v = lv.var;
-      Var outerV = context.getDeclaredVariable(v.name());
+      Var outerV = context.lookupVarUser(v.name());
       if (lv.declaredOutsideLoop) {
         if (outerV == null) {
-          throw new UndefinedVariableException(context, v.toString() + " was not " +
-                  "declared before for loop");
+          throw UndefinedVarError.fromName(context, v.name(), 
+              "Variable wasn't declared in for loop initializer, and wasn't" +
+              "declared outside of loop");
         }
       } else {
         context.checkNotDefined(v.name());
@@ -281,13 +282,8 @@ public class ForLoopDescriptor {
         SwiftAST expr = loopVarInit.child(1);
         assert(lvalTree.getType() == ExMParser.ID);
         String varName = lvalTree.getText();
-        Var var = context.getDeclaredVariable(varName);
-        if (var == null) {
-          throw new UndefinedVariableException(context, "Variable in " +
-                  "for loop: " + varName + " has not been declared"); 
-        }
-        forLoop.addLoopVar(var, true, expr);
-        
+        Var var = context.lookupVarUser(varName);
+        forLoop.addLoopVar(var, true, expr);        
       } else {
         throw new STCRuntimeError("Don't support initializer type "
             + LogHelper.tokName(initType) + " yet ");

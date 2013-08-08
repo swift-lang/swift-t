@@ -33,7 +33,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UndefinedTypeException;
-import exm.stc.common.exceptions.UndefinedVariableException;
+import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
@@ -118,7 +118,7 @@ public class ExprWalker {
           srcVarName = renames.get(srcVarName);
         }
 
-        Var srcVar = context.getDeclaredVariable(srcVarName);
+        Var srcVar = context.lookupVarUser(srcVarName);
         
         if (oVar.name().equals(srcVar.name())) {
           throw new UserException(context, "Assigning variable " + 
@@ -203,12 +203,7 @@ public class ExprWalker {
       if (renames != null && renames.containsKey(varName)) {
         varName = renames.get(varName);
       }
-      Var var = context.getDeclaredVariable(varName);
-  
-      if (var == null) {
-        throw new UndefinedVariableException(context, "Variable " + varName
-            + " is not defined");
-      }
+      Var var = context.lookupVarUser(varName);
       
       // Check to see that the current variable's storage is adequate
       // Might need to convert type, can't do that here
@@ -459,7 +454,7 @@ public class ExprWalker {
    * @param tree
    * @param oList
    * @throws UserException
-   * @throws UndefinedVariableException
+   * @throws UndefinedVarError
    * @throws UndefinedFunctionException
    */
   private void callFunctionExpression(Context context, SwiftAST tree,
@@ -685,7 +680,7 @@ public class ExprWalker {
     String fieldName = tree.child(1).getText();
 
     if (parentTree.getType() == ExMParser.VARIABLE) {
-      parent = context.getDeclaredVariable(parentTree.child(0).getText());
+      parent = context.lookupVarUser(parentTree.child(0).getText());
     } else {
       Type parentType = TypeChecker.findSingleExprType(context, parentTree);
       // Type error should have been caught earlier
@@ -709,7 +704,7 @@ public class ExprWalker {
       // The root is a local variable
       assert (structTree.getChildCount() == 1);
       String structVarName = structTree.child(0).getText();
-      rootStruct = context.getDeclaredVariable(structVarName);
+      rootStruct = context.lookupVarUnsafe(structVarName);
       pathFromRoot = path;
     } else {
       rootStruct = parent;

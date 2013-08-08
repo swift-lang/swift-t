@@ -26,7 +26,7 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedTypeException;
-import exm.stc.common.exceptions.UndefinedVariableException;
+import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayType;
@@ -213,7 +213,9 @@ public class LValue {
       }
     }
     
-    Var var = context.getDeclaredVariable(varName);
+    // It is ok if here variable isn't undeclared, since we might want
+    // to automatically declare it
+    Var var = context.lookupVarUnsafe(varName);
     if (var != null) {
       return new LValue(subtree, var, path);
     } else {
@@ -238,8 +240,7 @@ public class LValue {
     }
     
     if (!Settings.getBoolean(Settings.AUTO_DECLARE)) {
-      throw new UndefinedVariableException(context, "Variable " + this.varName
-               + " is not defined");
+      throw UndefinedVarError.fromName(context, this.varName);
     }
     
     for (SwiftAST t: this.indices) {
