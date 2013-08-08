@@ -299,22 +299,28 @@ turbine_engine_init()
     return TURBINE_ERROR_UNINITIALIZED;
 
   bool result;
+  // TODO: this memory may be leaked
   result = table_lp_init(&transforms_waiting, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
 
+  // TODO: this memory may be leaked
   list_init(&transforms_ready);
+  // TODO: this memory may be leaked
   result = table_lp_init(&transforms_returned, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
+  // TODO: this memory may be leaked
   result = table_lp_init(&td_blockers, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
 
+  // TODO: this memory may be leaked
   result = table_lp_init(&td_subscribed, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
   
+  // TODO: this memory may be leaked
   result = table_init(&td_sub_subscribed, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
@@ -587,6 +593,7 @@ rule_inputs(transform* T)
     struct list_l* L = table_lp_search(&td_blockers, id);
     if (L == NULL)
       declare_datum(id, &L);
+    // TODO: this memory may be leaked
     list_l_add(L, T->id);
   }
   // TODO: do same for pairs
@@ -652,9 +659,11 @@ declare_datum(turbine_datum_id id, struct list_l** result)
 {
   assert(initialized);
   // DEBUG_TURBINE("declare: %li\n", id);
+  // TODO: this memory may be leaked
   struct list_l* blocked = list_l_create();
   if (table_lp_contains(&td_blockers, id))
     return TURBINE_ERROR_DOUBLE_DECLARE;
+  // TODO: this memory may be leaked
   table_lp_add(&td_blockers, id, blocked);
   if (result != NULL)
     *result = blocked;

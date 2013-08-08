@@ -944,6 +944,9 @@ static int
 Turbine_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
+  // Free allocated object
+  Tcl_DecrRefCount(SPAWN_RULE_CMD);
+
   turbine_finalize();
   return TCL_OK;
 }
