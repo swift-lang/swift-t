@@ -94,7 +94,17 @@ struct list* list_pop_where(struct list* target,
 
 void list_transplant(struct list* target, struct list* segment);
 
+/*
+  Clear list data structure, and call free() on all values in list.
+  Equivalent to list_clear(target, free);
+ */
 void list_clear(struct list* target);
+
+/*
+  Clear list data structure, and call callback, but not free() on all
+  values in list.
+ */
+void list_clear_callback(struct list* target, void (*callback)(void*));
 
 void* list_pop(struct list* target);
 
@@ -119,11 +129,18 @@ int list_tostring(char* str, size_t size,
 
 /**
    Free this list but not its data.
+   Equivalent to list_free_callback(target, NULL);
 */
 void list_free(struct list* target);
 
+/*
+  Free this list and call callback on all data
+ */
+void list_free_callback(struct list* target, void (*callback)(void*));
+
 /**
    Free this list and its data.
+   Equivalent to list_free_callback(target, free);
 */
 void list_destroy(struct list* target);
 

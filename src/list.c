@@ -436,12 +436,19 @@ list_matches(struct list* target, int (*cmp)(void*,void*), void* arg)
 void
 list_clear(struct list* target)
 {
+  list_clear_callback(target, free);
+}
+
+
+void list_clear_callback(struct list* target, void (*callback)(void*))
+{
   struct list_item* item = target->head;
 
   while (item)
   {
     struct list_item* next = item->next;
-    free(item->data);
+    if (callback != NULL)
+      callback(item->data);
     free(item);
     item = next;
   }
@@ -814,10 +821,17 @@ list_printf(char* format, struct list* target)
 void
 list_free(struct list* target)
 {
+  list_free_callback(target, NULL);
+}
+
+void list_free_callback(struct list* target, void (*callback)(void*))
+{
   struct list_item* item = target->head;
   while (item)
   {
     struct list_item* next = item->next;
+    if (callback != NULL)
+      callback(item->data);
     free(item);
     item = next;
   }

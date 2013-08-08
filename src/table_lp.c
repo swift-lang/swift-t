@@ -75,6 +75,7 @@ table_lp_clear(struct table_lp* target)
 {
   for (int i = 0; i < target->capacity; i++)
     list_lp_clear(&target->array[i]);
+  target->size = 0; 
 }
 
 void
@@ -82,6 +83,7 @@ table_lp_delete(struct table_lp* target)
 {
   for (int i = 0; i < target->capacity; i++)
     list_lp_delete(&target->array[i]);
+  target->size = 0; 
 }
 
 void
@@ -96,9 +98,15 @@ void table_lp_free_callback(struct table_lp* target, bool free_root,
   for (int i = 0; i < target->capacity; i++)
     list_lp_clear_callback(&target->array[i], callback);
   free(target->array);
-  target->array = NULL;
   if (free_root)
+  {
     free(target);
+  }
+  else
+  {
+    target->array = NULL;
+    target->size = target->capacity = 0;
+  }
 }
 
 void

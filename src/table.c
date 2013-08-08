@@ -105,10 +105,16 @@ void table_free_callback(struct table* target, bool free_root,
     list_sp_free_callback(target->array[i], callback);
 
   free(target->array);
-  target->array = NULL;
 
   if (free_root)
+  {
     free(target);
+  }
+  else
+  {
+    target->array = NULL;
+    target->capacity = target->size = 0;
+  }
 }
 
 void
