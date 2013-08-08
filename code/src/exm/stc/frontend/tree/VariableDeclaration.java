@@ -115,7 +115,9 @@ public class VariableDeclaration {
     SwiftAST mappingExpr = null;
     
     Type varType = baseType;
-    for (SwiftAST subtree: tree.children(1)) {
+    // Process array indices backward to get correct type
+    for (int i = tree.getChildCount() - 1; i >= 1; i--) {
+      SwiftAST subtree = tree.child(i);
       if (subtree.getType() == ExMParser.ARRAY) {
         Type keyType = getArrayKeyType(context, subtree);
         varType = new Types.ArrayType(keyType, varType);

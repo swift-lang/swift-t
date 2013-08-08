@@ -1538,8 +1538,9 @@ public class ASTWalker {
                                              indexExpr.child(0));
     if (!Types.isArrayKeyFuture(lval.var, indexType)) {
       throw new TypeMismatchException(context, 
-          "Indexing array using non-integer expression in lval.  Type " +
-          "of expression was " + indexType.typeName());
+          "Array key type mismatch in LVal.  " +
+          "Expected: " + Types.arrayKeyType(lval.var) + " " +
+          "Actual: " + indexType.typeName());
     }
     
     if (lval.indices.size() == 1) {
@@ -1572,7 +1573,9 @@ public class ASTWalker {
         } else {
           // Handle the general case where the index must be computed
           mVar = varCreator.createTmp(context, new RefType(memberType));
-          Var indexVar = exprWalker.eval(context, indexExpr.child(0), Types.F_INT, false, null);
+          Type keyType = Types.arrayKeyType(lvalArr);
+          Var indexVar = exprWalker.eval(context, indexExpr.child(0), keyType,
+                                         false, null);
           
           if (Types.isArray(lvalArr.type())) {
             backend.arrayCreateNestedFuture(mVar, lvalArr, indexVar);
@@ -1658,11 +1661,11 @@ public class ASTWalker {
 
 
     final Var outermostArray = origLval.var;
-    Type indexType = ((ArrayType)outermostArray.type()).keyType();
+    Type keyType = Types.arrayKeyType(arrType);
     
     Long literal = Literals.extractIntLit(context, indexExpr);
 
-    if (Types.isInt(indexType) && literal != null) {
+    if (Types.isInt(keyType) && literal != null) {
       final long arrIx = literal;
       // Add this variable to array
       afterActions.addFirst(new Runnable() {
@@ -1673,7 +1676,7 @@ public class ASTWalker {
         }});
     } else {
       // Handle the general case where the index must be computed
-      final Var indexVar = exprWalker.eval(context, indexExpr, indexType, false, null);
+      final Var indexVar = exprWalker.eval(context, indexExpr, keyType, false, null);
       afterActions.addFirst(new Runnable() {
         @Override
         public void run() {
