@@ -32,6 +32,8 @@
 
 typedef enum
 {
+  /** No action */
+  TURBINE_ACTION_NULL = 0,
   /** Act locally */
   TURBINE_ACTION_LOCAL = 1,
   /** Act on a remote engine */
@@ -84,15 +86,6 @@ turbine_code turbine_rule(const char* name,
 
 turbine_code turbine_rules_push(void);
 
-/**
-   Obtain the list of TRs ready to run
-   @param count: maximum number to return
-   @param output: location to store TR IDs
-   @param result: number of TR IDs returned
- */
-turbine_code turbine_ready(int count, turbine_transform_id* output,
-                           int *result);
-
 /*
   Should be called when turbine engine is notified that an id is closed
  */
@@ -105,10 +98,13 @@ turbine_code turbine_close(turbine_datum_id id);
 turbine_code turbine_sub_close(turbine_datum_id id, const char *subscript);
 
 /*
+  action_type: this is TURBINE_ACTION_NULL if no ready actions.
+               otherwise it will have the type of action and
+               the output arguments will be filled in
   action: the string action.  Caller is responsible for freeing
  */
-turbine_code turbine_pop(turbine_transform_id id,
-                         turbine_action_type* action_type,
+turbine_code turbine_pop(turbine_action_type* action_type,
+                         turbine_transform_id *id,
                          char** action, int* priority, int* target,
                          int* parallelism);
 

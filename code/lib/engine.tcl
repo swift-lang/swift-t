@@ -21,7 +21,7 @@ namespace eval turbine {
     namespace import ::adlb::put ::adlb::get ::adlb::RANK_ANY
 
     # Import turbine c command
-    namespace import c::ready c::pop
+    namespace import c::pop_or_break
 
     proc engine { rules startup } {
 
@@ -40,13 +40,9 @@ namespace eval turbine {
         while {true} {
             while {true} {
                 # Do local work until we have none
-                set ready_transforms [ ready ]
-                if { [ llength $ready_transforms ] == 0 } break
-                foreach {transform} $ready_transforms {
-                    pop $transform type action priority target parallelism
-                    set_priority $priority
-                    release $transform $type $action $target $parallelism
-                }
+                pop_or_break transform type action priority target parallelism
+                set_priority $priority
+                release $transform $type $action $target $parallelism
             }
 
             reset_priority

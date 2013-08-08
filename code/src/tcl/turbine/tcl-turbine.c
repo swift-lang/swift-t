@@ -434,54 +434,36 @@ Turbine_Push_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-/**
-   usage: ready => [ list ids ]
-   Note that this may not return all ready TRs
+/*
+  Pop a ready transform. All arguments are output arguments
+  turbine::pop_or_break <transform id> <type> <action> <priority> <target>
+  If no ready transform, will return TCL_BREAK to signal this
+  condition.
  */
 static int
-Turbine_Ready_Cmd(ClientData cdata, Tcl_Interp *interp,
-                  int objc, Tcl_Obj *const objv[])
-{
-  TCL_ARGS(1);
-  turbine_transform_id transforms[TCL_TURBINE_READY_COUNT];
-  int actual;
-  turbine_ready(TCL_TURBINE_READY_COUNT, transforms, &actual);
-
-  Tcl_Obj* result = Tcl_NewListObj(0, NULL);
-  assert(result);
-
-  for (int i = 0; i < actual; i++)
-  {
-    Tcl_Obj* sid = Tcl_NewWideIntObj(transforms[i]);
-    Tcl_ListObjAppendElement(interp, result, sid);
-  }
-
-  Tcl_SetObjResult(interp, result);
-
-  return TCL_OK;
-}
-
-static int
-Turbine_Pop_Cmd(ClientData cdata, Tcl_Interp *interp,
+Turbine_Pop_Or_Break_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(7); // ID, plus type, action, priority, target, par vars to set
+  TCL_ARGS(7); 
 
-  turbine_transform_id id;
-  int error = Tcl_GetADLB_ID(interp, objv[1], &id);
-  TCL_CHECK(error);
-
+  turbine_transform_id transform_id;
   turbine_action_type type;
   char *action;
   int priority;
   int target;
   int parallelism;
 
-  turbine_code code = turbine_pop(id, &type, &action,
+  turbine_code code = turbine_pop(&type, &transform_id, &action,
                                   &priority, &target, &parallelism);
-  TCL_CONDITION(code == TURBINE_SUCCESS,
-                 "could not pop transform id: %lli", id);
+  TCL_CONDITION(code == TURBINE_SUCCESS, "could not pop transform id");
+  if (type == TURBINE_ACTION_NULL)
+  {
+    DEBUG_TURBINE("No ready transforms, sending TCL_BREAK signal"); 
+    return TCL_BREAK;
+  }
 
+  Tcl_ObjSetVar2(interp, objv[1], NULL, Tcl_NewWideIntObj(transform_id),
+                 EMPTY_FLAG);
   Tcl_ObjSetVar2(interp, objv[2], NULL, Tcl_NewIntObj(type),
                  EMPTY_FLAG);
   Tcl_ObjSetVar2(interp, objv[3], NULL, Tcl_NewStringObj(action, -1),
@@ -1089,8 +1071,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("rule",        Turbine_Rule_Cmd);
   COMMAND("ruleopts",    Turbine_RuleOpts_Cmd);
   COMMAND("push",        Turbine_Push_Cmd);
-  COMMAND("ready",       Turbine_Ready_Cmd);
-  COMMAND("pop",         Turbine_Pop_Cmd);
+  COMMAND("pop_or_break",Turbine_Pop_Or_Break_Cmd);
   COMMAND("close",       Turbine_Close_Cmd);
   COMMAND("log",         Turbine_Log_Cmd);
   COMMAND("normalize",   Turbine_Normalize_Cmd);

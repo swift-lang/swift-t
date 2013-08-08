@@ -124,13 +124,6 @@ struct table_lp transforms_waiting;
 struct list transforms_ready;
 
 /**
-   Transforms whose IDs have been returned to application
-   We retain these until the application pops them
-   Map from transform ID to transform
- */
-struct table_lp transforms_returned;
-
-/**
    TD inputs blocking their transforms
    Map from TD ID to list of transforms
  */
@@ -306,11 +299,6 @@ turbine_engine_init()
   if (!result)
     return TURBINE_ERROR_OOM;
 
-  list_init(&transforms_ready);
-  result = table_lp_init(&transforms_returned, 1024*1024);
-  if (!result)
-    return TURBINE_ERROR_OOM;
-  
   result = table_lp_init(&td_blockers, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
@@ -667,38 +655,23 @@ declare_datum(turbine_datum_id id, struct list_l** result)
   return TURBINE_SUCCESS;
 }
 
-turbine_code
-turbine_ready(int count, turbine_transform_id* output,
-              int* result)
+turbine_code turbine_pop(turbine_action_type* action_type,
+                         turbine_transform_id *id,
+                         char** action, int* priority, int* target,
+                         int* parallelism)
 {
-  int i = 0;
-  void* v;
-  DEBUG_TURBINE("ready:");
-  while (i < count && (v = list_poll(&transforms_ready)))
-  {
-    transform* T = (transform*) v;
-    table_lp_add(&transforms_returned, T->id, T);
-    output[i] = T->id;
-    DEBUG_TURBINE("\t %lli", lli(output[i]));
-    i++;
-  }
-  *result = i;
-  return TURBINE_SUCCESS;
-}
+  transform *T = (transform*) list_poll(&transforms_ready);
 
-turbine_code
-turbine_pop(turbine_transform_id id, turbine_action_type* action_type,
-            char** action, int* priority, int* target, int* parallelism)
-{
-  // Check inputs
-  if (id == TURBINE_ID_NULL)
-     return TURBINE_ERROR_NULL;
-  transform* T = table_lp_remove(&transforms_returned, id);
-  if (!T)
-    return TURBINE_ERROR_NOT_FOUND;
+  if (T == NULL)
+  {
+    // Signal none ready
+    DEBUG_TURBINE("pop: no transforms ready");
+    *action_type = TURBINE_ACTION_NULL;
+    return TURBINE_SUCCESS;
+  }
 
   // Debugging
-  DEBUG_TURBINE("pop: transform:   {%lli}", id);
+  DEBUG_TURBINE("pop: transform:   {%lli}", T->id);
   DEBUG_TURBINE("     action:      {%lli} %s: %s", lli(id), T->name,
                                                             T->action);
   DEBUG_TURBINE("     priority:    {%lli} => %i",  lli(id), T->priority);
@@ -707,6 +680,7 @@ turbine_pop(turbine_transform_id id, turbine_action_type* action_type,
 
   // Copy outputs
   *action_type = T->action_type;
+  *id = T->id;
   *action = T->action;
   T->action = NULL; // Avoid freeing action that we're going to return
   *priority = T->priority;
@@ -888,8 +862,7 @@ turbine_code_tostring(char* output, turbine_code code)
   return result;
 }
 
-static void action_type_tostring(turbine_action_type action_type,
-                                 char* output);
+static const char *action_type_tostring(turbine_action_type action_type);
 
 static int
 transform_tostring(char* output, transform* t)
@@ -897,8 +870,7 @@ transform_tostring(char* output, transform* t)
   int result = 0;
   char* p = output;
 
-  char action_type_string[16];
-  action_type_tostring(t->action_type, action_type_string);
+  const char *action_type_string = action_type_tostring(t->action_type);
 
   append(p, "%s ", t->name);
   append(p, "%s ", action_type_string);
@@ -985,12 +957,15 @@ bitfield_size(int inputs) {
 /**
    Convert given action_type to string representation
 */
-static void
-action_type_tostring(turbine_action_type action_type, char* output)
+static const char*
+action_type_tostring(turbine_action_type action_type)
 {
-  char* s = NULL;
+  const char* s = NULL;
   switch (action_type)
   {
+    case TURBINE_ACTION_NULL:
+      s = "NULL";
+      break;
     case TURBINE_ACTION_LOCAL:
       s = "LOCAL";
       break;
@@ -1000,13 +975,11 @@ action_type_tostring(turbine_action_type action_type, char* output)
     case TURBINE_ACTION_WORK:
       s = "WORK";
       break;
+    default:
+      printf("action_type_tostring(): unknown: %i\n", action_type);
+      exit(1);
   }
-  if (s == NULL)
-  {
-    printf("action_type_tostring(): unknown: %i\n", action_type);
-    exit(1);
-  }
-  strcpy(output, s);
+  return s;
 }
 
 static void
@@ -1051,7 +1024,6 @@ static void turbine_engine_finalize(void)
 
   // Now we're done reporting, free everything
   table_lp_free_callback(&transforms_waiting, false, tbl_free_transform_cb);
-  table_lp_free_callback(&transforms_returned, false, tbl_free_transform_cb);
   list_clear_callback(&transforms_ready, list_free_transform_cb);
   table_lp_free_callback(&td_blockers, false, tbl_free_blockers_cb);
  
