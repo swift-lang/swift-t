@@ -43,7 +43,9 @@ if { ! [ adlb::amserver ] } {
         adlb::store $id string "test-message"
     } else {
         puts "waiting..."
-        after 100
+        while { ! [ adlb::exists $id ] } {
+          after 100
+        }
     }
 
     for { set i 1 } { $i <= $iterations } { incr i } {
