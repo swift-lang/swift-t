@@ -38,11 +38,17 @@
 typedef long long adlb_int_t;
 typedef double adlb_float_t;
 
+// OSX GCC 4.2.1 does not have uint
+// Cf. https://github.com/imatix/zguide/issues/35
+#if __APPLE__ == 1
+typedef unsigned int uint;
+#endif
+
 typedef struct
 {
   char* value;
   int length; // Length including null terminator
-} adlb_string_t; 
+} adlb_string_t;
 
 typedef struct
 {
@@ -107,7 +113,7 @@ typedef struct {
 
 typedef struct adlb_struct_s {
   adlb_struct_type type;
-  adlb_datum_storage data[]; 
+  adlb_datum_storage data[];
 } adlb_struct;
 
 /*
@@ -133,7 +139,7 @@ ADLB_Lookup_struct_type(adlb_struct_type type,
                   const char **type_name, int *field_count,
                   const adlb_data_type **field_types, char ***field_names);
 
-// adlb_binary_data: struct to represent 
+// adlb_binary_data: struct to represent
 typedef struct {
   const void *data; // Pointer to data, always filled in
   // Caller-owned pointer if we use caller's buffer or allocate memory
@@ -166,7 +172,7 @@ static inline adlb_data_code
 ADLB_Own_data(const adlb_buffer *caller_buffer, adlb_binary_data *data);
 
 /*
-   Unpack data from buffer into adlb_datum_storage, allocating new 
+   Unpack data from buffer into adlb_datum_storage, allocating new
    memory if necessary.  The unpacked data won't hold any pointers
    into the buffer.
  */
@@ -344,7 +350,7 @@ ADLB_Unpack_blob(adlb_blob_t *b, void *data, int length, bool copy)
 typedef struct {
   adlb_struct_type type;
   // Offsets of fields within buffer relative to start of buffer
-  int field_offsets[]; 
+  int field_offsets[];
 } adlb_packed_struct_hdr;
 
 adlb_data_code
@@ -357,11 +363,11 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, int length);
 // Free any memory used
 adlb_data_code
 ADLB_Free_storage(adlb_datum_storage *d, adlb_data_type type);
-/* 
+/*
    Create string with human-readable representation of datum.
    Caller must free string.
    Note: this is currently not fast or robust, only used for
-   printing debug information 
+   printing debug information
   */
 char *
 ADLB_Data_repr(adlb_datum_storage *d, adlb_data_type type);
@@ -402,7 +408,7 @@ ADLB_Resize_buf(adlb_buffer *buf, bool *using_caller_buf, int min_length)
     // Ensure big enough
     if (buf->length < min_length)
     {
-      buf->length = min_length; 
+      buf->length = min_length;
     }
     // If caller-provided buffer, have to allocate new, otherwise
     // resize current
@@ -439,7 +445,7 @@ ADLB_Own_data(const adlb_buffer *caller_buffer, adlb_binary_data *data)
 {
   assert(data->data != NULL);
   assert(data->length >= 0);
-  
+
   if (data->length > 0 && data->caller_data == NULL)
   {
     // Need to move data to caller-owned buffer. Decide whether
