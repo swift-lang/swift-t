@@ -101,13 +101,16 @@ static inline void mark_input_td_closed(transform *T, int i);
 static inline bool input_td_sub_closed(transform *T, int i);
 static inline void mark_input_td_sub_closed(transform *T, int i);
 
+// Finalize engine
+static void turbine_engine_finalize(void);
+
 /**
    Has turbine_init() been called successfully?
 */
 static bool initialized = false;
 
 /** Has turbine_engine_init() been called? */
-bool engine_initialized = false;
+bool turbine_engine_initialized = false;
 
 /**
    Waiting transforms
@@ -299,33 +302,28 @@ turbine_engine_init()
     return TURBINE_ERROR_UNINITIALIZED;
 
   bool result;
-  // TODO: this memory may be leaked
   result = table_lp_init(&transforms_waiting, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
 
-  // TODO: this memory may be leaked
   list_init(&transforms_ready);
-  // TODO: this memory may be leaked
   result = table_lp_init(&transforms_returned, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
-  // TODO: this memory may be leaked
+  
   result = table_lp_init(&td_blockers, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
 
-  // TODO: this memory may be leaked
   result = table_lp_init(&td_subscribed, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
   
-  // TODO: this memory may be leaked
   result = table_init(&td_sub_subscribed, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
 
-  engine_initialized = true;
+  turbine_engine_initialized = true;
   return TURBINE_SUCCESS;
 }
 
@@ -541,7 +539,7 @@ turbine_rule(const char* name,
              int parallelism,
              turbine_transform_id* id)
 {
-  if (!engine_initialized)
+  if (!turbine_engine_initialized)
     return TURBINE_ERROR_UNINITIALIZED;
   transform* T = NULL;
   turbine_code code = transform_create(name, input_tds, input_td_list,
@@ -593,7 +591,6 @@ rule_inputs(transform* T)
     struct list_l* L = table_lp_search(&td_blockers, id);
     if (L == NULL)
       declare_datum(id, &L);
-    // TODO: this memory may be leaked
     list_l_add(L, T->id);
   }
   // TODO: do same for pairs
@@ -711,7 +708,7 @@ turbine_pop(turbine_transform_id id, turbine_action_type* action_type,
   // Copy outputs
   *action_type = T->action_type;
   *action = T->action;
-  T->action = NULL;
+  T->action = NULL; // Avoid freeing action that we're going to return
   *priority = T->priority;
   *target = T->target;
   *parallelism = T->parallelism;
@@ -1030,10 +1027,52 @@ info_waiting()
     }
 }
 
+// Callbacks to free data
+static void tbl_free_transform_cb(turbine_transform_id key, void *T);
+static void tbl_free_blockers_cb(turbine_datum_id key, void *L);
+static void list_free_transform_cb(void *T);
+
 void
-turbine_finalize()
+turbine_finalize(void)
 {
   turbine_cache_finalize();
+  turbine_engine_finalize();
+}
+
+
+static void turbine_engine_finalize(void)
+{
+  if (!turbine_engine_initialized)
+    return;
+
+  // First report any problems we find
   if (transforms_waiting.size != 0)
     info_waiting();
+
+  // Now we're done reporting, free everything
+  table_lp_free_callback(&transforms_waiting, false, tbl_free_transform_cb);
+  table_lp_free_callback(&transforms_returned, false, tbl_free_transform_cb);
+  list_clear_callback(&transforms_ready, list_free_transform_cb);
+  table_lp_free_callback(&td_blockers, false, tbl_free_blockers_cb);
+ 
+  // Entries in td_subscribed and td_sub_subscribed are not pointers and don't
+  // need to be freed
+  table_lp_free_callback(&td_subscribed, false, NULL);
+  table_free_callback(&td_sub_subscribed, false, NULL);
+   
+}
+
+static void tbl_free_transform_cb(turbine_transform_id key, void *T)
+{
+  transform_free((transform*)T);
+}
+
+static void list_free_transform_cb(void *T)
+{
+  transform_free((transform*)T);
+}
+
+static void tbl_free_blockers_cb(turbine_datum_id key, void *L)
+{
+  list_l_free((struct list_l*)L);
 }
