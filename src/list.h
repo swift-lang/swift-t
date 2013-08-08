@@ -110,6 +110,10 @@ void* list_pop(struct list* target);
 
 void* list_head(struct list* target);
 
+/*
+  Remove one element from head of list and return.
+  returns NULL if list is empty.
+ */
 void* list_poll(struct list* target);
 
 void* list_random(struct list* target);
