@@ -120,10 +120,7 @@ public class GlobalContext extends Context {
   {
     assert(defType == DefType.GLOBAL_CONST);
     assert(scope == VarStorage.GLOBAL_CONST);
-    if (variables.containsKey(name)) {
-      throw new DoubleDefineException(this, "Variable called " + 
-                name + " declared twice in global scope");
-    }
+    checkNotDefined(name);
     Var v = new Var(type, name, scope, defType, mapping);
     variables.put(name, v);
     return v;
@@ -175,12 +172,8 @@ public class GlobalContext extends Context {
   @Override
   public void defineType(String typeName, Type newType)
           throws DoubleDefineException {
-    if (types.get(typeName) != null) {
-      throw new DoubleDefineException(this, "Type name " + typeName +
-          " is already in used");
-    } else {
-      types.put(typeName, newType);
-    }
+    checkNotDefined(typeName);
+    types.put(typeName, newType);
   }
 
   @Override
