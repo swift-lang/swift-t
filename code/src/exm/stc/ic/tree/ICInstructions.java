@@ -2467,9 +2467,16 @@ public class ICInstructions {
           // across struct boundaries
           return super.getIncrVars();
         case COPY_REF: {
-          return Pair.create(Arrays.asList(getInput(0).getVar()),
-                             Arrays.asList(getInput(0).getVar()));
+          return Pair.create(getInput(0).getVar().asList(),
+                             getInput(0).getVar().asList());
         }
+        case UPDATE_INCR:
+        case UPDATE_MIN:
+        case UPDATE_SCALE:
+          // Consumes a read refcount for the input argument and
+          // write refcount for updated variable
+          return Pair.create(getInput(0).getVar().asList(),
+                             getOutput(0).asList());
         default:
           // Return default
           return super.getIncrVars();
