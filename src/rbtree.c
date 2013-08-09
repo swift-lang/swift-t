@@ -977,7 +977,8 @@ rbtree_clear_callback(struct rbtree* target, rbtree_callback cb)
   if (target->size != 0)
   {
     rbtree_free_subtree(target->root, cb);
-    target->size = 0;
+    // Reset to original state
+    rbtree_init(target);
   }
 }
 

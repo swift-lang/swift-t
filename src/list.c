@@ -452,8 +452,8 @@ void list_clear_callback(struct list* target, void (*callback)(void*))
     free(item);
     item = next;
   }
-  target->head = NULL;
-  target->tail = NULL;
+  // Reset everything
+  list_init(target);
 }
 
 

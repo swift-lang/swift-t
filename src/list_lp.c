@@ -375,9 +375,9 @@ list_lp_clear_callback(struct list_lp* target,
     free(item);
     item = next;
   }
-  target->head = NULL;
-  target->tail = NULL;
-  target->size = 0;
+
+  // Reset to original state
+  list_lp_init(target);
 }
 
 void

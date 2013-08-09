@@ -514,7 +514,9 @@ list_d_clear(struct list_d* target)
     free(item);
     item = next_item;
   }
-  target->size = 0;
+
+  // Reset everything
+  list_d_init(target);
 }
 
 /**

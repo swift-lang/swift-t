@@ -384,14 +384,9 @@ void list_ip_free_callback(struct list_ip* target, bool free_root,
     item = next;
   }
   if (free_root)
-  {
     free(target);
-  }
   else
-  {
-    target->head = target->tail = NULL;
-    target->size = 0;
-  }
+    list_ip_init(target); // Reinitialize to consistent state
 }
 
 /**

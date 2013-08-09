@@ -295,6 +295,7 @@ tree_clear(struct tree* target)
 {
   if (target->size != 0)
     tree_free_subtree(target->root);
+  tree_init(target);
 }
 
 static void
