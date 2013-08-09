@@ -41,14 +41,14 @@ main(int argc, char* argv[])
 {
   struct list* L;
 
-  puts("PARSE");
+  puts("SPLIT_WORDS");
 
-  L = list_parse("jkl iop l");
+  L = list_split_words("jkl iop l");
   list_printf("%s", L);
   fflush(stdout);
   list_destroy(L);
 
-  L = list_parse(" jkl iop  l  ");
+  L = list_split_words(" jkl iop  l  ");
   list_printf("%s", L);
   list_destroy(L);
 
