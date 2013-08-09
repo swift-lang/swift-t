@@ -1006,7 +1006,7 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
     Tcl_SetObjResult(interp, result);
   }
 
-  TCL_CONDITION(rc == ADLB_SUCCESS, "adlb::create <%lli> failed!", id);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "adlb::create <%"PRId64"> failed!", id);
   return TCL_OK;
 }
 
@@ -1086,7 +1086,7 @@ ADLB_Exists_Impl(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(argpos == objc, "unexpected trailing args at %ith arg", argpos);
 
   rc = ADLB_Exists(id, subscript, &b, decr);
-  TCL_CONDITION(rc == ADLB_SUCCESS, "<%lli> failed!", id);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
   Tcl_Obj* result = Tcl_NewBooleanObj(b);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
@@ -1386,7 +1386,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_binary_data data; 
   rc = tcl_obj_to_adlb_data(interp, objv, type, has_extra ? &extra : NULL,
                             objv[argpos++], &xfer_buf, &data);
-  TCL_CHECK_MSG(rc, "<%lli> failed, could not extract data!", id);
+  TCL_CHECK_MSG(rc, "<%"PRId64"> failed, could not extract data!", id);
 
   // Handle optional refcount spec
   adlb_refcounts decr = ADLB_WRITE_RC; // default is to decr writers
@@ -1403,7 +1403,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(argpos == objc,
           "extra trailing arguments starting at argument %i", argpos);
 
-  // DEBUG_ADLB("adlb::store: <%lli>=%s", id, data);
+  // DEBUG_ADLB("adlb::store: <%"PRId64">=%s", id, data);
   rc = ADLB_Store(id, NULL, type, data.data, data.length, decr);
   
   // Free if needed
@@ -1411,7 +1411,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
     ADLB_Free_binary_data(&data);
 
   TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::store <%lli> failed!", id);
+                "adlb::store <%"PRId64"> failed!", id);
 
   return TCL_OK;
 }
@@ -1483,8 +1483,8 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
   adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
   refcounts.decr_self.read_refcount = decr_amount;
   rc = ADLB_Retrieve(id, NULL, refcounts, &type, xfer, &length);
-  TCL_CONDITION(rc == ADLB_SUCCESS, "<%lli> failed!", id);
-  TCL_CONDITION(length >= 0, "adlb::retrieve <%lli> not found!",
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
+  TCL_CONDITION(length >= 0, "adlb::retrieve <%"PRId64"> not found!",
                             id);
 
   // Type check
@@ -1658,8 +1658,8 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
   adlb_data_type type;
   int length;
   rc = ADLB_Retrieve(id, subscript, refcounts, &type, xfer, &length);
-  TCL_CONDITION(rc == ADLB_SUCCESS, "<%lli> failed!", id);
-  TCL_CONDITION(length >= 0, "<%lli> not found!", id);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
+  TCL_CONDITION(length >= 0, "<%"PRId64"> not found!", id);
 
   // Type check
   if (expected_type != type)
@@ -1960,7 +1960,7 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
   adlb_data_type type;
   int length;
   rc = ADLB_Retrieve(id, NULL, refcounts, &type, xfer, &length);
-  TCL_CONDITION(rc == ADLB_SUCCESS, "<%lli> failed!", id);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
   TCL_CONDITION(type == ADLB_DATA_TYPE_BLOB,
                 "type mismatch: expected: %i actual: %i",
                 ADLB_DATA_TYPE_BLOB, type);
@@ -2061,7 +2061,7 @@ ADLB_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
   bool found;
   rc = uncache_blob(interp, objc, objv, id, &found);
   TCL_CHECK(rc);
-  TCL_CONDITION(found, "blob not cached: <%lli>", id);
+  TCL_CONDITION(found, "blob not cached: <%"PRId64">", id);
   return TCL_OK;
 }
 
@@ -2176,7 +2176,7 @@ ADLB_Blob_store_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = ADLB_Store(id, NULL, ADLB_DATA_TYPE_BLOB, 
                   xfer, length*(int)sizeof(double), decr);
   TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::store <%lli> failed!", id);
+                "adlb::store <%"PRId64"> failed!", id);
 
   return TCL_OK;
 }
@@ -2218,7 +2218,7 @@ ADLB_Blob_store_ints_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = ADLB_Store(id, NULL, ADLB_DATA_TYPE_BLOB,
                   xfer, length*(int)sizeof(int), decr);
   TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::store <%lli> failed!", id);
+                "adlb::store <%"PRId64"> failed!", id);
 
   return TCL_OK;
 }
@@ -2302,10 +2302,10 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_binary_data member; 
   rc = tcl_obj_to_adlb_data(interp, objv, type, has_extra ? &extra : NULL,
                             member_obj, &xfer_buf, &member);
-  TCL_CHECK_MSG(rc, "adlb::insert <%lli>[%s] failed, could not extract data!",
+  TCL_CHECK_MSG(rc, "adlb::insert <%"PRId64">[%s] failed, could not extract data!",
                     id, subscript);
 
-  DEBUG_ADLB("adlb::insert <%lli>[\"%s\"]=<%s>",
+  DEBUG_ADLB("adlb::insert <%"PRId64">[\"%s\"]=<%s>",
                id, subscript, Tcl_GetStringFromObj(member_obj, NULL));
 
   adlb_refcounts decr = ADLB_NO_RC;
@@ -2330,7 +2330,7 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   if (member.data != xfer_buf.data)
     ADLB_Free_binary_data(&member);
 
-  TCL_CONDITION(rc == ADLB_SUCCESS, "failed: <%lli>[\"%s\"]\n", id, subscript);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "failed: <%"PRId64">[\"%s\"]\n", id, subscript);
   return TCL_OK;
 }
 
@@ -2349,12 +2349,12 @@ ADLB_Insert_Atomic_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_GetADLB_ID(interp, objv[1], &id);
   char* subscript = Tcl_GetString(objv[2]);
 
-  DEBUG_ADLB("adlb::insert_atomic: <%lli>[\"%s\"]",
+  DEBUG_ADLB("adlb::insert_atomic: <%"PRId64">[\"%s\"]",
              id, subscript);
   int rc = ADLB_Insert_atomic(id, subscript, &b, NULL, NULL, NULL);
 
   TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::insert_atomic: failed: <%lli>[%s]",
+                "adlb::insert_atomic: failed: <%"PRId64">[%s]",
                 id, subscript);
 
   Tcl_Obj* result = Tcl_NewBooleanObj(b);
@@ -2416,16 +2416,16 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
  
   do {
     rc = ADLB_Retrieve(id, subscript, refcounts, &type, xfer, &len);
-    TCL_CONDITION(rc == ADLB_SUCCESS, "lookup failed for: <%lli>[%s]",
+    TCL_CONDITION(rc == ADLB_SUCCESS, "lookup failed for: <%"PRId64">[%s]",
                   id, subscript);
   } while (spin && len < 0);
   
-  TCL_CONDITION(len >= 0, "adlb::lookup <%lli>[\"%s\"] not found",
+  TCL_CONDITION(len >= 0, "adlb::lookup <%"PRId64">[\"%s\"] not found",
                 id, subscript);
 
   Tcl_Obj* result = NULL;
   adlb_data_to_tcl_obj(interp, objv, id, type, NULL, xfer, len, &result);
-  DEBUG_ADLB("adlb::lookup <%lli>[\"%s\"]=<%s>",
+  DEBUG_ADLB("adlb::lookup <%"PRId64">[\"%s\"]=<%s>",
              id, subscript, Tcl_GetStringFromObj(result, NULL));
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
@@ -2476,7 +2476,7 @@ ADLB_Lock_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   bool locked;
   rc = ADLB_Lock(id, &locked);
-  TCL_CONDITION(rc == ADLB_SUCCESS, "<%lli> failed!", id);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
 
   Tcl_Obj* result = Tcl_NewBooleanObj(locked);
   Tcl_SetObjResult(interp, result);
@@ -2498,7 +2498,7 @@ ADLB_Unlock_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK_MSG(rc, "argument must be a long integer!");
 
   rc = ADLB_Unlock(id);
-  TCL_CONDITION(rc == ADLB_SUCCESS, "<%lli> failed!", id);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
 
   return TCL_OK;
 }
@@ -2516,7 +2516,7 @@ ADLB_Unique_Cmd(ClientData cdata, Tcl_Interp *interp,
   int rc = ADLB_Unique(&id);
   ASSERT(rc == ADLB_SUCCESS);
 
-  // DEBUG_ADLB("adlb::unique: <%lli>", id);
+  // DEBUG_ADLB("adlb::unique: <%"PRId64">", id);
 
   Tcl_Obj* result = Tcl_NewADLB_ID(id);
   Tcl_SetObjResult(interp, result);
@@ -2538,13 +2538,13 @@ ADLB_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_data_type type;
   int rc = ADLB_Typeof(id, &type);
   TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::container_typeof <%lli> failed!", id);
+                "adlb::container_typeof <%"PRId64"> failed!", id);
 
-  // DEBUG_ADLB("adlb::container_typeof: <%lli> is: %i\n", id, type);
+  // DEBUG_ADLB("adlb::container_typeof: <%"PRId64"> is: %i\n", id, type);
 
   const char *type_string = ADLB_Data_type_tostring(type);
 
-  // DEBUG_ADLB("adlb::container_typeof: <%lli> is: %s",
+  // DEBUG_ADLB("adlb::container_typeof: <%"PRId64"> is: %s",
   //            id, type_string);
 
   Tcl_Obj* result = Tcl_NewStringObj(type_string, -1);
@@ -2568,7 +2568,7 @@ ADLB_Container_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_data_type key_type, val_type;
   int rc = ADLB_Container_typeof(id, &key_type, &val_type);
   TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::container_typeof <%lli> failed!", id);
+                "adlb::container_typeof <%"PRId64"> failed!", id);
 
   const char *key_type_string = ADLB_Data_type_tostring(val_type);
   const char *val_type_string = ADLB_Data_type_tostring(key_type);
@@ -2615,12 +2615,12 @@ ADLB_Container_Reference_Cmd(ClientData cdata, Tcl_Interp *interp,
                            &has_extra, &extra);
   TCL_CHECK(rc);
 
-  // DEBUG_ADLB("adlb::container_reference: <%lli>[%s] => <%lli>\n",
+  // DEBUG_ADLB("adlb::container_reference: <%"PRId64">[%s] => <%lli>\n",
   //            container_id, subscript, reference);
   rc = ADLB_Container_reference(container_id, subscript, reference,
                                 ref_type);
   TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::container_reference: <%lli> failed!",
+                "adlb::container_reference: <%"PRId64"> failed!",
                 container_id);
   return TCL_OK;
 }
@@ -2655,11 +2655,11 @@ ADLB_Container_Size_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(argpos == objc, "unexpected trailing args at %ith arg", argpos);
 
   int size;
-  // DEBUG_ADLB("adlb::container_size: <%lli>",
+  // DEBUG_ADLB("adlb::container_size: <%"PRId64">",
   //            container_id, size);
   rc = ADLB_Container_size(container_id, &size, decr);
   TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::container_size: <%lli> failed!",
+                "adlb::container_size: <%"PRId64"> failed!",
                 container_id);
   Tcl_Obj* result = Tcl_NewIntObj(size);
   Tcl_SetObjResult(interp, result);
@@ -2683,7 +2683,7 @@ ADLB_Write_Refcount_Incr_Cmd(ClientData cdata, Tcl_Interp *interp,
   if (objc == 3)
     Tcl_GetIntFromObj(interp, objv[2], &incr.write_refcount);
 
-  // DEBUG_ADLB("adlb::write_refcount_incr: <%lli>", container_id);
+  // DEBUG_ADLB("adlb::write_refcount_incr: <%"PRId64">", container_id);
   int rc = ADLB_Refcount_incr(container_id, incr);
 
   if (rc != ADLB_SUCCESS)
@@ -2708,7 +2708,7 @@ ADLB_Write_Refcount_Decr_Cmd(ClientData cdata, Tcl_Interp *interp,
   if (objc == 3)
     Tcl_GetIntFromObj(interp, objv[2], &decr_w);
 
-  // DEBUG_ADLB("adlb::write_refcount_decr: <%lli>", container_id);
+  // DEBUG_ADLB("adlb::write_refcount_decr: <%"PRId64">", container_id);
   adlb_refcounts decr = { .read_refcount = 0, .write_refcount = -decr_w };
   int rc = ADLB_Refcount_incr(container_id, decr);
 
@@ -2747,7 +2747,7 @@ ADLB_Refcount_Incr_Impl(ClientData cdata, Tcl_Interp *interp,
     change = -change;
   }
  
- // DEBUG_ADLB("adlb::refcount_incr: <%lli>", id);
+ // DEBUG_ADLB("adlb::refcount_incr: <%"PRId64">", id);
   
   adlb_refcounts incr = ADLB_NO_RC;
   if (type == ADLB_READ_REFCOUNT || type == ADLB_READWRITE_REFCOUNT)

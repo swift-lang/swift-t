@@ -42,7 +42,7 @@ typedef enum
   TURBINE_ACTION_WORK = 3
 } turbine_action_type;
 
-typedef long long turbine_transform_id;
+typedef int64_t turbine_transform_id;
 
 typedef struct {
   turbine_datum_id td;

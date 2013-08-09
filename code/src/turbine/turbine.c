@@ -147,7 +147,7 @@ static inline int
 write_id_sub_key(char *buf, turbine_datum_id id, const char *subscript)
 {
   assert(subscript != NULL);
-  return sprintf(buf, "%lli %s", id, subscript);
+  return sprintf(buf, "%"PRId64" %s", id, subscript);
 }
 
 #define turbine_check(code) if (code != TURBINE_SUCCESS) return code;
@@ -511,7 +511,7 @@ static int transform_tostring(char* output,
 #define DEBUG_TURBINE_RULE(transform, id) {         \
     char tmp[1024];                                     \
     transform_tostring(tmp, transform);                 \
-    DEBUG_TURBINE("rule: %s {%lli}", tmp, lli(id));     \
+    DEBUG_TURBINE("rule: %s {%"PRId64"}", tmp, lli(id));     \
   }
 #else
 #define DEBUG_TURBINE_RULE(transform, id)
@@ -629,7 +629,7 @@ turbine_rules_push()
 
       if (!subscribed)
       {
-        DEBUG_TURBINE("not subscribed on: %lli\n", lli(T->id));
+        DEBUG_TURBINE("not subscribed on: %"PRId64"\n", lli(T->id));
         list_add(&tmp, T);
       }
     }
@@ -675,12 +675,12 @@ turbine_code turbine_pop(turbine_action_type* action_type,
   }
 
   // Debugging
-  DEBUG_TURBINE("pop: transform:   {%lli}", T->id);
-  DEBUG_TURBINE("     action:      {%lli} %s: %s", lli(id), T->name,
+  DEBUG_TURBINE("pop: transform:   {%"PRId64"}", T->id);
+  DEBUG_TURBINE("     action:      {%"PRId64"} %s: %s", lli(id), T->name,
                                                             T->action);
-  DEBUG_TURBINE("     priority:    {%lli} => %i",  lli(id), T->priority);
-  DEBUG_TURBINE("     target:      {%lli} => %i",  lli(id), T->target);
-  DEBUG_TURBINE("     parallelism: {%lli} => %i",  lli(id), T->parallelism);
+  DEBUG_TURBINE("     priority:    {%"PRId64"} => %i",  lli(id), T->priority);
+  DEBUG_TURBINE("     target:      {%"PRId64"} => %i",  lli(id), T->target);
+  DEBUG_TURBINE("     parallelism: {%"PRId64"} => %i",  lli(id), T->parallelism);
 
   // Copy outputs
   *action_type = T->action_type;
@@ -736,7 +736,7 @@ turbine_close(turbine_datum_id id)
 
     if (!subscribed)
     {
-      DEBUG_TURBINE("ready: {%lli}", lli(transform_id));
+      DEBUG_TURBINE("ready: {%"PRId64"}", lli(transform_id));
       list_add(&tmp, T);
     }
   }
@@ -894,7 +894,7 @@ transform_tostring(char* output, transform* t)
     bool blocking = (i == t->blocker);
     if (blocking)
       append(p, "/");
-    append(p, "%lli", lli(t->input_td_list[i]));
+    append(p, "%"PRId64"", lli(t->input_td_list[i]));
     if (blocking)
       append(p, "/");
   }
@@ -910,7 +910,7 @@ transform_tostring(char* output, transform* t)
     td_sub_pair ts = t->input_td_sub_list[i];
     if (blocking)
       append(p, "/");
-    append(p, "%lli[\"%s\"]", lli(ts.td), ts.subscript);
+    append(p, "%"PRId64"[\"%s\"]", lli(ts.td), ts.subscript);
     if (blocking)
       append(p, "/");
   }
@@ -997,7 +997,7 @@ info_waiting()
     {
       transform* t = item->data;
       char id_string[24];
-      sprintf(id_string, "{%lli}", t->id);
+      sprintf(id_string, "{%"PRId64"}", t->id);
       int c = sprintf(buffer, "%10s ", id_string);
       transform_tostring(buffer+c, t);
       printf("TRANSFORM: %s\n", buffer);

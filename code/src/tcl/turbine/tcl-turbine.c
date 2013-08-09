@@ -276,7 +276,7 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
                               TCL_TURBINE_MAX_INPUTS,
                               input_list, &inputs);
   TCL_CHECK_MSG(rc, "could not parse inputs list as integers:\n"
-                "in rule: <%lli> %s inputs: \"%s\"",
+                "in rule: <%"PRId64"> %s inputs: \"%s\"",
                 lli(id), opts.name, Tcl_GetString(objv[1]));
 
   turbine_code code =
@@ -494,14 +494,14 @@ Turbine_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
   {
     turbine_code code = turbine_close(id);
     TCL_CONDITION(code == TURBINE_SUCCESS,
-                  "could not close datum id: %lli", id);
+                  "could not close datum id: %"PRId64"", id);
   }
   else
   {
     const char *sub = Tcl_GetString(objv[2]);
     turbine_code code = turbine_sub_close(id, sub);
     TCL_CONDITION(code == TURBINE_SUCCESS,
-                  "could not close %lli[\"%s\"]", id, sub);
+                  "could not close %"PRId64"[\"%s\"]", id, sub);
   }
 
   return TCL_OK;
@@ -556,7 +556,7 @@ Turbine_Cache_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   void* data;
   int length;
   turbine_code rc = turbine_cache_retrieve(td, &type, &data, &length);
-  TURBINE_CHECK(rc, "cache retrieve failed: %lli", td);
+  TURBINE_CHECK(rc, "cache retrieve failed: %"PRId64"", td);
 
   Tcl_Obj* result = NULL;
   int tcl_code = adlb_data_to_tcl_obj(interp, objv, td, type, NULL,
@@ -601,12 +601,12 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
   TCL_CONDITION(argpos < objc, "not enough arguments");
   error = tcl_obj_to_binary(interp, objv, td, type, has_extra ? &extra : NULL,
                          objv[argpos++], &data, &length);
-  TCL_CHECK_MSG(error, "object extraction failed: <%lli>", td);
+  TCL_CHECK_MSG(error, "object extraction failed: <%"PRId64">", td);
 
   TCL_CONDITION(argpos == objc, "extra trailing arguments from %i", argpos);
 
   turbine_code rc = turbine_cache_store(td, type, data, length);
-  TURBINE_CHECK(rc, "cache store failed: %lli", td);
+  TURBINE_CHECK(rc, "cache store failed: %"PRId64"", td);
 
   return TCL_OK;
 }
@@ -622,13 +622,13 @@ tcl_obj_to_binary(Tcl_Interp* interp, Tcl_Obj *const objv[],
   adlb_binary_data data;
 
   int rc = tcl_obj_to_adlb_data(interp, objv, type, extra, obj, NULL, &data);
-  TCL_CHECK_MSG(rc, "failed serializing tcl object to ADLB <%lli>: \"%s\"",
+  TCL_CHECK_MSG(rc, "failed serializing tcl object to ADLB <%"PRId64">: \"%s\"",
                     td, Tcl_GetString(obj));
 
   // Ensure we have ownership of a malloced buffer with the data
   adlb_data_code dc  = ADLB_Own_data(NULL, &data);
   
-  TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "allocating binary buffer for <%lli> "
+  TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "allocating binary buffer for <%"PRId64"> "
                 "failed: %s", td, Tcl_GetString(obj));
 
   assert(data.caller_data != NULL);
@@ -674,7 +674,7 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
     assert(rule_id_end != NULL);
     char *work = rule_id_end + 1; // start of Tcl work unit
     
-    DEBUG_TURBINE("rule_id: %lli", lli(atol(buffer)));
+    DEBUG_TURBINE("rule_id: %"PRId64"", lli(atol(buffer)));
     DEBUG_TURBINE("eval: %s", work);
 
     // Work out length | null byte | prefix
@@ -762,7 +762,7 @@ Turbine_Create_Nested_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
   TCL_CONDITION(argpos == objc, "Trailing args starting at %i", argpos);
 
-  log_printf("creating nested container <%lli>[%s] (%s->%s)",
+  log_printf("creating nested container <%"PRId64">[%s] (%s->%s)",
                           id, subscript, ADLB_Data_type_tostring(key_type),
                           ADLB_Data_type_tostring(val_type));
   
@@ -854,17 +854,17 @@ static int
 create_autoclose_rule(Tcl_Interp *interp, Tcl_Obj *const objv[],
                       adlb_datum_id wait_on, adlb_datum_id to_close)
 {
-  const int lli_len = 21; // Upper bound on long long int string length
+  const int i64_len = 21; // Upper bound on int64_t string length
 
   int tmp_len;
-  const int name_len = 10 + lli_len; // enough for text+id
+  const int name_len = 10 + i64_len; // enough for text+id
   char name[name_len];
-  tmp_len = sprintf(name, "autoclose-%lli", to_close);
+  tmp_len = sprintf(name, "autoclose-%"PRId64"", to_close);
   assert(tmp_len > 0 && tmp_len < name_len);
   
-  const int action_len = 30 + lli_len; // enough for function name+id
+  const int action_len = 30 + i64_len; // enough for function name+id
   char action[action_len];
-  tmp_len = sprintf(action, "adlb::write_refcount_decr %lli", to_close);
+  tmp_len = sprintf(action, "adlb::write_refcount_decr %"PRId64"", to_close);
   assert(tmp_len > 0 && tmp_len < action_len);
 
   if (turbine_is_engine())
@@ -878,9 +878,9 @@ create_autoclose_rule(Tcl_Interp *interp, Tcl_Obj *const objv[],
   else
   {
     // We're not on an engine, need to send this to an engine to process
-    const int rule_cmd_len = name_len + action_len + 20 + lli_len;
+    const int rule_cmd_len = name_len + action_len + 20 + i64_len;
     char rule_cmd[rule_cmd_len];
-    tmp_len = sprintf(rule_cmd, "rule %lli \"%s\" name \"%s\"",
+    tmp_len = sprintf(rule_cmd, "rule %"PRId64" \"%s\" name \"%s\"",
                       wait_on, action, name);
     assert(tmp_len > 0 && tmp_len < rule_cmd_len);
     
