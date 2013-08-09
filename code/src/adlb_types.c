@@ -172,11 +172,11 @@ char *ADLB_Data_repr(adlb_datum_storage *d, adlb_data_type type)
       return tmp;
     }
     case ADLB_DATA_TYPE_INTEGER:
-      rc = asprintf(&tmp, "%lli", d->INTEGER);
+      rc = asprintf(&tmp, "%"PRId64"", d->INTEGER);
       assert(rc >= 0);
       return tmp;
     case ADLB_DATA_TYPE_REF:
-      rc = asprintf(&tmp, "<%lli>", d->REF);
+      rc = asprintf(&tmp, "<%"PRId64">", d->REF);
       assert(rc >= 0);
       return tmp;
     case ADLB_DATA_TYPE_FLOAT:
@@ -189,7 +189,7 @@ char *ADLB_Data_repr(adlb_datum_storage *d, adlb_data_type type)
       assert(rc >= 0);
       return tmp;
     case ADLB_DATA_TYPE_FILE_REF:
-      rc = asprintf(&tmp, "status:<%lli> filename:<%lli> mapped:%i",
+      rc = asprintf(&tmp, "status:<%"PRId64"> filename:<%lli> mapped:%i",
             d->FILE_REF.status_id, d->FILE_REF.filename_id, d->FILE_REF.mapped);
       assert(rc >= 0);
       return tmp;

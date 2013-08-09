@@ -544,7 +544,7 @@ ADLBP_Exists(adlb_datum_id id, const char *subscript, bool* result,
   MPI_Status status;
   MPI_Request request;
 
-  TRACE("ADLB_Exists: <%lli>\n", id);
+  TRACE("ADLB_Exists: <%"PRId64">\n", id);
 
   char req[PACKED_SUBSCRIPT_MAX + sizeof(decr)];
   char *req_ptr = req;
@@ -621,11 +621,11 @@ ADLBP_Store(adlb_datum_id id, const char *subscript, adlb_data_type type,
 
   if (subscript != NULL)
   {
-    DEBUG("ADLB_Store: <%lli>[%s]=%p[%i]", id, subscript, data, length);
+    DEBUG("ADLB_Store: <%"PRId64">[%s]=%p[%i]", id, subscript, data, length);
   }
   else
   {
-    DEBUG("ADLB_Store: <%lli>=%p[%i]", id, data, length);
+    DEBUG("ADLB_Store: <%"PRId64">=%p[%i]", id, data, length);
   }
 
   int to_server_rank = ADLB_Locate(id);
@@ -712,7 +712,7 @@ ADLBP_Refcount_incr(adlb_datum_id id, adlb_refcounts change)
   MPI_Status status;
   MPI_Request request;
 
-  DEBUG("ADLB_Refcount_incr: <%lli> READ %i WRITE %i", id,
+  DEBUG("ADLB_Refcount_incr: <%"PRId64"> READ %i WRITE %i", id,
             change.read_refcount, change.write_refcount);
 
   if (!xlb_read_refcount_enabled)
@@ -754,7 +754,7 @@ ADLBP_Insert_atomic(adlb_datum_id id, const char *subscript,
   MPI_Request request;
   struct packed_insert_atomic_resp resp;
 
-  DEBUG("ADLB_Insert_atomic: <%lli>[\"%s\"]", id, subscript);
+  DEBUG("ADLB_Insert_atomic: <%"PRId64">[\"%s\"]", id, subscript);
   char *xfer_pos = xfer;
   xfer_pos += pack_id_subscript(xfer_pos, id, subscript);
 
@@ -832,7 +832,7 @@ ADLBP_Retrieve(adlb_datum_id id, const char *subscript,
     // Set length and type output parameters
     *length = resp_hdr.length;
     *type = resp_hdr.type;
-    DEBUG("RETRIEVE: <%lli> (%i bytes)\n", id, *length);
+    DEBUG("RETRIEVE: <%"PRId64"> (%i bytes)\n", id, *length);
     return ADLB_SUCCESS;
   }
   else if (resp_hdr.code == ADLB_DATA_ERROR_NOT_FOUND ||
@@ -928,7 +928,7 @@ ADLBP_Typeof(adlb_datum_id id, adlb_data_type* type)
   SEND(&id, 1, MPI_ADLB_ID, to_server_rank, ADLB_TAG_TYPEOF);
   WAIT(&request, &status);
 
-  DEBUG("ADLB_Typeof <%lli>=>%i", id, *type);
+  DEBUG("ADLB_Typeof <%"PRId64">=>%i", id, *type);
 
   if (*type == -1)
     return ADLB_ERROR;
@@ -949,7 +949,7 @@ ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* key_type,
   SEND(&id, 1, MPI_ADLB_ID, to_server_rank, ADLB_TAG_CONTAINER_TYPEOF);
   WAIT(&request, &status);
 
-  DEBUG("ADLB_Container_typeof <%lli>=>(%i,%i)", id, types[0], types[1]);
+  DEBUG("ADLB_Container_typeof <%"PRId64">=>(%i,%i)", id, types[0], types[1]);
 
   if (types[0] == -1 || types[1] == -1)
     return ADLB_ERROR;
@@ -985,29 +985,29 @@ ADLBP_Subscribe(adlb_datum_id id, const char *subscript,
   {
     if (subscript == NULL)
     {
-      DEBUG("ADLB_Subscribe: <%lli> => %i", id, *subscribed);
+      DEBUG("ADLB_Subscribe: <%"PRId64"> => %i", id, *subscribed);
     }
     else
     {
-      DEBUG("ADLB_Subscribe: <%lli>[\"%s\"] => %i", id, subscript, *subscribed);
+      DEBUG("ADLB_Subscribe: <%"PRId64">[\"%s\"] => %i", id, subscript, *subscribed);
     }
     *subscribed = result.subscribed;
     return ADLB_SUCCESS;
   }
   else if (result.dc == ADLB_DATA_ERROR_NOT_FOUND)
   {
-    DEBUG("ADLB_Subscribe: <%lli> not found", id);
+    DEBUG("ADLB_Subscribe: <%"PRId64"> not found", id);
     return ADLB_DATA_ERROR_NOT_FOUND;
   }
   else
   {
     if (subscript == NULL)
     {
-      DEBUG("ADLB_Subscribe: <%lli> => error", id);
+      DEBUG("ADLB_Subscribe: <%"PRId64"> => error", id);
     }
     else
     {
-      DEBUG("ADLB_Subscribe: <%lli>[\"%s\"] => error", id, subscript);
+      DEBUG("ADLB_Subscribe: <%"PRId64">[\"%s\"] => error", id, subscript);
     }
     return ADLB_ERROR;
   }
@@ -1043,7 +1043,7 @@ ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
        ADLB_TAG_CONTAINER_REFERENCE);
   WAIT(&request, &status);
 
-  DEBUG("ADLB_Container_reference: <%lli>[%s] => <%lli> (%i)",
+  DEBUG("ADLB_Container_reference: <%"PRId64">[%s] => <%lli> (%i)",
         id, subscript, reference, ref_type);
 
   if (dc != ADLB_DATA_SUCCESS)
@@ -1067,7 +1067,7 @@ ADLBP_Container_size(adlb_datum_id container_id, int* size,
                 ADLB_TAG_CONTAINER_SIZE);
   WAIT(&request, &status);
 
-  DEBUG("ADLB_Container_size: <%lli> => %i",
+  DEBUG("ADLB_Container_size: <%"PRId64"> => %i",
         container_id, *size);
 
   if (*size < 0)

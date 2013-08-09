@@ -119,7 +119,7 @@ workqueue_add(int type, int putter, int priority, int answer,
   wu->length = length;
   wu->parallelism = parallelism;
 
-  DEBUG("workqueue_add(): %lli: x%i %s",
+  DEBUG("workqueue_add(): %"PRId64": x%i %s",
         wu->id, wu->parallelism, (char*) wu->payload);
 
   if (target_rank < 0 && parallelism == 1)
@@ -165,7 +165,7 @@ static inline xlb_work_unit*
 pop_targeted(heap* H, int target)
 {
   xlb_work_unit* result = heap_root_val(H);
-  DEBUG("workqueue_get(): targeted: %lli", result->id);
+  DEBUG("workqueue_get(): targeted: %"PRId64"", result->id);
   heap_del_root(H);
   return result;
 }
@@ -197,7 +197,7 @@ workqueue_get(int target, int type)
     return NULL;
   rbtree_remove_node(T, node);
   wu = node->data;
-  DEBUG("workqueue_get(): untargeted: %lli", wu->id);
+  DEBUG("workqueue_get(): untargeted: %"PRId64"", wu->id);
   free(node);
   return wu;
 }
@@ -255,7 +255,7 @@ pop_parallel_cb(struct rbtree_node* node, void* user_data)
   xlb_work_unit* wu = node->data;
   struct pop_parallel_data* data = user_data;
 
-  TRACE("pop_parallel_cb(): wu: %p %lli x%i",
+  TRACE("pop_parallel_cb(): wu: %p %"PRId64" x%i",
         wu, wu->id, wu->parallelism);
   assert(wu->parallelism > 0);
 

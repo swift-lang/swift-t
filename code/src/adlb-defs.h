@@ -46,7 +46,7 @@ typedef enum
 /**
    Identifier for all ADLB data module user data
  */
-typedef long long adlb_datum_id;
+typedef int64_t adlb_datum_id;
 
 /**
    User data types

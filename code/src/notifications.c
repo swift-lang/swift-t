@@ -13,11 +13,11 @@ static int fill_payload(char *payload, adlb_datum_id id, const char *subscript)
   int strlen;
   if (subscript == NULL)
   {
-    strlen = sprintf(payload, "close %lli", id);
+    strlen = sprintf(payload, "close %"PRId64"", id);
   }
   else
   {
-    strlen = sprintf(payload, "close %lli %s", id, subscript);
+    strlen = sprintf(payload, "close %"PRId64" %s", id, subscript);
   }
   return strlen + 1;
 }
@@ -92,7 +92,7 @@ adlb_code set_references(adlb_datum_id *refs, int refs_count,
   adlb_code rc;
   for (int i = 0; i < refs_count; i++)
   {
-    TRACE("Notifying reference %lli\n", refs[i]);
+    TRACE("Notifying reference %"PRId64"\n", refs[i]);
     rc = set_reference_and_notify(refs[i], value, value_len, type);
     ADLB_CHECK(rc);
   }
@@ -168,7 +168,7 @@ adlb_code
 set_reference_and_notify(adlb_datum_id id, const void *value, int length,
                          adlb_data_type type)
 {
-  DEBUG("set_reference: <%lli>=%p[%i]", id, value, length);
+  DEBUG("set_reference: <%"PRId64">=%p[%i]", id, value, length);
 
   int rc = ADLB_SUCCESS;
   int server = ADLB_Locate(id);

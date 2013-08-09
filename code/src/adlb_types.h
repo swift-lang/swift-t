@@ -35,7 +35,7 @@
 #include <string.h>
 
 // Declarations of individual data types
-typedef long long adlb_int_t;
+typedef int64_t adlb_int_t;
 typedef double adlb_float_t;
 
 // OSX GCC 4.2.1 does not have uint

@@ -29,7 +29,7 @@
 
 #include "adlb-defs.h"
 
-typedef long long xlb_work_unit_id;
+typedef int64_t xlb_work_unit_id;
 
 typedef struct
 {
@@ -92,7 +92,7 @@ extern int64_t workqueue_parallel_task_count;
 
 static inline int64_t workqueue_parallel_tasks()
 {
-  TRACE("workqueue_parallel_tasks: %lli",
+  TRACE("workqueue_parallel_tasks: %"PRId64"",
         lli(workqueue_parallel_task_count));
   return workqueue_parallel_task_count;
 }

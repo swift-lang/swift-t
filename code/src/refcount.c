@@ -16,7 +16,7 @@ adlb_data_code incr_rc_svr(adlb_datum_id id, adlb_refcounts change)
   if (!xlb_read_refcount_enabled)
     change.read_refcount = 0;
 
-  DEBUG("server->server refcount <%lli> r += %i w += %i", id,
+  DEBUG("server->server refcount <%"PRId64"> r += %i w += %i", id,
         change.read_refcount, change.write_refcount);
   
   if (ADLB_RC_IS_NULL(change))
@@ -162,12 +162,12 @@ update_read_refcount_scav(adlb_datum_id id, const char *subscript,
     assert(ADLB_RC_NONNEGATIVE(incr_referand));
     if (ADLB_RC_IS_NULL(incr_referand))
     {
-      DEBUG("Success in refcount switch for <%lli>", id);
+      DEBUG("Success in refcount switch for <%"PRId64">", id);
       return ADLB_DATA_SUCCESS;
     }
     else
     {
-      DEBUG("Need to do extra increment of referands <%lli>", id);
+      DEBUG("Need to do extra increment of referands <%"PRId64">", id);
       return data_referand_refcount(ref_data, ref_data_len, ref_type,
                                   id, incr_referand);
     }
@@ -176,7 +176,7 @@ update_read_refcount_scav(adlb_datum_id id, const char *subscript,
   {
     // First attempt aborted and did nothing, do things one
     // step at a time
-    DEBUG("Need to manually update refcounts for <%lli>", id);
+    DEBUG("Need to manually update refcounts for <%"PRId64">", id);
     dc = data_referand_refcount(ref_data, ref_data_len, ref_type,
                                 id, incr_referand);
     DATA_CHECK(dc);
