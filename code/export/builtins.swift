@@ -85,8 +85,8 @@ type external void;
 <T> (int n) size(T A[]) "turbine" "0.0.5" "container_size"
   [ "set <<n>> [ turbine::container_size_local <<A>> ]" ];
 @pure
-<T> (boolean o) contains(T A[], int i) "turbine" "0.0.5" "contains"
-  [ "set <<o>> [ adlb::exists_sub <<A>> <<i>> ]" ];
+<K, V> (boolean o) contains(V A[K], K key) "turbine" "0.0.5" "contains"
+  [ "set <<o>> [ adlb::exists_sub <<A>> <<key>> ]" ];
 
 // Updateable variables
 (updateable_float o) init_updateable(float i) "turbine" "0.0.2" "init_updateable";
