@@ -103,7 +103,7 @@ adlb_data_code ADLB_Declare_struct_type(adlb_struct_type type,
   struct_type_info *t = &struct_types[type];
   check_verbose(!t->initialized, ADLB_DATA_ERROR_INVALID,
                 "struct type %i already initialized", type);
-    
+
   t->initialized = true;
   t->type_name = strdup(type_name);
   t->field_count = field_count;
@@ -233,7 +233,7 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
   adlb_buffer result_buf;
   // Use double pointer so that *hdr always points to result_buf->data
   adlb_packed_struct_hdr **hdr = (adlb_packed_struct_hdr **) &result_buf.data;
-  
+
   // Resize buf for header if needed
   int hdr_size = (int)sizeof(**hdr) +
               t->field_count * (int)sizeof((*hdr)->field_offsets[0]);
@@ -266,10 +266,10 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
     // Mark start of data
     (*hdr)->field_offsets[i] = buf_pos;
     buf_pos += field_data.length;
-    
+
     ADLB_Free_binary_data(&field_data);
   }
- 
+
   // Fill in result
   result->length = buf_pos;
   // Caller must now take care of allocated data
@@ -394,7 +394,8 @@ char *data_struct_repr(adlb_struct *s)
   else
   {
     char *result;
-    asprintf(&result, "<bad struct type %i>", s->type);
+    int n = asprintf(&result, "<bad struct type %i>", s->type);
+    assert(n != -1);
     return result;
   }
 }
