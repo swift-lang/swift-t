@@ -271,10 +271,10 @@ public class ForeachLoop {
       loopCountVal = context.createLocalValueVariable(keyValType,
                                                       countVarName);
       if (includeIndexFuture) {
-        Var loopCountVar = createCountVar();
-        context.declareVariable(loopCountVar.type(), loopCountVar.name(),
-                                loopCountVar.storage(), loopCountVar.defType(),
-                                loopCountVar.mapping());
+        Var countVar = createCountVar();
+        loopBodyContext.declareVariable(countVar.type(), countVar.name(),
+                                countVar.storage(), countVar.defType(),
+                                countVar.mapping());
       }
     } else {
       loopCountVal = null;
