@@ -40,13 +40,13 @@ main()
   tree_add(&T, 13, "hello");
   tree_print(&T);
 
-  long k;
+  cutil_long k;
   void* v;
   while (true)
   {
     bool b = tree_pop(&T, &k, &v);
     if (!b) break;
-    printf("popped: %li=%s\n\n", k, (char*) v);
+    printf("popped: %" PRId64 "=%s\n\n", k, (char*) v);
     tree_print(&T);
   }
 
@@ -66,7 +66,7 @@ main()
   tree_move(&T, 13, 1);
   tree_print(&T);
   tree_pop(&T, &k, &v);
-  printf("popped: %li=%s\n\n", k, (char*) v);
+  printf("popped: %" PRId64 "=%s\n\n", k, (char*) v);
 
   printf("move 9 -> 20\n");
   tree_move(&T, 9, 20);
