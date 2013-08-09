@@ -392,20 +392,28 @@ blobs to and from Swift types, and pass blobs to leaf functions.
 
 === Arrays
 
-Arrays are declared with empty square brackets:
+Arrays can be declared with empty square brackets:
 
 ----
 int A[];
+----
+
+Arrays with empty square brackets have integer indices.  It is
+also possible to declare integers with other index types, such as
+strings:
+
+----
+string dict[string];
 ----
 
 They are dynamically sized, expanding each time an item is inserted at
 a new index.  Arrays are indexed using square brackets.
 ----
-int A[];
+int A[string];
 int B[];
 B = function_returning_array();
-A[0] = B[0];
-A[1] = B[1];
+A["zero"] = B[0];
+A["one"] = B[1];
 ----
 
 Each array index can only be assigned to once.
