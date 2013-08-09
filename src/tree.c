@@ -38,9 +38,6 @@ tree_init(struct tree* target)
   target->root = NULL;
 }
 
-static inline void tree_add_loop(struct tree_node* node,
-                                 struct tree_node* p);
-
 void
 tree_add(struct tree* target, tree_key_t key, void* data)
 {
@@ -53,6 +50,9 @@ tree_add(struct tree* target, tree_key_t key, void* data)
 
   tree_add_node(target, node);
 }
+
+static inline void tree_add_loop(struct tree_node* node,
+                                 struct tree_node* p);
 
 void
 tree_add_node(struct tree* target, struct tree_node* node)
@@ -92,7 +92,7 @@ tree_add_loop(struct tree_node* node, struct tree_node* p)
       {
         p->right = node;
         node->parent = p;
-        return;
+        break;
       }
       p = p->right;
     }
@@ -334,8 +334,8 @@ tree_print_loop(struct tree_node* node, int level)
   int i;
   for (i = 0; i < level; i++)
     buffer[i] = ' ';
-  sprintf(&buffer[i], "%lli", node->key);
-  printf("%s\n", buffer);
+  sprintf(&buffer[i], "%"PRId64, node->key);
+  printf("%s\n", buffer); // fflush(stdout);
 
   if (node->left == NULL && node->right == NULL)
     return;

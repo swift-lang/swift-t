@@ -38,6 +38,7 @@ main()
   tree_add(&T, 15, "hello");
   tree_add(&T, 14, "hello");
   tree_add(&T, 13, "hello");
+
   tree_print(&T);
 
   cutil_long k;
@@ -51,12 +52,11 @@ main()
   }
 
   printf("\n--\n\n");
-
-  tree_add(&T, 12, "hello");
-  tree_add(&T, 8, "hello");
-  tree_add(&T, 9, "hello-9");
+  tree_add(&T,  12, "hello");
+  tree_add(&T, 8,  "hello");
+  tree_add(&T, 9,  "hello-9");
   tree_add(&T, 10, "hello");
-  tree_add(&T, 7, "hello");
+  tree_add(&T, 7,  "hello");
   tree_add(&T, 15, "hello");
   tree_add(&T, 14, "hello");
   tree_add(&T, 13, "hello-13");
