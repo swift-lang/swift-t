@@ -476,7 +476,11 @@ subscribe(adlb_datum_id id, const char *subscript, bool *result)
   int subscribed;
   adlb_code rc = ADLB_Subscribe(id, subscript, &subscribed);
 
-  if (rc != ADLB_SUCCESS) {
+  if (rc == (int)ADLB_DATA_ERROR_NOT_FOUND) {
+    // Handle case where read_refcount == 0 and write_refcount == 0
+    //      => datum was freed and we're good to go
+    subscribed = 0;
+  } else if (rc != ADLB_SUCCESS) {
     if (subscript != NULL)
     {
       log_printf("ADLB_Subscribe on <%ld>[\"%s\"] failed with code: %d\n",
