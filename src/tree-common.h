@@ -36,7 +36,6 @@ print_x(int level)
 {
   char buffer[level+16];
   char* p = &buffer[0];
-  append(p, "+ ");
   for (int i = 0; i < level; i++)
     append(p, " ");
   append(p, "X");
