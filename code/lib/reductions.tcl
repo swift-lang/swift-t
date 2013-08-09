@@ -18,6 +18,34 @@ namespace eval turbine {
 
     namespace export reduce_sum_integer
 
+    proc array_max_float { result container } {
+        deeprule $container 1 [ list false false ] \
+            "turbine::array_max_float_body $result $container"
+    }
+    proc array_max_float_body { result container } {
+        set m [ expr -Inf ]
+        foreach i [ container_list $container ] {
+            set td [ container_lookup $container $i ]
+            set v  [ retrieve_decr_float $td ]
+            if { $v > $m } { set m $v }
+        }
+        store_float $result $m
+    }
+
+    proc array_min_float { result container } {
+        deeprule $container 1 [ list false false ] \
+            "turbine::array_min_float_body $result $container"
+    }
+    proc array_min_float_body { result container } {
+        set m [ expr Inf ]
+        foreach i [ container_list $container ] {
+            set td [ container_lookup $container $i ]
+            set v  [ retrieve_decr_float $td ]
+            if { $v < $m } { set m $v }
+        }
+        store_float $result $m
+    }
+
     proc reduce_sum_integer { result A } {
         deeprule $A 2 [ list false false ] \
             "reduce_sum_integer_body $result $A" \
