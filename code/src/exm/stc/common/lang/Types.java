@@ -1586,7 +1586,7 @@ public class Types {
   public static boolean isValidArrayKey(Typed keyType) {
     // Handle polymorphic types
     for (Type t: UnionType.getAlternatives(keyType.type())) {;
-      if (isScalarFuture(keyType)) {
+      if (isScalarFuture(keyType) && !isBlob(keyType)) {
         return true;
       } else if (isWildcard(t) || isTypeVar(t)) {
         return true;
