@@ -1012,7 +1012,8 @@ public class ExprWalker {
     Type t = src.type();
     Type memType = Types.arrayMemberType(t);
     Var member = copyContext.createAliasVariable(memType);
-    Var ix = copyContext.createLocalValueVariable(Types.V_INT);
+    Type ixType = Types.derefResultType(Types.arrayKeyType(src));
+    Var ix = copyContext.createLocalValueVariable(ixType);
     
     List<Var> waitVars = Arrays.asList(src);
     backend.startWaitStatement(
