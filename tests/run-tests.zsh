@@ -368,9 +368,13 @@ do
 
     COMPILE_CODE=${EXIT_CODE}
 
+    # Default behaviour is to run if it compiles
+    RUN_COMPILED_TEST=$(( ! COMPILE_CODE ))
+
     # Reverse exit code if the case was intended to fail to compile
     if grep -F -q "THIS-TEST-SHOULD-NOT-COMPILE" ${SWIFT_FILE}
     then
+      RUN_COMPILED_TEST=0 # Never run these tests
       if grep -F -q "STC INTERNAL ERROR" ${STC_ERR_FILE}
       then
           :
@@ -386,7 +390,7 @@ do
       cat ${STC_ERR_FILE}
     fi
 
-    if (( ! COMPILE_CODE ))
+    if (( RUN_COMPILED_TEST ))
     then
       if (( COMPILE_ONLY ))
       then
