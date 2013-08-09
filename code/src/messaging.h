@@ -289,6 +289,12 @@ struct packed_insert_atomic_resp
   adlb_data_type value_type;
 };
 
+struct pack_sub_resp
+{
+  adlb_data_code dc; // Error code
+  bool subscribed; // True if not closed and subscribed
+};
+
 struct packed_size_req
 {
   adlb_datum_id id;

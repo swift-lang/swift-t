@@ -976,24 +976,41 @@ ADLBP_Subscribe(adlb_datum_id id, const char *subscript,
   int req_length = pack_id_subscript(xfer, id, subscript);
   assert(req_length > 0);
 
-  IRECV(subscribed, 1, MPI_INT, to_server_rank,
-        ADLB_TAG_RESPONSE);
+  struct pack_sub_resp result;
+  IRECV(&result, sizeof(result), MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
   SEND(xfer, req_length, MPI_BYTE, to_server_rank, ADLB_TAG_SUBSCRIBE);
   WAIT(&request, &status);
 
-  if (subscript == NULL)
+  if (result.dc == ADLB_DATA_SUCCESS)
   {
-    DEBUG("ADLB_Subscribe: <%lli> => %i", id, *subscribed);
+    if (subscript == NULL)
+    {
+      DEBUG("ADLB_Subscribe: <%lli> => %i", id, *subscribed);
+    }
+    else
+    {
+      DEBUG("ADLB_Subscribe: <%lli>[\"%s\"] => %i", id, subscript, *subscribed);
+    }
+    *subscribed = result.subscribed;
+    return ADLB_SUCCESS;
+  }
+  else if (result.dc == ADLB_DATA_ERROR_NOT_FOUND)
+  {
+    DEBUG("ADLB_Subscribe: <%lli> not found", id);
+    return ADLB_DATA_ERROR_NOT_FOUND;
   }
   else
   {
-    DEBUG("ADLB_Subscribe: <%lli>[\"%s\"] => %i", id, subscript, *subscribed);
-  }
-
-  if (*subscribed == -1)
+    if (subscript == NULL)
+    {
+      DEBUG("ADLB_Subscribe: <%lli> => error", id);
+    }
+    else
+    {
+      DEBUG("ADLB_Subscribe: <%lli>[\"%s\"] => error", id, subscript);
+    }
     return ADLB_ERROR;
-
-  return ADLB_SUCCESS;
+  }
 }
 
 /**

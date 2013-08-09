@@ -882,11 +882,14 @@ handle_subscribe(int caller)
   unpack_id_subscript(xfer, &id, &subscript, &sub_strlen);
 
   DEBUG("subscribe: <%lli>[%s]", id, subscript);
+  struct pack_sub_resp resp;
   int result;
-  adlb_data_code dc = data_subscribe(id, subscript, caller, &result);
-  if (dc != ADLB_DATA_SUCCESS)
-    result = -1;
-  RSEND(&result, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
+  resp.dc = data_subscribe(id, subscript, caller, &result);
+  if (resp.dc == ADLB_DATA_SUCCESS)
+    resp.subscribed = result != 0;
+  else
+    resp.subscribed = false;
+  RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
 
   TRACE("ADLB_TAG_SUBSCRIBE done\n");
   MPE_LOG(xlb_mpe_svr_subscribe_end);

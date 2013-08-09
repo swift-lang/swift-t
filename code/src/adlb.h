@@ -206,6 +206,10 @@ adlb_code ADLB_Insert_atomic(adlb_datum_id id, const char *subscript,
                        bool* result, void *data, int *length,
                        adlb_data_type *type);
 
+/*
+  returns: ADLB_SUCCESS if datum found
+       ADLB_DATA_ERROR_NOT_FOUND if datum not found (can indicate it was gced)
+ */
 adlb_code ADLBP_Subscribe(adlb_datum_id id, const char *subscript,
                           int* subscribed);
 adlb_code ADLB_Subscribe(adlb_datum_id id, const char *subscript,
