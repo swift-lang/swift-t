@@ -1,4 +1,4 @@
-
+import assert;
 
 type arrayT int[string];
 

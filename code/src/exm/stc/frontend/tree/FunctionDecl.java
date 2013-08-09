@@ -20,19 +20,19 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
-import exm.stc.common.exceptions.DoubleDefineException;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedTypeException;
+import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.UnionType;
-import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.TypeVariable;
+import exm.stc.common.lang.Types.UnionType;
+import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.frontend.Context;
@@ -81,8 +81,7 @@ public class FunctionDecl {
 
   public static FunctionDecl fromAST(Context context, String function,
                  SwiftAST inArgTree, SwiftAST outArgTree, Set<String> typeParams)
-       throws TypeMismatchException, UndefinedTypeException,
-              InvalidSyntaxException, DoubleDefineException {
+       throws UserException {
     LocalContext typeVarContext = new LocalContext(context, function);
 
     for (String typeParam: typeParams) {
@@ -130,7 +129,7 @@ public class FunctionDecl {
   }
 
   private static ArgDecl extractArgInfo(Context context, SwiftAST arg)
-      throws UndefinedTypeException, InvalidSyntaxException {
+      throws UserException {
     assert(arg.getType() == ExMParser.DECLARATION);
     assert(arg.getChildCount() == 2 || arg.getChildCount() == 3);
     
@@ -177,8 +176,7 @@ public class FunctionDecl {
     */
     public static Var fromFormalArgTree(
         Context context, Type baseType, SwiftAST tree, DefType deftype)
-    throws UndefinedTypeException, InvalidSyntaxException
-    {
+        throws UserException {
       assert(tree.getType() == ExMParser.DECLARE_VARIABLE_REST);
       assert(tree.getChildCount() >= 1);
       SwiftAST nameTree = tree.child(0);

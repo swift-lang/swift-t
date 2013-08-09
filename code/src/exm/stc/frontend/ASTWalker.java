@@ -2536,8 +2536,7 @@ public class ASTWalker {
 
 
   private void defineNewType(Context context, SwiftAST defnTree,
-                             boolean aliasOnly)
-                throws DoubleDefineException, UndefinedTypeException {
+                             boolean aliasOnly) throws UserException {
     assert (defnTree.getType() == ExMParser.DEFINE_NEW_TYPE ||
             defnTree.getType() == ExMParser.TYPEDEF );
     int children = defnTree.getChildCount();
@@ -2566,7 +2565,7 @@ public class ASTWalker {
 
 
   private void defineNewStructType(Context context, SwiftAST defnTree)
-      throws DoubleDefineException, UndefinedTypeException {
+      throws UserException {
     assert (defnTree.getType() == ExMParser.DEFINE_NEW_STRUCT_TYPE);
     int children = defnTree.getChildCount();
     if (children < 1) {

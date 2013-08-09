@@ -17,11 +17,12 @@ package exm.stc.frontend.tree;
 
 import java.util.ArrayList;
 
-import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
-import exm.stc.common.exceptions.InvalidSyntaxException;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedTypeException;
+import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.frontend.Context;
@@ -74,9 +75,8 @@ public class VariableDeclaration {
     return exprs.get(i) != null;
   }
   
-  public static VariableDeclaration fromAST(Context context,
-                                              SwiftAST tree) 
-        throws UndefinedTypeException, InvalidSyntaxException  {
+  public static VariableDeclaration fromAST(Context context, SwiftAST tree) 
+                                                    throws UserException  {
     VariableDeclaration res = new VariableDeclaration();
     assert(tree.getType() == ExMParser.DECLARATION);
     assert(tree.getChildCount() >= 2);
@@ -106,7 +106,7 @@ public class VariableDeclaration {
   
   public static VariableDescriptor fromDeclareVariableRest(
           Context context, Type baseType, SwiftAST tree)
-      throws UndefinedTypeException, InvalidSyntaxException {
+      throws UserException {
     assert(tree.getType() == ExMParser.DECLARE_VARIABLE_REST);
     assert(tree.getChildCount() >= 1);
     SwiftAST nameTree = tree.child(0);
@@ -140,9 +140,10 @@ public class VariableDeclaration {
    * @param subtree
    * @return
    * @throws UndefinedTypeException
+   * @throws TypeMismatchException 
    */
   public static Type getArrayKeyType(Context context, SwiftAST subtree)
-      throws UndefinedTypeException {
+      throws UndefinedTypeException, TypeMismatchException {
     assert(subtree.getType() == ExMParser.ARRAY);
     Type keyType;
     if (subtree.getChildCount() == 0) {
@@ -152,6 +153,10 @@ public class VariableDeclaration {
       assert(subtree.getChildCount() == 1);
       SwiftAST standaloneTypeT = subtree.child(0);
       keyType = extractStandaloneType(context, standaloneTypeT);
+      if (!Types.isValidArrayKey(keyType)) {
+        throw new TypeMismatchException(context, "Unsupported key type for"
+                                    + " arrays: " + keyType);
+      }
     }
     return keyType;
   }

@@ -101,10 +101,11 @@ public class Types {
 
     @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
-      if (concrete instanceof ArrayType) {
+      if (Types.isArray(concrete)) {
+        ArrayType concreteArray = (ArrayType)concrete.baseType();
         Map<String, Type> m1, m2;
-        m1 = memberType.matchTypeVars(((ArrayType)concrete).memberType);
-        m2 = keyType.matchTypeVars(((ArrayType)concrete).keyType);
+        m1 = memberType.matchTypeVars(concreteArray.memberType);
+        m2 = keyType.matchTypeVars(concreteArray.keyType);
         if (m1 == null || m2 == null) {
           return null;
         } else if (m1.isEmpty()) {
@@ -123,8 +124,9 @@ public class Types {
     @Override
     public Type concretize(Type concrete) {
       assert(isArray(concrete));
-      Type cMember = memberType.concretize(concrete.memberType());
-      Type cKey = keyType.concretize(((ArrayType)concrete).keyType);
+      ArrayType concreteArray = (ArrayType)concrete.baseType();
+      Type cMember = memberType.concretize(concreteArray.memberType());
+      Type cKey = keyType.concretize(concreteArray.keyType);
       if (cMember == this.memberType && cKey == this.keyType)
         return this;
       return new ArrayType(cKey, cMember);
@@ -135,8 +137,9 @@ public class Types {
       if (!isArray(other)) {
         return false;
       }
-      ArrayType otherA = (ArrayType)other;
-      // Types must exactly match, due to contra/co-variance issues
+      ArrayType otherA = (ArrayType)other.baseType();
+      // TODO
+      // For now, types must exactly match, due to contra/co-variance issues
       // with type parameters. Need to check to see if member types
       // can be converted to other member types
       
@@ -1123,9 +1126,20 @@ public class Types {
 
     /**
      * @return the base type which is used to implement this type.
+     *        This will find the implementation type of any paremeter types.
      *          Null if not concrete type
      */
     public abstract Type getImplType();
+    
+    
+    /**
+     * Get the base type of this type.  This doesn't do anything
+     * to any parameter types
+     */
+    public Type baseType() {
+      // Default
+      return this;
+    }
     
     /**
      * @return true if the type is something we can actually instantiate
@@ -1463,6 +1477,11 @@ public class Types {
       // This has same implementation as base type
       return baseType.getImplType();
     }
+    
+    public Type baseType() {
+      // Default
+      return baseType.baseType();
+    }
 
     @Override
     public int hashCode() {
@@ -1482,7 +1501,7 @@ public class Types {
   public static Map<String, Type> getBuiltInTypes() {
     return Collections.unmodifiableMap(nativeTypes);
   }
-
+  
   /**
    * Convenience function to check if a type is an array
    * @param t
@@ -1543,10 +1562,10 @@ public class Types {
 
   public static Type arrayKeyType(Typed arr) {
     if (Types.isArray(arr)) {
-      return ((ArrayType)arr.type()).keyType;
+      return ((ArrayType)arr.type().baseType()).keyType;
     } else {
       assert(Types.isArrayRef(arr)) : arr.type();
-      return ((ArrayType)arr.type().memberType()).keyType;
+      return ((ArrayType)arr.type().baseType().memberType()).keyType;
     }
   }
   
@@ -1556,6 +1575,24 @@ public class Types {
     // Get the value type of the array key
     Type expected = derefResultType(arrayKeyType(arr));
     return actual.assignableTo(expected);
+  }
+  
+
+  /**
+   * Return true if the type is possibly a valid array key.
+   * @param keyType
+   * @return
+   */
+  public static boolean isValidArrayKey(Typed keyType) {
+    // Handle polymorphic types
+    for (Type t: UnionType.getAlternatives(keyType.type())) {;
+      if (isScalarFuture(keyType)) {
+        return true;
+      } else if (isWildcard(t) || isTypeVar(t)) {
+        return true;
+      }
+    }
+    return false;
   }
   
   public static boolean isArrayKeyFuture(Typed arr, Typed key) {
@@ -1670,7 +1707,7 @@ public class Types {
   }
 
   public static boolean isPolymorphic(Typed type) {
-    return isUnion(type) || isTypeVar(type);
+    return isUnion(type) || isTypeVar(type) || isWildcard(type);
   }
   
   public static boolean isFunction(Typed type) {
