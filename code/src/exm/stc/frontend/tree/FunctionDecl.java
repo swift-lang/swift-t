@@ -154,8 +154,7 @@ public class FunctionDecl {
       String typeName = typeAlt.getText();
       Type baseType = context.lookupTypeUser(typeName);
       
-      Var v = fromFormalArgTree(context, baseType, 
-                                                    restDecl, DefType.INARG);
+      Var v = fromFormalArgTree(context, baseType, restDecl, DefType.INARG);
       varname = v.name();
       alts.add(v.type());
     }
@@ -187,7 +186,9 @@ public class FunctionDecl {
       String varName = nameTree.getText();
       
       Type varType = baseType;
-      for (SwiftAST subtree: tree.children(1)) {
+      // Process array markers backwards to get correct type
+      for (int i = tree.getChildCount() - 1; i >= 1; i--) {
+        SwiftAST subtree = tree.child(i);
         if (subtree.getType() == ExMParser.ARRAY) {
           Type keyType = VariableDeclaration.getArrayKeyType(context, subtree);
           varType = new Types.ArrayType(keyType, varType);

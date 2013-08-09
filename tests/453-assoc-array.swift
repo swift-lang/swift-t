@@ -19,8 +19,8 @@ main {
 
 
 f (string A[string][float]) {
-    foreach i, B in A {
-        foreach j, s in B {
+    foreach B, i in A {
+        foreach s, j in B {
             printf("[%s][%.2f]=%s", i, j, s);
         }
     }

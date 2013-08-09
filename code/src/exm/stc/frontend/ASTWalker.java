@@ -876,7 +876,7 @@ public class ASTWalker {
     Var startVal = varCreator.fetchValueOf(waitContext, start);
     Var endVal = varCreator.fetchValueOf(waitContext, end);
     Var stepVal = varCreator.fetchValueOf(waitContext, step);
-    Context bodyContext = loop.setupLoopBodyContext(waitContext, true);
+    Context bodyContext = loop.setupLoopBodyContext(waitContext, true, false);
     
     // The per-iteration value of the range
     Var memberVal = varCreator.createValueOfVar(bodyContext,
@@ -966,7 +966,7 @@ public class ASTWalker {
         Arrays.asList(realArray),
         WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
     
-    loop.setupLoopBodyContext(outsideLoopContext, false);
+    loop.setupLoopBodyContext(outsideLoopContext, false, false);
     Context loopBodyContext = loop.getBodyContext();
 
     backend.startForeachLoop(fc.getFunctionName() + "-foreach" + loopNum,
@@ -982,8 +982,7 @@ public class ASTWalker {
     // If the user's code expects a loop count var, need to create it here
     if (loop.getCountVarName() != null) {
       Var loopCountVar = varCreator.createVariable(loop.getBodyContext(),
-          Types.arrayKeyType(arrayVar.type()), loop.getCountVarName(), VarStorage.STACK,
-          DefType.LOCAL_USER, null);
+                                                   loop.createCountVar());
       exprWalker.assign(loopCountVar, Arg.createVar(loop.getLoopCountVal()));
     }
     

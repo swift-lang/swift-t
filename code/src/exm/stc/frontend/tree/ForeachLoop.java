@@ -41,10 +41,11 @@ public class ForeachLoop {
   private final SwiftAST arrayVarTree;
   private final SwiftAST loopBodyTree;
   private final String memberVarName;
-  private final String loopCountVarName;
+  private final String countVarName;
 
   private LocalContext loopBodyContext = null;
   private Var loopCountVal = null;
+  private Type keyType = null;
   private Var memberVar = null;
   private final ArrayList<String> annotations;
   private int unroll = 1;
@@ -92,7 +93,14 @@ public class ForeachLoop {
   }
 
   public String getCountVarName() {
-    return loopCountVarName;
+    return countVarName;
+  }
+
+  public Var createCountVar() {
+    assert(keyType != null);
+    assert(countVarName != null);
+    return new Var(keyType, countVarName, VarStorage.STACK,
+                   DefType.LOCAL_USER, null);
   }
 
   public LocalContext getBodyContext() {
@@ -106,7 +114,7 @@ public class ForeachLoop {
     this.arrayVarTree = arrayVarTree;
     this.loopBodyTree = loopBodyTree;
     this.memberVarName = memberVarName;
-    this.loopCountVarName = loopCountVarName;
+    this.countVarName = loopCountVarName;
     this.annotations = annotations;
   }
 
@@ -238,7 +246,7 @@ public class ForeachLoop {
     }
     throw new TypeMismatchException(context,
         "Expected array type in expression for foreach loop " +
-                " but got type: " + arrayType.typeName());
+                "but got type: " + arrayType.typeName());
   }
 
   /**
@@ -247,18 +255,27 @@ public class ForeachLoop {
    * 
    * @param context
    * @param rangeLoop where a range loop or container
+   * @param includeIndexFuture if true, initialize the count var
+   *    (getCountVarName()), rather than just loopCountval
    * @return
    * @throws UserException
    */
-  public Context setupLoopBodyContext(Context context, boolean rangeLoop)
-      throws UserException {
+  public Context setupLoopBodyContext(Context context, boolean rangeLoop,
+      boolean includeIndexFuture) throws UserException {
     // Set up the context for the loop body with loop variables
-    Type arrayType = findArrayType(context);
+    Type arrayType = findArrayType(context); 
     loopBodyContext = new LocalContext(context);
-    if (loopCountVarName != null) {
-      Type keyValType = Types.derefResultType(Types.arrayKeyType(arrayType));
+    if (countVarName != null) {
+      keyType = Types.arrayKeyType(arrayType);
+      Type keyValType = Types.derefResultType(keyType);
       loopCountVal = context.createLocalValueVariable(keyValType,
-                                                loopCountVarName);
+                                                      countVarName);
+      if (includeIndexFuture) {
+        Var loopCountVar = createCountVar();
+        context.declareVariable(loopCountVar.type(), loopCountVar.name(),
+                                loopCountVar.storage(), loopCountVar.defType(),
+                                loopCountVar.mapping());
+      }
     } else {
       loopCountVal = null;
     }
