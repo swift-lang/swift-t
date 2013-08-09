@@ -46,6 +46,7 @@ ifeq ($(USE_MAC),no)
 	MAC_NAME =
 else
 # 	Mac
+	STD = -std=gnu99
 	SO_SUFFIX = dylib
 	MAC_FLAT = -Wl,-flat_namespace
 	MAC_NAME = -install_name $(INSTALL_LIB)/libtclturbine.dylib
@@ -145,6 +146,7 @@ endif
 LIBS :=
 LIBS += -L$(ADLB)/lib -l adlb
 LIBS += -L$(C_UTILS)/lib -l exmcutils
+LIBS += -L$(TCL_LIB_DIR) -l$(TCL_LIB_NAME)
 ifeq ($(ENABLE_MPE),1)
 	LIBS += -L$(USE_MPE)/lib -l mpe
 endif
@@ -280,7 +282,6 @@ $(TCL_TURBINE_SO): $(TURBINE_OBJS)
 	$(E) $(CC) $(SHARED) $(LDFLAGS) -o $(@) \
              $(TURBINE_OBJS) \
              $(LIBS) \
-             -L/home/wozniak/Public/tcl-8.5.12-bgq/lib -ltcl8.5 \
              $(RPATHS) \
              $(MAC_NAME)
 
