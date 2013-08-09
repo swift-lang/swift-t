@@ -481,9 +481,6 @@ p.age = 90;
 
 === Defining new types
 
-*Note:* The features in this section are immature, so you will have
-a higher probability of encountering compiler bugs.
-
 Swift has two ways to define new types based on existing types.
 
 The first is +typedef+, which creates a new name for the type.
@@ -510,6 +507,9 @@ not possible.  This means that you can write functions that are more
 strictly typechecked, for example, only accepted particular types of
 file.
 
+*Note:* This feature is immature, so you will have a higher probability
+of encountering compiler bugs or limitations. 
+
 ----
 
 typedef sorted_file file;
@@ -534,6 +534,26 @@ main {
   // sorted_file not_sorted = unsorted;
 }
 ----
+
+=== Global Constants
+
+Swift supports a basic feature for defining globally visible constants.  You
+can use the +global const+ statement at the top level of the program.  The
+syntax only supports literals of scalar types: e.g. integer literals, floating
+point literals and string literals.
+
+----
+global const string hello = "Hello World";
+global const float pi_approx = 3.142;
+global const int ONE = 1;
+
+main () {
+  trace(hello, pi_approx, ONE);
+}
+----
+
+*Note:* better support is planned in future for more flexible support for
+global variables and code.
 
 == Control structures
 
