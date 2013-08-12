@@ -277,7 +277,7 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
                               input_list, &inputs);
   TCL_CHECK_MSG(rc, "could not parse inputs list as integers:\n"
                 "in rule: <%"PRId64"> %s inputs: \"%s\"",
-                lli(id), opts.name, Tcl_GetString(objv[1]));
+                id, opts.name, Tcl_GetString(objv[1]));
 
   turbine_code code =
       turbine_rule(opts.name, inputs, input_list, input_pairs, input_pair_list,
@@ -674,7 +674,7 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
     assert(rule_id_end != NULL);
     char *work = rule_id_end + 1; // start of Tcl work unit
     
-    DEBUG_TURBINE("rule_id: %"PRId64"", lli(atol(buffer)));
+    DEBUG_TURBINE("rule_id: %"PRId64"", atol(buffer));
     DEBUG_TURBINE("eval: %s", work);
 
     // Work out length | null byte | prefix

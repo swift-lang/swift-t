@@ -511,7 +511,7 @@ static int transform_tostring(char* output,
 #define DEBUG_TURBINE_RULE(transform, id) {         \
     char tmp[1024];                                     \
     transform_tostring(tmp, transform);                 \
-    DEBUG_TURBINE("rule: %s {%"PRId64"}", tmp, lli(id));     \
+    DEBUG_TURBINE("rule: %s {%"PRId64"}", tmp, id);     \
   }
 #else
 #define DEBUG_TURBINE_RULE(transform, id)
@@ -629,7 +629,7 @@ turbine_rules_push()
 
       if (!subscribed)
       {
-        DEBUG_TURBINE("not subscribed on: %"PRId64"\n", lli(T->id));
+        DEBUG_TURBINE("not subscribed on: %"PRId64"\n", T->id);
         list_add(&tmp, T);
       }
     }
@@ -676,11 +676,11 @@ turbine_code turbine_pop(turbine_action_type* action_type,
 
   // Debugging
   DEBUG_TURBINE("pop: transform:   {%"PRId64"}", T->id);
-  DEBUG_TURBINE("     action:      {%"PRId64"} %s: %s", lli(id), T->name,
+  DEBUG_TURBINE("     action:      {%"PRId64"} %s: %s", id, T->name,
                                                             T->action);
-  DEBUG_TURBINE("     priority:    {%"PRId64"} => %i",  lli(id), T->priority);
-  DEBUG_TURBINE("     target:      {%"PRId64"} => %i",  lli(id), T->target);
-  DEBUG_TURBINE("     parallelism: {%"PRId64"} => %i",  lli(id), T->parallelism);
+  DEBUG_TURBINE("     priority:    {%"PRId64"} => %i",  id, T->priority);
+  DEBUG_TURBINE("     target:      {%"PRId64"} => %i",  id, T->target);
+  DEBUG_TURBINE("     parallelism: {%"PRId64"} => %i",  id, T->parallelism);
 
   // Copy outputs
   *action_type = T->action_type;
@@ -736,7 +736,7 @@ turbine_close(turbine_datum_id id)
 
     if (!subscribed)
     {
-      DEBUG_TURBINE("ready: {%"PRId64"}", lli(transform_id));
+      DEBUG_TURBINE("ready: {%"PRId64"}", transform_id);
       list_add(&tmp, T);
     }
   }
@@ -894,7 +894,7 @@ transform_tostring(char* output, transform* t)
     bool blocking = (i == t->blocker);
     if (blocking)
       append(p, "/");
-    append(p, "%"PRId64"", lli(t->input_td_list[i]));
+    append(p, "%"PRId64"", t->input_td_list[i]);
     if (blocking)
       append(p, "/");
   }
@@ -910,7 +910,7 @@ transform_tostring(char* output, transform* t)
     td_sub_pair ts = t->input_td_sub_list[i];
     if (blocking)
       append(p, "/");
-    append(p, "%"PRId64"[\"%s\"]", lli(ts.td), ts.subscript);
+    append(p, "%"PRId64"[\"%s\"]", ts.td, ts.subscript);
     if (blocking)
       append(p, "/");
   }
