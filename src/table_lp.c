@@ -29,7 +29,7 @@
 #include "table_lp.h"
 
 static int
-hash_long(cutil_long key, int N)
+hash_long(int64_t key, int N)
 {
   return (int)(key % N);
 }
@@ -93,7 +93,7 @@ table_lp_destroy(struct table_lp* target)
 }
 
 void table_lp_free_callback(struct table_lp* target, bool free_root,
-                            void (*callback)(cutil_long, void*))
+                            void (*callback)(int64_t, void*))
 {
   for (int i = 0; i < target->capacity; i++)
     list_lp_clear_callback(&target->array[i], callback);
@@ -119,7 +119,7 @@ table_lp_release(struct table_lp* target)
    @return true on success, false on failure (memory)
  */
 bool
-table_lp_add(struct table_lp *table, cutil_long key, void* data)
+table_lp_add(struct table_lp *table, int64_t key, void* data)
 {
   int index = hash_long(key, table->capacity);
 
@@ -135,21 +135,21 @@ table_lp_add(struct table_lp *table, cutil_long key, void* data)
 }
 
 void*
-table_lp_search(struct table_lp* table, cutil_long key)
+table_lp_search(struct table_lp* table, int64_t key)
 {
   int index = hash_long(key, table->capacity);
   return list_lp_search(&table->array[index], key);
 }
 
 bool
-table_lp_contains(struct table_lp* table, cutil_long key)
+table_lp_contains(struct table_lp* table, int64_t key)
 {
   void* tmp = table_lp_search(table, key);
   return (tmp != NULL);
 }
 
 bool
-table_lp_move(struct table_lp* table, cutil_long key_old, cutil_long key_new)
+table_lp_move(struct table_lp* table, int64_t key_old, int64_t key_new)
 {
   int index_old = hash_long(key_old, table->capacity);
   int index_new = hash_long(key_new, table->capacity);
@@ -163,7 +163,7 @@ table_lp_move(struct table_lp* table, cutil_long key_old, cutil_long key_new)
 }
 
 void*
-table_lp_remove(struct table_lp* table, cutil_long key)
+table_lp_remove(struct table_lp* table, int64_t key)
 {
   int index = hash_long(key, table->capacity);
   void* result = list_lp_remove(&table->array[index], key);

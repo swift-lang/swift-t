@@ -21,10 +21,9 @@
 #ifndef __CUTILS_TYPES_H
 #define __CUTILS_TYPES_H
 
+// stdint.h includes fixed-width types like int64_t
 #include <stdint.h>
+// inttypes.h contains format specifiers like PRId64
 #include <inttypes.h>
-
-/** Type used for 64-bit long integer keys/values */
-typedef int64_t cutil_long;
 
 #endif // __CUTILS_TYPES_H

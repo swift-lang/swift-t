@@ -45,21 +45,21 @@ bool table_lp_init(struct table_lp *table, int capacity);
 
 struct table_lp* table_lp_create(int capacity);
 
-bool table_lp_add(struct table_lp *table, cutil_long key, void* data);
+bool table_lp_add(struct table_lp *table, int64_t key, void* data);
 
-void* table_lp_search(struct table_lp* table, cutil_long key);
+void* table_lp_search(struct table_lp* table, int64_t key);
 
-bool table_lp_contains(struct table_lp* table, cutil_long key);
+bool table_lp_contains(struct table_lp* table, int64_t key);
 
 bool table_lp_move(struct table_lp* table,
-                   cutil_long key_old, cutil_long key_new);
+                   int64_t key_old, int64_t key_new);
 
-void* table_lp_remove(struct table_lp* table, cutil_long key);
+void* table_lp_remove(struct table_lp* table, int64_t key);
 
 void table_lp_destroy(struct table_lp* target);
 
 void table_lp_free_callback(struct table_lp* target, bool free_root,
-                            void (*callback)(cutil_long, void*));
+                            void (*callback)(int64_t, void*));
 
 void table_lp_clear(struct table_lp* target);
 

@@ -32,7 +32,7 @@ typedef enum
   RED, BLACK
 } rbtree_color;
 
-typedef cutil_long rbtree_key_t;
+typedef int64_t rbtree_key_t;
 
 struct rbtree_node
 {

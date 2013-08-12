@@ -31,7 +31,7 @@
 #include <stdbool.h>
 #include "c-utils-types.h"
 
-typedef cutil_long tree_key_t;
+typedef int64_t tree_key_t;
 
 struct tree_node
 {

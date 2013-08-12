@@ -46,7 +46,7 @@ list_lp_create()
 }
 
 struct list_lp_item*
-list_lp_add(struct list_lp* target, cutil_long key, void* data)
+list_lp_add(struct list_lp* target, int64_t key, void* data)
 {
   struct list_lp_item* item = malloc(sizeof(struct list_lp_item));
   if (! item)
@@ -79,7 +79,7 @@ list_lp_add_item(struct list_lp* target, struct list_lp_item* item)
    to largest at tail.
 */
 struct list_lp_item*
-list_lp_ordered_insert(struct list_lp* target, cutil_long key, void* data)
+list_lp_ordered_insert(struct list_lp* target, int64_t key, void* data)
 {
   struct list_lp_item* new_item = malloc(sizeof(struct list_lp_item));
   if (! new_item)
@@ -136,7 +136,7 @@ list_lp_ordered_insert(struct list_lp* target, cutil_long key, void* data)
 */
 struct list_lp_item*
 list_lp_ordered_insertdata(struct list_lp* target,
-                         cutil_long key, void* data,
+                         int64_t key, void* data,
                          bool (*cmp)(void*,void*))
 {
   struct list_lp_item* new_item = malloc(sizeof(struct list_lp_item));
@@ -272,7 +272,7 @@ list_lp_get(struct list_lp* target, int i)
 }
 
 void*
-list_lp_search(struct list_lp* target, cutil_long key)
+list_lp_search(struct list_lp* target, int64_t key)
 {
   for (struct list_lp_item* item = target->head; item;
        item = item->next)
@@ -287,7 +287,7 @@ list_lp_search(struct list_lp* target, cutil_long key)
    @return The removed item or NULL if not found.
 */
 void*
-list_lp_remove(struct list_lp* target, cutil_long key)
+list_lp_remove(struct list_lp* target, int64_t key)
 {
   struct list_lp_item* item = list_lp_remove_item(target, key);
   if (item == NULL)
@@ -298,7 +298,7 @@ list_lp_remove(struct list_lp* target, cutil_long key)
 }
 
 struct list_lp_item*
-list_lp_remove_item(struct list_lp* target, cutil_long key)
+list_lp_remove_item(struct list_lp* target, int64_t key)
 {
   struct list_lp_item* result;
   if (target->size == 0)
@@ -350,7 +350,7 @@ list_lp_destroy(struct list_lp* target)
 }
 
 void list_lp_free_callback(struct list_lp* target,
-                           void (*callback)(cutil_long, void*))
+                           void (*callback)(int64_t, void*))
 {
   list_lp_clear_callback(target, callback);
   free(target);
@@ -364,7 +364,7 @@ list_lp_clear(struct list_lp* target)
 
 void
 list_lp_clear_callback(struct list_lp* target,
-                       void (*callback)(cutil_long, void*))
+                       void (*callback)(int64_t, void*))
 {
   struct list_lp_item* item = target->head;
   while (item)

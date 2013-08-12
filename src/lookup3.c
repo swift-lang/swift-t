@@ -479,7 +479,7 @@ static uint32_t bj_hashlittle( const void *key, size_t length, uint32_t initval)
  * lookup with 2^^64 buckets, or if you want a second hash if you're not
  * happy with the first, or if you want a probably-unique 64-bit ID for
  * the key.  *pc is better mixed than *pb, so use *pc first.  If you want
- * a 64-bit value do something like "*pc + (((ucutil_long)*pb)<<32)".
+ * a 64-bit value do something like "*pc + (((uint64_t)*pb)<<32)".
  */
 void bj_hashlittle2(
   const void *key,       /* the key to hash */

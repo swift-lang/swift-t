@@ -40,26 +40,26 @@
 
 #include "c-utils-types.h"
 
-// Maximum size of cutil_long encoded in bytes
+// Maximum size of int64_t encoded in bytes
 // One bit overhead per byte
-#define VINT_MAX_BYTES (sizeof(cutil_long) + (sizeof(cutil_long) - 1) / 8 + 1)
+#define VINT_MAX_BYTES (sizeof(int64_t) + (sizeof(int64_t) - 1) / 8 + 1)
 
 /*
   Return encoded length of a vint
  */
-static inline int vint_bytes(cutil_long val);
+static inline int vint_bytes(int64_t val);
 
 /*
   Encode a vint.  Must have at least VINT_MAX_BYTES or vint_bytes(val)
   space in buffer, whichever is less.
   Returns number of bytes written
  */
-static inline int vint_encode(cutil_long val, void *buffer);
+static inline int vint_encode(int64_t val, void *buffer);
 
 /*
   Decode a vint.  Returns number of bytes read, or negative on an error
  */
-static inline int vint_decode(void *buffer, int len, cutil_long *val);
+static inline int vint_decode(void *buffer, int len, int64_t *val);
 
 
 
@@ -71,7 +71,7 @@ static inline int vint_decode(void *buffer, int len, cutil_long *val);
 #define VINT_7BIT_MASK (0x7f)
 
 static inline int
-vint_bytes(cutil_long val)
+vint_bytes(int64_t val)
 {
   int len = 1;
   if (val < 0)
@@ -85,7 +85,7 @@ vint_bytes(cutil_long val)
 }
 
 static inline int
-vint_encode(cutil_long val, void *buffer)
+vint_encode(int64_t val, void *buffer)
 {
   unsigned char *buffer2 = buffer;
   unsigned char b; // Current byte being encoded
@@ -120,16 +120,16 @@ vint_encode(cutil_long val, void *buffer)
 }
 
 static inline int
-vint_decode(void *buffer, int len, cutil_long *val)
+vint_decode(void *buffer, int len, int64_t *val)
 {
   unsigned char *buffer2 = buffer;
   if (len < 1)
     return -1;
   unsigned char b = buffer2[0]; // current byte
-  cutil_long sign; // 1 for +ive, -1 for -ive
+  int64_t sign; // 1 for +ive, -1 for -ive
 
   sign = ((b & VINT_SIGN_MASK) != 0) ? -1 : 1;
-  cutil_long accum = b & VINT_6BIT_MASK;
+  int64_t accum = b & VINT_6BIT_MASK;
 
   int pos = 1; // Byte position
   int shift = 6; // Bits to shift next byte by
@@ -142,7 +142,7 @@ vint_decode(void *buffer, int len, cutil_long *val)
       return -1;
     }
     b = buffer2[pos++];
-    cutil_long add = (cutil_long)(b & VINT_7BIT_MASK);
+    int64_t add = (int64_t)(b & VINT_7BIT_MASK);
     // TODO: check for overflow
     accum += (add << shift);
     shift += 7;

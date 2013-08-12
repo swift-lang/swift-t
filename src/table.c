@@ -35,14 +35,14 @@ hash_string(const char* data, int table_size)
   return index;
 }
 
-cutil_long
+int64_t
 hash_string_long(const char* data)
 {
   uint32_t p, q;
   size_t length = strlen(data);
   bj_hashlittle2(data, length, &p, &q);
 
-  cutil_long result = 0;
+  int64_t result = 0;
 
   result += p;
 
