@@ -469,7 +469,7 @@ xlb_check_parallel_tasks(int type)
   int* ranks = NULL;
   adlb_code result = ADLB_SUCCESS;
 
-  TRACE("\t tasks: %"PRId64"\n", lli(workqueue_parallel_tasks()));
+  TRACE("\t tasks: %"PRId64"\n", workqueue_parallel_tasks());
 
   // Fast path for no parallel task case
   if (workqueue_parallel_tasks() == 0)

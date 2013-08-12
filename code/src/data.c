@@ -267,7 +267,7 @@ data_exists(adlb_datum_id id, const char *subscript, bool* result)
   {
     check_verbose(d->type == ADLB_DATA_TYPE_CONTAINER, ADLB_DATA_ERROR_TYPE,
                 "Expected <%"PRId64"> to be container, but had type %i",
-                lli(id), d->type); 
+                id, d->type); 
     adlb_container_val t;
     bool data_found = container_lookup(&d->data.CONTAINER, subscript, &t);
     *result = data_found;
@@ -779,7 +779,7 @@ data_store(adlb_datum_id id, const char *subscript,
   {
     // Avoid accessing freed memory
     check_verbose(!freed_datum, ADLB_DATA_ERROR_SLOTS_NEGATIVE,
-        "Taking write reference count below zero on datum <%"PRId64">", lli(id));
+        "Taking write reference count below zero on datum <%"PRId64">", id);
 
     adlb_refcounts incr = { .read_refcount = xlb_read_refcount_enabled ?
                                             -refcount_decr.read_refcount : 0,
