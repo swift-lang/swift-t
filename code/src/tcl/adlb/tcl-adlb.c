@@ -2615,7 +2615,7 @@ ADLB_Container_Reference_Cmd(ClientData cdata, Tcl_Interp *interp,
                            &has_extra, &extra);
   TCL_CHECK(rc);
 
-  // DEBUG_ADLB("adlb::container_reference: <%"PRId64">[%s] => <%lli>\n",
+  // DEBUG_ADLB("adlb::container_reference: <%"PRId64">[%s] => <%"PRId64">\n",
   //            container_id, subscript, reference);
   rc = ADLB_Container_reference(container_id, subscript, reference,
                                 ref_type);
