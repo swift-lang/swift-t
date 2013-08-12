@@ -42,9 +42,7 @@ cleanup_storage2(adlb_datum_storage *d, adlb_data_type type,
     // reference counting
     return cleanup_members(&d->CONTAINER, free_mem, rc_change, scav);
   }
-  else if (type == ADLB_DATA_TYPE_STRUCT ) {
-    check_verbose(scav.subscript != NULL, ADLB_DATA_ERROR_UNKNOWN,
-                  "TODO: reference scavenging for struct subscript");
+  else if (type == ADLB_DATA_TYPE_STRUCT) {
     int scav_ix = -1; // negative == don't scavenge
     if (scav.subscript != NULL) 
     {
