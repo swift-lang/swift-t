@@ -1423,7 +1423,7 @@ static void free_ix_l_entry(char *key, void *val)
   free(key);
 }
 
-static void free_locked_entry(cutil_long key, void *val)
+static void free_locked_entry(int64_t key, void *val)
 {
   assert(val != NULL);
   free(val);
