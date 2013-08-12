@@ -15,6 +15,7 @@
  */
 
 #include <assert.h>
+#include <stdint.h>
 
 #include <tools.h>
 
@@ -22,15 +23,16 @@
 
 turbine_code
 turbine_tcl_long_array(Tcl_Interp* interp, Tcl_Obj* list, int max,
-                      long long* output, int* count)
+                      int64_t* output, int* count)
 {
   Tcl_Obj** entry;
   int code = Tcl_ListObjGetElements(interp, list, count, &entry);
   assert(code == TCL_OK);
   assert(*count < max);
+  assert(sizeof(Tcl_WideInt) == sizeof(int64_t));
   for (int i = 0; i < *count; i++)
   {
-    code = Tcl_GetWideIntFromObj(interp, entry[i], &output[i]);
+    code = Tcl_GetWideIntFromObj(interp, entry[i], (Tcl_WideInt*)&output[i]);
     if (code != TCL_OK)
       return TURBINE_ERROR_NUMBER_FORMAT;
   }

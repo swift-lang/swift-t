@@ -25,6 +25,8 @@
 
 #include <tcl.h>
 
+#include <stdint.h>
+
 #include "src/turbine/turbine.h"
 
 #define EMPTY_FLAG 0
@@ -72,7 +74,7 @@
 */
 turbine_code turbine_tcl_long_array(Tcl_Interp* interp,
                                     Tcl_Obj* list, int max,
-                                    long long* output, int* count);
+                                    int64_t* output, int* count);
 
 /**
    Obtain array of string from Tcl list
@@ -186,16 +188,17 @@ Tcl_Obj* tcl_list_from_array_ints(Tcl_Interp *interp,
 /* Helper functions for specific int types */
 static inline Tcl_Obj *Tcl_NewADLBInt(adlb_int_t val)
 {
-  return Tcl_NewWideIntObj(val);
+  return Tcl_NewWideIntObj((Tcl_WideInt)val);
 }
 
 static inline Tcl_Obj *Tcl_NewADLB_ID(adlb_datum_id val)
 {
-  return Tcl_NewWideIntObj(val);
+  return Tcl_NewWideIntObj((Tcl_WideInt)val);
 }
 
 static inline Tcl_Obj *Tcl_NewPtr(void *ptr)
 {
+  // Long is always large enough to fit pointer in
   return Tcl_NewLongObj((long)ptr);
 }
 
@@ -203,13 +206,17 @@ static inline Tcl_Obj *Tcl_NewPtr(void *ptr)
 static inline int Tcl_GetADLBInt(Tcl_Interp *interp, Tcl_Obj *objPtr,
                                  adlb_int_t *intPtr)
 {
-  return Tcl_GetWideIntFromObj(interp, objPtr, intPtr);
+  // Sanity check for pointer conversion
+  assert(sizeof(adlb_int_t) == sizeof(Tcl_WideInt));
+  return Tcl_GetWideIntFromObj(interp, objPtr, (Tcl_WideInt*)intPtr);
 }
 
 static inline int Tcl_GetADLB_ID(Tcl_Interp *interp, Tcl_Obj *objPtr,
                                  adlb_datum_id *intPtr)
 {
-  return Tcl_GetWideIntFromObj(interp, objPtr, intPtr);
+  // Sanity check for pointer conversion
+  assert(sizeof(adlb_int_t) == sizeof(Tcl_WideInt));
+  return Tcl_GetWideIntFromObj(interp, objPtr, (Tcl_WideInt*)intPtr);
 }
 
 static inline int Tcl_GetPtr(Tcl_Interp *interp, Tcl_Obj *objPtr,
