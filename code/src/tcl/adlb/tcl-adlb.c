@@ -1860,7 +1860,7 @@ enumerate_object(Tcl_Interp *interp, Tcl_Obj *const objv[],
     Tcl_Obj *key = NULL, *val = NULL;
     if (include_keys)
     {
-      cutil_long key_len;
+      int64_t key_len;
       consumed = vint_decode(data + pos, length - pos, &key_len);
       TCL_CONDITION(consumed >= 1, "Corrupted message received");
       pos += consumed;
@@ -1873,7 +1873,7 @@ enumerate_object(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
     if (include_vals)
     {
-      cutil_long val_len;
+      int64_t val_len;
       consumed = vint_decode(data + pos, length - pos, &val_len);
       TCL_CONDITION(consumed >= 1, "Corrupted message received");
       pos += consumed;
@@ -2897,7 +2897,7 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-static void blob_free_callback(cutil_long key, void *blob)
+static void blob_free_callback(int64_t key, void *blob)
 {
   free(blob);
 }

@@ -231,7 +231,7 @@ cache_shrink(void)
 {
   while (memory < 0)
   {
-    cutil_long stamp;
+    int64_t stamp;
     void* v;
     rbtree_pop(&lru, &stamp, &v);
     struct entry* e = (struct entry*) v;
