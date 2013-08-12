@@ -406,10 +406,10 @@ list_lp_dump(char* format, struct list_lp* target)
   for (item = target->head;
        item; item = item->next)
   {
-    printf("(%lli,", item->key);
+    printf("(%"PRId64",", item->key);
     if (strcmp(format, "%s") == 0)
       printf(format, item->data);
-    else if (strcmp(format, "%lli") == 0)
+    else if (strcmp(format, "%"PRId64"") == 0)
       printf(format, *((long*) (item->data)));
     printf(")");
     if (item->next)
@@ -428,7 +428,7 @@ list_lp_dumpkeys(struct list_lp* target)
   for (item = target->head;
        item; item = item->next)
   {
-    printf("(%lli)", item->key);
+    printf("(%"PRId64")", item->key);
     if (item->next)
       printf(",");
   }
@@ -445,7 +445,7 @@ list_lp_xdumpkeys(struct list_lp* target)
   for (item = target->head;
        item; item = item->next)
   {
-    printf("(%llx)", item->key);
+    printf("(%"PRIx64")", item->key);
     if (item->next)
       printf(",");
   }
@@ -456,7 +456,7 @@ list_lp_xdumpkeys(struct list_lp* target)
 static char*
 append_pair(char* ptr, struct list_lp_item* item, char* s)
 {
-  ptr += sprintf(ptr, "(%lli,", item->key);
+  ptr += sprintf(ptr, "(%"PRId64",", item->key);
   ptr += sprintf(ptr, "%s)", s);
 
   if (item->next)
@@ -474,7 +474,7 @@ void list_lp_output(char* (*f)(void*), struct list_lp* target)
   for (item = target->head;
        item; item = item->next)
   {
-    printf("(%lli,", item->key);
+    printf("(%"PRId64",", item->key);
     printf("%s", f(item->data));
     printf(")");
     if (item->next)

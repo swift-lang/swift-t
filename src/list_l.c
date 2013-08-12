@@ -391,7 +391,7 @@ list_l_dump(struct list_l* target)
   printf("[");
   for (item = target->head; item; item = item->next)
   {
-    printf("%lli", item->data);
+    printf("%"PRId64"", item->data);
     if (item->next)
       printf(",");
   }

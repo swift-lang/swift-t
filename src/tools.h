@@ -194,10 +194,4 @@ void print_longs(long* A, int count);
  */
 char* slurp(const char* filename);
 
-/**
-   Type conversion for formatted output.
-   Use with %lli
-*/
-#define lli(x) ((long long int) x)
-
 #endif
