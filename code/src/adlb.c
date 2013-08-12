@@ -1043,7 +1043,7 @@ ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
        ADLB_TAG_CONTAINER_REFERENCE);
   WAIT(&request, &status);
 
-  DEBUG("ADLB_Container_reference: <%"PRId64">[%s] => <%lli> (%i)",
+  DEBUG("ADLB_Container_reference: <%"PRId64">[%s] => <%"PRId64"> (%i)",
         id, subscript, reference, ref_type);
 
   if (dc != ADLB_DATA_SUCCESS)

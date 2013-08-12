@@ -189,7 +189,7 @@ char *ADLB_Data_repr(adlb_datum_storage *d, adlb_data_type type)
       assert(rc >= 0);
       return tmp;
     case ADLB_DATA_TYPE_FILE_REF:
-      rc = asprintf(&tmp, "status:<%"PRId64"> filename:<%lli> mapped:%i",
+      rc = asprintf(&tmp, "status:<%"PRId64"> filename:<%"PRId64"> mapped:%i",
             d->FILE_REF.status_id, d->FILE_REF.filename_id, d->FILE_REF.mapped);
       assert(rc >= 0);
       return tmp;

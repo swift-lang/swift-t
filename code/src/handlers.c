@@ -1064,7 +1064,7 @@ handle_container_reference(int caller)
 
   unpack_id_subscript(xfer_read, &container_id, &subscript, &sub_strlen);
 
-  DEBUG("Container_reference: <%"PRId64">[%s] => <%lli> (%i)",
+  DEBUG("Container_reference: <%"PRId64">[%s] => <%"PRId64"> (%i)",
         container_id, subscript, reference, ref_type);
   
   adlb_binary_data member;
