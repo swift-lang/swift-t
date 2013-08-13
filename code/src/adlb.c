@@ -171,13 +171,21 @@ setup_hostmap()
   int rc = MPI_Allgather(myname,   (int)length, MPI_CHAR,
                          allnames, (int)length, MPI_CHAR, adlb_comm);
   MPI_CHECK(rc);
+
   table_init(&hostmap, 1024);
+
+  bool debug_hostmap = false;
+  char* t = getenv("ADLB_DEBUG_HOSTMAP");
+  if (t != NULL && strcmp(t, "1") == 0)
+    debug_hostmap = true;
 
   char* p = allnames;
   for (int rank = 0; rank < xlb_comm_size; rank++)
   {
     char* name = p;
-    // printf("setup_hostmap(): %s -> %i\n", name, rank);
+
+    if (rank == 0 && debug_hostmap)
+      printf("HOSTMAP: %s -> %i\n", name, rank);
 
     if (!table_contains(&hostmap, name))
     {
