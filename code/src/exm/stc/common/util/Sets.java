@@ -1,5 +1,6 @@
 package exm.stc.common.util;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -126,6 +127,14 @@ public class Sets {
     }
     
     return result;
+  }
+
+  public static <T> Set<T> union(Collection<Set<T>> allSets) {
+    Set<T> res = new HashSet<T>();
+    for (Set<? extends T> s: allSets) {
+      res.addAll(s);
+    }
+    return res;
   }
 }
  

@@ -16,7 +16,6 @@
 package exm.stc.ic.opt;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -36,6 +35,8 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalSet;
+import exm.stc.common.util.Pair;
+import exm.stc.common.util.Sets;
 import exm.stc.ic.opt.AliasTracker.AliasKey;
 import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -134,25 +135,67 @@ public class FixupVariables implements OptimizerPass {
       throw new STCRuntimeError("Unexpected write IC function "
           + fn.getName() + " to variables " + res.written.toString());
     }
+    
+    if (res.aliasWritten.size() > 0) {
+      throw new STCRuntimeError("Unexpected write IC function "
+          + fn.getName() + " to variables " + res.aliasWritten.toString());
+    }
   }
 
   private static class Result {
-    final Set<Var> read;
-    final Set<Var> written;
+    final Set<Var> read; /** Variables that were read */
+    final Set<Var> written; /** Variables that were written (de-aliased) */
+    /** Original aliases for write variables, to make sure that redundant
+     * aliases are passed correctly in case of suboptimal code */
+    final Set<Var> aliasWritten;
     
-    Result(Set<Var> read, Set<Var> written) {
+    Result() {
       super();
-      this.read = read;
-      this.written = written;
+      this.read = new HashSet<Var>();
+      this.written = new HashSet<Var>();
+      this.aliasWritten = new HashSet<Var>();
     }
 
+    public List<Set<Var>> allSets() {
+      List<Set<Var>> res = new ArrayList<Set<Var>>();
+      res.add(read);
+      res.add(written);
+      res.add(aliasWritten);
+      return res;
+    }
+
+    Set<Var> allNeeded() {
+      return Sets.union(allSets());
+    }
+    
     /**
      * Add everything from another result
      */
     void add(Result other) {
       read.addAll(other.read);
       written.addAll(other.written);
+      aliasWritten.addAll(other.aliasWritten);
     }
+    
+    /**
+     * Add everything from another result with exclusions
+     */
+    void addExcluding(Result other, Collection<Var> exclusion) {
+      List<Pair<Set<Var>, Set<Var>>> fromTos =
+                      new ArrayList<Pair<Set<Var>, Set<Var>>>();
+      fromTos.add(Pair.create(other.read, read));
+      fromTos.add(Pair.create(other.written, written));
+      fromTos.add(Pair.create(other.aliasWritten, aliasWritten));
+                      
+      for (Pair<Set<Var>, Set<Var>> fromTo: fromTos) {
+        for (Var var: fromTo.val1) {
+          if (!exclusion.contains(var)) {
+            fromTo.val2.add(var);
+          }
+        }
+      }
+    }
+
 
     void addRead(Var var) {
       read.add(var);
@@ -194,6 +237,9 @@ public class FixupVariables implements OptimizerPass {
        */
       Var key = canonicalWriteVar(var, aliases);
       this.written.add(key);
+      if (!key.equals(var)) {
+        this.aliasWritten.add(var);
+      }
     }
 
     void addWritten(Collection<Var> vars, AliasTracker aliases) {
@@ -210,6 +256,7 @@ public class FixupVariables implements OptimizerPass {
     void removeWritten(Var var) {
       // Remove the non-canonical var
       this.written.remove(var);
+      this.aliasWritten.remove(var);
     }
     
     /**
@@ -254,7 +301,7 @@ public class FixupVariables implements OptimizerPass {
     }
 
     // Work out which variables are read/writte which aren't locally declared
-    Result result = new Result(new HashSet<Var>(), new HashSet<Var>());
+    Result result = new Result();
     findBlockNeeded(block, result, aliases);
     
     for (Continuation c : block.allComplexStatements()) {
@@ -269,7 +316,7 @@ public class FixupVariables implements OptimizerPass {
     if (execCx == ExecContext.CONTROL) {
       // Global constants can be imported in control blocks only
       Set<Var> globals = addGlobalImports(block, visible, updateLists,
-                          Arrays.asList(result.read, result.written));
+                                          result.allSets());
   
       referencedGlobals.addAll(globals);
       result.removeReadWrite(globals);
@@ -280,8 +327,7 @@ public class FixupVariables implements OptimizerPass {
   /**
    * Find all referenced vars in scope
    * @param block
-   * @param written accumulate output vars
-   * @param read accumulate all input vars from this block
+   * @param result accumulate needed vars
    * @param aliases 
    */
   private static void findBlockNeeded(Block block, Result result,
@@ -387,32 +433,21 @@ public class FixupVariables implements OptimizerPass {
           Continuation continuation, HierarchicalSet<Var> visibleVars,
           Set<Var> outerBlockVars, AliasTracker outerAliases,
           Result outer, Result inner) {
-    Set<Var> innerAllNeeded = new HashSet<Var>();
-    innerAllNeeded.addAll(inner.read);
-    innerAllNeeded.addAll(inner.written);
-    
     // Rebuild passed in vars
     List<PassedVar> passedIn = new ArrayList<PassedVar>();
-    for (Var needed: innerAllNeeded) {
-      boolean read = inner.read.contains(needed);
-      boolean written = inner.written.contains(needed);
-      // Update outer in case outer will need to pass in
-      if (!outerBlockVars.contains(needed)) {
-        if (read)
-          outer.addRead(needed);
-        if (written)
-          outer.addWritten(needed, outerAliases);
-      }
+    for (Var needed: inner.allNeeded()) {
       if (!visibleVars.contains(needed)) {
         throw new STCRuntimeError("Variable " + needed
             + " should have been " + "visible but wasn't in "
             + function.getName());
       }
 
-      assert(read || written);
-      boolean writeOnly = !read;
+      boolean writeOnly = !inner.read.contains(needed);
       passedIn.add(new PassedVar(needed, writeOnly));
     }
+    
+    // Copy out any additional variables
+    outer.addExcluding(inner, outerBlockVars);
     
     // Handle any additional variables that need to be passed in,
     // for example if a variable is waited on but not otherwise passed
