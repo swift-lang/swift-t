@@ -9,20 +9,20 @@ app (file out) echo (string args[]) {
   "echo" args @stdout=out
 }
 
-app (file out) sed(string cmd, file input) {
-  "sed" cmd input @stdout=out
+app (file out) sed(string cmd, file inp) {
+  "sed" cmd inp @stdout=out
 }
 
-app (file out) sort (file input) {
-  "sort" "-n" "-o" out input
+app (file out) sort (file inp) {
+  "sort" "-n" "-o" out inp
 }
 
-app (file out) head (file input, int n) {
-  "head" "-n" n input @stdout=out
+app (file out) head (file inp, int n) {
+  "head" "-n" n inp @stdout=out
 }
 
-app (file out) cat (file input) {
-  "cat" input @stdout=out
+app (file out) cat (file inp) {
+  "cat" inp @stdout=out
 }
 
 main () {

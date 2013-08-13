@@ -1,6 +1,6 @@
 
-app (file out) f (file input, string s, int i) {
-    "./631-app-cat.sh" @input @out ("hello " + s) i;
+app (file out) f (file inp, string s, int i) {
+    "./631-app-cat.sh" @inp @out ("hello " + s) i;
 }
 
 main {

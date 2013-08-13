@@ -11,9 +11,9 @@ type bob {
     ret.b = 2;
 }
 
-(bob ret) swap(bob input) {
-    ret.a = input.b;
-    ret.b = input.a;
+(bob ret) swap(bob inp) {
+    ret.a = inp.b;
+    ret.b = inp.a;
 }
 
 main {

@@ -1,6 +1,6 @@
 
-app () f (file input, string s, int i) {
-    "cat" @input;
+app () f (file inp, string s, int i) {
+    "cat" @inp;
 }
 
 main {

@@ -8,8 +8,8 @@ import assert;
   o = read(cat(write(i)));
 }
 
-app (file out) cat (file input) {
-  "/bin/cat" @stdin=input @stdout=out;
+app (file out) cat (file inp) {
+  "/bin/cat" @stdin=inp @stdout=out;
 }
 
 main () {

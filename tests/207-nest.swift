@@ -1,5 +1,5 @@
 
-(int ret) notmain (int input)
+(int ret) notmain (int inp)
 {
   int a;
   a = 1;
