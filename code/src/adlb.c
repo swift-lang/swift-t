@@ -159,17 +159,17 @@ setup_hostmap()
   uname(&u);
 
   // Length of nodenames
-  size_t length = sizeof(u.nodename);
+  int length = (int) sizeof(u.nodename);
 
   // This may be too big for the stack
-  char* allnames = malloc(((size_t)xlb_comm_size*length) * sizeof(char));
+  char* allnames = malloc((xlb_comm_size*length) * sizeof(char));
 
   char myname[length];
   memset(myname, 0, length);
   strcpy(myname, u.nodename);
 
-  int rc = MPI_Allgather(myname,   (int)length, MPI_CHAR,
-                         allnames, (int)length, MPI_CHAR, adlb_comm);
+  int rc = MPI_Allgather(myname,   length, MPI_CHAR,
+                         allnames, length, MPI_CHAR, adlb_comm);
   MPI_CHECK(rc);
 
   table_init(&hostmap, 1024);
@@ -184,7 +184,7 @@ setup_hostmap()
   {
     char* name = p;
 
-    if (rank == 0 && debug_hostmap)
+    if (xlb_comm_rank == 0 && debug_hostmap)
       printf("HOSTMAP: %s -> %i\n", name, rank);
 
     if (!table_contains(&hostmap, name))
@@ -566,7 +566,7 @@ ADLBP_Exists(adlb_datum_id id, const char *subscript, bool* result,
         ADLB_TAG_RESPONSE);
   SEND(req, (int)(req_ptr - req), MPI_BYTE, to_server_rank, ADLB_TAG_EXISTS);
   WAIT(&request, &status);
-  
+
   ADLB_DATA_CHECK(resp.dc);
   *result = resp.result;
   return ADLB_SUCCESS;
@@ -809,7 +809,7 @@ ADLBP_Retrieve(adlb_datum_id id, const char *subscript,
   MPI_Request request;
 
   int to_server_rank = ADLB_Locate(id);
-  
+
   int subscript_len = (subscript == NULL) ? 0 : (int)strlen(subscript) + 1;
 
   // Stack allocate small buffer
@@ -876,7 +876,7 @@ ADLBP_Enumerate(adlb_datum_id container_id,
   // Are we requesting subscripts?
   opts.request_subscripts = include_keys;
   // Are we requesting members?
-  opts.request_members = include_vals; 
+  opts.request_members = include_vals;
   opts.count = count;
   opts.offset = offset;
   opts.decr = decr;
