@@ -508,7 +508,7 @@ strictly typechecked, for example, only accepted particular types of
 file.
 
 *Note:* This feature is immature, so you will have a higher probability
-of encountering compiler bugs or limitations. 
+of encountering compiler bugs or limitations.
 
 ----
 
@@ -978,14 +978,14 @@ NULL-terminator.
 
 +blob_from_floats(float[]) -> blob+:: Convert an array of Swift floats
 (implemented as doubles) to blob containing the C-formatted array of
-+double+s.
+doubles .
 
 +blob_from_floats(blob) -> float[]+:: Convert blob containing the
-C-formatted array of +double+s to an array of Swift floats
+C-formatted array of doubles to an array of Swift floats
 (implemented as doubles).
 
 +blob_from_ints(int i[]) -> blob+:: Convert blob containing the
-C-formatted array of +int+s to an array of Swift +int+s (implemented
+C-formatted array of ints to an array of Swift ints (implemented
 as 64-bit integers).
 
 +blob_from_file(file) -> blob+:: Reads whole file, returning it as a
