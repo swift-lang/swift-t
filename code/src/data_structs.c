@@ -323,13 +323,13 @@ data_cleanup_struct(adlb_struct *s, bool free_mem,
   check_valid_type(s->type);
   adlb_data_code dc;
   struct_type_info *t = &struct_types[s->type];
+  assert(scav_ix < t->field_count);
   bool do_scavenge = scav_refcounts.read_refcount != 0 ||
                      scav_refcounts.write_refcount != 0;
   
-  DEBUG("HERE: scav_ix == %i do_scav == %i", scav_ix, (int)do_scavenge);
   for (int i = 0; i < t->field_count; i++)
   {
-    if (do_scavenge && scav_ix == i)
+    if (do_scavenge && (scav_ix < 0 || scav_ix == i))
     {
       dc = incr_scav_rc_referand(&s->data[i], t->field_types[i],
                                 rc_change, scav_refcounts);
