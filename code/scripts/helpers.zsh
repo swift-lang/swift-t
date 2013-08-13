@@ -27,7 +27,15 @@ GB=$(( 1024*MB ))
   ${*}
 }
 
-assert() {
+abort()
+{
+  MSG=${*}
+  print ${MSG}
+  exit 1
+}
+
+assert()
+{
   ERR=$1
   shift
   MSG="${*}"
