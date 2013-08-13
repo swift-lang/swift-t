@@ -203,7 +203,6 @@ public class RCTracker {
       String fieldName = key.structPath[i];
       Var child = aliases.findVar(curr, fieldName);
       if (child == null) {
-        System.err.println("Must create " + curr.name() + "." + fieldName);
         // Doesn't exist
         StructType parentType = (StructType)curr.type();
         Type elemType = parentType.getFieldTypeByName(fieldName);

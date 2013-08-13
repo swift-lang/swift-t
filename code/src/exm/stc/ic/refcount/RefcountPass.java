@@ -503,7 +503,6 @@ public class RefcountPass implements OptimizerPass {
    */
   private void addTemporaryStructFields(Block block, RCTracker increments,
       Set<Var> parentAssignedAliasVars) {
-    // System.err.println("MUST CREATE: " + increments.getCreatedTemporaries());
     // Vars that were created out of order
     Set<Var> alreadyCreated = new HashSet<Var>();
     for (Var toCreate: increments.getCreatedTemporaries()) {
