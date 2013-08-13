@@ -17,6 +17,7 @@ package exm.stc.ic.opt;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
@@ -35,7 +36,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalSet;
-import exm.stc.common.util.Pair;
+import exm.stc.ic.opt.AliasTracker.AliasKey;
 import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -98,45 +99,131 @@ public class FixupVariables implements OptimizerPass {
           VarStorage.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
       fnargs.add(v);
     }
-    Pair<Set<Var>, Set<Var>> res = fixupBlockRec(logger,
-        fn, fn.mainBlock(), ExecContext.CONTROL, 
-        fnargs, referencedGlobals, updateLists);
-
-    Set<Var> read = res.val1;
-    Set<Var> written = res.val2;
     
+    AliasTracker aliases = new AliasTracker();
+    
+    Result res = fixupBlockRec(logger, fn, fn.mainBlock(),
+                       ExecContext.CONTROL, fnargs,
+                       referencedGlobals, aliases, updateLists);
     if (updateLists) {
       // Mark write-only outputs
       for (int i = 0; i < fn.getOutputList().size(); i++) {
         Var output = fn.getOutput(i);
-        if (!read.contains(output) && !Types.hasReadableSideChannel(output.type())) {
+        if (!res.read.contains(output) && !Types.hasReadableSideChannel(output.type())) {
           fn.makeOutputWriteOnly(i);
         }
       }
     }
+    
     // Check that all variables referred to are available as args
-    read.removeAll(fn.getInputList());
-    read.removeAll(fn.getOutputList());
-  
-    if (read.size() > 0) {
-      throw new STCRuntimeError("Reference in IC function "
-          + fn.getName() + " to undefined variables " + read.toString());
-    }
-    
-    written.removeAll(fn.getOutputList());
-    
+    res.removeRead(fn.getInputList());
+    res.removeReadWrite(fn.getOutputList());
     for (Var v: fn.getInputList()) {
       // TODO: should these be passed in through output list instead?
       if (Types.isScalarUpdateable(v.type())) {
-        written.remove(v);
+        res.removeWritten(v);
       }
     }
-    if (written.size() > 0) {
+
+    if (res.read.size() > 0) {
+      throw new STCRuntimeError("Reference in IC function "
+          + fn.getName() + " to undefined variables " + res.read.toString());
+    }
+    
+    if (res.written.size() > 0) {
       throw new STCRuntimeError("Unexpected write IC function "
-          + fn.getName() + " to variables " + written.toString());
+          + fn.getName() + " to variables " + res.written.toString());
     }
   }
 
+  private static class Result {
+    final Set<Var> read;
+    final Set<Var> written;
+    
+    Result(Set<Var> read, Set<Var> written) {
+      super();
+      this.read = read;
+      this.written = written;
+    }
+
+    /**
+     * Add everything from another result
+     */
+    void add(Result other) {
+      read.addAll(other.read);
+      written.addAll(other.written);
+    }
+
+    void addRead(Var var) {
+      read.add(var);
+    }
+
+    void addRead(Collection<Var> vars) {
+      for (Var var: vars) {
+        addRead(var);
+      }
+    }
+
+    void removeRead(Var var) {
+      this.read.remove(var);
+    }
+
+    void removeRead(Collection<Var> vars) {
+      for (Var var: vars) {
+        removeRead(var);
+      }
+    }
+
+    Var canonicalWriteVar(Var var, AliasTracker aliases) {
+      AliasKey key = aliases.getCanonical(var);
+      assert(key != null) : var;
+      Var canonical = aliases.findVar(key);
+      assert(canonical != null) : var + " " + key;
+      return canonical;
+    }
+
+    /**
+     * Mark variable as written
+     * @param var
+     * @param aliases
+     */
+    void addWritten(Var var, AliasTracker aliases) {
+      /* Use the canonical variable for a struct field so that we can track
+       * the write back to the original struct field in outer scopes where
+       * there may be multiple aliases for that field.
+       */
+      Var key = canonicalWriteVar(var, aliases);
+      this.written.add(key);
+    }
+
+    void addWritten(Collection<Var> vars, AliasTracker aliases) {
+      for (Var var: vars) {
+        addWritten(var, aliases);
+      }
+    }
+
+    /**
+     * Remove variable without canonicalizing it, e.g. if we're moving
+     * up to an outer scope
+     * @param var
+     */
+    void removeWritten(Var var) {
+      // Remove the non-canonical var
+      this.written.remove(var);
+    }
+    
+    /**
+     * Remove variable without canonicalizing them
+     * @param vars
+     */
+    void removeReadWrite(Collection<Var> vars) {
+      for (Var var: vars) {
+        removeRead(var);
+        removeWritten(var);
+      }
+    }
+  }
+  
   /**
    * 
    * @param logger
@@ -144,13 +231,14 @@ public class FixupVariables implements OptimizerPass {
    * @param visible all
    *          variables logically visible in this block. will be modified in fn
    * @param referencedGlobals updated with names of any globals used
+   * @param aliases 
    * @param updateLists 
    * @return
    */
-  private static Pair<Set<Var>, Set<Var>> fixupBlockRec(Logger logger,
+  private static Result fixupBlockRec(Logger logger,
       Function function, Block block, ExecContext execCx, 
-      HierarchicalSet<Var> visible,
-      Set<Var> referencedGlobals, boolean updateLists) {
+      HierarchicalSet<Var> visible, Set<Var> referencedGlobals,
+      AliasTracker aliases, boolean updateLists) {
 
     if (updateLists)
       // Remove global imports to be readded later if needed
@@ -166,30 +254,27 @@ public class FixupVariables implements OptimizerPass {
     }
 
     // Work out which variables are read/writte which aren't locally declared
-    Set<Var> read = new HashSet<Var>();
-    Set<Var> written = new HashSet<Var>();
-    findBlockNeeded(block, read, written);
+    Result result = new Result(new HashSet<Var>(), new HashSet<Var>());
+    findBlockNeeded(block, result, aliases);
     
     for (Continuation c : block.allComplexStatements()) {
       fixupContinuationRec(logger, function, execCx, c,
-              visible, referencedGlobals,
-              blockVars, read, written, updateLists);
+              visible, referencedGlobals, aliases,
+              blockVars, result, updateLists);
     }
 
     // Outer scopes don't have anything to do with vars declared here
-    read.removeAll(blockVars);
-    written.removeAll(blockVars);
+    result.removeReadWrite(blockVars);
     
     if (execCx == ExecContext.CONTROL) {
       // Global constants can be imported in control blocks only
       Set<Var> globals = addGlobalImports(block, visible, updateLists,
-                                          Arrays.asList(read, written));
+                          Arrays.asList(result.read, result.written));
   
       referencedGlobals.addAll(globals);
-      read.removeAll(globals);
-      written.removeAll(globals);
+      result.removeReadWrite(globals);
     }
-    return Pair.create(read, written);
+    return result;
   }
 
   /**
@@ -197,12 +282,13 @@ public class FixupVariables implements OptimizerPass {
    * @param block
    * @param written accumulate output vars
    * @param read accumulate all input vars from this block
+   * @param aliases 
    */
-  private static void findBlockNeeded(Block block, Set<Var> read,
-      Set<Var> written) {
+  private static void findBlockNeeded(Block block, Result result,
+                                      AliasTracker aliases) {
     for (Var v: block.getVariables()) {
       if (v.isMapped()) {
-        read.add(v.mapping());
+        result.addRead(v.mapping());
       }
     }
     
@@ -210,16 +296,20 @@ public class FixupVariables implements OptimizerPass {
       switch (stmt.type()) {
         case INSTRUCTION: {
           Instruction i = stmt.instruction();
+
+          // This line keeps aliases up to data for e.g. struct insertions
+          aliases.update(i);
+          
           for (Arg in: i.getInputs()) {
             if (in.isVar()) {
-              read.add(in.getVar());
+              result.addRead(in.getVar());
             }
           }
-          written.addAll(i.getOutputs());
+          result.addWritten(i.getOutputs(), aliases);
           break;
         }
         case CONDITIONAL: {
-          read.addAll(stmt.conditional().requiredVars(false));
+          result.addRead(stmt.conditional().requiredVars(false));
           break;
         }
         default:
@@ -228,14 +318,14 @@ public class FixupVariables implements OptimizerPass {
     }
     
     for (Continuation cont: block.getContinuations()) {
-      read.addAll(cont.requiredVars(false));
+      result.addRead(cont.requiredVars(false));
     }
     
     for (CleanupAction cleanup: block.getCleanups()) {
       // ignore outputs - the cleaned up vars should already be in scope
       for (Arg in: cleanup.action().getInputs()) {
         if (in.isVar()) {
-          read.add(in.getVar());
+          result.addRead(in.getVar());
         }
       }
     }
@@ -249,6 +339,7 @@ public class FixupVariables implements OptimizerPass {
    * @param continuation
    * @param visible
    * @param referencedGlobals
+   * @param aliases 
    * @param outerBlockVars
    * @param neededVars
    * @param updateLists 
@@ -256,66 +347,61 @@ public class FixupVariables implements OptimizerPass {
   private static void fixupContinuationRec(Logger logger, Function function,
           ExecContext outerCx,
           Continuation continuation, HierarchicalSet<Var> visible,
-          Set<Var> referencedGlobals, Set<Var> outerBlockVars,
-          Set<Var> read, Set<Var> written, boolean updateLists) {
+          Set<Var> referencedGlobals, AliasTracker outerAliases, Set<Var> outerBlockVars,
+          Result result, boolean updateLists) {
     // First see what variables the continuation defines inside itself
     List<Var> constructVars = continuation.constructDefinedVars(ContVarDefType.NEW_DEF);
     ExecContext innerCx = continuation.childContext(outerCx);
+    AliasTracker contAliases = outerAliases.makeChild();
     
     for (Block innerBlock : continuation.getBlocks()) {
       HierarchicalSet<Var> childVisible = visible.makeChild();
       for (Var v : constructVars) {
         childVisible.add(v);
       }
-      
-      Pair<Set<Var>, Set<Var>> inner = fixupBlockRec(logger,
-          function, innerBlock, innerCx,
-          childVisible, referencedGlobals, updateLists);
-      Set<Var> innerRead = inner.val1;
-      Set<Var> innerWritten = inner.val2;
+      AliasTracker blockAliases = contAliases.makeChild();
+      Result inner = fixupBlockRec(logger,
+          function, innerBlock, innerCx, childVisible,
+          referencedGlobals, blockAliases, updateLists);
       
       // construct will provide some vars
       if (!constructVars.isEmpty()) {
-        innerRead.removeAll(constructVars);
-        innerWritten.removeAll(constructVars);
+        inner.removeReadWrite(constructVars);
       }
 
       if (continuation.inheritsParentVars()) {
         // Might be some variables not yet defined in this scope
-        innerRead.removeAll(outerBlockVars);
-        read.addAll(innerRead);
-        innerWritten.removeAll(outerBlockVars);
-        written.addAll(innerWritten);
+        inner.removeReadWrite(outerBlockVars);
+        result.add(inner);
       } else if (updateLists) {
         // Update the passed in vars
         rebuildContinuationPassedVars(function, continuation, visible,
-              outerBlockVars, read, innerRead, written, innerWritten);
+              outerBlockVars, outerAliases, result, inner);
         rebuildContinuationKeepOpenVars(function, continuation,
-              visible, outerBlockVars, written, innerWritten);
+                  visible, outerBlockVars, outerAliases, result, inner);
       }
     }
   }
 
   private static void rebuildContinuationPassedVars(Function function,
           Continuation continuation, HierarchicalSet<Var> visibleVars,
-          Set<Var> outerBlockVars, 
-          Set<Var> outerRead, Set<Var> innerRead, 
-          Set<Var> outerWritten, Set<Var> innerWritten) {
+          Set<Var> outerBlockVars, AliasTracker outerAliases,
+          Result outer, Result inner) {
     Set<Var> innerAllNeeded = new HashSet<Var>();
-    innerAllNeeded.addAll(innerRead);
-    innerAllNeeded.addAll(innerWritten);
+    innerAllNeeded.addAll(inner.read);
+    innerAllNeeded.addAll(inner.written);
     
     // Rebuild passed in vars
     List<PassedVar> passedIn = new ArrayList<PassedVar>();
     for (Var needed: innerAllNeeded) {
-      boolean read = innerRead.contains(needed);
-      boolean written = innerWritten.contains(needed);
+      boolean read = inner.read.contains(needed);
+      boolean written = inner.written.contains(needed);
       // Update outer in case outer will need to pass in
       if (!outerBlockVars.contains(needed)) {
         if (read)
-          outerRead.add(needed);
+          outer.addRead(needed);
         if (written)
-          outerWritten.add(needed);
+          outer.addWritten(needed, outerAliases);
       }
       if (!visibleVars.contains(needed)) {
         throw new STCRuntimeError("Variable " + needed
@@ -354,12 +440,13 @@ public class FixupVariables implements OptimizerPass {
 
   private static void rebuildContinuationKeepOpenVars(Function function,
       Continuation continuation, HierarchicalSet<Var> visible,
-      Set<Var> outerBlockVars, Set<Var> outerWritten, Set<Var> innerWritten) {
+      Set<Var> outerBlockVars, AliasTracker outerAliases,
+      Result outer, Result inner) {
     List<Var> keepOpen = new ArrayList<Var>();
-    for (Var v: innerWritten) {
+    for (Var v: inner.written) {
       // If not declared in this scope
       if (!outerBlockVars.contains(v)) {
-        outerWritten.add(v);
+        outer.addWritten(v, outerAliases);
       }
       if (!visible.contains(v)) {
         throw new STCRuntimeError("Variable " + v

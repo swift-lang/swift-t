@@ -24,6 +24,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
+import exm.stc.ic.opt.AliasTracker.AliasKey;
 import exm.stc.ic.opt.OptimizerPass;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ForeachLoops.AbstractForeachLoop;
@@ -502,8 +503,7 @@ public class RefcountPass implements OptimizerPass {
    */
   private void addTemporaryStructFields(Block block, RCTracker increments,
       Set<Var> parentAssignedAliasVars) {
-    Deque<Pair<String, Var>> workStack = new ArrayDeque<Pair<String, Var>>();
-
+    System.err.println("MUST CREATE: " + increments.getCreatedTemporaries());
     // Vars that were created out of order
     Set<Var> alreadyCreated = new HashSet<Var>();
     for (Var toCreate: increments.getCreatedTemporaries()) {
@@ -513,38 +513,43 @@ public class RefcountPass implements OptimizerPass {
       // Keep track of insert position for instruction
       ListIterator<Statement> insertPos = block.statementIterator();
 
-      // Use stack to allow creating in dependency order
-      workStack.clear();
-
-      Var curr = toCreate;
-      do {
-        // See what ancestors need to be looked up
-        Pair<Var, String> parent = increments.getAliases()
-            .getStructParent(curr);
-        assert (parent != null);
-        // Will later lookup curr = parent.val1[parent.val2]
-        workStack.push(Pair.create(parent.val2, curr));
-        curr = parent.val1;
-      } while (increments.getCreatedTemporaries().contains(curr) &&
-          !alreadyCreated.contains(curr));
+      AliasKey pathToCreate = increments.getAliases().getCanonical(toCreate);
 
       // Track assigned alias vars in this block so we know where we can
       // insert lookup instructions
       Set<Var> blockAssignedAlias = new HashSet<Var>();
 
+      Deque<Pair<String, Var>> stack = new ArrayDeque<Pair<String,Var>>();
+      int pos; // Track which the closest existing parent is
+      Var curr = toCreate;
+      for (pos = pathToCreate.pathLength() - 1; pos >= 0; pos--) {
+        stack.push(Pair.create(pathToCreate.structPath[pos], curr));
+        
+        AliasKey parentKey = pathToCreate.prefix(pos);
+        curr = increments.getAliases().findVar(parentKey);
+        assert(curr != null); // Should have been created previously
+        if (alreadyCreated.contains(curr) ||
+            !increments.getCreatedTemporaries().contains(curr)) {
+          // Should already be loaded, don't need to go further
+          break;
+        }
+      }
+      assert(pos >= 0); // At least the root should exist
+      
       Var parentStruct = curr;
-      // Do lookups in reverse order they were added
-      while (!workStack.isEmpty()) {
-        Pair<String, Var> lookup = workStack.pop();
-        String field = lookup.val1;
-        Var child = lookup.val2;
+      // Do lookups in dependency order
+      while (!stack.isEmpty()) {
+        Pair<String, Var> toLookup = stack.pop();
+        String field = toLookup.val1;
+        Var child = toLookup.val2;
+        
         // If curr is alias, may not be able to read yet:
         // must scan down block for location where insert can occur
         if (curr.storage() == VarStorage.ALIAS &&
-            !parentAssignedAliasVars.contains(curr)) {
-          while (!blockAssignedAlias.contains(curr)) {
+            !parentAssignedAliasVars.contains(parentStruct)) {
+          while (!blockAssignedAlias.contains(parentStruct)) {
             assert (insertPos.hasNext()) : "Malformed IR, var not init: " +
-                curr;
+                    parentStruct;
             Statement stmt = insertPos.next();
             if (stmt.type() == StatementType.INSTRUCTION) {
               Instruction inst = stmt.instruction();

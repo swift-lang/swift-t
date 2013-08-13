@@ -1,6 +1,6 @@
 package exm.stc.ic.opt;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -14,46 +14,63 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalMap;
+import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 
 /**
  * Track which variables alias what.  AliasKey is a canonical key that
- * can be used to deal with aliases e.g. of struct fields
+ * can be used to deal with aliases e.g. of struct fields.
+ * 
+ * This data structure lets us answer some basic questions:
+ * - Does a variable exist in scope that corresponds to x.field1.field2?
+ * - Is variable x a component of any struct?  
  */
 public class AliasTracker {
   private final Logger logger = Logging.getSTCLogger();
   
-  /**
-   * Map from variables at bottom of struct to root.
-   * 
-   * Note that it is possible that a variable can be a part of
-   * more than one struct.  In this case we use the first definition
-   * encountered in code and don't track subsequent ones.
-   */
-  private final HierarchicalMap<Var, Pair<Var, String>> elemOfStruct;
+  private final AliasTracker parent;
   
   /**
-   * Map from root of struct to element vars
+   * Map from variable to alias key.
+   * 
+   * Note that it is possible that a variable can be a part of more than
+   * one struct.  In this case we use the first definition encountered in
+   * code and don't track subsequent ones.
    */
-  private HierarchicalMap<Pair<Var, String>, Var> structElem;
-
+  private final HierarchicalMap<Var, AliasKey> varToPath;
+  
+  /**
+   * Map from alias key to element vars.  We only track the first variable
+   * encountered for each alias.
+   */
+  private final HierarchicalMap<AliasKey, Var> pathToVar;
+  
+  
+  /**
+   * All keys that the var is the root of
+   */
+  private final MultiMap<Var, Pair<Var, AliasKey>> roots;
 
   public AliasTracker() {
-    this(new HierarchicalMap<Var, Pair<Var,String>>(),
-        new HierarchicalMap<Pair<Var,String>, Var>());
+    this(null, new HierarchicalMap<Var, AliasKey>(),
+        new HierarchicalMap<AliasKey, Var>());
   }
   
-  private AliasTracker(HierarchicalMap<Var, Pair<Var, String>> elemOfStruct,
-      HierarchicalMap<Pair<Var, String>, Var> structElem) {
-    this.elemOfStruct = elemOfStruct;
-    this.structElem = structElem;
+  private AliasTracker(AliasTracker parent,
+                       HierarchicalMap<Var, AliasKey> varToPath,
+                       HierarchicalMap<AliasKey, Var> pathToVar) {
+    this.parent = parent;
+    this.varToPath = varToPath;
+    this.pathToVar = pathToVar;
+    // We need to look at parent to find additional roots
+    this.roots = new MultiMap<Var, Pair<Var, AliasKey>>();
   }
   
   public AliasTracker makeChild() {
-    return new AliasTracker(elemOfStruct.makeChildMap(), 
-                            structElem.makeChildMap());
+    return new AliasTracker(this, varToPath.makeChildMap(), 
+                            pathToVar.makeChildMap());
   }
 
 
@@ -79,32 +96,78 @@ public class AliasTracker {
   }
 
   public void addStructElem(Var parent, String field, Var child) {
-    Pair<Var, String> parentField = Pair.create(parent, field);
-    Var prevChild = structElem.get(parentField); 
+    
+    // find canonical paths for parent and child
+    AliasKey parentPath = getCanonical(parent);
+    assert(parentPath != null);
+    AliasKey childPath = parentPath.makeChild(field);
+    
+    addVarPath(child, childPath, null);
+  }
+
+  /**
+   * Add a var and corresponding path, update data structures to be consistent
+   * @param var
+   * @param path path, which should have at least one element
+   * @param replaceNull if a root was updated, and we should override the
+   *              previous entry in varToPath in event of a conflict
+   */
+  public void addVarPath(Var var, AliasKey path, AliasKey replacePath) {
+    assert(!path.var.equals(var));
+    assert(path.pathLength() >= 1);
+    
+    roots.put(path.var, Pair.create(var, path));
+    
+    Var prevChild = pathToVar.get(path); 
     if (prevChild == null || (prevChild.storage() == VarStorage.ALIAS &&
-                                 child.storage() != VarStorage.ALIAS)) {
+                                 var.storage() != VarStorage.ALIAS)) {
       // Prefer non-alias vars
-      structElem.put(parentField,  child);
+      pathToVar.put(path, var);
     }
     
-    Pair<Var, String> prevParentField = elemOfStruct.get(child);
-    if (prevParentField == null) {
-      elemOfStruct.put(child, parentField);
+    AliasKey prevPath = varToPath.get(var);
+    // First entry takes priority, unless we're explicitly replacing an old path
+    if (prevPath == null || (replacePath != null && prevPath.equals(replacePath))) {
+      varToPath.put(var, path);
     } else {
       // It is ok if a var is a part of multiple structs
-      logger.trace(prevParentField + " and " + parentField + 
-                   " are aliases for " + child);
+      logger.trace(prevPath + " and " + path + 
+                   " both lead to " + var);
+    }
+    
+    updateRoot(var, path);
+  }
+
+  /**
+   * Check to see if var is the root of any keys, and if so
+   * update them to reflect that they're part of a larger structure 
+   * @param childPath
+   * @param child
+   */
+  private void updateRoot(Var var, AliasKey newPath) {
+    assert(newPath.pathLength() >= 1);
+    
+    // Traverse parents
+    AliasTracker curr = this;
+    while (curr != null) {
+      for (Pair<Var, AliasKey> varKey: curr.roots.get(var)) {
+        Var desc = varKey.val1;
+        AliasKey descKey = varKey.val2;
+        assert(descKey.var.equals(var));
+        AliasKey newKey = newPath.splice(descKey);
+        // This should only be effective at this level and below in hierarchy
+        addVarPath(desc, newKey, descKey);
+      }
+      curr = curr.parent;
     }
   }
-  
 
-  public Pair<Var, String> getStructParent(Var curr) {
-    return elemOfStruct.get(curr);
-  }
-
-
-  public Var findVar(Var var, String fieldName) {
-    return structElem.get(Pair.create(var, fieldName));
+  public Var findVar(Var var, String field) {
+    // Construct a canonical key for the child
+    AliasKey varKey = getCanonical(var);
+    assert(varKey != null);
+    AliasKey childKey = varKey.makeChild(field);
+    return pathToVar.get(childKey);
   }
 
   /**
@@ -113,61 +176,35 @@ public class AliasTracker {
    * @return null if no variable yet, the variable if present
    */
   public Var findVar(AliasKey key) {
+    assert(key != null);
     if (key.pathLength() == 0) {
       return key.var;
+    } else {
+      return pathToVar.get(key);
     }
-    
-    Var curr = key.var;
-    for (String field: key.structPath) {
-      curr = structElem.get(Pair.create(curr, field));
-      if (curr == null) {
-        // Doesn't exist
-        break;
-      }
-    }
-    return curr;
   }
+
 
   /**
-   * Find the root corresponding to the variable
+   * Find the canonical root and path corresponding to the variable
    * @param var
-   * @return the root variable, and path from var to root
+   * @return the key containing root variable, and path from root.
+   *        Should not be null
    */
-  public Pair<Var, List<String>> findRoot(Var var) {
-    Var curr = var;
-    List<String> path = new ArrayList<String>();
-    while (elemOfStruct.containsKey(curr)) {
-      Pair<Var, String> par = elemOfStruct.get(curr);
-      path.add(par.val2);
-      curr = par.val1;
-    }
-    
-    return Pair.create(curr, path);
-  }
-
-
   public AliasKey getCanonical(Var var) {
-    Pair<Var, List<String>> r = findRoot(var);
-    Var root = r.val1;
-    List<String> path = r.val2;
-    if (path.isEmpty()) {
-      assert(var == root);
-      return new AliasKey(var);
+    AliasKey key = varToPath.get(var);
+    if (key != null) {
+      return key;
     } else {
-      // Reverse the path
-      String arr[] = new String[path.size()];
-      for (int i = 0; i < path.size(); i++) {
-        arr[i] = path.get(path.size() - 1 - i);
-      }
-      // Get root struct var and path to refcounted var
-      return new AliasKey(root, arr);
+      // Not a part of any structure
+      return new AliasKey(var);
     }
   }
   
   @Override
   public String toString() {
-    return "ElemOfStruct: " + elemOfStruct +
-            "\n    StructElem: " + structElem;
+    return "varToPath: " + varToPath +
+            "\n    pathToVar: " + pathToVar;
   }
   
   /**
@@ -181,6 +218,19 @@ public class AliasTracker {
       this(var, null);
     }
     
+    public AliasKey splice(AliasKey subKey) {
+      int splicedLen = structPath.length + subKey.structPath.length;
+      String spliced[] = new String[splicedLen];
+      
+      for (int i = 0; i < structPath.length; i++) {
+        spliced[i] = this.structPath[i];
+      }
+      for (int i = 0; i < subKey.structPath.length; i++) {
+        spliced[i + structPath.length] = subKey.structPath[i];
+      }
+      return new AliasKey(this.var, spliced);
+    }
+
     public AliasKey(Var var, String structPath[]) {
       assert(var != null);
       this.var = var;
@@ -264,6 +314,20 @@ public class AliasTracker {
         sb.append(structPath[i]);
       }
       return sb.toString();
+    }
+
+    /**
+     * Get the prefix of the current path
+     * @param elems
+     * @return
+     */
+    public AliasKey prefix(int elems) {
+      assert(elems >= 0);
+      if (elems > pathLength()) {
+        throw new IllegalArgumentException("Too many elems: " + elems +
+                                           " vs " + pathLength()); 
+      }
+      return new AliasKey(var, Arrays.copyOfRange(structPath, 0, elems));
     }
   }
   
