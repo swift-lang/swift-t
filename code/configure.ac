@@ -278,6 +278,8 @@ AC_CHECK_FILE(${MPI_LIB},
                                location or shared library may not
                                have been built.]))
 
+AC_MSG_RESULT([Using MPI launcher: ${USE_LAUNCHER}])
+
 # Write out MPI settings
 AC_SUBST(USE_MACHINE)
 AC_SUBST(USE_LAUNCHER)
