@@ -19,7 +19,7 @@
 
 # For usage: turbine -h
 
-# Set TURBINE_LAUNCH_OPTS to pass additional arguments to mpiexec
+# Set TURBINE_LAUNCH_OPTIONS to pass additional arguments to mpiexec
 
 # Defaults:
 # Number of processes
@@ -113,7 +113,7 @@ fi
 
 if [[ ${MACHINE_FILE} != 0 ]]
 then
-  TURBINE_LAUNCH_OPTS="${TURBINE_LAUNCH_OPTS} -f ${MACHINE_FILE}"
+  TURBINE_LAUNCH_OPTIONS+=" -f ${MACHINE_FILE}"
 fi
 
 shift $(( OPTIND-1 ))
