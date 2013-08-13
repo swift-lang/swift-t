@@ -78,7 +78,7 @@ ifeq ($(USE_XLC),0)
         PIC = -fPIC
         STD = -std=gnu99
         SHARED = -shared
-	WARNS=-Wall -Wconversion
+	WARNS=-Wall
 else
 #       Using XLC
         PIC = -qpic
@@ -126,7 +126,6 @@ ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
   -include $(DEPS) $(TEST_DEPS)
 endif
 
-# default rule for generating dependency files (deps)
 %.d: %.c
 	$(Q) "  DEP		$(@)"
 	$(E) CC=$(CC) maint/depend.sh \
@@ -201,6 +200,14 @@ $(INSTALL_TOKEN): $(ADLB) $(INSTALLED_HEADERS)
 
 # This gives a false autoscan warning for token 'install'
 .PHONY: install
+
+### TAGS
+
+tags: TAGS
+
+TAGS: deps.txt
+	$(Q) "  TAGS "
+	$(E) etags `cat deps.txt`
 
 ### CLEAN
 
