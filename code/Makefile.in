@@ -357,10 +357,7 @@ else
 	CP_PARENTS = maint/cp-parents.sh
 endif
 
-TCL_SO       = lib$(TCL_LIB_NAME).$(SO_SUFFIX)
-EXMCUTILS_SO = libexmcutils.$(SO_SUFFIX)
-ADLB_SO      = libadlb.$(SO_SUFFIX)
-
+# These files will be copied to the installation directory
 PROVENANCE = version.txt source.txt config.log
 
 # Maintaining the install.txt file is a simple way to
