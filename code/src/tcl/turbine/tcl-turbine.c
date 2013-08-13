@@ -36,6 +36,9 @@
 #endif
 #include <string.h>
 
+#include <stdint.h>
+#include <inttypes.h>
+
 #include <tcl.h>
 
 #include <adlb.h>
@@ -134,7 +137,7 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
     log_enabled(false);
   else
     log_normalize();
-  
+
   return TCL_OK;
 }
 
@@ -333,7 +336,7 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
 
 /**
   Fill in struct from list
-  
+
   Note that strings may be filled in with pointers to
   other Tcl data structures.  If these pointers are going to
   escape from the caller into arbitrary Tcl code, the caller
@@ -354,10 +357,10 @@ rule_opts_from_list(Tcl_Interp* interp, Tcl_Obj *const objv[],
                 "found odd number: %i", count);
 
   rule_set_opts_default(opts, NULL, NULL, 0);
-  
+
   for (int keypos = 0; keypos < count; keypos+=2)
   {
-    int valpos = keypos + 1; 
+    int valpos = keypos + 1;
     int rc = rule_opt_from_kv(interp, objv, opts,
                               objs[keypos], objs[valpos]);
     TCL_CHECK(rc);
@@ -444,7 +447,7 @@ static int
 Turbine_Pop_Or_Break_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(7); 
+  TCL_ARGS(7);
 
   turbine_transform_id transform_id;
   turbine_action_type type;
@@ -458,7 +461,7 @@ Turbine_Pop_Or_Break_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(code == TURBINE_SUCCESS, "could not pop transform id");
   if (type == TURBINE_ACTION_NULL)
   {
-    DEBUG_TURBINE("No ready transforms, sending TCL_BREAK signal"); 
+    DEBUG_TURBINE("No ready transforms, sending TCL_BREAK signal");
     return TCL_BREAK;
   }
 
@@ -584,20 +587,20 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
   turbine_datum_id td;
   void* data = NULL;
   int length = 0;
-  
+
   int argpos = 1;
 
   int error;
   error = Tcl_GetADLB_ID(interp, objv[argpos++], &td);
   TCL_CHECK(error);
-  
+
   adlb_data_type type;
   bool has_extra;
   adlb_type_extra extra;
   error = type_from_obj_extra(interp, objv, objv[argpos++], &type,
                               &has_extra, &extra);
   TCL_CHECK(error);
-  
+
   TCL_CONDITION(argpos < objc, "not enough arguments");
   error = tcl_obj_to_binary(interp, objv, td, type, has_extra ? &extra : NULL,
                          objv[argpos++], &data, &length);
@@ -627,7 +630,7 @@ tcl_obj_to_binary(Tcl_Interp* interp, Tcl_Obj *const objv[],
 
   // Ensure we have ownership of a malloced buffer with the data
   adlb_data_code dc  = ADLB_Own_data(NULL, &data);
-  
+
   TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "allocating binary buffer for <%"PRId64"> "
                 "failed: %s", td, Tcl_GetString(obj));
 
@@ -645,7 +648,7 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
                         int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
-  
+
   int work_type;
   int rc = TCL_OK;
   rc = Tcl_GetIntFromObj(interp, objv[1], &work_type);
@@ -673,7 +676,7 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
 
     assert(rule_id_end != NULL);
     char *work = rule_id_end + 1; // start of Tcl work unit
-    
+
     DEBUG_TURBINE("rule_id: %"PRId64"", atol(buffer));
     DEBUG_TURBINE("eval: %s", work);
 
@@ -765,7 +768,7 @@ Turbine_Create_Nested_Cmd(ClientData cdata, Tcl_Interp *interp,
   log_printf("creating nested container <%"PRId64">[%s] (%s->%s)",
                           id, subscript, ADLB_Data_type_tostring(key_type),
                           ADLB_Data_type_tostring(val_type));
-  
+
   int xfer_size;
   char *xfer = tcl_adlb_xfer_buffer(&xfer_size);
 
@@ -775,7 +778,7 @@ Turbine_Create_Nested_Cmd(ClientData cdata, Tcl_Interp *interp,
  adlb_code code = ADLB_Insert_atomic(id, subscript, &created,
                               xfer, &value_len, &outer_value_type);
   TCL_CONDITION(code == ADLB_SUCCESS, "error in Insert_atomic!");
-  
+
   if (created)
   {
     // Need to create container and insert
@@ -788,11 +791,11 @@ Turbine_Create_Nested_Cmd(ClientData cdata, Tcl_Interp *interp,
     code = ADLB_Create_container(ADLB_DATA_ID_NULL, key_type, val_type,
                                props, &new_id);
     TCL_CONDITION(code == ADLB_SUCCESS, "Error while creating container");
-    
+
     code = ADLB_Store(id, subscript, ADLB_DATA_TYPE_REF, &new_id,
                     (int)sizeof(new_id), decr);
     TCL_CONDITION(code == ADLB_SUCCESS, "Error while inserting container");
-    
+
     // Set up rule to close container
     rc = create_autoclose_rule(interp, objv, id, new_id);
     TCL_CHECK(rc);
@@ -861,7 +864,7 @@ create_autoclose_rule(Tcl_Interp *interp, Tcl_Obj *const objv[],
   char name[name_len];
   tmp_len = sprintf(name, "autoclose-%"PRId64"", to_close);
   assert(tmp_len > 0 && tmp_len < name_len);
-  
+
   const int action_len = 30 + i64_len; // enough for function name+id
   char action[action_len];
   tmp_len = sprintf(action, "adlb::write_refcount_decr %"PRId64"", to_close);
@@ -883,7 +886,7 @@ create_autoclose_rule(Tcl_Interp *interp, Tcl_Obj *const objv[],
     tmp_len = sprintf(rule_cmd, "rule %"PRId64" \"%s\" name \"%s\"",
                       wait_on, action, name);
     assert(tmp_len > 0 && tmp_len < rule_cmd_len);
-    
+
     adlb_code code = ADLB_Put(rule_cmd, tmp_len + 1, ADLB_RANK_ANY, adlb_comm_rank,
                         TURBINE_ADLB_WORK_TYPE_CONTROL, ADLB_curr_priority, 1);
     TCL_CONDITION(code == ADLB_SUCCESS, "Error in ADLB put");
@@ -978,7 +981,7 @@ Turbine_StrInt_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(2);
   int len;
   const char *str = Tcl_GetStringFromObj(objv[1], &len);
-  
+
   errno = 0; // Reset so we can detect errors
   char *end_str;
 
