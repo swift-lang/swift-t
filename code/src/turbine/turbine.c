@@ -30,6 +30,9 @@
 #include <stdarg.h>
 #include <string.h>
 
+#include <stdint.h>
+#include <inttypes.h>
+
 #include <adlb.h>
 
 #include <c-utils.h>
@@ -70,7 +73,7 @@ typedef struct
   int input_tds;
   /** Array of input TDs */
   turbine_datum_id* input_td_list;
-  
+
   /** Number of input TD/subscript pairs */
   int input_td_subs;
   /** Array of input TD/subscript pairs */
@@ -306,7 +309,7 @@ turbine_engine_init()
   result = table_lp_init(&td_subscribed, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
-  
+
   result = table_init(&td_sub_subscribed, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
@@ -382,11 +385,11 @@ transform_create(const char* name,
 
     memcpy(T->input_td_list, input_td_list, sz);
   }
-  else 
+  else
   {
     T->input_td_list = NULL;
   }
-  
+
   if (input_td_subs > 0)
   {
     size_t sz = (size_t)input_td_subs* sizeof(td_sub_pair);
@@ -397,7 +400,7 @@ transform_create(const char* name,
 
     memcpy(T->input_td_sub_list, input_td_sub_list, sz);
   }
-  else 
+  else
   {
     T->input_td_sub_list = NULL;
   }
@@ -410,7 +413,7 @@ transform_create(const char* name,
 
     if (! T->closed_inputs)
       return TURBINE_ERROR_OOM;
-    
+
     memset(T->closed_inputs, 0, sz);
   }
   else
@@ -436,7 +439,7 @@ transform_free(transform* T)
   if (T->input_td_sub_list)
   {
     for (int i = 0; i < T->input_td_subs; i++)
-    { 
+    {
       // free subscript strings
       free(T->input_td_sub_list[i].subscript);
     }
@@ -741,7 +744,7 @@ turbine_close(turbine_datum_id id)
     }
   }
 
-  
+
   list_l_free(L); // No longer need list
 
   add_to_ready(&tmp);
@@ -765,7 +768,7 @@ static inline turbine_code
 progress(transform* T, bool* subscribed)
 {
   *subscribed = false;
-  
+
   // first check TDs to see if all are ready
   for (; T->blocker < T->input_tds; T->blocker++)
   {
@@ -1030,12 +1033,12 @@ static void turbine_engine_finalize(void)
   table_lp_free_callback(&transforms_waiting, false, tbl_free_transform_cb);
   list_clear_callback(&transforms_ready, list_free_transform_cb);
   table_lp_free_callback(&td_blockers, false, tbl_free_blockers_cb);
- 
+
   // Entries in td_subscribed and td_sub_subscribed are not pointers and don't
   // need to be freed
   table_lp_free_callback(&td_subscribed, false, NULL);
   table_free_callback(&td_sub_subscribed, false, NULL);
-   
+
 }
 
 static void tbl_free_transform_cb(turbine_transform_id key, void *T)
