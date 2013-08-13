@@ -164,6 +164,7 @@ system scheduler.
 
 == x86 clusters
 
+[[generic_clusters]]
 === Generic clusters
 
 This is the simplest method to run Turbine.
@@ -189,6 +190,13 @@ echo crush.mcs.anl.gov >  hosts.txt
 echo crank.mcs.anl.gov >> hosts.txt
 turbine -l -n 3 -f hosts.txt program.tcl
 ----
+
+==== Public installation
+
+MCS users are welcome to use this installation.
+
+* STC: +~wozniak/Public/stc/bin/stc+
+* Turbine: +~wozniak/Public/turbine/bin/turbine+
 
 === Breadboard
 
