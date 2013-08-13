@@ -13,7 +13,6 @@ main {
 
 
     X othermem;
-    // Parser doesn't support this yet.
     othermem = A[f()];
 }
 
