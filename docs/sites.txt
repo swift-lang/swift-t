@@ -193,6 +193,8 @@ turbine -l -n 3 -f hosts.txt program.tcl
 
 ==== Public installation
 
+*As of:* trunk, 8/13/2013
+
 MCS users are welcome to use this installation.
 
 * STC: +~wozniak/Public/stc/bin/stc+
