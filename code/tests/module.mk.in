@@ -55,6 +55,8 @@ TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/argv.tcl                \
                 $(DIR)/unpack.tcl              \
                 $(DIR)/send_rule.tcl           \
+                $(DIR)/deep_rule.tcl           \
+                $(DIR)/deep_rule-2.tcl         \
 
 ifeq ($(USE_MPE),1)
 	TEST_SRC_TCL += $(DIR)/mpe-3.tcl
