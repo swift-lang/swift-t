@@ -118,6 +118,7 @@ public class TurbineGenerator implements CompilerBackend {
   private static final String TCLTMP_ITERSLEFT = "tcltmp:itersleft";
   private static final String TCLTMP_ITERSTOTAL = "tcltmp:iterstotal";
   private static final String TCLTMP_ITERS = "tcltmp:iters";
+  private static final String TCLTMP_UNPACKED = "tcltmp:unpacked";
   
   private static final String MAIN_FUNCTION_NAME = "swift:main";
   private static final String CONSTINIT_FUNCTION_NAME = "swift:constants";
@@ -1070,13 +1071,18 @@ public class TurbineGenerator implements CompilerBackend {
     List<Expression> logMsg = new ArrayList<Expression>();
     logMsg.add(new Token("exec: " + cmd));
     
-    for (Arg arg: args) {
+    for (int argNum = 0; argNum < args.size(); argNum++) {
+      Arg arg = args.get(argNum);
       Expression argExpr;
       if (Types.isArray(arg.type())) {
         // Special case: expand arrays to list
+        // Use temporary variable to avoid double evaluation
         ArrayInfo ai = new ArrayInfo(arg.type());
-        argExpr = new Expand(Turbine.unpackArray(argToExpr(arg),
-                        ai.nesting, Types.isFile(ai.baseType)));
+        String unpackTmp = TCLTMP_UNPACKED + argNum;
+        pointStack.peek().add(new SetVariable(unpackTmp, Turbine.unpackArray(
+                                argToExpr(arg), ai.nesting,
+                                Types.isFile(ai.baseType))));  
+        argExpr = new Expand(new Value(unpackTmp));
       } else {
         argExpr = argToExpr(arg);
       }
