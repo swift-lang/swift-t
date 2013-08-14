@@ -4,17 +4,17 @@ type bob {
 }
 
 
-() f (bob input) {
+() f (bob inp) {
     //  check that struct member caching with branches works 
     // right
     if (1) {
-        trace(input.a);
+        trace(inp.a);
     } else {
-        trace(input.a);
-        trace(input.b);
+        trace(inp.a);
+        trace(inp.b);
     }
-    trace(input.a);
-    trace(input.b);
+    trace(inp.a);
+    trace(inp.b);
 }
 
 main {

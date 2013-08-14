@@ -1,7 +1,7 @@
 
 /* Split file into head and tail */
-app (file out1, file out2) split (file input, int lines) {
-    "./632-split.sh" @input lines @out1 @out2;
+app (file out1, file out2) split (file inp, int lines) {
+    "./632-split.sh" @inp lines @out1 @out2;
 }
 
 main {
