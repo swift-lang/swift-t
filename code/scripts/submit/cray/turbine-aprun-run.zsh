@@ -1,4 +1,4 @@
-#!/bin/zsh -f
+#!/bin/zsh -ef
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
@@ -17,73 +17,66 @@
 # TURBINE-APRUN-RUN
 # Creates a APRUN run file and runs it on the given program
 
-# USAGE
-# > VAR1=VALUE1 VAR2=VALUE2 turbine-aprun-run.zsh <PROGRAM> <ARGS>*
+# usage:
+#  turbine-aprun-run.zsh -n <PROCS> [-e <ENV>]* [-o <OUTPUT>] -t <WALLTIME>
+#                           <SCRIPT> [<ARG>]*
 
-# ENVIRONMENT
-# NODES: Number of nodes to use
-# PPN:   Processes-per-node
+# Environment variables that may be set:
+# QUEUE: The queue name to use
+
+# Environment variables that may be set:
+# PROJECT: The project name to use (default none)
+# TURBINE_OUTPUT_ROOT: Where to put Turbine output-
+#          a subdirectory based on the current time
+#          will be created, reported, and used
+#          (default ~/turbine-output)
+# PPN: Processes-per-node: see below
+
+# Runs job in TURBINE_OUTPUT
+# Pipes output and error to TURBINE_OUTPUT/output.txt
+# Creates TURBINE_OUTPUT/log.txt and TURBINE_OUTPUT/jobid.txt
+
+# Convention note: This script uses -n <processes>
+# (We follow the mpiexec convention.)
 
 # NOTE: See the sourced helpers.zsh script for definitions of some
 #       shell functions used here.
 
-export PROGRAM=$1
-
-if [[ ${PROGRAM} == "" ]]
-then
-  print "No PROGRAM!"
-  print "See the header of this script or the Swift/T Guide!"
-  return 1
-fi
-
-shift
-export ARGS="${*}"
-
-print $0
-
-export TURBINE_HOME=$( cd $(dirname $0)/../../.. && /bin/pwd )
+export TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 if [[ ${?} != 0 ]]
 then
   print "Could not find Turbine installation!"
   return 1
 fi
-declare TURBINE_HOME
+# declare TURBINE_HOME
 
-source ${TURBINE_HOME}/scripts/helpers.zsh
-if [[ ${?} != 0 ]]
-then
-  print "Broken Turbine installation!"
-  declare TURBINE_HOME
-  return 1
-fi
+source ${TURBINE_HOME}/scripts/submit/run-init.zsh
+
+[[ -f ${SCRIPT} ]] || abort "Could not find script: ${SCRIPT}"
 
 # Set SCRIPT_NAME, make PROGRAM an absolute path
-export SCRIPT_NAME=$( basename ${PROGRAM} )
-pushd $( dirname ${PROGRAM} ) >& /dev/null
-exitcode "Could not find: ${PROGRAM}"
-PROGRAM_DIR=$( /bin/pwd )
+export SCRIPT_NAME=$( basename ${SCRIPT} )
+pushd $( dirname ${SCRIPT} ) >& /dev/null
+SCRIPT_DIR=$( /bin/pwd )
 popd >& /dev/null
-PROGRAM=${PROGRAM_DIR}/${SCRIPT_NAME}
+SCRIPT=${SCRIPT_DIR}/${SCRIPT_NAME}
 
-export WALLTIME=${WALLTIME:-00:15:00}
-export PPN=${PPN:-1}
+checkvars SCRIPT PPN TURBINE_OUTPUT WALLTIME
+declare   SCRIPT PPN TURBINE_OUTPUT WALLTIME
 
-checkvars PROGRAM NODES PPN TURBINE_OUTPUT WALLTIME
-declare   PROGRAM NODES PPN TURBINE_OUTPUT WALLTIME
-
-export PROCS=$(( NODES*PPN ))
+# Round NODES up for extra processes
+export NODES=$(( PROCS/PPN ))
+(( PROCS % PPN )) && (( NODES++ )) || true
+declare NODES
 
 # Filter the template to create the PBS submit script
 TURBINE_APRUN_M4=${TURBINE_HOME}/scripts/submit/cray/turbine-aprun.sh.m4
 TURBINE_APRUN=${TURBINE_OUTPUT}/turbine-aprun.sh
 
 mkdir -pv ${TURBINE_OUTPUT}
-exitcode "Could not create TURBINE_OUTPUT directory!"
 touch ${TURBINE_APRUN}
-exitcode "Could not write to: ${TURBINE_APRUN}"
 
 m4 ${TURBINE_APRUN_M4} > ${TURBINE_APRUN}
-exitcode "Errors in M4 processing!"
 
 print "wrote: ${TURBINE_APRUN}"
 

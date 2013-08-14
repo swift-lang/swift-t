@@ -15,9 +15,12 @@
 
 # RUN-INIT
 
-# Common submission setup file used by Cobalt and PBS
+# Common submission setup file used by Cobalt and PBS (and APRUN)
 # Used to process command line arguments, initialize basic settings
 # before launching qsub
+
+# We assume the shell calling this is running with option -e
+#    to catch errors
 
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 source ${TURBINE_HOME}/scripts/helpers.zsh
@@ -25,9 +28,10 @@ source ${TURBINE_HOME}/scripts/helpers.zsh
 # Defaults:
 export PROCS=0
 SETTINGS=0
-WALLTIME=${WALLTIME:-00:15:00}
+export WALLTIME=${WALLTIME:-00:15:00}
 TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
-VERBOSE=0
+export VERBOSE=0
+export PPN=${PPN:-1}
 
 # Place to store output directory name
 OUTPUT_TOKEN_FILE=turbine-cobalt-directory.txt
@@ -70,7 +74,8 @@ then
   set -x
 fi
 
-SCRIPT=$1
+export SCRIPT=$1
+checkvar SCRIPT
 shift
 ARGS=${*}
 
@@ -78,10 +83,7 @@ if [[ ${SETTINGS} != 0 ]]
 then
   declare SETTINGS
   source ${SETTINGS}
-  exitcode "error in settings: ${SETTINGS}"
 fi
-
-checkvars QUEUE SCRIPT
 
 START=$( date +%s )
 
@@ -90,11 +92,10 @@ START=$( date +%s )
 RUN=$( date_path )
 
 # Create the directory in which to run
-TURBINE_OUTPUT=${TURBINE_OUTPUT_ROOT}/${RUN}
+export TURBINE_OUTPUT=${TURBINE_OUTPUT_ROOT}/${RUN}
 declare TURBINE_OUTPUT
 print ${TURBINE_OUTPUT} > ${OUTPUT_TOKEN_FILE}
 mkdir -p ${TURBINE_OUTPUT}
-exitcode "mkdir failed: ${TURBINE_OUTPUT}"
 
 # All output from job, including error stream
 export OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt

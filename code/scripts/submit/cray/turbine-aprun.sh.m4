@@ -1,4 +1,4 @@
-changecom(`dnl')#!/bin/bash
+changecom(`dnl')#!/bin/bash -e
 # We use changecom to change the M4 comment to dnl, not hash
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
@@ -26,7 +26,7 @@ define(`getenv', `esyscmd(printf -- "$`$1' ")')
 #PBS -l walltime=getenv(WALLTIME)
 #PBS -l mppwidth=getenv(PROCS)
 #PBS -l mppnppn=getenv(PPN)
-#PBS -o getenv(TURBINE_OUTPUT)
+#PBS -o getenv(OUTPUT_FILE)
 # Pass all environment variables to the job
 #PBS -V
 
@@ -35,17 +35,22 @@ define(`getenv', `esyscmd(printf -- "$`$1' ")')
 # Disable mail
 #PBS -m n
 
-# Receive some parameters
-PROGRAM=getenv(`PROGRAM')
-ARGS="getenv(`ARGS')"
-NODES=getenv(`NODES')
-WALLTIME=getenv(`WALLTIME')
+VERBOSE=getenv(VERBOSE)
+(( VERBOSE )) && set -x
+export TURBINE_HOME=getenv(TURBINE_HOME)
+source ${TURBINE_HOME}/scripts/turbine-config.sh
+
+SCRIPT=getenv(SCRIPT)
+ARGS="getenv(ARGS)"
+NODES=getenv(NODES)
+WALLTIME=getenv(WALLTIME)
 TURBINE_OUTPUT=getenv(TURBINE_OUTPUT)
-export TURBINE_HOME=getenv(`TURBINE_HOME')
-export TURBINE_USER_LIB=getenv(`TURBINE_USER_LIB')
-export TURBINE_LOG=getenv(`TURBINE_LOG')
-export TURBINE_DEBUG=getenv(`TURBINE_DEBUG')
-export ADLB_DEBUG=getenv(`ADLB_DEBUG')
+TCLSH=getenv(TCLSH)
+
+export TURBINE_USER_LIB=getenv(TURBINE_USER_LIB)
+export TURBINE_LOG=getenv(TURBINE_LOG)
+export TURBINE_DEBUG=getenv(TURBINE_DEBUG)
+export ADLB_DEBUG=getenv(ADLB_DEBUG)
 export PATH=getenv(PATH)
 
 # Set configuration of Turbine processes
@@ -64,7 +69,7 @@ echo
 
 # Log the parameters
 echo "TURBINE_HOME: ${TURBINE_HOME}"
-echo "PROGRAM:      ${PROGRAM} ${ARGS}"
+echo "SCRIPT:      ${SCRIPT} ${ARGS}"
 echo "NODES:        ${NODES}"
 echo "WALLTIME:     ${WALLTIME}"
 echo
@@ -73,15 +78,7 @@ echo "ADLB_SERVERS:    ${ADLB_SERVERS}"
 echo
 
 # Be sure we are in an accessible directory
-mkdir -p ${TURBINE_OUTPUT}
 cd ${TURBINE_OUTPUT}
-
-source ${TURBINE_HOME}/scripts/turbine-config.sh
-if [[ ${?} != 0 ]]
-then
-  echo "turbine: configuration error!"
-  exit 1
-fi
 
 echo "TCLSH:        ${TCLSH}"
 echo
@@ -93,10 +90,10 @@ OUTPUT_FILE=getenv(OUTPUT_FILE)
 if [ -z "$OUTPUT_FILE" ]
 then
     # USER: Set aprun parameters to agree with PBS -l settings
-    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 valgrind ${TCLSH} ${PROGRAM} ${ARGS}
+    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 valgrind ${TCLSH} ${SCRIPT} ${ARGS}
 else
     # USER: Set aprun parameters to agree with PBS -l settings
     # Stream output to file
-    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${TCLSH} ${PROGRAM} ${ARGS} \
+    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${TCLSH} ${SCRIPT} ${ARGS} \
             2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.out"
 fi
