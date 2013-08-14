@@ -28,6 +28,7 @@
 #include <mpi.h>
 
 #include <c-utils.h>
+#include <list_i.h>
 #include <table.h>
 #include <tools.h>
 
@@ -212,7 +213,8 @@ ADLB_Version(version* output)
 }
 
 adlb_code
-ADLB_Hostmap(const char* name, int count, int* output, int* actual)
+ADLB_Hostmap_lookup(const char* name, int count,
+                    int* output, int* actual)
 {
   struct list_i* L;
   bool b = table_search(&hostmap, name, (void*) &L);
@@ -230,12 +232,40 @@ ADLB_Hostmap(const char* name, int count, int* output, int* actual)
 }
 
 adlb_code
+ADLB_Hostmap_list(int n, char* output, int* actual)
+{
+  // Number of chars written
+  int count = 0;
+  // Number of hostnames written
+  int h = 0;
+  char* p = output;
+  for (int i = 0; i < hostmap.capacity; i++)
+  {
+    for (struct list_sp_item* item = hostmap.array[i]->head; item;
+         item = item->next)
+    {
+      int t = strlen(item->key);
+      if (count+t >= n)
+        goto done;
+      append(p, item->key);
+      *p = '\r';
+      p++;
+      count += t;
+      h++;
+    }
+  }
+  done:
+  *actual = h;
+  return ADLB_SUCCESS;
+}
+
+adlb_code
 ADLBP_Put(const void* payload, int length, int target, int answer,
           int type, int priority, int parallelism)
 {
   MPI_Status status;
   MPI_Request request;
-  /** In a redirect, we send the payload to a worker */
+  /* In a redirect, we send the payload to a worker */
   int payload_dest;
 
   DEBUG("ADLB_Put: target=%i x%i %s",

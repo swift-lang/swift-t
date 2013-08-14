@@ -51,8 +51,10 @@ adlb_code ADLB_Server(long max_memory);
 
 adlb_code ADLB_Version(version* output);
 
-adlb_code ADLB_Hostmap(const char* name, int count,
-                       int* output, int* actual);
+adlb_code ADLB_Hostmap_lookup(const char* name, int count,
+                              int* output, int* actual);
+
+adlb_code ADLB_Hostmap_list(int n, char* output, int* actual);
 
 adlb_code ADLBP_Put(const void* payload, int length, int target, int answer,
                     int type, int priority, int parallelism);
