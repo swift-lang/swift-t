@@ -28,6 +28,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.frontend.Context.DefKind;
 
 /**
  * Track context within a function.  New child contexts are created
@@ -95,10 +96,8 @@ public class LocalContext extends Context {
       name = Var.ALIAS_VAR_PREFIX + counter;
     } while (lookupDef(name) != null);
 
-    Var v =  new Var(type, name, VarStorage.ALIAS,
-                                          DefType.LOCAL_COMPILER);
-    variables.put(name, v);
-    return v;
+    return declareVariable(type, name, VarStorage.ALIAS,
+                           DefType.LOCAL_COMPILER, null);
   }
 
   /**
@@ -115,10 +114,8 @@ public class LocalContext extends Context {
       throws UserException {
     String name = chooseVariableName(Var.LOCAL_VALUE_VAR_PREFIX, varName,
                                     "value_var");
-    Var v =  new Var(type, name, VarStorage.LOCAL,
-                                          DefType.LOCAL_COMPILER);
-    variables.put(name, v);
-    return v;
+    return declareVariable(type, name, VarStorage.LOCAL,
+                           DefType.LOCAL_COMPILER, null);
   }
 
   /**
@@ -150,11 +147,13 @@ public class LocalContext extends Context {
   public Var createFilenameAliasVariable(String fileVarName) {
     String name = chooseVariableName(Var.FILENAME_OF_PREFIX,
         fileVarName, "filename_of");
-    Var v =  new Var(Types.F_STRING, name,
-                               VarStorage.ALIAS,
-                               DefType.LOCAL_COMPILER);
-    variables.put(name, v);
-    return v;
+    try {
+      return declareVariable(Types.F_STRING, name,
+          VarStorage.ALIAS, DefType.LOCAL_COMPILER, null);
+    } catch (DoubleDefineException e) {
+      e.printStackTrace();
+      throw new STCRuntimeError("Should be possible to have double defn");
+    }
   }
 
   @Override
@@ -220,8 +219,7 @@ public class LocalContext extends Context {
    */
   @Override
   protected Var createStructFieldTmp(Var struct,
-      Type fieldType, String fieldPath,
-      VarStorage storage) {
+      Type fieldType, String fieldPath, VarStorage storage) {
     // Should be unique in context
     String basename = Var.STRUCT_FIELD_VAR_PREFIX
         + struct.name() + "_" + fieldPath.replace('.', '_');
@@ -231,9 +229,13 @@ public class LocalContext extends Context {
       name = basename + "-" + counter;
       counter++;
     }
-    Var tmp = new Var(fieldType, name, storage, DefType.LOCAL_COMPILER);
-    variables.put(tmp.name(), tmp);
-    return tmp;
+    try {
+      return declareVariable(fieldType, name, storage, DefType.LOCAL_COMPILER,
+                           null);
+    } catch (DoubleDefineException e) {
+      e.printStackTrace();
+      throw new STCRuntimeError("Shouldn't be possible to have double defn");
+    }
   }
   
   @Override
