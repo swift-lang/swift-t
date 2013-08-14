@@ -2077,7 +2077,6 @@ public class ASTWalker {
                                      iList, oList, block);
 
     LocalContext functionContext = new LocalContext(context, function);
-    functionContext.setNested(false);
     functionContext.addDeclaredVariables(iList);
     functionContext.addDeclaredVariables(oList);
     
@@ -2155,7 +2154,6 @@ public class ASTWalker {
     }
     
     LocalContext appContext = new LocalContext(context, function);
-    appContext.setNested(false);
     appContext.addDeclaredVariables(outArgs);
     appContext.addDeclaredVariables(inArgs);
     

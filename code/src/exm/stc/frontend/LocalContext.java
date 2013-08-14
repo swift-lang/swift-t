@@ -35,50 +35,42 @@ import exm.stc.common.lang.Var.VarStorage;
  *
  */
 public class LocalContext extends Context {
-  private Context parent = null;
-  private GlobalContext globals = null;
-  
+  private final Context parent;
+  private final GlobalContext globals;
   private final FunctionContext functionContext;
 
   public LocalContext(Context parent) {
     this(parent, null);
   }
 
-  public LocalContext(Context parent, String functionName)
-  {
+  public LocalContext(Context parent, String functionName) {
+    super(parent.getLogger(), parent.getLevel() + 1);
     this.functionContext = functionName != null ?
           new FunctionContext(functionName) : null;
-
     this.parent = parent;
-    this.level = parent.level + 1;
-    this.logger = parent.getLogger();
     this.globals = parent.getGlobals();
-    nested = true;
+    inputFile = parent.inputFile;
     line = parent.line;
+    col = parent.col;
   }
   
   @Override
-  public Var lookupVarUnsafe(String name)
-  {
+  public DefInfo lookupDef(String name) {
+    DefInfo result = allDefs.get(name);
+    if (result != null) {
+      return result;
+    } else {
+      return parent.lookupDef(name);
+    }
+  }
+
+  @Override
+  public Var lookupVarUnsafe(String name) {
     Var result;
     result = variables.get(name);
     if (result != null)
       return result;
     return parent.lookupVarUnsafe(name);
-  }
-
-  @Override
-  public Var declareVariable(Type type, String name, VarStorage scope,
-      DefType defType, Var mapping)
-  throws UserException
-  {
-    logger.trace("context: declareVariable: " +
-                 type.toString() + " " + name + "<" + scope.toString() + ">"
-                 + "<" + defType.toString() + ">");
-
-    Var variable = new Var(type, name, scope, defType, mapping);
-    declareVariable(variable);
-    return variable;
   }
 
   @Override
@@ -165,17 +157,6 @@ public class LocalContext extends Context {
     return v;
   }
 
-  Var declareVariable(Var variable)
-  throws DoubleDefineException
-  {
-    String name = variable.name();
-    
-    checkNotDefined(name);
-
-    variables.put(name, variable);
-    return variable;
-  }
-
   @Override
   public void defineFunction(String name, FunctionType type)
                                     throws DoubleDefineException {
@@ -198,8 +179,7 @@ public class LocalContext extends Context {
   }
 
   @Override
-  public GlobalContext getGlobals()
-  {
+  public GlobalContext getGlobals() {
     return globals;
   }
 
@@ -215,25 +195,13 @@ public class LocalContext extends Context {
   }
 
   public void addDeclaredVariables(List<Var> variables)
-  throws DoubleDefineException
-  {
+        throws DoubleDefineException {
     for (Var v : variables)
       declareVariable(v);
   }
 
   @Override
-  public void setInputFile(String file) {
-    globals.setInputFile(file);
-  }
-
-  @Override
-  public String getInputFile() {
-    return globals.getInputFile();
-  }
-
-  @Override
-  public String toString()
-  {
+  public String toString() {
     return getVisibleVariables().toString();
   }
 
@@ -245,13 +213,6 @@ public class LocalContext extends Context {
     } else {
       return parent.lookupTypeUnsafe(typeName);
     }
-  }
-
-  @Override
-  public void defineType(String typeName, Type newType)
-    throws DoubleDefineException {
-    checkNotDefined(typeName);
-    types.put(typeName, newType);
   }
 
   /**

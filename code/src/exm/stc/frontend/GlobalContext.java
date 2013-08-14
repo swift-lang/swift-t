@@ -43,46 +43,27 @@ public class GlobalContext extends Context {
    */
   private Set<Pair<String, FnProp>> functionProps =
                         new HashSet<Pair<String, FnProp>>();
-  
-  /**
-     The name of the original SwiftScript file
-   */
-  private String inputFile = null;
 
-  public GlobalContext(String inputFile, Logger logger)
-  {
-    this(inputFile);
-    this.logger = logger;
-  }
-
-  GlobalContext(String inputFile)
-  {
+  public GlobalContext(String inputFile, Logger logger) {
+    super(logger, 0);
     this.inputFile = inputFile;
+
     // Add all predefined types into type name dict
     types.putAll(Types.getBuiltInTypes());
   }
 
-  @Override
-  public void setInputFile(String file)
-  {
-    inputFile = file;
+  GlobalContext(String inputFile) {
+    this(inputFile, null);
   }
-
+  
   @Override
-  public String getInputFile()
-  {
-    return inputFile;
-  }
-
-  @Override
-  public int getLevel()
-  {
-    return 0;
+  public DefInfo lookupDef(String name) {
+    return allDefs.get(name);
   }
 
   @Override
   public void defineFunction(String name, FunctionType type) 
-      throws DoubleDefineException {
+      throws UserException {
     checkNotDefined(name);
     declareVariable(type, name, VarStorage.GLOBAL_CONST,
                     DefType.GLOBAL_CONST, null);
@@ -111,19 +92,16 @@ public class GlobalContext extends Context {
   
   /**
      Declare a global variable
-   * @throws DoubleDefineException 
+   * @throws UserException 
    */
   @Override
   public Var declareVariable(Type type, String name,
                        VarStorage scope, DefType defType, Var mapping)
-                           throws DoubleDefineException
-  {
+                           throws DoubleDefineException {
+    // Sanity checks for global scope
     assert(defType == DefType.GLOBAL_CONST);
     assert(scope == VarStorage.GLOBAL_CONST);
-    checkNotDefined(name);
-    Var v = new Var(type, name, scope, defType, mapping);
-    variables.put(name, v);
-    return v;
+    return super.declareVariable(type, name, scope, defType, mapping);
   }
 
   @Override
@@ -148,14 +126,12 @@ public class GlobalContext extends Context {
   }
 
   @Override
-  public GlobalContext getGlobals()
-  {
+  public GlobalContext getGlobals() {
     return this;
   }
 
   @Override
-  public Var lookupVarUnsafe(String variable)
-  {
+  public Var lookupVarUnsafe(String variable) {
     return variables.get(variable);
   }
 
@@ -168,14 +144,7 @@ public class GlobalContext extends Context {
   public Type lookupTypeUnsafe(String typeName) {
     return types.get(typeName);
   }
-
-  @Override
-  public void defineType(String typeName, Type newType)
-          throws DoubleDefineException {
-    checkNotDefined(typeName);
-    types.put(typeName, newType);
-  }
-
+  
   @Override
   protected Var createStructFieldTmp(Var struct, Type fieldType,
       String fieldPath, VarStorage storage) {

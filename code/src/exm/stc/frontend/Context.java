@@ -17,22 +17,26 @@
 package exm.stc.frontend;
 
 import java.io.File;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 
 import exm.stc.ast.FilePosition;
-import exm.stc.ast.SwiftAST;
 import exm.stc.ast.FilePosition.LineMapping;
+import exm.stc.ast.SwiftAST;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
 
@@ -41,25 +45,40 @@ import exm.stc.common.lang.Var.VarStorage;
  * program at different points in the AST. 
  */
 public abstract class Context {
-  protected int level = 0;
+  
+  /**
+   * How many levels from root: 0 if this is the root
+   */
+  protected final int level;
 
-  protected Logger logger = null;
+  /**
+   * A logger for use by child classes 
+   */
+  protected final Logger logger;
 
   /**
      Map from variable name to Variable object
    */
-  protected Map<String,Var> variables = new HashMap<String,Var>();
+  protected final Map<String,Var> variables = new HashMap<String,Var>();
 
   /**
-   * Map from type name to the type object
+   * Map from type name to the type object.  Most types are defined
+   * in global context only, but we also have type variables with
+   * restricted scope.
    */
-  protected Map<String, Type> types = new HashMap<String, Type>();
+  protected final Map<String, Type> types = new HashMap<String, Type>();
   
   /**
-     True if this context scope has a visible parent scope
+   * Track all definitions (variables and types)
    */
-  protected boolean nested = false;
+  protected final Map<String, DefInfo> allDefs =
+                                         new HashMap<String, DefInfo>();
 
+  /**
+   * Current input file
+   */
+  protected String inputFile;
+  
   /**
      Current line in input file
    */
@@ -70,6 +89,12 @@ public abstract class Context {
    */
   protected int col = 0;
   
+  public Context(Logger logger, int level) {
+    super();
+    this.level = level;
+    this.logger = logger;
+  }
+
   /**
      Return global context.
      If this is a GlobalContext, return this,
@@ -80,27 +105,25 @@ public abstract class Context {
   /**
    * Lookup definition corresponding to name
    * @param name
-   * @return
+   * @return the definition info, or null if not defined
    */
-  public DefKind lookupDef(String name) {
-    if (lookupTypeUnsafe(name) != null) {
-      return DefKind.TYPE;
-    }
-    Var v = lookupVarUnsafe(name);
-    if (v == null) {
-      return null;
-    } else if (Types.isFunction(v.type())) {
-      return DefKind.FUNCTION;
-    } else {
-      return DefKind.VARIABLE;
-    }
+  public abstract DefInfo lookupDef(String name);
+  
+  /**
+   * Add definition for current location in file
+   * @param name 
+   * @param type
+   */
+  protected void addDef(String name, DefKind kind) {
+    allDefs.put(name, new DefInfo(kind, inputFile, line, col));
   }
   
   public void checkNotDefined(String name) throws DoubleDefineException {
-    DefKind def = lookupDef(name);
+    DefInfo def = lookupDef(name);
     if (def != null) {
-      throw new DoubleDefineException(this, def.toString().toLowerCase() + 
-          " called " + name + " already defined");
+      String loc = buildLocationString(def.file, def.line, def.col, false);
+      throw new DoubleDefineException(this, def.kind.humanReadable() + 
+          " called " + name + " already defined at " + loc);
     }
   }
   
@@ -115,9 +138,35 @@ public abstract class Context {
    * @return
    * @throws UserException
    */
-  public abstract Var declareVariable(Type type, String name, VarStorage scope,
-      DefType defType, Var mapping) throws UserException;
+  public Var declareVariable(Type type, String name, VarStorage scope,
+      DefType defType, Var mapping)
+              throws DoubleDefineException {
+    logger.trace("context: declareVariable: " +
+                 type.toString() + " " + name + "<" + scope.toString() + ">"
+                 + "<" + defType.toString() + ">");
 
+    Var variable = new Var(type, name, scope, defType, mapping);
+    declareVariable(variable);
+    return variable;
+  }
+
+  protected Var declareVariable(Var variable)
+          throws DoubleDefineException {
+    String name = variable.name();
+    checkNotDefined(name);
+  
+    variables.put(name, variable);
+    DefKind kind;
+    if (Types.isFunction(variable.type())) {
+      kind = DefKind.FUNCTION; 
+    } else { 
+      kind = DefKind.VARIABLE;
+    }
+    addDef(name, kind);
+    return variable;
+  }
+  
+  
   /**
    * Define a temporary variable with a unique name in the
    * current context
@@ -194,7 +243,7 @@ public abstract class Context {
   }
 
   public abstract void defineFunction(String name, FunctionType type)
-                                          throws DoubleDefineException;
+                                          throws UserException;
   
   public abstract void setFunctionProperty(String name, FnProp prop);
   
@@ -215,24 +264,9 @@ public abstract class Context {
     return (FunctionType)var.type();
   }
 
-  public void setNested(boolean b)
-  {
-    nested = b;
+  public String getInputFile() {
+    return inputFile;
   }
-
-  public boolean isNested()
-  {
-    return nested;
-  }
-
-  /**
-    Set the line of the current input file
-    Used by CPP linemarkers
-     For annotations, debugging, and error messages
-   */
-  public abstract void setInputFile(String file);
-
-  public abstract String getInputFile();
 
   
   /**
@@ -245,7 +279,7 @@ public abstract class Context {
     // Sometime antlr nodes give bad line info - negative numbers
     if (tree.getLine() > 0) {
       FilePosition pos = lineMapping.getFilePosition(tree.getLine());
-      setInputFile(pos.file);
+      this.inputFile = pos.file;
       this.line = pos.line;
       this.col = tree.getCharPositionInLine();
     }
@@ -262,35 +296,41 @@ public abstract class Context {
   /**
      @return E.g.; "path/file.txt:42"
    */
-  public String getFileLine()
-  {
+  public String getFileLine() {
     return getInputFile() + ":" + getLine();
   }
 
   /**
      @return E.g.; "file.txt:42: "
    */
-  public String getLocation()
-  {
-    String res = getInputFileBasename() + ":" + getLine() + ":";
+  public String getLocation() {
+    return buildLocationString(getInputFile(), getLine(), getColumn(), true);
+  }
+
+  /**
+   * Build a human-readable location string
+   * @param inputFile
+   * @param line
+   * @param col
+   * @return
+   */
+  private String buildLocationString(String inputFile, int line, int col,
+                              boolean trailingColon) {
+    String res = new File(inputFile).getName() + ":" + line;
     if (col > 0) {
-      res += (col + 1) + ":";
+      res += ":" + (col + 1);
     }
-    return res + " ";
+    if (trailingColon) {
+      res += ": ";
+    }
+    return res;
   }
 
-  public String getInputFileBasename()
-  {
-    return new File(getInputFile()).getName();
-  }
-
-  public int getLevel()
-  {
+  public final int getLevel() {
     return level;
   }
 
-  public Logger getLogger()
-  {
+  public final Logger getLogger() {
     return logger;
   }
 
@@ -322,8 +362,12 @@ public abstract class Context {
     }
   }
 
-  abstract public void defineType(String typeName, Type newType)
-    throws DoubleDefineException;
+  public void defineType(String typeName, Type newType)
+      throws DoubleDefineException {
+    checkNotDefined(typeName);
+    types.put(typeName, newType);
+    addDef(typeName, DefKind.TYPE);
+  }
 
   protected String buildPathStr(List<String> fieldPath) {
     StringBuilder build = new StringBuilder();
@@ -384,5 +428,26 @@ public abstract class Context {
    */
   public static enum DefKind {
     FUNCTION, VARIABLE, TYPE;
+    
+    public String humanReadable() {
+      return this.toString().toLowerCase();
+    }
+  }
+  
+  /**
+   * Information about a definition
+   */
+  public static class DefInfo {
+    public DefInfo(DefKind kind, String file, int line, int col) {
+      super();
+      this.kind = kind;
+      this.file = file;
+      this.line = line;
+      this.col = col;
+    }
+    public final DefKind kind;
+    public final String file;
+    public final int line;
+    public final int col;
   }
 }
