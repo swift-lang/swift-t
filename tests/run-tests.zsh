@@ -144,10 +144,16 @@ compile_test()
 {
   local STC_OPT_LEVEL=$1
   print "compiling: $( basename ${SWIFT_FILE} ) at O${STC_OPT_LEVEL}"
-  
+
+  local ARGS=""
+  if [ -f "${STC_ARGS}" ]
+  then
+    ARGS=$(cat ${STC_ARGS})
+  fi
+
   pushd $STC_TESTS_DIR
   ${STC} -l ${STC_LOG_FILE} -O ${STC_OPT_LEVEL} -C ${STC_IC_FILE} \
-            ${ADDTL_STC_ARGS} \
+            ${ADDTL_STC_ARGS} ${ARGS} \
             ${SWIFT_FILE} ${TCL_FILE} \
             > ${STC_OUT_FILE} 2> ${STC_ERR_FILE}
   EXIT_CODE=${?}
@@ -313,6 +319,7 @@ for (( i=1 ; i<=SWIFT_FILE_TOTAL ; i++ ))
 do
   SWIFT_FILE=${SWIFT_FILES[i]}
   TEST_PATH=${SWIFT_FILE%.swift}
+  STC_ARGS="${TEST_PATH}.stcargs"
   TEST_NAME=$( basename ${TEST_PATH} )
   TEST_OUT_PATH="${STC_TESTS_OUT_DIR}/${TEST_NAME}"
 
