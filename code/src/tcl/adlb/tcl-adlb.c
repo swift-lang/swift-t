@@ -558,8 +558,8 @@ ADLB_Barrier_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
-ADLB_Hostmap_Cmd(ClientData cdata, Tcl_Interp *interp,
-                 int objc, Tcl_Obj *const objv[])
+ADLB_Hostmap_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
+                        int objc, Tcl_Obj *const objv[])
 {
   // This is limited only by the number of ranks a user could
   // conceivably put on a node- getting bigger
@@ -569,7 +569,7 @@ ADLB_Hostmap_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   char* name = Tcl_GetString(objv[1]);
 
-  adlb_code rc = ADLB_Hostmap(name, count, ranks, &actual);
+  adlb_code rc = ADLB_Hostmap_lookup(name, count, ranks, &actual);
   TCL_CONDITION(rc == ADLB_SUCCESS || rc == ADLB_NOTHING,
                 "error in hostmap!");
   if (rc == ADLB_NOTHING)
@@ -582,6 +582,44 @@ ADLB_Hostmap_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_Obj* result = Tcl_NewListObj(actual, items);
   Tcl_SetObjResult(interp, result);
 
+  return TCL_OK;
+}
+
+/**
+    Output a list containing the entries of the hostmap
+    Note that the Turbine version of this function is different
+ */
+static int
+ADLB_Hostmap_List_Cmd(ClientData cdata, Tcl_Interp *interp,
+                      int objc, Tcl_Obj *const objv[])
+{
+  int count;
+  int name_max;
+  ADLB_Hostmap_stats(&count, &name_max);
+  // Extra byte per name for RS
+  int chars = count*(name_max+1);
+  char* buffer = malloc(chars * sizeof(char));
+
+  int actual;
+  ADLB_Hostmap_list(buffer, chars, 0, &actual);
+  assert(actual == count);
+
+  Tcl_Obj* names[count];
+  char* p = buffer;
+  for (int i = 0; i < count; i++)
+  {
+    char* t = strchr(p, '\r');
+    assert(t != NULL);
+    *t = '\0';
+    Tcl_Obj* name = Tcl_NewStringObj(p, t-p);
+    names[i] = name;
+    p = t+1;
+  }
+
+  free(buffer);
+
+  Tcl_Obj* result = Tcl_NewListObj(count, names);
+  Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
 
@@ -2949,7 +2987,8 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("servers",   ADLB_Servers_Cmd);
   COMMAND("workers",   ADLB_Workers_Cmd);
   COMMAND("barrier",   ADLB_Barrier_Cmd);
-  COMMAND("hostmap",   ADLB_Hostmap_Cmd);
+  COMMAND("hostmap_lookup",   ADLB_Hostmap_Lookup_Cmd);
+  COMMAND("hostmap_list",     ADLB_Hostmap_List_Cmd);
   COMMAND("get_priority",   ADLB_Get_Priority_Cmd);
   COMMAND("reset_priority", ADLB_Reset_Priority_Cmd);
   COMMAND("set_priority",   ADLB_Set_Priority_Cmd);

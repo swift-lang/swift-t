@@ -84,4 +84,19 @@ namespace eval turbine {
     # servers are allocated to topmost ranks
     return [ expr {$rank >= [ turbine_engines ] + [ turbine_workers ]} ]
   }
+
+  proc hostmap_list { results input } {
+
+      # There is no input
+
+      set names [ adlb::hostmap_list ]
+
+      set i 0
+      foreach name $names {
+          literal t string $name
+          container_insert $results $i $t ref
+      }
+      # close container
+      adlb::write_refcount_decr $results
+  }
 }
