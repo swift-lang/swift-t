@@ -166,7 +166,7 @@ setup_hostmap()
   char* allnames = malloc((xlb_comm_size*length) * sizeof(char));
 
   char myname[length];
-  memset(myname, 0, length);
+  // memset(myname, 0, length);
   strcpy(myname, u.nodename);
 
   int rc = MPI_Allgather(myname,   length, MPI_CHAR,
@@ -213,6 +213,15 @@ ADLB_Version(version* output)
 }
 
 adlb_code
+ADLB_Hostmap_stats(int* count, int* name_max)
+{
+  struct utsname u;
+  *count = hostmap.size;
+  *name_max = sizeof(u.nodename);
+  return ADLB_SUCCESS;
+}
+
+adlb_code
 ADLB_Hostmap_lookup(const char* name, int count,
                     int* output, int* actual)
 {
@@ -232,28 +241,35 @@ ADLB_Hostmap_lookup(const char* name, int count,
 }
 
 adlb_code
-ADLB_Hostmap_list(int n, char* output, int* actual)
+ADLB_Hostmap_list(char* output, int max, int offset, int* actual)
 {
   // Number of chars written
   int count = 0;
   // Number of hostnames written
   int h = 0;
+  // Moving pointer into output
   char* p = output;
+  // Counter for offset
+  int j = 0;
+
   for (int i = 0; i < hostmap.capacity; i++)
   {
     for (struct list_sp_item* item = hostmap.array[i]->head; item;
          item = item->next)
     {
+      if (j++ < offset) continue;
+
       int t = strlen(item->key);
-      if (count+t >= n)
+      if (count+t >= max)
         goto done;
-      append(p, item->key);
+      append(p, "%s", item->key);
       *p = '\r';
       p++;
       count += t;
       h++;
     }
   }
+
   done:
   *actual = h;
   return ADLB_SUCCESS;

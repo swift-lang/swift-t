@@ -51,10 +51,20 @@ adlb_code ADLB_Server(long max_memory);
 
 adlb_code ADLB_Version(version* output);
 
+adlb_code ADLB_Hostmap_stats(int* count, int* name_max);
+
 adlb_code ADLB_Hostmap_lookup(const char* name, int count,
                               int* output, int* actual);
 
-adlb_code ADLB_Hostmap_list(int n, char* output, int* actual);
+/**
+   Obtain RS-separated buffer of host names
+   @param output: OUT Buffer into which to write result
+   @param max: Maximal number of characters to write
+   @param offset: Start with this hostname
+   @param actual: OUT Number of hostnames written
+ */
+adlb_code ADLB_Hostmap_list(char* output, int max, int offset,
+                            int* actual);
 
 adlb_code ADLBP_Put(const void* payload, int length, int target, int answer,
                     int type, int priority, int parallelism);
