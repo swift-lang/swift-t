@@ -262,7 +262,7 @@ data_exists(adlb_datum_id id, const char* subscript, bool* result)
         *result = false;
       else
         *result = true;
-      DEBUG("Exists: <%lli> => %s", id, bool2string(*result));
+      DEBUG("Exists: <%"PRId64"> => %s", id, bool2string(*result));
   }
   else
   {
@@ -272,7 +272,7 @@ data_exists(adlb_datum_id id, const char* subscript, bool* result)
     adlb_container_val t;
     bool data_found = container_lookup(&d->data.CONTAINER, subscript, &t);
     *result = data_found;
-    DEBUG("Exists: <%lli>[%s] => %s",
+    DEBUG("Exists: <%"PRId64">[%s] => %s",
           id, subscript, bool2string(*result));
   }
   return ADLB_DATA_SUCCESS;
