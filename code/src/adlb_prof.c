@@ -89,7 +89,6 @@ setup_mpe_events(int num_types, int* types)
 
   user_state_start = malloc(num_types * sizeof(int));
   user_state_end   = malloc(num_types * sizeof(int));
-  int user_num_types   = num_types;
   for (int i = 0; i < num_types; i++)
   {
     MPE_Log_get_state_eventIDs(&user_state_start[i],
