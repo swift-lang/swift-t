@@ -18,6 +18,7 @@ package exm.stc.ui;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -87,14 +88,24 @@ public class Main {
     boolean preprocess = preprocessEnabled();
     File inputFile = setupInputFile(logger, preprocess, stcArgs);
     PrintStream icOutput = setupICOutput();
-    PrintStream output = setupOutput(stcArgs);
+    File finalOutput = selectOutputFile(stcArgs);
+    
+    if (skipCompile(stcArgs, finalOutput)) {
+      System.exit(ExitCode.SUCCESS.code());
+    }
+    
+    // Use intermediate file so we don't create invalid output in case of
+    // compilation errors
+    File tmpOutput = setupTmpOutput();
+    PrintStream outStream = openForOutput(tmpOutput);
 
     try {
-      if (skipCompile()) {
-        copyToOutput(inputFile, output);
+      if (preprocessOnly()) {
+        copyToOutput(inputFile, finalOutput);
       } else {
         STCompiler stc = new STCompiler(logger);
-        stc.compile(inputFile.getPath(), preprocess, output, icOutput);
+        stc.compile(inputFile.getPath(), preprocess, outStream, icOutput);
+        copyToOutput(tmpOutput, finalOutput);
       }
 
       cleanupFiles(true, stcArgs);
@@ -179,7 +190,24 @@ public class Main {
     return result;
   }
 
-  private static boolean skipCompile() {
+  /**
+   * Check conditions for skipping compilation entirely
+   * @param args
+   * @param infile
+   * @param outfile
+   * @return
+   */
+  private static boolean skipCompile(Args args, File outfile) {
+    if (args.updateOutput &&
+        !olderThan(outfile, new File(args.inputFilename))) {
+      Logging.getSTCLogger().debug("Output up to date. Done.");
+      return true;
+    }
+    return false;
+  }
+
+
+  private static boolean preprocessOnly() {
     boolean skipCompile = false;
     try {
       if (Settings.getBoolean(Settings.PREPROCESS_ONLY)) {
@@ -326,6 +354,52 @@ public class Main {
     return null;
   }
   
+  private static File selectOutputFile(Args args) {
+    String outputFilename;
+    if (args.outputFilename != null) {
+      outputFilename =  args.outputFilename;
+    } else {
+      String infile = args.inputFilename;
+      String prefix;
+      String ext = ".swift";
+      if (infile.endsWith(ext)) {
+        prefix = infile.substring(0, infile.length() - ext.length());
+      } else {
+        prefix = infile;
+      }
+      outputFilename = prefix + ".tcl";
+    }
+    return new File(outputFilename);
+  }
+  
+  private static File setupTmpOutput() {
+    try {
+      File result = File.createTempFile("stc-out", ".swift");
+      temporaries.add(result);
+      return result;
+    } catch (IOException e) {
+      System.out.println("Error while setting up temporary output: "
+          + e.getMessage());
+      System.exit(1);
+      return null;
+    }
+  }
+  
+  private static PrintStream openForOutput(File outfile) {
+    try {
+      FileOutputStream stream = new FileOutputStream(outfile);
+      BufferedOutputStream buffer = new BufferedOutputStream(stream);
+      return new PrintStream(buffer);
+    } catch (FileNotFoundException e) {
+      e.printStackTrace();
+      System.err.println("Unexpected error opening " +
+                         outfile.getAbsolutePath() + " for output.") ;
+      System.exit(1);
+      return null;
+    }
+  }
+
+
   private static void runPreprocessor(Logger logger, String input, String output,
                                       List<String> preprocArgs) {
     List<String> cmd = new ArrayList<String>();
@@ -406,11 +480,17 @@ public class Main {
   }
 
 
-  private static void copyToOutput(File inputFile, PrintStream output) {
-    // Copy to output
+  /**
+   * Copy input file to output file.  In event of failure, throw a fatal error
+   * @param inputFile
+   * @param output
+   */
+  private static void copyToOutput(File inputFile, File output) {
     try {
-      FileUtils.copyFile(inputFile, output);
-      output.close();
+      // Use output stream since it interacts between with non-seekable
+      // devices such as /dev/stdout
+      PrintStream outStream = new PrintStream(new FileOutputStream(output));
+      FileUtils.copyFile(inputFile, outStream);
     } catch (IOException e) {
       System.out.println("Error copying " + inputFile);
       e.printStackTrace();
@@ -418,44 +498,9 @@ public class Main {
     }
   }
 
-
-  private static PrintStream setupOutput(Args args) {
-    String infile = args.inputFilename;
-    String outfile;
-    if (args.outputFilename != null) {
-      outfile = args.outputFilename;
-    } else {
-      String prefix;
-      String ext = ".swift";
-      if (infile.endsWith(ext)) {
-        prefix = infile.substring(0, infile.length() - ext.length());
-      } else {
-        prefix = infile;
-      }
-      outfile = prefix + ".tcl";
-    }
-    
-    Logging.getSTCLogger().debug("Writing output to " + outfile);
-    PrintStream output = null;
-    try {
-      if (args.updateOutput && !olderThan(outfile, infile)) {
-        Logging.getSTCLogger().debug("Output up to date. Done.");
-        System.exit(ExitCode.SUCCESS.code());
-      }
-      
-      FileOutputStream stream = new FileOutputStream(outfile);
-      BufferedOutputStream buffer = new BufferedOutputStream(stream);
-      output = new PrintStream(buffer);
-    } catch (IOException e) {
-      System.out.println("Error opening output file: " + e.getMessage());
-      System.exit(ExitCode.ERROR_IO.code());
-    }
-    return output;
-  }
-
-  private static boolean olderThan(String file1, String file2) {
-    long modTime1 = new File(file1).lastModified();
-    long modTime2 = new File(file2).lastModified();
+  private static boolean olderThan(File file1, File file2) {
+    long modTime1 = file1.lastModified();
+    long modTime2 = file2.lastModified();
     return modTime1 < modTime2;
   }
 
