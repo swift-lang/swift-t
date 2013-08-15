@@ -251,7 +251,7 @@ datum_init_props(adlb_datum_id id, adlb_datum *d,
 }
 
 adlb_data_code
-data_exists(adlb_datum_id id, const char *subscript, bool* result)
+data_exists(adlb_datum_id id, const char* subscript, bool* result)
 {
   adlb_datum* d = table_lp_search(&tds, id);
 
@@ -262,6 +262,7 @@ data_exists(adlb_datum_id id, const char *subscript, bool* result)
         *result = false;
       else
         *result = true;
+      DEBUG("Exists: <%lli> => %s", id, bool2string(*result));
   }
   else
   {
@@ -271,6 +272,8 @@ data_exists(adlb_datum_id id, const char *subscript, bool* result)
     adlb_container_val t;
     bool data_found = container_lookup(&d->data.CONTAINER, subscript, &t);
     *result = data_found;
+    DEBUG("Exists: <%lli>[%s] => %s",
+          id, subscript, bool2string(*result));
   }
   return ADLB_DATA_SUCCESS;
 }
