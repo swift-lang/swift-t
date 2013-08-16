@@ -71,9 +71,15 @@
 #define USE_ADLB
 #endif
 
+/** The communicator to use in our ADLB instance */
+MPI_Comm adlb_comm;
+
+/** The rank of this process in adlb_comm */
 int adlb_comm_rank;
+
 /** Number of workers */
 static int workers;
+
 /** Number of servers */
 static int servers;
 
@@ -175,6 +181,9 @@ int ADLB_curr_priority = DEFAULT_PRIORITY;
 #define FILE_REF_FILENAME 1
 #define FILE_REF_MAPPED 2
 
+/** We only free this if we are the outermost MPI communicator */
+static bool must_comm_free = false;
+
 static int
 ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[], bool decr);
@@ -215,13 +224,12 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   table_lp_init(&blob_cache, 16);
 
-  MPI_Comm adlb_comm;
-
   if (objc == 3)
   {
     // Start with MPI_Init() and MPI_COMM_WORLD
     int argc = 0;
     char** argv = NULL;
+    must_comm_free = true;
     rc = MPI_Init(&argc, &argv);
     assert(rc == MPI_SUCCESS);
     MPI_Comm_dup(MPI_COMM_WORLD, &adlb_comm);
@@ -2925,6 +2933,10 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(2);
   int b;
   Tcl_GetBooleanFromObj(interp, objv[1], &b);
+
+  if (must_comm_free)
+    MPI_Comm_free(&adlb_comm);
+
   if (b)
     MPI_Finalize();
   turbine_debug_finalize();
