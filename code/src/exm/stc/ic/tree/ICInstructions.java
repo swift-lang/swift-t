@@ -2761,7 +2761,7 @@ public class ICInstructions {
       }
       if (allValues) {
         // We can work out array contents 
-        long arrSize = (end - start) / step + 1;
+        long arrSize = Math.max(0, (end - start) / step + 1);
         Var arr = getOutput(0);
         cvs.add(LocalFunctionCall.makeArraySizeComputedValue(
             arr, Arg.createIntLit(arrSize)));
