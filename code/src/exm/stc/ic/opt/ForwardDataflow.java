@@ -695,6 +695,10 @@ public class ForwardDataflow implements OptimizerPass {
     boolean noWaitRequired = req.mode == TaskMode.LOCAL
         || req.mode == TaskMode.SYNC
         || (req.mode == TaskMode.LOCAL_CONTROL && execCx == ExecContext.CONTROL);
+    
+    // First remove old instruction
+    stmts.remove();
+    
     if (noWaitRequired) {
       insertContext = block;
       insertPoint = stmts;
@@ -760,9 +764,6 @@ public class ForwardDataflow implements OptimizerPass {
       logger.trace("Replacing instruction <" + inst + "> with sequence "
           + alt.toString());
     }
-
-    // Remove existing instruction
-    stmts.remove();
 
     // Add new instructions at insert point
     for (Instruction newInst : alt) {
