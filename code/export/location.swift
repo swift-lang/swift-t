@@ -19,11 +19,11 @@
 ];
 
 (location rank) hostmap_one(string name) "turbine" "0.0.2" [
-    "set <<rank>> [ draw [ adlb::hostmap <<name>> ] ]"
+    "set <<rank>> [ draw [ adlb::hostmap_lookup <<name>> ] ]"
 ];
 
 (location rank) hostmap_one_worker(string name) "turbine" "0.0.2" [
-    "set <<rank>> [ ::turbine::random_rank WORKER [ adlb::hostmap <<name>> ] ]"
+    "set <<rank>> [ ::turbine::random_rank WORKER [ adlb::hostmap_lookup <<name>> ] ]"
 ];
 
 (string results[]) hostmap_list() "turbine" "0.5.0" "hostmap_list";
