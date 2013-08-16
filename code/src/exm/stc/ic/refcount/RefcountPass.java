@@ -552,13 +552,17 @@ public class RefcountPass implements OptimizerPass {
             Statement stmt = insertPos.next();
             if (stmt.type() == StatementType.INSTRUCTION) {
               Instruction inst = stmt.instruction();
-              blockAssignedAlias.addAll(inst.getInitializedAliases());
+              for (Var v: inst.getInitialized()) {
+                if (v.storage() == VarStorage.ALIAS) {
+                  blockAssignedAlias.add(v);
+                }
+              }
             }
           }
         }
         Instruction newInst = TurbineOp
             .structLookup(child, parentStruct, field);
-        blockAssignedAlias.addAll(newInst.getInitializedAliases());
+        blockAssignedAlias.addAll(newInst.getInitialized());
         insertPos.add(newInst);
 
         alreadyCreated.add(child);

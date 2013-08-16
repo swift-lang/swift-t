@@ -15,18 +15,28 @@
  */
 package exm.stc.ic;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
 
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.util.Pair;
+import exm.stc.ic.opt.OptUtil;
+import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.Statement;
 
 /**
  * Utility functions used to generate wrappers for local operations
@@ -44,13 +54,19 @@ public class WrapUtil {
    */
   public static Var fetchValueOf(Block block, List<Instruction> instBuffer,
           Var var, String valName) {
-    if (Types.isArray(var.type())) {
+    if (Types.isArray(var)) {
       // Don't have value version of array
       return var;
     }
+    Type value_t = Types.derefResultType(var);
     
-    Type value_t = Types.derefResultType(var.type());
-    if (Types.isScalarValue(value_t)) {
+    if (Types.isScalarUpdateable(var)) {
+      Var value_v = createValueVar(valName, value_t);
+      
+      block.addVariable(value_v);
+      instBuffer.add(TurbineOp.latestValue(value_v, var));
+      return value_v;
+    } else if (Types.isScalarFuture(var)) {
       // The result will be a value
       // Use the OPT_VALUE_VAR_PREFIX to make sure we don't clash with
       //  something inserted by the frontend (this caused problems before)
@@ -63,7 +79,7 @@ public class WrapUtil {
         block.addCleanup(value_v, TurbineOp.freeBlob(value_v));
       }
       return value_v;
-    } else if (Types.isRef(var.type())) {
+    } else if (Types.isRef(var)) {
       // The result will be an alias
       Var deref = new Var(value_t,
           valName,
@@ -83,29 +99,218 @@ public class WrapUtil {
     return value_v;
   }
   
-  public static Var fetchCurrentValueOf(Block block,
-      List<Instruction> instBuffer, Var var, String valName) {
-    assert(Types.isScalarUpdateable(var.type()));
-    Type value_t = Types.derefResultType(var.type());
-    Var value_v = createValueVar(valName, value_t);
-
-    block.addVariable(value_v);
-    instBuffer.add(TurbineOp.latestValue(value_v, var));
-    return value_v;
+  /**
+   * Work out which inputs/outputs need to be waited for before
+   * executing a statement depending on them
+   * @param block
+   * @param instInsertIt position to insert instructions
+   * @param inArgs
+   * @param outArgs
+   * @return (a list of variables to wait for,
+   *          the mapping from file output vars to filenames)
+   */
+  public static Pair<List<WaitVar>, Map<Var, Var>> buildWaitVars(
+      Block block, ListIterator<Statement> instInsertIt,
+      List<Var> inArgs, List<Var> outArgs) {
+    if (inArgs == null) {
+      // Gracefully handle null as empty list
+      inArgs = Collections.emptyList();
+    }
+    if (outArgs == null) {
+      // Gracefully handle null as empty list
+      outArgs = Collections.emptyList();
+    }
+    
+    List<WaitVar> waitVars = new ArrayList<WaitVar>(inArgs.size());
+    Map<Var, Var> filenameVars = new HashMap<Var, Var>();
+    for (Var in: inArgs) {
+      if (!Types.isScalarUpdateable(in.type())) {
+        waitVars.add(new WaitVar(in, false));
+      }
+    }
+    
+    for (Var out: outArgs) {
+      if (Types.isFile(out)) {
+        // Must wait on filename of output var
+        String name = block.uniqueVarName(Var.WRAP_FILENAME_PREFIX +
+                                          out.name());
+        Var filenameTmp = block.declareVariable(Types.F_STRING,
+            name,VarStorage.ALIAS, DefType.LOCAL_COMPILER, null);
+        instInsertIt.add(
+              TurbineOp.getFileName(filenameTmp, out, true));
+        waitVars.add(new WaitVar(filenameTmp, false));
+        filenameVars.put(out, filenameTmp);
+      }
+    }
+    return Pair.create(waitVars, filenameVars);
   }
 
+  /**
+   * Declare and fetch inputs for local operation
+   * @param block
+   * @param inputs
+   * @param instBuffer
+   * @param uniquifyNames
+   * @return
+   */
+  public static List<Arg> fetchLocalOpInputs(Block block, List<Var> inputs,
+      List<Instruction> instBuffer, boolean uniquifyNames) {
+    if (inputs == null) {
+      // Gracefully handle null as empty list
+      inputs = Collections.emptyList();
+    }
+    List<Arg> inVals = new ArrayList<Arg>(inputs.size());
+    for (Var inArg: inputs) {
+      if (Types.isArray(inArg.type())) {
+        // Pass arrays in original representation
+        inVals.add(inArg.asArg());
+      } else {
+        String name = valName(block, inArg, uniquifyNames);
+        inVals.add(WrapUtil.fetchValueOf(block, instBuffer,
+            inArg, name).asArg());
+      }
+    }
+    return inVals;
+  }
+
+  /**
+   * Build output variable list for local operation
+   * @param block
+   * @param outputFutures
+   * @param filenameVars
+   * @param instBuffer
+   * @param uniquifyNames if it isn't safe to use default name prefix,
+   *      e.g. if we're in the middle of optimizations
+   * @return
+   */
+  public static List<Var> createLocalOpOutputs(Block block,
+      List<Var> outputFutures, Map<Var, Var> filenameVars,
+      List<Instruction> instBuffer, boolean uniquifyNames) {
+    if (outputFutures == null) {
+      // Gracefully handle null as empty list
+      outputFutures = Collections.emptyList();
+    }
+    List<Var> outVals = new ArrayList<Var>();
+    for (Var outArg: outputFutures) {
+      if (Types.isArray(outArg.type()) || Types.isScalarUpdateable(outArg.type())) {
+        // Use standard representation
+        outVals.add(outArg);
+      } else {
+        outVals.add(WrapUtil.createLocalOutputVar(outArg, filenameVars,
+                                     block, instBuffer, uniquifyNames));
+      }
+    }
+    return outVals;
+  }
+  
+  /**
+   * Declare a local output variable for an operation
+   * @param block
+   * @param var
+   * @param valName
+   * @return
+   */
   public static Var declareLocalOutputVar(Block block, Var var,
           String valName) {
-    Var valOut = block.declareVariable(
-        Types.derefResultType(var.type()),
-        valName,
-        VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
-    if (valOut.type().equals(Types.V_BLOB)) {
-      block.addCleanup(valOut, TurbineOp.freeBlob(valOut));
-    } else if (valOut.type().equals(Types.V_FILE)) {
-      // Cleanup file if not copied to file future
-      block.addCleanup(valOut, TurbineOp.decrLocalFileRef(valOut));
+    return block.declareVariable(Types.derefResultType(var.type()),
+        valName, VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+  }
+  
+
+  /**
+   * Create an output variable for an operation, and
+   * perform initialization and cleanup actions
+   * @param outFut
+   * @param filenameVars map from file futures to filename
+   *                    vals/futures if this is a file var
+   * @param block
+   * @param instBuffer buffer for initialization actions
+   * @param uniquifyName if it isn't safe to use default name prefix,
+   *      e.g. if we're in the middle of optimizations
+   * @return
+   */
+  public static Var createLocalOutputVar(Var outFut,
+      Map<Var, Var> filenameVars,
+      Block block, List<Instruction> instBuffer, boolean uniquifyName) {
+    String outValName = valName(block, outFut, uniquifyName);
+    Var outVal = WrapUtil.declareLocalOutputVar(block, outFut, outValName);
+    WrapUtil.initLocalOutputVar(block, filenameVars, instBuffer,
+                                outFut, outVal);
+    WrapUtil.cleanupLocalOutputVar(block, outVal);
+    return outVal;
+  }
+
+  private static String valName(Block block, Var future, boolean uniquifyName) {
+    String outValName;
+    if (uniquifyName) {
+      outValName = OptUtil.optVPrefix(block, future.name());
+    } else {
+      outValName = Var.LOCAL_VALUE_VAR_PREFIX + future.name();
     }
-    return valOut;
+    return outValName;
+  }
+
+  /**
+   * Initialize a local output variable for an operation
+   * @param block
+   * @param filenameVars map of file future to filename future
+   * @param instBuffer append initialize instructions to this buffer
+   * @param outFut
+   * @param outVal
+   */
+  private static void initLocalOutputVar(Block block, Map<Var, Var> filenameVars,
+      List<Instruction> instBuffer, Var outFut, Var outVal) {
+    if (Types.isFile(outFut)) {
+      // Initialize filename in local variable
+      Var outFilename = filenameVars.get(outFut);
+      assert(outFilename != null) : "Expected filename in map for " + outFut;
+      Var outFilenameVal;
+      if (Types.isString(outFilename)) {
+        String valName = block.uniqueVarName(Var.OPT_VALUE_VAR_PREFIX +
+                                           outFilename.name());
+        outFilenameVal = WrapUtil.fetchValueOf(block, instBuffer,
+                                                 outFilename, valName);
+      } else {
+        // Already a value
+        assert(outFilename.type().assignableTo(Types.V_STRING));
+        outFilenameVal = outFilename;
+      }
+      instBuffer.add(TurbineOp.initLocalOutFile(outVal,
+                            outFilenameVal.asArg(), outFut));
+    }
+  }
+  
+  private static void cleanupLocalOutputVar(Block block, Var outVal) {
+    if (outVal.type().equals(Types.V_BLOB)) {
+      block.addCleanup(outVal, TurbineOp.freeBlob(outVal));
+    } else if (outVal.type().equals(Types.V_FILE)) {
+      // Cleanup file if not copied to file future
+      block.addCleanup(outVal, TurbineOp.decrLocalFileRef(outVal));
+    }
+  }
+  
+
+  /**
+   * Set futures from output values
+   * @param outFuts
+   * @param outVals
+   * @param instBuffer
+   */
+  public static void setLocalOpOutputs(List<Var> outFuts, List<Var> outVals,
+      List<Instruction> instBuffer) {
+    if (outFuts == null) {
+      assert(outVals == null || outVals.isEmpty());
+      return;
+    }
+    assert(outVals.size() == outFuts.size());
+    for (int i = 0; i < outVals.size(); i++) {
+      Var outArg = outFuts.get(i);
+      Var outVal = outVals.get(i);
+      if (outArg.equals(outVal)) {
+        // Do nothing: the variable wasn't substituted
+      } else {
+        instBuffer.add(ICInstructions.futureSet(outArg, Arg.createVar(outVal)));
+      }
+    }
   }
 }

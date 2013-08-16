@@ -16,7 +16,6 @@
 package exm.stc.ic.opt;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -40,6 +39,7 @@ import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICInstructions.RefCountOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
@@ -324,35 +324,59 @@ public class Validate implements OptimizerPass {
   private void checkVarInit(Logger logger, Program program,
       Function fn) {
     HierarchicalSet<Var> initVars = new HierarchicalSet<Var>();
+    HierarchicalSet<Var> assignedVals = new HierarchicalSet<Var>();
     for (Var v: fn.getInputList()) {
-      if (varMustBeInitialized(v)) {
+      if (varMustBeInitialized(v, false)) {
+        initVars.add(v);
+      }
+      if (assignBeforeRead(v)) {
+        assignedVals.add(v);
+      }
+    }
+    for (Var v: fn.getOutputList()) {
+      if (varMustBeInitialized(v, true)) {
         initVars.add(v);
       }
     }
-    checkAliasVarUsageRec(logger, program, fn, fn.mainBlock(), initVars);
+    checkInitializationRec(logger, program, fn, fn.mainBlock(),
+                           initVars, assignedVals);
   }
   
-  private boolean varMustBeInitialized(Var v) {
-    return v.storage() == VarStorage.ALIAS ||
-           v.storage() == VarStorage.LOCAL ||
-           Types.isScalarUpdateable(v.type()); 
+  private boolean assignBeforeRead(Var v) {
+    return v.storage() == VarStorage.LOCAL;
   }
   
-  private void checkAliasVarUsageRec(Logger logger, Program program,
-      Function fn, Block block, HierarchicalSet<Var> initVars) {
+  private boolean varMustBeInitialized(Var v, boolean output) {
+    if (output) {
+      return Types.outputRequiresInitialization(v);
+    } else {
+      return Types.inputRequiresInitialization(v);
+    } 
+  }
+   
+  
+  private void checkInitializationRec(Logger logger, Program program,
+      Function fn, Block block, HierarchicalSet<Var> initVars,
+      HierarchicalSet<Var> assignedVals) {
     for (Var v: block.getVariables()) {
-      if (v.isMapped() && varMustBeInitialized(v.mapping())) {
-        assert (initVars.contains(v.mapping())):
+      if (v.isMapped()) {
+        if (varMustBeInitialized(v.mapping(), false)) {
+          assert (initVars.contains(v.mapping())):
             v + " mapped to uninitialized var " + v.mapping();
+        }
+        if (assignBeforeRead(v.mapping())) {
+          assert(assignedVals.contains(v.mapping())) :
+            v + " mapped to unassigned var " + v.mapping();
+        }
       }
     }
     
     for (Statement stmt: block.getStatements()) {
-      updateInitVars(logger, program, fn, stmt, initVars);
+      updateInitVars(logger, program, fn, stmt, initVars, assignedVals);
     }
     
     for (Continuation c: block.getContinuations()) {
-      checkAliasVarUsageRec(logger, program, fn, initVars, c);
+      checkInitializationRec(logger, program, fn, initVars, assignedVals, c);
     }
   }
 
@@ -365,33 +389,47 @@ public class Validate implements OptimizerPass {
    *      are initialized after continuation
    * @param c
    */
-  private void checkAliasVarUsageRec(Logger logger, Program program,
-      Function fn, HierarchicalSet<Var> initVars, Continuation c) {
+  private void checkInitializationRec(Logger logger, Program program,
+      Function fn, HierarchicalSet<Var> initVars, HierarchicalSet<Var> assignedVals,
+      Continuation c) {
     for (Var v: c.requiredVars(false)) {
-      checkInitialized(c.getType(), initVars, v);
+      checkInitialized(c.getType(), initVars, v, false);
+      checkAssigned(c.getType(), assignedVals, v);
     }
     if (c.isAsync()) {
       // If alias var passed to async continuation, must be initialized
       for (PassedVar pv: c.getPassedVars()) {
-        checkInitialized(c.getType(), initVars, pv.var);
+        checkInitialized(c.getType(), initVars, pv.var, false);
+        checkAssigned(c.getType(), assignedVals, pv.var);
       }
     }
     
     boolean unifyBranches = c.isExhaustiveSyncConditional();
-    List<Set<Var>> branchInitVars = unifyBranches ? 
-        new ArrayList<Set<Var>>() : null;
+    List<Set<Var>> branchInitVars = null, branchAssigned = null;
+    if (unifyBranches) {
+      branchInitVars = new ArrayList<Set<Var>>();
+      branchAssigned = new ArrayList<Set<Var>>();
+    }
     
     HierarchicalSet<Var> contInit = initVars.makeChild();
+    HierarchicalSet<Var> contAssigned = assignedVals.makeChild();
+    
     for (Var v: c.constructDefinedVars()) {
-      if (varMustBeInitialized(v)) {
+      if (varMustBeInitialized(v, false)) {
         contInit.add(v);
+      }
+      if (assignBeforeRead(v)) {
+        contAssigned.add(v);
       }
     }
     for (Block inner: c.getBlocks()) {
       HierarchicalSet<Var> blockInitVars = contInit.makeChild();
-      checkAliasVarUsageRec(logger, program, fn, inner, blockInitVars);
+      HierarchicalSet<Var> blockAssigned = contAssigned.makeChild();
+      checkInitializationRec(logger, program, fn, inner,
+                             blockInitVars, blockAssigned);
       if (unifyBranches) {
         branchInitVars.add(blockInitVars);
+        branchAssigned.add(blockAssigned);
       }
     }
     
@@ -400,73 +438,85 @@ public class Validate implements OptimizerPass {
       for (Var initOnAll: Sets.intersection(branchInitVars)) {
         initVars.add(initOnAll);
       }
+      for (Var assignedOnAll: Sets.intersection(branchAssigned)) {
+        assignedVals.add(assignedOnAll);
+      }
     }
   }
 
   private void updateInitVars(Logger logger, Program program, Function fn, 
-                            Statement stmt, HierarchicalSet<Var> initVars) {
+            Statement stmt, HierarchicalSet<Var> initVars,
+            HierarchicalSet<Var> assignedVals) {
     switch (stmt.type()) {
       case INSTRUCTION:
-        updateInitVars(stmt.instruction(), initVars);
+        updateInitVars(stmt.instruction(), initVars, assignedVals);
         break;
       case CONDITIONAL:
         // Recurse on the conditional.
         // This will also fill in information about which variables are closed on the branch
-        checkAliasVarUsageRec(logger, program, fn, initVars, stmt.conditional());
+        checkInitializationRec(logger, program, fn, initVars, assignedVals, stmt.conditional());
         break;
       default:
         throw new STCRuntimeError("Unknown statement type" + stmt.type());
     }
   }
   
-  private void updateInitVars(Instruction inst, HierarchicalSet<Var> initVars) {
+  private void updateInitVars(Instruction inst, HierarchicalSet<Var> initVars,
+                              HierarchicalSet<Var> assignedVals) {
     for (Arg in: inst.getInputs()) {
-      if (in.isVar() && varMustBeInitialized(in.getVar())
-          && !initVars.contains(in.getVar())) {
-        throw new STCRuntimeError("Var " + in + " was an uninitialized " +
-            " var read in instruction " + inst);
+      if (in.isVar()) {
+        Var inVar = in.getVar();
+        checkInitialized(inst, initVars, inVar, false);
+        
+        checkAssigned(inst, assignedVals, inVar);
       }
     }
     List<Var> regularOutputs = inst.getOutputs();
-    List<Var> initializedAliases = inst.getInitializedAliases();
-    List<Var> initializedUpdateables = inst.getInitializedUpdateables();
+    List<Var> initialized = inst.getInitialized();
     
-    if (initializedAliases.size() > 0 || initializedUpdateables.size() > 0) {
+    if (initialized.size() > 0) {
       regularOutputs = new ArrayList<Var>(regularOutputs);
-      for (List<Var> initList: Arrays.asList(initializedAliases,
-                                             initializedUpdateables)) {
-        for (Var init: initList) {
-          assert(init.storage() == VarStorage.ALIAS ||
-                 Types.isScalarUpdateable(init.type())) : inst + " " + init;
+      for (Var init: initialized) {
+        assert(Types.outputRequiresInitialization(init)) : inst + " " + init;
+        
+        if (inst.op != Opcode.LOAD_FILE) // LOAD_FILE initialises and assigns the future
           ICUtil.remove(regularOutputs, init);
-          if (initVars.contains(init)) {
-            throw new STCRuntimeError("double initialized variable " + init);
-          }
-          initVars.add(init);
+        if (initVars.contains(init)) {
+          throw new STCRuntimeError("double initialized variable " + init);
         }
+        initVars.add(init);
       }
     }
     
     for (Var out: regularOutputs) {
-      if (out.storage() == VarStorage.LOCAL) {
-        if (initVars.contains(out)) {
-          throw new STCRuntimeError("double initialized variable " + out);
+      checkInitialized(inst, initVars, out, true);
+      
+      if (assignBeforeRead(out)) {
+        if (assignedVals.contains(out)) {
+          throw new STCRuntimeError("double assigned val " + out);
         }
-        initVars.add(out);
-      }
-    }
 
-    for (Var regularOut: regularOutputs) {
-      checkInitialized(inst, initVars, regularOut);
+        assignedVals.add(out);
+      }
     }
   }
 
   private void checkInitialized(Object context,
-      HierarchicalSet<Var> initVars, Var var) {
-    if (varMustBeInitialized(var) &&
+      HierarchicalSet<Var> initVars, Var var, boolean output) {
+    if (varMustBeInitialized(var, output) &&
         !initVars.contains(var)) {
-      throw new STCRuntimeError("Uninitialized alias " +
+      throw new STCRuntimeError("Uninitialized var " +
                     var + " in " + context.toString());
     }
   }
+  
+  private void checkAssigned(Object context,
+      HierarchicalSet<Var> assignedVals, Var inVar) {
+    if (assignBeforeRead(inVar)
+        && !assignedVals.contains(inVar)) {
+      throw new STCRuntimeError("Var " + inVar + " was an unassigned value " +
+                               " read in instruction " + context.toString());
+    }
+  }
+
 }

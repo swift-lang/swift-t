@@ -43,9 +43,10 @@ class TopDownInfo {
 
   public void updateForInstruction(Instruction inst) {
     // Track which alias vars are assigned
-    for (Var out : inst.getInitializedAliases()) {
-      assert(out.storage() == VarStorage.ALIAS);
-      assignedAliasVars.add(out);
+    for (Var out : inst.getInitialized()) {
+      if (out.storage() == VarStorage.ALIAS) {
+        assignedAliasVars.add(out);
+      }
     }
     
     aliases.update(inst);

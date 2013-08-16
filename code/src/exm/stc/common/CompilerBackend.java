@@ -165,6 +165,14 @@ public interface CompilerBackend {
    */
   public void chooseTmpFilename(Var filenameVal);
   
+
+  /**
+   * Initialise a local file with a filename
+   * @param localFile
+   * @param filenameVal
+   */
+  public void initLocalOutputFile(Var localFile, Arg filenameVal);
+  
   /**
    * Set filename of file future to a local string value
    * @param file file future
@@ -194,7 +202,7 @@ public interface CompilerBackend {
    * @param redirects 
    */
   public void runExternal(String cmd, List<Arg> args,
-           List<Arg> inFiles, List<Var> outFiles, List<Arg> outFileNames, 
+           List<Arg> inFiles, List<Var> outFiles, 
            Redirects<Arg> redirects,
            boolean hasSideEffects, boolean deterministic);
   
@@ -480,4 +488,5 @@ public interface CompilerBackend {
    */
   public void loopBreak(List<Var> loopUsedVars, List<Var> keepOpenVars);
   public void endLoop();
+
 }

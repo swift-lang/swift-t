@@ -1866,8 +1866,7 @@ public class ASTWalker {
     for (Var out: outArgs) {
       if (Types.isArray(out.type())) {
         // OK: will pass in standard repr
-      } else if (Types.isScalarFuture(out.type()) &&
-              !Types.isFile(out.type())) {
+      } else if (Types.isScalarFuture(out.type())) {
         // OK
       } else {
         throw new STCRuntimeError("Can't handle type of " + out.type()
@@ -2229,7 +2228,6 @@ public class ASTWalker {
     
     // Declare local dummy output vars
     List<Var> localOutputs = new ArrayList<Var>(outArgs.size());
-    List<Arg> localOutputFileNames = new ArrayList<Arg>(outArgs.size());
     for (Var output: outArgs) {
       Var localOutput = varCreator.createValueOfVar(context, output);
       localOutputs.add(localOutput);
@@ -2237,12 +2235,14 @@ public class ASTWalker {
       if (Types.isFile(output.type())) {
         localOutputFileName = Arg.createVar(
             varCreator.fetchValueOf(context, fileNames.get(output.name())));
+
+        // Initialize the output with a filename
+        backend.initLocalOutFile(localOutput, localOutputFileName, output);
       }
-      localOutputFileNames.add(localOutputFileName);
     }
     
     backend.runExternal(appName, localArgs, localInFiles, localOutputs,
-                localOutputFileNames, localRedirects, hasSideEffects, deterministic);
+                        localRedirects, hasSideEffects, deterministic);
     
     for (int i = 0; i < outArgs.size(); i++) {
       Var output = outArgs.get(i);

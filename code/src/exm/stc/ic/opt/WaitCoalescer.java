@@ -22,6 +22,7 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -46,6 +47,7 @@ import exm.stc.common.util.MultiMap.ListFactory;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.ic.ICUtil;
+import exm.stc.ic.WrapUtil;
 import exm.stc.ic.opt.OptUtil.InstOrCont;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.Conditionals.Conditional;
@@ -418,7 +420,6 @@ public class WaitCoalescer implements OptimizerPass {
   private static boolean tryExplode(Logger logger, Function fn,
         ExecContext execCx, Block block, ListIterator<Statement> it,
         Instruction inst) {
-    
     MakeImmRequest req = inst.canMakeImmediate(
                             Collections.<Var>emptySet(),
                             Collections.<Var>emptySet(), true);
@@ -426,7 +427,15 @@ public class WaitCoalescer implements OptimizerPass {
       if (logger.isTraceEnabled()) {
         logger.trace("Exploding " + inst + " in function " + fn.getName());
       }
-      List<Var> waitVars = ICUtil.filterBlockingOnly(req.in);
+      
+      // Remove old instruction now that we're certain to replace it
+      it.remove();
+      
+      Pair<List<WaitVar>, Map<Var, Var>> r;
+      r = WrapUtil.buildWaitVars(block, it, req.in, req.out);
+      
+      List<WaitVar> waitVars = r.val1;
+      Map<Var, Var> filenameMap = r.val2;
       
       WaitMode waitMode;
       if (req.mode == TaskMode.SYNC || req.mode == TaskMode.LOCAL ||
@@ -444,30 +453,33 @@ public class WaitCoalescer implements OptimizerPass {
       
       WaitStatement wait = new WaitStatement(
               fn.getName() + "-" + inst.shortOpName(),
-              WaitVar.makeList(waitVars, false), PassedVar.NONE, Var.NONE,
+              waitVars, PassedVar.NONE, Var.NONE,
               waitMode, req.recursiveClose, req.mode, props);
       block.addContinuation(wait);
-      
-      List<Instruction> instBuffer = new ArrayList<Instruction>();
-      
-      // Fetch the inputs
-      List<Arg> inVals = OptUtil.fetchValuesOf(wait.getBlock(),
-                                            instBuffer, req.in);
       
       if (props.containsKey(TaskPropKey.PARALLELISM)) {
         //TODO: different output var conventions
         throw new STCRuntimeError("Don't know how to explode parallel " +
-        		"instruction yet: " + inst);
+            "instruction yet: " + inst);
       }
+      
+      // Instructions to add inside wait
+      List<Instruction> instBuffer = new ArrayList<Instruction>();
+      
+      // Fetch the inputs
+      List<Arg> inVals = WrapUtil.fetchLocalOpInputs(wait.getBlock(), req.in,
+                                                     instBuffer, true);
+            
       // Create local instruction, copy out outputs
-      List<Var> localOutputs = OptUtil.declareLocalOpOutputVars(
-                                          wait.getBlock(), req.out);
+      List<Var> localOutputs = WrapUtil.createLocalOpOutputs(
+                              wait.getBlock(), req.out, filenameMap,
+                              instBuffer, true); 
+      
       MakeImmChange change = inst.makeImmediate(localOutputs, inVals);
       OptUtil.fixupImmChange(block, wait.getBlock(), change, instBuffer,
                                         localOutputs, req.out);
       
       // Remove old instruction, add new one inside wait block
-      it.remove();
       wait.getBlock().addInstructions(instBuffer);
       return true;
     }

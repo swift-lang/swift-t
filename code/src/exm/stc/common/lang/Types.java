@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.Var.VarStorage;
 
 /**
  * This module provides the type definitions used for Swift,
@@ -1732,6 +1733,30 @@ public class Types {
     return isFile(type);
   }
 
+  
+  /**
+   * Returns true if the variable requires initialization before
+   * being used in input context
+   * @param output
+   * @return
+   */
+  public static boolean inputRequiresInitialization(Var input) {
+    return input.storage() == VarStorage.ALIAS 
+        || Types.isScalarUpdateable(input);
+  }
+  
+  /**
+   * Returns true if the variable requires initialiation before being used
+   * in output context
+   * @param output
+   * @return
+   */
+  public static boolean outputRequiresInitialization(Var output) {
+    return output.storage() == VarStorage.ALIAS 
+        || Types.isScalarUpdateable(output)
+        || output.type().assignableTo(Types.V_FILE);
+  }
+  
   /** 
    * More convenient way of representing array types for some analysies
    *

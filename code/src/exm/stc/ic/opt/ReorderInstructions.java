@@ -313,16 +313,11 @@ public class ReorderInstructions extends FunctionOptimizerPass {
    */
   private boolean initializesOutputs(StatementInfo info1,
                                      StatementInfo info2) {
-    Collection<Var> initAliases = info2.initializedAliases;
-    Collection<Var> initUpdateables = info2.initializedUpdateables;
-    if (!initAliases.isEmpty() || !initUpdateables.isEmpty()) {
+    Collection<Var> init = info2.initialized;
+    if (!init.isEmpty()) {
       for (Var output: info1.outputs) {
-        if (output.storage() == VarStorage.ALIAS &&
-            initAliases.contains(output)) {
-          return true;
-        }
-        if (Types.isScalarUpdateable(output.type()) && 
-            initUpdateables.contains(output)) {
+        if (Types.outputRequiresInitialization(output) &&
+            init.contains(output)) {
           return true;
         }
       }
@@ -340,16 +335,15 @@ public class ReorderInstructions extends FunctionOptimizerPass {
         Collection<Var> inputVars,
         Collection<Var> outputs,
         Collection<Var> modifiedOutputs,
-        Collection<Var> initializedUpdateables,
-        Collection<Var> initializedAliases, Collection<Var> piecewiseAssigned) {
+        Collection<Var> initialized,
+        Collection<Var> piecewiseAssigned) {
       super();
       this.stmt = stmt;
       this.opcodeMap = opcodeMap;
       this.inputVars = inputVars;
       this.outputs = outputs;
       this.modifiedOutputs = modifiedOutputs;
-      this.initializedUpdateables = initializedUpdateables;
-      this.initializedAliases = initializedAliases;
+      this.initialized = initialized;
       this.piecewiseAssigned = piecewiseAssigned;
     }
 
@@ -363,15 +357,13 @@ public class ReorderInstructions extends FunctionOptimizerPass {
               getAllInputs(inst),
               inst.getOutputs(),
               inst.getModifiedOutputs(),
-              inst.getInitializedUpdateables(), 
-              inst.getInitializedAliases(),
+              inst.getInitialized(),
               inst.getPiecewiseAssignedOutputs());
         }
         case CONDITIONAL: {
           // need to walk recursively and collect info
           StatementInfo info = new StatementInfo(stmt,
               new MultiMap<Opcode, Instruction>(),
-              new HashSet<Var>(),
               new HashSet<Var>(),
               new HashSet<Var>(),
               new HashSet<Var>(),
@@ -390,8 +382,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     final Collection<Var> inputVars;    
     final Collection<Var> outputs;
     final Collection<Var> modifiedOutputs;
-    final Collection<Var> initializedUpdateables;
-    final Collection<Var> initializedAliases;
+    final Collection<Var> initialized;
     // Variables maybe piecewise assigned anywhere in statement 
     final Collection<Var> piecewiseAssigned;
 
@@ -447,8 +438,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
       info.inputVars.addAll(getAllInputs(inst));
       info.outputs.addAll(inst.getOutputs());
       info.modifiedOutputs.addAll(inst.getModifiedOutputs());
-      info.initializedAliases.addAll(inst.getInitializedAliases());
-      info.initializedUpdateables.addAll(inst.getInitializedUpdateables());
+      info.initialized.addAll(inst.getInitialized());
       info.piecewiseAssigned.addAll(inst.getPiecewiseAssignedOutputs());
     }
     

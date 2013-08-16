@@ -15,9 +15,12 @@
  */
 package exm.stc.ic.opt;
 
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -27,13 +30,13 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.ic.WrapUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
-import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.RenameMode;
+import exm.stc.ic.tree.ICTree.Statement;
 
 public class OptUtil {
 
@@ -161,26 +164,22 @@ public class OptUtil {
     }
   }
 
-  public static List<Var> declareLocalOpOutputVars(Block block,
-          List<Var> localOutputs) {
-    if (localOutputs == null) {
-      return null;
+  public static List<Var> createLocalOpOutputVars(Block block,
+          ListIterator<Statement> insertPos,
+          List<Var> outputFutures, Map<Var, Var> outputFilenames) {
+    if (outputFutures == null) {
+      return Collections.emptyList();
     }
-    List<Var> outValVars;
-    outValVars = new ArrayList<Var>(localOutputs.size());
-    // Need to create output value variables
-    for (Var v : localOutputs) {
-      Var outValVar;
-      if (Types.isArray(v.type())) {
-        // keep same repr
-        outValVar = v;
-      } else {
-        // Use different local representation
-        String name = optVPrefix(block, v);
-        outValVar = WrapUtil.declareLocalOutputVar(block, v, name);
-      }
-      outValVars.add(outValVar);
+    
+    List<Instruction> instBuffer = new ArrayList<Instruction>();
+    
+    List<Var> outValVars = WrapUtil.createLocalOpOutputs(block, outputFutures,
+                                  outputFilenames, instBuffer, true);
+
+    for (Instruction inst: instBuffer) {
+      insertPos.add(inst);
     }
+
     return outValVars;
   }  
 
@@ -188,9 +187,8 @@ public class OptUtil {
           Block targetBlock, MakeImmChange change,
           List<Instruction> instBuffer, List<Var> newOutVars,
                                         List<Var> oldOutVars) {
-    for (Instruction newInst: change.newInsts) {
-      instBuffer.add(newInst);
-    }
+    instBuffer.addAll(Arrays.asList(change.newInsts));
+    
     // System.err.println("Swapped " + inst + " for " + change.newInst);
     if (!change.isOutVarSame()) {
       // Output variable of instruction changed, need to fix up
@@ -202,14 +200,8 @@ public class OptUtil {
     }
 
     // Now copy back values into future
-    if (newOutVars != null && change.storeOutputVals) {
-      for (int i = 0; i < newOutVars.size(); i++) {
-        Var oldOut = oldOutVars.get(i);
-        Var newOut = newOutVars.get(i);
-        if (oldOut != newOut)
-          instBuffer.add(ICInstructions.futureSet(oldOut,
-                                  Arg.createVar(newOut)));
-      }
+    if (change.storeOutputVals) {
+      WrapUtil.setLocalOpOutputs(oldOutVars, newOutVars, instBuffer);
     }
   }
   

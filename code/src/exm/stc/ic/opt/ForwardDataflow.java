@@ -16,10 +16,12 @@
 package exm.stc.ic.opt;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
@@ -35,6 +37,7 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.TernaryLogic.Ternary;
@@ -51,6 +54,7 @@ import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
+import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.Function;
@@ -712,16 +716,20 @@ public class ForwardDataflow implements OptimizerPass {
     HashMap<Var, Arg> alreadyFetched = new HashMap<Var, Arg>();
     for (Var v : req.in) {
       Arg maybeVal;
+      boolean fetchedHere;
       if (alreadyFetched.containsKey(v)) {
         maybeVal = alreadyFetched.get(v);
+        fetchedHere = true;
       } else {
         maybeVal = cv.findRetrieveResult(v);
+        fetchedHere = false;
       }
       // Can only retrieve value of future or reference
       // If we inserted a wait, need to consider if local value can
-      // be passed into new scope
+      // be passed into new scope.
       if (maybeVal != null
-          && (noWaitRequired || Semantics.canPassToChildTask(maybeVal.type()))) {
+          && (fetchedHere || noWaitRequired ||
+              Semantics.canPassToChildTask(maybeVal.type()))) {
         /*
          * this variable might not actually be passed through continuations to
          * the current scope, so we might have temporarily made the IC invalid,
@@ -737,11 +745,16 @@ public class ForwardDataflow implements OptimizerPass {
         alreadyFetched.put(v, fetched);
       }
     }
-    List<Var> outValVars = OptUtil.declareLocalOpOutputVars(insertContext,
-        req.out);
+    
+    // Need filenames for output file values
+    Map<Var, Var> filenameVals = loadOutputFileNames(cv, req.out,
+                                      insertContext, insertPoint);
+    
+    List<Var> outValVars = OptUtil.createLocalOpOutputVars(insertContext,
+                                    insertPoint, req.out, filenameVals);
     MakeImmChange change = inst.makeImmediate(outValVars, inVals);
     OptUtil.fixupImmChange(block, insertContext, change, alt, outValVars,
-        req.out);
+                           req.out);
 
     if (logger.isTraceEnabled()) {
       logger.trace("Replacing instruction <" + inst + "> with sequence "
@@ -761,6 +774,33 @@ public class ForwardDataflow implements OptimizerPass {
       ICUtil.rewindIterator(stmts, alt.size());
     }
     return true;
+  }
+
+  private static Map<Var, Var> loadOutputFileNames(ValueTracker cv,
+      List<Var> outputs, Block insertContext,
+      ListIterator<Statement> insertPoint) {
+    if (outputs == null)
+      outputs = Collections.emptyList();
+    
+    Map<Var, Var> filenameVals = new HashMap<Var, Var>();
+    for (Var output: outputs) {
+      if (Types.isFile(output)) {
+        // Can only do this with unmapped vars, since otherwise we need
+        // to wait for filename to be set
+        assert(cv.isUnmapped(output));
+        String varName = insertContext.uniqueVarName(
+                          Var.FILENAME_OF_PREFIX + output.name());
+        Var filenameVal = insertContext.declareVariable(
+                        Types.V_STRING, varName, VarStorage.LOCAL,
+                        DefType.LOCAL_COMPILER, null);
+        for (Statement stmt: TurbineOp.initWithTmpFilename(
+                                    filenameVal, null, output)) {
+          insertPoint.add(stmt);
+        }
+        filenameVals.put(output, filenameVal);
+      }
+    }
+    return filenameVals;
   }
 
   /**

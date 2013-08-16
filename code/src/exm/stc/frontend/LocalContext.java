@@ -28,7 +28,6 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
-import exm.stc.frontend.Context.DefKind;
 
 /**
  * Track context within a function.  New child contexts are created

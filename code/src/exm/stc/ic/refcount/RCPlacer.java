@@ -124,7 +124,8 @@ public class RCPlacer {
         Var var = increments.getRefCountVar(block, e.getKey(), true);
         Long incr = e.getValue();
         if (incr > 0) {
-          if (inst != null && !inst.getInitializedAliases().contains(var)) {
+          if (inst != null && !(var.storage() == VarStorage.ALIAS &&
+                                inst.getInitialized().contains(var))) {
             insertIncrBefore(block, stmtIt, var, incr, rcType);
           } else {
             insertIncrAfter(block, stmtIt, var, incr, rcType);

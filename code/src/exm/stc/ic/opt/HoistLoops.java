@@ -297,13 +297,13 @@ public class HoistLoops implements OptimizerPass {
       for (Var out: inst.getModifiedOutputs()) {
         write(out, piecewiseOutputs.contains(out));
       }
-      for (Var initAlias: inst.getInitializedAliases()) {
-        initializeAlias(initAlias);
+      for (Var init: inst.getInitialized()) {
+        initialize(init);
       }
     }
     
-    public void initializeAlias(Var v) {
-      assert(v.storage() == VarStorage.ALIAS);
+    public void initialize(Var v) {
+      assert(Types.outputRequiresInitialization(v));
       initializedMap.put(v, this.block);
     }
     
@@ -438,11 +438,11 @@ public class HoistLoops implements OptimizerPass {
     // initialized if needed
     for (Var out: inst.getOutputs()) {
       if (out.storage() == VarStorage.ALIAS) {
-        if (!inst.getInitializedAliases().contains(out)) {
+        if (!inst.getInitialized().contains(out)) {
           int initDepth = state.initializedMap.getDepth(out);
           if (logger.isTraceEnabled())
             logger.trace("hoist limited to " + initDepth + " because of "
-                + " initialization for alias var " + out);
+                + " initialization for var " + out);
           maxHoist = Math.min(maxHoist, initDepth);
           return false;
         }

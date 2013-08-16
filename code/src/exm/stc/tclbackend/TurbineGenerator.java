@@ -755,6 +755,14 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
+  public void initLocalOutputFile(Var localFile, Arg filenameVal) {
+    assert(localFile.type().assignableTo(Types.V_FILE));
+    assert(filenameVal.type().assignableTo(Types.V_STRING));
+    pointStack.peek().add(Turbine.createLocalFile(prefixVar(localFile),
+                                                      argToExpr(filenameVal)));
+  }
+  
+  @Override
   public void localOp(BuiltinOpcode op, Var out,
                                             List<Arg> in) {
     ArrayList<Expression> argExpr = new ArrayList<Expression>(in.size());
@@ -1059,13 +1067,12 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void runExternal(String cmd, List<Arg> args,
           List<Arg> inFiles, List<Var> outFiles, 
-          List<Arg> outFileNames, Redirects<Arg> redirects,
+          Redirects<Arg> redirects,
           boolean hasSideEffects, boolean deterministic) {
     for (Arg inFile: inFiles) {
       assert(inFile.isVar());
       assert(inFile.type().assignableTo(Types.V_FILE));
     }
-    assert(outFiles.size() == outFileNames.size());
     
     List<Expression> tclArgs = new ArrayList<Expression>(args.size());
     List<Expression> logMsg = new ArrayList<Expression>();
@@ -1094,20 +1101,18 @@ public class TurbineGenerator implements CompilerBackend {
     Expression stdinFilename = TclUtil.argToExpr(redirects.stdin, true);
     Expression stdoutFilename = TclUtil.argToExpr(redirects.stdout, true);
     Expression stderrFilename = TclUtil.argToExpr(redirects.stderr, true);
-    logMsg.add(Turbine.execKeywordOpts(stdinFilename, stdoutFilename, stderrFilename));
+    logMsg.add(Turbine.execKeywordOpts(stdinFilename, stdoutFilename,
+                                       stderrFilename));
     
     pointStack.peek().add(Turbine.turbineLog(logMsg));
     pointStack.peek().add(Turbine.exec(cmd, stdinFilename,
                 stdoutFilename, stderrFilename, tclArgs));
         
-    // Close outputs
+    // Handle closing of outputs
     for (int i = 0; i < outFiles.size(); i++) {
       Var o = outFiles.get(i);
       if (o.type().assignableTo(Types.V_FILE)) {
-        Arg outFileName = outFileNames.get(i);
-        assert(outFileName != null);
-        pointStack.peek().add(Turbine.createLocalFile(
-                prefixVar(o), argToExpr(outFileName)));
+        // Do nothing, filename was set when initialized earlier
       } else if (o.type().assignableTo(Types.V_VOID)) {
         // Do nothing, void value is just a bookkeeping trick
       } else {

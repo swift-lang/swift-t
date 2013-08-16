@@ -327,16 +327,9 @@ public class ICInstructions {
     }
     
     /**
-     * @return list of alias vars initialized by this instruction
+     * @return list of vars initialized by this instruction
      */
-    public List<Var> getInitializedAliases() {
-      return Var.NONE;
-    }
-
-    /**
-     * @return list of updateables initialized by this instruction
-     */
-    public List<Var> getInitializedUpdateables() {
+    public List<Var> getInitialized() {
       return Var.NONE;
     }
 
@@ -812,6 +805,9 @@ public class ICInstructions {
       case CHOOSE_TMP_FILENAME:
         gen.chooseTmpFilename(getOutput(0));
         break;
+      case INIT_LOCAL_OUTPUT_FILE:
+        gen.initLocalOutputFile(getOutput(0), getInput(0));
+        break;
       default:
         throw new STCRuntimeError("didn't expect to see op " +
                   op.toString() + " here");
@@ -1168,6 +1164,14 @@ public class ICInstructions {
     public static Instruction chooseTmpFilename(Var filenameVal) {
       return new TurbineOp(Opcode.CHOOSE_TMP_FILENAME, filenameVal);
     }
+    
+    public static Instruction initLocalOutFile(Var localOutFile,
+                                  Arg outFilename, Var outFile) {
+      assert(localOutFile.type().assignableTo(Types.V_FILE));
+      assert(outFilename.type().assignableTo(Types.V_STRING));
+      return new TurbineOp(Opcode.INIT_LOCAL_OUTPUT_FILE, localOutFile,
+                           outFilename, outFile.asArg());
+    }
 
     @Override
     public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
@@ -1179,7 +1183,7 @@ public class ICInstructions {
       } else {
         assert(mode == RenameMode.REFERENCE);
         // Don't replace initialized aliases
-        List<Var> initAliasOut = getInitializedAliases();
+        List<Var> initAliasOut = getInitialized();
         for (int i = 0; i < outputs.size(); i++) {
           Var output = outputs.get(i);
           if (!initAliasOut.contains(output) &&
@@ -1273,6 +1277,8 @@ public class ICInstructions {
         return 1;
       case SET_FILENAME_VAL:
         return 1;
+      case INIT_LOCAL_OUTPUT_FILE:
+        return 1;
       case FREE_BLOB:
         // View refcounted var as output
         return 1;
@@ -1321,11 +1327,13 @@ public class ICInstructions {
       case STORE_STRING:
       case STORE_BLOB:
       case STORE_VOID:
+      case STORE_FILE:
       case DEREF_INT:
       case DEREF_BOOL:
       case DEREF_FLOAT:
       case DEREF_STRING:
       case DEREF_BLOB:
+      case DEREF_FILE:
       case LOAD_INT:
       case LOAD_BOOL:
       case LOAD_FLOAT:
@@ -1340,15 +1348,7 @@ public class ICInstructions {
       case ARRAYREF_LOOKUP_FUTURE:
       case ARRAYREF_LOOKUP_IMM:
         return false;
-        
-      case DEREF_FILE:
-        return this.writesAliasVar() ||
-               getOutput(0).isMapped();
 
-      case STORE_FILE:
-        return this.writesAliasVar() ||
-                    getOutput(0).isMapped();
-        
       case GET_FILENAME:
         // Only effect is setting alias var
         return false;
@@ -1360,6 +1360,8 @@ public class ICInstructions {
       case CHOOSE_TMP_FILENAME:
         // Non-deterministic
         return true;
+      case INIT_LOCAL_OUTPUT_FILE:
+        return false;
       case SET_FILENAME_VAL:
         // Only effect is in file output var
         return false;
@@ -1808,16 +1810,12 @@ public class ICInstructions {
         Var filenameVal = out.get(0);
         Var filenameFuture = getOutput(0);
         Var fileVar = getOutput(1);
-        Instruction newInsts[] = new Instruction[] {
-          // Choose filename
-          TurbineOp.chooseTmpFilename(filenameVal),
-          // Set the filename on the file var
-          TurbineOp.setFilenameVal(fileVar, Arg.createVar(filenameVal)),
-          // Get the filename again but can assume mapping initialized
-          TurbineOp.getFileName(filenameFuture, fileVar, false)
-        };
+        ArrayList<Instruction> newInsts = initWithTmpFilename(filenameVal,
+                                                filenameFuture, fileVar);
         // Caller shouldn't set filenameFuture
-        return new MakeImmChange(newInsts, false);
+        return new MakeImmChange(
+            newInsts.toArray(new Instruction[newInsts.size()]),
+            false);
       }
       default:
         // fall through
@@ -1828,8 +1826,40 @@ public class ICInstructions {
           + values.toString());
     }
 
+    
+    /**
+     * Instruction sequence that:
+     * - Selects a temporary filename and stores in in filenameVal
+     * - Set the mapping of fileVar to this value
+     * - If filenameFuture is not null, make sure the alias is initialized
+     * @param filenameVal
+     * @param filenameFuture
+     * @param fileVar
+     * @return
+     */
+    public static ArrayList<Instruction> initWithTmpFilename(Var filenameVal,
+        Var filenameFuture, Var fileVar) {
+      assert(filenameVal.type().assignableTo(Types.V_STRING));
+      assert(Types.isFile(fileVar));
+      if (filenameFuture != null) {
+        assert(Types.isString(filenameFuture));
+        assert(filenameFuture.storage() == VarStorage.ALIAS);
+      }
+
+      ArrayList<Instruction> seq = new ArrayList<Instruction>(3);
+      // Select temporary file name
+      seq.add(TurbineOp.chooseTmpFilename(filenameVal));
+      // Set the filename on the file var
+      seq.add(TurbineOp.setFilenameVal(fileVar, filenameVal.asArg()));
+      if (filenameFuture != null) {
+        // Get the filename again but can assume mapping initialized
+        seq.add(TurbineOp.getFileName(filenameFuture, fileVar, false));
+      }
+      return seq;
+    }
+
     @Override
-    public List<Var> getInitializedAliases() {
+    public List<Var> getInitialized() {
       switch (op) {
         case LOAD_REF:
         case COPY_REF:
@@ -1838,22 +1868,22 @@ public class ICInstructions {
         case GET_FILENAME:
         case GET_OUTPUT_FILENAME:
         case STRUCT_LOOKUP:
-          return Collections.singletonList(getOutput(0));
-        default:
-          return Var.NONE;
-      }
-    }
-    
-    @Override
-    public List<Var> getInitializedUpdateables() {
-      switch (op) {
+          // Initialises alias
+          return getOutput(0).asList();
+          
+
         case INIT_UPDATEABLE_FLOAT:
-          return Collections.singletonList(getOutput(0));
+          // Initializes updateable
+          return getOutput(0).asList();
+        
+        case INIT_LOCAL_OUTPUT_FILE:
+        case LOAD_FILE:
+          // Initializes output file value
+          return getOutput(0).asList();
         default:
           return Var.NONE;
       }
     }
-    
 
     /**
      * @return list of outputs for which previous value is read
@@ -1997,6 +2027,7 @@ public class ICInstructions {
       case COPY_REF:
       case CHOOSE_TMP_FILENAME:
       case SET_FILENAME_VAL:
+      case INIT_LOCAL_OUTPUT_FILE:
       case ARRAY_BUILD:
         return TaskMode.SYNC;
       
@@ -3078,6 +3109,18 @@ public class ICInstructions {
           }
         }
       }
+      
+      // Deal with mapped variables, which are effectively side-channels
+      for (int i = 0; i < this.outputs.size(); i++) {
+        Var out = this.outputs.get(i);
+        if (Types.isFile(out)) {
+          // Need to wait for filename, unless unmapped 
+          if (!(waitForClose || unmappedVars.contains(out))) {
+            allClosed = false;
+          }
+        }
+      }
+      
       if (allClosed && (Builtins.hasOpEquiv(this.functionName)
                 || Builtins.hasInlineVersion(this.functionName))) {
         TaskMode mode = Builtins.getTaskMode(this.functionName);
@@ -3375,21 +3418,18 @@ public class ICInstructions {
     private final String cmd;
     private final ArrayList<Arg> inFiles;
     private final ArrayList<Var> outFiles;
-    private final ArrayList<Arg> outFileNames;
     private final ArrayList<Arg> args;
     private final Redirects<Arg> redirects;
     private final boolean hasSideEffects;
     private final boolean deterministic;
     
     public RunExternal(String cmd, List<Arg> inFiles, List<Var> outFiles, 
-        List<Arg> outFileNames, 
-        List<Arg> args, Redirects<Arg> redirects,
+               List<Arg> args, Redirects<Arg> redirects,
                boolean hasSideEffects, boolean deterministic) {
       super(Opcode.RUN_EXTERNAL);
       this.cmd = cmd;
       this.inFiles = new ArrayList<Arg>(inFiles);
       this.outFiles = new ArrayList<Var>(outFiles);
-      this.outFileNames = new ArrayList<Arg>(outFileNames);
       this.args = new ArrayList<Arg>(args);
       this.redirects = redirects.clone();
       this.deterministic = deterministic;
@@ -3400,7 +3440,6 @@ public class ICInstructions {
     public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
       ICUtil.replaceArgsInList(renames, args);
       ICUtil.replaceArgsInList(renames, inFiles);
-      ICUtil.replaceArgsInList(renames, outFileNames, true);
       redirects.stdin = ICUtil.replaceArg(renames, redirects.stdin, true);
       redirects.stdout = ICUtil.replaceArg(renames, redirects.stdout, true);
       redirects.stderr = ICUtil.replaceArg(renames, redirects.stderr, true);
@@ -3424,16 +3463,12 @@ public class ICInstructions {
       res.append(" outfiles=[");
       ICUtil.prettyPrintVarList(res, outFiles);
       res.append("]");
-      res.append(" outfilenames=[");
-      ICUtil.prettyPrintArgList(res, outFileNames);
-      res.append("]");
       return res.toString();
     }
 
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.runExternal(cmd, args, inFiles, 
-                  outFiles, outFileNames, 
+      gen.runExternal(cmd, args, inFiles, outFiles, 
                   redirects, hasSideEffects, deterministic);
     }
 
@@ -3442,7 +3477,6 @@ public class ICInstructions {
       ArrayList<Arg> res = new ArrayList<Arg>();
       res.addAll(args);
       res.addAll(inFiles);
-      res.addAll(ICUtil.filterNulls(outFileNames));
       for (Arg redirFilename: redirects.redirections(true, true)) {
         if (redirFilename != null) {
           res.add(redirFilename);
@@ -3466,7 +3500,6 @@ public class ICInstructions {
         Map<Var, Arg> knownConstants) {
       // Replace variables for which values are known
       ICUtil.replaceArgsInList(knownConstants, args);
-      ICUtil.replaceArgsInList(knownConstants, outFileNames, true);
       return null;
     }
 
@@ -3526,7 +3559,7 @@ public class ICInstructions {
 
     @Override
     public Instruction clone() {
-      return new RunExternal(cmd, inFiles, outFiles, outFileNames,
+      return new RunExternal(cmd, inFiles, outFiles,
               args, redirects, hasSideEffects, deterministic);
     }
     
@@ -3837,6 +3870,7 @@ public class ICInstructions {
     RUN_EXTERNAL,
     INIT_UPDATEABLE_FLOAT, UPDATE_MIN, UPDATE_INCR, UPDATE_SCALE, LATEST_VALUE,
     UPDATE_MIN_IMM, UPDATE_INCR_IMM, UPDATE_SCALE_IMM,
+    INIT_LOCAL_OUTPUT_FILE,
     GET_FILENAME, GET_OUTPUT_FILENAME, CHOOSE_TMP_FILENAME,
     SET_FILENAME_VAL, GET_FILENAME_VAL
   }

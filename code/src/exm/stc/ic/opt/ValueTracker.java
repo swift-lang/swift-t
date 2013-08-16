@@ -319,6 +319,10 @@ public class ValueTracker implements CVMap {
     }
   }
 
+  public boolean isUnmapped(Var var) {
+    return unmapped.contains(var);
+  }
+
   public void setUnmapped(Var var) {
     unmapped.add(var);
   }

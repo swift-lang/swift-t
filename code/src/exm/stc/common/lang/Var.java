@@ -50,6 +50,7 @@ public class Var implements Comparable<Var>, Typed {
   public static final String STRUCT_FIELD_VAR_PREFIX = "__sf_";
   public static final String LOCAL_VALUE_VAR_PREFIX = "__v_";
   public static final String FILENAME_OF_PREFIX = "__filename_";
+  public static final String WRAP_FILENAME_PREFIX = "__wfilename_";
   /* Separate value prefix to avoid name clashes for optimizer 
    *    inserted variables */
   public static final String OPT_VALUE_VAR_PREFIX = "__ov_";

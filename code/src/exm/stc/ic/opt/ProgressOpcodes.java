@@ -156,6 +156,7 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.GET_FILENAME);
     opcodes.add(Opcode.GET_OUTPUT_FILENAME);
     opcodes.add(Opcode.CHOOSE_TMP_FILENAME);
+    opcodes.add(Opcode.INIT_LOCAL_OUTPUT_FILE);
     opcodes.add(Opcode.COMMENT);
     opcodes.add(Opcode.STRUCT_INSERT);
     opcodes.add(Opcode.STRUCT_LOOKUP);

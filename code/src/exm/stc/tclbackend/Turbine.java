@@ -196,6 +196,7 @@ class Turbine {
   private static final Token SET_FILE = turbFn("set_file");
   private static final Token GET_OUTPUT_FILE_PATH = turbFn("get_output_file_path");
   private static final Token GET_FILE_PATH = turbFn("get_file_path");
+  private static final Token LOCAL_FILE_PATH = turbFn("local_file_path");
   private static final Token CREATE_LOCAL_FILE_REF = turbFn("create_local_file_ref");
   private static final Token DECR_LOCAL_FILE_REFCOUNT = turbFn("decr_local_file_refcount");
   private static final Token MKTEMP = turbFn("mktemp");
@@ -1201,6 +1202,10 @@ class Turbine {
       return new Square(GET_FILE_PATH, fileVar);
     }
   }
+  
+  public static Expression localFilePath(Value fileVar) {
+    return new Square(LOCAL_FILE_PATH, fileVar);
+  }
 
   public static TclTree resetPriority() {
     return new Command(RESET_PRIORITY);
@@ -1233,6 +1238,7 @@ class Turbine {
     return new SetVariable(varName, 
             new Square(CREATE_LOCAL_FILE_REF, fileName));
   }
+  
   public static SetVariable mkTemp(String varName) {
     return new SetVariable(varName, new Square(MKTEMP));
   }
@@ -1267,10 +1273,4 @@ class Turbine {
   public static Command log(TclString logMsg) {
     return new Command(TURBINE_LOG, logMsg);
   }
-
-  public static TclTree structRefSet(Value varToExpr, Value varToExpr2, int i) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
 }

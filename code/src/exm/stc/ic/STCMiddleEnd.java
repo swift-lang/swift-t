@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 
@@ -47,6 +48,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.MultiMap;
+import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.ICOptimizer;
 import exm.stc.ic.tree.Conditionals.IfStatement;
 import exm.stc.ic.tree.Conditionals.SwitchStatement;
@@ -56,7 +58,6 @@ import exm.stc.ic.tree.ICContinuations.Loop;
 import exm.stc.ic.tree.ICContinuations.NestedBlock;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
-import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Builtin;
 import exm.stc.ic.tree.ICInstructions.Comment;
 import exm.stc.ic.tree.ICInstructions.FunctionCall;
@@ -381,16 +382,11 @@ public class STCMiddleEnd {
   }
 
   public void runExternal(String cmd, List<Arg> args, List<Arg> inFiles,
-                          List<Var> outFiles, List<Arg> outFileNames,
-                          Redirects<Arg> redirects,
+                          List<Var> outFiles, Redirects<Arg> redirects,
                           boolean hasSideEffects, boolean deterministic) {
     for (Var o: outFiles) {
       assert(o.type().assignableTo(Types.V_FILE) 
               || o.type().assignableTo(Types.V_VOID));
-    }
-    assert(outFiles.size() == outFileNames.size());
-    for (Arg o: outFileNames) {
-      assert(o == null || o.type().assignableTo(Types.V_STRING));
     }
     
     for (Arg i: inFiles) {
@@ -399,7 +395,13 @@ public class STCMiddleEnd {
     
 
     currBlock().addInstruction(new RunExternal(cmd, inFiles, outFiles, 
-        outFileNames, args, redirects, hasSideEffects, deterministic));
+                      args, redirects, hasSideEffects, deterministic));
+  }
+  
+  public void initLocalOutFile(Var localOutFile, Arg fileName,
+                                                 Var fileFuture) {
+    currBlock().addInstruction(TurbineOp.initLocalOutFile(
+                            localOutFile, fileName, fileFuture));
   }
   
   public void arrayLookupFuture(Var oVar, Var arrayVar,
@@ -897,59 +899,38 @@ public class STCMiddleEnd {
       // Cases where we may need to send task to another class of worker
       waitMode = WaitMode.TASK_DISPATCH;
     }
+
+    Block mainBlock = fn.mainBlock();
     
+    Pair<List<WaitVar>, Map<Var, Var>> p;
+    p = WrapUtil.buildWaitVars(mainBlock, mainBlock.statementIterator(),
+                               userInArgs, outArgs);
     
-    List<WaitVar> waitVars = new ArrayList<WaitVar>(userInArgs.size());
-    for (Var in: userInArgs) {
-      if (!Types.isScalarUpdateable(in.type())) {
-        waitVars.add(new WaitVar(in, false));
-      }
-    }
+    // Variables we must wait for
+    List<WaitVar> waitVars = p.val1;
+
+    // Track filenames corresponding to inputs
+    Map<Var, Var> filenameVars = p.val2;
+    
     
     WaitStatement wait = new WaitStatement(function + "-argwait",
                   waitVars, PassedVar.NONE, Var.NONE,
                   waitMode, true, mode, props);
     
-    fn.mainBlock().addContinuation(wait);
-    Block block = wait.getBlock();
+    mainBlock.addContinuation(wait);
     
+    Block waitBlock = wait.getBlock();
+    
+    // List of instructions to go inside wait
     List<Instruction> instBuffer = new ArrayList<Instruction>();
-    List<Arg> inVals = new ArrayList<Arg>();
-    for (Var inArg: userInArgs) {
-      if (Types.isArray(inArg.type())) {
-        inVals.add(inArg.asArg());
-      } else {
-        String name = Var.LOCAL_VALUE_VAR_PREFIX + inArg.name();
-        if (Types.isScalarUpdateable(inArg.type())) {
-          inVals.add(WrapUtil.fetchCurrentValueOf(block, instBuffer,
-              inArg, name).asArg());
-        } else {
-          inVals.add(WrapUtil.fetchValueOf(block, instBuffer,
-              inArg, name).asArg());
-        }
-      }
-    }
-    List<Var> outVals = new ArrayList<Var>();
-    for (Var outArg: outArgs) {
-      if (Types.isArray(outArg.type()) || Types.isScalarUpdateable(outArg.type())) {
-        outVals.add(outArg);
-      } else {
-        outVals.add(WrapUtil.declareLocalOutputVar(block, outArg,
-                  Var.LOCAL_VALUE_VAR_PREFIX + outArg.name()));
-      }
-    }
+    List<Arg> inVals = WrapUtil.fetchLocalOpInputs(waitBlock, userInArgs,
+                                                  instBuffer, false);
+    List<Var> outVals = WrapUtil.createLocalOpOutputs(waitBlock, outArgs,
+                                                filenameVars, instBuffer, false);
     instBuffer.add(new LocalFunctionCall(function, inVals, outVals));
     
-    for (int i = 0; i < outVals.size(); i++) {
-      Var outArg = outArgs.get(i);
-      Var outVal = outVals.get(i);
-      if (Types.isArray(outArg.type())) {
-        // Nothing: must be modified by called function
-      } else {
-        instBuffer.add(ICInstructions.futureSet(outArg, Arg.createVar(outVal)));
-      }
-    }
+    WrapUtil.setLocalOpOutputs(outArgs, outVals, instBuffer);
     
-    block.addInstructions(instBuffer);
+    waitBlock.addInstructions(instBuffer);
   }
 }
