@@ -2748,13 +2748,13 @@ public class ICInstructions {
         allValues = false;
       }
       if (getInput(1).isIntVal()) {
-        step = getInput(1).getIntLit();
+        end = getInput(1).getIntLit();
       } else {
         allValues = false;
       }
       if (this.functionName.equals(Builtins.RANGE_STEP)) {
         if (getInput(2).isIntVal()) {
-          start = getInput(2).getIntLit();
+          step = getInput(2).getIntLit();
         } else {
           allValues = false;
         }
