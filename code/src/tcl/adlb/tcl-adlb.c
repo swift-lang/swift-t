@@ -934,6 +934,11 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
 {
   int rc;
   int argpos = argstart;
+  
+  // Avoid passing out any uninitialized bytes
+  memset(type_extra, 0, sizeof(*type_extra));
+  memset(props, 0, sizeof(*props));
+
   if (accept_id) {
     TCL_CONDITION(objc - argstart >= 2, "adlb::create requires >= 2 args!");
     rc = Tcl_GetADLB_ID(interp, objv[argpos++], id);
@@ -942,7 +947,6 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
     TCL_CONDITION(objc - argstart >= 1, "adlb::create requires >= 1 args!");
     *id = ADLB_DATA_ID_NULL;
   }
-
 
   adlb_data_type tmp_type;
   rc = type_from_obj(interp, objv, objv[argpos++], &tmp_type);
