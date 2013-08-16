@@ -1037,6 +1037,7 @@ ADLBP_Subscribe(adlb_datum_id id, const char *subscript,
 
   if (result.dc == ADLB_DATA_SUCCESS)
   {
+    *subscribed = result.subscribed;
     if (subscript == NULL)
     {
       DEBUG("ADLB_Subscribe: <%"PRId64"> => %i", id, *subscribed);
@@ -1045,7 +1046,6 @@ ADLBP_Subscribe(adlb_datum_id id, const char *subscript,
     {
       DEBUG("ADLB_Subscribe: <%"PRId64">[\"%s\"] => %i", id, subscript, *subscribed);
     }
-    *subscribed = result.subscribed;
     return ADLB_SUCCESS;
   }
   else if (result.dc == ADLB_DATA_ERROR_NOT_FOUND)
