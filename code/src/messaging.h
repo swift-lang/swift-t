@@ -32,6 +32,14 @@
 #include "debug.h"
 #include "workqueue.h"
 
+/*
+ * Pragma to disable padding in structures:
+ * a) to reduce message sizes
+ * b) to avoid confusing tools like valgrind that detect uninitialized bytes
+ *    being sent.
+ */
+#pragma pack(push, 1)
+
 /**
    Initialize the messaging functionality
  */
@@ -426,4 +434,6 @@ typedef enum
 
 } adlb_tag;
 
+// Revert to regular packing rules
+#pragma pack(pop)
 #endif
