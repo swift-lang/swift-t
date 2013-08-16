@@ -289,7 +289,7 @@ namespace eval turbine {
 	set dstpath [ get_file_path $dst ]
 	set d [ retrieve_string $dstpath ]
 	set fp [ ::open $d w+ ]
-        puts $fp $str_val
+        puts -nonewline $fp $str_val
 	close $fp
 	store_void [ get_file_status $dst ]
     }
@@ -300,7 +300,7 @@ namespace eval turbine {
     proc file_write_local { local_file_name data } {
         upvar $local_file_name local_file
 	set fp [ ::open [ local_file_path $local_file ] w+ ]
-        puts $fp $data
+        puts -nonewline $fp $data
 	close $fp
     }
 
