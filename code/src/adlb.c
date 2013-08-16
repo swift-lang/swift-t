@@ -91,8 +91,6 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   adlb_code code = debug_check_environment();
   ADLB_CHECK(code);
 
-  printf("test_struct size: %d", sizeof(test_struct));
-
   TRACE_START;
 
   int initialized;
