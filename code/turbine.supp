@@ -1,10 +1,34 @@
 
 # Valgrind memcheck suppressions file
 # To use: set
-#   VALGRIND='valgrind --suppressions=turbine.supp'
+#   VALGRIND='valgrind --suppressions=turbine.supp --num-callers=$N'
+# Set N high for MPICH errors- these have deep call stacks
+
+# Put these in your .valgrindrc:
+# -q
+# --memcheck:leak-check=yes
+# --memcheck:track-origins=yes
+# --show-reachable=yes
+
+# Other tips:
+# http://wiki.tcl.tk/3840
+# http://wiki.tcl.tk/3248
+
+# Use: export LANG=POSIX - helps a little
+#      Tcl -DPURIFY - did not help
+# Configure MPICH with --with-enable=dbg,meminit
+#       meminit prevents uninitialized data warnings
 
 {
    tcl-alloc-1
+   Memcheck:Leak
+   fun:malloc
+   fun:Tcl_Alloc
+   ...
+}
+
+{
+   tcl-alloc-2
    Memcheck:Leak
    fun:malloc
    fun:TclpAlloc
@@ -33,4 +57,12 @@
    Memcheck:Leak
    fun:malloc
    fun:MPID_VCRT_Create
+}
+
+{
+  tcl-allocatefreeobjects
+  Memcheck:Leak
+  fun:malloc
+  fun:Tcl_Alloc
+  fun:TclAllocateFreeObjects
 }
