@@ -101,8 +101,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
 
   xlb_start_time = MPI_Wtime();
 
-  rc = MPI_Comm_dup(comm, &adlb_comm);
-  ASSERT(rc == MPI_SUCCESS);
+  adlb_comm = comm;
 
   rc = MPI_Comm_size(comm, &xlb_comm_size);
   rc = MPI_Comm_rank(comm, &xlb_comm_rank);
@@ -166,7 +165,8 @@ setup_hostmap()
   char* allnames = malloc((xlb_comm_size*length) * sizeof(char));
 
   char myname[length];
-  // memset(myname, 0, length);
+  // This prevents valgrind errors:
+  memset(myname, 0, length);
   strcpy(myname, u.nodename);
 
   int rc = MPI_Allgather(myname,   length, MPI_CHAR,
@@ -1268,11 +1268,11 @@ ADLBP_Finalize()
   // Clean up communicators (avoid memory leaks if ADLB used within
   // another application, and avoid spurious warnings from leak
   // detectors otherwise)
-  MPI_Comm_free(&adlb_comm);
   if (xlb_am_server)
     MPI_Comm_free(&adlb_server_comm);
   else
     MPI_Comm_free(&adlb_worker_comm);
+  MPI_Group_free(&adlb_group);
 
   free(xlb_types);
   xlb_types = NULL;
