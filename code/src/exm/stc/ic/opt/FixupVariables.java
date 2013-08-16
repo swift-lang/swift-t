@@ -16,10 +16,6 @@
 package exm.stc.ic.opt;
 
 import java.util.ArrayList;
-<<<<<<< HEAD
-=======
-import java.util.Arrays;
->>>>>>> Attempt to fix up write reference trracking for aliases struct emmbers
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -39,12 +35,9 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarStorage;
 import exm.stc.common.util.HierarchicalSet;
-<<<<<<< HEAD
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.ic.opt.AliasTracker.AliasKey;
-=======
->>>>>>> Attempt to fix up write reference trracking for aliases struct emmbers
 import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -139,7 +132,6 @@ public class FixupVariables implements OptimizerPass {
     }
     
     if (res.written.size() > 0) {
-<<<<<<< HEAD
       throw new STCRuntimeError("Unexpected write IC function "
           + fn.getName() + " to variables " + res.written.toString());
     }
@@ -147,15 +139,10 @@ public class FixupVariables implements OptimizerPass {
     if (res.aliasWritten.size() > 0) {
       throw new STCRuntimeError("Unexpected write IC function "
           + fn.getName() + " to variables " + res.aliasWritten.toString());
-=======
-      throw new STCRuntimeError("Unexpected write IC function "
-          + fn.getName() + " to variables " + res.written.toString());
->>>>>>> Attempt to fix up write reference trracking for aliases struct emmbers
     }
   }
 
   private static class Result {
-<<<<<<< HEAD
     final Set<Var> read; /** Variables that were read */
     final Set<Var> written; /** Variables that were written (de-aliased) */
     /** Original aliases for write variables, to make sure that redundant
@@ -181,24 +168,12 @@ public class FixupVariables implements OptimizerPass {
       return Sets.union(allSets());
     }
     
-=======
-    final Set<Var> read;
-    final Set<Var> written;
-    
-    Result(Set<Var> read, Set<Var> written) {
-      super();
-      this.read = read;
-      this.written = written;
-    }
-
->>>>>>> Attempt to fix up write reference trracking for aliases struct emmbers
     /**
      * Add everything from another result
      */
     void add(Result other) {
       read.addAll(other.read);
       written.addAll(other.written);
-<<<<<<< HEAD
       aliasWritten.addAll(other.aliasWritten);
     }
     
@@ -221,24 +196,15 @@ public class FixupVariables implements OptimizerPass {
       }
     }
 
-=======
-    }
->>>>>>> Attempt to fix up write reference trracking for aliases struct emmbers
 
     void addRead(Var var) {
       read.add(var);
     }
 
-<<<<<<< HEAD
     void addRead(Collection<Var> vars) {
       for (Var var: vars) {
         addRead(var);
       }
-=======
-    void addRead(Collection<Var> requiredVars) {
-      // TODO Auto-generated method stub
-      
->>>>>>> Attempt to fix up write reference trracking for aliases struct emmbers
     }
 
     void removeRead(Var var) {
@@ -252,15 +218,10 @@ public class FixupVariables implements OptimizerPass {
     }
 
     Var canonicalWriteVar(Var var, AliasTracker aliases) {
-<<<<<<< HEAD
       AliasKey key = aliases.getCanonical(var);
       assert(key != null) : var;
       Var canonical = aliases.findVar(key);
       assert(canonical != null) : var + " " + key;
-=======
-      Var canonical = aliases.findVar(aliases.getCanonical(var));
-      assert(canonical != null);
->>>>>>> Attempt to fix up write reference trracking for aliases struct emmbers
       return canonical;
     }
 
@@ -276,12 +237,9 @@ public class FixupVariables implements OptimizerPass {
        */
       Var key = canonicalWriteVar(var, aliases);
       this.written.add(key);
-<<<<<<< HEAD
       if (!key.equals(var)) {
         this.aliasWritten.add(var);
       }
-=======
->>>>>>> Attempt to fix up write reference trracking for aliases struct emmbers
     }
 
     void addWritten(Collection<Var> vars, AliasTracker aliases) {
@@ -298,10 +256,7 @@ public class FixupVariables implements OptimizerPass {
     void removeWritten(Var var) {
       // Remove the non-canonical var
       this.written.remove(var);
-<<<<<<< HEAD
       this.aliasWritten.remove(var);
-=======
->>>>>>> Attempt to fix up write reference trracking for aliases struct emmbers
     }
     
     /**
@@ -346,11 +301,7 @@ public class FixupVariables implements OptimizerPass {
     }
 
     // Work out which variables are read/writte which aren't locally declared
-<<<<<<< HEAD
     Result result = new Result();
-=======
-    Result result = new Result(new HashSet<Var>(), new HashSet<Var>());
->>>>>>> Attempt to fix up write reference trracking for aliases struct emmbers
     findBlockNeeded(block, result, aliases);
     
     for (Continuation c : block.allComplexStatements()) {
@@ -365,11 +316,7 @@ public class FixupVariables implements OptimizerPass {
     if (execCx == ExecContext.CONTROL) {
       // Global constants can be imported in control blocks only
       Set<Var> globals = addGlobalImports(block, visible, updateLists,
-<<<<<<< HEAD
                                           result.allSets());
-=======
-                          Arrays.asList(result.read, result.written));
->>>>>>> Attempt to fix up write reference trracking for aliases struct emmbers
   
       referencedGlobals.addAll(globals);
       result.removeReadWrite(globals);
@@ -380,12 +327,7 @@ public class FixupVariables implements OptimizerPass {
   /**
    * Find all referenced vars in scope
    * @param block
-<<<<<<< HEAD
    * @param result accumulate needed vars
-=======
-   * @param written accumulate output vars
-   * @param read accumulate all input vars from this block
->>>>>>> Attempt to fix up write reference trracking for aliases struct emmbers
    * @param aliases 
    */
   private static void findBlockNeeded(Block block, Result result,
@@ -409,12 +351,9 @@ public class FixupVariables implements OptimizerPass {
               result.addRead(in.getVar());
             }
           }
-<<<<<<< HEAD
           for (Var read: i.getReadOutputs()) {
             result.addRead(read);
           }
-=======
->>>>>>> Attempt to fix up write reference trracking for aliases struct emmbers
           result.addWritten(i.getOutputs(), aliases);
           break;
         }
@@ -497,28 +436,9 @@ public class FixupVariables implements OptimizerPass {
           Continuation continuation, HierarchicalSet<Var> visibleVars,
           Set<Var> outerBlockVars, AliasTracker outerAliases,
           Result outer, Result inner) {
-<<<<<<< HEAD
     // Rebuild passed in vars
     List<PassedVar> passedIn = new ArrayList<PassedVar>();
     for (Var needed: inner.allNeeded()) {
-=======
-    Set<Var> innerAllNeeded = new HashSet<Var>();
-    innerAllNeeded.addAll(inner.read);
-    innerAllNeeded.addAll(inner.written);
-    
-    // Rebuild passed in vars
-    List<PassedVar> passedIn = new ArrayList<PassedVar>();
-    for (Var needed: innerAllNeeded) {
-      boolean read = inner.read.contains(needed);
-      boolean written = inner.written.contains(needed);
-      // Update outer in case outer will need to pass in
-      if (!outerBlockVars.contains(needed)) {
-        if (read)
-          outer.addRead(needed);
-        if (written)
-          outer.addWritten(needed, outerAliases);
-      }
->>>>>>> Attempt to fix up write reference trracking for aliases struct emmbers
       if (!visibleVars.contains(needed)) {
         throw new STCRuntimeError("Variable " + needed
             + " should have been " + "visible but wasn't in "
