@@ -549,42 +549,50 @@ public class ICInstructions {
     
     /** Private constructor: use static methods to create */
     private TurbineOp(Opcode op, List<Var> outputs, List<Arg> inputs) {
-      super(op);
-      this.outputs = outputs;
-      this.inputs = inputs;
+      this(op, outputs, inputs, Collections.<Arg>emptyList());
     }
     
+    private TurbineOp(Opcode op, List<Var> outputs, List<Arg> inputs,
+                      List<Arg> dummyInputs) {
+      super(op);
+      this.outputs = initArgList(outputs);
+      this.inputs = initArgList(inputs);
+      this.dummyInputs = initArgList(dummyInputs);
+    }
+    
+    
+    private static Class<? extends Object> SINGLETON_LIST =
+                             Collections.singletonList(null).getClass();
+    /**
+     * Initialize args as list that support .set() operation.
+     * @param args
+     * @return
+     */
+    private static <T> List<T> initArgList(List<T> args) {
+      if (args.isEmpty()) {
+        // Nothing will be mutated in list, so use placeholder
+        return Collections.emptyList();
+      } else if (SINGLETON_LIST.isInstance(args)) {
+        // Avoid known-bad list classes
+        return new ArrayList<T>(args);
+      } else {
+        return args;
+      }
+    }
+
     private TurbineOp(Opcode op, Var output, Arg ...inputs) {
       this(op, Arrays.asList(output), Arrays.asList(inputs));
     }
     
-    /**
-     * Deprecated: prefer separate outputs and inputs
-     * @param op
-     * @param args
-     */
-    private TurbineOp(Opcode op, List<Arg> args) {
-      super(op);
-      int numOutputs = numOutputArgs();
-      this.outputs = new ArrayList<Var>(numOutputs);
-      this.inputs = new ArrayList<Arg>(args.size() - numOutputs);
-      for (int i = 0; i < args.size(); i++) {
-        if (i < numOutputs) {
-          outputs.add(args.get(i).getVar());
-        } else {
-          inputs.add(args.get(i));
-        }
-      }
-    }
-    
-    
-    private TurbineOp(Opcode op, Arg... args) {
-      this(op, Arrays.asList(args));
+    private TurbineOp(Opcode op, List<Var> outputs, Arg ...inputs) {
+      this(op, outputs, Arrays.asList(inputs));
     }
   
-    private List<Var> outputs;
-    private List<Arg> inputs;
-  
+    private List<Var> outputs; /** Variables that are modified by this instruction */
+    private List<Arg> inputs; /** Variables that are read-only */
+    /** Variables that are not actually read, but somehow are related */
+    private List<Arg> dummyInputs;
+    
     @Override
     public String toString() {
       String result = op.toString().toLowerCase();
@@ -592,6 +600,9 @@ public class ICInstructions {
         result += " " + o.name();
       }
       for (Arg i: inputs) {
+        result += " " + i.toString();
+      }
+      for (Arg i: dummyInputs) {
         result += " " + i.toString();
       }
       return result;
@@ -817,150 +828,152 @@ public class ICInstructions {
   
     public static TurbineOp arrayRefLookupFuture(Var oVar, Var arrayRefVar,
         Var indexVar) {
-      return new TurbineOp(Opcode.ARRAYREF_LOOKUP_FUTURE,
-          Arg.createVar(oVar), Arg.createVar(arrayRefVar),
-                                    Arg.createVar(indexVar));
+      return new TurbineOp(Opcode.ARRAYREF_LOOKUP_FUTURE, oVar,
+                            arrayRefVar.asArg(), indexVar.asArg());
     }
   
     public static TurbineOp arrayLookupFuture(Var oVar, Var arrayVar,
         Var indexVar) {
       return new TurbineOp(Opcode.ARRAY_LOOKUP_FUTURE,
-          Arg.createVar(oVar), Arg.createVar(arrayVar),
-          Arg.createVar(indexVar));
+          oVar, arrayVar.asArg(), indexVar.asArg());
     }
   
     public static Instruction arrayInsertFuture(Var array,
         Var ix, Var member) {
       return new TurbineOp(Opcode.ARRAY_INSERT_FUTURE,
-          Arg.createVar(array), Arg.createVar(ix),
-              Arg.createVar(member));
+              array, ix.asArg(),
+              member.asArg());
     }
     
     public static Instruction arrayDerefInsertFuture(Var array,
         Var ix, Var member) {
       return new TurbineOp(Opcode.ARRAY_DEREF_INSERT_FUTURE,
-          Arg.createVar(array), Arg.createVar(ix),
-              Arg.createVar(member));
+              array, ix.asArg(),
+              member.asArg());
     }
   
     public static Instruction arrayRefInsertFuture(Var outerArray,
         Var array, Var ix, Var member) {
       return new TurbineOp(Opcode.ARRAYREF_INSERT_FUTURE,
-          Arg.createVar(outerArray), Arg.createVar(array),
-          Arg.createVar(ix), Arg.createVar(member));
+          Arrays.asList(outerArray, array), ix.asArg(), member.asArg());
     }
     
     public static Instruction arrayRefDerefInsertFuture(Var outerArray,
         Var array, Var ix, Var member) {
       return new TurbineOp(Opcode.ARRAYREF_DEREF_INSERT_FUTURE,
-          Arg.createVar(outerArray), Arg.createVar(array),
-          Arg.createVar(ix), Arg.createVar(member));
+          Arrays.asList(outerArray, array),
+          ix.asArg(), member.asArg());
     }
     
     public static Instruction arrayInsertImm(Var array,
         Arg ix, Var member) {
       return new TurbineOp(Opcode.ARRAY_INSERT_IMM,
-          Arg.createVar(array), ix, Arg.createVar(member));
+                            array, ix, member.asArg());
     }
     
     public static Instruction arrayDerefInsertImm(Var array,
         Arg ix, Var member) {
       return new TurbineOp(Opcode.ARRAY_DEREF_INSERT_IMM,
-          Arg.createVar(array), ix, Arg.createVar(member));
+                           array, ix, member.asArg());
     }
 
     public static Instruction arrayRefInsertImm(Var outerArray,
         Var array, Arg ix, Var member) {
       return new TurbineOp(Opcode.ARRAYREF_INSERT_IMM,
-          Arg.createVar(outerArray), Arg.createVar(array),
-          ix, Arg.createVar(member));
+          Arrays.asList(outerArray, array),
+          ix, member.asArg());
     }
     
     public static Instruction arrayRefDerefInsertImm(Var outerArray,
         Var array, Arg ix, Var member) {
       return new TurbineOp(Opcode.ARRAYREF_DEREF_INSERT_IMM,
-          Arg.createVar(outerArray), Arg.createVar(array),
-          ix, Arg.createVar(member));
+          Arrays.asList(outerArray, array),
+          ix, member.asArg());
     }
 
     public static Instruction arrayRefLookupImm(Var oVar,
         Var arrayVar, Arg arrayIndex) {
       return new TurbineOp(Opcode.ARRAYREF_LOOKUP_IMM,
-          Arg.createVar(oVar), Arg.createVar(arrayVar), arrayIndex);
+          oVar, arrayVar.asArg(), arrayIndex);
     }
   
     public static Instruction arrayLookupRefImm(Var oVar, Var arrayVar,
         Arg arrayIndex) {
       return new TurbineOp(Opcode.ARRAY_LOOKUP_REF_IMM,
-          Arg.createVar(oVar), Arg.createVar(arrayVar), arrayIndex);
+          oVar, arrayVar.asArg(), arrayIndex);
     }
     
     public static Instruction arrayLookupImm(Var oVar, Var arrayVar,
         Arg arrayIndex) {
       return new TurbineOp(Opcode.ARRAY_LOOKUP_IMM,
-          Arg.createVar(oVar), Arg.createVar(arrayVar), arrayIndex);
+          oVar, arrayVar.asArg(), arrayIndex);
     }
   
     public static Instruction arrayBuild(Var array, List<Var> members) {
-      ArrayList<Arg> args = new ArrayList<Arg>(2 + members.size());
-      args.add(Arg.createVar(array));
+      ArrayList<Arg> inputs = new ArrayList<Arg>(members.size());
       for (Var mem: members) {
-        args.add(Arg.createVar(mem));
+        inputs.add(mem.asArg());
       }
-      return new TurbineOp(Opcode.ARRAY_BUILD, args);
+      return new TurbineOp(Opcode.ARRAY_BUILD, array.asList(), inputs);
+    }
+
+    public static Instruction structInsert(Var structVar,
+        String fieldName, Var fieldContents) {
+      return new TurbineOp(Opcode.STRUCT_INSERT,
+                      structVar,
+                      Arg.createStringLit(fieldName),
+                      fieldContents.asArg());
     }
 
     public static Instruction structLookup(Var oVar, Var structVar,
                                                           String fieldName) {
       assert(oVar.storage() == VarStorage.ALIAS) : oVar;
       return new TurbineOp(Opcode.STRUCT_LOOKUP,
-          Arg.createVar(oVar), Arg.createVar(structVar),
+          oVar, structVar.asArg(),
               Arg.createStringLit(fieldName));
     }
     
     public static Instruction structRefLookup(Var oVar, Var structVar,
         String fieldName) {
       return new TurbineOp(Opcode.STRUCTREF_LOOKUP,
-              Arg.createVar(oVar), Arg.createVar(structVar),
+              oVar, structVar.asArg(),
               Arg.createStringLit(fieldName));
     }
 
     public static Instruction assignInt(Var target, Arg src) {
-      return new TurbineOp(Opcode.STORE_INT, Arg.createVar(target), src);
+      return new TurbineOp(Opcode.STORE_INT, target, src);
     }
 
     public static Instruction assignBool(Var target, Arg src) {
-      return new TurbineOp(Opcode.STORE_BOOL, Arg.createVar(target), src);
+      return new TurbineOp(Opcode.STORE_BOOL, target, src);
     }
 
     public static Instruction assignVoid(Var target, Arg src) {
-      return new TurbineOp(Opcode.STORE_VOID, Arg.createVar(target), src);
+      return new TurbineOp(Opcode.STORE_VOID, target, src);
     }
   
     public static Instruction assignFloat(Var target, Arg src) {
-      return new TurbineOp(Opcode.STORE_FLOAT, Arg.createVar(target), src);
+      return new TurbineOp(Opcode.STORE_FLOAT, target, src);
     }
   
     public static Instruction assignString(Var target, Arg src) {
-      return new TurbineOp(Opcode.STORE_STRING, Arg.createVar(target), src);
+      return new TurbineOp(Opcode.STORE_STRING, target, src);
     }
   
     public static Instruction assignBlob(Var target, Arg src) {
-      return new TurbineOp(Opcode.STORE_BLOB, Arg.createVar(target), src);
+      return new TurbineOp(Opcode.STORE_BLOB, target, src);
     }
     
     public static Instruction assignFile(Var target, Arg src) {
-      return new TurbineOp(Opcode.STORE_FILE, Arg.createVar(target), src);
+      return new TurbineOp(Opcode.STORE_FILE, target, src);
     }
 
     public static Instruction retrieveString(Var target, Var source) {
-      return new TurbineOp(Opcode.LOAD_STRING, Arg.createVar(target),
-                                               Arg.createVar(source));
+      return new TurbineOp(Opcode.LOAD_STRING, target, source.asArg());
     }
   
     public static Instruction retrieveInt(Var target, Var source) {
-      return new TurbineOp(Opcode.LOAD_INT, Arg.createVar(target),
-                                            Arg.createVar(source));
+      return new TurbineOp(Opcode.LOAD_INT, target, source.asArg());
     }
   
     public static Instruction retrieveBool(Var target, Var source) {
@@ -984,64 +997,59 @@ public class ICInstructions {
     }
     
     public static Instruction freeBlob(Var blobVal) {
-      return new TurbineOp(Opcode.FREE_BLOB, Arg.createVar(blobVal));
+      // View refcounted var as output
+      return new TurbineOp(Opcode.FREE_BLOB, blobVal);
     }
 
     public static Instruction decrLocalFileRef(Var fileVal) {
-      return new TurbineOp(Opcode.DECR_LOCAL_FILE_REF, Arg.createVar(fileVal));
-    }
-  
-    public static Instruction structInsert(Var structVar,
-        String fieldName, Var fieldContents) {
-      return new TurbineOp(Opcode.STRUCT_INSERT,
-          Arg.createVar(structVar),
-                      Arg.createStringLit(fieldName),
-                      Arg.createVar(fieldContents));
+      // View all as inputs: only used in cleanupaction context
+      return new TurbineOp(Opcode.DECR_LOCAL_FILE_REF, Collections.<Var>emptyList(),
+                                                       fileVal.asArg());
     }
   
     public static Instruction addressOf(Var target, Var src) {
       return new TurbineOp(Opcode.STORE_REF,
-          Arg.createVar(target), Arg.createVar(src));
+          target, src.asArg());
     }
   
     public static Instruction dereferenceInt(Var target, Var src) {
       return new TurbineOp(Opcode.DEREF_INT,
-          Arg.createVar(target), Arg.createVar(src));
+          target, src.asArg());
     }
     
     public static Instruction dereferenceBool(Var target, Var src) {
       return new TurbineOp(Opcode.DEREF_BOOL,
-          Arg.createVar(target), Arg.createVar(src));
+          target, src.asArg());
     }
   
     public static Instruction dereferenceFloat(Var target, Var src) {
       return new TurbineOp(Opcode.DEREF_FLOAT,
-          Arg.createVar(target), Arg.createVar(src));
+          target, src.asArg());
     }
   
     public static Instruction dereferenceString(Var target, Var src) {
       return new TurbineOp(Opcode.DEREF_STRING,
-          Arg.createVar(target), Arg.createVar(src));
+          target, src.asArg());
     }
   
     public static Instruction dereferenceBlob(Var target, Var src) {
       return new TurbineOp(Opcode.DEREF_BLOB,
-          Arg.createVar(target), Arg.createVar(src));
+          target, src.asArg());
     }
     
     public static Instruction dereferenceFile(Var target, Var src) {
       return new TurbineOp(Opcode.DEREF_FILE,
-          Arg.createVar(target), Arg.createVar(src));
+          target, src.asArg());
     }
     
     public static Instruction retrieveRef(Var target, Var src) {
       return new TurbineOp(Opcode.LOAD_REF,
-          Arg.createVar(target), Arg.createVar(src));
+          target, src.asArg());
     }
     
     public static Instruction copyRef(Var dst, Var src) {
       return new TurbineOp(Opcode.COPY_REF,
-          Arg.createVar(dst), Arg.createVar(src));
+          dst, src.asArg());
           
     }
   
@@ -1051,17 +1059,19 @@ public class ICInstructions {
       assert(arrayResult.storage() != VarStorage.ALIAS);
       assert(Types.isArray(array.type()));
       assert(Types.isArrayKeyFuture(array, ix));
+      // Both arrays are modified, so outputs
       return new TurbineOp(Opcode.ARRAY_CREATE_NESTED_FUTURE,
-          Arg.createVar(arrayResult), Arg.createVar(array), Arg.createVar(ix));
+          Arrays.asList(arrayResult, array), ix.asArg());
     }
   
     public static Instruction arrayCreateNestedImm(Var arrayResult,
         Var arrayVar, Arg arrIx) {
       assert(Types.isArrayKeyVal(arrayVar, arrIx));
       assert(arrayResult.storage() == VarStorage.ALIAS);
+      // Both arrays are modified, so outputs
       return new TurbineOp(Opcode.ARRAY_CREATE_NESTED_IMM,
-          Arg.createVar(arrayResult),
-              Arg.createVar(arrayVar), arrIx, Arg.ZERO, Arg.ZERO);
+          Arrays.asList(arrayResult, arrayVar),
+          arrIx, Arg.ZERO, Arg.ZERO);
     }
   
     public static Instruction arrayRefCreateNestedComputed(Var arrayResult,
@@ -1071,11 +1081,12 @@ public class ICInstructions {
       assert(Types.isArrayRef(array.type())): array;
       assert(Types.isArray(outerArr.type())): outerArr;
       assert(Types.isArrayKeyFuture(array, ix));
+      // Returns nested array, modifies outer array and
+      // reference counts outmost array
       return new TurbineOp(Opcode.ARRAYREF_CREATE_NESTED_FUTURE,
-          Arg.createVar(arrayResult), Arg.createVar(outerArr),
-          Arg.createVar(array), Arg.createVar(ix));
+          Arrays.asList(arrayResult, outerArr, array),
+          ix.asArg());
     }
-  
   
     public static Instruction arrayRefCreateNestedImmIx(Var arrayResult,
         Var outerArray, Var array, Arg ix) {
@@ -1085,22 +1096,19 @@ public class ICInstructions {
       assert(Types.isArray(outerArray.type())): outerArray;
       assert(Types.isArrayKeyVal(array, ix));
       return new TurbineOp(Opcode.ARRAYREF_CREATE_NESTED_IMM,
-          Arg.createVar(arrayResult), Arg.createVar(outerArray),
-          Arg.createVar(array), ix);
+          // Returns nested array, modifies outer array and
+          // reference counts outmost array
+          Arrays.asList(arrayResult, outerArray, array),
+          ix);
     }
   
-  
-    public static Instruction initUpdateableFloat(Var updateable, 
-                                                              Arg val) {
-      return new TurbineOp(Opcode.INIT_UPDATEABLE_FLOAT, 
-          Arg.createVar(updateable), val);
+    public static Instruction initUpdateableFloat(Var updateable, Arg val) {
+      return new TurbineOp(Opcode.INIT_UPDATEABLE_FLOAT, updateable, val);
       
     }
 
-    public static Instruction latestValue(Var result, 
-                              Var updateable) {
-      return new TurbineOp(Opcode.LATEST_VALUE, 
-          Arg.createVar(result), Arg.createVar(updateable));
+    public static Instruction latestValue(Var result, Var updateable) {
+      return new TurbineOp(Opcode.LATEST_VALUE, result, updateable.asArg());
     }
     
     public static Instruction update(Var updateable,
@@ -1117,11 +1125,9 @@ public class ICInstructions {
         op = Opcode.UPDATE_SCALE;
         break;
       default:
-        throw new STCRuntimeError("Unknown UpdateMode"
-            + updateMode);
+        throw new STCRuntimeError("Unknown UpdateMode" + updateMode);
       }
-      return new TurbineOp(op, Arrays.asList(Arg.createVar(updateable), 
-                                             Arg.createVar(val)));
+      return new TurbineOp(op, updateable, val.asArg());
     }
 
     public static Instruction updateImm(Var updateable,
@@ -1141,8 +1147,7 @@ public class ICInstructions {
         throw new STCRuntimeError("Unknown UpdateMode"
             + updateMode);
       }
-      return new TurbineOp(op, Arrays.asList(Arg.createVar(updateable), 
-                                                                   val));
+      return new TurbineOp(op, updateable, val);
     }
     
     public static Instruction getFileName(Var filename, Var file,
@@ -1169,14 +1174,15 @@ public class ICInstructions {
                                   Arg outFilename, Var outFile) {
       assert(localOutFile.type().assignableTo(Types.V_FILE));
       assert(outFilename.type().assignableTo(Types.V_STRING));
-      return new TurbineOp(Opcode.INIT_LOCAL_OUTPUT_FILE, localOutFile,
-                           outFilename, outFile.asArg());
+      // Outfile is a dummy input
+      return new TurbineOp(Opcode.INIT_LOCAL_OUTPUT_FILE, localOutFile.asList(),
+                           outFilename.asList(), outFile.asArg().asList());
     }
 
     @Override
     public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
       if (mode == RenameMode.VALUE) {
-        renameInputs(renames);
+        // Fall through
       } else if (mode == RenameMode.REPLACE_VAR) {
         // Straightforward replacement
         ICUtil.replaceVarsInList(renames, outputs, false);
@@ -1195,100 +1201,12 @@ public class ICInstructions {
           }
         }
       }
-      ICUtil.replaceArgsInList(renames, inputs);
+      renameInputs(renames);
     }
   
     public void renameInputs(Map<Var, Arg> renames) {     
        ICUtil.replaceArgsInList(renames, inputs);
-    }
-
-    protected int numOutputArgs() {
-      switch (op) {
-      case UPDATE_INCR:
-      case UPDATE_MIN:
-      case UPDATE_SCALE:
-      case UPDATE_INCR_IMM:
-      case UPDATE_MIN_IMM:
-      case UPDATE_SCALE_IMM:
-      case INIT_UPDATEABLE_FLOAT:
-      case LATEST_VALUE:
-        return 1;
-      
-      case ARRAY_INSERT_FUTURE:
-      case ARRAY_DEREF_INSERT_FUTURE:
-      case ARRAY_INSERT_IMM:
-      case ARRAY_DEREF_INSERT_IMM:
-      case ARRAY_BUILD:
-      case STRUCT_INSERT:
-        // We view modified var as output
-        return 1;
-        
-      case ARRAYREF_LOOKUP_FUTURE:
-      case ARRAYREF_LOOKUP_IMM:
-      case ARRAY_LOOKUP_REF_IMM:
-      case ARRAY_LOOKUP_IMM:
-      case ARRAY_LOOKUP_FUTURE:
-      case STORE_INT:
-      case STORE_BOOL:
-      case STORE_VOID:
-      case STORE_FLOAT:
-      case STORE_STRING:
-      case STORE_BLOB:
-      case STORE_FILE:
-      case DEREF_INT:
-      case DEREF_BOOL:
-      case DEREF_FLOAT:
-      case DEREF_STRING:
-      case DEREF_BLOB:
-      case DEREF_FILE:
-      case LOAD_INT:
-      case LOAD_BOOL:
-      case LOAD_VOID:
-      case LOAD_FLOAT:
-      case LOAD_STRING:
-      case LOAD_BLOB:
-      case LOAD_FILE:
-      case STRUCT_LOOKUP:
-      case STRUCTREF_LOOKUP:
-      case STORE_REF:
-      case LOAD_REF:
-      case COPY_REF:
-      case GET_FILENAME:
-        return 1;
-
-      case ARRAYREF_INSERT_FUTURE:
-      case ARRAYREF_DEREF_INSERT_FUTURE:
-      case ARRAYREF_INSERT_IMM:
-      case ARRAYREF_DEREF_INSERT_IMM:
-        // Outer array and directly inserted
-        return 2;
-        
-      case ARRAY_CREATE_NESTED_FUTURE:
-      case ARRAY_CREATE_NESTED_IMM:
-        // Returns nested array and modifies outer array
-        return 2;
-
-      case ARRAYREF_CREATE_NESTED_FUTURE:
-      case ARRAYREF_CREATE_NESTED_IMM:
-        // Returns nested array, modifies outer array and
-        // reference counts outmost array
-        return 3;
-      case CHOOSE_TMP_FILENAME:
-        return 1;
-      case SET_FILENAME_VAL:
-        return 1;
-      case INIT_LOCAL_OUTPUT_FILE:
-        return 1;
-      case FREE_BLOB:
-        // View refcounted var as output
-        return 1;
-      case DECR_LOCAL_FILE_REF:
-        // View all as inputs: only used in cleanupaction context
-        return 0;
-      default:
-        throw new STCRuntimeError("Need to add opcode " + op.toString()
-            + " to numOutputArgs");
-      }
+       ICUtil.replaceArgsInList(renames, dummyInputs);
     }
   
     @Override
@@ -2127,7 +2045,7 @@ public class ICInstructions {
           // (true b/c this instruction closes val immediately)
           ResultVal assign = vanillaResult(true);
           // add retrieve so we can avoid retrieving later
-          Arg dst = Arg.createVar(getOutput(0));
+          Arg dst = getOutput(0).asArg();
           Arg src = getInput(0);
           Opcode cvop = retrieveOpcode(dst.futureType());
           assert(cvop != null);
@@ -2156,7 +2074,7 @@ public class ICInstructions {
         case GET_FILENAME: 
         case GET_OUTPUT_FILENAME: {
           List<ResultVal> res = new ArrayList<ResultVal>();
-          Arg filename = Arg.createVar(getOutput(0));
+          Arg filename = getOutput(0).asArg();
           Arg file;
           if (op == Opcode.GET_FILENAME) {
             file = getInput(0);
@@ -2177,7 +2095,7 @@ public class ICInstructions {
           return res;
         }
         case SET_FILENAME_VAL: {
-          Arg file = Arg.createVar(getOutput(0));
+          Arg file = getOutput(0).asArg();
           Arg val = getInput(0);
           return filenameValCV(file, val).asList();
         }
@@ -2200,14 +2118,14 @@ public class ICInstructions {
         case STRUCT_INSERT: {
           // Lookup
           ResultVal lookup = ResultVal.buildResult(Opcode.STRUCT_LOOKUP,
-              Arrays.asList(Arg.createVar(getOutput(0)), getInput(0)),
+              Arrays.asList(getOutput(0).asArg(), getInput(0)),
               getInput(1), false, EquivalenceType.REFERENCE);
           return lookup.asList(); 
         }
         case STRUCT_LOOKUP: {
           // don't know if its closed
           ResultVal lookup = ResultVal.buildResult(Opcode.STRUCT_LOOKUP,
-              Arrays.asList(getInput(0), getInput(1)), Arg.createVar(getOutput(0)),
+              Arrays.asList(getInput(0), getInput(1)), getOutput(0).asArg(),
               false, EquivalenceType.REFERENCE);
           return lookup.asList(); 
         }
@@ -2242,8 +2160,7 @@ public class ICInstructions {
           Var arr = getOutput(0);
           List<ResultVal> res = new ArrayList<ResultVal>();
           // Computed value for whole array
-          res.add(ResultVal.buildResult(op, getInputs(),
-                      Arg.createVar(arr), true));
+          res.add(ResultVal.buildResult(op, getInputs(), arr.asArg(), true));
           // For individual array elements
           int arrSize = getInputs().size();
           for (int i = 0; i < arrSize; i++) {
@@ -2280,13 +2197,13 @@ public class ICInstructions {
                * was previously inserted at this index, then we can 
                * short-circuit this as we know what is in the reference */
               ResultVal retrieveCV = ResultVal.buildResult(retrieveOpcode(
-                  contents.type()), Arg.createVar(contents), prev, false);
+                  contents.type()), contents.asArg(), prev, false);
               Opcode derefOp = derefOpCode(contents.type());
               if (derefOp == null) {
                 return Arrays.asList(retrieveCV, refCV);
               } else {
                 ResultVal derefCV = ResultVal.buildResult(derefOp,
-                            Arg.createVar(contents), prev, false);
+                                                contents.asArg(), prev, false);
                 return Arrays.asList(retrieveCV, refCV, derefCV);
               }
             } else {
@@ -2331,7 +2248,7 @@ public class ICInstructions {
               // See if we know the value of this reference already
               ResultVal derefCV = ResultVal.buildResult(
                   retrieveOpcode(nestedArr.type()),
-                  Arrays.asList(Arg.createVar(nestedArr)), prev, false);
+                  Arrays.asList(nestedArr.asArg()), prev, false);
               res.add(derefCV);
             }
           }
@@ -2364,7 +2281,7 @@ public class ICInstructions {
      */
     private ResultVal vanillaResult(boolean closed, EquivalenceType equiv) {
       assert(outputs.size() == 1);
-      return ResultVal.buildResult(op, inputs, Arg.createVar(outputs.get(0)),
+      return ResultVal.buildResult(op, inputs, outputs.get(0).asArg(),
           closed, equiv);
     }
 
@@ -2735,13 +2652,7 @@ public class ICInstructions {
       // Executes right away
       return TaskMode.SYNC;
     }
-
-    @Override
-    protected int numOutputArgs() {
-      // Treat all arguments as input, model refcount change as side-effect
-      return 0;
-    }
-
+    
     @Override
     public boolean hasSideEffects() {
       // Model refcount change as side-effect
@@ -2801,7 +2712,7 @@ public class ICInstructions {
             
             res.add(ResultVal.buildResult(this.op, 
                 canonicalFunctionName, output, in, 
-                Arg.createVar(getOutput(output)), outputClosed));
+                getOutput(output).asArg(), outputClosed));
           }
           addSpecialCVs(res);
           return res;
@@ -3354,7 +3265,7 @@ public class ICInstructions {
       assert(Types.isArray(arr.type()));
       assert(size.isImmediateInt());
       return ResultVal.buildResult(Opcode.CALL_BUILTIN_LOCAL, Builtins.ARRAY_SIZE,
-                               Arg.createVar(arr), size, true);
+                                   arr.asArg(), size, true);
     }
     
     @Override
@@ -3548,7 +3459,7 @@ public class ICInstructions {
           // Unique key for cv includes number of output
           // Output file should be closed after external program executes
           ResultVal cv = ResultVal.buildResult(op, cmd, i,
-                     args, Arg.createVar(outFiles.get(i)), true);
+                     args, outFiles.get(i).asArg(), true);
           cvs.add(cv);
         }
         return cvs;
@@ -3617,7 +3528,7 @@ public class ICInstructions {
       // need to make sure that these variables are avail in scope
       ArrayList<Arg> res = new ArrayList<Arg>(newLoopVars.size());
       for (Var v: newLoopVars) {
-        res.add(Arg.createVar(v));
+        res.add(v.asArg());
       }
       return res;
     }
@@ -4128,10 +4039,10 @@ public class ICInstructions {
             (subop == BuiltinOpcode.AND && arg1)) {
           if (op == Opcode.ASYNC_OP) { 
             return Builtin.createAsync(BuiltinOpcode.COPY_BOOL, 
-                output, Arg.createVar(varArgs.get(0)).asList());
+                output, varArgs.get(0).asArg().asList());
           } else {
             return Builtin.createLocal(BuiltinOpcode.COPY_BOOL, 
-                output, Arg.createVar(varArgs.get(0)));
+                output, varArgs.get(0).asArg());
           }
         } 
       }
@@ -4307,7 +4218,7 @@ public class ICInstructions {
         
         boolean outClosed = (this.op == Opcode.LOCAL_OP);
         return ResultVal.buildResult(this.op, cvOp.name(), cvInputs,
-                                Arg.createVar(this.output), outClosed);
+                                this.output.asArg(), outClosed);
       }
       return null;
     }
@@ -4531,7 +4442,7 @@ public class ICInstructions {
     if (op == null) {
       return null;
     }
-    return new ComputedValue(op, Arrays.asList(Arg.createVar(src)));
+    return new ComputedValue(op, Arrays.asList(src.asArg()));
   }
 
   public static ResultVal assignComputedVal(Var dst, Arg val) {
@@ -4565,11 +4476,11 @@ public class ICInstructions {
               + dstType);
         }
         return ResultVal.buildResult(Opcode.LOCAL_OP, 
-            op.toString(), Arrays.asList(val), Arg.createVar(dst), false);
+            op.toString(), Arrays.asList(val), dst.asArg(), false);
     } else {
       Opcode op = assignOpcode(dstType);
       if (op != null) {
-        return ResultVal.buildResult(op, Arrays.asList(val), Arg.createVar(dst)
+        return ResultVal.buildResult(op, Arrays.asList(val), dst.asArg()
                                                                           , true);
       }
     }
@@ -4710,7 +4621,7 @@ public class ICInstructions {
     assert(outFilename.isVar());
     assert(Types.isString(outFilename.getVar().type()));
     return ResultVal.buildResult(Opcode.GET_FILENAME,
-        Arrays.asList(Arg.createVar(inFile)), outFilename, false);
+        Arrays.asList(inFile.asArg()), outFilename, false);
   }
   
   public static ResultVal filenameValCV(Arg file, Arg filenameVal) {
