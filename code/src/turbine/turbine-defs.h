@@ -75,6 +75,10 @@ typedef enum
   TURBINE_ERROR_STORAGE,
   /** Called function when Turbine uninitialized */
   TURBINE_ERROR_UNINITIALIZED,
+  /** Error in call to ADLB */
+  TURBINE_ERROR_ADLB,
+  /** Error in when calling external task */
+  TURBINE_ERROR_EXTERNAL,
   /** Unknown error */
   TURBINE_ERROR_UNKNOWN = ADLB_DATA_ERROR_UNKNOWN,
 } turbine_code;

@@ -51,6 +51,7 @@
 #include "src/turbine/turbine-version.h"
 #include "src/turbine/turbine.h"
 #include "src/turbine/cache.h"
+#include "src/turbine/worker.h"
 
 #include "src/tcl/util.h"
 #include "src/tcl/turbine/tcl-turbine.h"
@@ -644,8 +645,8 @@ tcl_obj_to_binary(Tcl_Interp* interp, Tcl_Obj *const objv[],
    Repeatedly run units of work from ADLB of provided type
  */
 static int
-Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
-                        int objc, Tcl_Obj *const objv[])
+Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp* interp,
+                        int objc, Tcl_Obj* const objv[])
 {
   TCL_ARGS(2);
 
@@ -657,52 +658,19 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
   // Maintain separate buffer from xfer, since xfer may be
   // used in code that we call.
   int buffer_size = ADLB_DATA_MAX;
-  char *buffer = malloc((size_t)buffer_size);
+  void* buffer = malloc((size_t)buffer_size);
 
-  while (true) {
-    MPI_Comm task_comm;
-    int work_len, answer_rank, type_recved;
-    adlb_code code = ADLB_Get(work_type, buffer, &work_len,
-                    &answer_rank, &type_recved, &task_comm);
-    if (code == ADLB_SHUTDOWN)
-      break;
-    turbine_task_comm = task_comm;
-    TCL_CONDITION(code == ADLB_SUCCESS, "Get failed with code %i\n", code);
-    assert(work_len <= buffer_size);
-    assert(type_recved == work_type);
-
-    // Work unit is prepended with rule ID, followed by space.
-    char *rule_id_end = strchr(buffer, ' ');
-
-    assert(rule_id_end != NULL);
-    char *work = rule_id_end + 1; // start of Tcl work unit
-
-    DEBUG_TURBINE("rule_id: %"PRId64"", atol(buffer));
-    DEBUG_TURBINE("eval: %s", work);
-
-    // Work out length | null byte | prefix
-    int cmd_len = work_len - 1 - (int)(work - buffer);
-    rc = Tcl_EvalEx(interp, work, cmd_len, 0);
-    if (rc != TCL_OK) {
-      TCL_CONDITION(rc == TCL_ERROR, "Unexpected return code from evaled "
-                    "command: %d", rc);
-      // Pass error to calling script
-      const char *prefix = "\nWorker executing task: ";
-      size_t msg_len = strlen(prefix) + (size_t)work_len;
-      char *msg = malloc(sizeof(char) * msg_len);
-      int printed = sprintf(msg, "%s%s", prefix, buffer);
-      assert(printed == msg_len - 1);
-      Tcl_AddErrorInfo(interp, msg);
-      free(msg);
-      rc = TCL_ERROR;
-      break;
-    }
-  }
+  turbine_code code = turbine_worker_loop(interp, buffer, buffer_size,
+                                          work_type);
+  if (code == TURBINE_ERROR_EXTERNAL)
+    // turbine_worker_loop() has added the error info
+    rc = TCL_ERROR;
+  else
+    TCL_CONDITION(code == TURBINE_SUCCESS, "Unknown worker error!");
 
   free(buffer);
   return rc;
 }
-
 
 static int
 create_autoclose_rule(Tcl_Interp *interp, Tcl_Obj *const objv[],
