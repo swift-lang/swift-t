@@ -230,7 +230,7 @@ xlb_requestqueue_shutdown()
   }
   // Free now-empty structures
   free(type_requests);
-  
+
   assert(table_ip_size(&targets) == 0);
   table_ip_free_callback(&targets, false, NULL);
 }
@@ -246,6 +246,7 @@ shutdown_rank(int rank)
   g.length = -1;
   g.type = ADLB_TYPE_NULL;
   g.payload_source = ADLB_RANK_NULL;
+  g.parallelism = 0;
   SEND(&g, sizeof(g), MPI_BYTE, rank, ADLB_TAG_RESPONSE_GET);
   return ADLB_SUCCESS;
 }
