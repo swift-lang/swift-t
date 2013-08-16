@@ -16,47 +16,40 @@
 
 # Use: export LANG=POSIX - helps a little
 #      Tcl -DPURIFY - did not help
-# Configure MPICH with --with-enable=dbg,meminit
+# Configure MPICH with --enable-g=dbg,meminit
 #       meminit prevents uninitialized data warnings
 
 {
-   tcl-alloc-1
-   Memcheck:Leak
-   fun:malloc
-   fun:Tcl_Alloc
-   ...
+  tcl-alloc-1
+  Memcheck:Leak
+  fun:malloc
+  fun:Tcl_Alloc
+  ...
 }
 
 {
-   tcl-alloc-2
-   Memcheck:Leak
-   fun:malloc
-   fun:TclpAlloc
-   ...
+  tcl-alloc-2
+  Memcheck:Leak
+  fun:malloc
+  fun:TclpAlloc
+  ...
 }
 
 {
-   tcl-realloc-1
-   Memcheck:Leak
-   fun:realloc
-   fun:TclpRealloc
-   ...
+  tcl-realloc-1
+  Memcheck:Leak
+  fun:realloc
+  fun:TclpRealloc
+  ...
 }
 
 {
-   tcl-pwuid-1
-   Memcheck:Leak
-   fun:malloc
-   ...
-   fun:TclpGetPwUid
-   ...
-}
-
-{
-   mpi-vcrt
-   Memcheck:Leak
-   fun:malloc
-   fun:MPID_VCRT_Create
+  tcl-pwuid-1
+  Memcheck:Leak
+  fun:malloc
+  ...
+  fun:TclpGetPwUid
+  ...
 }
 
 {
@@ -66,3 +59,85 @@
   fun:Tcl_Alloc
   fun:TclAllocateFreeObjects
 }
+
+{
+  mpi-init-calloc
+  Memcheck:Leak
+  fun:calloc
+  ...
+  fun:PMPI_Init
+}
+
+{
+  mpi-vcrt
+  Memcheck:Leak
+  fun:malloc
+  fun:MPID_VCRT_Create
+}
+
+# The following Param suppressions are unnecessary when using
+#     MPICH's meminit...
+
+{
+  mpi-send
+  Memcheck:Param
+  writev(vector[...])
+  fun:writev
+  fun:MPID_nem_tcp_iStartContigMsg
+  ...
+  fun:PMPI_Send
+}
+
+{
+  mpi-barrier-send
+  Memcheck:Param
+  writev(vector[...])
+  fun:writev
+  fun:MPID_nem_tcp_iSendContig
+  ...
+  fun:PMPI_Barrier
+}
+
+{
+  mpi-comm-dup-send
+  Memcheck:Param
+  writev(vector[...])
+  fun:writev
+  ...
+  fun:PMPI_Comm_dup
+}
+
+{
+  mpi-comm-split-send
+  Memcheck:Param
+  writev(vector[...])
+  fun:writev
+  ...
+  fun:PMPI_Comm_split
+}
+
+{
+  mpi-allgather-send
+  Memcheck:Param
+  writev(vector[...])
+  fun:writev
+  fun:MPID_nem_tcp_iSendContig
+  ...
+  fun:PMPI_Allgather
+}
+
+{
+  mpi-finalize-send
+  Memcheck:Param
+  writev(vector[...])
+  fun:writev
+  fun:MPID_nem_tcp_iStartContigMsg
+  ...
+  fun:PMPI_Finalize
+  ...
+}
+
+# Local Variables:
+# mode: sh-mode
+# sh-basic-offset: 2
+# End:
