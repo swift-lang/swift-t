@@ -297,9 +297,10 @@ namespace eval turbine {
     # local_file: local file object
     # data: data to write to file
     # TODO: calling convention not figured out yet
-    proc file_write_local { local_file data } {
+    proc file_write_local { local_file_name data } {
+        upvar $local_file_name local_file
 	set fp [ ::open [ local_file_path $local_file ] w+ ]
-        puts $fp $str
+        puts $fp $data
 	close $fp
     }
 
