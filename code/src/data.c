@@ -420,7 +420,9 @@ refcount_impl(adlb_datum *d, adlb_datum_id id,
                 "incr: %i", id, d->write_refcount, write_incr);
     d->write_refcount += write_incr;
     if (d->write_refcount == 0) {
-      data_close(id, d, &notifications->ranks, &notifications->count);
+      adlb_data_code dc;
+      dc = data_close(id, d, &notifications->ranks, &notifications->count);
+      DATA_CHECK(dc);
     }
     DEBUG("write_refcount: <%"PRId64"> => %i", id, d->write_refcount);
   }
@@ -808,6 +810,9 @@ data_close(adlb_datum_id id, adlb_datum *d, int** result, int* count)
   list_i_toints(&d->listeners, result, count);
   DEBUG("data_close: <%"PRId64"> listeners: %i", id, *count);
   list_i_clear(&d->listeners);
+
+  // TODO: add check here for any hanging container_reference entries
+
   TRACE_END;
   return ADLB_DATA_SUCCESS;
 }
@@ -1414,6 +1419,20 @@ static void free_cref_entry(char *key, void *val)
 {
   assert(key != NULL && val != NULL);
   struct list_l* listeners = val;
+  struct list_l_item *curr;
+  
+  bool report_leaks_setting = false;
+  // Ignore invalid environment variables, can't do much at this stage
+  xlb_env_boolean("ADLB_REPORT_LEAKS", &report_leaks_setting);
+
+  for (curr = listeners->head; curr != NULL; curr = curr->next)
+  {
+    DEBUG("UNFILLED CONTAINER REFERENCE %s => <%"PRId64">", key, curr->data);
+    if (report_leaks_setting)
+    {
+      printf("UNFILLED CONTAINER REFERENCE %s => <%"PRId64">", key, curr->data);
+    }
+  }
   list_l_free(listeners);
   free(key);
 }
@@ -1441,7 +1460,7 @@ data_finalize()
   // Secondly free up memory allocated in this module
   table_lp_free_callback(&tds, false, free_td_entry);
 
-  table_free_callback(&container_references, false,free_cref_entry);
+  table_free_callback(&container_references, false, free_cref_entry);
   table_free_callback(&container_ix_listeners, false, free_ix_l_entry);
   
   table_lp_free_callback(&locked, false, free_locked_entry);
