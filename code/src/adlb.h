@@ -96,14 +96,6 @@ adlb_code ADLB_Create(adlb_datum_id id, adlb_data_type type,
                       adlb_type_extra type_extra,
                       adlb_create_props props, adlb_datum_id *new_id);
 
-// Information for new variable creation
-typedef struct {
-  adlb_datum_id id;
-  adlb_data_type type;
-  adlb_type_extra type_extra;
-  adlb_create_props props;
-} ADLB_create_spec;
-
 // Create multiple variables.
 // Currently we assume that spec[i].id is ADLB_DATA_ID_NULL and
 // will be filled in with a new id

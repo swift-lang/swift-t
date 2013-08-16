@@ -137,6 +137,8 @@ static inline adlb_refcounts adlb_rc_negate(adlb_refcounts rc)
   return result;
 }
 
+// Prefer to tightly pack these structs
+#pragma pack(push, 1)
 typedef struct
 {
   int read_refcount;
@@ -147,6 +149,16 @@ typedef struct
 // Default settings for new variables
 #define DEFAULT_CREATE_PROPS \
     { .read_refcount = 1, .write_refcount = 1, .permanent = false }
+
+// Information for new variable creation
+typedef struct {
+  adlb_datum_id id;
+  adlb_data_type type;
+  adlb_type_extra type_extra;
+  adlb_create_props props;
+} ADLB_create_spec;
+
+#pragma pack(pop) // Undo pragma change
 
 /* 
    Describe how refcounts should be changed
