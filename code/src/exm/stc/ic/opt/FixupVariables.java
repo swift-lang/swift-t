@@ -351,6 +351,9 @@ public class FixupVariables implements OptimizerPass {
               result.addRead(in.getVar());
             }
           }
+          for (Var read: i.getReadOutputs()) {
+            result.addRead(read);
+          }
           result.addWritten(i.getOutputs(), aliases);
           break;
         }
