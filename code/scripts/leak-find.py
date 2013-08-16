@@ -233,7 +233,8 @@ def draw_graph(only_leaked=False, show_rc=False, datums_to_render=None):
   G.node_attr['style'] = "filled"
 
   if datums_to_render is None:
-    datums_to_render = datums.itervalues()
+    datums_to_render = datums.values()
+
 
   datum_ids = set([d.id for d in datums_to_render])
 
