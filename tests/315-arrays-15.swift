@@ -1,5 +1,6 @@
 import string;
 
+// SKIP-THIS-TEST
 // THIS-TEST-SHOULD-NOT-RUN
 // Regression test for array lookup not failing correctly
 
