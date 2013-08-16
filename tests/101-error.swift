@@ -5,6 +5,7 @@
 
 import io;
 
+@dispatch=WORKER
 () f() "turbine" "0.0" [ "error \"MY USER ERROR MESSAGE\"" ];
 
 main
