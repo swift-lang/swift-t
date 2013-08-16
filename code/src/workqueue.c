@@ -394,7 +394,16 @@ wu_targeted_clear_callback(int key, void *val)
   {
     heap* H = &A[i];
     if (H->size > 0)
-      printf("WARNING: server contains targeted work!\n");
+    {
+      printf("WARNING: server contains targeted work that was never "
+             "received by target!\n");
+      for (int j = 0; j < H->size; j++)
+      {
+        xlb_work_unit *wu = H->array[j].val;
+        printf("  Targeted work: type: %i target rank: %i\n",
+                    wu->type, wu->target);
+      }
+    }
     
     // free the work unit
     heap_clear_callback(H, wu_heap_clear_callback);

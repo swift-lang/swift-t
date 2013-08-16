@@ -1421,17 +1421,9 @@ static void free_cref_entry(char *key, void *val)
   struct list_l* listeners = val;
   struct list_l_item *curr;
   
-  bool report_leaks_setting = false;
-  // Ignore invalid environment variables, can't do much at this stage
-  xlb_env_boolean("ADLB_REPORT_LEAKS", &report_leaks_setting);
-
   for (curr = listeners->head; curr != NULL; curr = curr->next)
   {
-    DEBUG("UNFILLED CONTAINER REFERENCE %s => <%"PRId64">", key, curr->data);
-    if (report_leaks_setting)
-    {
-      printf("UNFILLED CONTAINER REFERENCE %s => <%"PRId64">", key, curr->data);
-    }
+    printf("UNFILLED CONTAINER REFERENCE %s => <%"PRId64">", key, curr->data);
   }
   list_l_free(listeners);
   free(key);
