@@ -16,7 +16,7 @@
 # Code executed on worker processes
 
 namespace eval turbine {
-    # Import adlb commands 
+    # Import adlb commands
     namespace import ::adlb::get
 
     # Main worker loop
@@ -26,7 +26,7 @@ namespace eval turbine {
 
         if { [ catch { c::worker_loop $WORK_TYPE(WORK) } e ] } {
             global errorInfo
-            error "worker error: $e\n$errorInfo"
+            error "worker error: \n$errorInfo"
         }
     }
 }
