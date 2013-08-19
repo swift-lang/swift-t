@@ -844,8 +844,6 @@ void list_free_callback(struct list* target, void (*callback)(void*))
 void
 list_destroy(struct list* target)
 {
-  // NOTE_F;
-
   struct list_item* item = target->head;
   while (item)
   {
