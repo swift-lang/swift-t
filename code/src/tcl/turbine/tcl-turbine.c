@@ -657,8 +657,8 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp* interp,
 
   // Maintain separate buffer from xfer, since xfer may be
   // used in code that we call.
-  int buffer_size = ADLB_DATA_MAX;
-  void* buffer = malloc((size_t)buffer_size);
+  size_t buffer_size = ADLB_DATA_MAX;
+  void* buffer = malloc(buffer_size);
 
   turbine_code code = turbine_worker_loop(interp, buffer, buffer_size,
                                           work_type);
