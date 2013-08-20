@@ -286,15 +286,13 @@ public class ICInstructions {
     /**
      * 
      * @param closedVars variables closed at point of current instruction
-     * @param unmappedVars mappable variables that are definitely unmapped
      * @param waitForClose if true, allowed to (must don't necessarily
      *        have to) request that unclosed vars be waited for
      * @return null if it cannot be made immediate, if true,
      *            a list of vars that are the variables whose values are needed
      *            and output vars that need to be have value vars created
      */
-    public abstract MakeImmRequest canMakeImmediate(Set<Var> closedVars, 
-                                                  Set<Var> unmappedVars,
+    public abstract MakeImmRequest canMakeImmediate(Set<Var> closedVars,
                                                   boolean waitForClose);
 
     public abstract MakeImmChange makeImmediate(List<Var> outVals,
@@ -512,7 +510,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars, 
-        Set<Var> unmappedVars, boolean waitForClose) {
+                                           boolean waitForClose) {
       return null;
     }
 
@@ -591,6 +589,8 @@ public class ICInstructions {
   
     private List<Var> outputs; /** Variables that are modified by this instruction */
     private List<Arg> inputs; /** Variables that are read-only */
+    
+    // TODO: dummyInputs is unused?
     /** Variables that are not actually read, but somehow are related */
     private List<Arg> dummyInputs;
     
@@ -806,10 +806,10 @@ public class ICInstructions {
         gen.updateImm(getOutput(0), UpdateMode.SCALE, getInput(0));
         break;
       case GET_FILENAME:
-        gen.getFileName(getOutput(0), getInput(0).getVar(), false);
+        gen.getFileName(getOutput(0), getInput(0).getVar());
         break;
-      case GET_OUTPUT_FILENAME:
-        gen.getFileName(getOutput(0), getOutput(1), true);
+      case IS_MAPPED:
+        gen.isMapped(getOutput(0), getInput(0).getVar());
         break;
       case SET_FILENAME_VAL:
         gen.setFilenameVal(getOutput(0), getInput(0));
@@ -1151,20 +1151,18 @@ public class ICInstructions {
       return new TurbineOp(op, updateable, val);
     }
     
-    public static Instruction getFileName(Var filename, Var file,
-                                          boolean initUnmapped) {
-      // If file is definitely mapped, can skip initing it
-      if (initUnmapped && file.isMapped() != Ternary.TRUE) {
-        // Treat both as outputs
-        return new TurbineOp(Opcode.GET_OUTPUT_FILENAME, 
-                                Arrays.asList(filename, file), Collections.<Arg>emptyList());
-      } else {
-        return new TurbineOp(Opcode.GET_FILENAME, filename, file.asArg());
-      }
+    public static Instruction getFileName(Var filename, Var file) {
+      return new TurbineOp(Opcode.GET_FILENAME, filename, file.asArg());
     }
  
     public static Instruction setFilenameVal(Var file, Arg filenameVal) {
       return new TurbineOp(Opcode.SET_FILENAME_VAL, file, filenameVal);
+    }
+
+    public static Instruction isMapped(Var isMapped, Var filename) {
+      assert(isMapped.type().assignableTo(Types.V_BOOL));
+      assert(Types.isFile(filename));
+      return new TurbineOp(Opcode.IS_MAPPED, isMapped, filename.asArg());
     }
 
     public static Instruction chooseTmpFilename(Var filenameVal) {
@@ -1172,12 +1170,12 @@ public class ICInstructions {
     }
     
     public static Instruction initLocalOutFile(Var localOutFile,
-                                  Arg outFilename, Var outFile) {
+                                  Arg outFilename, Arg isMapped) {
       assert(localOutFile.type().assignableTo(Types.V_FILE));
       assert(outFilename.type().assignableTo(Types.V_STRING));
-      // Outfile is a dummy input
+      assert(isMapped.type().assignableTo(Types.V_BOOL));
       return new TurbineOp(Opcode.INIT_LOCAL_OUTPUT_FILE, localOutFile.asList(),
-                           outFilename.asList(), outFile.asArg().asList());
+                           outFilename, isMapped);
     }
 
     @Override
@@ -1271,19 +1269,26 @@ public class ICInstructions {
       case GET_FILENAME:
         // Only effect is setting alias var
         return false;
-      case GET_OUTPUT_FILENAME:
-        // Might initialise mapping on file, but in that case file
-        // is considered output, so we don't need to worry about actual
-        // side-effect.
+      case IS_MAPPED:
+        // will always returns same result for same var
         return false;
       case CHOOSE_TMP_FILENAME:
         // Non-deterministic
         return true;
-      case INIT_LOCAL_OUTPUT_FILE:
-        return false;
       case SET_FILENAME_VAL:
         // Only effect is in file output var
         return false;
+
+      case INIT_LOCAL_OUTPUT_FILE:
+        // If the output is mapped, we want to retain the file,
+        // so we treat this as having side-effects
+        if (getInput(1).isBoolVal() && getInput(1).getBoolLit() == false) {
+          // Definitely unmapped
+          return false;
+        } else {
+          // Maybe mapped
+          return true;
+        }
         
       case STRUCT_LOOKUP:
       case LOAD_REF:
@@ -1369,6 +1374,14 @@ public class ICInstructions {
           }
         }
         break;
+      case IS_MAPPED: {
+        Var file = getInput(0).getVar();
+        if (file.isMapped() != Ternary.MAYBE) {
+          Arg val = Arg.createBoolLit(file.isMapped() == Ternary.TRUE);
+          return Collections.singletonMap(getOutput(0), val);
+        }
+        break;
+      }
       default:
         // do nothing
       }
@@ -1424,7 +1437,6 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                                           Set<Var> unmappedVars,
                                            boolean waitForClose) {
       boolean insertRefWaitForClose = waitForClose;
       // Try to take advantage of closed variables 
@@ -1526,13 +1538,6 @@ public class ICInstructions {
       case UPDATE_SCALE:
         return new MakeImmRequest(null, Arrays.asList(
                   getInput(0).getVar()));
-      case GET_OUTPUT_FILENAME:
-        if (unmappedVars.contains(getOutput(1))) {
-          return new MakeImmRequest(
-                  Arrays.asList(getOutput(0)),
-                  Arrays.<Var>asList());
-        }
-        break;
       default:
         // fall through
       }
@@ -1725,17 +1730,6 @@ public class ICInstructions {
         return new MakeImmChange(null, null, TurbineOp.updateImm(
             getOutput(0), mode, values.get(0)));
       }
-      case GET_OUTPUT_FILENAME: {
-        Var filenameVal = out.get(0);
-        Var filenameFuture = getOutput(0);
-        Var fileVar = getOutput(1);
-        ArrayList<Instruction> newInsts = initWithTmpFilename(filenameVal,
-                                                filenameFuture, fileVar);
-        // Caller shouldn't set filenameFuture
-        return new MakeImmChange(
-            newInsts.toArray(new Instruction[newInsts.size()]),
-            false);
-      }
       default:
         // fall through
         break;
@@ -1743,38 +1737,6 @@ public class ICInstructions {
       throw new STCRuntimeError("Couldn't make inst "
           + this.toString() + " immediate with vars: "
           + values.toString());
-    }
-
-    
-    /**
-     * Instruction sequence that:
-     * - Selects a temporary filename and stores in in filenameVal
-     * - Set the mapping of fileVar to this value
-     * - If filenameFuture is not null, make sure the alias is initialized
-     * @param filenameVal
-     * @param filenameFuture
-     * @param fileVar
-     * @return
-     */
-    public static ArrayList<Instruction> initWithTmpFilename(Var filenameVal,
-        Var filenameFuture, Var fileVar) {
-      assert(filenameVal.type().assignableTo(Types.V_STRING));
-      assert(Types.isFile(fileVar));
-      if (filenameFuture != null) {
-        assert(Types.isString(filenameFuture));
-        assert(filenameFuture.storage() == Alloc.ALIAS);
-      }
-
-      ArrayList<Instruction> seq = new ArrayList<Instruction>(3);
-      // Select temporary file name
-      seq.add(TurbineOp.chooseTmpFilename(filenameVal));
-      // Set the filename on the file var
-      seq.add(TurbineOp.setFilenameVal(fileVar, filenameVal.asArg()));
-      if (filenameFuture != null) {
-        // Get the filename again but can assume mapping initialized
-        seq.add(TurbineOp.getFileName(filenameFuture, fileVar, false));
-      }
-      return seq;
     }
 
     @Override
@@ -1785,7 +1747,6 @@ public class ICInstructions {
         case ARRAY_LOOKUP_IMM:
         case ARRAY_CREATE_NESTED_IMM:
         case GET_FILENAME:
-        case GET_OUTPUT_FILENAME:
         case STRUCT_LOOKUP:
           // Initialises alias
           return getOutput(0).asList();
@@ -1870,9 +1831,9 @@ public class ICInstructions {
         }
         case STRUCT_INSERT:
           return getOutputs();
-        case GET_OUTPUT_FILENAME:
+        case SET_FILENAME_VAL:
           // File's filename might be modified
-          return Collections.singletonList(getOutput(1));
+          return Collections.singletonList(getOutput(0));
         default:
           return Var.NONE;
       }
@@ -1941,7 +1902,7 @@ public class ICInstructions {
       case FREE_BLOB:
       case DECR_LOCAL_FILE_REF:
       case GET_FILENAME:
-      case GET_OUTPUT_FILENAME:
+      case IS_MAPPED:
       case ARRAY_LOOKUP_IMM:
       case COPY_REF:
       case CHOOSE_TMP_FILENAME:
@@ -2072,17 +2033,23 @@ public class ICInstructions {
           }
           return Arrays.asList(retrieve, assign);
         }
-        case GET_FILENAME: 
-        case GET_OUTPUT_FILENAME: {
+        case IS_MAPPED: {
+          ResultVal vanilla = vanillaResult(true);
+          assert(vanilla != null);
+          Var fileVar = getInput(0).getVar();
+          if (fileVar.isMapped() == Ternary.MAYBE) {
+            return vanilla.asList();
+          } else {
+            // We know the value already, so check it's a constant
+            Arg result = Arg.createBoolLit(fileVar.isMapped() == Ternary.TRUE);
+            return Arrays.asList(vanilla,
+                  ResultVal.makeCopy(getOutput(0), result));
+          }
+        }
+        case GET_FILENAME: {
           List<ResultVal> res = new ArrayList<ResultVal>();
           Arg filename = getOutput(0).asArg();
-          Arg file;
-          if (op == Opcode.GET_FILENAME) {
-            file = getInput(0);
-          } else {
-            assert(op == Opcode.GET_OUTPUT_FILENAME);
-            file = getOutput(1).asArg();
-          }
+          Arg file = getInput(0);
           res.add(filenameCV(filename, file.getVar()));
           
           // Check to see if value of filename is in local value
@@ -3006,7 +2973,7 @@ public class ICInstructions {
     
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-              Set<Var> unmappedVars, boolean waitForClose) {
+                                           boolean waitForClose) {
       // See which arguments are closed
       boolean allClosed = true;
       if (!waitForClose) {
@@ -3027,7 +2994,7 @@ public class ICInstructions {
         Var out = this.outputs.get(i);
         if (Types.isFile(out)) {
           // Need to wait for filename, unless unmapped 
-          if (!(waitForClose || unmappedVars.contains(out))) {
+          if (!(waitForClose || out.isMapped() == Ternary.FALSE)) {
             allClosed = false;
           }
         }
@@ -3276,7 +3243,7 @@ public class ICInstructions {
     
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-            Set<Var> unmappedVars, boolean waitForClose) {
+                                           boolean waitForClose) {
       return null; // already immediate
     }
 
@@ -3422,7 +3389,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-        Set<Var> unmappedVars, boolean waitForClose) {
+                                           boolean waitForClose) {
       // Don't support reducing this
       return null;
     }
@@ -3560,7 +3527,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-        Set<Var> unmappedVars, boolean waitForClose) {
+                                           boolean waitForClose) {
       // See if we need to block on all inputs
       Set<Var> alreadyDone = new HashSet<Var>();
       for (int i = 0; i < this.newLoopVars.size(); i++) {
@@ -3720,7 +3687,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-        Set<Var> unmappedVars, boolean waitForClose) {
+                                           boolean waitForClose) {
       return null;
     }
 
@@ -3783,7 +3750,7 @@ public class ICInstructions {
     INIT_UPDATEABLE_FLOAT, UPDATE_MIN, UPDATE_INCR, UPDATE_SCALE, LATEST_VALUE,
     UPDATE_MIN_IMM, UPDATE_INCR_IMM, UPDATE_SCALE_IMM,
     INIT_LOCAL_OUTPUT_FILE,
-    GET_FILENAME, GET_OUTPUT_FILENAME, CHOOSE_TMP_FILENAME,
+    GET_FILENAME, CHOOSE_TMP_FILENAME, IS_MAPPED,
     SET_FILENAME_VAL, GET_FILENAME_VAL
   }
 
@@ -4066,7 +4033,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-        Set<Var> unmappedVars, boolean waitForClose) {
+                                           boolean waitForClose) {
       if (op == Opcode.LOCAL_OP) {
         // already is immediate
         return null; 
@@ -4189,11 +4156,6 @@ public class ICInstructions {
      */
     private ResultVal makeBasicComputedValue() {
       if (Operators.isCopy(subop)) {
-        if (this.output.isMapped() != Ternary.FALSE) {
-          // Can't treat interchangeably
-          return null;
-        }
-        
         // It might be assigning a constant val
         return ResultVal.makeCopy(this.output, this.inputs.get(0));
       } else if (Operators.isMinMaxOp(subop)) {

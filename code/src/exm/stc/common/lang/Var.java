@@ -211,7 +211,7 @@ public class Var implements Comparable<Var>, Typed {
                defType.isLocal()) {
       // If the variable is allocated in this scope and we didn't see a
       // mapping, then we can assume it's unmapped 
-      return Ternary.TRUE;
+      return Ternary.FALSE;
     }
     // Can't be sure
     return Ternary.MAYBE;

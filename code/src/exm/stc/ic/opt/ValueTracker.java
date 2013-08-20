@@ -68,9 +68,6 @@ public class ValueTracker implements CVMap {
   /** variables which are closed at this point in program */
   final HierarchicalSet<Var> closed;
 
-  /** mappable variables which are unmapped */
-  private final HierarchicalSet<Var> unmapped;
-
   /** variables which are recursively closed at this point in program */
   private final HierarchicalSet<Var> recursivelyClosed;
 
@@ -96,7 +93,6 @@ public class ValueTracker implements CVMap {
     this.varContents = new MultiMap<Var, ComputedValue>();
     this.varReferences = new MultiMap<Var, Pair<Arg,ComputedValue>>();
     this.closed = new HierarchicalSet<Var>();
-    this.unmapped = new HierarchicalSet<Var>();
     this.recursivelyClosed = new HierarchicalSet<Var>();
     this.dependsOn = new HashMap<Var, CopyOnWriteSmallSet<Var>>();
   }
@@ -107,8 +103,7 @@ public class ValueTracker implements CVMap {
       HashSet<ComputedValue> blackList,
       MultiMap<Var, ComputedValue> varContents,
       MultiMap<Var, Pair<Arg, ComputedValue>> varReferences,
-      HierarchicalSet<Var> closed,
-      HierarchicalSet<Var> unmapped, HierarchicalSet<Var> recursivelyClosed,
+      HierarchicalSet<Var> closed, HierarchicalSet<Var> recursivelyClosed,
       HashMap<Var, CopyOnWriteSmallSet<Var>> dependsOn) {
     this.logger = logger;
     this.reorderingAllowed = reorderingAllowed;
@@ -119,7 +114,6 @@ public class ValueTracker implements CVMap {
     this.varContents = varContents;
     this.varReferences = varReferences;
     this.closed = closed;
-    this.unmapped = unmapped;
     this.recursivelyClosed = recursivelyClosed;
     this.dependsOn = dependsOn;
   }
@@ -319,18 +313,6 @@ public class ValueTracker implements CVMap {
     }
   }
 
-  public boolean isUnmapped(Var var) {
-    return unmapped.contains(var);
-  }
-
-  public void setUnmapped(Var var) {
-    unmapped.add(var);
-  }
-
-  public Set<Var> getUnmapped() {
-    return Collections.unmodifiableSet(unmapped);
-  }
-
   /**
    * Register that variable future depends on all of the variables in the
    * collection, so that if future is closed, then the other variables must be
@@ -372,7 +354,7 @@ public class ValueTracker implements CVMap {
         blackList, // blacklist shared globally
         new MultiMap<Var, ComputedValue>(),
         new MultiMap<Var, Pair<Arg, ComputedValue>>(),
-        closed.makeChild(), unmapped.makeChild(), recursivelyClosed.makeChild(), newDO);
+        closed.makeChild(), recursivelyClosed.makeChild(), newDO);
   }
   
   /**

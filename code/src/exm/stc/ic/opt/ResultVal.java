@@ -44,10 +44,11 @@ public class ResultVal {
 
   public ResultVal(ComputedValue value, Arg location,
       boolean outClosed, EquivalenceType equivType, boolean substitutable) {
-    super();
+    assert(value != null);
     this.value = value;
     this.location = location;
     this.outClosed = outClosed;
+    assert(equivType != null);
     this.equivType = equivType;
     this.substitutable = substitutable;
   }

@@ -282,9 +282,11 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
                        readOut);
         }
       }
-      // Writing mapped var has side-effect
+      // Writing mapped var can have side-effect, unless we're storing a
+      // mapped value var that was written
       for (Var output: outputs) {
-        if (output.isMapped() != Ternary.FALSE) {
+        if (output.isMapped() != Ternary.FALSE && 
+            inst.op != Opcode.STORE_FILE) {
           needed.add(output);
         }
       }

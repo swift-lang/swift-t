@@ -21,6 +21,7 @@ import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.tclbackend.tree.TclString;
 
 public class Arg implements Comparable<Arg> {
@@ -348,6 +349,20 @@ public class Arg implements Comparable<Arg> {
 
   public boolean isConstant() {
     return this.kind != ArgKind.VAR;
+  }
+
+  public Ternary isMapped() {
+    switch (kind) {
+      case VAR:
+        return var.isMapped();
+      case INTVAL:
+      case FLOATVAL:
+      case STRINGVAL:
+      case BOOLVAL:
+        return Ternary.FALSE;
+      default:
+        throw new STCRuntimeError("Unknown kind " + kind);
+    }
   }
 
   /**

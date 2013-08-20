@@ -154,7 +154,7 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.LOAD_BLOB);
     opcodes.add(Opcode.LOAD_FILE);
     opcodes.add(Opcode.GET_FILENAME);
-    opcodes.add(Opcode.GET_OUTPUT_FILENAME);
+    opcodes.add(Opcode.IS_MAPPED);
     opcodes.add(Opcode.CHOOSE_TMP_FILENAME);
     opcodes.add(Opcode.INIT_LOCAL_OUTPUT_FILE);
     opcodes.add(Opcode.COMMENT);
@@ -216,6 +216,10 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.ARRAYREF_DEREF_INSERT_FUTURE);
     opcodes.add(Opcode.COPY_REF);
     opcodes.add(Opcode.LOCAL_OP);
+    opcodes.add(Opcode.GET_FILENAME);
+    opcodes.add(Opcode.IS_MAPPED);
+    opcodes.add(Opcode.SET_FILENAME_VAL);
+    opcodes.add(Opcode.INIT_LOCAL_OUTPUT_FILE);
     return opcodes;
   }
   
@@ -223,9 +227,6 @@ public class ProgressOpcodes {
     HashSet<Opcode> opcodes = initCheapWorker();
 
     opcodes.add(Opcode.CALL_LOCAL_CONTROL);
-    opcodes.add(Opcode.GET_FILENAME);
-    opcodes.add(Opcode.GET_OUTPUT_FILENAME);
-    opcodes.add(Opcode.SET_FILENAME_VAL);
     opcodes.add(Opcode.ARRAY_CREATE_NESTED_FUTURE);
     opcodes.add(Opcode.ARRAYREF_CREATE_NESTED_IMM);
     opcodes.add(Opcode.ARRAYREF_CREATE_NESTED_FUTURE);

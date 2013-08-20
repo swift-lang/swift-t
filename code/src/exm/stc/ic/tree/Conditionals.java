@@ -101,11 +101,11 @@ public class Conditionals {
       return new IfStatement(condition, thenBlock.clone(), elseBlock.clone());
     }
   
-    public Block getThenBlock() {
+    public Block thenBlock() {
       return thenBlock;
     }
   
-    public Block getElseBlock() {
+    public Block elseBlock() {
       return elseBlock;
     }
   

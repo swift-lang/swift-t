@@ -421,7 +421,6 @@ public class WaitCoalescer implements OptimizerPass {
         ExecContext execCx, Block block, ListIterator<Statement> it,
         Instruction inst) {
     MakeImmRequest req = inst.canMakeImmediate(
-                            Collections.<Var>emptySet(),
                             Collections.<Var>emptySet(), true);
     if (req != null && req.in.size() > 0) {
       if (logger.isTraceEnabled()) {

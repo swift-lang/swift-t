@@ -30,7 +30,9 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.OptUtil;
+import exm.stc.ic.tree.Conditionals.IfStatement;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -136,13 +138,79 @@ public class WrapUtil {
                                           out.name());
         Var filenameTmp = block.declareVariable(Types.F_STRING,
             name,Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
-        instInsertIt.add(
-              TurbineOp.getFileName(filenameTmp, out, true));
+        initOrGetFileName(block, instInsertIt, filenameTmp, out);
         waitVars.add(new WaitVar(filenameTmp, false));
         filenameVars.put(out, filenameTmp);
       }
     }
     return Pair.create(waitVars, filenameVars);
+  }
+
+  /**
+   * Get the filename for a file, initializing it to a temporary value in
+   * the case where it's not mapped.
+   * @param block
+   * @param filename: alias to be initialized
+   * @param file
+   * @return
+   */
+  public static void initOrGetFileName(Block block,
+            ListIterator<Statement> insertPos, Var filename, Var file) {
+    assert(Types.isString(filename.type()));
+    assert(filename.storage() == Alloc.ALIAS);
+    assert(Types.isFile(file.type()));
+    Instruction getFileName = TurbineOp.getFileName(filename, file);
+    
+    if (file.isMapped() == Ternary.TRUE) {
+      // Just get the mapping in this case
+      insertPos.add(getFileName);
+    } else {
+      // Use optimizer var prefixes to avoid clash with any frontend vars
+      Var isMapped = getIsMapped(block, insertPos, file);
+      
+      IfStatement ifMapped = new IfStatement(isMapped.asArg());
+      ifMapped.setParent(block);
+      
+      // Case when mapped: just return var
+      ifMapped.thenBlock().addStatement(getFileName);
+      
+      // Case when not mapped: init with tmp
+      Block elseB = ifMapped.elseBlock();
+      Var filenameVal = elseB.declareVariable(Types.V_STRING,
+          OptUtil.optVPrefix(elseB, "fname_" + file.name()), Alloc.LOCAL,
+          DefType.LOCAL_COMPILER, null);
+      initTemporaryFileName(elseB.statementEndIterator(), file, filenameVal);
+      // Get the filename again but can assume mapping initialized
+      elseB.addStatement(getFileName);
+      
+      insertPos.add(ifMapped);
+    }
+  }
+
+  public static Var getIsMapped(Block block,
+      ListIterator<? super Instruction> insertPos, Var file) {
+    Var isMapped = block.declareVariable(Types.V_BOOL,
+          OptUtil.optVPrefix(block, "mapped_" + file.name()), Alloc.LOCAL,
+          DefType.LOCAL_COMPILER, null);
+    
+    insertPos.add(TurbineOp.isMapped(isMapped, file));
+    return isMapped;
+  }
+
+  /**
+   * Initialize a file variable with a mapping to a temp file
+   * @param insertPos place to insert instructions
+   * @param file this is the file variable to be mapped
+   * @param filenameVal this is filename
+   */
+  public static void initTemporaryFileName(
+      ListIterator<? super Statement> insertPos, Var file, Var filenameVal) {
+    assert(Types.isFile(file));
+    assert(filenameVal.type().assignableTo(Types.V_STRING));
+    // Select temporary file name
+    insertPos.add(TurbineOp.chooseTmpFilename(filenameVal));
+    // Set the filename on the file var
+    insertPos.add(TurbineOp.setFilenameVal(file, filenameVal.asArg()));
   }
 
   /**
@@ -275,8 +343,11 @@ public class WrapUtil {
         assert(outFilename.type().assignableTo(Types.V_STRING));
         outFilenameVal = outFilename;
       }
+      
+      Var isMapped = getIsMapped(block, instBuffer.listIterator(), outFut);
+      
       instBuffer.add(TurbineOp.initLocalOutFile(outVal,
-                            outFilenameVal.asArg(), outFut));
+                            outFilenameVal.asArg(), isMapped.asArg()));
     }
   }
   

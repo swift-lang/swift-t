@@ -1,6 +1,8 @@
 package exm.stc.ic.refcount;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -23,6 +25,7 @@ import exm.stc.common.util.Sets;
 import exm.stc.ic.opt.AliasTracker.AliasKey;
 import exm.stc.ic.opt.TreeWalk;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
+import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ForeachLoops.AbstractForeachLoop;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -31,6 +34,7 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Statement;
+import exm.stc.ic.tree.ICTree.StatementType;
 
 /**
  * Functions to insert reference count operations in IC tree.  There are a number
@@ -423,6 +427,10 @@ public class RCPlacer {
   private void insertIncr(Block block,
       ListIterator<Statement> stmtIt, Var var, Long val,
       RefCountType type, boolean before) {
+    assert(val >= 0);
+    if (val == 0)
+      return;
+    
     if (before)
       stmtIt.previous();
     Instruction inst;
@@ -444,7 +452,7 @@ public class RCPlacer {
     insertIncr(block, stmtIt, var, val, type, false);
   }
 
-  private static void addIncrementsAtTop(Block block, RCTracker increments,
+  private void addIncrementsAtTop(Block block, RCTracker increments,
       RefCountType rcType, Set<Var> parentAssignedAliasVars) {
     // Next try to just put at top of block
     Iterator<Entry<AliasKey, Long>> it = increments.rcIter(rcType).iterator();
@@ -465,25 +473,17 @@ public class RCPlacer {
       Statement stmt = stmtIt.next();
       switch (stmt.type()) {
         case INSTRUCTION: {
-          for (Var out : stmt.instruction().getOutputs()) {
+          for (Var out: stmt.instruction().getInitialized()) {
             if (out.storage() == Alloc.ALIAS) {
-              // Alias var must be set at this point, insert refcount instruction
-              long incr = increments.getCount(rcType, out);
-              assert (incr >= 0);
-              if (incr > 0) {
-                Instruction incrInst = buildIncrInstruction(rcType, out, incr);
-                incrInst.setParent(block);
-                stmtIt.add(incrInst);
-              }
-              increments.reset(rcType, out);
+              addIncrForVar(block, increments, rcType, stmtIt, out);
             }
           }
           break;
         }
         case CONDITIONAL: {
-          // TODO: handle if initialised within conditional
-          //    currently we don't generate IR trees where we depend on
-          //    aliases being initialised inside conditionals
+          for (Var initAlias: findConditionalInitAliases(stmt.conditional())) {
+            addIncrForVar(block, increments, rcType, stmtIt, initAlias);
+          }
           break;
         }
         default: 
@@ -491,6 +491,54 @@ public class RCPlacer {
       }
       
     }
+  }
+
+  /**
+   * Find any alias variables that are initialized on
+   * all branches of the continuation
+   * @param cond
+   * @return
+   */
+  public Set<Var> findConditionalInitAliases(Conditional cond) {
+    Set<Var> initAllBranches; 
+    if (cond.isExhaustiveSyncConditional()) {
+      List<Set<Var>> branchesInit = new ArrayList<Set<Var>>();
+      for (Block b: cond.getBlocks()) {
+        branchesInit.add(findBlockInitAliases(b));
+      }
+      initAllBranches = Sets.intersection(branchesInit);
+    } else {
+      initAllBranches = Collections.emptySet();
+    }
+    return initAllBranches;
+  }
+
+  private Set<Var> findBlockInitAliases(Block block) {
+    HashSet<Var> result = new HashSet<Var>();
+    for (Statement stmt: block.getStatements()) {
+      if (stmt.type() == StatementType.INSTRUCTION) {
+        for (Var v: stmt.instruction().getInitialized()) {
+          if (v.storage() == Alloc.ALIAS) {
+            result.add(v);
+          }
+        }
+      } else {
+        assert(stmt.type() == StatementType.CONDITIONAL);
+        result.addAll(findConditionalInitAliases(stmt.conditional()));
+      }
+    }
+    return result;
+  }
+
+  public void addIncrForVar(Block block, RCTracker increments,
+      RefCountType rcType, ListIterator<Statement> stmtIt, Var out) {
+    // Alias var must be set at this point, insert refcount instruction
+    long incr = increments.getCount(rcType, out);
+    assert (incr >= 0);
+    if (incr > 0) {
+      insertIncrAfter(block, stmtIt, out, incr, rcType);
+    }
+    increments.reset(rcType, out);
   }
 
   /**

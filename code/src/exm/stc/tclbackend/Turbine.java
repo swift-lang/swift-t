@@ -34,9 +34,9 @@ import exm.stc.tclbackend.tree.LiteralInt;
 import exm.stc.tclbackend.tree.Sequence;
 import exm.stc.tclbackend.tree.SetVariable;
 import exm.stc.tclbackend.tree.Square;
-import exm.stc.tclbackend.tree.TclTarget;
 import exm.stc.tclbackend.tree.TclList;
 import exm.stc.tclbackend.tree.TclString;
+import exm.stc.tclbackend.tree.TclTarget;
 import exm.stc.tclbackend.tree.TclTree;
 import exm.stc.tclbackend.tree.Token;
 import exm.stc.tclbackend.tree.Value;
@@ -194,8 +194,9 @@ class Turbine {
   // Files
   private static final Token GET_FILE = turbFn("get_file");
   private static final Token SET_FILE = turbFn("set_file");
-  private static final Token GET_OUTPUT_FILE_PATH = turbFn("get_output_file_path");
   private static final Token GET_FILE_PATH = turbFn("get_file_path");
+  private static final Token IS_MAPPED = turbFn("is_file_mapped");
+  private static final Token GET_FILE_STATUS = turbFn("get_file_status");
   private static final Token LOCAL_FILE_PATH = turbFn("local_file_path");
   private static final Token CREATE_LOCAL_FILE_REF = turbFn("create_local_file_ref");
   private static final Token DECR_LOCAL_FILE_REFCOUNT = turbFn("decr_local_file_refcount");
@@ -1185,23 +1186,23 @@ class Turbine {
    * @return
    */
   public static Expression getFileStatus(Value fileVar) {
-    return new Square(turbFn("get_file_status"), fileVar);
+    return new Square(GET_FILE_STATUS, fileVar);
   }
   
   /**
    * Expression that extracts the filename string future
    * a file variable
    * @param fileVar
-   * @param initUnmapped 
    * @return
    */
-  public static Expression getFileName(Value fileVar, boolean initUnmapped) {
-    if (initUnmapped) {
-      return new Square(GET_OUTPUT_FILE_PATH, fileVar);
-    } else {
-      return new Square(GET_FILE_PATH, fileVar);
-    }
+  public static Expression getFileName(Value fileVar) {
+    return new Square(GET_FILE_PATH, fileVar);
   }
+  
+ public static SetVariable isMapped(String isMappedVar, Value fileVar) {
+   return new SetVariable(isMappedVar, new Square(IS_MAPPED, fileVar));
+ }
+ 
   
   public static Expression localFilePath(Value fileVar) {
     return new Square(LOCAL_FILE_PATH, fileVar);

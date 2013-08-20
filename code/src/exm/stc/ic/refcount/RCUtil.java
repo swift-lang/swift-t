@@ -87,7 +87,8 @@ public class RCUtil {
         String msg = "Refcount " + rcType  + " not 0 after pass " + e.toString()
                    + " in block " + block;
         Var refcountVar = increments.getRefCountVar(block, e.getKey(), true);
-        if (refcountVar.storage() == Alloc.ALIAS) {
+        // TODO: verify that this is actually ok now?
+        if (false && refcountVar.storage() == Alloc.ALIAS) {
           // This is ok but indicates var declaration is in wrong place
           Logging.getSTCLogger().debug(msg);
         } else {

@@ -184,10 +184,10 @@ public class STCMiddleEnd {
     currBlock().addStatement(stmt);
 
     if (hasElse) {
-      blockStack.push(stmt.getElseBlock());
+      blockStack.push(stmt.elseBlock());
     }
 
-    blockStack.push(stmt.getThenBlock());
+    blockStack.push(stmt.thenBlock());
   }
 
   public void startElseBlock() {
@@ -400,8 +400,10 @@ public class STCMiddleEnd {
   
   public void initLocalOutFile(Var localOutFile, Arg fileName,
                                                  Var fileFuture) {
+    Var isMapped = WrapUtil.getIsMapped(currBlock(),
+          currBlock().statementEndIterator(), fileFuture);
     currBlock().addInstruction(TurbineOp.initLocalOutFile(
-                            localOutFile, fileName, fileFuture));
+                            localOutFile, fileName, isMapped.asArg()));
   }
   
   public void arrayLookupFuture(Var oVar, Var arrayVar,
@@ -843,8 +845,13 @@ public class STCMiddleEnd {
     assert(Types.isString(filename.type()));
     assert(filename.storage() == Alloc.ALIAS);
     assert(Types.isFile(file.type()));
-    currBlock().addInstruction(
-            TurbineOp.getFileName(filename, file, initUnmapped));
+    if (initUnmapped) {
+      WrapUtil.initOrGetFileName(currBlock(),
+              currBlock().statementEndIterator(), filename, file);
+    } else {
+      // Don't allow initialization of filename
+      currBlock().addInstruction(TurbineOp.getFileName(filename, file));
+    }
   }
   
   public void setFilenameVal(Var file, Arg filenameVal) {

@@ -37,11 +37,12 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
+import exm.stc.ic.WrapUtil;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.opt.ProgressOpcodes.Category;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
@@ -54,7 +55,6 @@ import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
-import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.Function;
@@ -113,6 +113,7 @@ public class ForwardDataflow implements OptimizerPass {
         logger.trace("irs: " + irs.toString());
       }
       for (ResultVal resVal : irs) {
+        assert(resVal != null) : inst + " " + irs;
         if (ComputedValue.isAlias(resVal)) {
           replaceAll
               .put(resVal.location().getVar(), resVal.value().getInput(0));
@@ -134,12 +135,13 @@ public class ForwardDataflow implements OptimizerPass {
             assert (Types.isScalarValue(prevLoc.getVar().type()));
             // Constants are the best... might as well replace
             av.addComputedValue(resVal, Ternary.TRUE);
-            // System.err.println("replace " + prevLoc + " with " + currLoc);
-            replaceInputs.put(prevLoc.getVar(), currLoc);
+            if (prevLoc.isMapped() == Ternary.FALSE) {
+              replaceInputs.put(prevLoc.getVar(), currLoc);
+            }
           } else {
             // Should be same, otherwise bug (in user script or compiler)
             if (!currLoc.equals(prevLoc)) {
-              Logging .uniqueWarn("Invalid code detected during optimization. "
+              Logging.uniqueWarn("Invalid code detected during optimization. "
                       + "Conflicting values for " + resVal + ": " + prevLoc + " != "
                       + currLoc + " in " + function.getName() + ".\n"
                       + "This may have been caused by a double-write to a variable. "
@@ -154,11 +156,17 @@ public class ForwardDataflow implements OptimizerPass {
           }
         } else {
           final boolean usePrev;
+          final boolean substitute;
           assert (currLoc.isVar());
           // See if we should replace
           Arg prevLoc = av.getLocation(resVal.value());
+          
+          boolean currUnmapped = (currLoc.isMapped() == Ternary.FALSE);
+          boolean prevUnmapped = (prevLoc.isMapped() == Ternary.FALSE);
           if (prevLoc.isConstant()) {
+            // Only makes sense to use previous
             usePrev = true;
+            substitute = currUnmapped;
           } else {
             assert (prevLoc.isVar());
             boolean currClosed = av.isClosed(currLoc.getVar());
@@ -168,9 +176,18 @@ public class ForwardDataflow implements OptimizerPass {
               // replace all references, including writes to currLoc
               replaceAll.put(currLoc.getVar(), prevLoc);
             }
-            if (prevClosed || !currClosed) {
+            
+            // Must be at least as closed as other and unmapped
+            boolean canSubPrev = prevUnmapped && (!prevClosed || currClosed);
+            boolean canSubCurr = currUnmapped && (!currClosed || prevClosed);
+            
+            if (!canSubPrev && !canSubCurr) {
+              usePrev = false;
+              substitute = false;
+            } else if (canSubPrev && prevClosed || !currClosed) {
               // Use the prev value
               usePrev = true;
+              substitute = true;
             } else {
               /*
                * The current variable is closed but the previous isn't. Its
@@ -178,20 +195,23 @@ public class ForwardDataflow implements OptimizerPass {
                * optimisations
                */
               usePrev = false;
+              substitute = true;
             }
           }
 
           // Now we've decided whether to use the current or previous
           // variable for the computed expression
-          if (usePrev && resVal.isSubstitutable()) {
-            // Do it
-            if (logger.isTraceEnabled())
-              logger.trace("replace " + currLoc + " with " + prevLoc);
-            replaceInputs.put(currLoc.getVar(), prevLoc);
-          } else {
-            if (logger.isTraceEnabled())
-              logger.trace("replace " + prevLoc + " with " + currLoc);
-            replaceInputs.put(prevLoc.getVar(), currLoc);
+          if (substitute) {
+            if (usePrev && resVal.isSubstitutable()) {
+              // Do it
+              if (logger.isTraceEnabled())
+                logger.trace("replace " + currLoc + " with " + prevLoc);
+              replaceInputs.put(currLoc.getVar(), prevLoc);
+            } else {
+              if (logger.isTraceEnabled())
+                logger.trace("replace " + prevLoc + " with " + currLoc);
+              replaceInputs.put(prevLoc.getVar(), currLoc);
+            }
           }
         }
       }
@@ -393,10 +413,6 @@ public class ForwardDataflow implements OptimizerPass {
         ResultVal filenameVal = ICInstructions.filenameCV(
             Arg.createVar(v.mapping()), v);
         cv.addComputedValue(filenameVal, Ternary.FALSE);
-      }
-      if (v.isMapped() == Ternary.FALSE) {
-        // Var is definitely unmapped
-        cv.setUnmapped(v);
       }
     }
 
@@ -682,8 +698,7 @@ public class ForwardDataflow implements OptimizerPass {
       ExecContext execCx, Block block, ValueTracker cv, Instruction inst,
       ListIterator<Statement> stmts) {
     // First see if we can replace some futures with values
-    MakeImmRequest req = inst.canMakeImmediate(cv.getClosed(),
-        cv.getUnmapped(), false);
+    MakeImmRequest req = inst.canMakeImmediate(cv.getClosed(), false);
 
     if (req == null) {
       return false;
@@ -788,16 +803,14 @@ public class ForwardDataflow implements OptimizerPass {
       if (Types.isFile(output)) {
         // Can only do this with unmapped vars, since otherwise we need
         // to wait for filename to be set
-        assert(cv.isUnmapped(output));
+        assert(output.isMapped() == Ternary.FALSE);
         String varName = insertContext.uniqueVarName(
                           Var.FILENAME_OF_PREFIX + output.name());
         Var filenameVal = insertContext.declareVariable(
                         Types.V_STRING, varName, Alloc.LOCAL,
                         DefType.LOCAL_COMPILER, null);
-        for (Statement stmt: TurbineOp.initWithTmpFilename(
-                                    filenameVal, null, output)) {
-          insertPoint.add(stmt);
-        }
+
+        WrapUtil.initTemporaryFileName(insertPoint, output, filenameVal);
         filenameVals.put(output, filenameVal);
       }
     }
