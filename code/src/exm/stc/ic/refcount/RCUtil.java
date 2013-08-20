@@ -4,13 +4,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.lang.Var;
 import exm.stc.common.lang.RefCounting.RefCountType;
-import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var;
 import exm.stc.ic.opt.AliasTracker.AliasKey;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
@@ -84,16 +82,8 @@ public class RCUtil {
     for (Entry<AliasKey, Long> e : increments.rcIter(rcType)) {
       if ((noIncrements && e.getValue() > 0) ||
           (noDecrements && e.getValue() < 0)) {
-        String msg = "Refcount " + rcType  + " not 0 after pass " + e.toString()
-                   + " in block " + block;
-        Var refcountVar = increments.getRefCountVar(block, e.getKey(), true);
-        // TODO: verify that this is actually ok now?
-        if (false && refcountVar.storage() == Alloc.ALIAS) {
-          // This is ok but indicates var declaration is in wrong place
-          Logging.getSTCLogger().debug(msg);
-        } else {
-          throw new STCRuntimeError(msg);
-        }
+        throw new STCRuntimeError("Refcount " + rcType  + " not 0 after pass "
+                   + e.toString() + " in block " + block);
       }
     }
   }

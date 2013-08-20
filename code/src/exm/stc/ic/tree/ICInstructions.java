@@ -2644,6 +2644,10 @@ public class ICInstructions {
       super(op);
       this.functionName = functionName;
     }
+
+    public String functionName() {
+      return functionName;
+    }
     
     @Override
     public String shortOpName() {

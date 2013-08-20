@@ -80,6 +80,10 @@ public class ICOptimizer {
   private static void preprocess(PrintStream icOutput, Logger logger,
                          boolean debug, Program program) throws UserException {
     OptimizerPipeline preprocess = new OptimizerPipeline(icOutput);
+    
+    // Cut down size of IR right away
+    preprocess.addPass(new PruneFunctions());
+    
     // need variable names to be unique for rest of stages
     preprocess.addPass(new UniqueVarNames());
     // Must fix up variables as frontend doesn't do it
@@ -113,7 +117,11 @@ public class ICOptimizer {
         pipe.setValidator(Validate.standardValidator());
       }
       
-      // First prune any unneeded functions
+      // First prune and inline any functions
+      if (iteration == nIterations / 2) {
+        // Only makes sense to do periodically
+        pipe.addPass(new PruneFunctions());
+      }
       pipe.addPass(inliner);
       
       if ((iteration % 3) == 2) {
@@ -189,10 +197,12 @@ public class ICOptimizer {
     
     postprocess.addPass(new ConstantSharing());
     
-
     // Final dead code elimination to clean up any remaining dead code 
     // (from last iteration or constant sharing)
     postprocess.addPass(new DeadCodeEliminator());
+    
+    // Final pruning to remove unused functions
+    postprocess.addPass(new PruneFunctions());
     
     // Add in all the variable passing annotations now that instructions,
     // continuations and variables are fixed

@@ -109,7 +109,12 @@ public class MultiMap<K, V> {
   }
 
   public List<V> remove(K key) {
-    return map.remove(key);
+    List<V> res = map.remove(key);
+    if (res == null) {
+      return Collections.emptyList();
+    } else {
+      return res;
+    }
   }
 
   public boolean isEmpty() {
