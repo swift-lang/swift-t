@@ -247,6 +247,7 @@ public class Types {
 
     @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
+      concrete = concrete.stripSubTypes();
       if (concrete instanceof RefType) {
         Type concreteMember = ((RefType)concrete).referencedType;
         return referencedType.matchTypeVars(concreteMember);
@@ -401,6 +402,7 @@ public class Types {
 
     @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
+      concrete = concrete.stripSubTypes();
       if (this.equals(concrete)) {
         return Collections.emptyMap();
       } else {
@@ -485,6 +487,7 @@ public class Types {
 
     @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
+      concrete = concrete.stripSubTypes();
       if (this.equals(concrete)) {
         return Collections.emptyMap();
       } else {
@@ -567,6 +570,7 @@ public class Types {
 
     @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
+      concrete = concrete.stripSubTypes();
       if (this.equals(concrete)) {
         return Collections.emptyMap();
       } else {
@@ -657,6 +661,7 @@ public class Types {
 
     @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
+      concrete = concrete.stripSubTypes();
       if (this.equals(concrete)) {
         return Collections.emptyMap();
       } else {
@@ -1121,6 +1126,13 @@ public class Types {
     public abstract Map<String, Type> matchTypeVars(Type concrete);
     
     /**
+     * Return type with any subtypes stripped off
+     */
+    public Type stripSubTypes() {
+      return this;
+    }
+    
+    /**
      * @return true if any type variables in type
      */
     public abstract boolean hasTypeVar();
@@ -1438,7 +1450,23 @@ public class Types {
     
     @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
+      while (concrete instanceof SubType) {
+        if (this.equals(concrete)) {
+          break;
+        } else {
+          concrete = ((SubType)concrete).baseType();
+        }
+      }
+      
       return baseType.matchTypeVars(concrete);
+    }
+    
+    
+    /**
+     * Return type with any subtypes stripped off
+     */
+    public Type stripSubTypes() {
+      return baseType.stripSubTypes();
     }
     
     @Override

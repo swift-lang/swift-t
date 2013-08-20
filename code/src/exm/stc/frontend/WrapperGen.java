@@ -257,7 +257,8 @@ public class WrapperGen {
       unionChoices.add(concreteT);
     } else {
       Map<String, Type> b = abstractT.matchTypeVars(concreteT);
-      
+     
+      assert(b != null) : abstractT + " " + concreteT;
       for (String tv: b.keySet()) {
         assert(!typeVarBindings.containsKey(tv) ||
                 typeVarBindings.get(tv).equals(b.get(tv)));

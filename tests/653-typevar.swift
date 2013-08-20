@@ -13,4 +13,5 @@ main () {
   puts("Hello world!");
   puts2("Test!");
   puts2(1234);
+  puts2(1234.0);
 }
