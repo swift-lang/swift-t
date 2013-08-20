@@ -53,7 +53,7 @@ public class Proc extends TclTree
   private static void checkTclFunctionName(String name) {
     for (int i = 0; i < name.length(); i++) {
       char c = name.charAt(i);
-      if (Character.isAlphabetic(c) || Character.isDigit(c) ||
+      if (Character.isLetter(c) || Character.isDigit(c) ||
           c == ':' || c == '_' || c == '=' || c == '-') {
         // Whitelist of characters
       } else {
