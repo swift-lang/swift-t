@@ -64,6 +64,7 @@ import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.SubType;
 import exm.stc.common.lang.Types.Type;
@@ -1852,27 +1853,7 @@ public class ASTWalker {
       //TODO: figure out what output types are valid
       throw new STCRuntimeError("Don't support wrapping parallel functions yet");
     }
-    
-    for (Var in: inArgs) {
-      if (Types.isScalarFuture(in.type())) {
-        // OK
-      } else if (Types.isScalarUpdateable(in.type())) {
-        // OK
-      } else {
-        throw new STCRuntimeError("Can't handle type of " + in.type()
-               + " for function " + function);
-      }
-    }
-    for (Var out: outArgs) {
-      if (Types.isArray(out.type())) {
-        // OK: will pass in standard repr
-      } else if (Types.isScalarFuture(out.type())) {
-        // OK
-      } else {
-        throw new STCRuntimeError("Can't handle type of " + out.type()
-               + " for function " + function);
-      }
-    }
+
     backend.generateWrappedBuiltin(function, ft, outArgs, inArgs, mode,
                                    isParallel, isTargetable);
   }
@@ -1882,6 +1863,8 @@ public class ASTWalker {
           FunctionDecl fdecl, FunctionType ft, SwiftAST inlineTclTree)
           throws InvalidSyntaxException, UserException {
     assert(inlineTclTree.getType() == ExMParser.INLINE_TCL);
+    
+    checkInlineTclTypes(context, function, ft);
     TclOpTemplate inlineTcl;
     assert(inlineTclTree.getChildCount() == 1);
     String tclTemplateString = 
@@ -1897,6 +1880,56 @@ public class ASTWalker {
     inlineTcl.verifyNames(context);
     Builtins.addInlineTemplate(function, inlineTcl);
     return inlineTcl;
+  }
+
+
+  /** 
+   * Check that the compiler can handle TCL templates with these
+   * argument types
+   * @param function
+   * @param fdecl
+   */
+  private void checkInlineTclTypes(Context context,
+      String function, FunctionType ftype) 
+    throws TypeMismatchException {
+    for (Type in: ftype.getInputs()) {
+      for (Type alt: UnionType.getAlternatives(in)) {
+        if (Types.isScalarFuture(alt)) {
+          // OK
+        } else if (Types.isScalarUpdateable(alt)) {
+          // OK
+        } else if (Types.isArray(alt)) {
+          // OK
+        } else if (Types.isWildcard(alt) ||
+                   Types.isTypeVar(alt)) {
+          // TODO: need to defer checking to time when we know value
+        } else {
+          throw new TypeMismatchException(context,
+              "Type " + alt.typeName() + " is"
+              + " not current supported as an input to inline TCL code"
+              + " for function " + function);
+        }
+      }
+    }
+    for (Type out: ftype.getOutputs()) {
+      for (Type alt: UnionType.getAlternatives(out)) {
+        if (Types.isArray(alt)) {
+          // OK: will pass in standard repr
+        } else if (Types.isScalarUpdateable(alt)) {
+          // OK: will pass in standard repr
+        } else if (Types.isScalarFuture(alt)) {
+          // OK
+        } else if (Types.isWildcard(alt) ||
+            Types.isTypeVar(alt)) {
+          // TODO: need to defer checking to time when we know value
+        } else {
+          throw new TypeMismatchException(context,
+              "Type " + alt.typeName() + " is"
+              + " not current supported as an out to inline TCL code"
+              + " for function " + function);
+        }
+      }
+    }
   }
 
 
