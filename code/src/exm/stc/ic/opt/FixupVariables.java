@@ -33,7 +33,7 @@ import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
@@ -97,7 +97,7 @@ public class FixupVariables implements OptimizerPass {
     for (Entry<String, Arg> e : prog.getGlobalConsts().entrySet()) {
       Arg a = e.getValue();
       Var v = new Var(a.futureType(), e.getKey(),
-          VarStorage.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
+          Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
       fnargs.add(v);
     }
     
@@ -333,7 +333,7 @@ public class FixupVariables implements OptimizerPass {
   private static void findBlockNeeded(Block block, Result result,
                                       AliasTracker aliases) {
     for (Var v: block.getVariables()) {
-      if (v.isMapped()) {
+      if (v.mapping() != null) {
         result.addRead(v.mapping());
       }
     }
@@ -523,7 +523,7 @@ public class FixupVariables implements OptimizerPass {
     for (Set<Var> neededSet: neededSets) {
       for (Var var: neededSet) {
         if (visible.contains(var)) {
-          if (var.storage() == VarStorage.GLOBAL_CONST) {
+          if (var.storage() == Alloc.GLOBAL_CONST) {
             // Add at top in case used as mapping var
             if (updateLists && !addedGlobals.contains(var))
               block.addVariable(var, true);

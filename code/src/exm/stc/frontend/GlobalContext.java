@@ -30,7 +30,7 @@ import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Pair;
 
 /**
@@ -65,7 +65,7 @@ public class GlobalContext extends Context {
   public void defineFunction(String name, FunctionType type) 
       throws UserException {
     checkNotDefined(name);
-    declareVariable(type, name, VarStorage.GLOBAL_CONST,
+    declareVariable(type, name, Alloc.GLOBAL_CONST,
                     DefType.GLOBAL_CONST, null);
   }
   
@@ -96,11 +96,11 @@ public class GlobalContext extends Context {
    */
   @Override
   public Var declareVariable(Type type, String name,
-                       VarStorage scope, DefType defType, Var mapping)
+                       Alloc scope, DefType defType, Var mapping)
                            throws DoubleDefineException {
     // Sanity checks for global scope
     assert(defType == DefType.GLOBAL_CONST);
-    assert(scope == VarStorage.GLOBAL_CONST);
+    assert(scope == Alloc.GLOBAL_CONST);
     return super.declareVariable(type, name, scope, defType, mapping);
   }
 
@@ -147,7 +147,7 @@ public class GlobalContext extends Context {
   
   @Override
   protected Var createStructFieldTmp(Var struct, Type fieldType,
-      String fieldPath, VarStorage storage) {
+      String fieldPath, Alloc storage) {
     throw new UnsupportedOperationException("not yet implemented");
   }
 

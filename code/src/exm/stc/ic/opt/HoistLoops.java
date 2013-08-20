@@ -27,7 +27,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
@@ -437,7 +437,7 @@ public class HoistLoops implements OptimizerPass {
     // Check that any output variables that are aliases are
     // initialized if needed
     for (Var out: inst.getOutputs()) {
-      if (out.storage() == VarStorage.ALIAS) {
+      if (out.storage() == Alloc.ALIAS) {
         if (!inst.getInitialized().contains(out)) {
           int initDepth = state.initializedMap.getDepth(out);
           if (logger.isTraceEnabled())

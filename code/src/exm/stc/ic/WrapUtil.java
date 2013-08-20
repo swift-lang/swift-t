@@ -28,7 +28,7 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.OptUtil;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
@@ -83,7 +83,7 @@ public class WrapUtil {
       // The result will be an alias
       Var deref = new Var(value_t,
           valName,
-          VarStorage.ALIAS, DefType.LOCAL_COMPILER, null);
+          Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
       block.addVariable(deref);
       instBuffer.add(TurbineOp.retrieveRef(deref, var));
       return deref;
@@ -95,7 +95,7 @@ public class WrapUtil {
   public static Var createValueVar(String name, Type type) {
     Var value_v = new Var(type,
         name,
-        VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+        Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
     return value_v;
   }
   
@@ -135,7 +135,7 @@ public class WrapUtil {
         String name = block.uniqueVarName(Var.WRAP_FILENAME_PREFIX +
                                           out.name());
         Var filenameTmp = block.declareVariable(Types.F_STRING,
-            name,VarStorage.ALIAS, DefType.LOCAL_COMPILER, null);
+            name,Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
         instInsertIt.add(
               TurbineOp.getFileName(filenameTmp, out, true));
         waitVars.add(new WaitVar(filenameTmp, false));
@@ -213,7 +213,7 @@ public class WrapUtil {
   public static Var declareLocalOutputVar(Block block, Var var,
           String valName) {
     return block.declareVariable(Types.derefResultType(var.type()),
-        valName, VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+        valName, Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
   }
   
 

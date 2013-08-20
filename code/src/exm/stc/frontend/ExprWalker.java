@@ -55,7 +55,7 @@ import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Pair;
 import exm.stc.frontend.Context.FnProp;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
@@ -207,7 +207,7 @@ public class ExprWalker {
       
       // Check to see that the current variable's storage is adequate
       // Might need to convert type, can't do that here
-      if ((var.storage() == VarStorage.STACK || (!storeInStack))
+      if ((var.storage() == Alloc.STACK || (!storeInStack))
               && var.type().equals(type)) {
         return var;
       }
@@ -312,7 +312,7 @@ public class ExprWalker {
       if (outVar == null || !resultType.assignableTo(outVar.type())) {
         result = varCreator.createStructFieldTmp(context, 
             rootStruct, resultType,
-            fieldPath, VarStorage.TEMP); 
+            fieldPath, Alloc.TEMP); 
       } else {
         result = outVar;
       }
@@ -320,7 +320,7 @@ public class ExprWalker {
     } else {
       assert(Types.isStruct(structVar.type()));
       result = varCreator.createStructFieldTmp(context, 
-          rootStruct, memType, fieldPath, VarStorage.ALIAS);
+          rootStruct, memType, fieldPath, Alloc.ALIAS);
       backend.structLookup(result, structVar, fieldName);
     }
 

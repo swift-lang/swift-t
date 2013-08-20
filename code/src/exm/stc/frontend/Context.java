@@ -38,7 +38,7 @@ import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 
 /**
  * Abstract interface used to track and access contextual information about the
@@ -138,7 +138,7 @@ public abstract class Context {
    * @return
    * @throws UserException
    */
-  public Var declareVariable(Type type, String name, VarStorage scope,
+  public Var declareVariable(Type type, String name, Alloc scope,
       DefType defType, Var mapping)
               throws DoubleDefineException {
     logger.trace("context: declareVariable: " +
@@ -381,10 +381,10 @@ public abstract class Context {
   }
 
   abstract protected Var createStructFieldTmp(Var struct,
-      Type fieldType, String fieldPath, VarStorage storage);
+      Type fieldType, String fieldPath, Alloc storage);
 
   public Var createStructFieldTmp(Var struct,
-      Type fieldType, List<String> fieldPath, VarStorage storage) {
+      Type fieldType, List<String> fieldPath, Alloc storage) {
     String pathStr = buildPathStr(fieldPath);
     return createStructFieldTmp(struct, fieldType, pathStr, storage);
   }

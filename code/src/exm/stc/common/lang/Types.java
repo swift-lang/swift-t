@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.Set;
 
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 
 /**
  * This module provides the type definitions used for Swift,
@@ -1741,7 +1741,7 @@ public class Types {
    * @return
    */
   public static boolean inputRequiresInitialization(Var input) {
-    return input.storage() == VarStorage.ALIAS 
+    return input.storage() == Alloc.ALIAS 
         || Types.isScalarUpdateable(input);
   }
   
@@ -1752,7 +1752,7 @@ public class Types {
    * @return
    */
   public static boolean outputRequiresInitialization(Var output) {
-    return output.storage() == VarStorage.ALIAS 
+    return output.storage() == Alloc.ALIAS 
         || Types.isScalarUpdateable(output)
         || output.type().assignableTo(Types.V_FILE);
   }

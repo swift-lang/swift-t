@@ -28,7 +28,7 @@ import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.ic.STCMiddleEnd;
 
 /**
@@ -55,7 +55,7 @@ public class VarCreator {
    * @throws UserException
    */
   public Var createVariable(Context context, Type type, String name,
-      VarStorage storage, DefType defType, Var mapping)
+      Alloc storage, DefType defType, Var mapping)
                                                 throws UserException {
 
     if (mapping != null && (!Types.isMappable(type))) {
@@ -106,7 +106,7 @@ public class VarCreator {
     
     declare(structToInit);
     
-    if (structToInit.storage() == VarStorage.ALIAS) {
+    if (structToInit.storage() == Alloc.ALIAS) {
       // Skip recursive initialisation if its just an alias
       return;
     } else {
@@ -116,7 +116,7 @@ public class VarCreator {
         path.push(f.getName());
   
         Var tmp = context.createStructFieldTmp(
-            rootStruct, f.getType(), path, VarStorage.TEMP);
+            rootStruct, f.getType(), path, Alloc.TEMP);
   
         if (Types.isStruct(f.getType())) {
           // Continue recursive structure initialisation,
@@ -200,7 +200,7 @@ public class VarCreator {
   
   public Var createStructFieldTmp(Context context, Var rootStruct, 
                   Type memType, List<String> fieldPath,
-                  VarStorage storage) throws UndefinedTypeException {
+                  Alloc storage) throws UndefinedTypeException {
     Var tmp = context.createStructFieldTmp(rootStruct, memType,
           fieldPath, storage);
     declare(tmp);

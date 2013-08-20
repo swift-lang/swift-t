@@ -16,7 +16,7 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.WrapUtil;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
@@ -113,7 +113,7 @@ public class FunctionSignature implements OptimizerPass {
     for (Pair<Var, Var> fv: futValPairs) {
       // declare local stack var and replace argument in 
       Var tmpfuture = new Var(fv.val1.type(), fv.val1.name(),
-                       VarStorage.STACK, DefType.LOCAL_USER);
+                       Alloc.STACK, DefType.LOCAL_USER);
       newBlock.renameVars(Collections.singletonMap(fv.val1, tmpfuture.asArg()),
                           RenameMode.REPLACE_VAR, true);
       newBlock.addVariable(tmpfuture);

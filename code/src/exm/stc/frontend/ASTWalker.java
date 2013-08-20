@@ -69,7 +69,7 @@ import exm.stc.common.lang.Types.SubType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StringUtil;
 import exm.stc.common.util.TernaryLogic.Ternary;
@@ -902,7 +902,7 @@ public class ASTWalker {
     backend.assignInt(loop.getMemberVar(), Arg.createVar(memberVal));
     if (loop.getCountVarName() != null) {
       Var loopCountVar = varCreator.createVariable(bodyContext,
-          Types.F_INT, loop.getCountVarName(), VarStorage.STACK,
+          Types.F_INT, loop.getCountVarName(), Alloc.STACK,
           DefType.LOCAL_USER, null);
       backend.assignInt(loopCountVar, Arg.createVar(counterVal));
     }
@@ -1021,7 +1021,7 @@ public class ASTWalker {
         Var parentAlias = 
             varCreator.createVariable(context, lv.var.type(),
                   Var.OUTER_VAR_PREFIX + lv.var.name(),
-                  VarStorage.ALIAS, DefType.LOCAL_COMPILER,
+                  Alloc.ALIAS, DefType.LOCAL_COMPILER,
                   lv.var.mapping());
         // Copy turbine ID
         backend.makeAlias(parentAlias, lv.var);
@@ -1047,7 +1047,7 @@ public class ASTWalker {
     // Start the loop construct with some initial values
     Var condArg = 
         loopIterContext.declareVariable(condType, Var.LOOP_COND_PREFIX + 
-            loopNum, VarStorage.TEMP, DefType.INARG, null);
+            loopNum, Alloc.TEMP, DefType.INARG, null);
 
 
 
@@ -1135,7 +1135,7 @@ public class ASTWalker {
     // Start the loop construct with some initial values
     Var condArg = 
       iterContext.declareVariable(Types.F_BOOL, Var.LOOP_COND_PREFIX + 
-            loopNum, VarStorage.TEMP, DefType.INARG, null);
+            loopNum, Alloc.TEMP, DefType.INARG, null);
     
     List<Boolean> blockingVars = Arrays.asList(true, false);
     backend.startLoop(loopName, 
@@ -1291,7 +1291,7 @@ public class ASTWalker {
     }
 
     Var var = varCreator.createVariable(context, definedType, 
-        vDesc.getName(), VarStorage.STACK, DefType.LOCAL_USER, mappedVar);
+        vDesc.getName(), Alloc.STACK, DefType.LOCAL_USER, mappedVar);
     return var;
   }
 
@@ -1503,7 +1503,7 @@ public class ASTWalker {
     for (int i = 0; i < structPathLen; i++) {
       List<String> currPath = fieldPath.subList(0, i+1);
       Var next = varCreator.createStructFieldTmp(context,
-          rootVar, lval.getType(context, i+1), currPath, VarStorage.ALIAS);
+          rootVar, lval.getType(context, i+1), currPath, Alloc.ALIAS);
 
       backend.structLookup(next, curr, fieldPath.get(i));
       LogHelper.trace(context, "Lookup " + curr.name() + "." +
@@ -2129,7 +2129,7 @@ public class ASTWalker {
     // Need to pass location arg into task dispatch wait statement
     // Priority is passed implicitly
     Var loc = new Var(Types.V_INT, Var.DEREF_COMPILER_VAR_PREFIX + "location",
-        VarStorage.LOCAL, DefType.INARG);
+        Alloc.LOCAL, DefType.INARG);
     realInArgs.add(loc);
     props.put(TaskPropKey.LOCATION, loc.asArg());
     
@@ -2632,7 +2632,7 @@ public class ASTWalker {
       throw new UserException(context, "Can't have mapped global constant");
     }
     Var v = context.declareVariable(vDesc.getType(), vDesc.getName(),
-                   VarStorage.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
+                   Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
     
     
     SwiftAST val = vd.getVarExpr(0);

@@ -21,7 +21,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
 
@@ -36,7 +36,7 @@ public class IterateDescriptor {
     this.body = body;
     this.cond = cond;
     this.loopVar = new Var(Types.F_INT, loopVarName, 
-        VarStorage.STACK, DefType.INARG, null); 
+        Alloc.STACK, DefType.INARG, null); 
   }
   
   public static IterateDescriptor fromAST(Context context, SwiftAST tree) {

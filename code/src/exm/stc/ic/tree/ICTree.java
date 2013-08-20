@@ -51,8 +51,9 @@ import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -206,7 +207,7 @@ public class ICTree {
         globalVar = val.getVar();
         assert(globalVar.defType() == DefType.GLOBAL_CONST);
       } else {
-        globalVar = new Var(val.futureType(), name, VarStorage.GLOBAL_CONST,
+        globalVar = new Var(val.futureType(), name, Alloc.GLOBAL_CONST,
                             DefType.GLOBAL_CONST);
       }
       globalVars.add(globalVar);
@@ -832,7 +833,7 @@ public class ICTree {
     }
 
     public Var declareVariable(Type t, String name,
-        VarStorage storage, DefType defType, Var mapping) {
+        Alloc storage, DefType defType, Var mapping) {
       assert(mapping == null || Types.isString(mapping.type()));
       Var v = new Var(t, name, storage, defType, mapping);
       this.variables.add(v);
@@ -868,14 +869,14 @@ public class ICTree {
         
         // Initialize refcounts to default value if not
         //  explicitly overridden and check for bad refcounts
-        if (v.storage() != VarStorage.ALIAS && 
+        if (v.storage() != Alloc.ALIAS && 
             RefCounting.hasReadRefCount(v)) {
           if (initReaders == null)
             initReaders = Arg.ONE;
         } else {
           assert(initReaders == null) : v + " " +   initReaders;
         }
-        if (v.storage() != VarStorage.ALIAS && 
+        if (v.storage() != Alloc.ALIAS && 
             RefCounting.hasWriteRefCount(v)) {
           if (initWriters == null)
             initWriters = Arg.ONE;
@@ -914,7 +915,7 @@ public class ICTree {
         sb.append("alloc " + v.type().typeName() + " " + v.name() + 
                 " <" + v.storage().toString().toLowerCase() + ">");
         
-        if (v.isMapped()) {
+        if (v.mapping() != null) {
           sb.append(" @mapping=" + v.mapping().name());
         }
         if (initReadRefcounts.containsKey(v)) {
@@ -1114,9 +1115,9 @@ public class ICTree {
         }
 
         // Check to see if string variable for mapping is replaced
-        if (!removed && var.isMapped() && renames.containsKey(var.mapping())) { 
+        if (!removed && var.mapping() != null && renames.containsKey(var.mapping())) { 
           // Can't have double mapping
-          assert(!var.mapping().isMapped());
+          assert(var.mapping().isMapped() != Ternary.TRUE);
           if (mode == RenameMode.VALUE) {
             // TODO: can't replace mapping since we rely on the rest of
             //      the rename pass to fix up references to the old instance

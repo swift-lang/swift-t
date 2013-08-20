@@ -27,7 +27,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.ic.WrapUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -110,12 +110,12 @@ public class OptUtil {
     
     if (Types.isRefTo(oldOut.type(), newOut.type())) {
       Var refVar;
-      if (oldOut.storage() == VarStorage.ALIAS) {
+      if (oldOut.storage() == Alloc.ALIAS) {
         // Will need to initialise variable in this scope as before we
         // were relying on instruction to initialise it
         
         refVar = new Var(oldOut.type(),
-            oldOut.name(), VarStorage.TEMP,
+            oldOut.name(), Alloc.TEMP,
             oldOut.defType(), oldOut.mapping());
         
         // Replace variable in block and in buffered instructions

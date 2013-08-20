@@ -38,7 +38,7 @@ import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
@@ -223,7 +223,7 @@ public class ForwardDataflow implements OptimizerPass {
 
     for (Var v : program.getGlobalVars()) {
       // First, all constants can be treated as being set
-      if (v.storage() == VarStorage.GLOBAL_CONST) {
+      if (v.storage() == Alloc.GLOBAL_CONST) {
         Arg val = program.lookupGlobalConst(v.name());
         assert (val != null) : v.name();
         ResultVal compVal = ICInstructions.assignComputedVal(v, val);
@@ -388,13 +388,13 @@ public class ForwardDataflow implements OptimizerPass {
       }
     }
     for (Var v : block.getVariables()) {
-      if (v.isMapped() && Types.isFile(v.type())) {
+      if (v.mapping() != null && Types.isFile(v.type())) {
+        // Track the mapping
         ResultVal filenameVal = ICInstructions.filenameCV(
             Arg.createVar(v.mapping()), v);
         cv.addComputedValue(filenameVal, Ternary.FALSE);
       }
-      if (Types.isMappable(v.type()) && !v.isMapped()
-          && v.storage() != VarStorage.ALIAS) {
+      if (v.isMapped() == Ternary.FALSE) {
         // Var is definitely unmapped
         cv.setUnmapped(v);
       }
@@ -792,7 +792,7 @@ public class ForwardDataflow implements OptimizerPass {
         String varName = insertContext.uniqueVarName(
                           Var.FILENAME_OF_PREFIX + output.name());
         Var filenameVal = insertContext.declareVariable(
-                        Types.V_STRING, varName, VarStorage.LOCAL,
+                        Types.V_STRING, varName, Alloc.LOCAL,
                         DefType.LOCAL_COMPILER, null);
         for (Statement stmt: TurbineOp.initWithTmpFilename(
                                     filenameVal, null, output)) {

@@ -1,7 +1,7 @@
 package exm.stc.ic.refcount;
 
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.ic.opt.AliasTracker;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -34,7 +34,7 @@ class TopDownInfo {
   public TopDownInfo makeChild(Continuation cont) {
     TopDownInfo child = makeChild();
     for (Var v : cont.constructDefinedVars()) {
-      if (v.storage() == VarStorage.ALIAS) {
+      if (v.storage() == Alloc.ALIAS) {
         assignedAliasVars.add(v);
       }
     }
@@ -44,7 +44,7 @@ class TopDownInfo {
   public void updateForInstruction(Instruction inst) {
     // Track which alias vars are assigned
     for (Var out : inst.getInitialized()) {
-      if (out.storage() == VarStorage.ALIAS) {
+      if (out.storage() == Alloc.ALIAS) {
         assignedAliasVars.add(out);
       }
     }

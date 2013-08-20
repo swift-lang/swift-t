@@ -48,9 +48,10 @@ import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
@@ -155,7 +156,7 @@ public class ICInstructions {
     public boolean writesAliasVar() {
       // Writes to alias variables can have non-local effects
       for (Var out: this.getOutputs()) {
-        if (out.storage() == VarStorage.ALIAS) {
+        if (out.storage() == Alloc.ALIAS) {
           return true;
         }
       }
@@ -927,7 +928,7 @@ public class ICInstructions {
 
     public static Instruction structLookup(Var oVar, Var structVar,
                                                           String fieldName) {
-      assert(oVar.storage() == VarStorage.ALIAS) : oVar;
+      assert(oVar.storage() == Alloc.ALIAS) : oVar;
       return new TurbineOp(Opcode.STRUCT_LOOKUP,
           oVar, structVar.asArg(),
               Arg.createStringLit(fieldName));
@@ -1056,7 +1057,7 @@ public class ICInstructions {
     public static Instruction arrayCreateNestedComputed(Var arrayResult,
         Var array, Var ix) {
       assert(Types.isArrayRef(arrayResult.type()));
-      assert(arrayResult.storage() != VarStorage.ALIAS);
+      assert(arrayResult.storage() != Alloc.ALIAS);
       assert(Types.isArray(array.type()));
       assert(Types.isArrayKeyFuture(array, ix));
       // Both arrays are modified, so outputs
@@ -1067,7 +1068,7 @@ public class ICInstructions {
     public static Instruction arrayCreateNestedImm(Var arrayResult,
         Var arrayVar, Arg arrIx) {
       assert(Types.isArrayKeyVal(arrayVar, arrIx));
-      assert(arrayResult.storage() == VarStorage.ALIAS);
+      assert(arrayResult.storage() == Alloc.ALIAS);
       // Both arrays are modified, so outputs
       return new TurbineOp(Opcode.ARRAY_CREATE_NESTED_IMM,
           Arrays.asList(arrayResult, arrayVar),
@@ -1077,7 +1078,7 @@ public class ICInstructions {
     public static Instruction arrayRefCreateNestedComputed(Var arrayResult,
         Var outerArr, Var array, Var ix) {
       assert(Types.isArrayRef(arrayResult.type())): arrayResult;
-      assert(arrayResult.storage() != VarStorage.ALIAS);
+      assert(arrayResult.storage() != Alloc.ALIAS);
       assert(Types.isArrayRef(array.type())): array;
       assert(Types.isArray(outerArr.type())): outerArr;
       assert(Types.isArrayKeyFuture(array, ix));
@@ -1091,7 +1092,7 @@ public class ICInstructions {
     public static Instruction arrayRefCreateNestedImmIx(Var arrayResult,
         Var outerArray, Var array, Arg ix) {
       assert(Types.isArrayRef(arrayResult.type())): arrayResult;
-      assert(arrayResult.storage() != VarStorage.ALIAS);
+      assert(arrayResult.storage() != Alloc.ALIAS);
       assert(Types.isArrayRef(array.type())): array;
       assert(Types.isArray(outerArray.type())): outerArray;
       assert(Types.isArrayKeyVal(array, ix));
@@ -1153,7 +1154,7 @@ public class ICInstructions {
     public static Instruction getFileName(Var filename, Var file,
                                           boolean initUnmapped) {
       // If file is definitely mapped, can skip initing it
-      if (initUnmapped && !file.isMapped()) {
+      if (initUnmapped && file.isMapped() != Ternary.TRUE) {
         // Treat both as outputs
         return new TurbineOp(Opcode.GET_OUTPUT_FILENAME, 
                                 Arrays.asList(filename, file), Collections.<Arg>emptyList());
@@ -1559,7 +1560,7 @@ public class ICInstructions {
         // OUtput switched from ref to value
         Var refOut = getOutput(0);
         Var valOut = Var.createDerefTmp(refOut, 
-                                      VarStorage.ALIAS);
+                                      Alloc.ALIAS);
         Instruction newI = arrayLookupImm(valOut,
             getInput(0).getVar(), getInput(1));
         return new MakeImmChange(valOut, refOut, newI);
@@ -1659,7 +1660,7 @@ public class ICInstructions {
         // Output type of instruction changed from ref to direct
         // array handle
         assert(Types.isArrayRef(oldResult.type()));
-        Var newOut = Var.createDerefTmp(oldResult, VarStorage.ALIAS);
+        Var newOut = Var.createDerefTmp(oldResult, Alloc.ALIAS);
         return new MakeImmChange(newOut, oldResult,
             arrayCreateNestedImm(newOut, oldArray, ix));
       }
@@ -1668,7 +1669,7 @@ public class ICInstructions {
         if (values.size() == 2) {
           Var oldOut = getOutput(0);
           assert(Types.isArrayRef(oldOut.type()));
-          Var newOut = Var.createDerefTmp(oldOut, VarStorage.ALIAS);
+          Var newOut = Var.createDerefTmp(oldOut, Alloc.ALIAS);
           return new MakeImmChange(newOut, oldOut,
               arrayCreateNestedImm(newOut, values.get(0).getVar(),
                                    values.get(1)));
@@ -1697,7 +1698,7 @@ public class ICInstructions {
         Var arrResult = getOutput(0);
         assert(Types.isArray(newArr));
         assert(Types.isArrayRef(arrResult.type()));
-        Var newOut3 = Var.createDerefTmp(arrResult, VarStorage.ALIAS);
+        Var newOut3 = Var.createDerefTmp(arrResult, Alloc.ALIAS);
         assert(Types.isArrayKeyVal(newArr, ix));
         return new MakeImmChange(newOut3, arrResult,
             arrayCreateNestedImm(newOut3, newArr, getInput(0)));
@@ -1761,7 +1762,7 @@ public class ICInstructions {
       assert(Types.isFile(fileVar));
       if (filenameFuture != null) {
         assert(Types.isString(filenameFuture));
-        assert(filenameFuture.storage() == VarStorage.ALIAS);
+        assert(filenameFuture.storage() == Alloc.ALIAS);
       }
 
       ArrayList<Instruction> seq = new ArrayList<Instruction>(3);
@@ -2107,11 +2108,11 @@ public class ICInstructions {
           return vanillaResult(false).asList();
         }
         case DEREF_FILE: {
-          if (getOutput(0).isMapped()) {
-            // Can't use interchangably
-            return null;
-          } else {
+          if (getOutput(0).isMapped() == Ternary.FALSE) {
             return vanillaResult(false).asList();
+          } else {
+            // Can't use potentially mapped files interchangeably
+            return null;
           }
         }
         
@@ -4188,7 +4189,8 @@ public class ICInstructions {
      */
     private ResultVal makeBasicComputedValue() {
       if (Operators.isCopy(subop)) {
-        if (this.output.isMapped()) {
+        if (this.output.isMapped() != Ternary.FALSE) {
+          // Can't treat interchangeably
           return null;
         }
         
@@ -4395,7 +4397,7 @@ public class ICInstructions {
         break;
       }
     } else if (Types.isArray(dst.type()) || Types.isStruct(dst.type())) {
-      assert(dst.storage() == VarStorage.ALIAS);
+      assert(dst.storage() == Alloc.ALIAS);
       assert (value.isVar());
       return TurbineOp.copyRef(dst, value.getVar());
     }

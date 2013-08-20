@@ -18,7 +18,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.CopyOnWriteSmallSet;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.MultiMap;
@@ -534,11 +534,11 @@ public class ValueTracker implements CVMap {
           Var unifiedLoc;
           if (allVals) {
             unifiedLoc = parent.declareVariable(firstLoc.type(), 
-                OptUtil.optVPrefix(parent, "unified"), VarStorage.LOCAL,
+                OptUtil.optVPrefix(parent, "unified"), Alloc.LOCAL,
                 DefType.LOCAL_COMPILER, null);
           } else {
             unifiedLoc = parent.declareVariable(firstLoc.type(), 
-                OptUtil.optVPrefix(parent, "unified"), VarStorage.ALIAS,
+                OptUtil.optVPrefix(parent, "unified"), Alloc.ALIAS,
                 DefType.LOCAL_COMPILER, null);
           }
           

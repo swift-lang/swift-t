@@ -31,7 +31,7 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Sets;
 import exm.stc.ic.ICUtil;
@@ -133,7 +133,7 @@ public class Validate implements OptimizerPass {
           Block block, Map<String, Var> declared) {
     for (Var v: block.getVariables()) {
       checkVarUnique(logger, fn, declared, v);
-      if (v.isMapped()) {
+      if (v.mapping() != null) {
         // Check that it refers to previously declared var
         assert(declared.containsKey(v.mapping().name()));
       }
@@ -165,10 +165,10 @@ public class Validate implements OptimizerPass {
   private void checkVarReferences(Logger logger, Block block,
       Map<String, Var> declared) {
     for (Var v: block.getVariables()) {
-      if (v.storage() == VarStorage.GLOBAL_CONST) {
+      if (v.storage() == Alloc.GLOBAL_CONST) {
         checkVarReference(declared, v, v);
       }
-      if (v.isMapped()) {
+      if (v.mapping() != null) {
         checkVarReference(declared, v.mapping(), v);
       }
     }
@@ -343,7 +343,7 @@ public class Validate implements OptimizerPass {
   }
   
   private boolean assignBeforeRead(Var v) {
-    return v.storage() == VarStorage.LOCAL;
+    return v.storage() == Alloc.LOCAL;
   }
   
   private boolean varMustBeInitialized(Var v, boolean output) {
@@ -359,7 +359,7 @@ public class Validate implements OptimizerPass {
       Function fn, Block block, HierarchicalSet<Var> initVars,
       HierarchicalSet<Var> assignedVals) {
     for (Var v: block.getVariables()) {
-      if (v.isMapped()) {
+      if (v.mapping() != null) {
         if (varMustBeInitialized(v.mapping(), false)) {
           assert (initVars.contains(v.mapping())):
             v + " mapped to uninitialized var " + v.mapping();

@@ -32,9 +32,10 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -283,7 +284,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       }
       // Writing mapped var has side-effect
       for (Var output: outputs) {
-        if (output.isMapped()) {
+        if (output.isMapped() != Ternary.FALSE) {
           needed.add(output);
         }
       }
@@ -302,7 +303,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       Pair<Var, Var> componentAlias = inst.getComponentAlias();
       if (componentAlias != null) {
         Var component = componentAlias.val1;
-        assert(component.storage() == VarStorage.ALIAS ||
+        assert(component.storage() == Alloc.ALIAS ||
             Types.isRef(component.type())) : component + " " + inst;
         Var whole = componentAlias.val2;
         Var prev = componentOf.put(component, whole);
@@ -325,10 +326,10 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
   private static void walkBlockVars(Block block,
       HashSet<Var> removeCandidates, MultiMap<Var, Var> dependencyGraph) {
     for (Var v: block.getVariables()) {
-      if (v.storage() != VarStorage.GLOBAL_CONST) {
+      if (v.storage() != Alloc.GLOBAL_CONST) {
         removeCandidates.add(v);
       }
-      if (v.isMapped()) {
+      if (v.mapping() != null) {
         // Need mapping if v is retained
         dependencyGraph.put(v, v.mapping());
       }

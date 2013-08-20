@@ -21,7 +21,7 @@ import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.AliasTracker.AliasKey;
@@ -163,7 +163,7 @@ public class RefcountPass implements OptimizerPass {
       RCTracker increments, TopDownInfo parentInfo) {
     // First collect up all required reference counting ops in block
     for (Var v: block.getVariables()) {
-      if (v.isMapped()) {
+      if (v.mapping() != null) {
         // Add two since Turbine libraries want two references
         increments.readIncr(v.mapping(), 2);
       }
@@ -358,7 +358,7 @@ public class RefcountPass implements OptimizerPass {
       // Alias variables aren't allocated here. Struct variables have
       // members separately allocated, so don't want to double-decrement
       // struct members.
-      if (var.storage() != VarStorage.ALIAS && !Types.isStruct(var)) {
+      if (var.storage() != Alloc.ALIAS && !Types.isStruct(var)) {
         increments.readDecr(var);
         increments.writeDecr(var);
       }
@@ -544,7 +544,7 @@ public class RefcountPass implements OptimizerPass {
         
         // If curr is alias, may not be able to read yet:
         // must scan down block for location where insert can occur
-        if (curr.storage() == VarStorage.ALIAS &&
+        if (curr.storage() == Alloc.ALIAS &&
             !parentAssignedAliasVars.contains(parentStruct)) {
           while (!blockAssignedAlias.contains(parentStruct)) {
             assert (insertPos.hasNext()) : "Malformed IR, var not init: " +
@@ -553,7 +553,7 @@ public class RefcountPass implements OptimizerPass {
             if (stmt.type() == StatementType.INSTRUCTION) {
               Instruction inst = stmt.instruction();
               for (Var v: inst.getInitialized()) {
-                if (v.storage() == VarStorage.ALIAS) {
+                if (v.storage() == Alloc.ALIAS) {
                   blockAssignedAlias.add(v);
                 }
               }

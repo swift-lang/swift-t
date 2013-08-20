@@ -28,7 +28,7 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
@@ -133,7 +133,7 @@ public class ConstantSharing implements OptimizerPass {
       }
 
       Var glob = new Var(val.futureType(), globName, 
-                  VarStorage.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
+                  Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
       replacements.put(oldVar, glob.asArg());
     }
 

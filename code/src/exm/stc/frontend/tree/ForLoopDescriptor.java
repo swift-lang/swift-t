@@ -36,7 +36,7 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
 import exm.stc.frontend.LogHelper;
@@ -272,7 +272,7 @@ public class ForLoopDescriptor {
         assert(loopVarDesc.getMappingExpr() == null); 
         assert(expr != null);  // shouldn't be mapped, enforced by syntax
         Var loopVar = new Var(loopVarDesc.getType(),
-                loopVarDesc.getName(), VarStorage.STACK,
+                loopVarDesc.getName(), Alloc.STACK,
                 DefType.LOCAL_USER, null);
         forLoop.addLoopVar(loopVar, false, expr);
       } else if (initType == ExMParser.FOR_LOOP_ASSIGN) {

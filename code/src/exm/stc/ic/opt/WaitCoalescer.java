@@ -40,7 +40,7 @@ import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.MultiMap.LinkedListFactory;
 import exm.stc.common.util.MultiMap.ListFactory;
@@ -1150,7 +1150,7 @@ public class WaitCoalescer implements OptimizerPass {
       boolean canMove = true;
       for (Var out: inst.getOutputs()) {
         if (!Types.isFuture(out.type())
-            || out.storage() == VarStorage.ALIAS) {
+            || out.storage() == Alloc.ALIAS) {
           canMove = false;
           break;
         }

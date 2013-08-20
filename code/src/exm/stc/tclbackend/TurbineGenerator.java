@@ -64,7 +64,7 @@ import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.VarCount;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.tclbackend.Turbine.CacheMode;
@@ -330,7 +330,7 @@ public class TurbineGenerator implements CompilerBackend {
       Arg initWriters = decl.initWriters;
       Type t = var.type();
       assert(var.mapping() == null || Types.isMappable(t));
-      if (var.storage() == VarStorage.ALIAS) {
+      if (var.storage() == Alloc.ALIAS) {
         assert(initReaders == null && initWriters == null);
         pointStack.peek().add(new Comment("Alias " + var.name() + " with type " +
                               t.toString() + " was defined"));
@@ -341,7 +341,7 @@ public class TurbineGenerator implements CompilerBackend {
       assert(RefCounting.hasReadRefCount(var) ^ initReaders == null);
       assert(RefCounting.hasWriteRefCount(var) ^ initWriters == null);
   
-      if (var.storage() == VarStorage.GLOBAL_CONST) {
+      if (var.storage() == Alloc.GLOBAL_CONST) {
         // If global, it should already be in TCL global scope, just need to
         // make sure that we've imported it
         pointStack.peek().add(Turbine.makeTCLGlobal(prefixVar(var)));
@@ -381,7 +381,7 @@ public class TurbineGenerator implements CompilerBackend {
         // don't allocate in data store
         pointStack.peek().add(Turbine.allocateStruct(prefixVar(var)));
       } else if (Types.isScalarValue(t)) {
-        assert(var.storage() == VarStorage.LOCAL);
+        assert(var.storage() == Alloc.LOCAL);
         pointStack.peek().add(new Comment("Value " + var.name() + " with type " +
                               var.type().toString() + " was defined"));
         // don't need to do anything
@@ -420,7 +420,7 @@ public class TurbineGenerator implements CompilerBackend {
     
     for (VarDecl decl: decls) {
       // Store the name->TD in the stack
-      if (decl.var.storage() == VarStorage.STACK && !noStackVars()) {
+      if (decl.var.storage() == Alloc.STACK && !noStackVars()) {
         Command s = Turbine.storeInStack(decl.var.name(), prefixVar(decl.var));
         // Store the name->TD in the stack
         pointStack.peek().add(s);
@@ -539,7 +539,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void makeAlias(Var dst, Var src) {
     assert(src.type().equals(dst.type()));
-    assert(dst.storage() == VarStorage.ALIAS);
+    assert(dst.storage() == Alloc.ALIAS);
     pointStack.peek().add(new SetVariable(prefixVar(dst),
         varToExpr(src)));
   }
@@ -732,7 +732,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void getFileName(Var filename, Var file,
                           boolean initUnmapped) {
     assert(Types.isString(filename.type()));
-    assert(filename.storage() == VarStorage.ALIAS);
+    assert(filename.storage() == Alloc.ALIAS);
     assert(Types.isFile(file.type()));
     
     SetVariable cmd = new SetVariable(prefixVar(filename),
@@ -893,7 +893,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArray(array.type()));
     assert(Types.isArrayRef(arrayResult.type()));
     assert(Types.isArrayKeyFuture(array, ix));
-    assert(arrayResult.storage() != VarStorage.ALIAS);
+    assert(arrayResult.storage() != Alloc.ALIAS);
     TclTree t = Turbine.containerCreateNested(
         varToExpr(arrayResult), varToExpr(array),
         varToExpr(ix), arrayValueType(arrayResult, true));
@@ -905,7 +905,7 @@ public class TurbineGenerator implements CompilerBackend {
       Var outerArray, Var arrayRefVar, Var ix) {
     assert(Types.isArrayRef(arrayRefVar.type()));
     assert(Types.isArrayRef(arrayResult.type()));
-    assert(arrayResult.storage() != VarStorage.ALIAS);
+    assert(arrayResult.storage() != Alloc.ALIAS);
     assert(Types.isArrayKeyFuture(arrayRefVar, ix));
 
     TclTree t = Turbine.containerRefCreateNested(
@@ -921,7 +921,7 @@ public class TurbineGenerator implements CompilerBackend {
         Arg callerReadRefs, Arg callerWriteRefs) {
     assert(Types.isArray(array.type()));
     assert(Types.isArray(arrayResult.type()));
-    assert(arrayResult.storage() == VarStorage.ALIAS);
+    assert(arrayResult.storage() == Alloc.ALIAS);
     assert(Types.isArrayKeyVal(array, ix));
     assert(callerReadRefs.isImmediateInt());
     assert(callerWriteRefs.isImmediateInt());
@@ -938,7 +938,7 @@ public class TurbineGenerator implements CompilerBackend {
       Var outerArray, Var array, Arg ix) {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArrayRef(arrayResult.type()));
-    assert(arrayResult.storage() != VarStorage.ALIAS);
+    assert(arrayResult.storage() != Alloc.ALIAS);
     assert(Types.isArrayKeyVal(array, ix));
 
     TclTree t = Turbine.containerRefCreateNestedImmIx(
@@ -1597,7 +1597,7 @@ public class TurbineGenerator implements CompilerBackend {
     logger.trace("startIfStatement()...");
     assert(condition != null);
     assert(!condition.isVar()
-        || condition.getVar().storage() == VarStorage.LOCAL);
+        || condition.getVar().storage() == Alloc.LOCAL);
     assert(condition.isImmediateBool() || condition.isImmediateInt());
 
 
@@ -1895,7 +1895,7 @@ public class TurbineGenerator implements CompilerBackend {
     logger.trace("startSwitch()...");
     assert(switchVar != null);
     assert(!switchVar.isVar() ||
-        switchVar.getVar().storage() == VarStorage.LOCAL);
+        switchVar.getVar().storage() == Alloc.LOCAL);
     assert(switchVar.isImmediateInt());
 
     int casecount = caseLabels.size();

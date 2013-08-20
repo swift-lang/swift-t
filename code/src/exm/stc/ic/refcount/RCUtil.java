@@ -10,7 +10,7 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.RefCounting.RefCountType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.ic.opt.AliasTracker.AliasKey;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
@@ -87,7 +87,7 @@ public class RCUtil {
         String msg = "Refcount " + rcType  + " not 0 after pass " + e.toString()
                    + " in block " + block;
         Var refcountVar = increments.getRefCountVar(block, e.getKey(), true);
-        if (refcountVar.storage() == VarStorage.ALIAS) {
+        if (refcountVar.storage() == Alloc.ALIAS) {
           // This is ok but indicates var declaration is in wrong place
           Logging.getSTCLogger().debug(msg);
         } else {

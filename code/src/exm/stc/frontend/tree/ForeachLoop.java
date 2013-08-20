@@ -30,7 +30,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
 import exm.stc.frontend.TypeChecker;
@@ -99,7 +99,7 @@ public class ForeachLoop {
   public Var createCountVar() {
     assert(keyType != null);
     assert(countVarName != null);
-    return new Var(keyType, countVarName, VarStorage.STACK,
+    return new Var(keyType, countVarName, Alloc.STACK,
                    DefType.LOCAL_USER, null);
   }
 
@@ -280,8 +280,8 @@ public class ForeachLoop {
       loopCountVal = null;
     }
 
-    VarStorage memberVarStorage = rangeLoop ? VarStorage.TEMP 
-                                            : VarStorage.ALIAS;
+    Alloc memberVarStorage = rangeLoop ? Alloc.TEMP 
+                                            : Alloc.ALIAS;
     memberVar = loopBodyContext.declareVariable(
         Types.arrayMemberType(arrayType), getMemberVarName(),
         memberVarStorage, DefType.LOCAL_USER, null);

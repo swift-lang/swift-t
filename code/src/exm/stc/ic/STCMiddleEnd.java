@@ -46,7 +46,7 @@ import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.ICOptimizer;
@@ -339,7 +339,7 @@ public class STCMiddleEnd {
     assert(b.getType() == BlockType.LOOP_BODY);
   }
   
-  public void declare(Type type, String name, VarStorage storage,
+  public void declare(Type type, String name, Alloc storage,
       DefType defType, Var mapping)
       throws UndefinedTypeException {
     assert(mapping == null || Types.isMappable(type));
@@ -430,7 +430,7 @@ public class STCMiddleEnd {
   
   public void arrayLookupImm(Var oVar, Var arrayVar,
       Arg arrIx) {
-    assert(oVar.storage() == VarStorage.ALIAS);
+    assert(oVar.storage() == Alloc.ALIAS);
     assert(Types.isArray(arrayVar.type())); // Can't be reference to array
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
     currBlock().addInstruction(
@@ -533,7 +533,7 @@ public class STCMiddleEnd {
       Var arrayVar, Arg arrIx) {
     assert(Types.isArray(arrayResult.type()));
     assert(Types.isArray(arrayVar.type()));
-    assert(arrayResult.storage() == VarStorage.ALIAS);
+    assert(arrayResult.storage() == Alloc.ALIAS);
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
 
     currBlock().addInstruction(
@@ -621,7 +621,7 @@ public class STCMiddleEnd {
   
   public void makeAlias(Var dst, Var src) {
     assert(src.type().equals(dst.type()));
-    assert(dst.storage() == VarStorage.ALIAS);
+    assert(dst.storage() == Alloc.ALIAS);
     currBlock().addInstruction(
         TurbineOp.copyRef(dst, src));
   }
@@ -762,7 +762,7 @@ public class STCMiddleEnd {
 
   public void structLookup(Var result, Var structVar, String structField) {
     assert(Types.isStruct(structVar.type()));
-    assert(result.storage() == VarStorage.ALIAS);
+    assert(result.storage() == Alloc.ALIAS);
     currBlock().addInstruction(
         TurbineOp.structLookup(result, structVar, structField));
 
@@ -772,7 +772,7 @@ public class STCMiddleEnd {
       String structField) {
     assert(Types.isStructRef(structVar.type()));
     assert(Types.isRef(result.type()));
-    assert(result.storage() != VarStorage.ALIAS);
+    assert(result.storage() != Alloc.ALIAS);
     currBlock().addInstruction(
         TurbineOp.structRefLookup(result, structVar, structField));
   }
@@ -841,7 +841,7 @@ public class STCMiddleEnd {
   public void getFileName(Var filename, Var file,
                           boolean initUnmapped) {
     assert(Types.isString(filename.type()));
-    assert(filename.storage() == VarStorage.ALIAS);
+    assert(filename.storage() == Alloc.ALIAS);
     assert(Types.isFile(file.type()));
     currBlock().addInstruction(
             TurbineOp.getFileName(filename, file, initUnmapped));
@@ -869,7 +869,7 @@ public class STCMiddleEnd {
     if (isParallel) {
       // declare compiler arg for parallelism
       Var par = new Var(Types.V_INT, Var.DEREF_COMPILER_VAR_PREFIX + "par",
-                        VarStorage.LOCAL, DefType.INARG);
+                        Alloc.LOCAL, DefType.INARG);
       realInArgs.add(par);
       props.put(TaskPropKey.PARALLELISM, par.asArg());
 
@@ -882,7 +882,7 @@ public class STCMiddleEnd {
     if (isTargetable) {
       // declare compiler arg for target
       Var location = new Var(Types.V_INT, Var.DEREF_COMPILER_VAR_PREFIX + "location",
-          VarStorage.LOCAL, DefType.INARG);
+          Alloc.LOCAL, DefType.INARG);
       realInArgs.add(location);
       props.put(TaskPropKey.LOCATION, location.asArg());
     }

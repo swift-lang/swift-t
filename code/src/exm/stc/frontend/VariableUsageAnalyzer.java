@@ -36,7 +36,7 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Pair;
 import exm.stc.frontend.VariableUsageInfo.Violation;
 import exm.stc.frontend.VariableUsageInfo.ViolationType;
@@ -303,7 +303,7 @@ class VariableUsageAnalyzer {
       // mapped to a temporary var
       vu.declare(context, var.getName(), var.getType(), var.getMappingExpr() != null);
       context.declareVariable(var.getType(), var.getName(), 
-              VarStorage.STACK, DefType.LOCAL_USER, null);
+              Alloc.STACK, DefType.LOCAL_USER, null);
       SwiftAST assignExpr = vd.getVarExpr(i);
       if (assignExpr != null) {
         LogHelper.debug(context, "Variable " + var.getName() + 
@@ -340,7 +340,7 @@ class VariableUsageAnalyzer {
           assert(lVal != null);
           vu.declare(context, lVal.var.name(), lVal.var.type(), false);
           context.declareVariable(lVal.var.type(), lVal.var.name(), 
-                  VarStorage.STACK, DefType.LOCAL_USER, null);
+                  Alloc.STACK, DefType.LOCAL_USER, null);
         }
         
         singleAssignment(context, vu, lVal);
@@ -413,7 +413,7 @@ class VariableUsageAnalyzer {
     
     // Both loop variables are assigned before loop body runs
     initial.declare(context, loop.getMemberVarName(), 
-        loop.getMemberVar().type(), loop.getMemberVar().isMapped());
+        loop.getMemberVar().type(), loop.getMemberVar().mapping() != null);
     initial.assign(context, loop.getMemberVarName());
     if (loop.getCountVarName() != null) {
       initial.declare(context, loop.getCountVarName(), Types.F_INT, false);
@@ -460,7 +460,8 @@ class VariableUsageAnalyzer {
       
       
       if (!lv.declaredOutsideLoop) {
-        outerLoopInfo.declare(context, v.name(), v.type(), v.isMapped());
+        outerLoopInfo.declare(context, v.name(), v.type(),
+                              v.mapping() != null);
       }
       // we assume that each variable has an initializer and an update, so it
       // will be assigned before each loop iteration
@@ -503,7 +504,7 @@ class VariableUsageAnalyzer {
     
     Var v = loop.getLoopVar();
     LogHelper.debug(context, "declared loop var " + v.toString());
-    bodyInfo.declare(context, v.name(), v.type(), v.isMapped());
+    bodyInfo.declare(context, v.name(), v.type(), v.mapping() != null);
     // we assume that each variable has an initializer and an update, so it
     // will be assigned before each loop iteration
     bodyInfo.assign(context, v.name());

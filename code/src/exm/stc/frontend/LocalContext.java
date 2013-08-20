@@ -27,7 +27,7 @@ import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 
 /**
  * Track context within a function.  New child contexts are created
@@ -82,8 +82,8 @@ public class LocalContext extends Context {
         name = Var.TMP_VAR_PREFIX + counter;
       } while (lookupDef(name) != null); // In case variable name in use
 
-      VarStorage storage = storeInStack ? 
-                  VarStorage.STACK : VarStorage.TEMP;
+      Alloc storage = storeInStack ? 
+                  Alloc.STACK : Alloc.TEMP;
       return declareVariable(type, name, storage, DefType.LOCAL_COMPILER, null);
   }
 
@@ -95,7 +95,7 @@ public class LocalContext extends Context {
       name = Var.ALIAS_VAR_PREFIX + counter;
     } while (lookupDef(name) != null);
 
-    return declareVariable(type, name, VarStorage.ALIAS,
+    return declareVariable(type, name, Alloc.ALIAS,
                            DefType.LOCAL_COMPILER, null);
   }
 
@@ -113,7 +113,7 @@ public class LocalContext extends Context {
       throws UserException {
     String name = chooseVariableName(Var.LOCAL_VALUE_VAR_PREFIX, varName,
                                     "value_var");
-    return declareVariable(type, name, VarStorage.LOCAL,
+    return declareVariable(type, name, Alloc.LOCAL,
                            DefType.LOCAL_COMPILER, null);
   }
 
@@ -148,7 +148,7 @@ public class LocalContext extends Context {
         fileVarName, "filename_of");
     try {
       return declareVariable(Types.F_STRING, name,
-          VarStorage.ALIAS, DefType.LOCAL_COMPILER, null);
+          Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
     } catch (DoubleDefineException e) {
       e.printStackTrace();
       throw new STCRuntimeError("Should be possible to have double defn");
@@ -218,7 +218,7 @@ public class LocalContext extends Context {
    */
   @Override
   protected Var createStructFieldTmp(Var struct,
-      Type fieldType, String fieldPath, VarStorage storage) {
+      Type fieldType, String fieldPath, Alloc storage) {
     // Should be unique in context
     String basename = Var.STRUCT_FIELD_VAR_PREFIX
         + struct.name() + "_" + fieldPath.replace('.', '_');

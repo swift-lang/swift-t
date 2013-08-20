@@ -27,7 +27,7 @@ import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
@@ -767,24 +767,24 @@ public class ForeachLoops {
       
       String vPrefix = Var.OPT_VALUE_VAR_PREFIX + loopName;
       String bigStepName = outerBlock.uniqueVarName(vPrefix + ":unrollincr"); 
-      Var bigIncr = new Var(Types.V_INT, bigStepName, VarStorage.LOCAL,
+      Var bigIncr = new Var(Types.V_INT, bigStepName, Alloc.LOCAL,
                             DefType.LOCAL_COMPILER, null);
       Var diff = new Var(Types.V_INT, outerBlock.uniqueVarName(vPrefix + ":diff"),
-                        VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+                        Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
       Var diff2 = new Var(Types.V_INT, outerBlock.uniqueVarName(vPrefix + ":diff2"),
-                        VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+                        Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
       Var extra = new Var(Types.V_INT,
           outerBlock.uniqueVarName(vPrefix + ":extra"),
-          VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+          Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
       Var remainder = new Var(Types.V_INT,
           outerBlock.uniqueVarName(vPrefix + ":rem"),
-          VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+          Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
       Var remainderStart = new Var(Types.V_INT,
           outerBlock.uniqueVarName(vPrefix + ":remstart"),
-          VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+          Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
       Var unrollEnd = new Var(Types.V_INT,
           outerBlock.uniqueVarName(vPrefix + ":unrollEnd"),
-          VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+          Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
 
       outerBlock.declareVariable(bigIncr);
       outerBlock.declareVariable(diff);
@@ -843,7 +843,7 @@ public class ForeachLoops {
           String newLoopVarName = outerBlock.uniqueVarName(
               unrolled.loopVar.name() + "@" + (i + 1), createdVarNames);
           currIterLoopVar = new Var(Types.V_INT, newLoopVarName,
-              VarStorage.LOCAL, DefType.LOCAL_COMPILER, null);
+              Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
           createdVarNames.add(newLoopVarName);
           unrolledBody.addVariable(currIterLoopVar);
           unrolledBody.addInstruction(Builtin.createLocal(BuiltinOpcode.PLUS_INT,

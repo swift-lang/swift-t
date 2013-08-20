@@ -229,7 +229,7 @@ public class VariableUsageInfo {
         }
       } else {
         // v isn't read, but still should issue warnings
-        if (!v.isMapped()) {
+        if (!v.hasMapping()) {
           violations.add(new Violation(ViolationType.WARNING,
               "Variable " + v.getName() + " is not used", context));
         }
@@ -317,7 +317,7 @@ public class VariableUsageInfo {
    */
   public static class VInfo {
     private final Type type;
-    private final boolean mapped;
+    private final boolean hasMapping;
 
     /*
      * really need to handle struct specially:
@@ -340,16 +340,16 @@ public class VariableUsageInfo {
       this(type, mapped, locallyDeclared, name, Ternary.FALSE, Ternary.FALSE, 0, -1);
     }
 
-    public boolean isMapped() {
-      return mapped;
+    public boolean hasMapping() {
+      return hasMapping;
     }
 
-    private VInfo(Type type, boolean mapped, Map<String, VInfo> structFields,
+    private VInfo(Type type, boolean hasMapping, Map<String, VInfo> structFields,
         boolean locallyDeclared, String name,
         Ternary assigned, Ternary read, int arrayAssignDepth,
         int maxReadDepth) {
       this.type = type;
-      this.mapped = mapped;
+      this.hasMapping = hasMapping;
       this.structFields = structFields;
       this.declaredInCurrentScope = locallyDeclared;
       this.name = name;
@@ -363,7 +363,7 @@ public class VariableUsageInfo {
     private VInfo(Type type, boolean mapped, boolean locallyDeclared, String name,
         Ternary assigned, Ternary read, int arrayAssignDepth, int maxReadDepth) {
       this.type = type;
-      this.mapped = mapped;
+      this.hasMapping = mapped;
       if (Types.isStruct(type)) {
         structFields = new HashMap<String, VInfo>();
         for (StructField f:  ((StructType)type).getFields()) {
@@ -449,7 +449,7 @@ public class VariableUsageInfo {
         }
       }
 
-      return new VInfo(type, mapped, structFields,
+      return new VInfo(type, hasMapping, structFields,
           locallyDeclared, name, Ternary.FALSE, Ternary.FALSE, 0, -1);
     }
 

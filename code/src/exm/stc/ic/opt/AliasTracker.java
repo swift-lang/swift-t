@@ -12,7 +12,7 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
@@ -119,8 +119,8 @@ public class AliasTracker {
     roots.put(path.var, Pair.create(var, path));
     
     Var prevChild = pathToVar.get(path); 
-    if (prevChild == null || (prevChild.storage() == VarStorage.ALIAS &&
-                                 var.storage() != VarStorage.ALIAS)) {
+    if (prevChild == null || (prevChild.storage() == Alloc.ALIAS &&
+                                 var.storage() != Alloc.ALIAS)) {
       // Prefer non-alias vars
       pathToVar.put(path, var);
     }

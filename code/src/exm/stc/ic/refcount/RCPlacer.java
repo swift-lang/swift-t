@@ -17,7 +17,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.VarStorage;
+import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Sets;
 import exm.stc.ic.opt.AliasTracker.AliasKey;
@@ -124,7 +124,7 @@ public class RCPlacer {
         Var var = increments.getRefCountVar(block, e.getKey(), true);
         Long incr = e.getValue();
         if (incr > 0) {
-          if (inst != null && !(var.storage() == VarStorage.ALIAS &&
+          if (inst != null && !(var.storage() == Alloc.ALIAS &&
                                 inst.getInitialized().contains(var))) {
             insertIncrBefore(block, stmtIt, var, incr, rcType);
           } else {
@@ -155,7 +155,7 @@ public class RCPlacer {
     final Set<AliasKey> immDecrCandidates = Sets.createSet(
                         block.getVariables().size());
     for (Var blockVar : block.getVariables()) {
-      if (blockVar.storage() != VarStorage.ALIAS) {
+      if (blockVar.storage() != Alloc.ALIAS) {
         AliasKey countKey = increments.getCountKey(blockVar);
         long incr = increments.getCount(rcType, countKey);
         // -1 may correspond to the case when the value of the var is
@@ -187,7 +187,7 @@ public class RCPlacer {
 
     for (AliasKey key: immDecrCandidates) {
       Var immDecrVar = increments.getRefCountVar(block, key, true);
-      assert(immDecrVar.storage() != VarStorage.ALIAS) : immDecrVar;
+      assert(immDecrVar.storage() != Alloc.ALIAS) : immDecrVar;
       block.setInitRefcount(immDecrVar, rcType, 0);
       increments.incr(immDecrVar, rcType, 1);
     }
@@ -452,7 +452,7 @@ public class RCPlacer {
       Entry<AliasKey, Long> e = it.next();
       Var var = increments.getRefCountVar(block, e.getKey(), true);
       long count = e.getValue();
-      if (var.storage() != VarStorage.ALIAS
+      if (var.storage() != Alloc.ALIAS
           || parentAssignedAliasVars.contains(var)) {
         // add increments that we can at top
         addRefIncrementAtTop(block, rcType, var, count);
@@ -466,7 +466,7 @@ public class RCPlacer {
       switch (stmt.type()) {
         case INSTRUCTION: {
           for (Var out : stmt.instruction().getOutputs()) {
-            if (out.storage() == VarStorage.ALIAS) {
+            if (out.storage() == Alloc.ALIAS) {
               // Alias var must be set at this point, insert refcount instruction
               long incr = increments.getCount(rcType, out);
               assert (incr >= 0);
@@ -505,7 +505,7 @@ public class RCPlacer {
   private void piggybackIncrementsOnDeclarations(Block block,
                 RCTracker increments, RefCountType rcType) {
     for (Var blockVar : block.getVariables()) {
-      if (blockVar.storage() != VarStorage.ALIAS) {
+      if (blockVar.storage() != Alloc.ALIAS) {
         long incr = increments.getCount(rcType, blockVar);
         if (incr > 0) {
           assert(RefCounting.hasRefCount(blockVar, rcType)) : blockVar;
