@@ -174,14 +174,14 @@ service_shutdown(int* status)
 
   pid_t pid;
   int s;
-  // Wait for process to exit (up to 2 seconds, exponential backoff)
+  // Wait for process to exit (around 4 seconds, exponential backoff)
   double delay = 0.01;
-  while (delay < 1)
+  while (delay < 4)
   {
     pid = waitpid(service_pid, &s, WNOHANG);
     if (pid == 0)
     {
-      // service_log("service still running: %0.2f", delay);
+      service_log("service still running: waiting another %0.2fs", delay);
       time_delay(delay);
       delay *= 2;
     }
