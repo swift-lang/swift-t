@@ -175,10 +175,13 @@ public interface CompilerBackend {
 
   /**
    * Initialise a local file with a filename
-   * @param localFile
-   * @param filenameVal
+   * @param localFile an uninitialized local file var
+   * @param filenameVal an immediate string containing the filename
+   * @param isMapped an immediate bool saying whether the file is mapped
+   *                - i.e. whether it must be retained in all cases
    */
-  public void initLocalOutputFile(Var localFile, Arg filenameVal);
+  public void initLocalOutputFile(Var localFile, Arg filenameVal,
+                                  Arg isMapped);
   
   /**
    * Set filename of file future to a local string value

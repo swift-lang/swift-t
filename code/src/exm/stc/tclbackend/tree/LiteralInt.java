@@ -22,6 +22,7 @@ public class LiteralInt extends Expression {
   
   public static final Expression ZERO = new LiteralInt(0);
   public static final Expression ONE = new LiteralInt(1);
+  public static final Expression TWO = new LiteralInt(2);
   
   private final long value;
 

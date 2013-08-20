@@ -818,7 +818,7 @@ public class ICInstructions {
         gen.chooseTmpFilename(getOutput(0));
         break;
       case INIT_LOCAL_OUTPUT_FILE:
-        gen.initLocalOutputFile(getOutput(0), getInput(0));
+        gen.initLocalOutputFile(getOutput(0), getInput(0), getInput(1));
         break;
       default:
         throw new STCRuntimeError("didn't expect to see op " +

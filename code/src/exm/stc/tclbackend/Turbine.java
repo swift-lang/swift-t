@@ -1235,9 +1235,10 @@ class Turbine {
     return new Command(DECR_LOCAL_FILE_REFCOUNT, new Token(localFileName));
   }
 
-  public static SetVariable createLocalFile(String varName, Expression fileName) {
+  public static SetVariable createLocalFile(String varName, Expression fileName,
+                                            Expression initRefcount) {
     return new SetVariable(varName, 
-            new Square(CREATE_LOCAL_FILE_REF, fileName));
+            new Square(CREATE_LOCAL_FILE_REF, fileName, initRefcount));
   }
   
   public static SetVariable mkTemp(String varName) {

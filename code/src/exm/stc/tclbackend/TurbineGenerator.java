@@ -119,6 +119,7 @@ public class TurbineGenerator implements CompilerBackend {
   private static final String TCLTMP_ITERSTOTAL = "tcltmp:iterstotal";
   private static final String TCLTMP_ITERS = "tcltmp:iters";
   private static final String TCLTMP_UNPACKED = "tcltmp:unpacked";
+  private static final String TCLTMP_INIT_REFCOUNT = "tcltmp:init_rc";
   
   private static final String MAIN_FUNCTION_NAME = "swift:main";
   private static final String CONSTINIT_FUNCTION_NAME = "swift:constants";
@@ -762,11 +763,20 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void initLocalOutputFile(Var localFile, Arg filenameVal) {
+  public void initLocalOutputFile(Var localFile, Arg filenameVal, Arg isMapped) {
     assert(localFile.type().assignableTo(Types.V_FILE));
-    assert(filenameVal.type().assignableTo(Types.V_STRING));
+    assert(filenameVal.isImmediateString());
+    assert(isMapped.isImmediateBool());
+    
+    // Initialize refcount to 1 if unmapped, or 2 if mapped so that the file
+    // isn't deleted upon the block finishing
+    Sequence ifMapped = new Sequence(), ifUnmapped = new Sequence();
+    ifMapped.add(new SetVariable(TCLTMP_INIT_REFCOUNT, LiteralInt.TWO));
+    ifUnmapped.add(new SetVariable(TCLTMP_INIT_REFCOUNT, LiteralInt.ONE));
+    
+    pointStack.peek().add(new If(argToExpr(isMapped), ifMapped, ifUnmapped));
     pointStack.peek().add(Turbine.createLocalFile(prefixVar(localFile),
-                                                      argToExpr(filenameVal)));
+             argToExpr(filenameVal), new Value(TCLTMP_INIT_REFCOUNT)));
   }
   
   @Override
