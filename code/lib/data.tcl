@@ -20,6 +20,7 @@ namespace eval turbine {
     namespace export                                  \
         allocate retrieve                             \
         create_string  store_string                   \
+        retrieve_string retrieve_decr_string          \
         create_integer store_integer                  \
         retrieve_integer retrieve_decr_integer        \
         create_float   store_float                    \
