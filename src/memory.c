@@ -23,8 +23,6 @@
 
 #include "memory.h"
 
-static bool initialized = false;
-
 long KB;
 long MB;
 long GB;
@@ -32,7 +30,9 @@ long GB;
 mm_context mm_default = 0;
 mm_context mm_null = -1;
 
-#ifndef DISABLE_MM
+#ifdef ENABLE_MM
+
+static bool initialized = false;
 
 #include <stdio.h>
 #include <stdlib.h>
