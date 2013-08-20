@@ -70,14 +70,14 @@ import exm.stc.ic.STCMiddleEnd;
  */
 public class ExprWalker {
 
-  private VarCreator varCreator;
-  private STCMiddleEnd backend;
-  private LineMapping lineMapping;
+  private final VarCreator varCreator;
+  private final WrapperGen wrappers;
+  private final STCMiddleEnd backend;
+  private final LineMapping lineMapping;
   
-  public ExprWalker(VarCreator creator, 
-                    STCMiddleEnd backend, 
-                    LineMapping lineMapping) {
-    super();
+  public ExprWalker(WrapperGen wrappers, VarCreator creator, 
+                    STCMiddleEnd backend, LineMapping lineMapping) {
+    this.wrappers = wrappers;
     this.varCreator = creator;
     this.backend = backend;
     this.lineMapping = lineMapping;
@@ -851,7 +851,7 @@ public class ExprWalker {
       }
     }
 
-    backendFunctionCall(context, function, oList, realIList, props);
+    backendFunctionCall(context, function, concrete, oList, realIList, props);
 
     if (waitContext != null) {
       backend.endWaitStatement();
@@ -868,6 +868,7 @@ public class ExprWalker {
    * @throws UserException 
    */
   private void backendFunctionCall(Context context, String function,
+      FunctionType concrete,
       List<Var> oList, ArrayList<Var> iList, TaskProps props) throws UserException {
     props.assertInternalTypesValid();
     FunctionType def = context.lookupFunction(function);
@@ -895,41 +896,64 @@ public class ExprWalker {
       }
       backend.functionCall(function, Var.asArgList(iList), oList, mode, props);
     } else {
-      // Call wrapper function for app or wrapped builtin
-      assert(context.hasFunctionProp(function, FnProp.WRAPPED_BUILTIN) ||
-             context.hasFunctionProp(function, FnProp.APP));
-      List<Arg> realInputs = new ArrayList<Arg>();
-      for (Var in: iList) {
-        realInputs.add(in.asArg());
-      }
-    
-      /* Wrapped builtins must have these properties passed
-       * into function body so can be applied after arg wait
-       * Target and parallelism are passed in as extra args */
-      if (context.hasFunctionProp(function, FnProp.PARALLEL)) {
-        // parallelism must be specified for parallel functions
-        Arg par = props.get(TaskPropKey.PARALLELISM);
-        if (par == null) {
-          throw new UserException(context, "Parallelism not specified for " +
-              "call to parallel function " + function);
-        }
-        realInputs.add(par);
-      }
-      if (context.hasFunctionProp(function, FnProp.TARGETABLE)) {
-        // Target is optional but we have to pass something in
-        Arg target = props.getWithDefault(TaskPropKey.LOCATION);
-        realInputs.add(target);
-      }
-      
-      // Other code always creates sync wrapper
-      assert(context.hasFunctionProp(function, FnProp.SYNC));
-      TaskMode mode = TaskMode.SYNC;
-      
-      // Only priority property is used directly in sync instruction,
-      // but other properties are useful to have here so that the optimizer
-      // can replace instruction with local version and correct props
-      backend.functionCall(function, realInputs, oList, mode, props);
+      backendCallWrapped(context, function, concrete, oList, iList, props);
     }
+  }
+
+  /**
+   * Call wrapper function for app or wrapped builtin
+   * @param context
+   * @param function
+   * @param concrete
+   * @param oList
+   * @param iList
+   * @param props
+   * @throws UserException
+   */
+  public void backendCallWrapped(Context context, String function,
+      FunctionType concrete,
+      List<Var> oList, ArrayList<Var> iList, TaskProps props)
+      throws UserException {
+    String wrapperFnName; // The name of the wrapper to call
+    if (context.hasFunctionProp(function, FnProp.WRAPPED_BUILTIN)) {
+      // Wrapper may need to be generated
+      wrapperFnName = wrappers.generateWrapper(context, function, concrete);
+    } else {
+      assert(context.hasFunctionProp(function, FnProp.APP));
+      // Wrapper has same name for apps
+      wrapperFnName = function;
+    }
+    List<Arg> realInputs = new ArrayList<Arg>();
+    for (Var in: iList) {
+      realInputs.add(in.asArg());
+    }
+  
+    /* Wrapped builtins must have these properties passed
+     * into function body so can be applied after arg wait
+     * Target and parallelism are passed in as extra args */
+    if (context.hasFunctionProp(function, FnProp.PARALLEL)) {
+      // parallelism must be specified for parallel functions
+      Arg par = props.get(TaskPropKey.PARALLELISM);
+      if (par == null) {
+        throw new UserException(context, "Parallelism not specified for " +
+            "call to parallel function " + function);
+      }
+      realInputs.add(par);
+    }
+    if (context.hasFunctionProp(function, FnProp.TARGETABLE)) {
+      // Target is optional but we have to pass something in
+      Arg target = props.getWithDefault(TaskPropKey.LOCATION);
+      realInputs.add(target);
+    }
+    
+    // Other code always creates sync wrapper
+    assert(context.hasFunctionProp(function, FnProp.SYNC));
+    TaskMode mode = TaskMode.SYNC;
+    
+    // Only priority property is used directly in sync instruction,
+    // but other properties are useful to have here so that the optimizer
+    // can replace instruction with local version and correct props
+    backend.functionCall(wrapperFnName, realInputs, oList, mode, props);
   }
 
 

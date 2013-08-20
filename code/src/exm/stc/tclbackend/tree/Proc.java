@@ -19,6 +19,7 @@ package exm.stc.tclbackend.tree;
 import java.util.List;
 import java.util.Set;
 
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.util.StringUtil;
 
 public class Proc extends TclTree
@@ -39,10 +40,27 @@ public class Proc extends TclTree
                           List<String> args, Sequence sequence)
   {
     assert(!usedFunctionNames.contains(name));
+    checkTclFunctionName(name);
     usedFunctionNames.add(name);
     this.name = name;
     this.args = args;
     this.sequence = sequence;
+  }
+
+  /**
+   * Check that there are no invalid characters
+   */
+  private static void checkTclFunctionName(String name) {
+    for (int i = 0; i < name.length(); i++) {
+      char c = name.charAt(i);
+      if (Character.isAlphabetic(c) || Character.isDigit(c) ||
+          c == ':' || c == '_' || c == '=' || c == '-') {
+        // Whitelist of characters
+      } else {
+        throw new STCRuntimeError("Bad character '" + c +
+                                  "' in tcl function name " + name);
+      }
+    }
   }
 
   @Override

@@ -861,7 +861,8 @@ public class STCMiddleEnd {
             TurbineOp.setFilenameVal(file, filenameVal));
   }
 
-  public void generateWrappedBuiltin(String function, FunctionType ft,
+  public void generateWrappedBuiltin(String wrapperName,
+      String builtinName, FunctionType ft,
       List<Var> outArgs, List<Var> userInArgs, TaskMode mode,
       boolean isParallel, boolean isTargetable)
           throws UserException {
@@ -894,7 +895,7 @@ public class STCMiddleEnd {
       props.put(TaskPropKey.LOCATION, location.asArg());
     }
     
-    Function fn = new Function(function, realInArgs, outArgs, TaskMode.SYNC);
+    Function fn = new Function(wrapperName, realInArgs, outArgs, TaskMode.SYNC);
     this.program.addFunction(fn);
     
     WaitMode waitMode;
@@ -920,7 +921,7 @@ public class STCMiddleEnd {
     Map<Var, Var> filenameVars = p.val2;
     
     
-    WaitStatement wait = new WaitStatement(function + "-argwait",
+    WaitStatement wait = new WaitStatement(wrapperName + "-argwait",
                   waitVars, PassedVar.NONE, Var.NONE,
                   waitMode, true, mode, props);
     
@@ -934,7 +935,7 @@ public class STCMiddleEnd {
                                                   instBuffer, false);
     List<Var> outVals = WrapUtil.createLocalOpOutputs(waitBlock, outArgs,
                                                 filenameVars, instBuffer, false);
-    instBuffer.add(new LocalFunctionCall(function, inVals, outVals));
+    instBuffer.add(new LocalFunctionCall(builtinName, inVals, outVals));
     
     WrapUtil.setLocalOpOutputs(outArgs, outVals, instBuffer);
     

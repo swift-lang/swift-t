@@ -64,13 +64,12 @@ import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.SubType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StringUtil;
 import exm.stc.common.util.TernaryLogic.Ternary;
@@ -83,7 +82,6 @@ import exm.stc.frontend.tree.ForLoopDescriptor.LoopVar;
 import exm.stc.frontend.tree.ForeachLoop;
 import exm.stc.frontend.tree.FunctionDecl;
 import exm.stc.frontend.tree.If;
-import exm.stc.frontend.tree.InlineCode;
 import exm.stc.frontend.tree.IterateDescriptor;
 import exm.stc.frontend.tree.LValue;
 import exm.stc.frontend.tree.Literals;
@@ -104,6 +102,7 @@ public class ASTWalker {
   private VarCreator varCreator = null;
   private ExprWalker exprWalker = null;
   private VariableUsageAnalyzer varAnalyzer = null;
+  private WrapperGen wrapper = null;
 
   /** Map of canonical name to input file for all already loaded */
   private Map<String, SwiftModule> loadedModuleMap = 
@@ -145,7 +144,9 @@ public class ASTWalker {
           throws UserException {
     this.backend = backend;
     this.varCreator = new VarCreator(backend);
-    this.exprWalker = new ExprWalker(varCreator, backend, mainModule.lineMapping);
+    this.wrapper = new WrapperGen(backend);
+    this.exprWalker = new ExprWalker(wrapper, varCreator, backend,
+                                     mainModule.lineMapping);
     this.varAnalyzer = new VariableUsageAnalyzer();
     GlobalContext context = new GlobalContext(mainModule.inputFilePath,
                                               Logging.getSTCLogger());
@@ -1794,7 +1795,8 @@ public class ASTWalker {
           tree.child(pos).getType() == ExMParser.INLINE_TCL) {
       /* See if a template is provided for inline TCL code for function */
       SwiftAST inlineTclTree = tree.child(pos);
-      inlineTcl = handleInlineTcl(context, function, fdecl, ft, inlineTclTree);
+      inlineTcl = wrapper.loadTclTemplate(context, function, fdecl, ft,
+                                          inlineTclTree);
       pos++;
     }
     
@@ -1831,106 +1833,13 @@ public class ASTWalker {
         throw new UserException(context,
                         "Parallel tasks must execute on workers");
       }
-      generateWrapperFunction(context, function, ft, fdecl.getOutVars(),
-                    fdecl.getInVars(), taskMode, isParallel, isTargetable);
+      
+      // Defer generation of wrapper until it is called
+      wrapper.saveWrapper(function, ft, fdecl,
+                          taskMode, isParallel, isTargetable);
     }
   }
 
-
-  /**
-   * Generate a function that wraps some inline tcl
-   * @param function
-   * @param ft 
-   * @param fdecl
-   * @param inlineTcl 
-   * @throws UserException
-   */
-  private void generateWrapperFunction(Context global,
-           String function, FunctionType ft,
-           List<Var> outArgs, List<Var> inArgs,
-           TaskMode mode, boolean isParallel, boolean isTargetable) throws UserException {
-    if (isParallel) {
-      //TODO: figure out what output types are valid
-      throw new STCRuntimeError("Don't support wrapping parallel functions yet");
-    }
-
-    backend.generateWrappedBuiltin(function, ft, outArgs, inArgs, mode,
-                                   isParallel, isTargetable);
-  }
-
-
-  private TclOpTemplate handleInlineTcl(Context context, String function,
-          FunctionDecl fdecl, FunctionType ft, SwiftAST inlineTclTree)
-          throws InvalidSyntaxException, UserException {
-    assert(inlineTclTree.getType() == ExMParser.INLINE_TCL);
-    
-    checkInlineTclTypes(context, function, ft);
-    TclOpTemplate inlineTcl;
-    assert(inlineTclTree.getChildCount() == 1);
-    String tclTemplateString = 
-          Literals.extractLiteralString(context, inlineTclTree.child(0));
-    inlineTcl = InlineCode.templateFromString(context, tclTemplateString);
-    
-    List<String> inNames = fdecl.getInNames();
-    inlineTcl.addInNames(inNames);
-    if (ft.hasVarargs()) {
-      inlineTcl.setVarArgIn(inNames.get(inNames.size() - 1));
-    }
-    inlineTcl.addOutNames(fdecl.getOutNames());
-    inlineTcl.verifyNames(context);
-    Builtins.addInlineTemplate(function, inlineTcl);
-    return inlineTcl;
-  }
-
-
-  /** 
-   * Check that the compiler can handle TCL templates with these
-   * argument types
-   * @param function
-   * @param fdecl
-   */
-  private void checkInlineTclTypes(Context context,
-      String function, FunctionType ftype) 
-    throws TypeMismatchException {
-    for (Type in: ftype.getInputs()) {
-      for (Type alt: UnionType.getAlternatives(in)) {
-        if (Types.isScalarFuture(alt)) {
-          // OK
-        } else if (Types.isScalarUpdateable(alt)) {
-          // OK
-        } else if (Types.isArray(alt)) {
-          // OK
-        } else if (Types.isWildcard(alt) ||
-                   Types.isTypeVar(alt)) {
-          // TODO: need to defer checking to time when we know value
-        } else {
-          throw new TypeMismatchException(context,
-              "Type " + alt.typeName() + " is"
-              + " not current supported as an input to inline TCL code"
-              + " for function " + function);
-        }
-      }
-    }
-    for (Type out: ftype.getOutputs()) {
-      for (Type alt: UnionType.getAlternatives(out)) {
-        if (Types.isArray(alt)) {
-          // OK: will pass in standard repr
-        } else if (Types.isScalarUpdateable(alt)) {
-          // OK: will pass in standard repr
-        } else if (Types.isScalarFuture(alt)) {
-          // OK
-        } else if (Types.isWildcard(alt) ||
-            Types.isTypeVar(alt)) {
-          // TODO: need to defer checking to time when we know value
-        } else {
-          throw new TypeMismatchException(context,
-              "Type " + alt.typeName() + " is"
-              + " not current supported as an out to inline TCL code"
-              + " for function " + function);
-        }
-      }
-    }
-  }
 
 
   private Set<String> extractTypeParams(SwiftAST typeParamsT) {
@@ -1977,7 +1886,6 @@ public class ASTWalker {
       }
     }
   }
-
 
   private void addlocalEquiv(Context context, String function, String val)
       throws UserException {

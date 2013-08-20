@@ -133,6 +133,20 @@ public class Var implements Comparable<Var>, Typed {
     this.hashCode = calcHashCode();
   }
 
+  /**
+   * Create new variable with different type, but same everything else
+   * @param var
+   * @param newType
+   * @return
+   */
+  public static Var substituteType(Var var, Type newType) {
+    if (newType.equals(var.type)) {
+      return var;
+    } else {
+      return new Var(newType, var.name, var.storage, var.defType, var.mapping);
+    }
+  }
+
   @Override
   public int hashCode() {
     return hashCode;
