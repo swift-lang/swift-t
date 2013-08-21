@@ -113,6 +113,32 @@ namespace eval turbine {
       return [ create_local_file_ref $fname ]
     }
 
+    proc input_url { out filepath } {
+      set outfile [ lindex $out 0 ]
+      set mapped [ is_file_mapped $outfile ]
+      if { $mapped } {
+          error "file \[ $outfile \] was already mapped, cannot use input_url"
+      }
+      rule "$filepath" [ list input_url_body $outfile $filepath ] \
+        name "input_file-$outfile-$filepath"
+    }
+
+    proc input_url_body { outfile filepath } {
+      set filepath_val [ retrieve_decr_string $filepath ]
+      input_url_impl $outfile $filepath_val
+    }
+
+    proc input_url_impl { outfile filepath_val } {
+      store_string [ get_file_path $outfile ] $filepath_val
+      store_void [ get_file_status $outfile ]
+    }
+
+    # fname: filename as tcl string
+    # return: local file handle
+    proc input_url_local { fname } {
+      return [ create_local_file_ref $fname ]
+    }
+
     # initialise an unmapped file to a temporary location
     # should be called if a function is writing to an unmapped file
     # assigns the filename future in the file_handle, and also
