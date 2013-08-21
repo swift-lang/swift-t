@@ -47,7 +47,7 @@ namespace eval turbine {
         variable turbine_argp
         variable turbine_args
 
-        if { ! [ has_argv ] } return 
+        if { ! [ has_argv ] } return
 
         set turbine_program [ info script ]
         set turbine_argc 0
@@ -85,7 +85,7 @@ namespace eval turbine {
     proc argv_add_constant { args } {
       variable turbine_argv
 
-      if { ! [ has_argv ] } return 
+      if { ! [ has_argv ] } return
 
       dict for {key value} $args {
         if [ dict exists $turbine_argv $key ] {
@@ -356,7 +356,7 @@ namespace eval turbine {
     # Sleep for given time in seconds.  Return void
     proc sleep { outputs inputs } {
         rule $inputs "turbine::sleep_body $outputs $inputs" \
-            name "sleep-$outputs-$inputs"
+            name "sleep-$outputs-$inputs" type $turbine::WORK
     }
     proc sleep_body { output secs } {
         set secs_val [ retrieve_decr_float $secs ]
