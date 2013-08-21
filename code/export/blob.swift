@@ -36,7 +36,7 @@
 (blob o) blob_from_ints(int i[]) "turbine" "0.0.2" "blob_from_ints";
 @pure
 (float f[]) floats_from_blob(blob b) "turbine" "0.0.2" "floats_from_blob";
-@pure
+@pure @dispatch=WORKER
 (blob o) blob_read(file f) "turbine" "0.0.2" "blob_read";
 @pure
 (blob o) blob_zeroes_float(int n)
