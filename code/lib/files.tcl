@@ -190,6 +190,12 @@ namespace eval turbine {
       file_read_refcount_decr $src
     }
 
+    proc copy_local_file_contents { dst src } {
+      set dstpath [ local_file_path $dst ]
+      set srcpath [ local_file_path $src ]
+      file copy -force $srcpath $dstpath
+    }
+
     # return the filename of a unique temporary file
     # TODO: Do this w/o exec
     proc mktemp {} {
