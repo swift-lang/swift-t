@@ -35,6 +35,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Operators.IntrinsicFunction;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
@@ -45,8 +46,8 @@ import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.ICOptimizer;
@@ -741,6 +742,34 @@ public class STCMiddleEnd {
     currBlock().addInstruction(Builtin.createLocal(op, out, in));
   }
   
+  public void intrinsicCall(IntrinsicFunction intF, List<Var> iList,
+      List<Var> oList, TaskProps props) {
+    Block block = currBlock();
+    
+    switch (intF) {
+      case FILENAME: {
+        assert(iList.size() == 1) : "Wrong # input args for filename";
+        assert(oList.size() == 1) : "Wrong # output args for filename";
+        Var filename = oList.get(0);
+        Var file = iList.get(0);
+        assert(Types.isString(filename)) : "Wrong output type for filename";
+        assert(Types.isFile(file)) : "Wrong input type for filename";;
+        // Implement as alias lookup, then copy
+        String filenameAliasN = block.uniqueVarName(
+                            Var.OPT_VAR_PREFIX + "_fname" + file.name());
+        Var filenameAlias = block.declareVariable(Types.F_STRING,
+            filenameAliasN, Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
+        block.addInstruction(TurbineOp.getFileName(filenameAlias, file));
+        block.addInstruction(Builtin.createAsync(BuiltinOpcode.COPY_STRING,
+                                  filename, filenameAlias.asArg().asList()));
+        break;
+      }
+      default:
+        throw new STCRuntimeError("Intrinsic " + intF +
+                                  " unknown to middle end");
+    }
+  }
+
   /**
    * All default task properties
    * @param op

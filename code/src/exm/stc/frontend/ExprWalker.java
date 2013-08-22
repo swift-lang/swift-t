@@ -28,6 +28,7 @@ import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
+import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
@@ -40,6 +41,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Operators.IntrinsicFunction;
 import exm.stc.common.lang.Operators.OpType;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp;
@@ -532,7 +534,15 @@ public class ExprWalker {
 
   private void checkCallAnnotation(Context context, FunctionCall f,
       TaskPropKey ann) throws UserException {
-    if (ann == TaskPropKey.PARALLELISM) {
+    if (context.isIntrinsic(f.function())) {
+      // Handle annotation specially
+      IntrinsicFunction intF = context.lookupIntrinsic(f.function());
+      List<TaskPropKey> validProps = Operators.validProps(intF);
+      if (!validProps.contains(ann)) {
+          throw new InvalidAnnotationException(context, "Cannot specify " +
+                "property " + ann + " for intrinsic function " + f.function());
+      }
+    } else if (ann == TaskPropKey.PARALLELISM) {
       if (!context.hasFunctionProp(f.function(), FnProp.PARALLEL)) {
         throw new UserException(context, "Tried to call non-parallel"
             + " function " + f.function() + " with parallelism.  "
@@ -877,7 +887,10 @@ public class ExprWalker {
       throw new STCRuntimeError("Couldn't locate function definition for " +
           "previously defined function " + function);
     }
-    if (context.hasFunctionProp(function, FnProp.BUILTIN)) {
+    if (context.isIntrinsic(function)) {
+      IntrinsicFunction intF = context.lookupIntrinsic(function);
+      backend.intrinsicCall(intF, iList, oList, props);
+    } else if (context.hasFunctionProp(function, FnProp.BUILTIN)) {
       if (Builtins.hasOpEquiv(function)) {
         assert(oList.size() <= 1);
         Var out = oList.size() == 0 ? null : oList.get(0);

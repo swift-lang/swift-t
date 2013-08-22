@@ -23,6 +23,7 @@ import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Operators.IntrinsicFunction;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
@@ -174,6 +175,16 @@ public class LocalContext extends Context {
   @Override
   public List<FnProp> getFunctionProps(String function) {
     return parent.getFunctionProps(function);
+  }
+  
+  @Override
+  public void addIntrinsic(String function, IntrinsicFunction intrinsic) {
+    throw new STCRuntimeError("Cannot add intrinsic in local context");
+  }
+  
+  @Override
+  public IntrinsicFunction lookupIntrinsic(String function) {
+    return parent.lookupIntrinsic(function);
   }
 
   @Override

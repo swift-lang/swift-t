@@ -28,6 +28,7 @@ public class Annotations {
   public static final String FN_COMMUTATIVE = "commutative";
   public static final String FN_SYNC = "sync";
   public static final String FN_BUILTIN_OP = "builtin_op";
+  public static final String FN_STC_INTRINSIC = "stc_intrinsic";
   public static final String FN_DISPATCH = "dispatch";
   public static final String FN_PAR = "par";
 

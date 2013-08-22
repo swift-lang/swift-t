@@ -17,20 +17,23 @@
 package exm.stc.frontend;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Operators.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.Pair;
 
 /**
@@ -39,11 +42,18 @@ import exm.stc.common.util.Pair;
  */
 public class GlobalContext extends Context {
   /**
-   * Which composites should be called synchronously  
+   * Properties of functions  
    */
-  private Set<Pair<String, FnProp>> functionProps =
+  private final Set<Pair<String, FnProp>> functionProps =
                         new HashSet<Pair<String, FnProp>>();
 
+  /**
+   * Track function name to intrinsic op mapping
+   */
+  private final Map<String, IntrinsicFunction> intrinsics =
+                        new HashMap<String, IntrinsicFunction>();
+  
+  
   public GlobalContext(String inputFile, Logger logger) {
     super(logger, 0);
     this.inputFile = inputFile;
@@ -88,6 +98,17 @@ public class GlobalContext extends Context {
       }
     }
     return props;
+  }
+  
+  
+  @Override
+  public void addIntrinsic(String function, IntrinsicFunction intrinsic) {
+    intrinsics.put(function, intrinsic);
+  }
+
+  @Override
+  public IntrinsicFunction lookupIntrinsic(String function) {
+    return intrinsics.get(function);
   }
   
   /**

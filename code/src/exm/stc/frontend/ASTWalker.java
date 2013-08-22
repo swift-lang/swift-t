@@ -53,6 +53,7 @@ import exm.stc.common.lang.Builtins;
 import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Operators.IntrinsicFunction;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
@@ -1866,6 +1867,15 @@ public class ASTWalker {
       String val = annotTree.child(1).getText();
       if (key.equals(Annotations.FN_BUILTIN_OP)) {
         addlocalEquiv(context, function, val);
+      } else if (key.equals(Annotations.FN_STC_INTRINSIC)) {
+        IntrinsicFunction intF;
+        try {
+          intF = IntrinsicFunction.valueOf(val.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+          throw new InvalidAnnotationException(context, "Invalid intrinsic name: "
+                + " " + val + ".  Expected one of: " + IntrinsicFunction.values());
+        }
+        context.addIntrinsic(function, intF);
       } else if (key.equals(Annotations.FN_DISPATCH)) {
         try {
           TaskMode mode;

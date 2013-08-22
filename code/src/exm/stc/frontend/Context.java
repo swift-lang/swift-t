@@ -33,12 +33,13 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Operators.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 
 /**
  * Abstract interface used to track and access contextual information about the
@@ -251,6 +252,14 @@ public abstract class Context {
   
   public abstract boolean hasFunctionProp(String name, FnProp prop);
   
+  public abstract void addIntrinsic(String function, IntrinsicFunction intrinsic);
+  
+  public abstract IntrinsicFunction lookupIntrinsic(String function);
+  
+  public boolean isIntrinsic(String function) {
+    return lookupIntrinsic(function) != null;
+  }
+
   /**
    * Lookup the type of a function
    * @param name
