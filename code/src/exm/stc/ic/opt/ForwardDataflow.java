@@ -835,7 +835,7 @@ public class ForwardDataflow implements OptimizerPass {
     ArrayList<Var> toPurge = new ArrayList<Var>();
     for (Entry<Var, Arg> e : replacements.entrySet()) {
       Arg val = e.getValue();
-      if (val.isVar() && !Semantics.canPassToChildTask(val.getVar().type())) {
+      if (val.isVar() && !Semantics.canPassToChildTask(val.getVar())) {
         toPurge.add(e.getKey());
       }
     }

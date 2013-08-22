@@ -1184,10 +1184,10 @@ public class ICInstructions {
       return new TurbineOp(Opcode.COPY_FILE_CONTENTS, target, src.asArg());
     }
     
-    public static Instruction isMapped(Var isMapped, Var file) {
-      assert(isMapped.type().assignableTo(Types.V_BOOL));
-      assert(Types.isFile(file));
-      return new TurbineOp(Opcode.IS_MAPPED, isMapped, file.asArg());
+    public static Instruction isMapped(Var isMapped, Var filename) {
+      assert(Types.isBoolVal(isMapped));
+      assert(Types.isFile(filename));
+      return new TurbineOp(Opcode.IS_MAPPED, isMapped, filename.asArg());
     }
 
     public static Instruction chooseTmpFilename(Var filenameVal) {
@@ -1196,9 +1196,9 @@ public class ICInstructions {
     
     public static Instruction initLocalOutFile(Var localOutFile,
                                   Arg outFilename, Arg isMapped) {
-      assert(localOutFile.type().assignableTo(Types.V_FILE));
-      assert(outFilename.type().assignableTo(Types.V_STRING));
-      assert(isMapped.type().assignableTo(Types.V_BOOL));
+      assert(Types.isFileVal(localOutFile));
+      assert(Types.isStringVal(outFilename.type()));
+      assert(Types.isBoolVal(isMapped.type()));
       return new TurbineOp(Opcode.INIT_LOCAL_OUTPUT_FILE, localOutFile.asList(),
                            outFilename, isMapped);
     }
@@ -4445,7 +4445,7 @@ public class ICInstructions {
         assert(value.isImmediateBlob());
         return Builtin.createLocal(BuiltinOpcode.COPY_BLOB, dst, value);
       case VOID:
-        assert(value.type().assignableTo(Types.V_VOID));
+        assert(Types.isBoolVal(value.type()));
         return Builtin.createLocal(BuiltinOpcode.COPY_VOID, dst, value);
       default:
         // fall through
@@ -4658,10 +4658,10 @@ public class ICInstructions {
       assert(src.isImmediateBlob());
       return TurbineOp.assignBlob(dst, src);
     case VOID:
-      assert(src.isVar() && src.getVar().type().equals(Types.V_VOID));
+      assert(src.isVar() && Types.isVoidVal(src.getVar()));
       return TurbineOp.assignVoid(dst, src);
     case FILE:
-      assert(src.isVar() && src.getVar().type().equals(Types.V_FILE));
+      assert(src.isVar() && Types.isFileVal(src.getVar()));
       return TurbineOp.assignFile(dst, src);
     default:
       throw new STCRuntimeError("method to set " +

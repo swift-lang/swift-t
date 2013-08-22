@@ -222,26 +222,26 @@ public class Arg implements Comparable<Arg> {
    */
   public boolean isImmediateInt() {
     return kind == ArgKind.INTVAL
-        || (kind == ArgKind.VAR && var.type().equals(Types.V_INT));
+        || (kind == ArgKind.VAR && Types.isIntVal(var));
   }
 
   public boolean isImmediateFloat() {
     return kind == ArgKind.FLOATVAL
-        || (kind == ArgKind.VAR && var.type().equals(Types.V_FLOAT));
+        || (kind == ArgKind.VAR && Types.isFloatVal(var));
   }
 
   public boolean isImmediateString() {
     return kind == ArgKind.STRINGVAL
-        || (kind == ArgKind.VAR && var.type().equals(Types.V_STRING));
+        || (kind == ArgKind.VAR && Types.isStringVal(var));
   }
 
   public boolean isImmediateBool() {
     return kind == ArgKind.BOOLVAL
-        || (kind == ArgKind.VAR && var.type().equals(Types.V_BOOL));
+        || (kind == ArgKind.VAR && Types.isBoolVal(var));
   }
   
   public boolean isImmediateBlob() {
-    return kind == ArgKind.VAR && var.type().equals(Types.V_BLOB);
+    return kind == ArgKind.VAR && Types.isBlobVal(var);
   }
 
   @Override

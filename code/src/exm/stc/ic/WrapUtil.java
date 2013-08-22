@@ -77,7 +77,7 @@ public class WrapUtil {
       instBuffer.add(ICInstructions.retrieveValueOf(value_v, var));
       
       // Add cleanup action if needed
-      if (value_t.equals(Types.V_BLOB)) {
+      if (Types.isBlobVal(value_t)) {
         block.addCleanup(value_v, TurbineOp.freeBlob(value_v));
       }
       return value_v;
@@ -207,7 +207,7 @@ public class WrapUtil {
   public static void initTemporaryFileName(
       ListIterator<? super Statement> insertPos, Var file, Var filenameVal) {
     assert(Types.isFile(file));
-    assert(filenameVal.type().assignableTo(Types.V_STRING));
+    assert(Types.isStringVal(filenameVal));
     // Select temporary file name
     insertPos.add(TurbineOp.chooseTmpFilename(filenameVal));
     // Set the filename on the file var
@@ -345,7 +345,7 @@ public class WrapUtil {
                                                  outFilename, valName);
       } else {
         // Already a value
-        assert(outFilename.type().assignableTo(Types.V_STRING));
+        assert(Types.isStringVal(outFilename));
         outFilenameVal = outFilename;
       }
       
@@ -357,9 +357,9 @@ public class WrapUtil {
   }
   
   private static void cleanupLocalOutputVar(Block block, Var outVal) {
-    if (outVal.type().equals(Types.V_BLOB)) {
+    if (Types.isBlobVal(outVal)) {
       block.addCleanup(outVal, TurbineOp.freeBlob(outVal));
-    } else if (outVal.type().equals(Types.V_FILE)) {
+    } else if (Types.isFileVal(outVal)) {
       // Cleanup file if not copied to file future
       block.addCleanup(outVal, TurbineOp.decrLocalFileRef(outVal));
     }

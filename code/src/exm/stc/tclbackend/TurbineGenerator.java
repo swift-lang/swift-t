@@ -559,7 +559,7 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void retrieveInt(Var target, Var source, Arg decr) {
-    assert(target.type().equals(Types.V_INT));
+    assert(Types.isIntVal(target));
     assert(Types.isInt(source.type()));
     assert(decr.isImmediateInt());
     if (decr.equals(Arg.ZERO)) {
@@ -585,7 +585,7 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void retrieveBool(Var target, Var source, Arg decr) {
-    assert(target.type().equals(Types.V_BOOL));
+    assert(Types.isBoolVal(target));
     assert(Types.isBool(source.type()));
 
     assert(decr.isImmediateInt());
@@ -601,13 +601,13 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void assignVoid(Var target, Arg src) {
     assert(Types.isVoid(target.type()));
-    assert(src.type().equals(Types.V_VOID));
+    assert(Types.isVoidVal(src.type()));
     pointStack.peek().add(Turbine.voidSet(varToExpr(target)));
   }
 
   @Override
   public void retrieveVoid(Var target, Var source, Arg decr) {
-    assert(target.type().equals(Types.V_VOID));
+    assert(Types.isVoidVal(target));
     assert(Types.isVoid(source.type()));
     assert(decr.isImmediateInt());
     
@@ -634,9 +634,8 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void retrieveFloat(Var target, Var source, Arg decr) {
-    assert(target.type().equals(Types.V_FLOAT));
-    assert(source.type().equals(Types.F_FLOAT)
-            || source.type().equals(Types.UP_FLOAT));
+    assert(Types.isFloatVal(target));
+    assert(Types.isFloat(source));
 
     assert(decr.isImmediateInt());
     if (decr.equals(Arg.ZERO)) {
@@ -662,8 +661,8 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void retrieveString(Var target, Var source, Arg decr) {
-    assert(target.type().equals(Types.V_STRING));
-    assert(source.type().equals(Types.F_STRING));
+    assert(Types.isString(source));
+    assert(Types.isStringVal(target));
     assert(decr.isImmediateInt());
     if (decr.equals(Arg.ZERO)) {
       pointStack.peek().add(Turbine.stringGet(prefixVar(target),
@@ -684,7 +683,7 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void retrieveBlob(Var target, Var src, Arg decr) {
-    assert(target.type().equals(Types.V_BLOB));
+    assert(Types.isBlobVal(target));
     assert(Types.isBlob(src.type()));
     assert(decr.isImmediateInt());
     if (decr.equals(Arg.ZERO)) {
@@ -698,22 +697,22 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void freeBlob(Var blobVal) {
-    assert(blobVal.type().equals(Types.V_BLOB));
+    assert(Types.isBlobVal(blobVal));
     pointStack.peek().add(Turbine.freeLocalBlob(varToExpr(blobVal)));
   }
 
   @Override
   public void assignFile(Var target, Arg src) {
     assert(Types.isFile(target.type()));
-    assert(src.getVar().type().assignableTo(Types.V_FILE));
+    assert(Types.isFileVal(src.type()));
     pointStack.peek().add(Turbine.fileSet(varToExpr(target),
                             prefixVar(src.getVar())));
   }
 
   @Override
   public void retrieveFile(Var target, Var src, Arg decr) {
-    assert(Types.isFile(src.type()));
-    assert(target.type().assignableTo(Types.V_FILE));
+    assert(Types.isFile(src));
+    assert(Types.isFileVal(target));
     assert(decr.isImmediateInt());
     if (decr.equals(Arg.ZERO)) {
       pointStack.peek().add(Turbine.fileGet(prefixVar(target), varToExpr(src)));
@@ -725,7 +724,7 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void decrLocalFileRef(Var localFile) {
-    assert(localFile.type().assignableTo(Types.V_FILE));
+    assert(Types.isFileVal(localFile));
     pointStack.peek().add(Turbine.decrLocalFileRef(prefixVar(localFile)));
   }
   
@@ -751,7 +750,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void isMapped(Var isMapped, Var file) {
     assert(Types.isFile(file));
-    assert(isMapped.type().assignableTo(Types.V_BOOL));
+    assert(Types.isBoolVal(isMapped));
     pointStack.peek().add(Turbine.isMapped(prefixVar(isMapped),
                                            varToExpr(file)));
   }
@@ -766,13 +765,13 @@ public class TurbineGenerator implements CompilerBackend {
   
   @Override
   public void chooseTmpFilename(Var filenameVal) {
-    assert(filenameVal.type().assignableTo(Types.V_STRING));
+    assert(Types.isStringVal(filenameVal));
     pointStack.peek().add(Turbine.mkTemp(prefixVar(filenameVal)));
   }
 
   @Override
   public void initLocalOutputFile(Var localFile, Arg filenameVal, Arg isMapped) {
-    assert(localFile.type().assignableTo(Types.V_FILE));
+    assert(Types.isFileVal(localFile));
     assert(filenameVal.isImmediateString());
     assert(isMapped.isImmediateBool());
     
@@ -1104,7 +1103,7 @@ public class TurbineGenerator implements CompilerBackend {
           boolean hasSideEffects, boolean deterministic) {
     for (Arg inFile: inFiles) {
       assert(inFile.isVar());
-      assert(inFile.type().assignableTo(Types.V_FILE));
+      assert(Types.isFileVal(inFile.type()));
     }
     
     List<Expression> tclArgs = new ArrayList<Expression>(args.size());
@@ -1144,9 +1143,9 @@ public class TurbineGenerator implements CompilerBackend {
     // Handle closing of outputs
     for (int i = 0; i < outFiles.size(); i++) {
       Var o = outFiles.get(i);
-      if (o.type().assignableTo(Types.V_FILE)) {
+      if (Types.isFileVal(o)) {
         // Do nothing, filename was set when initialized earlier
-      } else if (o.type().assignableTo(Types.V_VOID)) {
+      } else if (Types.isVoidVal(o)) {
         // Do nothing, void value is just a bookkeeping trick
       } else {
         throw new STCRuntimeError("Invalid app output type: " + o);
@@ -1696,7 +1695,7 @@ public class TurbineGenerator implements CompilerBackend {
       props.assertInternalTypesValid();
       mode.checkSpawn(execContextStack.peek());
       for (Var v: passIn) {
-        if (v.type().equals(Types.V_BLOB)) {
+        if (Types.isBlobVal(v)) {
           throw new STCRuntimeError("Can't directly pass blob value");
         }
       }
@@ -2082,7 +2081,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(start.isImmediateInt());
     assert(end.isImmediateInt());
     assert(increment.isImmediateInt());
-    assert(loopVar.type().equals(Types.V_INT));
+    assert(Types.isIntVal(loopVar));
     if (countVar != null) { 
       throw new STCRuntimeError("Backend doesn't support counter var in range " +
       		                      "loop yet");

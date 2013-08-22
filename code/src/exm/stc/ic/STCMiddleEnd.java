@@ -183,8 +183,8 @@ public class STCMiddleEnd {
 
   public void startIfStatement(Arg condition, boolean hasElse) {
     assert(currFunction != null);
-    assert(condition.type().equals(Types.V_INT)
-          || condition.type().equals(Types.V_BOOL));
+    assert(Types.isIntVal(condition.type()) ||
+           Types.isBoolVal(condition.type()));
 
     IfStatement stmt = new IfStatement(condition);
     currBlock().addStatement(stmt);
@@ -391,12 +391,11 @@ public class STCMiddleEnd {
                           List<Var> outFiles, Redirects<Arg> redirects,
                           boolean hasSideEffects, boolean deterministic) {
     for (Var o: outFiles) {
-      assert(o.type().assignableTo(Types.V_FILE) 
-              || o.type().assignableTo(Types.V_VOID));
+      assert(Types.isFileVal(o) || Types.isVoidVal(o));
     }
     
     for (Arg i: inFiles) {
-      assert(i.type().assignableTo(Types.V_FILE));
+      assert(Types.isFileVal(i.type()));
     }
     
 
@@ -642,7 +641,7 @@ public class STCMiddleEnd {
   }
 
   public void retrieveInt(Var target, Var source) {
-    assert(target.type().equals(Types.V_INT));
+    assert(Types.isIntVal(target));
     assert(Types.isInt(source.type()));
     currBlock().addInstruction(
         TurbineOp.retrieveInt(target, source));
@@ -656,7 +655,7 @@ public class STCMiddleEnd {
   }
 
   public void retrieveBool(Var target, Var source) {
-    assert(target.type().equals(Types.V_BOOL));
+    assert(Types.isBoolVal(target));
     assert(Types.isBool(source.type()));
     currBlock().addInstruction(
         TurbineOp.retrieveBool(target, source));
@@ -664,12 +663,12 @@ public class STCMiddleEnd {
   
   public void assignVoid(Var target, Arg src) {
     assert(Types.isVoid(target.type()));
-    assert(src.type().equals(Types.V_VOID));
+    assert(Types.isVoidVal(src.type()));
     currBlock().addInstruction(TurbineOp.assignVoid(target, src));
   }
 
   public void retrieveVoid(Var target, Var source) {
-    assert(target.type().equals(Types.V_VOID));
+    assert(Types.isVoidVal(target));
     assert(Types.isVoid(source.type()));
     currBlock().addInstruction(
         TurbineOp.retrieveVoid(target, source));
@@ -683,7 +682,7 @@ public class STCMiddleEnd {
   }
 
   public void retrieveFloat(Var target, Var source) {
-    assert(target.type().equals(Types.V_FLOAT));
+    assert(Types.isFloatVal(target));
     assert(Types.isFloat(source.type()));
     currBlock().addInstruction(
         TurbineOp.retrieveFloat(target, source));
@@ -697,7 +696,7 @@ public class STCMiddleEnd {
   }
 
   public void retrieveString(Var target, Var source) {
-    assert(target.type().equals(Types.V_STRING));
+    assert(Types.isStringVal(target));
     assert(Types.isString(source.type()));
     currBlock().addInstruction(
         TurbineOp.retrieveString(target, source));
@@ -711,27 +710,27 @@ public class STCMiddleEnd {
   }
   
   public void retrieveBlob(Var target, Var src) {
-    assert(target.type().equals(Types.V_BLOB));
+    assert(Types.isBlobVal(target));
     assert(Types.isBlob(src.type()));
     currBlock().addInstruction(
         TurbineOp.retrieveBlob(target, src));
   }
   
   public void freeBlob(Var blobVal) {
-    assert(blobVal.type().equals(Types.V_BLOB));
+    assert(Types.isBlobVal(blobVal));
     currBlock().addInstruction(TurbineOp.freeBlob(blobVal));
   }
 
   public void assignFile(Var target, Arg src) {
     assert(Types.isFile(target.type()));
     assert(src.isVar());
-    assert(src.getVar().type().assignableTo(Types.V_FILE));
+    assert(Types.isFileVal(src.getVar()));
     currBlock().addInstruction(TurbineOp.assignFile(target, src));
   }
 
   public void retrieveFile(Var target, Var src) {
     assert(Types.isFile(src.type()));
-    assert(target.type().assignableTo(Types.V_FILE));
+    assert(Types.isFileVal(target));
     currBlock().addInstruction(TurbineOp.retrieveFile(target, src));
   }
   
@@ -815,7 +814,7 @@ public class STCMiddleEnd {
   }
   
   public void decrLocalFileRef(Var fileVal) {
-    assert(fileVal.type().assignableTo(Types.V_FILE));
+    assert(Types.isFileVal(fileVal));
     currBlock().addCleanup(fileVal, TurbineOp.decrLocalFileRef(fileVal));
   }
   

@@ -428,7 +428,7 @@ public class ForeachLoops {
           desiredUnroll, unrolled,
           passedVars, keepOpenVars, startIncrements,
           constStartIncrements, endDecrements);
-      assert(loopVar.type().equals(Types.V_INT));
+      assert(Types.isIntVal(loopVar));
       assert(start.isImmediateInt());
       assert(end.isImmediateInt());
       assert(increment.isImmediateInt());

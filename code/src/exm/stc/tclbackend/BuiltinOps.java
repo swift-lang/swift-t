@@ -26,6 +26,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.PrimType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.tclbackend.tree.Command;
@@ -47,7 +48,7 @@ public class BuiltinOps {
 
     if (op == BuiltinOpcode.ASSERT || op == BuiltinOpcode.ASSERT_EQ) {
       // Should have void output
-      assert(out != null && out.type().assignableTo(Types.V_VOID));
+      assert(out != null && Types.isVoidVal(out));
       String tclFn;
       switch (op) {
       case ASSERT:
@@ -296,31 +297,31 @@ public class BuiltinOps {
 
 
   private static void checkCopy(BuiltinOpcode op, Var out, Arg inArg) {
-    Type expType = null;
+    PrimType expType = null;
     switch (op) {
     case COPY_BLOB:
-      expType = Types.V_BLOB;
+      expType = PrimType.BLOB;
       break;
     case COPY_BOOL:
-      expType = Types.V_BOOL;
+      expType = PrimType.BOOL;
       break;
     case COPY_FLOAT:
-      expType = Types.V_FLOAT;
+      expType = PrimType.FLOAT;
       break;
     case COPY_INT:
-      expType = Types.V_INT;
+      expType = PrimType.INT;
       break;
     case COPY_STRING:
-      expType = Types.V_STRING;
+      expType = PrimType.STRING;
       break;
     case COPY_VOID:
-      expType = Types.V_VOID;
+      expType = PrimType.VOID;
       break;
     default:
       throw new STCRuntimeError("Unexpected op: " + op);
     }
-    assert(expType.equals(inArg.type()));
-    assert(expType.equals(out.type()));
+    assert(Types.isVal(expType, inArg.type()));
+    assert(Types.isVal(expType, out));
   }
 
   private static Expression localStrCat(List<Arg> in, ArrayList<Expression> argExpr) {

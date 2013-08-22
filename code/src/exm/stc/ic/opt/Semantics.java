@@ -3,8 +3,8 @@ package exm.stc.ic.opt;
 import java.util.Set;
 
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Types.Type;
 import exm.stc.common.util.TernaryLogic.Ternary;
 
 public class Semantics {
@@ -13,10 +13,10 @@ public class Semantics {
    * @param t
    * @return
    */
-  public static boolean canPassToChildTask(Type t) {
-    if (t.assignableTo(Types.V_BLOB)) {
+  public static boolean canPassToChildTask(Typed t) {
+    if (Types.isBlobVal(t)) {
       return false;
-    } else if (t.assignableTo(Types.V_FILE)) {
+    } else if (Types.isFileVal(t)) {
       return false;
     } else {
       return true;

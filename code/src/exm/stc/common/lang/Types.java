@@ -1660,88 +1660,101 @@ public class Types {
   public static boolean isStructRef(Typed t) {
     return isRef(t) && isStruct(t.type().memberType());
   }
+  
+  public static boolean isFuture(PrimType primType, Typed t) {
+    return isScalarFuture(t) && t.type().primType() == primType;
+  }
+  
+  public static boolean isVal(PrimType primType, Typed t) {
+    return isScalarValue(t) && t.type().primType() == primType;
+  }
+  
+  public static boolean isRef(PrimType primType, Typed t) {
+    return isRef(t) && isFuture(primType, t.type().memberType());
+  }
 
   public static boolean isBool(Typed t) {
-    return isScalarFuture(t) && t.type().primType() == PrimType.BOOL;
+    return isFuture(PrimType.BOOL, t);
   }
   
   public static boolean isBoolVal(Typed t) {
-    return isScalarValue(t) && t.type().primType() == PrimType.BOOL;
+    return isVal(PrimType.BOOL, t);
   }
+  
   public static boolean isBoolRef(Typed t) {
-    return isRef(t) && isBool(t.type().memberType());
+    return isRef(PrimType.BOOL, t);
   }
   
   public static boolean isInt(Typed t) {
-    return isScalarFuture(t) && t.type().primType() == PrimType.INT;
+    return isFuture(PrimType.INT, t);
   }
   
   public static boolean isIntVal(Typed t) {
-    return isScalarValue(t) && t.type().primType() == PrimType.INT;
+    return isVal(PrimType.INT, t);
   }
   
   public static boolean isIntRef(Typed t) {
-    return isRef(t) && isInt(t.type().memberType());
+    return isRef(PrimType.INT, t);
   }
 
   public static boolean isFloat(Typed t) {
-    return isScalarFuture(t) && t.type().primType() == PrimType.FLOAT;
+    return isFuture(PrimType.FLOAT, t);
   }
   
   public static boolean isFloatVal(Typed t) {
-    return isScalarValue(t) && t.type().primType() == PrimType.FLOAT;
+    return isVal(PrimType.FLOAT, t);
   }
   
   public static boolean isFloatRef(Typed t) {
-    return isRef(t) && isFloat(t.type().memberType());
+    return isRef(PrimType.FLOAT, t);
   }
 
   public static boolean isString(Typed t) {
-    return isScalarFuture(t) && t.type().primType() == PrimType.STRING;
+    return isFuture(PrimType.STRING, t);
   }
   
   public static boolean isStringVal(Typed t) {
-    return isScalarValue(t) && t.type().primType() == PrimType.STRING;
+    return isVal(PrimType.STRING, t);
   }
   
   public static boolean isStringRef(Typed t) {
-    return isRef(t) && isString(t.type().memberType());
+    return isRef(PrimType.STRING, t);
   }
   
   public static boolean isVoid(Typed t) {
-    return isScalarFuture(t) && t.type().primType() == PrimType.VOID;
+    return isFuture(PrimType.VOID, t);
   }
   
   public static boolean isVoidVal(Typed t) {
-    return isScalarValue(t) && t.type().primType() == PrimType.VOID;
+    return isVal(PrimType.VOID, t);
   }
   
   public static boolean isVoidRef(Typed t) {
-    return isRef(t) && isVoid(t.type().memberType());
+    return isRef(PrimType.VOID, t);
   }
 
   public static boolean isFile(Typed t) {
-    return isScalarFuture(t) && t.type().primType() == PrimType.FILE;
+    return isFuture(PrimType.FILE, t);
   }
   
   public static boolean isFileVal(Typed t) {
-    return isScalarValue(t) && t.type().primType() == PrimType.FILE;
+    return isVal(PrimType.FILE, t);
   }
   
   public static boolean isFileRef(Typed t) {
-    return isRef(t) && isFile(t.type().memberType());
+    return isRef(PrimType.FILE, t);
   }
   
   public static boolean isBlob(Typed t) {
-    return isScalarFuture(t) && t.type().primType() == PrimType.BLOB;
+    return isFuture(PrimType.BLOB, t);
   }
   
   public static boolean isBlobVal(Typed t) {
-    return isScalarValue(t) && t.type().primType() == PrimType.BLOB;
+    return isVal(PrimType.BLOB, t);
   }
   
   public static boolean isBlobRef(Typed t) {
-    return isRef(t) && isBlob(t.type().memberType());
+    return isRef(PrimType.BLOB, t);
   }
 
   public static boolean isRefTo(Typed refType, Typed valType) {
@@ -1832,8 +1845,8 @@ public class Types {
    */
   public static boolean outputRequiresInitialization(Var output) {
     return output.storage() == Alloc.ALIAS 
-        || Types.isScalarUpdateable(output)
-        || output.type().assignableTo(Types.V_FILE);
+        || isScalarUpdateable(output)
+        || isFileVal(output);
   }
   
   /** 

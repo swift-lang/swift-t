@@ -391,7 +391,7 @@ public class HoistLoops implements OptimizerPass {
         
         // Check if we can pass input between tasks, if not conservatively
         // don't hoist
-        if (!Semantics.canPassToChildTask(inVar.type())) {
+        if (!Semantics.canPassToChildTask(inVar)) {
           return false;
         }
       }
