@@ -27,12 +27,12 @@ import org.apache.log4j.Logger;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Sets;
 import exm.stc.ic.ICUtil;
@@ -482,9 +482,7 @@ public class Validate implements OptimizerPass {
         assert(Types.outputRequiresInitialization(init)) : inst + " " + init;
         
         // some functions initialise and assign the future at once
-        if (inst.op != Opcode.LOAD_FILE && 
-            !(inst.op == Opcode.CALL_FOREIGN_LOCAL &&
-              ((CommonFunctionCall)inst).isImpl(SpecialFunction.INPUT_FILE)))
+        if (!initAndAssignLocalFile(inst))
           ICUtil.remove(regularOutputs, init);
         if (initVars.contains(init)) {
           throw new STCRuntimeError("double initialized variable " + init);
@@ -503,6 +501,17 @@ public class Validate implements OptimizerPass {
 
         assignedVals.add(out);
       }
+    }
+  }
+
+  public boolean initAndAssignLocalFile(Instruction inst) {
+    if (inst.op == Opcode.LOAD_FILE) {
+      return true;
+    } else if (inst.op == Opcode.CALL_FOREIGN_LOCAL &&
+          ((CommonFunctionCall)inst).isImpl(SpecialFunction.INPUT_FILE)) {
+      return true;
+    } else {
+      return false;
     }
   }
 

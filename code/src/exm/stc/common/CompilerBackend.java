@@ -195,6 +195,13 @@ public interface CompilerBackend {
   public void setFilenameVal(Var file, Arg filenameVal);
 
   /**
+   * Copy file contents for files represented by local file values
+   * @param dst an output file value initialised with file name
+   * @param src an input file value initialised with file name
+   */
+  public void copyFileContents(Var dst, Var src);
+
+  /**
    * NOTE: all built-ins should be defined before other functions
    * @param function
    * @param inputs
@@ -502,5 +509,4 @@ public interface CompilerBackend {
    */
   public void loopBreak(List<Var> loopUsedVars, List<Var> keepOpenVars);
   public void endLoop();
-
 }

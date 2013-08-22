@@ -18,6 +18,7 @@ package exm.stc.ic;
 import java.io.PrintStream;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
@@ -52,6 +53,7 @@ import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.ICOptimizer;
 import exm.stc.ic.opt.OptUtil;
 import exm.stc.ic.tree.Conditionals.IfStatement;
@@ -731,6 +733,85 @@ public class STCMiddleEnd {
     assert(Types.isFile(src.type()));
     assert(target.type().assignableTo(Types.V_FILE));
     currBlock().addInstruction(TurbineOp.retrieveFile(target, src));
+  }
+  
+  public void copyFile(Var target, Var src) {
+    assert(Types.isFile(src));
+    assert(Types.isFile(target));
+    
+    // Generate different code depending on whether target is mapped
+    Ternary targetMapped = target.isMapped();
+    Block block = currBlock();
+    if (targetMapped == Ternary.TRUE) {
+      copyFile(block, target, src, true);
+    } else if (targetMapped == Ternary.FALSE) {
+      copyFile(block, target, src, false);
+    } else {
+      assert(targetMapped == Ternary.MAYBE);
+      Var targetMappedV = block.declareVariable(Types.V_BOOL,
+          block.uniqueVarName(Var.OPT_VAR_PREFIX + "mapped_" + target.name()),
+          Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
+      block.addInstruction(TurbineOp.isMapped(targetMappedV, target));
+      IfStatement ifMapped = new IfStatement(targetMappedV.asArg());
+      block.addStatement(ifMapped);
+      copyFile(ifMapped.thenBlock(), target, src, true);
+      copyFile(ifMapped.elseBlock(), target, src, false);
+    }
+  }
+
+  private void copyFile(Block block, Var target, Var src,boolean targetMapped) {
+    Var targetFilename = null;
+    List<WaitVar> waitVars;
+    if (targetMapped) {
+      // Wait for target filename and src file
+      targetFilename = block.declareVariable(Types.F_STRING,
+          OptUtil.optFilenamePrefix(block, target),
+          Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
+      
+      block.addInstruction(TurbineOp.getFileName(targetFilename, target));
+      
+      waitVars = Arrays.asList(new WaitVar(src, false),
+                       new WaitVar(targetFilename, false));
+    } else {
+      // Don't need target filename, just wait for src file
+      waitVars = Arrays.asList(new WaitVar(src, false));
+    }
+                               
+    WaitStatement wait = new WaitStatement(
+        currFunction.getName() + ":wait:" + src.name(), waitVars,
+        PassedVar.NONE, Var.NONE,
+        WaitMode.WAIT_ONLY, false, TaskMode.LOCAL, new TaskProps());
+    block.addContinuation(wait);
+
+    Block waitBlock = wait.getBlock();
+     
+
+    // Retrieve src file info
+    Var srcVal = waitBlock.declareVariable(Types.V_FILE,
+        OptUtil.optVPrefix(waitBlock, src), Alloc.LOCAL,
+        DefType.LOCAL_COMPILER, null);
+    waitBlock.addInstruction(TurbineOp.retrieveFile(srcVal, src));
+    
+    if (targetMapped) {
+      Var targetFilenameVal = waitBlock.declareVariable(Types.V_STRING,
+          OptUtil.optVPrefix(waitBlock, targetFilename), Alloc.LOCAL,
+          DefType.LOCAL_COMPILER, null);
+      Var targetVal = waitBlock.declareVariable(Types.V_FILE,
+          OptUtil.optVPrefix(waitBlock, target), Alloc.LOCAL,
+          DefType.LOCAL_COMPILER, null);
+      
+      // Setup local targetfile
+      waitBlock.addInstruction(TurbineOp.retrieveString(
+              targetFilenameVal, targetFilename));
+      waitBlock.addInstruction(TurbineOp.initLocalOutFile(
+              targetVal, targetFilenameVal.asArg(), Arg.TRUE));
+      
+      // Actually do the copy of file contents
+      waitBlock.addInstruction(TurbineOp.copyFileContents(targetVal, srcVal));
+      waitBlock.addInstruction(TurbineOp.assignFile(target, targetVal.asArg()));
+    } else {
+      waitBlock.addInstruction(TurbineOp.assignFile(target, srcVal.asArg()));
+    }
   }
   
   public void decrLocalFileRef(Var fileVal) {

@@ -788,6 +788,14 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   @Override
+  public void copyFileContents(Var dst, Var src) {
+    assert(dst.type().assignableTo(Types.V_FILE));
+    assert(src.type().assignableTo(Types.V_FILE));
+    pointStack.peek().add(Turbine.copyFileContents(varToExpr(dst),
+                                                   varToExpr(src)));  
+  }
+  
+  @Override
   public void localOp(BuiltinOpcode op, Var out,
                                             List<Arg> in) {
     ArrayList<Expression> argExpr = new ArrayList<Expression>(in.size());

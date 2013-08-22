@@ -57,6 +57,7 @@ import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.opt.ResultVal;
+import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.ValueTracker;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICTree.Block;
@@ -831,6 +832,9 @@ public class ICInstructions {
       case INIT_LOCAL_OUTPUT_FILE:
         gen.initLocalOutputFile(getOutput(0), getInput(0), getInput(1));
         break;
+      case COPY_FILE_CONTENTS:
+        gen.copyFileContents(getOutput(0), getInput(0).getVar());
+        break;
       default:
         throw new STCRuntimeError("didn't expect to see op " +
                   op.toString() + " here");
@@ -1176,10 +1180,14 @@ public class ICInstructions {
       return new TurbineOp(Opcode.SET_FILENAME_VAL, file, filenameVal);
     }
 
-    public static Instruction isMapped(Var isMapped, Var filename) {
+    public static Instruction copyFileContents(Var target, Var src) {
+      return new TurbineOp(Opcode.COPY_FILE_CONTENTS, target, src.asArg());
+    }
+    
+    public static Instruction isMapped(Var isMapped, Var file) {
       assert(isMapped.type().assignableTo(Types.V_BOOL));
-      assert(Types.isFile(filename));
-      return new TurbineOp(Opcode.IS_MAPPED, isMapped, filename.asArg());
+      assert(Types.isFile(file));
+      return new TurbineOp(Opcode.IS_MAPPED, isMapped, file.asArg());
     }
 
     public static Instruction chooseTmpFilename(Var filenameVal) {
@@ -1296,6 +1304,9 @@ public class ICInstructions {
         return true;
       case SET_FILENAME_VAL:
         // Only effect is in file output var
+        return false;
+      case COPY_FILE_CONTENTS:
+        // Only effect is to modify file represented by output var
         return false;
 
       case INIT_LOCAL_OUTPUT_FILE:
@@ -1923,6 +1934,7 @@ public class ICInstructions {
       case GET_FILENAME:
       case GET_LOCAL_FILENAME:
       case IS_MAPPED:
+      case COPY_FILE_CONTENTS:
       case ARRAY_LOOKUP_IMM:
       case COPY_REF:
       case CHOOSE_TMP_FILENAME:
@@ -2528,8 +2540,6 @@ public class ICInstructions {
           return false;
       }
     }
-
-    
   }
   
   /**
@@ -3054,8 +3064,8 @@ public class ICInstructions {
       for (int i = 0; i < this.outputs.size(); i++) {
         Var out = this.outputs.get(i);
         if (Types.isFile(out)) {
-          // Need to wait for filename, unless unmapped 
-          if (!(waitForClose || out.isMapped() == Ternary.FALSE)) {
+          // Need to wait for filename, unless unmapped
+          if (!(waitForClose || Semantics.outputMappingAvail(closedVars, out))) {
             allClosed = false;
           }
         }
@@ -3083,7 +3093,7 @@ public class ICInstructions {
       }
       return null;
     }
-
+    
     @Override
     public MakeImmChange makeImmediate(List<Var> outVars, 
                                         List<Arg> values) {
@@ -3823,7 +3833,8 @@ public class ICInstructions {
     UPDATE_MIN_IMM, UPDATE_INCR_IMM, UPDATE_SCALE_IMM,
     INIT_LOCAL_OUTPUT_FILE,
     GET_FILENAME, CHOOSE_TMP_FILENAME, IS_MAPPED,
-    SET_FILENAME_VAL, GET_FILENAME_VAL, GET_LOCAL_FILENAME
+    SET_FILENAME_VAL, GET_FILENAME_VAL, GET_LOCAL_FILENAME,
+    COPY_FILE_CONTENTS
   }
 
   
@@ -3944,7 +3955,7 @@ public class ICInstructions {
         return new ArrayList<Var>(0);
       }
     }
-
+    
     @Override
     public boolean hasSideEffects() {
       if (op == Opcode.LOCAL_OP) {
@@ -4096,12 +4107,7 @@ public class ICInstructions {
     }
     
     private static boolean hasLocalVersion(BuiltinOpcode op) {
-    if (op == BuiltinOpcode.COPY_FILE) {
-      // TODO: implement local version of copy_file
-      return false;
-    } else {
-        return true;
-      }
+      return true;
     }
 
     @Override
@@ -4116,6 +4122,9 @@ public class ICInstructions {
           return null;
         }
         
+        // COPY_FILE wants to initialize its own output file
+        boolean mapOutputVars = true;
+        
         // See which arguments are closed
         if (!waitForClose) {
           for (Arg inarg: this.inputs) {
@@ -4127,11 +4136,21 @@ public class ICInstructions {
             }
           }
         }
+        
+        if (Types.isFile(output) && !mapOutputVars) {
+          // Need to wait for filename, unless unmapped
+          if (!(waitForClose ||
+                Semantics.outputMappingAvail(closedVars, output))) {
+            return null;
+          }
+        }
+      
           // All args are closed!
         return new MakeImmRequest(
             (this.output == null) ? 
                   null : Collections.singletonList(this.output),
-            ICUtil.extractVars(this.inputs));
+            ICUtil.extractVars(this.inputs),
+            TaskMode.LOCAL, false, mapOutputVars);
       }
     }
 
@@ -4194,7 +4213,9 @@ public class ICInstructions {
       
       ResultVal basic = makeBasicComputedValue();
       
-      if (Operators.isCopy(subop)) {
+      if (subop == BuiltinOpcode.COPY_INT || subop == BuiltinOpcode.COPY_BOOL
+      || subop == BuiltinOpcode.COPY_FLOAT || subop == BuiltinOpcode.COPY_STRING
+      || subop == BuiltinOpcode.COPY_BLOB || subop == BuiltinOpcode.COPY_VOID) {
         // Add transitively valid computed values if a copy
         List<ResultVal> res = new ArrayList<ResultVal>();
         res.add(basic);
@@ -4228,7 +4249,9 @@ public class ICInstructions {
      * @return
      */
     private ResultVal makeBasicComputedValue() {
-      if (Operators.isCopy(subop)) {
+      if (subop == BuiltinOpcode.COPY_INT || subop == BuiltinOpcode.COPY_BOOL
+      || subop == BuiltinOpcode.COPY_FLOAT || subop == BuiltinOpcode.COPY_STRING
+      || subop == BuiltinOpcode.COPY_BLOB || subop == BuiltinOpcode.COPY_VOID) {
         // It might be assigning a constant val
         return ResultVal.makeCopy(this.output, this.inputs.get(0));
       } else if (Operators.isMinMaxOp(subop)) {
@@ -4421,9 +4444,6 @@ public class ICInstructions {
       case BLOB:
         assert(value.isImmediateBlob());
         return Builtin.createLocal(BuiltinOpcode.COPY_BLOB, dst, value);
-      case FILE:
-        assert(value.type().assignableTo(Types.V_FILE));
-        return Builtin.createLocal(BuiltinOpcode.COPY_FILE, dst, value);
       case VOID:
         assert(value.type().assignableTo(Types.V_VOID));
         return Builtin.createLocal(BuiltinOpcode.COPY_VOID, dst, value);
@@ -4502,15 +4522,11 @@ public class ICInstructions {
         case BLOB:
           op = BuiltinOpcode.COPY_BLOB;
           break;
-        case FILE:
-          op = BuiltinOpcode.COPY_FILE;
-          break;
         case VOID:
           op = BuiltinOpcode.COPY_VOID;
           break;
         default:
-          throw new STCRuntimeError("Unhandled type: "
-              + dstType);
+          throw new STCRuntimeError("Unhandled type: " + dstType);
         }
         return ResultVal.buildResult(Opcode.LOCAL_OP, 
             op.toString(), Arrays.asList(val), dst.asArg(), false);

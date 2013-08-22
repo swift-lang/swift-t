@@ -430,8 +430,6 @@ public class BuiltinOps {
         OP_TCL_PKG, "copy_integer"));
     builtinOpImpls.put(BuiltinOpcode.COPY_BLOB, new TclFunRef(
         OP_TCL_PKG, "copy_blob"));
-    builtinOpImpls.put(BuiltinOpcode.COPY_FILE, new TclFunRef(
-            OP_TCL_PKG, "copy_file"));
 
   }
   

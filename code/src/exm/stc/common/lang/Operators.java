@@ -46,7 +46,6 @@ public class Operators {
     EQ_BOOL, NEQ_BOOL, EQ_STRING, NEQ_STRING, 
     NOT, AND, OR, XOR, STRCAT, SUBSTRING, 
     COPY_INT, COPY_FLOAT, COPY_BOOL, COPY_STRING, COPY_BLOB, COPY_VOID, 
-    COPY_FILE,
     FLOOR, CEIL, ROUND, INTTOFLOAT, STRTOINT, INTTOSTR, STRTOFLOAT, FLOATTOSTR, 
     LOG, EXP, SQRT, IS_NAN,
     ASSERT_EQ, ASSERT, SPRINTF,
@@ -178,11 +177,15 @@ public class Operators {
     return t;
   }
 
+  /**
+   * If the operation is a copy operation
+   * @param op
+   * @return
+   */
   public static boolean isCopy(BuiltinOpcode op) {
     return op == BuiltinOpcode.COPY_INT || op == BuiltinOpcode.COPY_BOOL
-        || op == BuiltinOpcode.COPY_FLOAT || op == BuiltinOpcode.COPY_STRING
-        || op == BuiltinOpcode.COPY_BLOB || op == BuiltinOpcode.COPY_VOID
-        || op == BuiltinOpcode.COPY_FILE;
+    || op == BuiltinOpcode.COPY_FLOAT || op == BuiltinOpcode.COPY_STRING
+    || op == BuiltinOpcode.COPY_BLOB || op == BuiltinOpcode.COPY_VOID;
   }
 
   public static boolean isMinMaxOp(BuiltinOpcode localop) {

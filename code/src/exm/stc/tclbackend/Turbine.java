@@ -1250,6 +1250,12 @@ class Turbine {
     return new Command(SET_FILENAME_VAL, fileFuture, filenameVal);
   }
   
+
+  public static Command copyFileContents(Value dst, Value src) {
+    return new Command(turbFn("copy_local_file_contents"), 
+                          dst, src);
+  }
+  
   public static Command arrayBuild(Value array, List<Expression> arrMemExprs,
       boolean close, TypeName valType) {
     return new Command(ARRAY_BUILD, array, new TclList(arrMemExprs),
@@ -1275,4 +1281,5 @@ class Turbine {
   public static Command log(TclString logMsg) {
     return new Command(TURBINE_LOG, logMsg);
   }
+
 }

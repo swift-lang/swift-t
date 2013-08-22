@@ -53,6 +53,7 @@ import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
 import exm.stc.ic.tree.ICTree.Block;
@@ -801,16 +802,24 @@ public class ForwardDataflow implements OptimizerPass {
     Map<Var, Var> filenameVals = new HashMap<Var, Var>();
     for (Var output: outputs) {
       if (Types.isFile(output) && mapOutVars) {
-        // Can only do this with unmapped vars, since otherwise we need
-        // to wait for filename to be set
-        assert(output.isMapped() == Ternary.FALSE);
-        String varName = insertContext.uniqueVarName(
-                          Var.FILENAME_OF_PREFIX + output.name());
-        Var filenameVal = insertContext.declareVariable(
-                        Types.V_STRING, varName, Alloc.LOCAL,
-                        DefType.LOCAL_COMPILER, null);
+        Var filenameVal = insertContext.declareVariable(Types.V_STRING,
+                        OptUtil.optFilenamePrefix(insertContext, output),
+                        Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
 
-        WrapUtil.initTemporaryFileName(insertPoint, output, filenameVal);
+        if (output.isMapped() == Ternary.FALSE) {
+          // Initialize unmapped var
+          WrapUtil.initTemporaryFileName(insertPoint, output, filenameVal);
+        } else {
+          // Load existing mapping
+          // Should only get here if value of mapped var is available.
+          assert(output.mapping() != null);
+          assert(cv.isClosed(output.mapping()));
+          Var filenameAlias = insertContext.declareVariable(Types.F_STRING,
+              OptUtil.optFilenamePrefix(insertContext, output),
+              Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
+          insertPoint.add(TurbineOp.getFileName(filenameAlias, output));
+          insertPoint.add(TurbineOp.retrieveString(filenameVal, filenameAlias));
+        }
         filenameVals.put(output, filenameVal);
       }
     }

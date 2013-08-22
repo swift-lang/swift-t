@@ -247,27 +247,20 @@ public class ExprWalker {
       Type type) throws UserException {
     if (Types.isScalarFuture(type)) {
       if (Types.isInt(type)) {
-        backend.asyncOp(BuiltinOpcode.COPY_INT, dst, 
-            Arrays.asList(Arg.createVar(src)));
+        backend.asyncOp(BuiltinOpcode.COPY_INT, dst,src.asArg().asList());
       } else if (Types.isString(type)) {
-        backend.asyncOp(BuiltinOpcode.COPY_STRING, dst, 
-            Arrays.asList(Arg.createVar(src)));
+        backend.asyncOp(BuiltinOpcode.COPY_STRING, dst,src.asArg().asList());
       } else if (Types.isFloat(type)) {
-        backend.asyncOp(BuiltinOpcode.COPY_FLOAT, dst, 
-            Arrays.asList(Arg.createVar(src)));
+        backend.asyncOp(BuiltinOpcode.COPY_FLOAT, dst, src.asArg().asList());
       } else if (Types.isBool(type)) {
-        backend.asyncOp(BuiltinOpcode.COPY_BOOL, dst, 
-            Arrays.asList(Arg.createVar(src)));
+        backend.asyncOp(BuiltinOpcode.COPY_BOOL, dst, src.asArg().asList());
       } else if (Types.isBlob(type)) {
-        backend.asyncOp(BuiltinOpcode.COPY_BLOB, dst, 
-            Arrays.asList(Arg.createVar(src)));
+        backend.asyncOp(BuiltinOpcode.COPY_BLOB, dst, src.asArg().asList());
       } else if (Types.isVoid(type)) {
         // Sort of silly, but might be needed
-        backend.asyncOp(BuiltinOpcode.COPY_VOID, dst, 
-            Arrays.asList(Arg.createVar(src)));
+        backend.asyncOp(BuiltinOpcode.COPY_VOID, dst, src.asArg().asList());
       } else if (Types.isFile(type)) {
-        backend.asyncOp(BuiltinOpcode.COPY_FILE, dst, 
-                Arrays.asList(Arg.createVar(src)));
+        backend.copyFile(dst, src);
       } else {
         throw new STCRuntimeError(context.getFileLine() +
             "Haven't implemented copy for scalar type " +

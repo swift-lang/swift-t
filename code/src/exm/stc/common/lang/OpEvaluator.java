@@ -38,7 +38,9 @@ public class OpEvaluator {
     if (Operators.isShortCircuitable(op)) {
       // TODO: could short-circuit e.g. x * 0 or x ** 0 or x - x
       return evalShortCircuit(op, inputs);
-    } else if (Operators.isCopy(op)) {
+    } else if (op == BuiltinOpcode.COPY_INT || op == BuiltinOpcode.COPY_BOOL
+    || op == BuiltinOpcode.COPY_FLOAT || op == BuiltinOpcode.COPY_STRING
+    || op == BuiltinOpcode.COPY_BLOB || op == BuiltinOpcode.COPY_VOID) {
       return null;
     } else {
       /* we need all arguments to constant fold */

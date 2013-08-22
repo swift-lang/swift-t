@@ -27,6 +27,9 @@ import exm.stc.tclbackend.tree.TclString;
 public class Arg implements Comparable<Arg> {
   public static final Arg ZERO = Arg.createIntLit(0);
   public static final Arg ONE = Arg.createIntLit(1);
+  public static final Arg TRUE = Arg.createBoolLit(true);
+  public static final Arg FALSE = Arg.createBoolLit(false);
+  
   
   public static enum ArgKind {
     INTVAL, FLOATVAL, STRINGVAL, BOOLVAL, VAR
