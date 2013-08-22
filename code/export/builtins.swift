@@ -104,11 +104,11 @@ type external void;
     [ "set <<n>> [ turbine::turbine_workers ]" ];
 
 // Basic file ops
-@pure
-(string n) filename(file x) "turbine" "0.0.2" "filename2" [
-  "set <<n>> [ turbine::local_file_path <<x>> ]"
-];
-    
+
+// filename has a special implementation hardcoded in compiler
+@pure @stc_intrinsic=FILENAME
+(string n) filename(file x) "turbine" "0.0.2" "";
+
 @pure //@init_mapping=f
 (file f) input(string filename) "turbine" "0.0.2" "input_file"; /* [
   "set <<f>> [ turbine::input_file_local <<filename>> ]"
