@@ -20,9 +20,11 @@ changecom(`dnl')#!/bin/bash -e
 # Created: esyscmd(`date')
 
 # Define a convenience macro
+# This simply does environment variable substition when m4 runs
 define(`getenv', `esyscmd(printf -- "$`$1' ")')
 
 #PBS -N TURBINE
+#PBS -q getenv(QUEUE)
 #PBS -l walltime=getenv(WALLTIME)
 #PBS -l mppwidth=getenv(PROCS)
 #PBS -l mppnppn=getenv(PPN)
@@ -67,13 +69,19 @@ echo "Turbine: turbine-aprun.sh"
 date "+%m/%d/%Y %I:%M%p"
 echo
 
+PROCS=getenv(`PROCS')
+TURBINE_WORKERS=$(( ${PROCS} - ${TURBINE_ENGINES} - ${ADLB_SERVERS} ))
+
 # Log the parameters
 echo "TURBINE_HOME: ${TURBINE_HOME}"
 echo "SCRIPT:      ${SCRIPT} ${ARGS}"
+echo "PROCS:        ${PROCS}"
 echo "NODES:        ${NODES}"
+echo "PPN:          ${PPN}"
 echo "WALLTIME:     ${WALLTIME}"
 echo
 echo "TURBINE_ENGINES: ${TURBINE_ENGINES}"
+echo "TURBINE_WORKERS: ${TURBINE_WORKERS}"
 echo "ADLB_SERVERS:    ${ADLB_SERVERS}"
 echo
 
@@ -90,10 +98,10 @@ OUTPUT_FILE=getenv(OUTPUT_FILE)
 if [ -z "$OUTPUT_FILE" ]
 then
     # USER: Set aprun parameters to agree with PBS -l settings
-    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 valgrind ${TCLSH} ${SCRIPT} ${ARGS}
+    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${TCLSH} ${SCRIPT} ${ARGS}
 else
     # USER: Set aprun parameters to agree with PBS -l settings
-    # Stream output to file
+    # Stream output to file for immediate viewing
     aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${TCLSH} ${SCRIPT} ${ARGS} \
             2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.out"
 fi

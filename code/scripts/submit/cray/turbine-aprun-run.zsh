@@ -23,14 +23,14 @@
 
 # Environment variables that may be set:
 # QUEUE: The queue name to use
-
-# Environment variables that may be set:
 # PROJECT: The project name to use (default none)
+# PPN:            Processes-per-node
+# WALLTIME:       Time limit.  Default: 00:15:00 (15 minutes)
 # TURBINE_OUTPUT_ROOT: Where to put Turbine output-
 #          a subdirectory based on the current time
 #          will be created, reported, and used
 #          (default ~/turbine-output)
-# PPN: Processes-per-node: see below
+# TURBINE_OUTPUT: Directory in which to place output
 
 # Runs job in TURBINE_OUTPUT
 # Pipes output and error to TURBINE_OUTPUT/output.txt
