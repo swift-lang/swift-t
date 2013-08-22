@@ -196,6 +196,8 @@ public class ComputedValue {
   }
   
   /* Special subop strings to use with fake opcode */
+  public static final String ARRAY_SIZE_FUTURE = "array_size_future";
+  public static final String ARRAY_SIZE_VAL = "array_size_val";
   public static final String ARRAY_CONTENTS = "array_contents";
   public static final String REF_TO_ARRAY_CONTENTS = "ref_to_array_contents";
   public static final String ARRAY_NESTED = "autocreated_nested";

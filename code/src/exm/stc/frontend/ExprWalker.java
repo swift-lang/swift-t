@@ -39,6 +39,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.Intrinsics;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Operators;
@@ -760,16 +761,22 @@ public class ExprWalker {
                       false, null);
     Var endV = eval(context, ar.getEnd(), Types.F_INT, 
         false, null);
-
-   if (ar.getStep() != null) {
-      Var stepV = eval(context, ar.getStep(), Types.F_INT, 
-          false, null);
-      backend.builtinFunctionCall("rangestep", Arrays.asList(startV, endV, stepV), 
-          Arrays.asList(oVar));
+    List<Var> inArgs;
+    SpecialFunction fn;
+    if (ar.getStep() != null) {
+      Var stepV = eval(context, ar.getStep(), Types.F_INT,  false, null);
+      
+      inArgs = Arrays.asList(startV, endV, stepV);
+      fn = SpecialFunction.RANGE_STEP;
     } else {
-      backend.builtinFunctionCall("range", Arrays.asList(startV, endV), 
-          Arrays.asList(oVar));
+      inArgs = Arrays.asList(startV, endV);
+      fn = SpecialFunction.RANGE;
     }
+    String impl = ForeignFunctions.findSpecialImpl(fn);
+    if (impl == null) {
+      throw new STCRuntimeError("could not find implementation for " + fn);
+    }
+    backend.builtinFunctionCall(impl, inArgs, Arrays.asList(oVar));
   }
 
   /**

@@ -33,8 +33,9 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
-import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.CompileTimeArgs;
+import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.OpEvaluator;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
@@ -2136,9 +2137,8 @@ public class ICInstructions {
                                                 getInput(i).getVar(), false));
           }
           
-          // TODO: how to propagate size info.  This isn't working yet
-          res.add(LocalFunctionCall.makeArraySizeComputedValue(arr,
-                                        Arg.createIntLit(arrSize)));
+          res.add(CommonFunctionCall.makeArraySizeCV(arr,
+                      Arg.createIntLit(arrSize), false));
           return res;
         }
         case ARRAY_LOOKUP_IMM:
@@ -2671,6 +2671,8 @@ public class ICInstructions {
           // Handle copy as a special case
           return ResultVal.makeCopy(getOutput(0),
                                          getInput(0)).asList();
+        } else if (isImpl(SpecialFunction.SIZE)) {
+          return makeArraySizeCV();
         } else {
           List<ResultVal> res = new ArrayList<ResultVal>();
           for (int output = 0; output < getOutputs().size(); output++) {
@@ -2699,15 +2701,23 @@ public class ICInstructions {
      */
     private void addSpecialCVs(List<ResultVal> cvs) {
       if (op == Opcode.CALL_BUILTIN && (
-          this.functionName.equals(ForeignFunctions.INPUT_FILE) ||
-          this.functionName.equals(ForeignFunctions.UNCACHED_INPUT_FILE))) {
+          isImpl(SpecialFunction.INPUT_FILE) ||
+          isImpl(SpecialFunction.UNCACHED_INPUT_FILE))) {
         cvs.add(filenameCV(getInput(0), getOutput(0)));
       } else if (op == Opcode.CALL_BUILTIN_LOCAL &&
-          (this.functionName.equals(ForeignFunctions.RANGE) ||
-           this.functionName.equals(ForeignFunctions.RANGE_STEP))) {
+          (isImpl(SpecialFunction.RANGE) ||
+           isImpl(SpecialFunction.RANGE_STEP))) {
         addRangeCVs(cvs);
       }
       
+    }
+
+    /**
+     * @param inputFile
+     * @return true if this instruction calls a given special function
+     */
+    protected boolean isImpl(SpecialFunction special) {
+      return ForeignFunctions.isSpecialImpl(special, this.functionName);
     }
 
     private void addRangeCVs(List<ResultVal> cvs) {
@@ -2724,7 +2734,7 @@ public class ICInstructions {
       } else {
         allValues = false;
       }
-      if (this.functionName.equals(ForeignFunctions.RANGE_STEP)) {
+      if (isImpl(SpecialFunction.RANGE_STEP)) {
         if (getInput(2).isIntVal()) {
           step = getInput(2).getIntLit();
         } else {
@@ -2735,11 +2745,33 @@ public class ICInstructions {
         // We can work out array contents 
         long arrSize = Math.max(0, (end - start) / step + 1);
         Var arr = getOutput(0);
-        cvs.add(LocalFunctionCall.makeArraySizeComputedValue(
-            arr, Arg.createIntLit(arrSize)));
+        cvs.add(makeArraySizeCV(arr, Arg.createIntLit(arrSize),
+                                           false));
         // TODO: somehow add array elements?
       }
     }
+
+    private List<ResultVal> makeArraySizeCV() {
+      boolean isFuture;
+      if (Types.isString(getOutput(0))) {
+        isFuture = true;
+      } else {
+        assert(getOutput(0).type().assignableTo(Types.V_INT));
+        isFuture = false;
+      }
+      return makeArraySizeCV(getInput(0).getVar(), getOutput(0).asArg(),
+                             isFuture).asList();
+    }
+
+    static ResultVal makeArraySizeCV(Var arr, Arg size, boolean future) {
+      assert(Types.isArray(arr.type()));
+      assert(size.isImmediateInt());
+      String subop = future ? ComputedValue.ARRAY_SIZE_FUTURE :
+                              ComputedValue.ARRAY_SIZE_VAL;
+      return ResultVal.buildResult(Opcode.FAKE, subop,
+                                   arr.asArg(), size, true);
+    }
+    
   }
   
   public static class FunctionCall extends CommonFunctionCall {
@@ -2956,7 +2988,7 @@ public class ICInstructions {
     public Map<Var, Arg> constantFold(String enclosingFnName,
                                   Map<Var, Arg> knownConstants) {
       
-      if (this.functionName.equals(ForeignFunctions.ARGV)) {
+      if (isImpl(SpecialFunction.ARGV)) {
         // See if argument name is constant
         Arg argName = knownConstants.get(inputs.get(0).getVar());
         if (argName != null) {
@@ -3220,7 +3252,7 @@ public class ICInstructions {
       // Replace any variables for which constant values are known
       ICUtil.replaceArgsInList(knownConstants, inputs);
       
-      if (this.functionName.equals(ForeignFunctions.ARGV)) {
+      if (isImpl(SpecialFunction.ARGV)) {
         Arg argName = this.inputs.get(0);
         if (argName.isStringVal()) {
           String val = CompileTimeArgs.lookup(argName.getStringLit());
@@ -3231,13 +3263,6 @@ public class ICInstructions {
         }
       }
       return null;
-    }
-    
-    static ResultVal makeArraySizeComputedValue(Var arr, Arg size) {
-      assert(Types.isArray(arr.type()));
-      assert(size.isImmediateInt());
-      return ResultVal.buildResult(Opcode.CALL_BUILTIN_LOCAL, ForeignFunctions.ARRAY_SIZE,
-                                   arr.asArg(), size, true);
     }
     
     @Override
@@ -3270,8 +3295,8 @@ public class ICInstructions {
     
     @Override
     public List<Var> getClosedOutputs() {
-      if (functionName.equals(ForeignFunctions.RANGE) || 
-          functionName.equals(ForeignFunctions.RANGE_STEP)) {
+      if (isImpl(SpecialFunction.RANGE) ||
+          isImpl(SpecialFunction.RANGE_STEP)) {
         // Range closes outputs at end
         return Arrays.asList(outputs.get(0));
       }
@@ -3288,8 +3313,8 @@ public class ICInstructions {
     @Override
     public List<Var> getWriteIncrVars() {
       // Range is special case where output array modified
-      if (functionName.equals(ForeignFunctions.RANGE) ||
-          functionName.equals(ForeignFunctions.RANGE_STEP)) {
+      if (isImpl(SpecialFunction.RANGE) ||
+          isImpl(SpecialFunction.RANGE_STEP)) {
         // Array output must be incremented
         return Arrays.asList(getOutput(0));
       }

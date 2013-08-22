@@ -29,6 +29,7 @@ public class Annotations {
   public static final String FN_SYNC = "sync";
   public static final String FN_BUILTIN_OP = "builtin_op";
   public static final String FN_STC_INTRINSIC = "stc_intrinsic";
+  public static final String FN_IMPLEMENTS = "implements";
   public static final String FN_DISPATCH = "dispatch";
   public static final String FN_PAR = "par";
 
@@ -42,5 +43,4 @@ public class Annotations {
   public static final String LOOP_SYNC = "sync";
   public static final String LOOP_ASYNC = "async";
   public static final Object LOOP_NOSPLIT = "nosplit";
-  
 }

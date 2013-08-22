@@ -37,13 +37,26 @@ import exm.stc.frontend.Context;
  * Currently it is sufficient to have this as a static class.
  */
 public class ForeignFunctions {
-  public static final String INPUT_FILE = "input_file";
-  public static final String UNCACHED_INPUT_FILE = "uncached_input_file";
-  public static final String ARRAY_SIZE = "size";
-  public static final String RANGE = "range";
-  public static final String RANGE_STEP = "rangestep";
-  public static final Object ARGV = "argv";
   
+  
+  /**
+   * Functions that have special handling in STC, e.g. if the optimizer
+   * can exploit the particular semantics of them.
+   */
+  public static enum SpecialFunction {
+    INPUT_FILE, UNCACHED_INPUT_FILE,
+    SIZE, RANGE, RANGE_STEP, ARGV
+  }
+  
+  /**
+   * Map from implementation function name to special function anme
+   */
+  private static final HashMap<String, SpecialFunction> specialImpls =
+                                        new HashMap<String, SpecialFunction>();
+  
+  // Inverse map
+  private static final MultiMap<SpecialFunction, String> specialImplsInv =
+                                       new MultiMap<SpecialFunction, String>();
  
   /** Names of built-ins which don't have side effects */
   private static HashSet<String> pure = new HashSet<String>();
@@ -81,6 +94,48 @@ public class ForeignFunctions {
   private static HashMap<String, TaskMode> taskModes
     = new HashMap<String, TaskMode>();
 
+  /**
+   * @param specialName
+   * @return enum value if this is a valid name of a special function,
+   *         otherwise null
+   */
+  public static SpecialFunction findSpecialFunction(String specialName) {
+    try {
+      return SpecialFunction.valueOf(specialName.toUpperCase());
+    } catch (IllegalArgumentException ex){
+      return null;
+    }
+  }
+  
+  public static void addSpecialImpl(SpecialFunction special, String implName) {
+    specialImpls.put(implName, special);
+    specialImplsInv.put(special, implName);
+  }
+  
+  /**
+   * Check if a given function is an implementation of a special function
+   * @param special
+   * @param function
+   * @return
+   */
+  public static boolean isSpecialImpl(SpecialFunction special, String function) {
+    SpecialFunction act = specialImpls.get(function);
+    return act != null && act == special;
+  }
+  
+  /**
+   * Find an implementation of the special operation
+   * @param special
+   * @return
+   */
+  public static String findSpecialImpl(SpecialFunction special) {
+    List<String> impls = specialImplsInv.get(special);
+    if (impls.isEmpty()) {
+      return null;
+    } else {
+      return impls.get(0);
+    }
+  }
   
   public static void addPure(String builtinFunction) {
     pure.add(builtinFunction);

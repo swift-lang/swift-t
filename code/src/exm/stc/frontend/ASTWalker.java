@@ -51,6 +51,7 @@ import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
@@ -1876,6 +1877,15 @@ public class ASTWalker {
                 + " " + val + ".  Expected one of: " + IntrinsicFunction.values());
         }
         context.addIntrinsic(function, intF);
+      } else if (key.equals(Annotations.FN_IMPLEMENTS)) {
+        SpecialFunction special = ForeignFunctions.findSpecialFunction(val);
+        if (special == null) {
+          throw new InvalidAnnotationException(context, "\"" + val +
+              "\" is not the name of a specially handled function in STC. " +
+              "Valid options are: " +
+              StringUtil.concat(SpecialFunction.values())); 
+        }
+        ForeignFunctions.addSpecialImpl(special, function);
       } else if (key.equals(Annotations.FN_DISPATCH)) {
         try {
           TaskMode mode;
