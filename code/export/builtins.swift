@@ -75,10 +75,10 @@ type external void;
                                                             "sleep_trace";
 
 // Container operations
-@pure
+@pure @implements=range
 (int res[]) range(int start, int end) "turbine" "0.0.2" "range"
   [ "turbine::range_work <<res>> <<start>> <<end>> 1" ];
-@pure
+@pure @implements=range_step
 (int res[]) rangestep(int start, int end, int step) "turbine" "0.0.2" "rangestep"
   [ "turbine::range_work <<res>> <<start>> <<end>> <<step>>" ];
 @pure
@@ -109,12 +109,12 @@ type external void;
 @pure @stc_intrinsic=FILENAME
 (string n) filename(file x) "turbine" "0.0.2" "";
 
-@pure @init_mapping=f
+@pure @implements=input_file
 (file f) input(string filename) "turbine" "0.0.2" "input_file" [
   "set <<f>> [ turbine::input_file_local <<filename>> ]"
 ];
 
-@pure @init_mapping=f
+@pure @implements=input_file
 (file f) input_file(string filename) "turbine" "0.0.2" "input_file" [
   "set <<f>> [ turbine::input_file_local <<filename>> ]"
 ];
