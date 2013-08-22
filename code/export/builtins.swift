@@ -105,13 +105,20 @@ type external void;
 
 // Basic file ops
 @pure
-(string n) filename(file x) "turbine" "0.0.2" "filename2";
+(string n) filename(file x) "turbine" "0.0.2" "filename2" [
+  "set <<n>> [ turbine::local_file_path <<x>> ]"
+];
+    
+@pure //@init_mapping=f
+(file f) input(string filename) "turbine" "0.0.2" "input_file"; /* [
+  "set <<f>> [ turbine::input_file_local <<filename>> ]"
+];*/
 
-@pure
-(file f) input(string filename) "turbine" "0.0.2" "input_file";
-@pure
-(file f) input_file(string filename) "turbine" "0.0.2" "input_file";
-@pure
+@pure //@init_mapping=f
+(file f) input_file(string filename) "turbine" "0.0.2" "input_file"; /* [
+  "set <<f>> [ turbine::input_file_local <<filename>> ]"
+]; */
+
 (file f) input_url(string filename) "turbine" "0.0.2" "input_url";
 
 // Substitute for C ternary operator:
