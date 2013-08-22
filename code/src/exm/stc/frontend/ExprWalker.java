@@ -351,17 +351,17 @@ public class ExprWalker {
   
     if (Types.isScalarFuture(dst.type())) {
       Type dstType = dst.type();
-      if (dstType.equals(Types.F_INT)) {
+      if (Types.isInt(dstType)) {
         backend.dereferenceInt(dst, src);
-      } else if (dstType.equals(Types.F_STRING)) {
+      } else if (Types.isString(dstType)) {
         backend.dereferenceString(dst, src);
-      } else if (dstType.equals(Types.F_FLOAT)) {
+      } else if (Types.isFloat(dstType)) {
         backend.dereferenceFloat(dst, src);
-      } else if (dstType.equals(Types.F_BOOL)) {
+      } else if (Types.isBool(dstType)) {
         backend.dereferenceBool(dst, src);
-      } else if (dstType.equals(Types.F_FILE)) {
+      } else if (Types.isFile(dstType)) {
         backend.dereferenceFile(dst, src);
-      } else if (dstType.equals(Types.F_BLOB)) {
+      } else if (Types.isBlob(dstType)) {
         backend.dereferenceBlob(dst, src);
       } else {
         throw new STCRuntimeError("Don't know how to dereference "

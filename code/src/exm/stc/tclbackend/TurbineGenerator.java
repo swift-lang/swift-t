@@ -839,7 +839,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void dereferenceInt(Var target, Var src) {
     assert(Types.isInt(target.type()));
-    assert(src.type().equals(Types.R_INT));
+    assert(Types.isIntRef(src));
     Command deref = Turbine.dereferenceInteger(varToExpr(target),
                                                varToExpr(src));
     pointStack.peek().add(deref);
@@ -848,7 +848,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void dereferenceBool(Var target, Var src) {
     assert(Types.isBool(target.type()));
-    assert(src.type().equals(Types.R_BOOL));
+    assert(Types.isBoolRef(src));
     Command deref = Turbine.dereferenceInteger(varToExpr(target),
                                                varToExpr(src));
     pointStack.peek().add(deref);
@@ -856,8 +856,8 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void dereferenceFloat(Var target, Var src) {
-    assert(target.type().equals(Types.F_FLOAT));
-    assert(src.type().equals(Types.R_FLOAT));
+    assert(Types.isFloat(target));
+    assert(Types.isFloatRef(src));
     Command deref = Turbine.dereferenceFloat(varToExpr(target),
                                              varToExpr(src));
     pointStack.peek().add(deref);
@@ -865,8 +865,8 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void dereferenceString(Var target, Var src) {
-    assert(target.type().equals(Types.F_STRING));
-    assert(src.type().equals(Types.R_STRING));
+    assert(Types.isString(target));
+    assert(Types.isStringRef(src));
     Command deref = Turbine.dereferenceString(varToExpr(target), 
                                               varToExpr(src));
     pointStack.peek().add(deref);
@@ -874,16 +874,16 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void dereferenceBlob(Var target, Var src) {
-    assert(Types.isBlob(target.type()));
-    assert(src.type().equals(Types.R_BLOB));
+    assert(Types.isBlob(target));
+    assert(Types.isBlobRef(src));
     Command deref = Turbine.dereferenceBlob(varToExpr(target), varToExpr(src));
     pointStack.peek().add(deref);
   }
   
   @Override
   public void dereferenceFile(Var target, Var src) {
-    assert(Types.isFile(target.type()));
-    assert(src.type().equals(Types.REF_FILE));
+    assert(Types.isFile(target));
+    assert(Types.isFileRef(src));
     Command deref = Turbine.dereferenceFile(varToExpr(target),
                                             varToExpr(src));
     pointStack.peek().add(deref);

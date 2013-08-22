@@ -1660,37 +1660,88 @@ public class Types {
   public static boolean isStructRef(Typed t) {
     return isRef(t) && isStruct(t.type().memberType());
   }
-  
-  public static boolean isFileRef(Typed t) {
-    return isRef(t) && isFile(t.type().memberType());
-  }
 
   public static boolean isBool(Typed t) {
     return isScalarFuture(t) && t.type().primType() == PrimType.BOOL;
   }
   
+  public static boolean isBoolVal(Typed t) {
+    return isScalarValue(t) && t.type().primType() == PrimType.BOOL;
+  }
+  public static boolean isBoolRef(Typed t) {
+    return isRef(t) && isBool(t.type().memberType());
+  }
+  
   public static boolean isInt(Typed t) {
     return isScalarFuture(t) && t.type().primType() == PrimType.INT;
+  }
+  
+  public static boolean isIntVal(Typed t) {
+    return isScalarValue(t) && t.type().primType() == PrimType.INT;
+  }
+  
+  public static boolean isIntRef(Typed t) {
+    return isRef(t) && isInt(t.type().memberType());
   }
 
   public static boolean isFloat(Typed t) {
     return isScalarFuture(t) && t.type().primType() == PrimType.FLOAT;
+  }
+  
+  public static boolean isFloatVal(Typed t) {
+    return isScalarValue(t) && t.type().primType() == PrimType.FLOAT;
+  }
+  
+  public static boolean isFloatRef(Typed t) {
+    return isRef(t) && isFloat(t.type().memberType());
   }
 
   public static boolean isString(Typed t) {
     return isScalarFuture(t) && t.type().primType() == PrimType.STRING;
   }
   
+  public static boolean isStringVal(Typed t) {
+    return isScalarValue(t) && t.type().primType() == PrimType.STRING;
+  }
+  
+  public static boolean isStringRef(Typed t) {
+    return isRef(t) && isString(t.type().memberType());
+  }
+  
   public static boolean isVoid(Typed t) {
     return isScalarFuture(t) && t.type().primType() == PrimType.VOID;
+  }
+  
+  public static boolean isVoidVal(Typed t) {
+    return isScalarValue(t) && t.type().primType() == PrimType.VOID;
+  }
+  
+  public static boolean isVoidRef(Typed t) {
+    return isRef(t) && isVoid(t.type().memberType());
   }
 
   public static boolean isFile(Typed t) {
     return isScalarFuture(t) && t.type().primType() == PrimType.FILE;
   }
   
+  public static boolean isFileVal(Typed t) {
+    return isScalarValue(t) && t.type().primType() == PrimType.FILE;
+  }
+  
+  public static boolean isFileRef(Typed t) {
+    return isRef(t) && isFile(t.type().memberType());
+  }
+  
   public static boolean isBlob(Typed t) {
     return isScalarFuture(t) && t.type().primType() == PrimType.BLOB;
+  }
+  
+  public static boolean isBlobVal(Typed t) {
+    return isScalarValue(t) && t.type().primType() == PrimType.BLOB;
+  }
+  
+  public static boolean isBlobRef(Typed t) {
+    return isRef(t) && isBlob(t.type().memberType());
   }
 
   public static boolean isRefTo(Typed refType, Typed valType) {

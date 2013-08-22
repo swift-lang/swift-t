@@ -579,42 +579,42 @@ public class STCMiddleEnd {
 
   public void dereferenceInt(Var target, Var src) {
     assert(Types.isInt(target.type()));
-    assert(src.type().equals(Types.R_INT));
+    assert(Types.isIntRef(src));
     currBlock().addInstruction(
         TurbineOp.dereferenceInt(target, src));
   }
   
   public void dereferenceBool(Var target, Var src) {
     assert(Types.isBool(target.type()));
-    assert(src.type().equals(Types.R_BOOL));
+    assert(Types.isBoolRef(src));
     currBlock().addInstruction(
         TurbineOp.dereferenceBool(target, src));
   }
 
   public void dereferenceFloat(Var target, Var src) {
     assert(Types.isFloat(target.type()));
-    assert(src.type().equals(Types.R_FLOAT));
+    assert(Types.isFloatRef(src));
     currBlock().addInstruction(
         TurbineOp.dereferenceFloat(target, src));
   }
 
   public void dereferenceString(Var target, Var src) {
     assert(Types.isString(target.type()));
-    assert(src.type().equals(Types.R_STRING));
+    assert(Types.isStringRef(src));
     currBlock().addInstruction(
         TurbineOp.dereferenceString(target, src));
   }
 
   public void dereferenceBlob(Var target, Var src) {
     assert(Types.isBlob(target.type()));
-    assert(src.type().equals(Types.R_BLOB));
+    assert(Types.isBlobRef(src));
     currBlock().addInstruction(
         TurbineOp.dereferenceBlob(target, src));
   }
 
   public void dereferenceFile(Var target, Var src) {
     assert(Types.isFile(target.type()));
-    assert(src.type().equals(Types.REF_FILE));
+    assert(Types.isFileRef(src));
     currBlock().addInstruction(
         TurbineOp.dereferenceFile(target, src));
   }
